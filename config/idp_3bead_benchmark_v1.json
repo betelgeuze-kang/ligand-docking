@@ -1,0 +1,80 @@
+{
+  "version": "idp_3bead_benchmark_v1",
+  "description": "Small IDP-focused benchmark for 3-bead + virtual hbond + anti-collapse branch. Off-mainline, evaluator/gate/residual-learning track.",
+  "runtime": {
+    "device": "cuda",
+    "rollout_steps": 160,
+    "sample_stride": 4,
+    "dt": 0.045,
+    "thermal_noise": 0.018,
+    "knn_k": 12,
+    "ionic_strength": 0.15,
+    "pH": 7.2,
+    "ptm_count": 1.0,
+    "hydro_strength": 1.0
+  },
+  "gate": {
+    "min_target_pass_fraction": 0.75,
+    "max_failed_targets": 1,
+    "min_mean_force": 0.01,
+    "max_virtual_hbond_mean_distance_A": 4.3,
+    "min_virtual_hbond_contacts_mean": 0.1,
+    "min_anti_collapse_force_mean": 0.01,
+    "max_overcollapse_rate": 0.40,
+    "min_abs_delta_contact_persistence": 0.001,
+    "min_abs_delta_transient_helicity": 0.001,
+    "min_abs_delta_ensemble_diversity": 0.001
+  },
+  "targets": [
+    {
+      "name": "synthetic_idp_base",
+      "source": "synthetic",
+      "n_res": 64,
+      "seed": 31,
+      "noise_scale": 0.35,
+      "collapse_bias": 0.0
+    },
+    {
+      "name": "synthetic_idp_collapsed",
+      "source": "synthetic",
+      "n_res": 64,
+      "seed": 32,
+      "noise_scale": 0.28,
+      "collapse_bias": 0.38
+    },
+    {
+      "name": "synthetic_idp_high_salt",
+      "source": "synthetic",
+      "n_res": 72,
+      "seed": 33,
+      "noise_scale": 0.40,
+      "ionic_strength": 0.35,
+      "pH": 6.8
+    },
+    {
+      "name": "synthetic_idp_ptm_rich",
+      "source": "synthetic",
+      "n_res": 72,
+      "seed": 34,
+      "noise_scale": 0.42,
+      "ptm_count": 3.0,
+      "hydro_strength": 1.2
+    },
+    {
+      "name": "tp53_regulated_inhibitor",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/live_auto_tp53_regulated_inhibitor_of_apoptosis_1_o43715.pdb",
+      "seed": 35,
+      "ionic_strength": 0.20,
+      "hydro_strength": 1.05
+    },
+    {
+      "name": "serum_amyloid_component",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/live_auto_serum_amyloid_p_component_cleaved_into_serum_amyloid_p_p02743.pdb",
+      "seed": 36,
+      "ionic_strength": 0.18,
+      "ptm_count": 2.0
+    }
+  ]
+}

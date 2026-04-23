@@ -1,0 +1,5 @@
+ligand_id,smiles,molecular_weight,logp,h_donors,h_acceptors,rot_bonds,scaffold
+sr12813,CCOP(=O)(OCC)C(=Cc1cc(C(C)(C)C)c(O)c(C(C)(C)C)c1)P(=O)(OCC)OCC,504.5410,7.8178,1,7,11,c1ccccc1
+nifedipine,COC(=O)C1=C(C)NC(C)=C(C(=O)OC)C1c1ccccc1[N+](=O)[O-],346.3390,2.1756,1,7,4,C1=CC(c2ccccc2)C=CN1
+troglitazone,Cc1c(C)c2c(c(C)c1O)CCC(C)(COc1ccc(CC3SC(=O)NC3=O)cc1)O2,441.5490,4.3743,2,6,5,O=C1NC(=O)C(Cc2ccc(OCC3CCc4ccccc4O3)cc2)S1
+dexamethasone,CC1CC2C3CCC4=CC(=O)C=CC4(C)C3(F)C(O)CC2(C)C1(O)C(=O)CO,392.4670,1.8957,3,5,2,O=C1C=CC2C(=C1)CCC1C3CCCC3CCC21

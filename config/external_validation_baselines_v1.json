@@ -1,0 +1,30 @@
+{
+  "protocol_id": "external_validation_baselines_v1",
+  "description": "Ranking-layer baseline gauntlet over accepted bioRxiv ligand validation tasks using frozen stage5 evaluator inputs.",
+  "task_kind": "ligand_stress",
+  "candidate_score_columns": [
+    "binding_energy_mmpbsa_kcal_mol_proxy",
+    "mean_min_distance_A",
+    "binding_score_composite_v2",
+    "binding_score_composite_v3",
+    "binding_score_composite_v4",
+    "binding_score_composite_v6",
+    "binding_score_composite_v7"
+  ],
+  "score_aliases": {
+    "binding_energy_mmpbsa_kcal_mol_proxy": "proxy_energy",
+    "mean_min_distance_A": "distance_only",
+    "binding_score_composite_v2": "composite_v2",
+    "binding_score_composite_v3": "composite_v3",
+    "binding_score_composite_v4": "composite_v4",
+    "binding_score_composite_v6": "composite_v6",
+    "binding_score_composite_v7": "composite_v7"
+  },
+  "primary_metric": "pr_auc",
+  "tie_break_metrics": [
+    "top20_hit_rate",
+    "ef1",
+    "roc_auc"
+  ],
+  "note": "This suite reuses frozen stage5 evaluator inputs from accepted runs. It compares ranking-layer behavior on identical labels/splits/bootstraps and does not attempt to replay task-specific acceptance overrides outside the ranking evaluator itself."
+}

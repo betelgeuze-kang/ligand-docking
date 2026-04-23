@@ -1,0 +1,38 @@
+{
+  "version": "idp_3bead_virtual_hbond_v1",
+  "description": "Experimental IDP-only 3-bead extension with virtual O/N/P/S directional hydrogen-bond term plus anti-collapse force. Off by default for production HTVS.",
+  "runtime_enable_key": "idp_virtual_hbond_enabled",
+  "recommended_runtime_params": {
+    "idp_virtual_hbond_enabled": 1,
+    "idp_3bead_enabled": 1,
+    "ionic_strength": 0.15,
+    "pH": 7.0,
+    "ptm_count": 0,
+    "hydro_strength": 1.0
+  },
+  "design_notes": {
+    "base_model": "CA-SC-CB conceptual track",
+    "implementation_mode": "residue-local CA-SC-CB proxy with virtual directional sites, not explicit atoms",
+    "default_behavior": "zero force unless explicitly enabled",
+    "intended_domains": [
+      "IDP",
+      "LLPS",
+      "transient helices",
+      "weak fuzzy complexes"
+    ],
+    "stabilizers": [
+      "anti-collapse global expansion",
+      "local density repulsion"
+    ]
+  },
+  "gating_plan": {
+    "speed_loss_target_max_ratio": 0.30,
+    "primary_metrics": [
+      "Rg",
+      "SASA",
+      "contact_persistence",
+      "transient_helicity",
+      "ensemble_diversity"
+    ]
+  }
+}

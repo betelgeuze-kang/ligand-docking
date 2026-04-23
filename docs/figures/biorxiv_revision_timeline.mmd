@@ -1,0 +1,16 @@
+flowchart LR
+    v1["v1\nFrozen preregistration\nKinase infra + split confounds found"] -->|"infra + leakage correction"| v2["v2\nWritable heavy root\nDisjoint no-leak kinase split"]
+    v2 -->|"score wiring correction"| v3["v3\nBlind GPCR/TRPV1 score wiring fixed\nTRPV1 core/OOD + GPCR OOD recovered"]
+    v3 -->|"kinase gate correction"| v4["v4\nKinase gate mismatch corrected\nKinase smoke/core/OOD recovered"]
+    v4 -->|"GPCR-only residual blocker"| v5["v5\nNarrow GPCR score exploration"]
+    v5 -->|"scorefix3 live rerun"| v6r1["v6r1\nGPCR live-run metadata bug discovered\nLigand priors zeroed inline"]
+    v6r1 -->|"inline-score ligand priors fix"| v6r3["v6r3\nFirst all-pass close-out\nAll preregistered sets passing"]
+    v6r3 -->|"winner-informed score remapping"| v7r1["v7r1\nPromoted current package\nNo regressions; selected ligand gains"]
+
+    classDef accepted fill:#dff5e8,stroke:#2d7a46,color:#14351f,stroke-width:2px;
+    classDef corrective fill:#f8e7c8,stroke:#9a6a12,color:#4d3200,stroke-width:1.5px;
+    classDef archived fill:#eceff3,stroke:#6b7280,color:#1f2937,stroke-width:1.5px;
+
+    class v6r3,v7r1 accepted;
+    class v2,v3,v4,v5,v6r1 corrective;
+    class v1 archived;

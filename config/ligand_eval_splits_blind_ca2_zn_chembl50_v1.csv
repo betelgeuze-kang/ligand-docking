@@ -1,0 +1,4 @@
+target,ligand_id,role
+CARBONIC_ANHYDRASE_2_ZN_BLIND,dorzolamide,far_ood_eval
+CARBONIC_ANHYDRASE_2_ZN_BLIND,brinzolamide,far_ood_eval
+CARBONIC_ANHYDRASE_2_ZN_BLIND,chlorzolamide,far_ood_eval

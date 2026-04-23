@@ -1,0 +1,7 @@
+ligand_id,smiles,molecular_weight,logp,h_donors,h_acceptors,rot_bonds
+aspirin,CC(=O)OC1=CC=CC=C1C(=O)O,180.16,1.2,1,4,3
+caffeine,CN1C=NC2=C1N(C)C(=O)N(C)C(=O)N2C,194.19,-0.1,0,6,0
+ibuprofen,CC(C)CC1=CC=C(C=C1)C(C)C(=O)O,206.28,3.5,1,2,4
+imatinib,CC1=NC(NCC2=CC=CC=C2)=NC(NC3=CC(Cl)=CC=C3)=N1,493.6,4.2,2,8,7
+erlotinib,COCCOC1=NC2=CC(OC)=C(OCCOC)C=C2N=C1NC3=CC=CC=C3,393.44,3.0,1,7,8
+nilotinib,CC1=NC(NCC2=CC=CC=C2)=NC(NC3=CC(Cl)=CC=C3)=N1C4=CC=CC=C4,529.52,5.4,1,7,8

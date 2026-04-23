@@ -1,0 +1,20 @@
+target,pdb_id,uniprot_id,priority,pdb_url,afdb_url,notes
+Auto_aldo_keto_reductase_family_1_member_b15_C9JRZ8,,C9JRZ8,97.69,,,auto_afdb_online global_metric=97.69
+Auto_trna_wybutosine_synthesizing_protein_5wyosine_c_hydroxy_A2RUC4,,A2RUC4,95.75,,,auto_afdb_online global_metric=95.75
+Auto_synaptonemal_complex_central_element_protein_3_A1L190,,A1L190,93.56,,,auto_afdb_online global_metric=93.56
+Auto_mif4g_domain_containing_protein_A9UHW6,,A9UHW6,91.75,,,auto_afdb_online global_metric=91.75
+Auto_clarin_2_A0PK11,,A0PK11,91.31,,,auto_afdb_online global_metric=91.31
+Auto_deoxyribonuclease_2_alpha_O00115,,O00115,91.06,,,auto_afdb_online global_metric=91.06
+Auto_galectin_8_O00214,,O00214,90.69,,,auto_afdb_online global_metric=90.69
+Auto_plasmanylethanolamine_desaturase_1_A5PLL7,,A5PLL7,90.5,,,auto_afdb_online global_metric=90.50
+Auto_protein_myomaker_A6NI61,,A6NI61,90.44,,,auto_afdb_online global_metric=90.44
+Auto_very_long_chain_fatty_acid_elongase_7_A1L3X0,,A1L3X0,89.75,,,auto_afdb_online global_metric=89.75
+Auto_alkyldihydroxyacetonephosphate_synthase_peroxisomal_O00116,,O00116,88.44,,,auto_afdb_online global_metric=88.44
+Auto_phosphatidylinositol_4_5_bisphosphate_3_kinase_catalytic_O00329,,O00329,87.94,,,auto_afdb_online global_metric=87.94
+Auto_transmembrane_protein_218_A2RU14,,A2RU14,87.62,,,auto_afdb_online global_metric=87.62
+Auto_histone_deacetylase_complex_subunit_sap18_O00422,,O00422,87.06,,,auto_afdb_online global_metric=87.06
+Auto_tumor_necrosis_factor_receptor_superfamily_member_11b_O00300,,O00300,86.5,,,auto_afdb_online global_metric=86.50
+Auto_uroplakin_1a_O00322,,O00322,86.38,,,auto_afdb_online global_metric=86.38
+Hemoglobin_Alpha_Human,1A3N,P69905,10.0,,,example_large_target
+Lysozyme_C_Human,1LZ1,P61626,9.0,,,example_enzyme_target
+Albumin_Human,1AO6,P02768,8.0,,,example_serum_target

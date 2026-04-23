@@ -1,0 +1,13 @@
+ligand_id,smiles,molecular_weight,logp,h_donors,h_acceptors,rot_bonds,scaffold
+erlotinib,COCCOC1=CC2=C(C=C1)N=CN=C2NC3=CC=CC=C3,393.44,2.7,1,6,8,quinazoline
+nilotinib,CC1=NC(=CC=C1)NCC2=CC=C(C=C2)NC(=O)C3=CN=CC=C3,529.52,3.2,2,8,9,aminopyrimidine
+imatinib,CC1=CC=CC=C1NC(=O)NCC2=CC=NC=C2N3CCN(CC3)C,493.60,2.6,2,8,10,anilide
+ibuprofen,CC(C)CC1=CC=C(C=C1)C(C)C(=O)O,206.28,3.5,1,2,4,arylpropionic_acid
+aspirin,CC(=O)OC1=CC=CC=C1C(=O)O,180.16,1.2,1,4,3,salicylate
+caffeine,CN1C=NC2=C1N(C)C(=O)N(C)C(=O)N2C,194.19,-0.1,0,6,0,xanthine
+aqp1_placeholder_binder_01,O,18.02,-1.4,0,0,0,template_placeholder
+aqp1_placeholder_binder_02,CCO,46.07,-0.3,1,1,0,template_placeholder
+aqp1_placeholder_binder_03,CC(=O)O,60.05,-0.3,1,2,0,template_placeholder
+aqp1_placeholder_nonbinder_01,c1ccccc1,78.11,2.1,0,0,0,template_placeholder
+aqp1_placeholder_nonbinder_02,CC(=O)NC1=CC=CC=C1,135.16,1.2,1,1,1,template_placeholder
+aqp1_placeholder_nonbinder_03,CN1C=NC2=C1N(C)C(=O)N(C)C(=O)N2C,194.19,-0.1,0,6,0,template_placeholder

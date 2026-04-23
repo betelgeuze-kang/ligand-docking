@@ -1,0 +1,100 @@
+{
+  "protocol_id": "ligand_scaleup_100k_pilot_v1",
+  "description": "Validate-only 100k pilot scaffold for ligand stage2 production speedpack. Each task emits a frozen regression rerun plus a 100k throughput profile that is execute-ready only after a pilot ligand CSV is wired in.",
+  "baseline_library_size": 10000,
+  "target_library_size": 100000,
+  "baseline_refs": {
+    "accepted_freeze_json": "runs/biorxiv_submission_freeze_current.json",
+    "current_kpi_md": "runs/ligand_scaleup_kpi_current.md",
+    "benchmark_plan_md": "docs/ligand_scaleup_benchmark_plan.md",
+    "speedpack_plan_md": "docs/ligand_stage2_production_speedpack_plan.md"
+  },
+  "guardrails": {
+    "no_pass_to_fail": true,
+    "max_pr_auc_drop_abs": 0.02,
+    "max_top20_hit_count_drop": 1,
+    "min_slowest_domain_speedup": 1.8
+  },
+  "production_speedpack_overrides": {
+    "traj_prod_speedpack": true,
+    "traj_prod_adaptive_frame_budget": true,
+    "traj_prod_frame_budget_tiers": "0.90:1.00,0.75:0.85,0.60:0.70,0.00:0.55",
+    "traj_prod_min_frames_full": 160,
+    "traj_prod_early_stop_enabled": true,
+    "traj_prod_early_stop_min_frames_full": 220,
+    "traj_prod_early_stop_window": 16,
+    "traj_prod_early_stop_contact_drift": 0.02,
+    "traj_prod_early_stop_min_distance_drift_A": 0.15,
+    "traj_prod_early_stop_max_mean_min_distance_A": 5.5,
+    "stage3_score_only": true,
+    "emit_sla_summary": true,
+    "make_bundle_zip": false,
+    "traj_auto_fast_output": true,
+    "traj_frame_output_format": "npz_bundle",
+    "traj_npz_layout": "flat_shard",
+    "traj_npz_shard_size": 512,
+    "traj_writer_mode": "process",
+    "traj_writer_workers": 4,
+    "traj_writer_max_pending": 128
+  },
+  "regression_profile_overrides": {
+    "run_scope": "full"
+  },
+  "throughput_profile_overrides": {
+    "run_scope": "full",
+    "build_hard_decoy_benchmark": false,
+    "run_calibration": false,
+    "run_ranking_eval": false,
+    "run_leakage_audit": false,
+    "enforce_zero_overlap": false,
+    "gate": {
+      "enforce_operational_gate": false,
+      "strict_fail_fast": false
+    }
+  },
+  "tasks": [
+    {
+      "task_id": "gpcr_adrb2_chembl50",
+      "domain": "gpcr",
+      "profile_json": "config/ligand_htvs_blind_gpcr_adrb2_chembl50_v3_scorefix2.json",
+      "targets": "ADRB2_GPCR_BLIND",
+      "pilot_ligand_csv": "__REQUIRED__:pilot_ligand_csv",
+      "pilot_ligand_min_rows": 100000,
+      "notes": "Wire a 100k GPCR pilot CSV before enabling throughput execution.",
+      "throughput_overrides": {
+        "traj_job_batch_autotune_candidates": "2,4,8,16",
+        "traj_dynamic_adress_fraction": 0.2
+      }
+    },
+    {
+      "task_id": "ion_trpv1_chembl50",
+      "domain": "ion_channel",
+      "profile_json": "config/ligand_htvs_blind_trpv1_chembl50_v3_scorefix2.json",
+      "targets": "TRPV1_ION_CHANNEL_BLIND",
+      "pilot_ligand_csv": "__REQUIRED__:pilot_ligand_csv",
+      "pilot_ligand_min_rows": 100000,
+      "notes": "Wire a 100k ion-channel pilot CSV before enabling throughput execution.",
+      "throughput_overrides": {
+        "traj_writer_workers": 6,
+        "traj_writer_max_pending": 192,
+        "traj_job_batch_autotune_candidates": "4,8,16,32",
+        "traj_dynamic_adress_fraction": 0.1,
+        "traj_dynamic_adress_max_all_atom_radius_A": 7.5,
+        "traj_prod_min_frames_full": 180
+      }
+    },
+    {
+      "task_id": "kinase_protease_disjoint_strict",
+      "domain": "kinase_protease",
+      "profile_json": "config/ligand_htvs_commercial_validation_disjoint_strict_v3_gatefix1.json",
+      "targets": "EGFR_KINASE,HIV1_PROTEASE",
+      "pilot_ligand_csv": "__REQUIRED__:pilot_ligand_csv",
+      "pilot_ligand_min_rows": 100000,
+      "notes": "Uses a two-target split; throughput profile auto-allocates 50k jobs per target unless overridden.",
+      "throughput_overrides": {
+        "traj_job_batch_autotune_candidates": "4,8,16",
+        "traj_writer_workers": 3
+      }
+    }
+  ]
+}

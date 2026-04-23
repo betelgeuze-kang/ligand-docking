@@ -1,0 +1,71 @@
+{
+  "version": "idp_3bead_real_idp_llps_v1",
+  "description": "Real IDP/LLPS-oriented target set using AFDB PDBs and residue-range slices.",
+  "runtime": {
+    "device": "cuda",
+    "rollout_steps": 160,
+    "sample_stride": 4,
+    "dt": 0.045,
+    "thermal_noise": 0.018,
+    "knn_k": 12,
+    "ionic_strength": 0.15,
+    "pH": 7.2,
+    "ptm_count": 0.0,
+    "hydro_strength": 1.0,
+    "cooling_rate": 0.0
+  },
+  "gate": {
+    "min_target_pass_fraction": 0.75,
+    "max_failed_targets": 7,
+    "min_mean_force": 0.01,
+    "max_virtual_hbond_mean_distance_A": 4.3,
+    "min_virtual_hbond_contacts_mean": 0.1,
+    "min_anti_collapse_force_mean": 0.01,
+    "max_overcollapse_rate": 0.40,
+    "min_abs_delta_contact_persistence": 0.001,
+    "min_abs_delta_transient_helicity": 0.001,
+    "min_abs_delta_ensemble_diversity": 0.001
+  },
+  "targets": [
+    {
+      "name": "alpha_synuclein_full",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/alpha_synuclein_full.pdb",
+      "residue_start": 1,
+      "residue_end": 140,
+      "seed": 101
+    },
+    {
+      "name": "fus_lcd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/fus_lcd.pdb",
+      "residue_start": 1,
+      "residue_end": 214,
+      "seed": 102
+    },
+    {
+      "name": "hnrnpa1_lcd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/hnrnpa1_lcd.pdb",
+      "residue_start": 186,
+      "residue_end": 320,
+      "seed": 103
+    },
+    {
+      "name": "tardbp_ctd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tardbp_ctd.pdb",
+      "residue_start": 267,
+      "residue_end": 414,
+      "seed": 104
+    },
+    {
+      "name": "tp53_tad",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tp53_tad.pdb",
+      "residue_start": 1,
+      "residue_end": 93,
+      "seed": 105
+    }
+  ]
+}

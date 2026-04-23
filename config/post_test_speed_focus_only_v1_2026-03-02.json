@@ -1,0 +1,34 @@
+{
+  "policy_name": "post_test_speed_focus_only_v1",
+  "created_at_local": "2026-03-02",
+  "scope": "after_current_tests_complete",
+  "mode": "focus_only",
+  "ignore_other_backlog_items": true,
+  "must_include_when_user_requests_next_after_tests": true,
+  "priority_order": [
+    {
+      "id": "batch_replica_pipeline",
+      "title_ko": "배칭/레플리카 파이프라인",
+      "goal": "GPU occupancy를 올려 처리량을 증대",
+      "expected_impact_share_pct": 35
+    },
+    {
+      "id": "async_ai_inference",
+      "title_ko": "비동기 AI 추론 파이프라인",
+      "goal": "물리 커널과 AI 추론 오버랩으로 대기시간 축소",
+      "expected_impact_share_pct": 30
+    },
+    {
+      "id": "graph_replay",
+      "title_ko": "HIP 그래프 캡처/리플레이",
+      "goal": "커널 런치 오버헤드 절감",
+      "expected_impact_share_pct": 15
+    }
+  ],
+  "combined_expected_impact_share_pct": 80,
+  "guardrails": {
+    "no_accuracy_regression": true,
+    "keep_existing_strict_gates": true
+  },
+  "resume_rule_ko": "테스트 종료 후 남은 요소 진행 요청이 오면 본 파일의 3개 항목만 우선 진행한다."
+}

@@ -1,0 +1,41 @@
+{
+  "sections": {
+    "preflight": {
+      "speed_mode": "fast",
+      "speed_mode_replicas": 32,
+      "speed_profile_max_replicas": 128
+    },
+    "revalidation": {
+      "speed_mode": "fast",
+      "speed_mode_replicas": 32,
+      "speed_profile_max_replicas": 128,
+      "retry_ladder": [
+        {
+          "speed_mode": "fast",
+          "speed_mode_replicas": 32,
+          "speed_profile_max_replicas": 128
+        },
+        {
+          "speed_mode": "turbo",
+          "speed_mode_replicas": 64,
+          "speed_profile_max_replicas": 256
+        },
+        {
+          "speed_mode": "extreme",
+          "speed_mode_replicas": 128,
+          "speed_profile_max_replicas": 512
+        }
+      ]
+    },
+    "nightly": {
+      "speed_mode": "warp",
+      "speed_mode_replicas": 640,
+      "speed_profile_max_replicas": 640
+    },
+    "initial_claim_triplet": {
+      "speed_mode": "warp",
+      "speed_mode_replicas": 640,
+      "speed_profile_max_replicas": 640
+    }
+  }
+}

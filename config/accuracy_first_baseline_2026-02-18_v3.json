@@ -1,0 +1,18 @@
+{
+  "meta": {
+    "created_at": "2026-02-18",
+    "description": "Canonical accuracy-first baseline (v3) for nightly, claim, and reproducibility flows."
+  },
+  "paths": {
+    "strict_summary_json": "runs/openmm_2bead_strict_2026-02-17_candidate_fullrun_summary.json",
+    "external_manifest_csv": "runs/real_md_source_manifest_openmm_2bead_2026-02-17.csv",
+    "stability_profile_json": "config/long_stability_target_tuned_all10_2026-02-18_v3.json",
+    "claim_policy_json": "config/allatom_equivalence_acceptance_v1_2026-02-17.json",
+    "nightly_full_summary_json": "runs/nightly_screening_batch_accuracy_first_full_v3_2026-02-18.json",
+    "nightly_full_accuracy_csv": "runs/noncyclic_speed_accuracy_rebench_nightly_accuracy_first_full_v3_2026-02-18_accuracy.csv",
+    "nightly_full_speed_accuracy_json": "runs/noncyclic_speed_accuracy_rebench_nightly_accuracy_first_full_v3_2026-02-18_speed_accuracy.json",
+    "nightly_full_claim_correction_summary_json": "runs/claim_metric_correction_loop_nightly_accuracy_first_full_v3_2026-02-18_summary.json",
+    "repro_summary_json": "runs/accuracy_first_repro3_v3_2026-02-18.json",
+    "repro_table_csv": "runs/accuracy_first_repro3_v3_2026-02-18.csv"
+  }
+}

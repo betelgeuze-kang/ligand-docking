@@ -1,0 +1,41 @@
+{
+  "version": "ligand_data_contract_v1",
+  "description": "Commercial V1 contract for ligand HTVS input/output validation.",
+  "input": {
+    "ligand_csv_required_cols": [
+      "target",
+      "ligand_id",
+      "is_binder"
+    ],
+    "eval_split_csv_required_cols": [
+      "target",
+      "ligand_id",
+      "role"
+    ],
+    "ranking_labels_csv_required_cols": [
+      "target",
+      "ligand_id",
+      "is_binder"
+    ]
+  },
+  "output": {
+    "summary_required_top_keys": [
+      "pass",
+      "failed_stage",
+      "run_scope",
+      "generated_at_local",
+      "stages",
+      "artifacts"
+    ],
+    "artifact_required_keys": [
+      "queue_csv",
+      "trajectory_root",
+      "stage3_scores_csv",
+      "scored_csv_final",
+      "admet_surface_json",
+      "sla_summary_json",
+      "summary_json",
+      "summary_md"
+    ]
+  }
+}

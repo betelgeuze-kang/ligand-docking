@@ -1,0 +1,205 @@
+{
+  "protocol_id": "external_validation_biorxiv_robustness_bootstrap_seed_shift1",
+  "protocol_title": "Bootstrap Seed Shift for Cross-Domain Blind Architecture Validation",
+  "protocol_version": "robustness_bootstrap_seed_shift1",
+  "frozen_at_local": "2026-03-22T00:00:00+09:00",
+  "frozen_references": {
+    "idp_release_manifest_current": "runs/idp_3bead_release_manifest_current.json",
+    "idp_smoke_current": "runs/idp_3bead_release_smoke_current.json",
+    "current_release_label": "idp_3bead_holdout_v7_sb_rust_2026-03-20_r3_speedopt3",
+    "current_smoke_label": "idp_3bead_release_smoke_current_2026-03-20_speedopt3full"
+  },
+  "global_governance": {
+    "goal": "Produce an externally shareable, preregistered cross-domain architecture validation bundle suitable for preprint-era scrutiny.",
+    "anti_leakage_rules": [
+      "No target/ligand/control swapping after protocol freeze.",
+      "No acceptance-threshold changes after protocol freeze except explicit diagnostic-only annotations already encoded here.",
+      "No candidate-specific relabeling for IDP corrected evaluation; frozen-label sources are taken from the current release manifest.",
+      "Smoke ligand runs use stage5_ranking_eval plus stage45_eval_integrity as the acceptance basis when the only stage6 failure is ranking_eval_unique_keys at n=64."
+    ],
+    "reporting_rules": [
+      "Each set must publish raw task outputs, manifest.json, manifest.md, copied artifact files, and a zip bundle.",
+      "Each task records raw pass, effective pass, run return code, and acceptance note when diagnostic overrides are used.",
+      "Historical current baseline references are recorded in the protocol and copied into the submission package."
+    ],
+    "claim_scope": [
+      "Primary claims use full blind/core and expanded OOD sets.",
+      "Operational smoke is reproducibility support, not the primary large-scale performance claim.",
+      "For IDP, release claims use all_fold_pass plus regression pass; combined_gate_pass is reported but interpreted using branch-conditioned combined metrics.",
+      "This protocol is supplemental robustness evidence for scenario bootstrap_seed_shift1 and does not replace the accepted promoted package."
+    ]
+  },
+  "sets": [
+    {
+      "set_id": "set1_core_blind",
+      "title": "Core Blind Set",
+      "purpose": "Primary cross-domain blind performance set across GPCR, ion channel, kinase/protease, and the current full IDP release.",
+      "claim_role": "primary",
+      "preregistered_claim": "Supplemental robustness evidence for scenario bootstrap_seed_shift1 under frozen targets, labels, gates, and acceptance rules.",
+      "acceptance_policy": {
+        "set_pass_rule": "all tasks pass",
+        "ligand_rule": "use task-level pass from produced stress summary",
+        "idp_rule": "use current release acceptance from manifest"
+      },
+      "blind_governance": {
+        "target_editing_after_freeze": false,
+        "threshold_tuning_after_freeze": false,
+        "wetlab_dependency": false
+      },
+      "submission_package": {
+        "intended_use": "primary external performance packet",
+        "share_as": [
+          "manifest.json",
+          "manifest.md",
+          "zip"
+        ]
+      },
+      "tasks": [
+        {
+          "task_id": "gpcr_core_full",
+          "domain": "gpcr",
+          "kind": "ligand_stress",
+          "profile_json": "config/ligand_htvs_blind_gpcr_adrb2_v4_scorefix3_rb_boot31.json",
+          "ligand_sizes": "10000",
+          "date_tag_suffix": "gpcr-core-full"
+        },
+        {
+          "task_id": "ion_trpv1_chembl20_full",
+          "domain": "ion_channel",
+          "kind": "ligand_stress",
+          "profile_json": "config/ligand_htvs_blind_trpv1_chembl20_v3_scorefix2_rb_boot31.json",
+          "ligand_sizes": "10000",
+          "date_tag_suffix": "trpv1-chembl20-full"
+        },
+        {
+          "task_id": "kinase_core_full",
+          "domain": "kinase",
+          "kind": "ligand_stress",
+          "profile_json": "config/ligand_htvs_commercial_validation_no_leak_v3_gatefix1_rb_boot31.json",
+          "ligand_sizes": "10000",
+          "date_tag_suffix": "kinase-core-full"
+        },
+        {
+          "task_id": "idp_release_current",
+          "domain": "idp",
+          "kind": "idp_reference_current_full"
+        }
+      ]
+    },
+    {
+      "set_id": "set2_expanded_ood",
+      "title": "Expanded OOD Set",
+      "purpose": "Broader OOD stress set for the same four domains using larger public blind expansions and strict external-style kinase evaluation.",
+      "claim_role": "secondary_generalization",
+      "preregistered_claim": "Supplemental robustness evidence for scenario bootstrap_seed_shift1 under frozen targets, labels, gates, and acceptance rules.",
+      "acceptance_policy": {
+        "set_pass_rule": "all tasks pass",
+        "ligand_rule": "use task-level pass from produced stress summary",
+        "idp_rule": "use current release acceptance from manifest"
+      },
+      "blind_governance": {
+        "target_editing_after_freeze": false,
+        "threshold_tuning_after_freeze": false,
+        "wetlab_dependency": false
+      },
+      "submission_package": {
+        "intended_use": "secondary external generalization packet",
+        "share_as": [
+          "manifest.json",
+          "manifest.md",
+          "zip"
+        ]
+      },
+      "tasks": [
+        {
+          "task_id": "gpcr_chembl50_full",
+          "domain": "gpcr",
+          "kind": "ligand_stress",
+          "profile_json": "config/ligand_htvs_blind_gpcr_adrb2_chembl50_v3_scorefix2_rb_boot31.json",
+          "ligand_sizes": "10000",
+          "date_tag_suffix": "gpcr-chembl50-full"
+        },
+        {
+          "task_id": "ion_trpv1_chembl50_full",
+          "domain": "ion_channel",
+          "kind": "ligand_stress",
+          "profile_json": "config/ligand_htvs_blind_trpv1_chembl50_v3_scorefix2_rb_boot31.json",
+          "ligand_sizes": "10000",
+          "date_tag_suffix": "trpv1-chembl50-full"
+        },
+        {
+          "task_id": "kinase_strict_full",
+          "domain": "kinase",
+          "kind": "ligand_stress",
+          "profile_json": "config/ligand_htvs_commercial_validation_disjoint_strict_v3_gatefix1_rb_boot31.json",
+          "ligand_sizes": "10000",
+          "date_tag_suffix": "kinase-strict-full"
+        },
+        {
+          "task_id": "idp_release_current",
+          "domain": "idp",
+          "kind": "idp_reference_current_full"
+        }
+      ]
+    },
+    {
+      "set_id": "set3_operational_smoke",
+      "title": "Operational Smoke Set",
+      "purpose": "Fast reproducibility support set used to demonstrate that the architecture survives small reruns across the same four domains.",
+      "claim_role": "reproducibility_support",
+      "preregistered_claim": "Supplemental robustness evidence for scenario bootstrap_seed_shift1 under frozen targets, labels, gates, and acceptance rules.",
+      "acceptance_policy": {
+        "set_pass_rule": "all tasks pass after smoke-specific ligand acceptance logic",
+        "ligand_smoke_rule": "if stage5_ranking_eval ok, stage45_eval_integrity ok, and the only stage6 failure is ranking_eval_unique_keys at n=64, treat the run as an accepted smoke pass while preserving raw_pass=false",
+        "idp_rule": "use fresh current smoke rerun output"
+      },
+      "blind_governance": {
+        "target_editing_after_freeze": false,
+        "threshold_tuning_after_freeze": false,
+        "wetlab_dependency": false
+      },
+      "submission_package": {
+        "intended_use": "reproducibility support packet",
+        "share_as": [
+          "manifest.json",
+          "manifest.md",
+          "zip"
+        ]
+      },
+      "tasks": [
+        {
+          "task_id": "gpcr_smoke",
+          "domain": "gpcr",
+          "kind": "ligand_stress",
+          "profile_json": "config/ligand_htvs_blind_gpcr_adrb2_v4_scorefix3_rb_boot31.json",
+          "ligand_sizes": "64",
+          "date_tag_suffix": "gpcr-smoke"
+        },
+        {
+          "task_id": "ion_trpv1_chembl20_smoke",
+          "domain": "ion_channel",
+          "kind": "ligand_stress",
+          "profile_json": "config/ligand_htvs_blind_trpv1_chembl20_v3_scorefix2_rb_boot31.json",
+          "ligand_sizes": "64",
+          "date_tag_suffix": "trpv1-chembl20-smoke"
+        },
+        {
+          "task_id": "kinase_smoke",
+          "domain": "kinase",
+          "kind": "ligand_stress",
+          "profile_json": "config/ligand_htvs_commercial_validation_disjoint_strict_poscounter_smoke_v3_gatefix1_rb_boot31.json",
+          "ligand_sizes": "64",
+          "date_tag_suffix": "kinase-smoke"
+        },
+        {
+          "task_id": "idp_smoke_current",
+          "domain": "idp",
+          "kind": "idp_smoke_current"
+        }
+      ]
+    }
+  ],
+  "supersedes_protocol_id": "external_validation_biorxiv_blind_sets_v5",
+  "revision_note": "bootstrap_seed_shift1 preserves targets, labels, gates, and accepted score selections while applying the following perturbations where supported: ranking_bootstrap_seed.",
+  "description": "Supplemental robustness scenario 'bootstrap_seed_shift1' built on the promoted v7r1 stack. Change only ranking_bootstrap_seed from 17 to 31 to test uncertainty-estimation stability without changing generated ligand or decoy structures."
+}

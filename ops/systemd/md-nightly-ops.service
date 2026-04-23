@@ -1,0 +1,14 @@
+[Unit]
+Description=Molecular Dynamics Nightly Ops Batch
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/분자동역학
+ExecStart=/usr/bin/bash -lc 'cd "$HOME/분자동역학" && ./tools/run_nightly_ops.sh --mode full --targets all'
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+[Install]
+WantedBy=default.target

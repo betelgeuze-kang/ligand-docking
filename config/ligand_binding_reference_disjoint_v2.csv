@@ -1,0 +1,13 @@
+target,ligand_id,reference_binding_kcal_mol,is_binder,source
+EGFR_KINASE,egfr_erlotinib,-9.2,1,disjoint_proxy_v2
+EGFR_KINASE,egfr_gefitinib,-8.6,1,disjoint_proxy_v2
+EGFR_KINASE,egfr_lapatinib,-8.1,1,disjoint_proxy_v2
+EGFR_KINASE,egfr_decoy_ibuprofen,-2.0,0,disjoint_proxy_v2
+EGFR_KINASE,egfr_decoy_aspirin,-1.1,0,disjoint_proxy_v2
+EGFR_KINASE,egfr_decoy_caffeine,-0.5,0,disjoint_proxy_v2
+HIV1_PROTEASE,hiv_darunavir,-10.0,1,disjoint_proxy_v2
+HIV1_PROTEASE,hiv_atazanavir,-9.4,1,disjoint_proxy_v2
+HIV1_PROTEASE,hiv_lopinavir,-8.8,1,disjoint_proxy_v2
+HIV1_PROTEASE,hiv_decoy_metformin,-1.3,0,disjoint_proxy_v2
+HIV1_PROTEASE,hiv_decoy_acetaminophen,-1.0,0,disjoint_proxy_v2
+HIV1_PROTEASE,hiv_decoy_propranolol,-0.8,0,disjoint_proxy_v2

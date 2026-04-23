@@ -1,0 +1,17 @@
+{
+  "generated_at_local": "2026-02-15T04:05:13",
+  "target_checkpoints": {
+    "WW_Domain_FiP35": "/home/betelgeuze/분자동역학/models/target_ckpts_afdb_weighted_2026-02-15/airouter_ww_domain_fip35_afdbw.pth",
+    "FSD_1": "/home/betelgeuze/분자동역학/models/target_ckpts_afdb_weighted_2026-02-15/airouter_fsd_1_afdbw.pth",
+    "Chignolin": "/home/betelgeuze/분자동역학/models/target_ckpts_afdb_weighted_2026-02-15/airouter_chignolin_afdbw.pth",
+    "Ubiquitin_Mini": "/home/betelgeuze/분자동역학/models/target_ckpts_afdb_weighted_2026-02-15/airouter_ubiquitin_mini_afdbw.pth",
+    "Trp_Cage": "/home/betelgeuze/분자동역학/models/target_ckpts_afdb_weighted_2026-02-15/airouter_trp_cage_afdbw.pth",
+    "Villin_HP35": "/home/betelgeuze/분자동역학/models/target_ckpts_afdb_weighted_2026-02-15/airouter_villin_hp35_afdbw.pth",
+    "Crambin": "/home/betelgeuze/분자동역학/models/target_ckpts_afdb_weighted_2026-02-15/airouter_crambin_afdbw.pth",
+    "BBA5": "/home/betelgeuze/분자동역학/models/target_ckpts_afdb_weighted_2026-02-15/airouter_bba5_afdbw.pth",
+    "GB1_Mini": "/home/betelgeuze/분자동역학/models/target_ckpts_afdb_weighted_2026-02-15/airouter_gb1_mini_afdbw.pth",
+    "Protein_A_Bdomain": "/home/betelgeuze/분자동역학/models/target_ckpts_afdb_weighted_2026-02-15/airouter_protein_a_bdomain_afdbw.pth"
+  },
+  "default": "/home/betelgeuze/분자동역학/models/target_ckpts_afdb_weighted_2026-02-15/airouter_ww_domain_fip35_afdbw.pth",
+  "manifest_used": "runs/distilled_residual_manifest_bigdata_afdb_weighted_2026-02-15.csv"
+}

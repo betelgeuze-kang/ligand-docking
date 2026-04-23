@@ -1,0 +1,4 @@
+target,pdb_id,uniprot_id,notes
+p53_DBD_DNA_Complex,1TSR,P04637,dna_binding_domain_complex
+TBP_DNA_Complex,1CDW,P20226,tata_box_binding_complex
+Lac_Repressor_DNA_Complex,1LBG,P03023,dna_operator_binding_complex

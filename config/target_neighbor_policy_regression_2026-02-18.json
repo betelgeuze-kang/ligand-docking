@@ -1,0 +1,18 @@
+{
+  "Protein_A_Bdomain": {
+    "grid_spacing": 11.5,
+    "cutoff": 11.5,
+    "skin": 1.5,
+    "max_neighbors": 96,
+    "max_atoms_per_cell": 64,
+    "rebuild_stride": 4
+  },
+  "WW_Domain_FiP35": {
+    "grid_spacing": 12.0,
+    "cutoff": 12.0,
+    "skin": 2.0,
+    "max_neighbors": 96,
+    "max_atoms_per_cell": 64,
+    "rebuild_stride": 4
+  }
+}

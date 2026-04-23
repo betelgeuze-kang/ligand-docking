@@ -1,0 +1,143 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="700" viewBox="0 0 1500 700" role="img" aria-labelledby="title desc">
+  <title id="title">Camera-ready corrective validation figure</title>
+  <desc id="desc">Compact summary of corrective revisions, final set outcomes, GPCR close-out, and promoted package audit.</desc>
+  <style>
+    .bg { fill: #fbfcfd; }
+    .title { font: 700 26px Arial, sans-serif; fill: #0f172a; }
+    .subtitle { font: 400 14px Arial, sans-serif; fill: #475569; }
+    .panel { fill: #ffffff; stroke: #d7dee8; stroke-width: 1.5; }
+    .panel-title { font: 700 17px Arial, sans-serif; fill: #111827; }
+    .label { font: 700 14px Arial, sans-serif; fill: #111827; }
+    .body { font: 400 12px Arial, sans-serif; fill: #1f2937; }
+    .small { font: 400 11px Arial, sans-serif; fill: #4b5563; }
+    .archived { fill: #eceff3; stroke: #6b7280; stroke-width: 2; }
+    .corrective { fill: #f8e7c8; stroke: #9a6a12; stroke-width: 2; }
+    .accepted { fill: #dff5e8; stroke: #2d7a46; stroke-width: 2.5; }
+    .passbox { fill: #dff5e8; stroke: #2d7a46; stroke-width: 1.5; }
+    .line { stroke: #94a3b8; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+    .good { font: 700 14px Arial, sans-serif; fill: #166534; }
+    .old { font: 700 14px Arial, sans-serif; fill: #92400e; }
+    .divider { stroke: #cbd5e1; stroke-width: 2; }
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="1500" height="700"/>
+  <text class="title" x="32" y="46">Corrective validation close-out and promoted cross-domain package</text>
+  <text class="subtitle" x="32" y="70">Current promoted package: 2026-03-22_biorxiv_v7r1</text>
+
+  <rect class="panel" x="24" y="96" width="1452" height="208" rx="18"/>
+  <text class="panel-title" x="44" y="126">A. Corrective revision timeline</text>
+
+  <rect class="archived" x="44" y="160" width="132" height="80" rx="12"/>
+  <text class="label" x="60" y="188">v1</text>
+  <text class="body" x="60" y="210">Frozen preregistration</text>
+  <text class="body" x="60" y="228">Infra + split confounds</text>
+
+  <rect class="corrective" x="232" y="160" width="132" height="80" rx="12"/>
+  <text class="label" x="248" y="188">v2</text>
+  <text class="body" x="248" y="210">Heavy-root +</text>
+  <text class="body" x="248" y="228">disjoint split fix</text>
+
+  <rect class="corrective" x="420" y="160" width="132" height="80" rx="12"/>
+  <text class="label" x="436" y="188">v3</text>
+  <text class="body" x="436" y="210">Blind score wiring</text>
+  <text class="body" x="436" y="228">corrected</text>
+
+  <rect class="corrective" x="608" y="160" width="132" height="80" rx="12"/>
+  <text class="label" x="624" y="188">v4</text>
+  <text class="body" x="624" y="210">Kinase gate</text>
+  <text class="body" x="624" y="228">correction</text>
+
+  <rect class="corrective" x="796" y="160" width="132" height="80" rx="12"/>
+  <text class="label" x="812" y="188">v5</text>
+  <text class="body" x="812" y="210">GPCR residual</text>
+  <text class="body" x="812" y="228">blocker focus</text>
+
+  <rect class="corrective" x="984" y="160" width="132" height="80" rx="12"/>
+  <text class="label" x="1000" y="188">v6r1</text>
+  <text class="body" x="1000" y="210">Inline-score prior</text>
+  <text class="body" x="1000" y="228">bug identified</text>
+
+  <rect class="accepted" x="1172" y="160" width="220" height="80" rx="12"/>
+  <text class="label" x="1188" y="188">v6r3</text>
+  <text class="body" x="1188" y="210">First all-pass close-out</text>
+  <text class="body" x="1188" y="228">All preregistered sets pass</text>
+
+  <path class="line" d="M176 200 L232 200"/>
+  <path class="line" d="M364 200 L420 200"/>
+  <path class="line" d="M552 200 L608 200"/>
+  <path class="line" d="M740 200 L796 200"/>
+  <path class="line" d="M928 200 L984 200"/>
+  <path class="line" d="M1116 200 L1172 200"/>
+
+  <text class="small" x="184" y="150">infra + leakage</text>
+  <text class="small" x="376" y="248">score wiring</text>
+  <text class="small" x="560" y="150">kinase gate</text>
+  <text class="small" x="748" y="248">GPCR blocker</text>
+  <text class="small" x="936" y="150">live rerun</text>
+  <text class="small" x="1124" y="248">priors fix</text>
+
+  <rect class="panel" x="24" y="328" width="440" height="340" rx="18"/>
+  <text class="panel-title" x="44" y="358">B. Final set outcomes</text>
+  <text class="label" x="52" y="396">Set</text>
+  <text class="label" x="240" y="396">Role</text>
+  <text class="label" x="380" y="396">Result</text>
+  <line class="divider" x1="50" y1="408" x2="438" y2="408"/>
+  <text class="body" x="52" y="444">Core Blind</text>
+  <text class="body" x="240" y="444">primary</text>
+  <rect class="passbox" x="366" y="424" width="62" height="26" rx="10"/><text class="label" x="381" y="442">PASS</text>
+  <text class="body" x="52" y="490">Expanded OOD</text>
+  <text class="body" x="240" y="490">secondary_generalization</text>
+  <rect class="passbox" x="366" y="470" width="62" height="26" rx="10"/><text class="label" x="381" y="488">PASS</text>
+  <text class="body" x="52" y="536">Operational Smoke</text>
+  <text class="body" x="240" y="536">reproducibility_support</text>
+  <rect class="passbox" x="366" y="516" width="62" height="26" rx="10"/><text class="label" x="381" y="534">PASS</text>
+  <text class="small" x="52" y="584">All three preregistered claim layers passed.</text>
+
+  <rect class="panel" x="486" y="328" width="500" height="340" rx="18"/>
+  <text class="panel-title" x="506" y="358">C. Cross-domain matrix</text>
+  <text class="label" x="510" y="396">Set</text>
+  <text class="label" x="672" y="396">GPCR</text>
+  <text class="label" x="760" y="396">Ion</text>
+  <text class="label" x="840" y="396">Kinase</text>
+  <text class="label" x="930" y="396">IDP</text>
+  <line class="divider" x1="508" y1="408" x2="962" y2="408"/>
+  <text class="body" x="510" y="444">set1_core_blind</text>
+  <text class="good" x="672" y="444">PASS</text>
+  <text class="good" x="760" y="444">PASS</text>
+  <text class="good" x="840" y="444">PASS</text>
+  <text class="good" x="930" y="444">PASS</text>
+  <text class="small" x="672" y="468">final blocker closed in v6r3</text>
+  <text class="body" x="510" y="516">set2_expanded_ood</text>
+  <text class="good" x="672" y="516">PASS</text>
+  <text class="good" x="760" y="516">PASS</text>
+  <text class="good" x="840" y="516">PASS</text>
+  <text class="good" x="930" y="516">PASS</text>
+  <text class="body" x="510" y="588">set3_operational_smoke</text>
+  <text class="good" x="672" y="588">PASS</text>
+  <text class="good" x="760" y="588">PASS</text>
+  <text class="good" x="840" y="588">PASS</text>
+  <text class="good" x="930" y="588">PASS</text>
+
+  <rect class="panel" x="1008" y="328" width="468" height="340" rx="18"/>
+  <text class="panel-title" x="1028" y="358">D. GPCR close-out and promoted package</text>
+  <text class="label" x="1034" y="396">GPCR core blind</text>
+  <text class="body" x="1034" y="438">v4r1</text>
+  <text class="old" x="1110" y="438">PR 0.4336</text>
+  <text class="body" x="1230" y="438">top20 0.15</text>
+  <text class="body" x="1340" y="438">hits 3</text>
+  <text class="body" x="1034" y="474">v6r3</text>
+  <text class="good" x="1110" y="474">PR 1.000</text>
+  <text class="body" x="1230" y="474">top20 0.30</text>
+  <text class="body" x="1340" y="474">hits 6</text>
+  <text class="small" x="1034" y="516">binding_score_composite_v7 + inline-score priors fix</text>
+  <line class="divider" x1="1032" y1="544" x2="1450" y2="544"/>
+  <text class="label" x="1034" y="578">Promoted package</text>
+  <text class="body" x="1034" y="608">Run: 2026-03-22_biorxiv_v7r1</text>
+  <text class="body" x="1034" y="632">Zip: biorxiv_external_validation_package_current.zip</text>
+  <text class="good" x="1034" y="658">Audit: pass = true; failure_count = 0</text>
+</svg>

@@ -1,0 +1,2248 @@
+{
+  "version": "idp_3bead_benchmark_v7",
+  "description": "Expanded 20+ target IDP branch benchmark with 6-8 environment sweeps per target.",
+  "runtime": {
+    "device": "cuda",
+    "rollout_steps": 160,
+    "sample_stride": 4,
+    "dt": 0.045,
+    "thermal_noise": 0.018,
+    "knn_k": 12,
+    "ionic_strength": 0.15,
+    "pH": 7.2,
+    "ptm_count": 0.0,
+    "hydro_strength": 1.0,
+    "cooling_rate": 0.0,
+    "idp_force_backend": "auto",
+    "idp_neighbor_settings": {
+      "grid_spacing": 12.0,
+      "cutoff": 12.0,
+      "skin": 2.0,
+      "rebuild_stride": 4,
+      "max_neighbors": 48,
+      "candidate_max_neighbors": 64,
+      "max_atoms_per_cell": 64,
+      "seq_window": 8,
+      "force_backend": "auto",
+      "generic_nonbonded_enabled": false,
+      "generic_nonbonded_scale": 0.05,
+      "generic_nonbonded_mode": "additive",
+      "generic_nonbonded_replace_fraction": 0.0
+    },
+    "idp_branch_taxonomy_json": "/home/betelgeuze/분자동역학/config/idp_branch_taxonomy_v1.json",
+    "idp_branch_force_policy_json": "/home/betelgeuze/분자동역학/config/idp_branch_force_policy_v1.json",
+    "idp_observable_anchor_json": "/home/betelgeuze/분자동역학/config/idp_observable_anchors_expanded_v5.json"
+  },
+  "gate": {
+    "physics_gate_mode": "advisory",
+    "min_target_pass_fraction": 0.0,
+    "max_failed_targets": 999,
+    "min_branch_macro_f1": 0.75,
+    "min_single_branch_accuracy": 0.75,
+    "min_dominant_state_accuracy": 0.7,
+    "min_llps_flag_pr_auc": 0.75,
+    "min_aggregation_flag_pr_auc": 0.75,
+    "aggregation_branch_min_llps_flag_pr_auc": 0.0,
+    "aggregation_branch_min_helicity_rank_auc": 0.0,
+    "llps_branch_min_aggregation_flag_pr_auc": 0.0,
+    "llps_branch_min_compactness_rank_auc": 0.7,
+    "helix_branch_min_llps_flag_pr_auc": 0.0,
+    "helix_branch_min_aggregation_flag_pr_auc": 0.0,
+    "min_compactness_rank_auc": 0.8,
+    "min_helicity_rank_auc": 0.78,
+    "min_condensation_rank_auc": 0.8,
+    "min_virtual_hbond_contacts_mean": 0.1,
+    "min_anti_collapse_force_mean": 0.01,
+    "max_overcollapse_rate": 0.4
+  },
+  "targets": [
+    {
+      "name": "alpha_synuclein_full",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/alpha_synuclein_full.pdb",
+      "residue_start": 1,
+      "residue_end": 140,
+      "seed": 101,
+      "suffix": "base",
+      "condition_group": "base",
+      "split_group": "alpha_synuclein_full"
+    },
+    {
+      "name": "alpha_synuclein_full",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/alpha_synuclein_full.pdb",
+      "residue_start": 1,
+      "residue_end": 140,
+      "seed": 101,
+      "suffix": "salt_low",
+      "condition_group": "salt_low",
+      "split_group": "alpha_synuclein_full",
+      "ionic_strength": 0.05
+    },
+    {
+      "name": "alpha_synuclein_full",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/alpha_synuclein_full.pdb",
+      "residue_start": 1,
+      "residue_end": 140,
+      "seed": 101,
+      "suffix": "salt_high",
+      "condition_group": "salt_high",
+      "split_group": "alpha_synuclein_full",
+      "ionic_strength": 0.3
+    },
+    {
+      "name": "alpha_synuclein_full",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/alpha_synuclein_full.pdb",
+      "residue_start": 1,
+      "residue_end": 140,
+      "seed": 101,
+      "suffix": "ph_low",
+      "condition_group": "ph_low",
+      "split_group": "alpha_synuclein_full",
+      "pH": 6.5
+    },
+    {
+      "name": "alpha_synuclein_full",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/alpha_synuclein_full.pdb",
+      "residue_start": 1,
+      "residue_end": 140,
+      "seed": 101,
+      "suffix": "ph_high",
+      "condition_group": "ph_high",
+      "split_group": "alpha_synuclein_full",
+      "pH": 8.0
+    },
+    {
+      "name": "alpha_synuclein_full",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/alpha_synuclein_full.pdb",
+      "residue_start": 1,
+      "residue_end": 140,
+      "seed": 101,
+      "suffix": "hydro_high",
+      "condition_group": "hydro_high",
+      "split_group": "alpha_synuclein_full",
+      "hydro_strength": 1.2
+    },
+    {
+      "name": "alpha_synuclein_full",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/alpha_synuclein_full.pdb",
+      "residue_start": 1,
+      "residue_end": 140,
+      "seed": 101,
+      "suffix": "ptm1",
+      "condition_group": "ptm1",
+      "split_group": "alpha_synuclein_full",
+      "ptm_count": 1.0
+    },
+    {
+      "name": "alpha_synuclein_full",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/alpha_synuclein_full.pdb",
+      "residue_start": 1,
+      "residue_end": 140,
+      "seed": 101,
+      "suffix": "cooling",
+      "condition_group": "cooling",
+      "split_group": "alpha_synuclein_full",
+      "cooling_rate": 0.2
+    },
+    {
+      "name": "fus_lcd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/fus_lcd.pdb",
+      "residue_start": 1,
+      "residue_end": 214,
+      "seed": 102,
+      "suffix": "base",
+      "condition_group": "base",
+      "split_group": "fus_lcd"
+    },
+    {
+      "name": "fus_lcd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/fus_lcd.pdb",
+      "residue_start": 1,
+      "residue_end": 214,
+      "seed": 102,
+      "suffix": "salt_low",
+      "condition_group": "salt_low",
+      "split_group": "fus_lcd",
+      "ionic_strength": 0.05
+    },
+    {
+      "name": "fus_lcd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/fus_lcd.pdb",
+      "residue_start": 1,
+      "residue_end": 214,
+      "seed": 102,
+      "suffix": "salt_high",
+      "condition_group": "salt_high",
+      "split_group": "fus_lcd",
+      "ionic_strength": 0.3
+    },
+    {
+      "name": "fus_lcd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/fus_lcd.pdb",
+      "residue_start": 1,
+      "residue_end": 214,
+      "seed": 102,
+      "suffix": "ph_low",
+      "condition_group": "ph_low",
+      "split_group": "fus_lcd",
+      "pH": 6.5
+    },
+    {
+      "name": "fus_lcd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/fus_lcd.pdb",
+      "residue_start": 1,
+      "residue_end": 214,
+      "seed": 102,
+      "suffix": "ph_high",
+      "condition_group": "ph_high",
+      "split_group": "fus_lcd",
+      "pH": 8.0
+    },
+    {
+      "name": "fus_lcd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/fus_lcd.pdb",
+      "residue_start": 1,
+      "residue_end": 214,
+      "seed": 102,
+      "suffix": "hydro_high",
+      "condition_group": "hydro_high",
+      "split_group": "fus_lcd",
+      "hydro_strength": 1.2
+    },
+    {
+      "name": "fus_lcd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/fus_lcd.pdb",
+      "residue_start": 1,
+      "residue_end": 214,
+      "seed": 102,
+      "suffix": "ptm1",
+      "condition_group": "ptm1",
+      "split_group": "fus_lcd",
+      "ptm_count": 1.0
+    },
+    {
+      "name": "fus_lcd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/fus_lcd.pdb",
+      "residue_start": 1,
+      "residue_end": 214,
+      "seed": 102,
+      "suffix": "cooling",
+      "condition_group": "cooling",
+      "split_group": "fus_lcd",
+      "cooling_rate": 0.2
+    },
+    {
+      "name": "hnrnpa1_lcd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/hnrnpa1_lcd.pdb",
+      "residue_start": 186,
+      "residue_end": 320,
+      "seed": 103,
+      "suffix": "base",
+      "condition_group": "base",
+      "split_group": "hnrnpa1_lcd"
+    },
+    {
+      "name": "hnrnpa1_lcd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/hnrnpa1_lcd.pdb",
+      "residue_start": 186,
+      "residue_end": 320,
+      "seed": 103,
+      "suffix": "salt_low",
+      "condition_group": "salt_low",
+      "split_group": "hnrnpa1_lcd",
+      "ionic_strength": 0.05
+    },
+    {
+      "name": "hnrnpa1_lcd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/hnrnpa1_lcd.pdb",
+      "residue_start": 186,
+      "residue_end": 320,
+      "seed": 103,
+      "suffix": "salt_high",
+      "condition_group": "salt_high",
+      "split_group": "hnrnpa1_lcd",
+      "ionic_strength": 0.3
+    },
+    {
+      "name": "hnrnpa1_lcd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/hnrnpa1_lcd.pdb",
+      "residue_start": 186,
+      "residue_end": 320,
+      "seed": 103,
+      "suffix": "ph_low",
+      "condition_group": "ph_low",
+      "split_group": "hnrnpa1_lcd",
+      "pH": 6.5
+    },
+    {
+      "name": "hnrnpa1_lcd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/hnrnpa1_lcd.pdb",
+      "residue_start": 186,
+      "residue_end": 320,
+      "seed": 103,
+      "suffix": "ph_high",
+      "condition_group": "ph_high",
+      "split_group": "hnrnpa1_lcd",
+      "pH": 8.0
+    },
+    {
+      "name": "hnrnpa1_lcd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/hnrnpa1_lcd.pdb",
+      "residue_start": 186,
+      "residue_end": 320,
+      "seed": 103,
+      "suffix": "hydro_high",
+      "condition_group": "hydro_high",
+      "split_group": "hnrnpa1_lcd",
+      "hydro_strength": 1.2
+    },
+    {
+      "name": "hnrnpa1_lcd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/hnrnpa1_lcd.pdb",
+      "residue_start": 186,
+      "residue_end": 320,
+      "seed": 103,
+      "suffix": "ptm1",
+      "condition_group": "ptm1",
+      "split_group": "hnrnpa1_lcd",
+      "ptm_count": 1.0
+    },
+    {
+      "name": "hnrnpa1_lcd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/hnrnpa1_lcd.pdb",
+      "residue_start": 186,
+      "residue_end": 320,
+      "seed": 103,
+      "suffix": "cooling",
+      "condition_group": "cooling",
+      "split_group": "hnrnpa1_lcd",
+      "cooling_rate": 0.2
+    },
+    {
+      "name": "tardbp_ctd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tardbp_ctd.pdb",
+      "residue_start": 267,
+      "residue_end": 414,
+      "seed": 104,
+      "suffix": "base",
+      "condition_group": "base",
+      "split_group": "tardbp_ctd"
+    },
+    {
+      "name": "tardbp_ctd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tardbp_ctd.pdb",
+      "residue_start": 267,
+      "residue_end": 414,
+      "seed": 104,
+      "suffix": "salt_low",
+      "condition_group": "salt_low",
+      "split_group": "tardbp_ctd",
+      "ionic_strength": 0.05
+    },
+    {
+      "name": "tardbp_ctd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tardbp_ctd.pdb",
+      "residue_start": 267,
+      "residue_end": 414,
+      "seed": 104,
+      "suffix": "salt_high",
+      "condition_group": "salt_high",
+      "split_group": "tardbp_ctd",
+      "ionic_strength": 0.3
+    },
+    {
+      "name": "tardbp_ctd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tardbp_ctd.pdb",
+      "residue_start": 267,
+      "residue_end": 414,
+      "seed": 104,
+      "suffix": "ph_low",
+      "condition_group": "ph_low",
+      "split_group": "tardbp_ctd",
+      "pH": 6.5
+    },
+    {
+      "name": "tardbp_ctd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tardbp_ctd.pdb",
+      "residue_start": 267,
+      "residue_end": 414,
+      "seed": 104,
+      "suffix": "ph_high",
+      "condition_group": "ph_high",
+      "split_group": "tardbp_ctd",
+      "pH": 8.0
+    },
+    {
+      "name": "tardbp_ctd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tardbp_ctd.pdb",
+      "residue_start": 267,
+      "residue_end": 414,
+      "seed": 104,
+      "suffix": "hydro_high",
+      "condition_group": "hydro_high",
+      "split_group": "tardbp_ctd",
+      "hydro_strength": 1.2
+    },
+    {
+      "name": "tardbp_ctd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tardbp_ctd.pdb",
+      "residue_start": 267,
+      "residue_end": 414,
+      "seed": 104,
+      "suffix": "ptm1",
+      "condition_group": "ptm1",
+      "split_group": "tardbp_ctd",
+      "ptm_count": 1.0
+    },
+    {
+      "name": "tardbp_ctd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tardbp_ctd.pdb",
+      "residue_start": 267,
+      "residue_end": 414,
+      "seed": 104,
+      "suffix": "cooling",
+      "condition_group": "cooling",
+      "split_group": "tardbp_ctd",
+      "cooling_rate": 0.2
+    },
+    {
+      "name": "tp53_tad",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tp53_tad.pdb",
+      "residue_start": 1,
+      "residue_end": 93,
+      "seed": 105,
+      "suffix": "base",
+      "condition_group": "base",
+      "split_group": "tp53_tad"
+    },
+    {
+      "name": "tp53_tad",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tp53_tad.pdb",
+      "residue_start": 1,
+      "residue_end": 93,
+      "seed": 105,
+      "suffix": "salt_low",
+      "condition_group": "salt_low",
+      "split_group": "tp53_tad",
+      "ionic_strength": 0.05
+    },
+    {
+      "name": "tp53_tad",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tp53_tad.pdb",
+      "residue_start": 1,
+      "residue_end": 93,
+      "seed": 105,
+      "suffix": "salt_high",
+      "condition_group": "salt_high",
+      "split_group": "tp53_tad",
+      "ionic_strength": 0.3
+    },
+    {
+      "name": "tp53_tad",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tp53_tad.pdb",
+      "residue_start": 1,
+      "residue_end": 93,
+      "seed": 105,
+      "suffix": "ph_low",
+      "condition_group": "ph_low",
+      "split_group": "tp53_tad",
+      "pH": 6.5
+    },
+    {
+      "name": "tp53_tad",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tp53_tad.pdb",
+      "residue_start": 1,
+      "residue_end": 93,
+      "seed": 105,
+      "suffix": "ph_high",
+      "condition_group": "ph_high",
+      "split_group": "tp53_tad",
+      "pH": 8.0
+    },
+    {
+      "name": "tp53_tad",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tp53_tad.pdb",
+      "residue_start": 1,
+      "residue_end": 93,
+      "seed": 105,
+      "suffix": "hydro_high",
+      "condition_group": "hydro_high",
+      "split_group": "tp53_tad",
+      "hydro_strength": 1.2
+    },
+    {
+      "name": "tp53_tad",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tp53_tad.pdb",
+      "residue_start": 1,
+      "residue_end": 93,
+      "seed": 105,
+      "suffix": "ptm1",
+      "condition_group": "ptm1",
+      "split_group": "tp53_tad",
+      "ptm_count": 1.0
+    },
+    {
+      "name": "tp53_tad",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tp53_tad.pdb",
+      "residue_start": 1,
+      "residue_end": 93,
+      "seed": 105,
+      "suffix": "cooling",
+      "condition_group": "cooling",
+      "split_group": "tp53_tad",
+      "cooling_rate": 0.2
+    },
+    {
+      "name": "tau_k18",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tau_k18.pdb",
+      "residue_start": 244,
+      "residue_end": 372,
+      "seed": 106,
+      "suffix": "base",
+      "condition_group": "base",
+      "split_group": "tau_k18"
+    },
+    {
+      "name": "tau_k18",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tau_k18.pdb",
+      "residue_start": 244,
+      "residue_end": 372,
+      "seed": 106,
+      "suffix": "salt_low",
+      "condition_group": "salt_low",
+      "split_group": "tau_k18",
+      "ionic_strength": 0.05
+    },
+    {
+      "name": "tau_k18",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tau_k18.pdb",
+      "residue_start": 244,
+      "residue_end": 372,
+      "seed": 106,
+      "suffix": "salt_high",
+      "condition_group": "salt_high",
+      "split_group": "tau_k18",
+      "ionic_strength": 0.3
+    },
+    {
+      "name": "tau_k18",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tau_k18.pdb",
+      "residue_start": 244,
+      "residue_end": 372,
+      "seed": 106,
+      "suffix": "ph_low",
+      "condition_group": "ph_low",
+      "split_group": "tau_k18",
+      "pH": 6.5
+    },
+    {
+      "name": "tau_k18",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tau_k18.pdb",
+      "residue_start": 244,
+      "residue_end": 372,
+      "seed": 106,
+      "suffix": "ph_high",
+      "condition_group": "ph_high",
+      "split_group": "tau_k18",
+      "pH": 8.0
+    },
+    {
+      "name": "tau_k18",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tau_k18.pdb",
+      "residue_start": 244,
+      "residue_end": 372,
+      "seed": 106,
+      "suffix": "hydro_high",
+      "condition_group": "hydro_high",
+      "split_group": "tau_k18",
+      "hydro_strength": 1.2
+    },
+    {
+      "name": "tau_k18",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tau_k18.pdb",
+      "residue_start": 244,
+      "residue_end": 372,
+      "seed": 106,
+      "suffix": "ptm1",
+      "condition_group": "ptm1",
+      "split_group": "tau_k18",
+      "ptm_count": 1.0
+    },
+    {
+      "name": "tau_k18",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tau_k18.pdb",
+      "residue_start": 244,
+      "residue_end": 372,
+      "seed": 106,
+      "suffix": "cooling",
+      "condition_group": "cooling",
+      "split_group": "tau_k18",
+      "cooling_rate": 0.2
+    },
+    {
+      "name": "sic1_ntd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/sic1_ntd.pdb",
+      "residue_start": 1,
+      "residue_end": 90,
+      "seed": 107,
+      "suffix": "base",
+      "condition_group": "base",
+      "split_group": "sic1_ntd"
+    },
+    {
+      "name": "sic1_ntd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/sic1_ntd.pdb",
+      "residue_start": 1,
+      "residue_end": 90,
+      "seed": 107,
+      "suffix": "salt_low",
+      "condition_group": "salt_low",
+      "split_group": "sic1_ntd",
+      "ionic_strength": 0.05
+    },
+    {
+      "name": "sic1_ntd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/sic1_ntd.pdb",
+      "residue_start": 1,
+      "residue_end": 90,
+      "seed": 107,
+      "suffix": "salt_high",
+      "condition_group": "salt_high",
+      "split_group": "sic1_ntd",
+      "ionic_strength": 0.3
+    },
+    {
+      "name": "sic1_ntd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/sic1_ntd.pdb",
+      "residue_start": 1,
+      "residue_end": 90,
+      "seed": 107,
+      "suffix": "ph_low",
+      "condition_group": "ph_low",
+      "split_group": "sic1_ntd",
+      "pH": 6.5
+    },
+    {
+      "name": "sic1_ntd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/sic1_ntd.pdb",
+      "residue_start": 1,
+      "residue_end": 90,
+      "seed": 107,
+      "suffix": "ph_high",
+      "condition_group": "ph_high",
+      "split_group": "sic1_ntd",
+      "pH": 8.0
+    },
+    {
+      "name": "sic1_ntd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/sic1_ntd.pdb",
+      "residue_start": 1,
+      "residue_end": 90,
+      "seed": 107,
+      "suffix": "hydro_high",
+      "condition_group": "hydro_high",
+      "split_group": "sic1_ntd",
+      "hydro_strength": 1.2
+    },
+    {
+      "name": "sic1_ntd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/sic1_ntd.pdb",
+      "residue_start": 1,
+      "residue_end": 90,
+      "seed": 107,
+      "suffix": "ptm1",
+      "condition_group": "ptm1",
+      "split_group": "sic1_ntd",
+      "ptm_count": 1.0
+    },
+    {
+      "name": "sic1_ntd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/sic1_ntd.pdb",
+      "residue_start": 1,
+      "residue_end": 90,
+      "seed": 107,
+      "suffix": "cooling",
+      "condition_group": "cooling",
+      "split_group": "sic1_ntd",
+      "cooling_rate": 0.2
+    },
+    {
+      "name": "amyloid_beta_40",
+      "source": "synthetic",
+      "n_res": 40,
+      "seed": 201,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "base",
+      "condition_group": "base",
+      "split_group": "amyloid_beta_40"
+    },
+    {
+      "name": "amyloid_beta_40",
+      "source": "synthetic",
+      "n_res": 40,
+      "seed": 201,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "salt_low",
+      "condition_group": "salt_low",
+      "split_group": "amyloid_beta_40",
+      "ionic_strength": 0.05
+    },
+    {
+      "name": "amyloid_beta_40",
+      "source": "synthetic",
+      "n_res": 40,
+      "seed": 201,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "salt_high",
+      "condition_group": "salt_high",
+      "split_group": "amyloid_beta_40",
+      "ionic_strength": 0.3
+    },
+    {
+      "name": "amyloid_beta_40",
+      "source": "synthetic",
+      "n_res": 40,
+      "seed": 201,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "ph_low",
+      "condition_group": "ph_low",
+      "split_group": "amyloid_beta_40",
+      "pH": 6.5
+    },
+    {
+      "name": "amyloid_beta_40",
+      "source": "synthetic",
+      "n_res": 40,
+      "seed": 201,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "ph_high",
+      "condition_group": "ph_high",
+      "split_group": "amyloid_beta_40",
+      "pH": 8.0
+    },
+    {
+      "name": "amyloid_beta_40",
+      "source": "synthetic",
+      "n_res": 40,
+      "seed": 201,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "hydro_high",
+      "condition_group": "hydro_high",
+      "split_group": "amyloid_beta_40",
+      "hydro_strength": 1.2
+    },
+    {
+      "name": "amyloid_beta_40",
+      "source": "synthetic",
+      "n_res": 40,
+      "seed": 201,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "ptm1",
+      "condition_group": "ptm1",
+      "split_group": "amyloid_beta_40",
+      "ptm_count": 1.0
+    },
+    {
+      "name": "amyloid_beta_40",
+      "source": "synthetic",
+      "n_res": 40,
+      "seed": 201,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "cooling",
+      "condition_group": "cooling",
+      "split_group": "amyloid_beta_40",
+      "cooling_rate": 0.2
+    },
+    {
+      "name": "amyloid_beta_42",
+      "source": "synthetic",
+      "n_res": 42,
+      "seed": 202,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "base",
+      "condition_group": "base",
+      "split_group": "amyloid_beta_42"
+    },
+    {
+      "name": "amyloid_beta_42",
+      "source": "synthetic",
+      "n_res": 42,
+      "seed": 202,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "salt_low",
+      "condition_group": "salt_low",
+      "split_group": "amyloid_beta_42",
+      "ionic_strength": 0.05
+    },
+    {
+      "name": "amyloid_beta_42",
+      "source": "synthetic",
+      "n_res": 42,
+      "seed": 202,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "salt_high",
+      "condition_group": "salt_high",
+      "split_group": "amyloid_beta_42",
+      "ionic_strength": 0.3
+    },
+    {
+      "name": "amyloid_beta_42",
+      "source": "synthetic",
+      "n_res": 42,
+      "seed": 202,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "ph_low",
+      "condition_group": "ph_low",
+      "split_group": "amyloid_beta_42",
+      "pH": 6.5
+    },
+    {
+      "name": "amyloid_beta_42",
+      "source": "synthetic",
+      "n_res": 42,
+      "seed": 202,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "ph_high",
+      "condition_group": "ph_high",
+      "split_group": "amyloid_beta_42",
+      "pH": 8.0
+    },
+    {
+      "name": "amyloid_beta_42",
+      "source": "synthetic",
+      "n_res": 42,
+      "seed": 202,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "hydro_high",
+      "condition_group": "hydro_high",
+      "split_group": "amyloid_beta_42",
+      "hydro_strength": 1.2
+    },
+    {
+      "name": "amyloid_beta_42",
+      "source": "synthetic",
+      "n_res": 42,
+      "seed": 202,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "ptm1",
+      "condition_group": "ptm1",
+      "split_group": "amyloid_beta_42",
+      "ptm_count": 1.0
+    },
+    {
+      "name": "amyloid_beta_42",
+      "source": "synthetic",
+      "n_res": 42,
+      "seed": 202,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "cooling",
+      "condition_group": "cooling",
+      "split_group": "amyloid_beta_42",
+      "cooling_rate": 0.2
+    },
+    {
+      "name": "tau_2n4r_fragment",
+      "source": "synthetic",
+      "n_res": 120,
+      "seed": 203,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "base",
+      "condition_group": "base",
+      "split_group": "tau_2n4r_fragment"
+    },
+    {
+      "name": "tau_2n4r_fragment",
+      "source": "synthetic",
+      "n_res": 120,
+      "seed": 203,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "salt_low",
+      "condition_group": "salt_low",
+      "split_group": "tau_2n4r_fragment",
+      "ionic_strength": 0.05
+    },
+    {
+      "name": "tau_2n4r_fragment",
+      "source": "synthetic",
+      "n_res": 120,
+      "seed": 203,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "salt_high",
+      "condition_group": "salt_high",
+      "split_group": "tau_2n4r_fragment",
+      "ionic_strength": 0.3
+    },
+    {
+      "name": "tau_2n4r_fragment",
+      "source": "synthetic",
+      "n_res": 120,
+      "seed": 203,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "ph_low",
+      "condition_group": "ph_low",
+      "split_group": "tau_2n4r_fragment",
+      "pH": 6.5
+    },
+    {
+      "name": "tau_2n4r_fragment",
+      "source": "synthetic",
+      "n_res": 120,
+      "seed": 203,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "ph_high",
+      "condition_group": "ph_high",
+      "split_group": "tau_2n4r_fragment",
+      "pH": 8.0
+    },
+    {
+      "name": "tau_2n4r_fragment",
+      "source": "synthetic",
+      "n_res": 120,
+      "seed": 203,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "hydro_high",
+      "condition_group": "hydro_high",
+      "split_group": "tau_2n4r_fragment",
+      "hydro_strength": 1.2
+    },
+    {
+      "name": "tau_2n4r_fragment",
+      "source": "synthetic",
+      "n_res": 120,
+      "seed": 203,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "ptm1",
+      "condition_group": "ptm1",
+      "split_group": "tau_2n4r_fragment",
+      "ptm_count": 1.0
+    },
+    {
+      "name": "tau_2n4r_fragment",
+      "source": "synthetic",
+      "n_res": 120,
+      "seed": 203,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "cooling",
+      "condition_group": "cooling",
+      "split_group": "tau_2n4r_fragment",
+      "cooling_rate": 0.2
+    },
+    {
+      "name": "prion_like_polyq_control",
+      "source": "synthetic",
+      "n_res": 90,
+      "seed": 204,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "base",
+      "condition_group": "base",
+      "split_group": "prion_like_polyq_control"
+    },
+    {
+      "name": "prion_like_polyq_control",
+      "source": "synthetic",
+      "n_res": 90,
+      "seed": 204,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "salt_low",
+      "condition_group": "salt_low",
+      "split_group": "prion_like_polyq_control",
+      "ionic_strength": 0.05
+    },
+    {
+      "name": "prion_like_polyq_control",
+      "source": "synthetic",
+      "n_res": 90,
+      "seed": 204,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "salt_high",
+      "condition_group": "salt_high",
+      "split_group": "prion_like_polyq_control",
+      "ionic_strength": 0.3
+    },
+    {
+      "name": "prion_like_polyq_control",
+      "source": "synthetic",
+      "n_res": 90,
+      "seed": 204,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "ph_low",
+      "condition_group": "ph_low",
+      "split_group": "prion_like_polyq_control",
+      "pH": 6.5
+    },
+    {
+      "name": "prion_like_polyq_control",
+      "source": "synthetic",
+      "n_res": 90,
+      "seed": 204,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "ph_high",
+      "condition_group": "ph_high",
+      "split_group": "prion_like_polyq_control",
+      "pH": 8.0
+    },
+    {
+      "name": "prion_like_polyq_control",
+      "source": "synthetic",
+      "n_res": 90,
+      "seed": 204,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "hydro_high",
+      "condition_group": "hydro_high",
+      "split_group": "prion_like_polyq_control",
+      "hydro_strength": 1.2
+    },
+    {
+      "name": "prion_like_polyq_control",
+      "source": "synthetic",
+      "n_res": 90,
+      "seed": 204,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "ptm1",
+      "condition_group": "ptm1",
+      "split_group": "prion_like_polyq_control",
+      "ptm_count": 1.0
+    },
+    {
+      "name": "prion_like_polyq_control",
+      "source": "synthetic",
+      "n_res": 90,
+      "seed": 204,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      },
+      "suffix": "cooling",
+      "condition_group": "cooling",
+      "split_group": "prion_like_polyq_control",
+      "cooling_rate": 0.2
+    },
+    {
+      "name": "ews_lcd",
+      "source": "synthetic",
+      "n_res": 180,
+      "seed": 205,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "base",
+      "condition_group": "base",
+      "split_group": "ews_lcd"
+    },
+    {
+      "name": "ews_lcd",
+      "source": "synthetic",
+      "n_res": 180,
+      "seed": 205,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "salt_low",
+      "condition_group": "salt_low",
+      "split_group": "ews_lcd",
+      "ionic_strength": 0.05
+    },
+    {
+      "name": "ews_lcd",
+      "source": "synthetic",
+      "n_res": 180,
+      "seed": 205,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "salt_high",
+      "condition_group": "salt_high",
+      "split_group": "ews_lcd",
+      "ionic_strength": 0.3
+    },
+    {
+      "name": "ews_lcd",
+      "source": "synthetic",
+      "n_res": 180,
+      "seed": 205,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "ph_low",
+      "condition_group": "ph_low",
+      "split_group": "ews_lcd",
+      "pH": 6.5
+    },
+    {
+      "name": "ews_lcd",
+      "source": "synthetic",
+      "n_res": 180,
+      "seed": 205,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "ph_high",
+      "condition_group": "ph_high",
+      "split_group": "ews_lcd",
+      "pH": 8.0
+    },
+    {
+      "name": "ews_lcd",
+      "source": "synthetic",
+      "n_res": 180,
+      "seed": 205,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "hydro_high",
+      "condition_group": "hydro_high",
+      "split_group": "ews_lcd",
+      "hydro_strength": 1.2
+    },
+    {
+      "name": "ews_lcd",
+      "source": "synthetic",
+      "n_res": 180,
+      "seed": 205,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "ptm1",
+      "condition_group": "ptm1",
+      "split_group": "ews_lcd",
+      "ptm_count": 1.0
+    },
+    {
+      "name": "ews_lcd",
+      "source": "synthetic",
+      "n_res": 180,
+      "seed": 205,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "cooling",
+      "condition_group": "cooling",
+      "split_group": "ews_lcd",
+      "cooling_rate": 0.2
+    },
+    {
+      "name": "tia1_lcd",
+      "source": "synthetic",
+      "n_res": 160,
+      "seed": 206,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "base",
+      "condition_group": "base",
+      "split_group": "tia1_lcd"
+    },
+    {
+      "name": "tia1_lcd",
+      "source": "synthetic",
+      "n_res": 160,
+      "seed": 206,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "salt_low",
+      "condition_group": "salt_low",
+      "split_group": "tia1_lcd",
+      "ionic_strength": 0.05
+    },
+    {
+      "name": "tia1_lcd",
+      "source": "synthetic",
+      "n_res": 160,
+      "seed": 206,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "salt_high",
+      "condition_group": "salt_high",
+      "split_group": "tia1_lcd",
+      "ionic_strength": 0.3
+    },
+    {
+      "name": "tia1_lcd",
+      "source": "synthetic",
+      "n_res": 160,
+      "seed": 206,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "ph_low",
+      "condition_group": "ph_low",
+      "split_group": "tia1_lcd",
+      "pH": 6.5
+    },
+    {
+      "name": "tia1_lcd",
+      "source": "synthetic",
+      "n_res": 160,
+      "seed": 206,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "ph_high",
+      "condition_group": "ph_high",
+      "split_group": "tia1_lcd",
+      "pH": 8.0
+    },
+    {
+      "name": "tia1_lcd",
+      "source": "synthetic",
+      "n_res": 160,
+      "seed": 206,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "hydro_high",
+      "condition_group": "hydro_high",
+      "split_group": "tia1_lcd",
+      "hydro_strength": 1.2
+    },
+    {
+      "name": "tia1_lcd",
+      "source": "synthetic",
+      "n_res": 160,
+      "seed": 206,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "ptm1",
+      "condition_group": "ptm1",
+      "split_group": "tia1_lcd",
+      "ptm_count": 1.0
+    },
+    {
+      "name": "tia1_lcd",
+      "source": "synthetic",
+      "n_res": 160,
+      "seed": 206,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "cooling",
+      "condition_group": "cooling",
+      "split_group": "tia1_lcd",
+      "cooling_rate": 0.2
+    },
+    {
+      "name": "ddx4_n1",
+      "source": "synthetic",
+      "n_res": 220,
+      "seed": 207,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "base",
+      "condition_group": "base",
+      "split_group": "ddx4_n1"
+    },
+    {
+      "name": "ddx4_n1",
+      "source": "synthetic",
+      "n_res": 220,
+      "seed": 207,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "salt_low",
+      "condition_group": "salt_low",
+      "split_group": "ddx4_n1",
+      "ionic_strength": 0.05
+    },
+    {
+      "name": "ddx4_n1",
+      "source": "synthetic",
+      "n_res": 220,
+      "seed": 207,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "salt_high",
+      "condition_group": "salt_high",
+      "split_group": "ddx4_n1",
+      "ionic_strength": 0.3
+    },
+    {
+      "name": "ddx4_n1",
+      "source": "synthetic",
+      "n_res": 220,
+      "seed": 207,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "ph_low",
+      "condition_group": "ph_low",
+      "split_group": "ddx4_n1",
+      "pH": 6.5
+    },
+    {
+      "name": "ddx4_n1",
+      "source": "synthetic",
+      "n_res": 220,
+      "seed": 207,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "ph_high",
+      "condition_group": "ph_high",
+      "split_group": "ddx4_n1",
+      "pH": 8.0
+    },
+    {
+      "name": "ddx4_n1",
+      "source": "synthetic",
+      "n_res": 220,
+      "seed": 207,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "hydro_high",
+      "condition_group": "hydro_high",
+      "split_group": "ddx4_n1",
+      "hydro_strength": 1.2
+    },
+    {
+      "name": "ddx4_n1",
+      "source": "synthetic",
+      "n_res": 220,
+      "seed": 207,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "ptm1",
+      "condition_group": "ptm1",
+      "split_group": "ddx4_n1",
+      "ptm_count": 1.0
+    },
+    {
+      "name": "ddx4_n1",
+      "source": "synthetic",
+      "n_res": 220,
+      "seed": 207,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "cooling",
+      "condition_group": "cooling",
+      "split_group": "ddx4_n1",
+      "cooling_rate": 0.2
+    },
+    {
+      "name": "npm1_idr",
+      "source": "synthetic",
+      "n_res": 140,
+      "seed": 208,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "base",
+      "condition_group": "base",
+      "split_group": "npm1_idr"
+    },
+    {
+      "name": "npm1_idr",
+      "source": "synthetic",
+      "n_res": 140,
+      "seed": 208,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "salt_low",
+      "condition_group": "salt_low",
+      "split_group": "npm1_idr",
+      "ionic_strength": 0.05
+    },
+    {
+      "name": "npm1_idr",
+      "source": "synthetic",
+      "n_res": 140,
+      "seed": 208,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "salt_high",
+      "condition_group": "salt_high",
+      "split_group": "npm1_idr",
+      "ionic_strength": 0.3
+    },
+    {
+      "name": "npm1_idr",
+      "source": "synthetic",
+      "n_res": 140,
+      "seed": 208,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "ph_low",
+      "condition_group": "ph_low",
+      "split_group": "npm1_idr",
+      "pH": 6.5
+    },
+    {
+      "name": "npm1_idr",
+      "source": "synthetic",
+      "n_res": 140,
+      "seed": 208,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "ph_high",
+      "condition_group": "ph_high",
+      "split_group": "npm1_idr",
+      "pH": 8.0
+    },
+    {
+      "name": "npm1_idr",
+      "source": "synthetic",
+      "n_res": 140,
+      "seed": 208,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "hydro_high",
+      "condition_group": "hydro_high",
+      "split_group": "npm1_idr",
+      "hydro_strength": 1.2
+    },
+    {
+      "name": "npm1_idr",
+      "source": "synthetic",
+      "n_res": 140,
+      "seed": 208,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "ptm1",
+      "condition_group": "ptm1",
+      "split_group": "npm1_idr",
+      "ptm_count": 1.0
+    },
+    {
+      "name": "npm1_idr",
+      "source": "synthetic",
+      "n_res": 140,
+      "seed": 208,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "cooling",
+      "condition_group": "cooling",
+      "split_group": "npm1_idr",
+      "cooling_rate": 0.2
+    },
+    {
+      "name": "p27_kid",
+      "source": "synthetic",
+      "n_res": 90,
+      "seed": 209,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      },
+      "suffix": "base",
+      "condition_group": "base",
+      "split_group": "p27_kid"
+    },
+    {
+      "name": "p27_kid",
+      "source": "synthetic",
+      "n_res": 90,
+      "seed": 209,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      },
+      "suffix": "salt_low",
+      "condition_group": "salt_low",
+      "split_group": "p27_kid",
+      "ionic_strength": 0.05
+    },
+    {
+      "name": "p27_kid",
+      "source": "synthetic",
+      "n_res": 90,
+      "seed": 209,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      },
+      "suffix": "salt_high",
+      "condition_group": "salt_high",
+      "split_group": "p27_kid",
+      "ionic_strength": 0.3
+    },
+    {
+      "name": "p27_kid",
+      "source": "synthetic",
+      "n_res": 90,
+      "seed": 209,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      },
+      "suffix": "ph_low",
+      "condition_group": "ph_low",
+      "split_group": "p27_kid",
+      "pH": 6.5
+    },
+    {
+      "name": "p27_kid",
+      "source": "synthetic",
+      "n_res": 90,
+      "seed": 209,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      },
+      "suffix": "ph_high",
+      "condition_group": "ph_high",
+      "split_group": "p27_kid",
+      "pH": 8.0
+    },
+    {
+      "name": "p27_kid",
+      "source": "synthetic",
+      "n_res": 90,
+      "seed": 209,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      },
+      "suffix": "hydro_high",
+      "condition_group": "hydro_high",
+      "split_group": "p27_kid",
+      "hydro_strength": 1.2
+    },
+    {
+      "name": "cmyc_tad_fragment",
+      "source": "synthetic",
+      "n_res": 110,
+      "seed": 210,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      },
+      "suffix": "base",
+      "condition_group": "base",
+      "split_group": "cmyc_tad_fragment"
+    },
+    {
+      "name": "cmyc_tad_fragment",
+      "source": "synthetic",
+      "n_res": 110,
+      "seed": 210,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      },
+      "suffix": "salt_low",
+      "condition_group": "salt_low",
+      "split_group": "cmyc_tad_fragment",
+      "ionic_strength": 0.05
+    },
+    {
+      "name": "cmyc_tad_fragment",
+      "source": "synthetic",
+      "n_res": 110,
+      "seed": 210,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      },
+      "suffix": "salt_high",
+      "condition_group": "salt_high",
+      "split_group": "cmyc_tad_fragment",
+      "ionic_strength": 0.3
+    },
+    {
+      "name": "cmyc_tad_fragment",
+      "source": "synthetic",
+      "n_res": 110,
+      "seed": 210,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      },
+      "suffix": "ph_low",
+      "condition_group": "ph_low",
+      "split_group": "cmyc_tad_fragment",
+      "pH": 6.5
+    },
+    {
+      "name": "cmyc_tad_fragment",
+      "source": "synthetic",
+      "n_res": 110,
+      "seed": 210,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      },
+      "suffix": "ph_high",
+      "condition_group": "ph_high",
+      "split_group": "cmyc_tad_fragment",
+      "pH": 8.0
+    },
+    {
+      "name": "cmyc_tad_fragment",
+      "source": "synthetic",
+      "n_res": 110,
+      "seed": 210,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      },
+      "suffix": "hydro_high",
+      "condition_group": "hydro_high",
+      "split_group": "cmyc_tad_fragment",
+      "hydro_strength": 1.2
+    },
+    {
+      "name": "ash1_idr_fragment",
+      "source": "synthetic",
+      "n_res": 100,
+      "seed": 211,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      },
+      "suffix": "base",
+      "condition_group": "base",
+      "split_group": "ash1_idr_fragment"
+    },
+    {
+      "name": "ash1_idr_fragment",
+      "source": "synthetic",
+      "n_res": 100,
+      "seed": 211,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      },
+      "suffix": "salt_low",
+      "condition_group": "salt_low",
+      "split_group": "ash1_idr_fragment",
+      "ionic_strength": 0.05
+    },
+    {
+      "name": "ash1_idr_fragment",
+      "source": "synthetic",
+      "n_res": 100,
+      "seed": 211,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      },
+      "suffix": "salt_high",
+      "condition_group": "salt_high",
+      "split_group": "ash1_idr_fragment",
+      "ionic_strength": 0.3
+    },
+    {
+      "name": "ash1_idr_fragment",
+      "source": "synthetic",
+      "n_res": 100,
+      "seed": 211,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      },
+      "suffix": "ph_low",
+      "condition_group": "ph_low",
+      "split_group": "ash1_idr_fragment",
+      "pH": 6.5
+    },
+    {
+      "name": "ash1_idr_fragment",
+      "source": "synthetic",
+      "n_res": 100,
+      "seed": 211,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      },
+      "suffix": "ph_high",
+      "condition_group": "ph_high",
+      "split_group": "ash1_idr_fragment",
+      "pH": 8.0
+    },
+    {
+      "name": "ash1_idr_fragment",
+      "source": "synthetic",
+      "n_res": 100,
+      "seed": 211,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      },
+      "suffix": "hydro_high",
+      "condition_group": "hydro_high",
+      "split_group": "ash1_idr_fragment",
+      "hydro_strength": 1.2
+    },
+    {
+      "name": "page4",
+      "source": "synthetic",
+      "n_res": 102,
+      "seed": 212,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      },
+      "suffix": "base",
+      "condition_group": "base",
+      "split_group": "page4"
+    },
+    {
+      "name": "page4",
+      "source": "synthetic",
+      "n_res": 102,
+      "seed": 212,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      },
+      "suffix": "salt_low",
+      "condition_group": "salt_low",
+      "split_group": "page4",
+      "ionic_strength": 0.05
+    },
+    {
+      "name": "page4",
+      "source": "synthetic",
+      "n_res": 102,
+      "seed": 212,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      },
+      "suffix": "salt_high",
+      "condition_group": "salt_high",
+      "split_group": "page4",
+      "ionic_strength": 0.3
+    },
+    {
+      "name": "page4",
+      "source": "synthetic",
+      "n_res": 102,
+      "seed": 212,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      },
+      "suffix": "ph_low",
+      "condition_group": "ph_low",
+      "split_group": "page4",
+      "pH": 6.5
+    },
+    {
+      "name": "page4",
+      "source": "synthetic",
+      "n_res": 102,
+      "seed": 212,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      },
+      "suffix": "ph_high",
+      "condition_group": "ph_high",
+      "split_group": "page4",
+      "pH": 8.0
+    },
+    {
+      "name": "page4",
+      "source": "synthetic",
+      "n_res": 102,
+      "seed": 212,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      },
+      "suffix": "hydro_high",
+      "condition_group": "hydro_high",
+      "split_group": "page4",
+      "hydro_strength": 1.2
+    },
+    {
+      "name": "eaf1_idr",
+      "source": "synthetic",
+      "n_res": 150,
+      "seed": 213,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "base",
+      "condition_group": "base",
+      "split_group": "eaf1_idr"
+    },
+    {
+      "name": "eaf1_idr",
+      "source": "synthetic",
+      "n_res": 150,
+      "seed": 213,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "salt_low",
+      "condition_group": "salt_low",
+      "split_group": "eaf1_idr",
+      "ionic_strength": 0.05
+    },
+    {
+      "name": "eaf1_idr",
+      "source": "synthetic",
+      "n_res": 150,
+      "seed": 213,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "salt_high",
+      "condition_group": "salt_high",
+      "split_group": "eaf1_idr",
+      "ionic_strength": 0.3
+    },
+    {
+      "name": "eaf1_idr",
+      "source": "synthetic",
+      "n_res": 150,
+      "seed": 213,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "ph_low",
+      "condition_group": "ph_low",
+      "split_group": "eaf1_idr",
+      "pH": 6.5
+    },
+    {
+      "name": "eaf1_idr",
+      "source": "synthetic",
+      "n_res": 150,
+      "seed": 213,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "ph_high",
+      "condition_group": "ph_high",
+      "split_group": "eaf1_idr",
+      "pH": 8.0
+    },
+    {
+      "name": "eaf1_idr",
+      "source": "synthetic",
+      "n_res": 150,
+      "seed": 213,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "hydro_high",
+      "condition_group": "hydro_high",
+      "split_group": "eaf1_idr",
+      "hydro_strength": 1.2
+    },
+    {
+      "name": "eaf1_idr",
+      "source": "synthetic",
+      "n_res": 150,
+      "seed": 213,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "ptm1",
+      "condition_group": "ptm1",
+      "split_group": "eaf1_idr",
+      "ptm_count": 1.0
+    },
+    {
+      "name": "eaf1_idr",
+      "source": "synthetic",
+      "n_res": 150,
+      "seed": 213,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      },
+      "suffix": "cooling",
+      "condition_group": "cooling",
+      "split_group": "eaf1_idr",
+      "cooling_rate": 0.2
+    }
+  ]
+}

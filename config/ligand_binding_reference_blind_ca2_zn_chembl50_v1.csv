@@ -1,0 +1,4 @@
+target,ligand_id,reference_binding_kcal_mol,is_binder,source
+CARBONIC_ANHYDRASE_2_ZN_BLIND,dorzolamide,-10.9764,1,chembl_direct_binding::CHEMBL205::CHEMBL218490::activity_110109::assay_CHEMBL657156::Ki_9.0_nM::doc_CHEMBL1136178
+CARBONIC_ANHYDRASE_2_ZN_BLIND,brinzolamide,-11.6273,1,chembl_direct_binding::CHEMBL205::CHEMBL220491::activity_138028::assay_CHEMBL657156::Ki_3.0_nM::doc_CHEMBL1136178
+CARBONIC_ANHYDRASE_2_ZN_BLIND,chlorzolamide,-10.8060,1,chembl_direct_binding::CHEMBL205::CHEMBL360356::activity_1424016::assay_CHEMBL828932::Ki_12.0_nM::doc_CHEMBL1141985

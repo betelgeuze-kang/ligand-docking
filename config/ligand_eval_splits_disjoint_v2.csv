@@ -1,0 +1,13 @@
+target,ligand_id,role
+EGFR_KINASE,egfr_erlotinib,fit
+EGFR_KINASE,egfr_gefitinib,fit
+EGFR_KINASE,egfr_lapatinib,fit
+EGFR_KINASE,egfr_decoy_ibuprofen,fit
+EGFR_KINASE,egfr_decoy_aspirin,fit
+EGFR_KINASE,egfr_decoy_caffeine,fit
+HIV1_PROTEASE,hiv_darunavir,far_ood_eval
+HIV1_PROTEASE,hiv_atazanavir,far_ood_eval
+HIV1_PROTEASE,hiv_lopinavir,far_ood_eval
+HIV1_PROTEASE,hiv_decoy_metformin,far_ood_eval
+HIV1_PROTEASE,hiv_decoy_acetaminophen,far_ood_eval
+HIV1_PROTEASE,hiv_decoy_propranolol,far_ood_eval

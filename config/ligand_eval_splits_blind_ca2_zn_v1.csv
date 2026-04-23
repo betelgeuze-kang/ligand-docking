@@ -1,0 +1,4 @@
+target,ligand_id,role
+CARBONIC_ANHYDRASE_2_ZN_BLIND,acetazolamide,far_ood_eval
+CARBONIC_ANHYDRASE_2_ZN_BLIND,methazolamide,far_ood_eval
+CARBONIC_ANHYDRASE_2_ZN_BLIND,ethoxzolamide,far_ood_eval

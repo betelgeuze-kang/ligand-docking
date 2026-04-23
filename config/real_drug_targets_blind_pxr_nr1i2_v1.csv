@@ -1,0 +1,2 @@
+target,native_pdb_path,pdb_id,pocket_x,pocket_y,pocket_z,notes
+PXR_NR1I2_BLIND,data/native/live_auto_nuclear_receptor_subfamily_1_group_i_member_2_o75469.pdb,O75469,-3.041804,-0.642138,6.669984,"PXR/NR1I2 blind target using the repo-local live_auto O75469 native model. Pocket center is initialized from the current CA-centroid fallback and should be replaced with a curated ligand-binding-domain center before the first claim-bearing run."

@@ -1,0 +1,15 @@
+import torch
+
+from tools.idp_residual_common import BRANCH_NAMES, FEATURE_NAMES, RANKING_HEAD_NAMES, STATE_NAMES, build_residual_model
+
+
+def test_branch_selector_moe_shapes():
+    model = build_residual_model('branch_moe_v1', in_dim=len(FEATURE_NAMES), out_dim=0, hidden_dim=64)
+    x = torch.randn(5, len(FEATURE_NAMES))
+    out = model(x)
+    assert set(out.keys()) == {'branch_logits', 'state_logits', 'llps_logit', 'aggregation_logit', 'ranking_scores'}
+    assert out['branch_logits'].shape == (5, len(BRANCH_NAMES))
+    assert out['state_logits'].shape == (5, len(STATE_NAMES))
+    assert out['llps_logit'].shape == (5,)
+    assert out['aggregation_logit'].shape == (5,)
+    assert out['ranking_scores'].shape == (5, len(RANKING_HEAD_NAMES))

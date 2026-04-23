@@ -1,0 +1,19 @@
+from __future__ import annotations
+
+# Stable operator-facing scope/status tokens shared across top-level surfaces.
+
+GPCR_SAFE_SCOPE_ENDPOINT_ONLY = "locked_decoy_apply_safe_endpoint_only"
+MEASURED_NOOP_SAFE_SCOPE = "measured_noop_shadow_family"
+IDP_SAFE_SCOPE_CONTROLLED_PRETEST = "controlled_shadow_only_commercial_pretest"
+IDP_SAFE_SCOPE_ONE_WIDER_SHADOW_SAFE_LANE = "one_wider_shadow_safe_lane_only"
+IDP_SAFE_SCOPE_LEGACY_SUBSET_ONLY = "literature_anchor_subset_only"
+IDP_BLOCKED_SCOPE_BROADER_FULL_PROMOTION = "broader_full_idp_promotion"
+PARTIAL_AUTHORITATIVE_SAFE_SCOPE = "authoritative_partial_rows_only"
+TRANSPORTER_SAFE_SCOPE_SEED_ROW_BLOCKER_CLOSURE = "blocker_closure_seed_row_promotion_only"
+TRANSPORTER_SAFE_SCOPE_MANUAL_REVIEW_ONLY_DRAFT_PACKETS = "manual_review_only_draft_packets"
+
+GPCR_OPERATOR_STATUS_READY_ENDPOINT_ONLY = "ready_endpoint_only"
+IDP_OPERATOR_STATUS_SUBSET_SAFE_CONTROLLED_PRETEST_READY = "subset_safe_controlled_pretest_ready"
+IDP_OPERATOR_STATUS_ONE_WIDER_SHADOW_SAFE_LANE_ONLY = "one_wider_shadow_safe_lane_only"
+PARTIAL_AUTHORITATIVE_OPERATOR_STATUS = "partial_authoritative_only"
+TRANSPORTER_OPERATOR_STATUS_SEED_ROW_BLOCKER_CLOSURE_ONLY = "seed_row_blocker_closure_only"

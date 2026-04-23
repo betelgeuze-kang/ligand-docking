@@ -1,0 +1,239 @@
+import json
+from pathlib import Path
+
+from tools import run_ligand_backmapping_scoring as mod
+from tools.run_ligand_backmapping_scoring import _inline_score_from_row, _ligand_props
+
+
+def test_ligand_props_accepts_legacy_ligand_columns():
+    row = {
+        "ligand_mw": 310.5,
+        "ligand_logp": 2.4,
+        "ligand_rot_bonds": 7,
+        "ligand_h_donors": 2,
+        "ligand_h_acceptors": 5,
+    }
+    props = _ligand_props(row)
+    assert props["mw"] == 310.5
+    assert props["logp"] == 2.4
+    assert props["rot_bonds"] == 7.0
+    assert props["h_donors"] == 2.0
+    assert props["h_acceptors"] == 5.0
+
+
+def test_ligand_props_accepts_hard_decoy_metadata_columns():
+    row = {
+        "molecular_weight": 298.4,
+        "logp": 3.6,
+        "rot_bonds": 6,
+        "h_donors": 3,
+        "h_acceptors": 3,
+    }
+    props = _ligand_props(row)
+    assert props["mw"] == 298.4
+    assert props["logp"] == 3.6
+    assert props["rot_bonds"] == 6.0
+    assert props["h_donors"] == 3.0
+    assert props["h_acceptors"] == 3.0
+
+
+def test_inline_score_from_row_carries_ligand_priors_from_queue_row():
+    row = {
+        "inline_aux_available": True,
+        "trajectory_frame_count": 120,
+        "binding_energy_proxy": -5.0,
+        "binding_energy_mmpbsa_kcal_mol_proxy": -5.0,
+        "binding_energy_mmpbsa_std": 0.2,
+        "stability_score": 0.8,
+        "contact_fraction": 0.6,
+        "mean_min_distance_A": 3.5,
+        "ligand_mw": 298.4,
+        "ligand_logp": 3.6,
+        "ligand_rot_bonds": 6,
+        "ligand_h_donors": 3,
+        "ligand_h_acceptors": 3,
+    }
+    score = _inline_score_from_row(row, ligand_model="bead2")
+    assert score is not None
+    assert score["ligand_mw"] == 298.4
+    assert score["ligand_logp"] == 3.6
+    assert score["ligand_rot_bonds"] == 6.0
+    assert score["ligand_h_donors"] == 3.0
+    assert score["ligand_h_acceptors"] == 3.0
+
+
+def test_load_native_target_coords_prefers_explicit_pdb_and_marks_provenance(tmp_path):
+    native_pdb = tmp_path / "native_target.pdb"
+    native_pdb.write_text(
+        "\n".join(
+            [
+                "ATOM      1  CA  GLY A   1       0.000   0.000   0.000  1.00 20.00           C",
+                "ATOM      2  CA  ALA A   2       4.000   0.000   0.000  1.00 20.00           C",
+                "HETATM    3  C1  LIG L   1       1.500   1.000   0.000  1.00 20.00           C",
+                "END",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    info = mod._load_native_target_coords("Toy Target", native_path=str(native_pdb))
+
+    assert info["source_kind"] == "explicit_native_pdb"
+    assert info["source_available"] is True
+    assert info["source_used_explicit_native_path"] is True
+    assert info["source_residue_anchor_mode"] == "ca_only"
+    assert info["protein_ca_count"] == 2
+    assert info["ligand_atom_count"] == 1
+    assert info["coords"].shape == (2, 3)
+
+
+def test_load_native_target_coords_supports_explicit_mmcif(tmp_path):
+    native_cif = tmp_path / "native_target.cif"
+    native_cif.write_text(
+        "\n".join(
+            [
+                "data_native_target",
+                "#",
+                "loop_",
+                "_atom_site.group_PDB",
+                "_atom_site.id",
+                "_atom_site.type_symbol",
+                "_atom_site.label_atom_id",
+                "_atom_site.label_comp_id",
+                "_atom_site.label_asym_id",
+                "_atom_site.Cartn_x",
+                "_atom_site.Cartn_y",
+                "_atom_site.Cartn_z",
+                "ATOM 1 C CA GLY A 0.000 0.000 0.000",
+                "ATOM 2 C CA ALA A 4.000 0.000 0.000",
+                "HETATM 3 C C1 LIG L 1.500 1.000 0.000",
+                "#",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    info = mod._load_native_target_coords("Toy Target", native_path=str(native_cif))
+
+    assert info["source_kind"] == "explicit_native_mmcif"
+    assert info["source_available"] is True
+    assert info["source_format"] == "mmcif"
+    assert info["protein_ca_count"] == 2
+    assert info["coords"].shape == (2, 3)
+
+
+def test_load_native_target_coords_uses_repo_registry_fallback(tmp_path, monkeypatch):
+    native_pdb = tmp_path / "registry_native.pdb"
+    native_pdb.write_text(
+        "\n".join(
+            [
+                "ATOM      1  CA  GLY A   1       0.000   0.000   0.000  1.00 20.00           C",
+                "ATOM      2  CA  ALA A   2       4.000   0.000   0.000  1.00 20.00           C",
+                "HETATM    3  C1  LIG L   1       1.500   1.000   0.000  1.00 20.00           C",
+                "END",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        mod,
+        "resolve_repo_native_entry",
+        lambda target: {
+            "target": target,
+            "native_pdb_path": str(native_pdb),
+            "native_pdb_ready": True,
+            "native_format": "pdb",
+            "pdb_id": "6LU7",
+        },
+    )
+
+    info = mod._load_native_target_coords("sars_cov_2_mpro", native_path="")
+
+    assert info["source_kind"] == "repo_registry_native_pdb"
+    assert info["source_available"] is True
+    assert info["source_path"] == str(native_pdb)
+    assert info["source_used_explicit_native_path"] is False
+    assert info["protein_ca_count"] == 2
+    assert info["ligand_atom_count"] == 1
+
+
+def test_process_queue_row_emits_native_provenance_and_backmap_metadata(tmp_path, monkeypatch):
+    native_pdb = tmp_path / "native_target.pdb"
+    native_pdb.write_text(
+        "\n".join(
+            [
+                "ATOM      1  CA  GLY A   1       0.000   0.000   0.000  1.00 20.00           C",
+                "ATOM      2  CA  ALA A   2       4.000   0.000   0.000  1.00 20.00           C",
+                "END",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    def _fake_score_frames(**kwargs):
+        del kwargs
+        return {
+            "binding_energy_proxy": -0.12,
+            "binding_energy_mmpbsa_kcal_mol_proxy": -0.12,
+            "binding_energy_mmpbsa_std": 0.04,
+            "stability_score": 0.51,
+            "contact_fraction": 0.62,
+            "mean_min_distance_A": 2.75,
+            "frame_count": 64,
+            "ligand_affinity_hint": 0.31,
+            "ligand_onsps_norm": 0.22,
+            "ligand_mw": 250.0,
+            "ligand_logp": 2.5,
+            "ligand_rot_bonds": 4.0,
+            "ligand_h_donors": 1.0,
+            "ligand_h_acceptors": 3.0,
+            "ligand_model": "bead2",
+        }
+
+    def _fake_backmap(*, protein_ca, ligand_xyz, out_pdb):
+        assert protein_ca.shape == (2, 3)
+        assert ligand_xyz.shape[0] >= 2
+        Path(out_pdb).write_text("MODEL\nENDMDL\n", encoding="utf-8")
+        return {"protein_residues": 2, "protein_atoms": 10, "ligand_atoms": int(ligand_xyz.shape[0])}
+
+    monkeypatch.setattr(mod, "_score_frames", _fake_score_frames)
+    monkeypatch.setattr(mod, "_pseudo_backmap", _fake_backmap)
+
+    row = {
+        "queue_id": "toy_queue",
+        "target": "Toy Target",
+        "ligand_id": "toy_ligand",
+        "native_pdb_path": str(native_pdb),
+        "pocket_x": 1.0,
+        "pocket_y": 2.0,
+        "pocket_z": 3.0,
+    }
+    cfg = {
+        "score_only": False,
+        "jobs_root": str(tmp_path / "jobs"),
+        "trajectory_root": str(tmp_path / "traj"),
+        "trajectory_glob": "",
+        "allow_missing_trajectory": True,
+        "contact_cutoff_A": 4.5,
+        "min_frames": 8,
+        "ligand_model": "bead2",
+        "hbond_onsps_weight": 0.0,
+    }
+
+    result = mod._process_queue_row(row, cfg)
+
+    assert result["protein_structure_source_kind"] == "explicit_native_pdb"
+    assert result["protein_structure_source_available"] is True
+    assert result["backmapped_contains_protein"] is True
+    assert result["backmapped_structure_kind"] == "pseudo_backmapped_protein_ligand_pdb"
+    assert result["backmapped_protein_atoms"] == 10
+
+    score_payload = json.loads(Path(result["score_json"]).read_text(encoding="utf-8"))
+    assert score_payload["protein_structure_provenance"]["source_kind"] == "explicit_native_pdb"
+    assert score_payload["backmapped_contains_protein"] is True
+    assert score_payload["backmapped_structure_kind"] == "pseudo_backmapped_protein_ligand_pdb"

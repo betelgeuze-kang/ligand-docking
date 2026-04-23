@@ -1,0 +1,3 @@
+target,native_pdb_path,pdb_id,pocket_x,pocket_y,pocket_z,notes
+EGFR_KINASE,data/native/egfr_kinase.pdb,1M17,0.0,0.0,0.0,Existing fit-donor target retained to mirror current blind scaffold patterns.
+AQP1_TRANSPORT_BLIND,data/public_structures/nightly/2026-02-19-postfix-smoke-r6_ood_measured40/aquaporin_1_pdb_1J4N.pdb,1J4N,34.282,35.144,30.526,AQP1 pore centroid frozen from 1J4N chain A using channel-constriction residues around the NPA/ar-R filter; human sequence source is AFDB P29972.

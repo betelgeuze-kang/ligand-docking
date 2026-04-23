@@ -1,0 +1,5 @@
+ligand_id,smiles,molecular_weight,logp,h_donors,h_acceptors,rot_bonds,scaffold
+rifampicin,COC1C=COC2(C)Oc3c(C)c(O)c4c(O)c(c(C=NN5CCN(C)CC5)c(O)c4c3C2=O)NC(=O)C(C)=CC=CC(C)C(O)C(C)C(O)C(C)C(OC(C)=O)C1C,822.9530,4.3354,6,15,4,O=C1C=CC=CCCCCCCCCC=COC2Oc3ccc4cc(c(C=NN5CCNCC5)cc4c3C2=O)N1
+clotrimazole,Clc1ccccc1C(c1ccccc1)(c1ccccc1)n1ccnc1,344.8450,5.3767,0,2,4,c1ccc(C(c2ccccc2)(c2ccccc2)n2ccnc2)cc1
+hyperforin,CC(C)=CCCC1(C)C(CC=C(C)C)CC2(CC=C(C)C)C(=O)C1(C(=O)C(C)C)C(=O)C(CC=C(C)C)=C2O,536.7970,8.9897,1,4,11,O=C1C=CC2CCCC1C2=O
+ketoconazole,CC(=O)N1CCN(c2ccc(OCC3COC(Cn4ccnc4)(c4ccc(Cl)cc4Cl)O3)cc2)CC1,531.4400,4.2058,0,7,7,c1ccc(C2(Cn3ccnc3)OCC(COc3ccc(N4CCNCC4)cc3)O2)cc1

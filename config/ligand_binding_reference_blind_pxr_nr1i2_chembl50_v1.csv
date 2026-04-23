@@ -1,0 +1,5 @@
+target,ligand_id,reference_binding_kcal_mol,is_binder,source
+PXR_NR1I2_BLIND,sr12813,-8.6719,1,chembl_activity_proxy::CHEMBL3401::CHEMBL458767::activity_15463738::assay_CHEMBL3531878::EC50_440.0_nM::doc_CHEMBL3525965
+PXR_NR1I2_BLIND,nifedipine,-6.1703,1,chembl_activity_proxy::CHEMBL3401::CHEMBL193::activity_25188218::assay_CHEMBL5291846::AC50_30000.0_nM::doc_CHEMBL5291721
+PXR_NR1I2_BLIND,troglitazone,-6.8903,1,chembl_activity_proxy::CHEMBL3401::CHEMBL408::activity_15465515::assay_CHEMBL3531878::EC50_8900.0_nM::doc_CHEMBL3525965
+PXR_NR1I2_BLIND,dexamethasone,-6.1703,1,chembl_activity_proxy::CHEMBL3401::CHEMBL384467::activity_25188566::assay_CHEMBL5291846::AC50_30000.0_nM::doc_CHEMBL5291721

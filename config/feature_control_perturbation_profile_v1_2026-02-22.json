@@ -1,0 +1,15 @@
+{
+  "profile_name": "feature_control_perturbation_v1_2026-02-22",
+  "description": "Nightly defaults for control-perturbation coverage and control/observed schema separation.",
+  "profile": {
+    "feature_enable_control_perturbation": true,
+    "feature_control_perturbation_seed": 20260222,
+    "feature_perturb_ionic_strength_grid": "0.05,0.15,0.30,0.50",
+    "feature_perturb_ptm_count_grid": "0,1,2,3",
+    "feature_perturb_temperature_end_grid": "300,350,400,500",
+    "feature_perturb_hydro_scale_grid": "0.8,1.0,1.2",
+    "feature_perturb_force_scale_mult_grid": "0.9,1.0,1.1",
+    "feature_control_prefix": "control_",
+    "feature_observed_prefix": "observed_"
+  }
+}

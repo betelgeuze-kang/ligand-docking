@@ -1,0 +1,3 @@
+source_kind,publication_year,benchmark_inclusion_date,corrected_label_freeze_date,provenance_granularity,provenance_source,curation_status,notes
+pdb,,2026-03-21,2026-03-21,dataset_release,runs/idp_3bead_holdout_v7_sb_rust_2026-03-20_r3_speedopt3_release_manifest.json,dataset_release_locally_anchored,Dataset-level IDP release anchor derived from the accepted current release manifest for PDB-backed holdouts.
+synthetic,,2026-03-21,2026-03-21,dataset_release,runs/idp_3bead_holdout_v7_sb_rust_2026-03-20_r3_speedopt3_release_manifest.json,dataset_release_locally_anchored,Dataset-level IDP release anchor derived from the accepted current release manifest for synthetic holdouts.

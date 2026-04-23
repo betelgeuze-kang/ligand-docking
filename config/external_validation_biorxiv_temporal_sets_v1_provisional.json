@@ -1,0 +1,155 @@
+{
+  "protocol_id": "external_validation_biorxiv_temporal_sets_v1_provisional",
+  "protocol_title": "Cross-Domain Temporal Validation Scaffold for GPCR, Ion Channel, Kinase/Protease, and IDP Systems",
+  "protocol_version": "v1_provisional",
+  "status": "provisional_dataset_level_freeze_runnable",
+  "frozen_at_local": "2026-03-22T14:30:00+09:00",
+  "description": "Runnable provisional temporal-validation spec built on the promoted v7r1 validation stack. This spec is executable under the current runner because it reuses frozen task profiles, but its temporal governance is currently enforced at the dataset-profile level rather than the per-item provenance level. It is intended as the next computational validation layer, not yet as a full timestamp-audited temporal claim.",
+  "temporal_governance": {
+    "provenance_mode": "dataset_level_freeze",
+    "prediction_seal_required": true,
+    "limitations": [
+      "Per-item provenance dates are not yet curated across all ligand and IDP tasks.",
+      "Current temporal freeze is enforced at the dataset/profile release level rather than the individual ligand or holdout level.",
+      "This protocol is runnable and reviewer-facing, but it is not yet a full post-freeze item-level temporal claim."
+    ],
+    "freeze_policy": {
+      "fit_max_date": "2026-03-22",
+      "eval_min_date": "2026-03-22",
+      "seal_predictions_before_reveal": true
+    },
+    "dataset_level_freeze_sources": {
+      "gpcr_core_full": "config/ligand_htvs_blind_gpcr_adrb2_v4_scorefix3.json",
+      "gpcr_chembl50_full": "config/ligand_htvs_blind_gpcr_adrb2_chembl50_v3_scorefix2.json",
+      "ion_trpv1_chembl20_full": "config/ligand_htvs_blind_trpv1_chembl20_v3_scorefix2.json",
+      "ion_trpv1_chembl50_full": "config/ligand_htvs_blind_trpv1_chembl50_v3_scorefix2.json",
+      "kinase_core_full": "config/ligand_htvs_commercial_validation_no_leak_v3_gatefix1.json",
+      "kinase_strict_full": "config/ligand_htvs_commercial_validation_disjoint_strict_v3_gatefix1.json",
+      "idp_release_current": "runs/idp_3bead_release_manifest_current.json"
+    }
+  },
+  "frozen_references": {
+    "baseline_run_root": "runs/external_validation_blind_runs/external_validation_blind_runs_2026-03-22_biorxiv_v7r1",
+    "idp_release_manifest_current": "runs/idp_3bead_release_manifest_current.json",
+    "idp_smoke_current": "runs/idp_3bead_release_smoke_current.json",
+    "current_release_label": "idp_3bead_holdout_v7_sb_rust_2026-03-20_r3_speedopt3",
+    "current_smoke_label": "idp_3bead_release_smoke_current_2026-03-20_speedopt3full"
+  },
+  "global_governance": {
+    "goal": "Add a stricter computational temporal-validation layer on top of the promoted cross-domain blind package without changing the accepted blind/OOD/smoke claim set.",
+    "anti_leakage_rules": [
+      "No target/ligand/control swapping after temporal freeze.",
+      "No acceptance-threshold changes after temporal freeze.",
+      "No candidate-specific relabeling for IDP corrected evaluation; frozen-label sources remain the current release manifest.",
+      "Temporal package must be sealed before any post-freeze result interpretation is reported."
+    ],
+    "reporting_rules": [
+      "Temporal runs must publish manifests, copied artifacts, set-level summaries, and a package bundle.",
+      "Temporal outputs must explicitly disclose dataset-level rather than item-level provenance enforcement when per-item dates are unavailable."
+    ],
+    "claim_scope": [
+      "Temporal results are supplemental computational evidence for prospective-style generalization.",
+      "This provisional spec does not replace the primary preregistered blind claim set."
+    ]
+  },
+  "sets": [
+    {
+      "set_id": "set_temporal_core_blind",
+      "title": "Temporal Core Blind Set",
+      "purpose": "Primary temporal-style computational validation set using the promoted current profiles under a dataset-level freeze policy.",
+      "claim_role": "primary",
+      "preregistered_claim": "Provisional temporal primary claim set with dataset-level freeze enforcement.",
+      "acceptance_policy": {
+        "set_pass_rule": "all tasks pass",
+        "ligand_rule": "use task-level pass from produced stress summary",
+        "idp_rule": "use current release acceptance from manifest"
+      },
+      "blind_governance": {
+        "target_editing_after_freeze": false,
+        "threshold_tuning_after_freeze": false,
+        "wetlab_dependency": false,
+        "provenance_mode": "dataset_level_freeze"
+      },
+      "tasks": [
+        {
+          "task_id": "gpcr_core_full",
+          "domain": "gpcr",
+          "kind": "ligand_stress",
+          "profile_json": "config/ligand_htvs_blind_gpcr_adrb2_v4_scorefix3.json",
+          "ligand_sizes": "10000",
+          "date_tag_suffix": "temporal-gpcr-core-full"
+        },
+        {
+          "task_id": "ion_trpv1_chembl20_full",
+          "domain": "ion_channel",
+          "kind": "ligand_stress",
+          "profile_json": "config/ligand_htvs_blind_trpv1_chembl20_v3_scorefix2.json",
+          "ligand_sizes": "10000",
+          "date_tag_suffix": "temporal-trpv1-chembl20-full"
+        },
+        {
+          "task_id": "kinase_core_full",
+          "domain": "kinase",
+          "kind": "ligand_stress",
+          "profile_json": "config/ligand_htvs_commercial_validation_no_leak_v3_gatefix1.json",
+          "ligand_sizes": "10000",
+          "date_tag_suffix": "temporal-kinase-core-full"
+        },
+        {
+          "task_id": "idp_release_current",
+          "domain": "idp",
+          "kind": "idp_reference_current_full"
+        }
+      ]
+    },
+    {
+      "set_id": "set_temporal_expanded_ood",
+      "title": "Temporal Expanded OOD Set",
+      "purpose": "Secondary temporal-style computational validation set using broader OOD task profiles under the same dataset-level freeze policy.",
+      "claim_role": "secondary_generalization",
+      "preregistered_claim": "Provisional temporal expanded-OOD claim set with dataset-level freeze enforcement.",
+      "acceptance_policy": {
+        "set_pass_rule": "all tasks pass",
+        "ligand_rule": "use task-level pass from produced stress summary",
+        "idp_rule": "use current release acceptance from manifest"
+      },
+      "blind_governance": {
+        "target_editing_after_freeze": false,
+        "threshold_tuning_after_freeze": false,
+        "wetlab_dependency": false,
+        "provenance_mode": "dataset_level_freeze"
+      },
+      "tasks": [
+        {
+          "task_id": "gpcr_chembl50_full",
+          "domain": "gpcr",
+          "kind": "ligand_stress",
+          "profile_json": "config/ligand_htvs_blind_gpcr_adrb2_chembl50_v3_scorefix2.json",
+          "ligand_sizes": "10000",
+          "date_tag_suffix": "temporal-gpcr-chembl50-full"
+        },
+        {
+          "task_id": "ion_trpv1_chembl50_full",
+          "domain": "ion_channel",
+          "kind": "ligand_stress",
+          "profile_json": "config/ligand_htvs_blind_trpv1_chembl50_v3_scorefix2.json",
+          "ligand_sizes": "10000",
+          "date_tag_suffix": "temporal-trpv1-chembl50-full"
+        },
+        {
+          "task_id": "kinase_strict_full",
+          "domain": "kinase",
+          "kind": "ligand_stress",
+          "profile_json": "config/ligand_htvs_commercial_validation_disjoint_strict_v3_gatefix1.json",
+          "ligand_sizes": "10000",
+          "date_tag_suffix": "temporal-kinase-strict-full"
+        },
+        {
+          "task_id": "idp_release_current",
+          "domain": "idp",
+          "kind": "idp_reference_current_full"
+        }
+      ]
+    }
+  ]
+}

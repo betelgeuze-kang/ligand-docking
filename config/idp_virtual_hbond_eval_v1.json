@@ -1,0 +1,11 @@
+{
+  "device": "cuda",
+  "n_res": 64,
+  "seed": 31,
+  "smoke_frames": 24,
+  "eval_frames": 64,
+  "ionic_strength": 0.15,
+  "p_h": 7.2,
+  "ptm_count": 1.0,
+  "hydro_strength": 1.0
+}

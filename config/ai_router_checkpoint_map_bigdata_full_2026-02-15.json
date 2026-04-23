@@ -1,0 +1,20 @@
+{
+  "generated_at_local": "2026-02-15T04:56:22",
+  "source_curriculum_summary": "/home/betelgeuze/분자동역학/runs/train_curriculum_bigdata_full_2026-02-15.json",
+  "target_checkpoints": {
+    "Chignolin": "/home/betelgeuze/분자동역학/models/curriculum_bigdata_full/best_airouter_curriculum_01_Chignolin_bigdata_full_2026-02-15.pth",
+    "Trp_Cage": "/home/betelgeuze/분자동역학/models/curriculum_bigdata_full/best_airouter_curriculum_02_Trp_Cage_bigdata_full_2026-02-15.pth",
+    "BBA5": "/home/betelgeuze/분자동역학/models/curriculum_bigdata_full/best_airouter_curriculum_03_BBA5_bigdata_full_2026-02-15.pth",
+    "FSD_1": "/home/betelgeuze/분자동역학/models/curriculum_bigdata_full/best_airouter_curriculum_04_FSD_1_bigdata_full_2026-02-15.pth",
+    "Villin_HP35": "/home/betelgeuze/분자동역학/models/curriculum_bigdata_full/best_airouter_curriculum_05_Villin_HP35_bigdata_full_2026-02-15.pth",
+    "WW_Domain_FiP35": "/home/betelgeuze/분자동역학/models/curriculum_bigdata_full/best_airouter_curriculum_06_WW_Domain_FiP35_bigdata_full_2026-02-15.pth",
+    "Crambin": "/home/betelgeuze/분자동역학/models/curriculum_bigdata_full/best_airouter_curriculum_07_Crambin_bigdata_full_2026-02-15.pth",
+    "GB1_Mini": "/home/betelgeuze/분자동역학/models/curriculum_bigdata_full/best_airouter_curriculum_08_GB1_Mini_bigdata_full_2026-02-15.pth",
+    "Protein_A_Bdomain": "/home/betelgeuze/분자동역학/models/curriculum_bigdata_full/best_airouter_curriculum_09_Protein_A_Bdomain_bigdata_full_2026-02-15.pth",
+    "Ubiquitin_Mini": "/home/betelgeuze/분자동역학/models/curriculum_bigdata_full/best_airouter_curriculum_10_Ubiquitin_Mini_bigdata_full_2026-02-15.pth"
+  },
+  "default": "/home/betelgeuze/분자동역학/models/curriculum_bigdata_full/best_airouter_curriculum_01_Chignolin_bigdata_full_2026-02-15.pth",
+  "manifest_used": "runs/distilled_residual_manifest_bigdata_afdb_weighted_2026-02-15.csv",
+  "schedule": "size_ascending",
+  "run_tag": "bigdata_full_2026-02-15"
+}

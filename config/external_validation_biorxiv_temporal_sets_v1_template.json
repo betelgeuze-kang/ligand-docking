@@ -1,0 +1,34 @@
+{
+  "protocol_id": "external_validation_biorxiv_temporal_sets_v1_template",
+  "status": "draft_template_not_runnable",
+  "description": "Template for future temporal external-validation sets once per-item provenance dates are curated.",
+  "required_provenance_fields": {
+    "ligand": [
+      "provenance_date",
+      "source_release",
+      "target",
+      "ligand_id"
+    ],
+    "idp": [
+      "provenance_date",
+      "holdout_name"
+    ]
+  },
+  "freeze_policy": {
+    "fit_max_date": "YYYY-MM-DD",
+    "eval_min_date": "YYYY-MM-DD",
+    "prediction_seal_required": true
+  },
+  "sets": [
+    {
+      "set_id": "set_temporal_core_blind",
+      "status": "draft",
+      "tasks": []
+    },
+    {
+      "set_id": "set_temporal_expanded_ood",
+      "status": "draft",
+      "tasks": []
+    }
+  ]
+}

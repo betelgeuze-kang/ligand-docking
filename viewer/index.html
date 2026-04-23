@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>MD Dynamics Viewer — 분자동역학 시각화</title>
+  <meta name="description" content="분자동역학 시뮬레이션 결과 시각화 도구. 인터랙티브 3D 뷰어, 트래젝토리 재생, 결합 포즈 비교."/>
+  <script>
+    if (window.location.protocol === 'file:') {
+      const redirected = 'http://127.0.0.1:8765/viewer/index.html' + window.location.search + window.location.hash;
+      window.location.replace(redirected);
+    }
+  </script>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='10' fill='%233b82f6'/%3E%3Cg fill='none' stroke='%233b82f6' stroke-width='3'%3E%3Ccircle cx='32' cy='32' r='22'/%3E%3Cellipse cx='32' cy='32' rx='26' ry='12'/%3E%3Cellipse cx='32' cy='32' rx='12' ry='26'/%3E%3C/g%3E%3C/svg%3E"/>
+
+  <!-- Mol* (Molstar) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/molstar@4.5.0/build/viewer/molstar.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/molstar@4.5.0/build/viewer/molstar.js"></script>
+
+  <!-- Plotly for charts -->
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+
+  <link rel="stylesheet" href="style.css?v=20260421-blockersurfacing2"/>
+</head>
+<body>
+  <!-- Top Bar -->
+  <header id="topBar">
+    <div class="top-left">
+      <div class="logo-icon">⚛</div>
+      <h1>MD Dynamics Viewer</h1>
+      <span class="version-badge">v1.0</span>
+    </div>
+    <div class="top-right">
+      <select id="bundleSurfaceSelect" class="top-select" title="surface-label별 bundle 전환">
+        <option value="">Surface 선택</option>
+      </select>
+      <button id="btnLoadSurfaceBundle" class="btn-glass" title="선택한 surface bundle 로드">
+        <span class="btn-icon">🎯</span> Surface Bundle
+      </button>
+      <button id="btnLoadCurrentBundle" class="btn-glass" title="현재 selected-allatom bundle">
+        <span class="btn-icon">🧬</span> 현재 Bundle
+      </button>
+      <button id="btnLoadBundle" class="btn-glass" title="visual bundle JSON 로드">
+        <span class="btn-icon">🗂</span> Bundle 열기
+      </button>
+      <button id="btnLoadPDB" class="btn-glass" title="PDB 파일 로드">
+        <span class="btn-icon">📂</span> PDB 열기
+      </button>
+      <button id="btnLoadDir" class="btn-glass" title="디렉토리 스캔">
+        <span class="btn-icon">📁</span> 폴더 열기
+      </button>
+      <button id="btnOpenGallery" class="btn-glass" title="대표 PNG gallery">
+        <span class="btn-icon">🖼</span> Gallery
+      </button>
+      <div class="session-controls">
+        <button id="btnCopyPermalink" class="btn-glass" title="현재 선택 상태 링크 복사">
+          <span class="btn-icon">🔗</span> 링크 복사
+        </button>
+        <button id="btnSaveSession" class="btn-glass" title="현재 viewer 세션 저장">
+          <span class="btn-icon">💾</span> 세션 저장
+        </button>
+        <button id="btnRestoreSession" class="btn-glass" title="저장된 viewer 세션 복원">
+          <span class="btn-icon">↺</span> 세션 복원
+        </button>
+        <div id="sessionStateBadge" class="session-state-badge">session: idle</div>
+        <div id="smokeStateBadge" class="session-state-badge" style="display:none;">smoke: idle</div>
+      </div>
+      <div id="opsSurfaceStrip" class="ops-surface-strip" style="display:none;">
+        <div id="engineQueueBadge" class="session-state-badge">engine: loading</div>
+        <div id="viewerUsabilityBadge" class="session-state-badge">viewer: loading</div>
+        <div id="wetlabExecutionBadge" class="session-state-badge">wetlab: loading</div>
+      </div>
+      <button id="btnSnapshot" class="btn-glass primary" title="고해상도 스냅샷">
+        <span class="btn-icon">📸</span> 스냅샷
+      </button>
+      <button id="btnThemeToggle" class="btn-icon-only" title="다크/라이트 전환">🌙</button>
+    </div>
+  </header>
+
+  <!-- Hidden file inputs -->
+  <input type="file" id="bundleInput" accept=".json" style="display:none"/>
+  <input type="file" id="writebackBeforeInput" accept=".json" style="display:none"/>
+  <input type="file" id="fileInput" accept=".pdb,.cif,.mmcif,.ent,.xyz,.sdf,.mol2,.dx,.cube,.cub" multiple style="display:none"/>
+  <input type="file" id="dirInput" webkitdirectory directory multiple style="display:none"/>
+
+  <!-- Main Layout -->
+  <main id="mainLayout">
+    <!-- Left Panel: File Browser & Controls -->
+    <aside id="leftPanel">
+      <div class="panel-section">
+        <h3 class="panel-title">구조 목록</h3>
+        <input type="text" id="searchBox" placeholder="검색..." class="search-input"/>
+        <ul id="fileList" class="file-list"></ul>
+        <div id="bundleStatus" class="bundle-status">Bundle이 아직 로드되지 않았습니다.</div>
+      </div>
+
+      <div class="panel-section" id="infoPanel" style="display:none;">
+        <h3 class="panel-title">구조 정보</h3>
+        <div id="structInfo" class="struct-info"></div>
+      </div>
+
+      <div class="panel-section">
+        <h3 class="panel-title">스타일 설정</h3>
+        <div class="control-group">
+          <label>표현 방식</label>
+          <select id="reprSelect">
+            <option value="cartoon" selected>Cartoon (2차 구조)</option>
+            <option value="ball-and-stick">Ball & Stick</option>
+            <option value="spacefill">Spacefill (CPK)</option>
+            <option value="gaussian-surface">Gaussian Surface</option>
+            <option value="molecular-surface">Molecular Surface</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>색상 스킴</label>
+          <select id="colorSelect">
+            <option value="binding-focus" selected>Binding Focus (protein/ligand)</option>
+            <option value="alphafold-confidence">AlphaFold pLDDT</option>
+            <option value="secondary-structure">2차 구조</option>
+            <option value="chain-id">체인 ID</option>
+            <option value="residue-index">잔기 인덱스</option>
+            <option value="element">원소</option>
+            <option value="bfactor">B-factor (유연성)</option>
+            <option value="hydrophobicity">소수성</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>배경</label>
+          <select id="bgSelect">
+            <option value="#ffffff" selected>흰색</option>
+            <option value="#0a0a0f">검정</option>
+            <option value="#1a1a2e">딥네이비</option>
+            <option value="#f0f4f8">밝은 회색</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>렌더 프리셋</label>
+          <select id="aoPresetSelect">
+            <option value="analysis" selected>Analysis</option>
+            <option value="illustrative">Illustrative AO</option>
+            <option value="snapshot">Snapshot AO</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="toggleSpin"/>
+            자동 회전
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="togglePocketSurface" checked/>
+            Pocket Surface v1
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="toggleElectroSurface"/>
+            APBS Surface
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="toggleFog"/>
+            Depth / Fog Boost
+          </label>
+        </div>
+        <div class="measure-tools">
+          <button id="btnFocusBinding" class="btn-small">🔎 결합부 확대</button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h3 class="panel-title">측정 도구</h3>
+        <div class="measure-tools">
+          <button id="btnMeasureDist" class="btn-small">📏 거리</button>
+          <button id="btnMeasureAngle" class="btn-small">📐 각도</button>
+          <button id="btnMeasureDihedral" class="btn-small">🌀 Dihedral</button>
+          <button id="btnClearMeasure" class="btn-small ghost">✖ 지우기</button>
+        </div>
+        <div id="measurementStatus" class="measure-status muted">측정 비활성</div>
+        <div id="measurementList" class="measure-list"></div>
+      </div>
+
+      <!-- Confidence Legend -->
+      <div class="panel-section" id="confidenceLegend">
+        <h3 class="panel-title">AlphaFold pLDDT 범례</h3>
+        <div class="legend-scale">
+          <div class="legend-item" style="--c: #0053d6;">
+            <span class="legend-swatch"></span>
+            <span>매우 높음 (pLDDT > 90)</span>
+          </div>
+          <div class="legend-item" style="--c: #65cbf3;">
+            <span class="legend-swatch"></span>
+            <span>높음 (70 < pLDDT ≤ 90)</span>
+          </div>
+          <div class="legend-item" style="--c: #ffdb13;">
+            <span class="legend-swatch"></span>
+            <span>낮음 (50 < pLDDT ≤ 70)</span>
+          </div>
+          <div class="legend-item" style="--c: #ff7d45;">
+            <span class="legend-swatch"></span>
+            <span>매우 낮음 (pLDDT ≤ 50)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-section" id="interactionLegendPanel">
+        <h3 class="panel-title">결합 유형 범례</h3>
+        <div id="interactionLegend" class="legend-scale">
+          <div class="legend-item" style="--c: #38bdf8;">
+            <span class="legend-swatch"></span>
+            <span>H-bond</span>
+          </div>
+          <div class="legend-item" style="--c: #c084fc;">
+            <span class="legend-swatch"></span>
+            <span>Pi-Pi</span>
+          </div>
+          <div class="legend-item" style="--c: #f59e0b;">
+            <span class="legend-swatch"></span>
+            <span>소수성</span>
+          </div>
+          <div class="legend-item" style="--c: #94a3b8;">
+            <span class="legend-swatch"></span>
+            <span>일반 Contact</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Center: 3D Viewer -->
+    <section id="centerPanel">
+      <div id="viewerContainer">
+        <div id="molstarViewer"></div>
+        <div id="compareSplitLayout" class="compare-split-layout" style="display:none;">
+          <section class="compare-split-pane">
+            <div class="compare-split-head">
+              <span class="section-kicker">Compare A</span>
+              <strong id="compareViewerATitle">A</strong>
+            </div>
+            <div id="compareViewerA" class="compare-molstar"></div>
+          </section>
+          <section class="compare-split-pane">
+            <div class="compare-split-head">
+              <span class="section-kicker">Compare B</span>
+              <strong id="compareViewerBTitle">B</strong>
+            </div>
+            <div id="compareViewerB" class="compare-molstar"></div>
+          </section>
+        </div>
+        <div id="viewerOverlay" class="viewer-overlay">
+          <p>PDB 파일을 로드하면 3D 뷰어가 여기에 표시됩니다</p>
+          <p class="sub">📂 파일 열기 or 드래그&드롭</p>
+        </div>
+        <svg id="interactionOverlay" class="interaction-overlay" style="display:none;" aria-hidden="true"></svg>
+        <div id="viewerAnnotationLayer" class="viewer-annotation-layer" style="display:none;">
+          <div class="annotation-head">
+            <div id="annotationStrip" class="annotation-strip"></div>
+            <div class="annotation-toolbar">
+              <button id="btnToggleAnnotations" class="btn-small ghost" type="button">상세 보기</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section id="sceneGuidePanel" class="scene-guide-panel" style="display:none;"></section>
+
+      <section id="annotationPanel" class="annotation-panel" style="display:none;">
+        <div id="annotationDetailGrid" class="annotation-grid">
+          <section id="annotationHero" class="annotation-card annotation-card-hero"></section>
+          <section id="annotationContact" class="annotation-card"></section>
+          <section id="annotationTranslation" class="annotation-card"></section>
+          <section id="annotationBlockers" class="annotation-card"></section>
+        </div>
+      </section>
+
+      <!-- Trajectory Player Bar -->
+      <div id="trajectoryBar" class="trajectory-bar" style="display:none;">
+        <div class="trajectory-meta">
+          <span class="section-kicker">Trajectory</span>
+          <strong class="trajectory-title">Playback Deck</strong>
+          <p class="trajectory-copy">선택한 후보에 NPZ trajectory나 movie asset이 있으면 재생과 스크럽이 활성화됩니다.</p>
+          <div id="trajectoryStatusNote" class="status-banner muted" style="display:none;"></div>
+        </div>
+        <div class="trajectory-controls">
+          <div class="trajectory-buttons" aria-label="Trajectory playback controls">
+            <button id="btnTrajPlay" class="btn-small">▶</button>
+            <button id="btnTrajPause" class="btn-small">⏸</button>
+          </div>
+          <div class="trajectory-timeline">
+            <div class="trajectory-timeline-head">
+              <span class="trajectory-timeline-label">Time Scrub</span>
+              <span id="trajFrameLabel" class="traj-label">Frame 0 / 0</span>
+            </div>
+            <input type="range" id="trajSlider" min="0" max="100" value="0" step="1"/>
+            <div class="trajectory-ticks" aria-hidden="true">
+              <span>start</span>
+              <span>mid</span>
+              <span>end</span>
+            </div>
+          </div>
+          <div class="traj-speed">
+            <label>속도</label>
+            <select id="trajSpeed">
+              <option value="0.5">0.5x</option>
+              <option value="1" selected>1x</option>
+              <option value="2">2x</option>
+              <option value="5">5x</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Charts -->
+      <div id="chartsSection" class="charts-section" style="display:none;">
+        <div class="charts-header">
+          <h3>동역학 메트릭</h3>
+          <select id="metricSelect" multiple></select>
+        </div>
+        <div id="chartsGrid" class="charts-grid"></div>
+      </div>
+    </section>
+
+    <!-- Right Panel: Comparison & Analysis -->
+    <aside id="rightPanel">
+      <div class="panel-section">
+        <h3 class="panel-title">구조 비교</h3>
+        <div class="compare-panel">
+          <div class="compare-intro">
+            <p class="compare-copy">왼쪽 후보 카드의 A/B 칩으로 비교 대상을 고정한 뒤, 중첩 또는 나란히 비교를 실행하세요.</p>
+            <div class="compare-hints" aria-hidden="true">
+              <span class="compare-hint-chip">A/B quick pin</span>
+              <span class="compare-hint-chip">Top-k shortlisting</span>
+            </div>
+          </div>
+          <div id="compareSlots" class="compare-slots">
+            <div class="compare-slot empty" data-slot="A" id="slotA">
+              <span class="slot-label">A</span>
+              <span class="slot-text">A 핀으로 선택</span>
+            </div>
+            <span class="compare-vs">vs</span>
+            <div class="compare-slot empty" data-slot="B" id="slotB">
+              <span class="slot-label">B</span>
+              <span class="slot-text">B 핀으로 선택</span>
+            </div>
+          </div>
+          <div class="compare-actions">
+            <button id="btnSuperpose" class="btn-glass" disabled>중첩 비교</button>
+            <button id="btnSideBySide" class="btn-glass" disabled>나란히 비교</button>
+          </div>
+          <div class="compare-footnote">
+            <span class="section-kicker">Workflow</span>
+            <p>두 슬롯이 모두 채워지면 비교 액션이 활성화되며, A=before / B=after 기준 writeback diff row matrix와 results explorer side-by-side가 같이 열립니다.</p>
+          </div>
+          <div id="compareConsole" class="compare-console">
+            <div class="compare-console-head">
+              <div class="compare-console-head-copy">
+                <span class="section-kicker">Compare Console</span>
+                <strong>Before / After Diff</strong>
+              </div>
+              <div class="compare-console-tools">
+                <button id="btnLoadWritebackBefore" class="btn-small ghost">Before Bundle</button>
+                <button id="btnUseCurrentAsWritebackAfter" class="btn-small ghost">현재 Bundle → After</button>
+                <button id="btnClearWritebackCompare" class="btn-small ghost">초기화</button>
+              </div>
+            </div>
+            <div id="compareConsoleStatus" class="compare-console-status">A/B 슬롯을 채우면 before/after와 diff row matrix가 표시됩니다.</div>
+            <div id="compareWritebackSource" class="compare-writeback-source"></div>
+            <div id="compareBeforeAfter" class="compare-before-after"></div>
+            <div id="compareDiffMatrix" class="compare-diff-matrix"></div>
+            <div id="compareDecisionBoard" class="compare-decision-board"></div>
+          </div>
+          <div id="rmsdResult" class="rmsd-result" style="display:none;"></div>
+        </div>
+      </div>
+
+      <div class="panel-section" id="blockerSurfacePanel">
+        <h3 class="panel-title">운영 / 상용화 Blockers</h3>
+        <div id="blockerSurfaceStatus" class="status-banner muted">current artifact를 읽는 중...</div>
+        <div id="blockerSurfaceSummary" class="blocker-surface-summary"></div>
+        <div id="blockerSurfaceGrid" class="blocker-surface-grid"></div>
+      </div>
+
+      <div class="panel-section" id="bindingSection" style="display:none;">
+        <h3 class="panel-title">결합 분석</h3>
+        <div id="bindingInfo" class="binding-info"></div>
+        <div class="binding-analysis-grid">
+          <section class="binding-analysis-card">
+            <div class="binding-analysis-head">
+              <span class="section-kicker">Ligand 2D</span>
+              <strong>2D 구조식</strong>
+            </div>
+            <div id="ligand2D" class="ligand-2d"></div>
+          </section>
+          <section class="binding-analysis-card">
+            <div class="binding-analysis-head">
+              <span class="section-kicker">Contact Map</span>
+              <strong>2D 결합 맵</strong>
+            </div>
+            <div id="contactMap" class="contact-map"></div>
+          </section>
+          <section class="binding-analysis-card binding-analysis-card-wide">
+            <div class="binding-analysis-head">
+              <span class="section-kicker">Pocket Analytics</span>
+              <strong>Residue Contact Heatmap</strong>
+            </div>
+            <div id="pocketVolumeDisplay" class="pocket-volume-display"></div>
+            <div id="residueContactHeatmap" class="residue-contact-heatmap"></div>
+            <div id="residueContactMeta" class="heatmap-meta"></div>
+          </section>
+          <section class="binding-analysis-card binding-analysis-card-wide">
+            <div class="binding-analysis-head">
+              <span class="section-kicker">Sequence</span>
+              <strong>Pocket Residue Sequence Viewer</strong>
+            </div>
+            <div id="sequenceSummary" class="sequence-summary"></div>
+            <div id="sequenceViewer" class="sequence-viewer"></div>
+          </section>
+        </div>
+        <div id="bindingRecipeList" class="binding-recipe-list"></div>
+      </div>
+
+      <div class="panel-section" id="mediaSection" style="display:none;">
+        <h3 class="panel-title">피규어 & 영상</h3>
+        <div id="mediaPreview" class="media-preview">
+          <img id="figurePreview" alt="Primary figure preview" class="media-figure" style="display:none;"/>
+          <video id="videoPreview" class="media-video" controls muted playsinline style="display:none;"></video>
+          <div id="mediaEmpty" class="media-empty">선택된 후보의 피규어/영상 자산이 없습니다.</div>
+        </div>
+        <div id="mediaStatus" class="status-banner muted" style="display:none;"></div>
+        <div id="mediaMeta" class="media-meta"></div>
+        <div class="media-actions">
+          <button id="btnOpenFigure" class="btn-small" disabled>Figure 열기</button>
+          <button id="btnFigureModal" class="btn-small" disabled>Figure 확대</button>
+          <button id="btnOpenMovie" class="btn-small" disabled>Movie 열기</button>
+          <button id="btnOpenDashboard" class="btn-small ghost" disabled>Dashboard 열기</button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h3 class="panel-title">스냅샷 설정</h3>
+        <div class="control-group">
+          <label>해상도</label>
+          <select id="snapshotRes">
+            <option value="1">1x (현재)</option>
+            <option value="2" selected>2x (2배)</option>
+            <option value="4">4x (4배)</option>
+            <option value="8">8x (논문용 초고해상도)</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>포맷</label>
+          <select id="snapshotFormat">
+            <option value="png" selected>PNG</option>
+            <option value="jpeg">JPEG</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="snapshotTransparent"/>
+            투명 배경
+          </label>
+        </div>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="panel-section" id="quickStats" style="display:none;">
+        <h3 class="panel-title">빠른 통계</h3>
+        <div class="kpi-mini-grid" id="kpiMiniGrid"></div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Snapshot Modal -->
+  <div id="snapshotModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>고해상도 스냅샷</h2>
+        <button id="btnCloseModal" class="btn-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <img id="snapshotImage" alt="Molecular Structure Snapshot"/>
+        <div class="modal-actions">
+          <button id="btnDownloadSnapshot" class="btn-glass primary">💾 다운로드</button>
+          <button id="btnCopySnapshot" class="btn-glass">📋 복사</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="figureModal" class="modal">
+    <div class="modal-content modal-content-wide">
+      <div class="modal-header">
+        <h2>Figure Preview</h2>
+        <button id="btnCloseFigureModal" class="btn-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <img id="figureModalImage" alt="Selected figure preview"/>
+        <div id="figureModalCaption" class="modal-caption"></div>
+        <div class="modal-actions">
+          <button id="btnOpenFigureFromModal" class="btn-glass primary">🖼 원본 열기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notifications -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="app.js?v=20260421-blockersurfacing2"></script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+target,ligand_id,role
+EGFR_KINASE,erlotinib,fit
+EGFR_KINASE,nilotinib,fit
+EGFR_KINASE,imatinib,fit
+EGFR_KINASE,ibuprofen,fit
+EGFR_KINASE,aspirin,fit
+EGFR_KINASE,caffeine,fit

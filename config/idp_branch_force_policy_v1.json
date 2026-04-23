@@ -1,0 +1,22 @@
+{
+  "version": "idp_branch_force_policy_v1",
+  "description": "Branch-conditional virtual hbond/anti-collapse/contact gain scaling.",
+  "branch_defaults": {
+    "llps_lcd": {"virtual_hbond_scale": 0.80, "anti_collapse_scale": 0.66, "hydrophobic_sticker_scale": 1.25, "contact_gain_scale": 1.22, "exposure_sensitivity": 1.08, "anti_spread_scale": 0.98, "rg_target_multiplier": 1.00, "overcollapse_ratio": 0.92, "virtual_hbond_center_A": 3.0, "virtual_hbond_width_A": 1.2},
+    "aggregation_prone": {"virtual_hbond_scale": 0.55, "anti_collapse_scale": 0.95, "hydrophobic_sticker_scale": 1.35, "contact_gain_scale": 1.10, "exposure_sensitivity": 1.55, "anti_spread_scale": 1.70, "rg_target_multiplier": 1.00, "overcollapse_ratio": 0.92, "virtual_hbond_center_A": 3.0, "virtual_hbond_width_A": 1.2},
+    "helix_tad": {"virtual_hbond_scale": 1.25, "anti_collapse_scale": 1.10, "hydrophobic_sticker_scale": 0.85, "contact_gain_scale": 0.90, "exposure_sensitivity": 0.75, "anti_spread_scale": 0.65, "rg_target_multiplier": 1.00, "overcollapse_ratio": 0.92, "virtual_hbond_center_A": 3.0, "virtual_hbond_width_A": 1.2}
+  },
+  "target_overrides": {
+    "alpha_synuclein_full": {"virtual_hbond_scale": 0.68, "anti_collapse_scale": 1.28, "contact_gain_scale": 0.92, "exposure_sensitivity": 1.90, "anti_spread_scale": 2.10},
+    "tau_k18": {"virtual_hbond_scale": 0.70, "anti_collapse_scale": 1.08, "contact_gain_scale": 0.98, "exposure_sensitivity": 1.60, "anti_spread_scale": 1.72, "rg_target_multiplier": 0.96, "overcollapse_ratio": 0.92},
+    "tau_2n4r_fragment": {"virtual_hbond_scale": 0.74, "anti_collapse_scale": 1.22, "contact_gain_scale": 0.96, "exposure_sensitivity": 1.58, "anti_spread_scale": 1.68},
+    "fus_lcd": {"virtual_hbond_scale": 0.92, "anti_collapse_scale": 0.58, "contact_gain_scale": 1.26, "exposure_sensitivity": 1.26, "anti_spread_scale": 1.18, "virtual_hbond_center_A": 1.28, "virtual_hbond_width_A": 1.50},
+    "hnrnpa1_lcd": {"virtual_hbond_scale": 0.80, "contact_gain_scale": 1.15},
+    "tp53_tad": {"virtual_hbond_scale": 1.20, "anti_collapse_scale": 0.95},
+    "ews_lcd": {"anti_collapse_scale": 0.78, "contact_gain_scale": 1.04, "rg_target_multiplier": 0.82, "overcollapse_ratio": 0.88},
+    "tia1_lcd": {"anti_collapse_scale": 0.76, "contact_gain_scale": 1.02, "rg_target_multiplier": 0.86, "overcollapse_ratio": 0.89},
+    "ddx4_n1": {"anti_collapse_scale": 0.74, "contact_gain_scale": 0.98, "rg_target_multiplier": 0.80, "overcollapse_ratio": 0.87},
+    "eaf1_idr": {"anti_collapse_scale": 0.76, "contact_gain_scale": 1.00, "rg_target_multiplier": 0.88, "overcollapse_ratio": 0.90},
+    "npm1_idr": {"anti_collapse_scale": 0.76, "contact_gain_scale": 1.00, "rg_target_multiplier": 0.86, "overcollapse_ratio": 0.89}
+  }
+}

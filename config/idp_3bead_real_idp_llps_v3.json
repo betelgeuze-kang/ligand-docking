@@ -1,0 +1,243 @@
+{
+  "version": "idp_3bead_real_idp_llps_v3",
+  "description": "Expanded 20-target IDP/LLPS training set with real anchors plus synthetic branch-balanced targets.",
+  "runtime": {
+    "device": "cuda",
+    "rollout_steps": 160,
+    "sample_stride": 4,
+    "dt": 0.045,
+    "thermal_noise": 0.018,
+    "knn_k": 12,
+    "ionic_strength": 0.15,
+    "pH": 7.2,
+    "ptm_count": 0.0,
+    "hydro_strength": 1.0,
+    "cooling_rate": 0.0
+  },
+  "gate": {
+    "min_target_pass_fraction": 0.75,
+    "max_failed_targets": 7,
+    "min_mean_force": 0.01,
+    "max_virtual_hbond_mean_distance_A": 4.3,
+    "min_virtual_hbond_contacts_mean": 0.1,
+    "min_anti_collapse_force_mean": 0.01,
+    "max_overcollapse_rate": 0.4,
+    "min_abs_delta_contact_persistence": 0.001,
+    "min_abs_delta_transient_helicity": 0.001,
+    "min_abs_delta_ensemble_diversity": 0.001
+  },
+  "targets": [
+    {
+      "name": "alpha_synuclein_full",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/alpha_synuclein_full.pdb",
+      "residue_start": 1,
+      "residue_end": 140,
+      "seed": 101
+    },
+    {
+      "name": "fus_lcd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/fus_lcd.pdb",
+      "residue_start": 1,
+      "residue_end": 214,
+      "seed": 102
+    },
+    {
+      "name": "hnrnpa1_lcd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/hnrnpa1_lcd.pdb",
+      "residue_start": 186,
+      "residue_end": 320,
+      "seed": 103
+    },
+    {
+      "name": "tardbp_ctd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tardbp_ctd.pdb",
+      "residue_start": 267,
+      "residue_end": 414,
+      "seed": 104
+    },
+    {
+      "name": "tp53_tad",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tp53_tad.pdb",
+      "residue_start": 1,
+      "residue_end": 93,
+      "seed": 105
+    },
+    {
+      "name": "tau_k18",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/tau_k18.pdb",
+      "residue_start": 244,
+      "residue_end": 372,
+      "seed": 106
+    },
+    {
+      "name": "sic1_ntd",
+      "source": "pdb",
+      "pdb_path": "/home/betelgeuze/분자동역학/data/native/idp_llps/sic1_ntd.pdb",
+      "residue_start": 1,
+      "residue_end": 90,
+      "seed": 107
+    },
+    {
+      "name": "amyloid_beta_40",
+      "source": "synthetic",
+      "n_res": 40,
+      "seed": 201,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      }
+    },
+    {
+      "name": "amyloid_beta_42",
+      "source": "synthetic",
+      "n_res": 42,
+      "seed": 202,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      }
+    },
+    {
+      "name": "tau_2n4r_fragment",
+      "source": "synthetic",
+      "n_res": 120,
+      "seed": 203,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      }
+    },
+    {
+      "name": "prion_like_polyq_control",
+      "source": "synthetic",
+      "n_res": 90,
+      "seed": 204,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.8,
+        "helix_tad": 0.1
+      }
+    },
+    {
+      "name": "ews_lcd",
+      "source": "synthetic",
+      "n_res": 180,
+      "seed": 205,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      }
+    },
+    {
+      "name": "tia1_lcd",
+      "source": "synthetic",
+      "n_res": 160,
+      "seed": 206,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      }
+    },
+    {
+      "name": "ddx4_n1",
+      "source": "synthetic",
+      "n_res": 220,
+      "seed": 207,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      }
+    },
+    {
+      "name": "npm1_idr",
+      "source": "synthetic",
+      "n_res": 140,
+      "seed": 208,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      }
+    },
+    {
+      "name": "p27_kid",
+      "source": "synthetic",
+      "n_res": 90,
+      "seed": 209,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      }
+    },
+    {
+      "name": "cmyc_tad_fragment",
+      "source": "synthetic",
+      "n_res": 110,
+      "seed": 210,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      }
+    },
+    {
+      "name": "ash1_idr_fragment",
+      "source": "synthetic",
+      "n_res": 100,
+      "seed": 211,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      }
+    },
+    {
+      "name": "page4",
+      "source": "synthetic",
+      "n_res": 102,
+      "seed": 212,
+      "noise_scale": 0.25,
+      "branch_profile": {
+        "llps_lcd": 0.1,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.75
+      }
+    },
+    {
+      "name": "eaf1_idr",
+      "source": "synthetic",
+      "n_res": 150,
+      "seed": 213,
+      "noise_scale": 0.32,
+      "branch_profile": {
+        "llps_lcd": 0.8,
+        "aggregation_prone": 0.15,
+        "helix_tad": 0.05
+      }
+    }
+  ]
+}

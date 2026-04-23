@@ -1,0 +1,2 @@
+target,native_pdb_path,pdb_id,pocket_x,pocket_y,pocket_z,notes
+TRPV1_ION_CHANNEL_BLIND,data/native/trpv1_ion_channel_blind.pdb,5IS0,108.14,95.216,102.583,TRPV1 ion-channel blind target with capsazepine pocket center from chain C ligand centroid

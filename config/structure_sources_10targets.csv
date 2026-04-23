@@ -1,0 +1,11 @@
+target,pdb_id,uniprot_id,notes
+Chignolin,1UAO,,synthetic miniprotein; fill uniprot_id only if validated
+Trp_Cage,1L2Y,,synthetic miniprotein; fill uniprot_id only if validated
+Villin_HP35,1YRF,P02640,HP35 reference; uniprot auto-mapped from RCSB
+BBA5,1T8J,,small alpha/beta target
+FSD_1,1FSD,,small alpha/beta target
+WW_Domain_FiP35,2F21,Q13526,WW domain target; uniprot auto-mapped from RCSB
+Crambin,1CRN,P01542,experimental compact protein; uniprot auto-mapped from RCSB
+Protein_A_Bdomain,1BDD,P38507,protein A B-domain target; uniprot auto-mapped from RCSB
+GB1_Mini,2GB1,P06654,protein G B1-domain target; uniprot auto-mapped from RCSB
+Ubiquitin_Mini,1UBQ,P0CG48,ubiquitin target; uniprot auto-mapped from RCSB

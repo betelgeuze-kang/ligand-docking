@@ -1,0 +1,18 @@
+# monitoring/alertmanager.yml
+
+route:
+  receiver: 'slack-notifications' # Default receiver
+
+receivers:
+- name: 'slack-notifications'
+  slack_configs:
+  - api_url: 'YOUR_SLACK_WEBHOOK_URL_FOR_ALERTMANAGER' # Separate webhook for Alertmanager
+    channel: '#alerts'
+    text: '{{ .CommonAnnotations.Summary }}\n{{ .CommonAnnotations.Description }}'
+
+inhibit_rules:
+- source_match:
+    severity: 'critical'
+  target_match:
+    severity: 'warning'
+  equal: ['alertname', 'dev', 'instance']

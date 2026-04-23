@@ -1,0 +1,91 @@
+{
+  "protocol_id": "external_validation_biorxiv_non_kinase_enzyme_ca2_v1_template",
+  "protocol_title": "Non-Kinase Enzyme Expansion Template for Carbonic Anhydrase 2 Zn",
+  "protocol_version": "template_v1",
+  "status": "template_not_runnable",
+  "description": "Planning template for adding a non-kinase enzyme family to the existing blind/OOD/smoke governance pattern. Primary candidate is Carbonic_Anhydrase_2_Zn; Dihydrofolate Reductase, Fructose-1,6-bisphosphatase 1, and L-Lactate Dehydrogenase A Chain remain secondary fallback references only.",
+  "primary_candidate": {
+    "target": "CARBONIC_ANHYDRASE_2_ZN_BLIND",
+    "native_pdb_path": "data/public_structures/2026-02-19-measured20-strict-r1/carbonic_anhydrase_2_zn_pdb_1CA2.pdb",
+    "secondary_references": [
+      "Dihydrofolate Reductase",
+      "Fructose-1,6-bisphosphatase 1",
+      "L-Lactate Dehydrogenase A Chain"
+    ]
+  },
+  "required_artifacts": {
+    "target_csv": "config/real_drug_targets_blind_ca2_zn_v1.csv",
+    "target_metadata_csv": "config/ligand_target_metadata_blind_ca2_zn_v1.csv",
+    "core_reference_csv": "config/ligand_binding_reference_blind_ca2_zn_v1.csv",
+    "core_eval_split_csv": "config/ligand_eval_splits_blind_ca2_zn_v1.csv",
+    "core_ligand_meta_csv": "config/ligand_meta_blind_ca2_zn_v1.csv",
+    "ood_reference_csv": "config/ligand_binding_reference_blind_ca2_zn_chembl50_v1.csv",
+    "ood_eval_split_csv": "config/ligand_eval_splits_blind_ca2_zn_chembl50_v1.csv",
+    "ood_ligand_meta_csv": "config/ligand_meta_blind_ca2_zn_chembl50_v1.csv",
+    "core_profile_json": "config/ligand_htvs_blind_ca2_zn_v1.json",
+    "ood_profile_json": "config/ligand_htvs_blind_ca2_zn_chembl50_v1.json",
+    "smoke_profile_json": "config/ligand_htvs_blind_ca2_zn_v1.json"
+  },
+  "placeholder_policies": {
+    "fit_donor_target": "EGFR_KINASE",
+    "fit_donor_policy_state": "frozen_external_donor_egfr_until_ca2_family_fit_packet_exists",
+    "metal_scoring_policy_state": "governance_scaffold_only_no_family_specific_claim"
+  },
+  "sets": [
+    {
+      "set_id": "set1_core_blind",
+      "title": "Core Blind Set",
+      "purpose": "Primary non-kinase enzyme blind performance set for the first CA2 family extension.",
+      "claim_role": "primary_family_extension",
+      "tasks": [
+        {
+          "task_id": "non_kinase_enzyme_ca2_core_full",
+          "domain": "non_kinase_enzyme",
+          "kind": "ligand_stress",
+          "profile_json": "config/ligand_htvs_blind_ca2_zn_v1.json",
+          "ligand_sizes": "10000",
+          "date_tag_suffix": "ca2-core-full"
+        }
+      ]
+    },
+    {
+      "set_id": "set2_expanded_ood",
+      "title": "Expanded OOD Set",
+      "purpose": "Secondary non-kinase enzyme OOD set for CA2 under the same governance rules used elsewhere in the package.",
+      "claim_role": "secondary_generalization",
+      "tasks": [
+        {
+          "task_id": "non_kinase_enzyme_ca2_chembl50_full",
+          "domain": "non_kinase_enzyme",
+          "kind": "ligand_stress",
+          "profile_json": "config/ligand_htvs_blind_ca2_zn_chembl50_v1.json",
+          "ligand_sizes": "10000",
+          "date_tag_suffix": "ca2-chembl50-full"
+        }
+      ]
+    },
+    {
+      "set_id": "set3_operational_smoke",
+      "title": "Operational Smoke Set",
+      "purpose": "Optional fast reproducibility support set for the first non-kinase enzyme family extension.",
+      "claim_role": "reproducibility_support",
+      "tasks": [
+        {
+          "task_id": "non_kinase_enzyme_ca2_smoke",
+          "domain": "non_kinase_enzyme",
+          "kind": "ligand_stress",
+          "profile_json": "config/ligand_htvs_blind_ca2_zn_v1.json",
+          "ligand_sizes": "64",
+          "date_tag_suffix": "ca2-smoke"
+        }
+      ]
+    }
+  ],
+  "implementation_notes": [
+    "Do not promote this template to a runnable spec until the target packet, ligand reference packet, ligand meta packet, and eval split packet exist.",
+    "Reuse the current blind/OOD/smoke governance pattern instead of inventing family-specific acceptance rules.",
+    "Treat Dihydrofolate Reductase, Fructose-1,6-bisphosphatase 1, and L-Lactate Dehydrogenase A Chain as fallback references until they receive their own ligand governance assets.",
+    "Make the first CA2 pass explicit about whether it is governance-only or already claims metal-aware scoring behavior.",
+    "The current template uses EGFR_KINASE as a target-level placeholder for the inherited fit-donor path only. CA2 ligand packets are intentionally decoupled from that donor placeholder; replace or freeze this policy before any runnable CA2 execution."
+  ]
+}

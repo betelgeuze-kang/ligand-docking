@@ -1,0 +1,22 @@
+{
+  "version": "v1",
+  "generated_at_local": "2026-02-19T03:08:00",
+  "objective": "initial_claim_ready_without_correction_loop",
+  "source_artifact": "runs/claim_input_profile_sweep_2026-02-19-ic-v3pass_summary.json",
+  "profile": {
+    "claim_split_mode": "window_stratified",
+    "claim_split_replicas": 3,
+    "claim_split_window_frames": 24,
+    "claim_split_window_stride": 12,
+    "claim_min_effective_frames": 8,
+    "claim_thermo_agg_method": "median",
+    "claim_kinetics_agg_method": "trimmed",
+    "claim_experiment_agg_method": "median",
+    "claim_trim_fraction": 0.1,
+    "claim_tail_clip_low": 0.01,
+    "claim_tail_clip_high": 0.99,
+    "claim_pmf_pseudocount": 1.0,
+    "claim_kinetics_min_signal_std": 1e-06,
+    "claim_kinetics_min_denom_eps": 1e-12
+  }
+}

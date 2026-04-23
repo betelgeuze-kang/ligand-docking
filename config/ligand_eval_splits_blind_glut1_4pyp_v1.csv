@@ -1,0 +1,13 @@
+target,ligand_id,role
+EGFR_KINASE,erlotinib,fit
+EGFR_KINASE,nilotinib,fit
+EGFR_KINASE,imatinib,fit
+EGFR_KINASE,ibuprofen,fit
+EGFR_KINASE,aspirin,fit
+EGFR_KINASE,caffeine,fit
+GLUT1_TRANSPORT_BLIND,glut1_placeholder_binder_01,far_ood_eval
+GLUT1_TRANSPORT_BLIND,glut1_placeholder_binder_02,far_ood_eval
+GLUT1_TRANSPORT_BLIND,glut1_placeholder_binder_03,far_ood_eval
+GLUT1_TRANSPORT_BLIND,glut1_placeholder_nonbinder_01,far_ood_eval
+GLUT1_TRANSPORT_BLIND,glut1_placeholder_nonbinder_02,far_ood_eval
+GLUT1_TRANSPORT_BLIND,glut1_placeholder_nonbinder_03,far_ood_eval

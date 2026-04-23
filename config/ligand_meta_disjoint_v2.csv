@@ -1,0 +1,13 @@
+ligand_id,smiles,molecular_weight,logp,h_donors,h_acceptors,rot_bonds,scaffold
+egfr_erlotinib,COCCOC1=CC2=C(C=C1)N=CN=C2NC3=CC=CC=C3,393.44,2.7,1,6,8,egfr_quinazoline_a
+egfr_gefitinib,COC1=CC2=C(C=C1OC)N=CN=C2NCC3=CC=C(C=C3)Cl,446.9,3.0,1,7,9,egfr_quinazoline_b
+egfr_lapatinib,CS(=O)(=O)CCOc1ccc(Nc2ncnc3cc(OCCCN4CCOCC4)c(OC)cc23)cc1Cl,581.07,5.1,2,9,12,egfr_anilide_kinase
+egfr_decoy_ibuprofen,CC(C)CC1=CC=C(C=C1)C(C)C(=O)O,206.28,3.5,1,2,4,egfr_arylpropionic
+egfr_decoy_aspirin,CC(=O)OC1=CC=CC=C1C(=O)O,180.16,1.2,1,4,3,egfr_salicylate
+egfr_decoy_caffeine,CN1C=NC2=C1N(C)C(=O)N(C)C(=O)N2C,194.19,-0.1,0,6,0,egfr_xanthine
+hiv_darunavir,CC(C)(C)NC(=O)N[C@@H](CC1=CC=CC=C1)C(O)C[C@@H](O)[C@@H](CC1=CC=CC=C1)NC(=O)N[C@@H](C(C)C)C(O)C(C)(C)C,547.66,2.9,6,11,14,hiv_sulfonamide_like
+hiv_atazanavir,COC(=O)N[C@H](Cc1ccccc1)C(=O)N[C@H](CC(C)C)C(O)CNC(=O)N[C@H](Cc1ccccc1)C(O)C(C)(C)C,646.8,4.4,5,10,15,hiv_azapeptide_like
+hiv_lopinavir,CC(C)C[C@H](NC(=O)[C@@H](NC(=O)OCc1ccccc1)C(C)C)C(O)C[C@H](NC(=O)OCC1=CN=CS1)C(C)C,628.8,4.7,4,9,16,hiv_hydroxyethylamine
+hiv_decoy_metformin,CN(C)C(=N)NC(=N)N,129.16,-1.4,3,5,1,hiv_biguanide
+hiv_decoy_acetaminophen,CC(=O)NC1=CC=C(C=C1)O,151.16,0.5,2,2,1,hiv_aminophenol
+hiv_decoy_propranolol,CC(C)NCC(O)COC1=CC=CC2=CC=CC=C12,259.34,3.2,2,3,7,hiv_aryloxypropanolamine

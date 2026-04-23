@@ -1,0 +1,71 @@
+{
+  "version": "idp_observable_anchors_lit_template_v1",
+  "description": "Template for literature-curated IDP observable anchors. Replace provisional ranges and provenance with paper-backed values before claiming external anchor validation.",
+  "targets": {
+    "alpha_synuclein_full": {
+      "source": "literature_curated_pending",
+      "provenance": {
+        "kind": "paper_or_experiment",
+        "citation": "",
+        "notes": ""
+      },
+      "rg_mean_range": [30.0, 45.0],
+      "sasa_proxy_mean_range": [1200.0, 2600.0],
+      "contact_persistence_range": [0.03, 0.22],
+      "transient_helicity_range": [0.02, 0.18],
+      "ensemble_diversity_range": [4.0, 18.0]
+    },
+    "fus_lcd": {
+      "source": "literature_curated_pending",
+      "provenance": {
+        "kind": "paper_or_experiment",
+        "citation": "",
+        "notes": ""
+      },
+      "rg_mean_range": [38.0, 58.0],
+      "sasa_proxy_mean_range": [1800.0, 4200.0],
+      "contact_persistence_range": [0.05, 0.28],
+      "transient_helicity_range": [0.02, 0.16],
+      "ensemble_diversity_range": [5.0, 24.0]
+    },
+    "hnrnpa1_lcd": {
+      "source": "literature_curated_pending",
+      "provenance": {
+        "kind": "paper_or_experiment",
+        "citation": "",
+        "notes": ""
+      },
+      "rg_mean_range": [28.0, 46.0],
+      "sasa_proxy_mean_range": [1100.0, 2500.0],
+      "contact_persistence_range": [0.04, 0.24],
+      "transient_helicity_range": [0.03, 0.20],
+      "ensemble_diversity_range": [4.0, 18.0]
+    },
+    "tardbp_ctd": {
+      "source": "literature_curated_pending",
+      "provenance": {
+        "kind": "paper_or_experiment",
+        "citation": "",
+        "notes": ""
+      },
+      "rg_mean_range": [30.0, 48.0],
+      "sasa_proxy_mean_range": [1200.0, 2800.0],
+      "contact_persistence_range": [0.04, 0.24],
+      "transient_helicity_range": [0.03, 0.18],
+      "ensemble_diversity_range": [4.0, 18.0]
+    },
+    "tp53_tad": {
+      "source": "literature_curated_pending",
+      "provenance": {
+        "kind": "paper_or_experiment",
+        "citation": "",
+        "notes": ""
+      },
+      "rg_mean_range": [20.0, 34.0],
+      "sasa_proxy_mean_range": [700.0, 1800.0],
+      "contact_persistence_range": [0.02, 0.18],
+      "transient_helicity_range": [0.08, 0.30],
+      "ensemble_diversity_range": [3.0, 14.0]
+    }
+  }
+}

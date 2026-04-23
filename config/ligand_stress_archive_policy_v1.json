@@ -1,0 +1,15 @@
+{
+  "archive_dir": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_stress_archives",
+  "prefix_glob": "runs/ligand_stress*_summary.json",
+  "keep_latest": 8,
+  "delete_after_archive": true,
+  "exclude_prefixes": [
+    "runs/ligand_stress_commercial_p100_v6_2026-03-06_r1",
+    "runs/ligand_stress_commercial_p150_v6_2026-03-06_r1"
+  ],
+  "notes": [
+    "Do not archive any live prefix during active p100/p150 runs.",
+    "Archive only top-level completed run bundles; stage, hard_decoy, sla, post and failure artifacts are excluded automatically.",
+    "Use dry-run first while live experiments are active."
+  ]
+}

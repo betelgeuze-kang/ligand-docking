@@ -1,0 +1,13 @@
+{
+  "version": "idp_branch_taxonomy_v1",
+  "description": "Soft branch priors for IDP/LLPS targets.",
+  "targets": {
+    "alpha_synuclein_full": {"llps_lcd": 0.15, "aggregation_prone": 0.80, "helix_tad": 0.05},
+    "tau_k18": {"llps_lcd": 0.15, "aggregation_prone": 0.75, "helix_tad": 0.10},
+    "fus_lcd": {"llps_lcd": 0.85, "aggregation_prone": 0.10, "helix_tad": 0.05},
+    "hnrnpa1_lcd": {"llps_lcd": 0.75, "aggregation_prone": 0.20, "helix_tad": 0.05},
+    "tardbp_ctd": {"llps_lcd": 0.60, "aggregation_prone": 0.30, "helix_tad": 0.10},
+    "tp53_tad": {"llps_lcd": 0.05, "aggregation_prone": 0.15, "helix_tad": 0.80},
+    "sic1_ntd": {"llps_lcd": 0.15, "aggregation_prone": 0.35, "helix_tad": 0.50}
+  }
+}

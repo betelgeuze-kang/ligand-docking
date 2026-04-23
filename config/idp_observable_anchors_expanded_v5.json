@@ -1,0 +1,566 @@
+{
+  "version": "idp_observable_anchors_expanded_v5",
+  "description": "Expanded 20-target IDP/LLPS anchor table: literature/hybrid anchors for known targets and branch-family provisional anchors for expanded benchmark targets.",
+  "targets": {
+    "alpha_synuclein_full": {
+      "source": "literature_compilation_partial",
+      "provenance": {
+        "kind": "compiled_experimental_range",
+        "citation": "J. Chem. Inf. Model. 2024 review snippet reported experimental Rg range about 2.5-4.0 nm for alpha-synuclein monomer ensembles.",
+        "notes": "Broad experimental compilation rather than one canonical value."
+      },
+      "rg_mean_range": [
+        25.0,
+        40.0
+      ],
+      "sasa_proxy_mean_range": [
+        1100.0,
+        2500.0
+      ],
+      "contact_persistence_range": [
+        0.03,
+        0.22
+      ],
+      "transient_helicity_range": [
+        0.02,
+        0.18
+      ],
+      "ensemble_diversity_range": [
+        4.0,
+        18.0
+      ]
+    },
+    "fus_lcd": {
+      "source": "literature_inferred_partial",
+      "provenance": {
+        "kind": "paper_or_experiment",
+        "citation": "FUS low-complexity conformational studies and sequence-matched polymer analyses support expanded ensemble with Rg in high-40s to mid-50s A regime for long LCD constructs.",
+        "notes": "Not exact 1-214 construct SAXS anchor; narrowed from prior broad range using literature-constrained LCD expansion regime."
+      },
+      "rg_mean_range": [
+        46.0,
+        56.0
+      ],
+      "sasa_proxy_mean_range": [
+        1900.0,
+        3400.0
+      ],
+      "contact_persistence_range": [
+        0.05,
+        0.2
+      ],
+      "transient_helicity_range": [
+        0.02,
+        0.12
+      ],
+      "ensemble_diversity_range": [
+        6.0,
+        18.0
+      ]
+    },
+    "hnrnpa1_lcd": {
+      "source": "literature_curated_partial",
+      "provenance": {
+        "kind": "saxs_database_entry",
+        "citation": "SASBDB molecule/4796 snippet reports hNRNPA1 LCD Rg 24.4 +/- 0.4 A",
+        "notes": "Construct-aligned LCD anchor tightened from SAXS database entry; non-Rg observables remain proxy-assisted."
+      },
+      "rg_mean_range": [
+        23.6,
+        25.2
+      ],
+      "sasa_proxy_mean_range": [
+        950.0,
+        1700.0
+      ],
+      "contact_persistence_range": [
+        0.05,
+        0.19
+      ],
+      "transient_helicity_range": [
+        0.03,
+        0.16
+      ],
+      "ensemble_diversity_range": [
+        4.0,
+        14.0
+      ]
+    },
+    "tardbp_ctd": {
+      "source": "literature_inferred_partial",
+      "provenance": {
+        "kind": "paper_or_experiment",
+        "citation": "Biophysical reports for TDP-43 CTD indicate diffusion-derived Rg about 2.8 nm for disordered CTD ensemble.",
+        "notes": "CTD size anchor tightened from reported disordered-diffusion estimate; remaining observables are still proxy-guided."
+      },
+      "rg_mean_range": [
+        25.5,
+        30.5
+      ],
+      "sasa_proxy_mean_range": [
+        1150.0,
+        2200.0
+      ],
+      "contact_persistence_range": [
+        0.05,
+        0.18
+      ],
+      "transient_helicity_range": [
+        0.04,
+        0.16
+      ],
+      "ensemble_diversity_range": [
+        4.0,
+        14.0
+      ]
+    },
+    "tp53_tad": {
+      "source": "literature_curated_partial",
+      "provenance": {
+        "kind": "paper_or_experiment",
+        "citation": "PMCID review snippet reports p53 TAD Rg 28.7 A from NMR/MD integration for residues 1-93 scale.",
+        "notes": "Construct-matched TAD size anchor tightened; contact/helicity bands remain literature-informed proxy ranges."
+      },
+      "rg_mean_range": [
+        27.0,
+        30.5
+      ],
+      "sasa_proxy_mean_range": [
+        800.0,
+        1500.0
+      ],
+      "contact_persistence_range": [
+        0.03,
+        0.14
+      ],
+      "transient_helicity_range": [
+        0.1,
+        0.26
+      ],
+      "ensemble_diversity_range": [
+        3.0,
+        11.0
+      ]
+    },
+    "tau_k18": {
+      "source": "literature_curated_partial",
+      "provenance": {
+        "kind": "paper_or_experiment",
+        "citation": "SAXS-based value reported for tau K18 around Rg = 38 +/- 3 A.",
+        "notes": "Range widened slightly for coarse-grained observable mismatch."
+      },
+      "rg_mean_range": [
+        35.0,
+        41.0
+      ],
+      "sasa_proxy_mean_range": [
+        1400.0,
+        3000.0
+      ],
+      "contact_persistence_range": [
+        0.04,
+        0.22
+      ],
+      "transient_helicity_range": [
+        0.02,
+        0.15
+      ],
+      "ensemble_diversity_range": [
+        4.0,
+        20.0
+      ]
+    },
+    "sic1_ntd": {
+      "source": "literature_curated_partial",
+      "provenance": {
+        "kind": "paper_or_experiment",
+        "citation": "Ensemble benchmark literature reported Sic1 Rg around 29.5 A.",
+        "notes": "Range widened modestly for coarse observable tolerance."
+      },
+      "rg_mean_range": [
+        27.5,
+        31.5
+      ],
+      "sasa_proxy_mean_range": [
+        800.0,
+        1800.0
+      ],
+      "contact_persistence_range": [
+        0.02,
+        0.16
+      ],
+      "transient_helicity_range": [
+        0.01,
+        0.12
+      ],
+      "ensemble_diversity_range": [
+        3.0,
+        12.0
+      ]
+    },
+    "amyloid_beta_40": {
+      "rg_mean_range": [
+        22.0,
+        42.0
+      ],
+      "sasa_proxy_mean_range": [
+        900.0,
+        2600.0
+      ],
+      "contact_persistence_range": [
+        0.05,
+        0.24
+      ],
+      "transient_helicity_range": [
+        0.01,
+        0.12
+      ],
+      "ensemble_diversity_range": [
+        4.0,
+        16.0
+      ],
+      "source": "branch_family_provisional",
+      "provenance": {
+        "kind": "branch_family_prior",
+        "citation": "Generated from branch-conditioned family prior for expanded v7 benchmark; not construct-matched experimental anchor.",
+        "notes": "Auto-generated provisional anchor for branch=aggregation_prone. Replace with construct-matched literature/experimental values when available."
+      }
+    },
+    "amyloid_beta_42": {
+      "rg_mean_range": [
+        22.0,
+        42.0
+      ],
+      "sasa_proxy_mean_range": [
+        900.0,
+        2600.0
+      ],
+      "contact_persistence_range": [
+        0.05,
+        0.24
+      ],
+      "transient_helicity_range": [
+        0.01,
+        0.12
+      ],
+      "ensemble_diversity_range": [
+        4.0,
+        16.0
+      ],
+      "source": "branch_family_provisional",
+      "provenance": {
+        "kind": "branch_family_prior",
+        "citation": "Generated from branch-conditioned family prior for expanded v7 benchmark; not construct-matched experimental anchor.",
+        "notes": "Auto-generated provisional anchor for branch=aggregation_prone. Replace with construct-matched literature/experimental values when available."
+      }
+    },
+    "tau_2n4r_fragment": {
+      "rg_mean_range": [
+        22.0,
+        42.0
+      ],
+      "sasa_proxy_mean_range": [
+        900.0,
+        2600.0
+      ],
+      "contact_persistence_range": [
+        0.05,
+        0.24
+      ],
+      "transient_helicity_range": [
+        0.01,
+        0.12
+      ],
+      "ensemble_diversity_range": [
+        4.0,
+        16.0
+      ],
+      "source": "branch_family_provisional",
+      "provenance": {
+        "kind": "branch_family_prior",
+        "citation": "Generated from branch-conditioned family prior for expanded v7 benchmark; not construct-matched experimental anchor.",
+        "notes": "Auto-generated provisional anchor for branch=aggregation_prone. Replace with construct-matched literature/experimental values when available."
+      }
+    },
+    "prion_like_polyq_control": {
+      "rg_mean_range": [
+        22.0,
+        42.0
+      ],
+      "sasa_proxy_mean_range": [
+        900.0,
+        2600.0
+      ],
+      "contact_persistence_range": [
+        0.05,
+        0.24
+      ],
+      "transient_helicity_range": [
+        0.01,
+        0.12
+      ],
+      "ensemble_diversity_range": [
+        4.0,
+        16.0
+      ],
+      "source": "branch_family_provisional",
+      "provenance": {
+        "kind": "branch_family_prior",
+        "citation": "Generated from branch-conditioned family prior for expanded v7 benchmark; not construct-matched experimental anchor.",
+        "notes": "Auto-generated provisional anchor for branch=aggregation_prone. Replace with construct-matched literature/experimental values when available."
+      }
+    },
+    "ews_lcd": {
+      "rg_mean_range": [
+        38.0,
+        58.0
+      ],
+      "sasa_proxy_mean_range": [
+        1500.0,
+        3400.0
+      ],
+      "contact_persistence_range": [
+        0.06,
+        0.24
+      ],
+      "transient_helicity_range": [
+        0.02,
+        0.14
+      ],
+      "ensemble_diversity_range": [
+        6.0,
+        18.0
+      ],
+      "source": "branch_family_provisional",
+      "provenance": {
+        "kind": "branch_family_prior",
+        "citation": "Generated from branch-conditioned family prior for expanded v7 benchmark; not construct-matched experimental anchor.",
+        "notes": "Auto-generated provisional anchor for branch=llps_lcd. Replace with construct-matched literature/experimental values when available."
+      }
+    },
+    "tia1_lcd": {
+      "rg_mean_range": [
+        38.0,
+        58.0
+      ],
+      "sasa_proxy_mean_range": [
+        1500.0,
+        3400.0
+      ],
+      "contact_persistence_range": [
+        0.06,
+        0.24
+      ],
+      "transient_helicity_range": [
+        0.02,
+        0.14
+      ],
+      "ensemble_diversity_range": [
+        6.0,
+        18.0
+      ],
+      "source": "branch_family_provisional",
+      "provenance": {
+        "kind": "branch_family_prior",
+        "citation": "Generated from branch-conditioned family prior for expanded v7 benchmark; not construct-matched experimental anchor.",
+        "notes": "Auto-generated provisional anchor for branch=llps_lcd. Replace with construct-matched literature/experimental values when available."
+      }
+    },
+    "ddx4_n1": {
+      "rg_mean_range": [
+        38.0,
+        58.0
+      ],
+      "sasa_proxy_mean_range": [
+        1500.0,
+        3400.0
+      ],
+      "contact_persistence_range": [
+        0.06,
+        0.24
+      ],
+      "transient_helicity_range": [
+        0.02,
+        0.14
+      ],
+      "ensemble_diversity_range": [
+        6.0,
+        18.0
+      ],
+      "source": "branch_family_provisional",
+      "provenance": {
+        "kind": "branch_family_prior",
+        "citation": "Generated from branch-conditioned family prior for expanded v7 benchmark; not construct-matched experimental anchor.",
+        "notes": "Auto-generated provisional anchor for branch=llps_lcd. Replace with construct-matched literature/experimental values when available."
+      }
+    },
+    "npm1_idr": {
+      "rg_mean_range": [
+        38.0,
+        58.0
+      ],
+      "sasa_proxy_mean_range": [
+        1500.0,
+        3400.0
+      ],
+      "contact_persistence_range": [
+        0.06,
+        0.24
+      ],
+      "transient_helicity_range": [
+        0.02,
+        0.14
+      ],
+      "ensemble_diversity_range": [
+        6.0,
+        18.0
+      ],
+      "source": "branch_family_provisional",
+      "provenance": {
+        "kind": "branch_family_prior",
+        "citation": "Generated from branch-conditioned family prior for expanded v7 benchmark; not construct-matched experimental anchor.",
+        "notes": "Auto-generated provisional anchor for branch=llps_lcd. Replace with construct-matched literature/experimental values when available."
+      }
+    },
+    "p27_kid": {
+      "rg_mean_range": [
+        24.0,
+        34.0
+      ],
+      "sasa_proxy_mean_range": [
+        700.0,
+        1700.0
+      ],
+      "contact_persistence_range": [
+        0.03,
+        0.14
+      ],
+      "transient_helicity_range": [
+        0.08,
+        0.3
+      ],
+      "ensemble_diversity_range": [
+        3.0,
+        11.0
+      ],
+      "source": "branch_family_provisional",
+      "provenance": {
+        "kind": "branch_family_prior",
+        "citation": "Generated from branch-conditioned family prior for expanded v7 benchmark; not construct-matched experimental anchor.",
+        "notes": "Auto-generated provisional anchor for branch=helix_tad. Replace with construct-matched literature/experimental values when available."
+      }
+    },
+    "cmyc_tad_fragment": {
+      "rg_mean_range": [
+        24.0,
+        34.0
+      ],
+      "sasa_proxy_mean_range": [
+        700.0,
+        1700.0
+      ],
+      "contact_persistence_range": [
+        0.03,
+        0.14
+      ],
+      "transient_helicity_range": [
+        0.08,
+        0.3
+      ],
+      "ensemble_diversity_range": [
+        3.0,
+        11.0
+      ],
+      "source": "branch_family_provisional",
+      "provenance": {
+        "kind": "branch_family_prior",
+        "citation": "Generated from branch-conditioned family prior for expanded v7 benchmark; not construct-matched experimental anchor.",
+        "notes": "Auto-generated provisional anchor for branch=helix_tad. Replace with construct-matched literature/experimental values when available."
+      }
+    },
+    "ash1_idr_fragment": {
+      "rg_mean_range": [
+        24.0,
+        34.0
+      ],
+      "sasa_proxy_mean_range": [
+        700.0,
+        1700.0
+      ],
+      "contact_persistence_range": [
+        0.03,
+        0.14
+      ],
+      "transient_helicity_range": [
+        0.08,
+        0.3
+      ],
+      "ensemble_diversity_range": [
+        3.0,
+        11.0
+      ],
+      "source": "branch_family_provisional",
+      "provenance": {
+        "kind": "branch_family_prior",
+        "citation": "Generated from branch-conditioned family prior for expanded v7 benchmark; not construct-matched experimental anchor.",
+        "notes": "Auto-generated provisional anchor for branch=helix_tad. Replace with construct-matched literature/experimental values when available."
+      }
+    },
+    "page4": {
+      "rg_mean_range": [
+        34.9,
+        37.1
+      ],
+      "sasa_proxy_mean_range": [
+        700.0,
+        1700.0
+      ],
+      "contact_persistence_range": [
+        0.03,
+        0.14
+      ],
+      "transient_helicity_range": [
+        0.08,
+        0.3
+      ],
+      "ensemble_diversity_range": [
+        3.0,
+        11.0
+      ],
+      "source": "literature_curated_partial",
+      "provenance": {
+        "kind": "paper_or_experiment",
+        "citation": "J Mol Biol (2018) 430, 2422-2438, Table 1 reports WT-PAGE4 SAXS <Rg> = 36 +/- 1.1 A and smFRET distances Dist18_63 = 56 A, Dist63_102 = 50 A (DOI: 10.1016/j.jmb.2018.05.011).",
+        "notes": "Construct-matched full-length PAGE4 anchor tightened from WT-PAGE4 SAXS/smFRET measurements; non-Rg observables remain proxy-assisted and must stay separate from ph_low/ph_high follow-up states."
+      }
+    },
+    "eaf1_idr": {
+      "rg_mean_range": [
+        38.0,
+        58.0
+      ],
+      "sasa_proxy_mean_range": [
+        1500.0,
+        3400.0
+      ],
+      "contact_persistence_range": [
+        0.06,
+        0.24
+      ],
+      "transient_helicity_range": [
+        0.02,
+        0.14
+      ],
+      "ensemble_diversity_range": [
+        6.0,
+        18.0
+      ],
+      "source": "branch_family_provisional",
+      "provenance": {
+        "kind": "branch_family_prior",
+        "citation": "Generated from branch-conditioned family prior for expanded v7 benchmark; not construct-matched experimental anchor.",
+        "notes": "Auto-generated provisional anchor for branch=llps_lcd. Replace with construct-matched literature/experimental values when available."
+      }
+    }
+  }
+}

@@ -1,0 +1,4 @@
+target,pdb_id,uniprot_id,notes
+Carbonic_Anhydrase_2_Zn,1CA2,P00918,zn_metalloenzyme_reference
+CuZn_Superoxide_Dismutase,1CBJ,P00441,cu_zn_bimetal_center_reference
+Matrix_Metalloproteinase_1,1SU3,P03956,zn_binding_catalytic_domain

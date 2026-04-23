@@ -1,0 +1,23 @@
+numpy
+torch
+pandas
+PyYAML
+h5py
+psutil
+rich
+
+# API and client
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+openai
+
+# Optional modules used by specific scripts
+optuna
+mlflow
+GPUtil
+torch-geometric
+onnx
+matplotlib
+seaborn

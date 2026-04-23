@@ -1,0 +1,22 @@
+{
+  "target_chembl_id": "CHEMBL4794",
+  "activities_fetched": 6067,
+  "candidate_count": 50,
+  "candidate_csv": "/home/betelgeuze/분자동역학/config/ligand_blind_trpv1_chembl_candidates_v1.csv",
+  "variants": [
+    {
+      "count": "20",
+      "meta_csv": "/home/betelgeuze/분자동역학/config/ligand_meta_blind_trpv1_chembl20_v1.csv",
+      "reference_csv": "/home/betelgeuze/분자동역학/config/ligand_binding_reference_blind_trpv1_chembl20_v1.csv",
+      "split_csv": "/home/betelgeuze/분자동역학/config/ligand_eval_splits_blind_trpv1_chembl20_v1.csv",
+      "profile_json": "/home/betelgeuze/분자동역학/config/ligand_htvs_blind_trpv1_chembl20_v1.json"
+    },
+    {
+      "count": "50",
+      "meta_csv": "/home/betelgeuze/분자동역학/config/ligand_meta_blind_trpv1_chembl50_v1.csv",
+      "reference_csv": "/home/betelgeuze/분자동역학/config/ligand_binding_reference_blind_trpv1_chembl50_v1.csv",
+      "split_csv": "/home/betelgeuze/분자동역학/config/ligand_eval_splits_blind_trpv1_chembl50_v1.csv",
+      "profile_json": "/home/betelgeuze/분자동역학/config/ligand_htvs_blind_trpv1_chembl50_v1.json"
+    }
+  ]
+}

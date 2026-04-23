@@ -1,0 +1,31 @@
+{
+  "version": "ligand_service_error_codes_v1",
+  "description": "Canonical service error code map for ligand HTVS pipeline.",
+  "ok_code": "HTVS_OK",
+  "unknown_error_code": "HTVS_UNKNOWN_ERROR",
+  "map": {
+    "smoke": "HTVS_SMOKE_FAILED",
+    "full": "HTVS_FULL_FAILED",
+    "stage_contract_input": "HTVS_INPUT_CONTRACT_FAILED",
+    "stage_heavy_artifacts_root": "HTVS_STORAGE_ROOT_FAILED",
+    "stage0_leakage_audit": "HTVS_LEAKAGE_AUDIT_FAILED",
+    "stage1_ligand_mapping": "HTVS_MAPPING_FAILED",
+    "stage1_eval_positive_check": "HTVS_EVAL_POSITIVE_MISSING",
+    "stage2_trajectory_generation": "HTVS_TRAJECTORY_FAILED",
+    "stage2_residual_meta": "HTVS_RESIDUAL_META_FAILED",
+    "stage3_backmapping_scoring": "HTVS_SCORING_FAILED",
+    "stage4_calibration": "HTVS_CALIBRATION_FAILED",
+    "stage45_eval_integrity": "HTVS_EVAL_INTEGRITY_FAILED",
+    "stage5_ranking_eval": "HTVS_RANKING_FAILED",
+    "stage6_operational_gate": "HTVS_GATE_FAILED",
+    "stage7_data_contract_output": "HTVS_OUTPUT_CONTRACT_FAILED"
+  },
+  "retryable_stages": [
+    "smoke",
+    "full",
+    "stage_heavy_artifacts_root",
+    "stage2_trajectory_generation",
+    "stage2_residual_meta",
+    "stage3_backmapping_scoring"
+  ]
+}

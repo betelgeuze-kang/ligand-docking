@@ -1,0 +1,20 @@
+{
+  "meta": {
+    "created_at": "2026-02-15",
+    "description": "Speed-restore policy: force interval=10 for all 10 targets to avoid interval=1 regressions.",
+    "source": "manual_speed_restore_v2"
+  },
+  "policy": {
+    "BBA5": 10,
+    "Chignolin": 10,
+    "Crambin": 10,
+    "FSD_1": 10,
+    "GB1_Mini": 10,
+    "Protein_A_Bdomain": 10,
+    "Trp_Cage": 10,
+    "Ubiquitin_Mini": 10,
+    "Villin_HP35": 10,
+    "WW_Domain_FiP35": 10
+  },
+  "policy_spec": "BBA5=10,Chignolin=10,Crambin=10,FSD_1=10,GB1_Mini=10,Protein_A_Bdomain=10,Trp_Cage=10,Ubiquitin_Mini=10,Villin_HP35=10,WW_Domain_FiP35=10"
+}

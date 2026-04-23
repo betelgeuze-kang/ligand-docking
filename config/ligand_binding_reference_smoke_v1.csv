@@ -1,0 +1,14 @@
+target,ligand_id,reference_binding_kcal_mol,is_binder,source
+EGFR_KINASE,erlotinib,-9.2,1,literature_proxy
+EGFR_KINASE,imatinib,-7.4,1,literature_proxy
+EGFR_KINASE,aspirin,-1.1,0,literature_proxy
+EGFR_KINASE,caffeine,-0.6,0,literature_proxy
+EGFR_KINASE,ibuprofen,-1.8,0,literature_proxy
+KRAS_G12D,imatinib,-5.0,1,literature_proxy
+KRAS_G12D,nilotinib,-5.4,1,literature_proxy
+KRAS_G12D,aspirin,-0.7,0,literature_proxy
+KRAS_G12D,caffeine,-0.3,0,literature_proxy
+HIV1_PROTEASE,nilotinib,-6.2,1,literature_proxy
+HIV1_PROTEASE,imatinib,-5.4,1,literature_proxy
+HIV1_PROTEASE,aspirin,-1.0,0,literature_proxy
+HIV1_PROTEASE,caffeine,-0.4,0,literature_proxy

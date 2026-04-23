@@ -1,0 +1,7 @@
+# One URL/path per line. Lines starting with "#" are ignored.
+# Expected CSV columns:
+# target,pdb_id,uniprot_id,md_url,md_path,label,notes
+#
+# Example:
+# https://example.org/md_catalogs/high_precision_md_catalog_a.csv
+# https://example.org/md_catalogs/high_precision_md_catalog_b.csv

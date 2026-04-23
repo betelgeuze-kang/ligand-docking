@@ -1,0 +1,59 @@
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Local tooling / agent metadata
+.agents/
+
+# Python caches and virtualenvs
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+.venv/
+venv/
+
+# Build outputs and compiled artifacts
+rust_engine/target/
+target/
+ldi_arc_rust*.so
+*.so
+*.dylib
+*.dll
+*.a
+*.o
+*.rlib
+*.deb
+
+# Downloaded local tool bundles
+tools/bin/chimerax/
+
+# Generated datasets, models, caches, and reports
+archives/
+data/
+logs/
+models/
+output/
+runs/
+runtime/cache/
+test-results/
+tmp/
+final_result_summaries_2026-03-10/
+benchmark_results.csv
+commercialization_status_report.md
+*.log
+*.h5
+*.npz
+*.pt
+*.pth
+*.onnx
+*.tar.gz
+*.tar.zst
+
+# OS/editor noise
+.DS_Store

@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "created_at": "2026-02-15",
+    "description": "Per-target long-horizon stability tuning profile for failed noncyclic set."
+  },
+  "targets": {
+    "BBA5": {
+      "dt": 3e-06,
+      "restraint_k": 9.0,
+      "force_clip": 100.0
+    },
+    "Chignolin": {
+      "dt": 3e-06,
+      "restraint_k": 5.0,
+      "force_clip": 100.0
+    },
+    "FSD_1": {
+      "dt": 3e-06,
+      "restraint_k": 7.0,
+      "force_clip": 100.0
+    },
+    "GB1_Mini": {
+      "dt": 1e-06,
+      "restraint_k": 7.0,
+      "force_clip": 60.0
+    },
+    "Trp_Cage": {
+      "dt": 3e-06,
+      "restraint_k": 12.0,
+      "force_clip": 100.0
+    },
+    "WW_Domain_FiP35": {
+      "dt": 3e-06,
+      "restraint_k": 7.0,
+      "force_clip": 100.0
+    }
+  }
+}

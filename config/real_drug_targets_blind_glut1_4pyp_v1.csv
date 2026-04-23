@@ -1,0 +1,3 @@
+target,native_pdb_path,pdb_id,pocket_x,pocket_y,pocket_z,notes
+EGFR_KINASE,data/native/egfr_kinase.pdb,1M17,0.0,0.0,0.0,Existing fit-donor target retained to mirror current blind scaffold patterns.
+GLUT1_TRANSPORT_BLIND,data/public_structures/nightly/2026-02-19-postfix-smoke-r6_ood_measured40/glut1_4pyp_pdb_4PYP.pdb,4PYP,0.0,0.0,0.0,Template transporter blind target for GLUT1_4PYP. Pocket center and state annotation still need curation before execution.

@@ -1,0 +1,4 @@
+target,ligand_id,reference_binding_kcal_mol,is_binder,source
+CARBONIC_ANHYDRASE_2_ZN_BLIND,acetazolamide,-10.8060,1,chembl_direct_binding::CHEMBL205::CHEMBL20::activity_47560::assay_CHEMBL657848::Ki_12.0_nM::doc_CHEMBL1146805
+CARBONIC_ANHYDRASE_2_ZN_BLIND,methazolamide,-10.7146,1,chembl_direct_binding::CHEMBL205::CHEMBL19::activity_46288::assay_CHEMBL657848::Ki_14.0_nM::doc_CHEMBL1146805
+CARBONIC_ANHYDRASE_2_ZN_BLIND,ethoxzolamide,-11.0462,1,chembl_direct_binding::CHEMBL205::CHEMBL18::activity_68854::assay_CHEMBL657152::Ki_8.0_nM::doc_CHEMBL1133556

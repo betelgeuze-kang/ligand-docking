@@ -1,0 +1,40 @@
+{
+  "release": "v1.0.0",
+  "date": "2026-02-22",
+  "scope": "inference-runtime",
+  "supported_runtime_modes": [
+    "eager",
+    "scripted",
+    "compiled",
+    "onnx"
+  ],
+  "default_runtime_mode": "eager",
+  "selection_rule": {
+    "tool": "tools/profile_ai_runtime_modes.py",
+    "ranking": [
+      "all_rows_error_free",
+      "median_throughput_steps_per_sec"
+    ],
+    "fallback_order": [
+      "eager",
+      "scripted"
+    ]
+  },
+  "onnx": {
+    "allow_cpu_fallback_default": false,
+    "requires_packages": [
+      "onnx",
+      "onnxruntime"
+    ],
+    "preferred_providers": [
+      "ROCMExecutionProvider",
+      "CUDAExecutionProvider",
+      "CPUExecutionProvider"
+    ]
+  },
+  "acceptance_gates": {
+    "accuracy_gate_strict_pass": true,
+    "avg_speedup_on_vs_off_min": 12.0,
+    "overflow_or_saturation_allowed": false
+  }
+}

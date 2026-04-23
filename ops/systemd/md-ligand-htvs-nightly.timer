@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Ligand HTVS Nightly Strict Batch daily
+
+[Timer]
+OnCalendar=*-*-* 02:30:00
+RandomizedDelaySec=10m
+Persistent=true
+Unit=md-ligand-htvs-nightly.service
+
+[Install]
+WantedBy=timers.target

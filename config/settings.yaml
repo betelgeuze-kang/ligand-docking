@@ -1,0 +1,65 @@
+device:
+  type: cuda
+  id: 0
+  require_gpu: true
+
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  console_handler:
+    enabled: true
+    level: INFO
+  file_handler:
+    enabled: true
+    filename: logs/main.log
+    max_bytes: 10485760
+    backup_count: 5
+
+training:
+  batch_size: 32
+  learning_rate: 0.0002
+  epochs: 10
+  train_data_path: data/train.h5
+  val_data_path: data/val.h5
+  test_data_path: data/test.h5
+  loss_weights:
+    mse: 1.0
+    div_penalty: 0.05
+    clamp_penalty: 0.001
+
+torch_compile:
+  enabled: false
+
+rust_hip:
+  require: true
+
+# --- 최적화 설정 (2026-02-23 추가) ---
+
+adaptive_mts:
+  base_interval: 8
+  max_interval: 16
+  min_interval: 1
+  drift_threshold: 0.25
+  residual_threshold: 1.0
+  stable_upshift_window: 50
+
+adress:
+  max_high_res_fraction: 0.10
+  high_res_radius: 15.0
+  hybrid_width: 5.0
+
+gpu:
+  use_fused_cell: false
+  diagnose_isa_mismatch: true
+
+spatial:
+  use_morton_presort: true
+  kernel_fusion:
+    max_occupancy_ratio: 0.8
+
+operational_gate:
+  p95_speed_min: 50.0
+  worst_speed_min: 20.0
+  max_overflow_count: 0
+  max_saturation_ratio: 0.0
+  accuracy_rmsd_max: 5.0

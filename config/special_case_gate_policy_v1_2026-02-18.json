@@ -1,0 +1,89 @@
+{
+  "version": "special_case_gate_policy_v1_2026-02-18",
+  "meta": {
+    "description": "Domain-specific strict gate policy for special-case coverage (metal, dna, membrane).",
+    "notes": [
+      "Core strict gate must pass before domain gate can pass.",
+      "Any overflow/saturation event is an immediate failure.",
+      "All listed domain metrics are required and fail-fast."
+    ]
+  },
+  "common": {
+    "require_core_gate_pass": true,
+    "fail_on_overflow_or_saturation": true
+  },
+  "domains": {
+    "metal": {
+      "metrics": [
+        {
+          "name": "coordination_number_mae",
+          "operator": "<=",
+          "threshold": 0.3
+        },
+        {
+          "name": "metal_ligand_distance_rmse_A",
+          "operator": "<=",
+          "threshold": 0.35
+        },
+        {
+          "name": "geometry_angle_mae_deg",
+          "operator": "<=",
+          "threshold": 15.0
+        },
+        {
+          "name": "unphysical_exchange_rate",
+          "operator": "<=",
+          "threshold": 0.01
+        }
+      ]
+    },
+    "dna": {
+      "metrics": [
+        {
+          "name": "protein_dna_contact_f1",
+          "operator": ">=",
+          "threshold": 0.85
+        },
+        {
+          "name": "base_stacking_order_error",
+          "operator": "<=",
+          "threshold": 0.15
+        },
+        {
+          "name": "phosphate_contact_recall",
+          "operator": ">=",
+          "threshold": 0.85
+        },
+        {
+          "name": "backbone_break_rate",
+          "operator": "<=",
+          "threshold": 0.005
+        }
+      ]
+    },
+    "membrane": {
+      "metrics": [
+        {
+          "name": "tilt_angle_mae_deg",
+          "operator": "<=",
+          "threshold": 12.0
+        },
+        {
+          "name": "insertion_depth_mae_A",
+          "operator": "<=",
+          "threshold": 2.0
+        },
+        {
+          "name": "hydrophobic_mismatch_error",
+          "operator": "<=",
+          "threshold": 0.2
+        },
+        {
+          "name": "membrane_contact_stability",
+          "operator": ">=",
+          "threshold": 0.9
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,4 @@
+target,pdb_id,uniprot_id,notes
+Beta2AR_GPCR,2RH1,P07550,class_a_gpcr_membrane_reference
+KcsA_Potassium_Channel,1K4C,P0A334,tetrameric_membrane_channel_reference
+Aquaporin_1,1J4N,P29972,multispan_membrane_transport_reference

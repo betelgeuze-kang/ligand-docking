@@ -1,0 +1,18 @@
+{
+  "defaults": {
+    "active_learning_ood_pair_csv": "runs/ood_first_validation_batch_2026-02-18_pair_metrics.csv",
+    "active_learning_accuracy_external_csv": "runs/openmm_2bead_strict_2026-02-17_candidate_fullrun_accuracy_external.csv",
+    "active_learning_curriculum_base_manifest_csv": "runs/distilled_residual_manifest_bigdata_2026-02-15_refresh.csv",
+    "active_learning_curriculum_checkpoint_dir": "models/curriculum_active_learning",
+    "active_learning_stage2_csv": "runs/accuracy_gate_fast_opt_2026-02-18_stage2.csv",
+    "sentinel_sources_csv": "config/structure_sources_sentinel.csv",
+    "sentinel_targets": "Hemoglobin_4HHB",
+    "cath_sources_csv": "config/cath_sources_100_2026-02-19.csv",
+    "cath_split_csv": "runs/cath_diversity_100_split_2026-02-19.csv",
+    "cath_manifest_csv": "runs/cath_diversity_100_manifest_latest.csv",
+    "special_case_policy_json": "config/special_case_gate_policy_v1_2026-02-18.json",
+    "special_case_metal_sources_csv": "config/structure_sources_special_metal.csv",
+    "special_case_dna_sources_csv": "config/structure_sources_special_dna.csv",
+    "special_case_membrane_sources_csv": "config/structure_sources_special_membrane.csv"
+  }
+}

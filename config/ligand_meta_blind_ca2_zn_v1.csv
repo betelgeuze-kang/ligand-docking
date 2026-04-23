@@ -1,0 +1,4 @@
+ligand_id,smiles,molecular_weight,logp,h_donors,h_acceptors,rot_bonds,scaffold
+acetazolamide,CC(=O)Nc1nnc(S(N)(=O)=O)s1,222.2510,-0.8561,2,6,2,c1nncs1
+methazolamide,CC(=O)N=c1sc(S(N)(=O)=O)nn1C,236.2780,-1.4238,1,6,1,N=c1[nH]ncs1
+ethoxzolamide,CCOc1ccc2nc(S(N)(=O)=O)sc2c1,258.3240,1.3424,1,5,3,c1ccc2scnc2c1

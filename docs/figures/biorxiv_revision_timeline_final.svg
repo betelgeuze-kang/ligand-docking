@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="760" viewBox="0 0 1600 760" role="img" aria-labelledby="title desc">
+  <title id="title">Final figure draft for corrective validation timeline</title>
+  <desc id="desc">Compact multi-panel summary of corrective validation revisions and final accepted package.</desc>
+  <style>
+    .bg { fill: #fcfcfd; }
+    .title { font: 700 28px Arial, sans-serif; fill: #111827; }
+    .subtitle { font: 400 15px Arial, sans-serif; fill: #4b5563; }
+    .panel { fill: #ffffff; stroke: #d7dee8; stroke-width: 1.5; }
+    .panel-title { font: 700 18px Arial, sans-serif; fill: #111827; }
+    .label { font: 700 15px Arial, sans-serif; fill: #111827; }
+    .body { font: 400 13px Arial, sans-serif; fill: #1f2937; }
+    .small { font: 400 12px Arial, sans-serif; fill: #475569; }
+    .archived { fill: #eceff3; stroke: #6b7280; stroke-width: 2; }
+    .corrective { fill: #f8e7c8; stroke: #9a6a12; stroke-width: 2; }
+    .accepted { fill: #dff5e8; stroke: #2d7a46; stroke-width: 2.5; }
+    .pass { fill: #dff5e8; stroke: #2d7a46; stroke-width: 1.5; }
+    .line { stroke: #94a3b8; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+    .muted-line { stroke: #cbd5e1; stroke-width: 2; fill: none; }
+    .good { font: 700 15px Arial, sans-serif; fill: #166534; }
+    .old { font: 700 15px Arial, sans-serif; fill: #92400e; }
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="1600" height="760"/>
+  <text class="title" x="36" y="48">Cross-domain blind validation close-out and promoted package</text>
+  <text class="subtitle" x="36" y="74">Current promoted package: 2026-03-22_biorxiv_v7r1</text>
+
+  <rect class="panel" x="28" y="104" width="1544" height="220" rx="18"/>
+  <text class="panel-title" x="48" y="134">A. Corrective revision timeline</text>
+
+  <rect class="archived" x="52" y="170" width="150" height="88" rx="14"/>
+  <text class="label" x="70" y="198">v1</text>
+  <text class="body" x="70" y="221">Frozen preregistration</text>
+  <text class="body" x="70" y="241">Infra + split confounds</text>
+
+  <rect class="corrective" x="258" y="170" width="150" height="88" rx="14"/>
+  <text class="label" x="276" y="198">v2</text>
+  <text class="body" x="276" y="221">Heavy-root + disjoint</text>
+  <text class="body" x="276" y="241">kinase correction</text>
+
+  <rect class="corrective" x="464" y="170" width="150" height="88" rx="14"/>
+  <text class="label" x="482" y="198">v3</text>
+  <text class="body" x="482" y="221">Blind score wiring</text>
+  <text class="body" x="482" y="241">TRPV1/GPCR OOD recover</text>
+
+  <rect class="corrective" x="670" y="170" width="150" height="88" rx="14"/>
+  <text class="label" x="688" y="198">v4</text>
+  <text class="body" x="688" y="221">Kinase gate mismatch</text>
+  <text class="body" x="688" y="241">resolved</text>
+
+  <rect class="corrective" x="876" y="170" width="150" height="88" rx="14"/>
+  <text class="label" x="894" y="198">v5</text>
+  <text class="body" x="894" y="221">GPCR-only residual</text>
+  <text class="body" x="894" y="241">blocker search</text>
+
+  <rect class="corrective" x="1082" y="170" width="150" height="88" rx="14"/>
+  <text class="label" x="1100" y="198">v6r1</text>
+  <text class="body" x="1100" y="221">Live-run prior bug</text>
+  <text class="body" x="1100" y="241">identified</text>
+
+  <rect class="accepted" x="1288" y="170" width="232" height="88" rx="14"/>
+  <text class="label" x="1306" y="198">v6r3</text>
+  <text class="body" x="1306" y="221">First all-pass close-out</text>
+  <text class="body" x="1306" y="241">All preregistered sets pass</text>
+
+  <path class="line" d="M202 214 L258 214"/>
+  <path class="line" d="M408 214 L464 214"/>
+  <path class="line" d="M614 214 L670 214"/>
+  <path class="line" d="M820 214 L876 214"/>
+  <path class="line" d="M1026 214 L1082 214"/>
+  <path class="line" d="M1232 214 L1288 214"/>
+
+  <text class="small" x="212" y="160">infra + leakage</text>
+  <text class="small" x="421" y="274">score wiring</text>
+  <text class="small" x="622" y="160">kinase gate</text>
+  <text class="small" x="828" y="274">GPCR residual blocker</text>
+  <text class="small" x="1034" y="160">live rerun</text>
+  <text class="small" x="1238" y="274">priors fix</text>
+
+  <rect class="panel" x="28" y="348" width="470" height="380" rx="18"/>
+  <text class="panel-title" x="48" y="378">B. Final preregistered set outcomes</text>
+  <text class="label" x="56" y="418">Set</text>
+  <text class="label" x="260" y="418">Role</text>
+  <text class="label" x="410" y="418">Result</text>
+  <line class="muted-line" x1="54" y1="430" x2="474" y2="430"/>
+  <text class="body" x="56" y="466">Core Blind Set</text>
+  <text class="body" x="260" y="466">primary</text>
+  <rect class="pass" x="396" y="446" width="74" height="28" rx="10"/><text class="label" x="414" y="465">PASS</text>
+  <text class="body" x="56" y="512">Expanded OOD Set</text>
+  <text class="body" x="260" y="512">secondary_generalization</text>
+  <rect class="pass" x="396" y="492" width="74" height="28" rx="10"/><text class="label" x="414" y="511">PASS</text>
+  <text class="body" x="56" y="558">Operational Smoke Set</text>
+  <text class="body" x="260" y="558">reproducibility_support</text>
+  <rect class="pass" x="396" y="538" width="74" height="28" rx="10"/><text class="label" x="414" y="557">PASS</text>
+  <text class="small" x="56" y="610">All three preregistered claim layers passed in the accepted run.</text>
+
+  <rect class="panel" x="520" y="348" width="520" height="380" rx="18"/>
+  <text class="panel-title" x="540" y="378">C. Cross-domain validation matrix</text>
+  <text class="label" x="544" y="418">Set</text>
+  <text class="label" x="718" y="418">GPCR</text>
+  <text class="label" x="814" y="418">Ion</text>
+  <text class="label" x="898" y="418">Kinase</text>
+  <text class="label" x="990" y="418">IDP</text>
+  <line class="muted-line" x1="542" y1="430" x2="1014" y2="430"/>
+  <text class="body" x="544" y="468">set1_core_blind</text>
+  <text class="good" x="718" y="468">PASS</text>
+  <text class="small" x="768" y="468">PR 1.000</text>
+  <text class="good" x="814" y="468">PASS</text>
+  <text class="good" x="898" y="468">PASS</text>
+  <text class="good" x="990" y="468">PASS</text>
+  <text class="small" x="718" y="492">final blocker closed here</text>
+  <text class="body" x="544" y="548">set2_expanded_ood</text>
+  <text class="good" x="718" y="548">PASS</text>
+  <text class="small" x="768" y="548">PR 0.823</text>
+  <text class="good" x="814" y="548">PASS</text>
+  <text class="good" x="898" y="548">PASS</text>
+  <text class="good" x="990" y="548">PASS</text>
+  <text class="body" x="544" y="628">set3_operational_smoke</text>
+  <text class="good" x="718" y="628">PASS</text>
+  <text class="small" x="768" y="628">PR 1.000</text>
+  <text class="good" x="814" y="628">PASS</text>
+  <text class="good" x="898" y="628">PASS</text>
+  <text class="good" x="990" y="628">PASS</text>
+
+  <rect class="panel" x="1062" y="348" width="510" height="380" rx="18"/>
+  <text class="panel-title" x="1082" y="378">D. GPCR close-out and promoted package</text>
+  <text class="label" x="1088" y="418">GPCR core blind before/after</text>
+  <text class="body" x="1088" y="460">v4r1</text>
+  <text class="old" x="1170" y="460">PR-AUC 0.4336</text>
+  <text class="body" x="1320" y="460">top20 rate 0.15</text>
+  <text class="body" x="1450" y="460">hits 3</text>
+  <text class="body" x="1088" y="500">v6r3</text>
+  <text class="good" x="1170" y="500">PR-AUC 1.000</text>
+  <text class="body" x="1320" y="500">top20 rate 0.30</text>
+  <text class="body" x="1450" y="500">hits 6</text>
+  <text class="small" x="1088" y="542">Close-out came from binding_score_composite_v7</text>
+  <text class="small" x="1088" y="562">plus the inline-score ligand-prior propagation fix.</text>
+  <line class="muted-line" x1="1086" y1="590" x2="1546" y2="590"/>
+  <text class="label" x="1088" y="626">Promoted package</text>
+  <text class="body" x="1088" y="654">Run: 2026-03-22_biorxiv_v7r1</text>
+  <text class="body" x="1088" y="678">Zip: runs/biorxiv_external_validation_package_current.zip</text>
+  <text class="good" x="1088" y="704">Audit pass = true; failure_count = 0</text>
+</svg>

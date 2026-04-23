@@ -1,0 +1,7 @@
+target,native_pdb_path,pdb_id,notes,target_aliases
+KRAS_G12D,data/native/kras_g12d.pdb,6OIM,KRAS druggable pocket benchmark,
+EGFR_KINASE,data/native/egfr_kinase.pdb,1M17,EGFR kinase domain with inhibitor complex,
+HIV1_PROTEASE,data/native/hiv1_protease.pdb,1HVR,HIV-1 protease inhibitor complex,
+T. cruzi PDE,data/public_structures/selected_allatom_native_v1/t_cruzi_pde_pdb_3V94.pdb,3V94,TcrPDEC1 catalytic domain native reference for selected-allatom rescue/viewer,T. cruzi PDE;t_cruzi_pde;tcruzi_pde;Trypanosoma cruzi PDE;TcrPDEC;TcrPDEC1
+Cathepsin K,data/public_structures/selected_allatom_native_v1/cathepsin_k_pdb_5TDI.pdb,5TDI,Human Cathepsin K inhibitor-bound native reference for selected-allatom refinement,Cathepsin K;cathepsin_k;CTSK;Human Cathepsin K
+SARS-CoV-2 Mpro,data/public_structures/selected_allatom_native_v1/sars_cov_2_mpro_pdb_6LU7.pdb,6LU7,SARS-CoV-2 main protease inhibitor-bound native reference for selected-allatom refinement,SARS-CoV-2 Mpro;sars_cov_2_mpro;sarscov2_mpro;SARS-CoV-2 main protease;SARS-CoV-2 3CLpro

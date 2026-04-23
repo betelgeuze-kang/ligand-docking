@@ -1,0 +1,14 @@
+target,pdb_id,uniprot_id,md_url,md_path,label,notes
+Hemoglobin_Alpha_Human,1A3N,P69905,,,fill_md_url_or_local_md_path,optional_high_precision_md_source
+Lysozyme_C_Human,1LZ1,P61626,,,fill_md_url_or_local_md_path,optional_high_precision_md_source
+Albumin_Human,1AO6,P02768,,,fill_md_url_or_local_md_path,optional_high_precision_md_source
+WW_Domain_FiP35,,,,/home/betelgeuze/분자동역학/runs/real_md_openmm_2bead_2026-02-17/ww_domain_fip35_openmm_ca_sc_2bead_md.npy,WW_Domain_FiP35_openmm_ca_sc_2bead_md,REAL_MD_OPENMM_CA_SC_2BEAD
+FSD_1,,,,/home/betelgeuze/분자동역학/runs/real_md_openmm_2bead_2026-02-17/fsd_1_openmm_ca_sc_2bead_md.npy,FSD_1_openmm_ca_sc_2bead_md,REAL_MD_OPENMM_CA_SC_2BEAD
+Chignolin,,,,/home/betelgeuze/분자동역학/runs/real_md_openmm_2bead_2026-02-17/chignolin_openmm_ca_sc_2bead_md.npy,Chignolin_openmm_ca_sc_2bead_md,REAL_MD_OPENMM_CA_SC_2BEAD
+Ubiquitin_Mini,,,,/home/betelgeuze/분자동역학/runs/real_md_openmm_2bead_2026-02-17/ubiquitin_mini_openmm_ca_sc_2bead_md.npy,Ubiquitin_Mini_openmm_ca_sc_2bead_md,REAL_MD_OPENMM_CA_SC_2BEAD
+Trp_Cage,,,,/home/betelgeuze/분자동역학/runs/real_md_openmm_2bead_2026-02-17/trp_cage_openmm_ca_sc_2bead_md.npy,Trp_Cage_openmm_ca_sc_2bead_md,REAL_MD_OPENMM_CA_SC_2BEAD
+Villin_HP35,,,,/home/betelgeuze/분자동역학/runs/real_md_openmm_2bead_2026-02-17/villin_hp35_openmm_ca_sc_2bead_md.npy,Villin_HP35_openmm_ca_sc_2bead_md,REAL_MD_OPENMM_CA_SC_2BEAD
+Crambin,,,,/home/betelgeuze/분자동역학/runs/real_md_openmm_2bead_2026-02-17/crambin_openmm_ca_sc_2bead_md.npy,Crambin_openmm_ca_sc_2bead_md,REAL_MD_OPENMM_CA_SC_2BEAD
+BBA5,,,,/home/betelgeuze/분자동역학/runs/real_md_openmm_2bead_2026-02-17/bba5_openmm_ca_sc_2bead_md.npy,BBA5_openmm_ca_sc_2bead_md,REAL_MD_OPENMM_CA_SC_2BEAD
+GB1_Mini,,,,/home/betelgeuze/분자동역학/runs/real_md_openmm_2bead_2026-02-17/gb1_mini_openmm_ca_sc_2bead_md.npy,GB1_Mini_openmm_ca_sc_2bead_md,REAL_MD_OPENMM_CA_SC_2BEAD
+Protein_A_Bdomain,,,,/home/betelgeuze/분자동역학/runs/real_md_openmm_2bead_2026-02-17/protein_a_bdomain_openmm_ca_sc_2bead_md.npy,Protein_A_Bdomain_openmm_ca_sc_2bead_md,REAL_MD_OPENMM_CA_SC_2BEAD

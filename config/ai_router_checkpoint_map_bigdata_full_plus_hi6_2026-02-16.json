@@ -1,0 +1,27 @@
+{
+  "generated_at_local": "2026-02-16T11:21:38",
+  "source_map": "/home/betelgeuze/분자동역학/config/ai_router_checkpoint_map_bigdata_full_2026-02-15.json",
+  "source_finetune_glob": "/home/betelgeuze/분자동역학/runs/finetune_hi6_*_2026-02-15.json",
+  "target_checkpoints": {
+    "Chignolin": "/home/betelgeuze/분자동역학/models/finetune_hi6_2026-02-15/best_airouter_Chignolin_hi6_Chignolin_2026-02-15.pth",
+    "Trp_Cage": "/home/betelgeuze/분자동역학/models/finetune_hi6_2026-02-15/best_airouter_Trp_Cage_hi6_Trp_Cage_2026-02-15.pth",
+    "BBA5": "/home/betelgeuze/분자동역학/models/finetune_hi6_2026-02-15/best_airouter_BBA5_hi6_BBA5_2026-02-15.pth",
+    "FSD_1": "/home/betelgeuze/분자동역학/models/finetune_hi6_2026-02-15/best_airouter_FSD_1_hi6_FSD_1_2026-02-15.pth",
+    "Villin_HP35": "/home/betelgeuze/분자동역학/models/finetune_hi6_2026-02-15/best_airouter_Villin_HP35_hi6_Villin_HP35_2026-02-15.pth",
+    "WW_Domain_FiP35": "/home/betelgeuze/분자동역학/models/curriculum_bigdata_full/best_airouter_curriculum_06_WW_Domain_FiP35_bigdata_full_2026-02-15.pth",
+    "Crambin": "/home/betelgeuze/분자동역학/models/curriculum_bigdata_full/best_airouter_curriculum_07_Crambin_bigdata_full_2026-02-15.pth",
+    "GB1_Mini": "/home/betelgeuze/분자동역학/models/curriculum_bigdata_full/best_airouter_curriculum_08_GB1_Mini_bigdata_full_2026-02-15.pth",
+    "Protein_A_Bdomain": "/home/betelgeuze/분자동역학/models/finetune_hi6_2026-02-15/best_airouter_Protein_A_Bdomain_hi6_Protein_A_Bdomain_2026-02-15.pth",
+    "Ubiquitin_Mini": "/home/betelgeuze/분자동역학/models/curriculum_bigdata_full/best_airouter_curriculum_10_Ubiquitin_Mini_bigdata_full_2026-02-15.pth"
+  },
+  "default": "/home/betelgeuze/분자동역학/models/finetune_hi6_2026-02-15/best_airouter_Chignolin_hi6_Chignolin_2026-02-15.pth",
+  "run_tag": "bigdata_full_plus_hi6_2026-02-16",
+  "updated_targets": [
+    "BBA5",
+    "Chignolin",
+    "FSD_1",
+    "Protein_A_Bdomain",
+    "Trp_Cage",
+    "Villin_HP35"
+  ]
+}

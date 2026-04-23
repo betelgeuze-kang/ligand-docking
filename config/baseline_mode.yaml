@@ -1,0 +1,10 @@
+baseline_mode:
+  name: baseline_10_targets
+  enabled: true
+  strict_target_set: true
+  full_parameter_optimization_deferred: true
+  target_source: core.definitions.ResearchConstants.CHALLENGES
+  target_count_expected: 10
+  notes:
+    - Keep 10 small-protein targets fixed for stable baseline tracking.
+    - Defer full-variable global optimization until real teacher trajectory + condition metadata are ready.
