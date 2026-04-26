@@ -110,11 +110,54 @@ def _resolve_review_band(raw_band: Any, mean_min_distance_A: Any) -> tuple[str, 
 
 def _review_band_bucket(review_band: Any) -> str:
     band = _text(review_band)
-    if band == "strict_under_2p5A":
+    if band == "strict_under_2p5A" or band.startswith("strict"):
         return "strict"
-    if band == "near_under_3p0A":
+    if band == "near_under_3p0A" or band.startswith("near"):
         return "near"
     return "other"
+
+
+def _numeric_review_band(mean_min_distance_A: Any) -> tuple[str, str]:
+    distance = _safe_optional_float(mean_min_distance_A)
+    if distance is None:
+        return "", ""
+    if distance <= STRICT_THRESHOLD_A:
+        return "strict_under_2p5A", "source_three_bead_mean_min_distance_A"
+    if distance <= NEAR_THRESHOLD_A:
+        return "near_under_3p0A", "source_three_bead_mean_min_distance_A"
+    return "candidate_top32", "source_three_bead_mean_min_distance_A"
+
+
+def _band_consistency_counts(rows: list[dict[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in rows:
+        status = _text(row.get("rescue_review_band_consistency_status"), default="not_checked")
+        counts[status] = counts.get(status, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def _band_mismatch_rows_preview(rows: list[dict[str, Any]], *, limit: int = 5) -> list[dict[str, Any]]:
+    preview: list[dict[str, Any]] = []
+    for row in rows:
+        if _text(row.get("rescue_review_band_consistency_status")) != "mismatch_fail_closed":
+            continue
+        preview.append(
+            {
+                "lane_rank": _safe_int(row.get("lane_rank")),
+                "ligand_id": _text(row.get("ligand_id")),
+                "source_three_bead_mean_min_distance_A": _safe_float(
+                    row.get("source_three_bead_mean_min_distance_A")
+                ),
+                "metadata_rescue_review_bucket": _text(row.get("metadata_rescue_review_bucket")),
+                "numeric_rescue_review_bucket": _text(row.get("numeric_rescue_review_bucket")),
+                "source_rescue_review_band": _text(row.get("source_rescue_review_band")),
+                "numeric_rescue_review_band": _text(row.get("numeric_rescue_review_band")),
+                "action_code": "rebuild_rescue_review_band_metadata_from_numeric_distance",
+            }
+        )
+        if len(preview) >= limit:
+            break
+    return preview
 
 
 def _safe_bool(value: Any) -> bool | None:
@@ -337,6 +380,18 @@ def build_payload(
             raw_review_band,
             _text(review_meta.get("mean_min_distance_A"), row.get("mean_min_distance_A")),
         )
+        numeric_review_band, numeric_review_band_source = _numeric_review_band(row.get("mean_min_distance_A"))
+        metadata_review_bucket = _review_band_bucket(resolved_review_band)
+        numeric_review_bucket = _review_band_bucket(numeric_review_band) if numeric_review_band else ""
+        if numeric_review_bucket and metadata_review_bucket and metadata_review_bucket != numeric_review_bucket:
+            band_consistency_status = "mismatch_fail_closed"
+            band_consistency_action_codes = ["rebuild_rescue_review_band_metadata_from_numeric_distance"]
+        elif numeric_review_bucket:
+            band_consistency_status = "match" if metadata_review_bucket == numeric_review_bucket else "numeric_only"
+            band_consistency_action_codes = []
+        else:
+            band_consistency_status = "metadata_only" if review_band_source != "fallback_default" else "not_checked"
+            band_consistency_action_codes = []
         lane_row = {
             "row_kind": "tcruzi_pde_allatom_rescue_candidate",
             "target_id": target_id,
@@ -369,6 +424,12 @@ def build_payload(
             "source_rescue_review_band_raw": raw_review_band,
             "resolved_rescue_review_band": resolved_review_band,
             "resolved_rescue_review_band_source": review_band_source,
+            "metadata_rescue_review_bucket": metadata_review_bucket,
+            "numeric_rescue_review_band": numeric_review_band,
+            "numeric_rescue_review_band_source": numeric_review_band_source,
+            "numeric_rescue_review_bucket": numeric_review_bucket,
+            "rescue_review_band_consistency_status": band_consistency_status,
+            "rescue_review_band_consistency_action_codes": band_consistency_action_codes,
             "default_filter_mode": resolved_default_filter_mode,
             "selected_command_kind": ALLATOM_COMMAND_KIND,
             "selected_threshold_A": STRICT_THRESHOLD_A,
@@ -397,6 +458,17 @@ def build_payload(
         1 for row in lane_rows if _review_band_bucket(row.get("resolved_rescue_review_band")) == "near"
     )
     other_band_candidate_count = max(0, len(lane_rows) - strict_band_candidate_count - near_band_candidate_count)
+    band_mismatch_rows_preview = _band_mismatch_rows_preview(lane_rows)
+    band_mismatch_count = len(
+        [
+            row
+            for row in lane_rows
+            if _text(row.get("rescue_review_band_consistency_status")) == "mismatch_fail_closed"
+        ]
+    )
+    band_consistency_action_codes = (
+        ["rebuild_rescue_review_band_metadata_from_numeric_distance"] if band_mismatch_count else []
+    )
     rescue_only_branch_ready_for_operator_review = _resolve_bool_value(
         branch,
         "branch_ready_for_operator_review",
@@ -477,6 +549,11 @@ def build_payload(
             "strict_band_candidate_count": strict_band_candidate_count,
             "near_band_candidate_count": near_band_candidate_count,
             "other_band_candidate_count": other_band_candidate_count,
+            "rescue_review_band_consistency_counts": _band_consistency_counts(lane_rows),
+            "rescue_review_band_mismatch_count": band_mismatch_count,
+            "source_rescue_review_band_mismatch_count": band_mismatch_count,
+            "rescue_review_band_mismatch_rows_preview": band_mismatch_rows_preview,
+            "rescue_review_band_consistency_action_codes": band_consistency_action_codes,
             **translation_summary,
             "translation_gate_focus_hard_status": _text(translation_summary.get("translation_gate_focus_hard_status")),
             "translation_gate_focus_soft_status": _text(translation_summary.get("translation_gate_focus_soft_status")),

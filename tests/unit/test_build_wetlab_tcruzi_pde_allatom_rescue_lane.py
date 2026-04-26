@@ -124,3 +124,97 @@ def test_build_wetlab_tcruzi_pde_allatom_rescue_lane(tmp_path: Path) -> None:
     assert summary["recommended_next_expensive_lane_gate"] == "strict_high_confidence_translation_v2"
     assert "run_ensemble_explicit_water_mmgbsa" == summary["recommended_next_expensive_lane_action"]
     assert payload["rows"][0]["translation_gate_action_codes"]
+
+
+def test_build_wetlab_tcruzi_pde_allatom_rescue_lane_reports_band_metadata_drift(
+    tmp_path: Path,
+) -> None:
+    stage2_manifest = tmp_path / "throughput_run_gate51_stage2_traj_manifest.csv"
+    _write_csv(stage2_manifest, [{"ligand_id": "lig_mismatch", "trajectory_npz": "traj_mismatch.npz"}])
+    branch_summary_payload = {
+        "summary": {
+            "target_id": "T. cruzi PDE",
+            "shard_id": "20_of_20",
+            "branch_label": "tcruzi_pde_rescue_only_branch",
+        }
+    }
+    rescue_review_surface_payload = {
+        "summary": {"target_id": "T. cruzi PDE", "shard_id": "20_of_20"},
+        "rows": [
+            {
+                "ligand_id": "lig_mismatch",
+                "compound_name": "drifted candidate",
+                "compound_name_resolution": "human_readable",
+                "rescue_review_band": "strict_under_2p5A",
+                "smiles": "CC",
+            }
+        ],
+    }
+    rescue_three_bead_candidates_payload = {
+        "summary": {
+            "target_id": "T. cruzi PDE",
+            "shard_id": "20_of_20",
+            "candidate_count": 1,
+        },
+        "rows": [
+            {
+                "target_id": "T. cruzi PDE",
+                "shard_id": "20_of_20",
+                "priority_rank": 1,
+                "ligand_id": "lig_mismatch",
+                "binding_energy_proxy": -1.0,
+                "stability_score": 0.8,
+                "mean_min_distance_A": 3.4,
+                "pose_preservation_rmsd_A": 1.6,
+                "backmapping_consistency_score": 0.81,
+                "local_minimization_survival_fraction": 0.83,
+                "replicate_pass_fraction": 0.77,
+            }
+        ],
+    }
+    rescue_three_bead_slice_payload = {
+        "summary": {
+            "target_id": "T. cruzi PDE",
+            "shard_id": "20_of_20",
+            "stage2_manifest_csv": str(stage2_manifest),
+            "trajectory_root": str(tmp_path / "traj"),
+        }
+    }
+
+    payload = build_payload(
+        branch_summary_payload,
+        {},
+        rescue_review_surface_payload,
+        rescue_three_bead_candidates_payload,
+        rescue_three_bead_slice_payload,
+        {},
+        top_n=1,
+        default_top_k=1,
+    )
+
+    summary = payload["summary"]
+    assert summary["rescue_review_band_consistency_counts"] == {"mismatch_fail_closed": 1}
+    assert summary["source_rescue_review_band_mismatch_count"] == 1
+    assert summary["rescue_review_band_consistency_action_codes"] == [
+        "rebuild_rescue_review_band_metadata_from_numeric_distance"
+    ]
+    assert summary["rescue_review_band_mismatch_rows_preview"] == [
+        {
+            "lane_rank": 1,
+            "ligand_id": "lig_mismatch",
+            "source_three_bead_mean_min_distance_A": 3.4,
+            "metadata_rescue_review_bucket": "strict",
+            "numeric_rescue_review_bucket": "other",
+            "source_rescue_review_band": "strict_under_2p5A",
+            "numeric_rescue_review_band": "candidate_top32",
+            "action_code": "rebuild_rescue_review_band_metadata_from_numeric_distance",
+        }
+    ]
+    row = payload["rows"][0]
+    assert row["metadata_rescue_review_bucket"] == "strict"
+    assert row["numeric_rescue_review_band"] == "candidate_top32"
+    assert row["numeric_rescue_review_bucket"] == "other"
+    assert row["rescue_review_band_consistency_status"] == "mismatch_fail_closed"
+    assert row["rescue_review_band_consistency_action_codes"] == [
+        "rebuild_rescue_review_band_metadata_from_numeric_distance"
+    ]
