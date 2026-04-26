@@ -97,9 +97,31 @@ def _base_artifacts(tmp_path: Path) -> dict[str, Path]:
                 }
             },
         ),
+        "rescue_current_json": runs / "wetlab_tcruzi_pde_allatom_rescue_current.json",
+        "rescue_attempt_validation_json": runs / "wetlab_tcruzi_pde_allatom_rescue_attempt_validation_current.json",
         "status_report_md": tmp_path / "commercialization_status_report.md",
     }
     artifacts["status_report_md"].write_text("# Status\n", encoding="utf-8")
+    return artifacts
+
+
+def _add_rescue_current_and_validation(
+    artifacts: dict[str, Path],
+    *,
+    validation_summary: dict | None = None,
+) -> dict[str, Path]:
+    runs = artifacts["preflight_json"].parent
+    artifacts["rescue_current_json"] = _write_json(
+        runs / "wetlab_tcruzi_pde_allatom_rescue_current.json",
+        {
+            "summary": {
+                "status": "wetlab_tcruzi_pde_allatom_rescue_ready",
+                "attempt_id": "inputfp_aaaaaaaaaaaa__exec__0001",
+            }
+        },
+    )
+    if validation_summary is not None:
+        _write_json(artifacts["rescue_attempt_validation_json"], {"summary": validation_summary})
     return artifacts
 
 
@@ -121,6 +143,9 @@ def test_all_green_restricted_scope_is_delivery_ready(tmp_path: Path, monkeypatc
     assert summary["delivery_ready"] is True
     assert summary["verdict"] == "delivery_ready"
     assert summary["p0_blocker_count"] == 0
+    assert summary["rescue_attempt_validation_required"] is False
+    assert summary["rescue_attempt_validation_status"] == "not_required"
+    assert summary["rescue_attempt_validation_ok"] is True
     assert summary["accuracy_gate_pass"] is True
     assert summary["accuracy_gate_check"]["status"] == "pass"
     assert summary["nightly_metric_value"] == 2.1
@@ -428,6 +453,92 @@ def test_full_partnering_stack_does_not_increase_current_p0_blockers(tmp_path: P
     assert payload["summary"]["partnering_stack_artifact_complete"] is True
     assert payload["summary"]["partnering_stack_source_artifact_complete"] is True
     assert not any(blocker["code"] == "partnering_stack_placeholder_or_incomplete" for blocker in payload["p0_blockers"])
+
+
+def test_pass_rescue_attempt_validation_does_not_add_blocker(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    monkeypatch.setattr(mod, "RUNS", tmp_path / "runs")
+    artifacts = _add_rescue_current_and_validation(
+        _base_artifacts(tmp_path),
+        validation_summary={
+            "status": "pass",
+            "rescue_attempt_validation": "pass",
+            "overall_ok": True,
+            "failed_check_count": 0,
+            "hard_fail_count": 0,
+        },
+    )
+
+    payload = mod.build_payload(claim_scope="kinase", **artifacts)
+    by_label = {artifact["label"]: artifact for artifact in payload["source_artifacts"]}
+
+    assert payload["summary"]["delivery_ready"] is True
+    assert payload["summary"]["rescue_attempt_validation_required"] is True
+    assert payload["summary"]["rescue_attempt_validation_present"] is True
+    assert payload["summary"]["rescue_attempt_validation_status"] == "pass"
+    assert payload["summary"]["rescue_attempt_validation_pass"] is True
+    assert payload["summary"]["rescue_attempt_validation_ok"] is True
+    assert payload["summary"]["rescue_attempt_validation_failed_check_count"] == 0
+    assert payload["summary"]["rescue_attempt_validation_hard_fail_count"] == 0
+    assert payload["summary"]["rescue_attempt_validation_check"]["pass"] is True
+    assert payload["summary"]["rescue_attempt_validation_check"]["required"] is True
+    assert payload["summary"]["rescue_attempt_validation_artifact"].endswith(
+        "wetlab_tcruzi_pde_allatom_rescue_attempt_validation_current.json"
+    )
+    assert by_label["rescue_attempt_validation"]["present"] is True
+    assert not any(blocker["code"] == "rescue_attempt_validation_not_pass" for blocker in payload["p0_blockers"])
+
+
+def test_missing_rescue_attempt_validation_blocks_when_rescue_current_exists(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    monkeypatch.setattr(mod, "RUNS", tmp_path / "runs")
+    artifacts = _add_rescue_current_and_validation(_base_artifacts(tmp_path))
+
+    payload = mod.build_payload(claim_scope="kinase", **artifacts)
+
+    assert payload["summary"]["delivery_ready"] is False
+    assert payload["summary"]["rescue_attempt_validation_required"] is True
+    assert payload["summary"]["rescue_attempt_validation_present"] is False
+    assert payload["summary"]["rescue_attempt_validation_status"] == "missing"
+    assert payload["summary"]["rescue_attempt_validation_pass"] is False
+    assert payload["summary"]["rescue_attempt_validation_ok"] is False
+    assert payload["summary"]["rescue_attempt_validation_check"]["valid"] is False
+    assert any(blocker["code"] == "rescue_attempt_validation_not_pass" for blocker in payload["p0_blockers"])
+
+
+def test_failed_rescue_attempt_validation_blocks_when_rescue_current_exists(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    monkeypatch.setattr(mod, "RUNS", tmp_path / "runs")
+    artifacts = _add_rescue_current_and_validation(
+        _base_artifacts(tmp_path),
+        validation_summary={
+            "status": "fail",
+            "rescue_attempt_validation": "fail",
+            "overall_ok": False,
+            "failed_check_count": 2,
+            "hard_fail_count": 1,
+        },
+    )
+
+    payload = mod.build_payload(claim_scope="kinase", **artifacts)
+
+    assert payload["summary"]["delivery_ready"] is False
+    assert payload["summary"]["rescue_attempt_validation_required"] is True
+    assert payload["summary"]["rescue_attempt_validation_present"] is True
+    assert payload["summary"]["rescue_attempt_validation_status"] == "fail"
+    assert payload["summary"]["rescue_attempt_validation_pass"] is False
+    assert payload["summary"]["rescue_attempt_validation_ok"] is False
+    assert payload["summary"]["rescue_attempt_validation_failed_check_count"] == 2
+    assert payload["summary"]["rescue_attempt_validation_hard_fail_count"] == 1
+    assert payload["summary"]["rescue_attempt_validation_check"]["hard_fail_count"] == 1
+    blocker = next(
+        blocker for blocker in payload["p0_blockers"] if blocker["code"] == "rescue_attempt_validation_not_pass"
+    )
+    assert "status=fail" in blocker["reason"]
 
 
 def test_broad_or_transporter_claim_scope_blocks_delivery(tmp_path: Path, monkeypatch) -> None:

@@ -26,6 +26,8 @@ DEFAULT_NIGHTLY_GATE_JSON = "runs/nightly_gate_burndown_packet_current.json"
 DEFAULT_WETLAB_SELECTED_ALLATOM_JSON = "runs/wetlab_selected_allatom_gate_burndown_packet_current.json"
 DEFAULT_CURRENT_RESULTS_INDEX_JSON = "runs/wetlab_current_results_index_current.json"
 DEFAULT_PARTNERING_STACK_JSON = "runs/wetlab_partnering_stack_current.json"
+DEFAULT_RESCUE_CURRENT_JSON = "runs/wetlab_tcruzi_pde_allatom_rescue_current.json"
+DEFAULT_RESCUE_ATTEMPT_VALIDATION_JSON = "runs/wetlab_tcruzi_pde_allatom_rescue_attempt_validation_current.json"
 
 ALLOWED_CLAIM_SCOPES = {"kinase", "gpcr", "ion_channel"}
 DISALLOWED_SCOPE_WORDS = {
@@ -465,6 +467,130 @@ def _wetlab_selected_allatom_pass(data: dict[str, Any]) -> bool:
     return False
 
 
+def _rescue_attempt_validation_summary(
+    data: dict[str, Any],
+    *,
+    artifact: str,
+    required: bool,
+    artifact_present: bool,
+    artifact_valid: bool,
+) -> dict[str, Any]:
+    if not required and not artifact_present:
+        reason = "No PDE rescue current artifact is present; rescue attempt validation is not required."
+        return {
+            "required": False,
+            "present": False,
+            "valid": False,
+            "pass": False,
+            "ok": True,
+            "status": "not_required",
+            "failed_check_count": 0,
+            "hard_fail_count": 0,
+            "warning_count": 0,
+            "attempt_id": "",
+            "attempt_dir": "",
+            "attempt_state_json": "",
+            "execution_mode": "",
+            "scoring_status": "",
+            "input_fingerprint_recomputed_ok": False,
+            "required_artifact_missing_count": 0,
+            "path_boundary_fail_count": 0,
+            "artifact": artifact,
+            "reason": reason,
+            "next_required_step": "Continue with the normal local-delivery gate path.",
+        }
+    if not artifact_present:
+        reason = f"Rescue attempt validation artifact `{artifact}` is missing."
+        return {
+            "required": required,
+            "present": False,
+            "valid": False,
+            "pass": False,
+            "status": "missing",
+            "ok": False,
+            "failed_check_count": 0,
+            "hard_fail_count": 0,
+            "warning_count": 0,
+            "attempt_id": "",
+            "attempt_dir": "",
+            "attempt_state_json": "",
+            "execution_mode": "",
+            "scoring_status": "",
+            "input_fingerprint_recomputed_ok": False,
+            "required_artifact_missing_count": 0,
+            "path_boundary_fail_count": 0,
+            "artifact": artifact,
+            "reason": reason,
+            "next_required_step": "Run `python3 tools/validate_wetlab_tcruzi_pde_allatom_rescue_attempt.py` before reusing rescue evidence.",
+        }
+    if not artifact_valid or not data:
+        reason = f"Rescue attempt validation artifact `{artifact}` is invalid or not a JSON object."
+        return {
+            "required": required,
+            "present": True,
+            "valid": False,
+            "pass": False,
+            "status": "invalid",
+            "ok": False,
+            "failed_check_count": 0,
+            "hard_fail_count": 0,
+            "warning_count": 0,
+            "attempt_id": "",
+            "attempt_dir": "",
+            "attempt_state_json": "",
+            "execution_mode": "",
+            "scoring_status": "",
+            "input_fingerprint_recomputed_ok": False,
+            "required_artifact_missing_count": 0,
+            "path_boundary_fail_count": 0,
+            "artifact": artifact,
+            "reason": reason,
+            "next_required_step": "Regenerate the rescue attempt validation artifact before reusing rescue evidence.",
+        }
+
+    status = _text(data.get("rescue_attempt_validation") or data.get("status")) or "unknown"
+    failed_check_count = _int(data.get("failed_check_count"))
+    hard_fail_count = _int(data.get("hard_fail_count"))
+    warning_count = _int(data.get("warning_count"))
+    explicit_ok = _common_pass(data, ["overall_ok", "pass", "passed"])
+    status_pass = _status_implies_pass(status) is True
+    passed = bool((explicit_ok is True or status_pass) and hard_fail_count == 0 and failed_check_count == 0)
+    reason = (
+        "Rescue attempt validation reports pass with no failed checks."
+        if passed
+        else (
+            "Rescue attempt validation is not passing: "
+            f"status={status}, failed_check_count={failed_check_count}, hard_fail_count={hard_fail_count}."
+        )
+    )
+    return {
+        "required": required,
+        "present": True,
+        "valid": True,
+        "pass": passed,
+        "status": status,
+        "ok": passed,
+        "failed_check_count": failed_check_count,
+        "hard_fail_count": hard_fail_count,
+        "warning_count": warning_count,
+        "attempt_id": _text(data.get("attempt_id")),
+        "attempt_dir": _text(data.get("attempt_dir")),
+        "attempt_state_json": _text(data.get("attempt_state_json")),
+        "execution_mode": _text(data.get("execution_mode")),
+        "scoring_status": _text(data.get("scoring_status")),
+        "input_fingerprint_recomputed_ok": _boolish(data.get("input_fingerprint_recomputed_ok")) is True,
+        "required_artifact_missing_count": _int(data.get("required_artifact_missing_count")),
+        "path_boundary_fail_count": _int(data.get("path_boundary_fail_count")),
+        "artifact": artifact,
+        "reason": reason,
+        "next_required_step": (
+            "Continue with review packet and verdict refresh; this validates evidence integrity only."
+            if passed
+            else "Regenerate or repair the rescue attempt validation before reusing rescue evidence."
+        ),
+    }
+
+
 def _status_is_placeholder_or_minimal(status: str) -> bool:
     lowered = status.strip().lower()
     return lowered in {"", "ok", "placeholder", "minimal", "stub", "incomplete"} or any(
@@ -555,6 +681,8 @@ def build_payload(
     wetlab_selected_allatom_json: str | Path = DEFAULT_WETLAB_SELECTED_ALLATOM_JSON,
     current_results_index_json: str | Path | None = DEFAULT_CURRENT_RESULTS_INDEX_JSON,
     partnering_stack_json: str | Path | None = DEFAULT_PARTNERING_STACK_JSON,
+    rescue_current_json: str | Path = DEFAULT_RESCUE_CURRENT_JSON,
+    rescue_attempt_validation_json: str | Path = DEFAULT_RESCUE_ATTEMPT_VALIDATION_JSON,
 ) -> dict[str, Any]:
     blockers: list[dict[str, Any]] = []
     artifacts: list[dict[str, Any]] = []
@@ -593,6 +721,21 @@ def build_payload(
         if blocker:
             blockers.append(blocker)
 
+    rescue_current_present = _resolve(rescue_current_json).exists()
+    rescue_validation_path = _resolve(rescue_attempt_validation_json)
+    rescue_validation_artifact_relevant = rescue_current_present or rescue_validation_path.exists()
+    rescue_validation_payload: dict[str, Any] = {}
+    rescue_validation_artifact = None
+    if rescue_validation_artifact_relevant:
+        payload, _blocker = _read_json_artifact(rescue_attempt_validation_json, required=False)
+        rescue_validation_payload = _summaryish(payload) if payload else {}
+        rescue_validation_artifact = _source_artifact(
+            "rescue_attempt_validation",
+            rescue_attempt_validation_json,
+            required=rescue_current_present,
+        )
+        artifacts.append(rescue_validation_artifact)
+
     report_path = _resolve(status_report_md)
     status_report_present = report_path.exists()
     artifacts.append(_source_artifact("status_report_md", report_path, required=True, json_artifact=False))
@@ -607,6 +750,13 @@ def build_payload(
     wetlab = loaded["wetlab_selected_allatom"]
     current_results_index = evidence_loaded["current_results_index"]
     partnering_stack = evidence_loaded["partnering_stack"]
+    rescue_attempt_validation = _rescue_attempt_validation_summary(
+        rescue_validation_payload,
+        artifact=_relative(rescue_attempt_validation_json),
+        required=rescue_current_present,
+        artifact_present=bool(rescue_validation_artifact and rescue_validation_artifact.get("present")),
+        artifact_valid=bool(rescue_validation_artifact and rescue_validation_artifact.get("json_valid") is True),
+    )
 
     preflight_ok = _common_pass(preflight, ["preflight_ok", "overall_ok", "pass", "passed"]) is True and not _is_dry_run(preflight)
     accuracy_gate_check = _accuracy_gate_check(accuracy_gate, _relative(accuracy_gate_json))
@@ -737,6 +887,14 @@ def build_payload(
         if not ok:
             _add_blocker(blockers, code, reason, artifact)
 
+    if rescue_current_present and not rescue_attempt_validation["ok"]:
+        _add_blocker(
+            blockers,
+            "rescue_attempt_validation_not_pass",
+            rescue_attempt_validation["reason"],
+            rescue_attempt_validation["artifact"],
+        )
+
     hard_blocker_count = sum(1 for blocker in blockers if blocker.get("severity") == "hard")
     p0_blocker_count = hard_blocker_count
     source_artifact_missing_count = sum(1 for artifact in artifacts if not artifact.get("present"))
@@ -799,6 +957,38 @@ def build_payload(
         "wetlab_primary_burndown_metric": wetlab_primary_burndown_metric,
         "wetlab_primary_burndown_delta_A": wetlab_primary_burndown_delta,
         "wetlab_next_required_step": wetlab_next_required_step,
+        "rescue_attempt_validation_required": rescue_attempt_validation["required"],
+        "rescue_attempt_validation_present": rescue_attempt_validation["present"],
+        "rescue_attempt_validation_status": rescue_attempt_validation["status"],
+        "rescue_attempt_validation_pass": rescue_attempt_validation["pass"],
+        "rescue_attempt_validation_ok": rescue_attempt_validation["ok"],
+        "rescue_attempt_validation_failed_check_count": rescue_attempt_validation["failed_check_count"],
+        "rescue_attempt_validation_hard_fail_count": rescue_attempt_validation["hard_fail_count"],
+        "rescue_attempt_validation_warning_count": rescue_attempt_validation["warning_count"],
+        "rescue_attempt_validation_artifact": rescue_attempt_validation["artifact"],
+        "rescue_attempt_validation_check": {
+            "checked": True,
+            "required": rescue_attempt_validation["required"],
+            "present": rescue_attempt_validation["present"],
+            "valid": rescue_attempt_validation["valid"],
+            "pass": rescue_attempt_validation["pass"],
+            "ok": rescue_attempt_validation["ok"],
+            "status": rescue_attempt_validation["status"],
+            "artifact": rescue_attempt_validation["artifact"],
+            "reason": rescue_attempt_validation["reason"],
+            "next_required_step": rescue_attempt_validation["next_required_step"],
+            "hard_fail_count": rescue_attempt_validation["hard_fail_count"],
+            "failed_check_count": rescue_attempt_validation["failed_check_count"],
+            "warning_count": rescue_attempt_validation["warning_count"],
+            "attempt_id": rescue_attempt_validation["attempt_id"],
+            "attempt_dir": rescue_attempt_validation["attempt_dir"],
+            "attempt_state_json": rescue_attempt_validation["attempt_state_json"],
+            "execution_mode": rescue_attempt_validation["execution_mode"],
+            "scoring_status": rescue_attempt_validation["scoring_status"],
+            "input_fingerprint_recomputed_ok": rescue_attempt_validation["input_fingerprint_recomputed_ok"],
+            "required_artifact_missing_count": rescue_attempt_validation["required_artifact_missing_count"],
+            "path_boundary_fail_count": rescue_attempt_validation["path_boundary_fail_count"],
+        },
         "partnering_stack_artifact_status": partnering_stack_artifact_status,
         "partnering_stack_artifact_complete": partnering_stack_artifact_complete,
         "partnering_stack_source_artifact_status": partnering_stack_source_artifact_status,
@@ -868,6 +1058,16 @@ def render_markdown(payload: dict[str, Any]) -> str:
         f"- wetlab_primary_burndown_metric: `{summary.get('wetlab_primary_burndown_metric', '') or '-'}`",
         f"- wetlab_primary_burndown_delta_A: `{_fmt(summary.get('wetlab_primary_burndown_delta_A'))}`",
         f"- wetlab_next_required_step: {summary.get('wetlab_next_required_step') or '-'}",
+        f"- rescue_attempt_validation_required: `{summary.get('rescue_attempt_validation_required')}`",
+        f"- rescue_attempt_validation_present: `{summary.get('rescue_attempt_validation_present')}`",
+        f"- rescue_attempt_validation_status: `{summary.get('rescue_attempt_validation_status') or '-'}`",
+        f"- rescue_attempt_validation_pass: `{summary.get('rescue_attempt_validation_pass')}`",
+        f"- rescue_attempt_validation_ok: `{summary.get('rescue_attempt_validation_ok')}`",
+        f"- rescue_attempt_validation_failed_check_count: `{summary.get('rescue_attempt_validation_failed_check_count', 0)}`",
+        f"- rescue_attempt_validation_hard_fail_count: `{summary.get('rescue_attempt_validation_hard_fail_count', 0)}`",
+        f"- rescue_attempt_validation_warning_count: `{summary.get('rescue_attempt_validation_warning_count', 0)}`",
+        f"- rescue_attempt_validation_artifact: `{summary.get('rescue_attempt_validation_artifact') or '-'}`",
+        f"- rescue_attempt_validation_reason: `{(summary.get('rescue_attempt_validation_check') or {}).get('reason', '-')}`",
         f"- partnering_stack_artifact_status: `{summary.get('partnering_stack_artifact_status') or '-'}`",
         f"- partnering_stack_artifact_complete: `{summary.get('partnering_stack_artifact_complete')}`",
         f"- partnering_stack_source_artifact_status: `{summary.get('partnering_stack_source_artifact_status') or '-'}`",
@@ -924,6 +1124,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--wetlab-selected-allatom-json", default=DEFAULT_WETLAB_SELECTED_ALLATOM_JSON)
     parser.add_argument("--current-results-index-json", default=DEFAULT_CURRENT_RESULTS_INDEX_JSON)
     parser.add_argument("--partnering-stack-json", default=DEFAULT_PARTNERING_STACK_JSON)
+    parser.add_argument("--rescue-current-json", default=DEFAULT_RESCUE_CURRENT_JSON)
+    parser.add_argument("--rescue-attempt-validation-json", default=DEFAULT_RESCUE_ATTEMPT_VALIDATION_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
     return parser
@@ -944,6 +1146,8 @@ def main(argv: list[str] | None = None) -> int:
         wetlab_selected_allatom_json=args.wetlab_selected_allatom_json,
         current_results_index_json=args.current_results_index_json,
         partnering_stack_json=args.partnering_stack_json,
+        rescue_current_json=args.rescue_current_json,
+        rescue_attempt_validation_json=args.rescue_attempt_validation_json,
     )
     out_json = _resolve(args.out_json)
     out_md = _resolve(args.out_md)

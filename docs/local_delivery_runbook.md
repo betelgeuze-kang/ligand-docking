@@ -36,7 +36,7 @@ python3 tools/build_local_delivery_verdict_gate.py
 python3 tools/validate_local_delivery_bundle.py --bundle-dir <bundle_dir>
 ```
 
-These commands are evidence refreshes, not green-making commands. If the requirements/environment lock still shows missing, loose/source, or missing-file required inputs, keep the bundle blocked/internal-review and record the gap instead of suppressing it. Unpinned requirement inputs are acceptable only when the generated lock text records the resolved versions for the local-delivery required set.
+These commands are evidence refreshes, not green-making commands. If the requirements/environment lock still shows missing, loose/source, or missing-file required inputs, keep the bundle blocked/internal-review and record the gap instead of suppressing it. Unpinned requirement inputs are acceptable only when the generated lock text records the resolved versions for the local-delivery required set. If a rescue attempt is part of the current evidence set, run `python3 tools/validate_wetlab_tcruzi_pde_allatom_rescue_attempt.py` first and then refresh `python3 tools/build_local_delivery_verdict_gate.py` before `python3 tools/validate_local_delivery_bundle.py`; the rescue validator is evidence-integrity only and does not clear the wetlab hard gate or the queue.
 
 Current status snapshot:
 
@@ -55,12 +55,13 @@ Use this operator checklist for the current P0 closure work; it is separate from
 3. Move to a rescue-only branch/lane.
 4. Run `python3 tools/run_wetlab_tcruzi_pde_allatom_rescue.py --top-k 8 --filter-mode strict_then_near_fill --execute`.
 5. Run `python3 tools/validate_wetlab_tcruzi_pde_allatom_rescue_attempt.py`; proceed only when `rescue_attempt_validation=pass`, and if it is not pass, stop blocked/internal-review and do not trust the attempt evidence.
-6. Inspect the rescue summary before spending more compute: `top_k_effective` may be lower than requested, and any `rescue_review_band_mismatch_count > 0` is fail-closed evidence rather than a pass signal.
-7. Build the review packet.
-8. Refresh `current_results_index`.
-9. Refresh `partnering_stack`.
-10. Refresh the final campaign/dashboard, burndown, queue/status, and verdict artifacts.
-11. Treat claim/equivalence inputs as post-gate readiness evidence only after the wetlab selected-allatom hard gate is green; before then, placeholder or missing data stays blocked and cannot be counted as readiness evidence.
+6. Immediately run `python3 tools/build_local_delivery_verdict_gate.py` so the refreshed gate snapshots the rescue validator's `rescue_attempt_validation_*` fields and source artifacts.
+7. Inspect the rescue summary before spending more compute: `top_k_effective` may be lower than requested, and any `rescue_review_band_mismatch_count > 0` is fail-closed evidence rather than a pass signal. A pass here only confirms attempt-evidence integrity; it does not clear wetlab selected-allatom or the downstream queue.
+8. Build the review packet.
+9. Refresh `current_results_index`.
+10. Refresh `partnering_stack`.
+11. Refresh the final campaign/dashboard, burndown, queue/status, and verdict artifacts.
+12. Treat claim/equivalence inputs as post-gate readiness evidence only after the wetlab selected-allatom hard gate is green; before then, placeholder or missing data stays blocked and cannot be counted as readiness evidence.
 
 This standardizes the same sequence before each paid local delivery:
 
