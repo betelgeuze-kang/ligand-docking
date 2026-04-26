@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import subprocess
 import sys
@@ -77,12 +78,117 @@ def _sorted_unique(values: list[str]) -> list[str]:
     return sorted({text for value in values if (text := _text(value))})
 
 
+def _unique_in_order(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for value in values:
+        text = _text(value)
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        ordered.append(text)
+    return ordered
+
+
 
 def _under_root(path_like: str) -> Path:
     path = Path(path_like)
     if path.is_absolute():
         return path
     return (ROOT / path).resolve()
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _file_fingerprint(path: Path | str) -> dict[str, Any]:
+    text_path = _text(path)
+    if not text_path:
+        return {"path": "", "present": False, "size": None, "sha256": ""}
+    resolved = _under_root(text_path)
+    present = resolved.exists() and resolved.is_file()
+    return {
+        "path": str(resolved),
+        "present": present,
+        "size": resolved.stat().st_size if present else None,
+        "sha256": _sha256_file(resolved) if present else "",
+    }
+
+
+def _canonical_sha256(payload: dict[str, Any]) -> str:
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _validate_attempt_id(value: str) -> str:
+    attempt_id = _text(value)
+    if not attempt_id:
+        return ""
+    if attempt_id in {".", ".."} or "/" in attempt_id or "\\" in attempt_id:
+        raise SystemExit(f"invalid PDE all-atom rescue attempt id: {value}")
+    return attempt_id
+
+
+def _next_attempt_identity(
+    *,
+    slice_dir: Path,
+    input_fingerprint_sha256: str,
+    execute: bool,
+    override_attempt_id: str,
+) -> tuple[str, str, int | None]:
+    if override_attempt_id:
+        attempt_dir = slice_dir / "attempts" / override_attempt_id
+        if attempt_dir.exists():
+            raise SystemExit(f"PDE all-atom rescue attempt already exists: {attempt_dir}")
+        return override_attempt_id, "cli_override", None
+
+    mode = "exec" if execute else "noexec"
+    prefix = f"inputfp_{input_fingerprint_sha256[:12]}__{mode}__"
+    attempts_dir = slice_dir / "attempts"
+    used_sequences: set[int] = set()
+    if attempts_dir.exists():
+        for child in attempts_dir.iterdir():
+            if not child.is_dir() or not child.name.startswith(prefix):
+                continue
+            suffix = child.name.removeprefix(prefix)
+            if suffix.isdigit():
+                used_sequences.add(int(suffix))
+    sequence = 1
+    while sequence in used_sequences:
+        sequence += 1
+    return f"{prefix}{sequence:04d}", "deterministic_input_fingerprint_sequence", sequence
+
+
+def _selected_trajectory_fingerprints(
+    *,
+    stage2_subset_rows: list[dict[str, Any]],
+    trajectory_root: Path,
+) -> list[dict[str, Any]]:
+    fingerprints: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in stage2_subset_rows:
+        trajectory_npz = _text(row.get("trajectory_npz"))
+        if not trajectory_npz:
+            continue
+        trajectory_path = Path(trajectory_npz)
+        resolved = trajectory_path if trajectory_path.is_absolute() else trajectory_root / trajectory_path
+        key = str(resolved.resolve())
+        if key in seen:
+            continue
+        seen.add(key)
+        fingerprints.append(
+            {
+                "ligand_id": _text(row.get("ligand_id")),
+                "trajectory_npz": trajectory_npz,
+                **_file_fingerprint(resolved),
+            }
+        )
+    return fingerprints
 
 
 def _read_csv_rows(path: Path) -> list[dict[str, Any]]:
@@ -181,11 +287,22 @@ def _resolve_review_band(row: dict[str, Any]) -> tuple[str, str]:
     return "candidate_top32", "fallback_default"
 
 
+def _numeric_review_band(row: dict[str, Any]) -> tuple[str, str]:
+    distance = _safe_optional_float(row.get("source_three_bead_mean_min_distance_A"))
+    if distance is None:
+        return "", ""
+    if distance <= STRICT_THRESHOLD_A:
+        return "strict_under_2p5A", "source_three_bead_mean_min_distance_A"
+    if distance <= NEAR_THRESHOLD_A:
+        return "near_under_3p0A", "source_three_bead_mean_min_distance_A"
+    return "candidate_top32", "source_three_bead_mean_min_distance_A"
+
+
 def _review_band_bucket(review_band: Any) -> str:
     band = _text(review_band)
-    if band == "strict_under_2p5A":
+    if band == "strict_under_2p5A" or band.startswith("strict"):
         return "strict"
-    if band == "near_under_3p0A":
+    if band == "near_under_3p0A" or band.startswith("near"):
         return "near"
     return "other"
 
@@ -751,6 +868,182 @@ def _action_recipe_bundle(
     }
 
 
+def _review_bucket_counts(rows: list[dict[str, Any]]) -> dict[str, int]:
+    counts = {"strict": 0, "near": 0, "other": 0}
+    for row in rows:
+        bucket = _text(row.get("resolved_rescue_review_bucket")) or _review_band_bucket(
+            row.get("resolved_rescue_review_band") or row.get("source_rescue_review_band")
+        )
+        if bucket not in counts:
+            bucket = "other"
+        counts[bucket] += 1
+    return counts
+
+
+def _band_consistency_counts(rows: list[dict[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in rows:
+        status = _text(row.get("rescue_review_band_consistency_status")) or "not_checked"
+        counts[status] = counts.get(status, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def _execution_status_counts(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    order = ["deferred_blocked", "ready_manifest_only", "execute_requested"]
+    counts = {status: 0 for status in order}
+    for row in rows:
+        status = _text(row.get("rescue_execution_status")) or "deferred_blocked"
+        counts.setdefault(status, 0)
+        counts[status] += 1
+    return [
+        {"rescue_execution_status": status, "count": count}
+        for status in order
+        if (count := counts.get(status, 0)) > 0
+    ] + [
+        {"rescue_execution_status": status, "count": count}
+        for status, count in sorted(counts.items())
+        if status not in order and count > 0
+    ]
+
+
+def _next_action_recipe_codes(action_recipe_rows: list[dict[str, Any]]) -> list[str]:
+    return _unique_in_order(
+        [
+            _text(recipe.get("action_recipe_code"))
+            for recipe in action_recipe_rows
+            if _text(recipe.get("action_recipe_status")) in {"required", "open"}
+        ]
+    )
+
+
+def _next_required_calculations(bundle: dict[str, Any]) -> list[str]:
+    required = list(bundle.get("effective_actionability_required_calculations", []) or [])
+    if required:
+        return [_text(value) for value in required if _text(value)]
+    return _unique_in_order(
+        [
+            _text(recipe.get("action_recipe_next_calculation"))
+            for recipe in list(bundle.get("action_recipe_rows", []) or [])
+            if _text(recipe.get("action_recipe_status")) in {"required", "open"}
+        ]
+    )
+
+
+def _row_execution_plan_fields(
+    *,
+    row: dict[str, Any],
+    action_bundle: dict[str, Any],
+    selected_rank: int,
+    requested_top_k: int,
+    actual_top_k: int,
+    filter_meta: dict[str, Any],
+    execute: bool,
+) -> dict[str, Any]:
+    blocking_order = list(action_bundle.get("effective_blocking_order", []) or [])
+    action_recipe_rows = list(action_bundle.get("action_recipe_rows", []) or [])
+    next_required_calculations = _next_required_calculations(action_bundle)
+    next_action_recipe_codes = _next_action_recipe_codes(action_recipe_rows)
+    if blocking_order:
+        execution_status = "deferred_blocked"
+        expensive_lane_status = "deferred"
+        status_reason = "blocked by required pre-expensive-lane validation gates."
+    elif execute:
+        execution_status = "execute_requested"
+        expensive_lane_status = "open"
+        status_reason = "gates are satisfied and execution was requested by the controller."
+    else:
+        execution_status = "ready_manifest_only"
+        expensive_lane_status = "open"
+        status_reason = "gates are satisfied, but this run is manifest-only because execute=false."
+
+    return {
+        "rescue_execution_status": execution_status,
+        "rescue_execution_status_reason": status_reason,
+        "rescue_expensive_lane_status": expensive_lane_status,
+        "rescue_next_required_calculations": next_required_calculations,
+        "rescue_next_action_recipe_codes": next_action_recipe_codes,
+        "rescue_iteration_metadata": {
+            "selected_rank": selected_rank,
+            "top_k_requested": requested_top_k,
+            "top_k_effective": actual_top_k,
+            "filter_mode_requested": _text(filter_meta.get("requested_filter_mode")),
+            "filter_mode_applied": _text(filter_meta.get("applied_filter_mode")),
+            "review_bucket": _text(row.get("resolved_rescue_review_bucket")) or "other",
+            "execute_requested": bool(execute),
+        },
+    }
+
+
+def _execution_plan_summary(
+    *,
+    payload_rows: list[dict[str, Any]],
+    filtered_lane_rows: list[dict[str, Any]],
+    selected_lane_rows: list[dict[str, Any]],
+    requested_top_k: int,
+    actual_top_k: int,
+) -> dict[str, Any]:
+    status_counts = _execution_status_counts(payload_rows)
+    statuses = {_text(row.get("rescue_execution_status")) for row in payload_rows}
+    expensive_statuses = {_text(row.get("rescue_expensive_lane_status")) for row in payload_rows}
+    if "deferred_blocked" in statuses:
+        plan_status = "blocked_deferred"
+    elif "execute_requested" in statuses:
+        plan_status = "execute_requested"
+    else:
+        plan_status = "ready_manifest_only"
+    expensive_lane_status = "deferred" if "deferred" in expensive_statuses else "open"
+    return {
+        "top_k_requested": requested_top_k,
+        "top_k_effective": actual_top_k,
+        "rescue_execution_plan_version": "pde_selected_allatom_rescue_plan_v1",
+        "rescue_execution_plan_status": plan_status,
+        "rescue_execution_expensive_lane_status": expensive_lane_status,
+        "rescue_execution_filtered_bucket_counts": _review_bucket_counts(filtered_lane_rows),
+        "rescue_execution_selected_bucket_counts": _review_bucket_counts(selected_lane_rows),
+        "rescue_execution_status_counts": status_counts,
+        "rescue_execution_next_required_calculations": _unique_in_order(
+            [
+                calculation
+                for row in payload_rows
+                for calculation in list(row.get("rescue_next_required_calculations", []) or [])
+            ]
+        ),
+        "rescue_execution_next_action_recipe_codes": _unique_in_order(
+            [
+                code
+                for row in payload_rows
+                for code in list(row.get("rescue_next_action_recipe_codes", []) or [])
+            ]
+        ),
+    }
+
+
+def _normalize_scoring_summary(scoring_payload: Any) -> dict[str, Any]:
+    if not isinstance(scoring_payload, dict):
+        return {}
+    nested_summary = scoring_payload.get("summary")
+    if isinstance(nested_summary, dict) and nested_summary:
+        return dict(nested_summary)
+    return dict(scoring_payload)
+
+
+def _scoring_status_from_summary(
+    *,
+    returncode: int,
+    summary_present: bool,
+    scoring_summary: dict[str, Any],
+    expected_jobs: int,
+) -> tuple[str, str]:
+    if returncode != 0:
+        return "error", f"scoring_returncode={returncode}"
+    if not summary_present:
+        return "error", "scoring_summary_missing"
+    processed_jobs = _safe_int(scoring_summary.get("processed_jobs"), 0)
+    if processed_jobs < expected_jobs:
+        return "incomplete", f"processed_jobs={processed_jobs} below expected_jobs={expected_jobs}"
+    return "pass", "processed_jobs_complete"
+
+
 def _select_lane_rows(
     lane_rows: list[dict[str, Any]],
     requested_filter_mode: Any,
@@ -764,10 +1057,26 @@ def _select_lane_rows(
     for row in lane_rows:
         annotated = dict(row or {})
         resolved_band, band_source = _resolve_review_band(annotated)
-        band_bucket = _review_band_bucket(resolved_band)
+        metadata_bucket = _review_band_bucket(resolved_band)
+        numeric_band, numeric_band_source = _numeric_review_band(annotated)
+        numeric_bucket = _review_band_bucket(numeric_band) if numeric_band else ""
+        if numeric_bucket and metadata_bucket and metadata_bucket != numeric_bucket:
+            band_bucket = "other"
+            consistency_status = "mismatch_fail_closed"
+        elif numeric_bucket:
+            band_bucket = numeric_bucket
+            consistency_status = "match" if metadata_bucket == numeric_bucket else "numeric_only"
+        else:
+            band_bucket = metadata_bucket
+            consistency_status = "metadata_only" if band_source != "fallback_default" else "not_checked"
         annotated["resolved_rescue_review_band"] = resolved_band
         annotated["resolved_rescue_review_band_source"] = band_source
+        annotated["metadata_rescue_review_bucket"] = metadata_bucket
+        annotated["numeric_rescue_review_band"] = numeric_band
+        annotated["numeric_rescue_review_band_source"] = numeric_band_source
+        annotated["numeric_rescue_review_bucket"] = numeric_bucket
         annotated["resolved_rescue_review_bucket"] = band_bucket
+        annotated["rescue_review_band_consistency_status"] = consistency_status
         annotated.update(_translation_gate_row_from_lane_row(annotated))
         annotated_rows.append(annotated)
         if band_source != "fallback_default":
@@ -805,6 +1114,12 @@ def _select_lane_rows(
         "near_band_candidate_count": len(near_rows),
         "other_band_candidate_count": len(other_rows),
         "filtered_lane_candidate_count": len(selected_rows),
+        "rescue_review_band_consistency_counts": _band_consistency_counts(annotated_rows),
+        "rescue_review_band_mismatch_count": sum(
+            1
+            for row in annotated_rows
+            if _text(row.get("rescue_review_band_consistency_status")) == "mismatch_fail_closed"
+        ),
     }
 
 
@@ -821,6 +1136,7 @@ def run(
     python_bin: str,
     execute: bool,
     out_md: str,
+    attempt_id: str = "",
 ) -> dict[str, Any]:
     lane_payload = load_json(lane_json)
     lane_summary = dict(lane_payload.get("summary", {}) or {})
@@ -875,15 +1191,10 @@ def run(
     )
     slice_dir.mkdir(parents=True, exist_ok=True)
 
-    manifest_csv = slice_dir / "allatom_rescue_manifest.csv"
-    queue_subset_csv = slice_dir / "allatom_rescue_queue.csv"
-    stage2_subset_csv = slice_dir / "allatom_rescue_stage2_manifest.csv"
+    current_manifest_csv = slice_dir / "allatom_rescue_manifest.csv"
+    current_queue_subset_csv = slice_dir / "allatom_rescue_queue.csv"
+    current_stage2_subset_csv = slice_dir / "allatom_rescue_stage2_manifest.csv"
     state_json = slice_dir / "allatom_rescue_state.json"
-    scores_csv = slice_dir / "allatom_rescue_scores.csv"
-    summary_json = slice_dir / "allatom_rescue_summary.json"
-    summary_md = slice_dir / "allatom_rescue_summary.md"
-    scoring_log = slice_dir / "allatom_rescue_scoring.log"
-    out_dir = slice_dir / "allatom_delivery"
 
     stage1_queue_csv = _under_root(_text(lane_summary.get("base_stage1_queue_csv")))
     stage2_manifest_csv = _under_root(_text(lane_summary.get("base_stage2_manifest_csv")))
@@ -939,6 +1250,12 @@ def run(
                 "source_rescue_review_band": _text(row.get("source_rescue_review_band")),
                 "resolved_rescue_review_band": _text(row.get("resolved_rescue_review_band")),
                 "resolved_rescue_review_band_source": _text(row.get("resolved_rescue_review_band_source")),
+                "metadata_rescue_review_bucket": _text(row.get("metadata_rescue_review_bucket")),
+                "numeric_rescue_review_band": _text(row.get("numeric_rescue_review_band")),
+                "numeric_rescue_review_band_source": _text(row.get("numeric_rescue_review_band_source")),
+                "numeric_rescue_review_bucket": _text(row.get("numeric_rescue_review_bucket")),
+                "resolved_rescue_review_bucket": _text(row.get("resolved_rescue_review_bucket")),
+                "rescue_review_band_consistency_status": _text(row.get("rescue_review_band_consistency_status")),
                 "selected_filter_mode_requested": _text(filter_meta.get("requested_filter_mode")),
                 "selected_filter_mode_applied": _text(filter_meta.get("applied_filter_mode")),
                 "selected_filter_mode_fallback_reason": _text(filter_meta.get("fallback_reason")),
@@ -1019,7 +1336,6 @@ def run(
         )
     if not manifest_rows:
         raise SystemExit(f"no PDE all-atom rescue manifest rows available for {resolved_target} {resolved_shard}")
-    write_csv_rows(manifest_csv, manifest_rows)
 
     queue_subset_rows: list[dict[str, Any]] = []
     with stage1_queue_csv.open("r", encoding="utf-8", newline="") as handle:
@@ -1051,7 +1367,6 @@ def run(
             if not _text(row.get("pocket_z")) and _text(native_reference.get("pocket_z")):
                 row["pocket_z"] = _text(native_reference.get("pocket_z"))
             row["native_reference_provenance"] = _text(native_reference.get("provenance"))
-    write_csv_rows(queue_subset_csv, queue_subset_rows)
 
     stage2_subset_rows: list[dict[str, Any]] = []
     with stage2_manifest_csv.open("r", encoding="utf-8", newline="") as handle:
@@ -1061,20 +1376,123 @@ def run(
                 stage2_subset_rows.append(dict(row))
     if not stage2_subset_rows:
         raise SystemExit(f"no stage2 manifest rows matched PDE all-atom rescue ligands for {resolved_target} {resolved_shard}")
-    write_csv_rows(stage2_subset_csv, stage2_subset_rows)
 
-    payload_rows = [
-        {
-            **row,
-            **_action_recipe_bundle(row=row, claim_gate_summary=claim_gate_summary),
-        }
-        for row in manifest_rows
-    ]
+    input_fingerprint_ledger = {
+        "schema_version": "pde_allatom_rescue_input_fingerprint_v1",
+        "lane_json": _file_fingerprint(lane_json),
+        "stage1_queue_csv": _file_fingerprint(stage1_queue_csv),
+        "stage2_manifest_csv": _file_fingerprint(stage2_manifest_csv),
+        "claim_readiness_json": _file_fingerprint(claim_readiness_json),
+        "equivalence_gate_json": _file_fingerprint(equivalence_gate_json),
+        "rescue_target_native_csv": _file_fingerprint(lane_summary.get("rescue_target_native_csv")),
+        "rescue_target_pocket_csv": _file_fingerprint(lane_summary.get("rescue_target_pocket_csv")),
+        "rescue_target_ligand_csv": _file_fingerprint(lane_summary.get("rescue_target_ligand_csv")),
+        "resolved_native_pdb": _file_fingerprint(native_reference.get("native_pdb_path")),
+        "selected_ligand_ids": list(selected_ligand_ids),
+        "selected_manifest_rows_sha256": _canonical_sha256({"rows": manifest_rows}),
+        "selected_queue_rows_sha256": _canonical_sha256({"rows": queue_subset_rows}),
+        "selected_stage2_rows_sha256": _canonical_sha256({"rows": stage2_subset_rows}),
+        "selected_stage2_trajectory_files": _selected_trajectory_fingerprints(
+            stage2_subset_rows=stage2_subset_rows,
+            trajectory_root=trajectory_root,
+        ),
+    }
+    input_fingerprint_basis = {
+        "schema_version": "pde_allatom_rescue_attempt_v1",
+        "settings": {
+            "target_id": resolved_target,
+            "shard_id": resolved_shard,
+            "requested_top_k": requested_top_k,
+            "actual_top_k": actual_top_k,
+            "filter_mode_requested": _text(filter_meta.get("requested_filter_mode")),
+            "filter_mode_applied": _text(filter_meta.get("applied_filter_mode")),
+            "execute": bool(execute),
+            "selected_command_kind": ALLATOM_COMMAND_KIND,
+            "allatom_ligand_model": ALLATOM_LIGAND_MODEL,
+        },
+        "inputs": input_fingerprint_ledger,
+    }
+    input_fingerprint_sha256 = _canonical_sha256(input_fingerprint_basis)
+    override_attempt_id = _validate_attempt_id(attempt_id)
+    resolved_attempt_id, attempt_id_source, attempt_sequence = _next_attempt_identity(
+        slice_dir=slice_dir,
+        input_fingerprint_sha256=input_fingerprint_sha256,
+        execute=execute,
+        override_attempt_id=override_attempt_id,
+    )
+    attempt_dir = slice_dir / "attempts" / resolved_attempt_id
+    attempt_dir.mkdir(parents=True, exist_ok=False)
+    manifest_csv = attempt_dir / "allatom_rescue_manifest.csv"
+    queue_subset_csv = attempt_dir / "allatom_rescue_queue.csv"
+    stage2_subset_csv = attempt_dir / "allatom_rescue_stage2_manifest.csv"
+    attempt_state_json = attempt_dir / "allatom_rescue_state.json"
+    scores_csv = attempt_dir / "allatom_rescue_scores.csv"
+    summary_json = attempt_dir / "allatom_rescue_summary.json"
+    summary_md = attempt_dir / "allatom_rescue_summary.md"
+    scoring_log = attempt_dir / "allatom_rescue_scoring.log"
+    out_dir = attempt_dir / "allatom_delivery"
+    attempt_artifacts = {
+        "manifest_csv": str(manifest_csv),
+        "queue_csv": str(queue_subset_csv),
+        "stage2_manifest_csv": str(stage2_subset_csv),
+        "state_json": str(attempt_state_json),
+        "scores_csv": str(scores_csv),
+        "summary_json": str(summary_json),
+        "summary_md": str(summary_md),
+        "scoring_log": str(scoring_log),
+        "delivery_dir": str(out_dir),
+    }
+    current_artifacts = {
+        "manifest_csv": str(current_manifest_csv),
+        "queue_csv": str(current_queue_subset_csv),
+        "stage2_manifest_csv": str(current_stage2_subset_csv),
+        "state_json": str(state_json),
+        "artifact_md": str(_under_root(out_md)),
+        "artifact_json": str(_under_root(out_md).with_suffix(".json")),
+        "artifact_csv": str(_under_root(out_md).with_suffix(".csv")),
+    }
+    write_csv_rows(manifest_csv, manifest_rows)
+    write_csv_rows(queue_subset_csv, queue_subset_rows)
+    write_csv_rows(stage2_subset_csv, stage2_subset_rows)
+    write_csv_rows(current_manifest_csv, manifest_rows)
+    write_csv_rows(current_queue_subset_csv, queue_subset_rows)
+    write_csv_rows(current_stage2_subset_csv, stage2_subset_rows)
+
+    payload_rows: list[dict[str, Any]] = []
+    for selected_rank, row in enumerate(manifest_rows, start=1):
+        action_bundle = _action_recipe_bundle(row=row, claim_gate_summary=claim_gate_summary)
+        payload_rows.append(
+            {
+                **row,
+                "attempt_id": resolved_attempt_id,
+                "input_fingerprint_sha256": input_fingerprint_sha256,
+                **action_bundle,
+                **_row_execution_plan_fields(
+                    row=row,
+                    action_bundle=action_bundle,
+                    selected_rank=selected_rank,
+                    requested_top_k=requested_top_k,
+                    actual_top_k=actual_top_k,
+                    filter_meta=filter_meta,
+                    execute=execute,
+                ),
+            }
+        )
+    execution_plan_summary = _execution_plan_summary(
+        payload_rows=payload_rows,
+        filtered_lane_rows=filtered_lane_rows,
+        selected_lane_rows=selected_lane_rows,
+        requested_top_k=requested_top_k,
+        actual_top_k=actual_top_k,
+    )
 
     execution_mode = "controller_manifest_only"
     scoring_status = "not_executed"
+    scoring_status_reason = "not_executed"
     scoring_returncode: int | None = None
+    scoring_summary_present = False
     scoring_summary: dict[str, Any] = {}
+    scoring_expected_jobs = actual_top_k
     if execute:
         scoring_cmd = [
             python_bin,
@@ -1119,11 +1537,17 @@ def run(
         execution_mode = "pseudo_allatom_backmapping_scoring_executed"
         if summary_json.exists():
             scoring_payload = load_json(str(summary_json))
-            scoring_summary = dict(scoring_payload.get("summary", {}) or {})
-            scoring_pass = bool(scoring_payload.get("pass", False) or proc.returncode == 0)
-            scoring_status = "pass" if scoring_pass else "error"
+            scoring_summary = _normalize_scoring_summary(scoring_payload)
+            scoring_summary_present = bool(scoring_summary)
+            scoring_status, scoring_status_reason = _scoring_status_from_summary(
+                returncode=scoring_returncode,
+                summary_present=scoring_summary_present,
+                scoring_summary=scoring_summary,
+                expected_jobs=scoring_expected_jobs,
+            )
         else:
             scoring_status = "error"
+            scoring_status_reason = "scoring_summary_missing"
 
     payload = {
         "summary": {
@@ -1134,6 +1558,7 @@ def run(
             "selected_threshold_A": STRICT_THRESHOLD_A,
             "allatom_ligand_model": ALLATOM_LIGAND_MODEL,
             "requested_top_k": requested_top_k,
+            **execution_plan_summary,
             "slice_candidate_count": len(manifest_rows),
             "source_lane_candidate_count": len(lane_rows),
             "filtered_lane_candidate_count": _safe_int(filter_meta.get("filtered_lane_candidate_count"), len(filtered_lane_rows)),
@@ -1144,6 +1569,10 @@ def run(
             "strict_band_candidate_count": _safe_int(filter_meta.get("strict_band_candidate_count"), 0),
             "near_band_candidate_count": _safe_int(filter_meta.get("near_band_candidate_count"), 0),
             "other_band_candidate_count": _safe_int(filter_meta.get("other_band_candidate_count"), 0),
+            "rescue_review_band_consistency_counts": dict(
+                filter_meta.get("rescue_review_band_consistency_counts", {}) or {}
+            ),
+            "rescue_review_band_mismatch_count": _safe_int(filter_meta.get("rescue_review_band_mismatch_count"), 0),
             "filtered_translation_gate_version": _text(filtered_translation_summary.get("translation_gate_version")),
             "filtered_translation_gate_pass_count": _safe_int(filtered_translation_summary.get("translation_gate_pass_count"), 0),
             "filtered_translation_gate_borderline_count": _safe_int(filtered_translation_summary.get("translation_gate_borderline_count"), 0),
@@ -1318,11 +1747,22 @@ def run(
             "action_recipe_rollup": focus_action_recipe_bundle["action_recipe_rollup"],
             "allatom_claim_readiness_json": _text(claim_readiness_json),
             "allatom_equivalence_gate_json": _text(equivalence_gate_json),
+            "attempt_id": resolved_attempt_id,
+            "attempt_id_source": attempt_id_source,
+            "attempt_sequence": attempt_sequence,
+            "input_fingerprint_sha256": input_fingerprint_sha256,
+            "input_fingerprint_schema_version": _text(input_fingerprint_ledger.get("schema_version")),
             "focus_ligand_id": _text(manifest_rows[0].get("ligand_id")),
             "allatom_manifest_csv": str(manifest_csv),
             "allatom_queue_csv": str(queue_subset_csv),
             "allatom_stage2_manifest_csv": str(stage2_subset_csv),
             "allatom_state_json": str(state_json),
+            "attempt_dir": str(attempt_dir),
+            "attempt_state_json": str(attempt_state_json),
+            "current_pointer_json": str(state_json),
+            "current_artifact_is_pointer": True,
+            "attempt_artifacts": attempt_artifacts,
+            "current_artifacts": current_artifacts,
             "trajectory_root": str(trajectory_root),
             "allatom_scores_csv": str(scores_csv),
             "allatom_summary_json": str(summary_json),
@@ -1336,7 +1776,10 @@ def run(
             "rescue_target_ligand_csv": _text(lane_summary.get("rescue_target_ligand_csv")),
             "execution_mode": execution_mode,
             "scoring_status": scoring_status,
+            "scoring_status_reason": scoring_status_reason,
             "scoring_returncode": scoring_returncode,
+            "scoring_summary_present": scoring_summary_present,
+            "scoring_expected_jobs": scoring_expected_jobs,
             "queue_rows": _safe_int(scoring_summary.get("queue_rows"), len(queue_subset_rows)),
             "processed_jobs": _safe_int(scoring_summary.get("processed_jobs"), 0),
             "avg_binding_energy_proxy": scoring_summary.get("avg_binding_energy_proxy"),
@@ -1356,9 +1799,12 @@ def run(
             "allatom_claim_readiness_json": _text(claim_readiness_json),
             "allatom_equivalence_gate_json": _text(equivalence_gate_json),
         },
+        "input_fingerprints": input_fingerprint_ledger,
+        "input_fingerprint_ledger": input_fingerprint_ledger,
         "rows": payload_rows,
     }
     state_json.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    attempt_state_json.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     write_artifact(out_md, "Wet-Lab T. cruzi PDE All-Atom Rescue", payload)
     return payload
 
@@ -1378,6 +1824,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--python-bin", default=sys.executable or "python3")
     parser.add_argument("--execute", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
+    parser.add_argument("--attempt-id", default="")
     return parser.parse_args()
 
 
@@ -1395,6 +1842,7 @@ def main() -> None:
         python_bin=str(args.python_bin),
         execute=bool(args.execute),
         out_md=args.out_md,
+        attempt_id=str(args.attempt_id),
     )
 
 

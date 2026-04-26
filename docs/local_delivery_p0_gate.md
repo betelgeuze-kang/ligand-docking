@@ -1,0 +1,72 @@
+# Local Delivery P0 Gate
+
+P0 starts here: the current verdict-gate snapshot shows the preflight evidence is green (`summary.preflight_ok=true`) but the verdict remains blocked (`summary.delivery_ready=false`) because the remaining P0 blockers are `wetlab_selected_allatom_not_green` and `commercialization_queue_not_clear`. The preflight and the nightly stage6 summary are supporting evidence only; neither one is a delivery-ready verdict. The commercialization queue is downstream of wetlab selected-allatom closure and cannot clear independently. The nightly stage6 summary is keep-green and no longer a representative P0 blocker. The current representative `accuracy_gate` is `pass=true` with failed metrics `0`; the Morton presort neighbor/self-pair burndown is closed in the recorded local outputs, and we still do not fake-pass, relax thresholds, or manipulate results to force a green result. The source-consistency rule is review packet -> `current_results_index` -> `partnering_stack` -> final/dashboard -> burndown -> verdict; if any surface diverges on the metric source, treat it as a canonical freshness regression, not pass evidence. The current artifact is only a pointer; immutable attempt evidence lives by attempt path under `attempt_dir`, and `attempt_state_json` is the record to audit for `attempt_id`, `attempt_sequence`, `input_fingerprint_sha256`, `input_fingerprints` / `input_fingerprint_ledger`, `attempt_artifacts`, and `current_artifact_is_pointer=true`. Run `python3 tools/validate_wetlab_tcruzi_pde_allatom_rescue_attempt.py` on the current rescue JSON before reusing any output; if `rescue_attempt_validation` is not pass, keep the bundle blocked/internal-review and do not trust the attempt evidence. The partnering stack check only counts when `current_results_index.summary.partnering_stack_artifact_complete=true` and `runs/wetlab_partnering_stack_current.json.summary.status=wetlab_partnering_stack_ready`, `runs/wetlab_partnering_stack_current.json.artifact_completeness=full_partnering_stack`, and `runs/wetlab_partnering_stack_current.json` / `runs/wetlab_partnering_stack_current.md` carry the selected-allatom metric source-chain, selected-allatom gates, and freshness/source provenance. A false, missing, or placeholder surface, including a minimal `summary.status="ok"` record, is incomplete review input and should be recorded as blocker `partnering_stack_placeholder_or_incomplete`, not evidence. The latest allatom review packet, `current_results_index`, `partnering_stack`, final campaign/dashboard, regenerated burndown, and verdict now align on `mean_min_distance_A=3.375` versus `2.500` (`delta=0.875`) from `tcruzi_pde_allatom_review_packet.best_mean_min_distance_A`. Because `3.375 > 2.500`, the wetlab gate is still hard-blocked.
+
+The next execution path is the operator checklist: repair packet refresh -> rescue-only branch/lane -> `python3 tools/run_wetlab_tcruzi_pde_allatom_rescue.py --top-k 8 --filter-mode strict_then_near_fill --execute` -> `python3 tools/validate_wetlab_tcruzi_pde_allatom_rescue_attempt.py` -> review packet -> `current_results_index` -> `partnering_stack` -> final/dashboard -> burndown -> queue/status -> verdict refresh. Claim/equivalence inputs only count toward final readiness after the wetlab hard gate is green; until then, they stay blocked review inputs and do not clear the hard gate or queue. If `runs/wetlab_selected_allatom_repair_packet_current.md` exists, use it as the next execution reference only. The rescue runner now records `top_k_effective`, `rescue_execution_plan_status`, and `rescue_review_band_mismatch_count`; a band mismatch is fail-closed evidence, not an eligible strict/near rescue candidate.
+
+A. Current preflight, requirements lock, environment manifest, and verdict-gate artifacts exist, are fresh, and match the current bundle/work record; the current A snapshot has `accuracy_gate pass=true`, `installed=13/13`, `missing=0`, `loose_sources=0`, `optional_missing_count=7`, `requirements_lock_complete=true`, and `environment_lock_complete=true`. Optional/API/train/deploy dependencies are recorded separately as optional/deferred evidence and do not make or break A.
+B. The top-level nightly gate artifact reports pass; downstream execute-pass artifacts are supporting-only evidence and do not override the top-level gate. The current downstream execute path is green and the nightly stage6 summary is keep-green, so it is no longer a P0 blocker. The strict canonical reentry handoff is the packet/profile pair above, and it remains supporting-only evidence.
+C. The wetlab selected all-atom gate reports pass only when `mean_min_distance_A <= 2.500` and the claim gate plus hard/semi-hard blockers are closed; the latest review packet, `current_results_index`, `partnering_stack`, final campaign/dashboard, regenerated burndown, and verdict now report `mean_min_distance_A=3.375` (`delta=0.875`). Because `3.375 > 2.500`, the hard blocker remains, the claim metric is missing, and the hard/semi-hard blockers are still open. Recompute from `recompute_mean_min_distance_A` first and keep expensive lanes deferred until the metric clears. If `runs/wetlab_selected_allatom_repair_packet_current.md` exists, use it as the next execution reference only.
+D. The preflight itself is green as a non-dry-run evidence refresh (`summary.overall_ok=true`, `verdict_gate_required_ok=true`), but it is not the delivery-ready verdict. The delivery verdict reports pass only when `runs/local_delivery_verdict_gate_current.json` reports `summary.delivery_ready=true` and the final bundle validator reports `summary.overall_ok=true` and `summary.delivery_ready_policy_ok=true`.
+E. The commercialization queue reports pass only when the queue is clear after wetlab selected-allatom is green; the current queue is downstream and remains blocked because C is not green, so it remains dependent evidence rather than a standalone scientific pass.
+
+If any part of A/B/C/D/E is missing, stale, or still blocked, stop at blocked/internal-review and create evidence from the current artifacts first. The verdict gate is an audit wrapper over the existing artifacts; it records the persisted-vs-fresh fingerprint check and the package checksum list. The source-consistency check spans review packet -> `current_results_index` -> `partnering_stack` -> final/dashboard -> burndown -> verdict, and any mismatch anywhere is a canonical freshness regression. The final local bundle validator sits after bundle assembly and before any delivery-ready wording is used.
+
+Use these artifacts as the operator-facing source of truth:
+
+- `runs/local_delivery_preflight_current.json`
+- `runs/local_delivery_preflight_current.md`
+- `runs/local_delivery_requirements_lock_current.json`
+- `runs/local_delivery_requirements_lock_current.md`
+- `runs/local_delivery_requirements_lock_current.txt`
+- `runs/local_delivery_environment_manifest_current.json`
+- `runs/local_delivery_environment_manifest_current.md`
+- `runs/nightly_gate_burndown_packet_current.json`
+- `runs/nightly_gate_burndown_packet_current.md`
+- `runs/nightly_stage6_top_level_reentry_packet_current.json`
+- `runs/nightly_stage6_top_level_reentry_packet_current.md`
+- `runs/nightly_stage6_top_level_reentry_profile_current.json`
+- `runs/ligand_htvs_nightly_2026-04-26_summary.json`
+- `runs/ligand_htvs_nightly_2026-04-26_smoke_stage3_summary.json`
+- `runs/wetlab_selected_allatom_gate_burndown_packet_current.json`
+- `runs/wetlab_selected_allatom_gate_burndown_packet_current.md`
+- `runs/local_engine_commercialization_queue_current.json`
+- `runs/local_engine_commercialization_queue_current.md`
+- `commercialization_status_report.md`
+- `runs/local_delivery_verdict_gate_current.json`
+- `runs/local_delivery_verdict_gate_current.md`
+
+Practical rule:
+
+- if A is missing, stale, or still incomplete because required inputs are missing, loose/source, or absent, do not write delivery-ready wording; produce blocked/internal-review evidence from the current preflight, requirements lock, environment manifest, and verdict gate outputs first
+- do not write delivery-ready wording until `runs/local_delivery_verdict_gate_current.json` reports `summary.delivery_ready=true`
+- if the accuracy artifact regresses from `pass=true`, reopen the P0-A burndown and rerun the Morton presort/self-pair smoke before drafting any verdict
+- do not fake-pass, relax thresholds, or manipulate results to make the blocker look green; the verdict must reflect the recorded local outputs exactly
+- optional/API/train/deploy dependencies are not a substitute for the required local-delivery lock; record them as optional/deferred evidence instead of counting them toward a green A
+- if B is missing, stale, or the nightly stage6 summary regresses from keep-green, keep the bundle blocked/internal-review; do not treat downstream execute or stage3 smoke as a substitute for the verdict path
+- if C is still blocked, or `mean_min_distance_A > 2.500`, or the claim metric is missing, or the claim gate / hard-semi-hard blockers are open, keep the bundle blocked/internal-review; start from `recompute_mean_min_distance_A` and keep expensive lanes deferred until the metric clears
+- if review packet -> `current_results_index` -> `partnering_stack` -> final/dashboard -> burndown -> verdict disagree on the metric source or metric value, treat that as a canonical-source freshness regression; do not treat any surface as pass evidence while the strict threshold is still missed
+- if `current_results_index.summary.partnering_stack_artifact_complete` is not `true`, or `runs/wetlab_partnering_stack_current.json` / `runs/wetlab_partnering_stack_current.md` is placeholder/minimal (`summary.status="ok"` only) or missing `wetlab_partnering_stack_ready`, `artifact_completeness=full_partnering_stack`, the selected-allatom metric source-chain, selected-allatom gates, or freshness/source provenance, keep the bundle blocked/internal-review; record blocker `partnering_stack_placeholder_or_incomplete` and do not count the partnering stack as evidence
+- if `rescue_attempt_validation` is not pass, keep the bundle blocked/internal-review and do not trust the rescue attempt evidence
+- claim/equivalence inputs only count as readiness evidence after C is green; until then they remain blocked review inputs and do not clear the hard gate or the queue
+- if D or E is still blocked, keep the bundle blocked/internal-review even when the required local-delivery lock is green
+- if either gate is blocked, the bundle can stay as a blocked bundle for internal review, but it is not delivery-ready
+- `python3 tools/validate_local_delivery_bundle.py --bundle-dir <bundle_dir>` must report `summary.overall_ok=true` and `summary.delivery_ready_policy_ok=true` before any delivery-ready wording is used
+- the validator must confirm `checksums.sha256`, `manifest.json` / `manifest.md`, required files, and `verdict_gate_fingerprint_check.status=pass`, `ok=true`, `comparison_performed=true`, and `mismatch_count=0`
+- `runs/local_delivery_verdict_gate_current.json` must report `summary.delivery_ready=true` and its `source_artifacts` fingerprints must match the current bundle/work record before any delivery-ready wording is used
+- `manifest.json` / `manifest.md` must record `verdict_gate_fingerprint_check.status=pass`, `ok=true`, `comparison_performed=true`, and `mismatch_count=0` before any delivery-ready wording is used
+- if `source_artifacts` fingerprints are stale or mismatched, keep the verdict negative/internal-review even if the rest of the bundle is present
+- if `verdict_gate_fingerprint_check.status` is not `pass` or `ok=false`, keep the bundle blocked/internal-review and record the mismatch reason in the manifest
+- if the validator records a fingerprint mismatch for a blocked/internal-review bundle, keep it blocked/internal-review and do not promote it to delivery-ready
+- the allowed initial claim scope is only `kinase`, `ion_channel`, and `gpcr`
+- `transporter`, broad platform, general commercialization, and unattended decision-making stay disallowed
+
+`local_delivery_verdict_gate` is the conservative wrapper over the artifacts above.
+It only reads the existing outputs; it is not a scientific proof, not a new engine run, and not a substitute for the underlying files.
+
+Operator shortcut:
+
+1. Read the current preflight, environment manifest, nightly gate, wetlab gate, queue, and commercialization status report.
+2. Run `python3 tools/validate_local_delivery_bundle.py --bundle-dir <bundle_dir>`.
+3. Read `runs/local_delivery_verdict_gate_current.json`.
+4. Proceed only when A, B, C, D, and E are all green and the verdict gate reports `summary.delivery_ready=true`; otherwise stop at a blocked/internal-review verdict.
