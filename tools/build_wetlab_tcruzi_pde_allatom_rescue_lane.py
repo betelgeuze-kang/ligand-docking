@@ -21,6 +21,9 @@ DEFAULT_THREE_BEAD_CANDIDATES_JSON = "runs/wetlab_rescue_three_bead_candidates_c
 DEFAULT_THREE_BEAD_SLICE_JSON = "runs/wetlab_rescue_three_bead_slice_current.json"
 DEFAULT_RESCUE_ANCHORS_JSON = "runs/wetlab_rescue_anchor_artifacts_current.json"
 DEFAULT_OUT_MD = "runs/wetlab_tcruzi_pde_allatom_rescue_lane_current.md"
+RESCUE_REVIEW_SURFACE_ARTIFACT = "runs/wetlab_tcruzi_pde_rescue_review_surface_current.md"
+THREE_BEAD_SCORE_CSV_ORIGIN = "three_bead_score_csv"
+THREE_BEAD_CANDIDATES_ARTIFACT = "runs/wetlab_rescue_three_bead_candidates_current.md"
 DEFAULT_TOP_N = 32
 DEFAULT_DEFAULT_TOP_K = 8
 ALLATOM_COMMAND_KIND = "pseudo_allatom_backmapping_rescore"
@@ -134,6 +137,28 @@ def _band_consistency_counts(rows: list[dict[str, Any]]) -> dict[str, int]:
         status = _text(row.get("rescue_review_band_consistency_status"), default="not_checked")
         counts[status] = counts.get(status, 0) + 1
     return dict(sorted(counts.items()))
+
+
+def _metric_origin_counts(rows: list[dict[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in rows:
+        origin = _text(row.get("source_three_bead_metric_origin"), default="unknown")
+        counts[origin] = counts.get(origin, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def _source_metric_value(
+    score_meta: dict[str, Any],
+    review_meta: dict[str, Any],
+    key: str,
+    *,
+    origin: str,
+) -> Any:
+    if origin == THREE_BEAD_SCORE_CSV_ORIGIN and score_meta.get(key) not in {"", None}:
+        return score_meta.get(key)
+    if origin in {THREE_BEAD_SCORE_CSV_ORIGIN, "rescue_review_surface"} and review_meta.get(key) not in {"", None}:
+        return review_meta.get(key)
+    return None
 
 
 def _band_mismatch_rows_preview(rows: list[dict[str, Any]], *, limit: int = 5) -> list[dict[str, Any]]:
@@ -295,6 +320,71 @@ def _load_ligand_manifest_lookup(path_like: str) -> dict[str, dict[str, str]]:
     return lookup
 
 
+def _load_score_rows(path_like: str) -> list[dict[str, Any]]:
+    path = Path(_text(path_like))
+    if not path.exists() or path.is_dir():
+        return []
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        rows = [dict(row) for row in csv.DictReader(handle)]
+    normalized: list[dict[str, Any]] = []
+    for row in rows:
+        ligand_id = _text(row.get("ligand_id"))
+        if not ligand_id:
+            continue
+        normalized.append(
+            {
+                "ligand_id": ligand_id,
+                "binding_energy_proxy": _safe_float(row.get("binding_energy_proxy")),
+                "stability_score": _safe_float(row.get("stability_score")),
+                "mean_min_distance_A": _safe_float(row.get("mean_min_distance_A")),
+                "contact_fraction": _safe_optional_float(row.get("contact_fraction")),
+                "trajectory_frames": _safe_optional_float(row.get("trajectory_frames")),
+                "ligand_model": _text(row.get("ligand_model")),
+                "queue_id": _text(row.get("queue_id")),
+                "trajectory_npz": _text(row.get("trajectory_npz")),
+                "score_json": _text(row.get("score_json")),
+            }
+        )
+    normalized.sort(
+        key=lambda row: (
+            _safe_float(row.get("mean_min_distance_A"), float("inf")),
+            -_safe_float(row.get("stability_score")),
+            _text(row.get("ligand_id")),
+        )
+    )
+    return normalized
+
+
+def _resolve_three_bead_scores_csv(
+    rescue_review_surface_payload: dict[str, Any] | None,
+    rescue_three_bead_slice_payload: dict[str, Any] | None,
+) -> str:
+    rescue_slice = _summary(rescue_three_bead_slice_payload)
+    review_surface_structured = dict((rescue_review_surface_payload or {}).get("structured", {}) or {})
+    rescue_slice_structured = dict((rescue_three_bead_slice_payload or {}).get("structured", {}) or {})
+    return _text(
+        rescue_slice.get("three_bead_scores_csv"),
+        rescue_slice_structured.get("three_bead_scores_csv"),
+        review_surface_structured.get("three_bead_scores_csv"),
+    )
+
+
+def _review_surface_metric_rows(review_rows_by_ligand: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    rows = [
+        dict(row)
+        for row in review_rows_by_ligand.values()
+        if _safe_optional_float(row.get("mean_min_distance_A")) is not None
+    ]
+    rows.sort(
+        key=lambda row: (
+            _safe_float(row.get("mean_min_distance_A"), float("inf")),
+            -_safe_float(row.get("stability_score")),
+            _text(row.get("ligand_id")),
+        )
+    )
+    return rows
+
+
 
 def build_payload(
     branch_summary_payload: dict[str, Any] | None,
@@ -341,6 +431,11 @@ def build_payload(
     stage1_queue_csv = _resolve_stage1_queue_csv(stage2_manifest_csv)
     ligand_manifest_csv = _resolve_ligand_manifest_csv(review_packet_payload, rescue_review_surface_payload, stage2_manifest_csv)
     ligand_manifest_lookup = _load_ligand_manifest_lookup(ligand_manifest_csv)
+    three_bead_scores_csv = _resolve_three_bead_scores_csv(
+        rescue_review_surface_payload,
+        rescue_three_bead_slice_payload,
+    )
+    score_rows = _load_score_rows(three_bead_scores_csv)
 
     candidate_rows = [
         dict(row or {})
@@ -354,11 +449,23 @@ def build_payload(
             _text(row.get("ligand_id")),
         )
     )
+    candidate_rows_by_ligand = {
+        _text(row.get("ligand_id")): row for row in candidate_rows if _text(row.get("ligand_id"))
+    }
+    if score_rows:
+        canonical_rows = score_rows
+        canonical_metric_origin = THREE_BEAD_SCORE_CSV_ORIGIN
+        canonical_metric_origin_artifact = three_bead_scores_csv
+    else:
+        canonical_rows = _review_surface_metric_rows(review_rows_by_ligand)
+        canonical_metric_origin = "rescue_review_surface"
+        canonical_metric_origin_artifact = RESCUE_REVIEW_SURFACE_ARTIFACT
     lane_rows: list[dict[str, Any]] = []
-    for lane_rank, row in enumerate(candidate_rows[: max(1, int(top_n))], start=1):
+    for lane_rank, row in enumerate(canonical_rows[: max(1, int(top_n))], start=1):
         ligand_id = _text(row.get("ligand_id"))
         manifest_meta = ligand_manifest_lookup.get(ligand_id, {})
         review_meta = review_rows_by_ligand.get(ligand_id, {})
+        candidate_seed_row = candidate_rows_by_ligand.get(ligand_id, {})
         compound_name_raw = _text(
             review_meta.get("compound_name"),
             manifest_meta.get("compound_name"),
@@ -376,11 +483,30 @@ def build_payload(
                 else "unresolved"
             )
         raw_review_band = _text(review_meta.get("rescue_review_band"))
+        candidate_seed_priority_rank = _safe_int(candidate_seed_row.get("priority_rank"), 0)
+        candidate_seed_mean_min_distance_A = _safe_optional_float(candidate_seed_row.get("mean_min_distance_A"))
+        review_surface_mean_min_distance_A = _safe_optional_float(review_meta.get("mean_min_distance_A"))
+        score_csv_mean_min_distance_A = _safe_optional_float(row.get("mean_min_distance_A"))
+        metric_origin = canonical_metric_origin
+        metric_origin_artifact = canonical_metric_origin_artifact
+        source_mean_min_distance_A = _safe_float(
+            _source_metric_value(row, review_meta, "mean_min_distance_A", origin=metric_origin)
+        )
+        metric_reconciled = (
+            (
+                candidate_seed_mean_min_distance_A is not None
+                and abs(candidate_seed_mean_min_distance_A - source_mean_min_distance_A) > 1e-9
+            )
+            or (
+                review_surface_mean_min_distance_A is not None
+                and abs(review_surface_mean_min_distance_A - source_mean_min_distance_A) > 1e-9
+            )
+        )
         resolved_review_band, review_band_source = _resolve_review_band(
             raw_review_band,
-            _text(review_meta.get("mean_min_distance_A"), row.get("mean_min_distance_A")),
+            source_mean_min_distance_A,
         )
-        numeric_review_band, numeric_review_band_source = _numeric_review_band(row.get("mean_min_distance_A"))
+        numeric_review_band, numeric_review_band_source = _numeric_review_band(source_mean_min_distance_A)
         metadata_review_bucket = _review_band_bucket(resolved_review_band)
         numeric_review_bucket = _review_band_bucket(numeric_review_band) if numeric_review_band else ""
         if numeric_review_bucket and metadata_review_bucket and metadata_review_bucket != numeric_review_bucket:
@@ -406,20 +532,44 @@ def build_payload(
             "compound_source_dataset": _text(manifest_meta.get("source_dataset")),
             "compound_source_anchor": _text(manifest_meta.get("source_anchor")),
             "compound_source_url": _text(manifest_meta.get("source_url")),
-            "source_three_bead_priority_rank": _safe_int(row.get("priority_rank"), lane_rank),
-            "source_three_bead_binding_energy_proxy": _safe_float(row.get("binding_energy_proxy")),
-            "source_three_bead_stability_score": _safe_float(row.get("stability_score")),
-            "source_three_bead_mean_min_distance_A": _safe_float(row.get("mean_min_distance_A")),
-            "source_three_bead_contact_fraction": _safe_optional_float(row.get("contact_fraction")),
-            "source_three_bead_trajectory_frames": _safe_optional_float(row.get("trajectory_frames")),
-            "source_three_bead_pose_preservation_rmsd_A": _safe_optional_float(row.get("pose_preservation_rmsd_A")),
+            "source_three_bead_priority_rank": lane_rank,
+            "candidate_seed_priority_rank": candidate_seed_priority_rank,
+            "source_three_bead_binding_energy_proxy": _safe_float(
+                _source_metric_value(row, review_meta, "binding_energy_proxy", origin=metric_origin)
+            ),
+            "source_three_bead_stability_score": _safe_float(
+                _source_metric_value(row, review_meta, "stability_score", origin=metric_origin)
+            ),
+            "source_three_bead_mean_min_distance_A": source_mean_min_distance_A,
+            "source_three_bead_contact_fraction": _safe_optional_float(
+                _source_metric_value(row, review_meta, "contact_fraction", origin=metric_origin)
+            ),
+            "source_three_bead_trajectory_frames": _safe_optional_float(
+                _source_metric_value(row, review_meta, "trajectory_frames", origin=metric_origin)
+            ),
+            "source_three_bead_pose_preservation_rmsd_A": _safe_optional_float(
+                _source_metric_value(row, review_meta, "pose_preservation_rmsd_A", origin=metric_origin)
+            ),
             "source_three_bead_backmapping_consistency_score": _safe_optional_float(
-                row.get("backmapping_consistency_score")
+                _source_metric_value(row, review_meta, "backmapping_consistency_score", origin=metric_origin)
             ),
             "source_three_bead_local_minimization_survival_fraction": _safe_optional_float(
-                row.get("local_minimization_survival_fraction")
+                _source_metric_value(
+                    row,
+                    review_meta,
+                    "local_minimization_survival_fraction",
+                    origin=metric_origin,
+                )
             ),
-            "source_three_bead_replicate_pass_fraction": _safe_optional_float(row.get("replicate_pass_fraction")),
+            "source_three_bead_replicate_pass_fraction": _safe_optional_float(
+                _source_metric_value(row, review_meta, "replicate_pass_fraction", origin=metric_origin)
+            ),
+            "source_three_bead_metric_origin": metric_origin,
+            "source_three_bead_metric_origin_artifact": metric_origin_artifact,
+            "candidate_seed_mean_min_distance_A": candidate_seed_mean_min_distance_A,
+            "review_surface_mean_min_distance_A": review_surface_mean_min_distance_A,
+            "score_csv_mean_min_distance_A": score_csv_mean_min_distance_A,
+            "metric_reconciled": metric_reconciled,
             "source_rescue_review_band": raw_review_band or resolved_review_band,
             "source_rescue_review_band_raw": raw_review_band,
             "resolved_rescue_review_band": resolved_review_band,
@@ -544,6 +694,8 @@ def build_payload(
             "default_filter_mode": resolved_default_filter_mode,
             "available_filter_modes": AVAILABLE_FILTER_MODES,
             "source_candidate_count": _safe_int(rescue_candidates.get("candidate_count"), len(candidate_rows)),
+            "source_three_bead_score_csv": three_bead_scores_csv,
+            "source_three_bead_score_csv_row_count": len(score_rows),
             "lane_candidate_count": len(lane_rows),
             "default_top_k": max(1, int(default_top_k)),
             "strict_band_candidate_count": strict_band_candidate_count,
@@ -554,6 +706,23 @@ def build_payload(
             "source_rescue_review_band_mismatch_count": band_mismatch_count,
             "rescue_review_band_mismatch_rows_preview": band_mismatch_rows_preview,
             "rescue_review_band_consistency_action_codes": band_consistency_action_codes,
+            "source_three_bead_metric_origin_counts": _metric_origin_counts(lane_rows),
+            "source_three_bead_metric_origin_artifacts": sorted(
+                {
+                    _text(row.get("source_three_bead_metric_origin_artifact"))
+                    for row in lane_rows
+                    if _text(row.get("source_three_bead_metric_origin_artifact"))
+                }
+            ),
+            "source_three_bead_metric_reconciled_count": sum(
+                1 for row in lane_rows if bool(row.get("metric_reconciled"))
+            ),
+            "review_surface_metric_available_count": sum(
+                1 for row in lane_rows if row.get("review_surface_mean_min_distance_A") is not None
+            ),
+            "candidate_seed_metric_available_count": sum(
+                1 for row in lane_rows if row.get("candidate_seed_mean_min_distance_A") is not None
+            ),
             **translation_summary,
             "translation_gate_focus_hard_status": _text(translation_summary.get("translation_gate_focus_hard_status")),
             "translation_gate_focus_soft_status": _text(translation_summary.get("translation_gate_focus_soft_status")),
@@ -588,6 +757,7 @@ def build_payload(
             "base_stage1_queue_csv": stage1_queue_csv,
             "base_stage2_manifest_csv": stage2_manifest_csv,
             "base_trajectory_root": trajectory_root,
+            "three_bead_scores_csv": three_bead_scores_csv,
             "ligand_manifest_csv": ligand_manifest_csv,
             "rescue_target_native_csv": _text(rescue_anchors.get("rescue_target_native_csv")),
             "rescue_target_pocket_csv": _text(rescue_anchors.get("rescue_target_pocket_csv")),
@@ -617,6 +787,7 @@ def build_payload(
             "promoted_top4_review_packet_artifact": "runs/wetlab_tcruzi_pde_promoted_top4_review_packet_current.md",
             "rescue_three_bead_candidates_artifact": "runs/wetlab_rescue_three_bead_candidates_current.md",
             "rescue_three_bead_slice_artifact": "runs/wetlab_rescue_three_bead_slice_current.md",
+            "three_bead_scores_csv": three_bead_scores_csv,
             "rescue_anchor_artifacts_artifact": "runs/wetlab_rescue_anchor_artifacts_current.md",
         },
         "rows": lane_rows,
