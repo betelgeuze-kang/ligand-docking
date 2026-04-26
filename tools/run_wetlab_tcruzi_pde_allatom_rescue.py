@@ -981,6 +981,7 @@ def _execution_plan_summary(
     selected_lane_rows: list[dict[str, Any]],
     requested_top_k: int,
     actual_top_k: int,
+    filter_meta: dict[str, Any],
 ) -> dict[str, Any]:
     status_counts = _execution_status_counts(payload_rows)
     statuses = {_text(row.get("rescue_execution_status")) for row in payload_rows}
@@ -992,9 +993,18 @@ def _execution_plan_summary(
     else:
         plan_status = "ready_manifest_only"
     expensive_lane_status = "deferred" if "deferred" in expensive_statuses else "open"
+    top_k_shortfall_count = max(0, requested_top_k - actual_top_k)
+    top_k_shortfall_reason = ""
+    if top_k_shortfall_count:
+        top_k_shortfall_reason = (
+            f"filtered_lane_candidate_count={len(filtered_lane_rows)} below requested_top_k={requested_top_k} "
+            f"after {_text(filter_meta.get('applied_filter_mode'))}"
+        )
     return {
         "top_k_requested": requested_top_k,
         "top_k_effective": actual_top_k,
+        "top_k_shortfall_count": top_k_shortfall_count,
+        "top_k_shortfall_reason": top_k_shortfall_reason,
         "rescue_execution_plan_version": "pde_selected_allatom_rescue_plan_v1",
         "rescue_execution_plan_status": plan_status,
         "rescue_execution_expensive_lane_status": expensive_lane_status,
@@ -1042,6 +1052,14 @@ def _scoring_status_from_summary(
     if processed_jobs < expected_jobs:
         return "incomplete", f"processed_jobs={processed_jobs} below expected_jobs={expected_jobs}"
     return "pass", "processed_jobs_complete"
+
+
+def _band_mismatch_count(rows: list[dict[str, Any]]) -> int:
+    return sum(
+        1
+        for row in rows
+        if _text(row.get("rescue_review_band_consistency_status")) == "mismatch_fail_closed"
+    )
 
 
 def _select_lane_rows(
@@ -1115,11 +1133,9 @@ def _select_lane_rows(
         "other_band_candidate_count": len(other_rows),
         "filtered_lane_candidate_count": len(selected_rows),
         "rescue_review_band_consistency_counts": _band_consistency_counts(annotated_rows),
-        "rescue_review_band_mismatch_count": sum(
-            1
-            for row in annotated_rows
-            if _text(row.get("rescue_review_band_consistency_status")) == "mismatch_fail_closed"
-        ),
+        "rescue_review_band_mismatch_count": _band_mismatch_count(annotated_rows),
+        "source_rescue_review_band_mismatch_count": _band_mismatch_count(annotated_rows),
+        "filtered_rescue_review_band_mismatch_count": _band_mismatch_count(selected_rows),
     }
 
 
@@ -1484,6 +1500,7 @@ def run(
         selected_lane_rows=selected_lane_rows,
         requested_top_k=requested_top_k,
         actual_top_k=actual_top_k,
+        filter_meta=filter_meta,
     )
 
     execution_mode = "controller_manifest_only"
@@ -1562,6 +1579,7 @@ def run(
             "slice_candidate_count": len(manifest_rows),
             "source_lane_candidate_count": len(lane_rows),
             "filtered_lane_candidate_count": _safe_int(filter_meta.get("filtered_lane_candidate_count"), len(filtered_lane_rows)),
+            "selected_lane_candidate_count": len(selected_lane_rows),
             "filter_mode_requested": _text(filter_meta.get("requested_filter_mode")),
             "filter_mode_applied": _text(filter_meta.get("applied_filter_mode")),
             "filter_mode_fallback_reason": _text(filter_meta.get("fallback_reason")),
@@ -1573,6 +1591,14 @@ def run(
                 filter_meta.get("rescue_review_band_consistency_counts", {}) or {}
             ),
             "rescue_review_band_mismatch_count": _safe_int(filter_meta.get("rescue_review_band_mismatch_count"), 0),
+            "source_rescue_review_band_mismatch_count": _safe_int(
+                filter_meta.get("source_rescue_review_band_mismatch_count"),
+                _safe_int(filter_meta.get("rescue_review_band_mismatch_count"), 0),
+            ),
+            "filtered_rescue_review_band_mismatch_count": _safe_int(
+                filter_meta.get("filtered_rescue_review_band_mismatch_count"), 0
+            ),
+            "selected_rescue_review_band_mismatch_count": _band_mismatch_count(selected_lane_rows),
             "filtered_translation_gate_version": _text(filtered_translation_summary.get("translation_gate_version")),
             "filtered_translation_gate_pass_count": _safe_int(filtered_translation_summary.get("translation_gate_pass_count"), 0),
             "filtered_translation_gate_borderline_count": _safe_int(filtered_translation_summary.get("translation_gate_borderline_count"), 0),

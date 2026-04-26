@@ -56,12 +56,12 @@ Use this operator checklist for the current P0 closure work; it is separate from
 4. Run `python3 tools/run_wetlab_tcruzi_pde_allatom_rescue.py --top-k 8 --filter-mode strict_then_near_fill --execute`.
 5. Run `python3 tools/validate_wetlab_tcruzi_pde_allatom_rescue_attempt.py`; proceed only when `rescue_attempt_validation=pass`, and if it is not pass, stop blocked/internal-review and do not trust the attempt evidence.
 6. Immediately run `python3 tools/build_local_delivery_verdict_gate.py` so the refreshed gate snapshots the rescue validator's `rescue_attempt_validation_*` fields and source artifacts.
-7. Inspect the rescue summary before spending more compute: `top_k_effective` may be lower than requested, and any `rescue_review_band_mismatch_count > 0` is fail-closed evidence rather than a pass signal. A pass here only confirms attempt-evidence integrity; it does not clear wetlab selected-allatom or the downstream queue.
+7. Inspect the rescue summary before spending more compute: `top_k_effective` may be lower than requested, and any `rescue_review_band_mismatch_count > 0` is fail-closed evidence rather than a pass signal. If the rescue passes scoring but still shows a top-k shortfall or band mismatch, record the attempt as blocked/internal-review, resolve the candidate/band mismatch, and rerun the rescue before treating any downstream refresh as evidence. A pass here only confirms attempt-evidence integrity; it does not clear wetlab selected-allatom or the downstream queue.
 8. Build the review packet.
 9. Refresh `current_results_index`.
 10. Refresh `partnering_stack`.
 11. Refresh the final campaign/dashboard, burndown, queue/status, and verdict artifacts.
-12. Treat claim/equivalence inputs as post-gate readiness evidence only after the wetlab selected-allatom hard gate is green; before then, placeholder or missing data stays blocked and cannot be counted as readiness evidence.
+12. Treat claim/equivalence inputs as post-gate readiness evidence only after the wetlab selected-allatom hard gate is green; before then, placeholder or missing data stays blocked/internal-review and cannot be counted as readiness evidence or used to justify a downstream refresh.
 
 This standardizes the same sequence before each paid local delivery:
 

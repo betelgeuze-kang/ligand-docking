@@ -526,7 +526,17 @@ def test_run_wetlab_tcruzi_pde_allatom_rescue_fails_closed_on_band_distance_mism
     assert summary["near_band_candidate_count"] == 1
     assert summary["other_band_candidate_count"] == 1
     assert summary["filtered_lane_candidate_count"] == 1
+    assert summary["selected_lane_candidate_count"] == 1
+    assert summary["top_k_requested"] == 2
+    assert summary["top_k_effective"] == 1
+    assert summary["top_k_shortfall_count"] == 1
+    assert summary["top_k_shortfall_reason"] == (
+        "filtered_lane_candidate_count=1 below requested_top_k=2 after strict_then_near_fill"
+    )
     assert summary["rescue_review_band_mismatch_count"] == 1
+    assert summary["source_rescue_review_band_mismatch_count"] == 1
+    assert summary["filtered_rescue_review_band_mismatch_count"] == 0
+    assert summary["selected_rescue_review_band_mismatch_count"] == 0
     assert summary["rescue_review_band_consistency_counts"] == {
         "match": 1,
         "mismatch_fail_closed": 1,
