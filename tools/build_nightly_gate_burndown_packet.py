@@ -18,8 +18,9 @@ RUNS = ROOT / "runs"
 DEFAULT_OUT_JSON = "runs/nightly_gate_burndown_packet_current.json"
 DEFAULT_OUT_CSV = "runs/nightly_gate_burndown_packet_current.csv"
 DEFAULT_OUT_MD = "runs/nightly_gate_burndown_packet_current.md"
+DEFAULT_COMMERCIALIZATION_QUEUE_JSON = "runs/local_engine_commercialization_queue_current.json"
 
-_TOP_NIGHTLY_RE = re.compile(r"ligand_htvs_nightly_(\d{4}-\d{2}-\d{2})_summary\.json$")
+_TOP_NIGHTLY_RE = re.compile(r"ligand_htvs_nightly_(\d{4}-\d{2}-\d{2}(?:_[A-Za-z0-9][A-Za-z0-9_-]*)?)_summary\.json$")
 
 
 def _resolve(path_like: str | Path) -> Path:
@@ -86,24 +87,60 @@ def _maybe_load_csv_rows(path_like: str | Path) -> list[dict[str, Any]]:
         return [dict(row or {}) for row in csv.DictReader(fh)]
 
 
+def _top_nightly_label(path: Path) -> str:
+    match = _TOP_NIGHTLY_RE.fullmatch(path.name)
+    return match.group(1) if match else path.name
+
+
+def _is_top_nightly_summary_path(path: Path) -> bool:
+    match = _TOP_NIGHTLY_RE.fullmatch(path.name)
+    if not match:
+        return False
+    label = match.group(1)
+    suffix = label[10:]
+    if suffix:
+        if suffix in {"smoke", "full"} or suffix.startswith(("smoke_", "full_")):
+            return False
+        if suffix.endswith(("_smoke", "_full")) or "_attempt" in suffix:
+            return False
+
+    payload = _maybe_load_json(path)
+    if not payload:
+        return False
+    if _text(payload.get("run_scope")) == "smoke_then_full":
+        return True
+    stages = payload.get("stages")
+    artifacts = payload.get("artifacts")
+    if isinstance(stages, dict) and ("smoke" in stages or "full" in stages):
+        return True
+    if isinstance(artifacts, dict) and (
+        _text(artifacts.get("smoke_summary_json")) or _text(artifacts.get("full_summary_json"))
+    ):
+        return True
+    return False
+
+
+def _top_nightly_sort_key(path: Path) -> tuple[str, int, str]:
+    payload = _maybe_load_json(path)
+    generated_at = _text(payload.get("generated_at_local"))
+    try:
+        mtime_ns = path.stat().st_mtime_ns
+    except OSError:
+        mtime_ns = 0
+    label = _top_nightly_label(path)
+    return (generated_at or label, mtime_ns, label)
+
+
 def _discover_latest_top_nightly() -> Path | None:
-    candidates: list[tuple[str, Path]] = []
-    for path in RUNS.glob("ligand_htvs_nightly_*_summary.json"):
-        match = _TOP_NIGHTLY_RE.fullmatch(path.name)
-        if match:
-            candidates.append((match.group(1), path))
+    candidates = [path for path in RUNS.glob("ligand_htvs_nightly_*_summary.json") if _is_top_nightly_summary_path(path)]
     if not candidates:
         return None
-    return sorted(candidates, key=lambda item: item[0])[-1][1]
+    return sorted(candidates, key=_top_nightly_sort_key)[-1]
 
 
 def _recent_top_nightly_paths(limit: int = 3) -> list[Path]:
-    candidates: list[tuple[str, Path]] = []
-    for path in RUNS.glob("ligand_htvs_nightly_*_summary.json"):
-        match = _TOP_NIGHTLY_RE.fullmatch(path.name)
-        if match:
-            candidates.append((match.group(1), path))
-    return [path for _, path in sorted(candidates, key=lambda item: item[0])[-limit:]]
+    candidates = [path for path in RUNS.glob("ligand_htvs_nightly_*_summary.json") if _is_top_nightly_summary_path(path)]
+    return sorted(candidates, key=_top_nightly_sort_key)[-limit:]
 
 
 def _primary_failed_stage(payload: dict[str, Any]) -> str:
@@ -170,6 +207,70 @@ def _extract_stage(payload: dict[str, Any], stage_name: str) -> dict[str, Any]:
     return {}
 
 
+def _stage_reentry_context(
+    *,
+    latest_nightly_payload: dict[str, Any],
+    latest_nightly_artifact: str,
+    failed_stage: str,
+) -> dict[str, str]:
+    stage = _extract_stage(latest_nightly_payload, failed_stage) if failed_stage else {}
+    stderr_tail = _text(stage.get("stderr_tail"))
+    stdout_tail = _text(stage.get("stdout_tail"))
+    cmd_str = _text(stage.get("cmd_str"))
+    evidence_artifact = _derive_smoke_companion_artifact(latest_nightly_artifact, "_stage3_summary.json")
+    stage3_reentry_artifact_exists = (
+        failed_stage == "stage3_backmapping_scoring" and _resolve(evidence_artifact).exists()
+    )
+    if failed_stage != "stage3_backmapping_scoring" or not stage3_reentry_artifact_exists:
+        evidence_artifact = latest_nightly_artifact
+
+    if failed_stage == "stage3_backmapping_scoring" and "ModuleNotFoundError" in stderr_tail:
+        if stage3_reentry_artifact_exists:
+            reason = (
+                "stage3_backmapping_scoring import bootstrap failed in the stale top-level nightly summary, but a fresh "
+                "stage3 reentry artifact now exists; canonical top-level nightly rerun is still required"
+            )
+            action = (
+                "Rerun the canonical top-level smoke/full nightly so it consumes the recovered stage3 entrypoint and reaches "
+                "stage6 or reports pass=true; keep downstream execute evidence supporting-only."
+            )
+        else:
+            reason = "stage3_backmapping_scoring import bootstrap failed before scoring summary artifacts were produced"
+            action = (
+                "Recover the stage3 backmapping/scoring entrypoint import path in the canonical top-level nightly, then rerun "
+                "the top-level smoke/full nightly until it reaches stage6; keep downstream execute evidence supporting-only."
+            )
+    elif failed_stage == "stage6_operational_gate":
+        reason = "canonical top-level nightly reached stage6 and failed the operational gate"
+        action = (
+            "Use the stage6 burndown packet to reduce the failed gate metrics below threshold, then rerun the "
+            "canonical top-level smoke/full nightly; keep downstream execute evidence supporting-only until the "
+            "top-level summary reports pass=true."
+        )
+    elif failed_stage:
+        reason = f"{failed_stage} failed before the canonical top-level nightly reached stage6"
+        action = (
+            f"Recover `{failed_stage}` in the canonical top-level nightly and rerun until the top-level summary reaches "
+            "stage6 or reports pass=true; do not use downstream execute evidence as a promotion substitute."
+        )
+    else:
+        reason = "top-level nightly did not report pass=true and did not expose a stage6 gate failure"
+        action = (
+            "Recover the canonical top-level nightly until it either reaches stage6 with explicit gate metrics or reports "
+            "pass=true; keep downstream execute evidence supporting-only."
+        )
+
+    return {
+        "reentry_blocker_stage": failed_stage,
+        "reentry_reason": reason,
+        "reentry_action": action,
+        "reentry_evidence_artifact": evidence_artifact,
+        "reentry_command": cmd_str,
+        "reentry_stderr_tail": stderr_tail,
+        "reentry_stdout_tail": stdout_tail,
+    }
+
+
 def _recent_transition_line(recent_payloads: list[dict[str, Any]], recent_artifacts: list[str]) -> str:
     parts: list[str] = []
     for artifact, payload in zip(recent_artifacts, recent_payloads):
@@ -185,6 +286,80 @@ def _recent_stage6_fail_count(recent_payloads: list[dict[str, Any]]) -> int:
         for payload in recent_payloads
         if _primary_failed_stage(payload) == "stage6_operational_gate" or _top_error_code(payload) == "HTVS_GATE_FAILED"
     )
+
+
+def _walk_dicts(value: Any) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    if isinstance(value, dict):
+        rows.append(value)
+        for item in value.values():
+            rows.extend(_walk_dicts(item))
+    elif isinstance(value, list):
+        for item in value:
+            rows.extend(_walk_dicts(item))
+    return rows
+
+
+def _downstream_execute_pass_evidence(payload: dict[str, Any], *, source_artifact: str = "") -> dict[str, Any]:
+    for row in _walk_dicts(payload):
+        execute_payload_pass = (
+            row.get("execute_payload_pass")
+            if "execute_payload_pass" in row
+            else row.get("nightly_stage6_execute_payload_pass")
+            if "nightly_stage6_execute_payload_pass" in row
+            else row.get("nightly_stage6_downstream_rerun_payload_pass")
+        )
+        execute_gate_pass = (
+            row.get("execute_gate_pass")
+            if "execute_gate_pass" in row
+            else row.get("nightly_stage6_execute_gate_pass")
+            if "nightly_stage6_execute_gate_pass" in row
+            else row.get("nightly_stage6_downstream_rerun_execute_pass")
+        )
+        if execute_payload_pass is True or execute_gate_pass is True:
+            return {
+                "present": True,
+                "execute_payload_pass": bool(execute_payload_pass),
+                "execute_gate_pass": bool(execute_gate_pass),
+                "execute_matches_rescored_gate": bool(
+                    row.get("execute_matches_rescored_gate", row.get("nightly_stage6_execute_matches_rescored_gate", False))
+                ),
+                "packet_artifact": _text(row.get("packet_artifact") or row.get("nightly_stage6_execute_artifact")),
+                "status_artifact": _text(
+                    row.get("execute_status_json_artifact") or row.get("nightly_stage6_execute_status_json_artifact")
+                ),
+                "summary_artifact": _text(
+                    row.get("execute_pipeline_summary_json_artifact")
+                    or row.get("nightly_stage6_execute_pipeline_summary_json_artifact")
+                ),
+                "metric": _text(
+                    row.get("nightly_stage6_execute_gate_mean_min_distance_A")
+                    or row.get("nightly_stage6_rescored_gate_mean_min_distance_A")
+                    or row.get("nightly_stage6_probe_projected_gate_mean_min_distance_A")
+                ),
+                "source_artifact": source_artifact,
+            }
+    return {
+        "present": False,
+        "execute_payload_pass": False,
+        "execute_gate_pass": False,
+        "execute_matches_rescored_gate": False,
+        "packet_artifact": "",
+        "status_artifact": "",
+        "summary_artifact": "",
+        "metric": "",
+        "source_artifact": "",
+    }
+
+
+def _first_downstream_execute_pass_evidence(
+    sources: list[tuple[str, dict[str, Any]]],
+) -> dict[str, Any]:
+    for source_artifact, payload in sources:
+        evidence = _downstream_execute_pass_evidence(payload, source_artifact=source_artifact)
+        if evidence["present"]:
+            return evidence
+    return _downstream_execute_pass_evidence({})
 
 
 def _band_key(target: Any, ligand_id: Any) -> str:
@@ -498,6 +673,7 @@ def build_payload(
     stage4_score_rows: list[dict[str, Any]] | None = None,
     stage5_detail_rows: list[dict[str, Any]] | None = None,
     stage5_unique_rows: list[dict[str, Any]] | None = None,
+    supporting_evidence_payloads: list[tuple[str, dict[str, Any]]] | None = None,
 ) -> dict[str, Any]:
     stage6 = _extract_stage(latest_nightly_payload, "stage6_operational_gate")
     stage2 = dict(stage2_payload or {}) or _extract_stage(latest_nightly_payload, "stage2_trajectory_generation")
@@ -519,6 +695,14 @@ def build_payload(
     )
     transition_line = _recent_transition_line(recent_nightly_payloads, recent_nightly_artifacts)
     recent_stage6_fail_count = _recent_stage6_fail_count(recent_nightly_payloads)
+    downstream_execute_evidence = _first_downstream_execute_pass_evidence(
+        [(latest_nightly_artifact, latest_nightly_payload), *(supporting_evidence_payloads or [])]
+    )
+    reentry_context = _stage_reentry_context(
+        latest_nightly_payload=latest_nightly_payload,
+        latest_nightly_artifact=latest_nightly_artifact,
+        failed_stage=latest_failed_stage,
+    )
 
     rows: list[dict[str, Any]] = []
     for rank, metric in enumerate(failed_metrics, start=1):
@@ -587,10 +771,25 @@ def build_payload(
     else:
         status = "waiting_for_stage6_reentry"
         status_line = (
-            "nightly is not reaching the stage6 gate yet; upstream recovery is still required before gate burndown becomes actionable."
+            f"nightly is blocked at `{latest_failed_stage or 'unknown'}` before stage6; upstream reentry is required "
+            "before gate burndown becomes actionable."
         )
         next_required_step = (
-            "Recover upstream nightly failures first so the run reaches stage6 again; only then use this packet as the burndown surface."
+            f"{reentry_context['reentry_action']} Use `{reentry_context['reentry_evidence_artifact']}` as the stage "
+            "reentry evidence while the top-level summary remains the promotion blocker."
+        )
+
+    top_level_failure_explanation = ""
+    if not latest_pass and downstream_execute_evidence["present"]:
+        top_level_failure_explanation = (
+            "Downstream execute pass evidence is scoped follow-on evidence, not a top-level nightly promotion signal; "
+            f"the packet stays `{status}` because latest_nightly.pass is false and failed_stage is "
+            f"`{latest_failed_stage or '-'}` with error_code `{latest_error_code or '-'}`. Promotion requires the "
+            "top-level nightly summary to pass or the stage6 failed metrics to clear in that top-level summary."
+        )
+        next_required_step = (
+            f"{next_required_step} Keep the downstream execute packet as supporting evidence only; do not promote "
+            "the top-level nightly until the canonical nightly summary is green."
         )
 
     artifacts = dict(stage6_context.get("artifacts", {}) or {})
@@ -611,6 +810,7 @@ def build_payload(
         artifacts.get("stage5_detail_csv", ""),
         artifacts.get("stage5_topk_csv", ""),
         artifacts.get("stage5_unique_csv", ""),
+        downstream_execute_evidence.get("source_artifact", ""),
     ]
     source_artifacts = [artifact for artifact in source_artifacts if _text(artifact)]
     source_artifacts = list(dict.fromkeys(source_artifacts))
@@ -680,6 +880,22 @@ def build_payload(
         "recent_transition_line": transition_line,
         "recent_stage6_fail_count": recent_stage6_fail_count,
         "recent_window_size": max(len(recent_nightly_payloads), 1),
+        "downstream_execute_pass_evidence": bool(downstream_execute_evidence["present"]),
+        "downstream_execute_payload_pass": bool(downstream_execute_evidence["execute_payload_pass"]),
+        "downstream_execute_gate_pass": bool(downstream_execute_evidence["execute_gate_pass"]),
+        "downstream_execute_matches_rescored_gate": bool(downstream_execute_evidence["execute_matches_rescored_gate"]),
+        "downstream_execute_metric": _text(downstream_execute_evidence["metric"]),
+        "downstream_execute_source_artifact": _text(downstream_execute_evidence["source_artifact"]),
+        "downstream_execute_packet_artifact": _text(downstream_execute_evidence["packet_artifact"]),
+        "downstream_execute_status_artifact": _text(downstream_execute_evidence["status_artifact"]),
+        "downstream_execute_summary_artifact": _text(downstream_execute_evidence["summary_artifact"]),
+        "top_level_failure_explanation": top_level_failure_explanation,
+        "reentry_blocker_stage": _text(reentry_context["reentry_blocker_stage"]),
+        "reentry_reason": _text(reentry_context["reentry_reason"]),
+        "reentry_action": _text(reentry_context["reentry_action"]),
+        "reentry_evidence_artifact": _text(reentry_context["reentry_evidence_artifact"]),
+        "reentry_command": _text(reentry_context["reentry_command"]),
+        "reentry_stderr_tail": _text(reentry_context["reentry_stderr_tail"]),
         "next_required_step": next_required_step,
         "row_count": len(rows),
         "source_artifact_count": len(source_artifacts),
@@ -794,6 +1010,14 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- ranking_pass_signal: `{summary['ranking_pass_signal']}`",
         f"- recent_transition_line: `{summary['recent_transition_line']}`",
         f"- recent_stage6_fail_count: `{summary['recent_stage6_fail_count']}`",
+        f"- downstream_execute_pass_evidence: `{summary['downstream_execute_pass_evidence']}`",
+        f"- downstream_execute_metric: `{summary['downstream_execute_metric'] or '-'}`",
+        f"- downstream_execute_source_artifact: `{summary['downstream_execute_source_artifact'] or '-'}`",
+        f"- downstream_execute_packet_artifact: `{summary['downstream_execute_packet_artifact'] or '-'}`",
+        f"- top_level_failure_explanation: `{summary['top_level_failure_explanation'] or '-'}`",
+        f"- reentry_blocker_stage: `{summary['reentry_blocker_stage'] or '-'}`",
+        f"- reentry_reason: `{summary['reentry_reason'] or '-'}`",
+        f"- reentry_evidence_artifact: `{summary['reentry_evidence_artifact'] or '-'}`",
         "",
         "## Recommended Action",
         "",
@@ -819,6 +1043,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
+    parser.add_argument("--commercialization-queue-json", default=DEFAULT_COMMERCIALIZATION_QUEUE_JSON)
     return parser.parse_args()
 
 
@@ -841,6 +1066,7 @@ def main() -> None:
         stage5_artifact=stage5_artifact,
         recent_nightly_payloads=[_load_json(path) for path in recent_paths],
         recent_nightly_artifacts=[str(path.relative_to(ROOT)) for path in recent_paths],
+        supporting_evidence_payloads=[(args.commercialization_queue_json, _maybe_load_json(args.commercialization_queue_json))],
     )
     out_json = _resolve(args.out_json)
     out_csv = _resolve(args.out_csv)

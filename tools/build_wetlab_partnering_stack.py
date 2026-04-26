@@ -154,6 +154,13 @@ def _resolve(path_like: str) -> Path:
     return root_path
 
 
+def _resolve_output(path_like: str) -> Path:
+    path = Path(path_like)
+    if path.is_absolute():
+        return path
+    return (ROOT / path).resolve()
+
+
 def _load_json(path_like: str) -> dict[str, Any]:
     with _resolve(path_like).open("r", encoding="utf-8") as fh:
         return json.load(fh)
@@ -262,6 +269,51 @@ def _has_value(summary: dict[str, Any], key: str) -> bool:
         return False
     value = summary.get(key)
     return value is not None and value != ""
+
+
+def _summary_matches_selected_allatom_focus(
+    summary: dict[str, Any],
+    *,
+    selected_target_id: str,
+    selected_surface_label: str,
+) -> bool:
+    target_id = _text(summary.get("selected_allatom_target_id"), summary.get("target_id"))
+    surface_label = _text(
+        summary.get("selected_allatom_surface_label"),
+        summary.get("surface_label"),
+    )
+    return bool(
+        target_id
+        and surface_label
+        and target_id == _text(selected_target_id)
+        and surface_label == _text(selected_surface_label)
+    )
+
+
+def _selected_allatom_review_packet_metric_from_sources(
+    summaries: tuple[dict[str, Any], ...],
+    *,
+    selected_target_id: str,
+    selected_surface_label: str,
+    metric_key: str,
+) -> tuple[bool, float, str]:
+    selected_metric_key = f"selected_allatom_{metric_key}"
+    selected_source_key = f"{selected_metric_key}_source"
+    for summary in summaries:
+        if not summary or not _summary_matches_selected_allatom_focus(
+            summary,
+            selected_target_id=selected_target_id,
+            selected_surface_label=selected_surface_label,
+        ):
+            continue
+        source = _text(summary.get(selected_source_key), summary.get(f"{metric_key}_source"))
+        if not source or "review_packet" not in source:
+            continue
+        if _has_value(summary, selected_metric_key):
+            return True, _safe_float(summary.get(selected_metric_key)) or 0.0, source
+        if _has_value(summary, metric_key):
+            return True, _safe_float(summary.get(metric_key)) or 0.0, source
+    return False, 0.0, ""
 
 
 def _resolve_reported_bool(
@@ -2080,16 +2132,31 @@ def build_payload(
         bcris.get("selected_allatom_best_compound_name_resolution", ""),
         default="unresolved",
     )
-    selected_allatom_best_mean_min_distance_A = float(
-        _text(
-            bsrhs.get("selected_allatom_best_mean_min_distance_A", ""),
-            fcss.get("selected_allatom_best_mean_min_distance_A", ""),
-            mhds.get("selected_allatom_best_mean_min_distance_A", ""),
-            bcris.get("selected_allatom_best_mean_min_distance_A", ""),
-            default="0",
-        )
-        or 0.0
+    (
+        selected_allatom_review_packet_distance_reported,
+        selected_allatom_review_packet_distance_A,
+        selected_allatom_best_mean_min_distance_A_source,
+    ) = _selected_allatom_review_packet_metric_from_sources(
+        selected_allatom_sources,
+        selected_target_id=selected_allatom_target_id,
+        selected_surface_label=selected_allatom_surface_label,
+        metric_key="best_mean_min_distance_A",
     )
+    if selected_allatom_review_packet_distance_reported:
+        selected_allatom_best_mean_min_distance_A = selected_allatom_review_packet_distance_A
+    else:
+        selected_allatom_best_mean_min_distance_A = 0.0
+        selected_allatom_best_mean_min_distance_A_source = ""
+        for summary in (bsrhs, fcss, mhds, bcris):
+            if _has_value(summary, "selected_allatom_best_mean_min_distance_A"):
+                selected_allatom_best_mean_min_distance_A = (
+                    _safe_float(summary.get("selected_allatom_best_mean_min_distance_A"))
+                    or 0.0
+                )
+                selected_allatom_best_mean_min_distance_A_source = _text(
+                    summary.get("selected_allatom_best_mean_min_distance_A_source")
+                )
+                break
     selected_allatom_promoted_candidate_count = int(
         _text(
             bsrhs.get("selected_allatom_promoted_candidate_count", ""),
@@ -2558,6 +2625,9 @@ def build_payload(
     return {
         "summary": {
             "status": "wetlab_partnering_stack_ready",
+            "artifact_kind": "wetlab_partnering_stack",
+            "artifact_schema_version": "wetlab_partnering_stack.v1",
+            "artifact_completeness": "full_partnering_stack",
             "portfolio_target_count": int(ps.get("total_target_count", 0) or 0),
             "wave1_target_count": int(bs.get("wave1_target_count", 0) or 0),
             "brief_matrix_count": int(ms.get("row_count", 0) or 0),
@@ -3303,6 +3373,7 @@ def build_payload(
             "selected_allatom_best_compound_name_human_readable": selected_allatom_best_compound_name_human_readable,
             "selected_allatom_best_compound_name_resolution": selected_allatom_best_compound_name_resolution,
             "selected_allatom_best_mean_min_distance_A": selected_allatom_best_mean_min_distance_A,
+            "selected_allatom_best_mean_min_distance_A_source": selected_allatom_best_mean_min_distance_A_source,
             "selected_allatom_promoted_candidate_count": selected_allatom_promoted_candidate_count,
             "selected_allatom_under_2p5_candidate_count": selected_allatom_under_2p5_candidate_count,
             "selected_allatom_near_candidate_count": selected_allatom_near_candidate_count,
@@ -4687,8 +4758,8 @@ def main() -> None:
         _maybe_load_json(args.broad_screen_lbdhodh_gate51_validation_review_surface_json),
         _maybe_load_json(args.broad_screen_selected_allatom_visual_bundle_json),
     )
-    out_json = _resolve(args.out_json)
-    out_md = _resolve(args.out_md)
+    out_json = _resolve_output(args.out_json)
+    out_md = _resolve_output(args.out_md)
     out_json.parent.mkdir(parents=True, exist_ok=True)
     out_json.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     _write_markdown(out_md, payload)

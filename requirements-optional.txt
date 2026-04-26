@@ -1,0 +1,3 @@
+# Optional hardware/model-extension profile with in-code fallbacks or feature gates.
+GPUtil
+torch-geometric

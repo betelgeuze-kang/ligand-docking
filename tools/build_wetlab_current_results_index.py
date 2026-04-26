@@ -71,6 +71,34 @@ def _summary(payload: dict[str, Any] | None) -> dict[str, Any]:
     return dict((payload or {}).get("summary", {}) or {})
 
 
+def _is_full_partnering_stack_summary(summary: dict[str, Any] | None) -> bool:
+    summary = dict(summary or {})
+    if not summary:
+        return False
+    if _text(summary.get("status")) != "wetlab_partnering_stack_ready":
+        return False
+    marker_complete = _text(summary.get("artifact_kind")) == "wetlab_partnering_stack" and _text(
+        summary.get("artifact_completeness")
+    ) == "full_partnering_stack"
+    required_keys = (
+        "portfolio_target_count",
+        "wave1_target_count",
+        "selected_allatom_target_id",
+        "selected_allatom_surface_label",
+        "selected_allatom_best_mean_min_distance_A",
+        "selected_allatom_best_mean_min_distance_A_source",
+        "selected_allatom_wetlab_gate_pass",
+        "selected_allatom_final_gate_pass",
+    )
+    required_fields_present = all(key in summary and summary.get(key) not in {"", None} for key in required_keys)
+    return marker_complete and required_fields_present
+
+
+def _partnering_stack_summary(payload: dict[str, Any] | None) -> dict[str, Any]:
+    summary = _summary(payload)
+    return summary if _is_full_partnering_stack_summary(summary) else {}
+
+
 def _text(*values: Any, default: str = "") -> str:
     for value in values:
         text = str(value or "").strip()
@@ -257,6 +285,28 @@ def _resolve_named_value_from_specs(
                 continue
             return True, value, f"{source_label}.{key}"
     return False, None, ""
+
+
+def _selected_review_packet_metric(
+    selected_source: dict[str, Any] | None,
+    *,
+    target_id: str,
+    surface_label: str,
+    metric_key: str,
+) -> tuple[bool, Any, str]:
+    if not selected_source or selected_source.get("surface_kind") != "review_packet":
+        return False, None, ""
+    summary = dict(selected_source.get("summary", {}) or {})
+    source_target_id = _text(summary.get("target_id"), selected_source.get("target_id"))
+    source_surface_label = _text(
+        summary.get("surface_label"),
+        selected_source.get("surface_label"),
+    )
+    if _text(target_id) != source_target_id or _text(surface_label) != source_surface_label:
+        return False, None, ""
+    if metric_key not in summary or summary.get(metric_key) in {"", None}:
+        return False, None, ""
+    return True, summary.get(metric_key), f"{source_surface_label}.{metric_key}"
 
 
 def _clean(value: Any) -> str:
@@ -2208,11 +2258,37 @@ def _selected_allatom_focus_context(
         selected_summary.get("best_compound_name_resolution"),
         default="unresolved",
     )
+    (
+        review_packet_best_mean_min_distance_reported,
+        review_packet_best_mean_min_distance_A,
+        review_packet_best_mean_min_distance_source,
+    ) = _selected_review_packet_metric(
+        selected_source,
+        target_id=target_id,
+        surface_label=surface_label,
+        metric_key="best_mean_min_distance_A",
+    )
     best_mean_min_distance_A = _safe_float(
-        retry_handoff_summary.get("selected_allatom_best_mean_min_distance_A")
+        review_packet_best_mean_min_distance_A
+        if review_packet_best_mean_min_distance_reported
+        else retry_handoff_summary.get("selected_allatom_best_mean_min_distance_A")
         if retry_handoff_summary.get("selected_allatom_best_mean_min_distance_A") not in {"", None}
         else selected_summary.get("best_mean_min_distance_A"),
         0.0,
+    )
+    best_mean_min_distance_source = _text(
+        review_packet_best_mean_min_distance_source,
+        retry_handoff_summary.get("selected_allatom_best_mean_min_distance_A_source"),
+        (
+            "retry_handoff_summary.selected_allatom_best_mean_min_distance_A"
+            if retry_handoff_summary.get("selected_allatom_best_mean_min_distance_A") not in {"", None}
+            else ""
+        ),
+        (
+            f"{_text((selected_source or {}).get('surface_label'))}.best_mean_min_distance_A"
+            if selected_summary.get("best_mean_min_distance_A") not in {"", None}
+            else ""
+        ),
     )
     promoted_candidate_count = _safe_int(
         retry_handoff_summary.get("selected_allatom_promoted_candidate_count")
@@ -2267,6 +2343,7 @@ def _selected_allatom_focus_context(
         "best_compound_name_human_readable": best_compound_name_human_readable,
         "best_compound_name_resolution": best_compound_name_resolution,
         "best_mean_min_distance_A": best_mean_min_distance_A,
+        "best_mean_min_distance_A_source": best_mean_min_distance_source,
         "promoted_candidate_count": promoted_candidate_count,
         "under_2p5_candidate_count": under_2p5_candidate_count,
         "near_candidate_count": near_candidate_count,
@@ -2903,7 +2980,7 @@ def _campaign_summary_rows(
     stk17b_exploratory_followup_lane: dict[str, Any],
     plpro_manual_retry_lane: dict[str, Any],
 ) -> list[dict[str, Any]]:
-    p = _summary(partnering_stack)
+    p = _partnering_stack_summary(partnering_stack)
     h = _summary(master_handoff_dashboard)
     f = _summary(final_campaign_summary)
     t = _summary(master_terminal_review)
@@ -3147,6 +3224,7 @@ def _render_markdown(payload: dict[str, Any]) -> str:
         "selected_allatom_best_compound_name_human_readable",
         "selected_allatom_best_compound_name_resolution",
         "selected_allatom_best_mean_min_distance_A",
+        "selected_allatom_best_mean_min_distance_A_source",
         "selected_allatom_promoted_candidate_count",
         "selected_allatom_under_2p5_candidate_count",
         "selected_allatom_near_candidate_count",
@@ -3268,6 +3346,8 @@ def _render_markdown(payload: dict[str, Any]) -> str:
         "ligand_admet_red_count",
         "ligand_admet_module_scope",
         "ligand_admet_next_required_step",
+        "partnering_stack_artifact_status",
+        "partnering_stack_artifact_complete",
         "campaign_terminal_state",
         "ready_to_send_track_count",
         "next_required_step",
@@ -3979,7 +4059,8 @@ def build_payload(
         and _text(selected_lane_summary.get("followup_lane_label"), selected_lane_summary.get("lane_label"))
         == "exploratory_gate4.5_followup"
     )
-    ps = _summary(partnering_stack or {})
+    raw_ps = _summary(partnering_stack or {})
+    ps = _partnering_stack_summary(partnering_stack or {})
     mh = _summary(master_handoff_dashboard or {})
     fc = _summary(final_campaign_summary or {})
     mt = _summary(master_terminal_review or {})
@@ -4717,6 +4798,9 @@ def build_payload(
                 selected_allatom_focus_context.get("best_mean_min_distance_A"),
                 0.0,
             ),
+            "selected_allatom_best_mean_min_distance_A_source": _text(
+                selected_allatom_focus_context.get("best_mean_min_distance_A_source")
+            ),
             "selected_allatom_promoted_candidate_count": _safe_int(
                 selected_allatom_focus_context.get("promoted_candidate_count"),
                 0,
@@ -5269,6 +5353,8 @@ def build_payload(
             "ligand_admet_red_count": _safe_int((ligand_admet_module or {}).get("summary", {}).get("red_count")),
             "ligand_admet_module_scope": _text((ligand_admet_module or {}).get("summary", {}).get("module_scope")),
             "ligand_admet_next_required_step": _text((ligand_admet_module or {}).get("summary", {}).get("next_required_step")),
+            "partnering_stack_artifact_status": _text(raw_ps.get("status")),
+            "partnering_stack_artifact_complete": _is_full_partnering_stack_summary(raw_ps),
             "campaign_terminal_state": _text(fc.get("campaign_terminal_state"), mh.get("campaign_terminal_state"), ps.get("campaign_terminal_state"), mt.get("campaign_terminal_state")),
             "ready_to_send_track_count": _safe_int(mt.get("ready_to_send_track_count"), _safe_int(fc.get("ready_to_send_track_count"), _safe_int(mh.get("ready_to_send_track_count"), _safe_int(ps.get("ready_to_send_track_count"))))),
             "next_required_step": _text(

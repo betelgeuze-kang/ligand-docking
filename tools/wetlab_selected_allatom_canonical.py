@@ -173,6 +173,25 @@ def _metric_threshold_text(metric_name: str, thresholds: dict[str, Any]) -> str:
     return "missing"
 
 
+def _review_metric_matches_selected_focus(
+    *,
+    review: dict[str, Any],
+    selected_target_id: str,
+    selected_surface_label: str,
+) -> bool:
+    review_target_id = _text(
+        review.get("target_id"),
+        review.get("selected_allatom_target_id"),
+    )
+    review_surface_label = _text(
+        review.get("surface_label"),
+        review.get("selected_allatom_surface_label"),
+    )
+    target_matches = not review_target_id or review_target_id == selected_target_id
+    surface_matches = not review_surface_label or review_surface_label == selected_surface_label
+    return bool(target_matches and surface_matches)
+
+
 def _infer_translation_fields_from_texts(*texts: Any) -> dict[str, str]:
     combined = " ".join(str(text or "").strip() for text in texts if str(text or "").strip())
     lowered = combined.lower()
@@ -272,16 +291,22 @@ def resolve_selected_allatom_canonical(
         ("retry_handoff_summary", retry),
         ("review_packet_summary", review),
     ]
+    selected_target_id = _text(
+        retry.get("selected_allatom_target_id"),
+        current.get("selected_allatom_target_id"),
+        monitor.get("selected_allatom_target_id"),
+        review.get("target_id"),
+    )
+    selected_surface_label = _text(
+        retry.get("selected_allatom_surface_label"),
+        current.get("selected_allatom_surface_label"),
+        monitor.get("selected_allatom_surface_label"),
+        review.get("surface_label"),
+    )
     focus_available = bool(
         _text(
-            retry.get("selected_allatom_target_id"),
-            retry.get("selected_allatom_surface_label"),
-            current.get("selected_allatom_target_id"),
-            current.get("selected_allatom_surface_label"),
-            monitor.get("selected_allatom_target_id"),
-            monitor.get("selected_allatom_surface_label"),
-            review.get("target_id"),
-            review.get("surface_label"),
+            selected_target_id,
+            selected_surface_label,
         )
     )
 
@@ -660,11 +685,26 @@ def resolve_selected_allatom_canonical(
         else "not_reported"
     )
     translation_status = _text(translation_gate_focus_status).lower()
-    best_mean_min_distance_A, _ = _pick_value(
+    best_mean_min_distance_A, best_mean_min_distance_source = _pick_value(
         summaries,
         "selected_allatom_best_mean_min_distance_A",
         "best_mean_min_distance_A",
     )
+    review_best_mean_min_distance_A, review_best_mean_min_distance_source = _pick_value(
+        [("review_packet_summary", review)],
+        "best_mean_min_distance_A",
+        "selected_allatom_best_mean_min_distance_A",
+    )
+    if (
+        review_best_mean_min_distance_A not in {"", None}
+        and _review_metric_matches_selected_focus(
+            review=review,
+            selected_target_id=selected_target_id,
+            selected_surface_label=selected_surface_label,
+        )
+    ):
+        best_mean_min_distance_A = review_best_mean_min_distance_A
+        best_mean_min_distance_source = review_best_mean_min_distance_source
     best_mean_min_distance_A = _safe_float(best_mean_min_distance_A, 0.0)
     selected_threshold_A = _safe_float(thresholds.get("selected_threshold_A"), 0.0)
     if (
@@ -1012,6 +1052,8 @@ def resolve_selected_allatom_canonical(
         "focus_shortlist_tier": translation["focus_shortlist_tier"],
         "recommended_next_expensive_lane": translation["recommended_next_expensive_lane"],
         "recommended_next_expensive_lane_reason": translation["recommended_next_expensive_lane_reason"],
+        "best_mean_min_distance_A": best_mean_min_distance_A,
+        "best_mean_min_distance_source": best_mean_min_distance_source,
         "raw_claim_requirement_mode": raw_claim["requirement_mode"],
         "raw_claim_requirement_provenance": raw_claim["requirement_provenance"],
         "raw_claim_required_for_final_wetlab": raw_claim["required_for_final_wetlab"],

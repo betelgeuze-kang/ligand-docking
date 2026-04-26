@@ -36,6 +36,73 @@ def _assert_selected_allatom_commercial_schema(
     assert packet_summary["commercial_primary_upgrade_actions_v1"] == expected_primary_upgrade_actions
 
 
+def test_build_wetlab_current_results_index_rejects_placeholder_partnering_stack_evidence() -> None:
+    placeholder_payload = mod.build_payload(partnering_stack={"summary": {"status": "ok"}})
+    placeholder_summary = placeholder_payload["summary"]
+    assert placeholder_summary["partnering_stack_artifact_status"] == "ok"
+    assert placeholder_summary["partnering_stack_artifact_complete"] is False
+    assert placeholder_summary["campaign_terminal_state"] == ""
+    assert placeholder_summary["ready_to_send_track_count"] == 0
+    placeholder_rows = {
+        row["surface"]: row
+        for group in placeholder_payload["groups"]
+        for row in group["rows"]
+        if group["group"] == "stack/handoff/final summary"
+    }
+    assert placeholder_rows["partnering_stack"]["status"] == "missing"
+
+    minimal_ready_payload = mod.build_payload(
+        partnering_stack={"summary": {"status": "wetlab_partnering_stack_ready"}}
+    )
+    minimal_ready_summary = minimal_ready_payload["summary"]
+    assert minimal_ready_summary["partnering_stack_artifact_status"] == "wetlab_partnering_stack_ready"
+    assert minimal_ready_summary["partnering_stack_artifact_complete"] is False
+    assert minimal_ready_summary["campaign_terminal_state"] == ""
+    assert minimal_ready_summary["ready_to_send_track_count"] == 0
+
+    marker_only_payload = mod.build_payload(
+        partnering_stack={
+            "summary": {
+                "status": "wetlab_partnering_stack_ready",
+                "artifact_kind": "wetlab_partnering_stack",
+                "artifact_completeness": "full_partnering_stack",
+            }
+        }
+    )
+    marker_only_summary = marker_only_payload["summary"]
+    assert marker_only_summary["partnering_stack_artifact_status"] == "wetlab_partnering_stack_ready"
+    assert marker_only_summary["partnering_stack_artifact_complete"] is False
+    assert marker_only_summary["campaign_terminal_state"] == ""
+    assert marker_only_summary["ready_to_send_track_count"] == 0
+
+    full_payload = mod.build_payload(
+        partnering_stack={
+            "summary": {
+                "status": "wetlab_partnering_stack_ready",
+                "artifact_kind": "wetlab_partnering_stack",
+                "artifact_schema_version": "wetlab_partnering_stack.v1",
+                "artifact_completeness": "full_partnering_stack",
+                "portfolio_target_count": 14,
+                "wave1_target_count": 8,
+                "selected_allatom_target_id": "T. cruzi PDE",
+                "selected_allatom_surface_label": "tcruzi_pde_allatom_review_packet",
+                "selected_allatom_best_mean_min_distance_A": 3.375,
+                "selected_allatom_best_mean_min_distance_A_source": (
+                    "tcruzi_pde_allatom_review_packet.best_mean_min_distance_A"
+                ),
+                "selected_allatom_wetlab_gate_pass": False,
+                "selected_allatom_final_gate_pass": False,
+                "campaign_terminal_state": "complete",
+                "ready_to_send_track_count": 5,
+            }
+        }
+    )
+    full_summary = full_payload["summary"]
+    assert full_summary["partnering_stack_artifact_complete"] is True
+    assert full_summary["campaign_terminal_state"] == "complete"
+    assert full_summary["ready_to_send_track_count"] == 5
+
+
 def test_build_wetlab_current_results_index_groups_surfaces(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(mod, "ROOT", tmp_path)
     primary_queue = {
@@ -600,6 +667,19 @@ def test_build_wetlab_current_results_index_keeps_pde_operator_readiness_separat
         retry_handoff_summary=retry_handoff_summary,
         tcruzi_pde_promoted_top4_review_packet=promoted_top4_review_packet,
         tcruzi_pde_rescue_only_branch_summary=rescue_only_branch_summary,
+        tcruzi_pde_allatom_review_packet={
+            "summary": {
+                "status": "wetlab_tcruzi_pde_allatom_review_packet_ready",
+                "target_id": "T. cruzi PDE",
+                "surface_label": "tcruzi_pde_allatom_review_packet",
+                "best_mean_min_distance_A": 3.375,
+                "packet_ready_for_operator_review": True,
+                "wetlab_gate_pass": False,
+                "wetlab_final_gate_pass": False,
+                "claim_gate_available": False,
+                "claim_ready_for_allatom": False,
+            }
+        },
     )
 
     summary = payload["summary"]
@@ -618,6 +698,9 @@ def test_build_wetlab_current_results_index_keeps_pde_operator_readiness_separat
     assert summary["selected_allatom_packet_scope"] == "selected_allatom_review_packet"
     assert summary["selected_allatom_best_compound_name"] == "Cathepsin Lead"
     assert summary["selected_allatom_best_mean_min_distance_A"] == 1.234
+    assert summary["selected_allatom_best_mean_min_distance_A_source"] == (
+        "retry_handoff_summary.selected_allatom_best_mean_min_distance_A"
+    )
     assert summary["selected_allatom_promoted_candidate_count"] == 4
     assert summary["selected_allatom_under_2p5_candidate_count"] == 1
     assert summary["selected_allatom_near_candidate_count"] == 3
@@ -692,6 +775,7 @@ def test_build_wetlab_current_results_index_propagates_pde_selected_allatom_v2_a
                 "selected_allatom_commercial_primary_upgrade_actions_text_v1": pde_review_summary[
                     "commercial_action_rollup_v2"
                 ],
+                "selected_allatom_best_mean_min_distance_A": 3.705,
                 "selected_allatom_translation_gate_reason": pde_review_summary["translation_gate_focus_reason"],
                 "selected_allatom_recommended_next_expensive_lane_reason": pde_review_summary[
                     "recommended_next_expensive_lane_reason"
@@ -738,6 +822,12 @@ def test_build_wetlab_current_results_index_propagates_pde_selected_allatom_v2_a
     assert summary["selected_allatom_commercial_primary_upgrade_actions_v1"] == adjusted_pde_review_packet[
         "summary"
     ]["commercial_primary_upgrade_actions_v1"]
+    assert summary["selected_allatom_best_mean_min_distance_A"] == pde_review_summary["best_mean_min_distance_A"]
+    assert summary["selected_allatom_best_mean_min_distance_A_source"] == (
+        "tcruzi_pde_allatom_review_packet.best_mean_min_distance_A"
+    )
+    assert summary["selected_allatom_wetlab_gate_pass"] is False
+    assert summary["selected_allatom_final_gate_pass"] is False
     assert summary["selected_allatom_translation_gate_focus_reason"] == pde_review_summary["translation_gate_focus_reason"]
     assert summary["selected_allatom_recommended_next_expensive_lane_reason"] == pde_review_summary[
         "recommended_next_expensive_lane_reason"
@@ -784,7 +874,9 @@ def test_build_wetlab_current_results_index_propagates_pde_selected_allatom_v2_a
         expected_risk_bucket="critical",
         expected_primary_upgrade_actions=[
             "tighten_pose_geometry_under_strict_gate",
+            "strengthen_binding_energy_proxy",
             "raise_trajectory_stability",
+            "reduce_mmpbsa_uncertainty",
             "increase_trajectory_support",
         ],
     )

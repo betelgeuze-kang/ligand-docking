@@ -10,6 +10,10 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 import pandas as pd
+
+# Avoid ROCm unsupported hipBLASLt fallback warnings during torch matmul.
+os.environ.setdefault("TORCH_BLAS_PREFER_HIPBLASLT", "0")
+
 import torch
 
 from benchmark.performance_bench import benchmark_simulation

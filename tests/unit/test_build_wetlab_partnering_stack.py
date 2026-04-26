@@ -592,6 +592,16 @@ def test_build_wetlab_partnering_stack(monkeypatch, tmp_path) -> None:
         broad_screen_primary_watch=broad_primary_watch,
         broad_screen_antitarget_watch_state=broad_antitarget_watch_state,
         broad_screen_antitarget_watch=broad_antitarget_watch,
+        broad_screen_current_results_index={
+            "summary": {
+                "selected_allatom_target_id": "T. cruzi PDE",
+                "selected_allatom_surface_label": "tcruzi_pde_allatom_review_packet",
+                "selected_allatom_best_mean_min_distance_A": 3.375,
+                "selected_allatom_best_mean_min_distance_A_source": (
+                    "tcruzi_pde_allatom_review_packet.best_mean_min_distance_A"
+                ),
+            }
+        },
         broad_screen_retry_handoff_summary=retry_handoff_summary,
         broad_screen_dpre1_branch_review_surface=broad_screen_dpre1_branch_review_surface,
         broad_screen_stk17b_manual_retry_lane=broad_screen_stk17b_manual_retry_lane,
@@ -612,6 +622,9 @@ def test_build_wetlab_partnering_stack(monkeypatch, tmp_path) -> None:
     summary = payload["summary"]
 
     assert summary["status"] == "wetlab_partnering_stack_ready"
+    assert summary["artifact_kind"] == "wetlab_partnering_stack"
+    assert summary["artifact_schema_version"] == "wetlab_partnering_stack.v1"
+    assert summary["artifact_completeness"] == "full_partnering_stack"
     assert summary["portfolio_target_count"] == 14
     assert summary["wave1_target_count"] == 8
     assert summary["brief_matrix_count"] == 8
@@ -780,6 +793,9 @@ def test_build_wetlab_partnering_stack(monkeypatch, tmp_path) -> None:
     assert summary["selected_allatom_best_compound_name_human_readable"] == "Cathepsin Lead"
     assert summary["selected_allatom_best_compound_name_resolution"] == "human_readable"
     assert summary["selected_allatom_best_mean_min_distance_A"] == 1.234
+    assert summary["selected_allatom_best_mean_min_distance_A_source"] != (
+        "tcruzi_pde_allatom_review_packet.best_mean_min_distance_A"
+    )
     assert summary["selected_allatom_promoted_candidate_count"] == 4
     assert summary["selected_allatom_under_2p5_candidate_count"] == 1
     assert summary["selected_allatom_near_candidate_count"] == 3
@@ -1082,6 +1098,18 @@ def test_build_wetlab_partnering_stack_selected_allatom_additive_surface_contrac
                 ),
             }
         },
+        broad_screen_current_results_index={
+            "summary": {
+                "selected_allatom_target_id": "T. cruzi PDE",
+                "selected_allatom_surface_label": "tcruzi_pde_allatom_review_packet",
+                "selected_allatom_best_mean_min_distance_A": 3.375,
+                "selected_allatom_best_mean_min_distance_A_source": (
+                    "tcruzi_pde_allatom_review_packet.best_mean_min_distance_A"
+                ),
+                "selected_allatom_wetlab_gate_pass": False,
+                "selected_allatom_final_gate_pass": False,
+            }
+        },
         broad_screen_selected_allatom_visual_bundle={
             "summary": {
                 "status": "selected_allatom_visual_bundle_ready",
@@ -1109,6 +1137,12 @@ def test_build_wetlab_partnering_stack_selected_allatom_additive_surface_contrac
     assert summary["selected_allatom_commercial_human_summary_v2"] == (
         "Commercial-grade v2 is not yet reported for this focus."
     )
+    assert summary["selected_allatom_best_mean_min_distance_A"] == 3.375
+    assert summary["selected_allatom_best_mean_min_distance_A_source"] == (
+        "tcruzi_pde_allatom_review_packet.best_mean_min_distance_A"
+    )
+    assert summary["selected_allatom_wetlab_gate_pass"] is False
+    assert summary["selected_allatom_final_gate_pass"] is False
     assert summary["selected_allatom_raw_claim_requirement_mode"] == "semi_hard"
     assert summary["selected_allatom_raw_claim_requirement_provenance"] == "claim_gate_required_for_final_wetlab"
     assert summary["selected_allatom_raw_claim_required_for_final_wetlab"] is True
@@ -1182,8 +1216,15 @@ def test_build_wetlab_partnering_stack_selected_allatom_additive_surface_contrac
 
 
 def test_build_wetlab_partnering_stack_main_wires_target_retry_inputs(monkeypatch, tmp_path) -> None:
-    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    root = tmp_path / "root"
+    cwd = tmp_path / "cwd"
+    (cwd / "runs").mkdir(parents=True)
+    cwd_artifact = cwd / mod.DEFAULT_OUT_JSON
+    cwd_artifact.write_text('{"summary":{"status":"preexisting_cwd_artifact"}}\n', encoding="utf-8")
+    monkeypatch.chdir(cwd)
+    monkeypatch.setattr(mod, "ROOT", root)
     captured: dict[str, object] = {}
+    markdown_paths: list[object] = []
     original_build_payload = mod.build_payload
 
     def fake_load(path: str) -> dict[str, object]:
@@ -1196,12 +1237,15 @@ def test_build_wetlab_partnering_stack_main_wires_target_retry_inputs(monkeypatc
 
     monkeypatch.setattr(mod, "_load_json", fake_load)
     monkeypatch.setattr(mod, "_maybe_load_json", fake_load)
-    monkeypatch.setattr(mod, "_write_markdown", lambda path, payload: None)
+    monkeypatch.setattr(mod, "_write_markdown", lambda path, payload: markdown_paths.append(path))
     monkeypatch.setattr(mod, "build_payload", fake_build_payload)
     monkeypatch.setattr(sys, "argv", ["build_wetlab_partnering_stack.py"])
 
     mod.main()
 
+    assert json.loads(cwd_artifact.read_text(encoding="utf-8"))["summary"]["status"] == "preexisting_cwd_artifact"
+    assert json.loads((root / mod.DEFAULT_OUT_JSON).read_text(encoding="utf-8"))["summary"]["status"] == "ok"
+    assert markdown_paths == [root / mod.DEFAULT_OUT_MD]
     assert captured["broad_screen_tcruzi_pde_promoted_top4_review_packet"] == {
         "summary": {"source_path": mod.DEFAULT_BROAD_SCREEN_TCRUZI_PDE_PROMOTED_TOP4_REVIEW_PACKET_JSON}
     }

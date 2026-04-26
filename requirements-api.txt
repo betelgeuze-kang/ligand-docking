@@ -1,0 +1,4 @@
+# Optional API server profile, not required for offline local delivery runtime.
+fastapi
+uvicorn[standard]
+pydantic-settings

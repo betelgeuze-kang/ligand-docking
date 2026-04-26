@@ -504,6 +504,26 @@ def _load_artifact_summary(path_like: str) -> dict[str, Any]:
     return _summary(maybe_load_json(artifact_json_path))
 
 
+def _selected_allatom_review_packet_path(surface_label: str) -> str:
+    label = str(surface_label or "").strip()
+    if not label:
+        return ""
+    if label.endswith(".json"):
+        path = Path(label)
+    elif label.startswith("wetlab_"):
+        path = Path("runs") / f"{label}_current.json"
+    else:
+        path = Path("runs") / f"wetlab_{label}_current.json"
+    if not path.is_absolute():
+        path = ROOT / path
+    return str(path)
+
+
+def _selected_allatom_review_packet_summary(surface_label: str) -> dict[str, Any]:
+    path = _selected_allatom_review_packet_path(surface_label)
+    return _summary(maybe_load_json(path)) if path else {}
+
+
 def _reported_state(reported: bool, value: bool, *, ready_label: str, not_ready_label: str) -> str:
     if not reported:
         return "not_reported"
@@ -1467,6 +1487,13 @@ def build_payload(
         bsrhs.get("status", ""),
     )
     selected_allatom_focus_summary = _load_artifact_summary(selected_allatom_focus_artifact)
+    selected_allatom_review_packet_summary = _selected_allatom_review_packet_summary(
+        selected_allatom_surface_label
+    )
+    selected_allatom_focus_summary = _overlay_canonical_values(
+        selected_allatom_focus_summary,
+        selected_allatom_review_packet_summary,
+    )
     selected_allatom_operator_review_reported, selected_allatom_operator_review_ready = _resolve_explicit_bool_from_sources(
         [
             (
@@ -2138,6 +2165,22 @@ def build_payload(
         recommended_next_expensive_lane=selected_allatom_actionability_next_expensive_lane,
         recommended_next_expensive_lane_reason=selected_allatom_actionability_next_expensive_lane_reason,
     )
+    selected_allatom_best_mean_min_distance_A = _coerce_float(
+        _resolve_first_value(
+            [
+                (bsrhs, "selected_allatom_best_mean_min_distance_A"),
+                (bcris, "selected_allatom_best_mean_min_distance_A"),
+            ]
+        ),
+        0.0,
+    )
+    selected_allatom_metric_source = (
+        "retry_handoff_summary.selected_allatom_best_mean_min_distance_A"
+        if _has_value(bsrhs, "selected_allatom_best_mean_min_distance_A")
+        else "current_results_index.selected_allatom_best_mean_min_distance_A"
+        if _has_value(bcris, "selected_allatom_best_mean_min_distance_A")
+        else ""
+    )
     fallback_selected_allatom_canonical = {
         "commercial_schema_version_v2": selected_allatom_commercial_schema_version_v2,
         "commercial_overall_score_v2": selected_allatom_commercial_overall_score_v2,
@@ -2151,6 +2194,8 @@ def build_payload(
         "focus_shortlist_tier": selected_allatom_focus_shortlist_tier,
         "recommended_next_expensive_lane": selected_allatom_recommended_next_expensive_lane,
         "recommended_next_expensive_lane_reason": selected_allatom_recommended_next_expensive_lane_reason,
+        "best_mean_min_distance_A": selected_allatom_best_mean_min_distance_A,
+        "best_mean_min_distance_source": selected_allatom_metric_source,
         "raw_claim_requirement_mode": selected_allatom_raw_claim_requirement_mode,
         "raw_claim_requirement_provenance": selected_allatom_raw_claim_requirement_provenance,
         "raw_claim_required_for_final_wetlab": selected_allatom_raw_claim_required_for_final_wetlab,
@@ -2198,6 +2243,16 @@ def build_payload(
     selected_allatom_canonical_resolver_used = bool(
         selected_allatom_canonical.get("__canonical_resolver_used__", False)
     )
+    canonical_best_mean_min_distance_A = _coerce_float(
+        selected_allatom_canonical.get("best_mean_min_distance_A"),
+        0.0,
+    )
+    if canonical_best_mean_min_distance_A > 0.0:
+        selected_allatom_best_mean_min_distance_A = canonical_best_mean_min_distance_A
+        selected_allatom_metric_source = _text(
+            selected_allatom_canonical.get("best_mean_min_distance_source", ""),
+            selected_allatom_metric_source,
+        )
     selected_allatom_raw_claim_requirement_mode = _text(
         selected_allatom_canonical.get("raw_claim_requirement_mode", ""),
         selected_allatom_raw_claim_requirement_mode,
@@ -2314,10 +2369,7 @@ def build_payload(
                 bcris.get("selected_allatom_best_compound_name_resolution", "unresolved"),
             )
         ).strip(),
-        best_mean_min_distance_A=float(
-            bsrhs.get("selected_allatom_best_mean_min_distance_A", bcris.get("selected_allatom_best_mean_min_distance_A", 0.0))
-            or 0.0
-        ),
+        best_mean_min_distance_A=selected_allatom_best_mean_min_distance_A,
         promoted_candidate_count=int(
             bsrhs.get("selected_allatom_promoted_candidate_count", bcris.get("selected_allatom_promoted_candidate_count", 0))
             or 0
@@ -3532,9 +3584,8 @@ def build_payload(
                     bcris.get("selected_allatom_best_compound_name_resolution", "unresolved"),
                 )
             ).strip(),
-            "selected_allatom_best_mean_min_distance_A": float(
-                bsrhs.get("selected_allatom_best_mean_min_distance_A", bcris.get("selected_allatom_best_mean_min_distance_A", 0.0)) or 0.0
-            ),
+            "selected_allatom_best_mean_min_distance_A": selected_allatom_best_mean_min_distance_A,
+            "selected_allatom_metric_source": selected_allatom_metric_source,
             "selected_allatom_promoted_candidate_count": int(
                 bsrhs.get("selected_allatom_promoted_candidate_count", bcris.get("selected_allatom_promoted_candidate_count", 0)) or 0
             ),

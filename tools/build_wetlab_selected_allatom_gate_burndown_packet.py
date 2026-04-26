@@ -15,6 +15,10 @@ DEFAULT_WETLAB_FINAL_JSON = "runs/wetlab_final_campaign_summary_current.json"
 DEFAULT_OUT_JSON = "runs/wetlab_selected_allatom_gate_burndown_packet_current.json"
 DEFAULT_OUT_CSV = "runs/wetlab_selected_allatom_gate_burndown_packet_current.csv"
 DEFAULT_OUT_MD = "runs/wetlab_selected_allatom_gate_burndown_packet_current.md"
+TCRUZI_PDE_ALLATOM_REVIEW_ARTIFACTS = {
+    "runs/wetlab_tcruzi_pde_allatom_review_packet_current.md",
+    "runs/wetlab_tcruzi_pde_allatom_review_packet_current.json",
+}
 
 
 def _resolve(path_like: str | Path) -> Path:
@@ -66,6 +70,61 @@ def _fmt_float(value: Any, digits: int = 3) -> str:
     return f"{parsed:.{digits}f}"
 
 
+def _bool_or_none(value: Any) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return None
+    text = str(value).strip().lower()
+    if text in {"true", "1", "yes", "pass", "passed"}:
+        return True
+    if text in {"false", "0", "no", "fail", "failed"}:
+        return False
+    return None
+
+
+def _canonical_artifact(path_like: str) -> str:
+    return path_like.replace("\\", "/").lstrip("./")
+
+
+def _review_json_for_focus(focus_artifact: str) -> Path | None:
+    artifact = _canonical_artifact(focus_artifact)
+    if artifact not in TCRUZI_PDE_ALLATOM_REVIEW_ARTIFACTS:
+        return None
+    json_artifact = artifact[:-3] + ".json" if artifact.endswith(".md") else artifact
+    path = _resolve(json_artifact)
+    return path if path.exists() else None
+
+
+def _review_metric_override(
+    focus_artifact: str,
+    selected_allatom_review_payload: dict[str, Any] | None,
+) -> dict[str, str] | None:
+    if _canonical_artifact(focus_artifact) not in TCRUZI_PDE_ALLATOM_REVIEW_ARTIFACTS:
+        return None
+    if not selected_allatom_review_payload:
+        return None
+
+    review = _summaryish(selected_allatom_review_payload)
+    value_num = _float(review.get("best_mean_min_distance_A"))
+    thresholds = review.get("wetlab_gate_thresholds") if isinstance(review.get("wetlab_gate_thresholds"), dict) else {}
+    threshold_num = _float(review.get("selected_threshold_A"))
+    if threshold_num is None:
+        threshold_num = _float(thresholds.get("selected_threshold_A") or thresholds.get("strict_threshold_A"))
+    if value_num is None or threshold_num is None:
+        return None
+
+    return {
+        "metric": "mean_min_distance_A",
+        "value": _fmt_float(value_num),
+        "threshold": _fmt_float(threshold_num),
+        "delta": _fmt_float(value_num - threshold_num),
+        "source_artifact": "runs/wetlab_tcruzi_pde_allatom_review_packet_current.json",
+        "source_kind": "selected_allatom_review_packet_summary",
+        "refresh_reason": "review_packet_best_mean_min_distance_A_supersedes_stale_final_campaign_selected_allatom_value",
+    }
+
+
 def _operational_bucket(code: str, category: str, severity: str) -> str:
     if code == "recompute_mean_min_distance_A":
         return "geometry_hard_block"
@@ -113,6 +172,7 @@ def _next_required_action(code: str, action: str) -> str:
 def build_payload(
     wetlab_dashboard_payload: dict[str, Any],
     wetlab_final_payload: dict[str, Any],
+    selected_allatom_review_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     dashboard = _summaryish(wetlab_dashboard_payload)
     final_summary = _summaryish(wetlab_final_payload)
@@ -148,6 +208,7 @@ def build_payload(
     promoted_candidate_count = _int(final_summary.get("selected_allatom_promoted_candidate_count"))
     strict_candidate_count = _int(final_summary.get("selected_allatom_under_2p5_candidate_count"))
     near_candidate_count = _int(final_summary.get("selected_allatom_near_candidate_count"))
+    metric_override = _review_metric_override(focus_artifact, selected_allatom_review_payload)
 
     rows: list[dict[str, Any]] = []
     for rank, action_row in enumerate(action_rows, start=1):
@@ -183,6 +244,35 @@ def build_payload(
             }
         )
 
+    if metric_override:
+        best_mean_min_distance_A = metric_override["value"]
+        selected_threshold_A = metric_override["threshold"]
+        for row in rows:
+            if row["code"] == "recompute_mean_min_distance_A":
+                row["metric"] = metric_override["metric"]
+                row["value"] = metric_override["value"]
+                row["threshold"] = metric_override["threshold"]
+                row["delta"] = metric_override["delta"]
+                row["reason"] = (
+                    f"mean_min_distance_A={metric_override['value']} threshold={metric_override['threshold']} "
+                    f"from {metric_override['source_artifact']}"
+                )
+                break
+
+        review = _summaryish(selected_allatom_review_payload or {})
+        review_wetlab_gate_pass = _bool_or_none(review.get("wetlab_gate_pass"))
+        review_final_gate_pass = _bool_or_none(review.get("wetlab_final_gate_pass"))
+        review_claim_gate_available = _bool_or_none(review.get("claim_gate_available"))
+        if review_wetlab_gate_pass is not None:
+            wetlab_gate_pass = wetlab_gate_pass and review_wetlab_gate_pass
+        if review_claim_gate_available is False:
+            claim_gate_available = False
+            final_gate_pass = False
+        elif review_claim_gate_available is not None:
+            claim_gate_available = claim_gate_available and review_claim_gate_available
+        if review_final_gate_pass is not None:
+            final_gate_pass = final_gate_pass and review_final_gate_pass
+
     hard_block_count = sum(1 for row in rows if row["severity"] == "hard")
     semi_hard_block_count = sum(1 for row in rows if row["severity"] == "semi_hard")
     soft_deferred_count = sum(1 for row in rows if row["severity"] == "soft")
@@ -202,6 +292,15 @@ def build_payload(
         "selected_allatom_selected_command_kind": selected_command_kind,
         "selected_allatom_selected_threshold_A": selected_threshold_A,
         "selected_allatom_best_mean_min_distance_A": best_mean_min_distance_A,
+        "selected_allatom_metric_source_artifact": (
+            metric_override["source_artifact"] if metric_override else "runs/wetlab_final_campaign_summary_current.json"
+        ),
+        "selected_allatom_metric_source_kind": (
+            metric_override["source_kind"] if metric_override else "final_campaign_summary_selected_allatom"
+        ),
+        "selected_allatom_metric_refresh_reason": (
+            metric_override["refresh_reason"] if metric_override else "default_final_campaign_summary_source"
+        ),
         "selected_allatom_wetlab_gate_pass": wetlab_gate_pass,
         "selected_allatom_final_gate_pass": final_gate_pass,
         "selected_allatom_claim_gate_available": claim_gate_available,
@@ -243,6 +342,9 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- selected_allatom_selected_command_kind: `{summary['selected_allatom_selected_command_kind']}`",
         f"- selected_allatom_selected_threshold_A: `{summary['selected_allatom_selected_threshold_A']}`",
         f"- selected_allatom_best_mean_min_distance_A: `{summary['selected_allatom_best_mean_min_distance_A']}`",
+        f"- selected_allatom_metric_source_artifact: `{summary['selected_allatom_metric_source_artifact']}`",
+        f"- selected_allatom_metric_source_kind: `{summary['selected_allatom_metric_source_kind']}`",
+        f"- selected_allatom_metric_refresh_reason: `{summary['selected_allatom_metric_refresh_reason']}`",
         f"- selected_allatom_wetlab_gate_pass: `{summary['selected_allatom_wetlab_gate_pass']}`",
         f"- selected_allatom_final_gate_pass: `{summary['selected_allatom_final_gate_pass']}`",
         f"- selected_allatom_claim_gate_available: `{summary['selected_allatom_claim_gate_available']}`",
@@ -283,6 +385,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build the wetlab selected all-atom gate burndown packet.")
     parser.add_argument("--wetlab-dashboard-json", default=DEFAULT_WETLAB_DASHBOARD_JSON)
     parser.add_argument("--wetlab-final-json", default=DEFAULT_WETLAB_FINAL_JSON)
+    parser.add_argument("--selected-allatom-review-json", default="")
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -291,9 +394,19 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    wetlab_dashboard_payload = _load_json(args.wetlab_dashboard_json)
+    wetlab_final_payload = _load_json(args.wetlab_final_json)
+    dashboard = _summaryish(wetlab_dashboard_payload)
+    final_summary = _summaryish(wetlab_final_payload)
+    focus_artifact = _text(dashboard.get("selected_allatom_focus_artifact")) or _text(
+        final_summary.get("selected_allatom_focus_artifact")
+    )
+    review_json = _resolve(args.selected_allatom_review_json) if args.selected_allatom_review_json else _review_json_for_focus(focus_artifact)
+    selected_allatom_review_payload = _load_json(review_json) if review_json else None
     payload = build_payload(
-        wetlab_dashboard_payload=_load_json(args.wetlab_dashboard_json),
-        wetlab_final_payload=_load_json(args.wetlab_final_json),
+        wetlab_dashboard_payload=wetlab_dashboard_payload,
+        wetlab_final_payload=wetlab_final_payload,
+        selected_allatom_review_payload=selected_allatom_review_payload,
     )
     out_json = _resolve(args.out_json)
     out_csv = _resolve(args.out_csv)

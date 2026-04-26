@@ -36,7 +36,7 @@ DEFAULT_OUT_JSON = "runs/local_engine_commercialization_queue_current.json"
 DEFAULT_OUT_CSV = "runs/local_engine_commercialization_queue_current.csv"
 DEFAULT_OUT_MD = "runs/local_engine_commercialization_queue_current.md"
 
-_TOP_NIGHTLY_RE = re.compile(r"ligand_htvs_nightly_(\d{4}-\d{2}-\d{2})_summary\.json$")
+_TOP_NIGHTLY_RE = re.compile(r"ligand_htvs_nightly_(\d{4}-\d{2}-\d{2}(?:_[A-Za-z0-9][A-Za-z0-9_-]*)?)_summary\.json$")
 _SMOKE_NIGHTLY_RE = re.compile(r"ligand_htvs_nightly_(\d{4}-\d{2}-\d{2})_smoke_summary\.json$")
 
 
@@ -90,15 +90,55 @@ def _summaryish(payload: dict[str, Any]) -> dict[str, Any]:
     return dict(payload or {})
 
 
+def _top_nightly_label(path: Path) -> str:
+    match = _TOP_NIGHTLY_RE.fullmatch(path.name)
+    return match.group(1) if match else path.name
+
+
+def _is_top_nightly_summary_path(path: Path) -> bool:
+    match = _TOP_NIGHTLY_RE.fullmatch(path.name)
+    if not match:
+        return False
+    label = match.group(1)
+    suffix = label[10:]
+    if suffix:
+        if suffix in {"smoke", "full"} or suffix.startswith(("smoke_", "full_")):
+            return False
+        if suffix.endswith(("_smoke", "_full")) or "_attempt" in suffix:
+            return False
+
+    payload = _maybe_load_json(path)
+    if not payload:
+        return False
+    if _text(payload.get("run_scope")) == "smoke_then_full":
+        return True
+    stages = payload.get("stages")
+    artifacts = payload.get("artifacts")
+    if isinstance(stages, dict) and ("smoke" in stages or "full" in stages):
+        return True
+    if isinstance(artifacts, dict) and (
+        _text(artifacts.get("smoke_summary_json")) or _text(artifacts.get("full_summary_json"))
+    ):
+        return True
+    return False
+
+
+def _top_nightly_sort_key(path: Path) -> tuple[str, int, str]:
+    payload = _maybe_load_json(path)
+    generated_at = _text(payload.get("generated_at_local"))
+    try:
+        mtime_ns = path.stat().st_mtime_ns
+    except OSError:
+        mtime_ns = 0
+    label = _top_nightly_label(path)
+    return (generated_at or label, mtime_ns, label)
+
+
 def _discover_latest_top_nightly() -> Path | None:
-    candidates: list[tuple[str, Path]] = []
-    for path in RUNS.glob("ligand_htvs_nightly_*_summary.json"):
-        match = _TOP_NIGHTLY_RE.fullmatch(path.name)
-        if match:
-            candidates.append((match.group(1), path))
+    candidates = [path for path in RUNS.glob("ligand_htvs_nightly_*_summary.json") if _is_top_nightly_summary_path(path)]
     if not candidates:
         return None
-    return sorted(candidates, key=lambda item: item[0])[-1][1]
+    return sorted(candidates, key=_top_nightly_sort_key)[-1]
 
 
 def _discover_nightly_scan_paths() -> list[Path]:
@@ -106,20 +146,16 @@ def _discover_nightly_scan_paths() -> list[Path]:
     for path in RUNS.glob("ligand_htvs_nightly_*summary.json"):
         top = _TOP_NIGHTLY_RE.fullmatch(path.name)
         smoke = _SMOKE_NIGHTLY_RE.fullmatch(path.name)
-        if top:
-            candidates.append((top.group(1) + "_top", path))
+        if top and _is_top_nightly_summary_path(path):
+            candidates.append((_top_nightly_sort_key(path)[0] + "_top", path))
         elif smoke:
             candidates.append((smoke.group(1) + "_smoke", path))
     return [path for _, path in sorted(candidates, key=lambda item: item[0])]
 
 
 def _recent_top_nightly_paths(limit: int = 3) -> list[Path]:
-    candidates: list[tuple[str, Path]] = []
-    for path in RUNS.glob("ligand_htvs_nightly_*_summary.json"):
-        match = _TOP_NIGHTLY_RE.fullmatch(path.name)
-        if match:
-            candidates.append((match.group(1), path))
-    return [path for _, path in sorted(candidates, key=lambda item: item[0])[-limit:]]
+    candidates = [path for path in RUNS.glob("ligand_htvs_nightly_*_summary.json") if _is_top_nightly_summary_path(path)]
+    return sorted(candidates, key=_top_nightly_sort_key)[-limit:]
 
 
 def _extract_generated_at(payload: dict[str, Any]) -> str:
@@ -221,6 +257,12 @@ def _latest_nightly_signal(
     gate_packet_status_line = _text(nightly_gate_summary.get("status_line"))
     gate_packet_next_required_step = _text(nightly_gate_summary.get("next_required_step"))
     gate_packet_recent_transition_line = _text(nightly_gate_summary.get("recent_transition_line"))
+    gate_packet_reentry_stage = _text(nightly_gate_summary.get("reentry_blocker_stage")) or latest_failed_stage
+    gate_packet_reentry_reason = _text(nightly_gate_summary.get("reentry_reason"))
+    gate_packet_reentry_action = _text(nightly_gate_summary.get("reentry_action"))
+    gate_packet_reentry_evidence_artifact = (
+        _text(nightly_gate_summary.get("reentry_evidence_artifact")) or latest_artifact
+    )
     tuning_packet_artifact = _text(nightly_tuning_summary.get("packet_artifact"))
     tuning_full_band = bool(nightly_tuning_summary.get("topk_equals_full_unique_band", False))
     tuning_rows_above_threshold = _int(nightly_tuning_summary.get("rows_above_threshold_count"))
@@ -299,12 +341,17 @@ def _latest_nightly_signal(
     execute_gate_pass = bool(nightly_execute_summary.get("execute_gate_pass", False))
     execute_payload_pass = bool(nightly_execute_summary.get("execute_payload_pass", False))
     execute_matches_rescored_gate = bool(nightly_execute_summary.get("execute_matches_rescored_gate", False))
-    downstream_rerun_execute_status_artifact = execute_status_artifact or downstream_rerun_status_artifact
+    downstream_rerun_execute_status_artifact = execute_status_artifact
     downstream_rerun_execute_status_payload = (
         _maybe_load_json(downstream_rerun_execute_status_artifact) if downstream_rerun_execute_status_artifact else {}
     )
-    downstream_rerun_execute_pass = (
-        execute_payload_pass if execute_status_artifact else bool(downstream_rerun_execute_status_payload.get("pass", False))
+    downstream_rerun_execute_pass = bool(
+        nightly_execute_summary.get(
+            "execute_payload_pass",
+            downstream_rerun_execute_status_payload.get("pass", False)
+            if downstream_rerun_execute_status_artifact
+            else False,
+        )
     )
     source_signal = (
         f"latest_failed_stage={latest_failed_stage or '-'}; "
@@ -319,6 +366,9 @@ def _latest_nightly_signal(
         f"stage6_gate_burndown_artifact={gate_packet_artifact or '-'}; "
         f"stage6_gate_burndown_delta={_float_text(gate_packet_delta)}; "
         f"stage6_gate_recent_transition={gate_packet_recent_transition_line or '-'}; "
+        f"top_level_reentry_stage={gate_packet_reentry_stage or '-'}; "
+        f"top_level_reentry_reason={gate_packet_reentry_reason or '-'}; "
+        f"top_level_reentry_evidence_artifact={gate_packet_reentry_evidence_artifact or '-'}; "
         f"stage6_tuning_artifact={tuning_packet_artifact or '-'}; "
         f"stage6_tuning_full_band={tuning_full_band}; "
         f"stage6_tuning_rows_above_threshold={tuning_rows_above_threshold}; "
@@ -518,14 +568,22 @@ def _latest_nightly_signal(
     else:
         status = "blocked"
         impact = "critical"
-        status_line = (
-            "nightly still crashes before the gate layer; preserve the old import fix path and keep the stage2 writer path reproducible "
-            "until the smoke run reaches downstream gates."
+        status_line = gate_packet_status_line or (
+            f"nightly is blocked at `{gate_packet_reentry_stage or latest_failed_stage or 'unknown'}` before the stage6 gate; "
+            "stage6 execute/probe packets remain supporting evidence only until the canonical top-level summary is green."
         )
         next_required_action = (
-            "Stabilize nightly in two passes: first, preserve the stage1 import/bootstrap fix path so the old "
-            "`ModuleNotFoundError: core` regression stays dead; second, turn the current stage2 trajectory-generation "
-            "failure into a reproducible targeted retry surface with a claim-safe pass condition before treating nightly as commercial-grade."
+            (
+                gate_packet_reentry_action
+                if gate_packet_reentry_action
+                else (
+                    f"Recover `{gate_packet_reentry_stage or latest_failed_stage or 'the upstream nightly stage'}` in the "
+                    "canonical top-level nightly and rerun until the run reaches stage6 or reports pass=true."
+                )
+            )
+            + f" Use `{gate_packet_reentry_evidence_artifact}` as the stage reentry evidence while the stale "
+            "top-level summary remains the promotion blocker; "
+            "do not clear the commercialization queue from downstream execute/probe evidence alone."
             + (
                 " "
                 + (
@@ -661,8 +719,12 @@ def _wetlab_signal(
         f"selected_allatom_wetlab_gate_pass={dashboard.get('selected_allatom_wetlab_gate_pass', False)}"
     )
     if readiness_summary:
+        readiness_status_line = _text(readiness_summary.get("status_line"))
         source_signal = (
-            f"{_text(readiness_summary.get('status_line')) or source_signal}; "
+            f"{readiness_status_line}; {source_signal}; "
+            if readiness_status_line
+            else f"{source_signal}; "
+        ) + (
             f"blocked_row_count={readiness_summary.get('blocked_count', readiness_summary.get('blocked_row_count', 0))}; "
             f"partial_row_count={readiness_summary.get('partial_count', readiness_summary.get('partial_row_count', 0))}; "
             f"ready_row_count={readiness_summary.get('ready_count', readiness_summary.get('ready_row_count', 0))}"
@@ -708,6 +770,22 @@ def _wetlab_signal(
     ready_readiness = int(
         readiness_summary.get("ready_count", readiness_summary.get("ready_row_count", 0)) or 0
     )
+    selected_allatom_gate_failed = (
+        dashboard.get("selected_allatom_wetlab_gate_pass") is False
+        or _int(selected_allatom_summary.get("hard_block_count")) > 0
+        or _int(selected_allatom_summary.get("missing_metric_count")) > 0
+    )
+    execution_lane_green = (
+        readiness_summary
+        and blocked_readiness == 0
+        and partial_readiness == 0
+        and ready_readiness > 0
+        and watch_gap_count == 0
+        and not selected_allatom_gate_failed
+    )
+    active_wetlab_blocker = (
+        blocked_readiness > 0 or watch_gap_count > 0 or selected_allatom_gate_failed
+    )
     return {
         "priority_rank": 3,
         "blocker_id": "wetlab_execution_readiness",
@@ -715,11 +793,11 @@ def _wetlab_signal(
         "blocker_kind": "ops_validation",
         "status": (
             "blocked"
-            if blocked_readiness > 0
+            if active_wetlab_blocker
             else "partial"
             if partial_readiness > 0
             else "keep_green"
-            if readiness_summary and ready_readiness > 0
+            if execution_lane_green
             else "blocked"
         ),
         "commercialization_impact": "high",
@@ -890,14 +968,16 @@ def build_payload(
         nightly_execute_summary = dict(nightly_execute_payload.get("summary", {}) or {})
     downstream_rerun_execute_status_artifact = _text(
         nightly_execute_summary.get("execute_status_json_artifact")
-    ) or _text(nightly_downstream_rerun_summary.get("dry_run_status_json_artifact"))
+    )
     downstream_rerun_execute_status_payload = (
         _maybe_load_json(downstream_rerun_execute_status_artifact) if downstream_rerun_execute_status_artifact else {}
     )
     downstream_rerun_execute_pass = bool(
         nightly_execute_summary.get(
             "execute_payload_pass",
-            downstream_rerun_execute_status_payload.get("pass", False),
+            downstream_rerun_execute_status_payload.get("pass", False)
+            if downstream_rerun_execute_status_artifact
+            else False,
         )
     )
     rows = [
@@ -928,8 +1008,10 @@ def build_payload(
         _transporter_signal(negative_queue_payload, gap_payload),
     ]
     rows.sort(key=lambda row: int(row["priority_rank"]))
-    top_row = rows[0] if rows else {}
     rows_by_id = {row["blocker_id"]: row for row in rows}
+    actionable_rows = [row for row in rows if row["status"] in {"blocked", "partial"}]
+    parked_rows = [row for row in rows if row["status"] == "parked"]
+    top_row = (actionable_rows or parked_rows or rows or [{}])[0]
     blocked_count = sum(1 for row in rows if row["status"] == "blocked")
     partial_count = sum(1 for row in rows if row["status"] == "partial")
     keep_green_count = sum(1 for row in rows if row["status"] == "keep_green")
@@ -955,11 +1037,17 @@ def build_payload(
     nightly_promotion_projected_gate_pass = bool(nightly_promotion_summary.get("projected_gate_pass", False))
     nightly_gate_metric = _text(nightly_gate_summary.get("primary_gate_metric"))
     nightly_gate_delta = _text(nightly_gate_summary.get("primary_gate_delta"))
+    nightly_gate_reentry_stage = _text(nightly_gate_summary.get("reentry_blocker_stage"))
+    nightly_gate_reentry_reason = _text(nightly_gate_summary.get("reentry_reason"))
+    nightly_gate_reentry_action = _text(nightly_gate_summary.get("reentry_action"))
+    nightly_gate_reentry_evidence_artifact = _text(nightly_gate_summary.get("reentry_evidence_artifact"))
     viewer_phrase = (
         "keep the viewer mesh-backed compare-pane proof green, recover "
         if viewer_keep_green
         else "close the viewer mesh/canvas gap, recover "
     )
+    top_blocker_id = _text(top_row.get("blocker_id"))
+    top_status = _text(top_row.get("status"))
     next_required_step = (
         (
             "Raise engine commercialization first: keep the recovered nightly writer/import path green, use "
@@ -1014,12 +1102,31 @@ def build_payload(
             + "wetlab execution readiness, keep refresh reproducibility green, and leave transporter negative-evidence "
             "mining parked as a science blocker until the local engine surfaces are more trustworthy."
         )
-        if _text(top_row.get("blocker_id")) == "nightly_reliability" and _text(top_row.get("status")) == "partial"
+        if top_blocker_id == "nightly_reliability" and top_status == "partial"
         else (
-            "Raise engine commercialization first: fix nightly reliability, "
+            "Raise engine commercialization next: nightly and viewer are keep-green; recover wetlab execution readiness "
+            f"via `{_text(wetlab_row.get('source_artifact')) or DEFAULT_WETLAB_READINESS_JSON}`"
+            + (f" ({wetlab_status_line}). " if wetlab_status_line else ". ")
+            + "Keep refresh reproducibility green and leave transporter negative-evidence mining parked until the local "
+            "engine surfaces are trustworthy enough for delivery."
+        )
+        if top_blocker_id == "wetlab_execution_readiness"
+        else (
+            "Raise engine commercialization first: fix nightly reliability"
+            + (
+                f" at `{nightly_gate_reentry_stage}` using `{nightly_gate_reentry_evidence_artifact}` as reentry evidence, "
+                if nightly_gate_reentry_stage
+                else ", "
+            )
             + viewer_phrase
             + "wetlab execution readiness, keep refresh reproducibility green, and leave transporter negative-evidence "
             "mining parked as a science blocker until the local engine surfaces are more trustworthy."
+        )
+        if top_blocker_id == "nightly_reliability"
+        else (
+            "Raise engine commercialization next: "
+            f"`{top_blocker_id or 'unknown'}` is `{top_status or 'unknown'}`; "
+            f"{_text(top_row.get('next_required_action')) or 'clear the highest active blocker while keeping green lanes stable.'}"
         )
     )
     summary = {
@@ -1029,8 +1136,8 @@ def build_payload(
         "partial_count": partial_count,
         "keep_green_count": keep_green_count,
         "parked_science_blocker_count": parked_count,
-        "top_priority_id": _text(top_row.get("blocker_id")),
-        "top_priority_status": _text(top_row.get("status")),
+        "top_priority_id": top_blocker_id,
+        "top_priority_status": top_status,
         "engine_blocker_count": sum(1 for row in rows if row["blocker_domain"] == "engine"),
         "science_blocker_count": sum(1 for row in rows if row["blocker_domain"] == "science"),
         "nightly_blocker_artifact": _text(rows[0]["source_artifact"]) if rows else "",
@@ -1051,6 +1158,14 @@ def build_payload(
         "nightly_gate_recent_transition_line": _text(nightly_gate_summary.get("recent_transition_line")),
         "nightly_gate_recent_stage6_fail_count": _int(nightly_gate_summary.get("recent_stage6_fail_count")),
         "nightly_gate_next_required_step": _text(nightly_gate_summary.get("next_required_step")),
+        "nightly_top_level_reentry_stage": nightly_gate_reentry_stage,
+        "nightly_top_level_reentry_reason": nightly_gate_reentry_reason,
+        "nightly_top_level_reentry_action": nightly_gate_reentry_action,
+        "nightly_top_level_reentry_evidence_artifact": nightly_gate_reentry_evidence_artifact,
+        "nightly_downstream_execute_supporting_only": (
+            bool(nightly_execute_summary.get("execute_payload_pass", False))
+            and not bool(latest_nightly_payload.get("pass", False))
+        ),
         "nightly_stage6_tuning_ready": bool(nightly_tuning_summary),
         "nightly_stage6_tuning_artifact": nightly_tuning_artifact,
         "nightly_stage6_tuning_primary_focus_row_key": _text(nightly_tuning_summary.get("primary_focus_row_key")),
@@ -1248,6 +1363,10 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- nightly_gate_burndown_artifact: `{summary['nightly_gate_burndown_artifact'] or '-'}`",
         f"- nightly_gate_primary_metric: `{summary['nightly_gate_primary_metric'] or '-'}`",
         f"- nightly_gate_primary_delta: `{summary['nightly_gate_primary_delta'] or '-'}`",
+        f"- nightly_top_level_reentry_stage: `{summary['nightly_top_level_reentry_stage'] or '-'}`",
+        f"- nightly_top_level_reentry_reason: `{summary['nightly_top_level_reentry_reason'] or '-'}`",
+        f"- nightly_top_level_reentry_evidence_artifact: `{summary['nightly_top_level_reentry_evidence_artifact'] or '-'}`",
+        f"- nightly_downstream_execute_supporting_only: `{summary['nightly_downstream_execute_supporting_only']}`",
         f"- nightly_stage6_tuning_artifact: `{summary['nightly_stage6_tuning_artifact'] or '-'}`",
         f"- nightly_stage6_tuning_primary_focus_row_key: `{summary['nightly_stage6_tuning_primary_focus_row_key'] or '-'}`",
         f"- nightly_stage6_followup_artifact: `{summary['nightly_stage6_followup_artifact'] or '-'}`",

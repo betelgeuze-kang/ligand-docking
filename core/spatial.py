@@ -242,7 +242,13 @@ class GridSpatialHash(nn.Module):
                 B, N, K = nb_idx.shape
                 # 인덱스를 원래 순서로 변환
                 valid = nb_idx >= 0
-                nb_idx_orig = torch.where(valid, inv_perm.unsqueeze(-1).expand_as(nb_idx).gather(1, nb_idx.clamp(min=0)), nb_idx)
+                nb_idx_orig = torch.where(
+                    valid,
+                    sort_indices.unsqueeze(-1)
+                    .expand_as(nb_idx)
+                    .gather(1, nb_idx.clamp(min=0)),
+                    nb_idx,
+                )
                 # 행도 원래 순서로 재배열
                 nb_idx_reorder = torch.zeros_like(nb_idx_orig)
                 nb_dist_reorder = torch.zeros_like(nb_dist)
@@ -615,4 +621,3 @@ class MixedPrecisionNeighborConfig:
         dr = dr - box_h * torch.round(dr / box_h)
         r2 = (dr * dr).sum(dim=-1)
         return r2.float()
-

@@ -1308,6 +1308,11 @@ def build_payload(
     selected_allatom_best_mean_min_distance_A = float(
         bsrhs.get("selected_allatom_best_mean_min_distance_A", 0.0) or 0.0
     )
+    selected_allatom_metric_source = (
+        "retry_handoff_summary.selected_allatom_best_mean_min_distance_A"
+        if _has_value(bsrhs, "selected_allatom_best_mean_min_distance_A")
+        else ""
+    )
     selected_allatom_promoted_candidate_count = int(
         bsrhs.get("selected_allatom_promoted_candidate_count", 0) or 0
     )
@@ -1854,6 +1859,15 @@ def build_payload(
         selected_allatom_canonical.get("hybrid_policy", ""),
         "canonical_scores_source_only__translation_shortlist_labeled_fallback",
     )
+    canonical_best_mean_min_distance_A = _safe_float(
+        selected_allatom_canonical.get("best_mean_min_distance_A")
+    )
+    if canonical_best_mean_min_distance_A is not None and canonical_best_mean_min_distance_A > 0.0:
+        selected_allatom_best_mean_min_distance_A = canonical_best_mean_min_distance_A
+        selected_allatom_metric_source = _text(
+            selected_allatom_canonical.get("best_mean_min_distance_source", ""),
+            selected_allatom_metric_source,
+        )
     selected_allatom_raw_claim_requirement_mode = _text(
         selected_allatom_canonical.get("raw_claim_requirement_mode", ""),
         selected_allatom_raw_claim_requirement_mode,
@@ -2589,6 +2603,7 @@ def build_payload(
             "selected_allatom_best_compound_name_human_readable": selected_allatom_best_compound_name_human_readable,
             "selected_allatom_best_compound_name_resolution": selected_allatom_best_compound_name_resolution,
             "selected_allatom_best_mean_min_distance_A": selected_allatom_best_mean_min_distance_A,
+            "selected_allatom_metric_source": selected_allatom_metric_source,
             "selected_allatom_promoted_candidate_count": selected_allatom_promoted_candidate_count,
             "selected_allatom_under_2p5_candidate_count": selected_allatom_under_2p5_candidate_count,
             "selected_allatom_near_candidate_count": selected_allatom_near_candidate_count,

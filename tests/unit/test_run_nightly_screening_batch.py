@@ -403,6 +403,7 @@ def test_nightly_batch_claim_initial_requirement_blocks_pass(monkeypatch, tmp_pa
             "runs/openmm_2bead_strict_2026-02-17_candidate_fullrun_summary.json",
             "--accuracy-external-csv",
             "runs/openmm_2bead_strict_2026-02-17_candidate_fullrun_accuracy_external.csv",
+            "--no-preflight-validate-inputs",
         ]
     )
     summary = nightly.run_batch(args)
@@ -454,6 +455,7 @@ def test_nightly_batch_measured_proxy_requirement_blocks_pass(monkeypatch, tmp_p
             "--accuracy-external-csv",
             "runs/openmm_2bead_strict_2026-02-17_candidate_fullrun_accuracy_external.csv",
             "--run-ood-measured20",
+            "--no-preflight-validate-inputs",
         ]
     )
     summary = nightly.run_batch(args)
@@ -496,6 +498,7 @@ def test_nightly_batch_dashboard_metrics_requirement_blocks_pass(monkeypatch, tm
             "runs/openmm_2bead_strict_2026-02-17_candidate_fullrun_summary.json",
             "--accuracy-external-csv",
             "runs/openmm_2bead_strict_2026-02-17_candidate_fullrun_accuracy_external.csv",
+            "--no-preflight-validate-inputs",
         ]
     )
     summary = nightly.run_batch(args)

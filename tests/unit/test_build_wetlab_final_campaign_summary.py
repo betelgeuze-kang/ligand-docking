@@ -6,7 +6,8 @@ from tools import build_wetlab_final_campaign_summary as mod
 from tools.wetlab_allatom_refinement_utils import compute_commercial_grade_schema_v1
 
 
-def test_build_wetlab_final_campaign_summary_rolls_up_chains() -> None:
+def test_build_wetlab_final_campaign_summary_rolls_up_chains(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(mod, "maybe_load_json", lambda _: None)
     terminal_review = {
         "summary": {"campaign_terminal_state": "complete", "chain_count": 4},
         "rows": [
@@ -192,6 +193,18 @@ def test_build_wetlab_final_campaign_summary_rolls_up_chains() -> None:
             "selected_allatom_wetlab_final_gate_pass": False,
             "selected_allatom_claim_gate_available": True,
             "selected_allatom_claim_ready_for_allatom": False,
+            "selected_allatom_commercial_schema_version": "wetlab_commercial_grade_v1",
+            "selected_allatom_commercial_reported": True,
+            "selected_allatom_commercial_hard_gate_reported": True,
+            "selected_allatom_commercial_hard_gate_pass_v1": False,
+            "selected_allatom_commercial_overall_score_v1": 44.6,
+            "selected_allatom_commercial_risk_bucket_v1": "critical",
+            "selected_allatom_commercial_decision_class_v1": "commercial_recycle_or_rework",
+            "selected_allatom_commercial_primary_upgrade_actions_v1": [
+                "tighten_pose_geometry_under_strict_gate",
+                "raise_trajectory_stability",
+                "increase_trajectory_support",
+            ],
             "selected_allatom_best_compound_name": "Cathepsin Lead",
             "selected_allatom_best_compound_name_human_readable": "Cathepsin Lead",
             "selected_allatom_best_compound_name_resolution": "human_readable",
@@ -610,6 +623,56 @@ def test_build_wetlab_final_campaign_summary_selected_allatom_additive_surface_c
     assert summary["selected_allatom_translation_summary"].startswith(
         "Translation/shortlist fallback (inferred from partial upstream; three_bead_to_allatom_translation_v1): status fail"
     )
+
+
+def test_build_wetlab_final_campaign_summary_refreshes_selected_allatom_metric_from_review(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    empty = {"summary": {}}
+
+    def fake_review_packet_summary(surface_label: str) -> dict[str, object]:
+        assert surface_label == "tcruzi_pde_allatom_review_packet"
+        return {
+            "target_id": "T. cruzi PDE",
+            "surface_label": "tcruzi_pde_allatom_review_packet",
+            "best_mean_min_distance_A": 3.375,
+            "selected_threshold_A": 2.5,
+            "translation_gate_focus_status": "fail",
+            "commercial_hard_gate_pass_v2": False,
+            "commercial_hard_gate_failed_metrics_v2": ["mean_min_distance_A"],
+        }
+
+    monkeypatch.setattr(mod, "_selected_allatom_review_packet_summary", fake_review_packet_summary)
+
+    payload = mod.build_payload(
+        {"summary": {"campaign_terminal_state": "complete", "chain_count": 1}, "rows": []},
+        empty,
+        empty,
+        empty,
+        empty,
+        empty,
+        {"summary": {"status": "wetlab_broad_screen_queue_ready", "library_size": 1, "target_count": 1, "total_queue_rows": 1}},
+        {"summary": {"status": "wetlab_broad_screen_bridge_ready", "library_size": 1, "final_packet_shape": "top-3 repurposing + top-3 novelty"}},
+        broad_screen_retry_handoff_summary={
+            "summary": {
+                "status": "wetlab_retry_handoff_summary_ready",
+                "selected_allatom_target_id": "T. cruzi PDE",
+                "selected_allatom_surface_label": "tcruzi_pde_allatom_review_packet",
+                "selected_allatom_selected_threshold_A": 2.5,
+                "selected_allatom_packet_ready_for_operator_review": True,
+                "selected_allatom_wetlab_final_gate_pass": False,
+                "selected_allatom_claim_gate_available": False,
+                "selected_allatom_claim_ready_for_allatom": False,
+                "selected_allatom_best_mean_min_distance_A": 3.705,
+                "selected_allatom_next_required_step": "translation_gate=fail",
+            }
+        },
+    )
+
+    summary = payload["summary"]
+    assert summary["selected_allatom_best_mean_min_distance_A"] == 3.375
+    assert summary["selected_allatom_metric_source"] == "review_packet_summary.best_mean_min_distance_A"
+    assert summary["selected_allatom_final_gate_pass"] is False
 
 
 def test_build_wetlab_final_campaign_summary_prefers_selected_allatom_canonical_resolver(monkeypatch) -> None:

@@ -4,6 +4,12 @@
 - **목적:** 내부 연구진이 파이프라인에서 생성된 동역학 궤적(Trajectory) 파일과 리간드 결합 상태를 브라우저 상에서 인터랙티브하게 확인하고, 출판/보고서용(AlphaFold 수준)의 고해상도 단백질 이미지를 즉시 추출할 수 있는 독립형 프론트엔드 뷰어 구축.
 - **포지셔닝:** 기존 Python/HTML 생성 코드(`visualize_experiment_dashboard.py`)와 ChimeraX 오프라인 렌더링 스크립트를 대체하거나 보완하는 현대적 Single Page Application(SPA).
 
+### 1.1. DESIGN.md 운영 원칙
+- `DESIGN.md`는 viewer/local-delivery evidence UI의 source of truth다. 토큰, 계층, 톤, 여백, 상태 표현은 먼저 `DESIGN.md`에 기록하고 그 다음 `viewer/` source에 반영한다.
+- downstream generated artifact를 직접 꾸미지 않는다. `viewer/index.html`, `viewer/app.js`, `viewer/style.css` 또는 생성 스크립트를 고쳐서 다시 생성하고, 생성된 output은 결과물로만 취급한다.
+- 화면이 어긋나 보이면 generated output만 patch하지 말고 generator/viewer source를 수정한다.
+- P0 gate, wetlab claim gate, `mean_min_distance_A <= 2.500` 같은 scientific thresholds는 디자인으로 완화하지 않는다. 디자인은 evidence clarity를 높이는 보조층일 뿐이다.
+
 ---
 
 ## 2. 핵심 구현 스펙 및 요구사항
@@ -52,6 +58,12 @@
 ---
 
 ## 3. 화면 구성 제안 (UI Layout)
+
+### 3.1. Evidence Screen Hierarchy
+- local-delivery/nightly/wetlab evidence 화면은 `hero -> status strip -> workflow -> evidence sections` 순서로 유지한다.
+- `hero`는 핵심 verdict와 대상 요약을 보여주는 상단 카드이며, `status strip`은 실행 상태와 gate 상태를 압축한 칩 행이다.
+- `workflow`는 compare, trajectory, next-action 흐름처럼 사용자가 다음에 무엇을 봐야 하는지 안내하는 조작 영역이다.
+- `evidence sections`는 contact, translation, blockers, blocker surface처럼 근거를 길게 펼쳐 보여주는 상세 영역이다.
 
 1. **좌측 패널 (제어 계기판):**
    - 로컬 파일 트리 및 업로드 인터페이스 (`PDB/SDF` 로드)

@@ -1,8 +1,8 @@
 import json
 
-import torch
-
 from benchmark import accuracy_bench as ab
+
+import torch
 
 
 def test_to_refinement_kwargs_from_dt():

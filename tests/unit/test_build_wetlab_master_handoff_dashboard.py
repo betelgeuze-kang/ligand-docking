@@ -466,6 +466,10 @@ def test_build_wetlab_master_handoff_dashboard_surfaces_selected_allatom_v2_tran
         expected_shortlist_tier="defer",
         expected_recommended_lane="defer_expensive_lane",
     )
+    (runs / "wetlab_tcruzi_pde_allatom_review_packet_current.json").write_text(
+        json.dumps({"summary": packet_summary}),
+        encoding="utf-8",
+    )
 
     selected_next_step = (
         "Review the promoted PDE pseudo all-atom top-4 packet manually only, keep the default lane closed, "
@@ -580,6 +584,8 @@ def test_build_wetlab_master_handoff_dashboard_surfaces_selected_allatom_v2_tran
     assert "translation gate focus is fail" in summary["selected_allatom_next_required_step"]
     assert "shortlist tier is defer" in summary["selected_allatom_next_required_step"]
     assert "recommended next lane is defer_expensive_lane" in summary["selected_allatom_next_required_step"]
+    assert summary["selected_allatom_best_mean_min_distance_A"] == packet_summary["best_mean_min_distance_A"]
+    assert summary["selected_allatom_metric_source"] == "review_packet_summary.best_mean_min_distance_A"
     assert summary["selected_allatom_visual_bundle_ready"] is True
     assert summary["selected_allatom_visual_availability_rollup"] == (
         "top-k 4 | figures 2 | movie plans 4 | binding-event candidates 4"
@@ -731,7 +737,9 @@ def test_build_wetlab_master_handoff_dashboard_keeps_pde_final_gate_data_separat
         expected_risk_bucket="critical",
         expected_primary_upgrade_actions=[
             "tighten_pose_geometry_under_strict_gate",
+            "strengthen_binding_energy_proxy",
             "raise_trajectory_stability",
+            "reduce_mmpbsa_uncertainty",
             "increase_trajectory_support",
         ],
     )

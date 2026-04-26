@@ -69,7 +69,100 @@ class TestMortonPresortIntegration:
             identity = torch.arange(15)
             reconstructed = inv_perm[b][sort_idx[b]]
             # 아이디 일부분이 아닌 전체 복원 확인
-            assert reconstructed.shape == identity.shape
+            assert torch.equal(reconstructed.cpu(), identity)
+
+    def test_presort_preserves_neighbor_sets_by_original_atom_id(self):
+        """presort on/off는 원래 atom id 기준 neighbor set이 같아야 함."""
+        coords = torch.tensor(
+            [
+                [
+                    [8.0, 8.0, 8.0],
+                    [1.0, 1.0, 1.0],
+                    [1.6, 1.0, 1.0],
+                    [2.0, 1.0, 1.0],
+                    [10.0, 10.0, 10.0],
+                    [10.5, 10.0, 10.0],
+                ],
+                [
+                    [11.0, 1.0, 1.0],
+                    [3.2, 3.0, 3.0],
+                    [2.6, 3.0, 3.0],
+                    [2.0, 3.0, 3.0],
+                    [12.1, 1.0, 1.0],
+                    [12.7, 1.0, 1.0],
+                ],
+            ],
+            dtype=torch.float32,
+        )
+        sorter = MortonSorter([16.0, 16.0, 16.0], "cpu")
+        _, sort_indices = sorter.sort(coords)
+        assert any(
+            not torch.equal(sort_indices[b], torch.arange(coords.shape[1]))
+            for b in range(coords.shape[0])
+        )
+
+        sh_on = GridSpatialHash(
+            [16.0, 16.0, 16.0],
+            1.1,
+            "cpu",
+            skin=0.0,
+            max_neighbors=8,
+            use_morton_presort=True,
+        )
+        sh_off = GridSpatialHash(
+            [16.0, 16.0, 16.0],
+            1.1,
+            "cpu",
+            skin=0.0,
+            max_neighbors=8,
+            use_morton_presort=False,
+        )
+        nb_on = sh_on.get_neighbor_data(coords, force_rebuild=True)
+        nb_off = sh_off.get_neighbor_data(coords, force_rebuild=True)
+
+        for b in range(coords.shape[0]):
+            for atom_id in range(coords.shape[1]):
+                on_neighbors = set(nb_on[0][b, atom_id][nb_on[2][b, atom_id]].tolist())
+                off_neighbors = set(nb_off[0][b, atom_id][nb_off[2][b, atom_id]].tolist())
+                assert on_neighbors == off_neighbors
+
+    def test_presort_does_not_emit_self_neighbor_indices(self):
+        """presort on의 유효 neighbor index에는 자기 atom id가 없어야 함."""
+        coords = torch.tensor(
+            [
+                [
+                    [8.0, 8.0, 8.0],
+                    [1.0, 1.0, 1.0],
+                    [1.6, 1.0, 1.0],
+                    [2.0, 1.0, 1.0],
+                    [10.0, 10.0, 10.0],
+                    [10.5, 10.0, 10.0],
+                ],
+                [
+                    [11.0, 1.0, 1.0],
+                    [3.2, 3.0, 3.0],
+                    [2.6, 3.0, 3.0],
+                    [2.0, 3.0, 3.0],
+                    [12.1, 1.0, 1.0],
+                    [12.7, 1.0, 1.0],
+                ],
+            ],
+            dtype=torch.float32,
+        )
+        sh = GridSpatialHash(
+            [16.0, 16.0, 16.0],
+            1.1,
+            "cpu",
+            skin=0.0,
+            max_neighbors=8,
+            use_morton_presort=True,
+        )
+        nb_idx, _, nb_mask = sh.get_neighbor_data(coords, force_rebuild=True)
+
+        for b in range(coords.shape[0]):
+            for atom_id in range(coords.shape[1]):
+                valid_neighbors = nb_idx[b, atom_id][nb_mask[b, atom_id]]
+                assert atom_id not in valid_neighbors.tolist()
 
 
 class TestMortonSorterUnit:

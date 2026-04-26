@@ -1,12 +1,62 @@
 import argparse
 import json
+import os
 from pathlib import Path
+import subprocess
+import sys
 
 import numpy as np
 import pandas as pd
-import torch
 
 from benchmark import accuracy_bench as acc
+
+import torch
+
+
+def test_accuracy_bench_import_defaults_hipblaslt_preference():
+    repo_root = Path(__file__).resolve().parents[2]
+    env = os.environ.copy()
+    env.pop("TORCH_BLAS_PREFER_HIPBLASLT", None)
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import os; "
+                "import benchmark.accuracy_bench; "
+                "print(os.environ.get('TORCH_BLAS_PREFER_HIPBLASLT'))"
+            ),
+        ],
+        cwd=repo_root,
+        env=env,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert result.stdout.strip() == "0"
+
+
+def test_accuracy_bench_import_respects_existing_hipblaslt_preference():
+    repo_root = Path(__file__).resolve().parents[2]
+    env = os.environ.copy()
+    env["TORCH_BLAS_PREFER_HIPBLASLT"] = "1"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import os; "
+                "import benchmark.accuracy_bench; "
+                "print(os.environ.get('TORCH_BLAS_PREFER_HIPBLASLT'))"
+            ),
+        ],
+        cwd=repo_root,
+        env=env,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert result.stdout.strip() == "1"
 
 
 def test_calculate_rmsd_aligned_removes_rigid_transform():
