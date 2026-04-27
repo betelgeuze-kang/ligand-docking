@@ -462,7 +462,7 @@ def test_build_wetlab_master_handoff_dashboard_surfaces_selected_allatom_v2_tran
     packet_summary = _assert_selected_allatom_commercial_v2_translation_contract(
         "wetlab_tcruzi_pde_allatom_review_packet_current.json",
         expected_target_id="T. cruzi PDE",
-        expected_translation_status="fail",
+        expected_translation_status="borderline",
         expected_shortlist_tier="defer",
         expected_recommended_lane="defer_expensive_lane",
     )
@@ -498,7 +498,7 @@ def test_build_wetlab_master_handoff_dashboard_surfaces_selected_allatom_v2_tran
             "selected_allatom_selected_threshold_A": 2.5,
             "selected_allatom_packet_scope": "partner_operator_allatom_rescue_review",
             "selected_allatom_packet_ready_for_operator_review": True,
-            "selected_allatom_wetlab_gate_pass": False,
+            "selected_allatom_wetlab_gate_pass": packet_summary["wetlab_gate_pass"],
             "selected_allatom_wetlab_final_gate_pass": False,
             "selected_allatom_claim_gate_available": False,
             "selected_allatom_claim_ready_for_allatom": False,
@@ -518,10 +518,10 @@ def test_build_wetlab_master_handoff_dashboard_surfaces_selected_allatom_v2_tran
             ],
             "selected_allatom_best_compound_name": "chembl_cache_e6069e85050b",
             "selected_allatom_best_compound_name_resolution": "cache_placeholder",
-            "selected_allatom_best_mean_min_distance_A": 3.705,
+            "selected_allatom_best_mean_min_distance_A": packet_summary["best_mean_min_distance_A"],
             "selected_allatom_promoted_candidate_count": 4,
-            "selected_allatom_under_2p5_candidate_count": 0,
-            "selected_allatom_near_candidate_count": 2,
+            "selected_allatom_under_2p5_candidate_count": packet_summary["under_2p5_candidate_count"],
+            "selected_allatom_near_candidate_count": packet_summary["near_candidate_count"],
             "selected_allatom_next_required_step": selected_next_step,
         }
     }
@@ -576,12 +576,12 @@ def test_build_wetlab_master_handoff_dashboard_surfaces_selected_allatom_v2_tran
     assert summary["selected_allatom_effective_actionability_claim_requirement_mode"] == "not_applicable"
     assert summary["selected_allatom_effective_blocking_order"] == "hard_block_first"
     assert summary["selected_allatom_effective_primary_blocking_domain"] == "translation_commercial_hard_gate"
-    assert "recompute_mean_min_distance_A" in summary["selected_allatom_action_recipe_codes"]
+    assert "recompute_binding_energy_proxy" in summary["selected_allatom_action_recipe_codes"]
     assert "defer_expensive_lane" in summary["selected_allatom_action_recipe_codes"]
     assert "blocking order hard_block_first" in summary["selected_allatom_claim_actionability_split_summary"]
-    assert "recompute_mean_min_distance_A" in summary["selected_allatom_actionability_required_calculations_text"]
+    assert "recompute_binding_energy_proxy" in summary["selected_allatom_actionability_required_calculations_text"]
     assert "Actionability:" in summary["selected_allatom_human_summary"]
-    assert "translation gate focus is fail" in summary["selected_allatom_next_required_step"]
+    assert "translation gate focus is borderline" in summary["selected_allatom_next_required_step"]
     assert "shortlist tier is defer" in summary["selected_allatom_next_required_step"]
     assert "recommended next lane is defer_expensive_lane" in summary["selected_allatom_next_required_step"]
     assert summary["selected_allatom_best_mean_min_distance_A"] == packet_summary["best_mean_min_distance_A"]
@@ -597,7 +597,7 @@ def test_build_wetlab_master_handoff_dashboard_surfaces_selected_allatom_v2_tran
 
     focus_row = next(row for row in payload["rows"] if row["surface"] == "broad_screen_selected_allatom_focus")
     assert "commercial grade v2" in focus_row["one_line_summary"].lower()
-    assert "translation gate focus is fail" in focus_row["one_line_summary"]
+    assert "translation gate focus is borderline" in focus_row["one_line_summary"]
     assert "shortlist tier is defer" in focus_row["one_line_summary"]
     assert "recommended next lane is defer_expensive_lane" in focus_row["one_line_summary"]
     assert packet_summary["recommended_next_expensive_lane_reason"] in focus_row["one_line_summary"]
@@ -605,7 +605,7 @@ def test_build_wetlab_master_handoff_dashboard_surfaces_selected_allatom_v2_tran
     assert "Media: dashboard ready | figure ready | movie scripts 0/4 | movie mp4 0/4 | binding-event clips 0/4." in focus_row["one_line_summary"]
     actionability_row = next(row for row in payload["rows"] if row["surface"] == "broad_screen_selected_allatom_actionability")
     assert actionability_row["status"] == "hard_blocked"
-    assert "recompute_mean_min_distance_A" in actionability_row["one_line_summary"]
+    assert "recompute_binding_energy_proxy" in actionability_row["one_line_summary"]
     assert "raw claim semi_hard" in actionability_row["one_line_summary"]
     assert "blocking order hard_block_first" in actionability_row["one_line_summary"]
 

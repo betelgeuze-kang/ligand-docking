@@ -125,6 +125,14 @@ def _review_metric_override(
     }
 
 
+def _metric_override_passes(metric_override: dict[str, str] | None) -> bool:
+    if not metric_override:
+        return False
+    value_num = _float(metric_override.get("value"))
+    threshold_num = _float(metric_override.get("threshold"))
+    return bool(value_num is not None and threshold_num is not None and value_num <= threshold_num)
+
+
 def _operational_bucket(code: str, category: str, severity: str) -> str:
     if code == "recompute_mean_min_distance_A":
         return "geometry_hard_block"
@@ -209,10 +217,14 @@ def build_payload(
     strict_candidate_count = _int(final_summary.get("selected_allatom_under_2p5_candidate_count"))
     near_candidate_count = _int(final_summary.get("selected_allatom_near_candidate_count"))
     metric_override = _review_metric_override(focus_artifact, selected_allatom_review_payload)
+    metric_override_passes = _metric_override_passes(metric_override)
 
     rows: list[dict[str, Any]] = []
-    for rank, action_row in enumerate(action_rows, start=1):
+    for action_row in action_rows:
         code = _text(action_row.get("code")) or _text(action_row.get("calc_action"))
+        if code == "recompute_mean_min_distance_A" and metric_override_passes:
+            continue
+        rank = len(rows) + 1
         severity = _text(action_row.get("severity"))
         category = _text(action_row.get("category"))
         value = _text(action_row.get("value"))
@@ -264,7 +276,7 @@ def build_payload(
         review_final_gate_pass = _bool_or_none(review.get("wetlab_final_gate_pass"))
         review_claim_gate_available = _bool_or_none(review.get("claim_gate_available"))
         if review_wetlab_gate_pass is not None:
-            wetlab_gate_pass = wetlab_gate_pass and review_wetlab_gate_pass
+            wetlab_gate_pass = review_wetlab_gate_pass
         if review_claim_gate_available is False:
             claim_gate_available = False
             final_gate_pass = False

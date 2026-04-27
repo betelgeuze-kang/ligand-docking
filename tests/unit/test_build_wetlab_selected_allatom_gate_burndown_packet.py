@@ -149,3 +149,33 @@ def test_review_packet_metric_refreshes_primary_blocker_without_gate_promotion()
     assert rows["recompute_mean_min_distance_A"]["value"] == "3.375"
     assert rows["recompute_mean_min_distance_A"]["threshold"] == "2.500"
     assert rows["recompute_mean_min_distance_A"]["delta"] == "0.875"
+
+
+def test_review_packet_strict_metric_clears_stale_geometry_hard_blocker() -> None:
+    payload = mod.build_payload(
+        wetlab_dashboard_payload=_dashboard_payload(),
+        wetlab_final_payload=_final_payload(),
+        selected_allatom_review_payload={
+            "summary": {
+                "target_id": "T. cruzi PDE",
+                "best_ligand_id": "t_cruzi_pde_20_of_20_095609",
+                "best_mean_min_distance_A": 0.672,
+                "selected_threshold_A": 2.5,
+                "under_2p5_candidate_count": 1,
+                "wetlab_gate_pass": True,
+                "wetlab_final_gate_pass": False,
+                "claim_gate_available": False,
+            }
+        },
+    )
+
+    summary = payload["summary"]
+    assert summary["selected_allatom_best_mean_min_distance_A"] == "0.672"
+    assert summary["primary_burndown_code"] == "recompute_claim_gate_required_unavailable"
+    assert summary["hard_block_count"] == 1
+    assert summary["missing_metric_count"] == 1
+    assert summary["selected_allatom_metric_source_kind"] == "selected_allatom_review_packet_summary"
+
+    rows = {row["code"]: row for row in payload["rows"]}
+    assert "recompute_mean_min_distance_A" not in rows
+    assert rows["recompute_claim_gate_required_unavailable"]["burndown_rank"] == 1

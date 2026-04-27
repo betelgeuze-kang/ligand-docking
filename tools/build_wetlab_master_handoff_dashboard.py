@@ -1515,14 +1515,19 @@ def build_payload(
     selected_allatom_wetlab_gate_reported, selected_allatom_wetlab_gate_pass = _resolve_explicit_bool_from_sources(
         [
             (
-                bsrhs,
+                selected_allatom_focus_summary,
                 (),
-                ("selected_allatom_wetlab_gate_pass", "selected_allatom_gate_pass"),
+                ("wetlab_gate_pass", "selected_allatom_wetlab_gate_pass", "selected_allatom_gate_pass"),
             ),
             (
                 bcris,
                 ("selected_allatom_wetlab_gate_reported",),
                 ("selected_allatom_wetlab_gate_pass",),
+            ),
+            (
+                bsrhs,
+                (),
+                ("selected_allatom_wetlab_gate_pass", "selected_allatom_gate_pass"),
             ),
         ]
     )
@@ -2253,6 +2258,33 @@ def build_payload(
             selected_allatom_canonical.get("best_mean_min_distance_source", ""),
             selected_allatom_metric_source,
         )
+    selected_allatom_promoted_candidate_count = _safe_int(
+        _resolve_first_value(
+            [
+                (bcris, "selected_allatom_promoted_candidate_count"),
+                (selected_allatom_focus_summary, "promoted_candidate_count"),
+                (bsrhs, "selected_allatom_promoted_candidate_count"),
+            ]
+        )
+    )
+    selected_allatom_under_2p5_candidate_count = _safe_int(
+        _resolve_first_value(
+            [
+                (bcris, "selected_allatom_under_2p5_candidate_count"),
+                (selected_allatom_focus_summary, "under_2p5_candidate_count"),
+                (bsrhs, "selected_allatom_under_2p5_candidate_count"),
+            ]
+        )
+    )
+    selected_allatom_near_candidate_count = _safe_int(
+        _resolve_first_value(
+            [
+                (bcris, "selected_allatom_near_candidate_count"),
+                (selected_allatom_focus_summary, "near_candidate_count"),
+                (bsrhs, "selected_allatom_near_candidate_count"),
+            ]
+        )
+    )
     selected_allatom_raw_claim_requirement_mode = _text(
         selected_allatom_canonical.get("raw_claim_requirement_mode", ""),
         selected_allatom_raw_claim_requirement_mode,
@@ -2318,6 +2350,13 @@ def build_payload(
         else "",
         selected_allatom_action_recipe["action_recipe_rollup_text"],
     )
+    selected_allatom_effective_required_calculations = _coerce_text_list(
+        selected_allatom_canonical.get("effective_actionability_required_calculations", [])
+    )
+    if not selected_allatom_actionability_required_calculations_text and selected_allatom_effective_required_calculations:
+        selected_allatom_actionability_required_calculations_text = ", ".join(
+            selected_allatom_effective_required_calculations
+        )
     selected_allatom_actionability_status = selected_allatom_effective_actionability_status
     selected_allatom_actionability_claim_requirement_mode = selected_allatom_effective_actionability_claim_requirement_mode
     selected_allatom_actionability_claim_requirement_status = selected_allatom_effective_actionability_claim_requirement_status
@@ -2370,18 +2409,9 @@ def build_payload(
             )
         ).strip(),
         best_mean_min_distance_A=selected_allatom_best_mean_min_distance_A,
-        promoted_candidate_count=int(
-            bsrhs.get("selected_allatom_promoted_candidate_count", bcris.get("selected_allatom_promoted_candidate_count", 0))
-            or 0
-        ),
-        under_2p5_candidate_count=int(
-            bsrhs.get("selected_allatom_under_2p5_candidate_count", bcris.get("selected_allatom_under_2p5_candidate_count", 0))
-            or 0
-        ),
-        near_candidate_count=int(
-            bsrhs.get("selected_allatom_near_candidate_count", bcris.get("selected_allatom_near_candidate_count", 0))
-            or 0
-        ),
+        promoted_candidate_count=selected_allatom_promoted_candidate_count,
+        under_2p5_candidate_count=selected_allatom_under_2p5_candidate_count,
+        near_candidate_count=selected_allatom_near_candidate_count,
     )
     if selected_allatom_commercial_human_signal:
         selected_allatom_human_signal = f"{selected_allatom_human_signal} {selected_allatom_commercial_human_signal}"
@@ -3546,7 +3576,8 @@ def build_payload(
                 selected_allatom_focus_summary.get("selected_allatom_actionability_soft_guidance_reasons", [])
             ),
             "selected_allatom_actionability_required_calculations": _coerce_text_list(
-                selected_allatom_focus_summary.get("selected_allatom_actionability_required_calculations", [])
+                selected_allatom_effective_required_calculations
+                or selected_allatom_focus_summary.get("selected_allatom_actionability_required_calculations", [])
             ),
             "selected_allatom_actionability_action_list": list(
                 selected_allatom_focus_summary.get("selected_allatom_actionability_action_list", []) or []
@@ -3586,15 +3617,9 @@ def build_payload(
             ).strip(),
             "selected_allatom_best_mean_min_distance_A": selected_allatom_best_mean_min_distance_A,
             "selected_allatom_metric_source": selected_allatom_metric_source,
-            "selected_allatom_promoted_candidate_count": int(
-                bsrhs.get("selected_allatom_promoted_candidate_count", bcris.get("selected_allatom_promoted_candidate_count", 0)) or 0
-            ),
-            "selected_allatom_under_2p5_candidate_count": int(
-                bsrhs.get("selected_allatom_under_2p5_candidate_count", bcris.get("selected_allatom_under_2p5_candidate_count", 0)) or 0
-            ),
-            "selected_allatom_near_candidate_count": int(
-                bsrhs.get("selected_allatom_near_candidate_count", bcris.get("selected_allatom_near_candidate_count", 0)) or 0
-            ),
+            "selected_allatom_promoted_candidate_count": selected_allatom_promoted_candidate_count,
+            "selected_allatom_under_2p5_candidate_count": selected_allatom_under_2p5_candidate_count,
+            "selected_allatom_near_candidate_count": selected_allatom_near_candidate_count,
             "selected_allatom_next_required_step": str(
                 bsrhs.get("selected_allatom_next_required_step", bcris.get("selected_allatom_next_required_step", ""))
             ).strip(),

@@ -1981,43 +1981,42 @@ def _selected_allatom_focus_context(
         ]
     )
     commercial_reported, commercial_schema_version, commercial_schema_source = _resolve_named_value_from_specs(
-        [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_schema_version", "allatom_family_focus_commercial_schema_version"))]
-        + [
+        [
             (source["surface_label"], source["summary"], ("commercial_schema_version",))
             for source in candidate_sources
         ]
+        + [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_schema_version", "allatom_family_focus_commercial_schema_version"))]
     )
     commercial_hard_gate_reported, commercial_hard_gate_value, commercial_hard_gate_source = _resolve_named_value_from_specs(
-        [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_hard_gate_pass_v1", "allatom_family_focus_commercial_hard_gate_pass_v1"))]
-        + [
+        [
             (source["surface_label"], source["summary"], ("commercial_hard_gate_pass_v1",))
             for source in candidate_sources
         ]
+        + [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_hard_gate_pass_v1", "allatom_family_focus_commercial_hard_gate_pass_v1"))]
     )
     commercial_overall_reported, commercial_overall_value, commercial_overall_source = _resolve_named_value_from_specs(
-        [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_overall_score_v1", "allatom_family_focus_commercial_overall_score_v1"))]
-        + [
+        [
             (source["surface_label"], source["summary"], ("commercial_overall_score_v1",))
             for source in candidate_sources
         ]
+        + [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_overall_score_v1", "allatom_family_focus_commercial_overall_score_v1"))]
     )
     commercial_risk_reported, commercial_risk_bucket, commercial_risk_source = _resolve_named_value_from_specs(
-        [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_risk_bucket_v1", "allatom_family_focus_commercial_risk_bucket_v1"))]
-        + [
+        [
             (source["surface_label"], source["summary"], ("commercial_risk_bucket_v1",))
             for source in candidate_sources
         ]
+        + [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_risk_bucket_v1", "allatom_family_focus_commercial_risk_bucket_v1"))]
     )
     commercial_decision_reported, commercial_decision_class, commercial_decision_source = _resolve_named_value_from_specs(
-        [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_decision_class_v1", "allatom_family_focus_commercial_decision_class_v1"))]
-        + [
+        [
             (source["surface_label"], source["summary"], ("commercial_decision_class_v1",))
             for source in candidate_sources
         ]
+        + [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_decision_class_v1", "allatom_family_focus_commercial_decision_class_v1"))]
     )
     commercial_actions_reported, commercial_actions_value, commercial_actions_source = _resolve_named_value_from_specs(
-        [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_primary_upgrade_actions_v1", "allatom_family_focus_commercial_primary_upgrade_actions_v1"))]
-        + [
+        [
             (
                 source["surface_label"],
                 source["summary"],
@@ -2025,6 +2024,7 @@ def _selected_allatom_focus_context(
             )
             for source in candidate_sources
         ]
+        + [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_primary_upgrade_actions_v1", "allatom_family_focus_commercial_primary_upgrade_actions_v1"))]
     )
     commercial_actions = _normalize_string_list(commercial_actions_value)
     commercial_reported = bool(
@@ -2037,57 +2037,56 @@ def _selected_allatom_focus_context(
         or commercial_actions
     )
     commercial_reported_v2, commercial_schema_version_v2, commercial_schema_source_v2 = _resolve_named_value_from_specs(
-        [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_schema_version_v2", "allatom_family_focus_commercial_schema_version_v2"))]
-        + [
+        [
             (source["surface_label"], source["summary"], ("commercial_schema_version_v2",))
             for source in candidate_sources
         ]
+        + [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_schema_version_v2", "allatom_family_focus_commercial_schema_version_v2"))]
     )
     commercial_hard_gate_reported_v2, commercial_hard_gate_value_v2, commercial_hard_gate_source_v2 = _resolve_named_value_from_specs(
-        [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_hard_gate_pass_v2", "allatom_family_focus_commercial_hard_gate_pass_v2"))]
-        + [
+        [
             (source["surface_label"], source["summary"], ("commercial_hard_gate_pass_v2",))
             for source in candidate_sources
         ]
+        + [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_hard_gate_pass_v2", "allatom_family_focus_commercial_hard_gate_pass_v2"))]
     )
     commercial_soft_reported_v2, commercial_soft_value_v2, commercial_soft_source_v2 = _resolve_named_value_from_specs(
-        [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_soft_score_v2", "allatom_family_focus_commercial_soft_score_v2"))]
-        + [
+        [
             (source["surface_label"], source["summary"], ("commercial_soft_score_v2",))
             for source in candidate_sources
         ]
+        + [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_soft_score_v2", "allatom_family_focus_commercial_soft_score_v2"))]
     )
     commercial_confidence_reported_v2, commercial_confidence_value_v2, commercial_confidence_source_v2 = _resolve_named_value_from_specs(
-        [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_confidence_score_v2", "allatom_family_focus_commercial_confidence_score_v2"))]
-        + [
+        [
             (source["surface_label"], source["summary"], ("commercial_confidence_score_v2",))
             for source in candidate_sources
         ]
+        + [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_confidence_score_v2", "allatom_family_focus_commercial_confidence_score_v2"))]
     )
     commercial_overall_reported_v2, commercial_overall_value_v2, commercial_overall_source_v2 = _resolve_named_value_from_specs(
-        [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_overall_score_v2", "allatom_family_focus_commercial_overall_score_v2"))]
-        + [
+        [
             (source["surface_label"], source["summary"], ("commercial_overall_score_v2",))
             for source in candidate_sources
         ]
+        + [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_overall_score_v2", "allatom_family_focus_commercial_overall_score_v2"))]
     )
     commercial_risk_reported_v2, commercial_risk_bucket_v2, commercial_risk_source_v2 = _resolve_named_value_from_specs(
-        [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_risk_bucket_v2", "allatom_family_focus_commercial_risk_bucket_v2"))]
-        + [
+        [
             (source["surface_label"], source["summary"], ("commercial_risk_bucket_v2",))
             for source in candidate_sources
         ]
+        + [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_risk_bucket_v2", "allatom_family_focus_commercial_risk_bucket_v2"))]
     )
     commercial_decision_reported_v2, commercial_decision_class_v2, commercial_decision_source_v2 = _resolve_named_value_from_specs(
-        [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_decision_class_v2", "allatom_family_focus_commercial_decision_class_v2"))]
-        + [
+        [
             (source["surface_label"], source["summary"], ("commercial_decision_class_v2",))
             for source in candidate_sources
         ]
+        + [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_decision_class_v2", "allatom_family_focus_commercial_decision_class_v2"))]
     )
     commercial_actions_reported_v2, commercial_actions_value_v2, commercial_actions_source_v2 = _resolve_named_value_from_specs(
-        [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_primary_upgrade_actions_v2", "allatom_family_focus_commercial_primary_upgrade_actions_v2"))]
-        + [
+        [
             (
                 source["surface_label"],
                 source["summary"],
@@ -2095,14 +2094,15 @@ def _selected_allatom_focus_context(
             )
             for source in candidate_sources
         ]
+        + [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_primary_upgrade_actions_v2", "allatom_family_focus_commercial_primary_upgrade_actions_v2"))]
     )
     commercial_actions_v2 = _normalize_string_list(commercial_actions_value_v2)
     commercial_human_summary_reported_v2, commercial_human_summary_v2, commercial_human_summary_source_v2 = _resolve_named_value_from_specs(
-        [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_human_summary_v2", "allatom_family_focus_commercial_human_summary_v2"))]
-        + [
+        [
             (source["surface_label"], source["summary"], ("commercial_human_summary_v2",))
             for source in candidate_sources
         ]
+        + [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_commercial_human_summary_v2", "allatom_family_focus_commercial_human_summary_v2"))]
     )
     commercial_reported_v2 = bool(
         commercial_reported_v2
@@ -2268,6 +2268,35 @@ def _selected_allatom_focus_context(
         surface_label=surface_label,
         metric_key="best_mean_min_distance_A",
     )
+    review_packet_authoritative = bool(review_packet_best_mean_min_distance_reported)
+    if review_packet_authoritative:
+        for key, attr_name in (
+            ("packet_ready_for_operator_review", "operator_review_ready"),
+            ("wetlab_gate_pass", "wetlab_gate_pass"),
+            ("wetlab_final_gate_pass", "final_gate_pass"),
+            ("claim_gate_available", "claim_gate_available"),
+            ("claim_ready_for_allatom", "claim_ready_for_allatom"),
+        ):
+            if key not in selected_summary:
+                continue
+            value = _coerce_boolish(selected_summary.get(key))
+            if value is None:
+                continue
+            if attr_name == "operator_review_ready":
+                operator_review_reported = True
+                operator_review_ready = value
+            elif attr_name == "wetlab_gate_pass":
+                wetlab_gate_reported = True
+                wetlab_gate_pass = value
+            elif attr_name == "final_gate_pass":
+                final_gate_reported = True
+                final_gate_pass = value
+            elif attr_name == "claim_gate_available":
+                claim_gate_reported = True
+                claim_gate_available = value
+            elif attr_name == "claim_ready_for_allatom":
+                claim_ready_reported = True
+                claim_ready_for_allatom = value
     best_mean_min_distance_A = _safe_float(
         review_packet_best_mean_min_distance_A
         if review_packet_best_mean_min_distance_reported
@@ -2291,26 +2320,33 @@ def _selected_allatom_focus_context(
         ),
     )
     promoted_candidate_count = _safe_int(
-        retry_handoff_summary.get("selected_allatom_promoted_candidate_count")
+        selected_summary.get("promoted_candidate_count")
+        if review_packet_authoritative and selected_summary.get("promoted_candidate_count") not in {"", None}
+        else retry_handoff_summary.get("selected_allatom_promoted_candidate_count")
         if retry_handoff_summary.get("selected_allatom_promoted_candidate_count") not in {"", None}
         else selected_summary.get("promoted_candidate_count"),
         0,
     )
     under_2p5_candidate_count = _safe_int(
-        retry_handoff_summary.get("selected_allatom_under_2p5_candidate_count")
+        selected_summary.get("under_2p5_candidate_count")
+        if review_packet_authoritative and selected_summary.get("under_2p5_candidate_count") not in {"", None}
+        else retry_handoff_summary.get("selected_allatom_under_2p5_candidate_count")
         if retry_handoff_summary.get("selected_allatom_under_2p5_candidate_count") not in {"", None}
         else selected_summary.get("under_2p5_candidate_count"),
         0,
     )
     near_candidate_count = _safe_int(
-        retry_handoff_summary.get("selected_allatom_near_candidate_count")
+        selected_summary.get("near_candidate_count")
+        if review_packet_authoritative and selected_summary.get("near_candidate_count") not in {"", None}
+        else retry_handoff_summary.get("selected_allatom_near_candidate_count")
         if retry_handoff_summary.get("selected_allatom_near_candidate_count") not in {"", None}
         else selected_summary.get("near_candidate_count"),
         0,
     )
     next_required_step = _text(
+        selected_summary.get("next_required_step") if review_packet_authoritative else "",
         retry_handoff_summary.get("selected_allatom_next_required_step"),
-        selected_summary.get("next_required_step"),
+        selected_summary.get("next_required_step") if not review_packet_authoritative else "",
         allatom_family_summary.get("next_required_step"),
     )
     readiness_semantics = (

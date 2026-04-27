@@ -47,6 +47,17 @@ def _normalize_string_list(value: Any) -> list[str]:
     return [item for item in items if item]
 
 
+def _action_recipe_rollup_text(rows: list[dict[str, Any]]) -> str:
+    parts: list[str] = []
+    for row in rows:
+        severity = _text(row.get("priority"), row.get("severity"))
+        code = _text(row.get("code"), row.get("action"))
+        next_calculation = _text(row.get("next_calculation"), row.get("calc_action"), row.get("action"))
+        if severity and code and next_calculation:
+            parts.append(f"{severity}:{code} -> {next_calculation}")
+    return " | ".join(parts)
+
+
 def _pick_value(
     summaries: list[tuple[str, dict[str, Any]]],
     *keys: str,
@@ -288,8 +299,8 @@ def resolve_selected_allatom_canonical(
         ("master_handoff_dashboard", dashboard),
         ("final_campaign_summary", final),
         ("partnering_stack", partnering),
-        ("retry_handoff_summary", retry),
         ("review_packet_summary", review),
+        ("retry_handoff_summary", retry),
     ]
     selected_target_id = _text(
         retry.get("selected_allatom_target_id"),
@@ -794,9 +805,15 @@ def resolve_selected_allatom_canonical(
         "backmapping_consistency_score": review.get("commercial_backmapping_consistency_score_v2"),
         "local_minimization_survival_fraction": review.get("commercial_local_minimization_survival_fraction_v2"),
         "mean_min_distance_A": best_mean_min_distance_A or review.get("best_mean_min_distance_A"),
-        "binding_energy_proxy": review.get("commercial_binding_energy_proxy_v2"),
-        "stability_score": review.get("commercial_stability_score_v2"),
-        "contact_fraction": review.get("commercial_contact_fraction_v2"),
+        "binding_energy_proxy": review.get("commercial_binding_energy_proxy_v2")
+        if review.get("commercial_binding_energy_proxy_v2") not in {"", None}
+        else review.get("best_binding_energy_proxy"),
+        "stability_score": review.get("best_stability_score")
+        if "stability_score" in hard_failed_metrics and review.get("best_stability_score") not in {"", None}
+        else review.get("commercial_stability_score_v2"),
+        "contact_fraction": review.get("commercial_contact_fraction_v2")
+        if review.get("commercial_contact_fraction_v2") not in {"", None}
+        else review.get("best_contact_fraction"),
         "binding_energy_mmpbsa_std": review.get("commercial_binding_energy_mmpbsa_std_v2"),
         "trajectory_frames": review.get("commercial_trajectory_frames_v2"),
     }
@@ -1085,6 +1102,7 @@ def resolve_selected_allatom_canonical(
         "effective_primary_blocking_domain": effective_primary_blocking_domain,
         "action_recipe_codes": action_recipe_codes,
         "action_recipe_rows": action_recipe_rows,
+        "action_recipe_rollup_text": _action_recipe_rollup_text(action_recipe_rows),
         "translation_provenance_mode": translation_provenance_mode,
         "commercial_provenance_mode_v2": commercial_provenance_mode_v2,
         "hybrid_policy": "canonical_selected_allatom_source_driven_with_translation_text_fallback",

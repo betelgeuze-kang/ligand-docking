@@ -2025,7 +2025,7 @@ def build_payload(
         or bstcrbs.get("operator_packet_scope")
         or ""
     ).strip()
-    selected_allatom_sources = (bsrhs, fcss, mhds, bcris, bsmss)
+    selected_allatom_sources = (bcris, fcss, mhds, bsrhs, bsmss)
     selected_allatom_focus_available = bool(
         _text(
             bsrhs.get("selected_allatom_target_id", ""),
@@ -2056,7 +2056,7 @@ def build_payload(
         selected_allatom_wetlab_gate_reported,
         selected_allatom_wetlab_gate_pass,
     ) = _resolve_reported_bool(
-        selected_allatom_sources,
+        (bcris, fcss, mhds, bsrhs, bsmss),
         reported_keys=("selected_allatom_wetlab_gate_reported",),
         value_keys=(
             "selected_allatom_wetlab_gate_pass",
@@ -2067,7 +2067,7 @@ def build_payload(
         selected_allatom_final_gate_reported,
         selected_allatom_final_gate_pass,
     ) = _resolve_reported_bool(
-        selected_allatom_sources,
+        (bcris, fcss, mhds, bsrhs, bsmss),
         reported_keys=("selected_allatom_final_gate_reported",),
         value_keys=(
             "selected_allatom_wetlab_final_gate_pass",

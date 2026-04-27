@@ -724,6 +724,49 @@ def test_build_wetlab_current_results_index_keeps_pde_operator_readiness_separat
     )
 
 
+def test_build_wetlab_current_results_index_prefers_review_packet_strict_metric_over_stale_retry_value() -> None:
+    payload = mod.build_payload(
+        retry_handoff_summary={
+            "summary": {
+                "status": "wetlab_retry_handoff_summary_ready",
+                "selected_allatom_target_id": "T. cruzi PDE",
+                "selected_allatom_surface_label": "tcruzi_pde_allatom_review_packet",
+                "selected_allatom_selected_command_kind": "pseudo_allatom_backmapping_rescore",
+                "selected_allatom_selected_threshold_A": 2.5,
+                "selected_allatom_best_mean_min_distance_A": 2.756,
+                "selected_allatom_best_mean_min_distance_A_source": (
+                    "retry_handoff_summary.selected_allatom_best_mean_min_distance_A"
+                ),
+            }
+        },
+        tcruzi_pde_allatom_review_packet={
+            "summary": {
+                "status": "wetlab_tcruzi_pde_allatom_review_packet_ready",
+                "target_id": "T. cruzi PDE",
+                "surface_label": "tcruzi_pde_allatom_review_packet",
+                "selected_command_kind": "pseudo_allatom_backmapping_rescore",
+                "selected_threshold_A": 2.5,
+                "best_ligand_id": "t_cruzi_pde_20_of_20_095609",
+                "best_mean_min_distance_A": 0.672,
+                "promoted_candidate_count": 4,
+                "under_2p5_candidate_count": 1,
+                "near_candidate_count": 3,
+                "packet_ready_for_operator_review": True,
+                "wetlab_gate_pass": True,
+                "wetlab_final_gate_pass": False,
+            }
+        },
+    )
+
+    summary = payload["summary"]
+    assert summary["selected_allatom_best_mean_min_distance_A"] == 0.672
+    assert summary["selected_allatom_best_mean_min_distance_A_source"] == (
+        "tcruzi_pde_allatom_review_packet.best_mean_min_distance_A"
+    )
+    assert summary["selected_allatom_under_2p5_candidate_count"] == 1
+    assert summary["selected_allatom_wetlab_gate_pass"] is True
+
+
 def test_build_wetlab_current_results_index_propagates_pde_selected_allatom_v2_and_translation_shortlist_guidance() -> None:
     pde_review_packet = _load_current_packet_payload("wetlab_tcruzi_pde_allatom_review_packet_current.json")
     pde_review_summary = dict(pde_review_packet["summary"])
@@ -809,16 +852,20 @@ def test_build_wetlab_current_results_index_propagates_pde_selected_allatom_v2_a
     assert summary["allatom_family_focus_commercial_schema_version"] == "wetlab_commercial_grade_v2"
     assert summary["allatom_family_focus_commercial_hard_gate_pass_v1"] is False
     assert summary["allatom_family_focus_commercial_overall_score_v1"] == pde_review_summary["commercial_overall_score_v2"]
-    assert summary["allatom_family_focus_commercial_risk_bucket_v1"] == "high"
-    assert summary["allatom_family_focus_commercial_decision_class_v1"] == "commercial_review_only"
+    assert summary["allatom_family_focus_commercial_risk_bucket_v1"] == pde_review_summary["commercial_risk_bucket_v2"]
+    assert summary["allatom_family_focus_commercial_decision_class_v1"] == pde_review_summary[
+        "commercial_decision_class_v2"
+    ]
     assert summary["allatom_family_focus_commercial_primary_upgrade_actions_v1"] == adjusted_pde_review_packet[
         "summary"
     ]["commercial_primary_upgrade_actions_v1"]
     assert summary["selected_allatom_commercial_schema_version"] == "wetlab_commercial_grade_v2"
     assert summary["selected_allatom_commercial_hard_gate_pass_v1"] is False
     assert summary["selected_allatom_commercial_overall_score_v1"] == pde_review_summary["commercial_overall_score_v2"]
-    assert summary["selected_allatom_commercial_risk_bucket_v1"] == "high"
-    assert summary["selected_allatom_commercial_decision_class_v1"] == "commercial_review_only"
+    assert summary["selected_allatom_commercial_risk_bucket_v1"] == pde_review_summary["commercial_risk_bucket_v2"]
+    assert summary["selected_allatom_commercial_decision_class_v1"] == pde_review_summary[
+        "commercial_decision_class_v2"
+    ]
     assert summary["selected_allatom_commercial_primary_upgrade_actions_v1"] == adjusted_pde_review_packet[
         "summary"
     ]["commercial_primary_upgrade_actions_v1"]
@@ -826,8 +873,8 @@ def test_build_wetlab_current_results_index_propagates_pde_selected_allatom_v2_a
     assert summary["selected_allatom_best_mean_min_distance_A_source"] == (
         "tcruzi_pde_allatom_review_packet.best_mean_min_distance_A"
     )
-    assert summary["selected_allatom_wetlab_gate_pass"] is False
-    assert summary["selected_allatom_final_gate_pass"] is False
+    assert summary["selected_allatom_wetlab_gate_pass"] is pde_review_summary["wetlab_gate_pass"]
+    assert summary["selected_allatom_final_gate_pass"] is pde_review_summary["wetlab_final_gate_pass"]
     assert summary["selected_allatom_translation_gate_focus_reason"] == pde_review_summary["translation_gate_focus_reason"]
     assert summary["selected_allatom_recommended_next_expensive_lane_reason"] == pde_review_summary[
         "recommended_next_expensive_lane_reason"
@@ -837,8 +884,11 @@ def test_build_wetlab_current_results_index_propagates_pde_selected_allatom_v2_a
         "explicit_split_gate_fields",
     }
     selected_actions_text = summary["selected_allatom_commercial_primary_upgrade_actions_text_v1"]
-    assert "tighten_pose_geometry_under_strict_gate" in selected_actions_text
+    assert "strengthen_binding_energy_proxy" in selected_actions_text
+    assert "tighten_pose_geometry_under_strict_gate" not in selected_actions_text
     assert "produce_claim_equivalence_packet" in selected_actions_text
+    assert summary["selected_allatom_under_2p5_candidate_count"] == pde_review_summary["under_2p5_candidate_count"]
+    assert summary["selected_allatom_near_candidate_count"] == pde_review_summary["near_candidate_count"]
     assert summary["selected_allatom_next_required_step"] == translation_shortlist_guidance
     assert summary["selected_allatom_actionability_status"] == "hard_blocked"
     assert summary["selected_allatom_actionability_claim_requirement_mode"] == "not_applicable"
@@ -848,14 +898,17 @@ def test_build_wetlab_current_results_index_propagates_pde_selected_allatom_v2_a
     assert summary["selected_allatom_effective_actionability_claim_requirement_mode"] == "not_applicable"
     assert summary["selected_allatom_effective_blocking_order"] == "hard_block_first"
     assert summary["selected_allatom_effective_primary_blocking_domain"] == "translation_commercial_hard_gate"
-    assert "recompute_mean_min_distance_A" in summary["selected_allatom_action_recipe_codes"]
+    assert "recompute_binding_energy_proxy" in summary["selected_allatom_action_recipe_codes"]
+    assert "recompute_mean_min_distance_A" not in summary["selected_allatom_action_recipe_codes"]
     assert any(
         row.get("category") == "translation_commercial_hard_gate"
         for row in summary["selected_allatom_action_recipe_rows"]
     )
     assert summary["selected_allatom_actionability_next_expensive_lane"] == "defer_expensive_lane"
-    assert "recompute_mean_min_distance_A" in summary["selected_allatom_actionability_required_calculations"]
-    assert "mean_min_distance_A" in summary["selected_allatom_actionability_block_reason"]
+    assert "recompute_binding_energy_proxy" in summary["selected_allatom_actionability_required_calculations"]
+    assert "recompute_mean_min_distance_A" not in summary["selected_allatom_actionability_required_calculations"]
+    assert "binding_energy_proxy" in summary["selected_allatom_actionability_block_reason"]
+    assert "mean_min_distance_A" not in summary["selected_allatom_actionability_block_reason"]
     assert "Actionability:" in summary["selected_allatom_human_summary"]
     assert summary["selected_allatom_visual_bundle_ready"] is True
     assert summary["selected_allatom_visual_topk_count"] == 4

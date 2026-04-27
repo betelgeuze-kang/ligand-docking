@@ -1324,6 +1324,33 @@ def build_payload(
     )
     selected_allatom_next_required_step = str(bsrhs.get("selected_allatom_next_required_step", "")).strip()
     selected_allatom_review_packet_summary = _selected_allatom_review_packet_summary(selected_allatom_surface_label)
+    if _has_value(selected_allatom_review_packet_summary, "promoted_candidate_count"):
+        selected_allatom_promoted_candidate_count = _safe_int(
+            selected_allatom_review_packet_summary.get("promoted_candidate_count"),
+            selected_allatom_promoted_candidate_count,
+        )
+    if _has_value(selected_allatom_review_packet_summary, "under_2p5_candidate_count"):
+        selected_allatom_under_2p5_candidate_count = _safe_int(
+            selected_allatom_review_packet_summary.get("under_2p5_candidate_count"),
+            selected_allatom_under_2p5_candidate_count,
+        )
+    if _has_value(selected_allatom_review_packet_summary, "near_candidate_count"):
+        selected_allatom_near_candidate_count = _safe_int(
+            selected_allatom_review_packet_summary.get("near_candidate_count"),
+            selected_allatom_near_candidate_count,
+        )
+    if _has_value(selected_allatom_review_packet_summary, "wetlab_gate_pass"):
+        selected_allatom_wetlab_gate_reported = True
+        selected_allatom_wetlab_gate_pass = _resolve_bool(
+            selected_allatom_review_packet_summary.get("wetlab_gate_pass"),
+            default=selected_allatom_wetlab_gate_pass,
+        )
+    if _has_value(selected_allatom_review_packet_summary, "wetlab_final_gate_pass"):
+        selected_allatom_final_gate_reported = True
+        selected_allatom_final_gate_pass = _resolve_bool(
+            selected_allatom_review_packet_summary.get("wetlab_final_gate_pass"),
+            default=selected_allatom_final_gate_pass,
+        )
     selected_allatom_pose_validation = build_pose_validation_fields_from_summary(
         selected_allatom_review_packet_summary
     )
@@ -1399,8 +1426,8 @@ def build_payload(
         selected_allatom_pose_validation.get("pose_validation_reason", ""),
     )
     selected_allatom_commercial_schema_version = _text(
-        bsrhs.get("selected_allatom_commercial_schema_version", ""),
         selected_allatom_review_packet_summary.get("commercial_schema_version", ""),
+        bsrhs.get("selected_allatom_commercial_schema_version", ""),
     )
     selected_allatom_commercial_reported = any(
         _has_value(summary, key)
@@ -1423,30 +1450,30 @@ def build_payload(
         )
     )
     selected_allatom_commercial_hard_gate_pass_v1 = _resolve_bool(
-        bsrhs.get("selected_allatom_commercial_hard_gate_pass_v1"),
         selected_allatom_review_packet_summary.get("commercial_hard_gate_pass_v1"),
+        bsrhs.get("selected_allatom_commercial_hard_gate_pass_v1"),
         default=False,
     )
     selected_allatom_commercial_overall_score_v1 = _resolve_float(
-        bsrhs.get("selected_allatom_commercial_overall_score_v1"),
         selected_allatom_review_packet_summary.get("commercial_overall_score_v1"),
+        bsrhs.get("selected_allatom_commercial_overall_score_v1"),
         default=0.0,
     )
     selected_allatom_commercial_risk_bucket_v1 = _text(
-        bsrhs.get("selected_allatom_commercial_risk_bucket_v1", ""),
         selected_allatom_review_packet_summary.get("commercial_risk_bucket_v1", ""),
+        bsrhs.get("selected_allatom_commercial_risk_bucket_v1", ""),
     )
     selected_allatom_commercial_decision_class_v1 = _text(
-        bsrhs.get("selected_allatom_commercial_decision_class_v1", ""),
         selected_allatom_review_packet_summary.get("commercial_decision_class_v1", ""),
+        bsrhs.get("selected_allatom_commercial_decision_class_v1", ""),
     )
     selected_allatom_commercial_primary_upgrade_actions_v1 = (
-        _safe_str_list(bsrhs.get("selected_allatom_commercial_primary_upgrade_actions_v1"))
-        or _safe_str_list(selected_allatom_review_packet_summary.get("commercial_primary_upgrade_actions_v1"))
+        _safe_str_list(selected_allatom_review_packet_summary.get("commercial_primary_upgrade_actions_v1"))
+        or _safe_str_list(bsrhs.get("selected_allatom_commercial_primary_upgrade_actions_v1"))
     )
     selected_allatom_commercial_schema_version_v2 = _text(
-        bsrhs.get("selected_allatom_commercial_schema_version_v2", ""),
         selected_allatom_review_packet_summary.get("commercial_schema_version_v2", ""),
+        bsrhs.get("selected_allatom_commercial_schema_version_v2", ""),
     )
     selected_allatom_commercial_reported_v2 = any(
         _has_value(summary, key)
@@ -1471,40 +1498,40 @@ def build_payload(
         )
     )
     selected_allatom_commercial_hard_gate_pass_v2 = _resolve_bool(
-        bsrhs.get("selected_allatom_commercial_hard_gate_pass_v2"),
         selected_allatom_review_packet_summary.get("commercial_hard_gate_pass_v2"),
+        bsrhs.get("selected_allatom_commercial_hard_gate_pass_v2"),
         default=False,
     )
     selected_allatom_commercial_soft_score_v2 = _resolve_float(
-        bsrhs.get("selected_allatom_commercial_soft_score_v2"),
         selected_allatom_review_packet_summary.get("commercial_soft_score_v2"),
+        bsrhs.get("selected_allatom_commercial_soft_score_v2"),
         default=0.0,
     )
     selected_allatom_commercial_confidence_score_v2 = _resolve_float(
-        bsrhs.get("selected_allatom_commercial_confidence_score_v2"),
         selected_allatom_review_packet_summary.get("commercial_confidence_score_v2"),
+        bsrhs.get("selected_allatom_commercial_confidence_score_v2"),
         default=0.0,
     )
     selected_allatom_commercial_overall_score_v2 = _resolve_float(
-        bsrhs.get("selected_allatom_commercial_overall_score_v2"),
         selected_allatom_review_packet_summary.get("commercial_overall_score_v2"),
+        bsrhs.get("selected_allatom_commercial_overall_score_v2"),
         default=0.0,
     )
     selected_allatom_commercial_risk_bucket_v2 = _text(
-        bsrhs.get("selected_allatom_commercial_risk_bucket_v2", ""),
         selected_allatom_review_packet_summary.get("commercial_risk_bucket_v2", ""),
+        bsrhs.get("selected_allatom_commercial_risk_bucket_v2", ""),
     )
     selected_allatom_commercial_decision_class_v2 = _text(
-        bsrhs.get("selected_allatom_commercial_decision_class_v2", ""),
         selected_allatom_review_packet_summary.get("commercial_decision_class_v2", ""),
+        bsrhs.get("selected_allatom_commercial_decision_class_v2", ""),
     )
     selected_allatom_commercial_primary_upgrade_actions_v2 = (
-        _safe_str_list(bsrhs.get("selected_allatom_commercial_primary_upgrade_actions_v2"))
-        or _safe_str_list(selected_allatom_review_packet_summary.get("commercial_primary_upgrade_actions_v2"))
+        _safe_str_list(selected_allatom_review_packet_summary.get("commercial_primary_upgrade_actions_v2"))
+        or _safe_str_list(bsrhs.get("selected_allatom_commercial_primary_upgrade_actions_v2"))
     )
     selected_allatom_commercial_human_summary_v2 = _text(
-        bsrhs.get("selected_allatom_commercial_human_summary_v2", ""),
         selected_allatom_review_packet_summary.get("commercial_human_summary_v2", ""),
+        bsrhs.get("selected_allatom_commercial_human_summary_v2", ""),
     )
     selected_allatom_commercial_provenance_mode_v2 = (
         "source_driven" if selected_allatom_commercial_reported_v2 else "not_reported"
@@ -1924,9 +1951,20 @@ def build_payload(
         if selected_allatom_canonical_resolver_used
         else list(selected_allatom_action_recipe["action_recipe_rows"])
     )
+    selected_allatom_canonical_action_recipe_rollup_text = " | ".join(
+        f"{row.get('priority')}:{row.get('code')} -> {row.get('next_calculation')}"
+        for row in selected_allatom_action_recipe_rows
+        if row.get("priority") and row.get("code") and row.get("next_calculation")
+    )
+    selected_allatom_preferred_canonical_rollup = (
+        "recompute_binding_energy_proxy" in selected_allatom_action_recipe_codes
+    )
     selected_allatom_action_recipe_rollup_text = _text(
         selected_allatom_canonical.get("action_recipe_rollup_text", "")
-        if selected_allatom_canonical_resolver_used
+        if selected_allatom_canonical_resolver_used and selected_allatom_preferred_canonical_rollup
+        else "",
+        selected_allatom_canonical_action_recipe_rollup_text
+        if selected_allatom_canonical_resolver_used and selected_allatom_preferred_canonical_rollup
         else "",
         selected_allatom_action_recipe["action_recipe_rollup_text"],
     )

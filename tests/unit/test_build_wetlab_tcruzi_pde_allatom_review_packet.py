@@ -176,6 +176,58 @@ def test_build_wetlab_tcruzi_pde_allatom_review_packet(tmp_path: Path) -> None:
     assert "semi-hard claim/equivalence requirement is cleared" in summary["next_required_step"]
 
 
+def test_build_wetlab_tcruzi_pde_allatom_review_packet_uses_strict_candidate_as_best_metric(
+    tmp_path: Path,
+) -> None:
+    scoring_json = tmp_path / "summary.json"
+    scoring_json.write_text(
+        json.dumps(
+            {
+                "topk": [
+                    {
+                        "ligand_id": "lig_near_first",
+                        "mean_min_distance_A": 2.756,
+                        "binding_energy_proxy": -2.0,
+                        "trajectory_frames": 220,
+                    },
+                    {
+                        "ligand_id": "t_cruzi_pde_20_of_20_095609",
+                        "mean_min_distance_A": 0.672,
+                        "binding_energy_proxy": -1.0,
+                        "trajectory_frames": 220,
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    lane_payload = {
+        "summary": {
+            "shard_id": "20_of_20",
+            "selected_command_kind": "pseudo_allatom_backmapping_rescore",
+            "selected_threshold_A": 2.5,
+        },
+        "rows": [
+            {"ligand_id": "lig_near_first", "compound_name": "Near First"},
+            {
+                "ligand_id": "t_cruzi_pde_20_of_20_095609",
+                "compound_name": "Strict Candidate",
+                "compound_name_human_readable": "Strict Candidate",
+            },
+        ],
+    }
+    runner_payload = {"summary": {"allatom_summary_json": str(scoring_json)}}
+
+    payload = build_payload(lane_payload, runner_payload)
+
+    summary = payload["summary"]
+    assert summary["wetlab_gate_pass"] is True
+    assert summary["under_2p5_candidate_count"] == 1
+    assert summary["best_ligand_id"] == "t_cruzi_pde_20_of_20_095609"
+    assert summary["best_mean_min_distance_A"] == 0.672
+    assert payload["rows"][0]["ligand_id"] == "lig_near_first"
+
+
 def test_build_wetlab_tcruzi_pde_allatom_review_packet_requires_claim_artifact_for_final_gate(
     tmp_path: Path,
 ) -> None:

@@ -43,6 +43,34 @@ def _safe_int(value: Any, default: int = 0) -> int:
         return default
 
 
+def _best_metric_row(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    metric_rows = [
+        row
+        for row in rows
+        if _safe_float(row.get("mean_min_distance_A")) > 0
+    ]
+    if not metric_rows:
+        return rows[0] if rows else {}
+    return min(metric_rows, key=lambda row: _safe_float(row.get("mean_min_distance_A")))
+
+
+def _metric_first_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    best = _best_metric_row(rows)
+    best_rank = best.get("packet_rank")
+    if best_rank in {"", None}:
+        return list(rows)
+    return [dict(row) for row in rows if row.get("packet_rank") == best_rank] + [
+        dict(row) for row in rows if row.get("packet_rank") != best_rank
+    ]
+
+
+def _packet_rank_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return sorted(
+        [dict(row) for row in rows],
+        key=lambda row: (_safe_int(row.get("packet_rank"), 0), _text(row.get("ligand_id"))),
+    )
+
+
 def build_payload(
     lane_payload: dict[str, Any],
     runner_payload: dict[str, Any],
@@ -121,7 +149,7 @@ def build_payload(
                 **_extract_commercial_v2_optional_fields(dict(row or {})),
             }
         )
-    best_row = promoted_rows[0] if promoted_rows else {}
+    best_row = _best_metric_row(promoted_rows)
     strict_threshold = 2.5
     near_threshold = 3.0
     gate_summary = compute_wetlab_gate_summary(
@@ -140,8 +168,9 @@ def build_payload(
         wetlab_gate_summary=gate_summary,
         claim_gate_summary=claim_gate_summary,
     )
+    commercial_rows = _metric_first_rows(promoted_rows)
     commercial_schema_v1 = compute_commercial_grade_schema_v1(
-        promoted_rows=promoted_rows,
+        promoted_rows=commercial_rows,
         selected_threshold_A=_safe_float(lane_summary.get("selected_threshold_A"), strict_threshold),
         strict_threshold_A=strict_threshold,
         near_threshold_A=near_threshold,
@@ -149,9 +178,9 @@ def build_payload(
         claim_gate_summary=claim_gate_summary,
         final_gate_summary=final_gate_summary,
     )
-    promoted_rows = list(commercial_schema_v1.get("rows", []) or promoted_rows)
+    commercial_rows = list(commercial_schema_v1.get("rows", []) or commercial_rows)
     commercial_schema_v2 = compute_commercial_grade_schema_v2(
-        promoted_rows=promoted_rows,
+        promoted_rows=commercial_rows,
         selected_threshold_A=_safe_float(lane_summary.get("selected_threshold_A"), strict_threshold),
         strict_threshold_A=strict_threshold,
         near_threshold_A=near_threshold,
@@ -159,8 +188,8 @@ def build_payload(
         claim_gate_summary=claim_gate_summary,
         final_gate_summary=final_gate_summary,
     )
-    promoted_rows = list(commercial_schema_v2.get("rows", []) or promoted_rows)
-    best_row = promoted_rows[0] if promoted_rows else {}
+    promoted_rows = _packet_rank_rows(list(commercial_schema_v2.get("rows", []) or commercial_rows))
+    best_row = _best_metric_row(promoted_rows)
     wetlab_gate_pass = bool(gate_summary.get("wetlab_gate_pass"))
     wetlab_final_gate_pass = bool(final_gate_summary.get("wetlab_final_gate_pass"))
     packet_ready_for_operator_review = bool(gate_summary.get("packet_ready_for_operator_review"))
