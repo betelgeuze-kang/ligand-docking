@@ -826,6 +826,8 @@ def _selected_allatom_canonical_surface(
             effective_actionability_status = "soft_guided"
         else:
             effective_actionability_status = "blocked"
+    if effective_actionability_status == "ready":
+        effective_required_calculations = []
     effective_actionability_required_calculations_text = ", ".join(effective_required_calculations)
 
     action_recipe_rollup_text = _joined(action_recipe_codes, effective_action_list_text)
@@ -970,10 +972,16 @@ def _selected_allatom_canonical_surface(
         "effective_actionability_required_calculations": _helper_list(
             "effective_actionability_required_calculations",
             effective_required_calculations,
-        ),
-        "effective_actionability_required_calculations_text": _helper_text(
-            "effective_actionability_required_calculations_text",
-            effective_actionability_required_calculations_text,
+        )
+        if effective_actionability_status != "ready"
+        else list(effective_required_calculations),
+        "effective_actionability_required_calculations_text": (
+            _helper_text(
+                "effective_actionability_required_calculations_text",
+                effective_actionability_required_calculations_text,
+            )
+            if effective_actionability_status != "ready"
+            else effective_actionability_required_calculations_text
         ),
         "effective_actionability_action_list": _helper_list(
             "effective_actionability_action_list",
@@ -2541,6 +2549,25 @@ def build_payload(
         selected_allatom_under_2p5_candidate_count=selected_allatom_under_2p5_candidate_count,
         selected_allatom_near_candidate_count=selected_allatom_near_candidate_count,
     )
+    if (
+        selected_allatom_wetlab_gate_pass
+        and selected_allatom_final_gate_pass
+        and selected_allatom_claim_ready_for_allatom
+    ):
+        translation_status = _text(
+            selected_allatom_canonical_view.get("translation_gate_focus_status"),
+            selected_allatom_translation_gate_focus_status,
+            default="not reported",
+        )
+        lane = _text(
+            selected_allatom_canonical_view.get("recommended_next_expensive_lane"),
+            selected_allatom_recommended_next_expensive_lane,
+        )
+        lane_phrase = "expensive lane deferred" if lane == "defer_expensive_lane" else f"next expensive lane `{lane}`"
+        selected_allatom_next_required_step = (
+            "Selected all-atom delivery P0 is green; broader/default wetlab lane remains closed; "
+            f"translation gate remains {translation_status}; {lane_phrase}."
+        )
     selected_allatom_rollups["human_summary"] = _joined(
         selected_allatom_rollups["human_summary"],
         selected_allatom_canonical_view.get("human_summary", ""),
@@ -3946,8 +3973,8 @@ def build_payload(
             "open_eightyfifth_pde_top4": "runs/wetlab_tcruzi_pde_promoted_top4_review_packet_current.md",
             "open_eightysixth_pde_branch": "runs/wetlab_tcruzi_pde_rescue_only_branch_summary_current.md",
             "next_required_step": (
-                str(bsrhs.get("selected_allatom_next_required_step", "")).strip()
-                if str(bsrhs.get("selected_allatom_next_required_step", "")).strip()
+                selected_allatom_next_required_step
+                if selected_allatom_next_required_step
                 else str(bsrhs.get("selected_krs1_branch_review_next_required_step", "")).strip()
                 if str(bsrhs.get("selected_krs1_branch_review_next_required_step", "")).strip()
                 else str(bdr1.get("next_required_step", "")).strip()

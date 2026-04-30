@@ -9,7 +9,10 @@ from typing import Any
 
 from tools.wetlab_target_render_utils import maybe_load_json, resolve
 from tools.wetlab_pose_validation_utils import build_pose_validation_fields_from_summary
-from tools.wetlab_selected_allatom_canonical import resolve_selected_allatom_canonical
+from tools.wetlab_selected_allatom_canonical import (
+    resolve_selected_allatom_canonical,
+    selected_allatom_green_next_required_step,
+)
 from tools.wetlab_selected_allatom_visual import (
     resolve_selected_allatom_visual_bundle,
     selected_allatom_visual_surface_fields,
@@ -702,6 +705,12 @@ def _manual_retry_lane_rows(
     stk17b_exploratory_retry_step = _manual_retry_step_from_lane(stk17b_exploratory_retry_lane)
     stk17b_exploratory_followup_step = _manual_retry_step_from_lane(stk17b_exploratory_followup_lane)
     plpro_manual_retry_step = _manual_retry_step_from_lane(plpro_manual_retry_lane)
+    handoff_next_required_step = _text(handoff.get("next_required_step"))
+    selected_allatom_handoff_step = _text(handoff.get("selected_allatom_next_required_step"))
+    if selected_allatom_handoff_step and handoff_next_required_step == selected_allatom_handoff_step:
+        handoff_next_required_step = ""
+    if "strict_only gate did not pass" in handoff_next_required_step:
+        handoff_next_required_step = ""
     selected_lane_payload = _select_manual_retry_lane(
         retry_handoff_summary,
         lbdhodh_exploratory_retry_lane,
@@ -880,7 +889,7 @@ def _manual_retry_lane_rows(
             one_line_summary=_joined(
                 handoff.get("manual_retry_priority_targets"),
                 handoff.get("current_results_next_required_step"),
-                handoff.get("next_required_step"),
+                handoff_next_required_step,
             ),
         ),
         *lane_rows,
@@ -2131,8 +2140,7 @@ def _selected_allatom_focus_context(
         or commercial_actions_v2
     )
     translation_gate_version_reported, translation_gate_version, translation_gate_version_source = _resolve_named_value_from_specs(
-        [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_translation_gate_version", "allatom_family_focus_translation_gate_version"))]
-        + [
+        [
             (
                 source["surface_label"],
                 source["summary"],
@@ -2140,10 +2148,10 @@ def _selected_allatom_focus_context(
             )
             for source in candidate_sources
         ]
+        + [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_translation_gate_version", "allatom_family_focus_translation_gate_version"))]
     )
     translation_gate_focus_status_reported, translation_gate_focus_status, translation_gate_focus_status_source = _resolve_named_value_from_specs(
-        [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_translation_gate_focus_status", "allatom_family_focus_translation_gate_focus_status"))]
-        + [
+        [
             (
                 source["surface_label"],
                 source["summary"],
@@ -2151,10 +2159,10 @@ def _selected_allatom_focus_context(
             )
             for source in candidate_sources
         ]
+        + [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_translation_gate_focus_status", "allatom_family_focus_translation_gate_focus_status"))]
     )
     translation_gate_focus_score_reported, translation_gate_focus_score, translation_gate_focus_score_source = _resolve_named_value_from_specs(
-        [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_translation_gate_focus_score", "allatom_family_focus_translation_gate_focus_score"))]
-        + [
+        [
             (
                 source["surface_label"],
                 source["summary"],
@@ -2162,10 +2170,10 @@ def _selected_allatom_focus_context(
             )
             for source in candidate_sources
         ]
+        + [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_translation_gate_focus_score", "allatom_family_focus_translation_gate_focus_score"))]
     )
     translation_gate_focus_reason_reported, translation_gate_focus_reason, translation_gate_focus_reason_source = _resolve_named_value_from_specs(
-        [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_translation_gate_focus_reason", "allatom_family_focus_translation_gate_focus_reason"))]
-        + [
+        [
             (
                 source["surface_label"],
                 source["summary"],
@@ -2173,10 +2181,10 @@ def _selected_allatom_focus_context(
             )
             for source in candidate_sources
         ]
+        + [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_translation_gate_focus_reason", "allatom_family_focus_translation_gate_focus_reason"))]
     )
     shortlist_version_reported, stronger_physics_shortlist_version, stronger_physics_shortlist_version_source = _resolve_named_value_from_specs(
-        [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_stronger_physics_shortlist_version", "allatom_family_focus_stronger_physics_shortlist_version"))]
-        + [
+        [
             (
                 source["surface_label"],
                 source["summary"],
@@ -2184,10 +2192,10 @@ def _selected_allatom_focus_context(
             )
             for source in candidate_sources
         ]
+        + [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_stronger_physics_shortlist_version", "allatom_family_focus_stronger_physics_shortlist_version"))]
     )
     focus_shortlist_tier_reported, focus_shortlist_tier, focus_shortlist_tier_source = _resolve_named_value_from_specs(
-        [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_focus_shortlist_tier", "allatom_family_focus_shortlist_tier"))]
-        + [
+        [
             (
                 source["surface_label"],
                 source["summary"],
@@ -2195,10 +2203,10 @@ def _selected_allatom_focus_context(
             )
             for source in candidate_sources
         ]
+        + [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_focus_shortlist_tier", "allatom_family_focus_shortlist_tier"))]
     )
     recommended_lane_reported, recommended_next_expensive_lane, recommended_next_expensive_lane_source = _resolve_named_value_from_specs(
-        [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_recommended_next_expensive_lane", "allatom_family_focus_recommended_next_expensive_lane"))]
-        + [
+        [
             (
                 source["surface_label"],
                 source["summary"],
@@ -2206,10 +2214,10 @@ def _selected_allatom_focus_context(
             )
             for source in candidate_sources
         ]
+        + [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_recommended_next_expensive_lane", "allatom_family_focus_recommended_next_expensive_lane"))]
     )
     recommended_lane_reason_reported, recommended_next_expensive_lane_reason, recommended_next_expensive_lane_reason_source = _resolve_named_value_from_specs(
-        [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_recommended_next_expensive_lane_reason", "allatom_family_focus_recommended_next_expensive_lane_reason"))]
-        + [
+        [
             (
                 source["surface_label"],
                 source["summary"],
@@ -2217,6 +2225,7 @@ def _selected_allatom_focus_context(
             )
             for source in candidate_sources
         ]
+        + [("retry_handoff_summary", retry_handoff_summary, ("selected_allatom_recommended_next_expensive_lane_reason", "allatom_family_focus_recommended_next_expensive_lane_reason"))]
     )
 
     selected_summary = dict((selected_source or {}).get("summary", {}) or {})
@@ -2362,6 +2371,14 @@ def _selected_allatom_focus_context(
         retry_handoff_summary.get("selected_allatom_next_required_step"),
         selected_summary.get("next_required_step") if not review_packet_authoritative else "",
         allatom_family_summary.get("next_required_step"),
+    )
+    next_required_step = selected_allatom_green_next_required_step(
+        wetlab_gate_pass=wetlab_gate_pass,
+        final_gate_pass=final_gate_pass,
+        claim_ready_for_allatom=claim_ready_for_allatom,
+        translation_gate_focus_status=translation_gate_focus_status,
+        recommended_next_expensive_lane=recommended_next_expensive_lane,
+        fallback_next_required_step=next_required_step,
     )
     readiness_semantics = (
         "operator_review_and_final_gate"

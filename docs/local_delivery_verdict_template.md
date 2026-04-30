@@ -102,7 +102,7 @@ Use this when:
 ## Do Not Say
 
 - broad commercialization-ready
-- transporter-ready
+- transporter scope promotion
 - scorecard-level baseline comparison or acceptance-profile wording used as if it were a verdict
 - score-uplift wording when the scorecard is tie-heavy or the frozen packet identity changed
 - delivery-ready wording when required-family coverage is incomplete

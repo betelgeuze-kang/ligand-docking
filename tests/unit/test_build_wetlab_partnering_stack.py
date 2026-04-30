@@ -1215,6 +1215,108 @@ def test_build_wetlab_partnering_stack_selected_allatom_additive_surface_contrac
     assert "selected_allatom_visual_human_summary" in markdown
 
 
+def test_partnering_stack_selected_allatom_green_next_step_overrides_stale_retry_wording(monkeypatch) -> None:
+    monkeypatch.setattr(
+        mod.selected_allatom_canonical_mod,
+        "resolve_selected_allatom_canonical",
+        lambda **kwargs: {
+            "raw_claim_requirement_mode": "semi_hard",
+            "raw_claim_requirement_provenance": "claim_gate_required_for_final_wetlab",
+            "raw_claim_required_for_final_wetlab": True,
+            "raw_claim_required_for_commercial_readiness": True,
+            "raw_claim_requirement_reason": "claim/equivalence gate is required before final wetlab release.",
+            "effective_actionability_status": "ready",
+            "effective_actionability_claim_requirement_mode": "semi_hard",
+            "effective_actionability_claim_requirement_status": "satisfied",
+            "effective_actionability_claim_requirement_reason": "claim/equivalence gate is satisfied.",
+            "effective_actionability_next_expensive_lane": "defer_expensive_lane",
+            "effective_actionability_next_expensive_lane_reason": "translation gate remains borderline; expensive lane deferred.",
+            "effective_actionability_required_calculations": [],
+            "effective_actionability_required_calculations_text": "",
+            "effective_actionability_action_list": [
+                {"severity": "soft", "action": "defer_expensive_lane", "status": "deferred", "lane": "defer_expensive_lane"}
+            ],
+            "effective_actionability_action_list_text": (
+                "soft:defer_expensive_lane[deferred] lane=defer_expensive_lane"
+            ),
+            "effective_blocking_order": "ready",
+            "effective_primary_blocking_domain": "none",
+            "action_recipe_codes": ["defer_expensive_lane"],
+            "action_recipe_rows": [
+                {"severity": "soft", "action": "defer_expensive_lane", "status": "deferred", "lane": "defer_expensive_lane"}
+            ],
+            "action_recipe_rollup_text": (
+                "defer_expensive_lane | soft:defer_expensive_lane[deferred] lane=defer_expensive_lane"
+            ),
+            "translation_gate_version": "three_bead_to_allatom_translation_v1",
+            "translation_gate_focus_status": "borderline",
+            "translation_gate_focus_score": 0.5,
+            "translation_gate_focus_reason": "Borderline translation support.",
+            "focus_shortlist_tier": "follow_up",
+            "recommended_next_expensive_lane": "defer_expensive_lane",
+            "recommended_next_expensive_lane_reason": "Expensive lane deferred.",
+            "translation_provenance_mode": "source_driven",
+            "commercial_provenance_mode_v2": "source_driven",
+            "hybrid_policy": "canonical_scores_source_only__translation_shortlist_labeled_fallback",
+            "human_summary": "Selected all-atom delivery P0 is green; broader/default wetlab lane remains closed.",
+        },
+    )
+    empty = {"summary": {}}
+    stale_next_step = (
+        "Review the promoted PDE pseudo all-atom top-4 packet manually only, keep the default lane closed, "
+        "and do not treat this rescue-only packet as wetlab-ready because the strict_only gate did not pass."
+    )
+
+    payload = mod.build_payload(
+        *([empty] * 19),
+        broad_screen_retry_handoff_summary={
+            "summary": {
+                "status": "wetlab_retry_handoff_summary_ready",
+                "selected_allatom_target_id": "T. cruzi PDE",
+                "selected_allatom_surface_label": "tcruzi_pde_allatom_review_packet",
+                "selected_allatom_operator_review_ready_reported": True,
+                "selected_allatom_operator_review_ready": True,
+                "selected_allatom_wetlab_gate_reported": True,
+                "selected_allatom_wetlab_gate_pass": True,
+                "selected_allatom_final_gate_reported": True,
+                "selected_allatom_final_gate_pass": True,
+                "selected_allatom_claim_gate_available_reported": True,
+                "selected_allatom_claim_gate_available": True,
+                "selected_allatom_claim_ready_for_allatom_reported": True,
+                "selected_allatom_claim_ready_for_allatom": True,
+                "selected_allatom_next_required_step": stale_next_step,
+            }
+        },
+        broad_screen_current_results_index={
+            "summary": {
+                "selected_allatom_target_id": "T. cruzi PDE",
+                "selected_allatom_surface_label": "tcruzi_pde_allatom_review_packet",
+                "selected_allatom_wetlab_gate_reported": True,
+                "selected_allatom_wetlab_gate_pass": True,
+                "selected_allatom_final_gate_reported": True,
+                "selected_allatom_final_gate_pass": True,
+                "selected_allatom_claim_gate_available_reported": True,
+                "selected_allatom_claim_gate_available": True,
+                "selected_allatom_claim_ready_for_allatom_reported": True,
+                "selected_allatom_claim_ready_for_allatom": True,
+                "selected_allatom_translation_gate_focus_status": "borderline",
+                "selected_allatom_recommended_next_expensive_lane": "defer_expensive_lane",
+            }
+        },
+    )
+
+    summary = payload["summary"]
+    assert summary["selected_allatom_final_gate_pass"] is True
+    assert summary["selected_allatom_claim_ready_for_allatom"] is True
+    assert "delivery P0 is green" in summary["selected_allatom_next_required_step"]
+    assert "broader/default wetlab lane remains closed" in summary["selected_allatom_next_required_step"]
+    assert "translation gate remains borderline" in summary["selected_allatom_next_required_step"]
+    assert "expensive lane deferred" in summary["selected_allatom_next_required_step"]
+    assert summary["next_required_step"] == summary["selected_allatom_next_required_step"]
+    assert "strict_only gate did not pass" not in summary["next_required_step"]
+    assert "do not treat this rescue-only packet as wetlab-ready" not in summary["next_required_step"]
+
+
 def test_build_wetlab_partnering_stack_main_wires_target_retry_inputs(monkeypatch, tmp_path) -> None:
     root = tmp_path / "root"
     cwd = tmp_path / "cwd"

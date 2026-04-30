@@ -234,6 +234,35 @@ def _infer_translation_fields_from_texts(*texts: Any) -> dict[str, str]:
     return resolved
 
 
+def selected_allatom_green_next_required_step(
+    *,
+    wetlab_gate_pass: bool,
+    final_gate_pass: bool,
+    claim_ready_for_allatom: bool,
+    translation_gate_focus_status: Any = "",
+    recommended_next_expensive_lane: Any = "",
+    fallback_next_required_step: Any = "",
+) -> str:
+    """Return a current-aware next step once the selected all-atom P0 chain is green."""
+    fallback = _text(fallback_next_required_step)
+    if not (wetlab_gate_pass and final_gate_pass and claim_ready_for_allatom):
+        return fallback
+
+    parts = [
+        "Selected all-atom delivery P0 is green",
+        "broader/default wetlab lane remains closed",
+    ]
+    translation_status = _text(translation_gate_focus_status)
+    if translation_status:
+        parts.append(f"translation gate remains {translation_status}")
+    lane = _text(recommended_next_expensive_lane)
+    if lane == "defer_expensive_lane":
+        parts.append("expensive lane deferred")
+    elif lane:
+        parts.append(f"next expensive lane {lane}")
+    return "; ".join(parts) + "."
+
+
 def resolve_selected_allatom_canonical(
     *,
     review_packet_summary: dict[str, Any] | None = None,

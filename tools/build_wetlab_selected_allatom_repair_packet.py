@@ -428,6 +428,39 @@ def _claim_handoff_artifacts(
     }
 
 
+def _claim_handoff_from_current_review(review_summary: dict[str, Any]) -> dict[str, Any]:
+    claim_summary_json = _text(review_summary.get("allatom_claim_readiness_json")) or _text(
+        review_summary.get("claim_readiness_json")
+    )
+    gate_json = (
+        _text(review_summary.get("allatom_equivalence_gate_json"))
+        or _text(review_summary.get("equivalence_gate_json"))
+        or _text(review_summary.get("allatom_claim_readiness_gate_json"))
+    )
+    available_inputs: dict[str, str] = {}
+    if claim_summary_json:
+        available_inputs["claim_summary_json"] = claim_summary_json
+    if gate_json:
+        available_inputs["gate_json"] = gate_json
+    return {
+        "input_status": "claim_equivalence_satisfied",
+        "available_inputs": available_inputs,
+        "missing_inputs": [],
+        "strict_summary_candidate_paths": [],
+        "rejected_candidates": [],
+        "accuracy_external_candidate_paths": [],
+        "accuracy_external_rejected_candidates": [],
+        "claim_input_outputs": {},
+        "claim_readiness_outputs": {
+            "claim_summary_json": claim_summary_json,
+            "gate_json": gate_json,
+        },
+        "build_command": "",
+        "readiness_command": "",
+        "review_command": "",
+    }
+
+
 def _burndown_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return [dict(row or {}) for row in (payload.get("rows", []) or [])]
 
@@ -774,28 +807,76 @@ def build_payload(
         burndown_summary.get("hard_block_count"),
         sum(1 for row in rows if row["severity"] == "hard"),
     )
+    semi_hard_block_count = _safe_int(
+        burndown_summary.get("semi_hard_block_count"),
+        sum(1 for row in rows if row["severity"] == "semi_hard"),
+    )
     missing_metric_count = _safe_int(
         burndown_summary.get("missing_metric_count"),
         sum(1 for row in rows if row["source_status"] == "missing"),
     )
-    claim_handoff = _claim_handoff_artifacts(
-        rescue_lane_summary=rescue_summary,
-        allatom_runner_summary=allatom_runner_summary,
+    selected_wetlab_gate_pass = bool(burndown_summary.get("selected_allatom_wetlab_gate_pass", False))
+    selected_final_gate_pass = bool(burndown_summary.get("selected_allatom_final_gate_pass", False))
+    review_wetlab_gate_pass = bool(review_summary.get("wetlab_gate_pass", False))
+    review_final_gate_pass = bool(review_summary.get("wetlab_final_gate_pass", False))
+    claim_ready = bool(
+        burndown_summary.get("selected_allatom_claim_ready_for_allatom", False)
+        or review_summary.get("claim_ready_for_allatom", False)
+        or review_summary.get("claim_gate_satisfied", False)
     )
-    command_plan = _command_plan_with_claim_handoff(
-        target_id=target_id,
-        focus_artifact=focus_artifact,
-        claim_handoff=claim_handoff,
-        primary_code=primary_code,
-        primary_metric=primary_metric,
+    green_chain = bool(
+        selected_wetlab_gate_pass
+        and selected_final_gate_pass
+        and review_wetlab_gate_pass
+        and review_final_gate_pass
+        and claim_ready
+        and hard_block_count == 0
+        and semi_hard_block_count == 0
+        and missing_metric_count == 0
     )
-    recommended_command = _hard_gate_command(command_plan)
-    hard_codes = [row["repair_code"] for row in rows if row["execution_phase"] == "hard_gate_repair"]
-    after_hard_codes = [row["repair_code"] for row in rows if row["execution_phase"] == "after_hard_gate"]
+    active_rows = [row for row in rows if row["execution_phase"] != "deferred"] if green_chain else rows
+    claim_handoff = (
+        _claim_handoff_from_current_review(review_summary)
+        if green_chain
+        else _claim_handoff_artifacts(
+            rescue_lane_summary=rescue_summary,
+            allatom_runner_summary=allatom_runner_summary,
+        )
+    )
+    command_plan = (
+        []
+        if green_chain
+        else _command_plan_with_claim_handoff(
+            target_id=target_id,
+            focus_artifact=focus_artifact,
+            claim_handoff=claim_handoff,
+            primary_code=primary_code,
+            primary_metric=primary_metric,
+        )
+    )
+    recommended_command = _hard_gate_command(command_plan) if command_plan else ""
+    hard_codes = [row["repair_code"] for row in active_rows if row["execution_phase"] == "hard_gate_repair"]
+    after_hard_codes = [row["repair_code"] for row in active_rows if row["execution_phase"] == "after_hard_gate"]
     deferred_codes = [row["repair_code"] for row in rows if row["execution_phase"] == "deferred"]
+    active_repair_required = bool(active_rows)
+    next_required_step = (
+        f"No active repair is required for `{target_id or 'selected_allatom'}`. Keep this packet as a "
+        "regression/retry reference only; delivery P0 remains controlled by the refreshed verdict gate and "
+        "bundle validator. Keep the expensive lane deferred unless translation or survival support is explicitly reopened."
+        if not active_repair_required
+        else (
+            f"Execute repair `{primary_code}` for `{target_id or 'selected_allatom'}` with `{primary_metric}` currently "
+            f"`{primary_value or '-'}` versus unchanged threshold `{primary_threshold or '-'}` (delta `{primary_delta or '-'}`); "
+            "then recompute `claim_gate_required_unavailable`. Run claim/equivalence only after hard gate closure with "
+            f"`{(claim_handoff['claim_readiness_outputs']).get('claim_summary_json')}` and "
+            f"`{(claim_handoff['claim_readiness_outputs']).get('gate_json')}`; missing inputs "
+            f"`{', '.join(claim_handoff['missing_inputs']) or 'none'}` stay blocked, not pass. Keep the expensive lane deferred."
+        )
+    )
 
     summary = {
-        "repair_ready": bool(rows),
+        "repair_ready": active_repair_required,
+        "active_repair_required": active_repair_required,
         "packet_artifact": DEFAULT_OUT_MD,
         "target_id": target_id,
         "selected_allatom_focus_artifact": focus_artifact,
@@ -805,11 +886,12 @@ def build_payload(
         "manual_pass_promotion_allowed": False,
         "delivery_ready_override_allowed": False,
         "selected_allatom_pass_override_allowed": False,
-        "selected_allatom_wetlab_gate_pass": bool(burndown_summary.get("selected_allatom_wetlab_gate_pass", False)),
-        "selected_allatom_final_gate_pass": bool(burndown_summary.get("selected_allatom_final_gate_pass", False)),
-        "review_packet_wetlab_gate_pass": bool(review_summary.get("wetlab_gate_pass", False)),
-        "review_packet_wetlab_final_gate_pass": bool(review_summary.get("wetlab_final_gate_pass", False)),
+        "selected_allatom_wetlab_gate_pass": selected_wetlab_gate_pass,
+        "selected_allatom_final_gate_pass": selected_final_gate_pass,
+        "review_packet_wetlab_gate_pass": review_wetlab_gate_pass,
+        "review_packet_wetlab_final_gate_pass": review_final_gate_pass,
         "hard_block_count": hard_block_count,
+        "semi_hard_block_count": semi_hard_block_count,
         "missing_metric_count": missing_metric_count,
         "primary_repair_code": primary_code,
         "primary_metric": primary_metric,
@@ -820,7 +902,7 @@ def build_payload(
         "command_plan": command_plan,
         "closure_plan": command_plan,
         "claim_equivalence_required_inputs": ["<claim_summary.json>", "<gate.json>"],
-        "claim_equivalence_missing_inputs_pass": False,
+        "claim_equivalence_missing_inputs_pass": not bool(claim_handoff["missing_inputs"]),
         "claim_equivalence_input_status": claim_handoff["input_status"],
         "claim_equivalence_available_inputs": claim_handoff["available_inputs"],
         "claim_equivalence_missing_inputs": claim_handoff["missing_inputs"],
@@ -864,14 +946,7 @@ def build_payload(
         "source_burndown_packet": DEFAULT_BURNDOWN_JSON,
         "source_review_packet": DEFAULT_REVIEW_JSON,
         "source_rescue_lane_packet": DEFAULT_RESCUE_LANE_JSON,
-        "next_required_step": (
-            f"Execute repair `{primary_code}` for `{target_id or 'selected_allatom'}` with `{primary_metric}` currently "
-            f"`{primary_value or '-'}` versus unchanged threshold `{primary_threshold or '-'}` (delta `{primary_delta or '-'}`); "
-            "then recompute `claim_gate_required_unavailable`. Run claim/equivalence only after hard gate closure with "
-            f"`{(claim_handoff['claim_readiness_outputs']).get('claim_summary_json')}` and "
-            f"`{(claim_handoff['claim_readiness_outputs']).get('gate_json')}`; missing inputs "
-            f"`{', '.join(claim_handoff['missing_inputs']) or 'none'}` stay blocked, not pass. Keep the expensive lane deferred."
-        ),
+        "next_required_step": next_required_step,
     }
     return {"summary": summary, "rows": rows}
 

@@ -11,6 +11,13 @@ from typing import Any, Dict, List, Optional, Sequence
 
 
 ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_PILOT_JSON = "runs/ligand_scaleup_100k_pilot_current.json"
+DEFAULT_KPI_JSON = "runs/ligand_scaleup_kpi_current.json"
+DEFAULT_COMPARISON_JSON = "runs/biorxiv_run_comparison_2026-03-23_scaleup_100k_pilot_v2r2_vs_current/summary.json"
+DEFAULT_BASELINE_SUMMARY_JSON = "runs/external_validation_blind_runs/external_validation_blind_runs_2026-03-22_biorxiv_v7r1/summary.json"
+DEFAULT_CANDIDATE_SUMMARY_JSON = (
+    "runs/external_validation_blind_runs/external_validation_blind_runs_2026-03-23_scaleup_100k_pilot_v2r2/summary.json"
+)
 
 
 def _resolve_repo_path(path_str: str) -> Path:
@@ -200,6 +207,68 @@ def _comparison_metrics(summary: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _regression_diagnostics(summary: Dict[str, Any]) -> Dict[str, Any]:
+    rows = summary.get("task_rows")
+    if not isinstance(rows, list):
+        rows = []
+    ligand_rows = [row for row in rows if isinstance(row, dict) and str(row.get("kind", "")).strip() == "ligand_stress"]
+    pass_to_fail_rows = [
+        row for row in ligand_rows if bool(row.get("baseline_pass", False)) and not bool(row.get("candidate_pass", False))
+    ]
+    pass_to_fail_task_ids = [str(row.get("task_id", "") or "") for row in pass_to_fail_rows if str(row.get("task_id", "") or "")]
+
+    def _worst_row(metric: str) -> Dict[str, Any]:
+        with_values = [(row, _safe_float(row.get(metric))) for row in ligand_rows]
+        with_values = [(row, value) for row, value in with_values if value is not None]
+        if not with_values:
+            return {}
+        return dict(min(with_values, key=lambda item: item[1])[0])
+
+    worst_pr_row = _worst_row("delta_pr_auc")
+    worst_top20_row = _worst_row("delta_top20_hit_rate")
+    primary = pass_to_fail_rows[0] if pass_to_fail_rows else (worst_pr_row or worst_top20_row or {})
+    primary_task = str(primary.get("task_id", "") or "")
+    primary_is_pass_to_fail = primary_task in set(pass_to_fail_task_ids)
+    primary_is_worst_pr = bool(primary_task and primary_task == str(worst_pr_row.get("task_id", "") or ""))
+    primary_is_worst_top20 = bool(primary_task and primary_task == str(worst_top20_row.get("task_id", "") or ""))
+    reason_parts: List[str] = []
+    if primary_is_pass_to_fail:
+        reason_parts.append("pass_to_fail")
+    if primary_is_worst_pr:
+        reason_parts.append("worst_pr_auc")
+    if primary_is_worst_top20:
+        reason_parts.append("worst_top20")
+    primary_reason = "_and_".join(reason_parts) if reason_parts else "ranking_regression"
+
+    def _trim(row: Dict[str, Any]) -> Dict[str, Any]:
+        keys = [
+            "task_id",
+            "domain",
+            "baseline_pass",
+            "candidate_pass",
+            "baseline_pr_auc",
+            "candidate_pr_auc",
+            "delta_pr_auc",
+            "baseline_top20_hit_rate",
+            "candidate_top20_hit_rate",
+            "delta_top20_hit_rate",
+        ]
+        return {key: row.get(key) for key in keys if key in row}
+
+    return {
+        "pass_to_fail_task_ids": pass_to_fail_task_ids,
+        "pass_to_fail_count": int(len(pass_to_fail_task_ids)),
+        "worst_pr_auc_task": str(worst_pr_row.get("task_id", "") or ""),
+        "worst_pr_auc_delta": _safe_float(worst_pr_row.get("delta_pr_auc")),
+        "worst_top20_task": str(worst_top20_row.get("task_id", "") or ""),
+        "worst_top20_delta": _safe_float(worst_top20_row.get("delta_top20_hit_rate")),
+        "primary_regression": _trim(dict(primary)) if primary else {},
+        "primary_regression_task_id": primary_task,
+        "primary_regression_domain": str(primary.get("domain", "") or ""),
+        "primary_regression_reason": primary_reason,
+    }
+
+
 def _build_guardrail_rows(
     pilot: Dict[str, Any],
     comparison: Dict[str, Any],
@@ -291,6 +360,7 @@ def build_payload(
     candidate_ready = bool(candidate_summary)
     comparison_ready = bool(comparison)
     comparison_metrics = _comparison_metrics(comparison) if comparison_ready else {}
+    regression_diagnostics = _regression_diagnostics(comparison) if comparison_ready else {}
 
     if comparison_ready:
         benchmark_stage = "post_run_comparison"
@@ -330,16 +400,25 @@ def build_payload(
 
     next_action = "collect_baseline_and_candidate_run artifacts"
     speed_row = next((row for row in guardrail_rows if row.get("guardrail_id") == "slowest_domain_speedup_min_1p8x"), None)
-    if comparison_ready and isinstance(speed_row, dict) and speed_row.get("pass") is None:
-        next_action = "attach measured throughput artifact to close the speedup guardrail"
+    if comparison_ready and claim_safe is False:
+        primary_task = str(regression_diagnostics.get("primary_regression_task_id", "") or "")
+        if primary_task:
+            next_action = (
+                f"guardrails failed on {primary_task}; inspect PR-AUC and top20 regressions before scaling further"
+            )
+        else:
+            next_action = "guardrails failed; inspect worst PR-AUC and top20 regressions before scaling further"
+    elif comparison_ready and isinstance(speed_row, dict) and speed_row.get("pass") is None:
+        next_action = (
+            "quality guardrails are claim-safe; attach measured throughput and artifact-size evidence "
+            "to close the speedup guardrail"
+        )
     elif comparison_ready and isinstance(speed_row, dict) and speed_row.get("pass") is False and claim_safe:
         next_action = "quality guardrails hold, but measured speedup is below threshold; tune the slowest domain before larger launch"
     elif comparison_ready and claim_safe and isinstance(speed_row, dict) and speed_row.get("pass") is True:
         next_action = "benchmark remains claim-safe with measured speedup; candidate is ready for larger-scale throughput runs"
     elif comparison_ready and claim_safe:
         next_action = "benchmark remains claim-safe; next step is measured throughput and artifact-size evidence"
-    elif comparison_ready and claim_safe is False:
-        next_action = "guardrails failed; inspect worst PR-AUC and top20 regressions before scaling further"
     elif candidate_ready and not comparison_ready:
         next_action = "run comparison against the frozen baseline"
 
@@ -356,6 +435,10 @@ def build_payload(
         "kpi_summary": kpi_summary,
         "slowest_task_at_1m": slowest,
         "comparison_metrics": comparison_metrics,
+        "regression_diagnostics": regression_diagnostics,
+        "primary_regression_task_id": regression_diagnostics.get("primary_regression_task_id", ""),
+        "primary_regression_domain": regression_diagnostics.get("primary_regression_domain", ""),
+        "primary_regression_reason": regression_diagnostics.get("primary_regression_reason", ""),
         "measured_speedup_summary": measured_speedup,
         "guardrail_rows": guardrail_rows,
         "guardrail_pass_count": int(len(guardrail_pass_rows)),
@@ -377,11 +460,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         description="Build a commercialization-oriented guardrail summary for the ligand scale-up benchmark."
     )
-    parser.add_argument("--pilot-json", default="runs/ligand_scaleup_100k_pilot_current.json")
-    parser.add_argument("--kpi-json", default="runs/ligand_scaleup_kpi_current.json")
-    parser.add_argument("--comparison-json", default="runs/biorxiv_run_comparison_2026-03-23_scaleup_100k_pilot_v1_vs_current/summary.json")
-    parser.add_argument("--baseline-summary-json", default="runs/external_validation_blind_runs/external_validation_blind_runs_2026-03-22_biorxiv_v7r1/summary.json")
-    parser.add_argument("--candidate-summary-json", default="runs/external_validation_blind_runs/external_validation_blind_runs_2026-03-23_scaleup_100k_pilot_v1/summary.json")
+    parser.add_argument("--pilot-json", default=DEFAULT_PILOT_JSON)
+    parser.add_argument("--kpi-json", default=DEFAULT_KPI_JSON)
+    parser.add_argument("--comparison-json", default=DEFAULT_COMPARISON_JSON)
+    parser.add_argument("--baseline-summary-json", default=DEFAULT_BASELINE_SUMMARY_JSON)
+    parser.add_argument("--candidate-summary-json", default=DEFAULT_CANDIDATE_SUMMARY_JSON)
     parser.add_argument("--out-json", default="runs/ligand_scaleup_benchmark_summary_current.json")
     parser.add_argument("--out-csv", default="runs/ligand_scaleup_benchmark_summary_current.csv")
     parser.add_argument("--out-md", default="runs/ligand_scaleup_benchmark_summary_current.md")
@@ -432,6 +515,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         f"- claim_safe: `{payload.get('claim_safe')}`",
         f"- claim_safe_status: `{payload.get('claim_safe_status', '')}`",
         f"- recommended_next_action: `{payload.get('recommended_next_action', '')}`",
+        f"- primary_regression_task_id: `{payload.get('primary_regression_task_id', '')}`",
+        f"- primary_regression_domain: `{payload.get('primary_regression_domain', '')}`",
+        f"- primary_regression_reason: `{payload.get('primary_regression_reason', '')}`",
         "",
         "## Scope",
         "",

@@ -6,10 +6,24 @@ import re
 from typing import Any
 
 try:
-    from tools.wetlab_selected_allatom_canonical import resolve_selected_allatom_canonical
+    from tools.wetlab_selected_allatom_canonical import (
+        resolve_selected_allatom_canonical,
+        selected_allatom_green_next_required_step,
+    )
 except ModuleNotFoundError:
     def resolve_selected_allatom_canonical(**_: Any) -> dict[str, Any]:
         raise NotImplementedError("selected_allatom canonical resolver is not available")
+
+    def selected_allatom_green_next_required_step(
+        *,
+        wetlab_gate_pass: bool,
+        final_gate_pass: bool,
+        claim_ready_for_allatom: bool,
+        translation_gate_focus_status: Any = "",
+        recommended_next_expensive_lane: Any = "",
+        fallback_next_required_step: Any = "",
+    ) -> str:
+        return str(fallback_next_required_step or "").strip()
 from tools.wetlab_selected_allatom_visual import (
     resolve_selected_allatom_visual_bundle,
     selected_allatom_visual_surface_fields,
@@ -1351,6 +1365,18 @@ def build_payload(
             selected_allatom_review_packet_summary.get("wetlab_final_gate_pass"),
             default=selected_allatom_final_gate_pass,
         )
+    if _has_value(selected_allatom_review_packet_summary, "claim_gate_available"):
+        selected_allatom_claim_gate_reported = True
+        selected_allatom_claim_gate_available = _resolve_bool(
+            selected_allatom_review_packet_summary.get("claim_gate_available"),
+            default=selected_allatom_claim_gate_available,
+        )
+    if _has_value(selected_allatom_review_packet_summary, "claim_ready_for_allatom"):
+        selected_allatom_claim_ready_reported = True
+        selected_allatom_claim_ready_for_allatom = _resolve_bool(
+            selected_allatom_review_packet_summary.get("claim_ready_for_allatom"),
+            default=selected_allatom_claim_ready_for_allatom,
+        )
     selected_allatom_pose_validation = build_pose_validation_fields_from_summary(
         selected_allatom_review_packet_summary
     )
@@ -1556,33 +1582,33 @@ def build_payload(
         )
     )
     selected_allatom_translation_gate_version = _text(
-        bsrhs.get("selected_allatom_translation_gate_version", ""),
         selected_allatom_review_packet_summary.get("translation_gate_version", ""),
+        bsrhs.get("selected_allatom_translation_gate_version", ""),
     )
     selected_allatom_translation_gate_focus_status = _text(
-        bsrhs.get("selected_allatom_translation_gate_focus_status", ""),
         selected_allatom_review_packet_summary.get("translation_gate_focus_status", ""),
+        bsrhs.get("selected_allatom_translation_gate_focus_status", ""),
     )
     selected_allatom_translation_gate_focus_score = _resolve_float(
-        bsrhs.get("selected_allatom_translation_gate_focus_score"),
         selected_allatom_review_packet_summary.get("translation_gate_focus_score"),
+        bsrhs.get("selected_allatom_translation_gate_focus_score"),
         default=0.0,
     )
     selected_allatom_translation_gate_focus_reason = _text(
-        bsrhs.get("selected_allatom_translation_gate_focus_reason", ""),
         selected_allatom_review_packet_summary.get("translation_gate_focus_reason", ""),
+        bsrhs.get("selected_allatom_translation_gate_focus_reason", ""),
     )
     selected_allatom_focus_shortlist_tier = _text(
-        bsrhs.get("selected_allatom_focus_shortlist_tier", ""),
         selected_allatom_review_packet_summary.get("focus_shortlist_tier", ""),
+        bsrhs.get("selected_allatom_focus_shortlist_tier", ""),
     )
     selected_allatom_recommended_next_expensive_lane = _text(
-        bsrhs.get("selected_allatom_recommended_next_expensive_lane", ""),
         selected_allatom_review_packet_summary.get("recommended_next_expensive_lane", ""),
+        bsrhs.get("selected_allatom_recommended_next_expensive_lane", ""),
     )
     selected_allatom_recommended_next_expensive_lane_reason = _text(
-        bsrhs.get("selected_allatom_recommended_next_expensive_lane_reason", ""),
         selected_allatom_review_packet_summary.get("recommended_next_expensive_lane_reason", ""),
+        bsrhs.get("selected_allatom_recommended_next_expensive_lane_reason", ""),
     )
     selected_allatom_translation_provenance_mode = (
         "source_driven" if selected_allatom_translation_reported else "not_reported"
@@ -1885,6 +1911,14 @@ def build_payload(
     selected_allatom_hybrid_policy = _text(
         selected_allatom_canonical.get("hybrid_policy", ""),
         "canonical_scores_source_only__translation_shortlist_labeled_fallback",
+    )
+    selected_allatom_next_required_step = selected_allatom_green_next_required_step(
+        wetlab_gate_pass=selected_allatom_wetlab_gate_pass,
+        final_gate_pass=selected_allatom_final_gate_pass,
+        claim_ready_for_allatom=selected_allatom_claim_ready_for_allatom,
+        translation_gate_focus_status=selected_allatom_translation_gate_focus_status,
+        recommended_next_expensive_lane=selected_allatom_recommended_next_expensive_lane,
+        fallback_next_required_step=selected_allatom_next_required_step,
     )
     canonical_best_mean_min_distance_A = _safe_float(
         selected_allatom_canonical.get("best_mean_min_distance_A")
@@ -2860,8 +2894,8 @@ def build_payload(
             ).strip(),
             "top_outbound_targets": top_outbound_targets or str(obs.get("top_priority_lead_targets", "")).strip(),
             "next_required_step": (
-                str(bsrhs.get("selected_allatom_next_required_step", "")).strip()
-                if str(bsrhs.get("selected_allatom_next_required_step", "")).strip()
+                selected_allatom_next_required_step
+                if selected_allatom_next_required_step
                 else str(bskrs1.get("next_required_step", "")).strip()
                 if bool(bskrs1.get("branch_validated", False)) and str(bskrs1.get("next_required_step", "")).strip()
                 else str(bdr1.get("next_required_step", "")).strip()

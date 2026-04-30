@@ -233,6 +233,85 @@ def test_build_wetlab_selected_allatom_repair_packet_is_repair_only() -> None:
     assert rows["defer_expensive_lane"]["execution_phase"] == "deferred"
 
 
+def test_repair_packet_reports_no_active_repair_when_current_chain_is_green() -> None:
+    payload = mod.build_payload(
+        burndown_payload={
+            "summary": {
+                "selected_allatom_target_id": "T. cruzi PDE",
+                "selected_allatom_focus_artifact": "runs/wetlab_tcruzi_pde_allatom_review_packet_current.md",
+                "selected_allatom_selected_threshold_A": "2.5",
+                "selected_allatom_best_mean_min_distance_A": "2.120",
+                "selected_allatom_wetlab_gate_pass": True,
+                "selected_allatom_final_gate_pass": True,
+                "selected_allatom_claim_gate_available": True,
+                "selected_allatom_claim_ready_for_allatom": True,
+                "hard_block_count": 0,
+                "semi_hard_block_count": 0,
+                "missing_metric_count": 0,
+                "primary_burndown_code": "defer_expensive_lane",
+                "primary_burndown_delta": "-",
+            },
+            "rows": [
+                {
+                    "severity": "soft",
+                    "category": "next_expensive_lane",
+                    "code": "defer_expensive_lane",
+                    "action": "defer_expensive_lane",
+                    "status": "deferred",
+                    "reason": "Do not spend stronger-physics budget.",
+                }
+            ],
+        },
+        review_payload={
+            "summary": {
+                "target_id": "T. cruzi PDE",
+                "wetlab_gate_pass": True,
+                "wetlab_final_gate_pass": True,
+                "claim_gate_available": True,
+                "claim_gate_satisfied": True,
+                "claim_ready_for_allatom": True,
+                "allatom_claim_readiness_json": "runs/allatom_claim_readiness_2026-04-29_summary.json",
+                "allatom_equivalence_gate_json": "runs/allatom_claim_readiness_2026-04-29_gate.json",
+                "recommended_next_expensive_lane": "defer_expensive_lane",
+            }
+        },
+        rescue_lane_payload={"summary": {}},
+        allatom_runner_payload={
+            "summary": {
+                "raw_claim_gate_status": "claim_required_unavailable",
+                "allatom_claim_readiness_json": "",
+                "allatom_equivalence_gate_json": "",
+            }
+        },
+    )
+
+    summary = payload["summary"]
+    assert summary["repair_ready"] is False
+    assert summary["active_repair_required"] is False
+    assert summary["supporting_packet_only"] is True
+    assert summary["hard_block_count"] == 0
+    assert summary["semi_hard_block_count"] == 0
+    assert summary["missing_metric_count"] == 0
+    assert summary["claim_equivalence_missing_inputs"] == []
+    assert summary["claim_equivalence_missing_inputs_pass"] is True
+    assert summary["claim_equivalence_available_inputs"]["claim_summary_json"] == (
+        "runs/allatom_claim_readiness_2026-04-29_summary.json"
+    )
+    assert summary["claim_equivalence_available_inputs"]["gate_json"] == (
+        "runs/allatom_claim_readiness_2026-04-29_gate.json"
+    )
+    assert summary["recommended_command"] == ""
+    assert summary["command_plan"] == []
+    assert summary["hard_gate_repair_codes"] == []
+    assert summary["after_hard_gate_codes"] == []
+    assert summary["deferred_codes"] == ["defer_expensive_lane"]
+    assert "No active repair is required" in summary["next_required_step"]
+    assert "regression/retry reference" in summary["next_required_step"]
+    assert "claim_gate_required_unavailable" not in summary["next_required_step"]
+    assert "strict_summary_json" not in summary["next_required_step"]
+    assert "accuracy_external_csv" not in summary["next_required_step"]
+
+
 def test_repair_packet_does_not_relax_threshold_when_input_distance_fails() -> None:
     payload = mod.build_payload(
         burndown_payload={

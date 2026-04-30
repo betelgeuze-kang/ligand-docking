@@ -41,7 +41,7 @@ def _assert_selected_allatom_commercial_v2_translation_contract(
     packet_summary = _load_current_packet_summary(filename)
     assert packet_summary["target_id"] == expected_target_id
     assert packet_summary["commercial_schema_version_v2"] == "wetlab_commercial_grade_v2"
-    assert packet_summary["commercial_hard_gate_pass_v2"] is False
+    assert packet_summary["commercial_hard_gate_pass_v2"] is True
     assert round(float(packet_summary["commercial_overall_score_v2"]), 1) >= 50.0
     assert round(float(packet_summary["commercial_consistency_score_v2"]), 1) >= 60.0
     assert packet_summary["translation_gate_focus_status"] == expected_translation_status
@@ -566,53 +566,40 @@ def test_build_wetlab_master_handoff_dashboard_surfaces_selected_allatom_v2_tran
         "recommended_next_expensive_lane_reason"
     ]
     assert packet_summary["recommended_next_expensive_lane_reason"] in summary["selected_allatom_translation_human_summary"]
-    assert summary["selected_allatom_next_required_step"] == selected_next_step
-    assert summary["selected_allatom_actionability_status"] in {"hard_blocked", "semi_hard_blocked"}
-    expected_claim_mode = (
-        "semi_hard" if summary["selected_allatom_actionability_status"] == "semi_hard_blocked" else "not_applicable"
+    assert summary["selected_allatom_next_required_step"] == (
+        "Selected all-atom delivery P0 is green; broader/default wetlab lane remains closed; "
+        "translation gate remains borderline; expensive lane deferred."
     )
+    assert selected_next_step not in summary["selected_allatom_next_required_step"]
+    assert summary["next_required_step"] == summary["selected_allatom_next_required_step"]
+    assert summary["selected_allatom_actionability_status"] == "ready"
+    expected_claim_mode = "semi_hard"
     assert summary["selected_allatom_actionability_claim_requirement_mode"] == expected_claim_mode
     assert summary["selected_allatom_actionability_next_expensive_lane"] == "defer_expensive_lane"
     assert summary["selected_allatom_raw_claim_requirement_mode"] == "semi_hard"
     assert summary["selected_allatom_raw_claim_required_for_final_wetlab"] is True
     assert summary["selected_allatom_effective_actionability_status"] == summary["selected_allatom_actionability_status"]
     assert summary["selected_allatom_effective_actionability_claim_requirement_mode"] == expected_claim_mode
-    if summary["selected_allatom_actionability_status"] == "semi_hard_blocked":
-        assert summary["selected_allatom_effective_blocking_order"] == "claim_block_first"
-        assert summary["selected_allatom_effective_primary_blocking_domain"] == "claim_equivalence"
-    else:
-        assert summary["selected_allatom_effective_blocking_order"] == "hard_block_first"
-        assert summary["selected_allatom_effective_primary_blocking_domain"] == "translation_commercial_hard_gate"
+    assert summary["selected_allatom_effective_actionability_claim_requirement_status"] == "satisfied"
+    assert summary["selected_allatom_effective_blocking_order"] == "clear"
+    assert summary["selected_allatom_effective_primary_blocking_domain"] in {
+        "",
+        "soft_guidance",
+        "not_blocked",
+    }
     assert "recompute_binding_energy_proxy" not in summary["selected_allatom_action_recipe_codes"]
-    if summary["selected_allatom_actionability_status"] == "semi_hard_blocked":
-        assert "resolve_claim_equivalence_gate" in summary["selected_allatom_action_recipe_codes"]
-        assert "recompute_claim_gate_required_unavailable" not in summary["selected_allatom_action_recipe_codes"]
-    elif "recompute_claim_ready_for_allatom" in summary["selected_allatom_action_recipe_codes"]:
-        assert "recompute_claim_ready_for_allatom" in summary["selected_allatom_action_recipe_codes"]
-        assert "recompute_claim_gate_required_unavailable" not in summary["selected_allatom_action_recipe_codes"]
-    else:
-        assert "recompute_claim_gate_required_unavailable" in summary["selected_allatom_action_recipe_codes"]
+    assert "resolve_claim_equivalence_gate" in summary["selected_allatom_action_recipe_codes"]
+    assert "recompute_claim_gate_required_unavailable" not in summary["selected_allatom_action_recipe_codes"]
     assert "defer_expensive_lane" in summary["selected_allatom_action_recipe_codes"]
     assert (
         f"blocking order {summary['selected_allatom_effective_blocking_order']}"
         in summary["selected_allatom_claim_actionability_split_summary"]
     )
-    if summary["selected_allatom_actionability_status"] == "semi_hard_blocked":
-        assert "resolve_claim_equivalence_gate" in summary[
-            "selected_allatom_actionability_required_calculations_text"
-        ]
-    elif "recompute_claim_ready_for_allatom" in summary["selected_allatom_action_recipe_codes"]:
-        assert "recompute_claim_ready_for_allatom" in summary[
-            "selected_allatom_actionability_required_calculations_text"
-        ]
-    else:
-        assert "recompute_claim_gate_required_unavailable" in summary[
-            "selected_allatom_actionability_required_calculations_text"
-        ]
+    assert summary["selected_allatom_actionability_required_calculations_text"] == ""
     assert "Actionability:" in summary["selected_allatom_human_summary"]
-    assert "translation gate focus is borderline" in summary["selected_allatom_next_required_step"]
-    assert "shortlist tier is defer" in summary["selected_allatom_next_required_step"]
-    assert "recommended next lane is defer_expensive_lane" in summary["selected_allatom_next_required_step"]
+    assert "translation gate remains borderline" in summary["selected_allatom_next_required_step"]
+    assert "broader/default wetlab lane remains closed" in summary["selected_allatom_next_required_step"]
+    assert "expensive lane deferred" in summary["selected_allatom_next_required_step"]
     assert summary["selected_allatom_best_mean_min_distance_A"] == packet_summary["best_mean_min_distance_A"]
     assert summary["selected_allatom_metric_source"] == "review_packet_summary.best_mean_min_distance_A"
     assert summary["selected_allatom_visual_bundle_ready"] is True
@@ -626,20 +613,15 @@ def test_build_wetlab_master_handoff_dashboard_surfaces_selected_allatom_v2_tran
 
     focus_row = next(row for row in payload["rows"] if row["surface"] == "broad_screen_selected_allatom_focus")
     assert "commercial grade v2" in focus_row["one_line_summary"].lower()
-    assert "translation gate focus is borderline" in focus_row["one_line_summary"]
-    assert "shortlist tier is defer" in focus_row["one_line_summary"]
-    assert "recommended next lane is defer_expensive_lane" in focus_row["one_line_summary"]
+    assert "translation gate remains borderline" in focus_row["one_line_summary"]
+    assert "broader/default wetlab lane remains closed" in focus_row["one_line_summary"]
+    assert "expensive lane deferred" in focus_row["one_line_summary"]
     assert packet_summary["recommended_next_expensive_lane_reason"] in focus_row["one_line_summary"]
     assert "Visual: PDE focus visuals ready for review." in focus_row["one_line_summary"]
     assert "Media: dashboard ready | figure ready | movie scripts 0/4 | movie mp4 0/4 | binding-event clips 0/4." in focus_row["one_line_summary"]
     actionability_row = next(row for row in payload["rows"] if row["surface"] == "broad_screen_selected_allatom_actionability")
     assert actionability_row["status"] == summary["selected_allatom_actionability_status"]
-    if summary["selected_allatom_actionability_status"] == "semi_hard_blocked":
-        assert "resolve_claim_equivalence_gate" in actionability_row["one_line_summary"]
-    elif "recompute_claim_ready_for_allatom" in summary["selected_allatom_action_recipe_codes"]:
-        assert "recompute_claim_ready_for_allatom" in actionability_row["one_line_summary"]
-    else:
-        assert "recompute_claim_gate_required_unavailable" in actionability_row["one_line_summary"]
+    assert "resolve_claim_equivalence_gate" in actionability_row["one_line_summary"]
     assert "raw claim semi_hard" in actionability_row["one_line_summary"]
     assert f"blocking order {summary['selected_allatom_effective_blocking_order']}" in actionability_row["one_line_summary"]
 

@@ -8,10 +8,24 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from tools.wetlab_selected_allatom_canonical import resolve_selected_allatom_canonical
+    from tools.wetlab_selected_allatom_canonical import (
+        resolve_selected_allatom_canonical,
+        selected_allatom_green_next_required_step,
+    )
 except ModuleNotFoundError:
     def resolve_selected_allatom_canonical(**_: Any) -> dict[str, Any]:
         raise NotImplementedError("selected_allatom canonical resolver is not available")
+
+    def selected_allatom_green_next_required_step(
+        *,
+        wetlab_gate_pass: bool,
+        final_gate_pass: bool,
+        claim_ready_for_allatom: bool,
+        translation_gate_focus_status: Any = "",
+        recommended_next_expensive_lane: Any = "",
+        fallback_next_required_step: Any = "",
+    ) -> str:
+        return str(fallback_next_required_step or "").strip()
 from tools.wetlab_selected_allatom_visual import (
     resolve_selected_allatom_visual_bundle,
     selected_allatom_visual_surface_fields,
@@ -1497,6 +1511,16 @@ def build_payload(
     selected_allatom_operator_review_reported, selected_allatom_operator_review_ready = _resolve_explicit_bool_from_sources(
         [
             (
+                selected_allatom_focus_summary,
+                (),
+                (
+                    "packet_ready_for_operator_review",
+                    "selected_allatom_packet_ready_for_operator_review",
+                    "selected_allatom_operator_review_ready",
+                    "packet_ready",
+                ),
+            ),
+            (
                 bsrhs,
                 (),
                 (
@@ -1534,6 +1558,16 @@ def build_payload(
     selected_allatom_final_gate_reported, selected_allatom_final_gate_pass = _resolve_explicit_bool_from_sources(
         [
             (
+                selected_allatom_focus_summary,
+                (),
+                (
+                    "wetlab_final_gate_pass",
+                    "final_gate_pass",
+                    "selected_allatom_wetlab_final_gate_pass",
+                    "selected_allatom_final_gate_pass",
+                ),
+            ),
+            (
                 bsrhs,
                 (),
                 ("selected_allatom_wetlab_final_gate_pass", "selected_allatom_final_gate_pass"),
@@ -1548,6 +1582,11 @@ def build_payload(
     selected_allatom_claim_gate_reported, selected_allatom_claim_gate_available = _resolve_explicit_bool_from_sources(
         [
             (
+                selected_allatom_focus_summary,
+                (),
+                ("claim_gate_available", "selected_allatom_claim_gate_available"),
+            ),
+            (
                 bcris,
                 ("selected_allatom_claim_gate_available_reported",),
                 ("selected_allatom_claim_gate_available",),
@@ -1561,6 +1600,11 @@ def build_payload(
     )
     selected_allatom_claim_ready_reported, selected_allatom_claim_ready = _resolve_explicit_bool_from_sources(
         [
+            (
+                selected_allatom_focus_summary,
+                (),
+                ("claim_ready_for_allatom", "selected_allatom_claim_ready_for_allatom"),
+            ),
             (
                 bcris,
                 ("selected_allatom_claim_ready_for_allatom_reported",),
@@ -2023,6 +2067,14 @@ def build_payload(
         str(bsrhs.get("selected_allatom_next_required_step", "")).strip(),
         selected_allatom_focus_summary.get("next_required_step", ""),
     )
+    selected_allatom_next_required_step = selected_allatom_green_next_required_step(
+        wetlab_gate_pass=selected_allatom_wetlab_gate_pass,
+        final_gate_pass=selected_allatom_final_gate_pass,
+        claim_ready_for_allatom=selected_allatom_claim_ready,
+        translation_gate_focus_status=selected_allatom_translation_gate_status,
+        recommended_next_expensive_lane=selected_allatom_recommended_next_expensive_lane,
+        fallback_next_required_step=selected_allatom_next_required_step,
+    )
     selected_allatom_actionability_next_expensive_lane = _text(
         selected_allatom_actionability_next_expensive_lane,
         _selected_allatom_inferred_next_expensive_lane(
@@ -2457,9 +2509,18 @@ def build_payload(
         selected_allatom_visual.get("media_ready_rollup")
     )
     selected_allatom_next_required_step = _text(
+        selected_allatom_next_required_step,
         str(bcris.get("selected_allatom_next_required_step", "")).strip(),
         str(bsrhs.get("selected_allatom_next_required_step", "")).strip(),
         selected_allatom_focus_summary.get("next_required_step", ""),
+    )
+    selected_allatom_next_required_step = selected_allatom_green_next_required_step(
+        wetlab_gate_pass=selected_allatom_wetlab_gate_pass,
+        final_gate_pass=selected_allatom_final_gate_pass,
+        claim_ready_for_allatom=selected_allatom_claim_ready,
+        translation_gate_focus_status=selected_allatom_translation_gate_status,
+        recommended_next_expensive_lane=selected_allatom_recommended_next_expensive_lane,
+        fallback_next_required_step=selected_allatom_next_required_step,
     )
     selected_allatom_next_required_step_sentence = selected_allatom_next_required_step.rstrip().rstrip(".")
     selected_allatom_row_summary = " ".join(
@@ -3621,7 +3682,7 @@ def build_payload(
             "selected_allatom_under_2p5_candidate_count": selected_allatom_under_2p5_candidate_count,
             "selected_allatom_near_candidate_count": selected_allatom_near_candidate_count,
             "selected_allatom_next_required_step": str(
-                bsrhs.get("selected_allatom_next_required_step", bcris.get("selected_allatom_next_required_step", ""))
+                selected_allatom_next_required_step
             ).strip(),
             "broad_screen_lbdhodh_retry_lane_ready": bool(
                 str(bsldrs.get("status", "")).strip() == "wetlab_lbdhodh_exploratory_retry_lane_ready"
@@ -3850,8 +3911,8 @@ def build_payload(
             "first_dispatch_lead_targets": str(srs.get("first_dispatch_lead_targets", "")).strip(),
             "sender_name": str(ebs.get("sender_name", "")).strip(),
             "next_required_step": (
-                str(bsrhs.get("selected_allatom_next_required_step", "")).strip()
-                if str(bsrhs.get("selected_allatom_next_required_step", "")).strip()
+                selected_allatom_next_required_step
+                if selected_allatom_next_required_step
                 else str(bsrhs.get("selected_krs1_branch_review_next_required_step", "")).strip()
                 if str(bsrhs.get("selected_krs1_branch_review_next_required_step", "")).strip()
                 else str(bdr1.get("next_required_step", "")).strip()

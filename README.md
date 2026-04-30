@@ -90,6 +90,7 @@ Start with these documents when reviewing delivery readiness:
 - `docs/local_delivery_verdict_template.md`
 - `docs/local_delivery_engine_provenance.md`
 - `docs/local_delivery_claim_policy.md`
+- `docs/post_green_improvement_plan.md`
 
 ## Development Loop
 

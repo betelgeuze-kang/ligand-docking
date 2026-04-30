@@ -90,6 +90,7 @@ python3 tools/build_local_delivery_verdict_gate.py
 - `docs/local_delivery_verdict_template.md`
 - `docs/local_delivery_engine_provenance.md`
 - `docs/local_delivery_claim_policy.md`
+- `docs/post_green_improvement_plan.md`
 
 ### 현재 P0 메모
 

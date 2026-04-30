@@ -113,6 +113,7 @@ def test_build_payload_with_comparison_evaluates_guardrails(tmp_path: Path, monk
                 {"guardrail_id": "no_pass_to_fail", "metric": "set_pass_transition", "threshold": "0 pass->fail transitions", "scope": "regression slice"},
                 {"guardrail_id": "pr_auc_drop_max_0p02", "metric": "ranking_pr_auc_delta", "threshold": ">= -0.02 absolute", "scope": "regression slice"},
                 {"guardrail_id": "top20_hit_drop_max_1", "metric": "top20_hit_count_delta", "threshold": ">= -1 hit", "scope": "regression slice"},
+                {"guardrail_id": "slowest_domain_speedup_min_1p8x", "metric": "measured_end_to_end_speedup", "threshold": ">= 1.8x on slowest domain", "scope": "throughput benchmark"},
             ],
         },
     )
@@ -369,3 +370,87 @@ def test_build_payload_with_measured_speedup_below_threshold_marks_speed_guardra
     assert payload["claim_safe"] is True
     assert payload["claim_safe_status"] == "claim_safe_but_speedup_guardrail_failed"
     _contains_tokens(payload["recommended_next_action"], "speedup", "below", "slowest", "launch")
+
+
+def test_build_payload_failed_guardrails_surface_primary_regression_task(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    _write_json(
+        tmp_path / "runs/ligand_scaleup_100k_pilot_current.json",
+        {
+            "comparison_kind": "size_shift_operational_regression",
+            "scope_summary": {"full_task_count_100k": 6, "smoke_task_count_unchanged": 3, "domains_touched": ["gpcr"]},
+            "guardrail_rows": [
+                {"guardrail_id": "no_pass_to_fail", "metric": "set_pass_transition", "threshold": "0 pass->fail transitions", "scope": "regression slice"},
+                {"guardrail_id": "pr_auc_drop_max_0p02", "metric": "ranking_pr_auc_delta", "threshold": ">= -0.02 absolute", "scope": "regression slice"},
+                {"guardrail_id": "top20_hit_drop_max_1", "metric": "top20_hit_count_delta", "threshold": ">= -1 hit", "scope": "regression slice"},
+                {"guardrail_id": "slowest_domain_speedup_min_1p8x", "metric": "measured_end_to_end_speedup", "threshold": ">= 1.8x on slowest domain", "scope": "throughput benchmark"},
+            ],
+        },
+    )
+    _write_json(
+        tmp_path / "runs/ligand_scaleup_kpi_current.json",
+        {"summary": {"slowest_task_at_1m": {"task_id": "gpcr_core_full", "domain": "gpcr"}}},
+    )
+    _write_json(
+        tmp_path / "runs/comparison.json",
+        {
+            "tasks_with_pr_improvement": 0,
+            "tasks_with_pr_regression": 1,
+            "profile_changed_task_count": 1,
+            "task_rows": [
+                {
+                    "task_id": "gpcr_core_full",
+                    "kind": "ligand_stress",
+                    "domain": "gpcr",
+                    "baseline_pass": True,
+                    "candidate_pass": False,
+                    "baseline_pr_auc": 1.0,
+                    "candidate_pr_auc": 0.3908,
+                    "delta_pr_auc": -0.6092,
+                    "baseline_top20_hit_rate": 0.30,
+                    "candidate_top20_hit_rate": 0.15,
+                    "delta_top20_hit_rate": -0.15,
+                },
+                {
+                    "task_id": "kinase_core_full",
+                    "kind": "ligand_stress",
+                    "domain": "kinase",
+                    "baseline_pass": True,
+                    "candidate_pass": True,
+                    "baseline_pr_auc": 0.95,
+                    "candidate_pr_auc": 0.94,
+                    "delta_pr_auc": -0.01,
+                    "baseline_top20_hit_rate": 0.40,
+                    "candidate_top20_hit_rate": 0.40,
+                    "delta_top20_hit_rate": 0.0,
+                },
+            ],
+        },
+    )
+    _write_json(
+        tmp_path / "runs/baseline_summary.json",
+        {"sets": [{"set_id": "set1", "pass": True}]},
+    )
+    _write_json(
+        tmp_path / "runs/candidate_summary.json",
+        {"sets": [{"set_id": "set1", "pass": False}]},
+    )
+
+    payload = mod.build_payload(
+        pilot_json="runs/ligand_scaleup_100k_pilot_current.json",
+        kpi_json="runs/ligand_scaleup_kpi_current.json",
+        comparison_json="runs/comparison.json",
+        baseline_summary_json="runs/baseline_summary.json",
+        candidate_summary_json="runs/candidate_summary.json",
+    )
+
+    assert payload["claim_safe"] is False
+    assert payload["claim_safe_status"] == "regression_guardrail_failed"
+    assert payload["primary_regression_task_id"] == "gpcr_core_full"
+    assert payload["primary_regression_domain"] == "gpcr"
+    assert payload["primary_regression_reason"] == "pass_to_fail_and_worst_pr_auc_and_worst_top20"
+    assert payload["regression_diagnostics"]["pass_to_fail_task_ids"] == ["gpcr_core_full"]
+    assert payload["regression_diagnostics"]["worst_pr_auc_task"] == "gpcr_core_full"
+    assert payload["regression_diagnostics"]["worst_top20_task"] == "gpcr_core_full"
+    assert payload["regression_diagnostics"]["primary_regression"]["candidate_pr_auc"] == 0.3908
+    _contains_tokens(payload["recommended_next_action"], "gpcr_core_full", "pr-auc", "top20")
