@@ -442,7 +442,25 @@ def _apply_residual_prototype_shadow(
         terms = linear_rescore.get("terms", []) if isinstance(linear_rescore.get("terms", []), list) else []
         combine_mode = str(linear_rescore.get("combine_mode", "replace") or "replace").strip().lower()
         linear_score = np.full(len(result_df), _safe_float(linear_rescore.get("intercept"), 0.0), dtype=float)
+        ligand_mw_series = pd.to_numeric(
+            result_df["ligand_mw"] if "ligand_mw" in result_df.columns else pd.Series(np.zeros(len(result_df))),
+            errors="coerce",
+        ).fillna(0.0)
+        ligand_mw_std = float(ligand_mw_series.std()) if len(ligand_mw_series) else 1.0
+        if (not np.isfinite(ligand_mw_std)) or ligand_mw_std <= 1.0e-12:
+            ligand_mw_std = 1.0
+        z_ligand_mw = ((ligand_mw_series - float(ligand_mw_series.mean())) / ligand_mw_std).to_numpy(dtype=float)
         computed_linear_features = {
+            "z_binding_energy_mmpbsa_kcal_mol_proxy": pd.to_numeric(z_e, errors="coerce").to_numpy(dtype=float),
+            "z_mean_min_distance_A": pd.to_numeric(z_d, errors="coerce").to_numpy(dtype=float),
+            "z_stability_score": pd.to_numeric(z_s, errors="coerce").to_numpy(dtype=float),
+            "z_contact_fraction": pd.to_numeric(z_c, errors="coerce").to_numpy(dtype=float),
+            "z_ligand_affinity_hint": pd.to_numeric(z_aff, errors="coerce").to_numpy(dtype=float),
+            "z_ligand_mw": z_ligand_mw,
+            "z_ligand_logp": pd.to_numeric(z_logp, errors="coerce").to_numpy(dtype=float),
+            "z_ligand_rot_bonds": pd.to_numeric(z_rot, errors="coerce").to_numpy(dtype=float),
+            "z_ligand_h_donors": pd.to_numeric(z_hd, errors="coerce").to_numpy(dtype=float),
+            "z_ligand_h_acceptors": pd.to_numeric(z_ha, errors="coerce").to_numpy(dtype=float),
             "residual_shadow_prior_pressure": prior_pressure,
             "residual_shadow_structure_weakness": structural_weakness,
             "residual_shadow_structure_support": structural_support,

@@ -195,7 +195,7 @@ def test_apply_residual_prototype_shadow_linear_rescore_replace_mode(tmp_path):
                         "intercept": 0.25,
                         "terms": [
                             {"feature": "binding_score_composite_v7", "weight": 1.0},
-                            {"feature": "ligand_h_donors", "weight": 2.0},
+                            {"feature": "z_ligand_h_donors", "weight": 2.0},
                             {"feature": "residual_shadow_prior_pressure", "weight": 0.5},
                         ],
                     },
@@ -206,8 +206,8 @@ def test_apply_residual_prototype_shadow_linear_rescore_replace_mode(tmp_path):
     )
     result_df = pd.DataFrame(
         [
-            {"ligand_id": "binder_a", "binding_score_composite_v7": -8.0, "ligand_h_donors": 0.0},
-            {"ligand_id": "decoy_b", "binding_score_composite_v7": -8.0, "ligand_h_donors": 2.0},
+            {"ligand_id": "binder_a", "binding_score_composite_v7": -8.0},
+            {"ligand_id": "decoy_b", "binding_score_composite_v7": -8.0},
         ]
     )
     zero = pd.Series([0.0, 0.0], dtype=float)

@@ -144,3 +144,35 @@ def test_build_gpcr_residual_prototype_spec_core_decoy_intrusion_v1(tmp_path: Pa
         for row in payload["feature_rows"]
     )
     assert "compact_hydrophobic_low_affinity_decoy_intrusion" in payload["prototype"]["interactions"]
+
+
+def test_build_gpcr_residual_prototype_spec_core_linear_rescore_v1(tmp_path: Path) -> None:
+    out_json = tmp_path / "prototype_linear.json"
+    out_csv = tmp_path / "prototype_linear.csv"
+    out_md = tmp_path / "prototype_linear.md"
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools/build_gpcr_residual_prototype_spec.py"),
+            "--variant",
+            "gpcr_core_linear_rescore_v1",
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=ROOT,
+    )
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    linear = payload["prototype"]["linear_rescore"]
+
+    assert payload["summary"]["prototype_variant"] == "gpcr_core_linear_rescore_v1"
+    assert payload["prototype"]["constraints"]["linear_rescore_candidate"] is True
+    assert payload["prototype"]["tuning"]["core_replay_pr_auc"] >= 0.55
+    assert linear["enabled"] is True
+    assert linear["combine_mode"] == "replace"
+    assert any(term["feature"] == "z_ligand_logp" for term in linear["terms"])
+    assert any(row["feature_name"] == "z_ligand_affinity_hint" for row in payload["feature_rows"])

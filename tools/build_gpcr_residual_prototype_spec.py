@@ -125,6 +125,29 @@ def _feature_rows(variant: str) -> list[dict[str, Any]]:
                 },
             ]
         )
+    if variant == "gpcr_core_linear_rescore_v1":
+        rows.extend(
+            [
+                {
+                    "feature_name": "z_ligand_affinity_hint",
+                    "role": "linear_rescore_anchor",
+                    "direction": "reward_when_high",
+                    "rationale": "Replay search found affinity hint support helps recover core PR-AUC while preserving ChEMBL50 top-k.",
+                },
+                {
+                    "feature_name": "z_ligand_logp",
+                    "role": "linear_rescore_anchor",
+                    "direction": "reward_when_high",
+                    "rationale": "Core top-rank decoy intrusion is enriched for lower-logP rows than the protected beta-blocker anchors.",
+                },
+                {
+                    "feature_name": "z_ligand_rot_bonds",
+                    "role": "linear_rescore_anchor",
+                    "direction": "reward_when_high",
+                    "rationale": "Flexible beta-blocker-like anchors need protection from compact hard-decoy intrusion in 100k scale-up.",
+                },
+            ]
+        )
     return rows
 
 
@@ -330,6 +353,30 @@ def build_payload(*, variant: str = "current") -> dict[str, Any]:
             "Run this core-decoy intrusion candidate in shadow mode first. Promote to apply-mode only if core top20 "
             "false positives receive explainable deltas while core anchors and ChEMBL50 high-affinity positives remain protected."
         )
+    elif variant == "gpcr_core_linear_rescore_v1":
+        constraints = {
+            **constraints,
+            "max_abs_delta_score": 0.0,
+            "yellow_band_abs_delta_score": 0.0,
+            "linear_rescore_candidate": True,
+        }
+        tuning = {
+            "variant": "gpcr_core_linear_rescore_v1",
+            "candidate_source": "local_replay_search_2026-04-30",
+            "core_replay_pr_auc": 0.5681939351990422,
+            "core_replay_top20_hit_rate": 0.20,
+            "chembl50_replay_pr_auc": 0.8552083283821192,
+            "chembl50_replay_top20_hit_rate": 1.0,
+        }
+        interactions = [
+            "linear_rescore_rewards_affinity_hint_logp_and_rotor_support",
+            "linear_rescore_keeps_v7_as_primary_score_component",
+            "requires_blind_apply_run_before_claim_or_router_promotion",
+        ]
+        next_step = (
+            "Run gpcr_core_linear_rescore_v1 as a guarded apply candidate on core and ChEMBL50 100k. "
+            "Replay crossed the core PR-AUC/top20 floor, but this remains an overfit-risk candidate until the full blind run and CI gate pass."
+        )
 
     return {
         "summary": {
@@ -354,6 +401,28 @@ def build_payload(*, variant: str = "current") -> dict[str, Any]:
             "constraints": constraints,
             "interactions": interactions,
             "tuning": tuning,
+            "linear_rescore": (
+                {
+                    "enabled": True,
+                    "combine_mode": "replace",
+                    "intercept": 0.0,
+                    "terms": [
+                        {"feature": "binding_score_composite_v7", "weight": 0.6560744988396956},
+                        {"feature": "z_binding_energy_mmpbsa_kcal_mol_proxy", "weight": 0.06898074371659835},
+                        {"feature": "z_ligand_affinity_hint", "weight": -1.2316300252578614},
+                        {"feature": "z_ligand_logp", "weight": -1.2116692638345479},
+                        {"feature": "z_ligand_mw", "weight": 0.027722286583714784},
+                        {"feature": "z_ligand_h_donors", "weight": -0.2874434467251168},
+                        {"feature": "z_ligand_h_acceptors", "weight": 0.03213238193362028},
+                        {"feature": "z_ligand_rot_bonds", "weight": -0.5706661687175658},
+                        {"feature": "z_contact_fraction", "weight": 0.20125635810931242},
+                        {"feature": "z_stability_score", "weight": 0.31932524360428327},
+                        {"feature": "z_mean_min_distance_A", "weight": 0.45613011893835237},
+                    ],
+                }
+                if variant == "gpcr_core_linear_rescore_v1"
+                else {"enabled": False}
+            ),
             "feature_rows": feature_rows,
             "evidence_files": [
                 "runs/gpcr_100k_failure_analysis_current.md",
@@ -402,6 +471,7 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- require_contact_below_z: `{tuning.get('require_contact_below_z', 'off')}`",
         f"- min_intrusion_prior_pressure_for_delta: `{tuning.get('min_intrusion_prior_pressure_for_delta', 'off')}`",
         f"- min_intrusion_contact_support_for_delta: `{tuning.get('min_intrusion_contact_support_for_delta', 'off')}`",
+        f"- linear_rescore_enabled: `{proto.get('linear_rescore', {}).get('enabled', False)}`",
         "",
         "## Feature Targets",
         "",
@@ -429,6 +499,7 @@ def parse_args() -> argparse.Namespace:
             "chembl50_v3",
             "chembl50_v4",
             "gpcr_core_decoy_intrusion_v1",
+            "gpcr_core_linear_rescore_v1",
         ],
         default="current",
     )
