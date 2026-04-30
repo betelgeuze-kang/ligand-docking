@@ -109,3 +109,38 @@ def test_build_gpcr_residual_prototype_spec_chembl50_v4(tmp_path: Path) -> None:
     assert payload["summary"]["prototype_variant"] == "chembl50_v4"
     assert payload["prototype"]["constraints"]["max_abs_delta_score"] == 0.35
     assert payload["prototype"]["tuning"]["core_guard_abstain_on_small_margin"] is True
+
+
+def test_build_gpcr_residual_prototype_spec_core_decoy_intrusion_v1(tmp_path: Path) -> None:
+    out_json = tmp_path / "prototype_intrusion.json"
+    out_csv = tmp_path / "prototype_intrusion.csv"
+    out_md = tmp_path / "prototype_intrusion.md"
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools/build_gpcr_residual_prototype_spec.py"),
+            "--variant",
+            "gpcr_core_decoy_intrusion_v1",
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=ROOT,
+    )
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    tuning = payload["prototype"]["tuning"]
+
+    assert payload["summary"]["prototype_variant"] == "gpcr_core_decoy_intrusion_v1"
+    assert payload["prototype"]["constraints"]["max_abs_delta_score"] == 1.0
+    assert tuning["variant"] == "gpcr_core_decoy_intrusion_v1"
+    assert tuning["intrusion_weight_low_h_donors"] > 0.0
+    assert tuning["min_intrusion_contact_support_for_delta"] == 1.0
+    assert any(
+        row["feature_name"] == "intrusion_contact_support"
+        for row in payload["feature_rows"]
+    )
+    assert "compact_hydrophobic_low_affinity_decoy_intrusion" in payload["prototype"]["interactions"]

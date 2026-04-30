@@ -227,6 +227,32 @@ def _residual_tuning(spec_payload: Dict[str, Any]) -> Dict[str, float | str]:
         "min_raw_delta_for_activation": _safe_float(tuning.get("min_raw_delta_for_activation"), 0.0),
         "require_distance_above_z": _safe_float(tuning.get("require_distance_above_z"), -1.0e9),
         "require_contact_below_z": _safe_float(tuning.get("require_contact_below_z"), 1.0e9),
+        "intrusion_weight_low_h_donors": _safe_float(tuning.get("intrusion_weight_low_h_donors"), 0.0),
+        "intrusion_weight_low_h_acceptors": _safe_float(tuning.get("intrusion_weight_low_h_acceptors"), 0.0),
+        "intrusion_weight_low_rot_bonds": _safe_float(tuning.get("intrusion_weight_low_rot_bonds"), 0.0),
+        "intrusion_weight_high_logp": _safe_float(tuning.get("intrusion_weight_high_logp"), 0.0),
+        "intrusion_weight_low_affinity": _safe_float(tuning.get("intrusion_weight_low_affinity"), 0.0),
+        "intrusion_weight_contact": _safe_float(tuning.get("intrusion_weight_contact"), 0.0),
+        "intrusion_weight_stability": _safe_float(tuning.get("intrusion_weight_stability"), 0.0),
+        "intrusion_weight_neg_energy": _safe_float(tuning.get("intrusion_weight_neg_energy"), 0.0),
+        "intrusion_weight_neg_distance": _safe_float(tuning.get("intrusion_weight_neg_distance"), 0.0),
+        "intrusion_contact_bias": _safe_float(tuning.get("intrusion_contact_bias"), 0.0),
+        "min_intrusion_prior_pressure_for_delta": _safe_float(
+            tuning.get("min_intrusion_prior_pressure_for_delta"), 0.0
+        ),
+        "min_intrusion_contact_support_for_delta": _safe_float(
+            tuning.get("min_intrusion_contact_support_for_delta"), 0.0
+        ),
+        "min_intrusion_raw_delta_for_activation": _safe_float(
+            tuning.get("min_intrusion_raw_delta_for_activation"), 0.0
+        ),
+        "max_intrusion_affinity_z": _safe_float(tuning.get("max_intrusion_affinity_z"), 1.0e9),
+        "require_intrusion_contact_above_z": _safe_float(
+            tuning.get("require_intrusion_contact_above_z"), -1.0e9
+        ),
+        "require_intrusion_distance_below_z": _safe_float(
+            tuning.get("require_intrusion_distance_below_z"), 1.0e9
+        ),
     }
 
 
@@ -340,20 +366,61 @@ def _apply_residual_prototype_shadow(
     affinity_mismatch = float(tuning["affinity_mismatch_weight"]) * _clip_pos(z_aff) * (
         float(tuning["affinity_interaction_bias"]) + structural_weakness
     )
-    raw_delta = (
+    base_raw_delta = (
         prior_pressure * (float(tuning["interaction_bias"]) + structural_weakness)
         + affinity_mismatch
         - float(tuning["support_penalty_weight"]) * structural_support
     )
-    raw_delta = np.clip(raw_delta, 0.0, None)
-    activation_mask = (
+    base_raw_delta = np.clip(base_raw_delta, 0.0, None)
+    base_activation_mask = (
         (prior_pressure >= float(tuning["min_prior_pressure_for_delta"]))
         & (structural_weakness >= float(tuning["min_structural_weakness_for_delta"]))
         & (structural_support <= float(tuning["max_structural_support_for_delta"]))
         & (pd.to_numeric(z_d, errors="coerce").to_numpy(dtype=float) >= float(tuning["require_distance_above_z"]))
         & (pd.to_numeric(z_c, errors="coerce").to_numpy(dtype=float) <= float(tuning["require_contact_below_z"]))
-        & (raw_delta >= float(tuning["min_raw_delta_for_activation"]))
+        & (base_raw_delta >= float(tuning["min_raw_delta_for_activation"]))
     )
+    intrusion_pressure = np.zeros(len(result_df), dtype=float)
+    intrusion_contact_support = np.zeros(len(result_df), dtype=float)
+    intrusion_raw_delta = np.zeros(len(result_df), dtype=float)
+    intrusion_activation_mask = np.zeros(len(result_df), dtype=bool)
+    if str(tuning["variant"]) in {"gpcr_core_decoy_intrusion_v1", "core_decoy_intrusion_v1"}:
+        intrusion_pressure = (
+            float(tuning["intrusion_weight_low_h_donors"]) * _clip_pos(-z_hd)
+            + float(tuning["intrusion_weight_low_h_acceptors"]) * _clip_pos(-z_ha)
+            + float(tuning["intrusion_weight_low_rot_bonds"]) * _clip_pos(-z_rot)
+            + float(tuning["intrusion_weight_high_logp"]) * _clip_pos(z_logp)
+            + float(tuning["intrusion_weight_low_affinity"]) * _clip_pos(-z_aff)
+        )
+        intrusion_contact_support = (
+            float(tuning["intrusion_weight_contact"]) * _clip_pos(z_c)
+            + float(tuning["intrusion_weight_stability"]) * _clip_pos(z_s)
+            + float(tuning["intrusion_weight_neg_energy"]) * _clip_pos(-z_e)
+            + float(tuning["intrusion_weight_neg_distance"]) * _clip_pos(-z_d)
+        )
+        intrusion_raw_delta = np.clip(
+            intrusion_pressure * (float(tuning["intrusion_contact_bias"]) + intrusion_contact_support),
+            0.0,
+            None,
+        )
+        intrusion_activation_mask = (
+            (intrusion_pressure >= float(tuning["min_intrusion_prior_pressure_for_delta"]))
+            & (intrusion_contact_support >= float(tuning["min_intrusion_contact_support_for_delta"]))
+            & (intrusion_raw_delta >= float(tuning["min_intrusion_raw_delta_for_activation"]))
+            & (pd.to_numeric(z_aff, errors="coerce").to_numpy(dtype=float) <= float(tuning["max_intrusion_affinity_z"]))
+            & (
+                pd.to_numeric(z_c, errors="coerce").to_numpy(dtype=float)
+                >= float(tuning["require_intrusion_contact_above_z"])
+            )
+            & (
+                pd.to_numeric(z_d, errors="coerce").to_numpy(dtype=float)
+                <= float(tuning["require_intrusion_distance_below_z"])
+            )
+        )
+    base_delta_candidate = np.where(base_activation_mask, base_raw_delta, 0.0)
+    intrusion_delta_candidate = np.where(intrusion_activation_mask, intrusion_raw_delta, 0.0)
+    raw_delta = np.maximum(base_delta_candidate, intrusion_delta_candidate)
+    activation_mask = raw_delta > 0.0
     delta = np.where(
         activation_mask,
         np.clip(raw_delta, 0.0, max(0.0, float(max_abs_delta))),
@@ -363,9 +430,68 @@ def _apply_residual_prototype_shadow(
 
     base_score = pd.to_numeric(result_df["binding_score_composite_v7"], errors="coerce")
     shadow_score = base_score + delta
+    linear_rescore = (
+        spec_payload.get("prototype", {}).get("linear_rescore", {})
+        if isinstance(spec_payload.get("prototype", {}), dict)
+        else {}
+    )
+    linear_rescore_enabled = bool(linear_rescore.get("enabled", False)) if isinstance(linear_rescore, dict) else False
+    linear_rescore_status = "disabled"
+    linear_rescore_term_count = 0
+    if linear_rescore_enabled:
+        terms = linear_rescore.get("terms", []) if isinstance(linear_rescore.get("terms", []), list) else []
+        combine_mode = str(linear_rescore.get("combine_mode", "replace") or "replace").strip().lower()
+        linear_score = np.full(len(result_df), _safe_float(linear_rescore.get("intercept"), 0.0), dtype=float)
+        computed_linear_features = {
+            "residual_shadow_prior_pressure": prior_pressure,
+            "residual_shadow_structure_weakness": structural_weakness,
+            "residual_shadow_structure_support": structural_support,
+            "residual_shadow_intrusion_pressure": intrusion_pressure,
+            "residual_shadow_intrusion_contact_support": intrusion_contact_support,
+            "residual_shadow_intrusion_delta_raw": intrusion_raw_delta,
+            "residual_shadow_delta_raw": raw_delta,
+            "residual_shadow_delta": delta,
+        }
+        missing_terms: list[str] = []
+        for term in terms:
+            if not isinstance(term, dict):
+                continue
+            feature = str(term.get("feature", "") or "").strip()
+            if not feature:
+                continue
+            if feature in computed_linear_features:
+                values = np.asarray(computed_linear_features[feature], dtype=float)
+            elif feature in result_df.columns:
+                values = pd.to_numeric(result_df[feature], errors="coerce").fillna(0.0).to_numpy(dtype=float)
+            else:
+                missing_terms.append(feature)
+                continue
+            linear_score += _safe_float(term.get("weight"), 0.0) * values
+            linear_rescore_term_count += 1
+        if linear_rescore_term_count <= 0:
+            linear_rescore_status = "missing_terms"
+        elif combine_mode == "replace":
+            shadow_score = pd.Series(linear_score, index=result_df.index)
+            delta = pd.to_numeric(shadow_score - base_score, errors="coerce").to_numpy(dtype=float)
+            raw_delta = delta
+            activation_mask = np.isfinite(delta) & (np.abs(delta) > 0.0)
+            band = np.where(np.abs(delta) >= float(yellow_band), "yellow", np.where(np.abs(delta) > 0.0, "green", "none"))
+            linear_rescore_status = "applied" if not missing_terms else "applied_with_missing_terms"
+        elif combine_mode in {"add", "additive"}:
+            shadow_score = shadow_score + linear_score
+            delta = pd.to_numeric(shadow_score - base_score, errors="coerce").to_numpy(dtype=float)
+            raw_delta = delta
+            activation_mask = np.isfinite(delta) & (np.abs(delta) > 0.0)
+            band = np.where(np.abs(delta) >= float(yellow_band), "yellow", np.where(np.abs(delta) > 0.0, "green", "none"))
+            linear_rescore_status = "applied" if not missing_terms else "applied_with_missing_terms"
+        else:
+            linear_rescore_status = "unsupported_combine_mode"
     result_df["residual_shadow_prior_pressure"] = prior_pressure
     result_df["residual_shadow_structure_weakness"] = structural_weakness
     result_df["residual_shadow_structure_support"] = structural_support
+    result_df["residual_shadow_intrusion_pressure"] = intrusion_pressure
+    result_df["residual_shadow_intrusion_contact_support"] = intrusion_contact_support
+    result_df["residual_shadow_intrusion_delta_raw"] = intrusion_raw_delta
     result_df["residual_shadow_delta_raw"] = raw_delta
     result_df["residual_shadow_delta"] = delta
     result_df["residual_shadow_band"] = band
@@ -400,6 +526,7 @@ def _apply_residual_prototype_shadow(
             "shadow_score_col": "binding_score_composite_v7_residual_shadow",
             "positive_delta_count": int((delta > 0.0).sum()),
             "gated_positive_delta_count": int(activation_mask.sum()),
+            "intrusion_positive_delta_count": int(((intrusion_raw_delta > 0.0) & intrusion_activation_mask).sum()),
             "yellow_band_count": int((delta >= float(yellow_band)).sum()),
             "mean_delta": float(np.mean(delta)) if len(delta) > 0 else 0.0,
             "max_delta": float(np.max(delta)) if len(delta) > 0 else 0.0,
@@ -412,6 +539,14 @@ def _apply_residual_prototype_shadow(
             "min_structural_weakness_for_delta": float(tuning["min_structural_weakness_for_delta"]),
             "max_structural_support_for_delta": float(tuning["max_structural_support_for_delta"]),
             "min_raw_delta_for_activation": float(tuning["min_raw_delta_for_activation"]),
+            "min_intrusion_prior_pressure_for_delta": float(tuning["min_intrusion_prior_pressure_for_delta"]),
+            "min_intrusion_contact_support_for_delta": float(
+                tuning["min_intrusion_contact_support_for_delta"]
+            ),
+            "linear_rescore_enabled": bool(linear_rescore_enabled),
+            "linear_rescore_status": linear_rescore_status,
+            "linear_rescore_term_count": int(linear_rescore_term_count),
+            "linear_rescore_missing_terms": list(missing_terms) if linear_rescore_enabled else [],
         }
     )
     return result_df, summary

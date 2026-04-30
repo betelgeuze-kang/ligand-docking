@@ -108,6 +108,23 @@ def _feature_rows(variant: str) -> list[dict[str, Any]]:
                 "ligand_affinity_hint",
             }:
                 row["rationale"] += " Narrow-v2 only activates these behind explicit distance/contact mismatch gates."
+    if variant == "gpcr_core_decoy_intrusion_v1":
+        rows.extend(
+            [
+                {
+                    "feature_name": "low_donor_acceptor_rotor_pressure",
+                    "role": "intrusion_prior",
+                    "direction": "penalize_when_low_with_high_logp_and_contact_support",
+                    "rationale": "Core 100k false positives include compact hydrophobic decoys that v7 ranks above smaller beta-blocker anchors.",
+                },
+                {
+                    "feature_name": "intrusion_contact_support",
+                    "role": "intrusion_gate",
+                    "direction": "activate_only_when_contact_support_is_high",
+                    "rationale": "The candidate should target top-rank decoy intrusion without broadly penalizing weak/noisy rows.",
+                },
+            ]
+        )
     return rows
 
 
@@ -257,6 +274,62 @@ def build_payload(*, variant: str = "current") -> dict[str, Any]:
             "Use chembl50_v4 as a narrower core-guard shadow candidate. The goal is to preserve the chembl50 OOD gain "
             "while shrinking active deltas enough that gpcr_core_full no longer regresses before any apply-mode retry."
         )
+    elif variant == "gpcr_core_decoy_intrusion_v1":
+        constraints = {
+            **constraints,
+            "max_abs_delta_score": 1.0,
+            "yellow_band_abs_delta_score": 0.50,
+        }
+        tuning = {
+            "variant": "gpcr_core_decoy_intrusion_v1",
+            "prior_weight_h_donors": 0.0,
+            "prior_weight_h_acceptors": 0.0,
+            "prior_weight_rot_bonds": 0.0,
+            "prior_weight_neg_logp": 0.0,
+            "weakness_weight_distance": 0.0,
+            "weakness_weight_neg_contact": 0.0,
+            "weakness_weight_neg_stability": 0.0,
+            "weakness_weight_energy": 0.0,
+            "support_weight_neg_energy": 0.0,
+            "support_weight_contact": 0.0,
+            "support_weight_stability": 0.0,
+            "support_weight_neg_distance": 0.0,
+            "interaction_bias": 0.0,
+            "affinity_mismatch_weight": 0.0,
+            "affinity_interaction_bias": 0.0,
+            "support_penalty_weight": 0.0,
+            "min_prior_pressure_for_delta": 0.0,
+            "min_structural_weakness_for_delta": 0.0,
+            "max_structural_support_for_delta": 1.0e9,
+            "min_raw_delta_for_activation": 0.0,
+            "require_distance_above_z": -1.0e9,
+            "require_contact_below_z": 1.0e9,
+            "intrusion_weight_low_h_donors": 0.80,
+            "intrusion_weight_low_h_acceptors": 0.80,
+            "intrusion_weight_low_rot_bonds": 0.50,
+            "intrusion_weight_high_logp": 0.70,
+            "intrusion_weight_low_affinity": 0.50,
+            "intrusion_weight_contact": 0.90,
+            "intrusion_weight_stability": 0.40,
+            "intrusion_weight_neg_energy": 0.0,
+            "intrusion_weight_neg_distance": 0.30,
+            "intrusion_contact_bias": 0.25,
+            "min_intrusion_prior_pressure_for_delta": 1.00,
+            "min_intrusion_contact_support_for_delta": 1.00,
+            "min_intrusion_raw_delta_for_activation": 0.25,
+            "max_intrusion_affinity_z": 0.25,
+            "require_intrusion_contact_above_z": 0.20,
+            "require_intrusion_distance_below_z": 0.25,
+        }
+        interactions = [
+            "compact_hydrophobic_low_affinity_decoy_intrusion",
+            "intrusion_delta_only_when_contact_support_is_high",
+            "protect_beta_blocker_like_and_chembl50_high_affinity_rows",
+        ]
+        next_step = (
+            "Run this core-decoy intrusion candidate in shadow mode first. Promote to apply-mode only if core top20 "
+            "false positives receive explainable deltas while core anchors and ChEMBL50 high-affinity positives remain protected."
+        )
 
     return {
         "summary": {
@@ -327,6 +400,8 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- max_structural_support_for_delta: `{tuning.get('max_structural_support_for_delta', 'unbounded')}`",
         f"- require_distance_above_z: `{tuning.get('require_distance_above_z', 'off')}`",
         f"- require_contact_below_z: `{tuning.get('require_contact_below_z', 'off')}`",
+        f"- min_intrusion_prior_pressure_for_delta: `{tuning.get('min_intrusion_prior_pressure_for_delta', 'off')}`",
+        f"- min_intrusion_contact_support_for_delta: `{tuning.get('min_intrusion_contact_support_for_delta', 'off')}`",
         "",
         "## Feature Targets",
         "",
@@ -346,7 +421,17 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build the current GPCR residual prototype spec from the measured 100k failure slice.")
-    parser.add_argument("--variant", choices=["current", "narrow_v2", "chembl50_v3", "chembl50_v4"], default="current")
+    parser.add_argument(
+        "--variant",
+        choices=[
+            "current",
+            "narrow_v2",
+            "chembl50_v3",
+            "chembl50_v4",
+            "gpcr_core_decoy_intrusion_v1",
+        ],
+        default="current",
+    )
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)

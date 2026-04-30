@@ -181,3 +181,62 @@ def test_apply_residual_prototype_shadow_narrow_v2_gates_out_supported_rows(tmp_
     deltas = out_df["residual_shadow_delta"].to_numpy(dtype=float)
     assert deltas[0] > 0.0
     assert deltas[1] == 0.0
+
+
+def test_apply_residual_prototype_shadow_linear_rescore_replace_mode(tmp_path):
+    spec_json = tmp_path / "linear_rescore.json"
+    spec_json.write_text(
+        json.dumps(
+            {
+                "prototype": {
+                    "linear_rescore": {
+                        "enabled": True,
+                        "combine_mode": "replace",
+                        "intercept": 0.25,
+                        "terms": [
+                            {"feature": "binding_score_composite_v7", "weight": 1.0},
+                            {"feature": "ligand_h_donors", "weight": 2.0},
+                            {"feature": "residual_shadow_prior_pressure", "weight": 0.5},
+                        ],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    result_df = pd.DataFrame(
+        [
+            {"ligand_id": "binder_a", "binding_score_composite_v7": -8.0, "ligand_h_donors": 0.0},
+            {"ligand_id": "decoy_b", "binding_score_composite_v7": -8.0, "ligand_h_donors": 2.0},
+        ]
+    )
+    zero = pd.Series([0.0, 0.0], dtype=float)
+    z_hd = pd.Series([-1.0, 1.0], dtype=float)
+
+    out_df, meta = mod._apply_residual_prototype_shadow(
+        result_df.copy(),
+        _shadow_args(
+            residual_prototype_mode="apply",
+            residual_prototype_spec_json=str(spec_json),
+        ),
+        z_e=zero,
+        z_d=zero,
+        z_s=zero,
+        z_c=zero,
+        z_aff=zero,
+        z_logp=zero,
+        z_rot=zero,
+        z_hd=z_hd,
+        z_ha=zero,
+    )
+
+    assert meta["linear_rescore_enabled"] is True
+    assert meta["linear_rescore_status"] == "applied"
+    assert meta["linear_rescore_term_count"] == 3
+    assert meta["linear_rescore_missing_terms"] == []
+    assert meta["shadow_score_col"] == "binding_score_composite_v7_residual_shadow"
+    assert out_df.loc[0, "binding_score_composite_v7_residual_shadow"] < out_df.loc[1, "binding_score_composite_v7_residual_shadow"]
+    np.testing.assert_allclose(
+        out_df["binding_score_composite_v7_residual_active"].to_numpy(dtype=float),
+        out_df["binding_score_composite_v7_residual_shadow"].to_numpy(dtype=float),
+    )

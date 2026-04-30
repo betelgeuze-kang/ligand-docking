@@ -1,7 +1,9 @@
+import argparse
 import json
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 
 from tools import run_ligand_backmapping_scoring as mod
 from tools.run_ligand_backmapping_scoring import _inline_score_from_row, _ligand_props
@@ -335,3 +337,154 @@ def test_process_queue_row_clash_relief_bypasses_inline_metrics_and_records_prov
     score_payload = json.loads(Path(result["score_json"]).read_text(encoding="utf-8"))
     assert score_payload["score"]["clash_relief_mode"] == "translate"
     assert score_payload["score"]["pre_repair_clash_frame_fraction"] == 1.0
+
+
+def test_residual_intrusion_variant_penalizes_compact_hydrophobic_contact_decoy(tmp_path):
+    spec = tmp_path / "residual_intrusion.json"
+    zero_base_weights = {
+        "prior_weight_h_donors": 0.0,
+        "prior_weight_h_acceptors": 0.0,
+        "prior_weight_rot_bonds": 0.0,
+        "prior_weight_neg_logp": 0.0,
+        "weakness_weight_distance": 0.0,
+        "weakness_weight_neg_contact": 0.0,
+        "weakness_weight_neg_stability": 0.0,
+        "weakness_weight_energy": 0.0,
+        "support_weight_neg_energy": 0.0,
+        "support_weight_contact": 0.0,
+        "support_weight_stability": 0.0,
+        "support_weight_neg_distance": 0.0,
+        "affinity_mismatch_weight": 0.0,
+        "support_penalty_weight": 0.0,
+    }
+    spec.write_text(
+        json.dumps(
+            {
+                "prototype": {
+                    "constraints": {
+                        "max_abs_delta_score": 1.0,
+                        "yellow_band_abs_delta_score": 0.5,
+                    },
+                    "tuning": {
+                        **zero_base_weights,
+                        "variant": "gpcr_core_decoy_intrusion_v1",
+                        "intrusion_weight_low_h_donors": 0.8,
+                        "intrusion_weight_low_h_acceptors": 0.8,
+                        "intrusion_weight_low_rot_bonds": 0.5,
+                        "intrusion_weight_high_logp": 0.7,
+                        "intrusion_weight_low_affinity": 0.5,
+                        "intrusion_contact_bias": 0.25,
+                        "intrusion_weight_contact": 0.9,
+                        "intrusion_weight_stability": 0.4,
+                        "intrusion_weight_neg_distance": 0.3,
+                        "min_intrusion_prior_pressure_for_delta": 1.0,
+                        "min_intrusion_contact_support_for_delta": 1.0,
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    df = pd.DataFrame(
+        {
+            "ligand_id": ["compact_hydrophobic_decoy", "beta_blocker_like_active"],
+            "binding_score_composite_v7": [-2.0, -1.9],
+        }
+    )
+    args = argparse.Namespace(
+        residual_prototype_enabled=True,
+        residual_prototype_mode="apply",
+        residual_prototype_family="gpcr",
+        residual_prototype_spec_json=str(spec),
+        residual_prototype_runtime_hook_ready=True,
+        residual_prototype_max_abs_delta_score=None,
+        residual_prototype_yellow_band_abs_delta_score=None,
+    )
+
+    out, summary = mod._apply_residual_prototype_shadow(
+        df,
+        args,
+        z_e=pd.Series([-0.5, -0.8]),
+        z_d=pd.Series([-0.7, -0.5]),
+        z_s=pd.Series([0.8, 0.9]),
+        z_c=pd.Series([1.2, 0.9]),
+        z_aff=pd.Series([-1.0, 1.0]),
+        z_logp=pd.Series([1.4, -0.5]),
+        z_rot=pd.Series([-1.1, 1.0]),
+        z_hd=pd.Series([-1.2, 1.0]),
+        z_ha=pd.Series([-1.0, 1.0]),
+    )
+
+    assert summary["tuning_variant"] == "gpcr_core_decoy_intrusion_v1"
+    assert summary["positive_delta_count"] == 1
+    assert summary["active_score_col"] == "binding_score_composite_v7_residual_active"
+    assert out.loc[0, "residual_shadow_intrusion_pressure"] > 1.0
+    assert out.loc[0, "residual_shadow_delta"] > 0.0
+    assert out.loc[1, "residual_shadow_delta"] == 0.0
+    assert out.loc[0, "binding_score_composite_v7_residual_active"] > out.loc[0, "binding_score_composite_v7"]
+
+
+def test_residual_intrusion_variant_does_not_apply_ungated_intrusion_raw_delta(tmp_path):
+    spec = tmp_path / "residual_intrusion_gated.json"
+    spec.write_text(
+        json.dumps(
+            {
+                "prototype": {
+                    "constraints": {
+                        "max_abs_delta_score": 1.0,
+                        "yellow_band_abs_delta_score": 0.5,
+                    },
+                    "tuning": {
+                        "variant": "gpcr_core_decoy_intrusion_v1",
+                        "intrusion_weight_low_h_donors": 1.0,
+                        "intrusion_weight_low_h_acceptors": 1.0,
+                        "intrusion_weight_low_rot_bonds": 1.0,
+                        "intrusion_weight_high_logp": 1.0,
+                        "intrusion_weight_low_affinity": 1.0,
+                        "intrusion_contact_bias": 0.25,
+                        "intrusion_weight_contact": 1.0,
+                        "min_intrusion_prior_pressure_for_delta": 100.0,
+                        "min_intrusion_contact_support_for_delta": 100.0,
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    df = pd.DataFrame(
+        {
+            "ligand_id": ["ungated_decoy"],
+            "binding_score_composite_v7": [-2.0],
+        }
+    )
+    args = argparse.Namespace(
+        residual_prototype_enabled=True,
+        residual_prototype_mode="apply",
+        residual_prototype_family="gpcr",
+        residual_prototype_spec_json=str(spec),
+        residual_prototype_runtime_hook_ready=True,
+        residual_prototype_max_abs_delta_score=None,
+        residual_prototype_yellow_band_abs_delta_score=None,
+    )
+    one = pd.Series([1.0], dtype=float)
+    neg = pd.Series([-1.0], dtype=float)
+
+    out, summary = mod._apply_residual_prototype_shadow(
+        df,
+        args,
+        z_e=neg,
+        z_d=neg,
+        z_s=one,
+        z_c=one,
+        z_aff=neg,
+        z_logp=one,
+        z_rot=neg,
+        z_hd=neg,
+        z_ha=neg,
+    )
+
+    assert summary["intrusion_positive_delta_count"] == 0
+    assert summary["positive_delta_count"] == 0
+    assert out.loc[0, "residual_shadow_intrusion_delta_raw"] > 0.0
+    assert out.loc[0, "residual_shadow_delta"] == 0.0
+    assert out.loc[0, "binding_score_composite_v7_residual_active"] == out.loc[0, "binding_score_composite_v7"]
