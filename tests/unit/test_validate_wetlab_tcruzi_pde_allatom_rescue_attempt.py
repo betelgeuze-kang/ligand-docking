@@ -63,6 +63,22 @@ def _input_fingerprint(summary: dict, ledger: dict, *, execute: bool) -> str:
             "execute": execute,
             "selected_command_kind": summary["selected_command_kind"],
             "allatom_ligand_model": summary["allatom_ligand_model"],
+            "clash_relief_mode": summary.get("clash_relief_mode", "off"),
+            "clash_relief_target_min_distance_A": (
+                summary.get("clash_relief_target_min_distance_A")
+                if summary.get("clash_relief_mode", "off") != "off"
+                else None
+            ),
+            "clash_relief_max_translation_A": (
+                summary.get("clash_relief_max_translation_A")
+                if summary.get("clash_relief_mode", "off") != "off"
+                else None
+            ),
+            "clash_relief_max_steps": (
+                summary.get("clash_relief_max_steps")
+                if summary.get("clash_relief_mode", "off") != "off"
+                else None
+            ),
         },
         "inputs": ledger,
     }
@@ -84,6 +100,10 @@ def _base_payload(tmp_path: Path, *, execute: bool = True, scoring_summary_prese
         "filter_mode_applied": "strict_then_near_fill",
         "selected_command_kind": "pseudo_allatom_backmapping_rescore",
         "allatom_ligand_model": "3bead_implicit_hbond",
+        "clash_relief_mode": "off",
+        "clash_relief_target_min_distance_A": None,
+        "clash_relief_max_translation_A": None,
+        "clash_relief_max_steps": None,
         "attempt_id_source": "deterministic_input_fingerprint_sequence",
         "attempt_sequence": 1,
         "current_artifact_is_pointer": True,

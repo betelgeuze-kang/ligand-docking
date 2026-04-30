@@ -1548,13 +1548,13 @@ def build_payload(
     selected_allatom_claim_gate_reported, selected_allatom_claim_gate_available = _resolve_explicit_bool_from_sources(
         [
             (
-                bsrhs,
-                (),
+                bcris,
+                ("selected_allatom_claim_gate_available_reported",),
                 ("selected_allatom_claim_gate_available",),
             ),
             (
-                bcris,
-                ("selected_allatom_claim_gate_available_reported",),
+                bsrhs,
+                (),
                 ("selected_allatom_claim_gate_available",),
             ),
         ]
@@ -1562,13 +1562,13 @@ def build_payload(
     selected_allatom_claim_ready_reported, selected_allatom_claim_ready = _resolve_explicit_bool_from_sources(
         [
             (
-                bsrhs,
-                (),
+                bcris,
+                ("selected_allatom_claim_ready_for_allatom_reported",),
                 ("selected_allatom_claim_ready_for_allatom",),
             ),
             (
-                bcris,
-                ("selected_allatom_claim_ready_for_allatom_reported",),
+                bsrhs,
+                (),
                 ("selected_allatom_claim_ready_for_allatom",),
             ),
         ]
@@ -3871,7 +3871,7 @@ def build_payload(
                 else str(bslvrs.get("next_required_step", "")).strip()
                 if bool(bslvrs.get("gate51_validated", False)) and str(bslvrs.get("next_required_step", "")).strip()
                 else str(bstrpts.get("next_required_step", "")).strip()
-                if bool(bstrpts.get("status", "")).strip() == "wetlab_target_retry_policy_templates_ready"
+                if str(bstrpts.get("status", "")).strip() == "wetlab_target_retry_policy_templates_ready"
                 and str(bstrpts.get("next_required_step", "")).strip()
                 else _stk17b_followup_review_next_step(bssfrs)
                 if (

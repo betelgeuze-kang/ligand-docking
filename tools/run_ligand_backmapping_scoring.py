@@ -983,6 +983,94 @@ def _frame_mmpbsa_proxy(
     }
 
 
+def _model_ligand_xyz(ligand_xyz: np.ndarray, ligand_model: str) -> np.ndarray:
+    lig = np.asarray(ligand_xyz, dtype=np.float32)
+    if str(ligand_model).strip().lower() == "3bead_implicit_hbond":
+        return _virtual_third_bead(lig)
+    return lig
+
+
+def _closest_distance_pair(
+    protein_xyz: np.ndarray,
+    ligand_xyz: np.ndarray,
+) -> tuple[float, np.ndarray, np.ndarray]:
+    prot = np.asarray(protein_xyz, dtype=np.float32)
+    lig = np.asarray(ligand_xyz, dtype=np.float32)
+    if prot.size == 0 or lig.size == 0:
+        zero = np.zeros(3, dtype=np.float32)
+        return 999.0, zero, zero
+    delta = lig[None, :, :] - prot[:, None, :]
+    d = np.linalg.norm(delta, axis=2)
+    flat_idx = int(np.argmin(d))
+    prot_idx, lig_idx = np.unravel_index(flat_idx, d.shape)
+    return float(d[prot_idx, lig_idx]), prot[prot_idx], lig[lig_idx]
+
+
+def _relieve_ligand_clashes(
+    protein_xyz: np.ndarray,
+    ligand_xyz: np.ndarray,
+    *,
+    ligand_model: str,
+    target_min_distance_A: float,
+    max_translation_A: float,
+    max_steps: int,
+) -> tuple[np.ndarray, dict[str, Any]]:
+    prot = np.asarray(protein_xyz, dtype=np.float32)
+    lig = np.asarray(ligand_xyz, dtype=np.float32).copy()
+    if prot.size == 0 or lig.size == 0:
+        return lig, {
+            "applied": False,
+            "initial_min_distance_A": 999.0,
+            "repaired_min_distance_A": 999.0,
+            "translation_norm_A": 0.0,
+            "step_count": 0,
+        }
+
+    target = float(max(0.0, target_min_distance_A))
+    max_translation = float(max(0.0, max_translation_A))
+    steps = int(max(0, max_steps))
+    model_lig = _model_ligand_xyz(lig, ligand_model)
+    initial_min, _, _ = _closest_distance_pair(prot, model_lig)
+    total_shift = np.zeros(3, dtype=np.float32)
+    step_count = 0
+
+    for _ in range(steps):
+        model_lig = _model_ligand_xyz(lig, ligand_model)
+        min_d, prot_atom, lig_atom = _closest_distance_pair(prot, model_lig)
+        if min_d >= target or max_translation <= 0.0:
+            break
+        direction = lig_atom - prot_atom
+        norm = float(np.linalg.norm(direction))
+        if norm <= 1e-6:
+            direction = np.mean(lig, axis=0) - np.mean(prot, axis=0)
+            norm = float(np.linalg.norm(direction))
+        if norm <= 1e-6:
+            direction = np.asarray([1.0, 0.0, 0.0], dtype=np.float32)
+            norm = 1.0
+        direction = direction / norm
+        remaining = max(0.0, max_translation - float(np.linalg.norm(total_shift)))
+        if remaining <= 1e-6:
+            break
+        # Move the entire ligand gently; this preserves internal geometry while
+        # removing impossible close contacts before the same proxy is recomputed.
+        step = min(max(target - min_d, 0.0), remaining, 0.35)
+        if step <= 1e-6:
+            break
+        shift = (direction * float(step)).astype(np.float32)
+        lig = lig + shift
+        total_shift = total_shift + shift
+        step_count += 1
+
+    repaired_min, _, _ = _closest_distance_pair(prot, _model_ligand_xyz(lig, ligand_model))
+    return lig, {
+        "applied": bool(step_count > 0),
+        "initial_min_distance_A": float(initial_min),
+        "repaired_min_distance_A": float(repaired_min),
+        "translation_norm_A": float(np.linalg.norm(total_shift)),
+        "step_count": int(step_count),
+    }
+
+
 def _residue_name(i: int) -> str:
     names = [
         "GLY",
@@ -1083,6 +1171,10 @@ def _score_frames(
     min_frames: int,
     ligand_model: str,
     hbond_onsps_weight: float,
+    clash_relief_mode: str = "off",
+    clash_relief_target_min_distance_A: float = 2.12,
+    clash_relief_max_translation_A: float = 2.0,
+    clash_relief_max_steps: int = 12,
 ) -> Dict[str, Any]:
     min_dists: List[float] = []
     contact_fracs: List[float] = []
@@ -1094,9 +1186,58 @@ def _score_frames(
     e_polar: List[float] = []
     e_nonpolar: List[float] = []
     e_solv: List[float] = []
+    pre_repair_min_dists: List[float] = []
+    pre_repair_frame_energy: List[float] = []
+    pre_repair_clash_counts: List[float] = []
+    pre_repair_e_vdw: List[float] = []
+    clash_relief_translations: List[float] = []
+    clash_relief_applied: List[bool] = []
+    representative_ligand_xyz: np.ndarray | None = None
     frame_count = 0
     frame_with_ligand = 0
     props = _ligand_props(row)
+    relief_mode = str(clash_relief_mode or "off").strip().lower()
+    relief_enabled = relief_mode not in {"", "off", "none", "disabled", "false", "0"}
+
+    def _score_one_frame(prot_xyz: np.ndarray, lig_xyz: np.ndarray) -> Dict[str, float]:
+        nonlocal representative_ligand_xyz
+        prot_arr = np.asarray(prot_xyz, dtype=np.float32)
+        lig_arr = np.asarray(lig_xyz, dtype=np.float32)
+        scored_lig = lig_arr
+        if relief_enabled:
+            pre_ff = _frame_mmpbsa_proxy(
+                protein_xyz=prot_arr,
+                ligand_xyz=lig_arr,
+                props=props,
+                contact_cutoff_A=float(contact_cutoff_A),
+                ligand_model=str(ligand_model),
+                hbond_onsps_weight=float(hbond_onsps_weight),
+            )
+            scored_lig, repair_meta = _relieve_ligand_clashes(
+                protein_xyz=prot_arr,
+                ligand_xyz=lig_arr,
+                ligand_model=str(ligand_model),
+                target_min_distance_A=float(clash_relief_target_min_distance_A),
+                max_translation_A=float(clash_relief_max_translation_A),
+                max_steps=int(clash_relief_max_steps),
+            )
+            pre_repair_min_dists.append(float(pre_ff["min_distance_A"]))
+            pre_repair_frame_energy.append(float(pre_ff["deltaG_mmpbsa_proxy_kcal_mol"]))
+            pre_repair_clash_counts.append(float(pre_ff["clash_count"]))
+            pre_repair_e_vdw.append(float(pre_ff["e_vdw"]))
+            clash_relief_translations.append(float(repair_meta.get("translation_norm_A", 0.0)))
+            clash_relief_applied.append(bool(repair_meta.get("applied", False)))
+        ff = _frame_mmpbsa_proxy(
+            protein_xyz=prot_arr,
+            ligand_xyz=scored_lig,
+            props=props,
+            contact_cutoff_A=float(contact_cutoff_A),
+            ligand_model=str(ligand_model),
+            hbond_onsps_weight=float(hbond_onsps_weight),
+        )
+        if representative_ligand_xyz is None or (relief_enabled and clash_relief_applied and clash_relief_applied[-1]):
+            representative_ligand_xyz = np.asarray(scored_lig, dtype=np.float32)
+        return ff
 
     npz_src = str(trajectory_npz_path).strip()
     if npz_src and os.path.exists(npz_src):
@@ -1113,14 +1254,7 @@ def _score_frames(
                     frame_count += 1
                     if lig.size > 0:
                         frame_with_ligand += 1
-                    ff = _frame_mmpbsa_proxy(
-                        protein_xyz=prot,
-                        ligand_xyz=lig,
-                        props=props,
-                        contact_cutoff_A=float(contact_cutoff_A),
-                        ligand_model=str(ligand_model),
-                        hbond_onsps_weight=float(hbond_onsps_weight),
-                    )
+                    ff = _score_one_frame(prot, lig)
                     min_dists.append(float(ff["min_distance_A"]))
                     contact_fracs.append(float(ff["contact_fraction"]))
                     contact_counts.append(float(ff["contact_count"]))
@@ -1156,14 +1290,7 @@ def _score_frames(
             frame_count += 1
             if lig.size > 0:
                 frame_with_ligand += 1
-            ff = _frame_mmpbsa_proxy(
-                protein_xyz=prot,
-                ligand_xyz=lig,
-                props=props,
-                contact_cutoff_A=float(contact_cutoff_A),
-                ligand_model=str(ligand_model),
-                hbond_onsps_weight=float(hbond_onsps_weight),
-            )
+            ff = _score_one_frame(prot, lig)
             min_dists.append(float(ff["min_distance_A"]))
             contact_fracs.append(float(ff["contact_fraction"]))
             contact_counts.append(float(ff["contact_count"]))
@@ -1177,14 +1304,7 @@ def _score_frames(
 
     if frame_count <= 0:
         if protein_default.size > 0 and ligand_default.size > 0:
-            ff = _frame_mmpbsa_proxy(
-                protein_xyz=protein_default,
-                ligand_xyz=ligand_default,
-                props=props,
-                contact_cutoff_A=float(contact_cutoff_A),
-                ligand_model=str(ligand_model),
-                hbond_onsps_weight=float(hbond_onsps_weight),
-            )
+            ff = _score_one_frame(protein_default, ligand_default)
             min_d = float(ff["min_distance_A"])
             cfrac = float(ff["contact_fraction"])
             contact_cnt = float(ff["contact_count"])
@@ -1250,6 +1370,17 @@ def _score_frames(
     polar_support_proxy = float(-mean_e_polar)
     physics_net_support_proxy = float(favorable_energy_proxy - solvation_penalty_proxy)
     physics_contact_stability_proxy = float(contact_fraction * stability_score)
+    pre_arr = np.asarray(pre_repair_min_dists, dtype=np.float64)
+    pre_g_arr = np.asarray(pre_repair_frame_energy, dtype=np.float64)
+    pre_clash_arr = np.asarray(pre_repair_clash_counts, dtype=np.float64)
+    pre_vdw_arr = np.asarray(pre_repair_e_vdw, dtype=np.float64)
+    relief_translation_arr = np.asarray(clash_relief_translations, dtype=np.float64)
+    relief_applied_arr = np.asarray(clash_relief_applied, dtype=bool)
+    representative_ligand = (
+        representative_ligand_xyz.astype(float).tolist()
+        if isinstance(representative_ligand_xyz, np.ndarray) and representative_ligand_xyz.ndim == 2
+        else np.asarray(ligand_default, dtype=np.float32).astype(float).tolist()
+    )
     return {
         "frame_count": int(frame_count),
         "frame_with_ligand_count": int(frame_with_ligand),
@@ -1289,6 +1420,31 @@ def _score_frames(
         "vdw_nonpolar_support_proxy": vdw_nonpolar_support_proxy,
         "polar_support_proxy": polar_support_proxy,
         "solvation_penalty_proxy": solvation_penalty_proxy,
+        "clash_relief_mode": relief_mode if relief_enabled else "off",
+        "clash_relief_enabled": bool(relief_enabled),
+        "clash_relief_target_min_distance_A": float(clash_relief_target_min_distance_A) if relief_enabled else None,
+        "clash_relief_max_translation_A": float(clash_relief_max_translation_A) if relief_enabled else None,
+        "clash_relief_max_steps": int(clash_relief_max_steps) if relief_enabled else None,
+        "clash_relief_applied_frame_count": int(np.sum(relief_applied_arr)) if relief_enabled else 0,
+        "clash_relief_frame_fraction": (
+            float(np.mean(relief_applied_arr)) if relief_enabled and relief_applied_arr.size > 0 else 0.0
+        ),
+        "clash_relief_mean_translation_A": (
+            float(np.mean(relief_translation_arr)) if relief_enabled and relief_translation_arr.size > 0 else 0.0
+        ),
+        "pre_repair_binding_energy_proxy": (
+            float(np.mean(pre_g_arr)) if relief_enabled and pre_g_arr.size > 0 else None
+        ),
+        "pre_repair_mean_min_distance_A": (
+            float(np.mean(pre_arr)) if relief_enabled and pre_arr.size > 0 else None
+        ),
+        "pre_repair_clash_frame_fraction": (
+            float(np.mean(pre_clash_arr > 0.0)) if relief_enabled and pre_clash_arr.size > 0 else None
+        ),
+        "pre_repair_mean_e_vdw": (
+            float(np.mean(pre_vdw_arr)) if relief_enabled and pre_vdw_arr.size > 0 else None
+        ),
+        "representative_ligand_xyz": representative_ligand,
         "min_distance_A": float(np.min(arr)),
         "max_distance_A": float(np.max(arr)),
         "ligand_affinity_hint": float(props.get("affinity_hint", 0.0)),
@@ -1584,7 +1740,9 @@ def _process_queue_row(row: Dict[str, Any], cfg: Dict[str, Any]) -> Dict[str, An
         queue_id=queue_id,
         trajectory_root=str(cfg["trajectory_root"]),
     )
-    inline_score = _inline_score_from_row(row, ligand_model=str(cfg["ligand_model"]))
+    clash_relief_mode = str(cfg.get("clash_relief_mode", "off") or "off").strip().lower()
+    clash_relief_enabled = clash_relief_mode not in {"", "off", "none", "disabled", "false", "0"}
+    inline_score = None if clash_relief_enabled else _inline_score_from_row(row, ligand_model=str(cfg["ligand_model"]))
     if (inline_score is None) and (not frame_paths) and (not trajectory_npz) and (not bool(cfg["allow_missing_trajectory"])):
         raise FileNotFoundError(f"no frames found for queue_id={queue_id}")
 
@@ -1600,20 +1758,27 @@ def _process_queue_row(row: Dict[str, Any], cfg: Dict[str, Any]) -> Dict[str, An
             min_frames=int(cfg["min_frames"]),
             ligand_model=str(cfg["ligand_model"]),
             hbond_onsps_weight=float(cfg["hbond_onsps_weight"]),
+            clash_relief_mode=clash_relief_mode,
+            clash_relief_target_min_distance_A=float(cfg.get("clash_relief_target_min_distance_A", 2.12)),
+            clash_relief_max_translation_A=float(cfg.get("clash_relief_max_translation_A", 2.0)),
+            clash_relief_max_steps=int(cfg.get("clash_relief_max_steps", 12)),
         )
 
     backmap_pdb = ""
     score_json = ""
+    representative_ligand = np.asarray(score.get("representative_ligand_xyz", []), dtype=np.float32)
+    if representative_ligand.ndim != 2 or representative_ligand.shape[1] != 3 or representative_ligand.shape[0] <= 0:
+        representative_ligand = ligand_default
     backmap_stats: Dict[str, Any] = {
         "protein_residues": int(native_ca.shape[0]) if native_ca.ndim == 2 else 0,
         "protein_atoms": 0,
-        "ligand_atoms": int(ligand_default.shape[0]) if ligand_default.ndim == 2 else 0,
+        "ligand_atoms": int(representative_ligand.shape[0]) if representative_ligand.ndim == 2 else 0,
     }
     if not score_only:
         backmap_pdb = os.path.join(job_dir, f"backmapped_{queue_id}.pdb")
         backmap_stats = _pseudo_backmap(
             protein_ca=native_ca,
-            ligand_xyz=ligand_default,
+            ligand_xyz=representative_ligand,
             out_pdb=backmap_pdb,
         )
         backmapped_contains_protein = bool(int(backmap_stats.get("protein_atoms", 0)) > 0)
@@ -1698,6 +1863,18 @@ def _process_queue_row(row: Dict[str, Any], cfg: Dict[str, Any]) -> Dict[str, An
         "vdw_nonpolar_support_proxy": score.get("vdw_nonpolar_support_proxy"),
         "polar_support_proxy": score.get("polar_support_proxy"),
         "solvation_penalty_proxy": score.get("solvation_penalty_proxy"),
+        "clash_relief_mode": score.get("clash_relief_mode", "off"),
+        "clash_relief_enabled": bool(score.get("clash_relief_enabled", False)),
+        "clash_relief_target_min_distance_A": score.get("clash_relief_target_min_distance_A"),
+        "clash_relief_max_translation_A": score.get("clash_relief_max_translation_A"),
+        "clash_relief_max_steps": score.get("clash_relief_max_steps"),
+        "clash_relief_applied_frame_count": score.get("clash_relief_applied_frame_count"),
+        "clash_relief_frame_fraction": score.get("clash_relief_frame_fraction"),
+        "clash_relief_mean_translation_A": score.get("clash_relief_mean_translation_A"),
+        "pre_repair_binding_energy_proxy": score.get("pre_repair_binding_energy_proxy"),
+        "pre_repair_mean_min_distance_A": score.get("pre_repair_mean_min_distance_A"),
+        "pre_repair_clash_frame_fraction": score.get("pre_repair_clash_frame_fraction"),
+        "pre_repair_mean_e_vdw": score.get("pre_repair_mean_e_vdw"),
         "backmapped_pdb": backmap_pdb,
         "score_json": score_json,
         "protein_structure_source_path": str(native_info.get("source_path", "") or ""),
@@ -1960,6 +2137,10 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         "ligand_model": str(args.ligand_model),
         "hbond_onsps_weight": float(args.hbond_onsps_weight),
         "score_only": bool(score_only),
+        "clash_relief_mode": str(args.clash_relief_mode),
+        "clash_relief_target_min_distance_A": float(args.clash_relief_target_min_distance_A),
+        "clash_relief_max_translation_A": float(args.clash_relief_max_translation_A),
+        "clash_relief_max_steps": int(args.clash_relief_max_steps),
     }
     all_rows = df.to_dict(orient="records")
     workers_requested = int(max(0, int(args.workers)))
@@ -2023,6 +2204,12 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
             "vdw_nonpolar_support_proxy",
             "polar_support_proxy",
             "solvation_penalty_proxy",
+            "clash_relief_frame_fraction",
+            "clash_relief_mean_translation_A",
+            "pre_repair_binding_energy_proxy",
+            "pre_repair_mean_min_distance_A",
+            "pre_repair_clash_frame_fraction",
+            "pre_repair_mean_e_vdw",
         ]:
             if _c in result_df.columns:
                 result_df[_c] = pd.to_numeric(result_df[_c], errors="coerce")
@@ -2174,6 +2361,22 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         "priority_sampling": priority_sampling,
         "ligand_model": str(args.ligand_model),
         "hbond_onsps_weight": float(args.hbond_onsps_weight),
+        "clash_relief_mode": str(args.clash_relief_mode),
+        "clash_relief_target_min_distance_A": (
+            float(args.clash_relief_target_min_distance_A)
+            if str(args.clash_relief_mode).strip().lower() not in {"", "off", "none", "disabled", "false", "0"}
+            else None
+        ),
+        "clash_relief_max_translation_A": (
+            float(args.clash_relief_max_translation_A)
+            if str(args.clash_relief_mode).strip().lower() not in {"", "off", "none", "disabled", "false", "0"}
+            else None
+        ),
+        "clash_relief_max_steps": (
+            int(args.clash_relief_max_steps)
+            if str(args.clash_relief_mode).strip().lower() not in {"", "off", "none", "disabled", "false", "0"}
+            else None
+        ),
         "allow_missing_trajectory": bool(args.allow_missing_trajectory),
         "score_only": bool(score_only),
         "parallel_enabled": bool(parallel_enabled),
@@ -2205,6 +2408,26 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         "avg_clash_frame_fraction": (
             float(pd.to_numeric(result_df["clash_frame_fraction"], errors="coerce").mean())
             if (not result_df.empty) and ("clash_frame_fraction" in result_df.columns)
+            else None
+        ),
+        "avg_clash_relief_frame_fraction": (
+            float(pd.to_numeric(result_df["clash_relief_frame_fraction"], errors="coerce").mean())
+            if (not result_df.empty) and ("clash_relief_frame_fraction" in result_df.columns)
+            else None
+        ),
+        "avg_clash_relief_mean_translation_A": (
+            float(pd.to_numeric(result_df["clash_relief_mean_translation_A"], errors="coerce").mean())
+            if (not result_df.empty) and ("clash_relief_mean_translation_A" in result_df.columns)
+            else None
+        ),
+        "avg_pre_repair_binding_energy_proxy": (
+            float(pd.to_numeric(result_df["pre_repair_binding_energy_proxy"], errors="coerce").mean())
+            if (not result_df.empty) and ("pre_repair_binding_energy_proxy" in result_df.columns)
+            else None
+        ),
+        "avg_pre_repair_mean_min_distance_A": (
+            float(pd.to_numeric(result_df["pre_repair_mean_min_distance_A"], errors="coerce").mean())
+            if (not result_df.empty) and ("pre_repair_mean_min_distance_A" in result_df.columns)
             else None
         ),
         "avg_trajectory_ligand_presence_fraction": (
@@ -2257,6 +2480,9 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         f"- avg_binding_energy_mmpbsa_kcal_mol_proxy: {summary['avg_binding_energy_mmpbsa_kcal_mol_proxy']}",
         f"- avg_stability_score: {summary['avg_stability_score']}",
         f"- avg_binding_energy_mmpbsa_sem: {summary['avg_binding_energy_mmpbsa_sem']}",
+        f"- clash_relief_mode: {summary['clash_relief_mode']}",
+        f"- avg_pre_repair_binding_energy_proxy: {summary['avg_pre_repair_binding_energy_proxy']}",
+        f"- avg_clash_relief_frame_fraction: {summary['avg_clash_relief_frame_fraction']}",
         f"- avg_physics_net_support_proxy: {summary['avg_physics_net_support_proxy']}",
         f"- avg_replicate_consistency_score: {summary['avg_replicate_consistency_score']}",
         f"- ranking_score_col_used: {summary['ranking_score_col_used']}",
@@ -2326,6 +2552,16 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["2bead", "3bead_implicit_hbond"],
     )
     p.add_argument("--hbond-onsps-weight", type=float, default=1.0)
+    p.add_argument(
+        "--clash-relief-mode",
+        type=str,
+        default="off",
+        choices=["off", "translate"],
+        help="Optional deterministic ligand translation before scoring to relieve impossible steric clashes.",
+    )
+    p.add_argument("--clash-relief-target-min-distance-A", type=float, default=2.12)
+    p.add_argument("--clash-relief-max-translation-A", type=float, default=2.0)
+    p.add_argument("--clash-relief-max-steps", type=int, default=12)
     p.add_argument("--topk-report", type=int, default=20)
     p.add_argument("--out-dir", type=str, default=f"runs/ligand_screening_delivery_{stamp}")
     p.add_argument("--out-scores-csv", type=str, default="")

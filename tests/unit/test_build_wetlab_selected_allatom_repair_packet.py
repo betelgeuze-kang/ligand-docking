@@ -1,6 +1,33 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from tools import build_wetlab_selected_allatom_repair_packet as mod
+
+
+def _strict_summary_payload(manifest: Path) -> dict:
+    return {
+        "summary": {"pass": True, "targets": 10},
+        "gates": {
+            "accuracy_gate": {
+                "avg_neighbor_jaccard": 1.0,
+                "avg_e2e_rmse_raw": 0.2,
+                "avg_e2e_rel_rmse_mean_clipped": 1e-7,
+            },
+            "speed": {"avg_speedup_on_vs_off": 100.0},
+            "long_stability": {"passed_targets": 10},
+        },
+        "source_manifest_csv": str(manifest),
+    }
+
+
+def _write_accuracy_external_csv(path: Path) -> None:
+    path.write_text(
+        "target,avg_rmsd_aligned,avg_rmsd_vs_native_aligned\n"
+        "T. cruzi PDE,0.05,0.04\n",
+        encoding="utf-8",
+    )
 
 
 def test_build_wetlab_selected_allatom_repair_packet_is_repair_only() -> None:
@@ -142,8 +169,9 @@ def test_build_wetlab_selected_allatom_repair_packet_is_repair_only() -> None:
     ]
     assert "claim/equivalence" in summary["next_required_step"]
     assert "after hard gate" in summary["next_required_step"]
-    assert "<claim_summary.json>" in summary["next_required_step"]
-    assert "<gate.json>" in summary["next_required_step"]
+    assert "runs/allatom_claim_readiness_" in summary["next_required_step"]
+    assert "_summary.json" in summary["next_required_step"]
+    assert "_gate.json" in summary["next_required_step"]
     assert "not pass" in summary["next_required_step"]
 
     command_plan = summary["command_plan"]
@@ -157,6 +185,8 @@ def test_build_wetlab_selected_allatom_repair_packet_is_repair_only() -> None:
         "claim_inputs_build_after_hard_gate",
         "claim_readiness_after_hard_gate",
         "claim_attached_review_refresh",
+        "current_results_index_refresh",
+        "partnering_stack_refresh",
         "final_campaign_refresh",
         "dashboard_refresh",
         "burndown_refresh",
@@ -173,12 +203,14 @@ def test_build_wetlab_selected_allatom_repair_packet_is_repair_only() -> None:
     assert commands_by_phase["hard_gate_repair"] == summary["recommended_command"]
     assert commands_by_phase["hard_gate_review_refresh"] == "python3 tools/build_wetlab_tcruzi_pde_allatom_review_packet.py"
     assert "--manifest-csv <openmm_manifest.csv>" in commands_by_phase["claim_inputs_build_after_hard_gate"]
-    assert "--out-json <claim_summary.json>" in commands_by_phase["claim_readiness_after_hard_gate"]
-    assert "--gate-out-json <gate.json>" in commands_by_phase["claim_readiness_after_hard_gate"]
-    assert commands_by_phase["claim_attached_review_refresh"] == (
+    assert "--out-json runs/allatom_claim_readiness_" in commands_by_phase["claim_readiness_after_hard_gate"]
+    assert "--gate-out-json runs/allatom_claim_readiness_" in commands_by_phase["claim_readiness_after_hard_gate"]
+    assert commands_by_phase["claim_attached_review_refresh"].startswith(
         "python3 tools/build_wetlab_tcruzi_pde_allatom_review_packet.py "
-        "--claim-readiness-json <claim_summary.json> --equivalence-gate-json <gate.json>"
+        "--claim-readiness-json runs/allatom_claim_readiness_"
     )
+    assert commands_by_phase["current_results_index_refresh"] == "python3 tools/build_wetlab_current_results_index.py"
+    assert commands_by_phase["partnering_stack_refresh"] == "python3 tools/build_wetlab_partnering_stack.py"
     assert commands_by_phase["final_campaign_refresh"] == "python3 tools/build_wetlab_final_campaign_summary.py"
     assert commands_by_phase["dashboard_refresh"] == "python3 tools/build_wetlab_master_handoff_dashboard.py"
     assert commands_by_phase["burndown_refresh"] == "python3 tools/build_wetlab_selected_allatom_gate_burndown_packet.py"
@@ -186,7 +218,7 @@ def test_build_wetlab_selected_allatom_repair_packet_is_repair_only() -> None:
     assert commands_by_phase["commercialization_status_refresh"] == "python3 tools/build_commercialization_status_report.py"
     assert commands_by_phase["delivery_verdict_refresh"] == "python3 tools/build_local_delivery_verdict_gate.py"
     claim_step = next(item for item in command_plan if item["phase"] == "claim_attached_review_refresh")
-    assert claim_step["required_inputs"] == "<claim_summary.json>, <gate.json>"
+    assert "runs/allatom_claim_readiness_" in claim_step["required_inputs"]
     assert claim_step["blocked_if_missing"] == "true"
     assert command_plan[-1]["phase"] == "closure_acceptance_check"
     assert all(item["manual_pass_promotion_allowed"] == "false" for item in command_plan)
@@ -237,3 +269,427 @@ def test_repair_packet_does_not_relax_threshold_when_input_distance_fails() -> N
     assert summary["manual_pass_promotion_allowed"] is False
     assert summary["selected_allatom_pass_override_allowed"] is False
     assert summary["next_required_step"].startswith("Execute repair")
+
+
+def test_repair_packet_uses_clash_relief_command_for_binding_proxy_blocker() -> None:
+    payload = mod.build_payload(
+        burndown_payload={
+            "summary": {
+                "selected_allatom_target_id": "T. cruzi PDE",
+                "selected_allatom_focus_artifact": "runs/wetlab_tcruzi_pde_allatom_review_packet_current.md",
+                "selected_allatom_selected_threshold_A": "2.5",
+                "selected_allatom_best_mean_min_distance_A": "0.672",
+                "selected_allatom_wetlab_gate_pass": True,
+                "selected_allatom_final_gate_pass": False,
+                "hard_block_count": 2,
+                "missing_metric_count": 1,
+                "primary_burndown_code": "recompute_binding_energy_proxy",
+                "primary_burndown_metric": "binding_energy_proxy",
+                "primary_burndown_value": "0.113",
+                "primary_burndown_threshold": "-0.050",
+                "primary_burndown_delta": "0.163",
+            },
+            "rows": [
+                {
+                    "severity": "hard",
+                    "category": "translation_commercial_hard_gate",
+                    "code": "recompute_binding_energy_proxy",
+                    "action": "strengthen_binding_energy_proxy",
+                    "status": "failed",
+                    "metric": "binding_energy_proxy",
+                    "value": "0.113",
+                    "threshold": "-0.050",
+                    "delta": "0.163",
+                    "reason": "binding_energy_proxy=0.113 threshold=-0.050",
+                }
+            ],
+        },
+        review_payload={
+            "summary": {
+                "target_id": "T. cruzi PDE",
+                "wetlab_gate_pass": True,
+                "wetlab_final_gate_pass": False,
+                "recommended_next_expensive_lane": "defer_expensive_lane",
+            }
+        },
+        rescue_lane_payload={"summary": {}},
+    )
+
+    summary = payload["summary"]
+    assert summary["primary_repair_code"] == "recompute_binding_energy_proxy"
+    assert summary["hard_gate_acceptance_metric"] == "binding_energy_proxy"
+    assert summary["hard_gate_acceptance_threshold"] == "-0.050"
+    assert "--clash-relief-mode translate" in summary["recommended_command"]
+    assert "--clash-relief-target-min-distance-A 2.12" in summary["recommended_command"]
+    rows = {row["repair_code"]: row for row in payload["rows"]}
+    assert rows["recompute_binding_energy_proxy"]["operator_action"] == (
+        "relieve_pose_clash_and_recompute_binding_proxy"
+    )
+    assert "binding_energy_proxy <= -0.050" in rows["recompute_binding_energy_proxy"]["operator_instruction"]
+
+
+def test_repair_packet_starts_from_claim_inputs_when_claim_gate_is_primary() -> None:
+    payload = mod.build_payload(
+        burndown_payload={
+            "summary": {
+                "selected_allatom_target_id": "T. cruzi PDE",
+                "selected_allatom_focus_artifact": "runs/wetlab_tcruzi_pde_allatom_review_packet_current.md",
+                "selected_allatom_wetlab_gate_pass": True,
+                "selected_allatom_final_gate_pass": False,
+                "hard_block_count": 1,
+                "missing_metric_count": 1,
+                "primary_burndown_code": "recompute_claim_gate_required_unavailable",
+                "primary_burndown_metric": "claim_gate_required_unavailable",
+                "primary_burndown_value": "missing",
+                "primary_burndown_threshold": "missing",
+                "primary_burndown_delta": "-",
+            },
+            "rows": [
+                {
+                    "severity": "hard",
+                    "category": "translation_commercial_hard_gate",
+                    "code": "recompute_claim_gate_required_unavailable",
+                    "action": "review_claim_gate_required_unavailable",
+                    "status": "missing",
+                    "metric": "claim_gate_required_unavailable",
+                    "value": "missing",
+                    "threshold": "missing",
+                    "delta": "-",
+                }
+            ],
+        },
+        review_payload={"summary": {"target_id": "T. cruzi PDE", "wetlab_gate_pass": True}},
+        rescue_lane_payload={"summary": {}},
+    )
+
+    summary = payload["summary"]
+    assert summary["primary_repair_code"] == "recompute_claim_gate_required_unavailable"
+    assert summary["recommended_command"].startswith("python3 tools/build_claim_inputs_from_openmm_manifest.py")
+    phases = [item["phase"] for item in summary["command_plan"]]
+    assert phases[:3] == [
+        "claim_inputs_build_after_hard_gate",
+        "claim_readiness_after_hard_gate",
+        "claim_attached_review_refresh",
+    ]
+    assert "hard_gate_repair" not in phases
+    rows = {row["repair_code"]: row for row in payload["rows"]}
+    assert rows["recompute_claim_gate_required_unavailable"]["operator_action"] == (
+        "materialize_missing_claim_gate_metric"
+    )
+    assert "Build the claim/equivalence inputs" in rows["recompute_claim_gate_required_unavailable"]["operator_instruction"]
+
+
+def test_repair_packet_materializes_claim_handoff_from_existing_artifacts() -> None:
+    stage2_manifest = (
+        "runs/wetlab_tcruzi_pde_allatom_rescue/t_cruzi_pde/20_of_20/top_8_strict_then_near_fill/"
+        "allatom_rescue_stage2_manifest.csv"
+    )
+    payload = mod.build_payload(
+        burndown_payload={
+            "summary": {
+                "selected_allatom_target_id": "T. cruzi PDE",
+                "selected_allatom_focus_artifact": "runs/wetlab_tcruzi_pde_allatom_review_packet_current.md",
+                "selected_allatom_wetlab_gate_pass": True,
+                "selected_allatom_final_gate_pass": False,
+                "hard_block_count": 1,
+                "missing_metric_count": 1,
+                "primary_burndown_code": "recompute_claim_gate_required_unavailable",
+                "primary_burndown_metric": "claim_gate_required_unavailable",
+                "primary_burndown_value": "missing",
+                "primary_burndown_threshold": "missing",
+                "primary_burndown_delta": "-",
+            },
+            "rows": [
+                {
+                    "severity": "hard",
+                    "category": "translation_commercial_hard_gate",
+                    "code": "recompute_claim_gate_required_unavailable",
+                    "action": "review_claim_gate_required_unavailable",
+                    "status": "missing",
+                    "metric": "claim_gate_required_unavailable",
+                    "value": "missing",
+                    "threshold": "missing",
+                    "delta": "-",
+                }
+            ],
+        },
+        review_payload={"summary": {"target_id": "T. cruzi PDE", "wetlab_gate_pass": True}},
+        rescue_lane_payload={
+            "summary": {
+                "base_stage2_manifest_csv": stage2_manifest,
+            }
+        },
+        allatom_runner_payload={
+            "summary": {
+                "allatom_stage2_manifest_csv": stage2_manifest,
+            }
+        },
+    )
+
+    summary = payload["summary"]
+    assert summary["claim_equivalence_input_status"] == "ready_to_build_claim_inputs"
+    assert summary["claim_equivalence_missing_inputs"] == [
+        "strict_summary_json",
+        "accuracy_external_csv",
+    ]
+    assert summary["claim_equivalence_available_inputs"]["openmm_manifest_csv"] == stage2_manifest
+    assert "accuracy_external_csv" not in summary["claim_equivalence_available_inputs"]
+    assert summary["claim_equivalence_accuracy_external_candidate_paths"] == [
+        "runs/accuracy_gate_local_delivery_preflight_current.csv"
+    ]
+    assert summary["claim_equivalence_accuracy_external_rejected_candidates"] == [
+        {
+            "path": "runs/accuracy_gate_local_delivery_preflight_current.csv",
+            "reason": (
+                "missing_accuracy_external_columns:"
+                "avg_rmsd_aligned,avg_rmsd_vs_native_aligned"
+            ),
+        }
+    ]
+
+    commands_by_phase = {item["phase"]: item["command"] for item in summary["command_plan"]}
+    assert f"--manifest-csv {stage2_manifest}" in commands_by_phase[
+        "claim_inputs_build_after_hard_gate"
+    ]
+    assert "--kinetics-input-csv runs/kinetics_equivalence_input_real_openmm_" in commands_by_phase[
+        "claim_readiness_after_hard_gate"
+    ]
+    assert "--accuracy-external-csv <accuracy_external.csv>" in commands_by_phase[
+        "claim_readiness_after_hard_gate"
+    ]
+    assert "--strict-summary-json <strict_summary.json>" in commands_by_phase["claim_readiness_after_hard_gate"]
+    assert "strict_summary_json" in summary["next_required_step"]
+    assert "accuracy_external_csv" in summary["next_required_step"]
+
+
+def test_repair_packet_uses_valid_accuracy_external_when_present(tmp_path: Path) -> None:
+    manifest = tmp_path / "allatom_rescue_stage2_manifest.csv"
+    accuracy_external = tmp_path / "accuracy_external.csv"
+    manifest.write_text("target,trajectory_npz\nT. cruzi PDE,traj.npz\n", encoding="utf-8")
+    _write_accuracy_external_csv(accuracy_external)
+
+    payload = mod.build_payload(
+        burndown_payload={
+            "summary": {
+                "selected_allatom_target_id": "T. cruzi PDE",
+                "selected_allatom_wetlab_gate_pass": True,
+                "selected_allatom_final_gate_pass": False,
+                "hard_block_count": 1,
+                "missing_metric_count": 1,
+                "primary_burndown_code": "recompute_claim_gate_required_unavailable",
+                "primary_burndown_metric": "claim_gate_required_unavailable",
+                "primary_burndown_value": "missing",
+                "primary_burndown_threshold": "missing",
+                "primary_burndown_delta": "-",
+            },
+            "rows": [
+                {
+                    "severity": "hard",
+                    "category": "translation_commercial_hard_gate",
+                    "code": "recompute_claim_gate_required_unavailable",
+                    "status": "missing",
+                }
+            ],
+        },
+        review_payload={"summary": {"target_id": "T. cruzi PDE", "wetlab_gate_pass": True}},
+        rescue_lane_payload={"summary": {}},
+        allatom_runner_payload={
+            "summary": {
+                "allatom_stage2_manifest_csv": str(manifest),
+                "accuracy_external_csv": str(accuracy_external),
+            }
+        },
+    )
+
+    summary = payload["summary"]
+    assert summary["claim_equivalence_missing_inputs"] == ["strict_summary_json"]
+    assert summary["claim_equivalence_available_inputs"]["accuracy_external_csv"] == str(accuracy_external)
+    assert summary["claim_equivalence_accuracy_external_candidate_paths"] == [
+        str(accuracy_external),
+        "runs/accuracy_gate_local_delivery_preflight_current.csv",
+    ]
+    assert summary["claim_equivalence_accuracy_external_rejected_candidates"] == []
+    command = {item["phase"]: item["command"] for item in summary["command_plan"]}[
+        "claim_readiness_after_hard_gate"
+    ]
+    assert f"--accuracy-external-csv {accuracy_external}" in command
+
+
+def test_repair_packet_uses_current_strict_summary_when_present(tmp_path: Path) -> None:
+    manifest = tmp_path / "allatom_rescue_stage2_manifest.csv"
+    strict_summary = tmp_path / "strict_summary_current.json"
+    manifest.write_text("target,trajectory_npz\nT. cruzi PDE,traj.npz\n", encoding="utf-8")
+    strict_summary.write_text(
+        json.dumps(_strict_summary_payload(manifest)),
+        encoding="utf-8",
+    )
+
+    payload = mod.build_payload(
+        burndown_payload={
+            "summary": {
+                "selected_allatom_target_id": "T. cruzi PDE",
+                "selected_allatom_wetlab_gate_pass": True,
+                "selected_allatom_final_gate_pass": False,
+                "hard_block_count": 1,
+                "missing_metric_count": 1,
+                "primary_burndown_code": "recompute_claim_gate_required_unavailable",
+                "primary_burndown_metric": "claim_gate_required_unavailable",
+                "primary_burndown_value": "missing",
+                "primary_burndown_threshold": "missing",
+                "primary_burndown_delta": "-",
+            },
+            "rows": [
+                {
+                    "severity": "hard",
+                    "category": "translation_commercial_hard_gate",
+                    "code": "recompute_claim_gate_required_unavailable",
+                    "status": "missing",
+                }
+            ],
+        },
+        review_payload={"summary": {"target_id": "T. cruzi PDE", "wetlab_gate_pass": True}},
+        rescue_lane_payload={"summary": {}},
+        allatom_runner_payload={
+            "summary": {
+                "allatom_stage2_manifest_csv": str(manifest),
+                "strict_summary_json": str(strict_summary),
+            }
+        },
+    )
+
+    summary = payload["summary"]
+    assert "strict_summary_json" not in summary["claim_equivalence_missing_inputs"]
+    assert summary["claim_equivalence_available_inputs"]["strict_summary_json"] == str(strict_summary)
+    assert summary["claim_equivalence_strict_summary_candidate_paths"] == [str(strict_summary)]
+    assert summary["claim_equivalence_rejected_candidates"] == []
+    command = {item["phase"]: item["command"] for item in summary["command_plan"]}[
+        "claim_readiness_after_hard_gate"
+    ]
+    assert f"--strict-summary-json {strict_summary}" in command
+
+
+def test_repair_packet_exposes_archived_strict_summary_without_adopting(tmp_path: Path) -> None:
+    manifest = tmp_path / "allatom_rescue_stage2_manifest.csv"
+    archived = tmp_path / "archived" / "strict_summary.json"
+    manifest.write_text("target,trajectory_npz\nT. cruzi PDE,traj.npz\n", encoding="utf-8")
+    archived.parent.mkdir()
+    archived.write_text(
+        json.dumps(_strict_summary_payload(manifest)),
+        encoding="utf-8",
+    )
+
+    payload = mod.build_payload(
+        burndown_payload={
+            "summary": {
+                "selected_allatom_target_id": "T. cruzi PDE",
+                "selected_allatom_wetlab_gate_pass": True,
+                "selected_allatom_final_gate_pass": False,
+                "hard_block_count": 1,
+                "missing_metric_count": 1,
+                "primary_burndown_code": "recompute_claim_gate_required_unavailable",
+                "primary_burndown_metric": "claim_gate_required_unavailable",
+                "primary_burndown_value": "missing",
+                "primary_burndown_threshold": "missing",
+                "primary_burndown_delta": "-",
+            },
+            "rows": [
+                {
+                    "severity": "hard",
+                    "category": "translation_commercial_hard_gate",
+                    "code": "recompute_claim_gate_required_unavailable",
+                    "status": "missing",
+                }
+            ],
+        },
+        review_payload={"summary": {"target_id": "T. cruzi PDE", "wetlab_gate_pass": True}},
+        rescue_lane_payload={"summary": {}},
+        allatom_runner_payload={
+            "summary": {
+                "allatom_stage2_manifest_csv": str(manifest),
+                "strict_summary_json": str(archived),
+            }
+        },
+    )
+
+    summary = payload["summary"]
+    assert summary["claim_equivalence_missing_inputs"] == [
+        "strict_summary_json",
+        "accuracy_external_csv",
+    ]
+    assert "strict_summary_json" not in summary["claim_equivalence_available_inputs"]
+    assert summary["claim_equivalence_strict_summary_candidate_paths"] == [str(archived)]
+    assert summary["claim_equivalence_rejected_candidates"] == [
+        {"path": str(archived), "reason": "archived_candidate_not_auto_adopted"}
+    ]
+    command = {item["phase"]: item["command"] for item in summary["command_plan"]}[
+        "claim_readiness_after_hard_gate"
+    ]
+    assert "--strict-summary-json <strict_summary.json>" in command
+
+
+def test_repair_packet_rejects_rescue_state_json_as_strict_summary(tmp_path: Path) -> None:
+    manifest = tmp_path / "allatom_rescue_stage2_manifest.csv"
+    rescue_dir = tmp_path / "top_8_strict_then_near_fill"
+    rescue_state = rescue_dir / "allatom_rescue_state.json"
+    manifest.write_text("target,trajectory_npz\nT. cruzi PDE,traj.npz\n", encoding="utf-8")
+    rescue_dir.mkdir()
+    rescue_state.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "allatom_stage2_manifest_csv": str(manifest),
+                    "source_manifest_csv": str(manifest),
+                },
+                "rows": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = mod.build_payload(
+        burndown_payload={
+            "summary": {
+                "selected_allatom_target_id": "T. cruzi PDE",
+                "selected_allatom_wetlab_gate_pass": True,
+                "selected_allatom_final_gate_pass": False,
+                "hard_block_count": 1,
+                "missing_metric_count": 1,
+                "primary_burndown_code": "recompute_claim_gate_required_unavailable",
+                "primary_burndown_metric": "claim_gate_required_unavailable",
+                "primary_burndown_value": "missing",
+                "primary_burndown_threshold": "missing",
+                "primary_burndown_delta": "-",
+            },
+            "rows": [
+                {
+                    "severity": "hard",
+                    "category": "translation_commercial_hard_gate",
+                    "code": "recompute_claim_gate_required_unavailable",
+                    "status": "missing",
+                }
+            ],
+        },
+        review_payload={"summary": {"target_id": "T. cruzi PDE", "wetlab_gate_pass": True}},
+        rescue_lane_payload={"summary": {}},
+        allatom_runner_payload={
+            "summary": {
+                "allatom_stage2_manifest_csv": str(manifest),
+                "allatom_state_json": str(rescue_state),
+            }
+        },
+    )
+
+    summary = payload["summary"]
+    assert summary["claim_equivalence_missing_inputs"] == [
+        "strict_summary_json",
+        "accuracy_external_csv",
+    ]
+    assert "strict_summary_json" not in summary["claim_equivalence_available_inputs"]
+    assert summary["claim_equivalence_strict_summary_candidate_paths"] == [str(rescue_state)]
+    assert summary["claim_equivalence_rejected_candidates"] == [
+        {"path": str(rescue_state), "reason": "missing_strict_release_target_count"}
+    ]
+    command = {item["phase"]: item["command"] for item in summary["command_plan"]}[
+        "claim_readiness_after_hard_gate"
+    ]
+    assert "--strict-summary-json <strict_summary.json>" in command

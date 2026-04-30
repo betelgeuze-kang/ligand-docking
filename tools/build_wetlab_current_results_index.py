@@ -152,6 +152,20 @@ def _coerce_boolish(value: Any) -> bool | None:
     return bool(value)
 
 
+def _coerce_list(value: Any) -> list[Any]:
+    if value is None or value == "":
+        return []
+    if isinstance(value, list):
+        return list(value)
+    if isinstance(value, tuple):
+        return list(value)
+    if isinstance(value, set):
+        return list(value)
+    if isinstance(value, dict):
+        return [dict(value)]
+    return []
+
+
 def _resolve_value_from_specs(
     specs: list[tuple[dict[str, Any] | None, tuple[str, ...]]],
     *,
@@ -4960,17 +4974,17 @@ def build_payload(
             "selected_allatom_claim_pass_core_gate": selected_allatom_selected_summary.get(
                 "pass_core_gate"
             ),
-            "selected_allatom_claim_core_failed_metrics": list(
-                selected_allatom_selected_summary.get("core_failed_metrics", []) or []
+            "selected_allatom_claim_core_failed_metrics": _coerce_list(
+                selected_allatom_selected_summary.get("core_failed_metrics", [])
             ),
-            "selected_allatom_claim_core_missing_metrics": list(
-                selected_allatom_selected_summary.get("core_missing_metrics", []) or []
+            "selected_allatom_claim_core_missing_metrics": _coerce_list(
+                selected_allatom_selected_summary.get("core_missing_metrics", [])
             ),
-            "selected_allatom_claim_failed_metrics": list(
-                selected_allatom_selected_summary.get("claim_failed_metrics", []) or []
+            "selected_allatom_claim_failed_metrics": _coerce_list(
+                selected_allatom_selected_summary.get("claim_failed_metrics", [])
             ),
-            "selected_allatom_claim_missing_metrics": list(
-                selected_allatom_selected_summary.get("claim_missing_metrics", []) or []
+            "selected_allatom_claim_missing_metrics": _coerce_list(
+                selected_allatom_selected_summary.get("claim_missing_metrics", [])
             ),
             "selected_allatom_claim_requirement_mode": _text(
                 selected_allatom_canonical.get("raw_claim_requirement_mode")

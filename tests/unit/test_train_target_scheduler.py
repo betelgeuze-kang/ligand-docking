@@ -8,7 +8,7 @@ def test_scheduler_covers_all_targets():
     scheduler = FoldBalancedTargetScheduler()
     all_targets = scheduler.get_all_targets()
     assert set(all_targets) == set(ResearchConstants.CHALLENGES.keys())
-    assert len(all_targets) == 10
+    assert len(all_targets) == len(ResearchConstants.CHALLENGES)
 
 
 def test_unique_fold_balanced_order_contains_all_targets_once():

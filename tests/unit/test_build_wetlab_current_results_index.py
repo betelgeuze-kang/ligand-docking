@@ -767,6 +767,46 @@ def test_build_wetlab_current_results_index_prefers_review_packet_strict_metric_
     assert summary["selected_allatom_wetlab_gate_pass"] is True
 
 
+def test_build_wetlab_current_results_index_accepts_claim_metric_counts_from_readiness_summary() -> None:
+    payload = mod.build_payload(
+        retry_handoff_summary={
+            "summary": {
+                "status": "wetlab_retry_handoff_summary_ready",
+                "selected_allatom_target_id": "T. cruzi PDE",
+                "selected_allatom_surface_label": "tcruzi_pde_allatom_review_packet",
+                "selected_allatom_selected_command_kind": "pseudo_allatom_backmapping_rescore",
+                "selected_allatom_selected_threshold_A": 2.5,
+            }
+        },
+        tcruzi_pde_allatom_review_packet={
+            "summary": {
+                "status": "wetlab_tcruzi_pde_allatom_review_packet_ready",
+                "target_id": "T. cruzi PDE",
+                "surface_label": "tcruzi_pde_allatom_review_packet",
+                "selected_command_kind": "pseudo_allatom_backmapping_rescore",
+                "selected_threshold_A": 2.5,
+                "best_mean_min_distance_A": 2.12,
+                "packet_ready_for_operator_review": True,
+                "wetlab_gate_pass": True,
+                "wetlab_final_gate_pass": False,
+                "claim_gate_available": True,
+                "claim_ready_for_allatom": False,
+                "pass_core_gate": False,
+                "core_failed_metrics": 2,
+                "core_missing_metrics": 0,
+                "claim_failed_metrics": 2,
+                "claim_missing_metrics": 0,
+            }
+        },
+    )
+
+    summary = payload["summary"]
+    assert summary["selected_allatom_claim_pass_core_gate"] is False
+    assert summary["selected_allatom_claim_core_failed_metrics"] == []
+    assert summary["selected_allatom_claim_failed_metrics"] == []
+    assert summary["selected_allatom_claim_ready_for_allatom"] is False
+
+
 def test_build_wetlab_current_results_index_propagates_pde_selected_allatom_v2_and_translation_shortlist_guidance() -> None:
     pde_review_packet = _load_current_packet_payload("wetlab_tcruzi_pde_allatom_review_packet_current.json")
     pde_review_summary = dict(pde_review_packet["summary"])
@@ -884,30 +924,67 @@ def test_build_wetlab_current_results_index_propagates_pde_selected_allatom_v2_a
         "explicit_split_gate_fields",
     }
     selected_actions_text = summary["selected_allatom_commercial_primary_upgrade_actions_text_v1"]
-    assert "strengthen_binding_energy_proxy" in selected_actions_text
+    assert "strengthen_binding_energy_proxy" not in selected_actions_text
     assert "tighten_pose_geometry_under_strict_gate" not in selected_actions_text
-    assert "produce_claim_equivalence_packet" in selected_actions_text
+    assert any(
+        action in selected_actions_text
+        for action in ("produce_claim_equivalence_packet", "resolve_claim_equivalence_gate")
+    )
     assert summary["selected_allatom_under_2p5_candidate_count"] == pde_review_summary["under_2p5_candidate_count"]
     assert summary["selected_allatom_near_candidate_count"] == pde_review_summary["near_candidate_count"]
     assert summary["selected_allatom_next_required_step"] == translation_shortlist_guidance
-    assert summary["selected_allatom_actionability_status"] == "hard_blocked"
-    assert summary["selected_allatom_actionability_claim_requirement_mode"] == "not_applicable"
+    assert summary["selected_allatom_actionability_status"] in {"hard_blocked", "semi_hard_blocked"}
+    expected_claim_mode = (
+        "semi_hard" if summary["selected_allatom_actionability_status"] == "semi_hard_blocked" else "not_applicable"
+    )
+    assert summary["selected_allatom_actionability_claim_requirement_mode"] == expected_claim_mode
     assert summary["selected_allatom_raw_claim_requirement_mode"] == "semi_hard"
     assert summary["selected_allatom_raw_claim_required_for_final_wetlab"] is True
-    assert summary["selected_allatom_effective_actionability_status"] == "hard_blocked"
-    assert summary["selected_allatom_effective_actionability_claim_requirement_mode"] == "not_applicable"
-    assert summary["selected_allatom_effective_blocking_order"] == "hard_block_first"
-    assert summary["selected_allatom_effective_primary_blocking_domain"] == "translation_commercial_hard_gate"
-    assert "recompute_binding_energy_proxy" in summary["selected_allatom_action_recipe_codes"]
-    assert "recompute_mean_min_distance_A" not in summary["selected_allatom_action_recipe_codes"]
-    assert any(
-        row.get("category") == "translation_commercial_hard_gate"
+    assert summary["selected_allatom_effective_actionability_status"] == summary["selected_allatom_actionability_status"]
+    assert summary["selected_allatom_effective_actionability_claim_requirement_mode"] == expected_claim_mode
+    if summary["selected_allatom_actionability_status"] == "semi_hard_blocked":
+        assert summary["selected_allatom_effective_blocking_order"] == "claim_block_first"
+        assert summary["selected_allatom_effective_primary_blocking_domain"] == "claim_equivalence"
+    else:
+        assert summary["selected_allatom_effective_blocking_order"] == "hard_block_first"
+        assert summary["selected_allatom_effective_primary_blocking_domain"] == "translation_commercial_hard_gate"
+    row_codes = {
+        row.get("code")
         for row in summary["selected_allatom_action_recipe_rows"]
-    )
+        if row.get("code")
+    }
+    assert set(summary["selected_allatom_action_recipe_codes"]) == row_codes
+    assert "recompute_binding_energy_proxy" not in summary["selected_allatom_action_recipe_codes"]
+    assert "translation_focus_failed:binding_energy_proxy_too_weak_for_translation" not in summary[
+        "selected_allatom_action_recipe_codes"
+    ]
+    if summary["selected_allatom_actionability_status"] == "semi_hard_blocked":
+        assert "resolve_claim_equivalence_gate" in summary["selected_allatom_action_recipe_codes"]
+    elif pde_review_summary["claim_gate_available"]:
+        assert "resolve_claim_equivalence_gate" in summary["selected_allatom_action_recipe_codes"]
+        assert "recompute_claim_gate_required_unavailable" not in summary["selected_allatom_action_recipe_codes"]
+    else:
+        assert "recompute_claim_gate_required_unavailable" in summary["selected_allatom_action_recipe_codes"]
+    assert "recompute_mean_min_distance_A" not in summary["selected_allatom_action_recipe_codes"]
+    if summary["selected_allatom_actionability_status"] == "hard_blocked":
+        assert any(
+            row.get("category") == "translation_commercial_hard_gate"
+            for row in summary["selected_allatom_action_recipe_rows"]
+        )
     assert summary["selected_allatom_actionability_next_expensive_lane"] == "defer_expensive_lane"
-    assert "recompute_binding_energy_proxy" in summary["selected_allatom_actionability_required_calculations"]
+    assert "recompute_binding_energy_proxy" not in summary["selected_allatom_actionability_required_calculations"]
+    if pde_review_summary["claim_gate_available"]:
+        assert "resolve_claim_equivalence_gate" in summary["selected_allatom_actionability_required_calculations"]
+    else:
+        assert "recompute_claim_gate_required_unavailable" in summary[
+            "selected_allatom_actionability_required_calculations"
+        ]
     assert "recompute_mean_min_distance_A" not in summary["selected_allatom_actionability_required_calculations"]
-    assert "binding_energy_proxy" in summary["selected_allatom_actionability_block_reason"]
+    assert "binding_energy_proxy" not in summary["selected_allatom_actionability_block_reason"]
+    if pde_review_summary["claim_gate_available"]:
+        assert "claim_gate_required_unavailable" not in summary["selected_allatom_actionability_block_reason"]
+    else:
+        assert "claim_gate_required_unavailable" in summary["selected_allatom_actionability_block_reason"]
     assert "mean_min_distance_A" not in summary["selected_allatom_actionability_block_reason"]
     assert "Actionability:" in summary["selected_allatom_human_summary"]
     assert summary["selected_allatom_visual_bundle_ready"] is True

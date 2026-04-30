@@ -726,13 +726,42 @@ def resolve_selected_allatom_canonical(
         and best_mean_min_distance_A > selected_threshold_A
     ):
         hard_failed_metrics = ["mean_min_distance_A"]
+    claim_hard_metric_names = {"claim_ready_for_allatom", "pass_core_gate"}
+    non_claim_hard_failed_metrics = [
+        metric for metric in hard_failed_metrics if metric not in claim_hard_metric_names
+    ]
+    non_claim_hard_missing_metrics = [
+        metric for metric in hard_missing_metrics if metric not in claim_hard_metric_names
+    ]
     translation_hard_blocked = bool(
-        translation_status in {"fail", "blocked"} or hard_failed_metrics or hard_missing_metrics
+        translation_status in {"fail", "blocked"}
+        or non_claim_hard_failed_metrics
+        or non_claim_hard_missing_metrics
     )
     commercial_hard_gate_blocked = bool(
         (_text(commercial_schema_version_v2) or commercial_hard_gate_source_v2)
         and not commercial_hard_gate_pass_v2
     )
+    claim_only_commercial_block = bool(
+        commercial_hard_gate_blocked
+        and not translation_hard_blocked
+        and (commercial_actions_v2 or legacy_commercial_actions)
+        and all(metric in claim_hard_metric_names for metric in hard_failed_metrics + hard_missing_metrics)
+        and all(
+            action
+            in {
+                "produce_claim_equivalence_packet",
+                "resolve_claim_equivalence_gate",
+                "recompute_claim_ready_for_allatom",
+                "recompute_pass_core_gate",
+            }
+            for action in list(dict.fromkeys(commercial_actions_v2 + legacy_commercial_actions))
+        )
+    )
+    if claim_only_commercial_block:
+        commercial_hard_gate_blocked = False
+        hard_failed_metrics = non_claim_hard_failed_metrics
+        hard_missing_metrics = non_claim_hard_missing_metrics
     hard_block_present = bool(translation_hard_blocked or commercial_hard_gate_blocked)
 
     effective_claim_requirement_mode = (
@@ -823,6 +852,15 @@ def resolve_selected_allatom_canonical(
     required_calculations: list[str] = []
     block_reason_codes: list[str] = []
     soft_guidance_reasons: list[str] = []
+    binding_energy_proxy_hard_blocked = "binding_energy_proxy" in (
+        set(hard_failed_metrics) | set(hard_missing_metrics)
+    )
+
+    def _stale_binding_energy_proxy_code(code: str) -> bool:
+        return (
+            not binding_energy_proxy_hard_blocked
+            and "binding_energy_proxy" in _text(code)
+        )
 
     if translation_status:
         soft_guidance_reasons.append(f"translation_gate_focus:{translation_status}")
@@ -862,6 +900,8 @@ def resolve_selected_allatom_canonical(
 
     for check in translation_failed_checks:
         code = f"translation_focus_failed:{check}"
+        if _stale_binding_energy_proxy_code(code):
+            continue
         if code not in action_recipe_codes:
             action_recipe_codes.append(code)
         if code not in block_reason_codes:
@@ -881,6 +921,11 @@ def resolve_selected_allatom_canonical(
             "resolve_claim_equivalence_gate",
         ]
         claim_actions = [action for action in claim_actions if action]
+        primary_claim_action = _text(review.get("claim_gate_primary_action"))
+        if primary_claim_action:
+            claim_actions = [primary_claim_action] + [
+                action for action in claim_actions if action != primary_claim_action
+            ]
         for action_code in claim_actions:
             action_recipe_rows.append(
                 {
@@ -916,6 +961,8 @@ def resolve_selected_allatom_canonical(
         action_recipe_codes.append(recommended_next_expensive_lane)
 
     for code in translation_action_codes + translation_blocker_codes + lane_action_codes + lane_blocker_codes:
+        if _stale_binding_energy_proxy_code(code):
+            continue
         if code not in action_recipe_codes:
             action_recipe_codes.append(code)
 

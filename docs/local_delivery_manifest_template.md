@@ -41,7 +41,7 @@ Recommended fill shape:
   "preflight": "evidence refresh; runs/local_delivery_preflight_current.json and runs/local_delivery_preflight_current.md; source/artifact integrity and non-dry-run runtime capture; accuracy_gate pass=true with failed metrics 0; requirements/environment lock green for the local-delivery required set",
   "queue": "rebuilt; runs/local_engine_commercialization_queue_current.json, runs/local_engine_commercialization_queue_current.md, and runs/local_engine_commercialization_queue_current.csv",
   "status_report": "commercialization_status_report.md",
-  "local_delivery_verdict_gate": "conservative gate over refreshed preflight evidence, requirements lock, environment manifest, nightly, wetlab, queue, status, current_results_index, and partnering_stack artifacts; the queue is downstream of wetlab selected-allatom closure and cannot clear independently. Keep it separate from the preflight itself and blocked/internal-review only until the final bundle validator reports summary.overall_ok=true and summary.delivery_ready_policy_ok=true, summary.delivery_ready=true, source_artifacts fingerprints match the current bundle/work record across the full persisted-vs-fresh label set, including current_results_index and partnering_stack, and verdict_gate_fingerprint_check.status=pass/ok=true/comparison_performed=true/mismatch_count=0",
+  "local_delivery_verdict_gate": "conservative gate over refreshed preflight evidence, requirements lock, environment manifest, nightly, wetlab, queue, status, current_results_index, and partnering_stack artifacts. Keep it separate from the preflight itself, and use delivery-ready wording only when the final bundle validator reports summary.overall_ok=true and summary.delivery_ready_policy_ok=true, summary.delivery_ready=true, source_artifacts fingerprints match the current bundle/work record across the full persisted-vs-fresh label set, including current_results_index and partnering_stack, and verdict_gate_fingerprint_check.status=pass/ok=true/comparison_performed=true/mismatch_count=0",
   "verdict_gate_fingerprint_check": {
     "checked": true,
     "ok": true,
@@ -49,11 +49,11 @@ Recommended fill shape:
     "comparison_performed": true,
     "required_for_delivery_ready_verdict": true,
     "reason": "fingerprints_match",
-    "matched_count": 11,
-    "compared_label_count": 11,
+    "matched_count": 12,
+    "compared_label_count": 12,
     "mismatch_count": 0,
-    "persisted_label_count": 11,
-    "fresh_label_count": 11,
+    "persisted_label_count": 12,
+    "fresh_label_count": 12,
     "mismatches": []
   },
   "environment": "environment/environment_manifest.json, environment/environment_manifest.md, environment/requirements_lock.json, environment/requirements_lock.md, environment/requirements_lock.txt, environment/engine_provenance.json, and environment/engine_provenance.md",
@@ -80,11 +80,11 @@ Recommended fill shape:
     "runs/nightly_stage6_top_level_reentry_packet_current.md and runs/nightly_stage6_top_level_reentry_profile_current.json are the strict canonical reentry handoff, and they remain supporting-only keep-green evidence rather than a blocker",
     "downstream execute evidence is supporting-only and cannot promote the top-level nightly artifact",
     "nightly stage6 is keep-green and not a representative P0 blocker",
-    "commercialization queue is downstream of wetlab selected-allatom closure and does not clear independently while the wetlab block remains open",
-    "wetlab selected-allatom hard-blocked at mean_min_distance_A=3.375, delta=0.875, with claim metric missing and hard block 2/missing metric 1; start from recompute_mean_min_distance_A and keep expensive lanes deferred"
+    "commercialization queue is cleared for the restricted kinase,gpcr,ion_channel local-delivery scope only when wetlab selected-allatom and source-artifact gates are green",
+    "wetlab selected-allatom is green at mean_min_distance_A=2.120 <= 2.500 with rescue attempt validation pass; keep expensive lanes deferred unless this metric regresses"
   ],
   "rerun_command": "python3 tools/run_local_delivery_preflight.py && python3 tools/build_local_delivery_bundle.py ...",
-  "verdict": "Internal-review only; not delivery-ready for commercial handoff because summary.delivery_ready=false and the remaining P0 blockers are wetlab_selected_allatom_not_green and commercialization_queue_not_clear; the queue is downstream of wetlab selected-allatom closure, so it cannot clear independently. Wetlab selected-allatom is hard-blocked at mean_min_distance_A=3.375 with delta=0.875, the claim metric is missing, and the hard block / missing metric counts are 2/1; start from recompute_mean_min_distance_A and keep expensive lanes deferred until the metric clears. If runs/wetlab_selected_allatom_repair_packet_current.md exists, it can be used only as the next execution reference. The nightly stage6 summary is keep-green and no longer a representative P0 blocker, and the current preflight evidence, accuracy gate, and requirements/environment lock are green, but that does not override the wetlab/queue blockers."
+  "verdict": "Delivery-ready for the restricted local scope only: kinase,gpcr,ion_channel. The current verdict gate reports summary.delivery_ready=true, p0_blocker_count=0, hard_blocker_count=0, commercialization_queue_clear=true, preflight_ok=true, accuracy_gate_pass=true, rescue_attempt_validation_ok=true, and wetlab selected-allatom mean_min_distance_A=2.120 <= 2.500. Keep transporter and broad platform claims out of scope."
 }
 ```
 
@@ -151,8 +151,8 @@ Use the same facts as `manifest.json`, but keep the markdown version easy for an
 - `runs/nightly_stage6_top_level_reentry_packet_current.md` and `runs/nightly_stage6_top_level_reentry_profile_current.json` are the strict canonical reentry handoff, and they remain supporting-only keep-green evidence rather than a blocker`
 - `downstream execute evidence is supporting-only and cannot promote the top-level nightly artifact`
 - `nightly stage6 is keep-green and not a representative P0 blocker`
-- `commercialization queue is downstream of wetlab selected-allatom closure and does not clear independently while the wetlab block remains open`
-- `wetlab selected-allatom hard-blocked at mean_min_distance_A=3.375, delta=0.875, with claim metric missing and hard block 2/missing metric 1; start from recompute_mean_min_distance_A and keep expensive lanes deferred`
+- `commercialization queue is cleared for the restricted kinase,gpcr,ion_channel local-delivery scope only when wetlab selected-allatom and source-artifact gates are green`
+- `wetlab selected-allatom is green at mean_min_distance_A=2.120 <= 2.500 with rescue attempt validation pass; keep expensive lanes deferred unless this metric regresses`
 
 ### Integrity
 
@@ -167,7 +167,7 @@ Use the same facts as `manifest.json`, but keep the markdown version easy for an
 
 ### Verdict
 
-- `Internal-review only; not delivery-ready for commercial handoff because summary.delivery_ready=false and the remaining P0 blockers are wetlab_selected_allatom_not_green and commercialization_queue_not_clear; the queue is downstream of wetlab selected-allatom closure, so it cannot clear independently. Wetlab selected-allatom is hard-blocked at mean_min_distance_A=3.375 with delta=0.875, the claim metric is missing, and the hard block / missing metric counts are 2/1; start from recompute_mean_min_distance_A and keep expensive lanes deferred until the metric clears. If runs/wetlab_selected_allatom_repair_packet_current.md exists, it can be used only as the next execution reference. The nightly stage6 summary is keep-green and no longer a representative P0 blocker, and the current preflight evidence, accuracy gate, and requirements/environment lock are green, but that does not override the wetlab/queue blockers.`
+- `Delivery-ready for the restricted local scope only: kinase,gpcr,ion_channel. The current verdict gate reports summary.delivery_ready=true, p0_blocker_count=0, hard_blocker_count=0, commercialization_queue_clear=true, preflight_ok=true, accuracy_gate_pass=true, rescue_attempt_validation_ok=true, and wetlab selected-allatom mean_min_distance_A=2.120 <= 2.500. Keep transporter and broad platform claims out of scope.`
 - The local delivery verdict gate should stay narrower than the verdict and should not be described as a proof or a new run.
 - If `summary.delivery_ready=false`, the verdict must be negative/internal-review rather than delivery-ready.
 - If the bundle is blocked/internal-review, the `verdict_gate_fingerprint_check` result and mismatch reason should be recorded in `manifest.md`.

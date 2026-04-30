@@ -36,6 +36,21 @@ def _safe_float(v: Any) -> Optional[float]:
         return None
 
 
+def _safe_bool_float(v: Any) -> Optional[float]:
+    if isinstance(v, bool):
+        return 1.0 if v else 0.0
+    if isinstance(v, (int, float)) and not isinstance(v, bool):
+        if float(v) in {0.0, 1.0}:
+            return float(v)
+    if isinstance(v, str):
+        lowered = v.strip().lower()
+        if lowered in {"true", "yes", "y", "1", "pass", "passed", "ok", "green"}:
+            return 1.0
+        if lowered in {"false", "no", "n", "0", "fail", "failed", "blocked", "red"}:
+            return 0.0
+    return None
+
+
 def _optional_metrics_json(path: str) -> Dict[str, float]:
     src = str(path).strip()
     if not src:
@@ -104,6 +119,19 @@ def _read_strict_summary_metrics(path: str, expected_targets: int) -> Dict[str, 
         if fv is None:
             continue
         out[k] = float(fv)
+
+    bool_mapping = {
+        "strict_summary_pass": summary.get("pass"),
+        "accuracy_gate_pass": acc.get("pass"),
+        "long_stability_gate_pass": stb.get("pass"),
+        "speed_gate_pass": spd.get("pass"),
+        "speed_gate_enforced": spd.get("enforced"),
+    }
+    for k, v in bool_mapping.items():
+        bv = _safe_bool_float(v)
+        if bv is None:
+            continue
+        out[k] = float(bv)
 
     # Inject expected target count as explicit metric for optional policies.
     out.setdefault("expected_target_count", float(expected_targets))
@@ -332,4 +360,3 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
 
 if __name__ == "__main__":
     main()
-

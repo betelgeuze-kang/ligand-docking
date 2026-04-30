@@ -1153,6 +1153,10 @@ def run(
     execute: bool,
     out_md: str,
     attempt_id: str = "",
+    clash_relief_mode: str = "off",
+    clash_relief_target_min_distance_A: float = 2.12,
+    clash_relief_max_translation_A: float = 2.0,
+    clash_relief_max_steps: int = 12,
 ) -> dict[str, Any]:
     lane_payload = load_json(lane_json)
     lane_summary = dict(lane_payload.get("summary", {}) or {})
@@ -1196,6 +1200,8 @@ def run(
         claim_gate_summary=claim_gate_summary,
     )
     actual_top_k = len(selected_lane_rows)
+    resolved_clash_relief_mode = _text(clash_relief_mode).lower() or "off"
+    clash_relief_enabled = resolved_clash_relief_mode not in {"off", "none", "disabled", "false", "0"}
     target_slug = slug(resolved_target)
     slice_suffix = ""
     if filter_meta.get("requested_filter_mode") != "all" or filter_meta.get("applied_filter_mode") != "all":
@@ -1425,6 +1431,14 @@ def run(
             "execute": bool(execute),
             "selected_command_kind": ALLATOM_COMMAND_KIND,
             "allatom_ligand_model": ALLATOM_LIGAND_MODEL,
+            "clash_relief_mode": resolved_clash_relief_mode,
+            "clash_relief_target_min_distance_A": (
+                float(clash_relief_target_min_distance_A) if clash_relief_enabled else None
+            ),
+            "clash_relief_max_translation_A": (
+                float(clash_relief_max_translation_A) if clash_relief_enabled else None
+            ),
+            "clash_relief_max_steps": int(clash_relief_max_steps) if clash_relief_enabled else None,
         },
         "inputs": input_fingerprint_ledger,
     }
@@ -1541,6 +1555,19 @@ def run(
             "--make-bundle-zip",
             "--no-allow-missing-trajectory",
         ]
+        if clash_relief_enabled:
+            scoring_cmd.extend(
+                [
+                    "--clash-relief-mode",
+                    resolved_clash_relief_mode,
+                    "--clash-relief-target-min-distance-A",
+                    str(float(clash_relief_target_min_distance_A)),
+                    "--clash-relief-max-translation-A",
+                    str(float(clash_relief_max_translation_A)),
+                    "--clash-relief-max-steps",
+                    str(int(clash_relief_max_steps)),
+                ]
+            )
         with scoring_log.open("w", encoding="utf-8") as log_handle:
             proc = subprocess.run(
                 scoring_cmd,
@@ -1810,6 +1837,18 @@ def run(
             "processed_jobs": _safe_int(scoring_summary.get("processed_jobs"), 0),
             "avg_binding_energy_proxy": scoring_summary.get("avg_binding_energy_proxy"),
             "avg_stability_score": scoring_summary.get("avg_stability_score"),
+            "clash_relief_mode": _text(scoring_summary.get("clash_relief_mode")) or resolved_clash_relief_mode,
+            "clash_relief_target_min_distance_A": (
+                float(clash_relief_target_min_distance_A) if clash_relief_enabled else None
+            ),
+            "clash_relief_max_translation_A": (
+                float(clash_relief_max_translation_A) if clash_relief_enabled else None
+            ),
+            "clash_relief_max_steps": int(clash_relief_max_steps) if clash_relief_enabled else None,
+            "avg_pre_repair_binding_energy_proxy": scoring_summary.get("avg_pre_repair_binding_energy_proxy"),
+            "avg_pre_repair_mean_min_distance_A": scoring_summary.get("avg_pre_repair_mean_min_distance_A"),
+            "avg_clash_relief_frame_fraction": scoring_summary.get("avg_clash_relief_frame_fraction"),
+            "avg_clash_relief_mean_translation_A": scoring_summary.get("avg_clash_relief_mean_translation_A"),
             "next_required_step": (
                 f"Review the PDE pseudo-all-atom rescue slice for {resolved_shard} using the {filter_meta.get('applied_filter_mode')} "
                 f"filter mode and promote only rescue-lane ligands that remain within the 3.0A review band. Focus next spend on "
@@ -1851,6 +1890,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--execute", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
     parser.add_argument("--attempt-id", default="")
+    parser.add_argument("--clash-relief-mode", choices=["off", "translate"], default="off")
+    parser.add_argument("--clash-relief-target-min-distance-A", type=float, default=2.12)
+    parser.add_argument("--clash-relief-max-translation-A", type=float, default=2.0)
+    parser.add_argument("--clash-relief-max-steps", type=int, default=12)
     return parser.parse_args()
 
 
@@ -1869,6 +1912,10 @@ def main() -> None:
         execute=bool(args.execute),
         out_md=args.out_md,
         attempt_id=str(args.attempt_id),
+        clash_relief_mode=str(args.clash_relief_mode),
+        clash_relief_target_min_distance_A=float(args.clash_relief_target_min_distance_A),
+        clash_relief_max_translation_A=float(args.clash_relief_max_translation_A),
+        clash_relief_max_steps=int(args.clash_relief_max_steps),
     )
 
 

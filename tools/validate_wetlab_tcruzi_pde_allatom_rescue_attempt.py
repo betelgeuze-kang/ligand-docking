@@ -80,6 +80,15 @@ def _safe_int(value: Any, default: int = 0) -> int:
         return default
 
 
+def _safe_float(value: Any, default: float = 0.0) -> float:
+    try:
+        if value in {"", None}:
+            return default
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
 def _safe_path(value: Any) -> Path:
     text = _text(value)
     return _resolve(text) if text else Path()
@@ -161,6 +170,8 @@ def _recompute_input_fingerprint(
     ledger: dict[str, Any],
     execute_requested: bool,
 ) -> str:
+    clash_relief_mode = _text(summary.get("clash_relief_mode")) or "off"
+    clash_relief_enabled = clash_relief_mode not in {"off", "none", "disabled", "false", "0"}
     basis = {
         "schema_version": "pde_allatom_rescue_attempt_v1",
         "settings": {
@@ -173,6 +184,14 @@ def _recompute_input_fingerprint(
             "execute": bool(execute_requested),
             "selected_command_kind": _text(summary.get("selected_command_kind")),
             "allatom_ligand_model": _text(summary.get("allatom_ligand_model")),
+            "clash_relief_mode": clash_relief_mode,
+            "clash_relief_target_min_distance_A": (
+                _safe_float(summary.get("clash_relief_target_min_distance_A")) if clash_relief_enabled else None
+            ),
+            "clash_relief_max_translation_A": (
+                _safe_float(summary.get("clash_relief_max_translation_A")) if clash_relief_enabled else None
+            ),
+            "clash_relief_max_steps": _safe_int(summary.get("clash_relief_max_steps"), 0) if clash_relief_enabled else None,
         },
         "inputs": ledger,
     }

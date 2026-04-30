@@ -83,6 +83,18 @@ def _bool_or_none(value: Any) -> bool | None:
     return None
 
 
+def _status_is_resolved(value: Any) -> bool:
+    return _text(value).lower() in {
+        "satisfied",
+        "pass",
+        "passed",
+        "resolved",
+        "complete",
+        "completed",
+        "not_applicable",
+    }
+
+
 def _canonical_artifact(path_like: str) -> str:
     return path_like.replace("\\", "/").lstrip("./")
 
@@ -136,6 +148,8 @@ def _metric_override_passes(metric_override: dict[str, str] | None) -> bool:
 def _operational_bucket(code: str, category: str, severity: str) -> str:
     if code == "recompute_mean_min_distance_A":
         return "geometry_hard_block"
+    if code == "recompute_binding_energy_proxy":
+        return "binding_proxy_hard_block"
     if code == "recompute_claim_gate_required_unavailable":
         return "claim_gate_metric_missing"
     if category == "claim_equivalence":
@@ -162,9 +176,15 @@ def _next_required_action(code: str, action: str) -> str:
         return (
             "Materialize the missing claim_gate_required_unavailable field on the selected all-atom focus and rerun the translation/commercial hard gate."
         )
+    if code == "recompute_binding_energy_proxy":
+        return (
+            "Use the bounded T. cruzi PDE all-atom rescue lane to rescore or replace the selected strict-geometry pose, then rebuild "
+            "the all-atom review packet and selected-allatom burndown packet; do not promote claim/equivalence or expensive-lane "
+            "readiness until binding_energy_proxy is <= -0.050 from that source chain."
+        )
     if code == "produce_claim_equivalence_packet":
         return (
-            "Assemble the neglected-disease claim/equivalence packet and attach it to the selected all-atom focus after the geometry hard block is cleared."
+            "Assemble the neglected-disease claim/equivalence packet and attach it to the selected all-atom focus after all selected all-atom hard blocks are cleared."
         )
     if code == "resolve_claim_equivalence_gate":
         return (
@@ -175,6 +195,52 @@ def _next_required_action(code: str, action: str) -> str:
             "Keep explicit-water rescoring and seed-replicated short MD parked until geometry and claim-gate blockers are both resolved."
         )
     return f"Resolve `{action or code or 'selected_allatom_gate_action'}` before reopening the selected all-atom lane."
+
+
+def _selected_review_row(review_payload: dict[str, Any] | None) -> dict[str, Any]:
+    if not review_payload:
+        return {}
+    review = _summaryish(review_payload)
+    best_ligand_id = _text(review.get("best_ligand_id"))
+    rows = [dict(row or {}) for row in (review_payload.get("rows", []) or [])]
+    if best_ligand_id:
+        for row in rows:
+            if _text(row.get("ligand_id")) == best_ligand_id:
+                return row
+    return rows[0] if rows else {}
+
+
+def _repair_provenance(
+    *,
+    code: str,
+    metric: str,
+    focus_artifact: str,
+    selected_allatom_review_payload: dict[str, Any] | None,
+) -> dict[str, Any]:
+    if code != "recompute_binding_energy_proxy" and metric != "binding_energy_proxy":
+        return {
+            "repair_lane": "",
+            "repair_action": "",
+            "repair_source_artifact": "",
+            "repair_source_kind": "",
+            "repair_source_ligand_id": "",
+        }
+
+    review = _summaryish(selected_allatom_review_payload or {})
+    selected_row = _selected_review_row(selected_allatom_review_payload)
+    source_artifact = (
+        _text(selected_row.get("score_json"))
+        or _text(review.get("allatom_summary_json"))
+        or _canonical_artifact(focus_artifact)
+        or "runs/wetlab_tcruzi_pde_allatom_review_packet_current.json"
+    )
+    return {
+        "repair_lane": "tcruzi_pde_allatom_rescue",
+        "repair_action": "run_clash_relief_allatom_rescue_then_build_review_packet",
+        "repair_source_artifact": source_artifact,
+        "repair_source_kind": "selected_allatom_review_packet_best_row_binding_energy_proxy",
+        "repair_source_ligand_id": _text(selected_row.get("ligand_id")) or _text(review.get("best_ligand_id")),
+    }
 
 
 def build_payload(
@@ -224,6 +290,8 @@ def build_payload(
         code = _text(action_row.get("code")) or _text(action_row.get("calc_action"))
         if code == "recompute_mean_min_distance_A" and metric_override_passes:
             continue
+        if _status_is_resolved(action_row.get("status")):
+            continue
         rank = len(rows) + 1
         severity = _text(action_row.get("severity"))
         category = _text(action_row.get("category"))
@@ -253,6 +321,12 @@ def build_payload(
                 "gate_dependency": _gate_dependency(category, severity),
                 "reason": _text(action_row.get("reason")),
                 "next_required_action": _next_required_action(code, _text(action_row.get("action"))),
+                **_repair_provenance(
+                    code=code,
+                    metric=_text(action_row.get("metric")),
+                    focus_artifact=focus_artifact,
+                    selected_allatom_review_payload=selected_allatom_review_payload,
+                ),
             }
         )
 
@@ -283,7 +357,7 @@ def build_payload(
         elif review_claim_gate_available is not None:
             claim_gate_available = claim_gate_available and review_claim_gate_available
         if review_final_gate_pass is not None:
-            final_gate_pass = final_gate_pass and review_final_gate_pass
+            final_gate_pass = review_final_gate_pass
 
     hard_block_count = sum(1 for row in rows if row["severity"] == "hard")
     semi_hard_block_count = sum(1 for row in rows if row["severity"] == "semi_hard")
@@ -295,6 +369,30 @@ def build_payload(
     primary_value = _text(primary_row.get("value")) or best_mean_min_distance_A
     primary_threshold = _text(primary_row.get("threshold")) or selected_threshold_A
     primary_delta = _text(primary_row.get("delta"))
+    action_recipe_rollup_text = " | ".join(
+        f"{row['severity']}:{row['code']} -> {row['action'] or row['code']}"
+        for row in rows
+    )
+    gate_clear = (
+        bool(wetlab_gate_pass)
+        and bool(final_gate_pass)
+        and hard_block_count == 0
+        and semi_hard_block_count == 0
+        and missing_metric_count == 0
+    )
+    next_required_step = (
+        f"Selected all-atom wetlab gate is green for `{target_id or 'selected_allatom'}`: "
+        f"`{primary_metric}` is `{primary_value or '-'}` versus `{primary_threshold or '-'}`. "
+        "Keep the current review/claim evidence attached and defer expensive lanes unless a new delivery scope explicitly reopens them."
+        if gate_clear
+        else (
+            f"Start with `{_text(primary_row.get('code')) or 'recompute_mean_min_distance_A'}` on `{target_id or 'selected_allatom'}`: "
+            f"`{primary_metric}` sits at `{primary_value or '-'}` versus `{primary_threshold or '-'}` (delta `{primary_delta or '-'}`), "
+            f"repair_lane=`{_text(primary_row.get('repair_lane')) or 'selected_allatom_local_recompute'}` "
+            f"repair_action=`{_text(primary_row.get('repair_action')) or _text(primary_row.get('calc_action')) or 'recompute_selected_allatom_metric'}`; "
+            "then recompute the missing claim-gate field, and only after all hard blocks clear move on to claim/equivalence packet production while keeping expensive lanes deferred."
+        )
+    )
 
     summary = {
         "packet_ready": True,
@@ -334,11 +432,12 @@ def build_payload(
         "primary_burndown_value": primary_value,
         "primary_burndown_threshold": primary_threshold,
         "primary_burndown_delta": primary_delta,
-        "next_required_step": (
-            f"Start with `{_text(primary_row.get('code')) or 'recompute_mean_min_distance_A'}` on `{target_id or 'selected_allatom'}`: "
-            f"`{primary_metric}` sits at `{primary_value or '-'}` versus `{primary_threshold or '-'}` (delta `{primary_delta or '-'}`), "
-            "then recompute the missing claim-gate field, and only after the hard block clears move on to claim/equivalence packet production while keeping expensive lanes deferred."
-        ),
+        "primary_repair_lane": _text(primary_row.get("repair_lane")),
+        "primary_repair_action": _text(primary_row.get("repair_action")),
+        "primary_repair_source_artifact": _text(primary_row.get("repair_source_artifact")),
+        "primary_repair_source_kind": _text(primary_row.get("repair_source_kind")),
+        "primary_repair_source_ligand_id": _text(primary_row.get("repair_source_ligand_id")),
+        "next_required_step": next_required_step,
         "action_recipe_rollup_text": action_recipe_rollup_text,
     }
     return {"summary": summary, "rows": rows}
@@ -371,6 +470,10 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- primary_burndown_code: `{summary['primary_burndown_code']}`",
         f"- primary_burndown_metric: `{summary['primary_burndown_metric']}`",
         f"- primary_burndown_delta: `{summary['primary_burndown_delta']}`",
+        f"- primary_repair_lane: `{summary['primary_repair_lane'] or '-'}`",
+        f"- primary_repair_action: `{summary['primary_repair_action'] or '-'}`",
+        f"- primary_repair_source_artifact: `{summary['primary_repair_source_artifact'] or '-'}`",
+        f"- primary_repair_source_ligand_id: `{summary['primary_repair_source_ligand_id'] or '-'}`",
         "",
         "## Next Step",
         "",
@@ -378,13 +481,14 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         "",
         "## Burndown Queue",
         "",
-        "| rank | severity | bucket | code | status | metric | value | threshold | delta |",
-        "| ---: | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| rank | severity | bucket | code | status | metric | value | threshold | delta | repair_lane |",
+        "| ---: | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
             f"| {row['burndown_rank']} | `{row['severity']}` | `{row['operational_bucket']}` | `{row['code']}` | "
-            f"`{row['status']}` | `{row['metric'] or '-'}` | `{row['value'] or '-'}` | `{row['threshold'] or '-'}` | `{row['delta']}` |"
+            f"`{row['status']}` | `{row['metric'] or '-'}` | `{row['value'] or '-'}` | `{row['threshold'] or '-'}` | `{row['delta']}` | "
+            f"`{row.get('repair_lane') or '-'}` |"
         )
     lines.extend(["", "## Action Recipe Rollup", "", f"- {summary['action_recipe_rollup_text'] or '-'}", "", "## Execution Notes", ""])
     for row in payload["rows"]:

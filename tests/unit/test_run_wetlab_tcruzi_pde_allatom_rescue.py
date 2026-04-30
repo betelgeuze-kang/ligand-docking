@@ -613,6 +613,67 @@ def test_run_wetlab_tcruzi_pde_allatom_rescue_execute_reads_flat_scoring_summary
     assert payload["rows"][0]["rescue_iteration_metadata"]["execute_requested"] is True
 
 
+def test_run_wetlab_tcruzi_pde_allatom_rescue_passes_clash_relief_flags(
+    tmp_path: Path, monkeypatch
+) -> None:
+    lane_json, claim_json, equivalence_json = _write_single_ready_rescue_inputs(tmp_path)
+    captured_cmd: list[str] = []
+
+    class Result:
+        returncode = 0
+
+    def fake_scoring_run(cmd: list[str], **_: object) -> Result:
+        captured_cmd[:] = cmd
+        out_summary_json = Path(cmd[cmd.index("--out-summary-json") + 1])
+        out_scores_csv = Path(cmd[cmd.index("--out-scores-csv") + 1])
+        out_summary_json.parent.mkdir(parents=True, exist_ok=True)
+        out_scores_csv.parent.mkdir(parents=True, exist_ok=True)
+        _write_json(
+            out_summary_json,
+            {
+                "queue_rows": 1,
+                "processed_jobs": 1,
+                "avg_binding_energy_proxy": -0.08,
+                "avg_stability_score": 0.66,
+                "clash_relief_mode": "translate",
+                "avg_pre_repair_binding_energy_proxy": 0.113,
+                "avg_pre_repair_mean_min_distance_A": 0.672,
+                "avg_clash_relief_frame_fraction": 1.0,
+                "avg_clash_relief_mean_translation_A": 1.45,
+            },
+        )
+        out_scores_csv.write_text("ligand_id\nligand_strict\n", encoding="utf-8")
+        return Result()
+
+    monkeypatch.setattr("tools.run_wetlab_tcruzi_pde_allatom_rescue.subprocess.run", fake_scoring_run)
+
+    payload = run(
+        lane_json=str(lane_json),
+        target_id="T. cruzi PDE",
+        shard_id="20_of_20",
+        top_k=1,
+        filter_mode="strict_then_near_fill",
+        claim_readiness_json=str(claim_json),
+        equivalence_gate_json=str(equivalence_json),
+        python_bin=sys.executable,
+        execute=True,
+        out_md=str(tmp_path / "runner.md"),
+        clash_relief_mode="translate",
+        clash_relief_target_min_distance_A=2.12,
+        clash_relief_max_translation_A=2.0,
+        clash_relief_max_steps=12,
+    )
+
+    assert captured_cmd[captured_cmd.index("--clash-relief-mode") + 1] == "translate"
+    assert captured_cmd[captured_cmd.index("--clash-relief-target-min-distance-A") + 1] == "2.12"
+    assert captured_cmd[captured_cmd.index("--clash-relief-max-translation-A") + 1] == "2.0"
+    assert captured_cmd[captured_cmd.index("--clash-relief-max-steps") + 1] == "12"
+    summary = payload["summary"]
+    assert summary["clash_relief_mode"] == "translate"
+    assert summary["avg_pre_repair_binding_energy_proxy"] == 0.113
+    assert summary["avg_clash_relief_frame_fraction"] == 1.0
+
+
 def test_run_wetlab_tcruzi_pde_allatom_rescue_records_deterministic_attempt_fingerprint(
     tmp_path: Path,
 ) -> None:

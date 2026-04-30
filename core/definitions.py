@@ -34,4 +34,13 @@ class ResearchConstants:
         'Protein_A_Bdomain': {'n_res': 60, 'type': 'protein', 'box': [100.0, 100.0, 100.0], 'fold_class': 'all_alpha'},
         'GB1_Mini': {'n_res': 56, 'type': 'protein', 'box': [100.0, 100.0, 100.0], 'fold_class': 'alpha_beta'},
         'Ubiquitin_Mini': {'n_res': 76, 'type': 'protein', 'box': [120.0, 120.0, 120.0], 'fold_class': 'alpha_beta'},
+        # PDB 3V94 canonical observed chain B: 334 CA rows, 345 SEQRES residues, 11 missing residues.
+        'T. cruzi PDE': {
+            'n_res': 334,
+            'type': 'protein',
+            'box': [200.0, 200.0, 200.0],
+            'fold_class': 'phosphodiesterase',
+            'native_pdb_path': 'data/public_structures/selected_allatom_native_v1/t_cruzi_pde_pdb_3V94.pdb',
+            'canonical_chain': 'B',
+        },
     }

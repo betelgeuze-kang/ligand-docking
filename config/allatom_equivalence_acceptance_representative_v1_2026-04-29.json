@@ -1,0 +1,148 @@
+{
+  "version": "allatom_equivalence_acceptance_representative_v1_2026-04-29",
+  "meta": {
+    "owner": "md_architecture",
+    "description": "Representative-scope acceptance policy for selected all-atom-equivalence evidence from the 2-bead + residual architecture.",
+    "claim_scope": "single selected target / bounded wetlab evidence lane only",
+    "not_claimed_scope": "full platform, broad commercial release, or all target families",
+    "notes": [
+      "Use this policy only when the run is explicitly scoped to the selected representative target.",
+      "The full-release policy remains config/allatom_equivalence_acceptance_v1_2026-02-17.json.",
+      "Core integrity delegates long-stability and speed decisions to the strict-release gate outputs so single-target skipped speed gates are recorded as scoped, not silently re-thresholded.",
+      "If strict release enforces speed and fails, speed_gate_pass is false and this policy fails closed."
+    ]
+  },
+  "domains": [
+    {
+      "name": "core_simulation_sanity",
+      "required_for_core_gate": true,
+      "required_for_claim": true,
+      "description": "Non-negotiable simulation integrity checks from strict release summary, using strict gate pass/fail semantics for scoped target count and speed enforcement.",
+      "metrics": [
+        {
+          "name": "avg_neighbor_jaccard",
+          "source": "strict_summary",
+          "operator": "==",
+          "threshold": 1.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "avg_e2e_rmse_raw",
+          "source": "strict_summary",
+          "operator": "<=",
+          "threshold": 0.35
+        },
+        {
+          "name": "avg_e2e_rel_rmse_clipped",
+          "source": "strict_summary",
+          "operator": "<=",
+          "threshold": 1e-5
+        },
+        {
+          "name": "long_stability_gate_pass",
+          "source": "strict_summary",
+          "operator": ">=",
+          "threshold": 1.0
+        },
+        {
+          "name": "speed_gate_pass",
+          "source": "strict_summary",
+          "operator": ">=",
+          "threshold": 1.0
+        }
+      ]
+    },
+    {
+      "name": "structure_equivalence",
+      "required_for_core_gate": true,
+      "required_for_claim": true,
+      "description": "Structure-level agreement against external all-atom/openmm references.",
+      "metrics": [
+        {
+          "name": "avg_rmsd_aligned_A",
+          "source": "accuracy_external_csv",
+          "operator": "<=",
+          "threshold": 5.0
+        },
+        {
+          "name": "avg_rmsd_vs_native_aligned_A",
+          "source": "accuracy_external_csv",
+          "operator": "<=",
+          "threshold": 0.10
+        }
+      ]
+    },
+    {
+      "name": "thermodynamics_equivalence",
+      "required_for_core_gate": false,
+      "required_for_claim": true,
+      "description": "Free-energy and state-population consistency versus all-atom references.",
+      "metrics": [
+        {
+          "name": "deltaG_rmse_kcal_mol",
+          "source": "thermo_json",
+          "operator": "<=",
+          "threshold": 0.5
+        },
+        {
+          "name": "state_population_jsd",
+          "source": "thermo_json",
+          "operator": "<=",
+          "threshold": 0.05
+        },
+        {
+          "name": "pmf_1d_emd",
+          "source": "thermo_json",
+          "operator": "<=",
+          "threshold": 0.20
+        }
+      ]
+    },
+    {
+      "name": "kinetics_equivalence",
+      "required_for_core_gate": false,
+      "required_for_claim": true,
+      "description": "Transition-time and timescale agreement versus all-atom references.",
+      "metrics": [
+        {
+          "name": "log10_mfpt_error",
+          "source": "kinetics_json",
+          "operator": "<=",
+          "threshold": 0.30
+        },
+        {
+          "name": "implied_timescale_rel_error",
+          "source": "kinetics_json",
+          "operator": "<=",
+          "threshold": 0.15
+        }
+      ]
+    },
+    {
+      "name": "experiment_consistency",
+      "required_for_core_gate": false,
+      "required_for_claim": true,
+      "description": "Agreement with experimental observables.",
+      "metrics": [
+        {
+          "name": "nmr_noe_violation_rate",
+          "source": "experiment_json",
+          "operator": "<=",
+          "threshold": 0.10
+        },
+        {
+          "name": "cryoem_map_cc",
+          "source": "experiment_json",
+          "operator": ">=",
+          "threshold": 0.85
+        },
+        {
+          "name": "saxs_chi2",
+          "source": "experiment_json",
+          "operator": "<=",
+          "threshold": 1.50
+        }
+      ]
+    }
+  ]
+}

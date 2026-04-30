@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import numpy as np
+
 from tools import run_ligand_backmapping_scoring as mod
 from tools.run_ligand_backmapping_scoring import _inline_score_from_row, _ligand_props
 
@@ -237,3 +239,99 @@ def test_process_queue_row_emits_native_provenance_and_backmap_metadata(tmp_path
     assert score_payload["protein_structure_provenance"]["source_kind"] == "explicit_native_pdb"
     assert score_payload["backmapped_contains_protein"] is True
     assert score_payload["backmapped_structure_kind"] == "pseudo_backmapped_protein_ligand_pdb"
+
+
+def test_score_frames_clash_relief_recomputes_proxy_after_translation(tmp_path):
+    protein = np.asarray([[0.0, 0.0, 0.0]], dtype=np.float32)
+    ligand = np.asarray([[0.55, 0.0, 0.0], [0.95, 0.0, 0.0]], dtype=np.float32)
+
+    score = mod._score_frames(
+        frame_paths=[],
+        trajectory_npz_path="",
+        protein_default=protein,
+        ligand_default=ligand,
+        contact_cutoff_A=6.0,
+        row={"smiles": "CCO"},
+        min_frames=1,
+        ligand_model="2bead",
+        hbond_onsps_weight=1.0,
+        clash_relief_mode="translate",
+        clash_relief_target_min_distance_A=2.12,
+        clash_relief_max_translation_A=2.0,
+        clash_relief_max_steps=12,
+    )
+
+    assert score["clash_relief_enabled"] is True
+    assert score["clash_relief_applied_frame_count"] == 1
+    assert score["pre_repair_clash_frame_fraction"] == 1.0
+    assert score["pre_repair_mean_min_distance_A"] < 1.0
+    assert score["mean_min_distance_A"] >= 2.1
+    assert score["clash_frame_fraction"] == 0.0
+    assert score["binding_energy_proxy"] < score["pre_repair_binding_energy_proxy"]
+
+
+def test_process_queue_row_clash_relief_bypasses_inline_metrics_and_records_provenance(tmp_path):
+    native_pdb = tmp_path / "native_target.pdb"
+    native_pdb.write_text(
+        "\n".join(
+            [
+                "ATOM      1  CA  GLY A   1       0.000   0.000   0.000  1.00 20.00           C",
+                "END",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    npz = tmp_path / "trajectory.npz"
+    np.savez(
+        npz,
+        protein_ca=np.asarray([[0.0, 0.0, 0.0]], dtype=np.float32),
+        ligand_frames=np.asarray(
+            [
+                [[0.55, 0.0, 0.0], [0.95, 0.0, 0.0]],
+                [[0.60, 0.0, 0.0], [1.00, 0.0, 0.0]],
+            ],
+            dtype=np.float32,
+        ),
+    )
+    row = {
+        "queue_id": "toy_clash",
+        "target": "Toy Target",
+        "ligand_id": "toy_ligand",
+        "native_pdb_path": str(native_pdb),
+        "trajectory_npz": str(npz),
+        "inline_aux_available": True,
+        "binding_energy_proxy": 9.9,
+        "binding_energy_mmpbsa_kcal_mol_proxy": 9.9,
+        "binding_energy_mmpbsa_std": 0.0,
+        "stability_score": 0.0,
+        "contact_fraction": 0.0,
+        "mean_min_distance_A": 0.5,
+        "smiles": "CCO",
+    }
+    cfg = {
+        "score_only": False,
+        "jobs_root": str(tmp_path / "jobs"),
+        "trajectory_root": str(tmp_path),
+        "trajectory_glob": "",
+        "allow_missing_trajectory": False,
+        "contact_cutoff_A": 6.0,
+        "min_frames": 2,
+        "ligand_model": "2bead",
+        "hbond_onsps_weight": 1.0,
+        "clash_relief_mode": "translate",
+        "clash_relief_target_min_distance_A": 2.12,
+        "clash_relief_max_translation_A": 2.0,
+        "clash_relief_max_steps": 12,
+    }
+
+    result = mod._process_queue_row(row, cfg)
+
+    assert result["clash_relief_enabled"] is True
+    assert result["clash_relief_applied_frame_count"] == 2
+    assert result["pre_repair_binding_energy_proxy"] != 9.9
+    assert result["binding_energy_proxy"] < result["pre_repair_binding_energy_proxy"]
+    assert result["mean_min_distance_A"] >= 2.1
+    score_payload = json.loads(Path(result["score_json"]).read_text(encoding="utf-8"))
+    assert score_payload["score"]["clash_relief_mode"] == "translate"
+    assert score_payload["score"]["pre_repair_clash_frame_fraction"] == 1.0

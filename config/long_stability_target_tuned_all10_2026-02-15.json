@@ -1,7 +1,7 @@
 {
   "meta": {
     "created_at": "2026-02-15",
-    "description": "Per-target long-horizon stability tuning profile for OpenMM 2-bead strict release (all 10 targets)."
+    "description": "Per-target long-horizon stability tuning profile for OpenMM 2-bead strict release (all 10 fold-balanced targets plus T. cruzi PDE)."
   },
   "targets": {
     "BBA5": {
@@ -33,6 +33,11 @@
       "dt": 3e-06,
       "restraint_k": 7.0,
       "force_clip": 100.0
+    },
+    "T. cruzi PDE": {
+      "dt": 1e-06,
+      "restraint_k": 7.0,
+      "force_clip": 60.0
     },
     "Trp_Cage": {
       "dt": 3e-06,

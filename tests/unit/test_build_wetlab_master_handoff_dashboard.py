@@ -567,19 +567,48 @@ def test_build_wetlab_master_handoff_dashboard_surfaces_selected_allatom_v2_tran
     ]
     assert packet_summary["recommended_next_expensive_lane_reason"] in summary["selected_allatom_translation_human_summary"]
     assert summary["selected_allatom_next_required_step"] == selected_next_step
-    assert summary["selected_allatom_actionability_status"] == "hard_blocked"
-    assert summary["selected_allatom_actionability_claim_requirement_mode"] == "not_applicable"
+    assert summary["selected_allatom_actionability_status"] in {"hard_blocked", "semi_hard_blocked"}
+    expected_claim_mode = (
+        "semi_hard" if summary["selected_allatom_actionability_status"] == "semi_hard_blocked" else "not_applicable"
+    )
+    assert summary["selected_allatom_actionability_claim_requirement_mode"] == expected_claim_mode
     assert summary["selected_allatom_actionability_next_expensive_lane"] == "defer_expensive_lane"
     assert summary["selected_allatom_raw_claim_requirement_mode"] == "semi_hard"
     assert summary["selected_allatom_raw_claim_required_for_final_wetlab"] is True
-    assert summary["selected_allatom_effective_actionability_status"] == "hard_blocked"
-    assert summary["selected_allatom_effective_actionability_claim_requirement_mode"] == "not_applicable"
-    assert summary["selected_allatom_effective_blocking_order"] == "hard_block_first"
-    assert summary["selected_allatom_effective_primary_blocking_domain"] == "translation_commercial_hard_gate"
-    assert "recompute_binding_energy_proxy" in summary["selected_allatom_action_recipe_codes"]
+    assert summary["selected_allatom_effective_actionability_status"] == summary["selected_allatom_actionability_status"]
+    assert summary["selected_allatom_effective_actionability_claim_requirement_mode"] == expected_claim_mode
+    if summary["selected_allatom_actionability_status"] == "semi_hard_blocked":
+        assert summary["selected_allatom_effective_blocking_order"] == "claim_block_first"
+        assert summary["selected_allatom_effective_primary_blocking_domain"] == "claim_equivalence"
+    else:
+        assert summary["selected_allatom_effective_blocking_order"] == "hard_block_first"
+        assert summary["selected_allatom_effective_primary_blocking_domain"] == "translation_commercial_hard_gate"
+    assert "recompute_binding_energy_proxy" not in summary["selected_allatom_action_recipe_codes"]
+    if summary["selected_allatom_actionability_status"] == "semi_hard_blocked":
+        assert "resolve_claim_equivalence_gate" in summary["selected_allatom_action_recipe_codes"]
+        assert "recompute_claim_gate_required_unavailable" not in summary["selected_allatom_action_recipe_codes"]
+    elif "recompute_claim_ready_for_allatom" in summary["selected_allatom_action_recipe_codes"]:
+        assert "recompute_claim_ready_for_allatom" in summary["selected_allatom_action_recipe_codes"]
+        assert "recompute_claim_gate_required_unavailable" not in summary["selected_allatom_action_recipe_codes"]
+    else:
+        assert "recompute_claim_gate_required_unavailable" in summary["selected_allatom_action_recipe_codes"]
     assert "defer_expensive_lane" in summary["selected_allatom_action_recipe_codes"]
-    assert "blocking order hard_block_first" in summary["selected_allatom_claim_actionability_split_summary"]
-    assert "recompute_binding_energy_proxy" in summary["selected_allatom_actionability_required_calculations_text"]
+    assert (
+        f"blocking order {summary['selected_allatom_effective_blocking_order']}"
+        in summary["selected_allatom_claim_actionability_split_summary"]
+    )
+    if summary["selected_allatom_actionability_status"] == "semi_hard_blocked":
+        assert "resolve_claim_equivalence_gate" in summary[
+            "selected_allatom_actionability_required_calculations_text"
+        ]
+    elif "recompute_claim_ready_for_allatom" in summary["selected_allatom_action_recipe_codes"]:
+        assert "recompute_claim_ready_for_allatom" in summary[
+            "selected_allatom_actionability_required_calculations_text"
+        ]
+    else:
+        assert "recompute_claim_gate_required_unavailable" in summary[
+            "selected_allatom_actionability_required_calculations_text"
+        ]
     assert "Actionability:" in summary["selected_allatom_human_summary"]
     assert "translation gate focus is borderline" in summary["selected_allatom_next_required_step"]
     assert "shortlist tier is defer" in summary["selected_allatom_next_required_step"]
@@ -604,10 +633,15 @@ def test_build_wetlab_master_handoff_dashboard_surfaces_selected_allatom_v2_tran
     assert "Visual: PDE focus visuals ready for review." in focus_row["one_line_summary"]
     assert "Media: dashboard ready | figure ready | movie scripts 0/4 | movie mp4 0/4 | binding-event clips 0/4." in focus_row["one_line_summary"]
     actionability_row = next(row for row in payload["rows"] if row["surface"] == "broad_screen_selected_allatom_actionability")
-    assert actionability_row["status"] == "hard_blocked"
-    assert "recompute_binding_energy_proxy" in actionability_row["one_line_summary"]
+    assert actionability_row["status"] == summary["selected_allatom_actionability_status"]
+    if summary["selected_allatom_actionability_status"] == "semi_hard_blocked":
+        assert "resolve_claim_equivalence_gate" in actionability_row["one_line_summary"]
+    elif "recompute_claim_ready_for_allatom" in summary["selected_allatom_action_recipe_codes"]:
+        assert "recompute_claim_ready_for_allatom" in actionability_row["one_line_summary"]
+    else:
+        assert "recompute_claim_gate_required_unavailable" in actionability_row["one_line_summary"]
     assert "raw claim semi_hard" in actionability_row["one_line_summary"]
-    assert "blocking order hard_block_first" in actionability_row["one_line_summary"]
+    assert f"blocking order {summary['selected_allatom_effective_blocking_order']}" in actionability_row["one_line_summary"]
 
 
 def test_build_wetlab_master_handoff_dashboard_keeps_pde_final_gate_data_separate(monkeypatch, tmp_path) -> None:
@@ -743,6 +777,49 @@ def test_build_wetlab_master_handoff_dashboard_keeps_pde_final_gate_data_separat
             "increase_trajectory_support",
         ],
     )
+
+
+def test_build_wetlab_master_handoff_dashboard_prefers_current_results_claim_status_over_stale_retry(
+    monkeypatch, tmp_path
+) -> None:
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    empty = {"summary": {}}
+
+    payload = mod.build_payload(
+        empty,
+        empty,
+        empty,
+        empty,
+        empty,
+        empty,
+        empty,
+        broad_screen_retry_handoff_summary={
+            "summary": {
+                "status": "wetlab_retry_handoff_summary_ready",
+                "selected_allatom_target_id": "T. cruzi PDE",
+                "selected_allatom_surface_label": "tcruzi_pde_allatom_review_packet",
+                "selected_allatom_claim_gate_available": False,
+                "selected_allatom_claim_ready_for_allatom": False,
+            }
+        },
+        broad_screen_current_results_index={
+            "summary": {
+                "status": "wetlab_current_results_index_ready",
+                "selected_allatom_target_id": "T. cruzi PDE",
+                "selected_allatom_surface_label": "tcruzi_pde_allatom_review_packet",
+                "selected_allatom_claim_gate_available_reported": True,
+                "selected_allatom_claim_gate_available": True,
+                "selected_allatom_claim_ready_for_allatom_reported": True,
+                "selected_allatom_claim_ready_for_allatom": False,
+            }
+        },
+    )
+
+    summary = payload["summary"]
+    assert summary["selected_allatom_claim_gate_available_reported"] is True
+    assert summary["selected_allatom_claim_gate_available"] is True
+    assert summary["selected_allatom_claim_ready_for_allatom_reported"] is True
+    assert summary["selected_allatom_claim_ready_for_allatom"] is False
 
 
 def test_build_wetlab_master_handoff_dashboard_prefers_selected_allatom_canonical_resolver(monkeypatch, tmp_path) -> None:

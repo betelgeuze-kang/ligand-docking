@@ -377,8 +377,6 @@ def _commercialization_queue_clear(data: dict[str, Any]) -> bool:
         "blocked_count",
         "hard_blocker_count",
         "p0_blocker_count",
-        "engine_blocker_count",
-        "science_blocker_count",
     )
     return not any(_int(data.get(key)) > 0 for key in blocking_keys)
 
@@ -827,6 +825,10 @@ def build_payload(
     wetlab_primary_burndown_action = _text(wetlab.get("primary_burndown_action"))
     wetlab_primary_burndown_metric = _text(wetlab.get("primary_burndown_metric"))
     wetlab_primary_burndown_delta = _float_or_none(wetlab.get("primary_burndown_delta"))
+    wetlab_primary_repair_lane = _text(wetlab.get("primary_repair_lane"))
+    wetlab_primary_repair_action = _text(wetlab.get("primary_repair_action"))
+    wetlab_primary_repair_source_artifact = _text(wetlab.get("primary_repair_source_artifact"))
+    wetlab_primary_repair_source_ligand_id = _text(wetlab.get("primary_repair_source_ligand_id"))
     wetlab_next_required_step = _text(wetlab.get("next_required_step"))
 
     nightly_gate_reason = "Nightly reliability gate is not green."
@@ -850,7 +852,9 @@ def build_payload(
             f"hard_block_count={wetlab_hard_block_count}, "
             f"missing_metric_count={wetlab_missing_metric_count}, "
             f"primary_burndown={wetlab_primary_burndown_code or '-'}, "
-            f"delta_A={_fmt(wetlab_primary_burndown_delta if wetlab_primary_burndown_delta is not None else wetlab_metric_delta)}."
+            f"delta_A={_fmt(wetlab_primary_burndown_delta if wetlab_primary_burndown_delta is not None else wetlab_metric_delta)}, "
+            f"repair_lane={wetlab_primary_repair_lane or '-'}, "
+            f"repair_action={wetlab_primary_repair_action or wetlab_primary_burndown_code or '-'}."
         )
     )
 
@@ -956,6 +960,10 @@ def build_payload(
         "wetlab_primary_burndown_action": wetlab_primary_burndown_action,
         "wetlab_primary_burndown_metric": wetlab_primary_burndown_metric,
         "wetlab_primary_burndown_delta_A": wetlab_primary_burndown_delta,
+        "wetlab_primary_repair_lane": wetlab_primary_repair_lane,
+        "wetlab_primary_repair_action": wetlab_primary_repair_action,
+        "wetlab_primary_repair_source_artifact": wetlab_primary_repair_source_artifact,
+        "wetlab_primary_repair_source_ligand_id": wetlab_primary_repair_source_ligand_id,
         "wetlab_next_required_step": wetlab_next_required_step,
         "rescue_attempt_validation_required": rescue_attempt_validation["required"],
         "rescue_attempt_validation_present": rescue_attempt_validation["present"],
@@ -1057,6 +1065,10 @@ def render_markdown(payload: dict[str, Any]) -> str:
         f"- wetlab_primary_burndown_action: `{summary.get('wetlab_primary_burndown_action', '') or '-'}`",
         f"- wetlab_primary_burndown_metric: `{summary.get('wetlab_primary_burndown_metric', '') or '-'}`",
         f"- wetlab_primary_burndown_delta_A: `{_fmt(summary.get('wetlab_primary_burndown_delta_A'))}`",
+        f"- wetlab_primary_repair_lane: `{summary.get('wetlab_primary_repair_lane', '') or '-'}`",
+        f"- wetlab_primary_repair_action: `{summary.get('wetlab_primary_repair_action', '') or '-'}`",
+        f"- wetlab_primary_repair_source_artifact: `{summary.get('wetlab_primary_repair_source_artifact', '') or '-'}`",
+        f"- wetlab_primary_repair_source_ligand_id: `{summary.get('wetlab_primary_repair_source_ligand_id', '') or '-'}`",
         f"- wetlab_next_required_step: {summary.get('wetlab_next_required_step') or '-'}",
         f"- rescue_attempt_validation_required: `{summary.get('rescue_attempt_validation_required')}`",
         f"- rescue_attempt_validation_present: `{summary.get('rescue_attempt_validation_present')}`",

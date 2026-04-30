@@ -4,10 +4,15 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import sys
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from tools.builder_table_utils import write_csv_rows
 
@@ -21,9 +26,6 @@ except Exception:  # pragma: no cover
     Lipinski = None
     QED = None
     rdMolDescriptors = None
-
-ROOT = Path(__file__).resolve().parents[1]
-
 
 def _resolve(path_like: str) -> Path:
     path = Path(path_like)

@@ -738,6 +738,8 @@ def _wetlab_signal(
             f"selected_allatom_primary_burndown_value={_text(selected_allatom_summary.get('primary_burndown_value')) or '-'}; "
             f"selected_allatom_primary_burndown_threshold={_text(selected_allatom_summary.get('primary_burndown_threshold')) or '-'}; "
             f"selected_allatom_primary_burndown_delta={_text(selected_allatom_summary.get('primary_burndown_delta')) or '-'}; "
+            f"selected_allatom_primary_repair_lane={_text(selected_allatom_summary.get('primary_repair_lane')) or '-'}; "
+            f"selected_allatom_primary_repair_action={_text(selected_allatom_summary.get('primary_repair_action')) or '-'}; "
             f"selected_allatom_hard_block_count={selected_allatom_summary.get('hard_block_count', 0)}; "
             f"selected_allatom_semi_hard_block_count={selected_allatom_summary.get('semi_hard_block_count', 0)}; "
             f"selected_allatom_missing_metric_count={selected_allatom_summary.get('missing_metric_count', 0)}"
@@ -753,7 +755,9 @@ def _wetlab_signal(
             f"`{_text(selected_allatom_summary.get('packet_artifact')) or 'runs/wetlab_selected_allatom_gate_burndown_packet_current.md'}` "
             f"as the exact hard-block surface: start from "
             f"`{_text(selected_allatom_summary.get('primary_burndown_code')) or 'recompute_mean_min_distance_A'}`, "
-            "then clear the missing claim-gate field, and only after the hard block lifts move on to claim/equivalence work."
+            f"repair_lane=`{_text(selected_allatom_summary.get('primary_repair_lane')) or 'selected_allatom_local_recompute'}`, "
+            f"repair_action=`{_text(selected_allatom_summary.get('primary_repair_action')) or _text(selected_allatom_summary.get('primary_burndown_code')) or 'recompute_selected_allatom_metric'}`, "
+            "then clear the missing claim-gate field, and only after all hard blocks lift move on to claim/equivalence work."
         )
     status_line = _text(readiness_summary.get("status_line")) or (
         f"ready_now={final_summary.get('broad_screen_execution_ready_now_row_count', 0)}; "
@@ -1016,6 +1020,7 @@ def build_payload(
     partial_count = sum(1 for row in rows if row["status"] == "partial")
     keep_green_count = sum(1 for row in rows if row["status"] == "keep_green")
     parked_count = sum(1 for row in rows if row["status"] == "parked")
+    queue_clear = blocked_count == 0 and partial_count == 0
     nightly_status_line = _text(rows_by_id.get("nightly_reliability", {}).get("status_line"))
     viewer_status_line = _text(rows_by_id.get("viewer_usability", {}).get("status_line"))
     wetlab_status_line = _text(rows_by_id.get("wetlab_execution_readiness", {}).get("status_line"))
@@ -1049,6 +1054,13 @@ def build_payload(
     top_blocker_id = _text(top_row.get("blocker_id"))
     top_status = _text(top_row.get("status"))
     next_required_step = (
+        (
+            "Commercialization queue is clear for the current local-delivery scope; keep nightly, viewer, wetlab, "
+            "and reproducibility lanes green. Leave parked transporter negative-evidence mining out of the "
+            "delivery-ready claim until that science lane is explicitly reopened."
+        )
+        if queue_clear
+        else
         (
             "Raise engine commercialization first: keep the recovered nightly writer/import path green, use "
             f"{nightly_gate_artifact or nightly_gate_burndown_mod.DEFAULT_OUT_MD} to burn down the stage6 gate for "
@@ -1132,6 +1144,7 @@ def build_payload(
     summary = {
         "local_only_mode": True,
         "row_count": len(rows),
+        "queue_clear": queue_clear,
         "blocked_count": blocked_count,
         "partial_count": partial_count,
         "keep_green_count": keep_green_count,
@@ -1329,6 +1342,18 @@ def build_payload(
         "wetlab_selected_allatom_primary_burndown_delta": _text(
             wetlab_selected_allatom_summary.get("primary_burndown_delta")
         ),
+        "wetlab_selected_allatom_primary_repair_lane": _text(
+            wetlab_selected_allatom_summary.get("primary_repair_lane")
+        ),
+        "wetlab_selected_allatom_primary_repair_action": _text(
+            wetlab_selected_allatom_summary.get("primary_repair_action")
+        ),
+        "wetlab_selected_allatom_primary_repair_source_artifact": _text(
+            wetlab_selected_allatom_summary.get("primary_repair_source_artifact")
+        ),
+        "wetlab_selected_allatom_primary_repair_source_ligand_id": _text(
+            wetlab_selected_allatom_summary.get("primary_repair_source_ligand_id")
+        ),
         "wetlab_selected_allatom_hard_block_count": _int(
             wetlab_selected_allatom_summary.get("hard_block_count")
         ),
@@ -1422,6 +1447,10 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- wetlab_selected_allatom_primary_burndown_code: `{summary['wetlab_selected_allatom_primary_burndown_code'] or '-'}`",
         f"- wetlab_selected_allatom_primary_burndown_metric: `{summary['wetlab_selected_allatom_primary_burndown_metric'] or '-'}`",
         f"- wetlab_selected_allatom_primary_burndown_delta: `{summary['wetlab_selected_allatom_primary_burndown_delta'] or '-'}`",
+        f"- wetlab_selected_allatom_primary_repair_lane: `{summary['wetlab_selected_allatom_primary_repair_lane'] or '-'}`",
+        f"- wetlab_selected_allatom_primary_repair_action: `{summary['wetlab_selected_allatom_primary_repair_action'] or '-'}`",
+        f"- wetlab_selected_allatom_primary_repair_source_artifact: `{summary['wetlab_selected_allatom_primary_repair_source_artifact'] or '-'}`",
+        f"- wetlab_selected_allatom_primary_repair_source_ligand_id: `{summary['wetlab_selected_allatom_primary_repair_source_ligand_id'] or '-'}`",
         f"- wetlab_selected_allatom_hard_block_count: `{summary['wetlab_selected_allatom_hard_block_count']}`",
         f"- wetlab_selected_allatom_semi_hard_block_count: `{summary['wetlab_selected_allatom_semi_hard_block_count']}`",
         f"- wetlab_selected_allatom_soft_deferred_count: `{summary['wetlab_selected_allatom_soft_deferred_count']}`",

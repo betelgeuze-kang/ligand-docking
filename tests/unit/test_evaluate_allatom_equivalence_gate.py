@@ -166,3 +166,139 @@ def test_allatom_gate_core_fail_when_threshold_violated(tmp_path):
     assert payload["summary"]["pass_core_gate"] is False
     assert payload["summary"]["core_failed_metrics"] == 1
 
+
+def test_allatom_gate_exposes_strict_gate_pass_metrics_for_representative_scope(tmp_path):
+    policy = tmp_path / "policy.json"
+    strict_json = tmp_path / "strict.json"
+    out_json = tmp_path / "out.json"
+    out_csv = tmp_path / "out.csv"
+    _write_json(
+        policy,
+        {
+            "version": "representative_scope_test",
+            "domains": [
+                {
+                    "name": "core",
+                    "required_for_core_gate": True,
+                    "required_for_claim": True,
+                    "metrics": [
+                        {
+                            "name": "long_stability_gate_pass",
+                            "source": "strict_summary",
+                            "operator": ">=",
+                            "threshold": 1.0,
+                        },
+                        {
+                            "name": "speed_gate_pass",
+                            "source": "strict_summary",
+                            "operator": ">=",
+                            "threshold": 1.0,
+                        },
+                    ],
+                }
+            ],
+        },
+    )
+    _write_json(
+        strict_json,
+        {
+            "summary": {"pass": True, "targets": 1},
+            "gates": {
+                "long_stability": {"pass": True, "passed_targets": 1},
+                "speed": {
+                    "pass": True,
+                    "enforced": False,
+                    "avg_speedup_on_vs_off": 8.0,
+                    "reason": "skipped_for_single_target_scope",
+                },
+            },
+        },
+    )
+
+    payload = gate.run_gate(
+        gate.build_parser().parse_args(
+            [
+                "--policy-json",
+                str(policy),
+                "--strict-summary-json",
+                str(strict_json),
+                "--expected-target-count",
+                "1",
+                "--out-json",
+                str(out_json),
+                "--out-csv",
+                str(out_csv),
+            ]
+        )
+    )
+
+    assert payload["summary"]["pass_core_gate"] is True
+    strict_metrics = payload["observed_sources"]["strict_summary"]
+    assert strict_metrics["long_stability_gate_pass"] == 1.0
+    assert strict_metrics["speed_gate_pass"] == 1.0
+    assert strict_metrics["speed_gate_enforced"] == 0.0
+
+
+def test_allatom_gate_fails_when_enforced_strict_speed_gate_fails(tmp_path):
+    policy = tmp_path / "policy.json"
+    strict_json = tmp_path / "strict.json"
+    out_json = tmp_path / "out.json"
+    out_csv = tmp_path / "out.csv"
+    _write_json(
+        policy,
+        {
+            "version": "representative_scope_test",
+            "domains": [
+                {
+                    "name": "core",
+                    "required_for_core_gate": True,
+                    "required_for_claim": True,
+                    "metrics": [
+                        {
+                            "name": "speed_gate_pass",
+                            "source": "strict_summary",
+                            "operator": ">=",
+                            "threshold": 1.0,
+                        }
+                    ],
+                }
+            ],
+        },
+    )
+    _write_json(
+        strict_json,
+        {
+            "summary": {"pass": False, "targets": 10},
+            "gates": {
+                "speed": {
+                    "pass": False,
+                    "enforced": True,
+                    "avg_speedup_on_vs_off": 8.0,
+                    "reason": "avg_speedup_on_vs_off=8.0",
+                }
+            },
+        },
+    )
+
+    payload = gate.run_gate(
+        gate.build_parser().parse_args(
+            [
+                "--policy-json",
+                str(policy),
+                "--strict-summary-json",
+                str(strict_json),
+                "--expected-target-count",
+                "10",
+                "--out-json",
+                str(out_json),
+                "--out-csv",
+                str(out_csv),
+            ]
+        )
+    )
+
+    assert payload["summary"]["pass_core_gate"] is False
+    assert payload["summary"]["core_failed_metrics"] == 1
+    row = pd.read_csv(out_csv).iloc[0]
+    assert row["metric"] == "speed_gate_pass"
+    assert row["observed"] == 0.0

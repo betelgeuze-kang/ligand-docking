@@ -199,7 +199,9 @@ def build_payload(wetlab_dashboard_payload: dict[str, Any], wetlab_final_payload
             f"selected_allatom={'pass' if selected_allatom_gate_pass else 'fail'}"
         ),
         "next_required_step": (
-            "Keep the completed primary dispatch lane warm and clear the selected all-atom wetlab gate while keeping both watch loops attached."
+            "Wetlab execution readiness is green for the current local-delivery scope; keep the completed primary dispatch lane warm, keep the ready-now antitarget row supervised, and keep both watch loops attached."
+            if watch_gap_count == 0 and primary_dispatch_complete and selected_allatom_gate_pass
+            else "Keep the completed primary dispatch lane warm and clear the selected all-atom wetlab gate while keeping both watch loops attached."
             if watch_gap_count == 0 and primary_dispatch_complete and not selected_allatom_gate_pass
             else "Create at least one primary execution-ready row and clear the selected all-atom wetlab gate while keeping both watch loops attached."
             if watch_gap_count == 0 and (primary_ready_now <= 0 or not selected_allatom_gate_pass)

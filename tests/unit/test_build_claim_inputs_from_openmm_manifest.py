@@ -84,3 +84,53 @@ def test_build_claim_inputs_from_manifest_smoke(tmp_path):
     saved = json.loads(Path(out_j).read_text(encoding="utf-8"))
     assert saved["summary"]["targets_built"] == 1
     assert "diagnostics_json" in saved["artifacts"]
+
+
+def test_build_claim_inputs_accepts_stage2_manifest_trajectory_npz(tmp_path):
+    t = 30
+    n = 8
+    rng = np.random.default_rng(456)
+    ligand_frames = rng.normal(size=(t, n, 3)).astype(np.float32)
+
+    traj_path = tmp_path / "stage2_bundle.npz"
+    np.savez(traj_path, ligand_frames=ligand_frames, frame_indices=np.arange(t))
+
+    manifest_path = tmp_path / "stage2_manifest.csv"
+    pd.DataFrame(
+        [
+            {
+                "target": "T. cruzi PDE",
+                "trajectory_npz": str(traj_path),
+                "status": "ok_cached",
+            }
+        ]
+    ).to_csv(manifest_path, index=False)
+
+    out_j = tmp_path / "summary.json"
+    payload = mod.run_build(
+        mod.build_parser().parse_args(
+            [
+                "--manifest-csv",
+                str(manifest_path),
+                "--targets",
+                "T. cruzi PDE",
+                "--out-kinetics-csv",
+                str(tmp_path / "k.csv"),
+                "--out-thermo-csv",
+                str(tmp_path / "t.csv"),
+                "--out-experiment-csv",
+                str(tmp_path / "e.csv"),
+                "--out-diagnostics-csv",
+                str(tmp_path / "diag.csv"),
+                "--out-diagnostics-json",
+                str(tmp_path / "diag.json"),
+                "--out-json",
+                str(out_j),
+            ]
+        )
+    )
+
+    assert payload["summary"]["targets_built"] == 1
+    assert payload["per_target_metrics"][0]["path"] == str(traj_path)
+    saved = json.loads(out_j.read_text(encoding="utf-8"))
+    assert saved["summary"]["targets_failed"] == 0

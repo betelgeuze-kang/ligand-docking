@@ -6,6 +6,10 @@ import os
 from typing import Dict, List
 
 import pandas as pd
+
+# Avoid ROCm unsupported hipBLASLt fallback warnings during torch matmul/cdist.
+os.environ.setdefault("TORCH_BLAS_PREFER_HIPBLASLT", "0")
+
 import torch
 
 from core.definitions import ResearchConstants
@@ -36,6 +40,7 @@ def _thresholds_for_target(target: str) -> Dict[str, float]:
         "Protein_A_Bdomain": (2.0, 1.0, 260.0, 0.30),
         "GB1_Mini": (2.0, 1.0, 240.0, 0.30),
         "Ubiquitin_Mini": (2.0, 1.0, 300.0, 0.30),
+        "T. cruzi PDE": (2.0, 1.0, 800.0, 0.30),
     }
     rmsd_t, rg_t, sasa_t, edrift_t = table[target]
     return {

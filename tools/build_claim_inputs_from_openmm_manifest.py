@@ -301,7 +301,14 @@ def _saxs_chi2(pred: np.ndarray, ref: np.ndarray, eps: float = 1e-9) -> float:
 
 def _load_trajectory(path: str) -> np.ndarray:
     arr = np.load(path)
-    a = np.asarray(arr)
+    if isinstance(arr, np.lib.npyio.NpzFile):
+        keys = ["trajectory", "coords", "frames", "ligand_frames", "protein_ca"]
+        found_key = next((key for key in keys if key in arr.files), "")
+        if not found_key:
+            raise ValueError(f"npz trajectory has no supported coordinate key: {arr.files} ({path})")
+        a = np.asarray(arr[found_key])
+    else:
+        a = np.asarray(arr)
     if a.ndim == 2:
         if a.shape[1] != 3 and a.shape[0] == 3:
             a = a.T
@@ -588,6 +595,12 @@ def run_build(args: argparse.Namespace) -> Dict[str, Any]:
     for _, row in rows.iterrows():
         target = str(row.get("target", "")).strip()
         path = str(row.get("path", "")).strip()
+        if not path:
+            path = str(row.get("trajectory_npz", "")).strip()
+        if not path:
+            path = str(row.get("trajectory_npy", "")).strip()
+        if not path:
+            path = str(row.get("trajectory_path", "")).strip()
         if not target or not path:
             continue
         try:

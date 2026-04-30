@@ -152,6 +152,18 @@ def test_all_green_restricted_scope_is_delivery_ready(tmp_path: Path, monkeypatc
     assert summary["wetlab_metric_value"] == 2.2
 
 
+def test_commercialization_queue_clear_ignores_non_active_domain_counts() -> None:
+    assert mod._commercialization_queue_clear(
+        {
+            "blocked_count": 0,
+            "partial_count": 0,
+            "engine_blocker_count": 4,
+            "science_blocker_count": 1,
+            "parked_science_blocker_count": 1,
+        }
+    ) is True
+
+
 def test_nightly_gate_fail_blocks_delivery(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(mod, "ROOT", tmp_path)
     monkeypatch.setattr(mod, "RUNS", tmp_path / "runs")
@@ -322,6 +334,10 @@ def test_wetlab_selected_allatom_blocker_reason_includes_hard_and_missing_metric
                     "primary_burndown_value": 3.705,
                     "primary_burndown_threshold": 2.5,
                     "primary_burndown_delta": 1.205,
+                    "primary_repair_lane": "tcruzi_pde_allatom_rescue",
+                    "primary_repair_action": "run_clash_relief_allatom_rescue_then_build_review_packet",
+                    "primary_repair_source_artifact": "runs/pde_ligand_score.json",
+                    "primary_repair_source_ligand_id": "t_cruzi_pde_20_of_20_095609",
                     "next_required_step": "Start with recompute_mean_min_distance_A.",
                 }
             }
@@ -336,6 +352,8 @@ def test_wetlab_selected_allatom_blocker_reason_includes_hard_and_missing_metric
     assert payload["summary"]["wetlab_primary_burndown_action"] == "tighten_pose_geometry_under_strict_gate"
     assert payload["summary"]["wetlab_primary_burndown_metric"] == "mean_min_distance_A"
     assert payload["summary"]["wetlab_primary_burndown_delta_A"] == 1.205
+    assert payload["summary"]["wetlab_primary_repair_lane"] == "tcruzi_pde_allatom_rescue"
+    assert payload["summary"]["wetlab_primary_repair_source_ligand_id"] == "t_cruzi_pde_20_of_20_095609"
     assert payload["summary"]["wetlab_next_required_step"] == "Start with recompute_mean_min_distance_A."
     blocker = next(
         blocker for blocker in payload["p0_blockers"] if blocker["code"] == "wetlab_selected_allatom_not_green"
@@ -344,8 +362,11 @@ def test_wetlab_selected_allatom_blocker_reason_includes_hard_and_missing_metric
     assert "missing_metric_count=1" in blocker["reason"]
     assert "recompute_mean_min_distance_A" in blocker["reason"]
     assert "delta_A=1.205" in blocker["reason"]
+    assert "repair_lane=tcruzi_pde_allatom_rescue" in blocker["reason"]
+    assert "repair_action=run_clash_relief_allatom_rescue_then_build_review_packet" in blocker["reason"]
     markdown = mod.render_markdown(payload)
     assert "wetlab_primary_burndown_delta_A" in markdown
+    assert "wetlab_primary_repair_lane" in markdown
     assert "Start with recompute_mean_min_distance_A." in markdown
 
 

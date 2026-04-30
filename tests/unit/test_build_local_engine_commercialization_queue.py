@@ -781,6 +781,10 @@ def test_build_local_engine_commercialization_queue_exposes_selected_allatom_bur
                 "primary_burndown_value": "3.705",
                 "primary_burndown_threshold": "2.500",
                 "primary_burndown_delta": "1.205",
+                "primary_repair_lane": "tcruzi_pde_allatom_rescue",
+                "primary_repair_action": "run_clash_relief_allatom_rescue_then_build_review_packet",
+                "primary_repair_source_artifact": "runs/pde_ligand_score.json",
+                "primary_repair_source_ligand_id": "t_cruzi_pde_20_of_20_095609",
                 "hard_block_count": 2,
                 "semi_hard_block_count": 2,
                 "missing_metric_count": 1,
@@ -797,18 +801,23 @@ def test_build_local_engine_commercialization_queue_exposes_selected_allatom_bur
         wetlab_row["source_signal"],
         "selected_allatom_primary_burndown_code=recompute_mean_min_distance_a",
         "selected_allatom_primary_burndown_delta=1.205",
+        "selected_allatom_primary_repair_lane=tcruzi_pde_allatom_rescue",
+        "selected_allatom_primary_repair_action=run_clash_relief_allatom_rescue_then_build_review_packet",
         "selected_allatom_hard_block_count=2",
     )
     _contains_tokens(
         wetlab_row["next_required_action"],
         "wetlab_selected_allatom_gate_burndown_packet_current.md",
         "recompute_mean_min_distance_a",
+        "repair_lane=`tcruzi_pde_allatom_rescue`",
         "claim/equivalence",
     )
     summary = payload["summary"]
     assert summary["wetlab_selected_allatom_gate_burndown_artifact"] == "runs/wetlab_selected_allatom_gate_burndown_packet_current.md"
     assert summary["wetlab_selected_allatom_primary_burndown_code"] == "recompute_mean_min_distance_A"
     assert summary["wetlab_selected_allatom_primary_burndown_delta"] == "1.205"
+    assert summary["wetlab_selected_allatom_primary_repair_lane"] == "tcruzi_pde_allatom_rescue"
+    assert summary["wetlab_selected_allatom_primary_repair_source_ligand_id"] == "t_cruzi_pde_20_of_20_095609"
 
 
 def test_build_local_engine_commercialization_queue_keeps_failed_wetlab_lane_blocked() -> None:
