@@ -296,6 +296,16 @@ def _scaleup_repair_packet(
         router_status = "blocked"
     diagnostic_payload = _read_json_if_exists(DEFAULT_GPCR_FAILURE_ANALYSIS_JSON)
     diagnostic_summary = diagnostic_payload.get("summary", {}) if isinstance(diagnostic_payload.get("summary"), dict) else {}
+    score_diagnostics = (
+        diagnostic_payload.get("score_diagnostics", {})
+        if isinstance(diagnostic_payload.get("score_diagnostics"), dict)
+        else {}
+    )
+    best_existing_metrics = (
+        score_diagnostics.get("best_existing_metrics", {})
+        if isinstance(score_diagnostics.get("best_existing_metrics"), dict)
+        else {}
+    )
 
     return {
         "available": True,
@@ -336,6 +346,19 @@ def _scaleup_repair_packet(
             "previous_snapshot_available": diagnostic_summary.get("previous_snapshot_available", False),
             "missing_input_count": diagnostic_summary.get("missing_input_count", 0),
             "previous_scaleup_positive_ranks": diagnostic_summary.get("previous_scaleup_positive_ranks", []),
+            "score_diagnostics_available": score_diagnostics.get("available", False),
+            "existing_score_recovery_status": str(
+                score_diagnostics.get("existing_score_recovery_status", "not_available") or "not_available"
+            ),
+            "best_existing_score_col": str(score_diagnostics.get("best_existing_score_col", "") or ""),
+            "best_existing_pr_auc": best_existing_metrics.get("pr_auc"),
+            "best_existing_topk_hit_rate": best_existing_metrics.get("topk_hit_rate"),
+            "best_existing_positive_ranks": best_existing_metrics.get("positive_ranks", []),
+            "root_cause_tags": list(
+                score_diagnostics.get("root_cause_tags", [])
+                if isinstance(score_diagnostics.get("root_cause_tags"), list)
+                else []
+            ),
         },
         "diagnostic_command": "python3 tools/build_gpcr_100k_failure_analysis.py",
         "next_command": (

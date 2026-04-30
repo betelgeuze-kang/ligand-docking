@@ -535,7 +535,18 @@ def test_build_payload_gpcr_scaleup_failure_emits_repair_packet(tmp_path: Path, 
                 "previous_snapshot_available": True,
                 "missing_input_count": 2,
                 "previous_scaleup_positive_ranks": [1, 2, 15, 78, 107, 128],
-            }
+            },
+            "score_diagnostics": {
+                "available": True,
+                "existing_score_recovery_status": "no_existing_score_column_recovers_gate",
+                "best_existing_score_col": "binding_score_composite_v7",
+                "best_existing_metrics": {
+                    "pr_auc": 0.3908,
+                    "topk_hit_rate": 0.15,
+                    "positive_ranks": [1, 2, 15, 78, 107, 128],
+                },
+                "root_cause_tags": ["donor_prior_decoy_intrusion", "no_existing_score_column_recovers_gate"],
+            },
         },
     )
 
@@ -561,6 +572,14 @@ def test_build_payload_gpcr_scaleup_failure_emits_repair_packet(tmp_path: Path, 
     assert packet["diagnostic_artifact"]["source_rows_available"] is False
     assert packet["diagnostic_artifact"]["previous_snapshot_available"] is True
     assert packet["diagnostic_artifact"]["missing_input_count"] == 2
+    assert packet["diagnostic_artifact"]["existing_score_recovery_status"] == "no_existing_score_column_recovers_gate"
+    assert packet["diagnostic_artifact"]["best_existing_score_col"] == "binding_score_composite_v7"
+    assert packet["diagnostic_artifact"]["best_existing_pr_auc"] == 0.3908
+    assert packet["diagnostic_artifact"]["best_existing_topk_hit_rate"] == 0.15
+    assert packet["diagnostic_artifact"]["root_cause_tags"] == [
+        "donor_prior_decoy_intrusion",
+        "no_existing_score_column_recovers_gate",
+    ]
     assert packet["rerun_required"] is True
     _contains_tokens(packet["diagnostic_command"], "build_gpcr_100k_failure_analysis.py")
     _contains_tokens(packet["next_command"], "build_gpcr_apply_safe_endpoint.py", "build_gpcr_residual_chembl50_v4_endpoint_note.py")

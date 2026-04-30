@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 from pathlib import Path
 from statistics import mean
 from typing import Any
@@ -43,24 +44,38 @@ def _as_float(value: str) -> float:
     return float(str(value).strip())
 
 
+def _maybe_float(value: Any) -> float | None:
+    try:
+        if value is None or str(value).strip() == "":
+            return None
+        out = float(str(value).strip())
+        return out if math.isfinite(out) else None
+    except Exception:
+        return None
+
+
+def _is_positive(row: dict[str, Any]) -> bool:
+    return str(row.get("is_binder", "")).strip() in {"1", "true", "True", "TRUE"}
+
+
 def _positive_ranks(rows: list[dict[str, str]]) -> list[int]:
     out: list[int] = []
     for idx, row in enumerate(rows, start=1):
-        if str(row.get("is_binder", "")).strip() == "1":
+        if _is_positive(row):
             out.append(idx)
     return out
 
 
 def _topk_counts(rows: list[dict[str, str]], k: int) -> tuple[int, int]:
     top = rows[:k]
-    binders = sum(1 for row in top if str(row.get("is_binder", "")).strip() == "1")
+    binders = sum(1 for row in top if _is_positive(row))
     return binders, len(top) - binders
 
 
 def _top_false_positives(rows: list[dict[str, str]], k: int) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for idx, row in enumerate(rows, start=1):
-        if str(row.get("is_binder", "")).strip() == "0":
+        if not _is_positive(row):
             out.append(
                 {
                     "rank": idx,
@@ -74,6 +89,167 @@ def _top_false_positives(rows: list[dict[str, str]], k: int) -> list[dict[str, A
         if len(out) >= k:
             break
     return out
+
+
+def _score_positive_ranks(rows: list[dict[str, Any]], score_col: str) -> list[int]:
+    scored: list[tuple[float, int, dict[str, Any]]] = []
+    for idx, row in enumerate(rows):
+        value = _maybe_float(row.get(score_col))
+        if value is None:
+            continue
+        scored.append((value, idx, row))
+    scored.sort(key=lambda item: (item[0], item[1]))
+    return [rank for rank, (_, _, row) in enumerate(scored, start=1) if _is_positive(row)]
+
+
+def _average_precision_from_ranks(positive_ranks: list[int]) -> float | None:
+    if not positive_ranks:
+        return None
+    return float(sum((idx + 1) / rank for idx, rank in enumerate(positive_ranks)) / len(positive_ranks))
+
+
+def _topk_hit_rate_from_ranks(positive_ranks: list[int], *, k: int) -> float | None:
+    if k <= 0:
+        return None
+    return float(sum(1 for rank in positive_ranks if rank <= k) / k)
+
+
+def _score_column_metrics(rows: list[dict[str, Any]], score_col: str, *, topk_k: int) -> dict[str, Any]:
+    positive_ranks = _score_positive_ranks(rows, score_col)
+    return {
+        "score_col": score_col,
+        "positive_ranks": positive_ranks,
+        "pr_auc": _average_precision_from_ranks(positive_ranks),
+        "topk_k": int(topk_k),
+        "topk_hit_rate": _topk_hit_rate_from_ranks(positive_ranks, k=topk_k),
+    }
+
+
+def _mean_feature(rows: list[dict[str, Any]], feature: str) -> float | None:
+    values = [_maybe_float(row.get(feature)) for row in rows]
+    numeric = [value for value in values if value is not None]
+    return float(mean(numeric)) if numeric else None
+
+
+def _stage3_score_diagnostics(
+    *,
+    scaleup_rows: list[dict[str, str]],
+    scaleup_stage3_rows: list[dict[str, str]] | None,
+    topk_k: int,
+    pr_auc_min: float,
+    topk_hit_rate_min: float,
+) -> dict[str, Any]:
+    if not scaleup_stage3_rows:
+        return {
+            "available": False,
+            "reason": "missing_scaleup_stage3_scores",
+            "existing_score_recovery_status": "not_available",
+        }
+
+    labels_by_ligand = {str(row.get("ligand_id", "")).strip(): row for row in scaleup_rows}
+    merged_rows: list[dict[str, Any]] = []
+    for row in scaleup_stage3_rows:
+        ligand_id = str(row.get("ligand_id", "")).strip()
+        label = labels_by_ligand.get(ligand_id, {})
+        if not label:
+            continue
+        merged = dict(row)
+        merged["is_binder"] = str(label.get("is_binder", "")).strip()
+        merged["role"] = str(label.get("role", "")).strip()
+        merged_rows.append(merged)
+
+    score_cols = sorted(
+        {
+            key
+            for row in merged_rows
+            for key in row.keys()
+            if str(key).startswith("binding_score_composite_")
+            and any(_maybe_float(candidate.get(key)) is not None for candidate in merged_rows)
+        }
+    )
+    score_metrics = [_score_column_metrics(merged_rows, col, topk_k=topk_k) for col in score_cols]
+    score_metrics.sort(
+        key=lambda row: (
+            float(row.get("pr_auc") or -1.0),
+            float(row.get("topk_hit_rate") or -1.0),
+            str(row.get("score_col", "")),
+        ),
+        reverse=True,
+    )
+    best_metrics = score_metrics[0] if score_metrics else {}
+    best_passes = bool(
+        best_metrics
+        and (best_metrics.get("pr_auc") is not None)
+        and (float(best_metrics["pr_auc"]) >= float(pr_auc_min))
+        and (best_metrics.get("topk_hit_rate") is not None)
+        and (float(best_metrics["topk_hit_rate"]) >= float(topk_hit_rate_min))
+    )
+
+    top_fp_ids = {str(row.get("ligand_id", "")).strip() for row in _top_false_positives(scaleup_rows, topk_k)}
+    top_fp_rows = [row for row in merged_rows if str(row.get("ligand_id", "")).strip() in top_fp_ids]
+    binder_rows = [row for row in merged_rows if _is_positive(row)]
+    feature_names = [
+        "ligand_h_donors",
+        "ligand_h_acceptors",
+        "ligand_rot_bonds",
+        "ligand_logp",
+        "ligand_mw",
+        "ligand_affinity_hint",
+        "binding_energy_mmpbsa_kcal_mol_proxy",
+        "contact_fraction",
+        "stability_score",
+        "mean_min_distance_A",
+    ]
+    feature_profile = {
+        "binder_means": {feature: _mean_feature(binder_rows, feature) for feature in feature_names},
+        "top_false_positive_means": {feature: _mean_feature(top_fp_rows, feature) for feature in feature_names},
+    }
+    binder_means = feature_profile["binder_means"]
+    fp_means = feature_profile["top_false_positive_means"]
+    root_tags: list[str] = []
+    if (
+        fp_means.get("ligand_h_donors") is not None
+        and binder_means.get("ligand_h_donors") is not None
+        and float(fp_means["ligand_h_donors"]) >= float(binder_means["ligand_h_donors"]) + 1.0
+    ):
+        root_tags.append("donor_prior_decoy_intrusion")
+    if (
+        fp_means.get("contact_fraction") is not None
+        and binder_means.get("contact_fraction") is not None
+        and float(fp_means["contact_fraction"]) < float(binder_means["contact_fraction"]) * 0.95
+    ):
+        root_tags.append("weak_contact_prior_mismatch")
+    if (
+        fp_means.get("ligand_affinity_hint") is not None
+        and binder_means.get("ligand_affinity_hint") is not None
+        and fp_means.get("binding_energy_mmpbsa_kcal_mol_proxy") is not None
+        and binder_means.get("binding_energy_mmpbsa_kcal_mol_proxy") is not None
+        and float(fp_means["ligand_affinity_hint"]) >= float(binder_means["ligand_affinity_hint"]) * 0.8
+        and float(fp_means["binding_energy_mmpbsa_kcal_mol_proxy"])
+        > float(binder_means["binding_energy_mmpbsa_kcal_mol_proxy"])
+    ):
+        root_tags.append("affinity_hint_md_support_mismatch")
+    if not best_passes:
+        root_tags.append("no_existing_score_column_recovers_gate")
+
+    return {
+        "available": True,
+        "merged_stage3_row_count": int(len(merged_rows)),
+        "evaluated_score_col_count": int(len(score_metrics)),
+        "score_column_metrics": score_metrics,
+        "best_existing_score_col": str(best_metrics.get("score_col", "")),
+        "best_existing_metrics": best_metrics,
+        "thresholds": {
+            "pr_auc_min": float(pr_auc_min),
+            "topk_k": int(topk_k),
+            "topk_hit_rate_min": float(topk_hit_rate_min),
+        },
+        "existing_score_recovery_status": (
+            "existing_score_column_passes_gate" if best_passes else "no_existing_score_column_recovers_gate"
+        ),
+        "feature_profile": feature_profile,
+        "root_cause_tags": root_tags,
+    }
 
 
 def _payload_for(rows: list[dict[str, str]], label: str) -> dict[str, Any]:
@@ -99,10 +275,39 @@ def _payload_for(rows: list[dict[str, str]], label: str) -> dict[str, Any]:
     }
 
 
-def build_payload(baseline_rows: list[dict[str, str]], scaleup_rows: list[dict[str, str]]) -> dict[str, Any]:
+def build_payload(
+    baseline_rows: list[dict[str, str]],
+    scaleup_rows: list[dict[str, str]],
+    *,
+    scaleup_stage3_rows: list[dict[str, str]] | None = None,
+    topk_k: int = 20,
+    pr_auc_min: float = 0.55,
+    topk_hit_rate_min: float = 0.2,
+) -> dict[str, Any]:
+    return build_payload_with_diagnostics(
+        baseline_rows,
+        scaleup_rows,
+        scaleup_stage3_rows=scaleup_stage3_rows,
+        topk_k=topk_k,
+        pr_auc_min=pr_auc_min,
+        topk_hit_rate_min=topk_hit_rate_min,
+    )
+
+
+def build_payload_with_diagnostics(
+    baseline_rows: list[dict[str, str]],
+    scaleup_rows: list[dict[str, str]],
+    *,
+    scaleup_stage3_rows: list[dict[str, str]] | None = None,
+    topk_k: int = 20,
+    pr_auc_min: float = 0.55,
+    topk_hit_rate_min: float = 0.2,
+) -> dict[str, Any]:
     baseline = _payload_for(baseline_rows, "baseline_10k")
     scaleup = _payload_for(scaleup_rows, "scaleup_100k")
     summary = {
+        "status": "computed",
+        "source_rows_available": True,
         "baseline_positive_ranks": baseline["positive_rank_list"],
         "scaleup_positive_ranks": scaleup["positive_rank_list"],
         "baseline_top20_binder_count": baseline["top20_binder_count"],
@@ -120,7 +325,14 @@ def build_payload(baseline_rows: list[dict[str, str]], scaleup_rows: list[dict[s
     summary["interpretation"] = (
         "The 100k GPCR failure is driven by top-rank decoy intrusion: the first two binders stay at the top, but the remaining binders are pushed much deeper by synthetic hard decoys."
     )
-    return {"summary": summary, "baseline": baseline, "scaleup": scaleup}
+    score_diagnostics = _stage3_score_diagnostics(
+        scaleup_rows=scaleup_rows,
+        scaleup_stage3_rows=scaleup_stage3_rows,
+        topk_k=topk_k,
+        pr_auc_min=pr_auc_min,
+        topk_hit_rate_min=topk_hit_rate_min,
+    )
+    return {"summary": summary, "baseline": baseline, "scaleup": scaleup, "score_diagnostics": score_diagnostics}
 
 
 def build_missing_input_payload(
@@ -175,7 +387,16 @@ def build_missing_input_payload(
     baseline["label"] = "baseline_10k"
     scaleup = dict(empty_payload)
     scaleup["label"] = "scaleup_100k"
-    return {"summary": summary, "baseline": baseline, "scaleup": scaleup}
+    return {
+        "summary": summary,
+        "baseline": baseline,
+        "scaleup": scaleup,
+        "score_diagnostics": {
+            "available": False,
+            "reason": "missing_ranking_csv_inputs",
+            "existing_score_recovery_status": "not_available",
+        },
+    }
 
 
 def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
@@ -202,6 +423,27 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         for missing_path in s.get("missing_input_paths", []):
             lines.append(f"- `{missing_path}`")
         lines.extend(["", "## Next Required Step", "", f"- {s.get('next_required_step', '')}"])
+    diagnostics = payload.get("score_diagnostics", {}) if isinstance(payload.get("score_diagnostics"), dict) else {}
+    lines.extend(
+        [
+            "",
+            "## Score Diagnostics",
+            "",
+            f"- available: `{diagnostics.get('available', False)}`",
+            f"- existing_score_recovery_status: `{diagnostics.get('existing_score_recovery_status', '')}`",
+            f"- best_existing_score_col: `{diagnostics.get('best_existing_score_col', '')}`",
+            f"- root_cause_tags: `{diagnostics.get('root_cause_tags', [])}`",
+        ]
+    )
+    best = diagnostics.get("best_existing_metrics", {}) if isinstance(diagnostics.get("best_existing_metrics"), dict) else {}
+    if best:
+        lines.extend(
+            [
+                f"- best_pr_auc: `{best.get('pr_auc')}`",
+                f"- best_topk_hit_rate: `{best.get('topk_hit_rate')}`",
+                f"- best_positive_ranks: `{best.get('positive_ranks')}`",
+            ]
+        )
     lines.extend(
         [
             "",
@@ -223,10 +465,21 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Compare GPCR 10k baseline vs 100k pilot ranking rows and summarize top-rank decoy intrusion.")
     parser.add_argument("--baseline-csv", default=DEFAULT_BASELINE_CSV)
     parser.add_argument("--scaleup-csv", default=DEFAULT_SCALEUP_CSV)
+    parser.add_argument("--scaleup-stage3-csv", default="")
+    parser.add_argument("--topk-k", type=int, default=20)
+    parser.add_argument("--pr-auc-min", type=float, default=0.55)
+    parser.add_argument("--topk-hit-rate-min", type=float, default=0.2)
     parser.add_argument("--out-json", default="runs/gpcr_100k_failure_analysis_current.json")
     parser.add_argument("--out-csv", default="runs/gpcr_100k_failure_false_positives_current.csv")
     parser.add_argument("--out-md", default="runs/gpcr_100k_failure_analysis_current.md")
     return parser.parse_args()
+
+
+def _default_stage3_path(scaleup_csv: Path) -> Path:
+    text = str(scaleup_csv)
+    if text.endswith("_stage5_ranking_rows.csv"):
+        return Path(text[: -len("_stage5_ranking_rows.csv")] + "_stage3_scores.csv")
+    return scaleup_csv.with_name(scaleup_csv.stem + "_stage3_scores.csv")
 
 
 def main() -> None:
@@ -235,7 +488,16 @@ def main() -> None:
     scaleup_csv = _resolve(args.scaleup_csv)
     out_json = _resolve(args.out_json)
     if baseline_csv.exists() and scaleup_csv.exists():
-        payload = build_payload(_read_csv(baseline_csv), _read_csv(scaleup_csv))
+        scaleup_stage3_csv = _resolve(args.scaleup_stage3_csv) if str(args.scaleup_stage3_csv).strip() else _default_stage3_path(scaleup_csv)
+        scaleup_stage3_rows = _read_csv(scaleup_stage3_csv) if scaleup_stage3_csv.exists() else None
+        payload = build_payload(
+            _read_csv(baseline_csv),
+            _read_csv(scaleup_csv),
+            scaleup_stage3_rows=scaleup_stage3_rows,
+            topk_k=int(args.topk_k),
+            pr_auc_min=float(args.pr_auc_min),
+            topk_hit_rate_min=float(args.topk_hit_rate_min),
+        )
     else:
         previous_payload = json.loads(out_json.read_text(encoding="utf-8")) if out_json.exists() else None
         payload = build_missing_input_payload(baseline_csv, scaleup_csv, previous_payload=previous_payload)
