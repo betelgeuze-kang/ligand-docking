@@ -34,6 +34,11 @@ try:
 except Exception:  # pragma: no cover
     Chem = None
 
+ADRB2_BETA_BLOCKER_PHARMACOPHORE_SMARTS = "[a]-[OX2]-[CX4]-[CX4]([OX2H1])-[CX4]-[NX3]"
+_ADRB2_BETA_BLOCKER_PHARMACOPHORE = (
+    Chem.MolFromSmarts(ADRB2_BETA_BLOCKER_PHARMACOPHORE_SMARTS) if Chem is not None else None
+)
+
 
 class _AuxMLP(nn.Module):
     def __init__(self, in_dim: int, hidden_dim: int = 64):
@@ -83,6 +88,16 @@ def _safe_optional_float(value: Any) -> Optional[float]:
         return float(out) if np.isfinite(out) else None
     except (TypeError, ValueError):
         return None
+
+
+def _adrb2_beta_blocker_pharmacophore_match(smiles: Any) -> bool:
+    if Chem is None or _ADRB2_BETA_BLOCKER_PHARMACOPHORE is None:
+        return False
+    src = str(smiles or "").strip()
+    if not src:
+        return False
+    mol = Chem.MolFromSmiles(src)
+    return bool(mol is not None and mol.HasSubstructMatch(_ADRB2_BETA_BLOCKER_PHARMACOPHORE))
 
 
 def _safe_optional_int(value: Any) -> Optional[int]:
@@ -253,6 +268,7 @@ def _residual_tuning(spec_payload: Dict[str, Any]) -> Dict[str, float | str]:
         "require_intrusion_distance_below_z": _safe_float(
             tuning.get("require_intrusion_distance_below_z"), 1.0e9
         ),
+        "pharmacophore_reward_score": _safe_float(tuning.get("pharmacophore_reward_score"), 0.0),
     }
 
 
@@ -430,6 +446,8 @@ def _apply_residual_prototype_shadow(
 
     base_score = pd.to_numeric(result_df["binding_score_composite_v7"], errors="coerce")
     shadow_score = base_score + delta
+    pharmacophore_matches = np.zeros(len(result_df), dtype=np.int64)
+    pharmacophore_reward = np.zeros(len(result_df), dtype=float)
     linear_rescore = (
         spec_payload.get("prototype", {}).get("linear_rescore", {})
         if isinstance(spec_payload.get("prototype", {}), dict)
@@ -504,6 +522,25 @@ def _apply_residual_prototype_shadow(
             linear_rescore_status = "applied" if not missing_terms else "applied_with_missing_terms"
         else:
             linear_rescore_status = "unsupported_combine_mode"
+    if str(tuning["variant"]) == "gpcr_adrb2_beta_blocker_pharmacophore_v1":
+        smiles_series = (
+            result_df["ligand_smiles"]
+            if "ligand_smiles" in result_df.columns
+            else result_df["smiles"]
+            if "smiles" in result_df.columns
+            else pd.Series([""] * len(result_df), index=result_df.index)
+        )
+        pharmacophore_matches = smiles_series.apply(_adrb2_beta_blocker_pharmacophore_match).astype(int).to_numpy()
+        pharmacophore_reward = pharmacophore_matches.astype(float) * float(tuning["pharmacophore_reward_score"])
+        shadow_score = pd.to_numeric(shadow_score, errors="coerce") - pharmacophore_reward
+        delta = pd.to_numeric(shadow_score - base_score, errors="coerce").to_numpy(dtype=float)
+        raw_delta = delta
+        activation_mask = pharmacophore_matches.astype(bool)
+        band = np.where(
+            np.abs(delta) >= float(yellow_band),
+            "yellow",
+            np.where(np.abs(delta) > 0.0, "green", "none"),
+        )
     result_df["residual_shadow_prior_pressure"] = prior_pressure
     result_df["residual_shadow_structure_weakness"] = structural_weakness
     result_df["residual_shadow_structure_support"] = structural_support
@@ -513,6 +550,8 @@ def _apply_residual_prototype_shadow(
     result_df["residual_shadow_delta_raw"] = raw_delta
     result_df["residual_shadow_delta"] = delta
     result_df["residual_shadow_band"] = band
+    result_df["gpcr_adrb2_beta_blocker_pharmacophore_match"] = pharmacophore_matches
+    result_df["gpcr_adrb2_beta_blocker_pharmacophore_reward"] = pharmacophore_reward
     result_df["binding_score_composite_v7_residual_shadow"] = shadow_score
     result_df["binding_score_composite_v7_residual_active"] = (
         shadow_score if mode in {"apply", "apply_ranking"} else base_score
@@ -565,6 +604,8 @@ def _apply_residual_prototype_shadow(
             "linear_rescore_status": linear_rescore_status,
             "linear_rescore_term_count": int(linear_rescore_term_count),
             "linear_rescore_missing_terms": list(missing_terms) if linear_rescore_enabled else [],
+            "pharmacophore_positive_match_count": int(pharmacophore_matches.sum()),
+            "pharmacophore_reward_score": float(tuning["pharmacophore_reward_score"]),
         }
     )
     return result_df, summary
@@ -1969,6 +2010,7 @@ def _process_queue_row(row: Dict[str, Any], cfg: Dict[str, Any]) -> Dict[str, An
         "queue_id": queue_id,
         "target": target,
         "ligand_id": ligand_id,
+        "ligand_smiles": str(row.get("ligand_smiles", row.get("smiles", "")) or ""),
         "replica_idx": replica_idx,
         "simulation_seed": simulation_seed,
         "binding_energy_proxy": float(score["binding_energy_proxy"]),

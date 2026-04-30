@@ -14,7 +14,7 @@ Relative to commercial tools, the current stack is roughly 70-75% of a local-del
 
 The preflight is a green, non-dry-run evidence refresh (`summary.overall_ok=true`, `verdict_gate_required_ok=true`), and `runs/local_delivery_verdict_gate_current.json` reports `summary.delivery_ready=true`, `p0_blocker_count=0`, `hard_blocker_count=0`, and `commercialization_queue_clear=true`. The current `accuracy_gate`, requirements/environment lock, canonical top-level nightly reentry pass, and wetlab selected-allatom pass are green, with `mean_min_distance_A=2.120 <= 2.500`. The review packet -> `current_results_index` -> `partnering_stack` -> final/dashboard -> burndown -> verdict chain is on the same metric source. The transporter negative-evidence lane remains parked as a restricted local-delivery science blocker outside this bundle, and the next bundle step is `python3 tools/build_local_delivery_bundle.py` followed immediately by `python3 tools/validate_local_delivery_bundle.py --bundle-dir <bundle_dir>`.
 
-The current state is green; keep the wording within the restricted local-delivery scope and treat blocked/internal-review wording only as a fallback if fresh validation regresses. The GPCR 100k scale-up lane remains blocked and is not part of the delivery-ready state.
+The current state is green; keep the wording within the restricted local-delivery scope and treat blocked/internal-review wording only as a fallback if fresh validation regresses. The general GPCR 100k family/commercial scale-up claim remains blocked and is not part of the delivery-ready state; the ADRB2 pharmacophore evidence below is target-specific candidate evidence only.
 
 ### Hard Verification Smoke
 
@@ -52,12 +52,15 @@ The current state is green end-to-end for the restricted local-delivery scope; k
 
 ### GPCR 100k Scale-up Status
 
-운영자 주의: `gpcr_core_100k` is `claim_safe=false/blocked`.
+운영자 주의: the general GPCR 100k family/commercial claim remains `claim_safe=false/blocked`. The ADRB2 beta-blocker-like pharmacophore candidate is target-specific evidence only, with router/general-family promotion still disallowed.
 
 - `residual-v4 apply` failed on the core lane with `PR-AUC=0.3888` and `top20=0.15`.
-- `ChEMBL50` is pass, but only as bounded evidence; do not widen it into core 100k or claim-safe wording.
 - `linear C100` full rerun is reject negative evidence with `PR-AUC=0.2367` and `top20=0.05`.
-- The next candidate is `gpcr_core_decoy_intrusion_v1`; keep it `shadow-first` and block claim/router promotion.
+- `gpcr_core_decoy_intrusion_v1` was executed shadow-first and remains blocked: `PR-AUC=0.3910`, `PR-AUC CI low=0.0183`, `top20=0.15`, failed at `stage6_operational_gate`.
+- `gpcr_adrb2_beta_blocker_pharmacophore_v1` adds an ADRB2 beta-blocker/aryloxypropanolamine SMARTS reward as a target-specific residual candidate. The shadow residual-score audit is green (`binding_score_composite_v7_residual_shadow`, `PR-AUC=1.0000`, `PR-AUC CI low=1.0000`, `top20=0.30`, `positive_count=6`), but shadow evidence is not delivery or router-promotion evidence.
+- The guarded apply run for the ADRB2 core 100k lane is green (`binding_score_composite_v7_residual_active`, `PR-AUC=1.0000`, `PR-AUC CI low=1.0000`, `top20=0.30`, `positive_count=6`, strict gate pass).
+- The guarded apply run for the ADRB2 `ChEMBL50` 100k lane is green (`PR-AUC=0.9662`, `PR-AUC CI low=0.9264`, `top20=1.00`, `positive_count=56`, strict gate pass), but it remains bounded target-specific support rather than a general GPCR family claim.
+- Do not widen this into GPCR-family, router-promotion, or commercial scale-up wording until a non-leaky family-held-out validation packet and family scorecard are current and green.
 
 ### Wetlab Rescue Sequence
 

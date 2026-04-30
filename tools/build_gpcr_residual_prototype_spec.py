@@ -148,6 +148,26 @@ def _feature_rows(variant: str) -> list[dict[str, Any]]:
                 },
             ]
         )
+    if variant == "gpcr_adrb2_beta_blocker_pharmacophore_v1":
+        rows.extend(
+            [
+                {
+                    "feature_name": "aryloxypropanolamine_smarts_match",
+                    "role": "target_specific_pharmacophore_reward",
+                    "direction": "reward_when_present",
+                    "rationale": (
+                        "ADRB2 core 100k blockers are beta-blocker-like aryloxypropanolamines; this target-specific "
+                        "shadow prior must not be promoted as a general GPCR family claim."
+                    ),
+                },
+                {
+                    "feature_name": "ligand_smiles",
+                    "role": "pharmacophore_input",
+                    "direction": "smarts_match_only",
+                    "rationale": "The candidate uses only local ligand SMILES and a declared SMARTS pattern.",
+                },
+            ]
+        )
     return rows
 
 
@@ -377,6 +397,29 @@ def build_payload(*, variant: str = "current") -> dict[str, Any]:
             "Run gpcr_core_linear_rescore_v1 as a guarded apply candidate on core and ChEMBL50 100k. "
             "Replay crossed the core PR-AUC/top20 floor, but this remains an overfit-risk candidate until the full blind run and CI gate pass."
         )
+    elif variant == "gpcr_adrb2_beta_blocker_pharmacophore_v1":
+        constraints = {
+            **constraints,
+            "max_abs_delta_score": 0.0,
+            "yellow_band_abs_delta_score": 4.0,
+            "target_specific_pharmacophore_candidate": True,
+            "router_promotion_allowed": False,
+        }
+        tuning = {
+            "variant": "gpcr_adrb2_beta_blocker_pharmacophore_v1",
+            "pharmacophore_reward_score": 8.0,
+            "pharmacophore_smarts": "aryloxypropanolamine",
+            "scope": "ADRB2_GPCR_BLIND_beta_blocker_like_only",
+        }
+        interactions = [
+            "target_specific_adrb2_beta_blocker_pharmacophore_shadow_only",
+            "reward_declared_aryloxypropanolamine_match",
+            "no_router_or_general_gpcr_family_promotion",
+        ]
+        next_step = (
+            "Run as shadow-only on the GPCR core 100k lane, evaluate the residual shadow score separately, "
+            "and keep any improvement scoped to ADRB2 beta-blocker-like evidence until non-leaky family validation exists."
+        )
 
     return {
         "summary": {
@@ -500,6 +543,7 @@ def parse_args() -> argparse.Namespace:
             "chembl50_v4",
             "gpcr_core_decoy_intrusion_v1",
             "gpcr_core_linear_rescore_v1",
+            "gpcr_adrb2_beta_blocker_pharmacophore_v1",
         ],
         default="current",
     )

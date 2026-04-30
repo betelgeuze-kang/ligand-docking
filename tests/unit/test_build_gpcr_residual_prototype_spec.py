@@ -176,3 +176,37 @@ def test_build_gpcr_residual_prototype_spec_core_linear_rescore_v1(tmp_path: Pat
     assert linear["combine_mode"] == "replace"
     assert any(term["feature"] == "z_ligand_logp" for term in linear["terms"])
     assert any(row["feature_name"] == "z_ligand_affinity_hint" for row in payload["feature_rows"])
+
+
+def test_build_gpcr_residual_prototype_spec_adrb2_pharmacophore_v1(tmp_path: Path) -> None:
+    out_json = tmp_path / "prototype_pharmacophore.json"
+    out_csv = tmp_path / "prototype_pharmacophore.csv"
+    out_md = tmp_path / "prototype_pharmacophore.md"
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools/build_gpcr_residual_prototype_spec.py"),
+            "--variant",
+            "gpcr_adrb2_beta_blocker_pharmacophore_v1",
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=ROOT,
+    )
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    tuning = payload["prototype"]["tuning"]
+
+    assert payload["summary"]["prototype_variant"] == "gpcr_adrb2_beta_blocker_pharmacophore_v1"
+    assert payload["prototype"]["constraints"]["target_specific_pharmacophore_candidate"] is True
+    assert tuning["variant"] == "gpcr_adrb2_beta_blocker_pharmacophore_v1"
+    assert tuning["pharmacophore_reward_score"] == 8.0
+    assert "target_specific_adrb2_beta_blocker_pharmacophore_shadow_only" in payload["prototype"]["interactions"]
+    assert any(
+        row["feature_name"] == "aryloxypropanolamine_smarts_match"
+        for row in payload["feature_rows"]
+    )

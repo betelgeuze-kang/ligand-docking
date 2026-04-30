@@ -488,3 +488,66 @@ def test_residual_intrusion_variant_does_not_apply_ungated_intrusion_raw_delta(t
     assert out.loc[0, "residual_shadow_intrusion_delta_raw"] > 0.0
     assert out.loc[0, "residual_shadow_delta"] == 0.0
     assert out.loc[0, "binding_score_composite_v7_residual_active"] == out.loc[0, "binding_score_composite_v7"]
+
+
+def test_residual_pharmacophore_variant_rewards_aryloxypropanolamine_shadow_only(tmp_path):
+    spec = tmp_path / "residual_pharmacophore.json"
+    spec.write_text(
+        json.dumps(
+            {
+                "prototype": {
+                    "constraints": {
+                        "max_abs_delta_score": 0.0,
+                        "yellow_band_abs_delta_score": 0.0,
+                    },
+                    "tuning": {
+                        "variant": "gpcr_adrb2_beta_blocker_pharmacophore_v1",
+                        "pharmacophore_reward_score": 8.0,
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    df = pd.DataFrame(
+        {
+            "ligand_id": ["propranolol_like", "plain_decoy"],
+            "ligand_smiles": [
+                "CC(C)NCC(COC1=CC=CC2=CC=CC=C21)O",
+                "CCOC1=CC=CC=C1",
+            ],
+            "binding_score_composite_v7": [-2.0, -2.1],
+        }
+    )
+    args = argparse.Namespace(
+        residual_prototype_enabled=True,
+        residual_prototype_mode="shadow_only",
+        residual_prototype_family="gpcr",
+        residual_prototype_spec_json=str(spec),
+        residual_prototype_runtime_hook_ready=True,
+        residual_prototype_max_abs_delta_score=None,
+        residual_prototype_yellow_band_abs_delta_score=None,
+    )
+    zero = pd.Series([0.0, 0.0], dtype=float)
+
+    out, summary = mod._apply_residual_prototype_shadow(
+        df,
+        args,
+        z_e=zero,
+        z_d=zero,
+        z_s=zero,
+        z_c=zero,
+        z_aff=zero,
+        z_logp=zero,
+        z_rot=zero,
+        z_hd=zero,
+        z_ha=zero,
+    )
+
+    assert summary["tuning_variant"] == "gpcr_adrb2_beta_blocker_pharmacophore_v1"
+    assert summary["pharmacophore_positive_match_count"] == 1
+    assert out.loc[0, "gpcr_adrb2_beta_blocker_pharmacophore_match"] == 1
+    assert out.loc[1, "gpcr_adrb2_beta_blocker_pharmacophore_match"] == 0
+    assert out.loc[0, "binding_score_composite_v7_residual_shadow"] == -10.0
+    assert out.loc[1, "binding_score_composite_v7_residual_shadow"] == -2.1
+    assert out.loc[0, "binding_score_composite_v7_residual_active"] == -2.0
