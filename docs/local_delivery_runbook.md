@@ -14,7 +14,7 @@ Relative to commercial tools, the current stack is roughly 70-75% of a local-del
 
 The preflight is a green, non-dry-run evidence refresh (`summary.overall_ok=true`, `verdict_gate_required_ok=true`), and `runs/local_delivery_verdict_gate_current.json` reports `summary.delivery_ready=true`, `p0_blocker_count=0`, `hard_blocker_count=0`, and `commercialization_queue_clear=true`. The current `accuracy_gate`, requirements/environment lock, canonical top-level nightly reentry pass, and wetlab selected-allatom pass are green, with `mean_min_distance_A=2.120 <= 2.500`. The review packet -> `current_results_index` -> `partnering_stack` -> final/dashboard -> burndown -> verdict chain is on the same metric source. The transporter negative-evidence lane remains parked as a restricted local-delivery science blocker outside this bundle, and the next bundle step is `python3 tools/build_local_delivery_bundle.py` followed immediately by `python3 tools/validate_local_delivery_bundle.py --bundle-dir <bundle_dir>`.
 
-The current state is green; keep the wording within the restricted local-delivery scope and treat blocked/internal-review wording only as a fallback if fresh validation regresses.
+The current state is green; keep the wording within the restricted local-delivery scope and treat blocked/internal-review wording only as a fallback if fresh validation regresses. The GPCR 100k scale-up lane remains blocked and is not part of the delivery-ready state.
 
 ### Hard Verification Smoke
 
@@ -48,7 +48,16 @@ Current status snapshot:
 - C is green: wetlab selected-allatom is pass with selected `mean_min_distance_A=2.120` and `binding_energy_proxy=-0.146`, the commercialization queue is clear, and `runs/local_delivery_verdict_gate_current.json` reports `summary.delivery_ready=true`, `p0_blocker_count=0`, `hard_blocker_count=0`, and `commercialization_queue_clear=true`. The transporter negative-evidence lane remains parked outside the restricted local-delivery scope.
 - The next bundle step is `python3 tools/build_local_delivery_bundle.py` followed immediately by `python3 tools/validate_local_delivery_bundle.py --bundle-dir <bundle_dir>`.
 
-The current state is green end-to-end; keep blocked/internal-review wording only as a fallback if a fresh validation regresses.
+The current state is green end-to-end for the restricted local-delivery scope; keep blocked/internal-review wording only as a fallback if a fresh validation regresses.
+
+### GPCR 100k Scale-up Status
+
+운영자 주의: `gpcr_core_100k` is `claim_safe=false/blocked`.
+
+- `residual-v4 apply` failed on the core lane with `PR-AUC=0.3888` and `top20=0.15`.
+- `ChEMBL50` is pass, but only as bounded evidence; do not widen it into core 100k or claim-safe wording.
+- `linear C100` full rerun is reject negative evidence with `PR-AUC=0.2367` and `top20=0.05`.
+- The next candidate is `gpcr_core_decoy_intrusion_v1`; keep it `shadow-first` and block claim/router promotion.
 
 ### Wetlab Rescue Sequence
 
