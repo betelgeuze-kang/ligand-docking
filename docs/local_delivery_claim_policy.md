@@ -14,15 +14,18 @@ This policy applies to local-run delivery only.
 - `ion_channel`
 - `gpcr`
 
-These are the only families that should be described as delivery-ready in the initial local-delivery phase, and only when the current gating artifacts are green.
+These are the only families that should be described as delivery-ready in the initial local-delivery phase, and only when the current gating artifacts are green. The current P0 delivery claim stays limited to this scope. The post-P0 expansion queue for PDE translation quality, transporter AQP1/GLUT1 evidence closure, CA2/PXR packet closure, and IDP broader-promotion guardrails is separate and does not broaden delivery-ready wording.
 
 ## Allowed Claims
 
-- `The current local-delivery workflow is suitable for guarded validation delivery on kinase, ion-channel, and GPCR tasks.`
+- `The current local-delivery workflow is suitable for guarded validation delivery on kinase, ion-channel, and GPCR tasks only.`
+- `The current delivery verdict is limited to the restricted kinase, ion_channel, and gpcr scope.`
 - `The current delivery verdict is based on the exact artifacts in the attached bundle.`
 - `Nightly reliability and wetlab selected-all-atom gates are treated as hard blockers for delivery readiness.`
 - `The delivery result is valid only for the scope, profile, and machine assumptions documented in the bundle.`
 - `Transporter work remains staged or review-only until direct evidence closure is complete.`
+- `CA2/PXR packet work remains partial-authoritative or review-only until the packet lanes close.`
+- `IDP broader-promotion work remains blocked until the bounded lane and guardrails are resolved.`
 - `Scorecard-level baseline comparison and acceptance-profile results are not delivery-ready verdicts by themselves.`
 - Delivery-ready wording is allowed only when `python3 tools/validate_local_delivery_bundle.py --bundle-dir <bundle_dir>` reports `summary.overall_ok=true` and `summary.delivery_ready_policy_ok=true`, `runs/local_delivery_verdict_gate_current.json` reports `summary.delivery_ready=true`, the gate's `source_artifacts` fingerprints match the current bundle/work record, and `manifest.json` / `manifest.md` record `verdict_gate_fingerprint_check.status=pass`, `ok=true`, `comparison_performed=true`, and `mismatch_count=0`. If `family_scorecards` are bundled, every included scorecard must also report `summary.scorecard_level_status="pass"` and `summary.acceptance_overall_pass != false`. Any intentional ROCm `TORCH_BLAS_PREFER_HIPBLASLT` override must also be visible in the environment manifest and the verdict text before the wording can be called delivery-ready.
 - Bundled scorecards are additive evidence; they do not change the row identity, `identity_columns`, `--packet-id`, or hard-fail rules already documented in this policy.
@@ -57,6 +60,7 @@ These are the only families that should be described as delivery-ready in the in
 ## Allowed Internal Claims
 
 - `The repo contains stronger evidence for kinase, ion_channel, and gpcr than for transporter.`
+- `The repo contains separate post-P0 planning queues for PDE translation quality, transporter AQP1/GLUT1 closure, CA2/PXR packet closure, and IDP broader-promotion boundaries.`
 - `Viewer and refresh reproducibility can remain keep-green guardrails while nightly and wetlab are the main active blockers.`
 - `A family may remain commercially restricted even if related staging surfaces or reviewer packets already exist.`
 - `A local-delivery-ready verdict is narrower than a general platform commercialization claim.`
@@ -71,6 +75,11 @@ These are the only families that should be described as delivery-ready in the in
 
 - `The platform is broadly commercial-ready across all supported molecular families.`
 - `Transporter delivery is commercially ready today.`
+- `The current delivery verdict covers transporter, CA2/PXR, or IDP broader-promotion readiness.`
+- `The current result bundle proves broad platform commercialization readiness.`
+- `The current result bundle proves transporter delivery readiness before AQP1/GLUT1 evidence closure.`
+- `The current result bundle proves CA2 or PXR broader readiness before packet closure.`
+- `The current result bundle proves IDP broader promotion readiness before the bounded lane guardrails close.`
 - `The stack is suitable for unattended automatic external decision-making without guardrails.`
 - `The repo is production-ready as a hosted multi-tenant service.`
 - `The current evidence supports prospective wet-lab hit-discovery claims.`
@@ -117,10 +126,12 @@ Do not issue a delivery-ready verdict if any of the following are true:
 
 ## Restricted-Scope Rule
 
-If transporter remains evidence-blocked:
+If transporter, CA2/PXR, or IDP broader-promotion remains evidence-blocked:
 
-- transporter must stay out of delivery-ready wording
+- those lanes must stay out of delivery-ready wording
 - transporter outputs must be labeled `review-only`, `staged`, or `not yet claim-safe`
+- CA2/PXR outputs may be labeled `partial-authoritative` or `review-only`
+- IDP broader-promotion outputs must stay `blocked` or `review-only`
 - the bundle must say that commercial scope is restricted to `kinase`, `ion_channel`, and `gpcr`
 - broad platform wording and general commercialization wording stay disallowed
 

@@ -123,11 +123,68 @@ def build_payload(baseline_rows: list[dict[str, str]], scaleup_rows: list[dict[s
     return {"summary": summary, "baseline": baseline, "scaleup": scaleup}
 
 
+def build_missing_input_payload(
+    baseline_csv: Path,
+    scaleup_csv: Path,
+    *,
+    previous_payload: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    missing_paths = [str(path) for path in (baseline_csv, scaleup_csv) if not path.exists()]
+    previous_summary = dict((previous_payload or {}).get("summary", {}) or {})
+    summary = {
+        "status": "blocked_missing_csv_inputs",
+        "source_rows_available": False,
+        "claim_safe": False,
+        "missing_input_count": len(missing_paths),
+        "missing_input_paths": missing_paths,
+        "previous_snapshot_available": bool(previous_summary),
+        "previous_scaleup_positive_ranks": previous_summary.get("scaleup_positive_ranks", []),
+        "previous_scaleup_top20_binder_count": previous_summary.get("scaleup_top20_binder_count"),
+        "previous_last_positive_rank_shift": previous_summary.get("last_positive_rank_shift"),
+        "baseline_positive_ranks": [],
+        "scaleup_positive_ranks": [],
+        "baseline_top20_binder_count": 0,
+        "scaleup_top20_binder_count": 0,
+        "baseline_top100_binder_count": 0,
+        "scaleup_top100_binder_count": 0,
+        "first_positive_rank_shift": None,
+        "last_positive_rank_shift": None,
+        "interpretation": (
+            "The 100k GPCR failure analysis could not be recomputed because one or more raw ranking CSV inputs are missing."
+        ),
+        "next_required_step": (
+            "Do not infer a GPCR scale-up recovery from this diagnostic; rerun or restore the missing ranking CSV inputs, "
+            "then rebuild the 100k failure analysis."
+        ),
+    }
+    empty_payload = {
+        "label": "",
+        "row_count": 0,
+        "positive_rank_list": [],
+        "top20_binder_count": 0,
+        "top20_decoy_count": 0,
+        "top100_binder_count": 0,
+        "top100_decoy_count": 0,
+        "first_positive_rank": None,
+        "last_positive_rank": None,
+        "top_false_positive_mean_score": None,
+        "top_false_positive_mean_min_distance_A": None,
+        "top_false_positives": [],
+    }
+    baseline = dict(empty_payload)
+    baseline["label"] = "baseline_10k"
+    scaleup = dict(empty_payload)
+    scaleup["label"] = "scaleup_100k"
+    return {"summary": summary, "baseline": baseline, "scaleup": scaleup}
+
+
 def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
     s = payload["summary"]
     lines = [
         "# GPCR 100k Failure Analysis",
         "",
+        f"- status: `{s.get('status', 'computed')}`",
+        f"- source_rows_available: `{s.get('source_rows_available', True)}`",
         f"- baseline_positive_ranks: `{s['baseline_positive_ranks']}`",
         f"- scaleup_positive_ranks: `{s['scaleup_positive_ranks']}`",
         f"- baseline_top20_binder_count: `{s['baseline_top20_binder_count']}`",
@@ -139,12 +196,21 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         "## Interpretation",
         "",
         f"- {s['interpretation']}",
-        "",
-        "## Top False Positives In 100k",
-        "",
-        "| rank | ligand_id | score | mean_min_distance_A | role |",
-        "| ---: | --- | ---: | ---: | --- |",
     ]
+    if s.get("missing_input_paths"):
+        lines.extend(["", "## Missing Inputs", ""])
+        for missing_path in s.get("missing_input_paths", []):
+            lines.append(f"- `{missing_path}`")
+        lines.extend(["", "## Next Required Step", "", f"- {s.get('next_required_step', '')}"])
+    lines.extend(
+        [
+            "",
+            "## Top False Positives In 100k",
+            "",
+            "| rank | ligand_id | score | mean_min_distance_A | role |",
+            "| ---: | --- | ---: | ---: | --- |",
+        ]
+    )
     for row in payload["scaleup"]["top_false_positives"][:12]:
         lines.append(
             f"| {row['rank']} | `{row['ligand_id']}` | {row['binding_score_composite_v7']:.4f} | {row['mean_min_distance_A']:.4f} | {row['role']} |"
@@ -165,8 +231,14 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    payload = build_payload(_read_csv(_resolve(args.baseline_csv)), _read_csv(_resolve(args.scaleup_csv)))
+    baseline_csv = _resolve(args.baseline_csv)
+    scaleup_csv = _resolve(args.scaleup_csv)
     out_json = _resolve(args.out_json)
+    if baseline_csv.exists() and scaleup_csv.exists():
+        payload = build_payload(_read_csv(baseline_csv), _read_csv(scaleup_csv))
+    else:
+        previous_payload = json.loads(out_json.read_text(encoding="utf-8")) if out_json.exists() else None
+        payload = build_missing_input_payload(baseline_csv, scaleup_csv, previous_payload=previous_payload)
     out_csv = _resolve(args.out_csv)
     out_md = _resolve(args.out_md)
     out_json.parent.mkdir(parents=True, exist_ok=True)

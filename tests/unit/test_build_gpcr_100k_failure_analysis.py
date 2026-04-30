@@ -6,6 +6,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from tools import build_gpcr_100k_failure_analysis as mod
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -74,3 +76,39 @@ def test_build_gpcr_100k_failure_analysis(tmp_path: Path) -> None:
     assert payload["summary"]["scaleup_positive_ranks"] == [1, 4]
     assert payload["summary"]["scaleup_top20_binder_count"] == 2
 
+
+def test_missing_input_payload_is_actionable_without_fake_pass(tmp_path: Path) -> None:
+    baseline = tmp_path / "missing_baseline.csv"
+    scaleup = tmp_path / "missing_scaleup.csv"
+
+    payload = mod.build_missing_input_payload(baseline, scaleup)
+
+    assert payload["summary"]["status"] == "blocked_missing_csv_inputs"
+    assert payload["summary"]["source_rows_available"] is False
+    assert payload["summary"]["claim_safe"] is False
+    assert payload["summary"]["missing_input_count"] == 2
+    assert str(baseline) in payload["summary"]["missing_input_paths"]
+    assert payload["baseline"]["row_count"] == 0
+    assert payload["scaleup"]["row_count"] == 0
+    assert "rerun or restore" in payload["summary"]["next_required_step"]
+
+
+def test_missing_input_payload_preserves_previous_snapshot_summary(tmp_path: Path) -> None:
+    previous_payload = {
+        "summary": {
+            "scaleup_positive_ranks": [1, 2, 15, 78, 107, 128],
+            "scaleup_top20_binder_count": 3,
+            "last_positive_rank_shift": 122,
+        }
+    }
+
+    payload = mod.build_missing_input_payload(
+        tmp_path / "missing_baseline.csv",
+        tmp_path / "missing_scaleup.csv",
+        previous_payload=previous_payload,
+    )
+
+    assert payload["summary"]["previous_snapshot_available"] is True
+    assert payload["summary"]["previous_scaleup_positive_ranks"] == [1, 2, 15, 78, 107, 128]
+    assert payload["summary"]["previous_scaleup_top20_binder_count"] == 3
+    assert payload["summary"]["previous_last_positive_rank_shift"] == 122

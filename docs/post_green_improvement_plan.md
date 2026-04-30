@@ -1,6 +1,6 @@
 # Post-Green Improvement Plan
 
-요약: 현재 P0 green 기준선을 고정하고, 다음 실험은 claim-safe 개선 큐로만 분리한다.
+요약: 현재 P0 green 기준선을 고정하고, 다음 상용화 확장 큐는 별도 문서로 분리한다.
 
 ## Boundary
 
@@ -13,25 +13,13 @@
 1. Preserve the baseline
    - Treat [`docs/local_delivery_p0_gate.md`](local_delivery_p0_gate.md) and [`docs/local_delivery_claim_policy.md`](local_delivery_claim_policy.md) as the claim boundary.
    - Keep the green baseline frozen; only the new queue moves.
-2. Stale wetlab artifact cleanup
-   - Once the current gate is green, use `runs/wetlab_selected_allatom_repair_packet_current.md` as a regression/retry reference.
-   - Do not treat the repair packet as current proof of pass.
-3. Wetlab broader readiness follow-up
-   - Track the borderline `translation gate 68.1`, `binding_energy_proxy_too_weak_for_translation`, and missing backmapping / pose-validation metrics.
-   - Keep the expensive lane deferred until translation and survival support improve.
-4. Transporter lane
-   - `AQP1` / `GLUT1` remain blocked.
-   - Placeholder-driven rows: `6`.
-   - Negative evidence missing: `6`.
-   - Authoritative apply is blocked; keep this outside claim scope.
-5. CA2 / PXR
-   - `CA2` ligand ledger is `6/6` blocked with placeholder `ligand_id=6`.
-   - `PXR` still needs placeholder and provenance fill.
-   - Close evidence first, then revisit any scope expansion.
-6. IDP
-   - Keep the lane controlled and shadow-only.
-   - `broader_promotion_blocked=true`.
-7. Scale-up guardrail
+2. Follow the post-P0 expansion queue
+   - Read [`docs/post_p0_commercial_expansion_queue.md`](post_p0_commercial_expansion_queue.md) next.
+   - The queue order is: GPCR scale-up recovery, PDE translation quality, transporter `AQP1` / `GLUT1` evidence closure, `CA2` / `PXR` packet closure, and IDP broader-promotion guardrails.
+3. Keep P0 wording narrow
+   - `AQP1` / `GLUT1`, `CA2` / `PXR`, and IDP broader promotion stay review-only or partial-authoritative until their evidence lanes close.
+   - Do not restyle the current P0 delivery claim as transporter, broad platform, or IDP-broader readiness.
+4. Scale-up guardrail
    - The `100k` run is valid, but `gpcr_core_full` failed.
    - `commercialization_ready_suite_count=0`.
    - Pending milestones: `equal_size_ab`, `pilot_100k`, `pilot_1m`.
@@ -40,22 +28,22 @@
 
 - No threshold relaxation.
 - No fake-pass.
-- No transporter claim promotion or broad platform claim.
+- No transporter claim promotion, CA2/PXR claim promotion, or IDP broader-promotion claim.
 - No expensive lane before translation or survival support improves.
 - Keep P0 evidence and new experiments in separate queues.
 
 ## Local Verification
 
 ```bash
-rg -n "transporter.*ready|broad platform.*delivery-ready" docs/post_green_improvement_plan.md README.md README.ko.md
+rg -n "post_p0_commercial_expansion_queue|AQP1|GLUT1|CA2|PXR|IDP broader" docs/post_green_improvement_plan.md docs/post_p0_commercial_expansion_queue.md docs/local_delivery_p0_gate.md docs/local_delivery_claim_policy.md
 sed -n '1,220p' docs/local_delivery_p0_gate.md
-sed -n '90,120p' docs/local_delivery_verdict_template.md
 ```
 
 ## Reference Artifacts
 
 - `docs/local_delivery_p0_gate.md`
 - `docs/local_delivery_claim_policy.md`
+- `docs/post_p0_commercial_expansion_queue.md`
 - `docs/local_delivery_readiness_plan.md`
 - `docs/local_delivery_runbook.md`
 - `runs/wetlab_selected_allatom_repair_packet_current.md`

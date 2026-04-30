@@ -18,6 +18,9 @@ DEFAULT_BASELINE_SUMMARY_JSON = "runs/external_validation_blind_runs/external_va
 DEFAULT_CANDIDATE_SUMMARY_JSON = (
     "runs/external_validation_blind_runs/external_validation_blind_runs_2026-03-23_scaleup_100k_pilot_v2r2/summary.json"
 )
+DEFAULT_GPCR_SAFE_ENDPOINT_JSON = "runs/gpcr_apply_safe_endpoint_current.json"
+DEFAULT_GPCR_ENDPOINT_NOTE_JSON = "runs/gpcr_residual_chembl50_v4_endpoint_note_current.json"
+DEFAULT_GPCR_FAILURE_ANALYSIS_JSON = "runs/gpcr_100k_failure_analysis_current.json"
 
 
 def _resolve_repo_path(path_str: str) -> Path:
@@ -269,6 +272,84 @@ def _regression_diagnostics(summary: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _scaleup_repair_packet(
+    *,
+    claim_safe: Optional[bool],
+    regression_diagnostics: Dict[str, Any],
+) -> Dict[str, Any]:
+    primary = regression_diagnostics.get("primary_regression")
+    if not isinstance(primary, dict):
+        primary = {}
+    task_id = str(regression_diagnostics.get("primary_regression_task_id", "") or "")
+    domain = str(regression_diagnostics.get("primary_regression_domain", "") or "")
+    if claim_safe is not False or task_id != "gpcr_core_full" or domain != "gpcr":
+        return {"available": False}
+
+    endpoint_payload = _read_json_if_exists(DEFAULT_GPCR_SAFE_ENDPOINT_JSON)
+    endpoint_summary = endpoint_payload.get("summary", {}) if isinstance(endpoint_payload.get("summary"), dict) else {}
+    endpoint_note = _read_json_if_exists(DEFAULT_GPCR_ENDPOINT_NOTE_JSON)
+    endpoint_note_summary = endpoint_note.get("summary", {}) if isinstance(endpoint_note.get("summary"), dict) else {}
+    references = endpoint_note.get("references", []) if isinstance(endpoint_note.get("references"), list) else []
+    router_blocked = endpoint_summary.get("router_blocked")
+    router_status = str(endpoint_note_summary.get("router_status", "") or "")
+    if not router_status and router_blocked is True:
+        router_status = "blocked"
+    diagnostic_payload = _read_json_if_exists(DEFAULT_GPCR_FAILURE_ANALYSIS_JSON)
+    diagnostic_summary = diagnostic_payload.get("summary", {}) if isinstance(diagnostic_payload.get("summary"), dict) else {}
+
+    return {
+        "available": True,
+        "blocker_type": "gpcr_scaleup_quality_regression",
+        "task_id": task_id,
+        "domain": domain,
+        "claim_safe": False,
+        "rerun_required": True,
+        "failing_metrics": {
+            "baseline_pass": primary.get("baseline_pass"),
+            "candidate_pass": primary.get("candidate_pass"),
+            "baseline_pr_auc": primary.get("baseline_pr_auc"),
+            "candidate_pr_auc": primary.get("candidate_pr_auc"),
+            "delta_pr_auc": primary.get("delta_pr_auc"),
+            "baseline_top20_hit_rate": primary.get("baseline_top20_hit_rate"),
+            "candidate_top20_hit_rate": primary.get("candidate_top20_hit_rate"),
+            "delta_top20_hit_rate": primary.get("delta_top20_hit_rate"),
+        },
+        "safe_endpoint": {
+            "endpoint_label": str(
+                endpoint_note_summary.get("endpoint_label", "GPCR chembl50_v4 locked-decoy apply-safe endpoint") or ""
+            ),
+            "endpoint_status": str(
+                endpoint_note_summary.get("endpoint_status", endpoint_summary.get("endpoint_status", "")) or ""
+            ),
+            "router_status": router_status,
+            "apply_safe": endpoint_summary.get("apply_safe"),
+            "router_blocked": router_blocked,
+            "core_pr_delta_vs_baseline": endpoint_summary.get("core_pr_delta_vs_baseline"),
+            "chembl50_pr_delta_vs_baseline": endpoint_summary.get("chembl50_pr_delta_vs_baseline"),
+            "decision": str(endpoint_note_summary.get("decision", endpoint_summary.get("next_required_step", "")) or ""),
+            "references": [str(ref) for ref in references],
+        },
+        "diagnostic_artifact": {
+            "artifact": DEFAULT_GPCR_FAILURE_ANALYSIS_JSON,
+            "status": str(diagnostic_summary.get("status", "not_available") or "not_available"),
+            "source_rows_available": diagnostic_summary.get("source_rows_available"),
+            "previous_snapshot_available": diagnostic_summary.get("previous_snapshot_available", False),
+            "missing_input_count": diagnostic_summary.get("missing_input_count", 0),
+            "previous_scaleup_positive_ranks": diagnostic_summary.get("previous_scaleup_positive_ranks", []),
+        },
+        "diagnostic_command": "python3 tools/build_gpcr_100k_failure_analysis.py",
+        "next_command": (
+            "python3 tools/build_gpcr_apply_safe_endpoint.py && "
+            "python3 tools/build_gpcr_residual_chembl50_v4_endpoint_note.py"
+        ),
+        "next_required_step": (
+            "Keep claim_safe=false for the 100k scale-up candidate. Use the GPCR chembl50_v4 locked-decoy "
+            "apply-safe endpoint as the bounded recovery target, then rerun/compare gpcr_core_full at 100k "
+            "before unblocking router promotion."
+        ),
+    }
+
+
 def _build_guardrail_rows(
     pilot: Dict[str, Any],
     comparison: Dict[str, Any],
@@ -422,6 +503,13 @@ def build_payload(
     elif candidate_ready and not comparison_ready:
         next_action = "run comparison against the frozen baseline"
 
+    repair_packet = _scaleup_repair_packet(claim_safe=claim_safe, regression_diagnostics=regression_diagnostics)
+    if repair_packet.get("available"):
+        next_action = (
+            "claim_safe=false on gpcr_core_full PR-AUC/top20 regression; use the chembl50_v4 locked-decoy "
+            "endpoint packet and rerun the 100k GPCR comparison before scaling further"
+        )
+
     return {
         "generated_at_local": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
         "benchmark_stage": benchmark_stage,
@@ -436,6 +524,7 @@ def build_payload(
         "slowest_task_at_1m": slowest,
         "comparison_metrics": comparison_metrics,
         "regression_diagnostics": regression_diagnostics,
+        "scaleup_repair_packet": repair_packet,
         "primary_regression_task_id": regression_diagnostics.get("primary_regression_task_id", ""),
         "primary_regression_domain": regression_diagnostics.get("primary_regression_domain", ""),
         "primary_regression_reason": regression_diagnostics.get("primary_regression_reason", ""),
