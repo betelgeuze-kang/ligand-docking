@@ -66,6 +66,13 @@ Primary artifacts:
 
 ADRB2 pharmacophore candidate는 target-specific beta-blocker/aryloxypropanolamine SMARTS reward를 사용합니다. non-leaky family-held-out validation packet과 family scorecard가 green이 되기 전에는 GPCR-family 또는 router-level score로 승격하면 안 됩니다.
 
+Next comparison rule:
+
+- `linear C100`은 실제 full 100k rerun에서 실패했으므로 reject evidence로 유지합니다.
+- `gpcr_core_decoy_intrusion_v1`과 `gpcr_core_linear_rescore_v1`은 바로 claim하지 않습니다.
+- 두 후보는 같은 full 100k gate에서 shadow 또는 guarded apply 비교를 먼저 통과해야 하며, `gpcr_core_full`과 `ChEMBL50` lane을 분리해서 기록합니다.
+- 비교가 green이어도 GPCR-family claim으로 승격하려면 family-held-out scorecard와 non-leaky validation이 별도로 green이어야 합니다.
+
 Primary artifacts:
 
 - `runs/external_validation_2026-04-30_gpcr_scaleup_100k_residualv4_apply_candidate_v1_set1_core_blind_gpcr_core_full_p0_n100000_r1_summary.json`

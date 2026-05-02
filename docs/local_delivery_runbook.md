@@ -60,6 +60,7 @@ The current state is green end-to-end for the restricted local-delivery scope; k
 - `gpcr_adrb2_beta_blocker_pharmacophore_v1` adds an ADRB2 beta-blocker/aryloxypropanolamine SMARTS reward as a target-specific residual candidate. The shadow residual-score audit is green (`binding_score_composite_v7_residual_shadow`, `PR-AUC=1.0000`, `PR-AUC CI low=1.0000`, `top20=0.30`, `positive_count=6`), but shadow evidence is not delivery or router-promotion evidence.
 - The guarded apply run for the ADRB2 core 100k lane is green (`binding_score_composite_v7_residual_active`, `PR-AUC=1.0000`, `PR-AUC CI low=1.0000`, `top20=0.30`, `positive_count=6`, strict gate pass).
 - The guarded apply run for the ADRB2 `ChEMBL50` 100k lane is green (`PR-AUC=0.9662`, `PR-AUC CI low=0.9264`, `top20=1.00`, `positive_count=56`, strict gate pass), but it remains bounded target-specific support rather than a general GPCR family claim.
+- Treat `gpcr_core_decoy_intrusion_v1` and `gpcr_core_linear_rescore_v1` as comparison candidates only; do not claim them until the same full 100k gate is green under shadow or guarded apply evidence, with core and `ChEMBL50` lanes reported separately.
 - Do not widen this into GPCR-family, router-promotion, or commercial scale-up wording until a non-leaky family-held-out validation packet and family scorecard are current and green.
 
 ### Wetlab Rescue Sequence
