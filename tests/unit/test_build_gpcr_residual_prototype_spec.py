@@ -218,6 +218,170 @@ def test_build_gpcr_residual_prototype_spec_core_family_balanced_rescore_v1_is_c
     assert any(row["feature_name"] == "family_balanced_pose_energy_support" for row in payload["feature_rows"])
 
 
+def test_build_gpcr_residual_prototype_spec_core_family_anchor_rescore_v2_is_claim_locked(tmp_path: Path) -> None:
+    out_json = tmp_path / "prototype_family_anchor_v2.json"
+    out_csv = tmp_path / "prototype_family_anchor_v2.csv"
+    out_md = tmp_path / "prototype_family_anchor_v2.md"
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools/build_gpcr_residual_prototype_spec.py"),
+            "--variant",
+            "gpcr_core_family_anchor_rescore_v2",
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=ROOT,
+    )
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    constraints = payload["prototype"]["constraints"]
+    linear = payload["prototype"]["linear_rescore"]
+    term_features = {term["feature"] for term in linear["terms"]}
+    term_weights = {term["feature"]: term["weight"] for term in linear["terms"]}
+    feature_rows = {row["feature_name"]: row for row in payload["feature_rows"]}
+
+    assert payload["summary"]["prototype_variant"] == "gpcr_core_family_anchor_rescore_v2"
+    assert constraints["comparison_only_candidate"] is True
+    assert constraints["claim_locked_candidate"] is True
+    assert constraints["target_identity_feature_allowed"] is False
+    assert constraints["scorer_apply_allowed"] is False
+    assert constraints["claim_safe_assertion_allowed"] is False
+    assert linear["enabled"] is True
+    assert linear["combine_mode"] == "replace"
+    assert {
+        "binding_score_composite_v7_prior_active",
+        "gpcr_conserved_anchor_proxy",
+        "gpcr_basic_amine_proxy",
+        "prior_overreward_without_anchor",
+        "gpcr_pose_chemistry_hard_decoy_pressure",
+    } <= term_features
+    assert term_weights["binding_score_composite_v7_prior_active"] == 1.0
+    assert term_weights["gpcr_basic_amine_proxy"] == -4.0
+    assert term_weights["gpcr_conserved_anchor_proxy"] == -0.1
+    assert term_weights["prior_overreward_without_anchor"] == 0.2
+    assert term_weights["gpcr_pose_chemistry_hard_decoy_pressure"] == 3.0
+    assert "pose_physics_support" in feature_rows
+    assert "gpcr_smiles_present_proxy" in feature_rows
+    assert "target_internal_pairwise_pressure" in feature_rows
+    assert "target_internal_pairwise_replay_diagnostic" in feature_rows
+    assert "gpcr_anchor_chemistry_mismatch_pressure" in feature_rows
+    assert all("target" not in feature.lower() or feature == "target_internal_pairwise_pressure" for feature in term_features)
+    assert feature_rows["target_internal_pairwise_replay_diagnostic"]["direction"] == "diagnostic_only"
+    assert "target_internal_pairwise_replay_diagnostic" not in term_features
+    assert "gpcr_anchor_chemistry_mismatch_pressure" in term_features
+    assert term_weights["gpcr_anchor_chemistry_mismatch_pressure"] == 1.4
+    assert not any(
+        blocked in "gpcr_anchor_chemistry_mismatch_pressure"
+        for blocked in ["target", "label", "rank", "reference", "binding", "ligand_id", "decoy"]
+    )
+    assert feature_rows["gpcr_conserved_anchor_proxy"]["role"] == "conserved_anchor_proxy"
+    assert feature_rows["gpcr_basic_amine_proxy"]["role"] == "conserved_anchor_chemistry_proxy"
+    assert feature_rows["gpcr_smiles_present_proxy"]["role"] == "chemistry_availability_gate"
+    assert "no_target_identity_features" in payload["prototype"]["interactions"]
+
+
+def test_build_gpcr_residual_prototype_spec_core_family_anchor_ci_stability_v3_is_diagnostic_only(tmp_path: Path) -> None:
+    out_json = tmp_path / "prototype_family_anchor_ci_v3.json"
+    out_csv = tmp_path / "prototype_family_anchor_ci_v3.csv"
+    out_md = tmp_path / "prototype_family_anchor_ci_v3.md"
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools/build_gpcr_residual_prototype_spec.py"),
+            "--variant",
+            "gpcr_core_family_anchor_ci_stability_v3",
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=ROOT,
+    )
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    constraints = payload["prototype"]["constraints"]
+    tuning = payload["prototype"]["tuning"]
+    linear = payload["prototype"]["linear_rescore"]
+    term_features = {term["feature"] for term in linear.get("terms", [])}
+    feature_rows = {row["feature_name"]: row for row in payload["feature_rows"]}
+
+    assert payload["summary"]["prototype_variant"] == "gpcr_core_family_anchor_ci_stability_v3"
+    assert constraints["claim_locked_candidate"] is True
+    assert constraints["diagnostic_only_candidate"] is True
+    assert constraints["scorer_apply_allowed"] is False
+    assert constraints["claim_safe_assertion_allowed"] is False
+    assert constraints["target_identity_feature_allowed"] is False
+    assert constraints["ci_low_threshold"] == 0.45
+    assert linear["enabled"] is False
+    assert tuning["candidate_source"] == "family_anchor_v2_shadow_ci_low_blocker"
+    assert tuning["v2_shadow_pr_auc"] == 0.5767474245351905
+    assert tuning["v2_shadow_pr_auc_ci_low"] == 0.21066694653866244
+    assert tuning["v2_shadow_pr_auc_ci_low_gap_to_threshold"] == 0.23933305346133758
+    assert "bootstrap_ci_low_stability_probe" in feature_rows
+    assert "acidic_anchor_overcontact_pressure_probe" in feature_rows
+    assert feature_rows["bootstrap_ci_low_stability_probe"]["direction"] == "diagnostic_only"
+    assert feature_rows["acidic_anchor_overcontact_pressure_probe"]["direction"] == "diagnostic_only"
+    assert "acidic_anchor_overcontact_pressure_probe" not in term_features
+    assert "acidic_anchor_overcontact_pressure_probe" in payload["prototype"]["interactions"]
+    assert "ci_low_stability_metadata_required" in payload["prototype"]["interactions"]
+    assert "family_anchor_v2_score_preserved_as_baseline" in payload["prototype"]["interactions"]
+
+
+def test_build_gpcr_residual_prototype_spec_acidic_anchor_overcontact_prior_gate_v4_is_claim_locked(tmp_path: Path) -> None:
+    out_json = tmp_path / "prototype_anchor_overcontact_v4.json"
+    out_csv = tmp_path / "prototype_anchor_overcontact_v4.csv"
+    out_md = tmp_path / "prototype_anchor_overcontact_v4.md"
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools/build_gpcr_residual_prototype_spec.py"),
+            "--variant",
+            "gpcr_core_acidic_anchor_overcontact_prior_gate_v4",
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=ROOT,
+    )
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    constraints = payload["prototype"]["constraints"]
+    tuning = payload["prototype"]["tuning"]
+    linear = payload["prototype"]["linear_rescore"]
+    term_features = {term["feature"] for term in linear.get("terms", [])}
+    feature_rows = {row["feature_name"]: row for row in payload["feature_rows"]}
+
+    assert payload["summary"]["prototype_variant"] == "gpcr_core_acidic_anchor_overcontact_prior_gate_v4"
+    assert constraints["claim_locked_candidate"] is True
+    assert constraints["shadow_only_candidate"] is True
+    assert constraints["diagnostic_only_candidate"] is True
+    assert constraints["scorer_apply_allowed"] is False
+    assert constraints["claim_safe_assertion_allowed"] is False
+    assert constraints["target_identity_feature_allowed"] is False
+    assert constraints["label_feature_allowed"] is False
+    assert constraints["rank_feature_allowed"] is False
+    assert constraints["ligand_id_feature_allowed"] is False
+    assert constraints["reference_binding_value_allowed"] is False
+    assert constraints["threshold_relaxation_allowed"] is False
+    assert linear["enabled"] is True
+    assert tuning["candidate_source"] == "post_v3_acidic_anchor_overcontact_prior_gate"
+    assert tuning["threshold_relaxation_allowed"] is False
+    assert "gpcr_acidic_anchor_overcontact_prior_gate" in feature_rows
+    assert "gpcr_acidic_anchor_overcontact_prior_gate" in term_features
+    assert "no_target_identity_labels_ranks_ligand_ids_or_reference_values" in payload["prototype"]["interactions"]
+    assert "shadow_only_active_claim_disabled" in payload["prototype"]["interactions"]
+
+
 def test_build_gpcr_residual_prototype_spec_adrb2_pharmacophore_v1(tmp_path: Path) -> None:
     out_json = tmp_path / "prototype_pharmacophore.json"
     out_csv = tmp_path / "prototype_pharmacophore.csv"

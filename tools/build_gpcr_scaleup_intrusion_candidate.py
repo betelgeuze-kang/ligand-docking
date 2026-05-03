@@ -20,6 +20,7 @@ MISMATCH_CONTACT_RESCORE_VARIANT = "gpcr_core_mismatch_contact_rescore_v1"
 STRUCTURE_SUPPORT_RESCORE_VARIANT = "gpcr_core_structure_support_rescore_v1"
 FAMILY_BALANCED_RESCORE_VARIANT = "gpcr_core_family_balanced_rescore_v1"
 PHARMACOPHORE_VARIANT = "gpcr_adrb2_beta_blocker_pharmacophore_v1"
+ACIDIC_ANCHOR_OVERCONTACT_PRIOR_GATE_VARIANT = "gpcr_core_acidic_anchor_overcontact_prior_gate_v4"
 SUPPORTED_VARIANTS = {
     INTRUSION_VARIANT,
     LINEAR_RESCORE_VARIANT,
@@ -27,6 +28,7 @@ SUPPORTED_VARIANTS = {
     STRUCTURE_SUPPORT_RESCORE_VARIANT,
     FAMILY_BALANCED_RESCORE_VARIANT,
     PHARMACOPHORE_VARIANT,
+    ACIDIC_ANCHOR_OVERCONTACT_PRIOR_GATE_VARIANT,
 }
 SUPPORTED_MODES = {"shadow_only", "apply"}
 SUPPORTED_SCORE_REFERENCE_SCALING_MODES = {"run_local", "fixed_family_reference"}
@@ -37,6 +39,9 @@ VARIANT_DEFAULT_SPEC_JSON = {
     STRUCTURE_SUPPORT_RESCORE_VARIANT: "runs/gpcr_residual_prototype_spec_core_structure_support_rescore_v1_current.json",
     FAMILY_BALANCED_RESCORE_VARIANT: "runs/gpcr_residual_prototype_spec_core_family_balanced_rescore_v1_current.json",
     PHARMACOPHORE_VARIANT: "runs/gpcr_residual_prototype_spec_adrb2_beta_blocker_pharmacophore_v1_current.json",
+    ACIDIC_ANCHOR_OVERCONTACT_PRIOR_GATE_VARIANT: (
+        "runs/gpcr_residual_prototype_spec_acidic_anchor_overcontact_prior_gate_v4_shadow.json"
+    ),
 }
 VARIANT_CANDIDATE_KIND = {
     INTRUSION_VARIANT: "gpcr_core_decoy_intrusion_100k",
@@ -45,9 +50,11 @@ VARIANT_CANDIDATE_KIND = {
     STRUCTURE_SUPPORT_RESCORE_VARIANT: "gpcr_core_structure_support_rescore_100k",
     FAMILY_BALANCED_RESCORE_VARIANT: "gpcr_core_family_balanced_rescore_100k",
     PHARMACOPHORE_VARIANT: "gpcr_adrb2_beta_blocker_pharmacophore_100k",
+    ACIDIC_ANCHOR_OVERCONTACT_PRIOR_GATE_VARIANT: "gpcr_core_acidic_anchor_overcontact_prior_gate_100k",
 }
 VARIANT_DEFAULT_BASE_PROFILE_JSON = {
     FAMILY_BALANCED_RESCORE_VARIANT: "runs/gpcr_frozen_candidate_profile_support_current/profile.json",
+    ACIDIC_ANCHOR_OVERCONTACT_PRIOR_GATE_VARIANT: "runs/gpcr_frozen_candidate_profile_support_current/profile.json",
 }
 
 
@@ -176,6 +183,7 @@ def _candidate_profile(
     if not isinstance(constraints, dict):
         constraints = {}
     claim_locked_candidate = bool(constraints.get("claim_locked_candidate")) or variant == FAMILY_BALANCED_RESCORE_VARIANT
+    shadow_only_candidate = bool(constraints.get("shadow_only_candidate"))
     profile["platform_promotion_allowed"] = False
     if structure_support_gate:
         profile["evidence_role"] = "reject_shadow_evidence"
@@ -187,6 +195,13 @@ def _candidate_profile(
         profile["claim_locked_candidate"] = True
         profile["threshold_relaxation_allowed"] = False
         profile["fake_pass_allowed"] = False
+    if shadow_only_candidate:
+        profile["shadow_only_candidate"] = True
+        profile["shadow_only_active_locked"] = True
+        profile["residual_prototype_shadow_only_active_locked"] = True
+        profile["residual_prototype_status"] = "shadow_only_claim_locked"
+        profile["ranking_score_col"] = "binding_score_composite_v7"
+        profile["ranking_probability_score_col"] = "binding_score_composite_v7"
     if str(heavy_artifacts_root).strip():
         profile["heavy_artifacts_root"] = str(heavy_artifacts_root).strip()
         profile["auto_heavy_artifacts_root"] = False
@@ -271,6 +286,11 @@ def _candidate_set_spec(
         governance["claim_locked_candidate"] = True
         governance["threshold_relaxation_allowed"] = False
         governance["fake_pass_allowed"] = False
+    if bool(constraints.get("shadow_only_candidate")):
+        governance["shadow_only_candidate"] = True
+        governance["shadow_only_active_locked"] = True
+        governance["comparison_candidate_role"] = "shadow_candidate"
+        governance["apply_mode_claim_allowed"] = False
     if structure_support_gate:
         governance["evidence_role"] = "reject_shadow_evidence"
         governance["structure_support_gate"] = structure_support_gate
@@ -349,11 +369,20 @@ def build_payload(
     score_reference_scaling_mode = str(score_reference_scaling_mode or "run_local").strip()
     if score_reference_scaling_mode not in SUPPORTED_SCORE_REFERENCE_SCALING_MODES:
         raise ValueError(f"unsupported score reference scaling mode: {score_reference_scaling_mode}")
+    if variant == ACIDIC_ANCHOR_OVERCONTACT_PRIOR_GATE_VARIANT and mode != "shadow_only":
+        raise ValueError("gpcr_core_acidic_anchor_overcontact_prior_gate_v4 is shadow-only; apply mode is forbidden")
+    if (
+        variant == ACIDIC_ANCHOR_OVERCONTACT_PRIOR_GATE_VARIANT
+        and score_reference_scaling_mode != "fixed_family_reference"
+    ):
+        raise ValueError(
+            "gpcr_core_acidic_anchor_overcontact_prior_gate_v4 requires fixed_family_reference score scaling"
+        )
     out_root = _resolve(out_dir)
     residual_spec_path = _resolve(spec_json or VARIANT_DEFAULT_SPEC_JSON[variant])
     base_profile_json_text = str(base_profile_json or "").strip()
     if not base_profile_json_text or (
-        variant == FAMILY_BALANCED_RESCORE_VARIANT
+        variant in VARIANT_DEFAULT_BASE_PROFILE_JSON
         and base_profile_json_text == DEFAULT_BASE_PROFILE_JSON
     ):
         base_profile_json_text = _default_base_profile_json_for_variant(variant)

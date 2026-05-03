@@ -241,6 +241,165 @@ def _feature_rows(variant: str) -> list[dict[str, Any]]:
                 },
             ]
         )
+    if variant in {
+        "gpcr_core_family_anchor_rescore_v2",
+        "gpcr_core_family_anchor_ci_stability_v3",
+        "gpcr_core_acidic_anchor_overcontact_prior_gate_v4",
+    }:
+        rows.extend(
+            [
+                {
+                    "feature_name": "gpcr_smiles_present_proxy",
+                    "role": "chemistry_availability_gate",
+                    "direction": "gate_chemistry_penalties_when_ligand_smiles_is_present",
+                    "rationale": (
+                        "Anchor-chemistry mismatch pressure must not treat missing SMILES as evidence that a row lacks "
+                        "basic-amine chemistry. This target-agnostic availability gate prevents false penalty on "
+                        "chemistry-missing rows."
+                    ),
+                },
+                {
+                    "feature_name": "gpcr_conserved_anchor_proxy",
+                    "role": "conserved_anchor_proxy",
+                    "direction": "reward_shared_anchor_like_pose_physics_without_target_identity",
+                    "rationale": (
+                        "Proxy for aminergic GPCR conserved-anchor behavior such as Asp3.32 salt-bridge support, "
+                        "aromatic-cage compatibility, and orthosteric occupancy. Current implementation is stage3 "
+                        "pose/physics proxy only and must not encode target identity."
+                    ),
+                },
+                {
+                    "feature_name": "gpcr_basic_amine_proxy",
+                    "role": "conserved_anchor_chemistry_proxy",
+                    "direction": "reward_basic_amine_chemistry_for_shared_aminergic_gpcr_anchor",
+                    "rationale": (
+                        "DRD2 diagnostics show the positive contacts the acidic anchor, but hard decoys can over-anchor "
+                        "without basic amine chemistry. This target-agnostic chemistry proxy separates shared aminergic "
+                        "GPCR anchor compatibility from hydrophobic contact overreward."
+                    ),
+                },
+                {
+                    "feature_name": "pose_physics_support",
+                    "role": "pose_physics_support",
+                    "direction": "reward_when_energy_contact_stability_and_distance_agree",
+                    "rationale": "DRD2 rescue should come from shared pose/physics support rather than ligand-prior overreward.",
+                },
+                {
+                    "feature_name": "prior_overreward_without_anchor",
+                    "role": "prior_gate",
+                    "direction": "penalize_prior_reward_when_anchor_proxy_is_absent",
+                    "rationale": "Affinity, MW, logP, rotor, and polar priors should only help when the row has pose-anchor support.",
+                },
+                {
+                    "feature_name": "target_internal_pairwise_pressure",
+                    "role": "pairwise_hard_decoy_proxy",
+                    "direction": "diagnostic_only",
+                    "rationale": (
+                        "Replay diagnostic for the next pairwise hard-decoy loss. Live scoring must not use target "
+                        "labels or binder labels, so this remains diagnostic-only before claim review."
+                    ),
+                },
+                {
+                    "feature_name": "gpcr_pose_chemistry_hard_decoy_pressure",
+                    "role": "target_agnostic_hard_decoy_pressure",
+                    "direction": "penalize_prior_or_over_anchor_rows_without_basic_amine_support",
+                    "rationale": (
+                        "Active shadow/replay pressure uses only ligand chemistry plus pose/physics proxies to suppress "
+                        "hydrophobic low-polar basic-amine or over-anchor decoy-like rows without target identity, labels, "
+                        "or threshold relaxation."
+                    ),
+                },
+                {
+                    "feature_name": "gpcr_anchor_chemistry_mismatch_pressure",
+                    "role": "target_agnostic_anchor_chemistry_pressure",
+                    "direction": "penalize_anchor_like_pose_support_without_basic_amine_chemistry",
+                    "rationale": (
+                        "DRD2 hard rows need extra pressure when pose/physics support looks anchor-like but the "
+                        "shared aminergic basic-amine chemistry proxy is absent. This uses only ligand chemistry and "
+                        "pose/physics support proxies."
+                    ),
+                },
+                {
+                    "feature_name": "target_internal_pairwise_replay_diagnostic",
+                    "role": "pairwise_replay_diagnostic",
+                    "direction": "diagnostic_only",
+                    "rationale": (
+                        "Reserved output column for target-internal hard-decoy replay analysis. It is not a linear "
+                        "scorer term because true pairwise replay may require target/label context unavailable in live scoring."
+                    ),
+                },
+                {
+                    "feature_name": "drd2_pose_physics_rescue_slice",
+                    "role": "failure_slice",
+                    "direction": "diagnostic_only",
+                    "rationale": "Latest r2 evidence shows DRD2 positive tail-rank is the remaining PR-AUC/CI-low blocker.",
+                },
+                {
+                    "feature_name": "claim_locked_family_anchor_replay",
+                    "role": "claim_boundary",
+                    "direction": "comparison_only",
+                    "rationale": "This v2 lane opens only diagnostics, shadow/replay, and guarded-apply evidence; no delivery/router/platform promotion.",
+                },
+            ]
+        )
+    if variant == "gpcr_core_family_anchor_ci_stability_v3":
+        rows.extend(
+            [
+                {
+                    "feature_name": "acidic_anchor_overcontact_pressure_probe",
+                    "role": "acidic_anchor_geometry_diagnostic",
+                    "direction": "diagnostic_only",
+                    "rationale": (
+                        "DRD2 rank-failure diagnostics suggest many top hard decoys may be over-contacting conserved "
+                        "acidic anchor geometry. This remains a replay-only geometry probe until it is shown to improve "
+                        "CI-low without target identity, labels, ranks, ligand IDs, or reference-value leakage."
+                    ),
+                },
+                {
+                    "feature_name": "bootstrap_ci_low_stability_probe",
+                    "role": "ci_low_stability_diagnostic",
+                    "direction": "diagnostic_only",
+                    "rationale": (
+                        "The v2 shadow point PR-AUC improved, but bootstrap PR-AUC CI-low remains below the 0.45 "
+                        "gate. This v3 lane records the stability gap explicitly before any scorer or claim promotion."
+                    ),
+                },
+                {
+                    "feature_name": "family_anchor_v2_score_preservation",
+                    "role": "evidence_preservation",
+                    "direction": "comparison_only",
+                    "rationale": (
+                        "Preserve v2 as the scored replay baseline and add only CI-low diagnostics until bootstrap "
+                        "support explains the unstable lower tail."
+                    ),
+                },
+            ]
+        )
+    if variant == "gpcr_core_acidic_anchor_overcontact_prior_gate_v4":
+        rows.extend(
+            [
+                {
+                    "feature_name": "gpcr_acidic_anchor_overcontact_prior_gate",
+                    "role": "target_agnostic_overcontact_prior_gate",
+                    "direction": "penalize_anchor_overcontact_only_when_ligand_prior_is_overrewarded",
+                    "rationale": (
+                        "Post-v3 diagnostics point to acidic-anchor overcontact as a candidate blocker, but live "
+                        "scoring must only use shared pose/physics and ligand chemistry proxies. This gate activates "
+                        "only when anchor-like contact is high, basic-amine support is absent, and ligand prior pressure "
+                        "is overrewarded."
+                    ),
+                },
+                {
+                    "feature_name": "gpcr_acidic_anchor_overcontact_prior_gate_shadow_score",
+                    "role": "claim_locked_shadow_score",
+                    "direction": "diagnostic_only",
+                    "rationale": (
+                        "Candidate score is emitted for shadow comparison only; it cannot authorize active claims, "
+                        "router promotion, threshold relaxation, or broad GPCR delivery assertions."
+                    ),
+                },
+            ]
+        )
     if variant == "gpcr_adrb2_beta_blocker_pharmacophore_v1":
         rows.extend(
             [
@@ -640,6 +799,194 @@ def build_payload(*, variant: str = "current") -> dict[str, Any]:
             "non-ADRB2 guarded 100k evidence. Only open guarded apply after replay improves non-ADRB2 tail ranks "
             "without threshold relaxation, target identity features, or claim promotion."
         )
+    elif variant == "gpcr_core_family_anchor_rescore_v2":
+        constraints = {
+            **constraints,
+            "max_abs_delta_score": 0.0,
+            "yellow_band_abs_delta_score": 0.0,
+            "comparison_only_candidate": True,
+            "claim_locked_candidate": True,
+            "family_anchor_rescore_candidate": True,
+            "router_promotion_allowed": False,
+            "platform_promotion_allowed": False,
+            "apply_mode_claim_allowed": False,
+            "scorer_apply_allowed": False,
+            "claim_safe_assertion_allowed": False,
+            "broad_gpcr_claim_allowed": False,
+            "threshold_relaxation_allowed": False,
+            "fake_pass_allowed": False,
+            "target_identity_feature_allowed": False,
+            "atom_level_anchor_status": "proxy_pending",
+            "diagnostic_source_artifact": "runs/gpcr_guarded_100k_rank_failure_diagnostics_current.json#drd2_pose_physics_diagnostics",
+            "required_before_claim": [
+                "drd2_pose_physics_diagnostics",
+                "family_anchor_shadow_or_replay_evidence",
+                "guarded_apply_evidence",
+                "full_100k_ci_low_top20_claim_review_green",
+            ],
+        }
+        tuning = {
+            "variant": "gpcr_core_family_anchor_rescore_v2",
+            "candidate_source": "latest_family_balanced_frozen_r2",
+            "failure_tags": [
+                "drd2_positive_tail_rank",
+                "prior_overreward_without_anchor",
+                "target_internal_decoy_intrusion",
+                "ci_low_below_threshold",
+            ],
+            "latest_guarded_100k_pr_auc": 0.5186945103743427,
+            "latest_guarded_100k_pr_auc_ci_low": 0.1485815545422209,
+            "latest_guarded_100k_top20_hit_rate": 0.25,
+            "latest_drd2_positive_global_rank": 18923,
+            "latest_drd2_positive_within_target_rank": 5315,
+            "anchor_proxy_mode": "stage3_pose_physics_proxy",
+            "target_identity_feature_allowed": False,
+            "replay_score_formula": (
+                "1.00*binding_score_composite_v7_prior_active - 4.00*gpcr_basic_amine_proxy "
+                "- 0.10*gpcr_conserved_anchor_proxy + 0.20*prior_overreward_without_anchor "
+                "+ 3.00*gpcr_pose_chemistry_hard_decoy_pressure "
+                "+ 1.40*gpcr_anchor_chemistry_mismatch_pressure"
+            ),
+        }
+        interactions = [
+            "drd2_pose_physics_rescue_first",
+            "conserved_anchor_proxy_without_target_identity",
+            "basic_amine_anchor_chemistry_without_target_identity",
+            "ligand_prior_reward_only_when_anchor_proxy_present",
+            "target_internal_pairwise_hard_decoy_pressure",
+            "full_100k_ci_low_top20_gate_required",
+            "no_target_identity_features",
+            "no_router_platform_or_claim_promotion",
+        ]
+        next_step = (
+            "Run gpcr_core_family_anchor_rescore_v2 only as a claim-locked shadow/replay candidate on the latest "
+            "family-balanced frozen 100k evidence. It should rescue the DRD2 positive by shared pose/physics anchor "
+            "support and penalize prior-only hard decoys before any guarded apply or full 100k claim review."
+        )
+    elif variant == "gpcr_core_family_anchor_ci_stability_v3":
+        constraints = {
+            **constraints,
+            "max_abs_delta_score": 0.0,
+            "yellow_band_abs_delta_score": 0.0,
+            "comparison_only_candidate": True,
+            "claim_locked_candidate": True,
+            "diagnostic_only_candidate": True,
+            "family_anchor_ci_stability_candidate": True,
+            "router_promotion_allowed": False,
+            "platform_promotion_allowed": False,
+            "apply_mode_claim_allowed": False,
+            "scorer_apply_allowed": False,
+            "claim_safe_assertion_allowed": False,
+            "broad_gpcr_claim_allowed": False,
+            "threshold_relaxation_allowed": False,
+            "fake_pass_allowed": False,
+            "target_identity_feature_allowed": False,
+            "ci_low_threshold": 0.45,
+            "diagnostic_source_artifact": "runs/gpcr_guarded_100k_rank_failure_diagnostics_current.json#ci_low_stability_metadata",
+            "required_before_claim": [
+                "ci_low_stability_metadata",
+                "acidic_anchor_overcontact_pressure_probe",
+                "bootstrap_positive_support_instability_review",
+                "family_anchor_v2_score_preserved_as_baseline",
+                "full_100k_ci_low_top20_claim_review_green",
+            ],
+        }
+        tuning = {
+            "variant": "gpcr_core_family_anchor_ci_stability_v3",
+            "candidate_source": "family_anchor_v2_shadow_ci_low_blocker",
+            "failure_tags": [
+                "v2_point_pr_auc_improved",
+                "v2_bootstrap_pr_auc_ci_low_below_threshold",
+                "bootstrap_positive_support_instability",
+                "claim_promotion_blocked",
+            ],
+            "v2_shadow_pr_auc": 0.5767474245351905,
+            "v2_shadow_pr_auc_ci_low": 0.21066694653866244,
+            "v2_shadow_pr_auc_ci_low_threshold": 0.45,
+            "v2_shadow_pr_auc_ci_low_gap_to_threshold": 0.23933305346133758,
+            "v2_shadow_top20_hit_rate": 0.25,
+            "scorer_change": "none",
+            "target_identity_feature_allowed": False,
+        }
+        interactions = [
+            "acidic_anchor_overcontact_pressure_probe",
+            "bootstrap_ci_low_stability_probe",
+            "ci_low_stability_metadata_required",
+            "family_anchor_v2_score_preserved_as_baseline",
+            "no_new_live_scorer_terms",
+            "no_target_identity_features",
+            "no_router_platform_or_claim_promotion",
+        ]
+        next_step = (
+            "Use gpcr_core_family_anchor_ci_stability_v3 as a diagnostic-only packet to explain why v2 shadow "
+            "PR-AUC CI-low remains below 0.45. Keep v2 scoring evidence frozen and do not open guarded apply until "
+            "bootstrap CI-low stability is green."
+        )
+    elif variant == "gpcr_core_acidic_anchor_overcontact_prior_gate_v4":
+        constraints = {
+            **constraints,
+            "max_abs_delta_score": 0.0,
+            "yellow_band_abs_delta_score": 0.0,
+            "comparison_only_candidate": True,
+            "claim_locked_candidate": True,
+            "shadow_only_candidate": True,
+            "diagnostic_only_candidate": True,
+            "acidic_anchor_overcontact_prior_gate_candidate": True,
+            "router_promotion_allowed": False,
+            "platform_promotion_allowed": False,
+            "apply_mode_claim_allowed": False,
+            "scorer_apply_allowed": False,
+            "claim_safe_assertion_allowed": False,
+            "broad_gpcr_claim_allowed": False,
+            "threshold_relaxation_allowed": False,
+            "fake_pass_allowed": False,
+            "target_identity_feature_allowed": False,
+            "label_feature_allowed": False,
+            "rank_feature_allowed": False,
+            "ligand_id_feature_allowed": False,
+            "reference_binding_value_allowed": False,
+            "diagnostic_source_artifact": "runs/gpcr_guarded_100k_rank_failure_diagnostics_current.json#post_v3_acidic_anchor_review",
+            "required_before_claim": [
+                "shadow_only_overcontact_prior_gate_telemetry",
+                "leakage_review_no_target_label_rank_id_reference_inputs",
+                "family_anchor_v2_and_v3_behavior_preserved",
+                "fresh_full_100k_ci_low_top20_claim_review_green",
+            ],
+        }
+        tuning = {
+            "variant": "gpcr_core_acidic_anchor_overcontact_prior_gate_v4",
+            "candidate_source": "post_v3_acidic_anchor_overcontact_prior_gate",
+            "failure_tags": [
+                "acidic_anchor_overcontact_pressure_probe",
+                "prior_overreward_without_anchor",
+                "basic_amine_absent_anchor_overcontact",
+                "claim_promotion_blocked",
+            ],
+            "scorer_change": "shadow_only_linear_candidate",
+            "target_identity_feature_allowed": False,
+            "label_feature_allowed": False,
+            "rank_feature_allowed": False,
+            "ligand_id_feature_allowed": False,
+            "reference_binding_value_allowed": False,
+            "threshold_relaxation_allowed": False,
+            "replay_score_formula": (
+                "binding_score_composite_v7_prior_active "
+                "+ 2.25*gpcr_acidic_anchor_overcontact_prior_gate"
+            ),
+        }
+        interactions = [
+            "post_v3_acidic_anchor_overcontact_prior_gate",
+            "overcontact_gate_requires_prior_overreward_without_anchor",
+            "no_target_identity_labels_ranks_ligand_ids_or_reference_values",
+            "threshold_relaxation_forbidden",
+            "shadow_only_active_claim_disabled",
+            "no_router_platform_or_claim_promotion",
+        ]
+        next_step = (
+            "Run gpcr_core_acidic_anchor_overcontact_prior_gate_v4 only as a claim-locked shadow diagnostic after "
+            "v3. It probes whether acidic-anchor overcontact plus prior overreward explains hard-decoy pressure "
+            "without target identity, labels, ranks, ligand IDs, reference binding values, or threshold relaxation."
+        )
     elif variant == "gpcr_adrb2_beta_blocker_pharmacophore_v1":
         constraints = {
             **constraints,
@@ -741,6 +1088,30 @@ def build_payload(*, variant: str = "current") -> dict[str, Any]:
                     ],
                 }
                 if variant == "gpcr_core_family_balanced_rescore_v1"
+                else {
+                    "enabled": True,
+                    "combine_mode": "replace",
+                    "intercept": 0.0,
+                    "terms": [
+                        {"feature": "binding_score_composite_v7_prior_active", "weight": 1.0},
+                        {"feature": "gpcr_basic_amine_proxy", "weight": -4.0},
+                        {"feature": "gpcr_conserved_anchor_proxy", "weight": -0.1},
+                        {"feature": "prior_overreward_without_anchor", "weight": 0.2},
+                        {"feature": "gpcr_pose_chemistry_hard_decoy_pressure", "weight": 3.0},
+                        {"feature": "gpcr_anchor_chemistry_mismatch_pressure", "weight": 1.4},
+                    ],
+                }
+                if variant == "gpcr_core_family_anchor_rescore_v2"
+                else {
+                    "enabled": True,
+                    "combine_mode": "replace",
+                    "intercept": 0.0,
+                    "terms": [
+                        {"feature": "binding_score_composite_v7_prior_active", "weight": 1.0},
+                        {"feature": "gpcr_acidic_anchor_overcontact_prior_gate", "weight": 2.25},
+                    ],
+                }
+                if variant == "gpcr_core_acidic_anchor_overcontact_prior_gate_v4"
                 else {"enabled": False}
             ),
             "feature_rows": feature_rows,
@@ -824,6 +1195,9 @@ def parse_args() -> argparse.Namespace:
             "gpcr_core_mismatch_contact_rescore_v1",
             "gpcr_core_structure_support_rescore_v1",
             "gpcr_core_family_balanced_rescore_v1",
+            "gpcr_core_family_anchor_rescore_v2",
+            "gpcr_core_family_anchor_ci_stability_v3",
+            "gpcr_core_acidic_anchor_overcontact_prior_gate_v4",
             "gpcr_adrb2_beta_blocker_pharmacophore_v1",
         ],
         default="current",

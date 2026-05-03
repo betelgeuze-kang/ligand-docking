@@ -39,6 +39,13 @@ ADRB2_BETA_BLOCKER_PHARMACOPHORE_SMARTS = "[a]-[OX2]-[CX4]-[CX4]([OX2H1])-[CX4]-
 _ADRB2_BETA_BLOCKER_PHARMACOPHORE = (
     Chem.MolFromSmarts(ADRB2_BETA_BLOCKER_PHARMACOPHORE_SMARTS) if Chem is not None else None
 )
+GPCR_BASIC_AMINE_SMARTS = (
+    "[NX3;H0,H1,H2;!$(NC=O);!$(NS=O);!$(N[S](=O)=O)]",
+    "[NX4+]",
+)
+_GPCR_BASIC_AMINE_PATTERNS = (
+    tuple(Chem.MolFromSmarts(s) for s in GPCR_BASIC_AMINE_SMARTS) if Chem is not None else tuple()
+)
 
 
 class _AuxMLP(nn.Module):
@@ -99,6 +106,18 @@ def _adrb2_beta_blocker_pharmacophore_match(smiles: Any) -> bool:
         return False
     mol = Chem.MolFromSmiles(src)
     return bool(mol is not None and mol.HasSubstructMatch(_ADRB2_BETA_BLOCKER_PHARMACOPHORE))
+
+
+def _gpcr_basic_amine_proxy(smiles: Any) -> float:
+    src = str(smiles or "").strip()
+    if not src:
+        return 0.0
+    if Chem is None or not _GPCR_BASIC_AMINE_PATTERNS:
+        return 1.0 if re.search(r"(N|\[NH[0-9+]?\]|\[N[H+]?\+?\])", src) else 0.0
+    mol = Chem.MolFromSmiles(src)
+    if mol is None:
+        return 0.0
+    return 1.0 if any(p is not None and mol.HasSubstructMatch(p) for p in _GPCR_BASIC_AMINE_PATTERNS) else 0.0
 
 
 def _safe_optional_int(value: Any) -> Optional[int]:
@@ -567,6 +586,12 @@ def _apply_residual_prototype_shadow(
     band = np.where(delta >= float(yellow_band), "yellow", np.where(delta > 0.0, "green", "none"))
 
     base_score = pd.to_numeric(result_df["binding_score_composite_v7"], errors="coerce")
+    prior_active_score = (
+        pd.to_numeric(result_df["binding_score_composite_v7_residual_active"], errors="coerce")
+        if "binding_score_composite_v7_residual_active" in result_df.columns
+        else base_score.copy()
+    )
+    prior_active_score = prior_active_score.fillna(base_score)
     shadow_score = base_score + delta
     pharmacophore_matches = np.zeros(len(result_df), dtype=np.int64)
     pharmacophore_reward = np.zeros(len(result_df), dtype=float)
@@ -600,11 +625,99 @@ def _apply_residual_prototype_shadow(
         z_ligand_onsps = (
             (ligand_onsps_series - float(ligand_onsps_series.mean())) / ligand_onsps_std
         ).to_numpy(dtype=float)
+        smiles_series = (
+            result_df["ligand_smiles"]
+            if "ligand_smiles" in result_df.columns
+            else result_df["smiles"]
+            if "smiles" in result_df.columns
+            else pd.Series([""] * len(result_df), index=result_df.index)
+        )
+        gpcr_smiles_present_proxy = smiles_series.astype(str).str.strip().ne("").astype(float).to_numpy(dtype=float)
+        gpcr_basic_amine_proxy = smiles_series.apply(_gpcr_basic_amine_proxy).astype(float).to_numpy(dtype=float)
         family_balanced_pose_energy_support = (
             _clip_pos(-z_e)
             + _clip_pos(z_c)
             + _clip_pos(z_s)
             + _clip_pos(-z_d)
+        )
+        # Shared GPCR anchor proxy only uses target-agnostic pose/physics and ligand-property signals.
+        # It is a proxy for conserved aminergic-GPCR anchor behavior until atom-level motif checks are available.
+        pose_physics_support = (
+            _clip_pos(-z_e)
+            + 0.75 * _clip_pos(z_c)
+            + 0.50 * _clip_pos(z_s)
+            + 0.50 * _clip_pos(-z_d)
+        )
+        anchor_chemistry_support = 1.0 + 0.25 * _clip_pos(z_hd) + 0.10 * _clip_pos(z_ha)
+        gpcr_conserved_anchor_proxy = np.clip(
+            pose_physics_support * anchor_chemistry_support - 0.50 * _clip_pos(z_d),
+            0.0,
+            None,
+        )
+        ligand_prior_pressure_v2 = (
+            _clip_pos(z_aff)
+            + 0.50 * _clip_pos(z_logp)
+            + 0.40 * _clip_pos(z_rot)
+            + 0.25 * _clip_pos(z_ha)
+        )
+        prior_overreward_without_anchor = np.clip(
+            ligand_prior_pressure_v2 - gpcr_conserved_anchor_proxy,
+            0.0,
+            None,
+        )
+        target_internal_pairwise_pressure = prior_overreward_without_anchor * (
+            0.50 + _clip_pos(z_d) + _clip_pos(-z_c) + _clip_pos(z_e)
+        )
+        over_anchor_without_basic_amine = np.maximum(
+            gpcr_smiles_present_proxy * gpcr_conserved_anchor_proxy * (1.0 - gpcr_basic_amine_proxy),
+            0.0,
+        )
+        z_hd_arr = pd.to_numeric(z_hd, errors="coerce").to_numpy(dtype=float)
+        z_ha_arr = pd.to_numeric(z_ha, errors="coerce").to_numpy(dtype=float)
+        anchor_chemistry_gap = np.clip(-(z_hd_arr + z_ha_arr) / 2.0, 0.0, None)
+        anchor_prior_context = 0.25 + _clip_pos(z_aff) + 0.50 * _clip_pos(z_logp) + 0.30 * _clip_pos(z_rot)
+        gpcr_anchor_chemistry_mismatch_pressure = np.clip(
+            gpcr_smiles_present_proxy
+            * (1.0 - gpcr_basic_amine_proxy)
+            * (
+                gpcr_conserved_anchor_proxy * anchor_prior_context
+                + 0.50 * pose_physics_support * anchor_chemistry_gap
+            ),
+            0.0,
+            None,
+        )
+        hydrophobic_low_polar_intrusion = (
+            gpcr_basic_amine_proxy
+            * _clip_pos(z_logp)
+            * anchor_chemistry_gap
+        )
+        gpcr_pose_chemistry_hard_decoy_pressure = np.clip(
+            hydrophobic_low_polar_intrusion
+            + 0.05 * over_anchor_without_basic_amine
+            + 0.25 * gpcr_anchor_chemistry_mismatch_pressure,
+            0.0,
+            None,
+        )
+        acidic_anchor_overcontact_excess = np.clip(
+            gpcr_conserved_anchor_proxy - (1.0 + 0.75 * gpcr_basic_amine_proxy),
+            0.0,
+            None,
+        )
+        gpcr_acidic_anchor_overcontact_prior_gate = np.clip(
+            gpcr_smiles_present_proxy
+            * (1.0 - gpcr_basic_amine_proxy)
+            * acidic_anchor_overcontact_excess
+            * (0.25 + prior_overreward_without_anchor)
+            * (0.50 + _clip_pos(z_c) + _clip_pos(-z_d)),
+            0.0,
+            None,
+        )
+        target_internal_pairwise_replay_diagnostic = np.maximum(
+            target_internal_pairwise_pressure,
+            np.maximum(
+                gpcr_pose_chemistry_hard_decoy_pressure,
+                gpcr_acidic_anchor_overcontact_prior_gate,
+            ),
         )
         donor_rich_decoy_intrusion_pressure = np.maximum(
             _clip_pos(z_hd) + 0.5 * _clip_pos(z_ha) - 0.5 * family_balanced_pose_energy_support,
@@ -623,7 +736,18 @@ def _apply_residual_prototype_shadow(
             "z_ligand_rot_bonds": pd.to_numeric(z_rot, errors="coerce").to_numpy(dtype=float),
             "z_ligand_h_donors": pd.to_numeric(z_hd, errors="coerce").to_numpy(dtype=float),
             "z_ligand_h_acceptors": pd.to_numeric(z_ha, errors="coerce").to_numpy(dtype=float),
+            "binding_score_composite_v7_prior_active": prior_active_score.to_numpy(dtype=float),
+            "gpcr_smiles_present_proxy": gpcr_smiles_present_proxy,
             "family_balanced_pose_energy_support": family_balanced_pose_energy_support,
+            "gpcr_conserved_anchor_proxy": gpcr_conserved_anchor_proxy,
+            "gpcr_basic_amine_proxy": gpcr_basic_amine_proxy,
+            "pose_physics_support": pose_physics_support,
+            "prior_overreward_without_anchor": prior_overreward_without_anchor,
+            "target_internal_pairwise_pressure": target_internal_pairwise_pressure,
+            "gpcr_pose_chemistry_hard_decoy_pressure": gpcr_pose_chemistry_hard_decoy_pressure,
+            "gpcr_anchor_chemistry_mismatch_pressure": gpcr_anchor_chemistry_mismatch_pressure,
+            "gpcr_acidic_anchor_overcontact_prior_gate": gpcr_acidic_anchor_overcontact_prior_gate,
+            "target_internal_pairwise_replay_diagnostic": target_internal_pairwise_replay_diagnostic,
             "donor_rich_decoy_intrusion_pressure": donor_rich_decoy_intrusion_pressure,
             "residual_shadow_prior_pressure": prior_pressure,
             "residual_shadow_structure_weakness": structural_weakness,
@@ -701,14 +825,69 @@ def _apply_residual_prototype_shadow(
     result_df["residual_shadow_affinity_md_support"] = affinity_md_support
     result_df["residual_shadow_affinity_md_support_mismatch"] = affinity_md_support_mismatch
     result_df["residual_shadow_mismatch_contact_delta_raw"] = mismatch_contact_raw_delta
+    result_df["binding_score_composite_v7_prior_active"] = prior_active_score
+    result_df["gpcr_smiles_present_proxy"] = (
+        computed_linear_features.get("gpcr_smiles_present_proxy", np.zeros(len(result_df), dtype=float))
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["gpcr_conserved_anchor_proxy"] = (
+        computed_linear_features.get("gpcr_conserved_anchor_proxy", np.zeros(len(result_df), dtype=float))
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["gpcr_basic_amine_proxy"] = (
+        computed_linear_features.get("gpcr_basic_amine_proxy", np.zeros(len(result_df), dtype=float))
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["pose_physics_support"] = (
+        computed_linear_features.get("pose_physics_support", np.zeros(len(result_df), dtype=float))
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["prior_overreward_without_anchor"] = (
+        computed_linear_features.get("prior_overreward_without_anchor", np.zeros(len(result_df), dtype=float))
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["target_internal_pairwise_pressure"] = (
+        computed_linear_features.get("target_internal_pairwise_pressure", np.zeros(len(result_df), dtype=float))
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["gpcr_pose_chemistry_hard_decoy_pressure"] = (
+        computed_linear_features.get("gpcr_pose_chemistry_hard_decoy_pressure", np.zeros(len(result_df), dtype=float))
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["gpcr_anchor_chemistry_mismatch_pressure"] = (
+        computed_linear_features.get("gpcr_anchor_chemistry_mismatch_pressure", np.zeros(len(result_df), dtype=float))
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["gpcr_acidic_anchor_overcontact_prior_gate"] = (
+        computed_linear_features.get(
+            "gpcr_acidic_anchor_overcontact_prior_gate",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["target_internal_pairwise_replay_diagnostic"] = (
+        computed_linear_features.get("target_internal_pairwise_replay_diagnostic", np.zeros(len(result_df), dtype=float))
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
     result_df["residual_shadow_delta_raw"] = raw_delta
     result_df["residual_shadow_delta"] = delta
     result_df["residual_shadow_band"] = band
     result_df["gpcr_adrb2_beta_blocker_pharmacophore_match"] = pharmacophore_matches
     result_df["gpcr_adrb2_beta_blocker_pharmacophore_reward"] = pharmacophore_reward
     result_df["binding_score_composite_v7_residual_shadow"] = shadow_score
+    shadow_only_active_locked = str(tuning["variant"]) == "gpcr_core_acidic_anchor_overcontact_prior_gate_v4"
     result_df["binding_score_composite_v7_residual_active"] = (
-        shadow_score if mode in {"apply", "apply_ranking"} else base_score
+        shadow_score if mode in {"apply", "apply_ranking"} and not shadow_only_active_locked else base_score
     )
     result_df["residual_shadow_family"] = family
     result_df["residual_shadow_mode"] = mode
@@ -718,11 +897,15 @@ def _apply_residual_prototype_shadow(
         result_df.sort_values("binding_score_composite_v7_residual_shadow", ascending=True)
         .head(10)[
             [
-                "ligand_id",
-                "binding_score_composite_v7",
-                "binding_score_composite_v7_residual_shadow",
-                "residual_shadow_delta",
-                "residual_shadow_band",
+                col
+                for col in [
+                    "ligand_id",
+                    "binding_score_composite_v7",
+                    "binding_score_composite_v7_residual_shadow",
+                    "residual_shadow_delta",
+                    "residual_shadow_band",
+                ]
+                if col in result_df.columns
             ]
         ]
         .to_dict(orient="records")
@@ -731,7 +914,7 @@ def _apply_residual_prototype_shadow(
         {
             "active_score_col": (
                 "binding_score_composite_v7_residual_active"
-                if mode in {"apply", "apply_ranking"}
+                if mode in {"apply", "apply_ranking"} and not shadow_only_active_locked
                 else "binding_score_composite_v7"
             ),
             "shadow_score_col": "binding_score_composite_v7_residual_shadow",
@@ -747,7 +930,13 @@ def _apply_residual_prototype_shadow(
             "yellow_band_count": int((delta >= float(yellow_band)).sum()),
             "mean_delta": float(np.mean(delta)) if len(delta) > 0 else 0.0,
             "max_delta": float(np.max(delta)) if len(delta) > 0 else 0.0,
-            "status": "shadow_ready" if mode == "shadow_only" else "apply_ready",
+            "status": (
+                "shadow_ready_claim_locked"
+                if shadow_only_active_locked
+                else "shadow_ready"
+                if mode == "shadow_only"
+                else "apply_ready"
+            ),
             "top_shadow": top_shadow,
             "max_abs_delta_score": float(max_abs_delta),
             "yellow_band_abs_delta_score": float(yellow_band),
@@ -766,6 +955,7 @@ def _apply_residual_prototype_shadow(
             "linear_rescore_missing_terms": list(missing_terms) if linear_rescore_enabled else [],
             "pharmacophore_positive_match_count": int(pharmacophore_matches.sum()),
             "pharmacophore_reward_score": float(tuning["pharmacophore_reward_score"]),
+            "shadow_only_active_locked": bool(shadow_only_active_locked),
         }
     )
     return result_df, summary
