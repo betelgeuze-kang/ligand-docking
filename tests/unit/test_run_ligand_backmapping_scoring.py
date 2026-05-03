@@ -490,6 +490,67 @@ def test_residual_intrusion_variant_does_not_apply_ungated_intrusion_raw_delta(t
     assert out.loc[0, "binding_score_composite_v7_residual_active"] == out.loc[0, "binding_score_composite_v7"]
 
 
+def test_fixed_family_reference_scaling_uses_frozen_feature_stats(tmp_path):
+    stats_json = tmp_path / "gpcr_reference_stats.json"
+    stats_json.write_text(
+        json.dumps(
+            {
+                "schema_version": "score_reference_stats_v1",
+                "reference_scope": {
+                    "family": "gpcr",
+                    "source_roles": ["fit", "calibration"],
+                    "eval_roles_used": [],
+                },
+                "features": {
+                    "ligand_h_donors": {"mean": 2.0, "std": 2.0, "n": 50},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    scaling = mod._load_score_reference_scaling(
+        mode="fixed_family_reference",
+        stats_json=str(stats_json),
+    )
+    df = pd.DataFrame({"ligand_h_donors": [2.0, 6.0]})
+
+    z = mod._zscore_with_reference(df, "ligand_h_donors", scaling)
+
+    assert z.tolist() == [0.0, 2.0]
+    assert scaling["status"] == "loaded"
+    assert scaling["applied_columns"] == ["ligand_h_donors"]
+    assert scaling["missing_columns"] == []
+    assert scaling["stats_hash"]
+    assert scaling["reference_scope"]["eval_roles_used"] == []
+
+
+def test_fixed_family_reference_scaling_falls_back_to_run_local_when_feature_missing(tmp_path):
+    stats_json = tmp_path / "gpcr_reference_stats.json"
+    stats_json.write_text(
+        json.dumps(
+            {
+                "schema_version": "score_reference_stats_v1",
+                "features": {
+                    "ligand_h_donors": {"mean": 2.0, "std": 2.0, "n": 50},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    scaling = mod._load_score_reference_scaling(
+        mode="fixed_family_reference",
+        stats_json=str(stats_json),
+    )
+    df = pd.DataFrame({"ligand_h_acceptors": [10.0, 12.0, 14.0]})
+
+    z = mod._zscore_with_reference(df, "ligand_h_acceptors", scaling)
+
+    assert z.round(6).tolist() == [-1.0, 0.0, 1.0]
+    assert scaling["applied_columns"] == []
+    assert scaling["missing_columns"] == ["ligand_h_acceptors"]
+    assert scaling["fallback_columns"] == ["ligand_h_acceptors"]
+
+
 def test_residual_pharmacophore_variant_rewards_aryloxypropanolamine_shadow_only(tmp_path):
     spec = tmp_path / "residual_pharmacophore.json"
     spec.write_text(

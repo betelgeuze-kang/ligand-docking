@@ -1,9 +1,15 @@
+import json
 from pathlib import Path
 
 import pandas as pd
 
 from tools import run_ligand_htvs_pipeline as htvs_pipeline
 from tools import run_ligand_stress_validation as mod
+
+
+def _write_json(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
 def test_augment_eval_positive_count_adds_rows(tmp_path: Path):
@@ -120,6 +126,88 @@ def test_augment_eval_positive_count_handles_labels_with_existing_role(tmp_path:
     assert int(stats["positive_count_after"]) == 2
 
 
+def test_guarded_100k_preflight_blocks_gpcr_100k_when_readiness_missing(tmp_path: Path, monkeypatch):
+    profile = tmp_path / "profile.json"
+    out_prefix = tmp_path / "runs" / "blocked_gpcr_100k"
+    _write_json(
+        profile,
+        {
+            "targets": "ADRB2_GPCR_BLIND",
+        },
+    )
+
+    args = mod.build_parser().parse_args(
+        [
+            "--profile-json",
+            str(profile),
+            "--ligand-sizes",
+            "100000",
+            "--repeats",
+            "1",
+            "--out-prefix",
+            str(out_prefix),
+            "--no-single-instance",
+            "--guarded-100k-readiness-json",
+            str(tmp_path / "runs" / "missing_readiness.json"),
+        ]
+    )
+    monkeypatch.setattr(
+        mod,
+        "_run",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("child pipeline must not start")),
+    )
+
+    payload = mod.run_stress(args)
+
+    assert payload["pass"] is False
+    assert payload["failed_stage"] == "guarded_100k_readiness_preflight"
+    stage = payload["stages"]["guarded_100k_readiness_preflight"]
+    assert stage["enforced"] is True
+    assert stage["ok"] is False
+    assert stage["blockers"] == ["guarded_100k_readiness_missing"]
+    assert payload["runs"] == []
+    assert (tmp_path / "runs" / "blocked_gpcr_100k_summary.json").exists()
+
+
+def test_guarded_100k_preflight_allows_when_readiness_eligible(tmp_path: Path):
+    readiness = tmp_path / "runs" / "readiness.json"
+    _write_json(
+        readiness,
+        {
+            "summary": {
+                "eligible": False,
+                "status": "blocked",
+                "launch_eligible": True,
+                "launch_status": "eligible",
+                "launch_blockers": [],
+                "blockers": ["ci_low_below_threshold"],
+                "claim_promotion_allowed": False,
+            }
+        },
+    )
+    args = mod.build_parser().parse_args(
+        [
+            "--guarded-100k-readiness-json",
+            str(readiness),
+            "--enforce-guarded-100k-readiness",
+        ]
+    )
+
+    payload = mod._guarded_100k_readiness_preflight(
+        args=args,
+        prof={},
+        sizes=[100000],
+        target_list=["DRD2_GPCR_BLIND"],
+    )
+
+    assert payload["enforced"] is True
+    assert payload["ok"] is True
+    assert payload["eligible"] is True
+    assert payload["launch_eligible"] is True
+    assert payload["claim_review_eligible"] is False
+    assert payload["claim_promotion_allowed"] is False
+
+
 def test_profile_traj_prod_args_default_off():
     cli = mod._profile_traj_prod_args({})
     assert cli[:2] == ["--traj-prod-stage2-preset", "off"]
@@ -211,6 +299,68 @@ def test_profile_traj_prod_args_are_accepted_by_pipeline_parser():
     assert parsed.traj_prod_light_progress_every_jobs == 333
 
 
+def test_profile_stage2_runtime_args_are_accepted_by_pipeline_parser():
+    cli = mod._profile_stage2_runtime_args(
+        {
+            "traj_job_batch_size": 1,
+            "traj_job_batch_autotune_candidates": "1",
+            "traj_job_batch_autotune_frames": 4,
+            "traj_engine_cache_max_entries": 0,
+            "traj_writer_max_pending": 8,
+        }
+    )
+    parsed = htvs_pipeline.build_parser().parse_args(
+        [
+            "--out-prefix",
+            "runs/demo_stage2_runtime",
+            "--ligand-csv",
+            "config/demo_ligands.csv",
+            "--targets",
+            "ADRB2_GPCR_BLIND",
+            "--eval-split-csv",
+            "config/demo_split.csv",
+            "--ranking-labels-csv",
+            "config/demo_labels.csv",
+            *cli,
+        ]
+    )
+    assert parsed.traj_job_batch_size == 1
+    assert parsed.traj_job_batch_autotune_candidates == "1"
+    assert parsed.traj_job_batch_autotune_frames == 4
+    assert parsed.traj_engine_cache_max_entries == 0
+    assert parsed.traj_writer_max_pending == 8
+
+
+def test_explicit_stage2_runtime_args_survive_prod_preset() -> None:
+    parsed = htvs_pipeline.build_parser().parse_args(
+        [
+            "--out-prefix",
+            "runs/demo_stage2_runtime",
+            "--ligand-csv",
+            "config/demo_ligands.csv",
+            "--targets",
+            "ADRB2_GPCR_BLIND",
+            "--eval-split-csv",
+            "config/demo_split.csv",
+            "--ranking-labels-csv",
+            "config/demo_labels.csv",
+            "--traj-prod-stage2-preset",
+            "auto",
+            "--traj-prod-stage2-preset-strict",
+            "--traj-job-batch-autotune-candidates",
+            "1",
+            "--traj-writer-workers",
+            "0",
+            "--traj-writer-max-pending",
+            "8",
+        ]
+    )
+    settings = htvs_pipeline._traj_stage2_runtime_settings(parsed, mode="full")
+    assert settings["traj_job_batch_autotune_candidates"] == "1"
+    assert settings["traj_writer_workers"] == 0
+    assert settings["traj_writer_max_pending"] == 8
+
+
 def test_profile_residual_prototype_args_are_accepted_by_pipeline_parser():
     cli = mod._profile_residual_prototype_args(
         {
@@ -245,6 +395,32 @@ def test_profile_residual_prototype_args_are_accepted_by_pipeline_parser():
     assert parsed.stage3_residual_prototype_spec_json.endswith("gpcr_residual_prototype_spec_current.json")
     assert parsed.stage3_residual_prototype_max_abs_delta_score == 1.5
     assert parsed.stage3_residual_prototype_yellow_band_abs_delta_score == 0.75
+
+
+def test_profile_score_reference_args_are_accepted_by_pipeline_parser():
+    cli = mod._profile_score_reference_args(
+        {
+            "score_reference_scaling_mode": "fixed_family_reference",
+            "score_reference_stats_json": "runs/gpcr_reference_stats_current.json",
+        }
+    )
+    parsed = htvs_pipeline.build_parser().parse_args(
+        [
+            "--out-prefix",
+            "runs/demo_reference_scaling",
+            "--ligand-csv",
+            "config/demo_ligands.csv",
+            "--targets",
+            "ADRB2_GPCR_BLIND",
+            "--eval-split-csv",
+            "config/demo_split.csv",
+            "--ranking-labels-csv",
+            "config/demo_labels.csv",
+            *cli,
+        ]
+    )
+    assert parsed.stage3_score_reference_scaling_mode == "fixed_family_reference"
+    assert parsed.stage3_score_reference_stats_json.endswith("gpcr_reference_stats_current.json")
 
 
 def test_extract_traj_prod_audit_fields_prefers_stage8_operational_summary():

@@ -22,5 +22,8 @@ def test_build_transporter_authoritative_apply_blocker_decomposition() -> None:
     assert payload["summary"]["manual_review_backlog_cleared"] is True
     assert payload["summary"]["authoritative_apply_ready"] is False
     assert payload["summary"]["top_blocker_id"] == "placeholder_packet_rows"
-    assert payload["rows"][0]["current_signal"] == "placeholder_driven_rows=12; ready_for_apply_rows=0"
+    assert (
+        payload["rows"][0]["current_signal"]
+        == "placeholder_driven_rows=12; staged_non_authoritative_rows=0; ready_for_apply_rows=0"
+    )
     assert payload["rows"][2]["current_signal"] == "reopen_ready=False; blocked_check_count=3; fit_donor=EGFR_KINASE"

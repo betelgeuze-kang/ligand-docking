@@ -10,11 +10,13 @@ python3 tools/run_local_delivery_preflight.py
 
 Before running this preflight or any ROCm accuracy bench, export `TORCH_BLAS_PREFER_HIPBLASLT=0` by default. The unsupported-architecture hipBLASLt message is a backend fallback, not a test failure, so we keep the variable fixed to make CI and delivery logs clean; the environment manifest refresh is the evidence step and must capture the actual process value in its env vars / accelerator env snapshot, with intentional supported-hardware overrides recorded as the override value instead. If the value is missing from the captured manifest, treat that as a reproducibility and log-cleanliness gap rather than an accuracy failure, and rerun the capture or leave a manifest note before delivery-ready wording. The verdict text should mirror the same default-or-override state when that setting matters to the run.
 
-Relative to commercial tools, the current stack is roughly 70-75% of a local-delivery analysis service and 40-50% of a full commercial platform. The next improvement order is claim/equivalence, family scorecards (GPCR/ion channel/kinase), CI/regression, broad benchmark, and UX/report packaging.
+Relative to commercial tools, the current stack is roughly 70-75% of a local-delivery analysis service and 40-50% of a full commercial platform. The next improvement order is claim/equivalence, family scorecards (GPCR/ion channel/kinase), CI/regression, broad benchmark, UX/report packaging, and the separate post-P0 commercial expansion queue.
 
-The preflight is a green, non-dry-run evidence refresh (`summary.overall_ok=true`, `verdict_gate_required_ok=true`), and `runs/local_delivery_verdict_gate_current.json` reports `summary.delivery_ready=true`, `p0_blocker_count=0`, `hard_blocker_count=0`, and `commercialization_queue_clear=true`. The current `accuracy_gate`, requirements/environment lock, canonical top-level nightly reentry pass, and wetlab selected-allatom pass are green, with `mean_min_distance_A=2.120 <= 2.500`. The review packet -> `current_results_index` -> `partnering_stack` -> final/dashboard -> burndown -> verdict chain is on the same metric source. The transporter negative-evidence lane remains parked as a restricted local-delivery science blocker outside this bundle, and the next bundle step is `python3 tools/build_local_delivery_bundle.py` followed immediately by `python3 tools/validate_local_delivery_bundle.py --bundle-dir <bundle_dir>`.
+Transporter AQP1/GLUT1 evidence closure and CA2/PXR closure are post-P0 follow-up work only: AQP1 is first-wave, GLUT1 is second-wave, and CA2/PXR stay prep-only until placeholder/provenance and `replacement_reference_binding_kcal_mol` are closed.
 
-The current state is green; keep the wording within the restricted local-delivery scope and treat blocked/internal-review wording only as a fallback if fresh validation regresses. The general GPCR 100k family/commercial scale-up claim remains blocked and is not part of the delivery-ready state; the ADRB2 pharmacophore evidence below is target-specific candidate evidence only.
+The preflight is a green, non-dry-run evidence refresh (`summary.overall_ok=true`, `verdict_gate_required_ok=true`), and `runs/local_delivery_verdict_gate_current.json` currently reports `summary.delivery_ready=true`, `p0_blocker_count=0`, `hard_blocker_count=0`, and `commercialization_queue_clear=true`. The current `accuracy_gate`, requirements/environment lock, latest canonical top-level nightly reentry pass, and wetlab selected-allatom pass are green, with `mean_min_distance_A=2.120 <= 2.500`. The review packet -> `current_results_index` -> `partnering_stack` -> final/dashboard -> burndown -> verdict chain is on the same metric source. The transporter negative-evidence lane remains parked as a restricted local-delivery science blocker outside this bundle, and the next bundle step is `python3 tools/build_local_delivery_bundle.py` followed immediately by `python3 tools/validate_local_delivery_bundle.py --bundle-dir <bundle_dir>`.
+
+The current state is green for the restricted local-delivery scope; keep the wording narrow and treat blocked/internal-review wording as the fallback if a fresh validation regresses. The general GPCR 100k family/commercial scale-up claim remains blocked (`claim_safe=false`) and is not part of the delivery-ready state; the ADRB2 pharmacophore evidence below is target-specific candidate evidence only.
 
 ### Hard Verification Smoke
 
@@ -45,10 +47,10 @@ Current status snapshot:
 - P0-A accuracy_gate burndown is green in the current representative run: `pass=true`, failed metrics `0`, `avg_neighbor_jaccard=1.0`, and Morton presort neighbor/self-pair parity has `total_pair_outliers=0`.
 - A is green for the local-delivery required set: `installed=13/13`, `missing=0`, `loose_sources=0`, `requirements_lock_complete=true`, and `environment_lock_complete=true`. The seven API/train/deploy/optional packages remain recorded as optional/deferred evidence and do not count as required local-delivery coverage.
 - B is green: downstream execute evidence and the canonical top-level nightly summary are keep-green, so stage6 is no longer a representative P0 blocker. Downstream execute is supporting-only evidence and cannot replace the top-level nightly artifact. The strict canonical reentry handoff is `runs/nightly_stage6_top_level_reentry_packet_current.md` together with `runs/nightly_stage6_top_level_reentry_profile_current.json`, and that pair remains supporting-only evidence.
-- C is green: wetlab selected-allatom is pass with selected `mean_min_distance_A=2.120` and `binding_energy_proxy=-0.146`, the commercialization queue is clear, and `runs/local_delivery_verdict_gate_current.json` reports `summary.delivery_ready=true`, `p0_blocker_count=0`, `hard_blocker_count=0`, and `commercialization_queue_clear=true`. The transporter negative-evidence lane remains parked outside the restricted local-delivery scope.
+- C is green for wetlab selected-allatom, and the final verdict gate is delivery-ready for the restricted scope: `runs/local_delivery_verdict_gate_current.json` currently reports `summary.delivery_ready=true`, `p0_blocker_count=0`, `hard_blocker_count=0`, and `commercialization_queue_clear=true`. The transporter negative-evidence lane remains parked outside the restricted local-delivery scope.
 - The next bundle step is `python3 tools/build_local_delivery_bundle.py` followed immediately by `python3 tools/validate_local_delivery_bundle.py --bundle-dir <bundle_dir>`.
 
-The current state is green end-to-end for the restricted local-delivery scope; keep blocked/internal-review wording only as a fallback if a fresh validation regresses.
+The current state is green end-to-end for the restricted local-delivery scope. Keep blocked/internal-review wording as the fallback if a fresh validation regresses.
 
 ### GPCR 100k Scale-up Status
 
@@ -57,10 +59,14 @@ The current state is green end-to-end for the restricted local-delivery scope; k
 - `residual-v4 apply` failed on the core lane with `PR-AUC=0.3888` and `top20=0.15`.
 - `linear C100` full rerun is reject negative evidence with `PR-AUC=0.2367` and `top20=0.05`.
 - `gpcr_core_decoy_intrusion_v1` was executed shadow-first and remains blocked: `PR-AUC=0.3910`, `PR-AUC CI low=0.0183`, `top20=0.15`, failed at `stage6_operational_gate`.
+- `gpcr_core_decoy_intrusion_v1` guarded apply core 100k was rerun on 2026-05-02 after moving heavy artifacts off the full `/mnt` device; it still fails the core gate (`PR-AUC=0.3890`, `PR-AUC CI low=0.0195`, `top20=0.15`) and remains reject/negative evidence.
+- The refreshed scale-up KPI surface now resolves packaged-copy timing evidence instead of treating the frozen wrapper files as missing: `missing_artifact_count=0`, planning-ready `6/6`.
+- The 100k benchmark remains blocked on measured evidence too: guardrails are pass `0`, fail `5`, pending `0`, and the slowest measured end-to-end speedup is only `0.458x` for `ion_trpv1_chembl50_full` versus the `>=1.8x` threshold.
 - `gpcr_adrb2_beta_blocker_pharmacophore_v1` adds an ADRB2 beta-blocker/aryloxypropanolamine SMARTS reward as a target-specific residual candidate. The shadow residual-score audit is green (`binding_score_composite_v7_residual_shadow`, `PR-AUC=1.0000`, `PR-AUC CI low=1.0000`, `top20=0.30`, `positive_count=6`), but shadow evidence is not delivery or router-promotion evidence.
 - The guarded apply run for the ADRB2 core 100k lane is green (`binding_score_composite_v7_residual_active`, `PR-AUC=1.0000`, `PR-AUC CI low=1.0000`, `top20=0.30`, `positive_count=6`, strict gate pass).
 - The guarded apply run for the ADRB2 `ChEMBL50` 100k lane is green (`PR-AUC=0.9662`, `PR-AUC CI low=0.9264`, `top20=1.00`, `positive_count=56`, strict gate pass), but it remains bounded target-specific support rather than a general GPCR family claim.
-- Treat `gpcr_core_decoy_intrusion_v1` and `gpcr_core_linear_rescore_v1` as comparison candidates only; do not claim them until the same full 100k gate is green under shadow or guarded apply evidence, with core and `ChEMBL50` lanes reported separately.
+- Treat `gpcr_core_decoy_intrusion_v1` and `gpcr_core_linear_rescore_v1` as comparison candidates only; they stay shadow/guarded-apply candidates, not immediate claim lanes. Do not claim them until the same full 100k gate is green under shadow or guarded apply evidence, with core and `ChEMBL50` lanes reported separately.
+- The current triage packet is `runs/gpcr_scaleup_regression_triage_current.json`: candidate count `6`, comparison-only count `6`, reject evidence count `5`, and `primary_blocker_task=gpcr_core_full`.
 - Do not widen this into GPCR-family, router-promotion, or commercial scale-up wording until a non-leaky family-held-out validation packet and family scorecard are current and green.
 
 ### Wetlab Rescue Sequence
@@ -136,7 +142,7 @@ Primary outputs:
 
 ## P0 Gate
 
-P0 starts here: do not issue a delivery-ready verdict unless the current preflight evidence, requirements lock, environment manifest, and verdict-gate artifacts are fresh; `runs/local_delivery_verdict_gate_current.json` reports `summary.delivery_ready=true`; the final bundle validator reports `summary.overall_ok=true` and `summary.delivery_ready_policy_ok=true`; and wetlab selected-allatom is pass with `mean_min_distance_A <= 2.500` and no hard/semi-hard blockers. The current snapshot is green for the restricted `kinase,gpcr,ion_channel` local-delivery scope: `p0_blocker_count=0`, `hard_blocker_count=0`, `commercialization_queue_clear=true`, and wetlab selected `mean_min_distance_A=2.120`. The review packet -> `current_results_index` -> `partnering_stack` -> final/dashboard -> burndown -> verdict chain must stay on the same metric source, and any mismatch is a source-consistency regression rather than pass evidence. The nightly stage6 summary is keep-green and no longer a representative P0 blocker. If `runs/wetlab_selected_allatom_repair_packet_current.md` exists, treat it as a future regression/retry reference, not as proof of pass. The current stage3 smoke and downstream execute artifacts are supporting-only evidence.
+P0 starts here: do not issue a delivery-ready verdict unless the current preflight evidence, requirements lock, environment manifest, and verdict-gate artifacts are fresh; `runs/local_delivery_verdict_gate_current.json` reports `summary.delivery_ready=true`; the final bundle validator reports `summary.overall_ok=true` and `summary.delivery_ready_policy_ok=true`; and wetlab selected-allatom is pass with `mean_min_distance_A <= 2.500` and no hard/semi-hard blockers. The current snapshot is delivery-ready for the restricted `kinase,gpcr,ion_channel` local-delivery scope: `p0_blocker_count=0`, `hard_blocker_count=0`, and `commercialization_queue_clear=true`. The review packet -> `current_results_index` -> `partnering_stack` -> final/dashboard -> burndown -> verdict chain must stay on the same metric source, and any mismatch is a source-consistency regression rather than pass evidence. The nightly stage6 summary is keep-green and no longer a representative P0 blocker. If `runs/wetlab_selected_allatom_repair_packet_current.md` exists, treat it as a future regression/retry reference, not as proof of pass. The current stage3 smoke and downstream execute artifacts are supporting-only evidence.
 
 Use these artifacts as the operator rollup:
 
@@ -210,6 +216,14 @@ Do not issue a delivery-ready verdict when:
 - score-uplift or architecture-accuracy wording is being used without the family-held-out scorecard baseline described in `docs/family_scorecard_calibration_plan.md`
 - any bundled family scorecard reports `summary.scorecard_level_status` other than `pass` or `summary.acceptance_overall_pass == false`; blocked scorecards may stay in blocked/internal-review bundles as diagnostics, but they cannot support delivery-ready wording
 - the bundle carries no family scorecard; that absence does not by itself create a new delivery-ready blocker here, but score-uplift and architecture-accuracy claims still need scorecard evidence
+
+## Heavy Artifact Cleanup
+
+Keep the `runs/` summary, evidence, manifest, and verdict artifacts as preserved evidence. Cleanup is limited to heavy trajectory frames, derived caches, and similar large intermediates under `ligand_heavy_runs`; do not treat those cleanup steps as a way to prune the delivery record.
+
+`ligand_heavy_runs` cleanup is housekeeping only. It does not change the delivery claim, any measured metric, or the `claim_safe=false` GPCR scale-up boundary described below.
+
+Before deleting anything, run a dry-run inventory first and compare the candidate delete list against the manifest or explicit path list for the exact objects to remove. If the dry-run output or manifest check is missing, stale, or ambiguous, stop and keep the data.
 
 ## Dry Run
 

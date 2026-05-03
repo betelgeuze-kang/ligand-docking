@@ -11,7 +11,13 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_BASELINE_CSV = "runs/external_validation_2026-03-22_biorxiv_v7r1_set1_core_blind_gpcr_core_full_p0_n10000_r1_stage5_ranking_rows.csv"
-DEFAULT_SCALEUP_CSV = "runs/external_validation_2026-03-23_scaleup_100k_pilot_v2r2_set1_core_blind_gpcr_core_full_p0_n100000_r1_stage5_ranking_rows.csv"
+DEFAULT_SCALEUP_CSV = "runs/external_validation_2026-04-30_gpcr_scaleup_100k_residualv4_apply_candidate_v1_set1_core_blind_gpcr_core_full_p0_n100000_r1_stage5_ranking_rows.csv"
+BASELINE_DISCOVERY_GLOB = (
+    "external_validation_*_set1_core_blind_gpcr_core_full_p0_n10000_r1_stage5_ranking_rows.csv"
+)
+SCALEUP_DISCOVERY_GLOB = (
+    "external_validation_*gpcr_scaleup_100k*set1_core_blind_gpcr_core_full_p0_n100000_r1_stage5_ranking_rows.csv"
+)
 
 
 def _resolve(path_like: str) -> Path:
@@ -27,6 +33,20 @@ def _resolve(path_like: str) -> Path:
 def _read_csv(path: Path) -> list[dict[str, str]]:
     with path.open("r", encoding="utf-8", newline="") as fh:
         return [dict(row) for row in csv.DictReader(fh)]
+
+
+def _resolve_existing_gpcr_baseline_csv(preferred: Path) -> Path:
+    if preferred.exists():
+        return preferred
+    candidates = sorted((ROOT / "runs").glob(BASELINE_DISCOVERY_GLOB))
+    return candidates[-1] if candidates else preferred
+
+
+def _resolve_existing_gpcr_scaleup_csv(preferred: Path) -> Path:
+    if preferred.exists():
+        return preferred
+    candidates = sorted((ROOT / "runs").glob(SCALEUP_DISCOVERY_GLOB))
+    return candidates[-1] if candidates else preferred
 
 
 def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
@@ -484,8 +504,8 @@ def _default_stage3_path(scaleup_csv: Path) -> Path:
 
 def main() -> None:
     args = parse_args()
-    baseline_csv = _resolve(args.baseline_csv)
-    scaleup_csv = _resolve(args.scaleup_csv)
+    baseline_csv = _resolve_existing_gpcr_baseline_csv(_resolve(args.baseline_csv))
+    scaleup_csv = _resolve_existing_gpcr_scaleup_csv(_resolve(args.scaleup_csv))
     out_json = _resolve(args.out_json)
     if baseline_csv.exists() and scaleup_csv.exists():
         scaleup_stage3_csv = _resolve(args.scaleup_stage3_csv) if str(args.scaleup_stage3_csv).strip() else _default_stage3_path(scaleup_csv)

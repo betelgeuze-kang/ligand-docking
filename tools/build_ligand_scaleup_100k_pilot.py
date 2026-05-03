@@ -188,8 +188,8 @@ def _build_guardrail_rows() -> List[Dict[str, str]]:
         },
         {
             "guardrail_id": "top20_hit_drop_max_1",
-            "metric": "top20_hit_count_delta",
-            "threshold": ">= -1 hit",
+            "metric": "top20_hit_rate_delta",
+            "threshold": ">= -0.05 absolute rate",
             "scope": "regression slice",
             "rationale": "Preserve shortlist usefulness under the 100k pilot.",
         },

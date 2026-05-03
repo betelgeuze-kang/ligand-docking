@@ -148,6 +148,70 @@ def _feature_rows(variant: str) -> list[dict[str, Any]]:
                 },
             ]
         )
+    if variant == "gpcr_core_mismatch_contact_rescore_v1":
+        rows.extend(
+            [
+                {
+                    "feature_name": "donor_prior_decoy_intrusion",
+                    "role": "failure_tag_gate",
+                    "direction": "penalize_when_donor_prior_is_high_without_contact_support",
+                    "rationale": "Current 100k failure tags show donor-rich decoys outranking core binders despite weak support.",
+                },
+                {
+                    "feature_name": "weak_contact_prior_mismatch",
+                    "role": "contact_mismatch_gate",
+                    "direction": "activate_only_when_contact_is_weak_relative_to_prior_pressure",
+                    "rationale": "The candidate should focus on prior-favorable rows whose contact evidence does not support the rank.",
+                },
+                {
+                    "feature_name": "affinity_hint_md_support_mismatch",
+                    "role": "affinity_md_guard",
+                    "direction": "penalize_when_affinity_hint_disagrees_with_md_support",
+                    "rationale": "Affinity hints must not rescue rows when contact and MD support are weak.",
+                },
+                {
+                    "feature_name": "no_existing_score_column_recovers_gate",
+                    "role": "comparison_only_guard",
+                    "direction": "require_guarded_candidate_review",
+                    "rationale": "Failure analysis found no existing score column recovers the 100k gate, so this remains evidence-only.",
+                },
+            ]
+        )
+    if variant == "gpcr_core_structure_support_rescore_v1":
+        rows.extend(
+            [
+                {
+                    "feature_name": "z_ligand_logp",
+                    "role": "structure_support_rescore_anchor",
+                    "direction": "reward_higher_lipophilicity_when_structure_support_is_consistent",
+                    "rationale": "Replay on the measured 100k failure slice recovered top20 retention only when beta-blocker-like lipophilicity was protected.",
+                },
+                {
+                    "feature_name": "z_ligand_rot_bonds",
+                    "role": "structure_support_rescore_anchor",
+                    "direction": "reward_flexible_anchor_like_rows",
+                    "rationale": "Flexible ADRB2 anchors were displaced by compact hard decoys in the failed core 100k lanes.",
+                },
+                {
+                    "feature_name": "z_contact_fraction",
+                    "role": "structure_support_signal",
+                    "direction": "reward_contact_support",
+                    "rationale": "Contact support is retained as a required replay signal before any guarded apply rerun.",
+                },
+                {
+                    "feature_name": "z_mean_min_distance_A",
+                    "role": "structure_support_guard",
+                    "direction": "penalize_far_distance",
+                    "rationale": "Far-distance rows need a mild penalty so residual rescue does not become prior-only.",
+                },
+                {
+                    "feature_name": "z_stability_score",
+                    "role": "stability_over_support_guard",
+                    "direction": "penalize_over-supported_decoys_in_replay",
+                    "rationale": "The failed 100k slice shows some decoys with apparent stability support but poor top20 label behavior; this remains replay-only until a fresh full run passes.",
+                },
+            ]
+        )
     if variant == "gpcr_adrb2_beta_blocker_pharmacophore_v1":
         rows.extend(
             [
@@ -397,6 +461,96 @@ def build_payload(*, variant: str = "current") -> dict[str, Any]:
             "Run gpcr_core_linear_rescore_v1 as a guarded apply candidate on core and ChEMBL50 100k. "
             "Replay crossed the core PR-AUC/top20 floor, but this remains an overfit-risk candidate until the full blind run and CI gate pass."
         )
+    elif variant == "gpcr_core_mismatch_contact_rescore_v1":
+        constraints = {
+            **constraints,
+            "max_abs_delta_score": 0.80,
+            "yellow_band_abs_delta_score": 0.30,
+            "comparison_only_candidate": True,
+            "structure_support_gate": {
+                "enabled": True,
+                "required_before_claim": True,
+                "full_100k_gate_green": False,
+            },
+            "router_promotion_allowed": False,
+            "apply_mode_claim_allowed": False,
+            "claim_safe_assertion_allowed": False,
+            "broad_gpcr_claim_allowed": False,
+        }
+        tuning = {
+            "variant": "gpcr_core_mismatch_contact_rescore_v1",
+            "candidate_source": "gpcr_100k_failure_analysis_current",
+            "failure_tags": [
+                "donor_prior_decoy_intrusion",
+                "weak_contact_prior_mismatch",
+                "affinity_hint_md_support_mismatch",
+                "no_existing_score_column_recovers_gate",
+            ],
+            "prior_weight_h_donors": 0.30,
+            "prior_weight_h_acceptors": 0.16,
+            "prior_weight_rot_bonds": 0.10,
+            "weakness_weight_neg_contact": 0.85,
+            "weakness_weight_distance": 0.45,
+            "affinity_md_support_mismatch_weight": 0.25,
+            "support_weight_contact": 0.20,
+            "support_weight_stability": 0.08,
+            "support_weight_neg_energy": 0.10,
+            "min_prior_pressure_for_delta": 0.80,
+            "min_contact_mismatch_z_for_delta": 0.35,
+            "max_md_support_for_affinity_hint_delta": 0.15,
+            "min_raw_delta_for_activation": 0.20,
+            "require_no_existing_score_recovery_gate": True,
+        }
+        interactions = [
+            "donor_prior_decoy_intrusion_only_with_contact_mismatch",
+            "affinity_hint_penalty_only_when_md_support_is_weak",
+            "no_existing_score_column_recovers_gate_keeps_candidate_guarded",
+            "no_router_or_general_gpcr_family_promotion",
+        ]
+        next_step = (
+            "Run gpcr_core_mismatch_contact_rescore_v1 only as comparison telemetry or guarded apply evidence. "
+            "It targets measured donor/contact/affinity mismatch tags, but must not become a claim-safe or broad GPCR router candidate."
+        )
+    elif variant == "gpcr_core_structure_support_rescore_v1":
+        constraints = {
+            **constraints,
+            "max_abs_delta_score": 0.0,
+            "yellow_band_abs_delta_score": 0.0,
+            "comparison_only_candidate": True,
+            "structure_support_gate": {
+                "enabled": True,
+                "required_before_claim": True,
+                "full_100k_gate_green": False,
+            },
+            "router_promotion_allowed": False,
+            "apply_mode_claim_allowed": False,
+            "claim_safe_assertion_allowed": False,
+            "broad_gpcr_claim_allowed": False,
+            "replay_source_artifact": "runs/external_validation_2026-05-02_mismatch_contact_apply_safesync_r3_set1_core_blind_gpcr_core_full_p0_n100000_r1_stage3_scores.csv",
+            "replay_pr_auc": 0.6125,
+            "replay_top20_hit_rate": 0.20,
+        }
+        tuning = {
+            "variant": "gpcr_core_structure_support_rescore_v1",
+            "candidate_source": "local_replay_search_2026-05-03",
+            "replay_pr_auc": 0.6125,
+            "replay_top20_hit_rate": 0.20,
+            "replay_positive_ranks": [1, 2, 4, 6, 22, 193],
+            "replay_score_formula": (
+                "binding_score_composite_v7 - 2*z_ligand_logp - 0.5*z_ligand_rot_bonds "
+                "+ 0.5*z_mean_min_distance_A - z_contact_fraction + z_stability_score"
+            ),
+        }
+        interactions = [
+            "structure_support_replay_only_until_full_100k_gate_green",
+            "reward_lipophilic_flexible_anchor_like_rows",
+            "require_contact_and_distance_support_in_replay",
+            "no_router_or_general_gpcr_family_promotion",
+        ]
+        next_step = (
+            "Run gpcr_core_structure_support_rescore_v1 as a claim-locked comparison candidate only. "
+            "The replay metric crosses the core PR-AUC/top20 floor on one measured 100k failure slice, but it must pass a fresh full 100k run and ChEMBL50 preservation before any claim discussion."
+        )
     elif variant == "gpcr_adrb2_beta_blocker_pharmacophore_v1":
         constraints = {
             **constraints,
@@ -464,6 +618,20 @@ def build_payload(*, variant: str = "current") -> dict[str, Any]:
                     ],
                 }
                 if variant == "gpcr_core_linear_rescore_v1"
+                else {
+                    "enabled": True,
+                    "combine_mode": "replace",
+                    "intercept": 0.0,
+                    "terms": [
+                        {"feature": "binding_score_composite_v7", "weight": 1.0},
+                        {"feature": "z_ligand_logp", "weight": -2.0},
+                        {"feature": "z_ligand_rot_bonds", "weight": -0.5},
+                        {"feature": "z_mean_min_distance_A", "weight": 0.5},
+                        {"feature": "z_contact_fraction", "weight": -1.0},
+                        {"feature": "z_stability_score", "weight": 1.0},
+                    ],
+                }
+                if variant == "gpcr_core_structure_support_rescore_v1"
                 else {"enabled": False}
             ),
             "feature_rows": feature_rows,
@@ -503,6 +671,7 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- preserve_top2_binders: `{proto['constraints']['preserve_top2_binders']}`",
         f"- require_energy_contact_support_for_positive_delta: `{proto['constraints']['require_energy_contact_support_for_positive_delta']}`",
         f"- reference_scaling_mode: `{proto['constraints']['reference_scaling_mode']}`",
+        f"- structure_support_gate: `{proto['constraints'].get('structure_support_gate', {})}`",
         "",
         "## Tuning",
         "",
@@ -543,6 +712,8 @@ def parse_args() -> argparse.Namespace:
             "chembl50_v4",
             "gpcr_core_decoy_intrusion_v1",
             "gpcr_core_linear_rescore_v1",
+            "gpcr_core_mismatch_contact_rescore_v1",
+            "gpcr_core_structure_support_rescore_v1",
             "gpcr_adrb2_beta_blocker_pharmacophore_v1",
         ],
         default="current",

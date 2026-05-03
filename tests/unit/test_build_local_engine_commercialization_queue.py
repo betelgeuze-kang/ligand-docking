@@ -634,6 +634,127 @@ def test_build_local_engine_commercialization_queue_keeps_stage3_reentry_blocked
     )
 
 
+def test_build_local_engine_commercialization_queue_treats_latest_stage6_fail_as_authoritative_over_stale_green_gate() -> None:
+    payload = mod.build_payload(
+        latest_nightly_payload={
+            "pass": False,
+            "failed_stage": "smoke",
+            "generated_at_local": "2026-05-02T19:41:34",
+            "service_result": {"error_code": "HTVS_SMOKE_FAILED"},
+            "stages": {
+                "smoke": {
+                    "failed_stage": "stage6_operational_gate",
+                    "service_result": {"error_code": "HTVS_GATE_FAILED"},
+                    "stages": {
+                        "stage2_trajectory_generation": {"ok": True, "returncode": 0},
+                        "stage6_operational_gate": {
+                            "pass": False,
+                            "failed_metrics": [
+                                {
+                                    "metric": "mean_min_distance_A",
+                                    "value": 2.659242477938533,
+                                    "threshold": 2.5,
+                                }
+                            ],
+                        },
+                    },
+                }
+            },
+        },
+        latest_nightly_artifact="runs/ligand_htvs_nightly_2026-05-02_summary.json",
+        import_anchor={},
+        recent_nightly_payloads=[
+            {"pass": True, "failed_stage": ""},
+            {"pass": False, "failed_stage": "smoke", "stages": {"smoke": {"failed_stage": "stage6_operational_gate"}}},
+        ],
+        nightly_gate_payload={
+            "summary": {
+                "packet_artifact": "runs/nightly_gate_burndown_packet_current.md",
+                "status": "nightly_gate_green",
+                "status_line": "latest nightly stage6 gate is green; keep the recovered writer/import path stable.",
+                "next_required_step": "Keep the nightly stage6 gate green and avoid reopening upstream writer/import regressions.",
+                "reentry_evidence_artifact": "runs/ligand_htvs_nightly_2026-04-29_stage6_top_level_reentry_summary.json",
+            }
+        },
+        nightly_tuning_payload={},
+        nightly_followup_payload={},
+        nightly_execute_payload={
+            "summary": {
+                "packet_artifact": "runs/nightly_stage6_execute_result_packet_current.md",
+                "execute_status_json_artifact": "runs/nightly_stage6_downstream_execute_current_status.json",
+                "execute_pipeline_summary_json_artifact": "runs/nightly_stage6_downstream_execute_current_summary.json",
+                "execute_gate_mean_min_distance_A": "2.268931970372796",
+                "execute_gate_pass": True,
+                "execute_payload_pass": True,
+                "execute_matches_rescored_gate": True,
+            }
+        },
+        viewer_payload={
+            "overall_ok": True,
+            "summary": {
+                "compare_writeback_compare_pane_state_rep_count": 2,
+                "compare_writeback_wrapper_gap_count": 0,
+                "compare_writeback_mesh_probe_unavailable_count": 0,
+                "compare_writeback_geometry_status_line": "compare writeback green",
+            },
+            "geometry_access": {
+                "compare_writeback": {
+                    "compareA_canvas_probe_ready": True,
+                    "compareB_canvas_probe_ready": True,
+                }
+            },
+        },
+        wetlab_dashboard_payload={
+            "broad_screen_primary_watch_liveness": "attached",
+            "broad_screen_antitarget_watch_liveness": "attached",
+            "selected_allatom_wetlab_gate_pass": True,
+        },
+        wetlab_final_payload={"ready_to_send_track_count": 5, "broad_screen_execution_ready_now_row_count": 1},
+        wetlab_readiness_payload={
+            "summary": {
+                "blocked_count": 0,
+                "partial_count": 0,
+                "ready_count": 5,
+                "primary_watch_liveness": "attached",
+                "antitarget_watch_liveness": "attached",
+                "selected_allatom_wetlab_gate_pass": True,
+                "status_line": "wetlab green",
+            }
+        },
+        refresh_payload={"overall_ok": True, "ok_count": 116, "step_count": 116},
+        negative_queue_payload={"summary": {"row_count": 0}},
+        gap_payload={"summary": {}},
+    )
+
+    summary = payload["summary"]
+    nightly = {row["blocker_id"]: row for row in payload["rows"]}["nightly_reliability"]
+    assert nightly["status"] == "partial"
+    assert summary["queue_clear"] is False
+    assert summary["top_priority_id"] == "nightly_reliability"
+    assert summary["nightly_downstream_execute_supporting_only"] is True
+    _contains_tokens(
+        nightly["source_signal"],
+        "latest_failed_stage=stage6_operational_gate",
+        "stage6_gate_burndown_status=nightly_gate_green",
+        "stage6_gate_burndown_stale_green=true",
+        "stage6_execute_payload_pass=true",
+    )
+    _contains_tokens(
+        nightly["status_line"],
+        "latest top-level nightly",
+        "failed the operational gate",
+        "stale for this latest artifact",
+    )
+    _contains_tokens(
+        nightly["next_required_action"],
+        "latest canonical top-level nightly still fails",
+        "do not clear the commercialization queue",
+        "supporting-only",
+        "rerun the canonical top-level smoke/full nightly",
+    )
+    assert "keep the nightly stage6 gate green" not in nightly["next_required_action"].lower()
+
+
 def test_build_local_engine_commercialization_queue_promotes_viewer_to_keep_green_when_mesh_proof_is_present() -> None:
     payload = mod.build_payload(
         latest_nightly_payload={
@@ -818,6 +939,63 @@ def test_build_local_engine_commercialization_queue_exposes_selected_allatom_bur
     assert summary["wetlab_selected_allatom_primary_burndown_delta"] == "1.205"
     assert summary["wetlab_selected_allatom_primary_repair_lane"] == "tcruzi_pde_allatom_rescue"
     assert summary["wetlab_selected_allatom_primary_repair_source_ligand_id"] == "t_cruzi_pde_20_of_20_095609"
+
+
+def test_build_local_engine_commercialization_queue_prefers_readiness_liveness_over_stale_dashboard() -> None:
+    payload = mod.build_payload(
+        latest_nightly_payload={"pass": True},
+        latest_nightly_artifact="runs/ligand_htvs_nightly_2026-05-02_summary.json",
+        import_anchor={},
+        recent_nightly_payloads=[{"pass": True}],
+        nightly_gate_payload={"summary": {"status": "nightly_gate_green"}},
+        nightly_tuning_payload={},
+        nightly_followup_payload={},
+        viewer_payload={"overall_ok": True},
+        wetlab_dashboard_payload={
+            "summary": {
+                "broad_screen_primary_watch_liveness": "stale",
+                "broad_screen_antitarget_watch_liveness": "detached",
+                "selected_allatom_wetlab_gate_pass": False,
+            }
+        },
+        wetlab_final_payload={"summary": {"ready_to_send_track_count": 5, "broad_screen_execution_ready_now_row_count": 0}},
+        wetlab_readiness_payload={
+            "summary": {
+                "blocked_count": 0,
+                "partial_count": 0,
+                "ready_count": 5,
+                "primary_watch_liveness": "attached",
+                "antitarget_watch_liveness": "attached",
+                "watch_gap_count": 0,
+                "selected_allatom_wetlab_gate_pass": True,
+                "status_line": "send=5 ready | primary_exec=0 ready_now (attached; dispatch_complete) | antitarget_exec=1 ready_now (attached) | selected_allatom=pass",
+                "next_required_step": "Wetlab execution readiness is green for the current local-delivery scope.",
+            }
+        },
+        wetlab_selected_allatom_payload={
+            "summary": {
+                "packet_artifact": "runs/wetlab_selected_allatom_gate_burndown_packet_current.md",
+                "selected_allatom_target_id": "T. cruzi PDE",
+                "selected_allatom_wetlab_gate_pass": True,
+                "primary_burndown_code": "defer_expensive_lane",
+                "hard_block_count": 0,
+                "missing_metric_count": 0,
+            }
+        },
+        refresh_payload={"overall_ok": True, "ok_count": 115, "step_count": 115},
+        negative_queue_payload={"summary": {"row_count": 6, "top_target_id": "AQP1", "top_packet_step": "core_non_binder_01"}},
+        gap_payload={"summary": {"highest_gap_family": "transporter"}},
+    )
+
+    wetlab_row = {row["blocker_id"]: row for row in payload["rows"]}["wetlab_execution_readiness"]
+    assert wetlab_row["status"] == "keep_green"
+    _contains_tokens(
+        wetlab_row["source_signal"],
+        "primary_watch_liveness=attached",
+        "antitarget_watch_liveness=attached",
+        "watch_gap_count=0",
+        "selected_allatom_wetlab_gate_pass=true",
+    )
 
 
 def test_build_local_engine_commercialization_queue_keeps_failed_wetlab_lane_blocked() -> None:

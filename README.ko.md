@@ -95,8 +95,8 @@ python3 tools/build_local_delivery_verdict_gate.py
 ### 현재 P0 메모
 
 - 상용툴 대비 현재 수준은 로컬 납품형 분석 서비스 기준 약 70~75%, 풀 상용 플랫폼 기준 약 40~50% 정도입니다.
-- `runs/local_delivery_verdict_gate_current.json`는 `delivery_ready=true`, `p0_blocker_count=0`, `hard_blocker_count=0`, `commercialization_queue_clear=true`를 보고합니다. `accuracy_gate`, requirements/environment lock, nightly top-level reentry, 그리고 wetlab selected-allatom(`mean_min_distance_A=2.120 <= 2.500`)도 모두 green입니다.
-- 다음 단계는 `python3 tools/build_local_delivery_bundle.py` 뒤 `python3 tools/validate_local_delivery_bundle.py --bundle-dir <bundle_dir>`입니다.
+- `runs/local_delivery_verdict_gate_current.json`는 현재 `delivery_ready=true`, `p0_blocker_count=0`, `hard_blocker_count=0`, `commercialization_queue_clear=true`를 보고합니다. `accuracy_gate`, requirements/environment lock, 최신 nightly top-level reentry(`2026-05-02_stage6_top_level_reentry`), 그리고 wetlab selected-allatom(`mean_min_distance_A=2.120 <= 2.500`)이 green입니다.
+- 다음 단계는 `python3 tools/build_local_delivery_bundle.py`와 `python3 tools/validate_local_delivery_bundle.py --bundle-dir <bundle_dir>`를 다시 돌려 번들 fingerprint까지 green인지 확인하는 것입니다.
 - `transporter` negative-evidence lane은 parked science blocker이며 `restricted local-delivery scope` 밖에 둡니다.
 - `fake-pass`, threshold relaxation, `수동 pass`, `delivery-ready` 문구는 verdict gate와 bundle validator가 둘 다 green일 때만 사용합니다.
 

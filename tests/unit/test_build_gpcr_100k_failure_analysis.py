@@ -184,3 +184,31 @@ def test_missing_input_payload_preserves_previous_snapshot_summary(tmp_path: Pat
     assert payload["summary"]["previous_scaleup_positive_ranks"] == [1, 2, 15, 78, 107, 128]
     assert payload["summary"]["previous_scaleup_top20_binder_count"] == 3
     assert payload["summary"]["previous_last_positive_rank_shift"] == 122
+
+
+def test_discovers_latest_gpcr_baseline_when_default_path_is_stale(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    stale_default = tmp_path / "runs" / "external_validation_2026-03-22_biorxiv_v7r1_set1_core_blind_gpcr_core_full_p0_n10000_r1_stage5_ranking_rows.csv"
+    discovered = tmp_path / "runs" / "external_validation_2026-04-14_biorxiv_v7mlrefresh1_set1_core_blind_gpcr_core_full_p0_n10000_r1_stage5_ranking_rows.csv"
+    _write_rows(
+        discovered,
+        [
+            {"target": "ADRB2", "ligand_id": "b1", "is_binder": "1", "reference_binding_kcal_mol": "-9", "binding_score_composite_v7": "-9.0", "mean_min_distance_A": "4.0", "role": "far_ood_eval"},
+        ],
+    )
+
+    assert mod._resolve_existing_gpcr_baseline_csv(stale_default) == discovered
+
+
+def test_discovers_latest_gpcr_scaleup_when_default_path_is_stale(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    stale_default = tmp_path / "runs" / "external_validation_2026-03-23_scaleup_100k_pilot_v2r2_set1_core_blind_gpcr_core_full_p0_n100000_r1_stage5_ranking_rows.csv"
+    discovered = tmp_path / "runs" / "external_validation_2026-04-30_gpcr_scaleup_100k_residualv4_apply_candidate_v1_set1_core_blind_gpcr_core_full_p0_n100000_r1_stage5_ranking_rows.csv"
+    _write_rows(
+        discovered,
+        [
+            {"target": "ADRB2", "ligand_id": "b1", "is_binder": "1", "reference_binding_kcal_mol": "-9", "binding_score_composite_v7": "-9.0", "mean_min_distance_A": "4.0", "role": "far_ood_eval"},
+        ],
+    )
+
+    assert mod._resolve_existing_gpcr_scaleup_csv(stale_default) == discovered

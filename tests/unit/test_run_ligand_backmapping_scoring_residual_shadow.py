@@ -183,6 +183,136 @@ def test_apply_residual_prototype_shadow_narrow_v2_gates_out_supported_rows(tmp_
     assert deltas[1] == 0.0
 
 
+def test_apply_residual_prototype_shadow_mismatch_contact_rescore_targets_weak_contact_prior_mismatch(tmp_path):
+    spec_json = tmp_path / "mismatch_contact.json"
+    spec_json.write_text(
+        json.dumps(
+            {
+                "prototype": {
+                    "constraints": {
+                        "max_abs_delta_score": 0.8,
+                        "yellow_band_abs_delta_score": 0.3,
+                    },
+                    "tuning": {
+                        "variant": "gpcr_core_mismatch_contact_rescore_v1",
+                        "prior_weight_h_donors": 0.3,
+                        "prior_weight_h_acceptors": 0.16,
+                        "prior_weight_rot_bonds": 0.10,
+                        "weakness_weight_neg_contact": 0.85,
+                        "weakness_weight_distance": 0.45,
+                        "affinity_md_support_mismatch_weight": 0.25,
+                        "support_weight_contact": 0.20,
+                        "support_weight_stability": 0.08,
+                        "support_weight_neg_energy": 0.10,
+                        "min_prior_pressure_for_delta": 0.8,
+                        "min_contact_mismatch_z_for_delta": 0.35,
+                        "max_md_support_for_affinity_hint_delta": 0.15,
+                        "min_raw_delta_for_activation": 0.20,
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    result_df = pd.DataFrame(
+        [
+            {"ligand_id": "prior_rich_weak_contact_decoy", "binding_score_composite_v7": -6.4},
+            {"ligand_id": "prior_rich_supported_row", "binding_score_composite_v7": -6.3},
+        ]
+    )
+    zero = pd.Series([0.0, 0.0], dtype=float)
+
+    out_df, meta = mod._apply_residual_prototype_shadow(
+        result_df.copy(),
+        _shadow_args(
+            residual_prototype_mode="apply",
+            residual_prototype_spec_json=str(spec_json),
+            residual_prototype_max_abs_delta_score=None,
+            residual_prototype_yellow_band_abs_delta_score=None,
+        ),
+        z_e=pd.Series([0.7, -0.8], dtype=float),
+        z_d=pd.Series([0.8, -0.6], dtype=float),
+        z_s=pd.Series([-0.5, 0.9], dtype=float),
+        z_c=pd.Series([-1.2, 1.1], dtype=float),
+        z_aff=pd.Series([1.1, 1.0], dtype=float),
+        z_logp=zero,
+        z_rot=pd.Series([1.1, 1.0], dtype=float),
+        z_hd=pd.Series([1.4, 1.2], dtype=float),
+        z_ha=pd.Series([1.0, 1.0], dtype=float),
+    )
+
+    assert meta["tuning_variant"] == "gpcr_core_mismatch_contact_rescore_v1"
+    assert meta["mismatch_contact_positive_delta_count"] == 1
+    assert meta["affinity_md_support_mismatch_positive_count"] == 1
+    assert "residual_shadow_contact_mismatch" in out_df.columns
+    assert "residual_shadow_affinity_md_support_mismatch" in out_df.columns
+    assert out_df.loc[0, "residual_shadow_contact_mismatch"] > 0.35
+    assert out_df.loc[0, "residual_shadow_delta"] > 0.0
+    assert out_df.loc[1, "residual_shadow_delta"] == 0.0
+    assert out_df.loc[0, "binding_score_composite_v7_residual_active"] > out_df.loc[0, "binding_score_composite_v7"]
+
+
+def test_apply_residual_prototype_shadow_mismatch_contact_rescore_disables_base_penalty_without_contact_mismatch(tmp_path):
+    spec_json = tmp_path / "mismatch_contact_base_guard.json"
+    spec_json.write_text(
+        json.dumps(
+            {
+                "prototype": {
+                    "constraints": {
+                        "max_abs_delta_score": 0.8,
+                        "yellow_band_abs_delta_score": 0.3,
+                    },
+                    "tuning": {
+                        "variant": "gpcr_core_mismatch_contact_rescore_v1",
+                        "prior_weight_h_donors": 0.3,
+                        "prior_weight_h_acceptors": 0.16,
+                        "prior_weight_rot_bonds": 0.10,
+                        "weakness_weight_neg_contact": 0.85,
+                        "weakness_weight_distance": 0.45,
+                        "affinity_md_support_mismatch_weight": 0.25,
+                        "support_weight_contact": 0.20,
+                        "support_weight_stability": 0.08,
+                        "support_weight_neg_energy": 0.10,
+                        "min_prior_pressure_for_delta": 0.8,
+                        "min_contact_mismatch_z_for_delta": 0.35,
+                        "max_md_support_for_affinity_hint_delta": 0.15,
+                        "min_raw_delta_for_activation": 0.20,
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    result_df = pd.DataFrame(
+        [{"ligand_id": "prior_rich_supported_anchor", "binding_score_composite_v7": -8.0}]
+    )
+    zero = pd.Series([0.0], dtype=float)
+
+    out_df, meta = mod._apply_residual_prototype_shadow(
+        result_df.copy(),
+        _shadow_args(
+            residual_prototype_mode="apply",
+            residual_prototype_spec_json=str(spec_json),
+            residual_prototype_max_abs_delta_score=None,
+            residual_prototype_yellow_band_abs_delta_score=None,
+        ),
+        z_e=pd.Series([1.5], dtype=float),
+        z_d=zero,
+        z_s=zero,
+        z_c=pd.Series([1.0], dtype=float),
+        z_aff=pd.Series([1.2], dtype=float),
+        z_logp=zero,
+        z_rot=pd.Series([1.5], dtype=float),
+        z_hd=pd.Series([2.0], dtype=float),
+        z_ha=pd.Series([1.5], dtype=float),
+    )
+
+    assert meta["tuning_variant"] == "gpcr_core_mismatch_contact_rescore_v1"
+    assert out_df.loc[0, "residual_shadow_contact_mismatch"] == 0.0
+    assert out_df.loc[0, "residual_shadow_delta"] == 0.0
+    assert out_df.loc[0, "binding_score_composite_v7_residual_active"] == -8.0
+
+
 def test_apply_residual_prototype_shadow_linear_rescore_replace_mode(tmp_path):
     spec_json = tmp_path / "linear_rescore.json"
     spec_json.write_text(

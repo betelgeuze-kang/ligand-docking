@@ -6,6 +6,7 @@ import argparse
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import datetime as dt
 import glob
+import hashlib
 import json
 import math
 import os
@@ -107,6 +108,73 @@ def _safe_optional_int(value: Any) -> Optional[int]:
         return int(float(value))
     except (TypeError, ValueError):
         return None
+
+
+def _canonical_json_hash(payload: Dict[str, Any]) -> str:
+    text = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _load_score_reference_scaling(*, mode: str, stats_json: str) -> Dict[str, Any]:
+    requested_mode = str(mode or "run_local").strip().lower()
+    stats_path = str(stats_json or "").strip()
+    payload = _read_json_if_exists(stats_path) if stats_path else {}
+    features = payload.get("features") if isinstance(payload.get("features"), dict) else {}
+    if not features and isinstance(payload.get("columns"), dict):
+        features = payload.get("columns", {})
+    status = "run_local"
+    if requested_mode in {"fixed_family_reference", "reference", "frozen"}:
+        status = "loaded" if features else "missing_stats_fallback_run_local"
+    return {
+        "mode": requested_mode,
+        "stats_json": stats_path,
+        "status": status,
+        "schema_version": str(payload.get("schema_version", "") or ""),
+        "reference_scope": payload.get("reference_scope", {}) if isinstance(payload.get("reference_scope"), dict) else {},
+        "stats_hash": _canonical_json_hash(payload) if payload else "",
+        "features": features if isinstance(features, dict) else {},
+        "applied_columns": [],
+        "missing_columns": [],
+        "fallback_columns": [],
+        "invalid_columns": [],
+    }
+
+
+def _append_unique(values: list[str], value: str) -> None:
+    if value and value not in values:
+        values.append(value)
+
+
+def _run_local_zscore(series: pd.Series) -> pd.Series:
+    s = pd.to_numeric(series, errors="coerce")
+    mu = float(s.mean()) if len(s) > 0 else 0.0
+    sd = float(s.std()) if len(s) > 0 else 1.0
+    if (not np.isfinite(sd)) or sd <= 1e-12:
+        sd = 1.0
+    return (s - mu) / sd
+
+
+def _zscore_with_reference(result_df: pd.DataFrame, col: str, scaling: Dict[str, Any]) -> pd.Series:
+    s = pd.to_numeric(result_df[col], errors="coerce")
+    mode = str(scaling.get("mode", "run_local") or "run_local").strip().lower()
+    features = scaling.get("features") if isinstance(scaling.get("features"), dict) else {}
+    if mode not in {"fixed_family_reference", "reference", "frozen"}:
+        return _run_local_zscore(s)
+
+    stats = features.get(col) if isinstance(features, dict) else None
+    if not isinstance(stats, dict):
+        _append_unique(scaling["missing_columns"], col)
+        _append_unique(scaling["fallback_columns"], col)
+        return _run_local_zscore(s)
+
+    mu = _safe_optional_float(stats.get("mean"))
+    sd = _safe_optional_float(stats.get("std", stats.get("sd")))
+    if mu is None or sd is None or sd <= 1e-12:
+        _append_unique(scaling["invalid_columns"], col)
+        _append_unique(scaling["fallback_columns"], col)
+        return _run_local_zscore(s)
+    _append_unique(scaling["applied_columns"], col)
+    return (s - float(mu)) / float(sd)
 
 
 def _nan_percentile(values: np.ndarray, q: float) -> Optional[float]:
@@ -268,6 +336,15 @@ def _residual_tuning(spec_payload: Dict[str, Any]) -> Dict[str, float | str]:
         "require_intrusion_distance_below_z": _safe_float(
             tuning.get("require_intrusion_distance_below_z"), 1.0e9
         ),
+        "affinity_md_support_mismatch_weight": _safe_float(
+            tuning.get("affinity_md_support_mismatch_weight"), 0.0
+        ),
+        "min_contact_mismatch_z_for_delta": _safe_float(
+            tuning.get("min_contact_mismatch_z_for_delta"), 0.0
+        ),
+        "max_md_support_for_affinity_hint_delta": _safe_float(
+            tuning.get("max_md_support_for_affinity_hint_delta"), 1.0e9
+        ),
         "pharmacophore_reward_score": _safe_float(tuning.get("pharmacophore_reward_score"), 0.0),
     }
 
@@ -396,10 +473,17 @@ def _apply_residual_prototype_shadow(
         & (pd.to_numeric(z_c, errors="coerce").to_numpy(dtype=float) <= float(tuning["require_contact_below_z"]))
         & (base_raw_delta >= float(tuning["min_raw_delta_for_activation"]))
     )
+    if str(tuning["variant"]) == "gpcr_core_mismatch_contact_rescore_v1":
+        base_activation_mask = np.zeros(len(result_df), dtype=bool)
     intrusion_pressure = np.zeros(len(result_df), dtype=float)
     intrusion_contact_support = np.zeros(len(result_df), dtype=float)
     intrusion_raw_delta = np.zeros(len(result_df), dtype=float)
     intrusion_activation_mask = np.zeros(len(result_df), dtype=bool)
+    contact_mismatch = np.zeros(len(result_df), dtype=float)
+    affinity_md_support = np.zeros(len(result_df), dtype=float)
+    affinity_md_support_mismatch = np.zeros(len(result_df), dtype=float)
+    mismatch_contact_raw_delta = np.zeros(len(result_df), dtype=float)
+    mismatch_contact_activation_mask = np.zeros(len(result_df), dtype=bool)
     if str(tuning["variant"]) in {"gpcr_core_decoy_intrusion_v1", "core_decoy_intrusion_v1"}:
         intrusion_pressure = (
             float(tuning["intrusion_weight_low_h_donors"]) * _clip_pos(-z_hd)
@@ -433,9 +517,44 @@ def _apply_residual_prototype_shadow(
                 <= float(tuning["require_intrusion_distance_below_z"])
             )
         )
+    if str(tuning["variant"]) == "gpcr_core_mismatch_contact_rescore_v1":
+        z_aff_arr = pd.to_numeric(z_aff, errors="coerce").to_numpy(dtype=float)
+        contact_mismatch = (
+            float(tuning["weakness_weight_neg_contact"]) * _clip_pos(-z_c)
+            + float(tuning["weakness_weight_distance"]) * _clip_pos(z_d)
+        )
+        affinity_md_support = (
+            float(tuning["support_weight_contact"]) * _clip_pos(z_c)
+            + float(tuning["support_weight_stability"]) * _clip_pos(z_s)
+            + float(tuning["support_weight_neg_energy"]) * _clip_pos(-z_e)
+        )
+        affinity_prior_pressure = float(tuning["affinity_md_support_mismatch_weight"]) * _clip_pos(z_aff)
+        affinity_md_support_mismatch = _clip_pos(z_aff) * np.clip(
+            float(tuning["max_md_support_for_affinity_hint_delta"]) - affinity_md_support,
+            0.0,
+            None,
+        )
+        mismatch_prior_pressure = prior_pressure + affinity_prior_pressure
+        mismatch_contact_raw_delta = np.clip(
+            mismatch_prior_pressure * (contact_mismatch + affinity_md_support_mismatch),
+            0.0,
+            None,
+        )
+        mismatch_contact_activation_mask = (
+            (mismatch_prior_pressure >= float(tuning["min_prior_pressure_for_delta"]))
+            & (contact_mismatch >= float(tuning["min_contact_mismatch_z_for_delta"]))
+            & (affinity_md_support <= float(tuning["max_md_support_for_affinity_hint_delta"]))
+            & (z_aff_arr > 0.0)
+            & (mismatch_contact_raw_delta >= float(tuning["min_raw_delta_for_activation"]))
+        )
     base_delta_candidate = np.where(base_activation_mask, base_raw_delta, 0.0)
     intrusion_delta_candidate = np.where(intrusion_activation_mask, intrusion_raw_delta, 0.0)
-    raw_delta = np.maximum(base_delta_candidate, intrusion_delta_candidate)
+    mismatch_contact_delta_candidate = np.where(
+        mismatch_contact_activation_mask,
+        mismatch_contact_raw_delta,
+        0.0,
+    )
+    raw_delta = np.maximum(np.maximum(base_delta_candidate, intrusion_delta_candidate), mismatch_contact_delta_candidate)
     activation_mask = raw_delta > 0.0
     delta = np.where(
         activation_mask,
@@ -485,6 +604,10 @@ def _apply_residual_prototype_shadow(
             "residual_shadow_intrusion_pressure": intrusion_pressure,
             "residual_shadow_intrusion_contact_support": intrusion_contact_support,
             "residual_shadow_intrusion_delta_raw": intrusion_raw_delta,
+            "residual_shadow_contact_mismatch": contact_mismatch,
+            "residual_shadow_affinity_md_support": affinity_md_support,
+            "residual_shadow_affinity_md_support_mismatch": affinity_md_support_mismatch,
+            "residual_shadow_mismatch_contact_delta_raw": mismatch_contact_raw_delta,
             "residual_shadow_delta_raw": raw_delta,
             "residual_shadow_delta": delta,
         }
@@ -547,6 +670,10 @@ def _apply_residual_prototype_shadow(
     result_df["residual_shadow_intrusion_pressure"] = intrusion_pressure
     result_df["residual_shadow_intrusion_contact_support"] = intrusion_contact_support
     result_df["residual_shadow_intrusion_delta_raw"] = intrusion_raw_delta
+    result_df["residual_shadow_contact_mismatch"] = contact_mismatch
+    result_df["residual_shadow_affinity_md_support"] = affinity_md_support
+    result_df["residual_shadow_affinity_md_support_mismatch"] = affinity_md_support_mismatch
+    result_df["residual_shadow_mismatch_contact_delta_raw"] = mismatch_contact_raw_delta
     result_df["residual_shadow_delta_raw"] = raw_delta
     result_df["residual_shadow_delta"] = delta
     result_df["residual_shadow_band"] = band
@@ -584,6 +711,12 @@ def _apply_residual_prototype_shadow(
             "positive_delta_count": int((delta > 0.0).sum()),
             "gated_positive_delta_count": int(activation_mask.sum()),
             "intrusion_positive_delta_count": int(((intrusion_raw_delta > 0.0) & intrusion_activation_mask).sum()),
+            "mismatch_contact_positive_delta_count": int(
+                ((mismatch_contact_raw_delta > 0.0) & mismatch_contact_activation_mask).sum()
+            ),
+            "affinity_md_support_mismatch_positive_count": int(
+                ((affinity_md_support_mismatch > 0.0) & mismatch_contact_activation_mask).sum()
+            ),
             "yellow_band_count": int((delta >= float(yellow_band)).sum()),
             "mean_delta": float(np.mean(delta)) if len(delta) > 0 else 0.0,
             "max_delta": float(np.max(delta)) if len(delta) > 0 else 0.0,
@@ -2409,13 +2542,13 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
             if _c in result_df.columns:
                 result_df[_c] = pd.to_numeric(result_df[_c], errors="coerce")
 
+        score_reference_scaling = _load_score_reference_scaling(
+            mode=str(args.score_reference_scaling_mode),
+            stats_json=str(args.score_reference_stats_json),
+        )
+
         def _z(col: str) -> pd.Series:
-            s = pd.to_numeric(result_df[col], errors="coerce")
-            mu = float(s.mean()) if len(s) > 0 else 0.0
-            sd = float(s.std()) if len(s) > 0 else 1.0
-            if (not np.isfinite(sd)) or sd <= 1e-12:
-                sd = 1.0
-            return (s - mu) / sd
+            return _zscore_with_reference(result_df, col, score_reference_scaling)
 
         z_e = _z("binding_energy_mmpbsa_kcal_mol_proxy")
         z_d = _z("mean_min_distance_A")
@@ -2515,9 +2648,15 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
             z_hd=z_hd,
             z_ha=z_ha,
         )
+        result_df["score_scaling_mode"] = str(score_reference_scaling.get("mode", "run_local"))
+        result_df["score_reference_stats_hash"] = str(score_reference_scaling.get("stats_hash", ""))
     else:
         aux_meta = {"applied": False, "reason": "empty_scores"}
         residual_shadow_meta = {"enabled": False, "status": "empty_scores"}
+        score_reference_scaling = _load_score_reference_scaling(
+            mode=str(args.score_reference_scaling_mode),
+            stats_json=str(args.score_reference_stats_json),
+        )
 
     ranking_meta = _resolve_ranking_columns(result_df, residual_shadow_meta)
     result_df = result_df.sort_values(
@@ -2582,6 +2721,11 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         "min_frames_required": int(args.min_frames),
         "replicate_export_schema_version": "backmapping_replicate_metrics_v1",
         "physics_export_schema_version": "backmapping_physics_support_v1",
+        "score_reference_scaling": {
+            key: value
+            for key, value in score_reference_scaling.items()
+            if key != "features"
+        },
         "active_score_col": str(ranking_meta["active_score_col"]),
         "ranking_score_col_used": str(ranking_meta["ranking_score_col_used"]),
         "ranking_sort_columns": list(ranking_meta["sort_columns"]),
@@ -2695,6 +2839,17 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
                 f"- residual_shadow_max_delta: {residual_meta.get('max_delta')}",
             ]
         )
+    scaling_meta = summary.get("score_reference_scaling", {})
+    if isinstance(scaling_meta, dict) and scaling_meta:
+        lines.extend(
+            [
+                f"- score_reference_scaling_mode: {scaling_meta.get('mode')}",
+                f"- score_reference_scaling_status: {scaling_meta.get('status')}",
+                f"- score_reference_stats_hash: {scaling_meta.get('stats_hash')}",
+                f"- score_reference_applied_columns: {scaling_meta.get('applied_columns')}",
+                f"- score_reference_fallback_columns: {scaling_meta.get('fallback_columns')}",
+            ]
+        )
     if not score_only:
         lines.append(f"- jobs_dir: `{jobs_root}`")
     with open(out_md, "w", encoding="utf-8") as f:
@@ -2771,6 +2926,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--residual-prototype-runtime-hook-ready", action=argparse.BooleanOptionalAction, default=False)
     p.add_argument("--residual-prototype-max-abs-delta-score", type=float, default=None)
     p.add_argument("--residual-prototype-yellow-band-abs-delta-score", type=float, default=None)
+    p.add_argument("--score-reference-scaling-mode", type=str, default="run_local")
+    p.add_argument("--score-reference-stats-json", type=str, default="")
     p.add_argument("--score-only", action=argparse.BooleanOptionalAction, default=False)
     p.add_argument("--make-bundle-zip", action=argparse.BooleanOptionalAction, default=True)
     p.add_argument("--bundle-base", type=str, default="")

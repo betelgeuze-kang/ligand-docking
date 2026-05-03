@@ -257,6 +257,7 @@ def _latest_nightly_signal(
     gate_packet_status_line = _text(nightly_gate_summary.get("status_line"))
     gate_packet_next_required_step = _text(nightly_gate_summary.get("next_required_step"))
     gate_packet_recent_transition_line = _text(nightly_gate_summary.get("recent_transition_line"))
+    gate_packet_status = _text(nightly_gate_summary.get("status"))
     gate_packet_reentry_stage = _text(nightly_gate_summary.get("reentry_blocker_stage")) or latest_failed_stage
     gate_packet_reentry_reason = _text(nightly_gate_summary.get("reentry_reason"))
     gate_packet_reentry_action = _text(nightly_gate_summary.get("reentry_action"))
@@ -353,6 +354,8 @@ def _latest_nightly_signal(
             else False,
         )
     )
+    latest_stage6_failed = latest_failed_stage == "stage6_operational_gate" or latest_error_code == "HTVS_GATE_FAILED"
+    stale_green_gate_packet = bool(not latest_pass and latest_stage6_failed and gate_packet_status == "nightly_gate_green")
     source_signal = (
         f"latest_failed_stage={latest_failed_stage or '-'}; "
         f"latest_error_code={latest_error_code or '-'}; "
@@ -364,6 +367,8 @@ def _latest_nightly_signal(
         f"stage6_gate_value={gate_metric_value}; "
         f"stage6_gate_threshold={gate_metric_threshold}; "
         f"stage6_gate_burndown_artifact={gate_packet_artifact or '-'}; "
+        f"stage6_gate_burndown_status={gate_packet_status or '-'}; "
+        f"stage6_gate_burndown_stale_green={stale_green_gate_packet}; "
         f"stage6_gate_burndown_delta={_float_text(gate_packet_delta)}; "
         f"stage6_gate_recent_transition={gate_packet_recent_transition_line or '-'}; "
         f"top_level_reentry_stage={gate_packet_reentry_stage or '-'}; "
@@ -436,23 +441,39 @@ def _latest_nightly_signal(
             "Keep nightly green. Preserve the writer/import regression fix path and avoid reopening the old "
             "`ModuleNotFoundError: core` or writer-process failure lanes while downstream commercialization blockers are being burned down."
         )
-    elif latest_failed_stage == "stage6_operational_gate" or latest_error_code == "HTVS_GATE_FAILED":
+    elif latest_stage6_failed:
         status = "partial"
         impact = "critical"
-        status_line = gate_packet_status_line or (
+        status_line = (
+            "latest top-level nightly reached stage6 and failed the operational gate at "
+            f"{gate_metric_name or 'stage6_metric'}={gate_metric_value} versus threshold {gate_metric_threshold}; "
+            "the current gate packet reports green for older reentry evidence and is stale for this latest artifact."
+            if stale_green_gate_packet
+            else gate_packet_status_line
+        ) or (
             "stage2 trajectory-generation now completes; the nightly lane is currently blocked by the operational gate at "
             f"{gate_metric_name or 'stage6_metric'}={gate_metric_value} versus threshold {gate_metric_threshold}."
         )
         next_required_action = (
-            "Hold the recovered stage2 writer/import path green, then use "
-            f"`{gate_packet_artifact or nightly_gate_burndown_mod.DEFAULT_OUT_MD}` as the nightly stage6 burndown surface so "
-            f"`{gate_packet_metric or gate_metric_name or 'mean_min_distance_A'}` moves from "
-            f"`{_float_text(gate_packet_value)}` to within the `{_float_text(gate_packet_threshold)}` threshold "
-            "before treating nightly as commercial-grade. "
-            + (
-                gate_packet_next_required_step
-                if gate_packet_next_required_step
-                else "Burn down the current stage6 operational gate without reopening the recovered nightly writer/import path."
+            (
+                f"Treat `{latest_artifact}` as authoritative: the latest canonical top-level nightly still fails "
+                f"`stage6_operational_gate` at `{gate_metric_name or gate_packet_metric or 'mean_min_distance_A'}`="
+                f"`{gate_metric_value}` versus `{gate_metric_threshold}`. Do not clear the commercialization queue from "
+                "older reentry or downstream execute evidence; keep that evidence supporting-only and rerun the canonical "
+                "top-level smoke/full nightly after the stage6 fix lands."
+                if stale_green_gate_packet
+                else (
+                    "Hold the recovered stage2 writer/import path green, then use "
+                    f"`{gate_packet_artifact or nightly_gate_burndown_mod.DEFAULT_OUT_MD}` as the nightly stage6 burndown surface so "
+                    f"`{gate_packet_metric or gate_metric_name or 'mean_min_distance_A'}` moves from "
+                    f"`{_float_text(gate_packet_value)}` to within the `{_float_text(gate_packet_threshold)}` threshold "
+                    "before treating nightly as commercial-grade. "
+                    + (
+                        gate_packet_next_required_step
+                        if gate_packet_next_required_step
+                        else "Burn down the current stage6 operational gate without reopening the recovered nightly writer/import path."
+                    )
+                )
             )
             + (
                 " "
@@ -703,8 +724,17 @@ def _wetlab_signal(
     final_summary = _summaryish(wetlab_final)
     readiness_summary = _summaryish(wetlab_readiness or {})
     selected_allatom_summary = _summaryish(wetlab_selected_allatom or {})
-    primary_watch_liveness = _text(dashboard.get("broad_screen_primary_watch_liveness"))
-    antitarget_watch_liveness = _text(dashboard.get("broad_screen_antitarget_watch_liveness"))
+    primary_watch_liveness = _text(readiness_summary.get("primary_watch_liveness")) or _text(
+        dashboard.get("broad_screen_primary_watch_liveness")
+    )
+    antitarget_watch_liveness = _text(readiness_summary.get("antitarget_watch_liveness")) or _text(
+        dashboard.get("broad_screen_antitarget_watch_liveness")
+    )
+    selected_allatom_gate_pass = readiness_summary.get("selected_allatom_wetlab_gate_pass")
+    if not isinstance(selected_allatom_gate_pass, bool):
+        selected_allatom_gate_pass = dashboard.get("selected_allatom_wetlab_gate_pass")
+    if not isinstance(selected_allatom_gate_pass, bool) and selected_allatom_summary:
+        selected_allatom_gate_pass = bool(selected_allatom_summary.get("selected_allatom_wetlab_gate_pass", False))
     watch_gap_count = sum(
         1
         for value in (primary_watch_liveness, antitarget_watch_liveness)
@@ -716,7 +746,7 @@ def _wetlab_signal(
         f"primary_watch_liveness={primary_watch_liveness or '-'}; "
         f"antitarget_watch_liveness={antitarget_watch_liveness or '-'}; "
         f"watch_gap_count={watch_gap_count}; "
-        f"selected_allatom_wetlab_gate_pass={dashboard.get('selected_allatom_wetlab_gate_pass', False)}"
+        f"selected_allatom_wetlab_gate_pass={selected_allatom_gate_pass if isinstance(selected_allatom_gate_pass, bool) else False}"
     )
     if readiness_summary:
         readiness_status_line = _text(readiness_summary.get("status_line"))
@@ -775,7 +805,7 @@ def _wetlab_signal(
         readiness_summary.get("ready_count", readiness_summary.get("ready_row_count", 0)) or 0
     )
     selected_allatom_gate_failed = (
-        dashboard.get("selected_allatom_wetlab_gate_pass") is False
+        selected_allatom_gate_pass is False
         or _int(selected_allatom_summary.get("hard_block_count")) > 0
         or _int(selected_allatom_summary.get("missing_metric_count")) > 0
     )

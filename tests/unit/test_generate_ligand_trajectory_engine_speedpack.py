@@ -144,6 +144,57 @@ def test_register_batch_limit_derate_halves_limit_and_records_event() -> None:
     ]
 
 
+def test_get_engine_resources_can_disable_cache(monkeypatch) -> None:
+    build_count = {"top": 0, "ff": 0, "integrator": 0}
+
+    class _FakeForceField:
+        physics_backend = "rust_hip"
+
+        def __init__(self, *_args, **_kwargs) -> None:
+            build_count["ff"] += 1
+
+        def to(self, _device):
+            return self
+
+    class _FakeIntegrator:
+        def __init__(self, *_args, **_kwargs) -> None:
+            build_count["integrator"] += 1
+
+        def to(self, _device):
+            return self
+
+    def _fake_topology_factory(**_kwargs):
+        build_count["top"] += 1
+        return {"topology": build_count["top"]}
+
+    monkeypatch.setattr(mod, "TopologyFactory", _fake_topology_factory)
+    monkeypatch.setattr(mod, "ForceField", _FakeForceField)
+    monkeypatch.setattr(mod, "LangevinIntegrator", _FakeIntegrator)
+
+    cache: dict[tuple[object, ...], dict[str, object]] = {}
+    kwargs = {
+        "n_total": 5,
+        "strategy_type": "DIRECT_PERTURBATION_NO_MIN",
+        "box_size_A": 120.0,
+        "ff_sigma": 3.8,
+        "ff_eps_solv": 25.0,
+        "force_backend": "auto",
+        "require_rust_hip": True,
+        "dt_fs": 0.002,
+        "friction": 1.0,
+        "kT": 0.5961,
+        "engine_cache": cache,
+        "engine_cache_max_entries": 0,
+    }
+
+    first = mod._get_engine_resources(**kwargs)
+    second = mod._get_engine_resources(**kwargs)
+
+    assert first is not second
+    assert cache == {}
+    assert build_count == {"top": 2, "ff": 2, "integrator": 2}
+
+
 def test_run_batch_records_batch_derate_telemetry(tmp_path, monkeypatch) -> None:
     queue_csv = tmp_path / "queue.csv"
     pd.DataFrame(

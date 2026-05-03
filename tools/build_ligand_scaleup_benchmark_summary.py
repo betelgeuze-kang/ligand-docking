@@ -39,6 +39,30 @@ def _read_json_if_exists(path_str: str) -> Dict[str, Any]:
         return {}
 
 
+def _resolve_task_packaged_copy(path_str: str, task: Dict[str, Any]) -> Optional[Path]:
+    requested = _resolve_repo_path(path_str)
+    requested_name = requested.name
+    for copied_file in task.get("copied_files", []):
+        if not isinstance(copied_file, dict):
+            continue
+        src = _resolve_repo_path(str(copied_file.get("src", "")))
+        dst = _resolve_repo_path(str(copied_file.get("dst", "")))
+        if src == requested or src.name == requested_name:
+            if dst.exists():
+                return dst
+    return None
+
+
+def _resolve_task_artifact_path(path_str: str, task: Dict[str, Any]) -> tuple[Path, str]:
+    path = _resolve_repo_path(path_str)
+    if path.exists():
+        return path, "original_path"
+    packaged_copy = _resolve_task_packaged_copy(path_str, task)
+    if packaged_copy is not None:
+        return packaged_copy, "packaged_copy"
+    return path, "missing"
+
+
 def _safe_float(value: Any) -> Optional[float]:
     try:
         if value is None or value == "":
@@ -91,12 +115,23 @@ def _iter_ligand_task_rows(run_summary: Dict[str, Any]) -> List[Dict[str, Any]]:
     return out
 
 
-def _pipeline_sla_metrics(summary_json: str) -> Dict[str, Any]:
-    payload = _read_json_if_exists(summary_json)
+def _pipeline_sla_metrics(summary_json: str, task: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    resolution_source = "original_path"
+    if task is None:
+        payload = _read_json_if_exists(summary_json)
+        if not payload:
+            resolution_source = "missing"
+    else:
+        path, resolution_source = _resolve_task_artifact_path(summary_json, task)
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+        except Exception:
+            payload = {}
     sla = ((payload.get("stages") or {}).get("stage8_sla") or {})
     if not isinstance(sla, dict):
         sla = {}
     return {
+        "artifact_resolution_source": resolution_source,
         "total_latency_sec": _safe_float(sla.get("total_latency_sec")),
         "queue_rate_stage2_rows_per_sec": _safe_float(sla.get("queue_rate_stage2_rows_per_sec")),
         "queue_rate_stage3_rows_per_sec": _safe_float(sla.get("queue_rate_stage3_rows_per_sec")),
@@ -136,8 +171,8 @@ def _measured_speedup_summary(
     for task_id in common_ids:
         base_task = baseline_rows[task_id]
         cand_task = candidate_rows[task_id]
-        base_sla = _pipeline_sla_metrics(str(base_task.get("pipeline_summary_json", "")))
-        cand_sla = _pipeline_sla_metrics(str(cand_task.get("pipeline_summary_json", "")))
+        base_sla = _pipeline_sla_metrics(str(base_task.get("pipeline_summary_json", "")), base_task)
+        cand_sla = _pipeline_sla_metrics(str(cand_task.get("pipeline_summary_json", "")), cand_task)
         stage2_speedup = _safe_ratio(base_sla.get("stage2_latency_sec"), cand_sla.get("stage2_latency_sec"))
         end_to_end_speedup = _safe_ratio(base_sla.get("total_latency_sec"), cand_sla.get("total_latency_sec"))
         if isinstance(stage2_speedup, float):
@@ -158,6 +193,8 @@ def _measured_speedup_summary(
                 "end_to_end_speedup": end_to_end_speedup,
                 "baseline_pipeline_summary_json": str(base_task.get("pipeline_summary_json", "")),
                 "candidate_pipeline_summary_json": str(cand_task.get("pipeline_summary_json", "")),
+                "baseline_pipeline_resolution_source": str(base_sla.get("artifact_resolution_source", "")),
+                "candidate_pipeline_resolution_source": str(cand_sla.get("artifact_resolution_source", "")),
             }
         )
 
@@ -386,6 +423,8 @@ def _build_guardrail_rows(
     rows: List[Dict[str, Any]] = []
     for row in pilot.get("guardrail_rows", []) if isinstance(pilot.get("guardrail_rows"), list) else []:
         guardrail_id = str(row.get("guardrail_id", "")).strip()
+        metric = str(row.get("metric", ""))
+        threshold = str(row.get("threshold", ""))
         observed_value = "pending"
         passed: Optional[bool] = None
         note = ""
@@ -402,6 +441,8 @@ def _build_guardrail_rows(
                 if worst:
                     note = f"worst task: {worst}"
             elif guardrail_id == "top20_hit_drop_max_1":
+                metric = "top20_hit_rate_delta"
+                threshold = ">= -0.05 absolute rate"
                 value = comparison_metrics.get("max_top20_hit_rate_drop")
                 observed_value = f"{value:.4f}" if isinstance(value, float) else "n/a"
                 passed = (value is not None) and (value >= -0.05)
@@ -423,8 +464,8 @@ def _build_guardrail_rows(
         rows.append(
             {
                 "guardrail_id": guardrail_id,
-                "metric": str(row.get("metric", "")),
-                "threshold": str(row.get("threshold", "")),
+                "metric": metric,
+                "threshold": threshold,
                 "scope": str(row.get("scope", "")),
                 "observed_value": observed_value,
                 "pass": passed,

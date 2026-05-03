@@ -108,4 +108,4 @@ Before pushing, confirm that generated MD data, checkpoints, logs, and local del
 
 The pushed GitHub content includes the implementation, tests, configuration, and documentation needed to reproduce the local-delivery workflows. Runtime data remains local by design. If a partner or reviewer needs an evidence package, generate a local delivery bundle and share the resulting reviewed artifacts rather than committing raw trajectory or model output files.
 
-Current delivery status is green; assemble the restricted local-delivery bundle with `python3 tools/build_local_delivery_bundle.py` and validate it with `python3 tools/validate_local_delivery_bundle.py --bundle-dir <bundle_dir>`.
+Current delivery status is green for the restricted local-delivery scope: the verdict gate reports `summary.delivery_ready=true` and the commercialization queue is clear. Build the restricted local-delivery bundle and rerun `python3 tools/validate_local_delivery_bundle.py --bundle-dir <bundle_dir>` before sharing any delivery-ready package.

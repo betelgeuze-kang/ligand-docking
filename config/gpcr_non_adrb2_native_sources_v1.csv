@@ -1,0 +1,4 @@
+target,pdb_id,rcsb_url,ligand_code,ligand_chain,pocket_x,pocket_y,pocket_z,source_release,notes
+CHEMBL217_DRD2_HUMAN,6CM4,https://www.rcsb.org/structure/6CM4,8NU,A,9.925,5.846,-9.582,RCSB_PDB,DRD2 receptor structure with risperidone; pocket center from ligand HETATM centroid
+CHEMBL224_HTR2A_HUMAN,6A93,https://www.rcsb.org/structure/6A93,8NU,A,13.752,-0.738,60.462,RCSB_PDB,5-HT2A receptor structure with risperidone; pocket center from ligand HETATM centroid
+CHEMBL233_OPRM1_HUMAN,8EF6,https://www.rcsb.org/structure/8EF6,MOI,R,138.795,125.787,134.777,RCSB_PDB,Human mu opioid receptor complex with morphine; pocket center from ligand HETATM centroid

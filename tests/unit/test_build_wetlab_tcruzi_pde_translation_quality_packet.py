@@ -41,8 +41,39 @@ def test_build_translation_quality_packet_keeps_p0_green_but_translation_blocked
     assert summary["allatom_delivery_p0_green"] is True
     assert summary["translation_quality_ready"] is False
     assert summary["claim_scope"] == "post_p0_quality_followup_only"
+    assert summary["claim_promotion_allowed"] is False
+    assert summary["claim_policy_status"] == "blocked_post_p0_quality_followup"
     assert summary["primary_blocker"] == "binding_energy_proxy_too_weak_for_translation"
+    assert summary["measurement_gap_count"] == 4
+    assert summary["failed_quality_axes"] == ["binding_energy_proxy"]
+    assert summary["missing_quality_axes"] == [
+        "backmapping_consistency",
+        "local_minimization_survival",
+        "pose_preservation_rmsd",
+        "replicate_pass_fraction",
+    ]
     assert summary["next_required_step"] == "Close translation-quality evidence before broad wetlab or scale-up claims."
+    closure = payload["closure_gate_requirements"]
+    assert closure["status"] == "blocked"
+    assert closure["claim_promotion_allowed"] is False
+    assert closure["expensive_lane_allowed"] is False
+    assert closure["blocker_count"] == 5
+    assert closure["measurement_gap_count"] == 4
+    assert closure["next_gate"] == "translation_quality_closure"
+    assert closure["required_closed_axes"] == [
+        "backmapping_consistency",
+        "binding_energy_proxy",
+        "local_minimization_survival",
+        "pose_preservation_rmsd",
+        "replicate_pass_fraction",
+    ]
+    assert closure["required_next_calculations"] == [
+        "strengthen_binding_energy_proxy",
+        "measure_backmapping_consistency",
+        "measure_local_minimization_survival",
+        "measure_pose_preservation_rmsd",
+        "collect_replicate_pass_fraction",
+    ]
 
     action_by_check = {row["check_id"]: row for row in payload["rows"]}
     assert action_by_check["binding_energy_proxy_too_weak_for_translation"]["evidence_status"] == "failed"

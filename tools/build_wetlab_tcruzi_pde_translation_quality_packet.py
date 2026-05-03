@@ -163,12 +163,28 @@ def build_payload(review_payload: dict[str, Any], *, source_review_json: str = D
     failed_evidence_count = sum(1 for row in rows if row["evidence_status"] == "failed")
     missing_evidence_count = sum(1 for row in rows if row["evidence_status"] == "missing")
     warning_evidence_count = sum(1 for row in rows if row["evidence_status"] == "warning")
+    failed_quality_axes = [row["quality_axis"] for row in rows if row["evidence_status"] == "failed"]
+    missing_quality_axes = [row["quality_axis"] for row in rows if row["evidence_status"] == "missing"]
     recommended_next_expensive_lane = _text(review_summary.get("recommended_next_expensive_lane"), "defer_expensive_lane")
     next_required_step = (
         "Translation quality evidence is closed; broad wetlab claim review may proceed."
         if translation_quality_ready
         else "Close translation-quality evidence before broad wetlab or scale-up claims."
     )
+    required_next_calculations = [row["action_code"] for row in rows]
+    closure_gate_requirements = {
+        "status": "pass" if translation_quality_ready else "blocked",
+        "claim_promotion_allowed": translation_quality_ready,
+        "expensive_lane_allowed": translation_quality_ready,
+        "failed_quality_axes": failed_quality_axes,
+        "missing_quality_axes": missing_quality_axes,
+        "required_closed_axes": sorted({row["quality_axis"] for row in rows}),
+        "required_next_calculations": required_next_calculations,
+        "blocker_count": failed_evidence_count + missing_evidence_count,
+        "measurement_gap_count": missing_evidence_count,
+        "next_gate": "broad_translation_claim_review" if translation_quality_ready else "translation_quality_closure",
+        "claim_policy": "do_not_expand_broad_translation_or_scaleup_claim_until_all_axes_close",
+    }
 
     return {
         "summary": {
@@ -180,6 +196,10 @@ def build_payload(review_payload: dict[str, Any], *, source_review_json: str = D
             "commercial_hard_gate_pass": commercial_hard_gate_pass,
             "translation_quality_ready": translation_quality_ready,
             "claim_scope": "broad_translation_claim_candidate" if translation_quality_ready else "post_p0_quality_followup_only",
+            "claim_promotion_allowed": translation_quality_ready,
+            "claim_policy_status": "eligible_for_broad_translation_claim_review"
+            if translation_quality_ready
+            else "blocked_post_p0_quality_followup",
             "translation_gate_focus_status": translation_focus_status,
             "translation_gate_focus_score": review_summary.get("translation_gate_focus_score"),
             "primary_blocker": primary_blocker,
@@ -187,6 +207,9 @@ def build_payload(review_payload: dict[str, Any], *, source_review_json: str = D
             "failed_evidence_count": failed_evidence_count,
             "missing_evidence_count": missing_evidence_count,
             "warning_evidence_count": warning_evidence_count,
+            "measurement_gap_count": missing_evidence_count,
+            "failed_quality_axes": failed_quality_axes,
+            "missing_quality_axes": missing_quality_axes,
             "best_ligand_id": best_ligand_id,
             "best_mean_min_distance_A": best_mean_min_distance_A,
             "best_binding_energy_proxy": best_binding_energy_proxy,
@@ -194,6 +217,7 @@ def build_payload(review_payload: dict[str, Any], *, source_review_json: str = D
             "expensive_lane_status": "eligible_for_review" if translation_quality_ready else "deferred_until_translation_quality_closed",
             "next_required_step": next_required_step,
         },
+        "closure_gate_requirements": closure_gate_requirements,
         "rows": rows,
     }
 

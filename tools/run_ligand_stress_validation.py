@@ -25,6 +25,8 @@ except Exception:  # pragma: no cover
 
 _STOP_REQUESTED = False
 
+DEFAULT_GPCR_GUARDED_100K_READINESS_JSON = "runs/gpcr_guarded_100k_rerun_readiness_current.json"
+
 
 def _signal_stop(_signum: int, _frame: object) -> None:
     global _STOP_REQUESTED
@@ -169,6 +171,66 @@ def _parse_targets(spec: str) -> List[str]:
     return out
 
 
+def _boolish(value: Any) -> Optional[bool]:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    if text in {"1", "true", "yes", "y", "on"}:
+        return True
+    if text in {"0", "false", "no", "n", "off"}:
+        return False
+    return None
+
+
+def _guarded_100k_readiness_preflight(
+    *,
+    args: argparse.Namespace,
+    prof: Dict[str, Any],
+    sizes: List[int],
+    target_list: List[str],
+) -> Dict[str, Any]:
+    cli_enforce = _boolish(getattr(args, "enforce_guarded_100k_readiness", None))
+    profile_enforce = _boolish(prof.get("enforce_guarded_100k_readiness"))
+    has_gpcr_target = any("GPCR" in str(target).upper() for target in target_list)
+    has_100k_size = bool(sizes) and max(int(size) for size in sizes) >= 100000
+    auto_enforce = has_gpcr_target and has_100k_size
+    enforced = bool(cli_enforce if cli_enforce is not None else (profile_enforce if profile_enforce is not None else auto_enforce))
+    readiness_json = str(
+        getattr(args, "guarded_100k_readiness_json", "") or prof.get("guarded_100k_readiness_json", "")
+        or DEFAULT_GPCR_GUARDED_100K_READINESS_JSON
+    ).strip()
+    payload = _read_json(readiness_json) if enforced else {}
+    summary = payload.get("summary") if isinstance(payload.get("summary"), dict) else {}
+    claim_review_eligible = bool(
+        summary.get("eligible") is True or str(summary.get("status", "")).lower() == "eligible"
+    )
+    launch_eligible = bool(
+        summary.get("launch_eligible") is True or str(summary.get("launch_status", "")).lower() == "eligible"
+    )
+    eligible = bool(claim_review_eligible or launch_eligible)
+    launch_blockers = summary.get("launch_blockers") if isinstance(summary.get("launch_blockers"), list) else []
+    blockers = launch_blockers or (summary.get("blockers") if isinstance(summary.get("blockers"), list) else [])
+    if enforced and not payload:
+        blockers = ["guarded_100k_readiness_missing"]
+    elif enforced and not eligible and not blockers:
+        blockers = ["guarded_100k_readiness_not_eligible"]
+    return {
+        "enforced": bool(enforced),
+        "ok": bool((not enforced) or eligible),
+        "eligible": bool(eligible),
+        "launch_eligible": bool(launch_eligible),
+        "claim_review_eligible": bool(claim_review_eligible),
+        "readiness_json": readiness_json,
+        "blockers": blockers,
+        "has_gpcr_target": bool(has_gpcr_target),
+        "has_100k_size": bool(has_100k_size),
+        "auto_enforce": bool(auto_enforce),
+        "claim_promotion_allowed": False,
+    }
+
+
 def _parse_roles(spec: str) -> List[str]:
     return [tok.strip() for tok in str(spec or "").split(",") if tok.strip()]
 
@@ -229,6 +291,21 @@ def _profile_traj_prod_args(prof: Dict[str, Any]) -> List[str]:
     ]
 
 
+def _profile_stage2_runtime_args(prof: Dict[str, Any]) -> List[str]:
+    cli: List[str] = []
+    if "traj_job_batch_size" in prof:
+        cli.extend(["--traj-job-batch-size", str(int(prof.get("traj_job_batch_size", 0)))])
+    if str(prof.get("traj_job_batch_autotune_candidates", "")).strip():
+        cli.extend(["--traj-job-batch-autotune-candidates", str(prof.get("traj_job_batch_autotune_candidates"))])
+    if "traj_job_batch_autotune_frames" in prof:
+        cli.extend(["--traj-job-batch-autotune-frames", str(int(prof.get("traj_job_batch_autotune_frames", 12)))])
+    if "traj_engine_cache_max_entries" in prof:
+        cli.extend(["--traj-engine-cache-max-entries", str(int(prof.get("traj_engine_cache_max_entries", 16)))])
+    if "traj_writer_max_pending" in prof:
+        cli.extend(["--traj-writer-max-pending", str(int(prof.get("traj_writer_max_pending", 64)))])
+    return cli
+
+
 def _profile_residual_prototype_args(prof: Dict[str, Any]) -> List[str]:
     cli: List[str] = [
         "--stage3-residual-prototype-enabled"
@@ -259,6 +336,15 @@ def _profile_residual_prototype_args(prof: Dict[str, Any]) -> List[str]:
                 str(float(prof.get("residual_prototype_yellow_band_abs_delta_score"))),
             ]
         )
+    return cli
+
+
+def _profile_score_reference_args(prof: Dict[str, Any]) -> List[str]:
+    mode = str(prof.get("score_reference_scaling_mode", "run_local") or "run_local").strip()
+    stats_json = str(prof.get("score_reference_stats_json", "") or "").strip()
+    cli = ["--stage3-score-reference-scaling-mode", mode]
+    if stats_json:
+        cli.extend(["--stage3-score-reference-stats-json", stats_json])
     return cli
 
 
@@ -688,6 +774,48 @@ def run_stress(args: argparse.Namespace) -> Dict[str, Any]:
     base_targets = str(args.targets).strip() or str(prof.get("targets", "KRAS_G12D,EGFR_KINASE,HIV1_PROTEASE"))
     target_list = _parse_targets(base_targets)
     target_count = max(1, len(target_list))
+    guarded_100k_preflight = _guarded_100k_readiness_preflight(
+        args=args,
+        prof=prof,
+        sizes=sizes,
+        target_list=target_list,
+    )
+    if not bool(guarded_100k_preflight.get("ok", False)):
+        payload = {
+            "generated_at_local": dt.datetime.now().isoformat(timespec="seconds"),
+            "pass": False,
+            "stopped": False,
+            "failed_stage": "guarded_100k_readiness_preflight",
+            "profile_json": profile_json,
+            "runs": [],
+            "aggregate": [],
+            "failures": [],
+            "stages": {"guarded_100k_readiness_preflight": guarded_100k_preflight},
+            "artifacts": {
+                "summary_json": f"{out_prefix}_summary.json",
+                "summary_md": f"{out_prefix}_summary.md",
+                "state_json": state_json,
+            },
+        }
+        payload = _attach_artifacts_abs(payload)
+        with open(f"{out_prefix}_summary.json", "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+        with open(f"{out_prefix}_summary.md", "w", encoding="utf-8") as f:
+            f.write(
+                "\n".join(
+                    [
+                        "# Ligand Stress Validation",
+                        "",
+                        f"- pass: {payload['pass']}",
+                        f"- failed_stage: `{payload['failed_stage']}`",
+                        f"- guarded_100k_readiness_json: `{guarded_100k_preflight.get('readiness_json', '')}`",
+                        f"- blockers: {guarded_100k_preflight.get('blockers', [])}",
+                    ]
+                )
+                + "\n"
+            )
+        _release_instance_lock(lock_meta)
+        return payload
 
     gate = prof.get("gate", {}) if isinstance(prof.get("gate"), dict) else {}
     strict_gate = prof.get("strict_gate", {}) if isinstance(prof.get("strict_gate"), dict) else {}
@@ -1175,8 +1303,10 @@ def run_stress(args: argparse.Namespace) -> Dict[str, Any]:
                     str(int(prof.get("traj_writer_workers", 1))),
                     "--traj-writer-mode",
                     str(prof.get("traj_writer_mode", "process")),
+                    *_profile_stage2_runtime_args(prof),
                     *_profile_traj_prod_args(prof),
                     *_profile_residual_prototype_args(prof),
+                    *_profile_score_reference_args(prof),
                     "--max-jobs-score-full",
                     str(int(full_max_jobs_score)),
                     "--traj-dynamic-core-fallback-on-oom"
@@ -1647,6 +1777,7 @@ def run_stress(args: argparse.Namespace) -> Dict[str, Any]:
             "resume_retry_failed_runs": bool(resume_retry_failed_runs),
             "resume_stage3_only_on_retry": bool(resume_stage3_only_on_retry),
         },
+        "guarded_100k_readiness_preflight": guarded_100k_preflight,
         "stage_lock": {k: v for k, v in lock_meta.items() if k != "fd"},
         "pre_stage_hard_decoy": pre_stage,
         "calibration_reference_csv_effective": calib_ref_csv,
@@ -1762,6 +1893,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--auto-heavy-artifacts-root", action=argparse.BooleanOptionalAction, default=None)
     p.add_argument("--enforce-data-contract", action=argparse.BooleanOptionalAction, default=None)
     p.add_argument("--data-contract-json", type=str, default="")
+    p.add_argument("--guarded-100k-readiness-json", type=str, default=DEFAULT_GPCR_GUARDED_100K_READINESS_JSON)
+    p.add_argument("--enforce-guarded-100k-readiness", action=argparse.BooleanOptionalAction, default=None)
     return p
 
 

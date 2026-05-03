@@ -275,6 +275,86 @@ def test_build_payload_with_measured_speedup_promotes_post_run_evidence(tmp_path
     _contains_tokens(payload["recommended_next_action"], "claim-safe", "measured", "speedup", "throughput")
 
 
+def test_build_payload_measured_speedup_uses_packaged_pipeline_copy(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    _write_json(
+        tmp_path / "runs/ligand_scaleup_100k_pilot_current.json",
+        {
+            "comparison_kind": "size_shift_operational_regression",
+            "guardrail_rows": [
+                {"guardrail_id": "no_pass_to_fail", "metric": "set_pass_transition", "threshold": "0 pass->fail transitions", "scope": "regression slice"},
+                {"guardrail_id": "pr_auc_drop_max_0p02", "metric": "ranking_pr_auc_delta", "threshold": ">= -0.02 absolute", "scope": "regression slice"},
+                {"guardrail_id": "top20_hit_drop_max_1", "metric": "top20_hit_delta", "threshold": ">= -1 hit", "scope": "regression slice"},
+                {"guardrail_id": "slowest_domain_speedup_min_1p8x", "metric": "measured_end_to_end_speedup", "threshold": ">= 1.8x on slowest domain", "scope": "throughput benchmark"},
+            ],
+        },
+    )
+    _write_json(
+        tmp_path / "runs/ligand_scaleup_kpi_current.json",
+        {"summary": {"slowest_task_at_1m": {"task_id": "gpcr_core_full", "domain": "gpcr"}}},
+    )
+    _write_json(
+        tmp_path / "runs/comparison.json",
+        {
+            "task_rows": [
+                {
+                    "task_id": "gpcr_core_full",
+                    "kind": "ligand_stress",
+                    "baseline_pass": True,
+                    "candidate_pass": True,
+                    "delta_pr_auc": -0.01,
+                    "delta_top20_hit_rate": 0.0,
+                }
+            ]
+        },
+    )
+    original_base = tmp_path / "runs/base_missing_pipeline_summary.json"
+    original_cand = tmp_path / "runs/cand_missing_pipeline_summary.json"
+    packaged_base = tmp_path / "runs/package/set1/files/gpcr/base_missing_pipeline_summary.json"
+    packaged_cand = tmp_path / "runs/package/set1/files/gpcr/cand_missing_pipeline_summary.json"
+    _write_pipeline_summary(packaged_base, total_latency_sec=200.0, stage2_latency_sec=150.0, queue_rate_stage2_rows_per_sec=66.0)
+    _write_pipeline_summary(packaged_cand, total_latency_sec=100.0, stage2_latency_sec=75.0, queue_rate_stage2_rows_per_sec=132.0)
+    _write_run_summary_with_tasks(
+        tmp_path / "runs/baseline_summary.json",
+        [
+            {
+                "task_id": "gpcr_core_full",
+                "domain": "gpcr",
+                "kind": "ligand_stress",
+                "pipeline_summary_json": str(original_base),
+                "copied_files": [{"src": str(original_base), "dst": str(packaged_base)}],
+            }
+        ],
+    )
+    _write_run_summary_with_tasks(
+        tmp_path / "runs/candidate_summary.json",
+        [
+            {
+                "task_id": "gpcr_core_full",
+                "domain": "gpcr",
+                "kind": "ligand_stress",
+                "pipeline_summary_json": str(original_cand),
+                "copied_files": [{"src": str(original_cand), "dst": str(packaged_cand)}],
+            }
+        ],
+    )
+
+    payload = mod.build_payload(
+        pilot_json="runs/ligand_scaleup_100k_pilot_current.json",
+        kpi_json="runs/ligand_scaleup_kpi_current.json",
+        comparison_json="runs/comparison.json",
+        baseline_summary_json="runs/baseline_summary.json",
+        candidate_summary_json="runs/candidate_summary.json",
+    )
+
+    slowest = payload["measured_speedup_summary"]["slowest_task"]
+    speed_row = next(row for row in payload["guardrail_rows"] if row["guardrail_id"] == "slowest_domain_speedup_min_1p8x")
+    assert slowest["end_to_end_speedup"] == 2.0
+    assert slowest["baseline_pipeline_resolution_source"] == "packaged_copy"
+    assert slowest["candidate_pipeline_resolution_source"] == "packaged_copy"
+    assert speed_row["pass"] is True
+
+
 def test_build_payload_with_measured_speedup_below_threshold_marks_speed_guardrail_fail(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(mod, "ROOT", tmp_path)
     _write_json(

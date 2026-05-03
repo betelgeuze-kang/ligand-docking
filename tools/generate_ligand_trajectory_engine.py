@@ -1283,7 +1283,8 @@ def _get_engine_resources(
         friction=friction,
         kT=kT,
     )
-    if engine_cache is not None and key in engine_cache:
+    cache_enabled = engine_cache is not None and int(engine_cache_max_entries) > 0
+    if cache_enabled and key in engine_cache:
         return engine_cache[key]
 
     device = config.DEVICE
@@ -1315,7 +1316,7 @@ def _get_engine_resources(
         adaptive_dt=False,
     ).to(device)
     payload = {"top": top, "ff": ff, "integrator": integrator}
-    if engine_cache is not None:
+    if cache_enabled:
         engine_cache[key] = payload
         max_entries = int(max(1, int(engine_cache_max_entries)))
         while len(engine_cache) > max_entries:

@@ -153,7 +153,7 @@ def _validate_set_defs(set_defs: List[Dict[str, Any]], source: str) -> None:
         seen_set_ids.add(set_id)
         if not title or not purpose:
             raise ValueError(f"{source}: set {set_id} missing title/purpose")
-        if claim_role and claim_role not in {"primary", "secondary_generalization", "reproducibility_support"}:
+        if claim_role and claim_role not in {"primary", "secondary_generalization", "reproducibility_support", "comparison_candidate"}:
             raise ValueError(f"{source}: set {set_id} invalid claim_role: {claim_role}")
         if not isinstance(tasks, list) or not tasks:
             raise ValueError(f"{source}: set {set_id} missing non-empty tasks")

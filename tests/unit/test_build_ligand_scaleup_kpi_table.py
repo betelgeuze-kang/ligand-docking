@@ -202,3 +202,174 @@ def test_build_ligand_scaleup_kpi_table(tmp_path: Path) -> None:
     assert "## Target Gap Items" in md_text
     assert "req x @100k" in md_text
     assert "gpcr_core_full" in md_text
+
+
+def test_build_ligand_scaleup_kpi_table_records_missing_artifacts(tmp_path: Path) -> None:
+    runs = tmp_path / "runs"
+    run_root = runs / "external_validation_blind_runs" / "external_validation_blind_runs_missing"
+    run_root.mkdir(parents=True)
+    missing_wrapper = runs / "missing_gpcr_wrapper_summary.json"
+
+    _write_json(
+        run_root / "summary.json",
+        {
+            "sets": [
+                {
+                    "set_id": "set1_core_blind",
+                    "tasks": [
+                        {
+                            "task_id": "gpcr_core_full",
+                            "domain": "gpcr",
+                            "kind": "ligand_stress",
+                            "pass": True,
+                            "raw_pass": True,
+                            "profile_json": "config/gpcr.json",
+                            "summary_json": str(missing_wrapper),
+                        }
+                    ],
+                }
+            ]
+        },
+    )
+    freeze_json = runs / "biorxiv_submission_freeze_current.json"
+    _write_json(
+        freeze_json,
+        {
+            "bundle_tag": "missing",
+            "run_root": str(run_root),
+        },
+    )
+
+    out_json = runs / "ligand_scaleup_kpi_current.json"
+    out_csv = runs / "ligand_scaleup_kpi_current.csv"
+    out_md = runs / "ligand_scaleup_kpi_current.md"
+    subprocess.run(
+        [
+            "python3",
+            str(ROOT / "tools/build_ligand_scaleup_kpi_table.py"),
+            "--freeze-json",
+            str(freeze_json),
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=tmp_path,
+    )
+
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    assert payload["summary"]["row_count"] == 1
+    assert payload["summary"]["coverage_summary"]["missing_artifact_count"] == 1
+    assert payload["summary"]["coverage_summary"]["timing_coverage_tier_counts"] == {"missing_artifact": 1}
+    row = payload["rows"][0]
+    assert row["task_id"] == "gpcr_core_full"
+    assert row["missing_artifact"] is True
+    assert row["missing_artifact_kind"] == "wrapper_summary_json"
+    assert row["timing_coverage_tier"] == "missing_artifact"
+    assert row["speedpack_priority"] == "blocked"
+
+    md_text = out_md.read_text(encoding="utf-8")
+    assert "missing_artifact" in md_text
+
+
+def test_build_ligand_scaleup_kpi_table_uses_packaged_copies(tmp_path: Path) -> None:
+    runs = tmp_path / "runs"
+    run_root = runs / "external_validation_blind_runs" / "external_validation_blind_runs_packaged"
+    packaged_dir = run_root / "set1_core_blind" / "files" / "gpcr"
+    packaged_dir.mkdir(parents=True)
+
+    original_wrapper = runs / "external_validation_packaged_gpcr_core_full_summary.json"
+    original_raw = runs / "external_validation_packaged_gpcr_core_full_p0_n10000_r1_summary.json"
+    packaged_wrapper = packaged_dir / original_wrapper.name
+    packaged_raw = packaged_dir / original_raw.name
+
+    _write_json(
+        packaged_raw,
+        {
+            "stages": {
+                "stage2_trajectory_generation": {"duration_sec": 120.0},
+                "stage3_backmapping_scoring": {"duration_sec": 12.0},
+                "stage45_eval_integrity": {"duration_sec": 0.5},
+                "stage5_ranking_eval": {"duration_sec": 7.5},
+            }
+        },
+    )
+    _write_json(
+        packaged_wrapper,
+        {
+            "runs": [
+                {
+                    "summary_json": str(original_raw),
+                    "sla_total_latency_sec": 150.0,
+                    "sla_queue_rate_stage2_rows_per_sec": 90.0,
+                    "sla_queue_rate_stage3_rows_per_sec": 800.0,
+                }
+            ]
+        },
+    )
+    _write_json(
+        run_root / "summary.json",
+        {
+            "sets": [
+                {
+                    "set_id": "set1_core_blind",
+                    "tasks": [
+                        {
+                            "task_id": "gpcr_core_full",
+                            "domain": "gpcr",
+                            "kind": "ligand_stress",
+                            "pass": True,
+                            "raw_pass": True,
+                            "profile_json": "config/gpcr.json",
+                            "summary_json": str(original_wrapper),
+                            "copied_files": [
+                                {"src": str(original_wrapper), "dst": str(packaged_wrapper)},
+                                {"src": str(original_raw), "dst": str(packaged_raw)},
+                            ],
+                        }
+                    ],
+                }
+            ]
+        },
+    )
+    freeze_json = runs / "biorxiv_submission_freeze_current.json"
+    _write_json(
+        freeze_json,
+        {
+            "bundle_tag": "packaged",
+            "run_root": str(run_root),
+        },
+    )
+
+    out_json = runs / "ligand_scaleup_kpi_current.json"
+    out_csv = runs / "ligand_scaleup_kpi_current.csv"
+    out_md = runs / "ligand_scaleup_kpi_current.md"
+    subprocess.run(
+        [
+            "python3",
+            str(ROOT / "tools/build_ligand_scaleup_kpi_table.py"),
+            "--freeze-json",
+            str(freeze_json),
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=tmp_path,
+    )
+
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    assert payload["summary"]["row_count"] == 1
+    assert payload["summary"]["coverage_summary"]["missing_artifact_count"] == 0
+    assert payload["summary"]["coverage_summary"]["planning_ready_count"] == 1
+    row = payload["rows"][0]
+    assert row["artifact_resolution_source"] == "packaged_copy"
+    assert row["wrapper_summary_resolution_source"] == "packaged_copy"
+    assert row["pipeline_summary_resolution_source"] == "packaged_copy"
+    assert row["timing_coverage_tier"] == "measured_full"

@@ -210,3 +210,90 @@ def test_build_gpcr_residual_prototype_spec_adrb2_pharmacophore_v1(tmp_path: Pat
         row["feature_name"] == "aryloxypropanolamine_smarts_match"
         for row in payload["feature_rows"]
     )
+
+
+def test_build_gpcr_residual_prototype_spec_mismatch_contact_rescore_v1_is_guarded(tmp_path: Path) -> None:
+    out_json = tmp_path / "prototype_mismatch_contact.json"
+    out_csv = tmp_path / "prototype_mismatch_contact.csv"
+    out_md = tmp_path / "prototype_mismatch_contact.md"
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools/build_gpcr_residual_prototype_spec.py"),
+            "--variant",
+            "gpcr_core_mismatch_contact_rescore_v1",
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=ROOT,
+    )
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    constraints = payload["prototype"]["constraints"]
+    tuning = payload["prototype"]["tuning"]
+
+    assert payload["summary"]["prototype_variant"] == "gpcr_core_mismatch_contact_rescore_v1"
+    assert constraints["comparison_only_candidate"] is True
+    assert constraints["structure_support_gate"] == {
+        "enabled": True,
+        "required_before_claim": True,
+        "full_100k_gate_green": False,
+    }
+    assert constraints["router_promotion_allowed"] is False
+    assert constraints["claim_safe_assertion_allowed"] is False
+    assert tuning["variant"] == "gpcr_core_mismatch_contact_rescore_v1"
+    assert tuning["failure_tags"] == [
+        "donor_prior_decoy_intrusion",
+        "weak_contact_prior_mismatch",
+        "affinity_hint_md_support_mismatch",
+        "no_existing_score_column_recovers_gate",
+    ]
+    assert tuning["require_no_existing_score_recovery_gate"] is True
+    assert tuning["min_contact_mismatch_z_for_delta"] > 0.0
+    assert tuning["affinity_md_support_mismatch_weight"] > 0.0
+    assert "no_router_or_general_gpcr_family_promotion" in payload["prototype"]["interactions"]
+    assert any(row["feature_name"] == "weak_contact_prior_mismatch" for row in payload["feature_rows"])
+    assert any(row["feature_name"] == "affinity_hint_md_support_mismatch" for row in payload["feature_rows"])
+
+
+def test_build_gpcr_residual_prototype_spec_structure_support_rescore_v1_is_claim_locked(tmp_path: Path) -> None:
+    out_json = tmp_path / "prototype_structure_support.json"
+    out_csv = tmp_path / "prototype_structure_support.csv"
+    out_md = tmp_path / "prototype_structure_support.md"
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools/build_gpcr_residual_prototype_spec.py"),
+            "--variant",
+            "gpcr_core_structure_support_rescore_v1",
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=ROOT,
+    )
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    constraints = payload["prototype"]["constraints"]
+    linear = payload["prototype"]["linear_rescore"]
+
+    assert payload["summary"]["prototype_variant"] == "gpcr_core_structure_support_rescore_v1"
+    assert constraints["comparison_only_candidate"] is True
+    assert constraints["structure_support_gate"] == {
+        "enabled": True,
+        "required_before_claim": True,
+        "full_100k_gate_green": False,
+    }
+    assert constraints["claim_safe_assertion_allowed"] is False
+    assert linear["enabled"] is True
+    assert linear["combine_mode"] == "replace"
+    assert any(term["feature"] == "z_contact_fraction" for term in linear["terms"])
+    assert any(term["feature"] == "z_stability_score" for term in linear["terms"])
+    assert "structure_support_replay_only_until_full_100k_gate_green" in payload["prototype"]["interactions"]

@@ -44,6 +44,30 @@ def _resolve_path(path_str: str) -> Path:
     return (ROOT / path).resolve()
 
 
+def _resolve_packaged_copy(path_str: str, task: Dict[str, Any]) -> Optional[Path]:
+    requested = _resolve_path(path_str)
+    requested_name = requested.name
+    for copied_file in task.get("copied_files", []):
+        if not isinstance(copied_file, dict):
+            continue
+        src = _resolve_path(str(copied_file.get("src", "")))
+        dst = _resolve_path(str(copied_file.get("dst", "")))
+        if src == requested or src.name == requested_name:
+            if dst.exists():
+                return dst
+    return None
+
+
+def _resolve_task_artifact_path(path_str: str, task: Dict[str, Any]) -> tuple[Path, str]:
+    path = _resolve_path(path_str)
+    if path.exists():
+        return path, "original_path"
+    packaged_copy = _resolve_packaged_copy(path_str, task)
+    if packaged_copy is not None:
+        return packaged_copy, "packaged_copy"
+    return path, "missing"
+
+
 def _safe_sec(value: Any) -> float:
     try:
         if value is None:
@@ -129,6 +153,63 @@ def _extract_stage_duration(stages: Dict[str, Any], *keys: str) -> float:
     return 0.0
 
 
+def _missing_artifact_row(
+    *,
+    set_id: str,
+    task: Dict[str, Any],
+    missing_artifact_path: Path,
+    missing_artifact_kind: str,
+) -> Dict[str, Any]:
+    domain = str(task.get("domain", ""))
+    target_100k_wall_min_upper = _target_upper(domain, "target_100k_wall_min_upper")
+    target_1m_wall_hr_upper = _target_upper(domain, "target_1m_wall_hr_upper")
+    return {
+        "set_id": set_id,
+        "task_id": str(task.get("task_id", "")),
+        "domain": domain,
+        "profile_json": str(task.get("profile_json", "")),
+        "pass": False,
+        "raw_pass": False,
+        "total_latency_sec_10k": 0.0,
+        "stage2_trajectory_sec_10k": 0.0,
+        "stage3_backmapping_sec_10k": 0.0,
+        "stage4_calibration_sec_10k": 0.0,
+        "stage45_integrity_sec_10k": 0.0,
+        "stage5_ranking_sec_10k": 0.0,
+        "stage2_share_pct": 0.0,
+        "queue_rate_stage2_rows_per_sec": 0.0,
+        "queue_rate_stage3_rows_per_sec": 0.0,
+        "has_measured_total_latency": False,
+        "has_stage2_queue_rate": False,
+        "has_stage3_queue_rate": False,
+        "total_latency_source": "missing_artifact",
+        "timing_coverage_tier": "missing_artifact",
+        "missing_artifact": True,
+        "missing_artifact_kind": missing_artifact_kind,
+        "missing_artifact_path": str(missing_artifact_path),
+        "artifact_resolution_source": "missing",
+        "wrapper_summary_resolution_source": "missing",
+        "pipeline_summary_resolution_source": "missing",
+        "projected_100k_wall_min": 0.0,
+        "projected_1m_wall_hr": 0.0,
+        "projected_100k_wall_min_at_2x": 0.0,
+        "projected_1m_wall_hr_at_2x": 0.0,
+        "projected_100k_wall_min_at_3x": 0.0,
+        "projected_1m_wall_hr_at_3x": 0.0,
+        "target_100k_wall_min_upper": target_100k_wall_min_upper,
+        "target_1m_wall_hr_upper": target_1m_wall_hr_upper,
+        "gap_to_target_100k_min": None,
+        "gap_to_target_1m_hr": None,
+        "required_speedup_to_target_100k": None,
+        "required_speedup_to_target_1m": None,
+        "max_required_speedup_to_target": None,
+        "target_stage2_rows_per_sec_2x": 0.0,
+        "target_stage2_rows_per_sec_3x": 0.0,
+        "speedpack_priority": "blocked",
+        "recommended_levers": f"refresh_missing_artifact:{missing_artifact_kind}",
+    }
+
+
 def _classify_timing_coverage(
     *,
     has_measured_total_latency: bool,
@@ -167,12 +248,46 @@ def _build_rows(summary: Dict[str, Any]) -> List[Dict[str, Any]]:
         for task in set_payload.get("tasks", []):
             if str(task.get("kind", "")) != "ligand_stress":
                 continue
-            wrapper_summary = _load_json(_resolve_path(str(task.get("summary_json", ""))))
+            wrapper_summary_path, wrapper_resolution_source = _resolve_task_artifact_path(
+                str(task.get("summary_json", "")), task
+            )
+            if not wrapper_summary_path.exists():
+                rows.append(
+                    _missing_artifact_row(
+                        set_id=set_id,
+                        task=task,
+                        missing_artifact_path=wrapper_summary_path,
+                        missing_artifact_kind="wrapper_summary_json",
+                    )
+                )
+                continue
+            wrapper_summary = _load_json(wrapper_summary_path)
             run_records = wrapper_summary.get("runs", [])
             if not run_records:
+                rows.append(
+                    _missing_artifact_row(
+                        set_id=set_id,
+                        task=task,
+                        missing_artifact_path=wrapper_summary_path,
+                        missing_artifact_kind="wrapper_summary_runs",
+                    )
+                )
                 continue
             run_record = dict(run_records[0])
-            raw_summary = _load_json(_resolve_path(str(run_record.get("summary_json", ""))))
+            raw_summary_path, pipeline_resolution_source = _resolve_task_artifact_path(
+                str(run_record.get("summary_json", "")), task
+            )
+            if not raw_summary_path.exists():
+                rows.append(
+                    _missing_artifact_row(
+                        set_id=set_id,
+                        task=task,
+                        missing_artifact_path=raw_summary_path,
+                        missing_artifact_kind="pipeline_summary_json",
+                    )
+                )
+                continue
+            raw_summary = _load_json(raw_summary_path)
             stages = raw_summary.get("stages", {})
 
             stage2_sec = _extract_stage_duration(stages, "stage2_trajectory_generation")
@@ -225,6 +340,13 @@ def _build_rows(summary: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "has_stage3_queue_rate": has_stage3_queue_rate,
                 "total_latency_source": total_latency_source,
                 "timing_coverage_tier": timing_coverage_tier,
+                "artifact_resolution_source": (
+                    "packaged_copy"
+                    if "packaged_copy" in {wrapper_resolution_source, pipeline_resolution_source}
+                    else "original_path"
+                ),
+                "wrapper_summary_resolution_source": wrapper_resolution_source,
+                "pipeline_summary_resolution_source": pipeline_resolution_source,
                 "projected_100k_wall_min": projected_100k_wall_min,
                 "projected_1m_wall_hr": projected_1m_wall_hr,
                 "projected_100k_wall_min_at_2x": _project_seconds(total_latency_sec / 2.0, 100_000) / 60.0,
@@ -263,6 +385,8 @@ def _build_coverage_summary(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
             "stage3_queue_rate_pct": 0.0,
             "planning_ready_count": 0,
             "planning_ready_pct": 0.0,
+            "missing_artifact_count": 0,
+            "missing_artifact_pct": 0.0,
             "timing_source_counts": {},
             "timing_coverage_tier_counts": {},
         }
@@ -276,6 +400,7 @@ def _build_coverage_summary(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
         and bool(row.get("has_stage2_queue_rate", False))
         and bool(row.get("has_stage3_queue_rate", False))
     )
+    missing_artifact_count = sum(1 for row in rows if bool(row.get("missing_artifact", False)))
     timing_source_counts: Dict[str, int] = {}
     timing_coverage_tier_counts: Dict[str, int] = {}
     for row in rows:
@@ -292,6 +417,8 @@ def _build_coverage_summary(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
         "stage3_queue_rate_pct": (float(stage3_queue_rate_count) / float(row_count)) * 100.0,
         "planning_ready_count": int(planning_ready_count),
         "planning_ready_pct": (float(planning_ready_count) / float(row_count)) * 100.0,
+        "missing_artifact_count": int(missing_artifact_count),
+        "missing_artifact_pct": (float(missing_artifact_count) / float(row_count)) * 100.0,
         "timing_source_counts": timing_source_counts,
         "timing_coverage_tier_counts": timing_coverage_tier_counts,
     }
@@ -535,6 +662,11 @@ def _write_md(path: Path, payload: Dict[str, Any]) -> None:
         f"- planning_ready: `{coverage_summary.get('planning_ready_count', 0)}`"
         f" / `{summary.get('row_count', 0)}`"
         f" (`{float(coverage_summary.get('planning_ready_pct', 0.0)):.2f}%`)"
+    )
+    lines.append(
+        f"- missing_artifact: `{coverage_summary.get('missing_artifact_count', 0)}`"
+        f" / `{summary.get('row_count', 0)}`"
+        f" (`{float(coverage_summary.get('missing_artifact_pct', 0.0)):.2f}%`)"
     )
     lines.append(f"- timing_source_counts: `{coverage_summary.get('timing_source_counts', {})}`")
     lines.append(f"- timing_coverage_tier_counts: `{coverage_summary.get('timing_coverage_tier_counts', {})}`")

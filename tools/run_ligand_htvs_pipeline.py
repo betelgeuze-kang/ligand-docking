@@ -486,6 +486,15 @@ def _traj_stage2_runtime_settings(args: argparse.Namespace, *, mode: str) -> Dic
     settings["traj_prod_early_stop_min_frames"] = int(
         _traj_prod_early_stop_min_frames(args, normalized_mode, settings["traj_frames"])
     )
+    explicit_runtime_overrides: Dict[str, Any] = {}
+    if str(getattr(args, "traj_job_batch_autotune_candidates", "1,2,4,8")) != "1,2,4,8":
+        explicit_runtime_overrides["traj_job_batch_autotune_candidates"] = str(
+            getattr(args, "traj_job_batch_autotune_candidates")
+        )
+    if int(getattr(args, "traj_writer_workers", 1)) != 1:
+        explicit_runtime_overrides["traj_writer_workers"] = int(getattr(args, "traj_writer_workers"))
+    if int(getattr(args, "traj_writer_max_pending", 64)) != 64:
+        explicit_runtime_overrides["traj_writer_max_pending"] = int(getattr(args, "traj_writer_max_pending"))
     selected = _normalize_traj_prod_stage2_preset(getattr(args, "traj_prod_stage2_preset", "off"))
     resolved = _infer_traj_prod_stage2_preset_family(args) if selected == "auto" else selected
     overrides: Dict[str, Any] = {}
@@ -498,6 +507,7 @@ def _traj_stage2_runtime_settings(args: argparse.Namespace, *, mode: str) -> Dic
             else:
                 overrides[key] = value
         settings.update(overrides)
+        settings.update(explicit_runtime_overrides)
     settings["traj_prod_stage2_preset"] = {
         "enabled": bool(resolved != "off"),
         "requested": selected,
@@ -2208,6 +2218,19 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
                 str(float(args.stage3_residual_prototype_yellow_band_abs_delta_score)),
             ]
         )
+    stage3_cmd.extend(
+        [
+            "--score-reference-scaling-mode",
+            str(getattr(args, "stage3_score_reference_scaling_mode", "run_local")),
+        ]
+    )
+    if str(getattr(args, "stage3_score_reference_stats_json", "")).strip():
+        stage3_cmd.extend(
+            [
+                "--score-reference-stats-json",
+                str(args.stage3_score_reference_stats_json),
+            ]
+        )
     # Keep calibration fit-role coverage inside stage3 sampling window.
     # Without fit keys here, stage4 can become fit_rows_total=0.
     stage3_priority_roles = _merge_roles_csv(
@@ -3891,6 +3914,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--stage3-residual-prototype-max-abs-delta-score", type=float, default=None)
     p.add_argument("--stage3-residual-prototype-yellow-band-abs-delta-score", type=float, default=None)
+    p.add_argument("--stage3-score-reference-scaling-mode", type=str, default="run_local")
+    p.add_argument("--stage3-score-reference-stats-json", type=str, default="")
     p.add_argument("--run-physics-refinement", action=argparse.BooleanOptionalAction, default=False)
     p.add_argument("--physics-refinement-mode", type=str, default="explicit_water_surrogate")
     p.add_argument("--physics-refinement-backend", type=str, default="deterministic_surrogate_wrapper_v1")

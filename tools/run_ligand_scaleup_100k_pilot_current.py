@@ -115,7 +115,7 @@ def _guardrail_summary() -> list[dict[str, str]]:
     return [
         {"guardrail_id": "no_pass_to_fail", "threshold": "0 pass->fail transitions", "scope": "regression slice"},
         {"guardrail_id": "pr_auc_drop_max_0p02", "threshold": ">= -0.02 absolute", "scope": "regression slice"},
-        {"guardrail_id": "top20_hit_drop_max_1", "threshold": ">= -1 hit", "scope": "regression slice"},
+        {"guardrail_id": "top20_hit_drop_max_1", "threshold": ">= -0.05 absolute rate", "scope": "regression slice"},
         {"guardrail_id": "slowest_domain_speedup_min_1p8x", "threshold": ">= 1.8x on slowest domain", "scope": "throughput benchmark"},
     ]
 
