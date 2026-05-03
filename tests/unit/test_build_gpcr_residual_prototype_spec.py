@@ -178,6 +178,46 @@ def test_build_gpcr_residual_prototype_spec_core_linear_rescore_v1(tmp_path: Pat
     assert any(row["feature_name"] == "z_ligand_affinity_hint" for row in payload["feature_rows"])
 
 
+def test_build_gpcr_residual_prototype_spec_core_family_balanced_rescore_v1_is_claim_locked(tmp_path: Path) -> None:
+    out_json = tmp_path / "prototype_family_balanced.json"
+    out_csv = tmp_path / "prototype_family_balanced.csv"
+    out_md = tmp_path / "prototype_family_balanced.md"
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools/build_gpcr_residual_prototype_spec.py"),
+            "--variant",
+            "gpcr_core_family_balanced_rescore_v1",
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=ROOT,
+    )
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    constraints = payload["prototype"]["constraints"]
+    linear = payload["prototype"]["linear_rescore"]
+    term_features = {term["feature"] for term in linear["terms"]}
+
+    assert payload["summary"]["prototype_variant"] == "gpcr_core_family_balanced_rescore_v1"
+    assert constraints["comparison_only_candidate"] is True
+    assert constraints["claim_locked_candidate"] is True
+    assert constraints["router_promotion_allowed"] is False
+    assert constraints["platform_promotion_allowed"] is False
+    assert constraints["claim_safe_assertion_allowed"] is False
+    assert constraints["broad_gpcr_claim_allowed"] is False
+    assert linear["enabled"] is True
+    assert linear["combine_mode"] == "replace"
+    assert {"z_ligand_h_donors", "z_contact_fraction", "z_mean_min_distance_A"} <= term_features
+    assert all("target" not in feature.lower() for feature in term_features)
+    assert "no_router_platform_or_claim_promotion" in payload["prototype"]["interactions"]
+    assert any(row["feature_name"] == "family_balanced_pose_energy_support" for row in payload["feature_rows"])
+
+
 def test_build_gpcr_residual_prototype_spec_adrb2_pharmacophore_v1(tmp_path: Path) -> None:
     out_json = tmp_path / "prototype_pharmacophore.json"
     out_csv = tmp_path / "prototype_pharmacophore.csv"

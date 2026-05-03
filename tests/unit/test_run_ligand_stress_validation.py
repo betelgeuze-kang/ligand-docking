@@ -307,6 +307,7 @@ def test_profile_stage2_runtime_args_are_accepted_by_pipeline_parser():
             "traj_job_batch_autotune_frames": 4,
             "traj_engine_cache_max_entries": 0,
             "traj_writer_max_pending": 8,
+            "traj_resume_existing": True,
         }
     )
     parsed = htvs_pipeline.build_parser().parse_args(
@@ -329,6 +330,27 @@ def test_profile_stage2_runtime_args_are_accepted_by_pipeline_parser():
     assert parsed.traj_job_batch_autotune_frames == 4
     assert parsed.traj_engine_cache_max_entries == 0
     assert parsed.traj_writer_max_pending == 8
+    assert parsed.traj_resume_existing is True
+
+
+def test_profile_stage2_runtime_args_can_disable_resume_existing():
+    cli = mod._profile_stage2_runtime_args({"traj_resume_existing": False})
+    parsed = htvs_pipeline.build_parser().parse_args(
+        [
+            "--out-prefix",
+            "runs/demo_stage2_no_resume",
+            "--ligand-csv",
+            "config/demo_ligands.csv",
+            "--targets",
+            "ADRB2_GPCR_BLIND",
+            "--eval-split-csv",
+            "config/demo_split.csv",
+            "--ranking-labels-csv",
+            "config/demo_labels.csv",
+            *cli,
+        ]
+    )
+    assert parsed.traj_resume_existing is False
 
 
 def test_explicit_stage2_runtime_args_survive_prod_preset() -> None:

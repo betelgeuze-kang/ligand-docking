@@ -223,6 +223,13 @@ def build_packet(
     if top_intrusions:
         blockers.append("target_internal_decoy_intrusion")
 
+    next_action = "claim-locked family-balanced scoring candidate implementation"
+    next_required_step = (
+        "Do not relaunch the same packet as claim evidence. "
+        "Implement the next claim-locked family-balanced scoring candidate, then run shadow/replay, "
+        "guarded apply, and only then a fresh full 100k claim review."
+    )
+
     return {
         "packet_type": "gpcr_guarded_100k_rank_failure_diagnostics",
         "generated_at_local": generated_at_local or dt.datetime.now().astimezone().isoformat(timespec="seconds"),
@@ -237,6 +244,7 @@ def build_packet(
             "claim_promotion_allowed": False,
             "router_claim_allowed": False,
             "platform_claim_allowed": False,
+            "next_action": next_action,
             "positive_count": len(positives),
             "non_adrb2_positive_count": sum(1 for row in positives if row["non_adrb2"]),
             "non_adrb2_tail_positive_count": len(non_adrb2_tail),
@@ -248,10 +256,8 @@ def build_packet(
             "blocker_count": len(blockers),
             "blockers": blockers,
             "readiness_blockers": readiness_summary.get("blockers", []),
-            "next_required_step": (
-                "Build a claim-locked family-balanced scoring candidate that reduces donor-rich decoy intrusion "
-                "and improves non-ADRB2 pose/energy support before any new guarded 100k claim evidence."
-            ),
+            "next_action": next_action,
+            "next_required_step": next_required_step,
         },
         "positive_rank_diagnostics": positives,
         "top_decoy_intrusions": top_intrusions,
@@ -272,6 +278,7 @@ def render_markdown(payload: dict[str, Any]) -> str:
         "## Summary",
         f"- status: `{summary['status']}`",
         f"- claim_promotion_allowed: `{str(summary['claim_promotion_allowed']).lower()}`",
+        f"- next_action: `{summary['next_action']}`",
         f"- positive_count: `{summary['positive_count']}`",
         f"- non_adrb2_positive_count: `{summary['non_adrb2_positive_count']}`",
         f"- non_adrb2_tail_positive_count: `{summary['non_adrb2_tail_positive_count']}`",

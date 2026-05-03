@@ -885,6 +885,10 @@ def _traj_prod_stage2_args(args: argparse.Namespace, *, mode: str, traj_frames: 
     return out
 
 
+def _traj_resume_existing_stage2_arg(args: argparse.Namespace) -> List[str]:
+    return ["--resume-existing" if bool(getattr(args, "traj_resume_existing", True)) else "--no-resume-existing"]
+
+
 def _build_sla_summary(
     *,
     out_prefix: str,
@@ -1942,6 +1946,7 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
             f"{stage2_traj_prefix}_progress.json",
             "--progress-every-jobs",
             "25",
+            *_traj_resume_existing_stage2_arg(args),
         ]
         if trajectory_engine_mode == "rust_hip":
             traj_cmd.extend(
@@ -3704,6 +3709,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--single-instance", action=argparse.BooleanOptionalAction, default=True)
     p.add_argument("--lock-file", type=str, default="")
     p.add_argument("--resume-stage3-only", action=argparse.BooleanOptionalAction, default=False)
+    p.add_argument("--traj-resume-existing", action=argparse.BooleanOptionalAction, default=True)
     p.add_argument("--dry-run", action=argparse.BooleanOptionalAction, default=True)
     p.add_argument("--enforce-data-contract", action=argparse.BooleanOptionalAction, default=False)
     p.add_argument("--data-contract-json", type=str, default="config/ligand_data_contract_v1.json")

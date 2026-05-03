@@ -370,3 +370,68 @@ def test_apply_residual_prototype_shadow_linear_rescore_replace_mode(tmp_path):
         out_df["binding_score_composite_v7_residual_active"].to_numpy(dtype=float),
         out_df["binding_score_composite_v7_residual_shadow"].to_numpy(dtype=float),
     )
+
+
+def test_apply_residual_prototype_shadow_family_balanced_linear_terms_use_stage3_features(tmp_path):
+    spec_json = tmp_path / "family_balanced_rescore.json"
+    spec_json.write_text(
+        json.dumps(
+            {
+                "prototype": {
+                    "constraints": {
+                        "comparison_only_candidate": True,
+                        "claim_locked_candidate": True,
+                        "router_promotion_allowed": False,
+                        "platform_promotion_allowed": False,
+                    },
+                    "tuning": {
+                        "variant": "gpcr_core_family_balanced_rescore_v1",
+                    },
+                    "linear_rescore": {
+                        "enabled": True,
+                        "combine_mode": "replace",
+                        "intercept": 0.0,
+                        "terms": [
+                            {"feature": "binding_score_composite_v7", "weight": 1.0},
+                            {"feature": "z_ligand_h_donors", "weight": 0.7},
+                            {"feature": "z_contact_fraction", "weight": -0.8},
+                            {"feature": "z_mean_min_distance_A", "weight": 0.4},
+                            {"feature": "z_binding_energy_mmpbsa_kcal_mol_proxy", "weight": 0.3},
+                        ],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    result_df = pd.DataFrame(
+        [
+            {"ligand_id": "non_adrb2_supported", "binding_score_composite_v7": -7.0},
+            {"ligand_id": "donor_rich_intruder", "binding_score_composite_v7": -7.0},
+        ]
+    )
+
+    out_df, meta = mod._apply_residual_prototype_shadow(
+        result_df.copy(),
+        _shadow_args(
+            residual_prototype_mode="apply",
+            residual_prototype_spec_json=str(spec_json),
+        ),
+        z_e=pd.Series([-1.0, 1.0], dtype=float),
+        z_d=pd.Series([-1.0, 1.0], dtype=float),
+        z_s=pd.Series([0.5, -0.5], dtype=float),
+        z_c=pd.Series([1.0, -1.0], dtype=float),
+        z_aff=pd.Series([0.0, 0.0], dtype=float),
+        z_logp=pd.Series([0.0, 0.0], dtype=float),
+        z_rot=pd.Series([0.0, 0.0], dtype=float),
+        z_hd=pd.Series([-1.0, 1.0], dtype=float),
+        z_ha=pd.Series([0.0, 0.0], dtype=float),
+    )
+
+    assert meta["tuning_variant"] == "gpcr_core_family_balanced_rescore_v1"
+    assert meta["linear_rescore_enabled"] is True
+    assert meta["linear_rescore_status"] == "applied"
+    assert meta["linear_rescore_missing_terms"] == []
+    assert out_df.loc[0, "binding_score_composite_v7_residual_active"] < out_df.loc[1, "binding_score_composite_v7_residual_active"]
+    assert out_df.loc[0, "residual_shadow_delta"] < 0.0
+    assert out_df.loc[1, "residual_shadow_delta"] > 0.0

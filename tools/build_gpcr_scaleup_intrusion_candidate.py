@@ -18,12 +18,14 @@ INTRUSION_VARIANT = "gpcr_core_decoy_intrusion_v1"
 LINEAR_RESCORE_VARIANT = "gpcr_core_linear_rescore_v1"
 MISMATCH_CONTACT_RESCORE_VARIANT = "gpcr_core_mismatch_contact_rescore_v1"
 STRUCTURE_SUPPORT_RESCORE_VARIANT = "gpcr_core_structure_support_rescore_v1"
+FAMILY_BALANCED_RESCORE_VARIANT = "gpcr_core_family_balanced_rescore_v1"
 PHARMACOPHORE_VARIANT = "gpcr_adrb2_beta_blocker_pharmacophore_v1"
 SUPPORTED_VARIANTS = {
     INTRUSION_VARIANT,
     LINEAR_RESCORE_VARIANT,
     MISMATCH_CONTACT_RESCORE_VARIANT,
     STRUCTURE_SUPPORT_RESCORE_VARIANT,
+    FAMILY_BALANCED_RESCORE_VARIANT,
     PHARMACOPHORE_VARIANT,
 }
 SUPPORTED_MODES = {"shadow_only", "apply"}
@@ -33,6 +35,7 @@ VARIANT_DEFAULT_SPEC_JSON = {
     LINEAR_RESCORE_VARIANT: "runs/gpcr_residual_prototype_spec_core_linear_rescore_v1_current.json",
     MISMATCH_CONTACT_RESCORE_VARIANT: "runs/gpcr_residual_prototype_spec_core_mismatch_contact_rescore_v1_current.json",
     STRUCTURE_SUPPORT_RESCORE_VARIANT: "runs/gpcr_residual_prototype_spec_core_structure_support_rescore_v1_current.json",
+    FAMILY_BALANCED_RESCORE_VARIANT: "runs/gpcr_residual_prototype_spec_core_family_balanced_rescore_v1_current.json",
     PHARMACOPHORE_VARIANT: "runs/gpcr_residual_prototype_spec_adrb2_beta_blocker_pharmacophore_v1_current.json",
 }
 VARIANT_CANDIDATE_KIND = {
@@ -40,8 +43,16 @@ VARIANT_CANDIDATE_KIND = {
     LINEAR_RESCORE_VARIANT: "gpcr_core_linear_rescore_100k",
     MISMATCH_CONTACT_RESCORE_VARIANT: "gpcr_core_mismatch_contact_rescore_100k",
     STRUCTURE_SUPPORT_RESCORE_VARIANT: "gpcr_core_structure_support_rescore_100k",
+    FAMILY_BALANCED_RESCORE_VARIANT: "gpcr_core_family_balanced_rescore_100k",
     PHARMACOPHORE_VARIANT: "gpcr_adrb2_beta_blocker_pharmacophore_100k",
 }
+VARIANT_DEFAULT_BASE_PROFILE_JSON = {
+    FAMILY_BALANCED_RESCORE_VARIANT: "runs/gpcr_frozen_candidate_profile_support_current/profile.json",
+}
+
+
+def _default_base_profile_json_for_variant(variant: str) -> str:
+    return VARIANT_DEFAULT_BASE_PROFILE_JSON.get(variant, DEFAULT_BASE_PROFILE_JSON)
 
 
 def _resolve(path_like: str | Path) -> Path:
@@ -155,13 +166,27 @@ def _candidate_profile(
     profile["target_specific_candidate"] = bool(target_specific)
     profile["claim_safe_assertion_allowed"] = False
     profile["broad_gpcr_claim_allowed"] = False
+    profile["traj_resume_existing"] = True
     structure_support_gate = _structure_support_gate_from_spec(residual_spec or {})
+    constraints = (
+        residual_spec.get("prototype", {}).get("constraints", {})
+        if isinstance(residual_spec, dict) and isinstance(residual_spec.get("prototype"), dict)
+        else {}
+    )
+    if not isinstance(constraints, dict):
+        constraints = {}
+    claim_locked_candidate = bool(constraints.get("claim_locked_candidate")) or variant == FAMILY_BALANCED_RESCORE_VARIANT
+    profile["platform_promotion_allowed"] = False
     if structure_support_gate:
         profile["evidence_role"] = "reject_shadow_evidence"
         profile["structure_support_gate"] = structure_support_gate
         profile["claim_text_locked_until_full_100k_gate_green"] = not bool(
             structure_support_gate.get("full_100k_gate_green")
         )
+    if claim_locked_candidate:
+        profile["claim_locked_candidate"] = True
+        profile["threshold_relaxation_allowed"] = False
+        profile["fake_pass_allowed"] = False
     if str(heavy_artifacts_root).strip():
         profile["heavy_artifacts_root"] = str(heavy_artifacts_root).strip()
         profile["auto_heavy_artifacts_root"] = False
@@ -190,6 +215,11 @@ def _candidate_profile(
         profile["residual_prototype_notes"] = (
             f"{mode} target-specific ADRB2 beta-blocker pharmacophore candidate. "
             "Residual telemetry must not be used for router promotion or general GPCR family claims."
+        )
+    elif claim_locked_candidate:
+        profile["residual_prototype_notes"] = (
+            f"{mode_label} claim-locked {candidate_label} 100k comparison candidate. Residual telemetry is generated "
+            "for family-balanced scoring review only and is not a claim-safe, router, or platform assertion."
         )
     else:
         profile["residual_prototype_notes"] = (
@@ -222,6 +252,7 @@ def _candidate_set_spec(
         "prototype_mode": mode,
         "family_scope": ["gpcr"],
         "router_promotion_allowed": False,
+        "platform_promotion_allowed": False,
         "target_specific_candidate": variant == PHARMACOPHORE_VARIANT,
         "apply_mode_claim_allowed": False,
         "claim_safe_assertion_allowed": False,
@@ -229,6 +260,17 @@ def _candidate_set_spec(
         "comparison_candidate_role": comparison_candidate_role,
     }
     structure_support_gate = _structure_support_gate_from_spec(residual_spec or {})
+    constraints = (
+        residual_spec.get("prototype", {}).get("constraints", {})
+        if isinstance(residual_spec, dict) and isinstance(residual_spec.get("prototype"), dict)
+        else {}
+    )
+    if not isinstance(constraints, dict):
+        constraints = {}
+    if bool(constraints.get("claim_locked_candidate")) or variant == FAMILY_BALANCED_RESCORE_VARIANT:
+        governance["claim_locked_candidate"] = True
+        governance["threshold_relaxation_allowed"] = False
+        governance["fake_pass_allowed"] = False
     if structure_support_gate:
         governance["evidence_role"] = "reject_shadow_evidence"
         governance["structure_support_gate"] = structure_support_gate
@@ -309,7 +351,13 @@ def build_payload(
         raise ValueError(f"unsupported score reference scaling mode: {score_reference_scaling_mode}")
     out_root = _resolve(out_dir)
     residual_spec_path = _resolve(spec_json or VARIANT_DEFAULT_SPEC_JSON[variant])
-    base_profile_path = _resolve(base_profile_json)
+    base_profile_json_text = str(base_profile_json or "").strip()
+    if not base_profile_json_text or (
+        variant == FAMILY_BALANCED_RESCORE_VARIANT
+        and base_profile_json_text == DEFAULT_BASE_PROFILE_JSON
+    ):
+        base_profile_json_text = _default_base_profile_json_for_variant(variant)
+    base_profile_path = _resolve(base_profile_json_text)
     score_reference_stats_path = _resolve(score_reference_stats_json) if str(score_reference_stats_json).strip() else None
     if score_reference_scaling_mode != "run_local" and score_reference_stats_path is None:
         raise ValueError("score_reference_stats_json is required for fixed score reference scaling candidates")

@@ -11,6 +11,17 @@ def _write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
+def test_family_balanced_default_base_profile_uses_frozen_non_adrb2_support() -> None:
+    assert (
+        mod._default_base_profile_json_for_variant("gpcr_core_family_balanced_rescore_v1")
+        == "runs/gpcr_frozen_candidate_profile_support_current/profile.json"
+    )
+    assert (
+        mod._default_base_profile_json_for_variant("gpcr_core_linear_rescore_v1")
+        == mod.DEFAULT_BASE_PROFILE_JSON
+    )
+
+
 def test_build_payload_writes_shadow_profile_and_core_only_100k_spec(tmp_path: Path) -> None:
     base_profile = tmp_path / "config" / "base_gpcr.json"
     residual_spec = tmp_path / "runs" / "gpcr_residual_prototype_spec_core_decoy_intrusion_v1_current.json"
@@ -242,6 +253,67 @@ def test_build_payload_supports_core_linear_rescore_as_guarded_apply_candidate(t
     assert set_spec["global_governance"]["claim_safe_assertion_allowed"] is False
     assert set_spec["sets"][0]["claim_role"] == "comparison_candidate"
     assert "not a claim" in set_spec["sets"][0]["preregistered_claim"].lower()
+
+
+def test_build_payload_supports_family_balanced_rescore_as_claim_locked_candidate(tmp_path: Path) -> None:
+    base_profile = tmp_path / "config" / "base_gpcr.json"
+    residual_spec = tmp_path / "runs" / "gpcr_residual_prototype_spec_family_balanced.json"
+    out_dir = tmp_path / "candidate"
+    _write_json(base_profile, {"ranking_score_col": "binding_score_composite_v7"})
+    _write_json(
+        residual_spec,
+        {
+            "summary": {
+                "family": "gpcr",
+                "prototype_variant": "gpcr_core_family_balanced_rescore_v1",
+            },
+            "prototype": {
+                "constraints": {
+                    "comparison_only_candidate": True,
+                    "claim_locked_candidate": True,
+                    "router_promotion_allowed": False,
+                    "platform_promotion_allowed": False,
+                    "claim_safe_assertion_allowed": False,
+                    "broad_gpcr_claim_allowed": False,
+                },
+                "tuning": {
+                    "variant": "gpcr_core_family_balanced_rescore_v1",
+                },
+            },
+        },
+    )
+
+    payload = mod.build_payload(
+        out_dir=out_dir,
+        spec_json=residual_spec,
+        base_profile_json=base_profile,
+        tag_suffix="familybalanced",
+        variant="gpcr_core_family_balanced_rescore_v1",
+        mode="apply",
+    )
+
+    profile = json.loads(Path(payload["profile_json"]).read_text(encoding="utf-8"))
+    set_spec = json.loads(Path(payload["set_spec_json"]).read_text(encoding="utf-8"))
+    governance = set_spec["global_governance"]
+
+    assert payload["candidate_kind"] == "gpcr_core_family_balanced_rescore_100k"
+    assert profile["residual_prototype_candidate"] == "gpcr_core_family_balanced_rescore_v1"
+    assert profile["ranking_score_col"] == "binding_score_composite_v7_residual_active"
+    assert profile["router_promotion_allowed"] is False
+    assert profile["platform_promotion_allowed"] is False
+    assert profile["claim_locked_candidate"] is True
+    assert profile["claim_safe_assertion_allowed"] is False
+    assert profile["broad_gpcr_claim_allowed"] is False
+    assert profile["traj_resume_existing"] is True
+    assert "claim-locked" in profile["residual_prototype_notes"].lower()
+    assert governance["prototype_variant"] == "gpcr_core_family_balanced_rescore_v1"
+    assert governance["comparison_candidate_role"] == "guarded_apply_candidate"
+    assert governance["router_promotion_allowed"] is False
+    assert governance["platform_promotion_allowed"] is False
+    assert governance["claim_locked_candidate"] is True
+    assert governance["claim_safe_assertion_allowed"] is False
+    assert governance["broad_gpcr_claim_allowed"] is False
+    assert set_spec["sets"][0]["claim_role"] == "comparison_candidate"
 
 
 def test_build_payload_can_override_heavy_artifact_root_for_local_reruns(tmp_path: Path) -> None:

@@ -362,6 +362,7 @@ def _apply_residual_prototype_shadow(
     z_rot: pd.Series,
     z_hd: pd.Series,
     z_ha: pd.Series,
+    z_std: pd.Series | None = None,
 ) -> tuple[pd.DataFrame, Dict[str, Any]]:
     enabled = bool(getattr(args, "residual_prototype_enabled", False))
     mode = str(getattr(args, "residual_prototype_mode", "shadow_only") or "shadow_only").strip().lower()
@@ -438,6 +439,8 @@ def _apply_residual_prototype_shadow(
         return result_df, summary
 
     tuning = _residual_tuning(spec_payload)
+    if z_std is None:
+        z_std = pd.Series(np.zeros(len(result_df)), index=result_df.index, dtype=float)
     prior_pressure = (
         float(tuning["prior_weight_h_donors"]) * _clip_pos(z_hd)
         + float(tuning["prior_weight_h_acceptors"]) * _clip_pos(z_ha)
@@ -587,17 +590,41 @@ def _apply_residual_prototype_shadow(
         if (not np.isfinite(ligand_mw_std)) or ligand_mw_std <= 1.0e-12:
             ligand_mw_std = 1.0
         z_ligand_mw = ((ligand_mw_series - float(ligand_mw_series.mean())) / ligand_mw_std).to_numpy(dtype=float)
+        ligand_onsps_series = pd.to_numeric(
+            result_df["ligand_onsps_norm"] if "ligand_onsps_norm" in result_df.columns else pd.Series(np.zeros(len(result_df))),
+            errors="coerce",
+        ).fillna(0.0)
+        ligand_onsps_std = float(ligand_onsps_series.std()) if len(ligand_onsps_series) else 1.0
+        if (not np.isfinite(ligand_onsps_std)) or ligand_onsps_std <= 1.0e-12:
+            ligand_onsps_std = 1.0
+        z_ligand_onsps = (
+            (ligand_onsps_series - float(ligand_onsps_series.mean())) / ligand_onsps_std
+        ).to_numpy(dtype=float)
+        family_balanced_pose_energy_support = (
+            _clip_pos(-z_e)
+            + _clip_pos(z_c)
+            + _clip_pos(z_s)
+            + _clip_pos(-z_d)
+        )
+        donor_rich_decoy_intrusion_pressure = np.maximum(
+            _clip_pos(z_hd) + 0.5 * _clip_pos(z_ha) - 0.5 * family_balanced_pose_energy_support,
+            0.0,
+        )
         computed_linear_features = {
             "z_binding_energy_mmpbsa_kcal_mol_proxy": pd.to_numeric(z_e, errors="coerce").to_numpy(dtype=float),
             "z_mean_min_distance_A": pd.to_numeric(z_d, errors="coerce").to_numpy(dtype=float),
             "z_stability_score": pd.to_numeric(z_s, errors="coerce").to_numpy(dtype=float),
             "z_contact_fraction": pd.to_numeric(z_c, errors="coerce").to_numpy(dtype=float),
+            "z_binding_energy_mmpbsa_std": pd.to_numeric(z_std, errors="coerce").to_numpy(dtype=float),
             "z_ligand_affinity_hint": pd.to_numeric(z_aff, errors="coerce").to_numpy(dtype=float),
             "z_ligand_mw": z_ligand_mw,
+            "z_ligand_onsps_norm": z_ligand_onsps,
             "z_ligand_logp": pd.to_numeric(z_logp, errors="coerce").to_numpy(dtype=float),
             "z_ligand_rot_bonds": pd.to_numeric(z_rot, errors="coerce").to_numpy(dtype=float),
             "z_ligand_h_donors": pd.to_numeric(z_hd, errors="coerce").to_numpy(dtype=float),
             "z_ligand_h_acceptors": pd.to_numeric(z_ha, errors="coerce").to_numpy(dtype=float),
+            "family_balanced_pose_energy_support": family_balanced_pose_energy_support,
+            "donor_rich_decoy_intrusion_pressure": donor_rich_decoy_intrusion_pressure,
             "residual_shadow_prior_pressure": prior_pressure,
             "residual_shadow_structure_weakness": structural_weakness,
             "residual_shadow_structure_support": structural_support,
@@ -2647,6 +2674,7 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
             z_rot=z_rot,
             z_hd=z_hd,
             z_ha=z_ha,
+            z_std=z_std,
         )
         result_df["score_scaling_mode"] = str(score_reference_scaling.get("mode", "run_local"))
         result_df["score_reference_stats_hash"] = str(score_reference_scaling.get("stats_hash", ""))

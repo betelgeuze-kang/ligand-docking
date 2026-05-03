@@ -14,7 +14,9 @@ For the GPCR non-ADRB2 positive freeze workflow, `config/gpcr_non_adrb2_positive
 
 Transporter AQP1/GLUT1 evidence closure and CA2/PXR placeholder/provenance closure are post-P0 follow-up work only; AQP1/GLUT1 stay parked/review-only outside the delivery claim, and CA2/PXR stays prep-only until placeholder/provenance and `replacement_reference_binding_kcal_mol` are closed. GPCR recovery candidates (`gpcr_core_decoy_intrusion_v1`, `gpcr_core_linear_rescore_v1`, `gpcr_core_mismatch_contact_rescore_v1`, `gpcr_core_structure_support_rescore_v1`) stay comparison-only shadow/guarded-apply lanes. The frozen non-ADRB2 guarded 100k rerun completed with `positive_count=9`, stage2 `40000/40000` ok rows, leakage audit `pass=true`, and family-held-out `pass=true`, but `claim_safe=false` persists because `PR-AUC=0.22869872098030358`, `ranking_pr_auc_ci_low=0.0019312183264511504 < 0.45`, and `top20=0.10 < 0.20`. The operator packet for that blocker is `runs/gpcr_ci_low_recovery_packet_current.md`: `## Metric Table` and `## Rank And Bootstrap Diagnostics` carry the positive ranks, top20 misses, and bootstrap view. `ligand_heavy_runs` cleanup is storage housekeeping only: 2026-05-02 deleted 189 stale `stage2_trajectory_frames` payloads (`98125333296` bytes), the 2026-05-03 follow-up execute pass deleted_count=12 remaining raw trajectory payloads (`556010987428` bytes), and the 2026-05-03 structure-support rerun cleanup deleted the stalled partial payload (`38346317024` bytes) plus the completed rollout payload (`51265129536` bytes). After the latest cleanup, `/` usage is `57%` and `runs/local_heavy_runs` is `28K`. Cleanup does not change the delivery claim, any metric, or the current GPCR `claim_safe=false` boundary. See `docs/post_p0_evidence_closure_status.md` for the operator map.
 
-The matching rank-failure diagnostic packet is `runs/gpcr_guarded_100k_rank_failure_diagnostics_current.json`. It shows all three non-ADRB2 positives are still tail-ranked (`HTR2A` global rank `1413`, `OPRM1` `3138`, `DRD2` `5298`), so the next GPCR implementation should be a claim-locked family-balanced scorer that reduces donor-rich decoy intrusion and improves non-ADRB2 pose/energy support.
+The matching rank-failure diagnostic packet is `runs/gpcr_guarded_100k_rank_failure_diagnostics_current.json`. It shows all three non-ADRB2 positives are still tail-ranked (`HTR2A` global rank `1413`, `OPRM1` `3138`, `DRD2` `5298`), so its `next_action` is `claim-locked family-balanced scoring candidate implementation`. The accepted path is shadow/replay -> guarded apply -> full 100k claim review; do not rerun the same packet as claim evidence, and keep `claim_promotion_allowed=false` with threshold relaxation/fake pass forbidden.
+
+The first family-balanced frozen guarded rerun completed after an interrupted execution was resumed with the same tag and set-spec. Stage2 resume reused `34186` existing trajectory rows and generated the remaining `5814`, yielding `40000/40000` ok rows. Ranking recovered materially (`PR-AUC=0.5186945103743427`, `top20=0.25`, `strict_gate_pass=true`) but operational claim review still failed because `PR-AUC < 0.55` and `ranking_pr_auc_ci_low=0.1485815545422209 < 0.45`. This is comparison/reject evidence only; `claim_promotion_allowed=false` remains in force.
 
 2026-05-02에 `fixed_family_reference` score scaling lane도 comparison-only로 추가하고 full 100k까지 실행했습니다. `runs/gpcr_score_reference_stats_current.json`은 fit-role scored rows만 사용하며 `reference_row_count=24`, `eval_role_used_in_reference_count=0`, feature stats `12/12`입니다. 생성된 candidate set-spec은 `runs/gpcr_scaleup_100k_fixed_reference_decoy_intrusion_candidate_current/specs/gpcr_core_decoy_intrusion_100k_fixed-ref-decoy-intrusion100k.json`이고, 실제 full 100k run은 `PR-AUC=0.0328`, `PR-AUC CI low=0.0045`, `top20=0.05`로 실패했습니다. 따라서 GPCR scale-up claim은 계속 blocked입니다.
 
@@ -75,6 +77,7 @@ Primary artifacts:
 | `gpcr_core_mismatch_contact_rescore_v1` guarded apply core 100k | Fail | `0.3836` | `0.0157` | `0.15` | `6` | `binding_score_composite_v7_residual_active` | reject/negative evidence |
 | `gpcr_core_structure_support_rescore_v1` guarded apply core 100k | Fail, recovery-band | `0.5928` | `0.1287` | `0.25` | `6` | `binding_score_composite_v7_residual_active` | comparison/reject evidence only; superseded by frozen non-ADRB2 rerun for coverage/family review |
 | frozen non-ADRB2 GPCR guarded 100k | Fail, coverage/family green | `0.2287` | `0.0019` | `0.10` | `9` | `binding_score_composite_v7` | coverage, leakage, and family-held-out pass; CI-low/top20 still block claim |
+| `gpcr_core_family_balanced_rescore_v1` frozen guarded 100k | Fail, recovery-band | `0.5187` | `0.1486` | `0.25` | `9` | `binding_score_composite_v7_residual_active` | resumed r2 completed; strict gate green but operational PR-AUC/CI-low gate still blocks claim |
 | `gpcr_adrb2_beta_blocker_pharmacophore_v1` shadow residual audit | Pass, audit-only | `1.0000` | `1.0000` | `0.30` | `6` | `binding_score_composite_v7_residual_shadow` | shadow audit only |
 | `gpcr_adrb2_beta_blocker_pharmacophore_v1` guarded apply core 100k | Pass, target-specific | `1.0000` | `1.0000` | `0.30` | `6` | `binding_score_composite_v7_residual_active` | ADRB2 beta-blocker-like only |
 | `gpcr_adrb2_beta_blocker_pharmacophore_v1` guarded apply ChEMBL50 100k | Pass, target-specific | `0.9662` | `0.9264` | `1.00` | `56` | `binding_score_composite_v7_residual_active` | ADRB2 beta-blocker-like only |
@@ -104,6 +107,9 @@ Primary artifacts:
 - `runs/external_validation_2026-05-03_r1_set1_core_blind_gpcr_core_full_p0_n100000_r1_summary.json`
 - `runs/ligand_stress_validation_2026-05-03_gpcr_frozen_nonadrb2_guarded100k_summary.json`
 - `runs/ligand_stress_validation_2026-05-03_gpcr_frozen_nonadrb2_guarded100k_p0_n100000_r1_stage5_ranking_summary.json`
+- `runs/external_validation_2026-05-03_family_balanced_frozen_r2_set1_core_blind_gpcr_core_full_summary.json`
+- `runs/external_validation_2026-05-03_family_balanced_frozen_r2_set1_core_blind_gpcr_core_full_p0_n100000_r1_stage2_traj_summary.json`
+- `runs/external_validation_2026-05-03_family_balanced_frozen_r2_set1_core_blind_gpcr_core_full_p0_n100000_r1_stage5_ranking_summary.json`
 - `runs/gpcr_adrb2_pharmacophore_shadow_score_eval_current_summary.json`
 - `runs/external_validation_2026-04-30_gpcr_scaleup_100k_adrb2_pharmacophore_apply_v1_set1_core_blind_gpcr_core_full_p0_n100000_r1_summary.json`
 - `runs/external_validation_2026-04-30_gpcr_scaleup_100k_adrb2_pharmacophore_chembl50_apply_v1_set2_expanded_ood_gpcr_chembl50_full_p0_n100000_r1_summary.json`
@@ -182,6 +188,12 @@ python3 tools/build_gpcr_guarded_100k_rerun_readiness.py
 python3 tools/build_post_p0_claim_blocker_rollup.py
 python3 tools/build_commercialization_readiness_report.py
 ```
+
+Crash/resume operation for long tests:
+
+- `run_external_validation_blind_sets.py` and `run_ligand_stress_validation.py` default to `--resume`; rerun the same command with the same `--tag`, `--set-spec-json`, and `--sets` after a shutdown.
+- Stage2 trajectory generation now forwards `--traj-resume-existing` by default, so existing trajectory artifacts are reused instead of regenerated.
+- Candidate profiles can pin this behavior with `"traj_resume_existing": true`; use `"traj_resume_existing": false` only for intentional cold reruns.
 
 Delivery bundle publication은 이 요약 문서가 아니라 runbook을 기준으로 진행합니다.
 

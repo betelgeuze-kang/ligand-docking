@@ -212,6 +212,35 @@ def _feature_rows(variant: str) -> list[dict[str, Any]]:
                 },
             ]
         )
+    if variant == "gpcr_core_family_balanced_rescore_v1":
+        rows.extend(
+            [
+                {
+                    "feature_name": "family_balanced_pose_energy_support",
+                    "role": "family_balanced_rescore_anchor",
+                    "direction": "reward_pose_energy_support_without_target_identity",
+                    "rationale": "The frozen non-ADRB2 100k rerun shows coverage/family gates are green, but non-ADRB2 positives remain tail-ranked; the next scorer must use shared pose/energy support rather than target labels.",
+                },
+                {
+                    "feature_name": "non_adrb2_tail_rank_blocker",
+                    "role": "failure_tag_gate",
+                    "direction": "diagnostic_only",
+                    "rationale": "Rank diagnostics show HTR2A, OPRM1, and DRD2 positives still sit outside the claim-review top-k region.",
+                },
+                {
+                    "feature_name": "donor_rich_decoy_intrusion",
+                    "role": "intrusion_guard",
+                    "direction": "penalize_high_donor_without_pose_support",
+                    "rationale": "Donor-rich hard decoys can outrank true non-ADRB2 positives when prior-rich chemistry is not backed by contact, distance, and energy support.",
+                },
+                {
+                    "feature_name": "claim_locked_family_balanced_replay",
+                    "role": "claim_boundary",
+                    "direction": "comparison_only",
+                    "rationale": "This candidate opens only shadow/replay/guarded-apply evidence and cannot authorize router, platform, or delivery-claim promotion.",
+                },
+            ]
+        )
     if variant == "gpcr_adrb2_beta_blocker_pharmacophore_v1":
         rows.extend(
             [
@@ -551,6 +580,66 @@ def build_payload(*, variant: str = "current") -> dict[str, Any]:
             "Run gpcr_core_structure_support_rescore_v1 as a claim-locked comparison candidate only. "
             "The replay metric crosses the core PR-AUC/top20 floor on one measured 100k failure slice, but it must pass a fresh full 100k run and ChEMBL50 preservation before any claim discussion."
         )
+    elif variant == "gpcr_core_family_balanced_rescore_v1":
+        constraints = {
+            **constraints,
+            "max_abs_delta_score": 0.0,
+            "yellow_band_abs_delta_score": 0.0,
+            "comparison_only_candidate": True,
+            "claim_locked_candidate": True,
+            "family_balanced_rescore_candidate": True,
+            "router_promotion_allowed": False,
+            "platform_promotion_allowed": False,
+            "apply_mode_claim_allowed": False,
+            "claim_safe_assertion_allowed": False,
+            "broad_gpcr_claim_allowed": False,
+            "threshold_relaxation_allowed": False,
+            "fake_pass_allowed": False,
+            "target_identity_feature_allowed": False,
+            "diagnostic_source_artifact": "runs/gpcr_guarded_100k_rank_failure_diagnostics_current.json",
+            "required_before_claim": [
+                "shadow_or_replay_evidence",
+                "guarded_apply_evidence",
+                "full_100k_ci_low_top20_claim_review_green",
+            ],
+        }
+        tuning = {
+            "variant": "gpcr_core_family_balanced_rescore_v1",
+            "candidate_source": "gpcr_guarded_100k_rank_failure_diagnostics_current",
+            "failure_tags": [
+                "ci_low_below_threshold",
+                "top20_stability_not_green",
+                "non_adrb2_positive_tail_rank",
+                "target_internal_decoy_intrusion",
+            ],
+            "current_guarded_100k_pr_auc": 0.22869872098030358,
+            "current_guarded_100k_pr_auc_ci_low": 0.0019312183264511504,
+            "current_guarded_100k_top20_hit_rate": 0.10,
+            "current_non_adrb2_positive_tail_count": 3,
+            "local_replay_pr_auc": 0.5593,
+            "local_replay_top20_hit_rate": 0.25,
+            "local_replay_positive_ranks": [1, 2, 3, 4, 5, 282, 762, 2957, 18915],
+            "replay_score_formula": (
+                "0.242*z_binding_energy_mmpbsa_kcal_mol_proxy + 0.551*z_mean_min_distance_A "
+                "+ 0.226*z_stability_score - 0.553*z_contact_fraction "
+                "- 4.052*z_ligand_affinity_hint - 1.956*z_ligand_onsps_norm "
+                "- 0.078*z_ligand_mw + 0.264*z_ligand_logp + 0.122*z_ligand_rot_bonds "
+                "- 0.226*z_ligand_h_donors + 0.461*z_ligand_h_acceptors "
+                "+ 0.215*z_binding_energy_mmpbsa_std"
+            ),
+        }
+        interactions = [
+            "family_balanced_pose_energy_support",
+            "donor_rich_decoy_intrusion_penalty_without_target_identity",
+            "non_adrb2_tail_rank_recovery_requires_guarded_evidence",
+            "full_100k_ci_low_top20_gate_required",
+            "no_router_platform_or_claim_promotion",
+        ]
+        next_step = (
+            "Run gpcr_core_family_balanced_rescore_v1 as a claim-locked replay/shadow candidate on the frozen "
+            "non-ADRB2 guarded 100k evidence. Only open guarded apply after replay improves non-ADRB2 tail ranks "
+            "without threshold relaxation, target identity features, or claim promotion."
+        )
     elif variant == "gpcr_adrb2_beta_blocker_pharmacophore_v1":
         constraints = {
             **constraints,
@@ -632,6 +721,26 @@ def build_payload(*, variant: str = "current") -> dict[str, Any]:
                     ],
                 }
                 if variant == "gpcr_core_structure_support_rescore_v1"
+                else {
+                    "enabled": True,
+                    "combine_mode": "replace",
+                    "intercept": 0.0,
+                    "terms": [
+                        {"feature": "z_binding_energy_mmpbsa_kcal_mol_proxy", "weight": 0.242},
+                        {"feature": "z_mean_min_distance_A", "weight": 0.551},
+                        {"feature": "z_stability_score", "weight": 0.226},
+                        {"feature": "z_contact_fraction", "weight": -0.553},
+                        {"feature": "z_ligand_affinity_hint", "weight": -4.052},
+                        {"feature": "z_ligand_onsps_norm", "weight": -1.956},
+                        {"feature": "z_ligand_mw", "weight": -0.078},
+                        {"feature": "z_ligand_logp", "weight": 0.264},
+                        {"feature": "z_ligand_rot_bonds", "weight": 0.122},
+                        {"feature": "z_ligand_h_donors", "weight": -0.226},
+                        {"feature": "z_ligand_h_acceptors", "weight": 0.461},
+                        {"feature": "z_binding_energy_mmpbsa_std", "weight": 0.215},
+                    ],
+                }
+                if variant == "gpcr_core_family_balanced_rescore_v1"
                 else {"enabled": False}
             ),
             "feature_rows": feature_rows,
@@ -714,6 +823,7 @@ def parse_args() -> argparse.Namespace:
             "gpcr_core_linear_rescore_v1",
             "gpcr_core_mismatch_contact_rescore_v1",
             "gpcr_core_structure_support_rescore_v1",
+            "gpcr_core_family_balanced_rescore_v1",
             "gpcr_adrb2_beta_blocker_pharmacophore_v1",
         ],
         default="current",

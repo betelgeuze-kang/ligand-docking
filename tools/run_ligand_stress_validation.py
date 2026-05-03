@@ -293,6 +293,8 @@ def _profile_traj_prod_args(prof: Dict[str, Any]) -> List[str]:
 
 def _profile_stage2_runtime_args(prof: Dict[str, Any]) -> List[str]:
     cli: List[str] = []
+    if "traj_resume_existing" in prof:
+        cli.append("--traj-resume-existing" if bool(prof.get("traj_resume_existing", True)) else "--no-traj-resume-existing")
     if "traj_job_batch_size" in prof:
         cli.extend(["--traj-job-batch-size", str(int(prof.get("traj_job_batch_size", 0)))])
     if str(prof.get("traj_job_batch_autotune_candidates", "")).strip():

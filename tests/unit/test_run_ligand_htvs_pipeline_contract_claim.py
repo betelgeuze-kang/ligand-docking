@@ -450,6 +450,16 @@ def test_traj_prod_stage2_args_parse_in_engine_surface():
     assert parsed.prod_light_progress_every_jobs == 250
 
 
+def test_traj_resume_existing_stage2_arg_defaults_on_and_can_disable():
+    default_args = mod.build_parser().parse_args([])
+    assert default_args.traj_resume_existing is True
+    assert mod._traj_resume_existing_stage2_arg(default_args) == ["--resume-existing"]
+
+    disabled_args = mod.build_parser().parse_args(["--no-traj-resume-existing"])
+    assert disabled_args.traj_resume_existing is False
+    assert mod._traj_resume_existing_stage2_arg(disabled_args) == ["--no-resume-existing"]
+
+
 def test_infer_traj_prod_stage2_preset_family_auto_variants():
     assert mod._infer_traj_prod_stage2_preset_family(_traj_stage2_args_namespace(targets="ADRB2_GPCR_BLIND")) == "gpcr"
     assert mod._infer_traj_prod_stage2_preset_family(_traj_stage2_args_namespace(targets="TRPV1_ION_CHANNEL_BLIND")) == "ion_trpv1"

@@ -100,9 +100,14 @@ def test_rank_failure_packet_flags_non_adrb2_tail_positive_and_decoy_intrusion(t
 
     assert payload["summary"]["status"] == "blocked_ranking_quality"
     assert payload["summary"]["claim_promotion_allowed"] is False
+    assert payload["summary"]["next_action"] == "claim-locked family-balanced scoring candidate implementation"
     assert payload["summary"]["non_adrb2_tail_positive_count"] == 1
     assert "non_adrb2_positive_tail_rank" in payload["summary"]["blockers"]
     assert "target_internal_decoy_intrusion" in payload["summary"]["blockers"]
+    assert "Do not relaunch the same packet as claim evidence." in payload["summary"]["next_required_step"]
+    assert "shadow/replay" in payload["summary"]["next_required_step"]
+    assert "guarded apply" in payload["summary"]["next_required_step"]
+    assert "full 100k claim review" in payload["summary"]["next_required_step"]
     drd2 = [row for row in payload["positive_rank_diagnostics"] if row["ligand_id"] == "CHEMBL301265"][0]
     assert drd2["global_rank"] == 23
     assert drd2["within_target_rank"] == 22
@@ -169,3 +174,4 @@ def test_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     assert result.returncode == 0
     assert payload["packet_type"] == "gpcr_guarded_100k_rank_failure_diagnostics"
     assert "GPCR Guarded 100k Rank Failure Diagnostics" in markdown
+    assert "claim-locked family-balanced scoring candidate implementation" in markdown
