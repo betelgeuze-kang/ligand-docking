@@ -245,6 +245,11 @@ def _feature_rows(variant: str) -> list[dict[str, Any]]:
         "gpcr_core_family_anchor_rescore_v2",
         "gpcr_core_family_anchor_ci_stability_v3",
         "gpcr_core_acidic_anchor_overcontact_prior_gate_v4",
+        "gpcr_core_fixed_reference_live_shadow_v5",
+        "gpcr_core_class_a_motif_shadow_v6",
+        "gpcr_core_class_a_anchor_geometry_shadow_v7",
+        "gpcr_core_direct_atom_anchor_window_shadow_v8",
+        "gpcr_core_atom_window_excess_polar_shadow_v9",
     }:
         rows.extend(
             [
@@ -397,6 +402,366 @@ def _feature_rows(variant: str) -> list[dict[str, Any]]:
                         "Candidate score is emitted for shadow comparison only; it cannot authorize active claims, "
                         "router promotion, threshold relaxation, or broad GPCR delivery assertions."
                     ),
+                },
+            ]
+        )
+    if variant == "gpcr_core_fixed_reference_live_shadow_v5":
+        rows.extend(
+            [
+                {
+                    "feature_name": "fixed_reference_scaling_enabled",
+                    "role": "fixed_reference_activation_gate",
+                    "direction": "activate_only_under_fixed_family_reference_scaling",
+                    "rationale": (
+                        "The v5 shadow scorer is live only when frozen family reference scaling is active; "
+                        "run-local scaling emits telemetry but no pressure."
+                    ),
+                },
+                {
+                    "feature_name": "fixed_reference_pose_prior_support",
+                    "role": "target_agnostic_support_guard",
+                    "direction": "protect_shared_anchor_pose_physics_and_basic_amine_support",
+                    "rationale": (
+                        "Preserves the v2 family-anchor baseline by treating shared pose/physics and basic-amine "
+                        "compatibility as support, without target, label, rank, ligand-id, or reference-binding inputs."
+                    ),
+                },
+                {
+                    "feature_name": "fixed_reference_live_overreward_pressure",
+                    "role": "fixed_reference_live_shadow_pressure",
+                    "direction": "penalize_prior_overreward_without_pose_chemistry_support",
+                    "rationale": (
+                        "Post-v4 reject candidate pressure avoids porting v2/v4 weights and uses only target-agnostic "
+                        "pressures observed to remain live in the fixed-reference replay."
+                    ),
+                },
+                {
+                    "feature_name": "fixed_reference_prior_weakness_pressure",
+                    "role": "fixed_reference_live_shadow_pressure_component",
+                    "direction": "target_agnostic_prior_weakness_alias",
+                    "rationale": (
+                        "Renames the target-free prior weakness component for v5 governance so the scorer does not "
+                        "appear to depend on target-internal rank, label, ligand ID, or reference-binding inputs."
+                    ),
+                },
+                {
+                    "feature_name": "fixed_reference_feature_collapse_probe",
+                    "role": "feature_collapse_telemetry",
+                    "direction": "diagnostic_only",
+                    "rationale": (
+                        "Fixed-reference replay showed conserved-anchor, pose-physics, and acidic-overcontact "
+                        "features collapsed to near-zero activation; v5 records this instead of treating collapse "
+                        "as evidence of success."
+                    ),
+                },
+                {
+                    "feature_name": "family_anchor_v2_best_baseline_lock",
+                    "role": "baseline_preservation",
+                    "direction": "comparison_only",
+                    "rationale": (
+                        "v2 remains the best accepted baseline; v5 only emits shadow diagnostics and cannot replace "
+                        "v2 for claims or active ranking."
+                    ),
+                },
+            ]
+        )
+    if variant == "gpcr_core_class_a_motif_shadow_v6":
+        rows.extend(
+            [
+                {
+                    "feature_name": "class_a_aminergic_opioid_orthosteric_sublane_scope",
+                    "role": "claim_locked_scope",
+                    "direction": "narrow_class_a_orthosteric_sublane_not_broad_gpcr",
+                    "rationale": (
+                        "v6 is explicitly scoped to Class A aminergic/opioid-like orthosteric-lane motif behavior, "
+                        "not broad GPCR family delivery or router claims."
+                    ),
+                },
+                {
+                    "feature_name": "class_a_orthosteric_motif_support_proxy",
+                    "role": "motif_support_proxy",
+                    "direction": "reward_basic_amine_pose_trajectory_support",
+                    "rationale": (
+                        "Uses only existing SMILES basic-amine heuristic plus pose, trajectory, and support proxies "
+                        "to approximate active-state orthosteric motif compatibility."
+                    ),
+                },
+                {
+                    "feature_name": "class_a_prior_overreward_invalid_overanchor_pressure",
+                    "role": "shadow_pressure",
+                    "direction": "penalize_prior_overreward_or_invalid_overanchor_without_motif_support",
+                    "rationale": (
+                        "Separates prior-rich or overanchored rows from supported orthosteric motif-like rows without "
+                        "target, binder label, rank, ligand ID, or reference-binding inputs."
+                    ),
+                },
+                {
+                    "feature_name": "class_a_motif_shadow_score",
+                    "role": "claim_locked_shadow_score",
+                    "direction": "shadow_only_active_score_locked_to_base",
+                    "rationale": (
+                        "Candidate emits a score-only shadow column. Apply mode is intentionally active-locked to "
+                        "the base score until fresh guarded evidence exists."
+                    ),
+                },
+                {
+                    "feature_name": "family_anchor_v2_donor_baseline_lock",
+                    "role": "baseline_preservation",
+                    "direction": "comparison_only",
+                    "rationale": "v2 remains the donor/baseline lane; v6 may not replace active ranking or claims.",
+                },
+                {
+                    "feature_name": "v4_v5_tombstone_reject_preservation",
+                    "role": "reject_history_preservation",
+                    "direction": "diagnostic_only",
+                    "rationale": "v4 and v5 remain preserved as tombstone reject evidence rather than promoted baselines.",
+                },
+            ]
+        )
+    if variant == "gpcr_core_class_a_anchor_geometry_shadow_v7":
+        rows.extend(
+            [
+                {
+                    "feature_name": "class_a_aminergic_opioid_orthosteric_sublane_scope",
+                    "role": "claim_locked_scope",
+                    "direction": "narrow_class_a_orthosteric_sublane_not_broad_gpcr",
+                    "rationale": (
+                        "v7 is explicitly scoped to Class A aminergic/opioid-like orthosteric sublane anchor "
+                        "geometry. It must not be used for broad GPCR family delivery, router, or platform claims."
+                    ),
+                },
+                {
+                    "feature_name": "class_a_charge_complemented_anchor_geometry_proxy",
+                    "role": "anchor_geometry_support_proxy",
+                    "direction": "reward_basic_amine_charge_complemented_anchor_geometry",
+                    "rationale": (
+                        "Uses only the existing SMILES basic-amine heuristic plus pose/contact/distance/energy "
+                        "proxies to approximate charge-complemented orthosteric anchor geometry."
+                    ),
+                },
+                {
+                    "feature_name": "class_a_orthosteric_occupancy_proxy",
+                    "role": "orthosteric_occupancy_support_proxy",
+                    "direction": "reward_contact_distance_energy_occupancy_support",
+                    "rationale": (
+                        "Live proxy for orthosteric pocket occupancy from stage3 contact, distance, stability, and "
+                        "energy columns only; no target, label, rank, ligand-id, or reference-binding inputs."
+                    ),
+                },
+                {
+                    "feature_name": "class_a_pose_survival_support_proxy",
+                    "role": "pose_survival_support_proxy",
+                    "direction": "reward_trajectory_survival_and_pose_physics_support",
+                    "rationale": (
+                        "Separates supported Class A sublane poses from prior-only rows by using trajectory/stability, "
+                        "contact, distance, and energy proxies without claim leakage."
+                    ),
+                },
+                {
+                    "feature_name": "class_a_invalid_anchor_prior_pressure_v7",
+                    "role": "shadow_pressure",
+                    "direction": "penalize_invalid_anchor_or_prior_pressure_without_geometry_support",
+                    "rationale": (
+                        "Penalizes prior-rich, anchorless, or invalid-overanchor rows only when not supported by "
+                        "charge-complemented anchor geometry, orthosteric occupancy, and pose survival."
+                    ),
+                },
+                {
+                    "feature_name": "class_a_anchor_geometry_shadow_score_v7",
+                    "role": "claim_locked_shadow_score",
+                    "direction": "shadow_only_active_score_locked_to_base",
+                    "rationale": (
+                        "Candidate emits a score-only shadow column. Apply mode remains active-locked to the base "
+                        "binding score until fresh guarded evidence exists."
+                    ),
+                },
+                {
+                    "feature_name": "family_anchor_v2_donor_baseline_lock",
+                    "role": "baseline_preservation",
+                    "direction": "comparison_only",
+                    "rationale": "v2 remains the donor/baseline lane; v7 may not replace active ranking or claims.",
+                },
+                {
+                    "feature_name": "v4_v5_v6_reject_preservation",
+                    "role": "reject_history_preservation",
+                    "direction": "diagnostic_only",
+                    "rationale": "v4, v5, and the rejected v6 packet remain preserved as reject evidence rather than promoted baselines.",
+                },
+            ]
+        )
+    if variant in {
+        "gpcr_core_direct_atom_anchor_window_shadow_v8",
+        "gpcr_core_atom_window_excess_polar_shadow_v9",
+    }:
+        rows.extend(
+            [
+                {
+                    "feature_name": "class_a_direct_atom_window_anchor_geometry_proxy",
+                    "role": "direct_atom_window_support",
+                    "direction": "reward_basic_amine_when_anchor_distance_stays_in_2p8_to_4p2A_window",
+                    "rationale": (
+                        "Uses precomputed native acidic-anchor trajectory distances instead of stage3 proxy-only "
+                        "contact/distance signals. This keeps the next scorer contract focused on atom-window "
+                        "geometry after the v7 proxy replay reject."
+                    ),
+                },
+                {
+                    "feature_name": "class_a_hydrophobic_overcontact_pressure_v8",
+                    "role": "direct_atom_window_pressure",
+                    "direction": "penalize_hydrophobic_or_low_polar_rows_with_too_close_acidic_anchor_contact",
+                    "rationale": (
+                        "DRD2 diagnostics show top decoys can over-contact the acidic anchor. This pressure uses "
+                        "only ligand chemistry plus precomputed atom-window distances to separate true anchor "
+                        "geometry from hydrophobic overcontact."
+                    ),
+                },
+                {
+                    "feature_name": "class_a_atom_anchor_feature_available_proxy",
+                    "role": "feature_availability_telemetry",
+                    "direction": "diagnostic_only_no_missing_feature_penalty",
+                    "rationale": (
+                        "Rows without precomputed atom-window features must not be treated as failures. Missing "
+                        "direct features are telemetry only and keep the active score locked to base."
+                    ),
+                },
+                {
+                    "feature_name": "class_a_atom_window_shadow_score_v8",
+                    "role": "claim_locked_shadow_score",
+                    "direction": "shadow_only_active_score_locked_to_base",
+                    "rationale": (
+                        "Candidate emits a score-only shadow column. Apply mode remains active-locked to the base "
+                        "binding score until fresh guarded evidence exists."
+                    ),
+                },
+                {
+                    "feature_name": "class_a_excess_polar_anchor_pressure_v9",
+                    "role": "direct_atom_window_pressure",
+                    "direction": "penalize_multipolar_basic_amine_decoys_when_atom_window_reward_is_active",
+                    "rationale": (
+                        "The v8 replay promoted DRD2 hard decoys that had basic-amine and atom-window support but "
+                        "excess donor/acceptor burden. This pressure is target-free and label-free, and only "
+                        "activates behind precomputed atom-window support."
+                    ),
+                },
+                {
+                    "feature_name": "class_a_compact_amine_window_support_v9",
+                    "role": "direct_atom_window_support",
+                    "direction": "reward_compact_basic_amine_atom_window_support_without_target_identity",
+                    "rationale": (
+                        "Supports compact Class A aminergic-like ligands when atom-window geometry is present, while "
+                        "avoiding reward for donor/acceptor-heavy multipolar decoys."
+                    ),
+                },
+                {
+                    "feature_name": "v7_reject_preservation",
+                    "role": "reject_history_preservation",
+                    "direction": "diagnostic_only",
+                    "rationale": (
+                        "v7 remains preserved as reject/rework evidence; v8 must not silently promote v7 proxy "
+                        "terms or broad GPCR/basic-amine wording."
+                    ),
+                },
+            ]
+        )
+    if variant == "gpcr_core_cationic_pose_distortion_shadow_v10":
+        rows.extend(
+            [
+                {
+                    "feature_name": "base_score",
+                    "role": "selected_slice_score_anchor",
+                    "direction": "preserve_base_score_as_formula_anchor",
+                    "rationale": (
+                        "v10 is replayed first on the repaired DRD2 hard-decoy slice. It reuses the slice packet's "
+                        "frozen base score instead of changing the active production score."
+                    ),
+                },
+                {
+                    "feature_name": "label_free_penalty_pressure",
+                    "role": "cationic_pose_distortion_pressure",
+                    "direction": "penalize_invalid_overanchor_hydrophobic_multipolar_and_pose_distorted_decoys",
+                    "rationale": (
+                        "The selected slice separates DRD2 rank inversion into label-free pressures: invalid close "
+                        "overanchor without basic amine, hydrophobic overcontact, multipolar basic overanchor, "
+                        "cationic-window mismatch, and pose distortion."
+                    ),
+                },
+                {
+                    "feature_name": "label_free_support_pressure",
+                    "role": "cationic_pose_preservation_support",
+                    "direction": "reward_repaired_positive_anchor_window_and_pose_preservation_support",
+                    "rationale": (
+                        "Support only comes from cationic-center geometry, atom-window support, compact anchor "
+                        "support, and pose-preservation telemetry already materialized in the hard-decoy slice."
+                    ),
+                },
+                {
+                    "feature_name": "cationic_center_geometry_available",
+                    "role": "feature_availability_telemetry",
+                    "direction": "diagnostic_only_no_missing_feature_penalty",
+                    "rationale": (
+                        "Rows without cationic-center telemetry are tracked as missing telemetry, not as negative "
+                        "evidence or claim blockers."
+                    ),
+                },
+                {
+                    "feature_name": "pose_distortion_pressure",
+                    "role": "pose_generation_repair_pressure",
+                    "direction": "penalize_distorted_valid_anchor_rows_only_in_shadow_replay",
+                    "rationale": (
+                        "The repair lane showed apparent anchor support can still be distorted after pseudo-allatom "
+                        "backmapping. v10 keeps this as a claim-locked pressure until broader caches exist."
+                    ),
+                },
+                {
+                    "feature_name": "v8_v9_reject_preservation",
+                    "role": "reject_history_preservation",
+                    "direction": "diagnostic_only",
+                    "rationale": "v8 and v9 remain preserved as reject/rework evidence, not promoted scoring baselines.",
+                },
+            ]
+        )
+    if variant == "gpcr_core_cationic_weakbase_rescue_shadow_v11":
+        rows.extend(
+            [
+                {
+                    "feature_name": "base_score",
+                    "role": "selected_slice_score_anchor",
+                    "direction": "preserve_base_score_as_formula_anchor",
+                    "rationale": (
+                        "v11 keeps the base score as the active-lock anchor and only evaluates a claim-locked "
+                        "shadow score."
+                    ),
+                },
+                {
+                    "feature_name": "label_free_penalty_pressure",
+                    "role": "cationic_pose_distortion_pressure",
+                    "direction": "penalize_invalid_overanchor_hydrophobic_multipolar_and_pose_distorted_decoys",
+                    "rationale": "Carries the v10 label-free decoy pressure contract forward unchanged.",
+                },
+                {
+                    "feature_name": "weak_base_rescue_support_pressure",
+                    "role": "weak_base_conditional_anchor_support",
+                    "direction": "reward_cationic_pose_support_only_when_base_score_is_weak",
+                    "rationale": (
+                        "all_basic anchor placement rescued the DRD2 positive but also overpromoted already-strong "
+                        "decoys. This term gates anchor support by weak/borderline base score instead of rewarding "
+                        "all valid anchors."
+                    ),
+                },
+                {
+                    "feature_name": "weak_base_rescue_gate",
+                    "role": "score_conditioning_telemetry",
+                    "direction": "diagnostic_only_label_free_score_condition",
+                    "rationale": (
+                        "Telemetry for the continuous weak-base gate. It uses the base score only, not target, label, "
+                        "rank, ligand_id, or reference-binding features."
+                    ),
+                },
+                {
+                    "feature_name": "v10_selected_slice_rework_preservation",
+                    "role": "reject_history_preservation",
+                    "direction": "diagnostic_only",
+                    "rationale": "v10 remains selected-slice green/rework evidence and is not silently promoted to a claim.",
                 },
             ]
         )
@@ -987,6 +1352,719 @@ def build_payload(*, variant: str = "current") -> dict[str, Any]:
             "v3. It probes whether acidic-anchor overcontact plus prior overreward explains hard-decoy pressure "
             "without target identity, labels, ranks, ligand IDs, reference binding values, or threshold relaxation."
         )
+    elif variant == "gpcr_core_fixed_reference_live_shadow_v5":
+        constraints = {
+            **constraints,
+            "max_abs_delta_score": 0.0,
+            "yellow_band_abs_delta_score": 0.0,
+            "comparison_only_candidate": True,
+            "claim_locked_candidate": True,
+            "shadow_only_candidate": True,
+            "diagnostic_only_candidate": True,
+            "fixed_reference_live_shadow_candidate": True,
+            "router_promotion_allowed": False,
+            "platform_promotion_allowed": False,
+            "apply_mode_claim_allowed": False,
+            "scorer_apply_allowed": False,
+            "claim_safe_assertion_allowed": False,
+            "broad_gpcr_claim_allowed": False,
+            "threshold_relaxation_allowed": False,
+            "fake_pass_allowed": False,
+            "target_identity_feature_allowed": False,
+            "label_feature_allowed": False,
+            "rank_feature_allowed": False,
+            "ligand_id_feature_allowed": False,
+            "reference_binding_value_allowed": False,
+            "reference_scaling_mode": "fixed_family_reference",
+            "best_baseline_variant": "gpcr_core_family_anchor_rescore_v2",
+            "rejected_predecessor_variant": "gpcr_core_acidic_anchor_overcontact_prior_gate_v4",
+            "fixed_reference_v2_formula_replay_pr_auc_approx": 0.0076,
+            "fixed_reference_v2_formula_replay_top20_hit_rate": 0.0,
+            "diagnostic_source_artifact": "runs/gpcr_guarded_100k_rank_failure_diagnostics_current.json#post_v4_fixed_reference_redesign",
+            "required_before_claim": [
+                "score_only_shadow_replay_beats_v2_without_metric_regression",
+                "leakage_review_no_target_label_rank_ligand_id_reference_inputs",
+                "family_anchor_v2_remains_best_baseline",
+                "fresh_full_100k_ci_low_top20_claim_review_green",
+            ],
+        }
+        tuning = {
+            "variant": "gpcr_core_fixed_reference_live_shadow_v5",
+            "candidate_source": "post_v4_reject_fixed_reference_live_redesign",
+            "rejected_predecessor_variant": "gpcr_core_acidic_anchor_overcontact_prior_gate_v4",
+            "best_baseline_variant": "gpcr_core_family_anchor_rescore_v2",
+            "scorer_change": "shadow_only_fixed_reference_live_linear_candidate",
+            "target_identity_feature_allowed": False,
+            "label_feature_allowed": False,
+            "rank_feature_allowed": False,
+            "ligand_id_feature_allowed": False,
+            "reference_binding_value_allowed": False,
+            "threshold_relaxation_allowed": False,
+            "fixed_reference_scaling_required": True,
+            "fixed_reference_replay_feature_collapse": {
+                "rows": 40000,
+                "gpcr_conserved_anchor_proxy_nonzero": 1,
+                "pose_physics_support_nonzero": 1,
+                "gpcr_acidic_anchor_overcontact_prior_gate_nonzero": 0,
+                "target_internal_pairwise_pressure_nonzero": 17768,
+                "fixed_reference_prior_weakness_pressure_nonzero": 17768,
+                "gpcr_pose_chemistry_hard_decoy_pressure_nonzero": 4164,
+            },
+            "fixed_reference_v2_formula_replay": {
+                "pr_auc_approx": 0.0076,
+                "top20_hit_rate": 0.0,
+                "interpretation": "do_not_port_v2_or_v4_weights_under_fixed_reference_scaling",
+            },
+            "replay_score_formula": (
+                "binding_score_composite_v7_prior_active "
+                "+ 1.25*fixed_reference_live_overreward_pressure"
+            ),
+        }
+        interactions = [
+            "fixed_family_reference_scaling_required_for_live_pressure",
+            "v2_preserved_as_best_baseline",
+            "post_v4_reject_shadow_only_redesign",
+            "record_fixed_reference_feature_collapse",
+            "use_only_fixed_reference_live_pressures",
+            "no_target_identity_labels_ranks_ligand_ids_or_reference_values",
+            "threshold_relaxation_forbidden",
+            "shadow_only_active_claim_disabled",
+            "no_router_platform_or_claim_promotion",
+        ]
+        next_step = (
+            "Run gpcr_core_fixed_reference_live_shadow_v5 only as a score-only shadow replay under fixed-family "
+            "reference scaling. Keep v2 as the baseline, treat v4 as reject evidence, and do not run a fresh full "
+            "100k job or claim review from this packet."
+        )
+    elif variant == "gpcr_core_class_a_motif_shadow_v6":
+        constraints = {
+            **constraints,
+            "max_abs_delta_score": 0.0,
+            "yellow_band_abs_delta_score": 0.0,
+            "comparison_only_candidate": True,
+            "claim_locked_candidate": True,
+            "shadow_only_candidate": True,
+            "active_score_locked_to_base": True,
+            "class_a_aminergic_opioid_orthosteric_sublane_candidate": True,
+            "router_promotion_allowed": False,
+            "platform_promotion_allowed": False,
+            "apply_mode_claim_allowed": False,
+            "scorer_apply_allowed": False,
+            "claim_safe_assertion_allowed": False,
+            "broad_gpcr_claim_allowed": False,
+            "threshold_relaxation_allowed": False,
+            "fake_pass_allowed": False,
+            "target_identity_feature_allowed": False,
+            "label_feature_allowed": False,
+            "rank_feature_allowed": False,
+            "ligand_id_feature_allowed": False,
+            "reference_binding_value_allowed": False,
+            "best_baseline_variant": "gpcr_core_family_anchor_rescore_v2",
+            "baseline_role": "v2_donor_baseline",
+            "tombstone_reject_variants": [
+                "gpcr_core_acidic_anchor_overcontact_prior_gate_v4",
+                "gpcr_core_fixed_reference_live_shadow_v5",
+            ],
+            "allowed_live_feature_families": [
+                "existing_smiles_basic_amine_heuristic",
+                "pose_trajectory_support_proxy",
+                "prior_overreward_pressure",
+                "invalid_overanchor_pressure",
+            ],
+            "forbidden_live_feature_families": [
+                "target",
+                "is_binder",
+                "rank",
+                "ligand_id",
+                "reference_binding",
+            ],
+            "required_before_claim": [
+                "score_only_shadow_replay_beats_v2_without_metric_regression",
+                "leakage_review_no_target_is_binder_rank_ligand_id_reference_binding_inputs",
+                "v2_remains_donor_baseline",
+                "v4_v5_remain_tombstone_rejects",
+                "fresh_full_100k_ci_low_top20_claim_review_green",
+            ],
+        }
+        tuning = {
+            "variant": "gpcr_core_class_a_motif_shadow_v6",
+            "candidate_source": "post_v5_class_a_motif_shadow_design",
+            "scorer_change": "shadow_only_class_a_motif_linear_candidate",
+            "scope": "class_a_aminergic_opioid_like_orthosteric_sublane",
+            "broad_gpcr_claim_allowed": False,
+            "active_score_locked_to_base": True,
+            "best_baseline_variant": "gpcr_core_family_anchor_rescore_v2",
+            "baseline_role": "v2_donor_baseline",
+            "tombstone_reject_variants": [
+                "gpcr_core_acidic_anchor_overcontact_prior_gate_v4",
+                "gpcr_core_fixed_reference_live_shadow_v5",
+            ],
+            "target_identity_feature_allowed": False,
+            "label_feature_allowed": False,
+            "rank_feature_allowed": False,
+            "ligand_id_feature_allowed": False,
+            "reference_binding_value_allowed": False,
+            "live_feature_policy": "label_free_basic_amine_pose_trajectory_support_prior_overreward_invalid_overanchor_only",
+            "replay_score_formula": (
+                "binding_score_composite_v7_prior_active "
+                "- 0.75*class_a_orthosteric_motif_support_proxy "
+                "+ 1.10*class_a_prior_overreward_invalid_overanchor_pressure"
+            ),
+        }
+        interactions = [
+            "class_a_aminergic_opioid_like_orthosteric_sublane_not_broad_gpcr",
+            "active_score_locked_to_base_even_in_apply_mode",
+            "basic_amine_pose_trajectory_support_only",
+            "prior_overreward_invalid_overanchor_pressure_only",
+            "no_target_is_binder_rank_ligand_id_or_reference_binding_features",
+            "v2_preserved_as_donor_baseline",
+            "v4_v5_preserved_as_tombstone_rejects",
+            "no_router_platform_or_claim_promotion",
+        ]
+        next_step = (
+            "Run gpcr_core_class_a_motif_shadow_v6 only as score-only shadow/spec telemetry for the Class A "
+            "aminergic/opioid-like orthosteric sublane. Do not launch a full 100k rerun from this packet; v2 "
+            "remains the donor baseline and v4/v5 remain tombstone rejects."
+        )
+    elif variant == "gpcr_core_class_a_anchor_geometry_shadow_v7":
+        constraints = {
+            **constraints,
+            "max_abs_delta_score": 0.0,
+            "yellow_band_abs_delta_score": 0.0,
+            "comparison_only_candidate": True,
+            "claim_locked_candidate": True,
+            "shadow_only_candidate": True,
+            "score_only_candidate": True,
+            "active_score_locked_to_base": True,
+            "class_a_aminergic_opioid_orthosteric_sublane_candidate": True,
+            "router_promotion_allowed": False,
+            "platform_promotion_allowed": False,
+            "apply_mode_claim_allowed": False,
+            "scorer_apply_allowed": False,
+            "claim_safe_assertion_allowed": False,
+            "broad_gpcr_claim_allowed": False,
+            "threshold_relaxation_allowed": False,
+            "fake_pass_allowed": False,
+            "target_identity_feature_allowed": False,
+            "label_feature_allowed": False,
+            "rank_feature_allowed": False,
+            "ligand_id_feature_allowed": False,
+            "reference_binding_value_allowed": False,
+            "best_baseline_variant": "gpcr_core_family_anchor_rescore_v2",
+            "baseline_role": "v2_donor_baseline",
+            "rejected_predecessor_variant": "gpcr_core_class_a_motif_shadow_v6",
+            "tombstone_reject_variants": [
+                "gpcr_core_acidic_anchor_overcontact_prior_gate_v4",
+                "gpcr_core_fixed_reference_live_shadow_v5",
+                "gpcr_core_class_a_motif_shadow_v6",
+            ],
+            "allowed_live_feature_families": [
+                "existing_smiles_basic_amine_heuristic",
+                "stage3_pose_contact_distance_energy_proxy",
+                "trajectory_survival_support_proxy",
+                "invalid_anchor_prior_pressure",
+            ],
+            "forbidden_live_feature_families": [
+                "target",
+                "is_binder",
+                "rank",
+                "ligand_id",
+                "reference_binding",
+                "threshold_relaxation",
+                "fake_pass",
+            ],
+            "required_before_claim": [
+                "score_only_shadow_replay_beats_v2_without_metric_regression",
+                "leakage_review_no_target_is_binder_rank_ligand_id_reference_binding_inputs",
+                "v2_remains_donor_baseline",
+                "v4_v5_v6_remain_reject_history",
+                "fresh_full_100k_ci_low_top20_claim_review_green",
+            ],
+        }
+        tuning = {
+            "variant": "gpcr_core_class_a_anchor_geometry_shadow_v7",
+            "candidate_source": "post_v6_reject_class_a_anchor_geometry_shadow_design",
+            "scorer_change": "score_only_shadow_class_a_anchor_geometry_linear_candidate",
+            "scope": "class_a_aminergic_opioid_like_orthosteric_sublane",
+            "broad_gpcr_claim_allowed": False,
+            "active_score_locked_to_base": True,
+            "best_baseline_variant": "gpcr_core_family_anchor_rescore_v2",
+            "baseline_role": "v2_donor_baseline",
+            "rejected_predecessor_variant": "gpcr_core_class_a_motif_shadow_v6",
+            "tombstone_reject_variants": [
+                "gpcr_core_acidic_anchor_overcontact_prior_gate_v4",
+                "gpcr_core_fixed_reference_live_shadow_v5",
+                "gpcr_core_class_a_motif_shadow_v6",
+            ],
+            "target_identity_feature_allowed": False,
+            "label_feature_allowed": False,
+            "rank_feature_allowed": False,
+            "ligand_id_feature_allowed": False,
+            "reference_binding_value_allowed": False,
+            "threshold_relaxation_allowed": False,
+            "fake_pass_allowed": False,
+            "live_feature_policy": (
+                "label_free_target_free_basic_amine_stage3_pose_trajectory_contact_energy_anchor_geometry_only"
+            ),
+            "replay_score_formula": (
+                "binding_score_composite_v7_prior_active "
+                "- 0.55*class_a_charge_complemented_anchor_geometry_proxy "
+                "- 0.35*class_a_orthosteric_occupancy_proxy "
+                "- 0.45*class_a_pose_survival_support_proxy "
+                "+ 1.20*class_a_invalid_anchor_prior_pressure_v7"
+            ),
+        }
+        interactions = [
+            "class_a_aminergic_opioid_like_orthosteric_sublane_not_broad_gpcr",
+            "active_score_locked_to_base_even_in_apply_mode",
+            "score_only_shadow_candidate",
+            "charge_complemented_anchor_geometry_support_only",
+            "orthosteric_occupancy_and_pose_survival_support_only",
+            "invalid_anchor_prior_pressure_only",
+            "no_target_is_binder_rank_ligand_id_reference_binding_threshold_relaxation_or_fake_pass_features",
+            "v2_preserved_as_donor_baseline",
+            "v4_v5_v6_preserved_as_reject_history",
+            "v6_reject_preserved_not_promoted",
+            "no_router_platform_or_claim_promotion",
+        ]
+        next_step = (
+            "Run gpcr_core_class_a_anchor_geometry_shadow_v7 only as score-only shadow/spec telemetry for the "
+            "Class A aminergic/opioid-like orthosteric sublane. Keep v2 as the donor baseline and preserve "
+            "v4/v5/v6 as reject history; do not use this packet for broad GPCR claims."
+        )
+    elif variant == "gpcr_core_direct_atom_anchor_window_shadow_v8":
+        constraints = {
+            **constraints,
+            "max_abs_delta_score": 0.0,
+            "yellow_band_abs_delta_score": 0.0,
+            "comparison_only_candidate": True,
+            "claim_locked_candidate": True,
+            "shadow_only_candidate": True,
+            "score_only_candidate": True,
+            "active_score_locked_to_base": True,
+            "class_a_aminergic_opioid_orthosteric_sublane_candidate": True,
+            "requires_precomputed_atom_window_features": True,
+            "missing_atom_window_features_are_not_negative_evidence": True,
+            "router_promotion_allowed": False,
+            "platform_promotion_allowed": False,
+            "apply_mode_claim_allowed": False,
+            "scorer_apply_allowed": False,
+            "claim_safe_assertion_allowed": False,
+            "broad_gpcr_claim_allowed": False,
+            "threshold_relaxation_allowed": False,
+            "fake_pass_allowed": False,
+            "target_identity_feature_allowed": False,
+            "label_feature_allowed": False,
+            "rank_feature_allowed": False,
+            "ligand_id_feature_allowed": False,
+            "reference_binding_value_allowed": False,
+            "best_baseline_variant": "gpcr_core_family_anchor_rescore_v2",
+            "baseline_role": "frozen_r2_v2_matching_label_comparator",
+            "rejected_predecessor_variant": "gpcr_core_class_a_anchor_geometry_shadow_v7",
+            "tombstone_reject_variants": [
+                "gpcr_core_acidic_anchor_overcontact_prior_gate_v4",
+                "gpcr_core_fixed_reference_live_shadow_v5",
+                "gpcr_core_class_a_motif_shadow_v6",
+                "gpcr_core_class_a_anchor_geometry_shadow_v7",
+            ],
+            "allowed_live_feature_families": [
+                "precomputed_native_acidic_anchor_distance_window_features",
+                "existing_smiles_basic_amine_heuristic",
+                "ligand_logp_and_polarity_hydrophobic_pressure",
+                "existing_pose_survival_proxy",
+            ],
+            "forbidden_live_feature_families": [
+                "target",
+                "is_binder",
+                "rank",
+                "ligand_id",
+                "reference_binding",
+                "threshold_relaxation",
+                "fake_pass",
+            ],
+            "required_before_claim": [
+                "atom_window_feature_cache_materialized",
+                "score_only_shadow_replay_beats_frozen_r2_v2_without_metric_regression",
+                "leakage_review_no_target_is_binder_rank_ligand_id_reference_binding_inputs",
+                "v7_remains_reject_history",
+                "fresh_full_100k_ci_low_top20_claim_review_green",
+            ],
+        }
+        tuning = {
+            "variant": "gpcr_core_direct_atom_anchor_window_shadow_v8",
+            "candidate_source": "post_v7_reject_direct_atom_window_design",
+            "scorer_change": "score_only_shadow_direct_atom_window_linear_candidate",
+            "scope": "class_a_aminergic_opioid_like_orthosteric_sublane",
+            "broad_gpcr_claim_allowed": False,
+            "active_score_locked_to_base": True,
+            "best_baseline_variant": "gpcr_core_family_anchor_rescore_v2",
+            "baseline_role": "frozen_r2_v2_matching_label_comparator",
+            "rejected_predecessor_variant": "gpcr_core_class_a_anchor_geometry_shadow_v7",
+            "target_identity_feature_allowed": False,
+            "label_feature_allowed": False,
+            "rank_feature_allowed": False,
+            "ligand_id_feature_allowed": False,
+            "reference_binding_value_allowed": False,
+            "threshold_relaxation_allowed": False,
+            "fake_pass_allowed": False,
+            "atom_anchor_window_A": [2.8, 4.2],
+            "overcontact_distance_A": 2.8,
+            "live_feature_policy": (
+                "label_free_precomputed_atom_window_features_plus_smiles_hydrophobic_pressure_only"
+            ),
+            "replay_score_formula": (
+                "binding_score_composite_v7_prior_active "
+                "- 0.75*class_a_direct_atom_window_anchor_geometry_proxy "
+                "- 0.20*class_a_atom_window_pose_survival_proxy "
+                "+ 1.35*class_a_hydrophobic_overcontact_pressure_v8"
+            ),
+        }
+        interactions = [
+            "direct_atom_window_features_not_stage3_proxy_recombination",
+            "class_a_aminergic_opioid_like_orthosteric_sublane_not_broad_gpcr",
+            "active_score_locked_to_base_even_in_apply_mode",
+            "missing_atom_window_features_are_telemetry_not_negative_evidence",
+            "hydrophobic_overcontact_penalty_without_target_or_label_inputs",
+            "no_target_is_binder_rank_ligand_id_reference_binding_threshold_relaxation_or_fake_pass_features",
+            "v2_frozen_r2_matching_label_comparator_preserved",
+            "v7_preserved_as_reject_history",
+            "no_router_platform_or_claim_promotion",
+        ]
+        next_step = (
+            "Materialize atom-window anchor features into a local cache, then run "
+            "gpcr_core_direct_atom_anchor_window_shadow_v8 only as score-only shadow/spec telemetry. "
+            "Do not launch guarded apply or broad GPCR claims from this packet."
+        )
+    elif variant == "gpcr_core_atom_window_excess_polar_shadow_v9":
+        constraints = {
+            **constraints,
+            "max_abs_delta_score": 0.0,
+            "yellow_band_abs_delta_score": 0.0,
+            "comparison_only_candidate": True,
+            "claim_locked_candidate": True,
+            "shadow_only_candidate": True,
+            "score_only_candidate": True,
+            "active_score_locked_to_base": True,
+            "class_a_aminergic_opioid_orthosteric_sublane_candidate": True,
+            "requires_precomputed_atom_window_features": True,
+            "missing_atom_window_features_are_not_negative_evidence": True,
+            "router_promotion_allowed": False,
+            "platform_promotion_allowed": False,
+            "apply_mode_claim_allowed": False,
+            "scorer_apply_allowed": False,
+            "claim_safe_assertion_allowed": False,
+            "broad_gpcr_claim_allowed": False,
+            "threshold_relaxation_allowed": False,
+            "fake_pass_allowed": False,
+            "target_identity_feature_allowed": False,
+            "label_feature_allowed": False,
+            "rank_feature_allowed": False,
+            "ligand_id_feature_allowed": False,
+            "reference_binding_value_allowed": False,
+            "best_baseline_variant": "gpcr_core_family_anchor_rescore_v2",
+            "baseline_role": "frozen_r2_v2_matching_label_comparator",
+            "rejected_predecessor_variant": "gpcr_core_direct_atom_anchor_window_shadow_v8",
+            "tombstone_reject_variants": [
+                "gpcr_core_acidic_anchor_overcontact_prior_gate_v4",
+                "gpcr_core_fixed_reference_live_shadow_v5",
+                "gpcr_core_class_a_motif_shadow_v6",
+                "gpcr_core_class_a_anchor_geometry_shadow_v7",
+                "gpcr_core_direct_atom_anchor_window_shadow_v8",
+            ],
+            "allowed_live_feature_families": [
+                "precomputed_native_acidic_anchor_distance_window_features",
+                "existing_smiles_basic_amine_heuristic",
+                "ligand_h_donor_acceptor_rotatable_bond_counts",
+                "ligand_logp_and_polarity_hydrophobic_pressure",
+                "existing_pose_survival_proxy",
+            ],
+            "forbidden_live_feature_families": [
+                "target",
+                "is_binder",
+                "rank",
+                "ligand_id",
+                "reference_binding",
+                "threshold_relaxation",
+                "fake_pass",
+            ],
+            "required_before_claim": [
+                "atom_window_feature_cache_materialized_with_positive_labels",
+                "base_anchored_score_only_shadow_replay_beats_frozen_r2_v2_without_metric_regression",
+                "excess_polar_pressure_reduces_drd2_decoy_intrusion_without_top20_regression",
+                "leakage_review_no_target_is_binder_rank_ligand_id_reference_binding_inputs",
+                "fresh_full_100k_ci_low_top20_claim_review_green",
+            ],
+        }
+        tuning = {
+            "variant": "gpcr_core_atom_window_excess_polar_shadow_v9",
+            "candidate_source": "post_v8_reject_multipolar_decoy_pressure_design",
+            "scorer_change": "score_only_shadow_atom_window_excess_polar_linear_candidate",
+            "scope": "class_a_aminergic_opioid_like_orthosteric_sublane",
+            "broad_gpcr_claim_allowed": False,
+            "active_score_locked_to_base": True,
+            "best_baseline_variant": "gpcr_core_family_anchor_rescore_v2",
+            "baseline_role": "frozen_r2_v2_matching_label_comparator",
+            "rejected_predecessor_variant": "gpcr_core_direct_atom_anchor_window_shadow_v8",
+            "target_identity_feature_allowed": False,
+            "label_feature_allowed": False,
+            "rank_feature_allowed": False,
+            "ligand_id_feature_allowed": False,
+            "reference_binding_value_allowed": False,
+            "threshold_relaxation_allowed": False,
+            "fake_pass_allowed": False,
+            "atom_anchor_window_A": [2.8, 4.2],
+            "overcontact_distance_A": 2.8,
+            "excess_polar_pressure_basis": ["ligand_h_donors", "ligand_h_acceptors", "ligand_rot_bonds"],
+            "live_feature_policy": (
+                "label_free_precomputed_atom_window_features_plus_smiles_and_ligand_count_pressure_only"
+            ),
+            "replay_score_formula": (
+                "binding_score_composite_v7_prior_active "
+                "- 0.55*class_a_direct_atom_window_anchor_geometry_proxy "
+                "- 0.15*class_a_atom_window_pose_survival_proxy "
+                "- 0.20*class_a_compact_amine_window_support_v9 "
+                "+ 1.35*class_a_hydrophobic_overcontact_pressure_v8 "
+                "+ 2.75*class_a_excess_polar_anchor_pressure_v9"
+            ),
+        }
+        interactions = [
+            "direct_atom_window_features_not_stage3_proxy_recombination",
+            "excess_polar_pressure_targets_v8_multipolar_decoy_intrusion",
+            "class_a_aminergic_opioid_like_orthosteric_sublane_not_broad_gpcr",
+            "active_score_locked_to_base_even_in_apply_mode",
+            "missing_atom_window_features_are_telemetry_not_negative_evidence",
+            "no_target_is_binder_rank_ligand_id_reference_binding_threshold_relaxation_or_fake_pass_features",
+            "v2_frozen_r2_matching_label_comparator_preserved",
+            "v8_preserved_as_reject_history",
+            "no_router_platform_or_claim_promotion",
+        ]
+        next_step = (
+            "Run gpcr_core_atom_window_excess_polar_shadow_v9 as a base-anchored, score-only shadow replay. "
+            "It may only become a guarded candidate if it beats the frozen-r2 v2 comparator without Top20 or "
+            "CI-low regression."
+        )
+    elif variant == "gpcr_core_cationic_pose_distortion_shadow_v10":
+        constraints = {
+            **constraints,
+            "max_abs_delta_score": 0.0,
+            "yellow_band_abs_delta_score": 0.0,
+            "comparison_only_candidate": True,
+            "claim_locked_candidate": True,
+            "shadow_only_candidate": True,
+            "score_only_candidate": True,
+            "selected_repaired_slice_candidate": True,
+            "active_score_locked_to_base": True,
+            "class_a_aminergic_opioid_orthosteric_sublane_candidate": True,
+            "requires_precomputed_drd2_repair_slice_features": True,
+            "requires_precomputed_atom_window_features": True,
+            "requires_precomputed_cationic_center_features": True,
+            "missing_repair_slice_features_are_not_negative_evidence": True,
+            "router_promotion_allowed": False,
+            "platform_promotion_allowed": False,
+            "apply_mode_claim_allowed": False,
+            "scorer_apply_allowed": False,
+            "claim_safe_assertion_allowed": False,
+            "broad_gpcr_claim_allowed": False,
+            "threshold_relaxation_allowed": False,
+            "fake_pass_allowed": False,
+            "target_identity_feature_allowed": False,
+            "label_feature_allowed": False,
+            "rank_feature_allowed": False,
+            "ligand_id_feature_allowed": False,
+            "reference_binding_value_allowed": False,
+            "best_baseline_variant": "gpcr_core_family_anchor_rescore_v2",
+            "baseline_role": "frozen_r2_v2_matching_label_comparator",
+            "candidate_source_artifact": "runs/gpcr_drd2_hard_decoy_penalty_envelope_current.json",
+            "rejected_predecessor_variant": "gpcr_core_atom_window_excess_polar_shadow_v9",
+            "tombstone_reject_variants": [
+                "gpcr_core_acidic_anchor_overcontact_prior_gate_v4",
+                "gpcr_core_fixed_reference_live_shadow_v5",
+                "gpcr_core_class_a_motif_shadow_v6",
+                "gpcr_core_class_a_anchor_geometry_shadow_v7",
+                "gpcr_core_direct_atom_anchor_window_shadow_v8",
+                "gpcr_core_atom_window_excess_polar_shadow_v9",
+            ],
+            "allowed_live_feature_families": [
+                "selected_repaired_drd2_slice_base_score",
+                "precomputed_atom_window_features",
+                "precomputed_cationic_center_features",
+                "label_free_pose_distortion_pressure",
+                "label_free_anchor_support_pressure",
+            ],
+            "forbidden_live_feature_families": [
+                "target",
+                "is_binder",
+                "rank",
+                "ligand_id",
+                "reference_binding",
+                "threshold_relaxation",
+                "fake_pass",
+            ],
+            "required_before_claim": [
+                "materialize_equivalent_feature_cache_without_labels_for_frozen_non_adrb2_rows",
+                "selected_slice_shadow_replay_green_is_not_sufficient_for_claim",
+                "leakage_review_no_target_is_binder_rank_ligand_id_reference_binding_inputs",
+                "v8_v9_remain_reject_history",
+                "fresh_full_100k_ci_low_top20_claim_review_green",
+                "family_held_out_scorecard_green",
+            ],
+        }
+        tuning = {
+            "variant": "gpcr_core_cationic_pose_distortion_shadow_v10",
+            "candidate_source": "drd2_hard_decoy_penalty_envelope_current",
+            "scorer_change": "selected_repaired_slice_score_only_shadow_candidate",
+            "scope": "class_a_aminergic_opioid_like_orthosteric_sublane",
+            "broad_gpcr_claim_allowed": False,
+            "active_score_locked_to_base": True,
+            "best_baseline_variant": "gpcr_core_family_anchor_rescore_v2",
+            "baseline_role": "frozen_r2_v2_matching_label_comparator",
+            "rejected_predecessor_variant": "gpcr_core_atom_window_excess_polar_shadow_v9",
+            "target_identity_feature_allowed": False,
+            "label_feature_allowed": False,
+            "rank_feature_allowed": False,
+            "ligand_id_feature_allowed": False,
+            "reference_binding_value_allowed": False,
+            "threshold_relaxation_allowed": False,
+            "fake_pass_allowed": False,
+            "penalty_weight": 6.0,
+            "support_weight": 16.0,
+            "bounded_envelope_positive_rank": 1,
+            "bounded_envelope_decoys_above_positive_count": 0,
+            "bounded_envelope_valid_anchor_challenge_above_positive_count": 0,
+            "live_feature_policy": (
+                "selected_slice_precomputed_label_free_cationic_center_pose_distortion_pressures_only"
+            ),
+            "replay_score_formula": (
+                "base_score "
+                "+ 6.0*label_free_penalty_pressure "
+                "- 16.0*label_free_support_pressure"
+            ),
+        }
+        interactions = [
+            "selected_repaired_drd2_slice_only_not_full_gpcr_claim",
+            "cationic_center_geometry_uses_closest_basic_amine_not_target_identity",
+            "pose_distortion_pressure_is_label_free_and_precomputed",
+            "active_score_locked_to_base_even_in_apply_mode",
+            "missing_repair_slice_features_are_telemetry_not_negative_evidence",
+            "no_target_is_binder_rank_ligand_id_reference_binding_threshold_relaxation_or_fake_pass_features",
+            "v2_frozen_r2_matching_label_comparator_preserved",
+            "v8_v9_preserved_as_reject_history",
+            "no_router_platform_or_claim_promotion",
+        ]
+        next_step = (
+            "Replay gpcr_core_cationic_pose_distortion_shadow_v10 on the repaired DRD2 hard-decoy slice only. "
+            "If the selected slice remains green, build an equivalent label-free feature cache for frozen "
+            "non-ADRB2 rows before any guarded 100k rerun or claim discussion."
+        )
+    elif variant == "gpcr_core_cationic_weakbase_rescue_shadow_v11":
+        constraints = {
+            **constraints,
+            "max_abs_delta_score": 0.0,
+            "yellow_band_abs_delta_score": 0.0,
+            "comparison_only_candidate": True,
+            "claim_locked_candidate": True,
+            "shadow_only_candidate": True,
+            "score_only_candidate": True,
+            "selected_repaired_slice_candidate": True,
+            "active_score_locked_to_base": True,
+            "class_a_aminergic_opioid_orthosteric_sublane_candidate": True,
+            "requires_precomputed_drd2_repair_slice_features": True,
+            "requires_precomputed_frozen_row_v10_features": True,
+            "requires_weak_base_rescue_gate": True,
+            "missing_repair_slice_features_are_not_negative_evidence": True,
+            "router_promotion_allowed": False,
+            "platform_promotion_allowed": False,
+            "apply_mode_claim_allowed": False,
+            "scorer_apply_allowed": False,
+            "claim_safe_assertion_allowed": False,
+            "broad_gpcr_claim_allowed": False,
+            "threshold_relaxation_allowed": False,
+            "fake_pass_allowed": False,
+            "target_identity_feature_allowed": False,
+            "label_feature_allowed": False,
+            "rank_feature_allowed": False,
+            "ligand_id_feature_allowed": False,
+            "reference_binding_value_allowed": False,
+            "best_baseline_variant": "gpcr_core_family_anchor_rescore_v2",
+            "baseline_role": "frozen_r2_v2_matching_label_comparator",
+            "candidate_source_artifact": "runs/gpcr_cationic_pose_distortion_frozen_cache_mode_review_current.json",
+            "rejected_predecessor_variant": "gpcr_core_cationic_pose_distortion_shadow_v10",
+            "tombstone_reject_variants": [
+                "gpcr_core_acidic_anchor_overcontact_prior_gate_v4",
+                "gpcr_core_fixed_reference_live_shadow_v5",
+                "gpcr_core_class_a_motif_shadow_v6",
+                "gpcr_core_class_a_anchor_geometry_shadow_v7",
+                "gpcr_core_direct_atom_anchor_window_shadow_v8",
+                "gpcr_core_atom_window_excess_polar_shadow_v9",
+                "gpcr_core_cationic_pose_distortion_shadow_v10",
+            ],
+            "allowed_live_feature_families": [
+                "selected_repaired_drd2_slice_base_score",
+                "precomputed_cationic_center_features",
+                "label_free_pose_distortion_pressure",
+                "label_free_anchor_support_pressure",
+                "weak_base_score_conditioning",
+            ],
+            "forbidden_live_feature_families": [
+                "target",
+                "is_binder",
+                "rank",
+                "ligand_id",
+                "reference_binding",
+                "threshold_relaxation",
+                "fake_pass",
+            ],
+            "required_before_claim": [
+                "complete_frozen_row_feature_cache_without_labels",
+                "weak_base_rescue_shadow_replay_beats_frozen_r2_v2_without_top20_regression",
+                "leakage_review_no_target_is_binder_rank_ligand_id_reference_binding_inputs",
+                "fresh_full_100k_ci_low_top20_claim_review_green",
+                "family_held_out_scorecard_green",
+            ],
+        }
+        tuning = {
+            "variant": "gpcr_core_cationic_weakbase_rescue_shadow_v11",
+            "candidate_source": "v10_frozen_cache_mode_review_allbasic_decoy_overpromotion",
+            "scorer_change": "weak_base_conditional_cationic_pose_rescue_shadow_candidate",
+            "scope": "class_a_aminergic_opioid_like_orthosteric_sublane",
+            "broad_gpcr_claim_allowed": False,
+            "active_score_locked_to_base": True,
+            "best_baseline_variant": "gpcr_core_family_anchor_rescore_v2",
+            "baseline_role": "frozen_r2_v2_matching_label_comparator",
+            "rejected_predecessor_variant": "gpcr_core_cationic_pose_distortion_shadow_v10",
+            "target_identity_feature_allowed": False,
+            "label_feature_allowed": False,
+            "rank_feature_allowed": False,
+            "ligand_id_feature_allowed": False,
+            "reference_binding_value_allowed": False,
+            "threshold_relaxation_allowed": False,
+            "fake_pass_allowed": False,
+            "penalty_weight": 6.0,
+            "weak_base_support_weight": 18.0,
+            "weak_base_gate_formula": "clip((base_score + 6.0) / 6.0, 0.0, 1.0)",
+            "live_feature_policy": "label_free_precomputed_cationic_pose_pressures_plus_base_score_conditioning_only",
+            "replay_score_formula": (
+                "base_score "
+                "+ 6.0*label_free_penalty_pressure "
+                "- 18.0*weak_base_rescue_support_pressure"
+            ),
+        }
+        interactions = [
+            "weak_base_support_rescues_borderline_rows_not_already_strong_decoys",
+            "selected_repaired_drd2_slice_only_not_full_gpcr_claim",
+            "cationic_center_geometry_uses_closest_basic_amine_not_target_identity",
+            "pose_distortion_pressure_is_label_free_and_precomputed",
+            "active_score_locked_to_base_even_in_apply_mode",
+            "no_target_is_binder_rank_ligand_id_reference_binding_threshold_relaxation_or_fake_pass_features",
+            "v2_frozen_r2_matching_label_comparator_preserved",
+            "v10_preserved_as_selected_slice_rework_history",
+            "no_router_platform_or_claim_promotion",
+        ]
+        next_step = (
+            "Replay gpcr_core_cationic_weakbase_rescue_shadow_v11 on the repaired DRD2 slice and frozen-row "
+            "partial caches. Only if it avoids all-basic decoy overpromotion should a complete frozen-row cache and "
+            "guarded 100k candidate be considered."
+        )
     elif variant == "gpcr_adrb2_beta_blocker_pharmacophore_v1":
         constraints = {
             **constraints,
@@ -1112,6 +2190,88 @@ def build_payload(*, variant: str = "current") -> dict[str, Any]:
                     ],
                 }
                 if variant == "gpcr_core_acidic_anchor_overcontact_prior_gate_v4"
+                else {
+                    "enabled": True,
+                    "combine_mode": "replace",
+                    "intercept": 0.0,
+                    "terms": [
+                        {"feature": "binding_score_composite_v7_prior_active", "weight": 1.0},
+                        {"feature": "fixed_reference_live_overreward_pressure", "weight": 1.25},
+                    ],
+                }
+                if variant == "gpcr_core_fixed_reference_live_shadow_v5"
+                else {
+                    "enabled": True,
+                    "combine_mode": "replace",
+                    "intercept": 0.0,
+                    "terms": [
+                        {"feature": "binding_score_composite_v7_prior_active", "weight": 1.0},
+                        {"feature": "class_a_orthosteric_motif_support_proxy", "weight": -0.75},
+                        {"feature": "class_a_prior_overreward_invalid_overanchor_pressure", "weight": 1.10},
+                    ],
+                }
+                if variant == "gpcr_core_class_a_motif_shadow_v6"
+                else {
+                    "enabled": True,
+                    "combine_mode": "replace",
+                    "intercept": 0.0,
+                    "terms": [
+                        {"feature": "binding_score_composite_v7_prior_active", "weight": 1.0},
+                        {"feature": "class_a_charge_complemented_anchor_geometry_proxy", "weight": -0.55},
+                        {"feature": "class_a_orthosteric_occupancy_proxy", "weight": -0.35},
+                        {"feature": "class_a_pose_survival_support_proxy", "weight": -0.45},
+                        {"feature": "class_a_invalid_anchor_prior_pressure_v7", "weight": 1.20},
+                    ],
+                }
+                if variant == "gpcr_core_class_a_anchor_geometry_shadow_v7"
+                else {
+                    "enabled": True,
+                    "combine_mode": "replace",
+                    "intercept": 0.0,
+                    "terms": [
+                        {"feature": "binding_score_composite_v7_prior_active", "weight": 1.0},
+                        {"feature": "class_a_direct_atom_window_anchor_geometry_proxy", "weight": -0.75},
+                        {"feature": "class_a_atom_window_pose_survival_proxy", "weight": -0.20},
+                        {"feature": "class_a_hydrophobic_overcontact_pressure_v8", "weight": 1.35},
+                    ],
+                }
+                if variant == "gpcr_core_direct_atom_anchor_window_shadow_v8"
+                else {
+                    "enabled": True,
+                    "combine_mode": "replace",
+                    "intercept": 0.0,
+                    "terms": [
+                        {"feature": "binding_score_composite_v7_prior_active", "weight": 1.0},
+                        {"feature": "class_a_direct_atom_window_anchor_geometry_proxy", "weight": -0.55},
+                        {"feature": "class_a_atom_window_pose_survival_proxy", "weight": -0.15},
+                        {"feature": "class_a_compact_amine_window_support_v9", "weight": -0.20},
+                        {"feature": "class_a_hydrophobic_overcontact_pressure_v8", "weight": 1.35},
+                        {"feature": "class_a_excess_polar_anchor_pressure_v9", "weight": 2.75},
+                    ],
+                }
+                if variant == "gpcr_core_atom_window_excess_polar_shadow_v9"
+                else {
+                    "enabled": True,
+                    "combine_mode": "replace",
+                    "intercept": 0.0,
+                    "terms": [
+                        {"feature": "base_score", "weight": 1.0},
+                        {"feature": "label_free_penalty_pressure", "weight": 6.0},
+                        {"feature": "label_free_support_pressure", "weight": -16.0},
+                    ],
+                }
+                if variant == "gpcr_core_cationic_pose_distortion_shadow_v10"
+                else {
+                    "enabled": True,
+                    "combine_mode": "replace",
+                    "intercept": 0.0,
+                    "terms": [
+                        {"feature": "base_score", "weight": 1.0},
+                        {"feature": "label_free_penalty_pressure", "weight": 6.0},
+                        {"feature": "weak_base_rescue_support_pressure", "weight": -18.0},
+                    ],
+                }
+                if variant == "gpcr_core_cationic_weakbase_rescue_shadow_v11"
                 else {"enabled": False}
             ),
             "feature_rows": feature_rows,
@@ -1198,6 +2358,13 @@ def parse_args() -> argparse.Namespace:
             "gpcr_core_family_anchor_rescore_v2",
             "gpcr_core_family_anchor_ci_stability_v3",
             "gpcr_core_acidic_anchor_overcontact_prior_gate_v4",
+            "gpcr_core_fixed_reference_live_shadow_v5",
+            "gpcr_core_class_a_motif_shadow_v6",
+            "gpcr_core_class_a_anchor_geometry_shadow_v7",
+            "gpcr_core_direct_atom_anchor_window_shadow_v8",
+            "gpcr_core_atom_window_excess_polar_shadow_v9",
+            "gpcr_core_cationic_pose_distortion_shadow_v10",
+            "gpcr_core_cationic_weakbase_rescue_shadow_v11",
             "gpcr_adrb2_beta_blocker_pharmacophore_v1",
         ],
         default="current",

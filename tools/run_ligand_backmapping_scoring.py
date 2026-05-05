@@ -388,6 +388,9 @@ def _apply_residual_prototype_shadow(
     family = str(getattr(args, "residual_prototype_family", "") or "").strip().lower()
     spec_json = str(getattr(args, "residual_prototype_spec_json", "") or "").strip()
     runtime_hook_ready = bool(getattr(args, "residual_prototype_runtime_hook_ready", False))
+    score_reference_scaling_mode = str(
+        getattr(args, "score_reference_scaling_mode", "run_local") or "run_local"
+    ).strip().lower()
     spec_payload = _read_json_if_exists(spec_json)
     constraints = (
         spec_payload.get("prototype", {}).get("constraints", {})
@@ -408,6 +411,7 @@ def _apply_residual_prototype_shadow(
         "family": family,
         "spec_json": spec_json,
         "runtime_hook_ready": bool(runtime_hook_ready),
+        "score_reference_scaling_mode": score_reference_scaling_mode,
         "active_score_col": "binding_score_composite_v7",
         "shadow_score_col": "",
         "positive_delta_count": 0,
@@ -674,6 +678,20 @@ def _apply_residual_prototype_shadow(
         )
         z_hd_arr = pd.to_numeric(z_hd, errors="coerce").to_numpy(dtype=float)
         z_ha_arr = pd.to_numeric(z_ha, errors="coerce").to_numpy(dtype=float)
+        raw_h_donors = pd.to_numeric(
+            result_df["ligand_h_donors"] if "ligand_h_donors" in result_df.columns else pd.Series(np.zeros(len(result_df))),
+            errors="coerce",
+        ).fillna(0.0).to_numpy(dtype=float)
+        raw_h_acceptors = pd.to_numeric(
+            result_df["ligand_h_acceptors"]
+            if "ligand_h_acceptors" in result_df.columns
+            else pd.Series(np.zeros(len(result_df))),
+            errors="coerce",
+        ).fillna(0.0).to_numpy(dtype=float)
+        raw_rot_bonds = pd.to_numeric(
+            result_df["ligand_rot_bonds"] if "ligand_rot_bonds" in result_df.columns else pd.Series(np.zeros(len(result_df))),
+            errors="coerce",
+        ).fillna(0.0).to_numpy(dtype=float)
         anchor_chemistry_gap = np.clip(-(z_hd_arr + z_ha_arr) / 2.0, 0.0, None)
         anchor_prior_context = 0.25 + _clip_pos(z_aff) + 0.50 * _clip_pos(z_logp) + 0.30 * _clip_pos(z_rot)
         gpcr_anchor_chemistry_mismatch_pressure = np.clip(
@@ -712,6 +730,211 @@ def _apply_residual_prototype_shadow(
             0.0,
             None,
         )
+        fixed_reference_scaling_enabled = score_reference_scaling_mode == "fixed_family_reference"
+        fixed_reference_pose_prior_support = np.clip(
+            gpcr_conserved_anchor_proxy
+            + pose_physics_support
+            + gpcr_basic_amine_proxy
+            - prior_overreward_without_anchor,
+            0.0,
+            None,
+        )
+        fixed_reference_prior_weakness_pressure = target_internal_pairwise_pressure
+        fixed_reference_live_overreward_pressure = np.clip(
+            float(fixed_reference_scaling_enabled)
+            * (
+                prior_overreward_without_anchor
+                + gpcr_pose_chemistry_hard_decoy_pressure
+                + 0.15 * fixed_reference_prior_weakness_pressure
+                - 0.10 * fixed_reference_pose_prior_support
+            ),
+            0.0,
+            None,
+        )
+        class_a_orthosteric_motif_support_proxy = np.clip(
+            gpcr_basic_amine_proxy
+            * (
+                pose_physics_support
+                + 0.50 * _clip_pos(-z_e)
+                + 0.25 * _clip_pos(z_s)
+                + 0.25 * _clip_pos(z_c)
+            ),
+            0.0,
+            None,
+        )
+        class_a_invalid_overanchor_pressure = np.clip(
+            gpcr_smiles_present_proxy
+            * (1.0 - gpcr_basic_amine_proxy)
+            * gpcr_conserved_anchor_proxy
+            * (0.50 + _clip_pos(z_c) + _clip_pos(-z_d)),
+            0.0,
+            None,
+        )
+        class_a_prior_overreward_invalid_overanchor_pressure = np.clip(
+            prior_overreward_without_anchor
+            + class_a_invalid_overanchor_pressure
+            - 0.35 * class_a_orthosteric_motif_support_proxy,
+            0.0,
+            None,
+        )
+        class_a_orthosteric_occupancy_proxy = np.clip(
+            0.35 * _clip_pos(z_c)
+            + 0.25 * _clip_pos(-z_d)
+            + 0.25 * _clip_pos(-z_e)
+            + 0.15 * _clip_pos(z_s),
+            0.0,
+            None,
+        )
+        class_a_pose_survival_support_proxy = np.clip(
+            0.45 * pose_physics_support
+            + 0.35 * _clip_pos(z_s)
+            + 0.20 * _clip_pos(-z_e),
+            0.0,
+            None,
+        )
+        class_a_charge_complemented_anchor_geometry_proxy = np.clip(
+            gpcr_smiles_present_proxy
+            * gpcr_basic_amine_proxy
+            * (
+                0.50 * gpcr_conserved_anchor_proxy
+                + 0.35 * class_a_orthosteric_occupancy_proxy
+                + 0.15 * class_a_pose_survival_support_proxy
+            ),
+            0.0,
+            None,
+        )
+        class_a_anchorless_prior_pressure_v7 = np.clip(
+            gpcr_smiles_present_proxy
+            * prior_overreward_without_anchor
+            * (1.0 - np.clip(class_a_orthosteric_occupancy_proxy, 0.0, 1.0)),
+            0.0,
+            None,
+        )
+        class_a_invalid_anchor_prior_pressure_v7 = np.clip(
+            class_a_anchorless_prior_pressure_v7
+            + class_a_invalid_overanchor_pressure
+            + 0.35 * gpcr_anchor_chemistry_mismatch_pressure
+            - 0.30 * class_a_charge_complemented_anchor_geometry_proxy
+            - 0.20 * class_a_pose_survival_support_proxy,
+            0.0,
+            None,
+        )
+        def _optional_numeric_column(name: str) -> np.ndarray:
+            if name not in result_df.columns:
+                return np.full(len(result_df), np.nan, dtype=float)
+            return pd.to_numeric(result_df[name], errors="coerce").to_numpy(dtype=float)
+
+        atom_available = np.nan_to_num(
+            _optional_numeric_column("class_a_atom_anchor_available"),
+            nan=0.0,
+            posinf=0.0,
+            neginf=0.0,
+        )
+        atom_available = np.clip(atom_available, 0.0, 1.0)
+        atom_min_distance = _optional_numeric_column("class_a_atom_anchor_min_distance_A")
+        atom_p10_distance = _optional_numeric_column("class_a_atom_anchor_p10_distance_A")
+        atom_mean_distance = _optional_numeric_column("class_a_atom_anchor_mean_distance_A")
+        atom_window_fraction = np.nan_to_num(
+            _optional_numeric_column("class_a_atom_anchor_contact_fraction_2p8_4p2A"),
+            nan=0.0,
+            posinf=0.0,
+            neginf=0.0,
+        )
+        atom_too_close_fraction = np.nan_to_num(
+            _optional_numeric_column("class_a_atom_anchor_contact_fraction_le_2p8A"),
+            nan=0.0,
+            posinf=0.0,
+            neginf=0.0,
+        )
+        p10_for_window = np.nan_to_num(atom_p10_distance, nan=999.0, posinf=999.0, neginf=-999.0)
+        mean_for_window = np.nan_to_num(atom_mean_distance, nan=999.0, posinf=999.0, neginf=-999.0)
+        min_for_overcontact = np.nan_to_num(atom_min_distance, nan=999.0, posinf=999.0, neginf=-999.0)
+        atom_window_lower_support = np.clip((p10_for_window - 2.4) / 0.4, 0.0, 1.0)
+        atom_window_upper_support = np.clip((4.8 - mean_for_window) / 0.6, 0.0, 1.0)
+        class_a_atom_anchor_feature_available_proxy = atom_available
+        class_a_direct_atom_window_core_proxy = np.clip(
+            atom_available
+            * (
+                0.50 * np.clip(atom_window_fraction, 0.0, 1.0)
+                + 0.25 * atom_window_lower_support
+                + 0.25 * atom_window_upper_support
+            ),
+            0.0,
+            None,
+        )
+        class_a_direct_atom_window_anchor_geometry_proxy = np.clip(
+            gpcr_basic_amine_proxy
+            * class_a_direct_atom_window_core_proxy
+            * (0.50 + 0.50 * np.clip(class_a_pose_survival_support_proxy, 0.0, 1.0)),
+            0.0,
+            None,
+        )
+        class_a_atom_window_pose_survival_proxy = np.clip(
+            atom_available
+            * class_a_direct_atom_window_core_proxy
+            * np.clip(class_a_pose_survival_support_proxy, 0.0, None),
+            0.0,
+            None,
+        )
+        atom_too_close_pressure = np.clip(
+            atom_available
+            * (
+                np.clip(atom_too_close_fraction, 0.0, 1.0)
+                + np.clip((2.8 - p10_for_window) / 0.8, 0.0, None)
+                + 0.50 * np.clip((2.6 - min_for_overcontact) / 0.6, 0.0, None)
+            ),
+            0.0,
+            None,
+        )
+        hydrophobic_overcontact_context = np.clip(
+            _clip_pos(z_logp)
+            + 0.25 * _clip_pos(-z_hd)
+            + 0.25 * _clip_pos(-z_ha)
+            + 0.15 * _clip_pos(z_c)
+            + 0.15 * gpcr_anchor_chemistry_mismatch_pressure,
+            0.0,
+            None,
+        )
+        class_a_hydrophobic_overcontact_pressure_v8 = np.clip(
+            gpcr_smiles_present_proxy
+            * atom_too_close_pressure
+            * hydrophobic_overcontact_context
+            * (1.0 - 0.50 * np.clip(class_a_direct_atom_window_core_proxy, 0.0, 1.0)),
+            0.0,
+            None,
+        )
+        class_a_excess_polar_anchor_pressure_v9 = np.clip(
+            atom_available
+            * gpcr_smiles_present_proxy
+            * gpcr_basic_amine_proxy
+            * class_a_direct_atom_window_core_proxy
+            * (
+                np.clip((raw_h_donors - 2.5) / 2.0, 0.0, None)
+                + 0.75 * np.clip((raw_h_acceptors - 4.5) / 2.0, 0.0, None)
+                + 0.35 * np.clip((raw_rot_bonds - 5.5) / 3.0, 0.0, None)
+            ),
+            0.0,
+            None,
+        )
+        class_a_compact_amine_window_support_v9 = np.clip(
+            atom_available
+            * gpcr_smiles_present_proxy
+            * gpcr_basic_amine_proxy
+            * class_a_direct_atom_window_core_proxy
+            * (1.0 - np.clip((raw_h_donors - 2.5) / 3.0, 0.0, 1.0))
+            * (1.0 - np.clip((raw_h_acceptors - 4.5) / 3.0, 0.0, 1.0))
+            * (1.0 - np.clip((raw_rot_bonds - 5.5) / 4.0, 0.0, 1.0)),
+            0.0,
+            None,
+        )
+        fixed_reference_feature_collapse_probe = np.asarray(
+            [
+                np.mean(gpcr_conserved_anchor_proxy > 0.0),
+                np.mean(pose_physics_support > 0.0),
+                np.mean(gpcr_acidic_anchor_overcontact_prior_gate > 0.0),
+            ],
+            dtype=float,
+        )
         target_internal_pairwise_replay_diagnostic = np.maximum(
             target_internal_pairwise_pressure,
             np.maximum(
@@ -747,6 +970,39 @@ def _apply_residual_prototype_shadow(
             "gpcr_pose_chemistry_hard_decoy_pressure": gpcr_pose_chemistry_hard_decoy_pressure,
             "gpcr_anchor_chemistry_mismatch_pressure": gpcr_anchor_chemistry_mismatch_pressure,
             "gpcr_acidic_anchor_overcontact_prior_gate": gpcr_acidic_anchor_overcontact_prior_gate,
+            "fixed_reference_pose_prior_support": fixed_reference_pose_prior_support,
+            "fixed_reference_prior_weakness_pressure": fixed_reference_prior_weakness_pressure,
+            "fixed_reference_live_overreward_pressure": fixed_reference_live_overreward_pressure,
+            "class_a_orthosteric_motif_support_proxy": class_a_orthosteric_motif_support_proxy,
+            "class_a_prior_overreward_invalid_overanchor_pressure": (
+                class_a_prior_overreward_invalid_overanchor_pressure
+            ),
+            "class_a_charge_complemented_anchor_geometry_proxy": (
+                class_a_charge_complemented_anchor_geometry_proxy
+            ),
+            "class_a_orthosteric_occupancy_proxy": class_a_orthosteric_occupancy_proxy,
+            "class_a_pose_survival_support_proxy": class_a_pose_survival_support_proxy,
+            "class_a_invalid_anchor_prior_pressure_v7": class_a_invalid_anchor_prior_pressure_v7,
+            "class_a_atom_anchor_feature_available_proxy": class_a_atom_anchor_feature_available_proxy,
+            "class_a_direct_atom_window_anchor_geometry_proxy": (
+                class_a_direct_atom_window_anchor_geometry_proxy
+            ),
+            "class_a_atom_window_pose_survival_proxy": class_a_atom_window_pose_survival_proxy,
+            "class_a_hydrophobic_overcontact_pressure_v8": class_a_hydrophobic_overcontact_pressure_v8,
+            "class_a_excess_polar_anchor_pressure_v9": class_a_excess_polar_anchor_pressure_v9,
+            "class_a_compact_amine_window_support_v9": class_a_compact_amine_window_support_v9,
+            "fixed_reference_feature_collapse_probe": np.full(
+                len(result_df),
+                float(np.max(fixed_reference_feature_collapse_probe))
+                if fixed_reference_feature_collapse_probe.size
+                else 0.0,
+                dtype=float,
+            ),
+            "fixed_reference_scaling_enabled": np.full(
+                len(result_df),
+                1.0 if fixed_reference_scaling_enabled else 0.0,
+                dtype=float,
+            ),
             "target_internal_pairwise_replay_diagnostic": target_internal_pairwise_replay_diagnostic,
             "donor_rich_decoy_intrusion_pressure": donor_rich_decoy_intrusion_pressure,
             "residual_shadow_prior_pressure": prior_pressure,
@@ -874,6 +1130,115 @@ def _apply_residual_prototype_shadow(
         if linear_rescore_enabled
         else np.zeros(len(result_df), dtype=float)
     )
+    result_df["fixed_reference_pose_prior_support"] = (
+        computed_linear_features.get("fixed_reference_pose_prior_support", np.zeros(len(result_df), dtype=float))
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["fixed_reference_prior_weakness_pressure"] = (
+        computed_linear_features.get("fixed_reference_prior_weakness_pressure", np.zeros(len(result_df), dtype=float))
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["fixed_reference_live_overreward_pressure"] = (
+        computed_linear_features.get("fixed_reference_live_overreward_pressure", np.zeros(len(result_df), dtype=float))
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["class_a_orthosteric_motif_support_proxy"] = (
+        computed_linear_features.get("class_a_orthosteric_motif_support_proxy", np.zeros(len(result_df), dtype=float))
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["class_a_prior_overreward_invalid_overanchor_pressure"] = (
+        computed_linear_features.get(
+            "class_a_prior_overreward_invalid_overanchor_pressure",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["class_a_charge_complemented_anchor_geometry_proxy"] = (
+        computed_linear_features.get(
+            "class_a_charge_complemented_anchor_geometry_proxy",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["class_a_orthosteric_occupancy_proxy"] = (
+        computed_linear_features.get("class_a_orthosteric_occupancy_proxy", np.zeros(len(result_df), dtype=float))
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["class_a_pose_survival_support_proxy"] = (
+        computed_linear_features.get("class_a_pose_survival_support_proxy", np.zeros(len(result_df), dtype=float))
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["class_a_invalid_anchor_prior_pressure_v7"] = (
+        computed_linear_features.get("class_a_invalid_anchor_prior_pressure_v7", np.zeros(len(result_df), dtype=float))
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["class_a_atom_anchor_feature_available_proxy"] = (
+        computed_linear_features.get(
+            "class_a_atom_anchor_feature_available_proxy",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["class_a_direct_atom_window_anchor_geometry_proxy"] = (
+        computed_linear_features.get(
+            "class_a_direct_atom_window_anchor_geometry_proxy",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["class_a_atom_window_pose_survival_proxy"] = (
+        computed_linear_features.get(
+            "class_a_atom_window_pose_survival_proxy",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["class_a_hydrophobic_overcontact_pressure_v8"] = (
+        computed_linear_features.get(
+            "class_a_hydrophobic_overcontact_pressure_v8",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["class_a_excess_polar_anchor_pressure_v9"] = (
+        computed_linear_features.get(
+            "class_a_excess_polar_anchor_pressure_v9",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["class_a_compact_amine_window_support_v9"] = (
+        computed_linear_features.get(
+            "class_a_compact_amine_window_support_v9",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["fixed_reference_feature_collapse_probe"] = (
+        computed_linear_features.get("fixed_reference_feature_collapse_probe", np.zeros(len(result_df), dtype=float))
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["fixed_reference_scaling_enabled"] = (
+        computed_linear_features.get("fixed_reference_scaling_enabled", np.zeros(len(result_df), dtype=float))
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
     result_df["target_internal_pairwise_replay_diagnostic"] = (
         computed_linear_features.get("target_internal_pairwise_replay_diagnostic", np.zeros(len(result_df), dtype=float))
         if linear_rescore_enabled
@@ -885,7 +1250,16 @@ def _apply_residual_prototype_shadow(
     result_df["gpcr_adrb2_beta_blocker_pharmacophore_match"] = pharmacophore_matches
     result_df["gpcr_adrb2_beta_blocker_pharmacophore_reward"] = pharmacophore_reward
     result_df["binding_score_composite_v7_residual_shadow"] = shadow_score
-    shadow_only_active_locked = str(tuning["variant"]) == "gpcr_core_acidic_anchor_overcontact_prior_gate_v4"
+    shadow_only_active_locked = str(tuning["variant"]) in {
+        "gpcr_core_acidic_anchor_overcontact_prior_gate_v4",
+        "gpcr_core_fixed_reference_live_shadow_v5",
+        "gpcr_core_class_a_motif_shadow_v6",
+        "gpcr_core_class_a_anchor_geometry_shadow_v7",
+        "gpcr_core_direct_atom_anchor_window_shadow_v8",
+        "gpcr_core_atom_window_excess_polar_shadow_v9",
+        "gpcr_core_cationic_pose_distortion_shadow_v10",
+        "gpcr_core_cationic_weakbase_rescue_shadow_v11",
+    }
     result_df["binding_score_composite_v7_residual_active"] = (
         shadow_score if mode in {"apply", "apply_ranking"} and not shadow_only_active_locked else base_score
     )
@@ -956,6 +1330,149 @@ def _apply_residual_prototype_shadow(
             "pharmacophore_positive_match_count": int(pharmacophore_matches.sum()),
             "pharmacophore_reward_score": float(tuning["pharmacophore_reward_score"]),
             "shadow_only_active_locked": bool(shadow_only_active_locked),
+            "fixed_reference_scaling_enabled": bool(score_reference_scaling_mode == "fixed_family_reference"),
+            "fixed_reference_live_positive_pressure_count": int(
+                (pd.to_numeric(result_df["fixed_reference_live_overreward_pressure"], errors="coerce") > 0.0).sum()
+            ),
+            "class_a_motif_support_positive_count": int(
+                (pd.to_numeric(result_df["class_a_orthosteric_motif_support_proxy"], errors="coerce") > 0.0).sum()
+            ),
+            "class_a_prior_overreward_invalid_overanchor_positive_count": int(
+                (
+                    pd.to_numeric(
+                        result_df["class_a_prior_overreward_invalid_overanchor_pressure"],
+                        errors="coerce",
+                    )
+                    > 0.0
+                ).sum()
+            ),
+            "class_a_charge_complemented_anchor_geometry_positive_count": int(
+                (
+                    pd.to_numeric(
+                        result_df["class_a_charge_complemented_anchor_geometry_proxy"],
+                        errors="coerce",
+                    )
+                    > 0.0
+                ).sum()
+            ),
+            "class_a_orthosteric_occupancy_positive_count": int(
+                (pd.to_numeric(result_df["class_a_orthosteric_occupancy_proxy"], errors="coerce") > 0.0).sum()
+            ),
+            "class_a_pose_survival_support_positive_count": int(
+                (
+                    pd.to_numeric(
+                        result_df["class_a_pose_survival_support_proxy"],
+                        errors="coerce",
+                    )
+                    > 0.0
+                ).sum()
+            ),
+            "class_a_invalid_anchor_prior_pressure_v7_positive_count": int(
+                (
+                    pd.to_numeric(
+                        result_df["class_a_invalid_anchor_prior_pressure_v7"],
+                        errors="coerce",
+                    )
+                    > 0.0
+                ).sum()
+            ),
+            "class_a_atom_anchor_feature_available_count": int(
+                (
+                    pd.to_numeric(
+                        result_df["class_a_atom_anchor_feature_available_proxy"],
+                        errors="coerce",
+                    )
+                    > 0.0
+                ).sum()
+            ),
+            "class_a_direct_atom_window_anchor_geometry_positive_count": int(
+                (
+                    pd.to_numeric(
+                        result_df["class_a_direct_atom_window_anchor_geometry_proxy"],
+                        errors="coerce",
+                    )
+                    > 0.0
+                ).sum()
+            ),
+            "class_a_hydrophobic_overcontact_pressure_v8_positive_count": int(
+                (
+                    pd.to_numeric(
+                        result_df["class_a_hydrophobic_overcontact_pressure_v8"],
+                        errors="coerce",
+                    )
+                    > 0.0
+                ).sum()
+            ),
+            "class_a_excess_polar_anchor_pressure_v9_positive_count": int(
+                (
+                    pd.to_numeric(
+                        result_df["class_a_excess_polar_anchor_pressure_v9"],
+                        errors="coerce",
+                    )
+                    > 0.0
+                ).sum()
+            ),
+            "class_a_compact_amine_window_support_v9_positive_count": int(
+                (
+                    pd.to_numeric(
+                        result_df["class_a_compact_amine_window_support_v9"],
+                        errors="coerce",
+                    )
+                    > 0.0
+                ).sum()
+            ),
+            "fixed_reference_live_mean_pressure": float(
+                pd.to_numeric(result_df["fixed_reference_live_overreward_pressure"], errors="coerce").mean()
+            )
+            if len(result_df) > 0
+            else 0.0,
+            "fixed_reference_feature_nonzero_counts": {
+                "gpcr_conserved_anchor_proxy": int(
+                    (pd.to_numeric(result_df["gpcr_conserved_anchor_proxy"], errors="coerce") > 0.0).sum()
+                ),
+                "pose_physics_support": int(
+                    (pd.to_numeric(result_df["pose_physics_support"], errors="coerce") > 0.0).sum()
+                ),
+                "gpcr_acidic_anchor_overcontact_prior_gate": int(
+                    (
+                        pd.to_numeric(
+                            result_df["gpcr_acidic_anchor_overcontact_prior_gate"],
+                            errors="coerce",
+                        )
+                        > 0.0
+                    ).sum()
+                ),
+                "target_internal_pairwise_pressure": int(
+                    (pd.to_numeric(result_df["target_internal_pairwise_pressure"], errors="coerce") > 0.0).sum()
+                ),
+                "fixed_reference_prior_weakness_pressure": int(
+                    (
+                        pd.to_numeric(
+                            result_df["fixed_reference_prior_weakness_pressure"],
+                            errors="coerce",
+                        )
+                        > 0.0
+                    ).sum()
+                ),
+                "gpcr_pose_chemistry_hard_decoy_pressure": int(
+                    (
+                        pd.to_numeric(
+                            result_df["gpcr_pose_chemistry_hard_decoy_pressure"],
+                            errors="coerce",
+                        )
+                        > 0.0
+                    ).sum()
+                ),
+                "fixed_reference_live_overreward_pressure": int(
+                    (
+                        pd.to_numeric(
+                            result_df["fixed_reference_live_overreward_pressure"],
+                            errors="coerce",
+                        )
+                        > 0.0
+                    ).sum()
+                ),
+            },
         }
     )
     return result_df, summary

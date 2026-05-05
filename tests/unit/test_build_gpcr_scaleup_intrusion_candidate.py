@@ -24,6 +24,10 @@ def test_family_balanced_default_base_profile_uses_frozen_non_adrb2_support() ->
         mod._default_base_profile_json_for_variant("gpcr_core_acidic_anchor_overcontact_prior_gate_v4")
         == "runs/gpcr_frozen_candidate_profile_support_current/profile.json"
     )
+    assert (
+        mod._default_base_profile_json_for_variant("gpcr_core_fixed_reference_live_shadow_v5")
+        == "runs/gpcr_frozen_candidate_profile_support_current/profile.json"
+    )
 
 
 def test_build_payload_supports_acidic_anchor_v4_shadow_only_fixed_reference_candidate(tmp_path: Path) -> None:
@@ -156,6 +160,100 @@ def test_build_payload_rejects_acidic_anchor_v4_apply_or_run_local_scaling(tmp_p
             spec_json=residual_spec,
             base_profile_json=base_profile,
             variant="gpcr_core_acidic_anchor_overcontact_prior_gate_v4",
+            mode="shadow_only",
+        )
+
+
+def test_build_payload_supports_fixed_reference_live_v5_shadow_only_candidate(tmp_path: Path) -> None:
+    base_profile = tmp_path / "runs" / "gpcr_frozen_candidate_profile_support_current" / "profile.json"
+    residual_spec = tmp_path / "runs" / "gpcr_residual_prototype_spec_fixed_reference_live_shadow_v5.json"
+    score_reference_stats = tmp_path / "runs" / "gpcr_score_reference_stats_current.json"
+    out_dir = tmp_path / "candidate"
+    _write_json(base_profile, {"ranking_score_col": "binding_score_composite_v7"})
+    _write_json(score_reference_stats, {"schema_version": "score_reference_stats_v1", "features": {}})
+    _write_json(
+        residual_spec,
+        {
+            "summary": {
+                "family": "gpcr",
+                "prototype_variant": "gpcr_core_fixed_reference_live_shadow_v5",
+            },
+            "prototype": {
+                "constraints": {
+                    "claim_locked_candidate": True,
+                    "shadow_only_candidate": True,
+                    "diagnostic_only_candidate": True,
+                    "threshold_relaxation_allowed": False,
+                    "fake_pass_allowed": False,
+                },
+                "tuning": {"variant": "gpcr_core_fixed_reference_live_shadow_v5"},
+            },
+        },
+    )
+
+    payload = mod.build_payload(
+        out_dir=out_dir,
+        spec_json=residual_spec,
+        base_profile_json=base_profile,
+        tag_suffix="fixedrefv5",
+        variant="gpcr_core_fixed_reference_live_shadow_v5",
+        mode="shadow_only",
+        score_reference_scaling_mode="fixed_family_reference",
+        score_reference_stats_json=score_reference_stats,
+    )
+
+    profile = json.loads(Path(payload["profile_json"]).read_text(encoding="utf-8"))
+    set_spec = json.loads(Path(payload["set_spec_json"]).read_text(encoding="utf-8"))
+    governance = set_spec["global_governance"]
+
+    assert payload["candidate_kind"] == "gpcr_core_fixed_reference_live_shadow_v5_100k"
+    assert payload["score_reference_scaling_mode"] == "fixed_family_reference"
+    assert profile["residual_prototype_candidate"] == "gpcr_core_fixed_reference_live_shadow_v5"
+    assert profile["residual_prototype_mode"] == "shadow_only"
+    assert profile["shadow_only_candidate"] is True
+    assert profile["shadow_only_active_locked"] is True
+    assert profile["ranking_score_col"] == "binding_score_composite_v7"
+    assert profile["claim_locked_candidate"] is True
+    assert profile["threshold_relaxation_allowed"] is False
+    assert profile["fake_pass_allowed"] is False
+    assert governance["prototype_variant"] == "gpcr_core_fixed_reference_live_shadow_v5"
+    assert governance["shadow_only_candidate"] is True
+    assert governance["claim_locked_candidate"] is True
+    assert governance["score_reference_scaling"]["mode"] == "fixed_family_reference"
+    assert governance["score_reference_scaling"]["comparison_only"] is True
+
+
+def test_build_payload_rejects_fixed_reference_live_v5_apply_or_run_local_scaling(tmp_path: Path) -> None:
+    base_profile = tmp_path / "base.json"
+    residual_spec = tmp_path / "spec.json"
+    stats_json = tmp_path / "stats.json"
+    _write_json(base_profile, {"ranking_score_col": "binding_score_composite_v7"})
+    _write_json(stats_json, {"features": {}})
+    _write_json(
+        residual_spec,
+        {
+            "summary": {"prototype_variant": "gpcr_core_fixed_reference_live_shadow_v5"},
+            "prototype": {"tuning": {"variant": "gpcr_core_fixed_reference_live_shadow_v5"}},
+        },
+    )
+
+    with pytest.raises(ValueError, match="shadow-only"):
+        mod.build_payload(
+            out_dir=tmp_path / "out_apply",
+            spec_json=residual_spec,
+            base_profile_json=base_profile,
+            variant="gpcr_core_fixed_reference_live_shadow_v5",
+            mode="apply",
+            score_reference_scaling_mode="fixed_family_reference",
+            score_reference_stats_json=stats_json,
+        )
+
+    with pytest.raises(ValueError, match="fixed_family_reference"):
+        mod.build_payload(
+            out_dir=tmp_path / "out_run_local",
+            spec_json=residual_spec,
+            base_profile_json=base_profile,
+            variant="gpcr_core_fixed_reference_live_shadow_v5",
             mode="shadow_only",
         )
 

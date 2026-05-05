@@ -382,6 +382,212 @@ def test_build_gpcr_residual_prototype_spec_acidic_anchor_overcontact_prior_gate
     assert "shadow_only_active_claim_disabled" in payload["prototype"]["interactions"]
 
 
+def test_build_gpcr_residual_prototype_spec_fixed_reference_live_v5_is_claim_locked_and_records_collapse(tmp_path: Path) -> None:
+    out_json = tmp_path / "prototype_fixed_reference_live_v5.json"
+    out_csv = tmp_path / "prototype_fixed_reference_live_v5.csv"
+    out_md = tmp_path / "prototype_fixed_reference_live_v5.md"
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools/build_gpcr_residual_prototype_spec.py"),
+            "--variant",
+            "gpcr_core_fixed_reference_live_shadow_v5",
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=ROOT,
+    )
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    constraints = payload["prototype"]["constraints"]
+    tuning = payload["prototype"]["tuning"]
+    linear = payload["prototype"]["linear_rescore"]
+    term_features = {term["feature"] for term in linear.get("terms", [])}
+    feature_rows = {row["feature_name"]: row for row in payload["feature_rows"]}
+
+    assert payload["summary"]["prototype_variant"] == "gpcr_core_fixed_reference_live_shadow_v5"
+    assert constraints["claim_locked_candidate"] is True
+    assert constraints["shadow_only_candidate"] is True
+    assert constraints["diagnostic_only_candidate"] is True
+    assert constraints["reference_scaling_mode"] == "fixed_family_reference"
+    assert constraints["scorer_apply_allowed"] is False
+    assert constraints["threshold_relaxation_allowed"] is False
+    assert constraints["fake_pass_allowed"] is False
+    assert constraints["target_identity_feature_allowed"] is False
+    assert constraints["label_feature_allowed"] is False
+    assert constraints["rank_feature_allowed"] is False
+    assert constraints["ligand_id_feature_allowed"] is False
+    assert constraints["reference_binding_value_allowed"] is False
+    assert constraints["fixed_reference_v2_formula_replay_top20_hit_rate"] == 0.0
+    assert tuning["rejected_predecessor_variant"] == "gpcr_core_acidic_anchor_overcontact_prior_gate_v4"
+    assert tuning["fixed_reference_replay_feature_collapse"]["gpcr_acidic_anchor_overcontact_prior_gate_nonzero"] == 0
+    assert tuning["fixed_reference_replay_feature_collapse"]["fixed_reference_prior_weakness_pressure_nonzero"] == 17768
+    assert tuning["fixed_reference_v2_formula_replay"]["pr_auc_approx"] == 0.0076
+    assert tuning["fixed_reference_v2_formula_replay"]["interpretation"] == "do_not_port_v2_or_v4_weights_under_fixed_reference_scaling"
+    assert linear["enabled"] is True
+    assert term_features == {
+        "binding_score_composite_v7_prior_active",
+        "fixed_reference_live_overreward_pressure",
+    }
+    assert "fixed_reference_feature_collapse_probe" in feature_rows
+    assert "fixed_reference_prior_weakness_pressure" in feature_rows
+    assert feature_rows["fixed_reference_feature_collapse_probe"]["direction"] == "diagnostic_only"
+    assert feature_rows["fixed_reference_prior_weakness_pressure"]["direction"] == "target_agnostic_prior_weakness_alias"
+    assert "record_fixed_reference_feature_collapse" in payload["prototype"]["interactions"]
+    assert "use_only_fixed_reference_live_pressures" in payload["prototype"]["interactions"]
+
+
+def test_build_gpcr_residual_prototype_spec_class_a_motif_shadow_v6_is_claim_locked(tmp_path: Path) -> None:
+    out_json = tmp_path / "prototype_class_a_motif_v6.json"
+    out_csv = tmp_path / "prototype_class_a_motif_v6.csv"
+    out_md = tmp_path / "prototype_class_a_motif_v6.md"
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools/build_gpcr_residual_prototype_spec.py"),
+            "--variant",
+            "gpcr_core_class_a_motif_shadow_v6",
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=ROOT,
+    )
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    constraints = payload["prototype"]["constraints"]
+    tuning = payload["prototype"]["tuning"]
+    linear = payload["prototype"]["linear_rescore"]
+    term_features = {term["feature"] for term in linear.get("terms", [])}
+    feature_rows = {row["feature_name"]: row for row in payload["feature_rows"]}
+
+    assert payload["summary"]["prototype_variant"] == "gpcr_core_class_a_motif_shadow_v6"
+    assert tuning["scope"] == "class_a_aminergic_opioid_like_orthosteric_sublane"
+    assert constraints["class_a_aminergic_opioid_orthosteric_sublane_candidate"] is True
+    assert constraints["broad_gpcr_claim_allowed"] is False
+    assert constraints["active_score_locked_to_base"] is True
+    assert constraints["scorer_apply_allowed"] is False
+    assert constraints["target_identity_feature_allowed"] is False
+    assert constraints["label_feature_allowed"] is False
+    assert constraints["rank_feature_allowed"] is False
+    assert constraints["ligand_id_feature_allowed"] is False
+    assert constraints["reference_binding_value_allowed"] is False
+    assert constraints["best_baseline_variant"] == "gpcr_core_family_anchor_rescore_v2"
+    assert constraints["baseline_role"] == "v2_donor_baseline"
+    assert constraints["tombstone_reject_variants"] == [
+        "gpcr_core_acidic_anchor_overcontact_prior_gate_v4",
+        "gpcr_core_fixed_reference_live_shadow_v5",
+    ]
+    assert constraints["forbidden_live_feature_families"] == [
+        "target",
+        "is_binder",
+        "rank",
+        "ligand_id",
+        "reference_binding",
+    ]
+    assert linear["enabled"] is True
+    assert term_features == {
+        "binding_score_composite_v7_prior_active",
+        "class_a_orthosteric_motif_support_proxy",
+        "class_a_prior_overreward_invalid_overanchor_pressure",
+    }
+    assert "class_a_aminergic_opioid_orthosteric_sublane_scope" in feature_rows
+    assert "family_anchor_v2_donor_baseline_lock" in feature_rows
+    assert "v4_v5_tombstone_reject_preservation" in feature_rows
+    assert "active_score_locked_to_base_even_in_apply_mode" in payload["prototype"]["interactions"]
+    assert "no_target_is_binder_rank_ligand_id_or_reference_binding_features" in payload["prototype"]["interactions"]
+
+
+def test_build_gpcr_residual_prototype_spec_class_a_anchor_geometry_shadow_v7_is_claim_locked(tmp_path: Path) -> None:
+    out_json = tmp_path / "prototype_class_a_anchor_geometry_v7.json"
+    out_csv = tmp_path / "prototype_class_a_anchor_geometry_v7.csv"
+    out_md = tmp_path / "prototype_class_a_anchor_geometry_v7.md"
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools/build_gpcr_residual_prototype_spec.py"),
+            "--variant",
+            "gpcr_core_class_a_anchor_geometry_shadow_v7",
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=ROOT,
+    )
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    constraints = payload["prototype"]["constraints"]
+    tuning = payload["prototype"]["tuning"]
+    linear = payload["prototype"]["linear_rescore"]
+    term_features = {term["feature"] for term in linear.get("terms", [])}
+    feature_rows = {row["feature_name"]: row for row in payload["feature_rows"]}
+
+    assert payload["summary"]["prototype_variant"] == "gpcr_core_class_a_anchor_geometry_shadow_v7"
+    assert tuning["scope"] == "class_a_aminergic_opioid_like_orthosteric_sublane"
+    assert tuning["candidate_source"] == "post_v6_reject_class_a_anchor_geometry_shadow_design"
+    assert constraints["class_a_aminergic_opioid_orthosteric_sublane_candidate"] is True
+    assert constraints["score_only_candidate"] is True
+    assert constraints["shadow_only_candidate"] is True
+    assert constraints["active_score_locked_to_base"] is True
+    assert constraints["scorer_apply_allowed"] is False
+    assert constraints["broad_gpcr_claim_allowed"] is False
+    assert constraints["threshold_relaxation_allowed"] is False
+    assert constraints["fake_pass_allowed"] is False
+    assert constraints["target_identity_feature_allowed"] is False
+    assert constraints["label_feature_allowed"] is False
+    assert constraints["rank_feature_allowed"] is False
+    assert constraints["ligand_id_feature_allowed"] is False
+    assert constraints["reference_binding_value_allowed"] is False
+    assert constraints["best_baseline_variant"] == "gpcr_core_family_anchor_rescore_v2"
+    assert constraints["baseline_role"] == "v2_donor_baseline"
+    assert constraints["rejected_predecessor_variant"] == "gpcr_core_class_a_motif_shadow_v6"
+    assert constraints["tombstone_reject_variants"] == [
+        "gpcr_core_acidic_anchor_overcontact_prior_gate_v4",
+        "gpcr_core_fixed_reference_live_shadow_v5",
+        "gpcr_core_class_a_motif_shadow_v6",
+    ]
+    assert constraints["forbidden_live_feature_families"] == [
+        "target",
+        "is_binder",
+        "rank",
+        "ligand_id",
+        "reference_binding",
+        "threshold_relaxation",
+        "fake_pass",
+    ]
+    assert linear["enabled"] is True
+    assert term_features == {
+        "binding_score_composite_v7_prior_active",
+        "class_a_charge_complemented_anchor_geometry_proxy",
+        "class_a_orthosteric_occupancy_proxy",
+        "class_a_pose_survival_support_proxy",
+        "class_a_invalid_anchor_prior_pressure_v7",
+    }
+    assert not any(
+        blocked in feature.lower()
+        for feature in term_features
+        for blocked in ["target", "is_binder", "rank", "ligand_id", "reference_binding", "threshold_relaxation", "fake_pass"]
+    )
+    assert "class_a_charge_complemented_anchor_geometry_proxy" in feature_rows
+    assert "class_a_orthosteric_occupancy_proxy" in feature_rows
+    assert "class_a_pose_survival_support_proxy" in feature_rows
+    assert "class_a_invalid_anchor_prior_pressure_v7" in feature_rows
+    assert "family_anchor_v2_donor_baseline_lock" in feature_rows
+    assert "v4_v5_v6_reject_preservation" in feature_rows
+    assert "active_score_locked_to_base_even_in_apply_mode" in payload["prototype"]["interactions"]
+    assert "v6_reject_preserved_not_promoted" in payload["prototype"]["interactions"]
+
+
 def test_build_gpcr_residual_prototype_spec_adrb2_pharmacophore_v1(tmp_path: Path) -> None:
     out_json = tmp_path / "prototype_pharmacophore.json"
     out_csv = tmp_path / "prototype_pharmacophore.csv"
@@ -414,6 +620,210 @@ def test_build_gpcr_residual_prototype_spec_adrb2_pharmacophore_v1(tmp_path: Pat
         row["feature_name"] == "aryloxypropanolamine_smarts_match"
         for row in payload["feature_rows"]
     )
+
+
+def test_build_gpcr_residual_prototype_spec_direct_atom_anchor_window_v8_is_claim_locked(tmp_path: Path) -> None:
+    out_json = tmp_path / "prototype_direct_atom_window_v8.json"
+    out_csv = tmp_path / "prototype_direct_atom_window_v8.csv"
+    out_md = tmp_path / "prototype_direct_atom_window_v8.md"
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools/build_gpcr_residual_prototype_spec.py"),
+            "--variant",
+            "gpcr_core_direct_atom_anchor_window_shadow_v8",
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=ROOT,
+    )
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    constraints = payload["prototype"]["constraints"]
+    tuning = payload["prototype"]["tuning"]
+    linear = payload["prototype"]["linear_rescore"]
+    term_features = {term["feature"] for term in linear["terms"]}
+    feature_rows = {row["feature_name"]: row for row in payload["feature_rows"]}
+
+    assert payload["summary"]["prototype_variant"] == "gpcr_core_direct_atom_anchor_window_shadow_v8"
+    assert constraints["claim_locked_candidate"] is True
+    assert constraints["shadow_only_candidate"] is True
+    assert constraints["score_only_candidate"] is True
+    assert constraints["active_score_locked_to_base"] is True
+    assert constraints["requires_precomputed_atom_window_features"] is True
+    assert constraints["missing_atom_window_features_are_not_negative_evidence"] is True
+    assert constraints["scorer_apply_allowed"] is False
+    assert constraints["broad_gpcr_claim_allowed"] is False
+    assert constraints["target_identity_feature_allowed"] is False
+    assert constraints["label_feature_allowed"] is False
+    assert constraints["rank_feature_allowed"] is False
+    assert constraints["ligand_id_feature_allowed"] is False
+    assert constraints["reference_binding_value_allowed"] is False
+    assert tuning["variant"] == "gpcr_core_direct_atom_anchor_window_shadow_v8"
+    assert tuning["rejected_predecessor_variant"] == "gpcr_core_class_a_anchor_geometry_shadow_v7"
+    assert "class_a_direct_atom_window_anchor_geometry_proxy" in term_features
+    assert "class_a_hydrophobic_overcontact_pressure_v8" in term_features
+    assert feature_rows["class_a_atom_anchor_feature_available_proxy"]["direction"] == (
+        "diagnostic_only_no_missing_feature_penalty"
+    )
+    assert "direct_atom_window_features_not_stage3_proxy_recombination" in payload["prototype"]["interactions"]
+
+
+def test_build_gpcr_residual_prototype_spec_atom_window_excess_polar_v9_is_claim_locked(tmp_path: Path) -> None:
+    out_json = tmp_path / "prototype_atom_window_excess_polar_v9.json"
+    out_csv = tmp_path / "prototype_atom_window_excess_polar_v9.csv"
+    out_md = tmp_path / "prototype_atom_window_excess_polar_v9.md"
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools/build_gpcr_residual_prototype_spec.py"),
+            "--variant",
+            "gpcr_core_atom_window_excess_polar_shadow_v9",
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=ROOT,
+    )
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    constraints = payload["prototype"]["constraints"]
+    tuning = payload["prototype"]["tuning"]
+    term_features = {term["feature"] for term in payload["prototype"]["linear_rescore"]["terms"]}
+
+    assert payload["summary"]["prototype_variant"] == "gpcr_core_atom_window_excess_polar_shadow_v9"
+    assert constraints["claim_locked_candidate"] is True
+    assert constraints["score_only_candidate"] is True
+    assert constraints["active_score_locked_to_base"] is True
+    assert constraints["requires_precomputed_atom_window_features"] is True
+    assert constraints["rejected_predecessor_variant"] == "gpcr_core_direct_atom_anchor_window_shadow_v8"
+    assert constraints["scorer_apply_allowed"] is False
+    assert constraints["broad_gpcr_claim_allowed"] is False
+    assert tuning["variant"] == "gpcr_core_atom_window_excess_polar_shadow_v9"
+    assert "class_a_excess_polar_anchor_pressure_v9" in term_features
+    assert "class_a_compact_amine_window_support_v9" in term_features
+
+
+def test_build_gpcr_residual_prototype_spec_cationic_pose_distortion_v10_is_claim_locked(tmp_path: Path) -> None:
+    out_json = tmp_path / "prototype_cationic_pose_distortion_v10.json"
+    out_csv = tmp_path / "prototype_cationic_pose_distortion_v10.csv"
+    out_md = tmp_path / "prototype_cationic_pose_distortion_v10.md"
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools/build_gpcr_residual_prototype_spec.py"),
+            "--variant",
+            "gpcr_core_cationic_pose_distortion_shadow_v10",
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=ROOT,
+    )
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    constraints = payload["prototype"]["constraints"]
+    tuning = payload["prototype"]["tuning"]
+    linear = payload["prototype"]["linear_rescore"]
+    term_features = {term["feature"] for term in linear["terms"]}
+    term_weights = {term["feature"]: term["weight"] for term in linear["terms"]}
+    feature_rows = {row["feature_name"]: row for row in payload["feature_rows"]}
+
+    assert payload["summary"]["prototype_variant"] == "gpcr_core_cationic_pose_distortion_shadow_v10"
+    assert constraints["claim_locked_candidate"] is True
+    assert constraints["shadow_only_candidate"] is True
+    assert constraints["score_only_candidate"] is True
+    assert constraints["selected_repaired_slice_candidate"] is True
+    assert constraints["active_score_locked_to_base"] is True
+    assert constraints["requires_precomputed_drd2_repair_slice_features"] is True
+    assert constraints["requires_precomputed_cationic_center_features"] is True
+    assert constraints["scorer_apply_allowed"] is False
+    assert constraints["claim_safe_assertion_allowed"] is False
+    assert constraints["broad_gpcr_claim_allowed"] is False
+    assert constraints["target_identity_feature_allowed"] is False
+    assert constraints["label_feature_allowed"] is False
+    assert constraints["rank_feature_allowed"] is False
+    assert constraints["ligand_id_feature_allowed"] is False
+    assert constraints["reference_binding_value_allowed"] is False
+    assert constraints["rejected_predecessor_variant"] == "gpcr_core_atom_window_excess_polar_shadow_v9"
+    assert tuning["variant"] == "gpcr_core_cationic_pose_distortion_shadow_v10"
+    assert tuning["bounded_envelope_positive_rank"] == 1
+    assert tuning["bounded_envelope_decoys_above_positive_count"] == 0
+    assert linear["enabled"] is True
+    assert linear["combine_mode"] == "replace"
+    assert term_features == {"base_score", "label_free_penalty_pressure", "label_free_support_pressure"}
+    assert term_weights["base_score"] == 1.0
+    assert term_weights["label_free_penalty_pressure"] == 6.0
+    assert term_weights["label_free_support_pressure"] == -16.0
+    assert "pose_distortion_pressure" in feature_rows
+    assert "v8_v9_reject_preservation" in feature_rows
+    assert not any(
+        blocked in feature.lower()
+        for feature in term_features
+        for blocked in ["target", "is_binder", "rank", "ligand_id", "reference_binding", "threshold_relaxation", "fake_pass"]
+    )
+    assert "selected_repaired_drd2_slice_only_not_full_gpcr_claim" in payload["prototype"]["interactions"]
+    assert "no_router_platform_or_claim_promotion" in payload["prototype"]["interactions"]
+
+
+def test_build_gpcr_residual_prototype_spec_cationic_weakbase_rescue_v11_is_claim_locked(tmp_path: Path) -> None:
+    out_json = tmp_path / "prototype_cationic_weakbase_v11.json"
+    out_csv = tmp_path / "prototype_cationic_weakbase_v11.csv"
+    out_md = tmp_path / "prototype_cationic_weakbase_v11.md"
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools/build_gpcr_residual_prototype_spec.py"),
+            "--variant",
+            "gpcr_core_cationic_weakbase_rescue_shadow_v11",
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=ROOT,
+    )
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    constraints = payload["prototype"]["constraints"]
+    tuning = payload["prototype"]["tuning"]
+    linear = payload["prototype"]["linear_rescore"]
+    term_features = {term["feature"] for term in linear["terms"]}
+    term_weights = {term["feature"]: term["weight"] for term in linear["terms"]}
+    feature_rows = {row["feature_name"]: row for row in payload["feature_rows"]}
+
+    assert payload["summary"]["prototype_variant"] == "gpcr_core_cationic_weakbase_rescue_shadow_v11"
+    assert constraints["claim_locked_candidate"] is True
+    assert constraints["score_only_candidate"] is True
+    assert constraints["active_score_locked_to_base"] is True
+    assert constraints["requires_weak_base_rescue_gate"] is True
+    assert constraints["scorer_apply_allowed"] is False
+    assert constraints["target_identity_feature_allowed"] is False
+    assert constraints["label_feature_allowed"] is False
+    assert constraints["rank_feature_allowed"] is False
+    assert constraints["ligand_id_feature_allowed"] is False
+    assert constraints["reference_binding_value_allowed"] is False
+    assert tuning["variant"] == "gpcr_core_cationic_weakbase_rescue_shadow_v11"
+    assert tuning["rejected_predecessor_variant"] == "gpcr_core_cationic_pose_distortion_shadow_v10"
+    assert linear["enabled"] is True
+    assert term_features == {"base_score", "label_free_penalty_pressure", "weak_base_rescue_support_pressure"}
+    assert term_weights["label_free_penalty_pressure"] == 6.0
+    assert term_weights["weak_base_rescue_support_pressure"] == -18.0
+    assert "weak_base_rescue_support_pressure" in feature_rows
+    assert "v10_selected_slice_rework_preservation" in feature_rows
+    assert "weak_base_support_rescues_borderline_rows_not_already_strong_decoys" in payload["prototype"]["interactions"]
 
 
 def test_build_gpcr_residual_prototype_spec_mismatch_contact_rescore_v1_is_guarded(tmp_path: Path) -> None:

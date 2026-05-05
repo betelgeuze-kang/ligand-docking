@@ -18,6 +18,7 @@ def _shadow_args(**overrides):
         residual_prototype_runtime_hook_ready=True,
         residual_prototype_max_abs_delta_score=1.5,
         residual_prototype_yellow_band_abs_delta_score=0.75,
+        score_reference_scaling_mode="run_local",
     )
     base.update(overrides)
     return argparse.Namespace(**base)
@@ -949,3 +950,704 @@ def test_apply_residual_prototype_shadow_acidic_anchor_overcontact_prior_gate_is
         out_df["binding_score_composite_v7"].to_numpy(dtype=float),
     )
     assert out_df.loc[0, "binding_score_composite_v7_residual_shadow"] > out_df.loc[0, "binding_score_composite_v7"]
+
+
+def test_apply_residual_prototype_shadow_fixed_reference_live_v5_records_collapse_and_stays_shadow_only(tmp_path):
+    spec_json = tmp_path / "fixed_reference_live_v5.json"
+    spec_json.write_text(
+        json.dumps(
+            {
+                "prototype": {
+                    "constraints": {
+                        "claim_locked_candidate": True,
+                        "shadow_only_candidate": True,
+                        "scorer_apply_allowed": False,
+                    },
+                    "tuning": {
+                        "variant": "gpcr_core_fixed_reference_live_shadow_v5",
+                    },
+                    "linear_rescore": {
+                        "enabled": True,
+                        "combine_mode": "replace",
+                        "intercept": 0.0,
+                        "terms": [
+                            {"feature": "binding_score_composite_v7_prior_active", "weight": 1.0},
+                            {"feature": "fixed_reference_live_overreward_pressure", "weight": 1.25},
+                        ],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    result_df = pd.DataFrame(
+        [
+            {
+                "ligand_smiles": "CCCCCCc1ccccc1",
+                "binding_score_composite_v7": -6.0,
+            },
+            {
+                "ligand_smiles": "CN(C)CCc1ccccc1",
+                "binding_score_composite_v7": -6.0,
+            },
+        ]
+    )
+
+    out_df, meta = mod._apply_residual_prototype_shadow(
+        result_df.copy(),
+        _shadow_args(
+            residual_prototype_mode="apply",
+            residual_prototype_spec_json=str(spec_json),
+            score_reference_scaling_mode="fixed_family_reference",
+        ),
+        z_e=pd.Series([-1.0, -1.0], dtype=float),
+        z_d=pd.Series([-1.0, -1.0], dtype=float),
+        z_s=pd.Series([1.0, 1.0], dtype=float),
+        z_c=pd.Series([1.0, 1.0], dtype=float),
+        z_aff=pd.Series([1.2, 0.2], dtype=float),
+        z_logp=pd.Series([1.4, 0.0], dtype=float),
+        z_rot=pd.Series([1.0, 0.0], dtype=float),
+        z_hd=pd.Series([-0.2, 0.0], dtype=float),
+        z_ha=pd.Series([-0.2, 0.0], dtype=float),
+    )
+
+    assert meta["tuning_variant"] == "gpcr_core_fixed_reference_live_shadow_v5"
+    assert meta["status"] == "shadow_ready_claim_locked"
+    assert meta["active_score_col"] == "binding_score_composite_v7"
+    assert meta["shadow_only_active_locked"] is True
+    assert meta["fixed_reference_scaling_enabled"] is True
+    assert meta["fixed_reference_live_positive_pressure_count"] >= 1
+    assert "fixed_reference_feature_nonzero_counts" in meta
+    assert "fixed_reference_prior_weakness_pressure" in meta["fixed_reference_feature_nonzero_counts"]
+    assert "fixed_reference_prior_weakness_pressure" in out_df.columns
+    assert "fixed_reference_live_overreward_pressure" in out_df.columns
+    assert out_df.loc[0, "fixed_reference_live_overreward_pressure"] > out_df.loc[1, "fixed_reference_live_overreward_pressure"]
+    np.testing.assert_allclose(
+        out_df["binding_score_composite_v7_residual_active"].to_numpy(dtype=float),
+        out_df["binding_score_composite_v7"].to_numpy(dtype=float),
+    )
+
+
+def test_apply_residual_prototype_shadow_fixed_reference_live_v5_pressure_disabled_for_run_local(tmp_path):
+    spec_json = tmp_path / "fixed_reference_live_v5_run_local.json"
+    spec_json.write_text(
+        json.dumps(
+            {
+                "prototype": {
+                    "tuning": {"variant": "gpcr_core_fixed_reference_live_shadow_v5"},
+                    "linear_rescore": {
+                        "enabled": True,
+                        "combine_mode": "replace",
+                        "terms": [
+                            {"feature": "binding_score_composite_v7_prior_active", "weight": 1.0},
+                            {"feature": "fixed_reference_live_overreward_pressure", "weight": 1.25},
+                        ],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    result_df = pd.DataFrame([{"ligand_smiles": "CCCCCCc1ccccc1", "binding_score_composite_v7": -6.0}])
+    one = pd.Series([1.0], dtype=float)
+
+    out_df, meta = mod._apply_residual_prototype_shadow(
+        result_df.copy(),
+        _shadow_args(residual_prototype_spec_json=str(spec_json)),
+        z_e=-one,
+        z_d=-one,
+        z_s=one,
+        z_c=one,
+        z_aff=one,
+        z_logp=one,
+        z_rot=one,
+        z_hd=-one,
+        z_ha=-one,
+    )
+
+    assert meta["fixed_reference_scaling_enabled"] is False
+    assert out_df.loc[0, "fixed_reference_live_overreward_pressure"] == 0.0
+
+
+def test_apply_residual_prototype_shadow_class_a_motif_v6_stays_shadow_only_and_context_free(tmp_path):
+    spec_json = tmp_path / "class_a_motif_shadow_v6.json"
+    spec_json.write_text(
+        json.dumps(
+            {
+                "prototype": {
+                    "constraints": {
+                        "claim_locked_candidate": True,
+                        "shadow_only_candidate": True,
+                        "active_score_locked_to_base": True,
+                        "target_identity_feature_allowed": False,
+                        "label_feature_allowed": False,
+                        "rank_feature_allowed": False,
+                        "ligand_id_feature_allowed": False,
+                        "reference_binding_value_allowed": False,
+                        "scorer_apply_allowed": False,
+                    },
+                    "tuning": {
+                        "variant": "gpcr_core_class_a_motif_shadow_v6",
+                        "scope": "class_a_aminergic_opioid_like_orthosteric_sublane",
+                    },
+                    "linear_rescore": {
+                        "enabled": True,
+                        "combine_mode": "replace",
+                        "intercept": 0.0,
+                        "terms": [
+                            {"feature": "binding_score_composite_v7_prior_active", "weight": 1.0},
+                            {"feature": "class_a_orthosteric_motif_support_proxy", "weight": -0.75},
+                            {"feature": "class_a_prior_overreward_invalid_overanchor_pressure", "weight": 1.10},
+                        ],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    result_df = pd.DataFrame(
+        [
+            {
+                "ligand_id": "context_positive_a",
+                "target": "DRD2",
+                "is_binder": True,
+                "rank": 1,
+                "reference_binding": 1.0,
+                "ligand_smiles": "CN(C)CCc1ccccc1",
+                "binding_score_composite_v7": -6.0,
+            },
+            {
+                "ligand_id": "context_decoy_b",
+                "target": "OPRM1",
+                "is_binder": False,
+                "rank": 999,
+                "reference_binding": 10000.0,
+                "ligand_smiles": "CCCCCCc1ccccc1",
+                "binding_score_composite_v7": -6.0,
+            },
+        ]
+    )
+
+    out_df, meta = mod._apply_residual_prototype_shadow(
+        result_df.copy(),
+        _shadow_args(
+            residual_prototype_mode="apply",
+            residual_prototype_spec_json=str(spec_json),
+        ),
+        z_e=pd.Series([-1.0, -1.0], dtype=float),
+        z_d=pd.Series([-1.0, -1.0], dtype=float),
+        z_s=pd.Series([1.0, 1.0], dtype=float),
+        z_c=pd.Series([1.0, 1.0], dtype=float),
+        z_aff=pd.Series([0.1, 1.3], dtype=float),
+        z_logp=pd.Series([0.0, 1.4], dtype=float),
+        z_rot=pd.Series([0.0, 1.0], dtype=float),
+        z_hd=pd.Series([0.0, -0.4], dtype=float),
+        z_ha=pd.Series([0.0, -0.2], dtype=float),
+    )
+
+    assert meta["tuning_variant"] == "gpcr_core_class_a_motif_shadow_v6"
+    assert meta["status"] == "shadow_ready_claim_locked"
+    assert meta["active_score_col"] == "binding_score_composite_v7"
+    assert meta["shadow_only_active_locked"] is True
+    assert meta["linear_rescore_status"] == "applied"
+    assert meta["linear_rescore_missing_terms"] == []
+    assert meta["class_a_motif_support_positive_count"] == 1
+    assert meta["class_a_prior_overreward_invalid_overanchor_positive_count"] == 1
+    assert out_df.loc[0, "class_a_orthosteric_motif_support_proxy"] > 0.0
+    assert out_df.loc[1, "class_a_orthosteric_motif_support_proxy"] == 0.0
+    assert out_df.loc[1, "class_a_prior_overreward_invalid_overanchor_pressure"] > 0.0
+    np.testing.assert_allclose(
+        out_df["binding_score_composite_v7_residual_active"].to_numpy(dtype=float),
+        out_df["binding_score_composite_v7"].to_numpy(dtype=float),
+    )
+    assert out_df.loc[0, "binding_score_composite_v7_residual_shadow"] < out_df.loc[0, "binding_score_composite_v7"]
+    assert out_df.loc[1, "binding_score_composite_v7_residual_shadow"] > out_df.loc[1, "binding_score_composite_v7"]
+
+
+def test_apply_residual_prototype_shadow_class_a_anchor_geometry_v7_stays_active_locked_and_moves_proxies(tmp_path):
+    spec_json = tmp_path / "class_a_anchor_geometry_shadow_v7.json"
+    spec_json.write_text(
+        json.dumps(
+            {
+                "prototype": {
+                    "constraints": {
+                        "claim_locked_candidate": True,
+                        "shadow_only_candidate": True,
+                        "score_only_candidate": True,
+                        "active_score_locked_to_base": True,
+                        "target_identity_feature_allowed": False,
+                        "label_feature_allowed": False,
+                        "rank_feature_allowed": False,
+                        "ligand_id_feature_allowed": False,
+                        "reference_binding_value_allowed": False,
+                        "threshold_relaxation_allowed": False,
+                        "fake_pass_allowed": False,
+                        "scorer_apply_allowed": False,
+                    },
+                    "tuning": {
+                        "variant": "gpcr_core_class_a_anchor_geometry_shadow_v7",
+                        "scope": "class_a_aminergic_opioid_like_orthosteric_sublane",
+                    },
+                    "linear_rescore": {
+                        "enabled": True,
+                        "combine_mode": "replace",
+                        "intercept": 0.0,
+                        "terms": [
+                            {"feature": "binding_score_composite_v7_prior_active", "weight": 1.0},
+                            {"feature": "class_a_charge_complemented_anchor_geometry_proxy", "weight": -0.55},
+                            {"feature": "class_a_orthosteric_occupancy_proxy", "weight": -0.35},
+                            {"feature": "class_a_pose_survival_support_proxy", "weight": -0.45},
+                            {"feature": "class_a_invalid_anchor_prior_pressure_v7", "weight": 1.20},
+                        ],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    result_df = pd.DataFrame(
+        [
+            {
+                "ligand_id": "context_supported_anchor",
+                "target": "DRD2",
+                "is_binder": True,
+                "rank": 1,
+                "reference_binding": 1.0,
+                "ligand_smiles": "CN(C)CCc1ccccc1",
+                "binding_score_composite_v7": -6.0,
+            },
+            {
+                "ligand_id": "context_invalid_anchor_prior",
+                "target": "OPRM1",
+                "is_binder": False,
+                "rank": 999,
+                "reference_binding": 10000.0,
+                "ligand_smiles": "CCCCCCc1ccccc1",
+                "binding_score_composite_v7": -6.0,
+            },
+        ]
+    )
+
+    out_df, meta = mod._apply_residual_prototype_shadow(
+        result_df.copy(),
+        _shadow_args(
+            residual_prototype_mode="apply",
+            residual_prototype_spec_json=str(spec_json),
+        ),
+        z_e=pd.Series([-1.0, -0.2], dtype=float),
+        z_d=pd.Series([-1.0, -0.2], dtype=float),
+        z_s=pd.Series([1.0, 0.1], dtype=float),
+        z_c=pd.Series([1.0, 1.2], dtype=float),
+        z_aff=pd.Series([0.1, 1.4], dtype=float),
+        z_logp=pd.Series([0.0, 1.5], dtype=float),
+        z_rot=pd.Series([0.0, 1.0], dtype=float),
+        z_hd=pd.Series([0.0, -0.5], dtype=float),
+        z_ha=pd.Series([0.0, -0.3], dtype=float),
+    )
+
+    assert meta["tuning_variant"] == "gpcr_core_class_a_anchor_geometry_shadow_v7"
+    assert meta["status"] == "shadow_ready_claim_locked"
+    assert meta["active_score_col"] == "binding_score_composite_v7"
+    assert meta["shadow_only_active_locked"] is True
+    assert meta["linear_rescore_status"] == "applied"
+    assert meta["linear_rescore_missing_terms"] == []
+    assert meta["class_a_charge_complemented_anchor_geometry_positive_count"] == 1
+    assert meta["class_a_pose_survival_support_positive_count"] == 2
+    assert meta["class_a_invalid_anchor_prior_pressure_v7_positive_count"] == 1
+    assert out_df.loc[0, "class_a_charge_complemented_anchor_geometry_proxy"] > out_df.loc[1, "class_a_charge_complemented_anchor_geometry_proxy"]
+    assert out_df.loc[0, "class_a_pose_survival_support_proxy"] > out_df.loc[1, "class_a_pose_survival_support_proxy"]
+    assert out_df.loc[1, "class_a_invalid_anchor_prior_pressure_v7"] > out_df.loc[0, "class_a_invalid_anchor_prior_pressure_v7"]
+    np.testing.assert_allclose(
+        out_df["binding_score_composite_v7_residual_active"].to_numpy(dtype=float),
+        out_df["binding_score_composite_v7"].to_numpy(dtype=float),
+    )
+    assert out_df.loc[0, "binding_score_composite_v7_residual_shadow"] < out_df.loc[0, "binding_score_composite_v7"]
+    assert out_df.loc[1, "binding_score_composite_v7_residual_shadow"] > out_df.loc[1, "binding_score_composite_v7"]
+
+
+def test_apply_residual_prototype_shadow_direct_atom_window_v8_uses_cached_atom_features(tmp_path):
+    spec_json = tmp_path / "direct_atom_window_shadow_v8.json"
+    spec_json.write_text(
+        json.dumps(
+            {
+                "prototype": {
+                    "constraints": {
+                        "claim_locked_candidate": True,
+                        "shadow_only_candidate": True,
+                        "score_only_candidate": True,
+                        "active_score_locked_to_base": True,
+                        "requires_precomputed_atom_window_features": True,
+                        "target_identity_feature_allowed": False,
+                        "label_feature_allowed": False,
+                        "rank_feature_allowed": False,
+                        "ligand_id_feature_allowed": False,
+                        "reference_binding_value_allowed": False,
+                        "threshold_relaxation_allowed": False,
+                        "fake_pass_allowed": False,
+                        "scorer_apply_allowed": False,
+                    },
+                    "tuning": {
+                        "variant": "gpcr_core_direct_atom_anchor_window_shadow_v8",
+                        "scope": "class_a_aminergic_opioid_like_orthosteric_sublane",
+                    },
+                    "linear_rescore": {
+                        "enabled": True,
+                        "combine_mode": "replace",
+                        "intercept": 0.0,
+                        "terms": [
+                            {"feature": "binding_score_composite_v7_prior_active", "weight": 1.0},
+                            {"feature": "class_a_direct_atom_window_anchor_geometry_proxy", "weight": -0.75},
+                            {"feature": "class_a_atom_window_pose_survival_proxy", "weight": -0.20},
+                            {"feature": "class_a_hydrophobic_overcontact_pressure_v8", "weight": 1.35},
+                        ],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    result_df = pd.DataFrame(
+        [
+            {
+                "ligand_id": "context_supported_atom_window",
+                "target": "DRD2",
+                "is_binder": True,
+                "rank": 1,
+                "reference_binding": 1.0,
+                "ligand_smiles": "CN(C)CCc1ccccc1",
+                "binding_score_composite_v7": -6.0,
+                "class_a_atom_anchor_available": 1,
+                "class_a_atom_anchor_min_distance_A": 3.0,
+                "class_a_atom_anchor_p10_distance_A": 3.1,
+                "class_a_atom_anchor_mean_distance_A": 3.4,
+                "class_a_atom_anchor_contact_fraction_le_2p8A": 0.0,
+                "class_a_atom_anchor_contact_fraction_2p8_4p2A": 0.9,
+            },
+            {
+                "ligand_id": "context_hydrophobic_overcontact",
+                "target": "OPRM1",
+                "is_binder": False,
+                "rank": 999,
+                "reference_binding": 10000.0,
+                "ligand_smiles": "CCCCCCc1ccccc1",
+                "binding_score_composite_v7": -6.0,
+                "class_a_atom_anchor_available": 1,
+                "class_a_atom_anchor_min_distance_A": 2.1,
+                "class_a_atom_anchor_p10_distance_A": 2.3,
+                "class_a_atom_anchor_mean_distance_A": 2.5,
+                "class_a_atom_anchor_contact_fraction_le_2p8A": 0.8,
+                "class_a_atom_anchor_contact_fraction_2p8_4p2A": 0.1,
+            },
+            {
+                "ligand_id": "missing_atom_window",
+                "target": "HTR2A",
+                "is_binder": False,
+                "rank": 500,
+                "reference_binding": 10.0,
+                "ligand_smiles": "CCCCCCc1ccccc1",
+                "binding_score_composite_v7": -6.0,
+                "class_a_atom_anchor_available": 0,
+            },
+        ]
+    )
+
+    out_df, meta = mod._apply_residual_prototype_shadow(
+        result_df.copy(),
+        _shadow_args(
+            residual_prototype_mode="apply",
+            residual_prototype_spec_json=str(spec_json),
+        ),
+        z_e=pd.Series([-1.0, -0.2, -0.2], dtype=float),
+        z_d=pd.Series([-1.0, -0.2, -0.2], dtype=float),
+        z_s=pd.Series([1.0, 0.1, 0.1], dtype=float),
+        z_c=pd.Series([1.0, 1.2, 1.2], dtype=float),
+        z_aff=pd.Series([0.1, 1.4, 1.4], dtype=float),
+        z_logp=pd.Series([0.0, 1.8, 1.8], dtype=float),
+        z_rot=pd.Series([0.0, 1.0, 1.0], dtype=float),
+        z_hd=pd.Series([0.0, -0.5, -0.5], dtype=float),
+        z_ha=pd.Series([0.0, -0.3, -0.3], dtype=float),
+    )
+
+    assert meta["tuning_variant"] == "gpcr_core_direct_atom_anchor_window_shadow_v8"
+    assert meta["status"] == "shadow_ready_claim_locked"
+    assert meta["active_score_col"] == "binding_score_composite_v7"
+    assert meta["shadow_only_active_locked"] is True
+    assert meta["linear_rescore_missing_terms"] == []
+    assert meta["class_a_atom_anchor_feature_available_count"] == 2
+    assert meta["class_a_direct_atom_window_anchor_geometry_positive_count"] == 1
+    assert meta["class_a_hydrophobic_overcontact_pressure_v8_positive_count"] == 1
+    assert out_df.loc[0, "class_a_direct_atom_window_anchor_geometry_proxy"] > 0.0
+    assert out_df.loc[1, "class_a_hydrophobic_overcontact_pressure_v8"] > 0.0
+    assert out_df.loc[2, "class_a_hydrophobic_overcontact_pressure_v8"] == 0.0
+    np.testing.assert_allclose(
+        out_df["binding_score_composite_v7_residual_active"].to_numpy(dtype=float),
+        out_df["binding_score_composite_v7"].to_numpy(dtype=float),
+    )
+    assert out_df.loc[0, "binding_score_composite_v7_residual_shadow"] < out_df.loc[0, "binding_score_composite_v7"]
+    assert out_df.loc[1, "binding_score_composite_v7_residual_shadow"] > out_df.loc[1, "binding_score_composite_v7"]
+
+
+def test_apply_residual_prototype_shadow_atom_window_excess_polar_v9_penalizes_multipolar_decoy(tmp_path):
+    spec_json = tmp_path / "atom_window_excess_polar_shadow_v9.json"
+    spec_json.write_text(
+        json.dumps(
+            {
+                "prototype": {
+                    "constraints": {
+                        "claim_locked_candidate": True,
+                        "shadow_only_candidate": True,
+                        "score_only_candidate": True,
+                        "active_score_locked_to_base": True,
+                        "requires_precomputed_atom_window_features": True,
+                        "scorer_apply_allowed": False,
+                    },
+                    "tuning": {
+                        "variant": "gpcr_core_atom_window_excess_polar_shadow_v9",
+                        "scope": "class_a_aminergic_opioid_like_orthosteric_sublane",
+                    },
+                    "linear_rescore": {
+                        "enabled": True,
+                        "combine_mode": "replace",
+                        "intercept": 0.0,
+                        "terms": [
+                            {"feature": "binding_score_composite_v7_prior_active", "weight": 1.0},
+                            {"feature": "class_a_direct_atom_window_anchor_geometry_proxy", "weight": -0.55},
+                            {"feature": "class_a_compact_amine_window_support_v9", "weight": -0.20},
+                            {"feature": "class_a_excess_polar_anchor_pressure_v9", "weight": 2.75},
+                        ],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    result_df = pd.DataFrame(
+        [
+            {
+                "ligand_id": "compact_amine",
+                "target": "DRD2",
+                "ligand_smiles": "CCCNCC1CCCCC1",
+                "binding_score_composite_v7": -6.0,
+                "ligand_h_donors": 2,
+                "ligand_h_acceptors": 4,
+                "ligand_rot_bonds": 3,
+                "class_a_atom_anchor_available": 1,
+                "class_a_atom_anchor_min_distance_A": 3.0,
+                "class_a_atom_anchor_p10_distance_A": 3.1,
+                "class_a_atom_anchor_mean_distance_A": 3.4,
+                "class_a_atom_anchor_contact_fraction_le_2p8A": 0.0,
+                "class_a_atom_anchor_contact_fraction_2p8_4p2A": 0.9,
+            },
+            {
+                "ligand_id": "multipolar_decoy",
+                "target": "DRD2",
+                "ligand_smiles": "CCNc1cccc(NCCO)c1NCCO",
+                "binding_score_composite_v7": -6.0,
+                "ligand_h_donors": 5,
+                "ligand_h_acceptors": 5,
+                "ligand_rot_bonds": 7,
+                "class_a_atom_anchor_available": 1,
+                "class_a_atom_anchor_min_distance_A": 3.0,
+                "class_a_atom_anchor_p10_distance_A": 3.1,
+                "class_a_atom_anchor_mean_distance_A": 3.4,
+                "class_a_atom_anchor_contact_fraction_le_2p8A": 0.0,
+                "class_a_atom_anchor_contact_fraction_2p8_4p2A": 0.9,
+            },
+        ]
+    )
+
+    out_df, meta = mod._apply_residual_prototype_shadow(
+        result_df.copy(),
+        _shadow_args(
+            residual_prototype_mode="apply",
+            residual_prototype_spec_json=str(spec_json),
+        ),
+        z_e=pd.Series([-1.0, -1.0], dtype=float),
+        z_d=pd.Series([-1.0, -1.0], dtype=float),
+        z_s=pd.Series([1.0, 1.0], dtype=float),
+        z_c=pd.Series([1.0, 1.0], dtype=float),
+        z_aff=pd.Series([0.1, 0.1], dtype=float),
+        z_logp=pd.Series([0.0, 0.0], dtype=float),
+        z_rot=pd.Series([0.0, 0.0], dtype=float),
+        z_hd=pd.Series([0.0, 0.0], dtype=float),
+        z_ha=pd.Series([0.0, 0.0], dtype=float),
+    )
+
+    assert meta["tuning_variant"] == "gpcr_core_atom_window_excess_polar_shadow_v9"
+    assert meta["shadow_only_active_locked"] is True
+    assert meta["class_a_excess_polar_anchor_pressure_v9_positive_count"] == 1
+    assert out_df.loc[0, "class_a_compact_amine_window_support_v9"] > 0.0
+    assert out_df.loc[1, "class_a_excess_polar_anchor_pressure_v9"] > 0.0
+    assert out_df.loc[0, "binding_score_composite_v7_residual_shadow"] < out_df.loc[0, "binding_score_composite_v7"]
+    assert out_df.loc[1, "binding_score_composite_v7_residual_shadow"] > out_df.loc[1, "binding_score_composite_v7"]
+    np.testing.assert_allclose(
+        out_df["binding_score_composite_v7_residual_active"].to_numpy(dtype=float),
+        out_df["binding_score_composite_v7"].to_numpy(dtype=float),
+    )
+
+
+def test_apply_residual_prototype_shadow_cationic_pose_distortion_v10_stays_active_locked(tmp_path):
+    spec_json = tmp_path / "cationic_pose_distortion_shadow_v10.json"
+    spec_json.write_text(
+        json.dumps(
+            {
+                "prototype": {
+                    "constraints": {
+                        "claim_locked_candidate": True,
+                        "shadow_only_candidate": True,
+                        "score_only_candidate": True,
+                        "selected_repaired_slice_candidate": True,
+                        "active_score_locked_to_base": True,
+                        "requires_precomputed_drd2_repair_slice_features": True,
+                        "scorer_apply_allowed": False,
+                    },
+                    "tuning": {
+                        "variant": "gpcr_core_cationic_pose_distortion_shadow_v10",
+                        "scope": "class_a_aminergic_opioid_like_orthosteric_sublane",
+                    },
+                    "linear_rescore": {
+                        "enabled": True,
+                        "combine_mode": "replace",
+                        "intercept": 0.0,
+                        "terms": [
+                            {"feature": "base_score", "weight": 1.0},
+                            {"feature": "label_free_penalty_pressure", "weight": 6.0},
+                            {"feature": "label_free_support_pressure", "weight": -16.0},
+                        ],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    result_df = pd.DataFrame(
+        [
+            {
+                "ligand_id": "repaired_positive",
+                "target": "DRD2",
+                "ligand_smiles": "CCCNCCCC1=CC=CC=C1",
+                "binding_score_composite_v7": -1.0,
+                "base_score": 1.0,
+                "label_free_penalty_pressure": 0.0,
+                "label_free_support_pressure": 1.0,
+            },
+            {
+                "ligand_id": "invalid_overanchor_decoy",
+                "target": "DRD2",
+                "ligand_smiles": "CCCCCCCC",
+                "binding_score_composite_v7": -2.0,
+                "base_score": -2.0,
+                "label_free_penalty_pressure": 2.0,
+                "label_free_support_pressure": 0.0,
+            },
+        ]
+    )
+
+    out_df, meta = mod._apply_residual_prototype_shadow(
+        result_df.copy(),
+        _shadow_args(
+            residual_prototype_mode="apply",
+            residual_prototype_spec_json=str(spec_json),
+        ),
+        z_e=pd.Series([0.0, 0.0], dtype=float),
+        z_d=pd.Series([0.0, 0.0], dtype=float),
+        z_s=pd.Series([0.0, 0.0], dtype=float),
+        z_c=pd.Series([0.0, 0.0], dtype=float),
+        z_aff=pd.Series([0.0, 0.0], dtype=float),
+        z_logp=pd.Series([0.0, 0.0], dtype=float),
+        z_rot=pd.Series([0.0, 0.0], dtype=float),
+        z_hd=pd.Series([0.0, 0.0], dtype=float),
+        z_ha=pd.Series([0.0, 0.0], dtype=float),
+    )
+
+    assert meta["tuning_variant"] == "gpcr_core_cationic_pose_distortion_shadow_v10"
+    assert meta["shadow_only_active_locked"] is True
+    assert meta["linear_rescore_status"] == "applied"
+    assert out_df.loc[0, "binding_score_composite_v7_residual_shadow"] < out_df.loc[1, "binding_score_composite_v7_residual_shadow"]
+    np.testing.assert_allclose(
+        out_df["binding_score_composite_v7_residual_active"].to_numpy(dtype=float),
+        out_df["binding_score_composite_v7"].to_numpy(dtype=float),
+    )
+
+
+def test_apply_residual_prototype_shadow_cationic_weakbase_v11_suppresses_strong_decoy_reward(tmp_path):
+    spec_json = tmp_path / "cationic_weakbase_shadow_v11.json"
+    spec_json.write_text(
+        json.dumps(
+            {
+                "prototype": {
+                    "constraints": {
+                        "claim_locked_candidate": True,
+                        "shadow_only_candidate": True,
+                        "score_only_candidate": True,
+                        "active_score_locked_to_base": True,
+                        "requires_weak_base_rescue_gate": True,
+                        "scorer_apply_allowed": False,
+                    },
+                    "tuning": {
+                        "variant": "gpcr_core_cationic_weakbase_rescue_shadow_v11",
+                        "scope": "class_a_aminergic_opioid_like_orthosteric_sublane",
+                    },
+                    "linear_rescore": {
+                        "enabled": True,
+                        "combine_mode": "replace",
+                        "intercept": 0.0,
+                        "terms": [
+                            {"feature": "base_score", "weight": 1.0},
+                            {"feature": "label_free_penalty_pressure", "weight": 6.0},
+                            {"feature": "weak_base_rescue_support_pressure", "weight": -18.0},
+                        ],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    result_df = pd.DataFrame(
+        [
+            {
+                "ligand_id": "weak_positive_like",
+                "target": "DRD2",
+                "ligand_smiles": "CCCNCCCC1=CC=CC=C1",
+                "binding_score_composite_v7": -1.0,
+                "base_score": -0.5,
+                "label_free_penalty_pressure": 0.0,
+                "weak_base_rescue_support_pressure": 0.6,
+            },
+            {
+                "ligand_id": "already_strong_decoy",
+                "target": "DRD2",
+                "ligand_smiles": "CCCNCCCC1=CC=CC=C1",
+                "binding_score_composite_v7": -10.0,
+                "base_score": -10.0,
+                "label_free_penalty_pressure": 0.0,
+                "weak_base_rescue_support_pressure": 0.0,
+            },
+        ]
+    )
+
+    out_df, meta = mod._apply_residual_prototype_shadow(
+        result_df.copy(),
+        _shadow_args(
+            residual_prototype_mode="apply",
+            residual_prototype_spec_json=str(spec_json),
+        ),
+        z_e=pd.Series([0.0, 0.0], dtype=float),
+        z_d=pd.Series([0.0, 0.0], dtype=float),
+        z_s=pd.Series([0.0, 0.0], dtype=float),
+        z_c=pd.Series([0.0, 0.0], dtype=float),
+        z_aff=pd.Series([0.0, 0.0], dtype=float),
+        z_logp=pd.Series([0.0, 0.0], dtype=float),
+        z_rot=pd.Series([0.0, 0.0], dtype=float),
+        z_hd=pd.Series([0.0, 0.0], dtype=float),
+        z_ha=pd.Series([0.0, 0.0], dtype=float),
+    )
+
+    assert meta["tuning_variant"] == "gpcr_core_cationic_weakbase_rescue_shadow_v11"
+    assert meta["shadow_only_active_locked"] is True
+    assert out_df.loc[0, "binding_score_composite_v7_residual_shadow"] < -11.0
+    assert out_df.loc[1, "binding_score_composite_v7_residual_shadow"] == -10.0
+    np.testing.assert_allclose(
+        out_df["binding_score_composite_v7_residual_active"].to_numpy(dtype=float),
+        out_df["binding_score_composite_v7"].to_numpy(dtype=float),
+    )
