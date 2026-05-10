@@ -34,3 +34,39 @@ def test_claim_only_commercial_block_is_semi_hard_not_translation_hard() -> None
     assert payload["action_recipe_codes"][0] == "resolve_claim_equivalence_gate"
     assert "resolve_claim_equivalence_gate" in payload["action_recipe_codes"]
     assert all(row["severity"] != "hard" for row in payload["action_recipe_rows"])
+
+
+def test_commercial_hard_block_overrides_final_gate_actionability() -> None:
+    payload = resolve_selected_allatom_canonical(
+        review_packet_summary={
+            "target_id": "T. cruzi PDE",
+            "surface_label": "tcruzi_pde_allatom_review_packet",
+            "packet_ready_for_operator_review": True,
+            "wetlab_final_gate_pass": True,
+            "commercial_schema_version_v2": "wetlab_commercial_grade_v2",
+            "commercial_hard_gate_pass_v2": False,
+            "commercial_hard_gate_failed_metrics_v2": ["replicate_count"],
+            "commercial_primary_upgrade_actions_v2": ["increase_replicate_coverage"],
+            "commercial_score_thresholds_v2": {"replicate_count_min": 3},
+            "commercial_replicate_count_v2": 1,
+            "translation_gate_focus_status": "borderline",
+            "best_mean_min_distance_A": 2.12,
+            "claim_gate_available": True,
+            "claim_ready_for_allatom": True,
+            "claim_gate_requirement_mode": "semi_hard",
+            "claim_gate_required_for_final_wetlab": True,
+            "claim_gate_required_for_commercial_readiness": True,
+        },
+        retry_handoff_summary={
+            "selected_allatom_target_id": "T. cruzi PDE",
+            "selected_allatom_surface_label": "tcruzi_pde_allatom_review_packet",
+        },
+        allow_translation_fallback=False,
+    )
+
+    assert payload["commercial_hard_gate_pass_v2"] is False
+    assert payload["effective_actionability_status"] == "hard_blocked"
+    assert payload["effective_blocking_order"] == "hard_block_first"
+    assert payload["effective_primary_blocking_domain"] == "translation_commercial_hard_gate"
+    assert payload["effective_actionability_required_calculations"] == ["expand_replicate_sampling"]
+    assert payload["action_recipe_rows"][0]["metric"] == "replicate_count"

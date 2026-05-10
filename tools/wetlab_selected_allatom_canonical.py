@@ -815,10 +815,10 @@ def resolve_selected_allatom_canonical(
         else "claim/equivalence gate is not applicable"
     )
 
-    if final_gate_pass:
-        effective_actionability_status = "ready"
-    elif hard_block_present:
+    if hard_block_present:
         effective_actionability_status = "hard_blocked"
+    elif final_gate_pass:
+        effective_actionability_status = "ready"
     elif effective_claim_requirement_mode == "semi_hard" and not claim_ready_for_allatom:
         effective_actionability_status = "semi_hard_blocked"
     elif _text(recommended_next_expensive_lane, focus_shortlist_tier, translation_gate_focus_reason):
@@ -839,14 +839,14 @@ def resolve_selected_allatom_canonical(
         effective_primary_blocking_domain = "soft_guidance"
 
     effective_blocking_order = "not_reported"
-    if final_gate_pass:
-        effective_blocking_order = "clear"
-    elif hard_block_present:
+    if hard_block_present:
         effective_blocking_order = (
             "hard_block_first"
             if raw_claim_requirement_mode == "semi_hard"
             else "hard_block_only"
         )
+    elif final_gate_pass:
+        effective_blocking_order = "clear"
     elif effective_claim_requirement_mode == "semi_hard" and not claim_ready_for_allatom:
         effective_blocking_order = "claim_block_first"
     elif _text(recommended_next_expensive_lane, focus_shortlist_tier):

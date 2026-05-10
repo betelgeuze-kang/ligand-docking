@@ -2300,6 +2300,66 @@ def build_payload(
     selected_allatom_canonical_resolver_used = bool(
         selected_allatom_canonical.get("__canonical_resolver_used__", False)
     )
+    if selected_allatom_canonical_resolver_used:
+        canonical_schema_v2 = selected_allatom_canonical.get("commercial_schema_version_v2")
+        if _canonical_value_present(canonical_schema_v2):
+            selected_allatom_commercial_schema_version_v2 = _text(canonical_schema_v2)
+        canonical_hard_gate_v2 = selected_allatom_canonical.get("commercial_hard_gate_pass_v2")
+        if _canonical_value_present(canonical_hard_gate_v2):
+            selected_allatom_commercial_hard_gate_reported_v2 = True
+            selected_allatom_commercial_hard_gate_pass_v2 = _coerce_bool(canonical_hard_gate_v2)
+        canonical_soft_v2 = selected_allatom_canonical.get("commercial_soft_score_v2")
+        if _canonical_value_present(canonical_soft_v2):
+            selected_allatom_commercial_soft_score_v2 = _coerce_float(canonical_soft_v2, 0.0)
+        canonical_confidence_v2 = selected_allatom_canonical.get("commercial_confidence_score_v2")
+        if _canonical_value_present(canonical_confidence_v2):
+            selected_allatom_commercial_confidence_score_v2 = _coerce_float(
+                canonical_confidence_v2,
+                0.0,
+            )
+        canonical_overall_v2 = selected_allatom_canonical.get("commercial_overall_score_v2")
+        if _canonical_value_present(canonical_overall_v2):
+            selected_allatom_commercial_overall_score_v2 = _coerce_float(canonical_overall_v2, 0.0)
+        canonical_risk_v2 = selected_allatom_canonical.get("commercial_risk_bucket_v2")
+        if _canonical_value_present(canonical_risk_v2):
+            selected_allatom_commercial_risk_bucket_v2 = _text(canonical_risk_v2)
+        canonical_decision_v2 = selected_allatom_canonical.get("commercial_decision_class_v2")
+        if _canonical_value_present(canonical_decision_v2):
+            selected_allatom_commercial_decision_class_v2 = _text(canonical_decision_v2)
+        canonical_actions_v2 = selected_allatom_canonical.get("commercial_primary_upgrade_actions_v2")
+        if _canonical_value_present(canonical_actions_v2):
+            selected_allatom_commercial_primary_upgrade_actions_v2 = _coerce_text_list(
+                canonical_actions_v2
+            )
+        canonical_human_v2 = selected_allatom_canonical.get("commercial_human_summary_v2")
+        if _canonical_value_present(canonical_human_v2):
+            selected_allatom_commercial_human_summary_v2 = _text(canonical_human_v2)
+        selected_allatom_commercial_reported_v2 = bool(
+            selected_allatom_commercial_schema_version_v2
+            or selected_allatom_commercial_hard_gate_reported_v2
+            or selected_allatom_commercial_overall_score_v2 > 0
+            or selected_allatom_commercial_soft_score_v2 > 0
+            or selected_allatom_commercial_confidence_score_v2 > 0
+            or selected_allatom_commercial_risk_bucket_v2
+            or selected_allatom_commercial_decision_class_v2
+            or selected_allatom_commercial_primary_upgrade_actions_v2
+            or selected_allatom_commercial_human_summary_v2
+        )
+        selected_allatom_commercial_human_signal_v2 = _text(
+            selected_allatom_commercial_human_summary_v2,
+            _selected_allatom_commercial_signal(
+                commercial_reported=selected_allatom_commercial_reported_v2,
+                schema_version=selected_allatom_commercial_schema_version_v2,
+                hard_gate_reported=selected_allatom_commercial_hard_gate_reported_v2,
+                hard_gate_pass=selected_allatom_commercial_hard_gate_pass_v2,
+                soft_score=selected_allatom_commercial_soft_score_v2,
+                confidence_score=selected_allatom_commercial_confidence_score_v2,
+                overall_score=selected_allatom_commercial_overall_score_v2,
+                risk_bucket=selected_allatom_commercial_risk_bucket_v2,
+                decision_class=selected_allatom_commercial_decision_class_v2,
+                primary_upgrade_actions=selected_allatom_commercial_primary_upgrade_actions_v2,
+            ),
+        )
     canonical_best_mean_min_distance_A = _coerce_float(
         selected_allatom_canonical.get("best_mean_min_distance_A"),
         0.0,
@@ -2888,6 +2948,52 @@ def build_payload(
             "key_signal": str(bsbs.get("final_packet_shape", "")).strip(),
         },
     ]
+
+    selected_allatom_effective_actionability = dict(
+        selected_allatom_canonical.get("effective_actionability", {}) or {}
+    )
+    selected_allatom_actionability_block_reason_codes = _coerce_text_list(
+        selected_allatom_effective_actionability.get("block_reason_codes")
+        or selected_allatom_focus_summary.get("selected_allatom_actionability_block_reason_codes", [])
+    )
+    selected_allatom_actionability_soft_guidance_reasons = _coerce_text_list(
+        selected_allatom_effective_actionability.get("soft_guidance_reasons")
+        or selected_allatom_focus_summary.get("selected_allatom_actionability_soft_guidance_reasons", [])
+    )
+    selected_allatom_actionability_action_list = list(
+        selected_allatom_effective_actionability.get("action_list")
+        or selected_allatom_focus_summary.get("selected_allatom_actionability_action_list", [])
+        or []
+    )
+    selected_allatom_actionability_translation_gate_v2_failed_metrics = _coerce_text_list(
+        selected_allatom_effective_actionability.get("translation_gate_v2_failed_metrics")
+        or selected_allatom_focus_summary.get("selected_allatom_actionability_translation_gate_v2_failed_metrics", [])
+    )
+    selected_allatom_actionability_translation_gate_v2_missing_metrics = _coerce_text_list(
+        selected_allatom_effective_actionability.get("translation_gate_v2_missing_metrics")
+        or selected_allatom_focus_summary.get("selected_allatom_actionability_translation_gate_v2_missing_metrics", [])
+    )
+    selected_allatom_actionability_translation_gate_v2_thresholds = dict(
+        selected_allatom_effective_actionability.get("translation_gate_v2_thresholds")
+        or selected_allatom_focus_summary.get("selected_allatom_actionability_translation_gate_v2_thresholds", {})
+        or {}
+    )
+    selected_allatom_commercial_hard_gate_failed_metrics_v2 = _coerce_text_list(
+        selected_allatom_focus_summary.get("selected_allatom_commercial_hard_gate_failed_metrics_v2")
+        or selected_allatom_focus_summary.get("commercial_hard_gate_failed_metrics_v2")
+        or selected_allatom_actionability_translation_gate_v2_failed_metrics
+    )
+    selected_allatom_commercial_hard_gate_missing_metrics_v2 = _coerce_text_list(
+        selected_allatom_focus_summary.get("selected_allatom_commercial_hard_gate_missing_metrics_v2")
+        or selected_allatom_focus_summary.get("commercial_hard_gate_missing_metrics_v2")
+        or selected_allatom_actionability_translation_gate_v2_missing_metrics
+    )
+    selected_allatom_commercial_score_thresholds_v2 = dict(
+        selected_allatom_focus_summary.get("selected_allatom_commercial_score_thresholds_v2")
+        or selected_allatom_focus_summary.get("commercial_score_thresholds_v2")
+        or selected_allatom_actionability_translation_gate_v2_thresholds
+        or {}
+    )
 
     return {
         "summary": {
@@ -3630,37 +3736,19 @@ def build_payload(
             "selected_allatom_action_recipe_rollup_text": selected_allatom_action_recipe_rollup_text,
             "selected_allatom_claim_actionability_split_summary": selected_allatom_claim_actionability_split_summary,
             **selected_allatom_visual_fields,
-            "selected_allatom_actionability_block_reason_codes": _coerce_text_list(
-                selected_allatom_focus_summary.get("selected_allatom_actionability_block_reason_codes", [])
-            ),
-            "selected_allatom_actionability_soft_guidance_reasons": _coerce_text_list(
-                selected_allatom_focus_summary.get("selected_allatom_actionability_soft_guidance_reasons", [])
-            ),
+            "selected_allatom_actionability_block_reason_codes": selected_allatom_actionability_block_reason_codes,
+            "selected_allatom_actionability_soft_guidance_reasons": selected_allatom_actionability_soft_guidance_reasons,
             "selected_allatom_actionability_required_calculations": _coerce_text_list(
                 selected_allatom_effective_required_calculations
                 or selected_allatom_focus_summary.get("selected_allatom_actionability_required_calculations", [])
             ),
-            "selected_allatom_actionability_action_list": list(
-                selected_allatom_focus_summary.get("selected_allatom_actionability_action_list", []) or []
-            ),
-            "selected_allatom_actionability_translation_gate_v2_failed_metrics": _coerce_text_list(
-                selected_allatom_focus_summary.get("selected_allatom_actionability_translation_gate_v2_failed_metrics", [])
-            ),
-            "selected_allatom_actionability_translation_gate_v2_missing_metrics": _coerce_text_list(
-                selected_allatom_focus_summary.get("selected_allatom_actionability_translation_gate_v2_missing_metrics", [])
-            ),
-            "selected_allatom_actionability_translation_gate_v2_thresholds": dict(
-                selected_allatom_focus_summary.get("selected_allatom_actionability_translation_gate_v2_thresholds", {}) or {}
-            ),
-            "selected_allatom_commercial_hard_gate_failed_metrics_v2": _coerce_text_list(
-                selected_allatom_focus_summary.get("selected_allatom_commercial_hard_gate_failed_metrics_v2", [])
-            ),
-            "selected_allatom_commercial_hard_gate_missing_metrics_v2": _coerce_text_list(
-                selected_allatom_focus_summary.get("selected_allatom_commercial_hard_gate_missing_metrics_v2", [])
-            ),
-            "selected_allatom_commercial_score_thresholds_v2": dict(
-                selected_allatom_focus_summary.get("selected_allatom_commercial_score_thresholds_v2", {}) or {}
-            ),
+            "selected_allatom_actionability_action_list": selected_allatom_actionability_action_list,
+            "selected_allatom_actionability_translation_gate_v2_failed_metrics": selected_allatom_actionability_translation_gate_v2_failed_metrics,
+            "selected_allatom_actionability_translation_gate_v2_missing_metrics": selected_allatom_actionability_translation_gate_v2_missing_metrics,
+            "selected_allatom_actionability_translation_gate_v2_thresholds": selected_allatom_actionability_translation_gate_v2_thresholds,
+            "selected_allatom_commercial_hard_gate_failed_metrics_v2": selected_allatom_commercial_hard_gate_failed_metrics_v2,
+            "selected_allatom_commercial_hard_gate_missing_metrics_v2": selected_allatom_commercial_hard_gate_missing_metrics_v2,
+            "selected_allatom_commercial_score_thresholds_v2": selected_allatom_commercial_score_thresholds_v2,
             "selected_allatom_best_compound_name": str(
                 bsrhs.get("selected_allatom_best_compound_name", bcris.get("selected_allatom_best_compound_name", ""))
             ).strip(),

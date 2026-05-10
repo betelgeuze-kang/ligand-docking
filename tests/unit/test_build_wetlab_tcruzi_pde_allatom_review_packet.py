@@ -406,3 +406,65 @@ def test_build_wetlab_tcruzi_pde_allatom_review_packet_passes_when_claim_ready(t
     assert payload["rows"][0]["translation_gate_status"] == "pass"
     assert payload["rows"][0]["recommended_next_expensive_lane"] == "ensemble_explicit_water_mmgbsa"
     assert payload["rows"][0]["commercial_hard_gate_pass_v2"] is True
+
+
+def test_build_wetlab_tcruzi_pde_allatom_review_packet_maps_replicate_group_size_to_v2_count(
+    tmp_path: Path,
+) -> None:
+    scoring_json = tmp_path / "summary.json"
+    claim_json = tmp_path / "claim_readiness.json"
+    scoring_json.write_text(
+        json.dumps(
+            {
+                "topk": [
+                    {
+                        "ligand_id": "lig_a",
+                        "mean_min_distance_A": 2.2,
+                        "binding_energy_proxy": -1.0,
+                        "binding_energy_mmpbsa_kcal_mol_proxy": -1.0,
+                        "binding_energy_mmpbsa_std": 0.1,
+                        "stability_score": 0.4,
+                        "contact_fraction": 0.6,
+                        "trajectory_frames": 220,
+                        "replicate_group_size": 1,
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    _write_json(
+        claim_json,
+        {
+            "summary": {
+                "policy_version": "test_policy_v1",
+                "pass_core_gate": True,
+                "claim_ready_for_allatom": True,
+            }
+        },
+    )
+    lane_payload = {
+        "summary": {
+            "shard_id": "20_of_20",
+            "selected_command_kind": "pseudo_allatom_backmapping_rescore",
+            "selected_threshold_A": 2.5,
+        },
+        "rows": [{"ligand_id": "lig_a", "translation_gate_status": "pass", "translation_gate_pass": True}],
+    }
+    runner_payload = {
+        "summary": {
+            "allatom_summary_json": str(scoring_json),
+            "scoring_status": "pass",
+            "execution_mode": "pseudo_allatom_backmapping_scoring_executed",
+        }
+    }
+
+    payload = build_payload(lane_payload, runner_payload, claim_readiness_json=str(claim_json))
+    summary = payload["summary"]
+
+    assert summary["commercial_robustness_inputs_available_v2"] is True
+    assert summary["commercial_replicate_count_v2"] == 1
+    assert "replicate_count" in summary["commercial_hard_gate_failed_metrics_v2"]
+    assert summary["commercial_hard_gate_pass_v2"] is False
+    assert payload["rows"][0]["commercial_replicate_count_v2"] == 1
+    assert "increase_replicate_coverage" in payload["rows"][0]["commercial_upgrade_actions_v2"]

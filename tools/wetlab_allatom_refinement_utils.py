@@ -110,6 +110,7 @@ _RANKING_OVERRIDE_KEYS = (
 _COMMERCIAL_V2_OPTIONAL_FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     "replicate_count": (
         "replicate_count",
+        "replicate_group_size",
         "replica_count",
         "replicates_observed",
         "replicates_total",
