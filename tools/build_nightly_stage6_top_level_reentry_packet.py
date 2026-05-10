@@ -5,6 +5,7 @@ import argparse
 import csv
 import datetime as dt
 import json
+import re
 import shlex
 from pathlib import Path
 from typing import Any
@@ -12,8 +13,9 @@ from typing import Any
 from tools.builder_table_utils import write_csv_rows
 
 ROOT = Path(__file__).resolve().parents[1]
+RUNS = ROOT / "runs"
 
-DEFAULT_TOP_LEVEL_SUMMARY_JSON = "runs/ligand_htvs_nightly_2026-04-26_summary.json"
+DEFAULT_TOP_LEVEL_SUMMARY_JSON = ""
 DEFAULT_BASE_PROFILE_JSON = "config/ligand_htvs_nightly_strict_v1.json"
 DEFAULT_GATE_BURNDOWN_JSON = "runs/nightly_gate_burndown_packet_current.json"
 DEFAULT_DOWNSTREAM_RERUN_JSON = "runs/nightly_stage6_downstream_rerun_packet_current.json"
@@ -27,6 +29,8 @@ DEFAULT_OUT_JSON = "runs/nightly_stage6_top_level_reentry_packet_current.json"
 DEFAULT_OUT_CSV = "runs/nightly_stage6_top_level_reentry_packet_current.csv"
 DEFAULT_OUT_MD = "runs/nightly_stage6_top_level_reentry_packet_current.md"
 DEFAULT_PROFILE_JSON = "runs/nightly_stage6_top_level_reentry_profile_current.json"
+
+_TOP_NIGHTLY_RE = re.compile(r"ligand_htvs_nightly_(\d{4}-\d{2}-\d{2}(?:_[A-Za-z0-9][A-Za-z0-9_-]*)?)_summary\.json$")
 
 
 def _default_date_tag() -> str:
@@ -83,6 +87,80 @@ def _maybe_load_json(path_like: str | Path) -> dict[str, Any]:
         return {}
     with path.open("r", encoding="utf-8") as fh:
         return json.load(fh)
+
+
+def _artifact_label(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(ROOT.resolve()))
+    except ValueError:
+        return str(path)
+
+
+def _is_top_nightly_summary_path(path: Path) -> bool:
+    match = _TOP_NIGHTLY_RE.fullmatch(path.name)
+    if not match:
+        return False
+    label = match.group(1)
+    suffix = label[10:]
+    if suffix:
+        if suffix in {"smoke", "full"} or suffix.startswith(("smoke_", "full_")):
+            return False
+        if suffix.endswith(("_smoke", "_full")) or "_attempt" in suffix:
+            return False
+
+    payload = _maybe_load_json(path)
+    if not payload:
+        return False
+    if _text(payload.get("run_scope")) == "smoke_then_full":
+        return True
+    stages = payload.get("stages")
+    artifacts = payload.get("artifacts")
+    if isinstance(stages, dict) and ("smoke" in stages or "full" in stages):
+        return True
+    if isinstance(artifacts, dict) and (
+        _text(artifacts.get("smoke_summary_json")) or _text(artifacts.get("full_summary_json"))
+    ):
+        return True
+    return False
+
+
+def _top_nightly_label(path: Path) -> str:
+    match = _TOP_NIGHTLY_RE.fullmatch(path.name)
+    return match.group(1) if match else path.name
+
+
+def _top_nightly_sort_key(path: Path) -> tuple[str, int, str]:
+    payload = _maybe_load_json(path)
+    generated_at = _text(payload.get("generated_at_local"))
+    try:
+        mtime_ns = path.stat().st_mtime_ns
+    except OSError:
+        mtime_ns = 0
+    return (generated_at or _top_nightly_label(path), mtime_ns, _top_nightly_label(path))
+
+
+def _discover_latest_top_level_summary_path() -> Path | None:
+    candidates = [path for path in RUNS.glob("ligand_htvs_nightly_*_summary.json") if _is_top_nightly_summary_path(path)]
+    if not candidates:
+        return None
+    stage6_failures = [
+        path
+        for path in candidates
+        if _primary_failed_stage(_maybe_load_json(path)) == "stage6_operational_gate"
+    ]
+    if stage6_failures:
+        return sorted(stage6_failures, key=_top_nightly_sort_key)[-1]
+    return sorted(candidates, key=_top_nightly_sort_key)[-1]
+
+
+def _resolve_top_level_summary_artifact(path_like: str | Path) -> str:
+    explicit = _text(path_like)
+    if explicit:
+        return explicit
+    discovered = _discover_latest_top_level_summary_path()
+    if discovered is None:
+        raise FileNotFoundError("no top-level ligand HTVS nightly summary found under runs/")
+    return _artifact_label(discovered)
 
 
 def _maybe_load_csv_rows(path_like: str | Path) -> list[dict[str, Any]]:
@@ -498,7 +576,14 @@ def _markdown(payload: dict[str, Any]) -> str:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build the nightly stage6 canonical top-level reentry packet.")
-    parser.add_argument("--top-level-summary-json", default=DEFAULT_TOP_LEVEL_SUMMARY_JSON)
+    parser.add_argument(
+        "--top-level-summary-json",
+        default=DEFAULT_TOP_LEVEL_SUMMARY_JSON,
+        help=(
+            "Top-level nightly summary to use. Defaults to the latest top-level stage6 gate failure under runs/; "
+            "if none exists, falls back to the latest top-level nightly summary."
+        ),
+    )
     parser.add_argument("--base-profile-json", default=DEFAULT_BASE_PROFILE_JSON)
     parser.add_argument("--nightly-gate-burndown-json", default=DEFAULT_GATE_BURNDOWN_JSON)
     parser.add_argument("--downstream-rerun-json", default=DEFAULT_DOWNSTREAM_RERUN_JSON)
@@ -517,9 +602,10 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    top_level_summary_json = _resolve_top_level_summary_artifact(args.top_level_summary_json)
     payload = build_payload(
-        top_level_payload=_load_json(args.top_level_summary_json),
-        top_level_summary_artifact=args.top_level_summary_json,
+        top_level_payload=_load_json(top_level_summary_json),
+        top_level_summary_artifact=top_level_summary_json,
         base_profile_payload=_load_json(args.base_profile_json),
         nightly_gate_burndown_payload=_maybe_load_json(args.nightly_gate_burndown_json),
         downstream_rerun_payload=_maybe_load_json(args.downstream_rerun_json),

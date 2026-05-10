@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from tools import build_nightly_stage6_top_level_reentry_packet as mod
 
 
@@ -55,6 +58,59 @@ def _strict_base_profile() -> dict[str, object]:
         },
         "retry": {"max_attempts": 3, "sleep_sec": 20},
     }
+
+
+def _write_json(path: Path, payload: dict[str, object]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def test_default_top_level_summary_discovery_prefers_latest_stage6_failure(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    monkeypatch.setattr(mod, "RUNS", tmp_path / "runs")
+    runs = tmp_path / "runs"
+    _write_json(
+        runs / "ligand_htvs_nightly_2026-05-09_summary.json",
+        {
+            "generated_at_local": "2026-05-09T00:00:00",
+            "run_scope": "smoke_then_full",
+            "pass": False,
+            "failed_stage": "smoke",
+            "stages": {"smoke": {"failed_stage": "stage6_operational_gate"}, "full": {}},
+        },
+    )
+    _write_json(
+        runs / "ligand_htvs_nightly_2026-05-10_summary.json",
+        {
+            "generated_at_local": "2026-05-10T00:00:00",
+            "run_scope": "smoke_then_full",
+            "pass": False,
+            "failed_stage": "smoke",
+            "stages": {"smoke": {"failed_stage": "stage6_operational_gate"}, "full": {}},
+        },
+    )
+    _write_json(
+        runs / "ligand_htvs_nightly_2026-05-11_stage6_top_level_reentry_summary.json",
+        {
+            "generated_at_local": "2026-05-11T00:00:00",
+            "run_scope": "smoke_then_full",
+            "pass": True,
+            "failed_stage": None,
+            "stages": {"smoke": {"pass": True}, "full": {"pass": True}},
+        },
+    )
+    _write_json(
+        runs / "ligand_htvs_nightly_2026-05-12_smoke_summary.json",
+        {
+            "generated_at_local": "2026-05-12T00:00:00",
+            "run_scope": "smoke",
+            "pass": False,
+            "failed_stage": "stage6_operational_gate",
+            "stages": {"stage6_operational_gate": {}},
+        },
+    )
+
+    assert mod._resolve_top_level_summary_artifact("") == "runs/ligand_htvs_nightly_2026-05-10_summary.json"
 
 
 def test_top_level_reentry_packet_is_ready_without_fake_promotion() -> None:
