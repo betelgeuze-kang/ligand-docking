@@ -97,7 +97,11 @@ def test_build_packet_stages_four_positive_candidates(tmp_path: Path) -> None:
     assert summary["status"] == "gpcr_positive_coverage_expansion_candidates_ready_for_materialization"
     assert summary["ready_positive_candidate_count"] == 4
     assert summary["staged_positive_candidate_count"] == 4
+    assert summary["observed_positive_count"] == 6
+    assert summary["base_adrb2_positive_count"] == 6
+    assert summary["current_non_adrb2_shadow_positive_count"] == 3
     assert summary["projected_positive_count_after_staging"] == 7
+    assert summary["projected_total_positive_count_after_staging"] == 13
     assert summary["reviewed_uniprot_candidate_count"] == 4
     assert summary["rcsb_experimental_candidate_count"] == 4
     assert summary["alphafold_candidate_count"] == 4
