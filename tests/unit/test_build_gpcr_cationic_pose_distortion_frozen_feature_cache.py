@@ -108,11 +108,102 @@ def test_build_gpcr_cationic_pose_distortion_frozen_feature_cache_claim_locked(t
     assert summary["claim_promotion_allowed"] is False
     assert payload["claim_boundary"]["selected_slice_green_is_not_claim_evidence"] is True
     assert rows[0]["feature_cache_status"] == "ok"
+    assert rows[0]["effective_label_free_anchor_mode"] == "none"
     assert float(rows[0]["base_score"]) == -0.75
     assert float(rows[0]["label_free_support_pressure"]) >= 0.0
     assert float(rows[0]["weak_base_rescue_gate"]) > 0.0
     assert float(rows[0]["weak_base_rescue_support_pressure"]) >= 0.0
+    assert float(rows[0]["v12_synthetic_anchor_saturation_pressure"]) >= 0.0
+    assert float(rows[0]["v12_moderate_multi_basic_weakbase_support_pressure"]) >= 0.0
+    assert float(rows[0]["v12_plausible_anchor_window_support"]) >= 0.0
+    assert float(rows[0]["v14_cationic_anchor_occupancy_support"]) >= 0.0
+    assert float(rows[0]["v14_cationic_anchor_window_gate"]) >= 0.0
+    assert float(rows[0]["v14_cationic_overclose_artifact_pressure"]) >= 0.0
     assert "claim_promotion_allowed: `false`" in out_md.read_text(encoding="utf-8")
+
+
+def test_build_gpcr_cationic_pose_distortion_frozen_feature_cache_adaptive_rejects_pose_collapse(
+    tmp_path: Path,
+) -> None:
+    pdb = tmp_path / "native.pdb"
+    pdb.write_text(
+        "".join(
+            [
+                _pdb_line("ATOM", 1, "OD1", "ASP", "A", 114, (0.0, 0.0, 0.0)),
+                _pdb_line("ATOM", 2, "OD2", "ASP", "A", 114, (0.0, 1.0, 0.0)),
+                _pdb_line("HETATM", 3, "C1", "LIG", "A", 1, (35.0, 0.0, 0.0)),
+                _pdb_line("HETATM", 4, "C2", "LIG", "A", 1, (36.0, 0.0, 0.0)),
+                _pdb_line("HETATM", 5, "C3", "LIG", "A", 1, (37.0, 0.0, 0.0)),
+                _pdb_line("HETATM", 6, "C4", "LIG", "A", 1, (38.0, 0.0, 0.0)),
+                _pdb_line("HETATM", 7, "C5", "LIG", "A", 1, (39.0, 0.0, 0.0)),
+            ]
+        ),
+        encoding="utf-8",
+    )
+    traj = tmp_path / "traj.npz"
+    ligand_frames = np.asarray(
+        [
+            [[35.0, 0.0, 0.0], [36.0, 0.0, 0.0]],
+            [[35.2, 0.0, 0.0], [36.2, 0.0, 0.0]],
+        ],
+        dtype=np.float32,
+    )
+    protein_atom_frames = np.asarray(
+        [
+            [[0.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+            [[0.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+        ],
+        dtype=np.float32,
+    )
+    np.savez_compressed(traj, ligand_frames=ligand_frames, protein_atom_frames=protein_atom_frames)
+    input_csv = tmp_path / "stage3.csv"
+    out_csv = tmp_path / "cache.csv"
+    out_json = tmp_path / "cache.json"
+    out_md = tmp_path / "cache.md"
+    _write_csv(
+        input_csv,
+        [
+            {
+                "target": "CHEMBL217_DRD2_HUMAN",
+                "ligand_id": "CHEMBL331883",
+                "ligand_smiles": "CCN",
+                "trajectory_npz": str(traj),
+                "protein_structure_source_path": str(pdb),
+                "binding_score_composite_v7": -4.5,
+                "ligand_h_donors": 1,
+                "ligand_h_acceptors": 1,
+                "ligand_rot_bonds": 1,
+                "ligand_logp": 1.2,
+            }
+        ],
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools/build_gpcr_cationic_pose_distortion_frozen_feature_cache.py"),
+            "--input-csv",
+            str(input_csv),
+            "--anchor-mode",
+            "adaptive_pose_preserving",
+            "--out-csv",
+            str(out_csv),
+            "--out-json",
+            str(out_json),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=ROOT,
+    )
+    rows = list(csv.DictReader(out_csv.open("r", encoding="utf-8", newline="")))
+
+    assert rows[0]["feature_cache_status"] == "ok"
+    assert rows[0]["requested_label_free_anchor_mode"] == "adaptive_pose_preserving"
+    assert rows[0]["effective_label_free_anchor_mode"] == "none"
+    assert rows[0]["label_free_anchor_mode"] == "none"
+    assert rows[0]["adaptive_selection_reason"] == "all_basic_pose_collapse_rejected"
+    assert float(rows[0]["adaptive_all_basic_pose_rmsd_A"]) > float(rows[0]["adaptive_none_pose_rmsd_A"]) + 6.0
 
 
 def test_build_gpcr_cationic_pose_distortion_frozen_feature_cache_blocks_missing_native(tmp_path: Path) -> None:

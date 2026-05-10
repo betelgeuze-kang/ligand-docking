@@ -45,6 +45,22 @@ def _int(value: Any) -> int | None:
     return int(f) if f is not None else None
 
 
+def _first(row: dict[str, str], *keys: str) -> Any:
+    for key in keys:
+        value = row.get(key)
+        if value is not None and str(value).strip() != "":
+            return value
+    return None
+
+
+def _first_float(row: dict[str, str], *keys: str) -> float | None:
+    return _float(_first(row, *keys))
+
+
+def _first_int(row: dict[str, str], *keys: str) -> int | None:
+    return _int(_first(row, *keys))
+
+
 def _truthy(value: Any) -> bool:
     return _text(value).lower() in {"1", "true", "t", "yes", "y"}
 
@@ -214,6 +230,7 @@ def _row_packet(
 ) -> dict[str, Any]:
     score = _float(row.get("score"))
     is_positive = _truthy(row.get("is_positive")) or _text(row.get("ligand_id")) == DEFAULT_POSITIVE_LIGAND
+    cationic_source = cationic_row if cationic_row else cache_row
     out: dict[str, Any] = {
         "target": _text(row.get("target")),
         "ligand_id": _text(row.get("ligand_id")),
@@ -238,25 +255,71 @@ def _row_packet(
         "allatom_backmapping_coverage_ratio": _float(row.get("allatom_backmapping_coverage_ratio")),
         "target_cation_anchor_distance_A_mean": _float(row.get("target_cation_anchor_distance_A_mean")),
         "coarse_centroid_preservation_rmsd_A_mean": _float(row.get("coarse_centroid_preservation_rmsd_A_mean")),
-        "atom_anchor_available": _int(cache_row.get("class_a_atom_anchor_available")) or 0,
-        "atom_anchor_min_distance_A": _float(cache_row.get("class_a_atom_anchor_min_distance_A")),
-        "atom_anchor_p10_distance_A": _float(cache_row.get("class_a_atom_anchor_p10_distance_A")),
-        "atom_anchor_mean_distance_A": _float(cache_row.get("class_a_atom_anchor_mean_distance_A")),
-        "atom_contact_fraction_le_2p8A": _float(cache_row.get("class_a_atom_anchor_contact_fraction_le_2p8A")) or 0.0,
-        "atom_contact_fraction_2p8_4p2A": _float(cache_row.get("class_a_atom_anchor_contact_fraction_2p8_4p2A")) or 0.0,
-        "cationic_center_available": _int(cationic_row.get("class_a_cationic_center_available")) or 0,
-        "cationic_center_basic_atom_count": _int(cationic_row.get("class_a_cationic_center_basic_atom_count")) or 0,
-        "cationic_center_min_distance_A": _float(cationic_row.get("class_a_cationic_center_min_distance_A")),
-        "cationic_center_p10_distance_A": _float(cationic_row.get("class_a_cationic_center_p10_distance_A")),
-        "cationic_center_mean_distance_A": _float(cationic_row.get("class_a_cationic_center_mean_distance_A")),
+        "atom_anchor_available": _first_int(
+            cache_row, "class_a_atom_anchor_available", "atom_anchor_available"
+        )
+        or 0,
+        "atom_anchor_min_distance_A": _first_float(
+            cache_row, "class_a_atom_anchor_min_distance_A", "atom_anchor_min_distance_A"
+        ),
+        "atom_anchor_p10_distance_A": _first_float(
+            cache_row, "class_a_atom_anchor_p10_distance_A", "atom_anchor_p10_distance_A"
+        ),
+        "atom_anchor_mean_distance_A": _first_float(
+            cache_row, "class_a_atom_anchor_mean_distance_A", "atom_anchor_mean_distance_A"
+        ),
+        "atom_contact_fraction_le_2p8A": _first_float(
+            cache_row,
+            "class_a_atom_anchor_contact_fraction_le_2p8A",
+            "atom_contact_fraction_le_2p8A",
+        )
+        or 0.0,
+        "atom_contact_fraction_2p8_4p2A": _first_float(
+            cache_row,
+            "class_a_atom_anchor_contact_fraction_2p8_4p2A",
+            "atom_contact_fraction_2p8_4p2A",
+        )
+        or 0.0,
+        "cationic_center_available": _first_int(
+            cationic_source, "class_a_cationic_center_available", "cationic_center_available"
+        )
+        or 0,
+        "cationic_center_basic_atom_count": _first_int(
+            cationic_source, "class_a_cationic_center_basic_atom_count", "cationic_center_basic_atom_count"
+        )
+        or 0,
+        "cationic_center_min_distance_A": _first_float(
+            cationic_source, "class_a_cationic_center_min_distance_A", "cationic_center_min_distance_A"
+        ),
+        "cationic_center_p10_distance_A": _first_float(
+            cationic_source, "class_a_cationic_center_p10_distance_A", "cationic_center_p10_distance_A"
+        ),
+        "cationic_center_mean_distance_A": _first_float(
+            cationic_source, "class_a_cationic_center_mean_distance_A", "cationic_center_mean_distance_A"
+        ),
         "cationic_center_contact_fraction_le_2p8A": (
-            _float(cationic_row.get("class_a_cationic_center_contact_fraction_le_2p8A")) or 0.0
+            _first_float(
+                cationic_source,
+                "class_a_cationic_center_contact_fraction_le_2p8A",
+                "cationic_center_contact_fraction_le_2p8A",
+            )
+            or 0.0
         ),
         "cationic_center_contact_fraction_2p8_4p2A": (
-            _float(cationic_row.get("class_a_cationic_center_contact_fraction_2p8_4p2A")) or 0.0
+            _first_float(
+                cationic_source,
+                "class_a_cationic_center_contact_fraction_2p8_4p2A",
+                "cationic_center_contact_fraction_2p8_4p2A",
+            )
+            or 0.0
         ),
         "cationic_center_contact_fraction_ge_4p2A": (
-            _float(cationic_row.get("class_a_cationic_center_contact_fraction_ge_4p2A")) or 0.0
+            _first_float(
+                cationic_source,
+                "class_a_cationic_center_contact_fraction_ge_4p2A",
+                "cationic_center_contact_fraction_ge_4p2A",
+            )
+            or 0.0
         ),
     }
     out.update(_candidate_pressures(out))

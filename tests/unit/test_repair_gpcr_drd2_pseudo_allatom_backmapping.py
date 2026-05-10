@@ -90,6 +90,10 @@ def test_build_repair_expands_two_bead_drd2_positive_to_pseudo_allatom_npz(tmp_p
     assert int(row["source_ligand_frame_atom_count"]) == 2
     assert int(row["repaired_ligand_frame_atom_count"]) > 2
     assert float(row["allatom_backmapping_coverage_ratio"]) == 1.0
+    assert Path(str(row["backmapped_pdb"])).exists()
+    pdb_text = Path(str(row["backmapped_pdb"])).read_text(encoding="utf-8")
+    assert pdb_text.count("HETATM") == int(row["repaired_ligand_frame_atom_count"])
+    assert " LIG L" in pdb_text
     assert int(row["allatom_basic_amine_atom_count"]) >= 1
     assert int(row["allatom_anchor_atom_count"]) == 2
     assert np.isclose(float(row["target_cation_anchor_distance_A_mean"]), 3.2, atol=1e-5)
@@ -171,6 +175,8 @@ def test_repair_cli_writes_manifest_outputs(tmp_path: Path) -> None:
     assert payload["summary"]["status"] == "pseudo_allatom_repair_ready"
     assert "GPCR DRD2 Pseudo-Allatom Backmapping Repair" in out_md.read_text(encoding="utf-8")
     assert "pseudo_allatom_backmapping_generated" in out_csv.read_text(encoding="utf-8")
+    row = next(csv.DictReader(out_csv.open("r", encoding="utf-8", newline="")))
+    assert Path(row["backmapped_pdb"]).exists()
 
 
 def test_positive_only_anchor_mode_does_not_force_basic_decoy_to_anchor(tmp_path: Path) -> None:

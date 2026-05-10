@@ -31,6 +31,8 @@ DEFAULT_OUT_CSV = "runs/gpcr_cationic_pose_distortion_frozen_feature_cache_curre
 DEFAULT_OUT_JSON = "runs/gpcr_cationic_pose_distortion_frozen_feature_cache_current.json"
 DEFAULT_OUT_MD = "runs/gpcr_cationic_pose_distortion_frozen_feature_cache_current.md"
 
+_CONFORMER_CACHE: dict[str, dict[str, Any]] = {}
+
 
 def _resolve(path_like: str | Path) -> Path:
     path = Path(path_like)
@@ -47,6 +49,10 @@ def _float(value: Any, default: float = 0.0) -> float:
     except (TypeError, ValueError):
         return default
     return parsed if np.isfinite(parsed) else default
+
+
+def _clip01(value: float) -> float:
+    return float(np.clip(_float(value), 0.0, 1.0))
 
 
 def _read_csv(path_like: str | Path) -> list[dict[str, str]]:
@@ -82,6 +88,13 @@ def _write_json(path_like: str | Path, payload: dict[str, Any]) -> None:
 
 def _row_key(row: dict[str, Any]) -> tuple[str, str]:
     return (_text(row.get("target")), _text(row.get("ligand_id")))
+
+
+def _cached_conformer(smiles: str) -> dict[str, Any]:
+    key = _text(smiles)
+    if key not in _CONFORMER_CACHE:
+        _CONFORMER_CACHE[key] = _rdkit_conformer(key)
+    return _CONFORMER_CACHE[key]
 
 
 def _native_path_from_pdb_id(pdb_id: str) -> str:
@@ -127,6 +140,50 @@ def _score(row: dict[str, str]) -> float:
         if _text(row.get(col)):
             return _float(row.get(col), 0.0)
     return 0.0
+
+
+def _v12_anchor_terms(
+    *,
+    anchor_mode: str,
+    support_pressure: float,
+    weak_base_support_pressure: float,
+    basic_amine_count: int,
+    pose_rmsd_A: float,
+) -> dict[str, float]:
+    all_basic_anchor = 1.0 if str(anchor_mode or "").strip().lower() == "all_basic" and basic_amine_count > 0 else 0.0
+    saturated = all_basic_anchor * _clip01((support_pressure - 0.90) / 0.08)
+    plausible_window = _clip01((support_pressure - 0.35) / 0.25) * _clip01((0.86 - support_pressure) / 0.20)
+    multi_basic = _clip01((float(basic_amine_count) - 1.0) / 1.0)
+    pose_preserved = _clip01((1.35 - pose_rmsd_A) / 0.60)
+    moderate_multi_support = weak_base_support_pressure * plausible_window * multi_basic * pose_preserved
+    return {
+        "v12_synthetic_anchor_saturation_pressure": saturated,
+        "v12_moderate_multi_basic_weakbase_support_pressure": moderate_multi_support,
+        "v12_plausible_anchor_window_support": plausible_window,
+        "v12_multi_basic_support_gate": multi_basic,
+        "v12_pose_preservation_gate": pose_preserved,
+    }
+
+
+def _v14_anchor_occupancy_terms(
+    *,
+    distance_features: dict[str, Any],
+    basic_amine_count: int,
+    pose_preservation_support: float,
+) -> dict[str, float]:
+    cationic_available = _clip01(distance_features.get("cationic_center_available"))
+    cationic_window = _clip01(distance_features.get("cationic_center_contact_fraction_2p8_4p2A"))
+    cationic_too_close = _clip01(distance_features.get("cationic_center_contact_fraction_le_2p8A"))
+    basic_gate = _clip01(float(basic_amine_count))
+    pose_gate = _clip01(pose_preservation_support)
+    occupancy_support = cationic_available * basic_gate * cationic_window * (1.0 - cationic_too_close) * pose_gate
+    overclose_artifact = cationic_available * cationic_too_close * (1.0 - occupancy_support) * (1.0 - pose_gate)
+    return {
+        "v14_cationic_anchor_occupancy_support": occupancy_support,
+        "v14_cationic_anchor_window_gate": cationic_available * basic_gate * cationic_window,
+        "v14_cationic_overclose_artifact_pressure": overclose_artifact,
+        "v14_pose_preservation_support_gate": pose_gate,
+    }
 
 
 def _distance_features(
@@ -225,7 +282,7 @@ def _cache_row(
     npz_path = _resolve(trajectory_npz) if trajectory_npz else None
     if npz_path is None or not npz_path.exists():
         return {**out, "feature_cache_status": "failed", "feature_cache_reason": "trajectory_npz_missing"}
-    conformer = _rdkit_conformer(_text(row.get("ligand_smiles") or row.get("smiles")))
+    conformer = _cached_conformer(_text(row.get("ligand_smiles") or row.get("smiles")))
     if not conformer.get("available"):
         return {
             **out,
@@ -244,57 +301,147 @@ def _cache_row(
     if not anchor_indices:
         return {**out, "feature_cache_status": "failed", "feature_cache_reason": "acidic_anchor_missing"}
     basic_indices = [int(idx) for idx in conformer.get("basic_amine_atom_indices", [])]
-    anchor_mode_norm = str(anchor_mode or "none").strip().lower()
-    force_anchor = anchor_mode_norm == "all_basic" and bool(basic_indices)
-    repaired, metrics = _backmap_frames(
-        ligand_frames=ligand_frames,
-        protein_atom_frames=protein_atom_frames,
-        anchor_indices=anchor_indices,
-        conformer_coords=np.asarray(conformer["coords"], dtype=float),
-        basic_indices=basic_indices,
-        salt_bridge_distance_A=3.2,
-        force_anchor=bool(force_anchor),
-    )
-    if repaired.size <= 0:
-        return {**out, "feature_cache_status": "failed", "feature_cache_reason": "pseudo_allatom_backmapping_failed"}
-    distance_features = _distance_features(
-        ligand_frames=np.asarray(repaired, dtype=float),
-        protein_atom_frames=np.asarray(protein_atom_frames, dtype=float),
-        anchor_indices=anchor_indices,
-        basic_indices=basic_indices,
-    )
     heavy_atoms = max(len(conformer.get("atomic_numbers", [])), 1)
-    pressure_input = {
-        **distance_features,
-        "basic_amine_count": len(basic_indices),
-        "ligand_h_donors": _float(row.get("ligand_h_donors"), 0.0),
-        "ligand_h_acceptors": _float(row.get("ligand_h_acceptors"), 0.0),
-        "ligand_rot_bonds": _float(row.get("ligand_rot_bonds"), 0.0),
-        "ligand_logp": _float(row.get("ligand_logp"), 0.0),
-        "coarse_centroid_preservation_rmsd_A_mean": _float(
-            metrics.get("coarse_centroid_preservation_rmsd_A_mean"),
-            0.0,
-        ),
+    anchor_mode_norm = str(anchor_mode or "none").strip().lower()
+
+    def _evaluate_backmap(force_anchor: bool) -> dict[str, Any] | None:
+        repaired, metrics = _backmap_frames(
+            ligand_frames=ligand_frames,
+            protein_atom_frames=protein_atom_frames,
+            anchor_indices=anchor_indices,
+            conformer_coords=np.asarray(conformer["coords"], dtype=float),
+            basic_indices=basic_indices,
+            salt_bridge_distance_A=3.2,
+            force_anchor=bool(force_anchor),
+        )
+        if repaired.size <= 0:
+            return None
+        distance_features = _distance_features(
+            ligand_frames=np.asarray(repaired, dtype=float),
+            protein_atom_frames=np.asarray(protein_atom_frames, dtype=float),
+            anchor_indices=anchor_indices,
+            basic_indices=basic_indices,
+        )
+        pose_rmsd = _float(metrics.get("coarse_centroid_preservation_rmsd_A_mean"), 0.0)
+        pressure_input = {
+            **distance_features,
+            "basic_amine_count": len(basic_indices),
+            "ligand_h_donors": _float(row.get("ligand_h_donors"), 0.0),
+            "ligand_h_acceptors": _float(row.get("ligand_h_acceptors"), 0.0),
+            "ligand_rot_bonds": _float(row.get("ligand_rot_bonds"), 0.0),
+            "ligand_logp": _float(row.get("ligand_logp"), 0.0),
+            "coarse_centroid_preservation_rmsd_A_mean": pose_rmsd,
+        }
+        return {
+            "repaired": repaired,
+            "metrics": metrics,
+            "distance_features": distance_features,
+            "pressures": _candidate_pressures(pressure_input),
+            "pose_rmsd": pose_rmsd,
+            "force_anchor": bool(force_anchor),
+        }
+
+    adaptive_probe: dict[str, Any] = {
+        "requested_label_free_anchor_mode": str(anchor_mode),
+        "effective_label_free_anchor_mode": anchor_mode_norm,
+        "adaptive_none_pose_rmsd_A": "",
+        "adaptive_all_basic_pose_rmsd_A": "",
+        "adaptive_none_support_pressure": "",
+        "adaptive_all_basic_support_pressure": "",
+        "adaptive_selection_reason": "",
     }
-    pressures = _candidate_pressures(pressure_input)
+    if anchor_mode_norm == "adaptive_pose_preserving":
+        none_eval = _evaluate_backmap(False)
+        forced_eval = _evaluate_backmap(True) if basic_indices else None
+        if none_eval is None and forced_eval is None:
+            return {**out, "feature_cache_status": "failed", "feature_cache_reason": "pseudo_allatom_backmapping_failed"}
+        if none_eval is None:
+            selected = forced_eval
+            selected_mode = "all_basic"
+            adaptive_probe["adaptive_selection_reason"] = "none_backmapping_failed"
+        elif forced_eval is None:
+            selected = none_eval
+            selected_mode = "none"
+            adaptive_probe["adaptive_selection_reason"] = (
+                "no_basic_amine_for_all_basic_anchor" if not basic_indices else "all_basic_backmapping_failed"
+            )
+        else:
+            none_pose = float(none_eval["pose_rmsd"])
+            forced_pose = float(forced_eval["pose_rmsd"])
+            none_support = float(none_eval["pressures"].get("label_free_support_pressure") or 0.0)
+            forced_support = float(forced_eval["pressures"].get("label_free_support_pressure") or 0.0)
+            none_cationic = _float(
+                none_eval["distance_features"].get("cationic_center_contact_fraction_2p8_4p2A"),
+                0.0,
+            )
+            forced_cationic = _float(
+                forced_eval["distance_features"].get("cationic_center_contact_fraction_2p8_4p2A"),
+                0.0,
+            )
+            forced_pose_support = float(forced_eval["pressures"].get("pose_preservation_support") or 0.0)
+            forced_pose_collapse = forced_pose_support < 0.20 or forced_pose > max(6.0, none_pose + 6.0)
+            anchor_gain = forced_support > none_support + 0.05 or forced_cationic > none_cationic + 0.25
+            if anchor_gain and not forced_pose_collapse:
+                selected = forced_eval
+                selected_mode = "all_basic"
+                adaptive_probe["adaptive_selection_reason"] = "all_basic_anchor_gain_pose_preserved"
+            else:
+                selected = none_eval
+                selected_mode = "none"
+                adaptive_probe["adaptive_selection_reason"] = (
+                    "all_basic_pose_collapse_rejected" if forced_pose_collapse else "no_all_basic_anchor_gain"
+                )
+            adaptive_probe.update(
+                {
+                    "adaptive_none_pose_rmsd_A": none_pose,
+                    "adaptive_all_basic_pose_rmsd_A": forced_pose,
+                    "adaptive_none_support_pressure": none_support,
+                    "adaptive_all_basic_support_pressure": forced_support,
+                }
+            )
+    else:
+        selected_mode = "all_basic" if anchor_mode_norm == "all_basic" and basic_indices else "none"
+        selected = _evaluate_backmap(anchor_mode_norm == "all_basic" and bool(basic_indices))
+        if selected is None:
+            return {**out, "feature_cache_status": "failed", "feature_cache_reason": "pseudo_allatom_backmapping_failed"}
+        adaptive_probe["adaptive_selection_reason"] = "fixed_anchor_mode"
+    adaptive_probe["effective_label_free_anchor_mode"] = selected_mode
+    repaired = selected["repaired"]
+    metrics = selected["metrics"]
+    distance_features = selected["distance_features"]
+    pressures = selected["pressures"]
     weak_gate, weak_support = _weak_base_rescue_support(
         _score(row),
         float(pressures.get("label_free_support_pressure") or 0.0),
     )
+    pose_rmsd = _float(metrics.get("coarse_centroid_preservation_rmsd_A_mean"), 0.0)
+    v12_terms = _v12_anchor_terms(
+        anchor_mode=str(selected_mode),
+        support_pressure=float(pressures.get("label_free_support_pressure") or 0.0),
+        weak_base_support_pressure=float(weak_support),
+        basic_amine_count=len(basic_indices),
+        pose_rmsd_A=pose_rmsd,
+    )
+    v14_terms = _v14_anchor_occupancy_terms(
+        distance_features=distance_features,
+        basic_amine_count=len(basic_indices),
+        pose_preservation_support=float(pressures.get("pose_preservation_support") or 0.0),
+    )
     out.update(distance_features)
     out.update(pressures)
+    out.update(v12_terms)
+    out.update(v14_terms)
+    out.update(adaptive_probe)
     out.update(
         {
             "feature_cache_status": "ok",
             "feature_cache_reason": "label_free_pseudo_allatom_feature_cache_ready",
+            "label_free_anchor_mode": str(selected_mode),
             "source_ligand_frame_atom_count": int(ligand_frames.shape[1]),
             "repaired_ligand_frame_atom_count": int(repaired.shape[1]),
             "allatom_backmapping_coverage_ratio": float(repaired.shape[1] / heavy_atoms),
             "basic_amine_count": len(basic_indices),
-            "coarse_centroid_preservation_rmsd_A_mean": _float(
-                metrics.get("coarse_centroid_preservation_rmsd_A_mean"),
-                0.0,
-            ),
+            "coarse_centroid_preservation_rmsd_A_mean": pose_rmsd,
             "weak_base_rescue_gate": weak_gate,
             "weak_base_rescue_support_pressure": weak_support,
         }
@@ -423,7 +570,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--row-limit", type=int, default=0)
     parser.add_argument("--row-offset", type=int, default=0)
     parser.add_argument("--resume-existing", action=argparse.BooleanOptionalAction, default=False)
-    parser.add_argument("--anchor-mode", choices=["none", "all_basic"], default="none")
+    parser.add_argument("--anchor-mode", choices=["none", "all_basic", "adaptive_pose_preserving"], default="none")
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)

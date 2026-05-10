@@ -826,6 +826,282 @@ def test_build_gpcr_residual_prototype_spec_cationic_weakbase_rescue_v11_is_clai
     assert "weak_base_support_rescues_borderline_rows_not_already_strong_decoys" in payload["prototype"]["interactions"]
 
 
+def test_build_gpcr_residual_prototype_spec_synthetic_anchor_penalty_v12_is_claim_locked(tmp_path: Path) -> None:
+    out_json = tmp_path / "prototype_synthetic_anchor_v12.json"
+    out_csv = tmp_path / "prototype_synthetic_anchor_v12.csv"
+    out_md = tmp_path / "prototype_synthetic_anchor_v12.md"
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools/build_gpcr_residual_prototype_spec.py"),
+            "--variant",
+            "gpcr_core_synthetic_anchor_penalty_shadow_v12",
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=ROOT,
+    )
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    constraints = payload["prototype"]["constraints"]
+    tuning = payload["prototype"]["tuning"]
+    linear = payload["prototype"]["linear_rescore"]
+    term_features = {term["feature"] for term in linear["terms"]}
+    term_weights = {term["feature"]: term["weight"] for term in linear["terms"]}
+    feature_rows = {row["feature_name"]: row for row in payload["feature_rows"]}
+
+    assert payload["summary"]["prototype_variant"] == "gpcr_core_synthetic_anchor_penalty_shadow_v12"
+    assert constraints["claim_locked_candidate"] is True
+    assert constraints["score_only_candidate"] is True
+    assert constraints["active_score_locked_to_base"] is True
+    assert constraints["requires_true_base_score_cache"] is True
+    assert constraints["requires_synthetic_anchor_saturation_pressure"] is True
+    assert constraints["scorer_apply_allowed"] is False
+    assert constraints["target_identity_feature_allowed"] is False
+    assert constraints["label_feature_allowed"] is False
+    assert constraints["rank_feature_allowed"] is False
+    assert constraints["ligand_id_feature_allowed"] is False
+    assert constraints["reference_binding_value_allowed"] is False
+    assert tuning["variant"] == "gpcr_core_synthetic_anchor_penalty_shadow_v12"
+    assert tuning["rejected_predecessor_variant"] == "gpcr_core_cationic_weakbase_rescue_shadow_v11"
+    assert linear["enabled"] is True
+    assert term_features == {
+        "base_score",
+        "label_free_penalty_pressure",
+        "gpcr_synthetic_anchor_saturation_pressure_v12",
+        "gpcr_moderate_multi_basic_weakbase_support_v12",
+    }
+    assert term_weights["gpcr_synthetic_anchor_saturation_pressure_v12"] > 0.0
+    assert term_weights["gpcr_moderate_multi_basic_weakbase_support_v12"] < 0.0
+    assert "gpcr_synthetic_anchor_saturation_pressure_v12" in feature_rows
+    assert "v11_full_frozen_replay_blocker_preservation" in feature_rows
+    assert "saturated_all_basic_anchor_support_is_penalty_not_reward" in payload["prototype"]["interactions"]
+
+
+def test_build_gpcr_residual_prototype_spec_pose_support_gap_v13_is_claim_locked(tmp_path: Path) -> None:
+    out_json = tmp_path / "prototype_pose_support_gap_v13.json"
+    out_csv = tmp_path / "prototype_pose_support_gap_v13.csv"
+    out_md = tmp_path / "prototype_pose_support_gap_v13.md"
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools/build_gpcr_residual_prototype_spec.py"),
+            "--variant",
+            "gpcr_core_pose_support_gap_shadow_v13",
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=ROOT,
+    )
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    constraints = payload["prototype"]["constraints"]
+    tuning = payload["prototype"]["tuning"]
+    linear = payload["prototype"]["linear_rescore"]
+    term_features = {term["feature"] for term in linear["terms"]}
+    term_weights = {term["feature"]: term["weight"] for term in linear["terms"]}
+    feature_rows = {row["feature_name"]: row for row in payload["feature_rows"]}
+
+    assert payload["summary"]["prototype_variant"] == "gpcr_core_pose_support_gap_shadow_v13"
+    assert constraints["claim_locked_candidate"] is True
+    assert constraints["score_only_candidate"] is True
+    assert constraints["active_score_locked_to_base"] is True
+    assert constraints["requires_v12_gap_packet_review"] is True
+    assert constraints["scorer_apply_allowed"] is False
+    assert constraints["target_identity_feature_allowed"] is False
+    assert constraints["label_feature_allowed"] is False
+    assert constraints["rank_feature_allowed"] is False
+    assert constraints["ligand_id_feature_allowed"] is False
+    assert constraints["reference_binding_value_allowed"] is False
+    assert tuning["variant"] == "gpcr_core_pose_support_gap_shadow_v13"
+    assert tuning["best_baseline_variant"] == "gpcr_core_synthetic_anchor_penalty_shadow_v12"
+    assert linear["enabled"] is True
+    assert {
+        "base_score",
+        "label_free_penalty_pressure",
+        "gpcr_synthetic_anchor_saturation_pressure_v12",
+        "gpcr_moderate_multi_basic_weakbase_support_v12",
+        "gpcr_unsupported_strong_base_pressure_v13",
+        "gpcr_pose_gap_strong_base_pressure_v13",
+        "multipolar_basic_pressure",
+    } == term_features
+    assert term_weights["gpcr_unsupported_strong_base_pressure_v13"] > 0.0
+    assert term_weights["gpcr_pose_gap_strong_base_pressure_v13"] > 0.0
+    assert "gpcr_unsupported_strong_base_pressure_v13" in feature_rows
+    assert "v12_shadow_review_preservation" in feature_rows
+    assert "unsupported_strong_base_score_is_decoy_intrusion_pressure" in payload["prototype"]["interactions"]
+
+
+def test_build_gpcr_residual_prototype_spec_truebase_anchor_occupancy_v14_is_claim_locked(tmp_path: Path) -> None:
+    out_json = tmp_path / "prototype_truebase_anchor_occupancy_v14.json"
+    out_csv = tmp_path / "prototype_truebase_anchor_occupancy_v14.csv"
+    out_md = tmp_path / "prototype_truebase_anchor_occupancy_v14.md"
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools/build_gpcr_residual_prototype_spec.py"),
+            "--variant",
+            "gpcr_core_truebase_anchor_occupancy_shadow_v14",
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=ROOT,
+    )
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    constraints = payload["prototype"]["constraints"]
+    tuning = payload["prototype"]["tuning"]
+    linear = payload["prototype"]["linear_rescore"]
+    term_features = {term["feature"] for term in linear["terms"]}
+    term_weights = {term["feature"]: term["weight"] for term in linear["terms"]}
+    feature_rows = {row["feature_name"]: row for row in payload["feature_rows"]}
+
+    assert payload["summary"]["prototype_variant"] == "gpcr_core_truebase_anchor_occupancy_shadow_v14"
+    assert constraints["claim_locked_candidate"] is True
+    assert constraints["score_only_candidate"] is True
+    assert constraints["active_score_locked_to_base"] is True
+    assert constraints["requires_true_base_score_cache"] is True
+    assert constraints["requires_v13_gap_packet_review"] is True
+    assert constraints["scorer_apply_allowed"] is False
+    assert constraints["target_identity_feature_allowed"] is False
+    assert constraints["label_feature_allowed"] is False
+    assert constraints["rank_feature_allowed"] is False
+    assert constraints["ligand_id_feature_allowed"] is False
+    assert constraints["reference_binding_value_allowed"] is False
+    assert tuning["variant"] == "gpcr_core_truebase_anchor_occupancy_shadow_v14"
+    assert tuning["best_baseline_variant"] == "gpcr_core_pose_support_gap_shadow_v13"
+    assert linear["enabled"] is True
+    assert {
+        "base_score",
+        "label_free_penalty_pressure",
+        "gpcr_synthetic_anchor_saturation_pressure_v12",
+        "gpcr_moderate_multi_basic_weakbase_support_v12",
+        "gpcr_truebase_unsupported_strong_base_pressure_v14",
+        "gpcr_truebase_pose_gap_pressure_v14",
+        "gpcr_truebase_backmapping_collapse_pressure_v14",
+        "gpcr_truebase_overclose_artifact_pressure_v14",
+        "gpcr_cationic_anchor_occupancy_support_v14",
+        "multipolar_basic_pressure",
+    } == term_features
+    assert term_weights["gpcr_truebase_unsupported_strong_base_pressure_v14"] > 0.0
+    assert term_weights["gpcr_cationic_anchor_occupancy_support_v14"] < 0.0
+    assert "gpcr_true_base_score_for_gap_v14" in feature_rows
+    assert "gpcr_cationic_anchor_occupancy_support_v14" in feature_rows
+    assert "cached_true_base_score_is_used_for_gap_pressure" in payload["prototype"]["interactions"]
+
+
+def test_build_gpcr_residual_prototype_spec_truebase_gap_penalty_v15_is_claim_locked(tmp_path: Path) -> None:
+    out_json = tmp_path / "prototype_truebase_gap_penalty_v15.json"
+    out_csv = tmp_path / "prototype_truebase_gap_penalty_v15.csv"
+    out_md = tmp_path / "prototype_truebase_gap_penalty_v15.md"
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools/build_gpcr_residual_prototype_spec.py"),
+            "--variant",
+            "gpcr_core_truebase_gap_penalty_shadow_v15",
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=ROOT,
+    )
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    constraints = payload["prototype"]["constraints"]
+    tuning = payload["prototype"]["tuning"]
+    linear = payload["prototype"]["linear_rescore"]
+    term_features = {term["feature"] for term in linear["terms"]}
+    feature_rows = {row["feature_name"]: row for row in payload["feature_rows"]}
+
+    assert payload["summary"]["prototype_variant"] == "gpcr_core_truebase_gap_penalty_shadow_v15"
+    assert constraints["claim_locked_candidate"] is True
+    assert constraints["active_score_locked_to_base"] is True
+    assert constraints["requires_true_base_score_cache"] is True
+    assert constraints["requires_v14_rework_review"] is True
+    assert constraints["scorer_apply_allowed"] is False
+    assert constraints["target_identity_feature_allowed"] is False
+    assert constraints["label_feature_allowed"] is False
+    assert constraints["rank_feature_allowed"] is False
+    assert constraints["ligand_id_feature_allowed"] is False
+    assert constraints["reference_binding_value_allowed"] is False
+    assert tuning["variant"] == "gpcr_core_truebase_gap_penalty_shadow_v15"
+    assert tuning["rejected_predecessor_variant"] == "gpcr_core_truebase_anchor_occupancy_shadow_v14"
+    assert "gpcr_cationic_anchor_occupancy_support_v14" not in term_features
+    assert "gpcr_truebase_unsupported_strong_base_pressure_v15" in term_features
+    assert "gpcr_truebase_pose_gap_pressure_v15" in term_features
+    assert "gpcr_cationic_anchor_occupancy_support_v14" in feature_rows
+    assert feature_rows["gpcr_cationic_anchor_occupancy_support_v14"]["direction"] == (
+        "diagnostic_only_not_used_as_reward_in_v15"
+    )
+    assert "cationic_center_occupancy_is_diagnostic_only_not_reward" in payload["prototype"]["interactions"]
+
+
+def test_build_gpcr_residual_prototype_spec_false_support_discriminator_v16_is_claim_locked(
+    tmp_path: Path,
+) -> None:
+    out_json = tmp_path / "prototype_false_support_discriminator_v16.json"
+    out_csv = tmp_path / "prototype_false_support_discriminator_v16.csv"
+    out_md = tmp_path / "prototype_false_support_discriminator_v16.md"
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools/build_gpcr_residual_prototype_spec.py"),
+            "--variant",
+            "gpcr_core_false_support_discriminator_shadow_v16",
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=ROOT,
+    )
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    constraints = payload["prototype"]["constraints"]
+    tuning = payload["prototype"]["tuning"]
+    linear = payload["prototype"]["linear_rescore"]
+    term_features = {term["feature"] for term in linear["terms"]}
+    feature_rows = {row["feature_name"]: row for row in payload["feature_rows"]}
+
+    assert payload["summary"]["prototype_variant"] == "gpcr_core_false_support_discriminator_shadow_v16"
+    assert constraints["claim_locked_candidate"] is True
+    assert constraints["active_score_locked_to_base"] is True
+    assert constraints["requires_true_base_score_cache"] is True
+    assert constraints["requires_v15_gap_packet_review"] is True
+    assert constraints["scorer_apply_allowed"] is False
+    assert constraints["target_identity_feature_allowed"] is False
+    assert constraints["label_feature_allowed"] is False
+    assert constraints["rank_feature_allowed"] is False
+    assert constraints["ligand_id_feature_allowed"] is False
+    assert constraints["reference_binding_value_allowed"] is False
+    assert tuning["variant"] == "gpcr_core_false_support_discriminator_shadow_v16"
+    assert tuning["best_baseline_variant"] == "gpcr_core_truebase_gap_penalty_shadow_v15"
+    assert "gpcr_false_support_saturation_pressure_v16" in term_features
+    assert "gpcr_nonbasic_truebase_noanchor_pressure_v16" in term_features
+    assert "gpcr_basic_collapse_truebase_noanchor_pressure_v16" in term_features
+    assert "gpcr_false_support_saturation_pressure_v16" in feature_rows
+    assert "gpcr_nonbasic_truebase_noanchor_pressure_v16" in feature_rows
+    assert "false_support_saturation_is_penalty_not_reward" in payload["prototype"]["interactions"]
+
+
 def test_build_gpcr_residual_prototype_spec_mismatch_contact_rescore_v1_is_guarded(tmp_path: Path) -> None:
     out_json = tmp_path / "prototype_mismatch_contact.json"
     out_csv = tmp_path / "prototype_mismatch_contact.csv"

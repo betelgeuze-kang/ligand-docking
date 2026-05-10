@@ -2,558 +2,361 @@
 from __future__ import annotations
 
 import argparse
-import csv
 import datetime as dt
+import glob
 import json
 from pathlib import Path
 from typing import Any
 
+from tools.lib.artifacts import artifact as _artifact
+from tools.lib.artifacts import resolve as _resolve
+from tools.lib.artifacts import write_csv as _write_csv
+from tools.lib.artifacts import write_json as _write_json
 
-ROOT = Path(__file__).resolve().parents[1]
-
-DEFAULT_CI_PACKET_JSON = "runs/gpcr_ci_low_recovery_packet_current.json"
-DEFAULT_RANK_DIAGNOSTICS_JSON = "runs/gpcr_core_rank_diagnostics_current.json"
-DEFAULT_STAGE5_ROWS_CSV = "runs/external_validation_2026-05-03_r1_set1_core_blind_gpcr_core_full_p0_n100000_r1_stage5_ranking_rows.csv"
-DEFAULT_STAGE5_SUMMARY_JSON = "runs/external_validation_2026-05-03_r1_set1_core_blind_gpcr_core_full_p0_n100000_r1_stage5_ranking_summary.json"
-DEFAULT_REFERENCE_CSV = "config/ligand_binding_reference_blind_gpcr_adrb2_chembl50_v1.csv"
-DEFAULT_SPLITS_CSV = "config/ligand_eval_splits_blind_gpcr_adrb2_chembl50_v1.csv"
+DEFAULT_RAW_DIR = "runs/life_science_gpcr_coverage_expansion_current"
 DEFAULT_OUT_JSON = "runs/gpcr_positive_coverage_expansion_packet_current.json"
 DEFAULT_OUT_MD = "runs/gpcr_positive_coverage_expansion_packet_current.md"
+DEFAULT_OUT_CSV = "runs/gpcr_positive_coverage_expansion_candidates_current.csv"
 
-MINIMUM_FROZEN_POSITIVE_COUNT = 9
-DEFAULT_REQUIRED_ADDITIONS = 3
+TARGET_SPECS = [
+    {
+        "target": "CHEMBL234_DRD3_HUMAN",
+        "target_chembl_id": "CHEMBL234",
+        "pref_name": "D(3) dopamine receptor",
+        "uniprot_accession": "P35462",
+        "activity_raw": "chembl_activity_CHEMBL234_high_ki_raw.json",
+        "molecule_raw": "chembl_molecule_CHEMBL5841759_raw.json",
+        "uniprot_raw": "uniprot_P35462_raw.json",
+        "alphafold_raw": "alphafold_prediction_P35462_raw.json",
+        "rcsb_search_raw": "rcsb_search_P35462_raw.json",
+        "pubchem_raw": "pubchem_CHEMBL5841759_properties_raw.json",
+    },
+    {
+        "target": "CHEMBL251_ADORA2A_HUMAN",
+        "target_chembl_id": "CHEMBL251",
+        "pref_name": "Adenosine receptor A2a",
+        "uniprot_accession": "P29274",
+        "activity_raw": "chembl_activity_CHEMBL251_high_ki_raw.json",
+        "molecule_raw": "chembl_molecule_CHEMBL2419139_raw.json",
+        "uniprot_raw": "uniprot_P29274_raw.json",
+        "alphafold_raw": "alphafold_prediction_P29274_raw.json",
+        "rcsb_search_raw": "rcsb_search_P29274_raw.json",
+        "pubchem_raw": "pubchem_CHEMBL2419139_properties_raw.json",
+    },
+    {
+        "target": "CHEMBL231_HRH1_HUMAN",
+        "target_chembl_id": "CHEMBL231",
+        "pref_name": "Histamine H1 receptor",
+        "uniprot_accession": "P35367",
+        "activity_raw": "chembl_activity_CHEMBL231_high_ki_raw.json",
+        "molecule_raw": "chembl_molecule_CHEMBL1626_raw.json",
+        "uniprot_raw": "uniprot_P35367_raw.json",
+        "alphafold_raw": "alphafold_prediction_P35367_raw.json",
+        "rcsb_search_raw": "rcsb_search_P35367_raw.json",
+        "pubchem_raw": "pubchem_CHEMBL1626_properties_raw.json",
+    },
+    {
+        "target": "CHEMBL236_OPRD1_HUMAN",
+        "target_chembl_id": "CHEMBL236",
+        "pref_name": "Delta-type opioid receptor",
+        "uniprot_accession": "P41143",
+        "activity_raw": "chembl_activity_CHEMBL236_high_ki_raw.json",
+        "molecule_raw": "chembl_molecule_CHEMBL67192_raw.json",
+        "uniprot_raw": "uniprot_P41143_raw.json",
+        "alphafold_raw": "alphafold_prediction_P41143_raw.json",
+        "rcsb_search_raw": "rcsb_search_P41143_raw.json",
+        "pubchem_raw": "pubchem_CHEMBL67192_properties_raw.json",
+    },
+]
 
 
-def _resolve(path_like: str | Path | None) -> Path | None:
-    if path_like is None or str(path_like).strip() == "":
-        return None
-    path = Path(path_like)
-    return path.resolve() if path.is_absolute() else (ROOT / path).resolve()
-
-
-def _read_json(path: Path | None) -> dict[str, Any]:
-    if path is None or not path.exists():
+def _read_json(path: Path) -> dict[str, Any]:
+    if not path.exists():
         return {}
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return {}
+    if isinstance(payload, list):
+        return {"$": payload}
     return payload if isinstance(payload, dict) else {}
-
-
-def _read_csv(path: Path | None) -> list[dict[str, str]]:
-    if path is None or not path.exists():
-        return []
-    with path.open("r", encoding="utf-8", newline="") as fh:
-        return [dict(row) for row in csv.DictReader(fh)]
-
-
-def _write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-
-
-def _write_md(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
 
 
 def _text(value: Any) -> str:
     return str(value or "").strip()
 
 
-def _as_int(value: Any, default: int = 0) -> int:
+def _float(value: Any) -> float | None:
     try:
         if value is None or str(value).strip() == "":
-            return default
-        return int(float(value))
-    except (TypeError, ValueError):
-        return default
-
-
-def _as_float(value: Any, default: float = 0.0) -> float:
-    try:
-        if value is None or str(value).strip() == "":
-            return default
+            return None
         return float(value)
     except (TypeError, ValueError):
-        return default
+        return None
 
 
-def _as_bool(value: Any) -> bool:
-    if isinstance(value, bool):
-        return value
-    return _text(value).lower() in {"1", "true", "yes", "y", "pass", "passed", "green", "frozen"}
-
-
-def _is_positive(row: dict[str, Any]) -> bool:
-    return _text(row.get("is_binder")).lower() in {"1", "true", "t", "yes", "y"}
-
-
-def _coverage_requirement(ci_packet: dict[str, Any]) -> dict[str, Any]:
-    requirement = ci_packet.get("claim_coverage_requirement")
-    if not isinstance(requirement, dict):
-        requirement = {}
-    summary = ci_packet.get("summary") if isinstance(ci_packet.get("summary"), dict) else {}
-    observed = _as_int(
-        requirement.get("observed_positive_count", summary.get("ranking_positive_count")),
-        default=0,
-    )
-    minimum = _as_int(requirement.get("minimum_positive_count_for_claim"), default=MINIMUM_FROZEN_POSITIVE_COUNT)
-    gap = max(_as_int(requirement.get("positive_coverage_gap"), default=minimum - observed), DEFAULT_REQUIRED_ADDITIONS)
-    return {
-        "observed_positive_count": int(observed),
-        "minimum_positive_count_for_frozen_packet": int(max(minimum, MINIMUM_FROZEN_POSITIVE_COUNT)),
-        "minimum_non_leaky_positive_additions": int(gap),
-        "non_leaky_positive_requirement": (
-            f"add at least {gap} GPCR positives with zero fit/eval leakage and no target-specific shortcut"
-        ),
-        "source_requirement": "curated target/ligand rows must pass leakage audit before freezing",
-    }
-
-
-def _required_positive_rows(count: int) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    for idx in range(1, count + 1):
-        rows.append(
-            {
-                "slot": int(idx),
-                "row_classification": "possible_target_ligand_row",
-                "family": "gpcr",
-                "target": "",
-                "ligand_id": "",
-                "required_label": "positive",
-                "status": "needs_curated_non_leaky_source",
-                "leakage_precheck_required": True,
-                "required_checks": [
-                    "target not present in fit roles",
-                    "ligand/scaffold not present in fit roles",
-                    "family-held-out assignment recorded",
-                    "native/reference path available for positive coverage check",
-                ],
-            }
-        )
-    return rows
-
-
-def _split_role_map(split_rows: list[dict[str, str]]) -> dict[tuple[str, str], str]:
-    roles: dict[tuple[str, str], str] = {}
-    for row in split_rows:
-        key = (_text(row.get("target")), _text(row.get("ligand_id")))
-        if key[0] and key[1]:
-            roles[key] = _text(row.get("role"))
-    return roles
-
-
-def _reference_candidate_rows(
-    *,
-    reference_rows: list[dict[str, str]],
-    split_rows: list[dict[str, str]],
-    stage5_rows: list[dict[str, str]],
-) -> list[dict[str, Any]]:
-    existing_positive_keys = {
-        (_text(row.get("target")), _text(row.get("ligand_id")))
-        for row in stage5_rows
-        if _is_positive(row)
-    }
-    existing_fit_ligands = {
-        _text(row.get("ligand_id"))
-        for row in reference_rows
-        if _text(row.get("target")) != "ADRB2_GPCR_BLIND" and _text(row.get("ligand_id"))
-    }
-    roles = _split_role_map(split_rows)
-    candidates: list[dict[str, Any]] = []
-    for row in reference_rows:
-        target = _text(row.get("target"))
-        ligand_id = _text(row.get("ligand_id"))
-        if not target or not ligand_id or not _is_positive(row):
-            continue
-        if (target, ligand_id) in existing_positive_keys:
-            continue
-        if "GPCR" not in target.upper():
-            continue
-        role = roles.get((target, ligand_id), _text(row.get("role")) or "unknown")
-        risk_flags: list[str] = []
-        if target == "ADRB2_GPCR_BLIND":
-            risk_flags.append("target_specific_adrb2_bias_review_required")
-        if ligand_id in existing_fit_ligands:
-            risk_flags.append("ligand_seen_in_fit_role")
-        if role != "far_ood_eval":
-            risk_flags.append("not_far_ood_eval_role")
-        candidates.append(
-            {
-                "row_classification": "possible_target_ligand_row",
-                "target": target,
-                "ligand_id": ligand_id,
-                "role": role,
-                "reference_binding_kcal_mol": row.get("reference_binding_kcal_mol"),
-                "source": _text(row.get("source")),
-                "is_binder": 1,
-                "leakage_precheck_required": True,
-                "family_held_out_required": True,
-                "claim_policy": "coverage_candidate_only_not_router_or_platform_claim",
-                "risk_flags": risk_flags,
-                "risk_status": "review_required" if risk_flags else "candidate_after_leakage_audit",
-            }
-        )
-    return candidates
-
-
-def _selected_candidate_rows(
-    *,
-    candidate_rows: list[dict[str, Any]],
-    required_count: int,
-) -> list[dict[str, Any]]:
-    sorted_rows = sorted(
-        candidate_rows,
+def _top_activity(activity_payload: dict[str, Any]) -> dict[str, Any]:
+    rows = activity_payload.get("activities", [])
+    if not isinstance(rows, list):
+        rows = []
+    candidates = [row for row in rows if isinstance(row, dict) and _text(row.get("molecule_chembl_id"))]
+    candidates.sort(
         key=lambda row: (
-            1 if row.get("risk_flags") else 0,
-            _as_float(row.get("reference_binding_kcal_mol"), 999999.0),
-            _text(row.get("target")),
-            _text(row.get("ligand_id")),
-        ),
+            -(_float(row.get("pchembl_value")) or -1.0),
+            _float(row.get("standard_value")) if _float(row.get("standard_value")) is not None else 10**9,
+            _text(row.get("molecule_chembl_id")),
+        )
     )
-    return [dict(row, slot=idx) for idx, row in enumerate(sorted_rows[:required_count], start=1)]
+    return candidates[0] if candidates else {}
 
 
-def _positive_targets_from_rows(stage5_rows: list[dict[str, str]]) -> dict[str, int]:
-    counts: dict[str, int] = {}
-    for row in stage5_rows:
-        if not _is_positive(row):
-            continue
-        target = _text(row.get("target")) or "unknown"
-        counts[target] = counts.get(target, 0) + 1
-    return dict(sorted(counts.items()))
-
-
-def _diagnostic_target_counts(rank_diagnostics: dict[str, Any]) -> dict[str, int]:
-    counts: dict[str, int] = {}
-    candidates = rank_diagnostics.get("candidates")
-    if not isinstance(candidates, list):
-        return counts
-    for candidate in candidates:
-        if not isinstance(candidate, dict):
-            continue
-        top20 = candidate.get("top20_composition") if isinstance(candidate.get("top20_composition"), dict) else {}
-        target_counts = top20.get("target_counts") if isinstance(top20.get("target_counts"), dict) else {}
-        for target, count in target_counts.items():
-            target_text = _text(target) or "unknown"
-            counts[target_text] = counts.get(target_text, 0) + _as_int(count)
-    return dict(sorted(counts.items()))
-
-
-def _risk_rows(
-    *,
-    coverage: dict[str, Any],
-    rank_diagnostics: dict[str, Any],
-    stage5_rows: list[dict[str, str]],
-) -> list[dict[str, Any]]:
-    positive_targets = _positive_targets_from_rows(stage5_rows)
-    diagnostic_targets = _diagnostic_target_counts(rank_diagnostics)
-    target_counts = positive_targets or diagnostic_targets
-    rows: list[dict[str, Any]] = []
-    if len(target_counts) <= 1:
-        rows.append(
-            {
-                "row_classification": "leakage_or_target_specific_bias_risk_row",
-                "risk_type": "single_target_positive_coverage",
-                "severity": "blocking_for_router_platform_claim",
-                "observed_positive_count": coverage["observed_positive_count"],
-                "target_counts": target_counts,
-                "mitigation": "freeze only after adding non-leaky positives spanning held-out GPCR family/target evidence",
-            }
-        )
-    if coverage["observed_positive_count"] < coverage["minimum_positive_count_for_frozen_packet"]:
-        rows.append(
-            {
-                "row_classification": "leakage_or_target_specific_bias_risk_row",
-                "risk_type": "positive_count_below_frozen_minimum",
-                "severity": "blocking_for_full_100k_guarded_rerun",
-                "observed_positive_count": coverage["observed_positive_count"],
-                "required_positive_count": coverage["minimum_positive_count_for_frozen_packet"],
-                "mitigation": "do not mark full-100k eligibility until a frozen packet reaches positive_count >= 9",
-            }
-        )
-    return rows
-
-
-def _family_held_out_gate(family_scorecard: dict[str, Any]) -> dict[str, Any]:
-    summary = family_scorecard.get("summary") if isinstance(family_scorecard.get("summary"), dict) else {}
-    green = summary.get("scorecard_level_status") == "pass" and summary.get("acceptance_overall_pass") is not False
+def _molecule_summary(molecule_payload: dict[str, Any]) -> dict[str, Any]:
+    structures = molecule_payload.get("molecule_structures", {})
+    if not isinstance(structures, dict):
+        structures = {}
+    props = molecule_payload.get("molecule_properties", {})
+    if not isinstance(props, dict):
+        props = {}
     return {
-        "required_before_router_platform_claim": True,
-        "status": "green" if green else "missing_or_not_green",
-        "scorecard_level_status": summary.get("scorecard_level_status"),
-        "acceptance_overall_pass": summary.get("acceptance_overall_pass"),
-        "router_platform_claim_allowed": False,
-        "policy": "router/platform claim remains forbidden until family-held-out scorecard is green; this packet never flips claim_promotion_allowed",
+        "pref_name": molecule_payload.get("pref_name"),
+        "canonical_smiles": structures.get("canonical_smiles"),
+        "standard_inchi_key": structures.get("standard_inchi_key"),
+        "full_mwt": _float(props.get("full_mwt")),
+        "alogp": _float(props.get("alogp")),
+        "hba": _float(props.get("hba")),
+        "hbd": _float(props.get("hbd")),
+        "max_phase": molecule_payload.get("max_phase"),
     }
 
 
-def _frozen_summary(frozen_packet: dict[str, Any]) -> dict[str, Any]:
-    summary = frozen_packet.get("summary") if isinstance(frozen_packet.get("summary"), dict) else {}
-    source = summary if summary else frozen_packet
-    frozen = any(
-        _as_bool(source.get(key))
-        for key in ("frozen", "packet_frozen", "is_frozen", "freeze_complete", "curation_frozen")
-    )
-    positive_count = _as_int(
-        source.get("positive_count", source.get("ranking_positive_count", source.get("observed_positive_count"))),
-        default=0,
-    )
-    return {"frozen": bool(frozen), "positive_count": int(positive_count)}
-
-
-def _full_100k_eligibility(frozen_packet: dict[str, Any], frozen_packet_json: Path | None) -> dict[str, Any]:
-    if frozen_packet_json is None or not frozen_packet:
-        return {
-            "eligible": False,
-            "reason": "frozen_packet_missing",
-            "requires_frozen_packet": True,
-            "minimum_positive_count": MINIMUM_FROZEN_POSITIVE_COUNT,
-            "frozen_packet_json": str(frozen_packet_json) if frozen_packet_json else None,
-            "frozen": False,
-            "positive_count": 0,
-        }
-    frozen = _frozen_summary(frozen_packet)
-    if not frozen["frozen"]:
-        reason = "packet_not_frozen"
-        eligible = False
-    elif frozen["positive_count"] < MINIMUM_FROZEN_POSITIVE_COUNT:
-        reason = "positive_count_below_9"
-        eligible = False
-    else:
-        reason = "frozen_positive_count_ready"
-        eligible = True
+def _uniprot_summary(uniprot_payload: dict[str, Any]) -> dict[str, Any]:
     return {
-        "eligible": bool(eligible),
-        "reason": reason,
-        "requires_frozen_packet": True,
-        "minimum_positive_count": MINIMUM_FROZEN_POSITIVE_COUNT,
-        "frozen_packet_json": str(frozen_packet_json),
-        "frozen": bool(frozen["frozen"]),
-        "positive_count": int(frozen["positive_count"]),
-        "guardrails": [
-            "guarded rerun only; no threshold relaxation",
-            "family-held-out scorecard still required before router/platform claim",
-            "claim_promotion_allowed remains false in this expansion packet",
-        ],
+        "entry_type": uniprot_payload.get("entryType"),
+        "primary_accession": uniprot_payload.get("primaryAccession"),
+        "uniprot_id": uniprot_payload.get("uniProtkbId"),
+        "reviewed": _text(uniprot_payload.get("entryType")).startswith("UniProtKB reviewed"),
+    }
+
+
+def _record_count(payload: dict[str, Any], key: str) -> int:
+    rows = payload.get(key, [])
+    return len(rows) if isinstance(rows, list) else 0
+
+
+def _rcsb_hits(payload: dict[str, Any]) -> list[str]:
+    rows = payload.get("result_set", [])
+    if not isinstance(rows, list):
+        return []
+    return [_text(row.get("identifier")) for row in rows if isinstance(row, dict) and _text(row.get("identifier"))]
+
+
+def _pubchem_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    rows = (((payload.get("PropertyTable") or {}) if isinstance(payload.get("PropertyTable"), dict) else {}).get("Properties") or [])
+    row = rows[0] if isinstance(rows, list) and rows and isinstance(rows[0], dict) else {}
+    return {
+        "cid": row.get("CID"),
+        "molecular_formula": row.get("MolecularFormula"),
+        "molecular_weight": _float(row.get("MolecularWeight")),
+        "xlogp": _float(row.get("XLogP")),
+        "hbd": _float(row.get("HBondDonorCount")),
+        "hba": _float(row.get("HBondAcceptorCount")),
+        "rotatable_bond_count": _float(row.get("RotatableBondCount")),
     }
 
 
 def build_packet(
     *,
-    ci_packet_json: Path | str | None = DEFAULT_CI_PACKET_JSON,
-    rank_diagnostics_json: Path | str | None = DEFAULT_RANK_DIAGNOSTICS_JSON,
-    stage5_rows_csv: Path | str | None = DEFAULT_STAGE5_ROWS_CSV,
-    stage5_summary_json: Path | str | None = DEFAULT_STAGE5_SUMMARY_JSON,
-    reference_csv: Path | str | None = DEFAULT_REFERENCE_CSV,
-    splits_csv: Path | str | None = DEFAULT_SPLITS_CSV,
-    family_scorecard_json: Path | str | None = None,
-    frozen_packet_json: Path | str | None = None,
-) -> dict[str, Any]:
-    ci_path = _resolve(ci_packet_json)
-    rank_path = _resolve(rank_diagnostics_json)
-    rows_path = _resolve(stage5_rows_csv)
-    summary_path = _resolve(stage5_summary_json)
-    reference_path = _resolve(reference_csv)
-    splits_path = _resolve(splits_csv)
-    scorecard_path = _resolve(family_scorecard_json)
-    frozen_path = _resolve(frozen_packet_json)
-
-    ci_packet = _read_json(ci_path)
-    rank_diagnostics = _read_json(rank_path)
-    stage5_rows = _read_csv(rows_path)
-    stage5_summary = _read_json(summary_path)
-    reference_rows = _read_csv(reference_path)
-    split_rows = _read_csv(splits_path)
-    family_scorecard = _read_json(scorecard_path)
-    frozen_packet = _read_json(frozen_path)
-
-    coverage = _coverage_requirement(ci_packet)
-    family_gate = _family_held_out_gate(family_scorecard)
-    eligibility = _full_100k_eligibility(frozen_packet, frozen_path)
-    reference_candidates = _reference_candidate_rows(
-        reference_rows=reference_rows,
-        split_rows=split_rows,
-        stage5_rows=stage5_rows,
-    )
-    selected_candidates = _selected_candidate_rows(
-        candidate_rows=reference_candidates,
-        required_count=coverage["minimum_non_leaky_positive_additions"],
-    )
-    risk_rows = _risk_rows(
-        coverage=coverage,
-        rank_diagnostics=rank_diagnostics,
-        stage5_rows=stage5_rows,
-    )
-
-    return {
-        "packet_type": "gpcr_positive_coverage_expansion",
-        "generated_at_local": dt.datetime.now().replace(microsecond=0).isoformat(),
-        "source_artifacts": {
-            "ci_packet_json": str(ci_path) if ci_path else None,
-            "rank_diagnostics_json": str(rank_path) if rank_path else None,
-            "stage5_rows_csv": str(rows_path) if rows_path else None,
-            "stage5_summary_json": str(summary_path) if summary_path else None,
-            "reference_csv": str(reference_path) if reference_path else None,
-            "splits_csv": str(splits_path) if splits_path else None,
-            "family_scorecard_json": str(scorecard_path) if scorecard_path else None,
-            "frozen_packet_json": str(frozen_path) if frozen_path else None,
-        },
-        "summary": {
-            "status": "gpcr_positive_coverage_expansion_packet_ready",
-            "claim_promotion_allowed": False,
-            "router_claim_allowed": False,
-            "platform_claim_allowed": False,
-            "observed_positive_count": coverage["observed_positive_count"],
-            "minimum_positive_count_for_frozen_packet": coverage["minimum_positive_count_for_frozen_packet"],
-            "minimum_non_leaky_positive_additions": coverage["minimum_non_leaky_positive_additions"],
-            "reference_candidate_count": len(reference_candidates),
-            "selected_candidate_count": len(selected_candidates),
-            "risk_row_count": len(risk_rows),
-            "family_held_out_status": family_gate["status"],
-            "full_100k_guarded_rerun_eligible": eligibility["eligible"],
-            "full_100k_guarded_rerun_reason": eligibility["reason"],
-            "next_required_step": "Curate and freeze non-leaky GPCR positive coverage rows, then run family-held-out scorecard before any router/platform claim.",
-        },
-        "claim_boundaries": {
-            "claim_promotion_allowed": False,
-            "router_claim_allowed": False,
-            "platform_claim_allowed": False,
-            "threshold_relaxation_allowed": False,
-            "fake_pass_allowed": False,
-            "claim_boundary_note": "coverage expansion evidence is preparatory only until frozen coverage and family-held-out gates are green",
-        },
-        "coverage_requirement": coverage,
-        "required_positive_addition_rows": _required_positive_rows(
-            coverage["minimum_non_leaky_positive_additions"]
+    raw_dir: str | Path = DEFAULT_RAW_DIR,
+    generated_at_local: str | None = None,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    raw_path = _resolve(raw_dir)
+    rows: list[dict[str, Any]] = []
+    missing_artifacts: list[str] = []
+    for priority, spec in enumerate(TARGET_SPECS, start=1):
+        activity_path = raw_path / str(spec["activity_raw"])
+        molecule_path = raw_path / str(spec["molecule_raw"])
+        uniprot_path = raw_path / str(spec["uniprot_raw"])
+        alphafold_path = raw_path / str(spec["alphafold_raw"])
+        rcsb_path = raw_path / str(spec["rcsb_search_raw"])
+        pubchem_path = raw_path / str(spec["pubchem_raw"])
+        activity_payload = _read_json(activity_path)
+        molecule_payload = _read_json(molecule_path)
+        uniprot_payload = _read_json(uniprot_path)
+        alphafold_payload = _read_json(alphafold_path)
+        rcsb_payload = _read_json(rcsb_path)
+        pubchem_payload = _read_json(pubchem_path)
+        if not activity_payload:
+            missing_artifacts.append(_artifact(activity_path))
+        if not molecule_payload:
+            missing_artifacts.append(_artifact(molecule_path))
+        if not uniprot_payload:
+            missing_artifacts.append(_artifact(uniprot_path))
+        if not alphafold_payload:
+            missing_artifacts.append(_artifact(alphafold_path))
+        if not rcsb_payload:
+            missing_artifacts.append(_artifact(rcsb_path))
+        activity = _top_activity(activity_payload)
+        molecule = _molecule_summary(molecule_payload)
+        uniprot = _uniprot_summary(uniprot_payload)
+        pubchem = _pubchem_summary(pubchem_payload)
+        rcsb_hit_ids = _rcsb_hits(rcsb_payload)
+        alphafold_model_count = _record_count(alphafold_payload, "$") or (
+            len(alphafold_payload) if isinstance(alphafold_payload, list) else 0
+        )
+        molecule_id = _text(activity.get("molecule_chembl_id")) or Path(str(spec["molecule_raw"])).stem.replace(
+            "chembl_molecule_", ""
+        ).replace("_raw", "")
+        pchembl = _float(activity.get("pchembl_value"))
+        standard_value = _float(activity.get("standard_value"))
+        has_activity = pchembl is not None and pchembl >= 8.0
+        has_smiles = bool(molecule.get("canonical_smiles"))
+        has_reviewed_uniprot = bool(uniprot.get("reviewed")) and uniprot.get("primary_accession") == spec["uniprot_accession"]
+        has_structure_source = bool(rcsb_hit_ids or alphafold_model_count > 0)
+        inclusion_decision = (
+            "ready_for_frozen_pipeline_materialization"
+            if has_activity and has_smiles and has_reviewed_uniprot and has_structure_source
+            else "hold_until_activity_smiles_target_or_structure_complete"
+        )
+        structure_source_priority = (
+            "rcsb_experimental_first"
+            if rcsb_hit_ids
+            else "alphafold_model_fallback"
+            if alphafold_model_count > 0
+            else "missing_structure_source"
+        )
+        rows.append(
+            {
+                "priority": priority,
+                "target": spec["target"],
+                "target_chembl_id": spec["target_chembl_id"],
+                "target_pref_name": spec["pref_name"],
+                "uniprot_accession": spec["uniprot_accession"],
+                "candidate_ligand_id": molecule_id,
+                "candidate_ligand_pref_name": molecule.get("pref_name"),
+                "canonical_smiles": molecule.get("canonical_smiles"),
+                "standard_inchi_key": molecule.get("standard_inchi_key"),
+                "pubchem_cid": pubchem.get("cid"),
+                "pubchem_molecular_formula": pubchem.get("molecular_formula"),
+                "uniprot_reviewed": has_reviewed_uniprot,
+                "uniprot_id": uniprot.get("uniprot_id"),
+                "rcsb_hit_count": len(rcsb_hit_ids),
+                "rcsb_first_hit": rcsb_hit_ids[0] if rcsb_hit_ids else None,
+                "alphafold_model_count": alphafold_model_count,
+                "structure_source_priority": structure_source_priority,
+                "chembl_activity_id": activity.get("activity_id"),
+                "chembl_document_id": activity.get("document_chembl_id"),
+                "standard_type": activity.get("standard_type"),
+                "standard_relation": activity.get("standard_relation"),
+                "standard_value_nM": standard_value,
+                "pchembl_value": pchembl,
+                "assay_type": activity.get("assay_type"),
+                "assay_description": activity.get("assay_description"),
+                "activity_raw_artifact": _artifact(activity_path),
+                "molecule_raw_artifact": _artifact(molecule_path),
+                "uniprot_raw_artifact": _artifact(uniprot_path),
+                "alphafold_raw_artifact": _artifact(alphafold_path),
+                "rcsb_search_raw_artifact": _artifact(rcsb_path),
+                "pubchem_raw_artifact": _artifact(pubchem_path) if pubchem_payload else None,
+                "inclusion_decision": inclusion_decision,
+                "required_before_guarded_100k": (
+                    "Generate non-leaky candidate/decoy rows, protein structure or homology input, trajectory/cache "
+                    "features, and split metadata before this row can affect PR-AUC CI-low."
+                ),
+            }
+        )
+    staged = [row for row in rows if row["inclusion_decision"] == "ready_for_frozen_pipeline_materialization"]
+    summary = {
+        "generated_at_local": generated_at_local or dt.datetime.now().astimezone().isoformat(timespec="seconds"),
+        "status": "gpcr_positive_coverage_expansion_candidates_ready_for_materialization",
+        "raw_dir": _artifact(raw_path),
+        "candidate_target_count": len(rows),
+        "ready_positive_candidate_count": len(staged),
+        "staged_positive_candidate_count": len(staged),
+        "current_shadow_positive_count": 3,
+        "projected_positive_count_after_staging": 3 + len(staged),
+        "reviewed_uniprot_candidate_count": sum(1 for row in rows if row["uniprot_reviewed"]),
+        "rcsb_experimental_candidate_count": sum(1 for row in rows if int(row["rcsb_hit_count"] or 0) > 0),
+        "alphafold_candidate_count": sum(1 for row in rows if int(row["alphafold_model_count"] or 0) > 0),
+        "pubchem_property_candidate_count": sum(1 for row in rows if row.get("pubchem_cid")),
+        "current_guarded_shadow_pr_auc_ci_low": 0.325,
+        "required_pr_auc_ci_low": 0.45,
+        "claim_promotion_allowed": False,
+        "scorer_apply_allowed": False,
+        "missing_artifacts": missing_artifacts,
+        "raw_artifact_count": len(glob.glob(str(raw_path / "*.json"))),
+        "next_required_step": (
+            "Materialize these ready positives into the frozen GPCR candidate/decoy pipeline, then rerun the full "
+            "guarded 100k review; do not count this packet as accuracy evidence until trajectories and split metadata exist."
         ),
-        "candidate_target_ligand_rows": reference_candidates,
-        "selected_candidate_target_ligand_rows": selected_candidates,
-        "risk_classification_rows": risk_rows,
-        "family_held_out_gate": family_gate,
-        "full_100k_guarded_rerun_eligibility": eligibility,
-        "stage5_context": {
-            "rows_available": bool(stage5_rows),
-            "row_count": int(len(stage5_rows)),
-            "positive_target_counts": _positive_targets_from_rows(stage5_rows),
-            "summary_available": bool(stage5_summary),
-            "summary_metric_keys": sorted((stage5_summary.get("metrics") or {}).keys())
-            if isinstance(stage5_summary.get("metrics"), dict)
-            else [],
-            "reference_rows_available": bool(reference_rows),
-            "reference_row_count": int(len(reference_rows)),
-        },
-        "next_required_actions": [
-            "curate the required possible_target_ligand rows from non-leaky GPCR evidence",
-            "run leakage audit and reject target/scaffold/family overlap risks",
-            "freeze a positive coverage packet only after positive_count >= 9",
-            "run family-held-out scorecard and keep router/platform claim blocked until green",
-            "only then allow a guarded full-100k rerun; do not relax thresholds or fake pass",
-        ],
     }
+    payload = {
+        "packet_type": "gpcr_positive_coverage_expansion_packet",
+        "summary": summary,
+        "rows": rows,
+        "claim_boundary": {
+            "claim_promotion_allowed": False,
+            "scorer_apply_allowed": False,
+            "target_identity_feature_allowed": False,
+            "threshold_relaxation_allowed": False,
+            "staging_only_not_accuracy_evidence": True,
+        },
+    }
+    return payload, rows
 
 
-def render_markdown(payload: dict[str, Any]) -> str:
-    coverage = payload["coverage_requirement"]
-    family_gate = payload["family_held_out_gate"]
-    eligibility = payload["full_100k_guarded_rerun_eligibility"]
-    candidates = payload.get("selected_candidate_target_ligand_rows", [])
+def _fmt(value: Any) -> str:
+    return "None" if value is None else str(value)
+
+
+def _render_md(payload: dict[str, Any]) -> str:
+    s = payload["summary"]
     lines = [
         "# GPCR Positive Coverage Expansion Packet",
         "",
-        "## Claim Boundary",
-        "- claim_promotion_allowed=false",
-        "- router_claim_allowed=false",
-        "- platform_claim_allowed=false",
-        "- threshold_relaxation_allowed=false",
-        "- fake_pass_allowed=false",
+        f"- status: `{s['status']}`",
+        f"- ready_positive_candidate_count: `{s['ready_positive_candidate_count']}`",
+        f"- projected_positive_count_after_staging: `{s['projected_positive_count_after_staging']}`",
+        f"- rcsb_experimental_candidate_count: `{s['rcsb_experimental_candidate_count']}`",
+        f"- alphafold_candidate_count: `{s['alphafold_candidate_count']}`",
+        f"- pubchem_property_candidate_count: `{s['pubchem_property_candidate_count']}`",
+        f"- current_guarded_shadow_pr_auc_ci_low: `{s['current_guarded_shadow_pr_auc_ci_low']}`",
+        f"- required_pr_auc_ci_low: `{s['required_pr_auc_ci_low']}`",
+        f"- claim_promotion_allowed: `{str(s['claim_promotion_allowed']).lower()}`",
         "",
-        "## Coverage Requirement",
-        f"- observed_positive_count={coverage['observed_positive_count']}",
-        f"- minimum_non_leaky_positive_additions={coverage['minimum_non_leaky_positive_additions']}",
-        f"- minimum_positive_count_for_frozen_packet={coverage['minimum_positive_count_for_frozen_packet']}",
+        "## Candidates",
         "",
-        "## Family-Held-Out Gate",
-        f"- status={family_gate['status']}",
-        "- router/platform claim forbidden until scorecard is green",
-        "",
-        "## Full 100k Guarded Rerun",
-        f"- full_100k_guarded_rerun_eligible={str(eligibility['eligible']).lower()}",
-        f"- reason={eligibility['reason']}",
-        f"- frozen={str(eligibility['frozen']).lower()}",
-        f"- positive_count={eligibility['positive_count']}",
-        "",
-        "## Row Classifications",
-        "| row_classification | count | note |",
-        "| --- | ---: | --- |",
-        (
-            f"| possible_target_ligand_row | {len(payload['required_positive_addition_rows'])} | "
-            "curate and leakage-check before freezing |"
-        ),
-        (
-            f"| leakage_or_target_specific_bias_risk_row | {len(payload['risk_classification_rows'])} | "
-            "blocks router/platform claims |"
-        ),
-        "",
-        "## Selected Candidate Rows",
-        "",
-        "| slot | target | ligand_id | role | risk_status | risk_flags |",
-        "| ---: | --- | --- | --- | --- | --- |",
+        "| Priority | Target | UniProt | Ligand | pChEMBL | Ki nM | RCSB | AF | Decision |",
+        "|---:|---|---|---|---:|---:|---:|---:|---|",
     ]
-    if candidates:
-        for row in candidates:
-            lines.append(
-                "| {slot} | `{target}` | `{ligand}` | `{role}` | `{risk_status}` | {risk_flags} |".format(
-                    slot=row.get("slot"),
-                    target=row.get("target"),
-                    ligand=row.get("ligand_id"),
-                    role=row.get("role"),
-                    risk_status=row.get("risk_status"),
-                    risk_flags=", ".join(row.get("risk_flags", []) or []),
-                )
-            )
-    else:
-        lines.append("|  |  |  |  | `none_found` |  |")
-    lines.append("")
+    for row in payload["rows"]:
+        lines.append(
+            f"| {row['priority']} | `{row['target']}` | `{row['uniprot_accession']}` | "
+            f"`{row['candidate_ligand_id']}` | {_fmt(row['pchembl_value'])} | "
+            f"{_fmt(row['standard_value_nM'])} | {row['rcsb_hit_count']} | {row['alphafold_model_count']} | "
+            f"`{row['inclusion_decision']}` |"
+        )
+    lines.extend(["", "## Next Required Step", "", s["next_required_step"], ""])
     return "\n".join(lines)
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--ci-packet-json", default=DEFAULT_CI_PACKET_JSON)
-    parser.add_argument("--rank-diagnostics-json", default=DEFAULT_RANK_DIAGNOSTICS_JSON)
-    parser.add_argument("--stage5-rows-csv", default=DEFAULT_STAGE5_ROWS_CSV)
-    parser.add_argument("--stage5-summary-json", default=DEFAULT_STAGE5_SUMMARY_JSON)
-    parser.add_argument("--reference-csv", default=DEFAULT_REFERENCE_CSV)
-    parser.add_argument("--splits-csv", default=DEFAULT_SPLITS_CSV)
-    parser.add_argument("--family-scorecard-json", default="")
-    parser.add_argument("--frozen-packet-json", default="")
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Build staged GPCR positive coverage expansion candidates.")
+    parser.add_argument("--raw-dir", default=DEFAULT_RAW_DIR)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
-    return parser.parse_args()
+    parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
+    return parser.parse_args(argv)
 
 
-def main() -> None:
-    args = parse_args()
-    payload = build_packet(
-        ci_packet_json=args.ci_packet_json,
-        rank_diagnostics_json=args.rank_diagnostics_json,
-        stage5_rows_csv=args.stage5_rows_csv,
-        stage5_summary_json=args.stage5_summary_json,
-        reference_csv=args.reference_csv,
-        splits_csv=args.splits_csv,
-        family_scorecard_json=args.family_scorecard_json,
-        frozen_packet_json=args.frozen_packet_json,
-    )
-    out_json = _resolve(args.out_json)
+def main(argv: list[str] | None = None) -> None:
+    args = parse_args(argv)
+    payload, rows = build_packet(raw_dir=args.raw_dir)
+    _write_json(args.out_json, payload)
+    _write_csv(args.out_csv, rows)
     out_md = _resolve(args.out_md)
-    assert out_json is not None
-    assert out_md is not None
-    _write_json(out_json, payload)
-    _write_md(out_md, render_markdown(payload))
-    print(json.dumps({"out_json": str(out_json), "out_md": str(out_md)}, indent=2))
+    out_md.parent.mkdir(parents=True, exist_ok=True)
+    out_md.write_text(_render_md(payload), encoding="utf-8")
+    print(json.dumps(payload["summary"], indent=2, ensure_ascii=False, sort_keys=True))
 
 
 if __name__ == "__main__":

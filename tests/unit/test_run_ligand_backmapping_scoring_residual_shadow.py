@@ -1651,3 +1651,585 @@ def test_apply_residual_prototype_shadow_cationic_weakbase_v11_suppresses_strong
         out_df["binding_score_composite_v7_residual_active"].to_numpy(dtype=float),
         out_df["binding_score_composite_v7"].to_numpy(dtype=float),
     )
+
+
+def test_apply_residual_prototype_shadow_synthetic_anchor_v12_penalizes_saturation_and_rewards_moderate_support(
+    tmp_path,
+):
+    spec_json = tmp_path / "synthetic_anchor_shadow_v12.json"
+    spec_json.write_text(
+        json.dumps(
+            {
+                "prototype": {
+                    "constraints": {
+                        "claim_locked_candidate": True,
+                        "shadow_only_candidate": True,
+                        "score_only_candidate": True,
+                        "active_score_locked_to_base": True,
+                        "requires_synthetic_anchor_saturation_pressure": True,
+                        "scorer_apply_allowed": False,
+                    },
+                    "tuning": {
+                        "variant": "gpcr_core_synthetic_anchor_penalty_shadow_v12",
+                        "scope": "class_a_aminergic_opioid_like_orthosteric_sublane",
+                    },
+                    "linear_rescore": {
+                        "enabled": True,
+                        "combine_mode": "replace",
+                        "intercept": 0.0,
+                        "terms": [
+                            {"feature": "base_score", "weight": 1.0},
+                            {"feature": "label_free_penalty_pressure", "weight": 4.0},
+                            {"feature": "gpcr_synthetic_anchor_saturation_pressure_v12", "weight": 8.0},
+                            {"feature": "gpcr_moderate_multi_basic_weakbase_support_v12", "weight": -20.0},
+                        ],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    result_df = pd.DataFrame(
+        [
+            {
+                "ligand_id": "moderate_multi_basic_positive_like",
+                "target": "DRD2",
+                "ligand_smiles": "CCCNCCCC1=CC=CC=C1",
+                "binding_score_composite_v7": -1.0,
+                "base_score": -0.5,
+                "label_free_anchor_mode": "all_basic",
+                "label_free_penalty_pressure": 0.0,
+                "label_free_support_pressure": 0.65,
+                "weak_base_rescue_support_pressure": 0.60,
+                "basic_amine_count": 2,
+                "coarse_centroid_preservation_rmsd_A_mean": 0.90,
+            },
+            {
+                "ligand_id": "saturated_synthetic_decoy",
+                "target": "DRD2",
+                "ligand_smiles": "CCCNCCCC1=CC=CC=C1",
+                "binding_score_composite_v7": -2.0,
+                "base_score": -2.0,
+                "label_free_anchor_mode": "all_basic",
+                "label_free_penalty_pressure": 0.0,
+                "label_free_support_pressure": 1.0,
+                "weak_base_rescue_support_pressure": 1.0,
+                "basic_amine_count": 1,
+                "coarse_centroid_preservation_rmsd_A_mean": 0.30,
+            },
+        ]
+    )
+
+    out_df, meta = mod._apply_residual_prototype_shadow(
+        result_df.copy(),
+        _shadow_args(
+            residual_prototype_mode="apply",
+            residual_prototype_spec_json=str(spec_json),
+        ),
+        z_e=pd.Series([0.0, 0.0], dtype=float),
+        z_d=pd.Series([0.0, 0.0], dtype=float),
+        z_s=pd.Series([0.0, 0.0], dtype=float),
+        z_c=pd.Series([0.0, 0.0], dtype=float),
+        z_aff=pd.Series([0.0, 0.0], dtype=float),
+        z_logp=pd.Series([0.0, 0.0], dtype=float),
+        z_rot=pd.Series([0.0, 0.0], dtype=float),
+        z_hd=pd.Series([0.0, 0.0], dtype=float),
+        z_ha=pd.Series([0.0, 0.0], dtype=float),
+    )
+
+    assert meta["tuning_variant"] == "gpcr_core_synthetic_anchor_penalty_shadow_v12"
+    assert meta["shadow_only_active_locked"] is True
+    assert out_df.loc[0, "gpcr_moderate_multi_basic_weakbase_support_v12"] > 0.0
+    assert out_df.loc[1, "gpcr_synthetic_anchor_saturation_pressure_v12"] > 0.0
+    assert out_df.loc[0, "binding_score_composite_v7_residual_shadow"] < out_df.loc[0, "base_score"]
+    assert out_df.loc[1, "binding_score_composite_v7_residual_shadow"] > out_df.loc[1, "base_score"]
+    np.testing.assert_allclose(
+        out_df["binding_score_composite_v7_residual_active"].to_numpy(dtype=float),
+        out_df["binding_score_composite_v7"].to_numpy(dtype=float),
+    )
+
+
+def test_apply_residual_prototype_shadow_pose_support_gap_v13_penalizes_unsupported_strong_base_rows(
+    tmp_path,
+):
+    spec_json = tmp_path / "pose_support_gap_shadow_v13.json"
+    spec_json.write_text(
+        json.dumps(
+            {
+                "prototype": {
+                    "constraints": {
+                        "claim_locked_candidate": True,
+                        "shadow_only_candidate": True,
+                        "score_only_candidate": True,
+                        "active_score_locked_to_base": True,
+                        "requires_v12_gap_packet_review": True,
+                        "scorer_apply_allowed": False,
+                    },
+                    "tuning": {
+                        "variant": "gpcr_core_pose_support_gap_shadow_v13",
+                        "scope": "class_a_aminergic_opioid_like_orthosteric_sublane",
+                    },
+                    "linear_rescore": {
+                        "enabled": True,
+                        "combine_mode": "replace",
+                        "intercept": 0.0,
+                        "terms": [
+                            {"feature": "base_score", "weight": 1.0},
+                            {"feature": "label_free_penalty_pressure", "weight": 4.0},
+                            {"feature": "gpcr_synthetic_anchor_saturation_pressure_v12", "weight": 8.0},
+                            {"feature": "gpcr_moderate_multi_basic_weakbase_support_v12", "weight": -20.0},
+                            {"feature": "gpcr_unsupported_strong_base_pressure_v13", "weight": 28.0},
+                            {"feature": "gpcr_pose_gap_strong_base_pressure_v13", "weight": 12.0},
+                            {"feature": "multipolar_basic_pressure", "weight": 4.0},
+                        ],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    result_df = pd.DataFrame(
+        [
+            {
+                "ligand_id": "unsupported_strong_base_decoy",
+                "target": "HTR2A",
+                "ligand_smiles": "CCN1CCCC1",
+                "binding_score_composite_v7": -8.0,
+                "base_score": -8.0,
+                "label_free_anchor_mode": "all_basic",
+                "label_free_penalty_pressure": 0.0,
+                "label_free_support_pressure": 0.0,
+                "weak_base_rescue_support_pressure": 0.0,
+                "basic_amine_count": 1,
+                "pose_preservation_support": 0.0,
+                "coarse_centroid_preservation_rmsd_A_mean": 8.0,
+                "multipolar_basic_pressure": 0.25,
+            },
+            {
+                "ligand_id": "weak_base_unsupported_positive_like",
+                "target": "HTR2A",
+                "ligand_smiles": "CCN1CCCC1",
+                "binding_score_composite_v7": -4.5,
+                "base_score": -4.5,
+                "label_free_anchor_mode": "all_basic",
+                "label_free_penalty_pressure": 0.0,
+                "label_free_support_pressure": 0.0,
+                "weak_base_rescue_support_pressure": 0.0,
+                "basic_amine_count": 1,
+                "pose_preservation_support": 0.0,
+                "coarse_centroid_preservation_rmsd_A_mean": 8.0,
+                "multipolar_basic_pressure": 0.0,
+            },
+            {
+                "ligand_id": "moderate_supported_drd2_like",
+                "target": "DRD2",
+                "ligand_smiles": "CCCNCCCC1=CC=CC=C1",
+                "binding_score_composite_v7": -1.0,
+                "base_score": -0.5,
+                "label_free_anchor_mode": "all_basic",
+                "label_free_penalty_pressure": 0.0,
+                "label_free_support_pressure": 0.65,
+                "weak_base_rescue_support_pressure": 0.60,
+                "basic_amine_count": 2,
+                "pose_preservation_support": 1.0,
+                "coarse_centroid_preservation_rmsd_A_mean": 0.90,
+                "multipolar_basic_pressure": 0.0,
+            },
+        ]
+    )
+
+    out_df, meta = mod._apply_residual_prototype_shadow(
+        result_df.copy(),
+        _shadow_args(
+            residual_prototype_mode="apply",
+            residual_prototype_spec_json=str(spec_json),
+        ),
+        z_e=pd.Series([0.0, 0.0, 0.0], dtype=float),
+        z_d=pd.Series([0.0, 0.0, 0.0], dtype=float),
+        z_s=pd.Series([0.0, 0.0, 0.0], dtype=float),
+        z_c=pd.Series([0.0, 0.0, 0.0], dtype=float),
+        z_aff=pd.Series([0.0, 0.0, 0.0], dtype=float),
+        z_logp=pd.Series([0.0, 0.0, 0.0], dtype=float),
+        z_rot=pd.Series([0.0, 0.0, 0.0], dtype=float),
+        z_hd=pd.Series([0.0, 0.0, 0.0], dtype=float),
+        z_ha=pd.Series([0.0, 0.0, 0.0], dtype=float),
+    )
+
+    assert meta["tuning_variant"] == "gpcr_core_pose_support_gap_shadow_v13"
+    assert meta["shadow_only_active_locked"] is True
+    assert out_df.loc[0, "gpcr_unsupported_strong_base_pressure_v13"] > 0.0
+    assert out_df.loc[0, "gpcr_pose_gap_strong_base_pressure_v13"] > 0.0
+    assert out_df.loc[1, "gpcr_unsupported_strong_base_pressure_v13"] == 0.0
+    assert out_df.loc[0, "binding_score_composite_v7_residual_shadow"] > out_df.loc[0, "base_score"]
+    assert out_df.loc[2, "binding_score_composite_v7_residual_shadow"] < out_df.loc[2, "base_score"]
+    np.testing.assert_allclose(
+        out_df["binding_score_composite_v7_residual_active"].to_numpy(dtype=float),
+        out_df["binding_score_composite_v7"].to_numpy(dtype=float),
+    )
+
+
+def test_apply_residual_prototype_shadow_truebase_anchor_occupancy_v14_uses_cached_base_score(
+    tmp_path,
+):
+    spec_json = tmp_path / "truebase_anchor_occupancy_shadow_v14.json"
+    spec_json.write_text(
+        json.dumps(
+            {
+                "prototype": {
+                    "constraints": {
+                        "claim_locked_candidate": True,
+                        "shadow_only_candidate": True,
+                        "score_only_candidate": True,
+                        "active_score_locked_to_base": True,
+                        "requires_true_base_score_cache": True,
+                        "requires_v13_gap_packet_review": True,
+                        "scorer_apply_allowed": False,
+                    },
+                    "tuning": {
+                        "variant": "gpcr_core_truebase_anchor_occupancy_shadow_v14",
+                        "scope": "class_a_aminergic_opioid_like_orthosteric_sublane",
+                    },
+                    "linear_rescore": {
+                        "enabled": True,
+                        "combine_mode": "replace",
+                        "intercept": 0.0,
+                        "terms": [
+                            {"feature": "base_score", "weight": 1.0},
+                            {"feature": "label_free_penalty_pressure", "weight": 4.0},
+                            {"feature": "gpcr_synthetic_anchor_saturation_pressure_v12", "weight": 8.0},
+                            {"feature": "gpcr_moderate_multi_basic_weakbase_support_v12", "weight": -20.0},
+                            {"feature": "gpcr_truebase_unsupported_strong_base_pressure_v14", "weight": 28.0},
+                            {"feature": "gpcr_truebase_pose_gap_pressure_v14", "weight": 12.0},
+                            {"feature": "gpcr_truebase_backmapping_collapse_pressure_v14", "weight": 8.0},
+                            {"feature": "gpcr_truebase_overclose_artifact_pressure_v14", "weight": 10.0},
+                            {"feature": "gpcr_cationic_anchor_occupancy_support_v14", "weight": -8.0},
+                            {"feature": "multipolar_basic_pressure", "weight": 4.0},
+                        ],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    result_df = pd.DataFrame(
+        [
+            {
+                "ligand_id": "stale_active_strong_truebase_decoy",
+                "target": "OPRM1",
+                "ligand_smiles": "CCN1CCCC1",
+                "binding_score_composite_v7": 3.0,
+                "base_score": -8.0,
+                "label_free_anchor_mode": "all_basic",
+                "label_free_penalty_pressure": 0.0,
+                "label_free_support_pressure": 0.0,
+                "weak_base_rescue_support_pressure": 0.0,
+                "basic_amine_count": 1,
+                "pose_preservation_support": 0.0,
+                "coarse_centroid_preservation_rmsd_A_mean": 8.0,
+                "cationic_center_available": 1,
+                "cationic_center_contact_fraction_2p8_4p2A": 0.0,
+                "cationic_center_contact_fraction_le_2p8A": 0.0,
+                "multipolar_basic_pressure": 0.0,
+            },
+            {
+                "ligand_id": "cationic_window_supported_htr2a_like",
+                "target": "HTR2A",
+                "ligand_smiles": "CCN1CCCC1",
+                "binding_score_composite_v7": -5.0,
+                "base_score": -5.0,
+                "label_free_anchor_mode": "all_basic",
+                "label_free_penalty_pressure": 0.0,
+                "label_free_support_pressure": 0.0,
+                "weak_base_rescue_support_pressure": 0.0,
+                "basic_amine_count": 2,
+                "pose_preservation_support": 0.5,
+                "coarse_centroid_preservation_rmsd_A_mean": 2.0,
+                "cationic_center_available": 1,
+                "cationic_center_contact_fraction_2p8_4p2A": 1.0,
+                "cationic_center_contact_fraction_le_2p8A": 0.0,
+                "multipolar_basic_pressure": 0.0,
+            },
+        ]
+    )
+
+    out_df, meta = mod._apply_residual_prototype_shadow(
+        result_df.copy(),
+        _shadow_args(
+            residual_prototype_mode="apply",
+            residual_prototype_spec_json=str(spec_json),
+        ),
+        z_e=pd.Series([0.0, 0.0], dtype=float),
+        z_d=pd.Series([0.0, 0.0], dtype=float),
+        z_s=pd.Series([0.0, 0.0], dtype=float),
+        z_c=pd.Series([0.0, 0.0], dtype=float),
+        z_aff=pd.Series([0.0, 0.0], dtype=float),
+        z_logp=pd.Series([0.0, 0.0], dtype=float),
+        z_rot=pd.Series([0.0, 0.0], dtype=float),
+        z_hd=pd.Series([0.0, 0.0], dtype=float),
+        z_ha=pd.Series([0.0, 0.0], dtype=float),
+    )
+
+    assert meta["tuning_variant"] == "gpcr_core_truebase_anchor_occupancy_shadow_v14"
+    assert meta["shadow_only_active_locked"] is True
+    assert out_df.loc[0, "gpcr_true_base_score_for_gap_v14"] == -8.0
+    assert out_df.loc[0, "gpcr_truebase_unsupported_strong_base_pressure_v14"] > 0.0
+    assert out_df.loc[0, "gpcr_truebase_backmapping_collapse_pressure_v14"] > 0.0
+    assert out_df.loc[1, "gpcr_cationic_anchor_occupancy_support_v14"] > 0.0
+    assert out_df.loc[0, "binding_score_composite_v7_residual_shadow"] > out_df.loc[0, "base_score"]
+    assert out_df.loc[1, "binding_score_composite_v7_residual_shadow"] < out_df.loc[1, "base_score"]
+    np.testing.assert_allclose(
+        out_df["binding_score_composite_v7_residual_active"].to_numpy(dtype=float),
+        out_df["binding_score_composite_v7"].to_numpy(dtype=float),
+    )
+
+
+def test_apply_residual_prototype_shadow_truebase_gap_penalty_v15_does_not_reward_occupancy(
+    tmp_path,
+):
+    spec_json = tmp_path / "truebase_gap_penalty_shadow_v15.json"
+    spec_json.write_text(
+        json.dumps(
+            {
+                "prototype": {
+                    "constraints": {
+                        "claim_locked_candidate": True,
+                        "shadow_only_candidate": True,
+                        "score_only_candidate": True,
+                        "active_score_locked_to_base": True,
+                        "requires_true_base_score_cache": True,
+                        "requires_v14_rework_review": True,
+                        "scorer_apply_allowed": False,
+                    },
+                    "tuning": {
+                        "variant": "gpcr_core_truebase_gap_penalty_shadow_v15",
+                        "scope": "class_a_aminergic_opioid_like_orthosteric_sublane",
+                    },
+                    "linear_rescore": {
+                        "enabled": True,
+                        "combine_mode": "replace",
+                        "intercept": 0.0,
+                        "terms": [
+                            {"feature": "base_score", "weight": 1.0},
+                            {"feature": "label_free_penalty_pressure", "weight": 4.0},
+                            {"feature": "gpcr_synthetic_anchor_saturation_pressure_v12", "weight": 8.0},
+                            {"feature": "gpcr_moderate_multi_basic_weakbase_support_v12", "weight": -20.0},
+                            {"feature": "gpcr_truebase_unsupported_strong_base_pressure_v15", "weight": 28.0},
+                            {"feature": "gpcr_truebase_pose_gap_pressure_v15", "weight": 12.0},
+                            {"feature": "gpcr_truebase_backmapping_collapse_pressure_v14", "weight": 8.0},
+                            {"feature": "gpcr_truebase_overclose_artifact_pressure_v14", "weight": 10.0},
+                            {"feature": "multipolar_basic_pressure", "weight": 4.0},
+                        ],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    result_df = pd.DataFrame(
+        [
+            {
+                "ligand_id": "unsupported_truebase_decoy",
+                "target": "HTR2A",
+                "ligand_smiles": "CCN1CCCC1",
+                "binding_score_composite_v7": 3.0,
+                "base_score": -8.0,
+                "label_free_anchor_mode": "all_basic",
+                "label_free_penalty_pressure": 0.0,
+                "label_free_support_pressure": 0.0,
+                "weak_base_rescue_support_pressure": 0.0,
+                "basic_amine_count": 1,
+                "pose_preservation_support": 0.0,
+                "cationic_center_available": 1,
+                "cationic_center_contact_fraction_2p8_4p2A": 0.0,
+                "cationic_center_contact_fraction_le_2p8A": 0.0,
+                "multipolar_basic_pressure": 0.0,
+            },
+            {
+                "ligand_id": "occupancy_supported_but_not_rewarded",
+                "target": "HTR2A",
+                "ligand_smiles": "CCN1CCCC1",
+                "binding_score_composite_v7": -5.0,
+                "base_score": -5.0,
+                "label_free_anchor_mode": "all_basic",
+                "label_free_penalty_pressure": 0.0,
+                "label_free_support_pressure": 0.0,
+                "weak_base_rescue_support_pressure": 0.0,
+                "basic_amine_count": 2,
+                "pose_preservation_support": 1.0,
+                "cationic_center_available": 1,
+                "cationic_center_contact_fraction_2p8_4p2A": 1.0,
+                "cationic_center_contact_fraction_le_2p8A": 0.0,
+                "multipolar_basic_pressure": 0.0,
+            },
+        ]
+    )
+
+    out_df, meta = mod._apply_residual_prototype_shadow(
+        result_df.copy(),
+        _shadow_args(
+            residual_prototype_mode="apply",
+            residual_prototype_spec_json=str(spec_json),
+        ),
+        z_e=pd.Series([0.0, 0.0], dtype=float),
+        z_d=pd.Series([0.0, 0.0], dtype=float),
+        z_s=pd.Series([0.0, 0.0], dtype=float),
+        z_c=pd.Series([0.0, 0.0], dtype=float),
+        z_aff=pd.Series([0.0, 0.0], dtype=float),
+        z_logp=pd.Series([0.0, 0.0], dtype=float),
+        z_rot=pd.Series([0.0, 0.0], dtype=float),
+        z_hd=pd.Series([0.0, 0.0], dtype=float),
+        z_ha=pd.Series([0.0, 0.0], dtype=float),
+    )
+
+    assert meta["tuning_variant"] == "gpcr_core_truebase_gap_penalty_shadow_v15"
+    assert meta["shadow_only_active_locked"] is True
+    assert out_df.loc[0, "gpcr_truebase_unsupported_strong_base_pressure_v15"] > 0.0
+    assert out_df.loc[1, "gpcr_cationic_anchor_occupancy_support_v14"] > 0.0
+    assert out_df.loc[0, "binding_score_composite_v7_residual_shadow"] > out_df.loc[0, "base_score"]
+    assert out_df.loc[1, "binding_score_composite_v7_residual_shadow"] == out_df.loc[1, "base_score"]
+    np.testing.assert_allclose(
+        out_df["binding_score_composite_v7_residual_active"].to_numpy(dtype=float),
+        out_df["binding_score_composite_v7"].to_numpy(dtype=float),
+    )
+
+
+def test_apply_residual_prototype_shadow_false_support_discriminator_v16_penalizes_decoy_like_gaps(
+    tmp_path,
+):
+    spec_json = tmp_path / "false_support_discriminator_shadow_v16.json"
+    spec_json.write_text(
+        json.dumps(
+            {
+                "prototype": {
+                    "constraints": {
+                        "claim_locked_candidate": True,
+                        "shadow_only_candidate": True,
+                        "score_only_candidate": True,
+                        "active_score_locked_to_base": True,
+                        "requires_true_base_score_cache": True,
+                        "requires_v15_gap_packet_review": True,
+                        "scorer_apply_allowed": False,
+                    },
+                    "tuning": {
+                        "variant": "gpcr_core_false_support_discriminator_shadow_v16",
+                        "scope": "class_a_aminergic_opioid_like_orthosteric_sublane",
+                    },
+                    "linear_rescore": {
+                        "enabled": True,
+                        "combine_mode": "replace",
+                        "intercept": 0.0,
+                        "terms": [
+                            {"feature": "base_score", "weight": 1.0},
+                            {"feature": "label_free_penalty_pressure", "weight": 4.0},
+                            {"feature": "gpcr_synthetic_anchor_saturation_pressure_v12", "weight": 8.0},
+                            {"feature": "gpcr_moderate_multi_basic_weakbase_support_v12", "weight": -20.0},
+                            {"feature": "gpcr_truebase_unsupported_strong_base_pressure_v15", "weight": 28.0},
+                            {"feature": "gpcr_truebase_pose_gap_pressure_v15", "weight": 12.0},
+                            {"feature": "gpcr_truebase_backmapping_collapse_pressure_v14", "weight": 8.0},
+                            {"feature": "gpcr_truebase_overclose_artifact_pressure_v14", "weight": 10.0},
+                            {"feature": "gpcr_false_support_saturation_pressure_v16", "weight": 10.0},
+                            {"feature": "gpcr_nonbasic_truebase_noanchor_pressure_v16", "weight": 6.0},
+                            {"feature": "gpcr_basic_collapse_truebase_noanchor_pressure_v16", "weight": 6.0},
+                            {"feature": "multipolar_basic_pressure", "weight": 4.0},
+                        ],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    result_df = pd.DataFrame(
+        [
+            {
+                "ligand_id": "false_support_decoy",
+                "target": "HTR2A",
+                "ligand_smiles": "CCN1CCCC1",
+                "binding_score_composite_v7": -7.0,
+                "base_score": -7.0,
+                "label_free_anchor_mode": "all_basic",
+                "label_free_penalty_pressure": 0.0,
+                "label_free_support_pressure": 0.80,
+                "weak_base_rescue_support_pressure": 0.0,
+                "basic_amine_count": 1,
+                "pose_preservation_support": 0.80,
+                "coarse_centroid_preservation_rmsd_A_mean": 1.4,
+                "multipolar_basic_pressure": 0.0,
+            },
+            {
+                "ligand_id": "weakbase_supported_row",
+                "target": "DRD2",
+                "ligand_smiles": "CCN1CCCC1",
+                "binding_score_composite_v7": -7.0,
+                "base_score": -7.0,
+                "label_free_anchor_mode": "all_basic",
+                "label_free_penalty_pressure": 0.0,
+                "label_free_support_pressure": 0.65,
+                "weak_base_rescue_support_pressure": 0.65,
+                "basic_amine_count": 2,
+                "pose_preservation_support": 1.0,
+                "coarse_centroid_preservation_rmsd_A_mean": 0.8,
+                "multipolar_basic_pressure": 0.0,
+            },
+            {
+                "ligand_id": "nonbasic_noanchor_decoy",
+                "target": "OPRM1",
+                "ligand_smiles": "CCCC",
+                "binding_score_composite_v7": -5.6,
+                "base_score": -5.6,
+                "label_free_anchor_mode": "all_basic",
+                "label_free_penalty_pressure": 0.0,
+                "label_free_support_pressure": 0.0,
+                "weak_base_rescue_support_pressure": 0.0,
+                "basic_amine_count": 0,
+                "pose_preservation_support": 1.0,
+                "coarse_centroid_preservation_rmsd_A_mean": 0.0,
+                "multipolar_basic_pressure": 0.0,
+            },
+            {
+                "ligand_id": "basic_collapse_noanchor_decoy",
+                "target": "OPRM1",
+                "ligand_smiles": "CCN1CCCC1",
+                "binding_score_composite_v7": -5.8,
+                "base_score": -5.8,
+                "label_free_anchor_mode": "all_basic",
+                "label_free_penalty_pressure": 0.0,
+                "label_free_support_pressure": 0.0,
+                "weak_base_rescue_support_pressure": 0.0,
+                "basic_amine_count": 1,
+                "pose_preservation_support": 0.0,
+                "coarse_centroid_preservation_rmsd_A_mean": 32.0,
+                "multipolar_basic_pressure": 0.0,
+            },
+        ]
+    )
+
+    out_df, meta = mod._apply_residual_prototype_shadow(
+        result_df.copy(),
+        _shadow_args(
+            residual_prototype_mode="apply",
+            residual_prototype_spec_json=str(spec_json),
+        ),
+        z_e=pd.Series([0.0, 0.0, 0.0, 0.0], dtype=float),
+        z_d=pd.Series([0.0, 0.0, 0.0, 0.0], dtype=float),
+        z_s=pd.Series([0.0, 0.0, 0.0, 0.0], dtype=float),
+        z_c=pd.Series([0.0, 0.0, 0.0, 0.0], dtype=float),
+        z_aff=pd.Series([0.0, 0.0, 0.0, 0.0], dtype=float),
+        z_logp=pd.Series([0.0, 0.0, 0.0, 0.0], dtype=float),
+        z_rot=pd.Series([0.0, 0.0, 0.0, 0.0], dtype=float),
+        z_hd=pd.Series([0.0, 0.0, 0.0, 0.0], dtype=float),
+        z_ha=pd.Series([0.0, 0.0, 0.0, 0.0], dtype=float),
+    )
+
+    assert meta["tuning_variant"] == "gpcr_core_false_support_discriminator_shadow_v16"
+    assert meta["shadow_only_active_locked"] is True
+    assert out_df.loc[0, "gpcr_false_support_saturation_pressure_v16"] > 0.0
+    assert out_df.loc[1, "gpcr_false_support_saturation_pressure_v16"] == 0.0
+    assert out_df.loc[2, "gpcr_nonbasic_truebase_noanchor_pressure_v16"] > 0.0
+    assert out_df.loc[3, "gpcr_basic_collapse_truebase_noanchor_pressure_v16"] > 0.0
+    assert out_df.loc[0, "binding_score_composite_v7_residual_shadow"] > out_df.loc[0, "base_score"]
+    assert out_df.loc[2, "binding_score_composite_v7_residual_shadow"] > out_df.loc[2, "base_score"]
+    assert out_df.loc[3, "binding_score_composite_v7_residual_shadow"] > out_df.loc[3, "base_score"]
+    np.testing.assert_allclose(
+        out_df["binding_score_composite_v7_residual_active"].to_numpy(dtype=float),
+        out_df["binding_score_composite_v7"].to_numpy(dtype=float),
+    )

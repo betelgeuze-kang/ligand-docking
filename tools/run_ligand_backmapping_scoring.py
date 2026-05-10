@@ -927,6 +927,220 @@ def _apply_residual_prototype_shadow(
             0.0,
             None,
         )
+        cache_anchor_mode = (
+            result_df["label_free_anchor_mode"]
+            if "label_free_anchor_mode" in result_df.columns
+            else pd.Series([""] * len(result_df), index=result_df.index)
+        )
+        cache_all_basic_anchor = (
+            cache_anchor_mode.astype(str).str.strip().str.lower().eq("all_basic").astype(float).to_numpy(dtype=float)
+        )
+        cache_support_pressure = np.nan_to_num(
+            _optional_numeric_column("label_free_support_pressure"),
+            nan=0.0,
+            posinf=0.0,
+            neginf=0.0,
+        )
+        cache_weakbase_support_pressure = np.nan_to_num(
+            _optional_numeric_column("weak_base_rescue_support_pressure"),
+            nan=0.0,
+            posinf=0.0,
+            neginf=0.0,
+        )
+        cache_basic_amine_count = np.nan_to_num(
+            _optional_numeric_column("basic_amine_count"),
+            nan=0.0,
+            posinf=0.0,
+            neginf=0.0,
+        )
+        cache_pose_rmsd = np.nan_to_num(
+            _optional_numeric_column("coarse_centroid_preservation_rmsd_A_mean"),
+            nan=999.0,
+            posinf=999.0,
+            neginf=999.0,
+        )
+        gpcr_synthetic_anchor_saturation_pressure_v12 = np.clip(
+            cache_all_basic_anchor
+            * np.clip(cache_basic_amine_count, 0.0, 1.0)
+            * np.clip((cache_support_pressure - 0.90) / 0.08, 0.0, 1.0),
+            0.0,
+            None,
+        )
+        gpcr_plausible_anchor_window_support_v12 = np.clip(
+            np.clip((cache_support_pressure - 0.35) / 0.25, 0.0, 1.0)
+            * np.clip((0.86 - cache_support_pressure) / 0.20, 0.0, 1.0),
+            0.0,
+            1.0,
+        )
+        gpcr_moderate_multi_basic_weakbase_support_v12 = np.clip(
+            cache_weakbase_support_pressure
+            * gpcr_plausible_anchor_window_support_v12
+            * np.clip((cache_basic_amine_count - 1.0) / 1.0, 0.0, 1.0)
+            * np.clip((1.35 - cache_pose_rmsd) / 0.60, 0.0, 1.0),
+            0.0,
+            None,
+        )
+        gpcr_pose_support_signal_v13 = np.maximum.reduce(
+            [
+                np.clip(cache_support_pressure, 0.0, 1.0),
+                np.clip(cache_weakbase_support_pressure, 0.0, 1.0),
+                np.clip(gpcr_moderate_multi_basic_weakbase_support_v12, 0.0, 1.0),
+            ]
+        )
+        gpcr_no_pose_support_gate_v13 = np.clip((0.30 - gpcr_pose_support_signal_v13) / 0.30, 0.0, 1.0)
+        gpcr_strong_base_without_support_gate_v13 = np.clip(
+            (-6.0 - base_score.to_numpy(dtype=float)) / 2.0,
+            0.0,
+            None,
+        )
+        cache_pose_preservation_support = np.nan_to_num(
+            _optional_numeric_column("pose_preservation_support"),
+            nan=0.0,
+            posinf=1.0,
+            neginf=0.0,
+        )
+        gpcr_pose_gap_gate_v13 = np.clip(
+            (0.50 - np.clip(cache_pose_preservation_support, 0.0, 1.0)) / 0.50,
+            0.0,
+            1.0,
+        )
+        gpcr_unsupported_strong_base_pressure_v13 = np.clip(
+            gpcr_strong_base_without_support_gate_v13 * gpcr_no_pose_support_gate_v13,
+            0.0,
+            None,
+        )
+        gpcr_pose_gap_strong_base_pressure_v13 = np.clip(
+            gpcr_strong_base_without_support_gate_v13 * gpcr_pose_gap_gate_v13,
+            0.0,
+            None,
+        )
+        binding_base_score = base_score.to_numpy(dtype=float)
+        cached_true_base_score = _optional_numeric_column("base_score")
+        gpcr_true_base_score_for_gap_v14 = np.where(
+            np.isfinite(cached_true_base_score),
+            cached_true_base_score,
+            binding_base_score,
+        )
+        cationic_center_available = np.clip(
+            np.nan_to_num(
+                _optional_numeric_column("cationic_center_available"),
+                nan=0.0,
+                posinf=0.0,
+                neginf=0.0,
+            ),
+            0.0,
+            1.0,
+        )
+        cationic_center_window_fraction = np.clip(
+            np.nan_to_num(
+                _optional_numeric_column("cationic_center_contact_fraction_2p8_4p2A"),
+                nan=0.0,
+                posinf=0.0,
+                neginf=0.0,
+            ),
+            0.0,
+            1.0,
+        )
+        cationic_center_too_close_fraction = np.clip(
+            np.nan_to_num(
+                _optional_numeric_column("cationic_center_contact_fraction_le_2p8A"),
+                nan=0.0,
+                posinf=0.0,
+                neginf=0.0,
+            ),
+            0.0,
+            1.0,
+        )
+        gpcr_cationic_anchor_occupancy_support_v14 = np.clip(
+            cationic_center_available
+            * np.clip(cache_basic_amine_count, 0.0, 1.0)
+            * cationic_center_window_fraction
+            * (1.0 - cationic_center_too_close_fraction)
+            * np.clip(cache_pose_preservation_support, 0.0, 1.0),
+            0.0,
+            1.0,
+        )
+        gpcr_pose_support_signal_v14 = np.maximum(
+            gpcr_pose_support_signal_v13,
+            gpcr_cationic_anchor_occupancy_support_v14,
+        )
+        gpcr_no_pose_support_gate_v14 = np.clip((0.30 - gpcr_pose_support_signal_v14) / 0.30, 0.0, 1.0)
+        gpcr_strong_truebase_gate_v14 = np.clip(
+            (-6.0 - gpcr_true_base_score_for_gap_v14) / 2.0,
+            0.0,
+            None,
+        )
+        gpcr_truebase_unsupported_strong_base_pressure_v14 = np.clip(
+            gpcr_strong_truebase_gate_v14 * gpcr_no_pose_support_gate_v14,
+            0.0,
+            None,
+        )
+        gpcr_truebase_pose_gap_pressure_v14 = np.clip(
+            gpcr_strong_truebase_gate_v14 * gpcr_pose_gap_gate_v13,
+            0.0,
+            None,
+        )
+        gpcr_truebase_backmapping_collapse_pressure_v14 = np.clip(
+            gpcr_strong_truebase_gate_v14
+            * np.clip((0.20 - np.clip(cache_pose_preservation_support, 0.0, 1.0)) / 0.20, 0.0, 1.0)
+            * (1.0 - gpcr_cationic_anchor_occupancy_support_v14),
+            0.0,
+            None,
+        )
+        gpcr_truebase_overclose_artifact_pressure_v14 = np.clip(
+            gpcr_strong_truebase_gate_v14
+            * cationic_center_available
+            * cationic_center_too_close_fraction
+            * (1.0 - gpcr_cationic_anchor_occupancy_support_v14)
+            * gpcr_pose_gap_gate_v13,
+            0.0,
+            None,
+        )
+        gpcr_truebase_unsupported_strong_base_pressure_v15 = np.clip(
+            gpcr_strong_truebase_gate_v14 * gpcr_no_pose_support_gate_v13,
+            0.0,
+            None,
+        )
+        gpcr_truebase_pose_gap_pressure_v15 = gpcr_truebase_pose_gap_pressure_v14
+        gpcr_truebase_soft_intrusion_gate_v16 = np.clip(
+            (-5.25 - gpcr_true_base_score_for_gap_v14) / 1.25,
+            0.0,
+            None,
+        )
+        gpcr_weak_support_missing_gate_v16 = np.clip(
+            (0.05 - np.clip(cache_weakbase_support_pressure, 0.0, 1.0)) / 0.05,
+            0.0,
+            1.0,
+        )
+        gpcr_basic_count_decoy_like_gate_v16 = np.clip(
+            (2.5 - cache_basic_amine_count) / 1.5,
+            0.0,
+            1.0,
+        )
+        gpcr_false_support_saturation_pressure_v16 = np.clip(
+            np.clip((cache_support_pressure - 0.35) / 0.45, 0.0, 1.0)
+            * gpcr_weak_support_missing_gate_v16
+            * (1.0 - np.clip(gpcr_moderate_multi_basic_weakbase_support_v12, 0.0, 1.0))
+            * gpcr_basic_count_decoy_like_gate_v16
+            * gpcr_truebase_soft_intrusion_gate_v16,
+            0.0,
+            None,
+        )
+        gpcr_nonbasic_truebase_noanchor_pressure_v16 = np.clip(
+            (1.0 - np.clip(cache_basic_amine_count, 0.0, 1.0))
+            * gpcr_no_pose_support_gate_v13
+            * np.clip((-4.30 - gpcr_true_base_score_for_gap_v14) / 1.30, 0.0, None),
+            0.0,
+            None,
+        )
+        gpcr_basic_collapse_truebase_noanchor_pressure_v16 = np.clip(
+            np.clip(cache_basic_amine_count, 0.0, 1.0)
+            * gpcr_no_pose_support_gate_v13
+            * np.clip((0.20 - np.clip(cache_pose_preservation_support, 0.0, 1.0)) / 0.20, 0.0, 1.0)
+            * np.clip((-5.00 - gpcr_true_base_score_for_gap_v14) / 1.20, 0.0, None),
+            0.0,
+            None,
+        )
         fixed_reference_feature_collapse_probe = np.asarray(
             [
                 np.mean(gpcr_conserved_anchor_proxy > 0.0),
@@ -991,6 +1205,32 @@ def _apply_residual_prototype_shadow(
             "class_a_hydrophobic_overcontact_pressure_v8": class_a_hydrophobic_overcontact_pressure_v8,
             "class_a_excess_polar_anchor_pressure_v9": class_a_excess_polar_anchor_pressure_v9,
             "class_a_compact_amine_window_support_v9": class_a_compact_amine_window_support_v9,
+            "gpcr_synthetic_anchor_saturation_pressure_v12": gpcr_synthetic_anchor_saturation_pressure_v12,
+            "gpcr_plausible_anchor_window_support_v12": gpcr_plausible_anchor_window_support_v12,
+            "gpcr_moderate_multi_basic_weakbase_support_v12": gpcr_moderate_multi_basic_weakbase_support_v12,
+            "gpcr_pose_support_signal_v13": gpcr_pose_support_signal_v13,
+            "gpcr_unsupported_strong_base_pressure_v13": gpcr_unsupported_strong_base_pressure_v13,
+            "gpcr_pose_gap_strong_base_pressure_v13": gpcr_pose_gap_strong_base_pressure_v13,
+            "gpcr_true_base_score_for_gap_v14": gpcr_true_base_score_for_gap_v14,
+            "gpcr_cationic_anchor_occupancy_support_v14": gpcr_cationic_anchor_occupancy_support_v14,
+            "gpcr_pose_support_signal_v14": gpcr_pose_support_signal_v14,
+            "gpcr_truebase_unsupported_strong_base_pressure_v14": (
+                gpcr_truebase_unsupported_strong_base_pressure_v14
+            ),
+            "gpcr_truebase_pose_gap_pressure_v14": gpcr_truebase_pose_gap_pressure_v14,
+            "gpcr_truebase_backmapping_collapse_pressure_v14": (
+                gpcr_truebase_backmapping_collapse_pressure_v14
+            ),
+            "gpcr_truebase_overclose_artifact_pressure_v14": gpcr_truebase_overclose_artifact_pressure_v14,
+            "gpcr_truebase_unsupported_strong_base_pressure_v15": (
+                gpcr_truebase_unsupported_strong_base_pressure_v15
+            ),
+            "gpcr_truebase_pose_gap_pressure_v15": gpcr_truebase_pose_gap_pressure_v15,
+            "gpcr_false_support_saturation_pressure_v16": gpcr_false_support_saturation_pressure_v16,
+            "gpcr_nonbasic_truebase_noanchor_pressure_v16": gpcr_nonbasic_truebase_noanchor_pressure_v16,
+            "gpcr_basic_collapse_truebase_noanchor_pressure_v16": (
+                gpcr_basic_collapse_truebase_noanchor_pressure_v16
+            ),
             "fixed_reference_feature_collapse_probe": np.full(
                 len(result_df),
                 float(np.max(fixed_reference_feature_collapse_probe))
@@ -1229,6 +1469,150 @@ def _apply_residual_prototype_shadow(
         if linear_rescore_enabled
         else np.zeros(len(result_df), dtype=float)
     )
+    result_df["gpcr_synthetic_anchor_saturation_pressure_v12"] = (
+        computed_linear_features.get(
+            "gpcr_synthetic_anchor_saturation_pressure_v12",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["gpcr_plausible_anchor_window_support_v12"] = (
+        computed_linear_features.get(
+            "gpcr_plausible_anchor_window_support_v12",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["gpcr_moderate_multi_basic_weakbase_support_v12"] = (
+        computed_linear_features.get(
+            "gpcr_moderate_multi_basic_weakbase_support_v12",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["gpcr_pose_support_signal_v13"] = (
+        computed_linear_features.get(
+            "gpcr_pose_support_signal_v13",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["gpcr_unsupported_strong_base_pressure_v13"] = (
+        computed_linear_features.get(
+            "gpcr_unsupported_strong_base_pressure_v13",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["gpcr_pose_gap_strong_base_pressure_v13"] = (
+        computed_linear_features.get(
+            "gpcr_pose_gap_strong_base_pressure_v13",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["gpcr_true_base_score_for_gap_v14"] = (
+        computed_linear_features.get(
+            "gpcr_true_base_score_for_gap_v14",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["gpcr_cationic_anchor_occupancy_support_v14"] = (
+        computed_linear_features.get(
+            "gpcr_cationic_anchor_occupancy_support_v14",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["gpcr_pose_support_signal_v14"] = (
+        computed_linear_features.get(
+            "gpcr_pose_support_signal_v14",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["gpcr_truebase_unsupported_strong_base_pressure_v14"] = (
+        computed_linear_features.get(
+            "gpcr_truebase_unsupported_strong_base_pressure_v14",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["gpcr_truebase_pose_gap_pressure_v14"] = (
+        computed_linear_features.get(
+            "gpcr_truebase_pose_gap_pressure_v14",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["gpcr_truebase_backmapping_collapse_pressure_v14"] = (
+        computed_linear_features.get(
+            "gpcr_truebase_backmapping_collapse_pressure_v14",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["gpcr_truebase_overclose_artifact_pressure_v14"] = (
+        computed_linear_features.get(
+            "gpcr_truebase_overclose_artifact_pressure_v14",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["gpcr_truebase_unsupported_strong_base_pressure_v15"] = (
+        computed_linear_features.get(
+            "gpcr_truebase_unsupported_strong_base_pressure_v15",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["gpcr_truebase_pose_gap_pressure_v15"] = (
+        computed_linear_features.get(
+            "gpcr_truebase_pose_gap_pressure_v15",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["gpcr_false_support_saturation_pressure_v16"] = (
+        computed_linear_features.get(
+            "gpcr_false_support_saturation_pressure_v16",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["gpcr_nonbasic_truebase_noanchor_pressure_v16"] = (
+        computed_linear_features.get(
+            "gpcr_nonbasic_truebase_noanchor_pressure_v16",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
+    result_df["gpcr_basic_collapse_truebase_noanchor_pressure_v16"] = (
+        computed_linear_features.get(
+            "gpcr_basic_collapse_truebase_noanchor_pressure_v16",
+            np.zeros(len(result_df), dtype=float),
+        )
+        if linear_rescore_enabled
+        else np.zeros(len(result_df), dtype=float)
+    )
     result_df["fixed_reference_feature_collapse_probe"] = (
         computed_linear_features.get("fixed_reference_feature_collapse_probe", np.zeros(len(result_df), dtype=float))
         if linear_rescore_enabled
@@ -1259,6 +1643,11 @@ def _apply_residual_prototype_shadow(
         "gpcr_core_atom_window_excess_polar_shadow_v9",
         "gpcr_core_cationic_pose_distortion_shadow_v10",
         "gpcr_core_cationic_weakbase_rescue_shadow_v11",
+        "gpcr_core_synthetic_anchor_penalty_shadow_v12",
+        "gpcr_core_pose_support_gap_shadow_v13",
+        "gpcr_core_truebase_anchor_occupancy_shadow_v14",
+        "gpcr_core_truebase_gap_penalty_shadow_v15",
+        "gpcr_core_false_support_discriminator_shadow_v16",
     }
     result_df["binding_score_composite_v7_residual_active"] = (
         shadow_score if mode in {"apply", "apply_ranking"} and not shadow_only_active_locked else base_score

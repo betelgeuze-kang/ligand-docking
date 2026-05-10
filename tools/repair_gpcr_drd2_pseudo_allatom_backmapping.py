@@ -199,6 +199,36 @@ def _copy_npz_arrays(npz: np.lib.npyio.NpzFile) -> dict[str, np.ndarray]:
     return copied
 
 
+def _pdb_atom_name(element: str, index: int) -> str:
+    clean = re.sub(r"[^A-Za-z]", "", _text(element)).upper() or "C"
+    return f"{clean[:2]}{index}"
+
+
+def _write_ligand_pdb(
+    *,
+    path: Path,
+    coords: np.ndarray,
+    elements: list[str],
+    target: str,
+    ligand_id: str,
+) -> None:
+    lines = [
+        f"REMARK pseudo all-atom DRD2 ligand backmapping export",
+        f"REMARK target {target}",
+        f"REMARK ligand_id {ligand_id}",
+    ]
+    for idx, xyz in enumerate(np.asarray(coords, dtype=float), start=1):
+        element = re.sub(r"[^A-Za-z]", "", _text(elements[idx - 1] if idx - 1 < len(elements) else "C")).upper() or "C"
+        atom_name = _pdb_atom_name(element, idx)
+        lines.append(
+            f"HETATM{idx:5d} {atom_name:<4s} LIG L{1:4d}    "
+            f"{float(xyz[0]):8.3f}{float(xyz[1]):8.3f}{float(xyz[2]):8.3f}"
+            f"  1.00 20.00          {element[:2]:>2s}"
+        )
+    lines.append("END")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def _anchor_indices(native_pdb: str, protein_atom_count: int) -> list[int]:
     if not _text(native_pdb):
         return []
@@ -368,6 +398,14 @@ def _repair_row(
     arrays["ligand_backmapping_anchor_atom_indices"] = np.asarray(anchor_indices, dtype=np.int32)
     arrays["ligand_backmapping_schema_version"] = np.asarray(1, dtype=np.int16)
     np.savez_compressed(out_npz, **arrays)
+    out_pdb = out_root / f"{_safe_name(target)}__{_safe_name(ligand_id)}.pdb"
+    _write_ligand_pdb(
+        path=out_pdb,
+        coords=repaired[0],
+        elements=[str(item) for item in conformer.get("elements", [])],
+        target=target,
+        ligand_id=ligand_id,
+    )
     repaired_count = int(repaired.shape[1])
     source_count = int(ligand_frames.shape[1])
     heavy_atoms = int(len(conformer.get("atomic_numbers", [])))
@@ -375,6 +413,10 @@ def _repair_row(
     return {
         **base,
         "trajectory_npz": str(out_npz),
+        "backmapped_pdb": str(out_pdb),
+        "backmapped_pdb_ligand_atom_count": repaired_count,
+        "backmapped_pdb_ligand_heavy_atom_count": repaired_count,
+        "backmapped_pdb_frame_index": 0,
         "source_ligand_frame_atom_count": source_count,
         "repaired_ligand_frame_atom_count": repaired_count,
         "allatom_backmapping_status": "ok",

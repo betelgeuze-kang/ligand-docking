@@ -224,6 +224,94 @@ def test_build_packet_classifies_repaired_drd2_hard_decoy_slices(tmp_path: Path)
     assert by_ligand["valid_anchor_decoy"]["label_free_support_pressure"] > 0
 
 
+def test_build_packet_accepts_current_bare_atom_anchor_cache_schema(tmp_path: Path) -> None:
+    repair_rows = tmp_path / "repair_rows.csv"
+    atom_cache = tmp_path / "atom_cache.csv"
+    cationic_cache = tmp_path / "cationic_cache.csv"
+    _write_csv(
+        repair_rows,
+        [
+            {
+                "target": "CHEMBL217_DRD2_HUMAN",
+                "ligand_id": "valid_anchor_decoy",
+                "is_positive": "False",
+                "score": "-5.0",
+                "ligand_h_donors": "1",
+                "ligand_h_acceptors": "2",
+                "ligand_rot_bonds": "3",
+                "ligand_logp": "2.0",
+                "allatom_basic_amine_atom_count": "1",
+                "coarse_centroid_preservation_rmsd_A_mean": "0.3",
+            },
+            {
+                "target": "CHEMBL217_DRD2_HUMAN",
+                "ligand_id": "CHEMBL301265",
+                "is_positive": "True",
+                "score": "-1.0",
+                "ligand_h_donors": "2",
+                "ligand_h_acceptors": "4",
+                "ligand_rot_bonds": "3",
+                "ligand_logp": "1.5",
+                "allatom_basic_amine_atom_count": "2",
+            },
+        ],
+    )
+    _write_csv(
+        atom_cache,
+        [
+            {
+                "target": "CHEMBL217_DRD2_HUMAN",
+                "ligand_id": "valid_anchor_decoy",
+                "atom_anchor_available": "1",
+                "atom_anchor_mean_distance_A": "3.1",
+                "atom_contact_fraction_le_2p8A": "0.1",
+                "atom_contact_fraction_2p8_4p2A": "0.8",
+            },
+            {
+                "target": "CHEMBL217_DRD2_HUMAN",
+                "ligand_id": "CHEMBL301265",
+                "atom_anchor_available": "1",
+                "atom_anchor_mean_distance_A": "2.82",
+                "atom_contact_fraction_le_2p8A": "0.19",
+                "atom_contact_fraction_2p8_4p2A": "0.81",
+            },
+        ],
+    )
+    _write_csv(
+        cationic_cache,
+        [
+            {
+                "target": "CHEMBL217_DRD2_HUMAN",
+                "ligand_id": "valid_anchor_decoy",
+                "class_a_cationic_center_available": "1",
+                "class_a_cationic_center_contact_fraction_le_2p8A": "0.1",
+                "class_a_cationic_center_contact_fraction_2p8_4p2A": "0.8",
+            },
+            {
+                "target": "CHEMBL217_DRD2_HUMAN",
+                "ligand_id": "CHEMBL301265",
+                "class_a_cationic_center_available": "1",
+                "class_a_cationic_center_contact_fraction_le_2p8A": "0.0",
+                "class_a_cationic_center_contact_fraction_2p8_4p2A": "1.0",
+            },
+        ],
+    )
+
+    payload, rows = mod.build_packet(
+        repair_rows_csv=repair_rows,
+        atom_cache_csv=atom_cache,
+        cationic_cache_csv=cationic_cache,
+        generated_at_local="2026-05-05T00:00:00+09:00",
+    )
+
+    by_ligand = {row["ligand_id"]: row for row in rows}
+    assert payload["summary"]["positive_atom_window_fraction_2p8_4p2A"] == 0.81
+    assert payload["summary"]["positive_atom_anchor_mean_distance_A"] == 2.82
+    assert payload["summary"]["valid_anchor_challenge_count"] == 1
+    assert by_ligand["valid_anchor_decoy"]["atom_anchor_available"] == 1
+    assert "valid_anchor_challenge" in by_ligand["valid_anchor_decoy"]["slice_labels"]
+
+
 def test_hard_decoy_slice_cli_writes_outputs(tmp_path: Path) -> None:
     repair_rows = tmp_path / "repair_rows.csv"
     atom_cache = tmp_path / "atom_cache.csv"
