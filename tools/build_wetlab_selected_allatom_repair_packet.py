@@ -48,6 +48,7 @@ CLAIM_ATTACHED_REVIEW_COMMAND = (
     "python3 tools/build_wetlab_tcruzi_pde_allatom_review_packet.py "
     "--claim-readiness-json <claim_summary.json> --equivalence-gate-json <gate.json>"
 )
+REPLICATE_EVIDENCE_REFRESH_COMMAND = "python3 tools/build_wetlab_tcruzi_pde_replicate_evidence.py"
 
 
 def _resolve(path_like: str | Path) -> Path:
@@ -728,6 +729,12 @@ def _command_plan_with_claim_handoff(
                 "phase": "hard_gate_repair",
                 "command": hard_gate_command,
                 "purpose": hard_gate_purpose,
+                "manual_pass_promotion_allowed": "false",
+            },
+            {
+                "phase": "replicate_evidence_refresh",
+                "command": REPLICATE_EVIDENCE_REFRESH_COMMAND,
+                "purpose": "rebuild attempt-family replicate evidence before the selected all-atom review refresh",
                 "manual_pass_promotion_allowed": "false",
             },
             {

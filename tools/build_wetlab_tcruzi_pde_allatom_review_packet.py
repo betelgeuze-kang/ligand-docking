@@ -12,11 +12,12 @@ from tools.wetlab_allatom_refinement_utils import (
     compute_wetlab_gate_summary,
     resolve_optional_claim_gate_summary,
 )
-from tools.wetlab_target_render_utils import load_json, write_artifact
+from tools.wetlab_target_render_utils import load_json, maybe_load_json, write_artifact
 
 TARGET_ID = "T. cruzi PDE"
 DEFAULT_LANE_JSON = "runs/wetlab_tcruzi_pde_allatom_rescue_lane_current.json"
 DEFAULT_RUNNER_JSON = "runs/wetlab_tcruzi_pde_allatom_rescue_current.json"
+DEFAULT_REPLICATE_EVIDENCE_JSON = "runs/wetlab_tcruzi_pde_replicate_evidence_current.json"
 DEFAULT_OUT_MD = "runs/wetlab_tcruzi_pde_allatom_review_packet_current.md"
 
 
@@ -41,6 +42,14 @@ def _safe_int(value: Any, default: int = 0) -> int:
         return int(value)
     except Exception:
         return default
+
+
+def _is_empty(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str) and not value.strip():
+        return True
+    return False
 
 
 def _best_metric_row(rows: list[dict[str, Any]]) -> dict[str, Any]:
@@ -71,12 +80,35 @@ def _packet_rank_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     )
 
 
+def _replicate_evidence_rows(payload: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
+    return {
+        _text((row or {}).get("ligand_id")): dict(row or {})
+        for row in ((payload or {}).get("rows", []) or [])
+        if _text((row or {}).get("ligand_id"))
+    }
+
+
+def _replicate_evidence_fields(row: dict[str, Any]) -> dict[str, Any]:
+    evidence_fields = _extract_commercial_v2_optional_fields(dict(row or {}))
+    for key in (
+        "replicate_evidence_source",
+        "replicate_evidence_policy",
+        "replicate_evidence_attempt_ids",
+        "replicate_evidence_score_csv_count",
+    ):
+        if key in row and not _is_empty(row.get(key)):
+            evidence_fields[key] = row.get(key)
+    return evidence_fields
+
+
 def build_payload(
     lane_payload: dict[str, Any],
     runner_payload: dict[str, Any],
     *,
     claim_readiness_json: str = "",
     equivalence_gate_json: str = "",
+    replicate_evidence_payload: dict[str, Any] | None = None,
+    replicate_evidence_json: str = "",
 ) -> dict[str, Any]:
     lane_summary = dict(lane_payload.get("summary", {}) or {})
     runner_summary = dict(runner_payload.get("summary", {}) or {})
@@ -85,6 +117,7 @@ def build_payload(
         for row in (lane_payload.get("rows", []) or [])
         if _text((row or {}).get("ligand_id"))
     }
+    replicate_rows = _replicate_evidence_rows(replicate_evidence_payload)
     allatom_summary_json = _text(runner_summary.get("allatom_summary_json"))
     scoring_payload = load_json(allatom_summary_json) if allatom_summary_json else {}
     topk_rows = [dict(row or {}) for row in (scoring_payload.get("topk", []) or [])]
@@ -92,6 +125,7 @@ def build_payload(
     for idx, row in enumerate(topk_rows[:4], start=1):
         ligand_id = _text(row.get("ligand_id"))
         lane_row = lane_rows.get(ligand_id, {})
+        replicate_row = replicate_rows.get(ligand_id, {})
         promoted_rows.append(
             {
                 "row_kind": "tcruzi_pde_allatom_review_packet_row",
@@ -147,6 +181,7 @@ def build_payload(
                     else "retain_rescue_only_branch_manual_review"
                 ),
                 **_extract_commercial_v2_optional_fields(dict(row or {})),
+                **_replicate_evidence_fields(replicate_row),
             }
         )
     best_row = _best_metric_row(promoted_rows)
@@ -341,6 +376,8 @@ def build_payload(
             "best_smiles": _text(best_row.get("smiles")),
             "allatom_scoring_status": _text(runner_summary.get("scoring_status")),
             "execution_mode": _text(runner_summary.get("execution_mode")),
+            "replicate_evidence_available": bool(replicate_rows),
+            "replicate_evidence_row_count": len(replicate_rows),
             "next_required_step": next_required_step,
             **dict(commercial_schema_v1.get("summary", {}) or {}),
             **dict(commercial_schema_v2.get("summary", {}) or {}),
@@ -353,6 +390,7 @@ def build_payload(
             "allatom_claim_readiness_json": _text(claim_gate_summary.get("claim_readiness_json")),
             "allatom_equivalence_gate_json": _text(claim_gate_summary.get("equivalence_gate_json")),
             "allatom_equivalence_gate_csv": _text(claim_gate_summary.get("equivalence_gate_csv")),
+            "replicate_evidence_json": replicate_evidence_json,
         },
         "rows": promoted_rows,
     }
@@ -362,6 +400,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build the T. cruzi PDE pseudo all-atom review packet.")
     parser.add_argument("--lane-json", default=DEFAULT_LANE_JSON)
     parser.add_argument("--runner-json", default=DEFAULT_RUNNER_JSON)
+    parser.add_argument("--replicate-evidence-json", default=DEFAULT_REPLICATE_EVIDENCE_JSON)
     parser.add_argument("--claim-readiness-json", default="")
     parser.add_argument("--equivalence-gate-json", default="")
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -375,6 +414,8 @@ def main() -> None:
         load_json(args.runner_json),
         claim_readiness_json=str(args.claim_readiness_json),
         equivalence_gate_json=str(args.equivalence_gate_json),
+        replicate_evidence_payload=maybe_load_json(args.replicate_evidence_json),
+        replicate_evidence_json=str(args.replicate_evidence_json),
     )
     write_artifact(args.out_md, "Wet-Lab T. cruzi PDE All-Atom Review Packet", payload)
 

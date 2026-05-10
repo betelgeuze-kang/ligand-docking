@@ -958,7 +958,7 @@ def test_build_wetlab_current_results_index_propagates_pde_selected_allatom_v2_a
     assert "translation_focus_failed:binding_energy_proxy_too_weak_for_translation" not in summary[
         "selected_allatom_action_recipe_codes"
     ]
-    assert "expand_replicate_sampling" in summary["selected_allatom_action_recipe_codes"]
+    assert "recompute_mean_min_distance_iqr_A" in summary["selected_allatom_action_recipe_codes"]
     assert "resolve_claim_equivalence_gate" in summary["selected_allatom_action_recipe_codes"]
     assert "recompute_claim_gate_required_unavailable" not in summary["selected_allatom_action_recipe_codes"]
     assert "recompute_mean_min_distance_A" not in summary["selected_allatom_action_recipe_codes"]
@@ -969,9 +969,9 @@ def test_build_wetlab_current_results_index_propagates_pde_selected_allatom_v2_a
         )
     assert summary["selected_allatom_actionability_next_expensive_lane"] == "defer_expensive_lane"
     assert "recompute_binding_energy_proxy" not in summary["selected_allatom_actionability_required_calculations"]
-    assert summary["selected_allatom_actionability_required_calculations"] == ["expand_replicate_sampling"]
+    assert summary["selected_allatom_actionability_required_calculations"] == ["recompute_mean_min_distance_iqr_A"]
     assert "recompute_mean_min_distance_A" not in summary["selected_allatom_actionability_required_calculations"]
-    assert "replicate_count" in summary["selected_allatom_actionability_block_reason"]
+    assert "mean_min_distance_iqr_A" in summary["selected_allatom_actionability_block_reason"]
     assert "binding_energy_proxy" not in summary["selected_allatom_actionability_block_reason"]
     assert "claim_gate_required_unavailable" not in summary["selected_allatom_actionability_block_reason"]
     assert "mean_min_distance_A" not in summary["selected_allatom_actionability_block_reason"]

@@ -181,6 +181,7 @@ def test_build_wetlab_selected_allatom_repair_packet_is_repair_only() -> None:
         "rescue_only_branch_summary",
         "allatom_rescue_lane_build",
         "hard_gate_repair",
+        "replicate_evidence_refresh",
         "hard_gate_review_refresh",
         "claim_inputs_build_after_hard_gate",
         "claim_readiness_after_hard_gate",
@@ -201,6 +202,7 @@ def test_build_wetlab_selected_allatom_repair_packet_is_repair_only() -> None:
     assert commands_by_phase["rescue_only_branch_summary"] == "python3 tools/build_wetlab_tcruzi_pde_rescue_only_branch_summary.py"
     assert commands_by_phase["allatom_rescue_lane_build"] == "python3 tools/build_wetlab_tcruzi_pde_allatom_rescue_lane.py"
     assert commands_by_phase["hard_gate_repair"] == summary["recommended_command"]
+    assert commands_by_phase["replicate_evidence_refresh"] == "python3 tools/build_wetlab_tcruzi_pde_replicate_evidence.py"
     assert commands_by_phase["hard_gate_review_refresh"] == "python3 tools/build_wetlab_tcruzi_pde_allatom_review_packet.py"
     assert "--manifest-csv <openmm_manifest.csv>" in commands_by_phase["claim_inputs_build_after_hard_gate"]
     assert "--out-json runs/allatom_claim_readiness_" in commands_by_phase["claim_readiness_after_hard_gate"]

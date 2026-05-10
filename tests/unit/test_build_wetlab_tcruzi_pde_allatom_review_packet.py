@@ -468,3 +468,92 @@ def test_build_wetlab_tcruzi_pde_allatom_review_packet_maps_replicate_group_size
     assert summary["commercial_hard_gate_pass_v2"] is False
     assert payload["rows"][0]["commercial_replicate_count_v2"] == 1
     assert "increase_replicate_coverage" in payload["rows"][0]["commercial_upgrade_actions_v2"]
+
+
+def test_build_wetlab_tcruzi_pde_allatom_review_packet_overlays_replicate_evidence(
+    tmp_path: Path,
+) -> None:
+    scoring_json = tmp_path / "summary.json"
+    claim_json = tmp_path / "claim_readiness.json"
+    scoring_json.write_text(
+        json.dumps(
+            {
+                "topk": [
+                    {
+                        "ligand_id": "lig_a",
+                        "mean_min_distance_A": 2.2,
+                        "binding_energy_proxy": -1.0,
+                        "binding_energy_mmpbsa_kcal_mol_proxy": -1.0,
+                        "binding_energy_mmpbsa_std": 0.1,
+                        "stability_score": 0.4,
+                        "contact_fraction": 0.6,
+                        "trajectory_frames": 220,
+                        "replicate_group_size": 1,
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    _write_json(
+        claim_json,
+        {
+            "summary": {
+                "policy_version": "test_policy_v1",
+                "pass_core_gate": True,
+                "claim_ready_for_allatom": True,
+            }
+        },
+    )
+    lane_payload = {
+        "summary": {
+            "shard_id": "20_of_20",
+            "selected_command_kind": "pseudo_allatom_backmapping_rescore",
+            "selected_threshold_A": 2.5,
+        },
+        "rows": [{"ligand_id": "lig_a", "translation_gate_status": "pass", "translation_gate_pass": True}],
+    }
+    runner_payload = {
+        "summary": {
+            "allatom_summary_json": str(scoring_json),
+            "scoring_status": "pass",
+            "execution_mode": "pseudo_allatom_backmapping_scoring_executed",
+        }
+    }
+    replicate_evidence_payload = {
+        "summary": {"status": "wetlab_tcruzi_pde_replicate_evidence_ready"},
+        "rows": [
+            {
+                "ligand_id": "lig_a",
+                "replicate_count": 4,
+                "replicate_pass_fraction": 1.0,
+                "median_mean_min_distance_A": 2.2,
+                "mean_min_distance_iqr_A": 0.7,
+                "median_contact_fraction": 0.62,
+                "replicate_evidence_source": "allatom_rescue_attempt_score_csvs",
+                "replicate_evidence_attempt_ids": ["attempt_a", "attempt_b", "attempt_c", "attempt_d"],
+                "replicate_evidence_score_csv_count": 4,
+            }
+        ],
+    }
+
+    payload = build_payload(
+        lane_payload,
+        runner_payload,
+        claim_readiness_json=str(claim_json),
+        replicate_evidence_payload=replicate_evidence_payload,
+        replicate_evidence_json="runs/wetlab_tcruzi_pde_replicate_evidence_current.json",
+    )
+    summary = payload["summary"]
+
+    assert summary["replicate_evidence_available"] is True
+    assert summary["replicate_evidence_row_count"] == 1
+    assert summary["commercial_replicate_count_v2"] == 4
+    assert summary["commercial_replicate_pass_fraction_v2"] == 1.0
+    assert summary["commercial_mean_min_distance_iqr_A_v2"] == 0.7
+    assert "replicate_count" not in summary["commercial_hard_gate_failed_metrics_v2"]
+    assert "mean_min_distance_iqr_A" in summary["commercial_hard_gate_failed_metrics_v2"]
+    assert "reduce_replicate_distance_dispersion" in summary["commercial_primary_upgrade_actions_v2"]
+    assert payload["structured"]["replicate_evidence_json"] == "runs/wetlab_tcruzi_pde_replicate_evidence_current.json"
+    assert payload["rows"][0]["replicate_evidence_source"] == "allatom_rescue_attempt_score_csvs"
+    assert payload["rows"][0]["commercial_replicate_count_v2"] == 4
