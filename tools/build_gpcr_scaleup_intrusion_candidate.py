@@ -19,6 +19,7 @@ LINEAR_RESCORE_VARIANT = "gpcr_core_linear_rescore_v1"
 MISMATCH_CONTACT_RESCORE_VARIANT = "gpcr_core_mismatch_contact_rescore_v1"
 STRUCTURE_SUPPORT_RESCORE_VARIANT = "gpcr_core_structure_support_rescore_v1"
 FAMILY_BALANCED_RESCORE_VARIANT = "gpcr_core_family_balanced_rescore_v1"
+FAMILY_BALANCED_BETA_BLOCKER_RESCUE_VARIANT = "gpcr_core_family_balanced_beta_blocker_rescue_v2"
 PHARMACOPHORE_VARIANT = "gpcr_adrb2_beta_blocker_pharmacophore_v1"
 ACIDIC_ANCHOR_OVERCONTACT_PRIOR_GATE_VARIANT = "gpcr_core_acidic_anchor_overcontact_prior_gate_v4"
 FIXED_REFERENCE_LIVE_SHADOW_V5_VARIANT = "gpcr_core_fixed_reference_live_shadow_v5"
@@ -28,6 +29,7 @@ SUPPORTED_VARIANTS = {
     MISMATCH_CONTACT_RESCORE_VARIANT,
     STRUCTURE_SUPPORT_RESCORE_VARIANT,
     FAMILY_BALANCED_RESCORE_VARIANT,
+    FAMILY_BALANCED_BETA_BLOCKER_RESCUE_VARIANT,
     PHARMACOPHORE_VARIANT,
     ACIDIC_ANCHOR_OVERCONTACT_PRIOR_GATE_VARIANT,
     FIXED_REFERENCE_LIVE_SHADOW_V5_VARIANT,
@@ -40,6 +42,9 @@ VARIANT_DEFAULT_SPEC_JSON = {
     MISMATCH_CONTACT_RESCORE_VARIANT: "runs/gpcr_residual_prototype_spec_core_mismatch_contact_rescore_v1_current.json",
     STRUCTURE_SUPPORT_RESCORE_VARIANT: "runs/gpcr_residual_prototype_spec_core_structure_support_rescore_v1_current.json",
     FAMILY_BALANCED_RESCORE_VARIANT: "runs/gpcr_residual_prototype_spec_core_family_balanced_rescore_v1_current.json",
+    FAMILY_BALANCED_BETA_BLOCKER_RESCUE_VARIANT: (
+        "runs/gpcr_residual_prototype_spec_core_family_balanced_beta_blocker_rescue_v2_current.json"
+    ),
     PHARMACOPHORE_VARIANT: "runs/gpcr_residual_prototype_spec_adrb2_beta_blocker_pharmacophore_v1_current.json",
     ACIDIC_ANCHOR_OVERCONTACT_PRIOR_GATE_VARIANT: (
         "runs/gpcr_residual_prototype_spec_acidic_anchor_overcontact_prior_gate_v4_shadow.json"
@@ -54,12 +59,14 @@ VARIANT_CANDIDATE_KIND = {
     MISMATCH_CONTACT_RESCORE_VARIANT: "gpcr_core_mismatch_contact_rescore_100k",
     STRUCTURE_SUPPORT_RESCORE_VARIANT: "gpcr_core_structure_support_rescore_100k",
     FAMILY_BALANCED_RESCORE_VARIANT: "gpcr_core_family_balanced_rescore_100k",
+    FAMILY_BALANCED_BETA_BLOCKER_RESCUE_VARIANT: "gpcr_core_family_balanced_beta_blocker_rescue_100k",
     PHARMACOPHORE_VARIANT: "gpcr_adrb2_beta_blocker_pharmacophore_100k",
     ACIDIC_ANCHOR_OVERCONTACT_PRIOR_GATE_VARIANT: "gpcr_core_acidic_anchor_overcontact_prior_gate_100k",
     FIXED_REFERENCE_LIVE_SHADOW_V5_VARIANT: "gpcr_core_fixed_reference_live_shadow_v5_100k",
 }
 VARIANT_DEFAULT_BASE_PROFILE_JSON = {
     FAMILY_BALANCED_RESCORE_VARIANT: "runs/gpcr_frozen_candidate_profile_support_current/profile.json",
+    FAMILY_BALANCED_BETA_BLOCKER_RESCUE_VARIANT: "runs/gpcr_frozen_candidate_profile_support_current/profile.json",
     ACIDIC_ANCHOR_OVERCONTACT_PRIOR_GATE_VARIANT: "runs/gpcr_frozen_candidate_profile_support_current/profile.json",
     FIXED_REFERENCE_LIVE_SHADOW_V5_VARIANT: "runs/gpcr_frozen_candidate_profile_support_current/profile.json",
 }
@@ -162,7 +169,7 @@ def _candidate_profile(
     score_reference_stats_json: Path | None = None,
 ) -> dict[str, Any]:
     profile = dict(base_profile)
-    target_specific = variant == PHARMACOPHORE_VARIANT
+    target_specific = variant in {PHARMACOPHORE_VARIANT, FAMILY_BALANCED_BETA_BLOCKER_RESCUE_VARIANT}
     candidate_label = variant.replace("gpcr_core_", "GPCR core ").replace("_", " ")
     mode_label = "guarded apply" if mode == "apply" else "shadow"
     profile["residual_prototype_enabled"] = True
@@ -191,7 +198,11 @@ def _candidate_profile(
         constraints = {}
     claim_locked_candidate = (
         bool(constraints.get("claim_locked_candidate"))
-        or variant in {FAMILY_BALANCED_RESCORE_VARIANT, FIXED_REFERENCE_LIVE_SHADOW_V5_VARIANT}
+        or variant in {
+            FAMILY_BALANCED_RESCORE_VARIANT,
+            FAMILY_BALANCED_BETA_BLOCKER_RESCUE_VARIANT,
+            FIXED_REFERENCE_LIVE_SHADOW_V5_VARIANT,
+        }
     )
     shadow_only_candidate = bool(constraints.get("shadow_only_candidate"))
     profile["platform_promotion_allowed"] = False
@@ -278,7 +289,7 @@ def _candidate_set_spec(
         "family_scope": ["gpcr"],
         "router_promotion_allowed": False,
         "platform_promotion_allowed": False,
-        "target_specific_candidate": variant == PHARMACOPHORE_VARIANT,
+        "target_specific_candidate": variant in {PHARMACOPHORE_VARIANT, FAMILY_BALANCED_BETA_BLOCKER_RESCUE_VARIANT},
         "apply_mode_claim_allowed": False,
         "claim_safe_assertion_allowed": False,
         "broad_gpcr_claim_allowed": False,
@@ -292,7 +303,10 @@ def _candidate_set_spec(
     )
     if not isinstance(constraints, dict):
         constraints = {}
-    if bool(constraints.get("claim_locked_candidate")) or variant == FAMILY_BALANCED_RESCORE_VARIANT:
+    if bool(constraints.get("claim_locked_candidate")) or variant in {
+        FAMILY_BALANCED_RESCORE_VARIANT,
+        FAMILY_BALANCED_BETA_BLOCKER_RESCUE_VARIANT,
+    }:
         governance["claim_locked_candidate"] = True
         governance["threshold_relaxation_allowed"] = False
         governance["fake_pass_allowed"] = False

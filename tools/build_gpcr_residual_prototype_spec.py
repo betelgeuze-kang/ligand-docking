@@ -212,7 +212,10 @@ def _feature_rows(variant: str) -> list[dict[str, Any]]:
                 },
             ]
         )
-    if variant == "gpcr_core_family_balanced_rescore_v1":
+    if variant in {
+        "gpcr_core_family_balanced_rescore_v1",
+        "gpcr_core_family_balanced_beta_blocker_rescue_v2",
+    }:
         rows.extend(
             [
                 {
@@ -1033,7 +1036,10 @@ def _feature_rows(variant: str) -> list[dict[str, Any]]:
                 },
             ]
         )
-    if variant == "gpcr_adrb2_beta_blocker_pharmacophore_v1":
+    if variant in {
+        "gpcr_adrb2_beta_blocker_pharmacophore_v1",
+        "gpcr_core_family_balanced_beta_blocker_rescue_v2",
+    }:
         rows.extend(
             [
                 {
@@ -1431,6 +1437,68 @@ def build_payload(*, variant: str = "current") -> dict[str, Any]:
             "Run gpcr_core_family_balanced_rescore_v1 as a claim-locked replay/shadow candidate on the frozen "
             "non-ADRB2 guarded 100k evidence. Only open guarded apply after replay improves non-ADRB2 tail ranks "
             "without threshold relaxation, target identity features, or claim promotion."
+        )
+    elif variant == "gpcr_core_family_balanced_beta_blocker_rescue_v2":
+        constraints = {
+            **constraints,
+            "max_abs_delta_score": 0.0,
+            "yellow_band_abs_delta_score": 4.0,
+            "comparison_only_candidate": True,
+            "claim_locked_candidate": True,
+            "family_balanced_rescore_candidate": True,
+            "target_specific_pharmacophore_candidate": True,
+            "router_promotion_allowed": False,
+            "platform_promotion_allowed": False,
+            "apply_mode_claim_allowed": False,
+            "claim_safe_assertion_allowed": False,
+            "broad_gpcr_claim_allowed": False,
+            "threshold_relaxation_allowed": False,
+            "fake_pass_allowed": False,
+            "target_identity_feature_allowed": False,
+            "diagnostic_source_artifact": "runs/gpcr_ci_low_recovery_packet_coverage_v1_current.json",
+            "parent_variant": "gpcr_core_family_balanced_rescore_v1",
+            "required_before_claim": [
+                "shadow_or_replay_evidence",
+                "guarded_apply_evidence",
+                "full_100k_ci_low_top20_claim_review_green",
+                "non_adrb2_family_preservation_review",
+            ],
+        }
+        tuning = {
+            "variant": "gpcr_core_family_balanced_beta_blocker_rescue_v2",
+            "candidate_source": "coverage_v1_ci_low_recovery",
+            "parent_variant": "gpcr_core_family_balanced_rescore_v1",
+            "failure_tags": [
+                "ci_low_below_threshold",
+                "adrb2_beta_blocker_tail_rank",
+                "one_non_adrb2_positive_tail_rank_remaining",
+            ],
+            "current_guarded_100k_pr_auc": 0.6201397269445852,
+            "current_guarded_100k_pr_auc_ci_low": 0.33420934669032454,
+            "current_guarded_100k_top20_hit_rate": 0.45,
+            "local_replay_pr_auc": 0.8792154388055932,
+            "local_replay_pr_auc_ci_low": 0.688264358880204,
+            "local_replay_top20_hit_rate": 0.60,
+            "local_replay_positive_ranks": [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 16, 41464],
+            "pharmacophore_reward_score": 8.0,
+            "pharmacophore_smarts": "aryloxypropanolamine",
+            "scope": "family_balanced_gpcr_plus_adrb2_beta_blocker_like_rescue",
+            "replay_score_formula": (
+                "family_balanced_rescore_v1 - 8.0*aryloxypropanolamine_smarts_match"
+            ),
+        }
+        interactions = [
+            "family_balanced_pose_energy_support",
+            "aryloxypropanolamine_beta_blocker_rescue_without_decoy_match",
+            "adrb2_tail_rank_recovery_is_scoped_not_broad_gpcr_claim",
+            "non_adrb2_family_preservation_required_before_claim",
+            "full_100k_ci_low_top20_gate_required",
+            "no_router_platform_or_claim_promotion",
+        ]
+        next_step = (
+            "Replay gpcr_core_family_balanced_beta_blocker_rescue_v2 on the coverage-v1 100k stage3 scores. "
+            "Only open a guarded apply rerun if the PR-AUC CI-low recovery holds while non-ADRB2 family scorecard "
+            "and leakage gates remain green."
         )
     elif variant == "gpcr_core_family_anchor_rescore_v2":
         constraints = {
@@ -2996,7 +3064,10 @@ def build_payload(*, variant: str = "current") -> dict[str, Any]:
                         {"feature": "z_binding_energy_mmpbsa_std", "weight": 0.215},
                     ],
                 }
-                if variant == "gpcr_core_family_balanced_rescore_v1"
+                if variant in {
+                    "gpcr_core_family_balanced_rescore_v1",
+                    "gpcr_core_family_balanced_beta_blocker_rescue_v2",
+                }
                 else {
                     "enabled": True,
                     "combine_mode": "replace",
@@ -3268,6 +3339,7 @@ def parse_args() -> argparse.Namespace:
             "gpcr_core_mismatch_contact_rescore_v1",
             "gpcr_core_structure_support_rescore_v1",
             "gpcr_core_family_balanced_rescore_v1",
+            "gpcr_core_family_balanced_beta_blocker_rescue_v2",
             "gpcr_core_family_anchor_rescore_v2",
             "gpcr_core_family_anchor_ci_stability_v3",
             "gpcr_core_acidic_anchor_overcontact_prior_gate_v4",

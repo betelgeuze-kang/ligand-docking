@@ -622,6 +622,46 @@ def test_build_gpcr_residual_prototype_spec_adrb2_pharmacophore_v1(tmp_path: Pat
     )
 
 
+def test_build_gpcr_residual_prototype_spec_family_balanced_beta_blocker_rescue_v2(tmp_path: Path) -> None:
+    out_json = tmp_path / "prototype_family_balanced_beta_blocker.json"
+    out_csv = tmp_path / "prototype_family_balanced_beta_blocker.csv"
+    out_md = tmp_path / "prototype_family_balanced_beta_blocker.md"
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools/build_gpcr_residual_prototype_spec.py"),
+            "--variant",
+            "gpcr_core_family_balanced_beta_blocker_rescue_v2",
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=ROOT,
+    )
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    constraints = payload["prototype"]["constraints"]
+    tuning = payload["prototype"]["tuning"]
+    term_features = {term["feature"] for term in payload["prototype"]["linear_rescore"]["terms"]}
+    feature_rows = {row["feature_name"] for row in payload["feature_rows"]}
+
+    assert payload["summary"]["prototype_variant"] == "gpcr_core_family_balanced_beta_blocker_rescue_v2"
+    assert constraints["claim_locked_candidate"] is True
+    assert constraints["target_specific_pharmacophore_candidate"] is True
+    assert constraints["target_identity_feature_allowed"] is False
+    assert constraints["threshold_relaxation_allowed"] is False
+    assert tuning["variant"] == "gpcr_core_family_balanced_beta_blocker_rescue_v2"
+    assert tuning["parent_variant"] == "gpcr_core_family_balanced_rescore_v1"
+    assert tuning["pharmacophore_reward_score"] == 8.0
+    assert "z_ligand_affinity_hint" in term_features
+    assert "z_ligand_onsps_norm" in term_features
+    assert "aryloxypropanolamine_smarts_match" in feature_rows
+    assert "non_adrb2_tail_rank_blocker" in feature_rows
+
+
 def test_build_gpcr_residual_prototype_spec_direct_atom_anchor_window_v8_is_claim_locked(tmp_path: Path) -> None:
     out_json = tmp_path / "prototype_direct_atom_window_v8.json"
     out_csv = tmp_path / "prototype_direct_atom_window_v8.csv"

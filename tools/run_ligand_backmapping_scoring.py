@@ -1292,7 +1292,10 @@ def _apply_residual_prototype_shadow(
             linear_rescore_status = "applied" if not missing_terms else "applied_with_missing_terms"
         else:
             linear_rescore_status = "unsupported_combine_mode"
-    if str(tuning["variant"]) == "gpcr_adrb2_beta_blocker_pharmacophore_v1":
+    if str(tuning["variant"]) in {
+        "gpcr_adrb2_beta_blocker_pharmacophore_v1",
+        "gpcr_core_family_balanced_beta_blocker_rescue_v2",
+    }:
         smiles_series = (
             result_df["ligand_smiles"]
             if "ligand_smiles" in result_df.columns

@@ -371,6 +371,50 @@ def test_build_payload_supports_target_specific_pharmacophore_variant(tmp_path: 
     assert set_spec["global_governance"]["router_promotion_allowed"] is False
 
 
+def test_build_payload_supports_family_balanced_beta_blocker_rescue_variant(tmp_path: Path) -> None:
+    base_profile = tmp_path / "config" / "base_gpcr.json"
+    residual_spec = tmp_path / "runs" / "gpcr_residual_prototype_spec_family_balanced_beta_blocker.json"
+    out_dir = tmp_path / "candidate"
+    _write_json(base_profile, {"ranking_score_col": "binding_score_composite_v7"})
+    _write_json(
+        residual_spec,
+        {
+            "summary": {
+                "family": "gpcr",
+                "prototype_variant": "gpcr_core_family_balanced_beta_blocker_rescue_v2",
+            },
+            "prototype": {
+                "constraints": {
+                    "claim_locked_candidate": True,
+                    "target_specific_pharmacophore_candidate": True,
+                }
+            },
+        },
+    )
+
+    payload = mod.build_payload(
+        out_dir=out_dir,
+        spec_json=residual_spec,
+        base_profile_json=base_profile,
+        tag_suffix="familybalancedbb",
+        variant="gpcr_core_family_balanced_beta_blocker_rescue_v2",
+        mode="apply",
+    )
+
+    profile = json.loads(Path(payload["profile_json"]).read_text(encoding="utf-8"))
+    set_spec = json.loads(Path(payload["set_spec_json"]).read_text(encoding="utf-8"))
+
+    assert payload["candidate_kind"] == "gpcr_core_family_balanced_beta_blocker_rescue_100k"
+    assert profile["residual_prototype_candidate"] == "gpcr_core_family_balanced_beta_blocker_rescue_v2"
+    assert profile["ranking_score_col"] == "binding_score_composite_v7_residual_active"
+    assert profile["claim_locked_candidate"] is True
+    assert profile["target_specific_candidate"] is True
+    assert profile["router_promotion_allowed"] is False
+    assert set_spec["global_governance"]["claim_locked_candidate"] is True
+    assert set_spec["global_governance"]["target_specific_candidate"] is True
+    assert set_spec["global_governance"]["prototype_variant"] == "gpcr_core_family_balanced_beta_blocker_rescue_v2"
+
+
 def test_build_payload_can_emit_guarded_apply_profile(tmp_path: Path) -> None:
     base_profile = tmp_path / "config" / "base_gpcr.json"
     residual_spec = tmp_path / "runs" / "gpcr_residual_prototype_spec_pharmacophore.json"
