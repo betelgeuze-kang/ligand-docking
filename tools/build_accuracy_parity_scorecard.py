@@ -73,6 +73,50 @@ def _bool(value: Any) -> bool | None:
     return None
 
 
+def _topk_hit_rate(payload: dict[str, Any], *, k: int = 20) -> float | None:
+    for key in ("topk_unique", "topk"):
+        rows = payload.get(key)
+        if not isinstance(rows, list):
+            continue
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            if _int(row.get("k")) == k:
+                return _float(row.get("hit_rate"))
+    return None
+
+
+def _ranking_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    summary = _summary(payload)
+    if summary:
+        return summary
+    stage6 = payload.get("stages", {}).get("stage6_operational_gate") if isinstance(payload.get("stages"), dict) else {}
+    if isinstance(stage6, dict) and stage6:
+        return {
+            "claim_promotion_allowed": stage6.get("claim_promotion_allowed"),
+            "ranking_pr_auc": _float(stage6.get("ranking_pr_auc")),
+            "ranking_pr_auc_ci_low": _float(stage6.get("ranking_pr_auc_ci_low")),
+            "ranking_topk_hit_rate": _float(stage6.get("ranking_topk_hit_rate")),
+            "positive_count": _int(stage6.get("ranking_positive_count")),
+            "ranking_score_col_used": stage6.get("ranking_score_col_used"),
+        }
+    metrics = payload.get("metrics") if isinstance(payload.get("metrics"), dict) else {}
+    metrics_ci_unique = payload.get("metrics_ci_unique") if isinstance(payload.get("metrics_ci_unique"), dict) else {}
+    metrics_ci = payload.get("metrics_ci") if isinstance(payload.get("metrics_ci"), dict) else {}
+    pr_ci = metrics_ci_unique.get("pr_auc") if isinstance(metrics_ci_unique.get("pr_auc"), dict) else {}
+    if not pr_ci:
+        pr_ci = metrics_ci.get("pr_auc") if isinstance(metrics_ci.get("pr_auc"), dict) else {}
+    return {
+        "claim_promotion_allowed": payload.get("claim_promotion_allowed"),
+        "blockers": payload.get("blockers", []),
+        "ranking_pr_auc": _float(metrics.get("pr_auc_unique_key") or metrics.get("pr_auc")),
+        "ranking_pr_auc_ci_low": _float(pr_ci.get("low")),
+        "ranking_topk_hit_rate": _topk_hit_rate(payload, k=20),
+        "positive_count": _int(metrics.get("positive_count_unique_key") or metrics.get("positive_count")),
+        "ranking_score_col_used": metrics.get("probability_score_col_used") or payload.get("score_col"),
+    }
+
+
 def _metric(value: Any) -> Any:
     if isinstance(value, float):
         return round(value, 6)
@@ -176,7 +220,7 @@ def _ligand_ranking_row(
     gpcr_ranking_json: str | Path,
     gpcr_core_diagnostics_json: str | Path,
 ) -> dict[str, Any]:
-    ranking_summary = _summary(_read_json(gpcr_ranking_json))
+    ranking_summary = _ranking_summary(_read_json(gpcr_ranking_json))
     core_summary = _summary(_read_json(gpcr_core_diagnostics_json))
     pr_auc = _float(ranking_summary.get("ranking_pr_auc"))
     ci_low = _float(ranking_summary.get("ranking_pr_auc_ci_low"))
@@ -192,6 +236,26 @@ def _ligand_ranking_row(
     if claim_allowed is not True:
         blockers.append("claim_promotion_not_allowed")
     blockers = sorted(set(blockers))
+    metric_blockers = [
+        blocker
+        for blocker in blockers
+        if blocker
+        in {
+            "ranking_pr_auc_below_threshold",
+            "ranking_pr_auc_ci_low_below_threshold",
+            "topk_hit_rate_below_threshold",
+        }
+    ]
+    if not metric_blockers and "claim_promotion_not_allowed" in blockers:
+        next_required_step = (
+            "GPCR ranking metrics clear the local guarded thresholds; keep claim promotion false until the "
+            "accuracy scorecard, leakage/pose guardrails, and an independent repeat are reviewed."
+        )
+    else:
+        next_required_step = (
+            "Repair DRD2/HTR2A/OPRM1 pose-supported ranking, rebuild hard decoys, then rerun guarded "
+            "100k review before any Schrödinger-class ligand-ranking claim."
+        )
     return _row(
         axis="ligand_ranking",
         comparator="Schrodinger Glide/FEP+ class ranking",
@@ -203,6 +267,7 @@ def _ligand_ranking_row(
             "ranking_pr_auc_ci_low": ci_low,
             "ranking_topk_hit_rate": topk,
             "positive_count": _int(ranking_summary.get("positive_count")),
+            "ranking_score_col_used": ranking_summary.get("ranking_score_col_used"),
             "worst_positive_global_rank": _int(ranking_summary.get("worst_positive_global_rank")),
             "worst_positive_within_target_rank": _int(ranking_summary.get("worst_positive_within_target_rank")),
             "core_claim_safe": _bool(core_summary.get("claim_safe")),
@@ -215,10 +280,7 @@ def _ligand_ranking_row(
             "requires_pose_supported_decoy_resistance": True,
         },
         blockers=blockers,
-        next_required_step=(
-            "Repair DRD2/HTR2A/OPRM1 pose-supported ranking, rebuild hard decoys, then rerun guarded "
-            "100k review before any Schrödinger-class ligand-ranking claim."
-        ),
+        next_required_step=next_required_step,
     )
 
 

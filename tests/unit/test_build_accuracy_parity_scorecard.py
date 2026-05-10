@@ -282,3 +282,33 @@ def test_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["packet_type"] == "accuracy_parity_scorecard"
     assert "Accuracy Parity Scorecard" in out_md.read_text(encoding="utf-8")
+
+
+def test_ligand_ranking_reads_stage5_metric_shape(tmp_path: Path) -> None:
+    ranking = tmp_path / "stage5_ranking.json"
+    core = tmp_path / "core.json"
+    _write_json(
+        ranking,
+        {
+            "metrics": {
+                "pr_auc": 0.879215438805593,
+                "positive_count": 13,
+                "probability_score_col_used": "binding_score_composite_v7_residual_active",
+            },
+            "metrics_ci_unique": {"pr_auc": {"low": 0.6758817928374873}},
+            "topk_unique": [{"k": 20, "hit_rate": 0.6}],
+        },
+    )
+    _write_json(core, {"summary": {"claim_safe": False, "primary_blocker_task": "gpcr_core_full"}})
+
+    row = mod._ligand_ranking_row(gpcr_ranking_json=ranking, gpcr_core_diagnostics_json=core)
+
+    assert row["status"] == "blocked"
+    assert row["metrics"]["ranking_pr_auc"] == 0.879215
+    assert row["metrics"]["ranking_pr_auc_ci_low"] == 0.675882
+    assert row["metrics"]["ranking_topk_hit_rate"] == 0.6
+    assert row["metrics"]["positive_count"] == 13
+    assert row["metrics"]["ranking_score_col_used"] == "binding_score_composite_v7_residual_active"
+    assert "claim_promotion_not_allowed" in row["blockers"]
+    assert "ranking_pr_auc_ci_low_below_threshold" not in row["blockers"]
+    assert "ranking metrics clear" in row["next_required_step"]
