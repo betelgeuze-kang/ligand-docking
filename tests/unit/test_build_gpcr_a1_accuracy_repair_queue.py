@@ -727,3 +727,172 @@ def test_cli_writes_queue_artifacts(tmp_path: Path) -> None:
     assert "GPCR A1 Accuracy Repair Queue" in rendered_md
     assert "full_forcefield_minimization_ready flips true" in rendered_md
     assert "real protein-ligand forcefield parameterization path" in rendered_md
+
+
+def test_build_queue_closes_claim_review_after_full_guarded_stage5_pass(tmp_path: Path) -> None:
+    scorecard = tmp_path / "scorecard.json"
+    drd2 = tmp_path / "drd2.json"
+    support = tmp_path / "support.json"
+    readiness = tmp_path / "readiness.json"
+    parameterization_probe = tmp_path / "parameterization_probe.json"
+    protein_repair = tmp_path / "protein_repair.json"
+    hard_decoy_envelope = tmp_path / "hard_decoy_envelope.json"
+    drd2_weakbase_replay = tmp_path / "drd2_weakbase_replay.json"
+    htr2a_repair_packet = tmp_path / "htr2a_repair_packet.json"
+    htr2a_topology_probe = tmp_path / "htr2a_topology_probe.json"
+    htr2a_life_science = tmp_path / "htr2a_life_science.json"
+    htr2a_topology_replay = tmp_path / "htr2a_topology_replay.json"
+    oprm1_life_science = tmp_path / "oprm1_life_science.json"
+    oprm1_topology_replay = tmp_path / "oprm1_topology_replay.json"
+    shadow_claim_review = tmp_path / "shadow_claim_review.json"
+    pose_gap = tmp_path / "pose_gap.json"
+    ranking = tmp_path / "ranking.json"
+
+    _write_json(scorecard, {"summary": {"status": "blocked_accuracy_parity"}})
+    _write_json(drd2, {"summary": {"target": "CHEMBL217_DRD2_HUMAN", "positive_ligand_id": "CHEMBL301265"}})
+    _write_json(
+        support,
+        {
+            "summary": {
+                "status": "drd2_atom_typed_backmapping_support_ready",
+                "positive_backmapping_atom_coverage_ratio": 1.0,
+                "positive_full_atom_typed_backmapping_ready": True,
+                "positive_minimum_coverage_gate_pass": True,
+                "positive_pose_preservation_rmsd_A_p90": 0.1399,
+                "positive_local_minimization_survival_fraction": 1.0,
+                "positive_local_minimization_survival_claim_scope": "full_protein_ligand_forcefield",
+                "positive_local_minimization_survival_hard_decoy_evidence_allowed": True,
+                "positive_blockers": [],
+                "hard_decoy_rebuild_allowed": True,
+                "claim_promotion_allowed": False,
+                "scorer_apply_allowed": False,
+                "guarded_100k_rerun_allowed": False,
+            }
+        },
+    )
+    _write_json(
+        readiness,
+        {
+            "summary": {
+                "status": "ready",
+                "full_forcefield_minimization_ready": True,
+                "protein_parameterization_available": True,
+                "ligand_parameterization_available": True,
+            }
+        },
+    )
+    _write_json(
+        parameterization_probe,
+        {
+            "summary": {
+                "claim_grade_parameterization_ready": True,
+                "local_probe_partial": False,
+                "ligand_template_parameterization_available": True,
+            }
+        },
+    )
+    _write_json(
+        protein_repair,
+        {
+            "summary": {
+                "missing_heavy_atom_residue_count": 0,
+                "incomplete_histidine_count": 0,
+                "claim_grade_repair_allowed": True,
+            }
+        },
+    )
+    _write_json(
+        hard_decoy_envelope,
+        {
+            "summary": {
+                "status": "slice_pairwise_green_diagnostic_only",
+                "bounded_best_positive_rank": 1,
+                "bounded_best_decoys_above_positive_count": 0,
+                "bounded_best_valid_anchor_challenge_above_positive_count": 0,
+            }
+        },
+    )
+    _write_json(
+        drd2_weakbase_replay,
+        {"summary": {"status": "drd2_weakbase_false_support_shadow_replay_selected_slice_green_claim_locked"}},
+    )
+    _write_json(htr2a_repair_packet, {"summary": {}})
+    _write_json(htr2a_topology_probe, {"summary": {}})
+    _write_json(htr2a_life_science, {"summary": {}})
+    _write_json(
+        htr2a_topology_replay,
+        {
+            "summary": {
+                "status": "htr2a_topology_support_shadow_replay_selected_slice_green_claim_locked",
+                "claim_promotion_allowed": False,
+                "scorer_apply_allowed": False,
+                "guarded_100k_rerun_allowed": False,
+                "selected_htr2a_target_rank": 1,
+                "selected_htr2a_decoys_above_positive": 0,
+                "selected_non_htr2a_regression_count": 0,
+            }
+        },
+    )
+    _write_json(oprm1_life_science, {"summary": {}})
+    _write_json(
+        oprm1_topology_replay,
+        {
+            "summary": {
+                "status": "oprm1_topology_pose_shadow_replay_selected_slice_green_claim_locked",
+                "claim_promotion_allowed": False,
+                "scorer_apply_allowed": False,
+                "guarded_100k_rerun_allowed": False,
+                "selected_oprm1_target_rank": 1,
+                "selected_oprm1_decoys_above_positive": 0,
+                "selected_non_oprm1_regression_count": 0,
+            }
+        },
+    )
+    _write_json(shadow_claim_review, {"summary": {"status": "blocked_guarded_shadow_claim_review_ci_low"}})
+    _write_json(pose_gap, {"target_summaries": []})
+    _write_json(
+        ranking,
+        {
+            "metrics": {
+                "pr_auc": 0.879215438805593,
+                "roc_auc_unique_key": 0.9601290979014859,
+                "positive_count": 13,
+                "probability_score_col_used": "binding_score_composite_v7_residual_active",
+            },
+            "metrics_ci_unique": {"pr_auc": {"low": 0.6758817928374873}},
+            "topk_unique": [{"k": 20, "hit_rate": 0.6}],
+        },
+    )
+
+    payload = mod.build_queue(
+        accuracy_scorecard_json=scorecard,
+        drd2_repair_json=drd2,
+        drd2_backmapping_support_json=support,
+        drd2_full_forcefield_readiness_json=readiness,
+        drd2_parameterization_probe_json=parameterization_probe,
+        drd2_protein_repair_json=protein_repair,
+        drd2_hard_decoy_envelope_json=hard_decoy_envelope,
+        drd2_weakbase_replay_json=drd2_weakbase_replay,
+        htr2a_repair_packet_json=htr2a_repair_packet,
+        htr2a_topology_probe_json=htr2a_topology_probe,
+        htr2a_life_science_evidence_json=htr2a_life_science,
+        htr2a_topology_replay_json=htr2a_topology_replay,
+        oprm1_life_science_evidence_json=oprm1_life_science,
+        oprm1_topology_replay_json=oprm1_topology_replay,
+        shadow_claim_review_json=shadow_claim_review,
+        pose_gap_json=pose_gap,
+        ranking_json=ranking,
+        generated_at_local="2026-05-10T22:00:00+09:00",
+    )
+
+    rows = {row["repair_id"]: row for row in payload["rows"]}
+    claim_review = rows["guarded_100k_claim_review_rerun"]
+    assert payload["summary"]["status"] == "a1_accuracy_repair_queue_cleared_claim_locked"
+    assert payload["summary"]["full_guarded_100k_review_passed"] is True
+    assert payload["summary"]["open_queue_row_count"] == 0
+    assert claim_review["status"] == "completed"
+    assert claim_review["current_evidence"]["ranking_pr_auc"] == 0.879215438805593
+    assert claim_review["current_evidence"]["ranking_pr_auc_ci_low"] == 0.6758817928374873
+    assert claim_review["current_evidence"]["ranking_topk_hit_rate"] == 0.6
+    assert claim_review["current_evidence"]["ranking_score_col_used"] == "binding_score_composite_v7_residual_active"
+    assert "full guarded 100k ranking review clears" in claim_review["next_action"]

@@ -55,6 +55,49 @@ def _target_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return rows if isinstance(rows, list) else []
 
 
+def _topk_hit_rate(payload: dict[str, Any], *, k: int = 20) -> float | None:
+    for key in ("topk_unique", "topk"):
+        rows = payload.get(key)
+        if not isinstance(rows, list):
+            continue
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            if _int(row.get("k")) == k:
+                return _float(row.get("hit_rate"))
+    return None
+
+
+def _ranking_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    summary = _summary(payload)
+    if summary:
+        return summary
+    stage6 = payload.get("stages", {}).get("stage6_operational_gate") if isinstance(payload.get("stages"), dict) else {}
+    if isinstance(stage6, dict) and stage6:
+        return {
+            "ranking_unique_auc": _float(stage6.get("ranking_unique_auc") or stage6.get("ranking_auc")),
+            "ranking_pr_auc": _float(stage6.get("ranking_pr_auc")),
+            "ranking_pr_auc_ci_low": _float(stage6.get("ranking_pr_auc_ci_low")),
+            "ranking_topk_hit_rate": _float(stage6.get("ranking_topk_hit_rate")),
+            "ranking_positive_count": _int(stage6.get("ranking_positive_count")),
+            "ranking_score_col_used": stage6.get("ranking_score_col_used"),
+        }
+    metrics = payload.get("metrics") if isinstance(payload.get("metrics"), dict) else {}
+    metrics_ci_unique = payload.get("metrics_ci_unique") if isinstance(payload.get("metrics_ci_unique"), dict) else {}
+    metrics_ci = payload.get("metrics_ci") if isinstance(payload.get("metrics_ci"), dict) else {}
+    pr_ci = metrics_ci_unique.get("pr_auc") if isinstance(metrics_ci_unique.get("pr_auc"), dict) else {}
+    if not pr_ci:
+        pr_ci = metrics_ci.get("pr_auc") if isinstance(metrics_ci.get("pr_auc"), dict) else {}
+    return {
+        "ranking_unique_auc": _float(metrics.get("roc_auc_unique_key") or metrics.get("roc_auc")),
+        "ranking_pr_auc": _float(metrics.get("pr_auc_unique_key") or metrics.get("pr_auc")),
+        "ranking_pr_auc_ci_low": _float(pr_ci.get("low")),
+        "ranking_topk_hit_rate": _topk_hit_rate(payload, k=20),
+        "ranking_positive_count": _int(metrics.get("positive_count_unique_key") or metrics.get("positive_count")),
+        "ranking_score_col_used": metrics.get("probability_score_col_used") or payload.get("score_col"),
+    }
+
+
 def _queue_row(
     *,
     priority: int,
@@ -135,7 +178,7 @@ def build_queue(
     oprm1_life_science_summary = _summary(oprm1_life_science_evidence)
     oprm1_topology_replay_summary = _summary(oprm1_topology_replay)
     shadow_claim_review_summary = _summary(shadow_claim_review)
-    ranking_summary = _summary(ranking)
+    ranking_summary = _ranking_summary(ranking)
     target_rows = _target_rows(pose_gap)
     support_status = str(support_summary.get("status") or "").strip()
     support_next_required_step = str(support_summary.get("next_required_step") or "").strip()
@@ -280,6 +323,18 @@ def build_queue(
     shadow_review_status = str(shadow_claim_review_summary.get("status") or "").strip()
     shadow_review_blockers = [str(item) for item in shadow_claim_review_summary.get("blockers") or []]
     shadow_review_passed = bool(shadow_claim_review_summary.get("guarded_shadow_claim_review_passed"))
+    ranking_pr_auc = _float(ranking_summary.get("ranking_pr_auc"))
+    ranking_pr_auc_ci_low = _float(ranking_summary.get("ranking_pr_auc_ci_low"))
+    ranking_topk_hit_rate = _float(ranking_summary.get("ranking_topk_hit_rate"))
+    full_guarded_review_passed = bool(
+        guarded_review_ready
+        and ranking_pr_auc is not None
+        and ranking_pr_auc >= 0.55
+        and ranking_pr_auc_ci_low is not None
+        and ranking_pr_auc_ci_low >= 0.45
+        and ranking_topk_hit_rate is not None
+        and ranking_topk_hit_rate >= 0.50
+    )
     rows: list[dict[str, Any]] = [
         _queue_row(
             priority=1,
@@ -641,11 +696,14 @@ def build_queue(
             ],
             current_evidence={
                 "scorecard_status": _summary(scorecard).get("status"),
-                "ranking_pr_auc": _float(ranking_summary.get("ranking_pr_auc")),
-                "ranking_pr_auc_ci_low": _float(ranking_summary.get("ranking_pr_auc_ci_low")),
-                "ranking_topk_hit_rate": _float(ranking_summary.get("ranking_topk_hit_rate")),
+                "ranking_pr_auc": ranking_pr_auc,
+                "ranking_pr_auc_ci_low": ranking_pr_auc_ci_low,
+                "ranking_topk_hit_rate": ranking_topk_hit_rate,
                 "worst_positive_global_rank": _int(ranking_summary.get("worst_positive_global_rank")),
                 "worst_positive_within_target_rank": _int(ranking_summary.get("worst_positive_within_target_rank")),
+                "ranking_positive_count": _int(ranking_summary.get("ranking_positive_count")),
+                "ranking_score_col_used": ranking_summary.get("ranking_score_col_used"),
+                "full_guarded_review_passed": full_guarded_review_passed,
                 "pre_review_repair_gates_completed": guarded_review_ready,
                 "shadow_claim_review_status": shadow_review_status or None,
                 "shadow_claim_review_passed": shadow_review_passed,
@@ -672,6 +730,11 @@ def build_queue(
                 "no threshold relaxation",
             ],
             next_action=(
+                "Completed: full guarded 100k ranking review clears PR-AUC, PR-AUC CI-low, and top20 hit-rate "
+                "under the unchanged gate. Regenerate the accuracy parity scorecard and run an independent repeat "
+                "before any commercial parity or router-promotion claim."
+                if full_guarded_review_passed
+                else
                 (
                     "Guarded shadow claim review is still blocked "
                     f"(`status={shadow_review_status}`, `blockers={shadow_review_blockers}`); repair the DRD2 "
@@ -695,18 +758,22 @@ def build_queue(
                 else "Only after rows 1-4 close, rerun the guarded 100k GPCR claim review and regenerate "
                 "runs/accuracy_parity_scorecard_current.json."
             ),
+            status="completed" if full_guarded_review_passed else "open",
         )
     )
 
     open_rows = [row for row in rows if row["status"] == "open"]
     top_row = open_rows[0] if open_rows else rows[-1]
+    queue_status = "open_a1_repair_queue" if open_rows else "a1_accuracy_repair_queue_cleared_claim_locked"
     summary = {
         "generated_at_local": generated_at_local or dt.datetime.now().astimezone().isoformat(timespec="seconds"),
-        "status": "open_a1_repair_queue",
+        "status": queue_status,
         "queue_row_count": len(rows),
         "claim_promotion_allowed": False,
         "scorer_apply_allowed": False,
         "guarded_100k_rerun_allowed_now": guarded_review_ready,
+        "full_guarded_100k_review_passed": full_guarded_review_passed,
+        "open_queue_row_count": len(open_rows),
         "drd2_weakbase_false_support_replay_status": drd2_weakbase_replay_status or None,
         "guarded_shadow_claim_review_status": shadow_review_status or None,
         "guarded_shadow_claim_review_passed": shadow_review_passed,

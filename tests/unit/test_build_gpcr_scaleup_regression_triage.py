@@ -419,3 +419,68 @@ def test_triage_classifies_structure_support_rescore_as_comparison_only(tmp_path
     assert candidates["gpcr_core_structure_support_rescore_v1"]["reject_evidence"] is True
     assert candidates["gpcr_core_structure_support_rescore_v1"]["metrics"]["ranking_pr_auc"] == 0.5928
     assert candidates["gpcr_core_structure_support_rescore_v1"]["metrics"]["topk_hit_rate"] == 0.25
+
+
+def test_triage_discovers_beta_blocker_rescue_stage3_apply_summary(tmp_path: Path) -> None:
+    runs = tmp_path / "runs"
+    run_stem = (
+        "external_validation_2026-05-10_beta_blocker_rescue_v2_family_balanced100k_"
+        "r1_set1_core_blind_gpcr_core_full_p0_n100000_r1"
+    )
+    _write_json(
+        runs / "ligand_scaleup_benchmark_summary_current.json",
+        {
+            "claim_safe": False,
+            "claim_safe_status": "regression_guardrail_failed",
+            "primary_regression_task_id": "gpcr_core_full",
+        },
+    )
+    _write_json(runs / "ligand_scaleup_suite_status_current.json", {"summary": {"suite_count": 3}})
+    _write_json(
+        runs / f"{run_stem}_summary.json",
+        {
+            "pass": True,
+            "stages": {
+                "stage3_backmapping_scoring": {
+                    "cmd": [
+                        "python3",
+                        "tools/run_ligand_backmapping_scoring.py",
+                        "--residual-prototype-mode",
+                        "apply",
+                    ]
+                }
+            },
+        },
+    )
+    _write_json(
+        runs / f"{run_stem}_stage5_ranking_summary.json",
+        {
+            "metrics": {
+                "pr_auc": 0.8792,
+                "roc_auc_unique_key": 0.9601,
+                "probability_score_col_used": "binding_score_composite_v7_residual_active",
+            }
+        },
+    )
+
+    args = _Args(
+        benchmark_summary_json="runs/ligand_scaleup_benchmark_summary_current.json",
+        suite_status_json="runs/ligand_scaleup_suite_status_current.json",
+        failure_analysis_json="runs/gpcr_100k_failure_analysis_current.json",
+        candidate_glob="runs/external_validation_*gpcr*summary.json",
+        out_json="runs/gpcr_scaleup_regression_triage_current.json",
+        out_md="runs/gpcr_scaleup_regression_triage_current.md",
+    )
+    mod.ROOT = tmp_path
+
+    payload = mod.build_payload(args)
+    candidates = {row["candidate_id"]: row for row in payload["candidates"]}
+
+    assert payload["summary"]["candidate_count"] == 1
+    assert "gpcr_core_beta_blocker_rescue_v2" in candidates
+    assert candidates["gpcr_core_beta_blocker_rescue_v2"]["mode"] == "guarded_apply"
+    assert candidates["gpcr_core_beta_blocker_rescue_v2"]["pass"] is True
+    assert candidates["gpcr_core_beta_blocker_rescue_v2"]["claim_allowed"] is False
+    assert candidates["gpcr_core_beta_blocker_rescue_v2"]["reject_evidence"] is False
+    assert candidates["gpcr_core_beta_blocker_rescue_v2"]["score_column"] == "binding_score_composite_v7_residual_active"
+    assert candidates["gpcr_core_beta_blocker_rescue_v2"]["metrics"]["ranking_pr_auc"] == 0.8792

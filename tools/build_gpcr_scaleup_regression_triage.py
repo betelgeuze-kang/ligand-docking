@@ -90,6 +90,23 @@ def _cmd_value(payload: dict[str, Any], flag: str) -> str:
     return ""
 
 
+def _nested_stage_cmd_value(payload: dict[str, Any], stage_key: str, flag: str) -> str:
+    stages = payload.get("stages")
+    if not isinstance(stages, dict):
+        return ""
+    stage = stages.get(stage_key)
+    if not isinstance(stage, dict):
+        return ""
+    cmd = stage.get("cmd")
+    if not isinstance(cmd, list):
+        return ""
+    parts = [str(part) for part in cmd]
+    for idx, part in enumerate(parts[:-1]):
+        if part == flag:
+            return parts[idx + 1]
+    return ""
+
+
 def _stage5_summary_for(path: Path) -> dict[str, Any]:
     stem = path.name
     candidates: list[Path] = []
@@ -133,6 +150,11 @@ def _infer_candidate_id(path: Path, payload: dict[str, Any]) -> str:
         if version == "1":
             version = _token_version("structure-support")
         return f"gpcr_core_structure_support_rescore_v{version}"
+    if "beta_blocker_rescue" in source or "beta-blocker-rescue" in source:
+        version = _token_version("beta_blocker_rescue")
+        if version == "1":
+            version = _token_version("beta-blocker-rescue")
+        return f"gpcr_core_beta_blocker_rescue_v{version}"
     if "mismatch_contact" in source or "mismatch-contact" in source:
         version = _token_version("mismatch_contact")
         if version == "1":
@@ -167,6 +189,11 @@ def _infer_mode(path: Path, payload: dict[str, Any]) -> str:
             return "guarded_apply"
         if mode == "shadow_only":
             return "shadow"
+    stage_mode = _nested_stage_cmd_value(payload, "stage3_backmapping_scoring", "--residual-prototype-mode").lower()
+    if stage_mode == "apply":
+        return "guarded_apply"
+    if stage_mode == "shadow_only":
+        return "shadow"
     if "shadow" in source:
         return "shadow"
     if "apply" in source:
@@ -194,6 +221,8 @@ def _is_candidate_summary(path: Path, payload: dict[str, Any]) -> bool:
         "pharmacophore",
         "structure_support",
         "structure-support",
+        "beta_blocker_rescue",
+        "beta-blocker-rescue",
         "mismatch_contact",
         "mismatch-contact",
         "residualv4",

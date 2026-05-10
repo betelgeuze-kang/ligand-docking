@@ -110,6 +110,8 @@ def _gpcr_row(
             if guarded_readiness_payload and not readiness_ready
             else "guarded_100k_claim_review_blocked"
             if guarded_readiness_payload and readiness_ready and not claim_review_ready
+            else "claim_locked_scorecard_refresh_repeat_required"
+            if guarded_readiness_payload and claim_review_ready
             else "ranking_pr_auc_ci_low_positive_coverage"
         ),
         "blocker_count": blocker_count,
@@ -301,18 +303,24 @@ def build_payload(
         _idp_row(idp_promotion),
     ]
     blocked_rows = [row for row in rows if row["claim_promotion_allowed"] is not True]
+    evidence_blocked_rows = [row for row in rows if row.get("status") == "blocked" or _int(row.get("blocker_count")) > 0]
+    top_priority = evidence_blocked_rows[0] if evidence_blocked_rows else rows[0]
     summary = {
         "status": "post_p0_claim_blocker_rollup_ready",
         "delivery_claim_unchanged": True,
         "current_delivery_claim_scope": "restricted_kinase_ion_channel_gpcr",
         "lane_count": len(rows),
         "blocked_lane_count": len(blocked_rows),
+        "evidence_blocked_lane_count": len(evidence_blocked_rows),
         "claim_promotion_allowed_lane_count": sum(1 for row in rows if row["claim_promotion_allowed"]),
-        "top_priority_lane_id": rows[0]["lane_id"],
-        "top_priority_primary_blocker": rows[0]["primary_blocker"],
-        "top_priority_next_required_step": rows[0]["next_required_step"],
+        "top_priority_lane_id": top_priority["lane_id"],
+        "top_priority_primary_blocker": top_priority["primary_blocker"],
+        "top_priority_next_required_step": top_priority["next_required_step"],
         "next_required_step": (
-            "Launch/refresh GPCR guarded 100k evidence first, then PDE translation quality, then transporter, "
+            "GPCR guarded 100k evidence is green; refresh GPCR scorecard/repeat evidence, then burn down PDE "
+            "translation quality, transporter, CA2, PXR, and IDP evidence boundaries without widening the delivery claim."
+            if rows[0].get("status") != "blocked" and _int(rows[0].get("blocker_count")) == 0
+            else "Launch/refresh GPCR guarded 100k evidence first, then PDE translation quality, then transporter, "
             "CA2, PXR, and IDP evidence boundaries without widening the delivery claim."
         ),
     }

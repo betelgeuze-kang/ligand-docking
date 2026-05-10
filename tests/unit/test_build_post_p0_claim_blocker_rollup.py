@@ -132,6 +132,58 @@ def test_gpcr_rollup_distinguishes_launch_ready_from_claim_review_blocked() -> N
     assert row["full_100k_guarded_rerun_eligible"] is True
 
 
+def test_rollup_moves_top_priority_past_gpcr_when_guarded_claim_review_is_green() -> None:
+    payload = mod.build_payload(
+        {
+            "summary": {
+                "ci_low_blocker": False,
+                "ranking_pr_auc_ci_low": 0.675,
+                "threshold": 0.45,
+                "ranking_positive_count": 13,
+                "ranking_topk_hit_rate": 0.6,
+            },
+            "rank_diagnostics": {"top20_hit_rate_max_possible": 0.65, "top20_missing_positives": []},
+            "claim_coverage_requirement": {
+                "ci_low_policy": {"status": "meets_threshold"},
+            },
+        },
+        {
+            "summary": {
+                "claim_promotion_allowed": False,
+                "primary_blocker": "binding_energy_proxy_too_weak_for_translation",
+                "failed_evidence_count": 1,
+                "measurement_gap_count": 1,
+                "next_required_step": "Close PDE translation-quality evidence.",
+            }
+        },
+        {"summary": {}},
+        {"summary": {}},
+        {"summary": {}},
+        {"summary": {}},
+        gpcr_positive_coverage={"summary": {"frozen": True, "positive_count": 13}},
+        gpcr_guarded_100k_readiness={
+            "summary": {
+                "launch_eligible": True,
+                "eligible": True,
+                "claim_review_eligible": True,
+                "blocker_count": 0,
+                "blockers": [],
+                "next_required_step": "Refresh scorecard and repeat evidence.",
+            }
+        },
+    )
+
+    summary = payload["summary"]
+    gpcr_row = payload["rows"][0]
+    assert gpcr_row["status"] == "internal_review"
+    assert gpcr_row["blocker_count"] == 0
+    assert gpcr_row["primary_blocker"] == "claim_locked_scorecard_refresh_repeat_required"
+    assert summary["top_priority_lane_id"] == "pde_translation_quality"
+    assert summary["top_priority_primary_blocker"] == "binding_energy_proxy_too_weak_for_translation"
+    assert summary["evidence_blocked_lane_count"] == 2
+    assert "GPCR guarded 100k evidence is green" in summary["next_required_step"]
+
+
 def test_render_markdown_contains_claim_boundary() -> None:
     payload = {
         "summary": {
