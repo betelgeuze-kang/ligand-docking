@@ -2465,7 +2465,11 @@ def build_payload(
     selected_allatom_effective_required_calculations = _coerce_text_list(
         selected_allatom_canonical.get("effective_actionability_required_calculations", [])
     )
-    if not selected_allatom_actionability_required_calculations_text and selected_allatom_effective_required_calculations:
+    if selected_allatom_canonical_resolver_used:
+        selected_allatom_actionability_required_calculations_text = ", ".join(
+            selected_allatom_effective_required_calculations
+        )
+    elif not selected_allatom_actionability_required_calculations_text and selected_allatom_effective_required_calculations:
         selected_allatom_actionability_required_calculations_text = ", ".join(
             selected_allatom_effective_required_calculations
         )

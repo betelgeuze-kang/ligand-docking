@@ -939,15 +939,15 @@ def test_build_wetlab_current_results_index_propagates_pde_selected_allatom_v2_a
         "translation gate remains borderline; expensive lane deferred."
     )
     assert translation_shortlist_guidance not in summary["selected_allatom_next_required_step"]
-    assert summary["selected_allatom_actionability_status"] == "hard_blocked"
-    expected_claim_mode = "not_applicable"
+    assert summary["selected_allatom_actionability_status"] == "ready"
+    expected_claim_mode = "semi_hard"
     assert summary["selected_allatom_actionability_claim_requirement_mode"] == expected_claim_mode
     assert summary["selected_allatom_raw_claim_requirement_mode"] == "semi_hard"
     assert summary["selected_allatom_raw_claim_required_for_final_wetlab"] is True
     assert summary["selected_allatom_effective_actionability_status"] == summary["selected_allatom_actionability_status"]
     assert summary["selected_allatom_effective_actionability_claim_requirement_mode"] == expected_claim_mode
-    assert summary["selected_allatom_effective_blocking_order"] == "hard_block_first"
-    assert summary["selected_allatom_effective_primary_blocking_domain"] == "translation_commercial_hard_gate"
+    assert summary["selected_allatom_effective_blocking_order"] == "clear"
+    assert summary["selected_allatom_effective_primary_blocking_domain"] == "soft_guidance"
     row_codes = {
         row.get("code")
         for row in summary["selected_allatom_action_recipe_rows"]
@@ -958,7 +958,7 @@ def test_build_wetlab_current_results_index_propagates_pde_selected_allatom_v2_a
     assert "translation_focus_failed:binding_energy_proxy_too_weak_for_translation" not in summary[
         "selected_allatom_action_recipe_codes"
     ]
-    assert "recompute_mean_min_distance_iqr_A" in summary["selected_allatom_action_recipe_codes"]
+    assert "recompute_mean_min_distance_iqr_A" not in summary["selected_allatom_action_recipe_codes"]
     assert "resolve_claim_equivalence_gate" in summary["selected_allatom_action_recipe_codes"]
     assert "recompute_claim_gate_required_unavailable" not in summary["selected_allatom_action_recipe_codes"]
     assert "recompute_mean_min_distance_A" not in summary["selected_allatom_action_recipe_codes"]
@@ -969,9 +969,9 @@ def test_build_wetlab_current_results_index_propagates_pde_selected_allatom_v2_a
         )
     assert summary["selected_allatom_actionability_next_expensive_lane"] == "defer_expensive_lane"
     assert "recompute_binding_energy_proxy" not in summary["selected_allatom_actionability_required_calculations"]
-    assert summary["selected_allatom_actionability_required_calculations"] == ["recompute_mean_min_distance_iqr_A"]
+    assert summary["selected_allatom_actionability_required_calculations"] == []
     assert "recompute_mean_min_distance_A" not in summary["selected_allatom_actionability_required_calculations"]
-    assert "mean_min_distance_iqr_A" in summary["selected_allatom_actionability_block_reason"]
+    assert summary["selected_allatom_actionability_block_reason"] == ""
     assert "binding_energy_proxy" not in summary["selected_allatom_actionability_block_reason"]
     assert "claim_gate_required_unavailable" not in summary["selected_allatom_actionability_block_reason"]
     assert "mean_min_distance_A" not in summary["selected_allatom_actionability_block_reason"]

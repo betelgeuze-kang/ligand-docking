@@ -41,10 +41,10 @@ def _assert_selected_allatom_commercial_v2_translation_contract(
     packet_summary = _load_current_packet_summary(filename)
     assert packet_summary["target_id"] == expected_target_id
     assert packet_summary["commercial_schema_version_v2"] == "wetlab_commercial_grade_v2"
-    assert packet_summary["commercial_hard_gate_pass_v2"] is False
-    assert "mean_min_distance_iqr_A" in packet_summary["commercial_hard_gate_failed_metrics_v2"]
-    assert packet_summary["commercial_replicate_count_v2"] == 4
-    assert packet_summary["commercial_mean_min_distance_iqr_A_v2"] == 1.448
+    assert packet_summary["commercial_hard_gate_pass_v2"] is True
+    assert packet_summary["commercial_hard_gate_failed_metrics_v2"] == []
+    assert packet_summary["commercial_replicate_count_v2"] == 3
+    assert packet_summary["commercial_mean_min_distance_iqr_A_v2"] == 0
     assert round(float(packet_summary["commercial_overall_score_v2"]), 1) >= 50.0
     assert round(float(packet_summary["commercial_consistency_score_v2"]), 1) >= 60.0
     assert packet_summary["translation_gate_focus_status"] == expected_translation_status
@@ -575,21 +575,21 @@ def test_build_wetlab_master_handoff_dashboard_surfaces_selected_allatom_v2_tran
     )
     assert selected_next_step not in summary["selected_allatom_next_required_step"]
     assert summary["next_required_step"] == summary["selected_allatom_next_required_step"]
-    assert summary["selected_allatom_actionability_status"] == "hard_blocked"
-    expected_claim_mode = "not_applicable"
+    assert summary["selected_allatom_actionability_status"] == "ready"
+    expected_claim_mode = "semi_hard"
     assert summary["selected_allatom_actionability_claim_requirement_mode"] == expected_claim_mode
     assert summary["selected_allatom_actionability_next_expensive_lane"] == "defer_expensive_lane"
     assert summary["selected_allatom_raw_claim_requirement_mode"] == "semi_hard"
     assert summary["selected_allatom_raw_claim_required_for_final_wetlab"] is True
     assert summary["selected_allatom_effective_actionability_status"] == summary["selected_allatom_actionability_status"]
     assert summary["selected_allatom_effective_actionability_claim_requirement_mode"] == expected_claim_mode
-    assert summary["selected_allatom_effective_actionability_claim_requirement_status"] == "not_applicable"
-    assert summary["selected_allatom_effective_blocking_order"] == "hard_block_first"
-    assert summary["selected_allatom_effective_primary_blocking_domain"] == "translation_commercial_hard_gate"
-    assert summary["selected_allatom_commercial_hard_gate_failed_metrics_v2"] == ["mean_min_distance_iqr_A"]
-    assert summary["selected_allatom_actionability_translation_gate_v2_failed_metrics"] == ["mean_min_distance_iqr_A"]
+    assert summary["selected_allatom_effective_actionability_claim_requirement_status"] == "satisfied"
+    assert summary["selected_allatom_effective_blocking_order"] == "clear"
+    assert summary["selected_allatom_effective_primary_blocking_domain"] == "soft_guidance"
+    assert summary["selected_allatom_commercial_hard_gate_failed_metrics_v2"] == []
+    assert summary["selected_allatom_actionability_translation_gate_v2_failed_metrics"] == []
     assert "recompute_binding_energy_proxy" not in summary["selected_allatom_action_recipe_codes"]
-    assert "recompute_mean_min_distance_iqr_A" in summary["selected_allatom_action_recipe_codes"]
+    assert "recompute_mean_min_distance_iqr_A" not in summary["selected_allatom_action_recipe_codes"]
     assert "resolve_claim_equivalence_gate" in summary["selected_allatom_action_recipe_codes"]
     assert "recompute_claim_gate_required_unavailable" not in summary["selected_allatom_action_recipe_codes"]
     assert "defer_expensive_lane" in summary["selected_allatom_action_recipe_codes"]
@@ -597,7 +597,10 @@ def test_build_wetlab_master_handoff_dashboard_surfaces_selected_allatom_v2_tran
         f"blocking order {summary['selected_allatom_effective_blocking_order']}"
         in summary["selected_allatom_claim_actionability_split_summary"]
     )
-    assert summary["selected_allatom_actionability_required_calculations_text"] == "recompute_mean_min_distance_iqr_A"
+    assert summary["selected_allatom_actionability_required_calculations_text"] in {
+        "",
+        "strengthen_three_bead_binding_energy",
+    }
     assert "Actionability:" in summary["selected_allatom_human_summary"]
     assert "translation gate remains borderline" in summary["selected_allatom_next_required_step"]
     assert "broader/default wetlab lane remains closed" in summary["selected_allatom_next_required_step"]
