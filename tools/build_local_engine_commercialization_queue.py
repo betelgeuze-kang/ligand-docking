@@ -436,10 +436,13 @@ def _latest_nightly_signal(
     if latest_pass:
         status = "keep_green"
         impact = "critical"
-        status_line = "latest nightly pass is green; keep the recovered writer/import path stable while burning down viewer and wetlab blockers."
+        status_line = (
+            "latest nightly pass is green; keep the recovered writer/import path stable while downstream "
+            "commercialization lanes stay in regression coverage."
+        )
         next_required_action = (
             "Keep nightly green. Preserve the writer/import regression fix path and avoid reopening the old "
-            "`ModuleNotFoundError: core` or writer-process failure lanes while downstream commercialization blockers are being burned down."
+            "`ModuleNotFoundError: core` or writer-process failure lanes while downstream commercialization lanes remain in keep-green coverage."
         )
     elif latest_stage6_failed:
         status = "partial"

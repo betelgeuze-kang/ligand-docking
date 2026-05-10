@@ -236,6 +236,83 @@ def test_build_commercialization_status_report_handles_closed_reducible_slice() 
     assert any("evidence-blocked negative rows" in item for item in summary["fix_plan"])
 
 
+def test_build_commercialization_status_report_uses_keep_green_wording_when_queue_clear() -> None:
+    payload = mod.build_payload(
+        {
+            "summary": {
+                "core_commercial_lane_score": 82.5,
+                "all_category_expansion_score": 68.9,
+                "strongest_ready_families": "kinase, ion_channel, gpcr",
+                "aqp1_first_wave_primary_focus_ligand": "bacopaside II",
+                "aqp1_exact_human_reference_ligand": "AqB013",
+                "aqp1_first_wave_follow_on_lane_label": "core_binder_02/03",
+                "glut1_second_wave_source_confirmation_packet_primary_focus_ligand": "cytochalasin B",
+            },
+            "rows": [{"family": "transporter", "primary_blocker": "negative evidence", "claim_safe_scope": "local-only"}],
+        },
+        {"summary": {"highest_gap_family": "transporter"}},
+        {"summary": {"next_required_step": "keep green"}},
+        {
+            "summary": {
+                "placeholder_driven_rows": 6,
+                "reducible_now_placeholder_rows": 0,
+                "evidence_blocked_placeholder_rows": 6,
+            }
+        },
+        {"summary": {"top_target_id": "AQP1", "top_packet_step": "core_non_binder_01"}},
+        {"summary": {}},
+        {
+            "summary": {
+                "queue_clear": True,
+                "top_priority_id": "transporter_science_blocker",
+                "top_priority_status": "parked",
+                "blocked_count": 0,
+                "partial_count": 0,
+                "keep_green_count": 4,
+                "parked_science_blocker_count": 1,
+                "nightly_gate_burndown_artifact": "runs/nightly_gate_burndown_packet_current.md",
+                "nightly_status_line": "latest nightly pass is green",
+                "nightly_stage6_execute_artifact": "runs/nightly_stage6_execute_result_packet_current.md",
+                "nightly_stage6_execute_target_subset": "EGFR_KINASE,HIV1_PROTEASE",
+                "nightly_stage6_execute_gate_mean_min_distance_A": "2.2689",
+                "nightly_stage6_execute_gate_pass": True,
+                "nightly_stage6_execute_payload_pass": True,
+                "nightly_stage6_execute_matches_rescored_gate": True,
+                "viewer_status": "keep_green",
+                "viewer_status_line": "viewer green",
+                "wetlab_status_line": "wetlab green",
+                "wetlab_selected_allatom_gate_burndown_artifact": "runs/wetlab_selected_allatom_gate_burndown_packet_current.md",
+                "wetlab_selected_allatom_target_id": "T. cruzi PDE",
+                "wetlab_selected_allatom_primary_burndown_metric": "mean_min_distance_A",
+                "wetlab_selected_allatom_primary_burndown_value": "2.120",
+                "wetlab_selected_allatom_primary_burndown_threshold": "2.500",
+            }
+        },
+        {
+            "summary": {
+                "delivery_ready": True,
+                "verdict": "delivery_ready",
+                "p0_blocker_count": 0,
+                "hard_blocker_count": 0,
+                "status_line": "delivery-ready verdict may be issued for the restricted local scope.",
+            }
+        },
+    )
+
+    summary = payload["summary"]
+    assert summary["local_engine_queue_clear"] is True
+    assert summary["local_engine_queue_keep_green_count"] == 4
+    assert summary["local_delivery_ready"] is True
+    assert summary["local_delivery_verdict"] == "delivery_ready"
+    assert any("keep-green board" in item for item in summary["immediate_priority"])
+    assert any("Local delivery verdict is `delivery_ready`" in item for item in summary["immediate_priority"])
+    assert any("nightly gate regression artifact" in item for item in summary["immediate_priority"])
+    assert not any("Burn down engine blockers" in item for item in summary["immediate_priority"])
+    assert not any("burndown packet: tune" in item for item in summary["immediate_priority"])
+    assert any("restricted local scope" in item for item in summary["report_gaps"])
+    assert any("recurrent canonical nightly" in item for item in summary["fix_plan"])
+
+
 def test_build_commercialization_status_report_exposes_negative_target_packets() -> None:
     payload = mod.build_payload(
         {
