@@ -59,6 +59,12 @@ def _int(value: Any) -> int:
         return 0
 
 
+def _bool(value: Any) -> bool:
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes"}
+    return bool(value)
+
+
 def _queue_ranges(review_rows: list[dict[str, Any]]) -> dict[str, dict[str, int]]:
     negative_rows = [
         row
@@ -246,6 +252,9 @@ def build_payload(
         "aqp1_negative_exact_source_outcome_row_count": _int(
             aqp1_exact_source_outcome_summary.get("row_count")
         ),
+        "aqp1_negative_exact_source_almost_unaffected_candidate_count": _int(
+            aqp1_exact_source_outcome_summary.get("almost_unaffected_candidate_count")
+        ),
         "aqp1_negative_exact_source_primary_probe_candidate": _text(
             aqp1_exact_source_outcome_summary.get("primary_negative_probe_candidate")
         ),
@@ -253,6 +262,12 @@ def build_payload(
             aqp1_exact_source_outcome_summary.get("small_inhibitor_signal_candidate")
         ),
         "aqp1_negative_exact_source_source_pmid": _text(aqp1_exact_source_outcome_summary.get("source_pmid")),
+        "aqp1_negative_exact_source_direct_negative_quantitative_row_found_count": _int(
+            aqp1_exact_source_outcome_summary.get("direct_negative_quantitative_row_found_count")
+        ),
+        "aqp1_negative_exact_source_authoritative_negative_apply_allowed_count": _int(
+            aqp1_exact_source_outcome_summary.get("authoritative_negative_apply_allowed_count")
+        ),
         "aqp1_negative_primary_probe_resolution_artifact": _text(
             aqp1_primary_probe_resolution_summary.get("packet_artifact")
         )
@@ -268,6 +283,12 @@ def build_payload(
         ),
         "aqp1_negative_primary_probe_resolution_solvent_fallback_candidate": _text(
             aqp1_primary_probe_resolution_summary.get("solvent_fallback_candidate")
+        ),
+        "aqp1_negative_primary_probe_resolution_source_anchor_hemolysis_outcome": _text(
+            aqp1_primary_probe_resolution_summary.get("source_anchor_hemolysis_outcome")
+        ),
+        "aqp1_negative_primary_probe_resolution_source_anchor_direct_negative_quantitative_row_found": _bool(
+            aqp1_primary_probe_resolution_summary.get("source_anchor_direct_negative_quantitative_row_found")
         ),
         "glut1_negative_slot_count": _phase_count(review_rows, "GLUT1", "negative_slots_first"),
         "glut1_reference_signal_count": (
@@ -334,14 +355,19 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- aqp1_negative_primary_probe_source_anchor_pmid: `{s['aqp1_negative_primary_probe_source_anchor_pmid']}`",
         f"- aqp1_negative_exact_source_outcome_artifact: `{s['aqp1_negative_exact_source_outcome_artifact']}`",
         f"- aqp1_negative_exact_source_outcome_row_count: `{s['aqp1_negative_exact_source_outcome_row_count']}`",
+        f"- aqp1_negative_exact_source_almost_unaffected_candidate_count: `{s['aqp1_negative_exact_source_almost_unaffected_candidate_count']}`",
         f"- aqp1_negative_exact_source_primary_probe_candidate: `{s['aqp1_negative_exact_source_primary_probe_candidate']}`",
         f"- aqp1_negative_exact_source_small_inhibitor_signal_candidate: `{s['aqp1_negative_exact_source_small_inhibitor_signal_candidate']}`",
         f"- aqp1_negative_exact_source_source_pmid: `{s['aqp1_negative_exact_source_source_pmid']}`",
+        f"- aqp1_negative_exact_source_direct_negative_quantitative_row_found_count: `{s['aqp1_negative_exact_source_direct_negative_quantitative_row_found_count']}`",
+        f"- aqp1_negative_exact_source_authoritative_negative_apply_allowed_count: `{s['aqp1_negative_exact_source_authoritative_negative_apply_allowed_count']}`",
         f"- aqp1_negative_primary_probe_resolution_artifact: `{s['aqp1_negative_primary_probe_resolution_artifact']}`",
         f"- aqp1_negative_primary_probe_resolution_row_count: `{s['aqp1_negative_primary_probe_resolution_row_count']}`",
         f"- aqp1_negative_primary_probe_resolution_candidate: `{s['aqp1_negative_primary_probe_resolution_candidate']}`",
         f"- aqp1_negative_primary_probe_resolution_decision: `{s['aqp1_negative_primary_probe_resolution_decision']}`",
         f"- aqp1_negative_primary_probe_resolution_solvent_fallback_candidate: `{s['aqp1_negative_primary_probe_resolution_solvent_fallback_candidate']}`",
+        f"- aqp1_negative_primary_probe_resolution_source_anchor_hemolysis_outcome: `{s['aqp1_negative_primary_probe_resolution_source_anchor_hemolysis_outcome']}`",
+        f"- aqp1_negative_primary_probe_resolution_source_anchor_direct_negative_quantitative_row_found: `{s['aqp1_negative_primary_probe_resolution_source_anchor_direct_negative_quantitative_row_found']}`",
         f"- glut1_negative_slot_count: `{s['glut1_negative_slot_count']}`",
         f"- glut1_reference_signal_count: `{s['glut1_reference_signal_count']}`",
         f"- glut1_source_context_artifact: `{s['glut1_source_context_artifact']}`",

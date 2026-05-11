@@ -83,9 +83,12 @@ def test_build_transporter_negative_evidence_target_packets_reads_current_artifa
             "summary": {
                 "packet_artifact": "runs/aqp1_negative_exact_source_outcome_packet_current.md",
                 "row_count": 4,
+                "almost_unaffected_candidate_count": 2,
                 "primary_negative_probe_candidate": "sodium nitroprusside",
                 "small_inhibitor_signal_candidate": "dimethyl sulfoxide",
                 "source_pmid": "23123479",
+                "direct_negative_quantitative_row_found_count": 0,
+                "authoritative_negative_apply_allowed_count": 0,
             }
         },
         {
@@ -94,6 +97,8 @@ def test_build_transporter_negative_evidence_target_packets_reads_current_artifa
                 "row_count": 1,
                 "primary_probe_candidate": "sodium nitroprusside",
                 "solvent_fallback_candidate": "dimethyl sulfoxide",
+                "source_anchor_hemolysis_outcome": "almost_unaffected_at_200_mpa",
+                "source_anchor_direct_negative_quantitative_row_found": False,
                 "resolution_decision": "keep_review_only_no_authoritative_negative_promotion",
             }
         },
@@ -141,14 +146,22 @@ def test_build_transporter_negative_evidence_target_packets_reads_current_artifa
     assert summary["aqp1_negative_primary_probe_source_anchor_pmid"] == "23123479"
     assert summary["aqp1_negative_exact_source_outcome_artifact"] == "runs/aqp1_negative_exact_source_outcome_packet_current.md"
     assert summary["aqp1_negative_exact_source_outcome_row_count"] == 4
+    assert summary["aqp1_negative_exact_source_almost_unaffected_candidate_count"] == 2
     assert summary["aqp1_negative_exact_source_primary_probe_candidate"] == "sodium nitroprusside"
     assert summary["aqp1_negative_exact_source_small_inhibitor_signal_candidate"] == "dimethyl sulfoxide"
     assert summary["aqp1_negative_exact_source_source_pmid"] == "23123479"
+    assert summary["aqp1_negative_exact_source_direct_negative_quantitative_row_found_count"] == 0
+    assert summary["aqp1_negative_exact_source_authoritative_negative_apply_allowed_count"] == 0
     assert summary["aqp1_negative_primary_probe_resolution_artifact"] == "runs/aqp1_negative_primary_probe_resolution_packet_current.md"
     assert summary["aqp1_negative_primary_probe_resolution_row_count"] == 1
     assert summary["aqp1_negative_primary_probe_resolution_candidate"] == "sodium nitroprusside"
     assert summary["aqp1_negative_primary_probe_resolution_decision"] == "keep_review_only_no_authoritative_negative_promotion"
     assert summary["aqp1_negative_primary_probe_resolution_solvent_fallback_candidate"] == "dimethyl sulfoxide"
+    assert (
+        summary["aqp1_negative_primary_probe_resolution_source_anchor_hemolysis_outcome"]
+        == "almost_unaffected_at_200_mpa"
+    )
+    assert summary["aqp1_negative_primary_probe_resolution_source_anchor_direct_negative_quantitative_row_found"] is False
     assert summary["glut1_source_context_primary_focus_ligand"] == "cytochalasin B"
     assert rows[0]["target_id"] == "AQP1"
     assert rows[0]["primary_artifact"] == "runs/aqp1_negative_slot_closure_packet_current.md"
@@ -308,9 +321,12 @@ def test_build_transporter_negative_evidence_target_packets_cli(tmp_path: Path) 
                 "summary": {
                     "packet_artifact": "runs/aqp1_negative_exact_source_outcome_packet_current.md",
                     "row_count": 4,
+                    "almost_unaffected_candidate_count": 2,
                     "primary_negative_probe_candidate": "sodium nitroprusside",
                     "small_inhibitor_signal_candidate": "dimethyl sulfoxide",
                     "source_pmid": "23123479",
+                    "direct_negative_quantitative_row_found_count": 0,
+                    "authoritative_negative_apply_allowed_count": 0,
                 }
             },
             ensure_ascii=False,
@@ -327,6 +343,8 @@ def test_build_transporter_negative_evidence_target_packets_cli(tmp_path: Path) 
                     "row_count": 1,
                     "primary_probe_candidate": "sodium nitroprusside",
                     "solvent_fallback_candidate": "dimethyl sulfoxide",
+                    "source_anchor_hemolysis_outcome": "almost_unaffected_at_200_mpa",
+                    "source_anchor_direct_negative_quantitative_row_found": False,
                     "resolution_decision": "keep_review_only_no_authoritative_negative_promotion",
                 }
             },
@@ -378,7 +396,9 @@ def test_build_transporter_negative_evidence_target_packets_cli(tmp_path: Path) 
     assert payload["summary"]["aqp1_negative_frontier_resolution_row_count"] == 2
     assert payload["summary"]["aqp1_negative_primary_probe_row_count"] == 1
     assert payload["summary"]["aqp1_negative_exact_source_outcome_row_count"] == 4
+    assert payload["summary"]["aqp1_negative_exact_source_almost_unaffected_candidate_count"] == 2
     assert payload["summary"]["aqp1_negative_primary_probe_resolution_row_count"] == 1
+    assert payload["summary"]["aqp1_negative_primary_probe_resolution_source_anchor_hemolysis_outcome"] == "almost_unaffected_at_200_mpa"
     assert payload["rows"][0]["target_id"] == "AQP1"
     assert payload["rows"][0]["primary_artifact"] == "runs/aqp1_negative_slot_closure_packet_current.md"
     assert payload["rows"][0]["secondary_artifact"] == "runs/aqp1_negative_slot_resolution_packet_current.md"

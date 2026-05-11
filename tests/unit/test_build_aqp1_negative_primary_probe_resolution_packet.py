@@ -16,6 +16,7 @@ def test_build_aqp1_negative_primary_probe_resolution_packet() -> None:
         json.loads((ROOT / "runs/aqp1_negative_primary_probe_packet_current.json").read_text(encoding="utf-8")),
         json.loads((ROOT / "runs/aqp1_negative_frontier_resolution_packet_current.json").read_text(encoding="utf-8")),
         json.loads((ROOT / "runs/aqp1_negative_evidence_confirmation_packet_current.json").read_text(encoding="utf-8")),
+        json.loads((ROOT / "runs/aqp1_negative_exact_source_outcome_packet_current.json").read_text(encoding="utf-8")),
         as_of_date="2026-04-21",
     )
 
@@ -26,12 +27,16 @@ def test_build_aqp1_negative_primary_probe_resolution_packet() -> None:
     assert summary["row_count"] == 1
     assert summary["primary_probe_candidate"] == "sodium nitroprusside"
     assert summary["source_anchor_pmid"] == "23123479"
+    assert summary["source_anchor_hemolysis_outcome"] == "almost_unaffected_at_200_mpa"
+    assert summary["source_anchor_direct_negative_quantitative_row_found"] is False
     assert summary["indirect_context_pmid"] == "27261598"
     assert summary["assay_context_pmid"] == "26685080"
     assert summary["solvent_fallback_candidate"] == "dimethyl sulfoxide"
     assert summary["direct_negative_quantitative_row_found_count"] == 0
     assert summary["resolution_decision"] == "keep_review_only_no_authoritative_negative_promotion"
     assert rows[0]["candidate_name"] == "sodium nitroprusside"
+    assert rows[0]["source_anchor_hemolysis_outcome"] == "almost_unaffected_at_200_mpa"
+    assert rows[0]["source_anchor_outcome_interpretation"] == "exact_source_negative_probe_candidate_conflicts_with_older_permeability_reports_not_direct_quantitative_negative_row"
     assert rows[0]["solvent_fallback_candidate"] == "dimethyl sulfoxide"
     assert rows[0]["activity_url"].endswith("molecule_chembl_id=CHEMBL136478&target_chembl_id=CHEMBL4523210&limit=10")
 
@@ -59,6 +64,7 @@ def test_build_aqp1_negative_primary_probe_resolution_packet_cli(tmp_path: Path)
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["summary"]["row_count"] == 1
     assert payload["summary"]["primary_probe_candidate"] == "sodium nitroprusside"
+    assert payload["summary"]["source_anchor_hemolysis_outcome"] == "almost_unaffected_at_200_mpa"
     assert payload["summary"]["solvent_fallback_candidate"] == "dimethyl sulfoxide"
     assert out_csv.exists()
     assert out_md.exists()
