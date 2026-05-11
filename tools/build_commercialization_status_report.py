@@ -17,6 +17,7 @@ DEFAULT_NEGATIVE_TARGET_PACKETS_JSON = "runs/transporter_negative_evidence_targe
 DEFAULT_LOCAL_ENGINE_QUEUE_JSON = "runs/local_engine_commercialization_queue_current.json"
 DEFAULT_LOCAL_DELIVERY_VERDICT_JSON = "runs/local_delivery_verdict_gate_current.json"
 DEFAULT_KEEP_GREEN_TREND_JSON = "runs/keep_green_regression_trend_packet_current.json"
+DEFAULT_PLATFORM_GAP_TAXONOMY_JSON = "runs/platform_gap_taxonomy_packet_current.json"
 DEFAULT_OUT_MD = "commercialization_status_report.md"
 
 
@@ -62,6 +63,7 @@ def build_payload(
     local_engine_queue_payload: dict[str, Any] | None = None,
     local_delivery_verdict_payload: dict[str, Any] | None = None,
     keep_green_trend_payload: dict[str, Any] | None = None,
+    platform_gap_taxonomy_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     commercialization_summary = dict(commercialization_payload.get("summary", {}) or {})
     gap_summary = dict(gap_payload.get("summary", {}) or {})
@@ -72,6 +74,7 @@ def build_payload(
     local_engine_queue_summary = dict((local_engine_queue_payload or {}).get("summary", {}) or {})
     local_delivery_summary = dict((local_delivery_verdict_payload or {}).get("summary", {}) or {})
     keep_green_trend_summary = dict((keep_green_trend_payload or {}).get("summary", {}) or {})
+    platform_gap_taxonomy_summary = dict((platform_gap_taxonomy_payload or {}).get("summary", {}) or {})
     transporter_row = _find_family_row(list(commercialization_payload.get("rows", []) or []), "transporter")
 
     strongest_ready_families = _family_list(commercialization_summary.get("strongest_ready_families")) or "kinase, ion_channel, gpcr"
@@ -225,6 +228,24 @@ def build_payload(
     keep_green_trend_insufficient_count = int(keep_green_trend_summary.get("insufficient_history_lane_count", 0) or 0)
     keep_green_trend_min_samples = int(keep_green_trend_summary.get("minimum_repeated_sample_count", 0) or 0)
     keep_green_trend_nightly_streak = int(keep_green_trend_summary.get("nightly_recent_pass_streak", 0) or 0)
+    platform_gap_taxonomy_artifact = _text(platform_gap_taxonomy_summary.get("packet_artifact"))
+    platform_gap_taxonomy_top_gap = _text(platform_gap_taxonomy_summary.get("top_expansion_gap_id"))
+    platform_gap_taxonomy_top_class = _text(platform_gap_taxonomy_summary.get("top_expansion_gap_class"))
+    platform_gap_taxonomy_current_blockers = int(
+        platform_gap_taxonomy_summary.get("current_delivery_blocker_count", 0) or 0
+    )
+    platform_gap_taxonomy_expansion_blockers = int(
+        platform_gap_taxonomy_summary.get("expansion_blocker_count", 0) or 0
+    )
+    platform_gap_taxonomy_non_transporter_count = int(
+        platform_gap_taxonomy_summary.get("non_transporter_gap_count", 0) or 0
+    )
+    platform_gap_taxonomy_split_resolved = bool(
+        platform_gap_taxonomy_summary.get("transporter_specific_split_resolved", False)
+    )
+    platform_gap_taxonomy_scaleup_status = _text(
+        platform_gap_taxonomy_summary.get("ligand_scaleup_claim_safe_status")
+    )
 
     strengths = [
         f"Commercial core is still strongest in `{strongest_ready_families}`.",
@@ -327,6 +348,16 @@ def build_payload(
                         f"`{keep_green_trend_current_green_count}/{keep_green_trend_lane_count}` lanes are currently green, "
                         f"`{keep_green_trend_ready_count}/{keep_green_trend_lane_count}` have sufficient repeated history, "
                         f"and nightly streak is `{keep_green_trend_nightly_streak}/{keep_green_trend_min_samples}`."
+                    )
+                if platform_gap_taxonomy_artifact:
+                    engine_priority.append(
+                        "Use "
+                        f"`{platform_gap_taxonomy_artifact}` "
+                        "as the platform-wide gap taxonomy: current delivery blockers="
+                        f"`{platform_gap_taxonomy_current_blockers}`, expansion blockers="
+                        f"`{platform_gap_taxonomy_expansion_blockers}`, top expansion gap="
+                        f"`{platform_gap_taxonomy_top_gap or '-'}` (`{platform_gap_taxonomy_top_class or '-'}`), "
+                        f"and scale-up status=`{platform_gap_taxonomy_scaleup_status or '-'}`."
                     )
                 immediate_priority = engine_priority + immediate_priority
             else:
@@ -603,7 +634,11 @@ def build_payload(
                 if keep_green_trend_artifact and not keep_green_trend_sufficient_history
                 else "Nightly, viewer, wetlab, and refresh lanes are now keep-green surfaces, but they still need trend history across repeated canonical runs."
             ),
-            f"Current commercialization boards show `placeholder_driven_rows={placeholder_rows}` and separate `reducible_now={reducible_now_rows}` from `evidence_blocked={evidence_blocked_rows}`, but that split is still transporter-specific rather than platform-wide.",
+            (
+                "The platform-wide taxonomy now separates restricted-delivery blockers from expansion blockers, so transporter placeholder counts are no longer the only commercialization split."
+                if platform_gap_taxonomy_split_resolved
+                else f"Current commercialization boards show `placeholder_driven_rows={placeholder_rows}` and separate `reducible_now={reducible_now_rows}` from `evidence_blocked={evidence_blocked_rows}`, but that split is still transporter-specific rather than platform-wide."
+            ),
             transporter_gap_line,
         ]
         fix_plan = [
@@ -658,6 +693,7 @@ def build_payload(
         engine_nightly_downstream_artifact or "runs/nightly_stage6_downstream_rerun_packet_current.md",
         engine_nightly_execute_artifact or "runs/nightly_stage6_execute_result_packet_current.md",
         keep_green_trend_artifact or "runs/keep_green_regression_trend_packet_current.md",
+        platform_gap_taxonomy_artifact or "runs/platform_gap_taxonomy_packet_current.md",
         "runs/wetlab_execution_readiness_queue_current.md",
         engine_wetlab_allatom_artifact or "runs/wetlab_selected_allatom_gate_burndown_packet_current.md",
         "runs/commercialization_readiness_current.md",
@@ -770,6 +806,15 @@ def build_payload(
         "keep_green_trend_insufficient_history_lane_count": keep_green_trend_insufficient_count,
         "keep_green_trend_minimum_repeated_sample_count": keep_green_trend_min_samples,
         "keep_green_trend_nightly_recent_pass_streak": keep_green_trend_nightly_streak,
+        "platform_gap_taxonomy_ready": bool(platform_gap_taxonomy_summary),
+        "platform_gap_taxonomy_artifact": platform_gap_taxonomy_artifact,
+        "platform_gap_taxonomy_current_delivery_blocker_count": platform_gap_taxonomy_current_blockers,
+        "platform_gap_taxonomy_expansion_blocker_count": platform_gap_taxonomy_expansion_blockers,
+        "platform_gap_taxonomy_non_transporter_gap_count": platform_gap_taxonomy_non_transporter_count,
+        "platform_gap_taxonomy_transporter_specific_split_resolved": platform_gap_taxonomy_split_resolved,
+        "platform_gap_taxonomy_top_expansion_gap_id": platform_gap_taxonomy_top_gap,
+        "platform_gap_taxonomy_top_expansion_gap_class": platform_gap_taxonomy_top_class,
+        "platform_gap_taxonomy_ligand_scaleup_claim_safe_status": platform_gap_taxonomy_scaleup_status,
         "local_engine_queue_nightly_gate_artifact": engine_nightly_gate_artifact,
         "local_engine_queue_nightly_status_line": engine_nightly_status_line,
         "local_engine_queue_nightly_tuning_artifact": engine_nightly_tuning_artifact,
@@ -891,6 +936,14 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- keep_green_trend_sufficient_repeated_history: `{s['keep_green_trend_sufficient_repeated_history']}`",
         f"- keep_green_trend_lane_counts: `current={s['keep_green_trend_current_green_lane_count']}/{s['keep_green_trend_lane_count']}, repeated={s['keep_green_trend_repeated_history_ready_lane_count']}/{s['keep_green_trend_lane_count']}, insufficient={s['keep_green_trend_insufficient_history_lane_count']}`",
         f"- keep_green_trend_nightly_recent_pass_streak: `{s['keep_green_trend_nightly_recent_pass_streak']}/{s['keep_green_trend_minimum_repeated_sample_count']}`",
+        f"- platform_gap_taxonomy_ready: `{s['platform_gap_taxonomy_ready']}`",
+        f"- platform_gap_taxonomy_artifact: `{s['platform_gap_taxonomy_artifact'] or '-'}`",
+        f"- platform_gap_taxonomy_current_delivery_blocker_count: `{s['platform_gap_taxonomy_current_delivery_blocker_count']}`",
+        f"- platform_gap_taxonomy_expansion_blocker_count: `{s['platform_gap_taxonomy_expansion_blocker_count']}`",
+        f"- platform_gap_taxonomy_non_transporter_gap_count: `{s['platform_gap_taxonomy_non_transporter_gap_count']}`",
+        f"- platform_gap_taxonomy_transporter_specific_split_resolved: `{s['platform_gap_taxonomy_transporter_specific_split_resolved']}`",
+        f"- platform_gap_taxonomy_top_expansion_gap: `{s['platform_gap_taxonomy_top_expansion_gap_id'] or '-'} ({s['platform_gap_taxonomy_top_expansion_gap_class'] or '-'})`",
+        f"- platform_gap_taxonomy_ligand_scaleup_claim_safe_status: `{s['platform_gap_taxonomy_ligand_scaleup_claim_safe_status'] or '-'}`",
         f"- local_engine_queue_nightly_gate_artifact: `{s['local_engine_queue_nightly_gate_artifact'] or '-'}`",
         f"- local_engine_queue_nightly_status_line: `{s['local_engine_queue_nightly_status_line'] or '-'}`",
         f"- local_engine_queue_nightly_tuning_artifact: `{s['local_engine_queue_nightly_tuning_artifact'] or '-'}`",
@@ -977,6 +1030,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--local-engine-queue-json", default=DEFAULT_LOCAL_ENGINE_QUEUE_JSON)
     parser.add_argument("--local-delivery-verdict-json", default=DEFAULT_LOCAL_DELIVERY_VERDICT_JSON)
     parser.add_argument("--keep-green-trend-json", default=DEFAULT_KEEP_GREEN_TREND_JSON)
+    parser.add_argument("--platform-gap-taxonomy-json", default=DEFAULT_PLATFORM_GAP_TAXONOMY_JSON)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
     return parser.parse_args()
 
@@ -993,6 +1047,7 @@ def main() -> None:
         _load_json(args.local_engine_queue_json),
         _load_json(args.local_delivery_verdict_json),
         _load_json(args.keep_green_trend_json),
+        _load_json(args.platform_gap_taxonomy_json),
     )
     _write_markdown(_resolve(args.out_md), payload)
 

@@ -322,6 +322,18 @@ def test_build_commercialization_status_report_uses_keep_green_wording_when_queu
                 "nightly_recent_pass_streak": 2,
             }
         },
+        {
+            "summary": {
+                "packet_artifact": "runs/platform_gap_taxonomy_packet_current.md",
+                "current_delivery_blocker_count": 0,
+                "expansion_blocker_count": 23,
+                "non_transporter_gap_count": 4,
+                "transporter_specific_split_resolved": True,
+                "top_expansion_gap_id": "keep_green_repeated_history",
+                "top_expansion_gap_class": "keep_green_history",
+                "ligand_scaleup_claim_safe_status": "regression_guardrail_failed",
+            }
+        },
     )
 
     summary = payload["summary"]
@@ -336,16 +348,30 @@ def test_build_commercialization_status_report_uses_keep_green_wording_when_queu
     assert summary["keep_green_trend_current_green_lane_count"] == 4
     assert summary["keep_green_trend_repeated_history_ready_lane_count"] == 1
     assert summary["keep_green_trend_nightly_recent_pass_streak"] == 2
+    assert summary["platform_gap_taxonomy_artifact"] == "runs/platform_gap_taxonomy_packet_current.md"
+    assert summary["platform_gap_taxonomy_current_delivery_blocker_count"] == 0
+    assert summary["platform_gap_taxonomy_expansion_blocker_count"] == 23
+    assert summary["platform_gap_taxonomy_non_transporter_gap_count"] == 4
+    assert summary["platform_gap_taxonomy_transporter_specific_split_resolved"] is True
+    assert summary["platform_gap_taxonomy_top_expansion_gap_id"] == "keep_green_repeated_history"
+    assert summary["platform_gap_taxonomy_ligand_scaleup_claim_safe_status"] == "regression_guardrail_failed"
     assert any("keep-green board" in item for item in summary["immediate_priority"])
     assert any("Local delivery verdict is `delivery_ready`" in item for item in summary["immediate_priority"])
     assert any("nightly gate regression artifact" in item for item in summary["immediate_priority"])
     assert any("runs/keep_green_regression_trend_packet_current.md" in item for item in summary["immediate_priority"])
+    assert any("runs/platform_gap_taxonomy_packet_current.md" in item for item in summary["immediate_priority"])
+    assert any("platform-wide gap taxonomy" in item for item in summary["immediate_priority"])
     assert not any("Burn down engine blockers" in item for item in summary["immediate_priority"])
     assert not any("burndown packet: tune" in item for item in summary["immediate_priority"])
     assert any("restricted local scope" in item for item in summary["report_gaps"])
     assert any("repeated-history sufficiency is not complete" in item for item in summary["report_gaps"])
+    assert any(
+        "transporter placeholder counts are no longer the only commercialization split" in item
+        for item in summary["report_gaps"]
+    )
     assert any("recurrent canonical nightly" in item for item in summary["fix_plan"])
     assert any("runs/keep_green_regression_trend_packet_current.md" in item for item in summary["artifacts"])
+    assert any("runs/platform_gap_taxonomy_packet_current.md" in item for item in summary["artifacts"])
 
 
 def test_build_commercialization_status_report_exposes_negative_target_packets() -> None:
