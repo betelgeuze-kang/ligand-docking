@@ -137,6 +137,11 @@ def test_build_local_engine_commercialization_queue() -> None:
                 "top_target_id": "AQP1",
                 "top_packet_step": "core_non_binder_01",
                 "placeholder_driven_rows_remaining": 6,
+                "top_source_context_artifact": "runs/aqp1_negative_evidence_confirmation_packet_current.md",
+                "top_source_context_role": "exact_source_confirmation_not_authoritative_negative",
+                "aqp1_source_context_direct_negative_quantitative_row_found_count": 0,
+                "aqp1_source_context_authoritative_negative_apply_allowed_count": 0,
+                "glut1_negative_handoff_artifact": "runs/glut1_negative_review_handoff_packet_current.md",
             }
         },
         gap_payload={
@@ -160,6 +165,12 @@ def test_build_local_engine_commercialization_queue() -> None:
     assert rows["wetlab_execution_readiness"]["status"] == "blocked"
     assert rows["local_reproducibility_guardrail"]["status"] == "keep_green"
     assert rows["transporter_science_blocker"]["status"] == "parked"
+    _contains_tokens(
+        rows["transporter_science_blocker"]["source_signal"],
+        "top_source_context_artifact=runs/aqp1_negative_evidence_confirmation_packet_current.md",
+        "top_source_context_role=exact_source_confirmation_not_authoritative_negative",
+        "glut1_negative_handoff_artifact=runs/glut1_negative_review_handoff_packet_current.md",
+    )
     _contains_tokens(
         rows["nightly_reliability"]["source_signal"],
         "stage2_trajectory_generation",

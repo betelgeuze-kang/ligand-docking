@@ -884,7 +884,12 @@ def _transporter_signal(negative_queue_payload: dict[str, Any], gap_payload: dic
         f"queue_row_count={negative_summary.get('row_count', 0)}; "
         f"top_target_id={_text(negative_summary.get('top_target_id')) or '-'}; "
         f"top_packet_step={_text(negative_summary.get('top_packet_step')) or '-'}; "
-        f"placeholder_driven_rows_remaining={negative_summary.get('placeholder_driven_rows_remaining', 0)}"
+        f"placeholder_driven_rows_remaining={negative_summary.get('placeholder_driven_rows_remaining', 0)}; "
+        f"top_source_context_artifact={_text(negative_summary.get('top_source_context_artifact')) or '-'}; "
+        f"top_source_context_role={_text(negative_summary.get('top_source_context_role')) or '-'}; "
+        f"aqp1_direct_negative_quantitative_rows={negative_summary.get('aqp1_source_context_direct_negative_quantitative_row_found_count', 0)}; "
+        f"aqp1_authoritative_negative_apply_allowed={negative_summary.get('aqp1_source_context_authoritative_negative_apply_allowed_count', 0)}; "
+        f"glut1_negative_handoff_artifact={_text(negative_summary.get('glut1_negative_handoff_artifact')) or '-'}"
     )
     next_required_action = (
         "Park transporter as the science-blocker lane behind the engine blockers. Keep AQP1/GLUT1 negative evidence "
