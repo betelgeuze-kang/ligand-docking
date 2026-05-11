@@ -103,6 +103,14 @@ def test_build_tcruzi_krs1_guarded_operator_packet_prefers_exploratory_gate51_fo
             "target_id": "T. cruzi KRS1",
             "immediately_runnable_command_kind": "throughput_preflight_tuned_gate51",
             "immediately_runnable_threshold_A": 5.1,
+            "gate51_validation_row_count": 16,
+            "gate51_validation_success_count": 16,
+            "gate51_validation_all_post_hold_success": True,
+            "gate51_validation_start_shard_id": "05_of_20",
+            "gate51_validation_end_shard_id": "20_of_20",
+            "gate51_validation_observed_metric_min_A": 4.991,
+            "gate51_validation_observed_metric_mean_A": 5.021,
+            "gate51_validation_observed_metric_max_A": 5.054,
         }
     }
     payload = packet_mod.build_payload(
@@ -122,6 +130,11 @@ def test_build_tcruzi_krs1_guarded_operator_packet_prefers_exploratory_gate51_fo
     assert summary["selected_threshold_A"] == 5.1
     assert summary["decision_case"] == "tcruzi_krs1_guarded_gate51_review_candidate"
     assert summary["action"] == "pause_default_lane_and_review_gate51_retry"
+    assert summary["gate51_validation_row_count"] == 16
+    assert summary["gate51_validation_success_count"] == 16
+    assert summary["gate51_validation_start_shard_id"] == "05_of_20"
+    assert summary["gate51_validation_end_shard_id"] == "20_of_20"
+    assert summary["gate51_validation_observed_metric_mean_A"] == 5.021
 
 
 def test_build_tcruzi_krs1_guarded_branch_summary_switches_to_tuned_branch_when_tuned_bridge_is_selected() -> None:
@@ -193,6 +206,18 @@ def test_build_tcruzi_krs1_guarded_branch_summary_promotes_validated_gate51_bran
         execution_queue,
         _hold_guard_payload(),
         _watch_action_payload(),
+        {
+            "summary": {
+                "gate51_validation_row_count": 16,
+                "gate51_validation_success_count": 16,
+                "gate51_validation_all_post_hold_success": True,
+                "gate51_validation_start_shard_id": "05_of_20",
+                "gate51_validation_end_shard_id": "20_of_20",
+                "gate51_validation_observed_metric_min_A": 4.991,
+                "gate51_validation_observed_metric_mean_A": 5.021,
+                "gate51_validation_observed_metric_max_A": 5.054,
+            }
+        },
     )
     summary = payload["summary"]
 
@@ -206,4 +231,10 @@ def test_build_tcruzi_krs1_guarded_branch_summary_promotes_validated_gate51_bran
     assert summary["validated_start_shard_id"] == "05_of_20"
     assert summary["validated_end_shard_id"] == "06_of_20"
     assert summary["validated_success_streak_count"] == 2
+    assert summary["gate51_validation_row_count"] == 16
+    assert summary["gate51_validation_success_count"] == 16
+    assert summary["gate51_validation_all_post_hold_success"] is True
+    assert summary["gate51_validation_start_shard_id"] == "05_of_20"
+    assert summary["gate51_validation_end_shard_id"] == "20_of_20"
+    assert summary["gate51_validation_observed_metric_mean_A"] == 5.021
     assert "allow LRRK2 to continue" in summary["next_required_step"]

@@ -48,6 +48,26 @@ def _safe_float(value: Any, default: float = 0.0) -> float:
         return default
 
 
+def _first_int(*values: Any, default: int = 0) -> int:
+    for value in values:
+        if value in {"", None}:
+            continue
+        parsed = _safe_int(value, default)
+        if parsed != default or value == default:
+            return parsed
+    return default
+
+
+def _first_float(*values: Any, default: float = 0.0) -> float:
+    for value in values:
+        if value in {"", None}:
+            continue
+        parsed = _safe_float(value, default)
+        if parsed != default or value == default:
+            return parsed
+    return default
+
+
 def build_payload(
     result_review_payload: dict[str, Any],
     result_summary_payload: dict[str, Any],
@@ -81,6 +101,50 @@ def build_payload(
         guarded_branch_s.get("status")
     )
     branch_validated = guarded_packet_validated or guarded_branch_validated
+    gate51_validation_row_count = _first_int(
+        guarded_branch_s.get("gate51_validation_row_count"),
+        guarded_packet_s.get("gate51_validation_row_count"),
+        tuning_s.get("gate51_validation_row_count"),
+    )
+    gate51_validation_success_count = _first_int(
+        guarded_branch_s.get("gate51_validation_success_count"),
+        guarded_packet_s.get("gate51_validation_success_count"),
+        tuning_s.get("gate51_validation_success_count"),
+    )
+    gate51_validation_start_shard_id = _text(
+        guarded_branch_s.get("gate51_validation_start_shard_id"),
+        guarded_packet_s.get("gate51_validation_start_shard_id"),
+        tuning_s.get("gate51_validation_start_shard_id"),
+    )
+    gate51_validation_end_shard_id = _text(
+        guarded_branch_s.get("gate51_validation_end_shard_id"),
+        guarded_packet_s.get("gate51_validation_end_shard_id"),
+        tuning_s.get("gate51_validation_end_shard_id"),
+    )
+    gate51_validation_all_post_hold_success = bool(
+        guarded_branch_s.get(
+            "gate51_validation_all_post_hold_success",
+            guarded_packet_s.get(
+                "gate51_validation_all_post_hold_success",
+                tuning_s.get("gate51_validation_all_post_hold_success", False),
+            ),
+        )
+    )
+    gate51_validation_observed_metric_min_A = _first_float(
+        guarded_branch_s.get("gate51_validation_observed_metric_min_A"),
+        guarded_packet_s.get("gate51_validation_observed_metric_min_A"),
+        tuning_s.get("gate51_validation_observed_metric_min_A"),
+    )
+    gate51_validation_observed_metric_mean_A = _first_float(
+        guarded_branch_s.get("gate51_validation_observed_metric_mean_A"),
+        guarded_packet_s.get("gate51_validation_observed_metric_mean_A"),
+        tuning_s.get("gate51_validation_observed_metric_mean_A"),
+    )
+    gate51_validation_observed_metric_max_A = _first_float(
+        guarded_branch_s.get("gate51_validation_observed_metric_max_A"),
+        guarded_packet_s.get("gate51_validation_observed_metric_max_A"),
+        tuning_s.get("gate51_validation_observed_metric_max_A"),
+    )
     run_ready = _text(run_s.get("status")) == "tcruzi_krs1_run_record_ready"
     source_priority = "guarded_branch_summary" if guarded_branch_ready else "result_review"
     decision_source_priority = (
@@ -264,6 +328,14 @@ def build_payload(
             "successor_gate_state": successor_gate_state,
             "successor_gate_open": True if branch_validated else False if guarded_branch_ready or guarded_packet_ready else bool(review_s.get("successor_gate_open", run_s.get("successor_gate_open", True))),
             "branch_validated": branch_validated,
+            "gate51_validation_row_count": gate51_validation_row_count,
+            "gate51_validation_success_count": gate51_validation_success_count,
+            "gate51_validation_all_post_hold_success": gate51_validation_all_post_hold_success,
+            "gate51_validation_start_shard_id": gate51_validation_start_shard_id,
+            "gate51_validation_end_shard_id": gate51_validation_end_shard_id,
+            "gate51_validation_observed_metric_min_A": round(gate51_validation_observed_metric_min_A, 3),
+            "gate51_validation_observed_metric_mean_A": round(gate51_validation_observed_metric_mean_A, 3),
+            "gate51_validation_observed_metric_max_A": round(gate51_validation_observed_metric_max_A, 3),
             "stage6_tuning_surface_ready": tuning_ready,
             "stage6_tuning_source_priority": "stage6_tuning_surface",
             "stage6_tuning_recommended_threshold_A": _safe_float(

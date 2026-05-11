@@ -229,6 +229,14 @@ def build_payload(
     guard_triggered = bool(guard_row.get("guard_triggered_now", False))
     packet_ready = bool(current_row) and guard_triggered
     branch_validated = unresolved_count == 0 and success_count > hold_count and "gate51" in _text(command_kind)
+    gate51_validation_row_count = _safe_int(tuning_summary.get("gate51_validation_row_count"))
+    gate51_validation_success_count = _safe_int(tuning_summary.get("gate51_validation_success_count"))
+    gate51_validation_all_post_hold_success = bool(tuning_summary.get("gate51_validation_all_post_hold_success", False))
+    gate51_validation_start_shard_id = _text(tuning_summary.get("gate51_validation_start_shard_id"))
+    gate51_validation_end_shard_id = _text(tuning_summary.get("gate51_validation_end_shard_id"))
+    gate51_validation_observed_metric_min_A = _safe_float(tuning_summary.get("gate51_validation_observed_metric_min_A"))
+    gate51_validation_observed_metric_mean_A = _safe_float(tuning_summary.get("gate51_validation_observed_metric_mean_A"))
+    gate51_validation_observed_metric_max_A = _safe_float(tuning_summary.get("gate51_validation_observed_metric_max_A"))
     status = (
         "wetlab_tcruzi_krs1_guarded_operator_packet_validated"
         if branch_validated
@@ -262,6 +270,14 @@ def build_payload(
             "hold_shard_count": hold_count,
             "unresolved_shard_count": unresolved_count,
             "branch_validated": branch_validated,
+            "gate51_validation_row_count": gate51_validation_row_count,
+            "gate51_validation_success_count": gate51_validation_success_count,
+            "gate51_validation_all_post_hold_success": gate51_validation_all_post_hold_success,
+            "gate51_validation_start_shard_id": gate51_validation_start_shard_id,
+            "gate51_validation_end_shard_id": gate51_validation_end_shard_id,
+            "gate51_validation_observed_metric_min_A": round(gate51_validation_observed_metric_min_A, 3),
+            "gate51_validation_observed_metric_mean_A": round(gate51_validation_observed_metric_mean_A, 3),
+            "gate51_validation_observed_metric_max_A": round(gate51_validation_observed_metric_max_A, 3),
             "guard_hold_streak": _safe_int(guard_row.get("recent_consecutive_auto_hold_streak")),
             "guard_hold_limit": _safe_int(guard_row.get("guard_limit")),
             "watch_action": _text(watch_action.get("action_taken")),
@@ -279,6 +295,10 @@ def build_payload(
                 "queue_status_now": queue_status_now,
                 "success_shard_count": success_count,
                 "hold_shard_count": hold_count,
+                "gate51_validation_row_count": gate51_validation_row_count,
+                "gate51_validation_success_count": gate51_validation_success_count,
+                "gate51_validation_start_shard_id": gate51_validation_start_shard_id,
+                "gate51_validation_end_shard_id": gate51_validation_end_shard_id,
                 "guard_hold_streak": _safe_int(guard_row.get("recent_consecutive_auto_hold_streak")),
                 "guard_hold_limit": _safe_int(guard_row.get("guard_limit")),
                 "default_lane_reopen_allowed": False,

@@ -75,6 +75,12 @@ def test_build_wetlab_tcruzi_krs1_branch_review_surface_opens_lrrk2_when_guarded
                 "status": "wetlab_tcruzi_krs1_stage6_tuning_surface_ready",
                 "recommended_observed_threshold_A": 5.05,
                 "immediately_runnable_command_kind": "throughput_preflight_tuned_gate51",
+                "gate51_validation_row_count": 16,
+                "gate51_validation_success_count": 16,
+                "gate51_validation_all_post_hold_success": True,
+                "gate51_validation_start_shard_id": "05_of_20",
+                "gate51_validation_end_shard_id": "20_of_20",
+                "gate51_validation_observed_metric_mean_A": 5.021,
             }
         },
         {
@@ -99,6 +105,12 @@ def test_build_wetlab_tcruzi_krs1_branch_review_surface_opens_lrrk2_when_guarded
                 "branch_validated": True,
                 "branch_label": "tcruzi_krs1_guarded_gate51_branch",
                 "branch_state": "guarded_gate51_validated_default_lane_closed",
+                "gate51_validation_row_count": 16,
+                "gate51_validation_success_count": 16,
+                "gate51_validation_all_post_hold_success": True,
+                "gate51_validation_start_shard_id": "05_of_20",
+                "gate51_validation_end_shard_id": "20_of_20",
+                "gate51_validation_observed_metric_mean_A": 5.021,
                 "next_required_step": "Promote T. cruzi KRS1 guarded gate5.1 as validated, keep the default lane closed, and allow LRRK2 to continue as the successor broad lane.",
             }
         },
@@ -112,6 +124,12 @@ def test_build_wetlab_tcruzi_krs1_branch_review_surface_opens_lrrk2_when_guarded
     assert summary["successor_gate_state"] == "open_for_lrrk2_execution"
     assert summary["successor_gate_open"] is True
     assert summary["branch_validated"] is True
+    assert summary["gate51_validation_row_count"] == 16
+    assert summary["gate51_validation_success_count"] == 16
+    assert summary["gate51_validation_all_post_hold_success"] is True
+    assert summary["gate51_validation_start_shard_id"] == "05_of_20"
+    assert summary["gate51_validation_end_shard_id"] == "20_of_20"
+    assert summary["gate51_validation_observed_metric_mean_A"] == 5.021
     assert "allow LRRK2 to continue" in summary["next_required_step"]
 
     decision_row = next(row for row in payload["rows"] if row["row_kind"] == "result_summary_source")

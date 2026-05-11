@@ -140,9 +140,12 @@ def build_payload(
     execution_queue_payload: dict[str, Any] | None,
     hold_guard_payload: dict[str, Any] | None,
     watch_action_payload: dict[str, Any] | None,
+    stage6_tuning_surface_payload: dict[str, Any] | None = None,
+    exploratory_retry_lane_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     operator_packet = _summary(operator_packet_payload)
     watch_action = _summary(watch_action_payload)
+    tuning_s = _summary(stage6_tuning_surface_payload)
     command_kind = _text(operator_packet.get("selected_command_kind"), default="throughput_preflight")
     validated_state = _validated_gate51_branch_state(command_kind, execution_queue_payload)
     branch_validated = bool(validated_state.get("validated")) or bool(operator_packet.get("branch_validated", False)) or "validated" in _text(
@@ -163,6 +166,42 @@ def build_payload(
     unresolved_shard_count = _safe_int(
         validated_state.get("unresolved_shard_count"),
         _safe_int(operator_packet.get("unresolved_shard_count")),
+    )
+    gate51_validation_row_count = _safe_int(
+        operator_packet.get("gate51_validation_row_count"),
+        _safe_int(tuning_s.get("gate51_validation_row_count")),
+    )
+    gate51_validation_success_count = _safe_int(
+        operator_packet.get("gate51_validation_success_count"),
+        _safe_int(tuning_s.get("gate51_validation_success_count")),
+    )
+    gate51_validation_start_shard_id = _text(
+        operator_packet.get("gate51_validation_start_shard_id"),
+        tuning_s.get("gate51_validation_start_shard_id"),
+        validated_state.get("validated_start_shard_id"),
+    )
+    gate51_validation_end_shard_id = _text(
+        operator_packet.get("gate51_validation_end_shard_id"),
+        tuning_s.get("gate51_validation_end_shard_id"),
+        validated_state.get("validated_end_shard_id"),
+    )
+    gate51_validation_all_post_hold_success = bool(
+        operator_packet.get(
+            "gate51_validation_all_post_hold_success",
+            tuning_s.get("gate51_validation_all_post_hold_success", False),
+        )
+    )
+    gate51_validation_observed_metric_min_A = operator_packet.get(
+        "gate51_validation_observed_metric_min_A",
+        tuning_s.get("gate51_validation_observed_metric_min_A", 0.0),
+    )
+    gate51_validation_observed_metric_mean_A = operator_packet.get(
+        "gate51_validation_observed_metric_mean_A",
+        tuning_s.get("gate51_validation_observed_metric_mean_A", 0.0),
+    )
+    gate51_validation_observed_metric_max_A = operator_packet.get(
+        "gate51_validation_observed_metric_max_A",
+        tuning_s.get("gate51_validation_observed_metric_max_A", 0.0),
     )
 
     return {
@@ -192,6 +231,14 @@ def build_payload(
             "success_shard_count": success_shard_count,
             "hold_shard_count": hold_shard_count,
             "unresolved_shard_count": unresolved_shard_count,
+            "gate51_validation_row_count": gate51_validation_row_count,
+            "gate51_validation_success_count": gate51_validation_success_count,
+            "gate51_validation_all_post_hold_success": gate51_validation_all_post_hold_success,
+            "gate51_validation_start_shard_id": gate51_validation_start_shard_id,
+            "gate51_validation_end_shard_id": gate51_validation_end_shard_id,
+            "gate51_validation_observed_metric_min_A": gate51_validation_observed_metric_min_A,
+            "gate51_validation_observed_metric_mean_A": gate51_validation_observed_metric_mean_A,
+            "gate51_validation_observed_metric_max_A": gate51_validation_observed_metric_max_A,
             "validated_start_shard_id": _text(validated_state.get("validated_start_shard_id")),
             "validated_end_shard_id": _text(validated_state.get("validated_end_shard_id")),
             "validated_success_streak_count": _safe_int(validated_state.get("validated_success_streak_count")),
@@ -217,6 +264,11 @@ def build_payload(
                         else ""
                     ),
                     operator_packet.get("packet_scope"),
+                    (
+                        f"gate51_validation={gate51_validation_success_count}/{gate51_validation_row_count}"
+                        if gate51_validation_row_count
+                        else ""
+                    ),
                     f"{hold_shard_count} hold",
                 ),
             },
@@ -263,6 +315,8 @@ def main() -> None:
         maybe_load_json(args.execution_queue_json),
         maybe_load_json(args.hold_guard_json),
         maybe_load_json(args.watch_action_json),
+        maybe_load_json(args.stage6_tuning_surface_json),
+        maybe_load_json(args.exploratory_retry_lane_json),
     )
     write_artifact(args.out_md, "Wet-Lab T. cruzi KRS1 Guarded Branch Summary", payload)
 
