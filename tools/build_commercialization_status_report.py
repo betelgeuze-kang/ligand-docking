@@ -554,6 +554,19 @@ def build_payload(
                     f"`{_text(negative_target_packets_summary.get('aqp1_negative_acquisition_primary_query_label'))}` "
                     "and open the primary PubMed anchor first."
                 )
+            if _text(negative_target_packets_summary.get("glut1_negative_direct_evidence_audit_artifact")):
+                immediate_priority.append(
+                    "Use "
+                    f"`{_text(negative_target_packets_summary.get('glut1_negative_direct_evidence_audit_artifact'))}` "
+                    "as the GLUT1 negative direct-evidence audit: placeholder negative slots="
+                    f"`{negative_target_packets_summary.get('glut1_negative_direct_evidence_audit_placeholder_negative_candidate_count', 0)}`, "
+                    "positive/binder context rows="
+                    f"`{negative_target_packets_summary.get('glut1_negative_direct_evidence_audit_source_context_positive_or_binder_candidate_count', 0)}`, "
+                    "direct negative rows="
+                    f"`{negative_target_packets_summary.get('glut1_negative_direct_evidence_audit_direct_negative_quantitative_row_found_count', 0)}`, "
+                    "so keep GLUT1 at "
+                    f"`{_text(negative_target_packets_summary.get('glut1_negative_direct_evidence_audit_decision'))}`."
+                )
         transporter_gap_line = (
             "GLUT1 binder rows are now staged as non-authoritative second-wave surfaces, so the remaining transporter gap is no longer staging but evidence-blocked negative closure."
         )
@@ -635,6 +648,7 @@ def build_payload(
         _text(negative_target_packets_summary.get("aqp1_negative_primary_probe_resolution_artifact")) or "runs/aqp1_negative_primary_probe_resolution_packet_current.md",
         _text(negative_target_packets_summary.get("aqp1_negative_direct_evidence_audit_artifact")) or "runs/aqp1_negative_direct_evidence_audit_packet_current.md",
         _text(negative_target_packets_summary.get("aqp1_negative_acquisition_artifact")) or "runs/aqp1_negative_evidence_acquisition_packet_current.md",
+        _text(negative_target_packets_summary.get("glut1_negative_direct_evidence_audit_artifact")) or "runs/glut1_negative_direct_evidence_audit_packet_current.md",
         "runs/glut1_second_wave_source_confirmation_packet_current.md",
         "runs/glut1_second_wave_seed_row_packet_current.md",
     ]
@@ -689,6 +703,21 @@ def build_payload(
         ),
         "negative_target_packets_aqp1_direct_evidence_audit_decision": _text(
             negative_target_packets_summary.get("aqp1_negative_direct_evidence_audit_decision")
+        ),
+        "negative_target_packets_glut1_direct_evidence_audit_artifact": _text(
+            negative_target_packets_summary.get("glut1_negative_direct_evidence_audit_artifact")
+        ),
+        "negative_target_packets_glut1_direct_evidence_audit_placeholder_negative_candidate_count": negative_target_packets_summary.get(
+            "glut1_negative_direct_evidence_audit_placeholder_negative_candidate_count", 0
+        ),
+        "negative_target_packets_glut1_direct_evidence_audit_source_context_positive_or_binder_candidate_count": negative_target_packets_summary.get(
+            "glut1_negative_direct_evidence_audit_source_context_positive_or_binder_candidate_count", 0
+        ),
+        "negative_target_packets_glut1_direct_evidence_audit_direct_negative_quantitative_row_found_count": negative_target_packets_summary.get(
+            "glut1_negative_direct_evidence_audit_direct_negative_quantitative_row_found_count", 0
+        ),
+        "negative_target_packets_glut1_direct_evidence_audit_decision": _text(
+            negative_target_packets_summary.get("glut1_negative_direct_evidence_audit_decision")
         ),
         "local_engine_queue_ready": bool(local_engine_queue_summary),
         "local_engine_queue_clear": engine_queue_clear,
@@ -801,6 +830,11 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- negative_target_packets_aqp1_direct_evidence_audit_chembl_exact_target_pair_activity_count: `{s['negative_target_packets_aqp1_direct_evidence_audit_chembl_exact_target_pair_activity_count']}`",
         f"- negative_target_packets_aqp1_direct_evidence_audit_direct_negative_quantitative_row_found_count: `{s['negative_target_packets_aqp1_direct_evidence_audit_direct_negative_quantitative_row_found_count']}`",
         f"- negative_target_packets_aqp1_direct_evidence_audit_decision: `{s['negative_target_packets_aqp1_direct_evidence_audit_decision'] or '-'}`",
+        f"- negative_target_packets_glut1_direct_evidence_audit_artifact: `{s['negative_target_packets_glut1_direct_evidence_audit_artifact'] or '-'}`",
+        f"- negative_target_packets_glut1_direct_evidence_audit_placeholder_negative_candidate_count: `{s['negative_target_packets_glut1_direct_evidence_audit_placeholder_negative_candidate_count']}`",
+        f"- negative_target_packets_glut1_direct_evidence_audit_source_context_positive_or_binder_candidate_count: `{s['negative_target_packets_glut1_direct_evidence_audit_source_context_positive_or_binder_candidate_count']}`",
+        f"- negative_target_packets_glut1_direct_evidence_audit_direct_negative_quantitative_row_found_count: `{s['negative_target_packets_glut1_direct_evidence_audit_direct_negative_quantitative_row_found_count']}`",
+        f"- negative_target_packets_glut1_direct_evidence_audit_decision: `{s['negative_target_packets_glut1_direct_evidence_audit_decision'] or '-'}`",
         f"- local_engine_queue_ready: `{s['local_engine_queue_ready']}`",
         f"- local_engine_queue_clear: `{s['local_engine_queue_clear']}`",
         f"- local_engine_queue_top_priority: `{s['local_engine_queue_top_priority_id'] or '-'} ({s['local_engine_queue_top_priority_status'] or '-'})`",

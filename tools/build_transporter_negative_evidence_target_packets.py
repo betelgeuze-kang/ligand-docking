@@ -23,6 +23,7 @@ DEFAULT_AQP1_NEGATIVE_PRIMARY_PROBE_JSON = "runs/aqp1_negative_primary_probe_pac
 DEFAULT_AQP1_NEGATIVE_EXACT_SOURCE_OUTCOME_JSON = "runs/aqp1_negative_exact_source_outcome_packet_current.json"
 DEFAULT_AQP1_NEGATIVE_PRIMARY_PROBE_RESOLUTION_JSON = "runs/aqp1_negative_primary_probe_resolution_packet_current.json"
 DEFAULT_AQP1_NEGATIVE_DIRECT_EVIDENCE_AUDIT_JSON = "runs/aqp1_negative_direct_evidence_audit_packet_current.json"
+DEFAULT_GLUT1_NEGATIVE_DIRECT_EVIDENCE_AUDIT_JSON = "runs/glut1_negative_direct_evidence_audit_packet_current.json"
 DEFAULT_GLUT1_SOURCE_CONFIRMATION_JSON = "runs/glut1_second_wave_source_confirmation_packet_current.json"
 DEFAULT_OUT_JSON = "runs/transporter_negative_evidence_target_packets_current.json"
 DEFAULT_OUT_CSV = "runs/transporter_negative_evidence_target_packets_current.csv"
@@ -108,6 +109,7 @@ def build_payload(
     aqp1_negative_exact_source_outcome_payload: dict[str, Any] | None = None,
     aqp1_negative_primary_probe_resolution_payload: dict[str, Any] | None = None,
     aqp1_negative_direct_evidence_audit_payload: dict[str, Any] | None = None,
+    glut1_negative_direct_evidence_audit_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     day_summary = dict((negative_day_plan_payload or {}).get("summary", {}) or {})
     target_rows = list((negative_day_plan_payload or {}).get("target_rows", []) or [])
@@ -126,6 +128,9 @@ def build_payload(
     aqp1_primary_probe_resolution_summary = dict((aqp1_negative_primary_probe_resolution_payload or {}).get("summary", {}) or {})
     aqp1_direct_evidence_audit_summary = dict(
         (aqp1_negative_direct_evidence_audit_payload or {}).get("summary", {}) or {}
+    )
+    glut1_direct_evidence_audit_summary = dict(
+        (glut1_negative_direct_evidence_audit_payload or {}).get("summary", {}) or {}
     )
     queue_ranges = _queue_ranges(review_rows)
 
@@ -326,6 +331,25 @@ def build_payload(
         )
         or _text(glut1_source_summary.get("primary_focus_ligand"))
         or "cytochalasin B",
+        "glut1_negative_direct_evidence_audit_artifact": _text(
+            glut1_direct_evidence_audit_summary.get("packet_artifact")
+        )
+        or "runs/glut1_negative_direct_evidence_audit_packet_current.md",
+        "glut1_negative_direct_evidence_audit_placeholder_negative_candidate_count": _int(
+            glut1_direct_evidence_audit_summary.get("placeholder_negative_candidate_count")
+        ),
+        "glut1_negative_direct_evidence_audit_source_context_positive_or_binder_candidate_count": _int(
+            glut1_direct_evidence_audit_summary.get("source_context_positive_or_binder_candidate_count")
+        ),
+        "glut1_negative_direct_evidence_audit_positive_exact_target_pair_activity_record_count": _int(
+            glut1_direct_evidence_audit_summary.get("positive_exact_target_pair_activity_record_count")
+        ),
+        "glut1_negative_direct_evidence_audit_direct_negative_quantitative_row_found_count": _int(
+            glut1_direct_evidence_audit_summary.get("direct_negative_quantitative_row_found_count")
+        ),
+        "glut1_negative_direct_evidence_audit_decision": _text(
+            glut1_direct_evidence_audit_summary.get("audit_decision")
+        ),
         "aqp1_endpoint_status": _text(aqp1_summary.get("endpoint_status")),
         "next_required_step": (
             "Open the AQP1 negative handoff first for queue ranks 1-3, close core_non_binder_01 through core_non_binder_03 in order, "
@@ -402,6 +426,12 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- glut1_reference_signal_count: `{s['glut1_reference_signal_count']}`",
         f"- glut1_source_context_artifact: `{s['glut1_source_context_artifact']}`",
         f"- glut1_source_context_primary_focus_ligand: `{s['glut1_source_context_primary_focus_ligand']}`",
+        f"- glut1_negative_direct_evidence_audit_artifact: `{s['glut1_negative_direct_evidence_audit_artifact']}`",
+        f"- glut1_negative_direct_evidence_audit_placeholder_negative_candidate_count: `{s['glut1_negative_direct_evidence_audit_placeholder_negative_candidate_count']}`",
+        f"- glut1_negative_direct_evidence_audit_source_context_positive_or_binder_candidate_count: `{s['glut1_negative_direct_evidence_audit_source_context_positive_or_binder_candidate_count']}`",
+        f"- glut1_negative_direct_evidence_audit_positive_exact_target_pair_activity_record_count: `{s['glut1_negative_direct_evidence_audit_positive_exact_target_pair_activity_record_count']}`",
+        f"- glut1_negative_direct_evidence_audit_direct_negative_quantitative_row_found_count: `{s['glut1_negative_direct_evidence_audit_direct_negative_quantitative_row_found_count']}`",
+        f"- glut1_negative_direct_evidence_audit_decision: `{s['glut1_negative_direct_evidence_audit_decision']}`",
         "",
         "## Next Step",
         "",
@@ -447,6 +477,10 @@ def parse_args() -> argparse.Namespace:
         "--aqp1-negative-direct-evidence-audit-json",
         default=DEFAULT_AQP1_NEGATIVE_DIRECT_EVIDENCE_AUDIT_JSON,
     )
+    parser.add_argument(
+        "--glut1-negative-direct-evidence-audit-json",
+        default=DEFAULT_GLUT1_NEGATIVE_DIRECT_EVIDENCE_AUDIT_JSON,
+    )
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -470,6 +504,7 @@ def main() -> None:
         _load_json(args.aqp1_negative_exact_source_outcome_json),
         _load_json(args.aqp1_negative_primary_probe_resolution_json),
         _load_json(args.aqp1_negative_direct_evidence_audit_json),
+        _load_json(args.glut1_negative_direct_evidence_audit_json),
     )
     out_json = _resolve(args.out_json)
     out_csv = _resolve(args.out_csv)
