@@ -205,6 +205,23 @@ def _build_speedpack_candidate(
     profile_map: dict[str, str] = {}
     task_rows: list[dict[str, Any]] = []
     set_map: dict[str, list[dict[str, Any]]] = {}
+    source_set_meta: dict[str, dict[str, str]] = {}
+    for set_row in spec.get("sets", []):
+        set_id = str(set_row.get("set_id", "")).strip()
+        if not set_id:
+            continue
+        meta = {
+            "set_id": set_id,
+            "title": str(set_row.get("title", "") or set_id).strip(),
+            "purpose": str(
+                set_row.get("purpose", "")
+                or f"Equal-size ligand speedpack A/B slice derived from {set_id}."
+            ).strip(),
+        }
+        claim_role = str(set_row.get("claim_role", "") or "").strip()
+        if claim_role:
+            meta["claim_role"] = claim_role
+        source_set_meta[set_id] = meta
 
     for row in selected_rows:
         task = dict(row["task"])
@@ -255,7 +272,10 @@ def _build_speedpack_candidate(
             "comparison_kind": "equal_size_speedpack_ab",
             "source_spec_json": str(spec_path.resolve()),
         },
-        "sets": [{"set_id": set_id, "tasks": tasks} for set_id, tasks in set_map.items()],
+        "sets": [
+            {**source_set_meta.get(set_id, {"set_id": set_id, "title": set_id, "purpose": "Equal-size A/B slice."}), "tasks": tasks}
+            for set_id, tasks in set_map.items()
+        ],
     }
     spec_dir.mkdir(parents=True, exist_ok=True)
     candidate_spec_path = spec_dir / "ligand_speedpack_ab_current_v1.json"
