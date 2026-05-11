@@ -95,6 +95,7 @@ def test_build_glut1_negative_review_handoff_packet_collects_negative_and_cautio
             }
         },
     )
+    assert payload["summary"]["packet_artifact"] == "runs/glut1_negative_review_handoff_packet_current.md"
     assert payload["summary"]["negative_slot_count"] == 1
     assert payload["summary"]["caution_signal_count"] == 1
     assert payload["summary"]["negative_review_only_rows"] == 3

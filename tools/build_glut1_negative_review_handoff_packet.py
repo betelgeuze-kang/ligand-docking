@@ -151,6 +151,7 @@ def build_payload(
 
     summary = {
         "target_id": "GLUT1",
+        "packet_artifact": "runs/glut1_negative_review_handoff_packet_current.md",
         "local_evidence_status": str(dashboard_row.get("local_evidence_status", "")).strip() or str(local_evidence_note.get("summary", {}).get("endpoint_status", "")).strip(),
         "local_quantitative_negative_evidence_curated": bool(local_evidence_note.get("summary", {}).get("local_quantitative_negative_evidence_curated", False)),
         "negative_slot_count": len(negative_rows),
@@ -186,6 +187,7 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         "# GLUT1 Negative Review Handoff Packet",
         "",
         f"- target_id: `{s['target_id']}`",
+        f"- packet_artifact: `{s['packet_artifact']}`",
         f"- local_evidence_status: `{s['local_evidence_status']}`",
         f"- local_quantitative_negative_evidence_curated: `{s['local_quantitative_negative_evidence_curated']}`",
         f"- negative_slot_count: `{s['negative_slot_count']}`",
