@@ -102,6 +102,16 @@ def test_build_transporter_negative_evidence_target_packets_reads_current_artifa
                 "resolution_decision": "keep_review_only_no_authoritative_negative_promotion",
             }
         },
+        {
+            "summary": {
+                "packet_artifact": "runs/aqp1_negative_direct_evidence_audit_packet_current.md",
+                "pubmed_exact_ligand_target_hit_count": 8,
+                "chembl_exact_target_pair_activity_count": 0,
+                "direct_negative_quantitative_row_found_count": 0,
+                "no_direct_negative_source_row_count": 3,
+                "audit_decision": "keep_review_only_no_authoritative_negative_promotion",
+            }
+        },
     )
 
     summary = payload["summary"]
@@ -162,6 +172,12 @@ def test_build_transporter_negative_evidence_target_packets_reads_current_artifa
         == "almost_unaffected_at_200_mpa"
     )
     assert summary["aqp1_negative_primary_probe_resolution_source_anchor_direct_negative_quantitative_row_found"] is False
+    assert summary["aqp1_negative_direct_evidence_audit_artifact"] == "runs/aqp1_negative_direct_evidence_audit_packet_current.md"
+    assert summary["aqp1_negative_direct_evidence_audit_pubmed_exact_ligand_target_hit_count"] == 8
+    assert summary["aqp1_negative_direct_evidence_audit_chembl_exact_target_pair_activity_count"] == 0
+    assert summary["aqp1_negative_direct_evidence_audit_direct_negative_quantitative_row_found_count"] == 0
+    assert summary["aqp1_negative_direct_evidence_audit_no_direct_negative_source_row_count"] == 3
+    assert summary["aqp1_negative_direct_evidence_audit_decision"] == "keep_review_only_no_authoritative_negative_promotion"
     assert summary["glut1_source_context_primary_focus_ligand"] == "cytochalasin B"
     assert rows[0]["target_id"] == "AQP1"
     assert rows[0]["primary_artifact"] == "runs/aqp1_negative_slot_closure_packet_current.md"
@@ -188,6 +204,7 @@ def test_build_transporter_negative_evidence_target_packets_cli(tmp_path: Path) 
     aqp1_primary_probe_json = tmp_path / "aqp1_negative_primary_probe.json"
     aqp1_exact_source_outcome_json = tmp_path / "aqp1_negative_exact_source_outcome.json"
     aqp1_primary_probe_resolution_json = tmp_path / "aqp1_negative_primary_probe_resolution.json"
+    aqp1_direct_evidence_audit_json = tmp_path / "aqp1_negative_direct_evidence_audit.json"
     aqp1_source_exclusion_json.write_text(
         json.dumps(
             {
@@ -354,6 +371,24 @@ def test_build_transporter_negative_evidence_target_packets_cli(tmp_path: Path) 
         + "\n",
         encoding="utf-8",
     )
+    aqp1_direct_evidence_audit_json.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "packet_artifact": "runs/aqp1_negative_direct_evidence_audit_packet_current.md",
+                    "pubmed_exact_ligand_target_hit_count": 8,
+                    "chembl_exact_target_pair_activity_count": 0,
+                    "direct_negative_quantitative_row_found_count": 0,
+                    "no_direct_negative_source_row_count": 3,
+                    "audit_decision": "keep_review_only_no_authoritative_negative_promotion",
+                }
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
     subprocess.run(
         [
@@ -379,6 +414,8 @@ def test_build_transporter_negative_evidence_target_packets_cli(tmp_path: Path) 
             str(aqp1_exact_source_outcome_json),
             "--aqp1-negative-primary-probe-resolution-json",
             str(aqp1_primary_probe_resolution_json),
+            "--aqp1-negative-direct-evidence-audit-json",
+            str(aqp1_direct_evidence_audit_json),
             "--out-json",
             str(out_json),
             "--out-csv",
@@ -399,6 +436,8 @@ def test_build_transporter_negative_evidence_target_packets_cli(tmp_path: Path) 
     assert payload["summary"]["aqp1_negative_exact_source_almost_unaffected_candidate_count"] == 2
     assert payload["summary"]["aqp1_negative_primary_probe_resolution_row_count"] == 1
     assert payload["summary"]["aqp1_negative_primary_probe_resolution_source_anchor_hemolysis_outcome"] == "almost_unaffected_at_200_mpa"
+    assert payload["summary"]["aqp1_negative_direct_evidence_audit_artifact"] == "runs/aqp1_negative_direct_evidence_audit_packet_current.md"
+    assert payload["summary"]["aqp1_negative_direct_evidence_audit_no_direct_negative_source_row_count"] == 3
     assert payload["rows"][0]["target_id"] == "AQP1"
     assert payload["rows"][0]["primary_artifact"] == "runs/aqp1_negative_slot_closure_packet_current.md"
     assert payload["rows"][0]["secondary_artifact"] == "runs/aqp1_negative_slot_resolution_packet_current.md"

@@ -22,6 +22,7 @@ DEFAULT_AQP1_NEGATIVE_FRONTIER_RESOLUTION_JSON = "runs/aqp1_negative_frontier_re
 DEFAULT_AQP1_NEGATIVE_PRIMARY_PROBE_JSON = "runs/aqp1_negative_primary_probe_packet_current.json"
 DEFAULT_AQP1_NEGATIVE_EXACT_SOURCE_OUTCOME_JSON = "runs/aqp1_negative_exact_source_outcome_packet_current.json"
 DEFAULT_AQP1_NEGATIVE_PRIMARY_PROBE_RESOLUTION_JSON = "runs/aqp1_negative_primary_probe_resolution_packet_current.json"
+DEFAULT_AQP1_NEGATIVE_DIRECT_EVIDENCE_AUDIT_JSON = "runs/aqp1_negative_direct_evidence_audit_packet_current.json"
 DEFAULT_GLUT1_SOURCE_CONFIRMATION_JSON = "runs/glut1_second_wave_source_confirmation_packet_current.json"
 DEFAULT_OUT_JSON = "runs/transporter_negative_evidence_target_packets_current.json"
 DEFAULT_OUT_CSV = "runs/transporter_negative_evidence_target_packets_current.csv"
@@ -106,6 +107,7 @@ def build_payload(
     aqp1_negative_primary_probe_payload: dict[str, Any] | None = None,
     aqp1_negative_exact_source_outcome_payload: dict[str, Any] | None = None,
     aqp1_negative_primary_probe_resolution_payload: dict[str, Any] | None = None,
+    aqp1_negative_direct_evidence_audit_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     day_summary = dict((negative_day_plan_payload or {}).get("summary", {}) or {})
     target_rows = list((negative_day_plan_payload or {}).get("target_rows", []) or [])
@@ -122,6 +124,9 @@ def build_payload(
     aqp1_primary_probe_summary = dict((aqp1_negative_primary_probe_payload or {}).get("summary", {}) or {})
     aqp1_exact_source_outcome_summary = dict((aqp1_negative_exact_source_outcome_payload or {}).get("summary", {}) or {})
     aqp1_primary_probe_resolution_summary = dict((aqp1_negative_primary_probe_resolution_payload or {}).get("summary", {}) or {})
+    aqp1_direct_evidence_audit_summary = dict(
+        (aqp1_negative_direct_evidence_audit_payload or {}).get("summary", {}) or {}
+    )
     queue_ranges = _queue_ranges(review_rows)
 
     rows: list[dict[str, Any]] = []
@@ -290,6 +295,25 @@ def build_payload(
         "aqp1_negative_primary_probe_resolution_source_anchor_direct_negative_quantitative_row_found": _bool(
             aqp1_primary_probe_resolution_summary.get("source_anchor_direct_negative_quantitative_row_found")
         ),
+        "aqp1_negative_direct_evidence_audit_artifact": _text(
+            aqp1_direct_evidence_audit_summary.get("packet_artifact")
+        )
+        or "runs/aqp1_negative_direct_evidence_audit_packet_current.md",
+        "aqp1_negative_direct_evidence_audit_pubmed_exact_ligand_target_hit_count": _int(
+            aqp1_direct_evidence_audit_summary.get("pubmed_exact_ligand_target_hit_count")
+        ),
+        "aqp1_negative_direct_evidence_audit_chembl_exact_target_pair_activity_count": _int(
+            aqp1_direct_evidence_audit_summary.get("chembl_exact_target_pair_activity_count")
+        ),
+        "aqp1_negative_direct_evidence_audit_direct_negative_quantitative_row_found_count": _int(
+            aqp1_direct_evidence_audit_summary.get("direct_negative_quantitative_row_found_count")
+        ),
+        "aqp1_negative_direct_evidence_audit_no_direct_negative_source_row_count": _int(
+            aqp1_direct_evidence_audit_summary.get("no_direct_negative_source_row_count")
+        ),
+        "aqp1_negative_direct_evidence_audit_decision": _text(
+            aqp1_direct_evidence_audit_summary.get("audit_decision")
+        ),
         "glut1_negative_slot_count": _phase_count(review_rows, "GLUT1", "negative_slots_first"),
         "glut1_reference_signal_count": (
             _phase_count(review_rows, "GLUT1", "caution_references_second")
@@ -368,6 +392,12 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- aqp1_negative_primary_probe_resolution_solvent_fallback_candidate: `{s['aqp1_negative_primary_probe_resolution_solvent_fallback_candidate']}`",
         f"- aqp1_negative_primary_probe_resolution_source_anchor_hemolysis_outcome: `{s['aqp1_negative_primary_probe_resolution_source_anchor_hemolysis_outcome']}`",
         f"- aqp1_negative_primary_probe_resolution_source_anchor_direct_negative_quantitative_row_found: `{s['aqp1_negative_primary_probe_resolution_source_anchor_direct_negative_quantitative_row_found']}`",
+        f"- aqp1_negative_direct_evidence_audit_artifact: `{s['aqp1_negative_direct_evidence_audit_artifact']}`",
+        f"- aqp1_negative_direct_evidence_audit_pubmed_exact_ligand_target_hit_count: `{s['aqp1_negative_direct_evidence_audit_pubmed_exact_ligand_target_hit_count']}`",
+        f"- aqp1_negative_direct_evidence_audit_chembl_exact_target_pair_activity_count: `{s['aqp1_negative_direct_evidence_audit_chembl_exact_target_pair_activity_count']}`",
+        f"- aqp1_negative_direct_evidence_audit_direct_negative_quantitative_row_found_count: `{s['aqp1_negative_direct_evidence_audit_direct_negative_quantitative_row_found_count']}`",
+        f"- aqp1_negative_direct_evidence_audit_no_direct_negative_source_row_count: `{s['aqp1_negative_direct_evidence_audit_no_direct_negative_source_row_count']}`",
+        f"- aqp1_negative_direct_evidence_audit_decision: `{s['aqp1_negative_direct_evidence_audit_decision']}`",
         f"- glut1_negative_slot_count: `{s['glut1_negative_slot_count']}`",
         f"- glut1_reference_signal_count: `{s['glut1_reference_signal_count']}`",
         f"- glut1_source_context_artifact: `{s['glut1_source_context_artifact']}`",
@@ -413,6 +443,10 @@ def parse_args() -> argparse.Namespace:
         "--aqp1-negative-primary-probe-resolution-json",
         default=DEFAULT_AQP1_NEGATIVE_PRIMARY_PROBE_RESOLUTION_JSON,
     )
+    parser.add_argument(
+        "--aqp1-negative-direct-evidence-audit-json",
+        default=DEFAULT_AQP1_NEGATIVE_DIRECT_EVIDENCE_AUDIT_JSON,
+    )
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -435,6 +469,7 @@ def main() -> None:
         _load_json(args.aqp1_negative_primary_probe_json),
         _load_json(args.aqp1_negative_exact_source_outcome_json),
         _load_json(args.aqp1_negative_primary_probe_resolution_json),
+        _load_json(args.aqp1_negative_direct_evidence_audit_json),
     )
     out_json = _resolve(args.out_json)
     out_csv = _resolve(args.out_csv)

@@ -385,6 +385,12 @@ def test_build_commercialization_status_report_exposes_negative_target_packets()
                 "aqp1_negative_primary_probe_resolution_candidate": "sodium nitroprusside",
                 "aqp1_negative_primary_probe_resolution_solvent_fallback_candidate": "dimethyl sulfoxide",
                 "aqp1_negative_primary_probe_resolution_decision": "keep_review_only_no_authoritative_negative_promotion",
+                "aqp1_negative_direct_evidence_audit_artifact": "runs/aqp1_negative_direct_evidence_audit_packet_current.md",
+                "aqp1_negative_direct_evidence_audit_pubmed_exact_ligand_target_hit_count": 8,
+                "aqp1_negative_direct_evidence_audit_chembl_exact_target_pair_activity_count": 0,
+                "aqp1_negative_direct_evidence_audit_direct_negative_quantitative_row_found_count": 0,
+                "aqp1_negative_direct_evidence_audit_no_direct_negative_source_row_count": 3,
+                "aqp1_negative_direct_evidence_audit_decision": "keep_review_only_no_authoritative_negative_promotion",
                 "aqp1_negative_acquisition_artifact": "runs/aqp1_negative_evidence_acquisition_packet_current.md",
                 "aqp1_negative_acquisition_primary_query_label": "pressure_induced_hemolysis_reinvestigation",
             }
@@ -402,6 +408,11 @@ def test_build_commercialization_status_report_exposes_negative_target_packets()
     assert summary["negative_target_packets_top_target_id"] == "AQP1"
     assert summary["negative_target_packets_top_queue_rank_start"] == 1
     assert summary["negative_target_packets_top_queue_rank_end"] == 3
+    assert summary["negative_target_packets_aqp1_direct_evidence_audit_artifact"] == "runs/aqp1_negative_direct_evidence_audit_packet_current.md"
+    assert summary["negative_target_packets_aqp1_direct_evidence_audit_pubmed_exact_ligand_target_hit_count"] == 8
+    assert summary["negative_target_packets_aqp1_direct_evidence_audit_chembl_exact_target_pair_activity_count"] == 0
+    assert summary["negative_target_packets_aqp1_direct_evidence_audit_direct_negative_quantitative_row_found_count"] == 0
+    assert summary["negative_target_packets_aqp1_direct_evidence_audit_decision"] == "keep_review_only_no_authoritative_negative_promotion"
     assert any("runs/transporter_negative_evidence_target_packets_current.md" in item for item in summary["immediate_priority"])
     assert any("exact_source_confirmation_not_authoritative_negative" in item for item in summary["immediate_priority"])
     assert any("runs/glut1_negative_review_handoff_packet_current.md" in item for item in summary["immediate_priority"])
@@ -412,7 +423,10 @@ def test_build_commercialization_status_report_exposes_negative_target_packets()
     assert any("runs/aqp1_negative_frontier_resolution_packet_current.md" in item for item in summary["immediate_priority"])
     assert any("runs/aqp1_negative_primary_probe_packet_current.md" in item for item in summary["immediate_priority"])
     assert any("runs/aqp1_negative_primary_probe_resolution_packet_current.md" in item for item in summary["immediate_priority"])
+    assert any("runs/aqp1_negative_direct_evidence_audit_packet_current.md" in item for item in summary["immediate_priority"])
+    assert any("PubMed exact ligand/target hits=`8`" in item for item in summary["immediate_priority"])
     assert any("runs/aqp1_negative_evidence_acquisition_packet_current.md" in item for item in summary["immediate_priority"])
+    assert any("runs/aqp1_negative_direct_evidence_audit_packet_current.md" in item for item in summary["artifacts"])
 
 
 def test_build_commercialization_status_report_exposes_wetlab_selected_allatom_burndown() -> None:
