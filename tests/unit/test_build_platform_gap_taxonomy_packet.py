@@ -53,11 +53,13 @@ def test_build_platform_gap_taxonomy_packet() -> None:
     summary = payload["summary"]
     rows = {row["gap_id"]: row for row in payload["rows"]}
     assert summary["packet_ready"] is True
+    assert summary["platform_gap_count"] == 6
     assert summary["current_delivery_blocker_count"] == 0
     assert summary["transporter_specific_split_resolved"] is True
     assert summary["top_expansion_gap_id"] == "keep_green_repeated_history"
     assert summary["ligand_scaleup_claim_safe_status"] == "regression_guardrail_failed"
     assert rows["ligand_scaleup_regression_guardrail"]["primary_value"] == "0/3"
+    assert rows["ligand_scaleup_suite_completion"]["expansion_blocker_count"] == 0
     assert rows["transporter_negative_placeholder_rows"]["expansion_blocker_count"] == 6
     assert rows["ca2_pxr_review_only_evidence_policy"]["expansion_blocker_count"] == 13
 
@@ -84,7 +86,7 @@ def test_build_platform_gap_taxonomy_packet_cli(tmp_path: Path) -> None:
 
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["summary"]["packet_artifact"] == "runs/platform_gap_taxonomy_packet_current.md"
-    assert payload["summary"]["platform_gap_count"] == 5
+    assert payload["summary"]["platform_gap_count"] == 6
     assert payload["summary"]["non_transporter_gap_count"] >= 4
     assert out_csv.exists()
     assert out_md.exists()

@@ -96,6 +96,12 @@ def build_payload(
     ca2_row = _find_rollup_row(rollup_payload, "ca2")
     pxr_row = _find_rollup_row(rollup_payload, "pxr")
     aqp1_row = _find_rollup_row(rollup_payload, "aqp1")
+    ligand_claim_safe = _bool(gap.get("ligand_scaleup_claim_safe"))
+    ligand_suite_count = _int(gap.get("ligand_scaleup_suite_count"))
+    ligand_commercialization_ready_suite_count = _int(
+        gap.get("ligand_scaleup_commercialization_ready_suite_count")
+    )
+    ligand_pending_suite_count = max(0, ligand_suite_count - ligand_commercialization_ready_suite_count)
 
     rows = [
         {
@@ -128,6 +134,20 @@ def build_payload(
         },
         {
             "gap_rank": 3,
+            "gap_id": "ligand_scaleup_suite_completion",
+            "scope": "expanded_commercialization",
+            "family_or_lane": "gpcr,ion_channel,kinase scaleup",
+            "gap_class": "scaleup_suite_completion",
+            "current_status": "suite_completion_pending" if ligand_pending_suite_count else "suite_completion_ready",
+            "current_blocker_count": 0,
+            "expansion_blocker_count": ligand_pending_suite_count if ligand_claim_safe else 0,
+            "primary_metric": "commercialization_ready_suite_count",
+            "primary_value": f"{ligand_commercialization_ready_suite_count}/{ligand_suite_count}",
+            "source_artifact": "runs/ligand_scaleup_suite_status_current.md",
+            "next_required_step": _text(gap.get("ligand_scaleup_next_required_step")),
+        },
+        {
+            "gap_rank": 4,
             "gap_id": "transporter_negative_placeholder_rows",
             "scope": "parked_science_expansion",
             "family_or_lane": "transporter",
@@ -141,7 +161,7 @@ def build_payload(
             "next_required_step": _text(placeholder.get("next_required_step")),
         },
         {
-            "gap_rank": 4,
+            "gap_rank": 5,
             "gap_id": "aqp1_claim_safe_kcal_gap",
             "scope": "parked_science_expansion",
             "family_or_lane": "AQP1",
@@ -155,7 +175,7 @@ def build_payload(
             "next_required_step": _text(aqp1_row.get("next_required_step")),
         },
         {
-            "gap_rank": 5,
+            "gap_rank": 6,
             "gap_id": "ca2_pxr_review_only_evidence_policy",
             "scope": "expanded_family_claims",
             "family_or_lane": "CA2,PXR",
@@ -189,11 +209,13 @@ def build_payload(
         "top_expansion_gap_scope": _text(top_expansion_gap.get("scope")),
         "placeholder_driven_rows": _int(placeholder.get("placeholder_driven_rows")),
         "evidence_blocked_placeholder_rows": _int(placeholder.get("evidence_blocked_placeholder_rows")),
-        "ligand_scaleup_commercialization_ready_suite_count": _int(
-            gap.get("ligand_scaleup_commercialization_ready_suite_count")
-        ),
-        "ligand_scaleup_suite_count": _int(gap.get("ligand_scaleup_suite_count")),
+        "ligand_scaleup_commercialization_ready_suite_count": ligand_commercialization_ready_suite_count,
+        "ligand_scaleup_suite_count": ligand_suite_count,
+        "ligand_scaleup_suite_completion_pending_count": ligand_pending_suite_count,
         "ligand_scaleup_claim_safe_status": _text(gap.get("ligand_scaleup_claim_safe_status")),
+        "ligand_scaleup_gpcr_guardrail_frontier_status": _text(
+            gap.get("ligand_scaleup_gpcr_guardrail_frontier_status")
+        ),
         "keep_green_insufficient_history_lane_count": _int(trend.get("insufficient_history_lane_count")),
         "next_required_step": (
             "Keep the restricted local delivery claim green, but treat broader commercialization as blocked by "
@@ -218,6 +240,8 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- top_expansion_gap_class: `{s['top_expansion_gap_class']}`",
         f"- top_expansion_gap_scope: `{s['top_expansion_gap_scope']}`",
         f"- ligand_scaleup_claim_safe_status: `{s['ligand_scaleup_claim_safe_status']}`",
+        f"- ligand_scaleup_gpcr_guardrail_frontier_status: `{s['ligand_scaleup_gpcr_guardrail_frontier_status']}`",
+        f"- ligand_scaleup_suite_completion_pending_count: `{s['ligand_scaleup_suite_completion_pending_count']}`",
         "",
         "## Next Step",
         "",

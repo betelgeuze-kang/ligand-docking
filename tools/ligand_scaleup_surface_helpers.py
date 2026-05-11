@@ -4,6 +4,7 @@ from typing import Any
 
 DEFAULT_LIGAND_SCALEUP_SUITE_STATUS_JSON = "runs/ligand_scaleup_suite_status_current.json"
 DEFAULT_LIGAND_SCALEUP_BENCHMARK_SUMMARY_JSON = "runs/ligand_scaleup_benchmark_summary_current.json"
+DEFAULT_GPCR_SCALEUP_GUARDRAIL_FRONTIER_JSON = "runs/gpcr_scaleup_guardrail_frontier_packet_current.json"
 
 
 def _text(value: Any) -> str:
@@ -41,11 +42,16 @@ def _slowest_task(payload: dict[str, Any]) -> dict[str, Any]:
 def summarize_ligand_scaleup_blocker(
     suite_status_payload: dict[str, Any] | None = None,
     benchmark_summary_payload: dict[str, Any] | None = None,
+    gpcr_guardrail_frontier_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     suite_status_payload = dict(suite_status_payload or {})
     benchmark_summary_payload = dict(benchmark_summary_payload or {})
+    gpcr_guardrail_frontier_payload = dict(gpcr_guardrail_frontier_payload or {})
     suite_summary = dict(suite_status_payload.get("summary", {}) or {})
     suite_rows = list(suite_status_payload.get("rows", []) or [])
+    if not suite_rows:
+        suite_rows = list(suite_status_payload.get("suite_rows", []) or [])
+    frontier_summary = dict(gpcr_guardrail_frontier_payload.get("summary", {}) or {})
     slowest_task = _slowest_task(benchmark_summary_payload)
 
     suite_count = _int(suite_summary.get("suite_count", len(suite_rows)))
@@ -61,6 +67,15 @@ def summarize_ligand_scaleup_blocker(
     claim_safe = _value(benchmark_summary_payload, "claim_safe", "")
     claim_safe_status = _text(_value(benchmark_summary_payload, "claim_safe_status"))
     recommended_next_action = _text(_value(benchmark_summary_payload, "recommended_next_action"))
+    frontier_claim_safe = frontier_summary.get("claim_safe")
+    frontier_status = _text(frontier_summary.get("claim_safe_status"))
+    frontier_top_candidate = _text(frontier_summary.get("top_candidate_id"))
+    frontier_artifact = _text(frontier_summary.get("packet_artifact"))
+
+    if claim_safe is False and frontier_claim_safe is True:
+        claim_safe = True
+        claim_safe_status = "guardrail_recovered_candidate_available"
+        recommended_next_action = _text(frontier_summary.get("next_required_step")) or recommended_next_action
 
     if not recommended_next_action:
         pending_row = next(
@@ -107,6 +122,8 @@ def summarize_ligand_scaleup_blocker(
         signal_parts.append(f"ligand_scaleup_benchmark_stage={benchmark_stage}")
     if claim_safe_status:
         signal_parts.append(f"ligand_scaleup_claim_safe_status={claim_safe_status}")
+    if frontier_top_candidate:
+        signal_parts.append(f"ligand_scaleup_gpcr_frontier_top={frontier_top_candidate}")
     if slowest_domain:
         signal_parts.append(f"ligand_scaleup_slowest_domain={slowest_domain}")
     if slowest_task_id:
@@ -128,6 +145,8 @@ def summarize_ligand_scaleup_blocker(
         blocker_details.append(stage_note)
     elif claim_safe_status:
         blocker_details.append(f"claim_safe_status={claim_safe_status}")
+    if frontier_claim_safe is True and frontier_top_candidate:
+        blocker_details.append(f"GPCR 100k guardrail recovery candidate available: {frontier_top_candidate}")
     if slowest_domain and slowest_task_id:
         blocker_details.append(f"{slowest_domain}::{slowest_task_id} remains the slowest 1M pacing task")
     blocker_note = (
@@ -161,6 +180,11 @@ def summarize_ligand_scaleup_blocker(
         "ligand_scaleup_benchmark_stage": benchmark_stage,
         "ligand_scaleup_claim_safe": claim_safe,
         "ligand_scaleup_claim_safe_status": claim_safe_status,
+        "ligand_scaleup_gpcr_guardrail_frontier_ready": bool(frontier_summary),
+        "ligand_scaleup_gpcr_guardrail_frontier_artifact": frontier_artifact,
+        "ligand_scaleup_gpcr_guardrail_frontier_claim_safe": frontier_claim_safe,
+        "ligand_scaleup_gpcr_guardrail_frontier_status": frontier_status,
+        "ligand_scaleup_gpcr_guardrail_frontier_top_candidate_id": frontier_top_candidate,
         "ligand_scaleup_slowest_domain": slowest_domain,
         "ligand_scaleup_slowest_task_id": slowest_task_id,
         "ligand_scaleup_slowest_task_projected_1m_wall_hr": slowest_task_projected_1m_wall_hr,
@@ -184,6 +208,11 @@ def ligand_scaleup_summary_from_source(summary_source: dict[str, Any] | None = N
         "ligand_scaleup_benchmark_stage",
         "ligand_scaleup_claim_safe",
         "ligand_scaleup_claim_safe_status",
+        "ligand_scaleup_gpcr_guardrail_frontier_ready",
+        "ligand_scaleup_gpcr_guardrail_frontier_artifact",
+        "ligand_scaleup_gpcr_guardrail_frontier_claim_safe",
+        "ligand_scaleup_gpcr_guardrail_frontier_status",
+        "ligand_scaleup_gpcr_guardrail_frontier_top_candidate_id",
         "ligand_scaleup_slowest_domain",
         "ligand_scaleup_slowest_task_id",
         "ligand_scaleup_slowest_task_projected_1m_wall_hr",
@@ -195,4 +224,7 @@ def ligand_scaleup_summary_from_source(summary_source: dict[str, Any] | None = N
     hydrated = {key: summary_source.get(key, "" if key != "ligand_scaleup_pending_suite_ids" else []) for key in keys}
     hydrated["ligand_scaleup_blocker_ready"] = bool(summary_source.get("ligand_scaleup_blocker_ready", False))
     hydrated["ligand_scaleup_blocked"] = bool(summary_source.get("ligand_scaleup_blocked", False))
+    hydrated["ligand_scaleup_gpcr_guardrail_frontier_ready"] = bool(
+        summary_source.get("ligand_scaleup_gpcr_guardrail_frontier_ready", False)
+    )
     return hydrated

@@ -8,6 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import rows_by_family, write_csv_rows
 from tools.ligand_scaleup_surface_helpers import (
+    DEFAULT_GPCR_SCALEUP_GUARDRAIL_FRONTIER_JSON,
     DEFAULT_LIGAND_SCALEUP_BENCHMARK_SUMMARY_JSON as LIGAND_SCALEUP_BENCHMARK_SUMMARY_JSON,
     DEFAULT_LIGAND_SCALEUP_SUITE_STATUS_JSON as LIGAND_SCALEUP_SUITE_STATUS_JSON,
     ligand_scaleup_summary_from_source,
@@ -43,6 +44,7 @@ DEFAULT_LOCAL_ENGINE_QUEUE_JSON = DEFAULT_LOCAL_ENGINE_COMMERCIALIZATION_QUEUE_J
 DEFAULT_WETLAB_EXECUTION_QUEUE_JSON = DEFAULT_WETLAB_EXECUTION_READINESS_QUEUE_JSON
 DEFAULT_LIGAND_SCALEUP_SUITE_STATUS_JSON = LIGAND_SCALEUP_SUITE_STATUS_JSON
 DEFAULT_LIGAND_SCALEUP_BENCHMARK_SUMMARY_JSON = LIGAND_SCALEUP_BENCHMARK_SUMMARY_JSON
+DEFAULT_GPCR_SCALEUP_FRONTIER_JSON = DEFAULT_GPCR_SCALEUP_GUARDRAIL_FRONTIER_JSON
 DEFAULT_OUT_JSON = "runs/commercialization_gap_burndown_current.json"
 DEFAULT_OUT_CSV = "runs/commercialization_gap_burndown_current.csv"
 DEFAULT_OUT_MD = "runs/commercialization_gap_burndown_current.md"
@@ -438,6 +440,7 @@ def build_payload(
     glut1_second_wave_source_confirmation_packet_payload: dict[str, Any] | None = None,
     ligand_scaleup_suite_status_payload: dict[str, Any] | None = None,
     ligand_scaleup_benchmark_summary_payload: dict[str, Any] | None = None,
+    gpcr_scaleup_frontier_payload: dict[str, Any] | None = None,
     local_engine_commercialization_queue_payload: dict[str, Any] | None = None,
     wetlab_execution_readiness_queue_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -467,6 +470,7 @@ def build_payload(
     ligand_scaleup_summary = summarize_ligand_scaleup_blocker(
         ligand_scaleup_suite_status_payload,
         ligand_scaleup_benchmark_summary_payload,
+        gpcr_scaleup_frontier_payload,
     )
     if not ligand_scaleup_summary["ligand_scaleup_blocker_ready"]:
         ligand_scaleup_summary = ligand_scaleup_summary_from_source(commercialization_summary)
@@ -1055,6 +1059,7 @@ def parse_args() -> argparse.Namespace:
         "--ligand-scaleup-benchmark-summary-json",
         default=DEFAULT_LIGAND_SCALEUP_BENCHMARK_SUMMARY_JSON,
     )
+    parser.add_argument("--gpcr-scaleup-frontier-json", default=DEFAULT_GPCR_SCALEUP_FRONTIER_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -1078,6 +1083,7 @@ def main() -> None:
         _maybe_load_json(args.glut1_second_wave_source_confirmation_packet_json),
         _maybe_load_json(args.ligand_scaleup_suite_status_json),
         _maybe_load_json(args.ligand_scaleup_benchmark_summary_json),
+        _maybe_load_json(args.gpcr_scaleup_frontier_json),
         _maybe_load_json(args.local_engine_commercialization_queue_json),
         _maybe_load_json(args.wetlab_execution_readiness_queue_json),
     )
