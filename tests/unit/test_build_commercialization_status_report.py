@@ -259,7 +259,18 @@ def test_build_commercialization_status_report_uses_keep_green_wording_when_queu
                 "evidence_blocked_placeholder_rows": 6,
             }
         },
-        {"summary": {"top_target_id": "AQP1", "top_packet_step": "core_non_binder_01"}},
+        {
+            "summary": {
+                "top_target_id": "AQP1",
+                "top_packet_step": "core_non_binder_01",
+                "top_source_context_artifact": "runs/aqp1_negative_evidence_confirmation_packet_current.md",
+                "top_source_context_role": "exact_source_confirmation_not_authoritative_negative",
+                "aqp1_source_context_focus_ligand": "sodium nitroprusside",
+                "aqp1_source_context_direct_negative_quantitative_row_found_count": 0,
+                "aqp1_source_context_authoritative_negative_apply_allowed_count": 0,
+                "glut1_negative_handoff_artifact": "runs/glut1_negative_review_handoff_packet_current.md",
+            }
+        },
         {"summary": {}},
         {
             "summary": {
@@ -336,7 +347,18 @@ def test_build_commercialization_status_report_exposes_negative_target_packets()
                 "evidence_blocked_placeholder_rows": 6,
             }
         },
-        {"summary": {"top_target_id": "AQP1", "top_packet_step": "core_non_binder_01"}},
+        {
+            "summary": {
+                "top_target_id": "AQP1",
+                "top_packet_step": "core_non_binder_01",
+                "top_source_context_artifact": "runs/aqp1_negative_evidence_confirmation_packet_current.md",
+                "top_source_context_role": "exact_source_confirmation_not_authoritative_negative",
+                "aqp1_source_context_focus_ligand": "sodium nitroprusside",
+                "aqp1_source_context_direct_negative_quantitative_row_found_count": 0,
+                "aqp1_source_context_authoritative_negative_apply_allowed_count": 0,
+                "glut1_negative_handoff_artifact": "runs/glut1_negative_review_handoff_packet_current.md",
+            }
+        },
         {
             "summary": {
                 "top_target_id": "AQP1",
@@ -371,10 +393,18 @@ def test_build_commercialization_status_report_exposes_negative_target_packets()
 
     summary = payload["summary"]
     assert summary["negative_target_packets_ready"] is True
+    assert summary["negative_evidence_queue_top_source_context_artifact"] == "runs/aqp1_negative_evidence_confirmation_packet_current.md"
+    assert summary["negative_evidence_queue_top_source_context_role"] == "exact_source_confirmation_not_authoritative_negative"
+    assert summary["negative_evidence_queue_aqp1_source_context_focus_ligand"] == "sodium nitroprusside"
+    assert summary["negative_evidence_queue_aqp1_direct_negative_quantitative_row_found_count"] == 0
+    assert summary["negative_evidence_queue_aqp1_authoritative_negative_apply_allowed_count"] == 0
+    assert summary["negative_evidence_queue_glut1_negative_handoff_artifact"] == "runs/glut1_negative_review_handoff_packet_current.md"
     assert summary["negative_target_packets_top_target_id"] == "AQP1"
     assert summary["negative_target_packets_top_queue_rank_start"] == 1
     assert summary["negative_target_packets_top_queue_rank_end"] == 3
     assert any("runs/transporter_negative_evidence_target_packets_current.md" in item for item in summary["immediate_priority"])
+    assert any("exact_source_confirmation_not_authoritative_negative" in item for item in summary["immediate_priority"])
+    assert any("runs/glut1_negative_review_handoff_packet_current.md" in item for item in summary["immediate_priority"])
     assert any("runs/aqp1_negative_slot_closure_packet_current.md" in item for item in summary["immediate_priority"])
     assert any("runs/aqp1_negative_evidence_confirmation_packet_current.md" in item for item in summary["immediate_priority"])
     assert any("runs/aqp1_negative_slot_resolution_packet_current.md" in item for item in summary["immediate_priority"])

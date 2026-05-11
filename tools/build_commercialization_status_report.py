@@ -76,6 +76,16 @@ def build_payload(
     placeholder_rows = int(placeholder_summary.get("placeholder_driven_rows", gap_summary.get("transporter_placeholder_driven_rows", 0)) or 0)
     reducible_now_rows = int(placeholder_summary.get("reducible_now_placeholder_rows", 0) or 0)
     evidence_blocked_rows = int(placeholder_summary.get("evidence_blocked_placeholder_rows", 0) or 0)
+    negative_queue_top_source_context_artifact = _text(negative_queue_summary.get("top_source_context_artifact"))
+    negative_queue_top_source_context_role = _text(negative_queue_summary.get("top_source_context_role"))
+    negative_queue_aqp1_focus_ligand = _text(negative_queue_summary.get("aqp1_source_context_focus_ligand"))
+    negative_queue_aqp1_direct_negative_count = int(
+        negative_queue_summary.get("aqp1_source_context_direct_negative_quantitative_row_found_count", 0) or 0
+    )
+    negative_queue_aqp1_authoritative_apply_count = int(
+        negative_queue_summary.get("aqp1_source_context_authoritative_negative_apply_allowed_count", 0) or 0
+    )
+    negative_queue_glut1_handoff_artifact = _text(negative_queue_summary.get("glut1_negative_handoff_artifact"))
     immediate_target = _text(placeholder_summary.get("immediate_reduction_target"))
     immediate_queue_start = int(placeholder_summary.get("immediate_reduction_target_queue_start", 0) or 0)
     immediate_queue_end = int(placeholder_summary.get("immediate_reduction_target_queue_end", 0) or 0)
@@ -430,8 +440,23 @@ def build_payload(
                     f"`semi_hard={engine_wetlab_allatom_semi_hard_block_count}` still open.",
                 )
         if negative_queue_summary:
+            context_clause = (
+                f" Use `{negative_queue_top_source_context_artifact}` as the top source context "
+                f"(`{negative_queue_top_source_context_role}`; AQP1 direct negative rows="
+                f"`{negative_queue_aqp1_direct_negative_count}`, authoritative apply="
+                f"`{negative_queue_aqp1_authoritative_apply_count}`)."
+                if negative_queue_top_source_context_artifact
+                else ""
+            )
+            glut1_clause = (
+                f" Keep `{negative_queue_glut1_handoff_artifact}` ready for the GLUT1 follow-on negative handoff."
+                if negative_queue_glut1_handoff_artifact
+                else ""
+            )
             immediate_priority.append(
                 f"Use `runs/transporter_negative_evidence_closure_queue_current.md` as the live queue: `{_text(negative_queue_summary.get('top_target_id'))} {_text(negative_queue_summary.get('top_packet_step'))}` is first."
+                + context_clause
+                + glut1_clause
             )
         if negative_target_packets_summary:
             immediate_priority.append(
@@ -626,6 +651,12 @@ def build_payload(
         "negative_evidence_queue_ready": bool(negative_queue_summary),
         "negative_evidence_queue_top_target_id": _text(negative_queue_summary.get("top_target_id")),
         "negative_evidence_queue_top_packet_step": _text(negative_queue_summary.get("top_packet_step")),
+        "negative_evidence_queue_top_source_context_artifact": negative_queue_top_source_context_artifact,
+        "negative_evidence_queue_top_source_context_role": negative_queue_top_source_context_role,
+        "negative_evidence_queue_aqp1_source_context_focus_ligand": negative_queue_aqp1_focus_ligand,
+        "negative_evidence_queue_aqp1_direct_negative_quantitative_row_found_count": negative_queue_aqp1_direct_negative_count,
+        "negative_evidence_queue_aqp1_authoritative_negative_apply_allowed_count": negative_queue_aqp1_authoritative_apply_count,
+        "negative_evidence_queue_glut1_negative_handoff_artifact": negative_queue_glut1_handoff_artifact,
         "negative_target_packets_ready": bool(negative_target_packets_summary),
         "negative_target_packets_top_target_id": _text(negative_target_packets_summary.get("top_target_id")),
         "negative_target_packets_top_queue_rank_start": negative_target_packets_summary.get("top_queue_rank_start", 0),
@@ -728,6 +759,12 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- immediate_reduction_delta_if_completed: `{s['immediate_reduction_delta_if_completed']}`",
         f"- negative_evidence_queue_ready: `{s['negative_evidence_queue_ready']}`",
         f"- negative_evidence_queue_top: `{s['negative_evidence_queue_top_target_id']} {s['negative_evidence_queue_top_packet_step']}`",
+        f"- negative_evidence_queue_top_source_context_artifact: `{s['negative_evidence_queue_top_source_context_artifact'] or '-'}`",
+        f"- negative_evidence_queue_top_source_context_role: `{s['negative_evidence_queue_top_source_context_role'] or '-'}`",
+        f"- negative_evidence_queue_aqp1_source_context_focus_ligand: `{s['negative_evidence_queue_aqp1_source_context_focus_ligand'] or '-'}`",
+        f"- negative_evidence_queue_aqp1_direct_negative_quantitative_row_found_count: `{s['negative_evidence_queue_aqp1_direct_negative_quantitative_row_found_count']}`",
+        f"- negative_evidence_queue_aqp1_authoritative_negative_apply_allowed_count: `{s['negative_evidence_queue_aqp1_authoritative_negative_apply_allowed_count']}`",
+        f"- negative_evidence_queue_glut1_negative_handoff_artifact: `{s['negative_evidence_queue_glut1_negative_handoff_artifact'] or '-'}`",
         f"- negative_target_packets_ready: `{s['negative_target_packets_ready']}`",
         f"- negative_target_packets_top_queue: `{s['negative_target_packets_top_target_id']} {s['negative_target_packets_top_queue_rank_start']}-{s['negative_target_packets_top_queue_rank_end']}`",
         f"- local_engine_queue_ready: `{s['local_engine_queue_ready']}`",
