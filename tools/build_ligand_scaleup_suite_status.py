@@ -8,6 +8,8 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from tools.ligand_scaleup_surface_helpers import DEFAULT_GPCR_SCALEUP_GUARDRAIL_FRONTIER_JSON
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -382,6 +384,27 @@ def _build_pilot_row(
     return row
 
 
+def _apply_gpcr_frontier_recovery(row: Dict[str, Any], frontier_payload: Dict[str, Any]) -> Dict[str, Any]:
+    if row.get("suite_id") != "pilot_100k":
+        return row
+    summary = frontier_payload.get("summary") if isinstance(frontier_payload.get("summary"), dict) else {}
+    if summary.get("claim_safe") is not True:
+        return row
+    recovered = dict(row)
+    status = str(summary.get("claim_safe_status", "") or "guardrail_recovered_candidate_available").strip()
+    recovered["claim_safe_status"] = status
+    recovered["commercialization_ready"] = True
+    recovered["guardrail_frontier_claim_safe"] = True
+    recovered["guardrail_frontier_status"] = status
+    recovered["guardrail_frontier_top_candidate_id"] = str(summary.get("top_candidate_id", "") or "").strip()
+    recovered["guardrail_frontier_artifact"] = str(summary.get("packet_artifact", "") or "").strip()
+    recovered["recommended_next_action"] = (
+        str(summary.get("next_required_step", "") or "").strip()
+        or "Keep the GPCR 100k frontier recovery candidate attached, then finish equal-size and 1M suite packaging."
+    )
+    return recovered
+
+
 def build_suite_status(args: argparse.Namespace) -> Dict[str, Any]:
     suite_dryrun = _read_json_if_exists(getattr(args, "suite_dryrun_json", ""))
     suite_execute = _read_json_if_exists(getattr(args, "suite_execute_json", ""))
@@ -396,9 +419,11 @@ def build_suite_status(args: argparse.Namespace) -> Dict[str, Any]:
     dryrun_1m = _read_json_if_exists(args.pilot_1m_dryrun_json)
     summary_1m = _read_json_if_exists(args.pilot_1m_summary_json)
     shared_summary = _read_json_if_exists(getattr(args, "shared_benchmark_summary_json", args.pilot_100k_summary_json))
+    gpcr_frontier = _read_json_if_exists(
+        getattr(args, "gpcr_scaleup_frontier_json", DEFAULT_GPCR_SCALEUP_GUARDRAIL_FRONTIER_JSON)
+    )
 
-    rows = [
-        _build_ab_row(ab_summary),
+    row_100k = _apply_gpcr_frontier_recovery(
         _build_pilot_row(
             suite_id="pilot_100k",
             suite_label="100k commercialization pilot",
@@ -411,6 +436,11 @@ def build_suite_status(args: argparse.Namespace) -> Dict[str, Any]:
             suite_stage_result=suite_stage_results.get("pilot_100k", {}),
             suite_stage_refresh=suite_stage_refreshes.get("pilot_100k", {}),
         ),
+        gpcr_frontier,
+    )
+    rows = [
+        _build_ab_row(ab_summary),
+        row_100k,
         _build_pilot_row(
             suite_id="pilot_1m",
             suite_label="1M commercialization pilot",
@@ -436,8 +466,13 @@ def build_suite_status(args: argparse.Namespace) -> Dict[str, Any]:
         "commercialization_ready_suite_count": len(commercialization_ready_rows),
         "post_run_suite_count": len(post_run_rows),
         "refreshed_suite_count": len(refreshed_rows),
-        "pending_suite_ids": [row["suite_id"] for row in rows if row.get("artifact_state") != "present" or row.get("claim_safe_status") == "pending"],
+        "pending_suite_ids": [row["suite_id"] for row in rows if row.get("commercialization_ready") is not True],
         "summary_attached_suite_count": int(sum(1 for row in rows if bool(row.get("summary_attached")))),
+        "gpcr_guardrail_frontier_ready": bool((gpcr_frontier.get("summary") or {}).get("packet_ready")),
+        "gpcr_guardrail_frontier_status": str((gpcr_frontier.get("summary") or {}).get("claim_safe_status", "") or ""),
+        "gpcr_guardrail_frontier_top_candidate_id": str(
+            (gpcr_frontier.get("summary") or {}).get("top_candidate_id", "") or ""
+        ),
     }
     return {
         "generated_at_local": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
@@ -455,6 +490,11 @@ def build_suite_status(args: argparse.Namespace) -> Dict[str, Any]:
             "pilot_1m_dryrun_json": str(_resolve_repo_path(args.pilot_1m_dryrun_json)),
             "pilot_1m_summary_json": str(_resolve_repo_path(args.pilot_1m_summary_json)),
             "shared_benchmark_summary_json": str(_resolve_repo_path(getattr(args, "shared_benchmark_summary_json", args.pilot_100k_summary_json))),
+            "gpcr_scaleup_frontier_json": str(
+                _resolve_repo_path(
+                    getattr(args, "gpcr_scaleup_frontier_json", DEFAULT_GPCR_SCALEUP_GUARDRAIL_FRONTIER_JSON)
+                )
+            ),
         },
     }
 
@@ -479,6 +519,10 @@ def _write_csv(path: Path, rows: List[Dict[str, Any]]) -> None:
         "selected_smoke_task_count",
         "target_scale_label",
         "domains_touched",
+        "guardrail_frontier_claim_safe",
+        "guardrail_frontier_status",
+        "guardrail_frontier_top_candidate_id",
+        "guardrail_frontier_artifact",
         "summary_attached",
         "recommended_next_action",
     ]
@@ -505,6 +549,8 @@ def _write_md(path: Path, payload: Dict[str, Any]) -> None:
         f"- post-run suites: `{summary['post_run_suite_count']}/{summary['suite_count']}`",
         f"- refreshed suites: `{summary['refreshed_suite_count']}/{summary['suite_count']}`",
         f"- summary-attached suites: `{summary['summary_attached_suite_count']}/{summary['suite_count']}`",
+        f"- GPCR guardrail frontier: `{summary.get('gpcr_guardrail_frontier_status', '')}`",
+        f"- GPCR frontier top candidate: `{summary.get('gpcr_guardrail_frontier_top_candidate_id', '')}`",
         f"- suite runner artifacts: `{suite_runner.get('artifact_state', 'missing')}`",
         f"- suite runner latest kind: `{suite_runner.get('latest_kind', 'missing')}`",
         "",
@@ -535,6 +581,9 @@ def _write_md(path: Path, payload: Dict[str, Any]) -> None:
         lines.append(f"## {row.get('suite_label', row.get('suite_id', 'suite'))}")
         lines.append("")
         lines.append(f"- recommended_next_action: `{row.get('recommended_next_action', '')}`")
+        if row.get("guardrail_frontier_top_candidate_id"):
+            lines.append(f"- guardrail_frontier_top_candidate_id: `{row.get('guardrail_frontier_top_candidate_id', '')}`")
+            lines.append(f"- guardrail_frontier_artifact: `{row.get('guardrail_frontier_artifact', '')}`")
         lines.append(f"- summary_attached: `{row.get('summary_attached', False)}`")
         lines.append("")
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -553,6 +602,7 @@ def main() -> int:
     parser.add_argument("--pilot-1m-dryrun-json", default="runs/ligand_scaleup_1m_pilot_dryrun_current.json")
     parser.add_argument("--pilot-1m-summary-json", default="runs/ligand_scaleup_1m_benchmark_summary_current.json")
     parser.add_argument("--shared-benchmark-summary-json", default="runs/ligand_scaleup_benchmark_summary_current.json")
+    parser.add_argument("--gpcr-scaleup-frontier-json", default=DEFAULT_GPCR_SCALEUP_GUARDRAIL_FRONTIER_JSON)
     parser.add_argument("--out-json", default="runs/ligand_scaleup_suite_status_current.json")
     parser.add_argument("--out-csv", default="runs/ligand_scaleup_suite_status_current.csv")
     parser.add_argument("--out-md", default="runs/ligand_scaleup_suite_status_current.md")

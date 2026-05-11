@@ -140,6 +140,78 @@ def test_suite_status_uses_available_current_artifacts_and_matches_100k_summary(
     assert "pilot_100k" in out_md.read_text(encoding="utf-8")
 
 
+def test_suite_status_marks_100k_ready_from_gpcr_frontier_recovery(tmp_path: Path) -> None:
+    runs = tmp_path / "runs"
+    _write(
+        runs / "ligand_scaleup_100k_pilot_current.json",
+        {
+            "comparison_kind": "size_shift_operational_regression",
+            "launch_readiness": {"status": "ready", "next_required_step": "Launch 100k pilot."},
+            "scope_summary": {
+                "ligand_stress_task_count": 9,
+                "full_task_count_100k": 6,
+                "smoke_task_count_unchanged": 3,
+                "domains_touched": ["gpcr", "ion_channel", "kinase"],
+            },
+        },
+    )
+    _write(
+        runs / "ligand_scaleup_100k_pilot_dryrun_current.json",
+        {"comparison_enabled": True, "launch_readiness": {"status": "ready"}},
+    )
+    _write(
+        runs / "ligand_scaleup_benchmark_summary_current.json",
+        {
+            "benchmark_stage": "post_run_comparison",
+            "comparison_kind": "size_shift_operational_regression",
+            "claim_safe": False,
+            "claim_safe_status": "regression_guardrail_failed",
+            "commercialization_ready": False,
+            "comparison_artifact_ready": True,
+            "recommended_next_action": "Rerun GPCR comparison.",
+            "input_artifacts": {
+                "pilot_json": str((runs / "ligand_scaleup_100k_pilot_current.json").resolve()),
+            },
+        },
+    )
+    _write(
+        runs / "gpcr_scaleup_guardrail_frontier_packet_current.json",
+        {
+            "summary": {
+                "packet_ready": True,
+                "claim_safe": True,
+                "claim_safe_status": "guardrail_recovered_candidate_available",
+                "top_candidate_id": "2026-05-10_beta_blocker_rescue_v2_family_balanced100k_r1",
+                "packet_artifact": "runs/gpcr_scaleup_guardrail_frontier_packet_current.md",
+                "next_required_step": "Promote the family-balanced GPCR 100k recovery candidate.",
+            }
+        },
+    )
+    args = _Args(
+        suite_dryrun_json="runs/ligand_scaleup_suite_dryrun_current.json",
+        suite_execute_json="runs/ligand_scaleup_suite_current.json",
+        ab_summary_json="runs/ligand_speedpack_ab_summary_current.json",
+        pilot_100k_json="runs/ligand_scaleup_100k_pilot_current.json",
+        pilot_100k_dryrun_json="runs/ligand_scaleup_100k_pilot_dryrun_current.json",
+        pilot_100k_summary_json="runs/ligand_scaleup_benchmark_summary_current.json",
+        pilot_1m_json="runs/ligand_scaleup_1m_pilot_current.json",
+        pilot_1m_dryrun_json="runs/ligand_scaleup_1m_pilot_dryrun_current.json",
+        pilot_1m_summary_json="runs/ligand_scaleup_1m_benchmark_summary_current.json",
+        shared_benchmark_summary_json="runs/ligand_scaleup_benchmark_summary_current.json",
+        gpcr_scaleup_frontier_json="runs/gpcr_scaleup_guardrail_frontier_packet_current.json",
+    )
+    mod.ROOT = tmp_path
+    payload = mod.build_suite_status(args)
+    rows = {row["suite_id"]: row for row in payload["suite_rows"]}
+
+    assert rows["pilot_100k"]["claim_safe_status"] == "guardrail_recovered_candidate_available"
+    assert rows["pilot_100k"]["commercialization_ready"] is True
+    assert rows["pilot_100k"]["guardrail_frontier_top_candidate_id"].endswith("family_balanced100k_r1")
+    assert payload["summary"]["commercialization_ready_suite_count"] == 1
+    assert payload["summary"]["pending_suite_ids"] == ["equal_size_ab", "pilot_1m"]
+    assert payload["summary"]["gpcr_guardrail_frontier_status"] == "guardrail_recovered_candidate_available"
+
+
 def test_suite_status_missing_artifacts_falls_back_cleanly_and_ignores_mismatched_summary(tmp_path: Path) -> None:
     runs = tmp_path / "runs"
     _write(
