@@ -99,6 +99,7 @@ def test_build_speedpack_candidate_generates_strict_light_profiles(tmp_path: Pat
     assert prow["traj_prod_speedpack"] is True
     assert prow["traj_prod_early_stop_enabled"] is True
     assert prow["traj_prod_light_artifacts"] is True
+    assert prow["traj_frame_output_format"] == "manifest_only"
 
     payload = json.loads(Path(prow["generated_profile_json"]).read_text(encoding="utf-8"))
     assert payload["traj_prod_stage2_preset"] == "auto"
@@ -106,6 +107,7 @@ def test_build_speedpack_candidate_generates_strict_light_profiles(tmp_path: Pat
     assert payload["traj_prod_speedpack"] is True
     assert payload["traj_prod_early_stop_enabled"] is True
     assert payload["traj_prod_light_artifacts"] is True
+    assert payload["traj_frame_output_format"] == "manifest_only"
 
 
 def test_run_ligand_speedpack_ab_current_dry_run(tmp_path: Path, monkeypatch, capsys) -> None:

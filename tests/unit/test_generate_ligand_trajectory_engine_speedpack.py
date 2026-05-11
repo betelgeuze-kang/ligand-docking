@@ -474,6 +474,22 @@ def test_write_trajectory_artifact_accepts_template_dict_for_npz_bundle(tmp_path
         assert int(bundle["protein_atom_schema_version"]) == 1
 
 
+def test_write_trajectory_artifact_manifest_only_skips_frame_files(tmp_path) -> None:
+    written = mod._write_trajectory_artifact(
+        protein_ca=np.asarray([[0.0, 0.0, 0.0]], dtype=np.float32),
+        ligand_frames=np.asarray([[[1.0, 0.0, 0.0]], [[1.1, 0.0, 0.0]]], dtype=np.float32),
+        frame_indices=np.asarray([0, 1], dtype=np.int32),
+        frame_output_format="manifest_only",
+        npz_path=str(tmp_path / "traj.npz"),
+        tdir=str(tmp_path / "frames"),
+        npz_compression="store",
+    )
+
+    assert written == 2
+    assert not (tmp_path / "traj.npz").exists()
+    assert not (tmp_path / "frames").exists()
+
+
 def test_run_batch_surfaces_normalized_template_metadata_in_manifest(tmp_path, monkeypatch) -> None:
     queue_csv = tmp_path / "queue.csv"
     pd.DataFrame(

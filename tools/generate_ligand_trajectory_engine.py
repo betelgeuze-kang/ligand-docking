@@ -965,6 +965,9 @@ def _write_trajectory_artifact(
     protein_atom_template: Optional[np.ndarray] = None,
     npz_extra_arrays: Optional[Dict[str, Any]] = None,
 ) -> int:
+    if str(frame_output_format) == "manifest_only":
+        arr = np.asarray(ligand_frames)
+        return int(arr.shape[0]) if arr.ndim >= 1 else 0
     if str(frame_output_format) == "npz_bundle":
         resolved_extra_arrays: Dict[str, Any] = dict(npz_extra_arrays or {})
         protein_atom_template_meta = _normalize_protein_atom_template(protein_atom_template)
@@ -1724,8 +1727,8 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
         out_progress_json = f"{out_root}_progress.json"
     progress_every_jobs = int(max(1, int(args.progress_every_jobs)))
     frame_output_format = str(args.frame_output_format).strip().lower()
-    if frame_output_format not in {"pdb_files", "npz_bundle"}:
-        raise ValueError("--frame-output-format must be pdb_files|npz_bundle")
+    if frame_output_format not in {"pdb_files", "npz_bundle", "manifest_only"}:
+        raise ValueError("--frame-output-format must be pdb_files|npz_bundle|manifest_only")
 
     total_rows = int(len(df))
     processed_rows = 0
@@ -2812,7 +2815,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--out-root", type=str, default=f"runs/ligand_traj_engine_{stamp}")
     p.add_argument("--frames", type=int, default=120)
     p.add_argument("--write-every", type=int, default=1)
-    p.add_argument("--frame-output-format", type=str, default="pdb_files", choices=["pdb_files", "npz_bundle"])
+    p.add_argument(
+        "--frame-output-format",
+        type=str,
+        default="pdb_files",
+        choices=["pdb_files", "npz_bundle", "manifest_only"],
+    )
     p.add_argument("--npz-compression", type=str, default="store", choices=["store", "compressed"])
     p.add_argument("--npz-layout", type=str, default="flat_shard", choices=["job_dir", "flat_root", "flat_shard"])
     p.add_argument("--npz-shard-size", type=int, default=512)

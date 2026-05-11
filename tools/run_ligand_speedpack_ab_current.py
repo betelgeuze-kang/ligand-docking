@@ -142,6 +142,7 @@ def _speedpack_profile_payload(base: dict[str, Any], *, strict_auto: bool) -> di
     out["traj_prod_adaptive_frame_budget"] = True
     out["traj_prod_early_stop_enabled"] = True
     out["traj_prod_light_artifacts"] = True
+    out["traj_frame_output_format"] = "manifest_only"
     out.setdefault("traj_prod_light_progress_every_jobs", 250)
     return out
 
@@ -242,6 +243,7 @@ def _build_speedpack_candidate(
                     "traj_prod_speedpack": True,
                     "traj_prod_early_stop_enabled": True,
                     "traj_prod_light_artifacts": True,
+                    "traj_frame_output_format": "manifest_only",
                 }
             )
         task["profile_json"] = profile_map[source_profile_json]

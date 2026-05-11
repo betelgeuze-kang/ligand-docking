@@ -3797,7 +3797,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--traj-frame-output-format",
         type=str,
         default="pdb_files",
-        choices=["pdb_files", "npz_bundle"],
+        choices=["pdb_files", "npz_bundle", "manifest_only"],
     )
     p.add_argument(
         "--traj-auto-fast-output",
