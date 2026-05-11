@@ -57,6 +57,7 @@ def test_build_keep_green_regression_trend_packet_marks_baseline_history_gap() -
             {"run_label": "sample_2", "generated_at_local": "2026-05-10T00:00:00", "pass": True},
             {"run_label": "sample_3", "generated_at_local": "2026-05-11T00:00:00", "pass": True},
         ],
+        lane_history_payloads=[],
     )
 
     summary = payload["summary"]
@@ -71,6 +72,46 @@ def test_build_keep_green_regression_trend_packet_marks_baseline_history_gap() -
     assert rows["viewer"]["current_green"] is True
     assert rows["wetlab"]["current_green"] is True
     assert rows["refresh"]["current_green"] is True
+
+
+def test_build_keep_green_regression_trend_packet_uses_lane_history_for_non_nightly_lanes() -> None:
+    nightly_gate, viewer_refresh, wetlab_gate, refresh = _green_payloads()
+    lane_history = []
+    for lane_id in ["viewer", "wetlab", "refresh"]:
+        for index in range(1, 4):
+            lane_history.append(
+                {
+                    "lane_id": lane_id,
+                    "run_label": f"sample_{index}",
+                    "generated_at_local": f"2026-05-1{index}T00:00:00",
+                    "pass": True,
+                    "artifact": f"runs/{lane_id}_current.md",
+                }
+            )
+
+    payload = mod.build_payload(
+        nightly_gate,
+        viewer_refresh,
+        wetlab_gate,
+        refresh,
+        nightly_history_payloads=[
+            {"run_label": "sample_1", "generated_at_local": "2026-05-11T00:00:00", "pass": True},
+            {"run_label": "sample_2", "generated_at_local": "2026-05-12T00:00:00", "pass": True},
+            {"run_label": "sample_3", "generated_at_local": "2026-05-13T00:00:00", "pass": True},
+        ],
+        lane_history_payloads=lane_history,
+    )
+
+    summary = payload["summary"]
+    rows = {row["lane_id"]: row for row in payload["rows"]}
+    assert summary["sufficient_repeated_history"] is True
+    assert summary["commercial_trend_status"] == "sufficient_repeated_history"
+    assert summary["repeated_history_ready_lane_count"] == 4
+    assert summary["insufficient_history_lane_count"] == 0
+    assert summary["lane_history_sample_count"] == 9
+    assert rows["viewer"]["repeated_history_ready"] is True
+    assert rows["wetlab"]["recent_pass_streak"] == 3
+    assert rows["refresh"]["status"] == "keep_green_history_ready"
 
 
 def test_build_keep_green_regression_trend_packet_cli(tmp_path: Path) -> None:

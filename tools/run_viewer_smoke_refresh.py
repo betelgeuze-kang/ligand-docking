@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import argparse
 import json
 import subprocess
 import sys
@@ -11,6 +12,8 @@ from pathlib import Path
 ROOT = Path("/home/betelgeuze/분자동역학")
 OUT_JSON = ROOT / "runs" / "viewer_smoke_refresh_current.json"
 OUT_MD = ROOT / "runs" / "viewer_smoke_refresh_current.md"
+DEFAULT_MAX_ATTEMPTS = 2
+DEFAULT_RETRY_DELAY_SEC = 1.0
 
 
 def _run(cmd: list[str]) -> dict:
@@ -26,6 +29,23 @@ def _run(cmd: list[str]) -> dict:
     }
 
 
+def _run_with_retries(cmd: list[str], *, max_attempts: int, retry_delay_sec: float) -> dict:
+    attempts: list[dict] = []
+    for attempt_index in range(1, max(1, int(max_attempts)) + 1):
+        result = _run(cmd)
+        result["attempt"] = attempt_index
+        attempts.append(result)
+        if result["ok"]:
+            break
+        if attempt_index < max(1, int(max_attempts)):
+            time.sleep(max(0.0, float(retry_delay_sec)))
+    final = dict(attempts[-1])
+    final["attempt_count"] = len(attempts)
+    final["retry_recovered"] = len(attempts) > 1 and bool(final["ok"])
+    final["attempts"] = attempts
+    return final
+
+
 def _read_json(path: Path) -> dict:
     if not path.exists():
         return {}
@@ -35,7 +55,15 @@ def _read_json(path: Path) -> dict:
         return {}
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Refresh viewer smoke artifacts with transient-readiness retry.")
+    parser.add_argument("--max-attempts", type=int, default=DEFAULT_MAX_ATTEMPTS)
+    parser.add_argument("--retry-delay-sec", type=float, default=DEFAULT_RETRY_DELAY_SEC)
+    return parser.parse_args()
+
+
 def main() -> int:
+    args = parse_args()
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     steps = [
         ("protein_motion_smoke", [sys.executable, "tools/run_viewer_protein_atom_smoke.py"]),
@@ -44,16 +72,27 @@ def main() -> int:
     ]
     results = []
     for name, cmd in steps:
-        entry = {"step": name, **_run(cmd)}
+        entry = {
+            "step": name,
+            **_run_with_retries(
+                cmd,
+                max_attempts=args.max_attempts,
+                retry_delay_sec=args.retry_delay_sec,
+            ),
+        }
         results.append(entry)
 
     overall_ok = all(entry["ok"] for entry in results)
+    retry_recovered_step_count = sum(1 for entry in results if entry.get("retry_recovered"))
+    failed_step_count = sum(1 for entry in results if not entry.get("ok"))
     compare_smoke = _read_json(ROOT / "runs" / "viewer_compare_writeback_smoke" / "compare_writeback_browser_smoke_current.json")
     index_smoke = _read_json(ROOT / "runs" / "viewer_smoke_index_current.json")
     payload = {
         "generated_at_local": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "overall_ok": overall_ok,
         "step_count": len(results),
+        "failed_step_count": failed_step_count,
+        "retry_recovered_step_count": retry_recovered_step_count,
         "steps": results,
         "artifacts": {
             "viewer_smoke_index_json": str(ROOT / "runs" / "viewer_smoke_index_current.json"),
@@ -81,6 +120,8 @@ def main() -> int:
                 "",
                 f"- generated_at_local: `{payload['generated_at_local']}`",
                 f"- overall_ok: `{payload['overall_ok']}`",
+                f"- failed_step_count: `{payload['failed_step_count']}`",
+                f"- retry_recovered_step_count: `{payload['retry_recovered_step_count']}`",
                 f"- compare_writeback_debug_readiness_line: `{payload['summary']['compare_writeback_debug_readiness_line']}`",
                 f"- compare_writeback_geometry_status_line: `{payload['summary']['compare_writeback_geometry_status_line']}`",
                 f"- compare_writeback_geometry_burndown_status_line: `{payload['summary']['compare_writeback_geometry_burndown_status_line']}`",
@@ -89,7 +130,8 @@ def main() -> int:
                 f"- compare_writeback_wrapper_gap_count: `{payload['summary']['compare_writeback_wrapper_gap_count']}`",
                 f"- compare_writeback_mesh_probe_unavailable_count: `{payload['summary']['compare_writeback_mesh_probe_unavailable_count']}`",
                 *[
-                    f"- {entry['step']}: `{'ok' if entry['ok'] else 'fail'}` ({entry['elapsed_sec']}s)"
+                    f"- {entry['step']}: `{'ok' if entry['ok'] else 'fail'}` "
+                    f"({entry['elapsed_sec']}s; attempts={entry['attempt_count']})"
                     for entry in results
                 ],
             ]
