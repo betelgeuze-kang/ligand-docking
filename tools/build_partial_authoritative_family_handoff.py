@@ -26,6 +26,11 @@ DEFAULT_OUT_JSON = "runs/partial_authoritative_family_handoff_current.json"
 DEFAULT_OUT_CSV = "runs/partial_authoritative_family_handoff_current.csv"
 DEFAULT_OUT_MD = "runs/partial_authoritative_family_handoff_current.md"
 
+DEFAULT_FAMILY_TARGETS = {
+    "ca2": "CARBONIC_ANHYDRASE_2_ZN_BLIND",
+    "pxr": "PXR_NR1I2_BLIND",
+}
+
 
 def _resolve(path_like: str) -> Path:
     path = Path(path_like)
@@ -53,6 +58,30 @@ def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         writer.writerows(rows)
 
 
+def _summary(payload: dict[str, Any]) -> dict[str, Any]:
+    summary = payload.get("summary", {})
+    return dict(summary or {}) if isinstance(summary, dict) else {}
+
+
+def _target_from_payload(family: str, *payloads: dict[str, Any]) -> str:
+    for payload in payloads:
+        summary = _summary(payload)
+        for key in ("target", "target_id", "target_name"):
+            value = str(summary.get(key, "")).strip()
+            if value:
+                return value
+    return DEFAULT_FAMILY_TARGETS.get(family, family.upper())
+
+
+def _row_count_field(value: Any) -> int:
+    if isinstance(value, list):
+        return len(value)
+    text = str(value or "").strip()
+    if not text:
+        return 0
+    return len([part for part in text.split(",") if part.strip()])
+
+
 def _build_family_row(
     *,
     family: str,
@@ -62,15 +91,19 @@ def _build_family_row(
     packet_payload: dict[str, Any],
     commit_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    readiness_summary = _summary(readiness_payload)
+    policy_summary = _summary(policy_payload)
+    next_slice_summary = _summary(next_slice_payload)
+    packet_summary = _summary(packet_payload)
     if family == "ca2":
-        ready_rows = int(readiness_payload["summary"]["ready_row_count"])
-        blocked_rows = int(readiness_payload["summary"]["blocked_row_count"])
-        review_only_rows = int(policy_payload["summary"]["review_only_rows"])
-        defer_rows = int(policy_payload["summary"]["defer_rows"])
-        policy_line = str(policy_payload["summary"]["next_required_step"]).strip()
-        packet_row_count = int(packet_payload["summary"]["workbook_row_count"])
-        target = str(packet_payload["summary"]["target"]).strip()
-        next_slice_count = int(next_slice_payload["summary"]["row_count"])
+        ready_rows = int(readiness_summary["ready_row_count"])
+        blocked_rows = int(readiness_summary["blocked_row_count"])
+        review_only_rows = int(policy_summary["review_only_rows"])
+        defer_rows = int(policy_summary["defer_rows"])
+        policy_line = str(policy_summary["next_required_step"]).strip()
+        packet_row_count = int(packet_summary["workbook_row_count"])
+        target = _target_from_payload(family, packet_payload, readiness_payload, next_slice_payload)
+        next_slice_count = int(next_slice_summary["row_count"])
         partial_mode = PARTIAL_AUTHORITATIVE_SAFE_SCOPE
         next_gate = "review_only_negative_closure"
         commit_summary = dict((commit_payload or {}).get("summary", {}) or {})
@@ -79,14 +112,14 @@ def _build_family_row(
         authoritative_negative_ready_rows = int(commit_summary.get("authoritative_apply_allowed_count", 0) or 0)
         closure_scope = "review_only_conflict_or_gap_only"
     else:
-        ready_rows = int(readiness_payload["summary"]["ready_for_apply_row_count"])
-        blocked_rows = int(readiness_payload["summary"]["blocked_row_count"])
-        review_only_rows = len(str(policy_payload["summary"]["review_only_rows"]).split(", ")) if str(policy_payload["summary"]["review_only_rows"]).strip() else 0
-        defer_rows = len(str(policy_payload["summary"]["defer_rows"]).split(", ")) if str(policy_payload["summary"]["defer_rows"]).strip() else 0
-        policy_line = str(policy_payload["summary"]["policy_line"]).strip()
-        packet_row_count = int(packet_payload["summary"]["workbook_row_count"])
-        target = str(packet_payload["summary"]["target"]).strip()
-        next_slice_count = int(next_slice_payload["summary"]["row_count"])
+        ready_rows = int(readiness_summary["ready_for_apply_row_count"])
+        blocked_rows = int(readiness_summary["blocked_row_count"])
+        review_only_rows = _row_count_field(policy_summary["review_only_rows"])
+        defer_rows = _row_count_field(policy_summary["defer_rows"])
+        policy_line = str(policy_summary["policy_line"]).strip()
+        packet_row_count = int(packet_summary["workbook_row_count"])
+        target = _target_from_payload(family, packet_payload, readiness_payload, next_slice_payload)
+        next_slice_count = int(next_slice_summary["row_count"])
         partial_mode = PARTIAL_AUTHORITATIVE_SAFE_SCOPE
         next_gate = "review_only_and_defer_policy_lock"
         direct_conflict_rows = 0

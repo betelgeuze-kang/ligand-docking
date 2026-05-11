@@ -821,7 +821,12 @@ def build_payload(
     engine_provenance_payload = {} if bool(args.dry_run) else _read_json_object(args.engine_provenance_out_json)
     engine_provenance_summary = engine_provenance_payload.get("summary")
     engine_provenance_summary = engine_provenance_summary if isinstance(engine_provenance_summary, dict) else {}
-    verdict_gate_payload = {} if bool(args.dry_run) else _read_json_object(args.verdict_gate_out_json)
+    verdict_gate_step = next((step for step in steps if str(step.get("label", "")) == "verdict_gate"), None)
+    verdict_gate_payload = (
+        _read_json_object(args.verdict_gate_out_json)
+        if not bool(args.dry_run) and verdict_gate_step is not None
+        else {}
+    )
     verdict_gate_summary = verdict_gate_payload.get("summary")
     verdict_gate_summary = verdict_gate_summary if isinstance(verdict_gate_summary, dict) else {}
     verdict_gate_fingerprint_check = _verdict_gate_fingerprint_check_summary(verdict_gate_payload)
@@ -837,7 +842,6 @@ def build_payload(
     else:
         engine_provenance_ok = None if bool(args.dry_run) else False
     skipped_count = sum(1 for step in steps if bool(step.get("dry_run", False)))
-    verdict_gate_step = next((step for step in steps if str(step.get("label", "")) == "verdict_gate"), None)
     verdict_gate_delivery_ready = (
         None if bool(args.dry_run) and not verdict_gate_summary else bool(verdict_gate_summary.get("delivery_ready", False))
     )

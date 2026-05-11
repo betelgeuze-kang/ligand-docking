@@ -30,7 +30,7 @@ def test_build_partial_authoritative_family_handoff_payload() -> None:
             ],
         },
         ca2_packet_payload={
-            "summary": {"workbook_row_count": 12, "target": "CARBONIC_ANHYDRASE_2_ZN_BLIND"}
+            "summary": {"workbook_row_count": 12}
         },
         ca2_commit_payload={
             "summary": {
@@ -44,8 +44,8 @@ def test_build_partial_authoritative_family_handoff_payload() -> None:
         },
         pxr_policy_payload={
             "summary": {
-                "review_only_rows": "ibuprofen",
-                "defer_rows": "acetaminophen, caffeine, bexarotene, nicotinamide, aspirin",
+                "review_only_rows": ["nicotinamide", "ibuprofen", "aspirin"],
+                "defer_rows": ["acetaminophen", "caffeine", "bexarotene"],
                 "policy_line": "Keep ibuprofen review-only and defer the rest.",
             }
         },
@@ -78,13 +78,15 @@ def test_build_partial_authoritative_family_handoff_payload() -> None:
     assert payload["summary"]["family_count"] == 2
     assert payload["summary"]["ready_row_total"] == 14
     assert payload["summary"]["blocked_row_total"] == 12
-    assert payload["summary"]["review_only_row_total"] == 7
-    assert payload["summary"]["defer_row_total"] == 5
+    assert payload["summary"]["review_only_row_total"] == 9
+    assert payload["summary"]["defer_row_total"] == 3
     assert payload["summary"]["handoff_row_count"] == 3
 
     families = {row["family"]: row for row in payload["families"]}
+    assert families["ca2"]["target"] == "CARBONIC_ANHYDRASE_2_ZN_BLIND"
     assert families["ca2"]["partial_mode"] == "authoritative_partial_rows_only"
     assert families["ca2"]["next_gate"] == "review_only_negative_closure"
+    assert families["pxr"]["target"] == "PXR_NR1I2_BLIND"
     assert families["pxr"]["next_gate"] == "review_only_and_defer_policy_lock"
 
     handoff = {(row["family"], row["packet_step"]): row for row in payload["handoff_rows"]}
