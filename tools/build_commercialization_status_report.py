@@ -16,6 +16,7 @@ DEFAULT_NEGATIVE_QUEUE_JSON = "runs/transporter_negative_evidence_closure_queue_
 DEFAULT_NEGATIVE_TARGET_PACKETS_JSON = "runs/transporter_negative_evidence_target_packets_current.json"
 DEFAULT_LOCAL_ENGINE_QUEUE_JSON = "runs/local_engine_commercialization_queue_current.json"
 DEFAULT_LOCAL_DELIVERY_VERDICT_JSON = "runs/local_delivery_verdict_gate_current.json"
+DEFAULT_KEEP_GREEN_TREND_JSON = "runs/keep_green_regression_trend_packet_current.json"
 DEFAULT_OUT_MD = "commercialization_status_report.md"
 
 
@@ -60,6 +61,7 @@ def build_payload(
     negative_target_packets_payload: dict[str, Any] | None = None,
     local_engine_queue_payload: dict[str, Any] | None = None,
     local_delivery_verdict_payload: dict[str, Any] | None = None,
+    keep_green_trend_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     commercialization_summary = dict(commercialization_payload.get("summary", {}) or {})
     gap_summary = dict(gap_payload.get("summary", {}) or {})
@@ -69,6 +71,7 @@ def build_payload(
     negative_target_packets_summary = dict((negative_target_packets_payload or {}).get("summary", {}) or {})
     local_engine_queue_summary = dict((local_engine_queue_payload or {}).get("summary", {}) or {})
     local_delivery_summary = dict((local_delivery_verdict_payload or {}).get("summary", {}) or {})
+    keep_green_trend_summary = dict((keep_green_trend_payload or {}).get("summary", {}) or {})
     transporter_row = _find_family_row(list(commercialization_payload.get("rows", []) or []), "transporter")
 
     strongest_ready_families = _family_list(commercialization_summary.get("strongest_ready_families")) or "kinase, ion_channel, gpcr"
@@ -212,6 +215,16 @@ def build_payload(
     engine_wetlab_allatom_semi_hard_block_count = int(
         local_engine_queue_summary.get("wetlab_selected_allatom_semi_hard_block_count", 0) or 0
     )
+    keep_green_trend_artifact = _text(keep_green_trend_summary.get("packet_artifact"))
+    keep_green_trend_status = _text(keep_green_trend_summary.get("commercial_trend_status"))
+    keep_green_trend_all_current_green = bool(keep_green_trend_summary.get("all_current_green", False))
+    keep_green_trend_sufficient_history = bool(keep_green_trend_summary.get("sufficient_repeated_history", False))
+    keep_green_trend_current_green_count = int(keep_green_trend_summary.get("current_green_lane_count", 0) or 0)
+    keep_green_trend_lane_count = int(keep_green_trend_summary.get("lane_count", 0) or 0)
+    keep_green_trend_ready_count = int(keep_green_trend_summary.get("repeated_history_ready_lane_count", 0) or 0)
+    keep_green_trend_insufficient_count = int(keep_green_trend_summary.get("insufficient_history_lane_count", 0) or 0)
+    keep_green_trend_min_samples = int(keep_green_trend_summary.get("minimum_repeated_sample_count", 0) or 0)
+    keep_green_trend_nightly_streak = int(keep_green_trend_summary.get("nightly_recent_pass_streak", 0) or 0)
 
     strengths = [
         f"Commercial core is still strongest in `{strongest_ready_families}`.",
@@ -305,6 +318,15 @@ def build_payload(
                         f"versus `{engine_wetlab_allatom_primary_threshold or '-'}`, with "
                         f"`hard={engine_wetlab_allatom_hard_block_count}` and "
                         f"`semi_hard={engine_wetlab_allatom_semi_hard_block_count}`."
+                    )
+                if keep_green_trend_artifact:
+                    engine_priority.append(
+                        "Keep "
+                        f"`{keep_green_trend_artifact}` "
+                        "as the repeated keep-green trend packet: "
+                        f"`{keep_green_trend_current_green_count}/{keep_green_trend_lane_count}` lanes are currently green, "
+                        f"`{keep_green_trend_ready_count}/{keep_green_trend_lane_count}` have sufficient repeated history, "
+                        f"and nightly streak is `{keep_green_trend_nightly_streak}/{keep_green_trend_min_samples}`."
                     )
                 immediate_priority = engine_priority + immediate_priority
             else:
@@ -576,7 +598,11 @@ def build_payload(
     if engine_queue_clear:
         report_gaps = [
             "The local delivery verdict is green only for the restricted local scope; transporter negative-evidence mining remains parked outside that claim.",
-            "Nightly, viewer, wetlab, and refresh lanes are now keep-green surfaces, but they still need trend history across repeated canonical runs.",
+            (
+                "Nightly, viewer, wetlab, and refresh lanes are now keep-green surfaces, and the trend packet is attached, but repeated-history sufficiency is not complete."
+                if keep_green_trend_artifact and not keep_green_trend_sufficient_history
+                else "Nightly, viewer, wetlab, and refresh lanes are now keep-green surfaces, but they still need trend history across repeated canonical runs."
+            ),
             f"Current commercialization boards show `placeholder_driven_rows={placeholder_rows}` and separate `reducible_now={reducible_now_rows}` from `evidence_blocked={evidence_blocked_rows}`, but that split is still transporter-specific rather than platform-wide.",
             transporter_gap_line,
         ]
@@ -631,6 +657,7 @@ def build_payload(
         engine_nightly_rescored_artifact or "runs/nightly_stage6_rescored_gate_packet_current.md",
         engine_nightly_downstream_artifact or "runs/nightly_stage6_downstream_rerun_packet_current.md",
         engine_nightly_execute_artifact or "runs/nightly_stage6_execute_result_packet_current.md",
+        keep_green_trend_artifact or "runs/keep_green_regression_trend_packet_current.md",
         "runs/wetlab_execution_readiness_queue_current.md",
         engine_wetlab_allatom_artifact or "runs/wetlab_selected_allatom_gate_burndown_packet_current.md",
         "runs/commercialization_readiness_current.md",
@@ -732,6 +759,17 @@ def build_payload(
         "local_delivery_p0_blocker_count": delivery_p0_count,
         "local_delivery_hard_blocker_count": delivery_hard_count,
         "local_delivery_status_line": delivery_status_line,
+        "keep_green_trend_ready": bool(keep_green_trend_summary),
+        "keep_green_trend_artifact": keep_green_trend_artifact,
+        "keep_green_trend_status": keep_green_trend_status,
+        "keep_green_trend_all_current_green": keep_green_trend_all_current_green,
+        "keep_green_trend_sufficient_repeated_history": keep_green_trend_sufficient_history,
+        "keep_green_trend_current_green_lane_count": keep_green_trend_current_green_count,
+        "keep_green_trend_lane_count": keep_green_trend_lane_count,
+        "keep_green_trend_repeated_history_ready_lane_count": keep_green_trend_ready_count,
+        "keep_green_trend_insufficient_history_lane_count": keep_green_trend_insufficient_count,
+        "keep_green_trend_minimum_repeated_sample_count": keep_green_trend_min_samples,
+        "keep_green_trend_nightly_recent_pass_streak": keep_green_trend_nightly_streak,
         "local_engine_queue_nightly_gate_artifact": engine_nightly_gate_artifact,
         "local_engine_queue_nightly_status_line": engine_nightly_status_line,
         "local_engine_queue_nightly_tuning_artifact": engine_nightly_tuning_artifact,
@@ -846,6 +884,13 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- local_delivery_verdict: `{s['local_delivery_verdict'] or '-'}`",
         f"- local_delivery_blockers: `p0={s['local_delivery_p0_blocker_count']}, hard={s['local_delivery_hard_blocker_count']}`",
         f"- local_delivery_status_line: `{s['local_delivery_status_line'] or '-'}`",
+        f"- keep_green_trend_ready: `{s['keep_green_trend_ready']}`",
+        f"- keep_green_trend_artifact: `{s['keep_green_trend_artifact'] or '-'}`",
+        f"- keep_green_trend_status: `{s['keep_green_trend_status'] or '-'}`",
+        f"- keep_green_trend_all_current_green: `{s['keep_green_trend_all_current_green']}`",
+        f"- keep_green_trend_sufficient_repeated_history: `{s['keep_green_trend_sufficient_repeated_history']}`",
+        f"- keep_green_trend_lane_counts: `current={s['keep_green_trend_current_green_lane_count']}/{s['keep_green_trend_lane_count']}, repeated={s['keep_green_trend_repeated_history_ready_lane_count']}/{s['keep_green_trend_lane_count']}, insufficient={s['keep_green_trend_insufficient_history_lane_count']}`",
+        f"- keep_green_trend_nightly_recent_pass_streak: `{s['keep_green_trend_nightly_recent_pass_streak']}/{s['keep_green_trend_minimum_repeated_sample_count']}`",
         f"- local_engine_queue_nightly_gate_artifact: `{s['local_engine_queue_nightly_gate_artifact'] or '-'}`",
         f"- local_engine_queue_nightly_status_line: `{s['local_engine_queue_nightly_status_line'] or '-'}`",
         f"- local_engine_queue_nightly_tuning_artifact: `{s['local_engine_queue_nightly_tuning_artifact'] or '-'}`",
@@ -931,6 +976,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--negative-target-packets-json", default=DEFAULT_NEGATIVE_TARGET_PACKETS_JSON)
     parser.add_argument("--local-engine-queue-json", default=DEFAULT_LOCAL_ENGINE_QUEUE_JSON)
     parser.add_argument("--local-delivery-verdict-json", default=DEFAULT_LOCAL_DELIVERY_VERDICT_JSON)
+    parser.add_argument("--keep-green-trend-json", default=DEFAULT_KEEP_GREEN_TREND_JSON)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
     return parser.parse_args()
 
@@ -946,6 +992,7 @@ def main() -> None:
         _load_json(args.negative_target_packets_json),
         _load_json(args.local_engine_queue_json),
         _load_json(args.local_delivery_verdict_json),
+        _load_json(args.keep_green_trend_json),
     )
     _write_markdown(_resolve(args.out_md), payload)
 

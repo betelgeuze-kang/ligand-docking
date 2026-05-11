@@ -308,6 +308,20 @@ def test_build_commercialization_status_report_uses_keep_green_wording_when_queu
                 "status_line": "delivery-ready verdict may be issued for the restricted local scope.",
             }
         },
+        {
+            "summary": {
+                "packet_artifact": "runs/keep_green_regression_trend_packet_current.md",
+                "commercial_trend_status": "baseline_green_needs_repeated_history",
+                "all_current_green": True,
+                "sufficient_repeated_history": False,
+                "current_green_lane_count": 4,
+                "lane_count": 4,
+                "repeated_history_ready_lane_count": 1,
+                "insufficient_history_lane_count": 3,
+                "minimum_repeated_sample_count": 3,
+                "nightly_recent_pass_streak": 2,
+            }
+        },
     )
 
     summary = payload["summary"]
@@ -315,13 +329,23 @@ def test_build_commercialization_status_report_uses_keep_green_wording_when_queu
     assert summary["local_engine_queue_keep_green_count"] == 4
     assert summary["local_delivery_ready"] is True
     assert summary["local_delivery_verdict"] == "delivery_ready"
+    assert summary["keep_green_trend_artifact"] == "runs/keep_green_regression_trend_packet_current.md"
+    assert summary["keep_green_trend_status"] == "baseline_green_needs_repeated_history"
+    assert summary["keep_green_trend_all_current_green"] is True
+    assert summary["keep_green_trend_sufficient_repeated_history"] is False
+    assert summary["keep_green_trend_current_green_lane_count"] == 4
+    assert summary["keep_green_trend_repeated_history_ready_lane_count"] == 1
+    assert summary["keep_green_trend_nightly_recent_pass_streak"] == 2
     assert any("keep-green board" in item for item in summary["immediate_priority"])
     assert any("Local delivery verdict is `delivery_ready`" in item for item in summary["immediate_priority"])
     assert any("nightly gate regression artifact" in item for item in summary["immediate_priority"])
+    assert any("runs/keep_green_regression_trend_packet_current.md" in item for item in summary["immediate_priority"])
     assert not any("Burn down engine blockers" in item for item in summary["immediate_priority"])
     assert not any("burndown packet: tune" in item for item in summary["immediate_priority"])
     assert any("restricted local scope" in item for item in summary["report_gaps"])
+    assert any("repeated-history sufficiency is not complete" in item for item in summary["report_gaps"])
     assert any("recurrent canonical nightly" in item for item in summary["fix_plan"])
+    assert any("runs/keep_green_regression_trend_packet_current.md" in item for item in summary["artifacts"])
 
 
 def test_build_commercialization_status_report_exposes_negative_target_packets() -> None:
