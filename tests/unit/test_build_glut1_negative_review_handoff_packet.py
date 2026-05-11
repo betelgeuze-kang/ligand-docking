@@ -85,12 +85,31 @@ def test_build_glut1_negative_review_handoff_packet_collects_negative_and_cautio
                 }
             ],
         },
+        {
+            "summary": {
+                "packet_artifact": "runs/glut1_second_wave_source_confirmation_packet_current.md",
+                "primary_focus_ligand": "cytochalasin B",
+                "direct_quantitative_binding_count": 1,
+                "exact_target_pair_activity_count": 2,
+                "claim_safe_kcal_ready_count": 0,
+            }
+        },
     )
     assert payload["summary"]["negative_slot_count"] == 1
     assert payload["summary"]["caution_signal_count"] == 1
     assert payload["summary"]["negative_review_only_rows"] == 3
+    assert payload["summary"]["source_context_artifact"] == "runs/glut1_second_wave_source_confirmation_packet_current.md"
+    assert payload["summary"]["source_context_primary_focus_ligand"] == "cytochalasin B"
+    assert payload["summary"]["source_context_direct_quantitative_binding_count"] == 1
+    assert payload["summary"]["source_context_exact_target_pair_activity_count"] == 2
+    assert payload["summary"]["source_context_negative_evidence_row_count"] == 0
+    assert payload["summary"]["authoritative_negative_apply_allowed"] is False
+    assert len(payload["rows"]) == 2
     assert payload["negative_rows"][0]["verification_queue_action"] == "manual_negative_evidence_review"
+    assert payload["negative_rows"][0]["source_context_role"] == "positive_or_binder_context_not_negative_evidence"
+    assert payload["negative_rows"][0]["authoritative_negative_apply_allowed"] is False
     assert payload["caution_signal_rows"][0]["candidate_name"] == "forskolin"
+    assert payload["caution_signal_rows"][0]["source_context_role"] == "caution_signal_not_negative_evidence"
 
 
 def test_glut1_negative_review_handoff_target_row_lookup() -> None:

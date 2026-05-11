@@ -29,6 +29,7 @@ def test_build_glut1_second_wave_source_confirmation_packet_reads_current_artifa
     assert summary["row_count"] == 3
     assert summary["primary_focus_ligand"] == "cytochalasin B"
     assert summary["primary_confirmation_target"] == "core_binder_01"
+    assert summary["primary_anchor_pmid"] == "1716731"
     assert summary["second_wave_targets"] == "core_binder_01, core_binder_02, core_binder_03"
     assert summary["canonical_target_gene"] == "SLC2A1"
     assert summary["canonical_target_alias"] == "GLUT1"
@@ -37,6 +38,7 @@ def test_build_glut1_second_wave_source_confirmation_packet_reads_current_artifa
     assert summary["direct_quantitative_binding_count"] == 1
     assert summary["exact_target_pair_activity_count"] == 2
     assert summary["structured_pair_absent_count"] == 1
+    assert summary["source_anchor_pmid_count"] == 3
     assert summary["claim_safe_kcal_ready_count"] == 0
     _contains_tokens(
         summary["next_required_step"],
@@ -52,6 +54,7 @@ def test_build_glut1_second_wave_source_confirmation_packet_reads_current_artifa
     assert row_01["candidate_name"] == "cytochalasin B"
     assert row_01["confirmation_scope"] == "direct_quantitative_binding_source_confirmation"
     assert row_01["source_anchor"] == "PMID 1716731"
+    assert row_01["source_anchor_pmid"] == "1716731"
     assert row_01["public_provenance_status"] == "exact_human_glut1_direct_binding_present_no_kcal"
     assert row_01["chembl_molecule_chembl_id"] == "CHEMBL411729"
     assert row_01["chembl_target_chembl_id"] == "CHEMBL2535"
@@ -64,6 +67,7 @@ def test_build_glut1_second_wave_source_confirmation_packet_reads_current_artifa
     assert row_02["candidate_name"] == "WZB117"
     assert row_02["confirmation_scope"] == "exact_target_pair_activity_source_confirmation"
     assert row_02["source_anchor"] == "PMID 22689530"
+    assert row_02["source_anchor_pmid"] == "22689530"
     assert row_02["public_provenance_status"] == "exact_human_glut1_activity_present_nonbinding"
     assert row_02["chembl_molecule_chembl_id"] == "CHEMBL3092944"
     assert row_02["chembl_activity_record_count"] == 3
@@ -74,6 +78,7 @@ def test_build_glut1_second_wave_source_confirmation_packet_reads_current_artifa
     assert row_03["candidate_name"] == "STF-31"
     assert row_03["confirmation_scope"] == "literature_direct_binding_claim_source_confirmation"
     assert row_03["source_anchor"] == "PMID 21813754"
+    assert row_03["source_anchor_pmid"] == "21813754"
     assert row_03["public_provenance_status"] == "human_glut1_functional_anchor_direct_binding_claim_structured_pair_absent"
     assert row_03["chembl_activity_record_count"] == 0
     _contains_tokens(row_03["supportive_pmids"], "25058389", "29949049")
@@ -103,6 +108,8 @@ def test_build_glut1_second_wave_source_confirmation_packet_cli(tmp_path: Path) 
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["summary"]["status"] == "glut1_second_wave_source_confirmation_packet_ready"
     assert payload["summary"]["row_count"] == 3
+    assert payload["summary"]["primary_anchor_pmid"] == "1716731"
+    assert payload["summary"]["source_anchor_pmid_count"] == 3
     assert payload["rows"][0]["packet_step"] == "core_binder_01"
     assert payload["rows"][2]["packet_step"] == "core_binder_03"
     assert out_csv.read_text(encoding="utf-8").splitlines()[0].startswith("confirmation_rank,")

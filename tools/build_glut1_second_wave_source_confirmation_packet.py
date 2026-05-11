@@ -29,6 +29,7 @@ ROW_OVERRIDES: dict[str, dict[str, Any]] = {
             "Differentiation of erythrocyte-(GLUT1), liver-(GLUT2), and adipocyte-type (GLUT4) "
             "glucose transporters by binding of the inhibitory ligands cytochalasin B..."
         ),
+        "source_anchor_pmid": "1716731",
         "source_url": "https://pubmed.ncbi.nlm.nih.gov/1716731/",
         "supportive_pmids": "27078104",
         "evidence_signal": (
@@ -60,6 +61,7 @@ ROW_OVERRIDES: dict[str, dict[str, Any]] = {
             "A small-molecule inhibitor of glucose transporter 1 downregulates glycolysis, "
             "induces cell-cycle arrest, and inhibits cancer cell growth in vitro and in vivo."
         ),
+        "source_anchor_pmid": "22689530",
         "source_url": "https://pubmed.ncbi.nlm.nih.gov/22689530/",
         "supportive_pmids": "27836974,24200808",
         "evidence_signal": (
@@ -88,6 +90,7 @@ ROW_OVERRIDES: dict[str, dict[str, Any]] = {
         "confirmation_scope": "literature_direct_binding_claim_source_confirmation",
         "source_anchor": "PMID 21813754",
         "source_title": "Targeting GLUT1 and the Warburg effect in renal cell carcinoma by chemical synthetic lethality.",
+        "source_anchor_pmid": "21813754",
         "source_url": "https://pubmed.ncbi.nlm.nih.gov/21813754/",
         "supportive_pmids": "25058389,29949049",
         "evidence_signal": (
@@ -214,6 +217,7 @@ def build_payload(queue_payload: dict[str, Any]) -> dict[str, Any]:
         candidate_name = _text(override.get("candidate_name")) or _text(queue_row.get("candidate_name"))
         status = _text(override.get("public_provenance_status"))
         source_anchor = _text(override.get("source_anchor")) or _text(queue_row.get("source_anchor"))
+        source_anchor_pmid = _text(override.get("source_anchor_pmid"))
         source_title = _text(override.get("source_title"))
         source_url = _text(override.get("source_url")) or _text(queue_row.get("source_url"))
         review_bucket = _text(override.get("review_bucket")) or _text(queue_row.get("review_bucket"))
@@ -230,6 +234,7 @@ def build_payload(queue_payload: dict[str, Any]) -> dict[str, Any]:
                 "canonical_target_uniprot": CANONICAL_TARGET_UNIPROT,
                 "canonical_target_chembl_id": CANONICAL_TARGET_CHEMBL,
                 "source_anchor": source_anchor,
+                "source_anchor_pmid": source_anchor_pmid,
                 "source_title": source_title,
                 "source_url": source_url,
                 "supportive_pmids": _text(override.get("supportive_pmids")),
@@ -280,6 +285,7 @@ def build_payload(queue_payload: dict[str, Any]) -> dict[str, Any]:
         "packet_artifact": "runs/glut1_second_wave_source_confirmation_packet_current.md",
         "primary_focus_ligand": _text(rows[0]["candidate_name"]) if rows else "",
         "primary_confirmation_target": _text(rows[0]["packet_step"]) if rows else "",
+        "primary_anchor_pmid": _text(rows[0]["source_anchor_pmid"]) if rows else "",
         "second_wave_targets": ", ".join(row["packet_step"] for row in rows),
         "canonical_target_gene": CANONICAL_TARGET_GENE,
         "canonical_target_alias": CANONICAL_TARGET_ALIAS,
@@ -288,6 +294,7 @@ def build_payload(queue_payload: dict[str, Any]) -> dict[str, Any]:
         "direct_quantitative_binding_count": direct_quantitative_binding_count,
         "exact_target_pair_activity_count": exact_target_pair_activity_count,
         "structured_pair_absent_count": structured_pair_absent_count,
+        "source_anchor_pmid_count": sum(1 for row in rows if _text(row.get("source_anchor_pmid"))),
         "claim_safe_kcal_ready_count": 0,
         "next_required_step": (
             "Keep GLUT1 as second-wave until AQP1 core_binder_01 through core_binder_03 are parked. "
@@ -308,6 +315,7 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- row_count: `{summary['row_count']}`",
         f"- primary_focus_ligand: `{summary['primary_focus_ligand']}`",
         f"- primary_confirmation_target: `{summary['primary_confirmation_target']}`",
+        f"- primary_anchor_pmid: `{summary['primary_anchor_pmid']}`",
         f"- second_wave_targets: `{summary['second_wave_targets']}`",
         f"- canonical_target_gene: `{summary['canonical_target_gene']}`",
         f"- canonical_target_alias: `{summary['canonical_target_alias']}`",
@@ -316,6 +324,7 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- direct_quantitative_binding_count: `{summary['direct_quantitative_binding_count']}`",
         f"- exact_target_pair_activity_count: `{summary['exact_target_pair_activity_count']}`",
         f"- structured_pair_absent_count: `{summary['structured_pair_absent_count']}`",
+        f"- source_anchor_pmid_count: `{summary['source_anchor_pmid_count']}`",
         "",
         "## Next Step",
         "",
@@ -323,12 +332,13 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         "",
         "## Rows",
         "",
-        "| rank | packet_step | candidate_name | confirmation_scope | public_provenance_status | representative_activity |",
-        "| ---: | --- | --- | --- | --- | --- |",
+        "| rank | packet_step | candidate_name | source_anchor_pmid | confirmation_scope | public_provenance_status | representative_activity |",
+        "| ---: | --- | --- | --- | --- | --- | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
-            f"| {row['confirmation_rank']} | `{row['packet_step']}` | `{row['candidate_name']}` | `{row['confirmation_scope']}` | "
+            f"| {row['confirmation_rank']} | `{row['packet_step']}` | `{row['candidate_name']}` | "
+            f"`{row['source_anchor_pmid']}` | `{row['confirmation_scope']}` | "
             f"`{row['public_provenance_status']}` | `{row['representative_activity'] or '-'}` |"
         )
     lines.extend(["", "## Reviewer Gates", ""])

@@ -15,6 +15,7 @@ DEFAULT_LOCAL_EVIDENCE_NOTE_JSON = "runs/glut1_local_evidence_note_current.json"
 DEFAULT_CANDIDATE_VERDICT_JSON = "runs/glut1_candidate_verdict_sheet_current.json"
 DEFAULT_NEXT_VERIFICATION_SLICE_JSON = "runs/glut1_next_verification_slice_current.json"
 DEFAULT_TRANSPORTER_DASHBOARD_JSON = "runs/transporter_manual_review_dashboard_current.json"
+DEFAULT_SOURCE_CONFIRMATION_JSON = "runs/glut1_second_wave_source_confirmation_packet_current.json"
 DEFAULT_OUT_JSON = "runs/glut1_negative_review_handoff_packet_current.json"
 DEFAULT_OUT_CSV = "runs/glut1_negative_review_handoff_packet_current.csv"
 DEFAULT_OUT_MD = "runs/glut1_negative_review_handoff_packet_current.md"
@@ -76,10 +77,24 @@ def build_payload(
     candidate_verdict: dict[str, Any],
     next_verification_slice: dict[str, Any],
     transporter_dashboard: dict[str, Any],
+    source_confirmation: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     dashboard_row = _glut1_target_row(transporter_dashboard)
+    source_summary = dict((source_confirmation or {}).get("summary", {}) or {})
     pending_by_step = _keyed(pending_disposition.get("rows", []) or [], "packet_step")
     slice_by_step = _keyed(next_verification_slice.get("rows", []) or [], "packet_step")
+    source_context_artifact = (
+        str(source_summary.get("packet_artifact", "")).strip()
+        or "runs/glut1_second_wave_source_confirmation_packet_current.md"
+    )
+    source_context_primary_focus_ligand = str(source_summary.get("primary_focus_ligand", "")).strip()
+    source_context_direct_quantitative_binding_count = int(
+        source_summary.get("direct_quantitative_binding_count", 0) or 0
+    )
+    source_context_exact_target_pair_activity_count = int(
+        source_summary.get("exact_target_pair_activity_count", 0) or 0
+    )
+    source_context_claim_safe_kcal_ready_count = int(source_summary.get("claim_safe_kcal_ready_count", 0) or 0)
 
     negative_rows: list[dict[str, Any]] = []
     for row in manual_review_queue.get("rows", []) or []:
@@ -99,6 +114,13 @@ def build_payload(
                 "next_required_action": str(row.get("next_required_action", "")).strip() or str(disposition.get("next_required_action", "")).strip(),
                 "required_missing_fields": str(row.get("required_missing_fields", "")).strip(),
                 "verification_queue_action": str(slice_row.get("next_action", "")).strip(),
+                "source_context_artifact": source_context_artifact,
+                "source_context_primary_focus_ligand": source_context_primary_focus_ligand,
+                "source_context_role": "positive_or_binder_context_not_negative_evidence",
+                "source_context_direct_quantitative_binding_count": source_context_direct_quantitative_binding_count,
+                "source_context_exact_target_pair_activity_count": source_context_exact_target_pair_activity_count,
+                "source_context_claim_safe_kcal_ready_count": source_context_claim_safe_kcal_ready_count,
+                "authoritative_negative_apply_allowed": False,
                 "notes": str(row.get("notes", "")).strip(),
             }
         )
@@ -122,6 +144,8 @@ def build_payload(
                 "source_anchor": str(row.get("source_anchor", "")).strip(),
                 "caution": str(row.get("caution", "")).strip(),
                 "verification_queue_action": str(slice_row.get("next_action", "")).strip(),
+                "source_context_role": "caution_signal_not_negative_evidence",
+                "authoritative_negative_apply_allowed": False,
             }
         )
 
@@ -133,6 +157,13 @@ def build_payload(
         "caution_signal_count": len(caution_signal_rows),
         "placeholder_rows": int(dashboard_row.get("placeholder_rows", 0) or 0),
         "negative_review_only_rows": int(dashboard_row.get("negative_review_only_rows", 0) or 0),
+        "source_context_artifact": source_context_artifact,
+        "source_context_primary_focus_ligand": source_context_primary_focus_ligand,
+        "source_context_direct_quantitative_binding_count": source_context_direct_quantitative_binding_count,
+        "source_context_exact_target_pair_activity_count": source_context_exact_target_pair_activity_count,
+        "source_context_claim_safe_kcal_ready_count": source_context_claim_safe_kcal_ready_count,
+        "source_context_negative_evidence_row_count": 0,
+        "authoritative_negative_apply_allowed": False,
         "family_decision_status": str(transporter_dashboard.get("summary", {}).get("family_decision_status", "")).strip(),
         "scaffold_fit_donor_target": str(transporter_dashboard.get("summary", {}).get("scaffold_fit_donor_target", "")).strip(),
         "next_required_step": (
@@ -145,6 +176,7 @@ def build_payload(
         "negative_rows": negative_rows,
         "caution_signal_rows": caution_signal_rows,
         "handoff_rows": negative_rows + caution_signal_rows,
+        "rows": negative_rows + caution_signal_rows,
     }
 
 
@@ -160,6 +192,13 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- caution_signal_count: `{s['caution_signal_count']}`",
         f"- placeholder_rows: `{s['placeholder_rows']}`",
         f"- negative_review_only_rows: `{s['negative_review_only_rows']}`",
+        f"- source_context_artifact: `{s['source_context_artifact']}`",
+        f"- source_context_primary_focus_ligand: `{s['source_context_primary_focus_ligand']}`",
+        f"- source_context_direct_quantitative_binding_count: `{s['source_context_direct_quantitative_binding_count']}`",
+        f"- source_context_exact_target_pair_activity_count: `{s['source_context_exact_target_pair_activity_count']}`",
+        f"- source_context_claim_safe_kcal_ready_count: `{s['source_context_claim_safe_kcal_ready_count']}`",
+        f"- source_context_negative_evidence_row_count: `{s['source_context_negative_evidence_row_count']}`",
+        f"- authoritative_negative_apply_allowed: `{s['authoritative_negative_apply_allowed']}`",
         f"- family_decision_status: `{s['family_decision_status']}`",
         f"- scaffold_fit_donor_target: `{s['scaffold_fit_donor_target']}`",
         "",
@@ -169,13 +208,14 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         "",
         "## Negative Rows",
         "",
-        "| priority_rank | packet_step | current_ligand_id | review_bucket | promotion_blocker | next_required_action | verification_queue_action | required_missing_fields |",
-        "| ---: | --- | --- | --- | --- | --- | --- | --- |",
+        "| priority_rank | packet_step | current_ligand_id | review_bucket | promotion_blocker | source_context_role | next_required_action | verification_queue_action | required_missing_fields |",
+        "| ---: | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for row in payload["negative_rows"]:
         lines.append(
             f"| {row['priority_rank']} | `{row['packet_step']}` | `{row['current_ligand_id']}` | "
-            f"`{row['review_bucket']}` | `{row['promotion_blocker']}` | `{row['next_required_action']}` | "
+            f"`{row['review_bucket']}` | `{row['promotion_blocker']}` | `{row['source_context_role']}` | "
+            f"`{row['next_required_action']}` | "
             f"`{row['verification_queue_action']}` | `{row['required_missing_fields']}` |"
         )
     lines.extend(
@@ -205,6 +245,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--candidate-verdict-json", default=DEFAULT_CANDIDATE_VERDICT_JSON)
     parser.add_argument("--next-verification-slice-json", default=DEFAULT_NEXT_VERIFICATION_SLICE_JSON)
     parser.add_argument("--transporter-dashboard-json", default=DEFAULT_TRANSPORTER_DASHBOARD_JSON)
+    parser.add_argument("--source-confirmation-json", default=DEFAULT_SOURCE_CONFIRMATION_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -220,6 +261,7 @@ def main() -> None:
         _load_json(args.candidate_verdict_json),
         _load_json(args.next_verification_slice_json),
         _load_json(args.transporter_dashboard_json),
+        _load_json(args.source_confirmation_json),
     )
     out_json = _resolve(args.out_json)
     out_csv = _resolve(args.out_csv)
