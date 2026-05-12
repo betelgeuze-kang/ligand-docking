@@ -17,7 +17,7 @@ def test_build_ligand_scaleup_1m_pilot(tmp_path: Path) -> None:
     config_dir = tmp_path / "config"
     config_dir.mkdir()
 
-    gpcr_profile = config_dir / "gpcr.json"
+    gpcr_profile = config_dir / "ligand_htvs_blind_gpcr_adrb2_v4_scorefix3.json"
     gpcr_profile.write_text(
         json.dumps(
             {
@@ -55,6 +55,11 @@ def test_build_ligand_scaleup_1m_pilot(tmp_path: Path) -> None:
                                 "profile_json": str(gpcr_profile),
                                 "ligand_sizes": "10000",
                                 "date_tag_suffix": "gpcr-core-full",
+                            },
+                            {
+                                "task_id": "idp_release_current",
+                                "domain": "idp",
+                                "kind": "idp_reference_current_full",
                             }
                         ],
                     },
@@ -67,6 +72,11 @@ def test_build_ligand_scaleup_1m_pilot(tmp_path: Path) -> None:
                                 "profile_json": str(kinase_profile),
                                 "ligand_sizes": "64",
                                 "date_tag_suffix": "kinase-smoke",
+                            },
+                            {
+                                "task_id": "idp_smoke_current",
+                                "domain": "idp",
+                                "kind": "idp_smoke_current",
                             }
                         ],
                     },
@@ -88,15 +98,52 @@ def test_build_ligand_scaleup_1m_pilot(tmp_path: Path) -> None:
     assert pilot_spec_path.exists()
     pilot_spec = json.loads(pilot_spec_path.read_text(encoding="utf-8"))
     gpcr_task = pilot_spec["sets"][0]["tasks"][0]
+    assert [task["kind"] for row in pilot_spec["sets"] for task in row["tasks"]] == [
+        "ligand_stress",
+        "ligand_stress",
+    ]
+    assert pilot_spec["sets"][0]["non_ligand_task_count_omitted"] == 1
+    assert pilot_spec["sets"][1]["non_ligand_task_count_omitted"] == 1
     assert gpcr_task["ligand_sizes"] == "1000000"
     assert gpcr_task["date_tag_suffix"].endswith("-prod1m")
+    gpcr_pilot_profile_path = Path(gpcr_task["profile_json"])
+    if not gpcr_pilot_profile_path.is_absolute():
+        gpcr_pilot_profile_path = tmp_path / gpcr_pilot_profile_path
+    gpcr_pilot_profile = json.loads(gpcr_pilot_profile_path.read_text(encoding="utf-8"))
+    assert gpcr_pilot_profile["traj_frame_output_format"] == "manifest_only"
+    assert gpcr_pilot_profile["hard_decoy_synth_generation_mode"] == "enumerate"
+    assert gpcr_pilot_profile["hard_decoy_synth_global_unique"] is False
+    assert gpcr_pilot_profile["hard_decoy_synth_relax_3d"] is False
+    assert gpcr_pilot_profile["csv_relax_3d"] is False
+    assert gpcr_pilot_profile["csv_relax_workers"] == 0
+    assert gpcr_pilot_profile["ranking_score_col"] == "binding_score_composite_v7_residual_active"
+    assert gpcr_pilot_profile["ranking_probability_score_col"] == "binding_score_composite_v7_residual_active"
+    assert gpcr_pilot_profile["residual_prototype_enabled"] is True
+    assert gpcr_pilot_profile["residual_prototype_mode"] == "apply"
+    assert gpcr_pilot_profile["residual_prototype_candidate"] == "gpcr_core_family_balanced_beta_blocker_rescue_v3"
+    assert (
+        gpcr_pilot_profile["residual_prototype_spec_json"]
+        == "config/gpcr_residual_prototype_spec_core_family_balanced_beta_blocker_rescue_v3.json"
+    )
+    assert gpcr_pilot_profile["target_specific_candidate"] is True
+    assert gpcr_pilot_profile["broad_gpcr_claim_allowed"] is False
+    assert gpcr_pilot_profile["threshold_relaxation_allowed"] is False
     kinase_smoke = pilot_spec["sets"][1]["tasks"][0]
     assert kinase_smoke["ligand_sizes"] == "64"
-    assert kinase_smoke["profile_json"] == str(kinase_profile)
+    assert kinase_smoke["profile_json"] != str(kinase_profile)
+    kinase_smoke_profile_path = Path(kinase_smoke["profile_json"])
+    if not kinase_smoke_profile_path.is_absolute():
+        kinase_smoke_profile_path = tmp_path / kinase_smoke_profile_path
+    kinase_smoke_profile = json.loads(kinase_smoke_profile_path.read_text(encoding="utf-8"))
+    assert kinase_smoke_profile["hard_decoy_synth_generation_mode"] == "enumerate"
+    assert kinase_smoke_profile["hard_decoy_synth_global_unique"] is False
+    assert kinase_smoke_profile["hard_decoy_synth_relax_3d"] is False
+    assert kinase_smoke_profile["csv_relax_3d"] is False
 
     assert payload["target_scale_label"] == "1M"
     assert payload["target_scale_slug"] == "1m"
-    assert payload["profile_count"] == 1
+    assert payload["profile_count"] == 2
+    assert payload["non_ligand_task_count_removed"] == 2
     assert payload["comparison_label_default"].endswith("_vs_current")
     gpcr_row = next(row for row in payload["profile_rows"] if row["source_profile_json"] == str(gpcr_profile))
     assert gpcr_row["applies_to"] == "full"
@@ -106,7 +153,23 @@ def test_build_ligand_scaleup_1m_pilot(tmp_path: Path) -> None:
     assert gpcr_row["traj_prod_speedpack"] is True
     assert gpcr_row["traj_prod_early_stop_enabled"] is True
     assert gpcr_row["traj_prod_light_artifacts"] is True
+    assert gpcr_row["traj_frame_output_format"] == "manifest_only"
     assert gpcr_row["hard_decoy_synth_total_decoys"] == 1_000_000
+    assert gpcr_row["hard_decoy_synth_generation_mode"] == "enumerate"
+    assert gpcr_row["hard_decoy_synth_global_unique"] is False
+    assert gpcr_row["hard_decoy_synth_relax_3d"] is False
+    assert gpcr_row["csv_relax_3d"] is False
+    assert gpcr_row["csv_relax_workers"] == 0
+    assert gpcr_row["ranking_score_col"] == "binding_score_composite_v7_residual_active"
+    assert gpcr_row["ranking_probability_score_col"] == "binding_score_composite_v7_residual_active"
+    assert gpcr_row["residual_prototype_enabled"] is True
+    assert gpcr_row["residual_prototype_candidate"] == "gpcr_core_family_balanced_beta_blocker_rescue_v3"
+    smoke_profile_row = next(row for row in payload["profile_rows"] if row["source_profile_json"] == str(kinase_profile))
+    assert smoke_profile_row["applies_to"] == "smoke"
+    assert smoke_profile_row["hard_decoy_synth_generation_mode"] == "enumerate"
+    assert smoke_profile_row["hard_decoy_synth_global_unique"] is False
+    assert smoke_profile_row["hard_decoy_synth_relax_3d"] is False
+    assert smoke_profile_row["csv_relax_3d"] is False
 
     set1_row = next(row for row in payload["set_rows"] if row["set_id"] == "set1_core_blind")
     assert set1_row["full_task_count_target"] == 1
@@ -119,7 +182,7 @@ def test_build_ligand_scaleup_1m_pilot(tmp_path: Path) -> None:
     smoke_row = next(row for row in payload["task_rows"] if row["task_id"] == "kinase_smoke")
     assert smoke_row["ligand_sizes_before"] == "64"
     assert smoke_row["ligand_sizes_after"] == "64"
-    assert smoke_row["profile_changed"] is False
+    assert smoke_row["profile_changed"] is True
     assert smoke_row["pilot_shape_class"] == "smoke_baseline"
     assert payload["full_task_ids_target"] == ["gpcr_core_full"]
     assert payload["full_task_ids_1m"] == ["gpcr_core_full"]
@@ -135,6 +198,8 @@ def test_build_ligand_scaleup_1m_pilot(tmp_path: Path) -> None:
     assert payload["drift_audit"]["ok"] is True
     assert payload["drift_audit"]["nonstandard_ligand_size_count"] == 0
     assert payload["drift_audit"]["full_task_non_target_count"] == 0
+    assert payload["drift_audit"]["profile_missing_manifest_only_frame_output_count"] == 0
+    assert payload["drift_audit"]["profile_csv_relax_3d_enabled_count"] == 0
     assert payload["drift_audit"]["profile_missing_intent_count"] == 0
     assert payload["launch_readiness"]["ready"] is True
     assert payload["launch_readiness"]["status"] == "ready"
@@ -142,7 +207,7 @@ def test_build_ligand_scaleup_1m_pilot(tmp_path: Path) -> None:
     assert len(payload["guardrail_rows"]) == 4
     assert payload["guardrail_rows"][0]["guardrail_id"] == "no_pass_to_fail"
     _contains_tokens(payload["preflight_notes"][0], "full", "ligand_stress", "1000000")
-    _contains_tokens(payload["preflight_notes"][2], "prod1m")
+    assert any("prod1m" in note for note in payload["preflight_notes"])
     assert "--dry-run" in payload["runner_dry_run_command"]
 
 
@@ -229,6 +294,7 @@ def test_run_ligand_scaleup_1m_pilot_current_dry_run(tmp_path: Path, monkeypatch
     assert payload["selected_drift_audit"]["ok"] is True
     assert payload["selected_drift_audit"]["nonstandard_ligand_size_count"] == 0
     assert payload["selected_drift_audit"]["full_task_non_target_count"] == 0
+    assert payload["selected_drift_audit"]["profile_missing_manifest_only_frame_output_count"] == 0
     assert payload["guardrail_summary"][0]["guardrail_id"] == "no_pass_to_fail"
     assert payload["compare_label"] == "2026-03-23_scaleup_1m_pilot_v1_vs_current"
     assert payload["comparison_kind"] == "size_shift_operational_regression"
@@ -416,6 +482,7 @@ def test_helper_outputs_surface_launch_readiness_and_blockers(tmp_path: Path) ->
     assert "## Launch Readiness" in md_text
     assert "- ready: `True`" in md_text
     assert "- status: `ready`" in md_text
+    assert "manifest_only" in md_text
 
     run_payload = helper_mod.build_run_current_payload(
         tag="2026-03-23_scaleup_1m_pilot_v1",
@@ -510,3 +577,53 @@ def test_run_ligand_scaleup_1m_pilot_current_refreshes_current_summaries_when_co
         "build_ligand_scaleup_1m_pilot.py",
         "build_ligand_scaleup_benchmark_summary.py",
     ]
+
+
+def test_run_current_payload_blocks_existing_non_manifest_only_full_profiles(tmp_path: Path) -> None:
+    config_dir = tmp_path / "config"
+    config_dir.mkdir()
+    stale_profile = config_dir / "gpcr_prod1m.json"
+    stale_profile.write_text(
+        json.dumps({"traj_frame_output_format": "npz_bundle"}),
+        encoding="utf-8",
+    )
+    pilot_spec = config_dir / "pilot_spec.json"
+    pilot_spec.write_text(
+        json.dumps(
+            {
+                "sets": [
+                    {
+                        "set_id": "set1_core_blind",
+                        "tasks": [
+                            {
+                                "task_id": "gpcr_core_full",
+                                "kind": "ligand_stress",
+                                "profile_json": "config/gpcr_prod1m.json",
+                                "ligand_sizes": "1000000",
+                            }
+                        ],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = helper_mod.build_run_current_payload(
+        tag="2026-03-23_scaleup_1m_pilot_v1",
+        selected_sets=["set1_core_blind"],
+        set_spec_json="config/pilot_spec.json",
+        baseline_run_root=str(tmp_path / "runs" / "baseline_run"),
+        out_root="runs/external_validation_blind_runs",
+        comparison_out_root="runs",
+        compare_label="compare_v_current",
+        skip_compare=False,
+        preset=build_mod.PRESET,
+        root=tmp_path,
+    )
+
+    assert payload["selected_drift_audit"]["ok"] is False
+    assert payload["selected_drift_audit"]["selected_full_profile_manifest_only_inspected_count"] == 1
+    assert payload["selected_drift_audit"]["profile_missing_manifest_only_frame_output_count"] == 1
+    assert payload["launch_readiness"]["ready"] is False
+    assert any("manifest-only" in issue for issue in payload["launch_readiness"]["blocking_issues"])

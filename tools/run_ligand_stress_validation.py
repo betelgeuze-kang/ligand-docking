@@ -989,6 +989,11 @@ def run_stress(args: argparse.Namespace) -> Dict[str, Any]:
                 str(int(prof.get("hard_decoy_synth_decoys_per_target", 0))),
                 "--synth-random-seed",
                 str(int(prof.get("hard_decoy_synth_random_seed", 13))),
+                "--synth-generation-mode",
+                str(prof.get("hard_decoy_synth_generation_mode", "random")),
+                "--synth-global-unique"
+                if bool(prof.get("hard_decoy_synth_global_unique", True))
+                else "--no-synth-global-unique",
                 "--synth-max-attempt-mult",
                 str(int(prof.get("hard_decoy_synth_max_attempt_mult", 400))),
                 "--synth-relax-3d"

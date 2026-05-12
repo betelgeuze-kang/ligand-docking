@@ -143,6 +143,119 @@ def test_build_payload_post_run_ab_with_speed(tmp_path: Path, monkeypatch) -> No
     _contains_tokens(payload["recommended_next_action"], "claim-safe", "speed-positive", "100k/1m", "throughput")
 
 
+def test_build_payload_post_run_ab_missing_optional_speed_and_top20_are_pending(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    _write_json(
+        tmp_path / "runs/ligand_speedpack_ab_current.json",
+        {"comparison_kind": "equal_size_speedpack_ab", "scope_summary": {"ligand_task_count": 1, "domains_touched": ["ion_channel"]}},
+    )
+    _write_json(
+        tmp_path / "runs/comparison.json",
+        {
+            "task_rows": [
+                {
+                    "task_id": "ion_trpv1_chembl50_full",
+                    "kind": "ligand_stress",
+                    "domain": "ion_channel",
+                    "baseline_pass": True,
+                    "candidate_pass": True,
+                    "delta_pr_auc": -0.001,
+                    "delta_top20_hit_rate": None,
+                }
+            ],
+        },
+    )
+    _write_json(tmp_path / "runs/baseline_summary.json", {"sets": [{"set_id": "set1", "pass": True}]})
+    _write_json(tmp_path / "runs/candidate_summary.json", {"sets": [{"set_id": "set1", "pass": True}]})
+
+    payload = mod.build_payload(
+        ab_json="runs/ligand_speedpack_ab_current.json",
+        ab_spec_json="runs/ligand_speedpack_ab_current/specs/ligand_speedpack_ab_current_v1.json",
+        comparison_json="runs/comparison.json",
+        baseline_summary_json="runs/baseline_summary.json",
+        candidate_summary_json="runs/candidate_summary.json",
+        baseline_sla_json="runs/missing_baseline_sla.json",
+        candidate_sla_json="runs/missing_candidate_sla.json",
+        kpi_json="runs/missing_kpi.json",
+    )
+
+    assert payload["benchmark_stage"] == "post_run_ab_no_speed"
+    assert payload["claim_safe"] is True
+    assert payload["commercialization_ready"] is None
+    top20_row = next(row for row in payload["guardrail_rows"] if row["guardrail_id"] == "top20_hit_rate_drop_max_0p05")
+    speed_row = next(row for row in payload["guardrail_rows"] if row["guardrail_id"] == "stage2_speedup_min_1p2x")
+    assert top20_row["pass"] is None
+    assert speed_row["pass"] is None
+
+
+def test_build_payload_uses_runtime_json_for_multi_task_speed_guardrail(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    _write_json(
+        tmp_path / "runs/ligand_speedpack_ab_current.json",
+        {"comparison_kind": "equal_size_speedpack_ab", "scope_summary": {"ligand_task_count": 2, "domains_touched": ["ion_channel"]}},
+    )
+    _write_json(
+        tmp_path / "runs/comparison.json",
+        {
+            "task_rows": [
+                {
+                    "task_id": "ion_trpv1_chembl20_full",
+                    "kind": "ligand_stress",
+                    "domain": "ion_channel",
+                    "baseline_pass": True,
+                    "candidate_pass": True,
+                    "delta_pr_auc": 0.02,
+                },
+                {
+                    "task_id": "ion_trpv1_chembl50_full",
+                    "kind": "ligand_stress",
+                    "domain": "ion_channel",
+                    "baseline_pass": True,
+                    "candidate_pass": True,
+                    "delta_pr_auc": 0.01,
+                },
+            ],
+        },
+    )
+    _write_json(tmp_path / "runs/baseline_summary.json", {"sets": [{"set_id": "set1", "pass": True}, {"set_id": "set2", "pass": True}]})
+    _write_json(tmp_path / "runs/candidate_summary.json", {"sets": [{"set_id": "set1", "pass": True}, {"set_id": "set2", "pass": True}]})
+    _write_json(
+        tmp_path / "runs/runtime.json",
+        {
+            "rows": [
+                {
+                    "task_id": "ion_trpv1_chembl20_full",
+                    "measured_stage2_speedup": None,
+                    "baseline_stage2_runtime_sec": 500.0,
+                    "candidate_stage2_runtime_sec": 350.0,
+                },
+                {
+                    "task_id": "ion_trpv1_chembl50_full",
+                    "measured_stage2_speedup": 1.30,
+                },
+            ]
+        },
+    )
+
+    payload = mod.build_payload(
+        ab_json="runs/ligand_speedpack_ab_current.json",
+        ab_spec_json="runs/ligand_speedpack_ab_current/specs/ligand_speedpack_ab_current_v1.json",
+        comparison_json="runs/comparison.json",
+        baseline_summary_json="runs/baseline_summary.json",
+        candidate_summary_json="runs/candidate_summary.json",
+        baseline_sla_json="runs/missing_baseline_sla.json",
+        candidate_sla_json="runs/missing_candidate_sla.json",
+        runtime_json="runs/runtime.json",
+        kpi_json="runs/missing_kpi.json",
+    )
+
+    assert payload["benchmark_stage"] == "post_run_ab_with_speed"
+    assert payload["sla_metrics"]["source"] == "runtime_json"
+    assert payload["sla_metrics"]["stage2_latency_speedup"] == 1.30
+    assert payload["claim_safe"] is True
+    assert payload["commercialization_ready"] is True
+
+
 def test_build_payload_falls_back_to_candidate_spec_when_ab_json_missing(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(mod, "ROOT", tmp_path)
     _write_json(

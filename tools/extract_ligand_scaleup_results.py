@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -30,6 +31,22 @@ def _read_json_if_exists(path_str: str) -> Dict[str, Any]:
     return _read_json(path)
 
 
+def _copied_artifact_path(task_payload: Dict[str, Any], path_str: str) -> str:
+    if not str(path_str).strip():
+        return ""
+    expected_name = Path(str(path_str)).name
+    for row in task_payload.get("copied_files", []) if isinstance(task_payload.get("copied_files"), list) else []:
+        if not isinstance(row, dict):
+            continue
+        src = str(row.get("src") or "").strip()
+        dst = str(row.get("dst") or "").strip()
+        if not dst:
+            continue
+        if src == path_str or Path(src).name == expected_name or Path(dst).name == expected_name:
+            return dst
+    return ""
+
+
 def _safe_float(value: Any) -> Optional[float]:
     try:
         if value is None or value == "":
@@ -39,18 +56,58 @@ def _safe_float(value: Any) -> Optional[float]:
         return None
 
 
+def _stage_duration_from_pipeline(pipeline_summary: Dict[str, Any], stage_key: str) -> Optional[float]:
+    stages = pipeline_summary.get("stages", {}) if isinstance(pipeline_summary.get("stages"), dict) else {}
+    stage = stages.get(stage_key, {}) if isinstance(stages.get(stage_key), dict) else {}
+    return _safe_float(stage.get("duration_sec"))
+
+
+def _stage_duration_from_task_log(task_payload: Dict[str, Any], stage_key: str) -> Optional[float]:
+    log_path = str(task_payload.get("run_log") or "").strip()
+    if not log_path:
+        return None
+    path = _resolve_repo_path(log_path)
+    if not path.exists():
+        return None
+    try:
+        text = path.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return None
+    marker = f'"{stage_key}"'
+    idx = text.find(marker)
+    if idx < 0:
+        return None
+    match = re.search(r'"duration_sec"\s*:\s*([0-9.eE+-]+)', text[idx : idx + 50000])
+    if not match:
+        return None
+    return _safe_float(match.group(1))
+
+
 def _extract_sla_metrics(task_payload: Dict[str, Any]) -> Dict[str, Any]:
     pipeline_summary_json = str(task_payload.get("pipeline_summary_json") or "").strip()
     if not pipeline_summary_json:
         return {}
     pipeline_summary = _read_json_if_exists(pipeline_summary_json)
+    if not pipeline_summary:
+        copied_pipeline = _copied_artifact_path(task_payload, pipeline_summary_json)
+        if copied_pipeline:
+            pipeline_summary = _read_json_if_exists(copied_pipeline)
+            if pipeline_summary:
+                pipeline_summary_json = copied_pipeline
     artifacts = pipeline_summary.get("artifacts", {}) if isinstance(pipeline_summary.get("artifacts"), dict) else {}
     sla_summary_json = str(artifacts.get("sla_summary_json") or "").strip()
-    if not sla_summary_json:
+    stage8_sla = pipeline_summary.get("stages", {}).get("stage8_sla", {}) if isinstance(pipeline_summary.get("stages"), dict) else {}
+    if not sla_summary_json and not isinstance(stage8_sla, dict):
         return {}
     sla_summary = _read_json_if_exists(sla_summary_json)
+    if not sla_summary and isinstance(stage8_sla, dict):
+        sla_summary = stage8_sla
     durations = sla_summary.get("durations_sec", {}) if isinstance(sla_summary.get("durations_sec"), dict) else {}
     stage2_sec = _safe_float(durations.get("stage2_trajectory_sec"))
+    if stage2_sec in (None, 0.0):
+        stage2_sec = _stage_duration_from_pipeline(pipeline_summary, "stage2_trajectory_generation")
+    if stage2_sec in (None, 0.0):
+        stage2_sec = _stage_duration_from_task_log(task_payload, "stage2_trajectory_generation")
     total_sec = _safe_float(sla_summary.get("total_latency_sec"))
     queue_rows = _safe_float(sla_summary.get("queue_rows"))
     stage2_share_pct = None

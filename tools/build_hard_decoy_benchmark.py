@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import itertools
 import json
 import os
 import re
@@ -15,11 +16,12 @@ import numpy as np
 import pandas as pd
 
 try:
-    from rdkit import Chem  # type: ignore
+    from rdkit import Chem, RDLogger  # type: ignore
     from rdkit.Chem import BRICS  # type: ignore
     from rdkit.Chem import AllChem  # type: ignore
     from rdkit.Chem import Crippen, Descriptors, Lipinski  # type: ignore
     from rdkit.Chem.Scaffolds import MurckoScaffold  # type: ignore
+    RDLogger.DisableLog("rdApp.warning")
 except Exception:  # pragma: no cover
     Chem = None
     BRICS = None
@@ -146,6 +148,9 @@ def _template_smiles_candidates() -> Tuple[List[str], List[str]]:
         "c1ccc2cc({r1})ccc2c1{r2}",
         "C1CCC({r1})CC1{r2}",
         "C1CC({r1})C({r2})C({r3})C1",
+        "c1c({r1})c({r2})c({r3})c({r4})c1",
+        "c1cc({r1})c({r2})c({r3})c1{r4}",
+        "C1C({r1})C({r2})C({r3})C({r4})C1",
     ]
     substituents = [
         "F",
@@ -193,6 +198,41 @@ def _template_smiles_candidates() -> Tuple[List[str], List[str]]:
         "CC(C)O",
         "CC(C)N",
         "COC(C)C",
+        "CCCC",
+        "CC(C)C",
+        "C(C)(C)C",
+        "CC#N",
+        "COCC",
+        "COCCC",
+        "OCCN",
+        "OCCCN",
+        "N(C)CC",
+        "N(CC)CC",
+        "C(=O)OC",
+        "C(=O)OCC",
+        "C(=O)CC",
+        "C(=O)NCC",
+        "C(=O)N(C)C",
+        "S(=O)C",
+        "S(=O)CC",
+        "S(=O)(=O)NC",
+        "S(=O)(=O)N(C)C",
+        "c1ccoc1",
+        "c1ccsc1",
+        "c1ncccn1",
+        "c1ncncc1",
+        "c1cn[nH]c1",
+        "C1COCC1",
+        "C1CCOC1",
+        "C1CCNCC1",
+        "C1CNCCN1",
+        "CC(=O)N",
+        "CC(=O)NC",
+        "OC(C)C",
+        "OCC(C)O",
+        "CCOC",
+        "CCN(C)C",
+        "CN(C)C",
     ]
     return templates, substituents
 
@@ -251,6 +291,7 @@ def _generate_synthetic_unique_decoys(
     progress_every: int = 250,
     progress_max_interval_sec: float = 30.0,
     template_stall_attempts: int = 250000,
+    generation_mode: str = "random",
     diagnostics: Optional[Dict[str, Any]] = None,
 ) -> List[Dict[str, Any]]:
     target_count = int(max(count, 0))
@@ -273,6 +314,9 @@ def _generate_synthetic_unique_decoys(
     last_accept_attempt = 0
     template_exit_reason = "target_reached"
     brics_generated = 0
+    mode = str(generation_mode or "random").strip().lower()
+    if mode not in {"random", "enumerate"}:
+        mode = "random"
 
     def _maybe_emit_progress(*, force: bool = False) -> None:
         nonlocal last_progress_at
@@ -289,28 +333,14 @@ def _generate_synthetic_unique_decoys(
                 pass
             last_progress_at = now_mono
 
-    while len(out) < target_count and attempts < max_attempts:
-        attempts += 1
-        _maybe_emit_progress()
-        if _should_switch_to_brics(
-            attempts=attempts,
-            last_accept_attempt=last_accept_attempt,
-            target_count=target_count,
-            stall_attempts=int(template_stall_attempts),
-        ):
-            template_exit_reason = "stall_switch_to_brics"
-            break
-        tpl = templates[rng.randrange(len(templates))]
-        r1 = substituents[rng.randrange(len(substituents))]
-        r2 = substituents[rng.randrange(len(substituents))]
-        r3 = substituents[rng.randrange(len(substituents))]
-        smi = tpl.format(r1=r1, r2=r2, r3=r3)
+    def _accept_smiles(smi: str) -> bool:
+        nonlocal last_accept_attempt
         can = _canonicalize_smiles(smi)
         if (not can) or (can in forbidden) or (can in out):
-            continue
+            return False
         desc = _rdkit_desc(can)
         if desc is None:
-            continue
+            return False
         if bool(require_relaxed_3d):
             ok_relax = None
             if isinstance(relax_cache, dict):
@@ -320,14 +350,14 @@ def _generate_synthetic_unique_decoys(
                 if isinstance(relax_cache, dict):
                     relax_cache[can] = bool(ok_relax)
             if not bool(ok_relax):
-                continue
+                return False
         mw, logp, h_don, h_acc, rot = desc
         if not (120.0 <= mw <= 680.0):
-            continue
+            return False
         if not (-1.5 <= logp <= 7.5):
-            continue
+            return False
         if h_don > 6 or h_acc > 12 or rot > 14:
-            continue
+            return False
         out[can] = {
             "smiles": can,
             "molecular_weight": float(mw),
@@ -339,6 +369,59 @@ def _generate_synthetic_unique_decoys(
         }
         last_accept_attempt = attempts
         _maybe_emit_progress()
+        return True
+
+    placeholder_names = ("r1", "r2", "r3", "r4")
+
+    def _placeholders_for(tpl: str) -> List[str]:
+        return [name for name in placeholder_names if f"{{{name}}}" in tpl]
+
+    def _format_template(tpl: str, values: Dict[str, str]) -> str:
+        params = {name: "" for name in placeholder_names}
+        params.update(values)
+        return tpl.format(**params)
+
+    if mode == "enumerate":
+        tpl_order = list(templates)
+        rng.shuffle(tpl_order)
+        shuffled_subs: Dict[str, List[str]] = {}
+        for name in placeholder_names:
+            vals = list(substituents)
+            rng.shuffle(vals)
+            shuffled_subs[name] = vals
+        template_exit_reason = "enumeration_exhausted"
+        for tpl in tpl_order:
+            placeholders = _placeholders_for(tpl)
+            value_lists = [shuffled_subs[name] for name in placeholders]
+            for combo in itertools.product(*value_lists):
+                if len(out) >= target_count:
+                    break
+                attempts += 1
+                _maybe_emit_progress()
+                _accept_smiles(_format_template(tpl, dict(zip(placeholders, combo))))
+            if len(out) >= target_count:
+                break
+    else:
+        while len(out) < target_count and attempts < max_attempts:
+            attempts += 1
+            _maybe_emit_progress()
+            if _should_switch_to_brics(
+                attempts=attempts,
+                last_accept_attempt=last_accept_attempt,
+                target_count=target_count,
+                stall_attempts=int(template_stall_attempts),
+            ):
+                template_exit_reason = "stall_switch_to_brics"
+                break
+            tpl = templates[rng.randrange(len(templates))]
+            placeholders = _placeholders_for(tpl)
+            values = {name: substituents[rng.randrange(len(substituents))] for name in placeholders}
+            _accept_smiles(_format_template(tpl, values))
+
+    raw_combo_upper_bound = 0
+    for tpl in templates:
+        placeholders = _placeholders_for(tpl)
+        raw_combo_upper_bound += int(len(substituents) ** len(placeholders))
 
     if len(out) >= target_count:
         template_exit_reason = "target_reached"
@@ -412,7 +495,8 @@ def _generate_synthetic_unique_decoys(
             {
                 "template_count": int(len(templates)),
                 "substituent_count": int(len(substituents)),
-                "raw_combo_upper_bound": int(len(templates) * (len(substituents) ** 3)),
+                "raw_combo_upper_bound": int(raw_combo_upper_bound),
+                "generation_mode": str(mode),
                 "template_attempts": int(attempts),
                 "template_exit_reason": str(template_exit_reason),
                 "template_generated": int(len(out) - brics_generated),
@@ -445,6 +529,22 @@ def _match_distance(dec: pd.Series, bind: pd.DataFrame, feat_cols: List[str]) ->
         if d < best:
             best = d
     return float(best)
+
+
+def _match_distances_vectorized(dec: pd.DataFrame, bind: pd.DataFrame, feat_cols: List[str]) -> np.ndarray:
+    if dec.empty or bind.empty or len(feat_cols) <= 0:
+        return np.full(len(dec), np.nan, dtype=np.float64)
+    dec_arr = dec[feat_cols].astype(float).to_numpy(dtype=np.float64, copy=False)
+    bind_arr = bind[feat_cols].astype(float).to_numpy(dtype=np.float64, copy=False)
+    if dec_arr.size <= 0 or bind_arr.size <= 0:
+        return np.full(len(dec), np.nan, dtype=np.float64)
+    chunk = 100_000
+    out = np.empty(dec_arr.shape[0], dtype=np.float64)
+    for start in range(0, dec_arr.shape[0], chunk):
+        stop = min(start + chunk, dec_arr.shape[0])
+        dist = np.mean(np.abs(dec_arr[start:stop, None, :] - bind_arr[None, :, :]), axis=2)
+        out[start:stop] = np.min(dist, axis=1)
+    return out
 
 
 def _assign_fit_id_roles(group: pd.DataFrame, fit_fraction: float) -> pd.Series:
@@ -605,6 +705,7 @@ def run_build(args: argparse.Namespace) -> Dict[str, Any]:
     synth_generated = 0
     synth_shortfall = 0
     synth_targets: List[str] = []
+    synthetic_target_generation_stats: List[Dict[str, Any]] = []
     relax_cache_path = str(getattr(args, "synth_relax_cache_json", "") or "").strip()
     relax_cache: Dict[str, bool] = _read_relax_cache(relax_cache_path) if relax_cache_path else {}
     relax_cache_last_flush_at = time.monotonic()
@@ -662,8 +763,6 @@ def run_build(args: argparse.Namespace) -> Dict[str, Any]:
         rng = random.Random(int(args.synth_random_seed))
         global_forbidden: set[str] = set()
         synthetic_rows: List[Dict[str, Any]] = []
-        synthetic_target_generation_stats: List[Dict[str, Any]] = []
-
         for t_idx, tgt in enumerate(targets_sorted, start=1):
             n_req = int(per_target_map.get(tgt, 0))
             if n_req <= 0:
@@ -701,7 +800,7 @@ def run_build(args: argparse.Namespace) -> Dict[str, Any]:
                 seed_smiles=seed_smiles,
                 rng=rng,
                 max_attempt_mult=int(max(args.synth_max_attempt_mult, 20)),
-                global_forbidden=global_forbidden,
+                global_forbidden=global_forbidden if bool(args.synth_global_unique) else set(),
                 require_relaxed_3d=bool(args.synth_relax_3d),
                 relax_max_iters=int(args.synth_relax_max_iters),
                 relax_cache=relax_cache,
@@ -709,6 +808,7 @@ def run_build(args: argparse.Namespace) -> Dict[str, Any]:
                 progress_every=int(max(args.progress_every_attempts, 200)),
                 progress_max_interval_sec=float(max(args.progress_max_interval_sec, 1.0)),
                 template_stall_attempts=int(max(args.synth_template_stall_attempts, 0)),
+                generation_mode=str(args.synth_generation_mode),
                 diagnostics=target_gen_diag,
             )
             target_gen_diag["generated"] = int(len(synth))
@@ -717,7 +817,8 @@ def run_build(args: argparse.Namespace) -> Dict[str, Any]:
                 can = str(rec.get("smiles", "")).strip()
                 if not can:
                     continue
-                global_forbidden.add(can)
+                if bool(args.synth_global_unique):
+                    global_forbidden.add(can)
                 lid = f"decoy_{_safe_slug(tgt)}_{i:05d}"
                 ref_val = float(min(-0.05, max(-2.95, bind_median + 3.6 + rng.uniform(-0.4, 0.4))))
                 synthetic_rows.append(
@@ -812,20 +913,16 @@ def run_build(args: argparse.Namespace) -> Dict[str, Any]:
         dec = dec.copy()
         if "_synthetic_decoy" not in dec.columns:
             dec["_synthetic_decoy"] = False
-        dec_match_distances: List[float] = []
-        for d_idx, (_, dec_row) in enumerate(dec.iterrows(), start=1):
-            if d_idx == 1 or d_idx % 500 == 0:
-                _emit_progress(
-                    status="running",
-                    phase="postprocess_curate",
-                    current_target=str(tgt),
-                    target_index=int(c_idx),
-                    target_total=int(curated_group_total),
-                    requested_total=int(synth_requested),
-                    generated_total=int(synth_generated),
-                )
-            dec_match_distances.append(float(_match_distance(dec_row, bind, feat_cols)))
-        dec["decoy_match_distance"] = dec_match_distances
+        _emit_progress(
+            status="running",
+            phase="postprocess_curate",
+            current_target=str(tgt),
+            target_index=int(c_idx),
+            target_total=int(curated_group_total),
+            requested_total=int(synth_requested),
+            generated_total=int(synth_generated),
+        )
+        dec["decoy_match_distance"] = _match_distances_vectorized(dec, bind, feat_cols)
         if dec["decoy_match_distance"].isna().all():
             bmed = float(bind["reference_binding_kcal_mol"].median())
             dec["decoy_match_distance"] = (dec["reference_binding_kcal_mol"] - bmed).abs()
@@ -894,7 +991,7 @@ def run_build(args: argparse.Namespace) -> Dict[str, Any]:
     fit_families = {family_map.get(t, "") for t in fit_targets}
     fit_families = {x for x in fit_families if x and x != "nan"}
 
-    split_rows: List[Dict[str, Any]] = []
+    split_frames: List[pd.DataFrame] = []
     _emit_progress(
         status="running",
         phase="split_assignment",
@@ -924,14 +1021,15 @@ def run_build(args: argparse.Namespace) -> Dict[str, Any]:
             fam = family_map.get(tgt_s, "")
             role = "near_ood_eval" if (fam and fam in fit_families) else "far_ood_eval"
             gg["role"] = role
-        for _, r in gg.iterrows():
-            split_rows.append({
-                args.target_col: str(r[args.target_col]),
-                args.ligand_col: str(r[args.ligand_col]),
-                "role": str(r["role"]),
-            })
+        split_frames.append(gg[[args.target_col, args.ligand_col, "role"]].copy())
 
-    split_df = pd.DataFrame(split_rows).drop_duplicates([args.target_col, args.ligand_col], keep="first")
+    split_df = pd.concat(split_frames, axis=0, ignore_index=True).drop_duplicates(
+        [args.target_col, args.ligand_col],
+        keep="first",
+    )
+    split_df[args.target_col] = split_df[args.target_col].astype(str)
+    split_df[args.ligand_col] = split_df[args.ligand_col].astype(str)
+    split_df["role"] = split_df["role"].astype(str)
     split_df, role_rebalance = _enforce_role_min_counts(
         split_df,
         target_col=args.target_col,
@@ -1006,6 +1104,8 @@ def run_build(args: argparse.Namespace) -> Dict[str, Any]:
             "generated": int(synth_generated),
             "shortfall": int(synth_shortfall),
             "allow_shortfall": bool(args.synth_allow_shortfall),
+            "generation_mode": str(args.synth_generation_mode),
+            "global_unique": bool(args.synth_global_unique),
             "relax_cache_json": relax_cache_path,
             "relax_cache_entries": int(len(relax_cache)),
             "template_stall_attempts": int(max(args.synth_template_stall_attempts, 0)),
@@ -1087,6 +1187,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--synth-total-decoys", type=int, default=0)
     p.add_argument("--synth-decoys-per-target", type=int, default=0)
     p.add_argument("--synth-random-seed", type=int, default=13)
+    p.add_argument("--synth-generation-mode", type=str, default="random", choices=["random", "enumerate"])
+    p.add_argument("--synth-global-unique", action=argparse.BooleanOptionalAction, default=True)
     p.add_argument("--synth-max-attempt-mult", type=int, default=400)
     p.add_argument("--synth-template-stall-attempts", type=int, default=250000)
     p.add_argument("--synth-relax-3d", action=argparse.BooleanOptionalAction, default=True)

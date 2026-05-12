@@ -14,6 +14,11 @@ from typing import Any, Dict, List, Mapping, Sequence
 ROOT = Path(__file__).resolve().parents[1]
 FULL_SET_IDS = {"set1_core_blind", "set2_expanded_ood"}
 SMOKE_SET_ID = "set3_operational_smoke"
+LIGAND_TASK_KIND = "ligand_stress"
+GPCR_ADRB2_CORE_PROFILE_STEM = "ligand_htvs_blind_gpcr_adrb2_v4_scorefix3"
+GPCR_ADRB2_SCALEUP_RESIDUAL_SPEC_JSON = (
+    "config/gpcr_residual_prototype_spec_core_family_balanced_beta_blocker_rescue_v3.json"
+)
 
 
 @dataclass(frozen=True)
@@ -103,17 +108,85 @@ def _clone_scale_profile(src: Path, dst: Path, *, preset: ScaleupPilotPreset, de
     payload["traj_prod_early_stop_enabled"] = True
     payload["traj_prod_adaptive_frame_budget"] = True
     payload["traj_prod_light_artifacts"] = True
+    payload["traj_frame_output_format"] = "manifest_only"
     payload["traj_prod_light_progress_every_jobs"] = int(max(1, int(payload.get("traj_prod_light_progress_every_jobs", 250))))
     payload["hard_decoy_synth_total_decoys"] = int(
         max(int(payload.get("hard_decoy_synth_total_decoys", 10_000)), preset.target_ligand_size)
     )
+    if preset.target_ligand_size >= 1_000_000:
+        payload["hard_decoy_synth_generation_mode"] = "enumerate"
+        payload["hard_decoy_synth_global_unique"] = False
+        payload["hard_decoy_synth_relax_3d"] = False
+        payload["csv_relax_3d"] = False
+        payload["csv_relax_workers"] = 0
+        if src.stem == GPCR_ADRB2_CORE_PROFILE_STEM:
+            payload["ranking_score_col"] = "binding_score_composite_v7_residual_active"
+            payload["ranking_probability_score_col"] = "binding_score_composite_v7_residual_active"
+            payload["residual_prototype_enabled"] = True
+            payload["residual_prototype_mode"] = "apply"
+            payload["residual_prototype_family"] = "gpcr"
+            payload["residual_prototype_apply_stage"] = "stage5_ranking"
+            payload["residual_prototype_status"] = "scaleup_accuracy_gap_runtime_ready"
+            payload["residual_prototype_runtime_hook_ready"] = True
+            payload["residual_prototype_spec_json"] = GPCR_ADRB2_SCALEUP_RESIDUAL_SPEC_JSON
+            payload["residual_prototype_candidate"] = "gpcr_core_family_balanced_beta_blocker_rescue_v3"
+            payload["target_specific_candidate"] = True
+            payload["router_promotion_allowed"] = False
+            payload["platform_promotion_allowed"] = False
+            payload["claim_safe_assertion_allowed"] = False
+            payload["broad_gpcr_claim_allowed"] = False
+            payload["threshold_relaxation_allowed"] = False
+            payload["fake_pass_allowed"] = False
+            payload["residual_prototype_notes"] = (
+                "1M pilot accuracy-gap scorer for ADRB2 beta-blocker-like core validation; "
+                "target-scoped apply mode only, with no broad GPCR or delivery-claim promotion."
+            )
     desc = str(payload.get("description") or "").strip()
     payload["description"] = f"{desc} {description_suffix}".strip() if desc else description_suffix
     _write_json(dst, payload)
     return payload
 
 
-def _build_spec(base_spec: Mapping[str, Any], full_profile_map: Mapping[str, str], *, preset: ScaleupPilotPreset) -> Dict[str, Any]:
+def _clone_smoke_profile(src: Path, dst: Path, *, preset: ScaleupPilotPreset, description_suffix: str) -> Dict[str, Any]:
+    payload = _read_json(src)
+    payload["traj_prod_profile_intent"] = f"scaleup_{preset.target_scale_slug}_pilot_smoke"
+    payload["traj_prod_stage2_preset"] = "auto"
+    payload["traj_prod_stage2_preset_strict"] = True
+    payload["traj_prod_speedpack"] = True
+    payload["traj_prod_early_stop_enabled"] = True
+    payload["traj_prod_adaptive_frame_budget"] = True
+    payload["traj_prod_light_artifacts"] = True
+    payload["traj_frame_output_format"] = "manifest_only"
+    payload["traj_prod_light_progress_every_jobs"] = int(max(1, int(payload.get("traj_prod_light_progress_every_jobs", 250))))
+    payload["hard_decoy_synth_generation_mode"] = "enumerate"
+    payload["hard_decoy_synth_global_unique"] = False
+    payload["hard_decoy_synth_relax_3d"] = False
+    payload["csv_relax_3d"] = False
+    payload["csv_relax_workers"] = 0
+    desc = str(payload.get("description") or "").strip()
+    payload["description"] = f"{desc} {description_suffix}".strip() if desc else description_suffix
+    _write_json(dst, payload)
+    return payload
+
+
+def _non_ligand_task_count(spec: Mapping[str, Any]) -> int:
+    count = 0
+    for set_row in spec.get("sets", []):
+        if not isinstance(set_row, Mapping):
+            continue
+        for task in set_row.get("tasks", []):
+            if isinstance(task, Mapping) and str(task.get("kind", "")).strip() != LIGAND_TASK_KIND:
+                count += 1
+    return count
+
+
+def _build_spec(
+    base_spec: Mapping[str, Any],
+    full_profile_map: Mapping[str, str],
+    smoke_profile_map: Mapping[str, str],
+    *,
+    preset: ScaleupPilotPreset,
+) -> Dict[str, Any]:
     spec = json.loads(json.dumps(base_spec))
     spec["protocol_id"] = f"external_validation_biorxiv_{preset.pilot_version_slug}"
     spec["protocol_title"] = f"{preset.target_scale_label} Production Speedpack Pilot"
@@ -134,9 +207,16 @@ def _build_spec(base_spec: Mapping[str, Any], full_profile_map: Mapping[str, str
 
     for set_row in spec.get("sets", []):
         set_id = str(set_row.get("set_id", "")).strip()
-        for task in set_row.get("tasks", []):
-            if str(task.get("kind", "")) != "ligand_stress":
-                continue
+        original_tasks = list(set_row.get("tasks", []))
+        ligand_tasks = [
+            task
+            for task in original_tasks
+            if isinstance(task, Mapping) and str(task.get("kind", "")).strip() == LIGAND_TASK_KIND
+        ]
+        omitted_count = len(original_tasks) - len(ligand_tasks)
+        set_row["tasks"] = ligand_tasks
+        set_row["non_ligand_task_count_omitted"] = int(omitted_count)
+        for task in ligand_tasks:
             profile_json = str(task.get("profile_json") or "")
             if set_id in FULL_SET_IDS:
                 if profile_json in full_profile_map:
@@ -145,6 +225,8 @@ def _build_spec(base_spec: Mapping[str, Any], full_profile_map: Mapping[str, str
                 suffix = str(task.get("date_tag_suffix") or "").strip()
                 if suffix:
                     task["date_tag_suffix"] = f"{suffix}-{preset.profile_suffix}"
+            elif profile_json in smoke_profile_map:
+                task["profile_json"] = smoke_profile_map[profile_json]
         set_row["preregistered_claim"] = (
             f"Production-oriented {preset.target_scale_label} pilot over the accepted cross-domain task surface; "
             "results are size-shift operational benchmarks, not paper-claim replacements."
@@ -299,6 +381,8 @@ def _build_drift_audit(
             and all(bool(row.get("traj_prod_stage2_preset_strict", False)) for row in profile_rows)
             and all(bool(row.get("traj_prod_speedpack", False)) for row in profile_rows)
             and all(bool(row.get("traj_prod_light_artifacts", False)) for row in profile_rows)
+            and all(str(row.get("traj_frame_output_format", "")).strip() == "manifest_only" for row in profile_rows)
+            and all(not bool(row.get("csv_relax_3d", True)) for row in profile_rows)
             and all(str(row.get("traj_prod_profile_intent", "")).strip() for row in profile_rows)
         ),
         "nonstandard_ligand_size_count": len(nonstandard_rows),
@@ -313,6 +397,10 @@ def _build_drift_audit(
         "profile_missing_light_artifacts_count": sum(
             1 for row in profile_rows if not bool(row.get("traj_prod_light_artifacts", False))
         ),
+        "profile_missing_manifest_only_frame_output_count": sum(
+            1 for row in profile_rows if str(row.get("traj_frame_output_format", "")).strip() != "manifest_only"
+        ),
+        "profile_csv_relax_3d_enabled_count": sum(1 for row in profile_rows if bool(row.get("csv_relax_3d", True))),
         "profile_missing_intent_count": sum(
             1 for row in profile_rows if not str(row.get("traj_prod_profile_intent", "")).strip()
         ),
@@ -344,6 +432,10 @@ def build_launch_readiness(
         blockers.append("one or more selected full-task profiles are missing speedpack")
     if int(drift_audit.get("profile_missing_light_artifacts_count", 0) or 0) > 0:
         blockers.append("one or more selected full-task profiles are missing light-artifact mode")
+    if int(drift_audit.get("profile_missing_manifest_only_frame_output_count", 0) or 0) > 0:
+        blockers.append("one or more selected full-task profiles are missing manifest-only frame output")
+    if int(drift_audit.get("profile_csv_relax_3d_enabled_count", 0) or 0) > 0:
+        blockers.append("one or more selected full-task profiles still enable CSV 3D relax")
     if int(drift_audit.get("profile_missing_intent_count", 0) or 0) > 0:
         blockers.append("one or more selected full-task profiles are missing traj_prod_profile_intent")
     if comparison_enabled is not None and not bool(comparison_enabled):
@@ -374,6 +466,7 @@ def build_pilot_payload(
     base_spec = _read_json(base_spec_path)
     out_config_dir.mkdir(parents=True, exist_ok=True)
     unique_full_profiles: Dict[str, Path] = {}
+    unique_smoke_profiles: Dict[str, Path] = {}
     smoke_task_ids_baseline: List[str] = []
     for set_row in base_spec.get("sets", []):
         set_id = str(set_row.get("set_id", "")).strip()
@@ -387,10 +480,12 @@ def build_pilot_payload(
             if set_id in FULL_SET_IDS:
                 unique_full_profiles[profile_json] = src
             elif str(task.get("ligand_sizes", "")).strip() == "64":
+                unique_smoke_profiles[profile_json] = src
                 smoke_task_ids_baseline.append(str(task.get("task_id", "")).strip())
 
     profile_rows: List[Dict[str, Any]] = []
-    profile_map: Dict[str, str] = {}
+    full_profile_map: Dict[str, str] = {}
+    smoke_profile_map: Dict[str, str] = {}
     for rel_src, src in sorted(unique_full_profiles.items()):
         dst = out_config_dir / f"{src.stem}_{preset.profile_suffix}.json"
         payload = _clone_scale_profile(
@@ -402,25 +497,74 @@ def build_pilot_payload(
                 "and target-specific preset auto-selection."
             ),
         )
-        profile_map[rel_src] = _rel_or_abs(dst, root=root)
+        full_profile_map[rel_src] = _rel_or_abs(dst, root=root)
         profile_rows.append(
             {
                 "source_profile_json": rel_src,
                 "pilot_profile_json": _rel_or_abs(dst, root=root),
                 "applies_to": "full",
                 "hard_decoy_synth_total_decoys": int(payload.get("hard_decoy_synth_total_decoys", 0)),
+                "hard_decoy_synth_generation_mode": str(payload.get("hard_decoy_synth_generation_mode", "")),
+                "hard_decoy_synth_global_unique": bool(payload.get("hard_decoy_synth_global_unique", True)),
+                "hard_decoy_synth_relax_3d": bool(payload.get("hard_decoy_synth_relax_3d", True)),
+                "csv_relax_3d": bool(payload.get("csv_relax_3d", True)),
+                "csv_relax_workers": int(payload.get("csv_relax_workers", 0) or 0),
+                "ranking_score_col": str(payload.get("ranking_score_col", "")),
+                "ranking_probability_score_col": str(payload.get("ranking_probability_score_col", "")),
+                "residual_prototype_enabled": bool(payload.get("residual_prototype_enabled", False)),
+                "residual_prototype_candidate": str(payload.get("residual_prototype_candidate", "")),
+                "residual_prototype_spec_json": str(payload.get("residual_prototype_spec_json", "")),
                 "traj_prod_profile_intent": str(payload.get("traj_prod_profile_intent", "")),
                 "traj_prod_stage2_preset": str(payload.get("traj_prod_stage2_preset", "")),
                 "traj_prod_stage2_preset_strict": bool(payload.get("traj_prod_stage2_preset_strict", False)),
                 "traj_prod_speedpack": bool(payload.get("traj_prod_speedpack", False)),
                 "traj_prod_early_stop_enabled": bool(payload.get("traj_prod_early_stop_enabled", False)),
                 "traj_prod_light_artifacts": bool(payload.get("traj_prod_light_artifacts", False)),
+                "traj_frame_output_format": str(payload.get("traj_frame_output_format", "")),
+            }
+        )
+    for rel_src, src in sorted(unique_smoke_profiles.items()):
+        dst = out_config_dir / f"{src.stem}_{preset.profile_suffix}_smoke.json"
+        payload = _clone_smoke_profile(
+            src,
+            dst,
+            preset=preset,
+            description_suffix=(
+                f"Production-only {preset.target_scale_label} pilot smoke profile with fast hard-decoy "
+                "preflight settings; ligand size remains smoke-scale."
+            ),
+        )
+        smoke_profile_map[rel_src] = _rel_or_abs(dst, root=root)
+        profile_rows.append(
+            {
+                "source_profile_json": rel_src,
+                "pilot_profile_json": _rel_or_abs(dst, root=root),
+                "applies_to": "smoke",
+                "hard_decoy_synth_total_decoys": int(payload.get("hard_decoy_synth_total_decoys", 0)),
+                "hard_decoy_synth_generation_mode": str(payload.get("hard_decoy_synth_generation_mode", "")),
+                "hard_decoy_synth_global_unique": bool(payload.get("hard_decoy_synth_global_unique", True)),
+                "hard_decoy_synth_relax_3d": bool(payload.get("hard_decoy_synth_relax_3d", True)),
+                "csv_relax_3d": bool(payload.get("csv_relax_3d", True)),
+                "csv_relax_workers": int(payload.get("csv_relax_workers", 0) or 0),
+                "ranking_score_col": str(payload.get("ranking_score_col", "")),
+                "ranking_probability_score_col": str(payload.get("ranking_probability_score_col", "")),
+                "residual_prototype_enabled": bool(payload.get("residual_prototype_enabled", False)),
+                "residual_prototype_candidate": str(payload.get("residual_prototype_candidate", "")),
+                "residual_prototype_spec_json": str(payload.get("residual_prototype_spec_json", "")),
+                "traj_prod_profile_intent": str(payload.get("traj_prod_profile_intent", "")),
+                "traj_prod_stage2_preset": str(payload.get("traj_prod_stage2_preset", "")),
+                "traj_prod_stage2_preset_strict": bool(payload.get("traj_prod_stage2_preset_strict", False)),
+                "traj_prod_speedpack": bool(payload.get("traj_prod_speedpack", False)),
+                "traj_prod_early_stop_enabled": bool(payload.get("traj_prod_early_stop_enabled", False)),
+                "traj_prod_light_artifacts": bool(payload.get("traj_prod_light_artifacts", False)),
+                "traj_frame_output_format": str(payload.get("traj_frame_output_format", "")),
             }
         )
 
-    spec = _build_spec(base_spec, profile_map, preset=preset)
+    spec = _build_spec(base_spec, full_profile_map, smoke_profile_map, preset=preset)
     task_rows, set_rows = _build_task_rows(base_spec, spec, preset=preset)
     scope_summary = _build_scope_summary(task_rows, set_rows, profile_rows, preset=preset)
+    non_ligand_task_count_removed = int(_non_ligand_task_count(base_spec) - _non_ligand_task_count(spec))
     guardrail_rows = build_guardrail_rows(preset=preset)
     drift_audit = _build_drift_audit(task_rows, profile_rows, preset=preset)
     launch_readiness = build_launch_readiness(drift_audit, preset=preset)
@@ -443,6 +587,7 @@ def build_pilot_payload(
         "full_task_count_target": len(full_task_ids_target),
         preset.full_count_key: len(full_task_ids_target),
         "smoke_task_count_unchanged": sum(1 for row in task_rows if row["ligand_sizes_after"] == "64"),
+        "non_ligand_task_count_removed": non_ligand_task_count_removed,
         "full_task_ids_target": full_task_ids_target,
         preset.full_ids_key: full_task_ids_target,
         "smoke_task_ids_baseline": sorted(smoke_task_ids_baseline),
@@ -460,6 +605,7 @@ def build_pilot_payload(
         "preflight_notes": [
             f"Only full ligand_stress tasks in set1_core_blind and set2_expanded_ood are upsized to {preset.target_ligand_size}.",
             "Smoke ligand_stress tasks remain at 64 and keep the baseline-style decoy regime.",
+            "Non-ligand tasks are omitted from this ligand scale-up pilot to keep throughput evidence scoped to ligand_stress workloads.",
             f"Cloned full-task {preset.profile_suffix} profiles enable strict auto-preset governance and artifact-light stage2 mode.",
             "This pilot is an operational throughput benchmark and does not replace the accepted reviewer package.",
         ],
@@ -521,6 +667,7 @@ def write_builder_outputs(
         f"- full_task_count_target: `{payload.get('full_task_count_target')}`",
         f"- {preset.full_count_key}: `{payload.get(preset.full_count_key)}`",
         f"- smoke_task_count_unchanged: `{payload.get('smoke_task_count_unchanged')}`",
+        f"- non_ligand_task_count_removed: `{payload.get('non_ligand_task_count_removed', 0)}`",
         f"- comparison_kind: `{payload.get('comparison_kind')}`",
         f"- smoke_uses_baseline_decoys: `{payload.get('smoke_uses_baseline_decoys')}`",
         f"- comparison_label_default: `{payload.get('comparison_label_default')}`",
@@ -544,6 +691,7 @@ def write_builder_outputs(
         f"- profile_missing_strict_preset_count: `{payload['drift_audit']['profile_missing_strict_preset_count']}`",
         f"- profile_missing_speedpack_count: `{payload['drift_audit']['profile_missing_speedpack_count']}`",
         f"- profile_missing_light_artifacts_count: `{payload['drift_audit']['profile_missing_light_artifacts_count']}`",
+        f"- profile_missing_manifest_only_frame_output_count: `{payload['drift_audit']['profile_missing_manifest_only_frame_output_count']}`",
         f"- profile_missing_intent_count: `{payload['drift_audit']['profile_missing_intent_count']}`",
         "",
         "## Launch Readiness",
@@ -581,8 +729,8 @@ def write_builder_outputs(
             "",
             "## Profiles",
             "",
-            "| source_profile_json | pilot_profile_json | applies_to | intent | hard_decoy_synth_total_decoys | traj_prod_stage2_preset | strict | speedpack | early_stop | light_artifacts |",
-            "| --- | --- | --- | --- | ---: | --- | --- | --- | --- | --- |",
+            "| source_profile_json | pilot_profile_json | applies_to | intent | hard_decoy_synth_total_decoys | traj_prod_stage2_preset | strict | speedpack | early_stop | light_artifacts | frame_output |",
+            "| --- | --- | --- | --- | ---: | --- | --- | --- | --- | --- | --- |",
         ]
     )
     for row in rows:
@@ -590,7 +738,8 @@ def write_builder_outputs(
             f"| `{row['source_profile_json']}` | `{row['pilot_profile_json']}` | {row['applies_to']} | {row['traj_prod_profile_intent']} | "
             f"{row['hard_decoy_synth_total_decoys']} | {row['traj_prod_stage2_preset']} | "
             f"{row['traj_prod_stage2_preset_strict']} | {row['traj_prod_speedpack']} | "
-            f"{row['traj_prod_early_stop_enabled']} | {row['traj_prod_light_artifacts']} |"
+            f"{row['traj_prod_early_stop_enabled']} | {row['traj_prod_light_artifacts']} | "
+            f"{row.get('traj_frame_output_format', '')} |"
         )
     lines.extend(
         [
@@ -698,20 +847,45 @@ def selected_scope_summary(task_rows: Sequence[Mapping[str, Any]], *, preset: Sc
     }
 
 
-def selected_drift_audit(task_rows: Sequence[Mapping[str, Any]], *, preset: ScaleupPilotPreset) -> Dict[str, Any]:
+def selected_drift_audit(
+    task_rows: Sequence[Mapping[str, Any]],
+    *,
+    preset: ScaleupPilotPreset,
+    root: Path = ROOT,
+) -> Dict[str, Any]:
     target_size_text = str(preset.target_ligand_size)
     nonstandard_rows = [row for row in task_rows if str(row["ligand_sizes"]) not in {target_size_text, "64"}]
     full_rows = [row for row in task_rows if str(row["set_id"]) in FULL_SET_IDS]
     smoke_rows = [row for row in task_rows if str(row["set_id"]) == SMOKE_SET_ID]
+    inspected_profile_count = 0
+    non_manifest_profile_count = 0
+    for row in full_rows:
+        profile_json = str(row.get("profile_json", "")).strip()
+        if not profile_json:
+            continue
+        profile_path = resolve_repo_path(profile_json, root=root)
+        if not profile_path.exists():
+            continue
+        inspected_profile_count += 1
+        try:
+            profile_payload = _read_json(profile_path)
+        except Exception:
+            non_manifest_profile_count += 1
+            continue
+        if str(profile_payload.get("traj_frame_output_format", "")).strip() != "manifest_only":
+            non_manifest_profile_count += 1
     return {
         "ok": bool(
             len(nonstandard_rows) == 0
             and all(str(row["ligand_sizes"]) == target_size_text for row in full_rows)
             and all(str(row["ligand_sizes"]) == "64" for row in smoke_rows)
+            and non_manifest_profile_count == 0
         ),
         "nonstandard_ligand_size_count": len(nonstandard_rows),
         "full_task_non_target_count": sum(1 for row in full_rows if str(row["ligand_sizes"]) != target_size_text),
         "smoke_task_non_64_count": sum(1 for row in smoke_rows if str(row["ligand_sizes"]) != "64"),
+        "selected_full_profile_manifest_only_inspected_count": inspected_profile_count,
+        "profile_missing_manifest_only_frame_output_count": non_manifest_profile_count,
     }
 
 
@@ -730,7 +904,7 @@ def build_run_current_payload(
 ) -> Dict[str, Any]:
     task_rows = selected_task_rows(set_spec_json, selected_sets, root=root)
     scope_summary = selected_scope_summary(task_rows, preset=preset)
-    drift_audit = selected_drift_audit(task_rows, preset=preset)
+    drift_audit = selected_drift_audit(task_rows, preset=preset, root=root)
     candidate_run_root = root / out_root / f"external_validation_blind_runs_{tag}"
     comparison_enabled = bool(baseline_run_root) and (not bool(skip_compare))
     comparison_skip_reason = "skip_compare" if bool(skip_compare) else ("baseline_run_root_not_found" if not baseline_run_root else "")

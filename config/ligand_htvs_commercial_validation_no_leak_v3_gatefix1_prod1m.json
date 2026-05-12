@@ -101,5 +101,11 @@
   "traj_prod_early_stop_enabled": true,
   "traj_prod_adaptive_frame_budget": true,
   "traj_prod_light_artifacts": true,
-  "traj_prod_light_progress_every_jobs": 250
+  "traj_frame_output_format": "manifest_only",
+  "traj_prod_light_progress_every_jobs": 250,
+  "hard_decoy_synth_generation_mode": "enumerate",
+  "hard_decoy_synth_global_unique": false,
+  "hard_decoy_synth_relax_3d": false,
+  "csv_relax_3d": false,
+  "csv_relax_workers": 0
 }

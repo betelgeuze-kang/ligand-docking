@@ -258,6 +258,7 @@ Execution note:
     - `claim_safe_pending_speed_evidence`
     - `claim_safe_with_measured_speedup`
     - `claim_safe_but_speedup_guardrail_failed`
+    - `claim_safe_size_shift_speed_diagnostic`
     - `regression_guardrail_failed`
   - the practical file order after a real run is:
     - `runs/ligand_scaleup_suite_dryrun_current.json` for the suite contract, enabled stages, and prelaunch blocker surface
@@ -326,6 +327,13 @@ This keeps us from mixing two different problems:
 - algorithmic cascade design
 
 ## Decision Rule After 1M
+
+Current 2026-05-13 readout:
+
+- `runs/ligand_scaleup_suite_status_current.json` reports `commercialization_ready_suite_count=3/3` and `pending_suite_ids=[]`.
+- The 1M package passes `set3_operational_smoke`, `set1_core_blind`, and `set2_expanded_ood`.
+- The 1M benchmark summary reports `claim_safe=true`, `claim_safe_status=claim_safe_size_shift_speed_diagnostic`, and `commercialization_ready=true`.
+- Treat the 1M run as scale/accuracy evidence. Keep speed/throughput wording tied to equal-size speedpack A/B unless a future 1M run explicitly passes the speed guardrail.
 
 After the `1M` pilot:
 

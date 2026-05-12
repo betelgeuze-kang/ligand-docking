@@ -28,3 +28,63 @@ def test_validate_set_defs_accepts_comparison_candidate_claim_role(tmp_path: Pat
         ],
         "unit_spec",
     )
+
+
+def test_run_set_reruns_failed_ligand_task_when_resuming(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    monkeypatch.setattr(mod, "RUNS", tmp_path / "runs")
+    (tmp_path / "runs").mkdir()
+    profile_json = tmp_path / "profile.json"
+    profile_json.write_text("{}", encoding="utf-8")
+    summary_json = tmp_path / "runs/external_validation_unit_set1_gpcr_core_full_summary.json"
+    summary_json.write_text("{}", encoding="utf-8")
+    base_root = tmp_path / "bundle"
+    state_json = base_root / "set1" / "state.json"
+    state_json.parent.mkdir(parents=True)
+    mod._write_json(
+        state_json,
+        {
+            "set_id": "set1",
+            "title": "Set 1",
+            "tasks": {
+                "gpcr_core_full": {
+                    "done": True,
+                    "result": {"pass": False},
+                }
+            },
+        },
+    )
+    calls = []
+
+    def _fake_run(cmd, log):
+        calls.append(cmd)
+        return {"ok": True, "returncode": 0, "cmd": cmd, "log": str(log)}
+
+    monkeypatch.setattr(mod, "_run", _fake_run)
+    monkeypatch.setattr(mod, "_extract_ligand_result", lambda path: {"pass": True, "raw_pass": True})
+    monkeypatch.setattr(mod, "_copy_ligand_result_bundle", lambda result, domain_dir: [])
+
+    result = mod._run_set(
+        base_root,
+        "unit",
+        {
+            "set_id": "set1",
+            "title": "Set 1",
+            "purpose": "Unit rerun check.",
+            "tasks": [
+                {
+                    "task_id": "gpcr_core_full",
+                    "domain": "gpcr",
+                    "kind": "ligand_stress",
+                    "profile_json": "profile.json",
+                    "ligand_sizes": "10000",
+                    "date_tag_suffix": "gpcr-core-full",
+                }
+            ],
+        },
+        resume=True,
+    )
+
+    assert result["pass"] is True
+    assert len(calls) == 1
+    assert calls[0][1].endswith("tools/run_ligand_stress_validation.py")

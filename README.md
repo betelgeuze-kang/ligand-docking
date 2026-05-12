@@ -77,7 +77,7 @@ The verdict gate is designed to fail closed until required P0 evidence, wetlab s
 | PDE rescue provenance | `tools/run_wetlab_tcruzi_pde_allatom_rescue.py`, `tools/validate_wetlab_tcruzi_pde_allatom_rescue_attempt.py` |
 | Accuracy and regression gates | `tools/validate_accuracy_gate.py`, `tools/check_strict_release_regression.py`, `benchmark/accuracy_bench.py` |
 | Nightly/local operations | `tools/run_nightly_screening_batch.py`, `tools/run_nightly_ops.sh` |
-| Commercial readiness | `tools/build_commercial_readiness_report.py`, local-delivery docs, and generated verdict artifacts |
+| Commercial readiness | `tools/build_commercialization_readiness_report.py`, `tools/build_ligand_scaleup_suite_status.py`, local-delivery docs, and generated verdict artifacts |
 
 ## Local Delivery Documentation
 
@@ -103,6 +103,17 @@ git push
 ```
 
 Before pushing, confirm that generated MD data, checkpoints, logs, and local delivery outputs are still ignored and not staged.
+
+## Current Validation Snapshot
+
+Updated 2026-05-13 KST.
+
+- Restricted delivery verdict: `runs/local_delivery_verdict_gate_current.json` reports `summary.delivery_ready=true`, `verdict=delivery_ready`, `p0_blocker_count=0`, `hard_blocker_count=0`, `accuracy_gate_pass=true`, and `commercialization_queue_clear=true`.
+- Claim scope remains restricted to `kinase,gpcr,ion_channel`; transporter, CA2/PXR, broader IDP promotion, broad platform readiness, and unattended decision-making remain outside the delivery claim.
+- Ligand scale-up suite status is green for the tracked commercialization suite: `commercialization_ready_suite_count=3/3` and `pending_suite_ids=[]`.
+- The 1M pilot package passes all three blind sets. Core full-task PR-AUC values are `gpcr_core_full=0.8958`, `ion_trpv1_chembl20_full=0.9585`, `kinase_core_full=1.0000`; expanded OOD PR-AUC values are `gpcr_chembl50_full=0.8093`, `ion_trpv1_chembl50_full=0.9867`, `kinase_strict_full=1.0000`.
+- 1M guardrail interpretation is `claim_safe_size_shift_speed_diagnostic`: quality guardrails are claim-safe, while equal-size speedpack A/B owns the throughput claim and 1M speed is retained as diagnostic scale evidence.
+- Latest focused validation command: `python3 -m pytest -q tests/unit/test_build_ligand_scaleup_benchmark_summary.py tests/unit/test_build_ligand_scaleup_suite_status.py tests/unit/test_build_ligand_scaleup_1m_pilot.py tests/unit/test_run_ligand_backmapping_scoring.py tests/unit/test_run_ligand_stress_validation.py tests/unit/test_build_hard_decoy_benchmark.py tests/unit/test_build_hard_decoy_benchmark_progress.py tests/unit/test_run_external_validation_blind_sets.py` -> `58 passed`.
 
 ## Current Repository State
 

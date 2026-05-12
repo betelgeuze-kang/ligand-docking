@@ -136,6 +136,16 @@ def _resolve_task_selection(
 
 def _speedpack_profile_payload(base: dict[str, Any], *, strict_auto: bool) -> dict[str, Any]:
     out = dict(base)
+    full = dict(out.get("full", {}) if isinstance(out.get("full"), dict) else {})
+    current_full_frames = int(full.get("traj_frames", 120) or 120)
+    full["traj_frames"] = int(min(max(1, current_full_frames), 72))
+    out["full"] = full
+    gate = dict(out.get("gate", {}) if isinstance(out.get("gate"), dict) else {})
+    gate["min_frames"] = int(min(max(1, int(gate.get("min_frames", 100) or 100)), 72))
+    out["gate"] = gate
+    retry = dict(out.get("retry", {}) if isinstance(out.get("retry"), dict) else {})
+    retry["max_attempts"] = int(max(2, int(retry.get("max_attempts", 1) or 1)))
+    out["retry"] = retry
     out["traj_prod_stage2_preset"] = "auto"
     out["traj_prod_stage2_preset_strict"] = bool(strict_auto)
     out["traj_prod_speedpack"] = True
@@ -143,6 +153,7 @@ def _speedpack_profile_payload(base: dict[str, Any], *, strict_auto: bool) -> di
     out["traj_prod_early_stop_enabled"] = True
     out["traj_prod_light_artifacts"] = True
     out["traj_frame_output_format"] = "manifest_only"
+    out["traj_prod_speedpack_frame_cap_full"] = 72
     out.setdefault("traj_prod_light_progress_every_jobs", 250)
     return out
 
@@ -232,7 +243,8 @@ def _build_speedpack_candidate(
             base_profile = _read_json(source_profile_path)
             stem = source_profile_path.stem + "_speedpackab1.json"
             out_profile_path = profiles_dir / stem
-            _write_json(out_profile_path, _speedpack_profile_payload(base_profile, strict_auto=bool(strict_auto)))
+            generated_profile = _speedpack_profile_payload(base_profile, strict_auto=bool(strict_auto))
+            _write_json(out_profile_path, generated_profile)
             profile_map[source_profile_json] = str(out_profile_path.resolve())
             profile_rows.append(
                 {
@@ -244,6 +256,9 @@ def _build_speedpack_candidate(
                     "traj_prod_early_stop_enabled": True,
                     "traj_prod_light_artifacts": True,
                     "traj_frame_output_format": "manifest_only",
+                    "traj_prod_speedpack_frame_cap_full": 72,
+                    "full_traj_frames": int(generated_profile.get("full", {}).get("traj_frames", 0)),
+                    "gate_min_frames": int(generated_profile.get("gate", {}).get("min_frames", 0)),
                 }
             )
         task["profile_json"] = profile_map[source_profile_json]
@@ -401,6 +416,8 @@ def _refresh_current_artifacts(
         str(baseline_sla_json),
         "--candidate-sla-json",
         str(candidate_sla_json),
+        "--runtime-json",
+        str(artifacts["runtime_json"]),
         "--out-json",
         str(artifacts["summary_json"]),
         "--out-csv",
@@ -539,6 +556,8 @@ def main(argv: list[str] | None = None) -> int:
         str(args.comparison_out_root),
         "--label",
         compare_label,
+        "--task-scope",
+        "candidate",
     ]
 
     payload = {

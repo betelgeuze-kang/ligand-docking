@@ -65,6 +65,31 @@ def _load_task_index(run_root: Path) -> Tuple[Dict[str, Dict[str, Any]], Dict[st
     return out, top
 
 
+def _select_task_keys(
+    baseline_keys: set[str],
+    candidate_keys: set[str],
+    *,
+    task_scope: str,
+) -> List[str]:
+    scope = str(task_scope or "union").strip().lower()
+    if scope == "baseline":
+        keys = baseline_keys
+    elif scope == "candidate":
+        keys = candidate_keys
+    elif scope == "common":
+        keys = baseline_keys & candidate_keys
+    else:
+        keys = baseline_keys | candidate_keys
+    return sorted(keys)
+
+
+def _read_manifest_if_exists(run_root: Path, set_id: str) -> Dict[str, Any]:
+    path = run_root / set_id / "manifest.json"
+    if not path.exists():
+        return {}
+    return _read_json(path)
+
+
 def _enrich_task(task: Dict[str, Any]) -> Dict[str, Any]:
     row = dict(task)
     metrics = row.get("metrics", {}) if isinstance(row.get("metrics"), dict) else {}
@@ -106,6 +131,12 @@ def main(argv: List[str] | None = None) -> int:
     ap.add_argument("--candidate-run-root", required=True)
     ap.add_argument("--out-root", default="runs")
     ap.add_argument("--label", default="current_vs_candidate")
+    ap.add_argument(
+        "--task-scope",
+        choices=["union", "common", "candidate", "baseline"],
+        default="union",
+        help="Which task keys to include. Use candidate for slice comparisons against a larger baseline package.",
+    )
     args = ap.parse_args(argv)
 
     baseline_root = _resolve_run_root(args.baseline_run_root)
@@ -117,7 +148,9 @@ def main(argv: List[str] | None = None) -> int:
     baseline_idx, baseline_top = _load_task_index(baseline_root)
     candidate_idx, candidate_top = _load_task_index(candidate_root)
 
-    all_keys = sorted(set(baseline_idx.keys()) | set(candidate_idx.keys()))
+    baseline_keys = set(baseline_idx.keys())
+    candidate_keys = set(candidate_idx.keys())
+    all_keys = _select_task_keys(baseline_keys, candidate_keys, task_scope=str(args.task_scope))
     rows: List[Dict[str, Any]] = []
     set_summary: Dict[str, Dict[str, Any]] = {}
     improved = 0
@@ -181,8 +214,8 @@ def main(argv: List[str] | None = None) -> int:
             ss["regressed"] += 1
 
     for set_id in set_summary:
-        b_man = _read_json(baseline_root / set_id / "manifest.json")
-        c_man = _read_json(candidate_root / set_id / "manifest.json")
+        b_man = _read_manifest_if_exists(baseline_root, set_id)
+        c_man = _read_manifest_if_exists(candidate_root, set_id)
         set_summary[set_id]["baseline_pass"] = b_man.get("pass")
         set_summary[set_id]["candidate_pass"] = c_man.get("pass")
 
@@ -192,6 +225,9 @@ def main(argv: List[str] | None = None) -> int:
         "candidate_run_root": str(candidate_root),
         "baseline_status": baseline_top.get("status"),
         "candidate_status": candidate_top.get("status"),
+        "task_scope": str(args.task_scope),
+        "baseline_task_count_total": int(len(baseline_keys)),
+        "candidate_task_count_total": int(len(candidate_keys)),
         "task_count": len(rows),
         "tasks_with_pr_improvement": improved,
         "tasks_with_pr_regression": regressed,
@@ -223,6 +259,7 @@ def main(argv: List[str] | None = None) -> int:
         "",
         f"- baseline_run_root: `{baseline_root}`",
         f"- candidate_run_root: `{candidate_root}`",
+        f"- task_scope: `{args.task_scope}`",
         f"- task_count: `{len(rows)}`",
         f"- tasks_with_pr_improvement: `{improved}`",
         f"- tasks_with_pr_regression: `{regressed}`",

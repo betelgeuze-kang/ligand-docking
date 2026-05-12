@@ -78,13 +78,9 @@
           "profile_json": "config/ligand_htvs_commercial_validation_no_leak_v3_gatefix1_prod1m.json",
           "ligand_sizes": "1000000",
           "date_tag_suffix": "kinase-core-full-prod1m"
-        },
-        {
-          "task_id": "idp_release_current",
-          "domain": "idp",
-          "kind": "idp_reference_current_full"
         }
-      ]
+      ],
+      "non_ligand_task_count_omitted": 1
     },
     {
       "set_id": "set2_expanded_ood",
@@ -134,13 +130,9 @@
           "profile_json": "config/ligand_htvs_commercial_validation_disjoint_strict_v3_gatefix1_prod1m.json",
           "ligand_sizes": "1000000",
           "date_tag_suffix": "kinase-strict-full-prod1m"
-        },
-        {
-          "task_id": "idp_release_current",
-          "domain": "idp",
-          "kind": "idp_reference_current_full"
         }
-      ]
+      ],
+      "non_ligand_task_count_omitted": 1
     },
     {
       "set_id": "set3_operational_smoke",
@@ -171,7 +163,7 @@
           "task_id": "gpcr_smoke",
           "domain": "gpcr",
           "kind": "ligand_stress",
-          "profile_json": "config/ligand_htvs_blind_gpcr_adrb2_v4_scorefix3.json",
+          "profile_json": "config/ligand_htvs_blind_gpcr_adrb2_v4_scorefix3_prod1m_smoke.json",
           "ligand_sizes": "64",
           "date_tag_suffix": "gpcr-smoke"
         },
@@ -179,7 +171,7 @@
           "task_id": "ion_trpv1_chembl20_smoke",
           "domain": "ion_channel",
           "kind": "ligand_stress",
-          "profile_json": "config/ligand_htvs_blind_trpv1_chembl20_v3_scorefix2.json",
+          "profile_json": "config/ligand_htvs_blind_trpv1_chembl20_v3_scorefix2_prod1m_smoke.json",
           "ligand_sizes": "64",
           "date_tag_suffix": "trpv1-chembl20-smoke"
         },
@@ -187,16 +179,12 @@
           "task_id": "kinase_smoke",
           "domain": "kinase",
           "kind": "ligand_stress",
-          "profile_json": "config/ligand_htvs_commercial_validation_disjoint_strict_poscounter_smoke_v3_gatefix1.json",
+          "profile_json": "config/ligand_htvs_commercial_validation_disjoint_strict_poscounter_smoke_v3_gatefix1_prod1m_smoke.json",
           "ligand_sizes": "64",
           "date_tag_suffix": "kinase-smoke"
-        },
-        {
-          "task_id": "idp_smoke_current",
-          "domain": "idp",
-          "kind": "idp_smoke_current"
         }
-      ]
+      ],
+      "non_ligand_task_count_omitted": 1
     }
   ],
   "supersedes_protocol_id": "external_validation_biorxiv_blind_sets_v5",

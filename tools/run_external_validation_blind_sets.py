@@ -569,7 +569,9 @@ def _run_set(base_root: Path, tag: str, set_def: Dict[str, Any], resume: bool) -
                 out_prefix = RUNS / f"external_validation_{tag}_{set_def['set_id']}_{task_id}"
                 summary_json = Path(f"{out_prefix}_summary.json")
                 run_meta: Dict[str, Any] = {"ok": True, "returncode": 0, "cmd": [], "log": ""}
-                if not done or not summary_json.exists():
+                previous_result = task_state.get("result", {}) if isinstance(task_state.get("result"), dict) else {}
+                previous_pass = bool(previous_result.get("pass", False))
+                if (not done) or (not previous_pass) or (not summary_json.exists()):
                     cmd = [
                         sys.executable,
                         str(ROOT / "tools/run_ligand_stress_validation.py"),

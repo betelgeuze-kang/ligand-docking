@@ -75,3 +75,31 @@ def test_generate_synthetic_unique_decoys_reports_brics_switch_diagnostics(monke
     assert diagnostics["template_exit_reason"] == "stall_switch_to_brics"
     assert diagnostics["used_brics_fallback"] is True
     assert diagnostics["template_stall_attempts"] == 100000
+
+
+def test_generate_synthetic_unique_decoys_enumerates_four_placeholder_templates(monkeypatch) -> None:
+    monkeypatch.setattr("tools.build_hard_decoy_benchmark.Chem", object())
+    monkeypatch.setattr("tools.build_hard_decoy_benchmark.BRICS", None)
+    monkeypatch.setattr(
+        "tools.build_hard_decoy_benchmark._template_smiles_candidates",
+        lambda: (["C({r1})({r2})({r3}){r4}"], ["F", "Cl"]),
+    )
+    monkeypatch.setattr("tools.build_hard_decoy_benchmark._rdkit_desc", lambda _s: (200.0, 2.0, 1, 2, 3))
+    monkeypatch.setattr("tools.build_hard_decoy_benchmark._passes_3d_relaxation", lambda _s, max_iters=200: True)
+    monkeypatch.setattr("tools.build_hard_decoy_benchmark._derive_scaffold", lambda _s: "scaf")
+    monkeypatch.setattr("tools.build_hard_decoy_benchmark._canonicalize_smiles", lambda s: str(s))
+
+    diagnostics: dict[str, object] = {}
+    out = _generate_synthetic_unique_decoys(
+        count=10,
+        seed_smiles=["CCO"],
+        rng=random.Random(13),
+        max_attempt_mult=20,
+        require_relaxed_3d=False,
+        generation_mode="enumerate",
+        diagnostics=diagnostics,
+    )
+
+    assert len(out) == 10
+    assert diagnostics["template_exit_reason"] == "target_reached"
+    assert diagnostics["raw_combo_upper_bound"] == 16

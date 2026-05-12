@@ -682,3 +682,70 @@ def test_family_balanced_beta_blocker_rescue_combines_linear_score_and_pharmacop
     assert out.loc[0, "binding_score_composite_v7_residual_shadow"] == -10.0
     assert out.loc[1, "binding_score_composite_v7_residual_shadow"] == -2.1
     assert out.loc[0, "binding_score_composite_v7_residual_active"] == -10.0
+
+
+def test_family_balanced_beta_blocker_rescue_v3_uses_configured_pharmacophore_reward(tmp_path):
+    spec = tmp_path / "residual_family_balanced_beta_blocker_v3.json"
+    spec.write_text(
+        json.dumps(
+            {
+                "prototype": {
+                    "constraints": {
+                        "max_abs_delta_score": 0.0,
+                        "yellow_band_abs_delta_score": 4.0,
+                    },
+                    "tuning": {
+                        "variant": "gpcr_core_family_balanced_beta_blocker_rescue_v3",
+                        "pharmacophore_reward_score": 10.0,
+                    },
+                    "linear_rescore": {
+                        "enabled": True,
+                        "combine_mode": "replace",
+                        "terms": [{"feature": "binding_score_composite_v7", "weight": 1.0}],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    df = pd.DataFrame(
+        {
+            "ligand_id": ["propranolol_like", "plain_decoy"],
+            "ligand_smiles": [
+                "CC(C)NCC(COC1=CC=CC2=CC=CC=C21)O",
+                "CCOC1=CC=CC=C1",
+            ],
+            "binding_score_composite_v7": [-2.0, -2.1],
+        }
+    )
+    args = argparse.Namespace(
+        residual_prototype_enabled=True,
+        residual_prototype_mode="apply",
+        residual_prototype_family="gpcr",
+        residual_prototype_spec_json=str(spec),
+        residual_prototype_runtime_hook_ready=True,
+        residual_prototype_max_abs_delta_score=None,
+        residual_prototype_yellow_band_abs_delta_score=None,
+        score_reference_scaling_mode="run_local",
+    )
+    zero = pd.Series([0.0, 0.0], dtype=float)
+
+    out, summary = mod._apply_residual_prototype_shadow(
+        df,
+        args,
+        z_e=zero,
+        z_d=zero,
+        z_s=zero,
+        z_c=zero,
+        z_aff=zero,
+        z_logp=zero,
+        z_rot=zero,
+        z_hd=zero,
+        z_ha=zero,
+    )
+
+    assert summary["tuning_variant"] == "gpcr_core_family_balanced_beta_blocker_rescue_v3"
+    assert summary["pharmacophore_positive_match_count"] == 1
+    assert out.loc[0, "binding_score_composite_v7_residual_shadow"] == -12.0
+    assert out.loc[1, "binding_score_composite_v7_residual_shadow"] == -2.1
+    assert out.loc[0, "binding_score_composite_v7_residual_active"] == -12.0

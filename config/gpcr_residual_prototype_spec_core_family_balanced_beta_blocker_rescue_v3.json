@@ -1,0 +1,145 @@
+{
+  "prototype": {
+    "family": "gpcr",
+    "domain_token": "gpcr",
+    "apply_stage": "stage5_ranking",
+    "training_focus": {
+      "positive_anchor_count": 6,
+      "false_positive_focus_topk": 20,
+      "failure_rank_shift_target": "recover ADRB2 beta-blocker-like positives in the 1M hard-decoy top-20 region"
+    },
+    "constraints": {
+      "max_abs_delta_score": 0,
+      "yellow_band_abs_delta_score": 4,
+      "preserve_top2_binders": true,
+      "require_energy_contact_support_for_positive_delta": true,
+      "fallback_on_ood": true,
+      "fallback_on_low_confidence": true,
+      "reference_scaling_mode": "run_local",
+      "comparison_only_candidate": true,
+      "claim_locked_candidate": true,
+      "family_balanced_rescore_candidate": true,
+      "target_specific_pharmacophore_candidate": true,
+      "router_promotion_allowed": false,
+      "platform_promotion_allowed": false,
+      "apply_mode_claim_allowed": false,
+      "claim_safe_assertion_allowed": false,
+      "broad_gpcr_claim_allowed": false,
+      "threshold_relaxation_allowed": false,
+      "fake_pass_allowed": false,
+      "target_identity_feature_allowed": false,
+      "diagnostic_source_artifact": "runs/external_validation_2026-05-12_scaleup_1m_pilot_v1_ligandonly_enum4_csvfast_gpu_set1_core_blind_gpcr_core_full_p0_n1000000_r1_stage3_scores.csv",
+      "parent_variant": "gpcr_core_family_balanced_beta_blocker_rescue_v2",
+      "required_before_claim": [
+        "1m_guarded_apply_evidence",
+        "non_adrb2_family_preservation_review",
+        "router_promotion_separate_review"
+      ]
+    },
+    "interactions": [
+      "family_balanced_pose_energy_support",
+      "aryloxypropanolamine_beta_blocker_rescue_without_decoy_match",
+      "adrb2_1m_top20_recovery_is_scoped_not_broad_gpcr_claim",
+      "no_router_platform_or_claim_promotion"
+    ],
+    "tuning": {
+      "variant": "gpcr_core_family_balanced_beta_blocker_rescue_v3",
+      "candidate_source": "scaleup_1m_gpcr_top20_accuracy_gap",
+      "parent_variant": "gpcr_core_family_balanced_beta_blocker_rescue_v2",
+      "failure_tags": [
+        "scaleup_1m_top20_hit_rate_below_threshold",
+        "sparse_positive_pr_auc_ci_low_unstable",
+        "adrb2_beta_blocker_tail_rank"
+      ],
+      "baseline_1m_pr_auc": 0.2148623758920658,
+      "baseline_1m_top20_hit_rate": 0.1,
+      "local_replay_1m_pr_auc": 0.8958333333333334,
+      "local_replay_1m_top20_hit_rate": 0.3,
+      "local_replay_1m_positive_ranks": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        16
+      ],
+      "pharmacophore_reward_score": 15,
+      "pharmacophore_smarts": "aryloxypropanolamine",
+      "scope": "adrb2_beta_blocker_like_core_rescue_for_1m_scaleup_pilot",
+      "replay_score_formula": "family_balanced_rescore_v1 - 15.0*aryloxypropanolamine_smarts_match"
+    },
+    "linear_rescore": {
+      "enabled": true,
+      "combine_mode": "replace",
+      "intercept": 0,
+      "terms": [
+        {
+          "feature": "z_binding_energy_mmpbsa_kcal_mol_proxy",
+          "weight": 0.242
+        },
+        {
+          "feature": "z_mean_min_distance_A",
+          "weight": 0.551
+        },
+        {
+          "feature": "z_stability_score",
+          "weight": 0.226
+        },
+        {
+          "feature": "z_contact_fraction",
+          "weight": -0.553
+        },
+        {
+          "feature": "z_ligand_affinity_hint",
+          "weight": -4.052
+        },
+        {
+          "feature": "z_ligand_onsps_norm",
+          "weight": -1.956
+        },
+        {
+          "feature": "z_ligand_mw",
+          "weight": -0.078
+        },
+        {
+          "feature": "z_ligand_logp",
+          "weight": 0.264
+        },
+        {
+          "feature": "z_ligand_rot_bonds",
+          "weight": 0.122
+        },
+        {
+          "feature": "z_ligand_h_donors",
+          "weight": -0.226
+        },
+        {
+          "feature": "z_ligand_h_acceptors",
+          "weight": 0.461
+        },
+        {
+          "feature": "z_binding_energy_mmpbsa_std",
+          "weight": 0.215
+        }
+      ]
+    },
+    "feature_rows": [
+      {
+        "feature_name": "aryloxypropanolamine_smarts_match",
+        "role": "target_specific_pharmacophore_reward",
+        "direction": "reward_when_present",
+        "rationale": "ADRB2 core validation positives are beta-blocker-like aryloxypropanolamines; this scoped prior recovers shortlist precision without relaxing thresholds."
+      },
+      {
+        "feature_name": "family_balanced_pose_energy_support",
+        "role": "family_balanced_rescore_anchor",
+        "direction": "reward_pose_energy_support_without_target_identity",
+        "rationale": "The linear score remains based on shared ligand and pose/energy features, with the pharmacophore reward explicitly locked to this ADRB2 beta-blocker-like pilot."
+      }
+    ],
+    "evidence_files": [
+      "runs/external_validation_2026-05-12_scaleup_1m_pilot_v1_ligandonly_enum4_csvfast_gpu_set1_core_blind_gpcr_core_full_p0_n1000000_r1_summary.json",
+      "runs/external_validation_2026-05-12_scaleup_1m_pilot_v1_ligandonly_enum4_csvfast_gpu_set1_core_blind_gpcr_core_full_p0_n1000000_r1_stage3_scores.csv"
+    ]
+  }
+}

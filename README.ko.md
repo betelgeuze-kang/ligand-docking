@@ -77,7 +77,7 @@ python3 tools/build_local_delivery_verdict_gate.py
 | PDE rescue provenance | `tools/run_wetlab_tcruzi_pde_allatom_rescue.py`, `tools/validate_wetlab_tcruzi_pde_allatom_rescue_attempt.py` |
 | 정확도 및 regression gate | `tools/validate_accuracy_gate.py`, `tools/check_strict_release_regression.py`, `benchmark/accuracy_bench.py` |
 | nightly/local 운영 | `tools/run_nightly_screening_batch.py`, `tools/run_nightly_ops.sh` |
-| 상용화 readiness | `tools/build_commercial_readiness_report.py`, local-delivery 문서, 생성된 verdict artifact |
+| 상용화 readiness | `tools/build_commercialization_readiness_report.py`, `tools/build_ligand_scaleup_suite_status.py`, local-delivery 문서, 생성된 verdict artifact |
 
 ## 로컬 납품 문서
 
@@ -94,8 +94,11 @@ python3 tools/build_local_delivery_verdict_gate.py
 
 ### 현재 P0 메모
 
-- 상용툴 대비 현재 수준은 로컬 납품형 분석 서비스 기준 약 70~75%, 풀 상용 플랫폼 기준 약 40~50% 정도입니다.
+- 상용툴 대비 현재 수준은 제한된 로컬 납품형 분석 서비스 기준으로는 delivery-ready 수준까지 올라왔고, 풀 상용 플랫폼 기준으로는 transporter/CA2/PXR/IDP 확장과 broad all-atom/structure validation이 아직 남아 있습니다.
 - `runs/local_delivery_verdict_gate_current.json`는 현재 `delivery_ready=true`, `p0_blocker_count=0`, `hard_blocker_count=0`, `commercialization_queue_clear=true`를 보고합니다. `accuracy_gate`, requirements/environment lock, 최신 nightly top-level reentry(`2026-05-02_stage6_top_level_reentry`), 그리고 wetlab selected-allatom(`mean_min_distance_A=2.120 <= 2.500`)이 green입니다.
+- ligand scale-up suite는 현재 `commercialization_ready_suite_count=3/3`, `pending_suite_ids=[]`입니다. 1M blind package는 `set3_operational_smoke`, `set1_core_blind`, `set2_expanded_ood`가 모두 pass이고, 주요 PR-AUC는 `gpcr_core_full=0.8958`, `ion_trpv1_chembl20_full=0.9585`, `kinase_core_full=1.0000`, `gpcr_chembl50_full=0.8093`, `ion_trpv1_chembl50_full=0.9867`, `kinase_strict_full=1.0000`입니다.
+- 1M guardrail 상태는 `claim_safe_size_shift_speed_diagnostic`입니다. 즉 정확도/품질 guardrail은 claim-safe이고, throughput claim은 equal-size speedpack A/B가 담당하며 1M speed는 scale evidence/진단값으로 둡니다.
+- 최신 focused 테스트는 `58 passed`입니다.
 - 다음 단계는 `python3 tools/build_local_delivery_bundle.py`와 `python3 tools/validate_local_delivery_bundle.py --bundle-dir <bundle_dir>`를 다시 돌려 번들 fingerprint까지 green인지 확인하는 것입니다.
 - `transporter` negative-evidence lane은 parked science blocker이며 `restricted local-delivery scope` 밖에 둡니다.
 - `fake-pass`, threshold relaxation, `수동 pass`, `delivery-ready` 문구는 verdict gate와 bundle validator가 둘 다 green일 때만 사용합니다.

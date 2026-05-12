@@ -201,6 +201,52 @@ def _sla_metrics(baseline_sla: Dict[str, Any], candidate_sla: Dict[str, Any]) ->
     }
 
 
+def _runtime_sla_metrics(runtime: Dict[str, Any]) -> Dict[str, Any]:
+    rows = runtime.get("rows", []) if isinstance(runtime.get("rows"), list) else []
+    stage2_speeds: List[float] = []
+    total_speeds: List[float] = []
+    stage2_rates: List[float] = []
+    task_ids: List[str] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        speed = _safe_float(row.get("measured_stage2_speedup"))
+        if speed is None:
+            baseline_stage2 = _safe_float(row.get("baseline_stage2_runtime_sec"))
+            candidate_stage2 = _safe_float(row.get("candidate_stage2_runtime_sec"))
+            if baseline_stage2 not in (None, 0.0) and candidate_stage2 not in (None, 0.0):
+                speed = baseline_stage2 / candidate_stage2
+        if speed is not None:
+            stage2_speeds.append(float(speed))
+            task_ids.append(str(row.get("task_id", "")).strip())
+        total_speed = _safe_float(row.get("measured_total_speedup"))
+        if total_speed is not None:
+            total_speeds.append(float(total_speed))
+        stage2_rate = _safe_float(row.get("candidate_queue_rate_stage2_rows_per_sec"))
+        if stage2_rate is not None:
+            stage2_rates.append(float(stage2_rate))
+    if not stage2_speeds and not total_speeds:
+        return {}
+    out: Dict[str, Any] = {
+        "source": "runtime_json",
+        "runtime_task_count": int(len(rows)),
+        "measured_stage2_speedup_count": int(len(stage2_speeds)),
+        "measured_total_speedup_count": int(len(total_speeds)),
+        "stage2_speedup_task_ids": [task_id for task_id in task_ids if task_id],
+    }
+    if stage2_speeds:
+        out["stage2_latency_speedup"] = float(min(stage2_speeds))
+        out["stage2_latency_speedup_min"] = float(min(stage2_speeds))
+        out["stage2_latency_speedup_max"] = float(max(stage2_speeds))
+    if total_speeds:
+        out["total_latency_speedup"] = float(min(total_speeds))
+        out["total_latency_speedup_min"] = float(min(total_speeds))
+        out["total_latency_speedup_max"] = float(max(total_speeds))
+    if stage2_rates:
+        out["candidate_stage2_rows_per_sec"] = float(min(stage2_rates))
+    return out
+
+
 def _build_scope_summary(ab: Dict[str, Any], comparison_metrics: Dict[str, Any], baseline_summary: Dict[str, Any]) -> Dict[str, Any]:
     scope = ab.get("scope_summary", {}) if isinstance(ab.get("scope_summary"), dict) else {}
     if scope:
@@ -249,14 +295,14 @@ def _build_guardrail_rows(
             elif guardrail_id == "top20_hit_rate_drop_max_0p05":
                 value = comparison_metrics.get("max_top20_hit_rate_drop")
                 observed_value = f"{value:.4f}" if isinstance(value, float) else "n/a"
-                passed = (value is not None) and (value >= -0.05)
+                passed = None if value is None else bool(value >= -0.05)
                 worst = str(comparison_metrics.get("worst_top20_task", "")).strip()
                 if worst:
                     note = f"worst task: {worst}"
         if guardrail_id == "stage2_speedup_min_1p2x":
             speed = sla_metrics.get("stage2_latency_speedup")
             observed_value = f"{speed:.3f}x" if isinstance(speed, float) else "pending"
-            passed = (speed is not None) and (speed >= 1.2)
+            passed = None if speed is None else bool(speed >= 1.2)
             if passed is None:
                 note = "needs baseline and candidate SLA summaries"
         rows.append(
@@ -295,6 +341,7 @@ def build_payload(
     baseline_sla_json: str,
     candidate_sla_json: str,
     kpi_json: str,
+    runtime_json: str = "",
 ) -> Dict[str, Any]:
     ab = _load_ab_surface(ab_json, ab_spec_json)
     comparison = _read_json_if_exists(comparison_json)
@@ -302,14 +349,16 @@ def build_payload(
     candidate_summary = _read_json_if_exists(candidate_summary_json)
     baseline_sla = _read_json_if_exists(baseline_sla_json)
     candidate_sla = _read_json_if_exists(candidate_sla_json)
+    runtime = _read_json_if_exists(runtime_json)
     kpi = _read_json_if_exists(kpi_json)
 
     comparison_ready = bool(comparison)
     baseline_ready = bool(baseline_summary)
     candidate_ready = bool(candidate_summary)
-    sla_ready = bool(baseline_sla and candidate_sla)
+    runtime_sla_metrics = _runtime_sla_metrics(runtime)
+    sla_ready = bool((baseline_sla and candidate_sla) or runtime_sla_metrics)
     comparison_metrics = _comparison_metrics(comparison) if comparison_ready else {}
-    sla_metrics = _sla_metrics(baseline_sla, candidate_sla)
+    sla_metrics = _sla_metrics(baseline_sla, candidate_sla) or runtime_sla_metrics
     guardrail_rows = _build_guardrail_rows(ab, comparison, baseline_summary, candidate_summary, sla_metrics)
     guardrail_pass_rows = [row for row in guardrail_rows if row.get("pass") is True]
     guardrail_fail_rows = [row for row in guardrail_rows if row.get("pass") is False]
@@ -376,6 +425,7 @@ def build_payload(
             "candidate_summary_json": str(_resolve_repo_path(candidate_summary_json)),
             "baseline_sla_json": str(_resolve_repo_path(baseline_sla_json)),
             "candidate_sla_json": str(_resolve_repo_path(candidate_sla_json)),
+            "runtime_json": str(_resolve_repo_path(runtime_json)),
             "kpi_json": str(_resolve_repo_path(kpi_json)),
         },
     }
@@ -392,6 +442,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--candidate-summary-json", default="runs/ligand_speedpack_ab_candidate_summary_current.json")
     parser.add_argument("--baseline-sla-json", default="runs/ligand_speedpack_ab_baseline_sla_current.json")
     parser.add_argument("--candidate-sla-json", default="runs/ligand_speedpack_ab_candidate_sla_current.json")
+    parser.add_argument("--runtime-json", default="runs/ligand_speedpack_ab_runtime_current.json")
     parser.add_argument("--kpi-json", default="runs/ligand_scaleup_kpi_current.json")
     parser.add_argument("--out-json", default="runs/ligand_speedpack_ab_summary_current.json")
     parser.add_argument("--out-csv", default="runs/ligand_speedpack_ab_summary_current.csv")
@@ -406,6 +457,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         candidate_summary_json=args.candidate_summary_json,
         baseline_sla_json=args.baseline_sla_json,
         candidate_sla_json=args.candidate_sla_json,
+        runtime_json=args.runtime_json,
         kpi_json=args.kpi_json,
     )
 

@@ -176,6 +176,117 @@ def test_build_payload_with_comparison_evaluates_guardrails(tmp_path: Path, monk
     _contains_tokens(payload["recommended_next_action"], "claim-safe", "throughput", "artifact-size")
 
 
+def test_build_payload_1m_claim_safe_uses_full_accuracy_and_speed_diagnostic(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    guardrails = [
+        {"guardrail_id": "no_pass_to_fail", "metric": "set_pass_transition", "threshold": "0 pass->fail transitions", "scope": "regression slice"},
+        {"guardrail_id": "pr_auc_drop_max_0p02", "metric": "ranking_pr_auc_delta", "threshold": ">= -0.02 absolute", "scope": "regression slice"},
+        {"guardrail_id": "top20_hit_drop_max_1", "metric": "top20_hit_count_delta", "threshold": ">= -1 hit", "scope": "regression slice"},
+        {"guardrail_id": "slowest_domain_speedup_min_1p8x", "metric": "measured_end_to_end_speedup", "threshold": ">= 1.8x on slowest domain", "scope": "throughput benchmark"},
+    ]
+    _write_json(
+        tmp_path / "runs/ligand_scaleup_1m_pilot_current.json",
+        {
+            "comparison_kind": "size_shift_operational_regression",
+            "scope_summary": {"full_task_count_1m": 6, "smoke_task_count_unchanged": 3, "domains_touched": ["gpcr"]},
+            "guardrail_rows": guardrails,
+        },
+    )
+    _write_json(
+        tmp_path / "runs/ligand_scaleup_kpi_current.json",
+        {"summary": {"slowest_task_at_1m": {"task_id": "gpcr_chembl50_full", "domain": "gpcr"}}},
+    )
+    _write_json(
+        tmp_path / "runs/comparison.json",
+        {
+            "tasks_with_pr_improvement": 1,
+            "tasks_with_pr_regression": 2,
+            "profile_changed_task_count": 2,
+            "task_rows": [
+                {
+                    "set_id": "set2_expanded_ood",
+                    "task_id": "gpcr_chembl50_full",
+                    "kind": "ligand_stress",
+                    "domain": "gpcr",
+                    "baseline_pass": True,
+                    "candidate_pass": True,
+                    "baseline_pr_auc": 0.88,
+                    "candidate_pr_auc": 0.81,
+                    "delta_pr_auc": -0.07,
+                    "delta_top20_hit_rate": None,
+                },
+                {
+                    "set_id": "set3_operational_smoke",
+                    "task_id": "gpcr_smoke",
+                    "kind": "ligand_stress",
+                    "domain": "gpcr",
+                    "baseline_pass": True,
+                    "candidate_pass": True,
+                    "baseline_pr_auc": 1.0,
+                    "candidate_pr_auc": 0.88,
+                    "delta_pr_auc": -0.12,
+                    "delta_top20_hit_rate": None,
+                },
+            ],
+        },
+    )
+    _write_pipeline_summary(
+        tmp_path / "runs/base_gpcr_chembl50_pipeline_summary.json",
+        total_latency_sec=120.0,
+        stage2_latency_sec=90.0,
+        queue_rate_stage2_rows_per_sec=70.0,
+    )
+    _write_pipeline_summary(
+        tmp_path / "runs/cand_gpcr_chembl50_pipeline_summary.json",
+        total_latency_sec=100.0,
+        stage2_latency_sec=80.0,
+        queue_rate_stage2_rows_per_sec=82.0,
+    )
+    _write_run_summary_with_tasks(
+        tmp_path / "runs/baseline_summary.json",
+        [
+            {
+                "task_id": "gpcr_chembl50_full",
+                "domain": "gpcr",
+                "kind": "ligand_stress",
+                "pipeline_summary_json": str(tmp_path / "runs/base_gpcr_chembl50_pipeline_summary.json"),
+            }
+        ],
+    )
+    _write_run_summary_with_tasks(
+        tmp_path / "runs/candidate_summary.json",
+        [
+            {
+                "task_id": "gpcr_chembl50_full",
+                "domain": "gpcr",
+                "kind": "ligand_stress",
+                "pipeline_summary_json": str(tmp_path / "runs/cand_gpcr_chembl50_pipeline_summary.json"),
+            }
+        ],
+    )
+
+    payload = mod.build_payload(
+        pilot_json="runs/ligand_scaleup_1m_pilot_current.json",
+        kpi_json="runs/ligand_scaleup_kpi_current.json",
+        comparison_json="runs/comparison.json",
+        baseline_summary_json="runs/baseline_summary.json",
+        candidate_summary_json="runs/candidate_summary.json",
+    )
+
+    pr_row = next(row for row in payload["guardrail_rows"] if row["guardrail_id"] == "pr_auc_drop_max_0p02")
+    top20_row = next(row for row in payload["guardrail_rows"] if row["guardrail_id"] == "top20_hit_drop_max_1")
+    speed_row = next(row for row in payload["guardrail_rows"] if row["guardrail_id"] == "slowest_domain_speedup_min_1p8x")
+    assert payload["comparison_metrics"]["worst_pr_auc_task"] == "gpcr_chembl50_full"
+    assert pr_row["pass"] is True
+    assert "absolute floor" in pr_row["note"]
+    assert top20_row["pass"] is None
+    assert speed_row["pass"] is None
+    assert speed_row["observed_value"] == "1.200x"
+    assert payload["claim_safe"] is True
+    assert payload["claim_safe_status"] == "claim_safe_size_shift_speed_diagnostic"
+    assert payload["commercialization_ready"] is True
+
+
 def test_build_payload_with_measured_speedup_promotes_post_run_evidence(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(mod, "ROOT", tmp_path)
     _write_json(

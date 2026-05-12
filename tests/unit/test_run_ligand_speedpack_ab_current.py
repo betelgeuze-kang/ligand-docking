@@ -15,6 +15,7 @@ def test_build_speedpack_candidate_generates_strict_light_profiles(tmp_path: Pat
             {
                 "description": "trpv1 baseline",
                 "hard_decoy_synth_total_decoys": 10000,
+                "full": {"traj_frames": 120},
             }
         ),
         encoding="utf-8",
@@ -100,6 +101,9 @@ def test_build_speedpack_candidate_generates_strict_light_profiles(tmp_path: Pat
     assert prow["traj_prod_early_stop_enabled"] is True
     assert prow["traj_prod_light_artifacts"] is True
     assert prow["traj_frame_output_format"] == "manifest_only"
+    assert prow["traj_prod_speedpack_frame_cap_full"] == 72
+    assert prow["full_traj_frames"] == 72
+    assert prow["gate_min_frames"] == 72
 
     payload = json.loads(Path(prow["generated_profile_json"]).read_text(encoding="utf-8"))
     assert payload["traj_prod_stage2_preset"] == "auto"
@@ -108,6 +112,9 @@ def test_build_speedpack_candidate_generates_strict_light_profiles(tmp_path: Pat
     assert payload["traj_prod_early_stop_enabled"] is True
     assert payload["traj_prod_light_artifacts"] is True
     assert payload["traj_frame_output_format"] == "manifest_only"
+    assert payload["full"]["traj_frames"] == 72
+    assert payload["gate"]["min_frames"] == 72
+    assert payload["retry"]["max_attempts"] == 2
 
 
 def test_run_ligand_speedpack_ab_current_dry_run(tmp_path: Path, monkeypatch, capsys) -> None:
@@ -194,6 +201,7 @@ def test_run_ligand_speedpack_ab_current_dry_run(tmp_path: Path, monkeypatch, ca
     assert payload["refresh_result"] == {"enabled": False, "ok": None}
     assert payload["run_cmd"][1].endswith("tools/run_external_validation_blind_sets.py")
     assert payload["compare_cmd"][1].endswith("tools/compare_biorxiv_external_validation_runs.py")
+    assert payload["compare_cmd"][-2:] == ["--task-scope", "candidate"]
     assert len(payload["profile_rows"]) == 1
     assert payload["profile_rows"][0]["traj_prod_stage2_preset_strict"] is True
 
@@ -427,5 +435,6 @@ def test_run_ligand_speedpack_ab_current_real_run_can_refresh_current_artifacts(
     assert len(calls) == 4
     assert calls[0][0][1].endswith("tools/run_external_validation_blind_sets.py")
     assert calls[1][0][1].endswith("tools/compare_biorxiv_external_validation_runs.py")
+    assert calls[1][0][-2:] == ["--task-scope", "candidate"]
     assert calls[2][0][1].endswith("tools/extract_ligand_scaleup_results.py")
     assert calls[3][0][1].endswith("tools/build_ligand_speedpack_ab_summary.py")

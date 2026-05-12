@@ -15,14 +15,15 @@
    - Keep the green baseline frozen; only the new queue moves.
 2. Follow the post-P0 expansion queue
    - Read [`docs/post_p0_commercial_expansion_queue.md`](post_p0_commercial_expansion_queue.md) next.
-   - The queue order is: GPCR scale-up recovery, PDE translation quality, transporter `AQP1` / `GLUT1` evidence closure, `CA2` / `PXR` packet closure, and IDP broader-promotion guardrails.
+   - The queue order is now: preserve the green 1M/equal-size scale-up evidence, then PDE translation quality, transporter `AQP1` / `GLUT1` evidence closure, `CA2` / `PXR` packet closure, and IDP broader-promotion guardrails.
 3. Keep P0 wording narrow
    - `AQP1` / `GLUT1`, `CA2` / `PXR`, and IDP broader promotion stay review-only or partial-authoritative until their evidence lanes close.
    - Do not restyle the current P0 delivery claim as transporter, broad platform, or IDP-broader readiness.
 4. Scale-up guardrail
-   - The `100k` run is valid, but `gpcr_core_full` failed.
-   - `commercialization_ready_suite_count=0`.
-   - Pending milestones: `equal_size_ab`, `pilot_100k`, `pilot_1m`.
+   - The tracked scale-up suite is green as of 2026-05-13: `commercialization_ready_suite_count=3/3`.
+   - Pending milestones: none in `runs/ligand_scaleup_suite_status_current.json`.
+   - The 1M package is quality claim-safe with `claim_safe_status=claim_safe_size_shift_speed_diagnostic`; keep throughput wording tied to equal-size speedpack A/B, and treat 1M speed as diagnostic scale evidence.
+   - Do not widen the target-specific GPCR residual evidence into GPCR-family/router/platform claims.
 
 ## Guardrails
 

@@ -1295,6 +1295,7 @@ def _apply_residual_prototype_shadow(
     if str(tuning["variant"]) in {
         "gpcr_adrb2_beta_blocker_pharmacophore_v1",
         "gpcr_core_family_balanced_beta_blocker_rescue_v2",
+        "gpcr_core_family_balanced_beta_blocker_rescue_v3",
     }:
         smiles_series = (
             result_df["ligand_smiles"]
