@@ -207,7 +207,7 @@ Primary artifacts:
 | --- | --- | --- | --- |
 | Core commercial lane score | 강하지만 full-platform ready는 아님 | `82.5` | 우선순위 판단용이며 broad commercial claim은 아닙니다. |
 | Family expansion surface | Tracked | `family_count=7` | claim 확장 전 family-held-out scorecard가 필요합니다. |
-| Transporter lane | 아직 not claim-safe | closure queue rows `6`, placeholder burndown rows `12` | AQP1/GLUT1 stay outside the delivery claim; AQP1 is first-wave and GLUT1 is second-wave, and the lane remains parked/review-only until closure is complete. |
+| Transporter lane | 아직 not claim-safe | closure queue rows `6`, placeholder burndown rows `12`, external crosscheck negative rows `0`, AQP1 gap routes blocked `5/5`, AQP1 slot cover `0/3`, AQP1 exact-evidence request rows `3`, candidate harvest rows `40`, GLUT1 lower-bound candidates `5`, GLUT1 curation queue cover `3/3` | AQP1/GLUT1 stay outside the delivery claim; Life Science Research skill crosscheck confirms AQP1/GLUT1 target IDs, AQP1 now has an explicit gap matrix plus an exact-evidence acquisition request, and ChEMBL target-level harvest feeds a pre-apply GLUT1 curation queue. |
 | AQP1 first-wave quantitative readiness | Blocked | claim-safe kcal-ready count `0` | 포함 전 evidence closure가 필요합니다; `AqB013` exact-human-activity hold stays qualified and `replacement_reference_binding_kcal_mol` remains blank. |
 | CA2/PXR lanes | prep-only | CA2 core ledger `3/3` non-placeholder but replacement readiness `0/12`; PXR `8/14` ready-for-apply rows | CA2 still needs replacement workbook closure before config freeze, and PXR stays prep-only until quantitative provenance and `replacement_reference_binding_kcal_mol` close. |
 
@@ -215,6 +215,11 @@ Primary artifacts:
 
 - `runs/commercialization_readiness_current.json`
 - `runs/transporter_commercialization_closure_queue_current.json`
+- `runs/transporter_external_evidence_crosscheck_current.json`
+- `runs/aqp1_negative_evidence_gap_matrix_current.json`
+- `runs/aqp1_negative_evidence_request_packet_current.json`
+- `runs/transporter_negative_candidate_harvest_current.json`
+- `runs/transporter_negative_candidate_curation_queue_current.json`
 - `runs/family_readiness_heatmap_current.json`
 - `docs/post_p0_commercial_expansion_queue.md`
 - `docs/post_p0_evidence_closure_status.md`
@@ -227,6 +232,11 @@ Primary artifacts:
 python3 tools/run_local_delivery_preflight.py
 python3 tools/build_local_delivery_verdict_gate.py
 python3 tools/build_wetlab_selected_allatom_gate_burndown_packet.py
+python3 tools/build_transporter_external_evidence_crosscheck.py
+python3 tools/build_aqp1_negative_evidence_gap_matrix.py
+python3 tools/build_aqp1_negative_evidence_request_packet.py
+python3 tools/build_transporter_negative_candidate_harvest.py
+python3 tools/build_transporter_negative_candidate_curation_queue.py
 python3 tools/build_ligand_scaleup_kpi_table.py
 python3 tools/build_ligand_scaleup_benchmark_summary.py
 python3 tools/build_ligand_scaleup_suite_status.py

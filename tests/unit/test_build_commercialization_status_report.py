@@ -492,6 +492,317 @@ def test_build_commercialization_status_report_exposes_negative_target_packets()
     assert any("runs/glut1_negative_direct_evidence_audit_packet_current.md" in item for item in summary["artifacts"])
 
 
+def test_build_commercialization_status_report_exposes_external_evidence_crosscheck() -> None:
+    payload = mod.build_payload(
+        {
+            "summary": {
+                "core_commercial_lane_score": 82.5,
+                "all_category_expansion_score": 68.9,
+                "strongest_ready_families": "kinase, ion_channel, gpcr",
+                "aqp1_first_wave_primary_focus_ligand": "bacopaside II",
+                "aqp1_exact_human_reference_ligand": "AqB013",
+                "aqp1_first_wave_follow_on_lane_label": "core_binder_02/03",
+                "glut1_second_wave_source_confirmation_packet_primary_focus_ligand": "cytochalasin B",
+            },
+            "rows": [{"family": "transporter", "primary_blocker": "negative evidence", "claim_safe_scope": "local-only"}],
+        },
+        {"summary": {"highest_gap_family": "transporter"}},
+        {"summary": {"next_required_step": "Keep transporter negative evidence parked."}},
+        {"summary": {"placeholder_driven_rows": 6, "reducible_now_placeholder_rows": 0, "evidence_blocked_placeholder_rows": 6}},
+        external_evidence_crosscheck_payload={
+            "summary": {
+                "crosscheck_ready": True,
+                "skill_family": "life_science_research",
+                "skill_source_count": 6,
+                "target_count": 2,
+                "row_count": 5,
+                "aqp1_uniprot_accession": "P29972",
+                "glut1_uniprot_accession": "P11166",
+                "aqp1_chembl_target_id": "CHEMBL4523210",
+                "glut1_chembl_target_id": "CHEMBL2535",
+                "rcsb_glut1_entry": "4PYP",
+                "aqp1_bindingdb_affinity_count": 0,
+                "glut1_bindingdb_affinity_count": 123,
+                "glut1_positive_exact_activity_count": 5,
+                "direct_negative_quantitative_row_found_count": 0,
+                "authoritative_negative_apply_allowed_count": 0,
+                "negative_evidence_closure_allowed": False,
+                "current_decision": "keep_transporter_negative_slots_review_only",
+            }
+        },
+    )
+
+    summary = payload["summary"]
+    assert summary["external_evidence_crosscheck_ready"] is True
+    assert summary["external_evidence_crosscheck_artifact"] == "runs/transporter_external_evidence_crosscheck_current.md"
+    assert summary["external_evidence_crosscheck_skill_family"] == "life_science_research"
+    assert summary["external_evidence_crosscheck_skill_source_count"] == 6
+    assert summary["external_evidence_crosscheck_target_count"] == 2
+    assert summary["external_evidence_crosscheck_row_count"] == 5
+    assert summary["external_evidence_crosscheck_aqp1_uniprot_accession"] == "P29972"
+    assert summary["external_evidence_crosscheck_glut1_uniprot_accession"] == "P11166"
+    assert summary["external_evidence_crosscheck_aqp1_chembl_target_id"] == "CHEMBL4523210"
+    assert summary["external_evidence_crosscheck_glut1_chembl_target_id"] == "CHEMBL2535"
+    assert summary["external_evidence_crosscheck_rcsb_glut1_entry"] == "4PYP"
+    assert summary["external_evidence_crosscheck_aqp1_bindingdb_affinity_count"] == 0
+    assert summary["external_evidence_crosscheck_glut1_bindingdb_affinity_count"] == 123
+    assert summary["external_evidence_crosscheck_glut1_positive_exact_activity_count"] == 5
+    assert summary["external_evidence_crosscheck_direct_negative_quantitative_row_found_count"] == 0
+    assert summary["external_evidence_crosscheck_authoritative_negative_apply_allowed_count"] == 0
+    assert summary["external_evidence_crosscheck_negative_evidence_closure_allowed"] is False
+    assert summary["external_evidence_crosscheck_current_decision"] == "keep_transporter_negative_slots_review_only"
+    assert any("Life Science Research external crosscheck" in item for item in summary["strengths"])
+    assert any("skill-backed external evidence crosscheck" in item for item in summary["immediate_priority"])
+    assert any("External life-science database crosscheck" in item for item in summary["report_gaps"])
+    assert any("exact target-pair quantitative negative evidence" in item for item in summary["fix_plan"])
+    assert any("runs/transporter_external_evidence_crosscheck_current.md" in item for item in summary["artifacts"])
+
+
+def test_build_commercialization_status_report_exposes_negative_candidate_harvest() -> None:
+    payload = mod.build_payload(
+        {
+            "summary": {
+                "core_commercial_lane_score": 82.5,
+                "all_category_expansion_score": 68.9,
+                "strongest_ready_families": "kinase, ion_channel, gpcr",
+                "aqp1_first_wave_primary_focus_ligand": "bacopaside II",
+                "aqp1_exact_human_reference_ligand": "AqB013",
+                "aqp1_first_wave_follow_on_lane_label": "core_binder_02/03",
+                "glut1_second_wave_source_confirmation_packet_primary_focus_ligand": "cytochalasin B",
+            },
+            "rows": [{"family": "transporter", "primary_blocker": "negative evidence", "claim_safe_scope": "local-only"}],
+        },
+        {"summary": {"highest_gap_family": "transporter"}},
+        {"summary": {"next_required_step": "Keep transporter negative evidence parked."}},
+        {"summary": {"placeholder_driven_rows": 6, "reducible_now_placeholder_rows": 0, "evidence_blocked_placeholder_rows": 6}},
+        negative_candidate_harvest_payload={
+            "summary": {
+                "candidate_harvest_ready": True,
+                "packet_artifact": "runs/transporter_negative_candidate_harvest_current.md",
+                "candidate_harvest_status": "glut1_quantitative_candidate_review_available_aqp1_still_blocked",
+                "row_count": 40,
+                "aqp1_candidate_review_row_count": 2,
+                "glut1_candidate_review_row_count": 38,
+                "aqp1_quantitative_lower_bound_candidate_count": 0,
+                "glut1_quantitative_lower_bound_candidate_count": 5,
+                "potential_aqp1_negative_slot_cover_count": 0,
+                "potential_glut1_negative_slot_cover_count": 3,
+                "unreviewed_direct_negative_quantitative_candidate_count": 5,
+                "authoritative_negative_apply_allowed_count": 0,
+                "negative_evidence_closure_allowed": False,
+            }
+        },
+    )
+
+    summary = payload["summary"]
+    assert summary["negative_candidate_harvest_ready"] is True
+    assert summary["negative_candidate_harvest_artifact"] == "runs/transporter_negative_candidate_harvest_current.md"
+    assert summary["negative_candidate_harvest_status"] == "glut1_quantitative_candidate_review_available_aqp1_still_blocked"
+    assert summary["negative_candidate_harvest_row_count"] == 40
+    assert summary["negative_candidate_harvest_aqp1_candidate_review_row_count"] == 2
+    assert summary["negative_candidate_harvest_glut1_candidate_review_row_count"] == 38
+    assert summary["negative_candidate_harvest_aqp1_quantitative_lower_bound_candidate_count"] == 0
+    assert summary["negative_candidate_harvest_glut1_quantitative_lower_bound_candidate_count"] == 5
+    assert summary["negative_candidate_harvest_potential_aqp1_negative_slot_cover_count"] == 0
+    assert summary["negative_candidate_harvest_potential_glut1_negative_slot_cover_count"] == 3
+    assert summary["negative_candidate_harvest_unreviewed_direct_negative_quantitative_candidate_count"] == 5
+    assert summary["negative_candidate_harvest_authoritative_negative_apply_allowed_count"] == 0
+    assert summary["negative_candidate_harvest_negative_evidence_closure_allowed"] is False
+    assert any("negative-candidate harvest" in item for item in summary["strengths"])
+    assert any("candidate harvest board" in item for item in summary["immediate_priority"])
+    assert any("target-level ChEMBL harvest" in item for item in summary["report_gaps"])
+    assert any("harvested GLUT1 lower-bound candidates" in item for item in summary["fix_plan"])
+    assert any("runs/transporter_negative_candidate_harvest_current.md" in item for item in summary["artifacts"])
+
+
+def test_build_commercialization_status_report_exposes_negative_candidate_curation_queue() -> None:
+    payload = mod.build_payload(
+        {
+            "summary": {
+                "core_commercial_lane_score": 82.5,
+                "all_category_expansion_score": 68.9,
+                "strongest_ready_families": "kinase, ion_channel, gpcr",
+                "aqp1_first_wave_primary_focus_ligand": "bacopaside II",
+                "aqp1_exact_human_reference_ligand": "AqB013",
+                "aqp1_first_wave_follow_on_lane_label": "core_binder_02/03",
+                "glut1_second_wave_source_confirmation_packet_primary_focus_ligand": "cytochalasin B",
+            },
+            "rows": [{"family": "transporter", "primary_blocker": "negative evidence", "claim_safe_scope": "local-only"}],
+        },
+        {"summary": {"highest_gap_family": "transporter"}},
+        {"summary": {"next_required_step": "Keep transporter negative evidence parked."}},
+        {"summary": {"placeholder_driven_rows": 6, "reducible_now_placeholder_rows": 0, "evidence_blocked_placeholder_rows": 6}},
+        negative_candidate_curation_queue_payload={
+            "summary": {
+                "curation_queue_ready": True,
+                "packet_artifact": "runs/transporter_negative_candidate_curation_queue_current.md",
+                "source_harvest_artifact": "runs/transporter_negative_candidate_harvest_current.md",
+                "target_id": "GLUT1",
+                "available_quantitative_lower_bound_candidate_count": 5,
+                "target_negative_slot_count": 3,
+                "queue_row_count": 3,
+                "slot_cover_ready_count": 3,
+                "unused_candidate_count": 2,
+                "aqp1_first_blocker_open": True,
+                "candidate_apply_allowed": False,
+                "authoritative_negative_apply_allowed_count": 0,
+                "negative_evidence_closure_allowed": False,
+                "claim_promotion_allowed": False,
+                "queue_status": "glut1_curation_queue_ready_aqp1_first_blocker_still_open",
+            }
+        },
+    )
+
+    summary = payload["summary"]
+    assert summary["negative_candidate_curation_queue_ready"] is True
+    assert (
+        summary["negative_candidate_curation_queue_artifact"]
+        == "runs/transporter_negative_candidate_curation_queue_current.md"
+    )
+    assert summary["negative_candidate_curation_queue_target_id"] == "GLUT1"
+    assert summary["negative_candidate_curation_queue_status"] == "glut1_curation_queue_ready_aqp1_first_blocker_still_open"
+    assert summary["negative_candidate_curation_queue_source_harvest_artifact"] == "runs/transporter_negative_candidate_harvest_current.md"
+    assert summary["negative_candidate_curation_queue_available_quantitative_lower_bound_candidate_count"] == 5
+    assert summary["negative_candidate_curation_queue_target_negative_slot_count"] == 3
+    assert summary["negative_candidate_curation_queue_row_count"] == 3
+    assert summary["negative_candidate_curation_queue_slot_cover_ready_count"] == 3
+    assert summary["negative_candidate_curation_queue_unused_candidate_count"] == 2
+    assert summary["negative_candidate_curation_queue_aqp1_first_blocker_open"] is True
+    assert summary["negative_candidate_curation_queue_candidate_apply_allowed"] is False
+    assert summary["negative_candidate_curation_queue_authoritative_negative_apply_allowed_count"] == 0
+    assert summary["negative_candidate_curation_queue_negative_evidence_closure_allowed"] is False
+    assert summary["negative_candidate_curation_queue_claim_promotion_allowed"] is False
+    assert any("GLUT1 negative-candidate curation queue" in item for item in summary["strengths"])
+    assert any("GLUT1 pre-apply curation queue" in item for item in summary["immediate_priority"])
+    assert any("GLUT1 curation queue now covers" in item for item in summary["report_gaps"])
+    assert any("Review the GLUT1 curation queue row by row" in item for item in summary["fix_plan"])
+    assert any("runs/transporter_negative_candidate_curation_queue_current.md" in item for item in summary["artifacts"])
+
+
+def test_build_commercialization_status_report_exposes_aqp1_negative_evidence_gap_matrix() -> None:
+    payload = mod.build_payload(
+        {
+            "summary": {
+                "core_commercial_lane_score": 82.5,
+                "all_category_expansion_score": 68.9,
+                "strongest_ready_families": "kinase, ion_channel, gpcr",
+                "aqp1_first_wave_primary_focus_ligand": "bacopaside II",
+                "aqp1_exact_human_reference_ligand": "AqB013",
+                "aqp1_first_wave_follow_on_lane_label": "core_binder_02/03",
+                "glut1_second_wave_source_confirmation_packet_primary_focus_ligand": "cytochalasin B",
+            },
+            "rows": [{"family": "transporter", "primary_blocker": "negative evidence", "claim_safe_scope": "local-only"}],
+        },
+        {"summary": {"highest_gap_family": "transporter"}},
+        {"summary": {"next_required_step": "Keep transporter negative evidence parked."}},
+        {"summary": {"placeholder_driven_rows": 6, "reducible_now_placeholder_rows": 0, "evidence_blocked_placeholder_rows": 6}},
+        aqp1_negative_evidence_gap_matrix_payload={
+            "summary": {
+                "gap_matrix_ready": True,
+                "packet_artifact": "runs/aqp1_negative_evidence_gap_matrix_current.md",
+                "gap_status": "aqp1_direct_negative_quantitative_evidence_absent",
+                "target_uniprot_accession": "P29972",
+                "target_chembl_id": "CHEMBL4523210",
+                "negative_slot_count": 3,
+                "evidence_route_count": 5,
+                "blocked_route_count": 5,
+                "review_context_route_count": 3,
+                "direct_negative_quantitative_row_found_count": 0,
+                "authoritative_negative_apply_allowed_count": 0,
+                "negative_slot_cover_ready_count": 0,
+                "negative_slot_cover_missing_count": 3,
+                "claim_promotion_allowed": False,
+                "commercialization_blocker": "hard_blocker_for_broad_transporter_claim",
+            }
+        },
+    )
+
+    summary = payload["summary"]
+    assert summary["aqp1_negative_evidence_gap_matrix_ready"] is True
+    assert summary["aqp1_negative_evidence_gap_matrix_artifact"] == "runs/aqp1_negative_evidence_gap_matrix_current.md"
+    assert summary["aqp1_negative_evidence_gap_matrix_status"] == "aqp1_direct_negative_quantitative_evidence_absent"
+    assert summary["aqp1_negative_evidence_gap_matrix_target_uniprot_accession"] == "P29972"
+    assert summary["aqp1_negative_evidence_gap_matrix_target_chembl_id"] == "CHEMBL4523210"
+    assert summary["aqp1_negative_evidence_gap_matrix_negative_slot_count"] == 3
+    assert summary["aqp1_negative_evidence_gap_matrix_evidence_route_count"] == 5
+    assert summary["aqp1_negative_evidence_gap_matrix_blocked_route_count"] == 5
+    assert summary["aqp1_negative_evidence_gap_matrix_review_context_route_count"] == 3
+    assert summary["aqp1_negative_evidence_gap_matrix_direct_negative_quantitative_row_found_count"] == 0
+    assert summary["aqp1_negative_evidence_gap_matrix_authoritative_negative_apply_allowed_count"] == 0
+    assert summary["aqp1_negative_evidence_gap_matrix_negative_slot_cover_ready_count"] == 0
+    assert summary["aqp1_negative_evidence_gap_matrix_negative_slot_cover_missing_count"] == 3
+    assert summary["aqp1_negative_evidence_gap_matrix_claim_promotion_allowed"] is False
+    assert summary["aqp1_negative_evidence_gap_matrix_commercialization_blocker"] == "hard_blocker_for_broad_transporter_claim"
+    assert any("AQP1 negative-evidence gap matrix" in item for item in summary["strengths"])
+    assert any("AQP1 blocker matrix" in item for item in summary["immediate_priority"])
+    assert any("AQP1 is now decomposed by evidence route" in item for item in summary["report_gaps"])
+    assert any("For AQP1, stop spending cycles" in item for item in summary["fix_plan"])
+    assert any("runs/aqp1_negative_evidence_gap_matrix_current.md" in item for item in summary["artifacts"])
+
+
+def test_build_commercialization_status_report_exposes_aqp1_negative_evidence_request_packet() -> None:
+    payload = mod.build_payload(
+        {
+            "summary": {
+                "core_commercial_lane_score": 82.5,
+                "all_category_expansion_score": 68.9,
+                "strongest_ready_families": "kinase, ion_channel, gpcr",
+                "aqp1_first_wave_primary_focus_ligand": "bacopaside II",
+                "aqp1_exact_human_reference_ligand": "AqB013",
+                "aqp1_first_wave_follow_on_lane_label": "core_binder_02/03",
+                "glut1_second_wave_source_confirmation_packet_primary_focus_ligand": "cytochalasin B",
+            },
+            "rows": [{"family": "transporter", "primary_blocker": "negative evidence", "claim_safe_scope": "local-only"}],
+        },
+        {"summary": {"highest_gap_family": "transporter"}},
+        {"summary": {"next_required_step": "Keep transporter negative evidence parked."}},
+        {"summary": {"placeholder_driven_rows": 6, "reducible_now_placeholder_rows": 0, "evidence_blocked_placeholder_rows": 6}},
+        aqp1_negative_evidence_request_payload={
+            "summary": {
+                "evidence_request_ready": True,
+                "packet_artifact": "runs/aqp1_negative_evidence_request_packet_current.md",
+                "source_gap_matrix_artifact": "runs/aqp1_negative_evidence_gap_matrix_current.md",
+                "request_status": "ready_for_public_or_internal_exact_evidence_acquisition",
+                "request_mode": "exact_target_pair_quantitative_negative_evidence_required",
+                "request_row_count": 3,
+                "required_assignable_negative_row_count": 3,
+                "current_direct_negative_quantitative_row_found_count": 0,
+                "negative_slot_cover_ready_count": 0,
+                "negative_slot_cover_missing_count": 3,
+                "blocked_gap_route_count": 5,
+                "public_reinterpretation_exhausted": True,
+                "internal_wetlab_or_primary_source_required": True,
+                "authoritative_negative_apply_allowed_count": 0,
+                "negative_evidence_closure_allowed": False,
+                "claim_promotion_allowed": False,
+            }
+        },
+    )
+
+    summary = payload["summary"]
+    assert summary["aqp1_negative_evidence_request_ready"] is True
+    assert summary["aqp1_negative_evidence_request_artifact"] == "runs/aqp1_negative_evidence_request_packet_current.md"
+    assert summary["aqp1_negative_evidence_request_source_gap_matrix_artifact"] == "runs/aqp1_negative_evidence_gap_matrix_current.md"
+    assert summary["aqp1_negative_evidence_request_status"] == "ready_for_public_or_internal_exact_evidence_acquisition"
+    assert summary["aqp1_negative_evidence_request_mode"] == "exact_target_pair_quantitative_negative_evidence_required"
+    assert summary["aqp1_negative_evidence_request_row_count"] == 3
+    assert summary["aqp1_negative_evidence_request_required_assignable_negative_row_count"] == 3
+    assert summary["aqp1_negative_evidence_request_current_direct_negative_quantitative_row_found_count"] == 0
+    assert summary["aqp1_negative_evidence_request_negative_slot_cover_ready_count"] == 0
+    assert summary["aqp1_negative_evidence_request_negative_slot_cover_missing_count"] == 3
+    assert summary["aqp1_negative_evidence_request_blocked_gap_route_count"] == 5
+    assert summary["aqp1_negative_evidence_request_public_reinterpretation_exhausted"] is True
+    assert summary["aqp1_negative_evidence_request_internal_wetlab_or_primary_source_required"] is True
+    assert summary["aqp1_negative_evidence_request_authoritative_negative_apply_allowed_count"] == 0
+    assert summary["aqp1_negative_evidence_request_negative_evidence_closure_allowed"] is False
+    assert summary["aqp1_negative_evidence_request_claim_promotion_allowed"] is False
+    assert any("AQP1 exact-evidence request packet" in item for item in summary["strengths"])
+    assert any("AQP1 exact-evidence acquisition request" in item for item in summary["immediate_priority"])
+    assert any("AQP1 now has an acquisition-ready" in item for item in summary["report_gaps"])
+    assert any("Execute the AQP1 evidence request" in item for item in summary["fix_plan"])
+    assert any("runs/aqp1_negative_evidence_request_packet_current.md" in item for item in summary["artifacts"])
+
+
 def test_build_commercialization_status_report_exposes_wetlab_selected_allatom_burndown() -> None:
     payload = mod.build_payload(
         {

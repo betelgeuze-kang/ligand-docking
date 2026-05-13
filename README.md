@@ -113,7 +113,7 @@ Updated 2026-05-13 KST.
 - Ligand scale-up suite status is green for the tracked commercialization suite: `commercialization_ready_suite_count=3/3` and `pending_suite_ids=[]`.
 - The 1M pilot package passes all three blind sets. Core full-task PR-AUC values are `gpcr_core_full=0.8958`, `ion_trpv1_chembl20_full=0.9585`, `kinase_core_full=1.0000`; expanded OOD PR-AUC values are `gpcr_chembl50_full=0.8093`, `ion_trpv1_chembl50_full=0.9867`, `kinase_strict_full=1.0000`.
 - 1M guardrail interpretation is `claim_safe_size_shift_speed_diagnostic`: quality guardrails are claim-safe, while equal-size speedpack A/B owns the throughput claim and 1M speed is retained as diagnostic scale evidence.
-- Latest focused validation slice covers transporter negative-evidence closure, platform gap taxonomy, local verdict, and ligand scale-up regression tests -> `90 passed`.
+- Latest focused validation slice covers commercialization status reporting, AQP1 negative evidence gap matrix/request packet, transporter external evidence crosscheck, transporter negative candidate harvest/curation queue, negative-evidence closure, platform gap taxonomy, local verdict, and ligand scale-up regression tests -> `110 passed`.
 
 ## Current Repository State
 

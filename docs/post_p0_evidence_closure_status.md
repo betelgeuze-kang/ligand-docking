@@ -7,6 +7,11 @@ This note is an operator map for the post-P0 lanes that stay outside the current
 ## Claim Boundary
 
 - `runs/platform_gap_taxonomy_packet_current.json` and `runs/transporter_negative_evidence_closure_queue_current.json` are the current top-priority expansion sources. Work transporter negatives first: `AQP1__core_non_binder_01` through `AQP1__core_non_binder_03`, then the three `GLUT1` negative slots. Keep all six rows review-only until direct target-specific quantitative negative evidence is curated.
+- `runs/transporter_external_evidence_crosscheck_current.json` is the current Life Science Research skill-backed crosscheck. It normalizes AQP1 to UniProt `P29972` / ChEMBL target `CHEMBL4523210`, GLUT1 to UniProt `P11166` / ChEMBL target `CHEMBL2535`, and GLUT1 structure context to RCSB `4PYP`; it still reports `direct_negative_quantitative_row_found_count=0`, `authoritative_negative_apply_allowed_count=0`, and `negative_evidence_closure_allowed=false`.
+- `runs/aqp1_negative_evidence_gap_matrix_current.json` is the current AQP1 blocker matrix. It reports `5/5` evidence routes blocked, review context on `3` routes, direct quantitative negative rows `0`, authoritative apply `0`, and AQP1 negative slot cover `0/3`.
+- `runs/aqp1_negative_evidence_request_packet_current.json` is the current AQP1 exact-evidence acquisition request. It defines `3` assignable request rows and requires exact human AQP1 quantitative weak/no-effect evidence before any split/reference/meta update or authoritative apply.
+- `runs/transporter_negative_candidate_harvest_current.json` is the current target-level ChEMBL candidate harvest. It finds `5` unreviewed GLUT1 lower-bound quantitative candidates and `3` potential GLUT1 slot covers, but AQP1 quantitative lower-bound candidates remain `0`; this changes the next curation work but not the claim boundary.
+- `runs/transporter_negative_candidate_curation_queue_current.json` converts that GLUT1 harvest into a pre-apply curation queue covering `3/3` GLUT1 negative slots. The top mappings are `CHEMBL322952`, `CHEMBL324463`, and `CHEMBL326703`, but `candidate_apply_allowed=false`, `negative_evidence_closure_allowed=false`, and AQP1 remains the first blocker.
 - GPCR family/router recovery remains behind the transporter blocker. For that GPCR lane, the next step is claim-locked diagnostics/shadow/replay only, ordered v16/adaptive support-gap review -> OPRM1 pose/anchor alignment evidence -> HTR2A decoy support discrimination -> conserved anchor/prior gating review -> guarded validation prep for the hard-decoy lane -> coverage expansion; do not promote any of it into delivery/router/platform wording.
 - GPCR recovery candidates (`gpcr_core_decoy_intrusion_v1`, `gpcr_core_linear_rescore_v1`, `gpcr_core_mismatch_contact_rescore_v1`, `gpcr_core_structure_support_rescore_v1`) stay comparison-only shadow/guarded-apply lanes. The `positive_count >= 9` frozen-packet launch prerequisite, family-held-out scorecard, and leakage audit are now green, but no claim promotion is allowed until the full 100k claim-review gate clears CI-low and top20 stability. Do not use full 100k reruns, threshold relaxation, target identity feature, or fake pass to force a pass, and do not generalize the v2 basic-amine signal into broad GPCR/basic-amine wording.
 - `gpcr_core_mismatch_contact_rescore_v1` completed the 2026-05-02 safesync/cache-disabled guarded apply run, but the operational gate still failed (`PR-AUC=0.3836`, `PR-AUC CI low=0.0157`, `top20=0.15`), so it remains reject evidence only.
@@ -69,6 +74,11 @@ Current status:
 
 - `runs/transporter_commercialization_closure_queue_current.json`: `queue_row_count=6`, `first_wave_target=AQP1`, `second_wave_target=GLUT1`, `current_phase=blocker_closure_seed_row_promotion`
 - `runs/transporter_negative_evidence_closure_queue_current.json`: `row_count=6`, top queue `AQP1__core_non_binder_01`, AQP1 negative slots `3`, GLUT1 negative slots `3`, direct negative quantitative rows `0`
+- `runs/transporter_external_evidence_crosscheck_current.json`: skill-backed external check, AQP1 BindingDB affinity count `0`, GLUT1 BindingDB target affinities `123`, GLUT1 ChEMBL positive exact activity count `5`, negative promotion allowed `false`
+- `runs/aqp1_negative_evidence_gap_matrix_current.json`: AQP1 route-level blocker matrix, evidence routes `5`, blocked routes `5`, direct quantitative negative rows `0`, slot cover `0/3`, claim promotion `false`
+- `runs/aqp1_negative_evidence_request_packet_current.json`: AQP1 exact-evidence request, request rows `3`, current direct rows `0`, missing slot cover `3`, closure allowed `false`
+- `runs/transporter_negative_candidate_harvest_current.json`: target-level ChEMBL harvest, `row_count=40`, AQP1 quantitative lower-bound candidates `0`, GLUT1 quantitative lower-bound candidates `5`, potential GLUT1 negative slot cover `3`, authoritative apply `0`
+- `runs/transporter_negative_candidate_curation_queue_current.json`: GLUT1 pre-apply curation queue, `queue_row_count=3`, slot cover `3/3`, unused candidates `2`, apply allowed `false`, claim promotion `false`
 - `runs/transporter_binder_verdict_progress_current.json`: manual verdict backlog cleared, `6/6` complete
 - `runs/transporter_placeholder_burndown_queue_current.md`: `placeholder_queue_rows=12`
 - `runs/aqp1_first_seed_row_packet_current.md`, `runs/aqp1_first_wave_source_confirmation_packet_current.md`, `runs/aqp1_follow_on_source_confirmation_packet_current.md`, `runs/glut1_second_wave_source_confirmation_packet_current.md`
@@ -85,6 +95,11 @@ Next refresh:
 ```bash
 python3 tools/run_transporter_membrane_scaffold_check.py
 python3 tools/build_transporter_membrane_readiness.py
+python3 tools/build_transporter_external_evidence_crosscheck.py
+python3 tools/build_aqp1_negative_evidence_gap_matrix.py
+python3 tools/build_aqp1_negative_evidence_request_packet.py
+python3 tools/build_transporter_negative_candidate_harvest.py
+python3 tools/build_transporter_negative_candidate_curation_queue.py
 ```
 
 ### CA2

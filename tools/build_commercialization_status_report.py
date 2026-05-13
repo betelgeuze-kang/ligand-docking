@@ -18,6 +18,11 @@ DEFAULT_LOCAL_ENGINE_QUEUE_JSON = "runs/local_engine_commercialization_queue_cur
 DEFAULT_LOCAL_DELIVERY_VERDICT_JSON = "runs/local_delivery_verdict_gate_current.json"
 DEFAULT_KEEP_GREEN_TREND_JSON = "runs/keep_green_regression_trend_packet_current.json"
 DEFAULT_PLATFORM_GAP_TAXONOMY_JSON = "runs/platform_gap_taxonomy_packet_current.json"
+DEFAULT_EXTERNAL_EVIDENCE_CROSSCHECK_JSON = "runs/transporter_external_evidence_crosscheck_current.json"
+DEFAULT_NEGATIVE_CANDIDATE_HARVEST_JSON = "runs/transporter_negative_candidate_harvest_current.json"
+DEFAULT_NEGATIVE_CANDIDATE_CURATION_QUEUE_JSON = "runs/transporter_negative_candidate_curation_queue_current.json"
+DEFAULT_AQP1_NEGATIVE_EVIDENCE_GAP_MATRIX_JSON = "runs/aqp1_negative_evidence_gap_matrix_current.json"
+DEFAULT_AQP1_NEGATIVE_EVIDENCE_REQUEST_JSON = "runs/aqp1_negative_evidence_request_packet_current.json"
 DEFAULT_OUT_MD = "commercialization_status_report.md"
 
 
@@ -64,6 +69,11 @@ def build_payload(
     local_delivery_verdict_payload: dict[str, Any] | None = None,
     keep_green_trend_payload: dict[str, Any] | None = None,
     platform_gap_taxonomy_payload: dict[str, Any] | None = None,
+    external_evidence_crosscheck_payload: dict[str, Any] | None = None,
+    negative_candidate_harvest_payload: dict[str, Any] | None = None,
+    negative_candidate_curation_queue_payload: dict[str, Any] | None = None,
+    aqp1_negative_evidence_gap_matrix_payload: dict[str, Any] | None = None,
+    aqp1_negative_evidence_request_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     commercialization_summary = dict(commercialization_payload.get("summary", {}) or {})
     gap_summary = dict(gap_payload.get("summary", {}) or {})
@@ -75,6 +85,17 @@ def build_payload(
     local_delivery_summary = dict((local_delivery_verdict_payload or {}).get("summary", {}) or {})
     keep_green_trend_summary = dict((keep_green_trend_payload or {}).get("summary", {}) or {})
     platform_gap_taxonomy_summary = dict((platform_gap_taxonomy_payload or {}).get("summary", {}) or {})
+    external_evidence_summary = dict((external_evidence_crosscheck_payload or {}).get("summary", {}) or {})
+    negative_candidate_harvest_summary = dict((negative_candidate_harvest_payload or {}).get("summary", {}) or {})
+    negative_candidate_curation_queue_summary = dict(
+        (negative_candidate_curation_queue_payload or {}).get("summary", {}) or {}
+    )
+    aqp1_negative_evidence_gap_matrix_summary = dict(
+        (aqp1_negative_evidence_gap_matrix_payload or {}).get("summary", {}) or {}
+    )
+    aqp1_negative_evidence_request_summary = dict(
+        (aqp1_negative_evidence_request_payload or {}).get("summary", {}) or {}
+    )
     transporter_row = _find_family_row(list(commercialization_payload.get("rows", []) or []), "transporter")
 
     strongest_ready_families = _family_list(commercialization_summary.get("strongest_ready_families")) or "kinase, ion_channel, gpcr"
@@ -246,6 +267,210 @@ def build_payload(
     platform_gap_taxonomy_scaleup_status = _text(
         platform_gap_taxonomy_summary.get("ligand_scaleup_claim_safe_status")
     )
+    external_crosscheck_ready = bool(external_evidence_summary.get("crosscheck_ready", False))
+    external_crosscheck_artifact = "runs/transporter_external_evidence_crosscheck_current.md"
+    external_crosscheck_skill_family = _text(external_evidence_summary.get("skill_family"))
+    external_crosscheck_skill_source_count = int(external_evidence_summary.get("skill_source_count", 0) or 0)
+    external_crosscheck_target_count = int(external_evidence_summary.get("target_count", 0) or 0)
+    external_crosscheck_row_count = int(external_evidence_summary.get("row_count", 0) or 0)
+    external_crosscheck_aqp1_uniprot = _text(external_evidence_summary.get("aqp1_uniprot_accession"))
+    external_crosscheck_glut1_uniprot = _text(external_evidence_summary.get("glut1_uniprot_accession"))
+    external_crosscheck_aqp1_chembl = _text(external_evidence_summary.get("aqp1_chembl_target_id"))
+    external_crosscheck_glut1_chembl = _text(external_evidence_summary.get("glut1_chembl_target_id"))
+    external_crosscheck_rcsb_glut1_entry = _text(external_evidence_summary.get("rcsb_glut1_entry"))
+    external_crosscheck_aqp1_bindingdb_count = int(
+        external_evidence_summary.get("aqp1_bindingdb_affinity_count", 0) or 0
+    )
+    external_crosscheck_glut1_bindingdb_count = int(
+        external_evidence_summary.get("glut1_bindingdb_affinity_count", 0) or 0
+    )
+    external_crosscheck_glut1_positive_exact_count = int(
+        external_evidence_summary.get("glut1_positive_exact_activity_count", 0) or 0
+    )
+    external_crosscheck_direct_negative_count = int(
+        external_evidence_summary.get("direct_negative_quantitative_row_found_count", 0) or 0
+    )
+    external_crosscheck_authoritative_apply_count = int(
+        external_evidence_summary.get("authoritative_negative_apply_allowed_count", 0) or 0
+    )
+    external_crosscheck_negative_closure_allowed = bool(
+        external_evidence_summary.get("negative_evidence_closure_allowed", False)
+    )
+    external_crosscheck_current_decision = _text(external_evidence_summary.get("current_decision"))
+    external_crosscheck_next_required_step = _text(external_evidence_summary.get("next_required_step"))
+    negative_candidate_harvest_ready = bool(
+        negative_candidate_harvest_summary.get("candidate_harvest_ready", False)
+    )
+    negative_candidate_harvest_artifact = _text(
+        negative_candidate_harvest_summary.get("packet_artifact")
+    ) or "runs/transporter_negative_candidate_harvest_current.md"
+    negative_candidate_harvest_status = _text(negative_candidate_harvest_summary.get("candidate_harvest_status"))
+    negative_candidate_harvest_row_count = int(negative_candidate_harvest_summary.get("row_count", 0) or 0)
+    negative_candidate_harvest_aqp1_review_count = int(
+        negative_candidate_harvest_summary.get("aqp1_candidate_review_row_count", 0) or 0
+    )
+    negative_candidate_harvest_glut1_review_count = int(
+        negative_candidate_harvest_summary.get("glut1_candidate_review_row_count", 0) or 0
+    )
+    negative_candidate_harvest_aqp1_quant_count = int(
+        negative_candidate_harvest_summary.get("aqp1_quantitative_lower_bound_candidate_count", 0) or 0
+    )
+    negative_candidate_harvest_glut1_quant_count = int(
+        negative_candidate_harvest_summary.get("glut1_quantitative_lower_bound_candidate_count", 0) or 0
+    )
+    negative_candidate_harvest_aqp1_cover_count = int(
+        negative_candidate_harvest_summary.get("potential_aqp1_negative_slot_cover_count", 0) or 0
+    )
+    negative_candidate_harvest_glut1_cover_count = int(
+        negative_candidate_harvest_summary.get("potential_glut1_negative_slot_cover_count", 0) or 0
+    )
+    negative_candidate_harvest_unreviewed_quant_count = int(
+        negative_candidate_harvest_summary.get("unreviewed_direct_negative_quantitative_candidate_count", 0) or 0
+    )
+    negative_candidate_harvest_apply_count = int(
+        negative_candidate_harvest_summary.get("authoritative_negative_apply_allowed_count", 0) or 0
+    )
+    negative_candidate_harvest_closure_allowed = bool(
+        negative_candidate_harvest_summary.get("negative_evidence_closure_allowed", False)
+    )
+    negative_candidate_curation_queue_ready = bool(
+        negative_candidate_curation_queue_summary.get("curation_queue_ready", False)
+    )
+    negative_candidate_curation_queue_artifact = _text(
+        negative_candidate_curation_queue_summary.get("packet_artifact")
+    ) or "runs/transporter_negative_candidate_curation_queue_current.md"
+    negative_candidate_curation_queue_target_id = _text(
+        negative_candidate_curation_queue_summary.get("target_id")
+    )
+    negative_candidate_curation_queue_status = _text(
+        negative_candidate_curation_queue_summary.get("queue_status")
+    )
+    negative_candidate_curation_queue_source_artifact = _text(
+        negative_candidate_curation_queue_summary.get("source_harvest_artifact")
+    )
+    negative_candidate_curation_queue_candidate_count = int(
+        negative_candidate_curation_queue_summary.get("available_quantitative_lower_bound_candidate_count", 0) or 0
+    )
+    negative_candidate_curation_queue_slot_count = int(
+        negative_candidate_curation_queue_summary.get("target_negative_slot_count", 0) or 0
+    )
+    negative_candidate_curation_queue_row_count = int(
+        negative_candidate_curation_queue_summary.get("queue_row_count", 0) or 0
+    )
+    negative_candidate_curation_queue_slot_cover_count = int(
+        negative_candidate_curation_queue_summary.get("slot_cover_ready_count", 0) or 0
+    )
+    negative_candidate_curation_queue_unused_count = int(
+        negative_candidate_curation_queue_summary.get("unused_candidate_count", 0) or 0
+    )
+    negative_candidate_curation_queue_aqp1_blocker_open = bool(
+        negative_candidate_curation_queue_summary.get("aqp1_first_blocker_open", False)
+    )
+    negative_candidate_curation_queue_apply_allowed = bool(
+        negative_candidate_curation_queue_summary.get("candidate_apply_allowed", False)
+    )
+    negative_candidate_curation_queue_authoritative_apply_count = int(
+        negative_candidate_curation_queue_summary.get("authoritative_negative_apply_allowed_count", 0) or 0
+    )
+    negative_candidate_curation_queue_closure_allowed = bool(
+        negative_candidate_curation_queue_summary.get("negative_evidence_closure_allowed", False)
+    )
+    negative_candidate_curation_queue_claim_promotion_allowed = bool(
+        negative_candidate_curation_queue_summary.get("claim_promotion_allowed", False)
+    )
+    aqp1_negative_gap_matrix_ready = bool(
+        aqp1_negative_evidence_gap_matrix_summary.get("gap_matrix_ready", False)
+    )
+    aqp1_negative_gap_matrix_artifact = _text(
+        aqp1_negative_evidence_gap_matrix_summary.get("packet_artifact")
+    ) or "runs/aqp1_negative_evidence_gap_matrix_current.md"
+    aqp1_negative_gap_matrix_status = _text(
+        aqp1_negative_evidence_gap_matrix_summary.get("gap_status")
+    )
+    aqp1_negative_gap_matrix_target_accession = _text(
+        aqp1_negative_evidence_gap_matrix_summary.get("target_uniprot_accession")
+    )
+    aqp1_negative_gap_matrix_target_chembl = _text(
+        aqp1_negative_evidence_gap_matrix_summary.get("target_chembl_id")
+    )
+    aqp1_negative_gap_matrix_slot_count = int(
+        aqp1_negative_evidence_gap_matrix_summary.get("negative_slot_count", 0) or 0
+    )
+    aqp1_negative_gap_matrix_route_count = int(
+        aqp1_negative_evidence_gap_matrix_summary.get("evidence_route_count", 0) or 0
+    )
+    aqp1_negative_gap_matrix_blocked_route_count = int(
+        aqp1_negative_evidence_gap_matrix_summary.get("blocked_route_count", 0) or 0
+    )
+    aqp1_negative_gap_matrix_review_context_route_count = int(
+        aqp1_negative_evidence_gap_matrix_summary.get("review_context_route_count", 0) or 0
+    )
+    aqp1_negative_gap_matrix_direct_negative_count = int(
+        aqp1_negative_evidence_gap_matrix_summary.get("direct_negative_quantitative_row_found_count", 0) or 0
+    )
+    aqp1_negative_gap_matrix_apply_count = int(
+        aqp1_negative_evidence_gap_matrix_summary.get("authoritative_negative_apply_allowed_count", 0) or 0
+    )
+    aqp1_negative_gap_matrix_slot_cover_ready_count = int(
+        aqp1_negative_evidence_gap_matrix_summary.get("negative_slot_cover_ready_count", 0) or 0
+    )
+    aqp1_negative_gap_matrix_slot_cover_missing_count = int(
+        aqp1_negative_evidence_gap_matrix_summary.get("negative_slot_cover_missing_count", 0) or 0
+    )
+    aqp1_negative_gap_matrix_claim_promotion_allowed = bool(
+        aqp1_negative_evidence_gap_matrix_summary.get("claim_promotion_allowed", False)
+    )
+    aqp1_negative_gap_matrix_commercialization_blocker = _text(
+        aqp1_negative_evidence_gap_matrix_summary.get("commercialization_blocker")
+    )
+    aqp1_negative_evidence_request_ready = bool(
+        aqp1_negative_evidence_request_summary.get("evidence_request_ready", False)
+    )
+    aqp1_negative_evidence_request_artifact = _text(
+        aqp1_negative_evidence_request_summary.get("packet_artifact")
+    ) or "runs/aqp1_negative_evidence_request_packet_current.md"
+    aqp1_negative_evidence_request_source_gap_artifact = _text(
+        aqp1_negative_evidence_request_summary.get("source_gap_matrix_artifact")
+    )
+    aqp1_negative_evidence_request_status = _text(
+        aqp1_negative_evidence_request_summary.get("request_status")
+    )
+    aqp1_negative_evidence_request_mode = _text(
+        aqp1_negative_evidence_request_summary.get("request_mode")
+    )
+    aqp1_negative_evidence_request_row_count = int(
+        aqp1_negative_evidence_request_summary.get("request_row_count", 0) or 0
+    )
+    aqp1_negative_evidence_request_required_row_count = int(
+        aqp1_negative_evidence_request_summary.get("required_assignable_negative_row_count", 0) or 0
+    )
+    aqp1_negative_evidence_request_current_direct_count = int(
+        aqp1_negative_evidence_request_summary.get("current_direct_negative_quantitative_row_found_count", 0) or 0
+    )
+    aqp1_negative_evidence_request_slot_cover_ready_count = int(
+        aqp1_negative_evidence_request_summary.get("negative_slot_cover_ready_count", 0) or 0
+    )
+    aqp1_negative_evidence_request_slot_cover_missing_count = int(
+        aqp1_negative_evidence_request_summary.get("negative_slot_cover_missing_count", 0) or 0
+    )
+    aqp1_negative_evidence_request_blocked_route_count = int(
+        aqp1_negative_evidence_request_summary.get("blocked_gap_route_count", 0) or 0
+    )
+    aqp1_negative_evidence_request_public_exhausted = bool(
+        aqp1_negative_evidence_request_summary.get("public_reinterpretation_exhausted", False)
+    )
+    aqp1_negative_evidence_request_internal_or_primary_required = bool(
+        aqp1_negative_evidence_request_summary.get("internal_wetlab_or_primary_source_required", False)
+    )
+    aqp1_negative_evidence_request_apply_count = int(
+        aqp1_negative_evidence_request_summary.get("authoritative_negative_apply_allowed_count", 0) or 0
+    )
+    aqp1_negative_evidence_request_closure_allowed = bool(
+        aqp1_negative_evidence_request_summary.get("negative_evidence_closure_allowed", False)
+    )
+    aqp1_negative_evidence_request_claim_promotion_allowed = bool(
+        aqp1_negative_evidence_request_summary.get("claim_promotion_allowed", False)
+    )
 
     strengths = [
         f"Commercial core is still strongest in `{strongest_ready_families}`.",
@@ -268,6 +493,42 @@ def build_payload(
         strengths.append(
             f"Local delivery verdict is `{delivery_verdict or 'delivery_ready'}` with "
             f"`p0={delivery_p0_count}` and `hard={delivery_hard_count}` blockers."
+        )
+    if external_crosscheck_ready:
+        strengths.append(
+            "Life Science Research external crosscheck is attached for transporter evidence: "
+            f"`sources={external_crosscheck_skill_source_count}`, `targets={external_crosscheck_target_count}`, "
+            f"`rows={external_crosscheck_row_count}`, direct negative rows=`{external_crosscheck_direct_negative_count}`."
+        )
+    if negative_candidate_harvest_ready:
+        strengths.append(
+            "ChEMBL target-level transporter negative-candidate harvest is attached: "
+            f"`rows={negative_candidate_harvest_row_count}`, unreviewed quantitative lower-bound candidates="
+            f"`{negative_candidate_harvest_unreviewed_quant_count}`, apply-allowed="
+            f"`{negative_candidate_harvest_apply_count}`."
+        )
+    if negative_candidate_curation_queue_ready:
+        strengths.append(
+            "GLUT1 negative-candidate curation queue is attached as pre-apply evidence work: "
+            f"`rows={negative_candidate_curation_queue_row_count}/{negative_candidate_curation_queue_slot_count}`, "
+            f"candidate apply allowed=`{negative_candidate_curation_queue_apply_allowed}`, "
+            f"claim promotion=`{negative_candidate_curation_queue_claim_promotion_allowed}`."
+        )
+    if aqp1_negative_gap_matrix_ready:
+        strengths.append(
+            "AQP1 negative-evidence gap matrix is attached: "
+            f"`routes={aqp1_negative_gap_matrix_route_count}`, blocked routes="
+            f"`{aqp1_negative_gap_matrix_blocked_route_count}`, direct negative rows="
+            f"`{aqp1_negative_gap_matrix_direct_negative_count}`, slot cover="
+            f"`{aqp1_negative_gap_matrix_slot_cover_ready_count}/{aqp1_negative_gap_matrix_slot_count}`."
+        )
+    if aqp1_negative_evidence_request_ready:
+        strengths.append(
+            "AQP1 exact-evidence request packet is attached: "
+            f"`requests={aqp1_negative_evidence_request_row_count}`, required assignable rows="
+            f"`{aqp1_negative_evidence_request_required_row_count}`, current direct rows="
+            f"`{aqp1_negative_evidence_request_current_direct_count}`, closure allowed="
+            f"`{aqp1_negative_evidence_request_closure_allowed}`."
         )
     if reducible_now_rows > 0:
         immediate_priority = [
@@ -620,6 +881,55 @@ def build_payload(
                     "so keep GLUT1 at "
                     f"`{_text(negative_target_packets_summary.get('glut1_negative_direct_evidence_audit_decision'))}`."
                 )
+        if external_crosscheck_ready:
+            immediate_priority.append(
+                f"Use `{external_crosscheck_artifact}` as the skill-backed external evidence crosscheck: "
+                f"AQP1 `{external_crosscheck_aqp1_uniprot}/{external_crosscheck_aqp1_chembl}` and "
+                f"GLUT1 `{external_crosscheck_glut1_uniprot}/{external_crosscheck_glut1_chembl}` are mapped, "
+                f"GLUT1 structure support includes `{external_crosscheck_rcsb_glut1_entry or '-'}`, "
+                f"BindingDB affinities are AQP1=`{external_crosscheck_aqp1_bindingdb_count}` / "
+                f"GLUT1=`{external_crosscheck_glut1_bindingdb_count}`, "
+                f"GLUT1 positive exact ChEMBL activity rows=`{external_crosscheck_glut1_positive_exact_count}`, "
+                f"direct negative rows=`{external_crosscheck_direct_negative_count}`, authoritative apply="
+                f"`{external_crosscheck_authoritative_apply_count}`, so decision stays "
+                f"`{external_crosscheck_current_decision or 'keep_transporter_negative_slots_review_only'}`."
+            )
+        if negative_candidate_harvest_ready:
+            immediate_priority.append(
+                f"Use `{negative_candidate_harvest_artifact}` as the candidate harvest board: "
+                f"AQP1 review rows=`{negative_candidate_harvest_aqp1_review_count}` with quantitative lower-bound candidates="
+                f"`{negative_candidate_harvest_aqp1_quant_count}`, while GLUT1 review rows="
+                f"`{negative_candidate_harvest_glut1_review_count}` include "
+                f"`{negative_candidate_harvest_glut1_quant_count}` ChEMBL lower-bound candidates covering up to "
+                f"`{negative_candidate_harvest_glut1_cover_count}` GLUT1 negative slots. Prepare GLUT1 curation in parallel, "
+                "but keep AQP1 first in the strict closure order and keep all harvested rows unapplied."
+            )
+        if negative_candidate_curation_queue_ready:
+            immediate_priority.append(
+                f"Use `{negative_candidate_curation_queue_artifact}` as the GLUT1 pre-apply curation queue: "
+                f"`{negative_candidate_curation_queue_row_count}` rows cover "
+                f"`{negative_candidate_curation_queue_slot_cover_count}/{negative_candidate_curation_queue_slot_count}` "
+                f"GLUT1 negative slots from `{negative_candidate_curation_queue_candidate_count}` ChEMBL lower-bound candidates. "
+                f"AQP1-first blocker open=`{negative_candidate_curation_queue_aqp1_blocker_open}`, "
+                f"candidate apply allowed=`{negative_candidate_curation_queue_apply_allowed}`, so this is curation prework only."
+            )
+        if aqp1_negative_gap_matrix_ready:
+            immediate_priority.append(
+                f"Use `{aqp1_negative_gap_matrix_artifact}` as the AQP1 blocker matrix: "
+                f"`{aqp1_negative_gap_matrix_blocked_route_count}/{aqp1_negative_gap_matrix_route_count}` evidence routes remain blocked, "
+                f"direct quantitative negative rows=`{aqp1_negative_gap_matrix_direct_negative_count}`, "
+                f"AQP1 slot cover=`{aqp1_negative_gap_matrix_slot_cover_ready_count}/{aqp1_negative_gap_matrix_slot_count}`. "
+                "Do not reinterpret review-only literature context as negative evidence; acquire or curate exact target-pair quantitative rows."
+            )
+        if aqp1_negative_evidence_request_ready:
+            immediate_priority.append(
+                f"Use `{aqp1_negative_evidence_request_artifact}` as the AQP1 exact-evidence acquisition request: "
+                f"`{aqp1_negative_evidence_request_row_count}` request rows require "
+                f"`{aqp1_negative_evidence_request_required_row_count}` assignable quantitative negative rows; "
+                f"current direct rows=`{aqp1_negative_evidence_request_current_direct_count}`, missing="
+                f"`{aqp1_negative_evidence_request_slot_cover_missing_count}`, public reinterpretation exhausted="
+                f"`{aqp1_negative_evidence_request_public_exhausted}`."
+            )
         transporter_gap_line = (
             "GLUT1 binder rows are now staged as non-authoritative second-wave surfaces, so the remaining transporter gap is no longer staging but evidence-blocked negative closure."
         )
@@ -679,6 +989,64 @@ def build_payload(
             f"Third, keep the AQP1 follow-on lane `{follow_on_lane}` parked behind `{aqp1_focus}` while `{aqp1_guardrail}` stays the provenance guardrail and `replacement_reference_binding_kcal_mol` remains blank.",
             "Fourth, leave all transporter negative rows in the evidence-blocked bucket until direct negative evidence is curated; do not mix them with already-staged GLUT1 binder work.",
         ]
+    if external_crosscheck_ready:
+        report_gaps.append(
+            "External life-science database crosscheck now confirms the transporter negative lane remains evidence-blocked: "
+            f"closure_allowed=`{external_crosscheck_negative_closure_allowed}`, direct negative rows="
+            f"`{external_crosscheck_direct_negative_count}`, authoritative apply rows="
+            f"`{external_crosscheck_authoritative_apply_count}`."
+        )
+        fix_plan.append(
+            "Before any transporter negative promotion, refresh the external crosscheck and require exact target-pair quantitative negative evidence; "
+            f"current decision is `{external_crosscheck_current_decision or 'keep_transporter_negative_slots_review_only'}`."
+        )
+    if negative_candidate_harvest_ready:
+        report_gaps.append(
+            "The target-level ChEMBL harvest changes the work shape but not the claim boundary: "
+            f"GLUT1 has `{negative_candidate_harvest_glut1_quant_count}` unreviewed lower-bound candidates, "
+            f"but AQP1 has `{negative_candidate_harvest_aqp1_quant_count}` and closure_allowed="
+            f"`{negative_candidate_harvest_closure_allowed}`."
+        )
+        fix_plan.append(
+            "Curate harvested GLUT1 lower-bound candidates into molecule/source/split/reference/meta packets as prework, "
+            "while preserving the AQP1-first order and keeping `authoritative_negative_apply_allowed=false` until reviewer approval."
+        )
+    if negative_candidate_curation_queue_ready:
+        report_gaps.append(
+            "The GLUT1 curation queue now covers the second-wave negative slots, but it is explicitly pre-apply: "
+            f"queue_status=`{negative_candidate_curation_queue_status}`, apply_allowed="
+            f"`{negative_candidate_curation_queue_apply_allowed}`, and AQP1-first blocker open="
+            f"`{negative_candidate_curation_queue_aqp1_blocker_open}`."
+        )
+        fix_plan.append(
+            "Review the GLUT1 curation queue row by row for molecule identity, ChEMBL document provenance, assay semantics, "
+            "split assignment, and reference/meta packet updates; keep claim promotion false until AQP1 negative closure is solved."
+        )
+    if aqp1_negative_gap_matrix_ready:
+        report_gaps.append(
+            "AQP1 is now decomposed by evidence route, and the blocker is explicit: "
+            f"status=`{aqp1_negative_gap_matrix_status}`, slot cover="
+            f"`{aqp1_negative_gap_matrix_slot_cover_ready_count}/{aqp1_negative_gap_matrix_slot_count}`, "
+            f"missing=`{aqp1_negative_gap_matrix_slot_cover_missing_count}`, claim promotion="
+            f"`{aqp1_negative_gap_matrix_claim_promotion_allowed}`."
+        )
+        fix_plan.append(
+            "For AQP1, stop spending cycles on reinterpretation-only sources: the next acceptable closure is an exact human AQP1 "
+            "target-pair quantitative weak/no-effect row with molecule identity, assay context, units, primary source, split assignment, "
+            "and reference/meta packet updates."
+        )
+    if aqp1_negative_evidence_request_ready:
+        report_gaps.append(
+            "AQP1 now has an acquisition-ready exact-evidence request packet, but it still has no claim-safe rows: "
+            f"request_status=`{aqp1_negative_evidence_request_status}`, required rows="
+            f"`{aqp1_negative_evidence_request_required_row_count}`, direct rows="
+            f"`{aqp1_negative_evidence_request_current_direct_count}`, closure_allowed="
+            f"`{aqp1_negative_evidence_request_closure_allowed}`."
+        )
+        fix_plan.append(
+            "Execute the AQP1 evidence request through public primary-source curation or an internal/CRO assay; only rows matching the "
+            "request schema should enter split/reference/meta updates, and all other context stays review-only."
+        )
     artifacts = [
         "runs/local_delivery_verdict_gate_current.md",
         "runs/local_engine_commercialization_queue_current.md",
@@ -712,6 +1080,11 @@ def build_payload(
         _text(negative_target_packets_summary.get("aqp1_negative_direct_evidence_audit_artifact")) or "runs/aqp1_negative_direct_evidence_audit_packet_current.md",
         _text(negative_target_packets_summary.get("aqp1_negative_acquisition_artifact")) or "runs/aqp1_negative_evidence_acquisition_packet_current.md",
         _text(negative_target_packets_summary.get("glut1_negative_direct_evidence_audit_artifact")) or "runs/glut1_negative_direct_evidence_audit_packet_current.md",
+        external_crosscheck_artifact,
+        aqp1_negative_gap_matrix_artifact,
+        aqp1_negative_evidence_request_artifact,
+        negative_candidate_harvest_artifact,
+        negative_candidate_curation_queue_artifact,
         "runs/glut1_second_wave_source_confirmation_packet_current.md",
         "runs/glut1_second_wave_seed_row_packet_current.md",
     ]
@@ -815,6 +1188,90 @@ def build_payload(
         "platform_gap_taxonomy_top_expansion_gap_id": platform_gap_taxonomy_top_gap,
         "platform_gap_taxonomy_top_expansion_gap_class": platform_gap_taxonomy_top_class,
         "platform_gap_taxonomy_ligand_scaleup_claim_safe_status": platform_gap_taxonomy_scaleup_status,
+        "external_evidence_crosscheck_ready": external_crosscheck_ready,
+        "external_evidence_crosscheck_artifact": external_crosscheck_artifact if external_crosscheck_ready else "",
+        "external_evidence_crosscheck_skill_family": external_crosscheck_skill_family,
+        "external_evidence_crosscheck_skill_source_count": external_crosscheck_skill_source_count,
+        "external_evidence_crosscheck_target_count": external_crosscheck_target_count,
+        "external_evidence_crosscheck_row_count": external_crosscheck_row_count,
+        "external_evidence_crosscheck_aqp1_uniprot_accession": external_crosscheck_aqp1_uniprot,
+        "external_evidence_crosscheck_glut1_uniprot_accession": external_crosscheck_glut1_uniprot,
+        "external_evidence_crosscheck_aqp1_chembl_target_id": external_crosscheck_aqp1_chembl,
+        "external_evidence_crosscheck_glut1_chembl_target_id": external_crosscheck_glut1_chembl,
+        "external_evidence_crosscheck_rcsb_glut1_entry": external_crosscheck_rcsb_glut1_entry,
+        "external_evidence_crosscheck_aqp1_bindingdb_affinity_count": external_crosscheck_aqp1_bindingdb_count,
+        "external_evidence_crosscheck_glut1_bindingdb_affinity_count": external_crosscheck_glut1_bindingdb_count,
+        "external_evidence_crosscheck_glut1_positive_exact_activity_count": external_crosscheck_glut1_positive_exact_count,
+        "external_evidence_crosscheck_direct_negative_quantitative_row_found_count": external_crosscheck_direct_negative_count,
+        "external_evidence_crosscheck_authoritative_negative_apply_allowed_count": external_crosscheck_authoritative_apply_count,
+        "external_evidence_crosscheck_negative_evidence_closure_allowed": external_crosscheck_negative_closure_allowed,
+        "external_evidence_crosscheck_current_decision": external_crosscheck_current_decision,
+        "external_evidence_crosscheck_next_required_step": external_crosscheck_next_required_step,
+        "negative_candidate_harvest_ready": negative_candidate_harvest_ready,
+        "negative_candidate_harvest_artifact": negative_candidate_harvest_artifact if negative_candidate_harvest_ready else "",
+        "negative_candidate_harvest_status": negative_candidate_harvest_status,
+        "negative_candidate_harvest_row_count": negative_candidate_harvest_row_count,
+        "negative_candidate_harvest_aqp1_candidate_review_row_count": negative_candidate_harvest_aqp1_review_count,
+        "negative_candidate_harvest_glut1_candidate_review_row_count": negative_candidate_harvest_glut1_review_count,
+        "negative_candidate_harvest_aqp1_quantitative_lower_bound_candidate_count": negative_candidate_harvest_aqp1_quant_count,
+        "negative_candidate_harvest_glut1_quantitative_lower_bound_candidate_count": negative_candidate_harvest_glut1_quant_count,
+        "negative_candidate_harvest_potential_aqp1_negative_slot_cover_count": negative_candidate_harvest_aqp1_cover_count,
+        "negative_candidate_harvest_potential_glut1_negative_slot_cover_count": negative_candidate_harvest_glut1_cover_count,
+        "negative_candidate_harvest_unreviewed_direct_negative_quantitative_candidate_count": negative_candidate_harvest_unreviewed_quant_count,
+        "negative_candidate_harvest_authoritative_negative_apply_allowed_count": negative_candidate_harvest_apply_count,
+        "negative_candidate_harvest_negative_evidence_closure_allowed": negative_candidate_harvest_closure_allowed,
+        "negative_candidate_curation_queue_ready": negative_candidate_curation_queue_ready,
+        "negative_candidate_curation_queue_artifact": (
+            negative_candidate_curation_queue_artifact if negative_candidate_curation_queue_ready else ""
+        ),
+        "negative_candidate_curation_queue_target_id": negative_candidate_curation_queue_target_id,
+        "negative_candidate_curation_queue_status": negative_candidate_curation_queue_status,
+        "negative_candidate_curation_queue_source_harvest_artifact": negative_candidate_curation_queue_source_artifact,
+        "negative_candidate_curation_queue_available_quantitative_lower_bound_candidate_count": negative_candidate_curation_queue_candidate_count,
+        "negative_candidate_curation_queue_target_negative_slot_count": negative_candidate_curation_queue_slot_count,
+        "negative_candidate_curation_queue_row_count": negative_candidate_curation_queue_row_count,
+        "negative_candidate_curation_queue_slot_cover_ready_count": negative_candidate_curation_queue_slot_cover_count,
+        "negative_candidate_curation_queue_unused_candidate_count": negative_candidate_curation_queue_unused_count,
+        "negative_candidate_curation_queue_aqp1_first_blocker_open": negative_candidate_curation_queue_aqp1_blocker_open,
+        "negative_candidate_curation_queue_candidate_apply_allowed": negative_candidate_curation_queue_apply_allowed,
+        "negative_candidate_curation_queue_authoritative_negative_apply_allowed_count": negative_candidate_curation_queue_authoritative_apply_count,
+        "negative_candidate_curation_queue_negative_evidence_closure_allowed": negative_candidate_curation_queue_closure_allowed,
+        "negative_candidate_curation_queue_claim_promotion_allowed": negative_candidate_curation_queue_claim_promotion_allowed,
+        "aqp1_negative_evidence_gap_matrix_ready": aqp1_negative_gap_matrix_ready,
+        "aqp1_negative_evidence_gap_matrix_artifact": (
+            aqp1_negative_gap_matrix_artifact if aqp1_negative_gap_matrix_ready else ""
+        ),
+        "aqp1_negative_evidence_gap_matrix_status": aqp1_negative_gap_matrix_status,
+        "aqp1_negative_evidence_gap_matrix_target_uniprot_accession": aqp1_negative_gap_matrix_target_accession,
+        "aqp1_negative_evidence_gap_matrix_target_chembl_id": aqp1_negative_gap_matrix_target_chembl,
+        "aqp1_negative_evidence_gap_matrix_negative_slot_count": aqp1_negative_gap_matrix_slot_count,
+        "aqp1_negative_evidence_gap_matrix_evidence_route_count": aqp1_negative_gap_matrix_route_count,
+        "aqp1_negative_evidence_gap_matrix_blocked_route_count": aqp1_negative_gap_matrix_blocked_route_count,
+        "aqp1_negative_evidence_gap_matrix_review_context_route_count": aqp1_negative_gap_matrix_review_context_route_count,
+        "aqp1_negative_evidence_gap_matrix_direct_negative_quantitative_row_found_count": aqp1_negative_gap_matrix_direct_negative_count,
+        "aqp1_negative_evidence_gap_matrix_authoritative_negative_apply_allowed_count": aqp1_negative_gap_matrix_apply_count,
+        "aqp1_negative_evidence_gap_matrix_negative_slot_cover_ready_count": aqp1_negative_gap_matrix_slot_cover_ready_count,
+        "aqp1_negative_evidence_gap_matrix_negative_slot_cover_missing_count": aqp1_negative_gap_matrix_slot_cover_missing_count,
+        "aqp1_negative_evidence_gap_matrix_claim_promotion_allowed": aqp1_negative_gap_matrix_claim_promotion_allowed,
+        "aqp1_negative_evidence_gap_matrix_commercialization_blocker": aqp1_negative_gap_matrix_commercialization_blocker,
+        "aqp1_negative_evidence_request_ready": aqp1_negative_evidence_request_ready,
+        "aqp1_negative_evidence_request_artifact": (
+            aqp1_negative_evidence_request_artifact if aqp1_negative_evidence_request_ready else ""
+        ),
+        "aqp1_negative_evidence_request_source_gap_matrix_artifact": aqp1_negative_evidence_request_source_gap_artifact,
+        "aqp1_negative_evidence_request_status": aqp1_negative_evidence_request_status,
+        "aqp1_negative_evidence_request_mode": aqp1_negative_evidence_request_mode,
+        "aqp1_negative_evidence_request_row_count": aqp1_negative_evidence_request_row_count,
+        "aqp1_negative_evidence_request_required_assignable_negative_row_count": aqp1_negative_evidence_request_required_row_count,
+        "aqp1_negative_evidence_request_current_direct_negative_quantitative_row_found_count": aqp1_negative_evidence_request_current_direct_count,
+        "aqp1_negative_evidence_request_negative_slot_cover_ready_count": aqp1_negative_evidence_request_slot_cover_ready_count,
+        "aqp1_negative_evidence_request_negative_slot_cover_missing_count": aqp1_negative_evidence_request_slot_cover_missing_count,
+        "aqp1_negative_evidence_request_blocked_gap_route_count": aqp1_negative_evidence_request_blocked_route_count,
+        "aqp1_negative_evidence_request_public_reinterpretation_exhausted": aqp1_negative_evidence_request_public_exhausted,
+        "aqp1_negative_evidence_request_internal_wetlab_or_primary_source_required": aqp1_negative_evidence_request_internal_or_primary_required,
+        "aqp1_negative_evidence_request_authoritative_negative_apply_allowed_count": aqp1_negative_evidence_request_apply_count,
+        "aqp1_negative_evidence_request_negative_evidence_closure_allowed": aqp1_negative_evidence_request_closure_allowed,
+        "aqp1_negative_evidence_request_claim_promotion_allowed": aqp1_negative_evidence_request_claim_promotion_allowed,
         "local_engine_queue_nightly_gate_artifact": engine_nightly_gate_artifact,
         "local_engine_queue_nightly_status_line": engine_nightly_status_line,
         "local_engine_queue_nightly_tuning_artifact": engine_nightly_tuning_artifact,
@@ -944,6 +1401,70 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- platform_gap_taxonomy_transporter_specific_split_resolved: `{s['platform_gap_taxonomy_transporter_specific_split_resolved']}`",
         f"- platform_gap_taxonomy_top_expansion_gap: `{s['platform_gap_taxonomy_top_expansion_gap_id'] or '-'} ({s['platform_gap_taxonomy_top_expansion_gap_class'] or '-'})`",
         f"- platform_gap_taxonomy_ligand_scaleup_claim_safe_status: `{s['platform_gap_taxonomy_ligand_scaleup_claim_safe_status'] or '-'}`",
+        f"- external_evidence_crosscheck_ready: `{s['external_evidence_crosscheck_ready']}`",
+        f"- external_evidence_crosscheck_artifact: `{s['external_evidence_crosscheck_artifact'] or '-'}`",
+        f"- external_evidence_crosscheck_skill_family: `{s['external_evidence_crosscheck_skill_family'] or '-'}`",
+        f"- external_evidence_crosscheck_skill_source_count: `{s['external_evidence_crosscheck_skill_source_count']}`",
+        f"- external_evidence_crosscheck_target_count: `{s['external_evidence_crosscheck_target_count']}`",
+        f"- external_evidence_crosscheck_row_count: `{s['external_evidence_crosscheck_row_count']}`",
+        f"- external_evidence_crosscheck_accessions: `AQP1={s['external_evidence_crosscheck_aqp1_uniprot_accession'] or '-'}, GLUT1={s['external_evidence_crosscheck_glut1_uniprot_accession'] or '-'}`",
+        f"- external_evidence_crosscheck_chembl_targets: `AQP1={s['external_evidence_crosscheck_aqp1_chembl_target_id'] or '-'}, GLUT1={s['external_evidence_crosscheck_glut1_chembl_target_id'] or '-'}`",
+        f"- external_evidence_crosscheck_rcsb_glut1_entry: `{s['external_evidence_crosscheck_rcsb_glut1_entry'] or '-'}`",
+        f"- external_evidence_crosscheck_bindingdb_affinity_counts: `AQP1={s['external_evidence_crosscheck_aqp1_bindingdb_affinity_count']}, GLUT1={s['external_evidence_crosscheck_glut1_bindingdb_affinity_count']}`",
+        f"- external_evidence_crosscheck_glut1_positive_exact_activity_count: `{s['external_evidence_crosscheck_glut1_positive_exact_activity_count']}`",
+        f"- external_evidence_crosscheck_direct_negative_quantitative_row_found_count: `{s['external_evidence_crosscheck_direct_negative_quantitative_row_found_count']}`",
+        f"- external_evidence_crosscheck_authoritative_negative_apply_allowed_count: `{s['external_evidence_crosscheck_authoritative_negative_apply_allowed_count']}`",
+        f"- external_evidence_crosscheck_negative_evidence_closure_allowed: `{s['external_evidence_crosscheck_negative_evidence_closure_allowed']}`",
+        f"- external_evidence_crosscheck_current_decision: `{s['external_evidence_crosscheck_current_decision'] or '-'}`",
+        f"- negative_candidate_harvest_ready: `{s['negative_candidate_harvest_ready']}`",
+        f"- negative_candidate_harvest_artifact: `{s['negative_candidate_harvest_artifact'] or '-'}`",
+        f"- negative_candidate_harvest_status: `{s['negative_candidate_harvest_status'] or '-'}`",
+        f"- negative_candidate_harvest_row_count: `{s['negative_candidate_harvest_row_count']}`",
+        f"- negative_candidate_harvest_review_rows: `AQP1={s['negative_candidate_harvest_aqp1_candidate_review_row_count']}, GLUT1={s['negative_candidate_harvest_glut1_candidate_review_row_count']}`",
+        f"- negative_candidate_harvest_quantitative_lower_bound_candidates: `AQP1={s['negative_candidate_harvest_aqp1_quantitative_lower_bound_candidate_count']}, GLUT1={s['negative_candidate_harvest_glut1_quantitative_lower_bound_candidate_count']}`",
+        f"- negative_candidate_harvest_potential_slot_cover: `AQP1={s['negative_candidate_harvest_potential_aqp1_negative_slot_cover_count']}, GLUT1={s['negative_candidate_harvest_potential_glut1_negative_slot_cover_count']}`",
+        f"- negative_candidate_harvest_unreviewed_direct_negative_quantitative_candidate_count: `{s['negative_candidate_harvest_unreviewed_direct_negative_quantitative_candidate_count']}`",
+        f"- negative_candidate_harvest_authoritative_negative_apply_allowed_count: `{s['negative_candidate_harvest_authoritative_negative_apply_allowed_count']}`",
+        f"- negative_candidate_harvest_negative_evidence_closure_allowed: `{s['negative_candidate_harvest_negative_evidence_closure_allowed']}`",
+        f"- negative_candidate_curation_queue_ready: `{s['negative_candidate_curation_queue_ready']}`",
+        f"- negative_candidate_curation_queue_artifact: `{s['negative_candidate_curation_queue_artifact'] or '-'}`",
+        f"- negative_candidate_curation_queue_target_id: `{s['negative_candidate_curation_queue_target_id'] or '-'}`",
+        f"- negative_candidate_curation_queue_status: `{s['negative_candidate_curation_queue_status'] or '-'}`",
+        f"- negative_candidate_curation_queue_source_harvest_artifact: `{s['negative_candidate_curation_queue_source_harvest_artifact'] or '-'}`",
+        f"- negative_candidate_curation_queue_available_quantitative_lower_bound_candidate_count: `{s['negative_candidate_curation_queue_available_quantitative_lower_bound_candidate_count']}`",
+        f"- negative_candidate_curation_queue_slot_cover: `{s['negative_candidate_curation_queue_slot_cover_ready_count']}/{s['negative_candidate_curation_queue_target_negative_slot_count']}`",
+        f"- negative_candidate_curation_queue_unused_candidate_count: `{s['negative_candidate_curation_queue_unused_candidate_count']}`",
+        f"- negative_candidate_curation_queue_aqp1_first_blocker_open: `{s['negative_candidate_curation_queue_aqp1_first_blocker_open']}`",
+        f"- negative_candidate_curation_queue_candidate_apply_allowed: `{s['negative_candidate_curation_queue_candidate_apply_allowed']}`",
+        f"- negative_candidate_curation_queue_authoritative_negative_apply_allowed_count: `{s['negative_candidate_curation_queue_authoritative_negative_apply_allowed_count']}`",
+        f"- negative_candidate_curation_queue_negative_evidence_closure_allowed: `{s['negative_candidate_curation_queue_negative_evidence_closure_allowed']}`",
+        f"- negative_candidate_curation_queue_claim_promotion_allowed: `{s['negative_candidate_curation_queue_claim_promotion_allowed']}`",
+        f"- aqp1_negative_evidence_gap_matrix_ready: `{s['aqp1_negative_evidence_gap_matrix_ready']}`",
+        f"- aqp1_negative_evidence_gap_matrix_artifact: `{s['aqp1_negative_evidence_gap_matrix_artifact'] or '-'}`",
+        f"- aqp1_negative_evidence_gap_matrix_status: `{s['aqp1_negative_evidence_gap_matrix_status'] or '-'}`",
+        f"- aqp1_negative_evidence_gap_matrix_target_ids: `UniProt={s['aqp1_negative_evidence_gap_matrix_target_uniprot_accession'] or '-'}, ChEMBL={s['aqp1_negative_evidence_gap_matrix_target_chembl_id'] or '-'}`",
+        f"- aqp1_negative_evidence_gap_matrix_routes: `blocked={s['aqp1_negative_evidence_gap_matrix_blocked_route_count']}/{s['aqp1_negative_evidence_gap_matrix_evidence_route_count']}, review_context={s['aqp1_negative_evidence_gap_matrix_review_context_route_count']}`",
+        f"- aqp1_negative_evidence_gap_matrix_direct_negative_quantitative_row_found_count: `{s['aqp1_negative_evidence_gap_matrix_direct_negative_quantitative_row_found_count']}`",
+        f"- aqp1_negative_evidence_gap_matrix_authoritative_negative_apply_allowed_count: `{s['aqp1_negative_evidence_gap_matrix_authoritative_negative_apply_allowed_count']}`",
+        f"- aqp1_negative_evidence_gap_matrix_slot_cover: `{s['aqp1_negative_evidence_gap_matrix_negative_slot_cover_ready_count']}/{s['aqp1_negative_evidence_gap_matrix_negative_slot_count']}`",
+        f"- aqp1_negative_evidence_gap_matrix_negative_slot_cover_missing_count: `{s['aqp1_negative_evidence_gap_matrix_negative_slot_cover_missing_count']}`",
+        f"- aqp1_negative_evidence_gap_matrix_claim_promotion_allowed: `{s['aqp1_negative_evidence_gap_matrix_claim_promotion_allowed']}`",
+        f"- aqp1_negative_evidence_gap_matrix_commercialization_blocker: `{s['aqp1_negative_evidence_gap_matrix_commercialization_blocker'] or '-'}`",
+        f"- aqp1_negative_evidence_request_ready: `{s['aqp1_negative_evidence_request_ready']}`",
+        f"- aqp1_negative_evidence_request_artifact: `{s['aqp1_negative_evidence_request_artifact'] or '-'}`",
+        f"- aqp1_negative_evidence_request_source_gap_matrix_artifact: `{s['aqp1_negative_evidence_request_source_gap_matrix_artifact'] or '-'}`",
+        f"- aqp1_negative_evidence_request_status: `{s['aqp1_negative_evidence_request_status'] or '-'}`",
+        f"- aqp1_negative_evidence_request_mode: `{s['aqp1_negative_evidence_request_mode'] or '-'}`",
+        f"- aqp1_negative_evidence_request_rows: `{s['aqp1_negative_evidence_request_row_count']}/{s['aqp1_negative_evidence_request_required_assignable_negative_row_count']}`",
+        f"- aqp1_negative_evidence_request_current_direct_negative_quantitative_row_found_count: `{s['aqp1_negative_evidence_request_current_direct_negative_quantitative_row_found_count']}`",
+        f"- aqp1_negative_evidence_request_slot_cover: `{s['aqp1_negative_evidence_request_negative_slot_cover_ready_count']}/{s['aqp1_negative_evidence_request_required_assignable_negative_row_count']}`",
+        f"- aqp1_negative_evidence_request_negative_slot_cover_missing_count: `{s['aqp1_negative_evidence_request_negative_slot_cover_missing_count']}`",
+        f"- aqp1_negative_evidence_request_blocked_gap_route_count: `{s['aqp1_negative_evidence_request_blocked_gap_route_count']}`",
+        f"- aqp1_negative_evidence_request_public_reinterpretation_exhausted: `{s['aqp1_negative_evidence_request_public_reinterpretation_exhausted']}`",
+        f"- aqp1_negative_evidence_request_internal_wetlab_or_primary_source_required: `{s['aqp1_negative_evidence_request_internal_wetlab_or_primary_source_required']}`",
+        f"- aqp1_negative_evidence_request_authoritative_negative_apply_allowed_count: `{s['aqp1_negative_evidence_request_authoritative_negative_apply_allowed_count']}`",
+        f"- aqp1_negative_evidence_request_negative_evidence_closure_allowed: `{s['aqp1_negative_evidence_request_negative_evidence_closure_allowed']}`",
+        f"- aqp1_negative_evidence_request_claim_promotion_allowed: `{s['aqp1_negative_evidence_request_claim_promotion_allowed']}`",
         f"- local_engine_queue_nightly_gate_artifact: `{s['local_engine_queue_nightly_gate_artifact'] or '-'}`",
         f"- local_engine_queue_nightly_status_line: `{s['local_engine_queue_nightly_status_line'] or '-'}`",
         f"- local_engine_queue_nightly_tuning_artifact: `{s['local_engine_queue_nightly_tuning_artifact'] or '-'}`",
@@ -1031,6 +1552,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--local-delivery-verdict-json", default=DEFAULT_LOCAL_DELIVERY_VERDICT_JSON)
     parser.add_argument("--keep-green-trend-json", default=DEFAULT_KEEP_GREEN_TREND_JSON)
     parser.add_argument("--platform-gap-taxonomy-json", default=DEFAULT_PLATFORM_GAP_TAXONOMY_JSON)
+    parser.add_argument("--external-evidence-crosscheck-json", default=DEFAULT_EXTERNAL_EVIDENCE_CROSSCHECK_JSON)
+    parser.add_argument("--negative-candidate-harvest-json", default=DEFAULT_NEGATIVE_CANDIDATE_HARVEST_JSON)
+    parser.add_argument("--negative-candidate-curation-queue-json", default=DEFAULT_NEGATIVE_CANDIDATE_CURATION_QUEUE_JSON)
+    parser.add_argument("--aqp1-negative-evidence-gap-matrix-json", default=DEFAULT_AQP1_NEGATIVE_EVIDENCE_GAP_MATRIX_JSON)
+    parser.add_argument("--aqp1-negative-evidence-request-json", default=DEFAULT_AQP1_NEGATIVE_EVIDENCE_REQUEST_JSON)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
     return parser.parse_args()
 
@@ -1048,6 +1574,11 @@ def main() -> None:
         _load_json(args.local_delivery_verdict_json),
         _load_json(args.keep_green_trend_json),
         _load_json(args.platform_gap_taxonomy_json),
+        _load_json(args.external_evidence_crosscheck_json),
+        _load_json(args.negative_candidate_harvest_json),
+        _load_json(args.negative_candidate_curation_queue_json),
+        _load_json(args.aqp1_negative_evidence_gap_matrix_json),
+        _load_json(args.aqp1_negative_evidence_request_json),
     )
     _write_markdown(_resolve(args.out_md), payload)
 

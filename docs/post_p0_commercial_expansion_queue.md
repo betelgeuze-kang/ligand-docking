@@ -33,11 +33,21 @@ For the operator-facing closure map with current repo-local artifacts and next c
    - First row: `AQP1__core_non_binder_01`; top source context is `runs/aqp1_negative_evidence_confirmation_packet_current.md`, but it is exact-source confirmation context, not authoritative negative evidence.
    - AQP1 direct negative quantitative rows remain `0`; authoritative negative apply allowed remains `0`.
    - GLUT1 stays second-wave with `cytochalasin B` as source-confirmation context; do not widen to GLUT1 negatives before the AQP1 negative slots are explicitly parked or closed.
+   - External Life Science Research skill crosscheck is now materialized at `runs/transporter_external_evidence_crosscheck_current.json`: AQP1 maps to UniProt `P29972` / ChEMBL target `CHEMBL4523210`, GLUT1 maps to UniProt `P11166` / ChEMBL target `CHEMBL2535`, RCSB `4PYP` confirms GLUT1 structural context, ChEMBL/BindingDB still provide `0` authoritative AQP1 negative quantitative rows, and GLUT1 ChEMBL hits remain positive inhibitor context rather than negative replacements.
+   - AQP1 gap matrix is materialized at `runs/aqp1_negative_evidence_gap_matrix_current.json`: `5/5` evidence routes remain blocked, direct quantitative negative rows are `0`, AQP1 negative slot cover is `0/3`, and claim promotion remains `false`. This means the next closure requires an exact human AQP1 target-pair quantitative weak/no-effect row rather than reinterpretation of review-only context.
+   - AQP1 exact-evidence request is materialized at `runs/aqp1_negative_evidence_request_packet_current.json`: it defines `3` assignable negative-evidence request rows, requires exact human AQP1 quantitative weak/no-effect evidence, excludes tetraethylammonium/acetazolamide/DMSO shortcuts, and keeps closure/promotion `false` until split/reference/meta packets are updated.
+   - Target-level ChEMBL harvest is materialized at `runs/transporter_negative_candidate_harvest_current.json`: it finds `40` review candidates, including `5` unreviewed GLUT1 `Kd > 100000 nM` lower-bound candidates that could cover up to `3` GLUT1 negative slots after curation, while AQP1 still has `0` quantitative lower-bound candidates. Apply remains `0` and closure remains blocked.
+   - GLUT1 pre-apply curation queue is materialized at `runs/transporter_negative_candidate_curation_queue_current.json`: it maps the top three ChEMBL lower-bound candidates (`CHEMBL322952`, `CHEMBL324463`, `CHEMBL326703`) to `GLUT1__core_non_binder_01` through `GLUT1__core_non_binder_03`, but `candidate_apply_allowed=false`, `claim_promotion_allowed=false`, and `aqp1_first_blocker_open=true`.
    - Keep all transporter rows review-only until direct target-specific quantitative negative evidence is curated. Do not reopen binder staging, donor-policy work, or delivery claim wording while this queue is open.
 
      ```bash
      python3 tools/run_transporter_membrane_scaffold_check.py
      python3 tools/build_transporter_membrane_readiness.py
+     python3 tools/build_transporter_external_evidence_crosscheck.py
+     python3 tools/build_aqp1_negative_evidence_gap_matrix.py
+     python3 tools/build_aqp1_negative_evidence_request_packet.py
+     python3 tools/build_transporter_negative_candidate_harvest.py
+     python3 tools/build_transporter_negative_candidate_curation_queue.py
      python3 tools/build_transporter_negative_evidence_target_packets.py
      python3 tools/build_transporter_negative_evidence_closure_queue.py
      python3 tools/build_transporter_placeholder_burndown_queue.py
@@ -150,6 +160,11 @@ For the operator-facing closure map with current repo-local artifacts and next c
      ```bash
      python3 tools/run_transporter_membrane_scaffold_check.py
      python3 tools/build_transporter_membrane_readiness.py
+     python3 tools/build_transporter_external_evidence_crosscheck.py
+     python3 tools/build_aqp1_negative_evidence_gap_matrix.py
+     python3 tools/build_aqp1_negative_evidence_request_packet.py
+     python3 tools/build_transporter_negative_candidate_harvest.py
+     python3 tools/build_transporter_negative_candidate_curation_queue.py
      python3 tools/build_family_expansion_status_rollup.py
      python3 tools/build_family_evidence_acquisition_queue.py
      ```
