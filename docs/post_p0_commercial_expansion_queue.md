@@ -2,7 +2,11 @@
 
 ## Purpose
 
-This queue starts after the current restricted `kinase`, `ion_channel`, and `gpcr` P0 delivery claim. The restricted local delivery state is green, but the GPCR router/broad claim is blocked. It is planning-only, blocked, and does not widen the current delivery verdict. The first active queue item is GPCR scale-up recovery because the current 100k claim remains blocked. Within that lane, `claim_promotion_allowed=false` stays in force; the non-leaky GPCR +3 freeze, frozen-candidate scoreability, family-held-out scorecard, and leakage audit are green, but the latest r2 row-level evidence only recovers HTR2A/OPRM1 and leaves DRD2 at global rank `18923` / target rank `5315`. The v6/v7/v8/v9 shadow lanes are all reject/rework evidence; v9 preserves Top20 at `0.25` but remains below the fair v2 frozen-r2 comparator with `PR-AUC=0.38912765311702374` and `CI-low=0.105138774269897`. The fair v2 frozen-r2 comparator is `PR-AUC=0.4326129361306714`, `CI-low=0.12342803469357462`, `top20=0.25`, still below the `0.45` CI-low claim threshold. v10 is selected-slice green but not portable as-is. v11 weak-base-gated support is selected-slice green, but complete true-base frozen replay is blocked (`input_rows=30000`, `shadow_top20_positive_count=0`, DRD2 decoys above positive `498`, HTR2A `1744`, OPRM1 `261`). v12 synthetic-anchor saturation penalty improves DRD2 on the complete 30k frozen replay (`global_rank=4102 -> 15`, DRD2 decoys above positive `1505 -> 8`, `shadow_top20_positive_count=1`), but HTR2A and OPRM1 still have `128` and `321` decoys above their positives. v13 pose-support gap pressure improves the same frozen replay again (`DRD2 5/3/2`, `HTR2A 134/46/45`, `OPRM1 1031/255/254` for global/target/decoys-above). v14 cationic-center occupancy reward is reject/rework because it overpromotes HTR2A decoys (`target_rank=1139`). v15 removes that reward, and v16 false-support discrimination is the best all-basic top20 recovery (`DRD2 2/2/1`, `HTR2A 16/7/6`, `OPRM1 583/115/114`, `shadow_top20_positive_count=2`) but remains blocked. Adaptive pose-preserving feature generation completed `30000/30000` rows and removes OPRM1 pose collapse, but the v16 adaptive replay is still blocked (`DRD2 2/2/1`, `HTR2A 22/6/5`, `OPRM1 399/158/157`, `shadow_top20_positive_count=1`). The next blocker is target-portable feature generation, not more blind weight tuning: OPRM1 pose/anchor alignment evidence, HTR2A decoy support discrimination, and conditional prior gating before any guarded 100k rerun. Do not use full 100k reruns, threshold relaxation, target identity feature, or fake pass to move this lane forward; delivery/router/platform claim promotion remains forbidden.
+This queue starts after the current restricted `kinase`, `ion_channel`, and `gpcr` P0 delivery claim. The restricted local delivery state is green, and the tracked restricted ligand scale-up suite is now green (`commercialization_ready_suite_count=3/3`, `pending_suite_ids=[]`). This queue is planning-only, blocked for broad commercialization, and does not widen the current delivery verdict.
+
+As of the current artifact refresh, the first active broad-commercialization blocker is transporter negative placeholder closure, not GPCR scale-up recovery. `runs/platform_gap_taxonomy_packet_current.json` reports `top_expansion_gap_id=transporter_negative_placeholder_rows`, `evidence_blocked_placeholder_rows=6`, and `current_delivery_blocker_count=0`. `runs/transporter_negative_evidence_closure_queue_current.json` narrows the next action to `AQP1__core_non_binder_01` through `AQP1__core_non_binder_03`, followed by the three `GLUT1` negative slots; all six rows stay review-only until direct transporter-specific quantitative negative evidence is curated.
+
+Legacy GPCR family/router diagnostics remain claim-locked comparison material. They do not block the current restricted local-delivery verdict or the tracked restricted 1M scale-up package, and they do not promote broad GPCR/router/platform wording.
 
 For the non-ADRB2 positive freeze workflow, `config/gpcr_non_adrb2_positive_candidates_v1.csv` is the curated candidate input schema. The intended handoff is candidate CSV -> `runs/gpcr_non_adrb2_positive_candidates_leakage_audit_current.json` -> `runs/gpcr_positive_coverage_freeze_packet_current.json` -> `runs/gpcr_frozen_candidate_profile_support_current/summary.json` -> `runs/gpcr_frozen_candidate_scoreability_current.json` -> guarded 100k rerun -> `runs/gpcr_family_heldout_scorecard_current.json` / `runs/gpcr_family_heldout_scorecard_guardrail_current.json` -> `runs/gpcr_guarded_100k_rerun_readiness_current.json`; the current freeze packet is `frozen=true` after three non-ADRB2 ChEMBL_36 positives and a pass leakage audit, profile support is `profile_ready=true`, scoreability is `pass=true`, and family-held-out is `pass=true`. This closes launch/family coverage only; `claim_promotion_allowed=false` remains unchanged. The current proxy hook is `runs/gpcr_guarded_100k_rank_failure_diagnostics_current.json` / `drd2_pose_physics_diagnostics`; the paired shadow replay eval is `runs/gpcr_family_anchor_v2_shadow_replay_eval_current.json`; keep the rest of the follow-up chain compare-only.
 
@@ -11,7 +15,8 @@ For the operator-facing closure map with current repo-local artifacts and next c
 ## Claim Boundary
 
 - In claim: the current restricted P0 delivery claim remains limited to `kinase`, `ion_channel`, and `gpcr`.
-- Out of claim: transporter expansion, CA2/PXR packet closure, IDP broader promotion, and GPCR scale-up recovery.
+- Out of claim: transporter expansion, CA2/PXR packet closure, IDP broader promotion, broad GPCR-family/router generalization, broad platform readiness, and unattended decision-making.
+- The tracked restricted ligand scale-up suite is green, but that does not widen the claim beyond `kinase`, `ion_channel`, and `gpcr`.
 - Transporter stays out of claim and remains parked/review-only until `AQP1` is first-wave, `GLUT1` is second-wave, and negative evidence plus provenance closure are complete.
 - CA2/PXR stays out of claim and remains prep-only until placeholder work, provenance, and `replacement_reference_binding_kcal_mol` closure are complete.
 - `fixed_family_reference`, `gpcr_core_decoy_intrusion_v1`, `gpcr_core_linear_rescore_v1`, `gpcr_core_mismatch_contact_rescore_v1`, and `gpcr_core_structure_support_rescore_v1` are comparison-only shadow/guarded/reject evidence; `claim_promotion_allowed=false` remains in force, `gpcr_core_family_anchor_rescore_v2` is the feature donor/baseline only, and `gpcr_core_acidic_anchor_overcontact_prior_gate_v4`/`gpcr_core_fixed_reference_live_shadow_v5` are tombstone reject evidence. They do not promote the claim or router/platform wording, and no broad GPCR/basic-amine generalization is allowed. The paired shadow replay eval artifact is `runs/gpcr_family_anchor_v2_shadow_replay_eval_current.json`; keep it compare-only with `runs/gpcr_guarded_100k_rank_failure_diagnostics_current.json`.
@@ -21,7 +26,27 @@ For the operator-facing closure map with current repo-local artifacts and next c
 
 ## Priority Queue
 
-0. GPCR positive coverage expansion and scale-up recovery
+0. Transporter negative placeholder row closure
+   - Current top expansion gap: `transporter_negative_placeholder_rows`.
+   - Source of truth: `runs/transporter_negative_evidence_closure_queue_current.json`, `runs/transporter_negative_evidence_target_packets_current.json`, `runs/transporter_placeholder_burndown_queue_current.json`, and `runs/platform_gap_taxonomy_packet_current.json`.
+   - Queue state: six evidence-blocked negative placeholder rows remain: three `AQP1` slots first, then three `GLUT1` slots.
+   - First row: `AQP1__core_non_binder_01`; top source context is `runs/aqp1_negative_evidence_confirmation_packet_current.md`, but it is exact-source confirmation context, not authoritative negative evidence.
+   - AQP1 direct negative quantitative rows remain `0`; authoritative negative apply allowed remains `0`.
+   - GLUT1 stays second-wave with `cytochalasin B` as source-confirmation context; do not widen to GLUT1 negatives before the AQP1 negative slots are explicitly parked or closed.
+   - Keep all transporter rows review-only until direct target-specific quantitative negative evidence is curated. Do not reopen binder staging, donor-policy work, or delivery claim wording while this queue is open.
+
+     ```bash
+     python3 tools/run_transporter_membrane_scaffold_check.py
+     python3 tools/build_transporter_membrane_readiness.py
+     python3 tools/build_transporter_negative_evidence_target_packets.py
+     python3 tools/build_transporter_negative_evidence_closure_queue.py
+     python3 tools/build_transporter_placeholder_burndown_queue.py
+     python3 tools/build_family_expansion_status_rollup.py
+     python3 tools/build_commercialization_gap_burndown.py
+     python3 tools/build_platform_gap_taxonomy_packet.py
+     ```
+
+1. GPCR family/router diagnostics, claim-locked behind transporter
    - Keep `claim_safe=false`; `claim_promotion_allowed=false`; the guarded 100k frozen non-ADRB2 rerun completed, and the next hard blocker is now CI-low/top20 scoring quality, not positive coverage or family-held-out. Do not use full 100k reruns, threshold relaxation, target identity feature, or fake pass to move this lane forward, and do not generalize the v2 basic-amine feature donor into broad GPCR/basic-amine wording; the next work is OPRM1 pose/anchor alignment evidence plus HTR2A decoy support discrimination after the v16/adaptive support-gap recovery, not another blind scalar rerun.
    - The v3 family-anchor CI-stability packet `runs/gpcr_residual_prototype_spec_family_anchor_ci_stability_v3.json` is diagnostic-only (`prototype_mode=shadow_only`, `scorer_apply_allowed=false`). The v4 acidic-anchor overcontact prior gate is now implemented and profiled but rejected by score-only replay: `gpcr_acidic_anchor_overcontact_prior_gate` activated on `0/40000` rows and metrics were `PR-AUC=0.008231735935435774`, `PR-AUC CI-low=0.0009935430341614215`, `top20=0.00`; keep it as tombstone reject evidence.
    - `minimum_non_leaky_positive_additions=3` is satisfied in the frozen packet: `positive_count=9`, `new_non_adrb2_positive_count=3`, distinct positive GPCR target count `=4`, and leakage audit `pass=true`.
@@ -101,7 +126,7 @@ For the operator-facing closure map with current repo-local artifacts and next c
    - Guarded 100k readiness source: `runs/gpcr_guarded_100k_rerun_readiness_current.json`; current `launch_eligible=true`, `eligible=false`, `claim_review_eligible=false`, and blockers are `ci_low_below_threshold` plus `top20_stability_not_green`.
    - Crash/resume rule: rerun the exact same command with the same tag/spec after a shutdown. `run_external_validation_blind_sets.py` and `run_ligand_stress_validation.py` default to `--resume`, while stage2 trajectory generation now forwards `--traj-resume-existing` by default, so partial trajectory rows should be reused instead of regenerated.
 
-1. PDE translation quality
+2. PDE translation quality
    - Keep the T. cruzi PDE rescue/translation lane honest.
    - PDE translation은 `binding_energy_proxy` → `pose RMSD` → `backmapping` → `local minimization survival` 순서로 본다; later checks and expensive reruns must not jump ahead of earlier blockers.
    - Use the local translation annotator, rescue/validate pair, and translation-quality packet before any expensive rerun:
@@ -118,7 +143,7 @@ For the operator-facing closure map with current repo-local artifacts and next c
    - Do not widen claims while `translation_quality_ready=false` or the rescue attempt is incomplete; `claim_promotion_allowed=false` stays in force until the blocker sequence closes.
    - Source of truth: `runs/wetlab_tcruzi_pde_translation_quality_packet_current.md`.
 
-2. Transporter AQP1 / GLUT1 evidence closure
+3. Transporter AQP1 / GLUT1 scaffold/readiness helper refresh
    - Sequence AQP1 first, then GLUT1; AQP1 stays first-wave and GLUT1 stays second-wave.
    - Use the validate-only scaffold check and the transporter readiness rollup:
 
@@ -133,7 +158,7 @@ For the operator-facing closure map with current repo-local artifacts and next c
    - Source artifacts: `runs/transporter_commercialization_closure_queue_current.json`, `runs/transporter_binder_verdict_progress_current.json`, `runs/transporter_placeholder_burndown_queue_current.md`.
    - Source docs: `docs/transporter_membrane_runnable_scaffold_notes.md`, `docs/transporter_membrane_expansion_scaffold_plan.md`, `docs/post_p0_evidence_closure_status.md`.
 
-3. CA2 / PXR packet closure
+4. CA2 / PXR packet closure
    - Close the packet work before any expansion candidate wording:
 
      ```bash
@@ -149,7 +174,7 @@ For the operator-facing closure map with current repo-local artifacts and next c
    - Source artifacts: `runs/ca2_ligand_packet_fill_workbook_current.json`, `runs/ca2_packet_replacement_workbook_current.json`, `runs/ca2_packet_replacement_readiness_current.json`, `runs/pxr_ligand_packet_fill_workbook_current.json`, `runs/pxr_packet_fill_readiness_current.json`, `runs/pxr_quantitative_provenance_packet_current.json`, `runs/pxr_pending_resolution_packet_current.json`.
    - Source docs: `docs/non_kinase_enzyme_ca2_runnable_packet_plan.md`, `docs/non_kinase_enzyme_ca2_ligand_packet_p0_plan.md`, `docs/non_kinase_enzyme_ca2_packet_replacement_workbook.md`, `docs/non_kinase_enzyme_ca2_packet_replacement_readiness.md`, `docs/nuclear_receptor_pxr_ligand_packet_fill_workbook.md`, `docs/post_p0_evidence_closure_status.md`.
 
-4. IDP broader-promotion boundaries
+5. IDP broader-promotion boundaries
    - Keep broader promotion blocked while the bounded lane is evaluated.
    - Use the broader-promotion review and resolution helpers:
 
