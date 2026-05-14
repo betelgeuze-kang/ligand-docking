@@ -2014,6 +2014,12 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
                     str(float(traj_stage2_settings["traj_dynamic_adress_max_atom_ratio"])),
                     "--dynamic-adress-force-targets",
                     str(args.traj_dynamic_adress_force_targets),
+                    "--contact-attract-base",
+                    str(float(args.traj_contact_attract_base)),
+                    "--contact-target-distance-A",
+                    str(float(args.traj_contact_target_distance_A)),
+                    "--contact-attract-cutoff-A",
+                    str(float(args.traj_contact_attract_cutoff_A)),
                 ]
             )
             traj_cmd.extend(_traj_prod_stage2_args(args, mode=mode, traj_frames=int(traj_frames)))
@@ -3891,6 +3897,9 @@ def build_parser() -> argparse.ArgumentParser:
         default=True,
     )
     p.add_argument("--traj-dynamic-adress-force-targets", type=str, default="")
+    p.add_argument("--traj-contact-attract-base", type=float, default=0.0)
+    p.add_argument("--traj-contact-target-distance-A", type=float, default=3.2)
+    p.add_argument("--traj-contact-attract-cutoff-A", type=float, default=8.0)
     p.add_argument(
         "--traj-dynamic-core-fallback-on-oom",
         action=argparse.BooleanOptionalAction,

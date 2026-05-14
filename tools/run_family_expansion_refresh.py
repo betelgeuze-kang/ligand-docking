@@ -272,8 +272,45 @@ def main() -> None:
         ("nightly_stage6_rescored_gate_packet", [sys.executable, _script("build_nightly_stage6_rescored_gate_packet.py")]),
         ("nightly_stage6_downstream_rerun_packet", [sys.executable, _script("build_nightly_stage6_downstream_rerun_packet.py")]),
         ("nightly_stage6_execute_result_packet", [sys.executable, _script("build_nightly_stage6_execute_result_packet.py")]),
-        ("wetlab_execution_readiness_queue", [sys.executable, _script("build_wetlab_execution_readiness_queue.py")]),
+        ("allatom_claim_evidence_handoff", [sys.executable, _script("build_allatom_claim_evidence_handoff.py")]),
+        ("wetlab_tcruzi_pde_allatom_review_packet", [sys.executable, _script("build_wetlab_tcruzi_pde_allatom_review_packet.py")]),
+        (
+            "wetlab_tcruzi_pde_bindingdb_similarity_seed_packet",
+            [sys.executable, _script("build_wetlab_tcruzi_pde_bindingdb_similarity_seed_packet.py")],
+        ),
+        (
+            "wetlab_tcruzi_pde_external_geometry_stability_rescue_queue",
+            [sys.executable, _script("build_wetlab_tcruzi_pde_external_geometry_stability_rescue_queue.py")],
+        ),
+        (
+            "wetlab_tcruzi_pde_translation_evidence_probe",
+            [
+                sys.executable,
+                _script("probe_wetlab_tcruzi_pde_translation_evidence.py"),
+                "--out-json",
+                "runs/wetlab_tcruzi_pde_translation_evidence_probe_current.json",
+            ],
+        ),
+        ("wetlab_tcruzi_pde_translation_quality_packet", [sys.executable, _script("build_wetlab_tcruzi_pde_translation_quality_packet.py")]),
+        (
+            "wetlab_tcruzi_pde_metric_scale_gap_packet",
+            [sys.executable, _script("build_wetlab_tcruzi_pde_metric_scale_gap_packet.py")],
+        ),
+        (
+            "wetlab_tcruzi_pde_pose_backmapping_closure_queue",
+            [sys.executable, _script("build_wetlab_tcruzi_pde_pose_backmapping_closure_queue.py")],
+        ),
+        (
+            "wetlab_tcruzi_pde_ligand_atomization_gap_packet",
+            [sys.executable, _script("build_wetlab_tcruzi_pde_ligand_atomization_gap_packet.py")],
+        ),
+        (
+            "wetlab_tcruzi_pde_atomized_ligand_draft_packet",
+            [sys.executable, _script("build_wetlab_tcruzi_pde_atomized_ligand_draft_packet.py")],
+        ),
         ("wetlab_selected_allatom_gate_burndown_packet", [sys.executable, _script("build_wetlab_selected_allatom_gate_burndown_packet.py")]),
+        ("wetlab_selected_allatom_repair_packet", [sys.executable, _script("build_wetlab_selected_allatom_repair_packet.py")]),
+        ("wetlab_execution_readiness_queue", [sys.executable, _script("build_wetlab_execution_readiness_queue.py")]),
         ("local_engine_commercialization_queue", [sys.executable, _script("build_local_engine_commercialization_queue.py")]),
         ("execution_handoff_dashboard", [sys.executable, _script("build_execution_handoff_dashboard.py")]),
         ("family_packet_catalog", [sys.executable, _script("build_family_packet_catalog.py")]),
@@ -282,8 +319,18 @@ def main() -> None:
         ("commercialization_readiness", [sys.executable, _script("build_commercialization_readiness_report.py")]),
         ("cross_family_shadow", [sys.executable, _script("build_cross_family_residual_shadow_layer.py")]),
         ("commercialization_gap_burndown", [sys.executable, _script("build_commercialization_gap_burndown.py")]),
-        ("commercialization_status_report", [sys.executable, _script("build_commercialization_status_report.py")]),
         ("family_expansion_rollup", [sys.executable, _script("build_family_expansion_status_rollup.py")]),
+        ("aqp1_functional_kcal_surrogate_packet_final", [sys.executable, _script("build_aqp1_functional_kcal_surrogate_packet.py")]),
+        ("ca2_pxr_review_policy_closure_gate_final", [sys.executable, _script("build_ca2_pxr_review_policy_closure_gate.py")]),
+        ("keep_green_regression_trend_packet_final", [sys.executable, _script("build_keep_green_regression_trend_packet.py")]),
+        ("local_engine_commercialization_queue_final", [sys.executable, _script("build_local_engine_commercialization_queue.py")]),
+        ("family_expansion_rollup_final", [sys.executable, _script("build_family_expansion_status_rollup.py")]),
+        ("commercialization_gap_burndown_final", [sys.executable, _script("build_commercialization_gap_burndown.py")]),
+        ("platform_gap_taxonomy_packet_final", [sys.executable, _script("build_platform_gap_taxonomy_packet.py")]),
+        ("accuracy_parity_scorecard_final", [sys.executable, _script("build_accuracy_parity_scorecard.py")]),
+        ("gpcr_a1_accuracy_repair_queue_final", [sys.executable, _script("build_gpcr_a1_accuracy_repair_queue.py")]),
+        ("gpcr_a1_independent_repeat_packet_final", [sys.executable, _script("build_gpcr_a1_independent_repeat_packet.py")]),
+        ("commercialization_status_report_final", [sys.executable, _script("build_commercialization_status_report.py")]),
     ]
 
     results: list[dict[str, object]] = []
@@ -305,6 +352,8 @@ def main() -> None:
     pxr_intake = _safe_load_json(RUNS / "pxr_unresolved_evidence_capture_intake_current.json")
     pxr_commit = _safe_load_json(RUNS / "pxr_pending_resolution_commit_packet_current.json")
     transporter_apply_status = _safe_load_json(RUNS / "transporter_apply_draft_status_current.json")
+    transporter_placeholder_burndown = _safe_load_json(RUNS / "transporter_placeholder_burndown_queue_current.json")
+    transporter_negative_closure = _safe_load_json(RUNS / "transporter_negative_evidence_closure_queue_current.json")
     transporter_capture_intake = _safe_load_json(RUNS / "transporter_blocker_capture_intake_current.json")
     transporter_seed_execution = _safe_load_json(RUNS / "transporter_seed_row_execution_packet_current.json")
     aqp1_quant_intake = _safe_load_json(RUNS / "aqp1_quantitative_binding_capture_intake_current.json")
@@ -313,6 +362,17 @@ def main() -> None:
     aqp1_fill_draft = _safe_load_json(RUNS / "aqp1_seed_row_fill_draft_current.json")
     aqp1_sync_preview = _safe_load_json(RUNS / "aqp1_seed_row_sync_apply_preview_current.json")
 
+    transporter_burndown_summary = dict(transporter_placeholder_burndown.get("summary", {}) or {})
+    transporter_negative_summary = dict(transporter_negative_closure.get("summary", {}) or {})
+    transporter_negative_closed = bool(transporter_negative_summary.get("negative_evidence_closure_allowed", False))
+    transporter_placeholder_rows = transporter_burndown_summary.get(
+        "placeholder_driven_rows",
+        transporter_apply_status.get("summary", {}).get("placeholder_driven_rows", 0),
+    )
+    transporter_ready_rows = transporter_burndown_summary.get(
+        "ready_for_apply_rows",
+        transporter_apply_status.get("summary", {}).get("ready_for_apply_rows", 0),
+    )
     family_signals = [
         _family_signal(
             "CA2",
@@ -332,11 +392,15 @@ def main() -> None:
         ),
         _family_signal(
             "transporter",
-            f"placeholder_driven_rows={transporter_apply_status.get('summary', {}).get('placeholder_driven_rows', 0)}; "
-            f"staged_non_authoritative_rows={transporter_apply_status.get('summary', {}).get('staged_non_authoritative_rows', 0)}; "
-            f"ready_for_apply_rows={transporter_apply_status.get('summary', {}).get('ready_for_apply_rows', 0)}",
-            str(transporter_apply_status.get("summary", {}).get("next_required_step", "")).strip(),
-            "runs/transporter_apply_draft_status_current.json",
+            f"placeholder_driven_rows={transporter_placeholder_rows}; "
+            f"ready_for_apply_rows={transporter_ready_rows}; "
+            f"negative_evidence_closure_allowed={transporter_negative_closed}",
+            (
+                "Transporter negative placeholders are closed for accounting; keep direct-binding kcal claims blank."
+                if transporter_negative_closed
+                else str(transporter_apply_status.get("summary", {}).get("next_required_step", "")).strip()
+            ),
+            "runs/transporter_placeholder_burndown_queue_current.json",
         ),
         _family_signal(
             "AQP1",
@@ -384,6 +448,11 @@ def main() -> None:
             "runs/wetlab_execution_readiness_queue_current.md",
             "runs/wetlab_selected_allatom_gate_burndown_packet_current.md",
             "runs/local_engine_commercialization_queue_current.md",
+            "runs/keep_green_regression_trend_packet_current.md",
+            "runs/platform_gap_taxonomy_packet_current.md",
+            "runs/accuracy_parity_scorecard_current.md",
+            "runs/gpcr_a1_accuracy_repair_queue_current.md",
+            "runs/gpcr_a1_independent_repeat_packet_current.md",
             "commercialization_status_report.md",
         ],
     }

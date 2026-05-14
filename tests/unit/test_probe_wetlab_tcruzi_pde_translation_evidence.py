@@ -101,3 +101,247 @@ def test_probe_reports_exact_and_alias_fields_with_non_null_counts(tmp_path: Pat
     )
     assert replicate_alias["occurrence_count"] == 2
     assert replicate_alias["non_null_count"] == 1
+
+
+def test_probe_scores_tcruzi_pde_translation_candidate_pool(tmp_path: Path) -> None:
+    _write_csv(
+        tmp_path
+        / "runs"
+        / "archive"
+        / "snapshot_current"
+        / "wetlab_broad_screen_throughput"
+        / "t_cruzi_pde"
+        / "20_of_20"
+        / "throughput_run_stage3_scores.csv",
+        [
+            {
+                "ligand_id": "weak_core_like",
+                "binding_energy_proxy": "-0.12",
+                "mean_min_distance_A": "2.7",
+                "stability_score": "0.5",
+                "contact_fraction": "0.7",
+                "trajectory_frames": "300",
+            },
+            {
+                "ligand_id": "strong_core_pass",
+                "binding_energy_proxy": "-0.65",
+                "mean_min_distance_A": "2.8",
+                "stability_score": "0.4",
+                "contact_fraction": "0.8",
+                "trajectory_frames": "220",
+            },
+        ],
+    )
+
+    payload = build_probe(tmp_path)
+    summary = payload["summary"]
+
+    assert summary["translation_score_candidate_file_count"] == 1
+    assert summary["translation_score_candidate_row_count"] == 2
+    assert summary["translation_energy_pass_count"] == 1
+    assert summary["translation_energy_pass_unique_ligand_count"] == 1
+    assert summary["translation_core_pass_count"] == 1
+    assert summary["translation_core_pass_unique_ligand_count"] == 1
+    assert summary["candidate_pool_supports_energy_closure"] is True
+    assert summary["best_binding_energy_proxy"] == -0.65
+    assert summary["best_binding_energy_proxy_row"]["ligand_id"] == "strong_core_pass"
+    assert summary["candidate_pool_energy_gap_closed"] is True
+    assert summary["candidate_pool_core_gate_closed"] is True
+
+
+def test_probe_scores_external_homolog_seed_screen_without_promoting_claims(tmp_path: Path) -> None:
+    _write_csv(
+        tmp_path / "runs" / "wetlab_tcruzi_pde_external_pdeb1_seed_screen" / "stage3_scores.csv",
+        [
+            {
+                "ligand_id": "external_energy_hit",
+                "binding_energy_proxy": "-0.82",
+                "mean_min_distance_A": "3.7",
+                "stability_score": "0.001",
+                "contact_fraction": "0.01",
+                "trajectory_frames": "100",
+            },
+            {
+                "ligand_id": "external_geometry_hit",
+                "binding_energy_proxy": "-0.2",
+                "mean_min_distance_A": "2.9",
+                "stability_score": "0.5",
+                "contact_fraction": "0.7",
+                "trajectory_frames": "100",
+            },
+        ],
+    )
+
+    payload = build_probe(tmp_path)
+    summary = payload["summary"]
+
+    assert summary["translation_score_candidate_file_count"] == 1
+    assert summary["external_homolog_seed_candidate_file_count"] == 1
+    assert summary["external_homolog_seed_candidate_row_count"] == 2
+    assert summary["translation_energy_pass_count"] == 1
+    assert summary["translation_energy_pass_unique_ligand_count"] == 1
+    assert summary["translation_core_pass_count"] == 0
+    assert summary["translation_core_pass_unique_ligand_count"] == 0
+    assert summary["external_homolog_seed_energy_pass_count"] == 1
+    assert summary["external_homolog_seed_core_pass_count"] == 0
+    assert summary["candidate_pool_energy_gap_closed"] is True
+    assert summary["candidate_pool_core_gate_closed"] is False
+    assert summary["candidate_pool_supports_energy_closure"] is False
+    assert summary["external_homolog_seed_best_binding_energy_proxy"] == -0.82
+    assert (
+        summary["candidate_pool_claim_scope_note"]
+        == "external_homolog_seed_rows_are_candidate_pool_expansion_only_not_direct_tcruzi_pde_claim"
+    )
+    assert summary["best_binding_energy_proxy_row"]["source_pool_class"] == "external_homolog_pdeb1_seed"
+
+
+def test_probe_scores_external_geometry_stability_rescore_as_separate_evidence(tmp_path: Path) -> None:
+    rows = [
+        {
+            "ligand_id": "same_energy_hit",
+            "binding_energy_proxy": "-0.82",
+            "mean_min_distance_A": "3.7",
+            "stability_score": "0.001",
+            "contact_fraction": "0.01",
+            "trajectory_frames": "100",
+        }
+    ]
+    _write_csv(
+        tmp_path / "runs" / "wetlab_tcruzi_pde_external_pdeb1_seed_screen" / "stage3_scores.csv",
+        rows,
+    )
+    _write_csv(
+        tmp_path / "runs" / "wetlab_tcruzi_pde_external_geomstab_rescore_3bead_current" / "stage3_scores.csv",
+        rows,
+    )
+
+    payload = build_probe(tmp_path)
+    summary = payload["summary"]
+
+    assert summary["translation_score_candidate_file_count"] == 2
+    assert summary["translation_score_candidate_row_count"] == 2
+    assert summary["translation_score_candidate_unique_ligand_count"] == 1
+    assert summary["translation_energy_pass_count"] == 2
+    assert summary["translation_energy_pass_unique_ligand_count"] == 1
+    assert summary["translation_core_pass_count"] == 0
+    assert summary["translation_core_pass_unique_ligand_count"] == 0
+    assert summary["external_homolog_geomstab_rescore_candidate_file_count"] == 1
+    assert summary["external_homolog_geomstab_rescore_candidate_row_count"] == 1
+    assert summary["external_homolog_geomstab_rescore_energy_pass_count"] == 1
+    assert summary["external_homolog_geomstab_rescore_core_pass_count"] == 0
+    assert summary["external_homolog_geomstab_rescore_best_binding_energy_proxy"] == -0.82
+
+
+def test_probe_scores_external_adress_rescue_as_failed_rescue_evidence(tmp_path: Path) -> None:
+    _write_csv(
+        tmp_path / "runs" / "wetlab_tcruzi_pde_external_geomstab_adress_rescue_scores_current" / "stage3_scores.csv",
+        [
+            {
+                "ligand_id": "adress_energy_hit",
+                "binding_energy_proxy": "-0.70",
+                "mean_min_distance_A": "4.1",
+                "stability_score": "0.001",
+                "contact_fraction": "0.01",
+                "trajectory_frames": "300",
+            }
+        ],
+    )
+
+    payload = build_probe(tmp_path)
+    summary = payload["summary"]
+
+    assert summary["translation_score_candidate_file_count"] == 1
+    assert summary["translation_energy_pass_count"] == 1
+    assert summary["translation_energy_pass_unique_ligand_count"] == 1
+    assert summary["translation_core_pass_count"] == 0
+    assert summary["external_homolog_adress_rescue_candidate_file_count"] == 1
+    assert summary["external_homolog_adress_rescue_candidate_row_count"] == 1
+    assert summary["external_homolog_adress_rescue_energy_pass_count"] == 1
+    assert summary["external_homolog_adress_rescue_core_pass_count"] == 0
+    assert summary["external_homolog_adress_rescue_best_binding_energy_proxy"] == -0.70
+    assert summary["best_binding_energy_proxy_row"]["source_pool_class"] == "external_homolog_pdeb1_adress_rescue"
+
+
+def test_probe_scores_external_contact_rescue_as_failed_rescue_evidence(tmp_path: Path) -> None:
+    _write_csv(
+        tmp_path / "runs" / "wetlab_tcruzi_pde_external_geomstab_contact_rescue_scores_current" / "stage3_scores.csv",
+        [
+            {
+                "ligand_id": "contact_energy_hit",
+                "binding_energy_proxy": "-0.64",
+                "mean_min_distance_A": "4.3",
+                "stability_score": "0.001",
+                "contact_fraction": "0.01",
+                "trajectory_frames": "300",
+            }
+        ],
+    )
+
+    payload = build_probe(tmp_path)
+    summary = payload["summary"]
+
+    assert summary["translation_score_candidate_file_count"] == 1
+    assert summary["translation_energy_pass_count"] == 1
+    assert summary["translation_energy_pass_unique_ligand_count"] == 1
+    assert summary["translation_core_pass_count"] == 0
+    assert summary["external_homolog_contact_rescue_candidate_file_count"] == 1
+    assert summary["external_homolog_contact_rescue_candidate_row_count"] == 1
+    assert summary["external_homolog_contact_rescue_energy_pass_count"] == 1
+    assert summary["external_homolog_contact_rescue_core_pass_count"] == 0
+    assert summary["external_homolog_contact_rescue_best_binding_energy_proxy"] == -0.64
+    assert summary["best_binding_energy_proxy_row"]["source_pool_class"] == "external_homolog_pdeb1_contact_rescue"
+
+
+def test_probe_scores_bindingdb_similarity_seed_screen_as_claim_safe_evidence(tmp_path: Path) -> None:
+    _write_csv(
+        tmp_path / "runs" / "wetlab_tcruzi_pde_bindingdb_similarity_seed_screen" / "stage9_stage3_scores.csv",
+        [
+            {
+                "ligand_id": "bindingdb_energy_hit",
+                "binding_energy_proxy": "-0.60",
+                "mean_min_distance_A": "4.35",
+                "stability_score": "0.001",
+                "contact_fraction": "0.01",
+                "trajectory_frames": "300",
+            },
+            {
+                "ligand_id": "bindingdb_geometry_hit",
+                "binding_energy_proxy": "-0.20",
+                "mean_min_distance_A": "2.80",
+                "stability_score": "0.40",
+                "contact_fraction": "0.70",
+                "trajectory_frames": "300",
+            },
+        ],
+    )
+    _write_csv(
+        tmp_path / "runs" / "wetlab_tcruzi_pde_bindingdb_similarity_seed_screen" / "stage_stage3_scores.csv",
+        [
+            {
+                "ligand_id": "single_seed_pilot_not_main_screen",
+                "binding_energy_proxy": "-0.10",
+                "mean_min_distance_A": "4.80",
+                "stability_score": "0.001",
+                "contact_fraction": "0.01",
+                "trajectory_frames": "300",
+            }
+        ],
+    )
+
+    payload = build_probe(tmp_path)
+    summary = payload["summary"]
+
+    assert summary["translation_score_candidate_file_count"] == 1
+    assert summary["translation_score_candidate_row_count"] == 2
+    assert summary["translation_energy_pass_count"] == 1
+    assert summary["translation_core_pass_count"] == 0
+    assert summary["external_bindingdb_similarity_candidate_file_count"] == 1
+    assert summary["external_bindingdb_similarity_candidate_row_count"] == 2
+    assert summary["external_bindingdb_similarity_energy_pass_count"] == 1
+    assert summary["external_bindingdb_similarity_core_pass_count"] == 0
+    assert summary["external_bindingdb_similarity_best_binding_energy_proxy"] == -0.60
+    assert summary["best_binding_energy_proxy_row"]["source_pool_class"] == "external_bindingdb_similarity_seed"
+    assert (
+        summary["candidate_pool_claim_scope_note"]
+        == "external_homolog_seed_rows_are_candidate_pool_expansion_only_not_direct_tcruzi_pde_claim"
+    )

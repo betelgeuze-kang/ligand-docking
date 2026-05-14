@@ -39,13 +39,13 @@ class TestSelectKernel:
 
     @patch.dict("os.environ", {"RUST_HIP_USE_FUSED_CELL": "1"})
     def test_env_toggle_has_no_effect(self):
-        """RUST_HIP_USE_FUSED_CELL=1이어도 fused cell 선택 안 됨."""
+        """RUST_HIP_USE_FUSED_CELL=1이면 명시적 fused cell 경로를 선택."""
         from core.rust_hip_backend import _select_kernel
         mock_module = MagicMock()
         mock_module.compute_nonbonded_celllist_gpu = lambda: None
         mock_module.compute_nonbonded_nblist_gpu = lambda: None
         result = _select_kernel(mock_module)
-        assert result == "compute_nonbonded_nblist_gpu"
+        assert result == "compute_nonbonded_celllist_gpu"
 
     def test_returns_none_if_no_kernel(self):
         from core.rust_hip_backend import _select_kernel

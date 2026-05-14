@@ -16,6 +16,7 @@ def test_prod_speedpack_parser_defaults_are_off() -> None:
     assert args.prod_adaptive_frame_budget is False
     assert args.prod_early_stop is False
     assert args.prod_light_artifacts is False
+    assert args.contact_attract_base == 0.0
 
 
 def test_resolve_prod_effective_frames_is_noop_when_disabled() -> None:
@@ -115,6 +116,50 @@ def test_batched_min_distance_contact_fraction_matches_inline_proxy() -> None:
     assert backend == "torch_batch"
     assert np.allclose(min_distance, expected_min_distance, atol=1e-6)
     assert np.allclose(contact_fraction, expected_contact_fraction, atol=1e-6)
+
+
+def test_contact_attract_force_is_opt_in_and_pulls_toward_nearest_protein() -> None:
+    c = torch.tensor(
+        [
+            [
+                [0.0, 0.0, 0.0],
+                [6.0, 0.0, 0.0],
+            ]
+        ],
+        dtype=torch.float32,
+    )
+    pocket = torch.tensor([[[6.0, 0.0, 0.0]]], dtype=torch.float32)
+
+    off_force = mod._compute_ligand_extra_force(
+        c,
+        n_protein=1,
+        pocket=pocket,
+        pocket_attract=0.0,
+        protein_repulse=0.0,
+        contact_attract=0.0,
+        contact_target_distance_A=3.2,
+        contact_attract_cutoff_A=8.0,
+        bond_k=0.0,
+        bond_ref=0.0,
+        repulse_cutoff_A=4.5,
+    )
+    on_force = mod._compute_ligand_extra_force(
+        c,
+        n_protein=1,
+        pocket=pocket,
+        pocket_attract=0.0,
+        protein_repulse=0.0,
+        contact_attract=1.0,
+        contact_target_distance_A=3.2,
+        contact_attract_cutoff_A=8.0,
+        bond_k=0.0,
+        bond_ref=0.0,
+        repulse_cutoff_A=4.5,
+    )
+
+    assert torch.allclose(off_force, torch.zeros_like(off_force))
+    assert on_force[0, 0, 0] < 0.0
+    assert torch.isclose(on_force[0, 0, 1], torch.tensor(0.0))
 
 
 def test_register_batch_limit_derate_halves_limit_and_records_event() -> None:

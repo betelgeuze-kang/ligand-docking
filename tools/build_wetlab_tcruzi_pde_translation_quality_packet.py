@@ -4,10 +4,11 @@ from __future__ import annotations
 import argparse
 from typing import Any
 
-from tools.wetlab_target_render_utils import load_json, write_artifact
+from tools.wetlab_target_render_utils import load_json, maybe_load_json, write_artifact
 
 TARGET_ID = "T. cruzi PDE"
 DEFAULT_REVIEW_JSON = "runs/wetlab_tcruzi_pde_allatom_review_packet_current.json"
+DEFAULT_TRANSLATION_EVIDENCE_JSON = "runs/wetlab_tcruzi_pde_translation_evidence_probe_current.json"
 DEFAULT_OUT_MD = "runs/wetlab_tcruzi_pde_translation_quality_packet_current.md"
 
 
@@ -16,6 +17,16 @@ CHECK_CATALOG: dict[str, dict[str, str]] = {
         "axis": "binding_energy_proxy",
         "action_code": "strengthen_binding_energy_proxy",
         "required_closure": "Re-score or calibrate the proxy before using the selected pose for broad translation claims.",
+    },
+    "binding_energy_proxy_source_pool_exhausted": {
+        "axis": "binding_energy_proxy_candidate_pool",
+        "action_code": "generate_stronger_three_bead_binding_candidate_pool",
+        "required_closure": "Generate or source a stronger three-bead candidate pool before reopening expensive all-atom promotion.",
+    },
+    "candidate_pool_geometry_stability_blocked": {
+        "axis": "candidate_pool_geometry_stability",
+        "action_code": "repair_energy_pass_candidate_geometry_stability",
+        "required_closure": "Run geometry and stability rescue on energy-pass candidates before reopening expensive all-atom promotion.",
     },
     "pose_preservation_rmsd_not_observed": {
         "axis": "pose_preservation_rmsd",
@@ -110,18 +121,166 @@ def _ordered_checks(failed_checks: list[str], warning_checks: list[str]) -> list
     return ordered
 
 
-def build_payload(review_payload: dict[str, Any], *, source_review_json: str = DEFAULT_REVIEW_JSON) -> dict[str, Any]:
+def _safe_int(value: Any, default: int = 0) -> int:
+    try:
+        if value in {"", None}:
+            return default
+        return int(value)
+    except Exception:
+        return default
+
+
+def _safe_bool(value: Any, default: bool = False) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value in {"", None}:
+        return default
+    if isinstance(value, (int, float)):
+        return bool(value)
+    text = str(value).strip().lower()
+    if text in {"1", "true", "t", "yes", "y", "pass", "passed", "ready"}:
+        return True
+    if text in {"0", "false", "f", "no", "n", "fail", "failed", "blocked"}:
+        return False
+    return default
+
+
+def build_payload(
+    review_payload: dict[str, Any],
+    *,
+    source_review_json: str = DEFAULT_REVIEW_JSON,
+    translation_evidence_payload: dict[str, Any] | None = None,
+    source_translation_evidence_json: str = DEFAULT_TRANSLATION_EVIDENCE_JSON,
+) -> dict[str, Any]:
     review_summary = dict(review_payload.get("summary", {}) or {})
     review_rows = [dict(row or {}) for row in (review_payload.get("rows", []) or [])]
+    translation_evidence_summary = dict((translation_evidence_payload or {}).get("summary", {}) or {})
     best_row = _best_metric_row(review_rows)
 
     failed_checks = [_text(check) for check in (review_summary.get("translation_gate_focus_failed_checks", []) or []) if _text(check)]
     warning_checks = [_text(check) for check in (review_summary.get("translation_gate_focus_warning_checks", []) or []) if _text(check)]
     failed_set = set(failed_checks)
     ordered_checks = _ordered_checks(failed_checks, warning_checks)
+    candidate_pool_row_count = _safe_int(translation_evidence_summary.get("translation_score_candidate_row_count"))
+    candidate_pool_energy_pass_count = _safe_int(translation_evidence_summary.get("translation_energy_pass_count"))
+    candidate_pool_core_pass_count = _safe_int(translation_evidence_summary.get("translation_core_pass_count"))
+    candidate_pool_energy_pass_unique_ligand_count = _safe_int(
+        translation_evidence_summary.get("translation_energy_pass_unique_ligand_count")
+    )
+    candidate_pool_core_pass_unique_ligand_count = _safe_int(
+        translation_evidence_summary.get("translation_core_pass_unique_ligand_count")
+    )
+    candidate_pool_core_like_count = _safe_int(translation_evidence_summary.get("translation_core_like_count"))
+    external_homolog_seed_row_count = _safe_int(
+        translation_evidence_summary.get("external_homolog_seed_candidate_row_count")
+    )
+    external_homolog_seed_energy_pass_count = _safe_int(
+        translation_evidence_summary.get("external_homolog_seed_energy_pass_count")
+    )
+    external_homolog_seed_core_pass_count = _safe_int(
+        translation_evidence_summary.get("external_homolog_seed_core_pass_count")
+    )
+    external_homolog_geomstab_rescore_row_count = _safe_int(
+        translation_evidence_summary.get("external_homolog_geomstab_rescore_candidate_row_count")
+    )
+    external_homolog_geomstab_rescore_energy_pass_count = _safe_int(
+        translation_evidence_summary.get("external_homolog_geomstab_rescore_energy_pass_count")
+    )
+    external_homolog_geomstab_rescore_core_pass_count = _safe_int(
+        translation_evidence_summary.get("external_homolog_geomstab_rescore_core_pass_count")
+    )
+    external_homolog_adress_rescue_row_count = _safe_int(
+        translation_evidence_summary.get("external_homolog_adress_rescue_candidate_row_count")
+    )
+    external_homolog_adress_rescue_energy_pass_count = _safe_int(
+        translation_evidence_summary.get("external_homolog_adress_rescue_energy_pass_count")
+    )
+    external_homolog_adress_rescue_core_pass_count = _safe_int(
+        translation_evidence_summary.get("external_homolog_adress_rescue_core_pass_count")
+    )
+    external_homolog_contact_rescue_row_count = _safe_int(
+        translation_evidence_summary.get("external_homolog_contact_rescue_candidate_row_count")
+    )
+    external_homolog_contact_rescue_energy_pass_count = _safe_int(
+        translation_evidence_summary.get("external_homolog_contact_rescue_energy_pass_count")
+    )
+    external_homolog_contact_rescue_core_pass_count = _safe_int(
+        translation_evidence_summary.get("external_homolog_contact_rescue_core_pass_count")
+    )
+    external_bindingdb_similarity_row_count = _safe_int(
+        translation_evidence_summary.get("external_bindingdb_similarity_candidate_row_count")
+    )
+    external_bindingdb_similarity_energy_pass_count = _safe_int(
+        translation_evidence_summary.get("external_bindingdb_similarity_energy_pass_count")
+    )
+    external_bindingdb_similarity_core_pass_count = _safe_int(
+        translation_evidence_summary.get("external_bindingdb_similarity_core_pass_count")
+    )
+    candidate_pool_best_binding_energy_proxy = _safe_float(translation_evidence_summary.get("best_binding_energy_proxy"))
+    candidate_pool_best_core_like_binding_energy_proxy = _safe_float(
+        translation_evidence_summary.get("best_core_like_binding_energy_proxy")
+    )
+    external_homolog_seed_best_binding_energy_proxy = _safe_float(
+        translation_evidence_summary.get("external_homolog_seed_best_binding_energy_proxy")
+    )
+    external_homolog_geomstab_rescore_best_binding_energy_proxy = _safe_float(
+        translation_evidence_summary.get("external_homolog_geomstab_rescore_best_binding_energy_proxy")
+    )
+    external_homolog_adress_rescue_best_binding_energy_proxy = _safe_float(
+        translation_evidence_summary.get("external_homolog_adress_rescue_best_binding_energy_proxy")
+    )
+    external_homolog_contact_rescue_best_binding_energy_proxy = _safe_float(
+        translation_evidence_summary.get("external_homolog_contact_rescue_best_binding_energy_proxy")
+    )
+    external_bindingdb_similarity_best_binding_energy_proxy = _safe_float(
+        translation_evidence_summary.get("external_bindingdb_similarity_best_binding_energy_proxy")
+    )
+    candidate_pool_energy_gap_closed = _safe_bool(translation_evidence_summary.get("candidate_pool_energy_gap_closed", False))
+    candidate_pool_core_gate_closed = _safe_bool(translation_evidence_summary.get("candidate_pool_core_gate_closed", False))
+    candidate_pool_observed = candidate_pool_row_count > 0
+    binding_energy_source_pool_exhausted = (
+        candidate_pool_observed
+        and "binding_energy_proxy_too_weak_for_translation" in failed_set
+        and candidate_pool_energy_pass_count == 0
+        and candidate_pool_core_pass_count == 0
+    )
+    candidate_pool_geometry_stability_blocked = (
+        candidate_pool_observed
+        and "binding_energy_proxy_too_weak_for_translation" in failed_set
+        and candidate_pool_energy_pass_count > 0
+        and candidate_pool_core_pass_count == 0
+    )
+    adress_rescue_attempted_without_core_pass = (
+        external_homolog_adress_rescue_row_count > 0
+        and external_homolog_adress_rescue_core_pass_count == 0
+    )
+    contact_aware_rescue_attempted_without_core_pass = (
+        external_homolog_contact_rescue_row_count > 0
+        and external_homolog_contact_rescue_core_pass_count == 0
+    )
+    bindingdb_similarity_seed_attempted_without_core_pass = (
+        external_bindingdb_similarity_row_count > 0
+        and external_bindingdb_similarity_core_pass_count == 0
+    )
+    if binding_energy_source_pool_exhausted and "binding_energy_proxy_source_pool_exhausted" not in ordered_checks:
+        insert_at = (
+            ordered_checks.index("binding_energy_proxy_too_weak_for_translation") + 1
+            if "binding_energy_proxy_too_weak_for_translation" in ordered_checks
+            else 0
+        )
+        ordered_checks.insert(insert_at, "binding_energy_proxy_source_pool_exhausted")
+        failed_set.add("binding_energy_proxy_source_pool_exhausted")
+    if candidate_pool_geometry_stability_blocked and "candidate_pool_geometry_stability_blocked" not in ordered_checks:
+        insert_at = (
+            ordered_checks.index("binding_energy_proxy_too_weak_for_translation") + 1
+            if "binding_energy_proxy_too_weak_for_translation" in ordered_checks
+            else 0
+        )
+        ordered_checks.insert(insert_at, "candidate_pool_geometry_stability_blocked")
+        failed_set.add("candidate_pool_geometry_stability_blocked")
 
-    wetlab_final_gate_pass = bool(review_summary.get("wetlab_final_gate_pass", False))
-    commercial_hard_gate_pass = bool(
+    wetlab_final_gate_pass = _safe_bool(review_summary.get("wetlab_final_gate_pass", False))
+    commercial_hard_gate_pass = _safe_bool(
         review_summary.get("commercial_hard_gate_pass_v2", review_summary.get("commercial_hard_gate_pass_v1", False))
     )
     allatom_delivery_p0_green = wetlab_final_gate_pass and commercial_hard_gate_pass
@@ -156,6 +315,42 @@ def build_payload(review_payload: dict[str, Any], *, source_review_json: str = D
                 "best_mean_min_distance_A": best_mean_min_distance_A,
                 "best_binding_energy_proxy": best_binding_energy_proxy,
                 "source_review_json": source_review_json,
+                "source_translation_evidence_json": source_translation_evidence_json if translation_evidence_summary else "",
+                "candidate_pool_row_count": candidate_pool_row_count,
+                "candidate_pool_energy_pass_count": candidate_pool_energy_pass_count,
+                "candidate_pool_core_pass_count": candidate_pool_core_pass_count,
+                "candidate_pool_energy_pass_unique_ligand_count": candidate_pool_energy_pass_unique_ligand_count,
+                "candidate_pool_core_pass_unique_ligand_count": candidate_pool_core_pass_unique_ligand_count,
+                "external_homolog_seed_row_count": external_homolog_seed_row_count,
+                "external_homolog_seed_energy_pass_count": external_homolog_seed_energy_pass_count,
+                "external_homolog_seed_core_pass_count": external_homolog_seed_core_pass_count,
+                "external_homolog_geomstab_rescore_row_count": external_homolog_geomstab_rescore_row_count,
+                "external_homolog_geomstab_rescore_energy_pass_count": external_homolog_geomstab_rescore_energy_pass_count,
+                "external_homolog_geomstab_rescore_core_pass_count": external_homolog_geomstab_rescore_core_pass_count,
+                "external_homolog_adress_rescue_row_count": external_homolog_adress_rescue_row_count,
+                "external_homolog_adress_rescue_energy_pass_count": external_homolog_adress_rescue_energy_pass_count,
+                "external_homolog_adress_rescue_core_pass_count": external_homolog_adress_rescue_core_pass_count,
+                "external_homolog_contact_rescue_row_count": external_homolog_contact_rescue_row_count,
+                "external_homolog_contact_rescue_energy_pass_count": external_homolog_contact_rescue_energy_pass_count,
+                "external_homolog_contact_rescue_core_pass_count": external_homolog_contact_rescue_core_pass_count,
+                "external_bindingdb_similarity_row_count": external_bindingdb_similarity_row_count,
+                "external_bindingdb_similarity_energy_pass_count": external_bindingdb_similarity_energy_pass_count,
+                "external_bindingdb_similarity_core_pass_count": external_bindingdb_similarity_core_pass_count,
+                "candidate_pool_best_binding_energy_proxy": candidate_pool_best_binding_energy_proxy,
+                "candidate_pool_best_core_like_binding_energy_proxy": candidate_pool_best_core_like_binding_energy_proxy,
+                "external_homolog_seed_best_binding_energy_proxy": external_homolog_seed_best_binding_energy_proxy,
+                "external_homolog_geomstab_rescore_best_binding_energy_proxy": (
+                    external_homolog_geomstab_rescore_best_binding_energy_proxy
+                ),
+                "external_homolog_adress_rescue_best_binding_energy_proxy": (
+                    external_homolog_adress_rescue_best_binding_energy_proxy
+                ),
+                "external_homolog_contact_rescue_best_binding_energy_proxy": (
+                    external_homolog_contact_rescue_best_binding_energy_proxy
+                ),
+                "external_bindingdb_similarity_best_binding_energy_proxy": (
+                    external_bindingdb_similarity_best_binding_energy_proxy
+                ),
                 "claim_policy": "do_not_expand_claim_scope_until_closed",
             }
         )
@@ -169,7 +364,33 @@ def build_payload(review_payload: dict[str, Any], *, source_review_json: str = D
     next_required_step = (
         "Translation quality evidence is closed; broad wetlab claim review may proceed."
         if translation_quality_ready
-        else "Close translation-quality evidence before broad wetlab or scale-up claims."
+        else (
+            "Run geometry and stability rescue on energy-pass PDEB1 homolog seed candidates before reopening expensive all-atom promotion."
+            if candidate_pool_geometry_stability_blocked
+            and not adress_rescue_attempted_without_core_pass
+            and not contact_aware_rescue_attempted_without_core_pass
+            else (
+                "Add a contact-aware pocket objective or all-atom-style pose-preservation signal for the energy-pass PDEB1 homolog seed candidates; the ADRESS rescue attempt did not close geometry/stability."
+                if candidate_pool_geometry_stability_blocked
+                and adress_rescue_attempted_without_core_pass
+                and not contact_aware_rescue_attempted_without_core_pass
+                else (
+                    "BindingDB similarity seed expansion also failed to close the full core gate; next closure requires all-atom-style pose preservation/backmapping evidence or broader/new PDE chemistry, not claim promotion."
+                    if candidate_pool_geometry_stability_blocked
+                    and bindingdb_similarity_seed_attempted_without_core_pass
+                    else (
+                        "Contact-aware GPU rescue also failed to close geometry/stability; next closure requires all-atom-style pose preservation/backmapping evidence or new PDEB1-like chemistry, not more claim promotion."
+                        if candidate_pool_geometry_stability_blocked
+                        and contact_aware_rescue_attempted_without_core_pass
+                        else (
+                            "Generate a stronger three-bead binding candidate pool before reopening expensive all-atom promotion; existing evidence does not close the translation energy gate."
+                            if binding_energy_source_pool_exhausted
+                            else "Close translation-quality evidence before broad wetlab or scale-up claims."
+                        )
+                    )
+                )
+            )
+        )
     )
     required_next_calculations = [row["action_code"] for row in rows]
     closure_gate_requirements = {
@@ -213,6 +434,52 @@ def build_payload(review_payload: dict[str, Any], *, source_review_json: str = D
             "best_ligand_id": best_ligand_id,
             "best_mean_min_distance_A": best_mean_min_distance_A,
             "best_binding_energy_proxy": best_binding_energy_proxy,
+            "source_translation_evidence_json": source_translation_evidence_json if translation_evidence_summary else "",
+            "candidate_pool_row_count": candidate_pool_row_count,
+            "candidate_pool_energy_pass_count": candidate_pool_energy_pass_count,
+            "candidate_pool_core_pass_count": candidate_pool_core_pass_count,
+            "candidate_pool_energy_pass_unique_ligand_count": candidate_pool_energy_pass_unique_ligand_count,
+            "candidate_pool_core_pass_unique_ligand_count": candidate_pool_core_pass_unique_ligand_count,
+            "candidate_pool_core_like_count": candidate_pool_core_like_count,
+            "external_homolog_seed_row_count": external_homolog_seed_row_count,
+            "external_homolog_seed_energy_pass_count": external_homolog_seed_energy_pass_count,
+            "external_homolog_seed_core_pass_count": external_homolog_seed_core_pass_count,
+            "external_homolog_geomstab_rescore_row_count": external_homolog_geomstab_rescore_row_count,
+            "external_homolog_geomstab_rescore_energy_pass_count": external_homolog_geomstab_rescore_energy_pass_count,
+            "external_homolog_geomstab_rescore_core_pass_count": external_homolog_geomstab_rescore_core_pass_count,
+            "external_homolog_adress_rescue_row_count": external_homolog_adress_rescue_row_count,
+            "external_homolog_adress_rescue_energy_pass_count": external_homolog_adress_rescue_energy_pass_count,
+            "external_homolog_adress_rescue_core_pass_count": external_homolog_adress_rescue_core_pass_count,
+            "external_homolog_contact_rescue_row_count": external_homolog_contact_rescue_row_count,
+            "external_homolog_contact_rescue_energy_pass_count": external_homolog_contact_rescue_energy_pass_count,
+            "external_homolog_contact_rescue_core_pass_count": external_homolog_contact_rescue_core_pass_count,
+            "external_bindingdb_similarity_row_count": external_bindingdb_similarity_row_count,
+            "external_bindingdb_similarity_energy_pass_count": external_bindingdb_similarity_energy_pass_count,
+            "external_bindingdb_similarity_core_pass_count": external_bindingdb_similarity_core_pass_count,
+            "candidate_pool_best_binding_energy_proxy": candidate_pool_best_binding_energy_proxy,
+            "candidate_pool_best_core_like_binding_energy_proxy": candidate_pool_best_core_like_binding_energy_proxy,
+            "external_homolog_seed_best_binding_energy_proxy": external_homolog_seed_best_binding_energy_proxy,
+            "external_homolog_geomstab_rescore_best_binding_energy_proxy": (
+                external_homolog_geomstab_rescore_best_binding_energy_proxy
+            ),
+            "external_homolog_adress_rescue_best_binding_energy_proxy": (
+                external_homolog_adress_rescue_best_binding_energy_proxy
+            ),
+            "external_homolog_contact_rescue_best_binding_energy_proxy": (
+                external_homolog_contact_rescue_best_binding_energy_proxy
+            ),
+            "external_bindingdb_similarity_best_binding_energy_proxy": (
+                external_bindingdb_similarity_best_binding_energy_proxy
+            ),
+            "candidate_pool_energy_gap_closed": candidate_pool_energy_gap_closed,
+            "candidate_pool_core_gate_closed": candidate_pool_core_gate_closed,
+            "binding_energy_source_pool_exhausted": binding_energy_source_pool_exhausted,
+            "candidate_pool_geometry_stability_blocked": candidate_pool_geometry_stability_blocked,
+            "adress_rescue_attempted_without_core_pass": adress_rescue_attempted_without_core_pass,
+            "contact_aware_rescue_attempted_without_core_pass": contact_aware_rescue_attempted_without_core_pass,
+            "bindingdb_similarity_seed_attempted_without_core_pass": (
+                bindingdb_similarity_seed_attempted_without_core_pass
+            ),
             "recommended_next_expensive_lane": recommended_next_expensive_lane,
             "expensive_lane_status": "eligible_for_review" if translation_quality_ready else "deferred_until_translation_quality_closed",
             "next_required_step": next_required_step,
@@ -225,10 +492,16 @@ def build_payload(review_payload: dict[str, Any], *, source_review_json: str = D
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--review-json", default=DEFAULT_REVIEW_JSON)
+    parser.add_argument("--translation-evidence-json", default=DEFAULT_TRANSLATION_EVIDENCE_JSON)
     parser.add_argument("--out", default=DEFAULT_OUT_MD)
     args = parser.parse_args()
 
-    payload = build_payload(load_json(args.review_json), source_review_json=args.review_json)
+    payload = build_payload(
+        load_json(args.review_json),
+        source_review_json=args.review_json,
+        translation_evidence_payload=maybe_load_json(args.translation_evidence_json),
+        source_translation_evidence_json=args.translation_evidence_json,
+    )
     write_artifact(args.out, "Wetlab T. cruzi PDE Translation Quality Packet", payload)
     print(args.out)
 

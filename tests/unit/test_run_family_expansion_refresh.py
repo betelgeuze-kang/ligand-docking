@@ -110,6 +110,18 @@ def test_refresh_chain_runs_local_engine_queue_before_execution_handoff_dashboar
     placeholder_queue_step = '(\"transporter_placeholder_burndown_queue\", [sys.executable, _script(\"build_transporter_placeholder_burndown_queue.py\")])'
     negative_queue_step = '(\"transporter_negative_evidence_closure_queue\", [sys.executable, _script(\"build_transporter_negative_evidence_closure_queue.py\")])'
     nightly_gate_step = '(\"nightly_gate_burndown_packet\", [sys.executable, _script(\"build_nightly_gate_burndown_packet.py\")])'
+    claim_handoff_step = '(\"allatom_claim_evidence_handoff\", [sys.executable, _script(\"build_allatom_claim_evidence_handoff.py\")])'
+    review_step = '(\"wetlab_tcruzi_pde_allatom_review_packet\", [sys.executable, _script(\"build_wetlab_tcruzi_pde_allatom_review_packet.py\")])'
+    bindingdb_seed_step = '\"wetlab_tcruzi_pde_bindingdb_similarity_seed_packet\"'
+    external_rescue_queue_step = '\"wetlab_tcruzi_pde_external_geometry_stability_rescue_queue\"'
+    translation_probe_step = '\"wetlab_tcruzi_pde_translation_evidence_probe\"'
+    translation_quality_step = '(\"wetlab_tcruzi_pde_translation_quality_packet\", [sys.executable, _script(\"build_wetlab_tcruzi_pde_translation_quality_packet.py\")])'
+    metric_scale_step = '\"wetlab_tcruzi_pde_metric_scale_gap_packet\"'
+    pose_backmapping_queue_step = '\"wetlab_tcruzi_pde_pose_backmapping_closure_queue\"'
+    ligand_atomization_step = '\"wetlab_tcruzi_pde_ligand_atomization_gap_packet\"'
+    atomized_draft_step = '\"wetlab_tcruzi_pde_atomized_ligand_draft_packet\"'
+    wetlab_selected_step = '(\"wetlab_selected_allatom_gate_burndown_packet\", [sys.executable, _script(\"build_wetlab_selected_allatom_gate_burndown_packet.py\")])'
+    wetlab_repair_step = '(\"wetlab_selected_allatom_repair_packet\", [sys.executable, _script(\"build_wetlab_selected_allatom_repair_packet.py\")])'
     wetlab_queue_step = '(\"wetlab_execution_readiness_queue\", [sys.executable, _script(\"build_wetlab_execution_readiness_queue.py\")])'
     local_engine_step = '(\"local_engine_commercialization_queue\", [sys.executable, _script(\"build_local_engine_commercialization_queue.py\")])'
     execution_step = '(\"execution_handoff_dashboard\", [sys.executable, _script(\"build_execution_handoff_dashboard.py\")])'
@@ -117,10 +129,22 @@ def test_refresh_chain_runs_local_engine_queue_before_execution_handoff_dashboar
     assert placeholder_queue_step in text
     assert negative_queue_step in text
     assert nightly_gate_step in text
+    assert claim_handoff_step in text
+    assert review_step in text
+    assert bindingdb_seed_step in text
+    assert external_rescue_queue_step in text
+    assert translation_probe_step in text
+    assert translation_quality_step in text
+    assert metric_scale_step in text
+    assert pose_backmapping_queue_step in text
+    assert ligand_atomization_step in text
+    assert atomized_draft_step in text
+    assert wetlab_selected_step in text
+    assert wetlab_repair_step in text
     assert wetlab_queue_step in text
     assert local_engine_step in text
     assert execution_step in text
-    assert text.index(placeholder_queue_step) < text.index(negative_queue_step) < text.index(nightly_gate_step) < text.index(wetlab_queue_step) < text.index(local_engine_step) < text.index(execution_step)
+    assert text.index(placeholder_queue_step) < text.index(negative_queue_step) < text.index(nightly_gate_step) < text.index(claim_handoff_step) < text.index(review_step) < text.index(bindingdb_seed_step) < text.index(external_rescue_queue_step) < text.index(translation_probe_step) < text.index(translation_quality_step) < text.index(metric_scale_step) < text.index(pose_backmapping_queue_step) < text.index(ligand_atomization_step) < text.index(atomized_draft_step) < text.index(wetlab_selected_step) < text.index(wetlab_repair_step) < text.index(wetlab_queue_step) < text.index(local_engine_step) < text.index(execution_step)
 
 
 def test_refresh_chain_includes_nightly_stage6_tuning_packet_after_gate_packet() -> None:
