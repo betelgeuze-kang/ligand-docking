@@ -106,21 +106,88 @@ Before pushing, confirm that generated MD data, checkpoints, logs, and local del
 
 ## Current Validation Snapshot
 
-Updated 2026-05-14 KST.
+Updated 2026-05-15 KST.
 
-- Restricted delivery verdict: `runs/local_delivery_verdict_gate_current.json` reports `summary.delivery_ready=true`, `verdict=delivery_ready`, `p0_blocker_count=0`, `hard_blocker_count=0`, `accuracy_gate_pass=true`, and `commercialization_queue_clear=true`.
-- Claim scope remains restricted to `kinase,gpcr,ion_channel`; transporter, CA2/PXR, broader IDP promotion, broad platform readiness, and unattended decision-making remain outside the delivery claim.
-- Current tracked commercialization accounting is fail-closed again on the wetlab selected all-atom lane: `commercialization_status_report.md` reports `all_tracked_commercialization_accounting_closed=false`, `platform_accounting_closed=false`, and `local_engine_queue_clear=false`. Transporter placeholder rows remain `0`, and CA2/PXR review-only policy closure is allowed, but these closures do not widen the delivery claim.
-- T. cruzi PDE all-atom promotion remains blocked: the translation evidence probe now scans `29568` candidate score rows, finds `16` energy-threshold rows after the 3-bead rescore, GPU ADRESS rescue, contact-aware GPU rescue, and BindingDB similarity-seed screen, but only `7` unique energy-hit ligands across homolog/similarity expansion, and still finds `0` unique ligands that pass energy, geometry, and stability together.
-- `runs/wetlab_tcruzi_pde_metric_scale_gap_packet_current.md` now classifies the PDE blocker as `blocked_metric_scale_split`: selected pseudo-allatom review rows preserve geometry/stability (`4/4`) but are energy-weak (`0/4`), while external homolog/BindingDB rows add energy hits (`16`) with `0` geometry-stability/core passes. The next closure is all-atom-style pose preservation/backmapping and local-minimization normalization, not claim promotion.
-- `runs/wetlab_tcruzi_pde_pose_backmapping_closure_queue_current.md` materializes that closure into `7` unique energy-hit PDE seeds, with required pose-preservation RMSD, backmapping consistency, local-minimization survival, and replicate-pass measurements. The queue is claim-locked and keeps the fixed energy/distance/stability thresholds.
-- `runs/wetlab_tcruzi_pde_ligand_atomization_gap_packet_current.md` shows those `7` queued seeds are still ligand-atomization blocked: `0/7` are atomization-ready, because current pseudo-backmaps carry only `2` ligand atoms versus `34-43` expected heavy atoms from SMILES. Chemically faithful all-atom ligand coordinates/parameters are required before commercial pose-preservation or local-minimization claims.
-- `runs/wetlab_tcruzi_pde_atomized_ligand_draft_packet_current.md` now provides RDKit all-atom ligand drafts for `7/7` queued seeds, with `6/7` oriented to the existing two-point pseudo anchors. This closes the coordinate-draft substep only; ligand parameterization and protein-ligand local minimization remain `0/7`, so promotion stays blocked.
-- The post-goal active lane is commercial-tool accuracy parity. `runs/accuracy_parity_scorecard_current.md` is still `blocked_accuracy_parity`, and `runs/gpcr_a1_accuracy_repair_queue_current.md` is now `a1_accuracy_repair_queue_cleared_claim_locked`: `guarded_100k_claim_review_rerun` metrics cleared, and `runs/gpcr_a1_independent_repeat_packet_current.md` is `independent_repeat_ready_claim_locked` with validate-only green, but the full independent repeat and broader scorecard closure are still required before any promotion.
-- Ligand scale-up suite status is green for the tracked commercialization suite: `commercialization_ready_suite_count=3/3` and `pending_suite_ids=[]`.
-- The 1M pilot package passes all three blind sets. Core full-task PR-AUC values are `gpcr_core_full=0.8958`, `ion_trpv1_chembl20_full=0.9585`, `kinase_core_full=1.0000`; expanded OOD PR-AUC values are `gpcr_chembl50_full=0.8093`, `ion_trpv1_chembl50_full=0.9867`, `kinase_strict_full=1.0000`.
-- 1M guardrail interpretation is `claim_safe_size_shift_speed_diagnostic`: quality guardrails are claim-safe, while equal-size speedpack A/B owns the throughput claim and 1M speed is retained as diagnostic scale evidence.
-- Latest focused validation slice covers nightly gate discovery, keep-green trend, commercialization status reporting, AQP1 functional kcal surrogate and negative evidence gates, transporter negative closure, platform gap taxonomy, local verdict, and ligand scale-up regression tests.
+Runtime artifacts under `runs/` are local and intentionally ignored by Git. The table below names the local artifact to inspect, the current headline number, and the safe interpretation for GitHub readers.
+
+| Lane | Current status | Key local artifact | Data to read first | Interpretation |
+| --- | --- | --- | --- | --- |
+| Restricted local delivery | Green | `runs/local_delivery_verdict_gate_current.json` | `delivery_ready=true`, `p0_blocker_count=0`, `hard_blocker_count=0` | Delivery-ready only for the scoped local claim. |
+| Delivery claim boundary | Restricted | `docs/local_delivery_claim_policy.md` | `kinase,gpcr,ion_channel` | Transporter, CA2/PXR, broader IDP, broad all-atom, broad platform, and unattended decision-making remain outside the claim. |
+| Accuracy parity | Blocked | `runs/accuracy_parity_scorecard_current.json` | `status=blocked_accuracy_parity` | Commercial-tool parity is not claimed; API/productization remains secondary to A0/A1 scientific parity closure. |
+| Family refresh reproducibility | Green | `runs/family_expansion_refresh_current.json` | `overall_ok=true`, `step_count=137`, `failed_count=0` | Current packet chain is reproducible locally. |
+| Ligand scale-up suite | Green for tracked suite | `runs/ligand_scaleup_suite_status_current.json` | `commercialization_ready_suite_count=3`, `pending_suite_ids=[]` | Useful restricted-scale evidence, not broad commercial discovery parity. |
+| T. cruzi PDE translation | Blocked | `runs/wetlab_tcruzi_pde_translation_quality_packet_current.json` | `candidate_pool_row_count=29568`, `energy_pass=16`, `core_pass=0` | Wetlab/all-atom promotion is blocked. |
+| T. cruzi PDE next blocker | Blocked | `runs/wetlab_tcruzi_pde_atomized_ligand_draft_packet_current.json` | `atomized_ligand_draft=7/7`, `parameterization=0/7`, `local_minimization=0/7` | Coordinate drafts exist; commercial pose/local-min evidence does not. |
+
+## T. cruzi PDE Evidence Trail
+
+The current PDE path is deliberately fail-closed. It separates candidate expansion, metric diagnosis, atomization, and commercial-promotion evidence so that strong-looking energy rows cannot be promoted without geometry, stability, atomization, parameterization, and local minimization support.
+
+| Step | Local artifact | Current data | How to read it |
+| --- | --- | --- | --- |
+| Translation evidence scan | `runs/wetlab_tcruzi_pde_translation_evidence_probe_current.json` | `29568` candidate score rows, `16` energy-pass rows, `7` unique energy-hit ligands, `0` core-pass ligands | Energy evidence exists, but no row closes energy + distance + stability together. |
+| Translation quality gate | `runs/wetlab_tcruzi_pde_translation_quality_packet_current.json` | `claim_promotion_allowed=false`, `candidate_pool_geometry_stability_blocked=true` | Broad wetlab/all-atom promotion remains blocked. |
+| Metric-scale diagnosis | `runs/wetlab_tcruzi_pde_metric_scale_gap_packet_current.json` | selected pseudo-allatom review rows preserve geometry/stability `4/4` but energy `0/4`; external homolog/BindingDB rows provide energy `16` but geometry-stability/core `0` | The blocker is a metric-scale and pose-preservation split, not just a shortage of screened compounds. |
+| Pose/backmapping closure queue | `runs/wetlab_tcruzi_pde_pose_backmapping_closure_queue_current.json` | `7` unique energy-hit PDE seeds queued | Next measurements are pose-preservation RMSD, backmapping consistency, local-minimization survival, and replicate-pass fraction. |
+| Ligand atomization check | `runs/wetlab_tcruzi_pde_ligand_atomization_gap_packet_current.json` | `atomization_ready_count=0/7`; current pseudo-backmaps have `2` ligand atoms vs `34-43` expected heavy atoms | Existing pseudo-backmaps must not be treated as all-atom ligand pose evidence. |
+| Atomized ligand draft | `runs/wetlab_tcruzi_pde_atomized_ligand_draft_packet_current.json` | RDKit all-atom drafts `7/7`; pseudo-anchor orientation `6/7`; parameterization `0/7`; protein-ligand local minimization `0/7` | Coordinate draft substep is done; parameterization and local minimization are the next commercial blockers. |
+
+Fixed PDE hard thresholds remain:
+
+| Metric | Pass threshold |
+| --- | ---: |
+| `binding_energy_proxy` | `<= -0.55` |
+| `mean_min_distance_A` | `<= 3.10 A` |
+| `stability_score` | `>= 0.32` |
+
+## Reading Local Result Data
+
+Use these commands locally after regenerating artifacts. They avoid dumping large trajectory payloads and focus on summary fields.
+
+```bash
+python3 - <<'PY'
+import json
+for path in [
+    "runs/local_delivery_verdict_gate_current.json",
+    "runs/accuracy_parity_scorecard_current.json",
+    "runs/wetlab_tcruzi_pde_translation_quality_packet_current.json",
+    "runs/wetlab_tcruzi_pde_atomized_ligand_draft_packet_current.json",
+]:
+    data = json.load(open(path, encoding="utf-8"))
+    print("\\n##", path)
+    for key, value in (data.get("summary", {}) or {}).items():
+        if key in {
+            "status",
+            "delivery_ready",
+            "verdict",
+            "candidate_pool_row_count",
+            "candidate_pool_energy_pass_count",
+            "candidate_pool_core_pass_count",
+            "atomization_draft_ready_count",
+            "parameterization_ready_count",
+            "protein_local_minimization_ready_count",
+            "claim_promotion_allowed",
+            "next_required_step",
+        }:
+            print(f"{key}: {value}")
+PY
+```
+
+## Claim Boundary
+
+Acceptable current wording:
+
+- Restricted local-delivery analysis pipeline with green gates on selected families.
+- T. cruzi PDE has local evidence packets and RDKit atomized ligand drafts for review.
+- T. cruzi PDE commercial wetlab/all-atom promotion is blocked pending parameterization, protein-ligand local minimization, pose preservation, backmapping consistency, and replicate evidence.
+
+Not acceptable yet:
+
+- Broad commercial drug-discovery platform parity.
+- OpenMM/Schrodinger/GALAXY-class broad equivalence.
+- Wetlab-proven T. cruzi PDE hit claim.
+- Direct binding kcal claims from AQP1 functional surrogate rows.
 
 ## Current Repository State
 
