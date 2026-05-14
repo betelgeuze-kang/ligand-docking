@@ -96,6 +96,10 @@ python3 tools/build_local_delivery_verdict_gate.py
 
 업데이트: 2026-05-15 KST.
 
+![현재 검증 스냅샷 대시보드](docs/figures/current_validation_snapshot_gpt_image2_2026-05-15.png)
+
+위 대시보드 이미지는 GPT Image 2 배경 위에 로컬 `runs/*.json` summary 값을 결정적으로 overlay한 것입니다. 정확한 claim 경계와 수치는 아래 표를 기준으로 봅니다.
+
 `runs/` 아래 runtime artifact는 로컬에만 남고 Git에서는 제외됩니다. 아래 표는 로컬에서 어떤 파일을 먼저 열어야 하는지와 현재 해석을 요약합니다.
 
 | Lane | 현재 상태 | 주요 로컬 artifact | 먼저 볼 데이터 | 해석 |

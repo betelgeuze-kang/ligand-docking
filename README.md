@@ -108,6 +108,10 @@ Before pushing, confirm that generated MD data, checkpoints, logs, and local del
 
 Updated 2026-05-15 KST.
 
+![Validation snapshot dashboard](docs/figures/current_validation_snapshot_gpt_image2_2026-05-15.png)
+
+The dashboard image uses a GPT Image 2 background with deterministic metric overlays from the local `runs/*.json` summaries. The tables below remain the source of truth for exact claim boundaries.
+
 Runtime artifacts under `runs/` are local and intentionally ignored by Git. The table below names the local artifact to inspect, the current headline number, and the safe interpretation for GitHub readers.
 
 | Lane | Current status | Key local artifact | Data to read first | Interpretation |
