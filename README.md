@@ -112,7 +112,7 @@ Updated 2026-05-15 KST.
 
 ![Actual T. cruzi PDE 3V94 chain B molecular structure render](docs/figures/tcruzi_pde_3v94_chainB_structure_actual_2026-05-15.png)
 
-The first image is an actual browser capture of `viewer/index.html` loaded with `surface-label=tcruzi_pde_allatom_review_packet`. The second image is a deterministic PyMOL render from the protein and trajectory files used in the local analysis: `runs/tcruzi_pde_strict_external_openmm/tcruzi_pde_3v94_chain_B.pdb` and `runs/tcruzi_pde_strict_external_openmm/tcruzi_pde_chain_B_openmm_ca_md.npy`. The tables below remain the source of truth for exact claim boundaries.
+The first image is an actual browser capture of `viewer/index.html` loaded with `surface-label=tcruzi_pde_allatom_review_packet`, framed for README presentation. The second image is an AlphaFold-style deterministic PyMOL render from the protein and trajectory files used in the local analysis: `runs/tcruzi_pde_strict_external_openmm/tcruzi_pde_3v94_chain_B.pdb` and `runs/tcruzi_pde_strict_external_openmm/tcruzi_pde_chain_B_openmm_ca_md.npy`. The tables below remain the source of truth for exact claim boundaries.
 
 Runtime artifacts under `runs/` are local and intentionally ignored by Git. The table below names the local artifact to inspect, the current headline number, and the safe interpretation for GitHub readers.
 
