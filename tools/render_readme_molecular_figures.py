@@ -423,6 +423,18 @@ def write_manifest(*, viewer_url: str, ca_info: dict[str, Any], skipped: list[st
         },
         "target_id": "T. cruzi PDE",
         "surface_label": SURFACE_LABEL,
+        "reproducibility_scope": {
+            "committed_outputs": [
+                repo_rel(VIEWER_IMAGE),
+                repo_rel(STRUCTURE_IMAGE),
+                repo_rel(MANIFEST_JSON),
+            ],
+            "requires_local_runtime_artifacts": [
+                repo_rel(OPENMM_CHAIN_PDB),
+                repo_rel(OPENMM_CA_TRAJ_NPY),
+            ],
+            "committed_public_structure_input": repo_rel(SOURCE_PDB),
+        },
         "source_inputs": {
             "source_pdb": repo_rel(SOURCE_PDB),
             "openmm_chain_pdb": repo_rel(OPENMM_CHAIN_PDB),

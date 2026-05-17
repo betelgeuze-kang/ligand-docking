@@ -1,12 +1,24 @@
 {
   "status": "readme_molecular_figures_ready",
-  "generated_at_local": "2026-05-17T17:41:11+0900",
+  "generated_at_local": "2026-05-17T17:44:45+0900",
   "generator": {
     "script": "tools/render_readme_molecular_figures.py",
     "command": "python3 tools/render_readme_molecular_figures.py"
   },
   "target_id": "T. cruzi PDE",
   "surface_label": "tcruzi_pde_allatom_review_packet",
+  "reproducibility_scope": {
+    "committed_outputs": [
+      "docs/figures/webviewer_tcruzi_pde_actual_2026-05-15.png",
+      "docs/figures/tcruzi_pde_3v94_chainB_structure_actual_2026-05-15.png",
+      "docs/figures/readme_molecular_figures_manifest_current.json"
+    ],
+    "requires_local_runtime_artifacts": [
+      "runs/tcruzi_pde_strict_external_openmm/tcruzi_pde_3v94_chain_B.pdb",
+      "runs/tcruzi_pde_strict_external_openmm/tcruzi_pde_chain_B_openmm_ca_md.npy"
+    ],
+    "committed_public_structure_input": "data/public_structures/selected_allatom_native_v1/t_cruzi_pde_pdb_3V94.pdb"
+  },
   "source_inputs": {
     "source_pdb": "data/public_structures/selected_allatom_native_v1/t_cruzi_pde_pdb_3V94.pdb",
     "openmm_chain_pdb": "runs/tcruzi_pde_strict_external_openmm/tcruzi_pde_3v94_chain_B.pdb",

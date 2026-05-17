@@ -102,7 +102,7 @@ python3 tools/build_local_delivery_verdict_gate.py
 
 첫 번째 이미지는 `surface-label=tcruzi_pde_allatom_review_packet`을 로드한 실제 `viewer/index.html` 브라우저 캡처를 README용으로 프레이밍한 것입니다. 두 번째 이미지는 로컬 분석에 사용된 `runs/tcruzi_pde_strict_external_openmm/tcruzi_pde_3v94_chain_B.pdb`와 `runs/tcruzi_pde_strict_external_openmm/tcruzi_pde_chain_B_openmm_ca_md.npy`를 기반으로 만든 AlphaFold 스타일의 결정적 PyMOL 렌더입니다. 정확한 claim 경계와 수치는 아래 표를 기준으로 봅니다.
 
-두 README 이미지는 `python3 tools/render_readme_molecular_figures.py`로 다시 생성할 수 있습니다. 이미 검증된 asset 주변의 manifest만 갱신할 때만 `--skip-browser` 또는 `--skip-pymol`을 사용합니다. 현재 provenance manifest는 `docs/figures/readme_molecular_figures_manifest_current.json`에 기록됩니다.
+manifest에 명시된 로컬 T. cruzi PDE OpenMM artifact가 존재하면 두 README 이미지는 `python3 tools/render_readme_molecular_figures.py`로 다시 생성할 수 있습니다. 이미 검증된 asset 주변의 manifest만 갱신할 때만 `--skip-browser` 또는 `--skip-pymol`을 사용합니다. 현재 provenance manifest는 `docs/figures/readme_molecular_figures_manifest_current.json`에 기록됩니다.
 
 `runs/` 아래 runtime artifact는 로컬에만 남고 Git에서는 제외됩니다. 아래 표는 로컬에서 어떤 파일을 먼저 열어야 하는지와 현재 해석을 요약합니다.
 

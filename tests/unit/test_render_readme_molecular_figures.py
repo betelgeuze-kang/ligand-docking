@@ -84,5 +84,9 @@ def test_write_manifest_uses_stable_viewer_url_template(monkeypatch, tmp_path) -
     manifest_text = manifest_json.read_text(encoding="utf-8")
     assert manifest["viewer"]["captured_url"] == mod.build_viewer_url_template()
     assert "32123" not in manifest_text
+    assert manifest["reproducibility_scope"]["committed_public_structure_input"].endswith(
+        "t_cruzi_pde_pdb_3V94.pdb"
+    )
+    assert "runs/tcruzi_pde_strict_external_openmm/tcruzi_pde_chain_B_openmm_ca_md.npy" in manifest_text
     assert manifest["viewer"]["output_png"]["size"] == [7, 5]
     assert manifest["structure_render"]["output_png"]["mode"] == "RGB"
