@@ -114,6 +114,8 @@ Updated 2026-05-15 KST.
 
 The first image is an actual browser capture of `viewer/index.html` loaded with `surface-label=tcruzi_pde_allatom_review_packet`, framed for README presentation. The second image is an AlphaFold-style deterministic PyMOL render from the protein and trajectory files used in the local analysis: `runs/tcruzi_pde_strict_external_openmm/tcruzi_pde_3v94_chain_B.pdb` and `runs/tcruzi_pde_strict_external_openmm/tcruzi_pde_chain_B_openmm_ca_md.npy`. The tables below remain the source of truth for exact claim boundaries.
 
+Regenerate both README figures and their provenance manifest with `python3 tools/render_readme_molecular_figures.py`. Use `--skip-browser` or `--skip-pymol` only when refreshing the manifest around already verified assets. The current manifest is written to `docs/figures/readme_molecular_figures_manifest_current.json`.
+
 Runtime artifacts under `runs/` are local and intentionally ignored by Git. The table below names the local artifact to inspect, the current headline number, and the safe interpretation for GitHub readers.
 
 | Lane | Current status | Key local artifact | Data to read first | Interpretation |

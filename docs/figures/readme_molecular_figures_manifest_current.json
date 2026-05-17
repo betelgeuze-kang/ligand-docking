@@ -1,0 +1,49 @@
+{
+  "status": "readme_molecular_figures_ready",
+  "generated_at_local": "2026-05-17T17:41:11+0900",
+  "generator": {
+    "script": "tools/render_readme_molecular_figures.py",
+    "command": "python3 tools/render_readme_molecular_figures.py"
+  },
+  "target_id": "T. cruzi PDE",
+  "surface_label": "tcruzi_pde_allatom_review_packet",
+  "source_inputs": {
+    "source_pdb": "data/public_structures/selected_allatom_native_v1/t_cruzi_pde_pdb_3V94.pdb",
+    "openmm_chain_pdb": "runs/tcruzi_pde_strict_external_openmm/tcruzi_pde_3v94_chain_B.pdb",
+    "openmm_ca_trajectory_npy": "runs/tcruzi_pde_strict_external_openmm/tcruzi_pde_chain_B_openmm_ca_md.npy",
+    "ca_multistate_pdb": {
+      "out_pdb": "tmp/render_inputs/tcruzi_pde_chain_B_openmm_ca_md_multistate.pdb",
+      "frame_count": 3,
+      "ca_count": 334
+    }
+  },
+  "viewer": {
+    "url_path_query": "/viewer/index.html?surface-label=tcruzi_pde_allatom_review_packet&rank=1&repr=cartoon&color=binding-focus&bg=%23ffffff&ao=analysis&pocket=true&fog=false",
+    "captured_url": "http://127.0.0.1:<port>/viewer/index.html?surface-label=tcruzi_pde_allatom_review_packet&rank=1&repr=cartoon&color=binding-focus&bg=%23ffffff&ao=analysis&pocket=true&fog=false",
+    "output_png": {
+      "path": "docs/figures/webviewer_tcruzi_pde_actual_2026-05-15.png",
+      "size": [
+        1672,
+        941
+      ],
+      "mode": "RGB",
+      "bytes": 456522
+    }
+  },
+  "structure_render": {
+    "style": "alphafold_style_pymol_two_panel",
+    "pymol_script": "tmp/render_inputs/render_tcruzi_pde_readme_figures.pml",
+    "domain_panel": "tmp/render_inputs/tcruzi_domain_panel_readme.png",
+    "pocket_panel": "tmp/render_inputs/tcruzi_pocket_panel_readme.png",
+    "output_png": {
+      "path": "docs/figures/tcruzi_pde_3v94_chainB_structure_actual_2026-05-15.png",
+      "size": [
+        1672,
+        941
+      ],
+      "mode": "RGB",
+      "bytes": 491268
+    }
+  },
+  "skipped_steps": []
+}
