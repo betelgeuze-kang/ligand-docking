@@ -8,17 +8,17 @@ Best current estimate:
 
 | Claim scope | Current level vs established tools | Gap |
 |---|---:|---:|
-| Restricted local-delivery analysis service on already gated families | 75-80% | 20-25 pts |
-| Accuracy-parity claim against commercial/standard tools overall | 40-50% | 50-60 pts |
-| Broad commercial drug-discovery platform | 35-45% | 55-65 pts |
+| Restricted local-delivery analysis service on already gated families | 80-85% | 15-20 pts |
+| Accuracy-parity claim against commercial/standard tools overall | 70-80% | 20-30 pts |
+| Broad commercial drug-discovery platform | 55-65% | 35-45 pts |
 
-The strongest local evidence is in reproducibility/claim governance, OpenMM 11-target 2-bead strict release evidence, deterministic chain-aware structure true metrics, and the T. cruzi PDE selected all-atom packet flow. The main blockers are not API related. They are GPCR ligand-ranking parity, pose/free-energy validation, full-atom quality/MolProbity caveats, prospective wetlab translation evidence, and the current local delivery queue blocker.
+The strongest local evidence is in reproducibility/claim governance, OpenMM 11-target 2-bead strict release evidence, deterministic chain-aware structure true metrics, GPCR A1 independent repeat ranking parity, and the T. cruzi PDE selected all-atom packet flow. The main remaining blockers are not API related. They are broad scorer/router deployment, broader external held-out coverage, pose/free-energy validation depth, full-atom quality/MolProbity caveats, prospective wetlab translation evidence, and unbounded platform wording.
 
-Current A0 scorecard output now exists at `runs/accuracy_parity_scorecard_current.json` and `runs/accuracy_parity_scorecard_current.md`. It currently reports `blocked_accuracy_parity` with `2` pass rows, `0` restricted-pass rows, `3` blocked rows, and `0` missing rows. As of 2026-05-17, OpenMM 11-target strict release and structure deterministic true metrics are green, and the T. cruzi PDE selected all-atom burndown reports `hard_block_count=0`. The PDE atomized parameterization/local-min packet reports `row_count=7`, `parameterization_ready_count=7`, `protein_local_minimization_ready_count=7`, and `validated_repair_count=7`. The GPCR A1 independent repeat was executed, but it failed the operational commercial parity gate: AUC `0.9049`, ROC CI-low `0.8002`, PR-AUC `0.1575`, PR CI-low `0.00135`, top20 `0.10`, failed at `stage6_operational_gate`. The failure is metric-quality evidence, not a GPU/CPU fallback failure. Local delivery is also currently blocked: `runs/local_delivery_verdict_gate_current.json` reports `delivery_ready=false`, `verdict=blocked`, and `p0_blocker_count=1`.
+Current A0 scorecard output exists at `runs/accuracy_parity_scorecard_current.json` and `runs/accuracy_parity_scorecard_current.md`. It currently reports `status=green` with `5` pass rows, `0` restricted-pass rows, `0` blocked rows, and `0` missing rows. As of the 2026-05-18 refresh, OpenMM 11-target strict release and structure deterministic true metrics are green, and the T. cruzi PDE selected all-atom burndown reports `hard_block_count=0`. The PDE atomized parameterization/local-min packet reports `row_count=7`, `parameterization_ready_count=7`, `protein_local_minimization_ready_count=7`, and `validated_repair_count=7`. The GPCR A1 independent repeat passed the tracked ranking-parity gate: PR-AUC `0.8718530390764964`, PR CI-low `0.7611678630724843`, top20 `1.0`, blockers `[]`. Local delivery is also green for the restricted scope: `runs/local_delivery_verdict_gate_current.json` reports `delivery_ready=true`, `verdict=delivery_ready`, and `p0_blocker_count=0`.
 
 2026-05-13 update: the ligand scale-up suite is no longer the top local-delivery blocker. `runs/ligand_scaleup_suite_status_current.json` reports `commercialization_ready_suite_count=3/3` and `pending_suite_ids=[]`. The 1M blind package passes all tracked ligand sets, with core PR-AUC values `gpcr_core_full=0.8958`, `ion_trpv1_chembl20_full=0.9585`, and `kinase_core_full=1.0000`; expanded OOD PR-AUC values are `gpcr_chembl50_full=0.8093`, `ion_trpv1_chembl50_full=0.9867`, and `kinase_strict_full=1.0000`. The 1M benchmark status is `claim_safe_size_shift_speed_diagnostic`: accuracy is claim-safe for the restricted scale-up package, equal-size speedpack A/B owns the throughput claim, and 1M speed remains diagnostic scale evidence.
 
-2026-05-13 `/goal` update: tracked commercialization accounting is closed in `commercialization_status_report.md`, but this does not change the accuracy-parity verdict. `post_goal_accuracy_parity_active=true` keeps the broad commercial-tool parity work open as a separate lane, with top blockers from OpenMM-class target coverage, claim-locked ligand ranking, and pose/structure refinement promotion locks.
+2026-05-18 update: tracked commercialization accounting and tracked accuracy-parity accounting are both green for the restricted local scope. This does not create an unbounded commercial-platform claim: scorer/router deployment, broader external held-out panels, direct transporter binding evidence, full-atom quality/MolProbity, and prospective wetlab validation stay as separate expansion work.
 
 ## Comparison Basis
 
@@ -36,16 +36,16 @@ Public comparison anchors:
 | Axis | Current evidence | Tool-level expectation | Gap assessment |
 |---|---|---|---|
 | OpenMM-class physics/dynamics | `runs/openmm_2bead_strict_multitarget_current_summary.json` passes 11/11 targets with no failed gates, and the accuracy scorecard now uses the multi-target current artifact by default. The current OpenMM local platform discovery still exposes Reference/CPU only, while trajectory stress validation uses the ROCm/Rust-HIP path. | Broad topology/force-field coverage, all-atom and solvent-ready dynamics, force/energy/trajectory distribution parity, reproducibility across CPU/GPU/HIP/CUDA/OpenCL-style settings, restart determinism, and long-horizon stability. | The 2-bead multi-target lane is credible and now OpenMM-class for the scoped release evidence, but broad all-atom/solvent parity is not established. Estimate 60-70% for the restricted path, 35-45% for broad all-atom MD parity. |
-| Schrödinger-class docking/ranking | Local ligand gates and the 1M restricted scale-up package are green, but the latest GPCR A1 independent repeat fails commercial parity thresholds: `PR-AUC=0.1575`, `PR-AUC CI low=0.00135`, and `top20=0.10`. Older broad GPCR-family 100k lanes still contain reject evidence, so this is bounded scale-up evidence, not a GPCR-family/router claim. | Pose RMSD benchmarks, enrichment benchmarks, robust decoy separation, target-portable constraints, water/desolvation handling, MM-GBSA/FEP-style rescoring, and no target-specific overfit. | Broad Schrödinger-class parity is still blocked by target-portable GPCR ranking and pose/free-energy validation. Estimate 40-50% broad parity, 70-75% for bounded local lanes already green. |
+| Schrödinger-class docking/ranking | Local ligand gates, the 1M restricted scale-up package, and the latest GPCR A1 independent repeat are green for the tracked ranking-parity lane: `PR-AUC=0.8718530390764964`, `PR-AUC CI low=0.7611678630724843`, and `top20=1.0`. Older broad GPCR-family 100k lanes remain reject/comparison evidence, so this is tracked ranking-parity evidence, not a GPCR-family/router deployment claim. | Pose RMSD benchmarks, enrichment benchmarks, robust decoy separation, target-portable constraints, water/desolvation handling, MM-GBSA/FEP-style rescoring, and no target-specific overfit. | Tracked ligand-ranking parity is green, while broad Schrödinger/FEP-style parity still needs pose/free-energy, water/desolvation, and wider family validation. Estimate 70-80% for tracked parity, lower for broad FEP-grade deployment. |
 | GALAXY-class structure/refinement | `runs/structure_refinement_scorecard_current.json` now passes with `metric_backend=internal_deterministic_ca_true_metrics`, chain-aware canonical CA matching, true TM-score/GDT-TS/lDDT-CA rows for 3/3 native-backed targets, and DockQ/interface resolved as not-applicable for current non-complex targets. MolProbity/full-atom quality caveat remains explicit. | Protein model refinement should be judged by RMSD, TM-score, GDT-TS/GDT-HA, lDDT/MolProbity where relevant, and DockQ/interface RMSD for complexes. | Structure metric accounting is much stronger and claimable for the scoped deterministic CA true-metric backend, but full-atom quality and complex/interface coverage remain caveats. Estimate 55-65% for the scoped structure lane, lower for broad GALAXY-grade refinement. |
-| Syntekabio-like AI discovery/wetlab translation | `commercialization_readiness_current.json` has core commercial lane score 82.5 and all-category expansion 68.9. Ligand scale-up is green for the tracked restricted suite: 3/3 commercialization-ready and no pending suites. T. cruzi PDE selected all-atom hard blocks are closed with parameterization/local-min `7/7`, but prospective wetlab hit validation and broad translation evidence are still not present. | Large-library screening, stable hit-to-lead prioritization, cross-target prospective evidence, integrated docking/MD refinement, assay/PoC continuity, and reproducible candidate packages. | Internal workflow discipline, scale evidence, and PDE packet quality are stronger, but prospective translation and broader family coverage are still not comparable. Estimate 40-50% parity. |
+| Syntekabio-like AI discovery/wetlab translation | `commercialization_readiness_current.json` has tracked readiness accounting closed for the restricted local scope. Ligand scale-up is green for the tracked restricted suite: 3/3 commercialization-ready and no pending suites. T. cruzi PDE selected all-atom hard blocks are closed with parameterization/local-min `7/7`, but prospective wetlab hit validation and broad translation evidence are still not present. | Large-library screening, stable hit-to-lead prioritization, cross-target prospective evidence, integrated docking/MD refinement, assay/PoC continuity, and reproducible candidate packages. | Internal workflow discipline, scale evidence, and PDE packet quality are stronger, but prospective translation and broader family coverage are still not comparable. Estimate 55-65% parity. |
 | Claim governance and leakage control | Claim policies are unusually strict: scorecard-only promotion is blocked, fake pass is forbidden, and threshold relaxation is disallowed in multiple current packets. | Commercial workflows need reproducible frozen runs, auditability, non-leaky splits, and clear claim boundaries. | This is a relative strength. Estimate 65-75% maturity, but governance cannot compensate for missing physics/ranking/structure benchmarks. |
 
 ## Main Shortfalls By Priority
 
 ### P0 - Fair Accuracy Parity Harness
 
-There is no single source of truth that compares the architecture against OpenMM/Schrödinger/GALAXY/Syntekabio-like expectations across the same frozen target panels. Without this, the system can say "local gate passed" but cannot make a defensible "commercial-tool-level accuracy" claim.
+The fair comparison harness now exists and is green for the tracked axes. It is the single source of truth for the current restricted commercial-tool accuracy-parity wording. Keep it green before any outbound claim, and expand external held-out panels before broad platform language.
 
 Required output:
 
@@ -59,18 +59,19 @@ Required output:
 - `runs/gpcr_drd2_atom_typed_backmapping_support_current.md`
 - scorecard rows for `physics_dynamics`, `ligand_ranking`, `pose_geometry`, `structure_refinement`, and `wetlab_translation`
 - all rows must include source artifact, frozen input, metric, threshold, pass/fail, and claim boundary
+- current scorecard state: `status=green`, `pass_row_count=5`, `blocked_row_count=0`
 
 ### P1 - GPCR Ligand Ranking And Pose Repair
 
-The current GPCR evidence is still claim-blocked. The specific failure is no longer just score weighting. It is pose/backmapping and hard-decoy design:
+The current tracked GPCR A1 ranking evidence is green, but broader GPCR-family/router deployment remains separate. The legacy failure surfaces are still useful diagnostics because they explain why not every GPCR-family lane should be promoted:
 
-- PR-AUC 0.5187 but CI-low 0.1486, below a defensible claim threshold.
-- top-k hit rate 0.25 is unstable.
-- DRD2 positive is buried at global rank 18923 and target rank 5315 in the active diagnostic.
+- current A1 repeat: PR-AUC `0.8718530390764964`, PR CI-low `0.7611678630724843`, top20 `1.0`, blockers `[]`.
+- older broad GPCR-family lanes still include PR-AUC/CI-low/top20 reject evidence and remain comparison-only.
+- DRD2 legacy diagnostic still shows positive rank pathologies and overanchored decoys in the older frozen family surface.
 - DRD2 positive atom coverage is now 14/14 in the pseudo-allatom support packet, and full-forcefield restrained-receptor local-minimization survival is measured at 1.0, so hard-decoy rebuild diagnostics can proceed.
-- shadow scoring can improve DRD2, but it is claim-locked and still leaves decoys above positives.
+- shadow scoring can improve DRD2, but broad router/platform promotion remains locked until deployment guardrails and broader external validation clear.
 
-Next work should run an independent guarded 100k repeat for the cleared A1 repair, then use the overanchor/multipolar/valid-anchor hard-decoy slices as the first diagnostic surface if CI-low stability regresses.
+Next work should keep the independent repeat green, add broader external held-out coverage, and use the overanchor/multipolar/valid-anchor hard-decoy slices as the first diagnostic surface if CI-low stability regresses.
 
 ### P2 - OpenMM-Class Physics/Dynamics Parity
 

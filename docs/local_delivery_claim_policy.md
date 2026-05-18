@@ -61,7 +61,7 @@ These are the only families that should be described as delivery-ready in the in
 
 - `The repo contains stronger evidence for kinase, ion_channel, and gpcr than for transporter.`
 - `The repo contains separate post-P0 planning queues for PDE translation quality, transporter AQP1/GLUT1 closure, CA2/PXR packet closure, and IDP broader-promotion boundaries.`
-- `Viewer and refresh reproducibility can remain keep-green guardrails while nightly and wetlab are the main active blockers.`
+- `Viewer, nightly, wetlab, and refresh reproducibility are keep-green guardrails for the restricted delivery claim.`
 - `A family may remain commercially restricted even if related staging surfaces or reviewer packets already exist.`
 - `A local-delivery-ready verdict is narrower than a general platform commercialization claim.`
 - `A local_delivery_verdict_gate is a conservative wrapper over the current nightly, wetlab, queue, and status artifacts; it is not a scientific proof or a new engine run.`

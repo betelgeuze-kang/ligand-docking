@@ -94,7 +94,7 @@ python3 tools/build_local_delivery_verdict_gate.py
 
 ## 현재 검증 스냅샷
 
-업데이트: 2026-05-18 KST.
+업데이트: 2026-05-19 KST. 산출물 스냅샷: 2026-05-18 KST.
 
 ![T. cruzi PDE 실제 MD Dynamics Viewer 캡처](docs/figures/webviewer_tcruzi_pde_actual_2026-05-15.png)
 
@@ -121,7 +121,7 @@ manifest에 명시된 로컬 T. cruzi PDE OpenMM artifact가 존재하면 두 RE
 
 ## T. cruzi PDE 데이터 흐름
 
-현재 PDE selected all-atom 경로는 hard block이 닫혔습니다. 다만 broad wetlab/platform claim은 accuracy scorecard 전체 pass 전까지 올리지 않습니다. 후보 확장, metric 진단, atomization, parameterization, local minimization evidence를 분리해서 관리합니다.
+현재 PDE selected all-atom 경로는 hard block이 닫혔고, tracked accuracy scorecard도 green입니다. 다만 broad wetlab/platform claim은 prospective wetlab evidence와 broader platform guardrail이 생길 때까지 별도 claim으로 둡니다. 후보 확장, metric 진단, atomization, parameterization, local minimization evidence를 분리해서 관리합니다.
 
 | 단계 | 로컬 artifact | 현재 데이터 | 읽는 법 |
 | --- | --- | --- | --- |

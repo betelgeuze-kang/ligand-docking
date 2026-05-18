@@ -106,7 +106,7 @@ Before pushing, confirm that generated MD data, checkpoints, logs, and local del
 
 ## Current Validation Snapshot
 
-Updated 2026-05-18 KST.
+Updated 2026-05-19 KST. Artifact snapshot: 2026-05-18 KST.
 
 ![Actual MD Dynamics Viewer snapshot for T. cruzi PDE](docs/figures/webviewer_tcruzi_pde_actual_2026-05-15.png)
 
@@ -133,7 +133,7 @@ Runtime artifacts under `runs/` are local and intentionally ignored by Git. The 
 
 ## T. cruzi PDE Evidence Trail
 
-The current PDE selected all-atom path has no remaining hard block. Broad wetlab/platform claims still stay locked until the full accuracy scorecard passes. Candidate expansion, metric diagnosis, atomization, parameterization, and local minimization evidence remain separated so no single strong-looking energy row can be over-promoted.
+The current PDE selected all-atom path has no remaining hard block, and the tracked accuracy scorecard is green. Broad wetlab/platform claims still stay separate until prospective wetlab evidence and broader platform guardrails are available. Candidate expansion, metric diagnosis, atomization, parameterization, and local minimization evidence remain separated so no single strong-looking energy row can be over-promoted.
 
 | Step | Local artifact | Current data | How to read it |
 | --- | --- | --- | --- |
