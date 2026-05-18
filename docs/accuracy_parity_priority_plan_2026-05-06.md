@@ -36,6 +36,7 @@ Current state:
 
 - `runs/accuracy_parity_scorecard_current.md` is generated and still `blocked_accuracy_parity`.
 - Row mix is now `0 pass / 1 restricted_pass / 4 blocked / 0 missing`; A3 is no longer absent, it is explicitly blocked on missing structure/refinement metrics.
+- 2026-05-13 post-goal status: `/goal` commercialization accounting is closed, but broad commercial-tool accuracy parity is intentionally still blocked. The scorecard is now surfaced directly in `commercialization_status_report.md` as `post_goal_accuracy_parity_active=true`.
 
 ### A1 - Fix Ligand Ranking Robustness
 
@@ -53,10 +54,12 @@ Current blocker:
 - The previous claim-grade full-forcefield local-minimization blocker is closed for the DRD2 positive: `runs/gpcr_drd2_full_forcefield_minimization_readiness_current.md` is `ready` and `runs/gpcr_drd2_openmm_forcefield_parameterization_probe_current.md` has `claim_grade_parameterization_ready=true`.
 - `runs/gpcr_drd2_protein_amber14_parameterization_repair_current.md` keeps the raw 6cm4 blocker visible (`70` missing-heavy-atom residues, including `2` incomplete histidines) but the conservative ChimeraX same-residue side-chain rebuild plus chain-fragment/OXT repair produces an Amber14-ready receptor artifact with active missing-heavy count `0`.
 - DRD2 selected-slice hard-decoy diagnostics are pairwise-green after cache schema repair, and hard-decoy rebuild is now allowed as the next diagnostic step; claim/scorer/guarded-100k promotion remains locked.
+- Current A1 queue is `a1_accuracy_repair_queue_cleared_claim_locked`: `guarded_100k_claim_review_rerun` clears PR-AUC, PR-AUC CI-low, and top20 hit-rate for `gpcr_family_balanced`. `runs/gpcr_a1_independent_repeat_packet_current.md` is `independent_repeat_ready_claim_locked` and its validate-only command is green, while scorer apply and commercial parity claim promotion remain false until the independent repeat run and the broader scorecard clear.
 
 Next work:
 
-- DRD2 overanchor/multipolar/valid-anchor hard-decoy slice rebuild now that local-min survival passes
+- Run the guarded 100k independent repeat command from `runs/gpcr_a1_independent_repeat_packet_current.md` for the cleared A1 ranking repair before any router/platform claim review
+- Preserve DRD2 overanchor/multipolar/valid-anchor hard-decoy diagnostics as the first explanation surface if the rerun fails
 - OPRM1 target-portable pose/anchor evidence
 - HTR2A decoy-support discrimination
 - conditional prior gating that does not use target identity
@@ -113,10 +116,11 @@ Required metrics:
 Current caution:
 
 - IDP wider promotion remains bounded and not broad structure-refinement proof.
-- `runs/structure_refinement_scorecard_current.md` now exists, with native references and pseudo-allatom lanes for `3/3` targets but all required structure/refinement metric counts still `0/3`.
-- `runs/structure_refinement_metric_queue_current.md` now opens `6` metric materialization rows: protein-alignment metrics and interface/DockQ provenance for each of `T. cruzi PDE`, `SARS-CoV-2 Mpro`, and `Cathepsin K`.
-- `runs/structure_refinement_metric_materialization_current.md` computes partial CA-aligned RMSD/GDT/TM/lDDT proxy rows for SARS-CoV-2 Mpro and Cathepsin K (`16` candidate rows total), raising RMSD and CA-proxy materialization to `2/3` targets while keeping true TM-score/GDT/lDDT/DockQ at `0/3`.
-- SARS-CoV-2 Mpro and Cathepsin K each have `8` backmapped candidate PDBs ready for frozen metric computation; T. cruzi PDE must first expose an `allatom_scores_csv` or equivalent candidate source.
+- `runs/structure_refinement_scorecard_current.md` now exists, with native references and pseudo-allatom lanes for `3/3` targets; CA-aligned RMSD and CA proxy rows are materialized for `3/3`, while true TM-score, true GDT, and true lDDT/MolProbity remain `0/3`.
+- `runs/structure_refinement_metric_queue_current.md` keeps `6` metric/provenance rows: protein-alignment metrics plus interface/DockQ provenance for each of `T. cruzi PDE`, `SARS-CoV-2 Mpro`, and `Cathepsin K`.
+- `runs/structure_refinement_metric_materialization_current.md` computes partial CA-aligned RMSD/GDT/TM/lDDT proxy rows for all three targets (`20` candidate rows total), raising RMSD and CA-proxy materialization to `3/3`.
+- Interface/DockQ is resolved as `not_applicable_provenance` for all three current targets because no protein-protein complex/interface claim is in scope; this removes a false missing-metric blocker but does not unlock GALAXY-class promotion.
+- T. cruzi PDE now exposes the rescue `allatom_scores_csv`, but its best CA-aligned RMSD proxy is poor (`34.972216322061456 A`), so the row is evidence-bearing rather than claim-supporting.
 
 Pass rule:
 
@@ -131,8 +135,8 @@ Why fifth:
 Current blockers:
 
 - PDE translation quality is borderline with `binding_energy_proxy_too_weak_for_translation`
-- transporter AQP1/GLUT1 negative evidence is still review-only/evidence-blocked
-- CA2/PXR still need quantitative provenance and `replacement_reference_binding_kcal_mol` closure
+- transporter AQP1/GLUT1 accounting closure exists, but AQP1 kcal values are functional IC50-derived surrogates only; direct binding kcal remains no-claim
+- CA2/PXR review-only policy closure exists, but promotion remains locked
 
 Pass rule:
 

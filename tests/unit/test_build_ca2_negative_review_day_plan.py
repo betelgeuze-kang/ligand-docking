@@ -70,5 +70,5 @@ def test_build_ca2_negative_review_day_plan() -> None:
     assert payload["summary"]["policy_review_only_negative_count"] == 6
     assert payload["rows"][0]["day_block"] == "first_conflict_check"
     assert payload["rows"][1]["day_block"] == "afternoon_ood_review"
-    assert len(payload["checklist"]) == 3
+    assert len(payload["checklist"]) == 4
     assert len(payload["phase_notes"]) == 3

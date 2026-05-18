@@ -208,6 +208,61 @@ def test_guarded_100k_preflight_allows_when_readiness_eligible(tmp_path: Path):
     assert payload["claim_promotion_allowed"] is False
 
 
+def test_gpu_backend_preflight_blocks_required_gpu_when_unavailable(tmp_path: Path, monkeypatch):
+    profile = tmp_path / "profile.json"
+    out_prefix = tmp_path / "runs" / "blocked_gpu"
+    _write_json(
+        profile,
+        {
+            "targets": "EGFR_KINASE",
+            "require_rust_hip": True,
+            "trajectory_engine_mode": "rust_hip",
+            "traj_abort_on_cpu_backend": True,
+        },
+    )
+    args = mod.build_parser().parse_args(
+        [
+            "--profile-json",
+            str(profile),
+            "--ligand-sizes",
+            "64",
+            "--repeats",
+            "1",
+            "--out-prefix",
+            str(out_prefix),
+            "--no-single-instance",
+        ]
+    )
+    monkeypatch.setattr(
+        mod,
+        "_probe_torch_gpu",
+        lambda: {
+            "torch_import_ok": True,
+            "torch_version": "test",
+            "torch_cuda_available": False,
+            "torch_cuda_device_count": 0,
+            "torch_cuda_device_names": [],
+            "error": "",
+        },
+    )
+    monkeypatch.setattr(
+        mod,
+        "_run",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("child pipeline must not start")),
+    )
+
+    payload = mod.run_stress(args)
+
+    assert payload["pass"] is False
+    assert payload["failed_stage"] == "gpu_backend_preflight"
+    stage = payload["stages"]["gpu_backend_preflight"]
+    assert stage["required"] is True
+    assert stage["ok"] is False
+    assert "torch_cuda_unavailable" in stage["blockers"]
+    assert "torch_cuda_device_count_zero" in stage["blockers"]
+    assert (tmp_path / "runs" / "blocked_gpu_summary.json").exists()
+
+
 def test_profile_traj_prod_args_default_off():
     cli = mod._profile_traj_prod_args({})
     assert cli[:2] == ["--traj-prod-stage2-preset", "off"]

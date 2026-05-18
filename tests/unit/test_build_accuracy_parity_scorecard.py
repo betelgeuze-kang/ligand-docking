@@ -15,6 +15,9 @@ def test_default_pose_gap_uses_latest_v16_adaptive_packet() -> None:
         mod.DEFAULT_GPCR_POSE_GAP_JSON
         == "runs/gpcr_false_support_discriminator_v16_adaptive_frozen_gap_packet_current.json"
     )
+    assert mod.DEFAULT_OPENMM_EXTERNAL_JSON == "runs/openmm_2bead_strict_multitarget_current_accuracy_external.json"
+    assert mod.DEFAULT_OPENMM_STABILITY_JSON == "runs/openmm_2bead_strict_multitarget_current_long_stability_validation.json"
+    assert "gpcr_a1_independent_repeat_r2" in mod.DEFAULT_GPCR_RANKING_JSON
 
 
 def _write_json(path: Path, payload: dict) -> None:
@@ -36,6 +39,7 @@ def test_build_scorecard_blocks_broad_claims_with_current_gap_shapes(tmp_path: P
     pose_gap = tmp_path / "pose_gap.json"
     structure_scorecard = tmp_path / "missing_structure_scorecard.json"
     wetlab = tmp_path / "wetlab.json"
+    wetlab_allatom = tmp_path / "wetlab_allatom.json"
     readiness = tmp_path / "readiness.json"
 
     _write_json(
@@ -162,6 +166,28 @@ def test_build_scorecard_blocks_broad_claims_with_current_gap_shapes(tmp_path: P
         },
     )
     _write_json(
+        wetlab_allatom,
+        {
+            "summary": {
+                "translation_gate_focus_status": "fail",
+                "translation_gate_focus_source_status": "borderline",
+                "translation_gate_focus_hard_status": "fail",
+                "translation_gate_focus_score": 68.1,
+                "commercial_hard_gate_pass_v2": False,
+                "commercial_overall_score_v2": 54.7,
+                "commercial_decision_class_v2": "commercial_review_only",
+                "commercial_risk_bucket_v2": "high",
+                "commercial_primary_upgrade_actions_v2": ["clear_translation_hard_gate"],
+                "commercial_hard_gate_failed_metrics_v2": [
+                    "translation_gate_focus_status",
+                    "focus_shortlist_tier",
+                    "recommended_next_expensive_lane",
+                ],
+                "next_required_step": "Review manually only; do not treat as wetlab-ready.",
+            }
+        },
+    )
+    _write_json(
         readiness,
         {
             "summary": {
@@ -187,6 +213,7 @@ def test_build_scorecard_blocks_broad_claims_with_current_gap_shapes(tmp_path: P
         gpcr_pose_gap_json=pose_gap,
         structure_scorecard_json=structure_scorecard,
         wetlab_translation_json=wetlab,
+        wetlab_allatom_review_json=wetlab_allatom,
         commercial_readiness_json=readiness,
         generated_at_local="2026-05-06T00:00:00+09:00",
     )
@@ -216,6 +243,11 @@ def test_build_scorecard_blocks_broad_claims_with_current_gap_shapes(tmp_path: P
     assert rows["pose_geometry"]["metrics"]["drd2_missing_forcefield_assets"] == ["chimerax_tleap"]
     assert rows["structure_refinement"]["status"] == "missing"
     assert rows["wetlab_translation"]["status"] == "blocked"
+    assert rows["wetlab_translation"]["metrics"]["translation_gate_focus_status"] == "fail"
+    assert rows["wetlab_translation"]["metrics"]["commercial_hard_gate_pass"] is False
+    assert rows["wetlab_translation"]["metrics"]["commercial_overall_score_v2"] == 54.7
+    assert "commercial_hard_gate_blocked" in rows["wetlab_translation"]["blockers"]
+    assert "translation_gate_focus_status" in rows["wetlab_translation"]["blockers"]
     assert payload["claim_boundary"]["api_productization_out_of_scope"] is True
 
 
@@ -269,6 +301,8 @@ def test_cli_writes_json_and_markdown(tmp_path: Path) -> None:
             str(missing_structure),
             "--wetlab-translation-json",
             str(good),
+            "--wetlab-allatom-review-json",
+            str(good),
             "--commercial-readiness-json",
             str(good),
             "--out-json",
@@ -312,3 +346,42 @@ def test_ligand_ranking_reads_stage5_metric_shape(tmp_path: Path) -> None:
     assert "claim_promotion_not_allowed" in row["blockers"]
     assert "ranking_pr_auc_ci_low_below_threshold" not in row["blockers"]
     assert "ranking metrics clear" in row["next_required_step"]
+
+
+def test_structure_row_exposes_internal_true_metric_backend(tmp_path: Path) -> None:
+    scorecard = tmp_path / "structure_scorecard.json"
+    _write_json(
+        scorecard,
+        {
+            "summary": {
+                "claim_promotion_allowed": True,
+                "target_count": 3,
+                "rmsd_pass": True,
+                "tm_score_pass": True,
+                "gdt_pass": True,
+                "lddt_pass": True,
+                "dockq_pass": True,
+                "metric_backend": "internal_deterministic_ca_true_metrics",
+                "chain_aware_canonical_ca_matching": True,
+                "tm_score_true_metric_available_count": 3,
+                "gdt_ts_true_metric_available_count": 3,
+                "lddt_ca_true_metric_available_count": 3,
+                "best_tm_score": 0.91,
+                "best_gdt_ts": 0.82,
+                "best_lddt_ca": 0.76,
+                "molprobity_full_atom_quality_caveat": True,
+                "blockers": [],
+            }
+        },
+    )
+
+    row = mod._structure_row(structure_scorecard_json=scorecard)
+
+    assert row["status"] == "pass"
+    assert row["metrics"]["metric_backend"] == "internal_deterministic_ca_true_metrics"
+    assert row["metrics"]["chain_aware_canonical_ca_matching"] is True
+    assert row["metrics"]["tm_score_true_metric_available_count"] == 3
+    assert row["metrics"]["gdt_ts_true_metric_available_count"] == 3
+    assert row["metrics"]["lddt_ca_true_metric_available_count"] == 3
+    assert row["metrics"]["best_tm_score"] == 0.91
+    assert row["metrics"]["molprobity_full_atom_quality_caveat"] is True

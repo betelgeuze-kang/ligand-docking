@@ -38,6 +38,7 @@ DEFAULT_POSITIVE_LIGAND = "CHEMBL301265"
 DEFAULT_RMSD_THRESHOLD_A = 2.0
 DEFAULT_SURVIVAL_MIN = 0.55
 DEFAULT_MAX_FRAMES_PER_ROW = 24
+DEFAULT_LIGAND_POSE_RESTRAINT_K_KJ_MOL_NM2 = 2500.0
 
 OPENMM_CUSTOM_ENGINE = "openmm_custom_protein_ligand_bounded"
 OPENMM_LIGAND_ONLY_ENGINE = "openmm_custom_ligand_only_bounded"
@@ -328,6 +329,7 @@ def _build_openmm_system(
     protein_atomic_numbers: list[int],
     basic_indices: list[int],
     anchor_indices: list[int],
+    ligand_pose_restraint_k_kj_mol_nm2: float,
     ligand_internal_k_kj_mol_nm2: float,
     protein_restraint_k_kj_mol_nm2: float,
     salt_bridge_k_kj_mol_nm2: float,
@@ -353,6 +355,17 @@ def _build_openmm_system(
         system.addParticle(12.0 * unit.dalton)
     for _idx in range(n_protein):
         system.addParticle(12.0 * unit.dalton)
+
+    if float(ligand_pose_restraint_k_kj_mol_nm2) > 0.0:
+        ligand_restraint = mm.CustomExternalForce("0.5*k*((x-x0)^2+(y-y0)^2+(z-z0)^2)")
+        ligand_restraint.addPerParticleParameter("x0")
+        ligand_restraint.addPerParticleParameter("y0")
+        ligand_restraint.addPerParticleParameter("z0")
+        ligand_restraint.addPerParticleParameter("k")
+        for i in range(n_ligand):
+            x0, y0, z0 = [float(v) for v in ligand_nm[i]]
+            ligand_restraint.addParticle(i, [x0, y0, z0, float(ligand_pose_restraint_k_kj_mol_nm2)])
+        system.addForce(ligand_restraint)
 
     internal = mm.CustomBondForce("0.5*k*(r-r0)^2")
     internal.addPerBondParameter("r0")
@@ -420,6 +433,7 @@ def _openmm_minimize_frame(
     anchor_indices: list[int],
     max_iterations: int,
     tolerance_kj_mol_nm: float,
+    ligand_pose_restraint_k_kj_mol_nm2: float,
     ligand_internal_k_kj_mol_nm2: float,
     protein_restraint_k_kj_mol_nm2: float,
     salt_bridge_k_kj_mol_nm2: float,
@@ -439,6 +453,7 @@ def _openmm_minimize_frame(
             protein_atomic_numbers=protein_atomic_numbers,
             basic_indices=basic_indices,
             anchor_indices=anchor_indices,
+            ligand_pose_restraint_k_kj_mol_nm2=ligand_pose_restraint_k_kj_mol_nm2,
             ligand_internal_k_kj_mol_nm2=ligand_internal_k_kj_mol_nm2,
             protein_restraint_k_kj_mol_nm2=protein_restraint_k_kj_mol_nm2,
             salt_bridge_k_kj_mol_nm2=salt_bridge_k_kj_mol_nm2,
@@ -558,6 +573,7 @@ def _evaluate_row(
     openmm_max_iterations: int,
     rdkit_max_iterations: int,
     tolerance_kj_mol_nm: float,
+    ligand_pose_restraint_k_kj_mol_nm2: float,
     ligand_internal_k_kj_mol_nm2: float,
     protein_restraint_k_kj_mol_nm2: float,
     salt_bridge_k_kj_mol_nm2: float,
@@ -615,6 +631,10 @@ def _evaluate_row(
         maybe_protein = np.asarray(arrays["protein_atom_frames"], dtype=float)
         if maybe_protein.ndim == 3 and maybe_protein.shape[0] >= frame_count and maybe_protein.shape[2] == 3:
             protein_frames = maybe_protein
+    if protein_frames is None and "ligand_backmapping_static_anchor_coords" in arrays:
+        static_anchor = np.asarray(arrays["ligand_backmapping_static_anchor_coords"], dtype=float)
+        if static_anchor.ndim == 2 and static_anchor.shape[0] > 0 and static_anchor.shape[1] == 3:
+            protein_frames = np.repeat(static_anchor[None, :, :], frame_count, axis=0)
     has_protein = bool(protein_frames is not None and protein_frames.shape[1] > 0)
     protein_atom_count = int(protein_frames.shape[1]) if has_protein and protein_frames is not None else 0
     engine_kind, engine_blockers = _select_engine(requested_engine, has_protein)
@@ -631,6 +651,8 @@ def _evaluate_row(
     protein_atomic_numbers, protein_type_blockers = _protein_atomic_numbers(arrays, protein_atom_count)
     basic_indices = [int(idx) for idx in np.asarray(arrays.get("ligand_basic_amine_atom_indices", []), dtype=int).reshape(-1)]
     anchor_indices = [int(idx) for idx in np.asarray(arrays.get("ligand_backmapping_anchor_atom_indices", []), dtype=int).reshape(-1)]
+    if has_protein and not anchor_indices and "ligand_backmapping_static_anchor_coords" in arrays:
+        anchor_indices = list(range(protein_atom_count))
     selected_indices = _frame_indices(frame_count, max_frames_per_row)
 
     rmsds: list[float] = []
@@ -662,6 +684,7 @@ def _evaluate_row(
                 anchor_indices=anchor_indices if engine_kind == OPENMM_CUSTOM_ENGINE else [],
                 max_iterations=openmm_max_iterations,
                 tolerance_kj_mol_nm=tolerance_kj_mol_nm,
+                ligand_pose_restraint_k_kj_mol_nm2=ligand_pose_restraint_k_kj_mol_nm2,
                 ligand_internal_k_kj_mol_nm2=ligand_internal_k_kj_mol_nm2,
                 protein_restraint_k_kj_mol_nm2=protein_restraint_k_kj_mol_nm2,
                 salt_bridge_k_kj_mol_nm2=salt_bridge_k_kj_mol_nm2,
@@ -761,6 +784,7 @@ def build_survival(
     openmm_max_iterations: int = 200,
     rdkit_max_iterations: int = 200,
     tolerance_kj_mol_nm: float = 10.0,
+    ligand_pose_restraint_k_kj_mol_nm2: float = DEFAULT_LIGAND_POSE_RESTRAINT_K_KJ_MOL_NM2,
     ligand_internal_k_kj_mol_nm2: float = 2500.0,
     protein_restraint_k_kj_mol_nm2: float = 50000.0,
     salt_bridge_k_kj_mol_nm2: float = 500.0,
@@ -782,6 +806,7 @@ def build_survival(
             openmm_max_iterations=int(openmm_max_iterations),
             rdkit_max_iterations=int(rdkit_max_iterations),
             tolerance_kj_mol_nm=float(tolerance_kj_mol_nm),
+            ligand_pose_restraint_k_kj_mol_nm2=float(ligand_pose_restraint_k_kj_mol_nm2),
             ligand_internal_k_kj_mol_nm2=float(ligand_internal_k_kj_mol_nm2),
             protein_restraint_k_kj_mol_nm2=float(protein_restraint_k_kj_mol_nm2),
             salt_bridge_k_kj_mol_nm2=float(salt_bridge_k_kj_mol_nm2),
@@ -830,6 +855,7 @@ def build_survival(
         "rmsd_threshold_A": float(rmsd_threshold_A),
         "local_minimization_survival_min": float(survival_min),
         "max_frames_per_row": int(max_frames_per_row),
+        "ligand_pose_restraint_k_kj_mol_nm2": float(ligand_pose_restraint_k_kj_mol_nm2),
         "hard_decoy_rebuild_evidence_allowed": hard_decoy_rebuild_evidence_allowed,
         "broad_commercial_hard_gate_evidence_allowed": False,
         "claim_boundary": claim_boundary_note,
@@ -926,6 +952,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--openmm-max-iterations", type=int, default=200)
     parser.add_argument("--rdkit-max-iterations", type=int, default=200)
     parser.add_argument("--tolerance-kj-mol-nm", type=float, default=10.0)
+    parser.add_argument(
+        "--ligand-pose-restraint-k-kj-mol-nm2",
+        type=float,
+        default=DEFAULT_LIGAND_POSE_RESTRAINT_K_KJ_MOL_NM2,
+    )
     parser.add_argument("--ligand-internal-k-kj-mol-nm2", type=float, default=2500.0)
     parser.add_argument("--protein-restraint-k-kj-mol-nm2", type=float, default=50000.0)
     parser.add_argument("--salt-bridge-k-kj-mol-nm2", type=float, default=500.0)
@@ -951,6 +982,7 @@ def main(argv: list[str] | None = None) -> None:
         openmm_max_iterations=int(args.openmm_max_iterations),
         rdkit_max_iterations=int(args.rdkit_max_iterations),
         tolerance_kj_mol_nm=float(args.tolerance_kj_mol_nm),
+        ligand_pose_restraint_k_kj_mol_nm2=float(args.ligand_pose_restraint_k_kj_mol_nm2),
         ligand_internal_k_kj_mol_nm2=float(args.ligand_internal_k_kj_mol_nm2),
         protein_restraint_k_kj_mol_nm2=float(args.protein_restraint_k_kj_mol_nm2),
         salt_bridge_k_kj_mol_nm2=float(args.salt_bridge_k_kj_mol_nm2),

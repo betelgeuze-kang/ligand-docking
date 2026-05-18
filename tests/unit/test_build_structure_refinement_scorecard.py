@@ -93,6 +93,8 @@ def test_build_scorecard_blocks_native_backed_lanes_without_structure_metrics(tm
     assert summary["lddt_ca_proxy_available_count"] == 0
     assert summary["lddt_or_molprobity_available_count"] == 0
     assert summary["dockq_or_interface_metric_available_count"] == 0
+    assert summary["dockq_or_interface_not_applicable_count"] == 0
+    assert summary["dockq_or_interface_resolved_count"] == 0
     assert summary["galaxy_class_claim_allowed"] is False
     assert summary["blocker_counts"]["rmsd_missing"] == 3
     assert summary["blocker_counts"]["tm_score_missing"] == 3
@@ -171,6 +173,9 @@ def test_build_scorecard_reads_materialized_rmsd_but_keeps_proxy_claim_locked(tm
     rows = {row["target_id"]: row for row in payload["rows"]}
     assert payload["summary"]["rmsd_available_count"] == 2
     assert payload["summary"]["gdt_available_count"] == 0
+    assert payload["summary"]["tm_score_true_metric_available_count"] == 0
+    assert payload["summary"]["gdt_ts_true_metric_available_count"] == 0
+    assert payload["summary"]["lddt_ca_true_metric_available_count"] == 0
     assert payload["summary"]["gdt_ts_proxy_available_count"] == 2
     assert payload["summary"]["tm_score_ca_proxy_available_count"] == 2
     assert payload["summary"]["lddt_ca_proxy_available_count"] == 2
@@ -183,6 +188,144 @@ def test_build_scorecard_reads_materialized_rmsd_but_keeps_proxy_claim_locked(tm
     assert rows["SARS-CoV-2 Mpro"]["best_ca_aligned_rmsd_A"] == 1.5
     assert rows["SARS-CoV-2 Mpro"]["best_tm_score_ca_proxy"] == 0.8
     assert rows["SARS-CoV-2 Mpro"]["best_lddt_ca_proxy"] == 0.7
+
+
+def test_build_scorecard_treats_interface_not_applicable_as_resolved_not_metric_pass(tmp_path: Path) -> None:
+    manifest = _native_manifest(tmp_path)
+    tcruzi = _ready_source(tmp_path / "tcruzi.json", "T. cruzi PDE")
+    sars = _ready_source(tmp_path / "sars.json", "SARS-CoV-2 Mpro")
+    cathepsin = _ready_source(tmp_path / "cathepsin.json", "Cathepsin K")
+    materialization = tmp_path / "materialization.json"
+    _write_json(
+        materialization,
+        {
+            "rows": [
+                {
+                    "target": target,
+                    "metric_status": "not_applicable_without_complex_interface_claim",
+                    "dockq_available": False,
+                }
+                for target in TARGETS
+            ]
+        },
+    )
+
+    payload = mod.build_scorecard(
+        native_manifest_csv=manifest,
+        tcruzi_review_json=tcruzi,
+        sarscov2_runner_json=sars,
+        cathepsin_runner_json=cathepsin,
+        metric_materialization_json=materialization,
+        generated_at_local="2026-05-14T00:00:00+09:00",
+    )
+
+    rows = {row["target_id"]: row for row in payload["rows"]}
+    assert payload["summary"]["dockq_or_interface_metric_available_count"] == 0
+    assert payload["summary"]["dockq_or_interface_not_applicable_count"] == 3
+    assert payload["summary"]["dockq_or_interface_resolved_count"] == 3
+    assert payload["summary"]["dockq_pass"] is True
+    assert "dockq_or_interface_metric_missing" not in payload["summary"]["blocker_counts"]
+    assert rows["T. cruzi PDE"]["dockq_or_interface_metric_available"] is False
+    assert rows["T. cruzi PDE"]["dockq_or_interface_not_applicable"] is True
+    assert rows["T. cruzi PDE"]["dockq_or_interface_resolved"] is True
+
+
+def test_build_scorecard_accepts_internal_ca_true_metrics_with_interface_na(tmp_path: Path) -> None:
+    manifest = _native_manifest(tmp_path)
+    tcruzi = _ready_source(tmp_path / "tcruzi.json", "T. cruzi PDE")
+    sars = _ready_source(tmp_path / "sars.json", "SARS-CoV-2 Mpro")
+    cathepsin = _ready_source(tmp_path / "cathepsin.json", "Cathepsin K")
+    materialization = tmp_path / "materialization.json"
+    rows = []
+    for target in TARGETS:
+        rows.append(
+            {
+                "target": target,
+                "metric_status": "metrics_computed",
+                "ca_aligned_rmsd_A": 1.0,
+                "tm_score": 0.8,
+                "gdt_ts": 0.75,
+                "lddt_ca": 0.7,
+            }
+        )
+        rows.append(
+            {
+                "target": target,
+                "metric_status": "not_applicable_without_complex_interface_claim",
+                "dockq_available": False,
+            }
+        )
+    _write_json(
+        materialization,
+        {
+            "summary": {
+                "metric_backend": "internal_deterministic_ca_true_metrics",
+                "chain_aware_canonical_ca_matching": True,
+            },
+            "rows": rows,
+        },
+    )
+
+    payload = mod.build_scorecard(
+        native_manifest_csv=manifest,
+        tcruzi_review_json=tcruzi,
+        sarscov2_runner_json=sars,
+        cathepsin_runner_json=cathepsin,
+        metric_materialization_json=materialization,
+        generated_at_local="2026-05-17T00:00:00+09:00",
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "structure_refinement_scorecard_pass"
+    assert summary["tm_score_available_count"] == 3
+    assert summary["gdt_available_count"] == 3
+    assert summary["lddt_or_molprobity_available_count"] == 3
+    assert summary["metric_backend"] == "internal_deterministic_ca_true_metrics"
+    assert summary["chain_aware_canonical_ca_matching"] is True
+    assert summary["tm_score_true_metric_available_count"] == 3
+    assert summary["gdt_ts_true_metric_available_count"] == 3
+    assert summary["lddt_ca_true_metric_available_count"] == 3
+    assert summary["best_tm_score"] == 0.8
+    assert summary["best_gdt_ts"] == 0.75
+    assert summary["best_lddt_ca"] == 0.7
+    assert summary["molprobity_full_atom_quality_caveat"] is True
+    assert summary["dockq_or_interface_resolved_count"] == 3
+    assert summary["galaxy_class_claim_allowed"] is True
+
+
+def test_build_scorecard_uses_structured_candidate_paths_but_summary_gate_authority(tmp_path: Path) -> None:
+    manifest = _native_manifest(tmp_path)
+    scores = tmp_path / "scores.csv"
+    _write_csv(scores, [{"backmapped_pdb": str(tmp_path / "candidate.pdb")}])
+    tcruzi = tmp_path / "tcruzi.json"
+    _write_json(
+        tcruzi,
+        {
+            "summary": {
+                "status": "wetlab_tcruzi_pde_allatom_review_packet_ready",
+                "target_id": "T. cruzi PDE",
+                "packet_ready_for_operator_review": True,
+                "selected_command_kind": "pseudo_allatom_backmapping_rescore",
+                "commercial_hard_gate_pass_v2": False,
+            },
+            "structured": {"allatom_scores_csv": str(scores)},
+        },
+    )
+    sars = _ready_source(tmp_path / "sars.json", "SARS-CoV-2 Mpro")
+    cathepsin = _ready_source(tmp_path / "cathepsin.json", "Cathepsin K")
+
+    payload = mod.build_scorecard(
+        native_manifest_csv=manifest,
+        tcruzi_review_json=tcruzi,
+        sarscov2_runner_json=sars,
+        cathepsin_runner_json=cathepsin,
+        metric_materialization_json=tmp_path / "missing_materialization.json",
+        generated_at_local="2026-05-14T00:00:00+09:00",
+    )
+
+    rows = {row["target_id"]: row for row in payload["rows"]}
+    assert rows["T. cruzi PDE"]["allatom_scores_available"] is True
+    assert rows["T. cruzi PDE"]["commercial_hard_gate_pass"] is False
 
 
 def test_cli_writes_structure_refinement_artifacts(tmp_path: Path) -> None:

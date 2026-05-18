@@ -224,7 +224,7 @@ class AIRouter(nn.Module):
     def set_runtime_mode(self, mode: str) -> None:
         mode_i = str(mode).strip().lower()
         if mode_i not in _VALID_ROUTER_RUNTIME_MODES:
-            mode_i = "auto"
+            mode_i = "eager"
         self.runtime_mode = mode_i
 
     def set_disable_exploration(self, flag: bool) -> None:

@@ -31,7 +31,10 @@ DEFAULT_OPRM1_LIFE_SCIENCE_EVIDENCE_JSON = "runs/gpcr_oprm1_life_science_evidenc
 DEFAULT_OPRM1_TOPOLOGY_REPLAY_JSON = "runs/gpcr_oprm1_topology_pose_shadow_replay_summary_current.json"
 DEFAULT_SHADOW_CLAIM_REVIEW_JSON = "runs/gpcr_guarded_shadow_claim_review_current.json"
 DEFAULT_POSE_GAP_JSON = "runs/gpcr_false_support_discriminator_v16_adaptive_frozen_gap_packet_current.json"
-DEFAULT_RANKING_JSON = "runs/gpcr_guarded_100k_rank_failure_diagnostics_current.json"
+DEFAULT_RANKING_JSON = (
+    "runs/external_validation_2026-05-13_gpcr_a1_independent_repeat_r2_"
+    "set1_core_blind_gpcr_core_full_p0_n100000_r1_stage5_ranking_summary.json"
+)
 DEFAULT_OUT_JSON = "runs/gpcr_a1_accuracy_repair_queue_current.json"
 DEFAULT_OUT_MD = "runs/gpcr_a1_accuracy_repair_queue_current.md"
 
@@ -326,6 +329,12 @@ def build_queue(
     ranking_pr_auc = _float(ranking_summary.get("ranking_pr_auc"))
     ranking_pr_auc_ci_low = _float(ranking_summary.get("ranking_pr_auc_ci_low"))
     ranking_topk_hit_rate = _float(ranking_summary.get("ranking_topk_hit_rate"))
+    ranking_blockers = [str(item) for item in ranking_summary.get("blockers") or []]
+    ranking_provenance_blockers = [
+        blocker for blocker in ranking_blockers if blocker not in {"claim_promotion_not_allowed"}
+    ]
+    ranking_independent_repeat_completed = bool(ranking_summary.get("independent_repeat_completed"))
+    ranking_crossfit_validation_ready = bool(ranking_summary.get("crossfit_validation_ready"))
     full_guarded_review_passed = bool(
         guarded_review_ready
         and ranking_pr_auc is not None
@@ -334,6 +343,7 @@ def build_queue(
         and ranking_pr_auc_ci_low >= 0.45
         and ranking_topk_hit_rate is not None
         and ranking_topk_hit_rate >= 0.50
+        and not ranking_provenance_blockers
     )
     rows: list[dict[str, Any]] = [
         _queue_row(
@@ -703,6 +713,8 @@ def build_queue(
                 "worst_positive_within_target_rank": _int(ranking_summary.get("worst_positive_within_target_rank")),
                 "ranking_positive_count": _int(ranking_summary.get("ranking_positive_count")),
                 "ranking_score_col_used": ranking_summary.get("ranking_score_col_used"),
+                "ranking_blockers": ranking_blockers,
+                "ranking_provenance_blockers": ranking_provenance_blockers,
                 "full_guarded_review_passed": full_guarded_review_passed,
                 "pre_review_repair_gates_completed": guarded_review_ready,
                 "shadow_claim_review_status": shadow_review_status or None,
@@ -730,10 +742,31 @@ def build_queue(
                 "no threshold relaxation",
             ],
             next_action=(
-                "Completed: full guarded 100k ranking review clears PR-AUC, PR-AUC CI-low, and top20 hit-rate "
-                "under the unchanged gate. Regenerate the accuracy parity scorecard and run an independent repeat "
-                "before any commercial parity or router-promotion claim."
+                (
+                    "Completed: full guarded 100k ranking review clears PR-AUC, PR-AUC CI-low, and top20 hit-rate "
+                    "under the unchanged gate with independent-repeat out-of-fold evidence. Keep scorer deployment, "
+                    "router promotion, and platform claims separate from this ranking-parity closure."
+                    if ranking_independent_repeat_completed and ranking_crossfit_validation_ready
+                    else
+                    "Completed: full guarded 100k ranking review clears PR-AUC, PR-AUC CI-low, and top20 hit-rate "
+                    "under the unchanged gate. Regenerate the accuracy parity scorecard and run an independent repeat "
+                    "before any commercial parity or router-promotion claim."
+                )
                 if full_guarded_review_passed
+                else
+                (
+                    "Metric thresholds are green, but ranking evidence remains fail-closed by provenance blockers "
+                    f"`{ranking_provenance_blockers}`; run a fresh independent repeat without label-derived weight "
+                    "selection before clearing the A1 queue."
+                )
+                if guarded_review_ready
+                and ranking_pr_auc is not None
+                and ranking_pr_auc >= 0.55
+                and ranking_pr_auc_ci_low is not None
+                and ranking_pr_auc_ci_low >= 0.45
+                and ranking_topk_hit_rate is not None
+                and ranking_topk_hit_rate >= 0.50
+                and ranking_provenance_blockers
                 else
                 (
                     "Guarded shadow claim review is still blocked "
@@ -777,6 +810,8 @@ def build_queue(
         "drd2_weakbase_false_support_replay_status": drd2_weakbase_replay_status or None,
         "guarded_shadow_claim_review_status": shadow_review_status or None,
         "guarded_shadow_claim_review_passed": shadow_review_passed,
+        "ranking_blockers": ranking_blockers,
+        "ranking_provenance_blockers": ranking_provenance_blockers,
         "top_priority_repair_id": top_row["repair_id"],
         "top_priority_target": top_row["target"],
         "top_priority_blocker_group": top_row["blocker_group"],

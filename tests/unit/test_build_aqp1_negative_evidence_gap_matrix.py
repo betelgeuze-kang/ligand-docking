@@ -72,6 +72,17 @@ def _negative_queue() -> dict[str, object]:
     return {"summary": {"aqp1_negative_slot_count": 3}}
 
 
+def _primary_functional_evidence() -> dict[str, object]:
+    return {
+        "summary": {
+            "packet_artifact": "runs/aqp1_negative_primary_functional_evidence_current.md",
+            "endpoint": "pressure_induced_hemolysis_percent_at_200_mpa",
+            "direct_negative_quantitative_row_found_count": 3,
+            "authoritative_negative_apply_allowed_count": 3,
+        }
+    }
+
+
 def test_build_aqp1_negative_evidence_gap_matrix_summarizes_blocked_routes() -> None:
     payload = mod.build_payload(_external_crosscheck(), _direct_audit(), _exact_source(), _harvest(), _negative_queue())
 
@@ -126,6 +137,8 @@ def test_build_aqp1_negative_evidence_gap_matrix_cli(tmp_path: Path) -> None:
             str(harvest_json),
             "--negative-queue-json",
             str(queue_json),
+            "--primary-functional-evidence-json",
+            str(tmp_path / "missing_primary_functional.json"),
             "--out-json",
             str(out_json),
             "--out-csv",
@@ -142,3 +155,26 @@ def test_build_aqp1_negative_evidence_gap_matrix_cli(tmp_path: Path) -> None:
     assert payload["summary"]["negative_slot_cover_missing_count"] == 3
     assert out_csv.exists()
     assert out_md.read_text(encoding="utf-8").startswith("# AQP1 Negative Evidence Gap Matrix")
+
+
+def test_build_aqp1_negative_evidence_gap_matrix_accepts_primary_functional_closure() -> None:
+    payload = mod.build_payload(
+        _external_crosscheck(),
+        _direct_audit(),
+        _exact_source(),
+        _harvest(),
+        _negative_queue(),
+        _primary_functional_evidence(),
+    )
+
+    summary = payload["summary"]
+    rows = payload["rows"]
+    assert summary["direct_negative_quantitative_row_found_count"] == 3
+    assert summary["authoritative_negative_apply_allowed_count"] == 3
+    assert summary["negative_slot_cover_ready_count"] == 3
+    assert summary["negative_slot_cover_missing_count"] == 0
+    assert summary["negative_evidence_closure_allowed"] is True
+    assert summary["gap_status"] == "aqp1_primary_functional_negative_evidence_curated"
+    assert summary["commercialization_blocker"] == ""
+    assert rows[3]["evidence_route"] == "pressure_hemolysis_exact_source_anchor"
+    assert rows[3]["route_status"] == "primary_functional_no_effect_rows_curated"

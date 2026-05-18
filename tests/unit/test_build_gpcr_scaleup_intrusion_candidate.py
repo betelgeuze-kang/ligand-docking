@@ -585,6 +585,8 @@ def test_build_payload_supports_family_balanced_rescore_as_claim_locked_candidat
     assert profile["claim_safe_assertion_allowed"] is False
     assert profile["broad_gpcr_claim_allowed"] is False
     assert profile["traj_resume_existing"] is True
+    assert profile["traj_npz_compression"] == "compressed"
+    assert profile["csv_relax_workers"] == 0
     assert "claim-locked" in profile["residual_prototype_notes"].lower()
     assert governance["prototype_variant"] == "gpcr_core_family_balanced_rescore_v1"
     assert governance["comparison_candidate_role"] == "guarded_apply_candidate"
@@ -965,3 +967,45 @@ def test_build_payload_supports_structure_support_rescore_claim_locked_candidate
     assert governance["claim_text_locked_until_full_100k_gate_green"] is True
     assert governance["apply_mode_claim_allowed"] is False
     assert set_spec["sets"][0]["claim_role"] == "comparison_candidate"
+
+
+def test_100k_candidate_profile_disables_cpu_3d_relax_prestage(tmp_path: Path) -> None:
+    base_profile = tmp_path / "config" / "base_gpcr_100k.json"
+    residual_spec = tmp_path / "runs" / "gpcr_residual_prototype_spec_family_balanced.json"
+    out_dir = tmp_path / "candidate"
+    _write_json(
+        base_profile,
+        {
+            "ranking_score_col": "binding_score_composite_v7",
+            "hard_decoy_synth_total_decoys": 100000,
+            "hard_decoy_synth_relax_3d": True,
+            "csv_relax_3d": True,
+            "csv_relax_workers": 4,
+        },
+    )
+    _write_json(
+        residual_spec,
+        {
+            "summary": {"prototype_variant": "gpcr_core_family_balanced_rescore_v1"},
+            "prototype": {
+                "constraints": {"claim_locked_candidate": True},
+                "tuning": {"variant": "gpcr_core_family_balanced_rescore_v1"},
+            },
+        },
+    )
+
+    payload = mod.build_payload(
+        out_dir=out_dir,
+        spec_json=residual_spec,
+        base_profile_json=base_profile,
+        tag_suffix="fast100k",
+        variant="gpcr_core_family_balanced_rescore_v1",
+        mode="apply",
+    )
+
+    profile = json.loads(Path(payload["profile_json"]).read_text(encoding="utf-8"))
+    assert profile["hard_decoy_synth_generation_mode"] == "enumerate"
+    assert profile["hard_decoy_synth_global_unique"] is False
+    assert profile["hard_decoy_synth_relax_3d"] is False
+    assert profile["csv_relax_3d"] is False
+    assert profile["csv_relax_workers"] == 0

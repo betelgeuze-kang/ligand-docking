@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import time
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -633,3 +634,88 @@ def test_run_batch_surfaces_normalized_template_metadata_in_manifest(tmp_path, m
     assert manifest.loc[0, "protein_atom_template_source_path"] == "synthetic_template.pdb"
     assert manifest.loc[0, "protein_atom_template_count"] == 3
     assert bool(manifest.loc[0, "protein_atom_frames_available"]) is True
+
+
+def test_prod_light_npz_omits_repeated_protein_atom_frames(tmp_path, monkeypatch) -> None:
+    queue_csv = tmp_path / "queue.csv"
+    pd.DataFrame(
+        [
+            {
+                "queue_id": "q1",
+                "target": "T1",
+                "ligand_id": "L1",
+                "ligand_mw": 200.0,
+            }
+        ]
+    ).to_csv(queue_csv, index=False)
+
+    monkeypatch.setattr(mod, "_load_protein_coords", lambda target, native_path: np.zeros((2, 3), dtype=np.float32))
+    monkeypatch.setattr(
+        mod,
+        "_load_protein_atom_template",
+        lambda target, native_path: {
+            "ready": True,
+            "source_path": "synthetic_template.pdb",
+            "template_coords": np.asarray([[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]], dtype=np.float32),
+            "atom_count": 2,
+        },
+    )
+    monkeypatch.setattr(
+        mod,
+        "_simulate_with_engine_batch",
+        lambda protein, ligand0_batch, pocket_batch, **kwargs: (
+            np.asarray(ligand0_batch[:, None, :, :], dtype=np.float32),
+            np.asarray([0], dtype=np.int32),
+            "rust_hip",
+            1,
+            False,
+            1,
+            {
+                "prod_early_stop_metric_backend_counts": {},
+                "prod_early_stop_eval_keep_count": 0,
+                "prod_early_stop_eval_row_count": 0,
+            },
+        ),
+    )
+
+    summary = mod.run_batch(
+        mod.build_parser().parse_args(
+            [
+                "--queue-csv",
+                str(queue_csv),
+                "--out-root",
+                str(tmp_path / "out"),
+                "--out-progress-json",
+                str(tmp_path / "progress.json"),
+                "--out-summary-json",
+                str(tmp_path / "summary.json"),
+                "--out-summary-md",
+                str(tmp_path / "summary.md"),
+                "--out-manifest-csv",
+                str(tmp_path / "manifest.csv"),
+                "--frame-output-format",
+                "npz_bundle",
+                "--writer-workers",
+                "0",
+                "--progress-every-jobs",
+                "1",
+                "--prod-mode",
+                "--prod-light-artifacts",
+                "--no-fail-on-missing-native",
+            ]
+        )
+    )
+
+    manifest = pd.read_csv(tmp_path / "manifest.csv")
+    npz_path = Path(str(manifest.loc[0, "trajectory_npz"]))
+
+    assert summary["prod_light_effects"]["protein_atom_frames_disabled"] is True
+    assert summary["protein_atom_template_ready_row_count"] == 1
+    assert summary["protein_atom_npz_row_count"] == 0
+    assert bool(manifest.loc[0, "protein_atom_template_ready"]) is True
+    assert bool(manifest.loc[0, "protein_atom_frames_available"]) is False
+    assert manifest.loc[0, "protein_atom_motion_mode"] == "static_native_template_omitted_prod_light"
+    with np.load(npz_path, allow_pickle=False) as bundle:
+        assert "protein_atom_frames" not in bundle.files
+        assert "protein_ca" in bundle.files
+        assert "ligand_frames" in bundle.files

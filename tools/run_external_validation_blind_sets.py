@@ -320,6 +320,16 @@ def _write_checksums(set_root: Path) -> Dict[str, str]:
     }
 
 
+def _path_after_flag(cmd: Any, flag: str) -> Path | None:
+    if not isinstance(cmd, list):
+        return None
+    for idx, tok in enumerate(cmd):
+        if str(tok) == flag and idx + 1 < len(cmd):
+            src = str(cmd[idx + 1]).strip()
+            return Path(src).resolve() if src else None
+    return None
+
+
 def _extract_ligand_result(summary_json: Path) -> Dict[str, Any]:
     payload = _read_json(summary_json)
     runs = payload.get("runs") or []
@@ -332,8 +342,16 @@ def _extract_ligand_result(summary_json: Path) -> Dict[str, Any]:
     if not stage45:
         stage45 = stages.get("stage45_eval_integrity", {}) if isinstance(stages.get("stage45_eval_integrity"), dict) else {}
     stage6 = stages.get("stage6_operational_gate", {}) if isinstance(stages.get("stage6_operational_gate"), dict) else {}
-    ranking_summary_json = Path(str(stage5.get("artifacts", {}).get("summary_json", ""))).resolve() if stage5.get("artifacts", {}).get("summary_json") else None
-    integrity_summary_json = Path(str(stage45.get("artifacts", {}).get("out_json", ""))).resolve() if stage45.get("artifacts", {}).get("out_json") else None
+    ranking_summary_json = (
+        Path(str(stage5.get("artifacts", {}).get("summary_json", ""))).resolve()
+        if stage5.get("artifacts", {}).get("summary_json")
+        else _path_after_flag(stage5.get("cmd"), "--out-json")
+    )
+    integrity_summary_json = (
+        Path(str(stage45.get("artifacts", {}).get("out_json", ""))).resolve()
+        if stage45.get("artifacts", {}).get("out_json")
+        else _path_after_flag(stage45.get("cmd"), "--out-json")
+    )
     raw_pass = bool(payload.get("pass", False))
     effective_pass = raw_pass
     acceptance_note = ""

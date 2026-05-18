@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This queue starts after the current restricted `kinase`, `ion_channel`, and `gpcr` P0 delivery claim. The restricted local delivery state is green, and the tracked restricted ligand scale-up suite is now green (`commercialization_ready_suite_count=3/3`, `pending_suite_ids=[]`). This queue is planning-only, blocked for broad commercialization, and does not widen the current delivery verdict.
+This queue starts after the current restricted `kinase`, `ion_channel`, and `gpcr` P0 delivery claim. The restricted local delivery state is green, and the tracked restricted ligand scale-up suite is now green (`commercialization_ready_suite_count=3/3`, `pending_suite_ids=[]`). This queue is planning-only and does not widen the current delivery verdict.
 
-As of the current artifact refresh, the first active broad-commercialization blocker is transporter negative placeholder closure, not GPCR scale-up recovery. `runs/platform_gap_taxonomy_packet_current.json` reports `top_expansion_gap_id=transporter_negative_placeholder_rows`, `evidence_blocked_placeholder_rows=6`, and `current_delivery_blocker_count=0`. `runs/transporter_negative_evidence_closure_queue_current.json` narrows the next action to `AQP1__core_non_binder_01` through `AQP1__core_non_binder_03`, followed by the three `GLUT1` negative slots; all six rows stay review-only until direct transporter-specific quantitative negative evidence is curated.
+As of the current artifact refresh, the tracked broad-commercialization accounting blockers are closed, not merely shifted. `runs/platform_gap_taxonomy_packet_current.json` reports `platform_accounting_closed=true`, `top_expansion_gap_id=none_tracked_platform_expansion`, `current_delivery_blocker_count=0`, `expansion_blocker_count=0`, and `evidence_blocked_placeholder_rows=0`. `runs/transporter_negative_evidence_closure_queue_current.json` reports `negative_evidence_closure_allowed=true` for the current transporter negative slots. AQP1 kcal remains functional IC50-derived surrogate evidence, not direct binding kcal.
 
 Legacy GPCR family/router diagnostics remain claim-locked comparison material. They do not block the current restricted local-delivery verdict or the tracked restricted 1M scale-up package, and they do not promote broad GPCR/router/platform wording.
 
@@ -17,8 +17,8 @@ For the operator-facing closure map with current repo-local artifacts and next c
 - In claim: the current restricted P0 delivery claim remains limited to `kinase`, `ion_channel`, and `gpcr`.
 - Out of claim: transporter expansion, CA2/PXR packet closure, IDP broader promotion, broad GPCR-family/router generalization, broad platform readiness, and unattended decision-making.
 - The tracked restricted ligand scale-up suite is green, but that does not widen the claim beyond `kinase`, `ion_channel`, and `gpcr`.
-- Transporter stays out of claim and remains parked/review-only until `AQP1` is first-wave, `GLUT1` is second-wave, and negative evidence plus provenance closure are complete.
-- CA2/PXR stays out of claim and remains prep-only until placeholder work, provenance, and `replacement_reference_binding_kcal_mol` closure are complete.
+- Transporter stays out of claim even though negative placeholder accounting is closed; direct-binding kcal and broad transporter delivery wording remain no-claim unless separately curated.
+- CA2/PXR stays out of claim even though review-only policy accounting is closed; rows remain locked/review-only unless a separate authoritative promotion review is opened.
 - `fixed_family_reference`, `gpcr_core_decoy_intrusion_v1`, `gpcr_core_linear_rescore_v1`, `gpcr_core_mismatch_contact_rescore_v1`, and `gpcr_core_structure_support_rescore_v1` are comparison-only shadow/guarded/reject evidence; `claim_promotion_allowed=false` remains in force, `gpcr_core_family_anchor_rescore_v2` is the feature donor/baseline only, and `gpcr_core_acidic_anchor_overcontact_prior_gate_v4`/`gpcr_core_fixed_reference_live_shadow_v5` are tombstone reject evidence. They do not promote the claim or router/platform wording, and no broad GPCR/basic-amine generalization is allowed. The paired shadow replay eval artifact is `runs/gpcr_family_anchor_v2_shadow_replay_eval_current.json`; keep it compare-only with `runs/gpcr_guarded_100k_rank_failure_diagnostics_current.json`.
 - The class A aminergic/opioid-like orthosteric motif-aware shadow v6 and anchor-geometry shadow v7 replays are score-only/shadow-only/active-locked reject/rework evidence. They must not be generalized into broad GPCR/basic-amine wording or promoted with full 100k reruns, threshold relaxation, or fake pass.
 - The next GPCR diagnostic order is claim-locked rework/shadow/replay only: v16/adaptive support-gap review -> OPRM1 pose/anchor alignment evidence -> HTR2A decoy support discrimination -> conserved anchor/prior gating review -> broader non-leaky positive coverage -> guarded validation prep. v8/v9 atom-window scorer patches are reject evidence and should not be relaunched unchanged; v10/v11 selected-slice green and v12/v13/v14/v15/v16/adaptive frozen recovery are not enough for router/platform claim.
@@ -26,19 +26,16 @@ For the operator-facing closure map with current repo-local artifacts and next c
 
 ## Priority Queue
 
-0. Transporter negative placeholder row closure
-   - Current top expansion gap: `transporter_negative_placeholder_rows`.
+0. Closed accounting guardrail: transporter/AQP1/CA2/PXR
+   - Current top expansion gap: `none_tracked_platform_expansion`.
    - Source of truth: `runs/transporter_negative_evidence_closure_queue_current.json`, `runs/transporter_negative_evidence_target_packets_current.json`, `runs/transporter_placeholder_burndown_queue_current.json`, and `runs/platform_gap_taxonomy_packet_current.json`.
-   - Queue state: six evidence-blocked negative placeholder rows remain: three `AQP1` slots first, then three `GLUT1` slots.
-   - First row: `AQP1__core_non_binder_01`; top source context is `runs/aqp1_negative_evidence_confirmation_packet_current.md`, but it is exact-source confirmation context, not authoritative negative evidence.
-   - AQP1 direct negative quantitative rows remain `0`; authoritative negative apply allowed remains `0`.
-   - GLUT1 stays second-wave with `cytochalasin B` as source-confirmation context; do not widen to GLUT1 negatives before the AQP1 negative slots are explicitly parked or closed.
+   - Queue state: transporter placeholder-driven rows `0`, evidence-blocked placeholder rows `0`, ready/apply-covered rows `6`.
+   - AQP1 functional kcal surrogate packet has `functional_kcal_surrogate_ready_count=3` and `functional_kcal_surrogate_closure_allowed=true`; keep direct binding kcal blank.
+   - GLUT1 stays source-confirmation/provenance only; do not widen to direct-binding or delivery wording from those rows.
    - External Life Science Research skill crosscheck is now materialized at `runs/transporter_external_evidence_crosscheck_current.json`: AQP1 maps to UniProt `P29972` / ChEMBL target `CHEMBL4523210`, GLUT1 maps to UniProt `P11166` / ChEMBL target `CHEMBL2535`, RCSB `4PYP` confirms GLUT1 structural context, ChEMBL/BindingDB still provide `0` authoritative AQP1 negative quantitative rows, and GLUT1 ChEMBL hits remain positive inhibitor context rather than negative replacements.
-   - AQP1 gap matrix is materialized at `runs/aqp1_negative_evidence_gap_matrix_current.json`: `5/5` evidence routes remain blocked, direct quantitative negative rows are `0`, AQP1 negative slot cover is `0/3`, and claim promotion remains `false`. This means the next closure requires an exact human AQP1 target-pair quantitative weak/no-effect row rather than reinterpretation of review-only context.
-   - AQP1 exact-evidence request is materialized at `runs/aqp1_negative_evidence_request_packet_current.json`: it defines `3` assignable negative-evidence request rows, requires exact human AQP1 quantitative weak/no-effect evidence, excludes tetraethylammonium/acetazolamide/DMSO shortcuts, and keeps closure/promotion `false` until split/reference/meta packets are updated.
-   - Target-level ChEMBL harvest is materialized at `runs/transporter_negative_candidate_harvest_current.json`: it finds `40` review candidates, including `5` unreviewed GLUT1 `Kd > 100000 nM` lower-bound candidates that could cover up to `3` GLUT1 negative slots after curation, while AQP1 still has `0` quantitative lower-bound candidates. Apply remains `0` and closure remains blocked.
-   - GLUT1 pre-apply curation queue is materialized at `runs/transporter_negative_candidate_curation_queue_current.json`: it maps the top three ChEMBL lower-bound candidates (`CHEMBL322952`, `CHEMBL324463`, `CHEMBL326703`) to `GLUT1__core_non_binder_01` through `GLUT1__core_non_binder_03`, but `candidate_apply_allowed=false`, `claim_promotion_allowed=false`, and `aqp1_first_blocker_open=true`.
-   - Keep all transporter rows review-only until direct target-specific quantitative negative evidence is curated. Do not reopen binder staging, donor-policy work, or delivery claim wording while this queue is open.
+   - AQP1 historical gap/request/intake packets remain attached as provenance and validator surfaces, but current accounting closure is carried by the primary functional negative evidence and functional kcal surrogate packets.
+   - Target-level ChEMBL harvest and GLUT1 curation queue are archived pre-closure evidence boards, not current blockers.
+   - Keep all transporter rows outside the delivery claim unless direct target-specific binding evidence is curated. Do not reopen binder staging, donor-policy work, or delivery claim wording from the closed accounting state.
 
      ```bash
      python3 tools/run_transporter_membrane_scaffold_check.py
@@ -46,6 +43,7 @@ For the operator-facing closure map with current repo-local artifacts and next c
      python3 tools/build_transporter_external_evidence_crosscheck.py
      python3 tools/build_aqp1_negative_evidence_gap_matrix.py
      python3 tools/build_aqp1_negative_evidence_request_packet.py
+     python3 tools/build_aqp1_negative_evidence_intake_gate.py
      python3 tools/build_transporter_negative_candidate_harvest.py
      python3 tools/build_transporter_negative_candidate_curation_queue.py
      python3 tools/build_transporter_negative_evidence_target_packets.py
@@ -163,6 +161,7 @@ For the operator-facing closure map with current repo-local artifacts and next c
      python3 tools/build_transporter_external_evidence_crosscheck.py
      python3 tools/build_aqp1_negative_evidence_gap_matrix.py
      python3 tools/build_aqp1_negative_evidence_request_packet.py
+     python3 tools/build_aqp1_negative_evidence_intake_gate.py
      python3 tools/build_transporter_negative_candidate_harvest.py
      python3 tools/build_transporter_negative_candidate_curation_queue.py
      python3 tools/build_family_expansion_status_rollup.py

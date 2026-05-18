@@ -44,6 +44,18 @@ def _parse_targets(spec: str) -> List[str]:
     return [x.strip() for x in str(spec).split(",") if x.strip()]
 
 
+def _native_pdb_path_for_target(target: str) -> str:
+    slug = _slug_target(target)
+    fallback = os.path.join("data", "native", f"{slug}.pdb")
+    conf = ResearchConstants.CHALLENGES.get(target, {}) if hasattr(ResearchConstants, "CHALLENGES") else {}
+    configured = str(conf.get("native_pdb_path", "") or "").strip() if isinstance(conf, dict) else ""
+    candidates = [configured, fallback] if configured else [fallback]
+    for candidate in candidates:
+        if candidate and os.path.exists(candidate):
+            return candidate
+    return configured or fallback
+
+
 def _normalize_representation(raw: str) -> str:
     s = str(raw).strip().lower()
     if s in ("ca", "ca_only", "ca_bead"):
@@ -53,11 +65,14 @@ def _normalize_representation(raw: str) -> str:
     raise ValueError(f"unsupported representation: {raw}")
 
 
-def _load_ca_coords_from_pdb(path: str) -> np.ndarray:
+def _load_ca_coords_from_pdb(path: str, chain_id: str = "") -> np.ndarray:
     coords: List[List[float]] = []
+    wanted_chain = str(chain_id or "").strip()
     with open(path, "r", encoding="utf-8", errors="ignore") as f:
         for line in f:
             if not (line.startswith("ATOM") or line.startswith("HETATM")):
+                continue
+            if wanted_chain and line[21].strip() != wanted_chain:
                 continue
             atom_name = line[12:16].strip()
             if atom_name != "CA":
@@ -353,7 +368,9 @@ def _simulate_target(
     exclude_local_sc_neighbors: bool,
     save_ca_projection: bool,
 ) -> Dict[str, Any]:
-    coords_a = _load_ca_coords_from_pdb(pdb_path)
+    target_conf = ResearchConstants.CHALLENGES.get(target, {}) if hasattr(ResearchConstants, "CHALLENGES") else {}
+    canonical_chain = str(target_conf.get("canonical_chain", "") or "").strip() if isinstance(target_conf, dict) else ""
+    coords_a = _load_ca_coords_from_pdb(pdb_path, chain_id=canonical_chain)
     coords_ca_nm = np.asarray(coords_a * 0.1, dtype=np.float64)
     rep_i = _normalize_representation(representation)
     n_res = int(coords_ca_nm.shape[0])
@@ -501,7 +518,7 @@ def generate_openmm_ca_md_references(args: argparse.Namespace) -> Dict[str, Any]
     t0 = time.time()
     for idx, target in enumerate(targets):
         slug = _slug_target(target)
-        pdb_path = os.path.join("data", "native", f"{slug}.pdb")
+        pdb_path = _native_pdb_path_for_target(target)
         if not os.path.exists(pdb_path):
             raise FileNotFoundError(f"native pdb not found for {target}: {pdb_path}")
         rep_tag = "ca_sc_2bead" if representation == "ca_sc_2bead" else "ca"

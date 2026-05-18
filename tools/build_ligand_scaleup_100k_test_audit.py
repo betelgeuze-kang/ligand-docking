@@ -34,6 +34,32 @@ def _load_json(path: Path) -> dict[str, Any]:
         return json.load(fh)
 
 
+def _copied_file_path(task: dict[str, Any], original_path: str) -> Path | None:
+    if not original_path:
+        return None
+    original_name = Path(original_path).name
+    for copied in task.get("copied_files", []) or []:
+        src = str(copied.get("src", "")).strip()
+        dst = str(copied.get("dst", "")).strip()
+        if not dst:
+            continue
+        if src == original_path or Path(src).name == original_name or Path(dst).name == original_name:
+            candidate = Path(dst)
+            if candidate.exists():
+                return candidate
+    return None
+
+
+def _task_artifact_path(task: dict[str, Any], field: str) -> Path | None:
+    raw_path = str(task.get(field, "")).strip()
+    if not raw_path:
+        return None
+    resolved = _resolve(raw_path)
+    if resolved.exists():
+        return resolved
+    return _copied_file_path(task, raw_path)
+
+
 def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if not rows:
@@ -86,6 +112,36 @@ def _pipeline_prefix_from_summary_path(path: Path) -> Path:
     return Path(re.sub(r"_p\d+_n\d+_r\d+_summary\.json$", "", text))
 
 
+def _cmd_value(cmd: list[Any], flag: str) -> str:
+    for idx, item in enumerate(cmd):
+        if str(item) == flag and idx + 1 < len(cmd):
+            return str(cmd[idx + 1])
+    return ""
+
+
+def _infer_hard_decoys_from_task_summary(task_summary: dict[str, Any]) -> tuple[int | None, int | None, str]:
+    pre_stage = dict(task_summary.get("pre_stage_hard_decoy", {}) or {})
+    cmd = list(pre_stage.get("cmd", []) or [])
+    try:
+        returncode = int(pre_stage.get("returncode", 1))
+    except (TypeError, ValueError):
+        returncode = 1
+    if not (pre_stage.get("ok") is True and returncode == 0):
+        return None, None, ""
+    if "--synthesize-unique-decoys" not in [str(item) for item in cmd]:
+        return None, None, ""
+    requested_raw = _cmd_value(cmd, "--synth-total-decoys")
+    if not requested_raw:
+        return None, None, ""
+    try:
+        requested = int(requested_raw)
+    except ValueError:
+        return None, None, ""
+    allow_shortfall = "--no-synth-allow-shortfall" not in [str(item) for item in cmd]
+    generated = requested if not allow_shortfall else None
+    return requested, generated, "task_summary_pre_stage_hard_decoy_command"
+
+
 def build_payload(run_root: Path, pilot_spec: dict[str, Any], pilot_build: dict[str, Any], run_summary: dict[str, Any], run_state: dict[str, Any]) -> dict[str, Any]:
     contract_tasks = set(pilot_build.get("full_task_ids_100k", [])) | set(pilot_build.get("smoke_task_ids_baseline", []))
     expected_sizes = dict(pilot_build.get("pilot_ligand_sizes", {}))
@@ -100,13 +156,13 @@ def build_payload(run_root: Path, pilot_spec: dict[str, Any], pilot_build: dict[
             if task_id not in contract_tasks:
                 continue
             task = task_index.get(task_id, {})
-            task_summary_path = _resolve(str(task.get("summary_json", ""))) if task.get("summary_json") else None
+            task_summary_path = _task_artifact_path(task, "summary_json") if task else None
             task_summary_exists = bool(task_summary_path and task_summary_path.exists())
             task_summary = _load_json(task_summary_path) if task_summary_exists else {}
             task_metrics = _task_summary_metrics(task_summary) if task_summary else {}
-            pipeline_summary_path = _resolve(str(task.get("pipeline_summary_json", ""))) if task.get("pipeline_summary_json") else None
+            pipeline_summary_path = _task_artifact_path(task, "pipeline_summary_json") if task else None
             pipeline_summary_exists = bool(pipeline_summary_path and pipeline_summary_path.exists())
-            state_path = _resolve(str(task.get("state_json", ""))) if task.get("state_json") else None
+            state_path = _task_artifact_path(task, "state_json") if task else None
             state_exists = bool(state_path and state_path.exists())
 
             expected_key = f"{set_id}::{task_id}"
@@ -118,6 +174,7 @@ def build_payload(run_root: Path, pilot_spec: dict[str, Any], pilot_build: dict[
             hard_decoy_exists = False
             hard_decoys_requested = None
             hard_decoys_generated = None
+            hard_decoy_evidence_source = ""
             if pipeline_summary_exists and expected_size == "100000":
                 prefix = _pipeline_prefix_from_summary_path(pipeline_summary_path)
                 candidate = Path(str(prefix) + "_hard_decoy_summary.json")
@@ -128,6 +185,11 @@ def build_payload(run_root: Path, pilot_spec: dict[str, Any], pilot_build: dict[
                     synth = hard_summary.get("synthetic_decoys", {})
                     hard_decoys_requested = synth.get("requested")
                     hard_decoys_generated = synth.get("generated")
+                    hard_decoy_evidence_source = "hard_decoy_summary_json"
+                else:
+                    hard_decoys_requested, hard_decoys_generated, hard_decoy_evidence_source = (
+                        _infer_hard_decoys_from_task_summary(task_summary)
+                    )
 
             row = {
                 "set_id": set_id,
@@ -141,6 +203,7 @@ def build_payload(run_root: Path, pilot_spec: dict[str, Any], pilot_build: dict[
                 "pipeline_summary_exists": "yes" if pipeline_summary_exists else "no",
                 "state_json_exists": "yes" if state_exists else "no",
                 "hard_decoy_summary_exists": "yes" if hard_decoy_exists else "no",
+                "hard_decoy_evidence_source": hard_decoy_evidence_source,
                 "hard_decoys_requested": hard_decoys_requested if hard_decoys_requested is not None else "",
                 "hard_decoys_generated": hard_decoys_generated if hard_decoys_generated is not None else "",
                 "traj_prod_enabled": "yes" if task_metrics.get("traj_prod_enabled") else "no",
@@ -238,12 +301,12 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         "",
         "## Contract Rows",
         "",
-        "| set_id | task_id | expected_ligand_size | observed_ligand_sizes | size_matches | hard_decoys_generated | traj_prod_enabled | task_pass | contract_artifacts_complete |",
-        "| --- | --- | ---: | --- | --- | ---: | --- | --- | --- |",
+        "| set_id | task_id | expected_ligand_size | observed_ligand_sizes | size_matches | hard_decoys_generated | hard_decoy_evidence_source | traj_prod_enabled | task_pass | contract_artifacts_complete |",
+        "| --- | --- | ---: | --- | --- | ---: | --- | --- | --- | --- |",
     ]
     for row in payload["contract_rows"]:
         lines.append(
-            f"| {row['set_id']} | {row['task_id']} | {row['expected_ligand_size']} | `{row['observed_ligand_sizes']}` | {row['size_matches']} | {row['hard_decoys_generated']} | {row['traj_prod_enabled']} | {row['task_pass']} | {row['contract_artifacts_complete']} |"
+            f"| {row['set_id']} | {row['task_id']} | {row['expected_ligand_size']} | `{row['observed_ligand_sizes']}` | {row['size_matches']} | {row['hard_decoys_generated']} | `{row.get('hard_decoy_evidence_source', '') or '-'}` | {row['traj_prod_enabled']} | {row['task_pass']} | {row['contract_artifacts_complete']} |"
         )
     lines.extend(["", "## Live Process Check", ""])
     if payload["live_process_lines"]:

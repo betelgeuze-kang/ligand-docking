@@ -206,6 +206,83 @@ def test_build_gpcr_cationic_pose_distortion_frozen_feature_cache_adaptive_rejec
     assert float(rows[0]["adaptive_all_basic_pose_rmsd_A"]) > float(rows[0]["adaptive_none_pose_rmsd_A"]) + 6.0
 
 
+def test_build_gpcr_cationic_pose_distortion_frozen_feature_cache_uses_static_anchor_for_prod_light_npz(
+    tmp_path: Path,
+) -> None:
+    pdb = tmp_path / "native.pdb"
+    pdb.write_text(
+        "".join(
+            [
+                _pdb_line("ATOM", 1, "OD1", "ASP", "A", 114, (0.0, 0.0, 0.0)),
+                _pdb_line("ATOM", 2, "OD2", "ASP", "A", 114, (0.0, 1.0, 0.0)),
+                _pdb_line("HETATM", 3, "C1", "LIG", "A", 1, (3.0, 0.0, 0.0)),
+                _pdb_line("HETATM", 4, "C2", "LIG", "A", 1, (3.1, 0.2, 0.0)),
+                _pdb_line("HETATM", 5, "C3", "LIG", "A", 1, (3.2, 0.3, 0.0)),
+                _pdb_line("HETATM", 6, "C4", "LIG", "A", 1, (3.3, 0.4, 0.0)),
+                _pdb_line("HETATM", 7, "C5", "LIG", "A", 1, (3.4, 0.5, 0.0)),
+            ]
+        ),
+        encoding="utf-8",
+    )
+    traj = tmp_path / "prod_light_traj.npz"
+    np.savez_compressed(
+        traj,
+        ligand_frames=np.asarray(
+            [
+                [[3.0, 0.1, 0.0], [4.0, 0.1, 0.0]],
+                [[3.1, 0.2, 0.0], [4.1, 0.2, 0.0]],
+            ],
+            dtype=np.float32,
+        ),
+    )
+    input_csv = tmp_path / "stage3.csv"
+    out_csv = tmp_path / "cache.csv"
+    out_json = tmp_path / "cache.json"
+    out_md = tmp_path / "cache.md"
+    _write_csv(
+        input_csv,
+        [
+            {
+                "target": "CHEMBL217_DRD2_HUMAN",
+                "ligand_id": "CHEMBL301265",
+                "ligand_smiles": "CCN",
+                "trajectory_npz": str(traj),
+                "protein_structure_source_path": str(pdb),
+                "binding_score_composite_v7": -0.75,
+                "ligand_h_donors": 1,
+                "ligand_h_acceptors": 1,
+                "ligand_rot_bonds": 1,
+                "ligand_logp": 1.2,
+            }
+        ],
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools/build_gpcr_cationic_pose_distortion_frozen_feature_cache.py"),
+            "--input-csv",
+            str(input_csv),
+            "--anchor-mode",
+            "all_basic",
+            "--out-csv",
+            str(out_csv),
+            "--out-json",
+            str(out_json),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=ROOT,
+    )
+    rows = list(csv.DictReader(out_csv.open("r", encoding="utf-8", newline="")))
+
+    assert rows[0]["feature_cache_status"] == "ok"
+    assert rows[0]["effective_label_free_anchor_mode"] == "all_basic"
+    assert int(rows[0]["atom_anchor_available"]) == 1
+    assert int(rows[0]["cationic_center_available"]) == 1
+
+
 def test_build_gpcr_cationic_pose_distortion_frozen_feature_cache_blocks_missing_native(tmp_path: Path) -> None:
     input_csv = tmp_path / "stage3.csv"
     out_csv = tmp_path / "cache.csv"

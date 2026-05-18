@@ -14,6 +14,7 @@ DEFAULT_ROLLUP_JSON = "runs/family_expansion_status_rollup_current.json"
 DEFAULT_PLACEHOLDER_JSON = "runs/transporter_placeholder_burndown_queue_current.json"
 DEFAULT_LOCAL_ENGINE_QUEUE_JSON = "runs/local_engine_commercialization_queue_current.json"
 DEFAULT_KEEP_GREEN_TREND_JSON = "runs/keep_green_regression_trend_packet_current.json"
+DEFAULT_CA2_PXR_POLICY_GATE_JSON = "runs/ca2_pxr_review_policy_closure_gate_current.json"
 DEFAULT_OUT_JSON = "runs/platform_gap_taxonomy_packet_current.json"
 DEFAULT_OUT_CSV = "runs/platform_gap_taxonomy_packet_current.csv"
 DEFAULT_OUT_MD = "runs/platform_gap_taxonomy_packet_current.md"
@@ -31,6 +32,14 @@ def _resolve(path_like: str | Path) -> Path:
 
 def _load_json(path_like: str | Path) -> dict[str, Any]:
     with _resolve(path_like).open("r", encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+def _maybe_load_json(path_like: str | Path) -> dict[str, Any]:
+    path = _resolve(path_like)
+    if not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8") as fh:
         return json.load(fh)
 
 
@@ -88,11 +97,14 @@ def build_payload(
     placeholder_payload: dict[str, Any],
     local_engine_queue_payload: dict[str, Any],
     keep_green_trend_payload: dict[str, Any],
+    ca2_pxr_policy_gate_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     gap = _summary(gap_payload)
     placeholder = _summary(placeholder_payload)
     engine = _summary(local_engine_queue_payload)
     trend = _summary(keep_green_trend_payload)
+    ca2_pxr_policy = _summary(ca2_pxr_policy_gate_payload or {})
+    rollup = _summary(rollup_payload)
     ca2_row = _find_rollup_row(rollup_payload, "ca2")
     pxr_row = _find_rollup_row(rollup_payload, "pxr")
     aqp1_row = _find_rollup_row(rollup_payload, "aqp1")
@@ -102,6 +114,21 @@ def build_payload(
         gap.get("ligand_scaleup_commercialization_ready_suite_count")
     )
     ligand_pending_suite_count = max(0, ligand_suite_count - ligand_commercialization_ready_suite_count)
+    aqp1_functional_ready_count = _int(
+        rollup.get("aqp1_functional_kcal_surrogate_ready_count", aqp1_row.get("ready_like_count", 0))
+    )
+    aqp1_functional_closure_allowed = _bool(
+        rollup.get("aqp1_functional_kcal_surrogate_closure_allowed", aqp1_functional_ready_count >= 3)
+    )
+    aqp1_direct_binding_gap_still_open = _bool(rollup.get("aqp1_direct_binding_gap_still_open", False))
+    aqp1_expansion_blocker_count = 0 if aqp1_functional_closure_allowed else 1
+    ca2_pxr_policy_closure_allowed = _bool(ca2_pxr_policy.get("review_only_policy_closure_allowed", False))
+    ca2_pxr_locked_row_count = _int(ca2_pxr_policy.get("review_only_policy_locked_row_count"))
+    ca2_pxr_review_policy_blocker_count = (
+        0
+        if ca2_pxr_policy_closure_allowed
+        else _int(ca2_row.get("ready_like_count")) + _int(pxr_row.get("ready_like_count"))
+    )
 
     rows = [
         {
@@ -166,13 +193,21 @@ def build_payload(
             "scope": "parked_science_expansion",
             "family_or_lane": "AQP1",
             "gap_class": "claim_safe_kcal_gap",
-            "current_status": "review_only_functional_activity",
+            "current_status": (
+                "functional_kcal_surrogate_ready_direct_binding_gap_open"
+                if aqp1_functional_closure_allowed
+                else "review_only_functional_activity"
+            ),
             "current_blocker_count": 0,
-            "expansion_blocker_count": 1,
-            "primary_metric": "ready_like_count",
-            "primary_value": _int(aqp1_row.get("ready_like_count")),
+            "expansion_blocker_count": aqp1_expansion_blocker_count,
+            "primary_metric": "functional_kcal_surrogate_ready_count",
+            "primary_value": aqp1_functional_ready_count,
             "source_artifact": "runs/family_expansion_status_rollup_current.json",
-            "next_required_step": _text(aqp1_row.get("next_required_step")),
+            "next_required_step": (
+                "Use AQP1 functional kcal only as an IC50-derived surrogate; keep direct binding kcal claims blank."
+                if aqp1_functional_closure_allowed and aqp1_direct_binding_gap_still_open
+                else _text(aqp1_row.get("next_required_step"))
+            ),
         },
         {
             "gap_rank": 6,
@@ -180,14 +215,36 @@ def build_payload(
             "scope": "expanded_family_claims",
             "family_or_lane": "CA2,PXR",
             "gap_class": "review_only_evidence_policy",
-            "current_status": "source_linked_review_policy",
+            "current_status": (
+                "review_only_policy_closed"
+                if ca2_pxr_policy_closure_allowed
+                else "source_linked_review_policy"
+            ),
             "current_blocker_count": 0,
-            "expansion_blocker_count": _int(ca2_row.get("ready_like_count")) + _int(pxr_row.get("ready_like_count")),
-            "primary_metric": "source_linked_total",
-            "primary_value": _int(ca2_row.get("source_linked_count")) + _int(pxr_row.get("source_linked_count")),
-            "source_artifact": "runs/family_expansion_status_rollup_current.json",
-            "next_required_step": "; ".join(
-                part for part in [_text(ca2_row.get("next_required_step")), _text(pxr_row.get("next_required_step"))] if part
+            "expansion_blocker_count": ca2_pxr_review_policy_blocker_count,
+            "primary_metric": (
+                "review_only_policy_locked_row_count"
+                if ca2_pxr_policy_closure_allowed
+                else "source_linked_total"
+            ),
+            "primary_value": (
+                ca2_pxr_locked_row_count
+                if ca2_pxr_policy_closure_allowed
+                else _int(ca2_row.get("source_linked_count")) + _int(pxr_row.get("source_linked_count"))
+            ),
+            "source_artifact": (
+                _text(ca2_pxr_policy.get("packet_artifact"))
+                if ca2_pxr_policy_closure_allowed
+                else "runs/family_expansion_status_rollup_current.json"
+            ),
+            "next_required_step": (
+                _text(ca2_pxr_policy.get("next_required_step"))
+                if ca2_pxr_policy_closure_allowed
+                else "; ".join(
+                    part
+                    for part in [_text(ca2_row.get("next_required_step")), _text(pxr_row.get("next_required_step"))]
+                    if part
+                )
             ),
         },
     ]
@@ -195,18 +252,25 @@ def build_payload(
     current_delivery_blocker_count = sum(_int(row.get("current_blocker_count")) for row in rows)
     expansion_blocker_count = sum(_int(row.get("expansion_blocker_count")) for row in rows)
     non_transporter_gap_count = sum(1 for row in rows if _text(row.get("family_or_lane")).lower() != "transporter")
-    top_expansion_gap = next((row for row in rows if _int(row.get("expansion_blocker_count")) > 0), rows[0])
+    platform_accounting_closed = current_delivery_blocker_count == 0 and expansion_blocker_count == 0
+    top_expansion_gap = (
+        {}
+        if platform_accounting_closed
+        else next((row for row in rows if _int(row.get("expansion_blocker_count")) > 0), rows[0])
+    )
+    transporter_placeholder_closed = _int(placeholder.get("evidence_blocked_placeholder_rows")) == 0
     summary = {
         "packet_ready": True,
         "packet_artifact": "runs/platform_gap_taxonomy_packet_current.md",
         "platform_gap_count": len(rows),
         "current_delivery_blocker_count": current_delivery_blocker_count,
         "expansion_blocker_count": expansion_blocker_count,
+        "platform_accounting_closed": platform_accounting_closed,
         "non_transporter_gap_count": non_transporter_gap_count,
         "transporter_specific_split_resolved": non_transporter_gap_count > 0,
-        "top_expansion_gap_id": _text(top_expansion_gap.get("gap_id")),
-        "top_expansion_gap_class": _text(top_expansion_gap.get("gap_class")),
-        "top_expansion_gap_scope": _text(top_expansion_gap.get("scope")),
+        "top_expansion_gap_id": "none_tracked_platform_expansion" if platform_accounting_closed else _text(top_expansion_gap.get("gap_id")),
+        "top_expansion_gap_class": "closed" if platform_accounting_closed else _text(top_expansion_gap.get("gap_class")),
+        "top_expansion_gap_scope": "tracked_platform_accounting" if platform_accounting_closed else _text(top_expansion_gap.get("scope")),
         "placeholder_driven_rows": _int(placeholder.get("placeholder_driven_rows")),
         "evidence_blocked_placeholder_rows": _int(placeholder.get("evidence_blocked_placeholder_rows")),
         "ligand_scaleup_commercialization_ready_suite_count": ligand_commercialization_ready_suite_count,
@@ -217,9 +281,23 @@ def build_payload(
             gap.get("ligand_scaleup_gpcr_guardrail_frontier_status")
         ),
         "keep_green_insufficient_history_lane_count": _int(trend.get("insufficient_history_lane_count")),
+        "aqp1_functional_kcal_surrogate_ready_count": aqp1_functional_ready_count,
+        "aqp1_functional_kcal_surrogate_closure_allowed": aqp1_functional_closure_allowed,
+        "aqp1_direct_binding_gap_still_open": aqp1_direct_binding_gap_still_open,
+        "ca2_pxr_review_policy_closure_allowed": ca2_pxr_policy_closure_allowed,
+        "ca2_pxr_review_only_policy_locked_row_count": ca2_pxr_locked_row_count,
         "next_required_step": (
-            "Keep the restricted local delivery claim green, but treat broader commercialization as blocked by "
-            f"`{_text(top_expansion_gap.get('gap_id'))}` first; keep transporter negative evidence parked outside the delivery scope."
+            "All tracked platform expansion blockers are closed for accounting; keep no-promotion guardrails for surrogate/review-only science lanes and continue keep-green regression history."
+            if expansion_blocker_count == 0
+            else (
+                "Keep the restricted local delivery claim green; transporter negative placeholders are closed, so treat broader commercialization as blocked by "
+                f"`{_text(top_expansion_gap.get('gap_id'))}` first."
+                if transporter_placeholder_closed
+                else (
+                    "Keep the restricted local delivery claim green, but treat broader commercialization as blocked by "
+                    f"`{_text(top_expansion_gap.get('gap_id'))}` first; keep transporter negative evidence parked outside the delivery scope."
+                )
+            )
         ),
     }
     return {"summary": summary, "rows": rows}
@@ -234,6 +312,7 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- platform_gap_count: `{s['platform_gap_count']}`",
         f"- current_delivery_blocker_count: `{s['current_delivery_blocker_count']}`",
         f"- expansion_blocker_count: `{s['expansion_blocker_count']}`",
+        f"- platform_accounting_closed: `{s['platform_accounting_closed']}`",
         f"- non_transporter_gap_count: `{s['non_transporter_gap_count']}`",
         f"- transporter_specific_split_resolved: `{s['transporter_specific_split_resolved']}`",
         f"- top_expansion_gap_id: `{s['top_expansion_gap_id']}`",
@@ -242,6 +321,11 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- ligand_scaleup_claim_safe_status: `{s['ligand_scaleup_claim_safe_status']}`",
         f"- ligand_scaleup_gpcr_guardrail_frontier_status: `{s['ligand_scaleup_gpcr_guardrail_frontier_status']}`",
         f"- ligand_scaleup_suite_completion_pending_count: `{s['ligand_scaleup_suite_completion_pending_count']}`",
+        f"- aqp1_functional_kcal_surrogate_ready_count: `{s['aqp1_functional_kcal_surrogate_ready_count']}`",
+        f"- aqp1_functional_kcal_surrogate_closure_allowed: `{s['aqp1_functional_kcal_surrogate_closure_allowed']}`",
+        f"- aqp1_direct_binding_gap_still_open: `{s['aqp1_direct_binding_gap_still_open']}`",
+        f"- ca2_pxr_review_policy_closure_allowed: `{s['ca2_pxr_review_policy_closure_allowed']}`",
+        f"- ca2_pxr_review_only_policy_locked_row_count: `{s['ca2_pxr_review_only_policy_locked_row_count']}`",
         "",
         "## Next Step",
         "",
@@ -268,6 +352,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--placeholder-json", default=DEFAULT_PLACEHOLDER_JSON)
     parser.add_argument("--local-engine-queue-json", default=DEFAULT_LOCAL_ENGINE_QUEUE_JSON)
     parser.add_argument("--keep-green-trend-json", default=DEFAULT_KEEP_GREEN_TREND_JSON)
+    parser.add_argument("--ca2-pxr-policy-gate-json", default=DEFAULT_CA2_PXR_POLICY_GATE_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -282,6 +367,7 @@ def main() -> None:
         _load_json(args.placeholder_json),
         _load_json(args.local_engine_queue_json),
         _load_json(args.keep_green_trend_json),
+        _maybe_load_json(args.ca2_pxr_policy_gate_json),
     )
     out_json = _resolve(args.out_json)
     out_csv = _resolve(args.out_csv)

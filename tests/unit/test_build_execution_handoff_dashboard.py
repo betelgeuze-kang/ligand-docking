@@ -401,7 +401,7 @@ def test_build_execution_handoff_dashboard_surfaces_aqp1_negative_primary_probe_
                 "resolution_decision": "keep_review_only_no_authoritative_negative_promotion",
                 "next_required_step": (
                     "Open sodium nitroprusside as the first AQP1 primary-probe follow-up lane, keep it review-only while "
-                    "ChEMBL exact target-pair activity remains absent, and use dimethyl sulfoxide only as solvent fallback."
+                    "sodium nitroprusside has no exact human AQP1 ChEMBL target-pair activity row, and use dimethyl sulfoxide only as solvent fallback."
                 ),
             }
         },

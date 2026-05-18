@@ -134,5 +134,5 @@ def test_run_rescue_only_branch_supports_non_pde_target_templates(tmp_path: Path
     assert branch_summary["best_mean_min_distance_A"] == 1.234
     assert branch_summary["promoted_candidate_count"] == 6
     assert branch_summary_payload["rows"][1]["step_id"] == "promoted_top6_review_packet"
-    assert branch_summary_payload["rows"][1]["signal"] == "6 promoted"
+    assert branch_summary_payload["rows"][1]["signal"].startswith("6 promoted")
     assert "promoted top-6 packet" in branch_summary["next_required_step"]

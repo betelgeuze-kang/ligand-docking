@@ -194,6 +194,29 @@ def _source_artifact(
     return artifact
 
 
+def _source_fingerprint_summary(artifacts: list[dict[str, Any]]) -> dict[str, Any]:
+    present = [artifact for artifact in artifacts if artifact.get("present")]
+    digest = hashlib.sha256(
+        "\n".join(
+            f"{artifact.get('label','')}|{artifact.get('path','')}|{artifact.get('sha256','')}|{artifact.get('mtime_ns',0)}"
+            for artifact in sorted(present, key=lambda item: str(item.get("label", "")))
+        ).encode("utf-8")
+    ).hexdigest()
+    max_mtime_ns = max((_int(artifact.get("mtime_ns")) for artifact in present), default=0)
+    max_mtime_local = ""
+    for artifact in present:
+        if _int(artifact.get("mtime_ns")) == max_mtime_ns:
+            max_mtime_local = _text(artifact.get("mtime_local"))
+            break
+    return {
+        "input_artifact_fingerprint_sha256": digest,
+        "input_artifact_count": len(artifacts),
+        "input_artifact_present_count": len(present),
+        "input_artifact_max_mtime_ns": max_mtime_ns,
+        "input_artifact_max_mtime_local": max_mtime_local,
+    }
+
+
 def _read_json_artifact(path_like: str | Path, *, required: bool = True) -> tuple[dict[str, Any], dict[str, Any] | None]:
     path = _resolve(path_like)
     if not path.exists():
@@ -907,6 +930,7 @@ def build_payload(
         bool(artifact.get("present")) and bool(artifact.get("sha256")) and int(artifact.get("size_bytes", 0)) > 0
         for artifact in artifacts
     )
+    fingerprint_summary = _source_fingerprint_summary(artifacts)
     delivery_ready = hard_blocker_count == 0
     verdict = "delivery_ready" if delivery_ready else "blocked"
     status_line = (
@@ -931,6 +955,7 @@ def build_payload(
         "source_artifact_missing_count": source_artifact_missing_count,
         "source_artifact_invalid_count": source_artifact_invalid_count,
         "source_artifacts_all_fingerprinted": source_artifacts_all_fingerprinted,
+        **fingerprint_summary,
         "preflight_ok": preflight_ok,
         "accuracy_gate_pass": accuracy_gate_pass,
         "accuracy_gate_check": accuracy_gate_check,

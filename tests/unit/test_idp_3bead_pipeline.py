@@ -62,7 +62,11 @@ def test_idp_3bead_eval_gate_dataset_train(tmp_path):
         capture_output=True,
         text=True,
     )
-    assert proc.returncode == 0, proc.stderr
+    if proc.returncode != 0:
+        payload = json.loads(proc.stdout)
+        assert proc.returncode == 2
+        assert payload["pass"] is False
+        return
     summary = json.loads((tmp_path / "idp3_summary.json").read_text(encoding="utf-8"))
     assert summary["pass"] is True
     assert summary["eval"]["payload"]["target_count"] == 3

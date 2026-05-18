@@ -42,6 +42,7 @@ DEFAULT_AQP1_FOLLOW_ON_PACKET_JSON = "runs/aqp1_first_wave_follow_on_packet_curr
 DEFAULT_AQP1_FOLLOW_ON_BLOCKER_DECOMPOSITION_JSON = "runs/aqp1_follow_on_blocker_decomposition_current.json"
 DEFAULT_AQP1_FOLLOW_ON_SOURCE_CONFIRMATION_PACKET_JSON = "runs/aqp1_follow_on_source_confirmation_packet_current.json"
 DEFAULT_TRANSPORTER_PLACEHOLDER_BURNDOWN_QUEUE_JSON = "runs/transporter_placeholder_burndown_queue_current.json"
+DEFAULT_AQP1_FUNCTIONAL_KCAL_SURROGATE_JSON = "runs/aqp1_functional_kcal_surrogate_packet_current.json"
 DEFAULT_AQP1_NEGATIVE_PRIMARY_PROBE_RESOLUTION_JSON = "runs/aqp1_negative_primary_probe_resolution_packet_current.json"
 DEFAULT_AQP1_NEGATIVE_PRIMARY_PROBE_RESOLUTION_MD = "runs/aqp1_negative_primary_probe_resolution_packet_current.md"
 DEFAULT_GLUT1_SECOND_WAVE_SOURCE_CONFIRMATION_PACKET_JSON = "runs/glut1_second_wave_source_confirmation_packet_current.json"
@@ -88,6 +89,13 @@ def _stage_label(score: int) -> str:
     if score >= 40:
         return "manual_review_or_blocked_expansion_lane"
     return "scaffold_only_lane"
+
+
+def _int(value: Any) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _aqp1_source_confirmation_artifact(aqp1_source_confirmation_packet: dict[str, Any] | None) -> str:
@@ -269,6 +277,7 @@ def build_payload(
     aqp1_follow_on_blocker_decomposition: dict[str, Any] | None = None,
     aqp1_follow_on_source_confirmation_packet: dict[str, Any] | None = None,
     transporter_placeholder_burndown_queue: dict[str, Any] | None = None,
+    aqp1_functional_kcal_surrogate_packet: dict[str, Any] | None = None,
     aqp1_negative_primary_probe_resolution_packet: dict[str, Any] | None = None,
     glut1_second_wave_source_confirmation_packet: dict[str, Any] | None = None,
     ligand_scaleup_suite_status: dict[str, Any] | None = None,
@@ -304,6 +313,9 @@ def build_payload(
     transporter_placeholder_burndown_queue_summary = dict(
         (transporter_placeholder_burndown_queue or {}).get("summary", {}) or {}
     )
+    aqp1_functional_kcal_surrogate_summary = dict(
+        (aqp1_functional_kcal_surrogate_packet or {}).get("summary", {}) or {}
+    )
     aqp1_negative_primary_probe_resolution_summary = dict(
         (aqp1_negative_primary_probe_resolution_packet or {}).get("summary", {}) or {}
     )
@@ -337,6 +349,30 @@ def build_payload(
     )
     aqp1_negative_primary_probe_resolution_row_count = int(
         aqp1_negative_primary_probe_resolution_summary.get("row_count", 0) or 0
+    )
+    transporter_placeholder_driven_rows = _int(
+        transporter_placeholder_burndown_queue_summary.get("placeholder_driven_rows")
+    )
+    transporter_ready_for_apply_rows = _int(
+        transporter_placeholder_burndown_queue_summary.get("ready_for_apply_rows")
+    )
+    transporter_placeholder_accounting_closed = (
+        bool(transporter_placeholder_burndown_queue_summary)
+        and transporter_placeholder_driven_rows == 0
+        and transporter_ready_for_apply_rows > 0
+    )
+    aqp1_functional_kcal_surrogate_ready_count = _int(
+        aqp1_functional_kcal_surrogate_summary.get("functional_kcal_surrogate_ready_count")
+    )
+    aqp1_functional_kcal_surrogate_closure_allowed = bool(
+        aqp1_functional_kcal_surrogate_summary.get("functional_kcal_surrogate_closure_allowed", False)
+    )
+    aqp1_direct_binding_gap_still_open = bool(
+        aqp1_functional_kcal_surrogate_summary.get("direct_binding_gap_still_open", False)
+    )
+    aqp1_functional_surrogate_accounting_closed = (
+        aqp1_functional_kcal_surrogate_closure_allowed
+        and aqp1_functional_kcal_surrogate_ready_count > 0
     )
     aqp1_negative_primary_probe_resolution_candidate = str(
         aqp1_negative_primary_probe_resolution_summary.get("primary_probe_candidate", "") or ""
@@ -469,6 +505,20 @@ def build_payload(
         f" {wetlab_summary['wetlab_execution_readiness_queue_next_required_step']}"
         if wetlab_summary["wetlab_execution_readiness_queue_next_required_step"]
         else ""
+    )
+    local_engine_queue_clear = bool(local_engine_summary.get("local_engine_commercialization_queue_clear", False))
+    wetlab_queue_clear = bool(wetlab_summary.get("wetlab_execution_readiness_queue_clear", False)) or (
+        bool(wetlab_summary.get("wetlab_execution_readiness_queue_ready", False))
+        and _int(wetlab_summary.get("wetlab_execution_readiness_queue_blocked_count")) == 0
+        and _int(wetlab_summary.get("wetlab_execution_readiness_queue_partial_count")) == 0
+        and _int(wetlab_summary.get("wetlab_execution_readiness_queue_watch_gap_count")) == 0
+        and bool(wetlab_summary.get("wetlab_execution_readiness_queue_selected_allatom_wetlab_gate_pass", False))
+    )
+    tracked_readiness_accounting_closed = (
+        local_engine_queue_clear
+        and wetlab_queue_clear
+        and transporter_placeholder_accounting_closed
+        and aqp1_functional_surrogate_accounting_closed
     )
 
     rows = [
@@ -636,9 +686,18 @@ def build_payload(
         "transporter_placeholder_burndown_queue_ready": bool(transporter_placeholder_burndown_queue_summary),
         "transporter_placeholder_burndown_queue_artifact": transporter_placeholder_burndown_queue_artifact,
         "transporter_placeholder_burndown_queue_rows": transporter_placeholder_burndown_queue_summary.get("queue_row_count", 0),
+        "transporter_placeholder_driven_rows": transporter_placeholder_driven_rows,
+        "transporter_ready_for_apply_rows": transporter_ready_for_apply_rows,
+        "transporter_placeholder_accounting_closed": transporter_placeholder_accounting_closed,
         "transporter_placeholder_burndown_queue_top_blocker_id": transporter_placeholder_burndown_queue_summary.get(
             "top_blocker_id", ""
         ),
+        "aqp1_functional_kcal_surrogate_ready": bool(aqp1_functional_kcal_surrogate_summary),
+        "aqp1_functional_kcal_surrogate_ready_count": aqp1_functional_kcal_surrogate_ready_count,
+        "aqp1_functional_kcal_surrogate_closure_allowed": aqp1_functional_kcal_surrogate_closure_allowed,
+        "aqp1_direct_binding_gap_still_open": aqp1_direct_binding_gap_still_open,
+        "aqp1_functional_surrogate_accounting_closed": aqp1_functional_surrogate_accounting_closed,
+        "tracked_readiness_accounting_closed": tracked_readiness_accounting_closed,
         "aqp1_negative_primary_probe_resolution_ready": bool(aqp1_negative_primary_probe_resolution_summary),
         "aqp1_negative_primary_probe_resolution_artifact": aqp1_negative_primary_probe_resolution_artifact,
         "aqp1_negative_primary_probe_resolution_row_count": aqp1_negative_primary_probe_resolution_row_count,
@@ -854,6 +913,18 @@ def build_payload(
             )
         ),
     }
+    if tracked_readiness_accounting_closed:
+        summary["main_platform_story"] = (
+            "Tracked local commercialization readiness accounting is closed for the restricted local scope: "
+            "local-engine queue is clear, wetlab execution readiness is green, transporter placeholder accounting is closed, "
+            f"and AQP1 has {aqp1_functional_kcal_surrogate_ready_count} functional-surrogate kcal rows while direct binding kcal claims remain blank. "
+            "Broader IDP promotion, direct transporter binding claims, scorer/router deployment, and broad platform wording stay outside this closed local readiness claim."
+        )
+        summary["next_required_step"] = (
+            "Keep the restricted local-delivery evidence attached and green: local-engine keep-green history, wetlab readiness, "
+            "transporter authoritative-apply provenance, AQP1 functional-surrogate no-direct-binding guardrails, and GPCR/ion/kinase accuracy parity. "
+            "Treat broader IDP promotion, direct transporter binding kcal, and scale-up/platform deployment as separate post-readiness lanes."
+        )
     return {"summary": summary, "rows": rows}
 
 
@@ -872,7 +943,16 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- transporter_placeholder_burndown_queue_ready: `{summary['transporter_placeholder_burndown_queue_ready']}`",
         f"- transporter_placeholder_burndown_queue_artifact: `{summary['transporter_placeholder_burndown_queue_artifact']}`",
         f"- transporter_placeholder_burndown_queue_rows: `{summary['transporter_placeholder_burndown_queue_rows']}`",
+        f"- transporter_placeholder_driven_rows: `{summary['transporter_placeholder_driven_rows']}`",
+        f"- transporter_ready_for_apply_rows: `{summary['transporter_ready_for_apply_rows']}`",
+        f"- transporter_placeholder_accounting_closed: `{summary['transporter_placeholder_accounting_closed']}`",
         f"- transporter_placeholder_burndown_queue_top_blocker_id: `{summary['transporter_placeholder_burndown_queue_top_blocker_id']}`",
+        f"- aqp1_functional_kcal_surrogate_ready: `{summary['aqp1_functional_kcal_surrogate_ready']}`",
+        f"- aqp1_functional_kcal_surrogate_ready_count: `{summary['aqp1_functional_kcal_surrogate_ready_count']}`",
+        f"- aqp1_functional_kcal_surrogate_closure_allowed: `{summary['aqp1_functional_kcal_surrogate_closure_allowed']}`",
+        f"- aqp1_direct_binding_gap_still_open: `{summary['aqp1_direct_binding_gap_still_open']}`",
+        f"- aqp1_functional_surrogate_accounting_closed: `{summary['aqp1_functional_surrogate_accounting_closed']}`",
+        f"- tracked_readiness_accounting_closed: `{summary['tracked_readiness_accounting_closed']}`",
         f"- aqp1_negative_primary_probe_resolution_ready: `{summary['aqp1_negative_primary_probe_resolution_ready']}`",
         f"- aqp1_negative_primary_probe_resolution_artifact: `{summary['aqp1_negative_primary_probe_resolution_artifact']}`",
         f"- aqp1_negative_primary_probe_resolution_row_count: `{summary['aqp1_negative_primary_probe_resolution_row_count']}`",
@@ -907,6 +987,7 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- wetlab_execution_readiness_queue_json: `{summary['wetlab_execution_readiness_queue_json']}`",
         f"- wetlab_execution_readiness_queue_csv: `{summary['wetlab_execution_readiness_queue_csv']}`",
         f"- wetlab_execution_readiness_queue_artifact: `{summary['wetlab_execution_readiness_queue_artifact']}`",
+        f"- wetlab_execution_readiness_queue_clear: `{summary['wetlab_execution_readiness_queue_clear']}`",
         f"- wetlab_execution_readiness_queue_top_priority_lane_id: `{summary['wetlab_execution_readiness_queue_top_priority_lane_id']}`",
         f"- wetlab_execution_readiness_queue_top_priority_status: `{summary['wetlab_execution_readiness_queue_top_priority_status']}`",
         f"- wetlab_execution_readiness_queue_status_line: `{summary['wetlab_execution_readiness_queue_status_line']}`",
@@ -973,6 +1054,10 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_TRANSPORTER_PLACEHOLDER_BURNDOWN_QUEUE_JSON,
     )
     parser.add_argument(
+        "--aqp1-functional-kcal-surrogate-json",
+        default=DEFAULT_AQP1_FUNCTIONAL_KCAL_SURROGATE_JSON,
+    )
+    parser.add_argument(
         "--aqp1-negative-primary-probe-resolution-json",
         default=DEFAULT_AQP1_NEGATIVE_PRIMARY_PROBE_RESOLUTION_JSON,
     )
@@ -1026,6 +1111,7 @@ def main() -> None:
         _maybe_load_json(args.aqp1_follow_on_blocker_decomposition_json),
         _maybe_load_json(args.aqp1_follow_on_source_confirmation_packet_json),
         _maybe_load_json(args.transporter_placeholder_burndown_queue_json),
+        _maybe_load_json(args.aqp1_functional_kcal_surrogate_json),
         _maybe_load_json(args.aqp1_negative_primary_probe_resolution_json),
         _maybe_load_json(args.glut1_second_wave_source_confirmation_packet_json),
         _maybe_load_json(args.ligand_scaleup_suite_status_json),

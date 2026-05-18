@@ -46,11 +46,23 @@ def build_rows(seed_packet: dict, workbook: dict, manual_apply: dict, packet_ste
     for field_name in ordered_fields:
         seed = seed_fields[field_name]
         current_value = workbook_row.get(field_name, "")
-        staged_fill_value = seed["suggested_value"] if seed["status"] == "ready_to_copy" else ""
+        seed_status = str(seed["status"])
+        seed_safe = seed_status == "ready_to_copy" or seed_status.startswith("staged_review_")
+        staged_fill_value = seed["suggested_value"] if seed_safe else ""
         field_status = seed["status"]
-        reviewer_safe_now = "yes" if seed["status"] == "ready_to_copy" else "no"
-        if field_name in {"replacement_ligand_id", "replacement_source", "replacement_smiles", "replacement_scaffold"} and str(current_value).strip():
-            staged_fill_value = str(current_value).strip()
+        reviewer_safe_now = "yes" if seed_safe else "no"
+        current_text = str(current_value).strip()
+        current_is_source_placeholder = (
+            field_name == "replacement_source"
+            and current_text.startswith("pubchem_name_resolve_pending::")
+            and str(staged_fill_value).strip()
+        )
+        if (
+            field_name in {"replacement_ligand_id", "replacement_source", "replacement_smiles", "replacement_scaffold"}
+            and current_text
+            and not current_is_source_placeholder
+        ):
+            staged_fill_value = current_text
             field_status = (
                 "staged_review_identifier"
                 if field_name == "replacement_ligand_id"

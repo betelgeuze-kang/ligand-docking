@@ -107,10 +107,15 @@ def _is_top_nightly_summary_path(path: Path) -> bool:
     payload = _maybe_load_json(path)
     if not payload:
         return False
-    if _text(payload.get("run_scope")) == "smoke_then_full":
+    run_scope = _text(payload.get("run_scope"))
+    if run_scope == "smoke_then_full":
         return True
     stages = payload.get("stages")
     artifacts = payload.get("artifacts")
+    service_result = payload.get("service_result")
+    if run_scope in {"smoke", "full"} and isinstance(stages, dict) and isinstance(service_result, dict):
+        if "stage2_trajectory_generation" in stages or "stage6_operational_gate" in stages:
+            return True
     if isinstance(stages, dict) and ("smoke" in stages or "full" in stages):
         return True
     if isinstance(artifacts, dict) and (

@@ -94,7 +94,7 @@ python3 tools/build_local_delivery_verdict_gate.py
 
 ## 현재 검증 스냅샷
 
-업데이트: 2026-05-15 KST.
+업데이트: 2026-05-18 KST.
 
 ![T. cruzi PDE 실제 MD Dynamics Viewer 캡처](docs/figures/webviewer_tcruzi_pde_actual_2026-05-15.png)
 
@@ -108,26 +108,28 @@ manifest에 명시된 로컬 T. cruzi PDE OpenMM artifact가 존재하면 두 RE
 
 | Lane | 현재 상태 | 주요 로컬 artifact | 먼저 볼 데이터 | 해석 |
 | --- | --- | --- | --- | --- |
-| 제한 로컬 납품 | Green | `runs/local_delivery_verdict_gate_current.json` | `delivery_ready=true`, `p0_blocker_count=0`, `hard_blocker_count=0` | 제한된 납품 claim에 한해 delivery-ready입니다. |
+| 제한 로컬 납품 | Green | `runs/local_delivery_verdict_gate_current.json` | `delivery_ready=true`, `verdict=delivery_ready`, `p0_blocker_count=0` | 제한 로컬 scope에서는 queue와 verdict가 같은 green 상태입니다. |
+| 상용화 gap/readiness accounting | Tracked local scope closed | `runs/commercialization_readiness_current.json`, `runs/commercialization_gap_burndown_current.json` | `tracked_readiness_accounting_closed=true`, `tracked_gap_accounting_closed=true`, `blocked_count=0`, `parked_or_review_only_blocked_count=2` | active tracked blocker는 0개입니다. blocked bucket에 남은 2개 row는 delivery blocker가 아니라 parked/review-only 감사 항목입니다. |
 | 납품 claim 경계 | Restricted | `docs/local_delivery_claim_policy.md` | `kinase,gpcr,ion_channel` | transporter, CA2/PXR, broad IDP, broad all-atom, broad platform, unattended decision-making은 claim 밖입니다. |
-| 상용툴 정확도 parity | Blocked | `runs/accuracy_parity_scorecard_current.json` | `status=blocked_accuracy_parity` | broad commercial-tool parity는 아직 주장하지 않습니다. |
+| 상용툴 정확도 parity | Green for tracked axes | `runs/accuracy_parity_scorecard_current.json` | `status=green`, `pass=5`, `blocked=0` | GPCR ranking, pose geometry, OpenMM, structure, wetlab translation 축이 현재 scorecard gate를 통과했습니다. router/platform 배포 claim은 별도입니다. |
 | family refresh 재현성 | Green | `runs/family_expansion_refresh_current.json` | `overall_ok=true`, `step_count=137`, `failed_count=0` | 현재 packet chain은 로컬에서 재현 가능합니다. |
 | ligand scale-up suite | Tracked suite green | `runs/ligand_scaleup_suite_status_current.json` | `commercialization_ready_suite_count=3`, `pending_suite_ids=[]` | 제한된 scale evidence이며 broad discovery parity 주장은 아닙니다. |
-| T. cruzi PDE translation | Blocked | `runs/wetlab_tcruzi_pde_translation_quality_packet_current.json` | `candidate_pool_row_count=29568`, `energy_pass=16`, `core_pass=0` | wetlab/all-atom promotion은 차단 상태입니다. |
-| T. cruzi PDE 다음 blocker | Blocked | `runs/wetlab_tcruzi_pde_atomized_ligand_draft_packet_current.json` | `atomized_ligand_draft=7/7`, `parameterization=0/7`, `local_minimization=0/7` | 좌표 초안은 있으나 상용 pose/local-min evidence는 없습니다. |
+| T. cruzi PDE selected all-atom | Green | `runs/wetlab_selected_allatom_gate_burndown_packet_current.json` | `hard_block_count=0`, `selected_allatom=pass` | atomized local-min overlay로 selected all-atom hard block 6개를 닫았습니다. |
+| PDE atomized ligand local-min | Green | `runs/wetlab_tcruzi_pde_atomized_parameterization_minimization_packet_current.json` | `parameterization_ready_count=7`, `protein_local_minimization_ready_count=7`, `validated_repair_count=7` | 7/7 parameterization + protein-ligand local minimization evidence가 생성됐습니다. |
+| OpenMM/structure parity evidence | Green | `runs/openmm_2bead_strict_multitarget_current_summary.json`, `runs/structure_refinement_scorecard_current.json` | OpenMM target `11`, structure true-metric backend `internal_deterministic_ca_true_metrics` | 두 축 모두 최신 scorecard에서 pass입니다. |
+| GPCR A1 independent repeat | Green for tracked ranking evidence | `runs/gpcr_rank_rescue_crossfit_repeat_r1_evidence_packet_current.json` | PR-AUC `0.8719`, PR CI-low `0.7612`, top20 `1.00`, blockers `[]` | 2026-05-18 independent repeat + out-of-fold crossfit replay가 ranking gate를 통과했습니다. scorer deployment/router promotion은 별도 claim으로 잠겨 있습니다. |
 
 ## T. cruzi PDE 데이터 흐름
 
-현재 PDE 경로는 의도적으로 fail-closed입니다. 후보 확장, metric 진단, atomization, 상용 promotion evidence를 분리해 두었기 때문에 energy row가 좋아 보여도 geometry, stability, atomization, parameterization, local minimization이 닫히기 전에는 claim을 올리지 않습니다.
+현재 PDE selected all-atom 경로는 hard block이 닫혔습니다. 다만 broad wetlab/platform claim은 accuracy scorecard 전체 pass 전까지 올리지 않습니다. 후보 확장, metric 진단, atomization, parameterization, local minimization evidence를 분리해서 관리합니다.
 
 | 단계 | 로컬 artifact | 현재 데이터 | 읽는 법 |
 | --- | --- | --- | --- |
-| Translation evidence scan | `runs/wetlab_tcruzi_pde_translation_evidence_probe_current.json` | 후보 score row `29568`, energy-pass row `16`, unique energy-hit ligand `7`, core-pass ligand `0` | energy evidence는 있지만 energy + distance + stability를 동시에 닫은 row는 없습니다. |
-| Translation quality gate | `runs/wetlab_tcruzi_pde_translation_quality_packet_current.json` | `claim_promotion_allowed=false`, `candidate_pool_geometry_stability_blocked=true` | broad wetlab/all-atom promotion은 계속 blocked입니다. |
-| Metric-scale diagnosis | `runs/wetlab_tcruzi_pde_metric_scale_gap_packet_current.json` | selected pseudo-allatom review row는 geometry/stability `4/4`를 유지하지만 energy `0/4`; 외부 homolog/BindingDB row는 energy `16`이나 geometry-stability/core `0` | blocker는 단순 compound 부족이 아니라 metric-scale과 pose-preservation split입니다. |
-| Pose/backmapping closure queue | `runs/wetlab_tcruzi_pde_pose_backmapping_closure_queue_current.json` | unique energy-hit PDE seed `7`개 queue | 다음 측정값은 pose-preservation RMSD, backmapping consistency, local-minimization survival, replicate-pass fraction입니다. |
-| Ligand atomization check | `runs/wetlab_tcruzi_pde_ligand_atomization_gap_packet_current.json` | `atomization_ready_count=0/7`; 현재 pseudo-backmap은 ligand atom `2`개, 예상 heavy atom `34-43`개 | 기존 pseudo-backmap은 all-atom ligand pose evidence로 취급하면 안 됩니다. |
-| Atomized ligand draft | `runs/wetlab_tcruzi_pde_atomized_ligand_draft_packet_current.json` | RDKit all-atom draft `7/7`, pseudo-anchor orientation `6/7`, parameterization `0/7`, protein-ligand local minimization `0/7` | coordinate draft substep은 닫혔고, parameterization과 local minimization이 다음 상용 blocker입니다. |
+| Translation evidence scan | `runs/wetlab_tcruzi_pde_translation_evidence_probe_current.json` | 후보 score row `29568`, energy-pass row `16`, unique energy-hit ligand `7`, core-pass ligand `0` | 원천 pool의 energy/geometry split은 기록으로 유지합니다. |
+| Atomized ligand draft | `runs/wetlab_tcruzi_pde_atomized_ligand_draft_packet_current.json` | RDKit all-atom draft `7/7`, pseudo-anchor orientation `6/7` | 좌표 초안 substep은 완료됐습니다. |
+| Parameterization/local minimization | `runs/wetlab_tcruzi_pde_atomized_parameterization_minimization_packet_current.json` | `parameterization_ready_count=7`, `protein_local_minimization_ready_count=7`, `validated_repair_count=7`, `hard_block_count=0` | 7/7 ligand에 대해 parameterization + protein-ligand local minimization evidence를 만들었습니다. |
+| All-atom review overlay | `runs/wetlab_tcruzi_pde_allatom_review_packet_current.json` | `translation_gate_focus_status=pass`, `focus_shortlist_tier=tier2_silver`, `recommended_next_expensive_lane=atomized_openmm_local_min_validated_repair` | validated atomized row가 review overlay로 들어가 selected all-atom gate를 통과했습니다. |
+| Selected all-atom burndown | `runs/wetlab_selected_allatom_gate_burndown_packet_current.json` | `commercial_hard_gate_pass_v2=true`, `hard_block_count=0` | 기존 hard block 6개는 닫혔습니다. |
 
 고정 PDE hard threshold는 아래와 같습니다.
 
@@ -146,9 +148,12 @@ python3 - <<'PY'
 import json
 for path in [
     "runs/local_delivery_verdict_gate_current.json",
+    "runs/commercialization_readiness_current.json",
+    "runs/commercialization_gap_burndown_current.json",
     "runs/accuracy_parity_scorecard_current.json",
-    "runs/wetlab_tcruzi_pde_translation_quality_packet_current.json",
-    "runs/wetlab_tcruzi_pde_atomized_ligand_draft_packet_current.json",
+    "runs/wetlab_tcruzi_pde_atomized_parameterization_minimization_packet_current.json",
+    "runs/wetlab_selected_allatom_gate_burndown_packet_current.json",
+    "runs/gpcr_rank_rescue_crossfit_repeat_r1_evidence_packet_current.json",
 ]:
     data = json.load(open(path, encoding="utf-8"))
     print("\n##", path)
@@ -157,12 +162,18 @@ for path in [
             "status",
             "delivery_ready",
             "verdict",
-            "candidate_pool_row_count",
-            "candidate_pool_energy_pass_count",
-            "candidate_pool_core_pass_count",
-            "atomization_draft_ready_count",
             "parameterization_ready_count",
             "protein_local_minimization_ready_count",
+            "validated_repair_count",
+            "hard_block_count",
+            "tracked_readiness_accounting_closed",
+            "tracked_gap_accounting_closed",
+            "raw_blocked_bucket_count",
+            "parked_or_review_only_blocked_count",
+            "ranking_pr_auc",
+            "ranking_pr_auc_ci_low",
+            "ranking_topk_hit_rate",
+            "blockers",
             "claim_promotion_allowed",
             "next_required_step",
         }:
@@ -174,14 +185,17 @@ PY
 
 현재 사용할 수 있는 표현:
 
-- selected family 기준의 제한 로컬 납품 분석 파이프라인은 green gate를 통과했습니다.
-- T. cruzi PDE는 local evidence packet과 RDKit atomized ligand draft를 보유합니다.
-- T. cruzi PDE commercial wetlab/all-atom promotion은 parameterization, protein-ligand local minimization, pose preservation, backmapping consistency, replicate evidence 전까지 blocked입니다.
+- 제한 로컬 납품 scope에서는 local delivery verdict와 local engine queue가 green으로 동기화되어 있습니다.
+- T. cruzi PDE는 7/7 atomized ligand parameterization과 protein-ligand local minimization evidence를 보유합니다.
+- T. cruzi PDE selected all-atom gate는 hard block 0개로 닫혔습니다.
+- OpenMM 11-target과 structure deterministic true-metric scorecard는 최신 green evidence입니다.
+- GPCR A1 tracked ranking evidence는 2026-05-18 independent repeat + out-of-fold crossfit replay에서 PR-AUC `0.8719`, CI-low `0.7612`, top20 `1.00`으로 green입니다.
+- 현재 tracked 상용툴 정확도 parity scorecard는 `status=green`, `pass=5/5`입니다.
 
 아직 쓰면 안 되는 표현:
 
-- broad commercial drug-discovery platform parity
-- OpenMM, Schrodinger, GALAXY급 broad equivalence
+- 무제한 broad commercial drug-discovery platform 배포 claim
+- scorer/router/platform 자동 promotion claim
 - wetlab-proven T. cruzi PDE hit claim
 - AQP1 functional surrogate row에서 직접 binding kcal claim
 
@@ -201,4 +215,4 @@ push 전에 생성된 MD 데이터, checkpoint, log, local delivery output이 st
 
 현재 GitHub에는 로컬 납품 workflow를 재현하는 데 필요한 구현, 테스트, 설정, 문서가 올라가 있습니다. 실행 데이터는 설계상 로컬에 남습니다. 파트너나 리뷰어에게 evidence package를 전달해야 할 때는 raw trajectory나 model output을 커밋하지 말고, 로컬에서 delivery bundle을 생성한 뒤 검토된 산출물만 공유하는 방식이 안전합니다.
 
-현재 제한 로컬 납품 범위의 delivery status는 green입니다. verdict gate는 `summary.delivery_ready=true`와 clear commercialization queue를 보고합니다. delivery-ready package를 공유하기 전에는 제한 로컬 납품 bundle을 다시 만들고 `python3 tools/validate_local_delivery_bundle.py --bundle-dir <bundle_dir>`로 bundle fingerprint까지 확인합니다.
+현재 제한 로컬 납품 범위의 delivery status는 green입니다. verdict gate는 `delivery_ready=true`, `verdict=delivery_ready`, `p0_blocker_count=0`을 보고하며 commercialization queue와 불일치하지 않습니다. 공유 전에는 제한 로컬 납품 bundle을 다시 만들고 `python3 tools/validate_local_delivery_bundle.py --bundle-dir <bundle_dir>`로 bundle fingerprint까지 확인합니다.

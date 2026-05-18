@@ -48,8 +48,9 @@ def build_payload(
     readiness_payload: dict[str, Any],
     review_queue_payload: dict[str, Any],
     next_slice_payload: dict[str, Any],
-    capture_intake_payload: dict[str, Any],
+    capture_intake_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    capture_intake_payload = capture_intake_payload or {}
     readiness = dict(readiness_payload.get("summary", {}) or {})
     review_summary = dict(review_queue_payload.get("summary", {}) or {})
     next_summary = dict(next_slice_payload.get("summary", {}) or {})

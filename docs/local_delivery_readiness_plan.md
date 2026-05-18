@@ -57,29 +57,28 @@ As of `2026-04-26`, the current commercialization artifacts say the remaining bl
 - strongest ready families remain `kinase, ion_channel, gpcr`
 - A is green for the local-delivery required set: `runs/local_delivery_requirements_lock_current.md` reports `installed=13/13`, `missing=0`, `loose_sources=0`, `requirements_lock_complete=true`, and the environment manifest reports `environment_lock_complete=true`; seven API/train/deploy/optional packages remain optional/deferred evidence
 - local engine top priority remains `nightly_reliability (partial)`, pending top-level stage6 gate burndown
-- B has green downstream execute evidence, but the canonical top-level nightly summary is still red at `stage6_operational_gate` (`mean_min_distance_A=2.655`, threshold `2.500`, delta `+0.155`), so promotion is forbidden; downstream execute is supporting-only evidence and does not replace the top-level nightly artifact:
+- B is green on the canonical GPU/HIP top-level smoke evidence:
+  - latest nightly summary: `runs/ligand_htvs_nightly_2026-05-13_goal_closure2_summary.json`
+  - nightly gate status: `nightly_gate_green`
   - downstream execute gate pass `True`
   - downstream execute gate mean_min_distance_A `2.268931970372796`
-  - source: `runs/nightly_stage6_execute_result_packet_current.md` and `commercialization_status_report.md`
-  - top-level reentry handoff: `runs/nightly_stage6_top_level_reentry_packet_current.md` with strict `smoke_then_full`, full target set, OOD eval, and unchanged `2.500` gate preserved
-- C is hard-blocked on wetlab selected all atom:
+  - source: `runs/nightly_gate_burndown_packet_current.md`, `runs/nightly_stage6_execute_result_packet_current.md`, and `commercialization_status_report.md`
+- C is green on wetlab selected all atom for the current local-delivery scope:
   - target `T. cruzi PDE`
-  - `mean_min_distance_A = 3.705`
+  - `mean_min_distance_A = 2.120`
   - threshold `2.500`
-  - delta `+1.205`
-  - claim gate metric missing (`claim_gate_required_unavailable`)
-  - hard/semi-hard blockers are still open
+  - hard blockers `0`, semi-hard blockers `0`
   - source: `runs/wetlab_selected_allatom_gate_burndown_packet_current.json`
-- transporter expansion is still evidence-blocked:
-  - `placeholder_driven_rows = 6`
+- transporter expansion accounting is closed but remains outside the delivery claim:
+  - `placeholder_driven_rows = 0`
   - `reducible_now = 0`
-  - `evidence_blocked = 6`
+  - `evidence_blocked = 0`
   - source: `commercialization_status_report.md`
 
 That means the fastest path to revenue is:
 
-1. burn down the top-level nightly stage6 gate
-2. clear wetlab selected-allatom
+1. keep the top-level nightly gate green
+2. keep wetlab selected-allatom green
 3. keep the preflight/verdict path and commercialization queue blocked until those two are green
 4. make local reruns and delivery bundles reproducible
 5. freeze claim scope to the families already supported by the evidence
@@ -368,14 +367,14 @@ Definition of done:
 
 Why this is P2:
 
-- transporter is still blocked by missing direct negative evidence
-- this work increases commercial breadth, but it is not the shortest path to first safe delivery
+- transporter accounting closure is complete, but direct-binding kcal and bounded transporter claim wording remain out of scope
+- this work increases commercial breadth, but it is not required for the current restricted safe delivery
 
 Definition of done:
 
-- `placeholder_driven_rows` is materially reduced or closed
-- evidence-blocked transporter rows have direct closure, not only staging surfaces
-- transporter can be moved from review-only wording into bounded claim-safe wording
+- `placeholder_driven_rows=0` and `evidence_blocked_placeholder_rows=0` are preserved in the accounting artifacts
+- AQP1 functional kcal surrogate wording remains explicitly not direct binding kcal
+- transporter can only move into bounded claim-safe wording after a separate direct target-specific binding evidence review
 
 Required artifacts:
 

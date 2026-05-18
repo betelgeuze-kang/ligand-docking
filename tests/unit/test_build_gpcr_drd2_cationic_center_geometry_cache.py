@@ -90,6 +90,47 @@ def test_cationic_center_cache_measures_basic_amine_to_acidic_anchor(tmp_path: P
     assert rows[0]["class_a_cationic_center_contact_fraction_le_2p8A"] == 0.0
 
 
+def test_cationic_center_cache_uses_static_anchor_when_prod_light_npz_omits_protein_frames(tmp_path: Path) -> None:
+    pdb = tmp_path / "drd2.pdb"
+    pdb.write_text(
+        "\n".join(
+            [
+                _pdb_atom("ATOM", 1, "OD1", "ASP", "A", 114, 0.0, 0.0, 0.0),
+                _pdb_atom("ATOM", 2, "OD2", "ASP", "A", 114, 0.4, 0.0, 0.0),
+                "END",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    npz = tmp_path / "prod_light.npz"
+    np.savez(
+        npz,
+        ligand_frames=np.asarray([[[0.2, 0.0, 3.2], [10.0, 0.0, 0.0]]], dtype=np.float32),
+        ligand_backmapping_static_anchor_coords=np.asarray([[0.0, 0.0, 0.0], [0.4, 0.0, 0.0]], dtype=np.float32),
+        ligand_basic_amine_atom_indices=np.asarray([0], dtype=np.int32),
+    )
+    input_csv = tmp_path / "rows.csv"
+    _write_csv(
+        input_csv,
+        [
+            {
+                "target": "CHEMBL217_DRD2_HUMAN",
+                "ligand_id": "CHEMBL301265",
+                "trajectory_npz": str(npz),
+                "protein_structure_source_path": str(pdb),
+            }
+        ],
+    )
+
+    rows, summary = mod.build_cache(input_csv=input_csv, generated_at_local="2026-05-05T00:00:00+09:00")
+
+    assert summary["available_feature_count"] == 1
+    assert rows[0]["class_a_cationic_center_available"] == 1
+    assert rows[0]["class_a_cationic_center_anchor_atom_count"] == 2
+    assert np.isclose(rows[0]["class_a_cationic_center_mean_distance_A"], 3.2)
+
+
 def test_cationic_center_cache_cli_writes_outputs(tmp_path: Path) -> None:
     pdb = tmp_path / "drd2.pdb"
     pdb.write_text(

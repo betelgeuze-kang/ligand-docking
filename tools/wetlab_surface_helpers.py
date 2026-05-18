@@ -61,13 +61,27 @@ def summarize_wetlab_execution_readiness_queue(
     selected_allatom_focus_label = _text(summary.get("selected_allatom_focus_label"))
     selected_allatom_block_reason = _text(summary.get("selected_allatom_block_reason"))
     status_line = _text(summary.get("status_line"))
+    blocked_count = _int(summary.get("blocked_count"))
+    partial_count = _int(summary.get("partial_count"))
+    ready_count = _int(summary.get("ready_count"))
+    queue_clear = bool(summary.get("queue_clear", False)) or (
+        ready
+        and blocked_count == 0
+        and partial_count == 0
+        and watch_gap_count == 0
+        and (
+            selected_allatom_wetlab_gate_pass
+            or "selected_allatom_wetlab_gate_pass" not in summary
+        )
+    )
 
     blocker_signal_parts = [
         f"wetlab_queue_rows={row_count}" if row_count else "",
         (
-            f"wetlab_blocked={_int(summary.get('blocked_count'))}; "
-            f"wetlab_partial={_int(summary.get('partial_count'))}; "
-            f"wetlab_ready={_int(summary.get('ready_count'))}"
+            f"wetlab_blocked={blocked_count}; "
+            f"wetlab_partial={partial_count}; "
+            f"wetlab_ready={ready_count}; "
+            f"wetlab_queue_clear={queue_clear}"
         )
         if ready
         else "",
@@ -87,22 +101,36 @@ def summarize_wetlab_execution_readiness_queue(
     blocker_note = ""
     if ready:
         top_label = top_priority_lane_id.replace("_", " ") if top_priority_lane_id else "wetlab execution readiness"
-        blocker_note = (
-            f"Wetlab execution readiness is still queue-gated by {artifact or DEFAULT_WETLAB_EXECUTION_READINESS_QUEUE_MD}: "
-            f"{top_label}"
-            + (f" is {top_priority_status}" if top_priority_status else "")
-            + (
-                f", primary watch is {primary_watch_liveness} and antitarget watch is {antitarget_watch_liveness}"
-                if primary_watch_liveness or antitarget_watch_liveness
-                else ""
+        if queue_clear:
+            blocker_note = (
+                f"Wetlab execution readiness queue is clear in {artifact or DEFAULT_WETLAB_EXECUTION_READINESS_QUEUE_MD}: "
+                f"{top_label}"
+                + (f" is {top_priority_status}" if top_priority_status else "")
+                + ", with no blocked, partial, or watch-gap rows"
+                + (
+                    f", and the selected all-atom gate is {'passing' if selected_allatom_wetlab_gate_pass else 'not asserted'}"
+                    if summary.get("selected_allatom_wetlab_gate_pass") is not None or selected_allatom_wetlab_gate_pass
+                    else ""
+                )
+                + "."
             )
-            + (
-                f", and the selected all-atom gate is {'passing' if selected_allatom_wetlab_gate_pass else 'failing'}"
-                if summary.get("selected_allatom_wetlab_gate_pass") is not None or selected_allatom_wetlab_gate_pass
-                else ""
+        else:
+            blocker_note = (
+                f"Wetlab execution readiness is still queue-gated by {artifact or DEFAULT_WETLAB_EXECUTION_READINESS_QUEUE_MD}: "
+                f"{top_label}"
+                + (f" is {top_priority_status}" if top_priority_status else "")
+                + (
+                    f", primary watch is {primary_watch_liveness} and antitarget watch is {antitarget_watch_liveness}"
+                    if primary_watch_liveness or antitarget_watch_liveness
+                    else ""
+                )
+                + (
+                    f", and the selected all-atom gate is {'passing' if selected_allatom_wetlab_gate_pass else 'failing'}"
+                    if summary.get("selected_allatom_wetlab_gate_pass") is not None or selected_allatom_wetlab_gate_pass
+                    else ""
+                )
+                + "."
             )
-            + "."
-        )
 
     next_required_step = _text(summary.get("next_required_step")) or top_priority_next_required_action
 
@@ -116,9 +144,10 @@ def summarize_wetlab_execution_readiness_queue(
         ),
         "wetlab_execution_readiness_queue_artifact": artifact,
         "wetlab_execution_readiness_queue_row_count": row_count,
-        "wetlab_execution_readiness_queue_blocked_count": _int(summary.get("blocked_count")),
-        "wetlab_execution_readiness_queue_partial_count": _int(summary.get("partial_count")),
-        "wetlab_execution_readiness_queue_ready_count": _int(summary.get("ready_count")),
+        "wetlab_execution_readiness_queue_clear": queue_clear,
+        "wetlab_execution_readiness_queue_blocked_count": blocked_count,
+        "wetlab_execution_readiness_queue_partial_count": partial_count,
+        "wetlab_execution_readiness_queue_ready_count": ready_count,
         "wetlab_execution_readiness_queue_top_priority_lane_id": top_priority_lane_id,
         "wetlab_execution_readiness_queue_top_priority_status": top_priority_status,
         "wetlab_execution_readiness_queue_top_priority_signal": top_priority_signal,
@@ -147,6 +176,7 @@ def wetlab_summary_from_source(summary_source: dict[str, Any] | None = None) -> 
         "wetlab_execution_readiness_queue_csv",
         "wetlab_execution_readiness_queue_artifact",
         "wetlab_execution_readiness_queue_row_count",
+        "wetlab_execution_readiness_queue_clear",
         "wetlab_execution_readiness_queue_blocked_count",
         "wetlab_execution_readiness_queue_partial_count",
         "wetlab_execution_readiness_queue_ready_count",
@@ -171,6 +201,9 @@ def wetlab_summary_from_source(summary_source: dict[str, Any] | None = None) -> 
     hydrated = {key: summary_source.get(key, "") for key in keys}
     hydrated["wetlab_execution_readiness_queue_ready"] = bool(
         summary_source.get("wetlab_execution_readiness_queue_ready", False)
+    )
+    hydrated["wetlab_execution_readiness_queue_clear"] = bool(
+        summary_source.get("wetlab_execution_readiness_queue_clear", False)
     )
     hydrated["wetlab_execution_readiness_queue_selected_allatom_wetlab_gate_pass"] = bool(
         summary_source.get("wetlab_execution_readiness_queue_selected_allatom_wetlab_gate_pass", False)

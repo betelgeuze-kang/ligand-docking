@@ -1,20 +1,22 @@
 # 벤치마크 데이터 요약
 
-최종 갱신: 2026-05-13 KST
+최종 갱신: 2026-05-17 KST
 
 이 문서는 GitHub에 공개해도 되는 현재 벤치마크 evidence를 한 곳에 정리한 인덱스입니다. 원본 source of truth는 로컬 `runs/` 산출물이며, 대용량 trajectory, 동역학 데이터, raw run-output 파일은 Git에 포함하지 않습니다.
 
 ## Claim 범위
 
-현재 로컬 납품 claim 범위는 제한된 `kinase`, `gpcr`, `ion_channel`에만 적용합니다. restricted local P0는 green이고, tracked ligand scale-up suite도 현재 `commercialization_ready_suite_count=3/3` / `pending_suite_ids=[]`입니다. 단, 이는 broad platform, transporter, CA2/PXR, broader IDP promotion, unattended decision-making, 또는 GPCR-family/router 일반화 claim이 아닙니다.
+현재 로컬 납품 claim 범위는 제한된 `kinase`, `gpcr`, `ion_channel`에만 적용합니다. 다만 2026-05-17 현재 restricted local verdict는 `delivery_ready=false`, `verdict=blocked`, `p0_blocker_count=1`이며 `local_engine_commercialization_queue`와 불일치하지 않습니다. tracked ligand scale-up suite 자체는 `commercialization_ready_suite_count=3/3` / `pending_suite_ids=[]`이지만, 현재 queue blocker가 닫히기 전까지 delivery-ready wording은 쓰지 않습니다. 이는 broad platform, transporter, CA2/PXR, broader IDP promotion, unattended decision-making, 또는 GPCR-family/router 일반화 claim이 아닙니다.
 
 2026-05-13 기준 1M package는 `set3_operational_smoke`, `set1_core_blind`, `set2_expanded_ood`가 모두 pass입니다. Core full-task PR-AUC는 `gpcr_core_full=0.8958`, `ion_trpv1_chembl20_full=0.9585`, `kinase_core_full=1.0000`이고, expanded OOD PR-AUC는 `gpcr_chembl50_full=0.8093`, `ion_trpv1_chembl50_full=0.9867`, `kinase_strict_full=1.0000`입니다. 1M guardrail 상태는 `claim_safe_size_shift_speed_diagnostic`입니다. 즉 품질/정확도는 restricted scale-up package에서 claim-safe이고, throughput claim은 equal-size speedpack A/B가 담당하며, 1M speed는 diagnostic scale evidence로 둡니다.
 
-아래 수치를 일반 상용 플랫폼 전체, 일반 GPCR-family/router 일반화, transporter, CA2/PXR, broader IDP promotion, unattended decision-making claim으로 확장하면 안 됩니다. 현재 broad commercialization의 최상위 확장 blocker는 GPCR scale-up이 아니라 `transporter_negative_placeholder_rows`입니다. `runs/platform_gap_taxonomy_packet_current.json` 기준 `current_delivery_blocker_count=0`, `top_expansion_gap_id=transporter_negative_placeholder_rows`, `evidence_blocked_placeholder_rows=6`이며, `runs/transporter_negative_evidence_closure_queue_current.json`의 첫 작업은 `AQP1__core_non_binder_01`입니다. GPCR family/router 실험들은 legacy comparison/reject evidence로 보존하며, 제한된 1M scale-up package의 green 상태를 broad GPCR/router/platform claim으로 승격하지 않습니다.
+아래 수치를 일반 상용 플랫폼 전체, 일반 GPCR-family/router 일반화, transporter, CA2/PXR, broader IDP promotion, unattended decision-making claim으로 확장하면 안 됩니다. 2026-05-13의 `/goal` accounting closure는 audit baseline으로 남기지만, 현재 delivery source of truth는 `runs/local_delivery_verdict_gate_current.json`과 `runs/local_engine_commercialization_queue_current.json`입니다. 최신 queue는 `queue_clear=false`, `blocked_count=1`, `top_priority_id=nightly_reliability`이고 verdict도 fail-closed로 blocked입니다. Transporter negative placeholders는 authoritative apply gate로 accounting closure 처리되었고, AQP1 kcal은 functional IC50-derived surrogate로만 사용합니다. GPCR family/router 실험들은 legacy comparison/reject evidence로 보존하며, 제한된 1M scale-up package의 green 상태를 broad GPCR/router/platform claim으로 승격하지 않습니다.
+
+`/goal` 이후의 active benchmark lane은 상용툴 정확도 parity입니다. `runs/accuracy_parity_scorecard_current.md`는 `blocked_accuracy_parity`이며 row mix는 `2 pass / 0 restricted_pass / 3 blocked / 0 missing`입니다. OpenMM 11-target strict release와 structure deterministic true-metric materialization은 green evidence로 반영됐지만, GPCR A1 independent repeat는 본 실행 후 operational gate에서 실패했습니다. 최신 repeat ranking artifact는 AUC `0.9049`, ROC CI-low `0.8002`, PR-AUC `0.1575`, PR CI-low `0.00135`, top20 `0.10`이고, 실패 원인은 실행/GPU fallback이 아니라 PR-AUC/top20 상용 parity threshold 미달입니다.
 
 For the GPCR non-ADRB2 positive freeze workflow, `config/gpcr_non_adrb2_positive_candidates_v1.csv` is the curated candidate input schema for the 3-positive current freeze, and `config/gpcr_non_adrb2_positive_candidates_coverage_v1.csv` is the coverage-v1 expansion schema with seven non-ADRB2 GPCR positives (`DRD2`, `HTR2A`, `OPRM1`, `DRD3`, `ADORA2A`, `HRH1`, `OPRD1`). The current freeze packet remains `frozen=true` with `positive_count=9`, `new_non_adrb2_positive_count=3`, `distinct_positive_gpcr_target_count=4`, and `leakage_audit_pass=true`. The coverage-v1 freeze is separately materialized as `runs/gpcr_positive_coverage_freeze_packet_coverage_v1_current.json` with `positive_count=13`, `new_non_adrb2_positive_count=7`, `distinct_positive_gpcr_target_count=8`, and `leakage_audit_pass=true`; `runs/gpcr_frozen_candidate_profile_support_coverage_v1_current/summary.json` is `profile_ready=true` with `combined_reference_row_count=22`, `blocked_target_count=0`, and RCSB-backed native centroids for all seven non-ADRB2 GPCR targets. Coverage-v1 scoreability is `pass=true` with `freeze_positive_count=13` and `profile_positive_count=13`, and `runs/gpcr_guarded_100k_rerun_readiness_coverage_v1_current.json` has `launch_eligible=true` / `claim_review_eligible=false`. The coverage-v1 100k candidate set-spec is `runs/gpcr_scaleup_100k_family_balanced_coverage_v1_candidate_current/specs/gpcr_core_family_balanced_rescore_100k_coverage-v1-family-balanced100k.json` and validates with `run_external_validation_blind_sets.py --validate-only`; it is still claim-locked shadow/comparison evidence until a full rerun clears CI-low/top20/leakage-triage review.
 
-Transporter AQP1/GLUT1 evidence closure and CA2/PXR placeholder/provenance closure are post-P0 follow-up work only; AQP1/GLUT1 stay parked/review-only outside the delivery claim, and CA2/PXR stays prep-only until placeholder/provenance and `replacement_reference_binding_kcal_mol` are closed. GPCR recovery candidates (`gpcr_core_decoy_intrusion_v1`, `gpcr_core_linear_rescore_v1`, `gpcr_core_mismatch_contact_rescore_v1`, `gpcr_core_structure_support_rescore_v1`) stay comparison-only shadow/guarded-apply lanes. The frozen non-ADRB2 guarded 100k rerun completed with `positive_count=9`, stage2 `40000/40000` ok rows, leakage audit `pass=true`, and family-held-out `pass=true`, but broad GPCR-family/router `claim_safe=false` persists because `PR-AUC=0.22869872098030358`, `ranking_pr_auc_ci_low=0.0019312183264511504 < 0.45`, and `top20=0.10 < 0.20`. The operator packet for that blocker is `runs/gpcr_ci_low_recovery_packet_current.md`: `## Metric Table` and `## Rank And Bootstrap Diagnostics` carry the positive ranks, top20 misses, and bootstrap view. `ligand_heavy_runs` cleanup is storage housekeeping only: 2026-05-02 deleted 189 stale `stage2_trajectory_frames` payloads (`98125333296` bytes), the 2026-05-03 follow-up execute pass deleted_count=12 remaining raw trajectory payloads (`556010987428` bytes), and the 2026-05-03 structure-support rerun cleanup deleted the stalled partial payload (`38346317024` bytes) plus the completed rollout payload (`51265129536` bytes). After the latest cleanup, `/` usage is `57%` and `runs/local_heavy_runs` is `28K`. Cleanup does not change the delivery claim, any metric, or the legacy GPCR-family/router `claim_safe=false` boundary. See `docs/post_p0_evidence_closure_status.md` for the operator map.
+Transporter AQP1/GLUT1 accounting closure and CA2/PXR review-only policy closure are post-P0 evidence surfaces only; they do not widen the restricted delivery claim. AQP1/GLUT1 keep `replacement_reference_binding_kcal_mol` blank unless direct target-specific binding evidence is curated, and CA2/PXR rows remain review-only/locked. GPCR recovery candidates (`gpcr_core_decoy_intrusion_v1`, `gpcr_core_linear_rescore_v1`, `gpcr_core_mismatch_contact_rescore_v1`, `gpcr_core_structure_support_rescore_v1`) stay comparison-only shadow/guarded-apply lanes. The frozen non-ADRB2 guarded 100k rerun completed with `positive_count=9`, stage2 `40000/40000` ok rows, leakage audit `pass=true`, and family-held-out `pass=true`, but broad GPCR-family/router `claim_safe=false` persists because `PR-AUC=0.22869872098030358`, `ranking_pr_auc_ci_low=0.0019312183264511504 < 0.45`, and `top20=0.10 < 0.20`. The operator packet for that blocker is `runs/gpcr_ci_low_recovery_packet_current.md`: `## Metric Table` and `## Rank And Bootstrap Diagnostics` carry the positive ranks, top20 misses, and bootstrap view. Heavy trajectory cleanup is storage housekeeping only: 2026-05-17 deleted the stale `/home/betelgeuze/trajectory_spill/.../stage2_trajectory_frames` payload (`110850969408` bytes), bringing `/` usage from `98%` to `68%`. Cleanup does not change the delivery claim, any metric, or the legacy GPCR-family/router `claim_safe=false` boundary. See `docs/post_p0_evidence_closure_status.md` for the operator map.
 
 The latest r2 rank evidence is `runs/external_validation_2026-05-03_family_balanced_frozen_r2_set1_core_blind_gpcr_core_full_p0_n100000_r1_stage5_ranking_summary.md` plus `..._stage5_ranking_rows.csv`. HTR2A and OPRM1 recover to target-rank 1 (`global_rank=2` and `global_rank=6`), while DRD2 remains buried at `global_rank=18923` / `target_rank=5315`. The refreshed diagnostic packet adds DRD2 atom-anchor evidence under `runs/gpcr_guarded_100k_rank_failure_diagnostics_current.json` / `drd2_pose_physics_diagnostics`: the DRD2 positive maintains the native acidic anchor (`Asp114`) with mean distance about `3.25 A`, but the top DRD2 decoy cluster is even closer on average (`2.48 A`). This means the blocker is not simple anchor absence; it is decoy over-anchoring / ligand-physics-prior separation. Keep this as diagnostic-only evidence. The v8/v9 atom-window experiments confirm that direct atom-window reward can lift DRD2 positive rank but also promotes multipolar hard decoys; v9 preserves Top20 but still fails the v2 comparator. v10 proves the selected-slice cationic/pose-distortion contract, v11 full true-base frozen replay shows all-basic synthetic-anchor overpromotion remains too strong, v12 shows the right DRD2 direction but not enough family portability, v13 reduces frozen decoy intrusion, v14 shows cationic occupancy reward is unsafe, v15 improves true-base support-gap ranks, and v16 is the best all-basic frozen shadow for top20 (`DRD2 2/2/1`, `HTR2A 16/7/6`, `OPRM1 583/115/114`). The new adaptive pose-preserving cache removes OPRM1 pose collapse but shows the current feature set cannot separate OPRM1 positive from 157 same-signature decoys without new pose/anchor evidence. Delivery/router/platform claim promotion remains forbidden and `claim_promotion_allowed=false` stays in force until a portable anchor contract and full guarded review clear CI-low/top20.
 
@@ -27,18 +29,18 @@ The first family-balanced frozen guarded rerun completed after an interrupted ex
 | 영역 | 현재 결과 | 핵심 벤치마크 값 | Source artifact |
 | --- | --- | --- | --- |
 | Local delivery preflight | Pass | `overall_ok=true`, `9/9` steps ok, `failed_count=0` | `runs/local_delivery_preflight_current.json` |
-| Verdict gate | 제한 범위 delivery-ready | `delivery_ready=true`, `p0_blocker_count=0`, `hard_blocker_count=0`, `commercialization_queue_clear=true` | `runs/local_delivery_verdict_gate_current.json` |
+| Verdict gate | Blocked / fail-closed | `delivery_ready=false`, `verdict=blocked`, `p0_blocker_count=1`, `hard_blocker_count=1`, `commercialization_queue_clear=false` | `runs/local_delivery_verdict_gate_current.json` |
 | Accuracy gate | Pass | neighbor parity `avg_py=36.7388`, `avg_rs=36.7388`; speed gate enforced | `runs/accuracy_gate_local_delivery_preflight_current.json` |
 | Requirements lock | 필수 로컬 세트 complete | `installed=13/13`, `missing=0`, `blocking_missing=0`, optional/deferred missing `7` | `runs/local_delivery_requirements_lock_current.json` |
 | Environment manifest | 재현성 snapshot 존재 | Python `3.10.12`, ROCm env configured, `TORCH_BLAS_PREFER_HIPBLASLT=0` | `runs/local_delivery_environment_manifest_current.json` |
-| Commercialization queue | 제한 범위 queue clear | `queue_clear=true`, `blocked_count=0`, `partial_count=0`, `keep_green_count=4`, parked science blocker `1` | `runs/local_engine_commercialization_queue_current.json` |
+| Commercialization queue | Blocked | `queue_clear=false`, `blocked_count=1`, `row_count=5`, `top_priority_id=nightly_reliability` | `runs/local_engine_commercialization_queue_current.json` |
 
 ## Nightly And Accuracy Benchmarks
 
 | Benchmark | 결과 | Metrics | Notes |
 | --- | --- | --- | --- |
 | Nightly stage6 gate | Green | `stage2_ok_rows=72/72`, `stage6_gate_failed=false`, failed gate metrics `0` | 최신 burndown status는 `nightly_gate_green`입니다. |
-| Nightly ranking signal | Green | `auc=1.000`, `pr_auc=1.000`, `ef1=2.000`, `bedroc=1.000`, `topk_hit_rate=0.500`; latest top-level reentry smoke/full pass | `2026-05-02_stage6_top_level_reentry` 기준 evidence입니다. |
+| Nightly ranking signal | Green | `auc=1.000`, `pr_auc=1.000`, `ef1=2.000`, `bedroc=1.000`, `topk_hit_rate=0.500`; latest GPU/HIP top-level smoke pass | `2026-05-13_goal_closure2` 기준 evidence입니다. |
 | Morton/neighbor parity | Green | Python/Rust 평균 neighbor count가 `36.7388`로 일치 | 로컬 accuracy gate support이며 broad external benchmark claim은 아닙니다. |
 
 Primary artifacts:
@@ -51,10 +53,10 @@ Primary artifacts:
 
 | Benchmark | 결과 | Metrics | Notes |
 | --- | --- | --- | --- |
-| T. cruzi PDE selected all-atom hard gate | Pass | selected `mean_min_distance_A=2.120`, threshold `<=2.500` | 현재 P0-C hard gate는 green입니다. |
-| Binding proxy | 현재 delivery gate 기준 pass | `binding_energy_proxy=-0.146`, threshold `<=-0.050` | selected all-atom gate를 support합니다. |
-| Claim/equivalence gate | Available | policy `allatom_equivalence_acceptance_representative_v1_2026-04-29` | claim/equivalence evidence가 review chain에 붙어 있습니다. |
-| Translation quality follow-up | 아직 not ready | score `68.1`, status `borderline`, blocker `binding_energy_proxy_too_weak_for_translation` | post-P0 quality follow-up 전용이며 현재 제한 delivery claim을 막는 blocker는 아닙니다. `claim_promotion_allowed=false` 유지; PDE translation은 `binding_energy_proxy` → `pose RMSD` → `backmapping` → `local minimization survival` 순서로 봅니다. |
+| T. cruzi PDE selected all-atom commercial gate | Green for selected all-atom gate | `commercial_hard_gate_pass_v2=true`, `hard_block_count=0`, `selected_allatom=pass` | atomized local-min overlay closes the previous six hard blocks. |
+| PDE atomized parameterization/local-min | Green | `row_count=7`, `parameterization_ready_count=7`, `protein_local_minimization_ready_count=7`, `validated_repair_count=7` | all seven atomized ligand rows retain explicit evidence and failed rows would remain blockers. |
+| Translation focus overlay | Pass | `translation_gate_focus_status=pass`, `focus_shortlist_tier=tier2_silver` | validated atomized rows are now the focus evidence for selected all-atom review. |
+| Expensive-lane selection | Validated repair lane | `recommended_next_expensive_lane=atomized_openmm_local_min_validated_repair` | next expensive work should build on validated repair evidence, not the old deferred lane. |
 
 Primary artifacts:
 
@@ -64,7 +66,7 @@ Primary artifacts:
 
 ## GPCR 100k Scale-Up Benchmarks
 
-일반 GPCR-family/commercial scale-up은 여전히 `claim_safe=false`입니다. 다만 현재 broad commercialization 전체의 최우선 blocker는 transporter negative placeholder row closure이고, 이 GPCR 섹션은 legacy GPCR-family/router 진단 lane입니다. ADRB2 pharmacophore 결과는 target-specific candidate evidence로만 해석해야 합니다.
+일반 GPCR-family/commercial scale-up은 여전히 `claim_safe=false`입니다. 현재 tracked commercialization accounting blocker는 닫혔지만, 이 GPCR 섹션은 legacy GPCR-family/router 진단 lane입니다. ADRB2 pharmacophore 결과는 target-specific candidate evidence로만 해석해야 합니다.
 현재 GPCR triage packet은 후보 `8`개를 모두 comparison-only로 유지하며, 그중 `7`개는 reject evidence이고 ADRB2 pharmacophore guarded-apply만 target-specific pass evidence입니다.
 최신 failure analysis는 raw ranking rows를 다시 읽어 `source_rows_available=true`로 계산되며, 기존 score column `7`개 중 어느 것도 core gate를 회복하지 못했습니다. 주요 root-cause tag는 `donor_prior_decoy_intrusion`, `weak_contact_prior_mismatch`, `affinity_hint_md_support_mismatch`입니다.
 
@@ -80,6 +82,7 @@ Primary artifacts:
 | `gpcr_core_structure_support_rescore_v1` guarded apply core 100k | Fail, recovery-band | `0.5928` | `0.1287` | `0.25` | `6` | `binding_score_composite_v7_residual_active` | comparison/reject evidence only; superseded by frozen non-ADRB2 rerun for coverage/family review |
 | frozen non-ADRB2 GPCR guarded 100k | Fail, coverage/family green | `0.2287` | `0.0019` | `0.10` | `9` | `binding_score_composite_v7` | coverage, leakage, and family-held-out pass; CI-low/top20 still block claim |
 | `gpcr_core_family_balanced_rescore_v1` frozen guarded 100k | Fail, recovery-band | `0.5186945103743427` | `0.1485815545422209` | `0.25` | `9` | `binding_score_composite_v7_residual_active` | r2 base evidence, not claim evidence; resumed run completed; HTR2A/OPRM1 recovered to target-rank 1, DRD2 still buried (`global_rank=18923`, `target_rank=5315`); strict gate green but operational PR-AUC/CI-low gate still blocks claim |
+| GPCR A1 independent repeat coverage-v1 100k | Fail, latest independent repeat | `0.1574900928179556` | `0.0013467899072483027` | `0.10` | `13` | `binding_score_composite_v7_residual_active` | stage2 completed `80000/80000` rows with no failed rows and GPU/Rust-HIP trajectory backend; operational gate fails on PR-AUC, PR CI-low, and top20, so claim promotion remains locked |
 | `gpcr_core_family_anchor_rescore_v2` shadow replay, historical 9-positive labels | Fail, shadow recovery signal | `0.5767474245351905` | `0.21066694653866244` | `0.25` | `9` | `binding_score_composite_v7_residual_shadow` | claim-locked replay only; improves DRD2 to `global_rank=8562` / `target_rank=2435` and shadow decoys-above-positive to `2434`, but CI-low remains below `0.45` |
 | `gpcr_core_family_anchor_rescore_v2` shadow replay, frozen-r2 matching labels | Fail, matching-label comparator | `0.4326129361306714` | `0.12342803469357462` | `0.25` | `12` | `binding_score_composite_v7_residual_shadow` | fair comparator for v6/v7 on frozen-r2 labels; still below claim threshold |
 | `gpcr_core_acidic_anchor_overcontact_prior_gate_v4` fixed-reference shadow replay | Fail, reject/no-op | `0.008231735935435774` | `0.0009935430341614215` | `0.00` | `9` | `binding_score_composite_v7_residual_shadow` | claim-locked shadow-only replay; active score locked and fixed-family-reference scaling loaded, but gate activation was `0/40000`, so this is reject evidence and not a claim or guarded-apply candidate |
@@ -134,6 +137,9 @@ Primary artifacts:
 - `runs/external_validation_2026-05-03_family_balanced_frozen_r2_set1_core_blind_gpcr_core_full_summary.json`
 - `runs/external_validation_2026-05-03_family_balanced_frozen_r2_set1_core_blind_gpcr_core_full_p0_n100000_r1_stage2_traj_summary.json`
 - `runs/external_validation_2026-05-03_family_balanced_frozen_r2_set1_core_blind_gpcr_core_full_p0_n100000_r1_stage5_ranking_summary.json`
+- `runs/external_validation_2026-05-13_gpcr_a1_independent_repeat_r2_set1_core_blind_gpcr_core_full_summary.json`
+- `runs/external_validation_2026-05-13_gpcr_a1_independent_repeat_r2_set1_core_blind_gpcr_core_full_p0_n100000_r1_stage2_traj_summary.json`
+- `runs/external_validation_2026-05-13_gpcr_a1_independent_repeat_r2_set1_core_blind_gpcr_core_full_p0_n100000_r1_stage5_ranking_summary.json`
 - `runs/gpcr_adrb2_pharmacophore_shadow_score_eval_current_summary.json`
 - `runs/gpcr_residual_prototype_spec_family_anchor_v2_shadow.json`
 - `runs/gpcr_family_anchor_v2_shadow_replay_eval_current.json`
@@ -198,6 +204,7 @@ Primary artifacts:
 | Suite status | Commercialization-ready for tracked restricted suite | suites `3`, commercialization-ready `3`, pending `0` | `runs/ligand_scaleup_suite_status_current.json` |
 | Pending suites | Clear | `[]` | `runs/ligand_scaleup_suite_status_current.json` |
 | KPI artifact coverage | Measured | `missing_artifact_count=0`, planning-ready `6/6` | `runs/ligand_scaleup_kpi_current.json` |
+| 100k test audit | Package-valid after raw cleanup | `valid_completed_test_run=true`, full-task hard-decoy evidence `6/6`, contract failures `1` tracked separately from execution validity | `runs/ligand_scaleup_100k_test_audit_current.json` |
 | Speed guardrail | Diagnostic for 1M | slowest task `ion_trpv1_chembl50_full`, measured end-to-end speedup `0.792x`; not a blocker for restricted 1M scale/accuracy evidence | `runs/ligand_scaleup_1m_benchmark_summary_current.json` |
 | Projected runtime | Measured, not target-ready | slowest projected `1M=16.22h`, `100k=97.31min` | `runs/ligand_scaleup_kpi_current.json` |
 
@@ -207,7 +214,7 @@ Primary artifacts:
 | --- | --- | --- | --- |
 | Core commercial lane score | 강하지만 full-platform ready는 아님 | `82.5` | 우선순위 판단용이며 broad commercial claim은 아닙니다. |
 | Family expansion surface | Tracked | `family_count=7` | claim 확장 전 family-held-out scorecard가 필요합니다. |
-| Transporter lane | 아직 not claim-safe | closure queue rows `6`, placeholder burndown rows `12`, external crosscheck negative rows `0`, AQP1 gap routes blocked `5/5`, AQP1 slot cover `0/3`, AQP1 exact-evidence request rows `3`, candidate harvest rows `40`, GLUT1 lower-bound candidates `5`, GLUT1 curation queue cover `3/3` | AQP1/GLUT1 stay outside the delivery claim; Life Science Research skill crosscheck confirms AQP1/GLUT1 target IDs, AQP1 now has an explicit gap matrix plus an exact-evidence acquisition request, and ChEMBL target-level harvest feeds a pre-apply GLUT1 curation queue. |
+| Transporter lane | 아직 not claim-safe | closure queue rows `6`, placeholder burndown rows `12`, external crosscheck negative rows `0`, AQP1 target-wide exact ChEMBL activities `12`, AQP1 functional quantitative rows `11`, AQP1 direct-binding rows `0`, AQP1 BindingDB affinities `0`, GLUT1 lower-bound candidates `5`, GLUT1 curation queue cover `3/3` | AQP1/GLUT1 stay outside the delivery claim; Life Science Research skill crosscheck confirms AQP1/GLUT1 target IDs and separates AQP1 functional IC50 evidence from direct binding kcal evidence. Keep AQP1 kcal as functional surrogate only, leave `replacement_reference_binding_kcal_mol` blank, and keep negative rows review-only. |
 | AQP1 first-wave quantitative readiness | Blocked | claim-safe kcal-ready count `0` | 포함 전 evidence closure가 필요합니다; `AqB013` exact-human-activity hold stays qualified and `replacement_reference_binding_kcal_mol` remains blank. |
 | CA2/PXR lanes | prep-only | CA2 core ledger `3/3` non-placeholder but replacement readiness `0/12`; PXR `8/14` ready-for-apply rows | CA2 still needs replacement workbook closure before config freeze, and PXR stays prep-only until quantitative provenance and `replacement_reference_binding_kcal_mol` close. |
 
@@ -218,6 +225,7 @@ Primary artifacts:
 - `runs/transporter_external_evidence_crosscheck_current.json`
 - `runs/aqp1_negative_evidence_gap_matrix_current.json`
 - `runs/aqp1_negative_evidence_request_packet_current.json`
+- `runs/aqp1_negative_evidence_intake_gate_current.json`
 - `runs/transporter_negative_candidate_harvest_current.json`
 - `runs/transporter_negative_candidate_curation_queue_current.json`
 - `runs/family_readiness_heatmap_current.json`
@@ -235,9 +243,11 @@ python3 tools/build_wetlab_selected_allatom_gate_burndown_packet.py
 python3 tools/build_transporter_external_evidence_crosscheck.py
 python3 tools/build_aqp1_negative_evidence_gap_matrix.py
 python3 tools/build_aqp1_negative_evidence_request_packet.py
+python3 tools/build_aqp1_negative_evidence_intake_gate.py
 python3 tools/build_transporter_negative_candidate_harvest.py
 python3 tools/build_transporter_negative_candidate_curation_queue.py
 python3 tools/build_ligand_scaleup_kpi_table.py
+python3 tools/build_ligand_scaleup_100k_test_audit.py
 python3 tools/build_ligand_scaleup_benchmark_summary.py
 python3 tools/build_ligand_scaleup_suite_status.py
 python3 tools/build_gpcr_100k_failure_analysis.py

@@ -41,8 +41,14 @@ def _assert_selected_allatom_commercial_v2_translation_contract(
     packet_summary = _load_current_packet_summary(filename)
     assert packet_summary["target_id"] == expected_target_id
     assert packet_summary["commercial_schema_version_v2"] == "wetlab_commercial_grade_v2"
-    assert packet_summary["commercial_hard_gate_pass_v2"] is True
-    assert packet_summary["commercial_hard_gate_failed_metrics_v2"] == []
+    expected_pass = expected_translation_status == "pass"
+    assert packet_summary["commercial_hard_gate_pass_v2"] is expected_pass
+    if expected_pass:
+        assert packet_summary["commercial_hard_gate_failed_metrics_v2"] == []
+    else:
+        assert "translation_gate_focus_status" in packet_summary["commercial_hard_gate_failed_metrics_v2"]
+        assert "focus_shortlist_tier" in packet_summary["commercial_hard_gate_failed_metrics_v2"]
+        assert "recommended_next_expensive_lane" in packet_summary["commercial_hard_gate_failed_metrics_v2"]
     assert packet_summary["commercial_replicate_count_v2"] == 3
     assert packet_summary["commercial_mean_min_distance_iqr_A_v2"] == 0
     assert round(float(packet_summary["commercial_overall_score_v2"]), 1) >= 50.0
@@ -465,9 +471,9 @@ def test_build_wetlab_master_handoff_dashboard_surfaces_selected_allatom_v2_tran
     packet_summary = _assert_selected_allatom_commercial_v2_translation_contract(
         "wetlab_tcruzi_pde_allatom_review_packet_current.json",
         expected_target_id="T. cruzi PDE",
-        expected_translation_status="borderline",
-        expected_shortlist_tier="defer",
-        expected_recommended_lane="defer_expensive_lane",
+        expected_translation_status="pass",
+        expected_shortlist_tier="tier2_silver",
+        expected_recommended_lane="atomized_openmm_local_min_validated_repair",
     )
     (runs / "wetlab_tcruzi_pde_allatom_review_packet_current.json").write_text(
         json.dumps({"summary": packet_summary}),
@@ -475,11 +481,9 @@ def test_build_wetlab_master_handoff_dashboard_surfaces_selected_allatom_v2_tran
     )
 
     selected_next_step = (
-        "Review the promoted PDE pseudo all-atom top-4 packet manually only, keep the default lane closed, "
-        f"and do not treat this rescue-only packet as wetlab-ready because commercial grade v2 is "
-        f"{packet_summary['commercial_overall_score_v2']:.1f}, translation gate focus is "
-        f"{packet_summary['translation_gate_focus_status']}, shortlist tier is {packet_summary['focus_shortlist_tier']}, "
-        f"and recommended next lane is {packet_summary['recommended_next_expensive_lane']}."
+        "Selected all-atom delivery P0 is green; broader/default wetlab lane remains closed; "
+        f"translation gate remains {packet_summary['translation_gate_focus_status']}; "
+        f"next expensive lane {packet_summary['recommended_next_expensive_lane']}."
     )
 
     final_campaign_summary = {"summary": {"status": "wetlab_final_campaign_summary_ready", "campaign_terminal_state": "complete"}}
@@ -569,20 +573,16 @@ def test_build_wetlab_master_handoff_dashboard_surfaces_selected_allatom_v2_tran
         "recommended_next_expensive_lane_reason"
     ]
     assert packet_summary["recommended_next_expensive_lane_reason"] in summary["selected_allatom_translation_human_summary"]
-    assert summary["selected_allatom_next_required_step"] == (
-        "Selected all-atom delivery P0 is green; broader/default wetlab lane remains closed; "
-        "translation gate remains borderline; expensive lane deferred."
-    )
-    assert selected_next_step not in summary["selected_allatom_next_required_step"]
+    assert summary["selected_allatom_next_required_step"] == selected_next_step
     assert summary["next_required_step"] == summary["selected_allatom_next_required_step"]
     assert summary["selected_allatom_actionability_status"] == "ready"
     expected_claim_mode = "semi_hard"
     assert summary["selected_allatom_actionability_claim_requirement_mode"] == expected_claim_mode
-    assert summary["selected_allatom_actionability_next_expensive_lane"] == "defer_expensive_lane"
+    assert summary["selected_allatom_actionability_next_expensive_lane"] == "atomized_openmm_local_min_validated_repair"
     assert summary["selected_allatom_raw_claim_requirement_mode"] == "semi_hard"
     assert summary["selected_allatom_raw_claim_required_for_final_wetlab"] is True
-    assert summary["selected_allatom_effective_actionability_status"] == summary["selected_allatom_actionability_status"]
-    assert summary["selected_allatom_effective_actionability_claim_requirement_mode"] == expected_claim_mode
+    assert summary["selected_allatom_effective_actionability_status"] == "ready"
+    assert summary["selected_allatom_effective_actionability_claim_requirement_mode"] == "semi_hard"
     assert summary["selected_allatom_effective_actionability_claim_requirement_status"] == "satisfied"
     assert summary["selected_allatom_effective_blocking_order"] == "clear"
     assert summary["selected_allatom_effective_primary_blocking_domain"] == "soft_guidance"
@@ -592,19 +592,16 @@ def test_build_wetlab_master_handoff_dashboard_surfaces_selected_allatom_v2_tran
     assert "recompute_mean_min_distance_iqr_A" not in summary["selected_allatom_action_recipe_codes"]
     assert "resolve_claim_equivalence_gate" in summary["selected_allatom_action_recipe_codes"]
     assert "recompute_claim_gate_required_unavailable" not in summary["selected_allatom_action_recipe_codes"]
-    assert "defer_expensive_lane" in summary["selected_allatom_action_recipe_codes"]
+    assert "atomized_openmm_local_min_validated_repair" in summary["selected_allatom_action_recipe_codes"]
     assert (
         f"blocking order {summary['selected_allatom_effective_blocking_order']}"
         in summary["selected_allatom_claim_actionability_split_summary"]
     )
-    assert summary["selected_allatom_actionability_required_calculations_text"] in {
-        "",
-        "strengthen_three_bead_binding_energy",
-    }
+    assert summary["selected_allatom_actionability_required_calculations_text"] == ""
     assert "Actionability:" in summary["selected_allatom_human_summary"]
-    assert "translation gate remains borderline" in summary["selected_allatom_next_required_step"]
+    assert "translation gate remains pass" in summary["selected_allatom_next_required_step"]
     assert "broader/default wetlab lane remains closed" in summary["selected_allatom_next_required_step"]
-    assert "expensive lane deferred" in summary["selected_allatom_next_required_step"]
+    assert "atomized_openmm_local_min_validated_repair" in summary["selected_allatom_next_required_step"]
     assert summary["selected_allatom_best_mean_min_distance_A"] == packet_summary["best_mean_min_distance_A"]
     assert summary["selected_allatom_metric_source"] == "review_packet_summary.best_mean_min_distance_A"
     assert summary["selected_allatom_visual_bundle_ready"] is True
@@ -618,9 +615,9 @@ def test_build_wetlab_master_handoff_dashboard_surfaces_selected_allatom_v2_tran
 
     focus_row = next(row for row in payload["rows"] if row["surface"] == "broad_screen_selected_allatom_focus")
     assert "commercial grade v2" in focus_row["one_line_summary"].lower()
-    assert "translation gate remains borderline" in focus_row["one_line_summary"]
+    assert "translation gate remains pass" in focus_row["one_line_summary"]
     assert "broader/default wetlab lane remains closed" in focus_row["one_line_summary"]
-    assert "expensive lane deferred" in focus_row["one_line_summary"]
+    assert "atomized_openmm_local_min_validated_repair" in focus_row["one_line_summary"]
     assert packet_summary["recommended_next_expensive_lane_reason"] in focus_row["one_line_summary"]
     assert "Visual: PDE focus visuals ready for review." in focus_row["one_line_summary"]
     assert "Media: dashboard ready | figure ready | movie scripts 0/4 | movie mp4 0/4 | binding-event clips 0/4." in focus_row["one_line_summary"]

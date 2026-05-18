@@ -90,6 +90,34 @@ def _anchor_indices(native_pdb: str, protein_atom_count: int) -> list[int]:
     ]
 
 
+def _pdb_protein_atom_coords(native_pdb: str) -> np.ndarray:
+    if not _text(native_pdb):
+        return np.zeros((0, 3), dtype=np.float32)
+    pdb_path = _resolve(native_pdb)
+    if not pdb_path.exists():
+        return np.zeros((0, 3), dtype=np.float32)
+    coords: list[list[float]] = []
+    with pdb_path.open("r", encoding="utf-8", errors="ignore") as fh:
+        for line in fh:
+            if not line.startswith("ATOM"):
+                continue
+            try:
+                coords.append([float(line[30:38]), float(line[38:46]), float(line[46:54])])
+            except Exception:
+                continue
+    return np.asarray(coords, dtype=np.float32) if coords else np.zeros((0, 3), dtype=np.float32)
+
+
+def _static_anchor_coords(native_pdb: str) -> np.ndarray:
+    template = _parse_pdb_anchor_template(native_pdb) if _text(native_pdb) else {}
+    raw_indices = [int(idx) for idx in template.get("anchor_atom_indices", [])] if template.get("available") else []
+    protein_coords = _pdb_protein_atom_coords(native_pdb)
+    if not raw_indices or protein_coords.size <= 0:
+        return np.zeros((0, 3), dtype=np.float32)
+    valid = [idx for idx in raw_indices if 0 <= idx < int(protein_coords.shape[0])]
+    return np.asarray(protein_coords[valid, :], dtype=np.float32) if valid else np.zeros((0, 3), dtype=np.float32)
+
+
 def _cache_row(row: dict[str, Any]) -> dict[str, Any]:
     out = _base_row(row)
     trajectory_npz = _text(row.get("trajectory_npz"))
@@ -102,22 +130,35 @@ def _cache_row(row: dict[str, Any]) -> dict[str, Any]:
     try:
         with np.load(str(npz_path), allow_pickle=False) as npz:
             ligand_frames = np.asarray(npz["ligand_frames"], dtype=float)
-            protein_atom_frames = np.asarray(npz["protein_atom_frames"], dtype=float)
+            protein_atom_frames = (
+                np.asarray(npz["protein_atom_frames"], dtype=float)
+                if "protein_atom_frames" in npz.files
+                else np.zeros((0, 0, 3), dtype=float)
+            )
+            static_anchor = (
+                np.asarray(npz["ligand_backmapping_static_anchor_coords"], dtype=float)
+                if "ligand_backmapping_static_anchor_coords" in npz.files
+                else _static_anchor_coords(native_pdb)
+            )
             basic_indices = np.asarray(npz["ligand_basic_amine_atom_indices"], dtype=int)
     except Exception as exc:
         return {**out, "class_a_cationic_center_reason": f"trajectory_npz_unreadable:{type(exc).__name__}"}
     if ligand_frames.ndim != 3 or ligand_frames.shape[0] <= 0 or ligand_frames.shape[2] != 3:
         return {**out, "class_a_cationic_center_reason": "ligand_frames_invalid"}
-    if protein_atom_frames.ndim != 3 or protein_atom_frames.shape[0] <= 0 or protein_atom_frames.shape[2] != 3:
-        return {**out, "class_a_cationic_center_reason": "protein_atom_frames_invalid"}
     valid_basic = [int(idx) for idx in basic_indices.tolist() if 0 <= int(idx) < ligand_frames.shape[1]]
     if not valid_basic:
         return {**out, "class_a_cationic_center_reason": "basic_amine_center_missing"}
-    anchors = _anchor_indices(native_pdb, int(protein_atom_frames.shape[1]))
-    if not anchors:
+    anchors = _anchor_indices(native_pdb, int(protein_atom_frames.shape[1])) if protein_atom_frames.ndim == 3 else []
+    if anchors and protein_atom_frames.ndim == 3 and protein_atom_frames.shape[0] > 0 and protein_atom_frames.shape[2] == 3:
+        frame_count = min(int(ligand_frames.shape[0]), int(protein_atom_frames.shape[0]))
+        anchor_center = np.mean(protein_atom_frames[:frame_count, anchors, :], axis=1)
+        anchor_count = int(len(anchors))
+    elif static_anchor.ndim == 2 and static_anchor.shape[0] > 0 and static_anchor.shape[1] == 3:
+        frame_count = int(ligand_frames.shape[0])
+        anchor_center = np.repeat(np.mean(static_anchor, axis=0)[None, :], frame_count, axis=0)
+        anchor_count = int(static_anchor.shape[0])
+    else:
         return {**out, "class_a_cationic_center_reason": "acidic_anchor_missing"}
-    frame_count = min(int(ligand_frames.shape[0]), int(protein_atom_frames.shape[0]))
-    anchor_center = np.mean(protein_atom_frames[:frame_count, anchors, :], axis=1)
     basic_xyz = ligand_frames[:frame_count, valid_basic, :]
     distances_by_basic = np.linalg.norm(basic_xyz - anchor_center[:, None, :], axis=2)
     distances = np.min(distances_by_basic, axis=1)
@@ -128,7 +169,7 @@ def _cache_row(row: dict[str, Any]) -> dict[str, Any]:
         "class_a_cationic_center_basis": "closest_basic_amine_atom_to_acidic_anchor_center",
         "class_a_cationic_center_frame_count": int(frame_count),
         "class_a_cationic_center_basic_atom_count": int(len(valid_basic)),
-        "class_a_cationic_center_anchor_atom_count": int(len(anchors)),
+        "class_a_cationic_center_anchor_atom_count": int(anchor_count),
         "class_a_cationic_center_min_distance_A": float(np.min(distances)),
         "class_a_cationic_center_p10_distance_A": float(np.percentile(distances, 10)),
         "class_a_cationic_center_mean_distance_A": float(np.mean(distances)),

@@ -88,3 +88,60 @@ def test_run_set_reruns_failed_ligand_task_when_resuming(tmp_path: Path, monkeyp
     assert result["pass"] is True
     assert len(calls) == 1
     assert calls[0][1].endswith("tools/run_ligand_stress_validation.py")
+
+
+def test_extract_ligand_result_finds_ranking_summary_from_stage5_cmd(tmp_path: Path) -> None:
+    ranking_summary = tmp_path / "run_p0_n100000_r1_stage5_ranking_summary.json"
+    integrity_summary = tmp_path / "run_p0_n100000_r1_stage45_integrity_summary.json"
+    pipeline_summary = tmp_path / "run_p0_n100000_r1_summary.json"
+    stress_summary = tmp_path / "run_summary.json"
+    ranking_summary.write_text('{"pass": true}', encoding="utf-8")
+    integrity_summary.write_text('{"pass": true}', encoding="utf-8")
+    pipeline_summary.write_text(
+        """
+{
+  "stages": {
+    "stage5_ranking_eval": {
+      "ok": true,
+      "cmd": ["python3", "tools/evaluate_ligand_ranking_metrics.py", "--out-json", "__RANKING__"]
+    },
+    "stage45_integrity": {
+      "ok": true,
+      "cmd": ["python3", "tools/validate_ligand_eval_integrity.py", "--out-json", "__INTEGRITY__"]
+    },
+    "stage6_operational_gate": {
+      "ranking_score_col_used": "score",
+      "ranking_probability_score_col_used": "score"
+    }
+  }
+}
+""".replace("__RANKING__", str(ranking_summary)).replace("__INTEGRITY__", str(integrity_summary)),
+        encoding="utf-8",
+    )
+    stress_summary.write_text(
+        """
+{
+  "pass": false,
+  "runs": [
+    {
+      "summary_json": "__PIPELINE__",
+      "ranking_unique_auc": 0.9,
+      "ranking_pr_auc": 0.1,
+      "ranking_ef1": 30.0,
+      "ranking_bedroc": 1.0,
+      "operational_gate_pass": false,
+      "strict_gate_pass": true
+    }
+  ],
+  "artifacts": {}
+}
+""".replace("__PIPELINE__", str(pipeline_summary)),
+        encoding="utf-8",
+    )
+
+    result = mod._extract_ligand_result(stress_summary)
+
+    assert result["ranking_summary_json"] == str(ranking_summary.resolve())
+    assert result["integrity_summary_json"] == str(integrity_summary.resolve())
+    assert result["metrics"]["ranking_pass"] is True
+    assert result["metrics"]["integrity_pass"] is True

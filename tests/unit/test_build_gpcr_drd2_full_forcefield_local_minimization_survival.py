@@ -51,6 +51,8 @@ def test_build_survival_packet_records_claim_grade_pass(monkeypatch, tmp_path: P
     row = payload["rows"][0]
     assert summary["status"] == "full_forcefield_local_minimization_survival_pass"
     assert summary["hard_decoy_rebuild_evidence_allowed"] is True
+    assert row["target"] == "CHEMBL217_DRD2_HUMAN"
+    assert row["ligand_id"] == "CHEMBL301265"
     assert row["survival_fraction"] == 1.0
     assert row["survival_claim_scope"] == "full_protein_ligand_forcefield_restrained_receptor"
     assert payload["claim_boundary"]["claim_promotion_allowed"] is False

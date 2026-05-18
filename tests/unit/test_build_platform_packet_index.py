@@ -27,15 +27,15 @@ def test_build_platform_packet_index_outputs_expected_navigation() -> None:
 
     assert summary["packet_count"] == 11
     assert summary["core_commercial_lane_score"] == 82.5
-    assert summary["highest_gap_family"] == "transporter"
+    assert summary["highest_gap_family"] == "none_tracked_commercialization_gap"
     assert summary["manual_review_count"] == 1
     assert summary["manual_review_target_count"] == 2
-    assert summary["partial_commit_confirm_now_count"] == 4
+    assert summary["partial_commit_confirm_now_count"] == 8
     assert summary["transporter_manual_review_seed_row_count"] == 6
     assert summary["idp_commercial_pretest_target_count"] == 7
     assert summary["transporter_manual_review_binder_pending_count"] == 0
     assert summary["operator_evidence_closure_console_row_count"] == 20
-    assert summary["family_packet_count"] == 6
+    assert summary["family_packet_count"] == 27
     assert summary["family_quicklink_row_count"] == 8
 
     row_map = {row["packet_key"]: row for row in rows}
@@ -43,7 +43,7 @@ def test_build_platform_packet_index_outputs_expected_navigation() -> None:
     assert row_map["family_packet_catalog"]["artifact_path"] == "runs/family_packet_catalog_current.md"
     assert row_map["family_operator_quicklink_board"]["artifact_path"] == "runs/family_operator_quicklink_board_current.md"
     assert row_map["partial_authoritative_commit_launchboard"]["artifact_path"] == "runs/partial_authoritative_commit_launchboard_current.md"
-    assert row_map["partial_authoritative_commit_launchboard"]["primary_signal"] == "confirm_now=4"
+    assert row_map["partial_authoritative_commit_launchboard"]["primary_signal"] == "confirm_now=8"
     assert row_map["transporter_manual_review_quickstart"]["artifact_path"] == "runs/transporter_manual_review_quickstart_packet_current.md"
     assert row_map["transporter_manual_review_quickstart"]["primary_signal"] == "seed_rows=6"
     assert row_map["idp_commercial_pretest"]["artifact_path"] == "runs/idp_commercial_pretest_decision_current.md"

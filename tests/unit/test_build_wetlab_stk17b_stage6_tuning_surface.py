@@ -82,7 +82,7 @@ def test_build_wetlab_stk17b_stage6_tuning_surface_summarizes_retry_band() -> No
     assert success_row["gate_threshold_A"] == 4.5
     assert hold_row["gate_threshold_A"] == 4.5
     assert success_row["summary_json"].endswith("17_of_20/throughput_run_gate45_summary.json")
-    assert hold_row["summary_json"].endswith("18_of_20/throughput_run_summary.json")
+    assert hold_row["summary_json"].endswith("18_of_20/throughput_run_gate45_summary.json")
 
     candidate_rows = [row for row in payload["rows"] if row.get("row_kind") == "threshold_candidate"]
     assert len(candidate_rows) == 3

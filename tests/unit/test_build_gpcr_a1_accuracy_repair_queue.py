@@ -28,6 +28,7 @@ def test_default_pose_gap_uses_latest_v16_adaptive_packet() -> None:
         == "runs/gpcr_drd2_weakbase_false_support_shadow_replay_summary_current.json"
     )
     assert mod.DEFAULT_SHADOW_CLAIM_REVIEW_JSON == "runs/gpcr_guarded_shadow_claim_review_current.json"
+    assert "gpcr_a1_independent_repeat_r2" in mod.DEFAULT_RANKING_JSON
 
 
 def _write_json(path: Path, payload: dict) -> None:

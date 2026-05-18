@@ -114,6 +114,47 @@ def test_build_keep_green_regression_trend_packet_uses_lane_history_for_non_nigh
     assert rows["refresh"]["status"] == "keep_green_history_ready"
 
 
+def test_keep_green_history_accepts_tagged_smoke_top_level_and_skips_stage_children(
+    tmp_path: Path, monkeypatch
+) -> None:
+    runs = tmp_path / "runs"
+    runs.mkdir()
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    (runs / "ligand_htvs_nightly_2026-05-13_goal_closure_summary.json").write_text(
+        json.dumps(
+            {
+                "generated_at_local": "2026-05-13T22:50:53",
+                "run_scope": "smoke",
+                "pass": True,
+                "service_result": {"status": "ok", "error_code": "HTVS_OK"},
+                "stages": {
+                    "stage2_trajectory_generation": {"pass": True},
+                    "stage6_operational_gate": {"pass": True},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    (runs / "ligand_htvs_nightly_2026-05-13_goal_closure_stage5_ranking_summary.json").write_text(
+        json.dumps(
+            {
+                "generated_at_local": "2026-05-13T22:50:53",
+                "pass": True,
+                "metrics": {"mean_min_distance_A": 2.26},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rows = mod._load_nightly_history_from_runs(limit=10)
+
+    assert [row["artifact"] for row in rows] == [
+        "runs/ligand_htvs_nightly_2026-05-13_goal_closure_summary.json"
+    ]
+    assert rows[0]["run_label"] == "2026-05-13_goal_closure"
+    assert rows[0]["pass"] is True
+
+
 def test_build_keep_green_regression_trend_packet_cli(tmp_path: Path) -> None:
     out_json = tmp_path / "keep_green_regression_trend_packet.json"
     out_csv = tmp_path / "keep_green_regression_trend_packet.csv"
@@ -138,6 +179,8 @@ def test_build_keep_green_regression_trend_packet_cli(tmp_path: Path) -> None:
     assert payload["summary"]["packet_artifact"] == "runs/keep_green_regression_trend_packet_current.md"
     assert payload["summary"]["lane_count"] == 4
     assert payload["summary"]["all_current_green"] is True
+    assert payload["summary"]["wetlab_current_green"] is True
+    assert payload["summary"]["commercial_trend_status"] == "baseline_green_needs_repeated_history"
     assert payload["rows"][0]["lane_id"] == "nightly"
     assert out_csv.exists()
     assert out_md.exists()

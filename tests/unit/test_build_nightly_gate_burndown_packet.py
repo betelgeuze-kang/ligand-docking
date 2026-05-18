@@ -564,6 +564,7 @@ def test_discovers_suffixed_top_level_reentry_summary_without_child_summaries(tm
     full_child = runs / "ligand_htvs_nightly_2026-04-26_stage6_top_level_reentry_full_summary.json"
     attempt_child = runs / "ligand_htvs_nightly_2026-04-26_stage6_top_level_reentry_attempt1_summary.json"
     stage_child = runs / "ligand_htvs_nightly_2026-04-26_smoke_stage3_summary.json"
+    tagged_gpu_rerun = runs / "ligand_htvs_nightly_2026-04-26_goal_closure_summary.json"
 
     _write_json(
         old_top,
@@ -597,9 +598,24 @@ def test_discovers_suffixed_top_level_reentry_summary_without_child_summaries(tm
                 "stages": {"stage6_operational_gate": {"pass": True}},
             },
         )
+    _write_json(
+        tagged_gpu_rerun,
+        {
+            "generated_at_local": "2026-04-26T05:15:00",
+            "run_scope": "smoke",
+            "pass": True,
+            "failed_stage": None,
+            "service_result": {"status": "ok", "error_code": "HTVS_OK"},
+            "stages": {
+                "stage2_trajectory_generation": {"pass": True},
+                "stage6_operational_gate": {"pass": True},
+            },
+        },
+    )
 
-    assert mod._discover_latest_top_nightly() == strict_reentry
+    assert mod._discover_latest_top_nightly() == tagged_gpu_rerun
     assert [path.name for path in mod._recent_top_nightly_paths(limit=5)] == [
         old_top.name,
         strict_reentry.name,
+        tagged_gpu_rerun.name,
     ]

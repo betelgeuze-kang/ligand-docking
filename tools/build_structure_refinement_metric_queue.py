@@ -92,6 +92,17 @@ def _summary(payload: dict[str, Any]) -> dict[str, Any]:
     return summary if isinstance(summary, dict) else {}
 
 
+def _combined_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    structured = payload.get("structured", {})
+    summary = payload.get("summary", {})
+    combined: dict[str, Any] = {}
+    if isinstance(structured, dict):
+        combined.update(structured)
+    if isinstance(summary, dict):
+        combined.update(summary)
+    return combined
+
+
 def _scorecard_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     rows = payload.get("rows", [])
     return rows if isinstance(rows, list) else []
@@ -113,7 +124,7 @@ def _source_summary_by_target(
         "Cathepsin K": cathepsin_runner_json,
     }
     return {
-        target: {"artifact": _artifact(path), "summary": _summary(_read_json(path))}
+        target: {"artifact": _artifact(path), "summary": _combined_summary(_read_json(path))}
         for target, path in specs.items()
     }
 
@@ -141,7 +152,11 @@ def _missing_metric_families(scorecard_row: dict[str, Any]) -> list[str]:
         "tm_score": bool(scorecard_row.get("tm_score_available")),
         "gdt": bool(scorecard_row.get("gdt_available")),
         "lddt_or_molprobity": bool(scorecard_row.get("lddt_or_molprobity_available")),
-        "dockq_or_interface": bool(scorecard_row.get("dockq_or_interface_metric_available")),
+        "dockq_or_interface": bool(
+            scorecard_row.get("dockq_or_interface_metric_available")
+            or scorecard_row.get("dockq_or_interface_not_applicable")
+            or scorecard_row.get("dockq_or_interface_resolved")
+        ),
     }
     return [family for family in METRIC_FAMILIES if not checks[family]]
 
@@ -200,14 +215,16 @@ def _metric_queue_rows(
                 }
             )
             priority += 1
-        if "dockq_or_interface" in missing:
+        interface_not_applicable = bool(scorecard_row.get("dockq_or_interface_not_applicable"))
+        if "dockq_or_interface" in missing or interface_not_applicable:
+            interface_status = "not_applicable_provenance" if interface_not_applicable and "dockq_or_interface" not in missing else "open"
             rows.append(
                 {
                     "priority": priority,
                     "queue_id": f"{target}::interface_metrics",
                     "metric_task": "interface_metrics",
                     "missing_metric_families": "dockq_or_interface",
-                    "status": "open",
+                    "status": interface_status,
                     "next_action": (
                         "Compute DockQ or interface RMSD only if a biologically meaningful complex/interface "
                         "claim is in scope; otherwise record an explicit non-applicable interface provenance row."

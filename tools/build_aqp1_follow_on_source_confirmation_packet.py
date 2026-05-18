@@ -247,18 +247,38 @@ def build_payload(
             provenance_row.get("state_change_potential")
         )
         review_bucket = _text(blocker_row.get("review_bucket")) or _text(follow_on_row.get("review_bucket"))
+        if not review_bucket:
+            if public_provenance_status == "exact_human_aqp1_quantitative_activity_present_nonbinding":
+                review_bucket = "defer_exact_human_activity_nonbinding"
+            elif public_provenance_status == "pubchem_resolved_chembl_target_pair_absent":
+                review_bucket = "defer_pending_target_specific_evidence"
         promotion_blocker = _text(blocker_row.get("promotion_blocker")) or _text(
             follow_on_row.get("promotion_blocker")
         )
+        if not promotion_blocker:
+            if public_provenance_status == "exact_human_aqp1_quantitative_activity_present_nonbinding":
+                promotion_blocker = "no_claim_safe_aqp1_binding_kcal_curated"
+            elif public_provenance_status == "pubchem_resolved_chembl_target_pair_absent":
+                promotion_blocker = "no_local_aqp1_binder_evidence_curated"
         next_required_action = _text(blocker_row.get("next_required_action")) or _text(
             follow_on_row.get("next_required_action")
         )
+        if not next_required_action:
+            if public_provenance_status == "exact_human_aqp1_quantitative_activity_present_nonbinding":
+                next_required_action = "carry_exact_human_activity_provenance_keep_kcal_blank"
+            elif public_provenance_status == "pubchem_resolved_chembl_target_pair_absent":
+                next_required_action = "manual_curated_search_or_defer"
         claim_safe_binding_kcal_ready = _text(blocker_row.get("claim_safe_binding_kcal_ready")) or _text(
             provenance_row.get("claim_safe_binding_kcal_ready")
         )
         blocker_reason = _text(blocker_row.get("blocker_reason"))
-        blocker_id = _text(blocker_row.get("blocker_id"))
+        blocker_id = _text(blocker_row.get("blocker_id")) or promotion_blocker
         blocker_scope = _text(blocker_row.get("blocker_scope"))
+        if not blocker_scope:
+            if public_provenance_status == "exact_human_aqp1_quantitative_activity_present_nonbinding":
+                blocker_scope = "claim_safe_quantitative_binding"
+            elif public_provenance_status == "pubchem_resolved_chembl_target_pair_absent":
+                blocker_scope = "local_binder_evidence"
         chembl_activity_record_count = _int(blocker_row.get("chembl_activity_record_count")) or _int(
             provenance_row.get("chembl_activity_record_count")
         )

@@ -46,7 +46,10 @@ def _check_kfd_access(path: str = "/dev/kfd"):
 
 
 def _select_kernel(module: Any):
-    """안정 경로 커널만 선택합니다. 실험적 fused cell-list 토글 제거됨."""
+    """Select the fastest guarded kernel exposed by the loaded extension."""
+    if os.getenv("RUST_HIP_USE_FUSED_CELL", "").strip().lower() in {"1", "true", "yes", "on"}:
+        if hasattr(module, "compute_nonbonded_celllist_gpu"):
+            return "compute_nonbonded_celllist_gpu"
     for name in _KERNEL_CANDIDATES:
         if hasattr(module, name):
             return name

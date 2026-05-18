@@ -62,6 +62,38 @@ def test_build_commercialization_status_report() -> None:
     assert any("GLUT1 staging surfaces" in item for item in summary["fix_plan"])
 
 
+def test_delivery_ready_is_not_effective_when_engine_queue_is_blocked() -> None:
+    payload = mod.build_payload(
+        {"summary": {"core_commercial_lane_score": 80.0, "all_category_expansion_score": 60.0}},
+        {"summary": {"highest_gap_family": "transporter"}},
+        {"summary": {}},
+        {"summary": {"placeholder_driven_rows": 0, "reducible_now_placeholder_rows": 0}},
+        local_engine_queue_payload={
+            "summary": {
+                "queue_clear": False,
+                "blocked_count": 1,
+                "top_priority_id": "wetlab_execution_readiness",
+                "top_priority_status": "blocked",
+            }
+        },
+        local_delivery_verdict_payload={
+            "summary": {
+                "delivery_ready": True,
+                "verdict": "delivery_ready",
+                "p0_blocker_count": 0,
+                "hard_blocker_count": 0,
+                "status_line": "delivery-ready verdict may be issued for the restricted local scope.",
+            }
+        },
+    )
+
+    summary = payload["summary"]
+    assert summary["local_delivery_ready"] is True
+    assert summary["effective_delivery_ready"] is False
+    assert summary["local_delivery_queue_mismatch"] is True
+    assert "stale or inconsistent" in summary["effective_delivery_status_line"]
+
+
 def test_build_commercialization_status_report_handles_closed_reducible_slice() -> None:
     payload = mod.build_payload(
         {
@@ -803,6 +835,73 @@ def test_build_commercialization_status_report_exposes_aqp1_negative_evidence_re
     assert any("runs/aqp1_negative_evidence_request_packet_current.md" in item for item in summary["artifacts"])
 
 
+def test_build_commercialization_status_report_exposes_aqp1_negative_evidence_intake_gate() -> None:
+    payload = mod.build_payload(
+        {
+            "summary": {
+                "core_commercial_lane_score": 82.5,
+                "all_category_expansion_score": 68.9,
+                "strongest_ready_families": "kinase, ion_channel, gpcr",
+                "aqp1_first_wave_primary_focus_ligand": "bacopaside II",
+                "aqp1_exact_human_reference_ligand": "AqB013",
+                "aqp1_first_wave_follow_on_lane_label": "core_binder_02/03",
+                "glut1_second_wave_source_confirmation_packet_primary_focus_ligand": "cytochalasin B",
+            },
+            "rows": [{"family": "transporter", "primary_blocker": "negative evidence", "claim_safe_scope": "local-only"}],
+        },
+        {"summary": {"highest_gap_family": "transporter"}},
+        {"summary": {"next_required_step": "Keep transporter negative evidence parked."}},
+        {"summary": {"placeholder_driven_rows": 6, "reducible_now_placeholder_rows": 0, "evidence_blocked_placeholder_rows": 6}},
+        aqp1_negative_evidence_intake_gate_payload={
+            "summary": {
+                "intake_gate_ready": True,
+                "packet_artifact": "runs/aqp1_negative_evidence_intake_gate_current.md",
+                "request_artifact": "runs/aqp1_negative_evidence_request_packet_current.md",
+                "template_csv_artifact": "runs/aqp1_negative_evidence_intake_template_current.csv",
+                "intake_csv_artifact": "runs/aqp1_negative_evidence_intake_current.csv",
+                "intake_status": "awaiting_exact_aqp1_quantitative_negative_evidence_rows",
+                "intake_row_count": 3,
+                "intake_row_with_data_count": 0,
+                "valid_intake_row_count": 0,
+                "required_assignable_negative_row_count": 3,
+                "missing_valid_intake_row_count": 3,
+                "validation_error_row_count": 3,
+                "review_ready_row_count": 0,
+                "intake_gate_complete": False,
+                "split_reference_meta_update_required": False,
+                "authoritative_negative_apply_allowed_count": 0,
+                "negative_evidence_closure_allowed": False,
+                "claim_promotion_allowed": False,
+            }
+        },
+    )
+
+    summary = payload["summary"]
+    assert summary["aqp1_negative_evidence_intake_gate_ready"] is True
+    assert summary["aqp1_negative_evidence_intake_gate_artifact"] == "runs/aqp1_negative_evidence_intake_gate_current.md"
+    assert summary["aqp1_negative_evidence_intake_gate_request_artifact"] == "runs/aqp1_negative_evidence_request_packet_current.md"
+    assert summary["aqp1_negative_evidence_intake_gate_template_artifact"] == "runs/aqp1_negative_evidence_intake_template_current.csv"
+    assert summary["aqp1_negative_evidence_intake_gate_intake_artifact"] == "runs/aqp1_negative_evidence_intake_current.csv"
+    assert summary["aqp1_negative_evidence_intake_gate_status"] == "awaiting_exact_aqp1_quantitative_negative_evidence_rows"
+    assert summary["aqp1_negative_evidence_intake_gate_row_count"] == 3
+    assert summary["aqp1_negative_evidence_intake_gate_row_with_data_count"] == 0
+    assert summary["aqp1_negative_evidence_intake_gate_valid_intake_row_count"] == 0
+    assert summary["aqp1_negative_evidence_intake_gate_required_assignable_negative_row_count"] == 3
+    assert summary["aqp1_negative_evidence_intake_gate_missing_valid_intake_row_count"] == 3
+    assert summary["aqp1_negative_evidence_intake_gate_validation_error_row_count"] == 3
+    assert summary["aqp1_negative_evidence_intake_gate_review_ready_row_count"] == 0
+    assert summary["aqp1_negative_evidence_intake_gate_complete"] is False
+    assert summary["aqp1_negative_evidence_intake_gate_split_reference_meta_update_required"] is False
+    assert summary["aqp1_negative_evidence_intake_gate_authoritative_negative_apply_allowed_count"] == 0
+    assert summary["aqp1_negative_evidence_intake_gate_negative_evidence_closure_allowed"] is False
+    assert summary["aqp1_negative_evidence_intake_gate_claim_promotion_allowed"] is False
+    assert any("AQP1 negative-evidence intake gate" in item for item in summary["strengths"])
+    assert any("AQP1 evidence intake gate" in item for item in summary["immediate_priority"])
+    assert any("row-level intake validator" in item for item in summary["report_gaps"])
+    assert any("AQP1 intake template" in item for item in summary["fix_plan"])
+    assert any("runs/aqp1_negative_evidence_intake_gate_current.md" in item for item in summary["artifacts"])
+
+
 def test_build_commercialization_status_report_exposes_wetlab_selected_allatom_burndown() -> None:
     payload = mod.build_payload(
         {
@@ -851,3 +950,147 @@ def test_build_commercialization_status_report_exposes_wetlab_selected_allatom_b
     assert summary["local_engine_queue_wetlab_selected_allatom_primary_burndown_code"] == "recompute_mean_min_distance_A"
     assert any("runs/wetlab_selected_allatom_gate_burndown_packet_current.md" in item for item in summary["immediate_priority"])
     assert any(item == "runs/wetlab_selected_allatom_gate_burndown_packet_current.md" for item in summary["artifacts"])
+
+
+def test_closed_accounting_surfaces_post_goal_accuracy_parity_lane() -> None:
+    payload = mod.build_payload(
+        {
+            "summary": {
+                "core_commercial_lane_score": 82.5,
+                "all_category_expansion_score": 68.9,
+                "strongest_ready_families": "kinase, ion_channel, gpcr",
+            },
+            "rows": [],
+        },
+        {
+            "summary": {
+                "highest_gap_family": "none_tracked_commercialization_gap",
+                "tracked_gap_accounting_closed": True,
+                "blocked_count": 0,
+                "raw_blocked_bucket_count": 2,
+                "parked_or_review_only_blocked_count": 2,
+                "transporter_placeholder_accounting_closed": True,
+                "aqp1_functional_kcal_surrogate_closure_allowed": True,
+                "aqp1_functional_kcal_surrogate_ready_count": 3,
+                "aqp1_direct_binding_gap_still_open": True,
+            }
+        },
+        {
+            "summary": {
+                "all_tracked_family_accounting_closed": True,
+                "transporter_negative_accounting_closed": True,
+            }
+        },
+        {"summary": {"placeholder_driven_rows": 0, "reducible_now_placeholder_rows": 0, "evidence_blocked_placeholder_rows": 0}},
+        {"summary": {"negative_evidence_closure_allowed": True}},
+        {"summary": {}},
+        {
+            "summary": {
+                "queue_clear": True,
+                "top_priority_id": "nightly_reliability",
+                "top_priority_status": "keep_green",
+                "blocked_count": 0,
+                "partial_count": 0,
+                "keep_green_count": 5,
+                "parked_science_blocker_count": 0,
+            }
+        },
+        {"summary": {"delivery_ready": True, "verdict": "delivery_ready", "p0_blocker_count": 0, "hard_blocker_count": 0}},
+        {
+            "summary": {
+                "packet_artifact": "runs/keep_green_regression_trend_packet_current.md",
+                "commercial_trend_status": "sufficient_repeated_history",
+                "all_current_green": True,
+                "sufficient_repeated_history": True,
+                "current_green_lane_count": 4,
+                "lane_count": 4,
+                "repeated_history_ready_lane_count": 4,
+                "insufficient_history_lane_count": 0,
+                "minimum_repeated_sample_count": 3,
+                "nightly_recent_pass_streak": 4,
+            }
+        },
+        {
+            "summary": {
+                "packet_artifact": "runs/platform_gap_taxonomy_packet_current.md",
+                "platform_accounting_closed": True,
+                "current_delivery_blocker_count": 0,
+                "expansion_blocker_count": 0,
+                "top_expansion_gap_id": "none_tracked_platform_expansion",
+                "top_expansion_gap_class": "closed",
+                "aqp1_functional_kcal_surrogate_closure_allowed": True,
+                "aqp1_functional_kcal_surrogate_ready_count": 3,
+                "aqp1_direct_binding_gap_still_open": True,
+                "ca2_pxr_review_policy_closure_allowed": True,
+                "ca2_pxr_review_only_policy_locked_row_count": 13,
+            }
+        },
+        {"summary": {}},
+        {"summary": {}},
+        {"summary": {}},
+        {"summary": {}},
+        {"summary": {}},
+        {"summary": {}},
+        {
+            "summary": {
+                "status": "blocked_accuracy_parity",
+                "overall_commercial_tool_accuracy_parity_allowed": False,
+                "pass_row_count": 0,
+                "restricted_pass_row_count": 1,
+                "blocked_row_count": 4,
+                "missing_row_count": 0,
+                "current_broad_accuracy_parity_estimate_pct": "40-50",
+                "current_broad_commercial_platform_estimate_pct": "35-45",
+                "top_blockers": [
+                    "physics_dynamics:openmm_reference_target_count_too_small",
+                    "ligand_ranking:ranking_pr_auc_ci_low_below_threshold",
+                ],
+            }
+        },
+        {
+            "summary": {
+                "status": "open_a1_repair_queue",
+                "top_priority_repair_id": "guarded_100k_claim_review_rerun",
+                "top_priority_target": "gpcr_family_balanced",
+                "top_priority_blocker_group": "claim_review",
+                "open_queue_row_count": 1,
+                "guarded_100k_rerun_allowed_now": True,
+                "next_required_step": "Run the guarded 100k claim review rerun.",
+            }
+        },
+        {
+            "summary": {
+                "status": "independent_repeat_ready_claim_locked",
+                "independent_repeat_ready": True,
+                "blocker_count": 0,
+                "repeat_tag": "repeat_r2",
+                "validate_command": "python3 tools/run_external_validation_blind_sets.py --tag repeat_r2 --validate-only",
+                "run_command": "python3 tools/run_external_validation_blind_sets.py --tag repeat_r2",
+            }
+        },
+    )
+
+    summary = payload["summary"]
+    assert summary["top_blocker_family"] == "none_tracked_commercialization_gap"
+    assert summary["all_tracked_commercialization_accounting_closed"] is True
+    assert summary["gap_active_blocked_count"] == 0
+    assert summary["gap_raw_blocked_bucket_count"] == 2
+    assert summary["gap_parked_or_review_only_blocked_count"] == 2
+    assert summary["post_goal_accuracy_parity_active"] is True
+    assert summary["accuracy_parity_status"] == "blocked_accuracy_parity"
+    assert summary["accuracy_parity_blocked_row_count"] == 4
+    assert summary["accuracy_parity_top_blockers"][0] == "physics_dynamics:openmm_reference_target_count_too_small"
+    assert summary["gpcr_a1_accuracy_repair_queue_top_priority_repair_id"] == "guarded_100k_claim_review_rerun"
+    assert summary["gpcr_a1_accuracy_repair_queue_guarded_100k_rerun_allowed_now"] is True
+    assert summary["gpcr_a1_independent_repeat_ready"] is True
+    assert summary["gpcr_a1_independent_repeat_completed"] is False
+    assert summary["gpcr_a1_independent_repeat_result_passed"] is False
+    assert summary["gpcr_a1_independent_repeat_claim_locked"] is True
+    assert summary["gpcr_a1_independent_repeat_result_state"] == "ready_to_run"
+    assert summary["gpcr_a1_independent_repeat_tag"] == "repeat_r2"
+    assert any("post-goal accuracy-parity lane" in item for item in summary["immediate_priority"])
+    assert any("gpcr_a1_accuracy_repair_queue_current.md" in item for item in summary["immediate_priority"])
+    assert any("accuracy parity remains blocked" in item for item in summary["report_gaps"])
+    assert any("guarded 100k claim review rerun" in item for item in summary["fix_plan"])
+    assert any("runs/accuracy_parity_scorecard_current.md" in item for item in summary["artifacts"])
+    assert "post-goal commercial-tool accuracy parity" in summary["next_required_step"]

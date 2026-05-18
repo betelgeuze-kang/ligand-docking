@@ -1000,6 +1000,8 @@ def test_build_local_engine_commercialization_queue_prefers_readiness_liveness_o
 
     wetlab_row = {row["blocker_id"]: row for row in payload["rows"]}["wetlab_execution_readiness"]
     assert wetlab_row["status"] == "keep_green"
+    assert "recompute_selected_allatom_metric" not in wetlab_row["next_required_action"]
+    assert "claim/equivalence work" not in wetlab_row["next_required_action"]
     _contains_tokens(
         wetlab_row["source_signal"],
         "primary_watch_liveness=attached",
@@ -1192,6 +1194,7 @@ def test_discovers_suffixed_top_level_reentry_summary_without_child_summaries(tm
     full_child = runs / "ligand_htvs_nightly_2026-04-26_stage6_top_level_reentry_full_summary.json"
     attempt_child = runs / "ligand_htvs_nightly_2026-04-26_stage6_top_level_reentry_attempt1_summary.json"
     smoke_anchor = runs / "ligand_htvs_nightly_2026-04-25_smoke_summary.json"
+    tagged_gpu_rerun = runs / "ligand_htvs_nightly_2026-04-26_goal_closure_summary.json"
 
     _write_json(
         old_top,
@@ -1233,16 +1236,33 @@ def test_discovers_suffixed_top_level_reentry_summary_without_child_summaries(tm
             "stages": {"stage1_ligand_mapping": {"stderr_tail": "ModuleNotFoundError: No module named 'core'"}},
         },
     )
+    _write_json(
+        tagged_gpu_rerun,
+        {
+            "generated_at_local": "2026-04-26T05:15:00",
+            "run_scope": "smoke",
+            "pass": True,
+            "failed_stage": None,
+            "service_result": {"status": "ok", "error_code": "HTVS_OK"},
+            "stages": {
+                "stage2_trajectory_generation": {"pass": True},
+                "stage6_operational_gate": {"pass": True},
+            },
+            "artifacts": {"trajectory_engine_mode": "rust_hip"},
+        },
+    )
 
-    assert mod._discover_latest_top_nightly() == strict_reentry
+    assert mod._discover_latest_top_nightly() == tagged_gpu_rerun
     assert [path.name for path in mod._recent_top_nightly_paths(limit=5)] == [
         old_top.name,
         strict_reentry.name,
+        tagged_gpu_rerun.name,
     ]
     assert [path.name for path in mod._discover_nightly_scan_paths()] == [
         smoke_anchor.name,
         old_top.name,
         strict_reentry.name,
+        tagged_gpu_rerun.name,
     ]
 
 

@@ -28,6 +28,7 @@ DEFAULT_AQP1_FIRST_WAVE_FOLLOW_ON_JSON = "runs/aqp1_first_wave_follow_on_packet_
 DEFAULT_AQP1_FOLLOW_ON_BLOCKER_DECOMPOSITION_JSON = "runs/aqp1_follow_on_blocker_decomposition_current.json"
 DEFAULT_AQP1_QUANTITATIVE_PROVENANCE_PACKET_JSON = "runs/aqp1_quantitative_provenance_packet_current.json"
 DEFAULT_AQP1_FOLLOW_ON_SOURCE_CONFIRMATION_PACKET_JSON = "runs/aqp1_follow_on_source_confirmation_packet_current.json"
+DEFAULT_AQP1_FUNCTIONAL_KCAL_SURROGATE_JSON = "runs/aqp1_functional_kcal_surrogate_packet_current.json"
 DEFAULT_TRANSPORTER_PLACEHOLDER_BURNDOWN_QUEUE_JSON = "runs/transporter_placeholder_burndown_queue_current.json"
 DEFAULT_GLUT1_SECOND_WAVE_SOURCE_CONFIRMATION_PACKET_JSON = "runs/glut1_second_wave_source_confirmation_packet_current.json"
 DEFAULT_EXECUTION_JSON = "runs/execution_handoff_dashboard_current.json"
@@ -140,6 +141,7 @@ def build_payload(
     execution: dict[str, Any],
     aqp1_follow_on_blocker_decomposition: dict[str, Any] | None = None,
     aqp1_follow_on_source_confirmation_packet: dict[str, Any] | None = None,
+    aqp1_functional_kcal_surrogate_packet: dict[str, Any] | None = None,
     transporter_placeholder_burndown_queue: dict[str, Any] | None = None,
     glut1_second_wave_source_confirmation_packet: dict[str, Any] | None = None,
     local_engine_commercialization_queue: dict[str, Any] | None = None,
@@ -157,6 +159,9 @@ def build_payload(
     aqp1_follow_on_blocker_decomposition_s = dict((aqp1_follow_on_blocker_decomposition or {}).get("summary", {}) or {})
     aqp1_follow_on_source_confirmation_packet_s = dict(
         (aqp1_follow_on_source_confirmation_packet or {}).get("summary", {}) or {}
+    )
+    aqp1_functional_kcal_surrogate_packet_s = dict(
+        (aqp1_functional_kcal_surrogate_packet or {}).get("summary", {}) or {}
     )
     transporter_placeholder_burndown_queue_s = dict(
         (transporter_placeholder_burndown_queue or {}).get("summary", {}) or {}
@@ -257,6 +262,19 @@ def build_payload(
     aqp1_follow_on_source_confirmation_packet_row_count = _int(
         aqp1_follow_on_source_confirmation_packet_s.get("row_count", 0)
     )
+    aqp1_functional_kcal_surrogate_ready_count = _int(
+        aqp1_functional_kcal_surrogate_packet_s.get("functional_kcal_surrogate_ready_count", 0)
+    )
+    aqp1_functional_kcal_surrogate_closure_allowed = bool(
+        aqp1_functional_kcal_surrogate_packet_s.get("functional_kcal_surrogate_closure_allowed", False)
+    )
+    aqp1_functional_kcal_surrogate_artifact = _artifact_for(
+        "runs/aqp1_functional_kcal_surrogate_packet_current.md",
+        aqp1_functional_kcal_surrogate_packet_s,
+    )
+    aqp1_direct_binding_gap_still_open = bool(
+        aqp1_functional_kcal_surrogate_packet_s.get("direct_binding_gap_still_open", False)
+    )
     transporter_placeholder_burndown_queue_ready = bool(transporter_placeholder_burndown_queue_s)
     transporter_placeholder_burndown_queue_artifact = _artifact_for(
         "runs/transporter_placeholder_burndown_queue_current.md",
@@ -279,6 +297,25 @@ def build_payload(
     glut1_second_wave_direct_quantitative_binding_count = _int(
         glut1_second_wave_source_confirmation_packet_s.get("direct_quantitative_binding_count", 0)
     )
+    transporter_ready_for_apply_rows = _int(
+        transporter_placeholder_burndown_queue_s.get(
+            "ready_for_apply_rows",
+            transporter_apply_s.get("ready_for_apply_rows", 0),
+        )
+    )
+    transporter_placeholder_driven_rows = _int(
+        transporter_placeholder_burndown_queue_s.get(
+            "placeholder_driven_rows",
+            transporter_apply_s.get("placeholder_driven_rows", 0),
+        )
+    )
+    transporter_staged_non_authoritative_rows = _int(
+        transporter_placeholder_burndown_queue_s.get(
+            "staged_non_authoritative_rows",
+            transporter_apply_s.get("staged_non_authoritative_rows", 0),
+        )
+    )
+    transporter_negative_ready_note = _text(transporter_placeholder_burndown_queue_s.get("next_required_step"))
     aqp1_first_wave_signal = _compose_aqp1_first_wave_signal(
         aqp1_first_wave_focus_ligand,
         aqp1_first_wave_exact_human_reference_ligand,
@@ -304,9 +341,111 @@ def build_payload(
             else ""
         )
     )
+    aqp1_functional_kcal_surrogate_note = _text(
+        aqp1_functional_kcal_surrogate_packet_s.get("next_required_step", "")
+    )
     local_engine_queue_note = _text(local_engine_summary.get("local_engine_commercialization_queue_blocker_note"))
     local_engine_queue_next_required_step = _text(
         local_engine_summary.get("local_engine_commercialization_queue_next_required_step")
+    )
+    local_engine_queue_clear = bool(
+        local_engine_summary.get("local_engine_commercialization_queue_clear", False)
+    ) or (
+        bool(local_engine_summary.get("local_engine_commercialization_queue_ready", False))
+        and _int(local_engine_summary.get("local_engine_commercialization_queue_blocked_count")) == 0
+        and _int(local_engine_summary.get("local_engine_commercialization_queue_partial_count")) == 0
+        and _int(local_engine_summary.get("local_engine_commercialization_queue_parked_science_blocker_count")) == 0
+    )
+    transporter_negative_accounting_closed = (
+        transporter_placeholder_burndown_queue_ready
+        and transporter_placeholder_driven_rows == 0
+        and transporter_ready_for_apply_rows > 0
+    )
+    aqp1_surrogate_accounting_closed = (
+        aqp1_functional_kcal_surrogate_closure_allowed
+        and aqp1_functional_kcal_surrogate_ready_count > 0
+    )
+    all_tracked_family_accounting_closed = (
+        local_engine_queue_clear
+        and transporter_negative_accounting_closed
+        and aqp1_surrogate_accounting_closed
+        and int(ca2_cap_s.get("pending_capture_count", 0) or 0) == 0
+        and int(pxr_cap_s.get("pending_capture_count", 0) or 0) == 0
+    )
+
+    transporter_next_required_step = (
+        "Transporter negative placeholder rows are closed for accounting by the authoritative apply gate; "
+        "keep AQP1/GLUT1 replacement_reference_binding_kcal_mol blank unless direct binding evidence is curated, "
+        "and keep functional/surrogate wording separate from direct-binding claims."
+        if transporter_negative_accounting_closed
+        else " ".join(
+            part
+            for part in (
+                _text(transporter_apply_s.get("next_required_step", "")),
+                transporter_negative_ready_note,
+                aqp1_first_wave_signal,
+                aqp1_follow_on_blocker_note,
+                aqp1_first_wave_follow_on_signal,
+                aqp1_operator_provenance_note,
+                aqp1_functional_kcal_surrogate_note,
+                local_engine_queue_next_required_step or local_engine_queue_note,
+                (
+                    f"Keep {glut1_second_wave_source_confirmation_primary_focus_ligand} parked as the GLUT1 second-wave source-confirmation lead."
+                    if glut1_second_wave_source_confirmation_primary_focus_ligand
+                    else ""
+                ),
+            )
+            if part
+        ).strip()
+    )
+    aqp1_next_required_step = (
+        "AQP1 functional IC50-derived kcal surrogate coverage is closed for accounting; direct binding kcal remains "
+        "explicitly no-claim and replacement_reference_binding_kcal_mol stays blank."
+        if aqp1_surrogate_accounting_closed
+        else " ".join(
+            part
+            for part in (
+                aqp1_first_wave_signal,
+                aqp1_follow_on_blocker_note,
+                aqp1_first_wave_follow_on_signal,
+                aqp1_functional_kcal_surrogate_note,
+                local_engine_queue_next_required_step or local_engine_queue_note,
+                _text(aqp1_quant_prov_s.get("next_required_step", "") or aqp1_seed_s.get("next_required_step", "")),
+            )
+            if part
+        ).strip()
+    )
+    family_next_required_step = (
+        "All tracked family-expansion accounting blockers are closed; keep CA2/PXR review-only policy locks, "
+        "AQP1 functional-surrogate no-direct-binding wording, transporter negative apply provenance, and local-engine keep-green history attached."
+        if all_tracked_family_accounting_closed
+        else (
+            "Keep CA2 review-only, keep PXR partial-authoritative, keep transporter non-authoritative seed-row blocker closure, "
+            + (
+                "and "
+                + " ".join(
+                    part
+                    for part in (
+                        aqp1_first_wave_signal,
+                        aqp1_follow_on_blocker_note,
+                        aqp1_first_wave_follow_on_signal,
+                        aqp1_operator_provenance_note,
+                        aqp1_functional_kcal_surrogate_note,
+                        local_engine_queue_next_required_step or local_engine_queue_note,
+                        (
+                            f"Keep {glut1_second_wave_source_confirmation_primary_focus_ligand} parked as the GLUT1 second-wave source-confirmation lead."
+                            if glut1_second_wave_source_confirmation_primary_focus_ligand
+                            else ""
+                        ),
+                    )
+                    if part
+                )
+                if aqp1_first_wave_signal or aqp1_first_wave_follow_on_signal or aqp1_follow_on_blocker_note
+                else f"and {aqp1_operator_provenance_note}"
+                if aqp1_operator_provenance_note
+                else "and keep AQP1 quantitative binding blank until direct binding or a claim-safe kcal anchor is curated."
+            )
+        )
     )
 
     rows = [
@@ -341,15 +480,20 @@ def build_payload(
         },
         {
             "family": "transporter",
-            "phase": str(transporter_apply_s.get("current_phase", "")).strip(),
+            "phase": (
+                "negative_evidence_curated_functional_kcal_surrogate_staging"
+                if transporter_ready_for_apply_rows and aqp1_functional_kcal_surrogate_ready_count
+                else str(transporter_apply_s.get("current_phase", "")).strip()
+            ),
             "current_scope": "non_authoritative_seed_row_blocker_closure",
             "source_linked_count": int(transporter_cap_s.get("source_linked_count", 0) or 0),
             "pending_capture_count": int(transporter_cap_s.get("pending_capture_count", 0) or 0),
             "supportive_count": int(transporter_cap_s.get("supportive_target_specific_packet_evidence_count", 0) or 0),
-            "ready_like_count": int(transporter_apply_s.get("ready_for_apply_rows", 0) or 0),
+            "ready_like_count": transporter_ready_for_apply_rows,
             "blocking_signal": (
-                f"placeholder_driven_rows={transporter_apply_s.get('placeholder_driven_rows', 0)}; "
-                f"staged_non_authoritative_rows={transporter_apply_s.get('staged_non_authoritative_rows', 0)}; "
+                f"placeholder_driven_rows={transporter_placeholder_driven_rows}; "
+                f"staged_non_authoritative_rows={transporter_staged_non_authoritative_rows}; "
+                f"ready_for_apply_rows={transporter_ready_for_apply_rows}; "
                 f"aqp1_first_wave_primary_focus={aqp1_first_wave_focus_ligand}; "
                 f"aqp1_first_wave_exact_human_reference={aqp1_first_wave_exact_human_reference_ligand}; "
                 f"aqp1_first_wave_follow_on_packet_ready={aqp1_first_wave_follow_on_row_count > 0}; "
@@ -378,6 +522,8 @@ def build_payload(
                 f"glut1_second_wave_source_confirmation_packet_artifact={glut1_second_wave_source_confirmation_packet_artifact}; "
                 f"glut1_second_wave_source_confirmation_primary_focus_ligand={glut1_second_wave_source_confirmation_primary_focus_ligand}; "
                 f"glut1_second_wave_direct_quantitative_binding_count={glut1_second_wave_direct_quantitative_binding_count}; "
+                f"aqp1_functional_kcal_surrogate_ready_count={aqp1_functional_kcal_surrogate_ready_count}; "
+                f"aqp1_functional_kcal_surrogate_closure_allowed={aqp1_functional_kcal_surrogate_closure_allowed}; "
                 + (
                     f"{local_engine_summary['local_engine_commercialization_queue_blocker_signal']}; "
                     if local_engine_summary["local_engine_commercialization_queue_blocker_signal"]
@@ -385,37 +531,35 @@ def build_payload(
                 )
                 + "donor_reopen_ready=False"
             ),
-            "next_required_step": (
-                " ".join(
-                    part
-                    for part in (
-                        _text(transporter_apply_s.get("next_required_step", "")),
-                        aqp1_first_wave_signal,
-                        aqp1_follow_on_blocker_note,
-                        aqp1_first_wave_follow_on_signal,
-                        aqp1_operator_provenance_note,
-                        local_engine_queue_next_required_step or local_engine_queue_note,
-                        (
-                            f"Keep {glut1_second_wave_source_confirmation_primary_focus_ligand} parked as the GLUT1 second-wave source-confirmation lead."
-                            if glut1_second_wave_source_confirmation_primary_focus_ligand
-                            else ""
-                        ),
-                    )
-                    if part
-                ).strip()
-            ),
+            "next_required_step": transporter_next_required_step,
         },
         {
             "family": "aqp1",
-            "phase": "first_seed_review_only_quantitative_gap",
-            "current_scope": "functional_potency_staged_review_only",
+            "phase": (
+                "functional_kcal_surrogate_ready_direct_binding_gap_open"
+                if aqp1_functional_kcal_surrogate_ready_count
+                else "first_seed_review_only_quantitative_gap"
+            ),
+            "current_scope": (
+                "functional_ic50_surrogate_claim_safe_not_direct_binding"
+                if aqp1_functional_kcal_surrogate_ready_count
+                else "functional_potency_staged_review_only"
+            ),
             "source_linked_count": int(aqp1_cap_s.get("source_linked_count", 0) or 0),
             "pending_capture_count": int(aqp1_cap_s.get("pending_capture_count", 0) or 0),
-            "supportive_count": int(aqp1_cap_s.get("supportive_direct_quantitative_binding_count", 0) or 0),
-            "ready_like_count": int(aqp1_cap_s.get("kcal_overlay_ready_count", 0) or 0),
+            "supportive_count": int(aqp1_cap_s.get("supportive_direct_quantitative_binding_count", 0) or 0)
+            + aqp1_functional_kcal_surrogate_ready_count,
+            "ready_like_count": max(
+                int(aqp1_cap_s.get("kcal_overlay_ready_count", 0) or 0),
+                aqp1_functional_kcal_surrogate_ready_count,
+            ),
             "blocking_signal": (
                 f"quantitative_binding_status={aqp1_seed_s.get('quantitative_binding_status', '')}; "
                 f"remaining_unresolved={aqp1_seed_s.get('remaining_unresolved_fields', 'replacement_reference_binding_kcal_mol')}; "
+                f"functional_kcal_surrogate_ready_count={aqp1_functional_kcal_surrogate_ready_count}; "
+                f"functional_kcal_surrogate_closure_allowed={aqp1_functional_kcal_surrogate_closure_allowed}; "
+                f"direct_binding_gap_still_open={aqp1_direct_binding_gap_still_open}; "
+                f"functional_kcal_surrogate_artifact={aqp1_functional_kcal_surrogate_artifact}; "
                 f"first_wave_primary_focus={aqp1_first_wave_focus_ligand}; "
                 f"exact_human_reference={aqp1_first_wave_exact_human_reference_ligand}; "
                 f"aqp1_first_wave_follow_on_packet_ready={aqp1_first_wave_follow_on_row_count > 0}; "
@@ -448,25 +592,20 @@ def build_payload(
                     else ""
                 )
             ),
-            "next_required_step": (
-                " ".join(
-                    part
-                    for part in (
-                        aqp1_first_wave_signal,
-                        aqp1_follow_on_blocker_note,
-                        aqp1_first_wave_follow_on_signal,
-                        local_engine_queue_next_required_step or local_engine_queue_note,
-                        _text(aqp1_quant_prov_s.get("next_required_step", "") or aqp1_seed_s.get("next_required_step", "")),
-                    )
-                    if part
-                ).strip()
-            ),
+            "next_required_step": aqp1_next_required_step,
         },
     ]
 
+    highest_gap_family = str(execution_s.get("highest_gap_family", "")).strip() or "transporter"
+    if all_tracked_family_accounting_closed:
+        highest_gap_family = "none_tracked_family_expansion"
     summary = {
         "family_count": len(rows),
-        "highest_gap_family": str(execution_s.get("highest_gap_family", "")).strip() or "transporter",
+        "highest_gap_family": highest_gap_family,
+        "all_tracked_family_accounting_closed": all_tracked_family_accounting_closed,
+        "transporter_negative_accounting_closed": transporter_negative_accounting_closed,
+        "aqp1_surrogate_accounting_closed": aqp1_surrogate_accounting_closed,
+        "local_engine_commercialization_queue_clear": local_engine_queue_clear,
         "pending_capture_total": sum(int(row["pending_capture_count"]) for row in rows),
         "source_linked_total": sum(int(row["source_linked_count"]) for row in rows),
         "supportive_total": sum(int(row["supportive_count"]) for row in rows),
@@ -494,6 +633,11 @@ def build_payload(
         "aqp1_follow_on_source_confirmation_packet_ready": aqp1_follow_on_source_confirmation_packet_ready,
         "aqp1_follow_on_source_confirmation_packet_artifact": aqp1_follow_on_source_confirmation_packet_artifact,
         "aqp1_follow_on_source_confirmation_packet_row_count": aqp1_follow_on_source_confirmation_packet_row_count,
+        "aqp1_functional_kcal_surrogate_ready": bool(aqp1_functional_kcal_surrogate_packet_s),
+        "aqp1_functional_kcal_surrogate_artifact": aqp1_functional_kcal_surrogate_artifact,
+        "aqp1_functional_kcal_surrogate_ready_count": aqp1_functional_kcal_surrogate_ready_count,
+        "aqp1_functional_kcal_surrogate_closure_allowed": aqp1_functional_kcal_surrogate_closure_allowed,
+        "aqp1_direct_binding_gap_still_open": aqp1_direct_binding_gap_still_open,
         "transporter_placeholder_burndown_queue_ready": transporter_placeholder_burndown_queue_ready,
         "transporter_placeholder_burndown_queue_artifact": transporter_placeholder_burndown_queue_artifact,
         "transporter_placeholder_burndown_queue_row_count": transporter_placeholder_burndown_queue_row_count,
@@ -506,32 +650,7 @@ def build_payload(
         "aqp1_quantitative_provenance_signal": aqp1_quant_signal,
         "aqp1_operator_provenance_note": aqp1_operator_provenance_note,
         **local_engine_summary,
-        "next_required_step": (
-            "Keep CA2 review-only, keep PXR partial-authoritative, keep transporter non-authoritative seed-row blocker closure, "
-            + (
-                "and "
-                + " ".join(
-                    part
-                    for part in (
-                        aqp1_first_wave_signal,
-                        aqp1_follow_on_blocker_note,
-                        aqp1_first_wave_follow_on_signal,
-                        aqp1_operator_provenance_note,
-                        local_engine_queue_next_required_step or local_engine_queue_note,
-                        (
-                            f"Keep {glut1_second_wave_source_confirmation_primary_focus_ligand} parked as the GLUT1 second-wave source-confirmation lead."
-                            if glut1_second_wave_source_confirmation_primary_focus_ligand
-                            else ""
-                        ),
-                    )
-                    if part
-                )
-                if aqp1_first_wave_signal or aqp1_first_wave_follow_on_signal or aqp1_follow_on_blocker_note
-                else f"and {aqp1_operator_provenance_note}"
-                if aqp1_operator_provenance_note
-                else "and keep AQP1 quantitative binding blank until direct binding or a claim-safe kcal anchor is curated."
-            )
-        ),
+        "next_required_step": family_next_required_step,
     }
     return {"summary": summary, "rows": rows}
 
@@ -543,6 +662,10 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         "",
         f"- family_count: `{s['family_count']}`",
         f"- highest_gap_family: `{s['highest_gap_family']}`",
+        f"- all_tracked_family_accounting_closed: `{s['all_tracked_family_accounting_closed']}`",
+        f"- transporter_negative_accounting_closed: `{s['transporter_negative_accounting_closed']}`",
+        f"- aqp1_surrogate_accounting_closed: `{s['aqp1_surrogate_accounting_closed']}`",
+        f"- local_engine_commercialization_queue_clear: `{s['local_engine_commercialization_queue_clear']}`",
         f"- pending_capture_total: `{s['pending_capture_total']}`",
         f"- source_linked_total: `{s['source_linked_total']}`",
         f"- supportive_total: `{s['supportive_total']}`",
@@ -570,6 +693,11 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- aqp1_follow_on_source_confirmation_packet_ready: `{s['aqp1_follow_on_source_confirmation_packet_ready']}`",
         f"- aqp1_follow_on_source_confirmation_packet_artifact: `{s['aqp1_follow_on_source_confirmation_packet_artifact']}`",
         f"- aqp1_follow_on_source_confirmation_packet_row_count: `{s['aqp1_follow_on_source_confirmation_packet_row_count']}`",
+        f"- aqp1_functional_kcal_surrogate_ready: `{s['aqp1_functional_kcal_surrogate_ready']}`",
+        f"- aqp1_functional_kcal_surrogate_artifact: `{s['aqp1_functional_kcal_surrogate_artifact']}`",
+        f"- aqp1_functional_kcal_surrogate_ready_count: `{s['aqp1_functional_kcal_surrogate_ready_count']}`",
+        f"- aqp1_functional_kcal_surrogate_closure_allowed: `{s['aqp1_functional_kcal_surrogate_closure_allowed']}`",
+        f"- aqp1_direct_binding_gap_still_open: `{s['aqp1_direct_binding_gap_still_open']}`",
         f"- transporter_placeholder_burndown_queue_ready: `{s['transporter_placeholder_burndown_queue_ready']}`",
         f"- transporter_placeholder_burndown_queue_artifact: `{s['transporter_placeholder_burndown_queue_artifact']}`",
         f"- transporter_placeholder_burndown_queue_row_count: `{s['transporter_placeholder_burndown_queue_row_count']}`",
@@ -629,6 +757,10 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_AQP1_FOLLOW_ON_SOURCE_CONFIRMATION_PACKET_JSON,
     )
     parser.add_argument(
+        "--aqp1-functional-kcal-surrogate-json",
+        default=DEFAULT_AQP1_FUNCTIONAL_KCAL_SURROGATE_JSON,
+    )
+    parser.add_argument(
         "--transporter-placeholder-burndown-queue-json",
         default=DEFAULT_TRANSPORTER_PLACEHOLDER_BURNDOWN_QUEUE_JSON,
     )
@@ -670,6 +802,7 @@ def main() -> None:
         aqp1_follow_on_source_confirmation_packet=_maybe_load_json(
             args.aqp1_follow_on_source_confirmation_packet_json
         ),
+        aqp1_functional_kcal_surrogate_packet=_maybe_load_json(args.aqp1_functional_kcal_surrogate_json),
         transporter_placeholder_burndown_queue=_maybe_load_json(args.transporter_placeholder_burndown_queue_json),
         glut1_second_wave_source_confirmation_packet=_maybe_load_json(
             args.glut1_second_wave_source_confirmation_packet_json

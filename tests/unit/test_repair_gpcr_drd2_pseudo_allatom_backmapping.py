@@ -107,6 +107,78 @@ def test_build_repair_expands_two_bead_drd2_positive_to_pseudo_allatom_npz(tmp_p
     assert basic_indices.shape[0] >= 1
 
 
+def test_repair_uses_native_pdb_static_anchor_when_prod_light_npz_omits_protein_frames(tmp_path: Path) -> None:
+    pdb = tmp_path / "drd2.pdb"
+    pdb.write_text(
+        "\n".join(
+            [
+                _pdb_atom("ATOM", 1, "OD1", "ASP", "A", 114, 0.0, 0.0, 0.0),
+                _pdb_atom("ATOM", 2, "OD2", "ASP", "A", 114, 0.6, 0.0, 0.0),
+                _pdb_atom("HETATM", 3, "C1", "LIG", "A", 900, 0.2, 0.0, 3.0),
+                _pdb_atom("HETATM", 4, "C2", "LIG", "A", 900, 0.4, 0.0, 3.1),
+                _pdb_atom("HETATM", 5, "C3", "LIG", "A", 900, 0.2, 0.2, 3.0),
+                _pdb_atom("HETATM", 6, "C4", "LIG", "A", 900, 0.4, 0.2, 3.1),
+                _pdb_atom("HETATM", 7, "C5", "LIG", "A", 900, 0.2, 0.0, 3.4),
+                "END",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    source_npz = tmp_path / "prod_light_source.npz"
+    np.savez(
+        source_npz,
+        ligand_frames=np.asarray([[[0.3, 0.0, 3.0], [0.3, 0.0, 4.2]]], dtype=np.float32),
+    )
+    input_csv = tmp_path / "repair_rows.csv"
+    _write_csv(
+        input_csv,
+        [
+            {
+                "target": "CHEMBL217_DRD2_HUMAN",
+                "ligand_id": "CHEMBL301265",
+                "is_positive": "True",
+                "ligand_smiles": "CCCN[C@H]1CCc2nc(N)sc2C1",
+                "trajectory_npz": str(source_npz),
+                "protein_structure_source_path": str(pdb),
+            }
+        ],
+    )
+
+    _payload, rows = mod.build_repair(
+        input_csv=input_csv,
+        out_root=tmp_path / "repaired",
+        generated_at_local="2026-05-05T00:00:00+09:00",
+    )
+
+    row = rows[0]
+    assert row["allatom_backmapping_status"] == "ok"
+    assert int(row["allatom_anchor_atom_count"]) == 2
+    assert row["allatom_anchor_source"] == "native_pdb_static_fallback"
+    assert np.isclose(float(row["target_cation_anchor_distance_A_mean"]), 3.2, atol=1e-5)
+    with np.load(str(row["trajectory_npz"]), allow_pickle=False) as npz:
+        assert "protein_atom_frames" not in npz.files
+        assert np.asarray(npz["ligand_backmapping_static_anchor_coords"]).shape == (2, 3)
+
+
+def test_clash_relief_rotates_around_anchor_axis_to_improve_min_distance() -> None:
+    frame = np.asarray([[0.0, 1.0, 0.0], [0.0, 1.4, 0.0]], dtype=float)
+    protein = np.asarray([[0.0, 1.0, 0.0]], dtype=float)
+
+    repaired, metrics = mod._relieve_anchor_axis_clash(
+        frame,
+        origin=np.asarray([0.0, 0.0, 0.0], dtype=float),
+        axis=np.asarray([1.0, 0.0, 0.0], dtype=float),
+        protein_coords=protein,
+        angle_count=4,
+        cutoff_A=2.0,
+    )
+
+    assert metrics["min_distance_A"] > 1.9
+    assert metrics["clash_score"] == 0.0
+    assert not np.allclose(repaired, frame)
+
+
 def test_repair_cli_writes_manifest_outputs(tmp_path: Path) -> None:
     pdb = tmp_path / "drd2.pdb"
     pdb.write_text(

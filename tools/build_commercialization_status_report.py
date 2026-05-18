@@ -23,6 +23,10 @@ DEFAULT_NEGATIVE_CANDIDATE_HARVEST_JSON = "runs/transporter_negative_candidate_h
 DEFAULT_NEGATIVE_CANDIDATE_CURATION_QUEUE_JSON = "runs/transporter_negative_candidate_curation_queue_current.json"
 DEFAULT_AQP1_NEGATIVE_EVIDENCE_GAP_MATRIX_JSON = "runs/aqp1_negative_evidence_gap_matrix_current.json"
 DEFAULT_AQP1_NEGATIVE_EVIDENCE_REQUEST_JSON = "runs/aqp1_negative_evidence_request_packet_current.json"
+DEFAULT_AQP1_NEGATIVE_EVIDENCE_INTAKE_GATE_JSON = "runs/aqp1_negative_evidence_intake_gate_current.json"
+DEFAULT_ACCURACY_PARITY_SCORECARD_JSON = "runs/accuracy_parity_scorecard_current.json"
+DEFAULT_GPCR_A1_ACCURACY_REPAIR_QUEUE_JSON = "runs/gpcr_a1_accuracy_repair_queue_current.json"
+DEFAULT_GPCR_A1_INDEPENDENT_REPEAT_PACKET_JSON = "runs/gpcr_a1_independent_repeat_packet_current.json"
 DEFAULT_OUT_MD = "commercialization_status_report.md"
 
 
@@ -74,6 +78,10 @@ def build_payload(
     negative_candidate_curation_queue_payload: dict[str, Any] | None = None,
     aqp1_negative_evidence_gap_matrix_payload: dict[str, Any] | None = None,
     aqp1_negative_evidence_request_payload: dict[str, Any] | None = None,
+    aqp1_negative_evidence_intake_gate_payload: dict[str, Any] | None = None,
+    accuracy_parity_scorecard_payload: dict[str, Any] | None = None,
+    gpcr_a1_accuracy_repair_queue_payload: dict[str, Any] | None = None,
+    gpcr_a1_independent_repeat_packet_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     commercialization_summary = dict(commercialization_payload.get("summary", {}) or {})
     gap_summary = dict(gap_payload.get("summary", {}) or {})
@@ -96,6 +104,12 @@ def build_payload(
     aqp1_negative_evidence_request_summary = dict(
         (aqp1_negative_evidence_request_payload or {}).get("summary", {}) or {}
     )
+    aqp1_negative_evidence_intake_gate_summary = dict(
+        (aqp1_negative_evidence_intake_gate_payload or {}).get("summary", {}) or {}
+    )
+    accuracy_parity_summary = dict((accuracy_parity_scorecard_payload or {}).get("summary", {}) or {})
+    gpcr_a1_summary = dict((gpcr_a1_accuracy_repair_queue_payload or {}).get("summary", {}) or {})
+    gpcr_a1_repeat_summary = dict((gpcr_a1_independent_repeat_packet_payload or {}).get("summary", {}) or {})
     transporter_row = _find_family_row(list(commercialization_payload.get("rows", []) or []), "transporter")
 
     strongest_ready_families = _family_list(commercialization_summary.get("strongest_ready_families")) or "kinase, ion_channel, gpcr"
@@ -139,6 +153,24 @@ def build_payload(
     delivery_p0_count = int(local_delivery_summary.get("p0_blocker_count", 0) or 0)
     delivery_hard_count = int(local_delivery_summary.get("hard_blocker_count", 0) or 0)
     delivery_status_line = _text(local_delivery_summary.get("status_line"))
+    local_delivery_queue_mismatch = bool(local_delivery_summary and delivery_ready and not engine_queue_clear)
+    effective_delivery_ready = bool(
+        delivery_ready
+        and delivery_verdict == "delivery_ready"
+        and delivery_p0_count == 0
+        and delivery_hard_count == 0
+        and engine_queue_clear
+    )
+    effective_delivery_status_line = (
+        delivery_status_line
+        if effective_delivery_ready
+        else (
+            "blocked: local delivery verdict is stale or inconsistent with the active local-engine queue; "
+            "regenerate local_delivery_verdict after clearing the queue."
+            if local_delivery_queue_mismatch
+            else delivery_status_line
+        )
+    )
     engine_nightly_status_line = _text(local_engine_queue_summary.get("nightly_status_line"))
     engine_nightly_gate_artifact = _text(local_engine_queue_summary.get("nightly_gate_burndown_artifact"))
     engine_nightly_gate_metric = _text(local_engine_queue_summary.get("nightly_gate_primary_metric"))
@@ -266,6 +298,113 @@ def build_payload(
     )
     platform_gap_taxonomy_scaleup_status = _text(
         platform_gap_taxonomy_summary.get("ligand_scaleup_claim_safe_status")
+    )
+    platform_accounting_closed = bool(platform_gap_taxonomy_summary.get("platform_accounting_closed", False)) or (
+        bool(platform_gap_taxonomy_summary)
+        and platform_gap_taxonomy_current_blockers == 0
+        and platform_gap_taxonomy_expansion_blockers == 0
+    )
+    tracked_gap_accounting_closed = bool(gap_summary.get("tracked_gap_accounting_closed", False))
+    gap_active_blocked_count = int(gap_summary.get("blocked_count", 0) or 0)
+    gap_raw_blocked_bucket_count = int(gap_summary.get("raw_blocked_bucket_count", gap_active_blocked_count) or 0)
+    gap_parked_or_review_only_blocked_count = int(
+        gap_summary.get("parked_or_review_only_blocked_count", 0) or 0
+    )
+    family_accounting_closed = bool(rollup_summary.get("all_tracked_family_accounting_closed", False))
+    transporter_negative_accounting_closed = bool(
+        gap_summary.get("transporter_placeholder_accounting_closed", False)
+        or rollup_summary.get("transporter_negative_accounting_closed", False)
+        or negative_queue_summary.get("negative_evidence_closure_allowed", False)
+    )
+    aqp1_functional_kcal_surrogate_closure_allowed = bool(
+        platform_gap_taxonomy_summary.get(
+            "aqp1_functional_kcal_surrogate_closure_allowed",
+            gap_summary.get(
+                "aqp1_functional_kcal_surrogate_closure_allowed",
+                rollup_summary.get("aqp1_functional_kcal_surrogate_closure_allowed", False),
+            ),
+        )
+    )
+    aqp1_functional_kcal_surrogate_ready_count = int(
+        platform_gap_taxonomy_summary.get(
+            "aqp1_functional_kcal_surrogate_ready_count",
+            gap_summary.get(
+                "aqp1_functional_kcal_surrogate_ready_count",
+                rollup_summary.get("aqp1_functional_kcal_surrogate_ready_count", 0),
+            ),
+        )
+        or 0
+    )
+    aqp1_direct_binding_gap_still_open = bool(
+        platform_gap_taxonomy_summary.get(
+            "aqp1_direct_binding_gap_still_open",
+            gap_summary.get("aqp1_direct_binding_gap_still_open", rollup_summary.get("aqp1_direct_binding_gap_still_open", False)),
+        )
+    )
+    ca2_pxr_review_policy_closure_allowed = bool(
+        platform_gap_taxonomy_summary.get("ca2_pxr_review_policy_closure_allowed", False)
+    )
+    ca2_pxr_review_only_policy_locked_row_count = int(
+        platform_gap_taxonomy_summary.get("ca2_pxr_review_only_policy_locked_row_count", 0) or 0
+    )
+    all_tracked_commercialization_accounting_closed = (
+        engine_queue_clear
+        and keep_green_trend_sufficient_history
+        and platform_accounting_closed
+        and tracked_gap_accounting_closed
+        and family_accounting_closed
+        and transporter_negative_accounting_closed
+        and aqp1_functional_kcal_surrogate_closure_allowed
+        and ca2_pxr_review_policy_closure_allowed
+    )
+    if all_tracked_commercialization_accounting_closed:
+        top_blocker_family = "none_tracked_commercialization_gap"
+    accuracy_parity_ready = bool(accuracy_parity_summary)
+    accuracy_parity_status = _text(accuracy_parity_summary.get("status"))
+    accuracy_parity_allowed = bool(accuracy_parity_summary.get("overall_commercial_tool_accuracy_parity_allowed", False))
+    accuracy_parity_pass_count = int(accuracy_parity_summary.get("pass_row_count", 0) or 0)
+    accuracy_parity_restricted_count = int(accuracy_parity_summary.get("restricted_pass_row_count", 0) or 0)
+    accuracy_parity_blocked_count = int(accuracy_parity_summary.get("blocked_row_count", 0) or 0)
+    accuracy_parity_missing_count = int(accuracy_parity_summary.get("missing_row_count", 0) or 0)
+    accuracy_parity_top_blockers = [
+        _text(item) for item in accuracy_parity_summary.get("top_blockers", []) if _text(item)
+    ]
+    accuracy_parity_top_blockers_text = ", ".join(accuracy_parity_top_blockers[:4]) or "-"
+    accuracy_parity_next_step = _text(accuracy_parity_summary.get("next_required_step"))
+    gpcr_a1_ready = bool(gpcr_a1_summary)
+    gpcr_a1_status = _text(gpcr_a1_summary.get("status"))
+    gpcr_a1_top_repair = _text(gpcr_a1_summary.get("top_priority_repair_id"))
+    gpcr_a1_top_target = _text(gpcr_a1_summary.get("top_priority_target"))
+    gpcr_a1_top_blocker_group = _text(gpcr_a1_summary.get("top_priority_blocker_group"))
+    gpcr_a1_open_rows = int(gpcr_a1_summary.get("open_queue_row_count", 0) or 0)
+    gpcr_a1_guarded_100k_allowed = bool(gpcr_a1_summary.get("guarded_100k_rerun_allowed_now", False))
+    gpcr_a1_next_step = _text(gpcr_a1_summary.get("next_required_step"))
+    gpcr_a1_repeat_ready = bool(gpcr_a1_repeat_summary.get("independent_repeat_ready", False))
+    gpcr_a1_repeat_status = _text(gpcr_a1_repeat_summary.get("status"))
+    gpcr_a1_repeat_completed = bool(gpcr_a1_repeat_summary.get("independent_repeat_completed", False))
+    gpcr_a1_repeat_result_passed = bool(gpcr_a1_repeat_summary.get("independent_repeat_result_passed", False)) or (
+        "passed" in gpcr_a1_repeat_status
+    )
+    gpcr_a1_repeat_claim_locked = "claim_locked" in gpcr_a1_repeat_status or (
+        bool(gpcr_a1_repeat_summary) and not bool(gpcr_a1_repeat_summary.get("claim_promotion_allowed", True))
+    )
+    gpcr_a1_repeat_result_state = (
+        "passed_claim_locked"
+        if gpcr_a1_repeat_result_passed and gpcr_a1_repeat_claim_locked
+        else "passed"
+        if gpcr_a1_repeat_result_passed
+        else "ready_to_run"
+        if gpcr_a1_repeat_ready
+        else "blocked_or_not_ready"
+        if gpcr_a1_repeat_summary
+        else "missing"
+    )
+    gpcr_a1_repeat_tag = _text(gpcr_a1_repeat_summary.get("repeat_tag"))
+    gpcr_a1_repeat_validate_command = _text(gpcr_a1_repeat_summary.get("validate_command"))
+    gpcr_a1_repeat_run_command = _text(gpcr_a1_repeat_summary.get("run_command"))
+    gpcr_a1_repeat_blocker_count = int(gpcr_a1_repeat_summary.get("blocker_count", 0) or 0)
+    post_goal_accuracy_parity_active = (
+        all_tracked_commercialization_accounting_closed and accuracy_parity_ready and not accuracy_parity_allowed
     )
     external_crosscheck_ready = bool(external_evidence_summary.get("crosscheck_ready", False))
     external_crosscheck_artifact = "runs/transporter_external_evidence_crosscheck_current.md"
@@ -471,6 +610,60 @@ def build_payload(
     aqp1_negative_evidence_request_claim_promotion_allowed = bool(
         aqp1_negative_evidence_request_summary.get("claim_promotion_allowed", False)
     )
+    aqp1_negative_evidence_intake_gate_ready = bool(
+        aqp1_negative_evidence_intake_gate_summary.get("intake_gate_ready", False)
+    )
+    aqp1_negative_evidence_intake_gate_artifact = _text(
+        aqp1_negative_evidence_intake_gate_summary.get("packet_artifact")
+    ) or "runs/aqp1_negative_evidence_intake_gate_current.md"
+    aqp1_negative_evidence_intake_gate_request_artifact = _text(
+        aqp1_negative_evidence_intake_gate_summary.get("request_artifact")
+    )
+    aqp1_negative_evidence_intake_gate_template_artifact = _text(
+        aqp1_negative_evidence_intake_gate_summary.get("template_csv_artifact")
+    )
+    aqp1_negative_evidence_intake_gate_intake_artifact = _text(
+        aqp1_negative_evidence_intake_gate_summary.get("intake_csv_artifact")
+    )
+    aqp1_negative_evidence_intake_gate_status = _text(
+        aqp1_negative_evidence_intake_gate_summary.get("intake_status")
+    )
+    aqp1_negative_evidence_intake_gate_row_count = int(
+        aqp1_negative_evidence_intake_gate_summary.get("intake_row_count", 0) or 0
+    )
+    aqp1_negative_evidence_intake_gate_row_with_data_count = int(
+        aqp1_negative_evidence_intake_gate_summary.get("intake_row_with_data_count", 0) or 0
+    )
+    aqp1_negative_evidence_intake_gate_valid_row_count = int(
+        aqp1_negative_evidence_intake_gate_summary.get("valid_intake_row_count", 0) or 0
+    )
+    aqp1_negative_evidence_intake_gate_required_row_count = int(
+        aqp1_negative_evidence_intake_gate_summary.get("required_assignable_negative_row_count", 0) or 0
+    )
+    aqp1_negative_evidence_intake_gate_missing_row_count = int(
+        aqp1_negative_evidence_intake_gate_summary.get("missing_valid_intake_row_count", 0) or 0
+    )
+    aqp1_negative_evidence_intake_gate_error_row_count = int(
+        aqp1_negative_evidence_intake_gate_summary.get("validation_error_row_count", 0) or 0
+    )
+    aqp1_negative_evidence_intake_gate_review_ready_count = int(
+        aqp1_negative_evidence_intake_gate_summary.get("review_ready_row_count", 0) or 0
+    )
+    aqp1_negative_evidence_intake_gate_complete = bool(
+        aqp1_negative_evidence_intake_gate_summary.get("intake_gate_complete", False)
+    )
+    aqp1_negative_evidence_intake_gate_split_update_required = bool(
+        aqp1_negative_evidence_intake_gate_summary.get("split_reference_meta_update_required", False)
+    )
+    aqp1_negative_evidence_intake_gate_apply_count = int(
+        aqp1_negative_evidence_intake_gate_summary.get("authoritative_negative_apply_allowed_count", 0) or 0
+    )
+    aqp1_negative_evidence_intake_gate_closure_allowed = bool(
+        aqp1_negative_evidence_intake_gate_summary.get("negative_evidence_closure_allowed", False)
+    )
+    aqp1_negative_evidence_intake_gate_claim_promotion_allowed = bool(
+        aqp1_negative_evidence_intake_gate_summary.get("claim_promotion_allowed", False)
+    )
 
     strengths = [
         f"Commercial core is still strongest in `{strongest_ready_families}`.",
@@ -489,7 +682,7 @@ def build_payload(
                 "For local-only commercialization, the new engine queue now makes the operating blockers explicit: "
                 f"`blocked={engine_blocked_count}`, `partial={engine_partial_count}`, `parked_science={engine_parked_count}`."
             )
-    if local_delivery_summary and delivery_ready:
+    if local_delivery_summary and effective_delivery_ready:
         strengths.append(
             f"Local delivery verdict is `{delivery_verdict or 'delivery_ready'}` with "
             f"`p0={delivery_p0_count}` and `hard={delivery_hard_count}` blockers."
@@ -529,6 +722,15 @@ def build_payload(
             f"`{aqp1_negative_evidence_request_required_row_count}`, current direct rows="
             f"`{aqp1_negative_evidence_request_current_direct_count}`, closure allowed="
             f"`{aqp1_negative_evidence_request_closure_allowed}`."
+        )
+    if aqp1_negative_evidence_intake_gate_ready:
+        strengths.append(
+            "AQP1 negative-evidence intake gate is attached: "
+            f"`valid={aqp1_negative_evidence_intake_gate_valid_row_count}/"
+            f"{aqp1_negative_evidence_intake_gate_required_row_count}`, data rows="
+            f"`{aqp1_negative_evidence_intake_gate_row_with_data_count}`, gate complete="
+            f"`{aqp1_negative_evidence_intake_gate_complete}`, closure allowed="
+            f"`{aqp1_negative_evidence_intake_gate_closure_allowed}`."
         )
     if reducible_now_rows > 0:
         immediate_priority = [
@@ -930,6 +1132,15 @@ def build_payload(
                 f"`{aqp1_negative_evidence_request_slot_cover_missing_count}`, public reinterpretation exhausted="
                 f"`{aqp1_negative_evidence_request_public_exhausted}`."
             )
+        if aqp1_negative_evidence_intake_gate_ready:
+            immediate_priority.append(
+                f"Use `{aqp1_negative_evidence_intake_gate_artifact}` as the AQP1 evidence intake gate: "
+                f"fill `{aqp1_negative_evidence_intake_gate_template_artifact or 'runs/aqp1_negative_evidence_intake_template_current.csv'}` "
+                f"and rerun the gate until valid rows reach "
+                f"`{aqp1_negative_evidence_intake_gate_valid_row_count}/"
+                f"{aqp1_negative_evidence_intake_gate_required_row_count}`; current status="
+                f"`{aqp1_negative_evidence_intake_gate_status or 'awaiting_exact_aqp1_quantitative_negative_evidence_rows'}`."
+            )
         transporter_gap_line = (
             "GLUT1 binder rows are now staged as non-authoritative second-wave surfaces, so the remaining transporter gap is no longer staging but evidence-blocked negative closure."
         )
@@ -1047,6 +1258,94 @@ def build_payload(
             "Execute the AQP1 evidence request through public primary-source curation or an internal/CRO assay; only rows matching the "
             "request schema should enter split/reference/meta updates, and all other context stays review-only."
         )
+    if aqp1_negative_evidence_intake_gate_ready:
+        report_gaps.append(
+            "AQP1 now has a row-level intake validator, but the current gate is still below the evidence threshold: "
+            f"status=`{aqp1_negative_evidence_intake_gate_status}`, valid rows="
+            f"`{aqp1_negative_evidence_intake_gate_valid_row_count}/"
+            f"{aqp1_negative_evidence_intake_gate_required_row_count}`, missing="
+            f"`{aqp1_negative_evidence_intake_gate_missing_row_count}`, validation error rows="
+            f"`{aqp1_negative_evidence_intake_gate_error_row_count}`, apply allowed="
+            f"`{aqp1_negative_evidence_intake_gate_apply_count}`."
+        )
+        fix_plan.append(
+            "Use the AQP1 intake template as the only admissible entry point for new weak/no-effect rows; the gate must pass before "
+            "split/reference/meta review, and authoritative negative apply remains false until that review is complete."
+        )
+    if all_tracked_commercialization_accounting_closed:
+        strengths = [
+            f"Tracked commercialization accounting is closed: local engine queue clear=`{engine_queue_clear}`, "
+            f"platform blockers=`{platform_gap_taxonomy_current_blockers}/{platform_gap_taxonomy_expansion_blockers}`, "
+            f"and repeated keep-green history=`{keep_green_trend_ready_count}/{keep_green_trend_lane_count}`.",
+            f"Latest canonical GPU/HIP smoke reruns are green, with nightly pass streak "
+            f"`{keep_green_trend_nightly_streak}/{keep_green_trend_min_samples}` and local queue top priority "
+            f"`{engine_top_priority_id or '-'}`=`{engine_top_priority_status or '-'}`.",
+            f"Transporter negative placeholders are closed for accounting; AQP1 has "
+            f"`{aqp1_functional_kcal_surrogate_ready_count}` functional IC50-derived kcal surrogate rows, while direct-binding kcal remains no-claim.",
+            f"CA2/PXR review-only policy is closed with `{ca2_pxr_review_only_policy_locked_row_count}` locked rows and no promotion path.",
+        ]
+        if accuracy_parity_ready:
+            strengths.append(
+                "Post-goal commercial-tool accuracy parity is now tracked separately: "
+                f"status=`{accuracy_parity_status or '-'}`, allowed=`{accuracy_parity_allowed}`, "
+                f"rows pass/restricted/blocked/missing="
+                f"`{accuracy_parity_pass_count}/{accuracy_parity_restricted_count}/"
+                f"{accuracy_parity_blocked_count}/{accuracy_parity_missing_count}`."
+            )
+        immediate_priority = [
+            "Keep the closed accounting state green with recurring canonical nightly, viewer, wetlab, refresh, and platform taxonomy regeneration.",
+            "Do not widen wording from functional surrogate/review-only evidence into direct binding, unattended decision-making, or broad platform claims.",
+            "Treat future AQP1/GLUT1 direct-binding kcal evidence, larger ligand-scale suites, and non-local deployment hardening as new expansion work rather than blockers on the current /goal accounting closure.",
+        ]
+        if post_goal_accuracy_parity_active:
+            immediate_priority.insert(
+                1,
+                "Open the post-goal accuracy-parity lane from `runs/accuracy_parity_scorecard_current.md`: "
+                f"`{accuracy_parity_status}` with top blockers `{accuracy_parity_top_blockers_text}`.",
+            )
+            if gpcr_a1_ready:
+                if gpcr_a1_open_rows == 0:
+                    immediate_priority.insert(
+                        2,
+                        "`runs/gpcr_a1_accuracy_repair_queue_current.md` is cleared but claim-locked: "
+                        f"`{gpcr_a1_top_repair or '-'}` metrics passed for `{gpcr_a1_top_target or '-'}`; "
+                        "the next A1 move is an independent repeat before any router or commercial parity promotion.",
+                    )
+                    if gpcr_a1_repeat_ready:
+                        immediate_priority.insert(
+                            3,
+                            "`runs/gpcr_a1_independent_repeat_packet_current.md` is ready: run its validate command first, "
+                            f"then launch repeat tag `{gpcr_a1_repeat_tag or '-'}` if validation stays green.",
+                        )
+                else:
+                    immediate_priority.insert(
+                        2,
+                        "Use `runs/gpcr_a1_accuracy_repair_queue_current.md` as the first repair board: "
+                        f"`{gpcr_a1_top_repair or '-'}` for `{gpcr_a1_top_target or '-'}` "
+                        f"(`{gpcr_a1_top_blocker_group or '-'}`), guarded 100k rerun allowed="
+                        f"`{gpcr_a1_guarded_100k_allowed}`.",
+                    )
+        report_gaps = [
+            "No tracked current-delivery or platform-expansion blocker remains open in the refreshed accounting artifacts.",
+            "Residual science caveat: AQP1 kcal values are functional IC50-derived surrogates, not direct binding free energies.",
+            "Residual policy caveat: CA2/PXR rows stay review-only or locked unless a separate authoritative promotion review is opened.",
+        ]
+        if post_goal_accuracy_parity_active:
+            report_gaps.append(
+                "Post-goal broad commercial-tool accuracy parity remains blocked outside the closed `/goal` accounting scope: "
+                f"`{accuracy_parity_blocked_count}` blocked rows and `{accuracy_parity_restricted_count}` restricted-pass rows."
+            )
+        fix_plan = [
+            "Keep `runs/platform_gap_taxonomy_packet_current.md`, `runs/local_engine_commercialization_queue_current.md`, and `runs/keep_green_regression_trend_packet_current.md` as the closure gates.",
+            "Preserve `replacement_reference_binding_kcal_mol` blanks for transporter rows unless direct target-specific binding evidence is curated.",
+            "Continue regression-only monitoring; open a new scoped work item for any broader Schrodinger/Galaxy/OpenMM-grade accuracy benchmark expansion.",
+        ]
+        if post_goal_accuracy_parity_active:
+            fix_plan.append(
+                gpcr_a1_next_step
+                or accuracy_parity_next_step
+                or "Repair the first accuracy-parity blocker and regenerate the scorecard before any broad commercial-tool claim."
+            )
     artifacts = [
         "runs/local_delivery_verdict_gate_current.md",
         "runs/local_engine_commercialization_queue_current.md",
@@ -1083,8 +1382,13 @@ def build_payload(
         external_crosscheck_artifact,
         aqp1_negative_gap_matrix_artifact,
         aqp1_negative_evidence_request_artifact,
+        aqp1_negative_evidence_intake_gate_artifact,
+        aqp1_negative_evidence_intake_gate_template_artifact or "runs/aqp1_negative_evidence_intake_template_current.csv",
         negative_candidate_harvest_artifact,
         negative_candidate_curation_queue_artifact,
+        "runs/accuracy_parity_scorecard_current.md",
+        "runs/gpcr_a1_accuracy_repair_queue_current.md",
+        "runs/gpcr_a1_independent_repeat_packet_current.md",
         "runs/glut1_second_wave_source_confirmation_packet_current.md",
         "runs/glut1_second_wave_seed_row_packet_current.md",
     ]
@@ -1112,6 +1416,52 @@ def build_payload(
         "transporter_primary_blocker": _text(transporter_row.get("primary_blocker")),
         "transporter_claim_safe_scope": _text(transporter_row.get("claim_safe_scope")),
         "local_only_mode": local_only_mode,
+        "all_tracked_commercialization_accounting_closed": all_tracked_commercialization_accounting_closed,
+        "tracked_gap_accounting_closed": tracked_gap_accounting_closed,
+        "gap_active_blocked_count": gap_active_blocked_count,
+        "gap_raw_blocked_bucket_count": gap_raw_blocked_bucket_count,
+        "gap_parked_or_review_only_blocked_count": gap_parked_or_review_only_blocked_count,
+        "family_accounting_closed": family_accounting_closed,
+        "platform_accounting_closed": platform_accounting_closed,
+        "transporter_negative_accounting_closed": transporter_negative_accounting_closed,
+        "aqp1_functional_kcal_surrogate_closure_allowed": aqp1_functional_kcal_surrogate_closure_allowed,
+        "aqp1_functional_kcal_surrogate_ready_count": aqp1_functional_kcal_surrogate_ready_count,
+        "aqp1_direct_binding_gap_still_open": aqp1_direct_binding_gap_still_open,
+        "ca2_pxr_review_policy_closure_allowed": ca2_pxr_review_policy_closure_allowed,
+        "ca2_pxr_review_only_policy_locked_row_count": ca2_pxr_review_only_policy_locked_row_count,
+        "post_goal_accuracy_parity_active": post_goal_accuracy_parity_active,
+        "accuracy_parity_scorecard_ready": accuracy_parity_ready,
+        "accuracy_parity_status": accuracy_parity_status,
+        "accuracy_parity_overall_commercial_tool_accuracy_parity_allowed": accuracy_parity_allowed,
+        "accuracy_parity_pass_row_count": accuracy_parity_pass_count,
+        "accuracy_parity_restricted_pass_row_count": accuracy_parity_restricted_count,
+        "accuracy_parity_blocked_row_count": accuracy_parity_blocked_count,
+        "accuracy_parity_missing_row_count": accuracy_parity_missing_count,
+        "accuracy_parity_broad_accuracy_estimate_pct": _text(
+            accuracy_parity_summary.get("current_broad_accuracy_parity_estimate_pct")
+        ),
+        "accuracy_parity_broad_commercial_platform_estimate_pct": _text(
+            accuracy_parity_summary.get("current_broad_commercial_platform_estimate_pct")
+        ),
+        "accuracy_parity_top_blockers": accuracy_parity_top_blockers,
+        "gpcr_a1_accuracy_repair_queue_ready": gpcr_a1_ready,
+        "gpcr_a1_accuracy_repair_queue_status": gpcr_a1_status,
+        "gpcr_a1_accuracy_repair_queue_top_priority_repair_id": gpcr_a1_top_repair,
+        "gpcr_a1_accuracy_repair_queue_top_priority_target": gpcr_a1_top_target,
+        "gpcr_a1_accuracy_repair_queue_top_priority_blocker_group": gpcr_a1_top_blocker_group,
+        "gpcr_a1_accuracy_repair_queue_open_queue_row_count": gpcr_a1_open_rows,
+        "gpcr_a1_accuracy_repair_queue_guarded_100k_rerun_allowed_now": gpcr_a1_guarded_100k_allowed,
+        "gpcr_a1_independent_repeat_packet_ready": bool(gpcr_a1_repeat_summary),
+        "gpcr_a1_independent_repeat_status": gpcr_a1_repeat_status,
+        "gpcr_a1_independent_repeat_ready": gpcr_a1_repeat_ready,
+        "gpcr_a1_independent_repeat_completed": gpcr_a1_repeat_completed,
+        "gpcr_a1_independent_repeat_result_passed": gpcr_a1_repeat_result_passed,
+        "gpcr_a1_independent_repeat_claim_locked": gpcr_a1_repeat_claim_locked,
+        "gpcr_a1_independent_repeat_result_state": gpcr_a1_repeat_result_state,
+        "gpcr_a1_independent_repeat_blocker_count": gpcr_a1_repeat_blocker_count,
+        "gpcr_a1_independent_repeat_tag": gpcr_a1_repeat_tag,
+        "gpcr_a1_independent_repeat_validate_command": gpcr_a1_repeat_validate_command,
+        "gpcr_a1_independent_repeat_run_command": gpcr_a1_repeat_run_command,
         "negative_evidence_queue_ready": bool(negative_queue_summary),
         "negative_evidence_queue_top_target_id": _text(negative_queue_summary.get("top_target_id")),
         "negative_evidence_queue_top_packet_step": _text(negative_queue_summary.get("top_packet_step")),
@@ -1164,10 +1514,13 @@ def build_payload(
         "local_engine_queue_keep_green_count": engine_keep_green_count,
         "local_engine_queue_parked_science_blocker_count": engine_parked_count,
         "local_delivery_ready": delivery_ready,
+        "effective_delivery_ready": effective_delivery_ready,
+        "local_delivery_queue_mismatch": local_delivery_queue_mismatch,
         "local_delivery_verdict": delivery_verdict,
         "local_delivery_p0_blocker_count": delivery_p0_count,
         "local_delivery_hard_blocker_count": delivery_hard_count,
         "local_delivery_status_line": delivery_status_line,
+        "effective_delivery_status_line": effective_delivery_status_line,
         "keep_green_trend_ready": bool(keep_green_trend_summary),
         "keep_green_trend_artifact": keep_green_trend_artifact,
         "keep_green_trend_status": keep_green_trend_status,
@@ -1180,6 +1533,7 @@ def build_payload(
         "keep_green_trend_minimum_repeated_sample_count": keep_green_trend_min_samples,
         "keep_green_trend_nightly_recent_pass_streak": keep_green_trend_nightly_streak,
         "platform_gap_taxonomy_ready": bool(platform_gap_taxonomy_summary),
+        "platform_gap_taxonomy_accounting_closed": platform_accounting_closed,
         "platform_gap_taxonomy_artifact": platform_gap_taxonomy_artifact,
         "platform_gap_taxonomy_current_delivery_blocker_count": platform_gap_taxonomy_current_blockers,
         "platform_gap_taxonomy_expansion_blocker_count": platform_gap_taxonomy_expansion_blockers,
@@ -1209,7 +1563,11 @@ def build_payload(
         "external_evidence_crosscheck_next_required_step": external_crosscheck_next_required_step,
         "negative_candidate_harvest_ready": negative_candidate_harvest_ready,
         "negative_candidate_harvest_artifact": negative_candidate_harvest_artifact if negative_candidate_harvest_ready else "",
-        "negative_candidate_harvest_status": negative_candidate_harvest_status,
+        "negative_candidate_harvest_status": (
+            "archived_preclosure_candidate_harvest_not_current_blocker"
+            if all_tracked_commercialization_accounting_closed
+            else negative_candidate_harvest_status
+        ),
         "negative_candidate_harvest_row_count": negative_candidate_harvest_row_count,
         "negative_candidate_harvest_aqp1_candidate_review_row_count": negative_candidate_harvest_aqp1_review_count,
         "negative_candidate_harvest_glut1_candidate_review_row_count": negative_candidate_harvest_glut1_review_count,
@@ -1225,14 +1583,22 @@ def build_payload(
             negative_candidate_curation_queue_artifact if negative_candidate_curation_queue_ready else ""
         ),
         "negative_candidate_curation_queue_target_id": negative_candidate_curation_queue_target_id,
-        "negative_candidate_curation_queue_status": negative_candidate_curation_queue_status,
+        "negative_candidate_curation_queue_status": (
+            "archived_preclosure_curation_queue_not_current_blocker"
+            if all_tracked_commercialization_accounting_closed
+            else negative_candidate_curation_queue_status
+        ),
         "negative_candidate_curation_queue_source_harvest_artifact": negative_candidate_curation_queue_source_artifact,
         "negative_candidate_curation_queue_available_quantitative_lower_bound_candidate_count": negative_candidate_curation_queue_candidate_count,
         "negative_candidate_curation_queue_target_negative_slot_count": negative_candidate_curation_queue_slot_count,
         "negative_candidate_curation_queue_row_count": negative_candidate_curation_queue_row_count,
         "negative_candidate_curation_queue_slot_cover_ready_count": negative_candidate_curation_queue_slot_cover_count,
         "negative_candidate_curation_queue_unused_candidate_count": negative_candidate_curation_queue_unused_count,
-        "negative_candidate_curation_queue_aqp1_first_blocker_open": negative_candidate_curation_queue_aqp1_blocker_open,
+        "negative_candidate_curation_queue_aqp1_first_blocker_open": (
+            False
+            if all_tracked_commercialization_accounting_closed
+            else negative_candidate_curation_queue_aqp1_blocker_open
+        ),
         "negative_candidate_curation_queue_candidate_apply_allowed": negative_candidate_curation_queue_apply_allowed,
         "negative_candidate_curation_queue_authoritative_negative_apply_allowed_count": negative_candidate_curation_queue_authoritative_apply_count,
         "negative_candidate_curation_queue_negative_evidence_closure_allowed": negative_candidate_curation_queue_closure_allowed,
@@ -1272,6 +1638,26 @@ def build_payload(
         "aqp1_negative_evidence_request_authoritative_negative_apply_allowed_count": aqp1_negative_evidence_request_apply_count,
         "aqp1_negative_evidence_request_negative_evidence_closure_allowed": aqp1_negative_evidence_request_closure_allowed,
         "aqp1_negative_evidence_request_claim_promotion_allowed": aqp1_negative_evidence_request_claim_promotion_allowed,
+        "aqp1_negative_evidence_intake_gate_ready": aqp1_negative_evidence_intake_gate_ready,
+        "aqp1_negative_evidence_intake_gate_artifact": (
+            aqp1_negative_evidence_intake_gate_artifact if aqp1_negative_evidence_intake_gate_ready else ""
+        ),
+        "aqp1_negative_evidence_intake_gate_request_artifact": aqp1_negative_evidence_intake_gate_request_artifact,
+        "aqp1_negative_evidence_intake_gate_template_artifact": aqp1_negative_evidence_intake_gate_template_artifact,
+        "aqp1_negative_evidence_intake_gate_intake_artifact": aqp1_negative_evidence_intake_gate_intake_artifact,
+        "aqp1_negative_evidence_intake_gate_status": aqp1_negative_evidence_intake_gate_status,
+        "aqp1_negative_evidence_intake_gate_row_count": aqp1_negative_evidence_intake_gate_row_count,
+        "aqp1_negative_evidence_intake_gate_row_with_data_count": aqp1_negative_evidence_intake_gate_row_with_data_count,
+        "aqp1_negative_evidence_intake_gate_valid_intake_row_count": aqp1_negative_evidence_intake_gate_valid_row_count,
+        "aqp1_negative_evidence_intake_gate_required_assignable_negative_row_count": aqp1_negative_evidence_intake_gate_required_row_count,
+        "aqp1_negative_evidence_intake_gate_missing_valid_intake_row_count": aqp1_negative_evidence_intake_gate_missing_row_count,
+        "aqp1_negative_evidence_intake_gate_validation_error_row_count": aqp1_negative_evidence_intake_gate_error_row_count,
+        "aqp1_negative_evidence_intake_gate_review_ready_row_count": aqp1_negative_evidence_intake_gate_review_ready_count,
+        "aqp1_negative_evidence_intake_gate_complete": aqp1_negative_evidence_intake_gate_complete,
+        "aqp1_negative_evidence_intake_gate_split_reference_meta_update_required": aqp1_negative_evidence_intake_gate_split_update_required,
+        "aqp1_negative_evidence_intake_gate_authoritative_negative_apply_allowed_count": aqp1_negative_evidence_intake_gate_apply_count,
+        "aqp1_negative_evidence_intake_gate_negative_evidence_closure_allowed": aqp1_negative_evidence_intake_gate_closure_allowed,
+        "aqp1_negative_evidence_intake_gate_claim_promotion_allowed": aqp1_negative_evidence_intake_gate_claim_promotion_allowed,
         "local_engine_queue_nightly_gate_artifact": engine_nightly_gate_artifact,
         "local_engine_queue_nightly_status_line": engine_nightly_status_line,
         "local_engine_queue_nightly_tuning_artifact": engine_nightly_tuning_artifact,
@@ -1325,9 +1711,17 @@ def build_payload(
         "local_engine_queue_wetlab_selected_allatom_primary_burndown_delta": engine_wetlab_allatom_primary_delta,
         "local_engine_queue_wetlab_selected_allatom_hard_block_count": engine_wetlab_allatom_hard_block_count,
         "local_engine_queue_wetlab_selected_allatom_semi_hard_block_count": engine_wetlab_allatom_semi_hard_block_count,
-        "next_required_step": _text(local_engine_queue_summary.get("next_required_step"))
-        or _text(rollup_summary.get("next_required_step"))
-        or _text(gap_summary.get("next_required_step")),
+        "next_required_step": (
+            (
+                "All tracked commercialization accounting blockers are closed; next scoped work is post-goal commercial-tool accuracy parity."
+                if post_goal_accuracy_parity_active
+                else "All tracked commercialization accounting blockers are closed; keep guardrails and regression evidence attached."
+            )
+            if all_tracked_commercialization_accounting_closed
+            else _text(local_engine_queue_summary.get("next_required_step"))
+            or _text(rollup_summary.get("next_required_step"))
+            or _text(gap_summary.get("next_required_step"))
+        ),
         "strengths": strengths,
         "immediate_priority": immediate_priority,
         "report_gaps": report_gaps,
@@ -1349,6 +1743,40 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- all_category_expansion_score: `{s['all_category_expansion_score']}`",
         f"- strongest_ready_families: `{s['strongest_ready_families']}`",
         f"- local_only_mode: `{s['local_only_mode']}`",
+        f"- all_tracked_commercialization_accounting_closed: `{s['all_tracked_commercialization_accounting_closed']}`",
+        f"- tracked_gap_accounting_closed: `{s['tracked_gap_accounting_closed']}`",
+        f"- gap_active_blocked_count: `{s['gap_active_blocked_count']}`",
+        f"- gap_raw_blocked_bucket_count: `{s['gap_raw_blocked_bucket_count']}`",
+        f"- gap_parked_or_review_only_blocked_count: `{s['gap_parked_or_review_only_blocked_count']}`",
+        f"- family_accounting_closed: `{s['family_accounting_closed']}`",
+        f"- platform_accounting_closed: `{s['platform_accounting_closed']}`",
+        f"- transporter_negative_accounting_closed: `{s['transporter_negative_accounting_closed']}`",
+        f"- aqp1_functional_kcal_surrogate_closure_allowed: `{s['aqp1_functional_kcal_surrogate_closure_allowed']}`",
+        f"- aqp1_functional_kcal_surrogate_ready_count: `{s['aqp1_functional_kcal_surrogate_ready_count']}`",
+        f"- aqp1_direct_binding_gap_still_open: `{s['aqp1_direct_binding_gap_still_open']}`",
+        f"- ca2_pxr_review_policy_closure_allowed: `{s['ca2_pxr_review_policy_closure_allowed']}`",
+        f"- ca2_pxr_review_only_policy_locked_row_count: `{s['ca2_pxr_review_only_policy_locked_row_count']}`",
+        f"- post_goal_accuracy_parity_active: `{s['post_goal_accuracy_parity_active']}`",
+        f"- accuracy_parity_scorecard_ready: `{s['accuracy_parity_scorecard_ready']}`",
+        f"- accuracy_parity_status: `{s['accuracy_parity_status'] or '-'}`",
+        f"- accuracy_parity_allowed: `{s['accuracy_parity_overall_commercial_tool_accuracy_parity_allowed']}`",
+        f"- accuracy_parity_rows: `pass={s['accuracy_parity_pass_row_count']}, restricted={s['accuracy_parity_restricted_pass_row_count']}, blocked={s['accuracy_parity_blocked_row_count']}, missing={s['accuracy_parity_missing_row_count']}`",
+        f"- accuracy_parity_estimates: `broad_accuracy={s['accuracy_parity_broad_accuracy_estimate_pct'] or '-'}, broad_commercial_platform={s['accuracy_parity_broad_commercial_platform_estimate_pct'] or '-'}`",
+        f"- accuracy_parity_top_blockers: `{', '.join(s['accuracy_parity_top_blockers'][:4]) or '-'}`",
+        f"- gpcr_a1_accuracy_repair_queue_ready: `{s['gpcr_a1_accuracy_repair_queue_ready']}`",
+        f"- gpcr_a1_accuracy_repair_queue_status: `{s['gpcr_a1_accuracy_repair_queue_status'] or '-'}`",
+        f"- gpcr_a1_accuracy_repair_queue_top_priority: `{s['gpcr_a1_accuracy_repair_queue_top_priority_repair_id'] or '-'} ({s['gpcr_a1_accuracy_repair_queue_top_priority_target'] or '-'})`",
+        f"- gpcr_a1_accuracy_repair_queue_open_rows: `{s['gpcr_a1_accuracy_repair_queue_open_queue_row_count']}`",
+        f"- gpcr_a1_accuracy_repair_queue_guarded_100k_rerun_allowed_now: `{s['gpcr_a1_accuracy_repair_queue_guarded_100k_rerun_allowed_now']}`",
+        f"- gpcr_a1_independent_repeat_packet_ready: `{s['gpcr_a1_independent_repeat_packet_ready']}`",
+        f"- gpcr_a1_independent_repeat_status: `{s['gpcr_a1_independent_repeat_status'] or '-'}`",
+        f"- gpcr_a1_independent_repeat_ready_to_run: `{s['gpcr_a1_independent_repeat_ready']}`",
+        f"- gpcr_a1_independent_repeat_completed: `{s['gpcr_a1_independent_repeat_completed']}`",
+        f"- gpcr_a1_independent_repeat_result_passed: `{s['gpcr_a1_independent_repeat_result_passed']}`",
+        f"- gpcr_a1_independent_repeat_claim_locked: `{s['gpcr_a1_independent_repeat_claim_locked']}`",
+        f"- gpcr_a1_independent_repeat_result_state: `{s['gpcr_a1_independent_repeat_result_state']}`",
+        f"- gpcr_a1_independent_repeat_blocker_count: `{s['gpcr_a1_independent_repeat_blocker_count']}`",
+        f"- gpcr_a1_independent_repeat_tag: `{s['gpcr_a1_independent_repeat_tag'] or '-'}`",
         f"- transporter_placeholder_driven_rows: `{s['transporter_placeholder_driven_rows']}`",
         f"- reducible_now_placeholder_rows: `{s['reducible_now_placeholder_rows']}`",
         f"- evidence_blocked_placeholder_rows: `{s['evidence_blocked_placeholder_rows']}`",
@@ -1383,9 +1811,12 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- local_engine_queue_keep_green_count: `{s['local_engine_queue_keep_green_count']}`",
         f"- local_engine_queue_parked_science_blocker_count: `{s['local_engine_queue_parked_science_blocker_count']}`",
         f"- local_delivery_ready: `{s['local_delivery_ready']}`",
+        f"- effective_delivery_ready: `{s['effective_delivery_ready']}`",
+        f"- local_delivery_queue_mismatch: `{s['local_delivery_queue_mismatch']}`",
         f"- local_delivery_verdict: `{s['local_delivery_verdict'] or '-'}`",
         f"- local_delivery_blockers: `p0={s['local_delivery_p0_blocker_count']}, hard={s['local_delivery_hard_blocker_count']}`",
         f"- local_delivery_status_line: `{s['local_delivery_status_line'] or '-'}`",
+        f"- effective_delivery_status_line: `{s['effective_delivery_status_line'] or '-'}`",
         f"- keep_green_trend_ready: `{s['keep_green_trend_ready']}`",
         f"- keep_green_trend_artifact: `{s['keep_green_trend_artifact'] or '-'}`",
         f"- keep_green_trend_status: `{s['keep_green_trend_status'] or '-'}`",
@@ -1394,6 +1825,7 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- keep_green_trend_lane_counts: `current={s['keep_green_trend_current_green_lane_count']}/{s['keep_green_trend_lane_count']}, repeated={s['keep_green_trend_repeated_history_ready_lane_count']}/{s['keep_green_trend_lane_count']}, insufficient={s['keep_green_trend_insufficient_history_lane_count']}`",
         f"- keep_green_trend_nightly_recent_pass_streak: `{s['keep_green_trend_nightly_recent_pass_streak']}/{s['keep_green_trend_minimum_repeated_sample_count']}`",
         f"- platform_gap_taxonomy_ready: `{s['platform_gap_taxonomy_ready']}`",
+        f"- platform_gap_taxonomy_accounting_closed: `{s['platform_gap_taxonomy_accounting_closed']}`",
         f"- platform_gap_taxonomy_artifact: `{s['platform_gap_taxonomy_artifact'] or '-'}`",
         f"- platform_gap_taxonomy_current_delivery_blocker_count: `{s['platform_gap_taxonomy_current_delivery_blocker_count']}`",
         f"- platform_gap_taxonomy_expansion_blocker_count: `{s['platform_gap_taxonomy_expansion_blocker_count']}`",
@@ -1465,6 +1897,21 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- aqp1_negative_evidence_request_authoritative_negative_apply_allowed_count: `{s['aqp1_negative_evidence_request_authoritative_negative_apply_allowed_count']}`",
         f"- aqp1_negative_evidence_request_negative_evidence_closure_allowed: `{s['aqp1_negative_evidence_request_negative_evidence_closure_allowed']}`",
         f"- aqp1_negative_evidence_request_claim_promotion_allowed: `{s['aqp1_negative_evidence_request_claim_promotion_allowed']}`",
+        f"- aqp1_negative_evidence_intake_gate_ready: `{s['aqp1_negative_evidence_intake_gate_ready']}`",
+        f"- aqp1_negative_evidence_intake_gate_artifact: `{s['aqp1_negative_evidence_intake_gate_artifact'] or '-'}`",
+        f"- aqp1_negative_evidence_intake_gate_request_artifact: `{s['aqp1_negative_evidence_intake_gate_request_artifact'] or '-'}`",
+        f"- aqp1_negative_evidence_intake_gate_template_artifact: `{s['aqp1_negative_evidence_intake_gate_template_artifact'] or '-'}`",
+        f"- aqp1_negative_evidence_intake_gate_intake_artifact: `{s['aqp1_negative_evidence_intake_gate_intake_artifact'] or '-'}`",
+        f"- aqp1_negative_evidence_intake_gate_status: `{s['aqp1_negative_evidence_intake_gate_status'] or '-'}`",
+        f"- aqp1_negative_evidence_intake_gate_rows: `valid={s['aqp1_negative_evidence_intake_gate_valid_intake_row_count']}/{s['aqp1_negative_evidence_intake_gate_required_assignable_negative_row_count']}, data={s['aqp1_negative_evidence_intake_gate_row_with_data_count']}, total={s['aqp1_negative_evidence_intake_gate_row_count']}`",
+        f"- aqp1_negative_evidence_intake_gate_missing_valid_intake_row_count: `{s['aqp1_negative_evidence_intake_gate_missing_valid_intake_row_count']}`",
+        f"- aqp1_negative_evidence_intake_gate_validation_error_row_count: `{s['aqp1_negative_evidence_intake_gate_validation_error_row_count']}`",
+        f"- aqp1_negative_evidence_intake_gate_review_ready_row_count: `{s['aqp1_negative_evidence_intake_gate_review_ready_row_count']}`",
+        f"- aqp1_negative_evidence_intake_gate_complete: `{s['aqp1_negative_evidence_intake_gate_complete']}`",
+        f"- aqp1_negative_evidence_intake_gate_split_reference_meta_update_required: `{s['aqp1_negative_evidence_intake_gate_split_reference_meta_update_required']}`",
+        f"- aqp1_negative_evidence_intake_gate_authoritative_negative_apply_allowed_count: `{s['aqp1_negative_evidence_intake_gate_authoritative_negative_apply_allowed_count']}`",
+        f"- aqp1_negative_evidence_intake_gate_negative_evidence_closure_allowed: `{s['aqp1_negative_evidence_intake_gate_negative_evidence_closure_allowed']}`",
+        f"- aqp1_negative_evidence_intake_gate_claim_promotion_allowed: `{s['aqp1_negative_evidence_intake_gate_claim_promotion_allowed']}`",
         f"- local_engine_queue_nightly_gate_artifact: `{s['local_engine_queue_nightly_gate_artifact'] or '-'}`",
         f"- local_engine_queue_nightly_status_line: `{s['local_engine_queue_nightly_status_line'] or '-'}`",
         f"- local_engine_queue_nightly_tuning_artifact: `{s['local_engine_queue_nightly_tuning_artifact'] or '-'}`",
@@ -1557,6 +2004,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--negative-candidate-curation-queue-json", default=DEFAULT_NEGATIVE_CANDIDATE_CURATION_QUEUE_JSON)
     parser.add_argument("--aqp1-negative-evidence-gap-matrix-json", default=DEFAULT_AQP1_NEGATIVE_EVIDENCE_GAP_MATRIX_JSON)
     parser.add_argument("--aqp1-negative-evidence-request-json", default=DEFAULT_AQP1_NEGATIVE_EVIDENCE_REQUEST_JSON)
+    parser.add_argument("--aqp1-negative-evidence-intake-gate-json", default=DEFAULT_AQP1_NEGATIVE_EVIDENCE_INTAKE_GATE_JSON)
+    parser.add_argument("--accuracy-parity-scorecard-json", default=DEFAULT_ACCURACY_PARITY_SCORECARD_JSON)
+    parser.add_argument("--gpcr-a1-accuracy-repair-queue-json", default=DEFAULT_GPCR_A1_ACCURACY_REPAIR_QUEUE_JSON)
+    parser.add_argument("--gpcr-a1-independent-repeat-packet-json", default=DEFAULT_GPCR_A1_INDEPENDENT_REPEAT_PACKET_JSON)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
     return parser.parse_args()
 
@@ -1579,6 +2030,10 @@ def main() -> None:
         _load_json(args.negative_candidate_curation_queue_json),
         _load_json(args.aqp1_negative_evidence_gap_matrix_json),
         _load_json(args.aqp1_negative_evidence_request_json),
+        _load_json(args.aqp1_negative_evidence_intake_gate_json),
+        _load_json(args.accuracy_parity_scorecard_json),
+        _load_json(args.gpcr_a1_accuracy_repair_queue_json),
+        _load_json(args.gpcr_a1_independent_repeat_packet_json),
     )
     _write_markdown(_resolve(args.out_md), payload)
 

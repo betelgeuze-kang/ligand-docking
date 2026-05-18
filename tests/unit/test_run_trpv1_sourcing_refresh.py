@@ -19,10 +19,12 @@ def test_build_command_plan_prefers_merged_vendor_json_when_present(tmp_path: Pa
         merged_vendor_json=str(merged_vendor),
     )
 
-    assert commands[0][0:2] == ["python3", "tools/build_trpv1_vendor_quote_response_intake.py"]
-    assert commands[1][-1] == str(merged_vendor)
+    assert commands[0][0:2] == ["python3", "tools/build_trpv1_sendable_negative_panel.py"]
+    assert commands[1][0:2] == ["python3", "tools/build_trpv1_vendor_quote_response_intake.py"]
+    assert commands[1][-1] == "--no-refresh-downstream"
     assert commands[2][-1] == str(merged_vendor)
     assert commands[3][-1] == str(merged_vendor)
+    assert commands[4][-1] == str(merged_vendor)
 
 
 def test_build_payload_summarizes_trpv1_refresh_state() -> None:

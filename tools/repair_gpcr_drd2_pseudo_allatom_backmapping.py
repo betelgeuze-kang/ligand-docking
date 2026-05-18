@@ -30,6 +30,7 @@ DEFAULT_OUT_JSON = "runs/gpcr_drd2_pseudo_allatom_repair_current.json"
 DEFAULT_OUT_MD = "runs/gpcr_drd2_pseudo_allatom_repair_current.md"
 
 DEFAULT_SALT_BRIDGE_DISTANCE_A = 3.2
+DEFAULT_CLASH_RELIEF_CUTOFF_A = 2.0
 
 
 def _resolve(path_like: str | Path) -> Path:
@@ -124,6 +125,77 @@ def _rotation_between(src: np.ndarray, dst: np.ndarray) -> np.ndarray:
     )
     angle = math.atan2(cross_norm, dot)
     return np.eye(3, dtype=float) + math.sin(angle) * kx + (1.0 - math.cos(angle)) * (kx @ kx)
+
+
+def _rotation_around_axis(axis: np.ndarray, angle_rad: float) -> np.ndarray:
+    k = _unit(axis)
+    kx = np.asarray(
+        [
+            [0.0, -k[2], k[1]],
+            [k[2], 0.0, -k[0]],
+            [-k[1], k[0], 0.0],
+        ],
+        dtype=float,
+    )
+    return np.eye(3, dtype=float) + math.sin(float(angle_rad)) * kx + (1.0 - math.cos(float(angle_rad))) * (kx @ kx)
+
+
+def _protein_ligand_clash_metrics(
+    ligand_coords: np.ndarray,
+    protein_coords: np.ndarray | None,
+    *,
+    cutoff_A: float = DEFAULT_CLASH_RELIEF_CUTOFF_A,
+) -> dict[str, float | int | None]:
+    if protein_coords is None or np.asarray(protein_coords).size == 0:
+        return {"min_distance_A": None, "clash_score": None, "clash_pair_count": 0}
+    ligand = np.asarray(ligand_coords, dtype=float)
+    protein = np.asarray(protein_coords, dtype=float)
+    if ligand.ndim != 2 or protein.ndim != 2 or ligand.shape[1] != 3 or protein.shape[1] != 3:
+        return {"min_distance_A": None, "clash_score": None, "clash_pair_count": 0}
+    distances = np.linalg.norm(ligand[:, None, :] - protein[None, :, :], axis=2)
+    min_distance = float(np.min(distances)) if distances.size else None
+    overlap = np.clip(float(cutoff_A) - distances, 0.0, None)
+    pair_count = int(np.sum(overlap > 0.0))
+    score = float(np.sum((overlap / max(float(cutoff_A), 1e-6)) ** 2))
+    return {"min_distance_A": min_distance, "clash_score": score, "clash_pair_count": pair_count}
+
+
+def _relieve_anchor_axis_clash(
+    frame: np.ndarray,
+    *,
+    origin: np.ndarray,
+    axis: np.ndarray,
+    protein_coords: np.ndarray | None,
+    angle_count: int,
+    cutoff_A: float,
+) -> tuple[np.ndarray, dict[str, float | int | None]]:
+    base_metrics = _protein_ligand_clash_metrics(frame, protein_coords, cutoff_A=cutoff_A)
+    if protein_coords is None or np.asarray(protein_coords).size == 0 or int(angle_count) <= 1:
+        return frame, {**base_metrics, "selected_angle_rad": 0.0, "candidate_count": 1}
+    best_frame = np.asarray(frame, dtype=float)
+    best_metrics = {**base_metrics, "selected_angle_rad": 0.0, "candidate_count": int(angle_count)}
+    best_score = float(best_metrics.get("clash_score") or 0.0)
+    centered = np.asarray(frame, dtype=float) - np.asarray(origin, dtype=float)[None, :]
+    for angle in np.linspace(0.0, 2.0 * math.pi, int(angle_count), endpoint=False):
+        rotation = _rotation_around_axis(axis, float(angle))
+        candidate = (centered @ rotation.T) + np.asarray(origin, dtype=float)[None, :]
+        metrics = _protein_ligand_clash_metrics(candidate, protein_coords, cutoff_A=cutoff_A)
+        score = float(metrics.get("clash_score") or 0.0)
+        min_distance = metrics.get("min_distance_A")
+        best_min_distance = best_metrics.get("min_distance_A")
+        if score < best_score - 1e-12 or (
+            abs(score - best_score) <= 1e-12
+            and min_distance is not None
+            and (best_min_distance is None or float(min_distance) > float(best_min_distance))
+        ):
+            best_frame = candidate
+            best_score = score
+            best_metrics = {
+                **metrics,
+                "selected_angle_rad": float(angle),
+                "candidate_count": int(angle_count),
+            }
+    return best_frame, best_metrics
 
 
 def _fallback_conformer(smiles: str) -> dict[str, Any]:
@@ -229,17 +301,43 @@ def _write_ligand_pdb(
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def _anchor_indices(native_pdb: str, protein_atom_count: int) -> list[int]:
+def _pdb_protein_atom_coords(native_pdb: str) -> np.ndarray:
     if not _text(native_pdb):
-        return []
+        return np.zeros((0, 3), dtype=np.float32)
+    pdb_path = _resolve(native_pdb)
+    if not pdb_path.exists():
+        return np.zeros((0, 3), dtype=np.float32)
+    coords: list[list[float]] = []
+    with pdb_path.open("r", encoding="utf-8", errors="ignore") as fh:
+        for line in fh:
+            if not line.startswith("ATOM"):
+                continue
+            try:
+                coords.append([float(line[30:38]), float(line[38:46]), float(line[46:54])])
+            except Exception:
+                continue
+    return np.asarray(coords, dtype=np.float32) if coords else np.zeros((0, 3), dtype=np.float32)
+
+
+def _anchor_indices_and_static_coords(native_pdb: str, protein_atom_count: int) -> tuple[list[int], np.ndarray | None]:
+    if not _text(native_pdb):
+        return [], None
     template = _parse_pdb_anchor_template(native_pdb)
     if not template.get("available"):
-        return []
-    return [
+        return [], None
+    raw_indices = [
         int(idx)
         for idx in template.get("anchor_atom_indices", [])
-        if 0 <= int(idx) < int(max(protein_atom_count, 0))
+        if int(idx) >= 0
     ]
+    frame_indices = [idx for idx in raw_indices if 0 <= idx < int(max(protein_atom_count, 0))]
+    protein_coords = _pdb_protein_atom_coords(native_pdb)
+    static_coords = (
+        protein_coords[[idx for idx in raw_indices if 0 <= idx < int(protein_coords.shape[0])], :]
+        if protein_coords.size and raw_indices
+        else np.zeros((0, 3), dtype=np.float32)
+    )
+    return frame_indices, (static_coords if int(static_coords.shape[0]) > 0 else None)
 
 
 def _backmap_frames(
@@ -247,10 +345,14 @@ def _backmap_frames(
     ligand_frames: np.ndarray,
     protein_atom_frames: np.ndarray | None,
     anchor_indices: list[int],
+    static_anchor_coords: np.ndarray | None,
     conformer_coords: np.ndarray,
     basic_indices: list[int],
     salt_bridge_distance_A: float,
     force_anchor: bool,
+    clash_relief_protein_coords: np.ndarray | None = None,
+    clash_relief_angle_count: int = 1,
+    clash_relief_cutoff_A: float = DEFAULT_CLASH_RELIEF_CUTOFF_A,
 ) -> tuple[np.ndarray, dict[str, Any]]:
     coarse = np.asarray(ligand_frames, dtype=float)
     coords = np.asarray(conformer_coords, dtype=float)
@@ -270,6 +372,9 @@ def _backmap_frames(
     repaired = np.zeros((frame_count, atom_count, 3), dtype=np.float32)
     cation_anchor_distances: list[float] = []
     centroid_errors: list[float] = []
+    min_distances: list[float] = []
+    clash_scores: list[float] = []
+    selected_angles: list[float] = []
     forced_anchor_frames = 0
     for frame_idx in range(frame_count):
         coarse_frame = coarse[frame_idx]
@@ -280,16 +385,17 @@ def _backmap_frames(
             dtype=float),
         )
         frame_anchor_center: np.ndarray | None = None
-        if (
-            force_anchor
-            and
-            basic_index is not None
-            and protein_atom_frames is not None
-            and protein_atom_frames.ndim == 3
-            and frame_idx < protein_atom_frames.shape[0]
-            and anchor_indices
-        ):
-            frame_anchor_center = np.mean(protein_atom_frames[frame_idx, anchor_indices, :], axis=0)
+        if force_anchor and basic_index is not None:
+            if (
+                protein_atom_frames is not None
+                and protein_atom_frames.ndim == 3
+                and frame_idx < protein_atom_frames.shape[0]
+                and anchor_indices
+            ):
+                frame_anchor_center = np.mean(protein_atom_frames[frame_idx, anchor_indices, :], axis=0)
+            elif static_anchor_coords is not None and static_anchor_coords.ndim == 2 and static_anchor_coords.shape[0] > 0:
+                frame_anchor_center = np.mean(static_anchor_coords, axis=0)
+        if frame_anchor_center is not None:
             target_axis = _unit(coarse_centroid - frame_anchor_center, coarse_axis)
             target_origin = frame_anchor_center + target_axis * float(salt_bridge_distance_A)
             forced_anchor_frames += 1
@@ -298,6 +404,21 @@ def _backmap_frames(
             target_origin = coarse_centroid
         rotation = _rotation_between(source_axis, target_axis)
         frame = (local @ rotation.T) + target_origin[None, :]
+        if frame_anchor_center is not None and clash_relief_protein_coords is not None:
+            frame, clash_metrics = _relieve_anchor_axis_clash(
+                frame,
+                origin=target_origin,
+                axis=target_axis,
+                protein_coords=clash_relief_protein_coords,
+                angle_count=int(clash_relief_angle_count),
+                cutoff_A=float(clash_relief_cutoff_A),
+            )
+            if clash_metrics.get("min_distance_A") is not None:
+                min_distances.append(float(clash_metrics["min_distance_A"]))
+            if clash_metrics.get("clash_score") is not None:
+                clash_scores.append(float(clash_metrics["clash_score"]))
+            if clash_metrics.get("selected_angle_rad") is not None:
+                selected_angles.append(float(clash_metrics["selected_angle_rad"]))
         repaired[frame_idx] = frame.astype(np.float32)
         centroid_errors.append(float(np.linalg.norm(np.mean(frame, axis=0) - coarse_centroid)))
         if basic_index is not None and frame_anchor_center is not None:
@@ -309,6 +430,10 @@ def _backmap_frames(
         "target_cation_anchor_distance_A_max": float(np.max(cation_anchor_distances)) if cation_anchor_distances else None,
         "coarse_centroid_preservation_rmsd_A_mean": float(np.mean(centroid_errors)) if centroid_errors else None,
         "coarse_centroid_preservation_rmsd_A_max": float(np.max(centroid_errors)) if centroid_errors else None,
+        "protein_ligand_min_distance_A_min": float(np.min(min_distances)) if min_distances else None,
+        "protein_ligand_min_distance_A_mean": float(np.mean(min_distances)) if min_distances else None,
+        "protein_ligand_clash_score_mean": float(np.mean(clash_scores)) if clash_scores else None,
+        "clash_relief_selected_angle_rad_mean": float(np.mean(selected_angles)) if selected_angles else None,
     }
 
 
@@ -318,6 +443,9 @@ def _repair_row(
     out_root: Path,
     salt_bridge_distance_A: float,
     anchor_mode: str,
+    clash_relief: bool,
+    clash_relief_angle_count: int,
+    clash_relief_cutoff_A: float,
 ) -> dict[str, Any]:
     target = _text(row.get("target"))
     ligand_id = _text(row.get("ligand_id"))
@@ -339,6 +467,11 @@ def _repair_row(
             "allatom_backmapping_coverage_ratio": "",
             "target_cation_anchor_distance_A_mean": "",
             "coarse_centroid_preservation_rmsd_A_mean": "",
+            "protein_ligand_min_distance_A_min": "",
+            "protein_ligand_min_distance_A_mean": "",
+            "protein_ligand_clash_score_mean": "",
+            "clash_relief_selected_angle_rad_mean": "",
+            "clash_relief_applied": bool(clash_relief),
         }
     )
     if source_npz is None or not source_npz.exists():
@@ -369,7 +502,8 @@ def _repair_row(
             "allatom_backmapping_reason": "ligand_frames_invalid",
         }
     protein_atom_count = int(protein_atom_frames_np.shape[1]) if protein_atom_frames_np is not None and protein_atom_frames_np.ndim == 3 else 0
-    anchor_indices = _anchor_indices(native_pdb, protein_atom_count)
+    anchor_indices, static_anchor_coords = _anchor_indices_and_static_coords(native_pdb, protein_atom_count)
+    clash_relief_protein_coords = _pdb_protein_atom_coords(native_pdb) if clash_relief else None
     is_positive = _truthy(row.get("is_positive")) or _text(row.get("ligand_id")) == "CHEMBL301265"
     anchor_mode_norm = str(anchor_mode or "positive_only").strip().lower()
     force_anchor = anchor_mode_norm == "all_basic" or (anchor_mode_norm == "positive_only" and is_positive)
@@ -377,10 +511,14 @@ def _repair_row(
         ligand_frames=ligand_frames,
         protein_atom_frames=protein_atom_frames_np,
         anchor_indices=anchor_indices,
+        static_anchor_coords=static_anchor_coords,
         conformer_coords=np.asarray(conformer["coords"], dtype=float),
         basic_indices=[int(idx) for idx in conformer.get("basic_amine_atom_indices", [])],
         salt_bridge_distance_A=salt_bridge_distance_A,
         force_anchor=bool(force_anchor),
+        clash_relief_protein_coords=clash_relief_protein_coords,
+        clash_relief_angle_count=int(clash_relief_angle_count),
+        clash_relief_cutoff_A=float(clash_relief_cutoff_A),
     )
     if repaired.size <= 0:
         return {
@@ -396,6 +534,8 @@ def _repair_row(
     arrays["ligand_atom_elements"] = np.asarray(conformer.get("elements", []), dtype="<U3")
     arrays["ligand_basic_amine_atom_indices"] = np.asarray(conformer.get("basic_amine_atom_indices", []), dtype=np.int32)
     arrays["ligand_backmapping_anchor_atom_indices"] = np.asarray(anchor_indices, dtype=np.int32)
+    if static_anchor_coords is not None and static_anchor_coords.size:
+        arrays["ligand_backmapping_static_anchor_coords"] = np.asarray(static_anchor_coords, dtype=np.float32)
     arrays["ligand_backmapping_schema_version"] = np.asarray(1, dtype=np.int16)
     np.savez_compressed(out_npz, **arrays)
     out_pdb = out_root / f"{_safe_name(target)}__{_safe_name(ligand_id)}.pdb"
@@ -410,6 +550,11 @@ def _repair_row(
     source_count = int(ligand_frames.shape[1])
     heavy_atoms = int(len(conformer.get("atomic_numbers", [])))
     coverage = float(repaired_count / max(heavy_atoms, 1)) if heavy_atoms else ""
+    anchor_atom_count = int(len(anchor_indices))
+    anchor_source = "protein_atom_frames"
+    if anchor_atom_count <= 0 and static_anchor_coords is not None and static_anchor_coords.size:
+        anchor_atom_count = int(static_anchor_coords.shape[0])
+        anchor_source = "native_pdb_static_fallback"
     return {
         **base,
         "trajectory_npz": str(out_npz),
@@ -425,10 +570,16 @@ def _repair_row(
         "allatom_anchor_mode": anchor_mode_norm,
         "allatom_force_anchor_applied": bool(force_anchor),
         "allatom_basic_amine_atom_count": int(len(conformer.get("basic_amine_atom_indices", []))),
-        "allatom_anchor_atom_count": int(len(anchor_indices)),
+        "allatom_anchor_atom_count": anchor_atom_count,
+        "allatom_anchor_source": anchor_source if anchor_atom_count > 0 else "",
         "allatom_backmapping_coverage_ratio": coverage,
         "target_cation_anchor_distance_A_mean": metrics.get("target_cation_anchor_distance_A_mean") or "",
         "coarse_centroid_preservation_rmsd_A_mean": metrics.get("coarse_centroid_preservation_rmsd_A_mean") or "",
+        "protein_ligand_min_distance_A_min": metrics.get("protein_ligand_min_distance_A_min") or "",
+        "protein_ligand_min_distance_A_mean": metrics.get("protein_ligand_min_distance_A_mean") or "",
+        "protein_ligand_clash_score_mean": metrics.get("protein_ligand_clash_score_mean") or "",
+        "clash_relief_selected_angle_rad_mean": metrics.get("clash_relief_selected_angle_rad_mean") or "",
+        "clash_relief_applied": bool(clash_relief),
     }
 
 
@@ -438,6 +589,9 @@ def build_repair(
     out_root: str | Path = DEFAULT_OUT_ROOT,
     salt_bridge_distance_A: float = DEFAULT_SALT_BRIDGE_DISTANCE_A,
     anchor_mode: str = "positive_only",
+    clash_relief: bool = False,
+    clash_relief_angle_count: int = 24,
+    clash_relief_cutoff_A: float = DEFAULT_CLASH_RELIEF_CUTOFF_A,
     generated_at_local: str | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     rows = _read_csv(input_csv)
@@ -448,6 +602,9 @@ def build_repair(
             out_root=root,
             salt_bridge_distance_A=float(salt_bridge_distance_A),
             anchor_mode=str(anchor_mode),
+            clash_relief=bool(clash_relief),
+            clash_relief_angle_count=int(clash_relief_angle_count),
+            clash_relief_cutoff_A=float(clash_relief_cutoff_A),
         )
         for row in rows
     ]
@@ -469,6 +626,9 @@ def build_repair(
         "max_repaired_atom_count": max((int(row.get("repaired_ligand_frame_atom_count") or 0) for row in ok_rows), default=0),
         "salt_bridge_distance_A": float(salt_bridge_distance_A),
         "anchor_mode": str(anchor_mode),
+        "clash_relief": bool(clash_relief),
+        "clash_relief_angle_count": int(clash_relief_angle_count),
+        "clash_relief_cutoff_A": float(clash_relief_cutoff_A),
         "out_root": str(root),
         "next_action": "rebuild_atom_window_cache_on_repaired_rows_then_rescore_shadow_only",
         "next_required_step": (
@@ -526,6 +686,13 @@ def parse_args() -> argparse.Namespace:
         default="positive_only",
         help="Which rows receive forced cationic-center-to-anchor placement.",
     )
+    parser.add_argument(
+        "--clash-relief",
+        action="store_true",
+        help="Sample rotations around the cation-anchor axis to reduce static protein-ligand steric clashes.",
+    )
+    parser.add_argument("--clash-relief-angle-count", type=int, default=24)
+    parser.add_argument("--clash-relief-cutoff-A", type=float, default=DEFAULT_CLASH_RELIEF_CUTOFF_A)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -539,6 +706,9 @@ def main() -> None:
         out_root=args.out_root,
         salt_bridge_distance_A=float(args.salt_bridge_distance_A),
         anchor_mode=str(args.anchor_mode),
+        clash_relief=bool(args.clash_relief),
+        clash_relief_angle_count=int(args.clash_relief_angle_count),
+        clash_relief_cutoff_A=float(args.clash_relief_cutoff_A),
     )
     _write_json(args.out_json, payload)
     _write_csv(args.out_csv, rows)

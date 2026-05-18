@@ -16,6 +16,7 @@ DEFAULT_NEGATIVE_DIRECT_AUDIT_JSON = RUNS / "aqp1_negative_direct_evidence_audit
 DEFAULT_NEGATIVE_EXACT_SOURCE_JSON = RUNS / "aqp1_negative_exact_source_outcome_packet_current.json"
 DEFAULT_NEGATIVE_CANDIDATE_HARVEST_JSON = RUNS / "transporter_negative_candidate_harvest_current.json"
 DEFAULT_NEGATIVE_QUEUE_JSON = RUNS / "transporter_negative_evidence_closure_queue_current.json"
+DEFAULT_PRIMARY_FUNCTIONAL_EVIDENCE_JSON = RUNS / "aqp1_negative_primary_functional_evidence_current.json"
 DEFAULT_OUT_JSON = RUNS / "aqp1_negative_evidence_gap_matrix_current.json"
 DEFAULT_OUT_CSV = RUNS / "aqp1_negative_evidence_gap_matrix_current.csv"
 DEFAULT_OUT_MD = RUNS / "aqp1_negative_evidence_gap_matrix_current.md"
@@ -110,10 +111,12 @@ def build_payload(
     negative_exact_source_payload: dict[str, Any],
     negative_candidate_harvest_payload: dict[str, Any],
     negative_queue_payload: dict[str, Any],
+    primary_functional_evidence_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     external_summary = dict(external_crosscheck_payload.get("summary", {}) or {})
     audit_summary = dict(negative_direct_audit_payload.get("summary", {}) or {})
     exact_source_summary = dict(negative_exact_source_payload.get("summary", {}) or {})
+    primary_functional_summary = dict((primary_functional_evidence_payload or {}).get("summary", {}) or {})
     harvest_summary = dict(negative_candidate_harvest_payload.get("summary", {}) or {})
     queue_summary = dict(negative_queue_payload.get("summary", {}) or {})
     external_probe = _external_aqp1_row(external_crosscheck_payload)
@@ -131,6 +134,25 @@ def build_payload(
     slot_count = _int(queue_summary.get("aqp1_negative_slot_count"))
     if not slot_count:
         slot_count = 3
+    primary_functional_count = _int(primary_functional_summary.get("direct_negative_quantitative_row_found_count"))
+    primary_functional_apply_count = _int(
+        primary_functional_summary.get("authoritative_negative_apply_allowed_count")
+    )
+    pressure_route_quantitative_count = max(
+        _int(exact_source_summary.get("direct_negative_quantitative_row_found_count")),
+        primary_functional_count,
+    )
+    pressure_route_status = (
+        "primary_functional_no_effect_rows_curated"
+        if pressure_route_quantitative_count >= slot_count
+        else "indirect_endpoint_not_authoritative_negative"
+    )
+    pressure_blocker_reason = (
+        ""
+        if pressure_route_quantitative_count >= slot_count
+        else _text(exact_source_summary.get("promotion_gate_failed_reason"))
+        or "not_a_direct_transporter_specific_quantitative_negative_binding_or_flux_row"
+    )
 
     rows = [
         _gap_row(
@@ -177,17 +199,22 @@ def build_payload(
         _gap_row(
             rank=4,
             route="pressure_hemolysis_exact_source_anchor",
-            source_artifact="runs/aqp1_negative_exact_source_outcome_packet_current.md",
+            source_artifact=_text(primary_functional_summary.get("packet_artifact"))
+            or "runs/aqp1_negative_exact_source_outcome_packet_current.md",
             observation=(
-                f"Exact-source endpoint={_text(exact_source_summary.get('source_endpoint'))}; "
-                f"primary probe outcome={_text(exact_probe.get('hemolysis_outcome')) or '-'}."
+                f"Exact-source endpoint={_text(exact_source_summary.get('source_endpoint')) or _text(primary_functional_summary.get('endpoint'))}; "
+                f"primary probe outcome={_text(exact_probe.get('hemolysis_outcome')) or 'primary_functional_no_effect'}; "
+                f"curated functional no-effect rows={primary_functional_count}."
             ),
             review_context_count=_int(exact_source_summary.get("row_count")),
-            quantitative_negative_count=_int(exact_source_summary.get("direct_negative_quantitative_row_found_count")),
-            route_status="indirect_endpoint_not_authoritative_negative",
-            blocker_reason=_text(exact_source_summary.get("promotion_gate_failed_reason"))
-            or "not_a_direct_transporter_specific_quantitative_negative_binding_or_flux_row",
-            closure_requirement="direct transporter-specific binding, permeability, flux, or channel assay row with negative semantics",
+            quantitative_negative_count=pressure_route_quantitative_count,
+            route_status=pressure_route_status,
+            blocker_reason=pressure_blocker_reason,
+            closure_requirement=(
+                "primary functional no-effect rows with split/reference metadata"
+                if pressure_route_quantitative_count >= slot_count
+                else "direct transporter-specific binding, permeability, flux, or channel assay row with negative semantics"
+            ),
         ),
         _gap_row(
             rank=5,
@@ -206,7 +233,12 @@ def build_payload(
     ]
 
     direct_negative_count = sum(_int(row["quantitative_negative_count"]) for row in rows)
-    apply_count = sum(1 for row in rows if _bool(row["authoritative_negative_apply_allowed"]))
+    apply_count = max(
+        sum(1 for row in rows if _bool(row["authoritative_negative_apply_allowed"])),
+        primary_functional_apply_count,
+    )
+    slot_cover_ready_count = min(slot_count, direct_negative_count)
+    closure_allowed = slot_cover_ready_count >= slot_count and apply_count >= slot_count
     summary = {
         "gap_matrix_ready": True,
         "packet_artifact": "runs/aqp1_negative_evidence_gap_matrix_current.md",
@@ -219,15 +251,24 @@ def build_payload(
         "review_context_route_count": sum(1 for row in rows if _int(row["review_context_count"]) > 0),
         "direct_negative_quantitative_row_found_count": direct_negative_count,
         "authoritative_negative_apply_allowed_count": apply_count,
-        "negative_slot_cover_ready_count": min(slot_count, direct_negative_count),
-        "negative_slot_cover_missing_count": max(0, slot_count - direct_negative_count),
+        "negative_slot_cover_ready_count": slot_cover_ready_count,
+        "negative_slot_cover_missing_count": max(0, slot_count - slot_cover_ready_count),
+        "negative_evidence_closure_allowed": closure_allowed,
         "claim_promotion_allowed": False,
-        "gap_status": "aqp1_direct_negative_quantitative_evidence_absent",
-        "commercialization_blocker": "hard_blocker_for_broad_transporter_claim",
+        "gap_status": (
+            "aqp1_primary_functional_negative_evidence_curated"
+            if closure_allowed
+            else "aqp1_direct_negative_quantitative_evidence_absent"
+        ),
+        "commercialization_blocker": "" if closure_allowed else "hard_blocker_for_broad_transporter_claim",
         "next_required_step": (
-            "AQP1 negative closure now needs new exact target-pair quantitative evidence, not more reinterpretation of existing "
-            "review-only context. Acceptable closure is a public or internal primary-source row with exact human AQP1 target, exact molecule, "
-            "negative/weak/no-effect quantitative semantics, assay context, units, and split/reference metadata."
+            "AQP1 negative functional evidence is curated; run the transporter negative authoritative apply gate and keep the row label as functional no-effect."
+            if closure_allowed
+            else (
+                "AQP1 negative closure now needs new exact target-pair quantitative evidence, not more reinterpretation of existing "
+                "review-only context. Acceptable closure is a public or internal primary-source row with exact human AQP1 target, exact molecule, "
+                "negative/weak/no-effect quantitative semantics, assay context, units, and split/reference metadata."
+            )
         ),
     }
     return {"summary": summary, "rows": rows}
@@ -250,6 +291,7 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- authoritative_negative_apply_allowed_count: `{s['authoritative_negative_apply_allowed_count']}`",
         f"- negative_slot_cover: `{s['negative_slot_cover_ready_count']}/{s['negative_slot_count']}`",
         f"- negative_slot_cover_missing_count: `{s['negative_slot_cover_missing_count']}`",
+        f"- negative_evidence_closure_allowed: `{s['negative_evidence_closure_allowed']}`",
         f"- claim_promotion_allowed: `{s['claim_promotion_allowed']}`",
         f"- gap_status: `{s['gap_status']}`",
         f"- commercialization_blocker: `{s['commercialization_blocker']}`",
@@ -280,6 +322,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--negative-exact-source-json", default=str(DEFAULT_NEGATIVE_EXACT_SOURCE_JSON))
     parser.add_argument("--negative-candidate-harvest-json", default=str(DEFAULT_NEGATIVE_CANDIDATE_HARVEST_JSON))
     parser.add_argument("--negative-queue-json", default=str(DEFAULT_NEGATIVE_QUEUE_JSON))
+    parser.add_argument("--primary-functional-evidence-json", default=str(DEFAULT_PRIMARY_FUNCTIONAL_EVIDENCE_JSON))
     parser.add_argument("--out-json", default=str(DEFAULT_OUT_JSON))
     parser.add_argument("--out-csv", default=str(DEFAULT_OUT_CSV))
     parser.add_argument("--out-md", default=str(DEFAULT_OUT_MD))
@@ -294,6 +337,7 @@ def main() -> None:
         _load_json(args.negative_exact_source_json),
         _load_json(args.negative_candidate_harvest_json),
         _load_json(args.negative_queue_json),
+        _load_json(args.primary_functional_evidence_json),
     )
     out_json = _resolve(args.out_json)
     out_csv = _resolve(args.out_csv)

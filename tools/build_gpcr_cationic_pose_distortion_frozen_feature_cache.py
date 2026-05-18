@@ -5,7 +5,9 @@ import argparse
 import csv
 import datetime as dt
 import json
+import os
 from collections import Counter
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +16,7 @@ import numpy as np
 from tools.build_gpcr_drd2_hard_decoy_slice_packet import _candidate_pressures
 from tools.build_gpcr_drd2_hard_decoy_slice_packet import _weak_base_rescue_support
 from tools.repair_gpcr_drd2_pseudo_allatom_backmapping import (
-    _anchor_indices,
+    _anchor_indices_and_static_coords,
     _backmap_frames,
     _rdkit_conformer,
 )
@@ -248,6 +250,20 @@ def _distance_features(
     return base
 
 
+def _protein_frames_for_distance_features(
+    *,
+    protein_atom_frames: np.ndarray | None,
+    static_anchor_coords: np.ndarray | None,
+    frame_count: int,
+) -> tuple[np.ndarray | None, list[int]]:
+    if protein_atom_frames is not None and protein_atom_frames.ndim == 3:
+        return protein_atom_frames, []
+    if static_anchor_coords is None or static_anchor_coords.ndim != 2 or static_anchor_coords.shape[0] <= 0:
+        return None, []
+    tiled = np.repeat(np.asarray(static_anchor_coords, dtype=np.float32)[None, :, :], int(frame_count), axis=0)
+    return tiled, list(range(int(static_anchor_coords.shape[0])))
+
+
 def _cache_row(
     row: dict[str, str],
     *,
@@ -292,14 +308,27 @@ def _cache_row(
     try:
         with np.load(str(npz_path), allow_pickle=False) as npz:
             ligand_frames = np.asarray(npz["ligand_frames"], dtype=np.float32)
-            protein_atom_frames = np.asarray(npz["protein_atom_frames"], dtype=np.float32)
+            protein_atom_frames = (
+                np.asarray(npz["protein_atom_frames"], dtype=np.float32)
+                if "protein_atom_frames" in npz.files
+                else None
+            )
     except Exception as exc:
         return {**out, "feature_cache_status": "failed", "feature_cache_reason": f"trajectory_npz_unreadable:{type(exc).__name__}"}
-    if ligand_frames.ndim != 3 or protein_atom_frames.ndim != 3:
+    if ligand_frames.ndim != 3 or ligand_frames.shape[0] <= 0 or ligand_frames.shape[2] != 3:
         return {**out, "feature_cache_status": "failed", "feature_cache_reason": "trajectory_frames_invalid"}
-    anchor_indices = _anchor_indices(native_pdb, int(protein_atom_frames.shape[1]))
-    if not anchor_indices:
+    if protein_atom_frames is not None and (protein_atom_frames.ndim != 3 or protein_atom_frames.shape[2] != 3):
+        return {**out, "feature_cache_status": "failed", "feature_cache_reason": "trajectory_frames_invalid"}
+    protein_atom_count = int(protein_atom_frames.shape[1]) if protein_atom_frames is not None else 0
+    anchor_indices, static_anchor_coords = _anchor_indices_and_static_coords(native_pdb, protein_atom_count)
+    if not anchor_indices and (static_anchor_coords is None or static_anchor_coords.shape[0] <= 0):
         return {**out, "feature_cache_status": "failed", "feature_cache_reason": "acidic_anchor_missing"}
+    distance_protein_frames, static_distance_anchor_indices = _protein_frames_for_distance_features(
+        protein_atom_frames=protein_atom_frames,
+        static_anchor_coords=static_anchor_coords,
+        frame_count=int(ligand_frames.shape[0]),
+    )
+    distance_anchor_indices = anchor_indices if anchor_indices else static_distance_anchor_indices
     basic_indices = [int(idx) for idx in conformer.get("basic_amine_atom_indices", [])]
     heavy_atoms = max(len(conformer.get("atomic_numbers", [])), 1)
     anchor_mode_norm = str(anchor_mode or "none").strip().lower()
@@ -309,6 +338,7 @@ def _cache_row(
             ligand_frames=ligand_frames,
             protein_atom_frames=protein_atom_frames,
             anchor_indices=anchor_indices,
+            static_anchor_coords=static_anchor_coords,
             conformer_coords=np.asarray(conformer["coords"], dtype=float),
             basic_indices=basic_indices,
             salt_bridge_distance_A=3.2,
@@ -316,10 +346,12 @@ def _cache_row(
         )
         if repaired.size <= 0:
             return None
+        if distance_protein_frames is None:
+            return None
         distance_features = _distance_features(
             ligand_frames=np.asarray(repaired, dtype=float),
-            protein_atom_frames=np.asarray(protein_atom_frames, dtype=float),
-            anchor_indices=anchor_indices,
+            protein_atom_frames=np.asarray(distance_protein_frames, dtype=float),
+            anchor_indices=distance_anchor_indices,
             basic_indices=basic_indices,
         )
         pose_rmsd = _float(metrics.get("coarse_centroid_preservation_rmsd_A_mean"), 0.0)
@@ -449,6 +481,11 @@ def _cache_row(
     return out
 
 
+def _cache_row_task(task: tuple[dict[str, str], dict[str, str], str]) -> dict[str, Any]:
+    row, native_lookup, anchor_mode = task
+    return _cache_row(row, native_lookup=native_lookup, anchor_mode=anchor_mode)
+
+
 def build_cache(
     *,
     input_csv: str | Path = DEFAULT_INPUT_CSV,
@@ -460,6 +497,7 @@ def build_cache(
     row_offset: int = 0,
     existing_keys: set[tuple[str, str]] | None = None,
     anchor_mode: str = "none",
+    workers: int = 1,
     generated_at_local: str | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     native_lookup = _native_path_lookup(
@@ -485,10 +523,21 @@ def build_cache(
     seen = existing_keys or set()
     skipped_existing_rows = [row for row in limited if _row_key(row) in seen]
     rows_to_process = [row for row in limited if _row_key(row) not in seen]
-    rows = [
-        _cache_row(row, native_lookup=native_lookup, anchor_mode=str(anchor_mode))
-        for row in rows_to_process
-    ]
+    worker_count = max(1, int(workers or 1))
+    if worker_count > 1 and rows_to_process:
+        with ProcessPoolExecutor(max_workers=worker_count) as pool:
+            rows = list(
+                pool.map(
+                    _cache_row_task,
+                    [(row, native_lookup, str(anchor_mode)) for row in rows_to_process],
+                    chunksize=max(1, min(100, len(rows_to_process) // (worker_count * 4) or 1)),
+                )
+            )
+    else:
+        rows = [
+            _cache_row(row, native_lookup=native_lookup, anchor_mode=str(anchor_mode))
+            for row in rows_to_process
+        ]
     ok_rows = [row for row in rows if row.get("feature_cache_status") == "ok"]
     reason_counts = Counter(_text(row.get("feature_cache_reason")) for row in rows if row.get("feature_cache_status") != "ok")
     target_counts = Counter(_text(row.get("target")) for row in ok_rows)
@@ -513,6 +562,8 @@ def build_cache(
         "row_limit": int(row_limit or 0),
         "target_filter": sorted(targets),
         "ligand_filter": sorted(ligands),
+        "workers_requested": int(workers or 1),
+        "workers_used": int(worker_count),
         "target_feature_row_counts": dict(sorted(target_counts.items())),
         "failure_reason_counts": dict(sorted(reason_counts.items())),
         "label_free_anchor_mode": str(anchor_mode),
@@ -571,6 +622,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--row-offset", type=int, default=0)
     parser.add_argument("--resume-existing", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--anchor-mode", choices=["none", "all_basic", "adaptive_pose_preserving"], default="none")
+    parser.add_argument("--workers", type=int, default=max(1, min(4, os.cpu_count() or 1)))
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -592,6 +644,7 @@ def main(argv: list[str] | None = None) -> None:
         row_offset=int(args.row_offset),
         existing_keys=existing_keys,
         anchor_mode=str(args.anchor_mode),
+        workers=int(args.workers),
     )
     output_rows = [*existing_rows, *rows] if bool(args.resume_existing) else rows
     summary["existing_row_count"] = len(existing_rows)

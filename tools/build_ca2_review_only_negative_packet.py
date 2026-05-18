@@ -137,6 +137,10 @@ def build_payload(
     capture_sheet_payload: dict[str, Any],
     local_hints_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    if local_hints_payload is None and (
+        "hint_rows" in capture_sheet_payload or "slot_summary" in capture_sheet_payload
+    ):
+        local_hints_payload = capture_sheet_payload
     local_hints_payload = local_hints_payload or {}
     workbook_by_step = {
         str(row.get("packet_step", "")).strip(): row for row in workbook_rows if str(row.get("packet_step", "")).strip()

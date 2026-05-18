@@ -482,7 +482,7 @@ def build_payload(
     trpv1_sourcing_request_csv: str,
     trpv1_vendor_web_check_json: str,
     trpv1_matched_negative_panel_json: str,
-    ligand_admet_module_json: str,
+    ligand_admet_module_json: str = DEFAULT_LIGAND_ADMET_MODULE_JSON,
 ) -> dict[str, Any]:
     admet_payload = _load_optional_json(ligand_admet_module_json)
     admet_summary = dict((admet_payload or {}).get("summary", {}) or {})

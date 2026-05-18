@@ -176,6 +176,77 @@ def test_rescue_three_bead_candidates_fall_back_to_stage6_and_retry_sources(tmp_
     assert payload["rows"][0]["ligand_id"] == "lig1"
 
 
+def test_rescue_three_bead_candidates_uses_archive_fallback_when_current_scores_are_pruned(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    summary_dir = tmp_path / "runs" / "wetlab_broad_screen_throughput" / "t_cruzi_pde" / "20_of_20"
+    summary_dir.mkdir(parents=True, exist_ok=True)
+    summary_json = summary_dir / "throughput_run_summary.json"
+    current_scores = summary_dir / "throughput_run_stage3_scores.csv"
+    summary_json.write_text(
+        json.dumps({"artifacts": {"stage3_scores_csv": str(current_scores)}}),
+        encoding="utf-8",
+    )
+    archive_scores = (
+        tmp_path
+        / "runs"
+        / "archive"
+        / "snapshot_current"
+        / "wetlab_broad_screen_throughput"
+        / "t_cruzi_pde"
+        / "20_of_20"
+        / "throughput_run_stage3_scores.csv"
+    )
+    archive_scores.parent.mkdir(parents=True, exist_ok=True)
+    with archive_scores.open("w", encoding="utf-8", newline="") as fh:
+        writer = csv.DictWriter(
+            fh,
+            fieldnames=[
+                "ligand_id",
+                "binding_energy_proxy",
+                "stability_score",
+                "contact_fraction",
+                "mean_min_distance_A",
+                "trajectory_frames",
+            ],
+        )
+        writer.writeheader()
+        writer.writerow(
+            {
+                "ligand_id": "archive_lig",
+                "binding_energy_proxy": "-0.72",
+                "stability_score": "0.68",
+                "contact_fraction": "0.82",
+                "mean_min_distance_A": "2.42",
+                "trajectory_frames": "220",
+            }
+        )
+    monkeypatch.setattr(mod, "DEFAULT_ARCHIVE_ROOT", tmp_path / "runs" / "archive")
+
+    payload = mod.build_payload(
+        {
+            "rows": [
+                {
+                    "target_id": "T. cruzi PDE",
+                    "target_slug": "t_cruzi_pde",
+                    "shard_id": "20_of_20",
+                    "summary_json": str(summary_json),
+                    "top_n_three_bead_recommended": True,
+                    "top_n_three_bead_count": 1,
+                }
+            ]
+        },
+        top_n=1,
+    )
+
+    summary = payload["summary"]
+    assert summary["candidate_row_count"] == 1
+    assert summary["source_stage3_scores_csv_archive_fallback_count"] == 1
+    assert payload["rows"][0]["ligand_id"] == "archive_lig"
+    assert payload["rows"][0]["source_stage3_scores_csv_from_archive"] is True
+
+
 def test_build_wetlab_rescue_three_bead_candidates_separates_translation_gate_and_expensive_lane_choices(
     tmp_path: Path,
 ) -> None:

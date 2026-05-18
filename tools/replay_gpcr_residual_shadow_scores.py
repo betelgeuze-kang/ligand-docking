@@ -158,13 +158,20 @@ def _merge_feature_cache(df: pd.DataFrame, feature_cache_csv: str | Path = "") -
         raise ValueError("feature cache CSV must include target and ligand_id columns")
     feature_cols = [col for col in cache_df.columns if col not in required]
     before_cols = set(df.columns)
-    merged = df.merge(cache_df[["target", "ligand_id", *feature_cols]], on=["target", "ligand_id"], how="left")
+    # Feature-cache overlays are newer, materialized structure evidence. Drop
+    # stale/reused columns from the source score CSV before merging so pandas
+    # does not suffix the cache columns away from the residual scorer.
+    overlay_cols = [col for col in feature_cols if col in df.columns]
+    merge_base = df.drop(columns=overlay_cols) if overlay_cols else df
+    merged = merge_base.merge(cache_df[["target", "ligand_id", *feature_cols]], on=["target", "ligand_id"], how="left")
     matched = int(merged[feature_cols].notna().any(axis=1).sum()) if feature_cols else 0
     return merged, {
         "enabled": True,
         "feature_cache_csv": str(cache_path),
         "cache_row_count": int(len(cache_df)),
         "matched_row_count": matched,
+        "overlay_replaced_column_count": len(overlay_cols),
+        "overlay_replaced_columns": overlay_cols,
         "merged_feature_columns": [col for col in feature_cols if col not in before_cols or col in merged.columns],
     }
 

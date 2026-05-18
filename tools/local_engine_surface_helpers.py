@@ -60,14 +60,21 @@ def summarize_local_engine_commercialization_queue(
     nightly_gate_recent_transition_line = _text(summary.get("nightly_gate_recent_transition_line"))
     nightly_gate_recent_stage6_fail_count = _int(summary.get("nightly_gate_recent_stage6_fail_count"))
     nightly_gate_next_required_step = _text(summary.get("nightly_gate_next_required_step"))
+    blocked_count = _int(summary.get("blocked_count"))
+    partial_count = _int(summary.get("partial_count"))
+    parked_science_count = _int(summary.get("parked_science_blocker_count"))
+    queue_clear = bool(summary.get("queue_clear", False)) or (
+        ready and blocked_count == 0 and partial_count == 0 and parked_science_count == 0
+    )
 
     blocker_signal_parts = [
         f"local_engine_row_count={row_count}" if row_count else "",
         (
-            f"local_engine_blocked={_int(summary.get('blocked_count'))}; "
-            f"local_engine_partial={_int(summary.get('partial_count'))}; "
+            f"local_engine_blocked={blocked_count}; "
+            f"local_engine_partial={partial_count}; "
             f"local_engine_keep_green={_int(summary.get('keep_green_count'))}; "
-            f"local_engine_parked_science={_int(summary.get('parked_science_blocker_count'))}"
+            f"local_engine_parked_science={parked_science_count}; "
+            f"local_engine_queue_clear={queue_clear}"
         )
         if ready
         else "",
@@ -93,13 +100,21 @@ def summarize_local_engine_commercialization_queue(
     blocker_note = ""
     if ready:
         top_label = top_priority_id.replace("_", " ") if top_priority_id else "the local-engine commercialization queue"
-        blocker_note = (
-            f"Local-only commercialization is still queue-gated by {DEFAULT_LOCAL_ENGINE_COMMERCIALIZATION_QUEUE_MD}: "
-            f"{top_label}"
-            + (f" is {top_priority_status}" if top_priority_status else "")
-            + ", and transporter science work stays parked behind nightly reliability, viewer usability, and wetlab execution readiness."
-        )
-        if top_priority_id == "nightly_reliability" and top_priority_status == "partial" and nightly_gate_ready:
+        if queue_clear:
+            blocker_note = (
+                f"Local-only commercialization queue is clear in {DEFAULT_LOCAL_ENGINE_COMMERCIALIZATION_QUEUE_MD}: "
+                f"{top_label}"
+                + (f" is {top_priority_status}" if top_priority_status else "")
+                + ", with no blocked, partial, or parked science rows."
+            )
+        else:
+            blocker_note = (
+                f"Local-only commercialization is still queue-gated by {DEFAULT_LOCAL_ENGINE_COMMERCIALIZATION_QUEUE_MD}: "
+                f"{top_label}"
+                + (f" is {top_priority_status}" if top_priority_status else "")
+                + ", and transporter science work stays parked behind nightly reliability, viewer usability, and wetlab execution readiness."
+            )
+        if (not queue_clear) and top_priority_id == "nightly_reliability" and top_priority_status == "partial" and nightly_gate_ready:
             blocker_note += (
                 " The nightly stage6 burndown packet at "
                 f"{nightly_gate_artifact or DEFAULT_NIGHTLY_GATE_BURNDOWN_PACKET_MD} is tracking "
@@ -116,12 +131,11 @@ def summarize_local_engine_commercialization_queue(
             DEFAULT_LOCAL_ENGINE_COMMERCIALIZATION_QUEUE_MD if ready else ""
         ),
         "local_engine_commercialization_queue_row_count": row_count,
-        "local_engine_commercialization_queue_blocked_count": _int(summary.get("blocked_count")),
-        "local_engine_commercialization_queue_partial_count": _int(summary.get("partial_count")),
+        "local_engine_commercialization_queue_clear": queue_clear,
+        "local_engine_commercialization_queue_blocked_count": blocked_count,
+        "local_engine_commercialization_queue_partial_count": partial_count,
         "local_engine_commercialization_queue_keep_green_count": _int(summary.get("keep_green_count")),
-        "local_engine_commercialization_queue_parked_science_blocker_count": _int(
-            summary.get("parked_science_blocker_count")
-        ),
+        "local_engine_commercialization_queue_parked_science_blocker_count": parked_science_count,
         "local_engine_commercialization_queue_top_priority_id": top_priority_id,
         "local_engine_commercialization_queue_top_priority_status": top_priority_status,
         "local_engine_commercialization_queue_engine_blocker_count": _int(summary.get("engine_blocker_count")),
@@ -176,6 +190,7 @@ def local_engine_summary_from_source(summary_source: dict[str, Any] | None = Non
         "local_engine_commercialization_queue_ready",
         "local_engine_commercialization_queue_artifact",
         "local_engine_commercialization_queue_row_count",
+        "local_engine_commercialization_queue_clear",
         "local_engine_commercialization_queue_blocked_count",
         "local_engine_commercialization_queue_partial_count",
         "local_engine_commercialization_queue_keep_green_count",
@@ -209,6 +224,9 @@ def local_engine_summary_from_source(summary_source: dict[str, Any] | None = Non
     )
     hydrated["local_engine_commercialization_queue_nightly_gate_burndown_ready"] = bool(
         summary_source.get("local_engine_commercialization_queue_nightly_gate_burndown_ready", False)
+    )
+    hydrated["local_engine_commercialization_queue_clear"] = bool(
+        summary_source.get("local_engine_commercialization_queue_clear", False)
     )
     for key in (
         "local_engine_commercialization_queue_row_count",

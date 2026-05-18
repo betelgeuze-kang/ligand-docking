@@ -231,6 +231,78 @@ def _guarded_100k_readiness_preflight(
     }
 
 
+def _probe_torch_gpu() -> Dict[str, Any]:
+    try:
+        import torch  # type: ignore
+
+        available = bool(torch.cuda.is_available())
+        count = int(torch.cuda.device_count()) if available else 0
+        names: List[str] = []
+        if count > 0:
+            for idx in range(count):
+                try:
+                    names.append(str(torch.cuda.get_device_name(idx)))
+                except Exception:
+                    names.append(f"cuda:{idx}")
+        return {
+            "torch_import_ok": True,
+            "torch_version": str(getattr(torch, "__version__", "")),
+            "torch_cuda_available": available,
+            "torch_cuda_device_count": count,
+            "torch_cuda_device_names": names,
+            "error": "",
+        }
+    except Exception as exc:
+        return {
+            "torch_import_ok": False,
+            "torch_version": "",
+            "torch_cuda_available": False,
+            "torch_cuda_device_count": 0,
+            "torch_cuda_device_names": [],
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+
+
+def _gpu_backend_preflight(*, prof: Dict[str, Any]) -> Dict[str, Any]:
+    trajectory_mode = str(prof.get("trajectory_engine_mode", "")).strip().lower()
+    require_rust_hip = bool(prof.get("require_rust_hip", False))
+    abort_on_cpu_backend = bool(prof.get("traj_abort_on_cpu_backend", False))
+    required = bool(require_rust_hip or trajectory_mode == "rust_hip" or abort_on_cpu_backend)
+    probe = _probe_torch_gpu() if required else {}
+    ok = bool(
+        (not required)
+        or (
+            probe.get("torch_import_ok") is True
+            and probe.get("torch_cuda_available") is True
+            and int(probe.get("torch_cuda_device_count") or 0) > 0
+        )
+    )
+    blockers: List[str] = []
+    if required and not bool(probe.get("torch_import_ok", False)):
+        blockers.append("torch_gpu_probe_failed")
+    if required and not bool(probe.get("torch_cuda_available", False)):
+        blockers.append("torch_cuda_unavailable")
+    if required and int(probe.get("torch_cuda_device_count") or 0) <= 0:
+        blockers.append("torch_cuda_device_count_zero")
+    return {
+        "checked": bool(required),
+        "required": bool(required),
+        "ok": bool(ok),
+        "trajectory_engine_mode": trajectory_mode,
+        "require_rust_hip": bool(require_rust_hip),
+        "traj_abort_on_cpu_backend": bool(abort_on_cpu_backend),
+        "blockers": sorted(set(blockers)),
+        **probe,
+        "next_required_step": (
+            "Expose a ROCm/CUDA torch device before starting expensive hard-decoy or trajectory stages."
+            if required and not ok
+            else "GPU backend is visible for the rust_hip trajectory stage."
+            if required
+            else "GPU backend preflight not required for this profile."
+        ),
+    }
+
+
 def _parse_roles(spec: str) -> List[str]:
     return [tok.strip() for tok in str(spec or "").split(",") if tok.strip()]
 
@@ -819,6 +891,46 @@ def run_stress(args: argparse.Namespace) -> Dict[str, Any]:
         _release_instance_lock(lock_meta)
         return payload
 
+    gpu_backend_preflight = _gpu_backend_preflight(prof=prof)
+    if not bool(gpu_backend_preflight.get("ok", False)):
+        payload = {
+            "generated_at_local": dt.datetime.now().isoformat(timespec="seconds"),
+            "pass": False,
+            "stopped": False,
+            "failed_stage": "gpu_backend_preflight",
+            "profile_json": profile_json,
+            "runs": [],
+            "aggregate": [],
+            "failures": [],
+            "stages": {"gpu_backend_preflight": gpu_backend_preflight},
+            "artifacts": {
+                "summary_json": f"{out_prefix}_summary.json",
+                "summary_md": f"{out_prefix}_summary.md",
+                "state_json": state_json,
+            },
+        }
+        payload = _attach_artifacts_abs(payload)
+        with open(f"{out_prefix}_summary.json", "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+        with open(f"{out_prefix}_summary.md", "w", encoding="utf-8") as f:
+            f.write(
+                "\n".join(
+                    [
+                        "# Ligand Stress Validation",
+                        "",
+                        f"- pass: {payload['pass']}",
+                        f"- failed_stage: `{payload['failed_stage']}`",
+                        f"- trajectory_engine_mode: `{gpu_backend_preflight.get('trajectory_engine_mode', '')}`",
+                        f"- torch_cuda_available: `{gpu_backend_preflight.get('torch_cuda_available', False)}`",
+                        f"- torch_cuda_device_count: `{gpu_backend_preflight.get('torch_cuda_device_count', 0)}`",
+                        f"- blockers: {gpu_backend_preflight.get('blockers', [])}",
+                    ]
+                )
+                + "\n"
+            )
+        _release_instance_lock(lock_meta)
+        return payload
+
     gate = prof.get("gate", {}) if isinstance(prof.get("gate"), dict) else {}
     strict_gate = prof.get("strict_gate", {}) if isinstance(prof.get("strict_gate"), dict) else {}
     smoke = prof.get("smoke", {}) if isinstance(prof.get("smoke"), dict) else {}
@@ -933,9 +1045,13 @@ def run_stress(args: argparse.Namespace) -> Dict[str, Any]:
         hard_progress = f"{out_prefix}_hard_decoy_progress.json"
         hard_labels_balanced = f"{out_prefix}_hard_decoy_labels_balanced.csv"
         hard_summary_json = f"{out_prefix}_hard_decoy_summary.json"
-        can_reuse_pre = bool(args.resume) and bool(pre_stage_state.get("done", False)) and all(
+        hard_summary_obj = _read_json(hard_summary_json) if os.path.exists(hard_summary_json) else {}
+        can_reuse_pre = bool(args.resume) and all(
             os.path.exists(p)
             for p in [hard_labels, hard_split, hard_summary_json]
+        ) and (
+            bool(pre_stage_state.get("done", False))
+            or bool(hard_summary_obj.get("pass", False))
         )
         if can_reuse_pre:
             pre_stage = {"ok": True, "skipped": True, "reused": True, "cmd": [], "cmd_str": ""}

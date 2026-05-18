@@ -22,17 +22,17 @@ def test_build_aqp1_seed_row_fill_draft_only_prefills_safe_field() -> None:
 
     assert summary["target_id"] == "AQP1"
     assert summary["packet_step"] == "core_binder_01"
-    assert summary["safe_prefill_field_count"] == 1
-    assert summary["blocked_field_count"] == 4
+    assert summary["safe_prefill_field_count"] == 4
+    assert summary["blocked_field_count"] == 1
     assert summary["manual_verdict_status"] == "completed_manual_verdict"
 
     row_map = {row["field_name"]: row for row in rows}
     assert row_map["replacement_source"]["staged_fill_value"] == "https://pubmed.ncbi.nlm.nih.gov/27474162/"
     assert row_map["replacement_source"]["reviewer_safe_now"] == "yes"
-    assert row_map["replacement_ligand_id"]["staged_fill_value"] == ""
+    assert row_map["replacement_ligand_id"]["staged_fill_value"] == "aqp1_bacopaside_ii_review_seed"
     assert row_map["replacement_reference_binding_kcal_mol"]["staged_fill_value"] == ""
-    assert row_map["replacement_smiles"]["staged_fill_value"] == ""
-    assert row_map["replacement_scaffold"]["staged_fill_value"] == ""
+    assert row_map["replacement_smiles"]["staged_fill_value"]
+    assert row_map["replacement_scaffold"]["staged_fill_value"]
 
 
 def test_build_aqp1_seed_row_fill_draft_can_target_core_binder_02() -> None:
