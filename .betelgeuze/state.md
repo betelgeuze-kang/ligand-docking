@@ -1,0 +1,29 @@
+# Betelgeuze Harness State
+
+- updated_at: 2026-05-21T00:14:46+09:00
+- mode: Deep
+- risk: R3 local / R4 external submission boundary
+- goal: Bring CASP17 current open protein targets to 100% internal-physics quality-heavy local prediction readiness with fail-closed backend, launch, coverage, validation, scorecard, and submission gates.
+- constraints:
+  - Do not revert unrelated dirty worktree changes.
+  - Do not stage, commit, push, delete, or mutate external state without an explicit request.
+  - Do not fake CASP17 structures or provenance; raw/TS predictions must come from a real internal target-specific backend or cleared existing-structure source.
+  - Keep CPU fallback blocked for CASP17 generation unless explicitly re-scoped; GPU evidence is required by the backend contract.
+- current evidence:
+  - Official CASP17 target watchlist refreshed at `2026-05-20T23:04+09:00`: `12` open selected protein targets, with `H1319` excluded from the current open submission set because its human deadline passed on `2026-05-19`.
+  - `runs/casp17_sequence_packet_current.json`: `12/12` current open protein target FASTA files materialized.
+  - `runs/casp17_prediction_launch_packet_recursive_current.json`: `target_count=12`, `ready_to_launch_count=12`, backend mode `internal_physics`, preset `casp17_quality`, `--emit-backbone-atoms`.
+  - `runs/casp17_prediction_recursive_contract_batch_current.json`: `completed_to_contract`, `12/12` backend jobs executed and contract-validated.
+  - `runs/casp17_internal_physics_raw_gate_packet_recursive_current.json`: raw gate `pass`, `12/12` contract/geometry/confidence pass with GPU evidence required.
+  - `runs/casp17_internal_physics_ts_gate_batch_recursive_current.json`: `completed_to_submission_gate`, `12/12` converted to TS and downstream import/validation/scorecard/submission gate completed.
+  - `runs/casp17_submission_gate_packet_recursive_current.json`: internal fail-closed submission gate reports `12/12 submission_go`.
+  - `runs/casp17_internal_physics_accuracy_readiness_packet_recursive_current.json`: internal accuracy-readiness proxy `pass`, `12/12`, requiring backbone atom density.
+  - `docs/casp17_participation_gate_2026-05-21.md`: current CASP17 internal-physics runbook, replacing the older external-adapter-oriented participation note.
+  - TS converter emits `PARENT N/A` and `TER` per atom-containing chain segment; recursive TS files have chain-count-matched PARENT/TER rows.
+  - Internal predictor now performs stronger multichain closest-pair declash and emits an explicitly labeled CA-anchored compact pseudo-backbone for raw/TS geometry gates.
+  - CASP17 targeted regression suite: `75 passed in 29.25s`.
+- active hypothesis:
+  - For the current open protein target set, the repository-side CASP17 internal-physics quality-heavy lane is locally complete through raw generation, TS generation, internal scorecard, internal submission gate, and the added accuracy-readiness proxy.
+  - This is readiness evidence only, not accepted CASP submission or official native-accuracy/performance evidence.
+- next action:
+  - Commit the CASP17 internal-physics tooling/docs changes locally, then prepare external-state confirmation before pushing to GitHub or uploading to CASP.
