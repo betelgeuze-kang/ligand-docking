@@ -21,6 +21,18 @@ class StrategyType:
     # Add more types as needed
 
 class ResearchConstants:
+    SMALL_PROTEIN_TARGETS = (
+        'Chignolin',
+        'Trp_Cage',
+        'Villin_HP35',
+        'BBA5',
+        'FSD_1',
+        'WW_Domain_FiP35',
+        'Crambin',
+        'Protein_A_Bdomain',
+        'GB1_Mini',
+        'Ubiquitin_Mini',
+    )
     CHALLENGES = {
         # Small-protein target set (10 total) for structural diversity learning.
         # Fold coverage: beta-hairpin, all-alpha, all-beta, alpha/beta, disulfide-rich compact.
@@ -44,3 +56,9 @@ class ResearchConstants:
             'canonical_chain': 'B',
         },
     }
+
+
+ResearchConstants.SMALL_PROTEIN_CHALLENGES = {
+    target: ResearchConstants.CHALLENGES[target]
+    for target in ResearchConstants.SMALL_PROTEIN_TARGETS
+}

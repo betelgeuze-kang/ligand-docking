@@ -4,13 +4,16 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from tools import ca2_packet_bridge as bridge
-
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from tools import ca2_packet_bridge as bridge
 PRIMARY_TARGET = "CARBONIC_ANHYDRASE_2_ZN_BLIND"
 
 EXPECTED_HEADERS: dict[str, list[str]] = {
@@ -365,7 +368,7 @@ def _build_workbook_rows(
         "ca2_core_reference",
         "core_reference_csv",
         "csv",
-        "Core ligand reference packet still contains placeholder rows.",
+        "Core ligand reference packet has only headers; no curated CA2 ligand rows are frozen yet.",
         "Add binder/non-binder rows with provenance strings.",
         "P0",
         packet="core",
@@ -400,7 +403,7 @@ def _build_workbook_rows(
         "ca2_ood_reference",
         "ood_reference_csv",
         "csv",
-        "Expanded OOD ligand reference packet still contains placeholder rows.",
+        "Expanded OOD ligand reference packet has only headers; no curated CA2 OOD rows are frozen yet.",
         "Add external-style CA2 ligand rows and provenance.",
         "P0",
         packet="ood",
@@ -567,6 +570,15 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
     lines.append(f"- `ood_packet_ready`: `{summary.get('ood_packet_ready')}`")
     lines.append(f"- `ood_packet_ready_after_freeze`: `{summary.get('ood_packet_ready_after_freeze')}`")
     lines.append(f"- `fit_donor_policy_frozen`: `{summary.get('fit_donor_policy_frozen')}`")
+    lines.append("")
+    lines.append("## Placeholder Policies")
+    lines.append("")
+    placeholder_policies = payload.get("placeholder_policies", {}) or {}
+    if placeholder_policies:
+        for key in sorted(placeholder_policies):
+            lines.append(f"- `{key}`: `{placeholder_policies[key]}`")
+    else:
+        lines.append("- none")
     lines.append("")
     lines.append("## Workbook")
     lines.append("")

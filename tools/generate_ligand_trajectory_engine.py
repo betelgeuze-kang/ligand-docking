@@ -1340,6 +1340,9 @@ def _compute_ligand_extra_force(
     *,
     pocket_attract: Any,
     protein_repulse: Any,
+    contact_attract: Any,
+    contact_target_distance_A: float,
+    contact_attract_cutoff_A: float,
     bond_k: float,
     bond_ref: Any,
     repulse_cutoff_A: float,
@@ -1358,6 +1361,10 @@ def _compute_ligand_extra_force(
         protein_repulse_t = protein_repulse.to(device=lig.device, dtype=lig.dtype).reshape(b, 1, 1)
     else:
         protein_repulse_t = torch.full((b, 1, 1), float(protein_repulse), dtype=lig.dtype, device=lig.device)
+    if isinstance(contact_attract, torch.Tensor):
+        contact_attract_t = contact_attract.to(device=lig.device, dtype=lig.dtype).reshape(b, 1, 1)
+    else:
+        contact_attract_t = torch.full((b, 1, 1), float(contact_attract), dtype=lig.dtype, device=lig.device)
 
     # Pocket attraction toward pocket center.
     center = lig.mean(dim=1, keepdim=True)  # [B,1,3]
@@ -1376,6 +1383,24 @@ def _compute_ligand_extra_force(
             weighted = unit * mag.unsqueeze(-1) * mask.unsqueeze(-1).to(unit.dtype)
             denom = mask.sum(dim=2, keepdim=True).clamp_min(1).to(unit.dtype)
             f_lig += weighted.sum(dim=2) / denom
+
+        contact_strength = float(torch.max(contact_attract_t).detach().cpu().item())
+        contact_target = float(max(0.0, contact_target_distance_A))
+        contact_cutoff = float(max(contact_target + 1e-6, contact_attract_cutoff_A))
+        if contact_strength > 0.0:
+            nearest_dist, nearest_idx = torch.min(dist, dim=2)  # [B,L]
+            nearest_prot = torch.gather(
+                prot,
+                dim=1,
+                index=nearest_idx.unsqueeze(-1).expand(-1, -1, 3),
+            )
+            direction = nearest_prot - lig
+            unit_to_protein = direction / nearest_dist.unsqueeze(-1).clamp_min(1e-6)
+            normalized_gap = ((nearest_dist - contact_target).clamp_min(0.0) / (contact_cutoff - contact_target))
+            normalized_gap = normalized_gap.clamp(max=1.0)
+            active = nearest_dist > contact_target
+            contact_force = unit_to_protein * normalized_gap.unsqueeze(-1) * contact_attract_t
+            f_lig += contact_force * active.unsqueeze(-1).to(contact_force.dtype)
 
     # 2-bead harmonic bond.
     if l >= 2:
@@ -1428,6 +1453,9 @@ def _simulate_with_engine_batch(
     kT: float,
     pocket_attract_batch: np.ndarray,
     protein_repulse_batch: np.ndarray,
+    contact_attract_batch: np.ndarray,
+    contact_target_distance_A: float,
+    contact_attract_cutoff_A: float,
     bond_k: float,
     repulse_cutoff_A: float,
     max_pocket_radius_A: float,
@@ -1463,12 +1491,15 @@ def _simulate_with_engine_batch(
         raise ValueError("pocket_batch must have shape [B, 3]")
     pocket_attr = np.asarray(pocket_attract_batch, dtype=np.float32).reshape(-1)
     protein_rep = np.asarray(protein_repulse_batch, dtype=np.float32).reshape(-1)
+    contact_attr = np.asarray(contact_attract_batch, dtype=np.float32).reshape(-1)
     affinity_hint_arr = np.asarray(affinity_hint_batch if affinity_hint_batch is not None else np.zeros((lig0.shape[0],), dtype=np.float32), dtype=np.float32).reshape(-1)
     onsps_norm_arr = np.asarray(onsps_norm_batch if onsps_norm_batch is not None else np.zeros((lig0.shape[0],), dtype=np.float32), dtype=np.float32).reshape(-1)
     if pocket_attr.shape[0] != lig0.shape[0]:
         raise ValueError("pocket_attract_batch length must match batch size")
     if protein_rep.shape[0] != lig0.shape[0]:
         raise ValueError("protein_repulse_batch length must match batch size")
+    if contact_attr.shape[0] != lig0.shape[0]:
+        raise ValueError("contact_attract_batch length must match batch size")
     if affinity_hint_arr.shape[0] != lig0.shape[0]:
         raise ValueError("affinity_hint_batch length must match batch size")
     if onsps_norm_arr.shape[0] != lig0.shape[0]:
@@ -1483,6 +1514,7 @@ def _simulate_with_engine_batch(
     pocket_t = torch.as_tensor(pockets, dtype=torch.float32, device=device).view(bsz, 1, 3)
     pocket_attr_t = torch.as_tensor(pocket_attr, dtype=torch.float32, device=device)
     protein_rep_t = torch.as_tensor(protein_rep, dtype=torch.float32, device=device)
+    contact_attr_t = torch.as_tensor(contact_attr, dtype=torch.float32, device=device)
     protein_batch = protein_t.unsqueeze(0).expand(bsz, -1, -1)
     c = torch.cat([protein_batch, ligand_t], dim=1)  # [B,N,3]
     v = torch.zeros_like(c)
@@ -1543,6 +1575,7 @@ def _simulate_with_engine_batch(
         and getattr(ff, "rust_backend", None) is not None
         and bool(ff.rust_backend.supports_direct_rollout())
         and (not prod_early_stop_active)
+        and float(np.max(contact_attr)) <= 0.0
     )
     if native_rollout_ok:
         try:
@@ -1608,6 +1641,9 @@ def _simulate_with_engine_batch(
                 pocket=pocket_t,
                 pocket_attract=pocket_attr_t,
                 protein_repulse=protein_rep_t,
+                contact_attract=contact_attr_t,
+                contact_target_distance_A=float(contact_target_distance_A),
+                contact_attract_cutoff_A=float(contact_attract_cutoff_A),
                 bond_k=float(bond_k),
                 bond_ref=bond_ref_t if n_lig >= 2 else 0.0,
                 repulse_cutoff_A=float(repulse_cutoff_A),
@@ -1894,6 +1930,7 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
             pocket_batch = np.stack([x["pocket"] for x in probe], axis=0).astype(np.float32, copy=False)
             pocket_attr_batch = np.asarray([x["k_attr"] for x in probe], dtype=np.float32)
             protein_rep_batch = np.asarray([x["k_rep"] for x in probe], dtype=np.float32)
+            contact_attr_batch = np.asarray([x["k_contact"] for x in probe], dtype=np.float32)
             t0_probe = time.perf_counter()
             try:
                 _simulate_with_engine_batch(
@@ -1908,6 +1945,9 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                     kT=float(args.kT),
                     pocket_attract_batch=pocket_attr_batch,
                     protein_repulse_batch=protein_rep_batch,
+                    contact_attract_batch=contact_attr_batch,
+                    contact_target_distance_A=float(args.contact_target_distance_A),
+                    contact_attract_cutoff_A=float(args.contact_attract_cutoff_A),
                     affinity_hint_batch=np.asarray([x["affinity"] for x in probe], dtype=np.float32),
                     onsps_norm_batch=np.asarray([x.get("onsps_norm", 0.0) for x in probe], dtype=np.float32),
                     bond_k=float(args.bond_k),
@@ -1978,7 +2018,7 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                 npz_path=entry["npz_path"],
                 tdir=entry["tdir"],
                 npz_compression=str(args.npz_compression),
-                protein_atom_template=entry.get("protein_atom_template"),
+                protein_atom_template=None if bool(prod_light_artifacts) else entry.get("protein_atom_template"),
             )
             return
         if writer_mode == "process":
@@ -1996,7 +2036,7 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                     "npz_path": entry["npz_path"],
                     "tdir": entry["tdir"],
                     "npz_compression": str(args.npz_compression),
-                    "protein_atom_template": entry.get("protein_atom_template"),
+                    "protein_atom_template": None if bool(prod_light_artifacts) else entry.get("protein_atom_template"),
                     "npz_extra_arrays": entry.get("npz_extra_arrays"),
                     "protein_atom_template_source_type": entry.get("protein_atom_template_source_type", ""),
                 }
@@ -2021,7 +2061,7 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                 npz_path=entry["npz_path"],
                 tdir=entry["tdir"],
                 npz_compression=str(args.npz_compression),
-                protein_atom_template=entry.get("protein_atom_template"),
+                protein_atom_template=None if bool(prod_light_artifacts) else entry.get("protein_atom_template"),
                 npz_extra_arrays=entry.get("npz_extra_arrays"),
             )
         )
@@ -2059,6 +2099,7 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                 "affinity_hint": float(entry["affinity"]),
                 "k_attr": float(entry["k_attr"]),
                 "protein_repulse": float(entry["k_rep"]),
+                "contact_attract": float(entry.get("k_contact", 0.0)),
                 "seed": int(entry["seed_i"]),
                 "strategy_requested": str(entry["strategy_requested"]),
                 "strategy_final": str(entry["strategy_requested"]),
@@ -2123,12 +2164,24 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                 "protein_atom_template_source_type": str(entry.get("protein_atom_template_source_type", "")),
                 "protein_atom_template_source_path": str(entry.get("protein_atom_template_source_path", "")),
                 "protein_atom_template_warning": str(entry.get("protein_atom_template_warning", "")),
-                "protein_atom_frames_available": bool(entry.get("protein_atom_template_count", 0) > 0 and frame_output_format == "npz_bundle"),
+                "protein_atom_frames_available": bool(
+                    (not bool(prod_light_artifacts))
+                    and entry.get("protein_atom_template_count", 0) > 0
+                    and frame_output_format == "npz_bundle"
+                ),
                 "protein_atom_template_count": int(entry.get("protein_atom_template_count", 0)),
                 "protein_atom_schema_version": int(entry.get("protein_atom_schema_version", 0)),
-                "protein_atom_motion_mode": "static_native_template_repeated"
-                if int(entry.get("protein_atom_template_count", 0)) > 0 and frame_output_format == "npz_bundle"
-                else "not_available",
+                "protein_atom_motion_mode": (
+                    "static_native_template_omitted_prod_light"
+                    if bool(prod_light_artifacts)
+                    and int(entry.get("protein_atom_template_count", 0)) > 0
+                    and frame_output_format == "npz_bundle"
+                    else (
+                        "static_native_template_repeated"
+                        if int(entry.get("protein_atom_template_count", 0)) > 0 and frame_output_format == "npz_bundle"
+                        else "not_available"
+                    )
+                ),
                 "protein_frame_capture_supported": False,
                 "protein_frame_capture_mode": "simulation_failed_before_true_protein_frame_capture",
                 "protein_frame_capture_reason": "simulation_failed__engine_only_integrates_ligand_coordinates",
@@ -2180,6 +2233,7 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
         pocket_batch = np.stack([x["pocket"] for x in batch], axis=0).astype(np.float32, copy=False)
         pocket_attr_batch = np.asarray([x["k_attr"] for x in batch], dtype=np.float32)
         protein_rep_batch = np.asarray([x["k_rep"] for x in batch], dtype=np.float32)
+        contact_attr_batch = np.asarray([x["k_contact"] for x in batch], dtype=np.float32)
         affinity_hint_batch = np.asarray([x["affinity"] for x in batch], dtype=np.float32)
         onsps_norm_batch = np.asarray([x.get("onsps_norm", 0.0) for x in batch], dtype=np.float32)
         batch_seed = int(min(x["seed_i"] for x in batch))
@@ -2197,6 +2251,9 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                 kT=float(args.kT),
                 pocket_attract_batch=pocket_attr_batch,
                 protein_repulse_batch=protein_rep_batch,
+                contact_attract_batch=contact_attr_batch,
+                contact_target_distance_A=float(args.contact_target_distance_A),
+                contact_attract_cutoff_A=float(args.contact_attract_cutoff_A),
                 affinity_hint_batch=affinity_hint_batch,
                 onsps_norm_batch=onsps_norm_batch,
                 bond_k=float(args.bond_k),
@@ -2331,6 +2388,7 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                     "affinity_hint": float(entry["affinity"]),
                     "k_attr": float(entry["k_attr"]),
                     "protein_repulse": float(entry["k_rep"]),
+                    "contact_attract": float(entry.get("k_contact", 0.0)),
                     "seed": int(entry["seed_i"]),
                     "strategy_requested": str(entry["strategy_requested"]),
                     "strategy_final": str(strategy_final),
@@ -2342,16 +2400,26 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                     "protein_atom_template_source_type": str(entry.get("protein_atom_template_source_type", "")),
                     "protein_atom_template_source_path": str(entry.get("protein_atom_template_source_path", "")),
                     "protein_atom_template_warning": str(entry.get("protein_atom_template_warning", "")),
-                    "protein_atom_frames_available": bool(entry.get("protein_atom_template_count", 0) > 0 and frame_output_format == "npz_bundle"),
+                    "protein_atom_frames_available": bool(
+                        (not bool(prod_light_artifacts))
+                        and entry.get("protein_atom_template_count", 0) > 0
+                        and frame_output_format == "npz_bundle"
+                    ),
                     "protein_atom_template_count": int(entry.get("protein_atom_template_count", 0)),
                     "protein_atom_schema_version": int(entry.get("protein_atom_schema_version", 0)),
                     "protein_atom_motion_mode": (
                         "engine_true_protein_frames"
                         if bool(sim_telemetry.get("protein_frame_capture_supported", False))
                         else (
-                            "static_native_template_repeated"
-                            if int(entry.get("protein_atom_template_count", 0)) > 0 and frame_output_format == "npz_bundle"
-                            else "not_available"
+                            "static_native_template_omitted_prod_light"
+                            if bool(prod_light_artifacts)
+                            and int(entry.get("protein_atom_template_count", 0)) > 0
+                            and frame_output_format == "npz_bundle"
+                            else (
+                                "static_native_template_repeated"
+                                if int(entry.get("protein_atom_template_count", 0)) > 0 and frame_output_format == "npz_bundle"
+                                else "not_available"
+                            )
                         )
                     ),
                     "protein_res_count": int(entry["protein"].shape[0]),
@@ -2436,6 +2504,7 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
             )
             k_attr = float(args.pocket_attract_base) * (0.60 + 1.40 * affinity)
             k_rep = float(args.protein_repulse) * (1.00 + 0.30 * max(0.0, 1.0 - affinity))
+            k_contact = float(args.contact_attract_base) * (0.60 + 1.40 * affinity)
             seed_i = int(args.seed) + abs(hash(queue_id)) % 1000003
             strategy_requested, strategy_reason, adress_radius_A, estimated_atom_ratio = _resolve_strategy_type(
                 row=row,
@@ -2478,6 +2547,7 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                 "onsps_norm": float(onsps_norm),
                 "k_attr": float(k_attr),
                 "k_rep": float(k_rep),
+                "k_contact": float(k_contact),
                 "seed_i": int(seed_i),
                 "strategy_requested": str(strategy_requested),
                 "strategy_reason": str(strategy_reason),
@@ -2690,6 +2760,10 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
         "tail_perf": tail_summary,
         "force_backend_requested": str(args.force_backend),
         "require_rust_hip": bool(args.require_rust_hip),
+        "contact_attract_base": float(args.contact_attract_base),
+        "contact_target_distance_A": float(args.contact_target_distance_A),
+        "contact_attract_cutoff_A": float(args.contact_attract_cutoff_A),
+        "contact_attract_enabled": float(args.contact_attract_base) > 0.0,
         "out_root": os.path.abspath(out_root),
         "frame_output_format": frame_output_format,
         "npz_layout": str(args.npz_layout),
@@ -2752,6 +2826,7 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
             "manifest_chunks_disabled": bool(prod_artifact_light["manifest_chunks_disabled"]),
             "target_tail_disabled": bool(prod_artifact_light["target_tail_disabled"]),
             "summary_md_disabled": bool(prod_artifact_light["summary_md_disabled"]),
+            "protein_atom_frames_disabled": bool(prod_light_artifacts),
             "progress_every_jobs_effective": int(prod_artifact_light["progress_every_jobs"]),
         },
     }
@@ -2835,6 +2910,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--force-clip", type=float, default=200.0)
     p.add_argument("--pocket-attract-base", type=float, default=0.16)
     p.add_argument("--protein-repulse", type=float, default=0.22)
+    p.add_argument(
+        "--contact-attract-base",
+        type=float,
+        default=0.0,
+        help="Optional nearest-protein contact attraction for opt-in geometry/stability rescue lanes.",
+    )
+    p.add_argument("--contact-target-distance-A", type=float, default=3.2)
+    p.add_argument("--contact-attract-cutoff-A", type=float, default=8.0)
     p.add_argument("--bond-k", type=float, default=0.25)
     p.add_argument("--repulse-cutoff-A", type=float, default=4.5)
     p.add_argument("--max-pocket-radius-A", type=float, default=12.0)

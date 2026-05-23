@@ -17,6 +17,7 @@ DEFAULT_STAGE6_FAILURE_SURFACE_JSON = "runs/wetlab_primary_stage6_failure_surfac
 DEFAULT_RETRY_POLICY_TEMPLATES_JSON = "runs/wetlab_target_retry_policy_templates_current.json"
 DEFAULT_OUT_MD = "runs/wetlab_rescue_three_bead_candidates_current.md"
 DEFAULT_TOP_N = 32
+DEFAULT_ARCHIVE_ROOT = ROOT / "runs" / "archive"
 TRANSLATION_GATE_VERSION = "three_bead_to_allatom_translation_v2"
 STRONGER_PHYSICS_SHORTLIST_VERSION = "stronger_physics_shortlist_v2"
 RESCUE_POSE_PRESERVATION_RMSD_MAX = 2.40
@@ -598,11 +599,47 @@ def _read_csv_rows(path: Path) -> list[dict[str, Any]]:
         return [dict(row) for row in csv.DictReader(handle)]
 
 
+def _relative_to_root(path: Path) -> Path | None:
+    try:
+        return path.resolve().relative_to(ROOT)
+    except Exception:
+        try:
+            return path.relative_to(Path.cwd())
+        except Exception:
+            parts = path.parts
+            if "runs" not in parts:
+                return None
+            idx = parts.index("runs")
+            return Path(*parts[idx:])
+
+
+def _archive_fallback_for(path: Path) -> Path | None:
+    rel_path = _relative_to_root(path)
+    if rel_path is None or not rel_path.parts:
+        return None
+    if rel_path.parts[0] == "runs":
+        rel_path = Path(*rel_path.parts[1:])
+    if not rel_path.parts or not DEFAULT_ARCHIVE_ROOT.exists():
+        return None
+    candidates = sorted(DEFAULT_ARCHIVE_ROOT.glob(f"*/{rel_path.as_posix()}"))
+    for candidate in candidates:
+        if candidate.exists() and candidate.is_file():
+            return candidate
+    return None
+
+
+def _resolve_existing_or_archive(path: Path) -> Path:
+    if path.exists() and path.is_file():
+        return path
+    archive_path = _archive_fallback_for(path)
+    return archive_path or path
+
+
 def _resolve_stage3_scores_csv(summary_json: str, summary_payload: dict[str, Any]) -> Path:
     artifacts = dict(summary_payload.get("artifacts", {}) or {})
     text = _text(artifacts.get("stage3_scores_csv"))
     if text:
-        return Path(text)
+        return _resolve_existing_or_archive(Path(text))
     artifact_dir = Path(summary_json).parent
     for candidate in [
         artifact_dir / "throughput_run_stage3_scores.csv",
@@ -610,8 +647,9 @@ def _resolve_stage3_scores_csv(summary_json: str, summary_payload: dict[str, Any
         artifact_dir / "throughput_run_gate51_stage3_scores.csv",
         artifact_dir / "throughput_run_gate55_stage3_scores.csv",
     ]:
-        if candidate.exists():
-            return candidate
+        resolved = _resolve_existing_or_archive(candidate)
+        if resolved.exists():
+            return resolved
     return Path("/__missing_stage3_scores_csv__")
 
 
@@ -659,12 +697,15 @@ def build_payload(
         if bool((row or {}).get("top_n_three_bead_recommended", False) or (row or {}).get("three_bead_recommended", False))
     ]
     out_rows: list[dict[str, Any]] = []
+    stage3_score_csvs: list[str] = []
     for candidate in candidate_rows:
         target_id = _text(candidate.get("target_id"))
         shard_id = _text(candidate.get("shard_id"))
         target_slug = _text(candidate.get("target_slug")) or slug(target_id)
         summary_payload = _summary_payload(_text(candidate.get("summary_json")))
         stage3_scores_csv = _resolve_stage3_scores_csv(_text(candidate.get("summary_json")), summary_payload)
+        if stage3_scores_csv.exists():
+            stage3_score_csvs.append(stage3_scores_csv.as_posix())
         rows = _read_csv_rows(stage3_scores_csv)
         ranked, ranking_meta = _rank_rows_by_active_score(
             rows,
@@ -696,6 +737,8 @@ def build_payload(
                     "selection_score_col": selection_score_col,
                     "selection_score_value": selection_score_value,
                     "selection_score_source": _text(ranking_meta.get("score_source")),
+                    "source_stage3_scores_csv": stage3_scores_csv.as_posix(),
+                    "source_stage3_scores_csv_from_archive": "/runs/archive/" in stage3_scores_csv.as_posix(),
                     "three_bead_rescue_reason": "hard_target_stage6_fail_above_5A",
                     "top_n_requested": candidate_top_n,
                 },
@@ -728,6 +771,11 @@ def build_payload(
             "selection_score_direction": "ascending",
             "focus_selection_score_value": focus.get("selection_score_value"),
             "selection_score_cols_used": ranking_score_cols_used,
+            "source_stage3_scores_csv_count": len(set(stage3_score_csvs)),
+            "source_stage3_scores_csvs": sorted(set(stage3_score_csvs)),
+            "source_stage3_scores_csv_archive_fallback_count": len(
+                {path for path in stage3_score_csvs if "/runs/archive/" in path}
+            ),
             **translation_summary,
             **pose_validation_summary,
             "next_required_step": (

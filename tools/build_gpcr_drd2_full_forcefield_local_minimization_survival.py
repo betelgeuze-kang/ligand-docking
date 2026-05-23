@@ -33,6 +33,15 @@ DEFAULT_LIGAND_ID = "CHEMBL301265"
 DEFAULT_RMSD_THRESHOLD_A = 2.0
 
 
+def _probe_identity(parameterization_probe: dict[str, Any]) -> dict[str, str]:
+    target_probe = parameterization_probe.get("target_probe", {})
+    target_probe = target_probe if isinstance(target_probe, dict) else {}
+    return {
+        "target": str(target_probe.get("target") or DEFAULT_TARGET),
+        "ligand_id": str(target_probe.get("ligand_id") or DEFAULT_LIGAND_ID),
+    }
+
+
 def _probe_paths(parameterization_probe: dict[str, Any]) -> dict[str, str]:
     probes = parameterization_probe.get("capability_probes", {})
     probes = probes if isinstance(probes, dict) else {}
@@ -153,6 +162,8 @@ def _run_full_forcefield_minimization(
 def build_survival_packet(
     *,
     parameterization_probe_json: str | Path = DEFAULT_PARAMETERIZATION_PROBE_JSON,
+    target: str | None = None,
+    ligand_id: str | None = None,
     gaff_xml: str | Path = DEFAULT_GAFF_XML,
     rmsd_threshold_A: float = DEFAULT_RMSD_THRESHOLD_A,
     protein_restraint_k_kj_mol_nm2: float = 1000.0,
@@ -160,6 +171,9 @@ def build_survival_packet(
     generated_at_local: str | None = None,
 ) -> dict[str, Any]:
     parameterization_probe = _read_json(parameterization_probe_json)
+    identity = _probe_identity(parameterization_probe)
+    target = str(target or identity["target"])
+    ligand_id = str(ligand_id or identity["ligand_id"])
     paths = _probe_paths(parameterization_probe)
     result = _run_full_forcefield_minimization(
         complex_pdb=paths["complex_pdb"],
@@ -184,6 +198,8 @@ def build_survival_packet(
         "ligand_heavy_atom_rmsd_A": rmsd,
         "engine_kind": "openmm_full_forcefield_restrained_receptor",
         "survival_claim_scope": "full_protein_ligand_forcefield_restrained_receptor",
+        "target": target,
+        "ligand_id": ligand_id,
         "blockers": blockers,
         "next_required_step": (
             "Use this claim-grade local-minimization survival evidence to reopen DRD2 hard-decoy rebuild diagnostics."
@@ -192,8 +208,8 @@ def build_survival_packet(
         ),
     }
     row = {
-        "target": DEFAULT_TARGET,
-        "ligand_id": DEFAULT_LIGAND_ID,
+        "target": target,
+        "ligand_id": ligand_id,
         "survival_fraction": summary["survival_fraction"],
         "engine_kind": summary["engine_kind"],
         "survival_claim_scope": summary["survival_claim_scope"],
@@ -221,6 +237,8 @@ def _render_md(payload: dict[str, Any]) -> str:
     lines = ["# GPCR DRD2 Full-Forcefield Local-Minimization Survival", "", "## Summary"]
     for key in (
         "status",
+        "target",
+        "ligand_id",
         "survival_fraction",
         "hard_decoy_rebuild_evidence_allowed",
         "ligand_heavy_atom_rmsd_A",
@@ -237,6 +255,8 @@ def _render_md(payload: dict[str, Any]) -> str:
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run DRD2 full-forcefield local-minimization survival smoke probe.")
     parser.add_argument("--parameterization-probe-json", default=DEFAULT_PARAMETERIZATION_PROBE_JSON)
+    parser.add_argument("--target", default=None)
+    parser.add_argument("--ligand-id", default=None)
     parser.add_argument("--gaff-xml", default=DEFAULT_GAFF_XML)
     parser.add_argument("--rmsd-threshold-A", type=float, default=DEFAULT_RMSD_THRESHOLD_A)
     parser.add_argument("--protein-restraint-k-kj-mol-nm2", type=float, default=1000.0)
@@ -251,6 +271,8 @@ def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     payload = build_survival_packet(
         parameterization_probe_json=args.parameterization_probe_json,
+        target=args.target,
+        ligand_id=args.ligand_id,
         gaff_xml=args.gaff_xml,
         rmsd_threshold_A=args.rmsd_threshold_A,
         protein_restraint_k_kj_mol_nm2=args.protein_restraint_k_kj_mol_nm2,

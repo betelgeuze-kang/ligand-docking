@@ -6,7 +6,7 @@ from tools.pdb_loader import load_native_structure
 from run_validation import calculate_rg, calculate_sasa_proxy, run_target
 from core.definitions import ResearchConstants
 
-SMALL_PROTEIN_TARGETS = list(ResearchConstants.CHALLENGES.keys())
+SMALL_PROTEIN_TARGETS = list(ResearchConstants.SMALL_PROTEIN_TARGETS)
 
 
 def _calculate_rmsd(coords_a, coords_b):
@@ -81,6 +81,8 @@ def test_refinement_accuracy_vs_native(
 
 def test_small_protein_target_set_size_is_ten():
     assert len(SMALL_PROTEIN_TARGETS) == 10
+    assert "T. cruzi PDE" not in SMALL_PROTEIN_TARGETS
+    assert set(SMALL_PROTEIN_TARGETS) == set(ResearchConstants.SMALL_PROTEIN_CHALLENGES)
 
 
 @pytest.mark.parametrize("target", SMALL_PROTEIN_TARGETS)

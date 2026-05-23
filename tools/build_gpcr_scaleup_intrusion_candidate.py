@@ -188,6 +188,17 @@ def _candidate_profile(
     profile["claim_safe_assertion_allowed"] = False
     profile["broad_gpcr_claim_allowed"] = False
     profile["traj_resume_existing"] = True
+    profile["traj_npz_compression"] = "compressed"
+    # 100k candidates should use the mapping builder's auto worker pool instead of
+    # inheriting older 4-worker smoke-era profile defaults.
+    if int(profile.get("csv_relax_workers", 0) or 0) <= 4:
+        profile["csv_relax_workers"] = 0
+    if int(profile.get("hard_decoy_synth_total_decoys", 0) or 0) >= 100000:
+        profile["hard_decoy_synth_generation_mode"] = "enumerate"
+        profile["hard_decoy_synth_global_unique"] = False
+        profile["hard_decoy_synth_relax_3d"] = False
+        profile["csv_relax_3d"] = False
+        profile["csv_relax_workers"] = 0
     structure_support_gate = _structure_support_gate_from_spec(residual_spec or {})
     constraints = (
         residual_spec.get("prototype", {}).get("constraints", {})

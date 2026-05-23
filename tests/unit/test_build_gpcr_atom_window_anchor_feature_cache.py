@@ -86,6 +86,53 @@ def test_build_cache_materializes_direct_atom_window_features(tmp_path: Path) ->
     assert rows[0]["class_a_atom_anchor_contact_fraction_2p8_4p2A"] == 2 / 3
 
 
+def test_build_cache_uses_static_anchor_coords_when_prod_light_npz_omits_protein_frames(tmp_path: Path) -> None:
+    pdb = tmp_path / "native.pdb"
+    pdb.write_text(
+        "\n".join(
+            [
+                _pdb_atom("ATOM", 1, "OD1", "ASP", "A", 114, 0.0, 0.0, 0.0),
+                _pdb_atom("ATOM", 2, "OD2", "ASP", "A", 114, 0.5, 0.0, 0.0),
+                _pdb_atom("HETATM", 3, "C1", "LIG", "A", 900, 0.0, 0.0, 3.0),
+                _pdb_atom("HETATM", 4, "C2", "LIG", "A", 900, 0.5, 0.0, 3.0),
+                _pdb_atom("HETATM", 5, "C3", "LIG", "A", 900, 0.0, 0.5, 3.0),
+                _pdb_atom("HETATM", 6, "C4", "LIG", "A", 900, 0.5, 0.5, 3.0),
+                _pdb_atom("HETATM", 7, "C5", "LIG", "A", 900, 0.0, 0.0, 3.5),
+                "END",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    npz = tmp_path / "prod_light_repaired.npz"
+    np.savez(
+        npz,
+        ligand_frames=np.asarray([[[0.0, 0.0, 3.2]], [[0.0, 0.0, 5.0]]], dtype=np.float32),
+        ligand_backmapping_static_anchor_coords=np.asarray([[0.0, 0.0, 0.0], [0.5, 0.0, 0.0]], dtype=np.float32),
+    )
+    scores = tmp_path / "scores.csv"
+    _write_csv(
+        scores,
+        [
+            {
+                "target": "CHEMBL217_DRD2_HUMAN",
+                "ligand_id": "pos",
+                "is_binder": "1",
+                "binding_score_composite_v7": "-2.0",
+                "protein_structure_source_path": str(pdb),
+                "trajectory_npz": str(npz),
+            }
+        ],
+    )
+
+    rows, summary = mod.build_cache(input_csv=scores, target="CHEMBL217_DRD2_HUMAN", top_n=1)
+
+    assert summary["available_feature_count"] == 1
+    assert rows[0]["class_a_atom_anchor_available"] == 1
+    assert rows[0]["class_a_atom_anchor_source"] == "native_pdb_static_fallback"
+    assert rows[0]["class_a_atom_anchor_contact_fraction_2p8_4p2A"] == 0.5
+
+
 def test_build_cache_uses_labels_csv_when_scores_lack_binder_column(tmp_path: Path) -> None:
     pdb = tmp_path / "native.pdb"
     pdb.write_text(

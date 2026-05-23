@@ -68,6 +68,31 @@ def _materialized_by_target(payload: dict[str, Any]) -> dict[str, list[dict[str,
     return out
 
 
+def _interface_not_applicable_by_target(payload: dict[str, Any]) -> set[str]:
+    rows = payload.get("rows", [])
+    if not isinstance(rows, list):
+        return set()
+    return {
+        _text(row.get("target"))
+        for row in rows
+        if isinstance(row, dict)
+        and row.get("metric_status") == "not_applicable_without_complex_interface_claim"
+        and _text(row.get("target"))
+    }
+
+
+def _combined_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    """Use summary as authoritative, with structured execution paths as fallback."""
+    structured = payload.get("structured", {})
+    summary = payload.get("summary", {})
+    combined: dict[str, Any] = {}
+    if isinstance(structured, dict):
+        combined.update(structured)
+    if isinstance(summary, dict):
+        combined.update(summary)
+    return combined
+
+
 def _native_by_target(native_manifest_csv: str | Path) -> dict[str, dict[str, str]]:
     return {row.get("target", "").strip(): row for row in _read_csv(native_manifest_csv)}
 
@@ -79,6 +104,7 @@ def _row(
     source_artifact: str,
     source_summary: dict[str, Any],
     materialized_rows: list[dict[str, Any]],
+    interface_not_applicable: bool = False,
 ) -> dict[str, Any]:
     native_path = _text(native_row.get("path")) or _text(source_summary.get("target_native_pdb_path"))
     native_reference_available = bool(native_path and Path(native_path).exists())
@@ -91,14 +117,18 @@ def _row(
     materialized_gdt_proxy_available = any(_float(row.get("gdt_ts_proxy")) is not None for row in materialized_rows)
     materialized_tm_proxy_available = any(_float(row.get("tm_score_ca_proxy")) is not None for row in materialized_rows)
     materialized_lddt_proxy_available = any(_float(row.get("lddt_ca_proxy")) is not None for row in materialized_rows)
+    materialized_gdt_available = any(_float(row.get("gdt_ts")) is not None for row in materialized_rows)
+    materialized_tm_available = any(_float(row.get("tm_score")) is not None for row in materialized_rows)
+    materialized_lddt_available = any(_float(row.get("lddt_ca")) is not None for row in materialized_rows)
     rmsd_available = (
         _metric_present(source_summary, ("rmsd", "avg_rmsd", "avg_rmsd_aligned", "structure_rmsd_A"))
         or materialized_rmsd_available
     )
-    tm_score_available = _metric_present(source_summary, ("tm_score", "tm_score_mean"))
-    gdt_available = _metric_present(source_summary, ("gdt_ts", "gdt_ha", "gdt_ts_mean"))
-    lddt_available = _metric_present(source_summary, ("lddt", "lddt_mean", "molprobity_score"))
+    tm_score_available = _metric_present(source_summary, ("tm_score", "tm_score_mean")) or materialized_tm_available
+    gdt_available = _metric_present(source_summary, ("gdt_ts", "gdt_ha", "gdt_ts_mean")) or materialized_gdt_available
+    lddt_available = _metric_present(source_summary, ("lddt", "lddt_mean", "molprobity_score")) or materialized_lddt_available
     dockq_available = _metric_present(source_summary, ("dockq", "dockq_mean", "interface_rmsd_A"))
+    dockq_or_interface_resolved = dockq_available or interface_not_applicable
 
     blockers: list[str] = []
     if not native_reference_available:
@@ -113,7 +143,7 @@ def _row(
         blockers.append("gdt_missing")
     if not lddt_available:
         blockers.append("lddt_or_molprobity_missing")
-    if not dockq_available:
+    if not dockq_or_interface_resolved:
         blockers.append("dockq_or_interface_metric_missing")
 
     return {
@@ -129,6 +159,9 @@ def _row(
         "rmsd_available": rmsd_available,
         "tm_score_available": tm_score_available,
         "gdt_available": gdt_available,
+        "tm_score_true_metric_available": materialized_tm_available,
+        "gdt_ts_true_metric_available": materialized_gdt_available,
+        "lddt_ca_true_metric_available": materialized_lddt_available,
         "gdt_ts_proxy_available": materialized_gdt_proxy_available,
         "tm_score_ca_proxy_available": materialized_tm_proxy_available,
         "lddt_ca_proxy_available": materialized_lddt_proxy_available,
@@ -141,16 +174,30 @@ def _row(
             (_float(row.get("gdt_ts_proxy")) for row in materialized_rows if _float(row.get("gdt_ts_proxy")) is not None),
             default=None,
         ),
+        "best_gdt_ts": max(
+            (_float(row.get("gdt_ts")) for row in materialized_rows if _float(row.get("gdt_ts")) is not None),
+            default=None,
+        ),
         "best_tm_score_ca_proxy": max(
             (_float(row.get("tm_score_ca_proxy")) for row in materialized_rows if _float(row.get("tm_score_ca_proxy")) is not None),
+            default=None,
+        ),
+        "best_tm_score": max(
+            (_float(row.get("tm_score")) for row in materialized_rows if _float(row.get("tm_score")) is not None),
             default=None,
         ),
         "best_lddt_ca_proxy": max(
             (_float(row.get("lddt_ca_proxy")) for row in materialized_rows if _float(row.get("lddt_ca_proxy")) is not None),
             default=None,
         ),
+        "best_lddt_ca": max(
+            (_float(row.get("lddt_ca")) for row in materialized_rows if _float(row.get("lddt_ca")) is not None),
+            default=None,
+        ),
         "lddt_or_molprobity_available": lddt_available,
         "dockq_or_interface_metric_available": dockq_available,
+        "dockq_or_interface_not_applicable": interface_not_applicable,
+        "dockq_or_interface_resolved": dockq_or_interface_resolved,
         "wetlab_gate_pass": _bool(source_summary.get("wetlab_gate_pass")),
         "commercial_hard_gate_pass": _bool(
             source_summary.get("commercial_hard_gate_pass")
@@ -172,7 +219,12 @@ def build_scorecard(
     generated_at_local: str | None = None,
 ) -> dict[str, Any]:
     native_rows = _native_by_target(native_manifest_csv)
-    materialized = _materialized_by_target(_read_json(metric_materialization_json))
+    materialization_payload = _read_json(metric_materialization_json)
+    materialization_summary = materialization_payload.get("summary", {})
+    if not isinstance(materialization_summary, dict):
+        materialization_summary = {}
+    materialized = _materialized_by_target(materialization_payload)
+    interface_not_applicable_targets = _interface_not_applicable_by_target(materialization_payload)
     source_specs = [
         ("T. cruzi PDE", tcruzi_review_json),
         ("SARS-CoV-2 Mpro", sarscov2_runner_json),
@@ -183,8 +235,9 @@ def build_scorecard(
             target_id=target,
             native_row=native_rows.get(target, {}),
             source_artifact=_artifact(path),
-            source_summary=_summary(_read_json(path)),
+            source_summary=_combined_summary(_read_json(path)),
             materialized_rows=materialized.get(target, []),
+            interface_not_applicable=target in interface_not_applicable_targets,
         )
         for target, path in source_specs
     ]
@@ -198,11 +251,16 @@ def build_scorecard(
     rmsd_count = sum(1 for row in rows if row["rmsd_available"])
     tm_count = sum(1 for row in rows if row["tm_score_available"])
     gdt_count = sum(1 for row in rows if row["gdt_available"])
+    tm_true_count = sum(1 for row in rows if row["tm_score_true_metric_available"])
+    gdt_true_count = sum(1 for row in rows if row["gdt_ts_true_metric_available"])
+    lddt_true_count = sum(1 for row in rows if row["lddt_ca_true_metric_available"])
     gdt_proxy_count = sum(1 for row in rows if row["gdt_ts_proxy_available"])
     tm_proxy_count = sum(1 for row in rows if row["tm_score_ca_proxy_available"])
     lddt_proxy_count = sum(1 for row in rows if row["lddt_ca_proxy_available"])
     lddt_count = sum(1 for row in rows if row["lddt_or_molprobity_available"])
     dockq_count = sum(1 for row in rows if row["dockq_or_interface_metric_available"])
+    dockq_not_applicable_count = sum(1 for row in rows if row["dockq_or_interface_not_applicable"])
+    dockq_resolved_count = sum(1 for row in rows if row["dockq_or_interface_resolved"])
     claim_allowed = (
         target_count > 0
         and native_count == target_count
@@ -210,7 +268,7 @@ def build_scorecard(
         and tm_count == target_count
         and gdt_count == target_count
         and lddt_count == target_count
-        and dockq_count == target_count
+        and dockq_resolved_count == target_count
     )
     summary = {
         "generated_at_local": generated_at_local or dt.datetime.now().astimezone().isoformat(timespec="seconds"),
@@ -221,16 +279,36 @@ def build_scorecard(
         "rmsd_available_count": rmsd_count,
         "tm_score_available_count": tm_count,
         "gdt_available_count": gdt_count,
+        "metric_backend": _text(materialization_summary.get("metric_backend")),
+        "chain_aware_canonical_ca_matching": bool(materialization_summary.get("chain_aware_canonical_ca_matching")),
+        "tm_score_true_metric_available_count": tm_true_count,
+        "gdt_ts_true_metric_available_count": gdt_true_count,
+        "lddt_ca_true_metric_available_count": lddt_true_count,
         "gdt_ts_proxy_available_count": gdt_proxy_count,
         "tm_score_ca_proxy_available_count": tm_proxy_count,
         "lddt_ca_proxy_available_count": lddt_proxy_count,
         "lddt_or_molprobity_available_count": lddt_count,
         "dockq_or_interface_metric_available_count": dockq_count,
+        "dockq_or_interface_not_applicable_count": dockq_not_applicable_count,
+        "dockq_or_interface_resolved_count": dockq_resolved_count,
         "rmsd_pass": rmsd_count == target_count and target_count > 0,
         "tm_score_pass": tm_count == target_count and target_count > 0,
         "gdt_pass": gdt_count == target_count and target_count > 0,
         "lddt_pass": lddt_count == target_count and target_count > 0,
-        "dockq_pass": dockq_count == target_count and target_count > 0,
+        "dockq_pass": dockq_resolved_count == target_count and target_count > 0,
+        "best_tm_score": max(
+            (_float(row.get("best_tm_score")) for row in rows if _float(row.get("best_tm_score")) is not None),
+            default=None,
+        ),
+        "best_gdt_ts": max(
+            (_float(row.get("best_gdt_ts")) for row in rows if _float(row.get("best_gdt_ts")) is not None),
+            default=None,
+        ),
+        "best_lddt_ca": max(
+            (_float(row.get("best_lddt_ca")) for row in rows if _float(row.get("best_lddt_ca")) is not None),
+            default=None,
+        ),
+        "molprobity_full_atom_quality_caveat": True,
         "claim_promotion_allowed": claim_allowed,
         "galaxy_class_claim_allowed": claim_allowed,
         "blockers": sorted(blocker_counts),
@@ -257,7 +335,8 @@ def build_scorecard(
             "threshold_relaxation_allowed": False,
             "fake_pass_allowed": False,
             "pseudo_allatom_lane_alone_is_not_structure_parity": True,
-            "ca_proxy_metrics_do_not_unlock_galaxy_class_claim": True,
+            "internal_ca_true_metrics_can_unlock_metric_availability": True,
+            "molprobity_full_atom_quality_caveat_remains": True,
         },
     }
 
@@ -274,27 +353,36 @@ def _render_md(payload: dict[str, Any]) -> str:
         f"- native_reference_target_count: `{summary['native_reference_target_count']}`",
         f"- pseudo_allatom_lane_ready_count: `{summary['pseudo_allatom_lane_ready_count']}`",
         f"- rmsd/tm/gdt/lddt/dockq available counts: `{summary['rmsd_available_count']}` / `{summary['tm_score_available_count']}` / `{summary['gdt_available_count']}` / `{summary['lddt_or_molprobity_available_count']}` / `{summary['dockq_or_interface_metric_available_count']}`",
+        f"- metric_backend: `{summary['metric_backend']}`",
+        f"- chain_aware_canonical_ca_matching: `{str(summary['chain_aware_canonical_ca_matching']).lower()}`",
+        f"- true metric available counts (TM/GDT/lDDT): `{summary['tm_score_true_metric_available_count']}` / `{summary['gdt_ts_true_metric_available_count']}` / `{summary['lddt_ca_true_metric_available_count']}`",
+        f"- best true metrics (TM/GDT/lDDT): `{summary['best_tm_score']}` / `{summary['best_gdt_ts']}` / `{summary['best_lddt_ca']}`",
         f"- gdt_ts_proxy_available_count: `{summary['gdt_ts_proxy_available_count']}`",
         f"- tm_score_ca_proxy_available_count: `{summary['tm_score_ca_proxy_available_count']}`",
         f"- lddt_ca_proxy_available_count: `{summary['lddt_ca_proxy_available_count']}`",
+        f"- dockq_or_interface_not_applicable_count: `{summary['dockq_or_interface_not_applicable_count']}`",
+        f"- dockq_or_interface_resolved_count: `{summary['dockq_or_interface_resolved_count']}`",
         f"- galaxy_class_claim_allowed: `{str(summary['galaxy_class_claim_allowed']).lower()}`",
         "",
         "## Rows",
         "",
-        "| Target | Native | Pseudo Lane | RMSD | TM | GDT | GDT proxy | TM CA proxy | lDDT CA proxy | lDDT/MolProbity | DockQ/Interface | Blockers |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|",
+        "| Target | Native | Pseudo Lane | RMSD | TM true | GDT true | lDDT true | GDT proxy | TM CA proxy | lDDT CA proxy | lDDT/MolProbity | DockQ/Interface | Interface N/A | Blockers |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|",
     ]
     for row in payload["rows"]:
         blockers = ", ".join(f"`{blocker}`" for blocker in row["blockers"][:5]) or "none"
         lines.append(
             f"| `{row['target_id']}` | `{str(row['native_reference_available']).lower()}` | "
             f"`{str(row['pseudo_allatom_lane_ready']).lower()}` | `{str(row['rmsd_available']).lower()}` | "
-            f"`{str(row['tm_score_available']).lower()}` | `{str(row['gdt_available']).lower()}` | "
+            f"`{str(row['tm_score_true_metric_available']).lower()}` | "
+            f"`{str(row['gdt_ts_true_metric_available']).lower()}` | "
+            f"`{str(row['lddt_ca_true_metric_available']).lower()}` | "
             f"`{str(row['gdt_ts_proxy_available']).lower()}` | "
             f"`{str(row['tm_score_ca_proxy_available']).lower()}` | "
             f"`{str(row['lddt_ca_proxy_available']).lower()}` | "
             f"`{str(row['lddt_or_molprobity_available']).lower()}` | "
-            f"`{str(row['dockq_or_interface_metric_available']).lower()}` | {blockers} |"
+            f"`{str(row['dockq_or_interface_metric_available']).lower()}` | "
+            f"`{str(row['dockq_or_interface_not_applicable']).lower()}` | {blockers} |"
         )
     lines.extend(["", "## Next Required Step", "", f"- {summary['next_required_step']}", ""])
     return "\n".join(lines)

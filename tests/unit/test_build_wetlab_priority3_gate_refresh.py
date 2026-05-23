@@ -16,5 +16,6 @@ def test_build_wetlab_priority3_gate_refresh_runs_chain() -> None:
     assert rows[0]["step_id"] == "mpro_run_record"
     assert rows[4]["step_id"] == "tcruzi_run_record"
     assert rows[-1]["step_id"] == "partnering_stack"
-    assert summary["ready_now_target_count"] >= 1
+    assert summary["ready_now_target_count"] == 0
+    assert summary["resolved_target_count"] == 3
     assert summary["blocked_on_previous_review_count"] >= 0

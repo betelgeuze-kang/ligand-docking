@@ -83,6 +83,23 @@ def _bool_or_none(value: Any) -> bool | None:
     return None
 
 
+def _text_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        text = _text(value)
+        return [text] if text else []
+    if isinstance(value, (list, tuple, set)):
+        out: list[str] = []
+        for item in value:
+            text = _text(item)
+            if text and text not in out:
+                out.append(text)
+        return out
+    text = _text(value)
+    return [text] if text else []
+
+
 def _status_is_resolved(value: Any) -> bool:
     return _text(value).lower() in {
         "satisfied",
@@ -145,11 +162,192 @@ def _metric_override_passes(metric_override: dict[str, str] | None) -> bool:
     return bool(value_num is not None and threshold_num is not None and value_num <= threshold_num)
 
 
+def _renumber_rows(rows: list[dict[str, Any]]) -> None:
+    for index, row in enumerate(rows, start=1):
+        row["burndown_rank"] = index
+
+
+def _insert_claim_required_unavailable_row(
+    rows: list[dict[str, Any]],
+    *,
+    reason: str,
+) -> None:
+    if any(_text(row.get("code")) == "recompute_claim_gate_required_unavailable" for row in rows):
+        return
+
+    row = {
+        "burndown_rank": 0,
+        "severity": "hard",
+        "category": "translation_commercial_hard_gate",
+        "operational_bucket": _operational_bucket(
+            "recompute_claim_gate_required_unavailable",
+            "translation_commercial_hard_gate",
+            "hard",
+        ),
+        "action": "review_claim_gate_required_unavailable",
+        "calc_action": "recompute_claim_gate_required_unavailable",
+        "status": "missing",
+        "code": "recompute_claim_gate_required_unavailable",
+        "metric": "claim_gate_required_unavailable",
+        "value": "missing",
+        "threshold": "missing",
+        "delta": "-",
+        "gate_dependency": _gate_dependency("translation_commercial_hard_gate", "hard"),
+        "reason": reason or "claim_gate_required_unavailable=missing",
+        "next_required_action": _next_required_action(
+            "recompute_claim_gate_required_unavailable",
+            "review_claim_gate_required_unavailable",
+        ),
+        "repair_lane": "",
+        "repair_action": "",
+        "repair_source_artifact": "",
+        "repair_source_kind": "",
+        "repair_source_ligand_id": "",
+    }
+    insert_at = next((idx for idx, existing in enumerate(rows) if _text(existing.get("severity")) != "hard"), len(rows))
+    rows.insert(insert_at, row)
+    _renumber_rows(rows)
+
+
+def _commercial_metric_code(metric: str, action: str = "") -> str:
+    metric = _text(metric)
+    action = _text(action)
+    by_metric = {
+        "translation_gate_focus_status": "clear_translation_hard_gate",
+        "focus_shortlist_tier": "promote_stronger_physics_shortlist",
+        "recommended_next_expensive_lane": "replace_deferred_expensive_lane_with_validated_repair",
+        "binding_energy_proxy": "recompute_binding_energy_proxy",
+        "mean_min_distance_A": "recompute_mean_min_distance_A",
+    }
+    if action:
+        return action
+    return by_metric.get(metric, f"resolve_{metric}" if metric else "resolve_commercial_hard_gate")
+
+
+def _commercial_metric_threshold(metric: str) -> str:
+    metric = _text(metric)
+    by_metric = {
+        "translation_gate_focus_status": "pass",
+        "focus_shortlist_tier": "tier1_gold|tier2_silver|tier3_bronze",
+        "recommended_next_expensive_lane": "validated_repair_or_stronger_physics_lane",
+        "binding_energy_proxy": "<= -0.050",
+        "mean_min_distance_A": "<= selected_threshold_A",
+    }
+    return by_metric.get(metric, "commercial_hard_gate_pass_v2=true")
+
+
+def _commercial_metric_value(review: dict[str, Any], metric: str) -> str:
+    metric = _text(metric)
+    by_metric = {
+        "translation_gate_focus_status": review.get("translation_gate_focus_status"),
+        "focus_shortlist_tier": review.get("focus_shortlist_tier"),
+        "recommended_next_expensive_lane": review.get("recommended_next_expensive_lane"),
+        "binding_energy_proxy": review.get("best_binding_energy_proxy"),
+        "mean_min_distance_A": review.get("best_mean_min_distance_A"),
+    }
+    value = by_metric.get(metric)
+    if value is None:
+        value = review.get(metric)
+    return _text(value) or "failed"
+
+
+def _insert_commercial_hard_gate_rows(
+    rows: list[dict[str, Any]],
+    *,
+    review: dict[str, Any],
+) -> None:
+    hard_gate_pass = _bool_or_none(review.get("commercial_hard_gate_pass_v2"))
+    if hard_gate_pass is not False:
+        return
+
+    failed_metrics = _text_list(review.get("commercial_hard_gate_failed_metrics_v2"))
+    missing_metrics = _text_list(review.get("commercial_hard_gate_missing_metrics_v2"))
+    actions = _text_list(review.get("commercial_primary_upgrade_actions_v2"))
+    metrics = failed_metrics + [metric for metric in missing_metrics if metric not in failed_metrics]
+    if not metrics:
+        metrics = ["commercial_hard_gate_pass_v2"]
+
+    existing_codes = {_text(row.get("code")) for row in rows}
+    new_rows: list[dict[str, Any]] = []
+    for index, metric in enumerate(metrics):
+        action = actions[index] if index < len(actions) else ""
+        code = _commercial_metric_code(metric, action)
+        if code in existing_codes:
+            continue
+        existing_codes.add(code)
+        status = "missing" if metric in missing_metrics else "failed"
+        value = "missing" if status == "missing" else _commercial_metric_value(review, metric)
+        row = {
+            "burndown_rank": 0,
+            "severity": "hard",
+            "category": "translation_commercial_hard_gate",
+            "operational_bucket": _operational_bucket(code, "translation_commercial_hard_gate", "hard"),
+            "action": action or code,
+            "calc_action": code,
+            "status": status,
+            "code": code,
+            "metric": metric,
+            "value": value,
+            "threshold": _commercial_metric_threshold(metric),
+            "delta": "-",
+            "gate_dependency": _gate_dependency("translation_commercial_hard_gate", "hard"),
+            "reason": (
+                f"commercial_hard_gate_pass_v2=false; {metric}={value}; "
+                f"translation_commercial_fail_closed={bool(review.get('translation_commercial_fail_closed', False))}"
+            ),
+            "next_required_action": _next_required_action(code, action or code),
+            **_repair_provenance(
+                code=code,
+                metric=metric,
+                focus_artifact="runs/wetlab_tcruzi_pde_allatom_review_packet_current.md",
+                selected_allatom_review_payload={"summary": review},
+            ),
+        }
+        new_rows.append(row)
+
+    if not new_rows:
+        return
+    insert_at = next((idx for idx, existing in enumerate(rows) if _text(existing.get("severity")) != "hard"), len(rows))
+    rows[insert_at:insert_at] = new_rows
+    _renumber_rows(rows)
+
+
+def _review_resolves_stale_action_row(review: dict[str, Any], code: str, metric: str) -> bool:
+    metric = _text(metric)
+    code = _text(code)
+    hard_gate_pass = _bool_or_none(review.get("commercial_hard_gate_pass_v2"))
+    if hard_gate_pass is True and metric in {
+        "translation_gate_focus_status",
+        "focus_shortlist_tier",
+        "recommended_next_expensive_lane",
+    }:
+        return True
+    if hard_gate_pass is True and code in {
+        "clear_translation_hard_gate",
+        "promote_stronger_physics_shortlist",
+        "replace_deferred_expensive_lane_with_validated_repair",
+        "recompute_translation_gate_focus_status",
+        "recompute_focus_shortlist_tier",
+        "recompute_recommended_next_expensive_lane",
+    }:
+        return True
+    recommended_lane = _text(review.get("recommended_next_expensive_lane")).lower()
+    if code == "defer_expensive_lane" and recommended_lane and not recommended_lane.startswith("defer"):
+        return True
+    return False
+
+
 def _operational_bucket(code: str, category: str, severity: str) -> str:
     if code == "recompute_mean_min_distance_A":
         return "geometry_hard_block"
     if code == "recompute_binding_energy_proxy":
         return "binding_proxy_hard_block"
+    if code == "clear_translation_hard_gate":
+        return "translation_hard_gate_block"
+    if code == "promote_stronger_physics_shortlist":
+        return "stronger_physics_shortlist_block"
+    if code == "replace_deferred_expensive_lane_with_validated_repair":
+        return "validated_repair_lane_block"
     if code == "recompute_claim_gate_required_unavailable":
         return "claim_gate_metric_missing"
     if category == "claim_equivalence":
@@ -181,6 +379,18 @@ def _next_required_action(code: str, action: str) -> str:
             "Use the bounded T. cruzi PDE all-atom rescue lane to rescore or replace the selected strict-geometry pose, then rebuild "
             "the all-atom review packet and selected-allatom burndown packet; do not promote claim/equivalence or expensive-lane "
             "readiness until binding_energy_proxy is <= -0.050 from that source chain."
+        )
+    if code == "clear_translation_hard_gate":
+        return (
+            "Clear the selected all-atom translation hard gate with a validated repair or replacement pose, then rebuild the all-atom review packet before execution readiness can turn green."
+        )
+    if code == "promote_stronger_physics_shortlist":
+        return (
+            "Promote a stronger-physics shortlist only after the selected pose clears the translation hard gate and has enough support to leave the defer tier."
+        )
+    if code == "replace_deferred_expensive_lane_with_validated_repair":
+        return (
+            "Replace the deferred expensive lane with a validated repair lane; do not count `defer_expensive_lane` as commercial readiness evidence."
         )
     if code == "produce_claim_equivalence_packet":
         return (
@@ -284,10 +494,19 @@ def build_payload(
     near_candidate_count = _int(final_summary.get("selected_allatom_near_candidate_count"))
     metric_override = _review_metric_override(focus_artifact, selected_allatom_review_payload)
     metric_override_passes = _metric_override_passes(metric_override)
+    review = _summaryish(selected_allatom_review_payload or {})
+    review_commercial_hard_gate_pass_v2 = _bool_or_none(review.get("commercial_hard_gate_pass_v2"))
+    review_commercial_failed_metrics_v2 = _text_list(review.get("commercial_hard_gate_failed_metrics_v2"))
+    review_commercial_missing_metrics_v2 = _text_list(review.get("commercial_hard_gate_missing_metrics_v2"))
+    review_translation_commercial_fail_closed = _bool_or_none(review.get("translation_commercial_fail_closed"))
+    review_translation_commercial_failed_metrics = _text_list(review.get("translation_commercial_failed_metrics"))
 
     rows: list[dict[str, Any]] = []
     for action_row in action_rows:
         code = _text(action_row.get("code")) or _text(action_row.get("calc_action"))
+        metric = _text(action_row.get("metric"))
+        if _review_resolves_stale_action_row(review, code, metric):
+            continue
         if code == "recompute_mean_min_distance_A" and metric_override_passes:
             continue
         if _status_is_resolved(action_row.get("status")):
@@ -314,7 +533,7 @@ def build_payload(
                 "calc_action": _text(action_row.get("calc_action")),
                 "status": _text(action_row.get("status")),
                 "code": code,
-                "metric": _text(action_row.get("metric")),
+                "metric": metric,
                 "value": value,
                 "threshold": threshold,
                 "delta": delta_text,
@@ -323,7 +542,7 @@ def build_payload(
                 "next_required_action": _next_required_action(code, _text(action_row.get("action"))),
                 **_repair_provenance(
                     code=code,
-                    metric=_text(action_row.get("metric")),
+                    metric=metric,
                     focus_artifact=focus_artifact,
                     selected_allatom_review_payload=selected_allatom_review_payload,
                 ),
@@ -353,11 +572,41 @@ def build_payload(
             wetlab_gate_pass = review_wetlab_gate_pass
         if review_claim_gate_available is False:
             claim_gate_available = False
+            claim_ready_for_allatom = False
             final_gate_pass = False
         elif review_claim_gate_available is not None:
             claim_gate_available = claim_gate_available and review_claim_gate_available
         if review_final_gate_pass is not None:
             final_gate_pass = review_final_gate_pass
+        review_claim_ready = _bool_or_none(review.get("claim_ready_for_allatom"))
+        review_claim_satisfied = _bool_or_none(review.get("claim_gate_satisfied"))
+        if review_claim_ready is not None:
+            claim_ready_for_allatom = review_claim_ready
+        if review_claim_satisfied is False:
+            claim_ready_for_allatom = False
+            final_gate_pass = False
+        missing_metrics = {
+            _text(metric)
+            for metric in (
+                review.get("wetlab_final_gate_missing_metrics")
+                or review.get("commercial_hard_gate_missing_metrics_v2")
+                or []
+            )
+        }
+        if (
+            review_claim_gate_available is False
+            or review_claim_satisfied is False
+            or "claim_gate_required_unavailable" in missing_metrics
+        ):
+            _insert_claim_required_unavailable_row(
+                rows,
+                reason=(
+                    _text(review.get("claim_gate_status_reason"))
+                    or _text(review.get("wetlab_final_gate_reason"))
+                    or "claim_gate_required_unavailable=missing from selected all-atom review packet"
+                ),
+            )
+        _insert_commercial_hard_gate_rows(rows, review=review)
 
     hard_block_count = sum(1 for row in rows if row["severity"] == "hard")
     semi_hard_block_count = sum(1 for row in rows if row["severity"] == "semi_hard")
@@ -376,23 +625,32 @@ def build_payload(
     gate_clear = (
         bool(wetlab_gate_pass)
         and bool(final_gate_pass)
+        and review_commercial_hard_gate_pass_v2 is not False
         and hard_block_count == 0
         and semi_hard_block_count == 0
         and missing_metric_count == 0
     )
-    next_required_step = (
-        f"Selected all-atom wetlab gate is green for `{target_id or 'selected_allatom'}`: "
-        f"`{primary_metric}` is `{primary_value or '-'}` versus `{primary_threshold or '-'}`. "
-        "Keep the current review/claim evidence attached and defer expensive lanes unless a new delivery scope explicitly reopens them."
-        if gate_clear
-        else (
+    if gate_clear:
+        next_required_step = (
+            f"Selected all-atom wetlab gate is green for `{target_id or 'selected_allatom'}`: "
+            f"`{primary_metric}` is `{primary_value or '-'}` versus `{primary_threshold or '-'}`. "
+            "Keep the current review/claim evidence attached and defer expensive lanes unless a new delivery scope explicitly reopens them."
+        )
+    else:
+        followup = (
+            "then recompute the missing claim-gate field and reattach the claim/equivalence packet after all hard blocks clear."
+            if missing_metric_count
+            else "then rebuild the selected all-atom review, burndown, and execution-readiness chain after all hard blocks clear."
+            if claim_gate_available and claim_ready_for_allatom
+            else "then produce and resolve the claim/equivalence packet after all selected all-atom hard blocks clear."
+        )
+        next_required_step = (
             f"Start with `{_text(primary_row.get('code')) or 'recompute_mean_min_distance_A'}` on `{target_id or 'selected_allatom'}`: "
             f"`{primary_metric}` sits at `{primary_value or '-'}` versus `{primary_threshold or '-'}` (delta `{primary_delta or '-'}`), "
             f"repair_lane=`{_text(primary_row.get('repair_lane')) or 'selected_allatom_local_recompute'}` "
             f"repair_action=`{_text(primary_row.get('repair_action')) or _text(primary_row.get('calc_action')) or 'recompute_selected_allatom_metric'}`; "
-            "then recompute the missing claim-gate field, and only after all hard blocks clear move on to claim/equivalence packet production while keeping expensive lanes deferred."
+            f"{followup} Keep expensive lanes deferred until the commercial hard blocks are cleared."
         )
-    )
 
     summary = {
         "packet_ready": True,
@@ -411,10 +669,23 @@ def build_payload(
         "selected_allatom_metric_refresh_reason": (
             metric_override["refresh_reason"] if metric_override else "default_final_campaign_summary_source"
         ),
+        "selected_allatom_effective_execution_gate_pass": gate_clear,
+        "selected_allatom_geometry_wetlab_gate_pass": wetlab_gate_pass,
         "selected_allatom_wetlab_gate_pass": wetlab_gate_pass,
         "selected_allatom_final_gate_pass": final_gate_pass,
         "selected_allatom_claim_gate_available": claim_gate_available,
         "selected_allatom_claim_ready_for_allatom": claim_ready_for_allatom,
+        "selected_allatom_commercial_hard_gate_pass_v2": review_commercial_hard_gate_pass_v2,
+        "selected_allatom_commercial_hard_gate_failed_metrics_v2": review_commercial_failed_metrics_v2,
+        "selected_allatom_commercial_hard_gate_missing_metrics_v2": review_commercial_missing_metrics_v2,
+        "selected_allatom_translation_commercial_fail_closed": review_translation_commercial_fail_closed,
+        "selected_allatom_translation_commercial_failed_metrics": review_translation_commercial_failed_metrics,
+        "selected_allatom_translation_gate_focus_status": _text(review.get("translation_gate_focus_status")),
+        "selected_allatom_focus_shortlist_tier": _text(review.get("focus_shortlist_tier")),
+        "selected_allatom_recommended_next_expensive_lane": _text(review.get("recommended_next_expensive_lane")),
+        "selected_allatom_atomized_local_min_evidence_ready": _bool_or_none(
+            review.get("atomized_local_min_evidence_ready")
+        ),
         "selected_allatom_actionability_status": actionability_status,
         "selected_allatom_primary_blocking_domain": primary_blocking_domain,
         "selected_allatom_claim_requirement_reason": claim_requirement_reason,
@@ -456,10 +727,16 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- selected_allatom_metric_source_artifact: `{summary['selected_allatom_metric_source_artifact']}`",
         f"- selected_allatom_metric_source_kind: `{summary['selected_allatom_metric_source_kind']}`",
         f"- selected_allatom_metric_refresh_reason: `{summary['selected_allatom_metric_refresh_reason']}`",
+        f"- selected_allatom_effective_execution_gate_pass: `{summary['selected_allatom_effective_execution_gate_pass']}`",
+        f"- selected_allatom_geometry_wetlab_gate_pass: `{summary['selected_allatom_geometry_wetlab_gate_pass']}`",
         f"- selected_allatom_wetlab_gate_pass: `{summary['selected_allatom_wetlab_gate_pass']}`",
         f"- selected_allatom_final_gate_pass: `{summary['selected_allatom_final_gate_pass']}`",
         f"- selected_allatom_claim_gate_available: `{summary['selected_allatom_claim_gate_available']}`",
         f"- selected_allatom_claim_ready_for_allatom: `{summary['selected_allatom_claim_ready_for_allatom']}`",
+        f"- selected_allatom_translation_gate_focus_status: `{summary['selected_allatom_translation_gate_focus_status'] or '-'}`",
+        f"- selected_allatom_focus_shortlist_tier: `{summary['selected_allatom_focus_shortlist_tier'] or '-'}`",
+        f"- selected_allatom_recommended_next_expensive_lane: `{summary['selected_allatom_recommended_next_expensive_lane'] or '-'}`",
+        f"- selected_allatom_atomized_local_min_evidence_ready: `{summary['selected_allatom_atomized_local_min_evidence_ready']}`",
         f"- selected_allatom_actionability_status: `{summary['selected_allatom_actionability_status']}`",
         f"- selected_allatom_primary_blocking_domain: `{summary['selected_allatom_primary_blocking_domain']}`",
         f"- row_count: `{summary['row_count']}`",

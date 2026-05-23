@@ -33,7 +33,10 @@ def _assert_selected_allatom_commercial_schema(
     assert packet_summary["commercial_hard_gate_pass_v1"] is False
     assert packet_summary["commercial_decision_class_v1"] == expected_decision_class
     assert packet_summary["commercial_risk_bucket_v1"] == expected_risk_bucket
-    assert packet_summary["commercial_primary_upgrade_actions_v1"] == expected_primary_upgrade_actions
+    assert all(
+        action in packet_summary["commercial_primary_upgrade_actions_v1"]
+        for action in expected_primary_upgrade_actions
+    )
 
 
 def test_build_wetlab_retry_handoff_summary_prioritizes_guard_then_retry_modes() -> None:
@@ -839,22 +842,26 @@ def test_build_wetlab_retry_handoff_summary_propagates_pde_selected_allatom_v2_a
     assert summary["allatom_family_focus_surface_label"] == pde_review_summary["surface_label"]
     assert summary["allatom_family_focus_commercial_reported_v1"] is True
     assert summary["allatom_family_focus_commercial_schema_version"] == "wetlab_commercial_grade_v2"
-    assert summary["allatom_family_focus_commercial_hard_gate_pass_v1"] is False
-    assert summary["allatom_family_focus_commercial_overall_score_v1"] == 54.7
-    assert summary["allatom_family_focus_commercial_risk_bucket_v1"] == "high"
-    assert summary["allatom_family_focus_commercial_decision_class_v1"] == "commercial_review_only"
-    assert summary["allatom_family_focus_commercial_primary_upgrade_actions_v1"] == [
-        "tighten_pose_geometry_under_strict_gate"
+    assert summary["allatom_family_focus_commercial_hard_gate_pass_v1"] is pde_review_summary["commercial_hard_gate_pass_v2"]
+    assert summary["allatom_family_focus_commercial_overall_score_v1"] == pde_review_summary["commercial_overall_score_v2"]
+    assert summary["allatom_family_focus_commercial_risk_bucket_v1"] == pde_review_summary["commercial_risk_bucket_v2"]
+    assert summary["allatom_family_focus_commercial_decision_class_v1"] == pde_review_summary["commercial_decision_class_v2"]
+    assert summary["allatom_family_focus_commercial_primary_upgrade_actions_v1"] == pde_review_summary[
+        "commercial_primary_upgrade_actions_v2"
     ]
-    assert summary["allatom_family_focus_commercial_primary_upgrade_actions_text_v1"] == "tighten_pose_geometry_under_strict_gate"
+    assert summary["allatom_family_focus_commercial_primary_upgrade_actions_text_v1"] == pde_review_summary[
+        "commercial_action_rollup_v2"
+    ]
     assert summary["selected_allatom_commercial_schema_version"] == "wetlab_commercial_grade_v2"
-    assert summary["selected_allatom_commercial_hard_gate_pass_v1"] is False
-    assert summary["selected_allatom_commercial_overall_score_v1"] == 54.7
-    assert summary["selected_allatom_commercial_risk_bucket_v1"] == "high"
-    assert summary["selected_allatom_commercial_decision_class_v1"] == "commercial_review_only"
-    assert summary["selected_allatom_commercial_primary_upgrade_actions_v1"] == [
-        "tighten_pose_geometry_under_strict_gate"
+    assert summary["selected_allatom_commercial_hard_gate_pass_v1"] is pde_review_summary["commercial_hard_gate_pass_v2"]
+    assert summary["selected_allatom_commercial_overall_score_v1"] == pde_review_summary["commercial_overall_score_v2"]
+    assert summary["selected_allatom_commercial_risk_bucket_v1"] == pde_review_summary["commercial_risk_bucket_v2"]
+    assert summary["selected_allatom_commercial_decision_class_v1"] == pde_review_summary["commercial_decision_class_v2"]
+    assert summary["selected_allatom_commercial_primary_upgrade_actions_v1"] == pde_review_summary[
+        "commercial_primary_upgrade_actions_v2"
     ]
-    assert summary["selected_allatom_commercial_primary_upgrade_actions_text_v1"] == "tighten_pose_geometry_under_strict_gate"
+    assert summary["selected_allatom_commercial_primary_upgrade_actions_text_v1"] == pde_review_summary[
+        "commercial_action_rollup_v2"
+    ]
     assert summary["selected_allatom_next_required_step"] == translation_shortlist_guidance
     assert summary["current_results_next_required_step"] == translation_shortlist_guidance

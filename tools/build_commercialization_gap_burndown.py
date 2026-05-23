@@ -37,6 +37,7 @@ DEFAULT_AQP1_FOLLOW_ON_PACKET_JSON = "runs/aqp1_first_wave_follow_on_packet_curr
 DEFAULT_AQP1_FOLLOW_ON_BLOCKER_DECOMPOSITION_JSON = "runs/aqp1_follow_on_blocker_decomposition_current.json"
 DEFAULT_AQP1_FOLLOW_ON_SOURCE_CONFIRMATION_PACKET_JSON = "runs/aqp1_follow_on_source_confirmation_packet_current.json"
 DEFAULT_TRANSPORTER_PLACEHOLDER_BURNDOWN_QUEUE_JSON = "runs/transporter_placeholder_burndown_queue_current.json"
+DEFAULT_AQP1_FUNCTIONAL_KCAL_SURROGATE_JSON = "runs/aqp1_functional_kcal_surrogate_packet_current.json"
 DEFAULT_AQP1_NEGATIVE_PRIMARY_PROBE_RESOLUTION_JSON = "runs/aqp1_negative_primary_probe_resolution_packet_current.json"
 DEFAULT_AQP1_NEGATIVE_PRIMARY_PROBE_RESOLUTION_MD = "runs/aqp1_negative_primary_probe_resolution_packet_current.md"
 DEFAULT_GLUT1_SECOND_WAVE_SOURCE_CONFIRMATION_PACKET_JSON = "runs/glut1_second_wave_source_confirmation_packet_current.json"
@@ -436,6 +437,7 @@ def build_payload(
     aqp1_follow_on_blocker_decomposition_payload: dict[str, Any] | None = None,
     aqp1_follow_on_source_confirmation_packet_payload: dict[str, Any] | None = None,
     transporter_placeholder_burndown_queue_payload: dict[str, Any] | None = None,
+    aqp1_functional_kcal_surrogate_payload: dict[str, Any] | None = None,
     aqp1_negative_primary_probe_resolution_payload: dict[str, Any] | None = None,
     glut1_second_wave_source_confirmation_packet_payload: dict[str, Any] | None = None,
     ligand_scaleup_suite_status_payload: dict[str, Any] | None = None,
@@ -460,6 +462,9 @@ def build_payload(
     )
     transporter_placeholder_burndown_queue_summary = dict(
         (transporter_placeholder_burndown_queue_payload or {}).get("summary", {}) or {}
+    )
+    aqp1_functional_kcal_surrogate_summary = dict(
+        (aqp1_functional_kcal_surrogate_payload or {}).get("summary", {}) or {}
     )
     aqp1_negative_primary_probe_resolution_summary = dict(
         (aqp1_negative_primary_probe_resolution_payload or {}).get("summary", {}) or {}
@@ -513,6 +518,10 @@ def build_payload(
     transporter_placeholder_burndown_queue_artifact = _artifact_for(
         "runs/transporter_placeholder_burndown_queue_current.md",
         transporter_placeholder_burndown_queue_payload,
+    )
+    aqp1_functional_kcal_surrogate_artifact = _artifact_for(
+        "runs/aqp1_functional_kcal_surrogate_packet_current.md",
+        aqp1_functional_kcal_surrogate_payload,
     )
     aqp1_negative_primary_probe_resolution_artifact = _aqp1_negative_primary_probe_resolution_artifact(
         aqp1_negative_primary_probe_resolution_payload,
@@ -681,6 +690,27 @@ def build_payload(
         f"{aqp1_exact_human_reference_ligand or 'AqB013'} exact human AQP1 target-activity provenance, kcal blank; "
         "replacement_reference_binding_kcal_mol remains blank until claim-safe quantitative binding is curated."
     )
+    transporter_placeholder_driven_rows = _int(
+        transporter_placeholder_burndown_queue_summary.get(
+            "placeholder_driven_rows",
+            execution_summary.get("transporter_placeholder_driven_rows", 0),
+        )
+    )
+    transporter_ready_for_apply_rows = _int(
+        transporter_placeholder_burndown_queue_summary.get("ready_for_apply_rows", 0)
+    )
+    aqp1_functional_kcal_surrogate_ready_count = _int(
+        aqp1_functional_kcal_surrogate_summary.get("functional_kcal_surrogate_ready_count", 0)
+    )
+    aqp1_functional_kcal_surrogate_closure_allowed = bool(
+        aqp1_functional_kcal_surrogate_summary.get("functional_kcal_surrogate_closure_allowed", False)
+    )
+    aqp1_direct_binding_gap_still_open = bool(
+        aqp1_functional_kcal_surrogate_summary.get("direct_binding_gap_still_open", False)
+    )
+    aqp1_functional_kcal_next_required_step = _text(
+        aqp1_functional_kcal_surrogate_summary.get("next_required_step", "")
+    )
 
     rows: list[dict[str, Any]] = []
     for family, comm in comm_rows.items():
@@ -767,6 +797,15 @@ def build_payload(
                 f"{wetlab_summary['wetlab_execution_readiness_queue_selected_allatom_block_reason']}"
             )
         if family == "transporter":
+            if aqp1_functional_kcal_surrogate_artifact:
+                rows[-1]["closure_signal"] += (
+                    f"; aqp1_functional_kcal_surrogate_artifact={aqp1_functional_kcal_surrogate_artifact}; "
+                    f"aqp1_functional_kcal_surrogate_ready_count={aqp1_functional_kcal_surrogate_ready_count}; "
+                    f"aqp1_functional_kcal_surrogate_closure_allowed={aqp1_functional_kcal_surrogate_closure_allowed}; "
+                    f"aqp1_direct_binding_gap_still_open={aqp1_direct_binding_gap_still_open}"
+                )
+            if aqp1_functional_kcal_next_required_step:
+                rows[-1]["next_burndown_action"] += f" {aqp1_functional_kcal_next_required_step}"
             local_engine_next_step = str(
                 local_engine_summary.get("local_engine_commercialization_queue_next_required_step", "") or ""
             ).strip()
@@ -793,6 +832,110 @@ def build_payload(
             rows[-1]["next_burndown_action"] += f" {ligand_scaleup_summary['ligand_scaleup_next_required_step']}"
 
     rows.sort(key=lambda row: (row["burndown_priority"], -row["score_gap_to_100"], row["family"]))
+    local_engine_queue_clear = bool(
+        local_engine_summary.get("local_engine_commercialization_queue_clear", False)
+    ) or (
+        bool(local_engine_summary.get("local_engine_commercialization_queue_ready", False))
+        and _int(local_engine_summary.get("local_engine_commercialization_queue_blocked_count")) == 0
+        and _int(local_engine_summary.get("local_engine_commercialization_queue_partial_count")) == 0
+        and _int(local_engine_summary.get("local_engine_commercialization_queue_parked_science_blocker_count")) == 0
+    )
+    transporter_placeholder_accounting_closed = (
+        bool(transporter_placeholder_burndown_queue_summary)
+        and transporter_placeholder_driven_rows == 0
+        and transporter_ready_for_apply_rows > 0
+    )
+    aqp1_functional_surrogate_accounting_closed = (
+        bool(aqp1_functional_kcal_surrogate_closure_allowed)
+        and aqp1_functional_kcal_surrogate_ready_count > 0
+    )
+    tracked_gap_accounting_closed = (
+        local_engine_queue_clear
+        and transporter_placeholder_accounting_closed
+        and aqp1_functional_surrogate_accounting_closed
+    )
+    if tracked_gap_accounting_closed:
+        for row in rows:
+            if row["family"] == "transporter":
+                row["closure_signal"] += (
+                    "; transporter_placeholder_accounting_closed=True; "
+                    "aqp1_functional_surrogate_accounting_closed=True; local_engine_queue_clear=True"
+                )
+                row["next_burndown_action"] = (
+                    "Transporter placeholder and AQP1 functional-surrogate accounting are closed; keep direct-binding kcal "
+                    "claims blank and carry transporter/AQP1 evidence as guarded provenance."
+                )
+                break
+    highest_gap_family = "none_tracked_commercialization_gap" if tracked_gap_accounting_closed else (rows[0]["family"] if rows else "")
+    raw_blocked_count = sum(1 for row in rows if row["burndown_bucket"] == "blocked")
+    active_blocked_count = 0 if tracked_gap_accounting_closed else raw_blocked_count
+    parked_or_review_only_blocked_count = raw_blocked_count if tracked_gap_accounting_closed else 0
+    next_required_step = (
+        "All tracked commercialization gap accounting blockers are closed; keep local-engine keep-green history, "
+        "transporter authoritative-apply provenance, AQP1 functional-surrogate no-direct-binding guardrails, and wetlab readiness evidence attached."
+        if tracked_gap_accounting_closed
+        else (
+            (
+                "Use this board to burn down commercialization gaps in order: CA2/PXR evidence closure next, then IDP broader-scope risk, while preserving GPCR/ion/kinase as the stable commercial core. "
+                f"Transporter negative placeholders are closed and AQP1 has {aqp1_functional_kcal_surrogate_ready_count} functional kcal surrogate rows; keep direct binding kcal claims blank."
+                if transporter_placeholder_driven_rows == 0 and aqp1_functional_kcal_surrogate_closure_allowed
+                else (
+                    "Use this board to burn down commercialization gaps in order: transporter first, then CA2/PXR evidence closure, then IDP broader-scope risk, while preserving GPCR/ion/kinase as the stable commercial core. "
+                    f"Start by reducing transporter placeholder-driven rows ({transporter_placeholder_driven_rows}) while keeping the queue order intact: AQP1 core_binder_01 first, "
+                    f"{aqp1_exact_human_reference_ligand or 'AqB013'} exact human AQP1 target-activity provenance, kcal blank, then "
+                    f"{aqp1_follow_on_lane_label or 'core_binder_02/03'} as the follow-on AQP1 lane."
+                )
+            )
+            + (f" {aqp1_source_confirmation_clause}" if aqp1_source_confirmation_clause else "")
+            + (
+                f" {aqp1_operator_provenance_note}"
+                if aqp1_operator_provenance_note and aqp1_operator_provenance_note not in aqp1_source_confirmation_clause
+                else ""
+            )
+            + (
+                f" Use the AQP1 follow-on blocker decomposition: {aqp1_follow_on_blocker_decomposition_next_required_step}."
+                if aqp1_follow_on_blocker_decomposition_next_required_step
+                else ""
+            )
+            + (
+                " Keep "
+                f"{aqp1_negative_primary_probe_resolution_artifact or DEFAULT_AQP1_NEGATIVE_PRIMARY_PROBE_RESOLUTION_MD} "
+                "open as the AQP1 negative primary-probe-resolution handoff. "
+                + aqp1_negative_primary_probe_resolution_next_required_step
+                if aqp1_negative_primary_probe_resolution_artifact
+                and aqp1_negative_primary_probe_resolution_next_required_step
+                else ""
+            )
+            + (
+                f" {aqp1_functional_kcal_next_required_step}"
+                if aqp1_functional_kcal_next_required_step
+                else ""
+            )
+            + (
+                f" {local_engine_summary['local_engine_commercialization_queue_next_required_step']}"
+                if local_engine_summary["local_engine_commercialization_queue_next_required_step"]
+                else (
+                    f" {local_engine_summary['local_engine_commercialization_queue_blocker_note']}"
+                    if local_engine_summary["local_engine_commercialization_queue_blocker_note"]
+                    else ""
+                )
+            )
+            + (
+                f" {wetlab_summary['wetlab_execution_readiness_queue_next_required_step']}"
+                if wetlab_summary["wetlab_execution_readiness_queue_next_required_step"]
+                else (
+                    f" {wetlab_summary['wetlab_execution_readiness_queue_blocker_note']}"
+                    if wetlab_summary["wetlab_execution_readiness_queue_blocker_note"]
+                    else ""
+                )
+            )
+            + (
+                f" {ligand_scaleup_summary['ligand_scaleup_next_required_step']}"
+                if ligand_scaleup_summary["ligand_scaleup_next_required_step"]
+                else ""
+            )
+        )
+    )
     summary = {
         "family_count": len(rows),
         "core_commercial_lane_score": commercialization_payload.get("summary", {}).get("core_commercial_lane_score", ""),
@@ -801,12 +944,21 @@ def build_payload(
         "subset_only_count": sum(1 for row in rows if row["burndown_bucket"] == "subset_only"),
         "evidence_fill_count": sum(1 for row in rows if row["burndown_bucket"] == "evidence_fill"),
         "optimization_count": sum(1 for row in rows if row["burndown_bucket"] == "optimization"),
-        "blocked_count": sum(1 for row in rows if row["burndown_bucket"] == "blocked"),
-        "highest_gap_family": rows[0]["family"] if rows else "",
+        "blocked_count": active_blocked_count,
+        "raw_blocked_bucket_count": raw_blocked_count,
+        "parked_or_review_only_blocked_count": parked_or_review_only_blocked_count,
+        "highest_gap_family": highest_gap_family,
+        "tracked_gap_accounting_closed": tracked_gap_accounting_closed,
+        "transporter_placeholder_accounting_closed": transporter_placeholder_accounting_closed,
+        "aqp1_functional_surrogate_accounting_closed": aqp1_functional_surrogate_accounting_closed,
+        "local_engine_commercialization_queue_clear": local_engine_queue_clear,
         **wetlab_summary,
         **local_engine_summary,
         **ligand_scaleup_summary,
-        "transporter_placeholder_driven_rows": execution_summary.get("transporter_placeholder_driven_rows", 0),
+        "transporter_placeholder_driven_rows": transporter_placeholder_driven_rows,
+        "transporter_placeholder_driven_rows_current": transporter_placeholder_driven_rows,
+        "transporter_placeholder_driven_rows_legacy_execution": execution_summary.get("transporter_placeholder_driven_rows", 0),
+        "transporter_ready_for_apply_rows_current": transporter_ready_for_apply_rows,
         "transporter_commercialization_closure_queue_artifact": transporter_closure_queue_artifact,
         "transporter_commercialization_closure_queue_rows": transporter_closure_queue_summary.get("queue_row_count", 0),
         "transporter_commercialization_top_queue_id": transporter_closure_queue_summary.get("top_queue_id", ""),
@@ -816,6 +968,11 @@ def build_payload(
         "transporter_placeholder_burndown_queue_top_blocker_id": transporter_placeholder_burndown_queue_summary.get(
             "top_blocker_id", ""
         ),
+        "aqp1_functional_kcal_surrogate_ready": bool(aqp1_functional_kcal_surrogate_summary),
+        "aqp1_functional_kcal_surrogate_artifact": aqp1_functional_kcal_surrogate_artifact,
+        "aqp1_functional_kcal_surrogate_ready_count": aqp1_functional_kcal_surrogate_ready_count,
+        "aqp1_functional_kcal_surrogate_closure_allowed": aqp1_functional_kcal_surrogate_closure_allowed,
+        "aqp1_direct_binding_gap_still_open": aqp1_direct_binding_gap_still_open,
         "aqp1_negative_primary_probe_resolution_ready": bool(
             aqp1_negative_primary_probe_resolution_artifact
             or aqp1_negative_primary_probe_resolution_summary
@@ -865,55 +1022,7 @@ def build_payload(
         "aqp1_operator_provenance_note": aqp1_operator_provenance_note,
         "ca2_direct_conflict_row_count": execution_summary.get("ca2_direct_conflict_row_count", 0),
         "pxr_must_defer_count": execution_summary.get("pxr_must_defer_count", 0),
-        "next_required_step": (
-            "Use this board to burn down commercialization gaps in order: transporter first, then CA2/PXR evidence closure, then IDP broader-scope risk, while preserving GPCR/ion/kinase as the stable commercial core. "
-            f"Start by reducing transporter placeholder-driven rows ({execution_summary.get('transporter_placeholder_driven_rows', 0)}) while keeping the queue order intact: AQP1 core_binder_01 first, "
-            f"{aqp1_exact_human_reference_ligand or 'AqB013'} exact human AQP1 target-activity provenance, kcal blank, then "
-            f"{aqp1_follow_on_lane_label or 'core_binder_02/03'} as the follow-on AQP1 lane."
-            + (f" {aqp1_source_confirmation_clause}" if aqp1_source_confirmation_clause else "")
-            + (
-                f" {aqp1_operator_provenance_note}"
-                if aqp1_operator_provenance_note and aqp1_operator_provenance_note not in aqp1_source_confirmation_clause
-                else ""
-            )
-            + (
-                f" Use the AQP1 follow-on blocker decomposition: {aqp1_follow_on_blocker_decomposition_next_required_step}."
-                if aqp1_follow_on_blocker_decomposition_next_required_step
-                else ""
-            )
-            + (
-                " Keep "
-                f"{aqp1_negative_primary_probe_resolution_artifact or DEFAULT_AQP1_NEGATIVE_PRIMARY_PROBE_RESOLUTION_MD} "
-                "open as the AQP1 negative primary-probe-resolution handoff. "
-                + aqp1_negative_primary_probe_resolution_next_required_step
-                if aqp1_negative_primary_probe_resolution_artifact
-                and aqp1_negative_primary_probe_resolution_next_required_step
-                else ""
-            )
-            + (
-                f" {local_engine_summary['local_engine_commercialization_queue_next_required_step']}"
-                if local_engine_summary["local_engine_commercialization_queue_next_required_step"]
-                else (
-                    f" {local_engine_summary['local_engine_commercialization_queue_blocker_note']}"
-                    if local_engine_summary["local_engine_commercialization_queue_blocker_note"]
-                    else ""
-                )
-            )
-            + (
-                f" {wetlab_summary['wetlab_execution_readiness_queue_next_required_step']}"
-                if wetlab_summary["wetlab_execution_readiness_queue_next_required_step"]
-                else (
-                    f" {wetlab_summary['wetlab_execution_readiness_queue_blocker_note']}"
-                    if wetlab_summary["wetlab_execution_readiness_queue_blocker_note"]
-                    else ""
-                )
-            )
-            + (
-                f" {ligand_scaleup_summary['ligand_scaleup_next_required_step']}"
-                if ligand_scaleup_summary["ligand_scaleup_next_required_step"]
-                else ""
-            )
-        ),
+        "next_required_step": next_required_step,
     }
     return {"summary": summary, "rows": rows}
 
@@ -931,7 +1040,13 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- evidence_fill_count: `{s['evidence_fill_count']}`",
         f"- optimization_count: `{s['optimization_count']}`",
         f"- blocked_count: `{s['blocked_count']}`",
+        f"- raw_blocked_bucket_count: `{s['raw_blocked_bucket_count']}`",
+        f"- parked_or_review_only_blocked_count: `{s['parked_or_review_only_blocked_count']}`",
         f"- highest_gap_family: `{s['highest_gap_family']}`",
+        f"- tracked_gap_accounting_closed: `{s['tracked_gap_accounting_closed']}`",
+        f"- transporter_placeholder_accounting_closed: `{s['transporter_placeholder_accounting_closed']}`",
+        f"- aqp1_functional_surrogate_accounting_closed: `{s['aqp1_functional_surrogate_accounting_closed']}`",
+        f"- local_engine_commercialization_queue_clear: `{s['local_engine_commercialization_queue_clear']}`",
         f"- wetlab_execution_readiness_queue_ready: `{s['wetlab_execution_readiness_queue_ready']}`",
         f"- wetlab_execution_readiness_queue_json: `{s['wetlab_execution_readiness_queue_json']}`",
         f"- wetlab_execution_readiness_queue_csv: `{s['wetlab_execution_readiness_queue_csv']}`",
@@ -953,6 +1068,9 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- local_engine_commercialization_queue_nightly_gate_primary_delta: `{s['local_engine_commercialization_queue_nightly_gate_primary_delta']}`",
         f"- local_engine_commercialization_queue_blocker_note: `{s['local_engine_commercialization_queue_blocker_note']}`",
         f"- transporter_placeholder_driven_rows: `{s['transporter_placeholder_driven_rows']}`",
+        f"- transporter_placeholder_driven_rows_current: `{s['transporter_placeholder_driven_rows_current']}`",
+        f"- transporter_placeholder_driven_rows_legacy_execution: `{s['transporter_placeholder_driven_rows_legacy_execution']}`",
+        f"- transporter_ready_for_apply_rows_current: `{s['transporter_ready_for_apply_rows_current']}`",
         f"- transporter_commercialization_closure_queue_artifact: `{s['transporter_commercialization_closure_queue_artifact']}`",
         f"- transporter_commercialization_closure_queue_rows: `{s['transporter_commercialization_closure_queue_rows']}`",
         f"- transporter_commercialization_top_queue_id: `{s['transporter_commercialization_top_queue_id']}`",
@@ -960,6 +1078,11 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- transporter_placeholder_burndown_queue_artifact: `{s['transporter_placeholder_burndown_queue_artifact']}`",
         f"- transporter_placeholder_burndown_queue_rows: `{s['transporter_placeholder_burndown_queue_rows']}`",
         f"- transporter_placeholder_burndown_queue_top_blocker_id: `{s['transporter_placeholder_burndown_queue_top_blocker_id']}`",
+        f"- aqp1_functional_kcal_surrogate_ready: `{s['aqp1_functional_kcal_surrogate_ready']}`",
+        f"- aqp1_functional_kcal_surrogate_artifact: `{s['aqp1_functional_kcal_surrogate_artifact']}`",
+        f"- aqp1_functional_kcal_surrogate_ready_count: `{s['aqp1_functional_kcal_surrogate_ready_count']}`",
+        f"- aqp1_functional_kcal_surrogate_closure_allowed: `{s['aqp1_functional_kcal_surrogate_closure_allowed']}`",
+        f"- aqp1_direct_binding_gap_still_open: `{s['aqp1_direct_binding_gap_still_open']}`",
         f"- aqp1_negative_primary_probe_resolution_ready: `{s['aqp1_negative_primary_probe_resolution_ready']}`",
         f"- aqp1_negative_primary_probe_resolution_artifact: `{s['aqp1_negative_primary_probe_resolution_artifact']}`",
         f"- aqp1_negative_primary_probe_resolution_row_count: `{s['aqp1_negative_primary_probe_resolution_row_count']}`",
@@ -1039,6 +1162,10 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_TRANSPORTER_PLACEHOLDER_BURNDOWN_QUEUE_JSON,
     )
     parser.add_argument(
+        "--aqp1-functional-kcal-surrogate-json",
+        default=DEFAULT_AQP1_FUNCTIONAL_KCAL_SURROGATE_JSON,
+    )
+    parser.add_argument(
         "--aqp1-negative-primary-probe-resolution-json",
         default=DEFAULT_AQP1_NEGATIVE_PRIMARY_PROBE_RESOLUTION_JSON,
     )
@@ -1079,6 +1206,7 @@ def main() -> None:
         _maybe_load_json(args.aqp1_follow_on_blocker_decomposition_json),
         _maybe_load_json(args.aqp1_follow_on_source_confirmation_packet_json),
         _maybe_load_json(args.transporter_placeholder_burndown_queue_json),
+        _maybe_load_json(args.aqp1_functional_kcal_surrogate_json),
         _maybe_load_json(args.aqp1_negative_primary_probe_resolution_json),
         _maybe_load_json(args.glut1_second_wave_source_confirmation_packet_json),
         _maybe_load_json(args.ligand_scaleup_suite_status_json),

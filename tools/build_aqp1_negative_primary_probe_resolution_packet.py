@@ -177,7 +177,7 @@ def build_payload(
         "resolution_decision": resolution_decision,
         "packet_artifact": "runs/aqp1_negative_primary_probe_resolution_packet_current.md",
         "next_required_step": (
-            "Open sodium nitroprusside as the first AQP1 primary-probe follow-up lane, keep it review-only while ChEMBL exact target-pair activity remains absent, and treat dimethyl sulfoxide only as exact-source small-inhibitor solvent context rather than a negative fallback. Do not promote any authoritative negative row until a direct transporter-specific quantitative negative measurement is curated."
+            "Open sodium nitroprusside as the first AQP1 primary-probe follow-up lane, keep it review-only while sodium nitroprusside has no exact human AQP1 ChEMBL target-pair activity row, and treat dimethyl sulfoxide only as exact-source small-inhibitor solvent context rather than a negative fallback. Do not promote any authoritative negative row until a direct transporter-specific quantitative negative measurement is curated."
         ),
     }
     return {"summary": summary, "rows": rows}

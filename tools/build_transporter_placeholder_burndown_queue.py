@@ -15,6 +15,7 @@ DEFAULT_APPLY_STATUS_JSON = RUNS / "transporter_apply_draft_status_current.json"
 DEFAULT_QUEUE_JSON = RUNS / "transporter_seed_row_promotion_board_current.json"
 DEFAULT_AQP1_FOLLOW_ON_SOURCE_CONFIRMATION_JSON = RUNS / "aqp1_follow_on_source_confirmation_packet_current.json"
 DEFAULT_GLUT1_SECOND_WAVE_SOURCE_CONFIRMATION_JSON = RUNS / "glut1_second_wave_source_confirmation_packet_current.json"
+DEFAULT_NEGATIVE_APPLY_GATE_JSON = RUNS / "transporter_negative_authoritative_apply_gate_current.json"
 DEFAULT_OUT_JSON = RUNS / "transporter_placeholder_burndown_queue_current.json"
 DEFAULT_OUT_CSV = RUNS / "transporter_placeholder_burndown_queue_current.csv"
 DEFAULT_OUT_MD = RUNS / "transporter_placeholder_burndown_queue_current.md"
@@ -46,12 +47,26 @@ def _int(value: Any) -> int:
         return 0
 
 
+def _bool(value: Any) -> bool:
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "pass", "passed"}
+    return bool(value)
+
+
 def _rows_by_step(payload: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
     payload = payload or {}
     return {
         _text(row.get("packet_step")): dict(row)
         for row in payload.get("rows", []) or []
         if _text(row.get("packet_step"))
+    }
+
+
+def _apply_rows_by_slot(payload: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
+    return {
+        _text(row.get("slot_queue_id")): dict(row)
+        for row in (payload or {}).get("rows", []) or []
+        if _text(row.get("slot_queue_id"))
     }
 
 
@@ -114,6 +129,8 @@ def _reduction_potential(reduction_track: str) -> str:
         return "reducible_now"
     if reduction_track == "negative_evidence_missing":
         return "requires_new_negative_evidence"
+    if reduction_track == "negative_evidence_curated":
+        return "already_counted_elsewhere"
     if reduction_track in {"already_staged", "glut1_staged"}:
         return "already_counted_elsewhere"
     return "unknown"
@@ -168,6 +185,7 @@ def build_payload(
     queue_payload: dict[str, Any],
     aqp1_follow_on_source_confirmation_payload: dict[str, Any] | None = None,
     glut1_second_wave_source_confirmation_payload: dict[str, Any] | None = None,
+    negative_apply_gate_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     blocker_summary = dict(blocker_payload.get("summary", {}) or {})
     apply_summary = dict(apply_status_payload.get("summary", {}) or {})
@@ -177,6 +195,7 @@ def build_payload(
     follow_on_source_ready = bool(follow_on_source_summary)
     glut1_second_wave_ready = bool(glut1_second_wave_summary)
     glut1_second_wave_by_step = _rows_by_step(glut1_second_wave_source_confirmation_payload)
+    negative_apply_by_slot = _apply_rows_by_slot(negative_apply_gate_payload)
 
     apply_target_rows = {
         _text(row.get("target_id")).upper(): dict(row)
@@ -196,12 +215,33 @@ def build_payload(
         target_id = _text(row.get("target_id"))
         row_kind = _text(row.get("row_kind")).lower()
         packet_step = _text(row.get("packet_step"))
+        queue_id = f"{target_id}__{packet_step}"
+        negative_apply_allowed = _bool(
+            negative_apply_by_slot.get(queue_id, {}).get("authoritative_negative_apply_allowed")
+        )
+        burndown_class = _burndown_class(
+            target_id,
+            row_kind,
+            _text(row.get("seed_packet_artifact")),
+            _text(row.get("fill_draft_artifact")),
+            _text(row.get("sync_preview_artifact")),
+        )
+        reduction_track = _reduction_track(
+            target_id,
+            row_kind,
+            _text(row.get("seed_packet_artifact")),
+            _text(row.get("fill_draft_artifact")),
+            _text(row.get("sync_preview_artifact")),
+        )
+        if row_kind == "negative" and negative_apply_allowed:
+            burndown_class = "evidence_curated"
+            reduction_track = "negative_evidence_curated"
         glut1_source_row = glut1_second_wave_by_step.get(packet_step, {}) if target_id.upper() == "GLUT1" else {}
         queue_rank = len(queue_rows) + 1
         queue_rows.append(
             {
                 "queue_rank": queue_rank,
-                "queue_id": f"{target_id}__{packet_step}",
+                "queue_id": queue_id,
                 "priority_rank": _int(row.get("priority_rank")),
                 "target_id": target_id,
                 "wave": _text(row.get("wave")),
@@ -210,13 +250,7 @@ def build_payload(
                 "row_kind": row_kind,
                 "promotion_class": _text(row.get("promotion_class")),
                 "burndown_phase": _burndown_phase(target_id, row_kind),
-                "burndown_class": _burndown_class(
-                    target_id,
-                    row_kind,
-                    _text(row.get("seed_packet_artifact")),
-                    _text(row.get("fill_draft_artifact")),
-                    _text(row.get("sync_preview_artifact")),
-                ),
+                "burndown_class": burndown_class,
                 "candidate_name": _text(glut1_source_row.get("candidate_name")) or _text(row.get("candidate_name")),
                 "source_anchor": _text(glut1_source_row.get("source_anchor")) or _text(row.get("source_anchor")),
                 "source_url": _text(glut1_source_row.get("source_url")) or _text(row.get("source_url")),
@@ -233,13 +267,9 @@ def build_payload(
                 "seed_packet_artifact": _text(row.get("seed_packet_artifact")),
                 "fill_draft_artifact": _text(row.get("fill_draft_artifact")),
                 "sync_preview_artifact": _text(row.get("sync_preview_artifact")),
-                "reduction_track": _reduction_track(
-                    target_id,
-                    row_kind,
-                    _text(row.get("seed_packet_artifact")),
-                    _text(row.get("fill_draft_artifact")),
-                    _text(row.get("sync_preview_artifact")),
-                ),
+                "reduction_track": reduction_track,
+                "negative_apply_gate_artifact": "runs/transporter_negative_authoritative_apply_gate_current.md",
+                "authoritative_negative_apply_allowed": negative_apply_allowed,
                 "queue_artifact": "runs/transporter_seed_row_promotion_board_current.md",
                 "apply_artifact": "runs/transporter_apply_draft_status_current.md",
                 "blocker_artifact": "runs/transporter_authoritative_apply_blocker_decomposition_current.md",
@@ -322,6 +352,25 @@ def build_payload(
     immediate_reduction_target = "GLUT1 binder staging surfaces" if reducible_now_rows else ""
     immediate_reduction_target_queue_start = min((row["queue_rank"] for row in reducible_now_rows), default=0)
     immediate_reduction_target_queue_end = max((row["queue_rank"] for row in reducible_now_rows), default=0)
+    current_placeholder_rows = sum(1 for row in queue_rows if row["burndown_class"] == "placeholder_driven")
+    current_staged_rows = sum(1 for row in queue_rows if row["burndown_class"] == "staged_non_authoritative")
+    current_apply_ready_rows = sum(1 for row in queue_rows if row["authoritative_negative_apply_allowed"])
+    current_blocker_signal = (
+        f"placeholder_driven_rows={current_placeholder_rows}; "
+        f"staged_non_authoritative_rows={current_staged_rows}; "
+        f"ready_for_apply_rows={current_apply_ready_rows}"
+    )
+    placeholder_status_sentence = (
+        "All transporter negative placeholder rows are evidence-curated by the authoritative apply gate."
+        if not current_placeholder_rows and current_apply_ready_rows
+        else (
+            f"The first reducible-now slice is {immediate_reduction_target} covering queue ranks "
+            f"{immediate_reduction_target_queue_start}-{immediate_reduction_target_queue_end} for a potential "
+            f"{len(reducible_now_rows)}-row reduction."
+            if reducible_now_rows
+            else "The reducible-now GLUT1 staging slice is already parked, so the remaining placeholder-driven rows are evidence-blocked negative slots."
+        )
+    )
 
     summary = {
         "family": "transporter",
@@ -331,8 +380,8 @@ def build_payload(
         "seed_row_count": _int(queue_summary.get("aqp1_seed_surface_count") or 3),
         "binder_row_count": sum(1 for row in queue_rows if row["row_kind"] == "binder"),
         "negative_row_count": sum(1 for row in queue_rows if row["row_kind"] == "negative"),
-        "staged_non_authoritative_rows": sum(1 for row in queue_rows if row["burndown_class"] == "staged_non_authoritative"),
-        "placeholder_driven_rows": sum(1 for row in queue_rows if row["burndown_class"] == "placeholder_driven"),
+        "staged_non_authoritative_rows": current_staged_rows,
+        "placeholder_driven_rows": current_placeholder_rows,
         "transporter_staged_non_authoritative_rows": sum(
             1 for row in queue_rows if row["burndown_class"] == "staged_non_authoritative"
         ),
@@ -347,9 +396,9 @@ def build_payload(
         "immediate_reduction_target_queue_start": immediate_reduction_target_queue_start,
         "immediate_reduction_target_queue_end": immediate_reduction_target_queue_end,
         "immediate_reduction_delta_if_completed": len(reducible_now_rows),
-        "ready_for_apply_rows": _int(apply_summary.get("ready_for_apply_rows")),
+        "ready_for_apply_rows": current_apply_ready_rows or _int(apply_summary.get("ready_for_apply_rows")),
         "top_blocker_id": _text(blocker_summary.get("top_blocker_id")) or "placeholder_packet_rows",
-        "top_blocker_signal": queue_blocker_signal,
+        "top_blocker_signal": current_blocker_signal,
         "first_wave_target": _text(queue_summary.get("first_wave_target")) or "AQP1",
         "second_wave_target": _text(queue_summary.get("second_wave_target")) or "GLUT1",
         "today_first_target": _text(queue_summary.get("first_wave_target")) or "AQP1",
@@ -389,13 +438,7 @@ def build_payload(
             f"treat {_text(follow_on_source_summary.get('primary_focus_ligand')) or 'AqB011'} as the literature-backed follow-on exact-source row, "
             f"treat {_text(glut1_second_wave_summary.get('primary_focus_ligand')) or 'cytochalasin B'} as the GLUT1 second-wave source-confirmation lead, "
             "leave replacement_reference_binding_kcal_mol blank, and do not reopen donor policy until the placeholder-driven rows are reduced. "
-            + (
-                f"The first reducible-now slice is {immediate_reduction_target} covering queue ranks "
-                f"{immediate_reduction_target_queue_start}-{immediate_reduction_target_queue_end} for a potential "
-                f"{len(reducible_now_rows)}-row reduction."
-                if reducible_now_rows
-                else "The reducible-now GLUT1 staging slice is already parked, so the remaining placeholder-driven rows are evidence-blocked negative slots."
-            )
+            + placeholder_status_sentence
         ),
     }
     return {"summary": summary, "target_rows": target_rows, "rows": queue_rows}
@@ -486,6 +529,7 @@ def parse_args() -> argparse.Namespace:
         "--glut1-second-wave-source-confirmation-json",
         default=str(DEFAULT_GLUT1_SECOND_WAVE_SOURCE_CONFIRMATION_JSON),
     )
+    parser.add_argument("--negative-apply-gate-json", default=str(DEFAULT_NEGATIVE_APPLY_GATE_JSON))
     parser.add_argument("--out-json", default=str(DEFAULT_OUT_JSON))
     parser.add_argument("--out-csv", default=str(DEFAULT_OUT_CSV))
     parser.add_argument("--out-md", default=str(DEFAULT_OUT_MD))
@@ -496,6 +540,7 @@ def main() -> None:
     args = parse_args()
     follow_on_source_confirmation_path = _resolve(args.aqp1_follow_on_source_confirmation_json)
     glut1_second_wave_source_confirmation_path = _resolve(args.glut1_second_wave_source_confirmation_json)
+    negative_apply_gate_path = _resolve(args.negative_apply_gate_json)
     payload = build_payload(
         _load_json(args.blocker_json),
         _load_json(args.apply_status_json),
@@ -504,6 +549,7 @@ def main() -> None:
         _load_json(glut1_second_wave_source_confirmation_path)
         if glut1_second_wave_source_confirmation_path.exists()
         else None,
+        _load_json(negative_apply_gate_path) if negative_apply_gate_path.exists() else None,
     )
     out_json = _resolve(args.out_json)
     out_csv = _resolve(args.out_csv)

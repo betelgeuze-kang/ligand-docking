@@ -66,7 +66,7 @@ def build_payload(
             "novelty_controls": nov_controls or "pending_wave2_compound_fill",
             "content_ready": content_ready,
             "source_anchor": portfolio_row["source_anchor"],
-            "source_url": portfolio_row["source_url"],
+            "source_url": portfolio_row.get("source_url", ""),
         },
         "rows": [
             {

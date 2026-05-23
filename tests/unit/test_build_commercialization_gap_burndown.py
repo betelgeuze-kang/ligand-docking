@@ -107,6 +107,22 @@ LOCAL_ENGINE_STAGE6_GATE_QUEUE = {
     ],
 }
 
+LOCAL_ENGINE_CLEAR_QUEUE = {
+    "summary": {
+        "local_only_mode": True,
+        "row_count": 5,
+        "blocked_count": 0,
+        "partial_count": 0,
+        "keep_green_count": 5,
+        "parked_science_blocker_count": 0,
+        "queue_clear": True,
+        "top_priority_id": "nightly_reliability",
+        "top_priority_status": "keep_green",
+        "next_required_step": "Commercialization queue is clear for the current local-delivery scope.",
+    },
+    "rows": [],
+}
+
 WETLAB_EXECUTION_READINESS_QUEUE = {
     "summary": {
         "queue_ready": True,
@@ -146,6 +162,23 @@ WETLAB_EXECUTION_READINESS_QUEUE = {
             ),
         }
     ],
+}
+
+TRANSPORTER_PLACEHOLDER_ACCOUNTING_CLOSED = {
+    "summary": {
+        "queue_row_count": 12,
+        "placeholder_driven_rows": 0,
+        "ready_for_apply_rows": 6,
+        "top_blocker_id": "placeholder_packet_rows",
+    }
+}
+
+AQP1_FUNCTIONAL_SURROGATE_ACCOUNTING_CLOSED = {
+    "summary": {
+        "functional_kcal_surrogate_ready_count": 3,
+        "functional_kcal_surrogate_closure_allowed": True,
+        "direct_binding_gap_still_open": True,
+    }
 }
 
 
@@ -456,4 +489,64 @@ def test_build_commercialization_gap_burndown_propagates_nightly_gate_burndown()
         transporter_row["next_burndown_action"],
         "nightly_gate_burndown_packet_current.md",
         "mean_min_distance_a",
+    )
+
+
+def test_build_commercialization_gap_burndown_zeroes_active_blocked_count_when_tracked_closed(tmp_path) -> None:
+    payload = mod.build_payload(
+        {
+            "summary": {"core_commercial_lane_score": 82.5, "all_category_expansion_score": 68.9},
+            "rows": [
+                {"family": "gpcr", "score": 82, "primary_blocker": "router", "source_artifact": "gpcr.md"},
+                {"family": "ion_channel", "score": 88, "primary_blocker": "", "source_artifact": "ion.md"},
+                {"family": "kinase", "score": 90, "primary_blocker": "", "source_artifact": "kinase.md"},
+                {"family": "idp", "score": 70, "primary_blocker": "broader_full_idp_promotion_blocked", "source_artifact": "idp.md"},
+                {"family": "non_kinase_enzyme_ca2", "score": 58, "primary_blocker": "replacement_reference_binding_kcal_mol", "source_artifact": "ca2.md"},
+                {"family": "nuclear_receptor_pxr", "score": 62, "primary_blocker": "replacement_reference_binding_kcal_mol", "source_artifact": "pxr.md"},
+                {"family": "transporter", "score": 32, "primary_blocker": "local_evidence_and_donor_policy_blocked", "source_artifact": "tx.md"},
+            ],
+        },
+        {
+            "rows": [
+                {"family": "gpcr", "pretest_ready": "yes", "claim_safe_test_ready": "yes", "current_state": "endpoint", "primary_blocker": "100k_router_still_blocked", "next_required_step": "keep endpoint"},
+                {"family": "ion_channel", "pretest_ready": "yes", "claim_safe_test_ready": "yes", "current_state": "measured", "primary_blocker": "", "next_required_step": "keep stable"},
+                {"family": "kinase", "pretest_ready": "yes", "claim_safe_test_ready": "yes", "current_state": "measured", "primary_blocker": "", "next_required_step": "keep stable"},
+                {"family": "idp", "pretest_ready": "no", "claim_safe_test_ready": "no", "current_state": "parked", "primary_blocker": "broader_full_idp_promotion_blocked", "next_required_step": "keep broader IDP parked"},
+                {"family": "non_kinase_enzyme_ca2", "pretest_ready": "partial", "claim_safe_test_ready": "no", "current_state": "partial", "primary_blocker": "replacement_reference_binding_kcal_mol", "next_required_step": "fill CA2"},
+                {"family": "nuclear_receptor_pxr", "pretest_ready": "partial", "claim_safe_test_ready": "no", "current_state": "partial", "primary_blocker": "replacement_reference_binding_kcal_mol", "next_required_step": "fill PXR"},
+                {"family": "transporter", "pretest_ready": "no", "claim_safe_test_ready": "no", "current_state": "blocked", "primary_blocker": "local_evidence_and_donor_policy_blocked", "next_required_step": "finish manual review"},
+            ]
+        },
+        {"rows": []},
+        {"summary": {"transporter_placeholder_driven_rows": 6, "aqp1_quantitative_provenance_primary_focus_ligand": "AqB013"}},
+        {"summary": {"queue_row_count": 8, "top_queue_id": "seed_core_binder_01", "blocked_count": 2}},
+        transporter_placeholder_burndown_queue_payload=TRANSPORTER_PLACEHOLDER_ACCOUNTING_CLOSED,
+        aqp1_functional_kcal_surrogate_payload=AQP1_FUNCTIONAL_SURROGATE_ACCOUNTING_CLOSED,
+        local_engine_commercialization_queue_payload=LOCAL_ENGINE_CLEAR_QUEUE,
+    )
+
+    summary = payload["summary"]
+    assert summary["tracked_gap_accounting_closed"] is True
+    assert summary["highest_gap_family"] == "none_tracked_commercialization_gap"
+    assert summary["blocked_count"] == 0
+    assert summary["raw_blocked_bucket_count"] == 2
+    assert summary["parked_or_review_only_blocked_count"] == 2
+    assert summary["transporter_placeholder_driven_rows"] == 0
+    assert summary["transporter_placeholder_driven_rows_legacy_execution"] == 6
+    rows = {row["family"]: row for row in payload["rows"]}
+    assert rows["transporter"]["burndown_bucket"] == "blocked"
+    assert rows["idp"]["burndown_bucket"] == "blocked"
+    _contains_tokens(
+        summary["next_required_step"],
+        "all tracked commercialization gap accounting blockers are closed",
+        "wetlab readiness evidence attached",
+    )
+    out_md = tmp_path / "commercialization_gap_burndown_current.md"
+    mod._write_markdown(out_md, payload)
+    markdown = out_md.read_text(encoding="utf-8")
+    _contains_tokens(
+        markdown,
+        "blocked_count: `0`",
+        "raw_blocked_bucket_count: `2`",
+        "parked_or_review_only_blocked_count: `2`",
     )

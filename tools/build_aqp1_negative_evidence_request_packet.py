@@ -145,6 +145,9 @@ def build_payload(
 
     current_direct_negative_count = _int(gap_summary.get("direct_negative_quantitative_row_found_count"))
     slot_count = _int(gap_summary.get("negative_slot_count")) or len(rows)
+    cover_ready_count = min(slot_count, current_direct_negative_count)
+    cover_missing_count = max(0, slot_count - cover_ready_count)
+    closure_allowed = bool(gap_summary.get("negative_evidence_closure_allowed", False)) or cover_ready_count >= slot_count
     summary = {
         "evidence_request_ready": True,
         "packet_artifact": "runs/aqp1_negative_evidence_request_packet_current.md",
@@ -156,22 +159,28 @@ def build_payload(
         "request_row_count": len(rows),
         "required_assignable_negative_row_count": slot_count,
         "current_direct_negative_quantitative_row_found_count": current_direct_negative_count,
-        "negative_slot_cover_ready_count": min(slot_count, current_direct_negative_count),
-        "negative_slot_cover_missing_count": max(0, slot_count - current_direct_negative_count),
+        "negative_slot_cover_ready_count": cover_ready_count,
+        "negative_slot_cover_missing_count": cover_missing_count,
         "blocked_gap_route_count": _int(gap_summary.get("blocked_route_count")),
         "review_context_route_count": _int(gap_summary.get("review_context_route_count")),
-        "public_reinterpretation_exhausted": True,
-        "internal_wetlab_or_primary_source_required": True,
+        "public_reinterpretation_exhausted": not closure_allowed,
+        "internal_wetlab_or_primary_source_required": not closure_allowed,
         "acceptable_assay_modes": ACCEPTABLE_ASSAY_MODES,
         "minimum_required_fields": REQUIRED_FIELDS,
         "excluded_shortcuts": EXCLUDED_SHORTCUTS,
-        "authoritative_negative_apply_allowed_count": 0,
-        "negative_evidence_closure_allowed": False,
+        "authoritative_negative_apply_allowed_count": _int(
+            gap_summary.get("authoritative_negative_apply_allowed_count")
+        ),
+        "negative_evidence_closure_allowed": closure_allowed,
         "claim_promotion_allowed": False,
         "request_status": "ready_for_public_or_internal_exact_evidence_acquisition",
         "next_required_step": (
-            "Use this packet as the AQP1 closure ask: fill three assignable negative rows with exact human AQP1 "
-            "quantitative weak/no-effect evidence, then update split/reference/meta packets before any authoritative apply."
+            "AQP1 assignable negative rows are covered; run the intake and transporter authoritative apply gates."
+            if closure_allowed
+            else (
+                "Use this packet as the AQP1 closure ask: fill three assignable negative rows with exact human AQP1 "
+                "quantitative weak/no-effect evidence, then update split/reference/meta packets before any authoritative apply."
+            )
         ),
     }
     return {"summary": summary, "rows": rows}

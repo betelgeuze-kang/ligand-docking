@@ -40,7 +40,7 @@ def build_payload(ca2_pending: dict[str, Any], pxr_pending: dict[str, Any]) -> d
         },
         {
             "family": "PXR",
-            "decision": "keep current review-only negative-like PXR rows frozen at review-only; keep deferred binder/conflict rows deferred until blocker-reducing human PXR evidence is curated, and keep supportive-binder manual-confirmation rows out of authoritative apply until their claim-safe blocker is reduced.",
+            "decision": "keep current review-only negative-like PXR rows frozen at review-only; keep deferred binder/conflict rows deferred until blocker-reducing human PXR evidence is curated, and keep supportive-binder rows such as ibuprofen in the manual-confirmation lane and out of authoritative apply until their claim-safe blocker is reduced.",
             "review_only_rows": pxr_s.get("review_only_rows", ""),
             "defer_rows": pxr_s.get("defer_rows", ""),
         },

@@ -80,11 +80,11 @@ Recommended fill shape:
     "runs/nightly_stage6_top_level_reentry_packet_current.md and runs/nightly_stage6_top_level_reentry_profile_current.json are the strict canonical reentry handoff, and they remain supporting-only keep-green evidence rather than a blocker",
     "downstream execute evidence is supporting-only and cannot promote the top-level nightly artifact",
     "nightly stage6 is keep-green and not a representative P0 blocker",
-    "commercialization queue is cleared for the restricted kinase,gpcr,ion_channel local-delivery scope only when wetlab selected-allatom and source-artifact gates are green",
-    "wetlab selected-allatom is green at mean_min_distance_A=2.120 <= 2.500 with rescue attempt validation pass; keep expensive lanes deferred unless this metric regresses"
+    "commercialization queue is clear for the restricted kinase,gpcr,ion_channel local-delivery scope; keep queue_clear=true and a fresh green verdict before delivery-ready wording",
+    "wetlab selected-allatom is green with hard_block_count=0 and atomized parameterization/local-min evidence 7/7; this supports only the restricted delivery verdict"
   ],
   "rerun_command": "python3 tools/run_local_delivery_preflight.py && python3 tools/build_local_delivery_bundle.py ...",
-  "verdict": "Delivery-ready for the restricted local scope only: kinase,gpcr,ion_channel. The current verdict gate reports summary.delivery_ready=true, p0_blocker_count=0, hard_blocker_count=0, commercialization_queue_clear=true, preflight_ok=true, accuracy_gate_pass=true, rescue_attempt_validation_ok=true, and wetlab selected-allatom mean_min_distance_A=2.120 <= 2.500. Keep transporter and broad platform claims out of scope."
+  "verdict": "Delivery-ready for guarded local validation on the scoped kinase / ion-channel / GPCR workflow documented in this bundle."
 }
 ```
 
@@ -151,8 +151,8 @@ Use the same facts as `manifest.json`, but keep the markdown version easy for an
 - `runs/nightly_stage6_top_level_reentry_packet_current.md` and `runs/nightly_stage6_top_level_reentry_profile_current.json` are the strict canonical reentry handoff, and they remain supporting-only keep-green evidence rather than a blocker`
 - `downstream execute evidence is supporting-only and cannot promote the top-level nightly artifact`
 - `nightly stage6 is keep-green and not a representative P0 blocker`
-- `commercialization queue is cleared for the restricted kinase,gpcr,ion_channel local-delivery scope only when wetlab selected-allatom and source-artifact gates are green`
-- `wetlab selected-allatom is green at mean_min_distance_A=2.120 <= 2.500 with rescue attempt validation pass; keep expensive lanes deferred unless this metric regresses`
+- `commercialization queue is clear for the restricted kinase,gpcr,ion_channel local-delivery scope; keep queue_clear=true and a fresh green verdict before delivery-ready wording`
+- `wetlab selected-allatom is green with hard_block_count=0 and atomized parameterization/local-min evidence 7/7; this supports only the restricted delivery verdict`
 
 ### Integrity
 
@@ -167,7 +167,7 @@ Use the same facts as `manifest.json`, but keep the markdown version easy for an
 
 ### Verdict
 
-- `Delivery-ready for the restricted local scope only: kinase,gpcr,ion_channel. The current verdict gate reports summary.delivery_ready=true, p0_blocker_count=0, hard_blocker_count=0, commercialization_queue_clear=true, preflight_ok=true, accuracy_gate_pass=true, rescue_attempt_validation_ok=true, and wetlab selected-allatom mean_min_distance_A=2.120 <= 2.500. Keep transporter and broad platform claims out of scope.`
+- `Delivery-ready for guarded local validation on the scoped kinase / ion-channel / GPCR workflow documented in this bundle.`
 - The local delivery verdict gate should stay narrower than the verdict and should not be described as a proof or a new run.
 - If `summary.delivery_ready=false`, the verdict must be negative/internal-review rather than delivery-ready.
 - If the bundle is blocked/internal-review, the `verdict_gate_fingerprint_check` result and mismatch reason should be recorded in `manifest.md`.

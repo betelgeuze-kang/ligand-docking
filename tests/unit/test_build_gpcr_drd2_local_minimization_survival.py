@@ -98,6 +98,51 @@ def test_openmm_custom_minimizer_measures_survival_but_keeps_hard_gate_false(tmp
     assert payload["claim_boundary"]["bounded_custom_force_not_equivalent_to_full_forcefield"] is True
 
 
+def test_static_anchor_coords_enable_protein_ligand_bounded_engine_for_prod_light_repair(tmp_path: Path) -> None:
+    pytest.importorskip("openmm")
+    npz_path = tmp_path / "prod_light_repaired.npz"
+    np.savez(
+        npz_path,
+        ligand_frames=np.asarray(
+            [
+                [[3.20, 0.05, 0.00], [4.35, 0.05, 0.00], [5.50, 0.05, 0.00]],
+                [[3.25, 0.10, 0.00], [4.40, 0.10, 0.00], [5.55, 0.10, 0.00]],
+            ],
+            dtype=np.float32,
+        ),
+        ligand_atom_atomic_numbers=np.asarray([7, 6, 6], dtype=np.int16),
+        ligand_basic_amine_atom_indices=np.asarray([0], dtype=np.int32),
+        ligand_backmapping_static_anchor_coords=np.asarray([[0.00, 0.00, 0.00], [0.20, 0.00, 0.00]], dtype=np.float32),
+    )
+    input_csv = tmp_path / "repair_rows.csv"
+    _write_csv(
+        input_csv,
+        [
+            {
+                "target": "CHEMBL217_DRD2_HUMAN",
+                "ligand_id": "CHEMBL301265",
+                "is_positive": "True",
+                "ligand_smiles": "NCC",
+                "trajectory_npz": str(npz_path),
+            }
+        ],
+    )
+
+    payload = mod.build_survival(
+        input_csv=input_csv,
+        requested_engine="openmm_custom_protein_ligand_bounded",
+        max_frames_per_row=2,
+        openmm_max_iterations=50,
+        generated_at_local="2026-05-06T00:00:00+09:00",
+    )
+
+    row = payload["rows"][0]
+    assert row["engine_kind"] == mod.OPENMM_CUSTOM_ENGINE
+    assert row["protein_atom_count"] == 2
+    assert row["survival_claim_scope"] == "bounded_custom_protein_ligand_not_full_forcefield"
+    assert row["survival_fraction"] == 1.0
+
+
 def test_rdkit_uff_ligand_only_is_tagged_and_not_promoted(tmp_path: Path) -> None:
     pytest.importorskip("rdkit")
     npz_path = tmp_path / "ligand_only.npz"

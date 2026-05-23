@@ -15,6 +15,7 @@ def _activity(value: str = "100.0") -> dict[str, object]:
     return {
         "molecule_chembl_id": "CHEMBL411729",
         "target_chembl_id": "CHEMBL2535",
+        "target_organism": "Homo sapiens",
         "standard_type": "IC50",
         "standard_value": value,
         "standard_units": "nM",
@@ -34,6 +35,18 @@ def _bindingdb(count: int) -> dict[str, object]:
 def test_build_transporter_external_evidence_crosscheck_blocks_negative_promotion() -> None:
     payload = mod.build_payload(
         {"activities": []},
+        {
+            "activities": [
+                _activity("20000.0"),
+                {
+                    "target_organism": "Homo sapiens",
+                    "standard_type": "EC50",
+                    "standard_value": "3300.0",
+                    "standard_units": "nM",
+                },
+                {"activity_comment": "Not Active"},
+            ]
+        },
         {"activities": [_activity("100.0"), _activity("4100.0")]},
         {"activities": [_activity("10900.0")]},
         {"activities": []},
@@ -58,23 +71,32 @@ def test_build_transporter_external_evidence_crosscheck_blocks_negative_promotio
     assert summary["aqp1_uniprot_accession"] == "P29972"
     assert summary["glut1_uniprot_accession"] == "P11166"
     assert summary["aqp1_bindingdb_affinity_count"] == 0
+    assert summary["aqp1_target_chembl_exact_activity_count"] == 3
+    assert summary["aqp1_target_chembl_quantitative_activity_count"] == 2
+    assert summary["aqp1_target_chembl_functional_quantitative_count"] == 2
+    assert summary["aqp1_target_chembl_direct_binding_count"] == 0
+    assert summary["aqp1_target_chembl_unquantified_not_active_count"] == 1
     assert summary["glut1_bindingdb_affinity_count"] == 12
     assert summary["glut1_positive_exact_activity_count"] == 3
     assert summary["direct_negative_quantitative_row_found_count"] == 0
     assert summary["authoritative_negative_apply_allowed_count"] == 0
     assert summary["negative_evidence_closure_allowed"] is False
     assert rows[0]["target_id"] == "AQP1"
-    assert rows[0]["chembl_exact_activity_count"] == 0
-    assert rows[0]["interpretation"] == "review_only_literature_context_no_exact_quantitative_target_pair"
-    assert rows[2]["target_id"] == "GLUT1"
-    assert rows[2]["candidate"] == "cytochalasin B"
-    assert rows[2]["best_ic50_nm"] == "100"
+    assert rows[0]["evidence_role"] == "target_wide_functional_activity_inventory"
+    assert rows[0]["chembl_direct_binding_activity_count"] == 0
+    assert rows[0]["interpretation"] == "exact_human_functional_activity_present_no_direct_binding_kcal"
+    assert rows[1]["chembl_exact_activity_count"] == 0
+    assert rows[1]["interpretation"] == "review_only_literature_context_no_exact_quantitative_target_pair"
+    assert rows[3]["target_id"] == "GLUT1"
+    assert rows[3]["candidate"] == "cytochalasin B"
+    assert rows[3]["best_ic50_nm"] == "100"
 
 
 def test_build_transporter_external_evidence_crosscheck_cli(tmp_path: Path) -> None:
     paths: dict[str, Path] = {}
     fixtures = {
         "aqp1.json": {"activities": []},
+        "aqp1_target.json": {"activities": [_activity("20000.0")]},
         "cyto.json": {"activities": [_activity("100.0")]},
         "wzb117.json": {"activities": [_activity("10900.0")]},
         "stf31.json": {"activities": []},
@@ -101,6 +123,8 @@ def test_build_transporter_external_evidence_crosscheck_cli(tmp_path: Path) -> N
             "tools/build_transporter_external_evidence_crosscheck.py",
             "--aqp1-chembl-activity-json",
             str(paths["aqp1.json"]),
+            "--aqp1-chembl-target-activity-json",
+            str(paths["aqp1_target.json"]),
             "--glut1-cyto-activity-json",
             str(paths["cyto.json"]),
             "--glut1-wzb117-activity-json",

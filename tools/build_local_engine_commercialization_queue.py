@@ -110,10 +110,15 @@ def _is_top_nightly_summary_path(path: Path) -> bool:
     payload = _maybe_load_json(path)
     if not payload:
         return False
-    if _text(payload.get("run_scope")) == "smoke_then_full":
+    run_scope = _text(payload.get("run_scope"))
+    if run_scope == "smoke_then_full":
         return True
     stages = payload.get("stages")
     artifacts = payload.get("artifacts")
+    service_result = payload.get("service_result")
+    if run_scope in {"smoke", "full"} and isinstance(stages, dict) and isinstance(service_result, dict):
+        if "stage2_trajectory_generation" in stages or "stage6_operational_gate" in stages:
+            return True
     if isinstance(stages, dict) and ("smoke" in stages or "full" in stages):
         return True
     if isinstance(artifacts, dict) and (
@@ -777,12 +782,17 @@ def _wetlab_signal(
             f"selected_allatom_semi_hard_block_count={selected_allatom_summary.get('semi_hard_block_count', 0)}; "
             f"selected_allatom_missing_metric_count={selected_allatom_summary.get('missing_metric_count', 0)}"
         )
+    selected_allatom_gate_failed = (
+        selected_allatom_gate_pass is False
+        or _int(selected_allatom_summary.get("hard_block_count")) > 0
+        or _int(selected_allatom_summary.get("missing_metric_count")) > 0
+    )
     next_required_action = _text(readiness_summary.get("next_required_step")) or (
         "Treat wetlab as an engine commercialization blocker, not just a science appendix: recover the stale/detached "
         "watch loops, create at least one execution-ready row, and stop calling the lane commercially mature while the "
         "selected all-atom wetlab gate is still failed."
     )
-    if selected_allatom_summary:
+    if selected_allatom_summary and selected_allatom_gate_failed:
         next_required_action = (
             f"{next_required_action} Use "
             f"`{_text(selected_allatom_summary.get('packet_artifact')) or 'runs/wetlab_selected_allatom_gate_burndown_packet_current.md'}` "
@@ -806,11 +816,6 @@ def _wetlab_signal(
     )
     ready_readiness = int(
         readiness_summary.get("ready_count", readiness_summary.get("ready_row_count", 0)) or 0
-    )
-    selected_allatom_gate_failed = (
-        selected_allatom_gate_pass is False
-        or _int(selected_allatom_summary.get("hard_block_count")) > 0
-        or _int(selected_allatom_summary.get("missing_metric_count")) > 0
     )
     execution_lane_green = (
         readiness_summary
@@ -879,12 +884,15 @@ def _reproducibility_signal(refresh_payload: dict[str, Any]) -> dict[str, Any]:
 def _transporter_signal(negative_queue_payload: dict[str, Any], gap_payload: dict[str, Any]) -> dict[str, Any]:
     negative_summary = dict(negative_queue_payload.get("summary", {}) or {})
     gap_summary = dict(gap_payload.get("summary", {}) or {})
+    negative_evidence_closed = bool(negative_summary.get("negative_evidence_closure_allowed", False))
     source_signal = (
         f"highest_gap_family={_text(gap_summary.get('highest_gap_family')) or '-'}; "
         f"queue_row_count={negative_summary.get('row_count', 0)}; "
         f"top_target_id={_text(negative_summary.get('top_target_id')) or '-'}; "
         f"top_packet_step={_text(negative_summary.get('top_packet_step')) or '-'}; "
         f"placeholder_driven_rows_remaining={negative_summary.get('placeholder_driven_rows_remaining', 0)}; "
+        f"closed_negative_slot_count={negative_summary.get('closed_negative_slot_count', 0)}; "
+        f"negative_evidence_closure_allowed={negative_evidence_closed}; "
         f"top_source_context_artifact={_text(negative_summary.get('top_source_context_artifact')) or '-'}; "
         f"top_source_context_role={_text(negative_summary.get('top_source_context_role')) or '-'}; "
         f"aqp1_direct_negative_quantitative_rows={negative_summary.get('aqp1_source_context_direct_negative_quantitative_row_found_count', 0)}; "
@@ -892,16 +900,20 @@ def _transporter_signal(negative_queue_payload: dict[str, Any], gap_payload: dic
         f"glut1_negative_handoff_artifact={_text(negative_summary.get('glut1_negative_handoff_artifact')) or '-'}"
     )
     next_required_action = (
-        "Park transporter as the science-blocker lane behind the engine blockers. Keep AQP1/GLUT1 negative evidence "
-        "review-only, and only reopen this queue after nightly reliability, viewer usability, and wetlab execution "
-        "surfaces are promoted to a safer local commercial baseline."
+        "Transporter negative-evidence placeholders are closed by the authoritative apply gate; keep broader binder/kcal science wording separate from the local delivery claim."
+        if negative_evidence_closed
+        else (
+            "Park transporter as the science-blocker lane behind the engine blockers. Keep AQP1/GLUT1 negative evidence "
+            "review-only, and only reopen this queue after nightly reliability, viewer usability, and wetlab execution "
+            "surfaces are promoted to a safer local commercial baseline."
+        )
     )
     return {
         "priority_rank": 5,
         "blocker_id": "transporter_science_blocker",
         "blocker_domain": "science",
         "blocker_kind": "evidence",
-        "status": "parked",
+        "status": "keep_green" if negative_evidence_closed else "parked",
         "commercialization_impact": "medium",
         "source_artifact": DEFAULT_NEGATIVE_QUEUE_JSON,
         "secondary_artifact": "runs/commercialization_gap_burndown_current.md",
@@ -1062,6 +1074,15 @@ def build_payload(
     nightly_status_line = _text(rows_by_id.get("nightly_reliability", {}).get("status_line"))
     viewer_status_line = _text(rows_by_id.get("viewer_usability", {}).get("status_line"))
     wetlab_status_line = _text(rows_by_id.get("wetlab_execution_readiness", {}).get("status_line"))
+    transporter_row = dict(rows_by_id.get("transporter_science_blocker", {}) or {})
+    transporter_negative_closed = _text(transporter_row.get("status")) == "keep_green"
+    transporter_delivery_clause = (
+        "Transporter negative-evidence lane is closed for the current local-delivery scope; keep broader binder/kcal science wording separate."
+        if transporter_negative_closed
+        else (
+            "Leave transporter negative-evidence mining parked outside the delivery-ready claim until that science lane is explicitly reopened."
+        )
+    )
     viewer_row = dict(rows_by_id.get("viewer_usability", {}) or {})
     viewer_keep_green = _text(viewer_row.get("status")) == "keep_green"
     wetlab_row = dict(rows_by_id.get("wetlab_execution_readiness", {}) or {})
@@ -1094,8 +1115,7 @@ def build_payload(
     next_required_step = (
         (
             "Commercialization queue is clear for the current local-delivery scope; keep nightly, viewer, wetlab, "
-            "and reproducibility lanes green. Leave parked transporter negative-evidence mining out of the "
-            "delivery-ready claim until that science lane is explicitly reopened."
+            f"and reproducibility lanes green. {transporter_delivery_clause}"
         )
         if queue_clear
         else
@@ -1149,16 +1169,14 @@ def build_payload(
                 else ""
             )
             + viewer_phrase
-            + "wetlab execution readiness, keep refresh reproducibility green, and leave transporter negative-evidence "
-            "mining parked as a science blocker until the local engine surfaces are more trustworthy."
+            + f"wetlab execution readiness, keep refresh reproducibility green. {transporter_delivery_clause}"
         )
         if top_blocker_id == "nightly_reliability" and top_status == "partial"
         else (
             "Raise engine commercialization next: nightly and viewer are keep-green; recover wetlab execution readiness "
             f"via `{_text(wetlab_row.get('source_artifact')) or DEFAULT_WETLAB_READINESS_JSON}`"
             + (f" ({wetlab_status_line}). " if wetlab_status_line else ". ")
-            + "Keep refresh reproducibility green and leave transporter negative-evidence mining parked until the local "
-            "engine surfaces are trustworthy enough for delivery."
+            + f"Keep refresh reproducibility green. {transporter_delivery_clause}"
         )
         if top_blocker_id == "wetlab_execution_readiness"
         else (
@@ -1169,8 +1187,7 @@ def build_payload(
                 else ", "
             )
             + viewer_phrase
-            + "wetlab execution readiness, keep refresh reproducibility green, and leave transporter negative-evidence "
-            "mining parked as a science blocker until the local engine surfaces are more trustworthy."
+            + f"wetlab execution readiness, keep refresh reproducibility green. {transporter_delivery_clause}"
         )
         if top_blocker_id == "nightly_reliability"
         else (

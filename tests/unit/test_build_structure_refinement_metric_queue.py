@@ -71,7 +71,7 @@ def test_build_queue_splits_protein_and_interface_metric_tasks(tmp_path: Path) -
     )
     _write_csv(manifest, [{"target": "SARS-CoV-2 Mpro", "path": str(native), "pdb_id": "6LU7"}])
     _write_csv(scores, [{"backmapped_pdb": str(candidate)}])
-    _write_json(source, {"summary": {"allatom_scores_csv": str(scores)}})
+    _write_json(source, {"summary": {"status": "pseudo_allatom_local_refine_ready"}, "structured": {"allatom_scores_csv": str(scores)}})
 
     payload = mod.build_queue(
         structure_scorecard_json=scorecard,
@@ -96,6 +96,45 @@ def test_build_queue_splits_protein_and_interface_metric_tasks(tmp_path: Path) -
     assert rows[1]["metric_task"] == "interface_metrics"
     assert rows[1]["missing_metric_families"] == "dockq_or_interface"
     assert payload["claim_boundary"]["metric_availability_alone_is_not_galaxy_parity"] is True
+
+
+def test_build_queue_preserves_interface_not_applicable_provenance(tmp_path: Path) -> None:
+    scorecard = tmp_path / "scorecard.json"
+    manifest = tmp_path / "manifest.csv"
+    _write_json(
+        scorecard,
+        {
+            "summary": {"status": "blocked_structure_refinement_metrics_missing", "target_count": 1},
+            "rows": [
+                {
+                    "target_id": "T. cruzi PDE",
+                    "native_reference_available": True,
+                    "pseudo_allatom_lane_ready": True,
+                    "rmsd_available": True,
+                    "tm_score_available": False,
+                    "gdt_available": False,
+                    "lddt_or_molprobity_available": False,
+                    "dockq_or_interface_metric_available": False,
+                    "dockq_or_interface_not_applicable": True,
+                }
+            ],
+        },
+    )
+    _write_csv(manifest, [{"target": "T. cruzi PDE", "path": "", "pdb_id": "3V94"}])
+
+    payload = mod.build_queue(
+        structure_scorecard_json=scorecard,
+        native_manifest_csv=manifest,
+        tcruzi_review_json=tmp_path / "missing_tcruzi.json",
+        sarscov2_runner_json=tmp_path / "missing_sars.json",
+        cathepsin_runner_json=tmp_path / "missing_cathepsin.json",
+        generated_at_local="2026-05-14T00:00:00+09:00",
+    )
+
+    rows = payload["rows"]
+    interface_rows = [row for row in rows if row["metric_task"] == "interface_metrics"]
+    assert len(interface_rows) == 1
+    assert interface_rows[0]["status"] == "not_applicable_provenance"
 
 
 def test_cli_writes_metric_queue_outputs(tmp_path: Path) -> None:

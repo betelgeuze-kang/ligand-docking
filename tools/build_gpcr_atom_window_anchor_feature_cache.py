@@ -174,6 +174,29 @@ def _parse_pdb_anchor_template(path: str | Path) -> dict[str, Any]:
     }
 
 
+def _pdb_static_anchor_coords(native_pdb: str | Path, template: dict[str, Any]) -> np.ndarray:
+    pdb_path = _resolve(native_pdb)
+    if not pdb_path.exists():
+        return np.zeros((0, 3), dtype=np.float32)
+    raw_indices = [int(idx) for idx in template.get("anchor_atom_indices", []) if int(idx) >= 0]
+    if not raw_indices:
+        return np.zeros((0, 3), dtype=np.float32)
+    coords: list[list[float]] = []
+    with pdb_path.open("r", encoding="utf-8", errors="ignore") as fh:
+        for line in fh:
+            if not line.startswith("ATOM"):
+                continue
+            try:
+                coords.append([float(line[30:38]), float(line[38:46]), float(line[46:54])])
+            except Exception:
+                continue
+    if not coords:
+        return np.zeros((0, 3), dtype=np.float32)
+    arr = np.asarray(coords, dtype=np.float32)
+    valid = [idx for idx in raw_indices if 0 <= idx < int(arr.shape[0])]
+    return arr[valid, :] if valid else np.zeros((0, 3), dtype=np.float32)
+
+
 def _atom_window_features(row: dict[str, Any], template_cache: dict[str, dict[str, Any]]) -> dict[str, Any]:
     target = _text(row.get("target"))
     ligand_id = _text(row.get("ligand_id"))
@@ -210,17 +233,36 @@ def _atom_window_features(row: dict[str, Any], template_cache: dict[str, dict[st
     try:
         with np.load(str(npz_path), allow_pickle=False) as npz:
             ligand_frames = np.asarray(npz["ligand_frames"], dtype=float)
-            protein_atom_frames = np.asarray(npz["protein_atom_frames"], dtype=float)
+            protein_atom_frames = (
+                np.asarray(npz["protein_atom_frames"], dtype=float)
+                if "protein_atom_frames" in npz.files
+                else np.zeros((0, 0, 3), dtype=float)
+            )
+            static_anchor_coords = (
+                np.asarray(npz["ligand_backmapping_static_anchor_coords"], dtype=float)
+                if "ligand_backmapping_static_anchor_coords" in npz.files
+                else _pdb_static_anchor_coords(native_pdb, template).astype(float)
+            )
     except Exception as exc:
         return {**base, "class_a_atom_anchor_reason": f"trajectory_npz_unreadable:{type(exc).__name__}"}
     anchor_indices = [
         int(idx)
         for idx in template.get("anchor_atom_indices", [])
-        if 0 <= int(idx) < protein_atom_frames.shape[1]
+        if protein_atom_frames.ndim == 3 and 0 <= int(idx) < protein_atom_frames.shape[1]
     ]
-    if ligand_frames.size == 0 or protein_atom_frames.size == 0 or not anchor_indices:
+    if ligand_frames.size == 0:
         return {**base, "class_a_atom_anchor_reason": "ligand_or_anchor_frames_missing"}
-    anchor_frames = protein_atom_frames[:, anchor_indices, :]
+    if protein_atom_frames.size and anchor_indices:
+        anchor_frames = protein_atom_frames[:, anchor_indices, :]
+        anchor_source = "protein_atom_frames"
+    elif static_anchor_coords.size:
+        anchor_static = np.asarray(static_anchor_coords, dtype=float)
+        if anchor_static.ndim != 2 or anchor_static.shape[1] != 3:
+            return {**base, "class_a_atom_anchor_reason": "ligand_or_anchor_frames_missing"}
+        anchor_frames = np.repeat(anchor_static[None, :, :], int(ligand_frames.shape[0]), axis=0)
+        anchor_source = "native_pdb_static_fallback"
+    else:
+        return {**base, "class_a_atom_anchor_reason": "ligand_or_anchor_frames_missing"}
     distances = np.linalg.norm(
         ligand_frames[:, :, None, :] - anchor_frames[:, None, :, :],
         axis=3,
@@ -243,6 +285,7 @@ def _atom_window_features(row: dict[str, Any], template_cache: dict[str, dict[st
             f"{template.get('anchor_resn', '')}{template.get('anchor_resi', '')}"
             f"{template.get('anchor_chain', '')}"
         ),
+        "class_a_atom_anchor_source": anchor_source,
     }
 
 

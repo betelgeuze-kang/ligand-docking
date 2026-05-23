@@ -334,6 +334,9 @@ def test_main_writes_json_and_markdown(monkeypatch, tmp_path) -> None:
             "processor": "x86_64",
         },
     )
+    for key in mod._ACCELERATOR_ENV_KEYS:
+        if key.startswith(("CUDA", "NVIDIA")) or key == "NCCL_DEBUG":
+            monkeypatch.delenv(key, raising=False)
     monkeypatch.setenv("ROCM_HOME", "/opt/rocm")
     monkeypatch.setenv("TORCH_BLAS_PREFER_HIPBLASLT", "0")
     monkeypatch.setattr(

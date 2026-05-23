@@ -100,6 +100,37 @@ def _safe_int(value: Any, default: int = 0) -> int:
         return default
 
 
+def _optional_bool(value: Any) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    if value in {"", None}:
+        return None
+    if isinstance(value, str):
+        text = value.strip().lower()
+        if text in {"1", "true", "yes", "y", "pass", "passed", "ready"}:
+            return True
+        if text in {"0", "false", "no", "n", "fail", "failed", "blocked"}:
+            return False
+    return None
+
+
+def _text_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        text = _text(value)
+        return [text] if text else []
+    if isinstance(value, (list, tuple, set)):
+        out: list[str] = []
+        for item in value:
+            text = _text(item)
+            if text and text not in out:
+                out.append(text)
+        return out
+    text = _text(value)
+    return [text] if text else []
+
+
 def _path_exists(path_text: str) -> bool:
     text = _text(path_text)
     return bool(text and "<" not in text and _resolve(text).exists())
@@ -492,6 +523,12 @@ def _operator_action(row: dict[str, Any]) -> str:
         return "relieve_pose_clash_and_recompute_binding_proxy"
     if code == "recompute_claim_gate_required_unavailable":
         return "materialize_missing_claim_gate_metric"
+    if code == "clear_translation_hard_gate":
+        return "repair_translation_gate_and_recompute_commercial_gate"
+    if code == "promote_stronger_physics_shortlist":
+        return "promote_validated_stronger_physics_shortlist"
+    if code == "replace_deferred_expensive_lane_with_validated_repair":
+        return "replace_deferred_lane_with_validated_repair"
     if code == "produce_claim_equivalence_packet":
         return "produce_claim_equivalence_packet_after_hard_gate"
     if code == "resolve_claim_equivalence_gate":
@@ -517,6 +554,19 @@ def _operator_instruction(row: dict[str, Any], *, target_id: str, recommended_la
         return (
             "Build the claim/equivalence inputs from real all-atom evidence, attach the resulting gate JSON to the "
             "selected all-atom review packet, then rerun the commercial/final wetlab gate without changing pass state by hand."
+        )
+    if code == "clear_translation_hard_gate":
+        return (
+            f"Repair `{target_id}` selected all-atom translation support, rerun the rescue scoring lane, "
+            "and require `translation_gate_focus_status=pass` without relaxing the gate."
+        )
+    if code == "promote_stronger_physics_shortlist":
+        return (
+            "Promote the selected all-atom candidate out of the defer tier only with source-consistent stronger-physics support."
+        )
+    if code == "replace_deferred_expensive_lane_with_validated_repair":
+        return (
+            "Replace `defer_expensive_lane` with a validated repair or stronger-physics lane before any commercial execution-ready wording."
         )
     if code == "produce_claim_equivalence_packet":
         return "Only after the hard gate clears, produce and attach the neglected-disease claim/equivalence packet."
@@ -831,12 +881,31 @@ def build_payload(
         or review_summary.get("claim_ready_for_allatom", False)
         or review_summary.get("claim_gate_satisfied", False)
     )
+    selected_effective_execution_gate_pass = _optional_bool(
+        burndown_summary.get("selected_allatom_effective_execution_gate_pass")
+    )
+    selected_commercial_hard_gate_pass_v2 = _optional_bool(
+        burndown_summary.get("selected_allatom_commercial_hard_gate_pass_v2")
+    )
+    review_commercial_hard_gate_pass_v2 = _optional_bool(
+        review_summary.get("commercial_hard_gate_pass_v2")
+    )
+    commercial_hard_gate_pass_v2 = (
+        selected_commercial_hard_gate_pass_v2
+        if selected_commercial_hard_gate_pass_v2 is not None
+        else review_commercial_hard_gate_pass_v2
+    )
+    commercial_hard_gate_failed_metrics_v2 = _text_list(
+        burndown_summary.get("selected_allatom_commercial_hard_gate_failed_metrics_v2")
+    ) or _text_list(review_summary.get("commercial_hard_gate_failed_metrics_v2"))
     green_chain = bool(
         selected_wetlab_gate_pass
         and selected_final_gate_pass
         and review_wetlab_gate_pass
         and review_final_gate_pass
         and claim_ready
+        and commercial_hard_gate_pass_v2 is not False
+        and selected_effective_execution_gate_pass is not False
         and hard_block_count == 0
         and semi_hard_block_count == 0
         and missing_metric_count == 0
@@ -866,20 +935,33 @@ def build_payload(
     after_hard_codes = [row["repair_code"] for row in active_rows if row["execution_phase"] == "after_hard_gate"]
     deferred_codes = [row["repair_code"] for row in rows if row["execution_phase"] == "deferred"]
     active_repair_required = bool(active_rows)
-    next_required_step = (
-        f"No active repair is required for `{target_id or 'selected_allatom'}`. Keep this packet as a "
-        "regression/retry reference only; delivery P0 remains controlled by the refreshed verdict gate and "
-        "bundle validator. Keep the expensive lane deferred unless translation or survival support is explicitly reopened."
-        if not active_repair_required
-        else (
-            f"Execute repair `{primary_code}` for `{target_id or 'selected_allatom'}` with `{primary_metric}` currently "
-            f"`{primary_value or '-'}` versus unchanged threshold `{primary_threshold or '-'}` (delta `{primary_delta or '-'}`); "
-            "then recompute `claim_gate_required_unavailable`. Run claim/equivalence only after hard gate closure with "
+    if not active_repair_required:
+        next_required_step = (
+            f"No active repair is required for `{target_id or 'selected_allatom'}`. Keep this packet as a "
+            "regression/retry reference only; delivery P0 remains controlled by the refreshed verdict gate and "
+            "bundle validator. Keep the expensive lane deferred unless translation or survival support is explicitly reopened."
+        )
+    else:
+        post_repair_step = (
+            "then recompute `claim_gate_required_unavailable` and rebuild claim/equivalence after hard gate closure with "
             f"`{(claim_handoff['claim_readiness_outputs']).get('claim_summary_json')}` and "
             f"`{(claim_handoff['claim_readiness_outputs']).get('gate_json')}`; missing inputs "
-            f"`{', '.join(claim_handoff['missing_inputs']) or 'none'}` stay blocked, not pass. Keep the expensive lane deferred."
+            f"`{', '.join(claim_handoff['missing_inputs']) or 'none'}` stay blocked, not pass."
+            if missing_metric_count
+            else "then rebuild the selected all-atom review, burndown, readiness, and verdict chain with the current claim/equivalence evidence still attached."
+            if claim_ready
+            else (
+                "then run claim/equivalence only after hard gate closure with "
+                f"`{(claim_handoff['claim_readiness_outputs']).get('claim_summary_json')}` and "
+                f"`{(claim_handoff['claim_readiness_outputs']).get('gate_json')}`; missing inputs "
+                f"`{', '.join(claim_handoff['missing_inputs']) or 'none'}` stay blocked, not pass."
+            )
         )
-    )
+        next_required_step = (
+            f"Execute repair `{primary_code}` for `{target_id or 'selected_allatom'}` with `{primary_metric}` currently "
+            f"`{primary_value or '-'}` versus unchanged threshold `{primary_threshold or '-'}` (delta `{primary_delta or '-'}`); "
+            f"{post_repair_step} Keep the expensive lane deferred."
+        )
 
     summary = {
         "repair_ready": active_repair_required,
@@ -895,6 +977,9 @@ def build_payload(
         "selected_allatom_pass_override_allowed": False,
         "selected_allatom_wetlab_gate_pass": selected_wetlab_gate_pass,
         "selected_allatom_final_gate_pass": selected_final_gate_pass,
+        "selected_allatom_effective_execution_gate_pass": selected_effective_execution_gate_pass,
+        "selected_allatom_commercial_hard_gate_pass_v2": commercial_hard_gate_pass_v2,
+        "selected_allatom_commercial_hard_gate_failed_metrics_v2": commercial_hard_gate_failed_metrics_v2,
         "review_packet_wetlab_gate_pass": review_wetlab_gate_pass,
         "review_packet_wetlab_final_gate_pass": review_final_gate_pass,
         "hard_block_count": hard_block_count,

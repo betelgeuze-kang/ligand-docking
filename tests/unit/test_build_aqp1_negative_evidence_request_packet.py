@@ -25,6 +25,17 @@ def _gap_matrix() -> dict[str, object]:
     }
 
 
+def _closed_gap_matrix() -> dict[str, object]:
+    payload = _gap_matrix()
+    payload["summary"] = {
+        **payload["summary"],
+        "direct_negative_quantitative_row_found_count": 3,
+        "authoritative_negative_apply_allowed_count": 3,
+        "negative_evidence_closure_allowed": True,
+    }
+    return payload
+
+
 def _negative_queue() -> dict[str, object]:
     return {
         "rows": [
@@ -110,3 +121,16 @@ def test_build_aqp1_negative_evidence_request_packet_cli(tmp_path: Path) -> None
     assert payload["summary"]["request_row_count"] == 3
     assert out_csv.exists()
     assert out_md.read_text(encoding="utf-8").startswith("# AQP1 Negative Evidence Request Packet")
+
+
+def test_build_aqp1_negative_evidence_request_packet_surfaces_closed_slot_cover() -> None:
+    payload = mod.build_payload(_closed_gap_matrix(), _negative_queue(), _exact_source())
+
+    summary = payload["summary"]
+    assert summary["current_direct_negative_quantitative_row_found_count"] == 3
+    assert summary["negative_slot_cover_ready_count"] == 3
+    assert summary["negative_slot_cover_missing_count"] == 0
+    assert summary["public_reinterpretation_exhausted"] is False
+    assert summary["internal_wetlab_or_primary_source_required"] is False
+    assert summary["authoritative_negative_apply_allowed_count"] == 3
+    assert summary["negative_evidence_closure_allowed"] is True

@@ -29,7 +29,7 @@ P0 gates and scientific thresholds stay fixed. Design work is allowed only as a 
 
 ## P0 Gate
 
-P0 starts here: do not issue a delivery-ready verdict unless the A/B/C gate is green. That means the current preflight, requirements lock, environment manifest, and verdict-gate artifacts are fresh; the canonical top-level nightly summary is pass; and wetlab selected-allatom is pass with `mean_min_distance_A <= 2.500` and no open claim gate or hard/semi-hard blockers. The P0-A accuracy_gate and requirements/environment lock burndowns are closed in the current recorded outputs, and the top-level nightly now reaches `stage6_operational_gate`; the remaining P0 work is stage6 gate burndown, wetlab selected-allatom closure, the preflight/verdict path, and the commercialization queue. Downstream execute evidence is supporting-only and does not promote the top-level nightly artifact. Do not fake-pass, relax thresholds, or manipulate results.
+P0 starts here: do not issue a delivery-ready verdict unless the A/B/C/D/E gate is green. That means the current preflight, requirements lock, environment manifest, and verdict-gate artifacts are fresh; the canonical top-level nightly summary is pass/keep-green; wetlab selected-allatom is pass with `mean_min_distance_A <= 2.500` and no open claim gate or hard/semi-hard blockers; the commercialization queue is clear; and the final bundle validator passes. The P0-A accuracy_gate and requirements/environment lock burndowns are closed in the current recorded outputs, the top-level nightly is keep-green, wetlab selected-allatom is green, and the local delivery verdict/queue are synchronized green. Downstream execute evidence is supporting-only and does not promote the top-level nightly artifact. Do not fake-pass, relax thresholds, or manipulate results.
 
 Use `docs/local_delivery_p0_gate.md` as the short operator rule. The rollup artifacts are:
 
@@ -52,35 +52,34 @@ Use `docs/local_delivery_p0_gate.md` as the short operator rule. The rollup arti
 
 ## Current Snapshot
 
-As of `2026-04-26`, the current commercialization artifacts say the remaining blockers are operational and gate-related rather than feature-gap blockers: `p0_blocker_count=4`, with the canonical top-level nightly summary now reaching `stage6_operational_gate` and red at `mean_min_distance_A=2.655` versus `2.500` (`+0.155`); wetlab selected-allatom is still hard-blocked, and the preflight/verdict plus commercialization-queue dependencies remain open. The current `accuracy_gate` is `pass=true` with failed metrics `0`; Morton presort neighbor/self-pair parity now records `total_pair_outliers=0`.
+As of the 2026-05-18 artifact refresh, the current commercialization artifacts say the tracked restricted local-delivery blockers are closed: `delivery_ready=true`, `p0_blocker_count=0`, `hard_blocker_count=0`, `queue_clear=true`, and `blocked_count=0`. The current `accuracy_gate` is `pass=true` with failed metrics `0`; Morton presort neighbor/self-pair parity records `total_pair_outliers=0`; the tracked accuracy-parity scorecard is green with `5` pass rows and `0` blocked rows.
 
 - strongest ready families remain `kinase, ion_channel, gpcr`
 - A is green for the local-delivery required set: `runs/local_delivery_requirements_lock_current.md` reports `installed=13/13`, `missing=0`, `loose_sources=0`, `requirements_lock_complete=true`, and the environment manifest reports `environment_lock_complete=true`; seven API/train/deploy/optional packages remain optional/deferred evidence
-- local engine top priority remains `nightly_reliability (partial)`, pending top-level stage6 gate burndown
-- B has green downstream execute evidence, but the canonical top-level nightly summary is still red at `stage6_operational_gate` (`mean_min_distance_A=2.655`, threshold `2.500`, delta `+0.155`), so promotion is forbidden; downstream execute is supporting-only evidence and does not replace the top-level nightly artifact:
+- local engine top priority remains `nightly_reliability`, now in `keep_green` status rather than an open blocker
+- B is green on the canonical GPU/HIP top-level smoke evidence:
+  - latest nightly summary: `runs/ligand_htvs_nightly_2026-05-13_goal_closure2_summary.json`
+  - nightly gate status: `nightly_gate_green`
   - downstream execute gate pass `True`
   - downstream execute gate mean_min_distance_A `2.268931970372796`
-  - source: `runs/nightly_stage6_execute_result_packet_current.md` and `commercialization_status_report.md`
-  - top-level reentry handoff: `runs/nightly_stage6_top_level_reentry_packet_current.md` with strict `smoke_then_full`, full target set, OOD eval, and unchanged `2.500` gate preserved
-- C is hard-blocked on wetlab selected all atom:
+  - source: `runs/nightly_gate_burndown_packet_current.md`, `runs/nightly_stage6_execute_result_packet_current.md`, and `commercialization_status_report.md`
+- C is green on wetlab selected all atom for the current local-delivery scope:
   - target `T. cruzi PDE`
-  - `mean_min_distance_A = 3.705`
+  - `mean_min_distance_A = 2.120`
   - threshold `2.500`
-  - delta `+1.205`
-  - claim gate metric missing (`claim_gate_required_unavailable`)
-  - hard/semi-hard blockers are still open
+  - hard blockers `0`, semi-hard blockers `0`
   - source: `runs/wetlab_selected_allatom_gate_burndown_packet_current.json`
-- transporter expansion is still evidence-blocked:
-  - `placeholder_driven_rows = 6`
+- transporter expansion accounting is closed but remains outside the delivery claim:
+  - `placeholder_driven_rows = 0`
   - `reducible_now = 0`
-  - `evidence_blocked = 6`
+  - `evidence_blocked = 0`
   - source: `commercialization_status_report.md`
 
-That means the fastest path to revenue is:
+That means the fastest path to revenue is now:
 
-1. burn down the top-level nightly stage6 gate
-2. clear wetlab selected-allatom
-3. keep the preflight/verdict path and commercialization queue blocked until those two are green
+1. keep the top-level nightly gate green
+2. keep wetlab selected-allatom green
+3. keep the preflight/verdict path and commercialization queue synchronized green
 4. make local reruns and delivery bundles reproducible
 5. freeze claim scope to the families already supported by the evidence
 6. expand to transporter only after evidence closure is real
@@ -105,13 +104,13 @@ Acceptance rule:
 
 ## P0
 
-### 1. Close The Nightly Reliability Gate
+### 1. Keep The Nightly Reliability Gate Closed
 
 Why this is P0:
 
-- the commercialization queue currently ranks `nightly_reliability` first
-- the repo already has downstream stage6 tuning, followup, rerun, and execute artifacts, and the downstream execute path is green, but the current canonical top-level nightly summary still fails the stage6 operational gate
-- the downstream execute pass is supporting evidence only, but B is not complete until the top-level nightly gate artifact itself is pass; until then, promotion is forbidden
+- the commercialization queue still tracks `nightly_reliability` first, now as a keep-green item
+- the repo has downstream stage6 tuning, followup, rerun, execute artifacts, and a green canonical top-level nightly evidence path
+- the downstream execute pass remains supporting evidence only; B stays complete only while the top-level nightly gate artifact itself remains pass/keep-green
 
 Definition of done:
 
@@ -143,15 +142,15 @@ Acceptance rule:
 
 - do not call the engine delivery-ready while the current top-level nightly summary is red at `stage6_operational_gate` or any earlier stage, even if a downstream execute pass looks promising
 
-### 2. Close The Wetlab Selected All-Atom Gate
+### 2. Keep The Wetlab Selected All-Atom Gate Closed
 
 Why this is P0:
 
-- wetlab is still a blocker in the local engine commercialization queue
-- current wetlab status still says `selected_allatom=fail`
-- current selected-allatom is `mean_min_distance_A = 3.705`, `delta = 1.205`, which is above the `2.500` threshold
-- the claim gate metric is still missing and the hard/semi-hard block counts are still open
-- this is the main external-facing trust blocker after nightly reliability
+- wetlab selected-allatom was the main external-facing trust blocker after nightly reliability
+- current wetlab status says `selected_allatom=pass`
+- current selected-allatom is `mean_min_distance_A = 2.120`, which is below the `2.500` threshold
+- the claim gate metric is available and the hard/semi-hard block counts are closed
+- PDE atomized parameterization/local-min evidence is complete for `7/7` ligands
 
 Definition of done:
 
@@ -173,7 +172,7 @@ Required artifacts:
 
 Acceptance rule:
 
-- do not mark the local delivery lane as commercially trustworthy while the selected all-atom gate is still failed, the claim gate is missing, or the hard/semi-hard blockers remain open
+- reopen P0-C immediately if selected all-atom regresses, the claim gate goes missing, or any hard/semi-hard blocker reappears
 
 ### 3. Keep The Current Evidence Bundle Fresh
 
@@ -368,14 +367,14 @@ Definition of done:
 
 Why this is P2:
 
-- transporter is still blocked by missing direct negative evidence
-- this work increases commercial breadth, but it is not the shortest path to first safe delivery
+- transporter accounting closure is complete, but direct-binding kcal and bounded transporter claim wording remain out of scope
+- this work increases commercial breadth, but it is not required for the current restricted safe delivery
 
 Definition of done:
 
-- `placeholder_driven_rows` is materially reduced or closed
-- evidence-blocked transporter rows have direct closure, not only staging surfaces
-- transporter can be moved from review-only wording into bounded claim-safe wording
+- `placeholder_driven_rows=0` and `evidence_blocked_placeholder_rows=0` are preserved in the accounting artifacts
+- AQP1 functional kcal surrogate wording remains explicitly not direct binding kcal
+- transporter can only move into bounded claim-safe wording after a separate direct target-specific binding evidence review
 
 Required artifacts:
 
@@ -405,7 +404,7 @@ All of the following are true:
 
 - nightly gate is pass
 - wetlab selected all-atom gate is pass
-- transporter remains blocked
+- transporter remains outside the current claim despite accounting closure
 - outbound language is explicitly limited to `kinase`, `ion_channel`, and `gpcr`
 
 ### Do Not Ship
@@ -420,19 +419,19 @@ Any of the following are true:
 
 ## Practical Sequence
 
-1. Close `nightly_reliability` via top-level stage6 gate burndown and a green canonical summary.
-2. Close `wetlab_selected_allatom`.
+1. Keep `nightly_reliability` green via the top-level stage6 gate and canonical summary.
+2. Keep `wetlab_selected_allatom` green with the atomized local-min overlay attached.
 3. Freeze restricted claim scope and outbound wording.
 4. Pin environment, capture engine provenance, and document the machine baseline.
 5. Standardize the local preflight and delivery bundle.
-6. Tighten commercialization/control-plane verdict logic.
+6. Keep commercialization/control-plane verdict logic fail-closed and synchronized with the queue.
 7. Expand to transporter only after evidence closure is real.
 
 ## Immediate Working Rule
 
-Until P0 is closed, the repo should be described as:
+With P0 closed for the restricted local scope, the repo should be described as:
 
-- a strong local validation stack for selected families
+- a delivery-ready local validation stack for the restricted `kinase`, `ion_channel`, and `gpcr` scope
 - not yet a broad commercial platform
 - not yet ready for transporter-commercial claims
-- not yet safe to describe as fully delivery-ready without manual guardrails
+- not yet safe to describe as unattended or broad-platform ready without guardrails

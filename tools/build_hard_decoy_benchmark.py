@@ -47,7 +47,22 @@ def _write_progress_json(path: str, payload: Dict[str, Any]) -> None:
     os.replace(tmp, p)
 
 
-def _read_relax_cache(path: str) -> Dict[str, bool]:
+def _is_bead_coords(value: Any) -> bool:
+    if not isinstance(value, list) or not value:
+        return False
+    for row in value:
+        if not isinstance(row, list) or len(row) < 3:
+            return False
+        try:
+            float(row[0])
+            float(row[1])
+            float(row[2])
+        except Exception:
+            return False
+    return True
+
+
+def _read_relax_cache(path: str) -> Dict[str, Any]:
     src = str(path or "").strip()
     if (not src) or (not os.path.exists(src)):
         return {}
@@ -58,14 +73,23 @@ def _read_relax_cache(path: str) -> Dict[str, bool]:
         return {}
     if not isinstance(obj, dict):
         return {}
-    out: Dict[str, bool] = {}
+    out: Dict[str, Any] = {}
     for k, v in obj.items():
         if isinstance(k, str):
-            out[k] = bool(v)
+            if isinstance(v, bool):
+                out[k] = bool(v)
+            elif _is_bead_coords(v):
+                out[k] = [
+                    [float(row[0]), float(row[1]), float(row[2])]
+                    for row in v
+                    if isinstance(row, list) and len(row) >= 3
+                ]
+            else:
+                out[k] = bool(v)
     return out
 
 
-def _write_relax_cache(path: str, payload: Dict[str, bool]) -> None:
+def _write_relax_cache(path: str, payload: Dict[str, Any]) -> None:
     dst = str(path or "").strip()
     if not dst:
         return
@@ -252,30 +276,73 @@ def _should_switch_to_brics(
     return (attempts - last_accept_attempt) >= threshold
 
 
-def _passes_3d_relaxation(smiles: str, max_iters: int = 200) -> bool:
+def _kmeans_2bead(coords: np.ndarray, iters: int = 8) -> List[List[float]]:
+    arr = np.asarray(coords, dtype=np.float64)
+    if arr.ndim != 2 or arr.shape[1] != 3 or arr.shape[0] <= 0:
+        return [[0.0, 0.0, 0.0]]
+    if arr.shape[0] == 1:
+        c = arr[0].tolist()
+        return [[float(c[0]), float(c[1]), float(c[2])]]
+    c0 = arr[0]
+    d = np.sum((arr - c0[None, :]) ** 2, axis=1)
+    c1 = arr[int(np.argmax(d))]
+    cent = np.stack([c0, c1], axis=0)
+    for _ in range(int(max(iters, 1))):
+        dist = np.sum((arr[:, None, :] - cent[None, :, :]) ** 2, axis=2)
+        assign = np.argmin(dist, axis=1)
+        next_cent = cent.copy()
+        for k in range(2):
+            mask = assign == k
+            if np.any(mask):
+                next_cent[k] = np.mean(arr[mask], axis=0)
+        cent = next_cent
+    out = cent.astype(np.float32).tolist()
+    return [[float(v[0]), float(v[1]), float(v[2])] for v in out]
+
+
+def _relaxed_beads_from_smiles(smiles: str, max_iters: int = 200) -> Optional[List[List[float]]]:
     smi = str(smiles or "").strip()
     if not smi:
-        return False
+        return None
     if (Chem is None) or (AllChem is None):
-        return True
-    mol = Chem.MolFromSmiles(smi)
-    if mol is None:
-        return False
+        return None
     try:
+        mol = Chem.MolFromSmiles(smi)
+        if mol is None:
+            return None
         mol_h = Chem.AddHs(mol)
         params = AllChem.ETKDGv3()
         params.randomSeed = 13
         cid = int(AllChem.EmbedMolecule(mol_h, params))
         if cid < 0:
-            return False
+            return None
         mmff_props = AllChem.MMFFGetMoleculeProperties(mol_h, mmffVariant="MMFF94")
         if mmff_props is not None:
             rc = int(AllChem.MMFFOptimizeMolecule(mol_h, mmffVariant="MMFF94", maxIters=int(max_iters)))
-            return rc in (0, 1)
-        rc = int(AllChem.UFFOptimizeMolecule(mol_h, maxIters=int(max_iters)))
-        return rc in (0, 1)
+            if rc not in (0, 1):
+                return None
+        else:
+            rc = int(AllChem.UFFOptimizeMolecule(mol_h, maxIters=int(max_iters)))
+            if rc not in (0, 1):
+                return None
+        conf = mol_h.GetConformer()
+        coords: List[List[float]] = []
+        for atom in mol_h.GetAtoms():
+            if int(atom.GetAtomicNum()) <= 1:
+                continue
+            p = conf.GetAtomPosition(atom.GetIdx())
+            coords.append([float(p.x), float(p.y), float(p.z)])
+        if len(coords) <= 0:
+            return None
+        return _kmeans_2bead(np.asarray(coords, dtype=np.float32))
     except Exception:
-        return False
+        return None
+
+
+def _passes_3d_relaxation(smiles: str, max_iters: int = 200) -> bool:
+    if (Chem is None) or (AllChem is None):
+        return bool(str(smiles or "").strip())
+    return _relaxed_beads_from_smiles(smiles, max_iters=max_iters) is not None
 
 
 def _generate_synthetic_unique_decoys(
@@ -286,7 +353,7 @@ def _generate_synthetic_unique_decoys(
     global_forbidden: Optional[set[str]] = None,
     require_relaxed_3d: bool = True,
     relax_max_iters: int = 200,
-    relax_cache: Optional[Dict[str, bool]] = None,
+    relax_cache: Optional[Dict[str, Any]] = None,
     progress_cb: Optional[Callable[[int, int, int], None]] = None,
     progress_every: int = 250,
     progress_max_interval_sec: float = 30.0,
@@ -341,14 +408,29 @@ def _generate_synthetic_unique_decoys(
         desc = _rdkit_desc(can)
         if desc is None:
             return False
+        bead_coords: List[List[float]] = []
         if bool(require_relaxed_3d):
-            ok_relax = None
+            ok_relax: Optional[bool] = None
             if isinstance(relax_cache, dict):
-                ok_relax = relax_cache.get(can, None)
-            if ok_relax is None:
-                ok_relax = bool(_passes_3d_relaxation(can, max_iters=int(relax_max_iters)))
+                cached = relax_cache.get(can, None)
+                if _is_bead_coords(cached):
+                    bead_coords = [
+                        [float(row[0]), float(row[1]), float(row[2])]
+                        for row in cached
+                        if isinstance(row, list) and len(row) >= 3
+                    ]
+                    ok_relax = True
+                elif isinstance(cached, bool):
+                    ok_relax = bool(cached)
+            if ok_relax is None or (ok_relax and not bead_coords):
+                generated_beads = _relaxed_beads_from_smiles(can, max_iters=int(relax_max_iters))
+                if generated_beads:
+                    bead_coords = generated_beads
+                    ok_relax = True
+                elif ok_relax is None:
+                    ok_relax = bool(_passes_3d_relaxation(can, max_iters=int(relax_max_iters)))
                 if isinstance(relax_cache, dict):
-                    relax_cache[can] = bool(ok_relax)
+                    relax_cache[can] = bead_coords if bead_coords else bool(ok_relax)
             if not bool(ok_relax):
                 return False
         mw, logp, h_don, h_acc, rot = desc
@@ -367,6 +449,8 @@ def _generate_synthetic_unique_decoys(
             "rot_bonds": int(rot),
             "scaffold": _derive_scaffold(can),
         }
+        if bead_coords:
+            out[can]["bead_coords"] = bead_coords
         last_accept_attempt = attempts
         _maybe_emit_progress()
         return True
@@ -457,14 +541,29 @@ def _generate_synthetic_unique_decoys(
                     desc = _rdkit_desc(can)
                     if desc is None:
                         continue
+                    bead_coords: List[List[float]] = []
                     if bool(require_relaxed_3d):
-                        ok_relax = None
+                        ok_relax: Optional[bool] = None
                         if isinstance(relax_cache, dict):
-                            ok_relax = relax_cache.get(can, None)
-                        if ok_relax is None:
-                            ok_relax = bool(_passes_3d_relaxation(can, max_iters=int(relax_max_iters)))
+                            cached = relax_cache.get(can, None)
+                            if _is_bead_coords(cached):
+                                bead_coords = [
+                                    [float(row[0]), float(row[1]), float(row[2])]
+                                    for row in cached
+                                    if isinstance(row, list) and len(row) >= 3
+                                ]
+                                ok_relax = True
+                            elif isinstance(cached, bool):
+                                ok_relax = bool(cached)
+                        if ok_relax is None or (ok_relax and not bead_coords):
+                            generated_beads = _relaxed_beads_from_smiles(can, max_iters=int(relax_max_iters))
+                            if generated_beads:
+                                bead_coords = generated_beads
+                                ok_relax = True
+                            elif ok_relax is None:
+                                ok_relax = bool(_passes_3d_relaxation(can, max_iters=int(relax_max_iters)))
                             if isinstance(relax_cache, dict):
-                                relax_cache[can] = bool(ok_relax)
+                                relax_cache[can] = bead_coords if bead_coords else bool(ok_relax)
                         if not bool(ok_relax):
                             continue
                     mw, logp, h_don, h_acc, rot = desc
@@ -483,6 +582,8 @@ def _generate_synthetic_unique_decoys(
                         "rot_bonds": int(rot),
                         "scaffold": _derive_scaffold(can),
                     }
+                    if bead_coords:
+                        out[can]["bead_coords"] = bead_coords
                     brics_generated += 1
                     _maybe_emit_progress()
             except Exception:
@@ -835,6 +936,11 @@ def run_build(args: argparse.Namespace) -> Dict[str, Any]:
                         args.ha_col: int(rec.get("h_acceptors", 0)),
                         args.rot_col: int(rec.get("rot_bonds", 0)),
                         args.scaffold_col: str(rec.get("scaffold", "")),
+                        "bead_coords_json": (
+                            json.dumps(rec.get("bead_coords", []), separators=(",", ":"))
+                            if rec.get("bead_coords")
+                            else ""
+                        ),
                         "_scaffold": str(rec.get("scaffold", "")),
                         "_synthetic_decoy": True,
                     }

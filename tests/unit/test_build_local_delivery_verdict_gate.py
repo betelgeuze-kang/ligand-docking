@@ -164,6 +164,32 @@ def test_commercialization_queue_clear_ignores_non_active_domain_counts() -> Non
     ) is True
 
 
+def test_explicit_uncleared_commercialization_queue_blocks_delivery(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    monkeypatch.setattr(mod, "RUNS", tmp_path / "runs")
+
+    payload = _payload(
+        tmp_path,
+        rewrite={
+            "commercialization_queue_json": {
+                "summary": {
+                    "queue_clear": False,
+                    "blocked_count": 1,
+                    "top_priority_id": "wetlab_execution_readiness",
+                    "top_priority_status": "blocked",
+                }
+            }
+        },
+    )
+
+    summary = payload["summary"]
+    assert summary["delivery_ready"] is False
+    assert summary["commercialization_queue_clear"] is False
+    assert summary["input_artifact_fingerprint_sha256"]
+    assert summary["input_artifact_max_mtime_ns"] > 0
+    assert any(blocker["code"] == "commercialization_queue_not_clear" for blocker in payload["p0_blockers"])
+
+
 def test_nightly_gate_fail_blocks_delivery(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(mod, "ROOT", tmp_path)
     monkeypatch.setattr(mod, "RUNS", tmp_path / "runs")

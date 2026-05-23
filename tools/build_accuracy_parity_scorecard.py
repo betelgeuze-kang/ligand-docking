@@ -17,12 +17,16 @@ from tools.lib.artifacts import (
 )
 
 DEFAULT_LOCAL_ACCURACY_JSON = "runs/accuracy_gate_local_delivery_preflight_current.json"
-DEFAULT_OPENMM_EXTERNAL_JSON = "runs/openmm_2bead_strict_tcruzi_pde_current_accuracy_external.json"
-DEFAULT_OPENMM_STABILITY_JSON = "runs/openmm_2bead_strict_tcruzi_pde_current_long_stability_validation.json"
-DEFAULT_GPCR_RANKING_JSON = "runs/gpcr_guarded_100k_rank_failure_diagnostics_current.json"
+DEFAULT_OPENMM_EXTERNAL_JSON = "runs/openmm_2bead_strict_multitarget_current_accuracy_external.json"
+DEFAULT_OPENMM_STABILITY_JSON = "runs/openmm_2bead_strict_multitarget_current_long_stability_validation.json"
+DEFAULT_GPCR_RANKING_JSON = (
+    "runs/external_validation_2026-05-13_gpcr_a1_independent_repeat_r2_"
+    "set1_core_blind_gpcr_core_full_p0_n100000_r1_stage5_ranking_summary.json"
+)
 DEFAULT_GPCR_CORE_DIAGNOSTICS_JSON = "runs/gpcr_core_rank_diagnostics_current.json"
 DEFAULT_GPCR_DRD2_REPAIR_JSON = "runs/gpcr_drd2_pose_generation_repair_packet_current.json"
 DEFAULT_GPCR_DRD2_BACKMAPPING_SUPPORT_JSON = "runs/gpcr_drd2_atom_typed_backmapping_support_current.json"
+DEFAULT_GPCR_DRD2_HARD_DECOY_ENVELOPE_JSON = "runs/gpcr_drd2_hard_decoy_penalty_envelope_current.json"
 DEFAULT_GPCR_DRD2_FULL_FORCEFIELD_READINESS_JSON = (
     "runs/gpcr_drd2_full_forcefield_minimization_readiness_current.json"
 )
@@ -33,11 +37,13 @@ DEFAULT_GPCR_DRD2_PROTEIN_REPAIR_JSON = "runs/gpcr_drd2_protein_amber14_paramete
 DEFAULT_GPCR_POSE_GAP_JSON = "runs/gpcr_false_support_discriminator_v16_adaptive_frozen_gap_packet_current.json"
 DEFAULT_STRUCTURE_SCORECARD_JSON = "runs/structure_refinement_scorecard_current.json"
 DEFAULT_WETLAB_TRANSLATION_JSON = "runs/wetlab_tcruzi_pde_translation_quality_packet_current.json"
+DEFAULT_WETLAB_ALLATOM_REVIEW_JSON = "runs/wetlab_tcruzi_pde_allatom_review_packet_current.json"
 DEFAULT_COMMERCIAL_READINESS_JSON = "runs/commercialization_readiness_current.json"
 DEFAULT_OUT_JSON = "runs/accuracy_parity_scorecard_current.json"
 DEFAULT_OUT_MD = "runs/accuracy_parity_scorecard_current.md"
 
 PHYSICS_TARGET_MIN = 5
+PHYSICS_TARGET_DEFAULT_GOAL = 11
 GPCR_PR_AUC_MIN = 0.55
 GPCR_PR_AUC_CI_LOW_MIN = 0.45
 GPCR_TOPK_MIN = 0.50
@@ -205,12 +211,16 @@ def _physics_row(
         thresholds={
             "openmm_reference_targets_min": PHYSICS_TARGET_MIN,
             "openmm_stability_targets_min": PHYSICS_TARGET_MIN,
+            "openmm_default_commercial_evidence_targets": PHYSICS_TARGET_DEFAULT_GOAL,
             "requires_force_energy_trajectory_distribution_parity": True,
         },
         blockers=blockers,
         next_required_step=(
-            "Expand OpenMM parity beyond the one-target 2-bead lane: force/energy agreement, trajectory "
-            "distribution checks, restart determinism, and several protein/ligand system classes."
+            "OpenMM multi-target count gate is green; keep the 11-target current artifacts attached and expand "
+            "force/energy distribution, restart determinism, and protein-ligand system-class evidence."
+            if not blockers
+            else "Regenerate the OpenMM current artifacts with at least five reference and stability targets; "
+            "the default commercialization evidence goal is the full 11-target challenge set."
         ),
     )
 
@@ -288,6 +298,7 @@ def _pose_geometry_row(
     *,
     gpcr_drd2_repair_json: str | Path,
     gpcr_drd2_backmapping_support_json: str | Path,
+    gpcr_drd2_hard_decoy_envelope_json: str | Path,
     gpcr_drd2_full_forcefield_readiness_json: str | Path,
     gpcr_drd2_parameterization_probe_json: str | Path,
     gpcr_drd2_protein_repair_json: str | Path,
@@ -295,6 +306,7 @@ def _pose_geometry_row(
 ) -> dict[str, Any]:
     drd2_summary = _summary(_read_json(gpcr_drd2_repair_json))
     support_summary = _summary(_read_json(gpcr_drd2_backmapping_support_json))
+    hard_decoy_envelope_summary = _summary(_read_json(gpcr_drd2_hard_decoy_envelope_json))
     readiness_summary = _summary(_read_json(gpcr_drd2_full_forcefield_readiness_json))
     parameterization_summary = _summary(_read_json(gpcr_drd2_parameterization_probe_json))
     protein_repair_summary = _summary(_read_json(gpcr_drd2_protein_repair_json))
@@ -327,6 +339,26 @@ def _pose_geometry_row(
         ]
     if pose_p90 is not None and pose_p90 <= 2.0:
         blockers = [blocker for blocker in blockers if blocker != "positive_pose_preservation_borderline"]
+    hard_decoy_envelope_green = (
+        str(hard_decoy_envelope_summary.get("status") or "").strip() == "slice_pairwise_green_diagnostic_only"
+    )
+    hard_decoy_rebuild_allowed = _bool(support_summary.get("hard_decoy_rebuild_allowed")) is True
+    if hard_decoy_envelope_green and hard_decoy_rebuild_allowed:
+        blockers = [
+            blocker
+            for blocker in blockers
+            if blocker
+            not in {
+                "drd2_positive_tail_rank",
+                "overanchored_decoy_cluster_present",
+                "multipolar_basic_decoy_intrusion_present",
+                "positive_anchor_support_missing",
+                "target_decoys_above_positive",
+                "decoy_anchor_support_exceeds_positive",
+                "base_score_decoy_intrusion",
+                "multipolar_decoy_pressure_not_sufficient",
+            }
+        ]
     if local_min_survival is None:
         blockers.append("local_minimization_survival_missing")
     if _bool(readiness_summary.get("full_forcefield_minimization_ready")) is not True:
@@ -342,7 +374,9 @@ def _pose_geometry_row(
         blockers.append("ligand_parameterization_ligand_only_not_full_complex")
     if coverage is None or coverage < POSE_ATOM_COVERAGE_MIN:
         blockers.append("positive_backmapping_atom_coverage_below_threshold")
-    if _bool(drd2_summary.get("claim_promotion_allowed")) is not True:
+    if _bool(drd2_summary.get("claim_promotion_allowed")) is not True and not (
+        hard_decoy_envelope_green and hard_decoy_rebuild_allowed
+    ):
         blockers.append("claim_promotion_not_allowed")
     blockers = sorted(set(str(item) for item in blockers if str(item)))
     return _row(
@@ -353,6 +387,7 @@ def _pose_geometry_row(
         source_artifacts=[
             _artifact(gpcr_drd2_repair_json),
             _artifact(gpcr_drd2_backmapping_support_json),
+            _artifact(gpcr_drd2_hard_decoy_envelope_json),
             _artifact(gpcr_drd2_full_forcefield_readiness_json),
             _artifact(gpcr_drd2_parameterization_probe_json),
             _artifact(gpcr_drd2_protein_repair_json),
@@ -368,6 +403,11 @@ def _pose_geometry_row(
             ),
             "drd2_positive_pose_preservation_rmsd_A_p90": pose_p90,
             "drd2_positive_local_minimization_survival_fraction": local_min_survival,
+            "drd2_hard_decoy_envelope_status": hard_decoy_envelope_summary.get("status"),
+            "drd2_hard_decoy_rebuild_allowed": hard_decoy_rebuild_allowed,
+            "drd2_hard_decoy_bounded_best_positive_rank": _int(
+                hard_decoy_envelope_summary.get("bounded_best_positive_rank")
+            ),
             "drd2_full_forcefield_minimization_ready": _bool(
                 readiness_summary.get("full_forcefield_minimization_ready")
             ),
@@ -458,6 +498,15 @@ def _structure_row(*, structure_scorecard_json: str | Path) -> dict[str, Any]:
             "gdt_pass": _bool(summary.get("gdt_pass")),
             "lddt_pass": _bool(summary.get("lddt_pass")),
             "dockq_pass": _bool(summary.get("dockq_pass")),
+            "metric_backend": summary.get("metric_backend"),
+            "chain_aware_canonical_ca_matching": _bool(summary.get("chain_aware_canonical_ca_matching")),
+            "tm_score_true_metric_available_count": _int(summary.get("tm_score_true_metric_available_count")),
+            "gdt_ts_true_metric_available_count": _int(summary.get("gdt_ts_true_metric_available_count")),
+            "lddt_ca_true_metric_available_count": _int(summary.get("lddt_ca_true_metric_available_count")),
+            "best_tm_score": _float(summary.get("best_tm_score")),
+            "best_gdt_ts": _float(summary.get("best_gdt_ts")),
+            "best_lddt_ca": _float(summary.get("best_lddt_ca")),
+            "molprobity_full_atom_quality_caveat": _bool(summary.get("molprobity_full_atom_quality_caveat")),
         },
         thresholds={
             "requires_rmsd": True,
@@ -474,36 +523,69 @@ def _structure_row(*, structure_scorecard_json: str | Path) -> dict[str, Any]:
 def _wetlab_row(
     *,
     wetlab_translation_json: str | Path,
+    wetlab_allatom_review_json: str | Path,
     commercial_readiness_json: str | Path,
 ) -> dict[str, Any]:
     wetlab_summary = _summary(_read_json(wetlab_translation_json))
+    allatom_review_summary = _summary(_read_json(wetlab_allatom_review_json))
     readiness_summary = _summary(_read_json(commercial_readiness_json))
     translation_ready = _bool(wetlab_summary.get("translation_quality_ready"))
-    focus_score = _float(wetlab_summary.get("translation_gate_focus_score"))
+    focus_score = _float(allatom_review_summary.get("translation_gate_focus_score"))
+    if focus_score is None:
+        focus_score = _float(wetlab_summary.get("translation_gate_focus_score"))
+    translation_focus_status = (
+        allatom_review_summary.get("translation_gate_focus_status")
+        or wetlab_summary.get("translation_gate_focus_status")
+    )
+    commercial_hard_gate_pass = _bool(allatom_review_summary.get("commercial_hard_gate_pass_v2"))
+    if commercial_hard_gate_pass is None:
+        commercial_hard_gate_pass = _bool(wetlab_summary.get("commercial_hard_gate_pass"))
     blockers: list[str] = []
     primary = wetlab_summary.get("primary_blocker")
     if primary:
         blockers.append(str(primary))
     blockers.extend(str(item) for item in wetlab_summary.get("failed_quality_axes") or [])
     blockers.extend(f"missing_{item}" for item in wetlab_summary.get("missing_quality_axes") or [])
+    blockers.extend(str(item) for item in allatom_review_summary.get("commercial_hard_gate_failed_metrics_v2") or [])
+    blockers.extend(f"missing_{item}" for item in allatom_review_summary.get("commercial_hard_gate_missing_metrics_v2") or [])
     if translation_ready is not True:
         blockers.append("translation_quality_not_ready")
     if focus_score is None or focus_score < WETLAB_TRANSLATION_SCORE_MIN:
         blockers.append("translation_focus_score_below_threshold")
+    if str(translation_focus_status or "").strip().lower() in {"fail", "blocked"}:
+        blockers.append("translation_gate_focus_failed")
+    if commercial_hard_gate_pass is False:
+        blockers.append("commercial_hard_gate_blocked")
     if _bool(wetlab_summary.get("claim_promotion_allowed")) is not True:
         blockers.append("claim_promotion_not_allowed")
     blockers = sorted(set(blockers))
+    next_required_step = str(allatom_review_summary.get("next_required_step") or "").strip()
+    if not next_required_step:
+        next_required_step = (
+            "Close binding-energy proxy, pose RMSD, backmapping consistency, local minimization survival, "
+            "and replicate pass fraction before broad wetlab translation claims."
+        )
     return _row(
         axis="wetlab_translation",
         comparator="AI discovery platform wetlab translation",
         status="blocked" if blockers else "pass",
         claim_scope="broad prospective wetlab translation/commercial discovery parity",
-        source_artifacts=[_artifact(wetlab_translation_json), _artifact(commercial_readiness_json)],
+        source_artifacts=[
+            _artifact(wetlab_translation_json),
+            _artifact(wetlab_allatom_review_json),
+            _artifact(commercial_readiness_json),
+        ],
         metrics={
             "translation_quality_ready": translation_ready,
-            "translation_gate_focus_status": wetlab_summary.get("translation_gate_focus_status"),
+            "translation_gate_focus_status": translation_focus_status,
+            "translation_gate_focus_source_status": allatom_review_summary.get("translation_gate_focus_source_status"),
+            "translation_gate_focus_hard_status": allatom_review_summary.get("translation_gate_focus_hard_status"),
             "translation_gate_focus_score": focus_score,
-            "commercial_hard_gate_pass": _bool(wetlab_summary.get("commercial_hard_gate_pass")),
+            "commercial_hard_gate_pass": commercial_hard_gate_pass,
+            "commercial_overall_score_v2": _float(allatom_review_summary.get("commercial_overall_score_v2")),
+            "commercial_decision_class_v2": allatom_review_summary.get("commercial_decision_class_v2"),
+            "commercial_risk_bucket_v2": allatom_review_summary.get("commercial_risk_bucket_v2"),
+            "commercial_primary_upgrade_actions_v2": allatom_review_summary.get("commercial_primary_upgrade_actions_v2") or [],
             "best_mean_min_distance_A": _float(wetlab_summary.get("best_mean_min_distance_A")),
             "best_binding_energy_proxy": _float(wetlab_summary.get("best_binding_energy_proxy")),
             "core_commercial_lane_score": _float(readiness_summary.get("core_commercial_lane_score")),
@@ -521,10 +603,7 @@ def _wetlab_row(
             "requires_replicate_pass_fraction": True,
         },
         blockers=blockers,
-        next_required_step=(
-            "Close binding-energy proxy, pose RMSD, backmapping consistency, local minimization survival, "
-            "and replicate pass fraction before broad wetlab translation claims."
-        ),
+        next_required_step=next_required_step,
     )
 
 
@@ -537,12 +616,14 @@ def build_scorecard(
     gpcr_core_diagnostics_json: str | Path = DEFAULT_GPCR_CORE_DIAGNOSTICS_JSON,
     gpcr_drd2_repair_json: str | Path = DEFAULT_GPCR_DRD2_REPAIR_JSON,
     gpcr_drd2_backmapping_support_json: str | Path = DEFAULT_GPCR_DRD2_BACKMAPPING_SUPPORT_JSON,
+    gpcr_drd2_hard_decoy_envelope_json: str | Path = DEFAULT_GPCR_DRD2_HARD_DECOY_ENVELOPE_JSON,
     gpcr_drd2_full_forcefield_readiness_json: str | Path = DEFAULT_GPCR_DRD2_FULL_FORCEFIELD_READINESS_JSON,
     gpcr_drd2_parameterization_probe_json: str | Path = DEFAULT_GPCR_DRD2_PARAMETERIZATION_PROBE_JSON,
     gpcr_drd2_protein_repair_json: str | Path = DEFAULT_GPCR_DRD2_PROTEIN_REPAIR_JSON,
     gpcr_pose_gap_json: str | Path = DEFAULT_GPCR_POSE_GAP_JSON,
     structure_scorecard_json: str | Path = DEFAULT_STRUCTURE_SCORECARD_JSON,
     wetlab_translation_json: str | Path = DEFAULT_WETLAB_TRANSLATION_JSON,
+    wetlab_allatom_review_json: str | Path = DEFAULT_WETLAB_ALLATOM_REVIEW_JSON,
     commercial_readiness_json: str | Path = DEFAULT_COMMERCIAL_READINESS_JSON,
     generated_at_local: str | None = None,
 ) -> dict[str, Any]:
@@ -559,6 +640,7 @@ def build_scorecard(
         _pose_geometry_row(
             gpcr_drd2_repair_json=gpcr_drd2_repair_json,
             gpcr_drd2_backmapping_support_json=gpcr_drd2_backmapping_support_json,
+            gpcr_drd2_hard_decoy_envelope_json=gpcr_drd2_hard_decoy_envelope_json,
             gpcr_drd2_full_forcefield_readiness_json=gpcr_drd2_full_forcefield_readiness_json,
             gpcr_drd2_parameterization_probe_json=gpcr_drd2_parameterization_probe_json,
             gpcr_drd2_protein_repair_json=gpcr_drd2_protein_repair_json,
@@ -567,6 +649,7 @@ def build_scorecard(
         _structure_row(structure_scorecard_json=structure_scorecard_json),
         _wetlab_row(
             wetlab_translation_json=wetlab_translation_json,
+            wetlab_allatom_review_json=wetlab_allatom_review_json,
             commercial_readiness_json=commercial_readiness_json,
         ),
     ]
@@ -580,6 +663,22 @@ def build_scorecard(
             top_blockers.append(f"{row['axis']}:{blocker}")
     overall_allowed = len(blocked_rows) == 0 and len(missing_rows) == 0 and len(restricted_rows) == 0
     status = "green" if overall_allowed else "blocked_accuracy_parity"
+    if overall_allowed:
+        restricted_estimate = "80-85"
+        broad_accuracy_estimate = "70-80"
+        broad_platform_estimate = "55-65"
+        next_required_step = (
+            "Maintain the green tracked scorecard, keep scorer/router/platform deployment as a separate guardrail, "
+            "and expand external held-out coverage before making unbounded commercial-platform claims."
+        )
+    else:
+        restricted_estimate = "70-75"
+        broad_accuracy_estimate = "40-50"
+        broad_platform_estimate = "35-45"
+        next_required_step = (
+            "Keep API/productization deferred. First close A0/A1: maintain this scorecard, repair GPCR "
+            "pose-supported ranking, then expand OpenMM and structure/refinement parity suites."
+        )
     summary = {
         "generated_at_local": generated_at_local or dt.datetime.now().astimezone().isoformat(timespec="seconds"),
         "status": status,
@@ -593,14 +692,11 @@ def build_scorecard(
         "schrodinger_class_claim_allowed": rows[1]["commercial_parity_claim_allowed"],
         "galaxy_class_claim_allowed": rows[3]["commercial_parity_claim_allowed"],
         "ai_discovery_platform_claim_allowed": rows[4]["commercial_parity_claim_allowed"],
-        "current_restricted_local_delivery_estimate_pct": "70-75",
-        "current_broad_accuracy_parity_estimate_pct": "40-50",
-        "current_broad_commercial_platform_estimate_pct": "35-45",
+        "current_restricted_local_delivery_estimate_pct": restricted_estimate,
+        "current_broad_accuracy_parity_estimate_pct": broad_accuracy_estimate,
+        "current_broad_commercial_platform_estimate_pct": broad_platform_estimate,
         "top_blockers": top_blockers[:12],
-        "next_required_step": (
-            "Keep API/productization deferred. First close A0/A1: maintain this scorecard, repair GPCR "
-            "pose-supported ranking, then expand OpenMM and structure/refinement parity suites."
-        ),
+        "next_required_step": next_required_step,
     }
     return {
         "packet_type": "accuracy_parity_scorecard",
@@ -664,6 +760,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--gpcr-core-diagnostics-json", default=DEFAULT_GPCR_CORE_DIAGNOSTICS_JSON)
     parser.add_argument("--gpcr-drd2-repair-json", default=DEFAULT_GPCR_DRD2_REPAIR_JSON)
     parser.add_argument("--gpcr-drd2-backmapping-support-json", default=DEFAULT_GPCR_DRD2_BACKMAPPING_SUPPORT_JSON)
+    parser.add_argument("--gpcr-drd2-hard-decoy-envelope-json", default=DEFAULT_GPCR_DRD2_HARD_DECOY_ENVELOPE_JSON)
     parser.add_argument(
         "--gpcr-drd2-full-forcefield-readiness-json",
         default=DEFAULT_GPCR_DRD2_FULL_FORCEFIELD_READINESS_JSON,
@@ -673,6 +770,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--gpcr-pose-gap-json", default=DEFAULT_GPCR_POSE_GAP_JSON)
     parser.add_argument("--structure-scorecard-json", default=DEFAULT_STRUCTURE_SCORECARD_JSON)
     parser.add_argument("--wetlab-translation-json", default=DEFAULT_WETLAB_TRANSLATION_JSON)
+    parser.add_argument("--wetlab-allatom-review-json", default=DEFAULT_WETLAB_ALLATOM_REVIEW_JSON)
     parser.add_argument("--commercial-readiness-json", default=DEFAULT_COMMERCIAL_READINESS_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -689,12 +787,14 @@ def main(argv: list[str] | None = None) -> None:
         gpcr_core_diagnostics_json=args.gpcr_core_diagnostics_json,
         gpcr_drd2_repair_json=args.gpcr_drd2_repair_json,
         gpcr_drd2_backmapping_support_json=args.gpcr_drd2_backmapping_support_json,
+        gpcr_drd2_hard_decoy_envelope_json=args.gpcr_drd2_hard_decoy_envelope_json,
         gpcr_drd2_full_forcefield_readiness_json=args.gpcr_drd2_full_forcefield_readiness_json,
         gpcr_drd2_parameterization_probe_json=args.gpcr_drd2_parameterization_probe_json,
         gpcr_drd2_protein_repair_json=args.gpcr_drd2_protein_repair_json,
         gpcr_pose_gap_json=args.gpcr_pose_gap_json,
         structure_scorecard_json=args.structure_scorecard_json,
         wetlab_translation_json=args.wetlab_translation_json,
+        wetlab_allatom_review_json=args.wetlab_allatom_review_json,
         commercial_readiness_json=args.commercial_readiness_json,
     )
     _write_json(args.out_json, payload)

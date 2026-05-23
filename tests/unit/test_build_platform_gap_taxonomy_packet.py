@@ -64,6 +64,104 @@ def test_build_platform_gap_taxonomy_packet() -> None:
     assert rows["ca2_pxr_review_only_evidence_policy"]["expansion_blocker_count"] == 13
 
 
+def test_build_platform_gap_taxonomy_packet_closes_aqp1_surrogate_gap_without_direct_binding_claim() -> None:
+    payload = mod.build_payload(
+        {
+            "summary": {
+                "ligand_scaleup_claim_safe": True,
+                "ligand_scaleup_claim_safe_status": "claim_safe",
+                "ligand_scaleup_commercialization_ready_suite_count": 3,
+                "ligand_scaleup_suite_count": 3,
+            }
+        },
+        {
+            "summary": {
+                "aqp1_functional_kcal_surrogate_ready_count": 3,
+                "aqp1_functional_kcal_surrogate_closure_allowed": True,
+                "aqp1_direct_binding_gap_still_open": True,
+            },
+            "rows": [
+                {"family": "ca2", "source_linked_count": 6, "ready_like_count": 5},
+                {"family": "pxr", "source_linked_count": 6, "ready_like_count": 8},
+                {"family": "aqp1", "ready_like_count": 3, "next_required_step": "use surrogate"},
+            ],
+        },
+        {
+            "summary": {
+                "placeholder_driven_rows": 0,
+                "evidence_blocked_placeholder_rows": 0,
+                "next_required_step": "closed",
+            }
+        },
+        {"summary": {"top_priority_status": "keep_green"}},
+        {
+            "summary": {
+                "all_current_green": True,
+                "repeated_history_ready_lane_count": 4,
+                "lane_count": 4,
+                "insufficient_history_lane_count": 0,
+            }
+        },
+    )
+
+    rows = {row["gap_id"]: row for row in payload["rows"]}
+    assert rows["aqp1_claim_safe_kcal_gap"]["expansion_blocker_count"] == 0
+    assert rows["aqp1_claim_safe_kcal_gap"]["current_status"] == "functional_kcal_surrogate_ready_direct_binding_gap_open"
+    assert rows["aqp1_claim_safe_kcal_gap"]["primary_value"] == 3
+    assert payload["summary"]["aqp1_direct_binding_gap_still_open"] is True
+    assert payload["summary"]["top_expansion_gap_id"] == "ca2_pxr_review_only_evidence_policy"
+
+
+def test_build_platform_gap_taxonomy_packet_closes_ca2_pxr_review_policy_gate() -> None:
+    payload = mod.build_payload(
+        {
+            "summary": {
+                "ligand_scaleup_claim_safe": True,
+                "ligand_scaleup_claim_safe_status": "claim_safe",
+                "ligand_scaleup_commercialization_ready_suite_count": 3,
+                "ligand_scaleup_suite_count": 3,
+            }
+        },
+        {
+            "summary": {
+                "aqp1_functional_kcal_surrogate_ready_count": 3,
+                "aqp1_functional_kcal_surrogate_closure_allowed": True,
+            },
+            "rows": [
+                {"family": "ca2", "source_linked_count": 6, "ready_like_count": 5},
+                {"family": "pxr", "source_linked_count": 6, "ready_like_count": 8},
+                {"family": "aqp1", "ready_like_count": 3},
+            ],
+        },
+        {"summary": {"placeholder_driven_rows": 0, "evidence_blocked_placeholder_rows": 0}},
+        {"summary": {"top_priority_status": "keep_green"}},
+        {
+            "summary": {
+                "all_current_green": True,
+                "repeated_history_ready_lane_count": 4,
+                "lane_count": 4,
+                "insufficient_history_lane_count": 0,
+            }
+        },
+        {
+            "summary": {
+                "review_only_policy_closure_allowed": True,
+                "review_only_policy_locked_row_count": 13,
+                "packet_artifact": "runs/ca2_pxr_review_policy_closure_gate_current.md",
+                "next_required_step": "policy locked",
+            }
+        },
+    )
+
+    rows = {row["gap_id"]: row for row in payload["rows"]}
+    assert rows["ca2_pxr_review_only_evidence_policy"]["expansion_blocker_count"] == 0
+    assert rows["ca2_pxr_review_only_evidence_policy"]["current_status"] == "review_only_policy_closed"
+    assert rows["ca2_pxr_review_only_evidence_policy"]["primary_value"] == 13
+    assert payload["summary"]["expansion_blocker_count"] == 0
+    assert payload["summary"]["ca2_pxr_review_policy_closure_allowed"] is True
+    assert payload["summary"]["next_required_step"].startswith("All tracked platform expansion blockers are closed")
+
+
 def test_build_platform_gap_taxonomy_packet_cli(tmp_path: Path) -> None:
     out_json = tmp_path / "platform_gap_taxonomy_packet.json"
     out_csv = tmp_path / "platform_gap_taxonomy_packet.csv"

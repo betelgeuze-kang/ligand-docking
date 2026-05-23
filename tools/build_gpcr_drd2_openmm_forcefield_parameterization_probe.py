@@ -27,7 +27,7 @@ DEFAULT_OUT_JSON = "runs/gpcr_drd2_openmm_forcefield_parameterization_probe_curr
 DEFAULT_OUT_MD = "runs/gpcr_drd2_openmm_forcefield_parameterization_probe_current.md"
 DEFAULT_TARGET = "CHEMBL217_DRD2_HUMAN"
 DEFAULT_POSITIVE_LIGAND = "CHEMBL301265"
-DEFAULT_LIGAND_CHARGE = 1
+DEFAULT_LIGAND_CHARGE = "auto"
 DEFAULT_PREPARED_PROTEIN_PDB = "runs/gpcr_drd2_6cm4_chimerax_sidechain_rebuilt_split_oxt_current.pdb"
 DEFAULT_INTEGRATED_COMPLEX_PDB = "runs/gpcr_drd2_integrated_openmm_complex_parameterization_probe_current.pdb"
 DEFAULT_LIGAND_TEMPLATE_XML = "runs/gpcr_drd2_ligand_gaff_template_current.xml"
@@ -54,6 +54,21 @@ def _module_available(name: str) -> bool:
         return importlib.util.find_spec(name) is not None
     except Exception:
         return False
+
+
+def _derive_ligand_charge(ligand_charge: int | str, smiles: str) -> tuple[int, str]:
+    charge_text = str(ligand_charge).strip().lower()
+    if charge_text and charge_text != "auto":
+        return int(charge_text), "cli"
+    try:
+        from rdkit import Chem  # type: ignore
+
+        mol = Chem.MolFromSmiles(_text(smiles))
+        if mol is not None:
+            return int(Chem.GetFormalCharge(mol)), "rdkit_formal_charge"
+    except Exception:
+        pass
+    return 0, "auto_fallback_neutral"
 
 
 def _parse_mol2(path: str | Path) -> tuple[list[dict[str, Any]], list[tuple[int, int]]]:
@@ -217,7 +232,7 @@ def _probe_ligand_template(
     *,
     gaff_xml: str | Path,
     ambertools_home: str | Path,
-    ligand_charge: int,
+    ligand_charge: int | str,
     attempt_build: bool,
     timeout_sec: int,
 ) -> dict[str, Any]:
@@ -438,7 +453,7 @@ def build_probe(
     input_csv: str | Path = DEFAULT_INPUT_CSV,
     target: str = DEFAULT_TARGET,
     ligand_id: str = DEFAULT_POSITIVE_LIGAND,
-    ligand_charge: int = DEFAULT_LIGAND_CHARGE,
+    ligand_charge: int | str = DEFAULT_LIGAND_CHARGE,
     attempt_build: bool = True,
     gaff_xml: str | Path = CHIMERAX_GAFF_XML,
     ambertools_home: str | Path = CHIMERAX_AMBERTOOLS_HOME,
@@ -453,6 +468,8 @@ def build_probe(
     openmm_available = _module_available("openmm")
     rdkit_available = _module_available("rdkit")
     raw_protein_pdb = _text(positive.get("protein_structure_source_path")) if positive else ""
+    ligand_smiles = _text(positive.get("ligand_smiles")) if positive else ""
+    resolved_ligand_charge, ligand_charge_source = _derive_ligand_charge(ligand_charge, ligand_smiles)
     prepared_path = _resolve(prepared_protein_pdb) if prepared_protein_pdb else None
     active_protein_pdb = str(prepared_path) if prepared_path is not None and prepared_path.exists() else raw_protein_pdb
     target_probe = {
@@ -463,7 +480,9 @@ def build_probe(
         "active_protein_pdb": _artifact(active_protein_pdb) if active_protein_pdb else "",
         "prepared_protein_pdb": _artifact(prepared_path) if prepared_path is not None and prepared_path.exists() else "",
         "backmapped_pdb": _artifact(positive.get("backmapped_pdb", "")) if positive else "",
-        "ligand_smiles": _text(positive.get("ligand_smiles")) if positive else "",
+        "ligand_smiles": ligand_smiles,
+        "ligand_formal_charge": resolved_ligand_charge,
+        "ligand_charge_source": ligand_charge_source,
     }
     if positive and openmm_available:
         protein_probe = _probe_protein_parameterization(
@@ -474,7 +493,7 @@ def build_probe(
             _text(positive.get("backmapped_pdb")),
             gaff_xml=gaff_xml,
             ambertools_home=ambertools_home,
-            ligand_charge=ligand_charge,
+            ligand_charge=resolved_ligand_charge,
             attempt_build=attempt_build,
             timeout_sec=timeout_sec,
         )
@@ -483,7 +502,7 @@ def build_probe(
             _text(positive.get("backmapped_pdb")),
             gaff_xml=gaff_xml,
             ambertools_home=ambertools_home,
-            ligand_charge=ligand_charge,
+            ligand_charge=resolved_ligand_charge,
             attempt_build=attempt_build,
             timeout_sec=timeout_sec,
             out_complex_pdb=out_complex_pdb,
@@ -524,6 +543,8 @@ def build_probe(
         "protein_parameterization_available": protein_ready,
         "ligand_template_parameterization_available": ligand_ready,
         "integrated_system_parameterization_available": integrated_ready,
+        "ligand_formal_charge": resolved_ligand_charge,
+        "ligand_charge_source": ligand_charge_source,
         "blockers": blockers,
         "claim_scope": (
             "integrated_protein_ligand_openmm_system_parameterized_not_minimized"
@@ -589,6 +610,8 @@ def render_markdown(payload: dict[str, Any]) -> str:
             f"- active_protein_pdb: `{payload['target_probe']['active_protein_pdb']}`",
             f"- prepared_protein_pdb: `{payload['target_probe']['prepared_protein_pdb']}`",
             f"- backmapped_pdb: `{payload['target_probe']['backmapped_pdb']}`",
+            f"- ligand_formal_charge: `{payload['target_probe']['ligand_formal_charge']}`",
+            f"- ligand_charge_source: `{payload['target_probe']['ligand_charge_source']}`",
             "",
             "## Capability Probes",
             f"- protein_amber14_openmm: `{probes['protein_amber14_openmm']}`",
@@ -615,7 +638,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--input-csv", default=DEFAULT_INPUT_CSV)
     parser.add_argument("--target", default=DEFAULT_TARGET)
     parser.add_argument("--ligand-id", default=DEFAULT_POSITIVE_LIGAND)
-    parser.add_argument("--ligand-charge", type=int, default=DEFAULT_LIGAND_CHARGE)
+    parser.add_argument("--ligand-charge", default=DEFAULT_LIGAND_CHARGE)
     parser.add_argument("--gaff-xml", default=CHIMERAX_GAFF_XML)
     parser.add_argument("--ambertools-home", default=CHIMERAX_AMBERTOOLS_HOME)
     parser.add_argument("--prepared-protein-pdb", default=DEFAULT_PREPARED_PROTEIN_PDB)

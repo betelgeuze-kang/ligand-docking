@@ -213,10 +213,11 @@ def _write_target_native_stub(path: Path, target_id: str, native_csv: Path) -> t
         ]
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as fh:
-        writer = csv.DictWriter(fh, fieldnames=["target", "native_pdb_path", "pdb_id", "notes"])
+        fieldnames = ["target", "native_pdb_path", "pdb_id", "notes"]
+        writer = csv.DictWriter(fh, fieldnames=fieldnames)
         writer.writeheader()
         for row in rows:
-            writer.writerow(row)
+            writer.writerow({key: row.get(key, "") for key in fieldnames})
     return native_mapping_present, mapping_note
 
 

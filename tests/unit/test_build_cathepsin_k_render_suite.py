@@ -33,7 +33,7 @@ def test_build_cathepsin_k_render_suite() -> None:
 
     assert summary["status"] == "cathepsin_k_render_suite_ready"
     assert summary["partner_track_id"] == "acidic_protease_wave2"
-    assert summary["artifact_count"] == 4
-    assert artifacts["condition_card"]["structured"]["acidic_primary_arm"] == "acidic recombinant Cathepsin K fluorogenic arm"
+    assert summary["artifact_count"] == 5
+    assert artifacts["condition_card"]["structured"]["acidic_primary_arm"] == "sodium-acetate or MES-like acidic arm centered on pH 4.5 to 5.0"
     assert artifacts["selectivity_panel"]["structured"]["panel_label"] == "related cathepsin / pH-context specificity panel"
-    assert artifacts["go_no_go_card"]["structured"]["primary_promote_rule"] == "acidic-arm Cathepsin K activity plus related-cathepsin separation and weaker neutral replay"
+    assert artifacts["go_no_go_card"]["structured"]["primary_promote_rule"] == "acidic-arm Cathepsin K signal plus related-cathepsin separation and visible neutral-context drop-off"

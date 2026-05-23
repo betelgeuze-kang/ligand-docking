@@ -142,7 +142,7 @@ def build_payload(
         extra_args=[*slow_shard_extra_args, *gate_relax_extra_args],
         **base_kwargs,
     )
-    preferred_command_kind = primary_bridge._preferred_command_kind(slow_shard_profile_id, gate_relax_profile_id)
+    preferred_command_kind = primary_bridge._preferred_command_kind(slow_shard_profile_id, gate_relax_profile_id, "", "")
     preferred_out_prefix = artifact_dir / ("throughput_run_gate55" if preferred_command_kind.endswith("gate55") else "throughput_run")
     preferred_summary_json = preferred_out_prefix.with_name(preferred_out_prefix.name + "_summary.json")
     preferred_summary_md = preferred_out_prefix.with_name(preferred_out_prefix.name + "_summary.md")

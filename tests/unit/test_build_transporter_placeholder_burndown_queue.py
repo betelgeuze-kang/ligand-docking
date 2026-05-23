@@ -82,6 +82,43 @@ def test_build_transporter_placeholder_burndown_queue_reads_current_artifacts() 
     assert rows[5]["source_anchor"] == "PMID 21813754"
 
 
+def test_build_transporter_placeholder_burndown_queue_burns_down_negative_rows_with_apply_gate() -> None:
+    apply_gate = {
+        "rows": [
+            {
+                "slot_queue_id": f"{target}__core_non_binder_0{idx}",
+                "authoritative_negative_apply_allowed": True,
+            }
+            for target in ("AQP1", "GLUT1")
+            for idx in range(1, 4)
+        ]
+    }
+
+    payload = mod.build_payload(
+        json.loads((ROOT / "runs/transporter_authoritative_apply_blocker_decomposition_current.json").read_text()),
+        json.loads((ROOT / "runs/transporter_apply_draft_status_current.json").read_text()),
+        json.loads((ROOT / "runs/transporter_seed_row_promotion_board_current.json").read_text()),
+        follow_on_source_mod.build_payload(
+            json.loads((ROOT / "runs/aqp1_first_wave_follow_on_packet_current.json").read_text()),
+            json.loads((ROOT / "runs/aqp1_follow_on_blocker_decomposition_current.json").read_text()),
+            json.loads((ROOT / "runs/aqp1_quantitative_provenance_packet_current.json").read_text()),
+        ),
+        glut1_source_mod.build_payload(
+            json.loads((ROOT / "runs/transporter_seed_row_promotion_board_current.json").read_text())
+        ),
+        apply_gate,
+    )
+
+    summary = payload["summary"]
+    negative_rows = [row for row in payload["rows"] if row["row_kind"] == "negative"]
+    assert summary["placeholder_driven_rows"] == 0
+    assert summary["evidence_blocked_placeholder_rows"] == 0
+    assert summary["negative_evidence_missing_rows"] == 0
+    assert summary["ready_for_apply_rows"] == 6
+    assert all(row["burndown_class"] == "evidence_curated" for row in negative_rows)
+    assert all(row["reduction_track"] == "negative_evidence_curated" for row in negative_rows)
+
+
 def test_build_transporter_placeholder_burndown_queue_cli(tmp_path: Path) -> None:
     out_json = tmp_path / "transporter_placeholder_burndown_queue.json"
     out_csv = tmp_path / "transporter_placeholder_burndown_queue.csv"

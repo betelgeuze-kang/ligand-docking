@@ -347,3 +347,52 @@ def test_build_family_expansion_status_rollup_propagates_nightly_gate_burndown()
     assert summary["local_engine_commercialization_queue_nightly_gate_primary_metric"] == "mean_min_distance_A"
     assert "nightly_gate_burndown_packet_current.md" in summary["next_required_step"]
     assert "nightly_gate_burndown_packet_current.md" in transporter_row["next_required_step"]
+
+
+def test_build_family_expansion_status_rollup_uses_functional_kcal_surrogate_and_current_negative_burndown() -> None:
+    payload = mod.build_payload(
+        {"summary": {"source_linked_count": 6, "pending_capture_count": 0, "direct_negative_evidence_count": 1}},
+        {"summary": {"confirmed_manual_commit_count": 1}},
+        {"summary": {"source_linked_count": 4, "pending_capture_count": 0, "supportive_target_specific_human_count": 2}},
+        {"summary": {"ready_for_apply_row_count": 1}},
+        {"summary": {"source_linked_count": 12, "pending_capture_count": 0, "supportive_target_specific_packet_evidence_count": 6}},
+        {"summary": {"current_phase": "stale_apply_status", "ready_for_apply_rows": 0, "placeholder_driven_rows": 6, "staged_non_authoritative_rows": 6}},
+        {"summary": {"source_linked_count": 3, "pending_capture_count": 0, "supportive_direct_quantitative_binding_count": 0, "kcal_overlay_ready_count": 0}},
+        {"summary": {"quantitative_binding_status": "quantitative_binding_absent_claim_safe_kcal_missing"}},
+        {"summary": {"primary_focus_ligand": "bacopaside II", "exact_human_reference_ligand": "AqB013"}},
+        {"summary": {"row_count": 2, "follow_on_targets": "core_binder_02, core_binder_03"}},
+        {"summary": {"exact_human_aqp1_activity_count": 1, "primary_focus_ligand": "AqB013", "signal": "exact_human_activity_present_leave_kcal_blank"}},
+        {"summary": {"highest_gap_family": "transporter"}},
+        aqp1_functional_kcal_surrogate_packet={
+            "summary": {
+                "functional_kcal_surrogate_ready_count": 3,
+                "functional_kcal_surrogate_closure_allowed": True,
+                "direct_binding_gap_still_open": True,
+                "next_required_step": "Use functional surrogate only.",
+            }
+        },
+        transporter_placeholder_burndown_queue={
+            "summary": {
+                "row_count": 12,
+                "ready_for_apply_rows": 6,
+                "placeholder_driven_rows": 0,
+                "staged_non_authoritative_rows": 6,
+                "next_required_step": "All transporter negative placeholder rows are evidence-curated.",
+            }
+        },
+    )
+
+    summary = payload["summary"]
+    transporter_row = next(row for row in payload["rows"] if row["family"] == "transporter")
+    aqp1_row = next(row for row in payload["rows"] if row["family"] == "aqp1")
+
+    assert summary["aqp1_functional_kcal_surrogate_ready_count"] == 3
+    assert summary["aqp1_functional_kcal_surrogate_closure_allowed"] is True
+    assert summary["aqp1_direct_binding_gap_still_open"] is True
+    assert transporter_row["ready_like_count"] == 6
+    assert "placeholder_driven_rows=0" in transporter_row["blocking_signal"]
+    assert "ready_for_apply_rows=6" in transporter_row["blocking_signal"]
+    assert aqp1_row["ready_like_count"] == 3
+    assert aqp1_row["supportive_count"] == 3
+    assert aqp1_row["phase"] == "functional_kcal_surrogate_ready_direct_binding_gap_open"
+    assert "functional_kcal_surrogate_closure_allowed=True" in aqp1_row["blocking_signal"]

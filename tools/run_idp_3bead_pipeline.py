@@ -193,7 +193,13 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         and int(dataset_status.get("rc", 1)) == 0
         and int(train_status.get("rc", 1)) == 0
     )
-    corrected_available = int(eval_residual_status.get("rc", 1)) == 0 and int(gate_residual_status.get("rc", 1)) == 0
+    def _rc_ok(status: dict[str, object]) -> bool:
+        try:
+            return int(status.get("rc", 1) or 1) == 0
+        except (TypeError, ValueError):
+            return False
+
+    corrected_available = _rc_ok(eval_residual_status) and _rc_ok(gate_residual_status)
     payload["pass"] = bool(
         (corrected_available and bool(gate_residual_payload.get("pass", False)))
         or (not corrected_available and baseline_ok)

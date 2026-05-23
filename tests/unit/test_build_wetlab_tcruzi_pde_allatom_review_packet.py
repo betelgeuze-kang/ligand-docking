@@ -228,6 +228,84 @@ def test_build_wetlab_tcruzi_pde_allatom_review_packet_uses_strict_candidate_as_
     assert payload["rows"][0]["ligand_id"] == "lig_near_first"
 
 
+def test_atomized_local_min_overlay_clears_translation_fail_closed_metrics(tmp_path: Path) -> None:
+    scoring_json = tmp_path / "summary.json"
+    claim_json = tmp_path / "claim_readiness.json"
+    scoring_json.write_text(
+        json.dumps(
+            {
+                "topk": [
+                    {
+                        "ligand_id": "lig_a",
+                        "mean_min_distance_A": 2.1,
+                        "binding_energy_proxy": -0.2,
+                        "binding_energy_mmpbsa_kcal_mol_proxy": -0.2,
+                        "binding_energy_mmpbsa_std": 0.08,
+                        "stability_score": 0.52,
+                        "contact_fraction": 0.62,
+                        "trajectory_frames": 260,
+                        "replicate_count": 3,
+                        "replicate_pass_fraction": 0.667,
+                        "median_mean_min_distance_A": 2.1,
+                        "mean_min_distance_iqr_A": 0.2,
+                        "median_contact_fraction": 0.60,
+                        "pose_cluster_dominance": 0.70,
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    _write_json(claim_json, {"summary": {"pass_core_gate": True, "claim_ready_for_allatom": True}})
+    lane_payload = {
+        "summary": {"shard_id": "20_of_20", "selected_threshold_A": 2.5},
+        "rows": [
+            {
+                "ligand_id": "lig_a",
+                "translation_gate_status": "fail",
+                "translation_gate_hard_status": "fail",
+                "translation_gate_pass": False,
+                "translation_gate_failed_checks": ["binding_energy_proxy_too_weak_for_translation"],
+                "translation_gate_hard_failed_checks": ["binding_energy_proxy_too_weak_for_translation"],
+                "shortlist_tier": "defer",
+                "recommended_next_expensive_lane": "defer_expensive_lane",
+            }
+        ],
+    }
+    runner_payload = {"summary": {"allatom_summary_json": str(scoring_json), "scoring_status": "pass"}}
+    atomized_payload = {
+        "summary": {"status": "wetlab_tcruzi_pde_atomized_parameterization_minimization_pass"},
+        "rows": [
+            {
+                "ligand_id": "atomized_lig_a",
+                "parameterization_ready": True,
+                "protein_local_minimization_ready": True,
+                "local_minimization_survival_fraction": 1.0,
+                    "mean_min_distance_A": 1.8,
+                    "ligand_heavy_atom_rmsd_A": 0.7,
+                    "contact_fraction": 0.8,
+                    "energy_delta_kj_mol": -10.0,
+                }
+            ],
+        }
+
+    payload = build_payload(
+        lane_payload,
+        runner_payload,
+        claim_readiness_json=str(claim_json),
+        atomized_local_min_payload=atomized_payload,
+        atomized_local_min_json="runs/atomized.json",
+    )
+
+    summary = payload["summary"]
+    assert summary["atomized_local_min_evidence_ready"] is True
+    assert summary["translation_gate_focus_status"] == "pass"
+    assert summary["focus_shortlist_tier"] == "tier1_gold"
+    assert summary["recommended_next_expensive_lane"] == "atomized_openmm_local_min_validated_repair"
+    assert summary["commercial_hard_gate_pass_v2"] is True
+    assert summary["commercial_hard_gate_failed_metrics_v2"] == []
+
+
 def test_build_wetlab_tcruzi_pde_allatom_review_packet_requires_claim_artifact_for_final_gate(
     tmp_path: Path,
 ) -> None:

@@ -37,6 +37,7 @@ def _build_launch_ready_payloads() -> tuple[dict, dict]:
     )
     launch_payload = launch_mod.build_payload(
         render_payload,
+        render_payload["artifacts"]["partner_export"],
         render_payload["artifacts"]["condition_card"],
         repurposing_fill_map,
         novelty_fill_map,

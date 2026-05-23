@@ -22,16 +22,16 @@ def test_build_aqp1_seed_row_sync_apply_preview_only_stages_source() -> None:
 
     assert summary["target_id"] == "AQP1"
     assert summary["packet_step"] == "core_binder_01"
-    assert summary["safe_staged_field_count"] == 1
-    assert summary["unresolved_field_count"] == 4
+    assert summary["safe_staged_field_count"] == 4
+    assert summary["unresolved_field_count"] == 1
     assert summary["manual_verdict_status"] == "completed_manual_verdict"
     assert summary["authoritative_apply_allowed"] is False
 
     assert row["staged_replacement_source"] == "https://pubmed.ncbi.nlm.nih.gov/27474162/"
-    assert row["staged_replacement_ligand_id"] == ""
+    assert row["staged_replacement_ligand_id"] == "aqp1_bacopaside_ii_review_seed"
     assert row["staged_replacement_reference_binding_kcal_mol"] == ""
-    assert row["staged_replacement_smiles"] == ""
-    assert row["staged_replacement_scaffold"] == ""
+    assert row["staged_replacement_smiles"]
+    assert row["staged_replacement_scaffold"]
     assert row["sync_preview_status"] == "non_authoritative_partial_stage_only"
 
 

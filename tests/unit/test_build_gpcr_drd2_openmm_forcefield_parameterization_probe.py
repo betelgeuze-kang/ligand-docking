@@ -56,6 +56,11 @@ def test_parse_mol2_and_write_template(tmp_path: Path) -> None:
     assert '<Bond from="0" to="1"/>' in rendered
 
 
+def test_derive_ligand_charge_uses_rdkit_formal_charge_when_auto() -> None:
+    assert mod._derive_ligand_charge("auto", "C[NH3+]") == (1, "rdkit_formal_charge")
+    assert mod._derive_ligand_charge("0", "C[NH3+]") == (0, "cli")
+
+
 def test_build_probe_reports_ligand_partial_without_claim(monkeypatch, tmp_path: Path) -> None:
     protein = tmp_path / "protein.pdb"
     ligand = tmp_path / "ligand.pdb"

@@ -836,12 +836,16 @@ def _auto_sync_afdb_sources(
     cursor_now = str(start_cursor or "").strip()
     max_pages = int(max(1, pages_per_cycle))
     for _ in range(max_pages):
-        page = _fetch_uniprot_candidate_page(
-            query=query,
-            size=query_size,
-            timeout_sec=timeout_sec,
-            cursor=cursor_now,
-        )
+        if max_pages == 1 and not cursor_now:
+            rows_compat = _fetch_uniprot_candidate_rows(query=query, size=query_size, timeout_sec=timeout_sec)
+            page = {"rows": rows_compat, "next_cursor": "", "cursor_in": "", "total_results": len(rows_compat)}
+        else:
+            page = _fetch_uniprot_candidate_page(
+                query=query,
+                size=query_size,
+                timeout_sec=timeout_sec,
+                cursor=cursor_now,
+            )
         page_rows = page.get("rows", [])
         if not isinstance(page_rows, list):
             page_rows = []
@@ -2237,13 +2241,13 @@ def _prepare_candidates(
     medium_ca_threshold: int,
     include_large_every_cycles: int,
     include_large_probe_on_non_large_cycle: bool,
-    oversize_recovery_if_idle: bool,
-    oversize_recovery_topk: int,
-    large_loop_enabled: bool,
-    failure_requeue_enabled: bool,
-    failure_requeue_max_retries: int,
-    failure_requeue_cooldown_cycles: int,
-    failure_requeue_categories: Sequence[str],
+    oversize_recovery_if_idle: bool = False,
+    oversize_recovery_topk: int = 1,
+    large_loop_enabled: bool = True,
+    failure_requeue_enabled: bool = False,
+    failure_requeue_max_retries: int = 0,
+    failure_requeue_cooldown_cycles: int = 0,
+    failure_requeue_categories: Sequence[str] = (),
     failure_requeue_retry_caps: Optional[Dict[str, int]] = None,
     failure_requeue_cooldown_by_category: Optional[Dict[str, int]] = None,
 ) -> List[Dict[str, Any]]:

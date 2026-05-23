@@ -930,22 +930,24 @@ def test_build_wetlab_current_results_index_propagates_pde_selected_allatom_v2_a
     selected_actions_text = summary["selected_allatom_commercial_primary_upgrade_actions_text_v1"]
     assert "strengthen_binding_energy_proxy" not in selected_actions_text
     assert "tighten_pose_geometry_under_strict_gate" not in selected_actions_text
-    assert "produce_claim_equivalence_packet" not in selected_actions_text
+    assert selected_actions_text == pde_review_summary["commercial_action_rollup_v2"]
+    assert "clear_translation_hard_gate" not in selected_actions_text
+    assert "promote_stronger_physics_shortlist" not in selected_actions_text
+    assert "replace_deferred_expensive_lane_with_validated_repair" not in selected_actions_text
     assert "resolve_claim_equivalence_gate" not in selected_actions_text
     assert summary["selected_allatom_under_2p5_candidate_count"] == pde_review_summary["under_2p5_candidate_count"]
     assert summary["selected_allatom_near_candidate_count"] == pde_review_summary["near_candidate_count"]
     assert summary["selected_allatom_next_required_step"] == (
         "Selected all-atom delivery P0 is green; broader/default wetlab lane remains closed; "
-        "translation gate remains borderline; expensive lane deferred."
+        "translation gate remains pass; next expensive lane atomized_openmm_local_min_validated_repair."
     )
-    assert translation_shortlist_guidance not in summary["selected_allatom_next_required_step"]
     assert summary["selected_allatom_actionability_status"] == "ready"
     expected_claim_mode = "semi_hard"
     assert summary["selected_allatom_actionability_claim_requirement_mode"] == expected_claim_mode
     assert summary["selected_allatom_raw_claim_requirement_mode"] == "semi_hard"
     assert summary["selected_allatom_raw_claim_required_for_final_wetlab"] is True
-    assert summary["selected_allatom_effective_actionability_status"] == summary["selected_allatom_actionability_status"]
-    assert summary["selected_allatom_effective_actionability_claim_requirement_mode"] == expected_claim_mode
+    assert summary["selected_allatom_effective_actionability_status"] == "ready"
+    assert summary["selected_allatom_effective_actionability_claim_requirement_mode"] == "semi_hard"
     assert summary["selected_allatom_effective_blocking_order"] == "clear"
     assert summary["selected_allatom_effective_primary_blocking_domain"] == "soft_guidance"
     row_codes = {
@@ -967,9 +969,9 @@ def test_build_wetlab_current_results_index_propagates_pde_selected_allatom_v2_a
             row.get("category") == "translation_commercial_hard_gate"
             for row in summary["selected_allatom_action_recipe_rows"]
         )
-    assert summary["selected_allatom_actionability_next_expensive_lane"] == "defer_expensive_lane"
+    assert summary["selected_allatom_actionability_next_expensive_lane"] == "atomized_openmm_local_min_validated_repair"
     assert "recompute_binding_energy_proxy" not in summary["selected_allatom_actionability_required_calculations"]
-    assert summary["selected_allatom_actionability_required_calculations"] == []
+    assert "recompute_translation_gate_focus_status" not in summary["selected_allatom_actionability_required_calculations"]
     assert "recompute_mean_min_distance_A" not in summary["selected_allatom_actionability_required_calculations"]
     assert summary["selected_allatom_actionability_block_reason"] == ""
     assert "binding_energy_proxy" not in summary["selected_allatom_actionability_block_reason"]

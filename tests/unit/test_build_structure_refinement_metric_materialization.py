@@ -41,6 +41,20 @@ def _pdb(path: Path, coords: list[tuple[float, float, float]]) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def _multi_chain_pdb(path: Path, chains: tuple[str, str] = ("A", "B")) -> None:
+    lines = []
+    serial = 1
+    for chain_id, offset in ((chains[0], 0.0), (chains[1], 10.0)):
+        for idx in range(1, 4):
+            lines.append(
+                f"ATOM  {serial:5d}  CA  ALA {chain_id}{idx:4d}    "
+                f"{offset + idx:8.3f}{0.0:8.3f}{0.0:8.3f}  1.00 20.00           C"
+            )
+            serial += 1
+    lines.append("END")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def test_kabsch_rmsd_handles_rigid_translation(tmp_path: Path) -> None:
     native = tmp_path / "native.pdb"
     candidate = tmp_path / "candidate.pdb"
@@ -96,21 +110,69 @@ def test_build_materialization_computes_rmsd_and_gdt_proxy(tmp_path: Path) -> No
     summary = payload["summary"]
     computed = [row for row in payload["rows"] if row.get("metric_status") == "metrics_computed"]
     interface = [row for row in payload["rows"] if row.get("metric_status") == "not_applicable_without_complex_interface_claim"]
-    assert summary["status"] == "structure_refinement_metric_materialization_partial"
+    assert summary["status"] == "structure_refinement_metric_materialization_ready"
     assert summary["rmsd_available_target_count"] == 1
+    assert summary["metric_backend"] == "internal_deterministic_ca_true_metrics"
+    assert summary["chain_aware_canonical_ca_matching"] is True
+    assert summary["tm_score_true_metric_available_target_count"] == 1
+    assert summary["gdt_ts_true_metric_available_target_count"] == 1
+    assert summary["lddt_ca_true_metric_available_target_count"] == 1
     assert summary["gdt_ts_proxy_available_target_count"] == 1
     assert summary["tm_score_ca_proxy_available_target_count"] == 1
     assert summary["lddt_ca_proxy_available_target_count"] == 1
+    assert summary["tm_score_available_target_count"] == 1
+    assert summary["gdt_available_target_count"] == 1
+    assert summary["lddt_available_target_count"] == 1
     assert summary["galaxy_class_claim_allowed"] is False
     assert len(computed) == 1
     assert computed[0]["ca_aligned_rmsd_A"] is not None
+    assert computed[0]["gdt_ts"] == 1.0
+    assert computed[0]["tm_score"] == 1.0
+    assert computed[0]["lddt_ca"] == 1.0
     assert computed[0]["gdt_ts_proxy"] == 1.0
     assert computed[0]["tm_score_ca_proxy"] == 1.0
     assert computed[0]["lddt_ca_proxy"] == 1.0
     assert interface and interface[0]["dockq_available"] is False
-    assert payload["claim_boundary"]["gdt_ts_proxy_is_not_true_galaxy_metric"] is True
-    assert payload["claim_boundary"]["tm_score_ca_proxy_is_not_true_tm_score"] is True
-    assert payload["claim_boundary"]["lddt_ca_proxy_is_not_true_lddt_or_molprobity"] is True
+    assert payload["claim_boundary"]["internal_ca_metrics_are_deterministic_true_metrics"] is True
+    assert payload["claim_boundary"]["molprobity_full_atom_quality_missing"] is True
+
+
+def test_chain_aware_matching_reports_selected_chain_counts(tmp_path: Path) -> None:
+    native = tmp_path / "native.pdb"
+    candidate = tmp_path / "candidate.pdb"
+    scores = tmp_path / "scores.csv"
+    queue = tmp_path / "queue.json"
+    _multi_chain_pdb(native)
+    _multi_chain_pdb(candidate, chains=("X", "Y"))
+    _write_csv(scores, [{"backmapped_pdb": str(candidate)}])
+    _write_json(
+        queue,
+        {
+            "rows": [
+                {
+                    "target": "T. cruzi PDE",
+                    "queue_id": "T. cruzi PDE::protein_alignment_metrics",
+                    "metric_task": "protein_alignment_metrics",
+                    "native_pdb_path": str(native),
+                    "allatom_scores_csv": str(scores),
+                }
+            ]
+        },
+    )
+
+    payload = mod.build_materialization(
+        queue_json=queue,
+        max_candidates_per_target=8,
+        generated_at_local="2026-05-17T00:00:00+09:00",
+    )
+
+    row = payload["rows"][0]
+    assert row["metric_status"] == "metrics_computed"
+    assert row["native_total_ca_count"] == 6
+    assert row["candidate_total_ca_count"] == 6
+    assert row["native_ca_count"] == 3
+    assert row["candidate_ca_count"] == 3
+    assert row["matched_ca_count"] == 3
 
 
 def test_cli_writes_outputs(tmp_path: Path) -> None:

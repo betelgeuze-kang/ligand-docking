@@ -900,13 +900,14 @@ def build_report(args: argparse.Namespace) -> Dict[str, Any]:
 
     feature_quality = _extract_feature_quality(feature_df)
     max_missing_rate = _safe_float(feature_quality.get("max_missing_rate"))
+    feature_available = bool(feature_path) and feature_df is not None and not feature_df.empty
     checks.append(
         _build_check(
             "feature_matrix_targets",
             feature_quality.get("targets"),
             int(args.min_feature_targets),
             None
-            if feature_quality.get("targets") is None
+            if (not feature_available) or feature_quality.get("targets") is None
             else bool(int(feature_quality.get("targets", 0)) >= int(args.min_feature_targets)),
             feature_path,
             "상품 DB용 feature matrix 타깃 커버리지",
@@ -929,7 +930,9 @@ def build_report(args: argparse.Namespace) -> Dict[str, Any]:
             "feature_matrix_variable_cols",
             int(feature_quality.get("variable_cols_count", 0)),
             int(args.feature_min_variable_cols),
-            bool(int(feature_quality.get("variable_cols_count", 0)) >= int(args.feature_min_variable_cols)),
+            None
+            if not feature_available
+            else bool(int(feature_quality.get("variable_cols_count", 0)) >= int(args.feature_min_variable_cols)),
             feature_path,
             "핵심 feature 컬럼 변별성(고정값 제외)",
         )
@@ -939,7 +942,9 @@ def build_report(args: argparse.Namespace) -> Dict[str, Any]:
             "feature_matrix_constant_flag_cols",
             int(feature_quality.get("constant_flag_cols_count", 0)),
             int(args.feature_max_constant_flag_cols),
-            bool(int(feature_quality.get("constant_flag_cols_count", 0)) <= int(args.feature_max_constant_flag_cols)),
+            None
+            if not feature_available
+            else bool(int(feature_quality.get("constant_flag_cols_count", 0)) <= int(args.feature_max_constant_flag_cols)),
             feature_path,
             "플래그/조건 컬럼 상수화 허용 상한",
         )

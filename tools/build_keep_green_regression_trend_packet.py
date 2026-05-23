@@ -22,7 +22,7 @@ DEFAULT_OUT_MD = "runs/keep_green_regression_trend_packet_current.md"
 DEFAULT_MINIMUM_REPEATED_SAMPLE_COUNT = 3
 
 NIGHTLY_TOP_LEVEL_RE = re.compile(
-    r"^ligand_htvs_nightly_\d{4}-\d{2}-\d{2}(?:_(?:attempt\d+|smoke|stage6_top_level_reentry(?:_[a-z0-9_]+)?|summary))?_summary\.json$"
+    r"^ligand_htvs_nightly_\d{4}-\d{2}-\d{2}(?:_[A-Za-z0-9][A-Za-z0-9_-]*)?_summary\.json$"
 )
 
 
@@ -115,6 +115,24 @@ def _nightly_label(path: str) -> str:
     return name.removeprefix("ligand_htvs_nightly_").removesuffix("_summary.json")
 
 
+def _is_top_level_nightly_payload(payload: dict[str, Any]) -> bool:
+    run_scope = _text(payload.get("run_scope"))
+    if run_scope == "smoke_then_full":
+        return True
+    stages = payload.get("stages")
+    service_result = payload.get("service_result")
+    if run_scope in {"smoke", "full"} and isinstance(stages, dict) and isinstance(service_result, dict):
+        return "stage2_trajectory_generation" in stages or "stage6_operational_gate" in stages
+    artifacts = payload.get("artifacts")
+    if isinstance(stages, dict) and ("smoke" in stages or "full" in stages):
+        return True
+    if isinstance(artifacts, dict) and (
+        _text(artifacts.get("smoke_summary_json")) or _text(artifacts.get("full_summary_json"))
+    ):
+        return True
+    return False
+
+
 def _load_nightly_history_from_runs(limit: int) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for path in sorted((ROOT / "runs").glob("ligand_htvs_nightly_*summary.json")):
@@ -123,6 +141,8 @@ def _load_nightly_history_from_runs(limit: int) -> list[dict[str, Any]]:
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
+            continue
+        if not _is_top_level_nightly_payload(payload):
             continue
         if not isinstance(payload.get("pass"), bool):
             continue

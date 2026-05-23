@@ -6,6 +6,7 @@ import datetime as dt
 import json
 import os
 import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -805,7 +806,7 @@ def main() -> int:
     ap.add_argument('--loop', action=argparse.BooleanOptionalAction, default=False)
     ap.add_argument('--interval-sec', type=float, default=5.0)
     ap.add_argument('--clear-screen', action=argparse.BooleanOptionalAction, default=False)
-    ap.add_argument('--color', action=argparse.BooleanOptionalAction, default=True)
+    ap.add_argument('--color', action=argparse.BooleanOptionalAction, default=None)
     args = ap.parse_args()
 
     run_root = (ROOT / args.run_root).resolve() if not Path(args.run_root).is_absolute() else Path(args.run_root).resolve()
@@ -813,7 +814,8 @@ def main() -> int:
     while True:
         if args.clear_screen:
             print("\033[2J\033[H", end="")
-        _print_snapshot(run_root, bool(args.color))
+        color = bool(sys.stdout.isatty()) if args.color is None else bool(args.color)
+        _print_snapshot(run_root, color)
         if not args.loop:
             break
         time.sleep(max(0.2, float(args.interval_sec)))

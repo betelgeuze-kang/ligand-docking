@@ -248,17 +248,23 @@ def selected_allatom_green_next_required_step(
     if not (wetlab_gate_pass and final_gate_pass and claim_ready_for_allatom):
         return fallback
 
+    translation_status = _text(translation_gate_focus_status)
+    lane = _text(recommended_next_expensive_lane)
+    if translation_status and translation_status not in {"pass", "ready", "green"}:
+        return fallback or (
+            f"Selected all-atom commercial promotion remains blocked; translation gate remains {translation_status}; "
+            "keep the expensive lane deferred."
+        )
+    if lane == "defer_expensive_lane":
+        return fallback or "Selected all-atom commercial promotion remains blocked; keep the expensive lane deferred."
+
     parts = [
         "Selected all-atom delivery P0 is green",
         "broader/default wetlab lane remains closed",
     ]
-    translation_status = _text(translation_gate_focus_status)
     if translation_status:
         parts.append(f"translation gate remains {translation_status}")
-    lane = _text(recommended_next_expensive_lane)
-    if lane == "defer_expensive_lane":
-        parts.append("expensive lane deferred")
-    elif lane:
+    if lane:
         parts.append(f"next expensive lane {lane}")
     return "; ".join(parts) + "."
 

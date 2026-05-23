@@ -117,6 +117,22 @@ LOCAL_ENGINE_STAGE6_GATE_QUEUE = {
     ],
 }
 
+LOCAL_ENGINE_CLEAR_QUEUE = {
+    "summary": {
+        "local_only_mode": True,
+        "row_count": 5,
+        "blocked_count": 0,
+        "partial_count": 0,
+        "keep_green_count": 5,
+        "parked_science_blocker_count": 0,
+        "queue_clear": True,
+        "top_priority_id": "nightly_reliability",
+        "top_priority_status": "keep_green",
+        "next_required_step": "Commercialization queue is clear for the current local-delivery scope.",
+    },
+    "rows": [],
+}
+
 WETLAB_EXECUTION_READINESS_QUEUE = {
     "summary": {
         "queue_ready": True,
@@ -156,6 +172,46 @@ WETLAB_EXECUTION_READINESS_QUEUE = {
             ),
         }
     ],
+}
+
+WETLAB_EXECUTION_CLEAR_QUEUE = {
+    "summary": {
+        "queue_ready": True,
+        "queue_artifact": "runs/wetlab_execution_readiness_queue_current.md",
+        "row_count": 5,
+        "blocked_count": 0,
+        "partial_count": 0,
+        "ready_count": 5,
+        "primary_watch_liveness": "attached",
+        "antitarget_watch_liveness": "attached",
+        "watch_gap_count": 0,
+        "execution_ready_now_row_count": 0,
+        "antitarget_ready_now_row_count": 1,
+        "ready_to_send_track_count": 5,
+        "selected_allatom_wetlab_gate_pass": True,
+        "top_priority_lane_id": "primary_dispatch_lane",
+        "top_priority_status": "ready",
+        "status_line": "send=5 ready | selected_allatom=pass",
+        "next_required_step": "Wetlab execution readiness is green for the current local-delivery scope.",
+    },
+    "rows": [],
+}
+
+TRANSPORTER_PLACEHOLDER_ACCOUNTING_CLOSED = {
+    "summary": {
+        "queue_row_count": 12,
+        "placeholder_driven_rows": 0,
+        "ready_for_apply_rows": 6,
+        "top_blocker_id": "placeholder_packet_rows",
+    }
+}
+
+AQP1_FUNCTIONAL_SURROGATE_ACCOUNTING_CLOSED = {
+    "summary": {
+        "functional_kcal_surrogate_ready_count": 3,
+        "functional_kcal_surrogate_closure_allowed": True,
+        "direct_binding_gap_still_open": True,
+    }
 }
 
 
@@ -426,7 +482,7 @@ def test_build_commercialization_readiness_report_surfaces_negative_primary_prob
                 "resolution_decision": "keep_review_only_no_authoritative_negative_promotion",
                 "next_required_step": (
                     "Open sodium nitroprusside as the first AQP1 primary-probe follow-up lane, keep it review-only while "
-                    "ChEMBL exact target-pair activity remains absent, and use dimethyl sulfoxide only as solvent fallback."
+                    "sodium nitroprusside has no exact human AQP1 ChEMBL target-pair activity row, and use dimethyl sulfoxide only as solvent fallback."
                 ),
             }
         },
@@ -494,3 +550,40 @@ def test_build_commercialization_readiness_report_propagates_nightly_gate_burndo
         "mean_min_distance_a",
         "viewer mesh/canvas gap",
     )
+
+
+def test_build_commercialization_readiness_report_closes_tracked_local_accounting() -> None:
+    payload = mod.build_payload(
+        {"rows": []},
+        {"summary": {"endpoint_status": "locked_decoy_apply_safe_router_blocked"}},
+        {"summary": {"decision": "go_literature_anchor_default_mask_promotion"}},
+        {"summary": {"status": "operator_packet_ready", "blocker_reason": "packet blocker"}},
+        {"summary": {"ready_row_count": 6, "workbook_row_count": 12}},
+        {"summary": {"ready_for_apply_row_count": 8, "matched_queue_rows": 14}},
+        {"summary": {"current_phase": "blocker_closure_seed_row_promotion"}},
+        {"summary": {"top_blocker_signal": "placeholder_driven_rows=0; ready_for_apply_rows=6"}},
+        {"summary": {"queue_row_count": 8, "top_queue_id": "seed_core_binder_01", "blocked_count": 2}},
+        transporter_placeholder_burndown_queue=TRANSPORTER_PLACEHOLDER_ACCOUNTING_CLOSED,
+        aqp1_functional_kcal_surrogate_packet=AQP1_FUNCTIONAL_SURROGATE_ACCOUNTING_CLOSED,
+        local_engine_commercialization_queue=LOCAL_ENGINE_CLEAR_QUEUE,
+        wetlab_execution_readiness_queue=WETLAB_EXECUTION_CLEAR_QUEUE,
+    )
+
+    summary = payload["summary"]
+    assert summary["tracked_readiness_accounting_closed"] is True
+    assert summary["transporter_placeholder_accounting_closed"] is True
+    assert summary["aqp1_functional_surrogate_accounting_closed"] is True
+    assert summary["wetlab_execution_readiness_queue_clear"] is True
+    _contains_tokens(
+        summary["main_platform_story"],
+        "tracked local commercialization readiness accounting is closed",
+        "direct binding kcal claims remain blank",
+        "outside this closed local readiness claim",
+    )
+    _contains_tokens(
+        summary["next_required_step"],
+        "restricted local-delivery evidence",
+        "post-readiness lanes",
+    )
+    assert "all-category commercialization is still held back" not in summary["main_platform_story"]
+    assert "transporter closure queue starting" not in summary["next_required_step"]

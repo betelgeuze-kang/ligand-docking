@@ -13,6 +13,7 @@ RUNS = Path("runs")
 SKILL_RUNS = RUNS / "life_science_skill_crosscheck"
 
 DEFAULT_AQP1_CHEMBL_ACTIVITY_JSON = SKILL_RUNS / "chembl_activity_aqp1_sodium_nitroprusside.json"
+DEFAULT_AQP1_CHEMBL_TARGET_ACTIVITY_JSON = SKILL_RUNS / "chembl_activity_aqp1_target_latest.json"
 DEFAULT_GLUT1_CYTO_CHB_ACTIVITY_JSON = SKILL_RUNS / "chembl_activity_glut1_cytochalasin_b.json"
 DEFAULT_GLUT1_WZB117_ACTIVITY_JSON = SKILL_RUNS / "chembl_activity_glut1_wzb117.json"
 DEFAULT_GLUT1_STF31_ACTIVITY_JSON = SKILL_RUNS / "chembl_activity_glut1_stf31.json"
@@ -71,6 +72,34 @@ def _quantitative_activity_count(payload: dict[str, Any]) -> int:
     return sum(1 for row in _activities(payload) if _text(row.get("standard_type")) and _text(row.get("standard_value")))
 
 
+def _target_functional_quantitative_activity_count(payload: dict[str, Any]) -> int:
+    return sum(
+        1
+        for row in _activities(payload)
+        if _text(row.get("standard_type")).upper() in {"IC50", "EC50"}
+        and _text(row.get("standard_value"))
+        and _text(row.get("target_organism")).lower() == "homo sapiens"
+    )
+
+
+def _target_direct_binding_activity_count(payload: dict[str, Any]) -> int:
+    return sum(
+        1
+        for row in _activities(payload)
+        if _text(row.get("standard_type")).upper() in {"KD", "KI"}
+        and _text(row.get("standard_value"))
+        and _text(row.get("target_organism")).lower() == "homo sapiens"
+    )
+
+
+def _target_unquantified_not_active_count(payload: dict[str, Any]) -> int:
+    return sum(
+        1
+        for row in _activities(payload)
+        if _text(row.get("activity_comment")).lower() == "not active" and not _text(row.get("standard_value"))
+    )
+
+
 def _pchembl_values(payload: dict[str, Any]) -> str:
     values = [_text(row.get("pchembl_value")) for row in _activities(payload) if _text(row.get("pchembl_value"))]
     return ",".join(values)
@@ -122,6 +151,7 @@ def _rcsb_title(payload: dict[str, Any]) -> str:
 
 def build_payload(
     aqp1_chembl_activity: dict[str, Any],
+    aqp1_chembl_target_activity: dict[str, Any],
     glut1_cyto_activity: dict[str, Any],
     glut1_wzb117_activity: dict[str, Any],
     glut1_stf31_activity: dict[str, Any],
@@ -135,6 +165,28 @@ def build_payload(
     rcsb_4pyp: dict[str, Any],
 ) -> dict[str, Any]:
     rows = [
+        {
+            "target_id": "AQP1",
+            "target_accession": "P29972",
+            "target_chembl_id": "CHEMBL4523210",
+            "candidate": "AQP1 target-wide ChEMBL functional inventory",
+            "candidate_chembl_id": "",
+            "evidence_role": "target_wide_functional_activity_inventory",
+            "chembl_exact_activity_count": _activity_count(aqp1_chembl_target_activity),
+            "chembl_quantitative_activity_count": _quantitative_activity_count(aqp1_chembl_target_activity),
+            "chembl_functional_quantitative_activity_count": _target_functional_quantitative_activity_count(
+                aqp1_chembl_target_activity
+            ),
+            "chembl_direct_binding_activity_count": _target_direct_binding_activity_count(aqp1_chembl_target_activity),
+            "chembl_unquantified_not_active_count": _target_unquantified_not_active_count(aqp1_chembl_target_activity),
+            "best_ic50_nm": _best_ic50_nm(aqp1_chembl_target_activity),
+            "pubmed_query_hit_count": _pubmed_count(pubmed_aqp1_snp),
+            "bindingdb_target_affinity_count": _bindingdb_affinity_count(bindingdb_aqp1),
+            "direct_negative_quantitative_row_found": False,
+            "authoritative_negative_apply_allowed": False,
+            "interpretation": "exact_human_functional_activity_present_no_direct_binding_kcal",
+            "source_artifacts": "runs/life_science_skill_crosscheck/chembl_activity_aqp1_target_latest.json;runs/life_science_skill_crosscheck/bindingdb_aqp1_p29972.json",
+        },
         {
             "target_id": "AQP1",
             "target_accession": "P29972",
@@ -247,6 +299,15 @@ def build_payload(
         "aqp1_pubmed_anchor_title": _summary_title(pubmed_key_summaries, "23123479"),
         "glut1_cytochalasin_b_pubmed_title": _summary_title(pubmed_key_summaries, "27078104"),
         "aqp1_bindingdb_affinity_count": _bindingdb_affinity_count(bindingdb_aqp1),
+        "aqp1_target_chembl_exact_activity_count": _activity_count(aqp1_chembl_target_activity),
+        "aqp1_target_chembl_quantitative_activity_count": _quantitative_activity_count(aqp1_chembl_target_activity),
+        "aqp1_target_chembl_functional_quantitative_count": _target_functional_quantitative_activity_count(
+            aqp1_chembl_target_activity
+        ),
+        "aqp1_target_chembl_direct_binding_count": _target_direct_binding_activity_count(aqp1_chembl_target_activity),
+        "aqp1_target_chembl_unquantified_not_active_count": _target_unquantified_not_active_count(
+            aqp1_chembl_target_activity
+        ),
         "glut1_bindingdb_affinity_count": _bindingdb_affinity_count(bindingdb_glut1),
         "glut1_positive_exact_activity_count": glut1_positive_exact_activity_count,
         "direct_negative_quantitative_row_found_count": direct_negative_rows,
@@ -254,7 +315,9 @@ def build_payload(
         "negative_evidence_closure_allowed": direct_negative_rows >= 6 and authoritative_negative_rows >= 6,
         "current_decision": "keep_transporter_negative_slots_review_only",
         "next_required_step": (
-            "Do not promote AQP1/GLUT1 negative rows. AQP1 has literature context but no ChEMBL/BindingDB exact quantitative target-pair row; "
+            "Do not promote AQP1/GLUT1 negative rows. AQP1 has exact human functional ChEMBL IC50/EC50 rows, "
+            "but AQP1 BindingDB affinity/direct-binding rows remain absent and sodium nitroprusside has no exact "
+            "AQP1 activity row; keep AQP1 kcal as functional surrogate only and keep replacement_reference_binding_kcal_mol blank. "
             "GLUT1 has positive inhibitor evidence for cytochalasin B/WZB117 but no negative replacement evidence. Continue exact target-pair negative evidence acquisition."
         ),
     }
@@ -277,6 +340,10 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- glut1_chembl_target_id: `{s['glut1_chembl_target_id']}`",
         f"- rcsb_glut1_entry: `{s['rcsb_glut1_entry']}`",
         f"- aqp1_bindingdb_affinity_count: `{s['aqp1_bindingdb_affinity_count']}`",
+        f"- aqp1_target_chembl_exact_activity_count: `{s['aqp1_target_chembl_exact_activity_count']}`",
+        f"- aqp1_target_chembl_functional_quantitative_count: `{s['aqp1_target_chembl_functional_quantitative_count']}`",
+        f"- aqp1_target_chembl_direct_binding_count: `{s['aqp1_target_chembl_direct_binding_count']}`",
+        f"- aqp1_target_chembl_unquantified_not_active_count: `{s['aqp1_target_chembl_unquantified_not_active_count']}`",
         f"- glut1_bindingdb_affinity_count: `{s['glut1_bindingdb_affinity_count']}`",
         f"- glut1_positive_exact_activity_count: `{s['glut1_positive_exact_activity_count']}`",
         f"- direct_negative_quantitative_row_found_count: `{s['direct_negative_quantitative_row_found_count']}`",
@@ -290,13 +357,14 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         "",
         "## Crosscheck Rows",
         "",
-        "| target | candidate | role | ChEMBL exact | ChEMBL quantitative | best IC50 nM | PubMed hits | BindingDB target affinities | interpretation |",
-        "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |",
+        "| target | candidate | role | ChEMBL exact | ChEMBL quantitative | direct binding | best IC50 nM | PubMed hits | BindingDB target affinities | interpretation |",
+        "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
             f"| `{row['target_id']}` | `{row['candidate']}` | `{row['evidence_role']}` | "
             f"{row['chembl_exact_activity_count']} | {row['chembl_quantitative_activity_count']} | "
+            f"{row.get('chembl_direct_binding_activity_count', 0)} | "
             f"`{row.get('best_ic50_nm', '')}` | {row['pubmed_query_hit_count']} | "
             f"{row['bindingdb_target_affinity_count']} | `{row['interpretation']}` |"
         )
@@ -307,6 +375,7 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build a transporter external evidence crosscheck from skill query snapshots.")
     parser.add_argument("--aqp1-chembl-activity-json", default=str(DEFAULT_AQP1_CHEMBL_ACTIVITY_JSON))
+    parser.add_argument("--aqp1-chembl-target-activity-json", default=str(DEFAULT_AQP1_CHEMBL_TARGET_ACTIVITY_JSON))
     parser.add_argument("--glut1-cyto-activity-json", default=str(DEFAULT_GLUT1_CYTO_CHB_ACTIVITY_JSON))
     parser.add_argument("--glut1-wzb117-activity-json", default=str(DEFAULT_GLUT1_WZB117_ACTIVITY_JSON))
     parser.add_argument("--glut1-stf31-activity-json", default=str(DEFAULT_GLUT1_STF31_ACTIVITY_JSON))
@@ -328,6 +397,7 @@ def main() -> None:
     args = parse_args()
     payload = build_payload(
         _load_json(args.aqp1_chembl_activity_json),
+        _load_json(args.aqp1_chembl_target_activity_json),
         _load_json(args.glut1_cyto_activity_json),
         _load_json(args.glut1_wzb117_activity_json),
         _load_json(args.glut1_stf31_activity_json),
