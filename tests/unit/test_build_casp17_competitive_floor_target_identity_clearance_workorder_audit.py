@@ -180,6 +180,9 @@ def test_clearance_workorder_audit_blocks_missing_native_and_placeholders(tmp_pa
     assert payload["summary"]["clearance_workorder_audit_status"] == "blocked"
     assert payload["summary"]["audit_pass_count"] == 1
     assert payload["summary"]["audit_blocked_count"] == 1
+    assert payload["summary"]["prediction_present_count"] == 2
+    assert payload["summary"]["prediction_protein_atom_count"] == 2
+    assert payload["summary"]["prediction_coordinate_valid_count"] == 2
     assert payload["summary"]["native_valid_count"] == 1
     assert payload["summary"]["native_protein_atom_count"] == 1
     assert payload["summary"]["native_coordinate_valid_count"] == 1
@@ -200,6 +203,10 @@ def test_clearance_workorder_audit_blocks_missing_native_and_placeholders(tmp_pa
     assert by_id["H1001"]["native_protein_atom_record_count"] == 1
     assert by_id["H1001"]["native_chain_id_count"] == 1
     assert by_id["H1001"]["native_coordinate_status"] == "valid"
+    assert by_id["H1001"]["prediction_file_status"] == "present"
+    assert by_id["H1001"]["prediction_protein_atom_record_count"] == 1
+    assert by_id["H1001"]["prediction_chain_id_count"] == 1
+    assert by_id["H1001"]["prediction_coordinate_status"] == "valid"
     assert by_id["H1001"]["manifest_provenance_status"] == "matched"
     assert by_id["H1001"]["native_prediction_identity_status"] == "distinct"
     assert by_id["H1002"]["audit_status"] == "blocked"
@@ -451,6 +458,111 @@ def test_clearance_workorder_audit_blocks_native_with_invalid_coordinates(tmp_pa
     assert row["native_file_status"] == "invalid"
     assert row["native_coordinate_status"] == "invalid"
     assert "native_pdb_coordinates_invalid" in row["blockers"]
+
+
+def test_clearance_workorder_audit_blocks_hetatm_only_prediction(tmp_path: Path) -> None:
+    target_id = "H1001"
+    prediction = tmp_path / "H1001_model_1.pdb"
+    native = tmp_path / "H1001_native.pdb"
+    prediction.write_text(
+        "HETATM    1  C1  LIG A   1       1.000   2.000   3.000  1.00 70.00           C\n",
+        encoding="utf-8",
+    )
+    native.write_text(
+        "ATOM      1 CA   GLY A   1       4.000   5.000   6.000  1.00 60.00           C\n",
+        encoding="utf-8",
+    )
+    provenance_csv = tmp_path / "provenance_template.csv"
+    manifest_csv = tmp_path / "manifest_stub.csv"
+    evidence_ref = tmp_path / "no_leak_evidence.md"
+    evidence_ref.write_text("H1001 operator reviewed no-leak evidence\n", encoding="utf-8")
+    _write_csv(provenance_csv, [_ready_provenance(target_id, str(evidence_ref))])
+    _write_csv(manifest_csv, [_ready_manifest(target_id, prediction, native)])
+    workorder_json = tmp_path / "workorder.json"
+    _write_json(
+        workorder_json,
+        {
+            "summary": {"clearance_workorder_status": "ready_for_manifest_stub_review"},
+            "rows": [
+                {
+                    "target_id": target_id,
+                    "workorder_status": "ready_for_manifest_stub_review",
+                    "native_dropzone_pdb": str(native),
+                    "provenance_template_csv": str(provenance_csv),
+                    "manifest_stub_csv": str(manifest_csv),
+                    "prediction_pdb": str(prediction),
+                }
+            ],
+        },
+    )
+    args = mod.parse_args(_args(tmp_path, workorder_json))
+
+    payload = mod.build_payload(args)
+
+    row = payload["rows"][0]
+    assert payload["summary"]["clearance_workorder_audit_status"] == "blocked"
+    assert payload["summary"]["prediction_present_count"] == 0
+    assert payload["summary"]["prediction_protein_atom_count"] == 0
+    assert payload["summary"]["prediction_coordinate_valid_count"] == 0
+    assert row["prediction_file_status"] == "invalid"
+    assert row["prediction_atom_record_count"] == 1
+    assert row["prediction_protein_atom_record_count"] == 0
+    assert row["prediction_coordinate_status"] == "invalid"
+    assert row["native_prediction_identity_status"] == "waiting_on_prediction"
+    assert "prediction_pdb_has_no_protein_atom_records" in row["blockers"]
+    assert row["next_action"] == "replace the prediction PDB with an internal protein-coordinate model file"
+
+
+def test_clearance_workorder_audit_blocks_prediction_with_invalid_coordinates(tmp_path: Path) -> None:
+    target_id = "H1001"
+    prediction = tmp_path / "H1001_model_1.pdb"
+    native = tmp_path / "H1001_native.pdb"
+    prediction.write_text(
+        "ATOM      1 CA   ALA A   1       BADVAL   2.000   3.000  1.00 70.00           C\n",
+        encoding="utf-8",
+    )
+    native.write_text(
+        "ATOM      1 CA   GLY A   1       4.000   5.000   6.000  1.00 60.00           C\n",
+        encoding="utf-8",
+    )
+    provenance_csv = tmp_path / "provenance_template.csv"
+    manifest_csv = tmp_path / "manifest_stub.csv"
+    evidence_ref = tmp_path / "no_leak_evidence.md"
+    evidence_ref.write_text("H1001 operator reviewed no-leak evidence\n", encoding="utf-8")
+    _write_csv(provenance_csv, [_ready_provenance(target_id, str(evidence_ref))])
+    _write_csv(manifest_csv, [_ready_manifest(target_id, prediction, native)])
+    workorder_json = tmp_path / "workorder.json"
+    _write_json(
+        workorder_json,
+        {
+            "summary": {"clearance_workorder_status": "ready_for_manifest_stub_review"},
+            "rows": [
+                {
+                    "target_id": target_id,
+                    "workorder_status": "ready_for_manifest_stub_review",
+                    "native_dropzone_pdb": str(native),
+                    "provenance_template_csv": str(provenance_csv),
+                    "manifest_stub_csv": str(manifest_csv),
+                    "prediction_pdb": str(prediction),
+                }
+            ],
+        },
+    )
+    args = mod.parse_args(_args(tmp_path, workorder_json))
+
+    payload = mod.build_payload(args)
+
+    row = payload["rows"][0]
+    assert payload["summary"]["clearance_workorder_audit_status"] == "blocked"
+    assert payload["summary"]["prediction_present_count"] == 0
+    assert payload["summary"]["prediction_protein_atom_count"] == 1
+    assert payload["summary"]["prediction_coordinate_valid_count"] == 0
+    assert row["prediction_file_status"] == "invalid"
+    assert row["prediction_protein_atom_record_count"] == 1
+    assert row["prediction_coordinate_status"] == "invalid"
+    assert row["native_prediction_identity_status"] == "waiting_on_prediction"
+    assert "prediction_pdb_coordinates_invalid" in row["blockers"]
+    assert row["next_action"] == "replace the prediction PDB with an internal protein-coordinate model file"
 
 
 def test_clearance_workorder_audit_blocks_missing_local_evidence_ref(tmp_path: Path) -> None:

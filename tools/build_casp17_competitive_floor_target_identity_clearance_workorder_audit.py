@@ -38,6 +38,10 @@ AUDIT_COLUMNS = [
     "manifest_provenance_status",
     "manifest_provenance_mismatch_count",
     "prediction_file_status",
+    "prediction_atom_record_count",
+    "prediction_protein_atom_record_count",
+    "prediction_chain_id_count",
+    "prediction_coordinate_status",
     "native_prediction_identity_status",
     "blockers",
     "next_action",
@@ -159,17 +163,25 @@ def _date_or_none(value: Any) -> dt.date | None:
     return None
 
 
-def _native_status(path_like: str | Path) -> tuple[str, int, int, int, str, list[str]]:
+def _pdb_status(
+    path_like: str | Path,
+    *,
+    role: str,
+    missing_coordinate_status: str,
+    path_missing_blocker: str | None = None,
+) -> tuple[str, int, int, int, str, list[str]]:
     path_text = _text(path_like)
     if not path_text:
-        return "missing", 0, 0, 0, "waiting_on_native", ["native_dropzone_path_missing"]
+        blocker = path_missing_blocker or f"{role}_pdb_missing"
+        return "missing", 0, 0, 0, missing_coordinate_status, [blocker]
     path = _resolve(path_text)
     if not path.exists():
-        return "missing", 0, 0, 0, "waiting_on_native", ["native_pdb_missing"]
+        missing_blocker = f"{role}_pdb_missing" if role == "native" else f"{role}_pdb_not_found"
+        return "missing", 0, 0, 0, missing_coordinate_status, [missing_blocker]
     try:
         lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     except OSError:
-        return "unreadable", 0, 0, 0, "unreadable", ["native_pdb_unreadable"]
+        return "unreadable", 0, 0, 0, "unreadable", [f"{role}_pdb_unreadable"]
     atom_lines = [line for line in lines if line.startswith(("ATOM", "HETATM"))]
     protein_atom_lines = [line for line in lines if line.startswith("ATOM")]
     atom_count = len(atom_lines)
@@ -182,15 +194,32 @@ def _native_status(path_like: str | Path) -> tuple[str, int, int, int, str, list
             float(line[38:46])
             float(line[46:54])
         except ValueError:
-            coordinate_blockers.append("native_pdb_coordinates_invalid")
+            coordinate_blockers.append(f"{role}_pdb_coordinates_invalid")
             break
     if atom_count <= 0:
-        return "invalid", atom_count, protein_atom_count, len(chain_ids), "invalid", ["native_pdb_has_no_atom_records"]
+        return "invalid", atom_count, protein_atom_count, len(chain_ids), "invalid", [
+            f"{role}_pdb_has_no_atom_records"
+        ]
     if protein_atom_count <= 0:
-        return "invalid", atom_count, protein_atom_count, len(chain_ids), "invalid", ["native_pdb_has_no_protein_atom_records"]
+        return "invalid", atom_count, protein_atom_count, len(chain_ids), "invalid", [
+            f"{role}_pdb_has_no_protein_atom_records"
+        ]
     if coordinate_blockers:
         return "invalid", atom_count, protein_atom_count, len(chain_ids), "invalid", coordinate_blockers
     return "present", atom_count, protein_atom_count, len(chain_ids), "valid", []
+
+
+def _native_status(path_like: str | Path) -> tuple[str, int, int, int, str, list[str]]:
+    return _pdb_status(
+        path_like,
+        role="native",
+        missing_coordinate_status="waiting_on_native",
+        path_missing_blocker="native_dropzone_path_missing",
+    )
+
+
+def _prediction_status(path_like: str | Path) -> tuple[str, int, int, int, str, list[str]]:
+    return _pdb_status(path_like, role="prediction", missing_coordinate_status="waiting_on_prediction")
 
 
 def _evidence_ref_status(value: Any, *, target_id: str) -> tuple[str, str, str, str, list[str]]:
@@ -349,6 +378,8 @@ def _next_action(blockers: list[str]) -> str:
         return "place the cleared native PDB in the per-target native dropzone"
     if any(blocker.startswith("native_pdb_") or blocker == "native_prediction_identity_unreadable" for blocker in blockers):
         return "replace the native dropzone file with an independently cleared native PDB distinct from the prediction"
+    if any(blocker.startswith("prediction_pdb_") for blocker in blockers):
+        return "replace the prediction PDB with an internal protein-coordinate model file"
     if any(blocker.startswith("evidence_ref") for blocker in blockers):
         return "attach a local no-leak evidence file and record its path in evidence_ref"
     if any(blocker.startswith("manifest_provenance_") for blocker in blockers):
@@ -400,14 +431,15 @@ def _audit_row(workorder_row: dict[str, Any]) -> dict[str, Any]:
         manifest_readable=not manifest_file_blockers,
         blockers=manifest_provenance_blockers,
     )
-    prediction_file_status = "present"
     prediction = _text(manifest_row.get("prediction_pdb") or workorder_row.get("prediction_pdb") or workorder_row.get("ts_prediction_pdb"))
-    if not prediction:
-        prediction_file_status = "missing"
-        manifest_blockers.append("prediction_pdb_missing")
-    elif not _resolve(prediction).exists():
-        prediction_file_status = "missing"
-        manifest_blockers.append("prediction_pdb_not_found")
+    (
+        prediction_file_status,
+        prediction_atom_count,
+        prediction_protein_atom_count,
+        prediction_chain_id_count,
+        prediction_coordinate_status,
+        prediction_blockers,
+    ) = _prediction_status(prediction)
     native_prediction_identity_blockers: list[str] = []
     native_prediction_identity_status = _native_prediction_identity_status(
         native_dropzone,
@@ -418,6 +450,7 @@ def _audit_row(workorder_row: dict[str, Any]) -> dict[str, Any]:
     )
     blockers = [
         *native_blockers,
+        *prediction_blockers,
         *provenance_blockers,
         *evidence_ref_blockers,
         *manifest_blockers,
@@ -446,6 +479,10 @@ def _audit_row(workorder_row: dict[str, Any]) -> dict[str, Any]:
         "manifest_provenance_status": manifest_provenance_status,
         "manifest_provenance_mismatch_count": manifest_provenance_mismatch_count,
         "prediction_file_status": prediction_file_status,
+        "prediction_atom_record_count": prediction_atom_count,
+        "prediction_protein_atom_record_count": prediction_protein_atom_count,
+        "prediction_chain_id_count": prediction_chain_id_count,
+        "prediction_coordinate_status": prediction_coordinate_status,
         "native_prediction_identity_status": native_prediction_identity_status,
         "blockers": ",".join(dict.fromkeys(blockers)),
         "next_action": _next_action(blockers),
@@ -497,6 +534,8 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             int(row["manifest_provenance_mismatch_count"]) for row in rows
         ),
         "prediction_present_count": sum(1 for row in rows if row["prediction_file_status"] == "present"),
+        "prediction_protein_atom_count": sum(int(row["prediction_protein_atom_record_count"]) for row in rows),
+        "prediction_coordinate_valid_count": sum(1 for row in rows if row["prediction_coordinate_status"] == "valid"),
         "native_prediction_distinct_count": sum(
             1 for row in rows if row["native_prediction_identity_status"] == "distinct"
         ),
@@ -528,6 +567,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- clearance_workorder_status: `{summary['clearance_workorder_status'] or '-'}`",
         f"- audit pass/blocked/total: `{summary['audit_pass_count']}/{summary['audit_blocked_count']}/{summary['audit_target_count']}`",
         f"- prediction/native/provenance/manifest ready: `{summary['prediction_present_count']}/{summary['native_valid_count']}/{summary['provenance_ready_count']}/{summary['manifest_stub_ready_count']}`",
+        f"- prediction protein atoms/coordinate-valid: `{summary['prediction_protein_atom_count']}/{summary['prediction_coordinate_valid_count']}`",
         f"- native protein atoms/coordinate-valid: `{summary['native_protein_atom_count']}/{summary['native_coordinate_valid_count']}`",
         f"- local evidence refs present/blocked/waiting: `{summary['evidence_ref_present_count']}/{summary['evidence_ref_blocked_count']}/{summary['evidence_ref_waiting_count']}`",
         f"- local evidence content verified/blocked: `{summary['evidence_ref_verified_count']}/{summary['evidence_ref_content_blocked_count']}`",
@@ -538,21 +578,24 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         "## Audit Rows",
         "",
-        "| target | audit | native | atoms | protein atoms | chains | coordinates | provenance | evidence | evidence content | manifest | manifest/provenance | prediction | native/prediction | blockers | next action |",
-        "| --- | --- | --- | ---: | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| target | audit | native | atoms | protein atoms | chains | coordinates | prediction | pred atoms | pred protein atoms | pred chains | pred coordinates | provenance | evidence | evidence content | manifest | manifest/provenance | native/prediction | blockers | next action |",
+        "| --- | --- | --- | ---: | ---: | ---: | --- | --- | ---: | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
             f"| `{row['target_id']}` | `{row['audit_status']}` | `{row['native_file_status']}` | "
             f"{row['native_atom_record_count']} | {row['native_protein_atom_record_count']} | "
-            f"{row['native_chain_id_count']} | `{row['native_coordinate_status']}` | `{row['provenance_status']}` | "
+            f"{row['native_chain_id_count']} | `{row['native_coordinate_status']}` | "
+            f"`{row['prediction_file_status']}` | {row['prediction_atom_record_count']} | "
+            f"{row['prediction_protein_atom_record_count']} | {row['prediction_chain_id_count']} | "
+            f"`{row['prediction_coordinate_status']}` | `{row['provenance_status']}` | "
             f"`{row['evidence_ref_status']}` | `{row['evidence_ref_content_status']}` | `{row['manifest_stub_status']}` | "
-            f"`{row['manifest_provenance_status']}` | `{row['prediction_file_status']}` | "
+            f"`{row['manifest_provenance_status']}` | "
             f"`{row['native_prediction_identity_status']}` | `{row['blockers'] or '-'}` | {row['next_action']} |"
         )
     if not payload["rows"]:
         lines.append(
-            "| - | `missing_workorders` | - | 0 | 0 | 0 | - | - | - | - | - | - | - | - | `workorders_missing` | "
+            "| - | `missing_workorders` | - | 0 | 0 | 0 | - | - | 0 | 0 | 0 | - | - | - | - | - | - | - | `workorders_missing` | "
             "rerun clearance workorder builder |"
         )
     lines.extend(["", "## Claim Boundary", "", str(summary["claim_boundary"]), ""])

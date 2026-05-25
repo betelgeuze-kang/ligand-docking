@@ -238,7 +238,7 @@
     "first_open_dropzone_id": "priority_001_REQUIRED_MONOMER_001",
     "first_open_next_action": "wait for clearance intake staging to produce staged_for_operator_review rows",
     "first_open_status": "waiting_on_staged_identity",
-    "generated_at_local": "2026-05-26T02:47:23+09:00",
+    "generated_at_local": "2026-05-26T02:55:59+09:00",
     "live_intake_csv": "casp17/casp17_competitive_floor_identity_intake_bundle_current.csv",
     "packet_type": "casp17_competitive_floor_target_identity_clearance_candidate_intake_sync",
     "ready_to_apply_count": 0,
