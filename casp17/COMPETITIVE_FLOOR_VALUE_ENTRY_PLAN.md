@@ -1,6 +1,6 @@
 # CASP17 Competitive-Floor Value Entry Plan
 
-- generated: `2026-05-25T23:57:39+09:00`
+- generated: `2026-05-26T00:32:36+09:00`
 - value_entry_status: `waiting_on_identity`
 - rows/value actions: `15/270`
 - target/provenance/calibration actions: `30/150/90`

@@ -12170,7 +12170,7 @@
     "first_open_dropzone_id": "priority_001_REQUIRED_MONOMER_001",
     "first_open_next_action": "enter proposed_value, evidence_ref, and operator_clearance in the import CSV",
     "first_open_status": "awaiting_import_value",
-    "generated_at_local": "2026-05-25T23:45:11+09:00",
+    "generated_at_local": "2026-05-26T00:32:36+09:00",
     "import_csv": "casp17/casp17_competitive_floor_evidence_import_current.csv",
     "import_status": "awaiting_import",
     "ledger_updated_count": 0,

@@ -1,6 +1,6 @@
 # CASP17 Competitive-Floor Readiness Gate
 
-- generated: `2026-05-26T00:09:11+09:00`
+- generated: `2026-05-26T00:32:36+09:00`
 - readiness_gate_status: `awaiting_identity`
 - execution_board_status: `awaiting_identity`
 - gates pass/blocked: `1/5`

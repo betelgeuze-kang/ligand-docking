@@ -1030,7 +1030,7 @@
     "first_open_dropzone_id": "priority_001_REQUIRED_MONOMER_001",
     "first_open_next_action": "fill benchmark_id and target_id values first; target_id unlocks canonical file recommendations",
     "first_open_phase": "identity_unlock",
-    "generated_at_local": "2026-05-25T23:45:11+09:00",
+    "generated_at_local": "2026-05-26T00:32:36+09:00",
     "identity_open_action_count": 30,
     "identity_phase_count": 15,
     "import_csv": "casp17/casp17_competitive_floor_evidence_import_current.csv",

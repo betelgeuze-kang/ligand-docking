@@ -1,6 +1,6 @@
 # CASP17 Competitive-Floor Identity Intake Sync
 
-- generated: `2026-05-26T00:21:07+09:00`
+- generated: `2026-05-26T00:32:36+09:00`
 - identity_intake_sync_status: `awaiting_intake`
 - apply_mode: `dry_run`
 - rows synced/ready/awaiting/blocked: `0/0/15/0`

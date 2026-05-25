@@ -3254,7 +3254,7 @@
     "first_open_dropzone_id": "priority_001_REQUIRED_MONOMER_001",
     "first_open_next_action": "fill and apply the compact identity unlock kit first",
     "first_open_status": "waiting_on_identity",
-    "generated_at_local": "2026-05-25T23:51:29+09:00",
+    "generated_at_local": "2026-05-26T00:32:36+09:00",
     "identity_blocked_file_count": 0,
     "identity_kit_csv": "casp17/casp17_competitive_floor_identity_unlock_kit_current.csv",
     "identity_kit_json": "casp17/casp17_competitive_floor_identity_unlock_kit_current.json",

@@ -280,7 +280,7 @@
     "first_open_dropzone_id": "priority_001_REQUIRED_MONOMER_001",
     "first_open_next_action": "fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance in the intake bundle",
     "first_open_status": "awaiting_intake",
-    "generated_at_local": "2026-05-26T00:21:07+09:00",
+    "generated_at_local": "2026-05-26T00:32:36+09:00",
     "identity_intake_sync_status": "awaiting_intake",
     "intake_csv": "casp17/casp17_competitive_floor_identity_intake_bundle_current.csv",
     "kit_csv": "casp17/casp17_competitive_floor_identity_unlock_kit_current.csv",

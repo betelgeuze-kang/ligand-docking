@@ -1,6 +1,6 @@
 # CASP17 Competitive-Floor Identity Unlock Round
 
-- generated: `2026-05-25T23:45:11+09:00`
+- generated: `2026-05-26T00:32:36+09:00`
 - identity_round_status: `awaiting_identity`
 - apply_identity/apply_import: `False/False`
 - rows: `15`

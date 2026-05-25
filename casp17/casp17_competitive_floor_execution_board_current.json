@@ -433,7 +433,7 @@
     "first_open_dropzone_id": "priority_001_REQUIRED_MONOMER_001",
     "first_open_next_action": "fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance",
     "first_open_status": "awaiting_identity",
-    "generated_at_local": "2026-05-26T00:03:13+09:00",
+    "generated_at_local": "2026-05-26T00:32:36+09:00",
     "identity_kit_json": "casp17/casp17_competitive_floor_identity_unlock_kit_current.json",
     "identity_kit_status": "awaiting_identity",
     "packet_type": "casp17_competitive_floor_execution_board",

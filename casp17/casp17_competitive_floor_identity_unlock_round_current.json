@@ -38,7 +38,7 @@
     "claim_boundary": "Local competitive-floor identity unlock round only. It chains the compact identity kit, evidence import audit/apply gate, and unlock-priority audit so cleared benchmark_id/target_id entries can be reviewed and applied consistently. It does not choose historical targets, clear no-leak provenance, fetch native structures, score native accuracy, run predictors, mutate row_fill.csv, or submit to CASP.",
     "file_actions_waiting_on_identity_count": 180,
     "first_next_action": "fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance in the identity kit",
-    "generated_at_local": "2026-05-25T23:45:11+09:00",
+    "generated_at_local": "2026-05-26T00:32:36+09:00",
     "identity_awaiting_count": 15,
     "identity_blocked_count": 0,
     "identity_kit_json": "casp17/casp17_competitive_floor_identity_unlock_kit_current.json",

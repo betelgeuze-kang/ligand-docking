@@ -1,0 +1,113 @@
+{
+  "rows": [
+    {
+      "awaiting_count": 15,
+      "blocked_count": 0,
+      "next_action": "fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance in the intake bundle",
+      "path": "casp17/casp17_competitive_floor_identity_intake_sync_current.json",
+      "ready_count": 0,
+      "stage": "identity_sync",
+      "status": "awaiting_intake",
+      "total_count": 15
+    },
+    {
+      "awaiting_count": 15,
+      "blocked_count": 15,
+      "next_action": "fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance in the identity kit",
+      "path": "casp17/casp17_competitive_floor_identity_unlock_round_current.json",
+      "ready_count": 0,
+      "stage": "identity_round",
+      "status": "awaiting_identity",
+      "total_count": 15
+    },
+    {
+      "awaiting_count": 180,
+      "blocked_count": 0,
+      "next_action": "fill and apply the compact identity unlock kit first",
+      "path": "casp17/casp17_competitive_floor_file_source_plan_current.json",
+      "ready_count": 0,
+      "stage": "file_source_plan",
+      "status": "waiting_on_identity",
+      "total_count": 180
+    },
+    {
+      "awaiting_count": 270,
+      "blocked_count": 0,
+      "next_action": "fill and apply the compact identity unlock kit first",
+      "path": "casp17/casp17_competitive_floor_value_entry_plan_current.json",
+      "ready_count": 0,
+      "stage": "value_entry_plan",
+      "status": "waiting_on_identity",
+      "total_count": 270
+    },
+    {
+      "awaiting_count": 15,
+      "blocked_count": 0,
+      "next_action": "fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance",
+      "path": "casp17/casp17_competitive_floor_execution_board_current.json",
+      "ready_count": 0,
+      "stage": "execution_board",
+      "status": "awaiting_identity",
+      "total_count": 15
+    },
+    {
+      "awaiting_count": 0,
+      "blocked_count": 5,
+      "next_action": "fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance",
+      "path": "casp17/casp17_competitive_floor_readiness_gate_current.json",
+      "ready_count": 1,
+      "stage": "readiness_gate",
+      "status": "awaiting_identity",
+      "total_count": 6
+    },
+    {
+      "awaiting_count": 0,
+      "blocked_count": 0,
+      "next_action": "Replace placeholder target/benchmark IDs with a cleared historical non-CASP17 protein target.",
+      "path": "casp17/casp17_workbench_index_current.json",
+      "ready_count": 16,
+      "stage": "workbench",
+      "status": "ready_for_operator_fill",
+      "total_count": 16
+    }
+  ],
+  "summary": {
+    "apply_identity": false,
+    "apply_import": false,
+    "apply_sync": false,
+    "blocked_stage_count": 6,
+    "claim_boundary": "Local CASP17 competitive-floor identity cycle only. It chains the existing identity intake sync, identity unlock round, identity-aware file/value plans, execution board, readiness gate, and workbench refresh. It does not choose targets, clear no-leak provenance, fetch native structures, score native accuracy, run predictors, mutate row_fill.csv directly, copy evidence files unless downstream apply flags are explicitly provided, or submit to CASP.",
+    "execution_board_row_count": 15,
+    "execution_board_status": "awaiting_identity",
+    "file_source_action_count": 180,
+    "file_source_plan_status": "waiting_on_identity",
+    "file_source_waiting_on_identity_count": 180,
+    "first_next_action": "fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance in the intake bundle",
+    "generated_at_local": "2026-05-26T00:32:36+09:00",
+    "identity_awaiting_count": 15,
+    "identity_blocked_count": 0,
+    "identity_cycle_status": "awaiting_intake",
+    "identity_import_applied_count": 0,
+    "identity_import_ready_for_apply_count": 0,
+    "identity_ready_for_import_count": 0,
+    "identity_round_status": "awaiting_identity",
+    "packet_type": "casp17_competitive_floor_identity_cycle",
+    "readiness_gate_blocked_count": 5,
+    "readiness_gate_first_blocked_gate_id": "identity_gate",
+    "readiness_gate_pass_count": 1,
+    "readiness_gate_status": "awaiting_identity",
+    "ready_stage_count": 1,
+    "stage_count": 7,
+    "sync_applied_count": 0,
+    "sync_awaiting_count": 15,
+    "sync_blocked_count": 0,
+    "sync_missing_field_count": 60,
+    "sync_ready_to_sync_count": 0,
+    "sync_status": "awaiting_intake",
+    "sync_synced_count": 0,
+    "value_entry_action_count": 270,
+    "value_entry_plan_status": "waiting_on_identity",
+    "value_entry_waiting_on_identity_count": 270,
+    "workbench_status": "ready_for_operator_fill"
+  }
+}

@@ -70,7 +70,7 @@
     "first_blocked_next_action": "fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance",
     "first_blocked_status": "awaiting_identity",
     "gate_count": 6,
-    "generated_at_local": "2026-05-26T00:09:11+09:00",
+    "generated_at_local": "2026-05-26T00:32:36+09:00",
     "packet_type": "casp17_competitive_floor_readiness_gate",
     "pass_count": 1,
     "readiness_gate_status": "awaiting_identity",
