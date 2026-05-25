@@ -37,6 +37,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     competitive_target_identity_clearance_operator_intake_json = (
         tmp_path / "competitive_target_identity_clearance_operator_intake.json"
     )
+    competitive_target_identity_clearance_native_candidate_json = (
+        tmp_path / "competitive_target_identity_clearance_native_candidate.json"
+    )
     competitive_target_identity_clearance_manifest_sync_json = (
         tmp_path / "competitive_target_identity_clearance_manifest_sync.json"
     )
@@ -478,6 +481,22 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        competitive_target_identity_clearance_native_candidate_json,
+        {
+            "summary": {
+                "native_candidate_packet_status": "review_required",
+                "candidate_row_count": 4,
+                "operator_review_required_count": 0,
+                "relaxed_review_count": 1,
+                "blocked_candidate_count": 2,
+                "current_target_collision_count": 2,
+                "no_candidate_target_count": 1,
+                "search_prepared_count": 0,
+                "first_open_next_action": "inspect title/entities manually before considering as a native candidate",
+            }
+        },
+    )
+    _write_json(
         competitive_target_identity_clearance_manifest_sync_json,
         {
             "summary": {
@@ -862,6 +881,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(competitive_target_identity_clearance_workorder_json),
             "--competitive-target-identity-clearance-operator-intake-json",
             str(competitive_target_identity_clearance_operator_intake_json),
+            "--competitive-target-identity-clearance-native-candidate-json",
+            str(competitive_target_identity_clearance_native_candidate_json),
             "--competitive-target-identity-clearance-manifest-sync-json",
             str(competitive_target_identity_clearance_manifest_sync_json),
             "--competitive-target-identity-clearance-workorder-audit-json",
@@ -1062,6 +1083,14 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["competitive_target_identity_clearance_operator_intake_applied_count"] == 0
     assert payload["summary"]["competitive_target_identity_clearance_operator_intake_native_copied_count"] == 0
     assert payload["summary"]["competitive_target_identity_clearance_operator_intake_provenance_patched_count"] == 0
+    assert payload["summary"]["competitive_target_identity_clearance_native_candidate_status"] == "review_required"
+    assert payload["summary"]["competitive_target_identity_clearance_native_candidate_row_count"] == 4
+    assert payload["summary"]["competitive_target_identity_clearance_native_candidate_operator_review_count"] == 0
+    assert payload["summary"]["competitive_target_identity_clearance_native_candidate_relaxed_review_count"] == 1
+    assert payload["summary"]["competitive_target_identity_clearance_native_candidate_blocked_count"] == 2
+    assert payload["summary"]["competitive_target_identity_clearance_native_candidate_collision_count"] == 2
+    assert payload["summary"]["competitive_target_identity_clearance_native_candidate_no_candidate_count"] == 1
+    assert payload["summary"]["competitive_target_identity_clearance_native_candidate_prepared_count"] == 0
     assert payload["summary"]["competitive_target_identity_clearance_manifest_sync_status"] == "awaiting_provenance"
     assert payload["summary"]["competitive_target_identity_clearance_manifest_sync_row_count"] == 3
     assert payload["summary"]["competitive_target_identity_clearance_manifest_sync_ready_count"] == 0
@@ -1283,6 +1312,10 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["competitive_floor_target_identity_clearance_operator_intake"]["status"] == "awaiting_input"
     assert by_id["competitive_floor_target_identity_clearance_operator_intake"]["blocked_count"] == 3
     assert "awaiting:3" in by_id["competitive_floor_target_identity_clearance_operator_intake"]["blockers"]
+    assert by_id["competitive_floor_target_identity_clearance_native_candidates"]["status"] == "review_required"
+    assert by_id["competitive_floor_target_identity_clearance_native_candidates"]["ready_count"] == 1
+    assert by_id["competitive_floor_target_identity_clearance_native_candidates"]["blocked_count"] == 3
+    assert "collisions:2" in by_id["competitive_floor_target_identity_clearance_native_candidates"]["blockers"]
     assert by_id["competitive_floor_target_identity_clearance_manifest_sync"]["status"] == "awaiting_provenance"
     assert by_id["competitive_floor_target_identity_clearance_manifest_sync"]["blocked_count"] == 3
     assert by_id["competitive_floor_target_identity_clearance_workorder_audit"]["status"] == "blocked"
@@ -1364,6 +1397,8 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_competitive_target_identity_clearance_workorder.json"),
             "--competitive-target-identity-clearance-operator-intake-json",
             str(tmp_path / "missing_competitive_target_identity_clearance_operator_intake.json"),
+            "--competitive-target-identity-clearance-native-candidate-json",
+            str(tmp_path / "missing_competitive_target_identity_clearance_native_candidate.json"),
             "--competitive-target-identity-clearance-manifest-sync-json",
             str(tmp_path / "missing_competitive_target_identity_clearance_manifest_sync.json"),
             "--competitive-target-identity-clearance-workorder-audit-json",
