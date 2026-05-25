@@ -2,7 +2,7 @@
 
 This is the local navigation surface for the current CASP17 internal-physics lane.
 
-- generated: `2026-05-26T01:16:21+09:00`
+- generated: `2026-05-26T01:24:14+09:00`
 - workbench_status: `ready_for_operator_fill`
 - target model folders: `16/16`
 - target object folders: `48`
@@ -27,6 +27,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 - competitive target identity discovery: `review_required` discovered `19` operator/current/closed/unknown/synthetic `3/16/3/0/0` ready intake `0`
 - competitive target identity clearance: `awaiting_target_identity_clearance` review `3` prediction/TS/native/provenance `3/3/0/0` ready `0` awaiting prediction/native/no-leak `0/3/0`
 - competitive target identity clearance workorders: `awaiting_native_or_provenance` workorders `3` ready/native+provenance/native/provenance `0/3/0/0` dropzones/templates/stubs `3/3/3`
+- competitive target identity clearance workorder audit: `blocked` pass/blocked/total `0/3/3` prediction/native/provenance/manifest `3/0/0/0`
 - competitive identity cycle: `awaiting_intake` stages `1/6/7` sync `awaiting_intake` ready/awaiting `0/15` missing fields `60` readiness `awaiting_identity`
 - competitive file source plan: `waiting_on_identity` actions `180` waiting identity/source `180/0` ready/imported/blocked `0/0/0`
 - competitive value entry plan: `waiting_on_identity` actions `270` target/provenance/calibration `30/150/90` waiting identity/value/clearance/ref `270/0/0/0` ready/blocked `0/0`
@@ -74,6 +75,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 | `competitive_floor_target_identity_discovery` | `review_required` | 0 | 19 | 19 | `casp17/casp17_competitive_floor_target_identity_discovery_packet_current.json` | operator must confirm historical eligibility, native availability, and no-leak clearance | `operator_review:3,current:16,closed:3,unknown:0,synthetic:0` |
 | `competitive_floor_target_identity_clearance_queue` | `awaiting_target_identity_clearance` | 0 | 3 | 3 | `casp17/casp17_competitive_floor_target_identity_clearance_queue_current.json` | provide a cleared native PDB and complete no-leak/operator provenance review | `prediction:3,ts:3,native:0,provenance:0,await_native:3` |
 | `competitive_floor_target_identity_clearance_workorder` | `awaiting_native_or_provenance` | 0 | 3 | 3 | `casp17/casp17_competitive_floor_target_identity_clearance_workorder_current.json` | place a cleared native PDB and complete the no-leak provenance template | `native_provenance:3,native:0,provenance:0,dropzones:3` |
+| `competitive_floor_target_identity_clearance_workorder_audit` | `blocked` | 0 | 3 | 3 | `casp17/casp17_competitive_floor_target_identity_clearance_workorder_audit_current.json` | place the cleared native PDB in the per-target native dropzone | `prediction:3,native:0,provenance:0,manifest:0` |
 | `competitive_floor_identity_cycle` | `awaiting_intake` | 1 | 6 | 7 | `casp17/casp17_competitive_floor_identity_cycle_current.json` | fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance in the intake bundle | `sync:awaiting_intake,readiness:awaiting_identity,missing_fields:60` |
 | `competitive_floor_file_source_plan` | `waiting_on_identity` | 0 | 180 | 180 | `casp17/casp17_competitive_floor_file_source_plan_current.json` | fill and apply the compact identity unlock kit first | `target_identity_required` |
 | `competitive_floor_value_entry_plan` | `waiting_on_identity` | 0 | 270 | 270 | `casp17/casp17_competitive_floor_value_entry_plan_current.json` | fill and apply the compact identity unlock kit first | `target_identity_required` |

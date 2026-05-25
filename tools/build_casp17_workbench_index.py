@@ -40,6 +40,9 @@ DEFAULT_COMPETITIVE_TARGET_IDENTITY_CLEARANCE_QUEUE_JSON = (
 DEFAULT_COMPETITIVE_TARGET_IDENTITY_CLEARANCE_WORKORDER_JSON = (
     "casp17/casp17_competitive_floor_target_identity_clearance_workorder_current.json"
 )
+DEFAULT_COMPETITIVE_TARGET_IDENTITY_CLEARANCE_WORKORDER_AUDIT_JSON = (
+    "casp17/casp17_competitive_floor_target_identity_clearance_workorder_audit_current.json"
+)
 DEFAULT_COMPETITIVE_IDENTITY_CYCLE_JSON = "casp17/casp17_competitive_floor_identity_cycle_current.json"
 DEFAULT_COMPETITIVE_FILE_SOURCE_PLAN_JSON = "casp17/casp17_competitive_floor_file_source_plan_current.json"
 DEFAULT_COMPETITIVE_VALUE_ENTRY_PLAN_JSON = "casp17/casp17_competitive_floor_value_entry_plan_current.json"
@@ -186,6 +189,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     competitive_target_identity_clearance_workorder_payload = _read_json(
         args.competitive_target_identity_clearance_workorder_json
     )
+    competitive_target_identity_clearance_workorder_audit_payload = _read_json(
+        args.competitive_target_identity_clearance_workorder_audit_json
+    )
     competitive_identity_cycle_payload = _read_json(args.competitive_identity_cycle_json)
     competitive_file_source_plan_payload = _read_json(args.competitive_file_source_plan_json)
     competitive_value_entry_plan_payload = _read_json(args.competitive_value_entry_plan_json)
@@ -223,6 +229,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     competitive_target_identity_clearance_summary = _summary(competitive_target_identity_clearance_payload)
     competitive_target_identity_clearance_workorder_summary = _summary(
         competitive_target_identity_clearance_workorder_payload
+    )
+    competitive_target_identity_clearance_workorder_audit_summary = _summary(
+        competitive_target_identity_clearance_workorder_audit_payload
     )
     competitive_identity_cycle_summary = _summary(competitive_identity_cycle_payload)
     competitive_file_source_plan_summary = _summary(competitive_file_source_plan_payload)
@@ -680,6 +689,26 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + str(competitive_target_identity_clearance_workorder_summary.get("provenance_required_count", ""))
                 + ",dropzones:"
                 + str(competitive_target_identity_clearance_workorder_summary.get("native_dropzone_count", ""))
+            ),
+        ),
+        _artifact_row(
+            "competitive_floor_target_identity_clearance_workorder_audit",
+            "Audit for per-target clearance workorder native/provenance readiness",
+            _text(competitive_target_identity_clearance_workorder_audit_summary.get("clearance_workorder_audit_status")),
+            args.competitive_target_identity_clearance_workorder_audit_json,
+            ready_count=_int(competitive_target_identity_clearance_workorder_audit_summary.get("audit_pass_count")),
+            blocked_count=_int(competitive_target_identity_clearance_workorder_audit_summary.get("audit_blocked_count")),
+            total_count=_int(competitive_target_identity_clearance_workorder_audit_summary.get("audit_target_count")),
+            next_action=_text(competitive_target_identity_clearance_workorder_audit_summary.get("first_blocked_next_action")),
+            blockers=(
+                "prediction:"
+                + str(competitive_target_identity_clearance_workorder_audit_summary.get("prediction_present_count", ""))
+                + ",native:"
+                + str(competitive_target_identity_clearance_workorder_audit_summary.get("native_valid_count", ""))
+                + ",provenance:"
+                + str(competitive_target_identity_clearance_workorder_audit_summary.get("provenance_ready_count", ""))
+                + ",manifest:"
+                + str(competitive_target_identity_clearance_workorder_audit_summary.get("manifest_stub_ready_count", ""))
             ),
         ),
         _artifact_row(
@@ -1218,6 +1247,30 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "competitive_target_identity_clearance_workorder_stub_count": _int(
             competitive_target_identity_clearance_workorder_summary.get("manifest_stub_count")
         ),
+        "competitive_target_identity_clearance_workorder_audit_status": _text(
+            competitive_target_identity_clearance_workorder_audit_summary.get("clearance_workorder_audit_status")
+        ),
+        "competitive_target_identity_clearance_workorder_audit_target_count": _int(
+            competitive_target_identity_clearance_workorder_audit_summary.get("audit_target_count")
+        ),
+        "competitive_target_identity_clearance_workorder_audit_pass_count": _int(
+            competitive_target_identity_clearance_workorder_audit_summary.get("audit_pass_count")
+        ),
+        "competitive_target_identity_clearance_workorder_audit_blocked_count": _int(
+            competitive_target_identity_clearance_workorder_audit_summary.get("audit_blocked_count")
+        ),
+        "competitive_target_identity_clearance_workorder_audit_prediction_count": _int(
+            competitive_target_identity_clearance_workorder_audit_summary.get("prediction_present_count")
+        ),
+        "competitive_target_identity_clearance_workorder_audit_native_count": _int(
+            competitive_target_identity_clearance_workorder_audit_summary.get("native_valid_count")
+        ),
+        "competitive_target_identity_clearance_workorder_audit_provenance_count": _int(
+            competitive_target_identity_clearance_workorder_audit_summary.get("provenance_ready_count")
+        ),
+        "competitive_target_identity_clearance_workorder_audit_manifest_count": _int(
+            competitive_target_identity_clearance_workorder_audit_summary.get("manifest_stub_ready_count")
+        ),
         "competitive_identity_cycle_status": _text(
             competitive_identity_cycle_summary.get("identity_cycle_status")
         ),
@@ -1489,6 +1542,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- competitive target identity discovery: `{summary['competitive_target_identity_discovery_status'] or '-'}` discovered `{summary['competitive_target_identity_discovery_count']}` operator/current/closed/unknown/synthetic `{summary['competitive_target_identity_operator_review_count']}/{summary['competitive_target_identity_open_current_count']}/{summary['competitive_target_identity_closed_watchlist_count']}/{summary['competitive_target_identity_unknown_local_count']}/{summary['competitive_target_identity_synthetic_count']}` ready intake `{summary['competitive_target_identity_ready_for_intake_count']}`",
         f"- competitive target identity clearance: `{summary['competitive_target_identity_clearance_status'] or '-'}` review `{summary['competitive_target_identity_clearance_review_count']}` prediction/TS/native/provenance `{summary['competitive_target_identity_clearance_prediction_count']}/{summary['competitive_target_identity_clearance_ts_prediction_count']}/{summary['competitive_target_identity_clearance_native_count']}/{summary['competitive_target_identity_clearance_provenance_count']}` ready `{summary['competitive_target_identity_clearance_ready_count']}` awaiting prediction/native/no-leak `{summary['competitive_target_identity_clearance_awaiting_prediction_count']}/{summary['competitive_target_identity_clearance_awaiting_native_count']}/{summary['competitive_target_identity_clearance_awaiting_no_leak_count']}`",
         f"- competitive target identity clearance workorders: `{summary['competitive_target_identity_clearance_workorder_status'] or '-'}` workorders `{summary['competitive_target_identity_clearance_workorder_count']}` ready/native+provenance/native/provenance `{summary['competitive_target_identity_clearance_workorder_ready_count']}/{summary['competitive_target_identity_clearance_workorder_native_provenance_count']}/{summary['competitive_target_identity_clearance_workorder_native_count']}/{summary['competitive_target_identity_clearance_workorder_provenance_count']}` dropzones/templates/stubs `{summary['competitive_target_identity_clearance_workorder_dropzone_count']}/{summary['competitive_target_identity_clearance_workorder_template_count']}/{summary['competitive_target_identity_clearance_workorder_stub_count']}`",
+        f"- competitive target identity clearance workorder audit: `{summary['competitive_target_identity_clearance_workorder_audit_status'] or '-'}` pass/blocked/total `{summary['competitive_target_identity_clearance_workorder_audit_pass_count']}/{summary['competitive_target_identity_clearance_workorder_audit_blocked_count']}/{summary['competitive_target_identity_clearance_workorder_audit_target_count']}` prediction/native/provenance/manifest `{summary['competitive_target_identity_clearance_workorder_audit_prediction_count']}/{summary['competitive_target_identity_clearance_workorder_audit_native_count']}/{summary['competitive_target_identity_clearance_workorder_audit_provenance_count']}/{summary['competitive_target_identity_clearance_workorder_audit_manifest_count']}`",
         f"- competitive identity cycle: `{summary['competitive_identity_cycle_status'] or '-'}` stages `{summary['competitive_identity_cycle_ready_stage_count']}/{summary['competitive_identity_cycle_blocked_stage_count']}/{summary['competitive_identity_cycle_stage_count']}` sync `{summary['competitive_identity_cycle_sync_status'] or '-'}` ready/awaiting `{summary['competitive_identity_cycle_sync_ready_to_sync_count']}/{summary['competitive_identity_cycle_sync_awaiting_count']}` missing fields `{summary['competitive_identity_cycle_missing_field_count']}` readiness `{summary['competitive_identity_cycle_readiness_gate_status'] or '-'}`",
         f"- competitive file source plan: `{summary['competitive_file_source_plan_status'] or '-'}` actions `{summary['competitive_file_source_plan_action_count']}` waiting identity/source `{summary['competitive_file_source_plan_waiting_on_identity_count']}/{summary['competitive_file_source_plan_awaiting_source_path_count']}` ready/imported/blocked `{summary['competitive_file_source_plan_ready_for_import_count']}/{summary['competitive_file_source_plan_already_imported_count']}/{summary['competitive_file_source_plan_blocked_count']}`",
         f"- competitive value entry plan: `{summary['competitive_value_entry_plan_status'] or '-'}` actions `{summary['competitive_value_entry_plan_action_count']}` target/provenance/calibration `{summary['competitive_value_entry_plan_target_identity_count']}/{summary['competitive_value_entry_plan_provenance_count']}/{summary['competitive_value_entry_plan_calibration_count']}` waiting identity/value/clearance/ref `{summary['competitive_value_entry_plan_waiting_on_identity_count']}/{summary['competitive_value_entry_plan_awaiting_value_count']}/{summary['competitive_value_entry_plan_awaiting_clearance_count']}/{summary['competitive_value_entry_plan_awaiting_ref_count']}` ready/blocked `{summary['competitive_value_entry_plan_ready_for_import_count']}/{summary['competitive_value_entry_plan_blocked_count']}`",
@@ -1576,6 +1630,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--competitive-target-identity-clearance-workorder-json",
         default=DEFAULT_COMPETITIVE_TARGET_IDENTITY_CLEARANCE_WORKORDER_JSON,
+    )
+    parser.add_argument(
+        "--competitive-target-identity-clearance-workorder-audit-json",
+        default=DEFAULT_COMPETITIVE_TARGET_IDENTITY_CLEARANCE_WORKORDER_AUDIT_JSON,
     )
     parser.add_argument("--competitive-identity-cycle-json", default=DEFAULT_COMPETITIVE_IDENTITY_CYCLE_JSON)
     parser.add_argument("--competitive-file-source-plan-json", default=DEFAULT_COMPETITIVE_FILE_SOURCE_PLAN_JSON)
