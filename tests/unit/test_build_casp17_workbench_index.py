@@ -21,6 +21,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     competitive_row_fill_status_json = tmp_path / "competitive_row_fill_status.json"
     competitive_row_fill_worklist_json = tmp_path / "competitive_row_fill_worklist.json"
     competitive_evidence_dropzone_json = tmp_path / "competitive_evidence_dropzone.json"
+    competitive_evidence_import_json = tmp_path / "competitive_evidence_import.json"
     competitive_value_ledger_json = tmp_path / "competitive_value_ledger.json"
     competitive_evidence_intake_json = tmp_path / "competitive_evidence_intake.json"
     competitive_patch_gate_json = tmp_path / "competitive_patch_gate.json"
@@ -190,6 +191,25 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        competitive_evidence_import_json,
+        {
+            "summary": {
+                "import_status": "awaiting_import",
+                "action_count": 450,
+                "ready_for_apply_count": 0,
+                "applied_count": 0,
+                "already_imported_count": 0,
+                "awaiting_import_file_count": 180,
+                "awaiting_import_value_count": 270,
+                "awaiting_clearance_count": 0,
+                "awaiting_evidence_ref_count": 0,
+                "blocked_count": 0,
+                "first_open_status": "awaiting_import_file",
+                "first_open_next_action": "enter source_path",
+            }
+        },
+    )
+    _write_json(
         competitive_value_ledger_json,
         {
             "summary": {
@@ -311,6 +331,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(competitive_row_fill_worklist_json),
             "--competitive-evidence-dropzone-json",
             str(competitive_evidence_dropzone_json),
+            "--competitive-evidence-import-json",
+            str(competitive_evidence_import_json),
             "--competitive-value-ledger-json",
             str(competitive_value_ledger_json),
             "--competitive-evidence-intake-json",
@@ -360,6 +382,13 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["competitive_evidence_dropzone_manifest_count"] == 15
     assert payload["summary"]["competitive_evidence_dropzone_open_action_count"] == 450
     assert payload["summary"]["competitive_evidence_dropzone_file_action_count"] == 180
+    assert payload["summary"]["competitive_evidence_import_status"] == "awaiting_import"
+    assert payload["summary"]["competitive_evidence_import_action_count"] == 450
+    assert payload["summary"]["competitive_evidence_import_ready_for_apply_count"] == 0
+    assert payload["summary"]["competitive_evidence_import_applied_count"] == 0
+    assert payload["summary"]["competitive_evidence_import_awaiting_file_count"] == 180
+    assert payload["summary"]["competitive_evidence_import_awaiting_value_count"] == 270
+    assert payload["summary"]["competitive_evidence_import_blocked_count"] == 0
     assert payload["summary"]["competitive_value_ledger_status"] == "awaiting_values"
     assert payload["summary"]["competitive_value_ledger_count"] == 15
     assert payload["summary"]["competitive_value_ledger_action_count"] == 270
@@ -395,6 +424,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["competitive_floor_batch"]["status"] == "ready_for_fill"
     assert by_id["competitive_floor_row_fill_status"]["status"] == "awaiting_fill"
     assert by_id["competitive_floor_row_fill_worklist"]["status"] == "open_actions"
+    assert by_id["competitive_floor_evidence_import"]["status"] == "awaiting_import"
     assert by_id["competitive_floor_operator_template"]["status"] == "blocked"
     assert by_id["competitive_floor_operator_preflight"]["status"] == "blocked"
     assert by_id["benchmark_input_inventory"]["status"] == "blocked"

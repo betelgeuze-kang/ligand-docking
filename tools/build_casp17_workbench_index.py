@@ -22,6 +22,7 @@ DEFAULT_COMPETITIVE_BATCH_JSON = "casp17/casp17_competitive_floor_batch_current.
 DEFAULT_COMPETITIVE_ROW_FILL_STATUS_JSON = "casp17/casp17_competitive_floor_row_fill_status_current.json"
 DEFAULT_COMPETITIVE_ROW_FILL_WORKLIST_JSON = "casp17/casp17_competitive_floor_row_fill_worklist_current.json"
 DEFAULT_COMPETITIVE_EVIDENCE_DROPZONE_JSON = "casp17/casp17_competitive_floor_evidence_dropzone_current.json"
+DEFAULT_COMPETITIVE_EVIDENCE_IMPORT_JSON = "casp17/casp17_competitive_floor_evidence_import_current.json"
 DEFAULT_COMPETITIVE_VALUE_LEDGER_JSON = "casp17/casp17_competitive_floor_value_ledger_current.json"
 DEFAULT_COMPETITIVE_EVIDENCE_INTAKE_JSON = "casp17/casp17_competitive_floor_evidence_intake_current.json"
 DEFAULT_COMPETITIVE_PATCH_GATE_JSON = "casp17/casp17_competitive_floor_row_fill_patch_gate_current.json"
@@ -149,6 +150,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     competitive_row_fill_status_payload = _read_json(args.competitive_row_fill_status_json)
     competitive_row_fill_worklist_payload = _read_json(args.competitive_row_fill_worklist_json)
     competitive_evidence_dropzone_payload = _read_json(args.competitive_evidence_dropzone_json)
+    competitive_evidence_import_payload = _read_json(args.competitive_evidence_import_json)
     competitive_value_ledger_payload = _read_json(args.competitive_value_ledger_json)
     competitive_evidence_intake_payload = _read_json(args.competitive_evidence_intake_json)
     competitive_patch_gate_payload = _read_json(args.competitive_patch_gate_json)
@@ -168,6 +170,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     competitive_row_fill_status_summary = _summary(competitive_row_fill_status_payload)
     competitive_row_fill_worklist_summary = _summary(competitive_row_fill_worklist_payload)
     competitive_evidence_dropzone_summary = _summary(competitive_evidence_dropzone_payload)
+    competitive_evidence_import_summary = _summary(competitive_evidence_import_payload)
     competitive_value_ledger_summary = _summary(competitive_value_ledger_payload)
     competitive_evidence_intake_summary = _summary(competitive_evidence_intake_payload)
     competitive_patch_gate_summary = _summary(competitive_patch_gate_payload)
@@ -378,6 +381,25 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             blockers=_text(competitive_evidence_dropzone_summary.get("first_action_blocker")),
         ),
         _artifact_row(
+            "competitive_floor_evidence_import",
+            "Central import CSV for competitive-floor file copies and value-ledger updates",
+            _text(competitive_evidence_import_summary.get("import_status")),
+            args.competitive_evidence_import_json,
+            ready_count=_int(competitive_evidence_import_summary.get("ready_for_apply_count"))
+            + _int(competitive_evidence_import_summary.get("applied_count"))
+            + _int(competitive_evidence_import_summary.get("already_imported_count")),
+            blocked_count=(
+                _int(competitive_evidence_import_summary.get("awaiting_import_file_count"))
+                + _int(competitive_evidence_import_summary.get("awaiting_import_value_count"))
+                + _int(competitive_evidence_import_summary.get("awaiting_clearance_count"))
+                + _int(competitive_evidence_import_summary.get("awaiting_evidence_ref_count"))
+                + _int(competitive_evidence_import_summary.get("blocked_count"))
+            ),
+            total_count=_int(competitive_evidence_import_summary.get("action_count")),
+            next_action=_text(competitive_evidence_import_summary.get("first_open_next_action")),
+            blockers=_text(competitive_evidence_import_summary.get("first_open_status")),
+        ),
+        _artifact_row(
             "competitive_floor_value_ledger",
             "Per-row value ledgers for target identity, provenance, and calibration fields",
             _text(competitive_value_ledger_summary.get("value_ledger_status")),
@@ -552,6 +574,27 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "competitive_evidence_dropzone_file_action_count": _int(
             competitive_evidence_dropzone_summary.get("file_action_count")
         ),
+        "competitive_evidence_import_status": _text(
+            competitive_evidence_import_summary.get("import_status")
+        ),
+        "competitive_evidence_import_action_count": _int(
+            competitive_evidence_import_summary.get("action_count")
+        ),
+        "competitive_evidence_import_ready_for_apply_count": _int(
+            competitive_evidence_import_summary.get("ready_for_apply_count")
+        ),
+        "competitive_evidence_import_applied_count": _int(
+            competitive_evidence_import_summary.get("applied_count")
+        ),
+        "competitive_evidence_import_awaiting_file_count": _int(
+            competitive_evidence_import_summary.get("awaiting_import_file_count")
+        ),
+        "competitive_evidence_import_awaiting_value_count": _int(
+            competitive_evidence_import_summary.get("awaiting_import_value_count")
+        ),
+        "competitive_evidence_import_blocked_count": _int(
+            competitive_evidence_import_summary.get("blocked_count")
+        ),
         "competitive_value_ledger_status": _text(
             competitive_value_ledger_summary.get("value_ledger_status")
         ),
@@ -670,6 +713,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- competitive row_fill status: `{summary['competitive_row_fill_status'] or '-'}` filled/ready/total `{summary['competitive_row_fill_filled_count']}/{summary['competitive_row_fill_ready_count']}/{summary['competitive_row_fill_row_count']}`",
         f"- competitive row_fill worklist: `{summary['competitive_row_fill_worklist_status'] or '-'}` open actions `{summary['competitive_row_fill_worklist_open_action_count']}` guides `{summary['competitive_row_fill_worklist_guide_count']}`",
         f"- competitive evidence dropzones: `{summary['competitive_evidence_dropzone_status'] or '-'}` dropzones/manifests `{summary['competitive_evidence_dropzone_count']}/{summary['competitive_evidence_dropzone_manifest_count']}` open actions `{summary['competitive_evidence_dropzone_open_action_count']}` file actions `{summary['competitive_evidence_dropzone_file_action_count']}`",
+        f"- competitive evidence import: `{summary['competitive_evidence_import_status'] or '-'}` actions `{summary['competitive_evidence_import_action_count']}` ready/applied `{summary['competitive_evidence_import_ready_for_apply_count']}/{summary['competitive_evidence_import_applied_count']}` awaiting files/values `{summary['competitive_evidence_import_awaiting_file_count']}/{summary['competitive_evidence_import_awaiting_value_count']}` blocked `{summary['competitive_evidence_import_blocked_count']}`",
         f"- competitive value ledgers: `{summary['competitive_value_ledger_status'] or '-'}` ledgers/actions `{summary['competitive_value_ledger_count']}/{summary['competitive_value_ledger_action_count']}` ready/awaiting `{summary['competitive_value_ledger_ready_for_intake_count']}/{summary['competitive_value_ledger_awaiting_value_count']}`",
         f"- competitive evidence intake: `{summary['competitive_evidence_intake_status'] or '-'}` actions `{summary['competitive_evidence_intake_action_count']}` patch candidates `{summary['competitive_evidence_intake_patch_candidate_count']}` awaiting files/values `{summary['competitive_evidence_intake_awaiting_file_count']}/{summary['competitive_evidence_intake_awaiting_value_count']}`",
         f"- competitive row_fill patch gate: `{summary['competitive_patch_gate_status'] or '-'}` actions `{summary['competitive_patch_gate_action_count']}` ready/awaiting/conflicts `{summary['competitive_patch_gate_ready_to_patch_count']}/{summary['competitive_patch_gate_awaiting_evidence_count']}/{summary['competitive_patch_gate_conflict_count']}`",
@@ -727,6 +771,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--competitive-row-fill-status-json", default=DEFAULT_COMPETITIVE_ROW_FILL_STATUS_JSON)
     parser.add_argument("--competitive-row-fill-worklist-json", default=DEFAULT_COMPETITIVE_ROW_FILL_WORKLIST_JSON)
     parser.add_argument("--competitive-evidence-dropzone-json", default=DEFAULT_COMPETITIVE_EVIDENCE_DROPZONE_JSON)
+    parser.add_argument("--competitive-evidence-import-json", default=DEFAULT_COMPETITIVE_EVIDENCE_IMPORT_JSON)
     parser.add_argument("--competitive-value-ledger-json", default=DEFAULT_COMPETITIVE_VALUE_LEDGER_JSON)
     parser.add_argument("--competitive-evidence-intake-json", default=DEFAULT_COMPETITIVE_EVIDENCE_INTAKE_JSON)
     parser.add_argument("--competitive-patch-gate-json", default=DEFAULT_COMPETITIVE_PATCH_GATE_JSON)
