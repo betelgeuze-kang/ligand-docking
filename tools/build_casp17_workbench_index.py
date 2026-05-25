@@ -306,6 +306,17 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     if dashboard_rows:
         ordered = sorted(dashboard_rows, key=lambda row: (_status_rank(_text(row.get("operator_row_status"))), _int(row.get("row_rank"))))
         first_fill_action = _text(ordered[0].get("next_action")) if ordered else ""
+    target_object_folder_audit_blockers = (
+        "protein_atom_objects:"
+        + str(target_object_folder_audit_summary.get("protein_atom_pass_count", ""))
+        + ",coordinate_valid_objects:"
+        + str(target_object_folder_audit_summary.get("coordinate_valid_pass_count", ""))
+        + ",total_protein_atoms:"
+        + str(target_object_folder_audit_summary.get("total_protein_atom_count", ""))
+    )
+    first_object_folder_blockers = _text(target_object_folder_audit_summary.get("first_blocked_blockers"))
+    if first_object_folder_blockers:
+        target_object_folder_audit_blockers += ",first_blocked:" + first_object_folder_blockers
 
     artifact_rows = [
         _artifact_row(
@@ -370,7 +381,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             blocked_count=_int(target_object_folder_audit_summary.get("blocked_count")),
             total_count=_int(target_object_folder_audit_summary.get("object_row_count")),
             next_action="Keep this pass before treating per-protein object folders as independently reviewable.",
-            blockers=_text(target_object_folder_audit_summary.get("first_blocked_blockers")),
+            blockers=target_object_folder_audit_blockers,
         ),
         _artifact_row(
             "target_object_viewer_smoke",
@@ -1174,6 +1185,15 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "target_object_folder_chain_isolation_pass_count": _int(
             target_object_folder_audit_summary.get("chain_isolation_pass_count")
         ),
+        "target_object_folder_protein_atom_pass_count": _int(
+            target_object_folder_audit_summary.get("protein_atom_pass_count")
+        ),
+        "target_object_folder_coordinate_valid_pass_count": _int(
+            target_object_folder_audit_summary.get("coordinate_valid_pass_count")
+        ),
+        "target_object_folder_total_protein_atom_count": _int(
+            target_object_folder_audit_summary.get("total_protein_atom_count")
+        ),
         "target_object_viewer_smoke_status": _text(target_object_viewer_smoke_summary.get("smoke_status")),
         "target_object_viewer_smoke_pass_count": _int(target_object_viewer_smoke_summary.get("pass_count")),
         "target_object_viewer_smoke_total": _int(target_object_viewer_smoke_summary.get("object_row_count")),
@@ -1934,7 +1954,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- target object folders: `{summary['target_model_object_count']}`",
         f"- target object projections: `{summary['target_model_object_projection_count']}`",
         f"- target object viewers: `{summary['target_model_object_viewer_count']}`",
-        f"- target object folder audit: `{summary['target_object_folder_audit_status'] or '-'}` rows `{summary['target_object_folder_audit_pass_count']}/{summary['target_object_folder_audit_total']}` chain isolation `{summary['target_object_folder_chain_isolation_pass_count']}/{summary['target_object_folder_audit_total']}`",
+        f"- target object folder audit: `{summary['target_object_folder_audit_status'] or '-'}` rows `{summary['target_object_folder_audit_pass_count']}/{summary['target_object_folder_audit_total']}` chain isolation `{summary['target_object_folder_chain_isolation_pass_count']}/{summary['target_object_folder_audit_total']}` protein atoms/coordinate-valid `{summary['target_object_folder_protein_atom_pass_count']}/{summary['target_object_folder_coordinate_valid_pass_count']}/{summary['target_object_folder_audit_total']}` total protein atoms `{summary['target_object_folder_total_protein_atom_count']}`",
         f"- target object viewer smoke: `{summary['target_object_viewer_smoke_status'] or '-'}` rows `{summary['target_object_viewer_smoke_pass_count']}/{summary['target_object_viewer_smoke_total']}`",
         f"- benchmark rows ready/total: `{summary['benchmark_rows_ready_count']}/{summary['benchmark_rows_total']}`",
         f"- competitive-floor batch: `{summary['competitive_batch_status'] or '-'}` rows `{summary['competitive_batch_row_count']}` missing evidence `{summary['competitive_batch_missing_evidence_item_count']}`",

@@ -100,6 +100,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "pass_count": 4,
                 "blocked_count": 0,
                 "chain_isolation_pass_count": 4,
+                "protein_atom_pass_count": 4,
+                "coordinate_valid_pass_count": 4,
+                "total_protein_atom_count": 4,
             }
         },
     )
@@ -825,6 +828,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["target_object_folder_audit_status"] == "pass"
     assert payload["summary"]["target_object_folder_audit_pass_count"] == 4
     assert payload["summary"]["target_object_folder_chain_isolation_pass_count"] == 4
+    assert payload["summary"]["target_object_folder_protein_atom_pass_count"] == 4
+    assert payload["summary"]["target_object_folder_coordinate_valid_pass_count"] == 4
+    assert payload["summary"]["target_object_folder_total_protein_atom_count"] == 4
     assert payload["summary"]["target_object_viewer_smoke_status"] == "pass"
     assert payload["summary"]["target_object_viewer_smoke_pass_count"] == 4
     assert payload["summary"]["benchmark_rows_total"] == 40
@@ -1118,6 +1124,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     by_id = {row["artifact_id"]: row for row in payload["rows"]}
     assert by_id["target_model_folders"]["status"] == "ready"
     assert by_id["target_object_catalog"]["status"] == "ready"
+    assert "protein_atom_objects:4" in by_id["target_object_folder_audit"]["blockers"]
+    assert "coordinate_valid_objects:4" in by_id["target_object_folder_audit"]["blockers"]
+    assert "total_protein_atoms:4" in by_id["target_object_folder_audit"]["blockers"]
     assert by_id["target_object_viewer_smoke"]["status"] == "pass"
     assert by_id["competitive_floor_batch"]["status"] == "ready_for_fill"
     assert by_id["competitive_floor_row_fill_status"]["status"] == "awaiting_fill"

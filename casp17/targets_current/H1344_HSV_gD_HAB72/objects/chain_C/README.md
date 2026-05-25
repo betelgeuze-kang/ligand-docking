@@ -7,6 +7,7 @@
 - projection: `casp17/targets_current/H1344_HSV_gD_HAB72/objects/chain_C/renders/H1344_chain_C_projection.svg`
 - viewer: `casp17/targets_current/H1344_HSV_gD_HAB72/objects/chain_C/viewer.html`
 - atoms/residues: `1394/281`
+- protein atoms / coordinate status: `1394/valid`
 
 ## Claim Boundary
 

@@ -7,6 +7,7 @@
 - projection: `casp17/targets_current/H1343_Hepatitis_C_Virus_sE2_CBH_4G_Fab_complex/objects/chain_C/renders/H1343_chain_C_projection.svg`
 - viewer: `casp17/targets_current/H1343_Hepatitis_C_Virus_sE2_CBH_4G_Fab_complex/objects/chain_C/viewer.html`
 - atoms/residues: `1561/317`
+- protein atoms / coordinate status: `1561/valid`
 
 ## Claim Boundary
 

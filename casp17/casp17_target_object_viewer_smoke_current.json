@@ -630,7 +630,7 @@
     "claim_boundary": "Local object-viewer smoke only. It checks locally generated chain/object PDB, SVG projection, and HTML canvas viewer artifacts; it does not render a browser screenshot, fetch structures, score native accuracy, use external predictors, or submit to CASP.",
     "first_blocked_blockers": "",
     "first_blocked_object": "",
-    "generated_at_local": "2026-05-25T22:00:57+09:00",
+    "generated_at_local": "2026-05-26T03:19:03+09:00",
     "hosted_dependency_violation_count": 0,
     "model_missing_count": 0,
     "object_row_count": 48,

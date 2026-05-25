@@ -1,6 +1,6 @@
 # CASP17 Target Object Viewer Smoke
 
-- generated: `2026-05-25T22:00:57+09:00`
+- generated: `2026-05-26T03:19:03+09:00`
 - smoke_status: `pass`
 - objects pass/blocked/total: `48/0/48`
 - missing/invalid projection/viewer: `0/0`

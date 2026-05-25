@@ -99,10 +99,14 @@ def test_build_casp17_target_model_folders_copies_target_artifacts(tmp_path):
     assert payload["summary"]["total_object_count"] == 2
     assert payload["summary"]["total_object_projection_files"] == 2
     assert payload["summary"]["total_object_viewer_files"] == 2
+    assert payload["summary"]["total_object_protein_atom_count"] == 3
+    assert payload["summary"]["total_object_coordinate_valid_count"] == 2
     row = payload["rows"][0]
     assert row["folder_name"] == "T0001_Example_kinase_Fab_complex"
     assert row["folder_status"] == "ready"
     assert row["atom_count"] == 3
+    assert row["protein_atom_count"] == 3
+    assert row["coordinate_status"] == "valid"
     assert row["chain_count"] == 2
     assert row["residue_count"] == 3
     assert row["object_count"] == 2
@@ -118,6 +122,8 @@ def test_build_casp17_target_model_folders_copies_target_artifacts(tmp_path):
     assert len(payload["object_rows"]) == 2
     assert {obj["object_id"] for obj in object_rows} == {"chain_A", "chain_B"}
     assert all(Path(obj["model_path"]).exists() for obj in object_rows)
+    assert all(obj["protein_atom_count"] > 0 for obj in object_rows)
+    assert all(obj["coordinate_status"] == "valid" for obj in object_rows)
     assert all(Path(obj["projection_svg_path"]).exists() for obj in object_rows)
     assert all(Path(obj["viewer_html_path"]).exists() for obj in object_rows)
     assert all(Path(obj["manifest_path"]).exists() for obj in object_rows)

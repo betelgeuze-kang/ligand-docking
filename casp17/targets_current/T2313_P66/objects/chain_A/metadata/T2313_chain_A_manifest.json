@@ -3,11 +3,13 @@
   "summary": {
     "atom_count": 3042,
     "chain_id": "A",
+    "coordinate_status": "valid",
     "manifest_path": "casp17/targets_current/T2313_P66/objects/chain_A/metadata/T2313_chain_A_manifest.json",
     "model_path": "casp17/targets_current/T2313_P66/objects/chain_A/models/T2313_chain_A.pdb",
     "object_folder": "casp17/targets_current/T2313_P66/objects/chain_A",
     "object_id": "chain_A",
     "projection_svg_path": "casp17/targets_current/T2313_P66/objects/chain_A/renders/T2313_chain_A_projection.svg",
+    "protein_atom_count": 3042,
     "readme_path": "casp17/targets_current/T2313_P66/objects/chain_A/README.md",
     "residue_count": 618,
     "target_id": "T2313",

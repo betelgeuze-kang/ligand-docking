@@ -3,11 +3,13 @@
   "summary": {
     "atom_count": 1058,
     "chain_id": "D",
+    "coordinate_status": "valid",
     "manifest_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_D/metadata/H1335_chain_D_manifest.json",
     "model_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_D/models/H1335_chain_D.pdb",
     "object_folder": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_D",
     "object_id": "chain_D",
     "projection_svg_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_D/renders/H1335_chain_D_projection.svg",
+    "protein_atom_count": 1058,
     "readme_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_D/README.md",
     "residue_count": 214,
     "target_id": "H1335",

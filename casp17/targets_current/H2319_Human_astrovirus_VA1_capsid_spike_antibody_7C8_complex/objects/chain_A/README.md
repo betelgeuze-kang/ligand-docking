@@ -7,6 +7,7 @@
 - projection: `casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/objects/chain_A/renders/H2319_chain_A_projection.svg`
 - viewer: `casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/objects/chain_A/viewer.html`
 - atoms/residues: `1340/273`
+- protein atoms / coordinate status: `1340/valid`
 
 ## Claim Boundary
 

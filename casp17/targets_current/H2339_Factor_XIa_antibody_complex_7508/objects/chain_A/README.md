@@ -7,6 +7,7 @@
 - projection: `casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_A/renders/H2339_chain_A_projection.svg`
 - viewer: `casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_A/viewer.html`
 - atoms/residues: `1095/223`
+- protein atoms / coordinate status: `1095/valid`
 
 ## Claim Boundary
 

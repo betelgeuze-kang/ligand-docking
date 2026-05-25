@@ -78,7 +78,7 @@ def _write_csv(path_like: str | Path, rows: list[dict[str, Any]]) -> None:
     if not fieldnames:
         fieldnames = ["target_id"]
     with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore", lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
 
@@ -149,14 +149,18 @@ def _pdb_stats(path: Path) -> dict[str, Any]:
     if not path.is_file():
         return {
             "atom_count": 0,
+            "protein_atom_count": 0,
             "model_count": 0,
             "chain_count": 0,
             "residue_count": 0,
+            "coordinate_status": "waiting_on_model",
         }
     atoms = 0
+    protein_atoms = 0
     models = 0
     residues: set[tuple[str, str, str]] = set()
     chains: set[str] = set()
+    coordinate_status = "valid"
     for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
         record = line[:6].strip().upper()
         if record == "MODEL":
@@ -164,6 +168,13 @@ def _pdb_stats(path: Path) -> dict[str, Any]:
         if record != "ATOM":
             continue
         atoms += 1
+        protein_atoms += 1
+        try:
+            float(line[30:38])
+            float(line[38:46])
+            float(line[46:54])
+        except ValueError:
+            coordinate_status = "invalid"
         chain = line[21:22].strip() or "_"
         resseq = line[22:26].strip()
         icode = line[26:27].strip()
@@ -171,9 +182,11 @@ def _pdb_stats(path: Path) -> dict[str, Any]:
         residues.add((chain, resseq, icode))
     return {
         "atom_count": atoms,
+        "protein_atom_count": protein_atoms,
         "model_count": models,
         "chain_count": len(chains),
         "residue_count": len(residues),
+        "coordinate_status": coordinate_status if atoms else "invalid",
     }
 
 
@@ -434,6 +447,7 @@ def _write_object_readme(object_dir: Path, object_row: dict[str, Any]) -> str:
         f"- projection: `{object_row['projection_svg_path']}`",
         f"- viewer: `{object_row['viewer_html_path']}`",
         f"- atoms/residues: `{object_row['atom_count']}/{object_row['residue_count']}`",
+        f"- protein atoms / coordinate status: `{object_row['protein_atom_count']}/{object_row['coordinate_status']}`",
         "",
         "## Claim Boundary",
         "",
@@ -449,16 +463,17 @@ def _write_object_index(folder: Path, target_id: str, object_rows: list[dict[str
     lines = [
         f"# {target_id} Object Index",
         "",
-        "| object | chain | atoms | residues | model | projection | viewer | folder |",
-        "| --- | --- | ---: | ---: | --- | --- | --- | --- |",
+        "| object | chain | atoms | protein atoms | residues | coordinates | model | projection | viewer | folder |",
+        "| --- | --- | ---: | ---: | ---: | --- | --- | --- | --- | --- |",
     ]
     for row in object_rows:
         lines.append(
-            f"| `{row['object_id']}` | `{row['chain_id']}` | {row['atom_count']} | {row['residue_count']} | "
+            f"| `{row['object_id']}` | `{row['chain_id']}` | {row['atom_count']} | "
+            f"{row['protein_atom_count']} | {row['residue_count']} | `{row['coordinate_status']}` | "
             f"`{row['model_path']}` | `{row['projection_svg_path']}` | `{row['viewer_html_path']}` | `{row['object_folder']}` |"
         )
     if not object_rows:
-        lines.append("| - | - | 0 | 0 | - | - | - | - |")
+        lines.append("| - | - | 0 | 0 | 0 | - | - | - | - | - |")
     lines.extend(["", "## Claim Boundary", "", CLAIM_BOUNDARY, ""])
     path = folder / "objects" / "OBJECT_INDEX.md"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -522,7 +537,9 @@ def _split_object_models(source: Path, objects_dir: Path, target_id: str) -> lis
             "projection_svg_path": projection_svg_path,
             "viewer_html_path": viewer_html_path,
             "atom_count": stats["atom_count"],
+            "protein_atom_count": stats["protein_atom_count"],
             "residue_count": stats["residue_count"],
+            "coordinate_status": stats["coordinate_status"],
         }
         manifest_path = metadata_dir / f"{target_id}_{object_id}_manifest.json"
         object_payload = {
@@ -611,6 +628,11 @@ def _target_bundle(row: dict[str, Any], args: argparse.Namespace) -> tuple[dict[
     blockers: list[str] = []
     if not final_model_path:
         blockers.append("final_selected_model_missing")
+    else:
+        if int(stats["protein_atom_count"]) <= 0:
+            blockers.append("final_model_protein_atom_records_missing")
+        if stats["coordinate_status"] != "valid":
+            blockers.append("final_model_coordinates_invalid")
     if not fasta_path:
         blockers.append("fasta_missing")
     if not render_paths:
@@ -640,9 +662,11 @@ def _target_bundle(row: dict[str, Any], args: argparse.Namespace) -> tuple[dict[
         "object_index_md": object_index_md,
         "metadata_file_count": len(copied_job_files) + (1 if fasta_path else 0),
         "atom_count": stats["atom_count"],
+        "protein_atom_count": stats["protein_atom_count"],
         "model_count": stats["model_count"],
         "chain_count": stats["chain_count"],
         "residue_count": stats["residue_count"],
+        "coordinate_status": stats["coordinate_status"],
         "folder_status": folder_status,
         "blockers": ";".join(blockers),
     }
@@ -686,6 +710,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         target_payloads.append(target_payload)
 
     ready_count = sum(1 for row in rows if row["folder_status"] == "ready")
+    object_rows = [object_row for target in target_payloads for object_row in target.get("objects", [])]
     summary = {
         "packet_type": "casp17_target_model_folders",
         "generated_at_local": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
@@ -704,11 +729,14 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "total_object_count": sum(int(row["object_count"]) for row in rows),
         "total_object_projection_files": sum(int(row["object_projection_count"]) for row in rows),
         "total_object_viewer_files": sum(int(row["object_viewer_count"]) for row in rows),
+        "total_object_protein_atom_count": sum(int(row["protein_atom_count"]) for row in object_rows),
+        "total_object_coordinate_valid_count": sum(
+            1 for row in object_rows if row["coordinate_status"] == "valid"
+        ),
         "object_catalog_csv": _artifact(args.out_object_csv),
         "object_catalog_md": _artifact(args.out_object_md),
         "claim_boundary": CLAIM_BOUNDARY,
     }
-    object_rows = [object_row for target in target_payloads for object_row in target.get("objects", [])]
     return {"summary": summary, "rows": rows, "targets": target_payloads, "object_rows": object_rows}
 
 
@@ -725,6 +753,8 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- total object folders: `{summary['total_object_count']}`",
         f"- total object projection files: `{summary['total_object_projection_files']}`",
         f"- total object viewer files: `{summary['total_object_viewer_files']}`",
+        f"- total object protein atoms: `{summary['total_object_protein_atom_count']}`",
+        f"- coordinate-valid object models: `{summary['total_object_coordinate_valid_count']}/{summary['total_object_count']}`",
         f"- object catalog: `{summary['object_catalog_md']}`",
         "",
         "## Target Folders",
@@ -760,17 +790,18 @@ def _write_object_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         "## Objects",
         "",
-        "| target | protein/complex | object | chain | atoms | residues | model | projection | viewer | folder |",
-        "| --- | --- | --- | --- | ---: | ---: | --- | --- | --- | --- |",
+        "| target | protein/complex | object | chain | atoms | protein atoms | residues | coordinates | model | projection | viewer | folder |",
+        "| --- | --- | --- | --- | ---: | ---: | ---: | --- | --- | --- | --- | --- |",
     ]
     for row in payload["object_rows"]:
         lines.append(
             f"| `{row['target_id']}` | {row['protein_name']} | `{row['object_id']}` | `{row['chain_id']}` | "
-            f"{row['atom_count']} | {row['residue_count']} | `{row['model_path']}` | "
+            f"{row['atom_count']} | {row['protein_atom_count']} | {row['residue_count']} | "
+            f"`{row['coordinate_status']}` | `{row['model_path']}` | "
             f"`{row['projection_svg_path']}` | `{row['viewer_html_path']}` | `{row['object_folder']}` |"
         )
     if not payload["object_rows"]:
-        lines.append("| - | - | - | - | 0 | 0 | - | - | - | - |")
+        lines.append("| - | - | - | - | 0 | 0 | 0 | - | - | - | - | - |")
     lines.extend(["", "## Claim Boundary", "", CLAIM_BOUNDARY, ""])
     path = _resolve(path_like)
     path.parent.mkdir(parents=True, exist_ok=True)

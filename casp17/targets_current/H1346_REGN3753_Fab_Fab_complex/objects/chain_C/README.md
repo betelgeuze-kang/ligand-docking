@@ -7,6 +7,7 @@
 - projection: `casp17/targets_current/H1346_REGN3753_Fab_Fab_complex/objects/chain_C/renders/H1346_chain_C_projection.svg`
 - viewer: `casp17/targets_current/H1346_REGN3753_Fab_Fab_complex/objects/chain_C/viewer.html`
 - atoms/residues: `1131/230`
+- protein atoms / coordinate status: `1131/valid`
 
 ## Claim Boundary
 

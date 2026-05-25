@@ -7,6 +7,7 @@
 - projection: `casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_B/renders/H2312_chain_B_projection.svg`
 - viewer: `casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_B/viewer.html`
 - atoms/residues: `3157/637`
+- protein atoms / coordinate status: `3157/valid`
 
 ## Claim Boundary
 

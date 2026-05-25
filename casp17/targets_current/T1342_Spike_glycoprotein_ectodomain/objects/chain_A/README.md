@@ -7,6 +7,7 @@
 - projection: `casp17/targets_current/T1342_Spike_glycoprotein_ectodomain/objects/chain_A/renders/T1342_chain_A_projection.svg`
 - viewer: `casp17/targets_current/T1342_Spike_glycoprotein_ectodomain/objects/chain_A/viewer.html`
 - atoms/residues: `7155/1455`
+- protein atoms / coordinate status: `7155/valid`
 
 ## Claim Boundary
 

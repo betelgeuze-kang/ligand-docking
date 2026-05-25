@@ -1,6 +1,6 @@
 # CASP17 Target Model Folders
 
-- generated: `2026-05-25T21:47:15+09:00`
+- generated: `2026-05-26T03:18:57+09:00`
 - output directory: `casp17/targets_current`
 - targets ready/blocked: `16/0`
 - total render files: `320`
@@ -8,6 +8,8 @@
 - total object folders: `48`
 - total object projection files: `48`
 - total object viewer files: `48`
+- total object protein atoms: `72487`
+- coordinate-valid object models: `48/48`
 - object catalog: `casp17/casp17_target_object_models_current.md`
 
 ## Target Folders

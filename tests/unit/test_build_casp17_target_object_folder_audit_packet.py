@@ -48,7 +48,9 @@ def _object_row(target_folder: Path, *, chain_id: str = "A", object_id: str = "c
         "manifest_path": str(manifest_path),
         "readme_path": str(readme_path),
         "atom_count": 1,
+        "protein_atom_count": 1,
         "residue_count": 1,
+        "coordinate_status": "valid",
     }
     _write_json(manifest_path, {"summary": row, "claim_boundary": "local test boundary"})
     readme_path.write_text(
@@ -86,8 +88,13 @@ def test_target_object_folder_audit_passes_independent_object_folder(tmp_path: P
     assert payload["summary"]["folder_audit_status"] == "pass"
     assert payload["summary"]["protein_named_folder_pass_count"] == 1
     assert payload["summary"]["chain_isolation_pass_count"] == 1
+    assert payload["summary"]["protein_atom_pass_count"] == 1
+    assert payload["summary"]["coordinate_valid_pass_count"] == 1
+    assert payload["summary"]["total_protein_atom_count"] == 1
     assert payload["summary"]["viewer_local_only_pass_count"] == 1
     assert payload["rows"][0]["folder_audit_status"] == "pass"
+    assert payload["rows"][0]["protein_atom_count"] == 1
+    assert payload["rows"][0]["coordinate_status"] == "valid"
 
 
 def test_target_object_folder_audit_blocks_wrong_chain_and_hosted_viewer(tmp_path: Path) -> None:
@@ -126,3 +133,57 @@ def test_target_object_folder_audit_blocks_wrong_chain_and_hosted_viewer(tmp_pat
     assert payload["summary"]["blocked_count"] == 1
     assert "object_pdb_chain_isolation_failed" in blockers
     assert "viewer_hosted_dependency" in blockers
+
+
+def test_target_object_folder_audit_blocks_hetatm_only_and_invalid_coordinates(tmp_path: Path) -> None:
+    target_folder = tmp_path / "T9001_Example_Protein"
+    hetatm_row = _object_row(target_folder, chain_id="A", object_id="chain_A")
+    Path(str(hetatm_row["model_path"])).write_text(
+        "REMARK ligand-only object\n"
+        "HETATM    1  C1  LIG A   1       0.000   1.000   2.000  1.00 70.00           C  \n"
+        "TER\nEND\n",
+        encoding="utf-8",
+    )
+    hetatm_row["protein_atom_count"] = 0
+    hetatm_row["residue_count"] = 0
+
+    invalid_row = _object_row(target_folder, chain_id="B", object_id="chain_B")
+    Path(str(invalid_row["model_path"])).write_text(
+        "REMARK invalid coordinate object\n"
+        "ATOM      1  CA  ALA B   1       BADVAL   1.000   2.000  1.00 70.00           C  \n"
+        "TER\nEND\n",
+        encoding="utf-8",
+    )
+    invalid_row["coordinate_status"] = "invalid"
+
+    target_json = tmp_path / "target_folders.json"
+    _write_json(target_json, {"summary": {"blocked_count": 0}, "object_rows": [hetatm_row, invalid_row]})
+
+    result = subprocess.run(
+        [
+            "python3",
+            str(ROOT / "tools/build_casp17_target_object_folder_audit_packet.py"),
+            "--target-model-folders-json",
+            str(target_json),
+            "--out-json",
+            str(tmp_path / "audit.json"),
+            "--out-csv",
+            str(tmp_path / "audit.csv"),
+            "--out-md",
+            str(tmp_path / "audit.md"),
+        ],
+        cwd=ROOT,
+        check=False,
+    )
+
+    payload = json.loads((tmp_path / "audit.json").read_text(encoding="utf-8"))
+    blockers_by_object = {row["object_id"]: row["blockers"] for row in payload["rows"]}
+
+    assert result.returncode == 2
+    assert payload["summary"]["folder_audit_status"] == "blocked"
+    assert payload["summary"]["blocked_count"] == 2
+    assert payload["summary"]["protein_atom_pass_count"] == 1
+    assert payload["summary"]["coordinate_valid_pass_count"] == 1
+    assert payload["summary"]["total_protein_atom_count"] == 1
+    assert "object_pdb_protein_atom_records_missing" in blockers_by_object["chain_A"]
+    assert "object_pdb_coordinates_invalid" in blockers_by_object["chain_B"]

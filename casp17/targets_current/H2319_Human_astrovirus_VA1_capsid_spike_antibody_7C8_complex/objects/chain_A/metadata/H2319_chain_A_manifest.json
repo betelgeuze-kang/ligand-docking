@@ -3,11 +3,13 @@
   "summary": {
     "atom_count": 1340,
     "chain_id": "A",
+    "coordinate_status": "valid",
     "manifest_path": "casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/objects/chain_A/metadata/H2319_chain_A_manifest.json",
     "model_path": "casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/objects/chain_A/models/H2319_chain_A.pdb",
     "object_folder": "casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/objects/chain_A",
     "object_id": "chain_A",
     "projection_svg_path": "casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/objects/chain_A/renders/H2319_chain_A_projection.svg",
+    "protein_atom_count": 1340,
     "readme_path": "casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/objects/chain_A/README.md",
     "residue_count": 273,
     "target_id": "H2319",

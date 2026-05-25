@@ -92,7 +92,7 @@ def _write_csv(path_like: str | Path, rows: list[dict[str, Any]]) -> None:
     if not fieldnames:
         fieldnames = ["target_id", "object_id", "folder_audit_status"]
     with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore", lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
 
@@ -123,21 +123,46 @@ def _file_text(path: Path) -> str:
 
 def _pdb_chain_stats(path: Path) -> dict[str, Any]:
     atoms = 0
+    protein_atoms = 0
     residues: set[tuple[str, str, str]] = set()
     chains: set[str] = set()
+    coordinate_status = "waiting_on_object_pdb"
     if not path.is_file():
-        return {"atom_count": 0, "residue_count": 0, "chain_ids": []}
+        return {
+            "atom_count": 0,
+            "protein_atom_count": 0,
+            "residue_count": 0,
+            "chain_ids": [],
+            "coordinate_status": coordinate_status,
+        }
+    coordinate_status = "valid"
     for line in _file_text(path).splitlines():
         record = line[:6].strip().upper()
         if record not in {"ATOM", "HETATM"}:
             continue
         atoms += 1
+        try:
+            float(line[30:38])
+            float(line[38:46])
+            float(line[46:54])
+        except ValueError:
+            coordinate_status = "invalid"
         chain = line[21:22].strip() or "blank"
         resseq = line[22:26].strip()
         icode = line[26:27].strip()
-        chains.add(chain)
-        residues.add((chain, resseq, icode))
-    return {"atom_count": atoms, "residue_count": len(residues), "chain_ids": sorted(chains)}
+        if record == "ATOM":
+            protein_atoms += 1
+            chains.add(chain)
+            residues.add((chain, resseq, icode))
+    if atoms <= 0:
+        coordinate_status = "invalid"
+    return {
+        "atom_count": atoms,
+        "protein_atom_count": protein_atoms,
+        "residue_count": len(residues),
+        "chain_ids": sorted(chains),
+        "coordinate_status": coordinate_status,
+    }
 
 
 def _projection_ok(path: Path) -> bool:
@@ -228,12 +253,21 @@ def _audit_row(row: dict[str, Any]) -> dict[str, Any]:
     chain_ids = [str(chain) for chain in stats["chain_ids"]]
     if stats["atom_count"] <= 0:
         blockers.append("object_pdb_atom_records_missing")
+    if stats["protein_atom_count"] <= 0:
+        blockers.append("object_pdb_protein_atom_records_missing")
+    if stats["coordinate_status"] != "valid":
+        blockers.append("object_pdb_coordinates_invalid")
     if chain_ids != [chain_id]:
         blockers.append("object_pdb_chain_isolation_failed")
     if int(row.get("atom_count") or 0) != int(stats["atom_count"]):
         blockers.append("object_pdb_atom_count_mismatch")
+    if int(row.get("protein_atom_count") or 0) != int(stats["protein_atom_count"]):
+        blockers.append("object_pdb_protein_atom_count_mismatch")
     if int(row.get("residue_count") or 0) != int(stats["residue_count"]):
         blockers.append("object_pdb_residue_count_mismatch")
+    row_coordinate_status = _text(row.get("coordinate_status"))
+    if row_coordinate_status and row_coordinate_status != stats["coordinate_status"]:
+        blockers.append("object_pdb_coordinate_status_mismatch")
 
     if not _projection_ok(projection_path):
         blockers.append("projection_svg_missing_or_invalid")
@@ -255,8 +289,10 @@ def _audit_row(row: dict[str, Any]) -> dict[str, Any]:
         "manifest_path": _artifact(manifest_path),
         "readme_path": _artifact(readme_path),
         "atom_count": stats["atom_count"],
+        "protein_atom_count": stats["protein_atom_count"],
         "residue_count": stats["residue_count"],
         "chain_ids": ",".join(chain_ids),
+        "coordinate_status": stats["coordinate_status"],
         "blockers": ",".join(blockers),
     }
 
@@ -284,6 +320,13 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "chain_isolation_pass_count": sum(
             1 for row in rows if "object_pdb_chain_isolation_failed" not in row["blockers"]
         ),
+        "protein_atom_pass_count": sum(
+            1 for row in rows if "object_pdb_protein_atom_records_missing" not in row["blockers"]
+        ),
+        "coordinate_valid_pass_count": sum(
+            1 for row in rows if row["coordinate_status"] == "valid"
+        ),
+        "total_protein_atom_count": sum(int(row["protein_atom_count"]) for row in rows),
         "manifest_pass_count": sum(1 for row in rows if "manifest_" not in row["blockers"]),
         "readme_pass_count": sum(1 for row in rows if "readme_" not in row["blockers"]),
         "viewer_local_only_pass_count": sum(1 for row in rows if "viewer_hosted_dependency" not in row["blockers"]),
@@ -304,6 +347,8 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- objects pass/blocked/total: `{summary['pass_count']}/{summary['blocked_count']}/{summary['object_row_count']}`",
         f"- protein-named folders: `{summary['protein_named_folder_pass_count']}/{summary['object_row_count']}`",
         f"- chain isolation: `{summary['chain_isolation_pass_count']}/{summary['object_row_count']}`",
+        f"- protein atom objects: `{summary['protein_atom_pass_count']}/{summary['object_row_count']}` total protein atoms `{summary['total_protein_atom_count']}`",
+        f"- coordinate-valid objects: `{summary['coordinate_valid_pass_count']}/{summary['object_row_count']}`",
         f"- manifest/readme pass: `{summary['manifest_pass_count']}/{summary['readme_pass_count']}`",
         f"- local-only viewers: `{summary['viewer_local_only_pass_count']}/{summary['object_row_count']}`",
         f"- first blocked object: `{summary['first_blocked_object'] or '-'}`",
@@ -311,17 +356,18 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         "## Objects",
         "",
-        "| target | protein/complex | object | chain | status | atoms | residues | folder | blockers |",
-        "| --- | --- | --- | --- | --- | ---: | ---: | --- | --- |",
+        "| target | protein/complex | object | chain | status | atoms | protein atoms | residues | coordinates | folder | blockers |",
+        "| --- | --- | --- | --- | --- | ---: | ---: | ---: | --- | --- | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
             f"| `{row['target_id']}` | {row['protein_name']} | `{row['object_id']}` | `{row['chain_id']}` | "
-            f"`{row['folder_audit_status']}` | {row['atom_count']} | {row['residue_count']} | "
+            f"`{row['folder_audit_status']}` | {row['atom_count']} | {row['protein_atom_count']} | "
+            f"{row['residue_count']} | `{row['coordinate_status']}` | "
             f"`{row['object_folder']}` | `{row['blockers'] or '-'}` |"
         )
     if not payload["rows"]:
-        lines.append("| - | - | - | - | `blocked` | 0 | 0 | - | no objects |")
+        lines.append("| - | - | - | - | `blocked` | 0 | 0 | 0 | - | - | no objects |")
     lines.extend(["", "## Claim Boundary", "", str(summary["claim_boundary"]), ""])
     path = _resolve(path_like)
     path.parent.mkdir(parents=True, exist_ok=True)
