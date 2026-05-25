@@ -127,3 +127,60 @@ def test_evidence_intake_ready_when_dropzone_has_no_open_rows(tmp_path: Path) ->
     assert payload["summary"]["intake_status"] == "ready"
     assert payload["summary"]["action_count"] == 0
     assert payload["rows"] == []
+
+
+def test_evidence_intake_uses_cleared_value_ledger_patch_candidate(tmp_path: Path) -> None:
+    folder = tmp_path / "priority_001_REQUIRED_MONOMER_001"
+    row_fill = folder / "row_fill.csv"
+    _write_csv(
+        row_fill,
+        [{"benchmark_id": "hist_REQUIRED_MONOMER_001", "target_id": "REQUIRED_MONOMER_001"}],
+    )
+    _write_csv(
+        folder / "FIELD_VALUE_LEDGER.csv",
+        [
+            {
+                "template_column": "target_id",
+                "evidence_class": "target_identity",
+                "current_value": "REQUIRED_MONOMER_001",
+                "proposed_value": "T9001",
+                "evidence_ref": "local/no_leak/T9001.md",
+                "operator_clearance": "ready_for_row_fill",
+                "ledger_status": "ready_for_row_fill",
+                "next_action": "use this target_id",
+            }
+        ],
+    )
+    dropzone = tmp_path / "dropzone.json"
+    _write_json(
+        dropzone,
+        {
+            "summary": {"dropzone_status": "open_actions", "dropzone_count": 1},
+            "rows": [
+                {
+                    "dropzone_id": "priority_001_REQUIRED_MONOMER_001",
+                    "action_rank": 1,
+                    "operator_priority": 1,
+                    "row_rank": 1,
+                    "benchmark_id": "hist_REQUIRED_MONOMER_001",
+                    "target_id": "REQUIRED_MONOMER_001",
+                    "scope": "monomer",
+                    "evidence_class": "target_identity",
+                    "template_column": "target_id",
+                    "blocker": "target_id_placeholder",
+                    "source_row_fill_csv": str(row_fill),
+                    "dropzone_folder": str(folder / "evidence_dropzone"),
+                    "dropzone_class_folder": str(folder / "evidence_dropzone" / "target_identity"),
+                    "drop_path": "",
+                }
+            ],
+        },
+    )
+    args = mod.parse_args(["--dropzone-json", str(dropzone)])
+
+    payload = mod.build_payload(args)
+
+    assert payload["summary"]["intake_status"] == "ready_for_operator_patch"
+    assert payload["summary"]["patch_candidate_count"] == 1
+    assert payload["rows"][0]["intake_status"] == "patch_candidate"
+    assert payload["rows"][0]["recommended_value"] == "T9001"

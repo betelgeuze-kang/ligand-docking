@@ -18,6 +18,7 @@ DEFAULT_OUT_CSV = "casp17/casp17_competitive_floor_evidence_intake_current.csv"
 DEFAULT_OUT_MD = "casp17/COMPETITIVE_FLOOR_EVIDENCE_INTAKE.md"
 
 FILE_CLASSES = {"core_file", "ablation_file"}
+LEDGER_CLEAR_VALUES = {"ready_for_row_fill", "cleared", "no_leak", "internal_no_leak"}
 CLAIM_BOUNDARY = (
     "Local competitive-floor evidence intake only. It audits files and operator-filled fields already placed in "
     "dropzones and writes row_fill patch candidates; it does not choose targets, fetch native structures, clear "
@@ -155,6 +156,33 @@ def _row_fill_file_present(row_fill_value: str) -> bool:
     return bool(row_fill_value) and not _contains_placeholder(row_fill_value) and _resolve(row_fill_value).is_file()
 
 
+def _ledger_path(action: dict[str, Any]) -> Path:
+    dropzone_folder = _text(action.get("dropzone_folder"))
+    batch_folder = _resolve(dropzone_folder).parent if dropzone_folder else _resolve(".")
+    return batch_folder / "FIELD_VALUE_LEDGER.csv"
+
+
+def _ledger_value_for(action: dict[str, Any]) -> tuple[str, str]:
+    rows, blockers = _read_csv(_ledger_path(action))
+    if blockers:
+        return "", "awaiting_operator_value"
+    column = _text(action.get("template_column"))
+    matches = [row for row in rows if _text(row.get("template_column")) == column]
+    if not matches:
+        return "", "awaiting_operator_value"
+    row = matches[0]
+    proposed = _text(row.get("proposed_value"))
+    clearance = _text(row.get("operator_clearance")).lower()
+    evidence_ref = _text(row.get("evidence_ref"))
+    if _contains_placeholder(proposed):
+        return "", "awaiting_operator_value"
+    if clearance not in LEDGER_CLEAR_VALUES:
+        return "", "awaiting_operator_value"
+    if not evidence_ref:
+        return "", "awaiting_operator_value"
+    return proposed, "patch_candidate"
+
+
 def _intake_row(action: dict[str, Any], row_fill: dict[str, str], row_fill_blockers: list[str]) -> dict[str, Any]:
     evidence_class = _text(action.get("evidence_class"))
     column = _text(action.get("template_column"))
@@ -178,8 +206,7 @@ def _intake_row(action: dict[str, Any], row_fill: dict[str, str], row_fill_block
             status = "awaiting_dropzone_file"
             recommended_value = ""
     elif _contains_placeholder(row_fill_value):
-        status = "awaiting_operator_value"
-        recommended_value = ""
+        recommended_value, status = _ledger_value_for(action)
     else:
         status = "field_present_needs_worklist_rerun"
         recommended_value = row_fill_value
