@@ -200,7 +200,21 @@ def test_evidence_import_apply_copies_files_and_updates_ledgers(tmp_path: Path) 
             },
         ],
     )
-    args = mod.parse_args(["--dropzone-json", str(dropzone_json), "--import-csv", str(import_csv), "--apply"])
+    args = mod.parse_args(
+        [
+            "--dropzone-json",
+            str(dropzone_json),
+            "--import-csv",
+            str(import_csv),
+            "--out-json",
+            str(tmp_path / "import.json"),
+            "--out-csv",
+            str(tmp_path / "audit.csv"),
+            "--out-md",
+            str(tmp_path / "IMPORT.md"),
+            "--apply",
+        ]
+    )
 
     payload = mod.build_payload(args)
     mod.write_outputs(args, payload)
