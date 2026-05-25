@@ -458,6 +458,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "evidence_ref_present_count": 0,
                 "evidence_ref_blocked_count": 3,
                 "evidence_ref_waiting_count": 0,
+                "evidence_ref_verified_count": 0,
+                "evidence_ref_content_blocked_count": 0,
                 "manifest_stub_ready_count": 0,
                 "manifest_provenance_matched_count": 0,
                 "manifest_provenance_mismatch_count": 0,
@@ -954,6 +956,16 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     )
     assert (
         payload["summary"]["competitive_target_identity_clearance_workorder_audit_evidence_ref_waiting_count"]
+        == 0
+    )
+    assert (
+        payload["summary"]["competitive_target_identity_clearance_workorder_audit_evidence_ref_verified_count"]
+        == 0
+    )
+    assert (
+        payload["summary"][
+            "competitive_target_identity_clearance_workorder_audit_evidence_ref_content_blocked_count"
+        ]
         == 0
     )
     assert payload["summary"]["competitive_target_identity_clearance_workorder_audit_manifest_count"] == 0

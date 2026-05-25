@@ -118,7 +118,7 @@ def _fixture(tmp_path: Path, *, ready: bool) -> dict[str, Path]:
     evidence_ref = tmp_path / "no_leak" / f"{target_id}.md"
     if ready:
         evidence_ref.parent.mkdir(parents=True, exist_ok=True)
-        evidence_ref.write_text("operator reviewed no-leak evidence\n", encoding="utf-8")
+        evidence_ref.write_text(f"{target_id} operator reviewed no-leak evidence\n", encoding="utf-8")
     _write_csv(
         provenance_csv,
         [_ready_provenance(target_id, str(evidence_ref)) if ready else _blocked_provenance(target_id)],

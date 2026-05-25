@@ -130,7 +130,7 @@ def test_clearance_workorder_audit_blocks_missing_native_and_placeholders(tmp_pa
     blocked_provenance = blocked_dir / "provenance_template.csv"
     blocked_manifest = blocked_dir / "manifest_stub.csv"
     ready_evidence = ready_dir / "no_leak_evidence.md"
-    ready_evidence.write_text("operator reviewed no-leak evidence\n", encoding="utf-8")
+    ready_evidence.write_text("H1001 operator reviewed no-leak evidence\n", encoding="utf-8")
     _write_csv(ready_provenance, [_ready_provenance("H1001", str(ready_evidence))])
     _write_csv(ready_manifest, [_ready_manifest("H1001", ready_prediction, ready_native)])
     _write_csv(
@@ -184,6 +184,8 @@ def test_clearance_workorder_audit_blocks_missing_native_and_placeholders(tmp_pa
     assert payload["summary"]["provenance_ready_count"] == 1
     assert payload["summary"]["evidence_ref_present_count"] == 1
     assert payload["summary"]["evidence_ref_blocked_count"] == 1
+    assert payload["summary"]["evidence_ref_verified_count"] == 1
+    assert payload["summary"]["evidence_ref_content_blocked_count"] == 0
     assert payload["summary"]["manifest_stub_ready_count"] == 1
     assert payload["summary"]["manifest_provenance_matched_count"] == 1
     assert payload["summary"]["manifest_provenance_mismatch_count"] == 0
@@ -192,6 +194,7 @@ def test_clearance_workorder_audit_blocks_missing_native_and_placeholders(tmp_pa
     assert payload["summary"]["native_prediction_waiting_count"] == 1
     assert by_id["H1001"]["audit_status"] == "pass"
     assert by_id["H1001"]["evidence_ref_status"] == "present"
+    assert by_id["H1001"]["evidence_ref_content_status"] == "verified"
     assert by_id["H1001"]["manifest_provenance_status"] == "matched"
     assert by_id["H1001"]["native_prediction_identity_status"] == "distinct"
     assert by_id["H1002"]["audit_status"] == "blocked"
@@ -218,7 +221,7 @@ def test_clearance_workorder_audit_blocks_manifest_provenance_mismatch(tmp_path:
     provenance_csv = tmp_path / "provenance_template.csv"
     manifest_csv = tmp_path / "manifest_stub.csv"
     evidence_ref = tmp_path / "no_leak_evidence.md"
-    evidence_ref.write_text("operator reviewed no-leak evidence\n", encoding="utf-8")
+    evidence_ref.write_text("H1001 operator reviewed no-leak evidence\n", encoding="utf-8")
     manifest = _ready_manifest(target_id, prediction, native)
     manifest["operator_clearance"] = "cleared"
     _write_csv(provenance_csv, [_ready_provenance(target_id, str(evidence_ref))])
@@ -249,6 +252,7 @@ def test_clearance_workorder_audit_blocks_manifest_provenance_mismatch(tmp_path:
     assert payload["summary"]["audit_pass_count"] == 0
     assert payload["summary"]["manifest_stub_ready_count"] == 1
     assert payload["summary"]["evidence_ref_present_count"] == 1
+    assert payload["summary"]["evidence_ref_verified_count"] == 1
     assert payload["summary"]["manifest_provenance_matched_count"] == 0
     assert payload["summary"]["manifest_provenance_mismatch_count"] == 1
     assert row["manifest_provenance_status"] == "mismatch"
@@ -267,7 +271,7 @@ def test_clearance_workorder_audit_blocks_native_that_is_prediction_file(tmp_pat
     provenance_csv = tmp_path / "provenance_template.csv"
     manifest_csv = tmp_path / "manifest_stub.csv"
     evidence_ref = tmp_path / "no_leak_evidence.md"
-    evidence_ref.write_text("operator reviewed no-leak evidence\n", encoding="utf-8")
+    evidence_ref.write_text("H1001 operator reviewed no-leak evidence\n", encoding="utf-8")
     _write_csv(provenance_csv, [_ready_provenance(target_id, str(evidence_ref))])
     _write_csv(manifest_csv, [_ready_manifest(target_id, prediction, prediction)])
     workorder_json = tmp_path / "workorder.json"
@@ -312,7 +316,7 @@ def test_clearance_workorder_audit_blocks_native_with_prediction_content(tmp_pat
     provenance_csv = tmp_path / "provenance_template.csv"
     manifest_csv = tmp_path / "manifest_stub.csv"
     evidence_ref = tmp_path / "no_leak_evidence.md"
-    evidence_ref.write_text("operator reviewed no-leak evidence\n", encoding="utf-8")
+    evidence_ref.write_text("H1001 operator reviewed no-leak evidence\n", encoding="utf-8")
     _write_csv(provenance_csv, [_ready_provenance(target_id, str(evidence_ref))])
     _write_csv(manifest_csv, [_ready_manifest(target_id, prediction, native)])
     workorder_json = tmp_path / "workorder.json"
@@ -388,6 +392,58 @@ def test_clearance_workorder_audit_blocks_missing_local_evidence_ref(tmp_path: P
     assert payload["summary"]["evidence_ref_blocked_count"] == 1
     assert row["evidence_ref_status"] == "missing"
     assert "evidence_ref_file_missing" in row["blockers"]
+    assert row["next_action"] == "attach a local no-leak evidence file and record its path in evidence_ref"
+
+
+def test_clearance_workorder_audit_blocks_evidence_without_target_or_no_leak_marker(tmp_path: Path) -> None:
+    target_id = "H1001"
+    prediction = tmp_path / "H1001_model_1.pdb"
+    native = tmp_path / "H1001_native.pdb"
+    prediction.write_text(
+        "ATOM      1 CA   ALA A   1       1.000   2.000   3.000  1.00 70.00           C\n",
+        encoding="utf-8",
+    )
+    native.write_text(
+        "ATOM      1 CA   GLY A   1       4.000   5.000   6.000  1.00 60.00           C\n",
+        encoding="utf-8",
+    )
+    provenance_csv = tmp_path / "provenance_template.csv"
+    manifest_csv = tmp_path / "manifest_stub.csv"
+    evidence_ref = tmp_path / "evidence.md"
+    evidence_ref.write_text("operator reviewed benchmark material\n", encoding="utf-8")
+    _write_csv(provenance_csv, [_ready_provenance(target_id, str(evidence_ref))])
+    _write_csv(manifest_csv, [_ready_manifest(target_id, prediction, native)])
+    workorder_json = tmp_path / "workorder.json"
+    _write_json(
+        workorder_json,
+        {
+            "summary": {"clearance_workorder_status": "ready_for_manifest_stub_review"},
+            "rows": [
+                {
+                    "target_id": target_id,
+                    "workorder_status": "ready_for_manifest_stub_review",
+                    "native_dropzone_pdb": str(native),
+                    "provenance_template_csv": str(provenance_csv),
+                    "manifest_stub_csv": str(manifest_csv),
+                    "prediction_pdb": str(prediction),
+                }
+            ],
+        },
+    )
+    args = mod.parse_args(_args(tmp_path, workorder_json))
+
+    payload = mod.build_payload(args)
+
+    row = payload["rows"][0]
+    assert payload["summary"]["clearance_workorder_audit_status"] == "blocked"
+    assert payload["summary"]["evidence_ref_present_count"] == 1
+    assert payload["summary"]["evidence_ref_verified_count"] == 0
+    assert payload["summary"]["evidence_ref_content_blocked_count"] == 1
+    assert row["evidence_ref_status"] == "present"
+    assert row["evidence_ref_content_status"] == "content_blocked"
+    assert row["evidence_ref_sha256"]
+    assert "evidence_ref_target_id_missing" in row["blockers"]
+    assert "evidence_ref_no_leak_marker_missing" in row["blockers"]
     assert row["next_action"] == "attach a local no-leak evidence file and record its path in evidence_ref"
 
 

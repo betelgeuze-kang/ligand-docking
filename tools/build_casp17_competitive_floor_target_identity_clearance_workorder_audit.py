@@ -28,6 +28,8 @@ AUDIT_COLUMNS = [
     "provenance_status",
     "evidence_ref_status",
     "evidence_ref_path",
+    "evidence_ref_content_status",
+    "evidence_ref_sha256",
     "manifest_stub_csv",
     "manifest_stub_status",
     "manifest_provenance_status",
@@ -171,23 +173,31 @@ def _native_status(path_like: str | Path) -> tuple[str, int, list[str]]:
     return "present", atom_count, []
 
 
-def _evidence_ref_status(value: Any) -> tuple[str, str, list[str]]:
+def _evidence_ref_status(value: Any, *, target_id: str) -> tuple[str, str, str, str, list[str]]:
     ref = _text(value)
     if _contains_placeholder(ref):
-        return "missing", "", ["evidence_ref_required"]
+        return "missing", "", "waiting_on_evidence_ref", "", ["evidence_ref_required"]
     if ref.lower().startswith(URL_PREFIXES):
-        return "external_unverified", ref, ["evidence_ref_must_be_local_file"]
+        return "external_unverified", ref, "waiting_on_local_file", "", ["evidence_ref_must_be_local_file"]
     path = _resolve(ref)
     if not path.exists():
-        return "missing", ref, ["evidence_ref_file_missing"]
+        return "missing", ref, "waiting_on_evidence_ref", "", ["evidence_ref_file_missing"]
     if not path.is_file():
-        return "invalid", ref, ["evidence_ref_not_file"]
+        return "invalid", ref, "waiting_on_file", "", ["evidence_ref_not_file"]
     try:
         if path.stat().st_size <= 0:
-            return "empty", ref, ["evidence_ref_file_empty"]
+            return "empty", ref, "empty", "", ["evidence_ref_file_empty"]
+        content = path.read_text(encoding="utf-8", errors="replace")
     except OSError:
-        return "unreadable", ref, ["evidence_ref_file_unreadable"]
-    return "present", ref, []
+        return "unreadable", ref, "unreadable", "", ["evidence_ref_file_unreadable"]
+    blockers: list[str] = []
+    lowered = content.lower()
+    if target_id.lower() not in lowered:
+        blockers.append("evidence_ref_target_id_missing")
+    if not any(marker in lowered for marker in ["no-leak", "no_leak", "no leak"]):
+        blockers.append("evidence_ref_no_leak_marker_missing")
+    content_status = "verified" if not blockers else "content_blocked"
+    return "present", ref, content_status, _sha256(path), blockers
 
 
 def _sha256(path_like: str | Path) -> str:
@@ -337,8 +347,10 @@ def _audit_row(workorder_row: dict[str, Any]) -> dict[str, Any]:
     provenance_row, provenance_file_blockers = _read_csv_one(workorder_row.get("provenance_template_csv"))
     provenance_blockers = list(provenance_file_blockers)
     provenance_status = _provenance_status(provenance_row, provenance_blockers) if not provenance_file_blockers else "blocked"
-    evidence_ref_status, evidence_ref_path, evidence_ref_blockers = (
-        _evidence_ref_status(provenance_row.get("evidence_ref")) if not provenance_file_blockers else ("waiting_on_provenance", "", [])
+    evidence_ref_status, evidence_ref_path, evidence_ref_content_status, evidence_ref_sha256, evidence_ref_blockers = (
+        _evidence_ref_status(provenance_row.get("evidence_ref"), target_id=target_id)
+        if not provenance_file_blockers
+        else ("waiting_on_provenance", "", "waiting_on_provenance", "", [])
     )
     manifest_row, manifest_file_blockers = _read_csv_one(workorder_row.get("manifest_stub_csv"))
     manifest_blockers = list(manifest_file_blockers)
@@ -397,6 +409,8 @@ def _audit_row(workorder_row: dict[str, Any]) -> dict[str, Any]:
         "provenance_status": provenance_status,
         "evidence_ref_status": evidence_ref_status,
         "evidence_ref_path": evidence_ref_path,
+        "evidence_ref_content_status": evidence_ref_content_status,
+        "evidence_ref_sha256": evidence_ref_sha256,
         "manifest_stub_csv": _text(workorder_row.get("manifest_stub_csv")),
         "manifest_stub_status": manifest_status,
         "manifest_provenance_status": manifest_provenance_status,
@@ -436,6 +450,12 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         ),
         "evidence_ref_waiting_count": sum(
             1 for row in rows if row["evidence_ref_status"] == "waiting_on_provenance"
+        ),
+        "evidence_ref_verified_count": sum(
+            1 for row in rows if row["evidence_ref_content_status"] == "verified"
+        ),
+        "evidence_ref_content_blocked_count": sum(
+            1 for row in rows if row["evidence_ref_content_status"] == "content_blocked"
         ),
         "manifest_stub_ready_count": sum(1 for row in rows if row["manifest_stub_status"] == "ready"),
         "manifest_provenance_matched_count": sum(
@@ -477,6 +497,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- audit pass/blocked/total: `{summary['audit_pass_count']}/{summary['audit_blocked_count']}/{summary['audit_target_count']}`",
         f"- prediction/native/provenance/manifest ready: `{summary['prediction_present_count']}/{summary['native_valid_count']}/{summary['provenance_ready_count']}/{summary['manifest_stub_ready_count']}`",
         f"- local evidence refs present/blocked/waiting: `{summary['evidence_ref_present_count']}/{summary['evidence_ref_blocked_count']}/{summary['evidence_ref_waiting_count']}`",
+        f"- local evidence content verified/blocked: `{summary['evidence_ref_verified_count']}/{summary['evidence_ref_content_blocked_count']}`",
         f"- manifest/provenance matched/mismatches: `{summary['manifest_provenance_matched_count']}/{summary['manifest_provenance_mismatch_count']}`",
         f"- native/prediction distinct/same/waiting: `{summary['native_prediction_distinct_count']}/{summary['native_prediction_same_count']}/{summary['native_prediction_waiting_count']}`",
         f"- first blocked: `{summary['first_blocked_target_id'] or '-'}` `{summary['first_blocked_status'] or '-'}`",
@@ -484,19 +505,20 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         "## Audit Rows",
         "",
-        "| target | audit | native | atoms | provenance | evidence | manifest | manifest/provenance | prediction | native/prediction | blockers | next action |",
-        "| --- | --- | --- | ---: | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| target | audit | native | atoms | provenance | evidence | evidence content | manifest | manifest/provenance | prediction | native/prediction | blockers | next action |",
+        "| --- | --- | --- | ---: | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
             f"| `{row['target_id']}` | `{row['audit_status']}` | `{row['native_file_status']}` | "
             f"{row['native_atom_record_count']} | `{row['provenance_status']}` | `{row['evidence_ref_status']}` | "
-            f"`{row['manifest_stub_status']}` | `{row['manifest_provenance_status']}` | `{row['prediction_file_status']}` | "
+            f"`{row['evidence_ref_content_status']}` | `{row['manifest_stub_status']}` | "
+            f"`{row['manifest_provenance_status']}` | `{row['prediction_file_status']}` | "
             f"`{row['native_prediction_identity_status']}` | `{row['blockers'] or '-'}` | {row['next_action']} |"
         )
     if not payload["rows"]:
         lines.append(
-            "| - | `missing_workorders` | - | 0 | - | - | - | - | - | - | `workorders_missing` | "
+            "| - | `missing_workorders` | - | 0 | - | - | - | - | - | - | - | `workorders_missing` | "
             "rerun clearance workorder builder |"
         )
     lines.extend(["", "## Claim Boundary", "", str(summary["claim_boundary"]), ""])
