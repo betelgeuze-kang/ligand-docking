@@ -2,7 +2,7 @@
 
 This is the local navigation surface for the current CASP17 internal-physics lane.
 
-- generated: `2026-05-26T01:58:49+09:00`
+- generated: `2026-05-26T02:08:27+09:00`
 - workbench_status: `ready_for_operator_fill`
 - target model folders: `16/16`
 - target object folders: `48`
@@ -31,7 +31,8 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 - competitive target identity clearance workorder audit: `blocked` pass/blocked/total `0/3/3` prediction/native/provenance/manifest `3/0/0/0`
 - competitive target identity clearance promotion: `blocked_by_audit` rows/promoted/blocked `3/0/3` ready/audit-pass `0/0`
 - competitive target identity clearance intake staging: `waiting_on_promoted_manifest` promoted/staged/blocked `0/0/0` open slots/candidate rows `15/15`
-- competitive target identity clearance cycle: `awaiting_provenance` stages `1/4/5` sync/audit/promotion `awaiting_provenance`/`blocked`/`blocked_by_audit` staged `0`
+- competitive target identity clearance candidate intake sync: `waiting_on_staged_identity` rows ready/waiting/blocked/applied `15/0/15/0/0`
+- competitive target identity clearance cycle: `awaiting_provenance` stages `1/5/6` sync/audit/promotion `awaiting_provenance`/`blocked`/`blocked_by_audit` staged `0`
 - competitive identity cycle: `awaiting_intake` stages `1/6/7` sync `awaiting_intake` ready/awaiting `0/15` missing fields `60` readiness `awaiting_identity`
 - competitive file source plan: `waiting_on_identity` actions `180` waiting identity/source `180/0` ready/imported/blocked `0/0/0`
 - competitive value entry plan: `waiting_on_identity` actions `270` target/provenance/calibration `30/150/90` waiting identity/value/clearance/ref `270/0/0/0` ready/blocked `0/0`
@@ -83,7 +84,8 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 | `competitive_floor_target_identity_clearance_workorder_audit` | `blocked` | 0 | 3 | 3 | `casp17/casp17_competitive_floor_target_identity_clearance_workorder_audit_current.json` | place the cleared native PDB in the per-target native dropzone | `prediction:3,native:0,provenance:0,manifest:0` |
 | `competitive_floor_target_identity_clearance_promotion_plan` | `blocked_by_audit` | 0 | 3 | 3 | `casp17/casp17_competitive_floor_target_identity_clearance_promotion_plan_current.json` | clear the native/provenance workorder audit before promotion | `audit_pass:0,promoted:0,manifest:0` |
 | `competitive_floor_target_identity_clearance_intake_staging` | `waiting_on_promoted_manifest` | 0 | 0 | 0 | `casp17/casp17_competitive_floor_target_identity_clearance_intake_staging_plan_current.json` | wait for promoted clearance manifest rows | `promoted:0,staged:0,open_slots:15` |
-| `competitive_floor_target_identity_clearance_cycle` | `awaiting_provenance` | 1 | 4 | 5 | `casp17/casp17_competitive_floor_target_identity_clearance_cycle_current.json` | complete the no-leak provenance template before syncing the manifest stub | `sync:awaiting_provenance,audit:blocked,promotion:blocked_by_audit,staged:0` |
+| `competitive_floor_target_identity_clearance_candidate_intake_sync` | `waiting_on_staged_identity` | 0 | 15 | 15 | `casp17/casp17_competitive_floor_target_identity_clearance_candidate_intake_sync_current.json` | wait for clearance intake staging to produce staged_for_operator_review rows | `ready:0,waiting:15,applied:0` |
+| `competitive_floor_target_identity_clearance_cycle` | `awaiting_provenance` | 1 | 5 | 6 | `casp17/casp17_competitive_floor_target_identity_clearance_cycle_current.json` | complete the no-leak provenance template before syncing the manifest stub | `sync:awaiting_provenance,audit:blocked,promotion:blocked_by_audit,staged:0` |
 | `competitive_floor_identity_cycle` | `awaiting_intake` | 1 | 6 | 7 | `casp17/casp17_competitive_floor_identity_cycle_current.json` | fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance in the intake bundle | `sync:awaiting_intake,readiness:awaiting_identity,missing_fields:60` |
 | `competitive_floor_file_source_plan` | `waiting_on_identity` | 0 | 180 | 180 | `casp17/casp17_competitive_floor_file_source_plan_current.json` | fill and apply the compact identity unlock kit first | `target_identity_required` |
 | `competitive_floor_value_entry_plan` | `waiting_on_identity` | 0 | 270 | 270 | `casp17/casp17_competitive_floor_value_entry_plan_current.json` | fill and apply the compact identity unlock kit first | `target_identity_required` |

@@ -172,6 +172,12 @@ def _args(tmp_path: Path, fixture: dict[str, Path], *extra: str) -> list[str]:
         str(fixture["intake_csv"]),
         "--candidate-intake-csv",
         str(tmp_path / "candidate_intake.csv"),
+        "--candidate-intake-sync-json",
+        str(tmp_path / "candidate_intake_sync.json"),
+        "--candidate-intake-sync-csv",
+        str(tmp_path / "candidate_intake_sync.csv"),
+        "--candidate-intake-sync-md",
+        str(tmp_path / "CANDIDATE_INTAKE_SYNC.md"),
         "--intake-staging-json",
         str(tmp_path / "intake_staging.json"),
         "--intake-staging-csv",
@@ -210,18 +216,21 @@ def test_clearance_cycle_waits_for_provenance_without_mutating_manifest(tmp_path
 
 def test_clearance_cycle_apply_manifest_sync_reaches_intake_staging(tmp_path):
     fixture = _fixture(tmp_path, ready=True)
-    args = mod.parse_args(_args(tmp_path, fixture, "--apply-manifest-sync"))
+    args = mod.parse_args(_args(tmp_path, fixture, "--apply-manifest-sync", "--apply-candidate-intake"))
 
     payload = mod.build_payload(args)
     mod.write_outputs(args, payload)
 
-    assert payload["summary"]["clearance_cycle_status"] == "ready_for_operator_intake_review"
+    assert payload["summary"]["clearance_cycle_status"] == "candidate_intake_applied"
     assert payload["summary"]["audit_pass_count"] == 1
     assert payload["summary"]["promoted_manifest_count"] == 1
     assert payload["summary"]["staged_identity_count"] == 1
+    assert payload["summary"]["candidate_intake_applied_count"] == 1
     manifest = _read_csv(fixture["manifest_csv"])[0]
     assert manifest["operator_clearance"] == "cleared"
     assert manifest["leakage_clearance"] == "no_leak"
     candidate = _read_csv(tmp_path / "candidate_intake.csv")[0]
     assert candidate["proposed_target_id"] == "H1001"
     assert candidate["proposed_benchmark_id"] == "hist_H1001_clearance_candidate"
+    live = _read_csv(fixture["intake_csv"])[0]
+    assert live["proposed_target_id"] == "H1001"

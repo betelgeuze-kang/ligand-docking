@@ -18,6 +18,7 @@ from tools import build_casp17_competitive_floor_target_identity_clearance_intak
 from tools import build_casp17_competitive_floor_target_identity_clearance_promotion_plan as promotion_plan
 from tools import build_casp17_competitive_floor_target_identity_clearance_workorder_audit as workorder_audit
 from tools import build_casp17_workbench_index as workbench_index
+from tools import sync_casp17_competitive_floor_target_identity_clearance_candidate_intake as candidate_intake_sync
 from tools import sync_casp17_competitive_floor_target_identity_clearance_manifest_stub as manifest_sync
 
 
@@ -39,6 +40,13 @@ DEFAULT_IDENTITY_INTAKE_CSV = "casp17/casp17_competitive_floor_identity_intake_b
 DEFAULT_CANDIDATE_INTAKE_CSV = (
     "casp17/casp17_competitive_floor_identity_intake_bundle_candidate_from_clearance_current.csv"
 )
+DEFAULT_CANDIDATE_INTAKE_SYNC_JSON = (
+    "casp17/casp17_competitive_floor_target_identity_clearance_candidate_intake_sync_current.json"
+)
+DEFAULT_CANDIDATE_INTAKE_SYNC_CSV = (
+    "casp17/casp17_competitive_floor_target_identity_clearance_candidate_intake_sync_current.csv"
+)
+DEFAULT_CANDIDATE_INTAKE_SYNC_MD = "casp17/COMPETITIVE_FLOOR_TARGET_IDENTITY_CLEARANCE_CANDIDATE_INTAKE_SYNC.md"
 DEFAULT_INTAKE_STAGING_JSON = (
     "casp17/casp17_competitive_floor_target_identity_clearance_intake_staging_plan_current.json"
 )
@@ -77,7 +85,8 @@ CLAIM_BOUNDARY = (
     "audit, audited manifest promotion, clearance-to-intake staging, and workbench refresh. It does not rebuild "
     "workorders, fetch native structures, clear no-leak provenance, choose targets, score native accuracy, run "
     "predictors, mutate live identity intake files, or submit to CASP. Manifest stubs are modified only when "
-    "--apply-manifest-sync is explicitly provided."
+    "--apply-manifest-sync is explicitly provided; live identity intake is modified only when "
+    "--apply-candidate-intake is explicitly provided."
 )
 
 
@@ -233,6 +242,29 @@ def _run_intake_staging(args: argparse.Namespace) -> dict[str, Any]:
     return payload
 
 
+def _run_candidate_intake_sync(args: argparse.Namespace) -> dict[str, Any]:
+    argv = [
+        "--candidate-intake-csv",
+        args.candidate_intake_csv,
+        "--live-intake-csv",
+        args.identity_intake_csv,
+        "--current-target-csv",
+        args.current_target_csv,
+        "--out-json",
+        args.candidate_intake_sync_json,
+        "--out-csv",
+        args.candidate_intake_sync_csv,
+        "--out-md",
+        args.candidate_intake_sync_md,
+    ]
+    if args.apply_candidate_intake:
+        argv.append("--apply")
+    sync_args = candidate_intake_sync.parse_args(argv)
+    payload = candidate_intake_sync.build_payload(sync_args)
+    candidate_intake_sync.write_outputs(sync_args, payload)
+    return payload
+
+
 def _run_workbench(args: argparse.Namespace) -> dict[str, Any]:
     workbench_args = workbench_index.parse_args(
         [
@@ -244,6 +276,8 @@ def _run_workbench(args: argparse.Namespace) -> dict[str, Any]:
             args.promotion_json,
             "--competitive-target-identity-clearance-intake-staging-json",
             args.intake_staging_json,
+            "--competitive-target-identity-clearance-candidate-intake-sync-json",
+            args.candidate_intake_sync_json,
             "--competitive-target-identity-clearance-cycle-json",
             args.out_json,
             "--out-json",
@@ -266,6 +300,7 @@ def _cycle_status(args: argparse.Namespace, summaries: dict[str, dict[str, Any]]
     audit_summary = summaries["audit"]
     promotion_summary = summaries["promotion"]
     staging_summary = summaries["intake_staging"]
+    candidate_sync_summary = summaries["candidate_intake_sync"]
     if _int(sync_summary.get("ready_to_sync_count")) and not args.apply_manifest_sync:
         return "ready_for_manifest_sync_apply"
     if _int(sync_summary.get("awaiting_provenance_count")):
@@ -275,7 +310,13 @@ def _cycle_status(args: argparse.Namespace, summaries: dict[str, dict[str, Any]]
     if _int(audit_summary.get("audit_blocked_count")):
         return "awaiting_clearance_audit"
     if _int(staging_summary.get("staged_identity_count")):
+        if _int(candidate_sync_summary.get("ready_to_apply_count")) and not args.apply_candidate_intake:
+            return "ready_for_candidate_intake_apply"
+        if _int(candidate_sync_summary.get("applied_row_count")):
+            return "candidate_intake_applied"
         return "ready_for_operator_intake_review"
+    if _int(candidate_sync_summary.get("blocked_count")):
+        return "blocked_candidate_intake_sync"
     if _text(promotion_summary.get("clearance_promotion_status")) == "blocked_by_audit":
         return "blocked_by_audit"
     if _text(staging_summary.get("clearance_intake_staging_status")) == "waiting_on_promoted_manifest":
@@ -300,6 +341,10 @@ def _first_next_action(args: argparse.Namespace, summaries: dict[str, dict[str, 
         return _text(audit_summary.get("first_blocked_next_action"))
     staging_summary = summaries["intake_staging"]
     if _int(staging_summary.get("staged_identity_count")):
+        if _int(summaries["candidate_intake_sync"].get("ready_to_apply_count")) and not args.apply_candidate_intake:
+            return "review candidate intake sync rows, then rerun this cycle with --apply-candidate-intake"
+        if _int(summaries["candidate_intake_sync"].get("applied_row_count")):
+            return "rerun identity intake sync and identity cycle"
         return "review the candidate intake CSV before copying rows into the live identity intake bundle"
     return (
         _text(staging_summary.get("first_open_next_action"))
@@ -363,6 +408,17 @@ def _build_cycle_payload(
             total=_int(summaries["intake_staging"].get("promoted_manifest_row_count")),
             next_action=_text(summaries["intake_staging"].get("first_open_next_action")),
         ),
+        _stage_row(
+            "candidate_intake_sync",
+            _text(summaries["candidate_intake_sync"].get("candidate_intake_sync_status")),
+            args.candidate_intake_sync_json,
+            ready=_int(summaries["candidate_intake_sync"].get("ready_to_apply_count"))
+            + _int(summaries["candidate_intake_sync"].get("applied_row_count")),
+            awaiting=_int(summaries["candidate_intake_sync"].get("waiting_on_staged_identity_count")),
+            blocked=_int(summaries["candidate_intake_sync"].get("blocked_count")),
+            total=_int(summaries["candidate_intake_sync"].get("sync_row_count")),
+            next_action=_text(summaries["candidate_intake_sync"].get("first_open_next_action")),
+        ),
     ]
     if workbench_payload is not None:
         rows.append(
@@ -387,6 +443,7 @@ def _build_cycle_payload(
         "generated_at_local": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
         "clearance_cycle_status": _cycle_status(args, summaries),
         "apply_manifest_sync": bool(args.apply_manifest_sync),
+        "apply_candidate_intake": bool(args.apply_candidate_intake),
         "stage_count": len(rows),
         "ready_stage_count": ready_stage_count,
         "blocked_stage_count": len(rows) - ready_stage_count,
@@ -404,6 +461,16 @@ def _build_cycle_payload(
         "intake_staging_status": _text(summaries["intake_staging"].get("clearance_intake_staging_status")),
         "staged_identity_count": _int(summaries["intake_staging"].get("staged_identity_count")),
         "staging_blocked_count": _int(summaries["intake_staging"].get("blocked_assignment_count")),
+        "candidate_intake_sync_status": _text(
+            summaries["candidate_intake_sync"].get("candidate_intake_sync_status")
+        ),
+        "candidate_intake_ready_to_apply_count": _int(
+            summaries["candidate_intake_sync"].get("ready_to_apply_count")
+        ),
+        "candidate_intake_waiting_count": _int(
+            summaries["candidate_intake_sync"].get("waiting_on_staged_identity_count")
+        ),
+        "candidate_intake_applied_count": _int(summaries["candidate_intake_sync"].get("applied_row_count")),
         "workbench_status": _text(workbench_summary.get("workbench_status")),
         "first_next_action": _first_next_action(args, summaries),
         "claim_boundary": CLAIM_BOUNDARY,
@@ -418,12 +485,13 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         f"- generated: `{summary['generated_at_local']}`",
         f"- clearance_cycle_status: `{summary['clearance_cycle_status']}`",
-        f"- apply_manifest_sync: `{summary['apply_manifest_sync']}`",
+        f"- apply_manifest_sync/apply_candidate_intake: `{summary['apply_manifest_sync']}/{summary['apply_candidate_intake']}`",
         f"- stages ready/blocked/total: `{summary['ready_stage_count']}/{summary['blocked_stage_count']}/{summary['stage_count']}`",
         f"- manifest sync: `{summary['manifest_sync_status']}` ready/awaiting/synced/applied `{summary['manifest_sync_ready_to_sync_count']}/{summary['manifest_sync_awaiting_provenance_count']}/{summary['manifest_sync_synced_count']}/{summary['manifest_sync_applied_field_count']}`",
         f"- audit: `{summary['audit_status']}` pass/blocked `{summary['audit_pass_count']}/{summary['audit_blocked_count']}`",
         f"- promotion: `{summary['promotion_status']}` promoted/blocked `{summary['promoted_manifest_count']}/{summary['promotion_blocked_count']}`",
         f"- intake staging: `{summary['intake_staging_status']}` staged/blocked `{summary['staged_identity_count']}/{summary['staging_blocked_count']}`",
+        f"- candidate intake sync: `{summary['candidate_intake_sync_status']}` ready/waiting/applied `{summary['candidate_intake_ready_to_apply_count']}/{summary['candidate_intake_waiting_count']}/{summary['candidate_intake_applied_count']}`",
         f"- workbench: `{summary['workbench_status'] or '-'}`",
         f"- first next action: {summary['first_next_action'] or '-'}",
         "",
@@ -457,6 +525,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "audit": _run_workorder_audit(args),
         "promotion": _run_promotion_plan(args),
         "intake_staging": _run_intake_staging(args),
+        "candidate_intake_sync": _run_candidate_intake_sync(args),
     }
     payload = _build_cycle_payload(args, payloads)
     write_outputs(args, payload)
@@ -483,6 +552,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--promotion-md", default=DEFAULT_PROMOTION_MD)
     parser.add_argument("--identity-intake-csv", default=DEFAULT_IDENTITY_INTAKE_CSV)
     parser.add_argument("--candidate-intake-csv", default=DEFAULT_CANDIDATE_INTAKE_CSV)
+    parser.add_argument("--candidate-intake-sync-json", default=DEFAULT_CANDIDATE_INTAKE_SYNC_JSON)
+    parser.add_argument("--candidate-intake-sync-csv", default=DEFAULT_CANDIDATE_INTAKE_SYNC_CSV)
+    parser.add_argument("--candidate-intake-sync-md", default=DEFAULT_CANDIDATE_INTAKE_SYNC_MD)
     parser.add_argument("--intake-staging-json", default=DEFAULT_INTAKE_STAGING_JSON)
     parser.add_argument("--intake-staging-csv", default=DEFAULT_INTAKE_STAGING_CSV)
     parser.add_argument("--intake-staging-md", default=DEFAULT_INTAKE_STAGING_MD)
@@ -493,6 +565,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
     parser.add_argument("--apply-manifest-sync", action="store_true")
+    parser.add_argument("--apply-candidate-intake", action="store_true")
     return parser.parse_args(argv)
 
 

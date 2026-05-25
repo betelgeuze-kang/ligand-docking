@@ -41,6 +41,16 @@
       "total_count": 0
     },
     {
+      "awaiting_count": 15,
+      "blocked_count": 0,
+      "next_action": "wait for clearance intake staging to produce staged_for_operator_review rows",
+      "path": "casp17/casp17_competitive_floor_target_identity_clearance_candidate_intake_sync_current.json",
+      "ready_count": 0,
+      "stage": "candidate_intake_sync",
+      "status": "waiting_on_staged_identity",
+      "total_count": 15
+    },
+    {
       "awaiting_count": 0,
       "blocked_count": 0,
       "next_action": "Replace placeholder target/benchmark IDs with a cleared historical non-CASP17 protein target.",
@@ -52,15 +62,20 @@
     }
   ],
   "summary": {
+    "apply_candidate_intake": false,
     "apply_manifest_sync": false,
     "audit_blocked_count": 3,
     "audit_pass_count": 0,
     "audit_status": "blocked",
-    "blocked_stage_count": 4,
-    "claim_boundary": "Local CASP17 competitive-floor target identity clearance cycle only. It chains manifest-stub sync, workorder audit, audited manifest promotion, clearance-to-intake staging, and workbench refresh. It does not rebuild workorders, fetch native structures, clear no-leak provenance, choose targets, score native accuracy, run predictors, mutate live identity intake files, or submit to CASP. Manifest stubs are modified only when --apply-manifest-sync is explicitly provided.",
+    "blocked_stage_count": 5,
+    "candidate_intake_applied_count": 0,
+    "candidate_intake_ready_to_apply_count": 0,
+    "candidate_intake_sync_status": "waiting_on_staged_identity",
+    "candidate_intake_waiting_count": 15,
+    "claim_boundary": "Local CASP17 competitive-floor target identity clearance cycle only. It chains manifest-stub sync, workorder audit, audited manifest promotion, clearance-to-intake staging, and workbench refresh. It does not rebuild workorders, fetch native structures, clear no-leak provenance, choose targets, score native accuracy, run predictors, mutate live identity intake files, or submit to CASP. Manifest stubs are modified only when --apply-manifest-sync is explicitly provided; live identity intake is modified only when --apply-candidate-intake is explicitly provided.",
     "clearance_cycle_status": "awaiting_provenance",
     "first_next_action": "complete the no-leak provenance template before syncing the manifest stub",
-    "generated_at_local": "2026-05-26T01:58:49+09:00",
+    "generated_at_local": "2026-05-26T02:08:27+09:00",
     "intake_staging_status": "waiting_on_promoted_manifest",
     "manifest_sync_applied_field_count": 0,
     "manifest_sync_awaiting_provenance_count": 3,
@@ -72,7 +87,7 @@
     "promotion_blocked_count": 3,
     "promotion_status": "blocked_by_audit",
     "ready_stage_count": 1,
-    "stage_count": 5,
+    "stage_count": 6,
     "staged_identity_count": 0,
     "staging_blocked_count": 0,
     "workbench_status": "ready_for_operator_fill"
