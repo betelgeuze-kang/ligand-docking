@@ -92,6 +92,27 @@ Start with these documents when reviewing delivery readiness:
 - `docs/local_delivery_claim_policy.md`
 - `docs/post_green_improvement_plan.md`
 
+## CASP17 Internal Physics Lane
+
+The repository now includes a CASP17 participation workstream that stays inside the local molecular-dynamics/coarse-grain physics stack. It does not use AlphaFold, ColabFold, ESMFold, OmegaFold, public/template structures, current-target native lookups, or other-team models for the active lane.
+
+Current local status as of 2026-05-25 KST:
+
+- 16/16 current selected CASP17 protein targets have local FASTA materialization and internal TS artifacts.
+- The local submission floor is green: TS import, format, geometry, confidence, scorecard, shape sanity, and submission gate pass for the current selected target surface.
+- Review-quality visual artifacts are green: local internal-canvas viewer smoke 16/16, PyMOL/studio/surface/confidence/QC render coverage 16/16, molecular showcase images 16/16, and image-quality smoke 272/272.
+- The operational win-tier threshold packet now tracks 27 rows across submission, visual review, local all-atom/sidechain QC, no-leak historical monomer/complex native accuracy, refinement ablation, model selection, and confidence calibration.
+- Highest proven local level remains `review_quality`. Competitive/win-tier readiness is intentionally fail-closed until no-leak historical/native benchmark rows, refinement-ablation evidence, and model-selection/confidence calibration are populated.
+
+Primary current documents and artifacts:
+
+- `docs/casp17_participation_gate_2026-05-21.md`
+- `runs/casp17_readiness_dashboard_current.json`
+- `runs/casp17_win_tier_threshold_packet_current.json`
+- `runs/casp17_publication_figure_packet_current.json`
+
+Generated CASP17 render/data mirrors under `runs/` and `casp17/` remain local artifacts and should not be committed as raw generated data.
+
 ## Development Loop
 
 ```bash

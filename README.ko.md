@@ -92,6 +92,27 @@ python3 tools/build_local_delivery_verdict_gate.py
 - `docs/local_delivery_claim_policy.md`
 - `docs/post_green_improvement_plan.md`
 
+## CASP17 내부 물리 예측 lane
+
+이 저장소에는 현재 CASP17 참가 준비용 내부 물리 lane이 포함되어 있습니다. 활성 lane은 로컬 분자동역학/coarse-grain physics stack 안에서만 동작하며, AlphaFold, ColabFold, ESMFold, OmegaFold, public/template 구조, current-target native lookup, 타 팀 모델을 사용하지 않습니다.
+
+2026-05-25 KST 기준 로컬 상태:
+
+- 현재 선택된 CASP17 protein target 16/16개에 대해 FASTA materialization과 내부 TS 산출물이 있습니다.
+- 로컬 제출 floor는 green입니다. 현재 선택 target 표면에서 TS import, format, geometry, confidence, scorecard, shape sanity, submission gate가 통과합니다.
+- 리뷰용 3D 시각화는 green입니다. internal-canvas viewer smoke 16/16, PyMOL/studio/surface/confidence/QC render coverage 16/16, molecular showcase image 16/16, image-quality smoke 272/272입니다.
+- operational win-tier threshold packet은 submission, visual review, local all-atom/sidechain QC, no-leak historical monomer/complex native accuracy, refinement ablation, model selection, confidence calibration까지 27개 row를 추적합니다.
+- 현재 증명된 최고 로컬 단계는 `review_quality`입니다. Competitive/win-tier readiness는 no-leak historical/native benchmark row, refinement-ablation evidence, model-selection/confidence calibration이 채워질 때까지 의도적으로 fail-closed 상태를 유지합니다.
+
+주요 현재 문서와 artifact:
+
+- `docs/casp17_participation_gate_2026-05-21.md`
+- `runs/casp17_readiness_dashboard_current.json`
+- `runs/casp17_win_tier_threshold_packet_current.json`
+- `runs/casp17_publication_figure_packet_current.json`
+
+`runs/`와 `casp17/` 아래 생성된 CASP17 render/data mirror는 로컬 산출물이며 raw generated data로 커밋하지 않는 것이 기본 원칙입니다.
+
 ## 현재 검증 스냅샷
 
 업데이트: 2026-05-19 KST. 산출물 스냅샷: 2026-05-18 KST.
