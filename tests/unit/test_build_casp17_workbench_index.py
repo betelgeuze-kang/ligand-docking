@@ -24,6 +24,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     competitive_value_ledger_json = tmp_path / "competitive_value_ledger.json"
     competitive_evidence_intake_json = tmp_path / "competitive_evidence_intake.json"
     competitive_patch_gate_json = tmp_path / "competitive_patch_gate.json"
+    competitive_apply_plan_json = tmp_path / "competitive_apply_plan.json"
     competitive_operator_template_json = tmp_path / "competitive_operator_template.json"
     competitive_operator_preflight_json = tmp_path / "competitive_operator_preflight.json"
     bundle_json = tmp_path / "bundle.json"
@@ -239,6 +240,21 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        competitive_apply_plan_json,
+        {
+            "summary": {
+                "apply_plan_status": "awaiting_evidence",
+                "action_count": 450,
+                "planned_patch_count": 0,
+                "awaiting_evidence_count": 450,
+                "blocked_count": 0,
+                "applied_count": 0,
+                "first_open_status": "awaiting_evidence",
+                "first_open_next_action": "wait for cleared evidence",
+            }
+        },
+    )
+    _write_json(
         competitive_operator_template_json,
         {
             "summary": {
@@ -301,6 +317,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(competitive_evidence_intake_json),
             "--competitive-patch-gate-json",
             str(competitive_patch_gate_json),
+            "--competitive-apply-plan-json",
+            str(competitive_apply_plan_json),
             "--competitive-operator-template-json",
             str(competitive_operator_template_json),
             "--competitive-operator-preflight-json",
@@ -357,6 +375,11 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["competitive_patch_gate_ready_to_patch_count"] == 0
     assert payload["summary"]["competitive_patch_gate_awaiting_evidence_count"] == 450
     assert payload["summary"]["competitive_patch_gate_conflict_count"] == 0
+    assert payload["summary"]["competitive_apply_plan_status"] == "awaiting_evidence"
+    assert payload["summary"]["competitive_apply_plan_action_count"] == 450
+    assert payload["summary"]["competitive_apply_plan_planned_patch_count"] == 0
+    assert payload["summary"]["competitive_apply_plan_awaiting_evidence_count"] == 450
+    assert payload["summary"]["competitive_apply_plan_applied_count"] == 0
     assert payload["summary"]["competitive_operator_template_status"] == "blocked"
     assert payload["summary"]["competitive_operator_template_row_count"] == 15
     assert payload["summary"]["competitive_operator_template_row_fill_count"] == 0

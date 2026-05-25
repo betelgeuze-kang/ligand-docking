@@ -166,6 +166,17 @@
       "total_count": 450
     },
     {
+      "artifact_id": "competitive_floor_row_fill_apply_plan",
+      "blocked_count": 450,
+      "blockers": "awaiting_evidence",
+      "label": "Apply-plan review for ready row_fill patch candidates",
+      "next_action": "wait for cleared evidence, then rerun intake and patch gate",
+      "path": "casp17/casp17_competitive_floor_row_fill_apply_plan_current.json",
+      "ready_count": 0,
+      "status": "awaiting_evidence",
+      "total_count": 450
+    },
+    {
       "artifact_id": "competitive_floor_operator_template",
       "blocked_count": 15,
       "blockers": "missing_files:0,placeholder_paths:180,provenance_blockers:150,calibration_blockers:90,row_fill_candidates:15",
@@ -203,6 +214,11 @@
     "benchmark_rows_ready_count": 0,
     "benchmark_rows_total": 40,
     "claim_boundary": "Local CASP17 workbench index only. It links current target model folders, benchmark input scaffolds, and win-gap packets; it does not fetch native structures, use external predictors, prove native accuracy, or submit to CASP.",
+    "competitive_apply_plan_action_count": 450,
+    "competitive_apply_plan_applied_count": 0,
+    "competitive_apply_plan_awaiting_evidence_count": 450,
+    "competitive_apply_plan_planned_patch_count": 0,
+    "competitive_apply_plan_status": "awaiting_evidence",
     "competitive_batch_missing_evidence_item_count": 490,
     "competitive_batch_row_count": 15,
     "competitive_batch_status": "ready_for_fill",
@@ -244,7 +260,7 @@
     "first_operator_fill_action": "Replace placeholder target/benchmark IDs with a cleared historical non-CASP17 protein target.",
     "first_operator_input_action_id": "historical_benchmark_inputs",
     "first_operator_input_blockers": "ready_total_below_threshold,ready_monomer_below_threshold,ready_complex_below_threshold",
-    "generated_at_local": "2026-05-25T22:49:44+09:00",
+    "generated_at_local": "2026-05-25T22:55:26+09:00",
     "missing_file_count": 480,
     "next_unclosed_level": "competitive_floor",
     "packet_type": "casp17_workbench_index",

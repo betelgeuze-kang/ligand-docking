@@ -25,6 +25,7 @@ DEFAULT_COMPETITIVE_EVIDENCE_DROPZONE_JSON = "casp17/casp17_competitive_floor_ev
 DEFAULT_COMPETITIVE_VALUE_LEDGER_JSON = "casp17/casp17_competitive_floor_value_ledger_current.json"
 DEFAULT_COMPETITIVE_EVIDENCE_INTAKE_JSON = "casp17/casp17_competitive_floor_evidence_intake_current.json"
 DEFAULT_COMPETITIVE_PATCH_GATE_JSON = "casp17/casp17_competitive_floor_row_fill_patch_gate_current.json"
+DEFAULT_COMPETITIVE_APPLY_PLAN_JSON = "casp17/casp17_competitive_floor_row_fill_apply_plan_current.json"
 DEFAULT_COMPETITIVE_OPERATOR_TEMPLATE_JSON = "casp17/casp17_competitive_floor_batch_operator_template_current.json"
 DEFAULT_COMPETITIVE_OPERATOR_PREFLIGHT_JSON = "casp17/casp17_competitive_floor_batch_operator_preflight_current.json"
 DEFAULT_DATA_BUNDLE_JSON = "casp17/casp17_data_bundle_manifest_current.json"
@@ -151,6 +152,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     competitive_value_ledger_payload = _read_json(args.competitive_value_ledger_json)
     competitive_evidence_intake_payload = _read_json(args.competitive_evidence_intake_json)
     competitive_patch_gate_payload = _read_json(args.competitive_patch_gate_json)
+    competitive_apply_plan_payload = _read_json(args.competitive_apply_plan_json)
     competitive_operator_template_payload = _read_json(args.competitive_operator_template_json)
     competitive_operator_preflight_payload = _read_json(args.competitive_operator_preflight_json)
     data_bundle_payload = _read_json(args.data_bundle_json)
@@ -169,6 +171,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     competitive_value_ledger_summary = _summary(competitive_value_ledger_payload)
     competitive_evidence_intake_summary = _summary(competitive_evidence_intake_payload)
     competitive_patch_gate_summary = _summary(competitive_patch_gate_payload)
+    competitive_apply_plan_summary = _summary(competitive_apply_plan_payload)
     competitive_operator_template_summary = _summary(competitive_operator_template_payload)
     competitive_operator_preflight_summary = _summary(competitive_operator_preflight_payload)
     data_bundle_summary = _summary(data_bundle_payload)
@@ -426,6 +429,20 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             blockers=_text(competitive_patch_gate_summary.get("first_open_status")),
         ),
         _artifact_row(
+            "competitive_floor_row_fill_apply_plan",
+            "Apply-plan review for ready row_fill patch candidates",
+            _text(competitive_apply_plan_summary.get("apply_plan_status")),
+            args.competitive_apply_plan_json,
+            ready_count=_int(competitive_apply_plan_summary.get("planned_patch_count")),
+            blocked_count=(
+                _int(competitive_apply_plan_summary.get("awaiting_evidence_count"))
+                + _int(competitive_apply_plan_summary.get("blocked_count"))
+            ),
+            total_count=_int(competitive_apply_plan_summary.get("action_count")),
+            next_action=_text(competitive_apply_plan_summary.get("first_open_next_action")),
+            blockers=_text(competitive_apply_plan_summary.get("first_open_status")),
+        ),
+        _artifact_row(
             "competitive_floor_operator_template",
             "Candidate operator CSV assembled from filled competitive-floor batch folders",
             _text(competitive_operator_template_summary.get("template_status")),
@@ -580,6 +597,21 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "competitive_patch_gate_conflict_count": _int(
             competitive_patch_gate_summary.get("conflict_count")
         ),
+        "competitive_apply_plan_status": _text(
+            competitive_apply_plan_summary.get("apply_plan_status")
+        ),
+        "competitive_apply_plan_action_count": _int(
+            competitive_apply_plan_summary.get("action_count")
+        ),
+        "competitive_apply_plan_planned_patch_count": _int(
+            competitive_apply_plan_summary.get("planned_patch_count")
+        ),
+        "competitive_apply_plan_awaiting_evidence_count": _int(
+            competitive_apply_plan_summary.get("awaiting_evidence_count")
+        ),
+        "competitive_apply_plan_applied_count": _int(
+            competitive_apply_plan_summary.get("applied_count")
+        ),
         "competitive_operator_template_status": _text(
             competitive_operator_template_summary.get("template_status")
         ),
@@ -641,6 +673,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- competitive value ledgers: `{summary['competitive_value_ledger_status'] or '-'}` ledgers/actions `{summary['competitive_value_ledger_count']}/{summary['competitive_value_ledger_action_count']}` ready/awaiting `{summary['competitive_value_ledger_ready_for_intake_count']}/{summary['competitive_value_ledger_awaiting_value_count']}`",
         f"- competitive evidence intake: `{summary['competitive_evidence_intake_status'] or '-'}` actions `{summary['competitive_evidence_intake_action_count']}` patch candidates `{summary['competitive_evidence_intake_patch_candidate_count']}` awaiting files/values `{summary['competitive_evidence_intake_awaiting_file_count']}/{summary['competitive_evidence_intake_awaiting_value_count']}`",
         f"- competitive row_fill patch gate: `{summary['competitive_patch_gate_status'] or '-'}` actions `{summary['competitive_patch_gate_action_count']}` ready/awaiting/conflicts `{summary['competitive_patch_gate_ready_to_patch_count']}/{summary['competitive_patch_gate_awaiting_evidence_count']}/{summary['competitive_patch_gate_conflict_count']}`",
+        f"- competitive row_fill apply plan: `{summary['competitive_apply_plan_status'] or '-'}` actions `{summary['competitive_apply_plan_action_count']}` planned/awaiting/applied `{summary['competitive_apply_plan_planned_patch_count']}/{summary['competitive_apply_plan_awaiting_evidence_count']}/{summary['competitive_apply_plan_applied_count']}`",
         f"- competitive operator template: `{summary['competitive_operator_template_status'] or '-'}` rows `{summary['competitive_operator_template_ready_count']}/{summary['competitive_operator_template_row_count']}`",
         f"- competitive row_fill candidates: `{summary['competitive_operator_template_row_fill_count']}`",
         f"- competitive operator preflight: `{summary['competitive_operator_preflight_status'] or '-'}` rows `{summary['competitive_operator_preflight_ready_count']}/{summary['competitive_operator_preflight_row_count']}`",
@@ -697,6 +730,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--competitive-value-ledger-json", default=DEFAULT_COMPETITIVE_VALUE_LEDGER_JSON)
     parser.add_argument("--competitive-evidence-intake-json", default=DEFAULT_COMPETITIVE_EVIDENCE_INTAKE_JSON)
     parser.add_argument("--competitive-patch-gate-json", default=DEFAULT_COMPETITIVE_PATCH_GATE_JSON)
+    parser.add_argument("--competitive-apply-plan-json", default=DEFAULT_COMPETITIVE_APPLY_PLAN_JSON)
     parser.add_argument("--competitive-operator-template-json", default=DEFAULT_COMPETITIVE_OPERATOR_TEMPLATE_JSON)
     parser.add_argument("--competitive-operator-preflight-json", default=DEFAULT_COMPETITIVE_OPERATOR_PREFLIGHT_JSON)
     parser.add_argument("--data-bundle-json", default=DEFAULT_DATA_BUNDLE_JSON)
