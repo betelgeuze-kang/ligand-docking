@@ -20,6 +20,7 @@ DEFAULT_INPUT_INVENTORY_JSON = "runs/casp17_win_tier_benchmark_input_inventory_c
 DEFAULT_OPERATOR_DASHBOARD_JSON = "runs/casp17_win_tier_benchmark_operator_dashboard_current.json"
 DEFAULT_COMPETITIVE_BATCH_JSON = "casp17/casp17_competitive_floor_batch_current.json"
 DEFAULT_COMPETITIVE_ROW_FILL_STATUS_JSON = "casp17/casp17_competitive_floor_row_fill_status_current.json"
+DEFAULT_COMPETITIVE_ROW_FILL_WORKLIST_JSON = "casp17/casp17_competitive_floor_row_fill_worklist_current.json"
 DEFAULT_COMPETITIVE_OPERATOR_TEMPLATE_JSON = "casp17/casp17_competitive_floor_batch_operator_template_current.json"
 DEFAULT_COMPETITIVE_OPERATOR_PREFLIGHT_JSON = "casp17/casp17_competitive_floor_batch_operator_preflight_current.json"
 DEFAULT_DATA_BUNDLE_JSON = "casp17/casp17_data_bundle_manifest_current.json"
@@ -141,6 +142,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     dashboard_payload = _read_json(args.operator_dashboard_json)
     competitive_batch_payload = _read_json(args.competitive_batch_json)
     competitive_row_fill_status_payload = _read_json(args.competitive_row_fill_status_json)
+    competitive_row_fill_worklist_payload = _read_json(args.competitive_row_fill_worklist_json)
     competitive_operator_template_payload = _read_json(args.competitive_operator_template_json)
     competitive_operator_preflight_payload = _read_json(args.competitive_operator_preflight_json)
     data_bundle_payload = _read_json(args.data_bundle_json)
@@ -154,6 +156,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     dashboard_summary = _summary(dashboard_payload)
     competitive_batch_summary = _summary(competitive_batch_payload)
     competitive_row_fill_status_summary = _summary(competitive_row_fill_status_payload)
+    competitive_row_fill_worklist_summary = _summary(competitive_row_fill_worklist_payload)
     competitive_operator_template_summary = _summary(competitive_operator_template_payload)
     competitive_operator_preflight_summary = _summary(competitive_operator_preflight_payload)
     data_bundle_summary = _summary(data_bundle_payload)
@@ -330,6 +333,21 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             ),
         ),
         _artifact_row(
+            "competitive_floor_row_fill_worklist",
+            "Field-level operator action list for competitive-floor row_fill files",
+            _text(competitive_row_fill_worklist_summary.get("worklist_status")),
+            args.competitive_row_fill_worklist_json,
+            ready_count=max(
+                0,
+                _int(competitive_row_fill_worklist_summary.get("row_count"))
+                - _int(competitive_row_fill_worklist_summary.get("open_action_count")),
+            ),
+            blocked_count=_int(competitive_row_fill_worklist_summary.get("open_action_count")),
+            total_count=_int(competitive_row_fill_worklist_summary.get("row_count")),
+            next_action=_text(competitive_row_fill_worklist_summary.get("first_action_recommended_action")),
+            blockers=_text(competitive_row_fill_worklist_summary.get("first_action_blocker")),
+        ),
+        _artifact_row(
             "competitive_floor_operator_template",
             "Candidate operator CSV assembled from filled competitive-floor batch folders",
             _text(competitive_operator_template_summary.get("template_status")),
@@ -415,6 +433,15 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             competitive_row_fill_status_summary.get("ready_for_operator_template_count")
         ),
         "competitive_row_fill_row_count": _int(competitive_row_fill_status_summary.get("row_count")),
+        "competitive_row_fill_worklist_status": _text(
+            competitive_row_fill_worklist_summary.get("worklist_status")
+        ),
+        "competitive_row_fill_worklist_open_action_count": _int(
+            competitive_row_fill_worklist_summary.get("open_action_count")
+        ),
+        "competitive_row_fill_worklist_guide_count": _int(
+            competitive_row_fill_worklist_summary.get("guide_md_count")
+        ),
         "competitive_operator_template_status": _text(
             competitive_operator_template_summary.get("template_status")
         ),
@@ -471,6 +498,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- benchmark rows ready/total: `{summary['benchmark_rows_ready_count']}/{summary['benchmark_rows_total']}`",
         f"- competitive-floor batch: `{summary['competitive_batch_status'] or '-'}` rows `{summary['competitive_batch_row_count']}` missing evidence `{summary['competitive_batch_missing_evidence_item_count']}`",
         f"- competitive row_fill status: `{summary['competitive_row_fill_status'] or '-'}` filled/ready/total `{summary['competitive_row_fill_filled_count']}/{summary['competitive_row_fill_ready_count']}/{summary['competitive_row_fill_row_count']}`",
+        f"- competitive row_fill worklist: `{summary['competitive_row_fill_worklist_status'] or '-'}` open actions `{summary['competitive_row_fill_worklist_open_action_count']}` guides `{summary['competitive_row_fill_worklist_guide_count']}`",
         f"- competitive operator template: `{summary['competitive_operator_template_status'] or '-'}` rows `{summary['competitive_operator_template_ready_count']}/{summary['competitive_operator_template_row_count']}`",
         f"- competitive row_fill candidates: `{summary['competitive_operator_template_row_fill_count']}`",
         f"- competitive operator preflight: `{summary['competitive_operator_preflight_status'] or '-'}` rows `{summary['competitive_operator_preflight_ready_count']}/{summary['competitive_operator_preflight_row_count']}`",
@@ -522,6 +550,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--operator-dashboard-json", default=DEFAULT_OPERATOR_DASHBOARD_JSON)
     parser.add_argument("--competitive-batch-json", default=DEFAULT_COMPETITIVE_BATCH_JSON)
     parser.add_argument("--competitive-row-fill-status-json", default=DEFAULT_COMPETITIVE_ROW_FILL_STATUS_JSON)
+    parser.add_argument("--competitive-row-fill-worklist-json", default=DEFAULT_COMPETITIVE_ROW_FILL_WORKLIST_JSON)
     parser.add_argument("--competitive-operator-template-json", default=DEFAULT_COMPETITIVE_OPERATOR_TEMPLATE_JSON)
     parser.add_argument("--competitive-operator-preflight-json", default=DEFAULT_COMPETITIVE_OPERATOR_PREFLIGHT_JSON)
     parser.add_argument("--data-bundle-json", default=DEFAULT_DATA_BUNDLE_JSON)

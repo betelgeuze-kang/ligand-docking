@@ -1,0 +1,41 @@
+# CASP17 Competitive-Floor Row Fill Field Guide
+
+- row_fill_csv: `casp17/competitive_floor_batch_current/priority_010_REQUIRED_MONOMER_010/row_fill.csv`
+- open actions: `30`
+
+| rank | class | column | current | expected | action |
+| ---: | --- | --- | --- | --- | --- |
+| 271 | `target_identity` | `benchmark_id` | `hist_REQUIRED_MONOMER_010` | stable hist_* ID for a cleared historical benchmark row | replace with a stable hist_* ID for the chosen cleared historical target |
+| 272 | `target_identity` | `target_id` | `REQUIRED_MONOMER_010` | cleared historical non-CASP17 target ID | replace placeholder with a cleared historical non-current CASP target ID |
+| 273 | `core_file` | `prediction_pdb` | `runs/casp17_historical_benchmark_predictions_current/REQUIRED_MONOMER_010_prediction.pdb` | local internally generated prediction PDB made before native release | place a validated local PDB at runs/casp17_historical_benchmark_predictions_current/<HISTORICAL_TARGET_ID>_prediction.pdb and update row_fill.csv |
+| 274 | `core_file` | `native_pdb` | `runs/casp17_historical_benchmark_natives_current/REQUIRED_MONOMER_010_native.pdb` | local released historical native PDB after no-leak review | place a validated local PDB at runs/casp17_historical_benchmark_natives_current/<HISTORICAL_TARGET_ID>_native.pdb and update row_fill.csv |
+| 275 | `provenance` | `leakage_clearance` | `REQUIRED_NO_LEAK_CLEARANCE` | no_leak / cleared / internal_no_leak | record no_leak/cleared only after no-leak provenance review |
+| 276 | `provenance` | `prediction_method` | `REQUIRED_INTERNAL_METHOD` | internal method identifier | record the internal prediction method used before native release |
+| 277 | `provenance` | `prediction_created_at` | `YYYY-MM-DD` | YYYY-MM-DD | replace with an ISO date and ensure prediction_created_at is before native_release_date |
+| 278 | `provenance` | `native_release_date` | `YYYY-MM-DD` | YYYY-MM-DD | replace with an ISO date and ensure prediction_created_at is before native_release_date |
+| 279 | `provenance` | `prediction_generated_before_native_release` | `REQUIRED_TRUE_CONFIRMATION` | true | set to true only when the date/provenance evidence supports it |
+| 280 | `provenance` | `public_template_or_native_used_for_prediction` | `REQUIRED_FALSE_CONFIRMATION` | false | set to false only after the no-leak review supports that confirmation |
+| 281 | `provenance` | `other_team_model_used` | `REQUIRED_FALSE_CONFIRMATION` | false | set to false only after the no-leak review supports that confirmation |
+| 282 | `provenance` | `post_release_information_used` | `REQUIRED_FALSE_CONFIRMATION` | false | set to false only after the no-leak review supports that confirmation |
+| 283 | `provenance` | `current_casp17_target` | `REQUIRED_FALSE_CONFIRMATION` | false | set to false only after the no-leak review supports that confirmation |
+| 284 | `provenance` | `operator_clearance` | `REQUIRED_OPERATOR_CLEARANCE` | no_leak / cleared / internal_no_leak | record no_leak/cleared only after no-leak provenance review |
+| 285 | `ablation_file` | `recursive_prediction_pdb` | `runs/casp17_historical_ablation_predictions_current/recursive/REQUIRED_MONOMER_010TS.pdb` | local recursive ablation prediction PDB for the same historical target | place a validated local PDB at runs/casp17_historical_ablation_predictions_current/recursive/<HISTORICAL_TARGET_ID>TS.pdb and update row_fill.csv |
+| 286 | `ablation_file` | `scored_prediction_pdb` | `runs/casp17_historical_ablation_predictions_current/scored/REQUIRED_MONOMER_010TS.pdb` | local scored ablation prediction PDB for the same historical target | place a validated local PDB at runs/casp17_historical_ablation_predictions_current/scored/<HISTORICAL_TARGET_ID>TS.pdb and update row_fill.csv |
+| 287 | `ablation_file` | `sidechain_scaffold_prediction_pdb` | `runs/casp17_historical_ablation_predictions_current/sidechain_scaffold/REQUIRED_MONOMER_010TS.pdb` | local sidechain_scaffold ablation prediction PDB for the same historical target | place a validated local PDB at runs/casp17_historical_ablation_predictions_current/sidechain_scaffold/<HISTORICAL_TARGET_ID>TS.pdb and update row_fill.csv |
+| 288 | `ablation_file` | `sidechain_repacked_prediction_pdb` | `runs/casp17_historical_ablation_predictions_current/sidechain_repacked/REQUIRED_MONOMER_010TS.pdb` | local sidechain_repacked ablation prediction PDB for the same historical target | place a validated local PDB at runs/casp17_historical_ablation_predictions_current/sidechain_repacked/<HISTORICAL_TARGET_ID>TS.pdb and update row_fill.csv |
+| 289 | `ablation_file` | `sidechain_completed_prediction_pdb` | `runs/casp17_historical_ablation_predictions_current/sidechain_completed/REQUIRED_MONOMER_010TS.pdb` | local sidechain_completed ablation prediction PDB for the same historical target | place a validated local PDB at runs/casp17_historical_ablation_predictions_current/sidechain_completed/<HISTORICAL_TARGET_ID>TS.pdb and update row_fill.csv |
+| 290 | `ablation_file` | `steric_relaxed_prediction_pdb` | `runs/casp17_historical_ablation_predictions_current/steric_relaxed/REQUIRED_MONOMER_010TS.pdb` | local steric_relaxed ablation prediction PDB for the same historical target | place a validated local PDB at runs/casp17_historical_ablation_predictions_current/steric_relaxed/<HISTORICAL_TARGET_ID>TS.pdb and update row_fill.csv |
+| 291 | `ablation_file` | `rotamer_minimized_prediction_pdb` | `runs/casp17_historical_ablation_predictions_current/rotamer_minimized/REQUIRED_MONOMER_010TS.pdb` | local rotamer_minimized ablation prediction PDB for the same historical target | place a validated local PDB at runs/casp17_historical_ablation_predictions_current/rotamer_minimized/<HISTORICAL_TARGET_ID>TS.pdb and update row_fill.csv |
+| 292 | `ablation_file` | `polar_refined_prediction_pdb` | `runs/casp17_historical_ablation_predictions_current/polar_refined/REQUIRED_MONOMER_010TS.pdb` | local polar_refined ablation prediction PDB for the same historical target | place a validated local PDB at runs/casp17_historical_ablation_predictions_current/polar_refined/<HISTORICAL_TARGET_ID>TS.pdb and update row_fill.csv |
+| 293 | `ablation_file` | `forcefield_minimized_prediction_pdb` | `runs/casp17_historical_ablation_predictions_current/forcefield_minimized/REQUIRED_MONOMER_010TS.pdb` | local forcefield_minimized ablation prediction PDB for the same historical target | place a validated local PDB at runs/casp17_historical_ablation_predictions_current/forcefield_minimized/<HISTORICAL_TARGET_ID>TS.pdb and update row_fill.csv |
+| 294 | `ablation_file` | `statistical_rotamer_prediction_pdb` | `runs/casp17_historical_ablation_predictions_current/statistical_rotamer/REQUIRED_MONOMER_010TS.pdb` | local statistical_rotamer ablation prediction PDB for the same historical target | place a validated local PDB at runs/casp17_historical_ablation_predictions_current/statistical_rotamer/<HISTORICAL_TARGET_ID>TS.pdb and update row_fill.csv |
+| 295 | `calibration` | `selected_model_rank` | `REQUIRED_1_TO_5` | integer 1..5 | fill with a model rank from 1 to 5 |
+| 296 | `calibration` | `best_model_rank` | `REQUIRED_1_TO_5` | integer 1..5 | fill with a model rank from 1 to 5 |
+| 297 | `calibration` | `selected_native_metric` | `REQUIRED_NATIVE_METRIC` | numeric native metric for selected/oracle model | fill with a numeric calibration value from the historical scoring packet |
+| 298 | `calibration` | `best_native_metric` | `REQUIRED_ORACLE_METRIC` | numeric native metric for selected/oracle model | fill with a numeric calibration value from the historical scoring packet |
+| 299 | `calibration` | `selected_score` | `REQUIRED_INTERNAL_SCORE` | numeric internal score for selected/oracle model | fill with a numeric calibration value from the historical scoring packet |
+| 300 | `calibration` | `best_score` | `REQUIRED_ORACLE_SCORE` | numeric internal score for selected/oracle model | fill with a numeric calibration value from the historical scoring packet |
+
+## Claim Boundary
+
+Local competitive-floor row-fill worklist only. It turns row_fill.csv placeholders and local-file blockers into operator actions; it does not choose historical targets, fetch native structures, clear provenance, score native accuracy, use external predictors, or submit to CASP.

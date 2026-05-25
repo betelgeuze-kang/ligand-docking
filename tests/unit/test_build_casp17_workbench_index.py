@@ -19,6 +19,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     dashboard_json = tmp_path / "dashboard.json"
     competitive_batch_json = tmp_path / "competitive_batch.json"
     competitive_row_fill_status_json = tmp_path / "competitive_row_fill_status.json"
+    competitive_row_fill_worklist_json = tmp_path / "competitive_row_fill_worklist.json"
     competitive_operator_template_json = tmp_path / "competitive_operator_template.json"
     competitive_operator_preflight_json = tmp_path / "competitive_operator_preflight.json"
     bundle_json = tmp_path / "bundle.json"
@@ -157,6 +158,19 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        competitive_row_fill_worklist_json,
+        {
+            "summary": {
+                "worklist_status": "open_actions",
+                "row_count": 15,
+                "guide_md_count": 15,
+                "open_action_count": 450,
+                "first_action_blocker": "target_id_placeholder",
+                "first_action_recommended_action": "replace placeholder with a cleared historical non-current CASP target ID",
+            }
+        },
+    )
+    _write_json(
         competitive_operator_template_json,
         {
             "summary": {
@@ -209,6 +223,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(competitive_batch_json),
             "--competitive-row-fill-status-json",
             str(competitive_row_fill_status_json),
+            "--competitive-row-fill-worklist-json",
+            str(competitive_row_fill_worklist_json),
             "--competitive-operator-template-json",
             str(competitive_operator_template_json),
             "--competitive-operator-preflight-json",
@@ -242,6 +258,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["competitive_row_fill_status"] == "awaiting_fill"
     assert payload["summary"]["competitive_row_fill_filled_count"] == 0
     assert payload["summary"]["competitive_row_fill_row_count"] == 15
+    assert payload["summary"]["competitive_row_fill_worklist_status"] == "open_actions"
+    assert payload["summary"]["competitive_row_fill_worklist_open_action_count"] == 450
+    assert payload["summary"]["competitive_row_fill_worklist_guide_count"] == 15
     assert payload["summary"]["competitive_operator_template_status"] == "blocked"
     assert payload["summary"]["competitive_operator_template_row_count"] == 15
     assert payload["summary"]["competitive_operator_template_row_fill_count"] == 0
@@ -256,6 +275,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["target_object_viewer_smoke"]["status"] == "pass"
     assert by_id["competitive_floor_batch"]["status"] == "ready_for_fill"
     assert by_id["competitive_floor_row_fill_status"]["status"] == "awaiting_fill"
+    assert by_id["competitive_floor_row_fill_worklist"]["status"] == "open_actions"
     assert by_id["competitive_floor_operator_template"]["status"] == "blocked"
     assert by_id["competitive_floor_operator_preflight"]["status"] == "blocked"
     assert by_id["benchmark_input_inventory"]["status"] == "blocked"
@@ -293,6 +313,8 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_competitive_batch.json"),
             "--competitive-row-fill-status-json",
             str(tmp_path / "missing_competitive_row_fill_status.json"),
+            "--competitive-row-fill-worklist-json",
+            str(tmp_path / "missing_competitive_row_fill_worklist.json"),
             "--competitive-operator-template-json",
             str(tmp_path / "missing_competitive_operator_template.json"),
             "--competitive-operator-preflight-json",

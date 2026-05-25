@@ -2,7 +2,7 @@
 
 This is the local navigation surface for the current CASP17 internal-physics lane.
 
-- generated: `2026-05-25T22:16:31+09:00`
+- generated: `2026-05-25T22:22:20+09:00`
 - workbench_status: `ready_for_operator_fill`
 - target model folders: `16/16`
 - target object folders: `48`
@@ -13,6 +13,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 - benchmark rows ready/total: `0/40`
 - competitive-floor batch: `ready_for_fill` rows `15` missing evidence `490`
 - competitive row_fill status: `awaiting_fill` filled/ready/total `15/0/15`
+- competitive row_fill worklist: `open_actions` open actions `450` guides `15`
 - competitive operator template: `blocked` rows `0/15`
 - competitive row_fill candidates: `15`
 - competitive operator preflight: `blocked` rows `0/15`
@@ -37,6 +38,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 | `operator_dashboard` | `ready` | 0 | 40 | 40 | `runs/casp17_win_tier_benchmark_operator_dashboard_current.json` | Replace placeholder target/benchmark IDs with a cleared historical non-CASP17 protein target. | `-` |
 | `competitive_floor_batch` | `ready_for_fill` | 15 | 0 | 15 | `casp17/casp17_competitive_floor_batch_current.json` | Fill the copied competitive-floor task folders before expanding to the full 40-row win-tier set. | `missing_evidence_items:490` |
 | `competitive_floor_row_fill_status` | `awaiting_fill` | 0 | 15 | 15 | `casp17/casp17_competitive_floor_row_fill_status_current.json` | resolve row_fill.csv blockers and rerun operator-template/preflight | `filled:15,missing_fields:0,placeholders:450,missing_files:180` |
+| `competitive_floor_row_fill_worklist` | `open_actions` | 0 | 450 | 15 | `casp17/casp17_competitive_floor_row_fill_worklist_current.json` | replace with a stable hist_* ID for the chosen cleared historical target | `benchmark_id_placeholder` |
 | `competitive_floor_operator_template` | `blocked` | 0 | 15 | 15 | `casp17/casp17_competitive_floor_batch_operator_template_current.json` | Fill batch row metadata, required file paths, provenance, and calibration until this candidate is ready_for_preflight. | `missing_files:0,placeholder_paths:180,provenance_blockers:150,calibration_blockers:90,row_fill_candidates:15` |
 | `competitive_floor_operator_preflight` | `blocked` | 0 | 15 | 15 | `casp17/casp17_competitive_floor_batch_operator_preflight_current.json` | Resolve the first blocked competitive-floor operator row, then rerun the preflight. | `ablation_layer_prediction_pdb_missing,best_model_rank_required_1_to_5,best_native_metric_required_numeric,best_score_required_numeric,current_casp17_target_must_be_false,leakage_clearance_required,native_pdb_not_found,native_release_date_required_iso_date,operator_clearance_required,other_team_model_used_must_be_false,placeholder_target_id,post_release_information_used_must_be_false,prediction_created_at_required_iso_date,prediction_generated_before_native_release_required,prediction_pdb_not_found,public_template_or_native_used_for_prediction_must_be_false,selected_model_rank_required_1_to_5,selected_native_metric_required_numeric,selected_score_required_numeric` |
 | `data_bundle` | `ready` | 798 | 0 | 798 | `casp17/casp17_data_bundle_manifest_current.json` | Refresh after new CASP17 runtime artifacts are generated. | `missing_bundle_count:0` |
