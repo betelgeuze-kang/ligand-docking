@@ -104,6 +104,7 @@ def test_build_casp17_target_model_folders_copies_target_artifacts(tmp_path):
     row = payload["rows"][0]
     assert row["folder_name"] == "T0001_Example_kinase_Fab_complex"
     assert row["folder_status"] == "ready"
+    assert row["model_source_kind"] == "final_selected"
     assert row["atom_count"] == 3
     assert row["protein_atom_count"] == 3
     assert row["coordinate_status"] == "valid"
@@ -183,3 +184,63 @@ def test_build_casp17_target_model_folders_blocks_missing_model(tmp_path):
     row = payload["rows"][0]
     assert row["folder_status"] == "blocked"
     assert "final_selected_model_missing" in row["blockers"]
+
+
+def test_build_casp17_target_model_folders_can_use_raw_model_fallback(tmp_path):
+    watchlist = tmp_path / "watchlist.json"
+    watchlist.write_text(
+        json.dumps(
+            {
+                "rows": [
+                    {
+                        "target_id": "H0003",
+                        "description": "New antibody complex",
+                        "human_open": True,
+                        "lane_recommendation": "difficult_protein_complexes",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    seq_dir = tmp_path / "seq"
+    raw_job_dir = tmp_path / "jobs"
+    seq_dir.mkdir()
+    (seq_dir / "H0003.fasta").write_text(">H0003\nAA\n", encoding="utf-8")
+    _write_pdb(raw_job_dir / "H0003" / "H0003_model_1.pdb")
+
+    args = mod.parse_args(
+        [
+            "--target-watchlist-json",
+            str(watchlist),
+            "--sequence-dir",
+            str(seq_dir),
+            "--prediction-dir",
+            str(tmp_path / "missing_predictions"),
+            "--raw-job-dir",
+            str(raw_job_dir),
+            "--render-dir",
+            str(tmp_path / "missing_renders"),
+            "--figure-dir",
+            str(tmp_path / "missing_figures"),
+            "--out-dir",
+            str(tmp_path / "out"),
+            "--allow-raw-model-fallback",
+            "--generate-fallback-preview-assets",
+        ]
+    )
+
+    payload = mod.build_payload(args)
+
+    assert payload["summary"]["ready_count"] == 1
+    assert payload["summary"]["raw_fallback_target_count"] == 1
+    assert payload["summary"]["generated_fallback_render_files"] == 1
+    assert payload["summary"]["generated_fallback_figure_files"] == 1
+    row = payload["rows"][0]
+    assert row["folder_status"] == "ready"
+    assert row["model_source_kind"] == "raw_internal_fallback"
+    assert row["render_file_count"] == 1
+    assert row["figure_file_count"] == 1
+    assert row["object_count"] == 2
+    assert not row["blockers"]
+    assert Path(row["final_model_path"]).exists()

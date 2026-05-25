@@ -2,15 +2,15 @@
 
 This is the local navigation surface for the current CASP17 internal-physics lane.
 
-- generated: `2026-05-26T05:16:36+09:00`
+- generated: `2026-05-26T05:33:31+09:00`
 - workbench_status: `ready_for_operator_fill`
-- target model folders: `16/16`
-- target object folders: `48`
-- target object projections: `48`
-- target object viewers: `48`
-- target object folder audit: `pass` rows `48/48` chain isolation `48/48` protein atoms/coordinate-valid `48/48/48` total protein atoms `72487`
-- target object viewer smoke: `pass` rows `48/48`
-- target object model review: `pass` pass/blocked/total `48/0/48` review md/viewers `48/48` protein/CA/residue `72487/14694/14694` radius `7.778/47.562` gallery `pass` `casp17/casp17_target_object_model_review_gallery_current.html`
+- target model folders: `19/19`
+- target object folders: `58`
+- target object projections: `58`
+- target object viewers: `58`
+- target object folder audit: `pass` rows `58/58` chain isolation `58/58` protein atoms/coordinate-valid `58/58/58` total protein atoms `74625`
+- target object viewer smoke: `pass` rows `58/58`
+- target object model review: `pass` pass/blocked/total `58/0/58` review md/viewers `58/58` protein/CA/residue `74625/16832/16832` radius `7.778/114.196` gallery `pass` `casp17/casp17_target_object_model_review_gallery_current.html`
 - benchmark rows ready/total: `0/40`
 - competitive-floor batch: `ready_for_fill` rows `15` missing evidence `490`
 - competitive row_fill status: `awaiting_fill` filled/ready/total `15/0/15`
@@ -66,11 +66,11 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 
 | artifact | status | ready | blocked | total | path | next action | blockers |
 | --- | --- | ---: | ---: | ---: | --- | --- | --- |
-| `target_model_folders` | `ready` | 16 | 0 | 16 | `casp17/casp17_target_model_folders_current.json` | Use per-protein folders for local visual review and submission-readiness inspection. | `-` |
-| `target_object_catalog` | `ready` | 48 | 0 | 48 | `casp17/casp17_target_object_models_current.md` | Open the per-object catalog for chain-level PDB, projection, and local viewer review. | `projection_missing_count:0,viewer_missing_count:0` |
-| `target_object_folder_audit` | `pass` | 48 | 0 | 48 | `casp17/casp17_target_object_folder_audit_current.json` | Keep this pass before treating per-protein object folders as independently reviewable. | `protein_atom_objects:48,coordinate_valid_objects:48,total_protein_atoms:72487` |
-| `target_object_viewer_smoke` | `pass` | 48 | 0 | 48 | `casp17/casp17_target_object_viewer_smoke_current.json` | Keep this pass before relying on per-object viewer artifacts for review. | `-` |
-| `target_object_model_review` | `pass` | 48 | 0 | 48 | `casp17/casp17_target_object_model_review_current.json` | Open object review markdown files for per-chain molecular geometry inspection. | `review_md:48,viewer_local:48,protein_atoms:72487,radius:7.778-47.562,gallery:pass` |
+| `target_model_folders` | `ready` | 19 | 0 | 19 | `casp17/casp17_target_model_folders_current.json` | Use per-protein folders for local visual review and submission-readiness inspection. | `-` |
+| `target_object_catalog` | `ready` | 58 | 0 | 58 | `casp17/casp17_target_object_models_current.md` | Open the per-object catalog for chain-level PDB, projection, and local viewer review. | `projection_missing_count:0,viewer_missing_count:0` |
+| `target_object_folder_audit` | `pass` | 58 | 0 | 58 | `casp17/casp17_target_object_folder_audit_current.json` | Keep this pass before treating per-protein object folders as independently reviewable. | `protein_atom_objects:58,coordinate_valid_objects:58,total_protein_atoms:74625` |
+| `target_object_viewer_smoke` | `pass` | 58 | 0 | 58 | `casp17/casp17_target_object_viewer_smoke_current.json` | Keep this pass before relying on per-object viewer artifacts for review. | `-` |
+| `target_object_model_review` | `pass` | 58 | 0 | 58 | `casp17/casp17_target_object_model_review_current.json` | Open object review markdown files for per-chain molecular geometry inspection. | `review_md:58,viewer_local:58,protein_atoms:74625,radius:7.778-114.196,gallery:pass` |
 | `win_gap_closure` | `blocked_input` | 4 | 5 | 9 | `runs/casp17_win_gap_closure_packet_current.json` | historical_benchmark_inputs | `ready_total_below_threshold,ready_monomer_below_threshold,ready_complex_below_threshold` |
 | `benchmark_input_scaffold` | `ready` | 0 | 40 | 40 | `runs/casp17_win_tier_benchmark_input_scaffold_current.json` | Fill row folders with cleared historical target identity, internal predictions, native files, provenance, and calibration values. | `missing_evidence_items:1310` |
 | `benchmark_input_inventory` | `blocked` | 0 | 40 | 40 | `runs/casp17_win_tier_benchmark_input_inventory_current.json` | Replace placeholder target/benchmark IDs with a cleared historical non-CASP17 protein target. | `missing_files:480` |
@@ -139,6 +139,9 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 | `H1347` | `ready` | REGN15499 Fab-Fab complex | `casp17/targets_current/H1347_REGN15499_Fab_Fab_complex` |
 | `H1348` | `ready` | gp130 antibody complex | `casp17/targets_current/H1348_gp130_antibody_complex` |
 | `H1349` | `ready` | gp130 antibody complex | `casp17/targets_current/H1349_gp130_antibody_complex` |
+| `H1354` | `ready` | hemagglutinin/antibody | `casp17/targets_current/H1354_hemagglutinin_antibody` |
+| `H1355` | `ready` | hemagglutinin/antibody | `casp17/targets_current/H1355_hemagglutinin_antibody` |
+| `H2332` | `ready` | Fab 047-09_1A02 binding influenza virus H1 HA | `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA` |
 
 ## Claim Boundary
 

@@ -1,13 +1,13 @@
 # CASP17 Target Object Model Review
 
-- generated: `2026-05-26T03:54:39+09:00`
+- generated: `2026-05-26T05:33:31+09:00`
 - object_model_review_status: `pass`
-- objects pass/blocked/total: `48/0/48`
-- target_count: `16`
-- review_md_count: `48`
-- viewer_local_pass_count: `48`
-- protein/CA/residue counts: `72487/14694/14694`
-- radius_of_gyration min/max: `7.778/47.562`
+- objects pass/blocked/total: `58/0/58`
+- target_count: `19`
+- review_md_count: `58`
+- viewer_local_pass_count: `58`
+- protein/CA/residue counts: `74625/16832/16832`
+- radius_of_gyration min/max: `7.778/114.196`
 - gallery: `pass` `casp17/casp17_target_object_model_review_gallery_current.html`
 - first blocked: `-` `-` `-`
 
@@ -63,6 +63,16 @@
 | `H1349` | gp130 antibody complex | `chain_A` | `A` | `pass` | 2959 | 597 | 597 | 19.68 | 105.176 | `casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_A/review/OBJECT_MODEL_REVIEW.md` | `casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_A/viewer.html` | `-` |
 | `H1349` | gp130 antibody complex | `chain_B` | `B` | `pass` | 1079 | 219 | 219 | 14.624 | 71.063 | `casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_B/review/OBJECT_MODEL_REVIEW.md` | `casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_B/viewer.html` | `-` |
 | `H1349` | gp130 antibody complex | `chain_C` | `C` | `pass` | 1056 | 214 | 214 | 15.329 | 71.904 | `casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_C/review/OBJECT_MODEL_REVIEW.md` | `casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_C/viewer.html` | `-` |
+| `H1354` | hemagglutinin/antibody | `chain_A` | `A` | `pass` | 494 | 494 | 494 | 26.268 | 103.19 | `casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_A/review/OBJECT_MODEL_REVIEW.md` | `casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_A/viewer.html` | `-` |
+| `H1354` | hemagglutinin/antibody | `chain_B` | `B` | `pass` | 120 | 120 | 120 | 12.731 | 53.448 | `casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_B/review/OBJECT_MODEL_REVIEW.md` | `casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_B/viewer.html` | `-` |
+| `H1354` | hemagglutinin/antibody | `chain_C` | `C` | `pass` | 112 | 112 | 112 | 12.039 | 53.983 | `casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_C/review/OBJECT_MODEL_REVIEW.md` | `casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_C/viewer.html` | `-` |
+| `H1355` | hemagglutinin/antibody | `chain_A` | `A` | `pass` | 488 | 488 | 488 | 26.406 | 104.435 | `casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_A/review/OBJECT_MODEL_REVIEW.md` | `casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_A/viewer.html` | `-` |
+| `H1355` | hemagglutinin/antibody | `chain_B` | `B` | `pass` | 114 | 114 | 114 | 12.958 | 54.164 | `casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_B/review/OBJECT_MODEL_REVIEW.md` | `casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_B/viewer.html` | `-` |
+| `H1355` | hemagglutinin/antibody | `chain_C` | `C` | `pass` | 106 | 106 | 106 | 11.953 | 50.78 | `casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_C/review/OBJECT_MODEL_REVIEW.md` | `casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_C/viewer.html` | `-` |
+| `H2332` | Fab 047-09_1A02 binding influenza virus H1 HA | `chain_A` | `A` | `pass` | 104 | 104 | 104 | 11.187 | 45.042 | `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_A/review/OBJECT_MODEL_REVIEW.md` | `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_A/viewer.html` | `-` |
+| `H2332` | Fab 047-09_1A02 binding influenza virus H1 HA | `chain_B` | `B` | `pass` | 119 | 119 | 119 | 13.131 | 55.314 | `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_B/review/OBJECT_MODEL_REVIEW.md` | `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_B/viewer.html` | `-` |
+| `H2332` | Fab 047-09_1A02 binding influenza virus H1 HA | `chain_C` | `C` | `pass` | 160 | 160 | 160 | 13.907 | 57.17 | `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_C/review/OBJECT_MODEL_REVIEW.md` | `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_C/viewer.html` | `-` |
+| `H2332` | Fab 047-09_1A02 binding influenza virus H1 HA | `chain_D` | `D` | `pass` | 321 | 321 | 321 | 114.196 | 484.609 | `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_D/review/OBJECT_MODEL_REVIEW.md` | `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_D/viewer.html` | `-` |
 
 ## Claim Boundary
 

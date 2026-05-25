@@ -1,14 +1,14 @@
 # CASP17 Target Object Folder Audit
 
-- generated: `2026-05-26T03:19:00+09:00`
+- generated: `2026-05-26T05:33:31+09:00`
 - folder_audit_status: `pass`
-- objects pass/blocked/total: `48/0/48`
-- protein-named folders: `48/48`
-- chain isolation: `48/48`
-- protein atom objects: `48/48` total protein atoms `72487`
-- coordinate-valid objects: `48/48`
-- manifest/readme pass: `48/48`
-- local-only viewers: `48/48`
+- objects pass/blocked/total: `58/0/58`
+- protein-named folders: `58/58`
+- chain isolation: `58/58`
+- protein atom objects: `58/58` total protein atoms `74625`
+- coordinate-valid objects: `58/58`
+- manifest/readme pass: `58/58`
+- local-only viewers: `58/58`
 - first blocked object: `-`
 - first blocked blockers: `-`
 
@@ -64,6 +64,16 @@
 | `H1349` | gp130 antibody complex | `chain_A` | `A` | `pass` | 2959 | 2959 | 597 | `valid` | `casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_A` | `-` |
 | `H1349` | gp130 antibody complex | `chain_B` | `B` | `pass` | 1079 | 1079 | 219 | `valid` | `casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_B` | `-` |
 | `H1349` | gp130 antibody complex | `chain_C` | `C` | `pass` | 1056 | 1056 | 214 | `valid` | `casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_C` | `-` |
+| `H1354` | hemagglutinin/antibody | `chain_A` | `A` | `pass` | 494 | 494 | 494 | `valid` | `casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_A` | `-` |
+| `H1354` | hemagglutinin/antibody | `chain_B` | `B` | `pass` | 120 | 120 | 120 | `valid` | `casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_B` | `-` |
+| `H1354` | hemagglutinin/antibody | `chain_C` | `C` | `pass` | 112 | 112 | 112 | `valid` | `casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_C` | `-` |
+| `H1355` | hemagglutinin/antibody | `chain_A` | `A` | `pass` | 488 | 488 | 488 | `valid` | `casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_A` | `-` |
+| `H1355` | hemagglutinin/antibody | `chain_B` | `B` | `pass` | 114 | 114 | 114 | `valid` | `casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_B` | `-` |
+| `H1355` | hemagglutinin/antibody | `chain_C` | `C` | `pass` | 106 | 106 | 106 | `valid` | `casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_C` | `-` |
+| `H2332` | Fab 047-09_1A02 binding influenza virus H1 HA | `chain_A` | `A` | `pass` | 104 | 104 | 104 | `valid` | `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_A` | `-` |
+| `H2332` | Fab 047-09_1A02 binding influenza virus H1 HA | `chain_B` | `B` | `pass` | 119 | 119 | 119 | `valid` | `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_B` | `-` |
+| `H2332` | Fab 047-09_1A02 binding influenza virus H1 HA | `chain_C` | `C` | `pass` | 160 | 160 | 160 | `valid` | `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_C` | `-` |
+| `H2332` | Fab 047-09_1A02 binding influenza virus H1 HA | `chain_D` | `D` | `pass` | 321 | 321 | 321 | `valid` | `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_D` | `-` |
 
 ## Claim Boundary
 

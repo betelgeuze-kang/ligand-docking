@@ -89,7 +89,7 @@ def _write_csv(path_like: str | Path, rows: list[dict[str, Any]]) -> None:
     if not fieldnames:
         fieldnames = ["target_id", "object_id", "viewer_status"]
     with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore", lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
 

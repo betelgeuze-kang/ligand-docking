@@ -1,8 +1,8 @@
 # CASP17 Target Object Viewer Smoke
 
-- generated: `2026-05-26T03:19:03+09:00`
+- generated: `2026-05-26T05:33:31+09:00`
 - smoke_status: `pass`
-- objects pass/blocked/total: `48/0/48`
+- objects pass/blocked/total: `58/0/58`
 - missing/invalid projection/viewer: `0/0`
 - hosted dependency violations: `0`
 - first blocked object: `-`
@@ -60,6 +60,16 @@
 | `H1349` | `chain_A` | `A` | `pass` | `casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_A/models/H1349_chain_A.pdb` | `casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_A/renders/H1349_chain_A_projection.svg` | `casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_A/viewer.html` | `-` |
 | `H1349` | `chain_B` | `B` | `pass` | `casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_B/models/H1349_chain_B.pdb` | `casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_B/renders/H1349_chain_B_projection.svg` | `casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_B/viewer.html` | `-` |
 | `H1349` | `chain_C` | `C` | `pass` | `casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_C/models/H1349_chain_C.pdb` | `casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_C/renders/H1349_chain_C_projection.svg` | `casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_C/viewer.html` | `-` |
+| `H1354` | `chain_A` | `A` | `pass` | `casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_A/models/H1354_chain_A.pdb` | `casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_A/renders/H1354_chain_A_projection.svg` | `casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_A/viewer.html` | `-` |
+| `H1354` | `chain_B` | `B` | `pass` | `casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_B/models/H1354_chain_B.pdb` | `casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_B/renders/H1354_chain_B_projection.svg` | `casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_B/viewer.html` | `-` |
+| `H1354` | `chain_C` | `C` | `pass` | `casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_C/models/H1354_chain_C.pdb` | `casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_C/renders/H1354_chain_C_projection.svg` | `casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_C/viewer.html` | `-` |
+| `H1355` | `chain_A` | `A` | `pass` | `casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_A/models/H1355_chain_A.pdb` | `casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_A/renders/H1355_chain_A_projection.svg` | `casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_A/viewer.html` | `-` |
+| `H1355` | `chain_B` | `B` | `pass` | `casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_B/models/H1355_chain_B.pdb` | `casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_B/renders/H1355_chain_B_projection.svg` | `casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_B/viewer.html` | `-` |
+| `H1355` | `chain_C` | `C` | `pass` | `casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_C/models/H1355_chain_C.pdb` | `casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_C/renders/H1355_chain_C_projection.svg` | `casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_C/viewer.html` | `-` |
+| `H2332` | `chain_A` | `A` | `pass` | `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_A/models/H2332_chain_A.pdb` | `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_A/renders/H2332_chain_A_projection.svg` | `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_A/viewer.html` | `-` |
+| `H2332` | `chain_B` | `B` | `pass` | `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_B/models/H2332_chain_B.pdb` | `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_B/renders/H2332_chain_B_projection.svg` | `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_B/viewer.html` | `-` |
+| `H2332` | `chain_C` | `C` | `pass` | `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_C/models/H2332_chain_C.pdb` | `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_C/renders/H2332_chain_C_projection.svg` | `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_C/viewer.html` | `-` |
+| `H2332` | `chain_D` | `D` | `pass` | `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_D/models/H2332_chain_D.pdb` | `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_D/renders/H2332_chain_D_projection.svg` | `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_D/viewer.html` | `-` |
 
 ## Claim Boundary
 

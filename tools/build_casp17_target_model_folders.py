@@ -34,6 +34,7 @@ CLAIM_BOUNDARY = (
     "and QC metadata only; not an official CASP submission, native accuracy result, or "
     "experimental structure."
 )
+NORMALIZED_COPY_SUFFIXES = {".csv", ".fasta", ".html", ".json", ".md", ".pdb", ".svg", ".txt"}
 
 
 def _resolve(path_like: str | Path) -> Path:
@@ -83,6 +84,15 @@ def _write_csv(path_like: str | Path, rows: list[dict[str, Any]]) -> None:
         writer.writerows(rows)
 
 
+def _copy_normalized(source: Path, dest: Path, *, normalize_text: bool = False) -> None:
+    if normalize_text and source.suffix.lower() in NORMALIZED_COPY_SUFFIXES:
+        text = source.read_text(encoding="utf-8", errors="replace")
+        lines = [line.rstrip() for line in text.splitlines()]
+        dest.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+        return
+    shutil.copy2(source, dest)
+
+
 def _selected_targets(watchlist: dict[str, Any]) -> list[dict[str, Any]]:
     rows = watchlist.get("rows")
     if not isinstance(rows, list):
@@ -108,12 +118,12 @@ def _ascii_slug(value: str, *, fallback: str, max_len: int = 80) -> str:
     return slug[:max_len].rstrip("_") or fallback
 
 
-def _copy_one(source: Path, dest_dir: Path, dest_name: str | None = None) -> str:
+def _copy_one(source: Path, dest_dir: Path, dest_name: str | None = None, *, normalize_text: bool = False) -> str:
     if not source.is_file():
         return ""
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest = dest_dir / (dest_name or source.name)
-    shutil.copy2(source, dest)
+    _copy_normalized(source, dest, normalize_text=normalize_text)
     return _artifact(dest)
 
 
@@ -129,7 +139,7 @@ def _copy_prefix_files(source_dir: Path, prefix: str, dest_dir: Path) -> list[st
     return copied
 
 
-def _copy_job_files(job_dir: Path, target_id: str, dest_dir: Path) -> list[str]:
+def _copy_job_files(job_dir: Path, target_id: str, dest_dir: Path, *, normalize_text: bool = False) -> list[str]:
     source_root = job_dir / target_id
     if not source_root.is_dir():
         return []
@@ -140,9 +150,19 @@ def _copy_job_files(job_dir: Path, target_id: str, dest_dir: Path) -> list[str]:
         relative = source.relative_to(source_root)
         dest = dest_dir / relative
         dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, dest)
+        _copy_normalized(source, dest, normalize_text=normalize_text)
         copied.append(_artifact(dest))
     return copied
+
+
+def _model_source_for_target(args: argparse.Namespace, target_id: str) -> tuple[Path, str]:
+    final_source = _resolve(args.prediction_dir) / f"{target_id}TS.pdb"
+    if final_source.is_file():
+        return final_source, "final_selected"
+    raw_source = _resolve(args.raw_job_dir) / target_id / f"{target_id}_model_1.pdb"
+    if bool(args.allow_raw_model_fallback) and raw_source.is_file():
+        return raw_source, "raw_internal_fallback"
+    return final_source, "missing"
 
 
 def _pdb_stats(path: Path) -> dict[str, Any]:
@@ -432,6 +452,31 @@ tick();
     return _artifact(html_path)
 
 
+def _write_generated_preview_assets(
+    model_path: Path,
+    *,
+    target_id: str,
+    renders_dir: Path,
+    figures_dir: Path,
+    enabled: bool,
+) -> tuple[list[str], list[str]]:
+    if not enabled or not model_path.is_file():
+        return [], []
+    render_path = _project_object_svg(
+        model_path,
+        renders_dir / f"{target_id}_generated_model_projection.svg",
+        target_id=target_id,
+        object_id="full_model",
+    )
+    figure_path = _project_object_svg(
+        model_path,
+        figures_dir / f"{target_id}_generated_review_figure.svg",
+        target_id=target_id,
+        object_id="review_full_model",
+    )
+    return [path for path in [render_path] if path], [path for path in [figure_path] if path]
+
+
 def _chain_slug(chain_id: str) -> str:
     return _ascii_slug(chain_id or "blank", fallback="blank", max_len=24)
 
@@ -490,7 +535,7 @@ def _split_object_models(source: Path, objects_dir: Path, target_id: str) -> lis
         if record not in {"ATOM", "HETATM"}:
             continue
         chain_id = line[21:22].strip() or "blank"
-        chains.setdefault(chain_id, []).append(line)
+        chains.setdefault(chain_id, []).append(line.rstrip())
 
     object_rows: list[dict[str, Any]] = []
     for chain_id in sorted(chains):
@@ -607,14 +652,30 @@ def _target_bundle(row: dict[str, Any], args: argparse.Namespace) -> tuple[dict[
     for path in (models_dir, renders_dir, figures_dir, metadata_dir):
         path.mkdir(parents=True, exist_ok=True)
 
-    final_source = _resolve(args.prediction_dir) / f"{target_id}TS.pdb"
+    final_source, model_source_kind = _model_source_for_target(args, target_id)
+    normalize_copied_text = model_source_kind == "raw_internal_fallback"
     fasta_source = _resolve(args.sequence_dir) / f"{target_id}.fasta"
-
-    final_model_path = _copy_one(final_source, models_dir, f"{target_id}_final_selected_model.pdb")
-    fasta_path = _copy_one(fasta_source, metadata_dir, f"{target_id}.fasta")
-    copied_job_files = _copy_job_files(_resolve(args.raw_job_dir), target_id, metadata_dir / "internal_physics_job")
     raw_model_source = _resolve(args.raw_job_dir) / target_id / f"{target_id}_model_1.pdb"
-    raw_model_path = _copy_one(raw_model_source, models_dir, f"{target_id}_internal_physics_raw_model_1.pdb")
+
+    final_model_path = _copy_one(
+        final_source,
+        models_dir,
+        f"{target_id}_final_selected_model.pdb",
+        normalize_text=normalize_copied_text,
+    )
+    fasta_path = _copy_one(fasta_source, metadata_dir, f"{target_id}.fasta", normalize_text=normalize_copied_text)
+    copied_job_files = _copy_job_files(
+        _resolve(args.raw_job_dir),
+        target_id,
+        metadata_dir / "internal_physics_job",
+        normalize_text=normalize_copied_text,
+    )
+    raw_model_path = _copy_one(
+        raw_model_source,
+        models_dir,
+        f"{target_id}_internal_physics_raw_model_1.pdb",
+        normalize_text=normalize_copied_text,
+    )
 
     render_paths = _copy_prefix_files(_resolve(args.render_dir), target_id, renders_dir)
     figure_paths = _copy_prefix_files(_resolve(args.figure_dir), target_id, figures_dir)
@@ -622,6 +683,20 @@ def _target_bundle(row: dict[str, Any], args: argparse.Namespace) -> tuple[dict[
     stats = _pdb_stats(final_source)
     object_rows = _split_object_models(final_source, folder / "objects", target_id)
     object_index_md = _write_object_index(folder, target_id, object_rows)
+    generated_render_paths: list[str] = []
+    generated_figure_paths: list[str] = []
+    if final_model_path and (not render_paths or not figure_paths):
+        generated_render_paths, generated_figure_paths = _write_generated_preview_assets(
+            _resolve(final_model_path),
+            target_id=target_id,
+            renders_dir=renders_dir,
+            figures_dir=figures_dir,
+            enabled=bool(args.generate_fallback_preview_assets),
+        )
+        if not render_paths:
+            render_paths = generated_render_paths
+        if not figure_paths:
+            figure_paths = generated_figure_paths
     for object_row in object_rows:
         object_row["protein_name"] = protein_name
         object_row["target_folder"] = _artifact(folder)
@@ -651,11 +726,14 @@ def _target_bundle(row: dict[str, Any], args: argparse.Namespace) -> tuple[dict[
         "lane": _text(row.get("lane_recommendation")),
         "human_expiration": _text(row.get("human_expiration")),
         "qa_expiration": _text(row.get("qa_expiration")),
+        "model_source_kind": model_source_kind,
         "final_model_path": final_model_path,
         "raw_internal_model_path": raw_model_path,
         "fasta_path": fasta_path,
         "render_file_count": len(render_paths),
         "figure_file_count": len(figure_paths),
+        "generated_fallback_render_count": len(generated_render_paths),
+        "generated_fallback_figure_count": len(generated_figure_paths),
         "object_count": len(object_rows),
         "object_projection_count": sum(1 for object_row in object_rows if object_row["projection_svg_path"]),
         "object_viewer_count": sum(1 for object_row in object_rows if object_row["viewer_html_path"]),
@@ -679,6 +757,8 @@ def _target_bundle(row: dict[str, Any], args: argparse.Namespace) -> tuple[dict[
             "fasta_path": fasta_path,
             "render_paths": render_paths,
             "figure_paths": figure_paths,
+            "generated_fallback_render_paths": generated_render_paths,
+            "generated_fallback_figure_paths": generated_figure_paths,
             "object_model_paths": [row["model_path"] for row in object_rows],
             "object_projection_paths": [row["projection_svg_path"] for row in object_rows if row["projection_svg_path"]],
             "object_viewer_paths": [row["viewer_html_path"] for row in object_rows if row["viewer_html_path"]],
@@ -726,6 +806,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "blocked_count": len(rows) - ready_count,
         "total_render_files": sum(int(row["render_file_count"]) for row in rows),
         "total_figure_files": sum(int(row["figure_file_count"]) for row in rows),
+        "raw_fallback_target_count": sum(1 for row in rows if row.get("model_source_kind") == "raw_internal_fallback"),
+        "generated_fallback_render_files": sum(int(row["generated_fallback_render_count"]) for row in rows),
+        "generated_fallback_figure_files": sum(int(row["generated_fallback_figure_count"]) for row in rows),
         "total_object_count": sum(int(row["object_count"]) for row in rows),
         "total_object_projection_files": sum(int(row["object_projection_count"]) for row in rows),
         "total_object_viewer_files": sum(int(row["object_viewer_count"]) for row in rows),
@@ -750,6 +833,8 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- targets ready/blocked: `{summary['ready_count']}/{summary['blocked_count']}`",
         f"- total render files: `{summary['total_render_files']}`",
         f"- total figure files: `{summary['total_figure_files']}`",
+        f"- raw fallback targets: `{summary['raw_fallback_target_count']}`",
+        f"- generated fallback render/figure files: `{summary['generated_fallback_render_files']}/{summary['generated_fallback_figure_files']}`",
         f"- total object folders: `{summary['total_object_count']}`",
         f"- total object projection files: `{summary['total_object_projection_files']}`",
         f"- total object viewer files: `{summary['total_object_viewer_files']}`",
@@ -759,18 +844,18 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         "## Target Folders",
         "",
-        "| target | status | protein/complex | folder | final model | objects | viewers | renders | figures | blockers |",
-        "| --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |",
+        "| target | status | source | protein/complex | folder | final model | objects | viewers | renders | figures | blockers |",
+        "| --- | --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
-            f"| `{row['target_id']}` | `{row['folder_status']}` | {row['protein_name']} | "
+            f"| `{row['target_id']}` | `{row['folder_status']}` | `{row['model_source_kind']}` | {row['protein_name']} | "
             f"`{row['folder_path']}` | `{row['final_model_path'] or '-'}` | "
             f"{row['object_count']} | {row['object_viewer_count']} | {row['render_file_count']} | "
             f"{row['figure_file_count']} | `{row['blockers'] or '-'}` |"
         )
     if not payload["rows"]:
-        lines.append("| - | `no_targets` | - | - | - | 0 | 0 | 0 | 0 | - |")
+        lines.append("| - | `no_targets` | - | - | - | - | 0 | 0 | 0 | 0 | - |")
     lines.extend(["", "## Claim Boundary", "", CLAIM_BOUNDARY, ""])
     path = _resolve(path_like)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -816,6 +901,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--raw-job-dir", default=DEFAULT_RAW_JOB_DIR)
     parser.add_argument("--render-dir", default=DEFAULT_RENDER_DIR)
     parser.add_argument("--figure-dir", default=DEFAULT_FIGURE_DIR)
+    parser.add_argument("--allow-raw-model-fallback", action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument("--generate-fallback-preview-assets", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--out-dir", default=DEFAULT_OUT_DIR)
     parser.add_argument("--target-limit", type=int, default=0)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)

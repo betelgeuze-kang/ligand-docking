@@ -1,0 +1,154 @@
+{
+  "artifacts": {
+    "fasta_path": "casp17/targets_current/H1354_hemagglutinin_antibody/metadata/H1354.fasta",
+    "figure_paths": [
+      "casp17/targets_current/H1354_hemagglutinin_antibody/figures/H1354_generated_review_figure.svg"
+    ],
+    "final_model_path": "casp17/targets_current/H1354_hemagglutinin_antibody/models/H1354_final_selected_model.pdb",
+    "generated_fallback_figure_paths": [
+      "casp17/targets_current/H1354_hemagglutinin_antibody/figures/H1354_generated_review_figure.svg"
+    ],
+    "generated_fallback_render_paths": [
+      "casp17/targets_current/H1354_hemagglutinin_antibody/renders/H1354_generated_model_projection.svg"
+    ],
+    "metadata_paths": [
+      "casp17/targets_current/H1354_hemagglutinin_antibody/metadata/internal_physics_job/H1354_model_1.pdb",
+      "casp17/targets_current/H1354_hemagglutinin_antibody/metadata/internal_physics_job/backend_runtime.json",
+      "casp17/targets_current/H1354_hemagglutinin_antibody/metadata/internal_physics_job/internal_physics_metrics.json",
+      "casp17/targets_current/H1354_hemagglutinin_antibody/metadata/internal_physics_job/internal_physics_predictor.csv",
+      "casp17/targets_current/H1354_hemagglutinin_antibody/metadata/internal_physics_job/internal_physics_predictor.json",
+      "casp17/targets_current/H1354_hemagglutinin_antibody/metadata/internal_physics_job/internal_physics_predictor.md"
+    ],
+    "object_model_paths": [
+      "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_A/models/H1354_chain_A.pdb",
+      "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_B/models/H1354_chain_B.pdb",
+      "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_C/models/H1354_chain_C.pdb"
+    ],
+    "object_projection_paths": [
+      "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_A/renders/H1354_chain_A_projection.svg",
+      "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_B/renders/H1354_chain_B_projection.svg",
+      "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_C/renders/H1354_chain_C_projection.svg"
+    ],
+    "object_viewer_paths": [
+      "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_A/viewer.html",
+      "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_B/viewer.html",
+      "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_C/viewer.html"
+    ],
+    "raw_internal_model_path": "casp17/targets_current/H1354_hemagglutinin_antibody/models/H1354_internal_physics_raw_model_1.pdb",
+    "render_paths": [
+      "casp17/targets_current/H1354_hemagglutinin_antibody/renders/H1354_generated_model_projection.svg"
+    ]
+  },
+  "claim_boundary": "Per-target local organization of internal CASP17 predicted coordinates, FASTA, renders, and QC metadata only; not an official CASP submission, native accuracy result, or experimental structure.",
+  "objects": [
+    {
+      "atom_count": 494,
+      "chain_id": "A",
+      "coordinate_status": "valid",
+      "manifest_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_A/metadata/H1354_chain_A_manifest.json",
+      "model_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_A/models/H1354_chain_A.pdb",
+      "object_folder": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_A",
+      "object_id": "chain_A",
+      "projection_svg_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_A/renders/H1354_chain_A_projection.svg",
+      "protein_atom_count": 494,
+      "protein_name": "hemagglutinin/antibody",
+      "readme_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_A/README.md",
+      "residue_count": 494,
+      "target_folder": "casp17/targets_current/H1354_hemagglutinin_antibody",
+      "target_id": "H1354",
+      "viewer_html_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_A/viewer.html"
+    },
+    {
+      "atom_count": 120,
+      "chain_id": "B",
+      "coordinate_status": "valid",
+      "manifest_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_B/metadata/H1354_chain_B_manifest.json",
+      "model_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_B/models/H1354_chain_B.pdb",
+      "object_folder": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_B",
+      "object_id": "chain_B",
+      "projection_svg_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_B/renders/H1354_chain_B_projection.svg",
+      "protein_atom_count": 120,
+      "protein_name": "hemagglutinin/antibody",
+      "readme_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_B/README.md",
+      "residue_count": 120,
+      "target_folder": "casp17/targets_current/H1354_hemagglutinin_antibody",
+      "target_id": "H1354",
+      "viewer_html_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_B/viewer.html"
+    },
+    {
+      "atom_count": 112,
+      "chain_id": "C",
+      "coordinate_status": "valid",
+      "manifest_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_C/metadata/H1354_chain_C_manifest.json",
+      "model_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_C/models/H1354_chain_C.pdb",
+      "object_folder": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_C",
+      "object_id": "chain_C",
+      "projection_svg_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_C/renders/H1354_chain_C_projection.svg",
+      "protein_atom_count": 112,
+      "protein_name": "hemagglutinin/antibody",
+      "readme_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_C/README.md",
+      "residue_count": 112,
+      "target_folder": "casp17/targets_current/H1354_hemagglutinin_antibody",
+      "target_id": "H1354",
+      "viewer_html_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_C/viewer.html"
+    }
+  ],
+  "readme_path": "casp17/targets_current/H1354_hemagglutinin_antibody/README.md",
+  "summary": {
+    "atom_count": 726,
+    "blockers": "",
+    "chain_count": 3,
+    "coordinate_status": "valid",
+    "fasta_path": "casp17/targets_current/H1354_hemagglutinin_antibody/metadata/H1354.fasta",
+    "figure_file_count": 1,
+    "final_model_path": "casp17/targets_current/H1354_hemagglutinin_antibody/models/H1354_final_selected_model.pdb",
+    "folder_name": "H1354_hemagglutinin_antibody",
+    "folder_path": "casp17/targets_current/H1354_hemagglutinin_antibody",
+    "folder_status": "ready",
+    "generated_fallback_figure_count": 1,
+    "generated_fallback_render_count": 1,
+    "human_expiration": "2026-06-08",
+    "lane": "difficult_protein_complexes",
+    "metadata_file_count": 7,
+    "model_count": 0,
+    "model_source_kind": "raw_internal_fallback",
+    "object_count": 3,
+    "object_index_md": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/OBJECT_INDEX.md",
+    "object_projection_count": 3,
+    "object_viewer_count": 3,
+    "protein_atom_count": 726,
+    "protein_name": "hemagglutinin/antibody",
+    "qa_expiration": "2026-06-11",
+    "raw_internal_model_path": "casp17/targets_current/H1354_hemagglutinin_antibody/models/H1354_internal_physics_raw_model_1.pdb",
+    "readme_path": "casp17/targets_current/H1354_hemagglutinin_antibody/README.md",
+    "render_file_count": 1,
+    "residue_count": 726,
+    "target_id": "H1354",
+    "target_manifest_path": "casp17/targets_current/H1354_hemagglutinin_antibody/metadata/H1354_folder_manifest.json"
+  },
+  "target": {
+    "cancellation_date": "",
+    "days_to_human_expiration": 13,
+    "days_to_qa_expiration": 16,
+    "days_to_server_expiration": 2,
+    "deadline_class": "regular",
+    "description": "hemagglutinin/antibody",
+    "entry_date": "2026-05-25",
+    "human_expiration": "2026-06-08",
+    "human_open": true,
+    "lane_reason": "secondary difficult protein/complex lane",
+    "lane_recommendation": "difficult_protein_complexes",
+    "priority": 217,
+    "qa_expiration": "2026-06-11",
+    "qa_open": true,
+    "recommended_action": "seed_intake_no_go_until_prediction_artifacts_exist",
+    "residues": "726",
+    "server_expiration": "2026-05-28",
+    "server_open": true,
+    "stoichiometry": "UNK",
+    "submission_format_seed": "TS",
+    "support_accuracy_estimation": true,
+    "target_id": "H1354",
+    "target_type": "Prot"
+  }
+}
