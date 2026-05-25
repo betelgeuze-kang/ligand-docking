@@ -1,10 +1,10 @@
 # CASP17 Win Tier Benchmark Operator Preflight
 
-- generated: `2026-05-25T22:01:09+09:00`
+- generated: `2026-05-25T22:16:31+09:00`
 - operator_preflight_status: `blocked`
 - rows ready/blocked: `0/15`
 - ready monomer/complex: `0/0`
-- required total/monomer/complex: `15/10/5`
+- required total/monomer/complex: `40/25/15`
 - missing prediction/native/layer files: `15/15/150`
 - calibration_blocked_count: `15`
 - provenance_or_core_blocked_count: `15`

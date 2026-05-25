@@ -12,6 +12,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 
 DEFAULT_TARGET_MODEL_FOLDERS_JSON = "casp17/casp17_target_model_folders_current.json"
+DEFAULT_TARGET_OBJECT_FOLDER_AUDIT_JSON = "casp17/casp17_target_object_folder_audit_current.json"
 DEFAULT_TARGET_OBJECT_VIEWER_SMOKE_JSON = "casp17/casp17_target_object_viewer_smoke_current.json"
 DEFAULT_WIN_GAP_CLOSURE_JSON = "runs/casp17_win_gap_closure_packet_current.json"
 DEFAULT_INPUT_SCAFFOLD_JSON = "runs/casp17_win_tier_benchmark_input_scaffold_current.json"
@@ -132,6 +133,7 @@ def _artifact_row(
 
 def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     target_payload = _read_json(args.target_model_folders_json)
+    target_object_folder_audit_payload = _read_json(args.target_object_folder_audit_json)
     target_object_viewer_smoke_payload = _read_json(args.target_object_viewer_smoke_json)
     closure_payload = _read_json(args.win_gap_closure_json)
     scaffold_payload = _read_json(args.input_scaffold_json)
@@ -144,6 +146,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     data_bundle_payload = _read_json(args.data_bundle_json)
 
     target_summary = _summary(target_payload)
+    target_object_folder_audit_summary = _summary(target_object_folder_audit_payload)
     target_object_viewer_smoke_summary = _summary(target_object_viewer_smoke_payload)
     closure_summary = _summary(closure_payload)
     scaffold_summary = _summary(scaffold_payload)
@@ -224,6 +227,17 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                     )
                 )
             ),
+        ),
+        _artifact_row(
+            "target_object_folder_audit",
+            "Audit for per-protein object folders and chain-level 3D files",
+            _text(target_object_folder_audit_summary.get("folder_audit_status")),
+            args.target_object_folder_audit_json,
+            ready_count=_int(target_object_folder_audit_summary.get("pass_count")),
+            blocked_count=_int(target_object_folder_audit_summary.get("blocked_count")),
+            total_count=_int(target_object_folder_audit_summary.get("object_row_count")),
+            next_action="Keep this pass before treating per-protein object folders as independently reviewable.",
+            blockers=_text(target_object_folder_audit_summary.get("first_blocked_blockers")),
         ),
         _artifact_row(
             "target_object_viewer_smoke",
@@ -377,6 +391,14 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "target_model_object_count": _int(target_summary.get("total_object_count")),
         "target_model_object_projection_count": _int(target_summary.get("total_object_projection_files")),
         "target_model_object_viewer_count": _int(target_summary.get("total_object_viewer_files")),
+        "target_object_folder_audit_status": _text(
+            target_object_folder_audit_summary.get("folder_audit_status")
+        ),
+        "target_object_folder_audit_pass_count": _int(target_object_folder_audit_summary.get("pass_count")),
+        "target_object_folder_audit_total": _int(target_object_folder_audit_summary.get("object_row_count")),
+        "target_object_folder_chain_isolation_pass_count": _int(
+            target_object_folder_audit_summary.get("chain_isolation_pass_count")
+        ),
         "target_object_viewer_smoke_status": _text(target_object_viewer_smoke_summary.get("smoke_status")),
         "target_object_viewer_smoke_pass_count": _int(target_object_viewer_smoke_summary.get("pass_count")),
         "target_object_viewer_smoke_total": _int(target_object_viewer_smoke_summary.get("object_row_count")),
@@ -444,6 +466,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- target object folders: `{summary['target_model_object_count']}`",
         f"- target object projections: `{summary['target_model_object_projection_count']}`",
         f"- target object viewers: `{summary['target_model_object_viewer_count']}`",
+        f"- target object folder audit: `{summary['target_object_folder_audit_status'] or '-'}` rows `{summary['target_object_folder_audit_pass_count']}/{summary['target_object_folder_audit_total']}` chain isolation `{summary['target_object_folder_chain_isolation_pass_count']}/{summary['target_object_folder_audit_total']}`",
         f"- target object viewer smoke: `{summary['target_object_viewer_smoke_status'] or '-'}` rows `{summary['target_object_viewer_smoke_pass_count']}/{summary['target_object_viewer_smoke_total']}`",
         f"- benchmark rows ready/total: `{summary['benchmark_rows_ready_count']}/{summary['benchmark_rows_total']}`",
         f"- competitive-floor batch: `{summary['competitive_batch_status'] or '-'}` rows `{summary['competitive_batch_row_count']}` missing evidence `{summary['competitive_batch_missing_evidence_item_count']}`",
@@ -491,6 +514,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build a CASP17 local workbench index.")
     parser.add_argument("--target-model-folders-json", default=DEFAULT_TARGET_MODEL_FOLDERS_JSON)
+    parser.add_argument("--target-object-folder-audit-json", default=DEFAULT_TARGET_OBJECT_FOLDER_AUDIT_JSON)
     parser.add_argument("--target-object-viewer-smoke-json", default=DEFAULT_TARGET_OBJECT_VIEWER_SMOKE_JSON)
     parser.add_argument("--win-gap-closure-json", default=DEFAULT_WIN_GAP_CLOSURE_JSON)
     parser.add_argument("--input-scaffold-json", default=DEFAULT_INPUT_SCAFFOLD_JSON)

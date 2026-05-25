@@ -11,6 +11,7 @@ def _write_json(path: Path, payload: dict) -> None:
 
 def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path):
     target_json = tmp_path / "target_folders.json"
+    target_object_folder_audit_json = tmp_path / "target_object_folder_audit.json"
     target_object_viewer_smoke_json = tmp_path / "target_object_viewer_smoke.json"
     closure_json = tmp_path / "closure.json"
     scaffold_json = tmp_path / "scaffold.json"
@@ -49,6 +50,18 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                     "folder_path": "casp17/targets_current/H0002_Example_B",
                 },
             ],
+        },
+    )
+    _write_json(
+        target_object_folder_audit_json,
+        {
+            "summary": {
+                "folder_audit_status": "pass",
+                "object_row_count": 4,
+                "pass_count": 4,
+                "blocked_count": 0,
+                "chain_isolation_pass_count": 4,
+            }
         },
     )
     _write_json(
@@ -180,6 +193,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         [
             "--target-model-folders-json",
             str(target_json),
+            "--target-object-folder-audit-json",
+            str(target_object_folder_audit_json),
             "--target-object-viewer-smoke-json",
             str(target_object_viewer_smoke_json),
             "--win-gap-closure-json",
@@ -215,6 +230,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["target_model_object_count"] == 4
     assert payload["summary"]["target_model_object_projection_count"] == 4
     assert payload["summary"]["target_model_object_viewer_count"] == 4
+    assert payload["summary"]["target_object_folder_audit_status"] == "pass"
+    assert payload["summary"]["target_object_folder_audit_pass_count"] == 4
+    assert payload["summary"]["target_object_folder_chain_isolation_pass_count"] == 4
     assert payload["summary"]["target_object_viewer_smoke_status"] == "pass"
     assert payload["summary"]["target_object_viewer_smoke_pass_count"] == 4
     assert payload["summary"]["benchmark_rows_total"] == 40
