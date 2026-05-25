@@ -27,6 +27,7 @@ DEFAULT_COMPETITIVE_EVIDENCE_ROUND_JSON = "casp17/casp17_competitive_floor_evide
 DEFAULT_COMPETITIVE_UNLOCK_PRIORITY_JSON = "casp17/casp17_competitive_floor_evidence_unlock_priority_current.json"
 DEFAULT_COMPETITIVE_IDENTITY_UNLOCK_KIT_JSON = "casp17/casp17_competitive_floor_identity_unlock_kit_current.json"
 DEFAULT_COMPETITIVE_IDENTITY_UNLOCK_ROUND_JSON = "casp17/casp17_competitive_floor_identity_unlock_round_current.json"
+DEFAULT_COMPETITIVE_FILE_SOURCE_PLAN_JSON = "casp17/casp17_competitive_floor_file_source_plan_current.json"
 DEFAULT_COMPETITIVE_VALUE_LEDGER_JSON = "casp17/casp17_competitive_floor_value_ledger_current.json"
 DEFAULT_COMPETITIVE_EVIDENCE_INTAKE_JSON = "casp17/casp17_competitive_floor_evidence_intake_current.json"
 DEFAULT_COMPETITIVE_PATCH_GATE_JSON = "casp17/casp17_competitive_floor_row_fill_patch_gate_current.json"
@@ -159,6 +160,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     competitive_unlock_priority_payload = _read_json(args.competitive_unlock_priority_json)
     competitive_identity_unlock_payload = _read_json(args.competitive_identity_unlock_json)
     competitive_identity_round_payload = _read_json(args.competitive_identity_round_json)
+    competitive_file_source_plan_payload = _read_json(args.competitive_file_source_plan_json)
     competitive_value_ledger_payload = _read_json(args.competitive_value_ledger_json)
     competitive_evidence_intake_payload = _read_json(args.competitive_evidence_intake_json)
     competitive_patch_gate_payload = _read_json(args.competitive_patch_gate_json)
@@ -183,6 +185,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     competitive_unlock_priority_summary = _summary(competitive_unlock_priority_payload)
     competitive_identity_unlock_summary = _summary(competitive_identity_unlock_payload)
     competitive_identity_round_summary = _summary(competitive_identity_round_payload)
+    competitive_file_source_plan_summary = _summary(competitive_file_source_plan_payload)
     competitive_value_ledger_summary = _summary(competitive_value_ledger_payload)
     competitive_evidence_intake_summary = _summary(competitive_evidence_intake_payload)
     competitive_patch_gate_summary = _summary(competitive_patch_gate_payload)
@@ -486,6 +489,25 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             ),
         ),
         _artifact_row(
+            "competitive_floor_file_source_plan",
+            "Identity-aware source-path plan for prediction, native, and ablation PDB imports",
+            _text(competitive_file_source_plan_summary.get("file_source_status")),
+            args.competitive_file_source_plan_json,
+            ready_count=(
+                _int(competitive_file_source_plan_summary.get("ready_for_import_count"))
+                + _int(competitive_file_source_plan_summary.get("already_imported_count"))
+            ),
+            blocked_count=(
+                _int(competitive_file_source_plan_summary.get("waiting_on_identity_count"))
+                + _int(competitive_file_source_plan_summary.get("identity_blocked_file_count"))
+                + _int(competitive_file_source_plan_summary.get("awaiting_source_path_count"))
+                + _int(competitive_file_source_plan_summary.get("blocked_file_source_count"))
+            ),
+            total_count=_int(competitive_file_source_plan_summary.get("file_action_count")),
+            next_action=_text(competitive_file_source_plan_summary.get("first_open_next_action")),
+            blockers=_text(competitive_file_source_plan_summary.get("first_open_blocker")),
+        ),
+        _artifact_row(
             "competitive_floor_value_ledger",
             "Per-row value ledgers for target identity, provenance, and calibration fields",
             _text(competitive_value_ledger_summary.get("value_ledger_status")),
@@ -759,6 +781,30 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "competitive_identity_round_file_waiting_on_identity_count": _int(
             competitive_identity_round_summary.get("file_actions_waiting_on_identity_count")
         ),
+        "competitive_file_source_plan_status": _text(
+            competitive_file_source_plan_summary.get("file_source_status")
+        ),
+        "competitive_file_source_plan_action_count": _int(
+            competitive_file_source_plan_summary.get("file_action_count")
+        ),
+        "competitive_file_source_plan_waiting_on_identity_count": _int(
+            competitive_file_source_plan_summary.get("waiting_on_identity_count")
+        ),
+        "competitive_file_source_plan_identity_blocked_count": _int(
+            competitive_file_source_plan_summary.get("identity_blocked_file_count")
+        ),
+        "competitive_file_source_plan_awaiting_source_path_count": _int(
+            competitive_file_source_plan_summary.get("awaiting_source_path_count")
+        ),
+        "competitive_file_source_plan_ready_for_import_count": _int(
+            competitive_file_source_plan_summary.get("ready_for_import_count")
+        ),
+        "competitive_file_source_plan_already_imported_count": _int(
+            competitive_file_source_plan_summary.get("already_imported_count")
+        ),
+        "competitive_file_source_plan_blocked_count": _int(
+            competitive_file_source_plan_summary.get("blocked_file_source_count")
+        ),
         "competitive_value_ledger_status": _text(
             competitive_value_ledger_summary.get("value_ledger_status")
         ),
@@ -882,6 +928,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- competitive unlock priority: `{summary['competitive_unlock_priority_status'] or '-'}` phases `{summary['competitive_unlock_priority_phase_row_count']}` identity open `{summary['competitive_unlock_priority_identity_open_action_count']}` target_id open `{summary['competitive_unlock_priority_target_id_open_count']}` files waiting `{summary['competitive_unlock_priority_file_waiting_on_identity_count']}`",
         f"- competitive identity unlock kit: `{summary['competitive_identity_unlock_status'] or '-'}` rows `{summary['competitive_identity_unlock_ready_count']}/{summary['competitive_identity_unlock_awaiting_count']}/{summary['competitive_identity_unlock_blocked_count']}/{summary['competitive_identity_unlock_row_count']}` files unlocked `{summary['competitive_identity_unlock_file_actions_unlocked_count']}`",
         f"- competitive identity unlock round: `{summary['competitive_identity_round_status'] or '-'}` rows `{summary['competitive_identity_round_ready_for_import_count']}/{summary['competitive_identity_round_awaiting_count']}/{summary['competitive_identity_round_blocked_count']}/{summary['competitive_identity_round_row_count']}` import ready/applied `{summary['competitive_identity_round_import_ready_for_apply_count']}/{summary['competitive_identity_round_import_applied_count']}` target_id open `{summary['competitive_identity_round_target_id_open_count']}` files waiting `{summary['competitive_identity_round_file_waiting_on_identity_count']}`",
+        f"- competitive file source plan: `{summary['competitive_file_source_plan_status'] or '-'}` actions `{summary['competitive_file_source_plan_action_count']}` waiting identity/source `{summary['competitive_file_source_plan_waiting_on_identity_count']}/{summary['competitive_file_source_plan_awaiting_source_path_count']}` ready/imported/blocked `{summary['competitive_file_source_plan_ready_for_import_count']}/{summary['competitive_file_source_plan_already_imported_count']}/{summary['competitive_file_source_plan_blocked_count']}`",
         f"- competitive value ledgers: `{summary['competitive_value_ledger_status'] or '-'}` ledgers/actions `{summary['competitive_value_ledger_count']}/{summary['competitive_value_ledger_action_count']}` ready/awaiting `{summary['competitive_value_ledger_ready_for_intake_count']}/{summary['competitive_value_ledger_awaiting_value_count']}`",
         f"- competitive evidence intake: `{summary['competitive_evidence_intake_status'] or '-'}` actions `{summary['competitive_evidence_intake_action_count']}` patch candidates `{summary['competitive_evidence_intake_patch_candidate_count']}` awaiting files/values `{summary['competitive_evidence_intake_awaiting_file_count']}/{summary['competitive_evidence_intake_awaiting_value_count']}`",
         f"- competitive row_fill patch gate: `{summary['competitive_patch_gate_status'] or '-'}` actions `{summary['competitive_patch_gate_action_count']}` ready/awaiting/conflicts `{summary['competitive_patch_gate_ready_to_patch_count']}/{summary['competitive_patch_gate_awaiting_evidence_count']}/{summary['competitive_patch_gate_conflict_count']}`",
@@ -949,6 +996,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=DEFAULT_COMPETITIVE_IDENTITY_UNLOCK_KIT_JSON,
     )
     parser.add_argument("--competitive-identity-round-json", default=DEFAULT_COMPETITIVE_IDENTITY_UNLOCK_ROUND_JSON)
+    parser.add_argument("--competitive-file-source-plan-json", default=DEFAULT_COMPETITIVE_FILE_SOURCE_PLAN_JSON)
     parser.add_argument("--competitive-value-ledger-json", default=DEFAULT_COMPETITIVE_VALUE_LEDGER_JSON)
     parser.add_argument("--competitive-evidence-intake-json", default=DEFAULT_COMPETITIVE_EVIDENCE_INTAKE_JSON)
     parser.add_argument("--competitive-patch-gate-json", default=DEFAULT_COMPETITIVE_PATCH_GATE_JSON)
