@@ -30,6 +30,9 @@ DEFAULT_SCORECARD_JSON = "runs/casp17_internal_scorecard_batch_current.json"
 DEFAULT_SCORECARD_CSV = "runs/casp17_internal_scorecard_batch_current.csv"
 DEFAULT_SCORECARD_MD = "runs/casp17_internal_scorecard_batch_current.md"
 DEFAULT_SCORED_INTAKE_CSV = "runs/casp17_target_intake_scored_current.csv"
+DEFAULT_SHAPE_SANITY_JSON = "runs/casp17_structure_shape_sanity_packet_current.json"
+DEFAULT_SHAPE_SANITY_CSV = "runs/casp17_structure_shape_sanity_packet_current.csv"
+DEFAULT_SHAPE_SANITY_MD = "runs/casp17_structure_shape_sanity_packet_current.md"
 DEFAULT_SUBMISSION_GATE_JSON = "runs/casp17_submission_gate_packet_current.json"
 DEFAULT_SUBMISSION_GATE_CSV = "runs/casp17_submission_gate_packet_current.csv"
 DEFAULT_SUBMISSION_GATE_MD = "runs/casp17_submission_gate_packet_current.md"
@@ -37,7 +40,7 @@ DEFAULT_OUT_JSON = "runs/casp17_target_attempt_gate_current.json"
 DEFAULT_OUT_CSV = "runs/casp17_target_attempt_gate_current.csv"
 DEFAULT_OUT_MD = "runs/casp17_target_attempt_gate_current.md"
 
-STEP_ORDER = ("backend_job", "contract", "conversion", "import", "validation", "scorecard", "submission_gate")
+STEP_ORDER = ("backend_job", "contract", "conversion", "import", "validation", "scorecard", "shape_sanity", "submission_gate")
 
 
 def _resolve(path_like: str | Path) -> Path:
@@ -55,6 +58,13 @@ def _artifact(path_like: str | Path) -> str:
 
 def _text(value: Any) -> str:
     return str(value or "").strip()
+
+
+def _int(value: Any, default: int = 0) -> int:
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return default
 
 
 def _read_json(path_like: str | Path) -> dict[str, Any]:
@@ -185,6 +195,25 @@ def _command_rows(row: dict[str, Any], args: argparse.Namespace) -> list[dict[st
             ),
         },
         {
+            "step": "shape_sanity",
+            "command": _shell_join(
+                [
+                    "python3",
+                    "tools/build_casp17_structure_shape_sanity_packet.py",
+                    "--prediction-dir",
+                    args.prediction_dir,
+                    "--target-ids",
+                    args.target_id,
+                    "--out-json",
+                    args.shape_sanity_json,
+                    "--out-csv",
+                    args.shape_sanity_csv,
+                    "--out-md",
+                    args.shape_sanity_md,
+                ]
+            ),
+        },
+        {
             "step": "submission_gate",
             "command": _shell_join(
                 [
@@ -198,6 +227,8 @@ def _command_rows(row: dict[str, Any], args: argparse.Namespace) -> list[dict[st
                     args.submission_gate_csv,
                     "--out-md",
                     args.submission_gate_md,
+                    "--shape-sanity-json",
+                    args.shape_sanity_json,
                 ]
             ),
         },
@@ -238,6 +269,26 @@ def _submission_decision(path_like: str | Path, target_id: str) -> str:
         if isinstance(row, dict) and _text(row.get("target_id")).upper() == target_upper:
             return _text(row.get("submission_decision"))
     return ""
+
+
+def _shape_sanity_summary(path_like: str | Path) -> dict[str, Any]:
+    payload = _read_json(path_like)
+    summary = payload.get("summary")
+    if not isinstance(summary, dict):
+        return {
+            "shape_sanity_status": "",
+            "shape_sanity_pass_count": 0,
+            "shape_sanity_target_count": 0,
+            "shape_sanity_blocked_count": 0,
+            "shape_sanity_blocked_targets": "",
+        }
+    return {
+        "shape_sanity_status": _text(summary.get("shape_sanity_status")),
+        "shape_sanity_pass_count": _int(summary.get("pass_count")),
+        "shape_sanity_target_count": _int(summary.get("target_count")),
+        "shape_sanity_blocked_count": _int(summary.get("blocked_count")),
+        "shape_sanity_blocked_targets": _text(summary.get("blocked_targets")),
+    }
 
 
 def build_payload(args: argparse.Namespace) -> dict[str, Any]:
@@ -295,6 +346,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                     break
 
     submission_decision = _submission_decision(args.submission_gate_json, target_id)
+    shape_sanity = _shape_sanity_summary(args.shape_sanity_json)
     summary = {
         "packet_type": "casp17_target_attempt_gate",
         "generated_at_local": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
@@ -305,6 +357,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "attempt_status": status,
         "blocker_count": len(blockers),
         "blockers": blockers,
+        **shape_sanity,
         "submission_decision": submission_decision,
         "claim_boundary": "Single-target CASP17 attempt orchestration only; not public submission or official performance evidence.",
     }
@@ -322,6 +375,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- stop after: `{summary['stop_after']}`",
         f"- attempt status: `{summary['attempt_status']}`",
         f"- blockers: `{';'.join(summary['blockers']) if summary['blockers'] else '-'}`",
+        f"- shape sanity: `{summary['shape_sanity_status'] or '-'}` pass/target `{summary['shape_sanity_pass_count']}/{summary['shape_sanity_target_count']}`",
         f"- submission decision: `{summary['submission_decision'] or '-'}`",
         "",
         "## Steps",
@@ -366,6 +420,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--scorecard-csv", default=DEFAULT_SCORECARD_CSV)
     parser.add_argument("--scorecard-md", default=DEFAULT_SCORECARD_MD)
     parser.add_argument("--scored-intake-csv", default=DEFAULT_SCORED_INTAKE_CSV)
+    parser.add_argument("--shape-sanity-json", default=DEFAULT_SHAPE_SANITY_JSON)
+    parser.add_argument("--shape-sanity-csv", default=DEFAULT_SHAPE_SANITY_CSV)
+    parser.add_argument("--shape-sanity-md", default=DEFAULT_SHAPE_SANITY_MD)
     parser.add_argument("--submission-gate-json", default=DEFAULT_SUBMISSION_GATE_JSON)
     parser.add_argument("--submission-gate-csv", default=DEFAULT_SUBMISSION_GATE_CSV)
     parser.add_argument("--submission-gate-md", default=DEFAULT_SUBMISSION_GATE_MD)

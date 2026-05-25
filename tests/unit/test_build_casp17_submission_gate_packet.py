@@ -59,7 +59,7 @@ def _base_artifacts(root: Path) -> None:
     _write_json(runs / "wetlab_selected_allatom_gate_burndown_packet_current.json", {"summary": {"hard_block_count": 0}})
 
 
-def _run_builder(root: Path) -> dict:
+def _run_builder(root: Path, extra_args: list[str] | None = None) -> dict:
     out_json = root / "runs/casp17_submission_gate_packet_current.json"
     subprocess.run(
         [
@@ -67,6 +67,7 @@ def _run_builder(root: Path) -> dict:
             str(ROOT / "tools/build_casp17_submission_gate_packet.py"),
             "--root",
             str(root),
+            *(extra_args or []),
         ],
         cwd=root,
         check=True,
@@ -292,3 +293,58 @@ def test_casp17_internal_scorecard_json_hard_blocker_overrides_csv_pass(tmp_path
     row = payload["target_rows"][0]
     assert row["submission_decision"] == "submission_no_go"
     assert "validation:internal_scorecard:accuracy_parity_scorecard_not_green" in row["blockers"]
+
+
+def test_casp17_shape_sanity_json_blocks_otherwise_ready_target(tmp_path: Path) -> None:
+    _base_artifacts(tmp_path)
+    (tmp_path / "outputs").mkdir()
+    (tmp_path / "inputs").mkdir()
+    (tmp_path / "outputs/H2006TS.pdb").write_text("PFRMAT TS\nTARGET H2006\n", encoding="utf-8")
+    (tmp_path / "inputs/H2006.fasta").write_text(">H2006\nACDEFGHIK\n", encoding="utf-8")
+    _write_json(
+        tmp_path / "runs/shape_sanity.json",
+        {
+            "summary": {
+                "shape_sanity_status": "blocked",
+                "pass_count": 0,
+                "target_count": 1,
+                "blocked_count": 1,
+                "blocked_targets": "H2006",
+            },
+            "rows": [
+                {
+                    "target_id": "H2006",
+                    "shape_sanity_status": "blocked",
+                    "blockers": "ca_span_per_residue_above_threshold,shape_penalty_above_threshold",
+                }
+            ],
+        },
+    )
+    _write_intake(
+        tmp_path / "config/casp17_target_intake_template.csv",
+        [
+            {
+                "target_id": "H2006",
+                "lane": "difficult_protein_complexes",
+                "submission_format": "TS",
+                "deadline_class": "regular",
+                "sequence_path": "inputs/H2006.fasta",
+                "prediction_file_path": "outputs/H2006TS.pdb",
+                "format_check_status": "pass",
+                "model_generation_status": "pass",
+                "geometry_sanity_status": "pass",
+                "confidence_calibration_status": "pass",
+                "internal_scorecard_status": "pass",
+            }
+        ],
+    )
+
+    payload = _run_builder(tmp_path, ["--shape-sanity-json", "runs/shape_sanity.json"])
+
+    row = payload["target_rows"][0]
+    assert payload["summary"]["shape_sanity_required"] is True
+    assert payload["summary"]["shape_sanity_status"] == "blocked"
+    assert payload["summary"]["submission_no_go_count"] == 1
+    assert row["submission_decision"] == "submission_no_go"
+    assert "shape_sanity:ca_span_per_residue_above_threshold" in row["blockers"]
+    assert "shape_sanity:shape_penalty_above_threshold" in row["blockers"]

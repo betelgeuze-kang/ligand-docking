@@ -904,6 +904,7 @@ def _run_downstream_stages(args: argparse.Namespace) -> list[dict[str, Any]]:
             accuracy_scorecard_json=args.accuracy_scorecard_json,
             pde_local_min_json=args.pde_local_min_json,
             selected_allatom_json=args.selected_allatom_json,
+            shape_sanity_json=getattr(args, "shape_sanity_json", ""),
             out_json=args.submission_gate_json,
             out_csv=args.submission_gate_csv,
             out_md=args.submission_gate_md,
@@ -966,6 +967,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--accuracy-scorecard-json", default=scorecard_builder.DEFAULT_ACCURACY_SCORECARD_JSON)
     parser.add_argument("--pde-local-min-json", default=submission_gate_builder.DEFAULT_PDE_LOCAL_MIN_JSON)
     parser.add_argument("--selected-allatom-json", default=submission_gate_builder.DEFAULT_SELECTED_ALLATOM_JSON)
+    parser.add_argument("--shape-sanity-json", default="", help="Optional structure-shape sanity packet to require at submission-gate time.")
     return parser.parse_args(argv)
 
 

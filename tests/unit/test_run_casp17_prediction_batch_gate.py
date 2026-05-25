@@ -73,6 +73,12 @@ def test_casp17_prediction_batch_gate_plans_ready_and_blocked_rows(tmp_path: Pat
             str(ROOT / "tools/run_casp17_prediction_batch_gate.py"),
             "--launch-packet-json",
             str(launch),
+            "--prediction-dir",
+            str(tmp_path / "recursive_predictions"),
+            "--validation-dir",
+            str(tmp_path / "recursive_validations"),
+            "--submission-gate-json",
+            str(tmp_path / "recursive_submission.json"),
             "--out-json",
             str(tmp_path / "batch.json"),
             "--out-csv",
@@ -89,6 +95,9 @@ def test_casp17_prediction_batch_gate_plans_ready_and_blocked_rows(tmp_path: Pat
     assert payload["summary"]["planned_count"] == 1
     assert payload["summary"]["blocked_count"] == 1
     assert payload["rows"][0]["batch_status"] == "planned"
+    assert str(tmp_path / "recursive_predictions") in payload["rows"][0]["command"]
+    assert str(tmp_path / "recursive_submission.json") in payload["rows"][0]["command"]
+    assert "--shape-sanity-json" in payload["rows"][0]["command"]
     assert payload["rows"][1]["batch_status"] == "blocked_by_launch_packet"
 
 

@@ -116,9 +116,14 @@ def test_casp17_target_attempt_gate_plans_ready_launch_row(tmp_path: Path) -> No
         "import",
         "validation",
         "scorecard",
+        "shape_sanity",
         "submission_gate",
     ]
     assert all(row["status"] == "planned" for row in payload["steps"])
+    shape_step = next(row for row in payload["steps"] if row["step"] == "shape_sanity")
+    submission_step = next(row for row in payload["steps"] if row["step"] == "submission_gate")
+    assert "build_casp17_structure_shape_sanity_packet.py" in shape_step["command"]
+    assert "--shape-sanity-json" in submission_step["command"]
 
 
 def test_casp17_target_attempt_gate_executes_to_conversion(tmp_path: Path) -> None:

@@ -21,6 +21,7 @@ DEFAULT_LOCAL_ENGINE_QUEUE_JSON = "runs/local_engine_commercialization_queue_cur
 DEFAULT_ACCURACY_SCORECARD_JSON = "runs/accuracy_parity_scorecard_current.json"
 DEFAULT_PDE_LOCAL_MIN_JSON = "runs/wetlab_tcruzi_pde_atomized_parameterization_minimization_packet_current.json"
 DEFAULT_SELECTED_ALLATOM_JSON = "runs/wetlab_selected_allatom_gate_burndown_packet_current.json"
+DEFAULT_SHAPE_SANITY_JSON = ""
 
 ALLOWED_LANES = {
     "organic_ligand_protein_complexes": {
@@ -268,6 +269,72 @@ def _validation_overlay(row: dict[str, str], root: Path) -> dict[str, Any]:
     return {"present": present, "summary": merged_summary, "hard_blockers": hard_blockers}
 
 
+def _shape_sanity_gate(args: argparse.Namespace, root: Path) -> tuple[dict[str, Any], dict[str, list[str]], list[str]]:
+    path_value = _text(getattr(args, "shape_sanity_json", ""))
+    disabled = {
+        "shape_sanity_required": False,
+        "shape_sanity_status": "not_configured",
+        "shape_sanity_json": "",
+        "shape_sanity_pass_count": 0,
+        "shape_sanity_target_count": 0,
+        "shape_sanity_blocked_count": 0,
+        "shape_sanity_blocked_targets": "",
+    }
+    if not path_value:
+        return disabled, {}, []
+
+    payload = _read_json(path_value, root)
+    if not payload:
+        summary = {
+            **disabled,
+            "shape_sanity_required": True,
+            "shape_sanity_status": "missing_or_invalid",
+            "shape_sanity_json": _artifact(path_value, root),
+        }
+        return summary, {}, ["shape_sanity_artifact_missing_or_invalid"]
+
+    packet_summary = _summary(payload)
+    rows = payload.get("rows")
+    row_blockers: dict[str, list[str]] = {}
+    if isinstance(rows, list):
+        for shape_row in rows:
+            if not isinstance(shape_row, dict):
+                continue
+            target_id = _text(shape_row.get("target_id")).upper()
+            if not target_id:
+                continue
+            if _text(shape_row.get("shape_sanity_status")).lower() == "pass":
+                continue
+            blockers = [
+                item.strip()
+                for item in _text(shape_row.get("blockers")).replace(";", ",").split(",")
+                if item.strip()
+            ]
+            if not blockers:
+                blockers = ["shape_sanity_not_pass"]
+            row_blockers[target_id] = [f"shape_sanity:{blocker}" for blocker in blockers]
+
+    status = _text(packet_summary.get("shape_sanity_status") or "missing").lower()
+    global_blockers: list[str] = []
+    if status != "pass":
+        global_blockers.append(f"shape_sanity_status_not_pass:{status or 'missing'}")
+    summary = {
+        "shape_sanity_required": True,
+        "shape_sanity_status": status or "missing",
+        "shape_sanity_json": _artifact(path_value, root),
+        "shape_sanity_pass_count": _int(packet_summary.get("pass_count")),
+        "shape_sanity_target_count": _int(packet_summary.get("target_count")),
+        "shape_sanity_blocked_count": _int(packet_summary.get("blocked_count")),
+        "shape_sanity_blocked_targets": _text(packet_summary.get("blocked_targets")),
+        "shape_sanity_max_observed_span_per_residue": packet_summary.get("max_observed_span_per_residue"),
+        "shape_sanity_max_observed_radius_gyration_per_residue": packet_summary.get(
+            "max_observed_radius_gyration_per_residue"
+        ),
+        "shape_sanity_max_observed_chain_linearity": packet_summary.get("max_observed_chain_linearity"),
+    }
+    return summary, row_blockers, global_blockers
+
+
 def _merged_status(row: dict[str, str], overlay: dict[str, Any], key: str) -> str:
     row_status = _status(row.get(key))
     if row_status != "missing":
@@ -278,7 +345,13 @@ def _merged_status(row: dict[str, str], overlay: dict[str, Any], key: str) -> st
     return "missing"
 
 
-def _target_blockers(row: dict[str, str], framework_gate_pass: bool, root: Path) -> tuple[str, list[str]]:
+def _target_blockers(
+    row: dict[str, str],
+    framework_gate_pass: bool,
+    root: Path,
+    shape_row_blockers: dict[str, list[str]],
+    shape_global_blockers: list[str],
+) -> tuple[str, list[str]]:
     blockers: list[str] = []
     overlay = _validation_overlay(row, root)
 
@@ -310,6 +383,11 @@ def _target_blockers(row: dict[str, str], framework_gate_pass: bool, root: Path)
     elif not _resolve(sequence_path, root).exists():
         blockers.append("sequence_file_missing")
 
+    target_key = target_id.upper()
+    blockers.extend(shape_row_blockers.get(target_key, []))
+    if shape_global_blockers and target_key not in shape_row_blockers:
+        blockers.extend(shape_global_blockers)
+
     for key in (
         "format_check_status",
         "model_generation_status",
@@ -339,10 +417,17 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     root = Path(args.root).resolve()
     rows = [row for row in _read_csv(args.intake_csv, root) if any(_text(value) for value in row.values())]
     framework, framework_blockers = _framework_gate(args, root)
+    shape_summary, shape_row_blockers, shape_global_blockers = _shape_sanity_gate(args, root)
 
     target_rows: list[dict[str, Any]] = []
     for row in rows:
-        decision, blockers = _target_blockers(row, bool(framework["framework_gate_pass"]), root)
+        decision, blockers = _target_blockers(
+            row,
+            bool(framework["framework_gate_pass"]),
+            root,
+            shape_row_blockers,
+            shape_global_blockers,
+        )
         target_rows.append(
             {
                 "target_id": _text(row.get("target_id")),
@@ -367,6 +452,8 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         _source_artifact("pde_atomized_parameterization_minimization", args.pde_local_min_json, root),
         _source_artifact("selected_allatom_gate_burndown", args.selected_allatom_json, root),
     ]
+    if _text(args.shape_sanity_json):
+        source_artifacts.append(_source_artifact("structure_shape_sanity", args.shape_sanity_json, root))
     target_go_count = sum(row["submission_decision"] == "submission_go" for row in target_rows)
     lane_counts = {lane: 0 for lane in ALLOWED_LANES}
     for row in target_rows:
@@ -378,6 +465,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "packet_type": "casp17_submission_gate_packet",
         "generated_at_local": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
         **framework,
+        **shape_summary,
         "intake_csv": _artifact(args.intake_csv, root),
         "target_row_count": len(target_rows),
         "submission_go_count": target_go_count,
@@ -405,6 +493,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any], root: Path) -> Non
         f"- server registration ready: `{summary['server_registration_ready']}`",
         f"- primary lane: `{summary['primary_lane']}`",
         f"- submission policy: `{summary['submission_policy']}`",
+        f"- shape sanity: `{summary['shape_sanity_status']}` required `{summary['shape_sanity_required']}` pass/target `{summary['shape_sanity_pass_count']}/{summary['shape_sanity_target_count']}`",
         f"- target rows: `{summary['target_row_count']}`",
         f"- submission go/no-go: `{summary['submission_go_count']}/{summary['submission_no_go_count']}`",
         "",
@@ -458,6 +547,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--accuracy-scorecard-json", default=DEFAULT_ACCURACY_SCORECARD_JSON)
     parser.add_argument("--pde-local-min-json", default=DEFAULT_PDE_LOCAL_MIN_JSON)
     parser.add_argument("--selected-allatom-json", default=DEFAULT_SELECTED_ALLATOM_JSON)
+    parser.add_argument("--shape-sanity-json", default=DEFAULT_SHAPE_SANITY_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)

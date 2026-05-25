@@ -8,7 +8,7 @@ import json
 import math
 import random
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -62,6 +62,36 @@ BREAKERS = set("PG")
 CHAIN_IDS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 
 
+def _sequence_composition(sequence: str) -> dict[str, float]:
+    n_res = max(len(sequence), 1)
+    positive = sum(1 for aa in sequence if aa in POSITIVE)
+    negative = sum(1 for aa in sequence if aa in NEGATIVE)
+    return {
+        "hydrophobic_fraction": sum(1 for aa in sequence if aa in HYDROPHOBIC) / n_res,
+        "charged_fraction": (positive + negative) / n_res,
+        "net_charge_fraction": abs(positive - negative) / n_res,
+        "breaker_fraction": sum(1 for aa in sequence if aa in BREAKERS) / n_res,
+    }
+
+
+def sequence_compaction_scale(sequence: str) -> float:
+    comp = _sequence_composition(sequence)
+    scale = (
+        1.0
+        - 0.24 * (comp["hydrophobic_fraction"] - 0.35)
+        + 0.38 * comp["net_charge_fraction"]
+        + 0.12 * comp["charged_fraction"]
+        + 0.18 * comp["breaker_fraction"]
+    )
+    return max(0.78, min(1.34, float(scale)))
+
+
+def sequence_target_rg(sequence: str) -> float:
+    n_res = max(len(sequence), 1)
+    base = max(7.5, 2.10 * (float(n_res) ** 0.38))
+    return base * sequence_compaction_scale(sequence)
+
+
 @dataclass(frozen=True)
 class FastaChain:
     header: str
@@ -78,6 +108,9 @@ class ChainResult:
     ensemble_size: int
     secondary: str
     metrics: dict[str, Any]
+    ranked_coords: list[torch.Tensor] = field(default_factory=list)
+    ranked_confidences: list[torch.Tensor] = field(default_factory=list)
+    ranked_energies: list[float] = field(default_factory=list)
 
 
 def _resolve(path_like: str | Path) -> Path:
@@ -327,6 +360,105 @@ def _project_ca_bonds(coords: torch.Tensor, *, target: float, iterations: int) -
     return projected
 
 
+def _repair_ca_bond_window(coords: torch.Tensor, *, min_dist: float, max_dist: float, target: float, iterations: int) -> torch.Tensor:
+    repaired = coords.clone()
+    fallback = torch.tensor([1.0, 0.0, 0.0], dtype=repaired.dtype)
+    for _ in range(max(0, int(iterations))):
+        changed = False
+        for index in range(1, int(repaired.shape[0])):
+            step = repaired[index] - repaired[index - 1]
+            distance = float(torch.linalg.norm(step).item())
+            if min_dist <= distance <= max_dist:
+                continue
+            direction = _unit(step, fallback)
+            desired = max(float(min_dist), min(float(max_dist), float(target)))
+            midpoint = 0.5 * (repaired[index] + repaired[index - 1])
+            repaired[index - 1] = midpoint - 0.5 * desired * direction
+            repaired[index] = midpoint + 0.5 * desired * direction
+            changed = True
+        repaired = repaired - repaired.mean(dim=0, keepdim=True)
+        if not changed:
+            break
+    return repaired
+
+
+def _nonlocal_ca_close_contact_count(coords: torch.Tensor, *, threshold: float) -> int:
+    n_res = int(coords.shape[0])
+    if n_res <= 2:
+        return 0
+    count = 0
+    for left in range(n_res):
+        for right in range(left + 2, n_res):
+            if float(torch.linalg.norm(coords[left] - coords[right]).item()) < float(threshold):
+                count += 1
+    return count
+
+
+def _ranked_candidate_quality_score(coords: torch.Tensor, sequence: str, raw_energy: float) -> float:
+    n_res = int(coords.shape[0])
+    if n_res <= 1:
+        return float(raw_energy)
+    ca_dist = torch.linalg.norm(coords[1:] - coords[:-1], dim=-1)
+    continuity_violations = int(((ca_dist < 2.0) | (ca_dist > 8.0)).sum().item())
+    centered = coords - coords.mean(dim=0, keepdim=True)
+    rg = float(torch.sqrt(torch.mean(torch.sum(centered * centered, dim=-1))).item())
+    target_rg = max(sequence_target_rg(sequence), 1e-6)
+    rg_ratio = max(rg / target_rg, 1e-6)
+    max_abs = float(torch.max(torch.abs(coords)).item()) if coords.numel() else 0.0
+
+    dist = torch.cdist(coords.float(), coords.float()).clamp_min(1e-6)
+    indices = torch.arange(n_res)
+    nonlocal_mask = torch.triu((torch.abs(indices.view(-1, 1) - indices.view(1, -1)) > 1), diagonal=1)
+    nonlocal_dist = dist[nonlocal_mask]
+    severe_close = int((nonlocal_dist < 0.80).sum().item())
+    close_15 = int((nonlocal_dist < 1.50).sum().item())
+    close_20 = int((nonlocal_dist < 2.00).sum().item())
+    coordinate_overflow = max(0.0, max_abs - 950.0)
+
+    return float(
+        0.01 * raw_energy
+        + 100_000_000.0 * severe_close
+        + 1_000_000.0 * close_15
+        + 10_000.0 * close_20
+        + 500_000.0 * continuity_violations
+        + 250_000.0 * coordinate_overflow
+        + 2_500.0 * abs(math.log(rg_ratio))
+    )
+
+
+def _polish_ca_geometry(coords: torch.Tensor, *, steps: int) -> torch.Tensor:
+    n_res = int(coords.shape[0])
+    if n_res <= 2:
+        return coords
+    with torch.enable_grad():
+        polished = coords.clone().float().requires_grad_(True)
+        optimizer = torch.optim.Adam([polished], lr=0.03)
+        indices = torch.arange(n_res)
+        pair_mask = (torch.abs(indices.view(-1, 1) - indices.view(1, -1)) > 1) & torch.triu(
+            torch.ones((n_res, n_res), dtype=torch.bool),
+            diagonal=1,
+        )
+        for _ in range(max(0, int(steps))):
+            optimizer.zero_grad(set_to_none=True)
+            bond = torch.linalg.norm(polished[1:] - polished[:-1], dim=-1).clamp_min(1e-6)
+            dist = torch.cdist(polished, polished).clamp_min(1e-6)
+            nonlocal_dist = dist[pair_mask]
+            loss = (
+                20.0 * torch.mean((bond - 3.80) ** 2)
+                + 120.0 * torch.mean(torch.relu(2.05 - nonlocal_dist) ** 2)
+                + 30.0 * torch.mean(torch.relu(bond - 4.75) ** 2)
+                + 30.0 * torch.mean(torch.relu(3.05 - bond) ** 2)
+            )
+            if not torch.isfinite(loss):
+                break
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_([polished], max_norm=50.0)
+            optimizer.step()
+            with torch.no_grad():
+                polished -= polished.mean(dim=0, keepdim=True)
+        return polished.detach()
+
+
 def _sequence_flags(sequence: str, device: torch.device) -> dict[str, torch.Tensor]:
     return {
         "hydrophobic": torch.tensor([aa in HYDROPHOBIC for aa in sequence], dtype=torch.float32, device=device),
@@ -412,16 +544,24 @@ def _energy_batch(coords: torch.Tensor, sequence: str, secondary: str, pair_data
         energies = energies + 0.070 * torch.mean(same * torch.relu(8.50 - dist) ** 2, dim=-1)
     centered = coords - coords.mean(dim=1, keepdim=True)
     rg = torch.sqrt(torch.mean(torch.sum(centered * centered, dim=-1), dim=-1).clamp_min(eps))
-    target_rg = torch.tensor(max(7.5, 2.10 * (float(n_res) ** 0.38)), dtype=coords.dtype, device=coords.device)
+    target_rg = torch.tensor(sequence_target_rg(sequence), dtype=coords.dtype, device=coords.device)
     energies = energies + 0.055 * (rg - target_rg) ** 2
     return energies
 
 
-def _finalize_coords(coords: torch.Tensor) -> torch.Tensor:
+def _finalize_coords(coords: torch.Tensor, *, heavy_polish: bool = True) -> torch.Tensor:
     projected = _project_ca_bonds(coords.detach().float().cpu(), target=3.80, iterations=2)
-    projected = _declash_ca_coords(projected, min_dist=1.35, iterations=4)
-    projected = _project_ca_bonds(projected, target=3.80, iterations=1)
-    projected = _declash_ca_coords(projected, min_dist=1.20, iterations=2)
+    projected = _declash_ca_coords(projected, min_dist=2.60, iterations=36)
+    projected = _project_ca_bonds(projected, target=3.80, iterations=2)
+    projected = _declash_ca_coords(projected, min_dist=2.20, iterations=48)
+    projected = _repair_ca_bond_window(projected, min_dist=3.05, max_dist=4.75, target=3.80, iterations=3)
+    projected = _declash_ca_coords(projected, min_dist=1.60, iterations=36)
+    projected = _repair_ca_bond_window(projected, min_dist=3.05, max_dist=4.75, target=3.80, iterations=2)
+    if heavy_polish and int(projected.shape[0]) <= 800 and _nonlocal_ca_close_contact_count(projected, threshold=2.0) > 0:
+        projected = _polish_ca_geometry(projected, steps=400)
+        projected = _repair_ca_bond_window(projected, min_dist=3.05, max_dist=4.75, target=3.80, iterations=2)
+    projected = _declash_ca_coords(projected, min_dist=1.25, iterations=24)
+    projected = _repair_ca_bond_window(projected, min_dist=3.05, max_dist=4.75, target=3.80, iterations=1)
     return projected
 
 
@@ -474,9 +614,11 @@ def _residue_confidence(final_ensemble: torch.Tensor, best_index: int, sequence:
     return torch.clamp(confidence.float(), 12.0, 94.0)
 
 
-def _chain_metrics(coords: torch.Tensor, confidence: torch.Tensor, secondary: str, energy: float) -> dict[str, Any]:
+def _chain_metrics(coords: torch.Tensor, confidence: torch.Tensor, secondary: str, energy: float, sequence: str) -> dict[str, Any]:
     centered = coords - coords.mean(dim=0, keepdim=True)
     rg = torch.sqrt(torch.mean(torch.sum(centered * centered, dim=-1))).item() if coords.numel() else 0.0
+    target_rg = sequence_target_rg(sequence)
+    comp = _sequence_composition(sequence)
     if coords.shape[0] > 1:
         ca_dist = torch.linalg.norm(coords[1:] - coords[:-1], dim=-1)
         ca_min = float(ca_dist.min().item())
@@ -488,6 +630,13 @@ def _chain_metrics(coords: torch.Tensor, confidence: torch.Tensor, secondary: st
         "residue_count": int(coords.shape[0]),
         "energy": round(float(energy), 6),
         "rg_A": round(float(rg), 3),
+        "target_rg_A": round(float(target_rg), 3),
+        "rg_ratio": round(float(rg) / target_rg if target_rg else 0.0, 3),
+        "sequence_compaction_scale": round(sequence_compaction_scale(sequence), 3),
+        "hydrophobic_fraction": round(comp["hydrophobic_fraction"], 6),
+        "charged_fraction": round(comp["charged_fraction"], 6),
+        "net_charge_fraction": round(comp["net_charge_fraction"], 6),
+        "breaker_fraction": round(comp["breaker_fraction"], 6),
         "ca_distance_min_A": round(ca_min, 3),
         "ca_distance_mean_A": round(ca_mean, 3),
         "ca_distance_max_A": round(ca_max, 3),
@@ -537,12 +686,29 @@ def predict_chain(
         last_energy = energies.detach()
     with torch.no_grad():
         energies = _energy_batch(coords, sequence, secondary, pair_data).detach() if int(steps) >= 0 else last_energy
-        best_index = int(torch.argmin(energies).item())
-        final_ensemble = torch.stack([_finalize_coords(coords[index]) for index in range(coords.shape[0])], dim=0)
-        best_coords = final_ensemble[best_index]
+        energy_ranked_indices = torch.argsort(energies).detach().cpu().tolist()
+        final_ensemble = torch.stack([_finalize_coords(coords[index], heavy_polish=False) for index in range(coords.shape[0])], dim=0)
+        scored_indices = sorted(
+            (int(index) for index in energy_ranked_indices),
+            key=lambda index: _ranked_candidate_quality_score(
+                final_ensemble[index],
+                sequence,
+                float(energies[index].detach().cpu().item()),
+            ),
+        )
+        best_index = int(scored_indices[0])
+        best_coords = _finalize_coords(final_ensemble[best_index], heavy_polish=True)
         confidence = _residue_confidence(final_ensemble, best_index, sequence)
         best_energy = float(energies[best_index].detach().cpu().item())
-    metrics = _chain_metrics(best_coords, confidence, secondary, best_energy)
+        ranked_coords: list[torch.Tensor] = []
+        ranked_confidences: list[torch.Tensor] = []
+        ranked_energies: list[float] = []
+        for candidate_index in scored_indices[: min(5, len(scored_indices))]:
+            candidate_index = int(candidate_index)
+            ranked_coords.append(_finalize_coords(final_ensemble[candidate_index], heavy_polish=True).detach().cpu().float())
+            ranked_confidences.append(_residue_confidence(final_ensemble, candidate_index, sequence).detach().cpu().float())
+            ranked_energies.append(float(energies[candidate_index].detach().cpu().item()))
+    metrics = _chain_metrics(best_coords, confidence, secondary, best_energy, sequence)
     return ChainResult(
         chain=chain,
         coords=best_coords,
@@ -551,6 +717,9 @@ def predict_chain(
         ensemble_size=int(coords.shape[0]),
         secondary=secondary,
         metrics=metrics,
+        ranked_coords=ranked_coords,
+        ranked_confidences=ranked_confidences,
+        ranked_energies=ranked_energies,
     )
 
 
@@ -716,8 +885,113 @@ def dock_chains(chain_results: list[ChainResult], *, steps: int, seed: int, devi
             trans -= trans.mean(dim=0, keepdim=True)
             if not moved:
                 break
+        for _iteration in range(512):
+            best: tuple[float, int, int, int, int] | None = None
+            for c1 in range(len(chain_results)):
+                for c2 in range(c1 + 1, len(chain_results)):
+                    left_full = coords_by_chain[c1] + trans[c1]
+                    right_full = coords_by_chain[c2] + trans[c2]
+                    dist_matrix = torch.cdist(left_full, right_full).clamp_min(1e-6)
+                    min_distance, flat_index = torch.min(dist_matrix.reshape(-1), dim=0)
+                    distance = float(min_distance.item())
+                    if best is None or distance < best[0]:
+                        best = (distance, c1, c2, int((flat_index // dist_matrix.shape[1]).item()), int((flat_index % dist_matrix.shape[1]).item()))
+            if best is None or best[0] >= 3.25:
+                break
+            distance, c1, c2, left_index, right_index = best
+            left_full = coords_by_chain[c1] + trans[c1]
+            right_full = coords_by_chain[c2] + trans[c2]
+            delta = right_full[right_index] - left_full[left_index]
+            if float(torch.linalg.norm(delta).item()) < 1e-6:
+                delta = trans[c2] - trans[c1]
+            direction = delta / torch.linalg.norm(delta).clamp_min(1e-6)
+            push = float(torch.clamp(torch.tensor((3.35 - distance) * 0.70), min=0.05, max=2.50).item())
+            trans[c1] -= push * direction
+            trans[c2] += push * direction
+            trans -= trans.mean(dim=0, keepdim=True)
         for index, result in enumerate(chain_results):
             result.coords = (result.coords.to(device=device) + trans[index]).detach().cpu()
+        _enforce_interchain_ca_floor(chain_results, min_distance=3.20, target_distance=3.35, iterations=768)
+
+
+def _enforce_interchain_ca_floor(
+    chain_results: list[ChainResult],
+    *,
+    min_distance: float,
+    target_distance: float,
+    iterations: int,
+) -> None:
+    if len(chain_results) <= 1:
+        return
+    for _iteration in range(max(0, int(iterations))):
+        best: tuple[float, int, int, int, int] | None = None
+        for c1 in range(len(chain_results)):
+            for c2 in range(c1 + 1, len(chain_results)):
+                left = chain_results[c1].coords.float()
+                right = chain_results[c2].coords.float()
+                if left.numel() == 0 or right.numel() == 0:
+                    continue
+                dist_matrix = torch.cdist(left, right).clamp_min(1e-6)
+                min_dist, flat_index = torch.min(dist_matrix.reshape(-1), dim=0)
+                distance = float(min_dist.item())
+                if best is None or distance < best[0]:
+                    best = (
+                        distance,
+                        c1,
+                        c2,
+                        int((flat_index // dist_matrix.shape[1]).item()),
+                        int((flat_index % dist_matrix.shape[1]).item()),
+                    )
+        if best is None or best[0] >= float(min_distance):
+            break
+
+        distance, c1, c2, left_index, right_index = best
+        left = chain_results[c1].coords.float()
+        right = chain_results[c2].coords.float()
+        delta = right[right_index] - left[left_index]
+        if float(torch.linalg.norm(delta).item()) < 1e-6:
+            delta = right.mean(dim=0) - left.mean(dim=0)
+        if float(torch.linalg.norm(delta).item()) < 1e-6:
+            delta = torch.tensor([1.0, 0.0, 0.0], dtype=torch.float32)
+        direction = delta / torch.linalg.norm(delta).clamp_min(1e-6)
+        gap = max(0.0, float(target_distance) - distance)
+        shift = min(max(gap * 0.5 + 0.02, 0.04), 3.0)
+        chain_results[c1].coords = (chain_results[c1].coords.float() - shift * direction).detach().cpu()
+        chain_results[c2].coords = (chain_results[c2].coords.float() + shift * direction).detach().cpu()
+    _expand_chain_centers_until_floor(chain_results, min_distance=float(min_distance), step=0.18, iterations=256)
+
+
+def _expand_chain_centers_until_floor(
+    chain_results: list[ChainResult],
+    *,
+    min_distance: float,
+    step: float,
+    iterations: int,
+) -> None:
+    if len(chain_results) <= 1:
+        return
+    for _iteration in range(max(0, int(iterations))):
+        min_observed = float("inf")
+        for c1 in range(len(chain_results)):
+            for c2 in range(c1 + 1, len(chain_results)):
+                left = chain_results[c1].coords.float()
+                right = chain_results[c2].coords.float()
+                if left.numel() == 0 or right.numel() == 0:
+                    continue
+                pair_min = float(torch.cdist(left, right).min().item())
+                min_observed = min(min_observed, pair_min)
+        if not math.isfinite(min_observed) or min_observed >= float(min_distance):
+            break
+
+        centers = torch.stack([result.coords.float().mean(dim=0) for result in chain_results], dim=0)
+        assembly_center = centers.mean(dim=0)
+        for index, result in enumerate(chain_results):
+            direction = centers[index] - assembly_center
+            if float(torch.linalg.norm(direction).item()) < 1e-6:
+                angle = 2.0 * math.pi * index / max(len(chain_results), 1)
+                direction = torch.tensor([math.cos(angle), math.sin(angle), 0.0], dtype=torch.float32)
+            direction = direction / torch.linalg.norm(direction).clamp_min(1e-6)
+            result.coords = (result.coords.float() + float(step) * direction).detach().cpu()
 
 
 def assembly_metrics(chain_results: list[ChainResult]) -> dict[str, Any]:
@@ -840,6 +1114,69 @@ def write_raw_pdb(path_like: str | Path, target_id: str, chain_results: list[Cha
     return serial - 1
 
 
+def _ranked_clone(result: ChainResult, rank_index: int) -> ChainResult:
+    coords = result.ranked_coords[rank_index] if rank_index < len(result.ranked_coords) else result.coords.detach().cpu().float()
+    confidence = (
+        result.ranked_confidences[rank_index]
+        if rank_index < len(result.ranked_confidences)
+        else result.confidence.detach().cpu().float()
+    )
+    energy = result.ranked_energies[rank_index] if rank_index < len(result.ranked_energies) else result.energy
+    metrics = _chain_metrics(coords, confidence, result.secondary, float(energy), result.chain.sequence)
+    return ChainResult(
+        chain=result.chain,
+        coords=coords.clone(),
+        confidence=confidence.clone(),
+        energy=float(energy),
+        ensemble_size=result.ensemble_size,
+        secondary=result.secondary,
+        metrics=metrics,
+        ranked_coords=[],
+        ranked_confidences=[],
+        ranked_energies=[],
+    )
+
+
+def write_ranked_raw_pdbs(
+    dir_like: str | Path,
+    target_id: str,
+    chain_results: list[ChainResult],
+    *,
+    count: int,
+    emit_backbone_atoms: bool = False,
+    docking_steps: int = 0,
+    seed: int = 0,
+    device: torch.device | None = None,
+) -> list[dict[str, Any]]:
+    out_dir = _resolve(dir_like)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    rows: list[dict[str, Any]] = []
+    rank_count = max(0, min(5, int(count)))
+    for rank_index in range(rank_count):
+        ranked_results = [_ranked_clone(result, rank_index) for result in chain_results]
+        if len(ranked_results) > 1 and int(docking_steps) > 0 and device is not None:
+            dock_chains(ranked_results, steps=int(docking_steps), seed=int(seed) + rank_index * 1009, device=device)
+        out_pdb = out_dir / f"{target_id}_model_{rank_index + 1}.pdb"
+        atom_or_ter_count = write_raw_pdb(out_pdb, target_id, ranked_results, emit_backbone_atoms=emit_backbone_atoms)
+        energies = [float(result.energy) for result in ranked_results]
+        confidences = [
+            float(result.confidence.detach().cpu().float().mean().item())
+            for result in ranked_results
+            if result.confidence.numel()
+        ]
+        rows.append(
+            {
+                "rank": rank_index + 1,
+                "raw_pdb": _artifact(out_pdb),
+                "atom_or_ter_count": atom_or_ter_count,
+                "chain_count": len(ranked_results),
+                "energy_sum": round(sum(energies), 3),
+                "confidence_mean": round(sum(confidences) / len(confidences), 3) if confidences else 0.0,
+            }
+        )
+    return rows
+
+
 def _gpu_probe() -> dict[str, Any]:
     try:
         available = bool(torch.cuda.is_available())
@@ -914,6 +1251,7 @@ def build_prediction(args: argparse.Namespace) -> dict[str, Any]:
     raw_pdb = _resolve(args.raw_pdb or out_dir / f"{target_id}_model_1.pdb")
     runtime_json = _resolve(args.runtime_json or out_dir / "backend_runtime.json")
     metrics_json = _resolve(args.metrics_json or out_dir / "internal_physics_metrics.json")
+    ranked_raw_dir = _resolve(args.ranked_raw_dir) if _text(args.ranked_raw_dir) else out_dir / "ranked_raw_models"
     out_dir.mkdir(parents=True, exist_ok=True)
     blockers: list[dict[str, str]] = []
 
@@ -936,6 +1274,7 @@ def build_prediction(args: argparse.Namespace) -> dict[str, Any]:
     finished_at = ""
     chain_results: list[ChainResult] = []
     atom_or_ter_count = 0
+    ranked_raw_rows: list[dict[str, Any]] = []
     if not blockers and device is not None:
         started_at = dt.datetime.now().astimezone().isoformat(timespec="seconds")
         base_seed = int(args.seed)
@@ -953,6 +1292,17 @@ def build_prediction(args: argparse.Namespace) -> dict[str, Any]:
         dock_chains(chain_results, steps=docking_steps, seed=base_seed + 777, device=device)
         assembly = assembly_metrics(chain_results)
         atom_or_ter_count = write_raw_pdb(raw_pdb, target_id, chain_results, emit_backbone_atoms=bool(args.emit_backbone_atoms))
+        if int(args.ranked_raw_count) > 0:
+            ranked_raw_rows = write_ranked_raw_pdbs(
+                ranked_raw_dir,
+                target_id,
+                chain_results,
+                count=int(args.ranked_raw_count),
+                emit_backbone_atoms=bool(args.emit_backbone_atoms),
+                docking_steps=docking_steps,
+                seed=base_seed + 9001,
+                device=device,
+            )
         finished_at = dt.datetime.now().astimezone().isoformat(timespec="seconds")
     else:
         assembly = assembly_metrics(chain_results)
@@ -979,6 +1329,8 @@ def build_prediction(args: argparse.Namespace) -> dict[str, Any]:
             "max_pairs": max_pairs,
             "docking_steps": docking_steps,
             "raw_pdb": _artifact(raw_pdb),
+            "ranked_raw_dir": _artifact(ranked_raw_dir) if ranked_raw_rows else "",
+            "ranked_raw_count": len(ranked_raw_rows),
             "interface_plausibility_status": assembly.get("interface_plausibility_status", ""),
             "interchain_ca_contact_count_12A": assembly.get("interchain_ca_contact_count_12A", 0),
             "interchain_ca_clash_count_3A": assembly.get("interchain_ca_clash_count_3A", 0),
@@ -986,6 +1338,7 @@ def build_prediction(args: argparse.Namespace) -> dict[str, Any]:
         },
         "chains": chain_rows,
         "assembly": assembly,
+        "ranked_raw_models": ranked_raw_rows,
     }
     if not blockers:
         _write_json(metrics_json, metrics_payload)
@@ -1005,6 +1358,8 @@ def build_prediction(args: argparse.Namespace) -> dict[str, Any]:
             "torch_version": gpu.get("torch_version", ""),
             "raw_pdb": _artifact(raw_pdb),
             "raw_pdb_exists": raw_pdb.exists(),
+            "ranked_raw_dir": _artifact(ranked_raw_dir) if ranked_raw_rows else "",
+            "ranked_raw_count": len(ranked_raw_rows),
             "metrics_json": _artifact(metrics_json),
             "chain_count": len(chains),
             "residue_count": residue_count,
@@ -1043,6 +1398,8 @@ def build_prediction(args: argparse.Namespace) -> dict[str, Any]:
         "runtime_json": _artifact(runtime_json),
         "metrics_json": _artifact(metrics_json),
         "raw_pdb_exists": raw_pdb.exists(),
+        "ranked_raw_dir": _artifact(ranked_raw_dir) if ranked_raw_rows else "",
+        "ranked_raw_count": len(ranked_raw_rows),
         "atom_or_ter_record_count": atom_or_ter_count,
         "device": runtime_payload["summary"]["device"],
         "gpu_detected": bool(gpu.get("gpu_detected")),
@@ -1074,6 +1431,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=17017)
     parser.add_argument("--allow-cpu", action="store_true")
     parser.add_argument("--emit-backbone-atoms", action="store_true")
+    parser.add_argument("--ranked-raw-dir", default="")
+    parser.add_argument("--ranked-raw-count", type=int, default=0)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)

@@ -145,8 +145,10 @@ def _target_rg(residue_count: int) -> float:
 
 
 def _ts_counts(path_like: str | Path) -> dict[str, Any]:
+    if not _text(path_like):
+        return {"exists": False, "atom_count": 0, "parent_count": 0, "ter_count": 0, "chain_segment_count": 0}
     path = _resolve(path_like)
-    if not path.exists():
+    if not path.exists() or not path.is_file():
         return {"exists": False, "atom_count": 0, "parent_count": 0, "ter_count": 0, "chain_segment_count": 0}
     parent_count = 0
     ter_count = 0
@@ -233,7 +235,9 @@ def _row_for_target(
             continue
         length = _int(chain.get("sequence_length") or chain.get("residue_count"))
         rg = _float(chain.get("rg_A"))
-        ratio = rg / _target_rg(length) if length else 0.0
+        ratio = _float(chain.get("rg_ratio"))
+        if ratio <= 0.0:
+            ratio = rg / _target_rg(length) if length else 0.0
         max_rg_ratio = max(max_rg_ratio, ratio)
         confidence_mean = _float(chain.get("confidence_mean"))
         confidence_mean_min = min(confidence_mean_min, confidence_mean)
@@ -309,7 +313,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     raw_by_target = _index(_rows(raw_gate))
     ts_by_target = _index(_rows(ts_gate))
     submission_by_target = _index(_rows(submission_gate, key="target_rows"))
-    target_ids = sorted(submission_by_target)
+    target_ids = sorted(current_open | set(submission_by_target))
     rows = [
         _row_for_target(
             target_id,

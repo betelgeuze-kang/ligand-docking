@@ -15,11 +15,33 @@ ROOT = Path(__file__).resolve().parents[1]
 
 DEFAULT_LAUNCH_PACKET_JSON = "runs/casp17_prediction_launch_packet_current.json"
 DEFAULT_ATTEMPT_DIR = "runs/casp17_target_attempts_current"
+DEFAULT_INTAKE_CSV = "runs/casp17_target_intake_seed_with_sequences_current.csv"
+DEFAULT_PREDICTION_DIR = "runs/casp17_predictions_current"
+DEFAULT_IMPORT_JSON = "runs/casp17_prediction_import_packet_current.json"
+DEFAULT_IMPORT_CSV = "runs/casp17_prediction_import_packet_current.csv"
+DEFAULT_IMPORT_MD = "runs/casp17_prediction_import_packet_current.md"
+DEFAULT_IMPORTED_INTAKE_CSV = "runs/casp17_target_intake_prediction_imported_current.csv"
+DEFAULT_VALIDATION_DIR = "runs/casp17_validations_current"
+DEFAULT_VALIDATION_JSON = "runs/casp17_prediction_validation_batch_current.json"
+DEFAULT_VALIDATION_CSV = "runs/casp17_prediction_validation_batch_current.csv"
+DEFAULT_VALIDATION_MD = "runs/casp17_prediction_validation_batch_current.md"
+DEFAULT_VALIDATED_INTAKE_CSV = "runs/casp17_target_intake_validated_current.csv"
+DEFAULT_SCORECARD_DIR = "runs/casp17_internal_scorecards_current"
+DEFAULT_SCORECARD_JSON = "runs/casp17_internal_scorecard_batch_current.json"
+DEFAULT_SCORECARD_CSV = "runs/casp17_internal_scorecard_batch_current.csv"
+DEFAULT_SCORECARD_MD = "runs/casp17_internal_scorecard_batch_current.md"
+DEFAULT_SCORED_INTAKE_CSV = "runs/casp17_target_intake_scored_current.csv"
+DEFAULT_SHAPE_SANITY_JSON = "runs/casp17_structure_shape_sanity_packet_current.json"
+DEFAULT_SHAPE_SANITY_CSV = "runs/casp17_structure_shape_sanity_packet_current.csv"
+DEFAULT_SHAPE_SANITY_MD = "runs/casp17_structure_shape_sanity_packet_current.md"
+DEFAULT_SUBMISSION_GATE_JSON = "runs/casp17_submission_gate_packet_current.json"
+DEFAULT_SUBMISSION_GATE_CSV = "runs/casp17_submission_gate_packet_current.csv"
+DEFAULT_SUBMISSION_GATE_MD = "runs/casp17_submission_gate_packet_current.md"
 DEFAULT_OUT_JSON = "runs/casp17_prediction_batch_gate_current.json"
 DEFAULT_OUT_CSV = "runs/casp17_prediction_batch_gate_current.csv"
 DEFAULT_OUT_MD = "runs/casp17_prediction_batch_gate_current.md"
 
-STEP_ORDER = ("backend_job", "contract", "conversion", "import", "validation", "scorecard", "submission_gate")
+STEP_ORDER = ("backend_job", "contract", "conversion", "import", "validation", "scorecard", "shape_sanity", "submission_gate")
 
 
 def _resolve(path_like: str | Path) -> Path:
@@ -112,6 +134,54 @@ def _attempt_command(args: argparse.Namespace, target_id: str) -> list[str]:
     ]
     if _text(args.author_code):
         command.extend(["--author-code", _text(args.author_code)])
+    command.extend(
+        [
+            "--intake-csv",
+            args.intake_csv,
+            "--prediction-dir",
+            args.prediction_dir,
+            "--import-json",
+            args.import_json,
+            "--import-csv",
+            args.import_csv,
+            "--import-md",
+            args.import_md,
+            "--imported-intake-csv",
+            args.imported_intake_csv,
+            "--validation-dir",
+            args.validation_dir,
+            "--validation-json",
+            args.validation_json,
+            "--validation-csv",
+            args.validation_csv,
+            "--validation-md",
+            args.validation_md,
+            "--validated-intake-csv",
+            args.validated_intake_csv,
+            "--scorecard-dir",
+            args.scorecard_dir,
+            "--scorecard-json",
+            args.scorecard_json,
+            "--scorecard-csv",
+            args.scorecard_csv,
+            "--scorecard-md",
+            args.scorecard_md,
+            "--scored-intake-csv",
+            args.scored_intake_csv,
+            "--shape-sanity-json",
+            args.shape_sanity_json,
+            "--shape-sanity-csv",
+            args.shape_sanity_csv,
+            "--shape-sanity-md",
+            args.shape_sanity_md,
+            "--submission-gate-json",
+            args.submission_gate_json,
+            "--submission-gate-csv",
+            args.submission_gate_csv,
+            "--submission-gate-md",
+            args.submission_gate_md,
+        ]
+    )
     if args.execute:
         command.append("--execute")
     return command
@@ -211,6 +281,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "attempt_dir": _artifact(args.attempt_dir),
         "execute": bool(args.execute),
         "stop_after": args.stop_after,
+        "shape_sanity_json": _artifact(args.shape_sanity_json),
         "target_count": len(rows),
         "ready_count": ready_count,
         "planned_count": planned_count,
@@ -234,6 +305,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- launch packet: `{summary['launch_packet_json']}`",
         f"- execute: `{summary['execute']}`",
         f"- stop after: `{summary['stop_after']}`",
+        f"- shape sanity json: `{summary['shape_sanity_json']}`",
         f"- batch status: `{summary['batch_status']}`",
         f"- targets ready/planned/executed/completed/blocked/failed: "
         f"`{summary['ready_count']}/{summary['planned_count']}/{summary['executed_count']}/"
@@ -268,6 +340,28 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--target-limit", type=int, default=0)
     parser.add_argument("--timeout-seconds", type=int, default=21600)
     parser.add_argument("--continue-on-error", action="store_true")
+    parser.add_argument("--intake-csv", default=DEFAULT_INTAKE_CSV)
+    parser.add_argument("--prediction-dir", default=DEFAULT_PREDICTION_DIR)
+    parser.add_argument("--import-json", default=DEFAULT_IMPORT_JSON)
+    parser.add_argument("--import-csv", default=DEFAULT_IMPORT_CSV)
+    parser.add_argument("--import-md", default=DEFAULT_IMPORT_MD)
+    parser.add_argument("--imported-intake-csv", default=DEFAULT_IMPORTED_INTAKE_CSV)
+    parser.add_argument("--validation-dir", default=DEFAULT_VALIDATION_DIR)
+    parser.add_argument("--validation-json", default=DEFAULT_VALIDATION_JSON)
+    parser.add_argument("--validation-csv", default=DEFAULT_VALIDATION_CSV)
+    parser.add_argument("--validation-md", default=DEFAULT_VALIDATION_MD)
+    parser.add_argument("--validated-intake-csv", default=DEFAULT_VALIDATED_INTAKE_CSV)
+    parser.add_argument("--scorecard-dir", default=DEFAULT_SCORECARD_DIR)
+    parser.add_argument("--scorecard-json", default=DEFAULT_SCORECARD_JSON)
+    parser.add_argument("--scorecard-csv", default=DEFAULT_SCORECARD_CSV)
+    parser.add_argument("--scorecard-md", default=DEFAULT_SCORECARD_MD)
+    parser.add_argument("--scored-intake-csv", default=DEFAULT_SCORED_INTAKE_CSV)
+    parser.add_argument("--shape-sanity-json", default=DEFAULT_SHAPE_SANITY_JSON)
+    parser.add_argument("--shape-sanity-csv", default=DEFAULT_SHAPE_SANITY_CSV)
+    parser.add_argument("--shape-sanity-md", default=DEFAULT_SHAPE_SANITY_MD)
+    parser.add_argument("--submission-gate-json", default=DEFAULT_SUBMISSION_GATE_JSON)
+    parser.add_argument("--submission-gate-csv", default=DEFAULT_SUBMISSION_GATE_CSV)
+    parser.add_argument("--submission-gate-md", default=DEFAULT_SUBMISSION_GATE_MD)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
