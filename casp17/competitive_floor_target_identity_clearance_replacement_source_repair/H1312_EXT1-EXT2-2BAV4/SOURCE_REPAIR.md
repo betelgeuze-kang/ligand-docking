@@ -15,9 +15,9 @@
 
 ## Commands
 
-- predictor: `python3 tools/run_casp17_internal_physics_baseline_predictor.py --target-id H1312 --fasta casp17/replacement_source_fasta/H1312.fasta --out-dir runs/casp17_prediction_jobs_current/H1312 --quality-preset casp17_quality --ranked-raw-count 5 --emit-backbone-atoms`
-- validation: `python3 tools/validate_casp17_backend_contract.py --target-id H1312 --raw-pdb runs/casp17_prediction_jobs_current/H1312/H1312_model_1.pdb`
-- scorecard: `python3 tools/build_casp17_internal_scorecard.py --target-id H1312 --prediction-pdb runs/casp17_prediction_jobs_current/H1312/H1312_model_1.pdb`
+- predictor: `python3 tools/run_casp17_internal_physics_baseline_predictor.py --target-id H1312 --fasta casp17/replacement_source_fasta/H1312.fasta --out-dir runs/casp17_prediction_jobs_current/H1312 --raw-pdb runs/casp17_prediction_jobs_current/H1312/H1312_model_1.pdb --runtime-json runs/casp17_prediction_jobs_current/H1312/backend_runtime.json --metrics-json runs/casp17_prediction_jobs_current/H1312/internal_physics_metrics.json --quality-preset casp17_quality --ranked-raw-count 5 --emit-backbone-atoms --out-json runs/casp17_prediction_jobs_current/H1312/H1312_predictor.json --out-csv runs/casp17_prediction_jobs_current/H1312/H1312_predictor.csv --out-md runs/casp17_prediction_jobs_current/H1312/H1312_predictor.md`
+- validation: `python3 tools/validate_casp17_backend_contract.py --target-id H1312 --sequence-path casp17/replacement_source_fasta/H1312.fasta --raw-pdb runs/casp17_prediction_jobs_current/H1312/H1312_model_1.pdb --runtime-json runs/casp17_prediction_jobs_current/H1312/backend_runtime.json --backend-kind internal_physics --require-gpu --out-json runs/casp17_internal_physics_raw_validations_current/H1312_backend_contract.json --out-csv runs/casp17_internal_physics_raw_validations_current/H1312_backend_contract.csv --out-md runs/casp17_internal_physics_raw_validations_current/H1312_backend_contract.md`
+- scorecard: `python3 tools/build_casp17_internal_scorecard_batch.py --intake-csv runs/casp17_target_intake_validated_current.csv --out-dir runs/casp17_internal_scorecards_current --out-json runs/casp17_internal_scorecard_batch_current.json --out-csv runs/casp17_internal_scorecard_batch_current.csv --out-md runs/casp17_internal_scorecard_batch_current.md --out-intake-csv runs/casp17_target_intake_scored_current.csv`
 
 ## Claim Boundary
 

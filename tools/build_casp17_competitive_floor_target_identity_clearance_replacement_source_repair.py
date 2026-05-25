@@ -187,19 +187,34 @@ def _candidate_artifacts(candidate_id: str, rows: list[dict[str, Any]]) -> dict[
 def _commands(candidate_id: str, artifacts: dict[str, str]) -> tuple[str, str, str]:
     fasta = artifacts["fasta_path"] or f"casp17/replacement_source_fasta/{candidate_id}.fasta"
     prediction = artifacts["prediction_pdb"] or f"runs/casp17_prediction_jobs_current/{candidate_id}/{candidate_id}_model_1.pdb"
+    runtime = f"runs/casp17_prediction_jobs_current/{candidate_id}/backend_runtime.json"
+    metrics = f"runs/casp17_prediction_jobs_current/{candidate_id}/internal_physics_metrics.json"
     predictor_command = (
         "python3 tools/run_casp17_internal_physics_baseline_predictor.py "
         f"--target-id {candidate_id} --fasta {fasta} "
         f"--out-dir runs/casp17_prediction_jobs_current/{candidate_id} "
+        f"--raw-pdb {prediction} --runtime-json {runtime} --metrics-json {metrics} "
         "--quality-preset casp17_quality --ranked-raw-count 5 --emit-backbone-atoms"
+        f" --out-json runs/casp17_prediction_jobs_current/{candidate_id}/{candidate_id}_predictor.json"
+        f" --out-csv runs/casp17_prediction_jobs_current/{candidate_id}/{candidate_id}_predictor.csv"
+        f" --out-md runs/casp17_prediction_jobs_current/{candidate_id}/{candidate_id}_predictor.md"
     )
     validation_command = (
         "python3 tools/validate_casp17_backend_contract.py "
-        f"--target-id {candidate_id} --raw-pdb {prediction}"
+        f"--target-id {candidate_id} --sequence-path {fasta} --raw-pdb {prediction} "
+        f"--runtime-json {runtime} --backend-kind internal_physics --require-gpu "
+        f"--out-json runs/casp17_internal_physics_raw_validations_current/{candidate_id}_backend_contract.json "
+        f"--out-csv runs/casp17_internal_physics_raw_validations_current/{candidate_id}_backend_contract.csv "
+        f"--out-md runs/casp17_internal_physics_raw_validations_current/{candidate_id}_backend_contract.md"
     )
     scorecard_command = (
-        "python3 tools/build_casp17_internal_scorecard.py "
-        f"--target-id {candidate_id} --prediction-pdb {prediction}"
+        "python3 tools/build_casp17_internal_scorecard_batch.py "
+        "--intake-csv runs/casp17_target_intake_validated_current.csv "
+        "--out-dir runs/casp17_internal_scorecards_current "
+        "--out-json runs/casp17_internal_scorecard_batch_current.json "
+        "--out-csv runs/casp17_internal_scorecard_batch_current.csv "
+        "--out-md runs/casp17_internal_scorecard_batch_current.md "
+        "--out-intake-csv runs/casp17_target_intake_scored_current.csv"
     )
     return predictor_command, validation_command, scorecard_command
 

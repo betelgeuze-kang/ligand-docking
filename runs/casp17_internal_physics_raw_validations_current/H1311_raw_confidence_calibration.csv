@@ -1,0 +1,2 @@
+target_id,confidence_calibration_status,blocker_count,warning_count,atom_confidence_count,residue_confidence_count,sequence_residue_count,confidence_unique_count,confidence_stddev,confidence_extreme_fraction
+H1311,pass,0,0,4063,822,822,733,10.327551,0.0

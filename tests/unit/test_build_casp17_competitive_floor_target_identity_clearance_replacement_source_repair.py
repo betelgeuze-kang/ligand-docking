@@ -136,6 +136,9 @@ def test_replacement_source_repair_splits_source_states(tmp_path: Path, monkeypa
     assert by_id["H2004"]["source_repair_status"] == "ready_for_prediction_run"
     assert by_id["H2005"]["source_repair_status"] == "ready_for_validation_scorecard"
     assert by_id["H2006"]["source_repair_status"] == "source_ready"
+    assert "--sequence-path" in by_id["H2004"]["validation_command"]
+    assert "validate_casp17_backend_contract.py" in by_id["H2004"]["validation_command"]
+    assert "build_casp17_internal_scorecard_batch.py" in by_id["H2004"]["scorecard_command"]
     assert (tmp_path / by_id["H2001"]["source_repair_md"]).is_file()
     assert (tmp_path / "SOURCE_REPAIR.md").is_file()
 
