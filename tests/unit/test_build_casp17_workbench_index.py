@@ -23,6 +23,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     competitive_evidence_dropzone_json = tmp_path / "competitive_evidence_dropzone.json"
     competitive_evidence_import_json = tmp_path / "competitive_evidence_import.json"
     competitive_evidence_round_json = tmp_path / "competitive_evidence_round.json"
+    competitive_unlock_priority_json = tmp_path / "competitive_unlock_priority.json"
     competitive_value_ledger_json = tmp_path / "competitive_value_ledger.json"
     competitive_evidence_intake_json = tmp_path / "competitive_evidence_intake.json"
     competitive_patch_gate_json = tmp_path / "competitive_patch_gate.json"
@@ -228,6 +229,20 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        competitive_unlock_priority_json,
+        {
+            "summary": {
+                "unlock_status": "identity_unlock_required",
+                "phase_row_count": 60,
+                "identity_open_action_count": 30,
+                "target_id_open_count": 15,
+                "file_actions_waiting_on_identity_count": 180,
+                "first_open_phase": "identity_unlock",
+                "first_open_next_action": "fill benchmark_id and target_id values first",
+            }
+        },
+    )
+    _write_json(
         competitive_value_ledger_json,
         {
             "summary": {
@@ -353,6 +368,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(competitive_evidence_import_json),
             "--competitive-evidence-round-json",
             str(competitive_evidence_round_json),
+            "--competitive-unlock-priority-json",
+            str(competitive_unlock_priority_json),
             "--competitive-value-ledger-json",
             str(competitive_value_ledger_json),
             "--competitive-evidence-intake-json",
@@ -415,6 +432,11 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["competitive_evidence_round_import_applied_count"] == 0
     assert payload["summary"]["competitive_evidence_round_patch_candidate_count"] == 0
     assert payload["summary"]["competitive_evidence_round_apply_plan_planned_patch_count"] == 0
+    assert payload["summary"]["competitive_unlock_priority_status"] == "identity_unlock_required"
+    assert payload["summary"]["competitive_unlock_priority_phase_row_count"] == 60
+    assert payload["summary"]["competitive_unlock_priority_identity_open_action_count"] == 30
+    assert payload["summary"]["competitive_unlock_priority_target_id_open_count"] == 15
+    assert payload["summary"]["competitive_unlock_priority_file_waiting_on_identity_count"] == 180
     assert payload["summary"]["competitive_value_ledger_status"] == "awaiting_values"
     assert payload["summary"]["competitive_value_ledger_count"] == 15
     assert payload["summary"]["competitive_value_ledger_action_count"] == 270
@@ -452,6 +474,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["competitive_floor_row_fill_worklist"]["status"] == "open_actions"
     assert by_id["competitive_floor_evidence_import"]["status"] == "awaiting_import"
     assert by_id["competitive_floor_evidence_round"]["status"] == "awaiting_import"
+    assert by_id["competitive_floor_unlock_priority"]["status"] == "identity_unlock_required"
     assert by_id["competitive_floor_operator_template"]["status"] == "blocked"
     assert by_id["competitive_floor_operator_preflight"]["status"] == "blocked"
     assert by_id["benchmark_input_inventory"]["status"] == "blocked"
