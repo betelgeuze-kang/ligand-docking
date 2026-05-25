@@ -1,0 +1,54 @@
+{
+  "blockers": [],
+  "chains": [
+    {
+      "breaker_fraction": 0.132646,
+      "ca_distance_max_A": 4.601,
+      "ca_distance_mean_A": 3.809,
+      "ca_distance_min_A": 3.338,
+      "chain_id": "A",
+      "charged_fraction": 0.2,
+      "confidence_max": 89.599,
+      "confidence_mean": 68.904,
+      "confidence_min": 43.489,
+      "energy": 9.63541,
+      "header": "T1342 Spike glycoprotein ectodomain, Ambecovirus Pgymn_15_Bra-2020, 1455 residues|",
+      "hydrophobic_fraction": 0.479038,
+      "net_charge_fraction": 0.013058,
+      "residue_count": 1455,
+      "rg_A": 26.919,
+      "rg_ratio": 0.788,
+      "secondary_coil_fraction": 0.509966,
+      "secondary_helix_fraction": 0.285223,
+      "secondary_strand_fraction": 0.204811,
+      "sequence_compaction_scale": 1.022,
+      "sequence_length": 1455,
+      "target_rg_A": 34.159
+    }
+  ],
+  "summary": {
+    "atom_or_ter_record_count": 7156,
+    "backend_kind": "internal_physics",
+    "blocker_count": 0,
+    "chain_count": 1,
+    "claim_boundary": "CASP17 internal physics baseline generation only; not external predictor output, public/template structure, accepted submission, or accuracy claim.",
+    "device": "cuda",
+    "ensemble_size": 32,
+    "fasta": "runs/casp17_sequences_current/T1342.fasta",
+    "generated_at_local": "2026-05-22T23:07:02+09:00",
+    "gpu_detected": true,
+    "gpu_names": [
+      "AMD Radeon RX 6900 XT"
+    ],
+    "metrics_json": "runs/casp17_prediction_jobs_recursive_current/T1342/internal_physics_metrics.json",
+    "out_dir": "runs/casp17_prediction_jobs_recursive_current/T1342",
+    "packet_type": "casp17_internal_physics_baseline_predictor",
+    "predictor_status": "pass",
+    "raw_pdb": "runs/casp17_prediction_jobs_recursive_current/T1342/T1342_model_1.pdb",
+    "raw_pdb_exists": true,
+    "residue_count": 1455,
+    "runtime_json": "runs/casp17_prediction_jobs_recursive_current/T1342/backend_runtime.json",
+    "steps": 2500,
+    "target_id": "T1342"
+  }
+}

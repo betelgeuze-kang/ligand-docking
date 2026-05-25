@@ -1,0 +1,45 @@
+{
+  "runtime": {
+    "backend_kind": "internal_physics",
+    "gpu_detected": true,
+    "gpu_names": [
+      "AMD Radeon RX 6900 XT"
+    ],
+    "torch_cuda": {
+      "cuda_available": true,
+      "device_count": 1,
+      "device_names": [
+        "AMD Radeon RX 6900 XT"
+      ],
+      "torch_present": true,
+      "torch_version": "2.6.0+rocm6.1"
+    }
+  },
+  "summary": {
+    "allow_cpu": false,
+    "backend_kind": "internal_physics",
+    "chain_count": 4,
+    "claim_boundary": "Internal torch/coarse-grain physics runtime evidence only; no external predictor, template, public structure, or official CASP submission evidence.",
+    "device": "cuda",
+    "ensemble_size": 32,
+    "finished_at_local": "2026-05-22T23:24:34+09:00",
+    "generated_at_local": "2026-05-22T23:24:34+09:00",
+    "gpu_detected": true,
+    "gpu_names": [
+      "AMD Radeon RX 6900 XT"
+    ],
+    "interchain_ca_clash_count_3A": 0,
+    "interchain_ca_contact_count_12A": 795,
+    "interface_plausibility_status": "pass",
+    "job_status": "completed",
+    "metrics_json": "runs/casp17_prediction_jobs_recursive_current/H1346/internal_physics_metrics.json",
+    "packet_type": "casp17_internal_physics_runtime",
+    "raw_pdb": "runs/casp17_prediction_jobs_recursive_current/H1346/H1346_model_1.pdb",
+    "raw_pdb_exists": true,
+    "residue_count": 885,
+    "started_at_local": "2026-05-22T23:22:35+09:00",
+    "steps": 2500,
+    "target_id": "H1346",
+    "torch_version": "2.6.0+rocm6.1"
+  }
+}

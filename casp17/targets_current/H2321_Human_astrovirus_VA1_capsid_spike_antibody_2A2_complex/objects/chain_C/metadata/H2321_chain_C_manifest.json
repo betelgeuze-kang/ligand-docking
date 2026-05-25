@@ -1,0 +1,16 @@
+{
+  "claim_boundary": "Per-target local organization of internal CASP17 predicted coordinates, FASTA, renders, and QC metadata only; not an official CASP submission, native accuracy result, or experimental structure.",
+  "summary": {
+    "atom_count": 530,
+    "chain_id": "C",
+    "manifest_path": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_C/metadata/H2321_chain_C_manifest.json",
+    "model_path": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_C/models/H2321_chain_C.pdb",
+    "object_folder": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_C",
+    "object_id": "chain_C",
+    "projection_svg_path": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_C/renders/H2321_chain_C_projection.svg",
+    "readme_path": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_C/README.md",
+    "residue_count": 108,
+    "target_id": "H2321",
+    "viewer_html_path": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_C/viewer.html"
+  }
+}

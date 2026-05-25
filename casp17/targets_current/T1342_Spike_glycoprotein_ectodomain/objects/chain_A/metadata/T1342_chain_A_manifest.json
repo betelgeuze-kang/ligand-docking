@@ -1,0 +1,16 @@
+{
+  "claim_boundary": "Per-target local organization of internal CASP17 predicted coordinates, FASTA, renders, and QC metadata only; not an official CASP submission, native accuracy result, or experimental structure.",
+  "summary": {
+    "atom_count": 7155,
+    "chain_id": "A",
+    "manifest_path": "casp17/targets_current/T1342_Spike_glycoprotein_ectodomain/objects/chain_A/metadata/T1342_chain_A_manifest.json",
+    "model_path": "casp17/targets_current/T1342_Spike_glycoprotein_ectodomain/objects/chain_A/models/T1342_chain_A.pdb",
+    "object_folder": "casp17/targets_current/T1342_Spike_glycoprotein_ectodomain/objects/chain_A",
+    "object_id": "chain_A",
+    "projection_svg_path": "casp17/targets_current/T1342_Spike_glycoprotein_ectodomain/objects/chain_A/renders/T1342_chain_A_projection.svg",
+    "readme_path": "casp17/targets_current/T1342_Spike_glycoprotein_ectodomain/objects/chain_A/README.md",
+    "residue_count": 1455,
+    "target_id": "T1342",
+    "viewer_html_path": "casp17/targets_current/T1342_Spike_glycoprotein_ectodomain/objects/chain_A/viewer.html"
+  }
+}

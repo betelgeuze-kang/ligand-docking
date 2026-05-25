@@ -1,0 +1,54 @@
+{
+  "blockers": [],
+  "chains": [
+    {
+      "breaker_fraction": 0.081851,
+      "ca_distance_max_A": 4.166,
+      "ca_distance_mean_A": 3.81,
+      "ca_distance_min_A": 3.534,
+      "chain_id": "A",
+      "charged_fraction": 0.313167,
+      "confidence_max": 88.952,
+      "confidence_mean": 70.439,
+      "confidence_min": 44.571,
+      "energy": 2.335572,
+      "header": "T1331 5AT, Brown algae, 281 residues|",
+      "hydrophobic_fraction": 0.491103,
+      "net_charge_fraction": 0.042705,
+      "residue_count": 281,
+      "rg_A": 14.618,
+      "rg_ratio": 0.79,
+      "secondary_coil_fraction": 0.384342,
+      "secondary_helix_fraction": 0.430605,
+      "secondary_strand_fraction": 0.185053,
+      "sequence_compaction_scale": 1.035,
+      "sequence_length": 281,
+      "target_rg_A": 18.515
+    }
+  ],
+  "summary": {
+    "atom_or_ter_record_count": 1394,
+    "backend_kind": "internal_physics",
+    "blocker_count": 0,
+    "chain_count": 1,
+    "claim_boundary": "CASP17 internal physics baseline generation only; not external predictor output, public/template structure, accepted submission, or accuracy claim.",
+    "device": "cuda",
+    "ensemble_size": 32,
+    "fasta": "runs/casp17_sequences_current/T1331.fasta",
+    "generated_at_local": "2026-05-22T22:57:03+09:00",
+    "gpu_detected": true,
+    "gpu_names": [
+      "AMD Radeon RX 6900 XT"
+    ],
+    "metrics_json": "runs/casp17_prediction_jobs_recursive_current/T1331/internal_physics_metrics.json",
+    "out_dir": "runs/casp17_prediction_jobs_recursive_current/T1331",
+    "packet_type": "casp17_internal_physics_baseline_predictor",
+    "predictor_status": "pass",
+    "raw_pdb": "runs/casp17_prediction_jobs_recursive_current/T1331/T1331_model_1.pdb",
+    "raw_pdb_exists": true,
+    "residue_count": 281,
+    "runtime_json": "runs/casp17_prediction_jobs_recursive_current/T1331/backend_runtime.json",
+    "steps": 2500,
+    "target_id": "T1331"
+  }
+}

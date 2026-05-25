@@ -1,0 +1,291 @@
+import json
+from pathlib import Path
+
+from tools import build_casp17_workbench_index as mod
+
+
+def _write_json(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path):
+    target_json = tmp_path / "target_folders.json"
+    target_object_viewer_smoke_json = tmp_path / "target_object_viewer_smoke.json"
+    closure_json = tmp_path / "closure.json"
+    scaffold_json = tmp_path / "scaffold.json"
+    inventory_json = tmp_path / "inventory.json"
+    dashboard_json = tmp_path / "dashboard.json"
+    competitive_batch_json = tmp_path / "competitive_batch.json"
+    competitive_row_fill_status_json = tmp_path / "competitive_row_fill_status.json"
+    competitive_operator_template_json = tmp_path / "competitive_operator_template.json"
+    competitive_operator_preflight_json = tmp_path / "competitive_operator_preflight.json"
+    bundle_json = tmp_path / "bundle.json"
+
+    _write_json(
+        target_json,
+        {
+            "summary": {
+                "packet_type": "casp17_target_model_folders",
+                "ready_count": 2,
+                "blocked_count": 0,
+                "target_count": 2,
+                "total_object_count": 4,
+                "total_object_projection_files": 4,
+                "total_object_viewer_files": 4,
+                "object_catalog_md": "casp17/casp17_target_object_models_current.md",
+            },
+            "rows": [
+                {
+                    "target_id": "T0001",
+                    "folder_status": "ready",
+                    "protein_name": "Example A",
+                    "folder_path": "casp17/targets_current/T0001_Example_A",
+                },
+                {
+                    "target_id": "H0002",
+                    "folder_status": "ready",
+                    "protein_name": "Example B",
+                    "folder_path": "casp17/targets_current/H0002_Example_B",
+                },
+            ],
+        },
+    )
+    _write_json(
+        target_object_viewer_smoke_json,
+        {
+            "summary": {
+                "smoke_status": "pass",
+                "object_row_count": 4,
+                "pass_count": 4,
+                "blocked_count": 0,
+            }
+        },
+    )
+    _write_json(
+        closure_json,
+        {
+            "summary": {
+                "closure_status": "blocked_input",
+                "closed_count": 4,
+                "not_closed_count": 5,
+                "requirement_count": 9,
+                "current_proven_level": "review_quality",
+                "next_unclosed_level": "competitive_floor",
+                "first_operator_input_action_id": "historical_benchmark_inputs",
+                "first_operator_input_blockers": "ready_total_below_threshold",
+            }
+        },
+    )
+    _write_json(
+        scaffold_json,
+        {
+            "summary": {
+                "scaffold_status": "ready",
+                "ready_count": 0,
+                "blocked_count": 40,
+                "row_count": 40,
+                "missing_evidence_item_count": 1310,
+            }
+        },
+    )
+    _write_json(
+        inventory_json,
+        {
+            "summary": {
+                "inventory_status": "blocked",
+                "ready_row_count": 0,
+                "blocked_row_count": 40,
+                "row_count": 40,
+                "required_file_count": 480,
+                "present_file_count": 0,
+                "missing_file_count": 480,
+            }
+        },
+    )
+    _write_json(
+        dashboard_json,
+        {
+            "summary": {"dashboard_status": "ready", "ready_count": 0, "blocked_count": 40, "row_count": 40},
+            "rows": [
+                {
+                    "row_rank": 1,
+                    "operator_row_status": "blocked",
+                    "next_action": "Replace placeholder target/benchmark IDs with a cleared historical non-CASP17 protein target.",
+                }
+            ],
+        },
+    )
+    _write_json(
+        competitive_batch_json,
+        {
+            "summary": {
+                "batch_status": "ready_for_fill",
+                "row_count": 15,
+                "copied_row_scaffold_count": 15,
+                "missing_evidence_item_count": 490,
+            }
+        },
+    )
+    _write_json(
+        competitive_row_fill_status_json,
+        {
+            "summary": {
+                "row_fill_status": "awaiting_fill",
+                "row_count": 15,
+                "row_fill_filled_count": 0,
+                "ready_for_operator_template_count": 0,
+                "blocked_or_awaiting_count": 15,
+                "missing_required_field_count": 480,
+                "placeholder_field_count": 0,
+                "missing_local_file_count": 180,
+                "first_open_next_action": "copy row_fill_template.csv to row_fill.csv and replace placeholders",
+            }
+        },
+    )
+    _write_json(
+        competitive_operator_template_json,
+        {
+            "summary": {
+                "template_status": "blocked",
+                "row_count": 15,
+                "ready_for_preflight_count": 0,
+                "blocked_count": 15,
+                "row_fill_candidate_count": 0,
+                "missing_file_count": 180,
+                "placeholder_file_path_count": 180,
+                "provenance_blocker_count": 150,
+                "calibration_blocker_count": 90,
+            }
+        },
+    )
+    _write_json(
+        competitive_operator_preflight_json,
+        {
+            "summary": {
+                "operator_preflight_status": "blocked",
+                "row_count": 15,
+                "ready_count": 0,
+                "blocked_count": 15,
+                "first_blocked_blockers": "placeholder_target_id",
+            }
+        },
+    )
+    _write_json(
+        bundle_json,
+        {"summary": {"bundle_status": "ready", "artifact_count": 3, "missing_bundle_count": 0}},
+    )
+
+    args = mod.parse_args(
+        [
+            "--target-model-folders-json",
+            str(target_json),
+            "--target-object-viewer-smoke-json",
+            str(target_object_viewer_smoke_json),
+            "--win-gap-closure-json",
+            str(closure_json),
+            "--input-scaffold-json",
+            str(scaffold_json),
+            "--input-inventory-json",
+            str(inventory_json),
+            "--operator-dashboard-json",
+            str(dashboard_json),
+            "--competitive-batch-json",
+            str(competitive_batch_json),
+            "--competitive-row-fill-status-json",
+            str(competitive_row_fill_status_json),
+            "--competitive-operator-template-json",
+            str(competitive_operator_template_json),
+            "--competitive-operator-preflight-json",
+            str(competitive_operator_preflight_json),
+            "--data-bundle-json",
+            str(bundle_json),
+            "--out-json",
+            str(tmp_path / "index.json"),
+            "--out-csv",
+            str(tmp_path / "index.csv"),
+            "--out-md",
+            str(tmp_path / "WORKBENCH.md"),
+        ]
+    )
+    payload = mod.build_payload(args)
+
+    assert payload["summary"]["workbench_status"] == "ready_for_operator_fill"
+    assert payload["summary"]["target_model_ready_count"] == 2
+    assert payload["summary"]["target_model_object_count"] == 4
+    assert payload["summary"]["target_model_object_projection_count"] == 4
+    assert payload["summary"]["target_model_object_viewer_count"] == 4
+    assert payload["summary"]["target_object_viewer_smoke_status"] == "pass"
+    assert payload["summary"]["target_object_viewer_smoke_pass_count"] == 4
+    assert payload["summary"]["benchmark_rows_total"] == 40
+    assert payload["summary"]["competitive_batch_status"] == "ready_for_fill"
+    assert payload["summary"]["competitive_batch_row_count"] == 15
+    assert payload["summary"]["competitive_batch_missing_evidence_item_count"] == 490
+    assert payload["summary"]["competitive_row_fill_status"] == "awaiting_fill"
+    assert payload["summary"]["competitive_row_fill_filled_count"] == 0
+    assert payload["summary"]["competitive_row_fill_row_count"] == 15
+    assert payload["summary"]["competitive_operator_template_status"] == "blocked"
+    assert payload["summary"]["competitive_operator_template_row_count"] == 15
+    assert payload["summary"]["competitive_operator_template_row_fill_count"] == 0
+    assert payload["summary"]["competitive_operator_preflight_status"] == "blocked"
+    assert payload["summary"]["competitive_operator_preflight_row_count"] == 15
+    assert payload["summary"]["missing_file_count"] == 480
+    assert payload["summary"]["first_operator_input_action_id"] == "historical_benchmark_inputs"
+    assert len(payload["target_rows"]) == 2
+    by_id = {row["artifact_id"]: row for row in payload["rows"]}
+    assert by_id["target_model_folders"]["status"] == "ready"
+    assert by_id["target_object_catalog"]["status"] == "ready"
+    assert by_id["target_object_viewer_smoke"]["status"] == "pass"
+    assert by_id["competitive_floor_batch"]["status"] == "ready_for_fill"
+    assert by_id["competitive_floor_row_fill_status"]["status"] == "awaiting_fill"
+    assert by_id["competitive_floor_operator_template"]["status"] == "blocked"
+    assert by_id["competitive_floor_operator_preflight"]["status"] == "blocked"
+    assert by_id["benchmark_input_inventory"]["status"] == "blocked"
+    assert "cleared historical" in by_id["benchmark_input_inventory"]["next_action"]
+
+
+def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
+    target_json = tmp_path / "target_folders.json"
+    _write_json(
+        target_json,
+        {
+            "summary": {"packet_type": "casp17_target_model_folders", "ready_count": 1, "blocked_count": 1, "target_count": 2},
+            "rows": [
+                {"target_id": "T0001", "folder_status": "ready"},
+                {"target_id": "T0002", "folder_status": "blocked"},
+            ],
+        },
+    )
+
+    args = mod.parse_args(
+        [
+            "--target-model-folders-json",
+            str(target_json),
+            "--target-object-viewer-smoke-json",
+            str(tmp_path / "missing_object_viewer_smoke.json"),
+            "--win-gap-closure-json",
+            str(tmp_path / "missing_closure.json"),
+            "--input-scaffold-json",
+            str(tmp_path / "missing_scaffold.json"),
+            "--input-inventory-json",
+            str(tmp_path / "missing_inventory.json"),
+            "--operator-dashboard-json",
+            str(tmp_path / "missing_dashboard.json"),
+            "--competitive-batch-json",
+            str(tmp_path / "missing_competitive_batch.json"),
+            "--competitive-row-fill-status-json",
+            str(tmp_path / "missing_competitive_row_fill_status.json"),
+            "--competitive-operator-template-json",
+            str(tmp_path / "missing_competitive_operator_template.json"),
+            "--competitive-operator-preflight-json",
+            str(tmp_path / "missing_competitive_operator_preflight.json"),
+            "--data-bundle-json",
+            str(tmp_path / "missing_bundle.json"),
+        ]
+    )
+    payload = mod.build_payload(args)
+
+    assert payload["summary"]["workbench_status"] == "blocked"
+    by_id = {row["artifact_id"]: row for row in payload["rows"]}
+    assert by_id["target_model_folders"]["status"] == "blocked"
+    assert "T0002" in by_id["target_model_folders"]["blockers"]

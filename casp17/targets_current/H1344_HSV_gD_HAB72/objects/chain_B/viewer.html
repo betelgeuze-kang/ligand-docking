@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>H1344 chain_B object viewer</title>
+<style>
+:root { color-scheme: light; font-family: Arial, sans-serif; }
+body { margin: 0; background: #f8fafc; color: #111827; overflow: hidden; }
+#hud { position: fixed; left: 18px; top: 14px; padding: 10px 12px; background: rgba(248,250,252,.88); border: 1px solid #cbd5e1; border-radius: 8px; }
+#title { font-weight: 700; font-size: 16px; }
+#meta { color: #475569; font-size: 12px; margin-top: 3px; }
+canvas { display: block; width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<canvas id="viewer"></canvas>
+<div id="hud"><div id="title">H1344 chain_B</div><div id="meta">216 displayed atoms / 1065 total atoms</div></div>
+<script>
+const atoms = [{"x":-7.953,"y":4.973,"z":10.622,"label":"GLU 1 CA"},{"x":-6.318,"y":3.562,"z":7.496,"label":"VAL 2 CA"},{"x":-4.968,"y":7.034,"z":6.745,"label":"VAL 3 CA"},{"x":-2.129,"y":8.878,"z":8.472,"label":"LEU 4 CA"},{"x":-2.479,"y":11.23,"z":11.436,"label":"THR 5 CA"},{"x":-4.644,"y":14.196,"z":10.458,"label":"GLN 6 CA"},{"x":-7.262,"y":14.713,"z":13.163,"label":"SER 7 CA"},{"x":-9.337,"y":11.58,"z":12.594,"label":"PRO 8 CA"},{"x":-9.657,"y":9.96,"z":16.017,"label":"GLY 9 CA"},{"x":-6.91,"y":7.348,"z":15.741,"label":"THR 10 CA"},{"x":-5.604,"y":8.299,"z":12.302,"label":"LEU 11 CA"},{"x":-6.537,"y":11.948,"z":12.806,"label":"SER 12 CA"},{"x":-8.027,"y":12.102,"z":16.298,"label":"LEU 13 CA"},{"x":-6.412,"y":8.931,"z":17.632,"label":"SER 14 CA"},{"x":-4.734,"y":7.626,"z":14.483,"label":"PRO 15 CA"},{"x":-4.805,"y":10.681,"z":12.223,"label":"GLY 16 CA"},{"x":-7.991,"y":10.473,"z":10.163,"label":"GLU 17 CA"},{"x":-7.351,"y":12.241,"z":6.839,"label":"ARG 18 CA"},{"x":-4.936,"y":10.265,"z":4.66,"label":"ALA 19 CA"},{"x":-7.849,"y":7.982,"z":3.794,"label":"THR 20 CA"},{"x":-10.439,"y":10.726,"z":4.241,"label":"LEU 21 CA"},{"x":-8.742,"y":12.052,"z":1.109,"label":"SER 22 CA"},{"x":-6.909,"y":8.957,"z":-0.117,"label":"CYS 23 CA"},{"x":-3.562,"y":10.75,"z":0.065,"label":"ARG 24 CA"},{"x":-2.309,"y":10.336,"z":3.638,"label":"ALA 25 CA"},{"x":-4.037,"y":12.549,"z":6.134,"label":"SER 26 CA"},{"x":-0.854,"y":14.515,"z":7.303,"label":"GLN 27 CA"},{"x":-3.033,"y":17.265,"z":8.767,"label":"SER 28 CA"},{"x":-6.221,"y":16.647,"z":6.792,"label":"VAL 29 CA"},{"x":-7.695,"y":13.695,"z":8.676,"label":"SER 30 CA"},{"x":-8.529,"y":10.586,"z":6.57,"label":"SER 31 CA"},{"x":-5.963,"y":8.361,"z":4.883,"label":"ILE 32 CA"},{"x":-2.724,"y":8.413,"z":2.937,"label":"TYR 33 CA"},{"x":-2.059,"y":12.305,"z":4.152,"label":"LEU 34 CA"},{"x":-3.753,"y":14.535,"z":6.552,"label":"ALA 35 CA"},{"x":-6.774,"y":15.32,"z":4.384,"label":"TRP 36 CA"},{"x":-7.282,"y":11.647,"z":3.554,"label":"TYR 37 CA"},{"x":-6.053,"y":12.351,"z":0.027,"label":"GLN 38 CA"},{"x":-2.578,"y":13.16,"z":1.331,"label":"GLN 39 CA"},{"x":-1.263,"y":9.617,"z":2.039,"label":"LYS 40 CA"},{"x":-2.844,"y":10.032,"z":5.648,"label":"PRO 41 CA"},{"x":-1.908,"y":12.446,"z":8.43,"label":"GLY 42 CA"},{"x":1.147,"y":13.407,"z":6.384,"label":"GLN 43 CA"},{"x":0.586,"y":11.864,"z":2.957,"label":"ALA 44 CA"},{"x":3.087,"y":9.041,"z":2.492,"label":"PRO 45 CA"},{"x":3.663,"y":8.556,"z":-1.233,"label":"ARG 46 CA"},{"x":2.687,"y":5.012,"z":-0.27,"label":"LEU 47 CA"},{"x":0.81,"y":5.457,"z":-3.543,"label":"LEU 48 CA"},{"x":0.743,"y":9.235,"z":-3.131,"label":"ILE 49 CA"},{"x":-2.396,"y":8.726,"z":-1.052,"label":"TYR 50 CA"},{"x":-3.027,"y":5.569,"z":-3.07,"label":"GLY 51 CA"},{"x":-6.225,"y":4.078,"z":-1.658,"label":"ALA 52 CA"},{"x":-6.109,"y":0.4,"z":-2.604,"label":"SER 53 CA"},{"x":-5.584,"y":0.524,"z":-6.365,"label":"ASN 54 CA"},{"x":-2.253,"y":2.22,"z":-7.048,"label":"ARG 55 CA"},{"x":-0.024,"y":-0.498,"z":-5.606,"label":"ALA 56 CA"},{"x":-1.332,"y":-4.062,"z":-5.752,"label":"THR 57 CA"},{"x":-0.238,"y":-4.712,"z":-2.171,"label":"GLY 58 CA"},{"x":0.149,"y":-1.873,"z":0.327,"label":"ILE 59 CA"},{"x":-3.553,"y":-1.199,"z":-0.192,"label":"PRO 60 CA"},{"x":-3.62,"y":1.269,"z":-3.081,"label":"ASP 61 CA"},{"x":-2.471,"y":-0.715,"z":-6.111,"label":"ARG 62 CA"},{"x":-4.183,"y":-4.015,"z":-5.323,"label":"PHE 63 CA"},{"x":-6.107,"y":-4.204,"z":-8.594,"label":"SER 64 CA"},{"x":-9.579,"y":-2.95,"z":-7.692,"label":"GLY 65 CA"},{"x":-9.523,"y":0.673,"z":-8.838,"label":"SER 66 CA"},{"x":-11.889,"y":0.81,"z":-11.808,"label":"GLY 67 CA"},{"x":-9.625,"y":1.258,"z":-14.827,"label":"SER 68 CA"},{"x":-8.259,"y":4.695,"z":-13.956,"label":"GLY 69 CA"},{"x":-5.053,"y":3.755,"z":-15.767,"label":"THR 70 CA"},{"x":-3.011,"y":3.858,"z":-12.565,"label":"ASP 71 CA"},{"x":-4.101,"y":6.662,"z":-10.242,"label":"PHE 72 CA"},{"x":-7.157,"y":8.589,"z":-11.416,"label":"THR 73 CA"},{"x":-10.192,"y":6.691,"z":-12.693,"label":"LEU 74 CA"},{"x":-9.721,"y":2.927,"z":-12.458,"label":"THR 75 CA"},{"x":-7.181,"y":1.862,"z":-9.918,"label":"ILE 76 CA"},{"x":-5.771,"y":-0.802,"z":-12.822,"label":"SER 77 CA"},{"x":-8.779,"y":-1.143,"z":-14.93,"label":"ARG 78 CA"},{"x":-7.36,"y":1.121,"z":-17.632,"label":"LEU 79 CA"},{"x":-8.029,"y":4.622,"z":-16.316,"label":"GLU 80 CA"},{"x":-4.798,"y":5.218,"z":-14.41,"label":"PRO 81 CA"},{"x":-4.787,"y":2.416,"z":-11.843,"label":"GLU 82 CA"},{"x":-1.088,"y":1.681,"z":-11.383,"label":"ASP 83 CA"},{"x":-0.501,"y":3.673,"z":-8.201,"label":"PHE 84 CA"},{"x":0.684,"y":1.862,"z":-5.077,"label":"ALA 85 CA"},{"x":-1.431,"y":-1.08,"z":-3.935,"label":"VAL 86 CA"},{"x":-5.187,"y":-1.436,"z":-3.469,"label":"TYR 87 CA"},{"x":-8.207,"y":-1.966,"z":-5.713,"label":"TYR 88 CA"},{"x":-9.907,"y":-5.352,"z":-6.015,"label":"CYS 89 CA"},{"x":-8.614,"y":-8.488,"z":-7.727,"label":"GLN 90 CA"},{"x":-4.835,"y":-8.887,"z":-7.7,"label":"GLN 91 CA"},{"x":-2.296,"y":-9.313,"z":-4.858,"label":"TYR 92 CA"},{"x":-0.264,"y":-11.846,"z":-3.319,"label":"ALA 93 CA"},{"x":0.156,"y":-14.218,"z":-6.632,"label":"THR 94 CA"},{"x":-0.892,"y":-11.181,"z":-8.89,"label":"SER 95 CA"},{"x":1.273,"y":-8.554,"z":-7.203,"label":"PRO 96 CA"},{"x":-0.769,"y":-8.345,"z":-3.872,"label":"PRO 97 CA"},{"x":2.543,"y":-8.674,"z":-2.03,"label":"LEU 98 CA"},{"x":3.957,"y":-11.161,"z":-4.454,"label":"THR 99 CA"},{"x":1.635,"y":-10.991,"z":-7.457,"label":"PHE 100 CA"},{"x":-1.943,"y":-11.178,"z":-5.845,"label":"GLY 101 CA"},{"x":-3.655,"y":-14.192,"z":-7.576,"label":"GLY 102 CA"},{"x":-1.646,"y":-14.177,"z":-10.802,"label":"GLY 103 CA"},{"x":1.59,"y":-15.909,"z":-9.82,"label":"THR 104 CA"},{"x":0.899,"y":-18.151,"z":-6.831,"label":"LYS 105 CA"},{"x":0.237,"y":-15.936,"z":-3.815,"label":"VAL 106 CA"},{"x":-0.702,"y":-12.775,"z":-5.505,"label":"GLU 107 CA"},{"x":2.961,"y":-12.811,"z":-7.022,"label":"ILE 108 CA"},{"x":4.862,"y":-14.222,"z":-3.979,"label":"ARG 109 CA"},{"x":3.18,"y":-11.316,"z":-2.199,"label":"ARG 110 CA"},{"x":3.766,"y":-8.971,"z":-5.131,"label":"THR 111 CA"},{"x":7.554,"y":-9.746,"z":-4.255,"label":"VAL 112 CA"},{"x":7.112,"y":-9.482,"z":-0.645,"label":"ALA 113 CA"},{"x":5.416,"y":-6.103,"z":-1.026,"label":"ALA 114 CA"},{"x":5.761,"y":-6.212,"z":-4.809,"label":"PRO 115 CA"},{"x":6.248,"y":-9.875,"z":-5.83,"label":"SER 116 CA"},{"x":5.653,"y":-11.429,"z":-2.279,"label":"VAL 117 CA"},{"x":2.629,"y":-10.331,"z":-0.256,"label":"PHE 118 CA"},{"x":0.897,"y":-7.459,"z":-2.173,"label":"ILE 119 CA"},{"x":1.946,"y":-5.776,"z":-5.76,"label":"PHE 120 CA"},{"x":5.232,"y":-5.536,"z":-7.244,"label":"PRO 121 CA"},{"x":6.928,"y":-8.877,"z":-7.88,"label":"PRO 122 CA"},{"x":10.619,"y":-9.487,"z":-7.215,"label":"SER 123 CA"},{"x":11.445,"y":-12.992,"z":-8.429,"label":"ASP 124 CA"},{"x":14.607,"y":-14.095,"z":-6.633,"label":"GLU 125 CA"},{"x":15.848,"y":-10.507,"z":-6.78,"label":"GLN 126 CA"},{"x":12.57,"y":-8.603,"z":-7.048,"label":"LEU 127 CA"},{"x":13.512,"y":-7.265,"z":-10.478,"label":"LYS 128 CA"},{"x":14.277,"y":-10.716,"z":-11.875,"label":"SER 129 CA"},{"x":10.909,"y":-11.998,"z":-10.671,"label":"GLY 130 CA"},{"x":9.079,"y":-8.932,"z":-9.371,"label":"THR 131 CA"},{"x":5.823,"y":-8.68,"z":-11.314,"label":"ALA 132 CA"},{"x":4.999,"y":-12.389,"z":-11.358,"label":"SER 133 CA"},{"x":2.409,"y":-13.897,"z":-9.02,"label":"VAL 134 CA"},{"x":1.857,"y":-12.781,"z":-5.295,"label":"VAL 135 CA"},{"x":0.15,"y":-9.559,"z":-5.245,"label":"CYS 136 CA"},{"x":1.595,"y":-6.247,"z":-3.796,"label":"LEU 137 CA"},{"x":5.075,"y":-4.884,"z":-3.079,"label":"LEU 138 CA"},{"x":6.673,"y":-1.795,"z":-4.609,"label":"ASN 139 CA"},{"x":3.913,"y":0.785,"z":-5.017,"label":"ASN 140 CA"},{"x":1.501,"y":-1.146,"z":-2.805,"label":"PHE 141 CA"},{"x":1.226,"y":1.683,"z":-0.283,"label":"TYR 142 CA"},{"x":2.487,"y":4.474,"z":-2.532,"label":"PRO 143 CA"},{"x":2.957,"y":2.845,"z":-5.932,"label":"ARG 144 CA"},{"x":1.136,"y":0.774,"z":-3.319,"label":"GLU 145 CA"},{"x":4.322,"y":-1.21,"z":-2.731,"label":"ALA 146 CA"},{"x":6.287,"y":0.97,"z":-5.145,"label":"LYS 147 CA"},{"x":5.877,"y":-1.652,"z":-7.866,"label":"VAL 148 CA"},{"x":2.49,"y":-0.704,"z":-9.304,"label":"GLN 149 CA"},{"x":0.875,"y":-3.338,"z":-7.091,"label":"TRP 150 CA"},{"x":0.0,"y":-6.527,"z":-8.967,"label":"LYS 151 CA"},{"x":2.43,"y":-9.416,"z":-9.435,"label":"VAL 152 CA"},{"x":1.517,"y":-10.704,"z":-12.891,"label":"ASP 153 CA"},{"x":1.719,"y":-8.882,"z":-16.22,"label":"ASN 154 CA"},{"x":4.917,"y":-10.919,"z":-16.463,"label":"ALA 155 CA"},{"x":6.548,"y":-11.736,"z":-13.129,"label":"LEU 156 CA"},{"x":3.974,"y":-10.149,"z":-10.827,"label":"GLN 157 CA"},{"x":0.37,"y":-11.238,"z":-11.34,"label":"SER 158 CA"},{"x":1.098,"y":-13.033,"z":-14.609,"label":"GLY 159 CA"},{"x":-1.928,"y":-13.572,"z":-16.843,"label":"ASN 160 CA"},{"x":-3.716,"y":-10.256,"z":-16.348,"label":"SER 161 CA"},{"x":-5.338,"y":-10.692,"z":-12.939,"label":"GLN 162 CA"},{"x":-8.352,"y":-12.903,"z":-13.619,"label":"GLU 163 CA"},{"x":-10.096,"y":-13.168,"z":-10.253,"label":"SER 164 CA"},{"x":-13.532,"y":-11.665,"z":-10.866,"label":"VAL 165 CA"},{"x":-15.849,"y":-14.677,"z":-10.819,"label":"THR 166 CA"},{"x":-15.463,"y":-16.113,"z":-7.322,"label":"GLU 167 CA"},{"x":-14.454,"y":-13.145,"z":-5.174,"label":"GLN 168 CA"},{"x":-11.326,"y":-14.332,"z":-3.371,"label":"ASP 169 CA"},{"x":-12.114,"y":-17.937,"z":-2.464,"label":"SER 170 CA"},{"x":-12.526,"y":-17.87,"z":1.313,"label":"LYS 171 CA"},{"x":-8.979,"y":-17.922,"z":2.674,"label":"ASP 172 CA"},{"x":-6.733,"y":-18.562,"z":-0.325,"label":"SER 173 CA"},{"x":-7.108,"y":-15.47,"z":-2.501,"label":"THR 174 CA"},{"x":-4.385,"y":-13.033,"z":-1.461,"label":"TYR 175 CA"},{"x":-1.303,"y":-15.254,"z":-1.538,"label":"SER 176 CA"},{"x":1.0,"y":-13.624,"z":1.008,"label":"LEU 177 CA"},{"x":2.062,"y":-16.597,"z":3.123,"label":"SER 178 CA"},{"x":-0.686,"y":-16.818,"z":5.738,"label":"SER 179 CA"},{"x":-3.418,"y":-14.64,"z":4.243,"label":"THR 180 CA"},{"x":-1.577,"y":-12.21,"z":1.973,"label":"LEU 181 CA"},{"x":-4.322,"y":-10.234,"z":0.24,"label":"THR 182 CA"},{"x":-4.042,"y":-6.891,"z":2.025,"label":"LEU 183 CA"},{"x":-7.709,"y":-6.47,"z":1.121,"label":"SER 184 CA"},{"x":-7.666,"y":-10.089,"z":-0.036,"label":"LYS 185 CA"},{"x":-9.204,"y":-8.829,"z":-3.275,"label":"ALA 186 CA"},{"x":-8.052,"y":-5.365,"z":-2.222,"label":"ASP 187 CA"},{"x":-5.146,"y":-6.041,"z":-4.575,"label":"TYR 188 CA"},{"x":-7.291,"y":-8.944,"z":-5.765,"label":"GLU 189 CA"},{"x":-4.241,"y":-11.163,"z":-6.227,"label":"LYS 190 CA"},{"x":-3.402,"y":-7.596,"z":-4.68,"label":"HIS 191 CA"},{"x":-0.473,"y":-7.391,"z":-7.169,"label":"LYS 192 CA"},{"x":-2.981,"y":-7.255,"z":-10.069,"label":"VAL 193 CA"},{"x":-4.396,"y":-4.994,"z":-7.363,"label":"TYR 194 CA"},{"x":-7.77,"y":-6.441,"z":-8.346,"label":"ALA 195 CA"},{"x":-8.23,"y":-7.298,"z":-12.019,"label":"CYS 196 CA"},{"x":-6.514,"y":-5.718,"z":-15.018,"label":"GLU 197 CA"},{"x":-3.604,"y":-3.274,"z":-15.039,"label":"VAL 198 CA"},{"x":-5.883,"y":-0.416,"z":-16.082,"label":"THR 199 CA"},{"x":-3.056,"y":1.705,"z":-17.48,"label":"HIS 200 CA"},{"x":-0.066,"y":1.258,"z":-15.179,"label":"GLN 201 CA"},{"x":0.88,"y":4.812,"z":-14.223,"label":"GLY 202 CA"},{"x":0.566,"y":4.68,"z":-10.438,"label":"LEU 203 CA"},{"x":-0.218,"y":1.087,"z":-9.482,"label":"SER 204 CA"},{"x":-2.46,"y":0.717,"z":-12.527,"label":"SER 205 CA"},{"x":-6.296,"y":0.743,"z":-11.58,"label":"PRO 206 CA"},{"x":-5.726,"y":2.892,"z":-8.907,"label":"VAL 207 CA"},{"x":-7.91,"y":5.938,"z":-9.579,"label":"THR 208 CA"},{"x":-5.566,"y":8.918,"z":-9.831,"label":"LYS 209 CA"},{"x":-7.441,"y":11.765,"z":-8.153,"label":"SER 210 CA"},{"x":-4.638,"y":13.25,"z":-6.06,"label":"PHE 211 CA"},{"x":-5.305,"y":16.991,"z":-6.05,"label":"ASN 212 CA"},{"x":-2.59,"y":18.561,"z":-8.196,"label":"ARG 213 CA"},{"x":-3.803,"y":17.875,"z":-11.731,"label":"GLY 214 CA"},{"x":-6.702,"y":15.488,"z":-11.145,"label":"GLU 215 CA"},{"x":-5.28,"y":13.0,"z":-8.65,"label":"CYS 216 CA"}];
+const canvas = document.getElementById("viewer");
+const ctx = canvas.getContext("2d");
+let rx = -0.62;
+let ry = 0.72;
+let dragging = false;
+let lastX = 0;
+let lastY = 0;
+
+function resize() {
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  canvas.width = Math.floor(window.innerWidth * dpr);
+  canvas.height = Math.floor(window.innerHeight * dpr);
+  canvas.style.width = window.innerWidth + "px";
+  canvas.style.height = window.innerHeight + "px";
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function project(atom) {
+  const sx = Math.sin(rx), cx = Math.cos(rx);
+  const sy = Math.sin(ry), cy = Math.cos(ry);
+  let y = atom.y * cx - atom.z * sx;
+  let z = atom.y * sx + atom.z * cx;
+  let x = atom.x * cy + z * sy;
+  z = -atom.x * sy + z * cy;
+  return {x, y, z, label: atom.label};
+}
+
+function draw() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  ctx.clearRect(0, 0, w, h);
+  const projected = atoms.map(project);
+  const maxAbs = Math.max(1, ...projected.flatMap(p => [Math.abs(p.x), Math.abs(p.y)]));
+  const scale = Math.min(w, h) * 0.39 / maxAbs;
+  projected.sort((a, b) => a.z - b.z);
+  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = "rgba(51,65,85,.32)";
+  ctx.beginPath();
+  projected.forEach((p, i) => {
+    const x = w / 2 + p.x * scale;
+    const y = h / 2 - p.y * scale;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  const zMin = Math.min(...projected.map(p => p.z));
+  const zMax = Math.max(...projected.map(p => p.z));
+  const zSpan = Math.max(1, zMax - zMin);
+  for (const p of projected) {
+    const depth = (p.z - zMin) / zSpan;
+    const x = w / 2 + p.x * scale;
+    const y = h / 2 - p.y * scale;
+    const r = 2.4 + depth * 4.6;
+    ctx.beginPath();
+    ctx.fillStyle = `rgba(${Math.round(43 + 152 * depth)},${Math.round(103 + 84 * depth)},${Math.round(160 - 85 * depth)},0.86)`;
+    ctx.strokeStyle = "rgba(15,23,42,.52)";
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+}
+
+function tick() {
+  if (!dragging) ry += 0.003;
+  draw();
+  requestAnimationFrame(tick);
+}
+
+canvas.addEventListener("pointerdown", event => {
+  dragging = true;
+  lastX = event.clientX;
+  lastY = event.clientY;
+  canvas.setPointerCapture(event.pointerId);
+});
+canvas.addEventListener("pointermove", event => {
+  if (!dragging) return;
+  ry += (event.clientX - lastX) * 0.008;
+  rx += (event.clientY - lastY) * 0.008;
+  lastX = event.clientX;
+  lastY = event.clientY;
+});
+canvas.addEventListener("pointerup", () => { dragging = false; });
+window.addEventListener("resize", resize);
+resize();
+tick();
+</script>
+</body>
+</html>
