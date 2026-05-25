@@ -2,7 +2,7 @@
 
 This is the local navigation surface for the current CASP17 internal-physics lane.
 
-- generated: `2026-05-26T00:09:11+09:00`
+- generated: `2026-05-26T00:14:39+09:00`
 - workbench_status: `ready_for_operator_fill`
 - target model folders: `16/16`
 - target object folders: `48`
@@ -20,6 +20,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 - competitive unlock priority: `identity_unlock_required` phases `60` identity open `30` target_id open `15` files waiting `180`
 - competitive identity unlock kit: `awaiting_identity` rows `0/15/0/15` files unlocked `0`
 - competitive identity unlock round: `awaiting_identity` rows `0/15/0/15` import ready/applied `0/0` target_id open `15` files waiting `180`
+- competitive identity intake bundle: `awaiting_identity` rows `0/15/0/15` missing fields `60` files unlocked `0`
 - competitive file source plan: `waiting_on_identity` actions `180` waiting identity/source `180/0` ready/imported/blocked `0/0/0`
 - competitive value entry plan: `waiting_on_identity` actions `270` target/provenance/calibration `30/150/90` waiting identity/value/clearance/ref `270/0/0/0` ready/blocked `0/0`
 - competitive execution board: `awaiting_identity` rows `15` identity/apply/file/value/import/blocked `15/0/0/0/0/0` ready/blocked actions `0/450`
@@ -59,6 +60,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 | `competitive_floor_unlock_priority` | `identity_unlock_required` | 0 | 210 | 60 | `casp17/casp17_competitive_floor_evidence_unlock_priority_current.json` | fill benchmark_id and target_id values first; target_id unlocks canonical file recommendations | `identity_unlock` |
 | `competitive_floor_identity_unlock_kit` | `awaiting_identity` | 0 | 15 | 15 | `casp17/casp17_competitive_floor_identity_unlock_kit_current.json` | Fill proposed_benchmark_id/proposed_target_id/evidence_ref/operator_clearance, then apply the kit. | `proposed_benchmark_id_required,proposed_target_id_required,evidence_ref_required,operator_clearance_required` |
 | `competitive_floor_identity_unlock_round` | `awaiting_identity` | 0 | 30 | 15 | `casp17/casp17_competitive_floor_identity_unlock_round_current.json` | fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance in the identity kit | `identity_open:30,files_waiting:180` |
+| `competitive_floor_identity_intake_bundle` | `awaiting_identity` | 0 | 15 | 15 | `casp17/casp17_competitive_floor_identity_intake_bundle_current.json` | fill proposed_benchmark_id, proposed_target_id, evidence_ref, operator_clearance | `missing_fields:60` |
 | `competitive_floor_file_source_plan` | `waiting_on_identity` | 0 | 180 | 180 | `casp17/casp17_competitive_floor_file_source_plan_current.json` | fill and apply the compact identity unlock kit first | `target_identity_required` |
 | `competitive_floor_value_entry_plan` | `waiting_on_identity` | 0 | 270 | 270 | `casp17/casp17_competitive_floor_value_entry_plan_current.json` | fill and apply the compact identity unlock kit first | `target_identity_required` |
 | `competitive_floor_execution_board` | `awaiting_identity` | 0 | 450 | 15 | `casp17/casp17_competitive_floor_execution_board_current.json` | fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance | `awaiting_identity` |
