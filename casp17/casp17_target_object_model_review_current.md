@@ -1,6 +1,6 @@
 # CASP17 Target Object Model Review
 
-- generated: `2026-05-26T03:49:29+09:00`
+- generated: `2026-05-26T03:54:39+09:00`
 - object_model_review_status: `pass`
 - objects pass/blocked/total: `48/0/48`
 - target_count: `16`
@@ -8,6 +8,7 @@
 - viewer_local_pass_count: `48`
 - protein/CA/residue counts: `72487/14694/14694`
 - radius_of_gyration min/max: `7.778/47.562`
+- gallery: `pass` `casp17/casp17_target_object_model_review_gallery_current.html`
 - first blocked: `-` `-` `-`
 
 ## Objects

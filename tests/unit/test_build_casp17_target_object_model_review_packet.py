@@ -69,6 +69,8 @@ def _args(tmp_path: Path, target_json: Path) -> list[str]:
         str(tmp_path / "review.csv"),
         "--out-md",
         str(tmp_path / "review.md"),
+        "--out-html",
+        str(tmp_path / "review_gallery.html"),
     ]
 
 
@@ -99,6 +101,14 @@ def test_target_object_model_review_passes_local_object(tmp_path: Path) -> None:
     assert "OBJECT_MODEL_REVIEW" in str(row["review_md_path"])
     assert (tmp_path / "review.csv").is_file()
     assert (tmp_path / "review.md").is_file()
+    gallery = (tmp_path / "review_gallery.html").read_text(encoding="utf-8")
+    assert payload["summary"]["gallery_status"] == "pass"
+    assert payload["summary"]["gallery_html_path"] == str(tmp_path / "review_gallery.html")
+    assert "CASP17 Target Object Model Review Gallery" in gallery
+    assert "viewer.html" in gallery
+    assert "T9001_chain_A_projection.svg" in gallery
+    assert "http://" not in gallery
+    assert "https://" not in gallery
 
 
 def test_target_object_model_review_blocks_hosted_viewer(tmp_path: Path) -> None:

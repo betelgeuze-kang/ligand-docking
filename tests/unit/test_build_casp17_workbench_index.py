@@ -139,6 +139,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "residue_count": 4,
                 "min_radius_of_gyration": 1.2,
                 "max_radius_of_gyration": 9.4,
+                "gallery_status": "pass",
+                "gallery_html_path": "casp17/casp17_target_object_model_review_gallery_current.html",
             }
         },
     )
@@ -912,6 +914,11 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["target_object_model_review_residue_count"] == 4
     assert payload["summary"]["target_object_model_review_min_radius"] == 1.2
     assert payload["summary"]["target_object_model_review_max_radius"] == 9.4
+    assert payload["summary"]["target_object_model_review_gallery_status"] == "pass"
+    assert (
+        payload["summary"]["target_object_model_review_gallery_html"]
+        == "casp17/casp17_target_object_model_review_gallery_current.html"
+    )
     assert payload["summary"]["benchmark_rows_total"] == 40
     assert payload["summary"]["competitive_batch_status"] == "ready_for_fill"
     assert payload["summary"]["competitive_batch_row_count"] == 15
@@ -1227,6 +1234,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["target_object_model_review"]["status"] == "pass"
     assert by_id["target_object_model_review"]["ready_count"] == 4
     assert "review_md:4" in by_id["target_object_model_review"]["blockers"]
+    assert "gallery:pass" in by_id["target_object_model_review"]["blockers"]
     assert by_id["competitive_floor_batch"]["status"] == "ready_for_fill"
     assert by_id["competitive_floor_row_fill_status"]["status"] == "awaiting_fill"
     assert by_id["competitive_floor_row_fill_worklist"]["status"] == "open_actions"

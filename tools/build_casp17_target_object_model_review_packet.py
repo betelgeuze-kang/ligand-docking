@@ -4,8 +4,10 @@ from __future__ import annotations
 import argparse
 import csv
 import datetime as dt
+import html as html_lib
 import json
 import math
+import os
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +18,7 @@ DEFAULT_TARGET_MODEL_FOLDERS_JSON = "casp17/casp17_target_model_folders_current.
 DEFAULT_OUT_JSON = "casp17/casp17_target_object_model_review_current.json"
 DEFAULT_OUT_CSV = "casp17/casp17_target_object_model_review_current.csv"
 DEFAULT_OUT_MD = "casp17/casp17_target_object_model_review_current.md"
+DEFAULT_OUT_HTML = "casp17/casp17_target_object_model_review_gallery_current.html"
 
 HOSTED_TOKENS = ("http://", "https://", "//cdn.", "unpkg.com", "jsdelivr.net")
 CLAIM_BOUNDARY = (
@@ -106,6 +109,16 @@ def _file_text(path: Path) -> str:
         return path.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return ""
+
+
+def _href(target: str | Path, html_path: str | Path) -> str:
+    target_path = _resolve(target)
+    base = _resolve(html_path).parent
+    try:
+        relative = os.path.relpath(target_path, base)
+    except ValueError:
+        relative = _artifact(target_path)
+    return html_lib.escape(Path(relative).as_posix(), quote=True)
 
 
 def _atom_points(path: Path) -> list[dict[str, Any]]:
@@ -307,6 +320,8 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "first_blocked_target_id": blocked_rows[0]["target_id"] if blocked_rows else "",
         "first_blocked_object_id": blocked_rows[0]["object_id"] if blocked_rows else "",
         "first_blocked_blockers": blocked_rows[0]["blockers"] if blocked_rows else "",
+        "gallery_status": "pass" if rows and not blocked_rows else "blocked",
+        "gallery_html_path": _artifact(args.out_html),
         "claim_boundary": CLAIM_BOUNDARY,
     }
     return {"summary": summary, "rows": rows}
@@ -325,6 +340,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- viewer_local_pass_count: `{summary['viewer_local_pass_count']}`",
         f"- protein/CA/residue counts: `{summary['protein_atom_count']}/{summary['ca_atom_count']}/{summary['residue_count']}`",
         f"- radius_of_gyration min/max: `{summary['min_radius_of_gyration']}/{summary['max_radius_of_gyration']}`",
+        f"- gallery: `{summary['gallery_status']}` `{summary['gallery_html_path']}`",
         f"- first blocked: `{summary['first_blocked_target_id'] or '-'}` `{summary['first_blocked_object_id'] or '-'}` `{summary['first_blocked_blockers'] or '-'}`",
         "",
         "## Objects",
@@ -347,10 +363,119 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
+def _write_gallery_html(path_like: str | Path, payload: dict[str, Any]) -> None:
+    path = _resolve(path_like)
+    summary = payload["summary"]
+    rows = sorted(
+        payload["rows"],
+        key=lambda row: (_text(row.get("target_id")), _text(row.get("object_id"))),
+    )
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        grouped.setdefault(_text(row.get("target_id")), []).append(row)
+
+    lines = [
+        "<!doctype html>",
+        '<html lang="en">',
+        "<head>",
+        '<meta charset="utf-8">',
+        '<meta name="viewport" content="width=device-width, initial-scale=1">',
+        "<title>CASP17 Target Object Model Review Gallery</title>",
+        "<style>",
+        ":root { color-scheme: light; font-family: Arial, sans-serif; background: #f8fafc; color: #111827; }",
+        "body { margin: 0; }",
+        "header { position: sticky; top: 0; z-index: 2; background: rgba(248,250,252,.94); border-bottom: 1px solid #cbd5e1; padding: 14px 18px; }",
+        "h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: 0; }",
+        ".meta { display: flex; flex-wrap: wrap; gap: 10px; color: #475569; font-size: 13px; }",
+        "main { padding: 18px; display: grid; gap: 18px; }",
+        "section { display: grid; gap: 10px; }",
+        "h2 { margin: 0; font-size: 18px; letter-spacing: 0; }",
+        ".grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }",
+        ".card { border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; overflow: hidden; display: grid; }",
+        ".thumb { aspect-ratio: 16 / 10; width: 100%; object-fit: contain; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }",
+        ".body { padding: 10px; display: grid; gap: 8px; }",
+        ".name { font-weight: 700; font-size: 14px; }",
+        ".stats { color: #475569; font-size: 12px; line-height: 1.45; }",
+        ".links { display: flex; flex-wrap: wrap; gap: 8px; }",
+        "a { color: #0f766e; text-decoration: none; font-weight: 700; font-size: 12px; }",
+        "a:hover { text-decoration: underline; }",
+        ".status { font-size: 12px; font-weight: 700; color: #166534; }",
+        ".blocked { color: #991b1b; }",
+        "</style>",
+        "</head>",
+        "<body>",
+        "<header>",
+        "<h1>CASP17 Target Object Model Review Gallery</h1>",
+        '<div class="meta">',
+        f"<span>generated: {html_lib.escape(str(summary['generated_at_local']))}</span>",
+        f"<span>status: {html_lib.escape(str(summary['object_model_review_status']))}</span>",
+        f"<span>targets: {summary['target_count']}</span>",
+        f"<span>objects: {summary['pass_count']}/{summary['object_count']}</span>",
+        f"<span>protein atoms: {summary['protein_atom_count']}</span>",
+        f"<span>CA atoms: {summary['ca_atom_count']}</span>",
+        "</div>",
+        "</header>",
+        "<main>",
+    ]
+    for target_id, target_rows in grouped.items():
+        protein_name = _text(target_rows[0].get("protein_name"))
+        lines.extend(
+            [
+                "<section>",
+                f"<h2>{html_lib.escape(target_id)} - {html_lib.escape(protein_name)}</h2>",
+                '<div class="grid">',
+            ]
+        )
+        for row in target_rows:
+            status_class = "status" if _text(row.get("review_status")) == "pass" else "status blocked"
+            projection = _href(row["projection_svg_path"], path)
+            viewer = _href(row["viewer_html_path"], path)
+            review = _href(row["review_md_path"], path)
+            model = _href(row["model_path"], path)
+            lines.extend(
+                [
+                    '<article class="card">',
+                    f'<a href="{projection}"><img class="thumb" src="{projection}" alt="{html_lib.escape(target_id)} {html_lib.escape(_text(row.get("object_id")))} projection"></a>',
+                    '<div class="body">',
+                    f'<div class="name">{html_lib.escape(_text(row.get("object_id")))} chain {html_lib.escape(_text(row.get("chain_id")))}</div>',
+                    f'<div class="{status_class}">{html_lib.escape(_text(row.get("review_status")))}</div>',
+                    (
+                        '<div class="stats">'
+                        f"protein atoms {row['protein_atom_count']} &middot; CA {row['ca_atom_count']} &middot; residues {row['residue_count']}<br>"
+                        f"radius {row['radius_of_gyration']} &middot; bbox diagonal {row['bbox_diagonal']}"
+                        "</div>"
+                    ),
+                    '<div class="links">',
+                    f'<a href="{viewer}">Viewer</a>',
+                    f'<a href="{projection}">Projection</a>',
+                    f'<a href="{review}">Review</a>',
+                    f'<a href="{model}">PDB</a>',
+                    "</div>",
+                    "</div>",
+                    "</article>",
+                ]
+            )
+        lines.extend(["</div>", "</section>"])
+    if not rows:
+        lines.append("<p>No object rows were available.</p>")
+    lines.extend(
+        [
+            "</main>",
+            f"<!-- {html_lib.escape(CLAIM_BOUNDARY)} -->",
+            "</body>",
+            "</html>",
+            "",
+        ]
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines), encoding="utf-8")
+
+
 def write_outputs(args: argparse.Namespace, payload: dict[str, Any]) -> None:
     _write_json(args.out_json, payload)
     _write_csv(args.out_csv, payload["rows"])
     _write_md(args.out_md, payload)
+    _write_gallery_html(args.out_html, payload)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -359,6 +484,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
+    parser.add_argument("--out-html", default=DEFAULT_OUT_HTML)
     return parser.parse_args(argv)
 
 

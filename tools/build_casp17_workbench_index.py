@@ -435,6 +435,8 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + str(target_object_model_review_summary.get("min_radius_of_gyration", ""))
                 + "-"
                 + str(target_object_model_review_summary.get("max_radius_of_gyration", ""))
+                + ",gallery:"
+                + str(target_object_model_review_summary.get("gallery_status", ""))
             ),
         ),
         _artifact_row(
@@ -1311,6 +1313,8 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "target_object_model_review_residue_count": _int(target_object_model_review_summary.get("residue_count")),
         "target_object_model_review_min_radius": target_object_model_review_summary.get("min_radius_of_gyration", 0),
         "target_object_model_review_max_radius": target_object_model_review_summary.get("max_radius_of_gyration", 0),
+        "target_object_model_review_gallery_status": _text(target_object_model_review_summary.get("gallery_status")),
+        "target_object_model_review_gallery_html": _text(target_object_model_review_summary.get("gallery_html_path")),
         "benchmark_rows_ready_count": benchmark_rows_ready,
         "benchmark_rows_total": benchmark_rows_total,
         "competitive_batch_status": _text(competitive_batch_summary.get("batch_status")),
@@ -2121,7 +2125,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- target object viewers: `{summary['target_model_object_viewer_count']}`",
         f"- target object folder audit: `{summary['target_object_folder_audit_status'] or '-'}` rows `{summary['target_object_folder_audit_pass_count']}/{summary['target_object_folder_audit_total']}` chain isolation `{summary['target_object_folder_chain_isolation_pass_count']}/{summary['target_object_folder_audit_total']}` protein atoms/coordinate-valid `{summary['target_object_folder_protein_atom_pass_count']}/{summary['target_object_folder_coordinate_valid_pass_count']}/{summary['target_object_folder_audit_total']}` total protein atoms `{summary['target_object_folder_total_protein_atom_count']}`",
         f"- target object viewer smoke: `{summary['target_object_viewer_smoke_status'] or '-'}` rows `{summary['target_object_viewer_smoke_pass_count']}/{summary['target_object_viewer_smoke_total']}`",
-        f"- target object model review: `{summary['target_object_model_review_status'] or '-'}` pass/blocked/total `{summary['target_object_model_review_pass_count']}/{summary['target_object_model_review_blocked_count']}/{summary['target_object_model_review_total']}` review md/viewers `{summary['target_object_model_review_md_count']}/{summary['target_object_model_review_viewer_local_pass_count']}` protein/CA/residue `{summary['target_object_model_review_protein_atom_count']}/{summary['target_object_model_review_ca_atom_count']}/{summary['target_object_model_review_residue_count']}` radius `{summary['target_object_model_review_min_radius']}/{summary['target_object_model_review_max_radius']}`",
+        f"- target object model review: `{summary['target_object_model_review_status'] or '-'}` pass/blocked/total `{summary['target_object_model_review_pass_count']}/{summary['target_object_model_review_blocked_count']}/{summary['target_object_model_review_total']}` review md/viewers `{summary['target_object_model_review_md_count']}/{summary['target_object_model_review_viewer_local_pass_count']}` protein/CA/residue `{summary['target_object_model_review_protein_atom_count']}/{summary['target_object_model_review_ca_atom_count']}/{summary['target_object_model_review_residue_count']}` radius `{summary['target_object_model_review_min_radius']}/{summary['target_object_model_review_max_radius']}` gallery `{summary['target_object_model_review_gallery_status'] or '-'}` `{summary['target_object_model_review_gallery_html'] or '-'}`",
         f"- benchmark rows ready/total: `{summary['benchmark_rows_ready_count']}/{summary['benchmark_rows_total']}`",
         f"- competitive-floor batch: `{summary['competitive_batch_status'] or '-'}` rows `{summary['competitive_batch_row_count']}` missing evidence `{summary['competitive_batch_missing_evidence_item_count']}`",
         f"- competitive row_fill status: `{summary['competitive_row_fill_status'] or '-'}` filled/ready/total `{summary['competitive_row_fill_filled_count']}/{summary['competitive_row_fill_ready_count']}/{summary['competitive_row_fill_row_count']}`",
