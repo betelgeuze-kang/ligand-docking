@@ -8,6 +8,8 @@
 - native_dropzone_pdb: `casp17/competitive_floor_target_identity_clearance_workorders/H2324_T_Cell_Receptor_N17.2_complex_5_chains/native/H2324_native.pdb`
 - provenance_template_csv: `casp17/competitive_floor_target_identity_clearance_workorders/H2324_T_Cell_Receptor_N17.2_complex_5_chains/provenance_template.csv`
 - manifest_stub_csv: `casp17/competitive_floor_target_identity_clearance_workorders/H2324_T_Cell_Receptor_N17.2_complex_5_chains/manifest_stub.csv`
+- identity_discovery_blockers: `no_leak_clearance_required`
+- identity_discovery_next_action: operator must confirm historical eligibility, native availability, and no-leak clearance
 
 ## Stop Conditions
 

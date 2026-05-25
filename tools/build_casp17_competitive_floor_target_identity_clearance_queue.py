@@ -29,6 +29,8 @@ CLEARANCE_COLUMNS = [
     "scope",
     "identity_discovery_status",
     "candidate_use_status",
+    "identity_discovery_blockers",
+    "identity_discovery_next_action",
     "prediction_status",
     "prediction_pdb",
     "ts_prediction_status",
@@ -238,6 +240,8 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 "scope": _scope_for_target(target_id, checklist_row),
                 "identity_discovery_status": _text(discovery.get("identity_discovery_status")),
                 "candidate_use_status": _text(discovery.get("candidate_use_status")),
+                "identity_discovery_blockers": _text(discovery.get("blockers")),
+                "identity_discovery_next_action": _text(discovery.get("next_action")),
                 "prediction_status": "present" if prediction_pdb or ts_prediction_pdb else "missing",
                 "prediction_pdb": prediction_pdb,
                 "ts_prediction_status": "present" if ts_prediction_pdb else "missing",
@@ -276,6 +280,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "ts_prediction_present_count": sum(1 for row in rows if _text(row.get("ts_prediction_status")) == "present"),
         "native_present_count": sum(1 for row in rows if _text(row.get("native_status")) == "present"),
         "provenance_cleared_count": sum(1 for row in rows if _text(row.get("provenance_cleared")) == "true"),
+        "identity_discovery_blocker_count": sum(1 for row in rows if _text(row.get("identity_discovery_blockers"))),
         "ready_for_manifest_scaffold_count": ready_count,
         "awaiting_prediction_or_ts_count": by_status["awaiting_prediction_or_ts"],
         "awaiting_native_or_clearance_count": by_status["awaiting_native_or_clearance"],
@@ -298,6 +303,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- discovery_status: `{summary['discovery_status'] or '-'}`",
         f"- review targets: `{summary['review_target_count']}`",
         f"- prediction/TS/native/provenance-cleared: `{summary['prediction_present_count']}/{summary['ts_prediction_present_count']}/{summary['native_present_count']}/{summary['provenance_cleared_count']}`",
+        f"- identity discovery blockers: `{summary['identity_discovery_blocker_count']}`",
         f"- ready for manifest scaffold: `{summary['ready_for_manifest_scaffold_count']}`",
         f"- awaiting prediction/native-or-clearance/no-leak: `{summary['awaiting_prediction_or_ts_count']}/{summary['awaiting_native_or_clearance_count']}/{summary['awaiting_no_leak_clearance_count']}`",
         f"- first open: `{summary['first_open_target_id'] or '-'}` `{summary['first_open_status'] or '-'}`",
@@ -305,17 +311,18 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         "## Queue",
         "",
-        "| target | scope | clearance | prediction | TS | native | provenance | blockers | next action |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| target | scope | clearance | identity blockers | prediction | TS | native | provenance | blockers | next action |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
             f"| `{row['target_id']}` | `{row['scope']}` | `{row['clearance_status']}` | "
+            f"`{row['identity_discovery_blockers'] or '-'}` | "
             f"`{row['prediction_status']}` | `{row['ts_prediction_status']}` | `{row['native_status']}` | "
             f"`{row['provenance_status']}` | `{row['blockers'] or '-'}` | {row['next_action']} |"
         )
     if not payload["rows"]:
-        lines.append("| - | - | `missing_target_identity_discovery` | - | - | - | - | `review_targets_missing` | rerun target identity discovery |")
+        lines.append("| - | - | `missing_target_identity_discovery` | - | - | - | - | - | `review_targets_missing` | rerun target identity discovery |")
     lines.extend(["", "## Claim Boundary", "", str(summary["claim_boundary"]), ""])
     path = _resolve(path_like)
     path.parent.mkdir(parents=True, exist_ok=True)

@@ -1,6 +1,6 @@
 # CASP17 Competitive-Floor Target Identity Clearance Cycle
 
-- generated: `2026-05-26T02:55:59+09:00`
+- generated: `2026-05-26T03:04:46+09:00`
 - clearance_cycle_status: `awaiting_provenance`
 - apply_manifest_sync/apply_candidate_intake: `False/False`
 - stages ready/blocked/total: `1/5/6`
@@ -17,7 +17,7 @@
 | stage | status | ready | awaiting | blocked | total | path | next action |
 | --- | --- | ---: | ---: | ---: | ---: | --- | --- |
 | `manifest_sync` | `awaiting_provenance` | 0 | 3 | 0 | 3 | `casp17/casp17_competitive_floor_target_identity_clearance_manifest_sync_current.json` | complete the no-leak provenance template before syncing the manifest stub |
-| `workorder_audit` | `blocked` | 0 | 0 | 3 | 3 | `casp17/casp17_competitive_floor_target_identity_clearance_workorder_audit_current.json` | place the cleared native PDB in the per-target native dropzone |
+| `workorder_audit` | `blocked` | 0 | 0 | 3 | 3 | `casp17/casp17_competitive_floor_target_identity_clearance_workorder_audit_current.json` | complete target-origin and no-leak evidence review before native/provenance promotion |
 | `promotion_plan` | `blocked_by_audit` | 0 | 0 | 3 | 3 | `casp17/casp17_competitive_floor_target_identity_clearance_promotion_plan_current.json` | clear the native/provenance workorder audit before promotion |
 | `intake_staging` | `waiting_on_promoted_manifest` | 0 | 0 | 0 | 0 | `casp17/casp17_competitive_floor_target_identity_clearance_intake_staging_plan_current.json` | wait for promoted clearance manifest rows |
 | `candidate_intake_sync` | `waiting_on_staged_identity` | 0 | 15 | 0 | 15 | `casp17/casp17_competitive_floor_target_identity_clearance_candidate_intake_sync_current.json` | wait for clearance intake staging to produce staged_for_operator_review rows |

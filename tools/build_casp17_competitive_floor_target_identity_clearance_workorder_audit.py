@@ -27,6 +27,8 @@ AUDIT_COLUMNS = [
     "native_protein_atom_record_count",
     "native_chain_id_count",
     "native_coordinate_status",
+    "identity_discovery_blocker_status",
+    "identity_discovery_blockers",
     "provenance_template_csv",
     "provenance_status",
     "evidence_ref_status",
@@ -66,6 +68,7 @@ CLEAR_VALUES = {"cleared", "no_leak", "ready_for_row_fill", "internal_no_leak", 
 TRUE_VALUES = {"1", "true", "yes", "y"}
 FALSE_VALUES = {"0", "false", "no", "n"}
 URL_PREFIXES = ("http://", "https://")
+PROVENANCE_REVIEW_RESOLVABLE_IDENTITY_BLOCKERS = {"no_leak_clearance_required", "target_origin_review_required"}
 CLAIM_BOUNDARY = (
     "Local competitive-floor target identity clearance workorder audit only. It verifies per-target native "
     "dropzones, local no-leak evidence references, provenance templates, and manifest stubs before any manual "
@@ -89,6 +92,10 @@ def _artifact(path_like: str | Path) -> str:
 
 def _text(value: Any) -> str:
     return str(value or "").strip()
+
+
+def _split_blockers(value: Any) -> list[str]:
+    return [part.strip() for part in _text(value).split(",") if part.strip()]
 
 
 def _read_json(path_like: str | Path) -> dict[str, Any]:
@@ -249,6 +256,25 @@ def _evidence_ref_status(value: Any, *, target_id: str) -> tuple[str, str, str, 
     return "present", ref, content_status, _sha256(path), blockers
 
 
+def _identity_discovery_blocker_status(
+    blockers: list[str],
+    *,
+    provenance_status: str,
+    evidence_ref_content_status: str,
+) -> tuple[str, list[str]]:
+    if not blockers:
+        return "not_applicable", []
+    unresolved: list[str] = []
+    provenance_review_ready = provenance_status == "ready" and evidence_ref_content_status == "verified"
+    for blocker in blockers:
+        if blocker in PROVENANCE_REVIEW_RESOLVABLE_IDENTITY_BLOCKERS and provenance_review_ready:
+            continue
+        unresolved.append(f"identity_discovery_{blocker}")
+    if unresolved:
+        return "blocked", unresolved
+    return "cleared_by_provenance_review", []
+
+
 def _sha256(path_like: str | Path) -> str:
     return hashlib.sha256(_resolve(path_like).read_bytes()).hexdigest()
 
@@ -374,6 +400,12 @@ def _next_action(blockers: list[str]) -> str:
     blocker_set = set(blockers)
     if not blockers:
         return "review and promote the manifest stub only after final operator signoff"
+    if any(blocker.startswith("identity_discovery_current_casp17_target") for blocker in blockers):
+        return "replace target identity with a cleared historical non-CASP17 benchmark target"
+    if any(blocker.startswith("identity_discovery_synthetic_test_artifact") for blocker in blockers):
+        return "exclude synthetic test artifacts from target identity clearance"
+    if any(blocker.startswith("identity_discovery_") for blocker in blockers):
+        return "complete target-origin and no-leak evidence review before native/provenance promotion"
     if "native_pdb_missing" in blocker_set or "manifest_native_pdb_not_found" in blocker_set:
         return "place the cleared native PDB in the per-target native dropzone"
     if any(blocker.startswith("native_pdb_") or blocker == "native_prediction_identity_unreadable" for blocker in blockers):
@@ -409,6 +441,12 @@ def _audit_row(workorder_row: dict[str, Any]) -> dict[str, Any]:
         _evidence_ref_status(provenance_row.get("evidence_ref"), target_id=target_id)
         if not provenance_file_blockers
         else ("waiting_on_provenance", "", "waiting_on_provenance", "", [])
+    )
+    source_identity_blockers = _split_blockers(workorder_row.get("identity_discovery_blockers"))
+    identity_discovery_blocker_status, identity_discovery_blockers = _identity_discovery_blocker_status(
+        source_identity_blockers,
+        provenance_status=provenance_status,
+        evidence_ref_content_status=evidence_ref_content_status,
     )
     manifest_row, manifest_file_blockers = _read_csv_one(workorder_row.get("manifest_stub_csv"))
     manifest_blockers = list(manifest_file_blockers)
@@ -451,6 +489,7 @@ def _audit_row(workorder_row: dict[str, Any]) -> dict[str, Any]:
     blockers = [
         *native_blockers,
         *prediction_blockers,
+        *identity_discovery_blockers,
         *provenance_blockers,
         *evidence_ref_blockers,
         *manifest_blockers,
@@ -468,6 +507,8 @@ def _audit_row(workorder_row: dict[str, Any]) -> dict[str, Any]:
         "native_protein_atom_record_count": protein_atom_count,
         "native_chain_id_count": chain_id_count,
         "native_coordinate_status": native_coordinate_status,
+        "identity_discovery_blocker_status": identity_discovery_blocker_status,
+        "identity_discovery_blockers": ",".join(source_identity_blockers),
         "provenance_template_csv": _text(workorder_row.get("provenance_template_csv")),
         "provenance_status": provenance_status,
         "evidence_ref_status": evidence_ref_status,
@@ -536,6 +577,12 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "prediction_present_count": sum(1 for row in rows if row["prediction_file_status"] == "present"),
         "prediction_protein_atom_count": sum(int(row["prediction_protein_atom_record_count"]) for row in rows),
         "prediction_coordinate_valid_count": sum(1 for row in rows if row["prediction_coordinate_status"] == "valid"),
+        "identity_discovery_blocked_count": sum(
+            1 for row in rows if row["identity_discovery_blocker_status"] == "blocked"
+        ),
+        "identity_discovery_cleared_count": sum(
+            1 for row in rows if row["identity_discovery_blocker_status"] == "cleared_by_provenance_review"
+        ),
         "native_prediction_distinct_count": sum(
             1 for row in rows if row["native_prediction_identity_status"] == "distinct"
         ),
@@ -569,6 +616,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- prediction/native/provenance/manifest ready: `{summary['prediction_present_count']}/{summary['native_valid_count']}/{summary['provenance_ready_count']}/{summary['manifest_stub_ready_count']}`",
         f"- prediction protein atoms/coordinate-valid: `{summary['prediction_protein_atom_count']}/{summary['prediction_coordinate_valid_count']}`",
         f"- native protein atoms/coordinate-valid: `{summary['native_protein_atom_count']}/{summary['native_coordinate_valid_count']}`",
+        f"- identity discovery blockers blocked/cleared: `{summary['identity_discovery_blocked_count']}/{summary['identity_discovery_cleared_count']}`",
         f"- local evidence refs present/blocked/waiting: `{summary['evidence_ref_present_count']}/{summary['evidence_ref_blocked_count']}/{summary['evidence_ref_waiting_count']}`",
         f"- local evidence content verified/blocked: `{summary['evidence_ref_verified_count']}/{summary['evidence_ref_content_blocked_count']}`",
         f"- manifest/provenance matched/mismatches: `{summary['manifest_provenance_matched_count']}/{summary['manifest_provenance_mismatch_count']}`",
@@ -578,14 +626,15 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         "## Audit Rows",
         "",
-        "| target | audit | native | atoms | protein atoms | chains | coordinates | prediction | pred atoms | pred protein atoms | pred chains | pred coordinates | provenance | evidence | evidence content | manifest | manifest/provenance | native/prediction | blockers | next action |",
-        "| --- | --- | --- | ---: | ---: | ---: | --- | --- | ---: | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| target | audit | native | atoms | protein atoms | chains | coordinates | identity blockers | prediction | pred atoms | pred protein atoms | pred chains | pred coordinates | provenance | evidence | evidence content | manifest | manifest/provenance | native/prediction | blockers | next action |",
+        "| --- | --- | --- | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
             f"| `{row['target_id']}` | `{row['audit_status']}` | `{row['native_file_status']}` | "
             f"{row['native_atom_record_count']} | {row['native_protein_atom_record_count']} | "
             f"{row['native_chain_id_count']} | `{row['native_coordinate_status']}` | "
+            f"`{row['identity_discovery_blocker_status']}` | "
             f"`{row['prediction_file_status']}` | {row['prediction_atom_record_count']} | "
             f"{row['prediction_protein_atom_record_count']} | {row['prediction_chain_id_count']} | "
             f"`{row['prediction_coordinate_status']}` | `{row['provenance_status']}` | "
@@ -595,7 +644,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         )
     if not payload["rows"]:
         lines.append(
-            "| - | `missing_workorders` | - | 0 | 0 | 0 | - | - | 0 | 0 | 0 | - | - | - | - | - | - | - | `workorders_missing` | "
+            "| - | `missing_workorders` | - | 0 | 0 | 0 | - | - | - | 0 | 0 | 0 | - | - | - | - | - | - | - | `workorders_missing` | "
             "rerun clearance workorder builder |"
         )
     lines.extend(["", "## Claim Boundary", "", str(summary["claim_boundary"]), ""])

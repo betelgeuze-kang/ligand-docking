@@ -8,6 +8,8 @@
 - native_dropzone_pdb: `casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/native/H1319_native.pdb`
 - provenance_template_csv: `casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/provenance_template.csv`
 - manifest_stub_csv: `casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/manifest_stub.csv`
+- identity_discovery_blockers: `no_leak_clearance_required`
+- identity_discovery_next_action: operator must confirm historical eligibility, native availability, and no-leak clearance
 
 ## Stop Conditions
 

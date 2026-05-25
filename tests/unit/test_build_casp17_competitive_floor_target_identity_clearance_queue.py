@@ -90,6 +90,8 @@ def test_clearance_queue_separates_ready_and_blocked_review_targets(tmp_path: Pa
                     "description": "Blocked complex",
                     "identity_discovery_status": "closed_casp17_watchlist",
                     "candidate_use_status": "operator_review_required",
+                    "blockers": "no_leak_clearance_required",
+                    "next_action": "operator must confirm no-leak clearance",
                 },
                 {
                     "target_id": "H1003",
@@ -134,6 +136,7 @@ def test_clearance_queue_separates_ready_and_blocked_review_targets(tmp_path: Pa
 
     by_id = {row["target_id"]: row for row in payload["rows"]}
     assert payload["summary"]["review_target_count"] == 2
+    assert payload["summary"]["identity_discovery_blocker_count"] == 1
     assert payload["summary"]["ready_for_manifest_scaffold_count"] == 1
     assert payload["summary"]["awaiting_native_or_clearance_count"] == 1
     assert by_id["H1001"]["clearance_status"] == "ready_for_manifest_scaffold_review"
@@ -141,6 +144,8 @@ def test_clearance_queue_separates_ready_and_blocked_review_targets(tmp_path: Pa
     assert by_id["H1001"]["native_status"] == "present"
     assert by_id["H1001"]["provenance_cleared"] == "true"
     assert by_id["H1002"]["clearance_status"] == "awaiting_native_or_clearance"
+    assert by_id["H1002"]["identity_discovery_blockers"] == "no_leak_clearance_required"
+    assert by_id["H1002"]["identity_discovery_next_action"] == "operator must confirm no-leak clearance"
     assert "native_pdb_missing" in by_id["H1002"]["blockers"]
     assert _read_csv(tmp_path / "queue.csv")[0]["target_id"] == "H1001"
     assert (tmp_path / "QUEUE.md").is_file()

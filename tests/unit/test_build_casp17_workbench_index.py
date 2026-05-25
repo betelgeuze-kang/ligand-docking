@@ -455,6 +455,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "prediction_present_count": 3,
                 "prediction_protein_atom_count": 3,
                 "prediction_coordinate_valid_count": 3,
+                "identity_discovery_blocked_count": 3,
+                "identity_discovery_cleared_count": 0,
                 "native_valid_count": 0,
                 "native_protein_atom_count": 0,
                 "native_coordinate_valid_count": 0,
@@ -956,6 +958,14 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         payload["summary"]["competitive_target_identity_clearance_workorder_audit_prediction_coordinate_valid_count"]
         == 3
     )
+    assert (
+        payload["summary"]["competitive_target_identity_clearance_workorder_audit_identity_discovery_blocked_count"]
+        == 3
+    )
+    assert (
+        payload["summary"]["competitive_target_identity_clearance_workorder_audit_identity_discovery_cleared_count"]
+        == 0
+    )
     assert payload["summary"]["competitive_target_identity_clearance_workorder_audit_native_count"] == 0
     assert payload["summary"]["competitive_target_identity_clearance_workorder_audit_native_protein_atom_count"] == 0
     assert payload["summary"]["competitive_target_identity_clearance_workorder_audit_native_coordinate_valid_count"] == 0
@@ -1129,6 +1139,10 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["competitive_floor_target_identity_clearance_workorder_audit"]["status"] == "blocked"
     assert "prediction_protein_atoms:3" in by_id["competitive_floor_target_identity_clearance_workorder_audit"]["blockers"]
     assert "prediction_coordinate_valid:3" in by_id["competitive_floor_target_identity_clearance_workorder_audit"]["blockers"]
+    assert (
+        "identity_discovery_blocked:3"
+        in by_id["competitive_floor_target_identity_clearance_workorder_audit"]["blockers"]
+    )
     assert by_id["competitive_floor_target_identity_clearance_promotion_plan"]["status"] == "blocked_by_audit"
     assert by_id["competitive_floor_target_identity_clearance_promotion_plan"]["blocked_count"] == 3
     assert by_id["competitive_floor_target_identity_clearance_intake_staging"]["status"] == "waiting_on_promoted_manifest"
