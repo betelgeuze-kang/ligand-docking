@@ -22,6 +22,7 @@ DEFAULT_COMPETITIVE_BATCH_JSON = "casp17/casp17_competitive_floor_batch_current.
 DEFAULT_COMPETITIVE_ROW_FILL_STATUS_JSON = "casp17/casp17_competitive_floor_row_fill_status_current.json"
 DEFAULT_COMPETITIVE_ROW_FILL_WORKLIST_JSON = "casp17/casp17_competitive_floor_row_fill_worklist_current.json"
 DEFAULT_COMPETITIVE_EVIDENCE_DROPZONE_JSON = "casp17/casp17_competitive_floor_evidence_dropzone_current.json"
+DEFAULT_COMPETITIVE_EVIDENCE_INTAKE_JSON = "casp17/casp17_competitive_floor_evidence_intake_current.json"
 DEFAULT_COMPETITIVE_OPERATOR_TEMPLATE_JSON = "casp17/casp17_competitive_floor_batch_operator_template_current.json"
 DEFAULT_COMPETITIVE_OPERATOR_PREFLIGHT_JSON = "casp17/casp17_competitive_floor_batch_operator_preflight_current.json"
 DEFAULT_DATA_BUNDLE_JSON = "casp17/casp17_data_bundle_manifest_current.json"
@@ -145,6 +146,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     competitive_row_fill_status_payload = _read_json(args.competitive_row_fill_status_json)
     competitive_row_fill_worklist_payload = _read_json(args.competitive_row_fill_worklist_json)
     competitive_evidence_dropzone_payload = _read_json(args.competitive_evidence_dropzone_json)
+    competitive_evidence_intake_payload = _read_json(args.competitive_evidence_intake_json)
     competitive_operator_template_payload = _read_json(args.competitive_operator_template_json)
     competitive_operator_preflight_payload = _read_json(args.competitive_operator_preflight_json)
     data_bundle_payload = _read_json(args.data_bundle_json)
@@ -160,6 +162,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     competitive_row_fill_status_summary = _summary(competitive_row_fill_status_payload)
     competitive_row_fill_worklist_summary = _summary(competitive_row_fill_worklist_payload)
     competitive_evidence_dropzone_summary = _summary(competitive_evidence_dropzone_payload)
+    competitive_evidence_intake_summary = _summary(competitive_evidence_intake_payload)
     competitive_operator_template_summary = _summary(competitive_operator_template_payload)
     competitive_operator_preflight_summary = _summary(competitive_operator_preflight_payload)
     data_bundle_summary = _summary(data_bundle_payload)
@@ -366,6 +369,26 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             blockers=_text(competitive_evidence_dropzone_summary.get("first_action_blocker")),
         ),
         _artifact_row(
+            "competitive_floor_evidence_intake",
+            "Dropzone intake audit and row_fill patch candidates",
+            _text(competitive_evidence_intake_summary.get("intake_status")),
+            args.competitive_evidence_intake_json,
+            ready_count=(
+                _int(competitive_evidence_intake_summary.get("patch_candidate_count"))
+                + _int(competitive_evidence_intake_summary.get("row_fill_file_present_count"))
+                + _int(competitive_evidence_intake_summary.get("field_present_count"))
+            ),
+            blocked_count=(
+                _int(competitive_evidence_intake_summary.get("awaiting_dropzone_file_count"))
+                + _int(competitive_evidence_intake_summary.get("awaiting_operator_value_count"))
+                + _int(competitive_evidence_intake_summary.get("ambiguous_file_candidate_count"))
+                + _int(competitive_evidence_intake_summary.get("row_fill_blocked_count"))
+            ),
+            total_count=_int(competitive_evidence_intake_summary.get("action_count")),
+            next_action=_text(competitive_evidence_intake_summary.get("first_open_next_action")),
+            blockers=_text(competitive_evidence_intake_summary.get("first_open_status")),
+        ),
+        _artifact_row(
             "competitive_floor_operator_template",
             "Candidate operator CSV assembled from filled competitive-floor batch folders",
             _text(competitive_operator_template_summary.get("template_status")),
@@ -475,6 +498,21 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "competitive_evidence_dropzone_file_action_count": _int(
             competitive_evidence_dropzone_summary.get("file_action_count")
         ),
+        "competitive_evidence_intake_status": _text(
+            competitive_evidence_intake_summary.get("intake_status")
+        ),
+        "competitive_evidence_intake_action_count": _int(
+            competitive_evidence_intake_summary.get("action_count")
+        ),
+        "competitive_evidence_intake_patch_candidate_count": _int(
+            competitive_evidence_intake_summary.get("patch_candidate_count")
+        ),
+        "competitive_evidence_intake_awaiting_file_count": _int(
+            competitive_evidence_intake_summary.get("awaiting_dropzone_file_count")
+        ),
+        "competitive_evidence_intake_awaiting_value_count": _int(
+            competitive_evidence_intake_summary.get("awaiting_operator_value_count")
+        ),
         "competitive_operator_template_status": _text(
             competitive_operator_template_summary.get("template_status")
         ),
@@ -533,6 +571,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- competitive row_fill status: `{summary['competitive_row_fill_status'] or '-'}` filled/ready/total `{summary['competitive_row_fill_filled_count']}/{summary['competitive_row_fill_ready_count']}/{summary['competitive_row_fill_row_count']}`",
         f"- competitive row_fill worklist: `{summary['competitive_row_fill_worklist_status'] or '-'}` open actions `{summary['competitive_row_fill_worklist_open_action_count']}` guides `{summary['competitive_row_fill_worklist_guide_count']}`",
         f"- competitive evidence dropzones: `{summary['competitive_evidence_dropzone_status'] or '-'}` dropzones/manifests `{summary['competitive_evidence_dropzone_count']}/{summary['competitive_evidence_dropzone_manifest_count']}` open actions `{summary['competitive_evidence_dropzone_open_action_count']}` file actions `{summary['competitive_evidence_dropzone_file_action_count']}`",
+        f"- competitive evidence intake: `{summary['competitive_evidence_intake_status'] or '-'}` actions `{summary['competitive_evidence_intake_action_count']}` patch candidates `{summary['competitive_evidence_intake_patch_candidate_count']}` awaiting files/values `{summary['competitive_evidence_intake_awaiting_file_count']}/{summary['competitive_evidence_intake_awaiting_value_count']}`",
         f"- competitive operator template: `{summary['competitive_operator_template_status'] or '-'}` rows `{summary['competitive_operator_template_ready_count']}/{summary['competitive_operator_template_row_count']}`",
         f"- competitive row_fill candidates: `{summary['competitive_operator_template_row_fill_count']}`",
         f"- competitive operator preflight: `{summary['competitive_operator_preflight_status'] or '-'}` rows `{summary['competitive_operator_preflight_ready_count']}/{summary['competitive_operator_preflight_row_count']}`",
@@ -586,6 +625,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--competitive-row-fill-status-json", default=DEFAULT_COMPETITIVE_ROW_FILL_STATUS_JSON)
     parser.add_argument("--competitive-row-fill-worklist-json", default=DEFAULT_COMPETITIVE_ROW_FILL_WORKLIST_JSON)
     parser.add_argument("--competitive-evidence-dropzone-json", default=DEFAULT_COMPETITIVE_EVIDENCE_DROPZONE_JSON)
+    parser.add_argument("--competitive-evidence-intake-json", default=DEFAULT_COMPETITIVE_EVIDENCE_INTAKE_JSON)
     parser.add_argument("--competitive-operator-template-json", default=DEFAULT_COMPETITIVE_OPERATOR_TEMPLATE_JSON)
     parser.add_argument("--competitive-operator-preflight-json", default=DEFAULT_COMPETITIVE_OPERATOR_PREFLIGHT_JSON)
     parser.add_argument("--data-bundle-json", default=DEFAULT_DATA_BUNDLE_JSON)

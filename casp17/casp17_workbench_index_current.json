@@ -133,6 +133,17 @@
       "total_count": 15
     },
     {
+      "artifact_id": "competitive_floor_evidence_intake",
+      "blocked_count": 450,
+      "blockers": "awaiting_operator_value",
+      "label": "Dropzone intake audit and row_fill patch candidates",
+      "next_action": "fill benchmark_id in row_fill.csv from cleared local evidence",
+      "path": "casp17/casp17_competitive_floor_evidence_intake_current.json",
+      "ready_count": 0,
+      "status": "awaiting_evidence",
+      "total_count": 450
+    },
+    {
       "artifact_id": "competitive_floor_operator_template",
       "blocked_count": 15,
       "blockers": "missing_files:0,placeholder_paths:180,provenance_blockers:150,calibration_blockers:90,row_fill_candidates:15",
@@ -178,6 +189,11 @@
     "competitive_evidence_dropzone_manifest_count": 15,
     "competitive_evidence_dropzone_open_action_count": 450,
     "competitive_evidence_dropzone_status": "open_actions",
+    "competitive_evidence_intake_action_count": 450,
+    "competitive_evidence_intake_awaiting_file_count": 180,
+    "competitive_evidence_intake_awaiting_value_count": 270,
+    "competitive_evidence_intake_patch_candidate_count": 0,
+    "competitive_evidence_intake_status": "awaiting_evidence",
     "competitive_operator_preflight_ready_count": 0,
     "competitive_operator_preflight_row_count": 15,
     "competitive_operator_preflight_status": "blocked",
@@ -196,7 +212,7 @@
     "first_operator_fill_action": "Replace placeholder target/benchmark IDs with a cleared historical non-CASP17 protein target.",
     "first_operator_input_action_id": "historical_benchmark_inputs",
     "first_operator_input_blockers": "ready_total_below_threshold,ready_monomer_below_threshold,ready_complex_below_threshold",
-    "generated_at_local": "2026-05-25T22:31:08+09:00",
+    "generated_at_local": "2026-05-25T22:37:25+09:00",
     "missing_file_count": 480,
     "next_unclosed_level": "competitive_floor",
     "packet_type": "casp17_workbench_index",
