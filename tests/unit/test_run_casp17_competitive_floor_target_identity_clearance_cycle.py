@@ -30,7 +30,7 @@ def _pdb(path: Path, *, residue: str = "ALA", x: str = "1.000", y: str = "2.000"
     return str(path)
 
 
-def _ready_provenance(target_id: str = "H1001") -> dict[str, str]:
+def _ready_provenance(target_id: str = "H1001", evidence_ref: str = "local/no_leak/H1001.md") -> dict[str, str]:
     return {
         "benchmark_id": f"hist_{target_id}_clearance_candidate",
         "target_id": target_id,
@@ -47,7 +47,7 @@ def _ready_provenance(target_id: str = "H1001") -> dict[str, str]:
         "current_casp17_target": "false",
         "operator_clearance": "cleared",
         "operator": "operator-a",
-        "evidence_ref": "local/no_leak/H1001.md",
+        "evidence_ref": evidence_ref,
         "notes": "reviewed",
     }
 
@@ -115,7 +115,14 @@ def _fixture(tmp_path: Path, *, ready: bool) -> dict[str, Path]:
     )
     provenance_csv = tmp_path / "provenance_template.csv"
     manifest_csv = tmp_path / "manifest_stub.csv"
-    _write_csv(provenance_csv, [_ready_provenance(target_id) if ready else _blocked_provenance(target_id)])
+    evidence_ref = tmp_path / "no_leak" / f"{target_id}.md"
+    if ready:
+        evidence_ref.parent.mkdir(parents=True, exist_ok=True)
+        evidence_ref.write_text("operator reviewed no-leak evidence\n", encoding="utf-8")
+    _write_csv(
+        provenance_csv,
+        [_ready_provenance(target_id, str(evidence_ref)) if ready else _blocked_provenance(target_id)],
+    )
     _write_csv(manifest_csv, [_manifest(target_id, prediction_pdb, native_pdb)])
     workorder_json = tmp_path / "workorder.json"
     _write_json(
