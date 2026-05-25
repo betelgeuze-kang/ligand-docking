@@ -1,6 +1,6 @@
 # CASP17 Competitive-Floor Value Ledger
 
-- generated: `2026-05-25T23:17:38+09:00`
+- generated: `2026-05-25T23:23:04+09:00`
 - value_ledger_status: `awaiting_values`
 - ledgers/actions: `15/270`
 - target/provenance/calibration actions: `30/150/90`

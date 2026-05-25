@@ -229,6 +229,75 @@ def test_evidence_import_apply_copies_files_and_updates_ledgers(tmp_path: Path) 
     assert ledger_rows[0]["ledger_status"] == "ready_for_row_fill"
 
 
+def test_evidence_import_apply_uses_canonical_repo_file_destination(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    folder = tmp_path / "casp17" / "competitive_floor_batch_current" / "priority_001_REQUIRED_MONOMER_001"
+    row_fill = folder / "row_fill.csv"
+    _write_csv(row_fill, [{"prediction_pdb": "REQUIRED_prediction.pdb"}])
+    source_pdb = tmp_path / "incoming" / "T9001_prediction.pdb"
+    source_pdb.parent.mkdir(parents=True)
+    source_pdb.write_text("HEADER TEST\nATOM      1  CA  ALA A   1       0.0   0.0   0.0\nEND\n", encoding="utf-8")
+    core = folder / "evidence_dropzone" / "files" / "core"
+    dropzone_json = tmp_path / "dropzone.json"
+    _write_json(
+        dropzone_json,
+        {
+            "summary": {"dropzone_status": "open_actions", "dropzone_count": 1},
+            "rows": [
+                {
+                    "dropzone_id": "priority_001_REQUIRED_MONOMER_001",
+                    "action_rank": 1,
+                    "operator_priority": 1,
+                    "row_rank": 1,
+                    "benchmark_id": "hist_REQUIRED_MONOMER_001",
+                    "target_id": "REQUIRED_MONOMER_001",
+                    "scope": "monomer",
+                    "evidence_class": "core_file",
+                    "template_column": "prediction_pdb",
+                    "source_row_fill_csv": str(row_fill),
+                    "dropzone_folder": str(folder / "evidence_dropzone"),
+                    "dropzone_class_folder": str(core),
+                    "drop_path": str(core / "<HISTORICAL_TARGET_ID>_prediction.pdb"),
+                }
+            ],
+        },
+    )
+    import_csv = tmp_path / "import.csv"
+    _write_csv(
+        import_csv,
+        [
+            {
+                "dropzone_id": "priority_001_REQUIRED_MONOMER_001",
+                "template_column": "prediction_pdb",
+                "source_path": str(source_pdb),
+            }
+        ],
+    )
+    args = mod.parse_args(
+        [
+            "--dropzone-json",
+            str(dropzone_json),
+            "--import-csv",
+            str(import_csv),
+            "--out-json",
+            str(tmp_path / "import.json"),
+            "--out-csv",
+            str(tmp_path / "audit.csv"),
+            "--out-md",
+            str(tmp_path / "IMPORT.md"),
+            "--apply",
+        ]
+    )
+
+    payload = mod.build_payload(args)
+
+    canonical = tmp_path / "runs" / "casp17_historical_benchmark_predictions_current" / "T9001_prediction.pdb"
+    assert payload["summary"]["applied_count"] == 1
+    assert payload["rows"][0]["destination_path"].endswith("runs/casp17_historical_benchmark_predictions_current/T9001_prediction.pdb")
+    assert canonical.read_text(encoding="utf-8") == source_pdb.read_text(encoding="utf-8")
+    assert not (core / "T9001_prediction.pdb").exists()
+
+
 def test_evidence_import_blocks_invalid_column_typed_values(tmp_path: Path) -> None:
     folder = tmp_path / "priority_001_REQUIRED_MONOMER_001"
     row_fill = folder / "row_fill.csv"

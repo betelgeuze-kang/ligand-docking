@@ -184,3 +184,62 @@ def test_evidence_intake_uses_cleared_value_ledger_patch_candidate(tmp_path: Pat
     assert payload["summary"]["patch_candidate_count"] == 1
     assert payload["rows"][0]["intake_status"] == "patch_candidate"
     assert payload["rows"][0]["recommended_value"] == "T9001"
+
+
+def test_evidence_intake_prefers_canonical_file_path_from_cleared_target_id(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    folder = tmp_path / "casp17" / "competitive_floor_batch_current" / "priority_001_REQUIRED_MONOMER_001"
+    row_fill = folder / "row_fill.csv"
+    _write_csv(row_fill, [{"target_id": "REQUIRED_MONOMER_001", "prediction_pdb": "REQUIRED_prediction.pdb"}])
+    _write_csv(
+        folder / "FIELD_VALUE_LEDGER.csv",
+        [
+            {
+                "template_column": "target_id",
+                "evidence_class": "target_identity",
+                "current_value": "REQUIRED_MONOMER_001",
+                "proposed_value": "T9001",
+                "evidence_ref": "local/no_leak/T9001.md",
+                "operator_clearance": "ready_for_row_fill",
+                "ledger_status": "ready_for_row_fill",
+                "next_action": "use this target_id",
+            }
+        ],
+    )
+    canonical = tmp_path / "runs" / "casp17_historical_benchmark_predictions_current" / "T9001_prediction.pdb"
+    canonical.parent.mkdir(parents=True)
+    canonical.write_text("HEADER TEST\nATOM      1  CA  ALA A   1       0.0   0.0   0.0\nEND\n", encoding="utf-8")
+    core = folder / "evidence_dropzone" / "files" / "core"
+    dropzone = tmp_path / "dropzone.json"
+    _write_json(
+        dropzone,
+        {
+            "summary": {"dropzone_status": "open_actions", "dropzone_count": 1},
+            "rows": [
+                {
+                    "dropzone_id": "priority_001_REQUIRED_MONOMER_001",
+                    "action_rank": 1,
+                    "operator_priority": 1,
+                    "row_rank": 1,
+                    "benchmark_id": "hist_REQUIRED_MONOMER_001",
+                    "target_id": "REQUIRED_MONOMER_001",
+                    "scope": "monomer",
+                    "evidence_class": "core_file",
+                    "template_column": "prediction_pdb",
+                    "blocker": "prediction_pdb_placeholder",
+                    "source_row_fill_csv": str(row_fill),
+                    "dropzone_folder": str(folder / "evidence_dropzone"),
+                    "dropzone_class_folder": str(core),
+                    "drop_path": str(core / "<HISTORICAL_TARGET_ID>_prediction.pdb"),
+                }
+            ],
+        },
+    )
+    args = mod.parse_args(["--dropzone-json", str(dropzone)])
+
+    payload = mod.build_payload(args)
+
+    assert payload["summary"]["patch_candidate_count"] == 1
+    assert payload["rows"][0]["intake_status"] == "patch_candidate"
+    assert payload["rows"][0]["recommended_value"] == "runs/casp17_historical_benchmark_predictions_current/T9001_prediction.pdb"
+    assert "priority_001_REQUIRED_MONOMER_001" not in payload["rows"][0]["recommended_value"]

@@ -65,7 +65,7 @@
     "claim_boundary": "Local competitive-floor evidence round only. It runs the local evidence import, value-ledger audit, evidence intake, row_fill patch gate, and row_fill apply-plan in order. It does not choose targets, clear no-leak provenance, fetch native structures, score native accuracy, run predictors, submit to CASP, or mutate row_fill.csv unless --apply-row-fill is explicitly provided.",
     "dropzone_json": "casp17/casp17_competitive_floor_evidence_dropzone_current.json",
     "first_next_action": "enter proposed_value, evidence_ref, and operator_clearance in the import CSV",
-    "generated_at_local": "2026-05-25T23:17:38+09:00",
+    "generated_at_local": "2026-05-25T23:23:04+09:00",
     "import_applied_count": 0,
     "import_awaiting_file_count": 180,
     "import_awaiting_value_count": 270,

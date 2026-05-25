@@ -1,6 +1,6 @@
 # CASP17 Competitive-Floor Evidence Import
 
-- generated: `2026-05-25T23:17:38+09:00`
+- generated: `2026-05-25T23:23:03+09:00`
 - import_status: `awaiting_import`
 - apply_mode: `dry_run`
 - import_csv: `casp17/casp17_competitive_floor_evidence_import_current.csv`
@@ -470,4 +470,4 @@
 
 ## Claim Boundary
 
-Local competitive-floor evidence import only. It creates and audits a single import CSV for cleared historical benchmark evidence, and optional --apply copies local PDB files into dropzones or updates FIELD_VALUE_LEDGER.csv rows. It does not choose targets, clear no-leak provenance, fetch native structures, score native accuracy, run predictors, mutate row_fill.csv, or submit to CASP.
+Local competitive-floor evidence import only. It creates and audits a single import CSV for cleared historical benchmark evidence, and optional --apply copies local PDB files into canonical historical row-fill destinations or updates FIELD_VALUE_LEDGER.csv rows. It does not choose targets, clear no-leak provenance, fetch native structures, score native accuracy, run predictors, mutate row_fill.csv, or submit to CASP.

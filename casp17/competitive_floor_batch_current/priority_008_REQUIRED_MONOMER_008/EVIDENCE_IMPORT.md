@@ -40,4 +40,4 @@
 
 ## Claim Boundary
 
-Local competitive-floor evidence import only. It creates and audits a single import CSV for cleared historical benchmark evidence, and optional --apply copies local PDB files into dropzones or updates FIELD_VALUE_LEDGER.csv rows. It does not choose targets, clear no-leak provenance, fetch native structures, score native accuracy, run predictors, mutate row_fill.csv, or submit to CASP.
+Local competitive-floor evidence import only. It creates and audits a single import CSV for cleared historical benchmark evidence, and optional --apply copies local PDB files into canonical historical row-fill destinations or updates FIELD_VALUE_LEDGER.csv rows. It does not choose targets, clear no-leak provenance, fetch native structures, score native accuracy, run predictors, mutate row_fill.csv, or submit to CASP.

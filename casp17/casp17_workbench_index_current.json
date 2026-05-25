@@ -295,7 +295,7 @@
     "first_operator_fill_action": "Replace placeholder target/benchmark IDs with a cleared historical non-CASP17 protein target.",
     "first_operator_input_action_id": "historical_benchmark_inputs",
     "first_operator_input_blockers": "ready_total_below_threshold,ready_monomer_below_threshold,ready_complex_below_threshold",
-    "generated_at_local": "2026-05-25T23:17:38+09:00",
+    "generated_at_local": "2026-05-25T23:23:04+09:00",
     "missing_file_count": 480,
     "next_unclosed_level": "competitive_floor",
     "packet_type": "casp17_workbench_index",

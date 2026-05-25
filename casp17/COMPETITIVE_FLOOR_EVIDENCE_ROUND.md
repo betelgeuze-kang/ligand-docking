@@ -1,6 +1,6 @@
 # CASP17 Competitive-Floor Evidence Round
 
-- generated: `2026-05-25T23:17:38+09:00`
+- generated: `2026-05-25T23:23:04+09:00`
 - round_status: `awaiting_import`
 - apply_import/apply_row_fill: `False/False`
 - import ready/applied/awaiting files/awaiting values: `0/0/180/270`

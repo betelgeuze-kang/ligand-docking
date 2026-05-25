@@ -7,6 +7,7 @@ import datetime as dt
 import hashlib
 import json
 import math
+import re
 import shutil
 from collections import defaultdict
 from pathlib import Path
@@ -58,7 +59,8 @@ IMPORT_COLUMNS = [
 ]
 CLAIM_BOUNDARY = (
     "Local competitive-floor evidence import only. It creates and audits a single import CSV for cleared "
-    "historical benchmark evidence, and optional --apply copies local PDB files into dropzones or updates "
+    "historical benchmark evidence, and optional --apply copies local PDB files into canonical historical "
+    "row-fill destinations or updates "
     "FIELD_VALUE_LEDGER.csv rows. It does not choose targets, clear no-leak provenance, fetch native structures, "
     "score native accuracy, run predictors, mutate row_fill.csv, or submit to CASP."
 )
@@ -273,6 +275,44 @@ def _is_current_target_source(path: Path) -> bool:
     return False
 
 
+def _is_repo_local_action(action: dict[str, Any]) -> bool:
+    row_fill = _text(action.get("source_row_fill_csv"))
+    if not row_fill:
+        return False
+    try:
+        _resolve(row_fill).resolve().relative_to(ROOT.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def _target_id_from_file_name(name: str) -> str:
+    stem = Path(name).stem
+    for suffix in ("_prediction", "_native", "_model", "TS"):
+        if stem.endswith(suffix):
+            stem = stem[: -len(suffix)]
+    match = re.search(r"([A-Za-z][0-9]{4})", stem)
+    return match.group(1).upper() if match else ""
+
+
+def _canonical_file_destination(action: dict[str, Any], import_row: dict[str, str]) -> Path | None:
+    if not _is_repo_local_action(action):
+        return None
+    column = _text(action.get("template_column"))
+    source_name = _text(import_row.get("drop_filename")) or Path(_text(import_row.get("source_path"))).name
+    target_id = _target_id_from_file_name(source_name)
+    if not target_id:
+        return None
+    if column == "prediction_pdb":
+        return ROOT / "runs" / "casp17_historical_benchmark_predictions_current" / f"{target_id}_prediction.pdb"
+    if column == "native_pdb":
+        return ROOT / "runs" / "casp17_historical_benchmark_natives_current" / f"{target_id}_native.pdb"
+    if column.endswith("_prediction_pdb"):
+        layer = column.removesuffix("_prediction_pdb")
+        return ROOT / "runs" / "casp17_historical_ablation_predictions_current" / layer / f"{target_id}TS.pdb"
+    return None
+
+
 def _import_kind(action: dict[str, Any]) -> str:
     return "file" if _text(action.get("evidence_class")) in FILE_CLASSES else "value"
 
@@ -289,6 +329,9 @@ def _import_rows_by_key(import_csv: str | Path) -> dict[tuple[str, str], dict[st
 
 
 def _target_file(action: dict[str, Any], import_row: dict[str, str]) -> Path:
+    canonical = _canonical_file_destination(action, import_row)
+    if canonical is not None:
+        return canonical
     class_folder = _resolve(_text(action.get("dropzone_class_folder")))
     drop_filename = _text(import_row.get("drop_filename"))
     if drop_filename:

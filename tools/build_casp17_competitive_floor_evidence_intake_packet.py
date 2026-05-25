@@ -5,6 +5,7 @@ import argparse
 import csv
 import datetime as dt
 import json
+import re
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -130,6 +131,9 @@ def _candidate_files(action: dict[str, Any]) -> list[str]:
     expected = _text(action.get("drop_path"))
     if expected and "<HISTORICAL_TARGET_ID>" not in expected and _resolve(expected).is_file():
         return [_artifact(expected)]
+    canonical = _canonical_candidate_file(action)
+    if canonical is not None and canonical.is_file():
+        return [_artifact(canonical)]
     class_folder = _resolve(_text(action.get("dropzone_class_folder")))
     if not class_folder.is_dir():
         return []
@@ -150,6 +154,48 @@ def _candidate_files(action: dict[str, Any]) -> list[str]:
         if matches:
             break
     return [_artifact(path) for path in matches]
+
+
+def _canonical_candidate_file(action: dict[str, Any]) -> Path | None:
+    target_id = _target_id_for_action(action)
+    if not target_id:
+        return None
+    column = _text(action.get("template_column"))
+    if column == "prediction_pdb":
+        return ROOT / "runs" / "casp17_historical_benchmark_predictions_current" / f"{target_id}_prediction.pdb"
+    if column == "native_pdb":
+        return ROOT / "runs" / "casp17_historical_benchmark_natives_current" / f"{target_id}_native.pdb"
+    if column.endswith("_prediction_pdb"):
+        layer = column.removesuffix("_prediction_pdb")
+        return ROOT / "runs" / "casp17_historical_ablation_predictions_current" / layer / f"{target_id}TS.pdb"
+    return None
+
+
+def _target_id_for_action(action: dict[str, Any]) -> str:
+    target_id = _ledger_target_id(action)
+    if target_id:
+        return target_id
+    target_text = _text(action.get("target_id"))
+    if target_text and not _contains_placeholder(target_text):
+        return target_text
+    drop_path = _text(action.get("drop_path"))
+    match = re.search(r"([A-Za-z][0-9]{4})", drop_path)
+    return match.group(1).upper() if match else ""
+
+
+def _ledger_target_id(action: dict[str, Any]) -> str:
+    rows, blockers = _read_csv(_ledger_path(action))
+    if blockers:
+        return ""
+    for row in rows:
+        if _text(row.get("template_column")) != "target_id":
+            continue
+        proposed = _text(row.get("proposed_value"))
+        clearance = _text(row.get("operator_clearance")).lower()
+        evidence_ref = _text(row.get("evidence_ref"))
+        if proposed and not _contains_placeholder(proposed) and clearance in LEDGER_CLEAR_VALUES and evidence_ref:
+            return proposed
+    return ""
 
 
 def _row_fill_file_present(row_fill_value: str) -> bool:

@@ -2,7 +2,7 @@
 
 This is the local navigation surface for the current CASP17 internal-physics lane.
 
-- generated: `2026-05-25T23:17:38+09:00`
+- generated: `2026-05-25T23:23:04+09:00`
 - workbench_status: `ready_for_operator_fill`
 - target model folders: `16/16`
 - target object folders: `48`
