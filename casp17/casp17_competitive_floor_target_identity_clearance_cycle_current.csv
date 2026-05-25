@@ -1,0 +1,6 @@
+stage,status,path,ready_count,awaiting_count,blocked_count,total_count,next_action
+manifest_sync,awaiting_provenance,casp17/casp17_competitive_floor_target_identity_clearance_manifest_sync_current.json,0,3,0,3,complete the no-leak provenance template before syncing the manifest stub
+workorder_audit,blocked,casp17/casp17_competitive_floor_target_identity_clearance_workorder_audit_current.json,0,0,3,3,place the cleared native PDB in the per-target native dropzone
+promotion_plan,blocked_by_audit,casp17/casp17_competitive_floor_target_identity_clearance_promotion_plan_current.json,0,0,3,3,clear the native/provenance workorder audit before promotion
+intake_staging,waiting_on_promoted_manifest,casp17/casp17_competitive_floor_target_identity_clearance_intake_staging_plan_current.json,0,0,0,0,wait for promoted clearance manifest rows
+workbench,ready_for_operator_fill,casp17/casp17_workbench_index_current.json,16,0,0,16,Replace placeholder target/benchmark IDs with a cleared historical non-CASP17 protein target.

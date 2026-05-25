@@ -1,0 +1,80 @@
+{
+  "rows": [
+    {
+      "awaiting_count": 3,
+      "blocked_count": 0,
+      "next_action": "complete the no-leak provenance template before syncing the manifest stub",
+      "path": "casp17/casp17_competitive_floor_target_identity_clearance_manifest_sync_current.json",
+      "ready_count": 0,
+      "stage": "manifest_sync",
+      "status": "awaiting_provenance",
+      "total_count": 3
+    },
+    {
+      "awaiting_count": 0,
+      "blocked_count": 3,
+      "next_action": "place the cleared native PDB in the per-target native dropzone",
+      "path": "casp17/casp17_competitive_floor_target_identity_clearance_workorder_audit_current.json",
+      "ready_count": 0,
+      "stage": "workorder_audit",
+      "status": "blocked",
+      "total_count": 3
+    },
+    {
+      "awaiting_count": 0,
+      "blocked_count": 3,
+      "next_action": "clear the native/provenance workorder audit before promotion",
+      "path": "casp17/casp17_competitive_floor_target_identity_clearance_promotion_plan_current.json",
+      "ready_count": 0,
+      "stage": "promotion_plan",
+      "status": "blocked_by_audit",
+      "total_count": 3
+    },
+    {
+      "awaiting_count": 0,
+      "blocked_count": 0,
+      "next_action": "wait for promoted clearance manifest rows",
+      "path": "casp17/casp17_competitive_floor_target_identity_clearance_intake_staging_plan_current.json",
+      "ready_count": 0,
+      "stage": "intake_staging",
+      "status": "waiting_on_promoted_manifest",
+      "total_count": 0
+    },
+    {
+      "awaiting_count": 0,
+      "blocked_count": 0,
+      "next_action": "Replace placeholder target/benchmark IDs with a cleared historical non-CASP17 protein target.",
+      "path": "casp17/casp17_workbench_index_current.json",
+      "ready_count": 16,
+      "stage": "workbench",
+      "status": "ready_for_operator_fill",
+      "total_count": 16
+    }
+  ],
+  "summary": {
+    "apply_manifest_sync": false,
+    "audit_blocked_count": 3,
+    "audit_pass_count": 0,
+    "audit_status": "blocked",
+    "blocked_stage_count": 4,
+    "claim_boundary": "Local CASP17 competitive-floor target identity clearance cycle only. It chains manifest-stub sync, workorder audit, audited manifest promotion, clearance-to-intake staging, and workbench refresh. It does not rebuild workorders, fetch native structures, clear no-leak provenance, choose targets, score native accuracy, run predictors, mutate live identity intake files, or submit to CASP. Manifest stubs are modified only when --apply-manifest-sync is explicitly provided.",
+    "clearance_cycle_status": "awaiting_provenance",
+    "first_next_action": "complete the no-leak provenance template before syncing the manifest stub",
+    "generated_at_local": "2026-05-26T01:58:49+09:00",
+    "intake_staging_status": "waiting_on_promoted_manifest",
+    "manifest_sync_applied_field_count": 0,
+    "manifest_sync_awaiting_provenance_count": 3,
+    "manifest_sync_ready_to_sync_count": 0,
+    "manifest_sync_status": "awaiting_provenance",
+    "manifest_sync_synced_count": 0,
+    "packet_type": "casp17_competitive_floor_target_identity_clearance_cycle",
+    "promoted_manifest_count": 0,
+    "promotion_blocked_count": 3,
+    "promotion_status": "blocked_by_audit",
+    "ready_stage_count": 1,
+    "stage_count": 5,
+    "staged_identity_count": 0,
+    "staging_blocked_count": 0,
+    "workbench_status": "ready_for_operator_fill"
+  }
+}
