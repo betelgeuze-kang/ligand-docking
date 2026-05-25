@@ -31,6 +31,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     competitive_identity_candidate_json = tmp_path / "competitive_identity_candidate.json"
     competitive_identity_source_repair_json = tmp_path / "competitive_identity_source_repair.json"
     competitive_target_identity_discovery_json = tmp_path / "competitive_target_identity_discovery.json"
+    competitive_target_identity_clearance_json = tmp_path / "competitive_target_identity_clearance.json"
     competitive_identity_cycle_json = tmp_path / "competitive_identity_cycle.json"
     competitive_file_source_plan_json = tmp_path / "competitive_file_source_plan.json"
     competitive_value_entry_plan_json = tmp_path / "competitive_value_entry_plan.json"
@@ -372,6 +373,24 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        competitive_target_identity_clearance_json,
+        {
+            "summary": {
+                "clearance_queue_status": "awaiting_target_identity_clearance",
+                "review_target_count": 3,
+                "prediction_present_count": 3,
+                "ts_prediction_present_count": 3,
+                "native_present_count": 0,
+                "provenance_cleared_count": 0,
+                "ready_for_manifest_scaffold_count": 0,
+                "awaiting_prediction_or_ts_count": 0,
+                "awaiting_native_or_clearance_count": 3,
+                "awaiting_no_leak_clearance_count": 0,
+                "first_open_next_action": "provide a cleared native PDB and complete no-leak/operator provenance review",
+            }
+        },
+    )
+    _write_json(
         competitive_identity_cycle_json,
         {
             "summary": {
@@ -603,6 +622,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(competitive_identity_source_repair_json),
             "--competitive-target-identity-discovery-json",
             str(competitive_target_identity_discovery_json),
+            "--competitive-target-identity-clearance-queue-json",
+            str(competitive_target_identity_clearance_json),
             "--competitive-identity-cycle-json",
             str(competitive_identity_cycle_json),
             "--competitive-file-source-plan-json",
@@ -737,6 +758,16 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["competitive_target_identity_unknown_local_count"] == 0
     assert payload["summary"]["competitive_target_identity_synthetic_count"] == 0
     assert payload["summary"]["competitive_target_identity_ready_for_intake_count"] == 0
+    assert payload["summary"]["competitive_target_identity_clearance_status"] == "awaiting_target_identity_clearance"
+    assert payload["summary"]["competitive_target_identity_clearance_review_count"] == 3
+    assert payload["summary"]["competitive_target_identity_clearance_prediction_count"] == 3
+    assert payload["summary"]["competitive_target_identity_clearance_ts_prediction_count"] == 3
+    assert payload["summary"]["competitive_target_identity_clearance_native_count"] == 0
+    assert payload["summary"]["competitive_target_identity_clearance_provenance_count"] == 0
+    assert payload["summary"]["competitive_target_identity_clearance_ready_count"] == 0
+    assert payload["summary"]["competitive_target_identity_clearance_awaiting_prediction_count"] == 0
+    assert payload["summary"]["competitive_target_identity_clearance_awaiting_native_count"] == 3
+    assert payload["summary"]["competitive_target_identity_clearance_awaiting_no_leak_count"] == 0
     assert payload["summary"]["competitive_identity_cycle_status"] == "awaiting_intake"
     assert payload["summary"]["competitive_identity_cycle_stage_count"] == 7
     assert payload["summary"]["competitive_identity_cycle_ready_stage_count"] == 1
@@ -829,6 +860,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["competitive_floor_identity_candidate_packet"]["status"] == "awaiting_candidate_sources"
     assert by_id["competitive_floor_identity_source_repair_plan"]["status"] == "awaiting_target_identity"
     assert by_id["competitive_floor_target_identity_discovery"]["status"] == "review_required"
+    assert by_id["competitive_floor_target_identity_clearance_queue"]["status"] == "awaiting_target_identity_clearance"
     assert by_id["competitive_floor_identity_cycle"]["status"] == "awaiting_intake"
     assert by_id["competitive_floor_file_source_plan"]["status"] == "waiting_on_identity"
     assert by_id["competitive_floor_value_entry_plan"]["status"] == "waiting_on_identity"
@@ -879,6 +911,8 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_competitive_identity_source_repair.json"),
             "--competitive-target-identity-discovery-json",
             str(tmp_path / "missing_competitive_target_identity_discovery.json"),
+            "--competitive-target-identity-clearance-queue-json",
+            str(tmp_path / "missing_competitive_target_identity_clearance.json"),
             "--competitive-identity-cycle-json",
             str(tmp_path / "missing_competitive_identity_cycle.json"),
             "--competitive-operator-template-json",
