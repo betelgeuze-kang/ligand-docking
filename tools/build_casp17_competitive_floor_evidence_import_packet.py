@@ -6,6 +6,7 @@ import csv
 import datetime as dt
 import hashlib
 import json
+import math
 import shutil
 from collections import defaultdict
 from pathlib import Path
@@ -22,6 +23,8 @@ DEFAULT_OUT_MD = "casp17/COMPETITIVE_FLOOR_EVIDENCE_IMPORT.md"
 
 FILE_CLASSES = {"core_file", "ablation_file"}
 CLEAR_VALUES = {"ready_for_row_fill", "cleared", "no_leak", "internal_no_leak"}
+TRUE_VALUES = {"1", "true", "yes", "y"}
+FALSE_VALUES = {"0", "false", "no", "n"}
 LEDGER_COLUMNS = [
     "template_column",
     "evidence_class",
@@ -48,6 +51,7 @@ IMPORT_COLUMNS = [
     "source_path",
     "drop_filename",
     "proposed_value",
+    "expected_value_rule",
     "evidence_ref",
     "operator_clearance",
     "operator_note",
@@ -147,6 +151,82 @@ def _contains_placeholder(value: Any) -> bool:
     text = _text(value)
     upper = text.upper()
     return not text or upper.startswith("REQUIRED") or "REQUIRED_" in upper or "YYYY-MM-DD" in upper
+
+
+def _date_ok(value: Any) -> bool:
+    text = _text(value)
+    if _contains_placeholder(text):
+        return False
+    try:
+        dt.date.fromisoformat(text[:10])
+    except ValueError:
+        return False
+    return True
+
+
+def _numeric_ok(value: Any) -> bool:
+    try:
+        parsed = float(str(value).strip())
+    except (TypeError, ValueError):
+        return False
+    return math.isfinite(parsed)
+
+
+def _rank_ok(value: Any) -> bool:
+    try:
+        parsed = int(str(value).strip())
+    except (TypeError, ValueError):
+        return False
+    return 1 <= parsed <= 5
+
+
+def _expected_value_rule(column: str) -> str:
+    if column in {"benchmark_id", "target_id"}:
+        return "cleared historical non-current identifier"
+    if column in {"leakage_clearance", "operator_clearance"}:
+        return "one of no_leak, cleared, internal_no_leak, or ready_for_row_fill"
+    if column == "prediction_method":
+        return "non-placeholder internal method identifier"
+    if column in {"prediction_created_at", "native_release_date"}:
+        return "ISO date YYYY-MM-DD"
+    if column == "prediction_generated_before_native_release":
+        return "true"
+    if column in {
+        "public_template_or_native_used_for_prediction",
+        "other_team_model_used",
+        "post_release_information_used",
+        "current_casp17_target",
+    }:
+        return "false"
+    if column in {"selected_model_rank", "best_model_rank"}:
+        return "integer 1..5"
+    if column in {"selected_native_metric", "best_native_metric", "selected_score", "best_score"}:
+        return "finite numeric value"
+    return "non-placeholder cleared value"
+
+
+def _value_blocker(column: str, proposed: str) -> str:
+    lower = proposed.lower()
+    if column in {"benchmark_id", "target_id", "prediction_method"}:
+        return "" if not _contains_placeholder(proposed) else f"{column}_required"
+    if column in {"leakage_clearance", "operator_clearance"}:
+        return "" if lower in CLEAR_VALUES else f"{column}_requires_no_leak_clearance"
+    if column in {"prediction_created_at", "native_release_date"}:
+        return "" if _date_ok(proposed) else f"{column}_requires_iso_date"
+    if column == "prediction_generated_before_native_release":
+        return "" if lower in TRUE_VALUES else "prediction_generated_before_native_release_must_be_true"
+    if column in {
+        "public_template_or_native_used_for_prediction",
+        "other_team_model_used",
+        "post_release_information_used",
+        "current_casp17_target",
+    }:
+        return "" if lower in FALSE_VALUES else f"{column}_must_be_false"
+    if column in {"selected_model_rank", "best_model_rank"}:
+        return "" if _rank_ok(proposed) else f"{column}_requires_rank_1_to_5"
+    if column in {"selected_native_metric", "best_native_metric", "selected_score", "best_score"}:
+        return "" if _numeric_ok(proposed) else f"{column}_requires_numeric_value"
+    return "" if not _contains_placeholder(proposed) else f"{column}_required"
 
 
 def _key(row: dict[str, Any]) -> tuple[str, str]:
@@ -300,6 +380,9 @@ def _status_for_value(action: dict[str, Any], import_row: dict[str, str]) -> tup
     proposed = _text(import_row.get("proposed_value"))
     if _contains_placeholder(proposed):
         return "awaiting_import_value", "proposed_value_required"
+    value_blocker = _value_blocker(_text(action.get("template_column")), proposed)
+    if value_blocker:
+        return "blocked_invalid_import_value", value_blocker
     clearance = _text(import_row.get("operator_clearance")).lower()
     if clearance not in CLEAR_VALUES:
         return "awaiting_clearance", "operator_clearance_required"
@@ -340,6 +423,7 @@ def _audit_row(action: dict[str, Any], import_row: dict[str, str], *, overwrite:
         "source_path": _text(import_row.get("source_path")),
         "drop_filename": _text(import_row.get("drop_filename")),
         "proposed_value": _text(import_row.get("proposed_value")),
+        "expected_value_rule": _expected_value_rule(_text(action.get("template_column"))),
         "evidence_ref": _text(import_row.get("evidence_ref")),
         "operator_clearance": _text(import_row.get("operator_clearance")),
         "destination_path": destination,
@@ -367,6 +451,8 @@ def _next_action(status: str, kind: str) -> str:
         return "set operator_clearance to no_leak, cleared, internal_no_leak, or ready_for_row_fill"
     if status == "awaiting_evidence_ref":
         return "add a local evidence_ref that supports this imported value"
+    if status == "blocked_invalid_import_value":
+        return "correct proposed_value to match the expected field rule"
     if status.startswith("blocked"):
         return "resolve the import blocker before applying"
     return "review this import row"
@@ -488,6 +574,7 @@ def _template_row(action: dict[str, Any], existing: dict[str, str]) -> dict[str,
         "source_path": _text(existing.get("source_path")),
         "drop_filename": _text(existing.get("drop_filename")),
         "proposed_value": _text(existing.get("proposed_value")),
+        "expected_value_rule": _expected_value_rule(_text(action.get("template_column"))),
         "evidence_ref": _text(existing.get("evidence_ref")),
         "operator_clearance": _text(existing.get("operator_clearance")),
         "operator_note": _text(existing.get("operator_note")) or _template_next_action(kind),

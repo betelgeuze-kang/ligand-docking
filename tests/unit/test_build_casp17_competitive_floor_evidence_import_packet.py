@@ -213,3 +213,73 @@ def test_evidence_import_apply_copies_files_and_updates_ledgers(tmp_path: Path) 
     assert ledger_rows[0]["evidence_ref"] == "local/no_leak/T9001.md"
     assert ledger_rows[0]["operator_clearance"] == "ready_for_row_fill"
     assert ledger_rows[0]["ledger_status"] == "ready_for_row_fill"
+
+
+def test_evidence_import_blocks_invalid_column_typed_values(tmp_path: Path) -> None:
+    folder = tmp_path / "priority_001_REQUIRED_MONOMER_001"
+    row_fill = folder / "row_fill.csv"
+    _write_csv(row_fill, [{"selected_model_rank": "REQUIRED_1_TO_5"}])
+    _write_csv(
+        folder / "FIELD_VALUE_LEDGER.csv",
+        [
+            {
+                "template_column": "selected_model_rank",
+                "evidence_class": "calibration",
+                "current_value": "REQUIRED_1_TO_5",
+                "proposed_value": "",
+                "evidence_ref": "",
+                "operator_clearance": "REQUIRED_OPERATOR_CLEARANCE",
+                "ledger_status": "awaiting_value",
+                "next_action": "enter rank",
+            }
+        ],
+    )
+    dropzone_json = tmp_path / "dropzone.json"
+    _write_json(
+        dropzone_json,
+        {
+            "summary": {"dropzone_status": "open_actions", "dropzone_count": 1},
+            "rows": [
+                {
+                    "dropzone_id": "priority_001_REQUIRED_MONOMER_001",
+                    "action_rank": 1,
+                    "operator_priority": 1,
+                    "row_rank": 1,
+                    "benchmark_id": "hist_REQUIRED_MONOMER_001",
+                    "target_id": "REQUIRED_MONOMER_001",
+                    "scope": "monomer",
+                    "evidence_class": "calibration",
+                    "template_column": "selected_model_rank",
+                    "source_row_fill_csv": str(row_fill),
+                    "dropzone_folder": str(folder / "evidence_dropzone"),
+                    "dropzone_class_folder": str(folder / "evidence_dropzone" / "calibration"),
+                    "drop_path": "",
+                }
+            ],
+        },
+    )
+    import_csv = tmp_path / "import.csv"
+    _write_csv(
+        import_csv,
+        [
+            {
+                "dropzone_id": "priority_001_REQUIRED_MONOMER_001",
+                "template_column": "selected_model_rank",
+                "proposed_value": "6",
+                "evidence_ref": "local/calibration/T9001.json",
+                "operator_clearance": "ready_for_row_fill",
+            }
+        ],
+    )
+    args = mod.parse_args(["--dropzone-json", str(dropzone_json), "--import-csv", str(import_csv), "--apply"])
+
+    payload = mod.build_payload(args)
+
+    assert payload["summary"]["import_status"] == "blocked"
+    assert payload["summary"]["blocked_count"] == 1
+    assert payload["summary"]["applied_count"] == 0
+    assert payload["rows"][0]["import_status"] == "blocked_invalid_import_value"
+    assert payload["rows"][0]["blocker"] == "selected_model_rank_requires_rank_1_to_5"
+    assert payload["rows"][0]["expected_value_rule"] == "integer 1..5"
+    ledger_rows = _read_csv(folder / "FIELD_VALUE_LEDGER.csv")
+    assert ledger_rows[0]["proposed_value"] == ""

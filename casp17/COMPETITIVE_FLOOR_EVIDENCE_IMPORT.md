@@ -1,9 +1,9 @@
 # CASP17 Competitive-Floor Evidence Import
 
-- generated: `2026-05-25T23:05:32+09:00`
+- generated: `2026-05-25T23:08:58+09:00`
 - import_status: `ready_for_intake`
 - apply_mode: `applied`
-- import_csv: `/tmp/pytest-of-betelgeuze/pytest-70/test_evidence_import_apply_cop0/import.csv`
+- import_csv: `/tmp/pytest-of-betelgeuze/pytest-74/test_evidence_import_apply_cop0/import.csv`
 - rows/actions: `1/2`
 - file/value actions: `1/1`
 - ready copy/update/apply: `0/0/0`
@@ -17,8 +17,8 @@
 
 | rank | dropzone | kind | class | column | status | source/proposed | destination | blocker |
 | ---: | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | `priority_001_REQUIRED_MONOMER_001` | `file` | `core_file` | `prediction_pdb` | `copied_to_dropzone` | `/tmp/pytest-of-betelgeuze/pytest-70/test_evidence_import_apply_cop0/T9001_prediction.pdb` | `/tmp/pytest-of-betelgeuze/pytest-70/test_evidence_import_apply_cop0/priority_001_REQUIRED_MONOMER_001/evidence_dropzone/files/core/T9001_prediction.pdb` | `-` |
-| 2 | `priority_001_REQUIRED_MONOMER_001` | `value` | `target_identity` | `target_id` | `ledger_updated` | `T9001` | `/tmp/pytest-of-betelgeuze/pytest-70/test_evidence_import_apply_cop0/priority_001_REQUIRED_MONOMER_001/FIELD_VALUE_LEDGER.csv` | `-` |
+| 1 | `priority_001_REQUIRED_MONOMER_001` | `file` | `core_file` | `prediction_pdb` | `copied_to_dropzone` | `/tmp/pytest-of-betelgeuze/pytest-74/test_evidence_import_apply_cop0/T9001_prediction.pdb` | `/tmp/pytest-of-betelgeuze/pytest-74/test_evidence_import_apply_cop0/priority_001_REQUIRED_MONOMER_001/evidence_dropzone/files/core/T9001_prediction.pdb` | `-` |
+| 2 | `priority_001_REQUIRED_MONOMER_001` | `value` | `target_identity` | `target_id` | `ledger_updated` | `T9001` | `/tmp/pytest-of-betelgeuze/pytest-74/test_evidence_import_apply_cop0/priority_001_REQUIRED_MONOMER_001/FIELD_VALUE_LEDGER.csv` | `-` |
 
 ## Claim Boundary
 
