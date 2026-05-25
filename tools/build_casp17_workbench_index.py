@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_TARGET_MODEL_FOLDERS_JSON = "casp17/casp17_target_model_folders_current.json"
 DEFAULT_TARGET_OBJECT_FOLDER_AUDIT_JSON = "casp17/casp17_target_object_folder_audit_current.json"
 DEFAULT_TARGET_OBJECT_VIEWER_SMOKE_JSON = "casp17/casp17_target_object_viewer_smoke_current.json"
+DEFAULT_TARGET_OBJECT_MODEL_REVIEW_JSON = "casp17/casp17_target_object_model_review_current.json"
 DEFAULT_WIN_GAP_CLOSURE_JSON = "runs/casp17_win_gap_closure_packet_current.json"
 DEFAULT_INPUT_SCAFFOLD_JSON = "runs/casp17_win_tier_benchmark_input_scaffold_current.json"
 DEFAULT_INPUT_INVENTORY_JSON = "runs/casp17_win_tier_benchmark_input_inventory_current.json"
@@ -188,6 +189,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     target_payload = _read_json(args.target_model_folders_json)
     target_object_folder_audit_payload = _read_json(args.target_object_folder_audit_json)
     target_object_viewer_smoke_payload = _read_json(args.target_object_viewer_smoke_json)
+    target_object_model_review_payload = _read_json(args.target_object_model_review_json)
     closure_payload = _read_json(args.win_gap_closure_json)
     scaffold_payload = _read_json(args.input_scaffold_json)
     inventory_payload = _read_json(args.input_inventory_json)
@@ -250,6 +252,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     target_summary = _summary(target_payload)
     target_object_folder_audit_summary = _summary(target_object_folder_audit_payload)
     target_object_viewer_smoke_summary = _summary(target_object_viewer_smoke_payload)
+    target_object_model_review_summary = _summary(target_object_model_review_payload)
     closure_summary = _summary(closure_payload)
     scaffold_summary = _summary(scaffold_payload)
     inventory_summary = _summary(inventory_payload)
@@ -411,6 +414,28 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             total_count=_int(target_object_viewer_smoke_summary.get("object_row_count")),
             next_action="Keep this pass before relying on per-object viewer artifacts for review.",
             blockers=_text(target_object_viewer_smoke_summary.get("first_blocked_blockers")),
+        ),
+        _artifact_row(
+            "target_object_model_review",
+            "Per-object molecular geometry review packet",
+            _text(target_object_model_review_summary.get("object_model_review_status")),
+            args.target_object_model_review_json,
+            ready_count=_int(target_object_model_review_summary.get("pass_count")),
+            blocked_count=_int(target_object_model_review_summary.get("blocked_count")),
+            total_count=_int(target_object_model_review_summary.get("object_count")),
+            next_action="Open object review markdown files for per-chain molecular geometry inspection.",
+            blockers=(
+                "review_md:"
+                + str(target_object_model_review_summary.get("review_md_count", ""))
+                + ",viewer_local:"
+                + str(target_object_model_review_summary.get("viewer_local_pass_count", ""))
+                + ",protein_atoms:"
+                + str(target_object_model_review_summary.get("protein_atom_count", ""))
+                + ",radius:"
+                + str(target_object_model_review_summary.get("min_radius_of_gyration", ""))
+                + "-"
+                + str(target_object_model_review_summary.get("max_radius_of_gyration", ""))
+            ),
         ),
         _artifact_row(
             "win_gap_closure",
@@ -1269,6 +1294,23 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "target_object_viewer_smoke_status": _text(target_object_viewer_smoke_summary.get("smoke_status")),
         "target_object_viewer_smoke_pass_count": _int(target_object_viewer_smoke_summary.get("pass_count")),
         "target_object_viewer_smoke_total": _int(target_object_viewer_smoke_summary.get("object_row_count")),
+        "target_object_model_review_status": _text(
+            target_object_model_review_summary.get("object_model_review_status")
+        ),
+        "target_object_model_review_pass_count": _int(target_object_model_review_summary.get("pass_count")),
+        "target_object_model_review_blocked_count": _int(target_object_model_review_summary.get("blocked_count")),
+        "target_object_model_review_total": _int(target_object_model_review_summary.get("object_count")),
+        "target_object_model_review_md_count": _int(target_object_model_review_summary.get("review_md_count")),
+        "target_object_model_review_viewer_local_pass_count": _int(
+            target_object_model_review_summary.get("viewer_local_pass_count")
+        ),
+        "target_object_model_review_protein_atom_count": _int(
+            target_object_model_review_summary.get("protein_atom_count")
+        ),
+        "target_object_model_review_ca_atom_count": _int(target_object_model_review_summary.get("ca_atom_count")),
+        "target_object_model_review_residue_count": _int(target_object_model_review_summary.get("residue_count")),
+        "target_object_model_review_min_radius": target_object_model_review_summary.get("min_radius_of_gyration", 0),
+        "target_object_model_review_max_radius": target_object_model_review_summary.get("max_radius_of_gyration", 0),
         "benchmark_rows_ready_count": benchmark_rows_ready,
         "benchmark_rows_total": benchmark_rows_total,
         "competitive_batch_status": _text(competitive_batch_summary.get("batch_status")),
@@ -2079,6 +2121,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- target object viewers: `{summary['target_model_object_viewer_count']}`",
         f"- target object folder audit: `{summary['target_object_folder_audit_status'] or '-'}` rows `{summary['target_object_folder_audit_pass_count']}/{summary['target_object_folder_audit_total']}` chain isolation `{summary['target_object_folder_chain_isolation_pass_count']}/{summary['target_object_folder_audit_total']}` protein atoms/coordinate-valid `{summary['target_object_folder_protein_atom_pass_count']}/{summary['target_object_folder_coordinate_valid_pass_count']}/{summary['target_object_folder_audit_total']}` total protein atoms `{summary['target_object_folder_total_protein_atom_count']}`",
         f"- target object viewer smoke: `{summary['target_object_viewer_smoke_status'] or '-'}` rows `{summary['target_object_viewer_smoke_pass_count']}/{summary['target_object_viewer_smoke_total']}`",
+        f"- target object model review: `{summary['target_object_model_review_status'] or '-'}` pass/blocked/total `{summary['target_object_model_review_pass_count']}/{summary['target_object_model_review_blocked_count']}/{summary['target_object_model_review_total']}` review md/viewers `{summary['target_object_model_review_md_count']}/{summary['target_object_model_review_viewer_local_pass_count']}` protein/CA/residue `{summary['target_object_model_review_protein_atom_count']}/{summary['target_object_model_review_ca_atom_count']}/{summary['target_object_model_review_residue_count']}` radius `{summary['target_object_model_review_min_radius']}/{summary['target_object_model_review_max_radius']}`",
         f"- benchmark rows ready/total: `{summary['benchmark_rows_ready_count']}/{summary['benchmark_rows_total']}`",
         f"- competitive-floor batch: `{summary['competitive_batch_status'] or '-'}` rows `{summary['competitive_batch_row_count']}` missing evidence `{summary['competitive_batch_missing_evidence_item_count']}`",
         f"- competitive row_fill status: `{summary['competitive_row_fill_status'] or '-'}` filled/ready/total `{summary['competitive_row_fill_filled_count']}/{summary['competitive_row_fill_ready_count']}/{summary['competitive_row_fill_row_count']}`",
@@ -2158,6 +2201,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--target-model-folders-json", default=DEFAULT_TARGET_MODEL_FOLDERS_JSON)
     parser.add_argument("--target-object-folder-audit-json", default=DEFAULT_TARGET_OBJECT_FOLDER_AUDIT_JSON)
     parser.add_argument("--target-object-viewer-smoke-json", default=DEFAULT_TARGET_OBJECT_VIEWER_SMOKE_JSON)
+    parser.add_argument("--target-object-model-review-json", default=DEFAULT_TARGET_OBJECT_MODEL_REVIEW_JSON)
     parser.add_argument("--win-gap-closure-json", default=DEFAULT_WIN_GAP_CLOSURE_JSON)
     parser.add_argument("--input-scaffold-json", default=DEFAULT_INPUT_SCAFFOLD_JSON)
     parser.add_argument("--input-inventory-json", default=DEFAULT_INPUT_INVENTORY_JSON)

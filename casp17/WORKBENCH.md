@@ -2,7 +2,7 @@
 
 This is the local navigation surface for the current CASP17 internal-physics lane.
 
-- generated: `2026-05-26T03:41:39+09:00`
+- generated: `2026-05-26T03:49:29+09:00`
 - workbench_status: `ready_for_operator_fill`
 - target model folders: `16/16`
 - target object folders: `48`
@@ -10,6 +10,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 - target object viewers: `48`
 - target object folder audit: `pass` rows `48/48` chain isolation `48/48` protein atoms/coordinate-valid `48/48/48` total protein atoms `72487`
 - target object viewer smoke: `pass` rows `48/48`
+- target object model review: `pass` pass/blocked/total `48/0/48` review md/viewers `48/48` protein/CA/residue `72487/14694/14694` radius `7.778/47.562`
 - benchmark rows ready/total: `0/40`
 - competitive-floor batch: `ready_for_fill` rows `15` missing evidence `490`
 - competitive row_fill status: `awaiting_fill` filled/ready/total `15/0/15`
@@ -62,6 +63,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 | `target_object_catalog` | `ready` | 48 | 0 | 48 | `casp17/casp17_target_object_models_current.md` | Open the per-object catalog for chain-level PDB, projection, and local viewer review. | `projection_missing_count:0,viewer_missing_count:0` |
 | `target_object_folder_audit` | `pass` | 48 | 0 | 48 | `casp17/casp17_target_object_folder_audit_current.json` | Keep this pass before treating per-protein object folders as independently reviewable. | `protein_atom_objects:48,coordinate_valid_objects:48,total_protein_atoms:72487` |
 | `target_object_viewer_smoke` | `pass` | 48 | 0 | 48 | `casp17/casp17_target_object_viewer_smoke_current.json` | Keep this pass before relying on per-object viewer artifacts for review. | `-` |
+| `target_object_model_review` | `pass` | 48 | 0 | 48 | `casp17/casp17_target_object_model_review_current.json` | Open object review markdown files for per-chain molecular geometry inspection. | `review_md:48,viewer_local:48,protein_atoms:72487,radius:7.778-47.562` |
 | `win_gap_closure` | `blocked_input` | 4 | 5 | 9 | `runs/casp17_win_gap_closure_packet_current.json` | historical_benchmark_inputs | `ready_total_below_threshold,ready_monomer_below_threshold,ready_complex_below_threshold` |
 | `benchmark_input_scaffold` | `ready` | 0 | 40 | 40 | `runs/casp17_win_tier_benchmark_input_scaffold_current.json` | Fill row folders with cleared historical target identity, internal predictions, native files, provenance, and calibration values. | `missing_evidence_items:1310` |
 | `benchmark_input_inventory` | `blocked` | 0 | 40 | 40 | `runs/casp17_win_tier_benchmark_input_inventory_current.json` | Replace placeholder target/benchmark IDs with a cleared historical non-CASP17 protein target. | `missing_files:480` |

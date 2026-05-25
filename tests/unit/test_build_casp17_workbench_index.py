@@ -13,6 +13,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     target_json = tmp_path / "target_folders.json"
     target_object_folder_audit_json = tmp_path / "target_object_folder_audit.json"
     target_object_viewer_smoke_json = tmp_path / "target_object_viewer_smoke.json"
+    target_object_model_review_json = tmp_path / "target_object_model_review.json"
     closure_json = tmp_path / "closure.json"
     scaffold_json = tmp_path / "scaffold.json"
     inventory_json = tmp_path / "inventory.json"
@@ -120,6 +121,24 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "object_row_count": 4,
                 "pass_count": 4,
                 "blocked_count": 0,
+            }
+        },
+    )
+    _write_json(
+        target_object_model_review_json,
+        {
+            "summary": {
+                "object_model_review_status": "pass",
+                "object_count": 4,
+                "pass_count": 4,
+                "blocked_count": 0,
+                "review_md_count": 4,
+                "viewer_local_pass_count": 4,
+                "protein_atom_count": 4,
+                "ca_atom_count": 4,
+                "residue_count": 4,
+                "min_radius_of_gyration": 1.2,
+                "max_radius_of_gyration": 9.4,
             }
         },
     )
@@ -777,6 +796,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(target_object_folder_audit_json),
             "--target-object-viewer-smoke-json",
             str(target_object_viewer_smoke_json),
+            "--target-object-model-review-json",
+            str(target_object_model_review_json),
             "--win-gap-closure-json",
             str(closure_json),
             "--input-scaffold-json",
@@ -880,6 +901,17 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["target_object_folder_total_protein_atom_count"] == 4
     assert payload["summary"]["target_object_viewer_smoke_status"] == "pass"
     assert payload["summary"]["target_object_viewer_smoke_pass_count"] == 4
+    assert payload["summary"]["target_object_model_review_status"] == "pass"
+    assert payload["summary"]["target_object_model_review_pass_count"] == 4
+    assert payload["summary"]["target_object_model_review_blocked_count"] == 0
+    assert payload["summary"]["target_object_model_review_total"] == 4
+    assert payload["summary"]["target_object_model_review_md_count"] == 4
+    assert payload["summary"]["target_object_model_review_viewer_local_pass_count"] == 4
+    assert payload["summary"]["target_object_model_review_protein_atom_count"] == 4
+    assert payload["summary"]["target_object_model_review_ca_atom_count"] == 4
+    assert payload["summary"]["target_object_model_review_residue_count"] == 4
+    assert payload["summary"]["target_object_model_review_min_radius"] == 1.2
+    assert payload["summary"]["target_object_model_review_max_radius"] == 9.4
     assert payload["summary"]["benchmark_rows_total"] == 40
     assert payload["summary"]["competitive_batch_status"] == "ready_for_fill"
     assert payload["summary"]["competitive_batch_row_count"] == 15
@@ -1192,6 +1224,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "coordinate_valid_objects:4" in by_id["target_object_folder_audit"]["blockers"]
     assert "total_protein_atoms:4" in by_id["target_object_folder_audit"]["blockers"]
     assert by_id["target_object_viewer_smoke"]["status"] == "pass"
+    assert by_id["target_object_model_review"]["status"] == "pass"
+    assert by_id["target_object_model_review"]["ready_count"] == 4
+    assert "review_md:4" in by_id["target_object_model_review"]["blockers"]
     assert by_id["competitive_floor_batch"]["status"] == "ready_for_fill"
     assert by_id["competitive_floor_row_fill_status"]["status"] == "awaiting_fill"
     assert by_id["competitive_floor_row_fill_worklist"]["status"] == "open_actions"
@@ -1260,6 +1295,8 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(target_json),
             "--target-object-viewer-smoke-json",
             str(tmp_path / "missing_object_viewer_smoke.json"),
+            "--target-object-model-review-json",
+            str(tmp_path / "missing_object_model_review.json"),
             "--win-gap-closure-json",
             str(tmp_path / "missing_closure.json"),
             "--input-scaffold-json",
