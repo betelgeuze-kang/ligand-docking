@@ -30,6 +30,7 @@ DEFAULT_COMPETITIVE_IDENTITY_UNLOCK_ROUND_JSON = "casp17/casp17_competitive_floo
 DEFAULT_COMPETITIVE_IDENTITY_INTAKE_BUNDLE_JSON = "casp17/casp17_competitive_floor_identity_intake_bundle_current.json"
 DEFAULT_COMPETITIVE_IDENTITY_INTAKE_SYNC_JSON = "casp17/casp17_competitive_floor_identity_intake_sync_current.json"
 DEFAULT_COMPETITIVE_IDENTITY_CANDIDATE_JSON = "casp17/casp17_competitive_floor_identity_candidate_packet_current.json"
+DEFAULT_COMPETITIVE_IDENTITY_SOURCE_REPAIR_JSON = "casp17/casp17_competitive_floor_identity_source_repair_plan_current.json"
 DEFAULT_COMPETITIVE_IDENTITY_CYCLE_JSON = "casp17/casp17_competitive_floor_identity_cycle_current.json"
 DEFAULT_COMPETITIVE_FILE_SOURCE_PLAN_JSON = "casp17/casp17_competitive_floor_file_source_plan_current.json"
 DEFAULT_COMPETITIVE_VALUE_ENTRY_PLAN_JSON = "casp17/casp17_competitive_floor_value_entry_plan_current.json"
@@ -170,6 +171,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     competitive_identity_intake_payload = _read_json(args.competitive_identity_intake_json)
     competitive_identity_sync_payload = _read_json(args.competitive_identity_sync_json)
     competitive_identity_candidate_payload = _read_json(args.competitive_identity_candidate_json)
+    competitive_identity_source_repair_payload = _read_json(args.competitive_identity_source_repair_json)
     competitive_identity_cycle_payload = _read_json(args.competitive_identity_cycle_json)
     competitive_file_source_plan_payload = _read_json(args.competitive_file_source_plan_json)
     competitive_value_entry_plan_payload = _read_json(args.competitive_value_entry_plan_json)
@@ -202,6 +204,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     competitive_identity_intake_summary = _summary(competitive_identity_intake_payload)
     competitive_identity_sync_summary = _summary(competitive_identity_sync_payload)
     competitive_identity_candidate_summary = _summary(competitive_identity_candidate_payload)
+    competitive_identity_source_repair_summary = _summary(competitive_identity_source_repair_payload)
     competitive_identity_cycle_summary = _summary(competitive_identity_cycle_payload)
     competitive_file_source_plan_summary = _summary(competitive_file_source_plan_payload)
     competitive_value_entry_plan_summary = _summary(competitive_value_entry_plan_payload)
@@ -556,6 +559,28 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + str(competitive_identity_candidate_summary.get("source_blocked_candidate_count", ""))
                 + ",operator_preflight:"
                 + str(competitive_identity_candidate_summary.get("operator_preflight_status", ""))
+            ),
+        ),
+        _artifact_row(
+            "competitive_floor_identity_source_repair_plan",
+            "Repair phases for blocked local identity candidate sources",
+            _text(competitive_identity_source_repair_summary.get("source_repair_status")),
+            args.competitive_identity_source_repair_json,
+            ready_count=_int(competitive_identity_source_repair_summary.get("source_ready_candidate_count")),
+            blocked_count=_int(competitive_identity_source_repair_summary.get("repair_action_count")),
+            total_count=_int(competitive_identity_source_repair_summary.get("source_candidate_count")),
+            next_action=_text(competitive_identity_source_repair_summary.get("first_open_next_action")),
+            blockers=(
+                "identity:"
+                + str(competitive_identity_source_repair_summary.get("target_identity_action_count", ""))
+                + ",core:"
+                + str(competitive_identity_source_repair_summary.get("core_file_action_count", ""))
+                + ",provenance:"
+                + str(competitive_identity_source_repair_summary.get("provenance_action_count", ""))
+                + ",ablation:"
+                + str(competitive_identity_source_repair_summary.get("ablation_action_count", ""))
+                + ",calibration:"
+                + str(competitive_identity_source_repair_summary.get("calibration_action_count", ""))
             ),
         ),
         _artifact_row(
@@ -986,6 +1011,33 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "competitive_identity_candidate_operator_preflight_status": _text(
             competitive_identity_candidate_summary.get("operator_preflight_status")
         ),
+        "competitive_identity_source_repair_status": _text(
+            competitive_identity_source_repair_summary.get("source_repair_status")
+        ),
+        "competitive_identity_source_repair_action_count": _int(
+            competitive_identity_source_repair_summary.get("repair_action_count")
+        ),
+        "competitive_identity_source_repair_blocked_source_count": _int(
+            competitive_identity_source_repair_summary.get("blocked_source_row_count")
+        ),
+        "competitive_identity_source_repair_target_identity_count": _int(
+            competitive_identity_source_repair_summary.get("target_identity_action_count")
+        ),
+        "competitive_identity_source_repair_core_file_count": _int(
+            competitive_identity_source_repair_summary.get("core_file_action_count")
+        ),
+        "competitive_identity_source_repair_provenance_count": _int(
+            competitive_identity_source_repair_summary.get("provenance_action_count")
+        ),
+        "competitive_identity_source_repair_ablation_count": _int(
+            competitive_identity_source_repair_summary.get("ablation_action_count")
+        ),
+        "competitive_identity_source_repair_calibration_count": _int(
+            competitive_identity_source_repair_summary.get("calibration_action_count")
+        ),
+        "competitive_identity_source_repair_first_phase": _text(
+            competitive_identity_source_repair_summary.get("first_open_phase")
+        ),
         "competitive_identity_cycle_status": _text(
             competitive_identity_cycle_summary.get("identity_cycle_status")
         ),
@@ -1253,6 +1305,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- competitive identity intake bundle: `{summary['competitive_identity_intake_status'] or '-'}` rows `{summary['competitive_identity_intake_ready_count']}/{summary['competitive_identity_intake_awaiting_count']}/{summary['competitive_identity_intake_blocked_count']}/{summary['competitive_identity_intake_row_count']}` missing fields `{summary['competitive_identity_intake_missing_field_count']}` files unlocked `{summary['competitive_identity_intake_file_actions_unlocked_count']}`",
         f"- competitive identity intake sync: `{summary['competitive_identity_sync_status'] or '-'}` rows `{summary['competitive_identity_sync_synced_count']}/{summary['competitive_identity_sync_ready_to_sync_count']}/{summary['competitive_identity_sync_awaiting_count']}/{summary['competitive_identity_sync_blocked_count']}/{summary['competitive_identity_sync_row_count']}` missing fields `{summary['competitive_identity_sync_missing_field_count']}` mismatches `{summary['competitive_identity_sync_kit_mismatch_count']}` applied `{summary['competitive_identity_sync_applied_count']}`",
         f"- competitive identity candidates: `{summary['competitive_identity_candidate_status'] or '-'}` rows `{summary['competitive_identity_candidate_ready_count']}/{summary['competitive_identity_candidate_awaiting_count']}/{summary['competitive_identity_candidate_row_count']}` source ready/blocked/total `{summary['competitive_identity_candidate_source_ready_count']}/{summary['competitive_identity_candidate_source_blocked_count']}/{summary['competitive_identity_candidate_source_count']}` applied `{summary['competitive_identity_candidate_applied_count']}` operator preflight `{summary['competitive_identity_candidate_operator_preflight_status'] or '-'}`",
+        f"- competitive identity source repair: `{summary['competitive_identity_source_repair_status'] or '-'}` actions `{summary['competitive_identity_source_repair_action_count']}` blocked sources `{summary['competitive_identity_source_repair_blocked_source_count']}` phase identity/core/provenance/ablation/calibration `{summary['competitive_identity_source_repair_target_identity_count']}/{summary['competitive_identity_source_repair_core_file_count']}/{summary['competitive_identity_source_repair_provenance_count']}/{summary['competitive_identity_source_repair_ablation_count']}/{summary['competitive_identity_source_repair_calibration_count']}` first phase `{summary['competitive_identity_source_repair_first_phase'] or '-'}`",
         f"- competitive identity cycle: `{summary['competitive_identity_cycle_status'] or '-'}` stages `{summary['competitive_identity_cycle_ready_stage_count']}/{summary['competitive_identity_cycle_blocked_stage_count']}/{summary['competitive_identity_cycle_stage_count']}` sync `{summary['competitive_identity_cycle_sync_status'] or '-'}` ready/awaiting `{summary['competitive_identity_cycle_sync_ready_to_sync_count']}/{summary['competitive_identity_cycle_sync_awaiting_count']}` missing fields `{summary['competitive_identity_cycle_missing_field_count']}` readiness `{summary['competitive_identity_cycle_readiness_gate_status'] or '-'}`",
         f"- competitive file source plan: `{summary['competitive_file_source_plan_status'] or '-'}` actions `{summary['competitive_file_source_plan_action_count']}` waiting identity/source `{summary['competitive_file_source_plan_waiting_on_identity_count']}/{summary['competitive_file_source_plan_awaiting_source_path_count']}` ready/imported/blocked `{summary['competitive_file_source_plan_ready_for_import_count']}/{summary['competitive_file_source_plan_already_imported_count']}/{summary['competitive_file_source_plan_blocked_count']}`",
         f"- competitive value entry plan: `{summary['competitive_value_entry_plan_status'] or '-'}` actions `{summary['competitive_value_entry_plan_action_count']}` target/provenance/calibration `{summary['competitive_value_entry_plan_target_identity_count']}/{summary['competitive_value_entry_plan_provenance_count']}/{summary['competitive_value_entry_plan_calibration_count']}` waiting identity/value/clearance/ref `{summary['competitive_value_entry_plan_waiting_on_identity_count']}/{summary['competitive_value_entry_plan_awaiting_value_count']}/{summary['competitive_value_entry_plan_awaiting_clearance_count']}/{summary['competitive_value_entry_plan_awaiting_ref_count']}` ready/blocked `{summary['competitive_value_entry_plan_ready_for_import_count']}/{summary['competitive_value_entry_plan_blocked_count']}`",
@@ -1328,6 +1381,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--competitive-identity-intake-json", default=DEFAULT_COMPETITIVE_IDENTITY_INTAKE_BUNDLE_JSON)
     parser.add_argument("--competitive-identity-sync-json", default=DEFAULT_COMPETITIVE_IDENTITY_INTAKE_SYNC_JSON)
     parser.add_argument("--competitive-identity-candidate-json", default=DEFAULT_COMPETITIVE_IDENTITY_CANDIDATE_JSON)
+    parser.add_argument("--competitive-identity-source-repair-json", default=DEFAULT_COMPETITIVE_IDENTITY_SOURCE_REPAIR_JSON)
     parser.add_argument("--competitive-identity-cycle-json", default=DEFAULT_COMPETITIVE_IDENTITY_CYCLE_JSON)
     parser.add_argument("--competitive-file-source-plan-json", default=DEFAULT_COMPETITIVE_FILE_SOURCE_PLAN_JSON)
     parser.add_argument("--competitive-value-entry-plan-json", default=DEFAULT_COMPETITIVE_VALUE_ENTRY_PLAN_JSON)
