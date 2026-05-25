@@ -1,11 +1,14 @@
 # CASP17 Competitive-Floor Target Identity Clearance Workorder
 
-- generated: `2026-05-26T01:16:21+09:00`
+- generated: `2026-05-26T02:15:54+09:00`
 - clearance_workorder_status: `awaiting_native_or_provenance`
 - clearance_queue_status: `awaiting_target_identity_clearance`
 - workorders: `3`
 - ready/native+provenance/native/provenance: `0/3/0/0`
 - dropzones/templates/stubs: `3/3/3`
+- template mode force_refresh: `False`
+- provenance templates created/preserved/refreshed: `0/3/0`
+- manifest stubs created/preserved/refreshed: `0/3/0`
 - first open: `H1319` `native_and_provenance_required`
 - next action: place a cleared native PDB and complete the no-leak provenance template
 
@@ -19,4 +22,4 @@
 
 ## Claim Boundary
 
-Local competitive-floor target identity clearance workorder only. It creates per-target folders, native dropzone paths, provenance templates, and manifest stubs from the clearance queue. It does not fetch native structures, clear no-leak provenance, choose historical targets, score native accuracy, mutate identity intake files, or submit to CASP.
+Local competitive-floor target identity clearance workorder only. It creates per-target folders, native dropzone paths, provenance templates, and manifest stubs from the clearance queue. Existing provenance templates and manifest stubs are preserved unless --force-refresh-templates is explicitly provided. It does not fetch native structures, clear no-leak provenance, choose historical targets, score native accuracy, mutate identity intake files, or submit to CASP.

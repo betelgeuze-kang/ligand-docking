@@ -75,9 +75,10 @@ MANIFEST_COLUMNS = [
 ]
 CLAIM_BOUNDARY = (
     "Local competitive-floor target identity clearance workorder only. It creates per-target folders, native "
-    "dropzone paths, provenance templates, and manifest stubs from the clearance queue. It does not fetch native "
-    "structures, clear no-leak provenance, choose historical targets, score native accuracy, mutate identity "
-    "intake files, or submit to CASP."
+    "dropzone paths, provenance templates, and manifest stubs from the clearance queue. Existing provenance "
+    "templates and manifest stubs are preserved unless --force-refresh-templates is explicitly provided. It does "
+    "not fetch native structures, clear no-leak provenance, choose historical targets, score native accuracy, "
+    "mutate identity intake files, or submit to CASP."
 )
 
 
@@ -132,6 +133,21 @@ def _write_csv(path_like: str | Path, rows: list[dict[str, Any]], fieldnames: li
         writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore", lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
+
+
+def _write_csv_if_missing_or_forced(
+    path_like: str | Path,
+    rows: list[dict[str, Any]],
+    fieldnames: list[str],
+    *,
+    force: bool,
+) -> str:
+    path = _resolve(path_like)
+    existed = path.exists()
+    if existed and not force:
+        return "preserved"
+    _write_csv(path, rows, fieldnames)
+    return "refreshed" if existed else "created"
 
 
 def _slug(value: str) -> str:
@@ -271,8 +287,18 @@ def _materialize_row(args: argparse.Namespace, row: dict[str, Any], rank: int) -
     native_dropzone.parent.mkdir(parents=True, exist_ok=True)
     provenance_template = folder / "provenance_template.csv"
     manifest_stub = folder / "manifest_stub.csv"
-    _write_csv(provenance_template, [_provenance_template_row(row)], PROVENANCE_COLUMNS)
-    _write_csv(manifest_stub, [_manifest_stub_row(row, native_dropzone)], MANIFEST_COLUMNS)
+    provenance_template_status = _write_csv_if_missing_or_forced(
+        provenance_template,
+        [_provenance_template_row(row)],
+        PROVENANCE_COLUMNS,
+        force=args.force_refresh_templates,
+    )
+    manifest_stub_status = _write_csv_if_missing_or_forced(
+        manifest_stub,
+        [_manifest_stub_row(row, native_dropzone)],
+        MANIFEST_COLUMNS,
+        force=args.force_refresh_templates,
+    )
     status = _workorder_status(row)
     workorder_row = {
         "workorder_rank": rank,
@@ -286,6 +312,8 @@ def _materialize_row(args: argparse.Namespace, row: dict[str, Any], rank: int) -
         "native_dropzone_pdb": _artifact(native_dropzone),
         "provenance_template_csv": _artifact(provenance_template),
         "manifest_stub_csv": _artifact(manifest_stub),
+        "provenance_template_status": provenance_template_status,
+        "manifest_stub_status": manifest_stub_status,
         "missing_native": str(_text(row.get("native_status")) != "present").lower(),
         "missing_provenance": str(_text(row.get("provenance_cleared")) != "true").lower(),
         "blockers": _text(row.get("blockers")),
@@ -332,6 +360,23 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "native_dropzone_count": len(workorder_rows),
         "provenance_template_count": len(workorder_rows),
         "manifest_stub_count": len(workorder_rows),
+        "force_refresh_templates": bool(args.force_refresh_templates),
+        "provenance_template_created_count": sum(
+            1 for row in workorder_rows if row.get("provenance_template_status") == "created"
+        ),
+        "provenance_template_preserved_count": sum(
+            1 for row in workorder_rows if row.get("provenance_template_status") == "preserved"
+        ),
+        "provenance_template_refreshed_count": sum(
+            1 for row in workorder_rows if row.get("provenance_template_status") == "refreshed"
+        ),
+        "manifest_stub_created_count": sum(1 for row in workorder_rows if row.get("manifest_stub_status") == "created"),
+        "manifest_stub_preserved_count": sum(
+            1 for row in workorder_rows if row.get("manifest_stub_status") == "preserved"
+        ),
+        "manifest_stub_refreshed_count": sum(
+            1 for row in workorder_rows if row.get("manifest_stub_status") == "refreshed"
+        ),
         "first_open_target_id": _text(first_open.get("target_id")),
         "first_open_status": _text(first_open.get("workorder_status")),
         "first_open_next_action": _text(first_open.get("next_action")),
@@ -351,6 +396,9 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- workorders: `{summary['workorder_count']}`",
         f"- ready/native+provenance/native/provenance: `{summary['ready_for_manifest_stub_count']}/{summary['native_and_provenance_required_count']}/{summary['native_required_count']}/{summary['provenance_required_count']}`",
         f"- dropzones/templates/stubs: `{summary['native_dropzone_count']}/{summary['provenance_template_count']}/{summary['manifest_stub_count']}`",
+        f"- template mode force_refresh: `{summary['force_refresh_templates']}`",
+        f"- provenance templates created/preserved/refreshed: `{summary['provenance_template_created_count']}/{summary['provenance_template_preserved_count']}/{summary['provenance_template_refreshed_count']}`",
+        f"- manifest stubs created/preserved/refreshed: `{summary['manifest_stub_created_count']}/{summary['manifest_stub_preserved_count']}/{summary['manifest_stub_refreshed_count']}`",
         f"- first open: `{summary['first_open_target_id'] or '-'}` `{summary['first_open_status'] or '-'}`",
         f"- next action: {summary['first_open_next_action'] or '-'}",
         "",
@@ -386,6 +434,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
+    parser.add_argument("--force-refresh-templates", action="store_true")
     return parser.parse_args(argv)
 
 

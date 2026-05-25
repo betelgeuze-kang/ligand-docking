@@ -420,6 +420,10 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "native_dropzone_count": 3,
                 "provenance_template_count": 3,
                 "manifest_stub_count": 3,
+                "provenance_template_preserved_count": 3,
+                "provenance_template_refreshed_count": 0,
+                "manifest_stub_preserved_count": 3,
+                "manifest_stub_refreshed_count": 0,
                 "first_open_next_action": "place a cleared native PDB and complete the no-leak provenance template",
             }
         },
@@ -916,6 +920,10 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["competitive_target_identity_clearance_workorder_dropzone_count"] == 3
     assert payload["summary"]["competitive_target_identity_clearance_workorder_template_count"] == 3
     assert payload["summary"]["competitive_target_identity_clearance_workorder_stub_count"] == 3
+    assert payload["summary"]["competitive_target_identity_clearance_workorder_template_preserved_count"] == 3
+    assert payload["summary"]["competitive_target_identity_clearance_workorder_template_refreshed_count"] == 0
+    assert payload["summary"]["competitive_target_identity_clearance_workorder_stub_preserved_count"] == 3
+    assert payload["summary"]["competitive_target_identity_clearance_workorder_stub_refreshed_count"] == 0
     assert payload["summary"]["competitive_target_identity_clearance_manifest_sync_status"] == "awaiting_provenance"
     assert payload["summary"]["competitive_target_identity_clearance_manifest_sync_row_count"] == 3
     assert payload["summary"]["competitive_target_identity_clearance_manifest_sync_ready_count"] == 0
