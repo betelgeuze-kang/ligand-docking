@@ -454,6 +454,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "audit_blocked_count": 3,
                 "prediction_present_count": 3,
                 "native_valid_count": 0,
+                "native_protein_atom_count": 0,
+                "native_coordinate_valid_count": 0,
                 "provenance_ready_count": 0,
                 "evidence_ref_present_count": 0,
                 "evidence_ref_blocked_count": 3,
@@ -948,6 +950,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["competitive_target_identity_clearance_workorder_audit_blocked_count"] == 3
     assert payload["summary"]["competitive_target_identity_clearance_workorder_audit_prediction_count"] == 3
     assert payload["summary"]["competitive_target_identity_clearance_workorder_audit_native_count"] == 0
+    assert payload["summary"]["competitive_target_identity_clearance_workorder_audit_native_protein_atom_count"] == 0
+    assert payload["summary"]["competitive_target_identity_clearance_workorder_audit_native_coordinate_valid_count"] == 0
     assert payload["summary"]["competitive_target_identity_clearance_workorder_audit_provenance_count"] == 0
     assert payload["summary"]["competitive_target_identity_clearance_workorder_audit_evidence_ref_count"] == 0
     assert (

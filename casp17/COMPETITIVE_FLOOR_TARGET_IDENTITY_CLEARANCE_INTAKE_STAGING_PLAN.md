@@ -1,6 +1,6 @@
 # CASP17 Competitive-Floor Target Identity Clearance Intake Staging Plan
 
-- generated: `2026-05-26T02:41:34+09:00`
+- generated: `2026-05-26T02:47:23+09:00`
 - clearance_intake_staging_status: `waiting_on_promoted_manifest`
 - promotion_status: `blocked_by_audit`
 - promoted/staged/blocked: `0/0/0`

@@ -24,6 +24,9 @@ AUDIT_COLUMNS = [
     "native_dropzone_pdb",
     "native_file_status",
     "native_atom_record_count",
+    "native_protein_atom_record_count",
+    "native_chain_id_count",
+    "native_coordinate_status",
     "provenance_template_csv",
     "provenance_status",
     "evidence_ref_status",
@@ -156,21 +159,38 @@ def _date_or_none(value: Any) -> dt.date | None:
     return None
 
 
-def _native_status(path_like: str | Path) -> tuple[str, int, list[str]]:
+def _native_status(path_like: str | Path) -> tuple[str, int, int, int, str, list[str]]:
     path_text = _text(path_like)
     if not path_text:
-        return "missing", 0, ["native_dropzone_path_missing"]
+        return "missing", 0, 0, 0, "waiting_on_native", ["native_dropzone_path_missing"]
     path = _resolve(path_text)
     if not path.exists():
-        return "missing", 0, ["native_pdb_missing"]
+        return "missing", 0, 0, 0, "waiting_on_native", ["native_pdb_missing"]
     try:
         lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     except OSError:
-        return "unreadable", 0, ["native_pdb_unreadable"]
-    atom_count = sum(1 for line in lines if line.startswith(("ATOM", "HETATM")))
+        return "unreadable", 0, 0, 0, "unreadable", ["native_pdb_unreadable"]
+    atom_lines = [line for line in lines if line.startswith(("ATOM", "HETATM"))]
+    protein_atom_lines = [line for line in lines if line.startswith("ATOM")]
+    atom_count = len(atom_lines)
+    protein_atom_count = len(protein_atom_lines)
+    chain_ids = {(line[21].strip() or "_blank") for line in protein_atom_lines if len(line) > 21}
+    coordinate_blockers: list[str] = []
+    for line in atom_lines:
+        try:
+            float(line[30:38])
+            float(line[38:46])
+            float(line[46:54])
+        except ValueError:
+            coordinate_blockers.append("native_pdb_coordinates_invalid")
+            break
     if atom_count <= 0:
-        return "invalid", atom_count, ["native_pdb_has_no_atom_records"]
-    return "present", atom_count, []
+        return "invalid", atom_count, protein_atom_count, len(chain_ids), "invalid", ["native_pdb_has_no_atom_records"]
+    if protein_atom_count <= 0:
+        return "invalid", atom_count, protein_atom_count, len(chain_ids), "invalid", ["native_pdb_has_no_protein_atom_records"]
+    if coordinate_blockers:
+        return "invalid", atom_count, protein_atom_count, len(chain_ids), "invalid", coordinate_blockers
+    return "present", atom_count, protein_atom_count, len(chain_ids), "valid", []
 
 
 def _evidence_ref_status(value: Any, *, target_id: str) -> tuple[str, str, str, str, list[str]]:
@@ -343,7 +363,14 @@ def _next_action(blockers: list[str]) -> str:
 def _audit_row(workorder_row: dict[str, Any]) -> dict[str, Any]:
     target_id = _text(workorder_row.get("target_id")).upper()
     native_dropzone = _text(workorder_row.get("native_dropzone_pdb"))
-    native_file_status, atom_count, native_blockers = _native_status(native_dropzone)
+    (
+        native_file_status,
+        atom_count,
+        protein_atom_count,
+        chain_id_count,
+        native_coordinate_status,
+        native_blockers,
+    ) = _native_status(native_dropzone)
     provenance_row, provenance_file_blockers = _read_csv_one(workorder_row.get("provenance_template_csv"))
     provenance_blockers = list(provenance_file_blockers)
     provenance_status = _provenance_status(provenance_row, provenance_blockers) if not provenance_file_blockers else "blocked"
@@ -405,6 +432,9 @@ def _audit_row(workorder_row: dict[str, Any]) -> dict[str, Any]:
         "native_dropzone_pdb": native_dropzone,
         "native_file_status": native_file_status,
         "native_atom_record_count": atom_count,
+        "native_protein_atom_record_count": protein_atom_count,
+        "native_chain_id_count": chain_id_count,
+        "native_coordinate_status": native_coordinate_status,
         "provenance_template_csv": _text(workorder_row.get("provenance_template_csv")),
         "provenance_status": provenance_status,
         "evidence_ref_status": evidence_ref_status,
@@ -440,7 +470,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "audit_pass_count": pass_count,
         "audit_blocked_count": len(rows) - pass_count,
         "native_present_count": sum(1 for row in rows if row["native_file_status"] == "present"),
-        "native_valid_count": sum(1 for row in rows if int(row["native_atom_record_count"]) > 0),
+        "native_valid_count": sum(1 for row in rows if row["native_file_status"] == "present"),
+        "native_protein_atom_count": sum(int(row["native_protein_atom_record_count"]) for row in rows),
+        "native_coordinate_valid_count": sum(1 for row in rows if row["native_coordinate_status"] == "valid"),
         "provenance_ready_count": sum(1 for row in rows if row["provenance_status"] == "ready"),
         "evidence_ref_present_count": sum(1 for row in rows if row["evidence_ref_status"] == "present"),
         "evidence_ref_blocked_count": sum(
@@ -496,6 +528,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- clearance_workorder_status: `{summary['clearance_workorder_status'] or '-'}`",
         f"- audit pass/blocked/total: `{summary['audit_pass_count']}/{summary['audit_blocked_count']}/{summary['audit_target_count']}`",
         f"- prediction/native/provenance/manifest ready: `{summary['prediction_present_count']}/{summary['native_valid_count']}/{summary['provenance_ready_count']}/{summary['manifest_stub_ready_count']}`",
+        f"- native protein atoms/coordinate-valid: `{summary['native_protein_atom_count']}/{summary['native_coordinate_valid_count']}`",
         f"- local evidence refs present/blocked/waiting: `{summary['evidence_ref_present_count']}/{summary['evidence_ref_blocked_count']}/{summary['evidence_ref_waiting_count']}`",
         f"- local evidence content verified/blocked: `{summary['evidence_ref_verified_count']}/{summary['evidence_ref_content_blocked_count']}`",
         f"- manifest/provenance matched/mismatches: `{summary['manifest_provenance_matched_count']}/{summary['manifest_provenance_mismatch_count']}`",
@@ -505,20 +538,21 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         "## Audit Rows",
         "",
-        "| target | audit | native | atoms | provenance | evidence | evidence content | manifest | manifest/provenance | prediction | native/prediction | blockers | next action |",
-        "| --- | --- | --- | ---: | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| target | audit | native | atoms | protein atoms | chains | coordinates | provenance | evidence | evidence content | manifest | manifest/provenance | prediction | native/prediction | blockers | next action |",
+        "| --- | --- | --- | ---: | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
             f"| `{row['target_id']}` | `{row['audit_status']}` | `{row['native_file_status']}` | "
-            f"{row['native_atom_record_count']} | `{row['provenance_status']}` | `{row['evidence_ref_status']}` | "
-            f"`{row['evidence_ref_content_status']}` | `{row['manifest_stub_status']}` | "
+            f"{row['native_atom_record_count']} | {row['native_protein_atom_record_count']} | "
+            f"{row['native_chain_id_count']} | `{row['native_coordinate_status']}` | `{row['provenance_status']}` | "
+            f"`{row['evidence_ref_status']}` | `{row['evidence_ref_content_status']}` | `{row['manifest_stub_status']}` | "
             f"`{row['manifest_provenance_status']}` | `{row['prediction_file_status']}` | "
             f"`{row['native_prediction_identity_status']}` | `{row['blockers'] or '-'}` | {row['next_action']} |"
         )
     if not payload["rows"]:
         lines.append(
-            "| - | `missing_workorders` | - | 0 | - | - | - | - | - | - | - | `workorders_missing` | "
+            "| - | `missing_workorders` | - | 0 | 0 | 0 | - | - | - | - | - | - | - | - | `workorders_missing` | "
             "rerun clearance workorder builder |"
         )
     lines.extend(["", "## Claim Boundary", "", str(summary["claim_boundary"]), ""])
