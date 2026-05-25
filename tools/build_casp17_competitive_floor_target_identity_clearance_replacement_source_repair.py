@@ -208,13 +208,12 @@ def _commands(candidate_id: str, artifacts: dict[str, str]) -> tuple[str, str, s
         f"--out-md runs/casp17_internal_physics_raw_validations_current/{candidate_id}_backend_contract.md"
     )
     scorecard_command = (
-        "python3 tools/build_casp17_internal_scorecard_batch.py "
-        "--intake-csv runs/casp17_target_intake_validated_current.csv "
+        "python3 tools/build_casp17_competitive_floor_target_identity_clearance_replacement_scorecard.py "
+        "--source-repair-json casp17/casp17_competitive_floor_target_identity_clearance_replacement_source_repair_current.json "
         "--out-dir runs/casp17_internal_scorecards_current "
-        "--out-json runs/casp17_internal_scorecard_batch_current.json "
-        "--out-csv runs/casp17_internal_scorecard_batch_current.csv "
-        "--out-md runs/casp17_internal_scorecard_batch_current.md "
-        "--out-intake-csv runs/casp17_target_intake_scored_current.csv"
+        "--out-json casp17/casp17_competitive_floor_target_identity_clearance_replacement_scorecard_current.json "
+        "--out-csv casp17/casp17_competitive_floor_target_identity_clearance_replacement_scorecard_current.csv "
+        "--out-md casp17/COMPETITIVE_FLOOR_TARGET_IDENTITY_CLEARANCE_REPLACEMENT_SCORECARD.md"
     )
     return predictor_command, validation_command, scorecard_command
 
