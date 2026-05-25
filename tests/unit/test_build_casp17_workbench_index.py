@@ -36,6 +36,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     competitive_target_identity_clearance_workorder_audit_json = (
         tmp_path / "competitive_target_identity_clearance_workorder_audit.json"
     )
+    competitive_target_identity_clearance_promotion_json = (
+        tmp_path / "competitive_target_identity_clearance_promotion.json"
+    )
     competitive_identity_cycle_json = tmp_path / "competitive_identity_cycle.json"
     competitive_file_source_plan_json = tmp_path / "competitive_file_source_plan.json"
     competitive_value_entry_plan_json = tmp_path / "competitive_value_entry_plan.json"
@@ -428,6 +431,21 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        competitive_target_identity_clearance_promotion_json,
+        {
+            "summary": {
+                "clearance_promotion_status": "blocked_by_audit",
+                "promotion_row_count": 3,
+                "promoted_manifest_count": 0,
+                "blocked_count": 3,
+                "ready_for_operator_manifest_import_count": 0,
+                "audit_pass_count": 0,
+                "manifest_ready_count": 0,
+                "first_open_next_action": "clear the blocked audit rows before manifest promotion",
+            }
+        },
+    )
+    _write_json(
         competitive_identity_cycle_json,
         {
             "summary": {
@@ -665,6 +683,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(competitive_target_identity_clearance_workorder_json),
             "--competitive-target-identity-clearance-workorder-audit-json",
             str(competitive_target_identity_clearance_workorder_audit_json),
+            "--competitive-target-identity-clearance-promotion-plan-json",
+            str(competitive_target_identity_clearance_promotion_json),
             "--competitive-identity-cycle-json",
             str(competitive_identity_cycle_json),
             "--competitive-file-source-plan-json",
@@ -826,6 +846,12 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["competitive_target_identity_clearance_workorder_audit_native_count"] == 0
     assert payload["summary"]["competitive_target_identity_clearance_workorder_audit_provenance_count"] == 0
     assert payload["summary"]["competitive_target_identity_clearance_workorder_audit_manifest_count"] == 0
+    assert payload["summary"]["competitive_target_identity_clearance_promotion_status"] == "blocked_by_audit"
+    assert payload["summary"]["competitive_target_identity_clearance_promotion_row_count"] == 3
+    assert payload["summary"]["competitive_target_identity_clearance_promotion_promoted_count"] == 0
+    assert payload["summary"]["competitive_target_identity_clearance_promotion_blocked_count"] == 3
+    assert payload["summary"]["competitive_target_identity_clearance_promotion_ready_count"] == 0
+    assert payload["summary"]["competitive_target_identity_clearance_promotion_audit_pass_count"] == 0
     assert payload["summary"]["competitive_identity_cycle_status"] == "awaiting_intake"
     assert payload["summary"]["competitive_identity_cycle_stage_count"] == 7
     assert payload["summary"]["competitive_identity_cycle_ready_stage_count"] == 1
@@ -921,6 +947,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["competitive_floor_target_identity_clearance_queue"]["status"] == "awaiting_target_identity_clearance"
     assert by_id["competitive_floor_target_identity_clearance_workorder"]["status"] == "awaiting_native_or_provenance"
     assert by_id["competitive_floor_target_identity_clearance_workorder_audit"]["status"] == "blocked"
+    assert by_id["competitive_floor_target_identity_clearance_promotion_plan"]["status"] == "blocked_by_audit"
+    assert by_id["competitive_floor_target_identity_clearance_promotion_plan"]["blocked_count"] == 3
     assert by_id["competitive_floor_identity_cycle"]["status"] == "awaiting_intake"
     assert by_id["competitive_floor_file_source_plan"]["status"] == "waiting_on_identity"
     assert by_id["competitive_floor_value_entry_plan"]["status"] == "waiting_on_identity"
@@ -977,6 +1005,8 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_competitive_target_identity_clearance_workorder.json"),
             "--competitive-target-identity-clearance-workorder-audit-json",
             str(tmp_path / "missing_competitive_target_identity_clearance_workorder_audit.json"),
+            "--competitive-target-identity-clearance-promotion-plan-json",
+            str(tmp_path / "missing_competitive_target_identity_clearance_promotion.json"),
             "--competitive-identity-cycle-json",
             str(tmp_path / "missing_competitive_identity_cycle.json"),
             "--competitive-operator-template-json",
