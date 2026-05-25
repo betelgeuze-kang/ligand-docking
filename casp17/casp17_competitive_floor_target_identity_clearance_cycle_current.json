@@ -75,7 +75,7 @@
     "claim_boundary": "Local CASP17 competitive-floor target identity clearance cycle only. It chains manifest-stub sync, workorder audit, audited manifest promotion, clearance-to-intake staging, and workbench refresh. It does not rebuild workorders, fetch native structures, clear no-leak provenance, choose targets, score native accuracy, run predictors, mutate live identity intake files, or submit to CASP. Manifest stubs are modified only when --apply-manifest-sync is explicitly provided; live identity intake is modified only when --apply-candidate-intake is explicitly provided.",
     "clearance_cycle_status": "awaiting_provenance",
     "first_next_action": "complete the no-leak provenance template before syncing the manifest stub",
-    "generated_at_local": "2026-05-26T02:17:04+09:00",
+    "generated_at_local": "2026-05-26T02:22:43+09:00",
     "intake_staging_status": "waiting_on_promoted_manifest",
     "manifest_sync_applied_field_count": 0,
     "manifest_sync_awaiting_provenance_count": 3,

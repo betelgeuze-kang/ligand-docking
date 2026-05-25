@@ -176,12 +176,61 @@ def test_clearance_workorder_audit_blocks_missing_native_and_placeholders(tmp_pa
     assert payload["summary"]["native_valid_count"] == 1
     assert payload["summary"]["provenance_ready_count"] == 1
     assert payload["summary"]["manifest_stub_ready_count"] == 1
+    assert payload["summary"]["manifest_provenance_matched_count"] == 1
+    assert payload["summary"]["manifest_provenance_mismatch_count"] == 0
     assert by_id["H1001"]["audit_status"] == "pass"
+    assert by_id["H1001"]["manifest_provenance_status"] == "matched"
     assert by_id["H1002"]["audit_status"] == "blocked"
+    assert by_id["H1002"]["manifest_provenance_status"] == "waiting_on_provenance"
     assert "native_pdb_missing" in by_id["H1002"]["blockers"]
     assert "operator_clearance_required" in by_id["H1002"]["blockers"]
     assert _read_csv(tmp_path / "audit.csv")[0]["target_id"] == "H1001"
     assert (tmp_path / "AUDIT.md").is_file()
+
+
+def test_clearance_workorder_audit_blocks_manifest_provenance_mismatch(tmp_path: Path) -> None:
+    target_id = "H1001"
+    prediction = tmp_path / "H1001_model_1.pdb"
+    native = tmp_path / "H1001_native.pdb"
+    for path in [prediction, native]:
+        path.write_text("ATOM      1 CA   ALA A   1       1.000   2.000   3.000  1.00 70.00           C\n", encoding="utf-8")
+    provenance_csv = tmp_path / "provenance_template.csv"
+    manifest_csv = tmp_path / "manifest_stub.csv"
+    manifest = _ready_manifest(target_id, prediction, native)
+    manifest["operator_clearance"] = "cleared"
+    _write_csv(provenance_csv, [_ready_provenance(target_id)])
+    _write_csv(manifest_csv, [manifest])
+    workorder_json = tmp_path / "workorder.json"
+    _write_json(
+        workorder_json,
+        {
+            "summary": {"clearance_workorder_status": "ready_for_manifest_stub_review"},
+            "rows": [
+                {
+                    "target_id": target_id,
+                    "workorder_status": "ready_for_manifest_stub_review",
+                    "native_dropzone_pdb": str(native),
+                    "provenance_template_csv": str(provenance_csv),
+                    "manifest_stub_csv": str(manifest_csv),
+                    "prediction_pdb": str(prediction),
+                }
+            ],
+        },
+    )
+    args = mod.parse_args(_args(tmp_path, workorder_json))
+
+    payload = mod.build_payload(args)
+
+    row = payload["rows"][0]
+    assert payload["summary"]["clearance_workorder_audit_status"] == "blocked"
+    assert payload["summary"]["audit_pass_count"] == 0
+    assert payload["summary"]["manifest_stub_ready_count"] == 1
+    assert payload["summary"]["manifest_provenance_matched_count"] == 0
+    assert payload["summary"]["manifest_provenance_mismatch_count"] == 1
+    assert row["manifest_provenance_status"] == "mismatch"
+    assert row["manifest_provenance_mismatch_count"] == 1
+    assert "manifest_provenance_operator_clearance_mismatch" in row["blockers"]
+    assert row["next_action"] == "sync cleared provenance fields into the manifest stub and rerun the audit"
 
 
 def test_clearance_workorder_audit_reports_missing_workorders(tmp_path: Path) -> None:

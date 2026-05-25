@@ -27,9 +27,27 @@ AUDIT_COLUMNS = [
     "provenance_status",
     "manifest_stub_csv",
     "manifest_stub_status",
+    "manifest_provenance_status",
+    "manifest_provenance_mismatch_count",
     "prediction_file_status",
     "blockers",
     "next_action",
+]
+PROVENANCE_TO_MANIFEST_COLUMNS = [
+    "benchmark_id",
+    "target_id",
+    "scope",
+    "split",
+    "leakage_clearance",
+    "prediction_method",
+    "prediction_created_at",
+    "native_release_date",
+    "prediction_generated_before_native_release",
+    "public_template_or_native_used_for_prediction",
+    "other_team_model_used",
+    "post_release_information_used",
+    "current_casp17_target",
+    "operator_clearance",
 ]
 CLEAR_VALUES = {"cleared", "no_leak", "ready_for_row_fill", "internal_no_leak", "true", "yes"}
 TRUE_VALUES = {"1", "true", "yes", "y"}
@@ -218,12 +236,34 @@ def _manifest_status(
     return "ready" if not blockers else "blocked"
 
 
+def _manifest_provenance_status(
+    provenance: dict[str, str],
+    manifest: dict[str, str],
+    *,
+    provenance_ready: bool,
+    manifest_readable: bool,
+    blockers: list[str],
+) -> tuple[str, int]:
+    if not provenance_ready:
+        return "waiting_on_provenance", 0
+    if not manifest_readable:
+        return "waiting_on_manifest", 0
+    mismatch_count = 0
+    for column in PROVENANCE_TO_MANIFEST_COLUMNS:
+        if _text(provenance.get(column)) != _text(manifest.get(column)):
+            blockers.append(f"manifest_provenance_{column}_mismatch")
+            mismatch_count += 1
+    return ("matched" if mismatch_count == 0 else "mismatch"), mismatch_count
+
+
 def _next_action(blockers: list[str]) -> str:
     blocker_set = set(blockers)
     if not blockers:
         return "review and promote the manifest stub only after final operator signoff"
     if "native_pdb_missing" in blocker_set or "manifest_native_pdb_not_found" in blocker_set:
         return "place the cleared native PDB in the per-target native dropzone"
+    if any(blocker.startswith("manifest_provenance_") for blocker in blockers):
+        return "sync cleared provenance fields into the manifest stub and rerun the audit"
     if any("operator_clearance" in blocker or "leakage_clearance" in blocker for blocker in blockers):
         return "complete no-leak and operator clearance fields in the provenance template"
     if any("date" in blocker for blocker in blockers):
@@ -251,6 +291,14 @@ def _audit_row(workorder_row: dict[str, Any]) -> dict[str, Any]:
         if not manifest_file_blockers
         else "blocked"
     )
+    manifest_provenance_blockers: list[str] = []
+    manifest_provenance_status, manifest_provenance_mismatch_count = _manifest_provenance_status(
+        provenance_row,
+        manifest_row,
+        provenance_ready=provenance_status == "ready",
+        manifest_readable=not manifest_file_blockers,
+        blockers=manifest_provenance_blockers,
+    )
     prediction_file_status = "present"
     prediction = _text(manifest_row.get("prediction_pdb") or workorder_row.get("prediction_pdb") or workorder_row.get("ts_prediction_pdb"))
     if not prediction:
@@ -259,7 +307,7 @@ def _audit_row(workorder_row: dict[str, Any]) -> dict[str, Any]:
     elif not _resolve(prediction).exists():
         prediction_file_status = "missing"
         manifest_blockers.append("prediction_pdb_not_found")
-    blockers = [*native_blockers, *provenance_blockers, *manifest_blockers]
+    blockers = [*native_blockers, *provenance_blockers, *manifest_blockers, *manifest_provenance_blockers]
     audit_status = "pass" if not blockers else "blocked"
     return {
         "target_id": target_id,
@@ -272,6 +320,8 @@ def _audit_row(workorder_row: dict[str, Any]) -> dict[str, Any]:
         "provenance_status": provenance_status,
         "manifest_stub_csv": _text(workorder_row.get("manifest_stub_csv")),
         "manifest_stub_status": manifest_status,
+        "manifest_provenance_status": manifest_provenance_status,
+        "manifest_provenance_mismatch_count": manifest_provenance_mismatch_count,
         "prediction_file_status": prediction_file_status,
         "blockers": ",".join(dict.fromkeys(blockers)),
         "next_action": _next_action(blockers),
@@ -299,6 +349,12 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "native_valid_count": sum(1 for row in rows if int(row["native_atom_record_count"]) > 0),
         "provenance_ready_count": sum(1 for row in rows if row["provenance_status"] == "ready"),
         "manifest_stub_ready_count": sum(1 for row in rows if row["manifest_stub_status"] == "ready"),
+        "manifest_provenance_matched_count": sum(
+            1 for row in rows if row["manifest_provenance_status"] == "matched"
+        ),
+        "manifest_provenance_mismatch_count": sum(
+            int(row["manifest_provenance_mismatch_count"]) for row in rows
+        ),
         "prediction_present_count": sum(1 for row in rows if row["prediction_file_status"] == "present"),
         "first_blocked_target_id": _text(first_blocked.get("target_id")),
         "first_blocked_status": _text(first_blocked.get("audit_status")),
@@ -318,22 +374,27 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- clearance_workorder_status: `{summary['clearance_workorder_status'] or '-'}`",
         f"- audit pass/blocked/total: `{summary['audit_pass_count']}/{summary['audit_blocked_count']}/{summary['audit_target_count']}`",
         f"- prediction/native/provenance/manifest ready: `{summary['prediction_present_count']}/{summary['native_valid_count']}/{summary['provenance_ready_count']}/{summary['manifest_stub_ready_count']}`",
+        f"- manifest/provenance matched/mismatches: `{summary['manifest_provenance_matched_count']}/{summary['manifest_provenance_mismatch_count']}`",
         f"- first blocked: `{summary['first_blocked_target_id'] or '-'}` `{summary['first_blocked_status'] or '-'}`",
         f"- next action: {summary['first_blocked_next_action'] or '-'}",
         "",
         "## Audit Rows",
         "",
-        "| target | audit | native | atoms | provenance | manifest | prediction | blockers | next action |",
-        "| --- | --- | --- | ---: | --- | --- | --- | --- | --- |",
+        "| target | audit | native | atoms | provenance | manifest | manifest/provenance | prediction | blockers | next action |",
+        "| --- | --- | --- | ---: | --- | --- | --- | --- | --- | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
             f"| `{row['target_id']}` | `{row['audit_status']}` | `{row['native_file_status']}` | "
             f"{row['native_atom_record_count']} | `{row['provenance_status']}` | `{row['manifest_stub_status']}` | "
-            f"`{row['prediction_file_status']}` | `{row['blockers'] or '-'}` | {row['next_action']} |"
+            f"`{row['manifest_provenance_status']}` | `{row['prediction_file_status']}` | "
+            f"`{row['blockers'] or '-'}` | {row['next_action']} |"
         )
     if not payload["rows"]:
-        lines.append("| - | `missing_workorders` | - | 0 | - | - | - | `workorders_missing` | rerun clearance workorder builder |")
+        lines.append(
+            "| - | `missing_workorders` | - | 0 | - | - | - | - | `workorders_missing` | "
+            "rerun clearance workorder builder |"
+        )
     lines.extend(["", "## Claim Boundary", "", str(summary["claim_boundary"]), ""])
     path = _resolve(path_like)
     path.parent.mkdir(parents=True, exist_ok=True)

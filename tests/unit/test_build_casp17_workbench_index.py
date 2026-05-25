@@ -456,6 +456,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "native_valid_count": 0,
                 "provenance_ready_count": 0,
                 "manifest_stub_ready_count": 0,
+                "manifest_provenance_matched_count": 0,
+                "manifest_provenance_mismatch_count": 0,
                 "first_blocked_next_action": "place the cleared native PDB in the per-target native dropzone",
             }
         },
@@ -940,6 +942,18 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["competitive_target_identity_clearance_workorder_audit_native_count"] == 0
     assert payload["summary"]["competitive_target_identity_clearance_workorder_audit_provenance_count"] == 0
     assert payload["summary"]["competitive_target_identity_clearance_workorder_audit_manifest_count"] == 0
+    assert (
+        payload["summary"][
+            "competitive_target_identity_clearance_workorder_audit_manifest_provenance_matched_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"][
+            "competitive_target_identity_clearance_workorder_audit_manifest_provenance_mismatch_count"
+        ]
+        == 0
+    )
     assert payload["summary"]["competitive_target_identity_clearance_promotion_status"] == "blocked_by_audit"
     assert payload["summary"]["competitive_target_identity_clearance_promotion_row_count"] == 3
     assert payload["summary"]["competitive_target_identity_clearance_promotion_promoted_count"] == 0
