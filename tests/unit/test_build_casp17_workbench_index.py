@@ -27,6 +27,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     competitive_identity_unlock_json = tmp_path / "competitive_identity_unlock.json"
     competitive_identity_round_json = tmp_path / "competitive_identity_round.json"
     competitive_identity_intake_json = tmp_path / "competitive_identity_intake.json"
+    competitive_identity_sync_json = tmp_path / "competitive_identity_sync.json"
     competitive_file_source_plan_json = tmp_path / "competitive_file_source_plan.json"
     competitive_value_entry_plan_json = tmp_path / "competitive_value_entry_plan.json"
     competitive_execution_board_json = tmp_path / "competitive_execution_board.json"
@@ -298,6 +299,23 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        competitive_identity_sync_json,
+        {
+            "summary": {
+                "identity_intake_sync_status": "awaiting_intake",
+                "row_count": 15,
+                "synced_count": 0,
+                "ready_to_sync_count": 0,
+                "awaiting_intake_count": 15,
+                "blocked_count": 0,
+                "missing_field_count": 60,
+                "kit_mismatch_count": 0,
+                "applied_sync_count": 0,
+                "first_open_next_action": "fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance in the intake bundle",
+            }
+        },
+    )
+    _write_json(
         competitive_file_source_plan_json,
         {
             "summary": {
@@ -504,6 +522,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(competitive_identity_round_json),
             "--competitive-identity-intake-json",
             str(competitive_identity_intake_json),
+            "--competitive-identity-sync-json",
+            str(competitive_identity_sync_json),
             "--competitive-file-source-plan-json",
             str(competitive_file_source_plan_json),
             "--competitive-value-entry-plan-json",
@@ -601,6 +621,15 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["competitive_identity_intake_blocked_count"] == 0
     assert payload["summary"]["competitive_identity_intake_missing_field_count"] == 60
     assert payload["summary"]["competitive_identity_intake_file_actions_unlocked_count"] == 0
+    assert payload["summary"]["competitive_identity_sync_status"] == "awaiting_intake"
+    assert payload["summary"]["competitive_identity_sync_row_count"] == 15
+    assert payload["summary"]["competitive_identity_sync_synced_count"] == 0
+    assert payload["summary"]["competitive_identity_sync_ready_to_sync_count"] == 0
+    assert payload["summary"]["competitive_identity_sync_awaiting_count"] == 15
+    assert payload["summary"]["competitive_identity_sync_blocked_count"] == 0
+    assert payload["summary"]["competitive_identity_sync_missing_field_count"] == 60
+    assert payload["summary"]["competitive_identity_sync_kit_mismatch_count"] == 0
+    assert payload["summary"]["competitive_identity_sync_applied_count"] == 0
     assert payload["summary"]["competitive_file_source_plan_status"] == "waiting_on_identity"
     assert payload["summary"]["competitive_file_source_plan_action_count"] == 180
     assert payload["summary"]["competitive_file_source_plan_waiting_on_identity_count"] == 180
@@ -680,6 +709,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["competitive_floor_identity_unlock_kit"]["status"] == "awaiting_identity"
     assert by_id["competitive_floor_identity_unlock_round"]["status"] == "awaiting_identity"
     assert by_id["competitive_floor_identity_intake_bundle"]["status"] == "awaiting_identity"
+    assert by_id["competitive_floor_identity_intake_sync"]["status"] == "awaiting_intake"
     assert by_id["competitive_floor_file_source_plan"]["status"] == "waiting_on_identity"
     assert by_id["competitive_floor_value_entry_plan"]["status"] == "waiting_on_identity"
     assert by_id["competitive_floor_execution_board"]["status"] == "awaiting_identity"
