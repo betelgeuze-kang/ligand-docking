@@ -16,6 +16,7 @@ if str(ROOT) not in sys.path:
 
 from tools import build_casp17_competitive_floor_target_identity_clearance_intake_staging_plan as intake_staging
 from tools import build_casp17_competitive_floor_target_identity_clearance_action_board as action_board
+from tools import build_casp17_competitive_floor_target_identity_clearance_action_bundle as action_bundle
 from tools import build_casp17_competitive_floor_target_identity_clearance_promotion_plan as promotion_plan
 from tools import build_casp17_competitive_floor_target_identity_clearance_workorder_audit as workorder_audit
 from tools import build_casp17_workbench_index as workbench_index
@@ -33,6 +34,10 @@ DEFAULT_AUDIT_MD = "casp17/COMPETITIVE_FLOOR_TARGET_IDENTITY_CLEARANCE_WORKORDER
 DEFAULT_ACTION_BOARD_JSON = "casp17/casp17_competitive_floor_target_identity_clearance_action_board_current.json"
 DEFAULT_ACTION_BOARD_CSV = "casp17/casp17_competitive_floor_target_identity_clearance_action_board_current.csv"
 DEFAULT_ACTION_BOARD_MD = "casp17/COMPETITIVE_FLOOR_TARGET_IDENTITY_CLEARANCE_ACTION_BOARD.md"
+DEFAULT_ACTION_BUNDLE_DIR = "casp17/competitive_floor_target_identity_clearance_action_bundle"
+DEFAULT_ACTION_BUNDLE_JSON = "casp17/casp17_competitive_floor_target_identity_clearance_action_bundle_current.json"
+DEFAULT_ACTION_BUNDLE_CSV = "casp17/casp17_competitive_floor_target_identity_clearance_action_bundle_current.csv"
+DEFAULT_ACTION_BUNDLE_MD = "casp17/COMPETITIVE_FLOOR_TARGET_IDENTITY_CLEARANCE_ACTION_BUNDLE.md"
 DEFAULT_CURRENT_TARGET_CSV = "casp17/casp17_target_model_folders_current.csv"
 DEFAULT_PROMOTED_MANIFEST_CSV = (
     "casp17/casp17_competitive_floor_target_identity_clearance_promoted_manifest_candidate_current.csv"
@@ -86,7 +91,8 @@ READY_STATUSES = {
 }
 CLAIM_BOUNDARY = (
     "Local CASP17 competitive-floor target identity clearance cycle only. It chains manifest-stub sync, workorder "
-    "audit, action-board expansion, audited manifest promotion, clearance-to-intake staging, and workbench refresh. "
+    "audit, action-board expansion, action-bundle materialization, audited manifest promotion, "
+    "clearance-to-intake staging, and workbench refresh. "
     "It does not rebuild "
     "workorders, fetch native structures, clear no-leak provenance, choose targets, score native accuracy, run "
     "predictors, mutate live identity intake files, or submit to CASP. Manifest stubs are modified only when "
@@ -217,6 +223,26 @@ def _run_action_board(args: argparse.Namespace) -> dict[str, Any]:
     return payload
 
 
+def _run_action_bundle(args: argparse.Namespace) -> dict[str, Any]:
+    bundle_args = action_bundle.parse_args(
+        [
+            "--action-board-json",
+            args.action_board_json,
+            "--out-dir",
+            args.action_bundle_dir,
+            "--out-json",
+            args.action_bundle_json,
+            "--out-csv",
+            args.action_bundle_csv,
+            "--out-md",
+            args.action_bundle_md,
+        ]
+    )
+    payload = action_bundle.build_payload(bundle_args)
+    action_bundle.write_outputs(bundle_args, payload)
+    return payload
+
+
 def _run_promotion_plan(args: argparse.Namespace) -> dict[str, Any]:
     promotion_args = promotion_plan.parse_args(
         [
@@ -297,6 +323,8 @@ def _run_workbench(args: argparse.Namespace) -> dict[str, Any]:
             args.audit_json,
             "--competitive-target-identity-clearance-action-board-json",
             args.action_board_json,
+            "--competitive-target-identity-clearance-action-bundle-json",
+            args.action_bundle_json,
             "--competitive-target-identity-clearance-promotion-plan-json",
             args.promotion_json,
             "--competitive-target-identity-clearance-intake-staging-json",
@@ -361,7 +389,12 @@ def _first_next_action(args: argparse.Namespace, summaries: dict[str, dict[str, 
         return "review manifest sync rows, then rerun this cycle with --apply-manifest-sync"
     if _int(sync_summary.get("awaiting_provenance_count")):
         action_summary = summaries.get("action_board", {})
-        return _text(action_summary.get("first_open_next_action")) or _text(sync_summary.get("first_open_next_action"))
+        bundle_summary = summaries.get("action_bundle", {})
+        return (
+            _text(bundle_summary.get("first_open_action_md"))
+            or _text(action_summary.get("first_open_next_action"))
+            or _text(sync_summary.get("first_open_next_action"))
+        )
     audit_summary = summaries["audit"]
     if _int(audit_summary.get("audit_blocked_count")):
         return _text(audit_summary.get("first_blocked_next_action"))
@@ -418,6 +451,20 @@ def _build_cycle_payload(
             blocked=_int(summaries["action_board"].get("open_action_count")),
             total=_int(summaries["action_board"].get("action_count")),
             next_action=_text(summaries["action_board"].get("first_open_next_action")),
+        ),
+        _stage_row(
+            "action_bundle",
+            _text(summaries["action_bundle"].get("action_bundle_status")),
+            args.action_bundle_json,
+            ready=max(
+                0,
+                _int(summaries["action_bundle"].get("action_count"))
+                - _int(summaries["action_bundle"].get("open_action_count")),
+            ),
+            awaiting=0,
+            blocked=_int(summaries["action_bundle"].get("open_action_count")),
+            total=_int(summaries["action_bundle"].get("action_count")),
+            next_action=_text(summaries["action_bundle"].get("first_open_action_md")),
         ),
         _stage_row(
             "promotion_plan",
@@ -494,6 +541,11 @@ def _build_cycle_payload(
         "action_board_status": _text(summaries["action_board"].get("action_board_status")),
         "action_board_action_count": _int(summaries["action_board"].get("action_count")),
         "action_board_open_action_count": _int(summaries["action_board"].get("open_action_count")),
+        "action_bundle_status": _text(summaries["action_bundle"].get("action_bundle_status")),
+        "action_bundle_action_count": _int(summaries["action_bundle"].get("action_count")),
+        "action_bundle_open_action_count": _int(summaries["action_bundle"].get("open_action_count")),
+        "action_bundle_file_count": _int(summaries["action_bundle"].get("bundle_file_count")),
+        "action_bundle_folder_count": _int(summaries["action_bundle"].get("action_folder_count")),
         "promotion_status": _text(summaries["promotion"].get("clearance_promotion_status")),
         "promoted_manifest_count": _int(summaries["promotion"].get("promoted_manifest_count")),
         "promotion_blocked_count": _int(summaries["promotion"].get("blocked_count")),
@@ -529,6 +581,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- manifest sync: `{summary['manifest_sync_status']}` ready/awaiting/synced/applied `{summary['manifest_sync_ready_to_sync_count']}/{summary['manifest_sync_awaiting_provenance_count']}/{summary['manifest_sync_synced_count']}/{summary['manifest_sync_applied_field_count']}`",
         f"- audit: `{summary['audit_status']}` pass/blocked `{summary['audit_pass_count']}/{summary['audit_blocked_count']}`",
         f"- action board: `{summary['action_board_status']}` actions/open `{summary['action_board_action_count']}/{summary['action_board_open_action_count']}`",
+        f"- action bundle: `{summary['action_bundle_status']}` actions/open/files/folders `{summary['action_bundle_action_count']}/{summary['action_bundle_open_action_count']}/{summary['action_bundle_file_count']}/{summary['action_bundle_folder_count']}`",
         f"- promotion: `{summary['promotion_status']}` promoted/blocked `{summary['promoted_manifest_count']}/{summary['promotion_blocked_count']}`",
         f"- intake staging: `{summary['intake_staging_status']}` staged/blocked `{summary['staged_identity_count']}/{summary['staging_blocked_count']}`",
         f"- candidate intake sync: `{summary['candidate_intake_sync_status']}` ready/waiting/applied `{summary['candidate_intake_ready_to_apply_count']}/{summary['candidate_intake_waiting_count']}/{summary['candidate_intake_applied_count']}`",
@@ -564,6 +617,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "manifest_sync": _run_manifest_sync(args),
         "audit": _run_workorder_audit(args),
         "action_board": _run_action_board(args),
+        "action_bundle": _run_action_bundle(args),
         "promotion": _run_promotion_plan(args),
         "intake_staging": _run_intake_staging(args),
         "candidate_intake_sync": _run_candidate_intake_sync(args),
@@ -589,6 +643,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--action-board-json", default=DEFAULT_ACTION_BOARD_JSON)
     parser.add_argument("--action-board-csv", default=DEFAULT_ACTION_BOARD_CSV)
     parser.add_argument("--action-board-md", default=DEFAULT_ACTION_BOARD_MD)
+    parser.add_argument("--action-bundle-dir", default=DEFAULT_ACTION_BUNDLE_DIR)
+    parser.add_argument("--action-bundle-json", default=DEFAULT_ACTION_BUNDLE_JSON)
+    parser.add_argument("--action-bundle-csv", default=DEFAULT_ACTION_BUNDLE_CSV)
+    parser.add_argument("--action-bundle-md", default=DEFAULT_ACTION_BUNDLE_MD)
     parser.add_argument("--current-target-csv", default=DEFAULT_CURRENT_TARGET_CSV)
     parser.add_argument("--promoted-manifest-csv", default=DEFAULT_PROMOTED_MANIFEST_CSV)
     parser.add_argument("--promotion-json", default=DEFAULT_PROMOTION_JSON)

@@ -175,6 +175,14 @@ def _args(tmp_path: Path, fixture: dict[str, Path], *extra: str) -> list[str]:
         str(tmp_path / "action_board.csv"),
         "--action-board-md",
         str(tmp_path / "ACTION_BOARD.md"),
+        "--action-bundle-dir",
+        str(tmp_path / "action_bundle"),
+        "--action-bundle-json",
+        str(tmp_path / "action_bundle.json"),
+        "--action-bundle-csv",
+        str(tmp_path / "action_bundle.csv"),
+        "--action-bundle-md",
+        str(tmp_path / "ACTION_BUNDLE.md"),
         "--current-target-csv",
         str(fixture["current_csv"]),
         "--promoted-manifest-csv",
@@ -229,9 +237,14 @@ def test_clearance_cycle_waits_for_provenance_without_mutating_manifest(tmp_path
     assert payload["summary"]["audit_blocked_count"] == 1
     assert payload["summary"]["action_board_status"] == "open_actions"
     assert payload["summary"]["action_board_open_action_count"] == 4
+    assert payload["summary"]["action_bundle_status"] == "open_actions"
+    assert payload["summary"]["action_bundle_open_action_count"] == 4
+    assert payload["summary"]["action_bundle_file_count"] == 8
     assert _read_csv(fixture["manifest_csv"])[0]["operator_clearance"] == "REQUIRED_OPERATOR_CLEARANCE"
     assert _read_csv(tmp_path / "cycle.csv")[0]["stage"] == "manifest_sync"
     assert (tmp_path / "action_board.json").is_file()
+    assert (tmp_path / "action_bundle.json").is_file()
+    assert list((tmp_path / "action_bundle").glob("*/action_001_native_dropzone/ACTION.md"))
 
 
 def test_clearance_cycle_apply_manifest_sync_reaches_intake_staging(tmp_path):
@@ -245,6 +258,8 @@ def test_clearance_cycle_apply_manifest_sync_reaches_intake_staging(tmp_path):
     assert payload["summary"]["audit_pass_count"] == 1
     assert payload["summary"]["action_board_status"] == "ready"
     assert payload["summary"]["action_board_open_action_count"] == 0
+    assert payload["summary"]["action_bundle_status"] == "ready"
+    assert payload["summary"]["action_bundle_open_action_count"] == 0
     assert payload["summary"]["promoted_manifest_count"] == 1
     assert payload["summary"]["staged_identity_count"] == 1
     assert payload["summary"]["candidate_intake_applied_count"] == 1

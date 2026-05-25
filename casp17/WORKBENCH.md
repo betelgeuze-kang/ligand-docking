@@ -2,7 +2,7 @@
 
 This is the local navigation surface for the current CASP17 internal-physics lane.
 
-- generated: `2026-05-26T03:29:29+09:00`
+- generated: `2026-05-26T03:41:39+09:00`
 - workbench_status: `ready_for_operator_fill`
 - target model folders: `16/16`
 - target object folders: `48`
@@ -30,10 +30,11 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 - competitive target identity clearance manifest sync: `awaiting_provenance` rows ready/awaiting/blocked/synced `3/0/3/0/0` changed/applied `0/0`
 - competitive target identity clearance workorder audit: `blocked` pass/blocked/total `0/3/3` prediction/native/provenance/evidence/manifest `3/0/0/0/0` prediction protein-atoms/coordinate-valid `1855/3` identity discovery blocked/cleared `3/0` native protein-atoms/coordinate-valid `0/0` evidence verified/content-blocked/blocked/waiting `0/0/3/0` manifest/provenance matched/mismatches `0/0` native/prediction distinct/same/waiting `0/0/3`
 - competitive target identity clearance action board: `open_actions` actions/open `12/12` native/evidence/provenance/manifest `3/3/3/3`
+- competitive target identity clearance action bundle: `open_actions` targets/actions/open `3/12/12` files/folders `24/12` native/evidence/provenance/manifest `3/3/3/3`
 - competitive target identity clearance promotion: `blocked_by_audit` rows/promoted/blocked `3/0/3` ready/audit-pass `0/0`
 - competitive target identity clearance intake staging: `waiting_on_promoted_manifest` promoted/staged/blocked `0/0/0` open slots/candidate rows `15/15`
 - competitive target identity clearance candidate intake sync: `waiting_on_staged_identity` rows ready/waiting/blocked/applied `15/0/15/0/0`
-- competitive target identity clearance cycle: `awaiting_provenance` stages `1/6/7` sync/audit/promotion `awaiting_provenance`/`blocked`/`blocked_by_audit` staged `0`
+- competitive target identity clearance cycle: `awaiting_provenance` stages `1/7/8` sync/audit/promotion `awaiting_provenance`/`blocked`/`blocked_by_audit` staged `0`
 - competitive identity cycle: `awaiting_intake` stages `1/6/7` sync `awaiting_intake` ready/awaiting `0/15` missing fields `60` readiness `awaiting_identity`
 - competitive file source plan: `waiting_on_identity` actions `180` waiting identity/source `180/0` ready/imported/blocked `0/0/0`
 - competitive value entry plan: `waiting_on_identity` actions `270` target/provenance/calibration `30/150/90` waiting identity/value/clearance/ref `270/0/0/0` ready/blocked `0/0`
@@ -84,10 +85,11 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 | `competitive_floor_target_identity_clearance_manifest_sync` | `awaiting_provenance` | 0 | 3 | 3 | `casp17/casp17_competitive_floor_target_identity_clearance_manifest_sync_current.json` | complete the no-leak provenance template before syncing the manifest stub | `ready:0,awaiting_provenance:3,synced:0` |
 | `competitive_floor_target_identity_clearance_workorder_audit` | `blocked` | 0 | 3 | 3 | `casp17/casp17_competitive_floor_target_identity_clearance_workorder_audit_current.json` | complete target-origin and no-leak evidence review before native/provenance promotion | `prediction:3,prediction_protein_atoms:1855,prediction_coordinate_valid:3,identity_discovery_blocked:3,identity_discovery_cleared:0,native:0,native_protein_atoms:0,native_coordinate_valid:0,provenance:0,evidence_ref:0,evidence_ref_verified:0,manifest:0,manifest_provenance_matched:0,manifest_provenance_mismatches:0,native_prediction_distinct:0,native_prediction_same:0` |
 | `competitive_floor_target_identity_clearance_action_board` | `open_actions` | 0 | 12 | 12 | `casp17/casp17_competitive_floor_target_identity_clearance_action_board_current.json` | Place an operator-cleared native protein PDB in the native dropzone; ensure it is distinct from the prediction and has valid ATOM coordinates. | `native:3,evidence:3,provenance:3,manifest:3` |
+| `competitive_floor_target_identity_clearance_action_bundle` | `open_actions` | 0 | 12 | 12 | `casp17/casp17_competitive_floor_target_identity_clearance_action_bundle_current.json` | casp17/competitive_floor_target_identity_clearance_action_bundle/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/action_001_native_dropzone/ACTION.md | `targets:3,folders:12,files:24,native:3,evidence:3,provenance:3,manifest:3` |
 | `competitive_floor_target_identity_clearance_promotion_plan` | `blocked_by_audit` | 0 | 3 | 3 | `casp17/casp17_competitive_floor_target_identity_clearance_promotion_plan_current.json` | clear the native/provenance workorder audit before promotion | `audit_pass:0,promoted:0,manifest:0` |
 | `competitive_floor_target_identity_clearance_intake_staging` | `waiting_on_promoted_manifest` | 0 | 0 | 0 | `casp17/casp17_competitive_floor_target_identity_clearance_intake_staging_plan_current.json` | wait for promoted clearance manifest rows | `promoted:0,staged:0,open_slots:15` |
 | `competitive_floor_target_identity_clearance_candidate_intake_sync` | `waiting_on_staged_identity` | 0 | 15 | 15 | `casp17/casp17_competitive_floor_target_identity_clearance_candidate_intake_sync_current.json` | wait for clearance intake staging to produce staged_for_operator_review rows | `ready:0,waiting:15,applied:0` |
-| `competitive_floor_target_identity_clearance_cycle` | `awaiting_provenance` | 1 | 6 | 7 | `casp17/casp17_competitive_floor_target_identity_clearance_cycle_current.json` | Place an operator-cleared native protein PDB in the native dropzone; ensure it is distinct from the prediction and has valid ATOM coordinates. | `sync:awaiting_provenance,audit:blocked,promotion:blocked_by_audit,staged:0` |
+| `competitive_floor_target_identity_clearance_cycle` | `awaiting_provenance` | 1 | 7 | 8 | `casp17/casp17_competitive_floor_target_identity_clearance_cycle_current.json` | casp17/competitive_floor_target_identity_clearance_action_bundle/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/action_001_native_dropzone/ACTION.md | `sync:awaiting_provenance,audit:blocked,promotion:blocked_by_audit,staged:0` |
 | `competitive_floor_identity_cycle` | `awaiting_intake` | 1 | 6 | 7 | `casp17/casp17_competitive_floor_identity_cycle_current.json` | fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance in the intake bundle | `sync:awaiting_intake,readiness:awaiting_identity,missing_fields:60` |
 | `competitive_floor_file_source_plan` | `waiting_on_identity` | 0 | 180 | 180 | `casp17/casp17_competitive_floor_file_source_plan_current.json` | fill and apply the compact identity unlock kit first | `target_identity_required` |
 | `competitive_floor_value_entry_plan` | `waiting_on_identity` | 0 | 270 | 270 | `casp17/casp17_competitive_floor_value_entry_plan_current.json` | fill and apply the compact identity unlock kit first | `target_identity_required` |

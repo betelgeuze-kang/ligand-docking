@@ -68,6 +68,11 @@ CLEAR_VALUES = {"cleared", "no_leak", "ready_for_row_fill", "internal_no_leak", 
 TRUE_VALUES = {"1", "true", "yes", "y"}
 FALSE_VALUES = {"0", "false", "no", "n"}
 URL_PREFIXES = ("http://", "https://")
+EVIDENCE_REF_BLOCKED_MARKERS = (
+    "clearance_evidence_status: request_template",
+    "evidence request template",
+    "not a completed no-leak clearance",
+)
 PROVENANCE_REVIEW_RESOLVABLE_IDENTITY_BLOCKERS = {"no_leak_clearance_required", "target_origin_review_required"}
 CLAIM_BOUNDARY = (
     "Local competitive-floor target identity clearance workorder audit only. It verifies per-target native "
@@ -252,6 +257,8 @@ def _evidence_ref_status(value: Any, *, target_id: str) -> tuple[str, str, str, 
         blockers.append("evidence_ref_target_id_missing")
     if not any(marker in lowered for marker in ["no-leak", "no_leak", "no leak"]):
         blockers.append("evidence_ref_no_leak_marker_missing")
+    if any(marker in lowered for marker in EVIDENCE_REF_BLOCKED_MARKERS):
+        blockers.append("evidence_ref_is_request_template")
     content_status = "verified" if not blockers else "content_blocked"
     return "present", ref, content_status, _sha256(path), blockers
 

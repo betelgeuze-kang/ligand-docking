@@ -373,6 +373,60 @@ def test_clearance_workorder_audit_resolves_no_leak_identity_discovery_blocker_w
     assert row["identity_discovery_blockers"] == "no_leak_clearance_required"
 
 
+def test_clearance_workorder_audit_blocks_evidence_request_template(tmp_path: Path) -> None:
+    target_id = "H1001"
+    prediction = tmp_path / "H1001_model_1.pdb"
+    native = tmp_path / "H1001_native.pdb"
+    prediction.write_text(
+        "ATOM      1 CA   ALA A   1       1.000   2.000   3.000  1.00 70.00           C\n",
+        encoding="utf-8",
+    )
+    native.write_text(
+        "ATOM      1 CA   GLY A   1       4.000   5.000   6.000  1.00 60.00           C\n",
+        encoding="utf-8",
+    )
+    provenance_csv = tmp_path / "provenance_template.csv"
+    manifest_csv = tmp_path / "manifest_stub.csv"
+    evidence_ref = tmp_path / "evidence_request.md"
+    evidence_ref.write_text(
+        "CLEARANCE_EVIDENCE_STATUS: request_template\n\n"
+        "H1001 evidence request template for no-leak review. This is not a completed no-leak clearance.\n",
+        encoding="utf-8",
+    )
+    _write_csv(provenance_csv, [_ready_provenance(target_id, str(evidence_ref))])
+    _write_csv(manifest_csv, [_ready_manifest(target_id, prediction, native)])
+    workorder_json = tmp_path / "workorder.json"
+    _write_json(
+        workorder_json,
+        {
+            "summary": {"clearance_workorder_status": "ready_for_manifest_stub_review"},
+            "rows": [
+                {
+                    "target_id": target_id,
+                    "workorder_status": "ready_for_manifest_stub_review",
+                    "native_dropzone_pdb": str(native),
+                    "provenance_template_csv": str(provenance_csv),
+                    "manifest_stub_csv": str(manifest_csv),
+                    "prediction_pdb": str(prediction),
+                    "identity_discovery_blockers": "no_leak_clearance_required",
+                }
+            ],
+        },
+    )
+    args = mod.parse_args(_args(tmp_path, workorder_json))
+
+    payload = mod.build_payload(args)
+
+    row = payload["rows"][0]
+    assert payload["summary"]["clearance_workorder_audit_status"] == "blocked"
+    assert payload["summary"]["evidence_ref_present_count"] == 1
+    assert payload["summary"]["evidence_ref_verified_count"] == 0
+    assert payload["summary"]["evidence_ref_content_blocked_count"] == 1
+    assert row["evidence_ref_content_status"] == "content_blocked"
+    assert "evidence_ref_is_request_template" in row["blockers"]
+    assert row["identity_discovery_blocker_status"] == "blocked"
+
+
 def test_clearance_workorder_audit_blocks_native_that_is_prediction_file(tmp_path: Path) -> None:
     target_id = "H1001"
     prediction = tmp_path / "H1001_model_1.pdb"
