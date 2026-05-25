@@ -20,6 +20,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     competitive_batch_json = tmp_path / "competitive_batch.json"
     competitive_row_fill_status_json = tmp_path / "competitive_row_fill_status.json"
     competitive_row_fill_worklist_json = tmp_path / "competitive_row_fill_worklist.json"
+    competitive_evidence_dropzone_json = tmp_path / "competitive_evidence_dropzone.json"
     competitive_operator_template_json = tmp_path / "competitive_operator_template.json"
     competitive_operator_preflight_json = tmp_path / "competitive_operator_preflight.json"
     bundle_json = tmp_path / "bundle.json"
@@ -171,6 +172,20 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        competitive_evidence_dropzone_json,
+        {
+            "summary": {
+                "dropzone_status": "open_actions",
+                "dropzone_count": 15,
+                "manifest_count": 15,
+                "open_action_count": 450,
+                "file_action_count": 180,
+                "first_action_blocker": "target_id_placeholder",
+                "first_action_note": "replace target_id in row_fill.csv",
+            }
+        },
+    )
+    _write_json(
         competitive_operator_template_json,
         {
             "summary": {
@@ -225,6 +240,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(competitive_row_fill_status_json),
             "--competitive-row-fill-worklist-json",
             str(competitive_row_fill_worklist_json),
+            "--competitive-evidence-dropzone-json",
+            str(competitive_evidence_dropzone_json),
             "--competitive-operator-template-json",
             str(competitive_operator_template_json),
             "--competitive-operator-preflight-json",
@@ -261,6 +278,11 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["competitive_row_fill_worklist_status"] == "open_actions"
     assert payload["summary"]["competitive_row_fill_worklist_open_action_count"] == 450
     assert payload["summary"]["competitive_row_fill_worklist_guide_count"] == 15
+    assert payload["summary"]["competitive_evidence_dropzone_status"] == "open_actions"
+    assert payload["summary"]["competitive_evidence_dropzone_count"] == 15
+    assert payload["summary"]["competitive_evidence_dropzone_manifest_count"] == 15
+    assert payload["summary"]["competitive_evidence_dropzone_open_action_count"] == 450
+    assert payload["summary"]["competitive_evidence_dropzone_file_action_count"] == 180
     assert payload["summary"]["competitive_operator_template_status"] == "blocked"
     assert payload["summary"]["competitive_operator_template_row_count"] == 15
     assert payload["summary"]["competitive_operator_template_row_fill_count"] == 0
