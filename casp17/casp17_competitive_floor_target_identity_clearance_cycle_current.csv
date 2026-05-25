@@ -1,4 +1,5 @@
 stage,status,path,ready_count,awaiting_count,blocked_count,total_count,next_action
+operator_intake,awaiting_input,casp17/casp17_competitive_floor_target_identity_clearance_operator_intake_current.json,0,3,0,3,"fill native_source_pdb, no_leak_evidence_ref, operator, dates, and true/false provenance controls"
 manifest_sync,awaiting_provenance,casp17/casp17_competitive_floor_target_identity_clearance_manifest_sync_current.json,0,3,0,3,complete the no-leak provenance template before syncing the manifest stub
 workorder_audit,blocked,casp17/casp17_competitive_floor_target_identity_clearance_workorder_audit_current.json,0,0,3,3,complete target-origin and no-leak evidence review before native/provenance promotion
 action_board,open_actions,casp17/casp17_competitive_floor_target_identity_clearance_action_board_current.json,0,0,12,12,Place an operator-cleared native protein PDB in the native dropzone; ensure it is distinct from the prediction and has valid ATOM coordinates.

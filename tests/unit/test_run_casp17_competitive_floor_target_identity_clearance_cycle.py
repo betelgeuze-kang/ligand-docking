@@ -157,6 +157,14 @@ def _args(tmp_path: Path, fixture: dict[str, Path], *extra: str) -> list[str]:
     return [
         "--workorder-json",
         str(fixture["workorder_json"]),
+        "--operator-intake-csv",
+        str(tmp_path / "operator_intake.csv"),
+        "--operator-intake-json",
+        str(tmp_path / "operator_intake.json"),
+        "--operator-intake-report-csv",
+        str(tmp_path / "operator_intake_report.csv"),
+        "--operator-intake-md",
+        str(tmp_path / "OPERATOR_INTAKE.md"),
         "--manifest-sync-json",
         str(tmp_path / "manifest_sync.json"),
         "--manifest-sync-csv",
@@ -232,7 +240,10 @@ def test_clearance_cycle_waits_for_provenance_without_mutating_manifest(tmp_path
     payload = mod.build_payload(args)
     mod.write_outputs(args, payload)
 
-    assert payload["summary"]["clearance_cycle_status"] == "awaiting_provenance"
+    assert payload["summary"]["clearance_cycle_status"] == "awaiting_operator_intake"
+    assert payload["summary"]["operator_intake_status"] == "awaiting_input"
+    assert payload["summary"]["operator_intake_awaiting_input_count"] == 1
+    assert payload["summary"]["operator_intake_applied_count"] == 0
     assert payload["summary"]["manifest_sync_awaiting_provenance_count"] == 1
     assert payload["summary"]["audit_blocked_count"] == 1
     assert payload["summary"]["action_board_status"] == "open_actions"
@@ -241,7 +252,8 @@ def test_clearance_cycle_waits_for_provenance_without_mutating_manifest(tmp_path
     assert payload["summary"]["action_bundle_open_action_count"] == 4
     assert payload["summary"]["action_bundle_file_count"] == 8
     assert _read_csv(fixture["manifest_csv"])[0]["operator_clearance"] == "REQUIRED_OPERATOR_CLEARANCE"
-    assert _read_csv(tmp_path / "cycle.csv")[0]["stage"] == "manifest_sync"
+    assert _read_csv(tmp_path / "cycle.csv")[0]["stage"] == "operator_intake"
+    assert (tmp_path / "operator_intake.csv").is_file()
     assert (tmp_path / "action_board.json").is_file()
     assert (tmp_path / "action_bundle.json").is_file()
     assert list((tmp_path / "action_bundle").glob("*/action_001_native_dropzone/ACTION.md"))
@@ -249,12 +261,50 @@ def test_clearance_cycle_waits_for_provenance_without_mutating_manifest(tmp_path
 
 def test_clearance_cycle_apply_manifest_sync_reaches_intake_staging(tmp_path):
     fixture = _fixture(tmp_path, ready=True)
-    args = mod.parse_args(_args(tmp_path, fixture, "--apply-manifest-sync", "--apply-candidate-intake"))
+    native_source = _pdb(
+        tmp_path / "sources" / "H1001_native_source.pdb",
+        residue="GLY",
+        x="4.000",
+        y="5.000",
+        z="6.000",
+    )
+    _write_csv(
+        tmp_path / "operator_intake.csv",
+        [
+            {
+                "target_id": "H1001",
+                "native_source_pdb": native_source,
+                "no_leak_evidence_ref": str(tmp_path / "no_leak" / "H1001.md"),
+                "leakage_clearance": "no_leak",
+                "operator_clearance": "cleared",
+                "operator": "operator-a",
+                "prediction_created_at": "2026-01-01",
+                "native_release_date": "2026-02-01",
+                "prediction_generated_before_native_release": "true",
+                "public_template_or_native_used_for_prediction": "false",
+                "other_team_model_used": "false",
+                "post_release_information_used": "false",
+                "current_casp17_target": "false",
+                "notes": "operator reviewed no-leak evidence",
+            }
+        ],
+    )
+    args = mod.parse_args(
+        _args(
+            tmp_path,
+            fixture,
+            "--apply-operator-intake",
+            "--apply-manifest-sync",
+            "--apply-candidate-intake",
+        )
+    )
 
     payload = mod.build_payload(args)
     mod.write_outputs(args, payload)
 
     assert payload["summary"]["clearance_cycle_status"] == "candidate_intake_applied"
+    assert payload["summary"]["operator_intake_status"] == "applied"
+    assert payload["summary"]["operator_intake_applied_count"] == 1
     assert payload["summary"]["audit_pass_count"] == 1
     assert payload["summary"]["action_board_status"] == "ready"
     assert payload["summary"]["action_board_open_action_count"] == 0
