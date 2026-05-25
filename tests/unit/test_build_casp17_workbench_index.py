@@ -25,6 +25,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     competitive_evidence_round_json = tmp_path / "competitive_evidence_round.json"
     competitive_unlock_priority_json = tmp_path / "competitive_unlock_priority.json"
     competitive_identity_unlock_json = tmp_path / "competitive_identity_unlock.json"
+    competitive_identity_round_json = tmp_path / "competitive_identity_round.json"
     competitive_value_ledger_json = tmp_path / "competitive_value_ledger.json"
     competitive_evidence_intake_json = tmp_path / "competitive_evidence_intake.json"
     competitive_patch_gate_json = tmp_path / "competitive_patch_gate.json"
@@ -259,6 +260,24 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        competitive_identity_round_json,
+        {
+            "summary": {
+                "identity_round_status": "awaiting_identity",
+                "row_count": 15,
+                "identity_ready_for_import_count": 0,
+                "identity_awaiting_count": 15,
+                "identity_blocked_count": 0,
+                "import_ready_for_apply_count": 0,
+                "import_applied_count": 0,
+                "identity_open_action_count": 30,
+                "target_id_open_count": 15,
+                "file_actions_waiting_on_identity_count": 180,
+                "first_next_action": "fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance",
+            }
+        },
+    )
+    _write_json(
         competitive_value_ledger_json,
         {
             "summary": {
@@ -388,6 +407,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(competitive_unlock_priority_json),
             "--competitive-identity-unlock-kit-json",
             str(competitive_identity_unlock_json),
+            "--competitive-identity-round-json",
+            str(competitive_identity_round_json),
             "--competitive-value-ledger-json",
             str(competitive_value_ledger_json),
             "--competitive-evidence-intake-json",
@@ -461,6 +482,15 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["competitive_identity_unlock_awaiting_count"] == 15
     assert payload["summary"]["competitive_identity_unlock_blocked_count"] == 0
     assert payload["summary"]["competitive_identity_unlock_file_actions_unlocked_count"] == 0
+    assert payload["summary"]["competitive_identity_round_status"] == "awaiting_identity"
+    assert payload["summary"]["competitive_identity_round_row_count"] == 15
+    assert payload["summary"]["competitive_identity_round_ready_for_import_count"] == 0
+    assert payload["summary"]["competitive_identity_round_awaiting_count"] == 15
+    assert payload["summary"]["competitive_identity_round_blocked_count"] == 0
+    assert payload["summary"]["competitive_identity_round_import_ready_for_apply_count"] == 0
+    assert payload["summary"]["competitive_identity_round_import_applied_count"] == 0
+    assert payload["summary"]["competitive_identity_round_target_id_open_count"] == 15
+    assert payload["summary"]["competitive_identity_round_file_waiting_on_identity_count"] == 180
     assert payload["summary"]["competitive_value_ledger_status"] == "awaiting_values"
     assert payload["summary"]["competitive_value_ledger_count"] == 15
     assert payload["summary"]["competitive_value_ledger_action_count"] == 270
@@ -500,6 +530,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["competitive_floor_evidence_round"]["status"] == "awaiting_import"
     assert by_id["competitive_floor_unlock_priority"]["status"] == "identity_unlock_required"
     assert by_id["competitive_floor_identity_unlock_kit"]["status"] == "awaiting_identity"
+    assert by_id["competitive_floor_identity_unlock_round"]["status"] == "awaiting_identity"
     assert by_id["competitive_floor_operator_template"]["status"] == "blocked"
     assert by_id["competitive_floor_operator_preflight"]["status"] == "blocked"
     assert by_id["benchmark_input_inventory"]["status"] == "blocked"

@@ -1,6 +1,6 @@
 # CASP17 Competitive-Floor Identity Unlock Kit
 
-- generated: `2026-05-25T23:35:54+09:00`
+- generated: `2026-05-25T23:45:11+09:00`
 - identity_unlock_status: `awaiting_identity`
 - apply_mode: `dry_run`
 - rows: `15`

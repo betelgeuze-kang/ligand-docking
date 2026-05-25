@@ -2,7 +2,7 @@
 
 This is the local navigation surface for the current CASP17 internal-physics lane.
 
-- generated: `2026-05-25T23:37:01+09:00`
+- generated: `2026-05-25T23:45:11+09:00`
 - workbench_status: `ready_for_operator_fill`
 - target model folders: `16/16`
 - target object folders: `48`
@@ -19,6 +19,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 - competitive evidence round: `awaiting_import` stages `5` import ready/applied `0/0` patch candidates/planned `0/0`
 - competitive unlock priority: `identity_unlock_required` phases `60` identity open `30` target_id open `15` files waiting `180`
 - competitive identity unlock kit: `awaiting_identity` rows `0/15/0/15` files unlocked `0`
+- competitive identity unlock round: `awaiting_identity` rows `0/15/0/15` import ready/applied `0/0` target_id open `15` files waiting `180`
 - competitive value ledgers: `awaiting_values` ledgers/actions `15/270` ready/awaiting `0/270`
 - competitive evidence intake: `awaiting_evidence` actions `450` patch candidates `0` awaiting files/values `180/270`
 - competitive row_fill patch gate: `awaiting_evidence` actions `450` ready/awaiting/conflicts `0/450/0`
@@ -53,6 +54,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 | `competitive_floor_evidence_round` | `awaiting_import` | 0 | 450 | 5 | `casp17/casp17_competitive_floor_evidence_round_current.json` | enter proposed_value, evidence_ref, and operator_clearance in the import CSV | `awaiting_import` |
 | `competitive_floor_unlock_priority` | `identity_unlock_required` | 0 | 210 | 60 | `casp17/casp17_competitive_floor_evidence_unlock_priority_current.json` | fill benchmark_id and target_id values first; target_id unlocks canonical file recommendations | `identity_unlock` |
 | `competitive_floor_identity_unlock_kit` | `awaiting_identity` | 0 | 15 | 15 | `casp17/casp17_competitive_floor_identity_unlock_kit_current.json` | Fill proposed_benchmark_id/proposed_target_id/evidence_ref/operator_clearance, then apply the kit. | `proposed_benchmark_id_required,proposed_target_id_required,evidence_ref_required,operator_clearance_required` |
+| `competitive_floor_identity_unlock_round` | `awaiting_identity` | 0 | 30 | 15 | `casp17/casp17_competitive_floor_identity_unlock_round_current.json` | fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance in the identity kit | `identity_open:30,files_waiting:180` |
 | `competitive_floor_value_ledger` | `awaiting_values` | 0 | 270 | 270 | `casp17/casp17_competitive_floor_value_ledger_current.json` | enter the cleared historical benchmark_id and cite the local target-selection evidence | `awaiting_value` |
 | `competitive_floor_evidence_intake` | `awaiting_evidence` | 0 | 450 | 450 | `casp17/casp17_competitive_floor_evidence_intake_current.json` | fill benchmark_id in row_fill.csv from cleared local evidence | `awaiting_operator_value` |
 | `competitive_floor_row_fill_patch_gate` | `awaiting_evidence` | 0 | 450 | 450 | `casp17/casp17_competitive_floor_row_fill_patch_gate_current.json` | provide the missing cleared evidence, then rerun intake and this patch gate | `awaiting_evidence` |

@@ -297,7 +297,7 @@
     "first_open_blockers": "proposed_benchmark_id_required,proposed_target_id_required,evidence_ref_required,operator_clearance_required",
     "first_open_dropzone_id": "priority_001_REQUIRED_MONOMER_001",
     "first_open_status": "awaiting_identity",
-    "generated_at_local": "2026-05-25T23:35:54+09:00",
+    "generated_at_local": "2026-05-25T23:45:11+09:00",
     "identity_unlock_status": "awaiting_identity",
     "import_csv": "casp17/casp17_competitive_floor_evidence_import_current.csv",
     "packet_type": "casp17_competitive_floor_identity_unlock_kit",
