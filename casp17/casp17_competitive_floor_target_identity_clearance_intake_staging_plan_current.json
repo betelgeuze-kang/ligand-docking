@@ -312,7 +312,7 @@
     "first_open_next_action": "wait for promoted clearance manifest rows",
     "first_open_status": "",
     "first_open_target_id": "",
-    "generated_at_local": "2026-05-26T03:04:46+09:00",
+    "generated_at_local": "2026-05-26T03:29:29+09:00",
     "identity_intake_csv": "casp17/casp17_competitive_floor_identity_intake_bundle_current.csv",
     "identity_intake_row_count": 15,
     "open_complex_slot_count": 5,

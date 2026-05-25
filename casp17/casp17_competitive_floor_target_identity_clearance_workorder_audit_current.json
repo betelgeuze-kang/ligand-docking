@@ -109,7 +109,7 @@
     "first_blocked_next_action": "complete target-origin and no-leak evidence review before native/provenance promotion",
     "first_blocked_status": "blocked",
     "first_blocked_target_id": "H1319",
-    "generated_at_local": "2026-05-26T03:04:46+09:00",
+    "generated_at_local": "2026-05-26T03:29:29+09:00",
     "identity_discovery_blocked_count": 3,
     "identity_discovery_cleared_count": 0,
     "manifest_provenance_matched_count": 0,

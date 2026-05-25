@@ -1,6 +1,6 @@
 # CASP17 Competitive-Floor Target Identity Clearance Manifest Sync
 
-- generated: `2026-05-26T03:04:46+09:00`
+- generated: `2026-05-26T03:29:29+09:00`
 - clearance_manifest_sync_status: `awaiting_provenance`
 - apply_mode: `dry_run`
 - rows ready/awaiting/blocked/synced: `0/3/0/0`

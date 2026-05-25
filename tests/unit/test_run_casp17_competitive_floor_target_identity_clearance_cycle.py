@@ -169,6 +169,12 @@ def _args(tmp_path: Path, fixture: dict[str, Path], *extra: str) -> list[str]:
         str(tmp_path / "audit.csv"),
         "--audit-md",
         str(tmp_path / "AUDIT.md"),
+        "--action-board-json",
+        str(tmp_path / "action_board.json"),
+        "--action-board-csv",
+        str(tmp_path / "action_board.csv"),
+        "--action-board-md",
+        str(tmp_path / "ACTION_BOARD.md"),
         "--current-target-csv",
         str(fixture["current_csv"]),
         "--promoted-manifest-csv",
@@ -221,8 +227,11 @@ def test_clearance_cycle_waits_for_provenance_without_mutating_manifest(tmp_path
     assert payload["summary"]["clearance_cycle_status"] == "awaiting_provenance"
     assert payload["summary"]["manifest_sync_awaiting_provenance_count"] == 1
     assert payload["summary"]["audit_blocked_count"] == 1
+    assert payload["summary"]["action_board_status"] == "open_actions"
+    assert payload["summary"]["action_board_open_action_count"] == 4
     assert _read_csv(fixture["manifest_csv"])[0]["operator_clearance"] == "REQUIRED_OPERATOR_CLEARANCE"
     assert _read_csv(tmp_path / "cycle.csv")[0]["stage"] == "manifest_sync"
+    assert (tmp_path / "action_board.json").is_file()
 
 
 def test_clearance_cycle_apply_manifest_sync_reaches_intake_staging(tmp_path):
@@ -234,6 +243,8 @@ def test_clearance_cycle_apply_manifest_sync_reaches_intake_staging(tmp_path):
 
     assert payload["summary"]["clearance_cycle_status"] == "candidate_intake_applied"
     assert payload["summary"]["audit_pass_count"] == 1
+    assert payload["summary"]["action_board_status"] == "ready"
+    assert payload["summary"]["action_board_open_action_count"] == 0
     assert payload["summary"]["promoted_manifest_count"] == 1
     assert payload["summary"]["staged_identity_count"] == 1
     assert payload["summary"]["candidate_intake_applied_count"] == 1
