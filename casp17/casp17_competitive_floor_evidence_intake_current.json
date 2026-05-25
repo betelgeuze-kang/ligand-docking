@@ -10367,7 +10367,7 @@
     "first_open_dropzone_id": "priority_001_REQUIRED_MONOMER_001",
     "first_open_next_action": "fill benchmark_id in row_fill.csv from cleared local evidence",
     "first_open_status": "awaiting_operator_value",
-    "generated_at_local": "2026-05-25T22:43:45+09:00",
+    "generated_at_local": "2026-05-25T23:17:38+09:00",
     "intake_status": "awaiting_evidence",
     "packet_type": "casp17_competitive_floor_evidence_intake",
     "patch_candidate_count": 0,

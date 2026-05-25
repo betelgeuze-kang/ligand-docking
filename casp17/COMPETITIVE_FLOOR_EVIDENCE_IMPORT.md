@@ -1,6 +1,6 @@
 # CASP17 Competitive-Floor Evidence Import
 
-- generated: `2026-05-25T23:11:27+09:00`
+- generated: `2026-05-25T23:17:38+09:00`
 - import_status: `awaiting_import`
 - apply_mode: `dry_run`
 - import_csv: `casp17/casp17_competitive_floor_evidence_import_current.csv`

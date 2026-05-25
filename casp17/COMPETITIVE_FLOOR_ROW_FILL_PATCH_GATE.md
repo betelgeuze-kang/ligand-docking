@@ -1,6 +1,6 @@
 # CASP17 Competitive-Floor Row Fill Patch Gate
 
-- generated: `2026-05-25T22:49:44+09:00`
+- generated: `2026-05-25T23:17:38+09:00`
 - patch_gate_status: `awaiting_evidence`
 - rows/actions: `15/450`
 - ready_to_patch: `0` rows `0`
