@@ -57,7 +57,7 @@
     "first_open_next_action": "clear the native/provenance workorder audit before promotion",
     "first_open_status": "blocked_by_audit",
     "first_open_target_id": "H1319",
-    "generated_at_local": "2026-05-26T02:22:43+09:00",
+    "generated_at_local": "2026-05-26T02:28:39+09:00",
     "manifest_ready_count": 0,
     "out_manifest_csv": "casp17/casp17_competitive_floor_target_identity_clearance_promoted_manifest_candidate_current.csv",
     "packet_type": "casp17_competitive_floor_target_identity_clearance_promotion_plan",

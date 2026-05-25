@@ -24,9 +24,9 @@ def _read_csv(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(handle))
 
 
-def _pdb(path: Path) -> str:
+def _pdb(path: Path, *, residue: str = "ALA", x: str = "1.000", y: str = "2.000", z: str = "3.000") -> str:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("ATOM      1  CA  ALA A   1       1.000   2.000   3.000  1.00 70.00           C\n")
+    path.write_text(f"ATOM      1  CA  {residue} A   1       {x}   {y}   {z}  1.00 70.00           C\n")
     return str(path)
 
 
@@ -108,7 +108,11 @@ def _intake_row() -> dict[str, str]:
 def _fixture(tmp_path: Path, *, ready: bool) -> dict[str, Path]:
     target_id = "H1001"
     prediction_pdb = _pdb(tmp_path / "prediction" / f"{target_id}_model_1.pdb")
-    native_pdb = _pdb(tmp_path / "native" / f"{target_id}_native.pdb") if ready else str(tmp_path / "native" / f"{target_id}_native.pdb")
+    native_pdb = (
+        _pdb(tmp_path / "native" / f"{target_id}_native.pdb", residue="GLY", x="4.000", y="5.000", z="6.000")
+        if ready
+        else str(tmp_path / "native" / f"{target_id}_native.pdb")
+    )
     provenance_csv = tmp_path / "provenance_template.csv"
     manifest_csv = tmp_path / "manifest_stub.csv"
     _write_csv(provenance_csv, [_ready_provenance(target_id) if ready else _blocked_provenance(target_id)])

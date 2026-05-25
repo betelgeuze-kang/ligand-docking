@@ -1,6 +1,6 @@
 # CASP17 Competitive-Floor Target Identity Clearance Candidate Intake Sync
 
-- generated: `2026-05-26T02:22:43+09:00`
+- generated: `2026-05-26T02:28:39+09:00`
 - candidate_intake_sync_status: `waiting_on_staged_identity`
 - apply_mode: `dry_run`
 - rows ready/waiting/blocked/applied: `0/15/0/0`
