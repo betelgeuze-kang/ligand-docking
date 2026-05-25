@@ -2,7 +2,7 @@
 
 This is the local navigation surface for the current CASP17 internal-physics lane.
 
-- generated: `2026-05-26T05:06:08+09:00`
+- generated: `2026-05-26T05:16:36+09:00`
 - workbench_status: `ready_for_operator_fill`
 - target model folders: `16/16`
 - target object folders: `48`
@@ -34,6 +34,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 - competitive target identity clearance replacement queue: `candidate_ready_for_operator_clearance` targets/candidates `2/8` ready/missing-prediction/current-collision/source-repair `2/2/4/0`
 - competitive target identity clearance replacement source repair: `source_ready` candidates/ready/md `4/1/4` source-ready/predict/validate/sequence/cancelled/collision `1/0/0/0/1/2`
 - competitive target identity clearance replacement scorecard: `replacement_scorecard_blocked` candidates/pass/blocked/json `4/1/3/1`
+- competitive target identity clearance replacement workorder: `partial_replacement_workorders_ready_for_operator_intake` targets/rows `2/2` selected/duplicate/no-ready `1/1/0` dropzones/templates/stubs `1/1/1`
 - competitive target identity clearance manifest sync: `awaiting_provenance` rows ready/awaiting/blocked/synced `3/0/3/0/0` changed/applied `0/0`
 - competitive target identity clearance workorder audit: `blocked` pass/blocked/total `0/3/3` prediction/native/provenance/evidence/manifest `3/0/0/0/0` prediction protein-atoms/coordinate-valid `1855/3` identity discovery blocked/cleared `3/0` native protein-atoms/coordinate-valid `0/0` evidence verified/content-blocked/blocked/waiting `0/0/3/0` manifest/provenance matched/mismatches `0/0` native/prediction distinct/same/waiting `0/0/3`
 - competitive target identity clearance action board: `open_actions` actions/open `12/12` native/evidence/provenance/manifest `3/3/3/3`
@@ -96,6 +97,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 | `competitive_floor_target_identity_clearance_replacement_queue` | `candidate_ready_for_operator_clearance` | 2 | 6 | 8 | `casp17/casp17_competitive_floor_target_identity_clearance_replacement_queue_current.json` | generate or locate local internal prediction/TS artifacts before using this replacement candidate | `replacement_targets:2,ready:2,missing_prediction:2,current_collision:4,source_repair:0` |
 | `competitive_floor_target_identity_clearance_replacement_source_repair` | `source_ready` | 1 | 3 | 4 | `casp17/casp17_competitive_floor_target_identity_clearance_replacement_source_repair_current.json` | choose a non-colliding replacement target or prove no current-target leakage | `source_ready:1,ready_prediction:0,ready_validation:0,awaiting_sequence:0,cancelled:1,current_collision:2,md:4` |
 | `competitive_floor_target_identity_clearance_replacement_scorecard` | `replacement_scorecard_blocked` | 1 | 3 | 4 | `casp17/casp17_competitive_floor_target_identity_clearance_replacement_scorecard_current.json` | repair replacement source evidence before clearance review | `pass:1,blocked:3,scorecard_json:1` |
+| `competitive_floor_target_identity_clearance_replacement_workorder` | `partial_replacement_workorders_ready_for_operator_intake` | 1 | 1 | 2 | `casp17/casp17_competitive_floor_target_identity_clearance_replacement_workorder_current.json` | choose a different ready replacement candidate before materializing this workorder | `selected:1,duplicate:1,no_ready:0,dropzones:1` |
 | `competitive_floor_target_identity_clearance_manifest_sync` | `awaiting_provenance` | 0 | 3 | 3 | `casp17/casp17_competitive_floor_target_identity_clearance_manifest_sync_current.json` | complete the no-leak provenance template before syncing the manifest stub | `ready:0,awaiting_provenance:3,synced:0` |
 | `competitive_floor_target_identity_clearance_workorder_audit` | `blocked` | 0 | 3 | 3 | `casp17/casp17_competitive_floor_target_identity_clearance_workorder_audit_current.json` | complete target-origin and no-leak evidence review before native/provenance promotion | `prediction:3,prediction_protein_atoms:1855,prediction_coordinate_valid:3,identity_discovery_blocked:3,identity_discovery_cleared:0,native:0,native_protein_atoms:0,native_coordinate_valid:0,provenance:0,evidence_ref:0,evidence_ref_verified:0,manifest:0,manifest_provenance_matched:0,manifest_provenance_mismatches:0,native_prediction_distinct:0,native_prediction_same:0` |
 | `competitive_floor_target_identity_clearance_action_board` | `open_actions` | 0 | 12 | 12 | `casp17/casp17_competitive_floor_target_identity_clearance_action_board_current.json` | Place an operator-cleared native protein PDB in the native dropzone; ensure it is distinct from the prediction and has valid ATOM coordinates. | `native:3,evidence:3,provenance:3,manifest:3` |

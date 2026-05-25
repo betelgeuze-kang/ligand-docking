@@ -52,6 +52,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     competitive_target_identity_clearance_replacement_scorecard_json = (
         tmp_path / "competitive_target_identity_clearance_replacement_scorecard.json"
     )
+    competitive_target_identity_clearance_replacement_workorder_json = (
+        tmp_path / "competitive_target_identity_clearance_replacement_workorder.json"
+    )
     competitive_target_identity_clearance_manifest_sync_json = (
         tmp_path / "competitive_target_identity_clearance_manifest_sync.json"
     )
@@ -569,6 +572,23 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        competitive_target_identity_clearance_replacement_workorder_json,
+        {
+            "summary": {
+                "replacement_workorder_status": "partial_replacement_workorders_ready_for_operator_intake",
+                "replacement_target_count": 2,
+                "workorder_row_count": 2,
+                "selected_workorder_count": 1,
+                "duplicate_candidate_blocked_count": 1,
+                "no_ready_candidate_blocked_count": 0,
+                "native_dropzone_count": 1,
+                "provenance_template_count": 1,
+                "manifest_stub_count": 1,
+                "first_open_next_action": "choose a different ready replacement candidate",
+            }
+        },
+    )
+    _write_json(
         competitive_target_identity_clearance_manifest_sync_json,
         {
             "summary": {
@@ -963,6 +983,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(competitive_target_identity_clearance_replacement_source_repair_json),
             "--competitive-target-identity-clearance-replacement-scorecard-json",
             str(competitive_target_identity_clearance_replacement_scorecard_json),
+            "--competitive-target-identity-clearance-replacement-workorder-json",
+            str(competitive_target_identity_clearance_replacement_workorder_json),
             "--competitive-target-identity-clearance-manifest-sync-json",
             str(competitive_target_identity_clearance_manifest_sync_json),
             "--competitive-target-identity-clearance-workorder-audit-json",
@@ -1205,6 +1227,17 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["competitive_target_identity_clearance_replacement_scorecard_pass_count"] == 1
     assert payload["summary"]["competitive_target_identity_clearance_replacement_scorecard_blocked_count"] == 3
     assert payload["summary"]["competitive_target_identity_clearance_replacement_scorecard_json_count"] == 1
+    assert payload["summary"]["competitive_target_identity_clearance_replacement_workorder_status"] == (
+        "partial_replacement_workorders_ready_for_operator_intake"
+    )
+    assert payload["summary"]["competitive_target_identity_clearance_replacement_workorder_target_count"] == 2
+    assert payload["summary"]["competitive_target_identity_clearance_replacement_workorder_row_count"] == 2
+    assert payload["summary"]["competitive_target_identity_clearance_replacement_workorder_selected_count"] == 1
+    assert payload["summary"]["competitive_target_identity_clearance_replacement_workorder_duplicate_count"] == 1
+    assert payload["summary"]["competitive_target_identity_clearance_replacement_workorder_no_ready_count"] == 0
+    assert payload["summary"]["competitive_target_identity_clearance_replacement_workorder_dropzone_count"] == 1
+    assert payload["summary"]["competitive_target_identity_clearance_replacement_workorder_template_count"] == 1
+    assert payload["summary"]["competitive_target_identity_clearance_replacement_workorder_stub_count"] == 1
     assert payload["summary"]["competitive_target_identity_clearance_manifest_sync_status"] == "awaiting_provenance"
     assert payload["summary"]["competitive_target_identity_clearance_manifest_sync_row_count"] == 3
     assert payload["summary"]["competitive_target_identity_clearance_manifest_sync_ready_count"] == 0
@@ -1445,6 +1478,12 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["competitive_floor_target_identity_clearance_replacement_scorecard"]["ready_count"] == 1
     assert by_id["competitive_floor_target_identity_clearance_replacement_scorecard"]["blocked_count"] == 3
     assert "scorecard_json:1" in by_id["competitive_floor_target_identity_clearance_replacement_scorecard"]["blockers"]
+    assert by_id["competitive_floor_target_identity_clearance_replacement_workorder"]["status"] == (
+        "partial_replacement_workorders_ready_for_operator_intake"
+    )
+    assert by_id["competitive_floor_target_identity_clearance_replacement_workorder"]["ready_count"] == 1
+    assert by_id["competitive_floor_target_identity_clearance_replacement_workorder"]["blocked_count"] == 1
+    assert "duplicate:1" in by_id["competitive_floor_target_identity_clearance_replacement_workorder"]["blockers"]
     assert by_id["competitive_floor_target_identity_clearance_manifest_sync"]["status"] == "awaiting_provenance"
     assert by_id["competitive_floor_target_identity_clearance_manifest_sync"]["blocked_count"] == 3
     assert by_id["competitive_floor_target_identity_clearance_workorder_audit"]["status"] == "blocked"
