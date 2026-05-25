@@ -27,6 +27,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     competitive_identity_unlock_json = tmp_path / "competitive_identity_unlock.json"
     competitive_identity_round_json = tmp_path / "competitive_identity_round.json"
     competitive_file_source_plan_json = tmp_path / "competitive_file_source_plan.json"
+    competitive_value_entry_plan_json = tmp_path / "competitive_value_entry_plan.json"
     competitive_value_ledger_json = tmp_path / "competitive_value_ledger.json"
     competitive_evidence_intake_json = tmp_path / "competitive_evidence_intake.json"
     competitive_patch_gate_json = tmp_path / "competitive_patch_gate.json"
@@ -296,6 +297,27 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        competitive_value_entry_plan_json,
+        {
+            "summary": {
+                "value_entry_status": "waiting_on_identity",
+                "value_action_count": 270,
+                "target_identity_action_count": 30,
+                "provenance_action_count": 150,
+                "calibration_action_count": 90,
+                "waiting_on_identity_count": 270,
+                "ready_from_identity_kit_count": 0,
+                "awaiting_value_count": 0,
+                "awaiting_clearance_count": 0,
+                "awaiting_evidence_ref_count": 0,
+                "ready_for_import_count": 0,
+                "blocked_value_count": 0,
+                "first_open_next_action": "fill and apply the compact identity unlock kit first",
+                "first_open_blocker": "target_identity_required",
+            }
+        },
+    )
+    _write_json(
         competitive_value_ledger_json,
         {
             "summary": {
@@ -429,6 +451,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(competitive_identity_round_json),
             "--competitive-file-source-plan-json",
             str(competitive_file_source_plan_json),
+            "--competitive-value-entry-plan-json",
+            str(competitive_value_entry_plan_json),
             "--competitive-value-ledger-json",
             str(competitive_value_ledger_json),
             "--competitive-evidence-intake-json",
@@ -519,6 +543,18 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["competitive_file_source_plan_ready_for_import_count"] == 0
     assert payload["summary"]["competitive_file_source_plan_already_imported_count"] == 0
     assert payload["summary"]["competitive_file_source_plan_blocked_count"] == 0
+    assert payload["summary"]["competitive_value_entry_plan_status"] == "waiting_on_identity"
+    assert payload["summary"]["competitive_value_entry_plan_action_count"] == 270
+    assert payload["summary"]["competitive_value_entry_plan_target_identity_count"] == 30
+    assert payload["summary"]["competitive_value_entry_plan_provenance_count"] == 150
+    assert payload["summary"]["competitive_value_entry_plan_calibration_count"] == 90
+    assert payload["summary"]["competitive_value_entry_plan_waiting_on_identity_count"] == 270
+    assert payload["summary"]["competitive_value_entry_plan_ready_from_identity_kit_count"] == 0
+    assert payload["summary"]["competitive_value_entry_plan_awaiting_value_count"] == 0
+    assert payload["summary"]["competitive_value_entry_plan_awaiting_clearance_count"] == 0
+    assert payload["summary"]["competitive_value_entry_plan_awaiting_ref_count"] == 0
+    assert payload["summary"]["competitive_value_entry_plan_ready_for_import_count"] == 0
+    assert payload["summary"]["competitive_value_entry_plan_blocked_count"] == 0
     assert payload["summary"]["competitive_value_ledger_status"] == "awaiting_values"
     assert payload["summary"]["competitive_value_ledger_count"] == 15
     assert payload["summary"]["competitive_value_ledger_action_count"] == 270
@@ -560,6 +596,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["competitive_floor_identity_unlock_kit"]["status"] == "awaiting_identity"
     assert by_id["competitive_floor_identity_unlock_round"]["status"] == "awaiting_identity"
     assert by_id["competitive_floor_file_source_plan"]["status"] == "waiting_on_identity"
+    assert by_id["competitive_floor_value_entry_plan"]["status"] == "waiting_on_identity"
     assert by_id["competitive_floor_operator_template"]["status"] == "blocked"
     assert by_id["competitive_floor_operator_preflight"]["status"] == "blocked"
     assert by_id["benchmark_input_inventory"]["status"] == "blocked"
