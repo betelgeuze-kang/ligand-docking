@@ -2,7 +2,7 @@
 
 This folder mirrors the current local CASP17 data artifacts while keeping the original project paths intact.
 
-- generated: `2026-05-28T00:35:44+09:00`
+- generated: `2026-05-28T00:46:34+09:00`
 - bundle_status: `ready`
 - out_dir: `casp17`
 - run artifact count: `820`
@@ -10,7 +10,7 @@ This folder mirrors the current local CASP17 data artifacts while keeping the or
 - config artifact count: `1`
 - total top-level artifacts: `822`
 - total files under bundled artifacts: `6337`
-- total bytes under bundled artifacts: `1567024045`
+- total bytes under bundled artifacts: `1567024342`
 
 ## Layout
 
@@ -842,9 +842,9 @@ Local CASP17 data mirror only; originals remain in place, no external data is fe
 | `runs` | `casp17_win_tier_benchmark_operator_preflight_current.json` | `file` | 1 | 64833 | `runs/casp17_win_tier_benchmark_operator_preflight_current.json` | `casp17/runs/casp17_win_tier_benchmark_operator_preflight_current.json` |
 | `runs` | `casp17_win_tier_benchmark_operator_preflight_current.md` | `file` | 1 | 32874 | `runs/casp17_win_tier_benchmark_operator_preflight_current.md` | `casp17/runs/casp17_win_tier_benchmark_operator_preflight_current.md` |
 | `runs` | `casp17_win_tier_benchmark_operator_template_current.csv` | `file` | 1 | 62939 | `runs/casp17_win_tier_benchmark_operator_template_current.csv` | `casp17/runs/casp17_win_tier_benchmark_operator_template_current.csv` |
-| `runs` | `casp17_win_tier_goal_scorecard_current.csv` | `file` | 1 | 3591 | `runs/casp17_win_tier_goal_scorecard_current.csv` | `casp17/runs/casp17_win_tier_goal_scorecard_current.csv` |
-| `runs` | `casp17_win_tier_goal_scorecard_current.json` | `file` | 1 | 7832 | `runs/casp17_win_tier_goal_scorecard_current.json` | `casp17/runs/casp17_win_tier_goal_scorecard_current.json` |
-| `runs` | `casp17_win_tier_goal_scorecard_current.md` | `file` | 1 | 3428 | `runs/casp17_win_tier_goal_scorecard_current.md` | `casp17/runs/casp17_win_tier_goal_scorecard_current.md` |
+| `runs` | `casp17_win_tier_goal_scorecard_current.csv` | `file` | 1 | 3686 | `runs/casp17_win_tier_goal_scorecard_current.csv` | `casp17/runs/casp17_win_tier_goal_scorecard_current.csv` |
+| `runs` | `casp17_win_tier_goal_scorecard_current.json` | `file` | 1 | 8038 | `runs/casp17_win_tier_goal_scorecard_current.json` | `casp17/runs/casp17_win_tier_goal_scorecard_current.json` |
+| `runs` | `casp17_win_tier_goal_scorecard_current.md` | `file` | 1 | 3424 | `runs/casp17_win_tier_goal_scorecard_current.md` | `casp17/runs/casp17_win_tier_goal_scorecard_current.md` |
 | `runs` | `casp17_win_tier_threshold_packet_current.csv` | `file` | 1 | 10668 | `runs/casp17_win_tier_threshold_packet_current.csv` | `casp17/runs/casp17_win_tier_threshold_packet_current.csv` |
 | `runs` | `casp17_win_tier_threshold_packet_current.json` | `file` | 1 | 28931 | `runs/casp17_win_tier_threshold_packet_current.json` | `casp17/runs/casp17_win_tier_threshold_packet_current.json` |
 | `runs` | `casp17_win_tier_threshold_packet_current.md` | `file` | 1 | 8260 | `runs/casp17_win_tier_threshold_packet_current.md` | `casp17/runs/casp17_win_tier_threshold_packet_current.md` |

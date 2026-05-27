@@ -9776,7 +9776,7 @@
       "group": "runs",
       "kind": "file",
       "name": "casp17_win_tier_goal_scorecard_current.csv",
-      "size_bytes": 3591,
+      "size_bytes": 3686,
       "source_exists": true,
       "source_path": "runs/casp17_win_tier_goal_scorecard_current.csv"
     },
@@ -9788,7 +9788,7 @@
       "group": "runs",
       "kind": "file",
       "name": "casp17_win_tier_goal_scorecard_current.json",
-      "size_bytes": 7832,
+      "size_bytes": 8038,
       "source_exists": true,
       "source_path": "runs/casp17_win_tier_goal_scorecard_current.json"
     },
@@ -9800,7 +9800,7 @@
       "group": "runs",
       "kind": "file",
       "name": "casp17_win_tier_goal_scorecard_current.md",
-      "size_bytes": 3428,
+      "size_bytes": 3424,
       "source_exists": true,
       "source_path": "runs/casp17_win_tier_goal_scorecard_current.md"
     },
@@ -9876,7 +9876,7 @@
     "docs_dir": "docs",
     "docs_pattern": "*casp17*",
     "file_count": 6337,
-    "generated_at_local": "2026-05-28T00:35:44+09:00",
+    "generated_at_local": "2026-05-28T00:46:34+09:00",
     "manifest_csv": "casp17/casp17_data_bundle_manifest_current.csv",
     "manifest_json": "casp17/casp17_data_bundle_manifest_current.json",
     "manifest_only": false,
@@ -9887,6 +9887,6 @@
     "runs_artifact_count": 820,
     "runs_dir": "runs",
     "runs_prefix": "casp17",
-    "size_bytes": 1567024045
+    "size_bytes": 1567024342
   }
 }

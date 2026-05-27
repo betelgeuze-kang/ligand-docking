@@ -142,3 +142,67 @@ def test_build_casp17_win_tier_goal_scorecard_tracks_operator_goal_bands(tmp_pat
     assert "CASP17 Win-Tier Goal Scorecard" in md
     assert "competitive proof score: `15-25 -> 85-90`" in md
     assert "DockQ acceptable >=90%" in md
+
+
+def test_build_casp17_win_tier_goal_scorecard_uses_replacement_audit_next_action(tmp_path: Path) -> None:
+    goal = tmp_path / "CASP17_WIN_TIER_GOAL.md"
+    closure = tmp_path / "closure.json"
+    replacement_audit = tmp_path / "replacement_audit.json"
+    goal.write_text(
+        "\n".join(
+            [
+                "# CASP17 Win-Tier Goal Addendum",
+                "- CASP17 scaffold score: `65 -> 90`",
+                "- CASP17 competitive proof score: `15-25 -> 85-90`",
+                "- category leaderboard objective: `top-5/top-3/top-1-2`",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    _write_json(
+        closure,
+        {
+            "summary": {
+                "closure_status": "blocked_input",
+                "first_operator_input_action_id": "historical_benchmark_inputs",
+            }
+        },
+    )
+    _write_json(
+        replacement_audit,
+        {
+            "summary": {
+                "clearance_workorder_audit_status": "blocked",
+                "first_blocked_next_action": "place the cleared native PDB in the per-target native dropzone",
+            }
+        },
+    )
+
+    subprocess.run(
+        [
+            "python3",
+            str(ROOT / "tools/build_casp17_win_tier_goal_scorecard.py"),
+            "--goal-addendum-md",
+            str(goal),
+            "--win-gap-closure-json",
+            str(closure),
+            "--replacement-workorder-audit-json",
+            str(replacement_audit),
+            "--out-json",
+            str(tmp_path / "scorecard.json"),
+            "--out-csv",
+            str(tmp_path / "scorecard.csv"),
+            "--out-md",
+            str(tmp_path / "scorecard.md"),
+        ],
+        cwd=ROOT,
+        check=True,
+    )
+
+    payload = json.loads((tmp_path / "scorecard.json").read_text(encoding="utf-8"))
+    rows = {row["gate"]: row for row in payload["rows"]}
+    assert rows["historical_identity_clearance"]["status"] == "blocked_input"
+    assert rows["historical_identity_clearance"]["next_action"] == (
+        "place the cleared native PDB in the per-target native dropzone"
+    )
+    assert "replacement_audit=blocked" in rows["historical_identity_clearance"]["current"]

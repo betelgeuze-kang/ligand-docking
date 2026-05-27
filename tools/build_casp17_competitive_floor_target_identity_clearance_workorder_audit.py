@@ -125,6 +125,9 @@ def _rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _read_csv_one(path_like: str | Path) -> tuple[dict[str, str], list[str]]:
+    path_text = _text(path_like)
+    if not path_text:
+        return {}, ["csv_path_missing"]
     path = _resolve(path_like)
     if not path.exists():
         return {}, [f"{path.name}_missing"]

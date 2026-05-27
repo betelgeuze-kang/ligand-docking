@@ -17,6 +17,9 @@ DEFAULT_BENCHMARK_INPUT_INVENTORY_JSON = "runs/casp17_win_tier_benchmark_input_i
 DEFAULT_SIDECHAIN_NATIVE_BENCHMARK_JSON = "runs/casp17_sidechain_native_benchmark_packet_current.json"
 DEFAULT_HISTORICAL_BENCHMARK_JSON = "runs/casp17_historical_benchmark_packet_current.json"
 DEFAULT_MODEL_SELECTION_CALIBRATION_JSON = "runs/casp17_model_selection_calibration_packet_current.json"
+DEFAULT_REPLACEMENT_WORKORDER_AUDIT_JSON = (
+    "casp17/casp17_competitive_floor_target_identity_clearance_replacement_workorder_audit_current.json"
+)
 DEFAULT_OUT_JSON = "runs/casp17_win_tier_goal_scorecard_current.json"
 DEFAULT_OUT_CSV = "runs/casp17_win_tier_goal_scorecard_current.csv"
 DEFAULT_OUT_MD = "runs/casp17_win_tier_goal_scorecard_current.md"
@@ -194,6 +197,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     sidechain = _summary(_read_json(args.sidechain_native_benchmark_json))
     historical = _summary(_read_json(args.historical_benchmark_json))
     calibration = _summary(_read_json(args.model_selection_calibration_json))
+    replacement_audit = _summary(_read_json(args.replacement_workorder_audit_json))
 
     goal_text = goal_path.read_text(encoding="utf-8", errors="replace") if goal_path.exists() else ""
     goal_documented = (
@@ -206,6 +210,12 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     closure_pass = _text(closure.get("closure_status")) == "pass"
     identity_blocked = _text(closure.get("first_operator_input_action_id")) == "historical_benchmark_inputs"
     identity_cleared = closure_pass and not identity_blocked
+    replacement_audit_next_action = _text(replacement_audit.get("first_blocked_next_action"))
+    identity_next_action = (
+        replacement_audit_next_action
+        if replacement_audit_next_action
+        else "Replace placeholder benchmark/target IDs with operator-cleared historical non-CASP17 targets."
+    )
 
     required_files = _int(inventory.get("required_file_count"))
     present_files = _int(inventory.get("present_file_count"))
@@ -286,11 +296,12 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             target="cleared non-CASP17 historical identities with no-leak provenance",
             current=(
                 f"closure={closure.get('closure_status', 'missing')}; "
-                f"first_operator={closure.get('first_operator_input_action_id', 'missing')}"
+                f"first_operator={closure.get('first_operator_input_action_id', 'missing')}; "
+                f"replacement_audit={replacement_audit.get('clearance_workorder_audit_status', 'missing')}"
             ),
-            evidence_source=_artifact(args.win_gap_closure_json),
+            evidence_source=f"{_artifact(args.win_gap_closure_json)};{_artifact(args.replacement_workorder_audit_json)}",
             blocker="" if identity_cleared else "historical_benchmark_inputs_still_required",
-            next_action="Replace placeholder benchmark/target IDs with operator-cleared historical non-CASP17 targets.",
+            next_action=identity_next_action,
         ),
         _row(
             priority=3,
@@ -411,6 +422,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "priority_categories": PRIORITY_CATEGORIES,
         "historical_bands": HISTORICAL_BANDS,
         "required_metric_surface": REQUIRED_METRIC_SURFACE,
+        "replacement_workorder_audit_json": _artifact(args.replacement_workorder_audit_json),
         "claim_boundary": (
             "Goal scorecard only. It tracks whether the CASP17 win-tier evidence contract is closed; "
             "it does not claim current-target native accuracy, CASP17 submission success, or official ranking."
@@ -455,6 +467,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--sidechain-native-benchmark-json", default=DEFAULT_SIDECHAIN_NATIVE_BENCHMARK_JSON)
     parser.add_argument("--historical-benchmark-json", default=DEFAULT_HISTORICAL_BENCHMARK_JSON)
     parser.add_argument("--model-selection-calibration-json", default=DEFAULT_MODEL_SELECTION_CALIBRATION_JSON)
+    parser.add_argument("--replacement-workorder-audit-json", default=DEFAULT_REPLACEMENT_WORKORDER_AUDIT_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)

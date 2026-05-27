@@ -218,6 +218,41 @@ def test_clearance_workorder_audit_blocks_missing_native_and_placeholders(tmp_pa
     assert (tmp_path / "AUDIT.md").is_file()
 
 
+def test_clearance_workorder_audit_handles_blank_replacement_paths(tmp_path: Path) -> None:
+    prediction = tmp_path / "H1003_model_1.pdb"
+    prediction.write_text(
+        "ATOM      1 CA   ALA A   1       1.000   2.000   3.000  1.00 70.00           C\n",
+        encoding="utf-8",
+    )
+    workorder_json = tmp_path / "workorder.json"
+    _write_json(
+        workorder_json,
+        {
+            "summary": {"clearance_workorder_status": "partial_replacement_workorders_ready_for_operator_intake"},
+            "rows": [
+                {
+                    "target_id": "H1003",
+                    "workorder_status": "blocked_duplicate_candidate_assignment",
+                    "native_dropzone_pdb": "",
+                    "provenance_template_csv": "",
+                    "manifest_stub_csv": "",
+                    "prediction_pdb": str(prediction),
+                }
+            ],
+        },
+    )
+    args = mod.parse_args(_args(tmp_path, workorder_json))
+
+    payload = mod.build_payload(args)
+
+    row = payload["rows"][0]
+    assert payload["summary"]["clearance_workorder_audit_status"] == "blocked"
+    assert row["audit_status"] == "blocked"
+    assert row["prediction_file_status"] == "present"
+    assert "native_dropzone_path_missing" in row["blockers"]
+    assert "csv_path_missing" in row["blockers"]
+
+
 def test_clearance_workorder_audit_blocks_manifest_provenance_mismatch(tmp_path: Path) -> None:
     target_id = "H1001"
     prediction = tmp_path / "H1001_model_1.pdb"
