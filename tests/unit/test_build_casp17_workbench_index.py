@@ -14,6 +14,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     target_object_folder_audit_json = tmp_path / "target_object_folder_audit.json"
     target_object_viewer_smoke_json = tmp_path / "target_object_viewer_smoke.json"
     target_object_model_review_json = tmp_path / "target_object_model_review.json"
+    protein_object_library_json = tmp_path / "protein_object_library.json"
     closure_json = tmp_path / "closure.json"
     goal_scorecard_json = tmp_path / "goal_scorecard.json"
     scaffold_json = tmp_path / "scaffold.json"
@@ -167,6 +168,22 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "max_radius_of_gyration": 9.4,
                 "gallery_status": "pass",
                 "gallery_html_path": "casp17/casp17_target_object_model_review_gallery_current.html",
+            }
+        },
+    )
+    _write_json(
+        protein_object_library_json,
+        {
+            "summary": {
+                "protein_object_library_status": "pass",
+                "protein_folder_count": 2,
+                "object_folder_count": 4,
+                "pass_count": 4,
+                "blocked_count": 0,
+                "model_pointer_count": 4,
+                "projection_pointer_count": 4,
+                "viewer_pointer_count": 4,
+                "library_dir": "casp17/protein_object_library_current",
             }
         },
     )
@@ -1015,6 +1032,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(target_object_viewer_smoke_json),
             "--target-object-model-review-json",
             str(target_object_model_review_json),
+            "--protein-object-library-json",
+            str(protein_object_library_json),
             "--win-gap-closure-json",
             str(closure_json),
             "--win-tier-goal-scorecard-json",
@@ -1159,6 +1178,15 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         payload["summary"]["target_object_model_review_gallery_html"]
         == "casp17/casp17_target_object_model_review_gallery_current.html"
     )
+    assert payload["summary"]["protein_object_library_status"] == "pass"
+    assert payload["summary"]["protein_object_library_protein_folder_count"] == 2
+    assert payload["summary"]["protein_object_library_object_folder_count"] == 4
+    assert payload["summary"]["protein_object_library_pass_count"] == 4
+    assert payload["summary"]["protein_object_library_blocked_count"] == 0
+    assert payload["summary"]["protein_object_library_model_pointer_count"] == 4
+    assert payload["summary"]["protein_object_library_projection_pointer_count"] == 4
+    assert payload["summary"]["protein_object_library_viewer_pointer_count"] == 4
+    assert payload["summary"]["protein_object_library_dir"] == "casp17/protein_object_library_current"
     assert payload["summary"]["benchmark_rows_total"] == 40
     assert payload["summary"]["competitive_batch_status"] == "ready_for_fill"
     assert payload["summary"]["competitive_batch_row_count"] == 15
@@ -1592,6 +1620,10 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["target_object_model_review"]["ready_count"] == 4
     assert "review_md:4" in by_id["target_object_model_review"]["blockers"]
     assert "gallery:pass" in by_id["target_object_model_review"]["blockers"]
+    assert by_id["protein_object_library"]["status"] == "pass"
+    assert by_id["protein_object_library"]["ready_count"] == 4
+    assert "protein_folders:2" in by_id["protein_object_library"]["blockers"]
+    assert "model_projection_viewer:4/4/4" in by_id["protein_object_library"]["blockers"]
     assert by_id["win_tier_goal_scorecard"]["status"] == "blocked_input"
     assert by_id["win_tier_goal_scorecard"]["ready_count"] == 1
     assert "historical_identity_clearance" in by_id["win_tier_goal_scorecard"]["blockers"]

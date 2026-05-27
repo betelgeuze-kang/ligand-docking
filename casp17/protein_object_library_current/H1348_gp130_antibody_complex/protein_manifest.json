@@ -1,0 +1,71 @@
+{
+  "claim_boundary": "Local CASP17 protein-name object library only. It materializes review folders and pointers for already-generated internal 3D object models; it does not copy native structures, fetch external data, score native accuracy, or submit to CASP.",
+  "objects": [
+    {
+      "atom_count": 4783,
+      "blockers": "",
+      "chain_id": "A",
+      "coordinate_status": "valid",
+      "library_object_folder": "casp17/protein_object_library_current/H1348_gp130_antibody_complex/chain_A",
+      "library_protein_folder": "casp17/protein_object_library_current/H1348_gp130_antibody_complex",
+      "library_status": "pass",
+      "model_path": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_A/models/H1348_chain_A.pdb",
+      "object_id": "chain_A",
+      "projection_svg_path": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_A/renders/H1348_chain_A_projection.svg",
+      "protein_atom_count": 4783,
+      "protein_key": "H1348_gp130_antibody_complex",
+      "protein_name": "gp130 antibody complex",
+      "residue_count": 597,
+      "source_object_folder": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_A",
+      "target_id": "H1348",
+      "viewer_html_path": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_A/viewer.html"
+    },
+    {
+      "atom_count": 1669,
+      "blockers": "",
+      "chain_id": "B",
+      "coordinate_status": "valid",
+      "library_object_folder": "casp17/protein_object_library_current/H1348_gp130_antibody_complex/chain_B",
+      "library_protein_folder": "casp17/protein_object_library_current/H1348_gp130_antibody_complex",
+      "library_status": "pass",
+      "model_path": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_B/models/H1348_chain_B.pdb",
+      "object_id": "chain_B",
+      "projection_svg_path": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_B/renders/H1348_chain_B_projection.svg",
+      "protein_atom_count": 1669,
+      "protein_key": "H1348_gp130_antibody_complex",
+      "protein_name": "gp130 antibody complex",
+      "residue_count": 222,
+      "source_object_folder": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_B",
+      "target_id": "H1348",
+      "viewer_html_path": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_B/viewer.html"
+    },
+    {
+      "atom_count": 1646,
+      "blockers": "",
+      "chain_id": "C",
+      "coordinate_status": "valid",
+      "library_object_folder": "casp17/protein_object_library_current/H1348_gp130_antibody_complex/chain_C",
+      "library_protein_folder": "casp17/protein_object_library_current/H1348_gp130_antibody_complex",
+      "library_status": "pass",
+      "model_path": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_C/models/H1348_chain_C.pdb",
+      "object_id": "chain_C",
+      "projection_svg_path": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_C/renders/H1348_chain_C_projection.svg",
+      "protein_atom_count": 1646,
+      "protein_key": "H1348_gp130_antibody_complex",
+      "protein_name": "gp130 antibody complex",
+      "residue_count": 215,
+      "source_object_folder": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_C",
+      "target_id": "H1348",
+      "viewer_html_path": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_C/viewer.html"
+    }
+  ],
+  "summary": {
+    "blocked_count": 0,
+    "library_protein_folder": "casp17/protein_object_library_current/H1348_gp130_antibody_complex",
+    "object_count": 3,
+    "pass_count": 3,
+    "protein_key": "H1348_gp130_antibody_complex",
+    "protein_name": "gp130 antibody complex",
+    "target_id": "H1348"
+  }
+}

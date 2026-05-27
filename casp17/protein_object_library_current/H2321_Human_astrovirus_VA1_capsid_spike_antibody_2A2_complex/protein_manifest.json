@@ -1,0 +1,71 @@
+{
+  "claim_boundary": "Local CASP17 protein-name object library only. It materializes review folders and pointers for already-generated internal 3D object models; it does not copy native structures, fetch external data, score native accuracy, or submit to CASP.",
+  "objects": [
+    {
+      "atom_count": 2155,
+      "blockers": "",
+      "chain_id": "A",
+      "coordinate_status": "valid",
+      "library_object_folder": "casp17/protein_object_library_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/chain_A",
+      "library_protein_folder": "casp17/protein_object_library_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex",
+      "library_status": "pass",
+      "model_path": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_A/models/H2321_chain_A.pdb",
+      "object_id": "chain_A",
+      "projection_svg_path": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_A/renders/H2321_chain_A_projection.svg",
+      "protein_atom_count": 2155,
+      "protein_key": "H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex",
+      "protein_name": "Human astrovirus VA1 capsid spike - antibody 2A2 complex",
+      "residue_count": 273,
+      "source_object_folder": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_A",
+      "target_id": "H2321",
+      "viewer_html_path": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_A/viewer.html"
+    },
+    {
+      "atom_count": 946,
+      "blockers": "",
+      "chain_id": "B",
+      "coordinate_status": "valid",
+      "library_object_folder": "casp17/protein_object_library_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/chain_B",
+      "library_protein_folder": "casp17/protein_object_library_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex",
+      "library_status": "pass",
+      "model_path": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_B/models/H2321_chain_B.pdb",
+      "object_id": "chain_B",
+      "projection_svg_path": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_B/renders/H2321_chain_B_projection.svg",
+      "protein_atom_count": 946,
+      "protein_key": "H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex",
+      "protein_name": "Human astrovirus VA1 capsid spike - antibody 2A2 complex",
+      "residue_count": 121,
+      "source_object_folder": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_B",
+      "target_id": "H2321",
+      "viewer_html_path": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_B/viewer.html"
+    },
+    {
+      "atom_count": 842,
+      "blockers": "",
+      "chain_id": "C",
+      "coordinate_status": "valid",
+      "library_object_folder": "casp17/protein_object_library_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/chain_C",
+      "library_protein_folder": "casp17/protein_object_library_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex",
+      "library_status": "pass",
+      "model_path": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_C/models/H2321_chain_C.pdb",
+      "object_id": "chain_C",
+      "projection_svg_path": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_C/renders/H2321_chain_C_projection.svg",
+      "protein_atom_count": 842,
+      "protein_key": "H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex",
+      "protein_name": "Human astrovirus VA1 capsid spike - antibody 2A2 complex",
+      "residue_count": 108,
+      "source_object_folder": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_C",
+      "target_id": "H2321",
+      "viewer_html_path": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_C/viewer.html"
+    }
+  ],
+  "summary": {
+    "blocked_count": 0,
+    "library_protein_folder": "casp17/protein_object_library_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex",
+    "object_count": 3,
+    "pass_count": 3,
+    "protein_key": "H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex",
+    "protein_name": "Human astrovirus VA1 capsid spike - antibody 2A2 complex",
+    "target_id": "H2321"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "claim_boundary": "Local CASP17 protein-name object library only. It materializes review folders and pointers for already-generated internal 3D object models; it does not copy native structures, fetch external data, score native accuracy, or submit to CASP.",
+  "summary": {
+    "atom_count": 2511,
+    "blockers": "",
+    "chain_id": "D",
+    "coordinate_status": "valid",
+    "library_object_folder": "casp17/protein_object_library_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/chain_D",
+    "library_protein_folder": "casp17/protein_object_library_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA",
+    "library_status": "pass",
+    "model_path": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_D/models/H2332_chain_D.pdb",
+    "object_id": "chain_D",
+    "projection_svg_path": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_D/renders/H2332_chain_D_projection.svg",
+    "protein_atom_count": 2511,
+    "protein_key": "H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA",
+    "protein_name": "Fab 047-09_1A02 binding influenza virus H1 HA",
+    "residue_count": 321,
+    "source_object_folder": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_D",
+    "target_id": "H2332",
+    "viewer_html_path": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_D/viewer.html"
+  }
+}

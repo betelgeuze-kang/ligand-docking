@@ -1,0 +1,22 @@
+{
+  "claim_boundary": "Local CASP17 protein-name object library only. It materializes review folders and pointers for already-generated internal 3D object models; it does not copy native structures, fetch external data, score native accuracy, or submit to CASP.",
+  "summary": {
+    "atom_count": 5279,
+    "blockers": "",
+    "chain_id": "A",
+    "coordinate_status": "valid",
+    "library_object_folder": "casp17/protein_object_library_current/H2312_EXT1_EXT2_2BAV4/chain_A",
+    "library_protein_folder": "casp17/protein_object_library_current/H2312_EXT1_EXT2_2BAV4",
+    "library_status": "pass",
+    "model_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_A/models/H2312_chain_A.pdb",
+    "object_id": "chain_A",
+    "projection_svg_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_A/renders/H2312_chain_A_projection.svg",
+    "protein_atom_count": 5279,
+    "protein_key": "H2312_EXT1_EXT2_2BAV4",
+    "protein_name": "EXT1-EXT2-2BAV4",
+    "residue_count": 649,
+    "source_object_folder": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_A",
+    "target_id": "H2312",
+    "viewer_html_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_A/viewer.html"
+  }
+}
