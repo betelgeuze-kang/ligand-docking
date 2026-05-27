@@ -64,6 +64,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     competitive_target_identity_clearance_replacement_pickup_json = (
         tmp_path / "competitive_target_identity_clearance_replacement_pickup.json"
     )
+    competitive_target_identity_clearance_replacement_duplicate_resolution_json = (
+        tmp_path / "competitive_target_identity_clearance_replacement_duplicate_resolution.json"
+    )
     competitive_target_identity_clearance_manifest_sync_json = (
         tmp_path / "competitive_target_identity_clearance_manifest_sync.json"
     )
@@ -710,6 +713,26 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        competitive_target_identity_clearance_replacement_duplicate_resolution_json,
+        {
+            "summary": {
+                "duplicate_resolution_status": "operator_decision_required",
+                "duplicate_replace_target_count": 1,
+                "candidate_row_count": 4,
+                "safe_unique_ready_candidate_count": 0,
+                "duplicate_ready_candidate_count": 1,
+                "blocked_duplicate_count": 1,
+                "blocked_cancelled_count": 1,
+                "blocked_current_collision_count": 2,
+                "blocked_missing_prediction_count": 3,
+                "first_open_next_action": (
+                    "choose a new non-colliding closed protein replacement target or explicitly approve duplicate "
+                    "candidate reuse with no-leak rationale"
+                ),
+            }
+        },
+    )
+    _write_json(
         competitive_target_identity_clearance_manifest_sync_json,
         {
             "summary": {
@@ -1116,6 +1139,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(competitive_target_identity_clearance_replacement_workorder_audit_json),
             "--competitive-target-identity-clearance-replacement-pickup-json",
             str(competitive_target_identity_clearance_replacement_pickup_json),
+            "--competitive-target-identity-clearance-replacement-duplicate-resolution-json",
+            str(competitive_target_identity_clearance_replacement_duplicate_resolution_json),
             "--competitive-target-identity-clearance-manifest-sync-json",
             str(competitive_target_identity_clearance_manifest_sync_json),
             "--competitive-target-identity-clearance-workorder-audit-json",
@@ -1406,6 +1431,43 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["competitive_target_identity_clearance_replacement_pickup_native_missing_count"] == 1
     assert payload["summary"]["competitive_target_identity_clearance_replacement_pickup_required_field_count"] == 11
     assert payload["summary"]["competitive_target_identity_clearance_replacement_pickup_operator_action_count"] == 4
+    assert payload["summary"]["competitive_target_identity_clearance_replacement_duplicate_resolution_status"] == (
+        "operator_decision_required"
+    )
+    assert payload["summary"]["competitive_target_identity_clearance_replacement_duplicate_resolution_target_count"] == 1
+    assert (
+        payload["summary"]["competitive_target_identity_clearance_replacement_duplicate_resolution_candidate_count"]
+        == 4
+    )
+    assert (
+        payload["summary"]["competitive_target_identity_clearance_replacement_duplicate_resolution_safe_unique_count"]
+        == 0
+    )
+    assert (
+        payload["summary"][
+            "competitive_target_identity_clearance_replacement_duplicate_resolution_duplicate_ready_count"
+        ]
+        == 1
+    )
+    assert (
+        payload["summary"][
+            "competitive_target_identity_clearance_replacement_duplicate_resolution_blocked_duplicate_count"
+        ]
+        == 1
+    )
+    assert payload["summary"]["competitive_target_identity_clearance_replacement_duplicate_resolution_cancelled_count"] == 1
+    assert (
+        payload["summary"][
+            "competitive_target_identity_clearance_replacement_duplicate_resolution_current_collision_count"
+        ]
+        == 2
+    )
+    assert (
+        payload["summary"][
+            "competitive_target_identity_clearance_replacement_duplicate_resolution_missing_prediction_count"
+        ]
+        == 3
+    )
     assert payload["summary"]["competitive_target_identity_clearance_manifest_sync_status"] == "awaiting_provenance"
     assert payload["summary"]["competitive_target_identity_clearance_manifest_sync_row_count"] == 3
     assert payload["summary"]["competitive_target_identity_clearance_manifest_sync_ready_count"] == 0
@@ -1709,6 +1771,19 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["competitive_floor_target_identity_clearance_replacement_pickup"]["blocked_count"] == 2
     assert "selected:1" in by_id["competitive_floor_target_identity_clearance_replacement_pickup"]["blockers"]
     assert "operator_actions:4" in by_id["competitive_floor_target_identity_clearance_replacement_pickup"]["blockers"]
+    assert by_id["competitive_floor_target_identity_clearance_replacement_duplicate_resolution"]["status"] == (
+        "operator_decision_required"
+    )
+    assert by_id["competitive_floor_target_identity_clearance_replacement_duplicate_resolution"]["ready_count"] == 0
+    assert by_id["competitive_floor_target_identity_clearance_replacement_duplicate_resolution"]["blocked_count"] == 4
+    assert (
+        "duplicate_ready:1"
+        in by_id["competitive_floor_target_identity_clearance_replacement_duplicate_resolution"]["blockers"]
+    )
+    assert (
+        "current_collision:2"
+        in by_id["competitive_floor_target_identity_clearance_replacement_duplicate_resolution"]["blockers"]
+    )
     assert by_id["competitive_floor_target_identity_clearance_manifest_sync"]["status"] == "awaiting_provenance"
     assert by_id["competitive_floor_target_identity_clearance_manifest_sync"]["blocked_count"] == 3
     assert by_id["competitive_floor_target_identity_clearance_workorder_audit"]["status"] == "blocked"
@@ -1805,6 +1880,8 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_competitive_target_identity_clearance_replacement_source_repair.json"),
             "--competitive-target-identity-clearance-replacement-scorecard-json",
             str(tmp_path / "missing_competitive_target_identity_clearance_replacement_scorecard.json"),
+            "--competitive-target-identity-clearance-replacement-duplicate-resolution-json",
+            str(tmp_path / "missing_competitive_target_identity_clearance_replacement_duplicate_resolution.json"),
             "--competitive-target-identity-clearance-manifest-sync-json",
             str(tmp_path / "missing_competitive_target_identity_clearance_manifest_sync.json"),
             "--competitive-target-identity-clearance-workorder-audit-json",
