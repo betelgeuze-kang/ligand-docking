@@ -5,7 +5,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 - goal objective addendum: `casp17/CASP17_WIN_TIER_GOAL.md`
 - win-tier target: scaffold `65 -> 90`, competitive proof `15-25 -> 85-90`, leaderboard `top-5/top-3/top-1-2` by category.
 
-- generated: `2026-05-28T03:12:49+09:00`
+- generated: `2026-05-28T03:20:19+09:00`
 - workbench_status: `ready_for_operator_fill`
 - target model folders: `19/19`
 - target object folders: `58`
@@ -26,6 +26,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 - historical identity seed clearance action bundle: `open_actions` targets/actions/open `15/45/45` files/folders `90/45` identity/core/no-leak/calibration/ablation `0/0/15/15/15` first `casp17/historical_identity_seed_clearance_action_bundle/01_HIST_BBA5/action_001_no_leak_provenance/ACTION.md`
 - historical identity seed clearance field board: `operator_field_fill_required` rows operator-fill/ready/total `15/0/15` core pass/blocked `15/0` open no-leak/calibration/ablation/total `150/90/15/255` first `HIST_BBA5` `no_leak_evidence_ref` `fill no-leak evidence, chronology, leakage controls, and operator clearance first`
 - historical seed current-target prefill: `applied` mode `apply` ready/applied/already/blocked/total `0/15/0/0/15` collisions/remaining-open/hist-prefix `0/0/15` first `set current_casp17_target=false`
+- historical seed chronology candidates: `operator_evidence_required` ready/warning/evidence-required/conflict/total `0/0/15/0/15` path-date/mtime/risk `10/15/15` first `HIST_BBA5` `fill prediction_created_at, native_release_date, and before-native confirmation from operator evidence`
 - historical seed clearance to identity intake sync: `waiting_on_cleared_seed_manifest` mode `dry_run` seed eligible/total `0/0` intake ready/waiting/blocked/total `0/15/0/15` applied `0` first `clear historical seed rows before syncing competitive identity intake`
 - sidechain-native benchmark: `blocked` pass/blocked/total `0/40/40` core/leakage/pred/native/missing-files `40/40/40/40/80` exactness/metric `0/0` first `hist_REQUIRED_MONOMER_001` blockers `leakage_clearance_missing_or_not_clear,native_pdb_missing,prediction_pdb_missing`
 - sidechain-native workorder: actions/open `120/120` files `runs/casp17_sidechain_native_input_workorder_current.json` `runs/casp17_sidechain_native_input_workorder_current.md`
@@ -106,6 +107,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 | `historical_identity_seed_clearance_action_bundle` | `open_actions` | 0 | 45 | 45 | `casp17/casp17_historical_identity_seed_clearance_action_bundle_current.json` | casp17/historical_identity_seed_clearance_action_bundle/01_HIST_BBA5/action_001_no_leak_provenance/ACTION.md | `targets:15,folders:45,files:90,lanes:0/0/15/15/15` |
 | `historical_identity_seed_clearance_field_board` | `operator_field_fill_required` | 0 | 15 | 15 | `casp17/casp17_historical_identity_seed_clearance_field_board_current.json` | fill no-leak evidence, chronology, leakage controls, and operator clearance first | `core:15/0,open_fields:150/90/15/255,ready:0` |
 | `historical_seed_current_target_prefill` | `applied` | 15 | 0 | 15 | `casp17/casp17_historical_seed_current_target_prefill_current.json` | set current_casp17_target=false | `mode:apply,collisions:0,remaining_open:0,hist_prefix:15` |
+| `historical_seed_chronology_candidate_board` | `operator_evidence_required` | 0 | 15 | 15 | `casp17/casp17_historical_seed_chronology_candidate_board_current.json` | fill prediction_created_at, native_release_date, and before-native confirmation from operator evidence | `path_dates:10,mtimes:15,mtime_risk:15,conflicts:0` |
 | `historical_seed_clearance_to_identity_intake_sync` | `waiting_on_cleared_seed_manifest` | 0 | 15 | 15 | `casp17/casp17_historical_seed_clearance_to_identity_intake_sync_current.json` | clear historical seed rows before syncing competitive identity intake | `cleared_seed_rows:0,eligible:0,ready:0,waiting:15,applied:0,mode:dry_run` |
 | `sidechain_native_benchmark` | `blocked` | 0 | 40 | 40 | `runs/casp17_sidechain_native_benchmark_packet_current.json` | replace placeholder leakage_clearance with operator-confirmed no_leak provenance; place the cleared prediction/native PDB files for this benchmark row. | `leakage_clearance_missing_or_not_clear,native_pdb_missing,prediction_pdb_missing` |
 | `competitive_floor_batch` | `ready_for_fill` | 15 | 0 | 15 | `casp17/casp17_competitive_floor_batch_current.json` | Fill the copied competitive-floor task folders before expanding to the full 40-row win-tier set. | `missing_evidence_items:490` |

@@ -30,6 +30,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         tmp_path / "historical_identity_seed_clearance_field_board.json"
     )
     historical_seed_current_target_prefill_json = tmp_path / "historical_seed_current_target_prefill.json"
+    historical_seed_chronology_candidate_board_json = tmp_path / "historical_seed_chronology_candidate_board.json"
     historical_seed_clearance_to_identity_intake_sync_json = (
         tmp_path / "historical_seed_clearance_to_identity_intake_sync.json"
     )
@@ -418,6 +419,27 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "remaining_open_current_target_count": 0,
                 "hist_prefix_pass_count": 15,
                 "first_next_action": "set current_casp17_target=false",
+            }
+        },
+    )
+    _write_json(
+        historical_seed_chronology_candidate_board_json,
+        {
+            "summary": {
+                "chronology_board_status": "operator_evidence_required",
+                "row_count": 15,
+                "operator_chronology_ready_count": 0,
+                "operator_ready_mtime_warning_count": 0,
+                "operator_evidence_required_count": 15,
+                "blocked_chronology_conflict_count": 0,
+                "prediction_path_date_count": 10,
+                "file_mtime_candidate_count": 15,
+                "file_mtime_order_risk_count": 15,
+                "first_open_target_id": "HIST_BBA5",
+                "first_next_action": (
+                    "fill prediction_created_at, native_release_date, and before-native confirmation "
+                    "from operator evidence"
+                ),
             }
         },
     )
@@ -1324,6 +1346,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(historical_identity_seed_clearance_field_board_json),
             "--historical-seed-current-target-prefill-json",
             str(historical_seed_current_target_prefill_json),
+            "--historical-seed-chronology-candidate-board-json",
+            str(historical_seed_chronology_candidate_board_json),
             "--historical-seed-clearance-to-identity-intake-sync-json",
             str(historical_seed_clearance_to_identity_intake_sync_json),
             "--sidechain-native-benchmark-json",
@@ -2086,6 +2110,18 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["historical_seed_current_target_prefill_first_next_action"] == (
         "set current_casp17_target=false"
     )
+    assert payload["summary"]["historical_seed_chronology_candidate_board_status"] == (
+        "operator_evidence_required"
+    )
+    assert payload["summary"]["historical_seed_chronology_candidate_board_row_count"] == 15
+    assert payload["summary"]["historical_seed_chronology_candidate_board_ready_count"] == 0
+    assert payload["summary"]["historical_seed_chronology_candidate_board_warning_count"] == 0
+    assert payload["summary"]["historical_seed_chronology_candidate_board_evidence_required_count"] == 15
+    assert payload["summary"]["historical_seed_chronology_candidate_board_conflict_count"] == 0
+    assert payload["summary"]["historical_seed_chronology_candidate_board_path_date_count"] == 10
+    assert payload["summary"]["historical_seed_chronology_candidate_board_mtime_count"] == 15
+    assert payload["summary"]["historical_seed_chronology_candidate_board_mtime_risk_count"] == 15
+    assert payload["summary"]["historical_seed_chronology_candidate_board_first_target_id"] == "HIST_BBA5"
     assert payload["summary"]["historical_seed_clearance_to_identity_intake_sync_status"] == (
         "waiting_on_cleared_seed_manifest"
     )
@@ -2305,6 +2341,13 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "mode:apply" in by_id["historical_seed_current_target_prefill"]["blockers"]
     assert "collisions:0" in by_id["historical_seed_current_target_prefill"]["blockers"]
     assert "remaining_open:0" in by_id["historical_seed_current_target_prefill"]["blockers"]
+    assert by_id["historical_seed_chronology_candidate_board"]["status"] == "operator_evidence_required"
+    assert by_id["historical_seed_chronology_candidate_board"]["ready_count"] == 0
+    assert by_id["historical_seed_chronology_candidate_board"]["blocked_count"] == 15
+    assert by_id["historical_seed_chronology_candidate_board"]["total_count"] == 15
+    assert "path_dates:10" in by_id["historical_seed_chronology_candidate_board"]["blockers"]
+    assert "mtimes:15" in by_id["historical_seed_chronology_candidate_board"]["blockers"]
+    assert "mtime_risk:15" in by_id["historical_seed_chronology_candidate_board"]["blockers"]
     assert by_id["historical_seed_clearance_to_identity_intake_sync"]["status"] == (
         "waiting_on_cleared_seed_manifest"
     )
@@ -2356,6 +2399,8 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_historical_identity_seed_clearance_field_board.json"),
             "--historical-seed-current-target-prefill-json",
             str(tmp_path / "missing_historical_seed_current_target_prefill.json"),
+            "--historical-seed-chronology-candidate-board-json",
+            str(tmp_path / "missing_historical_seed_chronology_candidate_board.json"),
             "--historical-seed-clearance-to-identity-intake-sync-json",
             str(tmp_path / "missing_historical_seed_clearance_to_identity_intake_sync.json"),
             "--sidechain-native-benchmark-json",

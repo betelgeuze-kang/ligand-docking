@@ -35,6 +35,9 @@ DEFAULT_HISTORICAL_IDENTITY_SEED_CLEARANCE_FIELD_BOARD_JSON = (
 DEFAULT_HISTORICAL_SEED_CURRENT_TARGET_PREFILL_JSON = (
     "casp17/casp17_historical_seed_current_target_prefill_current.json"
 )
+DEFAULT_HISTORICAL_SEED_CHRONOLOGY_CANDIDATE_BOARD_JSON = (
+    "casp17/casp17_historical_seed_chronology_candidate_board_current.json"
+)
 DEFAULT_HISTORICAL_SEED_CLEARANCE_TO_IDENTITY_INTAKE_SYNC_JSON = (
     "casp17/casp17_historical_seed_clearance_to_identity_intake_sync_current.json"
 )
@@ -265,6 +268,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     historical_seed_current_target_prefill_payload = _read_json(
         args.historical_seed_current_target_prefill_json
     )
+    historical_seed_chronology_candidate_board_payload = _read_json(
+        args.historical_seed_chronology_candidate_board_json
+    )
     historical_seed_clearance_to_identity_intake_sync_payload = _read_json(
         args.historical_seed_clearance_to_identity_intake_sync_json
     )
@@ -386,6 +392,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         historical_identity_seed_clearance_field_board_payload
     )
     historical_seed_current_target_prefill_summary = _summary(historical_seed_current_target_prefill_payload)
+    historical_seed_chronology_candidate_board_summary = _summary(
+        historical_seed_chronology_candidate_board_payload
+    )
     historical_seed_clearance_to_identity_intake_sync_summary = _summary(
         historical_seed_clearance_to_identity_intake_sync_payload
     )
@@ -875,6 +884,32 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + str(historical_seed_current_target_prefill_summary.get("remaining_open_current_target_count", ""))
                 + ",hist_prefix:"
                 + str(historical_seed_current_target_prefill_summary.get("hist_prefix_pass_count", ""))
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_chronology_candidate_board",
+            "Operator chronology candidate board for historical seed rows",
+            _text(historical_seed_chronology_candidate_board_summary.get("chronology_board_status")),
+            args.historical_seed_chronology_candidate_board_json,
+            ready_count=(
+                _int(historical_seed_chronology_candidate_board_summary.get("operator_chronology_ready_count"))
+                + _int(historical_seed_chronology_candidate_board_summary.get("operator_ready_mtime_warning_count"))
+            ),
+            blocked_count=(
+                _int(historical_seed_chronology_candidate_board_summary.get("operator_evidence_required_count"))
+                + _int(historical_seed_chronology_candidate_board_summary.get("blocked_chronology_conflict_count"))
+            ),
+            total_count=_int(historical_seed_chronology_candidate_board_summary.get("row_count")),
+            next_action=_text(historical_seed_chronology_candidate_board_summary.get("first_next_action")),
+            blockers=(
+                "path_dates:"
+                + str(historical_seed_chronology_candidate_board_summary.get("prediction_path_date_count", ""))
+                + ",mtimes:"
+                + str(historical_seed_chronology_candidate_board_summary.get("file_mtime_candidate_count", ""))
+                + ",mtime_risk:"
+                + str(historical_seed_chronology_candidate_board_summary.get("file_mtime_order_risk_count", ""))
+                + ",conflicts:"
+                + str(historical_seed_chronology_candidate_board_summary.get("blocked_chronology_conflict_count", ""))
             ),
         ),
         _artifact_row(
@@ -2733,6 +2768,39 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "historical_seed_current_target_prefill_first_next_action": _text(
             historical_seed_current_target_prefill_summary.get("first_next_action")
         ),
+        "historical_seed_chronology_candidate_board_status": _text(
+            historical_seed_chronology_candidate_board_summary.get("chronology_board_status")
+        ),
+        "historical_seed_chronology_candidate_board_row_count": _int(
+            historical_seed_chronology_candidate_board_summary.get("row_count")
+        ),
+        "historical_seed_chronology_candidate_board_ready_count": _int(
+            historical_seed_chronology_candidate_board_summary.get("operator_chronology_ready_count")
+        ),
+        "historical_seed_chronology_candidate_board_warning_count": _int(
+            historical_seed_chronology_candidate_board_summary.get("operator_ready_mtime_warning_count")
+        ),
+        "historical_seed_chronology_candidate_board_evidence_required_count": _int(
+            historical_seed_chronology_candidate_board_summary.get("operator_evidence_required_count")
+        ),
+        "historical_seed_chronology_candidate_board_conflict_count": _int(
+            historical_seed_chronology_candidate_board_summary.get("blocked_chronology_conflict_count")
+        ),
+        "historical_seed_chronology_candidate_board_path_date_count": _int(
+            historical_seed_chronology_candidate_board_summary.get("prediction_path_date_count")
+        ),
+        "historical_seed_chronology_candidate_board_mtime_count": _int(
+            historical_seed_chronology_candidate_board_summary.get("file_mtime_candidate_count")
+        ),
+        "historical_seed_chronology_candidate_board_mtime_risk_count": _int(
+            historical_seed_chronology_candidate_board_summary.get("file_mtime_order_risk_count")
+        ),
+        "historical_seed_chronology_candidate_board_first_target_id": _text(
+            historical_seed_chronology_candidate_board_summary.get("first_open_target_id")
+        ),
+        "historical_seed_chronology_candidate_board_first_next_action": _text(
+            historical_seed_chronology_candidate_board_summary.get("first_next_action")
+        ),
         "historical_seed_clearance_to_identity_intake_sync_status": _text(
             historical_seed_clearance_to_identity_intake_sync_summary.get("seed_to_identity_sync_status")
         ),
@@ -4035,6 +4103,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- historical identity seed clearance action bundle: `{summary['historical_identity_seed_clearance_action_bundle_status'] or '-'}` targets/actions/open `{summary['historical_identity_seed_clearance_action_bundle_target_count']}/{summary['historical_identity_seed_clearance_action_bundle_action_count']}/{summary['historical_identity_seed_clearance_action_bundle_open_count']}` files/folders `{summary['historical_identity_seed_clearance_action_bundle_file_count']}/{summary['historical_identity_seed_clearance_action_bundle_folder_count']}` identity/core/no-leak/calibration/ablation `{summary['historical_identity_seed_clearance_action_bundle_identity_count']}/{summary['historical_identity_seed_clearance_action_bundle_core_count']}/{summary['historical_identity_seed_clearance_action_bundle_no_leak_count']}/{summary['historical_identity_seed_clearance_action_bundle_calibration_count']}/{summary['historical_identity_seed_clearance_action_bundle_ablation_count']}` first `{summary['historical_identity_seed_clearance_action_bundle_first_action'] or '-'}`",
         f"- historical identity seed clearance field board: `{summary['historical_identity_seed_clearance_field_board_status'] or '-'}` rows operator-fill/ready/total `{summary['historical_identity_seed_clearance_field_board_operator_fill_count']}/{summary['historical_identity_seed_clearance_field_board_ready_count']}/{summary['historical_identity_seed_clearance_field_board_seed_count']}` core pass/blocked `{summary['historical_identity_seed_clearance_field_board_core_pass_count']}/{summary['historical_identity_seed_clearance_field_board_blocked_core_count']}` open no-leak/calibration/ablation/total `{summary['historical_identity_seed_clearance_field_board_no_leak_open_count']}/{summary['historical_identity_seed_clearance_field_board_calibration_open_count']}/{summary['historical_identity_seed_clearance_field_board_ablation_open_count']}/{summary['historical_identity_seed_clearance_field_board_total_open_count']}` first `{summary['historical_identity_seed_clearance_field_board_first_target_id'] or '-'}` `{summary['historical_identity_seed_clearance_field_board_first_field'] or '-'}` `{summary['historical_identity_seed_clearance_field_board_first_next_action'] or '-'}`",
         f"- historical seed current-target prefill: `{summary['historical_seed_current_target_prefill_status'] or '-'}` mode `{summary['historical_seed_current_target_prefill_apply_mode'] or '-'}` ready/applied/already/blocked/total `{summary['historical_seed_current_target_prefill_ready_to_apply_count']}/{summary['historical_seed_current_target_prefill_applied_count']}/{summary['historical_seed_current_target_prefill_already_count']}/{summary['historical_seed_current_target_prefill_blocked_count']}/{summary['historical_seed_current_target_prefill_row_count']}` collisions/remaining-open/hist-prefix `{summary['historical_seed_current_target_prefill_collision_count']}/{summary['historical_seed_current_target_prefill_remaining_open_count']}/{summary['historical_seed_current_target_prefill_hist_prefix_count']}` first `{summary['historical_seed_current_target_prefill_first_next_action'] or '-'}`",
+        f"- historical seed chronology candidates: `{summary['historical_seed_chronology_candidate_board_status'] or '-'}` ready/warning/evidence-required/conflict/total `{summary['historical_seed_chronology_candidate_board_ready_count']}/{summary['historical_seed_chronology_candidate_board_warning_count']}/{summary['historical_seed_chronology_candidate_board_evidence_required_count']}/{summary['historical_seed_chronology_candidate_board_conflict_count']}/{summary['historical_seed_chronology_candidate_board_row_count']}` path-date/mtime/risk `{summary['historical_seed_chronology_candidate_board_path_date_count']}/{summary['historical_seed_chronology_candidate_board_mtime_count']}/{summary['historical_seed_chronology_candidate_board_mtime_risk_count']}` first `{summary['historical_seed_chronology_candidate_board_first_target_id'] or '-'}` `{summary['historical_seed_chronology_candidate_board_first_next_action'] or '-'}`",
         f"- historical seed clearance to identity intake sync: `{summary['historical_seed_clearance_to_identity_intake_sync_status'] or '-'}` mode `{summary['historical_seed_clearance_to_identity_intake_sync_apply_mode'] or '-'}` seed eligible/total `{summary['historical_seed_clearance_to_identity_intake_sync_eligible_count']}/{summary['historical_seed_clearance_to_identity_intake_sync_seed_row_count']}` intake ready/waiting/blocked/total `{summary['historical_seed_clearance_to_identity_intake_sync_ready_count']}/{summary['historical_seed_clearance_to_identity_intake_sync_waiting_count']}/{summary['historical_seed_clearance_to_identity_intake_sync_blocked_count']}/{summary['historical_seed_clearance_to_identity_intake_sync_intake_row_count']}` applied `{summary['historical_seed_clearance_to_identity_intake_sync_applied_count']}` first `{summary['historical_seed_clearance_to_identity_intake_sync_first_next_action'] or '-'}`",
         f"- sidechain-native benchmark: `{summary['sidechain_native_benchmark_status'] or '-'}` pass/blocked/total `{summary['sidechain_native_pass_count']}/{summary['sidechain_native_blocked_count']}/{summary['sidechain_native_benchmark_count']}` core/leakage/pred/native/missing-files `{summary['sidechain_native_core_input_blocked_count']}/{summary['sidechain_native_leakage_blocked_count']}/{summary['sidechain_native_prediction_missing_count']}/{summary['sidechain_native_native_missing_count']}/{summary['sidechain_native_missing_core_file_count']}` exactness/metric `{summary['sidechain_native_exactness_blocked_count']}/{summary['sidechain_native_metric_blocked_count']}` first `{summary['sidechain_native_first_blocked_benchmark_id'] or '-'}` blockers `{summary['sidechain_native_first_blocked_blockers'] or '-'}`",
         f"- sidechain-native workorder: actions/open `{summary['sidechain_native_workorder_action_count']}/{summary['sidechain_native_open_workorder_action_count']}` files `{summary['sidechain_native_workorder_json'] or '-'}` `{summary['sidechain_native_workorder_md'] or '-'}`",
@@ -4150,6 +4219,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--historical-seed-current-target-prefill-json",
         default=DEFAULT_HISTORICAL_SEED_CURRENT_TARGET_PREFILL_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-chronology-candidate-board-json",
+        default=DEFAULT_HISTORICAL_SEED_CHRONOLOGY_CANDIDATE_BOARD_JSON,
     )
     parser.add_argument(
         "--historical-seed-clearance-to-identity-intake-sync-json",
