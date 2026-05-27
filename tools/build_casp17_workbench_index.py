@@ -77,6 +77,9 @@ DEFAULT_COMPETITIVE_TARGET_IDENTITY_CLEARANCE_REPLACEMENT_DUPLICATE_RESOLUTION_J
 DEFAULT_COMPETITIVE_TARGET_IDENTITY_CLEARANCE_REPLACEMENT_DECISION_BUNDLE_JSON = (
     "casp17/casp17_competitive_floor_target_identity_clearance_replacement_decision_bundle_current.json"
 )
+DEFAULT_COMPETITIVE_TARGET_IDENTITY_CLEARANCE_REPLACEMENT_DECISION_PREFLIGHT_JSON = (
+    "casp17/casp17_competitive_floor_target_identity_clearance_replacement_decision_preflight_current.json"
+)
 DEFAULT_COMPETITIVE_TARGET_IDENTITY_CLEARANCE_MANIFEST_SYNC_JSON = (
     "casp17/casp17_competitive_floor_target_identity_clearance_manifest_sync_current.json"
 )
@@ -284,6 +287,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     competitive_target_identity_clearance_replacement_decision_bundle_payload = _read_json(
         args.competitive_target_identity_clearance_replacement_decision_bundle_json
     )
+    competitive_target_identity_clearance_replacement_decision_preflight_payload = _read_json(
+        args.competitive_target_identity_clearance_replacement_decision_preflight_json
+    )
     competitive_target_identity_clearance_manifest_sync_payload = _read_json(
         args.competitive_target_identity_clearance_manifest_sync_json
     )
@@ -391,6 +397,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     competitive_target_identity_clearance_replacement_decision_bundle_summary = _summary(
         competitive_target_identity_clearance_replacement_decision_bundle_payload
+    )
+    competitive_target_identity_clearance_replacement_decision_preflight_summary = _summary(
+        competitive_target_identity_clearance_replacement_decision_preflight_payload
     )
     competitive_target_identity_clearance_manifest_sync_summary = _summary(
         competitive_target_identity_clearance_manifest_sync_payload
@@ -1566,6 +1575,88 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + str(
                     competitive_target_identity_clearance_replacement_decision_bundle_summary.get(
                         "duplicate_ready_candidate_count", ""
+                    )
+                )
+            ),
+        ),
+        _artifact_row(
+            "competitive_floor_target_identity_clearance_replacement_decision_preflight",
+            "Fail-closed preflight for filled replacement decision inputs",
+            _text(
+                competitive_target_identity_clearance_replacement_decision_preflight_summary.get(
+                    "decision_preflight_status"
+                )
+            ),
+            args.competitive_target_identity_clearance_replacement_decision_preflight_json,
+            ready_count=(
+                _int(
+                    competitive_target_identity_clearance_replacement_decision_preflight_summary.get(
+                        "ready_new_unique_count"
+                    )
+                )
+                + _int(
+                    competitive_target_identity_clearance_replacement_decision_preflight_summary.get(
+                        "ready_duplicate_exception_count"
+                    )
+                )
+            ),
+            blocked_count=(
+                _int(
+                    competitive_target_identity_clearance_replacement_decision_preflight_summary.get(
+                        "awaiting_operator_decision_count"
+                    )
+                )
+                + _int(
+                    competitive_target_identity_clearance_replacement_decision_preflight_summary.get(
+                        "conflict_count"
+                    )
+                )
+            ),
+            total_count=_int(
+                competitive_target_identity_clearance_replacement_decision_preflight_summary.get(
+                    "decision_row_count"
+                )
+            ),
+            next_action=_text(
+                competitive_target_identity_clearance_replacement_decision_preflight_summary.get(
+                    "first_open_next_action"
+                )
+            ),
+            blockers=(
+                "ready_new:"
+                + str(
+                    competitive_target_identity_clearance_replacement_decision_preflight_summary.get(
+                        "ready_new_unique_count", ""
+                    )
+                )
+                + ",ready_duplicate:"
+                + str(
+                    competitive_target_identity_clearance_replacement_decision_preflight_summary.get(
+                        "ready_duplicate_exception_count", ""
+                    )
+                )
+                + ",awaiting:"
+                + str(
+                    competitive_target_identity_clearance_replacement_decision_preflight_summary.get(
+                        "awaiting_operator_decision_count", ""
+                    )
+                )
+                + ",conflict:"
+                + str(
+                    competitive_target_identity_clearance_replacement_decision_preflight_summary.get(
+                        "conflict_count", ""
+                    )
+                )
+                + ",new_unique_blockers:"
+                + str(
+                    competitive_target_identity_clearance_replacement_decision_preflight_summary.get(
+                        "new_unique_blocker_count", ""
+                    )
+                )
+                + ",duplicate_exception_blockers:"
+                + str(
+                    competitive_target_identity_clearance_replacement_decision_preflight_summary.get(
+                        "duplicate_exception_blocker_count", ""
                     )
                 )
             ),
@@ -2835,6 +2926,42 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 "duplicate_ready_candidate_count"
             )
         ),
+        "competitive_target_identity_clearance_replacement_decision_preflight_status": _text(
+            competitive_target_identity_clearance_replacement_decision_preflight_summary.get(
+                "decision_preflight_status"
+            )
+        ),
+        "competitive_target_identity_clearance_replacement_decision_preflight_row_count": _int(
+            competitive_target_identity_clearance_replacement_decision_preflight_summary.get("decision_row_count")
+        ),
+        "competitive_target_identity_clearance_replacement_decision_preflight_ready_new_count": _int(
+            competitive_target_identity_clearance_replacement_decision_preflight_summary.get(
+                "ready_new_unique_count"
+            )
+        ),
+        "competitive_target_identity_clearance_replacement_decision_preflight_ready_duplicate_count": _int(
+            competitive_target_identity_clearance_replacement_decision_preflight_summary.get(
+                "ready_duplicate_exception_count"
+            )
+        ),
+        "competitive_target_identity_clearance_replacement_decision_preflight_awaiting_count": _int(
+            competitive_target_identity_clearance_replacement_decision_preflight_summary.get(
+                "awaiting_operator_decision_count"
+            )
+        ),
+        "competitive_target_identity_clearance_replacement_decision_preflight_conflict_count": _int(
+            competitive_target_identity_clearance_replacement_decision_preflight_summary.get("conflict_count")
+        ),
+        "competitive_target_identity_clearance_replacement_decision_preflight_new_unique_blocker_count": _int(
+            competitive_target_identity_clearance_replacement_decision_preflight_summary.get(
+                "new_unique_blocker_count"
+            )
+        ),
+        "competitive_target_identity_clearance_replacement_decision_preflight_duplicate_exception_blocker_count": _int(
+            competitive_target_identity_clearance_replacement_decision_preflight_summary.get(
+                "duplicate_exception_blocker_count"
+            )
+        ),
         "competitive_target_identity_clearance_manifest_sync_status": _text(
             competitive_target_identity_clearance_manifest_sync_summary.get("clearance_manifest_sync_status")
         ),
@@ -3354,6 +3481,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- competitive target identity clearance replacement pickup: `{summary['competitive_target_identity_clearance_replacement_pickup_status'] or '-'}` selected/ready/awaiting/blocked-selection `{summary['competitive_target_identity_clearance_replacement_pickup_selected_count']}/{summary['competitive_target_identity_clearance_replacement_pickup_ready_count']}/{summary['competitive_target_identity_clearance_replacement_pickup_awaiting_count']}/{summary['competitive_target_identity_clearance_replacement_pickup_blocked_selection_count']}` native-missing/required-fields/actions `{summary['competitive_target_identity_clearance_replacement_pickup_native_missing_count']}/{summary['competitive_target_identity_clearance_replacement_pickup_required_field_count']}/{summary['competitive_target_identity_clearance_replacement_pickup_operator_action_count']}`",
         f"- competitive target identity clearance replacement duplicate resolution: `{summary['competitive_target_identity_clearance_replacement_duplicate_resolution_status'] or '-'}` targets/candidates `{summary['competitive_target_identity_clearance_replacement_duplicate_resolution_target_count']}/{summary['competitive_target_identity_clearance_replacement_duplicate_resolution_candidate_count']}` safe-unique/duplicate-ready `{summary['competitive_target_identity_clearance_replacement_duplicate_resolution_safe_unique_count']}/{summary['competitive_target_identity_clearance_replacement_duplicate_resolution_duplicate_ready_count']}` blocked duplicate/cancelled/current-collision/missing-prediction `{summary['competitive_target_identity_clearance_replacement_duplicate_resolution_blocked_duplicate_count']}/{summary['competitive_target_identity_clearance_replacement_duplicate_resolution_cancelled_count']}/{summary['competitive_target_identity_clearance_replacement_duplicate_resolution_current_collision_count']}/{summary['competitive_target_identity_clearance_replacement_duplicate_resolution_missing_prediction_count']}`",
         f"- competitive target identity clearance replacement decision bundle: `{summary['competitive_target_identity_clearance_replacement_decision_bundle_status'] or '-'}` decisions ready/open/total `{summary['competitive_target_identity_clearance_replacement_decision_bundle_ready_count']}/{summary['competitive_target_identity_clearance_replacement_decision_bundle_open_count']}/{summary['competitive_target_identity_clearance_replacement_decision_bundle_target_count']}` folders/candidate-csv/new-unique/duplicate-exception `{summary['competitive_target_identity_clearance_replacement_decision_bundle_folder_count']}/{summary['competitive_target_identity_clearance_replacement_decision_bundle_candidate_csv_count']}/{summary['competitive_target_identity_clearance_replacement_decision_bundle_new_unique_template_count']}/{summary['competitive_target_identity_clearance_replacement_decision_bundle_duplicate_exception_count']}` candidates safe-unique/duplicate-ready/total `{summary['competitive_target_identity_clearance_replacement_decision_bundle_safe_unique_count']}/{summary['competitive_target_identity_clearance_replacement_decision_bundle_duplicate_ready_count']}/{summary['competitive_target_identity_clearance_replacement_decision_bundle_candidate_count']}`",
+        f"- competitive target identity clearance replacement decision preflight: `{summary['competitive_target_identity_clearance_replacement_decision_preflight_status'] or '-'}` decisions ready-new/ready-duplicate/awaiting/conflict/total `{summary['competitive_target_identity_clearance_replacement_decision_preflight_ready_new_count']}/{summary['competitive_target_identity_clearance_replacement_decision_preflight_ready_duplicate_count']}/{summary['competitive_target_identity_clearance_replacement_decision_preflight_awaiting_count']}/{summary['competitive_target_identity_clearance_replacement_decision_preflight_conflict_count']}/{summary['competitive_target_identity_clearance_replacement_decision_preflight_row_count']}` blocker rows new-unique/duplicate-exception `{summary['competitive_target_identity_clearance_replacement_decision_preflight_new_unique_blocker_count']}/{summary['competitive_target_identity_clearance_replacement_decision_preflight_duplicate_exception_blocker_count']}`",
         f"- competitive target identity clearance manifest sync: `{summary['competitive_target_identity_clearance_manifest_sync_status'] or '-'}` rows ready/awaiting/blocked/synced `{summary['competitive_target_identity_clearance_manifest_sync_row_count']}/{summary['competitive_target_identity_clearance_manifest_sync_ready_count']}/{summary['competitive_target_identity_clearance_manifest_sync_awaiting_count']}/{summary['competitive_target_identity_clearance_manifest_sync_blocked_count']}/{summary['competitive_target_identity_clearance_manifest_sync_synced_count']}` changed/applied `{summary['competitive_target_identity_clearance_manifest_sync_changed_count']}/{summary['competitive_target_identity_clearance_manifest_sync_applied_count']}`",
         f"- competitive target identity clearance workorder audit: `{summary['competitive_target_identity_clearance_workorder_audit_status'] or '-'}` pass/blocked/total `{summary['competitive_target_identity_clearance_workorder_audit_pass_count']}/{summary['competitive_target_identity_clearance_workorder_audit_blocked_count']}/{summary['competitive_target_identity_clearance_workorder_audit_target_count']}` prediction/native/provenance/evidence/manifest `{summary['competitive_target_identity_clearance_workorder_audit_prediction_count']}/{summary['competitive_target_identity_clearance_workorder_audit_native_count']}/{summary['competitive_target_identity_clearance_workorder_audit_provenance_count']}/{summary['competitive_target_identity_clearance_workorder_audit_evidence_ref_count']}/{summary['competitive_target_identity_clearance_workorder_audit_manifest_count']}` prediction protein-atoms/coordinate-valid `{summary['competitive_target_identity_clearance_workorder_audit_prediction_protein_atom_count']}/{summary['competitive_target_identity_clearance_workorder_audit_prediction_coordinate_valid_count']}` identity discovery blocked/cleared `{summary['competitive_target_identity_clearance_workorder_audit_identity_discovery_blocked_count']}/{summary['competitive_target_identity_clearance_workorder_audit_identity_discovery_cleared_count']}` native protein-atoms/coordinate-valid `{summary['competitive_target_identity_clearance_workorder_audit_native_protein_atom_count']}/{summary['competitive_target_identity_clearance_workorder_audit_native_coordinate_valid_count']}` evidence verified/content-blocked/blocked/waiting `{summary['competitive_target_identity_clearance_workorder_audit_evidence_ref_verified_count']}/{summary['competitive_target_identity_clearance_workorder_audit_evidence_ref_content_blocked_count']}/{summary['competitive_target_identity_clearance_workorder_audit_evidence_ref_blocked_count']}/{summary['competitive_target_identity_clearance_workorder_audit_evidence_ref_waiting_count']}` manifest/provenance matched/mismatches `{summary['competitive_target_identity_clearance_workorder_audit_manifest_provenance_matched_count']}/{summary['competitive_target_identity_clearance_workorder_audit_manifest_provenance_mismatch_count']}` native/prediction distinct/same/waiting `{summary['competitive_target_identity_clearance_workorder_audit_native_prediction_distinct_count']}/{summary['competitive_target_identity_clearance_workorder_audit_native_prediction_same_count']}/{summary['competitive_target_identity_clearance_workorder_audit_native_prediction_waiting_count']}`",
         f"- competitive target identity clearance action board: `{summary['competitive_target_identity_clearance_action_board_status'] or '-'}` actions/open `{summary['competitive_target_identity_clearance_action_board_action_count']}/{summary['competitive_target_identity_clearance_action_board_open_count']}` native/evidence/provenance/manifest `{summary['competitive_target_identity_clearance_action_board_native_count']}/{summary['competitive_target_identity_clearance_action_board_evidence_count']}/{summary['competitive_target_identity_clearance_action_board_provenance_count']}/{summary['competitive_target_identity_clearance_action_board_manifest_count']}`",
@@ -3497,6 +3625,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--competitive-target-identity-clearance-replacement-decision-bundle-json",
         default=DEFAULT_COMPETITIVE_TARGET_IDENTITY_CLEARANCE_REPLACEMENT_DECISION_BUNDLE_JSON,
+    )
+    parser.add_argument(
+        "--competitive-target-identity-clearance-replacement-decision-preflight-json",
+        default=DEFAULT_COMPETITIVE_TARGET_IDENTITY_CLEARANCE_REPLACEMENT_DECISION_PREFLIGHT_JSON,
     )
     parser.add_argument(
         "--competitive-target-identity-clearance-manifest-sync-json",
