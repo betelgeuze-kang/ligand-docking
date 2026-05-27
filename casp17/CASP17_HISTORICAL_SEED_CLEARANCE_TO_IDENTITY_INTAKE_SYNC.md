@@ -1,6 +1,6 @@
 # CASP17 Historical Seed Clearance To Identity Intake Sync
 
-- generated: `2026-05-28T02:50:48+09:00`
+- generated: `2026-05-28T03:10:52+09:00`
 - seed_to_identity_sync_status: `waiting_on_cleared_seed_manifest`
 - apply_mode: `dry_run`
 - seed rows eligible/rejected/total: `0/0/0`

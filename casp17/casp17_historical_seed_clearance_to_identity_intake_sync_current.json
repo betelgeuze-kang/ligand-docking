@@ -207,7 +207,7 @@
     "first_next_action": "clear historical seed rows before syncing competitive identity intake",
     "first_open_dropzone_id": "priority_001_REQUIRED_MONOMER_001",
     "first_open_status": "waiting_on_cleared_seed",
-    "generated_at_local": "2026-05-28T02:50:48+09:00",
+    "generated_at_local": "2026-05-28T03:10:52+09:00",
     "identity_intake_csv": "casp17/casp17_competitive_floor_identity_intake_bundle_current.csv",
     "intake_row_count": 15,
     "packet_type": "casp17_historical_seed_clearance_to_identity_intake_sync",

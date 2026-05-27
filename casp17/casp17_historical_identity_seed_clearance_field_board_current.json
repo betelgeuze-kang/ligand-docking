@@ -12,8 +12,8 @@
       "native_coordinate_valid": true,
       "native_pdb_exists": true,
       "next_action": "fill no-leak evidence, chronology, leakage controls, and operator clearance first",
-      "no_leak_open_count": 11,
-      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,current_casp17_target,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
+      "no_leak_open_count": 10,
+      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
       "prediction_atom_count": 92,
       "prediction_coordinate_valid": true,
       "prediction_native_distinct": true,
@@ -21,7 +21,7 @@
       "scope": "monomer",
       "seed_rank": 1,
       "target_id": "HIST_BBA5",
-      "total_open_field_count": 18
+      "total_open_field_count": 17
     },
     {
       "ablation_open_count": 1,
@@ -35,8 +35,8 @@
       "native_coordinate_valid": true,
       "native_pdb_exists": true,
       "next_action": "fill no-leak evidence, chronology, leakage controls, and operator clearance first",
-      "no_leak_open_count": 11,
-      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,current_casp17_target,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
+      "no_leak_open_count": 10,
+      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
       "prediction_atom_count": 40,
       "prediction_coordinate_valid": true,
       "prediction_native_distinct": true,
@@ -44,7 +44,7 @@
       "scope": "monomer",
       "seed_rank": 2,
       "target_id": "HIST_CHIGNOLIN",
-      "total_open_field_count": 18
+      "total_open_field_count": 17
     },
     {
       "ablation_open_count": 1,
@@ -58,8 +58,8 @@
       "native_coordinate_valid": true,
       "native_pdb_exists": true,
       "next_action": "fill no-leak evidence, chronology, leakage controls, and operator clearance first",
-      "no_leak_open_count": 11,
-      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,current_casp17_target,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
+      "no_leak_open_count": 10,
+      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
       "prediction_atom_count": 184,
       "prediction_coordinate_valid": true,
       "prediction_native_distinct": true,
@@ -67,7 +67,7 @@
       "scope": "monomer",
       "seed_rank": 3,
       "target_id": "HIST_CRAMBIN",
-      "total_open_field_count": 18
+      "total_open_field_count": 17
     },
     {
       "ablation_open_count": 1,
@@ -81,8 +81,8 @@
       "native_coordinate_valid": true,
       "native_pdb_exists": true,
       "next_action": "fill no-leak evidence, chronology, leakage controls, and operator clearance first",
-      "no_leak_open_count": 11,
-      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,current_casp17_target,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
+      "no_leak_open_count": 10,
+      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
       "prediction_atom_count": 112,
       "prediction_coordinate_valid": true,
       "prediction_native_distinct": true,
@@ -90,7 +90,7 @@
       "scope": "monomer",
       "seed_rank": 4,
       "target_id": "HIST_FSD_1",
-      "total_open_field_count": 18
+      "total_open_field_count": 17
     },
     {
       "ablation_open_count": 1,
@@ -104,8 +104,8 @@
       "native_coordinate_valid": true,
       "native_pdb_exists": true,
       "next_action": "fill no-leak evidence, chronology, leakage controls, and operator clearance first",
-      "no_leak_open_count": 11,
-      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,current_casp17_target,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
+      "no_leak_open_count": 10,
+      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
       "prediction_atom_count": 224,
       "prediction_coordinate_valid": true,
       "prediction_native_distinct": true,
@@ -113,7 +113,7 @@
       "scope": "monomer",
       "seed_rank": 5,
       "target_id": "HIST_GB1_MINI",
-      "total_open_field_count": 18
+      "total_open_field_count": 17
     },
     {
       "ablation_open_count": 1,
@@ -127,8 +127,8 @@
       "native_coordinate_valid": true,
       "native_pdb_exists": true,
       "next_action": "fill no-leak evidence, chronology, leakage controls, and operator clearance first",
-      "no_leak_open_count": 11,
-      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,current_casp17_target,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
+      "no_leak_open_count": 10,
+      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
       "prediction_atom_count": 240,
       "prediction_coordinate_valid": true,
       "prediction_native_distinct": true,
@@ -136,7 +136,7 @@
       "scope": "monomer",
       "seed_rank": 6,
       "target_id": "HIST_PROTEIN_A_BDOMAIN",
-      "total_open_field_count": 18
+      "total_open_field_count": 17
     },
     {
       "ablation_open_count": 1,
@@ -150,8 +150,8 @@
       "native_coordinate_valid": true,
       "native_pdb_exists": true,
       "next_action": "fill no-leak evidence, chronology, leakage controls, and operator clearance first",
-      "no_leak_open_count": 11,
-      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,current_casp17_target,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
+      "no_leak_open_count": 10,
+      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
       "prediction_atom_count": 80,
       "prediction_coordinate_valid": true,
       "prediction_native_distinct": true,
@@ -159,7 +159,7 @@
       "scope": "monomer",
       "seed_rank": 7,
       "target_id": "HIST_TRP_CAGE",
-      "total_open_field_count": 18
+      "total_open_field_count": 17
     },
     {
       "ablation_open_count": 1,
@@ -173,8 +173,8 @@
       "native_coordinate_valid": true,
       "native_pdb_exists": true,
       "next_action": "fill no-leak evidence, chronology, leakage controls, and operator clearance first",
-      "no_leak_open_count": 11,
-      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,current_casp17_target,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
+      "no_leak_open_count": 10,
+      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
       "prediction_atom_count": 304,
       "prediction_coordinate_valid": true,
       "prediction_native_distinct": true,
@@ -182,7 +182,7 @@
       "scope": "monomer",
       "seed_rank": 8,
       "target_id": "HIST_UBIQUITIN_MINI",
-      "total_open_field_count": 18
+      "total_open_field_count": 17
     },
     {
       "ablation_open_count": 1,
@@ -196,8 +196,8 @@
       "native_coordinate_valid": true,
       "native_pdb_exists": true,
       "next_action": "fill no-leak evidence, chronology, leakage controls, and operator clearance first",
-      "no_leak_open_count": 11,
-      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,current_casp17_target,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
+      "no_leak_open_count": 10,
+      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
       "prediction_atom_count": 140,
       "prediction_coordinate_valid": true,
       "prediction_native_distinct": true,
@@ -205,7 +205,7 @@
       "scope": "monomer",
       "seed_rank": 9,
       "target_id": "HIST_VILLIN_HP35",
-      "total_open_field_count": 18
+      "total_open_field_count": 17
     },
     {
       "ablation_open_count": 1,
@@ -219,8 +219,8 @@
       "native_coordinate_valid": true,
       "native_pdb_exists": true,
       "next_action": "fill no-leak evidence, chronology, leakage controls, and operator clearance first",
-      "no_leak_open_count": 11,
-      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,current_casp17_target,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
+      "no_leak_open_count": 10,
+      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
       "prediction_atom_count": 140,
       "prediction_coordinate_valid": true,
       "prediction_native_distinct": true,
@@ -228,7 +228,7 @@
       "scope": "monomer",
       "seed_rank": 10,
       "target_id": "HIST_WW_DOMAIN_FIP35",
-      "total_open_field_count": 18
+      "total_open_field_count": 17
     },
     {
       "ablation_open_count": 1,
@@ -242,8 +242,8 @@
       "native_coordinate_valid": true,
       "native_pdb_exists": true,
       "next_action": "fill no-leak evidence, chronology, leakage controls, and operator clearance first",
-      "no_leak_open_count": 11,
-      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,current_casp17_target,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
+      "no_leak_open_count": 10,
+      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
       "prediction_atom_count": 5230,
       "prediction_coordinate_valid": true,
       "prediction_native_distinct": true,
@@ -251,7 +251,7 @@
       "scope": "complex",
       "seed_rank": 11,
       "target_id": "HIST_COMPLEX_01_TCRUZI_PDE_EXTERNAL_PDEB1_010_CHEMBL4453005",
-      "total_open_field_count": 18
+      "total_open_field_count": 17
     },
     {
       "ablation_open_count": 1,
@@ -265,8 +265,8 @@
       "native_coordinate_valid": true,
       "native_pdb_exists": true,
       "next_action": "fill no-leak evidence, chronology, leakage controls, and operator clearance first",
-      "no_leak_open_count": 11,
-      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,current_casp17_target,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
+      "no_leak_open_count": 10,
+      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
       "prediction_atom_count": 5219,
       "prediction_coordinate_valid": true,
       "prediction_native_distinct": true,
@@ -274,7 +274,7 @@
       "scope": "complex",
       "seed_rank": 12,
       "target_id": "HIST_COMPLEX_02_TCRUZI_PDE_EXTERNAL_PDEB1_043_CHEMBL2171451",
-      "total_open_field_count": 18
+      "total_open_field_count": 17
     },
     {
       "ablation_open_count": 1,
@@ -288,8 +288,8 @@
       "native_coordinate_valid": true,
       "native_pdb_exists": true,
       "next_action": "fill no-leak evidence, chronology, leakage controls, and operator clearance first",
-      "no_leak_open_count": 11,
-      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,current_casp17_target,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
+      "no_leak_open_count": 10,
+      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
       "prediction_atom_count": 5225,
       "prediction_coordinate_valid": true,
       "prediction_native_distinct": true,
@@ -297,7 +297,7 @@
       "scope": "complex",
       "seed_rank": 13,
       "target_id": "HIST_COMPLEX_03_TCRUZI_PDE_EXTERNAL_PDEB1_025_CHEMBL4441871",
-      "total_open_field_count": 18
+      "total_open_field_count": 17
     },
     {
       "ablation_open_count": 1,
@@ -311,8 +311,8 @@
       "native_coordinate_valid": true,
       "native_pdb_exists": true,
       "next_action": "fill no-leak evidence, chronology, leakage controls, and operator clearance first",
-      "no_leak_open_count": 11,
-      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,current_casp17_target,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
+      "no_leak_open_count": 10,
+      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
       "prediction_atom_count": 5207,
       "prediction_coordinate_valid": true,
       "prediction_native_distinct": true,
@@ -320,7 +320,7 @@
       "scope": "complex",
       "seed_rank": 14,
       "target_id": "HIST_COMPLEX_04_TCRUZI_PDE_EXTERNAL_PDEB1_032_CHEMBL4445930",
-      "total_open_field_count": 18
+      "total_open_field_count": 17
     },
     {
       "ablation_open_count": 1,
@@ -334,8 +334,8 @@
       "native_coordinate_valid": true,
       "native_pdb_exists": true,
       "next_action": "fill no-leak evidence, chronology, leakage controls, and operator clearance first",
-      "no_leak_open_count": 11,
-      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,current_casp17_target,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
+      "no_leak_open_count": 10,
+      "open_fields": "no_leak_evidence_ref,leakage_clearance,operator_clearance,operator,prediction_created_at,native_release_date,prediction_generated_before_native_release,public_template_or_native_used_for_prediction,other_team_model_used,post_release_information_used,selected_model_rank,best_model_rank,selected_native_metric,best_native_metric,selected_score,best_score,ablation_manifest_ref",
       "prediction_atom_count": 5223,
       "prediction_coordinate_valid": true,
       "prediction_native_distinct": true,
@@ -343,7 +343,7 @@
       "scope": "complex",
       "seed_rank": 15,
       "target_id": "HIST_COMPLEX_05_TCRUZI_PDE_EXTERNAL_PDEB1_007_CHEMBL3764370",
-      "total_open_field_count": 18
+      "total_open_field_count": 17
     }
   ],
   "summary": {
@@ -356,15 +356,15 @@
     "first_next_action": "fill no-leak evidence, chronology, leakage controls, and operator clearance first",
     "first_open_field": "no_leak_evidence_ref",
     "first_open_target_id": "HIST_BBA5",
-    "generated_at_local": "2026-05-28T03:03:10+09:00",
+    "generated_at_local": "2026-05-28T03:10:52+09:00",
     "input_blockers": "",
-    "no_leak_open_field_count": 165,
+    "no_leak_open_field_count": 150,
     "operator_clearance_csv": "runs/casp17_historical_identity_seed_operator_clearance_current.csv",
     "operator_field_fill_required_count": 15,
     "packet_type": "casp17_historical_identity_seed_clearance_field_board",
     "ready_for_cleared_seed_manifest_count": 0,
     "seed_manifest_csv": "runs/casp17_historical_benchmark_manifest_seed_current.csv",
     "seed_row_count": 15,
-    "total_open_field_count": 270
+    "total_open_field_count": 255
   }
 }

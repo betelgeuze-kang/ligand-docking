@@ -29,6 +29,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     historical_identity_seed_clearance_field_board_json = (
         tmp_path / "historical_identity_seed_clearance_field_board.json"
     )
+    historical_seed_current_target_prefill_json = tmp_path / "historical_seed_current_target_prefill.json"
     historical_seed_clearance_to_identity_intake_sync_json = (
         tmp_path / "historical_seed_clearance_to_identity_intake_sync.json"
     )
@@ -399,6 +400,24 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "first_open_target_id": "HIST_BBA5",
                 "first_open_field": "no_leak_evidence_ref",
                 "first_next_action": "fill no-leak evidence, chronology, leakage controls, and operator clearance first",
+            }
+        },
+    )
+    _write_json(
+        historical_seed_current_target_prefill_json,
+        {
+            "summary": {
+                "prefill_status": "applied",
+                "apply_mode": "apply",
+                "row_count": 15,
+                "ready_to_apply_count": 0,
+                "applied_count": 15,
+                "already_safe_false_count": 0,
+                "blocked_count": 0,
+                "current_target_collision_count": 0,
+                "remaining_open_current_target_count": 0,
+                "hist_prefix_pass_count": 15,
+                "first_next_action": "set current_casp17_target=false",
             }
         },
     )
@@ -1303,6 +1322,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(historical_identity_seed_clearance_action_bundle_json),
             "--historical-identity-seed-clearance-field-board-json",
             str(historical_identity_seed_clearance_field_board_json),
+            "--historical-seed-current-target-prefill-json",
+            str(historical_seed_current_target_prefill_json),
             "--historical-seed-clearance-to-identity-intake-sync-json",
             str(historical_seed_clearance_to_identity_intake_sync_json),
             "--sidechain-native-benchmark-json",
@@ -2052,6 +2073,19 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["historical_identity_seed_clearance_field_board_first_next_action"] == (
         "fill no-leak evidence, chronology, leakage controls, and operator clearance first"
     )
+    assert payload["summary"]["historical_seed_current_target_prefill_status"] == "applied"
+    assert payload["summary"]["historical_seed_current_target_prefill_apply_mode"] == "apply"
+    assert payload["summary"]["historical_seed_current_target_prefill_row_count"] == 15
+    assert payload["summary"]["historical_seed_current_target_prefill_ready_to_apply_count"] == 0
+    assert payload["summary"]["historical_seed_current_target_prefill_applied_count"] == 15
+    assert payload["summary"]["historical_seed_current_target_prefill_already_count"] == 0
+    assert payload["summary"]["historical_seed_current_target_prefill_blocked_count"] == 0
+    assert payload["summary"]["historical_seed_current_target_prefill_collision_count"] == 0
+    assert payload["summary"]["historical_seed_current_target_prefill_remaining_open_count"] == 0
+    assert payload["summary"]["historical_seed_current_target_prefill_hist_prefix_count"] == 15
+    assert payload["summary"]["historical_seed_current_target_prefill_first_next_action"] == (
+        "set current_casp17_target=false"
+    )
     assert payload["summary"]["historical_seed_clearance_to_identity_intake_sync_status"] == (
         "waiting_on_cleared_seed_manifest"
     )
@@ -2264,6 +2298,13 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "core:15/0" in by_id["historical_identity_seed_clearance_field_board"]["blockers"]
     assert "open_fields:165/90/15/270" in by_id["historical_identity_seed_clearance_field_board"]["blockers"]
     assert "ready:0" in by_id["historical_identity_seed_clearance_field_board"]["blockers"]
+    assert by_id["historical_seed_current_target_prefill"]["status"] == "applied"
+    assert by_id["historical_seed_current_target_prefill"]["ready_count"] == 15
+    assert by_id["historical_seed_current_target_prefill"]["blocked_count"] == 0
+    assert by_id["historical_seed_current_target_prefill"]["total_count"] == 15
+    assert "mode:apply" in by_id["historical_seed_current_target_prefill"]["blockers"]
+    assert "collisions:0" in by_id["historical_seed_current_target_prefill"]["blockers"]
+    assert "remaining_open:0" in by_id["historical_seed_current_target_prefill"]["blockers"]
     assert by_id["historical_seed_clearance_to_identity_intake_sync"]["status"] == (
         "waiting_on_cleared_seed_manifest"
     )
@@ -2313,6 +2354,8 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_historical_identity_seed_clearance_action_bundle.json"),
             "--historical-identity-seed-clearance-field-board-json",
             str(tmp_path / "missing_historical_identity_seed_clearance_field_board.json"),
+            "--historical-seed-current-target-prefill-json",
+            str(tmp_path / "missing_historical_seed_current_target_prefill.json"),
             "--historical-seed-clearance-to-identity-intake-sync-json",
             str(tmp_path / "missing_historical_seed_clearance_to_identity_intake_sync.json"),
             "--sidechain-native-benchmark-json",
