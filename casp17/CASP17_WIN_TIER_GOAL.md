@@ -3,6 +3,8 @@
 This addendum is the durable goal objective extension for the active CASP17
 internal-physics lane. It converts the operator-supplied CASP17 win-tier
 criteria into repo-tracked targets, unlock gates, and benchmark bands.
+The executable scorecard for this contract is
+`runs/casp17_win_tier_goal_scorecard_current.md`.
 
 Status note: CASP17 is still in season as of 2026-05-28. Final CASP17 winner
 evidence does not exist yet, so competitive proof must be anchored to

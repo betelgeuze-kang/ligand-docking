@@ -16,6 +16,7 @@ DEFAULT_TARGET_OBJECT_FOLDER_AUDIT_JSON = "casp17/casp17_target_object_folder_au
 DEFAULT_TARGET_OBJECT_VIEWER_SMOKE_JSON = "casp17/casp17_target_object_viewer_smoke_current.json"
 DEFAULT_TARGET_OBJECT_MODEL_REVIEW_JSON = "casp17/casp17_target_object_model_review_current.json"
 DEFAULT_WIN_GAP_CLOSURE_JSON = "runs/casp17_win_gap_closure_packet_current.json"
+DEFAULT_WIN_TIER_GOAL_SCORECARD_JSON = "runs/casp17_win_tier_goal_scorecard_current.json"
 DEFAULT_INPUT_SCAFFOLD_JSON = "runs/casp17_win_tier_benchmark_input_scaffold_current.json"
 DEFAULT_INPUT_INVENTORY_JSON = "runs/casp17_win_tier_benchmark_input_inventory_current.json"
 DEFAULT_OPERATOR_DASHBOARD_JSON = "runs/casp17_win_tier_benchmark_operator_dashboard_current.json"
@@ -213,6 +214,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     target_object_viewer_smoke_payload = _read_json(args.target_object_viewer_smoke_json)
     target_object_model_review_payload = _read_json(args.target_object_model_review_json)
     closure_payload = _read_json(args.win_gap_closure_json)
+    goal_scorecard_payload = _read_json(args.win_tier_goal_scorecard_json)
     scaffold_payload = _read_json(args.input_scaffold_json)
     inventory_payload = _read_json(args.input_inventory_json)
     dashboard_payload = _read_json(args.operator_dashboard_json)
@@ -298,6 +300,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     target_object_viewer_smoke_summary = _summary(target_object_viewer_smoke_payload)
     target_object_model_review_summary = _summary(target_object_model_review_payload)
     closure_summary = _summary(closure_payload)
+    goal_scorecard_summary = _summary(goal_scorecard_payload)
     scaffold_summary = _summary(scaffold_payload)
     inventory_summary = _summary(inventory_payload)
     dashboard_summary = _summary(dashboard_payload)
@@ -524,6 +527,20 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             total_count=_int(closure_summary.get("requirement_count")),
             next_action=first_operator_action or _text(closure_summary.get("first_open_action_id")),
             blockers=first_operator_blockers or _text(closure_summary.get("first_open_blockers")),
+        ),
+        _artifact_row(
+            "win_tier_goal_scorecard",
+            "CASP17 scaffold/proof/category win-tier goal scorecard",
+            _text(goal_scorecard_summary.get("scorecard_status")),
+            args.win_tier_goal_scorecard_json,
+            ready_count=_int(goal_scorecard_summary.get("pass_count")),
+            blocked_count=(
+                _int(goal_scorecard_summary.get("partial_count"))
+                + _int(goal_scorecard_summary.get("blocked_count"))
+            ),
+            total_count=_int(goal_scorecard_summary.get("row_count")),
+            next_action=_text(goal_scorecard_summary.get("first_blocked_next_action")),
+            blockers=_text(goal_scorecard_summary.get("first_blocked_gate")),
         ),
         _artifact_row(
             "benchmark_input_scaffold",
@@ -1763,6 +1780,12 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "target_object_model_review_gallery_html": _text(target_object_model_review_summary.get("gallery_html_path")),
         "benchmark_rows_ready_count": benchmark_rows_ready,
         "benchmark_rows_total": benchmark_rows_total,
+        "win_tier_goal_scorecard_status": _text(goal_scorecard_summary.get("scorecard_status")),
+        "win_tier_goal_scorecard_pass_count": _int(goal_scorecard_summary.get("pass_count")),
+        "win_tier_goal_scorecard_partial_count": _int(goal_scorecard_summary.get("partial_count")),
+        "win_tier_goal_scorecard_blocked_count": _int(goal_scorecard_summary.get("blocked_count")),
+        "win_tier_goal_scorecard_row_count": _int(goal_scorecard_summary.get("row_count")),
+        "win_tier_goal_scorecard_first_blocked_gate": _text(goal_scorecard_summary.get("first_blocked_gate")),
         "win_gap_closure_status": _text(closure_summary.get("closure_status")),
         "win_gap_closed_count": _int(closure_summary.get("closed_count")),
         "win_gap_not_closed_count": _int(closure_summary.get("not_closed_count")),
@@ -2825,6 +2848,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- target object viewer smoke: `{summary['target_object_viewer_smoke_status'] or '-'}` rows `{summary['target_object_viewer_smoke_pass_count']}/{summary['target_object_viewer_smoke_total']}`",
         f"- target object model review: `{summary['target_object_model_review_status'] or '-'}` pass/blocked/total `{summary['target_object_model_review_pass_count']}/{summary['target_object_model_review_blocked_count']}/{summary['target_object_model_review_total']}` review md/viewers `{summary['target_object_model_review_md_count']}/{summary['target_object_model_review_viewer_local_pass_count']}` protein/CA/residue `{summary['target_object_model_review_protein_atom_count']}/{summary['target_object_model_review_ca_atom_count']}/{summary['target_object_model_review_residue_count']}` radius `{summary['target_object_model_review_min_radius']}/{summary['target_object_model_review_max_radius']}` gallery `{summary['target_object_model_review_gallery_status'] or '-'}` `{summary['target_object_model_review_gallery_html'] or '-'}`",
         f"- benchmark rows ready/total: `{summary['benchmark_rows_ready_count']}/{summary['benchmark_rows_total']}`",
+        f"- win-tier goal scorecard: `{summary['win_tier_goal_scorecard_status'] or '-'}` pass/partial/blocked `{summary['win_tier_goal_scorecard_pass_count']}/{summary['win_tier_goal_scorecard_partial_count']}/{summary['win_tier_goal_scorecard_blocked_count']}` first blocked `{summary['win_tier_goal_scorecard_first_blocked_gate'] or '-'}`",
         f"- win gap closure: `{summary['win_gap_closure_status'] or '-'}` closed/open `{summary['win_gap_closed_count']}/{summary['win_gap_not_closed_count']}` missing win rows `{summary['benchmark_missing_win_total_rows']}`",
         f"- historical benchmark workorders: `{summary['historical_input_workorder_count']}` core `{summary['historical_core_workorder_count']}` missing core/ablation `{summary['historical_missing_core_file_count']}/{summary['historical_missing_ablation_layer_file_count']}` operator ready/blocked `{summary['benchmark_operator_ready_count']}/{summary['benchmark_operator_blocked_count']}`",
         f"- operator dashboard: `{summary['operator_dashboard_status'] or '-'}` rows ready/blocked/total `{summary['operator_dashboard_ready_count']}/{summary['operator_dashboard_blocked_count']}/{summary['operator_dashboard_row_count']}` needs target/core/ablation/calibration/provenance `{summary['operator_dashboard_needs_target_replacement_count']}/{summary['operator_dashboard_needs_core_file_count']}/{summary['operator_dashboard_needs_ablation_layer_count']}/{summary['operator_dashboard_needs_calibration_count']}/{summary['operator_dashboard_needs_provenance_count']}`",
@@ -2917,6 +2941,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--target-object-viewer-smoke-json", default=DEFAULT_TARGET_OBJECT_VIEWER_SMOKE_JSON)
     parser.add_argument("--target-object-model-review-json", default=DEFAULT_TARGET_OBJECT_MODEL_REVIEW_JSON)
     parser.add_argument("--win-gap-closure-json", default=DEFAULT_WIN_GAP_CLOSURE_JSON)
+    parser.add_argument("--win-tier-goal-scorecard-json", default=DEFAULT_WIN_TIER_GOAL_SCORECARD_JSON)
     parser.add_argument("--input-scaffold-json", default=DEFAULT_INPUT_SCAFFOLD_JSON)
     parser.add_argument("--input-inventory-json", default=DEFAULT_INPUT_INVENTORY_JSON)
     parser.add_argument("--operator-dashboard-json", default=DEFAULT_OPERATOR_DASHBOARD_JSON)

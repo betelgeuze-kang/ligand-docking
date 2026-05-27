@@ -5,7 +5,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 - goal objective addendum: `casp17/CASP17_WIN_TIER_GOAL.md`
 - win-tier target: scaffold `65 -> 90`, competitive proof `15-25 -> 85-90`, leaderboard `top-5/top-3/top-1-2` by category.
 
-- generated: `2026-05-28T00:23:04+09:00`
+- generated: `2026-05-28T00:35:50+09:00`
 - workbench_status: `ready_for_operator_fill`
 - target model folders: `19/19`
 - target object folders: `58`
@@ -15,6 +15,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 - target object viewer smoke: `pass` rows `58/58`
 - target object model review: `pass` pass/blocked/total `58/0/58` review md/viewers `58/58` protein/CA/residue `131343/16832/16832` radius `11.275/26.759` gallery `pass` `casp17/casp17_target_object_model_review_gallery_current.html`
 - benchmark rows ready/total: `0/40`
+- win-tier goal scorecard: `blocked_input` pass/partial/blocked `1/0/9` first blocked `historical_identity_clearance`
 - win gap closure: `blocked_input` closed/open `4/5` missing win rows `40`
 - historical benchmark workorders: `40` core `40` missing core/ablation `80/400` operator ready/blocked `0/40`
 - operator dashboard: `ready` rows ready/blocked/total `0/40/40` needs target/core/ablation/calibration/provenance `40/40/40/40/40`
@@ -80,6 +81,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 | `target_object_viewer_smoke` | `pass` | 58 | 0 | 58 | `casp17/casp17_target_object_viewer_smoke_current.json` | Keep this pass before relying on per-object viewer artifacts for review. | `-` |
 | `target_object_model_review` | `pass` | 58 | 0 | 58 | `casp17/casp17_target_object_model_review_current.json` | Open object review markdown files for per-chain molecular geometry inspection. | `review_md:58,viewer_local:58,protein_atoms:131343,radius:11.275-26.759,gallery:pass` |
 | `win_gap_closure` | `blocked_input` | 4 | 5 | 9 | `runs/casp17_win_gap_closure_packet_current.json` | historical_benchmark_inputs | `ready_total_below_threshold,ready_monomer_below_threshold,ready_complex_below_threshold` |
+| `win_tier_goal_scorecard` | `blocked_input` | 1 | 9 | 10 | `runs/casp17_win_tier_goal_scorecard_current.json` | Replace placeholder benchmark/target IDs with operator-cleared historical non-CASP17 targets. | `historical_identity_clearance` |
 | `benchmark_input_scaffold` | `ready` | 0 | 40 | 40 | `runs/casp17_win_tier_benchmark_input_scaffold_current.json` | Fill row folders with cleared historical target identity, internal predictions, native files, provenance, and calibration values. | `missing_evidence_items:1310` |
 | `benchmark_input_inventory` | `blocked` | 0 | 40 | 40 | `runs/casp17_win_tier_benchmark_input_inventory_current.json` | Replace placeholder target/benchmark IDs with a cleared historical non-CASP17 protein target. | `missing_files:480` |
 | `operator_dashboard` | `ready` | 0 | 40 | 40 | `runs/casp17_win_tier_benchmark_operator_dashboard_current.json` | Replace placeholder target/benchmark IDs with a cleared historical non-CASP17 protein target. | `-` |
@@ -126,7 +128,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 | `competitive_floor_row_fill_apply_plan` | `awaiting_evidence` | 0 | 450 | 450 | `casp17/casp17_competitive_floor_row_fill_apply_plan_current.json` | wait for cleared evidence, then rerun intake and patch gate | `awaiting_evidence` |
 | `competitive_floor_operator_template` | `blocked` | 0 | 15 | 15 | `casp17/casp17_competitive_floor_batch_operator_template_current.json` | Fill batch row metadata, required file paths, provenance, and calibration until this candidate is ready_for_preflight. | `missing_files:0,placeholder_paths:180,provenance_blockers:150,calibration_blockers:90,row_fill_candidates:15` |
 | `competitive_floor_operator_preflight` | `blocked` | 0 | 15 | 15 | `casp17/casp17_competitive_floor_batch_operator_preflight_current.json` | Resolve the first blocked competitive-floor operator row, then rerun the preflight. | `ablation_layer_prediction_pdb_missing,best_model_rank_required_1_to_5,best_native_metric_required_numeric,best_score_required_numeric,current_casp17_target_must_be_false,leakage_clearance_required,native_pdb_not_found,native_release_date_required_iso_date,operator_clearance_required,other_team_model_used_must_be_false,placeholder_target_id,post_release_information_used_must_be_false,prediction_created_at_required_iso_date,prediction_generated_before_native_release_required,prediction_pdb_not_found,public_template_or_native_used_for_prediction_must_be_false,selected_model_rank_required_1_to_5,selected_native_metric_required_numeric,selected_score_required_numeric` |
-| `data_bundle` | `ready` | 798 | 0 | 798 | `casp17/casp17_data_bundle_manifest_current.json` | Refresh after new CASP17 runtime artifacts are generated. | `missing_bundle_count:0` |
+| `data_bundle` | `ready` | 822 | 0 | 822 | `casp17/casp17_data_bundle_manifest_current.json` | Refresh after new CASP17 runtime artifacts are generated. | `missing_bundle_count:0` |
 
 ## Current Target Folders
 

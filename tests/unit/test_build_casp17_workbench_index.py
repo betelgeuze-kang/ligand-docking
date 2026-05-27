@@ -15,6 +15,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     target_object_viewer_smoke_json = tmp_path / "target_object_viewer_smoke.json"
     target_object_model_review_json = tmp_path / "target_object_model_review.json"
     closure_json = tmp_path / "closure.json"
+    goal_scorecard_json = tmp_path / "goal_scorecard.json"
     scaffold_json = tmp_path / "scaffold.json"
     inventory_json = tmp_path / "inventory.json"
     dashboard_json = tmp_path / "dashboard.json"
@@ -185,6 +186,22 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "benchmark_operator_ready_count": 0,
                 "benchmark_operator_blocked_count": 40,
                 "benchmark_missing_win_total_rows": 40,
+            }
+        },
+    )
+    _write_json(
+        goal_scorecard_json,
+        {
+            "summary": {
+                "scorecard_status": "blocked_input",
+                "row_count": 10,
+                "pass_count": 1,
+                "partial_count": 0,
+                "blocked_count": 9,
+                "first_blocked_gate": "historical_identity_clearance",
+                "first_blocked_next_action": (
+                    "Replace placeholder benchmark/target IDs with operator-cleared historical non-CASP17 targets."
+                ),
             }
         },
     )
@@ -979,6 +996,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(target_object_model_review_json),
             "--win-gap-closure-json",
             str(closure_json),
+            "--win-tier-goal-scorecard-json",
+            str(goal_scorecard_json),
             "--input-scaffold-json",
             str(scaffold_json),
             "--input-inventory-json",
@@ -1481,6 +1500,10 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["competitive_operator_preflight_status"] == "blocked"
     assert payload["summary"]["competitive_operator_preflight_row_count"] == 15
     assert payload["summary"]["missing_file_count"] == 480
+    assert payload["summary"]["win_tier_goal_scorecard_status"] == "blocked_input"
+    assert payload["summary"]["win_tier_goal_scorecard_pass_count"] == 1
+    assert payload["summary"]["win_tier_goal_scorecard_blocked_count"] == 9
+    assert payload["summary"]["win_tier_goal_scorecard_first_blocked_gate"] == "historical_identity_clearance"
     assert payload["summary"]["win_gap_closure_status"] == "blocked_input"
     assert payload["summary"]["win_gap_closed_count"] == 4
     assert payload["summary"]["win_gap_not_closed_count"] == 5
@@ -1532,6 +1555,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["target_object_model_review"]["ready_count"] == 4
     assert "review_md:4" in by_id["target_object_model_review"]["blockers"]
     assert "gallery:pass" in by_id["target_object_model_review"]["blockers"]
+    assert by_id["win_tier_goal_scorecard"]["status"] == "blocked_input"
+    assert by_id["win_tier_goal_scorecard"]["ready_count"] == 1
+    assert "historical_identity_clearance" in by_id["win_tier_goal_scorecard"]["blockers"]
     assert by_id["competitive_floor_batch"]["status"] == "ready_for_fill"
     assert by_id["competitive_floor_row_fill_status"]["status"] == "awaiting_fill"
     assert by_id["competitive_floor_row_fill_worklist"]["status"] == "open_actions"
