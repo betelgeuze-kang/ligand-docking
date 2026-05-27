@@ -26,6 +26,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     historical_identity_seed_clearance_action_bundle_json = (
         tmp_path / "historical_identity_seed_clearance_action_bundle.json"
     )
+    historical_identity_seed_clearance_field_board_json = (
+        tmp_path / "historical_identity_seed_clearance_field_board.json"
+    )
     historical_seed_clearance_to_identity_intake_sync_json = (
         tmp_path / "historical_seed_clearance_to_identity_intake_sync.json"
     )
@@ -376,6 +379,26 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                     "casp17/historical_identity_seed_clearance_action_bundle/"
                     "01_HIST_BBA5/action_001_no_leak_provenance/ACTION.md"
                 ),
+            }
+        },
+    )
+    _write_json(
+        historical_identity_seed_clearance_field_board_json,
+        {
+            "summary": {
+                "field_board_status": "operator_field_fill_required",
+                "seed_row_count": 15,
+                "core_file_pass_count": 15,
+                "blocked_core_file_count": 0,
+                "operator_field_fill_required_count": 15,
+                "ready_for_cleared_seed_manifest_count": 0,
+                "no_leak_open_field_count": 165,
+                "calibration_open_field_count": 90,
+                "ablation_open_field_count": 15,
+                "total_open_field_count": 270,
+                "first_open_target_id": "HIST_BBA5",
+                "first_open_field": "no_leak_evidence_ref",
+                "first_next_action": "fill no-leak evidence, chronology, leakage controls, and operator clearance first",
             }
         },
     )
@@ -1278,6 +1301,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(historical_identity_seed_clearance_json),
             "--historical-identity-seed-clearance-action-bundle-json",
             str(historical_identity_seed_clearance_action_bundle_json),
+            "--historical-identity-seed-clearance-field-board-json",
+            str(historical_identity_seed_clearance_field_board_json),
             "--historical-seed-clearance-to-identity-intake-sync-json",
             str(historical_seed_clearance_to_identity_intake_sync_json),
             "--sidechain-native-benchmark-json",
@@ -2008,6 +2033,25 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["historical_identity_seed_clearance_action_bundle_first_action"].endswith(
         "action_001_no_leak_provenance/ACTION.md"
     )
+    assert payload["summary"]["historical_identity_seed_clearance_field_board_status"] == (
+        "operator_field_fill_required"
+    )
+    assert payload["summary"]["historical_identity_seed_clearance_field_board_seed_count"] == 15
+    assert payload["summary"]["historical_identity_seed_clearance_field_board_core_pass_count"] == 15
+    assert payload["summary"]["historical_identity_seed_clearance_field_board_blocked_core_count"] == 0
+    assert payload["summary"]["historical_identity_seed_clearance_field_board_operator_fill_count"] == 15
+    assert payload["summary"]["historical_identity_seed_clearance_field_board_ready_count"] == 0
+    assert payload["summary"]["historical_identity_seed_clearance_field_board_no_leak_open_count"] == 165
+    assert payload["summary"]["historical_identity_seed_clearance_field_board_calibration_open_count"] == 90
+    assert payload["summary"]["historical_identity_seed_clearance_field_board_ablation_open_count"] == 15
+    assert payload["summary"]["historical_identity_seed_clearance_field_board_total_open_count"] == 270
+    assert payload["summary"]["historical_identity_seed_clearance_field_board_first_target_id"] == "HIST_BBA5"
+    assert payload["summary"]["historical_identity_seed_clearance_field_board_first_field"] == (
+        "no_leak_evidence_ref"
+    )
+    assert payload["summary"]["historical_identity_seed_clearance_field_board_first_next_action"] == (
+        "fill no-leak evidence, chronology, leakage controls, and operator clearance first"
+    )
     assert payload["summary"]["historical_seed_clearance_to_identity_intake_sync_status"] == (
         "waiting_on_cleared_seed_manifest"
     )
@@ -2213,6 +2257,13 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "folders:45" in by_id["historical_identity_seed_clearance_action_bundle"]["blockers"]
     assert "files:90" in by_id["historical_identity_seed_clearance_action_bundle"]["blockers"]
     assert "lanes:0/0/15/15/15" in by_id["historical_identity_seed_clearance_action_bundle"]["blockers"]
+    assert by_id["historical_identity_seed_clearance_field_board"]["status"] == "operator_field_fill_required"
+    assert by_id["historical_identity_seed_clearance_field_board"]["ready_count"] == 0
+    assert by_id["historical_identity_seed_clearance_field_board"]["blocked_count"] == 15
+    assert by_id["historical_identity_seed_clearance_field_board"]["total_count"] == 15
+    assert "core:15/0" in by_id["historical_identity_seed_clearance_field_board"]["blockers"]
+    assert "open_fields:165/90/15/270" in by_id["historical_identity_seed_clearance_field_board"]["blockers"]
+    assert "ready:0" in by_id["historical_identity_seed_clearance_field_board"]["blockers"]
     assert by_id["historical_seed_clearance_to_identity_intake_sync"]["status"] == (
         "waiting_on_cleared_seed_manifest"
     )
@@ -2260,6 +2311,8 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_historical_identity_seed_clearance.json"),
             "--historical-identity-seed-clearance-action-bundle-json",
             str(tmp_path / "missing_historical_identity_seed_clearance_action_bundle.json"),
+            "--historical-identity-seed-clearance-field-board-json",
+            str(tmp_path / "missing_historical_identity_seed_clearance_field_board.json"),
             "--historical-seed-clearance-to-identity-intake-sync-json",
             str(tmp_path / "missing_historical_seed_clearance_to_identity_intake_sync.json"),
             "--sidechain-native-benchmark-json",
