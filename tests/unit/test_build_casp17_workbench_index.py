@@ -29,6 +29,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     historical_identity_seed_clearance_field_board_json = (
         tmp_path / "historical_identity_seed_clearance_field_board.json"
     )
+    historical_seed_no_leak_provenance_dossiers_json = (
+        tmp_path / "historical_seed_no_leak_provenance_dossiers.json"
+    )
     historical_seed_current_target_prefill_json = tmp_path / "historical_seed_current_target_prefill.json"
     historical_seed_chronology_candidate_board_json = tmp_path / "historical_seed_chronology_candidate_board.json"
     historical_seed_ablation_candidate_manifests_json = (
@@ -404,6 +407,28 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "first_open_target_id": "HIST_BBA5",
                 "first_open_field": "no_leak_evidence_ref",
                 "first_next_action": "fill no-leak evidence, chronology, leakage controls, and operator clearance first",
+            }
+        },
+    )
+    _write_json(
+        historical_seed_no_leak_provenance_dossiers_json,
+        {
+            "summary": {
+                "no_leak_dossier_status": "operator_provenance_review_required",
+                "seed_row_count": 15,
+                "dossier_count": 15,
+                "core_input_pass_count": 15,
+                "current_target_prefilled_false_count": 15,
+                "operator_review_required_count": 15,
+                "ready_for_no_leak_clearance_count": 0,
+                "operator_required_open_field_count": 150,
+                "chronology_evidence_gap_count": 15,
+                "negative_leakage_control_gap_count": 15,
+                "mtime_order_risk_count": 15,
+                "blocked_core_provenance_input_count": 0,
+                "blocked_current_target_risk_count": 0,
+                "first_open_target_id": "HIST_BBA5",
+                "first_next_action": "attach independent no-leak evidence and operator clearance before setting leakage_clearance",
             }
         },
     )
@@ -1367,6 +1392,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(historical_identity_seed_clearance_action_bundle_json),
             "--historical-identity-seed-clearance-field-board-json",
             str(historical_identity_seed_clearance_field_board_json),
+            "--historical-seed-no-leak-provenance-dossiers-json",
+            str(historical_seed_no_leak_provenance_dossiers_json),
             "--historical-seed-current-target-prefill-json",
             str(historical_seed_current_target_prefill_json),
             "--historical-seed-chronology-candidate-board-json",
@@ -2122,6 +2149,25 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["historical_identity_seed_clearance_field_board_first_next_action"] == (
         "fill no-leak evidence, chronology, leakage controls, and operator clearance first"
     )
+    assert payload["summary"]["historical_seed_no_leak_provenance_dossiers_status"] == (
+        "operator_provenance_review_required"
+    )
+    assert payload["summary"]["historical_seed_no_leak_provenance_dossiers_seed_count"] == 15
+    assert payload["summary"]["historical_seed_no_leak_provenance_dossiers_dossier_count"] == 15
+    assert payload["summary"]["historical_seed_no_leak_provenance_dossiers_core_pass_count"] == 15
+    assert payload["summary"]["historical_seed_no_leak_provenance_dossiers_current_false_count"] == 15
+    assert payload["summary"]["historical_seed_no_leak_provenance_dossiers_operator_review_count"] == 15
+    assert payload["summary"]["historical_seed_no_leak_provenance_dossiers_ready_count"] == 0
+    assert payload["summary"]["historical_seed_no_leak_provenance_dossiers_open_field_count"] == 150
+    assert payload["summary"]["historical_seed_no_leak_provenance_dossiers_chronology_gap_count"] == 15
+    assert payload["summary"]["historical_seed_no_leak_provenance_dossiers_negative_control_gap_count"] == 15
+    assert payload["summary"]["historical_seed_no_leak_provenance_dossiers_mtime_risk_count"] == 15
+    assert payload["summary"]["historical_seed_no_leak_provenance_dossiers_core_blocked_count"] == 0
+    assert payload["summary"]["historical_seed_no_leak_provenance_dossiers_current_risk_count"] == 0
+    assert payload["summary"]["historical_seed_no_leak_provenance_dossiers_first_target_id"] == "HIST_BBA5"
+    assert payload["summary"]["historical_seed_no_leak_provenance_dossiers_first_next_action"] == (
+        "attach independent no-leak evidence and operator clearance before setting leakage_clearance"
+    )
     assert payload["summary"]["historical_seed_current_target_prefill_status"] == "applied"
     assert payload["summary"]["historical_seed_current_target_prefill_apply_mode"] == "apply"
     assert payload["summary"]["historical_seed_current_target_prefill_row_count"] == 15
@@ -2221,6 +2267,12 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["win_tier_goal_scorecard"]["status"] == "blocked_input"
     assert by_id["win_tier_goal_scorecard"]["ready_count"] == 1
     assert "historical_identity_clearance" in by_id["win_tier_goal_scorecard"]["blockers"]
+    assert by_id["historical_seed_no_leak_provenance_dossiers"]["status"] == (
+        "operator_provenance_review_required"
+    )
+    assert by_id["historical_seed_no_leak_provenance_dossiers"]["blocked_count"] == 15
+    assert "current_false:15" in by_id["historical_seed_no_leak_provenance_dossiers"]["blockers"]
+    assert "open_fields:150" in by_id["historical_seed_no_leak_provenance_dossiers"]["blockers"]
     assert by_id["historical_seed_ablation_candidate_manifests"]["status"] == (
         "operator_ablation_review_required"
     )

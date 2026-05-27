@@ -32,6 +32,9 @@ DEFAULT_HISTORICAL_IDENTITY_SEED_CLEARANCE_ACTION_BUNDLE_JSON = (
 DEFAULT_HISTORICAL_IDENTITY_SEED_CLEARANCE_FIELD_BOARD_JSON = (
     "casp17/casp17_historical_identity_seed_clearance_field_board_current.json"
 )
+DEFAULT_HISTORICAL_SEED_NO_LEAK_PROVENANCE_DOSSIERS_JSON = (
+    "casp17/casp17_historical_seed_no_leak_provenance_dossiers_current.json"
+)
 DEFAULT_HISTORICAL_SEED_CURRENT_TARGET_PREFILL_JSON = (
     "casp17/casp17_historical_seed_current_target_prefill_current.json"
 )
@@ -268,6 +271,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     historical_identity_seed_clearance_field_board_payload = _read_json(
         args.historical_identity_seed_clearance_field_board_json
     )
+    historical_seed_no_leak_provenance_dossiers_payload = _read_json(
+        args.historical_seed_no_leak_provenance_dossiers_json
+    )
     historical_seed_current_target_prefill_payload = _read_json(
         args.historical_seed_current_target_prefill_json
     )
@@ -396,6 +402,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     historical_identity_seed_clearance_field_board_summary = _summary(
         historical_identity_seed_clearance_field_board_payload
+    )
+    historical_seed_no_leak_provenance_dossiers_summary = _summary(
+        historical_seed_no_leak_provenance_dossiers_payload
     )
     historical_seed_current_target_prefill_summary = _summary(historical_seed_current_target_prefill_payload)
     historical_seed_chronology_candidate_board_summary = _summary(
@@ -867,6 +876,38 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                         "ready_for_cleared_seed_manifest_count", ""
                     )
                 )
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_no_leak_provenance_dossiers",
+            "Fail-closed no-leak provenance dossiers for historical seed rows",
+            _text(historical_seed_no_leak_provenance_dossiers_summary.get("no_leak_dossier_status")),
+            args.historical_seed_no_leak_provenance_dossiers_json,
+            ready_count=_int(
+                historical_seed_no_leak_provenance_dossiers_summary.get(
+                    "ready_for_no_leak_clearance_count"
+                )
+            ),
+            blocked_count=_int(
+                historical_seed_no_leak_provenance_dossiers_summary.get(
+                    "operator_review_required_count"
+                )
+            ),
+            total_count=_int(historical_seed_no_leak_provenance_dossiers_summary.get("seed_row_count")),
+            next_action=_text(historical_seed_no_leak_provenance_dossiers_summary.get("first_next_action")),
+            blockers=(
+                "core:"
+                + str(historical_seed_no_leak_provenance_dossiers_summary.get("core_input_pass_count", ""))
+                + ",current_false:"
+                + str(historical_seed_no_leak_provenance_dossiers_summary.get("current_target_prefilled_false_count", ""))
+                + ",open_fields:"
+                + str(historical_seed_no_leak_provenance_dossiers_summary.get("operator_required_open_field_count", ""))
+                + ",chronology_gaps:"
+                + str(historical_seed_no_leak_provenance_dossiers_summary.get("chronology_evidence_gap_count", ""))
+                + ",negative_control_gaps:"
+                + str(historical_seed_no_leak_provenance_dossiers_summary.get("negative_leakage_control_gap_count", ""))
+                + ",mtime_risk:"
+                + str(historical_seed_no_leak_provenance_dossiers_summary.get("mtime_order_risk_count", ""))
             ),
         ),
         _artifact_row(
@@ -2774,6 +2815,51 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "historical_identity_seed_clearance_field_board_first_next_action": _text(
             historical_identity_seed_clearance_field_board_summary.get("first_next_action")
         ),
+        "historical_seed_no_leak_provenance_dossiers_status": _text(
+            historical_seed_no_leak_provenance_dossiers_summary.get("no_leak_dossier_status")
+        ),
+        "historical_seed_no_leak_provenance_dossiers_seed_count": _int(
+            historical_seed_no_leak_provenance_dossiers_summary.get("seed_row_count")
+        ),
+        "historical_seed_no_leak_provenance_dossiers_dossier_count": _int(
+            historical_seed_no_leak_provenance_dossiers_summary.get("dossier_count")
+        ),
+        "historical_seed_no_leak_provenance_dossiers_core_pass_count": _int(
+            historical_seed_no_leak_provenance_dossiers_summary.get("core_input_pass_count")
+        ),
+        "historical_seed_no_leak_provenance_dossiers_current_false_count": _int(
+            historical_seed_no_leak_provenance_dossiers_summary.get("current_target_prefilled_false_count")
+        ),
+        "historical_seed_no_leak_provenance_dossiers_operator_review_count": _int(
+            historical_seed_no_leak_provenance_dossiers_summary.get("operator_review_required_count")
+        ),
+        "historical_seed_no_leak_provenance_dossiers_ready_count": _int(
+            historical_seed_no_leak_provenance_dossiers_summary.get("ready_for_no_leak_clearance_count")
+        ),
+        "historical_seed_no_leak_provenance_dossiers_open_field_count": _int(
+            historical_seed_no_leak_provenance_dossiers_summary.get("operator_required_open_field_count")
+        ),
+        "historical_seed_no_leak_provenance_dossiers_chronology_gap_count": _int(
+            historical_seed_no_leak_provenance_dossiers_summary.get("chronology_evidence_gap_count")
+        ),
+        "historical_seed_no_leak_provenance_dossiers_negative_control_gap_count": _int(
+            historical_seed_no_leak_provenance_dossiers_summary.get("negative_leakage_control_gap_count")
+        ),
+        "historical_seed_no_leak_provenance_dossiers_mtime_risk_count": _int(
+            historical_seed_no_leak_provenance_dossiers_summary.get("mtime_order_risk_count")
+        ),
+        "historical_seed_no_leak_provenance_dossiers_core_blocked_count": _int(
+            historical_seed_no_leak_provenance_dossiers_summary.get("blocked_core_provenance_input_count")
+        ),
+        "historical_seed_no_leak_provenance_dossiers_current_risk_count": _int(
+            historical_seed_no_leak_provenance_dossiers_summary.get("blocked_current_target_risk_count")
+        ),
+        "historical_seed_no_leak_provenance_dossiers_first_target_id": _text(
+            historical_seed_no_leak_provenance_dossiers_summary.get("first_open_target_id")
+        ),
+        "historical_seed_no_leak_provenance_dossiers_first_next_action": _text(
+            historical_seed_no_leak_provenance_dossiers_summary.get("first_next_action")
+        ),
         "historical_seed_current_target_prefill_status": _text(
             historical_seed_current_target_prefill_summary.get("prefill_status")
         ),
@@ -4180,6 +4266,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- historical identity seed clearance: `{summary['historical_identity_seed_clearance_status'] or '-'}` template `{summary['historical_identity_seed_clearance_template_status'] or '-'}` ready/awaiting/total `{summary['historical_identity_seed_clearance_ready_count']}/{summary['historical_identity_seed_clearance_awaiting_count']}/{summary['historical_identity_seed_clearance_seed_count']}` cleared manifest `{summary['historical_identity_seed_clearance_cleared_manifest_count']}` open identity/core/provenance/calibration/ablation `{summary['historical_identity_seed_clearance_identity_open_count']}/{summary['historical_identity_seed_clearance_core_files_open_count']}/{summary['historical_identity_seed_clearance_no_leak_open_count']}/{summary['historical_identity_seed_clearance_calibration_open_count']}/{summary['historical_identity_seed_clearance_ablation_open_count']}` blocking fields `{summary['historical_identity_seed_clearance_blocking_field_count']}` first `{summary['historical_identity_seed_clearance_first_target_id'] or '-'}` operator `{summary['historical_identity_seed_clearance_operator_csv'] or '-'}` cleared `{summary['historical_identity_seed_clearance_cleared_manifest_csv'] or '-'}`",
         f"- historical identity seed clearance action bundle: `{summary['historical_identity_seed_clearance_action_bundle_status'] or '-'}` targets/actions/open `{summary['historical_identity_seed_clearance_action_bundle_target_count']}/{summary['historical_identity_seed_clearance_action_bundle_action_count']}/{summary['historical_identity_seed_clearance_action_bundle_open_count']}` files/folders `{summary['historical_identity_seed_clearance_action_bundle_file_count']}/{summary['historical_identity_seed_clearance_action_bundle_folder_count']}` identity/core/no-leak/calibration/ablation `{summary['historical_identity_seed_clearance_action_bundle_identity_count']}/{summary['historical_identity_seed_clearance_action_bundle_core_count']}/{summary['historical_identity_seed_clearance_action_bundle_no_leak_count']}/{summary['historical_identity_seed_clearance_action_bundle_calibration_count']}/{summary['historical_identity_seed_clearance_action_bundle_ablation_count']}` first `{summary['historical_identity_seed_clearance_action_bundle_first_action'] or '-'}`",
         f"- historical identity seed clearance field board: `{summary['historical_identity_seed_clearance_field_board_status'] or '-'}` rows operator-fill/ready/total `{summary['historical_identity_seed_clearance_field_board_operator_fill_count']}/{summary['historical_identity_seed_clearance_field_board_ready_count']}/{summary['historical_identity_seed_clearance_field_board_seed_count']}` core pass/blocked `{summary['historical_identity_seed_clearance_field_board_core_pass_count']}/{summary['historical_identity_seed_clearance_field_board_blocked_core_count']}` open no-leak/calibration/ablation/total `{summary['historical_identity_seed_clearance_field_board_no_leak_open_count']}/{summary['historical_identity_seed_clearance_field_board_calibration_open_count']}/{summary['historical_identity_seed_clearance_field_board_ablation_open_count']}/{summary['historical_identity_seed_clearance_field_board_total_open_count']}` first `{summary['historical_identity_seed_clearance_field_board_first_target_id'] or '-'}` `{summary['historical_identity_seed_clearance_field_board_first_field'] or '-'}` `{summary['historical_identity_seed_clearance_field_board_first_next_action'] or '-'}`",
+        f"- historical seed no-leak dossiers: `{summary['historical_seed_no_leak_provenance_dossiers_status'] or '-'}` seeds/dossiers `{summary['historical_seed_no_leak_provenance_dossiers_seed_count']}/{summary['historical_seed_no_leak_provenance_dossiers_dossier_count']}` core/current-false `{summary['historical_seed_no_leak_provenance_dossiers_core_pass_count']}/{summary['historical_seed_no_leak_provenance_dossiers_current_false_count']}` ready/review/core-blocked/current-risk `{summary['historical_seed_no_leak_provenance_dossiers_ready_count']}/{summary['historical_seed_no_leak_provenance_dossiers_operator_review_count']}/{summary['historical_seed_no_leak_provenance_dossiers_core_blocked_count']}/{summary['historical_seed_no_leak_provenance_dossiers_current_risk_count']}` open-fields/chronology/negative-control/mtime-risk `{summary['historical_seed_no_leak_provenance_dossiers_open_field_count']}/{summary['historical_seed_no_leak_provenance_dossiers_chronology_gap_count']}/{summary['historical_seed_no_leak_provenance_dossiers_negative_control_gap_count']}/{summary['historical_seed_no_leak_provenance_dossiers_mtime_risk_count']}` first `{summary['historical_seed_no_leak_provenance_dossiers_first_target_id'] or '-'}` `{summary['historical_seed_no_leak_provenance_dossiers_first_next_action'] or '-'}`",
         f"- historical seed current-target prefill: `{summary['historical_seed_current_target_prefill_status'] or '-'}` mode `{summary['historical_seed_current_target_prefill_apply_mode'] or '-'}` ready/applied/already/blocked/total `{summary['historical_seed_current_target_prefill_ready_to_apply_count']}/{summary['historical_seed_current_target_prefill_applied_count']}/{summary['historical_seed_current_target_prefill_already_count']}/{summary['historical_seed_current_target_prefill_blocked_count']}/{summary['historical_seed_current_target_prefill_row_count']}` collisions/remaining-open/hist-prefix `{summary['historical_seed_current_target_prefill_collision_count']}/{summary['historical_seed_current_target_prefill_remaining_open_count']}/{summary['historical_seed_current_target_prefill_hist_prefix_count']}` first `{summary['historical_seed_current_target_prefill_first_next_action'] or '-'}`",
         f"- historical seed chronology candidates: `{summary['historical_seed_chronology_candidate_board_status'] or '-'}` ready/warning/evidence-required/conflict/total `{summary['historical_seed_chronology_candidate_board_ready_count']}/{summary['historical_seed_chronology_candidate_board_warning_count']}/{summary['historical_seed_chronology_candidate_board_evidence_required_count']}/{summary['historical_seed_chronology_candidate_board_conflict_count']}/{summary['historical_seed_chronology_candidate_board_row_count']}` path-date/mtime/risk `{summary['historical_seed_chronology_candidate_board_path_date_count']}/{summary['historical_seed_chronology_candidate_board_mtime_count']}/{summary['historical_seed_chronology_candidate_board_mtime_risk_count']}` first `{summary['historical_seed_chronology_candidate_board_first_target_id'] or '-'}` `{summary['historical_seed_chronology_candidate_board_first_next_action'] or '-'}`",
         f"- historical seed ablation candidates: `{summary['historical_seed_ablation_candidate_manifests_status'] or '-'}` seeds/manifests/candidate-rows `{summary['historical_seed_ablation_candidate_manifests_seed_count']}/{summary['historical_seed_ablation_candidate_manifests_manifest_count']}/{summary['historical_seed_ablation_candidate_manifests_candidate_row_count']}` selected/native `{summary['historical_seed_ablation_candidate_manifests_selected_present_count']}/{summary['historical_seed_ablation_candidate_manifests_native_present_count']}` baseline/gaps `{summary['historical_seed_ablation_candidate_manifests_baseline_count']}/{summary['historical_seed_ablation_candidate_manifests_layer_gap_count']}` ready/review/core-blocked `{summary['historical_seed_ablation_candidate_manifests_ready_count']}/{summary['historical_seed_ablation_candidate_manifests_operator_review_count']}/{summary['historical_seed_ablation_candidate_manifests_core_blocked_count']}` first `{summary['historical_seed_ablation_candidate_manifests_first_target_id'] or '-'}` `{summary['historical_seed_ablation_candidate_manifests_first_next_action'] or '-'}`",
@@ -4294,6 +4381,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--historical-identity-seed-clearance-field-board-json",
         default=DEFAULT_HISTORICAL_IDENTITY_SEED_CLEARANCE_FIELD_BOARD_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-no-leak-provenance-dossiers-json",
+        default=DEFAULT_HISTORICAL_SEED_NO_LEAK_PROVENANCE_DOSSIERS_JSON,
     )
     parser.add_argument(
         "--historical-seed-current-target-prefill-json",
