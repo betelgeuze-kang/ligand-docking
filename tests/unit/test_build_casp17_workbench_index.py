@@ -61,6 +61,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     competitive_target_identity_clearance_replacement_workorder_audit_json = (
         tmp_path / "competitive_target_identity_clearance_replacement_workorder_audit.json"
     )
+    competitive_target_identity_clearance_replacement_pickup_json = (
+        tmp_path / "competitive_target_identity_clearance_replacement_pickup.json"
+    )
     competitive_target_identity_clearance_manifest_sync_json = (
         tmp_path / "competitive_target_identity_clearance_manifest_sync.json"
     )
@@ -690,6 +693,23 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        competitive_target_identity_clearance_replacement_pickup_json,
+        {
+            "summary": {
+                "replacement_pickup_status": "open_actions",
+                "row_count": 2,
+                "selected_count": 1,
+                "ready_for_operator_intake_count": 0,
+                "awaiting_operator_pickup_count": 1,
+                "blocked_selection_count": 1,
+                "native_missing_count": 1,
+                "provenance_required_field_count": 11,
+                "operator_action_count": 4,
+                "first_open_next_action": "place the cleared native PDB in the native dropzone",
+            }
+        },
+    )
+    _write_json(
         competitive_target_identity_clearance_manifest_sync_json,
         {
             "summary": {
@@ -1094,6 +1114,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(competitive_target_identity_clearance_replacement_workorder_json),
             "--competitive-target-identity-clearance-replacement-workorder-audit-json",
             str(competitive_target_identity_clearance_replacement_workorder_audit_json),
+            "--competitive-target-identity-clearance-replacement-pickup-json",
+            str(competitive_target_identity_clearance_replacement_pickup_json),
             "--competitive-target-identity-clearance-manifest-sync-json",
             str(competitive_target_identity_clearance_manifest_sync_json),
             "--competitive-target-identity-clearance-workorder-audit-json",
@@ -1375,6 +1397,15 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         ]
         == 2
     )
+    assert payload["summary"]["competitive_target_identity_clearance_replacement_pickup_status"] == "open_actions"
+    assert payload["summary"]["competitive_target_identity_clearance_replacement_pickup_row_count"] == 2
+    assert payload["summary"]["competitive_target_identity_clearance_replacement_pickup_selected_count"] == 1
+    assert payload["summary"]["competitive_target_identity_clearance_replacement_pickup_ready_count"] == 0
+    assert payload["summary"]["competitive_target_identity_clearance_replacement_pickup_awaiting_count"] == 1
+    assert payload["summary"]["competitive_target_identity_clearance_replacement_pickup_blocked_selection_count"] == 1
+    assert payload["summary"]["competitive_target_identity_clearance_replacement_pickup_native_missing_count"] == 1
+    assert payload["summary"]["competitive_target_identity_clearance_replacement_pickup_required_field_count"] == 11
+    assert payload["summary"]["competitive_target_identity_clearance_replacement_pickup_operator_action_count"] == 4
     assert payload["summary"]["competitive_target_identity_clearance_manifest_sync_status"] == "awaiting_provenance"
     assert payload["summary"]["competitive_target_identity_clearance_manifest_sync_row_count"] == 3
     assert payload["summary"]["competitive_target_identity_clearance_manifest_sync_ready_count"] == 0
@@ -1674,6 +1705,10 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["competitive_floor_target_identity_clearance_replacement_workorder_audit"]["blocked_count"] == 2
     assert "prediction:2" in by_id["competitive_floor_target_identity_clearance_replacement_workorder_audit"]["blockers"]
     assert "waiting:2" in by_id["competitive_floor_target_identity_clearance_replacement_workorder_audit"]["blockers"]
+    assert by_id["competitive_floor_target_identity_clearance_replacement_pickup"]["status"] == "open_actions"
+    assert by_id["competitive_floor_target_identity_clearance_replacement_pickup"]["blocked_count"] == 2
+    assert "selected:1" in by_id["competitive_floor_target_identity_clearance_replacement_pickup"]["blockers"]
+    assert "operator_actions:4" in by_id["competitive_floor_target_identity_clearance_replacement_pickup"]["blockers"]
     assert by_id["competitive_floor_target_identity_clearance_manifest_sync"]["status"] == "awaiting_provenance"
     assert by_id["competitive_floor_target_identity_clearance_manifest_sync"]["blocked_count"] == 3
     assert by_id["competitive_floor_target_identity_clearance_workorder_audit"]["status"] == "blocked"

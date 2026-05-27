@@ -5,7 +5,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 - goal objective addendum: `casp17/CASP17_WIN_TIER_GOAL.md`
 - win-tier target: scaffold `65 -> 90`, competitive proof `15-25 -> 85-90`, leaderboard `top-5/top-3/top-1-2` by category.
 
-- generated: `2026-05-28T00:56:33+09:00`
+- generated: `2026-05-28T01:06:19+09:00`
 - workbench_status: `ready_for_operator_fill`
 - target model folders: `19/19`
 - target object folders: `58`
@@ -46,6 +46,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 - competitive target identity clearance replacement scorecard: `replacement_scorecard_blocked` candidates/pass/blocked/json `4/1/3/1`
 - competitive target identity clearance replacement workorder: `partial_replacement_workorders_ready_for_operator_intake` targets/rows `2/2` selected/duplicate/no-ready `1/1/0` dropzones/templates/stubs `1/1/1`
 - competitive target identity clearance replacement workorder audit: `blocked` pass/blocked/total `0/2/2` prediction/native/provenance/manifest `2/0/0/0` native/prediction waiting `2`
+- competitive target identity clearance replacement pickup: `open_actions` selected/ready/awaiting/blocked-selection `1/0/1/1` native-missing/required-fields/actions `1/11/4`
 - competitive target identity clearance manifest sync: `awaiting_provenance` rows ready/awaiting/blocked/synced `3/0/3/0/0` changed/applied `0/0`
 - competitive target identity clearance workorder audit: `blocked` pass/blocked/total `0/3/3` prediction/native/provenance/evidence/manifest `3/0/0/0/0` prediction protein-atoms/coordinate-valid `1855/3` identity discovery blocked/cleared `3/0` native protein-atoms/coordinate-valid `0/0` evidence verified/content-blocked/blocked/waiting `0/0/3/0` manifest/provenance matched/mismatches `0/0` native/prediction distinct/same/waiting `0/0/3`
 - competitive target identity clearance action board: `open_actions` actions/open `12/12` native/evidence/provenance/manifest `3/3/3/3`
@@ -113,6 +114,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 | `competitive_floor_target_identity_clearance_replacement_scorecard` | `replacement_scorecard_blocked` | 1 | 3 | 4 | `casp17/casp17_competitive_floor_target_identity_clearance_replacement_scorecard_current.json` | repair replacement source evidence before clearance review | `pass:1,blocked:3,scorecard_json:1` |
 | `competitive_floor_target_identity_clearance_replacement_workorder` | `partial_replacement_workorders_ready_for_operator_intake` | 1 | 1 | 2 | `casp17/casp17_competitive_floor_target_identity_clearance_replacement_workorder_current.json` | choose a different ready replacement candidate before materializing this workorder | `selected:1,duplicate:1,no_ready:0,dropzones:1` |
 | `competitive_floor_target_identity_clearance_replacement_workorder_audit` | `blocked` | 0 | 2 | 2 | `casp17/casp17_competitive_floor_target_identity_clearance_replacement_workorder_audit_current.json` | place the cleared native PDB in the per-target native dropzone | `prediction:2,native:0,provenance:0,manifest:0,native_prediction_distinct:0,waiting:2` |
+| `competitive_floor_target_identity_clearance_replacement_pickup` | `open_actions` | 0 | 2 | 2 | `casp17/casp17_competitive_floor_target_identity_clearance_replacement_pickup_current.json` | place the cleared native PDB in the native dropzone | `selected:1,ready:0,awaiting:1,blocked_selection:1,native_missing:1,required_fields:11,operator_actions:4` |
 | `competitive_floor_target_identity_clearance_manifest_sync` | `awaiting_provenance` | 0 | 3 | 3 | `casp17/casp17_competitive_floor_target_identity_clearance_manifest_sync_current.json` | complete the no-leak provenance template before syncing the manifest stub | `ready:0,awaiting_provenance:3,synced:0` |
 | `competitive_floor_target_identity_clearance_workorder_audit` | `blocked` | 0 | 3 | 3 | `casp17/casp17_competitive_floor_target_identity_clearance_workorder_audit_current.json` | complete target-origin and no-leak evidence review before native/provenance promotion | `prediction:3,prediction_protein_atoms:1855,prediction_coordinate_valid:3,identity_discovery_blocked:3,identity_discovery_cleared:0,native:0,native_protein_atoms:0,native_coordinate_valid:0,provenance:0,evidence_ref:0,evidence_ref_verified:0,manifest:0,manifest_provenance_matched:0,manifest_provenance_mismatches:0,native_prediction_distinct:0,native_prediction_same:0` |
 | `competitive_floor_target_identity_clearance_action_board` | `open_actions` | 0 | 12 | 12 | `casp17/casp17_competitive_floor_target_identity_clearance_action_board_current.json` | Place an operator-cleared native protein PDB in the native dropzone; ensure it is distinct from the prediction and has valid ATOM coordinates. | `native:3,evidence:3,provenance:3,manifest:3` |
