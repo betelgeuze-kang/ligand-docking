@@ -5,7 +5,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 - goal objective addendum: `casp17/CASP17_WIN_TIER_GOAL.md`
 - win-tier target: scaffold `65 -> 90`, competitive proof `15-25 -> 85-90`, leaderboard `top-5/top-3/top-1-2` by category.
 
-- generated: `2026-05-28T02:16:40+09:00`
+- generated: `2026-05-28T02:30:49+09:00`
 - workbench_status: `ready_for_operator_fill`
 - target model folders: `19/19`
 - target object folders: `58`
@@ -22,6 +22,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 - historical benchmark workorders: `40` core `40` missing core/ablation `80/400` operator ready/blocked `0/40`
 - operator dashboard: `ready` rows ready/blocked/total `0/40/40` needs target/core/ablation/calibration/provenance `40/40/40/40/40`
 - historical identity seed inventory: `batch_seed_shape_ready_operator_clearance_required` candidates monomer/complex/total `10/7/17` eligible `10/7` batch/manifest `15/15` clearance-required `15` first `HIST_BBA5` manifest `runs/casp17_historical_benchmark_manifest_seed_current.csv`
+- historical identity seed clearance: `awaiting_seed_clearance` template `created` ready/awaiting/total `0/15/15` cleared manifest `0` open identity/core/provenance/calibration/ablation `0/0/15/15/15` blocking fields `270` first `HIST_BBA5` operator `runs/casp17_historical_identity_seed_operator_clearance_current.csv` cleared `runs/casp17_historical_benchmark_manifest_seed_cleared_current.csv`
 - sidechain-native benchmark: `blocked` pass/blocked/total `0/40/40` core/leakage/pred/native/missing-files `40/40/40/40/80` exactness/metric `0/0` first `hist_REQUIRED_MONOMER_001` blockers `leakage_clearance_missing_or_not_clear,native_pdb_missing,prediction_pdb_missing`
 - sidechain-native workorder: actions/open `120/120` files `runs/casp17_sidechain_native_input_workorder_current.json` `runs/casp17_sidechain_native_input_workorder_current.md`
 - competitive-floor batch: `ready_for_fill` rows `15` missing evidence `490`
@@ -97,6 +98,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 | `benchmark_input_inventory` | `blocked` | 0 | 40 | 40 | `runs/casp17_win_tier_benchmark_input_inventory_current.json` | Replace placeholder target/benchmark IDs with a cleared historical non-CASP17 protein target. | `missing_files:480` |
 | `operator_dashboard` | `ready` | 0 | 40 | 40 | `runs/casp17_win_tier_benchmark_operator_dashboard_current.json` | Replace placeholder target/benchmark IDs with a cleared historical non-CASP17 protein target. | `-` |
 | `historical_identity_seed_inventory` | `batch_seed_shape_ready_operator_clearance_required` | 15 | 15 | 17 | `runs/casp17_historical_identity_seed_inventory_current.json` | operator must verify no-leak provenance, chronology, calibration values, and ablation files before promotion | `monomer_complex:10/7,eligible:10/7,batch:15,manifest:15` |
+| `historical_identity_seed_clearance_workorder` | `awaiting_seed_clearance` | 0 | 15 | 15 | `runs/casp17_historical_identity_seed_clearance_workorder_current.json` | fill operator no-leak evidence, chronology, and leakage controls | `phase_open:0/0/15/15/15,cleared_manifest:0,blocking_fields:270` |
 | `sidechain_native_benchmark` | `blocked` | 0 | 40 | 40 | `runs/casp17_sidechain_native_benchmark_packet_current.json` | replace placeholder leakage_clearance with operator-confirmed no_leak provenance; place the cleared prediction/native PDB files for this benchmark row. | `leakage_clearance_missing_or_not_clear,native_pdb_missing,prediction_pdb_missing` |
 | `competitive_floor_batch` | `ready_for_fill` | 15 | 0 | 15 | `casp17/casp17_competitive_floor_batch_current.json` | Fill the copied competitive-floor task folders before expanding to the full 40-row win-tier set. | `missing_evidence_items:490` |
 | `competitive_floor_row_fill_status` | `awaiting_fill` | 0 | 15 | 15 | `casp17/casp17_competitive_floor_row_fill_status_current.json` | resolve row_fill.csv blockers and rerun operator-template/preflight | `filled:15,missing_fields:0,placeholders:450,missing_files:180` |

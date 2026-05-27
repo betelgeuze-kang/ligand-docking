@@ -1,6 +1,6 @@
 # CASP17 Competitive-Floor Identity Candidate Packet
 
-- generated: `2026-05-28T02:16:33+09:00`
+- generated: `2026-05-28T02:30:43+09:00`
 - identity_candidate_status: `awaiting_candidate_sources`
 - apply_mode: `dry_run`
 - intake rows ready/awaiting: `0/15`

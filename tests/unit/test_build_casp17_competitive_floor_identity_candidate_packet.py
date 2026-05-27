@@ -108,6 +108,8 @@ def _args(
         str(ready_csv),
         "--candidate-manifest-csv",
         str(candidate_csv),
+        "--seed-cleared-manifest-csv",
+        str(tmp_path / "seed_cleared_manifest_missing.csv"),
         "--seed-manifest-csv",
         str(tmp_path / "seed_manifest_missing.csv"),
         "--operator-template-csv",

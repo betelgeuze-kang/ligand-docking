@@ -281,7 +281,7 @@
     "first_open_dropzone_id": "priority_001_REQUIRED_MONOMER_001",
     "first_open_next_action": "replace REQUIRED target/benchmark placeholders with a cleared non-current historical target identity",
     "first_open_phase": "target_identity",
-    "generated_at_local": "2026-05-28T02:16:36+09:00",
+    "generated_at_local": "2026-05-28T02:30:46+09:00",
     "identity_candidate_json": "casp17/casp17_competitive_floor_identity_candidate_packet_current.json",
     "identity_source_repair_csv": "casp17/casp17_competitive_floor_identity_source_repair_plan_current.csv",
     "identity_unlock_kit_json": "casp17/casp17_competitive_floor_identity_unlock_kit_current.json",

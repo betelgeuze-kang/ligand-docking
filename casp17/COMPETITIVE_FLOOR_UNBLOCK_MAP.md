@@ -1,6 +1,6 @@
 # CASP17 Competitive-Floor Unblock Map
 
-- generated: `2026-05-28T02:16:36+09:00`
+- generated: `2026-05-28T02:30:46+09:00`
 - unblock_map_status: `awaiting_candidate_source_repair`
 - rows monomer/complex/total: `10/5/15`
 - identity ready/awaiting: `0/15`

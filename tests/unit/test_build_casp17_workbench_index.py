@@ -22,6 +22,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     inventory_json = tmp_path / "inventory.json"
     dashboard_json = tmp_path / "dashboard.json"
     historical_identity_seed_inventory_json = tmp_path / "historical_identity_seed_inventory.json"
+    historical_identity_seed_clearance_json = tmp_path / "historical_identity_seed_clearance.json"
     sidechain_native_benchmark_json = tmp_path / "sidechain_native_benchmark.json"
     competitive_batch_json = tmp_path / "competitive_batch.json"
     competitive_row_fill_status_json = tmp_path / "competitive_row_fill_status.json"
@@ -320,6 +321,32 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "candidate_manifest_csv": "runs/casp17_historical_benchmark_manifest_seed_current.csv",
                 "first_seed_target_id": "HIST_BBA5",
                 "first_next_action": "operator must verify no-leak provenance, chronology, calibration values, and ablation files before promotion",
+            }
+        },
+    )
+    _write_json(
+        historical_identity_seed_clearance_json,
+        {
+            "summary": {
+                "seed_clearance_status": "awaiting_seed_clearance",
+                "template_status": "created",
+                "seed_inventory_status": "batch_seed_shape_ready_operator_clearance_required",
+                "operator_clearance_csv": "runs/casp17_historical_identity_seed_operator_clearance_current.csv",
+                "cleared_manifest_csv": "runs/casp17_historical_benchmark_manifest_seed_cleared_current.csv",
+                "seed_row_count": 15,
+                "ready_seed_count": 0,
+                "awaiting_seed_count": 15,
+                "cleared_manifest_row_count": 0,
+                "blocking_field_count": 270,
+                "phase_open_counts": {
+                    "identity": 0,
+                    "core_files": 0,
+                    "no_leak_provenance": 15,
+                    "calibration": 15,
+                    "ablation": 15,
+                },
+                "first_open_target_id": "HIST_BBA5",
+                "first_open_next_action": "fill operator no-leak evidence, chronology, and leakage controls",
             }
         },
     )
@@ -1201,6 +1228,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(dashboard_json),
             "--historical-identity-seed-inventory-json",
             str(historical_identity_seed_inventory_json),
+            "--historical-identity-seed-clearance-json",
+            str(historical_identity_seed_clearance_json),
             "--sidechain-native-benchmark-json",
             str(sidechain_native_benchmark_json),
             "--competitive-batch-json",
@@ -1896,6 +1925,25 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["historical_identity_seed_manifest_row_count"] == 15
     assert payload["summary"]["historical_identity_seed_operator_clearance_required_count"] == 15
     assert payload["summary"]["historical_identity_seed_first_target_id"] == "HIST_BBA5"
+    assert payload["summary"]["historical_identity_seed_clearance_status"] == "awaiting_seed_clearance"
+    assert payload["summary"]["historical_identity_seed_clearance_template_status"] == "created"
+    assert payload["summary"]["historical_identity_seed_clearance_seed_count"] == 15
+    assert payload["summary"]["historical_identity_seed_clearance_ready_count"] == 0
+    assert payload["summary"]["historical_identity_seed_clearance_awaiting_count"] == 15
+    assert payload["summary"]["historical_identity_seed_clearance_cleared_manifest_count"] == 0
+    assert payload["summary"]["historical_identity_seed_clearance_blocking_field_count"] == 270
+    assert payload["summary"]["historical_identity_seed_clearance_identity_open_count"] == 0
+    assert payload["summary"]["historical_identity_seed_clearance_core_files_open_count"] == 0
+    assert payload["summary"]["historical_identity_seed_clearance_no_leak_open_count"] == 15
+    assert payload["summary"]["historical_identity_seed_clearance_calibration_open_count"] == 15
+    assert payload["summary"]["historical_identity_seed_clearance_ablation_open_count"] == 15
+    assert payload["summary"]["historical_identity_seed_clearance_first_target_id"] == "HIST_BBA5"
+    assert payload["summary"]["historical_identity_seed_clearance_operator_csv"] == (
+        "runs/casp17_historical_identity_seed_operator_clearance_current.csv"
+    )
+    assert payload["summary"]["historical_identity_seed_clearance_cleared_manifest_csv"] == (
+        "runs/casp17_historical_benchmark_manifest_seed_cleared_current.csv"
+    )
     assert payload["summary"]["sidechain_native_benchmark_status"] == "blocked"
     assert payload["summary"]["sidechain_native_benchmark_count"] == 40
     assert payload["summary"]["sidechain_native_pass_count"] == 0
@@ -2073,6 +2121,13 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["historical_identity_seed_inventory"]["blocked_count"] == 15
     assert "monomer_complex:10/7" in by_id["historical_identity_seed_inventory"]["blockers"]
     assert "manifest:15" in by_id["historical_identity_seed_inventory"]["blockers"]
+    assert by_id["historical_identity_seed_clearance_workorder"]["status"] == "awaiting_seed_clearance"
+    assert by_id["historical_identity_seed_clearance_workorder"]["ready_count"] == 0
+    assert by_id["historical_identity_seed_clearance_workorder"]["blocked_count"] == 15
+    assert by_id["historical_identity_seed_clearance_workorder"]["total_count"] == 15
+    assert "phase_open:0/0/15/15/15" in by_id["historical_identity_seed_clearance_workorder"]["blockers"]
+    assert "cleared_manifest:0" in by_id["historical_identity_seed_clearance_workorder"]["blockers"]
+    assert "blocking_fields:270" in by_id["historical_identity_seed_clearance_workorder"]["blockers"]
     assert by_id["sidechain_native_benchmark"]["status"] == "blocked"
     assert by_id["sidechain_native_benchmark"]["blocked_count"] == 40
     assert "prediction_pdb_missing" in by_id["sidechain_native_benchmark"]["blockers"]
@@ -2109,6 +2164,8 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_dashboard.json"),
             "--historical-identity-seed-inventory-json",
             str(tmp_path / "missing_historical_identity_seed_inventory.json"),
+            "--historical-identity-seed-clearance-json",
+            str(tmp_path / "missing_historical_identity_seed_clearance.json"),
             "--sidechain-native-benchmark-json",
             str(tmp_path / "missing_sidechain_native_benchmark.json"),
             "--competitive-batch-json",
