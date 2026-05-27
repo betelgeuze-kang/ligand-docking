@@ -87,6 +87,8 @@ def _args(tmp_path: Path, operator_csv: Path, seed_csv: Path, ablation_json: Pat
         str(seed_csv),
         "--ablation-candidate-json",
         str(ablation_json),
+        "--top5-candidate-pool-json",
+        str(tmp_path / "missing_top5.json"),
         "--ledger-dir",
         str(tmp_path / "ledgers"),
         "--out-json",
@@ -96,6 +98,14 @@ def _args(tmp_path: Path, operator_csv: Path, seed_csv: Path, ablation_json: Pat
         "--out-md",
         str(tmp_path / "CALIBRATION.md"),
     ]
+
+
+def _args_with_top5(
+    tmp_path: Path, operator_csv: Path, seed_csv: Path, ablation_json: Path, top5_json: Path
+) -> list[str]:
+    args = _args(tmp_path, operator_csv, seed_csv, ablation_json)
+    args[args.index("--top5-candidate-pool-json") + 1] = str(top5_json)
+    return args
 
 
 def test_calibration_candidate_ledgers_surface_selected_rank_but_keep_oracle_gaps(tmp_path: Path) -> None:
@@ -167,6 +177,37 @@ def test_calibration_candidate_ledgers_count_top5_pool_ready_without_filling_met
     assert payload["summary"]["candidate_pool_gap_count"] == 0
     assert payload["summary"]["ready_for_calibration_fill_count"] == 0
     assert payload["rows"][0]["top5_candidate_pool_ready"] is True
+    assert "native_oracle_metrics_required" in payload["rows"][0]["blockers"]
+
+
+def test_calibration_candidate_ledgers_accept_generated_top5_candidate_pool(tmp_path: Path) -> None:
+    row = _base_row(tmp_path)
+    operator_csv = tmp_path / "operator.csv"
+    seed_csv = tmp_path / "seed.csv"
+    ablation_json = tmp_path / "ablation.json"
+    top5_json = tmp_path / "top5.json"
+    _write_csv(operator_csv, [row])
+    _write_csv(seed_csv, [row])
+    _write_json(ablation_json, {"manifest_rows_by_target": {row["target_id"]: []}})
+    top5_rows = [
+        _manifest_row(row, "selected_prediction_copy", str(tmp_path / "pool_model_1.pdb"), "pool1")
+    ]
+    top5_rows.extend(
+        _manifest_row(row, f"deterministic_perturbation_{index}", str(tmp_path / f"pool_model_{index}.pdb"), f"pool{index}")
+        for index in range(2, 6)
+    )
+    _write_json(top5_json, {"candidate_rows_by_target": {row["target_id"]: top5_rows}})
+
+    payload = mod.build_payload(
+        mod.parse_args(_args_with_top5(tmp_path, operator_csv, seed_csv, ablation_json, top5_json))
+    )
+
+    assert payload["summary"]["candidate_model_count"] == 5
+    assert payload["summary"]["top5_candidate_pool_ready_count"] == 1
+    assert payload["summary"]["selected_model_rank_candidate_count"] == 1
+    assert payload["summary"]["ready_for_calibration_fill_count"] == 0
+    assert payload["rows"][0]["top5_candidate_pool_ready"] is True
+    assert "best_of_5_candidate_pool_missing" not in payload["rows"][0]["blockers"]
     assert "native_oracle_metrics_required" in payload["rows"][0]["blockers"]
 
 

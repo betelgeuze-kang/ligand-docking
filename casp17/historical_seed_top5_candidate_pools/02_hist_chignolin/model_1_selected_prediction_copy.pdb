@@ -1,0 +1,52 @@
+REMARK GENERATED_BY collect_feature_matrix.py
+REMARK TARGET Chignolin
+REMARK SAMPLE_IDX 0
+REMARK STEP 20
+REMARK MODEL coarse_ca_projection
+REMARK SOURCE internal_visual_refined
+REMARK VISUAL_PIPELINE postprocess_structure_visuals.py
+REMARK VISUAL_MODEL pseudo_backbone_v1
+REMARK SECONDARY_STRUCTURE_METHOD dssp_pydssp_v1
+REMARK FLEXIBILITY_METHOD rmsf+residual_mix_v1
+ATOM      1    N GLY A   1      -7.986   0.460   0.333  1.00 37.50           N
+ATOM      2   CA GLY A   1      -6.903  -0.009   0.013  1.00 37.50           C
+ATOM      3    C GLY A   1      -5.689   0.030  -0.345  1.00 37.50           C
+ATOM      4    O GLY A   1      -5.513   1.041  -0.209  1.00 37.50           O
+ATOM      5    N GLY A   2      -6.914  -0.274  -0.300  1.00 55.68           N
+ATOM      6   CA GLY A   2      -5.697  -0.171  -0.342  1.00 55.68           C
+ATOM      7    C GLY A   2      -4.562   0.260   0.016  1.00 55.68           C
+ATOM      8    O GLY A   2      -4.839   0.733   0.894  1.00 55.68           O
+ATOM      9    N GLY A   3      -5.085   0.399   0.444  1.00 60.89           N
+ATOM     10   CA GLY A   3      -3.923   0.770   0.534  1.00 60.89           C
+ATOM     11    C GLY A   3      -2.724   0.913   0.153  1.00 60.89           C
+ATOM     12    O GLY A   3      -2.828   0.595  -0.827  1.00 60.89           O
+ATOM     13    N GLY A   4      -3.393   0.774  -0.514  1.00 62.50           N
+ATOM     14   CA GLY A   4      -2.273   0.495  -0.920  1.00 62.50           C
+ATOM     15    C GLY A   4      -1.072   0.109  -0.818  1.00 62.50           C
+ATOM     16    O GLY A   4      -1.095  -0.232   0.160  1.00 62.50           O
+ATOM     17    N GLY A   5      -1.745   0.244  -0.419  1.00 47.65           N
+ATOM     18   CA GLY A   5      -0.826  -0.144   0.287  1.00 47.65           C
+ATOM     19    C GLY A   5       0.371  -0.458   0.555  1.00 47.65           C
+ATOM     20    O GLY A   5       0.827  -0.103  -0.305  1.00 47.65           O
+ATOM     21    N GLY A   6      -0.425  -0.134   0.223  1.00 48.66           N
+ATOM     22   CA GLY A   6       0.752  -0.455   0.292  1.00 48.66           C
+ATOM     23    C GLY A   6       1.991  -0.359   0.047  1.00 48.66           C
+ATOM     24    O GLY A   6       1.994   0.571  -0.408  1.00 48.66           O
+ATOM     25    N GLY A   7       1.158  -0.423   0.240  1.00 43.11           N
+ATOM     26   CA GLY A   7       2.344  -0.313  -0.036  1.00 43.11           C
+ATOM     27    C GLY A   7       3.586  -0.268   0.205  1.00 43.11           C
+ATOM     28    O GLY A   7       3.570  -0.582   1.192  1.00 43.11           O
+ATOM     29    N GLY A   8       2.765  -0.335   0.252  1.00 50.77           N
+ATOM     30   CA GLY A   8       3.977  -0.271   0.403  1.00 50.77           C
+ATOM     31    C GLY A   8       5.178  -0.109   0.038  1.00 50.77           C
+ATOM     32    O GLY A   8       5.009   0.244  -0.921  1.00 50.77           O
+ATOM     33    N GLY A   9       4.587  -0.144  -0.035  1.00 58.75           N
+ATOM     34   CA GLY A   9       5.703   0.034  -0.501  1.00 58.75           C
+ATOM     35    C GLY A   9       6.964   0.143  -0.467  1.00 58.75           C
+ATOM     36    O GLY A   9       7.128  -0.182   0.503  1.00 58.75           O
+ATOM     37    N GLY A  10       5.606  -0.024  -0.198  1.00 37.50           N
+ATOM     38   CA GLY A  10       6.804   0.048   0.032  1.00 37.50           C
+ATOM     39    C GLY A  10       7.845   0.025   0.752  1.00 37.50           C
+ATOM     40    O GLY A  10       7.427  -0.338   1.628  1.00 37.50           O
+TER      41      GLY A  10
+END

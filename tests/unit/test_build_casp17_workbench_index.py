@@ -37,6 +37,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     historical_seed_ablation_candidate_manifests_json = (
         tmp_path / "historical_seed_ablation_candidate_manifests.json"
     )
+    historical_seed_top5_candidate_pools_json = tmp_path / "historical_seed_top5_candidate_pools.json"
     historical_seed_calibration_candidate_ledgers_json = (
         tmp_path / "historical_seed_calibration_candidate_ledgers.json"
     )
@@ -495,14 +496,35 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        historical_seed_top5_candidate_pools_json,
+        {
+            "summary": {
+                "top5_candidate_pool_status": "top5_candidate_pool_ready_for_review",
+                "seed_row_count": 15,
+                "pool_count": 15,
+                "candidate_model_count": 75,
+                "complete_top5_pool_count": 15,
+                "candidate_pool_gap_count": 0,
+                "selected_source_present_count": 15,
+                "generated_perturbation_count": 60,
+                "blocked_selected_source_count": 0,
+                "first_open_target_id": "HIST_BBA5",
+                "first_next_action": (
+                    "feed candidate pool into calibration ledger, then attach native oracle metrics "
+                    "and internal scores"
+                ),
+            }
+        },
+    )
+    _write_json(
         historical_seed_calibration_candidate_ledgers_json,
         {
             "summary": {
                 "calibration_candidate_status": "operator_calibration_review_required",
                 "seed_row_count": 15,
                 "ledger_count": 15,
-                "candidate_model_count": 16,
-                "top5_candidate_pool_ready_count": 0,
+                "candidate_model_count": 76,
+                "top5_candidate_pool_ready_count": 15,
                 "selected_prediction_candidate_count": 15,
                 "selected_model_rank_candidate_count": 15,
                 "native_oracle_metric_available_count": 0,
@@ -513,8 +535,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "open_calibration_field_count": 90,
                 "first_open_target_id": "HIST_BBA5",
                 "first_next_action": (
-                    "attach top-5 candidate pool, internal scores, and native oracle metrics before "
-                    "filling calibration fields"
+                    "attach native oracle metrics and internal scores before filling calibration fields"
                 ),
             }
         },
@@ -1428,6 +1449,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(historical_seed_chronology_candidate_board_json),
             "--historical-seed-ablation-candidate-manifests-json",
             str(historical_seed_ablation_candidate_manifests_json),
+            "--historical-seed-top5-candidate-pools-json",
+            str(historical_seed_top5_candidate_pools_json),
             "--historical-seed-calibration-candidate-ledgers-json",
             str(historical_seed_calibration_candidate_ledgers_json),
             "--historical-seed-clearance-to-identity-intake-sync-json",
@@ -2240,13 +2263,25 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["historical_seed_ablation_candidate_manifests_first_next_action"] == (
         "attach real ablation layer evidence before setting ablation_manifest_ref"
     )
+    assert payload["summary"]["historical_seed_top5_candidate_pools_status"] == (
+        "top5_candidate_pool_ready_for_review"
+    )
+    assert payload["summary"]["historical_seed_top5_candidate_pools_seed_count"] == 15
+    assert payload["summary"]["historical_seed_top5_candidate_pools_pool_count"] == 15
+    assert payload["summary"]["historical_seed_top5_candidate_pools_candidate_model_count"] == 75
+    assert payload["summary"]["historical_seed_top5_candidate_pools_complete_count"] == 15
+    assert payload["summary"]["historical_seed_top5_candidate_pools_gap_count"] == 0
+    assert payload["summary"]["historical_seed_top5_candidate_pools_source_present_count"] == 15
+    assert payload["summary"]["historical_seed_top5_candidate_pools_generated_perturbation_count"] == 60
+    assert payload["summary"]["historical_seed_top5_candidate_pools_blocked_source_count"] == 0
+    assert payload["summary"]["historical_seed_top5_candidate_pools_first_target_id"] == "HIST_BBA5"
     assert payload["summary"]["historical_seed_calibration_candidate_ledgers_status"] == (
         "operator_calibration_review_required"
     )
     assert payload["summary"]["historical_seed_calibration_candidate_ledgers_seed_count"] == 15
     assert payload["summary"]["historical_seed_calibration_candidate_ledgers_ledger_count"] == 15
-    assert payload["summary"]["historical_seed_calibration_candidate_ledgers_candidate_model_count"] == 16
-    assert payload["summary"]["historical_seed_calibration_candidate_ledgers_top5_ready_count"] == 0
+    assert payload["summary"]["historical_seed_calibration_candidate_ledgers_candidate_model_count"] == 76
+    assert payload["summary"]["historical_seed_calibration_candidate_ledgers_top5_ready_count"] == 15
     assert payload["summary"]["historical_seed_calibration_candidate_ledgers_selected_prediction_count"] == 15
     assert payload["summary"]["historical_seed_calibration_candidate_ledgers_selected_rank_candidate_count"] == 15
     assert payload["summary"]["historical_seed_calibration_candidate_ledgers_native_metric_count"] == 0
@@ -2257,7 +2292,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["historical_seed_calibration_candidate_ledgers_open_field_count"] == 90
     assert payload["summary"]["historical_seed_calibration_candidate_ledgers_first_target_id"] == "HIST_BBA5"
     assert payload["summary"]["historical_seed_calibration_candidate_ledgers_first_next_action"] == (
-        "attach top-5 candidate pool, internal scores, and native oracle metrics before filling calibration fields"
+        "attach native oracle metrics and internal scores before filling calibration fields"
     )
     assert payload["summary"]["historical_seed_clearance_to_identity_intake_sync_status"] == (
         "waiting_on_cleared_seed_manifest"
@@ -2328,12 +2363,16 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["historical_seed_ablation_candidate_manifests"]["blocked_count"] == 15
     assert "baseline_candidates:1" in by_id["historical_seed_ablation_candidate_manifests"]["blockers"]
     assert "layer_gaps:14" in by_id["historical_seed_ablation_candidate_manifests"]["blockers"]
+    assert by_id["historical_seed_top5_candidate_pools"]["status"] == "top5_candidate_pool_ready_for_review"
+    assert by_id["historical_seed_top5_candidate_pools"]["ready_count"] == 15
+    assert "models:75" in by_id["historical_seed_top5_candidate_pools"]["blockers"]
+    assert "complete_top5:15" in by_id["historical_seed_top5_candidate_pools"]["blockers"]
     assert by_id["historical_seed_calibration_candidate_ledgers"]["status"] == (
         "operator_calibration_review_required"
     )
     assert by_id["historical_seed_calibration_candidate_ledgers"]["blocked_count"] == 15
-    assert "models:16" in by_id["historical_seed_calibration_candidate_ledgers"]["blockers"]
-    assert "top5_ready:0" in by_id["historical_seed_calibration_candidate_ledgers"]["blockers"]
+    assert "models:76" in by_id["historical_seed_calibration_candidate_ledgers"]["blockers"]
+    assert "top5_ready:15" in by_id["historical_seed_calibration_candidate_ledgers"]["blockers"]
     assert "open_fields:90" in by_id["historical_seed_calibration_candidate_ledgers"]["blockers"]
     assert by_id["competitive_floor_batch"]["status"] == "ready_for_fill"
     assert by_id["competitive_floor_row_fill_status"]["status"] == "awaiting_fill"

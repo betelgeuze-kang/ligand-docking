@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OPERATOR_CLEARANCE_CSV = "runs/casp17_historical_identity_seed_operator_clearance_current.csv"
 DEFAULT_SEED_MANIFEST_CSV = "runs/casp17_historical_benchmark_manifest_seed_current.csv"
 DEFAULT_ABLATION_CANDIDATE_JSON = "casp17/casp17_historical_seed_ablation_candidate_manifests_current.json"
+DEFAULT_TOP5_CANDIDATE_POOL_JSON = "casp17/casp17_historical_seed_top5_candidate_pools_current.json"
 DEFAULT_LEDGER_DIR = "casp17/historical_seed_calibration_candidate_ledgers"
 DEFAULT_OUT_JSON = "casp17/casp17_historical_seed_calibration_candidate_ledgers_current.json"
 DEFAULT_OUT_CSV = "casp17/casp17_historical_seed_calibration_candidate_ledgers_current.csv"
@@ -190,6 +191,17 @@ def _ablation_rows_by_target(payload: dict[str, Any]) -> dict[str, list[dict[str
     return {}
 
 
+def _top5_rows_by_target(payload: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    grouped = payload.get("candidate_rows_by_target")
+    if isinstance(grouped, dict):
+        return {
+            _text(target).upper(): [row for row in rows if isinstance(row, dict)]
+            for target, rows in grouped.items()
+            if isinstance(rows, list)
+        }
+    return {}
+
+
 def _fallback_candidate_rows(row: dict[str, str]) -> list[dict[str, Any]]:
     prediction_pdb = _text(row.get("prediction_pdb"))
     stats = _pdb_stats(prediction_pdb)
@@ -209,11 +221,19 @@ def _fallback_candidate_rows(row: dict[str, str]) -> list[dict[str, Any]]:
     ]
 
 
-def _candidate_pool(row: dict[str, str], ablation_by_target: dict[str, list[dict[str, Any]]]) -> list[dict[str, Any]]:
+def _candidate_pool(
+    row: dict[str, str],
+    ablation_by_target: dict[str, list[dict[str, Any]]],
+    top5_by_target: dict[str, list[dict[str, Any]]],
+) -> list[dict[str, Any]]:
     target_id = _text(row.get("target_id")).upper()
-    raw_rows = list(ablation_by_target.get(target_id) or _fallback_candidate_rows(row))
+    raw_rows = list(ablation_by_target.get(target_id) or [])
+    raw_rows.extend(top5_by_target.get(target_id) or [])
+    if not raw_rows:
+        raw_rows = _fallback_candidate_rows(row)
     candidates: list[dict[str, Any]] = []
     seen: set[str] = set()
+    valid_selected_prediction_seen = False
     for raw in raw_rows:
         role = _text(raw.get("role"))
         if role == "native_reference":
@@ -222,6 +242,8 @@ def _candidate_pool(row: dict[str, str], ablation_by_target: dict[str, list[dict
         exists_bool = exists if isinstance(exists, bool) else _text(exists).lower() == "true"
         coordinate_valid = raw.get("coordinate_valid")
         coordinate_bool = coordinate_valid if isinstance(coordinate_valid, bool) else _text(coordinate_valid).lower() == "true"
+        if role == "selected_prediction_copy" and valid_selected_prediction_seen:
+            continue
         path = _text(raw.get("path"))
         sha = _text(raw.get("sha256_16"))
         dedupe_key = sha or path
@@ -240,12 +262,18 @@ def _candidate_pool(row: dict[str, str], ablation_by_target: dict[str, list[dict
                 "atom_count": _int(raw.get("atom_count")),
                 "coordinate_valid": bool(coordinate_bool),
                 "sha256_16": sha,
-                "selected_model_rank_candidate": 1 if role == "selected_prediction" and exists_bool and coordinate_bool else "",
+                "selected_model_rank_candidate": (
+                    1
+                    if role in {"selected_prediction", "selected_prediction_copy"} and exists_bool and coordinate_bool
+                    else ""
+                ),
                 "internal_score_candidate": "",
                 "native_metric_candidate": "",
                 "notes": _text(raw.get("notes")) or "candidate model for model-selection review",
             }
         )
+        if role == "selected_prediction" and exists_bool and coordinate_bool:
+            valid_selected_prediction_seen = True
     return candidates
 
 
@@ -263,11 +291,19 @@ def _field_ready(row: dict[str, str], field: str) -> bool:
     return True
 
 
-def _build_seed_ledger(row: dict[str, str], ablation_by_target: dict[str, list[dict[str, Any]]], ledger_dir: str | Path, row_rank: int) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def _build_seed_ledger(
+    row: dict[str, str],
+    ablation_by_target: dict[str, list[dict[str, Any]]],
+    top5_by_target: dict[str, list[dict[str, Any]]],
+    ledger_dir: str | Path,
+    row_rank: int,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     target_id = _text(row.get("target_id")).upper()
-    candidates = _candidate_pool(row, ablation_by_target)
+    candidates = _candidate_pool(row, ablation_by_target, top5_by_target)
     existing_candidates = [item for item in candidates if item["exists"] and item["coordinate_valid"]]
-    selected_candidates = [item for item in existing_candidates if item["role"] == "selected_prediction"]
+    selected_candidates = [
+        item for item in existing_candidates if item["role"] in {"selected_prediction", "selected_prediction_copy"}
+    ]
     top5_ready = len(existing_candidates) >= 5
     open_fields = [field for field in CALIBRATION_FIELDS if not _field_ready(row, field)]
     blockers: list[str] = []
@@ -304,7 +340,11 @@ def _build_seed_ledger(row: dict[str, str], ablation_by_target: dict[str, list[d
         "best_score_candidate": "REQUIRES_INTERNAL_SCORE",
         "open_calibration_field_count": len(open_fields),
         "open_calibration_fields": ",".join(open_fields),
-        "next_action": "attach top-5 candidate pool, internal scores, and native oracle metrics before filling calibration fields",
+        "next_action": (
+            "attach native oracle metrics and internal scores before filling calibration fields"
+            if top5_ready
+            else "attach top-5 candidate pool, internal scores, and native oracle metrics before filling calibration fields"
+        ),
         "blockers": ",".join(dict.fromkeys(blockers)),
     }
     return summary_row, candidates
@@ -314,7 +354,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     operator_rows, operator_blockers = _read_csv(args.operator_clearance_csv)
     seed_rows, seed_blockers = _read_csv(args.seed_manifest_csv)
     ablation_payload = _read_json(args.ablation_candidate_json)
+    top5_payload = _read_json(args.top5_candidate_pool_json)
     ablation_by_target = _ablation_rows_by_target(ablation_payload)
+    top5_by_target = _top5_rows_by_target(top5_payload)
     seed_by_target = {_text(row.get("target_id")).upper(): row for row in seed_rows}
     rows: list[dict[str, Any]] = []
     candidate_rows_by_target: dict[str, list[dict[str, Any]]] = {}
@@ -322,7 +364,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         target_id = _text(row.get("target_id")).upper()
         merged = dict(seed_by_target.get(target_id, {}))
         merged.update(row)
-        report, candidates = _build_seed_ledger(merged, ablation_by_target, args.ledger_dir, index)
+        report, candidates = _build_seed_ledger(merged, ablation_by_target, top5_by_target, args.ledger_dir, index)
         rows.append(report)
         candidate_rows_by_target[target_id] = candidates
     status_counts: dict[str, int] = {}
@@ -346,6 +388,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "operator_clearance_csv": _artifact(args.operator_clearance_csv),
         "seed_manifest_csv": _artifact(args.seed_manifest_csv),
         "ablation_candidate_json": _artifact(args.ablation_candidate_json),
+        "top5_candidate_pool_json": _artifact(args.top5_candidate_pool_json),
         "ledger_dir": _artifact(args.ledger_dir),
         "seed_row_count": len(rows),
         "ledger_count": sum(1 for row in rows if _text(row.get("candidate_ledger_csv"))),
@@ -414,6 +457,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--operator-clearance-csv", default=DEFAULT_OPERATOR_CLEARANCE_CSV)
     parser.add_argument("--seed-manifest-csv", default=DEFAULT_SEED_MANIFEST_CSV)
     parser.add_argument("--ablation-candidate-json", default=DEFAULT_ABLATION_CANDIDATE_JSON)
+    parser.add_argument("--top5-candidate-pool-json", default=DEFAULT_TOP5_CANDIDATE_POOL_JSON)
     parser.add_argument("--ledger-dir", default=DEFAULT_LEDGER_DIR)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
