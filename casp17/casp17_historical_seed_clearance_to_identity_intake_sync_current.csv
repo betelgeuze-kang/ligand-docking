@@ -1,0 +1,16 @@
+dropzone_id,operator_priority,row_rank,scope,sync_status,seed_benchmark_id,seed_target_id,evidence_ref,operator_clearance,missing_or_blocked_reason,next_action
+priority_001_REQUIRED_MONOMER_001,1,1,monomer,waiting_on_cleared_seed,,,,,cleared_seed_manifest_empty_or_blocked,clear historical seed rows before syncing competitive identity intake
+priority_002_REQUIRED_MONOMER_002,2,2,monomer,waiting_on_cleared_seed,,,,,cleared_seed_manifest_empty_or_blocked,clear historical seed rows before syncing competitive identity intake
+priority_003_REQUIRED_MONOMER_003,3,3,monomer,waiting_on_cleared_seed,,,,,cleared_seed_manifest_empty_or_blocked,clear historical seed rows before syncing competitive identity intake
+priority_004_REQUIRED_MONOMER_004,4,4,monomer,waiting_on_cleared_seed,,,,,cleared_seed_manifest_empty_or_blocked,clear historical seed rows before syncing competitive identity intake
+priority_005_REQUIRED_MONOMER_005,5,5,monomer,waiting_on_cleared_seed,,,,,cleared_seed_manifest_empty_or_blocked,clear historical seed rows before syncing competitive identity intake
+priority_006_REQUIRED_MONOMER_006,6,6,monomer,waiting_on_cleared_seed,,,,,cleared_seed_manifest_empty_or_blocked,clear historical seed rows before syncing competitive identity intake
+priority_007_REQUIRED_MONOMER_007,7,7,monomer,waiting_on_cleared_seed,,,,,cleared_seed_manifest_empty_or_blocked,clear historical seed rows before syncing competitive identity intake
+priority_008_REQUIRED_MONOMER_008,8,8,monomer,waiting_on_cleared_seed,,,,,cleared_seed_manifest_empty_or_blocked,clear historical seed rows before syncing competitive identity intake
+priority_009_REQUIRED_MONOMER_009,9,9,monomer,waiting_on_cleared_seed,,,,,cleared_seed_manifest_empty_or_blocked,clear historical seed rows before syncing competitive identity intake
+priority_010_REQUIRED_MONOMER_010,10,10,monomer,waiting_on_cleared_seed,,,,,cleared_seed_manifest_empty_or_blocked,clear historical seed rows before syncing competitive identity intake
+priority_011_REQUIRED_COMPLEX_001,11,26,complex,waiting_on_cleared_seed,,,,,cleared_seed_manifest_empty_or_blocked,clear historical seed rows before syncing competitive identity intake
+priority_012_REQUIRED_COMPLEX_002,12,27,complex,waiting_on_cleared_seed,,,,,cleared_seed_manifest_empty_or_blocked,clear historical seed rows before syncing competitive identity intake
+priority_013_REQUIRED_COMPLEX_003,13,28,complex,waiting_on_cleared_seed,,,,,cleared_seed_manifest_empty_or_blocked,clear historical seed rows before syncing competitive identity intake
+priority_014_REQUIRED_COMPLEX_004,14,29,complex,waiting_on_cleared_seed,,,,,cleared_seed_manifest_empty_or_blocked,clear historical seed rows before syncing competitive identity intake
+priority_015_REQUIRED_COMPLEX_005,15,30,complex,waiting_on_cleared_seed,,,,,cleared_seed_manifest_empty_or_blocked,clear historical seed rows before syncing competitive identity intake

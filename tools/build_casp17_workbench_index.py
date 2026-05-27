@@ -29,6 +29,9 @@ DEFAULT_HISTORICAL_IDENTITY_SEED_CLEARANCE_JSON = (
 DEFAULT_HISTORICAL_IDENTITY_SEED_CLEARANCE_ACTION_BUNDLE_JSON = (
     "casp17/casp17_historical_identity_seed_clearance_action_bundle_current.json"
 )
+DEFAULT_HISTORICAL_SEED_CLEARANCE_TO_IDENTITY_INTAKE_SYNC_JSON = (
+    "casp17/casp17_historical_seed_clearance_to_identity_intake_sync_current.json"
+)
 DEFAULT_SIDECHAIN_NATIVE_BENCHMARK_JSON = "runs/casp17_sidechain_native_benchmark_packet_current.json"
 DEFAULT_COMPETITIVE_BATCH_JSON = "casp17/casp17_competitive_floor_batch_current.json"
 DEFAULT_COMPETITIVE_ROW_FILL_STATUS_JSON = "casp17/casp17_competitive_floor_row_fill_status_current.json"
@@ -250,6 +253,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     historical_identity_seed_clearance_action_bundle_payload = _read_json(
         args.historical_identity_seed_clearance_action_bundle_json
     )
+    historical_seed_clearance_to_identity_intake_sync_payload = _read_json(
+        args.historical_seed_clearance_to_identity_intake_sync_json
+    )
     sidechain_native_benchmark_payload = _read_json(args.sidechain_native_benchmark_json)
     competitive_batch_payload = _read_json(args.competitive_batch_json)
     competitive_row_fill_status_payload = _read_json(args.competitive_row_fill_status_json)
@@ -363,6 +369,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         historical_identity_seed_clearance_phase_open_counts = {}
     historical_identity_seed_clearance_action_bundle_summary = _summary(
         historical_identity_seed_clearance_action_bundle_payload
+    )
+    historical_seed_clearance_to_identity_intake_sync_summary = _summary(
+        historical_seed_clearance_to_identity_intake_sync_payload
     )
     sidechain_native_benchmark_summary = _summary(sidechain_native_benchmark_payload)
     competitive_batch_summary = _summary(competitive_batch_payload)
@@ -783,6 +792,33 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + str(historical_identity_seed_clearance_action_bundle_summary.get("calibration_action_count", ""))
                 + "/"
                 + str(historical_identity_seed_clearance_action_bundle_summary.get("ablation_action_count", ""))
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_clearance_to_identity_intake_sync",
+            "Dry-run bridge from cleared historical seed manifest into competitive identity intake",
+            _text(historical_seed_clearance_to_identity_intake_sync_summary.get("seed_to_identity_sync_status")),
+            args.historical_seed_clearance_to_identity_intake_sync_json,
+            ready_count=_int(historical_seed_clearance_to_identity_intake_sync_summary.get("ready_to_sync_count")),
+            blocked_count=(
+                _int(historical_seed_clearance_to_identity_intake_sync_summary.get("waiting_intake_count"))
+                + _int(historical_seed_clearance_to_identity_intake_sync_summary.get("blocked_count"))
+            ),
+            total_count=_int(historical_seed_clearance_to_identity_intake_sync_summary.get("intake_row_count")),
+            next_action=_text(historical_seed_clearance_to_identity_intake_sync_summary.get("first_next_action")),
+            blockers=(
+                "cleared_seed_rows:"
+                + str(historical_seed_clearance_to_identity_intake_sync_summary.get("seed_manifest_row_count", ""))
+                + ",eligible:"
+                + str(historical_seed_clearance_to_identity_intake_sync_summary.get("eligible_seed_row_count", ""))
+                + ",ready:"
+                + str(historical_seed_clearance_to_identity_intake_sync_summary.get("ready_to_sync_count", ""))
+                + ",waiting:"
+                + str(historical_seed_clearance_to_identity_intake_sync_summary.get("waiting_intake_count", ""))
+                + ",applied:"
+                + str(historical_seed_clearance_to_identity_intake_sync_summary.get("applied_count", ""))
+                + ",mode:"
+                + str(historical_seed_clearance_to_identity_intake_sync_summary.get("apply_mode", ""))
             ),
         ),
         _artifact_row(
@@ -2540,6 +2576,36 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "historical_identity_seed_clearance_action_bundle_first_action": _text(
             historical_identity_seed_clearance_action_bundle_summary.get("first_open_action_md")
         ),
+        "historical_seed_clearance_to_identity_intake_sync_status": _text(
+            historical_seed_clearance_to_identity_intake_sync_summary.get("seed_to_identity_sync_status")
+        ),
+        "historical_seed_clearance_to_identity_intake_sync_apply_mode": _text(
+            historical_seed_clearance_to_identity_intake_sync_summary.get("apply_mode")
+        ),
+        "historical_seed_clearance_to_identity_intake_sync_intake_row_count": _int(
+            historical_seed_clearance_to_identity_intake_sync_summary.get("intake_row_count")
+        ),
+        "historical_seed_clearance_to_identity_intake_sync_seed_row_count": _int(
+            historical_seed_clearance_to_identity_intake_sync_summary.get("seed_manifest_row_count")
+        ),
+        "historical_seed_clearance_to_identity_intake_sync_eligible_count": _int(
+            historical_seed_clearance_to_identity_intake_sync_summary.get("eligible_seed_row_count")
+        ),
+        "historical_seed_clearance_to_identity_intake_sync_ready_count": _int(
+            historical_seed_clearance_to_identity_intake_sync_summary.get("ready_to_sync_count")
+        ),
+        "historical_seed_clearance_to_identity_intake_sync_waiting_count": _int(
+            historical_seed_clearance_to_identity_intake_sync_summary.get("waiting_intake_count")
+        ),
+        "historical_seed_clearance_to_identity_intake_sync_blocked_count": _int(
+            historical_seed_clearance_to_identity_intake_sync_summary.get("blocked_count")
+        ),
+        "historical_seed_clearance_to_identity_intake_sync_applied_count": _int(
+            historical_seed_clearance_to_identity_intake_sync_summary.get("applied_count")
+        ),
+        "historical_seed_clearance_to_identity_intake_sync_first_next_action": _text(
+            historical_seed_clearance_to_identity_intake_sync_summary.get("first_next_action")
+        ),
         "sidechain_native_benchmark_status": _text(
             sidechain_native_benchmark_summary.get("sidechain_native_benchmark_status")
         ),
@@ -3810,6 +3876,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- historical identity seed inventory: `{summary['historical_identity_seed_inventory_status'] or '-'}` candidates monomer/complex/total `{summary['historical_identity_seed_monomer_count']}/{summary['historical_identity_seed_complex_count']}/{summary['historical_identity_seed_candidate_count']}` eligible `{summary['historical_identity_seed_eligible_monomer_count']}/{summary['historical_identity_seed_eligible_complex_count']}` batch/manifest `{summary['historical_identity_seed_batch_slot_count']}/{summary['historical_identity_seed_manifest_row_count']}` clearance-required `{summary['historical_identity_seed_operator_clearance_required_count']}` first `{summary['historical_identity_seed_first_target_id'] or '-'}` manifest `{summary['historical_identity_seed_manifest_csv'] or '-'}`",
         f"- historical identity seed clearance: `{summary['historical_identity_seed_clearance_status'] or '-'}` template `{summary['historical_identity_seed_clearance_template_status'] or '-'}` ready/awaiting/total `{summary['historical_identity_seed_clearance_ready_count']}/{summary['historical_identity_seed_clearance_awaiting_count']}/{summary['historical_identity_seed_clearance_seed_count']}` cleared manifest `{summary['historical_identity_seed_clearance_cleared_manifest_count']}` open identity/core/provenance/calibration/ablation `{summary['historical_identity_seed_clearance_identity_open_count']}/{summary['historical_identity_seed_clearance_core_files_open_count']}/{summary['historical_identity_seed_clearance_no_leak_open_count']}/{summary['historical_identity_seed_clearance_calibration_open_count']}/{summary['historical_identity_seed_clearance_ablation_open_count']}` blocking fields `{summary['historical_identity_seed_clearance_blocking_field_count']}` first `{summary['historical_identity_seed_clearance_first_target_id'] or '-'}` operator `{summary['historical_identity_seed_clearance_operator_csv'] or '-'}` cleared `{summary['historical_identity_seed_clearance_cleared_manifest_csv'] or '-'}`",
         f"- historical identity seed clearance action bundle: `{summary['historical_identity_seed_clearance_action_bundle_status'] or '-'}` targets/actions/open `{summary['historical_identity_seed_clearance_action_bundle_target_count']}/{summary['historical_identity_seed_clearance_action_bundle_action_count']}/{summary['historical_identity_seed_clearance_action_bundle_open_count']}` files/folders `{summary['historical_identity_seed_clearance_action_bundle_file_count']}/{summary['historical_identity_seed_clearance_action_bundle_folder_count']}` identity/core/no-leak/calibration/ablation `{summary['historical_identity_seed_clearance_action_bundle_identity_count']}/{summary['historical_identity_seed_clearance_action_bundle_core_count']}/{summary['historical_identity_seed_clearance_action_bundle_no_leak_count']}/{summary['historical_identity_seed_clearance_action_bundle_calibration_count']}/{summary['historical_identity_seed_clearance_action_bundle_ablation_count']}` first `{summary['historical_identity_seed_clearance_action_bundle_first_action'] or '-'}`",
+        f"- historical seed clearance to identity intake sync: `{summary['historical_seed_clearance_to_identity_intake_sync_status'] or '-'}` mode `{summary['historical_seed_clearance_to_identity_intake_sync_apply_mode'] or '-'}` seed eligible/total `{summary['historical_seed_clearance_to_identity_intake_sync_eligible_count']}/{summary['historical_seed_clearance_to_identity_intake_sync_seed_row_count']}` intake ready/waiting/blocked/total `{summary['historical_seed_clearance_to_identity_intake_sync_ready_count']}/{summary['historical_seed_clearance_to_identity_intake_sync_waiting_count']}/{summary['historical_seed_clearance_to_identity_intake_sync_blocked_count']}/{summary['historical_seed_clearance_to_identity_intake_sync_intake_row_count']}` applied `{summary['historical_seed_clearance_to_identity_intake_sync_applied_count']}` first `{summary['historical_seed_clearance_to_identity_intake_sync_first_next_action'] or '-'}`",
         f"- sidechain-native benchmark: `{summary['sidechain_native_benchmark_status'] or '-'}` pass/blocked/total `{summary['sidechain_native_pass_count']}/{summary['sidechain_native_blocked_count']}/{summary['sidechain_native_benchmark_count']}` core/leakage/pred/native/missing-files `{summary['sidechain_native_core_input_blocked_count']}/{summary['sidechain_native_leakage_blocked_count']}/{summary['sidechain_native_prediction_missing_count']}/{summary['sidechain_native_native_missing_count']}/{summary['sidechain_native_missing_core_file_count']}` exactness/metric `{summary['sidechain_native_exactness_blocked_count']}/{summary['sidechain_native_metric_blocked_count']}` first `{summary['sidechain_native_first_blocked_benchmark_id'] or '-'}` blockers `{summary['sidechain_native_first_blocked_blockers'] or '-'}`",
         f"- sidechain-native workorder: actions/open `{summary['sidechain_native_workorder_action_count']}/{summary['sidechain_native_open_workorder_action_count']}` files `{summary['sidechain_native_workorder_json'] or '-'}` `{summary['sidechain_native_workorder_md'] or '-'}`",
         f"- competitive-floor batch: `{summary['competitive_batch_status'] or '-'}` rows `{summary['competitive_batch_row_count']}` missing evidence `{summary['competitive_batch_missing_evidence_item_count']}`",
@@ -3916,6 +3983,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--historical-identity-seed-clearance-action-bundle-json",
         default=DEFAULT_HISTORICAL_IDENTITY_SEED_CLEARANCE_ACTION_BUNDLE_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-clearance-to-identity-intake-sync-json",
+        default=DEFAULT_HISTORICAL_SEED_CLEARANCE_TO_IDENTITY_INTAKE_SYNC_JSON,
     )
     parser.add_argument("--sidechain-native-benchmark-json", default=DEFAULT_SIDECHAIN_NATIVE_BENCHMARK_JSON)
     parser.add_argument("--competitive-batch-json", default=DEFAULT_COMPETITIVE_BATCH_JSON)
