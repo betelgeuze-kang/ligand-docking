@@ -1,0 +1,44 @@
+{
+  "rows": [
+    {
+      "blocked_candidate_count": 4,
+      "blockers": "safe_unique_candidate_missing,operator_decision_required",
+      "candidate_resolution_csv": "casp17/competitive_floor_target_identity_clearance_replacement_decisions/H1321_Human_astrovirus_VA1_capsid_spike_-_antibody_2A2_complex/candidate_resolution.csv",
+      "candidate_row_count": 4,
+      "decision_folder": "casp17/competitive_floor_target_identity_clearance_replacement_decisions/H1321_Human_astrovirus_VA1_capsid_spike_-_antibody_2A2_complex",
+      "decision_md": "casp17/competitive_floor_target_identity_clearance_replacement_decisions/H1321_Human_astrovirus_VA1_capsid_spike_-_antibody_2A2_complex/DECISION.md",
+      "decision_status": "open_operator_decision",
+      "duplicate_candidate_ids": "H1311",
+      "duplicate_ready_candidate_count": 1,
+      "duplicate_reuse_exception_csv": "casp17/competitive_floor_target_identity_clearance_replacement_decisions/H1321_Human_astrovirus_VA1_capsid_spike_-_antibody_2A2_complex/duplicate_reuse_exception.csv",
+      "first_blocked_candidate_id": "H1311",
+      "new_unique_candidate_intake_csv": "casp17/competitive_floor_target_identity_clearance_replacement_decisions/H1321_Human_astrovirus_VA1_capsid_spike_-_antibody_2A2_complex/new_unique_candidate_intake.csv",
+      "next_action": "fill the new unique candidate intake template or explicitly approve duplicate candidate reuse with no-leak rationale, then rerun replacement workorders",
+      "replace_target_id": "H1321",
+      "replace_target_name": "Human astrovirus VA1 capsid spike - antibody 2A2 complex",
+      "safe_unique_candidate_ids": "",
+      "safe_unique_ready_candidate_count": 0
+    }
+  ],
+  "summary": {
+    "candidate_resolution_csv_count": 1,
+    "candidate_row_count": 4,
+    "claim_boundary": "Local CASP17 replacement decision bundle only. It creates operator-facing decision files for duplicate replacement blockers, including a new-unique-candidate intake template and a duplicate-reuse exception template. It does not choose a new target, approve duplicate reuse, fetch native structures, clear no-leak provenance, score native accuracy, mutate replacement workorders, or submit to CASP.",
+    "decision_bundle_status": "open_operator_decision",
+    "decision_folder_count": 1,
+    "decision_target_count": 1,
+    "duplicate_exception_template_count": 1,
+    "duplicate_ready_candidate_count": 1,
+    "duplicate_resolution_json": "casp17/casp17_competitive_floor_target_identity_clearance_replacement_duplicate_resolution_current.json",
+    "duplicate_resolution_status": "operator_decision_required",
+    "first_open_next_action": "fill the new unique candidate intake template or explicitly approve duplicate candidate reuse with no-leak rationale, then rerun replacement workorders",
+    "first_open_replace_target_id": "H1321",
+    "generated_at_local": "2026-05-28T01:26:16+09:00",
+    "new_unique_template_count": 1,
+    "open_decision_count": 1,
+    "out_dir": "casp17/competitive_floor_target_identity_clearance_replacement_decisions",
+    "packet_type": "casp17_competitive_floor_target_identity_clearance_replacement_decision_bundle",
+    "ready_decision_count": 0,
+    "safe_unique_ready_candidate_count": 0
+  }
+}
