@@ -13,6 +13,23 @@ def _write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
+def _goal_addendum_text() -> str:
+    return "\n".join(
+        [
+            "# CASP17 Win-Tier Goal Addendum",
+            "- CASP17 scaffold score: `65 -> 90`",
+            "- CASP17 competitive proof score: `15-25 -> 85-90`",
+            "- category leaderboard objective: `top-5/top-3/top-1/top-2`",
+            "- priority category: immune and protein complexes",
+            "- priority category: organic ligand-protein complexes",
+            "- priority category: accuracy estimation and model selection",
+            "- first fill action: historical non-CASP17 target identity clearance",
+            "- metric surface: GDT_TS, DockQ, LDDT-PLI, BiSyRMSD",
+            "- model1 and best-of-5 must both be scored",
+        ]
+    )
+
+
 def test_build_casp17_win_tier_goal_scorecard_tracks_operator_goal_bands(tmp_path: Path) -> None:
     goal = tmp_path / "CASP17_WIN_TIER_GOAL.md"
     closure = tmp_path / "closure.json"
@@ -21,17 +38,7 @@ def test_build_casp17_win_tier_goal_scorecard_tracks_operator_goal_bands(tmp_pat
     historical = tmp_path / "historical.json"
     calibration = tmp_path / "calibration.json"
 
-    goal.write_text(
-        "\n".join(
-            [
-                "# CASP17 Win-Tier Goal Addendum",
-                "- CASP17 scaffold score: `65 -> 90`",
-                "- CASP17 competitive proof score: `15-25 -> 85-90`",
-                "- category leaderboard objective: `top-5/top-3/top-1-2`",
-            ]
-        ),
-        encoding="utf-8",
-    )
+    goal.write_text(_goal_addendum_text(), encoding="utf-8")
     _write_json(
         closure,
         {
@@ -148,17 +155,7 @@ def test_build_casp17_win_tier_goal_scorecard_uses_replacement_audit_next_action
     goal = tmp_path / "CASP17_WIN_TIER_GOAL.md"
     closure = tmp_path / "closure.json"
     replacement_audit = tmp_path / "replacement_audit.json"
-    goal.write_text(
-        "\n".join(
-            [
-                "# CASP17 Win-Tier Goal Addendum",
-                "- CASP17 scaffold score: `65 -> 90`",
-                "- CASP17 competitive proof score: `15-25 -> 85-90`",
-                "- category leaderboard objective: `top-5/top-3/top-1-2`",
-            ]
-        ),
-        encoding="utf-8",
-    )
+    goal.write_text(_goal_addendum_text(), encoding="utf-8")
     _write_json(
         closure,
         {

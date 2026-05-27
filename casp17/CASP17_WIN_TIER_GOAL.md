@@ -12,6 +12,30 @@ historical CASP15/CASP16 official-like replay, with no current-target leakage.
 These thresholds are planning targets and must be checked against official CASP
 assessment pages before public claims.
 
+## Operator Objective Patch 2026-05-28
+
+This section records the active goal extension supplied by the operator. The
+goal is not to declare CASP17 performance before assessment exists; the goal is
+to raise the lane from a review-quality scaffold into a no-leak, official-like,
+category-aware benchmark system that can prove win-tier proximity.
+
+The working target is:
+
+- scaffold readiness: `65 -> 90`
+- competitive proof: `15-25 -> 85-90`
+- leaderboard interpretation: category `top-5` means competitive, `top-3`
+  means winner-proximity, and `top-1/top-2` means actual win-tier
+
+The goal must track these distinctions explicitly:
+
+- scaffold `85-90` means the evidence machinery is closed, not that the model
+  performance is already `90`
+- performance `90` requires no-leak historical replay, official-like metrics,
+  model1 and best-of-5 scoring, top-5 band evidence, and at least one priority
+  category near top-3
+- active CASP17 targets may be used only for local readiness and visual/object
+  organization, never for native lookup or leakage-prone performance claims
+
 ## CASP17 Competitive Scope
 
 CASP17 must be treated as more than monomer folding. The priority categories for
@@ -40,6 +64,11 @@ CASP17 calendar anchors:
 - modeling season end: 2026-08-31
 - assessment window: 2026-08 through 2026-10
 - result and invitation window: 2026-11 or later
+
+Current-target examples that make the scope concrete include immune/protein
+complexes such as astrovirus-antibody entries, Factor XIa antibody complexes,
+HCMV gHgLgO-Fab, gp130 antibody complex, and hemagglutinin-antibody targets,
+plus RNA/ligand and hybrid targets in the `R`, `M`, and `L` target families.
 
 ## Score Objectives
 
@@ -195,6 +224,24 @@ Targets:
 - rerank near-native candidates upward from large AF/MassiveFold-style pools
 - flag wrong stoichiometry, bad interface, ligand mispose, and hallucinated
   contacts as low confidence
+
+## Source Anchors To Recheck
+
+These links are source anchors for the goal contract and must be rechecked
+before any public claim or leaderboard comparison:
+
+- CASP17 scope, categories, registration, and target-suggestion schedule:
+  `https://predictioncenter.org/casp17/`
+- CASP17 target list and naming convention:
+  `https://predictioncenter.org/casp17/targetlist.cgi`
+- CASP15 GDT_TS z-score table:
+  `https://predictioncenter.org/casp15/zscores_final.cgi`
+- CASP16 GDT_TS z-score table:
+  `https://predictioncenter.org/casp16/zscores_final.cgi`
+- CASP16 multimer z-score table:
+  `https://predictioncenter.org/casp16/zscores_multimer.cgi`
+- CASP16 ligand pose/affinity assessment paper:
+  `https://pmc.ncbi.nlm.nih.gov/articles/PMC12750038/`
 
 ## Claim Boundary
 

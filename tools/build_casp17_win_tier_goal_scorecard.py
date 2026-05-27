@@ -45,6 +45,23 @@ PRIORITY_CATEGORIES = [
     "difficult_monomer_domain",
 ]
 
+GOAL_DOCUMENTATION_REQUIRED_TERMS = [
+    "CASP17 scaffold score",
+    "competitive proof score",
+    "top-5",
+    "top-3",
+    "top-1/top-2",
+    "immune",
+    "organic ligand-protein",
+    "accuracy estimation",
+    "historical non-CASP17",
+    "GDT_TS",
+    "DockQ",
+    "LDDT-PLI",
+    "BiSyRMSD",
+    "best-of-5",
+]
+
 HISTORICAL_BANDS = {
     "casp15_regular_domain": {
         "winner_group": "Yang-Server",
@@ -200,12 +217,8 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     replacement_audit = _summary(_read_json(args.replacement_workorder_audit_json))
 
     goal_text = goal_path.read_text(encoding="utf-8", errors="replace") if goal_path.exists() else ""
-    goal_documented = (
-        goal_path.exists()
-        and "CASP17 scaffold score" in goal_text
-        and "competitive proof score" in goal_text
-        and "top-5" in goal_text
-    )
+    missing_goal_terms = [term for term in GOAL_DOCUMENTATION_REQUIRED_TERMS if term not in goal_text]
+    goal_documented = goal_path.exists() and not missing_goal_terms
 
     closure_pass = _text(closure.get("closure_status")) == "pass"
     identity_blocked = _text(closure.get("first_operator_input_action_id")) == "historical_benchmark_inputs"
@@ -283,7 +296,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             category="scaffold_and_proof",
             status=_status(goal_documented),
             target="scaffold 65 -> 90; competitive proof 15-25 -> 85-90",
-            current="documented" if goal_documented else "missing or incomplete",
+            current="documented" if goal_documented else "missing_terms=" + ",".join(missing_goal_terms),
             evidence_source=_artifact(args.goal_addendum_md),
             blocker="" if goal_documented else "goal_addendum_missing_or_incomplete",
             next_action="Keep this addendum linked from the workbench and scorecard before claiming win-tier progress.",
@@ -420,6 +433,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "competitive_proof_score_current_band": "15-25",
         "competitive_proof_score_target_band": "85-90",
         "priority_categories": PRIORITY_CATEGORIES,
+        "goal_documentation_required_terms": GOAL_DOCUMENTATION_REQUIRED_TERMS,
         "historical_bands": HISTORICAL_BANDS,
         "required_metric_surface": REQUIRED_METRIC_SURFACE,
         "replacement_workorder_audit_json": _artifact(args.replacement_workorder_audit_json),

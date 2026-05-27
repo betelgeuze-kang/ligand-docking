@@ -16,6 +16,7 @@ DEFAULT_TARGET_OBJECT_FOLDER_AUDIT_JSON = "casp17/casp17_target_object_folder_au
 DEFAULT_TARGET_OBJECT_VIEWER_SMOKE_JSON = "casp17/casp17_target_object_viewer_smoke_current.json"
 DEFAULT_TARGET_OBJECT_MODEL_REVIEW_JSON = "casp17/casp17_target_object_model_review_current.json"
 DEFAULT_PROTEIN_OBJECT_LIBRARY_JSON = "casp17/casp17_protein_object_library_current.json"
+DEFAULT_RAW_RANKED_MODEL_QUARANTINE_JSON = "casp17/casp17_raw_ranked_model_quarantine_audit_current.json"
 DEFAULT_WIN_GAP_CLOSURE_JSON = "runs/casp17_win_gap_closure_packet_current.json"
 DEFAULT_WIN_TIER_GOAL_SCORECARD_JSON = "runs/casp17_win_tier_goal_scorecard_current.json"
 DEFAULT_INPUT_SCAFFOLD_JSON = "runs/casp17_win_tier_benchmark_input_scaffold_current.json"
@@ -230,6 +231,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     target_object_viewer_smoke_payload = _read_json(args.target_object_viewer_smoke_json)
     target_object_model_review_payload = _read_json(args.target_object_model_review_json)
     protein_object_library_payload = _read_json(args.protein_object_library_json)
+    raw_ranked_model_quarantine_payload = _read_json(args.raw_ranked_model_quarantine_json)
     closure_payload = _read_json(args.win_gap_closure_json)
     goal_scorecard_payload = _read_json(args.win_tier_goal_scorecard_json)
     scaffold_payload = _read_json(args.input_scaffold_json)
@@ -332,6 +334,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     target_object_viewer_smoke_summary = _summary(target_object_viewer_smoke_payload)
     target_object_model_review_summary = _summary(target_object_model_review_payload)
     protein_object_library_summary = _summary(protein_object_library_payload)
+    raw_ranked_model_quarantine_summary = _summary(raw_ranked_model_quarantine_payload)
     closure_summary = _summary(closure_payload)
     goal_scorecard_summary = _summary(goal_scorecard_payload)
     scaffold_summary = _summary(scaffold_payload)
@@ -585,6 +588,34 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + str(protein_object_library_summary.get("viewer_pointer_count", ""))
                 + ",first_blocked:"
                 + (_text(protein_object_library_summary.get("first_blocked_blockers")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "raw_ranked_model_quarantine",
+            "Quarantine audit for untracked raw-ranked internal model PDBs",
+            _text(raw_ranked_model_quarantine_summary.get("raw_ranked_model_quarantine_status")),
+            args.raw_ranked_model_quarantine_json,
+            ready_count=_int(raw_ranked_model_quarantine_summary.get("linked_object_library_count")),
+            blocked_count=max(
+                0,
+                _int(raw_ranked_model_quarantine_summary.get("raw_ranked_model_count"))
+                - _int(raw_ranked_model_quarantine_summary.get("linked_object_library_count")),
+            ),
+            total_count=_int(raw_ranked_model_quarantine_summary.get("raw_ranked_model_count")),
+            next_action=(
+                "Keep raw-ranked PDBs quarantined and use reviewed protein/object folders for commit-safe inspection."
+            ),
+            blockers=(
+                "targets:"
+                + str(raw_ranked_model_quarantine_summary.get("target_count", ""))
+                + ",top5:"
+                + str(raw_ranked_model_quarantine_summary.get("complete_top5_target_count", ""))
+                + ",quarantined:"
+                + str(raw_ranked_model_quarantine_summary.get("quarantined_count", ""))
+                + ",author_present:"
+                + str(raw_ranked_model_quarantine_summary.get("author_record_present_count", ""))
+                + ",atoms:"
+                + str(raw_ranked_model_quarantine_summary.get("total_atom_record_count", ""))
             ),
         ),
         _artifact_row(
@@ -2197,6 +2228,28 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             protein_object_library_summary.get("viewer_pointer_count")
         ),
         "protein_object_library_dir": _text(protein_object_library_summary.get("library_dir")),
+        "raw_ranked_model_quarantine_status": _text(
+            raw_ranked_model_quarantine_summary.get("raw_ranked_model_quarantine_status")
+        ),
+        "raw_ranked_model_quarantine_target_count": _int(raw_ranked_model_quarantine_summary.get("target_count")),
+        "raw_ranked_model_quarantine_model_count": _int(
+            raw_ranked_model_quarantine_summary.get("raw_ranked_model_count")
+        ),
+        "raw_ranked_model_quarantine_quarantined_count": _int(
+            raw_ranked_model_quarantine_summary.get("quarantined_count")
+        ),
+        "raw_ranked_model_quarantine_linked_count": _int(
+            raw_ranked_model_quarantine_summary.get("linked_object_library_count")
+        ),
+        "raw_ranked_model_quarantine_author_present_count": _int(
+            raw_ranked_model_quarantine_summary.get("author_record_present_count")
+        ),
+        "raw_ranked_model_quarantine_top5_count": _int(
+            raw_ranked_model_quarantine_summary.get("complete_top5_target_count")
+        ),
+        "raw_ranked_model_quarantine_atom_count": _int(
+            raw_ranked_model_quarantine_summary.get("total_atom_record_count")
+        ),
         "benchmark_rows_ready_count": benchmark_rows_ready,
         "benchmark_rows_total": benchmark_rows_total,
         "win_tier_goal_scorecard_status": _text(goal_scorecard_summary.get("scorecard_status")),
@@ -3447,6 +3500,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- target object viewer smoke: `{summary['target_object_viewer_smoke_status'] or '-'}` rows `{summary['target_object_viewer_smoke_pass_count']}/{summary['target_object_viewer_smoke_total']}`",
         f"- target object model review: `{summary['target_object_model_review_status'] or '-'}` pass/blocked/total `{summary['target_object_model_review_pass_count']}/{summary['target_object_model_review_blocked_count']}/{summary['target_object_model_review_total']}` review md/viewers `{summary['target_object_model_review_md_count']}/{summary['target_object_model_review_viewer_local_pass_count']}` protein/CA/residue `{summary['target_object_model_review_protein_atom_count']}/{summary['target_object_model_review_ca_atom_count']}/{summary['target_object_model_review_residue_count']}` radius `{summary['target_object_model_review_min_radius']}/{summary['target_object_model_review_max_radius']}` gallery `{summary['target_object_model_review_gallery_status'] or '-'}` `{summary['target_object_model_review_gallery_html'] or '-'}`",
         f"- protein object library: `{summary['protein_object_library_status'] or '-'}` protein/object folders `{summary['protein_object_library_protein_folder_count']}/{summary['protein_object_library_object_folder_count']}` pass/blocked `{summary['protein_object_library_pass_count']}/{summary['protein_object_library_blocked_count']}` model/projection/viewer pointers `{summary['protein_object_library_model_pointer_count']}/{summary['protein_object_library_projection_pointer_count']}/{summary['protein_object_library_viewer_pointer_count']}` `{summary['protein_object_library_dir'] or '-'}`",
+        f"- raw-ranked model quarantine: `{summary['raw_ranked_model_quarantine_status'] or '-'}` targets/models/top5 `{summary['raw_ranked_model_quarantine_target_count']}/{summary['raw_ranked_model_quarantine_model_count']}/{summary['raw_ranked_model_quarantine_top5_count']}` quarantined/linked/author-present `{summary['raw_ranked_model_quarantine_quarantined_count']}/{summary['raw_ranked_model_quarantine_linked_count']}/{summary['raw_ranked_model_quarantine_author_present_count']}` atoms `{summary['raw_ranked_model_quarantine_atom_count']}`",
         f"- benchmark rows ready/total: `{summary['benchmark_rows_ready_count']}/{summary['benchmark_rows_total']}`",
         f"- win-tier goal scorecard: `{summary['win_tier_goal_scorecard_status'] or '-'}` pass/partial/blocked `{summary['win_tier_goal_scorecard_pass_count']}/{summary['win_tier_goal_scorecard_partial_count']}/{summary['win_tier_goal_scorecard_blocked_count']}` first blocked `{summary['win_tier_goal_scorecard_first_blocked_gate'] or '-'}`",
         f"- win gap closure: `{summary['win_gap_closure_status'] or '-'}` closed/open `{summary['win_gap_closed_count']}/{summary['win_gap_not_closed_count']}` missing win rows `{summary['benchmark_missing_win_total_rows']}`",
@@ -3546,6 +3600,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--target-object-viewer-smoke-json", default=DEFAULT_TARGET_OBJECT_VIEWER_SMOKE_JSON)
     parser.add_argument("--target-object-model-review-json", default=DEFAULT_TARGET_OBJECT_MODEL_REVIEW_JSON)
     parser.add_argument("--protein-object-library-json", default=DEFAULT_PROTEIN_OBJECT_LIBRARY_JSON)
+    parser.add_argument("--raw-ranked-model-quarantine-json", default=DEFAULT_RAW_RANKED_MODEL_QUARANTINE_JSON)
     parser.add_argument("--win-gap-closure-json", default=DEFAULT_WIN_GAP_CLOSURE_JSON)
     parser.add_argument("--win-tier-goal-scorecard-json", default=DEFAULT_WIN_TIER_GOAL_SCORECARD_JSON)
     parser.add_argument("--input-scaffold-json", default=DEFAULT_INPUT_SCAFFOLD_JSON)
