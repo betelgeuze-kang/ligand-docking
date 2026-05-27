@@ -35,6 +35,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     competitive_identity_sync_json = tmp_path / "competitive_identity_sync.json"
     competitive_identity_candidate_json = tmp_path / "competitive_identity_candidate.json"
     competitive_identity_source_repair_json = tmp_path / "competitive_identity_source_repair.json"
+    competitive_floor_unblock_map_json = tmp_path / "competitive_floor_unblock_map.json"
     competitive_target_identity_discovery_json = tmp_path / "competitive_target_identity_discovery.json"
     competitive_target_identity_clearance_json = tmp_path / "competitive_target_identity_clearance.json"
     competitive_target_identity_clearance_workorder_json = tmp_path / "competitive_target_identity_clearance_workorder.json"
@@ -530,6 +531,32 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "provenance_action_count": 40,
                 "ablation_action_count": 40,
                 "calibration_action_count": 40,
+                "first_open_phase": "target_identity",
+                "first_open_next_action": "replace REQUIRED target/benchmark placeholders",
+            }
+        },
+    )
+    _write_json(
+        competitive_floor_unblock_map_json,
+        {
+            "summary": {
+                "unblock_map_status": "awaiting_candidate_source_repair",
+                "row_count": 15,
+                "ready_for_intake_count": 0,
+                "awaiting_candidate_source_count": 15,
+                "source_candidate_count": 40,
+                "source_ready_candidate_count": 0,
+                "source_blocked_candidate_count": 40,
+                "phase_open_counts": {
+                    "target_identity": 15,
+                    "core_files": 15,
+                    "no_leak_provenance": 15,
+                    "ablation_files": 15,
+                    "calibration_values": 15,
+                },
+                "blocking_field_count": 285,
+                "blocking_phase_count": 75,
+                "first_open_dropzone_id": "priority_001_REQUIRED_MONOMER_001",
                 "first_open_phase": "target_identity",
                 "first_open_next_action": "replace REQUIRED target/benchmark placeholders",
             }
@@ -1180,6 +1207,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(competitive_identity_candidate_json),
             "--competitive-identity-source-repair-json",
             str(competitive_identity_source_repair_json),
+            "--competitive-floor-unblock-map-json",
+            str(competitive_floor_unblock_map_json),
             "--competitive-target-identity-discovery-json",
             str(competitive_target_identity_discovery_json),
             "--competitive-target-identity-clearance-queue-json",
@@ -1384,6 +1413,21 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["competitive_identity_candidate_source_blocked_count"] == 40
     assert payload["summary"]["competitive_identity_candidate_applied_count"] == 0
     assert payload["summary"]["competitive_identity_candidate_operator_preflight_status"] == "blocked"
+    assert payload["summary"]["competitive_floor_unblock_map_status"] == "awaiting_candidate_source_repair"
+    assert payload["summary"]["competitive_floor_unblock_map_row_count"] == 15
+    assert payload["summary"]["competitive_floor_unblock_map_ready_count"] == 0
+    assert payload["summary"]["competitive_floor_unblock_map_awaiting_count"] == 15
+    assert payload["summary"]["competitive_floor_unblock_map_source_count"] == 40
+    assert payload["summary"]["competitive_floor_unblock_map_source_ready_count"] == 0
+    assert payload["summary"]["competitive_floor_unblock_map_source_blocked_count"] == 40
+    assert payload["summary"]["competitive_floor_unblock_map_blocking_field_count"] == 285
+    assert payload["summary"]["competitive_floor_unblock_map_blocking_phase_count"] == 75
+    assert payload["summary"]["competitive_floor_unblock_map_target_identity_open_count"] == 15
+    assert payload["summary"]["competitive_floor_unblock_map_core_files_open_count"] == 15
+    assert payload["summary"]["competitive_floor_unblock_map_no_leak_provenance_open_count"] == 15
+    assert payload["summary"]["competitive_floor_unblock_map_ablation_files_open_count"] == 15
+    assert payload["summary"]["competitive_floor_unblock_map_calibration_values_open_count"] == 15
+    assert payload["summary"]["competitive_floor_unblock_map_first_open_phase"] == "target_identity"
     assert payload["summary"]["competitive_identity_source_repair_status"] == "awaiting_target_identity"
     assert payload["summary"]["competitive_identity_source_repair_action_count"] == 200
     assert payload["summary"]["competitive_identity_source_repair_blocked_source_count"] == 40
@@ -1872,6 +1916,11 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["competitive_floor_identity_intake_bundle"]["status"] == "awaiting_identity"
     assert by_id["competitive_floor_identity_intake_sync"]["status"] == "awaiting_intake"
     assert by_id["competitive_floor_identity_candidate_packet"]["status"] == "awaiting_candidate_sources"
+    assert by_id["competitive_floor_unblock_map"]["status"] == "awaiting_candidate_source_repair"
+    assert by_id["competitive_floor_unblock_map"]["ready_count"] == 0
+    assert by_id["competitive_floor_unblock_map"]["blocked_count"] == 15
+    assert "phase_open:15/15/15/15/15" in by_id["competitive_floor_unblock_map"]["blockers"]
+    assert "blocking_fields:285" in by_id["competitive_floor_unblock_map"]["blockers"]
     assert by_id["competitive_floor_identity_source_repair_plan"]["status"] == "awaiting_target_identity"
     assert by_id["competitive_floor_target_identity_discovery"]["status"] == "review_required"
     assert by_id["competitive_floor_target_identity_clearance_queue"]["status"] == "awaiting_target_identity_clearance"
@@ -2029,6 +2078,8 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_competitive_identity_candidate.json"),
             "--competitive-identity-source-repair-json",
             str(tmp_path / "missing_competitive_identity_source_repair.json"),
+            "--competitive-floor-unblock-map-json",
+            str(tmp_path / "missing_competitive_floor_unblock_map.json"),
             "--competitive-target-identity-discovery-json",
             str(tmp_path / "missing_competitive_target_identity_discovery.json"),
             "--competitive-target-identity-clearance-queue-json",

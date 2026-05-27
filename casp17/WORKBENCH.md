@@ -5,7 +5,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 - goal objective addendum: `casp17/CASP17_WIN_TIER_GOAL.md`
 - win-tier target: scaffold `65 -> 90`, competitive proof `15-25 -> 85-90`, leaderboard `top-5/top-3/top-1-2` by category.
 
-- generated: `2026-05-28T01:54:41+09:00`
+- generated: `2026-05-28T02:06:12+09:00`
 - workbench_status: `ready_for_operator_fill`
 - target model folders: `19/19`
 - target object folders: `58`
@@ -35,6 +35,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 - competitive identity intake bundle: `awaiting_identity` rows `0/15/0/15` missing fields `60` files unlocked `0`
 - competitive identity intake sync: `awaiting_intake` rows `0/0/15/0/15` missing fields `60` mismatches `0` applied `0`
 - competitive identity candidates: `awaiting_candidate_sources` rows `0/15/15` source ready/blocked/total `0/40/40` applied `0` operator preflight `blocked`
+- competitive floor unblock map: `awaiting_candidate_source_repair` rows ready/awaiting/total `0/15/15` source ready/blocked/total `0/40/40` open target/core/provenance/ablation/calibration `15/15/15/15/15` blocking fields/phases `285/75` first `priority_001_REQUIRED_MONOMER_001` `target_identity`
 - competitive identity source repair: `awaiting_target_identity` actions `200` blocked sources `40` phase identity/core/provenance/ablation/calibration `40/40/40/40/40` first phase `target_identity`
 - competitive target identity discovery: `review_required` discovered `19` operator/current/closed/unknown/synthetic `3/16/3/0/0` ready intake `0`
 - competitive target identity clearance: `awaiting_target_identity_clearance` review `3` prediction/TS/native/provenance `3/3/0/0` ready `0` awaiting prediction/native/no-leak `0/3/0`
@@ -107,6 +108,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 | `competitive_floor_identity_intake_bundle` | `awaiting_identity` | 0 | 15 | 15 | `casp17/casp17_competitive_floor_identity_intake_bundle_current.json` | fill proposed_benchmark_id, proposed_target_id, evidence_ref, operator_clearance | `missing_fields:60` |
 | `competitive_floor_identity_intake_sync` | `awaiting_intake` | 0 | 15 | 15 | `casp17/casp17_competitive_floor_identity_intake_sync_current.json` | fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance in the intake bundle | `missing_fields:60` |
 | `competitive_floor_identity_candidate_packet` | `awaiting_candidate_sources` | 0 | 15 | 15 | `casp17/casp17_competitive_floor_identity_candidate_packet_current.json` | fix blocked local candidate rows until a cleared non-current historical target is ready | `source_ready:0,source_blocked:40,operator_preflight:blocked` |
+| `competitive_floor_unblock_map` | `awaiting_candidate_source_repair` | 0 | 15 | 15 | `casp17/casp17_competitive_floor_unblock_map_current.json` | replace REQUIRED target/benchmark placeholders with a cleared non-current historical target identity | `phase_open:15/15/15/15/15,blocking_fields:285,source_ready:0,source_blocked:40,source_total:40` |
 | `competitive_floor_identity_source_repair_plan` | `awaiting_target_identity` | 0 | 200 | 40 | `casp17/casp17_competitive_floor_identity_source_repair_plan_current.json` | replace REQUIRED target/benchmark placeholders with a cleared non-current historical target identity | `identity:40,core:40,provenance:40,ablation:40,calibration:40` |
 | `competitive_floor_target_identity_discovery` | `review_required` | 0 | 19 | 19 | `casp17/casp17_competitive_floor_target_identity_discovery_packet_current.json` | operator must confirm historical eligibility, native availability, and no-leak clearance | `operator_review:3,current:16,closed:3,unknown:0,synthetic:0` |
 | `competitive_floor_target_identity_clearance_queue` | `awaiting_target_identity_clearance` | 0 | 3 | 3 | `casp17/casp17_competitive_floor_target_identity_clearance_queue_current.json` | provide a cleared native PDB and complete no-leak/operator provenance review | `prediction:3,ts:3,native:0,provenance:0,await_native:3` |

@@ -36,6 +36,7 @@ DEFAULT_COMPETITIVE_IDENTITY_INTAKE_BUNDLE_JSON = "casp17/casp17_competitive_flo
 DEFAULT_COMPETITIVE_IDENTITY_INTAKE_SYNC_JSON = "casp17/casp17_competitive_floor_identity_intake_sync_current.json"
 DEFAULT_COMPETITIVE_IDENTITY_CANDIDATE_JSON = "casp17/casp17_competitive_floor_identity_candidate_packet_current.json"
 DEFAULT_COMPETITIVE_IDENTITY_SOURCE_REPAIR_JSON = "casp17/casp17_competitive_floor_identity_source_repair_plan_current.json"
+DEFAULT_COMPETITIVE_FLOOR_UNBLOCK_MAP_JSON = "casp17/casp17_competitive_floor_unblock_map_current.json"
 DEFAULT_COMPETITIVE_TARGET_IDENTITY_DISCOVERY_JSON = (
     "casp17/casp17_competitive_floor_target_identity_discovery_packet_current.json"
 )
@@ -251,6 +252,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     competitive_identity_sync_payload = _read_json(args.competitive_identity_sync_json)
     competitive_identity_candidate_payload = _read_json(args.competitive_identity_candidate_json)
     competitive_identity_source_repair_payload = _read_json(args.competitive_identity_source_repair_json)
+    competitive_floor_unblock_map_payload = _read_json(args.competitive_floor_unblock_map_json)
     competitive_target_identity_discovery_payload = _read_json(args.competitive_target_identity_discovery_json)
     competitive_target_identity_clearance_payload = _read_json(args.competitive_target_identity_clearance_queue_json)
     competitive_target_identity_clearance_workorder_payload = _read_json(
@@ -354,6 +356,10 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     competitive_identity_sync_summary = _summary(competitive_identity_sync_payload)
     competitive_identity_candidate_summary = _summary(competitive_identity_candidate_payload)
     competitive_identity_source_repair_summary = _summary(competitive_identity_source_repair_payload)
+    competitive_floor_unblock_map_summary = _summary(competitive_floor_unblock_map_payload)
+    competitive_floor_unblock_map_phase_open_counts = competitive_floor_unblock_map_summary.get("phase_open_counts")
+    if not isinstance(competitive_floor_unblock_map_phase_open_counts, dict):
+        competitive_floor_unblock_map_phase_open_counts = {}
     competitive_target_identity_discovery_summary = _summary(competitive_target_identity_discovery_payload)
     competitive_target_identity_clearance_summary = _summary(competitive_target_identity_clearance_payload)
     competitive_target_identity_clearance_workorder_summary = _summary(
@@ -895,6 +901,36 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + str(competitive_identity_candidate_summary.get("source_blocked_candidate_count", ""))
                 + ",operator_preflight:"
                 + str(competitive_identity_candidate_summary.get("operator_preflight_status", ""))
+            ),
+        ),
+        _artifact_row(
+            "competitive_floor_unblock_map",
+            "Compact blocker map for the first 15 competitive-floor rows",
+            _text(competitive_floor_unblock_map_summary.get("unblock_map_status")),
+            args.competitive_floor_unblock_map_json,
+            ready_count=_int(competitive_floor_unblock_map_summary.get("ready_for_intake_count")),
+            blocked_count=_int(competitive_floor_unblock_map_summary.get("awaiting_candidate_source_count")),
+            total_count=_int(competitive_floor_unblock_map_summary.get("row_count")),
+            next_action=_text(competitive_floor_unblock_map_summary.get("first_open_next_action")),
+            blockers=(
+                "phase_open:"
+                + str(competitive_floor_unblock_map_phase_open_counts.get("target_identity", ""))
+                + "/"
+                + str(competitive_floor_unblock_map_phase_open_counts.get("core_files", ""))
+                + "/"
+                + str(competitive_floor_unblock_map_phase_open_counts.get("no_leak_provenance", ""))
+                + "/"
+                + str(competitive_floor_unblock_map_phase_open_counts.get("ablation_files", ""))
+                + "/"
+                + str(competitive_floor_unblock_map_phase_open_counts.get("calibration_values", ""))
+                + ",blocking_fields:"
+                + str(competitive_floor_unblock_map_summary.get("blocking_field_count", ""))
+                + ",source_ready:"
+                + str(competitive_floor_unblock_map_summary.get("source_ready_candidate_count", ""))
+                + ",source_blocked:"
+                + str(competitive_floor_unblock_map_summary.get("source_blocked_candidate_count", ""))
+                + ",source_total:"
+                + str(competitive_floor_unblock_map_summary.get("source_candidate_count", ""))
             ),
         ),
         _artifact_row(
@@ -2541,6 +2577,54 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "competitive_identity_candidate_operator_preflight_status": _text(
             competitive_identity_candidate_summary.get("operator_preflight_status")
         ),
+        "competitive_floor_unblock_map_status": _text(
+            competitive_floor_unblock_map_summary.get("unblock_map_status")
+        ),
+        "competitive_floor_unblock_map_row_count": _int(
+            competitive_floor_unblock_map_summary.get("row_count")
+        ),
+        "competitive_floor_unblock_map_ready_count": _int(
+            competitive_floor_unblock_map_summary.get("ready_for_intake_count")
+        ),
+        "competitive_floor_unblock_map_awaiting_count": _int(
+            competitive_floor_unblock_map_summary.get("awaiting_candidate_source_count")
+        ),
+        "competitive_floor_unblock_map_source_count": _int(
+            competitive_floor_unblock_map_summary.get("source_candidate_count")
+        ),
+        "competitive_floor_unblock_map_source_ready_count": _int(
+            competitive_floor_unblock_map_summary.get("source_ready_candidate_count")
+        ),
+        "competitive_floor_unblock_map_source_blocked_count": _int(
+            competitive_floor_unblock_map_summary.get("source_blocked_candidate_count")
+        ),
+        "competitive_floor_unblock_map_blocking_field_count": _int(
+            competitive_floor_unblock_map_summary.get("blocking_field_count")
+        ),
+        "competitive_floor_unblock_map_blocking_phase_count": _int(
+            competitive_floor_unblock_map_summary.get("blocking_phase_count")
+        ),
+        "competitive_floor_unblock_map_target_identity_open_count": _int(
+            competitive_floor_unblock_map_phase_open_counts.get("target_identity")
+        ),
+        "competitive_floor_unblock_map_core_files_open_count": _int(
+            competitive_floor_unblock_map_phase_open_counts.get("core_files")
+        ),
+        "competitive_floor_unblock_map_no_leak_provenance_open_count": _int(
+            competitive_floor_unblock_map_phase_open_counts.get("no_leak_provenance")
+        ),
+        "competitive_floor_unblock_map_ablation_files_open_count": _int(
+            competitive_floor_unblock_map_phase_open_counts.get("ablation_files")
+        ),
+        "competitive_floor_unblock_map_calibration_values_open_count": _int(
+            competitive_floor_unblock_map_phase_open_counts.get("calibration_values")
+        ),
+        "competitive_floor_unblock_map_first_open_dropzone_id": _text(
+            competitive_floor_unblock_map_summary.get("first_open_dropzone_id")
+        ),
+        "competitive_floor_unblock_map_first_open_phase": _text(
+            competitive_floor_unblock_map_summary.get("first_open_phase")
+        ),
         "competitive_identity_source_repair_status": _text(
             competitive_identity_source_repair_summary.get("source_repair_status")
         ),
@@ -3520,6 +3604,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- competitive identity intake bundle: `{summary['competitive_identity_intake_status'] or '-'}` rows `{summary['competitive_identity_intake_ready_count']}/{summary['competitive_identity_intake_awaiting_count']}/{summary['competitive_identity_intake_blocked_count']}/{summary['competitive_identity_intake_row_count']}` missing fields `{summary['competitive_identity_intake_missing_field_count']}` files unlocked `{summary['competitive_identity_intake_file_actions_unlocked_count']}`",
         f"- competitive identity intake sync: `{summary['competitive_identity_sync_status'] or '-'}` rows `{summary['competitive_identity_sync_synced_count']}/{summary['competitive_identity_sync_ready_to_sync_count']}/{summary['competitive_identity_sync_awaiting_count']}/{summary['competitive_identity_sync_blocked_count']}/{summary['competitive_identity_sync_row_count']}` missing fields `{summary['competitive_identity_sync_missing_field_count']}` mismatches `{summary['competitive_identity_sync_kit_mismatch_count']}` applied `{summary['competitive_identity_sync_applied_count']}`",
         f"- competitive identity candidates: `{summary['competitive_identity_candidate_status'] or '-'}` rows `{summary['competitive_identity_candidate_ready_count']}/{summary['competitive_identity_candidate_awaiting_count']}/{summary['competitive_identity_candidate_row_count']}` source ready/blocked/total `{summary['competitive_identity_candidate_source_ready_count']}/{summary['competitive_identity_candidate_source_blocked_count']}/{summary['competitive_identity_candidate_source_count']}` applied `{summary['competitive_identity_candidate_applied_count']}` operator preflight `{summary['competitive_identity_candidate_operator_preflight_status'] or '-'}`",
+        f"- competitive floor unblock map: `{summary['competitive_floor_unblock_map_status'] or '-'}` rows ready/awaiting/total `{summary['competitive_floor_unblock_map_ready_count']}/{summary['competitive_floor_unblock_map_awaiting_count']}/{summary['competitive_floor_unblock_map_row_count']}` source ready/blocked/total `{summary['competitive_floor_unblock_map_source_ready_count']}/{summary['competitive_floor_unblock_map_source_blocked_count']}/{summary['competitive_floor_unblock_map_source_count']}` open target/core/provenance/ablation/calibration `{summary['competitive_floor_unblock_map_target_identity_open_count']}/{summary['competitive_floor_unblock_map_core_files_open_count']}/{summary['competitive_floor_unblock_map_no_leak_provenance_open_count']}/{summary['competitive_floor_unblock_map_ablation_files_open_count']}/{summary['competitive_floor_unblock_map_calibration_values_open_count']}` blocking fields/phases `{summary['competitive_floor_unblock_map_blocking_field_count']}/{summary['competitive_floor_unblock_map_blocking_phase_count']}` first `{summary['competitive_floor_unblock_map_first_open_dropzone_id'] or '-'}` `{summary['competitive_floor_unblock_map_first_open_phase'] or '-'}`",
         f"- competitive identity source repair: `{summary['competitive_identity_source_repair_status'] or '-'}` actions `{summary['competitive_identity_source_repair_action_count']}` blocked sources `{summary['competitive_identity_source_repair_blocked_source_count']}` phase identity/core/provenance/ablation/calibration `{summary['competitive_identity_source_repair_target_identity_count']}/{summary['competitive_identity_source_repair_core_file_count']}/{summary['competitive_identity_source_repair_provenance_count']}/{summary['competitive_identity_source_repair_ablation_count']}/{summary['competitive_identity_source_repair_calibration_count']}` first phase `{summary['competitive_identity_source_repair_first_phase'] or '-'}`",
         f"- competitive target identity discovery: `{summary['competitive_target_identity_discovery_status'] or '-'}` discovered `{summary['competitive_target_identity_discovery_count']}` operator/current/closed/unknown/synthetic `{summary['competitive_target_identity_operator_review_count']}/{summary['competitive_target_identity_open_current_count']}/{summary['competitive_target_identity_closed_watchlist_count']}/{summary['competitive_target_identity_unknown_local_count']}/{summary['competitive_target_identity_synthetic_count']}` ready intake `{summary['competitive_target_identity_ready_for_intake_count']}`",
         f"- competitive target identity clearance: `{summary['competitive_target_identity_clearance_status'] or '-'}` review `{summary['competitive_target_identity_clearance_review_count']}` prediction/TS/native/provenance `{summary['competitive_target_identity_clearance_prediction_count']}/{summary['competitive_target_identity_clearance_ts_prediction_count']}/{summary['competitive_target_identity_clearance_native_count']}/{summary['competitive_target_identity_clearance_provenance_count']}` ready `{summary['competitive_target_identity_clearance_ready_count']}` awaiting prediction/native/no-leak `{summary['competitive_target_identity_clearance_awaiting_prediction_count']}/{summary['competitive_target_identity_clearance_awaiting_native_count']}/{summary['competitive_target_identity_clearance_awaiting_no_leak_count']}`",
@@ -3625,6 +3710,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--competitive-identity-sync-json", default=DEFAULT_COMPETITIVE_IDENTITY_INTAKE_SYNC_JSON)
     parser.add_argument("--competitive-identity-candidate-json", default=DEFAULT_COMPETITIVE_IDENTITY_CANDIDATE_JSON)
     parser.add_argument("--competitive-identity-source-repair-json", default=DEFAULT_COMPETITIVE_IDENTITY_SOURCE_REPAIR_JSON)
+    parser.add_argument("--competitive-floor-unblock-map-json", default=DEFAULT_COMPETITIVE_FLOOR_UNBLOCK_MAP_JSON)
     parser.add_argument(
         "--competitive-target-identity-discovery-json",
         default=DEFAULT_COMPETITIVE_TARGET_IDENTITY_DISCOVERY_JSON,
