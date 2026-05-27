@@ -21,6 +21,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     scaffold_json = tmp_path / "scaffold.json"
     inventory_json = tmp_path / "inventory.json"
     dashboard_json = tmp_path / "dashboard.json"
+    historical_identity_seed_inventory_json = tmp_path / "historical_identity_seed_inventory.json"
     sidechain_native_benchmark_json = tmp_path / "sidechain_native_benchmark.json"
     competitive_batch_json = tmp_path / "competitive_batch.json"
     competitive_row_fill_status_json = tmp_path / "competitive_row_fill_status.json"
@@ -304,6 +305,25 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        historical_identity_seed_inventory_json,
+        {
+            "summary": {
+                "seed_inventory_status": "batch_seed_shape_ready_operator_clearance_required",
+                "seed_candidate_count": 17,
+                "monomer_seed_candidate_count": 10,
+                "complex_seed_candidate_count": 7,
+                "eligible_monomer_seed_count": 10,
+                "eligible_complex_seed_count": 7,
+                "batch_seed_slot_count": 15,
+                "candidate_manifest_row_count": 15,
+                "operator_clearance_required_count": 15,
+                "candidate_manifest_csv": "runs/casp17_historical_benchmark_manifest_seed_current.csv",
+                "first_seed_target_id": "HIST_BBA5",
+                "first_next_action": "operator must verify no-leak provenance, chronology, calibration values, and ablation files before promotion",
+            }
+        },
+    )
+    _write_json(
         sidechain_native_benchmark_json,
         {
             "summary": {
@@ -508,9 +528,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "row_count": 15,
                 "ready_for_intake_count": 0,
                 "awaiting_candidate_source_count": 15,
-                "source_candidate_count": 40,
+                "source_candidate_count": 55,
                 "source_ready_candidate_count": 0,
-                "source_blocked_candidate_count": 40,
+                "source_blocked_candidate_count": 55,
                 "applied_intake_count": 0,
                 "operator_preflight_status": "blocked",
                 "first_open_next_action": "populate the historical/operator manifest",
@@ -544,9 +564,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "row_count": 15,
                 "ready_for_intake_count": 0,
                 "awaiting_candidate_source_count": 15,
-                "source_candidate_count": 40,
+                "source_candidate_count": 55,
                 "source_ready_candidate_count": 0,
-                "source_blocked_candidate_count": 40,
+                "source_blocked_candidate_count": 55,
                 "phase_open_counts": {
                     "target_identity": 15,
                     "core_files": 15,
@@ -1179,6 +1199,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(inventory_json),
             "--operator-dashboard-json",
             str(dashboard_json),
+            "--historical-identity-seed-inventory-json",
+            str(historical_identity_seed_inventory_json),
             "--sidechain-native-benchmark-json",
             str(sidechain_native_benchmark_json),
             "--competitive-batch-json",
@@ -1408,18 +1430,18 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["competitive_identity_candidate_row_count"] == 15
     assert payload["summary"]["competitive_identity_candidate_ready_count"] == 0
     assert payload["summary"]["competitive_identity_candidate_awaiting_count"] == 15
-    assert payload["summary"]["competitive_identity_candidate_source_count"] == 40
+    assert payload["summary"]["competitive_identity_candidate_source_count"] == 55
     assert payload["summary"]["competitive_identity_candidate_source_ready_count"] == 0
-    assert payload["summary"]["competitive_identity_candidate_source_blocked_count"] == 40
+    assert payload["summary"]["competitive_identity_candidate_source_blocked_count"] == 55
     assert payload["summary"]["competitive_identity_candidate_applied_count"] == 0
     assert payload["summary"]["competitive_identity_candidate_operator_preflight_status"] == "blocked"
     assert payload["summary"]["competitive_floor_unblock_map_status"] == "awaiting_candidate_source_repair"
     assert payload["summary"]["competitive_floor_unblock_map_row_count"] == 15
     assert payload["summary"]["competitive_floor_unblock_map_ready_count"] == 0
     assert payload["summary"]["competitive_floor_unblock_map_awaiting_count"] == 15
-    assert payload["summary"]["competitive_floor_unblock_map_source_count"] == 40
+    assert payload["summary"]["competitive_floor_unblock_map_source_count"] == 55
     assert payload["summary"]["competitive_floor_unblock_map_source_ready_count"] == 0
-    assert payload["summary"]["competitive_floor_unblock_map_source_blocked_count"] == 40
+    assert payload["summary"]["competitive_floor_unblock_map_source_blocked_count"] == 55
     assert payload["summary"]["competitive_floor_unblock_map_blocking_field_count"] == 285
     assert payload["summary"]["competitive_floor_unblock_map_blocking_phase_count"] == 75
     assert payload["summary"]["competitive_floor_unblock_map_target_identity_open_count"] == 15
@@ -1862,6 +1884,18 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["operator_dashboard_needs_ablation_layer_count"] == 40
     assert payload["summary"]["operator_dashboard_needs_calibration_count"] == 40
     assert payload["summary"]["operator_dashboard_needs_provenance_count"] == 40
+    assert payload["summary"]["historical_identity_seed_inventory_status"] == (
+        "batch_seed_shape_ready_operator_clearance_required"
+    )
+    assert payload["summary"]["historical_identity_seed_candidate_count"] == 17
+    assert payload["summary"]["historical_identity_seed_monomer_count"] == 10
+    assert payload["summary"]["historical_identity_seed_complex_count"] == 7
+    assert payload["summary"]["historical_identity_seed_eligible_monomer_count"] == 10
+    assert payload["summary"]["historical_identity_seed_eligible_complex_count"] == 7
+    assert payload["summary"]["historical_identity_seed_batch_slot_count"] == 15
+    assert payload["summary"]["historical_identity_seed_manifest_row_count"] == 15
+    assert payload["summary"]["historical_identity_seed_operator_clearance_required_count"] == 15
+    assert payload["summary"]["historical_identity_seed_first_target_id"] == "HIST_BBA5"
     assert payload["summary"]["sidechain_native_benchmark_status"] == "blocked"
     assert payload["summary"]["sidechain_native_benchmark_count"] == 40
     assert payload["summary"]["sidechain_native_pass_count"] == 0
@@ -2032,6 +2066,13 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["competitive_floor_operator_preflight"]["status"] == "blocked"
     assert by_id["benchmark_input_inventory"]["status"] == "blocked"
     assert "cleared historical" in by_id["benchmark_input_inventory"]["next_action"]
+    assert by_id["historical_identity_seed_inventory"]["status"] == (
+        "batch_seed_shape_ready_operator_clearance_required"
+    )
+    assert by_id["historical_identity_seed_inventory"]["ready_count"] == 15
+    assert by_id["historical_identity_seed_inventory"]["blocked_count"] == 15
+    assert "monomer_complex:10/7" in by_id["historical_identity_seed_inventory"]["blockers"]
+    assert "manifest:15" in by_id["historical_identity_seed_inventory"]["blockers"]
     assert by_id["sidechain_native_benchmark"]["status"] == "blocked"
     assert by_id["sidechain_native_benchmark"]["blocked_count"] == 40
     assert "prediction_pdb_missing" in by_id["sidechain_native_benchmark"]["blockers"]
@@ -2066,6 +2107,8 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_inventory.json"),
             "--operator-dashboard-json",
             str(tmp_path / "missing_dashboard.json"),
+            "--historical-identity-seed-inventory-json",
+            str(tmp_path / "missing_historical_identity_seed_inventory.json"),
             "--sidechain-native-benchmark-json",
             str(tmp_path / "missing_sidechain_native_benchmark.json"),
             "--competitive-batch-json",

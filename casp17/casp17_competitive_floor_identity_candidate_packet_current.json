@@ -1,6 +1,186 @@
 {
   "candidate_rows": [
     {
+      "evidence_ref": "runs/casp17_historical_benchmark_manifest_seed_current.csv#hist_seed_bba5",
+      "operator_clearance": "",
+      "proposed_benchmark_id": "hist_seed_bba5",
+      "proposed_target_id": "HIST_BBA5",
+      "scope": "monomer",
+      "source_artifact": "runs/casp17_historical_benchmark_manifest_seed_current.csv",
+      "source_blockers": "leakage_clearance_required,operator_clearance_required,prediction_generated_before_native_release_required,public_template_or_native_used_for_prediction_must_be_false,other_team_model_used_must_be_false,post_release_information_used_must_be_false",
+      "source_name": "seed_manifest",
+      "source_rank": 1,
+      "source_row_status": "blocked_candidate_source"
+    },
+    {
+      "evidence_ref": "runs/casp17_historical_benchmark_manifest_seed_current.csv#hist_seed_chignolin",
+      "operator_clearance": "",
+      "proposed_benchmark_id": "hist_seed_chignolin",
+      "proposed_target_id": "HIST_CHIGNOLIN",
+      "scope": "monomer",
+      "source_artifact": "runs/casp17_historical_benchmark_manifest_seed_current.csv",
+      "source_blockers": "leakage_clearance_required,operator_clearance_required,prediction_generated_before_native_release_required,public_template_or_native_used_for_prediction_must_be_false,other_team_model_used_must_be_false,post_release_information_used_must_be_false",
+      "source_name": "seed_manifest",
+      "source_rank": 2,
+      "source_row_status": "blocked_candidate_source"
+    },
+    {
+      "evidence_ref": "runs/casp17_historical_benchmark_manifest_seed_current.csv#hist_seed_crambin",
+      "operator_clearance": "",
+      "proposed_benchmark_id": "hist_seed_crambin",
+      "proposed_target_id": "HIST_CRAMBIN",
+      "scope": "monomer",
+      "source_artifact": "runs/casp17_historical_benchmark_manifest_seed_current.csv",
+      "source_blockers": "leakage_clearance_required,operator_clearance_required,prediction_generated_before_native_release_required,public_template_or_native_used_for_prediction_must_be_false,other_team_model_used_must_be_false,post_release_information_used_must_be_false",
+      "source_name": "seed_manifest",
+      "source_rank": 3,
+      "source_row_status": "blocked_candidate_source"
+    },
+    {
+      "evidence_ref": "runs/casp17_historical_benchmark_manifest_seed_current.csv#hist_seed_fsd_1",
+      "operator_clearance": "",
+      "proposed_benchmark_id": "hist_seed_fsd_1",
+      "proposed_target_id": "HIST_FSD_1",
+      "scope": "monomer",
+      "source_artifact": "runs/casp17_historical_benchmark_manifest_seed_current.csv",
+      "source_blockers": "leakage_clearance_required,operator_clearance_required,prediction_generated_before_native_release_required,public_template_or_native_used_for_prediction_must_be_false,other_team_model_used_must_be_false,post_release_information_used_must_be_false",
+      "source_name": "seed_manifest",
+      "source_rank": 4,
+      "source_row_status": "blocked_candidate_source"
+    },
+    {
+      "evidence_ref": "runs/casp17_historical_benchmark_manifest_seed_current.csv#hist_seed_gb1_mini",
+      "operator_clearance": "",
+      "proposed_benchmark_id": "hist_seed_gb1_mini",
+      "proposed_target_id": "HIST_GB1_MINI",
+      "scope": "monomer",
+      "source_artifact": "runs/casp17_historical_benchmark_manifest_seed_current.csv",
+      "source_blockers": "leakage_clearance_required,operator_clearance_required,prediction_generated_before_native_release_required,public_template_or_native_used_for_prediction_must_be_false,other_team_model_used_must_be_false,post_release_information_used_must_be_false",
+      "source_name": "seed_manifest",
+      "source_rank": 5,
+      "source_row_status": "blocked_candidate_source"
+    },
+    {
+      "evidence_ref": "runs/casp17_historical_benchmark_manifest_seed_current.csv#hist_seed_protein_a_bdomain",
+      "operator_clearance": "",
+      "proposed_benchmark_id": "hist_seed_protein_a_bdomain",
+      "proposed_target_id": "HIST_PROTEIN_A_BDOMAIN",
+      "scope": "monomer",
+      "source_artifact": "runs/casp17_historical_benchmark_manifest_seed_current.csv",
+      "source_blockers": "leakage_clearance_required,operator_clearance_required,prediction_generated_before_native_release_required,public_template_or_native_used_for_prediction_must_be_false,other_team_model_used_must_be_false,post_release_information_used_must_be_false",
+      "source_name": "seed_manifest",
+      "source_rank": 6,
+      "source_row_status": "blocked_candidate_source"
+    },
+    {
+      "evidence_ref": "runs/casp17_historical_benchmark_manifest_seed_current.csv#hist_seed_trp_cage",
+      "operator_clearance": "",
+      "proposed_benchmark_id": "hist_seed_trp_cage",
+      "proposed_target_id": "HIST_TRP_CAGE",
+      "scope": "monomer",
+      "source_artifact": "runs/casp17_historical_benchmark_manifest_seed_current.csv",
+      "source_blockers": "leakage_clearance_required,operator_clearance_required,prediction_generated_before_native_release_required,public_template_or_native_used_for_prediction_must_be_false,other_team_model_used_must_be_false,post_release_information_used_must_be_false",
+      "source_name": "seed_manifest",
+      "source_rank": 7,
+      "source_row_status": "blocked_candidate_source"
+    },
+    {
+      "evidence_ref": "runs/casp17_historical_benchmark_manifest_seed_current.csv#hist_seed_ubiquitin_mini",
+      "operator_clearance": "",
+      "proposed_benchmark_id": "hist_seed_ubiquitin_mini",
+      "proposed_target_id": "HIST_UBIQUITIN_MINI",
+      "scope": "monomer",
+      "source_artifact": "runs/casp17_historical_benchmark_manifest_seed_current.csv",
+      "source_blockers": "leakage_clearance_required,operator_clearance_required,prediction_generated_before_native_release_required,public_template_or_native_used_for_prediction_must_be_false,other_team_model_used_must_be_false,post_release_information_used_must_be_false",
+      "source_name": "seed_manifest",
+      "source_rank": 8,
+      "source_row_status": "blocked_candidate_source"
+    },
+    {
+      "evidence_ref": "runs/casp17_historical_benchmark_manifest_seed_current.csv#hist_seed_villin_hp35",
+      "operator_clearance": "",
+      "proposed_benchmark_id": "hist_seed_villin_hp35",
+      "proposed_target_id": "HIST_VILLIN_HP35",
+      "scope": "monomer",
+      "source_artifact": "runs/casp17_historical_benchmark_manifest_seed_current.csv",
+      "source_blockers": "leakage_clearance_required,operator_clearance_required,prediction_generated_before_native_release_required,public_template_or_native_used_for_prediction_must_be_false,other_team_model_used_must_be_false,post_release_information_used_must_be_false",
+      "source_name": "seed_manifest",
+      "source_rank": 9,
+      "source_row_status": "blocked_candidate_source"
+    },
+    {
+      "evidence_ref": "runs/casp17_historical_benchmark_manifest_seed_current.csv#hist_seed_ww_domain_fip35",
+      "operator_clearance": "",
+      "proposed_benchmark_id": "hist_seed_ww_domain_fip35",
+      "proposed_target_id": "HIST_WW_DOMAIN_FIP35",
+      "scope": "monomer",
+      "source_artifact": "runs/casp17_historical_benchmark_manifest_seed_current.csv",
+      "source_blockers": "leakage_clearance_required,operator_clearance_required,prediction_generated_before_native_release_required,public_template_or_native_used_for_prediction_must_be_false,other_team_model_used_must_be_false,post_release_information_used_must_be_false",
+      "source_name": "seed_manifest",
+      "source_rank": 10,
+      "source_row_status": "blocked_candidate_source"
+    },
+    {
+      "evidence_ref": "runs/casp17_historical_benchmark_manifest_seed_current.csv#hist_seed_01_tcruzi_pde_external_pdeb1_010_chembl4453005",
+      "operator_clearance": "",
+      "proposed_benchmark_id": "hist_seed_01_tcruzi_pde_external_pdeb1_010_chembl4453005",
+      "proposed_target_id": "HIST_COMPLEX_01_TCRUZI_PDE_EXTERNAL_PDEB1_010_CHEMBL4453005",
+      "scope": "complex",
+      "source_artifact": "runs/casp17_historical_benchmark_manifest_seed_current.csv",
+      "source_blockers": "leakage_clearance_required,operator_clearance_required,prediction_generated_before_native_release_required,public_template_or_native_used_for_prediction_must_be_false,other_team_model_used_must_be_false,post_release_information_used_must_be_false",
+      "source_name": "seed_manifest",
+      "source_rank": 11,
+      "source_row_status": "blocked_candidate_source"
+    },
+    {
+      "evidence_ref": "runs/casp17_historical_benchmark_manifest_seed_current.csv#hist_seed_02_tcruzi_pde_external_pdeb1_043_chembl2171451",
+      "operator_clearance": "",
+      "proposed_benchmark_id": "hist_seed_02_tcruzi_pde_external_pdeb1_043_chembl2171451",
+      "proposed_target_id": "HIST_COMPLEX_02_TCRUZI_PDE_EXTERNAL_PDEB1_043_CHEMBL2171451",
+      "scope": "complex",
+      "source_artifact": "runs/casp17_historical_benchmark_manifest_seed_current.csv",
+      "source_blockers": "leakage_clearance_required,operator_clearance_required,prediction_generated_before_native_release_required,public_template_or_native_used_for_prediction_must_be_false,other_team_model_used_must_be_false,post_release_information_used_must_be_false",
+      "source_name": "seed_manifest",
+      "source_rank": 12,
+      "source_row_status": "blocked_candidate_source"
+    },
+    {
+      "evidence_ref": "runs/casp17_historical_benchmark_manifest_seed_current.csv#hist_seed_03_tcruzi_pde_external_pdeb1_025_chembl4441871",
+      "operator_clearance": "",
+      "proposed_benchmark_id": "hist_seed_03_tcruzi_pde_external_pdeb1_025_chembl4441871",
+      "proposed_target_id": "HIST_COMPLEX_03_TCRUZI_PDE_EXTERNAL_PDEB1_025_CHEMBL4441871",
+      "scope": "complex",
+      "source_artifact": "runs/casp17_historical_benchmark_manifest_seed_current.csv",
+      "source_blockers": "leakage_clearance_required,operator_clearance_required,prediction_generated_before_native_release_required,public_template_or_native_used_for_prediction_must_be_false,other_team_model_used_must_be_false,post_release_information_used_must_be_false",
+      "source_name": "seed_manifest",
+      "source_rank": 13,
+      "source_row_status": "blocked_candidate_source"
+    },
+    {
+      "evidence_ref": "runs/casp17_historical_benchmark_manifest_seed_current.csv#hist_seed_04_tcruzi_pde_external_pdeb1_032_chembl4445930",
+      "operator_clearance": "",
+      "proposed_benchmark_id": "hist_seed_04_tcruzi_pde_external_pdeb1_032_chembl4445930",
+      "proposed_target_id": "HIST_COMPLEX_04_TCRUZI_PDE_EXTERNAL_PDEB1_032_CHEMBL4445930",
+      "scope": "complex",
+      "source_artifact": "runs/casp17_historical_benchmark_manifest_seed_current.csv",
+      "source_blockers": "leakage_clearance_required,operator_clearance_required,prediction_generated_before_native_release_required,public_template_or_native_used_for_prediction_must_be_false,other_team_model_used_must_be_false,post_release_information_used_must_be_false",
+      "source_name": "seed_manifest",
+      "source_rank": 14,
+      "source_row_status": "blocked_candidate_source"
+    },
+    {
+      "evidence_ref": "runs/casp17_historical_benchmark_manifest_seed_current.csv#hist_seed_05_tcruzi_pde_external_pdeb1_007_chembl3764370",
+      "operator_clearance": "",
+      "proposed_benchmark_id": "hist_seed_05_tcruzi_pde_external_pdeb1_007_chembl3764370",
+      "proposed_target_id": "HIST_COMPLEX_05_TCRUZI_PDE_EXTERNAL_PDEB1_007_CHEMBL3764370",
+      "scope": "complex",
+      "source_artifact": "runs/casp17_historical_benchmark_manifest_seed_current.csv",
+      "source_blockers": "leakage_clearance_required,operator_clearance_required,prediction_generated_before_native_release_required,public_template_or_native_used_for_prediction_must_be_false,other_team_model_used_must_be_false,post_release_information_used_must_be_false",
+      "source_name": "seed_manifest",
+      "source_rank": 15,
+      "source_row_status": "blocked_candidate_source"
+    },
+    {
       "evidence_ref": "runs/casp17_win_tier_benchmark_operator_template_current.csv#hist_REQUIRED_MONOMER_001",
       "operator_clearance": "required_operator_clearance",
       "proposed_benchmark_id": "hist_REQUIRED_MONOMER_001",
@@ -496,7 +676,7 @@
       "row_rank": 1,
       "scope": "monomer",
       "source_artifact": "",
-      "source_blockers": "blocked_source_candidates:25",
+      "source_blockers": "blocked_source_candidates:35",
       "source_rank": 0,
       "source_row_status": ""
     },
@@ -514,7 +694,7 @@
       "row_rank": 2,
       "scope": "monomer",
       "source_artifact": "",
-      "source_blockers": "blocked_source_candidates:25",
+      "source_blockers": "blocked_source_candidates:35",
       "source_rank": 0,
       "source_row_status": ""
     },
@@ -532,7 +712,7 @@
       "row_rank": 3,
       "scope": "monomer",
       "source_artifact": "",
-      "source_blockers": "blocked_source_candidates:25",
+      "source_blockers": "blocked_source_candidates:35",
       "source_rank": 0,
       "source_row_status": ""
     },
@@ -550,7 +730,7 @@
       "row_rank": 4,
       "scope": "monomer",
       "source_artifact": "",
-      "source_blockers": "blocked_source_candidates:25",
+      "source_blockers": "blocked_source_candidates:35",
       "source_rank": 0,
       "source_row_status": ""
     },
@@ -568,7 +748,7 @@
       "row_rank": 5,
       "scope": "monomer",
       "source_artifact": "",
-      "source_blockers": "blocked_source_candidates:25",
+      "source_blockers": "blocked_source_candidates:35",
       "source_rank": 0,
       "source_row_status": ""
     },
@@ -586,7 +766,7 @@
       "row_rank": 6,
       "scope": "monomer",
       "source_artifact": "",
-      "source_blockers": "blocked_source_candidates:25",
+      "source_blockers": "blocked_source_candidates:35",
       "source_rank": 0,
       "source_row_status": ""
     },
@@ -604,7 +784,7 @@
       "row_rank": 7,
       "scope": "monomer",
       "source_artifact": "",
-      "source_blockers": "blocked_source_candidates:25",
+      "source_blockers": "blocked_source_candidates:35",
       "source_rank": 0,
       "source_row_status": ""
     },
@@ -622,7 +802,7 @@
       "row_rank": 8,
       "scope": "monomer",
       "source_artifact": "",
-      "source_blockers": "blocked_source_candidates:25",
+      "source_blockers": "blocked_source_candidates:35",
       "source_rank": 0,
       "source_row_status": ""
     },
@@ -640,7 +820,7 @@
       "row_rank": 9,
       "scope": "monomer",
       "source_artifact": "",
-      "source_blockers": "blocked_source_candidates:25",
+      "source_blockers": "blocked_source_candidates:35",
       "source_rank": 0,
       "source_row_status": ""
     },
@@ -658,7 +838,7 @@
       "row_rank": 10,
       "scope": "monomer",
       "source_artifact": "",
-      "source_blockers": "blocked_source_candidates:25",
+      "source_blockers": "blocked_source_candidates:35",
       "source_rank": 0,
       "source_row_status": ""
     },
@@ -676,7 +856,7 @@
       "row_rank": 26,
       "scope": "complex",
       "source_artifact": "",
-      "source_blockers": "blocked_source_candidates:15",
+      "source_blockers": "blocked_source_candidates:20",
       "source_rank": 0,
       "source_row_status": ""
     },
@@ -694,7 +874,7 @@
       "row_rank": 27,
       "scope": "complex",
       "source_artifact": "",
-      "source_blockers": "blocked_source_candidates:15",
+      "source_blockers": "blocked_source_candidates:20",
       "source_rank": 0,
       "source_row_status": ""
     },
@@ -712,7 +892,7 @@
       "row_rank": 28,
       "scope": "complex",
       "source_artifact": "",
-      "source_blockers": "blocked_source_candidates:15",
+      "source_blockers": "blocked_source_candidates:20",
       "source_rank": 0,
       "source_row_status": ""
     },
@@ -730,7 +910,7 @@
       "row_rank": 29,
       "scope": "complex",
       "source_artifact": "",
-      "source_blockers": "blocked_source_candidates:15",
+      "source_blockers": "blocked_source_candidates:20",
       "source_rank": 0,
       "source_row_status": ""
     },
@@ -748,7 +928,7 @@
       "row_rank": 30,
       "scope": "complex",
       "source_artifact": "",
-      "source_blockers": "blocked_source_candidates:15",
+      "source_blockers": "blocked_source_candidates:20",
       "source_rank": 0,
       "source_row_status": ""
     }
@@ -762,7 +942,7 @@
     "first_open_dropzone_id": "priority_001_REQUIRED_MONOMER_001",
     "first_open_next_action": "fix blocked local candidate rows until a cleared non-current historical target is ready",
     "first_open_status": "awaiting_candidate_source",
-    "generated_at_local": "2026-05-26T00:41:10+09:00",
+    "generated_at_local": "2026-05-28T02:16:33+09:00",
     "identity_candidate_status": "awaiting_candidate_sources",
     "intake_csv": "casp17/casp17_competitive_floor_identity_intake_bundle_current.csv",
     "operator_import_status": "blocked",
@@ -772,8 +952,9 @@
     "ready_for_intake_count": 0,
     "ready_manifest_csv": "runs/casp17_historical_benchmark_manifest_ready_current.csv",
     "row_count": 15,
-    "source_blocked_candidate_count": 40,
-    "source_candidate_count": 40,
+    "seed_manifest_csv": "runs/casp17_historical_benchmark_manifest_seed_current.csv",
+    "source_blocked_candidate_count": 55,
+    "source_candidate_count": 55,
     "source_ready_candidate_count": 0
   }
 }

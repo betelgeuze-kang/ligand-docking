@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_INTAKE_CSV = "casp17/casp17_competitive_floor_identity_intake_bundle_current.csv"
 DEFAULT_READY_MANIFEST_CSV = "runs/casp17_historical_benchmark_manifest_ready_current.csv"
 DEFAULT_CANDIDATE_MANIFEST_CSV = "runs/casp17_historical_benchmark_manifest_candidate_current.csv"
+DEFAULT_SEED_MANIFEST_CSV = "runs/casp17_historical_benchmark_manifest_seed_current.csv"
 DEFAULT_OPERATOR_TEMPLATE_CSV = "runs/casp17_win_tier_benchmark_operator_template_current.csv"
 DEFAULT_OPERATOR_PREFLIGHT_JSON = "runs/casp17_win_tier_benchmark_operator_preflight_current.json"
 DEFAULT_OPERATOR_IMPORT_JSON = "runs/casp17_win_tier_benchmark_operator_import_packet_current.json"
@@ -152,6 +153,7 @@ def _source_definitions(args: argparse.Namespace) -> list[tuple[str, str]]:
     return [
         ("ready_manifest", args.ready_manifest_csv),
         ("candidate_manifest", args.candidate_manifest_csv),
+        ("seed_manifest", args.seed_manifest_csv),
         ("operator_template", args.operator_template_csv),
     ]
 
@@ -317,6 +319,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "intake_csv": _artifact(args.intake_csv),
         "ready_manifest_csv": _artifact(args.ready_manifest_csv),
         "candidate_manifest_csv": _artifact(args.candidate_manifest_csv),
+        "seed_manifest_csv": _artifact(args.seed_manifest_csv),
         "operator_template_csv": _artifact(args.operator_template_csv),
         "operator_preflight_status": _text(operator_preflight_summary.get("operator_preflight_status")),
         "operator_import_status": _text(operator_import_summary.get("import_status")),
@@ -381,6 +384,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--intake-csv", default=DEFAULT_INTAKE_CSV)
     parser.add_argument("--ready-manifest-csv", default=DEFAULT_READY_MANIFEST_CSV)
     parser.add_argument("--candidate-manifest-csv", default=DEFAULT_CANDIDATE_MANIFEST_CSV)
+    parser.add_argument("--seed-manifest-csv", default=DEFAULT_SEED_MANIFEST_CSV)
     parser.add_argument("--operator-template-csv", default=DEFAULT_OPERATOR_TEMPLATE_CSV)
     parser.add_argument("--operator-preflight-json", default=DEFAULT_OPERATOR_PREFLIGHT_JSON)
     parser.add_argument("--operator-import-json", default=DEFAULT_OPERATOR_IMPORT_JSON)

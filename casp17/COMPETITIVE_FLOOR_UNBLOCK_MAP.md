@@ -1,10 +1,10 @@
 # CASP17 Competitive-Floor Unblock Map
 
-- generated: `2026-05-28T02:06:10+09:00`
+- generated: `2026-05-28T02:16:36+09:00`
 - unblock_map_status: `awaiting_candidate_source_repair`
 - rows monomer/complex/total: `10/5/15`
 - identity ready/awaiting: `0/15`
-- source candidates ready/blocked/total: `0/40/40`
+- source candidates ready/blocked/total: `0/55/55`
 - open phases target/core/provenance/ablation/calibration: `15/15/15/15/15`
 - blocking fields/phases: `285/75`
 - identity unlock / clearance cycle / replacement decision: `awaiting_identity` / `awaiting_operator_intake` / `awaiting_operator_decision`

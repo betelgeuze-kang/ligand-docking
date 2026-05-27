@@ -22,6 +22,7 @@ DEFAULT_WIN_TIER_GOAL_SCORECARD_JSON = "runs/casp17_win_tier_goal_scorecard_curr
 DEFAULT_INPUT_SCAFFOLD_JSON = "runs/casp17_win_tier_benchmark_input_scaffold_current.json"
 DEFAULT_INPUT_INVENTORY_JSON = "runs/casp17_win_tier_benchmark_input_inventory_current.json"
 DEFAULT_OPERATOR_DASHBOARD_JSON = "runs/casp17_win_tier_benchmark_operator_dashboard_current.json"
+DEFAULT_HISTORICAL_IDENTITY_SEED_INVENTORY_JSON = "runs/casp17_historical_identity_seed_inventory_current.json"
 DEFAULT_SIDECHAIN_NATIVE_BENCHMARK_JSON = "runs/casp17_sidechain_native_benchmark_packet_current.json"
 DEFAULT_COMPETITIVE_BATCH_JSON = "casp17/casp17_competitive_floor_batch_current.json"
 DEFAULT_COMPETITIVE_ROW_FILL_STATUS_JSON = "casp17/casp17_competitive_floor_row_fill_status_current.json"
@@ -238,6 +239,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     scaffold_payload = _read_json(args.input_scaffold_json)
     inventory_payload = _read_json(args.input_inventory_json)
     dashboard_payload = _read_json(args.operator_dashboard_json)
+    historical_identity_seed_inventory_payload = _read_json(args.historical_identity_seed_inventory_json)
     sidechain_native_benchmark_payload = _read_json(args.sidechain_native_benchmark_json)
     competitive_batch_payload = _read_json(args.competitive_batch_json)
     competitive_row_fill_status_payload = _read_json(args.competitive_row_fill_status_json)
@@ -342,6 +344,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     scaffold_summary = _summary(scaffold_payload)
     inventory_summary = _summary(inventory_payload)
     dashboard_summary = _summary(dashboard_payload)
+    historical_identity_seed_inventory_summary = _summary(historical_identity_seed_inventory_payload)
     sidechain_native_benchmark_summary = _summary(sidechain_native_benchmark_payload)
     competitive_batch_summary = _summary(competitive_batch_payload)
     competitive_row_fill_status_summary = _summary(competitive_row_fill_status_payload)
@@ -681,6 +684,30 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             total_count=_int(dashboard_summary.get("row_count")),
             next_action=first_fill_action,
             blockers=_text(dashboard_summary.get("source_blockers")),
+        ),
+        _artifact_row(
+            "historical_identity_seed_inventory",
+            "Local historical identity seed candidates for operator no-leak review",
+            _text(historical_identity_seed_inventory_summary.get("seed_inventory_status")),
+            args.historical_identity_seed_inventory_json,
+            ready_count=_int(historical_identity_seed_inventory_summary.get("batch_seed_slot_count")),
+            blocked_count=_int(historical_identity_seed_inventory_summary.get("operator_clearance_required_count")),
+            total_count=_int(historical_identity_seed_inventory_summary.get("seed_candidate_count")),
+            next_action=_text(historical_identity_seed_inventory_summary.get("first_next_action")),
+            blockers=(
+                "monomer_complex:"
+                + str(historical_identity_seed_inventory_summary.get("monomer_seed_candidate_count", ""))
+                + "/"
+                + str(historical_identity_seed_inventory_summary.get("complex_seed_candidate_count", ""))
+                + ",eligible:"
+                + str(historical_identity_seed_inventory_summary.get("eligible_monomer_seed_count", ""))
+                + "/"
+                + str(historical_identity_seed_inventory_summary.get("eligible_complex_seed_count", ""))
+                + ",batch:"
+                + str(historical_identity_seed_inventory_summary.get("batch_seed_slot_count", ""))
+                + ",manifest:"
+                + str(historical_identity_seed_inventory_summary.get("candidate_manifest_row_count", ""))
+            ),
         ),
         _artifact_row(
             "sidechain_native_benchmark",
@@ -2323,6 +2350,39 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "operator_dashboard_needs_provenance_count": _int(
             dashboard_summary.get("needs_provenance_count")
         ),
+        "historical_identity_seed_inventory_status": _text(
+            historical_identity_seed_inventory_summary.get("seed_inventory_status")
+        ),
+        "historical_identity_seed_candidate_count": _int(
+            historical_identity_seed_inventory_summary.get("seed_candidate_count")
+        ),
+        "historical_identity_seed_monomer_count": _int(
+            historical_identity_seed_inventory_summary.get("monomer_seed_candidate_count")
+        ),
+        "historical_identity_seed_complex_count": _int(
+            historical_identity_seed_inventory_summary.get("complex_seed_candidate_count")
+        ),
+        "historical_identity_seed_eligible_monomer_count": _int(
+            historical_identity_seed_inventory_summary.get("eligible_monomer_seed_count")
+        ),
+        "historical_identity_seed_eligible_complex_count": _int(
+            historical_identity_seed_inventory_summary.get("eligible_complex_seed_count")
+        ),
+        "historical_identity_seed_batch_slot_count": _int(
+            historical_identity_seed_inventory_summary.get("batch_seed_slot_count")
+        ),
+        "historical_identity_seed_manifest_row_count": _int(
+            historical_identity_seed_inventory_summary.get("candidate_manifest_row_count")
+        ),
+        "historical_identity_seed_operator_clearance_required_count": _int(
+            historical_identity_seed_inventory_summary.get("operator_clearance_required_count")
+        ),
+        "historical_identity_seed_manifest_csv": _text(
+            historical_identity_seed_inventory_summary.get("candidate_manifest_csv")
+        ),
+        "historical_identity_seed_first_target_id": _text(
+            historical_identity_seed_inventory_summary.get("first_seed_target_id")
+        ),
         "sidechain_native_benchmark_status": _text(
             sidechain_native_benchmark_summary.get("sidechain_native_benchmark_status")
         ),
@@ -3590,6 +3650,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- win gap closure: `{summary['win_gap_closure_status'] or '-'}` closed/open `{summary['win_gap_closed_count']}/{summary['win_gap_not_closed_count']}` missing win rows `{summary['benchmark_missing_win_total_rows']}`",
         f"- historical benchmark workorders: `{summary['historical_input_workorder_count']}` core `{summary['historical_core_workorder_count']}` missing core/ablation `{summary['historical_missing_core_file_count']}/{summary['historical_missing_ablation_layer_file_count']}` operator ready/blocked `{summary['benchmark_operator_ready_count']}/{summary['benchmark_operator_blocked_count']}`",
         f"- operator dashboard: `{summary['operator_dashboard_status'] or '-'}` rows ready/blocked/total `{summary['operator_dashboard_ready_count']}/{summary['operator_dashboard_blocked_count']}/{summary['operator_dashboard_row_count']}` needs target/core/ablation/calibration/provenance `{summary['operator_dashboard_needs_target_replacement_count']}/{summary['operator_dashboard_needs_core_file_count']}/{summary['operator_dashboard_needs_ablation_layer_count']}/{summary['operator_dashboard_needs_calibration_count']}/{summary['operator_dashboard_needs_provenance_count']}`",
+        f"- historical identity seed inventory: `{summary['historical_identity_seed_inventory_status'] or '-'}` candidates monomer/complex/total `{summary['historical_identity_seed_monomer_count']}/{summary['historical_identity_seed_complex_count']}/{summary['historical_identity_seed_candidate_count']}` eligible `{summary['historical_identity_seed_eligible_monomer_count']}/{summary['historical_identity_seed_eligible_complex_count']}` batch/manifest `{summary['historical_identity_seed_batch_slot_count']}/{summary['historical_identity_seed_manifest_row_count']}` clearance-required `{summary['historical_identity_seed_operator_clearance_required_count']}` first `{summary['historical_identity_seed_first_target_id'] or '-'}` manifest `{summary['historical_identity_seed_manifest_csv'] or '-'}`",
         f"- sidechain-native benchmark: `{summary['sidechain_native_benchmark_status'] or '-'}` pass/blocked/total `{summary['sidechain_native_pass_count']}/{summary['sidechain_native_blocked_count']}/{summary['sidechain_native_benchmark_count']}` core/leakage/pred/native/missing-files `{summary['sidechain_native_core_input_blocked_count']}/{summary['sidechain_native_leakage_blocked_count']}/{summary['sidechain_native_prediction_missing_count']}/{summary['sidechain_native_native_missing_count']}/{summary['sidechain_native_missing_core_file_count']}` exactness/metric `{summary['sidechain_native_exactness_blocked_count']}/{summary['sidechain_native_metric_blocked_count']}` first `{summary['sidechain_native_first_blocked_benchmark_id'] or '-'}` blockers `{summary['sidechain_native_first_blocked_blockers'] or '-'}`",
         f"- sidechain-native workorder: actions/open `{summary['sidechain_native_workorder_action_count']}/{summary['sidechain_native_open_workorder_action_count']}` files `{summary['sidechain_native_workorder_json'] or '-'}` `{summary['sidechain_native_workorder_md'] or '-'}`",
         f"- competitive-floor batch: `{summary['competitive_batch_status'] or '-'}` rows `{summary['competitive_batch_row_count']}` missing evidence `{summary['competitive_batch_missing_evidence_item_count']}`",
@@ -3691,6 +3752,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--input-scaffold-json", default=DEFAULT_INPUT_SCAFFOLD_JSON)
     parser.add_argument("--input-inventory-json", default=DEFAULT_INPUT_INVENTORY_JSON)
     parser.add_argument("--operator-dashboard-json", default=DEFAULT_OPERATOR_DASHBOARD_JSON)
+    parser.add_argument("--historical-identity-seed-inventory-json", default=DEFAULT_HISTORICAL_IDENTITY_SEED_INVENTORY_JSON)
     parser.add_argument("--sidechain-native-benchmark-json", default=DEFAULT_SIDECHAIN_NATIVE_BENCHMARK_JSON)
     parser.add_argument("--competitive-batch-json", default=DEFAULT_COMPETITIVE_BATCH_JSON)
     parser.add_argument("--competitive-row-fill-status-json", default=DEFAULT_COMPETITIVE_ROW_FILL_STATUS_JSON)

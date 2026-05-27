@@ -108,6 +108,8 @@ def _args(
         str(ready_csv),
         "--candidate-manifest-csv",
         str(candidate_csv),
+        "--seed-manifest-csv",
+        str(tmp_path / "seed_manifest_missing.csv"),
         "--operator-template-csv",
         str(operator_csv),
         "--operator-preflight-json",
@@ -149,6 +151,57 @@ def test_identity_candidate_packet_waits_for_cleared_source_candidates(tmp_path:
     assert payload["rows"][0]["candidate_status"] == "awaiting_candidate_source"
     assert _read_csv(tmp_path / "packet.csv")[0]["dropzone_id"] == "priority_001_REQUIRED_MONOMER_001"
     assert (tmp_path / "PACKET.md").is_file()
+
+
+def test_identity_candidate_packet_counts_blocked_seed_manifest_sources(tmp_path: Path) -> None:
+    intake_csv = tmp_path / "intake.csv"
+    ready_csv = tmp_path / "ready.csv"
+    candidate_csv = tmp_path / "candidate.csv"
+    seed_csv = tmp_path / "seed.csv"
+    operator_csv = tmp_path / "operator.csv"
+    current_targets_csv = tmp_path / "current_targets.csv"
+    _write_csv(intake_csv, _intake_rows())
+    _write_csv(ready_csv, [])
+    _write_csv(candidate_csv, [])
+    _write_csv(
+        seed_csv,
+        [
+            {
+                "benchmark_id": "hist_seed_bba5",
+                "target_id": "HIST_BBA5",
+                "scope": "monomer",
+                "leakage_clearance": "",
+                "operator_clearance": "",
+                "prediction_generated_before_native_release": "",
+                "public_template_or_native_used_for_prediction": "",
+                "other_team_model_used": "",
+                "post_release_information_used": "",
+                "current_casp17_target": "false",
+            }
+        ],
+    )
+    _write_csv(operator_csv, [])
+    _write_csv(current_targets_csv, [{"target_id": "T1331"}])
+    args = mod.parse_args(
+        _args(
+            tmp_path,
+            intake_csv,
+            ready_csv,
+            candidate_csv,
+            operator_csv,
+            current_targets_csv,
+            "--seed-manifest-csv",
+            str(seed_csv),
+        )
+    )
+
+    payload = mod.build_payload(args)
+
+    assert payload["summary"]["source_candidate_count"] == 1
+    assert payload["summary"]["source_blocked_candidate_count"] == 1
+    assert payload["candidate_rows"][0]["source_name"] == "seed_manifest"
+    assert payload["candidate_rows"][0]["proposed_target_id"] == "HIST_BBA5"
+    assert "operator_clearance_required" in payload["candidate_rows"][0]["source_blockers"]
 
 
 def test_identity_candidate_packet_applies_ready_candidates_to_intake(tmp_path: Path) -> None:

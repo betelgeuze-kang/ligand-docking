@@ -5,7 +5,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 - goal objective addendum: `casp17/CASP17_WIN_TIER_GOAL.md`
 - win-tier target: scaffold `65 -> 90`, competitive proof `15-25 -> 85-90`, leaderboard `top-5/top-3/top-1-2` by category.
 
-- generated: `2026-05-28T02:06:12+09:00`
+- generated: `2026-05-28T02:16:40+09:00`
 - workbench_status: `ready_for_operator_fill`
 - target model folders: `19/19`
 - target object folders: `58`
@@ -21,6 +21,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 - win gap closure: `blocked_input` closed/open `4/5` missing win rows `40`
 - historical benchmark workorders: `40` core `40` missing core/ablation `80/400` operator ready/blocked `0/40`
 - operator dashboard: `ready` rows ready/blocked/total `0/40/40` needs target/core/ablation/calibration/provenance `40/40/40/40/40`
+- historical identity seed inventory: `batch_seed_shape_ready_operator_clearance_required` candidates monomer/complex/total `10/7/17` eligible `10/7` batch/manifest `15/15` clearance-required `15` first `HIST_BBA5` manifest `runs/casp17_historical_benchmark_manifest_seed_current.csv`
 - sidechain-native benchmark: `blocked` pass/blocked/total `0/40/40` core/leakage/pred/native/missing-files `40/40/40/40/80` exactness/metric `0/0` first `hist_REQUIRED_MONOMER_001` blockers `leakage_clearance_missing_or_not_clear,native_pdb_missing,prediction_pdb_missing`
 - sidechain-native workorder: actions/open `120/120` files `runs/casp17_sidechain_native_input_workorder_current.json` `runs/casp17_sidechain_native_input_workorder_current.md`
 - competitive-floor batch: `ready_for_fill` rows `15` missing evidence `490`
@@ -34,8 +35,8 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 - competitive identity unlock round: `awaiting_identity` rows `0/15/0/15` import ready/applied `0/0` target_id open `15` files waiting `180`
 - competitive identity intake bundle: `awaiting_identity` rows `0/15/0/15` missing fields `60` files unlocked `0`
 - competitive identity intake sync: `awaiting_intake` rows `0/0/15/0/15` missing fields `60` mismatches `0` applied `0`
-- competitive identity candidates: `awaiting_candidate_sources` rows `0/15/15` source ready/blocked/total `0/40/40` applied `0` operator preflight `blocked`
-- competitive floor unblock map: `awaiting_candidate_source_repair` rows ready/awaiting/total `0/15/15` source ready/blocked/total `0/40/40` open target/core/provenance/ablation/calibration `15/15/15/15/15` blocking fields/phases `285/75` first `priority_001_REQUIRED_MONOMER_001` `target_identity`
+- competitive identity candidates: `awaiting_candidate_sources` rows `0/15/15` source ready/blocked/total `0/55/55` applied `0` operator preflight `blocked`
+- competitive floor unblock map: `awaiting_candidate_source_repair` rows ready/awaiting/total `0/15/15` source ready/blocked/total `0/55/55` open target/core/provenance/ablation/calibration `15/15/15/15/15` blocking fields/phases `285/75` first `priority_001_REQUIRED_MONOMER_001` `target_identity`
 - competitive identity source repair: `awaiting_target_identity` actions `200` blocked sources `40` phase identity/core/provenance/ablation/calibration `40/40/40/40/40` first phase `target_identity`
 - competitive target identity discovery: `review_required` discovered `19` operator/current/closed/unknown/synthetic `3/16/3/0/0` ready intake `0`
 - competitive target identity clearance: `awaiting_target_identity_clearance` review `3` prediction/TS/native/provenance `3/3/0/0` ready `0` awaiting prediction/native/no-leak `0/3/0`
@@ -95,6 +96,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 | `benchmark_input_scaffold` | `ready` | 0 | 40 | 40 | `runs/casp17_win_tier_benchmark_input_scaffold_current.json` | Fill row folders with cleared historical target identity, internal predictions, native files, provenance, and calibration values. | `missing_evidence_items:1310` |
 | `benchmark_input_inventory` | `blocked` | 0 | 40 | 40 | `runs/casp17_win_tier_benchmark_input_inventory_current.json` | Replace placeholder target/benchmark IDs with a cleared historical non-CASP17 protein target. | `missing_files:480` |
 | `operator_dashboard` | `ready` | 0 | 40 | 40 | `runs/casp17_win_tier_benchmark_operator_dashboard_current.json` | Replace placeholder target/benchmark IDs with a cleared historical non-CASP17 protein target. | `-` |
+| `historical_identity_seed_inventory` | `batch_seed_shape_ready_operator_clearance_required` | 15 | 15 | 17 | `runs/casp17_historical_identity_seed_inventory_current.json` | operator must verify no-leak provenance, chronology, calibration values, and ablation files before promotion | `monomer_complex:10/7,eligible:10/7,batch:15,manifest:15` |
 | `sidechain_native_benchmark` | `blocked` | 0 | 40 | 40 | `runs/casp17_sidechain_native_benchmark_packet_current.json` | replace placeholder leakage_clearance with operator-confirmed no_leak provenance; place the cleared prediction/native PDB files for this benchmark row. | `leakage_clearance_missing_or_not_clear,native_pdb_missing,prediction_pdb_missing` |
 | `competitive_floor_batch` | `ready_for_fill` | 15 | 0 | 15 | `casp17/casp17_competitive_floor_batch_current.json` | Fill the copied competitive-floor task folders before expanding to the full 40-row win-tier set. | `missing_evidence_items:490` |
 | `competitive_floor_row_fill_status` | `awaiting_fill` | 0 | 15 | 15 | `casp17/casp17_competitive_floor_row_fill_status_current.json` | resolve row_fill.csv blockers and rerun operator-template/preflight | `filled:15,missing_fields:0,placeholders:450,missing_files:180` |
@@ -107,8 +109,8 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 | `competitive_floor_identity_unlock_round` | `awaiting_identity` | 0 | 30 | 15 | `casp17/casp17_competitive_floor_identity_unlock_round_current.json` | fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance in the identity kit | `identity_open:30,files_waiting:180` |
 | `competitive_floor_identity_intake_bundle` | `awaiting_identity` | 0 | 15 | 15 | `casp17/casp17_competitive_floor_identity_intake_bundle_current.json` | fill proposed_benchmark_id, proposed_target_id, evidence_ref, operator_clearance | `missing_fields:60` |
 | `competitive_floor_identity_intake_sync` | `awaiting_intake` | 0 | 15 | 15 | `casp17/casp17_competitive_floor_identity_intake_sync_current.json` | fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance in the intake bundle | `missing_fields:60` |
-| `competitive_floor_identity_candidate_packet` | `awaiting_candidate_sources` | 0 | 15 | 15 | `casp17/casp17_competitive_floor_identity_candidate_packet_current.json` | fix blocked local candidate rows until a cleared non-current historical target is ready | `source_ready:0,source_blocked:40,operator_preflight:blocked` |
-| `competitive_floor_unblock_map` | `awaiting_candidate_source_repair` | 0 | 15 | 15 | `casp17/casp17_competitive_floor_unblock_map_current.json` | replace REQUIRED target/benchmark placeholders with a cleared non-current historical target identity | `phase_open:15/15/15/15/15,blocking_fields:285,source_ready:0,source_blocked:40,source_total:40` |
+| `competitive_floor_identity_candidate_packet` | `awaiting_candidate_sources` | 0 | 15 | 15 | `casp17/casp17_competitive_floor_identity_candidate_packet_current.json` | fix blocked local candidate rows until a cleared non-current historical target is ready | `source_ready:0,source_blocked:55,operator_preflight:blocked` |
+| `competitive_floor_unblock_map` | `awaiting_candidate_source_repair` | 0 | 15 | 15 | `casp17/casp17_competitive_floor_unblock_map_current.json` | replace REQUIRED target/benchmark placeholders with a cleared non-current historical target identity | `phase_open:15/15/15/15/15,blocking_fields:285,source_ready:0,source_blocked:55,source_total:55` |
 | `competitive_floor_identity_source_repair_plan` | `awaiting_target_identity` | 0 | 200 | 40 | `casp17/casp17_competitive_floor_identity_source_repair_plan_current.json` | replace REQUIRED target/benchmark placeholders with a cleared non-current historical target identity | `identity:40,core:40,provenance:40,ablation:40,calibration:40` |
 | `competitive_floor_target_identity_discovery` | `review_required` | 0 | 19 | 19 | `casp17/casp17_competitive_floor_target_identity_discovery_packet_current.json` | operator must confirm historical eligibility, native availability, and no-leak clearance | `operator_review:3,current:16,closed:3,unknown:0,synthetic:0` |
 | `competitive_floor_target_identity_clearance_queue` | `awaiting_target_identity_clearance` | 0 | 3 | 3 | `casp17/casp17_competitive_floor_target_identity_clearance_queue_current.json` | provide a cleared native PDB and complete no-leak/operator provenance review | `prediction:3,ts:3,native:0,provenance:0,await_native:3` |
