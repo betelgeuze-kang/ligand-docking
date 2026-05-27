@@ -175,13 +175,19 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             related_dimension="all_atom_steric_quality",
             required_level=str(all_atom.get("required_level", "Native-scored all-atom steric and sidechain quality evidence.")),
             current_evidence=str(all_atom.get("current_evidence", "missing")),
-            inputs_needed="No external predictor input. Needs no-leak historical prediction/native PDB pairs with sidechain atoms, chain/residue/atom exactness, and leakage clearance.",
+            inputs_needed=(
+                "No external predictor input. Needs no-leak historical prediction/native PDB pairs with sidechain atoms, "
+                "chain/residue/atom exactness, leakage clearance, and the 40-row operator draft filled or promoted."
+            ),
             command=(
                 "python3 tools/build_casp17_statistical_rotamer_packet.py "
                 "--source-dir runs/casp17_predictions_forcefield_minimized_current "
                 "--out-dir runs/casp17_predictions_statistical_rotamer_current && "
+                "python3 tools/build_casp17_sidechain_native_manifest_sync_packet.py "
+                "--manifest-csv runs/casp17_historical_benchmark_manifest_draft_from_operator_current.csv "
+                "--workorder-json runs/casp17_sidechain_native_input_workorder_current.json && "
                 "python3 tools/build_casp17_sidechain_native_benchmark_packet.py "
-                "--manifest-csv runs/casp17_historical_benchmark_manifest_current.csv && "
+                "--manifest-csv runs/casp17_sidechain_native_manifest_candidate_current.csv && "
                 "python3 tools/build_casp17_competitive_readiness_packet.py "
                 "--prediction-dir runs/casp17_predictions_statistical_rotamer_current "
                 "--polar-refinement-json runs/casp17_polar_refinement_packet_current.json "

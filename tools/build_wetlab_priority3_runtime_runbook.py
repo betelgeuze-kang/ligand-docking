@@ -8,6 +8,22 @@ DEFAULT_REFRESH_JSON = "runs/wetlab_priority3_gate_refresh_current.json"
 DEFAULT_OUT_MD = "runs/wetlab_priority3_runtime_runbook_current.md"
 
 
+def _next_required_step(queue_s: dict, refresh_s: dict) -> str:
+    ready_now = int(queue_s.get("ready_now_target_count", 0) or 0)
+    blocked = int(queue_s.get("blocked_on_previous_review_count", 0) or 0)
+    resolved = int(queue_s.get("resolved_target_count", refresh_s.get("resolved_target_count", 0)) or 0)
+    running = int(queue_s.get("running_target_count", refresh_s.get("running_target_count", 0)) or 0)
+    if resolved >= 3 and ready_now == 0 and blocked == 0 and running == 0:
+        return (
+            "Priority3 serialized execution is resolved. Use the partner send-round artifact for dispatch review, "
+            "and keep external outreach behind an explicit R4 confirmation."
+        )
+    return (
+        "Use the Mpro start/complete events first. Once the refresh artifact shows the CA IX gate open, "
+        "switch to the CA IX commands. Only then move to T. cruzi PDE."
+    )
+
+
 def build_payload(queue_payload: dict, refresh_payload: dict) -> dict:
     queue_s = dict(queue_payload.get("summary", {}) or {})
     refresh_s = dict(refresh_payload.get("summary", {}) or {})
@@ -117,7 +133,7 @@ def build_payload(queue_payload: dict, refresh_payload: dict) -> dict:
             "mpro_execution_state": str(refresh_s.get("mpro_execution_state", "")).strip(),
             "caix_review_state": str(refresh_s.get("caix_review_state", "")).strip(),
             "tcruzi_execution_state": str(refresh_s.get("tcruzi_execution_state", "")).strip(),
-            "next_required_step": "Use the Mpro start/complete events first. Once the refresh artifact shows the CA IX gate open, switch to the CA IX commands. Only then move to T. cruzi PDE.",
+            "next_required_step": _next_required_step(queue_s, refresh_s),
         },
         "structured": {
             "runtime_event_artifact": "runs/wetlab_priority3_runtime_event_current.md",

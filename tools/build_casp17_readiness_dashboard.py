@@ -172,6 +172,11 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     if not isinstance(missing_by_class, dict):
         missing_by_class = {}
     missing_by_class_text = ",".join(f"{key}:{missing_by_class[key]}" for key in sorted(missing_by_class))
+    sidechain_priority_status = _text(fill_kit.get("sidechain_native_priority_status") or "missing")
+    sidechain_priority_open_count = _int(fill_kit.get("sidechain_native_priority_open_action_count"))
+    sidechain_priority_action_count = _int(fill_kit.get("sidechain_native_priority_action_count"))
+    sidechain_priority_first_action = _text(fill_kit.get("sidechain_native_priority_first_open_action_id"))
+    sidechain_priority_first_next_action = _text(fill_kit.get("sidechain_native_priority_first_open_next_action"))
 
     rows = [
         _row(
@@ -276,6 +281,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 f"benchmark_rows_ready={benchmark.get('ready_count', 0)}/{benchmark.get('row_count', 0)}; "
                 f"evidence_filled={fill_kit.get('filled_evidence_item_count', 0)}/{evidence_item_count}; "
                 f"missing={missing_evidence_count}; missing_by_class={missing_by_class_text or '-'}; "
+                f"sidechain_native_priority={sidechain_priority_status} "
+                f"{sidechain_priority_open_count}/{sidechain_priority_action_count} "
+                f"first={sidechain_priority_first_action or '-'}; "
                 f"input_scaffold={input_scaffold.get('scaffold_status', 'missing')} "
                 f"files={input_scaffold.get('required_total_file_count', 0)}; "
                 f"inventory={input_inventory.get('inventory_status', 'missing')} "
@@ -283,7 +291,10 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 f"{input_inventory.get('required_file_count', 0)}"
             ),
             gap=_text(first_win_gap.get("blocker") or closure.get("first_operator_input_blockers") or "historical_benchmark_inputs_missing"),
-            next_action="Fill the 40-row no-leak historical benchmark template with local prediction/native files, ablation layers, provenance, and calibration fields.",
+            next_action=(
+                sidechain_priority_first_next_action
+                or "Fill the 40-row no-leak historical benchmark template with local prediction/native files, ablation layers, provenance, and calibration fields."
+            ),
             artifact=f"{_artifact(args.benchmark_dashboard_json)};{_artifact(args.evidence_fill_kit_json)};{_artifact(args.input_scaffold_json)};{_artifact(args.input_inventory_json)}",
         ),
         _row(
@@ -358,6 +369,11 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "model_selection_active_gate_pass_count": model_active_gate_pass_count,
         "model_selection_model_selected_gate_pass_count": model_selected_gate_pass_count,
         "model_selection_review_both_count": model_review_both_count,
+        "sidechain_native_priority_status": sidechain_priority_status,
+        "sidechain_native_priority_open_action_count": sidechain_priority_open_count,
+        "sidechain_native_priority_action_count": sidechain_priority_action_count,
+        "sidechain_native_priority_first_open_action_id": sidechain_priority_first_action,
+        "sidechain_native_priority_first_open_next_action": sidechain_priority_first_next_action,
         "model_selection_internal_candidate_count": model_selected_candidate_count,
         "model_selection_comparison_contact_sheet_path": _text(model_comparison.get("contact_sheet_path")),
         "benchmark_row_count": _int(benchmark.get("row_count")),
@@ -439,6 +455,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- minimum edge pixels / luminance range: `{summary['min_estimated_edge_pixel_count']}` / `{summary['min_luminance_range']}`",
         f"- benchmark rows ready/blocked: `{summary['benchmark_ready_count']}/{summary['benchmark_blocked_count']}`",
         f"- evidence items missing/total: `{summary['missing_evidence_item_count']}/{summary['evidence_item_count']}`",
+        f"- sidechain-native priority open/action: `{summary['sidechain_native_priority_open_action_count']}/{summary['sidechain_native_priority_action_count']}` first `{summary['sidechain_native_priority_first_open_action_id'] or '-'}`",
         f"- input scaffold: `{summary['input_scaffold_status']}` rows/files `{summary['input_scaffold_row_count']}/{summary['input_scaffold_required_total_file_count']}`",
         f"- input scaffold prediction/native/ablation files: `{summary['input_scaffold_required_prediction_file_count']}/{summary['input_scaffold_required_native_file_count']}/{summary['input_scaffold_required_ablation_file_count']}`",
         f"- input inventory: `{summary['input_inventory_status']}` ready/blocked rows `{summary['input_inventory_ready_row_count']}/{summary['input_inventory_blocked_row_count']}`",
@@ -521,6 +538,7 @@ def _write_html(path_like: str | Path, payload: dict[str, Any]) -> str:
         f'      <div class="stat"><span>min edge</span><strong>{summary["min_estimated_edge_pixel_count"]}</strong></div>',
         f'      <div class="stat"><span>benchmark rows</span><strong>{summary["benchmark_ready_count"]}/{summary["benchmark_row_count"]}</strong></div>',
         f'      <div class="stat"><span>evidence missing</span><strong>{summary["missing_evidence_item_count"]}</strong></div>',
+        f'      <div class="stat"><span>sidechain-native</span><strong>{summary["sidechain_native_priority_open_action_count"]}/{summary["sidechain_native_priority_action_count"]}</strong></div>',
         "    </div>",
         "  </header>",
         "  <main>",

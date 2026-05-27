@@ -149,7 +149,7 @@ def build_payload(
         "follow_on_target_count": max(len(rows) - 1, 0),
         "export_bundle_sender_name": str(export_summary.get("sender_name", "")).strip(),
         "next_required_step": (
-            "Send DNDi/IPK first, then READDI_Korea, then M4K_open_science, oncology_condition_aware, and SGC_dark_kinase."
+            "Prepare manual dispatch review in rank order: DNDi/IPK, READDI_Korea, M4K_open_science, oncology_condition_aware, and SGC_dark_kinase. Require explicit R4 confirmation before external send."
             if rows and all_resolved
             else "Finish resolving all serialized chains before using this outbound execution priority board."
         ),

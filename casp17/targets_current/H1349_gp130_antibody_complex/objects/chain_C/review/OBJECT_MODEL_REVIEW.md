@@ -6,10 +6,10 @@
 - model: `casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_C/models/H1349_chain_C.pdb`
 - projection: `casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_C/renders/H1349_chain_C_projection.svg`
 - viewer: `casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_C/viewer.html`
-- atoms/protein/CA/residues: `1056/1056/214/214`
-- bbox xyz/diagonal: `58.068/29.024/30.917/71.904`
-- centroid xyz: `-16.292/-18.841/2.68`
-- radius_of_gyration: `15.329`
+- atoms/protein/CA/residues: `1655/1655/214/214`
+- bbox xyz/diagonal: `57.435/43.093/46.072/85.314`
+- centroid xyz: `-15.808/-24.049/6.041`
+- radius_of_gyration: `15.723`
 - viewer_local_status: `pass`
 - blockers: `-`
 

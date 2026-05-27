@@ -4,7 +4,7 @@ reinitialize
 set quiet, 1
 set internal_gui, 0
 viewport 1800, 1200
-load "runs/casp17_predictions_model_selected_shape_guarded_coordinate_normalized_current/H2319TS.pdb", casp17_H2319_surface
+load "runs/casp17_predictions_statistical_rotamer_current/H2319TS.pdb", casp17_H2319_surface
 hide everything, casp17_H2319_surface
 remove casp17_H2319_surface and elem H
 bg_color 0x06101f
@@ -45,5 +45,5 @@ zoom casp17_H2319_surface, 1.06
 rotate x, 12
 rotate y, -18
 ray 1800, 1200
-png runs/casp17_structure_renders_model_selected_shape_guarded_current/H2319_structure_surface_pymol.png, dpi=240
+png runs/casp17_structure_renders_current/H2319_structure_surface_pymol.png, dpi=240
 quit

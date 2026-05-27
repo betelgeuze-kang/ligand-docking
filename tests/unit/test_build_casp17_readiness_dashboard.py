@@ -191,6 +191,11 @@ def test_build_casp17_readiness_dashboard_summarizes_levels_and_gaps(tmp_path: P
                 "evidence_item_count": 1160,
                 "filled_evidence_item_count": 0,
                 "missing_evidence_item_count": 1160,
+                "sidechain_native_priority_status": "open",
+                "sidechain_native_priority_action_count": 120,
+                "sidechain_native_priority_open_action_count": 120,
+                "sidechain_native_priority_first_open_action_id": "hist_REQUIRED_MONOMER_001:leakage_clearance",
+                "sidechain_native_priority_first_open_next_action": "Replace placeholder leakage_clearance with operator-confirmed no_leak provenance.",
                 "missing_by_class": {
                     "target_identity": 40,
                     "core_file": 80,
@@ -318,6 +323,11 @@ def test_build_casp17_readiness_dashboard_summarizes_levels_and_gaps(tmp_path: P
     assert summary["min_luminance_range"] == 91.5
     assert summary["benchmark_row_count"] == 40
     assert summary["missing_evidence_item_count"] == 1160
+    assert summary["sidechain_native_priority_status"] == "open"
+    assert summary["sidechain_native_priority_open_action_count"] == 120
+    assert summary["sidechain_native_priority_action_count"] == 120
+    assert summary["sidechain_native_priority_first_open_action_id"] == "hist_REQUIRED_MONOMER_001:leakage_clearance"
+    assert summary["sidechain_native_priority_first_open_next_action"].startswith("Replace placeholder")
     assert summary["input_scaffold_status"] == "ready"
     assert summary["input_scaffold_row_count"] == 40
     assert summary["input_scaffold_required_total_file_count"] == 480
@@ -342,6 +352,7 @@ def test_build_casp17_readiness_dashboard_summarizes_levels_and_gaps(tmp_path: P
     assert "stereo depth" in html
     assert "turntable" in html
     assert "showcases" in html
+    assert "sidechain-native" in html
     assert "model_selection_review" in html
     assert "no_leak_historical_calibration_required_for_model_selected_promotion" in html
     assert "historical_monomer_rows_missing" in html

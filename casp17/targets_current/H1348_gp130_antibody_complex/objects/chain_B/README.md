@@ -6,8 +6,8 @@
 - model: `casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_B/models/H1348_chain_B.pdb`
 - projection: `casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_B/renders/H1348_chain_B_projection.svg`
 - viewer: `casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_B/viewer.html`
-- atoms/residues: `1090/222`
-- protein atoms / coordinate status: `1090/valid`
+- atoms/residues: `1669/222`
+- protein atoms / coordinate status: `1669/valid`
 
 ## Claim Boundary
 

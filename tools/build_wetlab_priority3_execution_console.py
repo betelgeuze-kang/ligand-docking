@@ -15,6 +15,23 @@ DEFAULT_EVENT_LOG = "runs/wetlab_priority3_runtime_event_log.jsonl"
 DEFAULT_OUT_MD = "runs/wetlab_priority3_execution_console_current.md"
 
 
+def _next_required_step(queue_s: dict[str, Any]) -> str:
+    queue_target_count = int(queue_s.get("queue_target_count", 0) or 0)
+    ready_now = int(queue_s.get("ready_now_target_count", 0) or 0)
+    blocked = int(queue_s.get("blocked_on_previous_review_count", 0) or 0)
+    running = int(queue_s.get("running_target_count", 0) or 0)
+    resolved = int(queue_s.get("resolved_target_count", 0) or 0)
+    if queue_target_count > 0 and resolved >= queue_target_count and ready_now == 0 and blocked == 0 and running == 0:
+        return (
+            "Priority3 execution is resolved. Review the partner send-round artifact for ranked manual dispatch, "
+            "then request explicit R4 confirmation before any external email or submission."
+        )
+    return (
+        "If Mpro is still only ready_to_launch, start it from the runtime runbook. Otherwise follow the latest gate "
+        "state shown here and only advance the next serialized target when the upstream result is resolved."
+    )
+
+
 def _load_event_log_rows(path_like: str, limit: int = 6) -> list[dict[str, Any]]:
     path = Path(path_like)
     if not path.exists():
@@ -81,7 +98,7 @@ def build_payload(
             "last_runtime_target": str(log_rows[-1].get("target_id", "")).strip() if log_rows else "",
             "last_runtime_event": str(log_rows[-1].get("event", "")).strip() if log_rows else "",
             "last_runtime_timestamp": str(log_rows[-1].get("event_timestamp", "")).strip() if log_rows else "",
-            "next_required_step": "If Mpro is still only ready_to_launch, start it from the runtime runbook. Otherwise follow the latest gate state shown here and only advance the next serialized target when the upstream result is resolved.",
+            "next_required_step": _next_required_step(queue_s),
         },
         "structured": {
             "queue_artifact": "runs/wetlab_priority3_protein_run_queue_current.md",

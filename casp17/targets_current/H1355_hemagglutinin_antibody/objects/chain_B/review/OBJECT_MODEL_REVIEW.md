@@ -6,10 +6,10 @@
 - model: `casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_B/models/H1355_chain_B.pdb`
 - projection: `casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_B/renders/H1355_chain_B_projection.svg`
 - viewer: `casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_B/viewer.html`
-- atoms/protein/CA/residues: `114/114/114/114`
-- bbox xyz/diagonal: `35.069/29.577/28.795/54.164`
-- centroid xyz: `-10.541/20.953/-1.139`
-- radius_of_gyration: `12.958`
+- atoms/protein/CA/residues: `863/863/114/114`
+- bbox xyz/diagonal: `46.404/25.075/22.986/57.536`
+- centroid xyz: `-8.919/13.934/3.834`
+- radius_of_gyration: `12.86`
 - viewer_local_status: `pass`
 - blockers: `-`
 

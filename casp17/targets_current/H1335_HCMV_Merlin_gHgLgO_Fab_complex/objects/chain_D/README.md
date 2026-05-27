@@ -6,8 +6,8 @@
 - model: `casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_D/models/H1335_chain_D.pdb`
 - projection: `casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_D/renders/H1335_chain_D_projection.svg`
 - viewer: `casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_D/viewer.html`
-- atoms/residues: `1058/214`
-- protein atoms / coordinate status: `1058/valid`
+- atoms/residues: `1650/214`
+- protein atoms / coordinate status: `1650/valid`
 
 ## Claim Boundary
 

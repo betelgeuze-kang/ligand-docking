@@ -8,7 +8,7 @@
 - final model: `casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/models/H2339_final_selected_model.pdb`
 - FASTA: `casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/metadata/H2339.fasta`
 - render files: `20`
-- figure files: `4`
+- figure files: `5`
 - object folders: `4`
 - metadata files: `7`
 

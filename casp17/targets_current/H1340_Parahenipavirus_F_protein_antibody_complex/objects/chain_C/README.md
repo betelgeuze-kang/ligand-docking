@@ -6,8 +6,8 @@
 - model: `casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_C/models/H1340_chain_C.pdb`
 - projection: `casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_C/renders/H1340_chain_C_projection.svg`
 - viewer: `casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_C/viewer.html`
-- atoms/residues: `525/107`
-- protein atoms / coordinate status: `525/valid`
+- atoms/residues: `820/107`
+- protein atoms / coordinate status: `820/valid`
 
 ## Claim Boundary
 

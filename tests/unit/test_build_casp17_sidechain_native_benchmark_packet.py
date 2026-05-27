@@ -97,6 +97,12 @@ def test_build_casp17_sidechain_native_benchmark_packet_scores_no_leak_fixture(t
             str(tmp_path / "packet.csv"),
             "--out-md",
             str(tmp_path / "packet.md"),
+            "--out-workorder-json",
+            str(tmp_path / "workorder.json"),
+            "--out-workorder-csv",
+            str(tmp_path / "workorder.csv"),
+            "--out-workorder-md",
+            str(tmp_path / "workorder.md"),
         ],
         cwd=ROOT,
         check=True,
@@ -112,6 +118,8 @@ def test_build_casp17_sidechain_native_benchmark_packet_scores_no_leak_fixture(t
     assert row["native_sidechain_atom_coverage"] == 1.0
     assert row["sidechain_rmsd_A"] < 1e-6
     assert row["sidechain_lddt_proxy"] == 1.0
+    assert payload["summary"]["workorder_action_count"] == 0
+    assert payload["workorder_rows"] == []
     assert "Sidechain Native Benchmark" in (tmp_path / "packet.md").read_text(encoding="utf-8")
 
 
@@ -139,6 +147,12 @@ def test_build_casp17_sidechain_native_benchmark_packet_blocks_missing_sidechain
             str(tmp_path / "packet.csv"),
             "--out-md",
             str(tmp_path / "packet.md"),
+            "--out-workorder-json",
+            str(tmp_path / "workorder.json"),
+            "--out-workorder-csv",
+            str(tmp_path / "workorder.csv"),
+            "--out-workorder-md",
+            str(tmp_path / "workorder.md"),
         ],
         cwd=ROOT,
         check=True,
@@ -151,6 +165,10 @@ def test_build_casp17_sidechain_native_benchmark_packet_blocks_missing_sidechain
     assert row["sidechain_native_status"] == "blocked"
     assert "matched_sidechain_atom_count_below_threshold" in row["blockers"]
     assert "native_sidechain_coverage_below_threshold" in row["blockers"]
+    assert payload["summary"]["exactness_blocked_count"] == 1
+    assert payload["summary"]["metric_threshold_blocked_count"] == 0
+    assert payload["summary"]["workorder_action_count"] == 1
+    assert payload["workorder_rows"][0]["evidence_class"] == "exactness_gate"
 
 
 def test_build_casp17_sidechain_native_benchmark_packet_blocks_partial_ca_coverage(tmp_path: Path) -> None:
@@ -177,6 +195,12 @@ def test_build_casp17_sidechain_native_benchmark_packet_blocks_partial_ca_covera
             str(tmp_path / "packet.csv"),
             "--out-md",
             str(tmp_path / "packet.md"),
+            "--out-workorder-json",
+            str(tmp_path / "workorder.json"),
+            "--out-workorder-csv",
+            str(tmp_path / "workorder.csv"),
+            "--out-workorder-md",
+            str(tmp_path / "workorder.md"),
         ],
         cwd=ROOT,
         check=True,
@@ -189,6 +213,85 @@ def test_build_casp17_sidechain_native_benchmark_packet_blocks_partial_ca_covera
     assert row["prediction_ca_coverage"] == 1.0
     assert row["native_ca_coverage"] < 1.0
     assert "native_ca_coverage_below_threshold" in row["blockers"]
+    assert payload["workorder_rows"][0]["evidence_item"] == "chain_residue_sidechain_exactness"
+
+
+def test_build_casp17_sidechain_native_benchmark_packet_summarizes_core_input_blockers(tmp_path: Path) -> None:
+    manifest = tmp_path / "manifest.csv"
+    with manifest.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=[
+                "benchmark_id",
+                "target_id",
+                "scope",
+                "split",
+                "prediction_pdb",
+                "native_pdb",
+                "leakage_clearance",
+            ],
+        )
+        writer.writeheader()
+        writer.writerow(
+            {
+                "benchmark_id": "hist_MISSING",
+                "target_id": "MISSING",
+                "scope": "monomer",
+                "split": "historical",
+                "prediction_pdb": str(tmp_path / "missing_prediction.pdb"),
+                "native_pdb": str(tmp_path / "missing_native.pdb"),
+                "leakage_clearance": "REQUIRED_NO_LEAK_CLEARANCE",
+            }
+        )
+
+    subprocess.run(
+        [
+            "python3",
+            str(ROOT / "tools/build_casp17_sidechain_native_benchmark_packet.py"),
+            "--manifest-csv",
+            str(manifest),
+            "--out-json",
+            str(tmp_path / "packet.json"),
+            "--out-csv",
+            str(tmp_path / "packet.csv"),
+            "--out-md",
+            str(tmp_path / "packet.md"),
+            "--out-workorder-json",
+            str(tmp_path / "workorder.json"),
+            "--out-workorder-csv",
+            str(tmp_path / "workorder.csv"),
+            "--out-workorder-md",
+            str(tmp_path / "workorder.md"),
+        ],
+        cwd=ROOT,
+        check=True,
+    )
+
+    payload = json.loads((tmp_path / "packet.json").read_text(encoding="utf-8"))
+    summary = payload["summary"]
+
+    assert summary["sidechain_native_benchmark_status"] == "blocked"
+    assert summary["benchmark_count"] == 1
+    assert summary["core_input_blocked_count"] == 1
+    assert summary["leakage_clearance_blocked_count"] == 1
+    assert summary["prediction_pdb_missing_count"] == 1
+    assert summary["native_pdb_missing_count"] == 1
+    assert summary["missing_core_file_count"] == 2
+    assert summary["first_blocked_benchmark_id"] == "hist_MISSING"
+    assert summary["first_blocked_target_id"] == "MISSING"
+    assert "leakage_clearance_missing_or_not_clear" in summary["first_blocked_blockers"]
+    assert summary["blocker_histogram"]["prediction_pdb_missing"] == 1
+    assert "prediction/native PDB files" in summary["first_open_next_action"]
+    assert summary["workorder_action_count"] == 3
+    assert summary["open_workorder_action_count"] == 3
+    assert summary["workorder_action_counts_by_class"] == {"core_file": 2, "provenance": 1}
+    workorder_rows = payload["workorder_rows"]
+    assert [row["evidence_item"] for row in workorder_rows] == [
+        "leakage_clearance",
+        "prediction_pdb",
+        "native_pdb",
+    ]
+    assert "CASP17 Sidechain Native Input Workorder" in (tmp_path / "workorder.md").read_text(encoding="utf-8")
 
 
 def test_build_casp17_sidechain_native_benchmark_packet_blocks_missing_manifest(tmp_path: Path) -> None:
@@ -204,6 +307,12 @@ def test_build_casp17_sidechain_native_benchmark_packet_blocks_missing_manifest(
             str(tmp_path / "packet.csv"),
             "--out-md",
             str(tmp_path / "packet.md"),
+            "--out-workorder-json",
+            str(tmp_path / "workorder.json"),
+            "--out-workorder-csv",
+            str(tmp_path / "workorder.csv"),
+            "--out-workorder-md",
+            str(tmp_path / "workorder.md"),
         ],
         cwd=ROOT,
         check=True,
@@ -213,3 +322,6 @@ def test_build_casp17_sidechain_native_benchmark_packet_blocks_missing_manifest(
     assert payload["summary"]["sidechain_native_benchmark_status"] == "blocked"
     assert payload["summary"]["blocked_count"] == 1
     assert payload["summary"]["manifest_blockers"] == "manifest_missing"
+    assert payload["summary"]["first_open_next_action"].startswith("Create or populate")
+    assert payload["summary"]["workorder_action_count"] == 1
+    assert payload["workorder_rows"][0]["evidence_class"] == "manifest"

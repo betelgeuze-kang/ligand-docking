@@ -8,7 +8,7 @@
 - final model: `casp17/targets_current/H2312_EXT1_EXT2_2BAV4/models/H2312_final_selected_model.pdb`
 - FASTA: `casp17/targets_current/H2312_EXT1_EXT2_2BAV4/metadata/H2312.fasta`
 - render files: `20`
-- figure files: `4`
+- figure files: `5`
 - object folders: `3`
 - metadata files: `7`
 

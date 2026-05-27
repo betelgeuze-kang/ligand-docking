@@ -45,6 +45,22 @@ def run_refresh(python_bin: str) -> list[dict[str, Any]]:
     return rows
 
 
+def _next_required_step(summary: dict[str, Any]) -> str:
+    ready_now = int(summary.get("ready_now_target_count", 0) or 0)
+    blocked = int(summary.get("blocked_on_previous_review_count", 0) or 0)
+    running = int(summary.get("running_target_count", 0) or 0)
+    resolved = int(summary.get("resolved_target_count", 0) or 0)
+    if resolved >= 3 and ready_now == 0 and blocked == 0 and running == 0:
+        return (
+            "Priority3 serialized execution is resolved. Refresh the partner export bundle, outbound priority board, "
+            "and partner send-round artifacts, then require explicit R4 confirmation before any external dispatch."
+        )
+    return (
+        "Update the live progress or result summary writers for the active target, then rerun this refresh script "
+        "to propagate serialized gate changes through CA IX and T. cruzi PDE."
+    )
+
+
 def build_payload(step_rows: list[dict[str, Any]]) -> dict[str, Any]:
     queue_summary = _summary("runs/wetlab_priority3_protein_run_queue_current.json")
     stack_summary = _summary("runs/wetlab_partnering_stack_current.json")
@@ -55,28 +71,29 @@ def build_payload(step_rows: list[dict[str, Any]]) -> dict[str, Any]:
     tcruzi_progress = _summary("runs/tcruzi_pde_live_progress_current.json") if Path(ROOT / "runs/tcruzi_pde_live_progress_current.json").exists() else {}
     tcruzi_result = _summary("runs/tcruzi_pde_result_summary_current.json") if Path(ROOT / "runs/tcruzi_pde_result_summary_current.json").exists() else {}
     tcruzi_run_record = _summary("runs/tcruzi_pde_run_record_current.json") if Path(ROOT / "runs/tcruzi_pde_run_record_current.json").exists() else {}
+    summary = {
+        "status": "wetlab_priority3_gate_refresh_ready",
+        "step_count": len(step_rows),
+        "mpro_live_progress_status": str(mpro_progress.get("status", "not_present")).strip() or "not_present",
+        "mpro_result_summary_status": str(mpro_result.get("status", "not_present")).strip() or "not_present",
+        "caix_live_progress_status": str(caix_progress.get("status", "not_present")).strip() or "not_present",
+        "caix_result_summary_status": str(caix_result.get("status", "not_present")).strip() or "not_present",
+        "tcruzi_live_progress_status": str(tcruzi_progress.get("status", "not_present")).strip() or "not_present",
+        "tcruzi_result_summary_status": str(tcruzi_result.get("status", "not_present")).strip() or "not_present",
+        "ready_now_target_count": int(queue_summary.get("ready_now_target_count", 0) or 0),
+        "blocked_on_previous_review_count": int(queue_summary.get("blocked_on_previous_review_count", 0) or 0),
+        "running_target_count": int(queue_summary.get("running_target_count", 0) or 0),
+        "resolved_target_count": int(queue_summary.get("resolved_target_count", 0) or 0),
+        "mpro_execution_state": str(stack_summary.get("mpro_execution_state", "")).strip(),
+        "caix_review_state": str(stack_summary.get("caix_review_state", "")).strip(),
+        "tcruzi_run_record_status": str(tcruzi_run_record.get("status", "not_present")).strip() or "not_present",
+        "tcruzi_execution_state": str(stack_summary.get("tcruzi_execution_state", tcruzi_run_record.get("execution_state", ""))).strip(),
+        "tcruzi_queue_status_now": str(tcruzi_run_record.get("queue_status_now", "")).strip(),
+        "tcruzi_result_review_gate_status": str(stack_summary.get("tcruzi_result_review_gate_status", "")).strip(),
+    }
+    summary["next_required_step"] = _next_required_step(summary)
     return {
-        "summary": {
-            "status": "wetlab_priority3_gate_refresh_ready",
-            "step_count": len(step_rows),
-            "mpro_live_progress_status": str(mpro_progress.get("status", "not_present")).strip() or "not_present",
-            "mpro_result_summary_status": str(mpro_result.get("status", "not_present")).strip() or "not_present",
-            "caix_live_progress_status": str(caix_progress.get("status", "not_present")).strip() or "not_present",
-            "caix_result_summary_status": str(caix_result.get("status", "not_present")).strip() or "not_present",
-            "tcruzi_live_progress_status": str(tcruzi_progress.get("status", "not_present")).strip() or "not_present",
-            "tcruzi_result_summary_status": str(tcruzi_result.get("status", "not_present")).strip() or "not_present",
-            "ready_now_target_count": int(queue_summary.get("ready_now_target_count", 0) or 0),
-            "blocked_on_previous_review_count": int(queue_summary.get("blocked_on_previous_review_count", 0) or 0),
-            "running_target_count": int(queue_summary.get("running_target_count", 0) or 0),
-            "resolved_target_count": int(queue_summary.get("resolved_target_count", 0) or 0),
-            "mpro_execution_state": str(stack_summary.get("mpro_execution_state", "")).strip(),
-            "caix_review_state": str(stack_summary.get("caix_review_state", "")).strip(),
-            "tcruzi_run_record_status": str(tcruzi_run_record.get("status", "not_present")).strip() or "not_present",
-            "tcruzi_execution_state": str(stack_summary.get("tcruzi_execution_state", tcruzi_run_record.get("execution_state", ""))).strip(),
-            "tcruzi_queue_status_now": str(tcruzi_run_record.get("queue_status_now", "")).strip(),
-            "tcruzi_result_review_gate_status": str(stack_summary.get("tcruzi_result_review_gate_status", "")).strip(),
-            "next_required_step": "Update the live progress or result summary writers for the active target, then rerun this refresh script to propagate serialized gate changes through CA IX and T. cruzi PDE.",
-        },
+        "summary": summary,
         "structured": {
             "execution_policy": "serialized_by_target",
             "refresh_role": "rebuild_all_priority3_gate_artifacts_from_live_writer_inputs",

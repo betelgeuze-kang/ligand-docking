@@ -6,10 +6,10 @@
 - model: `casp17/targets_current/H1344_HSV_gD_HAB72/objects/chain_B/models/H1344_chain_B.pdb`
 - projection: `casp17/targets_current/H1344_HSV_gD_HAB72/objects/chain_B/renders/H1344_chain_B_projection.svg`
 - viewer: `casp17/targets_current/H1344_HSV_gD_HAB72/objects/chain_B/viewer.html`
-- atoms/protein/CA/residues: `1065/1065/216/216`
-- bbox xyz/diagonal: `31.881/37.218/35.404/60.457`
-- centroid xyz: `-11.545/22.857/0.753`
-- radius_of_gyration: `13.613`
+- atoms/protein/CA/residues: `1652/1652/216/216`
+- bbox xyz/diagonal: `34.8/65.8/46.472/87.752`
+- centroid xyz: `-11.288/23.38/-1.649`
+- radius_of_gyration: `15.187`
 - viewer_local_status: `pass`
 - blockers: `-`
 

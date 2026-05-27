@@ -6,8 +6,8 @@
 - model: `casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_B/models/H2338_chain_B.pdb`
 - projection: `casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_B/renders/H2338_chain_B_projection.svg`
 - viewer: `casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_B/viewer.html`
-- atoms/residues: `1063/215`
-- protein atoms / coordinate status: `1063/valid`
+- atoms/residues: `1646/215`
+- protein atoms / coordinate status: `1646/valid`
 
 ## Claim Boundary
 

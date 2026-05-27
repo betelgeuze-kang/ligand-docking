@@ -6,10 +6,10 @@
 - model: `casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_A/models/H1340_chain_A.pdb`
 - projection: `casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_A/renders/H1340_chain_A_projection.svg`
 - viewer: `casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_A/viewer.html`
-- atoms/protein/CA/residues: `2280/2280/462/462`
-- bbox xyz/diagonal: `28.224/47.222/60.659/81.89`
-- centroid xyz: `18.801/-1.942/-7.261`
-- radius_of_gyration: `19.955`
+- atoms/protein/CA/residues: `3536/3536/462/462`
+- bbox xyz/diagonal: `45.937/62.574/64.299/100.797`
+- centroid xyz: `19.727/2.66/0.275`
+- radius_of_gyration: `17.777`
 - viewer_local_status: `pass`
 - blockers: `-`
 

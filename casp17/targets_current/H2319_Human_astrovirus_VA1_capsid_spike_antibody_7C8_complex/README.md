@@ -8,7 +8,7 @@
 - final model: `casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/models/H2319_final_selected_model.pdb`
 - FASTA: `casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/metadata/H2319.fasta`
 - render files: `20`
-- figure files: `4`
+- figure files: `5`
 - object folders: `3`
 - metadata files: `7`
 

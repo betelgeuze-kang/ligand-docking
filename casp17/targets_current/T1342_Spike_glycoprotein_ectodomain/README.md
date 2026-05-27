@@ -8,7 +8,7 @@
 - final model: `casp17/targets_current/T1342_Spike_glycoprotein_ectodomain/models/T1342_final_selected_model.pdb`
 - FASTA: `casp17/targets_current/T1342_Spike_glycoprotein_ectodomain/metadata/T1342.fasta`
 - render files: `20`
-- figure files: `4`
+- figure files: `5`
 - object folders: `1`
 - metadata files: `7`
 

@@ -191,7 +191,12 @@ def test_build_casp17_win_tier_action_queue_packet_orders_blocked_gaps(tmp_path:
     assert rows["all_atom_quality_upgrade"]["blockers"] == "sidechain_native_benchmark_missing_or_blocked"
     assert "runs/casp17_predictions_forcefield_minimized_current" in rows["all_atom_quality_upgrade"]["command"]
     assert "runs/casp17_predictions_statistical_rotamer_current" in rows["all_atom_quality_upgrade"]["command"]
+    assert "build_casp17_sidechain_native_manifest_sync_packet.py" in rows["all_atom_quality_upgrade"]["command"]
     assert "build_casp17_sidechain_native_benchmark_packet.py" in rows["all_atom_quality_upgrade"]["command"]
+    assert "runs/casp17_historical_benchmark_manifest_draft_from_operator_current.csv" in (
+        rows["all_atom_quality_upgrade"]["command"]
+    )
+    assert "runs/casp17_sidechain_native_manifest_candidate_current.csv" in rows["all_atom_quality_upgrade"]["command"]
     assert rows["historical_benchmark_inputs"]["status"] == "blocked_input"
     assert "ready_total_below_threshold" in rows["historical_benchmark_inputs"]["blockers"]
     assert "preflight=blocked" in rows["historical_benchmark_inputs"]["current_evidence"]

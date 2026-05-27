@@ -110,7 +110,7 @@ def build_payload(
             "proposal_summary": (
                 "A two-target Chagas first-contact packet that combines a parasite-vs-human selectivity story for T. cruzi PDE with a false-positive-controlled Cruzain protease story, keeping the wet-lab ask limited to cheap recombinant assays and day-one counterscreens."
             ),
-            "attachment_artifacts": "runs/wetlab_neglected_outreach_packet_current.md; runs/wetlab_neglected_first_contact_packets_current.md; runs/wetlab_target_brief_tcruzi_pde_current.md; runs/wetlab_target_brief_cruzain_current.md",
+            "attachment_artifacts": "runs/wetlab_neglected_outreach_packet_current.md; runs/wetlab_neglected_first_contact_packets_current.md; runs/wetlab_target_brief_tcruzi_pde_current.md; runs/wetlab_target_brief_cruzain_current.md; runs/tcruzi_pde_condition_card_current.md; runs/tcruzi_pde_human_pde_selectivity_panel_current.md; runs/tcruzi_pde_assay_packet_current.md; runs/tcruzi_pde_go_no_go_card_current.md; runs/tcruzi_pde_dndi_ipk_export_current.md",
         },
         {
             "track_id": "M4K_open_science",
@@ -167,7 +167,7 @@ def build_payload(
             "proposal_summary": (
                 "A pH-conditioned CA IX first-contact packet that couples acidic-buffer ranking with same-packet CA II and CA XII deselection, so the wet-lab can answer a sharper yes/no question than a flat carbonic-anhydrase screen."
             ),
-            "attachment_artifacts": "runs/wetlab_oncology_first_contact_packet_current.md; runs/wetlab_target_brief_caix_current.md; runs/ca_ix_one_page_brief_current.md",
+            "attachment_artifacts": "runs/wetlab_oncology_first_contact_packet_current.md; runs/wetlab_target_brief_caix_current.md; runs/ca_ix_one_page_brief_current.md; runs/caix_condition_card_current.md; runs/caix_ca2_ca12_selectivity_panel_current.md; runs/caix_acidic_buffer_assay_packet_current.md; runs/caix_condition_aware_go_no_go_card_current.md; runs/caix_oncology_export_current.md",
         },
         {
             "track_id": "READDI_Korea",
@@ -186,7 +186,7 @@ def build_payload(
             "proposal_summary": (
                 "A paired antiviral first-contact packet that uses Mpro as the cheapest proof rail and PLpro as the shallow-pocket selectivity rail, with explicit host-protease and human-DUB counterscreens from the first experiment."
             ),
-            "attachment_artifacts": "runs/wetlab_antiviral_first_contact_packets_current.md; runs/wetlab_target_brief_sarscov2_mpro_current.md; runs/wetlab_target_brief_sarscov2_plpro_current.md; runs/wetlab_mpro_vendor_cost_check_current.md",
+            "attachment_artifacts": "runs/wetlab_antiviral_first_contact_packets_current.md; runs/wetlab_target_brief_sarscov2_mpro_current.md; runs/wetlab_target_brief_sarscov2_plpro_current.md; runs/wetlab_mpro_vendor_cost_check_current.md; runs/sarscov2_mpro_condition_card_current.md; runs/sarscov2_mpro_host_protease_panel_current.md; runs/sarscov2_mpro_assay_packet_current.md; runs/sarscov2_mpro_go_no_go_card_current.md; runs/sarscov2_mpro_readdi_export_current.md",
         },
     ]
 
@@ -196,7 +196,7 @@ def build_payload(
         "ready_to_send_count": sum(1 for row in rows if row["status"] == "ready_to_send"),
         "sender_name": sender_name,
         "sender_affiliation": sender_affiliation or "",
-        "next_required_step": "Use these exported subject lines, email bodies, proposal titles, and attachment bundles for DNDi/IPK, M4K, SGC, oncology, and READDI first-contact outreach.",
+        "next_required_step": "Review these exported subject lines, email bodies, proposal titles, and attachment bundles for DNDi/IPK, M4K, SGC, oncology, and READDI. Require explicit R4 confirmation before external outreach.",
     }
     return {"summary": summary, "rows": rows}
 

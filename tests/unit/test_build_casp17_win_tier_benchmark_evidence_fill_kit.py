@@ -32,6 +32,8 @@ def test_build_casp17_win_tier_benchmark_evidence_fill_kit_lists_required_items(
     template = tmp_path / "template.csv"
     dashboard = tmp_path / "dashboard.json"
     historical = tmp_path / "historical.json"
+    sidechain_workorder = tmp_path / "sidechain_workorder.json"
+    sidechain_priority_csv = tmp_path / "sidechain_priority.csv"
     row = {
         "benchmark_id": "hist_demo_001",
         "target_id": "DEMO001",
@@ -86,6 +88,46 @@ def test_build_casp17_win_tier_benchmark_evidence_fill_kit_lists_required_items(
         ),
         encoding="utf-8",
     )
+    sidechain_workorder.write_text(
+        json.dumps(
+            {
+                "summary": {"sidechain_native_benchmark_status": "blocked"},
+                "rows": [
+                    {
+                        "action_id": "hist_demo_001:leakage_clearance",
+                        "action_status": "open",
+                        "benchmark_id": "hist_demo_001",
+                        "target_id": "DEMO001",
+                        "scope": "monomer",
+                        "evidence_class": "provenance",
+                        "evidence_item": "leakage_clearance",
+                        "source_column": "leakage_clearance",
+                        "required_value": "operator-confirmed no_leak provenance",
+                        "current_value": "required_no_leak_clearance",
+                        "destination_path": "manifest row leakage_clearance",
+                        "blocker": "leakage_clearance_missing_or_not_clear",
+                        "next_action": "Replace placeholder leakage_clearance with operator-confirmed no_leak provenance.",
+                    },
+                    {
+                        "action_id": "hist_demo_001:prediction_pdb",
+                        "action_status": "open",
+                        "benchmark_id": "hist_demo_001",
+                        "target_id": "DEMO001",
+                        "scope": "monomer",
+                        "evidence_class": "core_file",
+                        "evidence_item": "prediction_pdb",
+                        "source_column": "prediction_pdb",
+                        "required_value": "internal prediction PDB generated before native release",
+                        "current_value": str(prediction),
+                        "destination_path": str(prediction),
+                        "blocker": "prediction_pdb_missing",
+                        "next_action": "Place the internal prediction PDB at the manifest prediction_pdb path.",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
 
     subprocess.run(
         [
@@ -97,6 +139,8 @@ def test_build_casp17_win_tier_benchmark_evidence_fill_kit_lists_required_items(
             str(dashboard),
             "--historical-benchmark-json",
             str(historical),
+            "--sidechain-native-workorder-json",
+            str(sidechain_workorder),
             "--out-json",
             str(tmp_path / "kit.json"),
             "--out-csv",
@@ -105,6 +149,8 @@ def test_build_casp17_win_tier_benchmark_evidence_fill_kit_lists_required_items(
             str(tmp_path / "kit.md"),
             "--out-html",
             str(tmp_path / "kit.html"),
+            "--out-sidechain-native-priority-csv",
+            str(sidechain_priority_csv),
         ],
         cwd=ROOT,
         check=True,
@@ -113,7 +159,10 @@ def test_build_casp17_win_tier_benchmark_evidence_fill_kit_lists_required_items(
     payload = json.loads((tmp_path / "kit.json").read_text(encoding="utf-8"))
     summary = payload["summary"]
     rows = payload["rows"]
+    priority_rows = payload["sidechain_native_priority_rows"]
+    priority_csv_rows = list(csv.DictReader(sidechain_priority_csv.open(encoding="utf-8")))
     html = (tmp_path / "kit.html").read_text(encoding="utf-8")
+    md = (tmp_path / "kit.md").read_text(encoding="utf-8")
 
     assert summary["fill_kit_status"] == "ready"
     assert summary["benchmark_row_count"] == 1
@@ -125,10 +174,21 @@ def test_build_casp17_win_tier_benchmark_evidence_fill_kit_lists_required_items(
     assert summary["required_native_metric_gate_count"] == 3
     assert summary["missing_by_class"]["native_metric_gate"] == 0
     assert summary["missing_by_class"]["ablation_layer_file"] == 9
+    assert summary["sidechain_native_priority_status"] == "open"
+    assert summary["sidechain_native_priority_action_count"] == 2
+    assert summary["sidechain_native_priority_open_action_count"] == 2
+    assert summary["sidechain_native_priority_missing_by_class"] == {"core_file": 1, "provenance": 1}
+    assert summary["sidechain_native_priority_first_open_action_id"] == "hist_demo_001:leakage_clearance"
+    assert summary["sidechain_native_priority_csv_path"].endswith("sidechain_priority.csv")
+    assert priority_rows[0]["source"] == "sidechain_native_workorder"
+    assert priority_rows[0]["next_action"].startswith("Replace placeholder leakage_clearance")
+    assert priority_csv_rows[1]["evidence_class"] == "core_file"
     assert any(item["evidence_item"] == "internal_prediction_pdb" and item["completion_status"] == "filled" for item in rows)
     assert any(item["evidence_item"] == "statistical_rotamer" and item["completion_status"] == "missing" for item in rows)
     assert any(item["evidence_item"] == "monomer_tm_score_proxy" and item["completion_status"] == "filled" for item in rows)
     assert "CASP17 Benchmark Evidence Fill Kit" in html
+    assert "Sidechain-Native Priority Lane" in html
+    assert "sidechain-native priority" in md
     assert "http://" not in html
     assert "https://" not in html
     assert "Local evidence fill kit only" in summary["claim_boundary"]

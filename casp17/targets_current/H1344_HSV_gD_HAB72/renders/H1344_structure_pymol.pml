@@ -2,7 +2,7 @@ reinitialize
 set quiet, 1
 set internal_gui, 0
 viewport 1800, 1200
-load "runs/casp17_predictions_model_selected_shape_guarded_coordinate_normalized_current/H1344TS.pdb", casp17_H1344
+load "runs/casp17_predictions_statistical_rotamer_current/H1344TS.pdb", casp17_H1344
 hide everything, casp17_H1344
 remove casp17_H1344 and elem H
 bg_color 0x08111f
@@ -40,5 +40,5 @@ zoom casp17_H1344, 1.10
 rotate x, 8
 rotate y, -10
 ray 1800, 1200
-png runs/casp17_structure_renders_model_selected_shape_guarded_current/H1344_structure_pymol.png, dpi=240
+png runs/casp17_structure_renders_current/H1344_structure_pymol.png, dpi=240
 quit

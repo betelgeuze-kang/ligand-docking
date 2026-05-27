@@ -6,8 +6,8 @@
 - model: `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_B/models/H2332_chain_B.pdb`
 - projection: `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_B/renders/H2332_chain_B_projection.svg`
 - viewer: `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_B/viewer.html`
-- atoms/residues: `119/119`
-- protein atoms / coordinate status: `119/valid`
+- atoms/residues: `906/119`
+- protein atoms / coordinate status: `906/valid`
 
 ## Claim Boundary
 

@@ -6,10 +6,10 @@
 - model: `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_C/models/H2332_chain_C.pdb`
 - projection: `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_C/renders/H2332_chain_C_projection.svg`
 - viewer: `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_C/viewer.html`
-- atoms/protein/CA/residues: `160/160/160/160`
-- bbox xyz/diagonal: `40.19/26.675/30.686/57.17`
-- centroid xyz: `-155.022/4.908/7.064`
-- radius_of_gyration: `13.907`
+- atoms/protein/CA/residues: `1298/1298/160/160`
+- bbox xyz/diagonal: `66.858/19.331/21.476/72.835`
+- centroid xyz: `-21.796/1.266/6.45`
+- radius_of_gyration: `14.625`
 - viewer_local_status: `pass`
 - blockers: `-`
 

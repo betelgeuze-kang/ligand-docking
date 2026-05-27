@@ -1,7 +1,7 @@
 {
   "rows": [
     {
-      "atom_count": 1393,
+      "atom_count": 2342,
       "blockers": "",
       "chain_id": "A",
       "chain_ids": "A",
@@ -12,7 +12,7 @@
       "object_folder": "casp17/targets_current/T1331_5AT/objects/chain_A",
       "object_id": "chain_A",
       "projection_svg_path": "casp17/targets_current/T1331_5AT/objects/chain_A/renders/T1331_chain_A_projection.svg",
-      "protein_atom_count": 1393,
+      "protein_atom_count": 2342,
       "protein_name": "5AT",
       "readme_path": "casp17/targets_current/T1331_5AT/objects/chain_A/README.md",
       "residue_count": 281,
@@ -21,7 +21,7 @@
       "viewer_html_path": "casp17/targets_current/T1331_5AT/objects/chain_A/viewer.html"
     },
     {
-      "atom_count": 2181,
+      "atom_count": 3592,
       "blockers": "",
       "chain_id": "A",
       "chain_ids": "A",
@@ -32,7 +32,7 @@
       "object_folder": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_A",
       "object_id": "chain_A",
       "projection_svg_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_A/renders/H1335_chain_A_projection.svg",
-      "protein_atom_count": 2181,
+      "protein_atom_count": 3592,
       "protein_name": "HCMV Merlin gHgLgO-Fab complex",
       "readme_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_A/README.md",
       "residue_count": 439,
@@ -41,7 +41,7 @@
       "viewer_html_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_A/viewer.html"
     },
     {
-      "atom_count": 3441,
+      "atom_count": 5546,
       "blockers": "",
       "chain_id": "B",
       "chain_ids": "B",
@@ -52,7 +52,7 @@
       "object_folder": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_B",
       "object_id": "chain_B",
       "projection_svg_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_B/renders/H1335_chain_B_projection.svg",
-      "protein_atom_count": 3441,
+      "protein_atom_count": 5546,
       "protein_name": "HCMV Merlin gHgLgO-Fab complex",
       "readme_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_B/README.md",
       "residue_count": 692,
@@ -61,7 +61,7 @@
       "viewer_html_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_B/viewer.html"
     },
     {
-      "atom_count": 1226,
+      "atom_count": 1938,
       "blockers": "",
       "chain_id": "C",
       "chain_ids": "C",
@@ -72,7 +72,7 @@
       "object_folder": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_C",
       "object_id": "chain_C",
       "projection_svg_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_C/renders/H1335_chain_C_projection.svg",
-      "protein_atom_count": 1226,
+      "protein_atom_count": 1938,
       "protein_name": "HCMV Merlin gHgLgO-Fab complex",
       "readme_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_C/README.md",
       "residue_count": 248,
@@ -81,7 +81,7 @@
       "viewer_html_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_C/viewer.html"
     },
     {
-      "atom_count": 1058,
+      "atom_count": 1650,
       "blockers": "",
       "chain_id": "D",
       "chain_ids": "D",
@@ -92,7 +92,7 @@
       "object_folder": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_D",
       "object_id": "chain_D",
       "projection_svg_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_D/renders/H1335_chain_D_projection.svg",
-      "protein_atom_count": 1058,
+      "protein_atom_count": 1650,
       "protein_name": "HCMV Merlin gHgLgO-Fab complex",
       "readme_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_D/README.md",
       "residue_count": 214,
@@ -101,7 +101,7 @@
       "viewer_html_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_D/viewer.html"
     },
     {
-      "atom_count": 1114,
+      "atom_count": 1713,
       "blockers": "",
       "chain_id": "E",
       "chain_ids": "E",
@@ -112,7 +112,7 @@
       "object_folder": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_E",
       "object_id": "chain_E",
       "projection_svg_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_E/renders/H1335_chain_E_projection.svg",
-      "protein_atom_count": 1114,
+      "protein_atom_count": 1713,
       "protein_name": "HCMV Merlin gHgLgO-Fab complex",
       "readme_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_E/README.md",
       "residue_count": 227,
@@ -121,7 +121,7 @@
       "viewer_html_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_E/viewer.html"
     },
     {
-      "atom_count": 3215,
+      "atom_count": 5279,
       "blockers": "",
       "chain_id": "A",
       "chain_ids": "A",
@@ -132,7 +132,7 @@
       "object_folder": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_A",
       "object_id": "chain_A",
       "projection_svg_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_A/renders/H2312_chain_A_projection.svg",
-      "protein_atom_count": 3215,
+      "protein_atom_count": 5279,
       "protein_name": "EXT1-EXT2-2BAV4",
       "readme_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_A/README.md",
       "residue_count": 649,
@@ -141,7 +141,7 @@
       "viewer_html_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_A/viewer.html"
     },
     {
-      "atom_count": 3157,
+      "atom_count": 5135,
       "blockers": "",
       "chain_id": "B",
       "chain_ids": "B",
@@ -152,7 +152,7 @@
       "object_folder": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_B",
       "object_id": "chain_B",
       "projection_svg_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_B/renders/H2312_chain_B_projection.svg",
-      "protein_atom_count": 3157,
+      "protein_atom_count": 5135,
       "protein_name": "EXT1-EXT2-2BAV4",
       "readme_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_B/README.md",
       "residue_count": 637,
@@ -161,7 +161,7 @@
       "viewer_html_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_B/viewer.html"
     },
     {
-      "atom_count": 602,
+      "atom_count": 950,
       "blockers": "",
       "chain_id": "C",
       "chain_ids": "C",
@@ -172,7 +172,7 @@
       "object_folder": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_C",
       "object_id": "chain_C",
       "projection_svg_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_C/renders/H2312_chain_C_projection.svg",
-      "protein_atom_count": 602,
+      "protein_atom_count": 950,
       "protein_name": "EXT1-EXT2-2BAV4",
       "readme_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_C/README.md",
       "residue_count": 123,
@@ -181,7 +181,7 @@
       "viewer_html_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_C/viewer.html"
     },
     {
-      "atom_count": 3042,
+      "atom_count": 4815,
       "blockers": "",
       "chain_id": "A",
       "chain_ids": "A",
@@ -192,7 +192,7 @@
       "object_folder": "casp17/targets_current/T2313_P66/objects/chain_A",
       "object_id": "chain_A",
       "projection_svg_path": "casp17/targets_current/T2313_P66/objects/chain_A/renders/T2313_chain_A_projection.svg",
-      "protein_atom_count": 3042,
+      "protein_atom_count": 4815,
       "protein_name": "P66",
       "readme_path": "casp17/targets_current/T2313_P66/objects/chain_A/README.md",
       "residue_count": 618,
@@ -201,7 +201,7 @@
       "viewer_html_path": "casp17/targets_current/T2313_P66/objects/chain_A/viewer.html"
     },
     {
-      "atom_count": 1119,
+      "atom_count": 1721,
       "blockers": "",
       "chain_id": "A",
       "chain_ids": "A",
@@ -212,7 +212,7 @@
       "object_folder": "casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_A",
       "object_id": "chain_A",
       "projection_svg_path": "casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_A/renders/H2338_chain_A_projection.svg",
-      "protein_atom_count": 1119,
+      "protein_atom_count": 1721,
       "protein_name": "Factor XIa antibody complex 9933",
       "readme_path": "casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_A/README.md",
       "residue_count": 228,
@@ -221,7 +221,7 @@
       "viewer_html_path": "casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_A/viewer.html"
     },
     {
-      "atom_count": 1063,
+      "atom_count": 1646,
       "blockers": "",
       "chain_id": "B",
       "chain_ids": "B",
@@ -232,7 +232,7 @@
       "object_folder": "casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_B",
       "object_id": "chain_B",
       "projection_svg_path": "casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_B/renders/H2338_chain_B_projection.svg",
-      "protein_atom_count": 1063,
+      "protein_atom_count": 1646,
       "protein_name": "Factor XIa antibody complex 9933",
       "readme_path": "casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_B/README.md",
       "residue_count": 215,
@@ -241,7 +241,7 @@
       "viewer_html_path": "casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_B/viewer.html"
     },
     {
-      "atom_count": 1827,
+      "atom_count": 2879,
       "blockers": "",
       "chain_id": "C",
       "chain_ids": "C",
@@ -252,7 +252,7 @@
       "object_folder": "casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_C",
       "object_id": "chain_C",
       "projection_svg_path": "casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_C/renders/H2338_chain_C_projection.svg",
-      "protein_atom_count": 1827,
+      "protein_atom_count": 2879,
       "protein_name": "Factor XIa antibody complex 9933",
       "readme_path": "casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_C/README.md",
       "residue_count": 369,
@@ -261,7 +261,7 @@
       "viewer_html_path": "casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_C/viewer.html"
     },
     {
-      "atom_count": 1166,
+      "atom_count": 1887,
       "blockers": "",
       "chain_id": "D",
       "chain_ids": "D",
@@ -272,7 +272,7 @@
       "object_folder": "casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_D",
       "object_id": "chain_D",
       "projection_svg_path": "casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_D/renders/H2338_chain_D_projection.svg",
-      "protein_atom_count": 1166,
+      "protein_atom_count": 1887,
       "protein_name": "Factor XIa antibody complex 9933",
       "readme_path": "casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_D/README.md",
       "residue_count": 238,
@@ -281,7 +281,7 @@
       "viewer_html_path": "casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_D/viewer.html"
     },
     {
-      "atom_count": 1095,
+      "atom_count": 1688,
       "blockers": "",
       "chain_id": "A",
       "chain_ids": "A",
@@ -292,7 +292,7 @@
       "object_folder": "casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_A",
       "object_id": "chain_A",
       "projection_svg_path": "casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_A/renders/H2339_chain_A_projection.svg",
-      "protein_atom_count": 1095,
+      "protein_atom_count": 1688,
       "protein_name": "Factor XIa antibody complex 7508",
       "readme_path": "casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_A/README.md",
       "residue_count": 223,
@@ -301,7 +301,7 @@
       "viewer_html_path": "casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_A/viewer.html"
     },
     {
-      "atom_count": 1058,
+      "atom_count": 1658,
       "blockers": "",
       "chain_id": "B",
       "chain_ids": "B",
@@ -312,7 +312,7 @@
       "object_folder": "casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_B",
       "object_id": "chain_B",
       "projection_svg_path": "casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_B/renders/H2339_chain_B_projection.svg",
-      "protein_atom_count": 1058,
+      "protein_atom_count": 1658,
       "protein_name": "Factor XIa antibody complex 7508",
       "readme_path": "casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_B/README.md",
       "residue_count": 214,
@@ -321,7 +321,7 @@
       "viewer_html_path": "casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_B/viewer.html"
     },
     {
-      "atom_count": 1827,
+      "atom_count": 2879,
       "blockers": "",
       "chain_id": "C",
       "chain_ids": "C",
@@ -332,7 +332,7 @@
       "object_folder": "casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_C",
       "object_id": "chain_C",
       "projection_svg_path": "casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_C/renders/H2339_chain_C_projection.svg",
-      "protein_atom_count": 1827,
+      "protein_atom_count": 2879,
       "protein_name": "Factor XIa antibody complex 7508",
       "readme_path": "casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_C/README.md",
       "residue_count": 369,
@@ -341,7 +341,7 @@
       "viewer_html_path": "casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_C/viewer.html"
     },
     {
-      "atom_count": 1166,
+      "atom_count": 1887,
       "blockers": "",
       "chain_id": "D",
       "chain_ids": "D",
@@ -352,7 +352,7 @@
       "object_folder": "casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_D",
       "object_id": "chain_D",
       "projection_svg_path": "casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_D/renders/H2339_chain_D_projection.svg",
-      "protein_atom_count": 1166,
+      "protein_atom_count": 1887,
       "protein_name": "Factor XIa antibody complex 7508",
       "readme_path": "casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_D/README.md",
       "residue_count": 238,
@@ -361,7 +361,7 @@
       "viewer_html_path": "casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_D/viewer.html"
     },
     {
-      "atom_count": 2280,
+      "atom_count": 3536,
       "blockers": "",
       "chain_id": "A",
       "chain_ids": "A",
@@ -372,7 +372,7 @@
       "object_folder": "casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_A",
       "object_id": "chain_A",
       "projection_svg_path": "casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_A/renders/H1340_chain_A_projection.svg",
-      "protein_atom_count": 2280,
+      "protein_atom_count": 3536,
       "protein_name": "Parahenipavirus F protein /antibody complex",
       "readme_path": "casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_A/README.md",
       "residue_count": 462,
@@ -381,7 +381,7 @@
       "viewer_html_path": "casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_A/viewer.html"
     },
     {
-      "atom_count": 571,
+      "atom_count": 917,
       "blockers": "",
       "chain_id": "B",
       "chain_ids": "B",
@@ -392,7 +392,7 @@
       "object_folder": "casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_B",
       "object_id": "chain_B",
       "projection_svg_path": "casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_B/renders/H1340_chain_B_projection.svg",
-      "protein_atom_count": 571,
+      "protein_atom_count": 917,
       "protein_name": "Parahenipavirus F protein /antibody complex",
       "readme_path": "casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_B/README.md",
       "residue_count": 117,
@@ -401,7 +401,7 @@
       "viewer_html_path": "casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_B/viewer.html"
     },
     {
-      "atom_count": 525,
+      "atom_count": 820,
       "blockers": "",
       "chain_id": "C",
       "chain_ids": "C",
@@ -412,7 +412,7 @@
       "object_folder": "casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_C",
       "object_id": "chain_C",
       "projection_svg_path": "casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_C/renders/H1340_chain_C_projection.svg",
-      "protein_atom_count": 525,
+      "protein_atom_count": 820,
       "protein_name": "Parahenipavirus F protein /antibody complex",
       "readme_path": "casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_C/README.md",
       "residue_count": 107,
@@ -421,7 +421,7 @@
       "viewer_html_path": "casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_C/viewer.html"
     },
     {
-      "atom_count": 1186,
+      "atom_count": 1777,
       "blockers": "",
       "chain_id": "A",
       "chain_ids": "A",
@@ -432,7 +432,7 @@
       "object_folder": "casp17/targets_current/H1343_Hepatitis_C_Virus_sE2_CBH_4G_Fab_complex/objects/chain_A",
       "object_id": "chain_A",
       "projection_svg_path": "casp17/targets_current/H1343_Hepatitis_C_Virus_sE2_CBH_4G_Fab_complex/objects/chain_A/renders/H1343_chain_A_projection.svg",
-      "protein_atom_count": 1186,
+      "protein_atom_count": 1777,
       "protein_name": "Hepatitis C Virus sE2 CBH-4G Fab complex",
       "readme_path": "casp17/targets_current/H1343_Hepatitis_C_Virus_sE2_CBH_4G_Fab_complex/objects/chain_A/README.md",
       "residue_count": 242,
@@ -441,7 +441,7 @@
       "viewer_html_path": "casp17/targets_current/H1343_Hepatitis_C_Virus_sE2_CBH_4G_Fab_complex/objects/chain_A/viewer.html"
     },
     {
-      "atom_count": 1057,
+      "atom_count": 1630,
       "blockers": "",
       "chain_id": "B",
       "chain_ids": "B",
@@ -452,7 +452,7 @@
       "object_folder": "casp17/targets_current/H1343_Hepatitis_C_Virus_sE2_CBH_4G_Fab_complex/objects/chain_B",
       "object_id": "chain_B",
       "projection_svg_path": "casp17/targets_current/H1343_Hepatitis_C_Virus_sE2_CBH_4G_Fab_complex/objects/chain_B/renders/H1343_chain_B_projection.svg",
-      "protein_atom_count": 1057,
+      "protein_atom_count": 1630,
       "protein_name": "Hepatitis C Virus sE2 CBH-4G Fab complex",
       "readme_path": "casp17/targets_current/H1343_Hepatitis_C_Virus_sE2_CBH_4G_Fab_complex/objects/chain_B/README.md",
       "residue_count": 214,
@@ -461,7 +461,7 @@
       "viewer_html_path": "casp17/targets_current/H1343_Hepatitis_C_Virus_sE2_CBH_4G_Fab_complex/objects/chain_B/viewer.html"
     },
     {
-      "atom_count": 1561,
+      "atom_count": 2522,
       "blockers": "",
       "chain_id": "C",
       "chain_ids": "C",
@@ -472,7 +472,7 @@
       "object_folder": "casp17/targets_current/H1343_Hepatitis_C_Virus_sE2_CBH_4G_Fab_complex/objects/chain_C",
       "object_id": "chain_C",
       "projection_svg_path": "casp17/targets_current/H1343_Hepatitis_C_Virus_sE2_CBH_4G_Fab_complex/objects/chain_C/renders/H1343_chain_C_projection.svg",
-      "protein_atom_count": 1561,
+      "protein_atom_count": 2522,
       "protein_name": "Hepatitis C Virus sE2 CBH-4G Fab complex",
       "readme_path": "casp17/targets_current/H1343_Hepatitis_C_Virus_sE2_CBH_4G_Fab_complex/objects/chain_C/README.md",
       "residue_count": 317,
@@ -481,7 +481,7 @@
       "viewer_html_path": "casp17/targets_current/H1343_Hepatitis_C_Virus_sE2_CBH_4G_Fab_complex/objects/chain_C/viewer.html"
     },
     {
-      "atom_count": 1340,
+      "atom_count": 2155,
       "blockers": "",
       "chain_id": "A",
       "chain_ids": "A",
@@ -492,7 +492,7 @@
       "object_folder": "casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/objects/chain_A",
       "object_id": "chain_A",
       "projection_svg_path": "casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/objects/chain_A/renders/H2319_chain_A_projection.svg",
-      "protein_atom_count": 1340,
+      "protein_atom_count": 2155,
       "protein_name": "Human astrovirus VA1 capsid spike - antibody 7C8 complex",
       "readme_path": "casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/objects/chain_A/README.md",
       "residue_count": 273,
@@ -501,7 +501,7 @@
       "viewer_html_path": "casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/objects/chain_A/viewer.html"
     },
     {
-      "atom_count": 568,
+      "atom_count": 907,
       "blockers": "",
       "chain_id": "B",
       "chain_ids": "B",
@@ -512,7 +512,7 @@
       "object_folder": "casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/objects/chain_B",
       "object_id": "chain_B",
       "projection_svg_path": "casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/objects/chain_B/renders/H2319_chain_B_projection.svg",
-      "protein_atom_count": 568,
+      "protein_atom_count": 907,
       "protein_name": "Human astrovirus VA1 capsid spike - antibody 7C8 complex",
       "readme_path": "casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/objects/chain_B/README.md",
       "residue_count": 116,
@@ -521,7 +521,7 @@
       "viewer_html_path": "casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/objects/chain_B/viewer.html"
     },
     {
-      "atom_count": 531,
+      "atom_count": 815,
       "blockers": "",
       "chain_id": "C",
       "chain_ids": "C",
@@ -532,7 +532,7 @@
       "object_folder": "casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/objects/chain_C",
       "object_id": "chain_C",
       "projection_svg_path": "casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/objects/chain_C/renders/H2319_chain_C_projection.svg",
-      "protein_atom_count": 531,
+      "protein_atom_count": 815,
       "protein_name": "Human astrovirus VA1 capsid spike - antibody 7C8 complex",
       "readme_path": "casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/objects/chain_C/README.md",
       "residue_count": 108,
@@ -541,7 +541,7 @@
       "viewer_html_path": "casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/objects/chain_C/viewer.html"
     },
     {
-      "atom_count": 7155,
+      "atom_count": 11192,
       "blockers": "",
       "chain_id": "A",
       "chain_ids": "A",
@@ -552,7 +552,7 @@
       "object_folder": "casp17/targets_current/T1342_Spike_glycoprotein_ectodomain/objects/chain_A",
       "object_id": "chain_A",
       "projection_svg_path": "casp17/targets_current/T1342_Spike_glycoprotein_ectodomain/objects/chain_A/renders/T1342_chain_A_projection.svg",
-      "protein_atom_count": 7155,
+      "protein_atom_count": 11192,
       "protein_name": "Spike glycoprotein ectodomain",
       "readme_path": "casp17/targets_current/T1342_Spike_glycoprotein_ectodomain/objects/chain_A/README.md",
       "residue_count": 1455,
@@ -561,7 +561,7 @@
       "viewer_html_path": "casp17/targets_current/T1342_Spike_glycoprotein_ectodomain/objects/chain_A/viewer.html"
     },
     {
-      "atom_count": 1162,
+      "atom_count": 1766,
       "blockers": "",
       "chain_id": "A",
       "chain_ids": "A",
@@ -572,7 +572,7 @@
       "object_folder": "casp17/targets_current/H1344_HSV_gD_HAB72/objects/chain_A",
       "object_id": "chain_A",
       "projection_svg_path": "casp17/targets_current/H1344_HSV_gD_HAB72/objects/chain_A/renders/H1344_chain_A_projection.svg",
-      "protein_atom_count": 1162,
+      "protein_atom_count": 1766,
       "protein_name": "HSV gD - HAB72",
       "readme_path": "casp17/targets_current/H1344_HSV_gD_HAB72/objects/chain_A/README.md",
       "residue_count": 237,
@@ -581,7 +581,7 @@
       "viewer_html_path": "casp17/targets_current/H1344_HSV_gD_HAB72/objects/chain_A/viewer.html"
     },
     {
-      "atom_count": 1065,
+      "atom_count": 1652,
       "blockers": "",
       "chain_id": "B",
       "chain_ids": "B",
@@ -592,7 +592,7 @@
       "object_folder": "casp17/targets_current/H1344_HSV_gD_HAB72/objects/chain_B",
       "object_id": "chain_B",
       "projection_svg_path": "casp17/targets_current/H1344_HSV_gD_HAB72/objects/chain_B/renders/H1344_chain_B_projection.svg",
-      "protein_atom_count": 1065,
+      "protein_atom_count": 1652,
       "protein_name": "HSV gD - HAB72",
       "readme_path": "casp17/targets_current/H1344_HSV_gD_HAB72/objects/chain_B/README.md",
       "residue_count": 216,
@@ -601,7 +601,7 @@
       "viewer_html_path": "casp17/targets_current/H1344_HSV_gD_HAB72/objects/chain_B/viewer.html"
     },
     {
-      "atom_count": 1394,
+      "atom_count": 2237,
       "blockers": "",
       "chain_id": "C",
       "chain_ids": "C",
@@ -612,7 +612,7 @@
       "object_folder": "casp17/targets_current/H1344_HSV_gD_HAB72/objects/chain_C",
       "object_id": "chain_C",
       "projection_svg_path": "casp17/targets_current/H1344_HSV_gD_HAB72/objects/chain_C/renders/H1344_chain_C_projection.svg",
-      "protein_atom_count": 1394,
+      "protein_atom_count": 2237,
       "protein_name": "HSV gD - HAB72",
       "readme_path": "casp17/targets_current/H1344_HSV_gD_HAB72/objects/chain_C/README.md",
       "residue_count": 281,
@@ -621,7 +621,7 @@
       "viewer_html_path": "casp17/targets_current/H1344_HSV_gD_HAB72/objects/chain_C/viewer.html"
     },
     {
-      "atom_count": 1340,
+      "atom_count": 2155,
       "blockers": "",
       "chain_id": "A",
       "chain_ids": "A",
@@ -632,7 +632,7 @@
       "object_folder": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_A",
       "object_id": "chain_A",
       "projection_svg_path": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_A/renders/H2321_chain_A_projection.svg",
-      "protein_atom_count": 1340,
+      "protein_atom_count": 2155,
       "protein_name": "Human astrovirus VA1 capsid spike - antibody 2A2 complex",
       "readme_path": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_A/README.md",
       "residue_count": 273,
@@ -641,7 +641,7 @@
       "viewer_html_path": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_A/viewer.html"
     },
     {
-      "atom_count": 592,
+      "atom_count": 946,
       "blockers": "",
       "chain_id": "B",
       "chain_ids": "B",
@@ -652,7 +652,7 @@
       "object_folder": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_B",
       "object_id": "chain_B",
       "projection_svg_path": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_B/renders/H2321_chain_B_projection.svg",
-      "protein_atom_count": 592,
+      "protein_atom_count": 946,
       "protein_name": "Human astrovirus VA1 capsid spike - antibody 2A2 complex",
       "readme_path": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_B/README.md",
       "residue_count": 121,
@@ -661,7 +661,7 @@
       "viewer_html_path": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_B/viewer.html"
     },
     {
-      "atom_count": 530,
+      "atom_count": 842,
       "blockers": "",
       "chain_id": "C",
       "chain_ids": "C",
@@ -672,7 +672,7 @@
       "object_folder": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_C",
       "object_id": "chain_C",
       "projection_svg_path": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_C/renders/H2321_chain_C_projection.svg",
-      "protein_atom_count": 530,
+      "protein_atom_count": 842,
       "protein_name": "Human astrovirus VA1 capsid spike - antibody 2A2 complex",
       "readme_path": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_C/README.md",
       "residue_count": 108,
@@ -681,7 +681,7 @@
       "viewer_html_path": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_C/viewer.html"
     },
     {
-      "atom_count": 1113,
+      "atom_count": 1716,
       "blockers": "",
       "chain_id": "A",
       "chain_ids": "A",
@@ -692,7 +692,7 @@
       "object_folder": "casp17/targets_current/H1346_REGN3753_Fab_Fab_complex/objects/chain_A",
       "object_id": "chain_A",
       "projection_svg_path": "casp17/targets_current/H1346_REGN3753_Fab_Fab_complex/objects/chain_A/renders/H1346_chain_A_projection.svg",
-      "protein_atom_count": 1113,
+      "protein_atom_count": 1716,
       "protein_name": "REGN3753 Fab-Fab complex",
       "readme_path": "casp17/targets_current/H1346_REGN3753_Fab_Fab_complex/objects/chain_A/README.md",
       "residue_count": 226,
@@ -701,7 +701,7 @@
       "viewer_html_path": "casp17/targets_current/H1346_REGN3753_Fab_Fab_complex/objects/chain_A/viewer.html"
     },
     {
-      "atom_count": 1056,
+      "atom_count": 1643,
       "blockers": "",
       "chain_id": "B",
       "chain_ids": "B",
@@ -712,7 +712,7 @@
       "object_folder": "casp17/targets_current/H1346_REGN3753_Fab_Fab_complex/objects/chain_B",
       "object_id": "chain_B",
       "projection_svg_path": "casp17/targets_current/H1346_REGN3753_Fab_Fab_complex/objects/chain_B/renders/H1346_chain_B_projection.svg",
-      "protein_atom_count": 1056,
+      "protein_atom_count": 1643,
       "protein_name": "REGN3753 Fab-Fab complex",
       "readme_path": "casp17/targets_current/H1346_REGN3753_Fab_Fab_complex/objects/chain_B/README.md",
       "residue_count": 214,
@@ -721,7 +721,7 @@
       "viewer_html_path": "casp17/targets_current/H1346_REGN3753_Fab_Fab_complex/objects/chain_B/viewer.html"
     },
     {
-      "atom_count": 1131,
+      "atom_count": 1748,
       "blockers": "",
       "chain_id": "C",
       "chain_ids": "C",
@@ -732,7 +732,7 @@
       "object_folder": "casp17/targets_current/H1346_REGN3753_Fab_Fab_complex/objects/chain_C",
       "object_id": "chain_C",
       "projection_svg_path": "casp17/targets_current/H1346_REGN3753_Fab_Fab_complex/objects/chain_C/renders/H1346_chain_C_projection.svg",
-      "protein_atom_count": 1131,
+      "protein_atom_count": 1748,
       "protein_name": "REGN3753 Fab-Fab complex",
       "readme_path": "casp17/targets_current/H1346_REGN3753_Fab_Fab_complex/objects/chain_C/README.md",
       "residue_count": 230,
@@ -741,7 +741,7 @@
       "viewer_html_path": "casp17/targets_current/H1346_REGN3753_Fab_Fab_complex/objects/chain_C/viewer.html"
     },
     {
-      "atom_count": 1063,
+      "atom_count": 1646,
       "blockers": "",
       "chain_id": "D",
       "chain_ids": "D",
@@ -752,7 +752,7 @@
       "object_folder": "casp17/targets_current/H1346_REGN3753_Fab_Fab_complex/objects/chain_D",
       "object_id": "chain_D",
       "projection_svg_path": "casp17/targets_current/H1346_REGN3753_Fab_Fab_complex/objects/chain_D/renders/H1346_chain_D_projection.svg",
-      "protein_atom_count": 1063,
+      "protein_atom_count": 1646,
       "protein_name": "REGN3753 Fab-Fab complex",
       "readme_path": "casp17/targets_current/H1346_REGN3753_Fab_Fab_complex/objects/chain_D/README.md",
       "residue_count": 215,
@@ -761,7 +761,7 @@
       "viewer_html_path": "casp17/targets_current/H1346_REGN3753_Fab_Fab_complex/objects/chain_D/viewer.html"
     },
     {
-      "atom_count": 1092,
+      "atom_count": 1675,
       "blockers": "",
       "chain_id": "A",
       "chain_ids": "A",
@@ -772,7 +772,7 @@
       "object_folder": "casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_A",
       "object_id": "chain_A",
       "projection_svg_path": "casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_A/renders/H1347_chain_A_projection.svg",
-      "protein_atom_count": 1092,
+      "protein_atom_count": 1675,
       "protein_name": "REGN15499 Fab-Fab complex",
       "readme_path": "casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_A/README.md",
       "residue_count": 222,
@@ -781,7 +781,7 @@
       "viewer_html_path": "casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_A/viewer.html"
     },
     {
-      "atom_count": 1057,
+      "atom_count": 1655,
       "blockers": "",
       "chain_id": "B",
       "chain_ids": "B",
@@ -792,7 +792,7 @@
       "object_folder": "casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_B",
       "object_id": "chain_B",
       "projection_svg_path": "casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_B/renders/H1347_chain_B_projection.svg",
-      "protein_atom_count": 1057,
+      "protein_atom_count": 1655,
       "protein_name": "REGN15499 Fab-Fab complex",
       "readme_path": "casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_B/README.md",
       "residue_count": 214,
@@ -801,7 +801,7 @@
       "viewer_html_path": "casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_B/viewer.html"
     },
     {
-      "atom_count": 1109,
+      "atom_count": 1687,
       "blockers": "",
       "chain_id": "C",
       "chain_ids": "C",
@@ -812,7 +812,7 @@
       "object_folder": "casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_C",
       "object_id": "chain_C",
       "projection_svg_path": "casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_C/renders/H1347_chain_C_projection.svg",
-      "protein_atom_count": 1109,
+      "protein_atom_count": 1687,
       "protein_name": "REGN15499 Fab-Fab complex",
       "readme_path": "casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_C/README.md",
       "residue_count": 226,
@@ -821,7 +821,7 @@
       "viewer_html_path": "casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_C/viewer.html"
     },
     {
-      "atom_count": 1053,
+      "atom_count": 1593,
       "blockers": "",
       "chain_id": "D",
       "chain_ids": "D",
@@ -832,7 +832,7 @@
       "object_folder": "casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_D",
       "object_id": "chain_D",
       "projection_svg_path": "casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_D/renders/H1347_chain_D_projection.svg",
-      "protein_atom_count": 1053,
+      "protein_atom_count": 1593,
       "protein_name": "REGN15499 Fab-Fab complex",
       "readme_path": "casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_D/README.md",
       "residue_count": 214,
@@ -841,7 +841,7 @@
       "viewer_html_path": "casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_D/viewer.html"
     },
     {
-      "atom_count": 2959,
+      "atom_count": 4783,
       "blockers": "",
       "chain_id": "A",
       "chain_ids": "A",
@@ -852,7 +852,7 @@
       "object_folder": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_A",
       "object_id": "chain_A",
       "projection_svg_path": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_A/renders/H1348_chain_A_projection.svg",
-      "protein_atom_count": 2959,
+      "protein_atom_count": 4783,
       "protein_name": "gp130 antibody complex",
       "readme_path": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_A/README.md",
       "residue_count": 597,
@@ -861,7 +861,7 @@
       "viewer_html_path": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_A/viewer.html"
     },
     {
-      "atom_count": 1090,
+      "atom_count": 1669,
       "blockers": "",
       "chain_id": "B",
       "chain_ids": "B",
@@ -872,7 +872,7 @@
       "object_folder": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_B",
       "object_id": "chain_B",
       "projection_svg_path": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_B/renders/H1348_chain_B_projection.svg",
-      "protein_atom_count": 1090,
+      "protein_atom_count": 1669,
       "protein_name": "gp130 antibody complex",
       "readme_path": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_B/README.md",
       "residue_count": 222,
@@ -881,7 +881,7 @@
       "viewer_html_path": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_B/viewer.html"
     },
     {
-      "atom_count": 1063,
+      "atom_count": 1646,
       "blockers": "",
       "chain_id": "C",
       "chain_ids": "C",
@@ -892,7 +892,7 @@
       "object_folder": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_C",
       "object_id": "chain_C",
       "projection_svg_path": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_C/renders/H1348_chain_C_projection.svg",
-      "protein_atom_count": 1063,
+      "protein_atom_count": 1646,
       "protein_name": "gp130 antibody complex",
       "readme_path": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_C/README.md",
       "residue_count": 215,
@@ -901,7 +901,7 @@
       "viewer_html_path": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_C/viewer.html"
     },
     {
-      "atom_count": 2959,
+      "atom_count": 4783,
       "blockers": "",
       "chain_id": "A",
       "chain_ids": "A",
@@ -912,7 +912,7 @@
       "object_folder": "casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_A",
       "object_id": "chain_A",
       "projection_svg_path": "casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_A/renders/H1349_chain_A_projection.svg",
-      "protein_atom_count": 2959,
+      "protein_atom_count": 4783,
       "protein_name": "gp130 antibody complex",
       "readme_path": "casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_A/README.md",
       "residue_count": 597,
@@ -921,7 +921,7 @@
       "viewer_html_path": "casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_A/viewer.html"
     },
     {
-      "atom_count": 1079,
+      "atom_count": 1646,
       "blockers": "",
       "chain_id": "B",
       "chain_ids": "B",
@@ -932,7 +932,7 @@
       "object_folder": "casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_B",
       "object_id": "chain_B",
       "projection_svg_path": "casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_B/renders/H1349_chain_B_projection.svg",
-      "protein_atom_count": 1079,
+      "protein_atom_count": 1646,
       "protein_name": "gp130 antibody complex",
       "readme_path": "casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_B/README.md",
       "residue_count": 219,
@@ -941,7 +941,7 @@
       "viewer_html_path": "casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_B/viewer.html"
     },
     {
-      "atom_count": 1056,
+      "atom_count": 1655,
       "blockers": "",
       "chain_id": "C",
       "chain_ids": "C",
@@ -952,7 +952,7 @@
       "object_folder": "casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_C",
       "object_id": "chain_C",
       "projection_svg_path": "casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_C/renders/H1349_chain_C_projection.svg",
-      "protein_atom_count": 1056,
+      "protein_atom_count": 1655,
       "protein_name": "gp130 antibody complex",
       "readme_path": "casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_C/README.md",
       "residue_count": 214,
@@ -961,7 +961,7 @@
       "viewer_html_path": "casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_C/viewer.html"
     },
     {
-      "atom_count": 494,
+      "atom_count": 3923,
       "blockers": "",
       "chain_id": "A",
       "chain_ids": "A",
@@ -972,7 +972,7 @@
       "object_folder": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_A",
       "object_id": "chain_A",
       "projection_svg_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_A/renders/H1354_chain_A_projection.svg",
-      "protein_atom_count": 494,
+      "protein_atom_count": 3923,
       "protein_name": "hemagglutinin/antibody",
       "readme_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_A/README.md",
       "residue_count": 494,
@@ -981,7 +981,7 @@
       "viewer_html_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_A/viewer.html"
     },
     {
-      "atom_count": 120,
+      "atom_count": 929,
       "blockers": "",
       "chain_id": "B",
       "chain_ids": "B",
@@ -992,7 +992,7 @@
       "object_folder": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_B",
       "object_id": "chain_B",
       "projection_svg_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_B/renders/H1354_chain_B_projection.svg",
-      "protein_atom_count": 120,
+      "protein_atom_count": 929,
       "protein_name": "hemagglutinin/antibody",
       "readme_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_B/README.md",
       "residue_count": 120,
@@ -1001,7 +1001,7 @@
       "viewer_html_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_B/viewer.html"
     },
     {
-      "atom_count": 112,
+      "atom_count": 841,
       "blockers": "",
       "chain_id": "C",
       "chain_ids": "C",
@@ -1012,7 +1012,7 @@
       "object_folder": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_C",
       "object_id": "chain_C",
       "projection_svg_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_C/renders/H1354_chain_C_projection.svg",
-      "protein_atom_count": 112,
+      "protein_atom_count": 841,
       "protein_name": "hemagglutinin/antibody",
       "readme_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_C/README.md",
       "residue_count": 112,
@@ -1021,7 +1021,7 @@
       "viewer_html_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_C/viewer.html"
     },
     {
-      "atom_count": 488,
+      "atom_count": 3873,
       "blockers": "",
       "chain_id": "A",
       "chain_ids": "A",
@@ -1032,7 +1032,7 @@
       "object_folder": "casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_A",
       "object_id": "chain_A",
       "projection_svg_path": "casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_A/renders/H1355_chain_A_projection.svg",
-      "protein_atom_count": 488,
+      "protein_atom_count": 3873,
       "protein_name": "hemagglutinin/antibody",
       "readme_path": "casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_A/README.md",
       "residue_count": 488,
@@ -1041,7 +1041,7 @@
       "viewer_html_path": "casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_A/viewer.html"
     },
     {
-      "atom_count": 114,
+      "atom_count": 863,
       "blockers": "",
       "chain_id": "B",
       "chain_ids": "B",
@@ -1052,7 +1052,7 @@
       "object_folder": "casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_B",
       "object_id": "chain_B",
       "projection_svg_path": "casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_B/renders/H1355_chain_B_projection.svg",
-      "protein_atom_count": 114,
+      "protein_atom_count": 863,
       "protein_name": "hemagglutinin/antibody",
       "readme_path": "casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_B/README.md",
       "residue_count": 114,
@@ -1061,7 +1061,7 @@
       "viewer_html_path": "casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_B/viewer.html"
     },
     {
-      "atom_count": 106,
+      "atom_count": 787,
       "blockers": "",
       "chain_id": "C",
       "chain_ids": "C",
@@ -1072,7 +1072,7 @@
       "object_folder": "casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_C",
       "object_id": "chain_C",
       "projection_svg_path": "casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_C/renders/H1355_chain_C_projection.svg",
-      "protein_atom_count": 106,
+      "protein_atom_count": 787,
       "protein_name": "hemagglutinin/antibody",
       "readme_path": "casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_C/README.md",
       "residue_count": 106,
@@ -1081,7 +1081,7 @@
       "viewer_html_path": "casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_C/viewer.html"
     },
     {
-      "atom_count": 104,
+      "atom_count": 793,
       "blockers": "",
       "chain_id": "A",
       "chain_ids": "A",
@@ -1092,7 +1092,7 @@
       "object_folder": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_A",
       "object_id": "chain_A",
       "projection_svg_path": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_A/renders/H2332_chain_A_projection.svg",
-      "protein_atom_count": 104,
+      "protein_atom_count": 793,
       "protein_name": "Fab 047-09_1A02 binding influenza virus H1 HA",
       "readme_path": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_A/README.md",
       "residue_count": 104,
@@ -1101,7 +1101,7 @@
       "viewer_html_path": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_A/viewer.html"
     },
     {
-      "atom_count": 119,
+      "atom_count": 906,
       "blockers": "",
       "chain_id": "B",
       "chain_ids": "B",
@@ -1112,7 +1112,7 @@
       "object_folder": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_B",
       "object_id": "chain_B",
       "projection_svg_path": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_B/renders/H2332_chain_B_projection.svg",
-      "protein_atom_count": 119,
+      "protein_atom_count": 906,
       "protein_name": "Fab 047-09_1A02 binding influenza virus H1 HA",
       "readme_path": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_B/README.md",
       "residue_count": 119,
@@ -1121,7 +1121,7 @@
       "viewer_html_path": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_B/viewer.html"
     },
     {
-      "atom_count": 160,
+      "atom_count": 1298,
       "blockers": "",
       "chain_id": "C",
       "chain_ids": "C",
@@ -1132,7 +1132,7 @@
       "object_folder": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_C",
       "object_id": "chain_C",
       "projection_svg_path": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_C/renders/H2332_chain_C_projection.svg",
-      "protein_atom_count": 160,
+      "protein_atom_count": 1298,
       "protein_name": "Fab 047-09_1A02 binding influenza virus H1 HA",
       "readme_path": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_C/README.md",
       "residue_count": 160,
@@ -1141,7 +1141,7 @@
       "viewer_html_path": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_C/viewer.html"
     },
     {
-      "atom_count": 321,
+      "atom_count": 2511,
       "blockers": "",
       "chain_id": "D",
       "chain_ids": "D",
@@ -1152,7 +1152,7 @@
       "object_folder": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_D",
       "object_id": "chain_D",
       "projection_svg_path": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_D/renders/H2332_chain_D_projection.svg",
-      "protein_atom_count": 321,
+      "protein_atom_count": 2511,
       "protein_name": "Fab 047-09_1A02 binding influenza virus H1 HA",
       "readme_path": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_D/README.md",
       "residue_count": 321,
@@ -1169,7 +1169,7 @@
     "first_blocked_blockers": "",
     "first_blocked_object": "",
     "folder_audit_status": "pass",
-    "generated_at_local": "2026-05-26T05:33:31+09:00",
+    "generated_at_local": "2026-05-27T22:40:55+09:00",
     "manifest_pass_count": 58,
     "object_row_count": 58,
     "packet_type": "casp17_target_object_folder_audit",
@@ -1180,7 +1180,7 @@
     "target_count": 19,
     "target_model_folder_status": "ready",
     "target_model_folders_json": "casp17/casp17_target_model_folders_current.json",
-    "total_protein_atom_count": 74625,
+    "total_protein_atom_count": 131343,
     "viewer_local_only_pass_count": 58
   }
 }

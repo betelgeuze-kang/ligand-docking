@@ -8,7 +8,7 @@
 - final model: `casp17/targets_current/T2313_P66/models/T2313_final_selected_model.pdb`
 - FASTA: `casp17/targets_current/T2313_P66/metadata/T2313.fasta`
 - render files: `20`
-- figure files: `4`
+- figure files: `5`
 - object folders: `1`
 - metadata files: `7`
 

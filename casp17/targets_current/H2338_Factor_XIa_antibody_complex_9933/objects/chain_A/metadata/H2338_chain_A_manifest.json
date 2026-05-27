@@ -1,7 +1,7 @@
 {
   "claim_boundary": "Per-target local organization of internal CASP17 predicted coordinates, FASTA, renders, and QC metadata only; not an official CASP submission, native accuracy result, or experimental structure.",
   "summary": {
-    "atom_count": 1119,
+    "atom_count": 1721,
     "chain_id": "A",
     "coordinate_status": "valid",
     "manifest_path": "casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_A/metadata/H2338_chain_A_manifest.json",
@@ -9,7 +9,7 @@
     "object_folder": "casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_A",
     "object_id": "chain_A",
     "projection_svg_path": "casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_A/renders/H2338_chain_A_projection.svg",
-    "protein_atom_count": 1119,
+    "protein_atom_count": 1721,
     "readme_path": "casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_A/README.md",
     "residue_count": 228,
     "target_id": "H2338",

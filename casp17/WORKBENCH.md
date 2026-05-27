@@ -2,16 +2,21 @@
 
 This is the local navigation surface for the current CASP17 internal-physics lane.
 
-- generated: `2026-05-26T05:33:31+09:00`
+- generated: `2026-05-27T23:27:50+09:00`
 - workbench_status: `ready_for_operator_fill`
 - target model folders: `19/19`
 - target object folders: `58`
 - target object projections: `58`
 - target object viewers: `58`
-- target object folder audit: `pass` rows `58/58` chain isolation `58/58` protein atoms/coordinate-valid `58/58/58` total protein atoms `74625`
+- target object folder audit: `pass` rows `58/58` chain isolation `58/58` protein atoms/coordinate-valid `58/58/58` total protein atoms `131343`
 - target object viewer smoke: `pass` rows `58/58`
-- target object model review: `pass` pass/blocked/total `58/0/58` review md/viewers `58/58` protein/CA/residue `74625/16832/16832` radius `7.778/114.196` gallery `pass` `casp17/casp17_target_object_model_review_gallery_current.html`
+- target object model review: `pass` pass/blocked/total `58/0/58` review md/viewers `58/58` protein/CA/residue `131343/16832/16832` radius `11.275/26.759` gallery `pass` `casp17/casp17_target_object_model_review_gallery_current.html`
 - benchmark rows ready/total: `0/40`
+- win gap closure: `blocked_input` closed/open `4/5` missing win rows `40`
+- historical benchmark workorders: `40` core `40` missing core/ablation `80/400` operator ready/blocked `0/40`
+- operator dashboard: `ready` rows ready/blocked/total `0/40/40` needs target/core/ablation/calibration/provenance `40/40/40/40/40`
+- sidechain-native benchmark: `blocked` pass/blocked/total `0/40/40` core/leakage/pred/native/missing-files `40/40/40/40/80` exactness/metric `0/0` first `hist_REQUIRED_MONOMER_001` blockers `leakage_clearance_missing_or_not_clear,native_pdb_missing,prediction_pdb_missing`
+- sidechain-native workorder: actions/open `120/120` files `runs/casp17_sidechain_native_input_workorder_current.json` `runs/casp17_sidechain_native_input_workorder_current.md`
 - competitive-floor batch: `ready_for_fill` rows `15` missing evidence `490`
 - competitive row_fill status: `awaiting_fill` filled/ready/total `15/0/15`
 - competitive row_fill worklist: `open_actions` open actions `450` guides `15`
@@ -68,13 +73,14 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 | --- | --- | ---: | ---: | ---: | --- | --- | --- |
 | `target_model_folders` | `ready` | 19 | 0 | 19 | `casp17/casp17_target_model_folders_current.json` | Use per-protein folders for local visual review and submission-readiness inspection. | `-` |
 | `target_object_catalog` | `ready` | 58 | 0 | 58 | `casp17/casp17_target_object_models_current.md` | Open the per-object catalog for chain-level PDB, projection, and local viewer review. | `projection_missing_count:0,viewer_missing_count:0` |
-| `target_object_folder_audit` | `pass` | 58 | 0 | 58 | `casp17/casp17_target_object_folder_audit_current.json` | Keep this pass before treating per-protein object folders as independently reviewable. | `protein_atom_objects:58,coordinate_valid_objects:58,total_protein_atoms:74625` |
+| `target_object_folder_audit` | `pass` | 58 | 0 | 58 | `casp17/casp17_target_object_folder_audit_current.json` | Keep this pass before treating per-protein object folders as independently reviewable. | `protein_atom_objects:58,coordinate_valid_objects:58,total_protein_atoms:131343` |
 | `target_object_viewer_smoke` | `pass` | 58 | 0 | 58 | `casp17/casp17_target_object_viewer_smoke_current.json` | Keep this pass before relying on per-object viewer artifacts for review. | `-` |
-| `target_object_model_review` | `pass` | 58 | 0 | 58 | `casp17/casp17_target_object_model_review_current.json` | Open object review markdown files for per-chain molecular geometry inspection. | `review_md:58,viewer_local:58,protein_atoms:74625,radius:7.778-114.196,gallery:pass` |
+| `target_object_model_review` | `pass` | 58 | 0 | 58 | `casp17/casp17_target_object_model_review_current.json` | Open object review markdown files for per-chain molecular geometry inspection. | `review_md:58,viewer_local:58,protein_atoms:131343,radius:11.275-26.759,gallery:pass` |
 | `win_gap_closure` | `blocked_input` | 4 | 5 | 9 | `runs/casp17_win_gap_closure_packet_current.json` | historical_benchmark_inputs | `ready_total_below_threshold,ready_monomer_below_threshold,ready_complex_below_threshold` |
 | `benchmark_input_scaffold` | `ready` | 0 | 40 | 40 | `runs/casp17_win_tier_benchmark_input_scaffold_current.json` | Fill row folders with cleared historical target identity, internal predictions, native files, provenance, and calibration values. | `missing_evidence_items:1310` |
 | `benchmark_input_inventory` | `blocked` | 0 | 40 | 40 | `runs/casp17_win_tier_benchmark_input_inventory_current.json` | Replace placeholder target/benchmark IDs with a cleared historical non-CASP17 protein target. | `missing_files:480` |
 | `operator_dashboard` | `ready` | 0 | 40 | 40 | `runs/casp17_win_tier_benchmark_operator_dashboard_current.json` | Replace placeholder target/benchmark IDs with a cleared historical non-CASP17 protein target. | `-` |
+| `sidechain_native_benchmark` | `blocked` | 0 | 40 | 40 | `runs/casp17_sidechain_native_benchmark_packet_current.json` | replace placeholder leakage_clearance with operator-confirmed no_leak provenance; place the cleared prediction/native PDB files for this benchmark row. | `leakage_clearance_missing_or_not_clear,native_pdb_missing,prediction_pdb_missing` |
 | `competitive_floor_batch` | `ready_for_fill` | 15 | 0 | 15 | `casp17/casp17_competitive_floor_batch_current.json` | Fill the copied competitive-floor task folders before expanding to the full 40-row win-tier set. | `missing_evidence_items:490` |
 | `competitive_floor_row_fill_status` | `awaiting_fill` | 0 | 15 | 15 | `casp17/casp17_competitive_floor_row_fill_status_current.json` | resolve row_fill.csv blockers and rerun operator-template/preflight | `filled:15,missing_fields:0,placeholders:450,missing_files:180` |
 | `competitive_floor_row_fill_worklist` | `open_actions` | 0 | 450 | 15 | `casp17/casp17_competitive_floor_row_fill_worklist_current.json` | replace with a stable hist_* ID for the chosen cleared historical target | `benchmark_id_placeholder` |

@@ -18,6 +18,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     scaffold_json = tmp_path / "scaffold.json"
     inventory_json = tmp_path / "inventory.json"
     dashboard_json = tmp_path / "dashboard.json"
+    sidechain_native_benchmark_json = tmp_path / "sidechain_native_benchmark.json"
     competitive_batch_json = tmp_path / "competitive_batch.json"
     competitive_row_fill_status_json = tmp_path / "competitive_row_fill_status.json"
     competitive_row_fill_worklist_json = tmp_path / "competitive_row_fill_worklist.json"
@@ -177,6 +178,13 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "next_unclosed_level": "competitive_floor",
                 "first_operator_input_action_id": "historical_benchmark_inputs",
                 "first_operator_input_blockers": "ready_total_below_threshold",
+                "historical_input_workorder_count": 40,
+                "historical_core_workorder_count": 40,
+                "historical_missing_core_file_count": 80,
+                "historical_missing_ablation_layer_file_count": 400,
+                "benchmark_operator_ready_count": 0,
+                "benchmark_operator_blocked_count": 40,
+                "benchmark_missing_win_total_rows": 40,
             }
         },
     )
@@ -209,7 +217,17 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     _write_json(
         dashboard_json,
         {
-            "summary": {"dashboard_status": "ready", "ready_count": 0, "blocked_count": 40, "row_count": 40},
+            "summary": {
+                "dashboard_status": "ready",
+                "ready_count": 0,
+                "blocked_count": 40,
+                "row_count": 40,
+                "needs_target_replacement_count": 40,
+                "needs_core_file_count": 40,
+                "needs_ablation_layer_count": 40,
+                "needs_calibration_count": 40,
+                "needs_provenance_count": 40,
+            },
             "rows": [
                 {
                     "row_rank": 1,
@@ -217,6 +235,34 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                     "next_action": "Replace placeholder target/benchmark IDs with a cleared historical non-CASP17 protein target.",
                 }
             ],
+        },
+    )
+    _write_json(
+        sidechain_native_benchmark_json,
+        {
+            "summary": {
+                "sidechain_native_benchmark_status": "blocked",
+                "manifest_csv": "runs/casp17_historical_benchmark_manifest_draft_from_operator_current.csv",
+                "benchmark_count": 40,
+                "pass_count": 0,
+                "blocked_count": 40,
+                "core_input_blocked_count": 40,
+                "leakage_clearance_blocked_count": 40,
+                "prediction_pdb_missing_count": 40,
+                "native_pdb_missing_count": 40,
+                "missing_core_file_count": 80,
+                "exactness_blocked_count": 0,
+                "metric_threshold_blocked_count": 0,
+                "first_blocked_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "first_blocked_blockers": (
+                    "leakage_clearance_missing_or_not_clear,native_pdb_missing,prediction_pdb_missing"
+                ),
+                "first_open_next_action": "place the cleared prediction/native PDB files for this benchmark row.",
+                "workorder_action_count": 120,
+                "open_workorder_action_count": 120,
+                "workorder_json": "runs/casp17_sidechain_native_input_workorder_current.json",
+                "workorder_md": "runs/casp17_sidechain_native_input_workorder_current.md",
+            }
         },
     )
     _write_json(
@@ -939,6 +985,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(inventory_json),
             "--operator-dashboard-json",
             str(dashboard_json),
+            "--sidechain-native-benchmark-json",
+            str(sidechain_native_benchmark_json),
             "--competitive-batch-json",
             str(competitive_batch_json),
             "--competitive-row-fill-status-json",
@@ -1428,6 +1476,44 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["competitive_operator_preflight_status"] == "blocked"
     assert payload["summary"]["competitive_operator_preflight_row_count"] == 15
     assert payload["summary"]["missing_file_count"] == 480
+    assert payload["summary"]["win_gap_closure_status"] == "blocked_input"
+    assert payload["summary"]["win_gap_closed_count"] == 4
+    assert payload["summary"]["win_gap_not_closed_count"] == 5
+    assert payload["summary"]["historical_input_workorder_count"] == 40
+    assert payload["summary"]["historical_core_workorder_count"] == 40
+    assert payload["summary"]["historical_missing_core_file_count"] == 80
+    assert payload["summary"]["historical_missing_ablation_layer_file_count"] == 400
+    assert payload["summary"]["benchmark_operator_ready_count"] == 0
+    assert payload["summary"]["benchmark_operator_blocked_count"] == 40
+    assert payload["summary"]["benchmark_missing_win_total_rows"] == 40
+    assert payload["summary"]["operator_dashboard_status"] == "ready"
+    assert payload["summary"]["operator_dashboard_row_count"] == 40
+    assert payload["summary"]["operator_dashboard_ready_count"] == 0
+    assert payload["summary"]["operator_dashboard_blocked_count"] == 40
+    assert payload["summary"]["operator_dashboard_needs_target_replacement_count"] == 40
+    assert payload["summary"]["operator_dashboard_needs_core_file_count"] == 40
+    assert payload["summary"]["operator_dashboard_needs_ablation_layer_count"] == 40
+    assert payload["summary"]["operator_dashboard_needs_calibration_count"] == 40
+    assert payload["summary"]["operator_dashboard_needs_provenance_count"] == 40
+    assert payload["summary"]["sidechain_native_benchmark_status"] == "blocked"
+    assert payload["summary"]["sidechain_native_benchmark_count"] == 40
+    assert payload["summary"]["sidechain_native_pass_count"] == 0
+    assert payload["summary"]["sidechain_native_blocked_count"] == 40
+    assert payload["summary"]["sidechain_native_core_input_blocked_count"] == 40
+    assert payload["summary"]["sidechain_native_leakage_blocked_count"] == 40
+    assert payload["summary"]["sidechain_native_prediction_missing_count"] == 40
+    assert payload["summary"]["sidechain_native_native_missing_count"] == 40
+    assert payload["summary"]["sidechain_native_missing_core_file_count"] == 80
+    assert payload["summary"]["sidechain_native_first_blocked_benchmark_id"] == "hist_REQUIRED_MONOMER_001"
+    assert "prediction_pdb_missing" in payload["summary"]["sidechain_native_first_blocked_blockers"]
+    assert payload["summary"]["sidechain_native_workorder_action_count"] == 120
+    assert payload["summary"]["sidechain_native_open_workorder_action_count"] == 120
+    assert payload["summary"]["sidechain_native_workorder_json"] == (
+        "runs/casp17_sidechain_native_input_workorder_current.json"
+    )
+    assert payload["summary"]["sidechain_native_workorder_md"] == (
+        "runs/casp17_sidechain_native_input_workorder_current.md"
+    )
     assert payload["summary"]["first_operator_input_action_id"] == "historical_benchmark_inputs"
     assert len(payload["target_rows"]) == 2
     by_id = {row["artifact_id"]: row for row in payload["rows"]}
@@ -1516,6 +1602,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["competitive_floor_operator_preflight"]["status"] == "blocked"
     assert by_id["benchmark_input_inventory"]["status"] == "blocked"
     assert "cleared historical" in by_id["benchmark_input_inventory"]["next_action"]
+    assert by_id["sidechain_native_benchmark"]["status"] == "blocked"
+    assert by_id["sidechain_native_benchmark"]["blocked_count"] == 40
+    assert "prediction_pdb_missing" in by_id["sidechain_native_benchmark"]["blockers"]
 
 
 def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
@@ -1547,6 +1636,8 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_inventory.json"),
             "--operator-dashboard-json",
             str(tmp_path / "missing_dashboard.json"),
+            "--sidechain-native-benchmark-json",
+            str(tmp_path / "missing_sidechain_native_benchmark.json"),
             "--competitive-batch-json",
             str(tmp_path / "missing_competitive_batch.json"),
             "--competitive-row-fill-status-json",

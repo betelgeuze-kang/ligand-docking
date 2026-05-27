@@ -37,5 +37,6 @@ def test_build_wetlab_partner_send_round_orders_tracks_by_dispatch_rank() -> Non
     payload = mod.build_payload(outbound_board, export_bundle)
     assert payload["summary"]["status"] == "wetlab_partner_send_round_ready"
     assert payload["summary"]["first_dispatch_track_id"] == "DNDi_IPK"
+    assert "explicit R4 confirmation" in payload["summary"]["next_required_step"]
     assert payload["rows"][0]["track_id"] == "DNDi_IPK"
     assert payload["rows"][0]["dispatch_status"] == "send_ready_manual_dispatch"

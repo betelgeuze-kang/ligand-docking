@@ -6,8 +6,8 @@
 - model: `casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_C/models/H2312_chain_C.pdb`
 - projection: `casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_C/renders/H2312_chain_C_projection.svg`
 - viewer: `casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_C/viewer.html`
-- atoms/residues: `602/123`
-- protein atoms / coordinate status: `602/valid`
+- atoms/residues: `950/123`
+- protein atoms / coordinate status: `950/valid`
 
 ## Claim Boundary
 

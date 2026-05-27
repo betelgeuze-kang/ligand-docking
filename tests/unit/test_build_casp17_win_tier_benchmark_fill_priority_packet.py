@@ -87,7 +87,13 @@ def test_build_casp17_win_tier_benchmark_fill_priority_packet_orders_competitive
     evidence_json.write_text(
         json.dumps(
             {
-                "summary": {"fill_kit_status": "ready"},
+                "summary": {
+                    "fill_kit_status": "ready",
+                    "sidechain_native_priority_status": "open",
+                    "sidechain_native_priority_action_count": 2,
+                    "sidechain_native_priority_open_action_count": 2,
+                    "sidechain_native_priority_csv_path": "runs/sidechain_priority.csv",
+                },
                 "rows": [
                     {
                         "benchmark_id": "hist_mono_001",
@@ -113,6 +119,24 @@ def test_build_casp17_win_tier_benchmark_fill_priority_packet_orders_competitive
                         "benchmark_id": "hist_mono_030",
                         "evidence_class": "core_file",
                         "completion_status": "missing",
+                    },
+                ],
+                "sidechain_native_priority_rows": [
+                    {
+                        "action_id": "hist_mono_001:leakage_clearance",
+                        "completion_status": "missing",
+                        "benchmark_id": "hist_mono_001",
+                        "target_id": "HIST_MONO_001",
+                        "evidence_class": "provenance",
+                        "next_action": "Replace placeholder leakage_clearance with operator-confirmed no_leak provenance.",
+                    },
+                    {
+                        "action_id": "hist_mono_001:prediction_pdb",
+                        "completion_status": "missing",
+                        "benchmark_id": "hist_mono_001",
+                        "target_id": "HIST_MONO_001",
+                        "evidence_class": "core_file",
+                        "next_action": "Place the internal prediction PDB at the manifest prediction_pdb path.",
                     },
                 ],
             }
@@ -168,6 +192,10 @@ def test_build_casp17_win_tier_benchmark_fill_priority_packet_orders_competitive
     assert summary["competitive_batch_complex_count"] == 1
     assert summary["win_required_row_count"] == 3
     assert summary["missing_evidence_by_class"]["core_file"] == 2
+    assert summary["sidechain_native_priority_status"] == "open"
+    assert summary["sidechain_native_priority_open_action_count"] == 2
+    assert summary["sidechain_native_first_open_action_id"] == "hist_mono_001:leakage_clearance"
+    assert summary["sidechain_native_first_open_next_action"].startswith("Replace placeholder")
     assert rows[0]["benchmark_id"] == "hist_mono_001"
     assert rows[0]["fill_batch"] == "competitive_floor_batch"
     assert rows[0]["next_action"].startswith("Replace placeholder target identity")
@@ -176,4 +204,8 @@ def test_build_casp17_win_tier_benchmark_fill_priority_packet_orders_competitive
     assert rows[2]["fill_batch"] == "win_extension_batch"
     assert csv_rows[0]["operator_priority"] == "1"
     assert "CASP17 Win-Tier Benchmark Fill Priority Packet" in md
+    assert "sidechain-native priority" in md
+    assert any("build_casp17_sidechain_native_manifest_sync_packet.py" in command for command in summary["post_fill_validation_commands"])
+    assert any("build_casp17_sidechain_native_benchmark_packet.py" in command for command in summary["post_fill_validation_commands"])
+    assert any("casp17_sidechain_native_manifest_candidate_current.csv" in command for command in summary["post_fill_validation_commands"])
     assert "Local fill-priority planning only" in summary["claim_boundary"]

@@ -7,10 +7,10 @@
 - status: `ready`
 - final model: `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/models/H2332_final_selected_model.pdb`
 - FASTA: `casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/metadata/H2332.fasta`
-- render files: `1`
-- figure files: `1`
+- render files: `20`
+- figure files: `5`
 - object folders: `4`
-- metadata files: `7`
+- metadata files: `12`
 
 ## Folder Layout
 

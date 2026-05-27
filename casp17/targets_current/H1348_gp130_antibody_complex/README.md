@@ -8,7 +8,7 @@
 - final model: `casp17/targets_current/H1348_gp130_antibody_complex/models/H1348_final_selected_model.pdb`
 - FASTA: `casp17/targets_current/H1348_gp130_antibody_complex/metadata/H1348.fasta`
 - render files: `20`
-- figure files: `4`
+- figure files: `5`
 - object folders: `3`
 - metadata files: `7`
 

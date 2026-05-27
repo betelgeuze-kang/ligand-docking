@@ -73,6 +73,11 @@ def _rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
 
 
+def _priority_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = payload.get("sidechain_native_priority_rows")
+    return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+
+
 def _write_json(path_like: str | Path, payload: dict[str, Any]) -> None:
     path = _resolve(path_like)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -168,6 +173,11 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     closure_summary = _summary(closure_payload)
     inventory_rows = _rows(inventory_payload)
     missing_by_benchmark = _missing_evidence_by_benchmark(_rows(fill_payload))
+    sidechain_priority_rows = _priority_rows(fill_payload)
+    sidechain_open_priority_rows = [
+        row for row in sidechain_priority_rows if _text(row.get("completion_status")).lower() != "filled"
+    ]
+    first_sidechain_priority = sidechain_open_priority_rows[0] if sidechain_open_priority_rows else {}
 
     scope_counters: dict[str, int] = {}
     rows: list[dict[str, Any]] = []
@@ -239,6 +249,17 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "first_priority_target_id": _text(first_row.get("target_id")),
         "first_priority_scope": _text(first_row.get("scope")),
         "first_priority_next_action": _text(first_row.get("next_action")),
+        "sidechain_native_priority_status": _text(fill_summary.get("sidechain_native_priority_status")),
+        "sidechain_native_priority_action_count": _int(fill_summary.get("sidechain_native_priority_action_count")),
+        "sidechain_native_priority_open_action_count": _int(
+            fill_summary.get("sidechain_native_priority_open_action_count")
+        ),
+        "sidechain_native_priority_csv_path": _text(fill_summary.get("sidechain_native_priority_csv_path")),
+        "sidechain_native_first_open_action_id": _text(first_sidechain_priority.get("action_id")),
+        "sidechain_native_first_open_benchmark_id": _text(first_sidechain_priority.get("benchmark_id")),
+        "sidechain_native_first_open_target_id": _text(first_sidechain_priority.get("target_id")),
+        "sidechain_native_first_open_evidence_class": _text(first_sidechain_priority.get("evidence_class")),
+        "sidechain_native_first_open_next_action": _text(first_sidechain_priority.get("next_action")),
         "missing_evidence_by_class": {
             key: sum(int(row.get(f"missing_{key}_count", 0)) for row in rows)
             for key in EVIDENCE_CLASSES
@@ -248,6 +269,8 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             "python3 tools/build_casp17_win_tier_benchmark_operator_preflight.py",
             "python3 tools/build_casp17_win_tier_benchmark_operator_import_packet.py",
             "python3 tools/build_casp17_historical_benchmark_packet.py",
+            "python3 tools/build_casp17_sidechain_native_manifest_sync_packet.py --manifest-csv runs/casp17_historical_benchmark_manifest_draft_from_operator_current.csv --workorder-json runs/casp17_sidechain_native_input_workorder_current.json",
+            "python3 tools/build_casp17_sidechain_native_benchmark_packet.py --manifest-csv runs/casp17_sidechain_native_manifest_candidate_current.csv",
             "python3 tools/build_casp17_model_selection_calibration_packet.py",
             "python3 tools/build_casp17_refinement_ablation_packet.py",
             "python3 tools/build_casp17_readiness_dashboard.py",
@@ -273,6 +296,9 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- win missing evidence items: `{summary['win_required_missing_evidence_item_count']}`",
         f"- first priority: `{summary['first_priority_benchmark_id']}` `{summary['first_priority_target_id']}` `{summary['first_priority_scope']}`",
         f"- first action: {summary['first_priority_next_action'] or '-'}",
+        f"- sidechain-native priority: `{summary['sidechain_native_priority_status'] or '-'}` open/action `{summary['sidechain_native_priority_open_action_count']}/{summary['sidechain_native_priority_action_count']}`",
+        f"- sidechain-native first action: `{summary['sidechain_native_first_open_action_id'] or '-'}` {summary['sidechain_native_first_open_next_action'] or '-'}",
+        f"- sidechain-native priority csv: `{summary['sidechain_native_priority_csv_path'] or '-'}`",
         "",
         "## Rows",
         "",

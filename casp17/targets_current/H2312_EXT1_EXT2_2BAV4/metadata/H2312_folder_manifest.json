@@ -5,6 +5,7 @@
       "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/figures/H2312_molecular_inspection_poster.png",
       "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/figures/H2312_molecular_review_board.png",
       "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/figures/H2312_molecular_scene_poster.png",
+      "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/figures/H2312_molecular_showcase.png",
       "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/figures/H2312_publication_figure.png"
     ],
     "final_model_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/models/H2312_final_selected_model.pdb",
@@ -60,7 +61,7 @@
   "claim_boundary": "Per-target local organization of internal CASP17 predicted coordinates, FASTA, renders, and QC metadata only; not an official CASP submission, native accuracy result, or experimental structure.",
   "objects": [
     {
-      "atom_count": 3215,
+      "atom_count": 5279,
       "chain_id": "A",
       "coordinate_status": "valid",
       "manifest_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_A/metadata/H2312_chain_A_manifest.json",
@@ -68,7 +69,7 @@
       "object_folder": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_A",
       "object_id": "chain_A",
       "projection_svg_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_A/renders/H2312_chain_A_projection.svg",
-      "protein_atom_count": 3215,
+      "protein_atom_count": 5279,
       "protein_name": "EXT1-EXT2-2BAV4",
       "readme_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_A/README.md",
       "residue_count": 649,
@@ -77,7 +78,7 @@
       "viewer_html_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_A/viewer.html"
     },
     {
-      "atom_count": 3157,
+      "atom_count": 5135,
       "chain_id": "B",
       "coordinate_status": "valid",
       "manifest_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_B/metadata/H2312_chain_B_manifest.json",
@@ -85,7 +86,7 @@
       "object_folder": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_B",
       "object_id": "chain_B",
       "projection_svg_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_B/renders/H2312_chain_B_projection.svg",
-      "protein_atom_count": 3157,
+      "protein_atom_count": 5135,
       "protein_name": "EXT1-EXT2-2BAV4",
       "readme_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_B/README.md",
       "residue_count": 637,
@@ -94,7 +95,7 @@
       "viewer_html_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_B/viewer.html"
     },
     {
-      "atom_count": 602,
+      "atom_count": 950,
       "chain_id": "C",
       "coordinate_status": "valid",
       "manifest_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_C/metadata/H2312_chain_C_manifest.json",
@@ -102,7 +103,7 @@
       "object_folder": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_C",
       "object_id": "chain_C",
       "projection_svg_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_C/renders/H2312_chain_C_projection.svg",
-      "protein_atom_count": 602,
+      "protein_atom_count": 950,
       "protein_name": "EXT1-EXT2-2BAV4",
       "readme_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_C/README.md",
       "residue_count": 123,
@@ -113,12 +114,12 @@
   ],
   "readme_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/README.md",
   "summary": {
-    "atom_count": 6974,
+    "atom_count": 11364,
     "blockers": "",
     "chain_count": 3,
     "coordinate_status": "valid",
     "fasta_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/metadata/H2312.fasta",
-    "figure_file_count": 4,
+    "figure_file_count": 5,
     "final_model_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/models/H2312_final_selected_model.pdb",
     "folder_name": "H2312_EXT1_EXT2_2BAV4",
     "folder_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4",
@@ -134,7 +135,7 @@
     "object_index_md": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/OBJECT_INDEX.md",
     "object_projection_count": 3,
     "object_viewer_count": 3,
-    "protein_atom_count": 6974,
+    "protein_atom_count": 11364,
     "protein_name": "EXT1-EXT2-2BAV4",
     "qa_expiration": "2026-05-30",
     "raw_internal_model_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/models/H2312_internal_physics_raw_model_1.pdb",

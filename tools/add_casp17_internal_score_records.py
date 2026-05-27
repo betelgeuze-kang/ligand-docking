@@ -210,11 +210,12 @@ def _interface_scores(atoms: list[str], global_score: float) -> tuple[list[str],
                     min_distance = min(min_distance, distance)
                     contacts += int(distance <= 12.0)
                     clashes += int(distance < 3.0)
-            if contacts <= 0:
-                continue
-            contact_pairs += 1
             contact_scale = min(contacts / max(8.0, min(len(left_coords), len(right_coords)) * 4.0), 1.0)
             qscore = 0.08 + 0.32 * contact_scale + 0.22 * global_score
+            if contacts <= 0:
+                qscore = 0.03
+            else:
+                contact_pairs += 1
             if clashes:
                 qscore *= 0.45
             qscore_records.append(f"{left_chain}{right_chain}:{_clamp(qscore, 0.03, 0.62):.3f}")

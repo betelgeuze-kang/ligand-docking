@@ -6,10 +6,10 @@
 - model: `casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_B/models/H1335_chain_B.pdb`
 - projection: `casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_B/renders/H1335_chain_B_projection.svg`
 - viewer: `casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_B/viewer.html`
-- atoms/protein/CA/residues: `3441/3441/692/692`
-- bbox xyz/diagonal: `46.336/64.905/58.152/98.698`
-- centroid xyz: `4.699/29.422/1.838`
-- radius_of_gyration: `22.601`
+- atoms/protein/CA/residues: `5546/5546/692/692`
+- bbox xyz/diagonal: `68.641/89.443/68.359/131.851`
+- centroid xyz: `5.148/33.4/-3.172`
+- radius_of_gyration: `20.167`
 - viewer_local_status: `pass`
 - blockers: `-`
 

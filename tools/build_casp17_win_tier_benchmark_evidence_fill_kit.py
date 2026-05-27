@@ -16,10 +16,14 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OPERATOR_TEMPLATE_CSV = "runs/casp17_win_tier_benchmark_operator_template_current.csv"
 DEFAULT_OPERATOR_DASHBOARD_JSON = "runs/casp17_win_tier_benchmark_operator_dashboard_current.json"
 DEFAULT_HISTORICAL_BENCHMARK_JSON = "runs/casp17_historical_benchmark_packet_current.json"
+DEFAULT_SIDECHAIN_NATIVE_WORKORDER_JSON = "runs/casp17_sidechain_native_input_workorder_current.json"
 DEFAULT_OUT_JSON = "runs/casp17_win_tier_benchmark_evidence_fill_kit_current.json"
 DEFAULT_OUT_CSV = "runs/casp17_win_tier_benchmark_evidence_fill_kit_current.csv"
 DEFAULT_OUT_MD = "runs/casp17_win_tier_benchmark_evidence_fill_kit_current.md"
 DEFAULT_OUT_HTML = "runs/casp17_win_tier_benchmark_evidence_fill_kit_current.html"
+DEFAULT_OUT_SIDECHAIN_NATIVE_PRIORITY_CSV = (
+    "runs/casp17_win_tier_benchmark_evidence_fill_kit_sidechain_native_priority_current.csv"
+)
 
 ABLATION_LAYER_NAMES = [
     "recursive",
@@ -101,16 +105,17 @@ def _summary(payload: dict[str, Any]) -> dict[str, Any]:
     return summary if isinstance(summary, dict) else {}
 
 
-def _json_rows_by_benchmark(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
+def _json_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     rows = payload.get("rows")
-    if not isinstance(rows, list):
-        return {}
+    return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+
+
+def _json_rows_by_benchmark(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
     result: dict[str, dict[str, Any]] = {}
-    for row in rows:
-        if isinstance(row, dict):
-            benchmark_id = _text(row.get("benchmark_id"))
-            if benchmark_id:
-                result[benchmark_id] = row
+    for row in _json_rows(payload):
+        benchmark_id = _text(row.get("benchmark_id"))
+        if benchmark_id:
+            result[benchmark_id] = row
     return result
 
 
@@ -275,6 +280,73 @@ def _metric_status(
     return "filled", expected, str(value), ""
 
 
+def _sidechain_priority_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for index, row in enumerate(_json_rows(payload), start=1):
+        action_status = _text(row.get("action_status")) or "open"
+        completion_status = "filled" if action_status.lower() in {"closed", "done", "filled", "pass"} else "missing"
+        rows.append(
+            {
+                "priority_rank": index,
+                "source": "sidechain_native_workorder",
+                "action_id": _text(row.get("action_id")),
+                "action_status": action_status,
+                "completion_status": completion_status,
+                "benchmark_id": _text(row.get("benchmark_id")),
+                "target_id": _text(row.get("target_id")).upper(),
+                "scope": _text(row.get("scope")).lower(),
+                "evidence_class": _text(row.get("evidence_class")),
+                "evidence_item": _text(row.get("evidence_item")),
+                "source_column": _text(row.get("source_column")),
+                "required_value": _text(row.get("required_value")),
+                "current_value": _text(row.get("current_value")),
+                "destination_path": _text(row.get("destination_path")),
+                "blocker": _text(row.get("blocker")),
+                "next_action": _text(row.get("next_action")),
+            }
+        )
+    return rows
+
+
+def _sidechain_priority_summary(
+    *,
+    payload: dict[str, Any],
+    priority_rows: list[dict[str, Any]],
+    workorder_json: str | Path,
+    priority_csv: str | Path,
+) -> dict[str, Any]:
+    summary = _summary(payload)
+    open_rows = [row for row in priority_rows if row["completion_status"] != "filled"]
+    first_open = open_rows[0] if open_rows else {}
+    missing_by_class: dict[str, int] = {}
+    for row in open_rows:
+        evidence_class = _text(row.get("evidence_class")) or "unknown"
+        missing_by_class[evidence_class] = missing_by_class.get(evidence_class, 0) + 1
+    if not payload:
+        status = "missing"
+    elif open_rows:
+        status = "open"
+    elif priority_rows:
+        status = "complete"
+    else:
+        status = "empty"
+    return {
+        "sidechain_native_workorder_json": _artifact(workorder_json),
+        "sidechain_native_priority_csv_path": _artifact(priority_csv),
+        "sidechain_native_priority_status": status,
+        "sidechain_native_benchmark_status": _text(summary.get("sidechain_native_benchmark_status")) or "missing",
+        "sidechain_native_priority_action_count": len(priority_rows),
+        "sidechain_native_priority_open_action_count": len(open_rows),
+        "sidechain_native_priority_missing_by_class": missing_by_class,
+        "sidechain_native_priority_first_open_action_id": _text(first_open.get("action_id")),
+        "sidechain_native_priority_first_open_benchmark_id": _text(first_open.get("benchmark_id")),
+        "sidechain_native_priority_first_open_target_id": _text(first_open.get("target_id")),
+        "sidechain_native_priority_first_open_evidence_class": _text(first_open.get("evidence_class")),
+        "sidechain_native_priority_first_open_blocker": _text(first_open.get("blocker")),
+        "sidechain_native_priority_first_open_next_action": _text(first_open.get("next_action")),
+    }
+
+
 def _rows_for_template_row(
     template_row: dict[str, str],
     row_rank: int,
@@ -394,6 +466,10 @@ def _rows_for_template_row(
 def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
     summary = payload["summary"]
     class_counts = summary["missing_by_class"]
+    priority_counts = summary.get("sidechain_native_priority_missing_by_class")
+    if not isinstance(priority_counts, dict):
+        priority_counts = {}
+    priority_count_text = ",".join(f"{key}:{priority_counts[key]}" for key in sorted(priority_counts))
     lines = [
         "# CASP17 Win Tier Benchmark Evidence Fill Kit",
         "",
@@ -404,6 +480,9 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- evidence items: `{summary['evidence_item_count']}`",
         f"- missing evidence items: `{summary['missing_evidence_item_count']}`",
         f"- missing by class: target/core/ablation/provenance/calibration/metrics `{class_counts['target_identity']}/{class_counts['core_file']}/{class_counts['ablation_layer_file']}/{class_counts['provenance_field']}/{class_counts['calibration_field']}/{class_counts['native_metric_gate']}`",
+        f"- sidechain-native priority: `{summary['sidechain_native_priority_status']}` open/action `{summary['sidechain_native_priority_open_action_count']}/{summary['sidechain_native_priority_action_count']}` missing_by_class `{priority_count_text or '-'}`",
+        f"- sidechain-native first action: `{summary['sidechain_native_priority_first_open_action_id'] or '-'}` {summary['sidechain_native_priority_first_open_next_action'] or '-'}",
+        f"- sidechain-native priority csv: `{summary['sidechain_native_priority_csv_path']}`",
         f"- html: `{summary['fill_kit_html_path']}`",
         "",
         "## Required Evidence Totals",
@@ -415,11 +494,28 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- calibration fields: `{summary['required_calibration_field_count']}`",
         f"- native metric gates: `{summary['required_native_metric_gate_count']}`",
         "",
+        "## Sidechain-Native Priority Lane",
+        "",
+        "| priority | benchmark | target | class | item | destination | blocker | next action |",
+        "| ---: | --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    for row in payload.get("sidechain_native_priority_rows", [])[:40]:
+        lines.append(
+            f"| {row['priority_rank']} | `{row['benchmark_id']}` | `{row['target_id']}` | "
+            f"`{row['evidence_class']}` | `{row['evidence_item']}` | `{row['destination_path'] or '-'}` | "
+            f"`{row['blocker'] or '-'}` | {row['next_action'] or '-'} |"
+        )
+    if not payload.get("sidechain_native_priority_rows"):
+        lines.append("| 0 | - | - | `missing` | - | - | `sidechain_native_workorder_missing` | rerun sidechain-native benchmark packet |")
+    lines.extend(
+        [
+            "",
         "## First Missing Items",
         "",
         "| rank | benchmark | target | class | item | expected | current | blocker |",
         "| ---: | --- | --- | --- | --- | --- | --- | --- |",
-    ]
+        ]
+    )
     for row in [item for item in payload["rows"] if item["completion_status"] != "filled"][:40]:
         lines.append(
             f"| {row['row_rank']} | `{row['benchmark_id']}` | `{row['target_id']}` | `{row['evidence_class']}` | "
@@ -434,6 +530,24 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
 def _write_html(path_like: str | Path, payload: dict[str, Any]) -> str:
     summary = payload["summary"]
     rows = payload["rows"]
+    priority_rows = payload.get("sidechain_native_priority_rows", [])
+    priority_cards: list[str] = []
+    for row in priority_rows[:120]:
+        status_class = "filled" if row["completion_status"] == "filled" else "missing"
+        priority_cards.append(
+            "\n".join(
+                [
+                    f'<article class="item priority-item {status_class}">',
+                    f'  <strong>{html.escape(str(row["action_id"]))}</strong>',
+                    f'  <span>{html.escape(str(row["target_id"]))} · {html.escape(str(row["evidence_class"]))}</span>',
+                    f'  <h2>{html.escape(str(row["evidence_item"]))}</h2>',
+                    f'  <p>{html.escape(str(row["next_action"]) or "-")}</p>',
+                    f'  <code>{html.escape(str(row["destination_path"]) or "-")}</code>',
+                    f'  <em>{html.escape(str(row["blocker"]) or "filled")}</em>',
+                    "</article>",
+                ]
+            )
+        )
     cards: list[str] = []
     for row in rows[:240]:
         status_class = "filled" if row["completion_status"] == "filled" else "missing"
@@ -461,7 +575,7 @@ def _write_html(path_like: str | Path, payload: dict[str, Any]) -> str:
             "<title>CASP17 Benchmark Evidence Fill Kit</title>",
             "<style>",
             ":root{color-scheme:dark;--bg:#020617;--panel:#07111f;--line:#1e293b;--text:#f8fafc;--muted:#94a3b8;--ok:#86efac;--bad:#fca5a5;--accent:#38bdf8}",
-            "*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}header{padding:18px 22px;background:#020617;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:2}h1{margin:0;font-size:22px}.summary{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.pill{padding:6px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);background:#0f172a}main{padding:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}.item{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:12px}.item.missing{border-color:#4c1d1d}.item.filled{border-color:#14532d}.item span{display:block;color:var(--muted);margin-top:3px}.item h2{font-size:16px;margin:10px 0 6px}.item p{color:#dbeafe;margin:0 0 8px}.item code{display:block;color:var(--muted);overflow-wrap:anywhere;background:#0b1220;border:1px solid var(--line);padding:8px;border-radius:6px}.item em{display:block;color:var(--bad);font-style:normal;margin-top:8px;overflow-wrap:anywhere}.item.filled em{color:var(--ok)}",
+            "*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}header{padding:18px 22px;background:#020617;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:2}h1{margin:0;font-size:22px}h2.section-title{font-size:15px;margin:0 0 12px;color:#e2e8f0}.summary{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.pill{padding:6px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);background:#0f172a}.priority,.evidence-grid{padding:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}.section-title{grid-column:1/-1}.priority{background:#111827;border-bottom:1px solid var(--line)}.item{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:12px}.priority-item{background:#18181b}.item.missing{border-color:#4c1d1d}.item.filled{border-color:#14532d}.item span{display:block;color:var(--muted);margin-top:3px}.item h2{font-size:16px;margin:10px 0 6px}.item p{color:#dbeafe;margin:0 0 8px}.item code{display:block;color:var(--muted);overflow-wrap:anywhere;background:#0b1220;border:1px solid var(--line);padding:8px;border-radius:6px}.item em{display:block;color:var(--bad);font-style:normal;margin-top:8px;overflow-wrap:anywhere}.item.filled em{color:var(--ok)}",
             "</style>",
             "</head>",
             "<body>",
@@ -471,10 +585,16 @@ def _write_html(path_like: str | Path, payload: dict[str, Any]) -> str:
             f'<span class="pill">status: {html.escape(str(summary["fill_kit_status"]))}</span>',
             f'<span class="pill">benchmark rows: {summary["benchmark_row_count"]}</span>',
             f'<span class="pill">missing evidence: {summary["missing_evidence_item_count"]}/{summary["evidence_item_count"]}</span>',
+            f'<span class="pill">sidechain-native open: {summary["sidechain_native_priority_open_action_count"]}/{summary["sidechain_native_priority_action_count"]}</span>',
             f'<span class="pill">showing first {min(240, len(rows))} items</span>',
             "</div>",
             "</header>",
-            "<main>",
+            '<section class="priority">',
+            '<h2 class="section-title">Sidechain-Native Priority Lane</h2>',
+            *(priority_cards or ['<article class="item missing"><strong>sidechain_native_workorder_missing</strong><span>missing</span><h2>rerun packet</h2><p>Run the sidechain-native benchmark packet to materialize priority actions.</p><code>-</code><em>missing</em></article>']),
+            "</section>",
+            '<main class="evidence-grid">',
+            '<h2 class="section-title">Broad Evidence Fill Kit</h2>',
             *cards,
             "</main>",
             '<footer style="padding:20px 22px;color:#94a3b8;border-top:1px solid #1e293b">Local fill kit only. It does not fetch natives, clear provenance, score accuracy, use external predictors, or submit to CASP.</footer>',
@@ -492,6 +612,8 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     template_rows, source_blockers = _read_csv(args.operator_template_csv)
     dashboard = _summary(_read_json(args.operator_dashboard_json))
     historical_payload = _read_json(args.historical_benchmark_json)
+    sidechain_workorder_payload = _read_json(args.sidechain_native_workorder_json)
+    sidechain_priority_rows = _sidechain_priority_rows(sidechain_workorder_payload)
     historical_summary = _summary(historical_payload)
     historical_rows_by_benchmark = _json_rows_by_benchmark(historical_payload)
     historical_thresholds = historical_summary.get("thresholds")
@@ -553,7 +675,15 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             "it does not fetch natives, clear provenance, score accuracy, use external predictors, or submit to CASP."
         ),
     }
-    payload = {"summary": summary, "rows": rows}
+    summary.update(
+        _sidechain_priority_summary(
+            payload=sidechain_workorder_payload,
+            priority_rows=sidechain_priority_rows,
+            workorder_json=args.sidechain_native_workorder_json,
+            priority_csv=args.out_sidechain_native_priority_csv,
+        )
+    )
+    payload = {"summary": summary, "rows": rows, "sidechain_native_priority_rows": sidechain_priority_rows}
     summary["fill_kit_html_path"] = _write_html(args.out_html, payload)
     return payload
 
@@ -563,10 +693,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--operator-template-csv", default=DEFAULT_OPERATOR_TEMPLATE_CSV)
     parser.add_argument("--operator-dashboard-json", default=DEFAULT_OPERATOR_DASHBOARD_JSON)
     parser.add_argument("--historical-benchmark-json", default=DEFAULT_HISTORICAL_BENCHMARK_JSON)
+    parser.add_argument("--sidechain-native-workorder-json", default=DEFAULT_SIDECHAIN_NATIVE_WORKORDER_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
     parser.add_argument("--out-html", default=DEFAULT_OUT_HTML)
+    parser.add_argument("--out-sidechain-native-priority-csv", default=DEFAULT_OUT_SIDECHAIN_NATIVE_PRIORITY_CSV)
     return parser.parse_args(argv)
 
 
@@ -575,6 +707,7 @@ def main(argv: list[str] | None = None) -> None:
     payload = build_payload(args)
     _write_json(args.out_json, payload)
     _write_csv(args.out_csv, payload["rows"])
+    _write_csv(args.out_sidechain_native_priority_csv, payload.get("sidechain_native_priority_rows", []))
     _write_md(args.out_md, payload)
 
 

@@ -4,7 +4,7 @@ reinitialize
 set quiet, 1
 set internal_gui, 0
 viewport 1800, 1200
-load "runs/casp17_predictions_model_selected_shape_guarded_coordinate_normalized_current/T1342TS.pdb", casp17_T1342_confidence
+load "runs/casp17_predictions_statistical_rotamer_current/T1342TS.pdb", casp17_T1342_confidence
 hide everything, casp17_T1342_confidence
 remove casp17_T1342_confidence and elem H
 bg_color 0x08111f
@@ -30,18 +30,18 @@ show cartoon, casp17_T1342_confidence
 show sticks, casp17_T1342_confidence and not name N+C+O+CA
 show spheres, casp17_T1342_confidence and name CA
 set_color casp17_conf_very_low, [0.8627, 0.149, 0.149]
-color casp17_conf_very_low, casp17_T1342_confidence and b >= 43.849 and b < 59.803
+color casp17_conf_very_low, casp17_T1342_confidence and b >= 43.489 and b < 59.629
 set_color casp17_conf_low, [0.851, 0.4667, 0.0235]
-color casp17_conf_low, casp17_T1342_confidence and b >= 59.803 and b < 68.919
+color casp17_conf_low, casp17_T1342_confidence and b >= 59.629 and b < 68.850
 set_color casp17_conf_medium, [0.0196, 0.5882, 0.4118]
-color casp17_conf_medium, casp17_T1342_confidence and b >= 68.919 and b < 79.402
+color casp17_conf_medium, casp17_T1342_confidence and b >= 68.850 and b < 79.456
 set_color casp17_conf_high, [0.1451, 0.3882, 0.9216]
-color casp17_conf_high, casp17_T1342_confidence and b >= 79.402 and b < 89.431
+color casp17_conf_high, casp17_T1342_confidence and b >= 79.456 and b < 89.601
 show cartoon, casp17_T1342_confidence and chain A
 orient casp17_T1342_confidence
 zoom casp17_T1342_confidence, 1.08
 rotate x, 8
 rotate y, -12
 ray 1800, 1200
-png runs/casp17_structure_renders_model_selected_shape_guarded_current/T1342_structure_confidence_pymol.png, dpi=240
+png runs/casp17_structure_renders_current/T1342_structure_confidence_pymol.png, dpi=240
 quit

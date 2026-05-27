@@ -6,10 +6,10 @@
 - model: `casp17/targets_current/T1342_Spike_glycoprotein_ectodomain/objects/chain_A/models/T1342_chain_A.pdb`
 - projection: `casp17/targets_current/T1342_Spike_glycoprotein_ectodomain/objects/chain_A/renders/T1342_chain_A_projection.svg`
 - viewer: `casp17/targets_current/T1342_Spike_glycoprotein_ectodomain/objects/chain_A/viewer.html`
-- atoms/protein/CA/residues: `7155/7155/1455/1455`
-- bbox xyz/diagonal: `91.494/138.435/126.214/208.484`
-- centroid xyz: `0.007/0.088/0.018`
-- radius_of_gyration: `47.562`
+- atoms/protein/CA/residues: `11192/11192/1455/1455`
+- bbox xyz/diagonal: `87.859/106.834/112.067/178.022`
+- centroid xyz: `-0.163/0.176/-0.003`
+- radius_of_gyration: `26.759`
 - viewer_local_status: `pass`
 - blockers: `-`
 

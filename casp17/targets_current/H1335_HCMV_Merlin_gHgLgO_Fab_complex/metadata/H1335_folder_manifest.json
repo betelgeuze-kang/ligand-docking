@@ -5,6 +5,7 @@
       "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/figures/H1335_molecular_inspection_poster.png",
       "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/figures/H1335_molecular_review_board.png",
       "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/figures/H1335_molecular_scene_poster.png",
+      "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/figures/H1335_molecular_showcase.png",
       "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/figures/H1335_publication_figure.png"
     ],
     "final_model_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/models/H1335_final_selected_model.pdb",
@@ -66,7 +67,7 @@
   "claim_boundary": "Per-target local organization of internal CASP17 predicted coordinates, FASTA, renders, and QC metadata only; not an official CASP submission, native accuracy result, or experimental structure.",
   "objects": [
     {
-      "atom_count": 2181,
+      "atom_count": 3592,
       "chain_id": "A",
       "coordinate_status": "valid",
       "manifest_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_A/metadata/H1335_chain_A_manifest.json",
@@ -74,7 +75,7 @@
       "object_folder": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_A",
       "object_id": "chain_A",
       "projection_svg_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_A/renders/H1335_chain_A_projection.svg",
-      "protein_atom_count": 2181,
+      "protein_atom_count": 3592,
       "protein_name": "HCMV Merlin gHgLgO-Fab complex",
       "readme_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_A/README.md",
       "residue_count": 439,
@@ -83,7 +84,7 @@
       "viewer_html_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_A/viewer.html"
     },
     {
-      "atom_count": 3441,
+      "atom_count": 5546,
       "chain_id": "B",
       "coordinate_status": "valid",
       "manifest_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_B/metadata/H1335_chain_B_manifest.json",
@@ -91,7 +92,7 @@
       "object_folder": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_B",
       "object_id": "chain_B",
       "projection_svg_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_B/renders/H1335_chain_B_projection.svg",
-      "protein_atom_count": 3441,
+      "protein_atom_count": 5546,
       "protein_name": "HCMV Merlin gHgLgO-Fab complex",
       "readme_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_B/README.md",
       "residue_count": 692,
@@ -100,7 +101,7 @@
       "viewer_html_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_B/viewer.html"
     },
     {
-      "atom_count": 1226,
+      "atom_count": 1938,
       "chain_id": "C",
       "coordinate_status": "valid",
       "manifest_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_C/metadata/H1335_chain_C_manifest.json",
@@ -108,7 +109,7 @@
       "object_folder": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_C",
       "object_id": "chain_C",
       "projection_svg_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_C/renders/H1335_chain_C_projection.svg",
-      "protein_atom_count": 1226,
+      "protein_atom_count": 1938,
       "protein_name": "HCMV Merlin gHgLgO-Fab complex",
       "readme_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_C/README.md",
       "residue_count": 248,
@@ -117,7 +118,7 @@
       "viewer_html_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_C/viewer.html"
     },
     {
-      "atom_count": 1058,
+      "atom_count": 1650,
       "chain_id": "D",
       "coordinate_status": "valid",
       "manifest_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_D/metadata/H1335_chain_D_manifest.json",
@@ -125,7 +126,7 @@
       "object_folder": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_D",
       "object_id": "chain_D",
       "projection_svg_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_D/renders/H1335_chain_D_projection.svg",
-      "protein_atom_count": 1058,
+      "protein_atom_count": 1650,
       "protein_name": "HCMV Merlin gHgLgO-Fab complex",
       "readme_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_D/README.md",
       "residue_count": 214,
@@ -134,7 +135,7 @@
       "viewer_html_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_D/viewer.html"
     },
     {
-      "atom_count": 1114,
+      "atom_count": 1713,
       "chain_id": "E",
       "coordinate_status": "valid",
       "manifest_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_E/metadata/H1335_chain_E_manifest.json",
@@ -142,7 +143,7 @@
       "object_folder": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_E",
       "object_id": "chain_E",
       "projection_svg_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_E/renders/H1335_chain_E_projection.svg",
-      "protein_atom_count": 1114,
+      "protein_atom_count": 1713,
       "protein_name": "HCMV Merlin gHgLgO-Fab complex",
       "readme_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_E/README.md",
       "residue_count": 227,
@@ -153,12 +154,12 @@
   ],
   "readme_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/README.md",
   "summary": {
-    "atom_count": 9020,
+    "atom_count": 14439,
     "blockers": "",
     "chain_count": 5,
     "coordinate_status": "valid",
     "fasta_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/metadata/H1335.fasta",
-    "figure_file_count": 4,
+    "figure_file_count": 5,
     "final_model_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/models/H1335_final_selected_model.pdb",
     "folder_name": "H1335_HCMV_Merlin_gHgLgO_Fab_complex",
     "folder_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex",
@@ -174,7 +175,7 @@
     "object_index_md": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/OBJECT_INDEX.md",
     "object_projection_count": 5,
     "object_viewer_count": 5,
-    "protein_atom_count": 9020,
+    "protein_atom_count": 14439,
     "protein_name": "HCMV Merlin gHgLgO-Fab complex",
     "qa_expiration": "2026-05-30",
     "raw_internal_model_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/models/H1335_internal_physics_raw_model_1.pdb",

@@ -19,6 +19,7 @@ DEFAULT_WIN_GAP_CLOSURE_JSON = "runs/casp17_win_gap_closure_packet_current.json"
 DEFAULT_INPUT_SCAFFOLD_JSON = "runs/casp17_win_tier_benchmark_input_scaffold_current.json"
 DEFAULT_INPUT_INVENTORY_JSON = "runs/casp17_win_tier_benchmark_input_inventory_current.json"
 DEFAULT_OPERATOR_DASHBOARD_JSON = "runs/casp17_win_tier_benchmark_operator_dashboard_current.json"
+DEFAULT_SIDECHAIN_NATIVE_BENCHMARK_JSON = "runs/casp17_sidechain_native_benchmark_packet_current.json"
 DEFAULT_COMPETITIVE_BATCH_JSON = "casp17/casp17_competitive_floor_batch_current.json"
 DEFAULT_COMPETITIVE_ROW_FILL_STATUS_JSON = "casp17/casp17_competitive_floor_row_fill_status_current.json"
 DEFAULT_COMPETITIVE_ROW_FILL_WORKLIST_JSON = "casp17/casp17_competitive_floor_row_fill_worklist_current.json"
@@ -215,6 +216,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     scaffold_payload = _read_json(args.input_scaffold_json)
     inventory_payload = _read_json(args.input_inventory_json)
     dashboard_payload = _read_json(args.operator_dashboard_json)
+    sidechain_native_benchmark_payload = _read_json(args.sidechain_native_benchmark_json)
     competitive_batch_payload = _read_json(args.competitive_batch_json)
     competitive_row_fill_status_payload = _read_json(args.competitive_row_fill_status_json)
     competitive_row_fill_worklist_payload = _read_json(args.competitive_row_fill_worklist_json)
@@ -299,6 +301,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     scaffold_summary = _summary(scaffold_payload)
     inventory_summary = _summary(inventory_payload)
     dashboard_summary = _summary(dashboard_payload)
+    sidechain_native_benchmark_summary = _summary(sidechain_native_benchmark_payload)
     competitive_batch_summary = _summary(competitive_batch_payload)
     competitive_row_fill_status_summary = _summary(competitive_row_fill_status_payload)
     competitive_row_fill_worklist_summary = _summary(competitive_row_fill_worklist_payload)
@@ -554,6 +557,20 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             total_count=_int(dashboard_summary.get("row_count")),
             next_action=first_fill_action,
             blockers=_text(dashboard_summary.get("source_blockers")),
+        ),
+        _artifact_row(
+            "sidechain_native_benchmark",
+            "No-leak historical sidechain/native benchmark exactness and sidechain metric gate",
+            _text(sidechain_native_benchmark_summary.get("sidechain_native_benchmark_status")),
+            args.sidechain_native_benchmark_json,
+            ready_count=_int(sidechain_native_benchmark_summary.get("pass_count")),
+            blocked_count=_int(sidechain_native_benchmark_summary.get("blocked_count")),
+            total_count=_int(sidechain_native_benchmark_summary.get("benchmark_count")),
+            next_action=_text(sidechain_native_benchmark_summary.get("first_open_next_action")),
+            blockers=_text(
+                sidechain_native_benchmark_summary.get("first_blocked_blockers")
+                or sidechain_native_benchmark_summary.get("manifest_blockers")
+            ),
         ),
         _artifact_row(
             "competitive_floor_batch",
@@ -1746,6 +1763,80 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "target_object_model_review_gallery_html": _text(target_object_model_review_summary.get("gallery_html_path")),
         "benchmark_rows_ready_count": benchmark_rows_ready,
         "benchmark_rows_total": benchmark_rows_total,
+        "win_gap_closure_status": _text(closure_summary.get("closure_status")),
+        "win_gap_closed_count": _int(closure_summary.get("closed_count")),
+        "win_gap_not_closed_count": _int(closure_summary.get("not_closed_count")),
+        "historical_input_workorder_count": _int(closure_summary.get("historical_input_workorder_count")),
+        "historical_core_workorder_count": _int(closure_summary.get("historical_core_workorder_count")),
+        "historical_missing_core_file_count": _int(closure_summary.get("historical_missing_core_file_count")),
+        "historical_missing_ablation_layer_file_count": _int(
+            closure_summary.get("historical_missing_ablation_layer_file_count")
+        ),
+        "benchmark_operator_ready_count": _int(closure_summary.get("benchmark_operator_ready_count")),
+        "benchmark_operator_blocked_count": _int(closure_summary.get("benchmark_operator_blocked_count")),
+        "benchmark_missing_win_total_rows": _int(closure_summary.get("benchmark_missing_win_total_rows")),
+        "operator_dashboard_status": _text(dashboard_summary.get("dashboard_status")),
+        "operator_dashboard_row_count": _int(dashboard_summary.get("row_count")),
+        "operator_dashboard_ready_count": _int(dashboard_summary.get("ready_count")),
+        "operator_dashboard_blocked_count": _int(dashboard_summary.get("blocked_count")),
+        "operator_dashboard_needs_target_replacement_count": _int(
+            dashboard_summary.get("needs_target_replacement_count")
+        ),
+        "operator_dashboard_needs_core_file_count": _int(dashboard_summary.get("needs_core_file_count")),
+        "operator_dashboard_needs_ablation_layer_count": _int(
+            dashboard_summary.get("needs_ablation_layer_count")
+        ),
+        "operator_dashboard_needs_calibration_count": _int(
+            dashboard_summary.get("needs_calibration_count")
+        ),
+        "operator_dashboard_needs_provenance_count": _int(
+            dashboard_summary.get("needs_provenance_count")
+        ),
+        "sidechain_native_benchmark_status": _text(
+            sidechain_native_benchmark_summary.get("sidechain_native_benchmark_status")
+        ),
+        "sidechain_native_benchmark_count": _int(sidechain_native_benchmark_summary.get("benchmark_count")),
+        "sidechain_native_pass_count": _int(sidechain_native_benchmark_summary.get("pass_count")),
+        "sidechain_native_blocked_count": _int(sidechain_native_benchmark_summary.get("blocked_count")),
+        "sidechain_native_core_input_blocked_count": _int(
+            sidechain_native_benchmark_summary.get("core_input_blocked_count")
+        ),
+        "sidechain_native_leakage_blocked_count": _int(
+            sidechain_native_benchmark_summary.get("leakage_clearance_blocked_count")
+        ),
+        "sidechain_native_prediction_missing_count": _int(
+            sidechain_native_benchmark_summary.get("prediction_pdb_missing_count")
+        ),
+        "sidechain_native_native_missing_count": _int(
+            sidechain_native_benchmark_summary.get("native_pdb_missing_count")
+        ),
+        "sidechain_native_missing_core_file_count": _int(
+            sidechain_native_benchmark_summary.get("missing_core_file_count")
+        ),
+        "sidechain_native_exactness_blocked_count": _int(
+            sidechain_native_benchmark_summary.get("exactness_blocked_count")
+        ),
+        "sidechain_native_metric_blocked_count": _int(
+            sidechain_native_benchmark_summary.get("metric_threshold_blocked_count")
+        ),
+        "sidechain_native_first_blocked_benchmark_id": _text(
+            sidechain_native_benchmark_summary.get("first_blocked_benchmark_id")
+        ),
+        "sidechain_native_first_blocked_blockers": _text(
+            sidechain_native_benchmark_summary.get("first_blocked_blockers")
+            or sidechain_native_benchmark_summary.get("manifest_blockers")
+        ),
+        "sidechain_native_first_next_action": _text(
+            sidechain_native_benchmark_summary.get("first_open_next_action")
+        ),
+        "sidechain_native_workorder_action_count": _int(
+            sidechain_native_benchmark_summary.get("workorder_action_count")
+        ),
+        "sidechain_native_open_workorder_action_count": _int(
+            sidechain_native_benchmark_summary.get("open_workorder_action_count")
+        ),
+        "sidechain_native_workorder_json": _text(sidechain_native_benchmark_summary.get("workorder_json")),
+        "sidechain_native_workorder_md": _text(sidechain_native_benchmark_summary.get("workorder_md")),
         "competitive_batch_status": _text(competitive_batch_summary.get("batch_status")),
         "competitive_batch_row_count": _int(competitive_batch_summary.get("row_count")),
         "competitive_batch_missing_evidence_item_count": _int(
@@ -2730,6 +2821,11 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- target object viewer smoke: `{summary['target_object_viewer_smoke_status'] or '-'}` rows `{summary['target_object_viewer_smoke_pass_count']}/{summary['target_object_viewer_smoke_total']}`",
         f"- target object model review: `{summary['target_object_model_review_status'] or '-'}` pass/blocked/total `{summary['target_object_model_review_pass_count']}/{summary['target_object_model_review_blocked_count']}/{summary['target_object_model_review_total']}` review md/viewers `{summary['target_object_model_review_md_count']}/{summary['target_object_model_review_viewer_local_pass_count']}` protein/CA/residue `{summary['target_object_model_review_protein_atom_count']}/{summary['target_object_model_review_ca_atom_count']}/{summary['target_object_model_review_residue_count']}` radius `{summary['target_object_model_review_min_radius']}/{summary['target_object_model_review_max_radius']}` gallery `{summary['target_object_model_review_gallery_status'] or '-'}` `{summary['target_object_model_review_gallery_html'] or '-'}`",
         f"- benchmark rows ready/total: `{summary['benchmark_rows_ready_count']}/{summary['benchmark_rows_total']}`",
+        f"- win gap closure: `{summary['win_gap_closure_status'] or '-'}` closed/open `{summary['win_gap_closed_count']}/{summary['win_gap_not_closed_count']}` missing win rows `{summary['benchmark_missing_win_total_rows']}`",
+        f"- historical benchmark workorders: `{summary['historical_input_workorder_count']}` core `{summary['historical_core_workorder_count']}` missing core/ablation `{summary['historical_missing_core_file_count']}/{summary['historical_missing_ablation_layer_file_count']}` operator ready/blocked `{summary['benchmark_operator_ready_count']}/{summary['benchmark_operator_blocked_count']}`",
+        f"- operator dashboard: `{summary['operator_dashboard_status'] or '-'}` rows ready/blocked/total `{summary['operator_dashboard_ready_count']}/{summary['operator_dashboard_blocked_count']}/{summary['operator_dashboard_row_count']}` needs target/core/ablation/calibration/provenance `{summary['operator_dashboard_needs_target_replacement_count']}/{summary['operator_dashboard_needs_core_file_count']}/{summary['operator_dashboard_needs_ablation_layer_count']}/{summary['operator_dashboard_needs_calibration_count']}/{summary['operator_dashboard_needs_provenance_count']}`",
+        f"- sidechain-native benchmark: `{summary['sidechain_native_benchmark_status'] or '-'}` pass/blocked/total `{summary['sidechain_native_pass_count']}/{summary['sidechain_native_blocked_count']}/{summary['sidechain_native_benchmark_count']}` core/leakage/pred/native/missing-files `{summary['sidechain_native_core_input_blocked_count']}/{summary['sidechain_native_leakage_blocked_count']}/{summary['sidechain_native_prediction_missing_count']}/{summary['sidechain_native_native_missing_count']}/{summary['sidechain_native_missing_core_file_count']}` exactness/metric `{summary['sidechain_native_exactness_blocked_count']}/{summary['sidechain_native_metric_blocked_count']}` first `{summary['sidechain_native_first_blocked_benchmark_id'] or '-'}` blockers `{summary['sidechain_native_first_blocked_blockers'] or '-'}`",
+        f"- sidechain-native workorder: actions/open `{summary['sidechain_native_workorder_action_count']}/{summary['sidechain_native_open_workorder_action_count']}` files `{summary['sidechain_native_workorder_json'] or '-'}` `{summary['sidechain_native_workorder_md'] or '-'}`",
         f"- competitive-floor batch: `{summary['competitive_batch_status'] or '-'}` rows `{summary['competitive_batch_row_count']}` missing evidence `{summary['competitive_batch_missing_evidence_item_count']}`",
         f"- competitive row_fill status: `{summary['competitive_row_fill_status'] or '-'}` filled/ready/total `{summary['competitive_row_fill_filled_count']}/{summary['competitive_row_fill_ready_count']}/{summary['competitive_row_fill_row_count']}`",
         f"- competitive row_fill worklist: `{summary['competitive_row_fill_worklist_status'] or '-'}` open actions `{summary['competitive_row_fill_worklist_open_action_count']}` guides `{summary['competitive_row_fill_worklist_guide_count']}`",
@@ -2820,6 +2916,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--input-scaffold-json", default=DEFAULT_INPUT_SCAFFOLD_JSON)
     parser.add_argument("--input-inventory-json", default=DEFAULT_INPUT_INVENTORY_JSON)
     parser.add_argument("--operator-dashboard-json", default=DEFAULT_OPERATOR_DASHBOARD_JSON)
+    parser.add_argument("--sidechain-native-benchmark-json", default=DEFAULT_SIDECHAIN_NATIVE_BENCHMARK_JSON)
     parser.add_argument("--competitive-batch-json", default=DEFAULT_COMPETITIVE_BATCH_JSON)
     parser.add_argument("--competitive-row-fill-status-json", default=DEFAULT_COMPETITIVE_ROW_FILL_STATUS_JSON)
     parser.add_argument("--competitive-row-fill-worklist-json", default=DEFAULT_COMPETITIVE_ROW_FILL_WORKLIST_JSON)

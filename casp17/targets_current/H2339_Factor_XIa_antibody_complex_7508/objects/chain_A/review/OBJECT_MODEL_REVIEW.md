@@ -6,10 +6,10 @@
 - model: `casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_A/models/H2339_chain_A.pdb`
 - projection: `casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_A/renders/H2339_chain_A_projection.svg`
 - viewer: `casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_A/viewer.html`
-- atoms/protein/CA/residues: `1095/1095/223/223`
-- bbox xyz/diagonal: `26.84/54.137/37.864/71.308`
-- centroid xyz: `32.283/2.544/-3.144`
-- radius_of_gyration: `16.267`
+- atoms/protein/CA/residues: `1688/1688/223/223`
+- bbox xyz/diagonal: `42.327/45.042/39.897/73.567`
+- centroid xyz: `26.077/-0.286/-7.378`
+- radius_of_gyration: `14.518`
 - viewer_local_status: `pass`
 - blockers: `-`
 

@@ -17,10 +17,13 @@ from tools.build_casp17_sidechain_scaffold_packet import BACKBONE_ATOMS
 
 ROOT = Path(__file__).resolve().parents[1]
 
-DEFAULT_MANIFEST_CSV = "runs/casp17_historical_benchmark_manifest_current.csv"
+DEFAULT_MANIFEST_CSV = "runs/casp17_historical_benchmark_manifest_draft_from_operator_current.csv"
 DEFAULT_OUT_JSON = "runs/casp17_sidechain_native_benchmark_packet_current.json"
 DEFAULT_OUT_CSV = "runs/casp17_sidechain_native_benchmark_packet_current.csv"
 DEFAULT_OUT_MD = "runs/casp17_sidechain_native_benchmark_packet_current.md"
+DEFAULT_OUT_WORKORDER_JSON = "runs/casp17_sidechain_native_input_workorder_current.json"
+DEFAULT_OUT_WORKORDER_CSV = "runs/casp17_sidechain_native_input_workorder_current.csv"
+DEFAULT_OUT_WORKORDER_MD = "runs/casp17_sidechain_native_input_workorder_current.md"
 
 
 def _resolve(path_like: str | Path) -> Path:
@@ -332,6 +335,207 @@ def _mean(rows: list[dict[str, Any]], key: str) -> float:
     return round(sum(values) / len(values), 6) if values else 0.0
 
 
+def _row_blockers(row: dict[str, Any]) -> set[str]:
+    return {item for item in str(row.get("blockers", "")).split(",") if item}
+
+
+def _blocker_histogram(rows: list[dict[str, Any]], manifest_blockers: list[str]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for blocker in manifest_blockers:
+        counts[blocker] = counts.get(blocker, 0) + 1
+    for row in rows:
+        for blocker in _row_blockers(row):
+            counts[blocker] = counts.get(blocker, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def _first_next_action(first_blocked: dict[str, Any], manifest_blockers: list[str]) -> str:
+    if manifest_blockers:
+        return "Create or populate the no-leak historical benchmark manifest, then rerun this packet."
+    blockers = _row_blockers(first_blocked)
+    if not blockers:
+        return "No sidechain-native benchmark action is open."
+    actions: list[str] = []
+    if "leakage_clearance_missing_or_not_clear" in blockers:
+        actions.append("replace placeholder leakage_clearance with operator-confirmed no_leak provenance")
+    if {"prediction_pdb_missing", "native_pdb_missing"} & blockers:
+        actions.append("place the cleared prediction/native PDB files for this benchmark row")
+    if {
+        "matched_ca_count_below_threshold",
+        "prediction_ca_coverage_below_threshold",
+        "native_ca_coverage_below_threshold",
+        "prediction_native_chain_ids_mismatch",
+        "complex_scope_requires_multichain",
+        "monomer_scope_requires_single_chain",
+        "prediction_native_residue_identity_mismatch",
+        "matched_sidechain_atom_count_below_threshold",
+        "native_sidechain_coverage_below_threshold",
+    } & blockers:
+        actions.append("repair chain, residue, atom, and sidechain exactness before native scoring")
+    if {"sidechain_rmsd_above_threshold", "sidechain_lddt_below_threshold"} & blockers:
+        actions.append("tune sidechain placement against RMSD/lDDT thresholds")
+    return "; ".join(actions) + "." if actions else "Resolve the first blocked sidechain-native benchmark row."
+
+
+def _workorder_action(
+    *,
+    action_rank: int,
+    row: dict[str, Any],
+    evidence_class: str,
+    evidence_item: str,
+    source_column: str,
+    required_value: str,
+    current_value: str,
+    destination_path: str,
+    blocker: str,
+    next_action: str,
+) -> dict[str, Any]:
+    benchmark_id = _text(row.get("benchmark_id")) or "manifest"
+    return {
+        "action_rank": action_rank,
+        "action_id": f"{benchmark_id}:{evidence_item}",
+        "benchmark_id": benchmark_id,
+        "target_id": _text(row.get("target_id")),
+        "scope": _text(row.get("scope")) or "historical",
+        "evidence_class": evidence_class,
+        "evidence_item": evidence_item,
+        "source_column": source_column,
+        "required_value": required_value,
+        "current_value": current_value,
+        "destination_path": destination_path,
+        "action_status": "open" if blocker else "closed",
+        "blocker": blocker,
+        "next_action": next_action,
+    }
+
+
+def _workorder_rows(
+    rows: list[dict[str, Any]],
+    manifest_blockers: list[str],
+    *,
+    max_sidechain_rmsd_A: float,
+    min_sidechain_lddt_proxy: float,
+) -> list[dict[str, Any]]:
+    if manifest_blockers:
+        return [
+            _workorder_action(
+                action_rank=1,
+                row={"benchmark_id": "manifest", "target_id": "", "scope": "historical"},
+                evidence_class="manifest",
+                evidence_item="manifest_csv",
+                source_column="manifest_csv",
+                required_value="populated no-leak historical benchmark manifest CSV",
+                current_value=",".join(manifest_blockers),
+                destination_path=DEFAULT_MANIFEST_CSV,
+                blocker=",".join(manifest_blockers),
+                next_action="Create or populate the no-leak historical benchmark manifest, then rerun this packet.",
+            )
+        ]
+
+    actions: list[dict[str, Any]] = []
+    exactness_blockers = {
+        "matched_ca_count_below_threshold",
+        "prediction_ca_coverage_below_threshold",
+        "native_ca_coverage_below_threshold",
+        "prediction_native_chain_ids_mismatch",
+        "complex_scope_requires_multichain",
+        "monomer_scope_requires_single_chain",
+        "prediction_native_residue_identity_mismatch",
+        "matched_sidechain_atom_count_below_threshold",
+        "native_sidechain_coverage_below_threshold",
+    }
+    metric_blockers = {"sidechain_rmsd_above_threshold", "sidechain_lddt_below_threshold"}
+    for row in rows:
+        blockers = _row_blockers(row)
+        if "leakage_clearance_missing_or_not_clear" in blockers:
+            actions.append(
+                _workorder_action(
+                    action_rank=len(actions) + 1,
+                    row=row,
+                    evidence_class="provenance",
+                    evidence_item="leakage_clearance",
+                    source_column="leakage_clearance",
+                    required_value="operator-confirmed no_leak provenance",
+                    current_value=_text(row.get("leakage_clearance")),
+                    destination_path="manifest row leakage_clearance",
+                    blocker="leakage_clearance_missing_or_not_clear",
+                    next_action="Replace placeholder leakage_clearance with operator-confirmed no_leak provenance.",
+                )
+            )
+        if "prediction_pdb_missing" in blockers:
+            actions.append(
+                _workorder_action(
+                    action_rank=len(actions) + 1,
+                    row=row,
+                    evidence_class="core_file",
+                    evidence_item="prediction_pdb",
+                    source_column="prediction_pdb",
+                    required_value="internal prediction PDB generated before native release",
+                    current_value=_text(row.get("prediction_pdb")),
+                    destination_path=_text(row.get("prediction_pdb")),
+                    blocker="prediction_pdb_missing",
+                    next_action="Place the internal prediction PDB at the manifest prediction_pdb path.",
+                )
+            )
+        if "native_pdb_missing" in blockers:
+            actions.append(
+                _workorder_action(
+                    action_rank=len(actions) + 1,
+                    row=row,
+                    evidence_class="core_file",
+                    evidence_item="native_pdb",
+                    source_column="native_pdb",
+                    required_value="operator-cleared historical native PDB",
+                    current_value=_text(row.get("native_pdb")),
+                    destination_path=_text(row.get("native_pdb")),
+                    blocker="native_pdb_missing",
+                    next_action="Place the operator-cleared historical native PDB at the manifest native_pdb path.",
+                )
+            )
+        exactness_open = sorted(exactness_blockers & blockers)
+        if exactness_open:
+            actions.append(
+                _workorder_action(
+                    action_rank=len(actions) + 1,
+                    row=row,
+                    evidence_class="exactness_gate",
+                    evidence_item="chain_residue_sidechain_exactness",
+                    source_column="prediction_pdb/native_pdb",
+                    required_value="matching chain IDs, residue identity, CA coverage, and sidechain atom overlap",
+                    current_value=(
+                        f"matched_ca={row.get('matched_ca_count', 0)};"
+                        f"matched_sidechain={row.get('matched_sidechain_atom_count', 0)}"
+                    ),
+                    destination_path="repair prediction/native PDB pair",
+                    blocker=",".join(exactness_open),
+                    next_action="Repair chain, residue, atom, and sidechain exactness before native scoring.",
+                )
+            )
+        metric_open = sorted(metric_blockers & blockers)
+        if metric_open:
+            actions.append(
+                _workorder_action(
+                    action_rank=len(actions) + 1,
+                    row=row,
+                    evidence_class="metric_gate",
+                    evidence_item="sidechain_rmsd_lddt",
+                    source_column="sidechain_rmsd_A/sidechain_lddt_proxy",
+                    required_value=(
+                        f"RMSD <= {max_sidechain_rmsd_A}; "
+                        f"lDDT >= {min_sidechain_lddt_proxy}"
+                    ),
+                    current_value=(
+                        f"RMSD={row.get('sidechain_rmsd_A', 0.0)};"
+                        f"lDDT={row.get('sidechain_lddt_proxy', 0.0)}"
+                    ),
+                    destination_path="sidechain refinement/tuning",
+                    blocker=",".join(metric_open),
+                    next_action="Tune sidechain placement against RMSD and lDDT thresholds.",
+                )
+            )
+    return actions
+
+
 def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     manifest_rows, manifest_blockers = _read_manifest(args.manifest_csv)
     rows = [_score_one(row, args) for row in manifest_rows]
@@ -339,6 +543,47 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     blocked_count = len(rows) - pass_count
     if manifest_blockers:
         blocked_count = max(blocked_count, 1)
+    first_blocked = next((row for row in rows if row["sidechain_native_status"] != "pass"), {})
+    blocker_histogram = _blocker_histogram(rows, manifest_blockers)
+    leakage_blocked = sum(
+        1 for row in rows if "leakage_clearance_missing_or_not_clear" in _row_blockers(row)
+    )
+    prediction_missing = sum(1 for row in rows if "prediction_pdb_missing" in _row_blockers(row))
+    native_missing = sum(1 for row in rows if "native_pdb_missing" in _row_blockers(row))
+    core_input_blocked = sum(
+        1
+        for row in rows
+        if {"leakage_clearance_missing_or_not_clear", "prediction_pdb_missing", "native_pdb_missing"}
+        & _row_blockers(row)
+    )
+    exactness_blockers = {
+        "matched_ca_count_below_threshold",
+        "prediction_ca_coverage_below_threshold",
+        "native_ca_coverage_below_threshold",
+        "prediction_native_chain_ids_mismatch",
+        "complex_scope_requires_multichain",
+        "monomer_scope_requires_single_chain",
+        "prediction_native_residue_identity_mismatch",
+        "matched_sidechain_atom_count_below_threshold",
+        "native_sidechain_coverage_below_threshold",
+    }
+    exactness_blocked = sum(1 for row in rows if exactness_blockers & _row_blockers(row))
+    metric_blocked = sum(
+        1
+        for row in rows
+        if {"sidechain_rmsd_above_threshold", "sidechain_lddt_below_threshold"} & _row_blockers(row)
+    )
+    workorder_rows = _workorder_rows(
+        rows,
+        manifest_blockers,
+        max_sidechain_rmsd_A=float(args.max_sidechain_rmsd_A),
+        min_sidechain_lddt_proxy=float(args.min_sidechain_lddt_proxy),
+    )
+    open_workorder_rows = [row for row in workorder_rows if row["action_status"] != "closed"]
+    workorder_counts: dict[str, int] = {}
+    for row in open_workorder_rows:
+        klass = str(row.get("evidence_class", ""))
+        workorder_counts[klass] = workorder_counts.get(klass, 0) + 1
     summary = {
         "packet_type": "casp17_sidechain_native_benchmark_packet",
         "generated_at_local": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
@@ -346,6 +591,24 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "benchmark_count": len(rows),
         "pass_count": pass_count,
         "blocked_count": blocked_count,
+        "core_input_blocked_count": core_input_blocked,
+        "leakage_clearance_blocked_count": leakage_blocked,
+        "prediction_pdb_missing_count": prediction_missing,
+        "native_pdb_missing_count": native_missing,
+        "missing_core_file_count": prediction_missing + native_missing,
+        "exactness_blocked_count": exactness_blocked,
+        "metric_threshold_blocked_count": metric_blocked,
+        "first_blocked_benchmark_id": str(first_blocked.get("benchmark_id", "")),
+        "first_blocked_target_id": str(first_blocked.get("target_id", "")),
+        "first_blocked_blockers": str(first_blocked.get("blockers", "")),
+        "first_open_next_action": _first_next_action(first_blocked, manifest_blockers),
+        "blocker_histogram": blocker_histogram,
+        "workorder_json": _artifact(args.out_workorder_json),
+        "workorder_csv": _artifact(args.out_workorder_csv),
+        "workorder_md": _artifact(args.out_workorder_md),
+        "workorder_action_count": len(workorder_rows),
+        "open_workorder_action_count": len(open_workorder_rows),
+        "workorder_action_counts_by_class": dict(sorted(workorder_counts.items())),
         "sidechain_native_benchmark_status": "pass" if rows and blocked_count == 0 else "blocked",
         "mean_sidechain_rmsd_A": _mean(rows, "sidechain_rmsd_A"),
         "mean_sidechain_lddt_proxy": _mean(rows, "sidechain_lddt_proxy"),
@@ -362,7 +625,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         },
         "claim_boundary": "Local no-leak historical sidechain/native benchmark proxy only; not official MolProbity, not current-target native accuracy evidence, and not portal submission.",
     }
-    return {"summary": summary, "rows": rows}
+    return {"summary": summary, "rows": rows, "workorder_rows": workorder_rows}
 
 
 def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
@@ -375,6 +638,15 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- status: `{summary['sidechain_native_benchmark_status']}`",
         f"- benchmark_count: `{summary['benchmark_count']}`",
         f"- pass/blocked: `{summary['pass_count']}/{summary['blocked_count']}`",
+        f"- core input blocked/leakage/prediction/native/missing files: `{summary['core_input_blocked_count']}/{summary['leakage_clearance_blocked_count']}/{summary['prediction_pdb_missing_count']}/{summary['native_pdb_missing_count']}/{summary['missing_core_file_count']}`",
+        f"- exactness/metric blocked: `{summary['exactness_blocked_count']}/{summary['metric_threshold_blocked_count']}`",
+        f"- first_blocked: `{summary['first_blocked_benchmark_id'] or '-'}` / `{summary['first_blocked_target_id'] or '-'}`",
+        f"- first_blockers: `{summary['first_blocked_blockers'] or summary['manifest_blockers'] or '-'}`",
+        f"- first_next_action: {summary['first_open_next_action']}",
+        f"- blocker_histogram: `{summary['blocker_histogram']}`",
+        f"- workorder actions/open: `{summary['workorder_action_count']}/{summary['open_workorder_action_count']}`",
+        f"- workorder by class: `{summary['workorder_action_counts_by_class']}`",
+        f"- workorder files: `{summary['workorder_json']}` `{summary['workorder_csv']}` `{summary['workorder_md']}`",
         f"- mean sidechain RMSD/lddt/coverage: `{summary['mean_sidechain_rmsd_A']}/{summary['mean_sidechain_lddt_proxy']}/{summary['mean_native_sidechain_atom_coverage']}`",
         "",
         "| benchmark | target | scope | status | matched CA | CA coverage | matched sidechain atoms | native coverage | sidechain RMSD A | sidechain lDDT proxy | blockers |",
@@ -395,6 +667,39 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
+def _write_workorder_md(path_like: str | Path, payload: dict[str, Any]) -> None:
+    summary = payload["summary"]
+    rows = payload["workorder_rows"]
+    lines = [
+        "# CASP17 Sidechain Native Input Workorder",
+        "",
+        "This local workorder separates no-leak sidechain/native benchmark gaps into provenance, core-file, exactness, and metric actions.",
+        "",
+        f"- generated: `{summary['generated_at_local']}`",
+        f"- manifest_csv: `{summary['manifest_csv']}`",
+        f"- benchmark status: `{summary['sidechain_native_benchmark_status']}`",
+        f"- benchmark rows pass/blocked/total: `{summary['pass_count']}/{summary['blocked_count']}/{summary['benchmark_count']}`",
+        f"- workorder actions/open: `{summary['workorder_action_count']}/{summary['open_workorder_action_count']}`",
+        f"- action counts by class: `{summary['workorder_action_counts_by_class']}`",
+        f"- first action: `{summary['first_blocked_benchmark_id'] or '-'}` `{summary['first_open_next_action']}`",
+        "",
+        "| rank | benchmark | target | class | item | destination | blocker | next action |",
+        "| ---: | --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    for row in rows[:120]:
+        lines.append(
+            f"| {row['action_rank']} | `{row['benchmark_id']}` | `{row['target_id']}` | "
+            f"`{row['evidence_class']}` | `{row['evidence_item']}` | `{row['destination_path'] or '-'}` | "
+            f"`{row['blocker'] or '-'}` | {row['next_action'] or '-'} |"
+        )
+    if not rows:
+        lines.append("| 0 | - | - | - | - | - | - | No open sidechain-native workorder actions. |")
+    lines.extend(["", "## Claim Boundary", "", str(summary["claim_boundary"]), ""])
+    path = _resolve(path_like)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines), encoding="utf-8")
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build a no-leak historical sidechain/native benchmark proxy packet for CASP17 internal predictions.")
     parser.add_argument("--manifest-csv", default=DEFAULT_MANIFEST_CSV)
@@ -409,6 +714,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
+    parser.add_argument("--out-workorder-json", default=DEFAULT_OUT_WORKORDER_JSON)
+    parser.add_argument("--out-workorder-csv", default=DEFAULT_OUT_WORKORDER_CSV)
+    parser.add_argument("--out-workorder-md", default=DEFAULT_OUT_WORKORDER_MD)
     return parser.parse_args(argv)
 
 
@@ -418,6 +726,9 @@ def main(argv: list[str] | None = None) -> None:
     _write_json(args.out_json, payload)
     _write_csv(args.out_csv, payload["rows"])
     _write_md(args.out_md, payload)
+    _write_json(args.out_workorder_json, {"summary": payload["summary"], "rows": payload["workorder_rows"]})
+    _write_csv(args.out_workorder_csv, payload["workorder_rows"])
+    _write_workorder_md(args.out_workorder_md, payload)
     if args.fail_on_blocked and payload["summary"]["blocked_count"]:
         raise SystemExit(2)
 

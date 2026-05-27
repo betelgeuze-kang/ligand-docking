@@ -6,8 +6,8 @@
 - model: `casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_A/models/H1354_chain_A.pdb`
 - projection: `casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_A/renders/H1354_chain_A_projection.svg`
 - viewer: `casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_A/viewer.html`
-- atoms/residues: `494/494`
-- protein atoms / coordinate status: `494/valid`
+- atoms/residues: `3923/494`
+- protein atoms / coordinate status: `3923/valid`
 
 ## Claim Boundary
 

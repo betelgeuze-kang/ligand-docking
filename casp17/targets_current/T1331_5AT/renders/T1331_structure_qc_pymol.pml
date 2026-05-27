@@ -4,7 +4,7 @@ reinitialize
 set quiet, 1
 set internal_gui, 0
 viewport 1800, 1200
-load "runs/casp17_predictions_model_selected_shape_guarded_coordinate_normalized_current/T1331TS.pdb", casp17_T1331_qc
+load "runs/casp17_predictions_statistical_rotamer_current/T1331TS.pdb", casp17_T1331_qc
 hide everything, casp17_T1331_qc
 remove casp17_T1331_qc and elem H
 bg_color 0x08111f
@@ -40,182 +40,182 @@ set_color casp17_qc_base, [0.55, 0.65, 0.78]
 color casp17_qc_base, casp17_T1331_qc
 set_color casp17_qc_chain_0, [0.3294, 0.4941, 0.8392]
 color casp17_qc_chain_0, casp17_T1331_qc and chain A
-select qc_hotspot_1, (casp17_T1331_qc and chain A and resi 1)
-color casp17_qc_low, qc_hotspot_1
+select qc_hotspot_1, (casp17_T1331_qc and chain A and resi 19)
+color casp17_qc_dual, qc_hotspot_1
 show sticks, qc_hotspot_1
 show spheres, qc_hotspot_1 and name CA
 set sphere_scale, 0.48, qc_hotspot_1 and name CA
-label qc_hotspot_1 and name CA, "A:1"
-select qc_hotspot_2, (casp17_T1331_qc and chain A and resi 281)
-color casp17_qc_low, qc_hotspot_2
+label qc_hotspot_1 and name CA, "A:19"
+select qc_hotspot_2, (casp17_T1331_qc and chain A and resi 66)
+color casp17_qc_soft, qc_hotspot_2
 show sticks, qc_hotspot_2
 show spheres, qc_hotspot_2 and name CA
 set sphere_scale, 0.48, qc_hotspot_2 and name CA
-label qc_hotspot_2 and name CA, "A:281"
-select qc_hotspot_3, (casp17_T1331_qc and chain A and resi 27)
+label qc_hotspot_2 and name CA, "A:66"
+select qc_hotspot_3, (casp17_T1331_qc and chain A and resi 281)
 color casp17_qc_low, qc_hotspot_3
 show sticks, qc_hotspot_3
 show spheres, qc_hotspot_3 and name CA
 set sphere_scale, 0.48, qc_hotspot_3 and name CA
-label qc_hotspot_3 and name CA, "A:27"
-select qc_hotspot_4, (casp17_T1331_qc and chain A and resi 28)
+label qc_hotspot_3 and name CA, "A:281"
+select qc_hotspot_4, (casp17_T1331_qc and chain A and resi 1)
 color casp17_qc_low, qc_hotspot_4
 show sticks, qc_hotspot_4
 show spheres, qc_hotspot_4 and name CA
 set sphere_scale, 0.48, qc_hotspot_4 and name CA
-label qc_hotspot_4 and name CA, "A:28"
-select qc_hotspot_5, (casp17_T1331_qc and chain A and resi 22)
+label qc_hotspot_4 and name CA, "A:1"
+select qc_hotspot_5, (casp17_T1331_qc and chain A and resi 274)
 color casp17_qc_low, qc_hotspot_5
 show sticks, qc_hotspot_5
 show spheres, qc_hotspot_5 and name CA
 set sphere_scale, 0.48, qc_hotspot_5 and name CA
-label qc_hotspot_5 and name CA, "A:22"
-select qc_hotspot_6, (casp17_T1331_qc and chain A and resi 13)
+label qc_hotspot_5 and name CA, "A:274"
+select qc_hotspot_6, (casp17_T1331_qc and chain A and resi 280)
 color casp17_qc_low, qc_hotspot_6
 show sticks, qc_hotspot_6
 show spheres, qc_hotspot_6 and name CA
 set sphere_scale, 0.48, qc_hotspot_6 and name CA
-label qc_hotspot_6 and name CA, "A:13"
-select qc_hotspot_7, (casp17_T1331_qc and chain A and resi 280)
+label qc_hotspot_6 and name CA, "A:280"
+select qc_hotspot_7, (casp17_T1331_qc and chain A and resi 279)
 color casp17_qc_low, qc_hotspot_7
 show sticks, qc_hotspot_7
 show spheres, qc_hotspot_7 and name CA
 set sphere_scale, 0.48, qc_hotspot_7 and name CA
-label qc_hotspot_7 and name CA, "A:280"
-select qc_hotspot_8, (casp17_T1331_qc and chain A and resi 26)
+label qc_hotspot_7 and name CA, "A:279"
+select qc_hotspot_8, (casp17_T1331_qc and chain A and resi 278)
 color casp17_qc_low, qc_hotspot_8
 show sticks, qc_hotspot_8
 show spheres, qc_hotspot_8 and name CA
 set sphere_scale, 0.48, qc_hotspot_8 and name CA
-label qc_hotspot_8 and name CA, "A:26"
-select qc_hotspot_9, (casp17_T1331_qc and chain A and resi 274)
+label qc_hotspot_8 and name CA, "A:278"
+select qc_hotspot_9, (casp17_T1331_qc and chain A and resi 272)
 color casp17_qc_low, qc_hotspot_9
 show sticks, qc_hotspot_9
 show spheres, qc_hotspot_9 and name CA
 set sphere_scale, 0.48, qc_hotspot_9 and name CA
-label qc_hotspot_9 and name CA, "A:274"
-select qc_hotspot_10, (casp17_T1331_qc and chain A and resi 279)
+label qc_hotspot_9 and name CA, "A:272"
+select qc_hotspot_10, (casp17_T1331_qc and chain A and resi 27)
 color casp17_qc_low, qc_hotspot_10
 show sticks, qc_hotspot_10
 show spheres, qc_hotspot_10 and name CA
 set sphere_scale, 0.48, qc_hotspot_10 and name CA
-label qc_hotspot_10 and name CA, "A:279"
-select qc_hotspot_11, (casp17_T1331_qc and chain A and resi 34)
+label qc_hotspot_10 and name CA, "A:27"
+select qc_hotspot_11, (casp17_T1331_qc and chain A and resi 28)
 color casp17_qc_low, qc_hotspot_11
 show sticks, qc_hotspot_11
 show spheres, qc_hotspot_11 and name CA
 set sphere_scale, 0.48, qc_hotspot_11 and name CA
-select qc_hotspot_12, (casp17_T1331_qc and chain A and resi 278)
+select qc_hotspot_12, (casp17_T1331_qc and chain A and resi 271)
 color casp17_qc_low, qc_hotspot_12
 show sticks, qc_hotspot_12
 show spheres, qc_hotspot_12 and name CA
 set sphere_scale, 0.48, qc_hotspot_12 and name CA
-select qc_hotspot_13, (casp17_T1331_qc and chain A and resi 19)
+select qc_hotspot_13, (casp17_T1331_qc and chain A and resi 277)
 color casp17_qc_low, qc_hotspot_13
 show sticks, qc_hotspot_13
 show spheres, qc_hotspot_13 and name CA
 set sphere_scale, 0.48, qc_hotspot_13 and name CA
-select qc_hotspot_14, (casp17_T1331_qc and chain A and resi 23)
+select qc_hotspot_14, (casp17_T1331_qc and chain A and resi 273)
 color casp17_qc_low, qc_hotspot_14
 show sticks, qc_hotspot_14
 show spheres, qc_hotspot_14 and name CA
 set sphere_scale, 0.48, qc_hotspot_14 and name CA
-select qc_hotspot_15, (casp17_T1331_qc and chain A and resi 277)
+select qc_hotspot_15, (casp17_T1331_qc and chain A and resi 276)
 color casp17_qc_low, qc_hotspot_15
 show sticks, qc_hotspot_15
 show spheres, qc_hotspot_15 and name CA
 set sphere_scale, 0.48, qc_hotspot_15 and name CA
-select qc_hotspot_16, (casp17_T1331_qc and chain A and resi 24)
+select qc_hotspot_16, (casp17_T1331_qc and chain A and resi 13)
 color casp17_qc_low, qc_hotspot_16
 show sticks, qc_hotspot_16
 show spheres, qc_hotspot_16 and name CA
 set sphere_scale, 0.48, qc_hotspot_16 and name CA
-select qc_hotspot_17, (casp17_T1331_qc and chain A and resi 272)
+select qc_hotspot_17, (casp17_T1331_qc and chain A and resi 270)
 color casp17_qc_low, qc_hotspot_17
 show sticks, qc_hotspot_17
 show spheres, qc_hotspot_17 and name CA
 set sphere_scale, 0.48, qc_hotspot_17 and name CA
-select qc_hotspot_18, (casp17_T1331_qc and chain A and resi 25)
+select qc_hotspot_18, (casp17_T1331_qc and chain A and resi 2)
 color casp17_qc_low, qc_hotspot_18
 show sticks, qc_hotspot_18
 show spheres, qc_hotspot_18 and name CA
 set sphere_scale, 0.48, qc_hotspot_18 and name CA
-select qc_hotspot_19, (casp17_T1331_qc and chain A and resi 31)
+select qc_hotspot_19, (casp17_T1331_qc and chain A and resi 275)
 color casp17_qc_low, qc_hotspot_19
 show sticks, qc_hotspot_19
 show spheres, qc_hotspot_19 and name CA
 set sphere_scale, 0.48, qc_hotspot_19 and name CA
-select qc_hotspot_20, (casp17_T1331_qc and chain A and resi 17)
+select qc_hotspot_20, (casp17_T1331_qc and chain A and resi 3)
 color casp17_qc_low, qc_hotspot_20
 show sticks, qc_hotspot_20
 show spheres, qc_hotspot_20 and name CA
 set sphere_scale, 0.48, qc_hotspot_20 and name CA
-select qc_hotspot_21, (casp17_T1331_qc and chain A and resi 2)
+select qc_hotspot_21, (casp17_T1331_qc and chain A and resi 26)
 color casp17_qc_low, qc_hotspot_21
 show sticks, qc_hotspot_21
 show spheres, qc_hotspot_21 and name CA
 set sphere_scale, 0.48, qc_hotspot_21 and name CA
-select qc_hotspot_22, (casp17_T1331_qc and chain A and resi 276)
+select qc_hotspot_22, (casp17_T1331_qc and chain A and resi 22)
 color casp17_qc_low, qc_hotspot_22
 show sticks, qc_hotspot_22
 show spheres, qc_hotspot_22 and name CA
 set sphere_scale, 0.48, qc_hotspot_22 and name CA
-select qc_hotspot_23, (casp17_T1331_qc and chain A and resi 14)
+select qc_hotspot_23, (casp17_T1331_qc and chain A and resi 4)
 color casp17_qc_low, qc_hotspot_23
 show sticks, qc_hotspot_23
 show spheres, qc_hotspot_23 and name CA
 set sphere_scale, 0.48, qc_hotspot_23 and name CA
-select qc_hotspot_24, (casp17_T1331_qc and chain A and resi 246)
+select qc_hotspot_24, (casp17_T1331_qc and chain A and resi 260)
 color casp17_qc_low, qc_hotspot_24
 show sticks, qc_hotspot_24
 show spheres, qc_hotspot_24 and name CA
 set sphere_scale, 0.48, qc_hotspot_24 and name CA
-select qc_hotspot_25, (casp17_T1331_qc and chain A and resi 20)
+select qc_hotspot_25, (casp17_T1331_qc and chain A and resi 24)
 color casp17_qc_low, qc_hotspot_25
 show sticks, qc_hotspot_25
 show spheres, qc_hotspot_25 and name CA
 set sphere_scale, 0.48, qc_hotspot_25 and name CA
-select qc_hotspot_26, (casp17_T1331_qc and chain A and resi 271)
+select qc_hotspot_26, (casp17_T1331_qc and chain A and resi 252)
 color casp17_qc_low, qc_hotspot_26
 show sticks, qc_hotspot_26
 show spheres, qc_hotspot_26 and name CA
 set sphere_scale, 0.48, qc_hotspot_26 and name CA
-select qc_hotspot_27, (casp17_T1331_qc and chain A and resi 3)
+select qc_hotspot_27, (casp17_T1331_qc and chain A and resi 17)
 color casp17_qc_low, qc_hotspot_27
 show sticks, qc_hotspot_27
 show spheres, qc_hotspot_27 and name CA
 set sphere_scale, 0.48, qc_hotspot_27 and name CA
-select qc_hotspot_28, (casp17_T1331_qc and chain A and resi 273)
+select qc_hotspot_28, (casp17_T1331_qc and chain A and resi 246)
 color casp17_qc_low, qc_hotspot_28
 show sticks, qc_hotspot_28
 show spheres, qc_hotspot_28 and name CA
 set sphere_scale, 0.48, qc_hotspot_28 and name CA
-select qc_hotspot_29, (casp17_T1331_qc and chain A and resi 33)
+select qc_hotspot_29, (casp17_T1331_qc and chain A and resi 25)
 color casp17_qc_low, qc_hotspot_29
 show sticks, qc_hotspot_29
 show spheres, qc_hotspot_29 and name CA
 set sphere_scale, 0.48, qc_hotspot_29 and name CA
-select qc_hotspot_30, (casp17_T1331_qc and chain A and resi 252)
+select qc_hotspot_30, (casp17_T1331_qc and chain A and resi 23)
 color casp17_qc_low, qc_hotspot_30
 show sticks, qc_hotspot_30
 show spheres, qc_hotspot_30 and name CA
 set sphere_scale, 0.48, qc_hotspot_30 and name CA
-select qc_hotspot_31, (casp17_T1331_qc and chain A and resi 270)
+select qc_hotspot_31, (casp17_T1331_qc and chain A and resi 34)
 color casp17_qc_low, qc_hotspot_31
 show sticks, qc_hotspot_31
 show spheres, qc_hotspot_31 and name CA
 set sphere_scale, 0.48, qc_hotspot_31 and name CA
-select qc_hotspot_32, (casp17_T1331_qc and chain A and resi 260)
+select qc_hotspot_32, (casp17_T1331_qc and chain A and resi 14)
 color casp17_qc_low, qc_hotspot_32
 show sticks, qc_hotspot_32
 show spheres, qc_hotspot_32 and name CA
 set sphere_scale, 0.48, qc_hotspot_32 and name CA
-select qc_hotspot_33, (casp17_T1331_qc and chain A and resi 275)
+select qc_hotspot_33, (casp17_T1331_qc and chain A and resi 5)
 color casp17_qc_low, qc_hotspot_33
 show sticks, qc_hotspot_33
 show spheres, qc_hotspot_33 and name CA
 set sphere_scale, 0.48, qc_hotspot_33 and name CA
-select qc_hotspot_34, (casp17_T1331_qc and chain A and resi 4)
+select qc_hotspot_34, (casp17_T1331_qc and chain A and resi 6)
 color casp17_qc_low, qc_hotspot_34
 show sticks, qc_hotspot_34
 show spheres, qc_hotspot_34 and name CA
@@ -225,7 +225,7 @@ color casp17_qc_low, qc_hotspot_35
 show sticks, qc_hotspot_35
 show spheres, qc_hotspot_35 and name CA
 set sphere_scale, 0.48, qc_hotspot_35 and name CA
-select qc_hotspot_36, (casp17_T1331_qc and chain A and resi 21)
+select qc_hotspot_36, (casp17_T1331_qc and chain A and resi 31)
 color casp17_qc_low, qc_hotspot_36
 show sticks, qc_hotspot_36
 show spheres, qc_hotspot_36 and name CA
@@ -237,5 +237,5 @@ zoom casp17_T1331_qc, 1.08
 rotate x, 8
 rotate y, -10
 ray 1800, 1200
-png runs/casp17_structure_renders_model_selected_shape_guarded_current/T1331_structure_qc_pymol.png, dpi=240
+png runs/casp17_structure_renders_current/T1331_structure_qc_pymol.png, dpi=240
 quit

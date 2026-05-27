@@ -7,10 +7,10 @@
 - status: `ready`
 - final model: `casp17/targets_current/H1354_hemagglutinin_antibody/models/H1354_final_selected_model.pdb`
 - FASTA: `casp17/targets_current/H1354_hemagglutinin_antibody/metadata/H1354.fasta`
-- render files: `1`
-- figure files: `1`
+- render files: `20`
+- figure files: `5`
 - object folders: `3`
-- metadata files: `7`
+- metadata files: `12`
 
 ## Folder Layout
 

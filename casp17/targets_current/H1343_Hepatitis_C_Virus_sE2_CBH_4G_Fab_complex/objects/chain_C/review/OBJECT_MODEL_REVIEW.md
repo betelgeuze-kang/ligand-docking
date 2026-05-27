@@ -6,10 +6,10 @@
 - model: `casp17/targets_current/H1343_Hepatitis_C_Virus_sE2_CBH_4G_Fab_complex/objects/chain_C/models/H1343_chain_C.pdb`
 - projection: `casp17/targets_current/H1343_Hepatitis_C_Virus_sE2_CBH_4G_Fab_complex/objects/chain_C/renders/H1343_chain_C_projection.svg`
 - viewer: `casp17/targets_current/H1343_Hepatitis_C_Virus_sE2_CBH_4G_Fab_complex/objects/chain_C/viewer.html`
-- atoms/protein/CA/residues: `1561/1561/317/317`
-- bbox xyz/diagonal: `56.282/40.447/40.64/80.344`
-- centroid xyz: `-9.95/-19.503/0.566`
-- radius_of_gyration: `17.382`
+- atoms/protein/CA/residues: `2522/2522/317/317`
+- bbox xyz/diagonal: `50.847/62.195/45.538/92.344`
+- centroid xyz: `-11.544/-19.473/3.949`
+- radius_of_gyration: `16.473`
 - viewer_local_status: `pass`
 - blockers: `-`
 

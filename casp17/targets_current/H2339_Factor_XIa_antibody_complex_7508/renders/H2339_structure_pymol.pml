@@ -2,7 +2,7 @@ reinitialize
 set quiet, 1
 set internal_gui, 0
 viewport 1800, 1200
-load "runs/casp17_predictions_model_selected_shape_guarded_coordinate_normalized_current/H2339TS.pdb", casp17_H2339
+load "runs/casp17_predictions_statistical_rotamer_current/H2339TS.pdb", casp17_H2339
 hide everything, casp17_H2339
 remove casp17_H2339 and elem H
 bg_color 0x08111f
@@ -42,5 +42,5 @@ zoom casp17_H2339, 1.10
 rotate x, 8
 rotate y, -10
 ray 1800, 1200
-png runs/casp17_structure_renders_model_selected_shape_guarded_current/H2339_structure_pymol.png, dpi=240
+png runs/casp17_structure_renders_current/H2339_structure_pymol.png, dpi=240
 quit

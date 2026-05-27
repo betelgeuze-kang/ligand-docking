@@ -213,9 +213,12 @@ def test_build_casp17_win_tier_threshold_packet_names_required_win_bands(tmp_pat
 
     assert payload["summary"]["threshold_packet_status"] == "blocked_input"
     assert payload["summary"]["current_proven_level"] == "review_quality"
+    assert payload["summary"]["next_unclosed_level"] == "competitive_floor"
     assert payload["summary"]["target_count"] == 2
+    assert payload["summary"]["first_gap_level"] == "competitive_floor"
     assert payload["summary"]["first_blocked_dimension"] == "sidechain_native_quality"
     assert payload["summary"]["first_blocked_metric"] == "sidechain_native_lddt"
+    assert payload["summary"]["first_gap_status"] == "partial"
     assert rows[("official_submission_gate", "submission_go_fraction")]["threshold_status"] == "pass"
     assert rows[("visual_molecular_review", "visual_review_fraction")]["threshold_status"] == "pass"
     assert "stereo_depth=2/2" in rows[("visual_molecular_review", "visual_review_fraction")]["current_status"]
@@ -248,4 +251,5 @@ def test_build_casp17_win_tier_threshold_packet_names_required_win_bands(tmp_pat
 
     md = (tmp_path / "threshold.md").read_text(encoding="utf-8")
     assert "CASP17 Win Tier Threshold Packet" in md
+    assert "next_unclosed_level: `competitive_floor`" in md
     assert "sidechain_native_benchmark_missing_or_blocked" in md

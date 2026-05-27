@@ -8,7 +8,7 @@
 - final model: `casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/models/H1340_final_selected_model.pdb`
 - FASTA: `casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/metadata/H1340.fasta`
 - render files: `20`
-- figure files: `4`
+- figure files: `5`
 - object folders: `3`
 - metadata files: `7`
 

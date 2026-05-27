@@ -6,10 +6,10 @@
 - model: `casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_C/models/H2321_chain_C.pdb`
 - projection: `casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_C/renders/H2321_chain_C_projection.svg`
 - viewer: `casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_C/viewer.html`
-- atoms/protein/CA/residues: `530/530/108/108`
-- bbox xyz/diagonal: `22.247/24.161/35.499/48.362`
-- centroid xyz: `-7.142/-12.579/2.93`
-- radius_of_gyration: `11.758`
+- atoms/protein/CA/residues: `842/842/108/108`
+- bbox xyz/diagonal: `41.236/29.877/37.327/63.138`
+- centroid xyz: `-10.251/-15.933/2.191`
+- radius_of_gyration: `12.073`
 - viewer_local_status: `pass`
 - blockers: `-`
 

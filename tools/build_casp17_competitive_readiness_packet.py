@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_WATCHLIST_JSON = "runs/casp17_target_watchlist_current.json"
 DEFAULT_RAW_GATE_JSON = "runs/casp17_internal_physics_raw_gate_packet_recursive_current.json"
 DEFAULT_TS_GATE_JSON = "runs/casp17_internal_physics_ts_gate_batch_recursive_current.json"
-DEFAULT_SUBMISSION_GATE_JSON = "runs/casp17_submission_gate_packet_recursive_current.json"
+DEFAULT_SUBMISSION_GATE_JSON = "runs/casp17_submission_gate_packet_current.json"
 DEFAULT_ACCURACY_READINESS_JSON = "runs/casp17_internal_physics_accuracy_readiness_packet_recursive_current.json"
 DEFAULT_VIEWER_JSON = "runs/casp17_molecular_viewer_packet_current.json"
 DEFAULT_RANKED_DEPTH_JSON = "runs/casp17_ranked_model_depth_packet_current.json"
@@ -233,7 +233,13 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
 
     target_count = len(target_ids)
     raw_pass = raw.get("raw_gate_status") == "pass" and int(raw.get("pass_count", -1)) == target_count
-    ts_pass = ts.get("batch_status") == "completed_to_submission_gate" and int(ts.get("converted_count", -1)) == target_count
+    ts_batch_status = _text(ts.get("batch_status"))
+    ts_pass = (
+        ts_batch_status in {"completed_to_submission_gate", "completed_to_conversion"}
+        and int(ts.get("converted_count", -1)) == target_count
+        and int(ts.get("blocked_count", 0) or 0) == 0
+        and int(ts.get("failed_count", 0) or 0) == 0
+    )
     submission_pass = int(submission.get("submission_go_count", -1)) == target_count and int(submission.get("submission_no_go_count", -1)) == 0
     accuracy_pass = accuracy.get("accuracy_readiness_status") == "pass" and int(accuracy.get("pass_count", -1)) == target_count
     viewer_pass = int(viewer.get("ready_count", -1)) == target_count and int(viewer.get("blocked_count", -1)) == 0

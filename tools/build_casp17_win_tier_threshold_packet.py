@@ -750,29 +750,35 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     gap_rows = [row for row in rows if row["threshold_status"] != "pass"]
     blocked_rows = [row for row in rows if row["threshold_status"] not in {"pass", "partial"}]
     first_blocked = gap_rows[0] if gap_rows else {}
+    level_order = ["submission_floor", "review_quality", "competitive_floor", "win_tier"]
+    level_statuses = {
+        "submission_floor": str(win.get("submission_level_status", "missing")),
+        "review_quality": str(win.get("review_quality_status", "missing")),
+        "competitive_floor": str(win.get("competitive_floor_status", "missing")),
+        "win_tier": str(win.get("win_tier_level_status", "missing")),
+    }
+    current_proven_level = "none"
+    for level in level_order:
+        if level_statuses[level] != "pass":
+            break
+        current_proven_level = level
+    next_unclosed_level = next((level for level in level_order if level_statuses[level] != "pass"), "")
     summary = {
         "packet_type": "casp17_win_tier_threshold_packet",
         "generated_at_local": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
         "threshold_schema_version": "casp17_internal_win_thresholds_v1",
         "threshold_packet_status": "pass" if not gap_rows else "blocked_input",
-        "current_proven_level": (
-            "win_tier"
-            if win.get("win_tier_level_status") == "pass"
-            else "competitive_floor"
-            if win.get("competitive_floor_status") == "pass"
-            else "review_quality"
-            if win.get("review_quality_status") == "pass"
-            else "submission_floor"
-            if win.get("submission_level_status") == "pass"
-            else "none"
-        ),
+        "current_proven_level": current_proven_level,
+        "next_unclosed_level": next_unclosed_level,
         "target_count": target_count,
         "threshold_count": len(rows),
         "pass_count": pass_count,
         "partial_count": partial_count,
         "blocked_count": len(blocked_rows),
+        "first_gap_level": str(first_blocked.get("level", "")),
         "first_blocked_dimension": str(first_blocked.get("dimension", "")),
         "first_blocked_metric": str(first_blocked.get("metric", "")),
+        "first_gap_status": str(first_blocked.get("threshold_status", "")),
         "first_blocked_blocker": str(first_blocked.get("blocker", "")),
         "submission_floor_status": win.get("submission_level_status", "missing"),
         "review_quality_status": win.get("review_quality_status", "missing"),
@@ -797,9 +803,10 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- generated: `{summary['generated_at_local']}`",
         f"- threshold_packet_status: `{summary['threshold_packet_status']}`",
         f"- current_proven_level: `{summary['current_proven_level']}`",
+        f"- next_unclosed_level: `{summary['next_unclosed_level'] or '-'}`",
         f"- target_count: `{summary['target_count']}`",
         f"- pass/partial/blocked: `{summary['pass_count']}/{summary['partial_count']}/{summary['blocked_count']}`",
-        f"- first_blocked: `{summary['first_blocked_dimension'] or '-'}` / `{summary['first_blocked_metric'] or '-'}`",
+        f"- first_gap: `{summary['first_gap_level'] or '-'}` / `{summary['first_blocked_dimension'] or '-'}` / `{summary['first_blocked_metric'] or '-'}` / `{summary['first_gap_status'] or '-'}`",
         f"- first_blocker: `{summary['first_blocked_blocker'] or '-'}`",
         "",
         "## Interpretation",

@@ -8,7 +8,7 @@
 - final model: `casp17/targets_current/H1343_Hepatitis_C_Virus_sE2_CBH_4G_Fab_complex/models/H1343_final_selected_model.pdb`
 - FASTA: `casp17/targets_current/H1343_Hepatitis_C_Virus_sE2_CBH_4G_Fab_complex/metadata/H1343.fasta`
 - render files: `20`
-- figure files: `4`
+- figure files: `5`
 - object folders: `3`
 - metadata files: `7`
 

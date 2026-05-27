@@ -8,7 +8,7 @@
 - final model: `casp17/targets_current/H1344_HSV_gD_HAB72/models/H1344_final_selected_model.pdb`
 - FASTA: `casp17/targets_current/H1344_HSV_gD_HAB72/metadata/H1344.fasta`
 - render files: `20`
-- figure files: `4`
+- figure files: `5`
 - object folders: `3`
 - metadata files: `7`
 

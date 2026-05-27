@@ -1,7 +1,7 @@
 {
   "rows": [
     {
-      "atom_count": 1393,
+      "atom_count": 2342,
       "blockers": "",
       "chain_id": "A",
       "model_path": "casp17/targets_current/T1331_5AT/objects/chain_A/models/T1331_chain_A.pdb",
@@ -14,7 +14,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 2181,
+      "atom_count": 3592,
       "blockers": "",
       "chain_id": "A",
       "model_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_A/models/H1335_chain_A.pdb",
@@ -27,7 +27,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 3441,
+      "atom_count": 5546,
       "blockers": "",
       "chain_id": "B",
       "model_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_B/models/H1335_chain_B.pdb",
@@ -40,7 +40,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1226,
+      "atom_count": 1938,
       "blockers": "",
       "chain_id": "C",
       "model_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_C/models/H1335_chain_C.pdb",
@@ -53,7 +53,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1058,
+      "atom_count": 1650,
       "blockers": "",
       "chain_id": "D",
       "model_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_D/models/H1335_chain_D.pdb",
@@ -66,7 +66,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1114,
+      "atom_count": 1713,
       "blockers": "",
       "chain_id": "E",
       "model_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_E/models/H1335_chain_E.pdb",
@@ -79,7 +79,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 3215,
+      "atom_count": 5279,
       "blockers": "",
       "chain_id": "A",
       "model_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_A/models/H2312_chain_A.pdb",
@@ -92,7 +92,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 3157,
+      "atom_count": 5135,
       "blockers": "",
       "chain_id": "B",
       "model_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_B/models/H2312_chain_B.pdb",
@@ -105,7 +105,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 602,
+      "atom_count": 950,
       "blockers": "",
       "chain_id": "C",
       "model_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_C/models/H2312_chain_C.pdb",
@@ -118,7 +118,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 3042,
+      "atom_count": 4815,
       "blockers": "",
       "chain_id": "A",
       "model_path": "casp17/targets_current/T2313_P66/objects/chain_A/models/T2313_chain_A.pdb",
@@ -131,7 +131,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1119,
+      "atom_count": 1721,
       "blockers": "",
       "chain_id": "A",
       "model_path": "casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_A/models/H2338_chain_A.pdb",
@@ -144,7 +144,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1063,
+      "atom_count": 1646,
       "blockers": "",
       "chain_id": "B",
       "model_path": "casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_B/models/H2338_chain_B.pdb",
@@ -157,7 +157,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1827,
+      "atom_count": 2879,
       "blockers": "",
       "chain_id": "C",
       "model_path": "casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_C/models/H2338_chain_C.pdb",
@@ -170,7 +170,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1166,
+      "atom_count": 1887,
       "blockers": "",
       "chain_id": "D",
       "model_path": "casp17/targets_current/H2338_Factor_XIa_antibody_complex_9933/objects/chain_D/models/H2338_chain_D.pdb",
@@ -183,7 +183,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1095,
+      "atom_count": 1688,
       "blockers": "",
       "chain_id": "A",
       "model_path": "casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_A/models/H2339_chain_A.pdb",
@@ -196,7 +196,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1058,
+      "atom_count": 1658,
       "blockers": "",
       "chain_id": "B",
       "model_path": "casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_B/models/H2339_chain_B.pdb",
@@ -209,7 +209,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1827,
+      "atom_count": 2879,
       "blockers": "",
       "chain_id": "C",
       "model_path": "casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_C/models/H2339_chain_C.pdb",
@@ -222,7 +222,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1166,
+      "atom_count": 1887,
       "blockers": "",
       "chain_id": "D",
       "model_path": "casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_D/models/H2339_chain_D.pdb",
@@ -235,7 +235,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 2280,
+      "atom_count": 3536,
       "blockers": "",
       "chain_id": "A",
       "model_path": "casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_A/models/H1340_chain_A.pdb",
@@ -248,7 +248,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 571,
+      "atom_count": 917,
       "blockers": "",
       "chain_id": "B",
       "model_path": "casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_B/models/H1340_chain_B.pdb",
@@ -261,7 +261,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 525,
+      "atom_count": 820,
       "blockers": "",
       "chain_id": "C",
       "model_path": "casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_C/models/H1340_chain_C.pdb",
@@ -274,7 +274,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1186,
+      "atom_count": 1777,
       "blockers": "",
       "chain_id": "A",
       "model_path": "casp17/targets_current/H1343_Hepatitis_C_Virus_sE2_CBH_4G_Fab_complex/objects/chain_A/models/H1343_chain_A.pdb",
@@ -287,7 +287,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1057,
+      "atom_count": 1630,
       "blockers": "",
       "chain_id": "B",
       "model_path": "casp17/targets_current/H1343_Hepatitis_C_Virus_sE2_CBH_4G_Fab_complex/objects/chain_B/models/H1343_chain_B.pdb",
@@ -300,7 +300,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1561,
+      "atom_count": 2522,
       "blockers": "",
       "chain_id": "C",
       "model_path": "casp17/targets_current/H1343_Hepatitis_C_Virus_sE2_CBH_4G_Fab_complex/objects/chain_C/models/H1343_chain_C.pdb",
@@ -313,7 +313,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1340,
+      "atom_count": 2155,
       "blockers": "",
       "chain_id": "A",
       "model_path": "casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/objects/chain_A/models/H2319_chain_A.pdb",
@@ -326,7 +326,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 568,
+      "atom_count": 907,
       "blockers": "",
       "chain_id": "B",
       "model_path": "casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/objects/chain_B/models/H2319_chain_B.pdb",
@@ -339,7 +339,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 531,
+      "atom_count": 815,
       "blockers": "",
       "chain_id": "C",
       "model_path": "casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/objects/chain_C/models/H2319_chain_C.pdb",
@@ -352,7 +352,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 7155,
+      "atom_count": 11192,
       "blockers": "",
       "chain_id": "A",
       "model_path": "casp17/targets_current/T1342_Spike_glycoprotein_ectodomain/objects/chain_A/models/T1342_chain_A.pdb",
@@ -365,7 +365,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1162,
+      "atom_count": 1766,
       "blockers": "",
       "chain_id": "A",
       "model_path": "casp17/targets_current/H1344_HSV_gD_HAB72/objects/chain_A/models/H1344_chain_A.pdb",
@@ -378,7 +378,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1065,
+      "atom_count": 1652,
       "blockers": "",
       "chain_id": "B",
       "model_path": "casp17/targets_current/H1344_HSV_gD_HAB72/objects/chain_B/models/H1344_chain_B.pdb",
@@ -391,7 +391,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1394,
+      "atom_count": 2237,
       "blockers": "",
       "chain_id": "C",
       "model_path": "casp17/targets_current/H1344_HSV_gD_HAB72/objects/chain_C/models/H1344_chain_C.pdb",
@@ -404,7 +404,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1340,
+      "atom_count": 2155,
       "blockers": "",
       "chain_id": "A",
       "model_path": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_A/models/H2321_chain_A.pdb",
@@ -417,7 +417,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 592,
+      "atom_count": 946,
       "blockers": "",
       "chain_id": "B",
       "model_path": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_B/models/H2321_chain_B.pdb",
@@ -430,7 +430,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 530,
+      "atom_count": 842,
       "blockers": "",
       "chain_id": "C",
       "model_path": "casp17/targets_current/H2321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex/objects/chain_C/models/H2321_chain_C.pdb",
@@ -443,7 +443,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1113,
+      "atom_count": 1716,
       "blockers": "",
       "chain_id": "A",
       "model_path": "casp17/targets_current/H1346_REGN3753_Fab_Fab_complex/objects/chain_A/models/H1346_chain_A.pdb",
@@ -456,7 +456,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1056,
+      "atom_count": 1643,
       "blockers": "",
       "chain_id": "B",
       "model_path": "casp17/targets_current/H1346_REGN3753_Fab_Fab_complex/objects/chain_B/models/H1346_chain_B.pdb",
@@ -469,7 +469,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1131,
+      "atom_count": 1748,
       "blockers": "",
       "chain_id": "C",
       "model_path": "casp17/targets_current/H1346_REGN3753_Fab_Fab_complex/objects/chain_C/models/H1346_chain_C.pdb",
@@ -482,7 +482,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1063,
+      "atom_count": 1646,
       "blockers": "",
       "chain_id": "D",
       "model_path": "casp17/targets_current/H1346_REGN3753_Fab_Fab_complex/objects/chain_D/models/H1346_chain_D.pdb",
@@ -495,7 +495,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1092,
+      "atom_count": 1675,
       "blockers": "",
       "chain_id": "A",
       "model_path": "casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_A/models/H1347_chain_A.pdb",
@@ -508,7 +508,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1057,
+      "atom_count": 1655,
       "blockers": "",
       "chain_id": "B",
       "model_path": "casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_B/models/H1347_chain_B.pdb",
@@ -521,7 +521,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1109,
+      "atom_count": 1687,
       "blockers": "",
       "chain_id": "C",
       "model_path": "casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_C/models/H1347_chain_C.pdb",
@@ -534,7 +534,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1053,
+      "atom_count": 1593,
       "blockers": "",
       "chain_id": "D",
       "model_path": "casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_D/models/H1347_chain_D.pdb",
@@ -547,7 +547,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 2959,
+      "atom_count": 4783,
       "blockers": "",
       "chain_id": "A",
       "model_path": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_A/models/H1348_chain_A.pdb",
@@ -560,7 +560,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1090,
+      "atom_count": 1669,
       "blockers": "",
       "chain_id": "B",
       "model_path": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_B/models/H1348_chain_B.pdb",
@@ -573,7 +573,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1063,
+      "atom_count": 1646,
       "blockers": "",
       "chain_id": "C",
       "model_path": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_C/models/H1348_chain_C.pdb",
@@ -586,7 +586,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 2959,
+      "atom_count": 4783,
       "blockers": "",
       "chain_id": "A",
       "model_path": "casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_A/models/H1349_chain_A.pdb",
@@ -599,7 +599,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1079,
+      "atom_count": 1646,
       "blockers": "",
       "chain_id": "B",
       "model_path": "casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_B/models/H1349_chain_B.pdb",
@@ -612,7 +612,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 1056,
+      "atom_count": 1655,
       "blockers": "",
       "chain_id": "C",
       "model_path": "casp17/targets_current/H1349_gp130_antibody_complex/objects/chain_C/models/H1349_chain_C.pdb",
@@ -625,7 +625,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 494,
+      "atom_count": 3923,
       "blockers": "",
       "chain_id": "A",
       "model_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_A/models/H1354_chain_A.pdb",
@@ -638,7 +638,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 120,
+      "atom_count": 929,
       "blockers": "",
       "chain_id": "B",
       "model_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_B/models/H1354_chain_B.pdb",
@@ -651,7 +651,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 112,
+      "atom_count": 841,
       "blockers": "",
       "chain_id": "C",
       "model_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_C/models/H1354_chain_C.pdb",
@@ -664,7 +664,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 488,
+      "atom_count": 3873,
       "blockers": "",
       "chain_id": "A",
       "model_path": "casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_A/models/H1355_chain_A.pdb",
@@ -677,7 +677,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 114,
+      "atom_count": 863,
       "blockers": "",
       "chain_id": "B",
       "model_path": "casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_B/models/H1355_chain_B.pdb",
@@ -690,7 +690,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 106,
+      "atom_count": 787,
       "blockers": "",
       "chain_id": "C",
       "model_path": "casp17/targets_current/H1355_hemagglutinin_antibody/objects/chain_C/models/H1355_chain_C.pdb",
@@ -703,7 +703,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 104,
+      "atom_count": 793,
       "blockers": "",
       "chain_id": "A",
       "model_path": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_A/models/H2332_chain_A.pdb",
@@ -716,7 +716,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 119,
+      "atom_count": 906,
       "blockers": "",
       "chain_id": "B",
       "model_path": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_B/models/H2332_chain_B.pdb",
@@ -729,7 +729,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 160,
+      "atom_count": 1298,
       "blockers": "",
       "chain_id": "C",
       "model_path": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_C/models/H2332_chain_C.pdb",
@@ -742,7 +742,7 @@
       "viewer_status": "pass"
     },
     {
-      "atom_count": 321,
+      "atom_count": 2511,
       "blockers": "",
       "chain_id": "D",
       "model_path": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_D/models/H2332_chain_D.pdb",
@@ -760,7 +760,7 @@
     "claim_boundary": "Local object-viewer smoke only. It checks locally generated chain/object PDB, SVG projection, and HTML canvas viewer artifacts; it does not render a browser screenshot, fetch structures, score native accuracy, use external predictors, or submit to CASP.",
     "first_blocked_blockers": "",
     "first_blocked_object": "",
-    "generated_at_local": "2026-05-26T05:33:31+09:00",
+    "generated_at_local": "2026-05-27T22:40:55+09:00",
     "hosted_dependency_violation_count": 0,
     "model_missing_count": 0,
     "object_row_count": 58,

@@ -62,7 +62,7 @@ def build_payload(
             "first_dispatch_lead_targets": rows[0]["lead_targets"] if rows else "",
             "sender_name": str(ebs.get("sender_name", "")).strip(),
             "sender_affiliation": str(ebs.get("sender_affiliation", "")).strip(),
-            "next_required_step": "Dispatch the tracks in rank order using the export bundle email bodies and attachment sets, starting with DNDi/IPK.",
+            "next_required_step": "Review the tracks in rank order using the export bundle email bodies and attachment sets, starting with DNDi/IPK. Require explicit R4 confirmation before external dispatch.",
         },
         "structured": {
             "outbound_priority_board_artifact": "runs/wetlab_outbound_execution_priority_board_current.md",

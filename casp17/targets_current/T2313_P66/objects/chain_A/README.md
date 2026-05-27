@@ -6,8 +6,8 @@
 - model: `casp17/targets_current/T2313_P66/objects/chain_A/models/T2313_chain_A.pdb`
 - projection: `casp17/targets_current/T2313_P66/objects/chain_A/renders/T2313_chain_A_projection.svg`
 - viewer: `casp17/targets_current/T2313_P66/objects/chain_A/viewer.html`
-- atoms/residues: `3042/618`
-- protein atoms / coordinate status: `3042/valid`
+- atoms/residues: `4815/618`
+- protein atoms / coordinate status: `4815/valid`
 
 ## Claim Boundary
 
