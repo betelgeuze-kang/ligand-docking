@@ -45,6 +45,39 @@ PRIORITY_CATEGORIES = [
     "difficult_monomer_domain",
 ]
 
+CASP17_SCOPE_CATEGORIES = [
+    "immune_complexes",
+    "organic_ligand_protein_complexes",
+    "nucleic_acids_and_complexes",
+    "conformational_ensembles",
+    "difficult_protein_structures_and_complexes",
+    "accuracy_estimation",
+]
+
+LEADERBOARD_GOAL_BANDS = {
+    "competitive": "category_top_5",
+    "winner_proximity": "category_top_3",
+    "actual_win_tier": "category_top_1_or_2",
+}
+
+SHORT_TERM_UNLOCK_GATES = [
+    "historical_non_casp17_identity_clearance",
+    "native_prediction_no_leak_provenance",
+    "competitive_floor_15_rows_filled",
+    "required_files_480_of_480_present",
+    "sidechain_native_40_of_40_pass",
+    "official_like_metric_surface",
+    "casp15_casp16_winner_normalized_comparison",
+]
+
+PERFORMANCE_90_REQUIREMENTS = [
+    "target_identity_leakage_absent",
+    "official_like_metric_replay",
+    "model1_and_best_of_5_scored",
+    "category_top_5_band_or_better",
+    "at_least_one_priority_category_near_top_3",
+]
+
 GOAL_DOCUMENTATION_REQUIRED_TERMS = [
     "CASP17 scaffold score",
     "competitive proof score",
@@ -53,13 +86,23 @@ GOAL_DOCUMENTATION_REQUIRED_TERMS = [
     "top-1/top-2",
     "immune",
     "organic ligand-protein",
+    "nucleic acids",
+    "conformational ensembles",
     "accuracy estimation",
+    "target release start: 2026-04-27",
+    "modeling season end: 2026-08-31",
+    "CASP15 regular protein domains",
+    "CASP16 regular protein domains",
+    "winner-normalized",
     "historical non-CASP17",
     "GDT_TS",
     "DockQ",
+    "Kendall tau",
     "LDDT-PLI",
     "BiSyRMSD",
+    "MassiveFold",
     "best-of-5",
+    "top1 selection accuracy",
 ]
 
 HISTORICAL_BANDS = {
@@ -433,6 +476,10 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "competitive_proof_score_current_band": "15-25",
         "competitive_proof_score_target_band": "85-90",
         "priority_categories": PRIORITY_CATEGORIES,
+        "casp17_scope_categories": CASP17_SCOPE_CATEGORIES,
+        "leaderboard_goal_bands": LEADERBOARD_GOAL_BANDS,
+        "short_term_unlock_gates": SHORT_TERM_UNLOCK_GATES,
+        "performance_90_requirements": PERFORMANCE_90_REQUIREMENTS,
         "goal_documentation_required_terms": GOAL_DOCUMENTATION_REQUIRED_TERMS,
         "historical_bands": HISTORICAL_BANDS,
         "required_metric_surface": REQUIRED_METRIC_SURFACE,
@@ -456,6 +503,18 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- scaffold score: `{summary['scaffold_score_current']} -> {summary['scaffold_score_target']}`",
         f"- competitive proof score: `{summary['competitive_proof_score_current_band']} -> {summary['competitive_proof_score_target_band']}`",
         f"- first blocked gate: `{summary['first_blocked_gate'] or '-'}`",
+        "",
+        "## Objective Contract",
+        "",
+        "- CASP17 scope categories: "
+        + ", ".join(f"`{category}`" for category in summary["casp17_scope_categories"]),
+        "- priority categories: " + ", ".join(f"`{category}`" for category in summary["priority_categories"]),
+        "- leaderboard bands: "
+        + ", ".join(f"`{key}={value}`" for key, value in summary["leaderboard_goal_bands"].items()),
+        "- short-term unlock gates: "
+        + ", ".join(f"`{gate}`" for gate in summary["short_term_unlock_gates"]),
+        "- performance-90 requirements: "
+        + ", ".join(f"`{requirement}`" for requirement in summary["performance_90_requirements"]),
         "",
         "## Gates",
         "",

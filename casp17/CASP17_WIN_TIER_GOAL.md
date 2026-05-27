@@ -12,6 +12,23 @@ historical CASP15/CASP16 official-like replay, with no current-target leakage.
 These thresholds are planning targets and must be checked against official CASP
 assessment pages before public claims.
 
+## Active Goal Objective Lock
+
+This file is the repo-tracked extension of the active CASP17 goal. The runtime
+goal text remains the same, but CASP17 work is now judged against this contract:
+
+- do not claim CASP17 win-tier performance until no-leak historical replay is
+  closed with official-like metrics
+- raise scaffold readiness from `65` to `90` by closing target identity,
+  provenance, file, sidechain-native, and metric-surface gates
+- raise competitive proof from `15-25` to `85-90` by matching normalized
+  historical top-band evidence against CASP15/CASP16 references
+- prioritize immune/protein complexes, organic ligand-protein complexes, and
+  accuracy estimation/model selection before broad monomer-only expansion
+- keep every current CASP17 target native-free and leakage-guarded; current
+  target folders and object viewers are readiness artifacts, not native
+  performance evidence
+
 ## Operator Objective Patch 2026-05-28
 
 This section records the active goal extension supplied by the operator. The

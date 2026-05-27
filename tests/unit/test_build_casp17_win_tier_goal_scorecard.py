@@ -22,10 +22,17 @@ def _goal_addendum_text() -> str:
             "- category leaderboard objective: `top-5/top-3/top-1/top-2`",
             "- priority category: immune and protein complexes",
             "- priority category: organic ligand-protein complexes",
+            "- CASP17 scope includes nucleic acids and conformational ensembles",
             "- priority category: accuracy estimation and model selection",
+            "- target release start: 2026-04-27",
+            "- modeling season end: 2026-08-31",
+            "- CASP15 regular protein domains and CASP16 regular protein domains",
+            "- use winner-normalized historical comparison",
             "- first fill action: historical non-CASP17 target identity clearance",
-            "- metric surface: GDT_TS, DockQ, LDDT-PLI, BiSyRMSD",
+            "- metric surface: GDT_TS, DockQ, Kendall tau, LDDT-PLI, BiSyRMSD",
+            "- rerank MassiveFold-style pools",
             "- model1 and best-of-5 must both be scored",
+            "- top1 selection accuracy must be tracked",
         ]
     )
 
@@ -137,6 +144,10 @@ def test_build_casp17_win_tier_goal_scorecard_tracks_operator_goal_bands(tmp_pat
     assert payload["summary"]["scaffold_score_target"] == 90
     assert payload["summary"]["competitive_proof_score_current_band"] == "15-25"
     assert payload["summary"]["competitive_proof_score_target_band"] == "85-90"
+    assert "nucleic_acids_and_complexes" in payload["summary"]["casp17_scope_categories"]
+    assert payload["summary"]["leaderboard_goal_bands"]["winner_proximity"] == "category_top_3"
+    assert "required_files_480_of_480_present" in payload["summary"]["short_term_unlock_gates"]
+    assert "model1_and_best_of_5_scored" in payload["summary"]["performance_90_requirements"]
     assert payload["summary"]["historical_bands"]["casp15_regular_domain"]["top3_cutoff"] == 85.0
     assert payload["summary"]["historical_bands"]["casp16_regular_domain"]["top5_cutoff"] == 33.3
     assert rows["goal_contract_documented"]["status"] == "pass"
@@ -147,6 +158,7 @@ def test_build_casp17_win_tier_goal_scorecard_tracks_operator_goal_bands(tmp_pat
 
     md = (tmp_path / "scorecard.md").read_text(encoding="utf-8")
     assert "CASP17 Win-Tier Goal Scorecard" in md
+    assert "CASP17 scope categories" in md
     assert "competitive proof score: `15-25 -> 85-90`" in md
     assert "DockQ acceptable >=90%" in md
 
