@@ -1082,8 +1082,13 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         ]
     )
     payload = mod.build_payload(args)
+    mod._write_md(args.out_md, payload)
+    workbench_md = Path(args.out_md).read_text(encoding="utf-8")
 
     assert payload["summary"]["workbench_status"] == "ready_for_operator_fill"
+    assert "- goal objective addendum: `casp17/CASP17_WIN_TIER_GOAL.md`" in workbench_md
+    assert "competitive proof `15-25 -> 85-90`" in workbench_md
+    assert "leaderboard `top-5/top-3/top-1-2` by category" in workbench_md
     assert payload["summary"]["target_model_ready_count"] == 2
     assert payload["summary"]["target_model_object_count"] == 4
     assert payload["summary"]["target_model_object_projection_count"] == 4

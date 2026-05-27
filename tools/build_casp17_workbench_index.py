@@ -2811,6 +2811,10 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         "This is the local navigation surface for the current CASP17 internal-physics lane.",
         "",
+        "- goal objective addendum: `casp17/CASP17_WIN_TIER_GOAL.md`",
+        "- win-tier target: scaffold `65 -> 90`, competitive proof `15-25 -> 85-90`, "
+        "leaderboard `top-5/top-3/top-1-2` by category.",
+        "",
         f"- generated: `{summary['generated_at_local']}`",
         f"- workbench_status: `{summary['workbench_status']}`",
         f"- target model folders: `{summary['target_model_ready_count']}/{summary['target_model_count']}`",

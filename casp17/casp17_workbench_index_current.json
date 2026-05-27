@@ -911,7 +911,7 @@
     "first_operator_fill_action": "Replace placeholder target/benchmark IDs with a cleared historical non-CASP17 protein target.",
     "first_operator_input_action_id": "historical_benchmark_inputs",
     "first_operator_input_blockers": "ready_total_below_threshold,ready_monomer_below_threshold,ready_complex_below_threshold",
-    "generated_at_local": "2026-05-27T23:27:50+09:00",
+    "generated_at_local": "2026-05-28T00:23:04+09:00",
     "historical_core_workorder_count": 40,
     "historical_input_workorder_count": 40,
     "historical_missing_ablation_layer_file_count": 400,
