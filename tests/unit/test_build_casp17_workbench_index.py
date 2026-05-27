@@ -31,6 +31,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     )
     historical_seed_current_target_prefill_json = tmp_path / "historical_seed_current_target_prefill.json"
     historical_seed_chronology_candidate_board_json = tmp_path / "historical_seed_chronology_candidate_board.json"
+    historical_seed_ablation_candidate_manifests_json = (
+        tmp_path / "historical_seed_ablation_candidate_manifests.json"
+    )
     historical_seed_clearance_to_identity_intake_sync_json = (
         tmp_path / "historical_seed_clearance_to_identity_intake_sync.json"
     )
@@ -440,6 +443,26 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                     "fill prediction_created_at, native_release_date, and before-native confirmation "
                     "from operator evidence"
                 ),
+            }
+        },
+    )
+    _write_json(
+        historical_seed_ablation_candidate_manifests_json,
+        {
+            "summary": {
+                "ablation_candidate_status": "operator_ablation_review_required",
+                "seed_row_count": 15,
+                "candidate_manifest_count": 15,
+                "candidate_row_count": 50,
+                "selected_prediction_present_count": 15,
+                "native_reference_present_count": 15,
+                "baseline_candidate_present_count": 1,
+                "operator_review_required_count": 15,
+                "ready_for_operator_reference_count": 0,
+                "layer_evidence_gap_count": 14,
+                "blocked_core_candidate_input_count": 0,
+                "first_open_target_id": "HIST_BBA5",
+                "first_next_action": "attach real ablation layer evidence before setting ablation_manifest_ref",
             }
         },
     )
@@ -1348,6 +1371,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(historical_seed_current_target_prefill_json),
             "--historical-seed-chronology-candidate-board-json",
             str(historical_seed_chronology_candidate_board_json),
+            "--historical-seed-ablation-candidate-manifests-json",
+            str(historical_seed_ablation_candidate_manifests_json),
             "--historical-seed-clearance-to-identity-intake-sync-json",
             str(historical_seed_clearance_to_identity_intake_sync_json),
             "--sidechain-native-benchmark-json",
@@ -2122,6 +2147,23 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["historical_seed_chronology_candidate_board_mtime_count"] == 15
     assert payload["summary"]["historical_seed_chronology_candidate_board_mtime_risk_count"] == 15
     assert payload["summary"]["historical_seed_chronology_candidate_board_first_target_id"] == "HIST_BBA5"
+    assert payload["summary"]["historical_seed_ablation_candidate_manifests_status"] == (
+        "operator_ablation_review_required"
+    )
+    assert payload["summary"]["historical_seed_ablation_candidate_manifests_seed_count"] == 15
+    assert payload["summary"]["historical_seed_ablation_candidate_manifests_manifest_count"] == 15
+    assert payload["summary"]["historical_seed_ablation_candidate_manifests_candidate_row_count"] == 50
+    assert payload["summary"]["historical_seed_ablation_candidate_manifests_selected_present_count"] == 15
+    assert payload["summary"]["historical_seed_ablation_candidate_manifests_native_present_count"] == 15
+    assert payload["summary"]["historical_seed_ablation_candidate_manifests_baseline_count"] == 1
+    assert payload["summary"]["historical_seed_ablation_candidate_manifests_layer_gap_count"] == 14
+    assert payload["summary"]["historical_seed_ablation_candidate_manifests_operator_review_count"] == 15
+    assert payload["summary"]["historical_seed_ablation_candidate_manifests_ready_count"] == 0
+    assert payload["summary"]["historical_seed_ablation_candidate_manifests_core_blocked_count"] == 0
+    assert payload["summary"]["historical_seed_ablation_candidate_manifests_first_target_id"] == "HIST_BBA5"
+    assert payload["summary"]["historical_seed_ablation_candidate_manifests_first_next_action"] == (
+        "attach real ablation layer evidence before setting ablation_manifest_ref"
+    )
     assert payload["summary"]["historical_seed_clearance_to_identity_intake_sync_status"] == (
         "waiting_on_cleared_seed_manifest"
     )
@@ -2179,6 +2221,12 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["win_tier_goal_scorecard"]["status"] == "blocked_input"
     assert by_id["win_tier_goal_scorecard"]["ready_count"] == 1
     assert "historical_identity_clearance" in by_id["win_tier_goal_scorecard"]["blockers"]
+    assert by_id["historical_seed_ablation_candidate_manifests"]["status"] == (
+        "operator_ablation_review_required"
+    )
+    assert by_id["historical_seed_ablation_candidate_manifests"]["blocked_count"] == 15
+    assert "baseline_candidates:1" in by_id["historical_seed_ablation_candidate_manifests"]["blockers"]
+    assert "layer_gaps:14" in by_id["historical_seed_ablation_candidate_manifests"]["blockers"]
     assert by_id["competitive_floor_batch"]["status"] == "ready_for_fill"
     assert by_id["competitive_floor_row_fill_status"]["status"] == "awaiting_fill"
     assert by_id["competitive_floor_row_fill_worklist"]["status"] == "open_actions"
