@@ -5,7 +5,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 - goal objective addendum: `casp17/CASP17_WIN_TIER_GOAL.md`
 - win-tier target: scaffold `65 -> 90`, competitive proof `15-25 -> 85-90`, leaderboard `top-5/top-3/top-1-2` by category.
 
-- generated: `2026-06-01T04:05:50+09:00`
+- generated: `2026-06-01T04:20:10+09:00`
 - workbench_status: `ready_for_operator_fill`
 - target model folders: `19/19`
 - target object folders: `58`
@@ -16,6 +16,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 - target object model review: `pass` pass/blocked/total `58/0/58` review md/viewers `58/58` protein/CA/residue `131343/16832/16832` radius `11.275/26.759` gallery `pass` `casp17/casp17_target_object_model_review_gallery_current.html`
 - protein object library: `pass` protein/object folders `19/58` pass/blocked `58/0` model/projection/viewer pointers `58/58/58` `casp17/protein_object_library_current`
 - protein object library completion audit: `pass` proteins pass/blocked/total `19/0/19` objects pass/blocked/total `58/0/58` assets model/projection/viewer `58/58/58` manifests object/protein `58/19`
+- protein object library navigation catalog: `protein_object_library_navigation_catalog_ready` proteins pass/blocked/total `19/0/19` objects pass/blocked/total `58/0/58` readme/manifest links `19/19` largest `H1335_HCMV_Merlin_gHgLgO_Fab_complex` `5` html `casp17/casp17_protein_object_library_navigation_catalog_current.html`
 - raw-ranked model quarantine: `pass` targets/models/top5 `3/15/3` quarantined/linked/author-present `15/15/0` atoms `10690`
 - benchmark rows ready/total: `0/40`
 - win-tier goal scorecard: `blocked_input` pass/partial/blocked `1/0/9` first blocked `historical_identity_clearance`
@@ -162,6 +163,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 | `target_object_model_review` | `pass` | 58 | 0 | 58 | `casp17/casp17_target_object_model_review_current.json` | Open object review markdown files for per-chain molecular geometry inspection. | `review_md:58,viewer_local:58,protein_atoms:131343,radius:11.275-26.759,gallery:pass` |
 | `protein_object_library` | `pass` | 58 | 0 | 58 | `casp17/casp17_protein_object_library_current.json` | Use the protein-name library folders for object-by-object molecular review. | `protein_folders:19,model_projection_viewer:58/58/58,first_blocked:-` |
 | `protein_object_library_completion_audit` | `pass` | 58 | 0 | 58 | `casp17/casp17_protein_object_library_completion_audit_current.json` | keep protein-name folders, per-object manifests, model PDBs, projections, and viewers green while strict-blind historical benchmark evidence is filled | `proteins:19/0/19,assets:58/58/58,manifests:58/19,first_blocked:-` |
+| `protein_object_library_navigation_catalog` | `protein_object_library_navigation_catalog_ready` | 58 | 0 | 58 | `casp17/casp17_protein_object_library_navigation_catalog_current.json` | Use the protein-name navigation catalog to jump from each protein folder to its chain/object viewer, projection, model, and manifest while strict-blind benchmark evidence is filled. | `proteins:19/0/19,links:19/19,largest:H1335_HCMV_Merlin_gHgLgO_Fab_complex/5,html:casp17/casp17_protein_object_library_navigation_catalog_current.html` |
 | `raw_ranked_model_quarantine` | `pass` | 15 | 0 | 15 | `casp17/casp17_raw_ranked_model_quarantine_audit_current.json` | Keep raw-ranked PDBs quarantined and use reviewed protein/object folders for commit-safe inspection. | `targets:3,top5:3,quarantined:15,author_present:0,atoms:10690` |
 | `win_gap_closure` | `blocked_input` | 4 | 5 | 9 | `runs/casp17_win_gap_closure_packet_current.json` | historical_benchmark_inputs | `ready_total_below_threshold,ready_monomer_below_threshold,ready_complex_below_threshold` |
 | `win_tier_goal_scorecard` | `blocked_input` | 1 | 9 | 10 | `runs/casp17_win_tier_goal_scorecard_current.json` | place the cleared native PDB in the per-target native dropzone | `historical_identity_clearance` |

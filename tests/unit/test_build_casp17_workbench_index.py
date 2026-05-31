@@ -16,6 +16,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     target_object_model_review_json = tmp_path / "target_object_model_review.json"
     protein_object_library_json = tmp_path / "protein_object_library.json"
     protein_object_library_completion_audit_json = tmp_path / "protein_object_library_completion_audit.json"
+    protein_object_library_navigation_catalog_json = tmp_path / "protein_object_library_navigation_catalog.json"
     raw_ranked_model_quarantine_json = tmp_path / "raw_ranked_model_quarantine.json"
     closure_json = tmp_path / "closure.json"
     goal_scorecard_json = tmp_path / "goal_scorecard.json"
@@ -386,6 +387,26 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "object_manifest_present_count": 4,
                 "protein_manifest_present_count": 2,
                 "next_action": "keep protein-name folders green",
+            }
+        },
+    )
+    _write_json(
+        protein_object_library_navigation_catalog_json,
+        {
+            "summary": {
+                "navigation_catalog_status": "protein_object_library_navigation_catalog_ready",
+                "protein_count": 2,
+                "protein_pass_count": 2,
+                "protein_blocked_count": 0,
+                "object_count": 4,
+                "object_pass_count": 4,
+                "object_blocked_count": 0,
+                "protein_readme_link_count": 2,
+                "protein_manifest_link_count": 2,
+                "largest_protein_key": "H9002_Example_Fab_Complex",
+                "largest_object_count": 3,
+                "html_catalog_path": "casp17/casp17_protein_object_library_navigation_catalog_current.html",
+                "next_action": "use protein-name navigation catalog",
             }
         },
     )
@@ -3169,6 +3190,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(protein_object_library_json),
             "--protein-object-library-completion-audit-json",
             str(protein_object_library_completion_audit_json),
+            "--protein-object-library-navigation-catalog-json",
+            str(protein_object_library_navigation_catalog_json),
             "--raw-ranked-model-quarantine-json",
             str(raw_ranked_model_quarantine_json),
             "--win-gap-closure-json",
@@ -3442,6 +3465,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "active competition scope: `casp17_only`" in workbench_md
     assert "protein object library completion audit: `pass`" in workbench_md
     assert "proteins pass/blocked/total `2/0/2`" in workbench_md
+    assert "protein object library navigation catalog: `protein_object_library_navigation_catalog_ready`" in workbench_md
+    assert "readme/manifest links `2/2`" in workbench_md
     assert "win-tier metric surface contract: `awaiting_strict_blind_evidence_files_and_ligand_category_slots`" in workbench_md
     assert "metrics covered/required `11/11`" in workbench_md
     assert "win-tier critical path board: `competitive_proof_blocked_on_strict_blind_evidence`" in workbench_md
@@ -3581,6 +3606,22 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["protein_object_library_completion_viewer_count"] == 4
     assert payload["summary"]["protein_object_library_completion_object_manifest_count"] == 4
     assert payload["summary"]["protein_object_library_completion_protein_manifest_count"] == 2
+    assert payload["summary"]["protein_object_library_navigation_status"] == (
+        "protein_object_library_navigation_catalog_ready"
+    )
+    assert payload["summary"]["protein_object_library_navigation_protein_pass_count"] == 2
+    assert payload["summary"]["protein_object_library_navigation_protein_blocked_count"] == 0
+    assert payload["summary"]["protein_object_library_navigation_object_pass_count"] == 4
+    assert payload["summary"]["protein_object_library_navigation_object_blocked_count"] == 0
+    assert payload["summary"]["protein_object_library_navigation_readme_link_count"] == 2
+    assert payload["summary"]["protein_object_library_navigation_manifest_link_count"] == 2
+    assert payload["summary"]["protein_object_library_navigation_largest_protein_key"] == (
+        "H9002_Example_Fab_Complex"
+    )
+    assert payload["summary"]["protein_object_library_navigation_largest_object_count"] == 3
+    assert payload["summary"]["protein_object_library_navigation_html"] == (
+        "casp17/casp17_protein_object_library_navigation_catalog_current.html"
+    )
     assert payload["summary"]["raw_ranked_model_quarantine_status"] == "pass"
     assert payload["summary"]["raw_ranked_model_quarantine_target_count"] == 3
     assert payload["summary"]["raw_ranked_model_quarantine_model_count"] == 15
@@ -4903,6 +4944,17 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "proteins:2/0/2" in by_id["protein_object_library_completion_audit"]["blockers"]
     assert "assets:4/4/4" in by_id["protein_object_library_completion_audit"]["blockers"]
     assert "manifests:4/2" in by_id["protein_object_library_completion_audit"]["blockers"]
+    assert by_id["protein_object_library_navigation_catalog"]["status"] == (
+        "protein_object_library_navigation_catalog_ready"
+    )
+    assert by_id["protein_object_library_navigation_catalog"]["ready_count"] == 4
+    assert by_id["protein_object_library_navigation_catalog"]["blocked_count"] == 0
+    assert by_id["protein_object_library_navigation_catalog"]["total_count"] == 4
+    assert "proteins:2/0/2" in by_id["protein_object_library_navigation_catalog"]["blockers"]
+    assert "links:2/2" in by_id["protein_object_library_navigation_catalog"]["blockers"]
+    assert "largest:H9002_Example_Fab_Complex/3" in by_id[
+        "protein_object_library_navigation_catalog"
+    ]["blockers"]
     assert by_id["raw_ranked_model_quarantine"]["status"] == "pass"
     assert by_id["raw_ranked_model_quarantine"]["ready_count"] == 15
     assert by_id["raw_ranked_model_quarantine"]["blocked_count"] == 0

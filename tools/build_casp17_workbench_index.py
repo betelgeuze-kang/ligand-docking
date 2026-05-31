@@ -19,6 +19,9 @@ DEFAULT_PROTEIN_OBJECT_LIBRARY_JSON = "casp17/casp17_protein_object_library_curr
 DEFAULT_PROTEIN_OBJECT_LIBRARY_COMPLETION_AUDIT_JSON = (
     "casp17/casp17_protein_object_library_completion_audit_current.json"
 )
+DEFAULT_PROTEIN_OBJECT_LIBRARY_NAVIGATION_CATALOG_JSON = (
+    "casp17/casp17_protein_object_library_navigation_catalog_current.json"
+)
 DEFAULT_RAW_RANKED_MODEL_QUARANTINE_JSON = "casp17/casp17_raw_ranked_model_quarantine_audit_current.json"
 DEFAULT_WIN_GAP_CLOSURE_JSON = "runs/casp17_win_gap_closure_packet_current.json"
 DEFAULT_WIN_TIER_GOAL_SCORECARD_JSON = "runs/casp17_win_tier_goal_scorecard_current.json"
@@ -433,6 +436,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     protein_object_library_completion_audit_payload = _read_json(
         args.protein_object_library_completion_audit_json
     )
+    protein_object_library_navigation_catalog_payload = _read_json(
+        args.protein_object_library_navigation_catalog_json
+    )
     raw_ranked_model_quarantine_payload = _read_json(args.raw_ranked_model_quarantine_json)
     closure_payload = _read_json(args.win_gap_closure_json)
     goal_scorecard_payload = _read_json(args.win_tier_goal_scorecard_json)
@@ -731,6 +737,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     target_object_model_review_summary = _summary(target_object_model_review_payload)
     protein_object_library_summary = _summary(protein_object_library_payload)
     protein_object_library_completion_audit_summary = _summary(protein_object_library_completion_audit_payload)
+    protein_object_library_navigation_catalog_summary = _summary(protein_object_library_navigation_catalog_payload)
     raw_ranked_model_quarantine_summary = _summary(raw_ranked_model_quarantine_payload)
     closure_summary = _summary(closure_payload)
     goal_scorecard_summary = _summary(goal_scorecard_payload)
@@ -1212,6 +1219,34 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + str(protein_object_library_completion_audit_summary.get("protein_manifest_present_count", ""))
                 + ",first_blocked:"
                 + (_text(protein_object_library_completion_audit_summary.get("first_blocked_blockers")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "protein_object_library_navigation_catalog",
+            "Navigation catalog for protein-name 3D object folders and viewers",
+            _text(protein_object_library_navigation_catalog_summary.get("navigation_catalog_status")),
+            args.protein_object_library_navigation_catalog_json,
+            ready_count=_int(protein_object_library_navigation_catalog_summary.get("object_pass_count")),
+            blocked_count=_int(protein_object_library_navigation_catalog_summary.get("object_blocked_count")),
+            total_count=_int(protein_object_library_navigation_catalog_summary.get("object_count")),
+            next_action=_text(protein_object_library_navigation_catalog_summary.get("next_action")),
+            blockers=(
+                "proteins:"
+                + str(protein_object_library_navigation_catalog_summary.get("protein_pass_count", ""))
+                + "/"
+                + str(protein_object_library_navigation_catalog_summary.get("protein_blocked_count", ""))
+                + "/"
+                + str(protein_object_library_navigation_catalog_summary.get("protein_count", ""))
+                + ",links:"
+                + str(protein_object_library_navigation_catalog_summary.get("protein_readme_link_count", ""))
+                + "/"
+                + str(protein_object_library_navigation_catalog_summary.get("protein_manifest_link_count", ""))
+                + ",largest:"
+                + (_text(protein_object_library_navigation_catalog_summary.get("largest_protein_key")) or "-")
+                + "/"
+                + str(protein_object_library_navigation_catalog_summary.get("largest_object_count", ""))
+                + ",html:"
+                + (_text(protein_object_library_navigation_catalog_summary.get("html_catalog_path")) or "-")
             ),
         ),
         _artifact_row(
@@ -5905,6 +5940,42 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "protein_object_library_completion_protein_manifest_count": _int(
             protein_object_library_completion_audit_summary.get("protein_manifest_present_count")
         ),
+        "protein_object_library_navigation_status": _text(
+            protein_object_library_navigation_catalog_summary.get("navigation_catalog_status")
+        ),
+        "protein_object_library_navigation_protein_pass_count": _int(
+            protein_object_library_navigation_catalog_summary.get("protein_pass_count")
+        ),
+        "protein_object_library_navigation_protein_blocked_count": _int(
+            protein_object_library_navigation_catalog_summary.get("protein_blocked_count")
+        ),
+        "protein_object_library_navigation_protein_count": _int(
+            protein_object_library_navigation_catalog_summary.get("protein_count")
+        ),
+        "protein_object_library_navigation_object_pass_count": _int(
+            protein_object_library_navigation_catalog_summary.get("object_pass_count")
+        ),
+        "protein_object_library_navigation_object_blocked_count": _int(
+            protein_object_library_navigation_catalog_summary.get("object_blocked_count")
+        ),
+        "protein_object_library_navigation_object_count": _int(
+            protein_object_library_navigation_catalog_summary.get("object_count")
+        ),
+        "protein_object_library_navigation_readme_link_count": _int(
+            protein_object_library_navigation_catalog_summary.get("protein_readme_link_count")
+        ),
+        "protein_object_library_navigation_manifest_link_count": _int(
+            protein_object_library_navigation_catalog_summary.get("protein_manifest_link_count")
+        ),
+        "protein_object_library_navigation_largest_protein_key": _text(
+            protein_object_library_navigation_catalog_summary.get("largest_protein_key")
+        ),
+        "protein_object_library_navigation_largest_object_count": _int(
+            protein_object_library_navigation_catalog_summary.get("largest_object_count")
+        ),
+        "protein_object_library_navigation_html": _text(
+            protein_object_library_navigation_catalog_summary.get("html_catalog_path")
+        ),
         "raw_ranked_model_quarantine_status": _text(
             raw_ranked_model_quarantine_summary.get("raw_ranked_model_quarantine_status")
         ),
@@ -10594,6 +10665,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- target object model review: `{summary['target_object_model_review_status'] or '-'}` pass/blocked/total `{summary['target_object_model_review_pass_count']}/{summary['target_object_model_review_blocked_count']}/{summary['target_object_model_review_total']}` review md/viewers `{summary['target_object_model_review_md_count']}/{summary['target_object_model_review_viewer_local_pass_count']}` protein/CA/residue `{summary['target_object_model_review_protein_atom_count']}/{summary['target_object_model_review_ca_atom_count']}/{summary['target_object_model_review_residue_count']}` radius `{summary['target_object_model_review_min_radius']}/{summary['target_object_model_review_max_radius']}` gallery `{summary['target_object_model_review_gallery_status'] or '-'}` `{summary['target_object_model_review_gallery_html'] or '-'}`",
         f"- protein object library: `{summary['protein_object_library_status'] or '-'}` protein/object folders `{summary['protein_object_library_protein_folder_count']}/{summary['protein_object_library_object_folder_count']}` pass/blocked `{summary['protein_object_library_pass_count']}/{summary['protein_object_library_blocked_count']}` model/projection/viewer pointers `{summary['protein_object_library_model_pointer_count']}/{summary['protein_object_library_projection_pointer_count']}/{summary['protein_object_library_viewer_pointer_count']}` `{summary['protein_object_library_dir'] or '-'}`",
         f"- protein object library completion audit: `{summary['protein_object_library_completion_status'] or '-'}` proteins pass/blocked/total `{summary['protein_object_library_completion_protein_pass_count']}/{summary['protein_object_library_completion_protein_blocked_count']}/{summary['protein_object_library_completion_protein_count']}` objects pass/blocked/total `{summary['protein_object_library_completion_object_pass_count']}/{summary['protein_object_library_completion_object_blocked_count']}/{summary['protein_object_library_completion_object_count']}` assets model/projection/viewer `{summary['protein_object_library_completion_model_count']}/{summary['protein_object_library_completion_projection_count']}/{summary['protein_object_library_completion_viewer_count']}` manifests object/protein `{summary['protein_object_library_completion_object_manifest_count']}/{summary['protein_object_library_completion_protein_manifest_count']}`",
+        f"- protein object library navigation catalog: `{summary['protein_object_library_navigation_status'] or '-'}` proteins pass/blocked/total `{summary['protein_object_library_navigation_protein_pass_count']}/{summary['protein_object_library_navigation_protein_blocked_count']}/{summary['protein_object_library_navigation_protein_count']}` objects pass/blocked/total `{summary['protein_object_library_navigation_object_pass_count']}/{summary['protein_object_library_navigation_object_blocked_count']}/{summary['protein_object_library_navigation_object_count']}` readme/manifest links `{summary['protein_object_library_navigation_readme_link_count']}/{summary['protein_object_library_navigation_manifest_link_count']}` largest `{summary['protein_object_library_navigation_largest_protein_key'] or '-'}` `{summary['protein_object_library_navigation_largest_object_count']}` html `{summary['protein_object_library_navigation_html'] or '-'}`",
         f"- raw-ranked model quarantine: `{summary['raw_ranked_model_quarantine_status'] or '-'}` targets/models/top5 `{summary['raw_ranked_model_quarantine_target_count']}/{summary['raw_ranked_model_quarantine_model_count']}/{summary['raw_ranked_model_quarantine_top5_count']}` quarantined/linked/author-present `{summary['raw_ranked_model_quarantine_quarantined_count']}/{summary['raw_ranked_model_quarantine_linked_count']}/{summary['raw_ranked_model_quarantine_author_present_count']}` atoms `{summary['raw_ranked_model_quarantine_atom_count']}`",
         f"- benchmark rows ready/total: `{summary['benchmark_rows_ready_count']}/{summary['benchmark_rows_total']}`",
         f"- win-tier goal scorecard: `{summary['win_tier_goal_scorecard_status'] or '-'}` pass/partial/blocked `{summary['win_tier_goal_scorecard_pass_count']}/{summary['win_tier_goal_scorecard_partial_count']}/{summary['win_tier_goal_scorecard_blocked_count']}` first blocked `{summary['win_tier_goal_scorecard_first_blocked_gate'] or '-'}`",
@@ -10777,6 +10849,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--protein-object-library-completion-audit-json",
         default=DEFAULT_PROTEIN_OBJECT_LIBRARY_COMPLETION_AUDIT_JSON,
+    )
+    parser.add_argument(
+        "--protein-object-library-navigation-catalog-json",
+        default=DEFAULT_PROTEIN_OBJECT_LIBRARY_NAVIGATION_CATALOG_JSON,
     )
     parser.add_argument("--raw-ranked-model-quarantine-json", default=DEFAULT_RAW_RANKED_MODEL_QUARANTINE_JSON)
     parser.add_argument("--win-gap-closure-json", default=DEFAULT_WIN_GAP_CLOSURE_JSON)
