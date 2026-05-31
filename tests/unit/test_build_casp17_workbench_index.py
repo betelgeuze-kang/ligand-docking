@@ -190,6 +190,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     historical_seed_first_clearance_no_leak_gate_json = (
         tmp_path / "historical_seed_first_clearance_no_leak_gate.json"
     )
+    historical_seed_first_clearance_no_leak_evidence_packet_json = (
+        tmp_path / "historical_seed_first_clearance_no_leak_evidence_packet.json"
+    )
     historical_seed_clearance_to_identity_intake_sync_json = (
         tmp_path / "historical_seed_clearance_to_identity_intake_sync.json"
     )
@@ -2355,6 +2358,37 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        historical_seed_first_clearance_no_leak_evidence_packet_json,
+        {
+            "summary": {
+                "first_clearance_no_leak_evidence_packet_status": (
+                    "awaiting_first_clearance_no_leak_evidence_collection"
+                ),
+                "no_leak_gate_status": "awaiting_operator_no_leak_values",
+                "target_id": "HIST_CHIGNOLIN",
+                "benchmark_id": "hist_seed_chignolin",
+                "packet_folder": "casp17/historical_seed_first_clearance_no_leak_evidence_packet/hist_chignolin",
+                "action_md": (
+                    "casp17/historical_seed_first_clearance_no_leak_evidence_packet/"
+                    "hist_chignolin/ACTION.md"
+                ),
+                "operator_evidence_template_csv": (
+                    "casp17/historical_seed_first_clearance_no_leak_evidence_packet/"
+                    "hist_chignolin/operator_evidence_template.csv"
+                ),
+                "field_count": 10,
+                "open_field_count": 10,
+                "ready_field_count": 0,
+                "evidence_stub_count": 10,
+                "weak_hint_count": 2,
+                "first_open_field": "no_leak_evidence_ref",
+                "first_open_kind": "independent_no_leak_evidence",
+                "first_blocker": "operator_value_missing",
+                "next_action": "collect evidence for no_leak_evidence_ref",
+            }
+        },
+    )
+    _write_json(
         sidechain_native_benchmark_json,
         {
             "summary": {
@@ -3376,6 +3410,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(historical_seed_first_clearance_operator_kit_json),
             "--historical-seed-first-clearance-no-leak-gate-json",
             str(historical_seed_first_clearance_no_leak_gate_json),
+            "--historical-seed-first-clearance-no-leak-evidence-packet-json",
+            str(historical_seed_first_clearance_no_leak_evidence_packet_json),
             "--historical-seed-clearance-to-identity-intake-sync-json",
             str(historical_seed_clearance_to_identity_intake_sync_json),
             "--sidechain-native-benchmark-json",
@@ -4938,6 +4974,26 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["historical_seed_first_clearance_no_leak_gate_first_blocker"] == (
         "operator_value_missing"
     )
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_evidence_packet_status"] == (
+        "awaiting_first_clearance_no_leak_evidence_collection"
+    )
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_evidence_packet_target_id"] == (
+        "HIST_CHIGNOLIN"
+    )
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_evidence_packet_benchmark_id"] == (
+        "hist_seed_chignolin"
+    )
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_evidence_packet_field_count"] == 10
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_evidence_packet_ready_count"] == 0
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_evidence_packet_open_count"] == 10
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_evidence_packet_stub_count"] == 10
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_evidence_packet_weak_count"] == 2
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_evidence_packet_first_open_field"] == (
+        "no_leak_evidence_ref"
+    )
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_evidence_packet_first_open_kind"] == (
+        "independent_no_leak_evidence"
+    )
     assert payload["summary"]["historical_seed_clearance_to_identity_intake_sync_status"] == (
         "waiting_on_cleared_seed_manifest"
     )
@@ -5300,6 +5356,19 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "blocker:operator_value_missing" in by_id["historical_seed_first_clearance_no_leak_gate"]["blockers"]
     assert "values_missing:10" in by_id["historical_seed_first_clearance_no_leak_gate"]["blockers"]
     assert "clearance_missing:10" in by_id["historical_seed_first_clearance_no_leak_gate"]["blockers"]
+    assert by_id["historical_seed_first_clearance_no_leak_evidence_packet"]["status"] == (
+        "awaiting_first_clearance_no_leak_evidence_collection"
+    )
+    assert by_id["historical_seed_first_clearance_no_leak_evidence_packet"]["ready_count"] == 0
+    assert by_id["historical_seed_first_clearance_no_leak_evidence_packet"]["blocked_count"] == 10
+    assert by_id["historical_seed_first_clearance_no_leak_evidence_packet"]["total_count"] == 10
+    assert "first:no_leak_evidence_ref" in (
+        by_id["historical_seed_first_clearance_no_leak_evidence_packet"]["blockers"]
+    )
+    assert "kind:independent_no_leak_evidence" in (
+        by_id["historical_seed_first_clearance_no_leak_evidence_packet"]["blockers"]
+    )
+    assert "stubs:10" in by_id["historical_seed_first_clearance_no_leak_evidence_packet"]["blockers"]
     assert by_id["competitive_floor_batch"]["status"] == "ready_for_fill"
     assert by_id["competitive_floor_row_fill_status"]["status"] == "awaiting_fill"
     assert by_id["competitive_floor_row_fill_worklist"]["status"] == "open_actions"
@@ -6038,6 +6107,8 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_historical_seed_first_clearance_operator_kit.json"),
             "--historical-seed-first-clearance-no-leak-gate-json",
             str(tmp_path / "missing_historical_seed_first_clearance_no_leak_gate.json"),
+            "--historical-seed-first-clearance-no-leak-evidence-packet-json",
+            str(tmp_path / "missing_historical_seed_first_clearance_no_leak_evidence_packet.json"),
             "--historical-seed-clearance-to-identity-intake-sync-json",
             str(tmp_path / "missing_historical_seed_clearance_to_identity_intake_sync.json"),
             "--sidechain-native-benchmark-json",
