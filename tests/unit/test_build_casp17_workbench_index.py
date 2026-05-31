@@ -187,6 +187,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     historical_seed_first_clearance_operator_kit_json = (
         tmp_path / "historical_seed_first_clearance_operator_kit.json"
     )
+    historical_seed_first_clearance_no_leak_gate_json = (
+        tmp_path / "historical_seed_first_clearance_no_leak_gate.json"
+    )
     historical_seed_clearance_to_identity_intake_sync_json = (
         tmp_path / "historical_seed_clearance_to_identity_intake_sync.json"
     )
@@ -2325,6 +2328,33 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        historical_seed_first_clearance_no_leak_gate_json,
+        {
+            "summary": {
+                "first_clearance_no_leak_gate_status": "awaiting_operator_no_leak_values",
+                "target_id": "HIST_CHIGNOLIN",
+                "benchmark_id": "hist_seed_chignolin",
+                "field_count": 10,
+                "ready_field_count": 0,
+                "blocked_field_count": 10,
+                "operator_value_present_count": 0,
+                "operator_value_missing_count": 10,
+                "operator_clearance_present_count": 0,
+                "operator_clearance_missing_count": 10,
+                "policy_pass_count": 0,
+                "policy_blocked_count": 10,
+                "weak_hint_count": 2,
+                "first_blocked_field": "no_leak_evidence_ref",
+                "first_blocker": "operator_value_missing",
+                "no_leak_operator_intake_csv": (
+                    "casp17/historical_seed_first_clearance_operator_kit/"
+                    "HIST_CHIGNOLIN/no_leak_operator_intake.csv"
+                ),
+                "next_action": "fill all operator no-leak gate fields",
+            }
+        },
+    )
+    _write_json(
         sidechain_native_benchmark_json,
         {
             "summary": {
@@ -3344,6 +3374,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(historical_seed_clearance_execution_board_json),
             "--historical-seed-first-clearance-operator-kit-json",
             str(historical_seed_first_clearance_operator_kit_json),
+            "--historical-seed-first-clearance-no-leak-gate-json",
+            str(historical_seed_first_clearance_no_leak_gate_json),
             "--historical-seed-clearance-to-identity-intake-sync-json",
             str(historical_seed_clearance_to_identity_intake_sync_json),
             "--sidechain-native-benchmark-json",
@@ -4887,6 +4919,25 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["historical_seed_first_clearance_operator_kit_preview_status"] == (
         "waiting_on_operator_no_leak_fields"
     )
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_gate_status"] == (
+        "awaiting_operator_no_leak_values"
+    )
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_gate_target_id"] == "HIST_CHIGNOLIN"
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_gate_benchmark_id"] == (
+        "hist_seed_chignolin"
+    )
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_gate_field_count"] == 10
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_gate_ready_count"] == 0
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_gate_blocked_count"] == 10
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_gate_value_missing_count"] == 10
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_gate_clearance_missing_count"] == 10
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_gate_policy_blocked_count"] == 10
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_gate_first_blocked_field"] == (
+        "no_leak_evidence_ref"
+    )
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_gate_first_blocker"] == (
+        "operator_value_missing"
+    )
     assert payload["summary"]["historical_seed_clearance_to_identity_intake_sync_status"] == (
         "waiting_on_cleared_seed_manifest"
     )
@@ -5239,6 +5290,16 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         by_id["historical_seed_first_clearance_operator_kit"]["blockers"]
     )
     assert "weak:2" in by_id["historical_seed_first_clearance_operator_kit"]["blockers"]
+    assert by_id["historical_seed_first_clearance_no_leak_gate"]["status"] == (
+        "awaiting_operator_no_leak_values"
+    )
+    assert by_id["historical_seed_first_clearance_no_leak_gate"]["ready_count"] == 0
+    assert by_id["historical_seed_first_clearance_no_leak_gate"]["blocked_count"] == 10
+    assert by_id["historical_seed_first_clearance_no_leak_gate"]["total_count"] == 10
+    assert "first:no_leak_evidence_ref" in by_id["historical_seed_first_clearance_no_leak_gate"]["blockers"]
+    assert "blocker:operator_value_missing" in by_id["historical_seed_first_clearance_no_leak_gate"]["blockers"]
+    assert "values_missing:10" in by_id["historical_seed_first_clearance_no_leak_gate"]["blockers"]
+    assert "clearance_missing:10" in by_id["historical_seed_first_clearance_no_leak_gate"]["blockers"]
     assert by_id["competitive_floor_batch"]["status"] == "ready_for_fill"
     assert by_id["competitive_floor_row_fill_status"]["status"] == "awaiting_fill"
     assert by_id["competitive_floor_row_fill_worklist"]["status"] == "open_actions"
@@ -5975,6 +6036,8 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_strict_blind_batch_closure_runway.json"),
             "--historical-seed-first-clearance-operator-kit-json",
             str(tmp_path / "missing_historical_seed_first_clearance_operator_kit.json"),
+            "--historical-seed-first-clearance-no-leak-gate-json",
+            str(tmp_path / "missing_historical_seed_first_clearance_no_leak_gate.json"),
             "--historical-seed-clearance-to-identity-intake-sync-json",
             str(tmp_path / "missing_historical_seed_clearance_to_identity_intake_sync.json"),
             "--sidechain-native-benchmark-json",

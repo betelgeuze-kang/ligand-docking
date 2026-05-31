@@ -220,6 +220,9 @@ DEFAULT_HISTORICAL_SEED_CLEARANCE_EXECUTION_BOARD_JSON = (
 DEFAULT_HISTORICAL_SEED_FIRST_CLEARANCE_OPERATOR_KIT_JSON = (
     "casp17/casp17_historical_seed_first_clearance_operator_kit_current.json"
 )
+DEFAULT_HISTORICAL_SEED_FIRST_CLEARANCE_NO_LEAK_GATE_JSON = (
+    "casp17/casp17_historical_seed_first_clearance_no_leak_gate_current.json"
+)
 DEFAULT_HISTORICAL_SEED_CLEARANCE_TO_IDENTITY_INTAKE_SYNC_JSON = (
     "casp17/casp17_historical_seed_clearance_to_identity_intake_sync_current.json"
 )
@@ -635,6 +638,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     historical_seed_first_clearance_operator_kit_payload = _read_json(
         args.historical_seed_first_clearance_operator_kit_json
     )
+    historical_seed_first_clearance_no_leak_gate_payload = _read_json(
+        args.historical_seed_first_clearance_no_leak_gate_json
+    )
     historical_seed_clearance_to_identity_intake_sync_payload = _read_json(
         args.historical_seed_clearance_to_identity_intake_sync_json
     )
@@ -933,6 +939,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     historical_seed_first_clearance_operator_kit_summary = _summary(
         historical_seed_first_clearance_operator_kit_payload
+    )
+    historical_seed_first_clearance_no_leak_gate_summary = _summary(
+        historical_seed_first_clearance_no_leak_gate_payload
     )
     historical_seed_clearance_to_identity_intake_sync_summary = _summary(
         historical_seed_clearance_to_identity_intake_sync_payload
@@ -4293,6 +4302,42 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + str(historical_seed_first_clearance_operator_kit_summary.get("weak_hint_count", ""))
                 + ",kit:"
                 + _text(historical_seed_first_clearance_operator_kit_summary.get("kit_folder"))
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_first_clearance_no_leak_gate",
+            "Fail-closed readiness gate for the first historical seed no-leak operator intake",
+            _text(
+                historical_seed_first_clearance_no_leak_gate_summary.get(
+                    "first_clearance_no_leak_gate_status"
+                )
+            ),
+            args.historical_seed_first_clearance_no_leak_gate_json,
+            ready_count=_int(historical_seed_first_clearance_no_leak_gate_summary.get("ready_field_count")),
+            blocked_count=_int(
+                historical_seed_first_clearance_no_leak_gate_summary.get("blocked_field_count")
+            ),
+            total_count=_int(historical_seed_first_clearance_no_leak_gate_summary.get("field_count")),
+            next_action=_text(historical_seed_first_clearance_no_leak_gate_summary.get("next_action")),
+            blockers=(
+                "first:"
+                + _text(historical_seed_first_clearance_no_leak_gate_summary.get("first_blocked_field"))
+                + ",blocker:"
+                + _text(historical_seed_first_clearance_no_leak_gate_summary.get("first_blocker"))
+                + ",values_missing:"
+                + str(
+                    historical_seed_first_clearance_no_leak_gate_summary.get(
+                        "operator_value_missing_count", ""
+                    )
+                )
+                + ",clearance_missing:"
+                + str(
+                    historical_seed_first_clearance_no_leak_gate_summary.get(
+                        "operator_clearance_missing_count", ""
+                    )
+                )
+                + ",weak:"
+                + str(historical_seed_first_clearance_no_leak_gate_summary.get("weak_hint_count", ""))
             ),
         ),
         _artifact_row(
@@ -9373,6 +9418,57 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "historical_seed_first_clearance_operator_kit_next_action": _text(
             historical_seed_first_clearance_operator_kit_summary.get("next_action")
         ),
+        "historical_seed_first_clearance_no_leak_gate_status": _text(
+            historical_seed_first_clearance_no_leak_gate_summary.get("first_clearance_no_leak_gate_status")
+        ),
+        "historical_seed_first_clearance_no_leak_gate_target_id": _text(
+            historical_seed_first_clearance_no_leak_gate_summary.get("target_id")
+        ),
+        "historical_seed_first_clearance_no_leak_gate_benchmark_id": _text(
+            historical_seed_first_clearance_no_leak_gate_summary.get("benchmark_id")
+        ),
+        "historical_seed_first_clearance_no_leak_gate_field_count": _int(
+            historical_seed_first_clearance_no_leak_gate_summary.get("field_count")
+        ),
+        "historical_seed_first_clearance_no_leak_gate_ready_count": _int(
+            historical_seed_first_clearance_no_leak_gate_summary.get("ready_field_count")
+        ),
+        "historical_seed_first_clearance_no_leak_gate_blocked_count": _int(
+            historical_seed_first_clearance_no_leak_gate_summary.get("blocked_field_count")
+        ),
+        "historical_seed_first_clearance_no_leak_gate_value_present_count": _int(
+            historical_seed_first_clearance_no_leak_gate_summary.get("operator_value_present_count")
+        ),
+        "historical_seed_first_clearance_no_leak_gate_value_missing_count": _int(
+            historical_seed_first_clearance_no_leak_gate_summary.get("operator_value_missing_count")
+        ),
+        "historical_seed_first_clearance_no_leak_gate_clearance_present_count": _int(
+            historical_seed_first_clearance_no_leak_gate_summary.get("operator_clearance_present_count")
+        ),
+        "historical_seed_first_clearance_no_leak_gate_clearance_missing_count": _int(
+            historical_seed_first_clearance_no_leak_gate_summary.get("operator_clearance_missing_count")
+        ),
+        "historical_seed_first_clearance_no_leak_gate_policy_pass_count": _int(
+            historical_seed_first_clearance_no_leak_gate_summary.get("policy_pass_count")
+        ),
+        "historical_seed_first_clearance_no_leak_gate_policy_blocked_count": _int(
+            historical_seed_first_clearance_no_leak_gate_summary.get("policy_blocked_count")
+        ),
+        "historical_seed_first_clearance_no_leak_gate_weak_count": _int(
+            historical_seed_first_clearance_no_leak_gate_summary.get("weak_hint_count")
+        ),
+        "historical_seed_first_clearance_no_leak_gate_first_blocked_field": _text(
+            historical_seed_first_clearance_no_leak_gate_summary.get("first_blocked_field")
+        ),
+        "historical_seed_first_clearance_no_leak_gate_first_blocker": _text(
+            historical_seed_first_clearance_no_leak_gate_summary.get("first_blocker")
+        ),
+        "historical_seed_first_clearance_no_leak_gate_intake_csv": _text(
+            historical_seed_first_clearance_no_leak_gate_summary.get("no_leak_operator_intake_csv")
+        ),
+        "historical_seed_first_clearance_no_leak_gate_next_action": _text(
+            historical_seed_first_clearance_no_leak_gate_summary.get("next_action")
+        ),
         "historical_seed_clearance_to_identity_intake_sync_status": _text(
             historical_seed_clearance_to_identity_intake_sync_summary.get("seed_to_identity_sync_status")
         ),
@@ -10750,6 +10846,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- historical seed clearance fill candidates: `{summary['historical_seed_clearance_fill_candidate_packet_status'] or '-'}` seeds/fields/proposed/manual/blocked `{summary['historical_seed_clearance_fill_candidate_packet_seed_count']}/{summary['historical_seed_clearance_fill_candidate_packet_field_count']}/{summary['historical_seed_clearance_fill_candidate_packet_proposed_count']}/{summary['historical_seed_clearance_fill_candidate_packet_operator_required_count']}/{summary['historical_seed_clearance_fill_candidate_packet_blocked_field_count']}` calibration/ablation/no-leak-manual/conflicts `{summary['historical_seed_clearance_fill_candidate_packet_calibration_count']}/{summary['historical_seed_clearance_fill_candidate_packet_ablation_count']}/{summary['historical_seed_clearance_fill_candidate_packet_no_leak_manual_count']}/{summary['historical_seed_clearance_fill_candidate_packet_conflict_count']}` partial/full-ready/blocked rows `{summary['historical_seed_clearance_fill_candidate_packet_partial_row_count']}/{summary['historical_seed_clearance_fill_candidate_packet_full_ready_row_count']}/{summary['historical_seed_clearance_fill_candidate_packet_blocked_row_count']}` first `{summary['historical_seed_clearance_fill_candidate_packet_first_target_id'] or '-'}` `{summary['historical_seed_clearance_fill_candidate_packet_first_next_action'] or '-'}`",
         f"- historical seed clearance execution board: `{summary['historical_seed_clearance_execution_board_status'] or '-'}` seeds/no-leak-only/ablation-repair `{summary['historical_seed_clearance_execution_board_seed_count']}/{summary['historical_seed_clearance_execution_board_no_leak_only_count']}/{summary['historical_seed_clearance_execution_board_ablation_repair_count']}` no-leak/proposed/calibration/ablation/blocked-ablation `{summary['historical_seed_clearance_execution_board_operator_no_leak_field_count']}/{summary['historical_seed_clearance_execution_board_proposed_field_count']}/{summary['historical_seed_clearance_execution_board_calibration_count']}/{summary['historical_seed_clearance_execution_board_ablation_count']}/{summary['historical_seed_clearance_execution_board_blocked_ablation_count']}` first `{summary['historical_seed_clearance_execution_board_first_target_id'] or '-'}` `{summary['historical_seed_clearance_execution_board_first_status'] or '-'}` `{summary['historical_seed_clearance_execution_board_first_next_action'] or '-'}` folder `{summary['historical_seed_clearance_execution_board_first_folder'] or '-'}`",
         f"- historical seed first clearance kit: `{summary['historical_seed_first_clearance_operator_kit_status'] or '-'}` target `{summary['historical_seed_first_clearance_operator_kit_target_id'] or '-'}` benchmark `{summary['historical_seed_first_clearance_operator_kit_benchmark_id'] or '-'}` no-leak/ready/weak `{summary['historical_seed_first_clearance_operator_kit_no_leak_count']}/{summary['historical_seed_first_clearance_operator_kit_ready_count']}/{summary['historical_seed_first_clearance_operator_kit_weak_count']}` calibration/ablation `{summary['historical_seed_first_clearance_operator_kit_calibration_count']}/{summary['historical_seed_first_clearance_operator_kit_ablation_count']}` preview `{summary['historical_seed_first_clearance_operator_kit_preview_status'] or '-'}` intake `{summary['historical_seed_first_clearance_operator_kit_intake_csv'] or '-'}`",
+        f"- historical seed first clearance no-leak gate: `{summary['historical_seed_first_clearance_no_leak_gate_status'] or '-'}` target `{summary['historical_seed_first_clearance_no_leak_gate_target_id'] or '-'}` benchmark `{summary['historical_seed_first_clearance_no_leak_gate_benchmark_id'] or '-'}` fields ready/blocked/total `{summary['historical_seed_first_clearance_no_leak_gate_ready_count']}/{summary['historical_seed_first_clearance_no_leak_gate_blocked_count']}/{summary['historical_seed_first_clearance_no_leak_gate_field_count']}` values present/missing `{summary['historical_seed_first_clearance_no_leak_gate_value_present_count']}/{summary['historical_seed_first_clearance_no_leak_gate_value_missing_count']}` clearance present/missing `{summary['historical_seed_first_clearance_no_leak_gate_clearance_present_count']}/{summary['historical_seed_first_clearance_no_leak_gate_clearance_missing_count']}` policy pass/blocked `{summary['historical_seed_first_clearance_no_leak_gate_policy_pass_count']}/{summary['historical_seed_first_clearance_no_leak_gate_policy_blocked_count']}` first `{summary['historical_seed_first_clearance_no_leak_gate_first_blocked_field'] or '-'}` `{summary['historical_seed_first_clearance_no_leak_gate_first_blocker'] or '-'}` intake `{summary['historical_seed_first_clearance_no_leak_gate_intake_csv'] or '-'}`",
         f"- historical seed clearance to identity intake sync: `{summary['historical_seed_clearance_to_identity_intake_sync_status'] or '-'}` mode `{summary['historical_seed_clearance_to_identity_intake_sync_apply_mode'] or '-'}` seed eligible/total `{summary['historical_seed_clearance_to_identity_intake_sync_eligible_count']}/{summary['historical_seed_clearance_to_identity_intake_sync_seed_row_count']}` intake ready/waiting/blocked/total `{summary['historical_seed_clearance_to_identity_intake_sync_ready_count']}/{summary['historical_seed_clearance_to_identity_intake_sync_waiting_count']}/{summary['historical_seed_clearance_to_identity_intake_sync_blocked_count']}/{summary['historical_seed_clearance_to_identity_intake_sync_intake_row_count']}` applied `{summary['historical_seed_clearance_to_identity_intake_sync_applied_count']}` first `{summary['historical_seed_clearance_to_identity_intake_sync_first_next_action'] or '-'}`",
         f"- sidechain-native benchmark: `{summary['sidechain_native_benchmark_status'] or '-'}` pass/blocked/total `{summary['sidechain_native_pass_count']}/{summary['sidechain_native_blocked_count']}/{summary['sidechain_native_benchmark_count']}` core/leakage/pred/native/missing-files `{summary['sidechain_native_core_input_blocked_count']}/{summary['sidechain_native_leakage_blocked_count']}/{summary['sidechain_native_prediction_missing_count']}/{summary['sidechain_native_native_missing_count']}/{summary['sidechain_native_missing_core_file_count']}` exactness/metric `{summary['sidechain_native_exactness_blocked_count']}/{summary['sidechain_native_metric_blocked_count']}` first `{summary['sidechain_native_first_blocked_benchmark_id'] or '-'}` blockers `{summary['sidechain_native_first_blocked_blockers'] or '-'}`",
         f"- sidechain-native workorder: actions/open `{summary['sidechain_native_workorder_action_count']}/{summary['sidechain_native_open_workorder_action_count']}` files `{summary['sidechain_native_workorder_json'] or '-'}` `{summary['sidechain_native_workorder_md'] or '-'}`",
@@ -11115,6 +11212,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--historical-seed-first-clearance-operator-kit-json",
         default=DEFAULT_HISTORICAL_SEED_FIRST_CLEARANCE_OPERATOR_KIT_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-first-clearance-no-leak-gate-json",
+        default=DEFAULT_HISTORICAL_SEED_FIRST_CLEARANCE_NO_LEAK_GATE_JSON,
     )
     parser.add_argument(
         "--historical-seed-clearance-to-identity-intake-sync-json",
