@@ -149,6 +149,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     strict_blind_source_request_fulfillment_gate_json = (
         tmp_path / "strict_blind_source_request_fulfillment_gate.json"
     )
+    strict_blind_source_request_operator_fill_worklist_json = (
+        tmp_path / "strict_blind_source_request_operator_fill_worklist.json"
+    )
     strict_blind_source_request_operator_sync_plan_json = (
         tmp_path / "strict_blind_source_request_operator_sync_plan.json"
     )
@@ -1915,6 +1918,28 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        strict_blind_source_request_operator_fill_worklist_json,
+        {
+            "summary": {
+                "source_request_operator_fill_worklist_status": "awaiting_source_request_operator_values",
+                "source_request_packet_status": "awaiting_pre_native_source_or_candidate_replacement",
+                "fulfillment_gate_status": "awaiting_source_request_operator_values",
+                "request_count": 17,
+                "field_action_count": 187,
+                "field_ready_count": 0,
+                "operator_value_missing_count": 187,
+                "operator_evidence_missing_count": 153,
+                "candidate_replacement_field_count": 77,
+                "first_fill_id": "source_request_operator_fill_001",
+                "first_request_id": "source_request_001",
+                "first_target_id": "HIST_BBA5",
+                "first_field_key": "source_id",
+                "first_blocker": "operator_value_missing",
+                "first_next_action": "fill operator_value for source_id",
+            }
+        },
+    )
+    _write_json(
         strict_blind_source_request_operator_sync_plan_json,
         {
             "summary": {
@@ -3266,6 +3291,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(strict_blind_source_gate_source_request_packet_json),
             "--strict-blind-source-request-fulfillment-gate-json",
             str(strict_blind_source_request_fulfillment_gate_json),
+            "--strict-blind-source-request-operator-fill-worklist-json",
+            str(strict_blind_source_request_operator_fill_worklist_json),
             "--strict-blind-source-request-operator-sync-plan-json",
             str(strict_blind_source_request_operator_sync_plan_json),
             "--strict-blind-internal-prediction-source-apply-plan-json",
@@ -3493,6 +3520,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "requests ready/blocked/total `0/17/17`" in workbench_md
     assert "evidence present/missing `0/153`" in workbench_md
     assert "validation pdb/chronology/internal-source `0/0/0`" in workbench_md
+    assert "strict-blind source request operator fill worklist: `awaiting_source_request_operator_values`" in workbench_md
+    assert "fields ready/value-missing/evidence-missing/total `0/187/153/187`" in workbench_md
     assert "strict-blind source request operator sync plan: `awaiting_source_request_fulfillment`" in workbench_md
     assert "actions ready/blocked/applied/total `0/1/0/0`" in workbench_md
     assert "strict-blind internal prediction source apply plan: `blocked_until_internal_prediction_source_gate_passes`" in workbench_md
@@ -4191,6 +4220,21 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["strict_blind_source_request_fulfillment_gate_chronology_pass_count"] == 0
     assert payload["summary"]["strict_blind_source_request_fulfillment_gate_internal_source_pass_count"] == 0
     assert payload["summary"]["strict_blind_source_request_fulfillment_gate_first_blocker"] == "source_id_missing"
+    assert payload["summary"]["strict_blind_source_request_operator_fill_worklist_status"] == (
+        "awaiting_source_request_operator_values"
+    )
+    assert payload["summary"]["strict_blind_source_request_operator_fill_worklist_field_ready_count"] == 0
+    assert payload["summary"]["strict_blind_source_request_operator_fill_worklist_operator_value_missing_count"] == 187
+    assert payload["summary"]["strict_blind_source_request_operator_fill_worklist_operator_evidence_missing_count"] == 153
+    assert payload["summary"]["strict_blind_source_request_operator_fill_worklist_field_action_count"] == 187
+    assert payload["summary"]["strict_blind_source_request_operator_fill_worklist_candidate_replacement_field_count"] == 77
+    assert payload["summary"]["strict_blind_source_request_operator_fill_worklist_first_request_id"] == (
+        "source_request_001"
+    )
+    assert payload["summary"]["strict_blind_source_request_operator_fill_worklist_first_field_key"] == "source_id"
+    assert payload["summary"]["strict_blind_source_request_operator_fill_worklist_first_blocker"] == (
+        "operator_value_missing"
+    )
     assert payload["summary"]["strict_blind_source_request_operator_sync_plan_status"] == (
         "awaiting_source_request_fulfillment"
     )
@@ -5674,6 +5718,18 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "first:source_request_001/source_id_missing" in by_id[
         "strict_blind_source_request_fulfillment_gate"
     ]["blockers"]
+    assert by_id["strict_blind_source_request_operator_fill_worklist"]["status"] == (
+        "awaiting_source_request_operator_values"
+    )
+    assert by_id["strict_blind_source_request_operator_fill_worklist"]["ready_count"] == 0
+    assert by_id["strict_blind_source_request_operator_fill_worklist"]["blocked_count"] == 187
+    assert by_id["strict_blind_source_request_operator_fill_worklist"]["total_count"] == 187
+    assert "fields:0/187/153/187" in by_id["strict_blind_source_request_operator_fill_worklist"][
+        "blockers"
+    ]
+    assert "first:source_request_operator_fill_001/source_request_001/source_id/operator_value_missing" in by_id[
+        "strict_blind_source_request_operator_fill_worklist"
+    ]["blockers"]
     assert by_id["strict_blind_source_request_operator_sync_plan"]["status"] == (
         "awaiting_source_request_fulfillment"
     )
@@ -5855,6 +5911,8 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_strict_blind_source_gate_source_request_packet.json"),
             "--strict-blind-source-request-fulfillment-gate-json",
             str(tmp_path / "missing_strict_blind_source_request_fulfillment_gate.json"),
+            "--strict-blind-source-request-operator-fill-worklist-json",
+            str(tmp_path / "missing_strict_blind_source_request_operator_fill_worklist.json"),
             "--strict-blind-source-request-operator-sync-plan-json",
             str(tmp_path / "missing_strict_blind_source_request_operator_sync_plan.json"),
             "--strict-blind-internal-prediction-source-apply-plan-json",
