@@ -21,6 +21,9 @@ DEFAULT_PROTEIN_COMPLEX_MASSIVEFOLD_MODEL_SELECTION_COVERAGE_JSON = (
     "casp17/casp17_protein_complex_massivefold_model_selection_coverage_current.json"
 )
 DEFAULT_WIN_TIER_METRIC_SURFACE_CONTRACT_JSON = "casp17/casp17_win_tier_metric_surface_contract_current.json"
+DEFAULT_STRICT_BLIND_BATCH_CLOSURE_RUNWAY_JSON = (
+    "casp17/casp17_strict_blind_batch_closure_runway_current.json"
+)
 DEFAULT_STRICT_BLIND_REPLACEMENT_CYCLE_JSON = (
     "casp17/casp17_historical_seed_strict_blind_replacement_cycle_current.json"
 )
@@ -118,6 +121,7 @@ def _input_blockers(args: argparse.Namespace) -> list[str]:
         "massivefold_rna_model_selection_coverage_json",
         "protein_complex_massivefold_model_selection_coverage_json",
         "win_tier_metric_surface_contract_json",
+        "strict_blind_batch_closure_runway_json",
         "strict_blind_replacement_cycle_json",
         "strict_blind_first_slot_kit_json",
         "competitive_readiness_gate_json",
@@ -159,6 +163,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     rna_coverage = _summary(_read_json(args.massivefold_rna_model_selection_coverage_json))
     protein_coverage = _summary(_read_json(args.protein_complex_massivefold_model_selection_coverage_json))
     metric_contract = _summary(_read_json(args.win_tier_metric_surface_contract_json))
+    batch_runway = _summary(_read_json(args.strict_blind_batch_closure_runway_json))
     strict_cycle = _summary(_read_json(args.strict_blind_replacement_cycle_json))
     first_slot = _summary(_read_json(args.strict_blind_first_slot_kit_json))
     competitive_readiness = _summary(_read_json(args.competitive_readiness_gate_json))
@@ -173,8 +178,16 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     protein_ready = _int(protein_coverage.get("ready_target_count"))
     external_total = rna_total + protein_total
     external_ready = rna_ready + protein_ready
-    strict_slot_total = _int(strict_cycle.get("slot_count"))
-    strict_slot_ready = _int(strict_cycle.get("promotion_ready_count"))
+    strict_slot_total = (
+        _int(batch_runway.get("slot_count"))
+        if "slot_count" in batch_runway
+        else _int(strict_cycle.get("slot_count"))
+    )
+    strict_slot_ready = (
+        _int(batch_runway.get("ready_slot_count"))
+        if "ready_slot_count" in batch_runway
+        else _int(strict_cycle.get("promotion_ready_count"))
+    )
     first_slot_total = _int(first_slot.get("evidence_action_count")) + _int(first_slot.get("operator_action_count"))
     first_slot_ready = _int(first_slot.get("evidence_ready_count")) + _int(first_slot.get("operator_ready_count"))
     metric_total = _int(metric_contract.get("metric_surface_row_count"))
@@ -224,25 +237,25 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             args.protein_complex_massivefold_model_selection_coverage_json,
         ),
         _stage_row(
-            "win_tier_metric_surface",
+            "strict_blind_batch_closure_runway",
             4,
-            _text(metric_contract.get("metric_surface_contract_status")),
-            metric_ready,
-            _int(metric_contract.get("blocked_metric_row_count")),
-            metric_total,
-            "Official-like metric surface is blocked until strict-blind slots are populated.",
-            _text(metric_contract.get("first_blocked_benchmark_id"))
-            or _text(metric_contract.get("first_blocked_metric")),
-            _text(metric_contract.get("next_action")),
-            args.win_tier_metric_surface_contract_json,
+            _text(batch_runway.get("batch_closure_runway_status")),
+            _int(batch_runway.get("ready_slot_count")),
+            _int(batch_runway.get("blocked_slot_count")),
+            _int(batch_runway.get("slot_count")),
+            "Competitive proof stays closed until batch slots have internal pre-native predictions, native authority, no-leak evidence, ablation, calibration, and operator clearance.",
+            _text(batch_runway.get("first_blocking_stage"))
+            or _text(batch_runway.get("first_blocked_benchmark_id")),
+            _text(batch_runway.get("first_next_action")),
+            args.strict_blind_batch_closure_runway_json,
         ),
         _stage_row(
             "strict_blind_replacement_cycle",
             5,
             _text(strict_cycle.get("strict_blind_replacement_cycle_status")),
-            strict_slot_ready,
-            max(strict_slot_total - strict_slot_ready, 0),
-            strict_slot_total,
+            _int(strict_cycle.get("promotion_ready_count")),
+            max(_int(strict_cycle.get("slot_count")) - _int(strict_cycle.get("promotion_ready_count")), 0),
+            _int(strict_cycle.get("slot_count")),
             "Competitive proof requires pre-native internal predictions, native authority, no-leak evidence, ablation, and calibration.",
             _text(strict_cycle.get("first_blocking_stage")),
             _text(strict_cycle.get("first_next_action")),
@@ -261,8 +274,21 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             _text(first_slot.get("kit_folder")) or args.strict_blind_first_slot_kit_json,
         ),
         _stage_row(
-            "competitive_floor_identity_gate",
+            "win_tier_metric_surface",
             7,
+            _text(metric_contract.get("metric_surface_contract_status")),
+            metric_ready,
+            _int(metric_contract.get("blocked_metric_row_count")),
+            metric_total,
+            "Official-like metric surface is blocked until strict-blind slots are populated.",
+            _text(metric_contract.get("first_blocked_benchmark_id"))
+            or _text(metric_contract.get("first_blocked_metric")),
+            _text(metric_contract.get("next_action")),
+            args.win_tier_metric_surface_contract_json,
+        ),
+        _stage_row(
+            "competitive_floor_identity_gate",
+            8,
             _text(competitive_readiness.get("readiness_gate_status")),
             readiness_ready,
             _int(competitive_readiness.get("blocked_gate_count")),
@@ -274,7 +300,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         ),
         _stage_row(
             "competitive_target_identity_clearance_cycle",
-            8,
+            9,
             _text(clearance_cycle.get("clearance_cycle_status")),
             clearance_ready,
             _int(clearance_cycle.get("blocked_stage_count")),
@@ -322,10 +348,33 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         ),
         "strict_blind_ready_slot_count": strict_slot_ready,
         "strict_blind_slot_count": strict_slot_total,
-        "strict_blind_evidence_file_present_count": _int(strict_cycle.get("evidence_file_present_count")),
-        "strict_blind_evidence_file_missing_count": _int(strict_cycle.get("evidence_file_missing_count")),
-        "strict_blind_operator_action_count": _int(strict_cycle.get("operator_action_board_action_count")),
-        "strict_blind_operator_open_value_count": _int(strict_cycle.get("operator_action_board_open_value_count")),
+        "strict_blind_evidence_file_present_count": (
+            _int(batch_runway.get("file_present_count"))
+            if "file_present_count" in batch_runway
+            else _int(strict_cycle.get("evidence_file_present_count"))
+        ),
+        "strict_blind_evidence_file_missing_count": (
+            _int(batch_runway.get("file_missing_count"))
+            if "file_missing_count" in batch_runway
+            else _int(strict_cycle.get("evidence_file_missing_count"))
+        ),
+        "strict_blind_operator_action_count": (
+            _int(batch_runway.get("operator_ready_count")) + _int(batch_runway.get("operator_open_count"))
+            if "operator_open_count" in batch_runway
+            else _int(strict_cycle.get("operator_action_board_action_count"))
+        ),
+        "strict_blind_operator_open_value_count": (
+            _int(batch_runway.get("operator_open_count"))
+            if "operator_open_count" in batch_runway
+            else _int(strict_cycle.get("operator_action_board_open_value_count"))
+        ),
+        "strict_blind_batch_closure_runway_status": _text(batch_runway.get("batch_closure_runway_status")),
+        "strict_blind_batch_source_gate_blocked_count": _int(batch_runway.get("source_gate_blocked_count")),
+        "strict_blind_batch_evidence_file_blocked_count": _int(batch_runway.get("evidence_file_blocked_count")),
+        "strict_blind_batch_operator_value_blocked_count": _int(batch_runway.get("operator_value_blocked_count")),
+        "strict_blind_batch_intake_preflight_blocked_count": _int(
+            batch_runway.get("intake_preflight_blocked_count")
+        ),
         "metric_surface_ready_row_count": metric_ready,
         "metric_surface_row_count": metric_total,
         "competitive_readiness_status": _text(competitive_readiness.get("readiness_gate_status")),
@@ -360,6 +409,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- strict-blind slots ready/total: `{summary['strict_blind_ready_slot_count']}/{summary['strict_blind_slot_count']}`",
         f"- strict-blind evidence present/missing: `{summary['strict_blind_evidence_file_present_count']}/{summary['strict_blind_evidence_file_missing_count']}`",
         f"- strict-blind operator actions/open-values: `{summary['strict_blind_operator_action_count']}/{summary['strict_blind_operator_open_value_count']}`",
+        f"- strict-blind batch closure runway: `{summary['strict_blind_batch_closure_runway_status'] or '-'}` blocked source/evidence/operator/intake `{summary['strict_blind_batch_source_gate_blocked_count']}/{summary['strict_blind_batch_evidence_file_blocked_count']}/{summary['strict_blind_batch_operator_value_blocked_count']}/{summary['strict_blind_batch_intake_preflight_blocked_count']}`",
         f"- metric surface rows ready/total: `{summary['metric_surface_ready_row_count']}/{summary['metric_surface_row_count']}`",
         f"- competitive readiness: `{summary['competitive_readiness_status'] or '-'}` pass/total `{summary['competitive_readiness_pass_count']}/{summary['competitive_readiness_gate_count']}`",
         f"- target identity clearance: `{summary['target_identity_clearance_status'] or '-'}` stages `{summary['target_identity_clearance_ready_stage_count']}/{summary['target_identity_clearance_stage_count']}`",
@@ -401,6 +451,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--win-tier-metric-surface-contract-json",
         default=DEFAULT_WIN_TIER_METRIC_SURFACE_CONTRACT_JSON,
+    )
+    parser.add_argument(
+        "--strict-blind-batch-closure-runway-json",
+        default=DEFAULT_STRICT_BLIND_BATCH_CLOSURE_RUNWAY_JSON,
     )
     parser.add_argument(
         "--strict-blind-replacement-cycle-json",

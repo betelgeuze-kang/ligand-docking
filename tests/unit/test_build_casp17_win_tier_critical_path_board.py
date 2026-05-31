@@ -14,6 +14,7 @@ def test_build_casp17_win_tier_critical_path_board_marks_strict_blind_blocker(tm
     rna_coverage = tmp_path / "rna_coverage.json"
     protein_coverage = tmp_path / "protein_coverage.json"
     metric_contract = tmp_path / "metric_contract.json"
+    batch_runway = tmp_path / "batch_runway.json"
     strict_cycle = tmp_path / "strict_cycle.json"
     first_slot = tmp_path / "first_slot.json"
     readiness = tmp_path / "readiness.json"
@@ -75,6 +76,29 @@ def test_build_casp17_win_tier_critical_path_board_marks_strict_blind_blocker(tm
                 "first_blocked_benchmark_id": "hist_REQUIRED_MONOMER_001",
                 "first_blocked_metric": "GDT_TS",
                 "next_action": "fill strict-blind prediction/native/no-leak evidence",
+            }
+        },
+    )
+    _write_json(
+        batch_runway,
+        {
+            "summary": {
+                "batch_closure_runway_status": "blocked_on_first_slot_internal_prediction_source",
+                "slot_count": 40,
+                "ready_slot_count": 0,
+                "blocked_slot_count": 40,
+                "source_gate_blocked_count": 1,
+                "evidence_file_blocked_count": 39,
+                "operator_value_blocked_count": 0,
+                "intake_preflight_blocked_count": 0,
+                "file_present_count": 0,
+                "file_missing_count": 240,
+                "operator_ready_count": 0,
+                "operator_open_count": 400,
+                "first_blocked_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "first_blocking_stage": "internal_prediction_source_gate",
+                "first_blocker": "internal_source_id_missing_or_external",
+                "first_next_action": "set source_id to an internal pre-native prediction source",
             }
         },
     )
@@ -146,6 +170,8 @@ def test_build_casp17_win_tier_critical_path_board_marks_strict_blind_blocker(tm
             str(protein_coverage),
             "--win-tier-metric-surface-contract-json",
             str(metric_contract),
+            "--strict-blind-batch-closure-runway-json",
+            str(batch_runway),
             "--strict-blind-replacement-cycle-json",
             str(strict_cycle),
             "--strict-blind-first-slot-kit-json",
@@ -169,8 +195,22 @@ def test_build_casp17_win_tier_critical_path_board_marks_strict_blind_blocker(tm
     assert payload["summary"]["external_model_selection_top5_count"] == 75
     assert payload["summary"]["strict_blind_evidence_file_missing_count"] == 240
     assert payload["summary"]["strict_blind_operator_open_value_count"] == 400
-    assert payload["summary"]["first_blocked_stage_id"] == "win_tier_metric_surface"
+    assert payload["summary"]["stage_count"] == 9
+    assert payload["summary"]["stage_ready_count"] == 3
+    assert payload["summary"]["stage_blocked_count"] == 6
+    assert payload["summary"]["first_blocked_stage_id"] == "strict_blind_batch_closure_runway"
+    assert payload["summary"]["first_blocker"] == "internal_prediction_source_gate"
+    assert payload["summary"]["strict_blind_batch_closure_runway_status"] == (
+        "blocked_on_first_slot_internal_prediction_source"
+    )
+    assert payload["summary"]["strict_blind_batch_source_gate_blocked_count"] == 1
+    assert payload["summary"]["strict_blind_batch_evidence_file_blocked_count"] == 39
     assert "strict-blind slots ready/total: `0/40`" in board_md
+    assert (
+        "strict-blind batch closure runway: `blocked_on_first_slot_internal_prediction_source`"
+        in board_md
+    )
+    assert "blocked source/evidence/operator/intake `1/39/0/0`" in board_md
     assert "external review-only model1/top5 picks: `15/75`" in board_md
 
 

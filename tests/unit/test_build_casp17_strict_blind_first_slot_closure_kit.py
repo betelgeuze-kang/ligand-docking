@@ -70,12 +70,23 @@ def test_first_slot_closure_kit_surfaces_first_gate_blocker(tmp_path):
             "summary": {
                 "internal_prediction_source_gate_status": "awaiting_internal_prediction_source_gate_fields",
                 "required_benchmark_id": benchmark_id,
+                "manifest_csv": "gate/internal_prediction_source_manifest_template.csv",
                 "pass_count": 3,
                 "blocked_count": 13,
                 "check_count": 16,
+                "first_blocked_check": "source_id_internal",
                 "first_blocker": "internal_source_id_missing_or_external",
                 "first_next_action": "set source_id",
-            }
+            },
+            "rows": [
+                {
+                    "check_id": "source_id_internal",
+                    "check_status": "blocked",
+                    "actual_value": "",
+                    "blocker": "internal_source_id_missing_or_external",
+                    "next_action": "set source_id",
+                }
+            ],
         },
     )
     _write_json(
@@ -181,7 +192,10 @@ def test_first_slot_closure_kit_surfaces_first_gate_blocker(tmp_path):
     assert payload["summary"]["first_slot_closure_kit_status"] == "blocked_on_internal_prediction_source_gate"
     assert payload["summary"]["step_blocked_count"] == 5
     assert payload["summary"]["first_blocker"] == "internal_source_id_missing_or_external"
-    assert payload["summary"]["fill_item_count"] == 3
+    assert payload["summary"]["source_gate_fill_count"] == 1
+    assert payload["summary"]["fill_item_count"] == 4
+    assert payload["fill_rows"][0]["fill_kind"] == "source_gate_manifest_value"
+    assert payload["fill_rows"][0]["field_name"] == "source_id"
     assert (tmp_path / "kit" / benchmark_id / "fill_order.csv").exists()
 
 

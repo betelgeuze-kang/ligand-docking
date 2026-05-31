@@ -160,6 +160,9 @@ DEFAULT_STRICT_BLIND_INTERNAL_PREDICTION_SOURCE_AUDIT_JSON = (
 DEFAULT_STRICT_BLIND_INTERNAL_PREDICTION_SOURCE_GATE_JSON = (
     "casp17/casp17_strict_blind_internal_prediction_source_gate_current.json"
 )
+DEFAULT_STRICT_BLIND_SOURCE_GATE_FIELD_BOARD_JSON = (
+    "casp17/casp17_strict_blind_source_gate_field_board_current.json"
+)
 DEFAULT_STRICT_BLIND_INTERNAL_PREDICTION_SOURCE_APPLY_PLAN_JSON = (
     "casp17/casp17_strict_blind_internal_prediction_source_apply_plan_current.json"
 )
@@ -554,6 +557,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     strict_blind_internal_prediction_source_gate_payload = _read_json(
         args.strict_blind_internal_prediction_source_gate_json
     )
+    strict_blind_source_gate_field_board_payload = _read_json(
+        args.strict_blind_source_gate_field_board_json
+    )
     strict_blind_internal_prediction_source_apply_plan_payload = _read_json(
         args.strict_blind_internal_prediction_source_apply_plan_json
     )
@@ -835,6 +841,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     strict_blind_internal_prediction_source_gate_summary = _summary(
         strict_blind_internal_prediction_source_gate_payload
+    )
+    strict_blind_source_gate_field_board_summary = _summary(
+        strict_blind_source_gate_field_board_payload
     )
     strict_blind_internal_prediction_source_apply_plan_summary = _summary(
         strict_blind_internal_prediction_source_apply_plan_payload
@@ -3662,6 +3671,38 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             ),
         ),
         _artifact_row(
+            "strict_blind_source_gate_field_board",
+            "First strict-blind slot source-gate unique field action board",
+            _text(strict_blind_source_gate_field_board_summary.get("source_gate_field_board_status")),
+            args.strict_blind_source_gate_field_board_json,
+            ready_count=0,
+            blocked_count=_int(strict_blind_source_gate_field_board_summary.get("field_action_count")),
+            total_count=_int(strict_blind_source_gate_field_board_summary.get("field_action_count")),
+            next_action=_text(strict_blind_source_gate_field_board_summary.get("first_next_action")),
+            blockers=(
+                "checks:"
+                + str(strict_blind_source_gate_field_board_summary.get("source_gate_pass_count", ""))
+                + "/"
+                + str(strict_blind_source_gate_field_board_summary.get("source_gate_blocked_count", ""))
+                + "/"
+                + str(strict_blind_source_gate_field_board_summary.get("source_gate_check_count", ""))
+                + ",actions:"
+                + str(strict_blind_source_gate_field_board_summary.get("manifest_value_action_count", ""))
+                + "/"
+                + str(strict_blind_source_gate_field_board_summary.get("file_action_count", ""))
+                + "/"
+                + str(strict_blind_source_gate_field_board_summary.get("manifest_file_action_count", ""))
+                + "/"
+                + str(strict_blind_source_gate_field_board_summary.get("field_action_count", ""))
+                + ",covered:"
+                + str(strict_blind_source_gate_field_board_summary.get("blocked_check_covered_count", ""))
+                + ",first:"
+                + str(strict_blind_source_gate_field_board_summary.get("first_field_key", ""))
+                + "/"
+                + str(strict_blind_source_gate_field_board_summary.get("first_blockers", ""))
+            ),
+        ),
+        _artifact_row(
             "strict_blind_internal_prediction_source_apply_plan",
             "First strict-blind slot internal prediction source apply plan",
             _text(
@@ -3714,6 +3755,8 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + "/"
                 + str(strict_blind_first_slot_closure_kit_summary.get("intake_preflight_status", ""))
                 + ",fills:"
+                + str(strict_blind_first_slot_closure_kit_summary.get("source_gate_fill_count", ""))
+                + "/"
                 + str(strict_blind_first_slot_closure_kit_summary.get("file_fill_count", ""))
                 + "/"
                 + str(strict_blind_first_slot_closure_kit_summary.get("operator_fill_count", ""))
@@ -8227,6 +8270,42 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "strict_blind_internal_prediction_source_gate_first_blocker": _text(
             strict_blind_internal_prediction_source_gate_summary.get("first_blocker")
         ),
+        "strict_blind_source_gate_field_board_status": _text(
+            strict_blind_source_gate_field_board_summary.get("source_gate_field_board_status")
+        ),
+        "strict_blind_source_gate_field_board_required_benchmark_id": _text(
+            strict_blind_source_gate_field_board_summary.get("required_benchmark_id")
+        ),
+        "strict_blind_source_gate_field_board_required_target_id": _text(
+            strict_blind_source_gate_field_board_summary.get("required_target_id")
+        ),
+        "strict_blind_source_gate_field_board_required_scope": _text(
+            strict_blind_source_gate_field_board_summary.get("required_scope")
+        ),
+        "strict_blind_source_gate_field_board_field_action_count": _int(
+            strict_blind_source_gate_field_board_summary.get("field_action_count")
+        ),
+        "strict_blind_source_gate_field_board_manifest_value_action_count": _int(
+            strict_blind_source_gate_field_board_summary.get("manifest_value_action_count")
+        ),
+        "strict_blind_source_gate_field_board_file_action_count": _int(
+            strict_blind_source_gate_field_board_summary.get("file_action_count")
+        ),
+        "strict_blind_source_gate_field_board_manifest_file_action_count": _int(
+            strict_blind_source_gate_field_board_summary.get("manifest_file_action_count")
+        ),
+        "strict_blind_source_gate_field_board_blocked_check_covered_count": _int(
+            strict_blind_source_gate_field_board_summary.get("blocked_check_covered_count")
+        ),
+        "strict_blind_source_gate_field_board_first_field_key": _text(
+            strict_blind_source_gate_field_board_summary.get("first_field_key")
+        ),
+        "strict_blind_source_gate_field_board_first_blockers": _text(
+            strict_blind_source_gate_field_board_summary.get("first_blockers")
+        ),
+        "strict_blind_source_gate_field_board_dir": _text(
+            strict_blind_source_gate_field_board_summary.get("board_dir")
+        ),
         "strict_blind_internal_prediction_source_apply_plan_status": _text(
             strict_blind_internal_prediction_source_apply_plan_summary.get(
                 "internal_prediction_source_apply_plan_status"
@@ -8294,6 +8373,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         ),
         "strict_blind_first_slot_closure_kit_step_count": _int(
             strict_blind_first_slot_closure_kit_summary.get("step_count")
+        ),
+        "strict_blind_first_slot_closure_kit_source_gate_fill_count": _int(
+            strict_blind_first_slot_closure_kit_summary.get("source_gate_fill_count")
         ),
         "strict_blind_first_slot_closure_kit_file_fill_count": _int(
             strict_blind_first_slot_closure_kit_summary.get("file_fill_count")
@@ -10108,8 +10190,9 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- strict-blind first slot source bridge: `{summary['strict_blind_first_slot_source_bridge_status'] or '-'}` required `{summary['strict_blind_first_slot_source_bridge_required_benchmark_id'] or '-'}` `{summary['strict_blind_first_slot_source_bridge_required_target_id'] or '-'}` `{summary['strict_blind_first_slot_source_bridge_required_scope'] or '-'}` official ready/total `{summary['strict_blind_first_slot_source_bridge_official_ready_count']}/{summary['strict_blind_first_slot_source_bridge_official_candidate_count']}` native-bridge `{summary['strict_blind_first_slot_source_bridge_native_ready_count']}` baseline-only/strict-blocked `{summary['strict_blind_first_slot_source_bridge_baseline_only_count']}/{summary['strict_blind_first_slot_source_bridge_strict_blocked_count']}` operator-only/internal-blocked `{summary['strict_blind_first_slot_source_bridge_operator_only_count']}/{summary['strict_blind_first_slot_source_bridge_internal_prediction_blocked_count']}` auto-apply `{summary['strict_blind_first_slot_source_bridge_auto_apply_count']}` first `{summary['strict_blind_first_slot_source_bridge_first_candidate_competition'] or '-'}` `{summary['strict_blind_first_slot_source_bridge_first_candidate_target_id'] or '-'}` `{summary['strict_blind_first_slot_source_bridge_first_candidate_native_pdb_code'] or '-'}` blocker `{summary['strict_blind_first_slot_source_bridge_first_blocker'] or '-'}` folder `{summary['strict_blind_first_slot_source_bridge_bridge_folder'] or '-'}`",
         f"- strict-blind internal prediction source audit: `{summary['strict_blind_internal_prediction_source_audit_status'] or '-'}` required `{summary['strict_blind_internal_prediction_source_audit_required_benchmark_id'] or '-'}` `{summary['strict_blind_internal_prediction_source_audit_required_target_id'] or '-'}` `{summary['strict_blind_internal_prediction_source_audit_required_scope'] or '-'}` first-field `{summary['strict_blind_internal_prediction_source_audit_first_open_field'] or '-'}` local eligible/total `{summary['strict_blind_internal_prediction_source_audit_local_eligible_count']}/{summary['strict_blind_internal_prediction_source_audit_local_candidate_count']}` routes allowed/total `{summary['strict_blind_internal_prediction_source_audit_source_route_allowed_count']}/{summary['strict_blind_internal_prediction_source_audit_source_route_count']}` official blocked/total `{summary['strict_blind_internal_prediction_source_audit_official_blocked_count']}/{summary['strict_blind_internal_prediction_source_audit_official_baseline_count']}` native/internal-blocked `{summary['strict_blind_internal_prediction_source_audit_native_ready_count']}/{summary['strict_blind_internal_prediction_source_audit_internal_blocked_count']}` allowed/template `{summary['strict_blind_internal_prediction_source_audit_allowed_internal_source_count']}/{summary['strict_blind_internal_prediction_source_audit_template_count']}` blocker `{summary['strict_blind_internal_prediction_source_audit_first_blocker'] or '-'}` template `{summary['strict_blind_internal_prediction_source_audit_manifest_template'] or '-'}`",
         f"- strict-blind internal prediction source gate: `{summary['strict_blind_internal_prediction_source_gate_status'] or '-'}` required `{summary['strict_blind_internal_prediction_source_gate_required_benchmark_id'] or '-'}` `{summary['strict_blind_internal_prediction_source_gate_required_target_id'] or '-'}` `{summary['strict_blind_internal_prediction_source_gate_required_scope'] or '-'}` manifest rows `{summary['strict_blind_internal_prediction_source_gate_manifest_row_count']}` checks pass/blocked/total `{summary['strict_blind_internal_prediction_source_gate_pass_count']}/{summary['strict_blind_internal_prediction_source_gate_blocked_count']}/{summary['strict_blind_internal_prediction_source_gate_check_count']}` source `{summary['strict_blind_internal_prediction_source_gate_source_id'] or '-'}` prediction/dropzone `{summary['strict_blind_internal_prediction_source_gate_prediction_pdb'] or '-'}` `{summary['strict_blind_internal_prediction_source_gate_prediction_dropzone'] or '-'}` first `{summary['strict_blind_internal_prediction_source_gate_first_blocked_check'] or '-'}` `{summary['strict_blind_internal_prediction_source_gate_first_blocker'] or '-'}` manifest `{summary['strict_blind_internal_prediction_source_gate_manifest_csv'] or '-'}`",
+        f"- strict-blind source gate field board: `{summary['strict_blind_source_gate_field_board_status'] or '-'}` required `{summary['strict_blind_source_gate_field_board_required_benchmark_id'] or '-'}` `{summary['strict_blind_source_gate_field_board_required_target_id'] or '-'}` `{summary['strict_blind_source_gate_field_board_required_scope'] or '-'}` actions manifest/file/manifest-file/total `{summary['strict_blind_source_gate_field_board_manifest_value_action_count']}/{summary['strict_blind_source_gate_field_board_file_action_count']}/{summary['strict_blind_source_gate_field_board_manifest_file_action_count']}/{summary['strict_blind_source_gate_field_board_field_action_count']}` blocked checks covered `{summary['strict_blind_source_gate_field_board_blocked_check_covered_count']}` first `{summary['strict_blind_source_gate_field_board_first_field_key'] or '-'}` `{summary['strict_blind_source_gate_field_board_first_blockers'] or '-'}` folder `{summary['strict_blind_source_gate_field_board_dir'] or '-'}`",
         f"- strict-blind internal prediction source apply plan: `{summary['strict_blind_internal_prediction_source_apply_plan_status'] or '-'}` required `{summary['strict_blind_internal_prediction_source_apply_plan_required_benchmark_id'] or '-'}` `{summary['strict_blind_internal_prediction_source_apply_plan_required_target_id'] or '-'}` `{summary['strict_blind_internal_prediction_source_apply_plan_required_scope'] or '-'}` gate `{summary['strict_blind_internal_prediction_source_apply_plan_gate_status'] or '-'}` actions ready/blocked/total `{summary['strict_blind_internal_prediction_source_apply_plan_ready_action_count']}/{summary['strict_blind_internal_prediction_source_apply_plan_blocked_action_count']}/{summary['strict_blind_internal_prediction_source_apply_plan_action_count']}` file/operator/supp `{summary['strict_blind_internal_prediction_source_apply_plan_file_action_count']}/{summary['strict_blind_internal_prediction_source_apply_plan_operator_value_action_count']}/{summary['strict_blind_internal_prediction_source_apply_plan_supplemental_action_count']}` prediction `{summary['strict_blind_internal_prediction_source_apply_plan_prediction_source'] or '-'}` `->{summary['strict_blind_internal_prediction_source_apply_plan_prediction_destination'] or '-'}` first `{summary['strict_blind_internal_prediction_source_apply_plan_first_blocked_action_id'] or '-'}` `{summary['strict_blind_internal_prediction_source_apply_plan_first_blocker'] or '-'}`",
-        f"- strict-blind first slot closure kit: `{summary['strict_blind_first_slot_closure_kit_status'] or '-'}` required `{summary['strict_blind_first_slot_closure_kit_required_benchmark_id'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_required_target_id'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_required_scope'] or '-'}` steps ready/blocked/total `{summary['strict_blind_first_slot_closure_kit_step_ready_count']}/{summary['strict_blind_first_slot_closure_kit_step_blocked_count']}/{summary['strict_blind_first_slot_closure_kit_step_count']}` fills file/operator/total `{summary['strict_blind_first_slot_closure_kit_file_fill_count']}/{summary['strict_blind_first_slot_closure_kit_operator_fill_count']}/{summary['strict_blind_first_slot_closure_kit_fill_item_count']}` source/apply/dropzone/operator/intake `{summary['strict_blind_first_slot_closure_kit_source_gate_status'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_apply_plan_status'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_dropzone_status'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_operator_gate_status'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_intake_preflight_status'] or '-'}` first `{summary['strict_blind_first_slot_closure_kit_first_blocked_step'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_first_blocker'] or '-'}` folder `{summary['strict_blind_first_slot_closure_kit_folder'] or '-'}`",
+        f"- strict-blind first slot closure kit: `{summary['strict_blind_first_slot_closure_kit_status'] or '-'}` required `{summary['strict_blind_first_slot_closure_kit_required_benchmark_id'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_required_target_id'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_required_scope'] or '-'}` steps ready/blocked/total `{summary['strict_blind_first_slot_closure_kit_step_ready_count']}/{summary['strict_blind_first_slot_closure_kit_step_blocked_count']}/{summary['strict_blind_first_slot_closure_kit_step_count']}` fills source-gate/file/operator/total `{summary['strict_blind_first_slot_closure_kit_source_gate_fill_count']}/{summary['strict_blind_first_slot_closure_kit_file_fill_count']}/{summary['strict_blind_first_slot_closure_kit_operator_fill_count']}/{summary['strict_blind_first_slot_closure_kit_fill_item_count']}` source/apply/dropzone/operator/intake `{summary['strict_blind_first_slot_closure_kit_source_gate_status'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_apply_plan_status'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_dropzone_status'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_operator_gate_status'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_intake_preflight_status'] or '-'}` first `{summary['strict_blind_first_slot_closure_kit_first_blocked_step'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_first_blocker'] or '-'}` folder `{summary['strict_blind_first_slot_closure_kit_folder'] or '-'}`",
         f"- strict-blind batch closure runway: `{summary['strict_blind_batch_closure_runway_status'] or '-'}` slots ready/blocked/total `{summary['strict_blind_batch_closure_runway_ready_slot_count']}/{summary['strict_blind_batch_closure_runway_blocked_slot_count']}/{summary['strict_blind_batch_closure_runway_slot_count']}` blocked source/evidence/operator/intake `{summary['strict_blind_batch_closure_runway_source_gate_blocked_count']}/{summary['strict_blind_batch_closure_runway_evidence_blocked_count']}/{summary['strict_blind_batch_closure_runway_operator_blocked_count']}/{summary['strict_blind_batch_closure_runway_intake_blocked_count']}` files present/missing `{summary['strict_blind_batch_closure_runway_file_present_count']}/{summary['strict_blind_batch_closure_runway_file_missing_count']}` operators ready/open `{summary['strict_blind_batch_closure_runway_operator_ready_count']}/{summary['strict_blind_batch_closure_runway_operator_open_count']}` intake filled/missing `{summary['strict_blind_batch_closure_runway_intake_filled_count']}/{summary['strict_blind_batch_closure_runway_intake_missing_count']}` first `{summary['strict_blind_batch_closure_runway_first_blocked_rank']}` `{summary['strict_blind_batch_closure_runway_first_blocked_benchmark_id'] or '-'}` `{summary['strict_blind_batch_closure_runway_first_stage'] or '-'}` `{summary['strict_blind_batch_closure_runway_first_blocker'] or '-'}`",
         f"- historical seed ablation candidates: `{summary['historical_seed_ablation_candidate_manifests_status'] or '-'}` seeds/manifests/candidate-rows `{summary['historical_seed_ablation_candidate_manifests_seed_count']}/{summary['historical_seed_ablation_candidate_manifests_manifest_count']}/{summary['historical_seed_ablation_candidate_manifests_candidate_row_count']}` selected/native `{summary['historical_seed_ablation_candidate_manifests_selected_present_count']}/{summary['historical_seed_ablation_candidate_manifests_native_present_count']}` baseline/gaps `{summary['historical_seed_ablation_candidate_manifests_baseline_count']}/{summary['historical_seed_ablation_candidate_manifests_layer_gap_count']}` ready/review/core-blocked `{summary['historical_seed_ablation_candidate_manifests_ready_count']}/{summary['historical_seed_ablation_candidate_manifests_operator_review_count']}/{summary['historical_seed_ablation_candidate_manifests_core_blocked_count']}` first `{summary['historical_seed_ablation_candidate_manifests_first_target_id'] or '-'}` `{summary['historical_seed_ablation_candidate_manifests_first_next_action'] or '-'}`",
         f"- historical seed ablation gap repair: `{summary['historical_seed_ablation_gap_repair_plan_status'] or '-'}` seeds/repair-csvs `{summary['historical_seed_ablation_gap_repair_plan_seed_count']}/{summary['historical_seed_ablation_gap_repair_plan_repair_csv_count']}` real/missing-real/top5-decoys/top5-copy `{summary['historical_seed_ablation_gap_repair_plan_real_count']}/{summary['historical_seed_ablation_gap_repair_plan_missing_real_count']}/{summary['historical_seed_ablation_gap_repair_plan_top5_decoy_count']}/{summary['historical_seed_ablation_gap_repair_plan_top5_copy_count']}` ready/gap/core-blocked `{summary['historical_seed_ablation_gap_repair_plan_ready_count']}/{summary['historical_seed_ablation_gap_repair_plan_gap_count']}/{summary['historical_seed_ablation_gap_repair_plan_core_blocked_count']}` first `{summary['historical_seed_ablation_gap_repair_plan_first_target_id'] or '-'}` `{summary['historical_seed_ablation_gap_repair_plan_first_next_action'] or '-'}`",
@@ -10406,6 +10489,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--strict-blind-internal-prediction-source-gate-json",
         default=DEFAULT_STRICT_BLIND_INTERNAL_PREDICTION_SOURCE_GATE_JSON,
+    )
+    parser.add_argument(
+        "--strict-blind-source-gate-field-board-json",
+        default=DEFAULT_STRICT_BLIND_SOURCE_GATE_FIELD_BOARD_JSON,
     )
     parser.add_argument(
         "--strict-blind-internal-prediction-source-apply-plan-json",

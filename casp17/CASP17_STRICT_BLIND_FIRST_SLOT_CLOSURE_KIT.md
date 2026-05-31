@@ -1,10 +1,10 @@
 # CASP17 Strict-Blind First Slot Closure Kit
 
-- generated: `2026-06-01T02:29:30+09:00`
+- generated: `2026-06-01T02:42:40+09:00`
 - status: `blocked_on_internal_prediction_source_gate`
 - required benchmark/target/scope: `hist_REQUIRED_MONOMER_001` `REQUIRED_MONOMER_001` `monomer`
 - steps ready/blocked/total: `0/5/5`
-- fill items file/operator/total: `12/20/32`
+- fill items source-gate/file/operator/total: `13/12/20/45`
 - source/apply/dropzone/operator/intake: `awaiting_internal_prediction_source_gate_fields` `blocked_until_internal_prediction_source_gate_passes` `awaiting_strict_blind_evidence_files` `awaiting_operator_values` `awaiting_operator_input`
 - first blocker: `internal_prediction_source_gate` `internal_source_id_missing_or_external`
 - kit folder: `casp17/strict_blind_first_slot_closure_kit/hist_REQUIRED_MONOMER_001`

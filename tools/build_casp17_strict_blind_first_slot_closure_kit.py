@@ -48,6 +48,30 @@ FILL_COLUMNS = [
     "current_status",
     "next_action",
 ]
+SOURCE_GATE_FIELD_BY_CHECK = {
+    "manifest_exists": "internal_prediction_source_manifest",
+    "source_id_internal": "source_id",
+    "target_id_present": "target_id",
+    "scope_matches": "scope",
+    "manifest_prediction_pdb_present": "prediction_pdb",
+    "manifest_prediction_pdb_exists": "prediction_pdb",
+    "dropzone_prediction_pdb_exists": "prediction_pdb_dropzone",
+    "prediction_pdb_has_atom_records": "prediction_pdb",
+    "prediction_created_at_present": "prediction_created_at",
+    "native_release_date_present": "native_release_date",
+    "prediction_before_native": "prediction_created_at/native_release_date",
+    "native_authority_ref_present": "native_authority_ref",
+    "creation_evidence_ref_present": "creation_evidence_ref",
+    "no_leak_evidence_ref_present": "no_leak_evidence_ref",
+    "method_summary_present": "method_summary",
+    "operator_clearance_present": "operator_clearance",
+}
+SOURCE_GATE_FILE_CHECKS = {
+    "manifest_prediction_pdb_present",
+    "manifest_prediction_pdb_exists",
+    "dropzone_prediction_pdb_exists",
+    "prediction_pdb_has_atom_records",
+}
 CLAIM_BOUNDARY = (
     "Local CASP17 first-slot closure kit only. It gathers existing source gate, apply-plan, evidence-dropzone, "
     "operator-value, and intake-preflight blockers for the first strict-blind historical slot. It does not create "
@@ -174,13 +198,55 @@ def _step(
     }
 
 
-def _fill_rows(dropzone_row: dict[str, Any], operator_values_csv: str, apply_rows: list[dict[str, Any]]) -> list[dict[str, str]]:
+def _source_gate_fill_rows(source_gate: dict[str, Any], source_gate_rows: list[dict[str, Any]]) -> list[dict[str, str]]:
+    manifest_csv = _text(source_gate.get("manifest_csv"))
+    rows: list[dict[str, str]] = []
+    blocked_rows = [row for row in source_gate_rows if _text(row.get("check_status")) != "pass"]
+    if not blocked_rows and _text(source_gate.get("first_blocker")):
+        blocked_rows = [
+            {
+                "check_id": _text(source_gate.get("first_blocked_check")) or "source_gate",
+                "blocker": _text(source_gate.get("first_blocker")),
+                "actual_value": "",
+                "next_action": _text(source_gate.get("first_next_action")),
+            }
+        ]
+    for index, row in enumerate(blocked_rows, start=1):
+        check_id = _text(row.get("check_id"))
+        fill_kind = "source_gate_file" if check_id in SOURCE_GATE_FILE_CHECKS else "source_gate_manifest_value"
+        field_name = SOURCE_GATE_FIELD_BY_CHECK.get(check_id, check_id)
+        destination = _text(row.get("actual_value"))
+        if check_id == "dropzone_prediction_pdb_exists":
+            destination = _text(source_gate.get("prediction_dropzone")) or destination
+        rows.append(
+            {
+                "fill_id": f"source_gate_fill_{index:03d}",
+                "fill_kind": fill_kind,
+                "field_name": field_name,
+                "source_or_template": manifest_csv,
+                "destination": destination,
+                "current_status": _text(row.get("blocker")) or _text(row.get("check_status")),
+                "next_action": _text(row.get("next_action")),
+            }
+        )
+    return rows
+
+
+def _fill_rows(
+    source_gate: dict[str, Any],
+    source_gate_rows: list[dict[str, Any]],
+    dropzone_row: dict[str, Any],
+    operator_values_csv: str,
+    apply_rows: list[dict[str, Any]],
+) -> list[dict[str, str]]:
     fills: list[dict[str, str]] = []
+    fills.extend(_source_gate_fill_rows(source_gate, source_gate_rows))
+    base = len(fills)
     patch_rows = _read_csv_rows(_text(dropzone_row.get("patch_preview_csv")))
     for index, row in enumerate(patch_rows, start=1):
         fills.append(
             {
-                "fill_id": f"first_slot_fill_{index:03d}",
+                "fill_id": f"first_slot_fill_{base + index:03d}",
                 "fill_kind": _text(row.get("field_kind")),
                 "field_name": _text(row.get("field_name")),
                 "source_or_template": _text(row.get("source_path")) or operator_values_csv,
@@ -296,7 +362,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             _text(intake_row.get("next_action")),
         ),
     ]
-    fill_rows = _fill_rows(dropzone_row, operator_values_csv, _rows(apply_plan_payload))
+    fill_rows = _fill_rows(source_gate, _rows(source_gate_payload), dropzone_row, operator_values_csv, _rows(apply_plan_payload))
     first_blocked = next((row for row in steps if _int(row["blocked_count"]) > 0), {})
     summary = {
         "packet_type": "casp17_strict_blind_first_slot_closure_kit",
@@ -309,6 +375,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "step_ready_count": sum(1 for row in steps if _int(row["blocked_count"]) == 0 and _int(row["total_count"]) > 0),
         "step_blocked_count": sum(1 for row in steps if _int(row["blocked_count"]) > 0),
         "fill_item_count": len(fill_rows),
+        "source_gate_fill_count": sum(1 for row in fill_rows if row["fill_kind"].startswith("source_gate_")),
         "file_fill_count": sum(1 for row in fill_rows if row["fill_kind"] in {"file", "file_copy", "supplemental_evidence"}),
         "operator_fill_count": sum(1 for row in fill_rows if row["fill_kind"] == "operator_value"),
         "source_gate_status": _text(source_gate.get("internal_prediction_source_gate_status")),
@@ -338,7 +405,7 @@ def _write_kit_folder(args: argparse.Namespace, payload: dict[str, Any]) -> None
         f"- status: `{summary['first_slot_closure_kit_status']}`",
         f"- required benchmark/target/scope: `{summary['required_benchmark_id']}` `{summary['required_target_id']}` `{summary['required_scope']}`",
         f"- steps ready/blocked/total: `{summary['step_ready_count']}/{summary['step_blocked_count']}/{summary['step_count']}`",
-        f"- fill items file/operator/total: `{summary['file_fill_count']}/{summary['operator_fill_count']}/{summary['fill_item_count']}`",
+        f"- fill items source-gate/file/operator/total: `{summary['source_gate_fill_count']}/{summary['file_fill_count']}/{summary['operator_fill_count']}/{summary['fill_item_count']}`",
         f"- first blocker: `{summary['first_blocked_step'] or '-'}` `{summary['first_blocker'] or '-'}`",
         f"- next action: {summary['first_next_action'] or '-'}",
         "",
@@ -357,7 +424,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- status: `{summary['first_slot_closure_kit_status']}`",
         f"- required benchmark/target/scope: `{summary['required_benchmark_id']}` `{summary['required_target_id']}` `{summary['required_scope']}`",
         f"- steps ready/blocked/total: `{summary['step_ready_count']}/{summary['step_blocked_count']}/{summary['step_count']}`",
-        f"- fill items file/operator/total: `{summary['file_fill_count']}/{summary['operator_fill_count']}/{summary['fill_item_count']}`",
+        f"- fill items source-gate/file/operator/total: `{summary['source_gate_fill_count']}/{summary['file_fill_count']}/{summary['operator_fill_count']}/{summary['fill_item_count']}`",
         f"- source/apply/dropzone/operator/intake: `{summary['source_gate_status']}` `{summary['apply_plan_status']}` `{summary['dropzone_status']}` `{summary['operator_gate_status']}` `{summary['intake_preflight_status']}`",
         f"- first blocker: `{summary['first_blocked_step'] or '-'}` `{summary['first_blocker'] or '-'}`",
         f"- kit folder: `{summary['kit_folder']}`",
