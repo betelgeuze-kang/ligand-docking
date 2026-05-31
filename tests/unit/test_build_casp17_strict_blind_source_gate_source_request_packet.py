@@ -90,9 +90,23 @@ def test_source_request_packet_turns_routes_into_operator_request_folders(tmp_pa
     route_json = tmp_path / "route.json"
     candidate_json = tmp_path / "candidate.json"
     operator_json = tmp_path / "operator.json"
+    request_dir = tmp_path / "requests"
     _write_json(route_json, _route_payload())
     _write_json(candidate_json, _candidate_payload())
     _write_json(operator_json, _operator_payload())
+    preserved_template = request_dir / "source_request_001" / "operator_source_values_template.csv"
+    preserved_template.parent.mkdir(parents=True, exist_ok=True)
+    preserved_template.write_text(
+        "\n".join(
+            [
+                "field_key,operator_value,operator_evidence_ref,required_format,source_request_note",
+                "source_id,internal_pre_native_bba5,ledger:001,,existing source",
+                "prediction_pdb,,,,",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
     args = mod.parse_args(
         [
@@ -103,7 +117,7 @@ def test_source_request_packet_turns_routes_into_operator_request_folders(tmp_pa
             "--local-candidate-json",
             str(candidate_json),
             "--request-dir",
-            str(tmp_path / "requests"),
+            str(request_dir),
             "--out-json",
             str(tmp_path / "packet.json"),
             "--out-csv",
@@ -120,13 +134,21 @@ def test_source_request_packet_turns_routes_into_operator_request_folders(tmp_pa
     assert summary["request_count"] == 2
     assert summary["pre_native_source_required_count"] == 1
     assert summary["candidate_replacement_required_count"] == 1
+    assert summary["operator_template_ready_count"] == 0
+    assert summary["operator_template_awaiting_count"] == 2
+    assert summary["operator_field_filled_count"] == 1
+    assert summary["operator_field_missing_count"] == 9
     assert summary["first_request_target_id"] == "HIST_BBA5"
+    assert summary["first_missing_operator_field"] == "prediction_pdb"
     assert payload["rows"][0]["request_kind"] == "pre_native_prediction_source_required"
+    assert payload["rows"][0]["operator_field_filled_count"] == 1
+    assert payload["rows"][0]["operator_field_missing_count"] == 4
     assert payload["rows"][0]["required_operator_fields"] == (
         "source_id,prediction_pdb,prediction_created_at,native_release_date,no_leak_evidence_ref"
     )
     assert (tmp_path / "requests" / "source_request_001" / "SOURCE_REQUEST.md").is_file()
     assert (tmp_path / "requests" / "source_request_001" / "operator_source_values_template.csv").is_file()
+    assert "internal_pre_native_bba5" in preserved_template.read_text(encoding="utf-8")
 
 
 def test_source_request_packet_blocks_missing_inputs(tmp_path):

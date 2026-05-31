@@ -1864,12 +1864,18 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "pre_native_source_required_count": 10,
                 "candidate_replacement_required_count": 7,
                 "operator_evidence_repair_required_count": 0,
+                "operator_template_ready_count": 0,
+                "operator_template_awaiting_count": 17,
+                "operator_field_count": 187,
+                "operator_field_filled_count": 0,
+                "operator_field_missing_count": 187,
                 "monomer_request_count": 10,
                 "complex_request_count": 7,
                 "first_request_id": "source_request_001",
                 "first_request_target_id": "HIST_BBA5",
                 "first_request_kind": "pre_native_prediction_source_required",
                 "first_request_blocker": "prediction_not_before_native",
+                "first_missing_operator_field": "source_id",
                 "first_next_action": (
                     "attach a prediction artifact created before the authoritative native release date"
                 ),
@@ -3421,6 +3427,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "operator ready/awaiting/total `0/11/11`" in workbench_md
     assert "strict-blind source gate source requests: `awaiting_pre_native_source_or_candidate_replacement`" in workbench_md
     assert "requests pre-native/replacement/operator-repair/total `10/7/0/17`" in workbench_md
+    assert "templates ready/awaiting `0/17`" in workbench_md
+    assert "fields filled/missing/total `0/187/187`" in workbench_md
     assert "strict-blind internal prediction source apply plan: `blocked_until_internal_prediction_source_gate_passes`" in workbench_md
     assert "actions ready/blocked/total `0/16/16`" in workbench_md
     assert "file/operator/supp `1/10/5`" in workbench_md
@@ -4083,6 +4091,11 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["strict_blind_source_gate_source_request_packet_pre_native_source_count"] == 10
     assert payload["summary"]["strict_blind_source_gate_source_request_packet_candidate_replacement_count"] == 7
     assert payload["summary"]["strict_blind_source_gate_source_request_packet_operator_repair_count"] == 0
+    assert payload["summary"]["strict_blind_source_gate_source_request_packet_operator_template_ready_count"] == 0
+    assert payload["summary"]["strict_blind_source_gate_source_request_packet_operator_template_awaiting_count"] == 17
+    assert payload["summary"]["strict_blind_source_gate_source_request_packet_operator_field_count"] == 187
+    assert payload["summary"]["strict_blind_source_gate_source_request_packet_operator_field_filled_count"] == 0
+    assert payload["summary"]["strict_blind_source_gate_source_request_packet_operator_field_missing_count"] == 187
     assert payload["summary"]["strict_blind_source_gate_source_request_packet_monomer_request_count"] == 10
     assert payload["summary"]["strict_blind_source_gate_source_request_packet_complex_request_count"] == 7
     assert payload["summary"]["strict_blind_source_gate_source_request_packet_first_request_id"] == (
@@ -4094,6 +4107,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     )
     assert payload["summary"]["strict_blind_source_gate_source_request_packet_first_blocker"] == (
         "prediction_not_before_native"
+    )
+    assert payload["summary"]["strict_blind_source_gate_source_request_packet_first_missing_operator_field"] == (
+        "source_id"
     )
     assert payload["summary"]["strict_blind_internal_prediction_source_apply_plan_status"] == (
         "blocked_until_internal_prediction_source_gate_passes"
@@ -5550,6 +5566,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["strict_blind_source_gate_source_request_packet"]["total_count"] == 17
     assert "requests:10/7/0/17" in by_id["strict_blind_source_gate_source_request_packet"]["blockers"]
     assert "scope:10/7" in by_id["strict_blind_source_gate_source_request_packet"]["blockers"]
+    assert "templates:0/17" in by_id["strict_blind_source_gate_source_request_packet"]["blockers"]
+    assert "fields:0/187/187" in by_id["strict_blind_source_gate_source_request_packet"]["blockers"]
     assert "first:source_request_001/HIST_BBA5/pre_native_prediction_source_required/prediction_not_before_native" in by_id[
         "strict_blind_source_gate_source_request_packet"
     ]["blockers"]

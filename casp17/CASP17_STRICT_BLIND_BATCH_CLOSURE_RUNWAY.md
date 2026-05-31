@@ -1,6 +1,6 @@
 # CASP17 Strict-Blind Batch Closure Runway
 
-- generated: `2026-06-01T03:30:27+09:00`
+- generated: `2026-06-01T03:36:13+09:00`
 - status: `blocked_on_first_slot_internal_prediction_source`
 - slots ready/blocked/total: `0/40/40`
 - blocked by source/evidence/operator/intake: `1/39/0/0`

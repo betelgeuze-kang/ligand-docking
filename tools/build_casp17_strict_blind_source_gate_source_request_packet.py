@@ -41,6 +41,12 @@ ROW_COLUMNS = [
     "native_authority_ref",
     "required_operator_fields",
     "request_folder",
+    "operator_template_csv",
+    "operator_template_status",
+    "operator_field_count",
+    "operator_field_filled_count",
+    "operator_field_missing_count",
+    "first_missing_operator_field",
     "next_action",
 ]
 OPERATOR_TEMPLATE_COLUMNS = [
@@ -125,6 +131,14 @@ def _write_csv(path_like: str | Path, rows: list[dict[str, Any]], fieldnames: li
         writer.writerows(rows)
 
 
+def _read_csv_rows(path_like: str | Path) -> list[dict[str, str]]:
+    path = _resolve(path_like)
+    if not path.exists() or not path.is_file():
+        return []
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        return [dict(row) for row in csv.DictReader(handle)]
+
+
 def _safe_name(value: str) -> str:
     return "".join(ch.lower() if ch.isalnum() else "_" for ch in value).strip("_") or "unknown"
 
@@ -148,6 +162,32 @@ def _operator_field_text(operator_rows: list[dict[str, Any]]) -> str:
         if field_key:
             fields.append(field_key)
     return ",".join(fields)
+
+
+def _required_fields(row: dict[str, Any]) -> list[str]:
+    return [field for field in _text(row.get("required_operator_fields")).split(",") if field]
+
+
+def _template_state(template_csv: str | Path, required_fields: list[str]) -> dict[str, Any]:
+    existing_by_field = {
+        _text(row.get("field_key")): row for row in _read_csv_rows(template_csv) if _text(row.get("field_key"))
+    }
+    filled = 0
+    first_missing = ""
+    for field in required_fields:
+        row = existing_by_field.get(field, {})
+        if _text(row.get("operator_value")):
+            filled += 1
+        elif not first_missing:
+            first_missing = field
+    missing = max(len(required_fields) - filled, 0)
+    return {
+        "operator_template_status": "ready_for_source_gate_operator_packet" if required_fields and missing == 0 else "awaiting_operator_values",
+        "operator_field_count": len(required_fields),
+        "operator_field_filled_count": filled,
+        "operator_field_missing_count": missing,
+        "first_missing_operator_field": first_missing,
+    }
 
 
 def _request_kind(route: dict[str, Any]) -> str:
@@ -189,27 +229,31 @@ def _build_rows(
         candidate = candidates.get(_text(route.get("target_id")), {})
         request_id = f"source_request_{len(rows) + 1:03d}"
         folder = _resolve(args.request_dir) / request_id
+        operator_template_csv = folder / "operator_source_values_template.csv"
+        request = {
+            "request_id": request_id,
+            "request_status": _request_status(route),
+            "request_kind": _request_kind(route),
+            "candidate_target_id": _text(route.get("target_id")),
+            "candidate_scope": _text(route.get("scope")),
+            "candidate_rank": _int(candidate.get("candidate_rank")),
+            "route_id": _text(route.get("route_id")),
+            "route_status": _text(route.get("route_status")),
+            "candidate_status": _text(route.get("candidate_status")),
+            "first_blocker": _text(route.get("first_blocker")),
+            "prediction_created_at": _text(route.get("prediction_created_at")),
+            "native_release_date": _text(route.get("native_release_date")),
+            "current_prediction_pdb": _text(candidate.get("prediction_pdb")),
+            "current_native_pdb": _text(candidate.get("native_pdb")),
+            "native_authority_ref": _text(candidate.get("native_authority_ref")),
+            "required_operator_fields": required_operator_fields,
+            "request_folder": _artifact(folder),
+            "operator_template_csv": _artifact(operator_template_csv),
+            "next_action": _next_action(route, candidate),
+        }
+        request.update(_template_state(operator_template_csv, _required_fields(request)))
         rows.append(
-            {
-                "request_id": request_id,
-                "request_status": _request_status(route),
-                "request_kind": _request_kind(route),
-                "candidate_target_id": _text(route.get("target_id")),
-                "candidate_scope": _text(route.get("scope")),
-                "candidate_rank": _int(candidate.get("candidate_rank")),
-                "route_id": _text(route.get("route_id")),
-                "route_status": _text(route.get("route_status")),
-                "candidate_status": _text(route.get("candidate_status")),
-                "first_blocker": _text(route.get("first_blocker")),
-                "prediction_created_at": _text(route.get("prediction_created_at")),
-                "native_release_date": _text(route.get("native_release_date")),
-                "current_prediction_pdb": _text(candidate.get("prediction_pdb")),
-                "current_native_pdb": _text(candidate.get("native_pdb")),
-                "native_authority_ref": _text(candidate.get("native_authority_ref")),
-                "required_operator_fields": required_operator_fields,
-                "request_folder": _artifact(folder),
-                "next_action": _next_action(route, candidate),
-            }
+            request
         )
     return rows
 
@@ -253,12 +297,22 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "operator_evidence_repair_required_count": sum(
             1 for row in rows if row["request_kind"] == "operator_evidence_repair_required"
         ),
+        "operator_template_ready_count": sum(
+            1 for row in rows if row["operator_template_status"] == "ready_for_source_gate_operator_packet"
+        ),
+        "operator_template_awaiting_count": sum(
+            1 for row in rows if row["operator_template_status"] != "ready_for_source_gate_operator_packet"
+        ),
+        "operator_field_count": sum(_int(row.get("operator_field_count")) for row in rows),
+        "operator_field_filled_count": sum(_int(row.get("operator_field_filled_count")) for row in rows),
+        "operator_field_missing_count": sum(_int(row.get("operator_field_missing_count")) for row in rows),
         "monomer_request_count": sum(1 for row in rows if row["candidate_scope"] == "monomer"),
         "complex_request_count": sum(1 for row in rows if row["candidate_scope"] == "complex"),
         "first_request_id": _text(first_open.get("request_id")),
         "first_request_target_id": _text(first_open.get("candidate_target_id")),
         "first_request_kind": _text(first_open.get("request_kind")),
         "first_request_blocker": _text(first_open.get("first_blocker")),
+        "first_missing_operator_field": _text(first_open.get("first_missing_operator_field")),
         "first_next_action": _text(first_open.get("next_action")),
         "request_dir": _artifact(args.request_dir),
         "input_blockers": ",".join(input_blockers),
@@ -267,10 +321,12 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     return {"summary": summary, "rows": rows}
 
 
-def _operator_template_rows(row: dict[str, Any]) -> list[dict[str, Any]]:
-    fields = [field for field in row["required_operator_fields"].split(",") if field]
+def _operator_template_rows(row: dict[str, Any], existing_rows: list[dict[str, str]]) -> list[dict[str, Any]]:
+    fields = _required_fields(row)
+    existing_by_field = {_text(existing.get("field_key")): existing for existing in existing_rows}
     rows: list[dict[str, Any]] = []
     for field in fields:
+        existing = existing_by_field.get(field, {})
         note = "fill after acquiring strict-blind source evidence"
         if field == "prediction_pdb":
             note = "path to acquired pre-native prediction PDB"
@@ -281,10 +337,10 @@ def _operator_template_rows(row: dict[str, Any]) -> list[dict[str, Any]]:
         rows.append(
             {
                 "field_key": field,
-                "operator_value": "",
-                "operator_evidence_ref": "",
-                "required_format": "",
-                "source_request_note": note,
+                "operator_value": _text(existing.get("operator_value")),
+                "operator_evidence_ref": _text(existing.get("operator_evidence_ref")),
+                "required_format": _text(existing.get("required_format")),
+                "source_request_note": _text(existing.get("source_request_note")) or note,
             }
         )
     return rows
@@ -294,7 +350,8 @@ def _write_request_folders(args: argparse.Namespace, payload: dict[str, Any]) ->
     for row in payload["rows"]:
         folder = _resolve(row["request_folder"])
         folder.mkdir(parents=True, exist_ok=True)
-        _write_csv(folder / "operator_source_values_template.csv", _operator_template_rows(row), OPERATOR_TEMPLATE_COLUMNS)
+        template_csv = folder / "operator_source_values_template.csv"
+        _write_csv(template_csv, _operator_template_rows(row, _read_csv_rows(template_csv)), OPERATOR_TEMPLATE_COLUMNS)
         lines = [
             "# CASP17 Strict-Blind Source Gate Source Request",
             "",
@@ -324,22 +381,24 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- required benchmark/target/scope: `{summary['required_benchmark_id']}` `{summary['required_target_id']}` `{summary['required_scope']}`",
         f"- route/operator status: `{summary['source_route_board_status']}` `{summary['operator_packet_status']}`",
         f"- requests pre-native/replacement/operator-repair/total: `{summary['pre_native_source_required_count']}/{summary['candidate_replacement_required_count']}/{summary['operator_evidence_repair_required_count']}/{summary['request_count']}`",
+        f"- operator templates ready/awaiting: `{summary['operator_template_ready_count']}/{summary['operator_template_awaiting_count']}` fields filled/missing/total `{summary['operator_field_filled_count']}/{summary['operator_field_missing_count']}/{summary['operator_field_count']}`",
         f"- monomer/complex requests: `{summary['monomer_request_count']}/{summary['complex_request_count']}`",
-        f"- first request: `{summary['first_request_id'] or '-'}` `{summary['first_request_target_id'] or '-'}` `{summary['first_request_kind'] or '-'}` `{summary['first_request_blocker'] or '-'}`",
+        f"- first request: `{summary['first_request_id'] or '-'}` `{summary['first_request_target_id'] or '-'}` `{summary['first_request_kind'] or '-'}` `{summary['first_request_blocker'] or '-'}` missing `{summary['first_missing_operator_field'] or '-'}`",
         "",
         "## Requests",
         "",
-        "| request | target | scope | kind | blocker | dates | next action |",
-        "| --- | --- | --- | --- | --- | --- | --- |",
+        "| request | target | scope | kind | blocker | operator fields | dates | next action |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
             f"| `{row['request_id']}` | `{row['candidate_target_id']}` | `{row['candidate_scope']}` | "
             f"`{row['request_kind']}` | `{row['first_blocker'] or '-'}` | "
+            f"`{row['operator_field_filled_count']}/{row['operator_field_missing_count']}/{row['operator_field_count']}` | "
             f"`{row['prediction_created_at'] or '-'}/{row['native_release_date'] or '-'}` | {row['next_action']} |"
         )
     if not payload["rows"]:
-        lines.append("| - | - | - | - | - | - | - |")
+        lines.append("| - | - | - | - | - | - | - | - |")
     lines.extend(["", CLAIM_BOUNDARY, ""])
     path = _resolve(path_like)
     path.parent.mkdir(parents=True, exist_ok=True)

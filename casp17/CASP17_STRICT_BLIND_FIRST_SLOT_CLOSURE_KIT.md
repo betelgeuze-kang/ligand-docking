@@ -1,6 +1,6 @@
 # CASP17 Strict-Blind First Slot Closure Kit
 
-- generated: `2026-06-01T03:30:24+09:00`
+- generated: `2026-06-01T03:36:10+09:00`
 - status: `blocked_on_internal_prediction_source_gate`
 - required benchmark/target/scope: `hist_REQUIRED_MONOMER_001` `REQUIRED_MONOMER_001` `monomer`
 - steps ready/blocked/total: `0/7/7`
