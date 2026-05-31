@@ -193,6 +193,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     historical_seed_first_clearance_no_leak_evidence_packet_json = (
         tmp_path / "historical_seed_first_clearance_no_leak_evidence_packet.json"
     )
+    historical_seed_first_clearance_no_leak_evidence_review_gate_json = (
+        tmp_path / "historical_seed_first_clearance_no_leak_evidence_review_gate.json"
+    )
     historical_seed_clearance_to_identity_intake_sync_json = (
         tmp_path / "historical_seed_clearance_to_identity_intake_sync.json"
     )
@@ -2389,6 +2392,35 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        historical_seed_first_clearance_no_leak_evidence_review_gate_json,
+        {
+            "summary": {
+                "first_clearance_no_leak_evidence_review_gate_status": (
+                    "awaiting_first_clearance_no_leak_evidence_review"
+                ),
+                "target_id": "HIST_CHIGNOLIN",
+                "benchmark_id": "hist_seed_chignolin",
+                "operator_evidence_template_csv": (
+                    "casp17/historical_seed_first_clearance_no_leak_evidence_packet/"
+                    "hist_chignolin/operator_evidence_template.csv"
+                ),
+                "field_count": 10,
+                "ready_field_count": 0,
+                "blocked_field_count": 10,
+                "template_operator_value_missing_count": 10,
+                "template_operator_clearance_missing_count": 10,
+                "template_operator_id_missing_count": 10,
+                "stub_present_count": 10,
+                "stub_evidence_missing_count": 10,
+                "policy_pass_count": 0,
+                "policy_blocked_count": 10,
+                "first_blocked_field": "no_leak_evidence_ref",
+                "first_blocker": "template_operator_value_missing",
+                "next_action": "fill operator_value for no_leak_evidence_ref",
+            }
+        },
+    )
+    _write_json(
         sidechain_native_benchmark_json,
         {
             "summary": {
@@ -3412,6 +3444,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(historical_seed_first_clearance_no_leak_gate_json),
             "--historical-seed-first-clearance-no-leak-evidence-packet-json",
             str(historical_seed_first_clearance_no_leak_evidence_packet_json),
+            "--historical-seed-first-clearance-no-leak-evidence-review-gate-json",
+            str(historical_seed_first_clearance_no_leak_evidence_review_gate_json),
             "--historical-seed-clearance-to-identity-intake-sync-json",
             str(historical_seed_clearance_to_identity_intake_sync_json),
             "--sidechain-native-benchmark-json",
@@ -4994,6 +5028,39 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["historical_seed_first_clearance_no_leak_evidence_packet_first_open_kind"] == (
         "independent_no_leak_evidence"
     )
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_evidence_review_gate_status"] == (
+        "awaiting_first_clearance_no_leak_evidence_review"
+    )
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_evidence_review_gate_target_id"] == (
+        "HIST_CHIGNOLIN"
+    )
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_evidence_review_gate_benchmark_id"] == (
+        "hist_seed_chignolin"
+    )
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_evidence_review_gate_field_count"] == 10
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_evidence_review_gate_ready_count"] == 0
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_evidence_review_gate_blocked_count"] == 10
+    assert (
+        payload["summary"][
+            "historical_seed_first_clearance_no_leak_evidence_review_gate_template_value_missing_count"
+        ]
+        == 10
+    )
+    assert (
+        payload["summary"][
+            "historical_seed_first_clearance_no_leak_evidence_review_gate_stub_evidence_missing_count"
+        ]
+        == 10
+    )
+    assert (
+        payload["summary"][
+            "historical_seed_first_clearance_no_leak_evidence_review_gate_policy_blocked_count"
+        ]
+        == 10
+    )
+    assert payload["summary"]["historical_seed_first_clearance_no_leak_evidence_review_gate_first_blocker"] == (
+        "template_operator_value_missing"
+    )
     assert payload["summary"]["historical_seed_clearance_to_identity_intake_sync_status"] == (
         "waiting_on_cleared_seed_manifest"
     )
@@ -5369,6 +5436,24 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         by_id["historical_seed_first_clearance_no_leak_evidence_packet"]["blockers"]
     )
     assert "stubs:10" in by_id["historical_seed_first_clearance_no_leak_evidence_packet"]["blockers"]
+    assert by_id["historical_seed_first_clearance_no_leak_evidence_review_gate"]["status"] == (
+        "awaiting_first_clearance_no_leak_evidence_review"
+    )
+    assert by_id["historical_seed_first_clearance_no_leak_evidence_review_gate"]["ready_count"] == 0
+    assert by_id["historical_seed_first_clearance_no_leak_evidence_review_gate"]["blocked_count"] == 10
+    assert by_id["historical_seed_first_clearance_no_leak_evidence_review_gate"]["total_count"] == 10
+    assert "first:no_leak_evidence_ref" in (
+        by_id["historical_seed_first_clearance_no_leak_evidence_review_gate"]["blockers"]
+    )
+    assert "blocker:template_operator_value_missing" in (
+        by_id["historical_seed_first_clearance_no_leak_evidence_review_gate"]["blockers"]
+    )
+    assert "template_missing:10" in (
+        by_id["historical_seed_first_clearance_no_leak_evidence_review_gate"]["blockers"]
+    )
+    assert "stub_evidence_missing:10" in (
+        by_id["historical_seed_first_clearance_no_leak_evidence_review_gate"]["blockers"]
+    )
     assert by_id["competitive_floor_batch"]["status"] == "ready_for_fill"
     assert by_id["competitive_floor_row_fill_status"]["status"] == "awaiting_fill"
     assert by_id["competitive_floor_row_fill_worklist"]["status"] == "open_actions"
@@ -6109,6 +6194,8 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_historical_seed_first_clearance_no_leak_gate.json"),
             "--historical-seed-first-clearance-no-leak-evidence-packet-json",
             str(tmp_path / "missing_historical_seed_first_clearance_no_leak_evidence_packet.json"),
+            "--historical-seed-first-clearance-no-leak-evidence-review-gate-json",
+            str(tmp_path / "missing_historical_seed_first_clearance_no_leak_evidence_review_gate.json"),
             "--historical-seed-clearance-to-identity-intake-sync-json",
             str(tmp_path / "missing_historical_seed_clearance_to_identity_intake_sync.json"),
             "--sidechain-native-benchmark-json",
