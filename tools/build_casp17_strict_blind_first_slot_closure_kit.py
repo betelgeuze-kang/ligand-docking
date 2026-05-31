@@ -15,6 +15,12 @@ DEFAULT_FIRST_SLOT_KIT_JSON = (
     "casp17/casp17_historical_seed_strict_blind_replacement_first_slot_kit_current.json"
 )
 DEFAULT_SOURCE_GATE_JSON = "casp17/casp17_strict_blind_internal_prediction_source_gate_current.json"
+DEFAULT_SOURCE_GATE_OPERATOR_PACKET_JSON = (
+    "casp17/casp17_strict_blind_source_gate_operator_packet_current.json"
+)
+DEFAULT_SOURCE_GATE_SOURCE_REQUEST_PACKET_JSON = (
+    "casp17/casp17_strict_blind_source_gate_source_request_packet_current.json"
+)
 DEFAULT_APPLY_PLAN_JSON = "casp17/casp17_strict_blind_internal_prediction_source_apply_plan_current.json"
 DEFAULT_EVIDENCE_DROPZONES_JSON = (
     "casp17/casp17_historical_seed_strict_blind_replacement_evidence_dropzones_current.json"
@@ -127,6 +133,11 @@ def _rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
 
 
+def _operator_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = payload.get("operator_rows")
+    return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+
+
 def _read_csv_rows(path_like: str | Path) -> list[dict[str, str]]:
     if not _text(path_like):
         return []
@@ -157,6 +168,8 @@ def _input_blockers(args: argparse.Namespace) -> list[str]:
     for name in [
         "first_slot_kit_json",
         "source_gate_json",
+        "source_gate_operator_packet_json",
+        "source_gate_source_request_packet_json",
         "apply_plan_json",
         "evidence_dropzones_json",
         "operator_gate_json",
@@ -232,15 +245,73 @@ def _source_gate_fill_rows(source_gate: dict[str, Any], source_gate_rows: list[d
     return rows
 
 
+def _source_gate_operator_fill_rows(
+    source_gate_operator_packet: dict[str, Any],
+    source_gate_operator_rows: list[dict[str, Any]],
+) -> list[dict[str, str]]:
+    operator_csv = _text(source_gate_operator_packet.get("operator_csv"))
+    rows: list[dict[str, str]] = []
+    for index, row in enumerate(source_gate_operator_rows, start=1):
+        field_key = _text(row.get("field_key"))
+        fill_kind = "source_gate_operator_value"
+        if field_key == "prediction_pdb_dropzone":
+            fill_kind = "source_gate_file_copy"
+        elif field_key == "prediction_created_at/native_release_date":
+            fill_kind = "source_gate_derived_check"
+        elif _text(row.get("fill_kind")) == "file":
+            fill_kind = "source_gate_file"
+        rows.append(
+            {
+                "fill_id": f"source_gate_operator_fill_{index:03d}",
+                "fill_kind": fill_kind,
+                "field_name": field_key,
+                "source_or_template": operator_csv,
+                "destination": _text(row.get("destination")),
+                "current_status": _text(row.get("operator_status")),
+                "next_action": _text(row.get("next_action")),
+            }
+        )
+    return rows
+
+
+def _source_request_fill_rows(
+    source_request_packet: dict[str, Any],
+    source_request_rows: list[dict[str, Any]],
+) -> list[dict[str, str]]:
+    request_dir = _text(source_request_packet.get("request_dir"))
+    rows: list[dict[str, str]] = []
+    for index, row in enumerate(source_request_rows, start=1):
+        rows.append(
+            {
+                "fill_id": f"source_request_{index:03d}",
+                "fill_kind": "source_request",
+                "field_name": _text(row.get("candidate_target_id")),
+                "source_or_template": request_dir,
+                "destination": _text(row.get("request_folder")),
+                "current_status": _text(row.get("request_status")),
+                "next_action": _text(row.get("next_action")),
+            }
+        )
+    return rows
+
+
 def _fill_rows(
     source_gate: dict[str, Any],
     source_gate_rows: list[dict[str, Any]],
+    source_gate_operator_packet: dict[str, Any],
+    source_gate_operator_rows: list[dict[str, Any]],
+    source_request_packet: dict[str, Any],
+    source_request_rows: list[dict[str, Any]],
     dropzone_row: dict[str, Any],
     operator_values_csv: str,
     apply_rows: list[dict[str, Any]],
 ) -> list[dict[str, str]]:
     fills: list[dict[str, str]] = []
-    fills.extend(_source_gate_fill_rows(source_gate, source_gate_rows))
+    if source_gate_operator_rows:
+        fills.extend(_source_gate_operator_fill_rows(source_gate_operator_packet, source_gate_operator_rows))
+    else:
+        fills.extend(_source_gate_fill_rows(source_gate, source_gate_rows))
+    fills.extend(_source_request_fill_rows(source_request_packet, source_request_rows))
     base = len(fills)
     patch_rows = _read_csv_rows(_text(dropzone_row.get("patch_preview_csv")))
     for index, row in enumerate(patch_rows, start=1):
@@ -291,12 +362,16 @@ def _closure_status(input_blockers: list[str], rows: list[dict[str, Any]]) -> st
 def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     first_slot_payload = _read_json(args.first_slot_kit_json)
     source_gate_payload = _read_json(args.source_gate_json)
+    source_gate_operator_packet_payload = _read_json(args.source_gate_operator_packet_json)
+    source_gate_source_request_packet_payload = _read_json(args.source_gate_source_request_packet_json)
     apply_plan_payload = _read_json(args.apply_plan_json)
     dropzones_payload = _read_json(args.evidence_dropzones_json)
     operator_gate_payload = _read_json(args.operator_gate_json)
     intake_payload = _read_json(args.intake_json)
     first_slot = _summary(first_slot_payload)
     source_gate = _summary(source_gate_payload)
+    source_gate_operator_packet = _summary(source_gate_operator_packet_payload)
+    source_gate_source_request_packet = _summary(source_gate_source_request_packet_payload)
     apply_plan = _summary(apply_plan_payload)
     operator_gate = _summary(operator_gate_payload)
     benchmark_id = _text(first_slot.get("required_benchmark_id") or source_gate.get("required_benchmark_id"))
@@ -318,8 +393,38 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             _text(source_gate.get("first_next_action")),
         ),
         _step(
-            "internal_prediction_apply_plan",
+            "source_gate_operator_packet",
             2,
+            _text(source_gate_operator_packet.get("source_gate_operator_packet_status")),
+            _int(source_gate_operator_packet.get("operator_ready_count")),
+            _int(source_gate_operator_packet.get("operator_awaiting_count")),
+            _int(source_gate_operator_packet.get("field_action_count")),
+            _text(source_gate_operator_packet.get("operator_csv")),
+            (
+                _text(source_gate_operator_packet.get("first_field_key"))
+                + ":"
+                + _text(source_gate_operator_packet.get("first_operator_status"))
+            ).strip(":"),
+            _text(source_gate_operator_packet.get("first_next_action")),
+        ),
+        _step(
+            "source_gate_source_requests",
+            3,
+            _text(source_gate_source_request_packet.get("source_request_packet_status")),
+            0,
+            _int(source_gate_source_request_packet.get("request_count")),
+            _int(source_gate_source_request_packet.get("request_count")),
+            _text(source_gate_source_request_packet.get("request_dir")),
+            (
+                _text(source_gate_source_request_packet.get("first_request_id"))
+                + ":"
+                + _text(source_gate_source_request_packet.get("first_request_blocker"))
+            ).strip(":"),
+            _text(source_gate_source_request_packet.get("first_next_action")),
+        ),
+        _step(
+            "internal_prediction_apply_plan",
+            4,
             _text(apply_plan.get("internal_prediction_source_apply_plan_status")),
             _int(apply_plan.get("ready_action_count")),
             _int(apply_plan.get("blocked_action_count")),
@@ -330,7 +435,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         ),
         _step(
             "first_slot_evidence_files",
-            3,
+            5,
             _text(dropzone_row.get("dropzone_status")),
             _int(dropzone_row.get("file_present_count")),
             _int(dropzone_row.get("file_missing_count")),
@@ -341,7 +446,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         ),
         _step(
             "first_slot_operator_values",
-            4,
+            6,
             _text(operator_gate.get("strict_blind_replacement_operator_value_gate_status")),
             operator_ready,
             operator_blocked,
@@ -352,7 +457,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         ),
         _step(
             "first_slot_intake_preflight",
-            5,
+            7,
             _text(intake_row.get("preflight_status")),
             _int(intake_row.get("filled_field_count")),
             _int(intake_row.get("missing_field_count")),
@@ -362,7 +467,17 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             _text(intake_row.get("next_action")),
         ),
     ]
-    fill_rows = _fill_rows(source_gate, _rows(source_gate_payload), dropzone_row, operator_values_csv, _rows(apply_plan_payload))
+    fill_rows = _fill_rows(
+        source_gate,
+        _rows(source_gate_payload),
+        source_gate_operator_packet,
+        _operator_rows(source_gate_operator_packet_payload),
+        source_gate_source_request_packet,
+        _rows(source_gate_source_request_packet_payload),
+        dropzone_row,
+        operator_values_csv,
+        _rows(apply_plan_payload),
+    )
     first_blocked = next((row for row in steps if _int(row["blocked_count"]) > 0), {})
     summary = {
         "packet_type": "casp17_strict_blind_first_slot_closure_kit",
@@ -376,9 +491,38 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "step_blocked_count": sum(1 for row in steps if _int(row["blocked_count"]) > 0),
         "fill_item_count": len(fill_rows),
         "source_gate_fill_count": sum(1 for row in fill_rows if row["fill_kind"].startswith("source_gate_")),
+        "source_request_fill_count": sum(1 for row in fill_rows if row["fill_kind"] == "source_request"),
         "file_fill_count": sum(1 for row in fill_rows if row["fill_kind"] in {"file", "file_copy", "supplemental_evidence"}),
         "operator_fill_count": sum(1 for row in fill_rows if row["fill_kind"] == "operator_value"),
         "source_gate_status": _text(source_gate.get("internal_prediction_source_gate_status")),
+        "source_gate_operator_packet_status": _text(
+            source_gate_operator_packet.get("source_gate_operator_packet_status")
+        ),
+        "source_gate_operator_ready_count": _int(source_gate_operator_packet.get("operator_ready_count")),
+        "source_gate_operator_awaiting_count": _int(source_gate_operator_packet.get("operator_awaiting_count")),
+        "source_gate_operator_field_action_count": _int(source_gate_operator_packet.get("field_action_count")),
+        "source_gate_operator_patch_ready_count": _int(source_gate_operator_packet.get("patch_ready_count")),
+        "source_gate_operator_patch_awaiting_count": _int(source_gate_operator_packet.get("patch_awaiting_count")),
+        "source_gate_operator_packet_csv": _text(source_gate_operator_packet.get("operator_csv")),
+        "source_gate_operator_packet_dir": _text(source_gate_operator_packet.get("packet_dir")),
+        "source_gate_source_request_packet_status": _text(
+            source_gate_source_request_packet.get("source_request_packet_status")
+        ),
+        "source_gate_source_request_count": _int(source_gate_source_request_packet.get("request_count")),
+        "source_gate_pre_native_source_request_count": _int(
+            source_gate_source_request_packet.get("pre_native_source_required_count")
+        ),
+        "source_gate_candidate_replacement_request_count": _int(
+            source_gate_source_request_packet.get("candidate_replacement_required_count")
+        ),
+        "source_gate_first_source_request_id": _text(source_gate_source_request_packet.get("first_request_id")),
+        "source_gate_first_source_request_target_id": _text(
+            source_gate_source_request_packet.get("first_request_target_id")
+        ),
+        "source_gate_first_source_request_blocker": _text(
+            source_gate_source_request_packet.get("first_request_blocker")
+        ),
+        "source_gate_source_request_dir": _text(source_gate_source_request_packet.get("request_dir")),
         "apply_plan_status": _text(apply_plan.get("internal_prediction_source_apply_plan_status")),
         "dropzone_status": _text(dropzone_row.get("dropzone_status")),
         "operator_gate_status": _text(operator_gate.get("strict_blind_replacement_operator_value_gate_status")),
@@ -406,6 +550,7 @@ def _write_kit_folder(args: argparse.Namespace, payload: dict[str, Any]) -> None
         f"- required benchmark/target/scope: `{summary['required_benchmark_id']}` `{summary['required_target_id']}` `{summary['required_scope']}`",
         f"- steps ready/blocked/total: `{summary['step_ready_count']}/{summary['step_blocked_count']}/{summary['step_count']}`",
         f"- fill items source-gate/file/operator/total: `{summary['source_gate_fill_count']}/{summary['file_fill_count']}/{summary['operator_fill_count']}/{summary['fill_item_count']}`",
+        f"- source-gate operator packet: `{summary['source_gate_operator_packet_status']}` ready/awaiting/total `{summary['source_gate_operator_ready_count']}/{summary['source_gate_operator_awaiting_count']}/{summary['source_gate_operator_field_action_count']}` patch `{summary['source_gate_operator_patch_ready_count']}/{summary['source_gate_operator_patch_awaiting_count']}`",
         f"- first blocker: `{summary['first_blocked_step'] or '-'}` `{summary['first_blocker'] or '-'}`",
         f"- next action: {summary['first_next_action'] or '-'}",
         "",
@@ -425,6 +570,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- required benchmark/target/scope: `{summary['required_benchmark_id']}` `{summary['required_target_id']}` `{summary['required_scope']}`",
         f"- steps ready/blocked/total: `{summary['step_ready_count']}/{summary['step_blocked_count']}/{summary['step_count']}`",
         f"- fill items source-gate/file/operator/total: `{summary['source_gate_fill_count']}/{summary['file_fill_count']}/{summary['operator_fill_count']}/{summary['fill_item_count']}`",
+        f"- source-gate operator packet: `{summary['source_gate_operator_packet_status']}` ready/awaiting/total `{summary['source_gate_operator_ready_count']}/{summary['source_gate_operator_awaiting_count']}/{summary['source_gate_operator_field_action_count']}` patch `{summary['source_gate_operator_patch_ready_count']}/{summary['source_gate_operator_patch_awaiting_count']}` csv `{summary['source_gate_operator_packet_csv'] or '-'}`",
         f"- source/apply/dropzone/operator/intake: `{summary['source_gate_status']}` `{summary['apply_plan_status']}` `{summary['dropzone_status']}` `{summary['operator_gate_status']}` `{summary['intake_preflight_status']}`",
         f"- first blocker: `{summary['first_blocked_step'] or '-'}` `{summary['first_blocker'] or '-'}`",
         f"- kit folder: `{summary['kit_folder']}`",
@@ -456,6 +602,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build strict-blind first-slot closure kit.")
     parser.add_argument("--first-slot-kit-json", default=DEFAULT_FIRST_SLOT_KIT_JSON)
     parser.add_argument("--source-gate-json", default=DEFAULT_SOURCE_GATE_JSON)
+    parser.add_argument("--source-gate-operator-packet-json", default=DEFAULT_SOURCE_GATE_OPERATOR_PACKET_JSON)
     parser.add_argument("--apply-plan-json", default=DEFAULT_APPLY_PLAN_JSON)
     parser.add_argument("--evidence-dropzones-json", default=DEFAULT_EVIDENCE_DROPZONES_JSON)
     parser.add_argument("--operator-gate-json", default=DEFAULT_OPERATOR_GATE_JSON)

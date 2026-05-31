@@ -1,10 +1,11 @@
 # CASP17 Strict-Blind First Slot Closure Kit
 
-- generated: `2026-06-01T02:42:40+09:00`
+- generated: `2026-06-01T03:11:48+09:00`
 - status: `blocked_on_internal_prediction_source_gate`
 - required benchmark/target/scope: `hist_REQUIRED_MONOMER_001` `REQUIRED_MONOMER_001` `monomer`
-- steps ready/blocked/total: `0/5/5`
-- fill items source-gate/file/operator/total: `13/12/20/45`
+- steps ready/blocked/total: `0/6/6`
+- fill items source-gate/file/operator/total: `11/12/20/43`
+- source-gate operator packet: `awaiting_source_gate_operator_values` ready/awaiting/total `0/11/11` patch `0/11` csv `casp17/strict_blind_source_gate_operator_packet/hist_REQUIRED_MONOMER_001/source_gate_operator_values.csv`
 - source/apply/dropzone/operator/intake: `awaiting_internal_prediction_source_gate_fields` `blocked_until_internal_prediction_source_gate_passes` `awaiting_strict_blind_evidence_files` `awaiting_operator_values` `awaiting_operator_input`
 - first blocker: `internal_prediction_source_gate` `internal_source_id_missing_or_external`
 - kit folder: `casp17/strict_blind_first_slot_closure_kit/hist_REQUIRED_MONOMER_001`
@@ -14,6 +15,7 @@
 | step | status | ready/blocked/total | artifact | first blocker | next action |
 | --- | --- | --- | --- | --- | --- |
 | `internal_prediction_source_gate` | `awaiting_internal_prediction_source_gate_fields` | `3/13/16` | `casp17/casp17_strict_blind_internal_prediction_source_gate_current.json` | `internal_source_id_missing_or_external` | set source_id to an internal pre-native prediction source, not an official archive or MassiveFold pool |
+| `source_gate_operator_packet` | `awaiting_source_gate_operator_values` | `0/11/11` | `casp17/strict_blind_source_gate_operator_packet/hist_REQUIRED_MONOMER_001/source_gate_operator_values.csv` | `source_id:awaiting_operator_value` | set source_id to an internal pre-native prediction source, not an official archive or MassiveFold pool |
 | `internal_prediction_apply_plan` | `blocked_until_internal_prediction_source_gate_passes` | `0/16/16` | `casp17/casp17_strict_blind_internal_prediction_source_apply_plan_current.json` | `internal_prediction_source_gate_not_ready` | copy verified internal prediction PDB into the first-slot prediction dropzone |
 | `first_slot_evidence_files` | `awaiting_strict_blind_evidence_files` | `0/6/6` | `casp17/historical_seed_strict_blind_replacement_evidence_dropzones/01_hist_required_monomer_001` | `missing_files:6,operator_values_required:10` | place strict-blind evidence files in this dropzone, then rerun dropzone and intake preflight |
 | `first_slot_operator_values` | `awaiting_operator_values` | `0/10/10` | `casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_operator_values.csv` | `replacement_target_id` | fill operator_value for replacement_target_id in replacement_operator_values.csv |

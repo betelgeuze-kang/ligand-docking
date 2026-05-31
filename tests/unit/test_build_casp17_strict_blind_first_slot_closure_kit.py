@@ -55,6 +55,7 @@ def test_first_slot_closure_kit_surfaces_first_gate_blocker(tmp_path):
     _write_csv(operator_values, [], ["field_name", "operator_value"])
     first_slot = tmp_path / "first_slot.json"
     gate = tmp_path / "gate.json"
+    operator_packet = tmp_path / "operator_packet.json"
     apply_plan = tmp_path / "apply_plan.json"
     dropzones = tmp_path / "dropzones.json"
     operator_gate = tmp_path / "operator_gate.json"
@@ -86,6 +87,50 @@ def test_first_slot_closure_kit_surfaces_first_gate_blocker(tmp_path):
                     "blocker": "internal_source_id_missing_or_external",
                     "next_action": "set source_id",
                 }
+            ],
+        },
+    )
+    operator_fields = [
+        "source_id",
+        "prediction_pdb",
+        "prediction_pdb_dropzone",
+        "prediction_created_at",
+        "native_release_date",
+        "prediction_created_at/native_release_date",
+        "native_authority_ref",
+        "creation_evidence_ref",
+        "no_leak_evidence_ref",
+        "method_summary",
+        "operator_clearance",
+    ]
+    _write_json(
+        operator_packet,
+        {
+            "summary": {
+                "source_gate_operator_packet_status": "awaiting_source_gate_operator_values",
+                "required_benchmark_id": benchmark_id,
+                "required_target_id": "REQUIRED_MONOMER_001",
+                "required_scope": "monomer",
+                "operator_csv": "source_gate_operator_values.csv",
+                "field_action_count": 11,
+                "operator_ready_count": 0,
+                "operator_awaiting_count": 11,
+                "patch_ready_count": 0,
+                "patch_awaiting_count": 11,
+                "first_field_key": "source_id",
+                "first_operator_status": "awaiting_operator_value",
+                "first_next_action": "fill source_id",
+                "packet_dir": "operator_packet/hist_REQUIRED_MONOMER_001",
+            },
+            "operator_rows": [
+                {
+                    "field_key": field,
+                    "fill_kind": "file" if field in {"prediction_pdb", "prediction_pdb_dropzone"} else "manifest_value",
+                    "operator_status": "awaiting_operator_value",
+                    "destination": "manifest.csv",
+                    "next_action": f"fill {field}",
+                }
+                for field in operator_fields
             ],
         },
     )
@@ -168,6 +213,8 @@ def test_first_slot_closure_kit_surfaces_first_gate_blocker(tmp_path):
             str(first_slot),
             "--source-gate-json",
             str(gate),
+            "--source-gate-operator-packet-json",
+            str(operator_packet),
             "--apply-plan-json",
             str(apply_plan),
             "--evidence-dropzones-json",
@@ -190,11 +237,14 @@ def test_first_slot_closure_kit_surfaces_first_gate_blocker(tmp_path):
     mod.write_outputs(args, payload)
 
     assert payload["summary"]["first_slot_closure_kit_status"] == "blocked_on_internal_prediction_source_gate"
-    assert payload["summary"]["step_blocked_count"] == 5
+    assert payload["summary"]["step_blocked_count"] == 6
     assert payload["summary"]["first_blocker"] == "internal_source_id_missing_or_external"
-    assert payload["summary"]["source_gate_fill_count"] == 1
-    assert payload["summary"]["fill_item_count"] == 4
-    assert payload["fill_rows"][0]["fill_kind"] == "source_gate_manifest_value"
+    assert payload["summary"]["source_gate_operator_packet_status"] == "awaiting_source_gate_operator_values"
+    assert payload["summary"]["source_gate_operator_awaiting_count"] == 11
+    assert payload["summary"]["source_gate_fill_count"] == 11
+    assert payload["summary"]["fill_item_count"] == 14
+    assert payload["rows"][1]["step_id"] == "source_gate_operator_packet"
+    assert payload["fill_rows"][0]["fill_kind"] == "source_gate_operator_value"
     assert payload["fill_rows"][0]["field_name"] == "source_id"
     assert (tmp_path / "kit" / benchmark_id / "fill_order.csv").exists()
 
@@ -206,6 +256,8 @@ def test_first_slot_closure_kit_blocks_missing_inputs(tmp_path):
             str(tmp_path / "missing_first_slot.json"),
             "--source-gate-json",
             str(tmp_path / "missing_gate.json"),
+            "--source-gate-operator-packet-json",
+            str(tmp_path / "missing_operator_packet.json"),
             "--apply-plan-json",
             str(tmp_path / "missing_apply_plan.json"),
             "--evidence-dropzones-json",
@@ -220,3 +272,4 @@ def test_first_slot_closure_kit_blocks_missing_inputs(tmp_path):
 
     assert payload["summary"]["first_slot_closure_kit_status"] == "blocked_missing_inputs"
     assert "first_slot_kit_json_missing" in payload["summary"]["input_blockers"]
+    assert "source_gate_operator_packet_json_missing" in payload["summary"]["input_blockers"]

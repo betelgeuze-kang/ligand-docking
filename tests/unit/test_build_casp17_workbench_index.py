@@ -140,6 +140,12 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         tmp_path / "strict_blind_internal_prediction_source_gate.json"
     )
     strict_blind_source_gate_field_board_json = tmp_path / "strict_blind_source_gate_field_board.json"
+    strict_blind_source_gate_operator_packet_json = (
+        tmp_path / "strict_blind_source_gate_operator_packet.json"
+    )
+    strict_blind_source_gate_source_request_packet_json = (
+        tmp_path / "strict_blind_source_gate_source_request_packet.json"
+    )
     strict_blind_internal_prediction_source_apply_plan_json = (
         tmp_path / "strict_blind_internal_prediction_source_apply_plan.json"
     )
@@ -1809,6 +1815,69 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        strict_blind_source_gate_operator_packet_json,
+        {
+            "summary": {
+                "source_gate_operator_packet_status": "awaiting_source_gate_operator_values",
+                "source_gate_field_board_status": "awaiting_source_gate_field_fills",
+                "required_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "required_target_id": "REQUIRED_MONOMER_001",
+                "required_scope": "monomer",
+                "operator_csv": (
+                    "casp17/strict_blind_source_gate_operator_packet/"
+                    "hist_REQUIRED_MONOMER_001/source_gate_operator_values.csv"
+                ),
+                "manifest_csv": (
+                    "casp17/strict_blind_internal_prediction_source_audit/"
+                    "hist_REQUIRED_MONOMER_001/internal_prediction_source_manifest_template.csv"
+                ),
+                "field_action_count": 11,
+                "operator_ready_count": 0,
+                "operator_awaiting_count": 11,
+                "manifest_patch_count": 9,
+                "file_copy_count": 1,
+                "derived_check_count": 1,
+                "patch_ready_count": 0,
+                "patch_awaiting_count": 11,
+                "first_field_key": "source_id",
+                "first_operator_status": "awaiting_operator_value",
+                "first_next_action": "fill source_id",
+                "packet_dir": "casp17/strict_blind_source_gate_operator_packet/hist_REQUIRED_MONOMER_001",
+            }
+        },
+    )
+    _write_json(
+        strict_blind_source_gate_source_request_packet_json,
+        {
+            "summary": {
+                "source_request_packet_status": "awaiting_pre_native_source_or_candidate_replacement",
+                "required_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "required_target_id": "REQUIRED_MONOMER_001",
+                "required_scope": "monomer",
+                "source_route_board_status": "first_slot_requires_pre_native_monomer_source_or_replacement",
+                "operator_packet_status": "awaiting_source_gate_operator_values",
+                "operator_csv": (
+                    "casp17/strict_blind_source_gate_operator_packet/"
+                    "hist_REQUIRED_MONOMER_001/source_gate_operator_values.csv"
+                ),
+                "request_count": 17,
+                "pre_native_source_required_count": 10,
+                "candidate_replacement_required_count": 7,
+                "operator_evidence_repair_required_count": 0,
+                "monomer_request_count": 10,
+                "complex_request_count": 7,
+                "first_request_id": "source_request_001",
+                "first_request_target_id": "HIST_BBA5",
+                "first_request_kind": "pre_native_prediction_source_required",
+                "first_request_blocker": "prediction_not_before_native",
+                "first_next_action": (
+                    "attach a prediction artifact created before the authoritative native release date"
+                ),
+                "request_dir": "casp17/strict_blind_source_gate_source_request_packet",
+            }
+        },
+    )
+    _write_json(
         strict_blind_internal_prediction_source_apply_plan_json,
         {
             "summary": {
@@ -1847,14 +1916,27 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "required_benchmark_id": "hist_REQUIRED_MONOMER_001",
                 "required_target_id": "REQUIRED_MONOMER_001",
                 "required_scope": "monomer",
-                "step_count": 5,
+                "step_count": 6,
                 "step_ready_count": 0,
-                "step_blocked_count": 5,
-                "fill_item_count": 45,
-                "source_gate_fill_count": 13,
+                "step_blocked_count": 6,
+                "fill_item_count": 43,
+                "source_gate_fill_count": 11,
                 "file_fill_count": 12,
                 "operator_fill_count": 20,
                 "source_gate_status": "awaiting_internal_prediction_source_gate_fields",
+                "source_gate_operator_packet_status": "awaiting_source_gate_operator_values",
+                "source_gate_operator_ready_count": 0,
+                "source_gate_operator_awaiting_count": 11,
+                "source_gate_operator_field_action_count": 11,
+                "source_gate_operator_patch_ready_count": 0,
+                "source_gate_operator_patch_awaiting_count": 11,
+                "source_gate_operator_packet_csv": (
+                    "casp17/strict_blind_source_gate_operator_packet/"
+                    "hist_REQUIRED_MONOMER_001/source_gate_operator_values.csv"
+                ),
+                "source_gate_operator_packet_dir": (
+                    "casp17/strict_blind_source_gate_operator_packet/hist_REQUIRED_MONOMER_001"
+                ),
                 "apply_plan_status": "blocked_until_internal_prediction_source_gate_passes",
                 "dropzone_status": "awaiting_strict_blind_evidence_files",
                 "operator_gate_status": "awaiting_operator_values",
@@ -3108,6 +3190,10 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(strict_blind_internal_prediction_source_gate_json),
             "--strict-blind-source-gate-field-board-json",
             str(strict_blind_source_gate_field_board_json),
+            "--strict-blind-source-gate-operator-packet-json",
+            str(strict_blind_source_gate_operator_packet_json),
+            "--strict-blind-source-gate-source-request-packet-json",
+            str(strict_blind_source_gate_source_request_packet_json),
             "--strict-blind-internal-prediction-source-apply-plan-json",
             str(strict_blind_internal_prediction_source_apply_plan_json),
             "--strict-blind-first-slot-closure-kit-json",
@@ -3323,12 +3409,16 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "strict-blind source gate field board: `awaiting_source_gate_field_fills`" in workbench_md
     assert "actions manifest/file/manifest-file/total `9/2/0/11`" in workbench_md
     assert "blocked checks covered `13`" in workbench_md
+    assert "strict-blind source gate operator packet: `awaiting_source_gate_operator_values`" in workbench_md
+    assert "operator ready/awaiting/total `0/11/11`" in workbench_md
+    assert "strict-blind source gate source requests: `awaiting_pre_native_source_or_candidate_replacement`" in workbench_md
+    assert "requests pre-native/replacement/operator-repair/total `10/7/0/17`" in workbench_md
     assert "strict-blind internal prediction source apply plan: `blocked_until_internal_prediction_source_gate_passes`" in workbench_md
     assert "actions ready/blocked/total `0/16/16`" in workbench_md
     assert "file/operator/supp `1/10/5`" in workbench_md
     assert "strict-blind first slot closure kit: `blocked_on_internal_prediction_source_gate`" in workbench_md
-    assert "steps ready/blocked/total `0/5/5`" in workbench_md
-    assert "fills source-gate/file/operator/total `13/12/20/45`" in workbench_md
+    assert "steps ready/blocked/total `0/6/6`" in workbench_md
+    assert "fills source-gate/file/operator/total `11/12/20/43`" in workbench_md
     assert "strict-blind batch closure runway: `blocked_on_first_slot_internal_prediction_source`" in workbench_md
     assert "slots ready/blocked/total `0/40/40`" in workbench_md
     assert "blocked source/evidence/operator/intake `1/39/0/0`" in workbench_md
@@ -3962,6 +4052,40 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["strict_blind_source_gate_field_board_first_blockers"] == (
         "internal_source_id_missing_or_external"
     )
+    assert payload["summary"]["strict_blind_source_gate_operator_packet_status"] == (
+        "awaiting_source_gate_operator_values"
+    )
+    assert payload["summary"]["strict_blind_source_gate_operator_packet_field_action_count"] == 11
+    assert payload["summary"]["strict_blind_source_gate_operator_packet_operator_ready_count"] == 0
+    assert payload["summary"]["strict_blind_source_gate_operator_packet_operator_awaiting_count"] == 11
+    assert payload["summary"]["strict_blind_source_gate_operator_packet_manifest_patch_count"] == 9
+    assert payload["summary"]["strict_blind_source_gate_operator_packet_file_copy_count"] == 1
+    assert payload["summary"]["strict_blind_source_gate_operator_packet_derived_check_count"] == 1
+    assert payload["summary"]["strict_blind_source_gate_operator_packet_patch_ready_count"] == 0
+    assert payload["summary"]["strict_blind_source_gate_operator_packet_patch_awaiting_count"] == 11
+    assert payload["summary"]["strict_blind_source_gate_operator_packet_first_field_key"] == "source_id"
+    assert payload["summary"]["strict_blind_source_gate_operator_packet_first_operator_status"] == (
+        "awaiting_operator_value"
+    )
+    assert payload["summary"]["strict_blind_source_gate_source_request_packet_status"] == (
+        "awaiting_pre_native_source_or_candidate_replacement"
+    )
+    assert payload["summary"]["strict_blind_source_gate_source_request_packet_request_count"] == 17
+    assert payload["summary"]["strict_blind_source_gate_source_request_packet_pre_native_source_count"] == 10
+    assert payload["summary"]["strict_blind_source_gate_source_request_packet_candidate_replacement_count"] == 7
+    assert payload["summary"]["strict_blind_source_gate_source_request_packet_operator_repair_count"] == 0
+    assert payload["summary"]["strict_blind_source_gate_source_request_packet_monomer_request_count"] == 10
+    assert payload["summary"]["strict_blind_source_gate_source_request_packet_complex_request_count"] == 7
+    assert payload["summary"]["strict_blind_source_gate_source_request_packet_first_request_id"] == (
+        "source_request_001"
+    )
+    assert payload["summary"]["strict_blind_source_gate_source_request_packet_first_target_id"] == "HIST_BBA5"
+    assert payload["summary"]["strict_blind_source_gate_source_request_packet_first_kind"] == (
+        "pre_native_prediction_source_required"
+    )
+    assert payload["summary"]["strict_blind_source_gate_source_request_packet_first_blocker"] == (
+        "prediction_not_before_native"
+    )
     assert payload["summary"]["strict_blind_internal_prediction_source_apply_plan_status"] == (
         "blocked_until_internal_prediction_source_gate_passes"
     )
@@ -3981,12 +4105,12 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         "blocked_on_internal_prediction_source_gate"
     )
     assert payload["summary"]["strict_blind_first_slot_closure_kit_step_ready_count"] == 0
-    assert payload["summary"]["strict_blind_first_slot_closure_kit_step_blocked_count"] == 5
-    assert payload["summary"]["strict_blind_first_slot_closure_kit_step_count"] == 5
-    assert payload["summary"]["strict_blind_first_slot_closure_kit_source_gate_fill_count"] == 13
+    assert payload["summary"]["strict_blind_first_slot_closure_kit_step_blocked_count"] == 6
+    assert payload["summary"]["strict_blind_first_slot_closure_kit_step_count"] == 6
+    assert payload["summary"]["strict_blind_first_slot_closure_kit_source_gate_fill_count"] == 11
     assert payload["summary"]["strict_blind_first_slot_closure_kit_file_fill_count"] == 12
     assert payload["summary"]["strict_blind_first_slot_closure_kit_operator_fill_count"] == 20
-    assert payload["summary"]["strict_blind_first_slot_closure_kit_fill_item_count"] == 45
+    assert payload["summary"]["strict_blind_first_slot_closure_kit_fill_item_count"] == 43
     assert payload["summary"]["strict_blind_first_slot_closure_kit_first_blocked_step"] == (
         "internal_prediction_source_gate"
     )
@@ -5389,6 +5513,29 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "first:source_id/internal_source_id_missing_or_external" in by_id[
         "strict_blind_source_gate_field_board"
     ]["blockers"]
+    assert by_id["strict_blind_source_gate_operator_packet"]["status"] == (
+        "awaiting_source_gate_operator_values"
+    )
+    assert by_id["strict_blind_source_gate_operator_packet"]["ready_count"] == 0
+    assert by_id["strict_blind_source_gate_operator_packet"]["blocked_count"] == 11
+    assert by_id["strict_blind_source_gate_operator_packet"]["total_count"] == 11
+    assert "operator:0/11/11" in by_id["strict_blind_source_gate_operator_packet"]["blockers"]
+    assert "patch:0/11" in by_id["strict_blind_source_gate_operator_packet"]["blockers"]
+    assert "actions:9/1/1" in by_id["strict_blind_source_gate_operator_packet"]["blockers"]
+    assert "first:source_id/awaiting_operator_value" in by_id[
+        "strict_blind_source_gate_operator_packet"
+    ]["blockers"]
+    assert by_id["strict_blind_source_gate_source_request_packet"]["status"] == (
+        "awaiting_pre_native_source_or_candidate_replacement"
+    )
+    assert by_id["strict_blind_source_gate_source_request_packet"]["ready_count"] == 0
+    assert by_id["strict_blind_source_gate_source_request_packet"]["blocked_count"] == 17
+    assert by_id["strict_blind_source_gate_source_request_packet"]["total_count"] == 17
+    assert "requests:10/7/0/17" in by_id["strict_blind_source_gate_source_request_packet"]["blockers"]
+    assert "scope:10/7" in by_id["strict_blind_source_gate_source_request_packet"]["blockers"]
+    assert "first:source_request_001/HIST_BBA5/pre_native_prediction_source_required/prediction_not_before_native" in by_id[
+        "strict_blind_source_gate_source_request_packet"
+    ]["blockers"]
     assert by_id["strict_blind_internal_prediction_source_apply_plan"]["status"] == (
         "blocked_until_internal_prediction_source_gate_passes"
     )
@@ -5406,9 +5553,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     ]["blockers"]
     assert by_id["strict_blind_first_slot_closure_kit"]["status"] == "blocked_on_internal_prediction_source_gate"
     assert by_id["strict_blind_first_slot_closure_kit"]["ready_count"] == 0
-    assert by_id["strict_blind_first_slot_closure_kit"]["blocked_count"] == 5
-    assert by_id["strict_blind_first_slot_closure_kit"]["total_count"] == 5
-    assert "fills:13/12/20/45" in by_id["strict_blind_first_slot_closure_kit"]["blockers"]
+    assert by_id["strict_blind_first_slot_closure_kit"]["blocked_count"] == 6
+    assert by_id["strict_blind_first_slot_closure_kit"]["total_count"] == 6
+    assert "fills:11/12/20/43" in by_id["strict_blind_first_slot_closure_kit"]["blockers"]
     assert "first:internal_prediction_source_gate/internal_source_id_missing_or_external" in by_id[
         "strict_blind_first_slot_closure_kit"
     ]["blockers"]
@@ -5554,6 +5701,10 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_strict_blind_internal_prediction_source_gate.json"),
             "--strict-blind-source-gate-field-board-json",
             str(tmp_path / "missing_strict_blind_source_gate_field_board.json"),
+            "--strict-blind-source-gate-operator-packet-json",
+            str(tmp_path / "missing_strict_blind_source_gate_operator_packet.json"),
+            "--strict-blind-source-gate-source-request-packet-json",
+            str(tmp_path / "missing_strict_blind_source_gate_source_request_packet.json"),
             "--strict-blind-internal-prediction-source-apply-plan-json",
             str(tmp_path / "missing_strict_blind_internal_prediction_source_apply_plan.json"),
             "--strict-blind-first-slot-closure-kit-json",

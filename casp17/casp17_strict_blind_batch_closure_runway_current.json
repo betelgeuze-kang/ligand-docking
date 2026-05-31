@@ -693,7 +693,7 @@
     "first_blocker": "internal_source_id_missing_or_external",
     "first_blocking_stage": "internal_prediction_source_gate",
     "first_next_action": "set source_id to an internal pre-native prediction source, not an official archive or MassiveFold pool",
-    "generated_at_local": "2026-06-01T02:42:44+09:00",
+    "generated_at_local": "2026-06-01T03:11:48+09:00",
     "input_blockers": "",
     "intake_filled_count": 0,
     "intake_missing_count": 640,

@@ -163,6 +163,12 @@ DEFAULT_STRICT_BLIND_INTERNAL_PREDICTION_SOURCE_GATE_JSON = (
 DEFAULT_STRICT_BLIND_SOURCE_GATE_FIELD_BOARD_JSON = (
     "casp17/casp17_strict_blind_source_gate_field_board_current.json"
 )
+DEFAULT_STRICT_BLIND_SOURCE_GATE_OPERATOR_PACKET_JSON = (
+    "casp17/casp17_strict_blind_source_gate_operator_packet_current.json"
+)
+DEFAULT_STRICT_BLIND_SOURCE_GATE_SOURCE_REQUEST_PACKET_JSON = (
+    "casp17/casp17_strict_blind_source_gate_source_request_packet_current.json"
+)
 DEFAULT_STRICT_BLIND_INTERNAL_PREDICTION_SOURCE_APPLY_PLAN_JSON = (
     "casp17/casp17_strict_blind_internal_prediction_source_apply_plan_current.json"
 )
@@ -560,6 +566,12 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     strict_blind_source_gate_field_board_payload = _read_json(
         args.strict_blind_source_gate_field_board_json
     )
+    strict_blind_source_gate_operator_packet_payload = _read_json(
+        args.strict_blind_source_gate_operator_packet_json
+    )
+    strict_blind_source_gate_source_request_packet_payload = _read_json(
+        args.strict_blind_source_gate_source_request_packet_json
+    )
     strict_blind_internal_prediction_source_apply_plan_payload = _read_json(
         args.strict_blind_internal_prediction_source_apply_plan_json
     )
@@ -844,6 +856,12 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     strict_blind_source_gate_field_board_summary = _summary(
         strict_blind_source_gate_field_board_payload
+    )
+    strict_blind_source_gate_operator_packet_summary = _summary(
+        strict_blind_source_gate_operator_packet_payload
+    )
+    strict_blind_source_gate_source_request_packet_summary = _summary(
+        strict_blind_source_gate_source_request_packet_payload
     )
     strict_blind_internal_prediction_source_apply_plan_summary = _summary(
         strict_blind_internal_prediction_source_apply_plan_payload
@@ -3700,6 +3718,70 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + str(strict_blind_source_gate_field_board_summary.get("first_field_key", ""))
                 + "/"
                 + str(strict_blind_source_gate_field_board_summary.get("first_blockers", ""))
+            ),
+        ),
+        _artifact_row(
+            "strict_blind_source_gate_operator_packet",
+            "First strict-blind slot source-gate operator value packet",
+            _text(strict_blind_source_gate_operator_packet_summary.get("source_gate_operator_packet_status")),
+            args.strict_blind_source_gate_operator_packet_json,
+            ready_count=_int(strict_blind_source_gate_operator_packet_summary.get("operator_ready_count")),
+            blocked_count=_int(strict_blind_source_gate_operator_packet_summary.get("operator_awaiting_count")),
+            total_count=_int(strict_blind_source_gate_operator_packet_summary.get("field_action_count")),
+            next_action=_text(strict_blind_source_gate_operator_packet_summary.get("first_next_action")),
+            blockers=(
+                "operator:"
+                + str(strict_blind_source_gate_operator_packet_summary.get("operator_ready_count", ""))
+                + "/"
+                + str(strict_blind_source_gate_operator_packet_summary.get("operator_awaiting_count", ""))
+                + "/"
+                + str(strict_blind_source_gate_operator_packet_summary.get("field_action_count", ""))
+                + ",patch:"
+                + str(strict_blind_source_gate_operator_packet_summary.get("patch_ready_count", ""))
+                + "/"
+                + str(strict_blind_source_gate_operator_packet_summary.get("patch_awaiting_count", ""))
+                + ",actions:"
+                + str(strict_blind_source_gate_operator_packet_summary.get("manifest_patch_count", ""))
+                + "/"
+                + str(strict_blind_source_gate_operator_packet_summary.get("file_copy_count", ""))
+                + "/"
+                + str(strict_blind_source_gate_operator_packet_summary.get("derived_check_count", ""))
+                + ",first:"
+                + str(strict_blind_source_gate_operator_packet_summary.get("first_field_key", ""))
+                + "/"
+                + str(strict_blind_source_gate_operator_packet_summary.get("first_operator_status", ""))
+            ),
+        ),
+        _artifact_row(
+            "strict_blind_source_gate_source_request_packet",
+            "First strict-blind slot source-gate source acquisition requests",
+            _text(strict_blind_source_gate_source_request_packet_summary.get("source_request_packet_status")),
+            args.strict_blind_source_gate_source_request_packet_json,
+            ready_count=0,
+            blocked_count=_int(strict_blind_source_gate_source_request_packet_summary.get("request_count")),
+            total_count=_int(strict_blind_source_gate_source_request_packet_summary.get("request_count")),
+            next_action=_text(strict_blind_source_gate_source_request_packet_summary.get("first_next_action")),
+            blockers=(
+                "requests:"
+                + str(strict_blind_source_gate_source_request_packet_summary.get("pre_native_source_required_count", ""))
+                + "/"
+                + str(strict_blind_source_gate_source_request_packet_summary.get("candidate_replacement_required_count", ""))
+                + "/"
+                + str(strict_blind_source_gate_source_request_packet_summary.get("operator_evidence_repair_required_count", ""))
+                + "/"
+                + str(strict_blind_source_gate_source_request_packet_summary.get("request_count", ""))
+                + ",scope:"
+                + str(strict_blind_source_gate_source_request_packet_summary.get("monomer_request_count", ""))
+                + "/"
+                + str(strict_blind_source_gate_source_request_packet_summary.get("complex_request_count", ""))
+                + ",first:"
+                + str(strict_blind_source_gate_source_request_packet_summary.get("first_request_id", ""))
+                + "/"
+                + str(strict_blind_source_gate_source_request_packet_summary.get("first_request_target_id", ""))
+                + "/"
+                + str(strict_blind_source_gate_source_request_packet_summary.get("first_request_kind", ""))
+                + "/"
+                + str(strict_blind_source_gate_source_request_packet_summary.get("first_request_blocker", ""))
             ),
         ),
         _artifact_row(
@@ -8306,6 +8388,102 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "strict_blind_source_gate_field_board_dir": _text(
             strict_blind_source_gate_field_board_summary.get("board_dir")
         ),
+        "strict_blind_source_gate_operator_packet_status": _text(
+            strict_blind_source_gate_operator_packet_summary.get("source_gate_operator_packet_status")
+        ),
+        "strict_blind_source_gate_operator_packet_required_benchmark_id": _text(
+            strict_blind_source_gate_operator_packet_summary.get("required_benchmark_id")
+        ),
+        "strict_blind_source_gate_operator_packet_required_target_id": _text(
+            strict_blind_source_gate_operator_packet_summary.get("required_target_id")
+        ),
+        "strict_blind_source_gate_operator_packet_required_scope": _text(
+            strict_blind_source_gate_operator_packet_summary.get("required_scope")
+        ),
+        "strict_blind_source_gate_operator_packet_field_action_count": _int(
+            strict_blind_source_gate_operator_packet_summary.get("field_action_count")
+        ),
+        "strict_blind_source_gate_operator_packet_operator_ready_count": _int(
+            strict_blind_source_gate_operator_packet_summary.get("operator_ready_count")
+        ),
+        "strict_blind_source_gate_operator_packet_operator_awaiting_count": _int(
+            strict_blind_source_gate_operator_packet_summary.get("operator_awaiting_count")
+        ),
+        "strict_blind_source_gate_operator_packet_manifest_patch_count": _int(
+            strict_blind_source_gate_operator_packet_summary.get("manifest_patch_count")
+        ),
+        "strict_blind_source_gate_operator_packet_file_copy_count": _int(
+            strict_blind_source_gate_operator_packet_summary.get("file_copy_count")
+        ),
+        "strict_blind_source_gate_operator_packet_derived_check_count": _int(
+            strict_blind_source_gate_operator_packet_summary.get("derived_check_count")
+        ),
+        "strict_blind_source_gate_operator_packet_patch_ready_count": _int(
+            strict_blind_source_gate_operator_packet_summary.get("patch_ready_count")
+        ),
+        "strict_blind_source_gate_operator_packet_patch_awaiting_count": _int(
+            strict_blind_source_gate_operator_packet_summary.get("patch_awaiting_count")
+        ),
+        "strict_blind_source_gate_operator_packet_first_field_key": _text(
+            strict_blind_source_gate_operator_packet_summary.get("first_field_key")
+        ),
+        "strict_blind_source_gate_operator_packet_first_operator_status": _text(
+            strict_blind_source_gate_operator_packet_summary.get("first_operator_status")
+        ),
+        "strict_blind_source_gate_operator_packet_first_next_action": _text(
+            strict_blind_source_gate_operator_packet_summary.get("first_next_action")
+        ),
+        "strict_blind_source_gate_operator_packet_operator_csv": _text(
+            strict_blind_source_gate_operator_packet_summary.get("operator_csv")
+        ),
+        "strict_blind_source_gate_operator_packet_dir": _text(
+            strict_blind_source_gate_operator_packet_summary.get("packet_dir")
+        ),
+        "strict_blind_source_gate_source_request_packet_status": _text(
+            strict_blind_source_gate_source_request_packet_summary.get("source_request_packet_status")
+        ),
+        "strict_blind_source_gate_source_request_packet_required_benchmark_id": _text(
+            strict_blind_source_gate_source_request_packet_summary.get("required_benchmark_id")
+        ),
+        "strict_blind_source_gate_source_request_packet_required_target_id": _text(
+            strict_blind_source_gate_source_request_packet_summary.get("required_target_id")
+        ),
+        "strict_blind_source_gate_source_request_packet_required_scope": _text(
+            strict_blind_source_gate_source_request_packet_summary.get("required_scope")
+        ),
+        "strict_blind_source_gate_source_request_packet_request_count": _int(
+            strict_blind_source_gate_source_request_packet_summary.get("request_count")
+        ),
+        "strict_blind_source_gate_source_request_packet_pre_native_source_count": _int(
+            strict_blind_source_gate_source_request_packet_summary.get("pre_native_source_required_count")
+        ),
+        "strict_blind_source_gate_source_request_packet_candidate_replacement_count": _int(
+            strict_blind_source_gate_source_request_packet_summary.get("candidate_replacement_required_count")
+        ),
+        "strict_blind_source_gate_source_request_packet_operator_repair_count": _int(
+            strict_blind_source_gate_source_request_packet_summary.get("operator_evidence_repair_required_count")
+        ),
+        "strict_blind_source_gate_source_request_packet_monomer_request_count": _int(
+            strict_blind_source_gate_source_request_packet_summary.get("monomer_request_count")
+        ),
+        "strict_blind_source_gate_source_request_packet_complex_request_count": _int(
+            strict_blind_source_gate_source_request_packet_summary.get("complex_request_count")
+        ),
+        "strict_blind_source_gate_source_request_packet_first_request_id": _text(
+            strict_blind_source_gate_source_request_packet_summary.get("first_request_id")
+        ),
+        "strict_blind_source_gate_source_request_packet_first_target_id": _text(
+            strict_blind_source_gate_source_request_packet_summary.get("first_request_target_id")
+        ),
+        "strict_blind_source_gate_source_request_packet_first_kind": _text(
+            strict_blind_source_gate_source_request_packet_summary.get("first_request_kind")
+        ),
+        "strict_blind_source_gate_source_request_packet_first_blocker": _text(
+            strict_blind_source_gate_source_request_packet_summary.get("first_request_blocker")
+        ),
+        "strict_blind_source_gate_source_request_packet_dir": _text(
+            strict_blind_source_gate_source_request_packet_summary.get("request_dir")
+        ),
         "strict_blind_internal_prediction_source_apply_plan_status": _text(
             strict_blind_internal_prediction_source_apply_plan_summary.get(
                 "internal_prediction_source_apply_plan_status"
@@ -10191,6 +10369,8 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- strict-blind internal prediction source audit: `{summary['strict_blind_internal_prediction_source_audit_status'] or '-'}` required `{summary['strict_blind_internal_prediction_source_audit_required_benchmark_id'] or '-'}` `{summary['strict_blind_internal_prediction_source_audit_required_target_id'] or '-'}` `{summary['strict_blind_internal_prediction_source_audit_required_scope'] or '-'}` first-field `{summary['strict_blind_internal_prediction_source_audit_first_open_field'] or '-'}` local eligible/total `{summary['strict_blind_internal_prediction_source_audit_local_eligible_count']}/{summary['strict_blind_internal_prediction_source_audit_local_candidate_count']}` routes allowed/total `{summary['strict_blind_internal_prediction_source_audit_source_route_allowed_count']}/{summary['strict_blind_internal_prediction_source_audit_source_route_count']}` official blocked/total `{summary['strict_blind_internal_prediction_source_audit_official_blocked_count']}/{summary['strict_blind_internal_prediction_source_audit_official_baseline_count']}` native/internal-blocked `{summary['strict_blind_internal_prediction_source_audit_native_ready_count']}/{summary['strict_blind_internal_prediction_source_audit_internal_blocked_count']}` allowed/template `{summary['strict_blind_internal_prediction_source_audit_allowed_internal_source_count']}/{summary['strict_blind_internal_prediction_source_audit_template_count']}` blocker `{summary['strict_blind_internal_prediction_source_audit_first_blocker'] or '-'}` template `{summary['strict_blind_internal_prediction_source_audit_manifest_template'] or '-'}`",
         f"- strict-blind internal prediction source gate: `{summary['strict_blind_internal_prediction_source_gate_status'] or '-'}` required `{summary['strict_blind_internal_prediction_source_gate_required_benchmark_id'] or '-'}` `{summary['strict_blind_internal_prediction_source_gate_required_target_id'] or '-'}` `{summary['strict_blind_internal_prediction_source_gate_required_scope'] or '-'}` manifest rows `{summary['strict_blind_internal_prediction_source_gate_manifest_row_count']}` checks pass/blocked/total `{summary['strict_blind_internal_prediction_source_gate_pass_count']}/{summary['strict_blind_internal_prediction_source_gate_blocked_count']}/{summary['strict_blind_internal_prediction_source_gate_check_count']}` source `{summary['strict_blind_internal_prediction_source_gate_source_id'] or '-'}` prediction/dropzone `{summary['strict_blind_internal_prediction_source_gate_prediction_pdb'] or '-'}` `{summary['strict_blind_internal_prediction_source_gate_prediction_dropzone'] or '-'}` first `{summary['strict_blind_internal_prediction_source_gate_first_blocked_check'] or '-'}` `{summary['strict_blind_internal_prediction_source_gate_first_blocker'] or '-'}` manifest `{summary['strict_blind_internal_prediction_source_gate_manifest_csv'] or '-'}`",
         f"- strict-blind source gate field board: `{summary['strict_blind_source_gate_field_board_status'] or '-'}` required `{summary['strict_blind_source_gate_field_board_required_benchmark_id'] or '-'}` `{summary['strict_blind_source_gate_field_board_required_target_id'] or '-'}` `{summary['strict_blind_source_gate_field_board_required_scope'] or '-'}` actions manifest/file/manifest-file/total `{summary['strict_blind_source_gate_field_board_manifest_value_action_count']}/{summary['strict_blind_source_gate_field_board_file_action_count']}/{summary['strict_blind_source_gate_field_board_manifest_file_action_count']}/{summary['strict_blind_source_gate_field_board_field_action_count']}` blocked checks covered `{summary['strict_blind_source_gate_field_board_blocked_check_covered_count']}` first `{summary['strict_blind_source_gate_field_board_first_field_key'] or '-'}` `{summary['strict_blind_source_gate_field_board_first_blockers'] or '-'}` folder `{summary['strict_blind_source_gate_field_board_dir'] or '-'}`",
+        f"- strict-blind source gate operator packet: `{summary['strict_blind_source_gate_operator_packet_status'] or '-'}` required `{summary['strict_blind_source_gate_operator_packet_required_benchmark_id'] or '-'}` `{summary['strict_blind_source_gate_operator_packet_required_target_id'] or '-'}` `{summary['strict_blind_source_gate_operator_packet_required_scope'] or '-'}` operator ready/awaiting/total `{summary['strict_blind_source_gate_operator_packet_operator_ready_count']}/{summary['strict_blind_source_gate_operator_packet_operator_awaiting_count']}/{summary['strict_blind_source_gate_operator_packet_field_action_count']}` patch ready/awaiting `{summary['strict_blind_source_gate_operator_packet_patch_ready_count']}/{summary['strict_blind_source_gate_operator_packet_patch_awaiting_count']}` actions manifest/file/derived `{summary['strict_blind_source_gate_operator_packet_manifest_patch_count']}/{summary['strict_blind_source_gate_operator_packet_file_copy_count']}/{summary['strict_blind_source_gate_operator_packet_derived_check_count']}` first `{summary['strict_blind_source_gate_operator_packet_first_field_key'] or '-'}` `{summary['strict_blind_source_gate_operator_packet_first_operator_status'] or '-'}` csv `{summary['strict_blind_source_gate_operator_packet_operator_csv'] or '-'}` folder `{summary['strict_blind_source_gate_operator_packet_dir'] or '-'}`",
+        f"- strict-blind source gate source requests: `{summary['strict_blind_source_gate_source_request_packet_status'] or '-'}` required `{summary['strict_blind_source_gate_source_request_packet_required_benchmark_id'] or '-'}` `{summary['strict_blind_source_gate_source_request_packet_required_target_id'] or '-'}` `{summary['strict_blind_source_gate_source_request_packet_required_scope'] or '-'}` requests pre-native/replacement/operator-repair/total `{summary['strict_blind_source_gate_source_request_packet_pre_native_source_count']}/{summary['strict_blind_source_gate_source_request_packet_candidate_replacement_count']}/{summary['strict_blind_source_gate_source_request_packet_operator_repair_count']}/{summary['strict_blind_source_gate_source_request_packet_request_count']}` monomer/complex `{summary['strict_blind_source_gate_source_request_packet_monomer_request_count']}/{summary['strict_blind_source_gate_source_request_packet_complex_request_count']}` first `{summary['strict_blind_source_gate_source_request_packet_first_request_id'] or '-'}` `{summary['strict_blind_source_gate_source_request_packet_first_target_id'] or '-'}` `{summary['strict_blind_source_gate_source_request_packet_first_kind'] or '-'}` `{summary['strict_blind_source_gate_source_request_packet_first_blocker'] or '-'}` folder `{summary['strict_blind_source_gate_source_request_packet_dir'] or '-'}`",
         f"- strict-blind internal prediction source apply plan: `{summary['strict_blind_internal_prediction_source_apply_plan_status'] or '-'}` required `{summary['strict_blind_internal_prediction_source_apply_plan_required_benchmark_id'] or '-'}` `{summary['strict_blind_internal_prediction_source_apply_plan_required_target_id'] or '-'}` `{summary['strict_blind_internal_prediction_source_apply_plan_required_scope'] or '-'}` gate `{summary['strict_blind_internal_prediction_source_apply_plan_gate_status'] or '-'}` actions ready/blocked/total `{summary['strict_blind_internal_prediction_source_apply_plan_ready_action_count']}/{summary['strict_blind_internal_prediction_source_apply_plan_blocked_action_count']}/{summary['strict_blind_internal_prediction_source_apply_plan_action_count']}` file/operator/supp `{summary['strict_blind_internal_prediction_source_apply_plan_file_action_count']}/{summary['strict_blind_internal_prediction_source_apply_plan_operator_value_action_count']}/{summary['strict_blind_internal_prediction_source_apply_plan_supplemental_action_count']}` prediction `{summary['strict_blind_internal_prediction_source_apply_plan_prediction_source'] or '-'}` `->{summary['strict_blind_internal_prediction_source_apply_plan_prediction_destination'] or '-'}` first `{summary['strict_blind_internal_prediction_source_apply_plan_first_blocked_action_id'] or '-'}` `{summary['strict_blind_internal_prediction_source_apply_plan_first_blocker'] or '-'}`",
         f"- strict-blind first slot closure kit: `{summary['strict_blind_first_slot_closure_kit_status'] or '-'}` required `{summary['strict_blind_first_slot_closure_kit_required_benchmark_id'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_required_target_id'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_required_scope'] or '-'}` steps ready/blocked/total `{summary['strict_blind_first_slot_closure_kit_step_ready_count']}/{summary['strict_blind_first_slot_closure_kit_step_blocked_count']}/{summary['strict_blind_first_slot_closure_kit_step_count']}` fills source-gate/file/operator/total `{summary['strict_blind_first_slot_closure_kit_source_gate_fill_count']}/{summary['strict_blind_first_slot_closure_kit_file_fill_count']}/{summary['strict_blind_first_slot_closure_kit_operator_fill_count']}/{summary['strict_blind_first_slot_closure_kit_fill_item_count']}` source/apply/dropzone/operator/intake `{summary['strict_blind_first_slot_closure_kit_source_gate_status'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_apply_plan_status'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_dropzone_status'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_operator_gate_status'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_intake_preflight_status'] or '-'}` first `{summary['strict_blind_first_slot_closure_kit_first_blocked_step'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_first_blocker'] or '-'}` folder `{summary['strict_blind_first_slot_closure_kit_folder'] or '-'}`",
         f"- strict-blind batch closure runway: `{summary['strict_blind_batch_closure_runway_status'] or '-'}` slots ready/blocked/total `{summary['strict_blind_batch_closure_runway_ready_slot_count']}/{summary['strict_blind_batch_closure_runway_blocked_slot_count']}/{summary['strict_blind_batch_closure_runway_slot_count']}` blocked source/evidence/operator/intake `{summary['strict_blind_batch_closure_runway_source_gate_blocked_count']}/{summary['strict_blind_batch_closure_runway_evidence_blocked_count']}/{summary['strict_blind_batch_closure_runway_operator_blocked_count']}/{summary['strict_blind_batch_closure_runway_intake_blocked_count']}` files present/missing `{summary['strict_blind_batch_closure_runway_file_present_count']}/{summary['strict_blind_batch_closure_runway_file_missing_count']}` operators ready/open `{summary['strict_blind_batch_closure_runway_operator_ready_count']}/{summary['strict_blind_batch_closure_runway_operator_open_count']}` intake filled/missing `{summary['strict_blind_batch_closure_runway_intake_filled_count']}/{summary['strict_blind_batch_closure_runway_intake_missing_count']}` first `{summary['strict_blind_batch_closure_runway_first_blocked_rank']}` `{summary['strict_blind_batch_closure_runway_first_blocked_benchmark_id'] or '-'}` `{summary['strict_blind_batch_closure_runway_first_stage'] or '-'}` `{summary['strict_blind_batch_closure_runway_first_blocker'] or '-'}`",
@@ -10493,6 +10673,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--strict-blind-source-gate-field-board-json",
         default=DEFAULT_STRICT_BLIND_SOURCE_GATE_FIELD_BOARD_JSON,
+    )
+    parser.add_argument(
+        "--strict-blind-source-gate-operator-packet-json",
+        default=DEFAULT_STRICT_BLIND_SOURCE_GATE_OPERATOR_PACKET_JSON,
+    )
+    parser.add_argument(
+        "--strict-blind-source-gate-source-request-packet-json",
+        default=DEFAULT_STRICT_BLIND_SOURCE_GATE_SOURCE_REQUEST_PACKET_JSON,
     )
     parser.add_argument(
         "--strict-blind-internal-prediction-source-apply-plan-json",
