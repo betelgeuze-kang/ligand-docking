@@ -23,6 +23,7 @@ DEFAULT_RAW_RANKED_MODEL_QUARANTINE_JSON = "casp17/casp17_raw_ranked_model_quara
 DEFAULT_WIN_GAP_CLOSURE_JSON = "runs/casp17_win_gap_closure_packet_current.json"
 DEFAULT_WIN_TIER_GOAL_SCORECARD_JSON = "runs/casp17_win_tier_goal_scorecard_current.json"
 DEFAULT_WIN_TIER_METRIC_SURFACE_CONTRACT_JSON = "casp17/casp17_win_tier_metric_surface_contract_current.json"
+DEFAULT_WIN_TIER_CRITICAL_PATH_BOARD_JSON = "casp17/casp17_win_tier_critical_path_board_current.json"
 DEFAULT_ORGANIC_LIGAND_SLOT_CANDIDATE_PACKET_JSON = (
     "casp17/casp17_organic_ligand_slot_candidate_packet_current.json"
 )
@@ -149,6 +150,9 @@ DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_FIRST_SLOT_OFFICIAL_ARCHIVE_SOU
 )
 DEFAULT_HISTORICAL_SEED_OFFICIAL_ARCHIVE_BASELINE_LANE_JSON = (
     "casp17/casp17_historical_seed_official_archive_baseline_lane_current.json"
+)
+DEFAULT_STRICT_BLIND_FIRST_SLOT_SOURCE_BRIDGE_JSON = (
+    "casp17/casp17_strict_blind_first_slot_source_bridge_current.json"
 )
 DEFAULT_HISTORICAL_SEED_ABLATION_CANDIDATE_MANIFESTS_JSON = (
     "casp17/casp17_historical_seed_ablation_candidate_manifests_current.json"
@@ -400,6 +404,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     closure_payload = _read_json(args.win_gap_closure_json)
     goal_scorecard_payload = _read_json(args.win_tier_goal_scorecard_json)
     win_tier_metric_surface_contract_payload = _read_json(args.win_tier_metric_surface_contract_json)
+    win_tier_critical_path_board_payload = _read_json(args.win_tier_critical_path_board_json)
     organic_ligand_slot_candidate_packet_payload = _read_json(
         args.organic_ligand_slot_candidate_packet_json
     )
@@ -524,6 +529,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     historical_seed_official_archive_baseline_lane_payload = _read_json(
         args.historical_seed_official_archive_baseline_lane_json
+    )
+    strict_blind_first_slot_source_bridge_payload = _read_json(
+        args.strict_blind_first_slot_source_bridge_json
     )
     historical_seed_ablation_candidate_manifests_payload = _read_json(
         args.historical_seed_ablation_candidate_manifests_json
@@ -661,6 +669,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     closure_summary = _summary(closure_payload)
     goal_scorecard_summary = _summary(goal_scorecard_payload)
     win_tier_metric_surface_contract_summary = _summary(win_tier_metric_surface_contract_payload)
+    win_tier_critical_path_board_summary = _summary(win_tier_critical_path_board_payload)
     organic_ligand_slot_candidate_packet_summary = _summary(
         organic_ligand_slot_candidate_packet_payload
     )
@@ -787,6 +796,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     historical_seed_official_archive_baseline_lane_summary = _summary(
         historical_seed_official_archive_baseline_lane_payload
+    )
+    strict_blind_first_slot_source_bridge_summary = _summary(
+        strict_blind_first_slot_source_bridge_payload
     )
     historical_seed_ablation_candidate_manifests_summary = _summary(
         historical_seed_ablation_candidate_manifests_payload
@@ -1186,6 +1198,40 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + str(win_tier_metric_surface_contract_summary.get("organic_ligand_slot_count", ""))
                 + ",official_archive:"
                 + _text(win_tier_metric_surface_contract_summary.get("official_archive_baseline_policy"))
+            ),
+        ),
+        _artifact_row(
+            "win_tier_critical_path_board",
+            "CASP17 win-tier critical path board",
+            _text(win_tier_critical_path_board_summary.get("critical_path_status")),
+            args.win_tier_critical_path_board_json,
+            ready_count=_int(win_tier_critical_path_board_summary.get("stage_ready_count")),
+            blocked_count=_int(win_tier_critical_path_board_summary.get("stage_blocked_count")),
+            total_count=_int(win_tier_critical_path_board_summary.get("stage_count")),
+            next_action=_text(win_tier_critical_path_board_summary.get("first_next_action")),
+            blockers=(
+                "3d:"
+                + str(win_tier_critical_path_board_summary.get("three_d_object_ready_count", ""))
+                + "/"
+                + str(win_tier_critical_path_board_summary.get("three_d_object_count", ""))
+                + ",external:"
+                + str(win_tier_critical_path_board_summary.get("external_model_selection_ready_target_count", ""))
+                + "/"
+                + str(win_tier_critical_path_board_summary.get("external_model_selection_target_count", ""))
+                + ",model1/top5:"
+                + str(win_tier_critical_path_board_summary.get("external_model_selection_model1_count", ""))
+                + "/"
+                + str(win_tier_critical_path_board_summary.get("external_model_selection_top5_count", ""))
+                + ",strict:"
+                + str(win_tier_critical_path_board_summary.get("strict_blind_ready_slot_count", ""))
+                + "/"
+                + str(win_tier_critical_path_board_summary.get("strict_blind_slot_count", ""))
+                + ",missing_files:"
+                + str(win_tier_critical_path_board_summary.get("strict_blind_evidence_file_missing_count", ""))
+                + ",operator_open:"
+                + str(win_tier_critical_path_board_summary.get("strict_blind_operator_open_value_count", ""))
+                + ",first:"
+                + _text(win_tier_critical_path_board_summary.get("first_blocked_stage_id"))
             ),
         ),
         _artifact_row(
@@ -3478,6 +3524,43 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             ),
         ),
         _artifact_row(
+            "strict_blind_first_slot_source_bridge",
+            "First strict-blind slot source bridge for native authority and operator-only fields",
+            _text(strict_blind_first_slot_source_bridge_summary.get("source_bridge_status")),
+            args.strict_blind_first_slot_source_bridge_json,
+            ready_count=_int(strict_blind_first_slot_source_bridge_summary.get("native_authority_bridge_ready_count")),
+            blocked_count=(
+                _int(strict_blind_first_slot_source_bridge_summary.get("operator_only_field_count"))
+                + _int(strict_blind_first_slot_source_bridge_summary.get("internal_prediction_blocked_count"))
+            ),
+            total_count=_int(strict_blind_first_slot_source_bridge_summary.get("bridge_row_count")),
+            next_action=_text(strict_blind_first_slot_source_bridge_summary.get("first_next_action")),
+            blockers=(
+                "official:"
+                + str(strict_blind_first_slot_source_bridge_summary.get("official_ready_candidate_count", ""))
+                + "/"
+                + str(strict_blind_first_slot_source_bridge_summary.get("official_candidate_count", ""))
+                + ",native_bridge:"
+                + str(strict_blind_first_slot_source_bridge_summary.get("native_authority_bridge_ready_count", ""))
+                + ",baseline_only:"
+                + str(strict_blind_first_slot_source_bridge_summary.get("official_prediction_baseline_only_count", ""))
+                + ",strict_blocked:"
+                + str(strict_blind_first_slot_source_bridge_summary.get("strict_blind_import_blocked_count", ""))
+                + ",operator_only:"
+                + str(strict_blind_first_slot_source_bridge_summary.get("operator_only_field_count", ""))
+                + ",internal_prediction_blocked:"
+                + str(strict_blind_first_slot_source_bridge_summary.get("internal_prediction_blocked_count", ""))
+                + ",auto_apply:"
+                + str(strict_blind_first_slot_source_bridge_summary.get("auto_apply_allowed_count", ""))
+                + ",first:"
+                + str(strict_blind_first_slot_source_bridge_summary.get("first_candidate_competition", ""))
+                + "/"
+                + str(strict_blind_first_slot_source_bridge_summary.get("first_candidate_target_id", ""))
+                + "/"
+                + str(strict_blind_first_slot_source_bridge_summary.get("first_candidate_native_pdb_code", ""))
+            ),
+        ),
+        _artifact_row(
             "historical_seed_ablation_candidate_manifests",
             "Fail-closed ablation candidate manifests for historical seed rows",
             _text(historical_seed_ablation_candidate_manifests_summary.get("ablation_candidate_status")),
@@ -5429,6 +5512,54 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         ),
         "win_tier_metric_surface_contract_first_blocked_benchmark": _text(
             win_tier_metric_surface_contract_summary.get("first_blocked_benchmark_id")
+        ),
+        "win_tier_critical_path_status": _text(
+            win_tier_critical_path_board_summary.get("critical_path_status")
+        ),
+        "win_tier_critical_path_stage_ready_count": _int(
+            win_tier_critical_path_board_summary.get("stage_ready_count")
+        ),
+        "win_tier_critical_path_stage_blocked_count": _int(
+            win_tier_critical_path_board_summary.get("stage_blocked_count")
+        ),
+        "win_tier_critical_path_stage_count": _int(
+            win_tier_critical_path_board_summary.get("stage_count")
+        ),
+        "win_tier_critical_path_3d_ready_count": _int(
+            win_tier_critical_path_board_summary.get("three_d_object_ready_count")
+        ),
+        "win_tier_critical_path_3d_count": _int(
+            win_tier_critical_path_board_summary.get("three_d_object_count")
+        ),
+        "win_tier_critical_path_external_ready_target_count": _int(
+            win_tier_critical_path_board_summary.get("external_model_selection_ready_target_count")
+        ),
+        "win_tier_critical_path_external_target_count": _int(
+            win_tier_critical_path_board_summary.get("external_model_selection_target_count")
+        ),
+        "win_tier_critical_path_external_model1_count": _int(
+            win_tier_critical_path_board_summary.get("external_model_selection_model1_count")
+        ),
+        "win_tier_critical_path_external_top5_count": _int(
+            win_tier_critical_path_board_summary.get("external_model_selection_top5_count")
+        ),
+        "win_tier_critical_path_strict_ready_slot_count": _int(
+            win_tier_critical_path_board_summary.get("strict_blind_ready_slot_count")
+        ),
+        "win_tier_critical_path_strict_slot_count": _int(
+            win_tier_critical_path_board_summary.get("strict_blind_slot_count")
+        ),
+        "win_tier_critical_path_missing_evidence_file_count": _int(
+            win_tier_critical_path_board_summary.get("strict_blind_evidence_file_missing_count")
+        ),
+        "win_tier_critical_path_operator_open_value_count": _int(
+            win_tier_critical_path_board_summary.get("strict_blind_operator_open_value_count")
+        ),
+        "win_tier_critical_path_first_blocked_stage": _text(
+            win_tier_critical_path_board_summary.get("first_blocked_stage_id")
+        ),
+        "win_tier_critical_path_first_blocker": _text(
+            win_tier_critical_path_board_summary.get("first_blocker")
         ),
         "organic_ligand_slot_candidate_status": _text(
             organic_ligand_slot_candidate_packet_summary.get("organic_ligand_slot_candidate_status")
@@ -7751,6 +7882,57 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "historical_seed_official_archive_baseline_lane_first_manifest": _text(
             historical_seed_official_archive_baseline_lane_summary.get("first_acquisition_manifest")
         ),
+        "strict_blind_first_slot_source_bridge_status": _text(
+            strict_blind_first_slot_source_bridge_summary.get("source_bridge_status")
+        ),
+        "strict_blind_first_slot_source_bridge_required_benchmark_id": _text(
+            strict_blind_first_slot_source_bridge_summary.get("required_benchmark_id")
+        ),
+        "strict_blind_first_slot_source_bridge_required_target_id": _text(
+            strict_blind_first_slot_source_bridge_summary.get("required_target_id")
+        ),
+        "strict_blind_first_slot_source_bridge_required_scope": _text(
+            strict_blind_first_slot_source_bridge_summary.get("required_scope")
+        ),
+        "strict_blind_first_slot_source_bridge_official_candidate_count": _int(
+            strict_blind_first_slot_source_bridge_summary.get("official_candidate_count")
+        ),
+        "strict_blind_first_slot_source_bridge_official_ready_count": _int(
+            strict_blind_first_slot_source_bridge_summary.get("official_ready_candidate_count")
+        ),
+        "strict_blind_first_slot_source_bridge_native_ready_count": _int(
+            strict_blind_first_slot_source_bridge_summary.get("native_authority_bridge_ready_count")
+        ),
+        "strict_blind_first_slot_source_bridge_baseline_only_count": _int(
+            strict_blind_first_slot_source_bridge_summary.get("official_prediction_baseline_only_count")
+        ),
+        "strict_blind_first_slot_source_bridge_strict_blocked_count": _int(
+            strict_blind_first_slot_source_bridge_summary.get("strict_blind_import_blocked_count")
+        ),
+        "strict_blind_first_slot_source_bridge_operator_only_count": _int(
+            strict_blind_first_slot_source_bridge_summary.get("operator_only_field_count")
+        ),
+        "strict_blind_first_slot_source_bridge_internal_prediction_blocked_count": _int(
+            strict_blind_first_slot_source_bridge_summary.get("internal_prediction_blocked_count")
+        ),
+        "strict_blind_first_slot_source_bridge_auto_apply_count": _int(
+            strict_blind_first_slot_source_bridge_summary.get("auto_apply_allowed_count")
+        ),
+        "strict_blind_first_slot_source_bridge_first_candidate_competition": _text(
+            strict_blind_first_slot_source_bridge_summary.get("first_candidate_competition")
+        ),
+        "strict_blind_first_slot_source_bridge_first_candidate_target_id": _text(
+            strict_blind_first_slot_source_bridge_summary.get("first_candidate_target_id")
+        ),
+        "strict_blind_first_slot_source_bridge_first_candidate_native_pdb_code": _text(
+            strict_blind_first_slot_source_bridge_summary.get("first_candidate_native_pdb_code")
+        ),
+        "strict_blind_first_slot_source_bridge_first_blocker": _text(
+            strict_blind_first_slot_source_bridge_summary.get("first_blocker")
+        ),
+        "strict_blind_first_slot_source_bridge_bridge_folder": _text(
+            strict_blind_first_slot_source_bridge_summary.get("bridge_folder")
+        ),
         "historical_seed_ablation_candidate_manifests_status": _text(
             historical_seed_ablation_candidate_manifests_summary.get("ablation_candidate_status")
         ),
@@ -9416,6 +9598,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- benchmark rows ready/total: `{summary['benchmark_rows_ready_count']}/{summary['benchmark_rows_total']}`",
         f"- win-tier goal scorecard: `{summary['win_tier_goal_scorecard_status'] or '-'}` pass/partial/blocked `{summary['win_tier_goal_scorecard_pass_count']}/{summary['win_tier_goal_scorecard_partial_count']}/{summary['win_tier_goal_scorecard_blocked_count']}` first blocked `{summary['win_tier_goal_scorecard_first_blocked_gate'] or '-'}`",
         f"- win-tier metric surface contract: `{summary['win_tier_metric_surface_contract_status'] or '-'}` metrics covered/required `{summary['win_tier_metric_surface_contract_covered_metric_count']}/{summary['win_tier_metric_surface_contract_required_metric_count']}` slots ready/blocked/total `{summary['win_tier_metric_surface_contract_ready_slot_count']}/{summary['win_tier_metric_surface_contract_blocked_slot_count']}/{summary['win_tier_metric_surface_contract_slot_count']}` rows ready/blocked/total `{summary['win_tier_metric_surface_contract_ready_metric_row_count']}/{summary['win_tier_metric_surface_contract_blocked_metric_row_count']}/{summary['win_tier_metric_surface_contract_metric_row_count']}` ligand slots `{summary['win_tier_metric_surface_contract_ligand_slot_count']}` official archive `{summary['win_tier_metric_surface_contract_official_archive_policy'] or '-'}` first `{summary['win_tier_metric_surface_contract_first_blocked_benchmark'] or '-'}` `{summary['win_tier_metric_surface_contract_first_blocked_metric'] or '-'}`",
+        f"- win-tier critical path board: `{summary['win_tier_critical_path_status'] or '-'}` stages ready/blocked/total `{summary['win_tier_critical_path_stage_ready_count']}/{summary['win_tier_critical_path_stage_blocked_count']}/{summary['win_tier_critical_path_stage_count']}` 3D objects `{summary['win_tier_critical_path_3d_ready_count']}/{summary['win_tier_critical_path_3d_count']}` external targets `{summary['win_tier_critical_path_external_ready_target_count']}/{summary['win_tier_critical_path_external_target_count']}` model1/top5 `{summary['win_tier_critical_path_external_model1_count']}/{summary['win_tier_critical_path_external_top5_count']}` strict slots `{summary['win_tier_critical_path_strict_ready_slot_count']}/{summary['win_tier_critical_path_strict_slot_count']}` missing evidence/operator-open `{summary['win_tier_critical_path_missing_evidence_file_count']}/{summary['win_tier_critical_path_operator_open_value_count']}` first `{summary['win_tier_critical_path_first_blocked_stage'] or '-'}` `{summary['win_tier_critical_path_first_blocker'] or '-'}`",
         f"- organic ligand slot candidates: `{summary['organic_ligand_slot_candidate_status'] or '-'}` review/proof/total `{summary['organic_ligand_slot_candidate_review_ready_count']}/{summary['organic_ligand_slot_candidate_proof_eligible_count']}/{summary['organic_ligand_slot_candidate_count']}` ChEMBL/BindingDB `{summary['organic_ligand_slot_candidate_chembl_count']}/{summary['organic_ligand_slot_candidate_bindingdb_count']}` strict-blocked `{summary['organic_ligand_slot_candidate_strict_blocked_count']}` files reference/prediction/ligand/template `{summary['organic_ligand_slot_candidate_reference_present_count']}/{summary['organic_ligand_slot_candidate_prediction_present_count']}/{summary['organic_ligand_slot_candidate_ligand_mol2_present_count']}/{summary['organic_ligand_slot_candidate_ligand_template_present_count']}` metrics LDDT-PLI/BiSyRMSD `{summary['organic_ligand_slot_candidate_lddt_pli_required_count']}/{summary['organic_ligand_slot_candidate_bisyrmsd_required_count']}` affinity labels `{summary['organic_ligand_slot_candidate_affinity_label_candidate_count']}` metric ligand slots `{summary['organic_ligand_slot_candidate_metric_contract_ligand_slot_gap_count']}` first `{summary['organic_ligand_slot_candidate_first_target_id'] or '-'}` `{summary['organic_ligand_slot_candidate_first_ligand_id'] or '-'}`",
         f"- organic ligand strict-blind promotion board: `{summary['organic_ligand_slot_promotion_action_board_status'] or '-'}` candidates/actions/open `{summary['organic_ligand_slot_promotion_candidate_count']}/{summary['organic_ligand_slot_promotion_action_count']}/{summary['organic_ligand_slot_promotion_open_action_count']}` reference-preflight `{summary['organic_ligand_slot_promotion_reference_preflight_pass_count']}` operator/numeric/affinity-source `{summary['organic_ligand_slot_promotion_operator_evidence_required_count']}/{summary['organic_ligand_slot_promotion_numeric_value_required_count']}/{summary['organic_ligand_slot_promotion_affinity_source_required_count']}` metric/slot `{summary['organic_ligand_slot_promotion_metric_input_required_count']}/{summary['organic_ligand_slot_promotion_slot_mapping_required_count']}` proof-ready `{summary['organic_ligand_slot_promotion_proof_ready_candidate_count']}` first `{summary['organic_ligand_slot_promotion_first_open_action_id'] or '-'}` `{summary['organic_ligand_slot_promotion_first_open_target_id'] or '-'}` `{summary['organic_ligand_slot_promotion_first_open_action_type'] or '-'}`",
         f"- active competition scope: `{summary['active_competition_scope'] or '-'}` CASP17 `{summary['active_scope_casp17_continuation_status'] or '-'}` priority `{summary['active_scope_casp17_priority_status'] or '-'}` CAPRI `{summary['active_scope_capri_round65_participation_status'] or '-'}` reason `{summary['active_scope_capri_round65_hold_reason'] or '-'}` next `{summary['active_scope_next_action'] or '-'}`",
@@ -9473,6 +9656,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- historical seed strict-blind first slot source route: `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_status'] or '-'}` required `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_required_benchmark_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_required_target_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_required_scope'] or '-'}` routes in/out/total `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_in_scope_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_out_of_scope_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_route_count']}` allowed `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_allowed_count']}` external targets/actions `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_external_required_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_external_action_count']}` out-scope source/date `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_out_scope_source_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_out_scope_date_count']}` first external `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_first_external_route_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_first_external_target_id'] or '-'}` prediction/native `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_first_external_prediction_created_at'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_first_external_native_release_date'] or '-'}`",
         f"- historical seed strict-blind first slot official archive sources: `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_status'] or '-'}` required `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_required_benchmark_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_required_target_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_required_scope'] or '-'}` sources `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_source_count']}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_source_competitions'] or '-'}` candidates ready/blocked/total `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_ready_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_blocked_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_candidate_count']}` pre/native-ready/lookup `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_pre_native_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_native_ready_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_native_lookup_count']}` native PDB/mmCIF `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_native_pdb_ready_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_native_mmcif_only_count']}` metadata/CAPRI/special `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_metadata_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_capri_marker_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_special_mode_count']}` regular/domain/variant `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_regular_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_domain_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_variant_count']}` first `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_candidate_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_competition'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_target_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_native_pdb_code'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_native_download_status'] or '-'}` prediction/native `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_prediction_at'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_native_anchor'] or '-'}`",
         f"- historical seed official archive baseline lane: `{summary['historical_seed_official_archive_baseline_lane_status'] or '-'}` source ready/total `{summary['historical_seed_official_archive_baseline_lane_source_ready_count']}/{summary['historical_seed_official_archive_baseline_lane_source_count']}` baseline ready/blocked/total `{summary['historical_seed_official_archive_baseline_lane_ready_count']}/{summary['historical_seed_official_archive_baseline_lane_blocked_count']}/{summary['historical_seed_official_archive_baseline_lane_candidate_count']}` proof-eligible/strict-blocked/other-team `{summary['historical_seed_official_archive_baseline_lane_proof_eligible_count']}/{summary['historical_seed_official_archive_baseline_lane_strict_blind_blocked_count']}/{summary['historical_seed_official_archive_baseline_lane_other_team_count']}` policy `{summary['historical_seed_official_archive_baseline_lane_policy'] or '-'}` first `{summary['historical_seed_official_archive_baseline_lane_first_candidate_id'] or '-'}` `{summary['historical_seed_official_archive_baseline_lane_first_competition'] or '-'}` `{summary['historical_seed_official_archive_baseline_lane_first_target_id'] or '-'}` `{summary['historical_seed_official_archive_baseline_lane_first_native_pdb_code'] or '-'}` manifest `{summary['historical_seed_official_archive_baseline_lane_first_manifest'] or '-'}`",
+        f"- strict-blind first slot source bridge: `{summary['strict_blind_first_slot_source_bridge_status'] or '-'}` required `{summary['strict_blind_first_slot_source_bridge_required_benchmark_id'] or '-'}` `{summary['strict_blind_first_slot_source_bridge_required_target_id'] or '-'}` `{summary['strict_blind_first_slot_source_bridge_required_scope'] or '-'}` official ready/total `{summary['strict_blind_first_slot_source_bridge_official_ready_count']}/{summary['strict_blind_first_slot_source_bridge_official_candidate_count']}` native-bridge `{summary['strict_blind_first_slot_source_bridge_native_ready_count']}` baseline-only/strict-blocked `{summary['strict_blind_first_slot_source_bridge_baseline_only_count']}/{summary['strict_blind_first_slot_source_bridge_strict_blocked_count']}` operator-only/internal-blocked `{summary['strict_blind_first_slot_source_bridge_operator_only_count']}/{summary['strict_blind_first_slot_source_bridge_internal_prediction_blocked_count']}` auto-apply `{summary['strict_blind_first_slot_source_bridge_auto_apply_count']}` first `{summary['strict_blind_first_slot_source_bridge_first_candidate_competition'] or '-'}` `{summary['strict_blind_first_slot_source_bridge_first_candidate_target_id'] or '-'}` `{summary['strict_blind_first_slot_source_bridge_first_candidate_native_pdb_code'] or '-'}` blocker `{summary['strict_blind_first_slot_source_bridge_first_blocker'] or '-'}` folder `{summary['strict_blind_first_slot_source_bridge_bridge_folder'] or '-'}`",
         f"- historical seed ablation candidates: `{summary['historical_seed_ablation_candidate_manifests_status'] or '-'}` seeds/manifests/candidate-rows `{summary['historical_seed_ablation_candidate_manifests_seed_count']}/{summary['historical_seed_ablation_candidate_manifests_manifest_count']}/{summary['historical_seed_ablation_candidate_manifests_candidate_row_count']}` selected/native `{summary['historical_seed_ablation_candidate_manifests_selected_present_count']}/{summary['historical_seed_ablation_candidate_manifests_native_present_count']}` baseline/gaps `{summary['historical_seed_ablation_candidate_manifests_baseline_count']}/{summary['historical_seed_ablation_candidate_manifests_layer_gap_count']}` ready/review/core-blocked `{summary['historical_seed_ablation_candidate_manifests_ready_count']}/{summary['historical_seed_ablation_candidate_manifests_operator_review_count']}/{summary['historical_seed_ablation_candidate_manifests_core_blocked_count']}` first `{summary['historical_seed_ablation_candidate_manifests_first_target_id'] or '-'}` `{summary['historical_seed_ablation_candidate_manifests_first_next_action'] or '-'}`",
         f"- historical seed ablation gap repair: `{summary['historical_seed_ablation_gap_repair_plan_status'] or '-'}` seeds/repair-csvs `{summary['historical_seed_ablation_gap_repair_plan_seed_count']}/{summary['historical_seed_ablation_gap_repair_plan_repair_csv_count']}` real/missing-real/top5-decoys/top5-copy `{summary['historical_seed_ablation_gap_repair_plan_real_count']}/{summary['historical_seed_ablation_gap_repair_plan_missing_real_count']}/{summary['historical_seed_ablation_gap_repair_plan_top5_decoy_count']}/{summary['historical_seed_ablation_gap_repair_plan_top5_copy_count']}` ready/gap/core-blocked `{summary['historical_seed_ablation_gap_repair_plan_ready_count']}/{summary['historical_seed_ablation_gap_repair_plan_gap_count']}/{summary['historical_seed_ablation_gap_repair_plan_core_blocked_count']}` first `{summary['historical_seed_ablation_gap_repair_plan_first_target_id'] or '-'}` `{summary['historical_seed_ablation_gap_repair_plan_first_next_action'] or '-'}`",
         f"- historical seed top5 pools: `{summary['historical_seed_top5_candidate_pools_status'] or '-'}` seeds/pools/models `{summary['historical_seed_top5_candidate_pools_seed_count']}/{summary['historical_seed_top5_candidate_pools_pool_count']}/{summary['historical_seed_top5_candidate_pools_candidate_model_count']}` complete/gaps/source-present/source-blocked `{summary['historical_seed_top5_candidate_pools_complete_count']}/{summary['historical_seed_top5_candidate_pools_gap_count']}/{summary['historical_seed_top5_candidate_pools_source_present_count']}/{summary['historical_seed_top5_candidate_pools_blocked_source_count']}` generated `{summary['historical_seed_top5_candidate_pools_generated_perturbation_count']}` first `{summary['historical_seed_top5_candidate_pools_first_target_id'] or '-'}` `{summary['historical_seed_top5_candidate_pools_first_next_action'] or '-'}`",
@@ -9587,6 +9771,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--win-gap-closure-json", default=DEFAULT_WIN_GAP_CLOSURE_JSON)
     parser.add_argument("--win-tier-goal-scorecard-json", default=DEFAULT_WIN_TIER_GOAL_SCORECARD_JSON)
     parser.add_argument("--win-tier-metric-surface-contract-json", default=DEFAULT_WIN_TIER_METRIC_SURFACE_CONTRACT_JSON)
+    parser.add_argument("--win-tier-critical-path-board-json", default=DEFAULT_WIN_TIER_CRITICAL_PATH_BOARD_JSON)
     parser.add_argument(
         "--organic-ligand-slot-candidate-packet-json",
         default=DEFAULT_ORGANIC_LIGAND_SLOT_CANDIDATE_PACKET_JSON,
@@ -9755,6 +9940,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--historical-seed-official-archive-baseline-lane-json",
         default=DEFAULT_HISTORICAL_SEED_OFFICIAL_ARCHIVE_BASELINE_LANE_JSON,
+    )
+    parser.add_argument(
+        "--strict-blind-first-slot-source-bridge-json",
+        default=DEFAULT_STRICT_BLIND_FIRST_SLOT_SOURCE_BRIDGE_JSON,
     )
     parser.add_argument(
         "--historical-seed-ablation-candidate-manifests-json",

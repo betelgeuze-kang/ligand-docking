@@ -20,6 +20,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     closure_json = tmp_path / "closure.json"
     goal_scorecard_json = tmp_path / "goal_scorecard.json"
     win_tier_metric_surface_contract_json = tmp_path / "win_tier_metric_surface_contract.json"
+    win_tier_critical_path_board_json = tmp_path / "win_tier_critical_path_board.json"
     organic_ligand_slot_candidate_packet_json = tmp_path / "organic_ligand_slot_candidate_packet.json"
     organic_ligand_slot_promotion_action_board_json = (
         tmp_path / "organic_ligand_slot_promotion_action_board.json"
@@ -131,6 +132,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     historical_seed_official_archive_baseline_lane_json = (
         tmp_path / "historical_seed_official_archive_baseline_lane.json"
     )
+    strict_blind_first_slot_source_bridge_json = tmp_path / "strict_blind_first_slot_source_bridge.json"
     historical_seed_ablation_candidate_manifests_json = (
         tmp_path / "historical_seed_ablation_candidate_manifests.json"
     )
@@ -433,6 +435,30 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "first_blocked_metric": "GDT_TS",
                 "first_blocked_benchmark_id": "hist_REQUIRED_MONOMER_001",
                 "next_action": "fill strict-blind prediction/native/no-leak evidence",
+            }
+        },
+    )
+    _write_json(
+        win_tier_critical_path_board_json,
+        {
+            "summary": {
+                "critical_path_status": "competitive_proof_blocked_on_strict_blind_evidence",
+                "stage_count": 8,
+                "stage_ready_count": 3,
+                "stage_blocked_count": 5,
+                "three_d_object_ready_count": 4,
+                "three_d_object_count": 4,
+                "external_model_selection_ready_target_count": 4,
+                "external_model_selection_target_count": 4,
+                "external_model_selection_model1_count": 4,
+                "external_model_selection_top5_count": 20,
+                "strict_blind_ready_slot_count": 0,
+                "strict_blind_slot_count": 40,
+                "strict_blind_evidence_file_missing_count": 240,
+                "strict_blind_operator_open_value_count": 400,
+                "first_blocked_stage_id": "win_tier_metric_surface",
+                "first_blocker": "hist_REQUIRED_MONOMER_001",
+                "first_next_action": "fill strict-blind prediction/native/no-leak evidence",
             }
         },
     )
@@ -1653,6 +1679,38 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        strict_blind_first_slot_source_bridge_json,
+        {
+            "summary": {
+                "source_bridge_status": "first_slot_source_bridge_internal_prediction_required",
+                "required_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "required_target_id": "REQUIRED_MONOMER_001",
+                "required_scope": "monomer",
+                "official_candidate_count": 24,
+                "official_ready_candidate_count": 24,
+                "native_authority_bridge_ready_count": 2,
+                "official_prediction_baseline_only_count": 24,
+                "strict_blind_import_blocked_count": 24,
+                "operator_only_field_count": 6,
+                "internal_prediction_blocked_count": 1,
+                "auto_apply_allowed_count": 0,
+                "bridge_row_count": 9,
+                "first_candidate_competition": "CASP16",
+                "first_candidate_target_id": "T1210",
+                "first_candidate_native_pdb_code": "9enr",
+                "first_blocker": "internal_pre_native_prediction_pdb_required",
+                "first_next_action": (
+                    "provide a pre-native internal prediction PDB; use official archive files only for "
+                    "native authority/baseline review"
+                ),
+                "bridge_folder": (
+                    "casp17/historical_seed_strict_blind_first_slot_source_bridge/"
+                    "hist_REQUIRED_MONOMER_001"
+                ),
+            }
+        },
+    )
+    _write_json(
         historical_seed_ablation_candidate_manifests_json,
         {
             "summary": {
@@ -2760,6 +2818,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(goal_scorecard_json),
             "--win-tier-metric-surface-contract-json",
             str(win_tier_metric_surface_contract_json),
+            "--win-tier-critical-path-board-json",
+            str(win_tier_critical_path_board_json),
             "--organic-ligand-slot-candidate-packet-json",
             str(organic_ligand_slot_candidate_packet_json),
             "--organic-ligand-slot-promotion-action-board-json",
@@ -2858,6 +2918,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_json),
             "--historical-seed-official-archive-baseline-lane-json",
             str(historical_seed_official_archive_baseline_lane_json),
+            "--strict-blind-first-slot-source-bridge-json",
+            str(strict_blind_first_slot_source_bridge_json),
             "--historical-seed-ablation-candidate-manifests-json",
             str(historical_seed_ablation_candidate_manifests_json),
             "--historical-seed-ablation-gap-repair-plan-json",
@@ -3001,6 +3063,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "proteins pass/blocked/total `2/0/2`" in workbench_md
     assert "win-tier metric surface contract: `awaiting_strict_blind_evidence_files_and_ligand_category_slots`" in workbench_md
     assert "metrics covered/required `11/11`" in workbench_md
+    assert "win-tier critical path board: `competitive_proof_blocked_on_strict_blind_evidence`" in workbench_md
+    assert "3D objects `4/4` external targets `4/4` model1/top5 `4/20`" in workbench_md
+    assert "strict slots `0/40` missing evidence/operator-open `240/400`" in workbench_md
     assert "organic ligand slot candidates: `organic_ligand_slot_candidates_ready_for_operator_review`" in workbench_md
     assert "review/proof/total `2/0/2`" in workbench_md
     assert "ChEMBL/BindingDB `1/1`" in workbench_md
@@ -3052,6 +3117,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "CAPRI Round 65 format preflight context: `deferred_pi_required`" in workbench_md
     assert "historical seed official archive baseline lane: `official_archive_baseline_lane_ready`" in workbench_md
     assert "proof-eligible/strict-blocked/other-team `0/24/24`" in workbench_md
+    assert "strict-blind first slot source bridge: `first_slot_source_bridge_internal_prediction_required`" in workbench_md
+    assert "official ready/total `24/24` native-bridge `2`" in workbench_md
+    assert "baseline-only/strict-blocked `24/24` operator-only/internal-blocked `6/1`" in workbench_md
     assert payload["summary"]["target_model_ready_count"] == 2
     assert payload["summary"]["target_model_object_count"] == 4
     assert payload["summary"]["target_model_object_projection_count"] == 4
@@ -3622,6 +3690,29 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         "excluded_from_competitive_proof"
     )
     assert payload["summary"]["win_tier_metric_surface_contract_first_blocked_metric"] == "GDT_TS"
+    assert payload["summary"]["win_tier_critical_path_status"] == (
+        "competitive_proof_blocked_on_strict_blind_evidence"
+    )
+    assert payload["summary"]["win_tier_critical_path_stage_ready_count"] == 3
+    assert payload["summary"]["win_tier_critical_path_stage_blocked_count"] == 5
+    assert payload["summary"]["win_tier_critical_path_3d_ready_count"] == 4
+    assert payload["summary"]["win_tier_critical_path_external_ready_target_count"] == 4
+    assert payload["summary"]["win_tier_critical_path_external_model1_count"] == 4
+    assert payload["summary"]["win_tier_critical_path_external_top5_count"] == 20
+    assert payload["summary"]["win_tier_critical_path_strict_ready_slot_count"] == 0
+    assert payload["summary"]["win_tier_critical_path_strict_slot_count"] == 40
+    assert payload["summary"]["win_tier_critical_path_missing_evidence_file_count"] == 240
+    assert payload["summary"]["win_tier_critical_path_operator_open_value_count"] == 400
+    assert payload["summary"]["win_tier_critical_path_first_blocked_stage"] == "win_tier_metric_surface"
+    assert payload["summary"]["strict_blind_first_slot_source_bridge_status"] == (
+        "first_slot_source_bridge_internal_prediction_required"
+    )
+    assert payload["summary"]["strict_blind_first_slot_source_bridge_native_ready_count"] == 2
+    assert payload["summary"]["strict_blind_first_slot_source_bridge_baseline_only_count"] == 24
+    assert payload["summary"]["strict_blind_first_slot_source_bridge_strict_blocked_count"] == 24
+    assert payload["summary"]["strict_blind_first_slot_source_bridge_operator_only_count"] == 6
+    assert payload["summary"]["strict_blind_first_slot_source_bridge_internal_prediction_blocked_count"] == 1
+    assert payload["summary"]["strict_blind_first_slot_source_bridge_auto_apply_count"] == 0
     assert payload["summary"]["organic_ligand_slot_candidate_status"] == (
         "organic_ligand_slot_candidates_ready_for_operator_review"
     )
@@ -4246,6 +4337,17 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "official_archive:excluded_from_competitive_proof" in by_id[
         "win_tier_metric_surface_contract"
     ]["blockers"]
+    assert by_id["win_tier_critical_path_board"]["status"] == (
+        "competitive_proof_blocked_on_strict_blind_evidence"
+    )
+    assert by_id["win_tier_critical_path_board"]["ready_count"] == 3
+    assert by_id["win_tier_critical_path_board"]["blocked_count"] == 5
+    assert by_id["win_tier_critical_path_board"]["total_count"] == 8
+    assert "3d:4/4" in by_id["win_tier_critical_path_board"]["blockers"]
+    assert "external:4/4" in by_id["win_tier_critical_path_board"]["blockers"]
+    assert "model1/top5:4/20" in by_id["win_tier_critical_path_board"]["blockers"]
+    assert "strict:0/40" in by_id["win_tier_critical_path_board"]["blockers"]
+    assert "missing_files:240" in by_id["win_tier_critical_path_board"]["blockers"]
     assert by_id["organic_ligand_slot_candidate_packet"]["status"] == (
         "organic_ligand_slot_candidates_ready_for_operator_review"
     )
@@ -4950,6 +5052,19 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "strict_blind_blocked:24" in by_id["historical_seed_official_archive_baseline_lane"]["blockers"]
     assert "other_team_baseline:24" in by_id["historical_seed_official_archive_baseline_lane"]["blockers"]
     assert "first:CASP16/T1210/9enr" in by_id["historical_seed_official_archive_baseline_lane"]["blockers"]
+    assert by_id["strict_blind_first_slot_source_bridge"]["status"] == (
+        "first_slot_source_bridge_internal_prediction_required"
+    )
+    assert by_id["strict_blind_first_slot_source_bridge"]["ready_count"] == 2
+    assert by_id["strict_blind_first_slot_source_bridge"]["blocked_count"] == 7
+    assert by_id["strict_blind_first_slot_source_bridge"]["total_count"] == 9
+    assert "official:24/24" in by_id["strict_blind_first_slot_source_bridge"]["blockers"]
+    assert "native_bridge:2" in by_id["strict_blind_first_slot_source_bridge"]["blockers"]
+    assert "baseline_only:24" in by_id["strict_blind_first_slot_source_bridge"]["blockers"]
+    assert "strict_blocked:24" in by_id["strict_blind_first_slot_source_bridge"]["blockers"]
+    assert "operator_only:6" in by_id["strict_blind_first_slot_source_bridge"]["blockers"]
+    assert "internal_prediction_blocked:1" in by_id["strict_blind_first_slot_source_bridge"]["blockers"]
+    assert "auto_apply:0" in by_id["strict_blind_first_slot_source_bridge"]["blockers"]
     assert by_id["historical_seed_clearance_to_identity_intake_sync"]["status"] == (
         "waiting_on_cleared_seed_manifest"
     )
@@ -5003,6 +5118,8 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_organic_ligand_slot_candidate_packet.json"),
             "--organic-ligand-slot-promotion-action-board-json",
             str(tmp_path / "missing_organic_ligand_slot_promotion_action_board.json"),
+            "--win-tier-critical-path-board-json",
+            str(tmp_path / "missing_win_tier_critical_path_board.json"),
             "--target-object-viewer-smoke-json",
             str(tmp_path / "missing_object_viewer_smoke.json"),
             "--target-object-model-review-json",
@@ -5071,6 +5188,8 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates.json"),
             "--historical-seed-official-archive-baseline-lane-json",
             str(tmp_path / "missing_historical_seed_official_archive_baseline_lane.json"),
+            "--strict-blind-first-slot-source-bridge-json",
+            str(tmp_path / "missing_strict_blind_first_slot_source_bridge.json"),
             "--historical-seed-first-clearance-operator-kit-json",
             str(tmp_path / "missing_historical_seed_first_clearance_operator_kit.json"),
             "--historical-seed-clearance-to-identity-intake-sync-json",
