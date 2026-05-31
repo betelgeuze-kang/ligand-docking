@@ -229,6 +229,9 @@ DEFAULT_HISTORICAL_SEED_FIRST_CLEARANCE_NO_LEAK_EVIDENCE_PACKET_JSON = (
 DEFAULT_HISTORICAL_SEED_FIRST_CLEARANCE_NO_LEAK_EVIDENCE_REVIEW_GATE_JSON = (
     "casp17/casp17_historical_seed_first_clearance_no_leak_evidence_review_gate_current.json"
 )
+DEFAULT_HISTORICAL_SEED_FIRST_CLEARANCE_NO_LEAK_EVIDENCE_SYNC_PLAN_JSON = (
+    "casp17/casp17_historical_seed_first_clearance_no_leak_evidence_sync_plan_current.json"
+)
 DEFAULT_HISTORICAL_SEED_CLEARANCE_TO_IDENTITY_INTAKE_SYNC_JSON = (
     "casp17/casp17_historical_seed_clearance_to_identity_intake_sync_current.json"
 )
@@ -653,6 +656,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     historical_seed_first_clearance_no_leak_evidence_review_gate_payload = _read_json(
         args.historical_seed_first_clearance_no_leak_evidence_review_gate_json
     )
+    historical_seed_first_clearance_no_leak_evidence_sync_plan_payload = _read_json(
+        args.historical_seed_first_clearance_no_leak_evidence_sync_plan_json
+    )
     historical_seed_clearance_to_identity_intake_sync_payload = _read_json(
         args.historical_seed_clearance_to_identity_intake_sync_json
     )
@@ -960,6 +966,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     historical_seed_first_clearance_no_leak_evidence_review_gate_summary = _summary(
         historical_seed_first_clearance_no_leak_evidence_review_gate_payload
+    )
+    historical_seed_first_clearance_no_leak_evidence_sync_plan_summary = _summary(
+        historical_seed_first_clearance_no_leak_evidence_sync_plan_payload
     )
     historical_seed_clearance_to_identity_intake_sync_summary = _summary(
         historical_seed_clearance_to_identity_intake_sync_payload
@@ -4446,6 +4455,36 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                         "policy_blocked_count", ""
                     )
                 )
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_first_clearance_no_leak_evidence_sync_plan",
+            "Dry-run/apply plan from reviewed first-clearance no-leak evidence into the intake",
+            _text(
+                historical_seed_first_clearance_no_leak_evidence_sync_plan_summary.get(
+                    "first_clearance_no_leak_evidence_sync_plan_status"
+                )
+            ),
+            args.historical_seed_first_clearance_no_leak_evidence_sync_plan_json,
+            ready_count=_int(
+                historical_seed_first_clearance_no_leak_evidence_sync_plan_summary.get("ready_action_count")
+            ),
+            blocked_count=_int(
+                historical_seed_first_clearance_no_leak_evidence_sync_plan_summary.get("blocked_action_count")
+            ),
+            total_count=_int(historical_seed_first_clearance_no_leak_evidence_sync_plan_summary.get("action_count")),
+            next_action=_text(historical_seed_first_clearance_no_leak_evidence_sync_plan_summary.get("next_action")),
+            blockers=(
+                "mode:"
+                + _text(historical_seed_first_clearance_no_leak_evidence_sync_plan_summary.get("sync_mode"))
+                + ",review:"
+                + _text(historical_seed_first_clearance_no_leak_evidence_sync_plan_summary.get("review_gate_status"))
+                + ",first:"
+                + _text(historical_seed_first_clearance_no_leak_evidence_sync_plan_summary.get("first_blocked_field"))
+                + ",blocker:"
+                + _text(historical_seed_first_clearance_no_leak_evidence_sync_plan_summary.get("first_blocker"))
+                + ",applied:"
+                + str(historical_seed_first_clearance_no_leak_evidence_sync_plan_summary.get("applied_action_count", ""))
             ),
         ),
         _artifact_row(
@@ -9686,6 +9725,53 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "historical_seed_first_clearance_no_leak_evidence_review_gate_next_action": _text(
             historical_seed_first_clearance_no_leak_evidence_review_gate_summary.get("next_action")
         ),
+        "historical_seed_first_clearance_no_leak_evidence_sync_plan_status": _text(
+            historical_seed_first_clearance_no_leak_evidence_sync_plan_summary.get(
+                "first_clearance_no_leak_evidence_sync_plan_status"
+            )
+        ),
+        "historical_seed_first_clearance_no_leak_evidence_sync_plan_mode": _text(
+            historical_seed_first_clearance_no_leak_evidence_sync_plan_summary.get("sync_mode")
+        ),
+        "historical_seed_first_clearance_no_leak_evidence_sync_plan_review_status": _text(
+            historical_seed_first_clearance_no_leak_evidence_sync_plan_summary.get("review_gate_status")
+        ),
+        "historical_seed_first_clearance_no_leak_evidence_sync_plan_target_id": _text(
+            historical_seed_first_clearance_no_leak_evidence_sync_plan_summary.get("target_id")
+        ),
+        "historical_seed_first_clearance_no_leak_evidence_sync_plan_benchmark_id": _text(
+            historical_seed_first_clearance_no_leak_evidence_sync_plan_summary.get("benchmark_id")
+        ),
+        "historical_seed_first_clearance_no_leak_evidence_sync_plan_action_count": _int(
+            historical_seed_first_clearance_no_leak_evidence_sync_plan_summary.get("action_count")
+        ),
+        "historical_seed_first_clearance_no_leak_evidence_sync_plan_ready_count": _int(
+            historical_seed_first_clearance_no_leak_evidence_sync_plan_summary.get("ready_action_count")
+        ),
+        "historical_seed_first_clearance_no_leak_evidence_sync_plan_blocked_count": _int(
+            historical_seed_first_clearance_no_leak_evidence_sync_plan_summary.get("blocked_action_count")
+        ),
+        "historical_seed_first_clearance_no_leak_evidence_sync_plan_applied_count": _int(
+            historical_seed_first_clearance_no_leak_evidence_sync_plan_summary.get("applied_action_count")
+        ),
+        "historical_seed_first_clearance_no_leak_evidence_sync_plan_review_ready_count": _int(
+            historical_seed_first_clearance_no_leak_evidence_sync_plan_summary.get("review_ready_field_count")
+        ),
+        "historical_seed_first_clearance_no_leak_evidence_sync_plan_review_blocked_count": _int(
+            historical_seed_first_clearance_no_leak_evidence_sync_plan_summary.get("review_blocked_field_count")
+        ),
+        "historical_seed_first_clearance_no_leak_evidence_sync_plan_first_blocked_field": _text(
+            historical_seed_first_clearance_no_leak_evidence_sync_plan_summary.get("first_blocked_field")
+        ),
+        "historical_seed_first_clearance_no_leak_evidence_sync_plan_first_blocker": _text(
+            historical_seed_first_clearance_no_leak_evidence_sync_plan_summary.get("first_blocker")
+        ),
+        "historical_seed_first_clearance_no_leak_evidence_sync_plan_destination_intake_csv": _text(
+            historical_seed_first_clearance_no_leak_evidence_sync_plan_summary.get("destination_intake_csv")
+        ),
+        "historical_seed_first_clearance_no_leak_evidence_sync_plan_next_action": _text(
+            historical_seed_first_clearance_no_leak_evidence_sync_plan_summary.get("next_action")
+        ),
         "historical_seed_clearance_to_identity_intake_sync_status": _text(
             historical_seed_clearance_to_identity_intake_sync_summary.get("seed_to_identity_sync_status")
         ),
@@ -11066,6 +11152,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- historical seed first clearance no-leak gate: `{summary['historical_seed_first_clearance_no_leak_gate_status'] or '-'}` target `{summary['historical_seed_first_clearance_no_leak_gate_target_id'] or '-'}` benchmark `{summary['historical_seed_first_clearance_no_leak_gate_benchmark_id'] or '-'}` fields ready/blocked/total `{summary['historical_seed_first_clearance_no_leak_gate_ready_count']}/{summary['historical_seed_first_clearance_no_leak_gate_blocked_count']}/{summary['historical_seed_first_clearance_no_leak_gate_field_count']}` values present/missing `{summary['historical_seed_first_clearance_no_leak_gate_value_present_count']}/{summary['historical_seed_first_clearance_no_leak_gate_value_missing_count']}` clearance present/missing `{summary['historical_seed_first_clearance_no_leak_gate_clearance_present_count']}/{summary['historical_seed_first_clearance_no_leak_gate_clearance_missing_count']}` policy pass/blocked `{summary['historical_seed_first_clearance_no_leak_gate_policy_pass_count']}/{summary['historical_seed_first_clearance_no_leak_gate_policy_blocked_count']}` first `{summary['historical_seed_first_clearance_no_leak_gate_first_blocked_field'] or '-'}` `{summary['historical_seed_first_clearance_no_leak_gate_first_blocker'] or '-'}` intake `{summary['historical_seed_first_clearance_no_leak_gate_intake_csv'] or '-'}`",
         f"- historical seed first clearance no-leak evidence packet: `{summary['historical_seed_first_clearance_no_leak_evidence_packet_status'] or '-'}` target `{summary['historical_seed_first_clearance_no_leak_evidence_packet_target_id'] or '-'}` benchmark `{summary['historical_seed_first_clearance_no_leak_evidence_packet_benchmark_id'] or '-'}` fields ready/open/total `{summary['historical_seed_first_clearance_no_leak_evidence_packet_ready_count']}/{summary['historical_seed_first_clearance_no_leak_evidence_packet_open_count']}/{summary['historical_seed_first_clearance_no_leak_evidence_packet_field_count']}` stubs/weak `{summary['historical_seed_first_clearance_no_leak_evidence_packet_stub_count']}/{summary['historical_seed_first_clearance_no_leak_evidence_packet_weak_count']}` first `{summary['historical_seed_first_clearance_no_leak_evidence_packet_first_open_field'] or '-'}` `{summary['historical_seed_first_clearance_no_leak_evidence_packet_first_open_kind'] or '-'}` folder `{summary['historical_seed_first_clearance_no_leak_evidence_packet_folder'] or '-'}` template `{summary['historical_seed_first_clearance_no_leak_evidence_packet_template_csv'] or '-'}`",
         f"- historical seed first clearance no-leak evidence review gate: `{summary['historical_seed_first_clearance_no_leak_evidence_review_gate_status'] or '-'}` target `{summary['historical_seed_first_clearance_no_leak_evidence_review_gate_target_id'] or '-'}` benchmark `{summary['historical_seed_first_clearance_no_leak_evidence_review_gate_benchmark_id'] or '-'}` fields ready/blocked/total `{summary['historical_seed_first_clearance_no_leak_evidence_review_gate_ready_count']}/{summary['historical_seed_first_clearance_no_leak_evidence_review_gate_blocked_count']}/{summary['historical_seed_first_clearance_no_leak_evidence_review_gate_field_count']}` template missing value/clearance/operator `{summary['historical_seed_first_clearance_no_leak_evidence_review_gate_template_value_missing_count']}/{summary['historical_seed_first_clearance_no_leak_evidence_review_gate_template_clearance_missing_count']}/{summary['historical_seed_first_clearance_no_leak_evidence_review_gate_template_operator_missing_count']}` stubs present/evidence-missing `{summary['historical_seed_first_clearance_no_leak_evidence_review_gate_stub_present_count']}/{summary['historical_seed_first_clearance_no_leak_evidence_review_gate_stub_evidence_missing_count']}` policy pass/blocked `{summary['historical_seed_first_clearance_no_leak_evidence_review_gate_policy_pass_count']}/{summary['historical_seed_first_clearance_no_leak_evidence_review_gate_policy_blocked_count']}` first `{summary['historical_seed_first_clearance_no_leak_evidence_review_gate_first_blocked_field'] or '-'}` `{summary['historical_seed_first_clearance_no_leak_evidence_review_gate_first_blocker'] or '-'}`",
+        f"- historical seed first clearance no-leak evidence sync plan: `{summary['historical_seed_first_clearance_no_leak_evidence_sync_plan_status'] or '-'}` mode `{summary['historical_seed_first_clearance_no_leak_evidence_sync_plan_mode'] or '-'}` review `{summary['historical_seed_first_clearance_no_leak_evidence_sync_plan_review_status'] or '-'}` target `{summary['historical_seed_first_clearance_no_leak_evidence_sync_plan_target_id'] or '-'}` benchmark `{summary['historical_seed_first_clearance_no_leak_evidence_sync_plan_benchmark_id'] or '-'}` actions ready/blocked/applied/total `{summary['historical_seed_first_clearance_no_leak_evidence_sync_plan_ready_count']}/{summary['historical_seed_first_clearance_no_leak_evidence_sync_plan_blocked_count']}/{summary['historical_seed_first_clearance_no_leak_evidence_sync_plan_applied_count']}/{summary['historical_seed_first_clearance_no_leak_evidence_sync_plan_action_count']}` review ready/blocked `{summary['historical_seed_first_clearance_no_leak_evidence_sync_plan_review_ready_count']}/{summary['historical_seed_first_clearance_no_leak_evidence_sync_plan_review_blocked_count']}` first `{summary['historical_seed_first_clearance_no_leak_evidence_sync_plan_first_blocked_field'] or '-'}` `{summary['historical_seed_first_clearance_no_leak_evidence_sync_plan_first_blocker'] or '-'}` intake `{summary['historical_seed_first_clearance_no_leak_evidence_sync_plan_destination_intake_csv'] or '-'}`",
         f"- historical seed clearance to identity intake sync: `{summary['historical_seed_clearance_to_identity_intake_sync_status'] or '-'}` mode `{summary['historical_seed_clearance_to_identity_intake_sync_apply_mode'] or '-'}` seed eligible/total `{summary['historical_seed_clearance_to_identity_intake_sync_eligible_count']}/{summary['historical_seed_clearance_to_identity_intake_sync_seed_row_count']}` intake ready/waiting/blocked/total `{summary['historical_seed_clearance_to_identity_intake_sync_ready_count']}/{summary['historical_seed_clearance_to_identity_intake_sync_waiting_count']}/{summary['historical_seed_clearance_to_identity_intake_sync_blocked_count']}/{summary['historical_seed_clearance_to_identity_intake_sync_intake_row_count']}` applied `{summary['historical_seed_clearance_to_identity_intake_sync_applied_count']}` first `{summary['historical_seed_clearance_to_identity_intake_sync_first_next_action'] or '-'}`",
         f"- sidechain-native benchmark: `{summary['sidechain_native_benchmark_status'] or '-'}` pass/blocked/total `{summary['sidechain_native_pass_count']}/{summary['sidechain_native_blocked_count']}/{summary['sidechain_native_benchmark_count']}` core/leakage/pred/native/missing-files `{summary['sidechain_native_core_input_blocked_count']}/{summary['sidechain_native_leakage_blocked_count']}/{summary['sidechain_native_prediction_missing_count']}/{summary['sidechain_native_native_missing_count']}/{summary['sidechain_native_missing_core_file_count']}` exactness/metric `{summary['sidechain_native_exactness_blocked_count']}/{summary['sidechain_native_metric_blocked_count']}` first `{summary['sidechain_native_first_blocked_benchmark_id'] or '-'}` blockers `{summary['sidechain_native_first_blocked_blockers'] or '-'}`",
         f"- sidechain-native workorder: actions/open `{summary['sidechain_native_workorder_action_count']}/{summary['sidechain_native_open_workorder_action_count']}` files `{summary['sidechain_native_workorder_json'] or '-'}` `{summary['sidechain_native_workorder_md'] or '-'}`",
@@ -11443,6 +11530,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--historical-seed-first-clearance-no-leak-evidence-review-gate-json",
         default=DEFAULT_HISTORICAL_SEED_FIRST_CLEARANCE_NO_LEAK_EVIDENCE_REVIEW_GATE_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-first-clearance-no-leak-evidence-sync-plan-json",
+        default=DEFAULT_HISTORICAL_SEED_FIRST_CLEARANCE_NO_LEAK_EVIDENCE_SYNC_PLAN_JSON,
     )
     parser.add_argument(
         "--historical-seed-clearance-to-identity-intake-sync-json",
