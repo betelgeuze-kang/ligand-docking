@@ -16,10 +16,19 @@ DEFAULT_TARGET_OBJECT_FOLDER_AUDIT_JSON = "casp17/casp17_target_object_folder_au
 DEFAULT_TARGET_OBJECT_VIEWER_SMOKE_JSON = "casp17/casp17_target_object_viewer_smoke_current.json"
 DEFAULT_TARGET_OBJECT_MODEL_REVIEW_JSON = "casp17/casp17_target_object_model_review_current.json"
 DEFAULT_PROTEIN_OBJECT_LIBRARY_JSON = "casp17/casp17_protein_object_library_current.json"
+DEFAULT_PROTEIN_OBJECT_LIBRARY_COMPLETION_AUDIT_JSON = (
+    "casp17/casp17_protein_object_library_completion_audit_current.json"
+)
 DEFAULT_RAW_RANKED_MODEL_QUARANTINE_JSON = "casp17/casp17_raw_ranked_model_quarantine_audit_current.json"
 DEFAULT_WIN_GAP_CLOSURE_JSON = "runs/casp17_win_gap_closure_packet_current.json"
 DEFAULT_WIN_TIER_GOAL_SCORECARD_JSON = "runs/casp17_win_tier_goal_scorecard_current.json"
+DEFAULT_WIN_TIER_METRIC_SURFACE_CONTRACT_JSON = "casp17/casp17_win_tier_metric_surface_contract_current.json"
 DEFAULT_ACTIVE_SCOPE_DECISION_JSON = "casp17/casp17_active_scope_decision_current.json"
+DEFAULT_ORGANIZER_NOTICE_PACKET_JSON = "casp17/casp17_organizer_notice_packet_current.json"
+DEFAULT_MASSIVEFOLD_EXTERNAL_POOL_INTAKE_JSON = "casp17/casp17_massivefold_external_pool_intake_current.json"
+DEFAULT_RNA_HYBRID_MASSIVEFOLD_PRIORITY_QUEUE_JSON = (
+    "casp17/casp17_rna_hybrid_massivefold_priority_queue_current.json"
+)
 DEFAULT_CAPRI_ROUND65_READINESS_JSON = "casp17/capri_round65/capri_round65_readiness_current.json"
 DEFAULT_CAPRI_ROUND65_FORMAT_PREFLIGHT_JSON = "casp17/capri_round65/capri_round65_format_preflight_current.json"
 DEFAULT_INPUT_SCAFFOLD_JSON = "runs/casp17_win_tier_benchmark_input_scaffold_current.json"
@@ -109,6 +118,9 @@ DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_FIRST_SLOT_SOURCE_ROUTE_BOARD_J
 )
 DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_FIRST_SLOT_OFFICIAL_ARCHIVE_SOURCE_CANDIDATES_JSON = (
     "casp17/casp17_historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_current.json"
+)
+DEFAULT_HISTORICAL_SEED_OFFICIAL_ARCHIVE_BASELINE_LANE_JSON = (
+    "casp17/casp17_historical_seed_official_archive_baseline_lane_current.json"
 )
 DEFAULT_HISTORICAL_SEED_ABLATION_CANDIDATE_MANIFESTS_JSON = (
     "casp17/casp17_historical_seed_ablation_candidate_manifests_current.json"
@@ -353,10 +365,19 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     target_object_viewer_smoke_payload = _read_json(args.target_object_viewer_smoke_json)
     target_object_model_review_payload = _read_json(args.target_object_model_review_json)
     protein_object_library_payload = _read_json(args.protein_object_library_json)
+    protein_object_library_completion_audit_payload = _read_json(
+        args.protein_object_library_completion_audit_json
+    )
     raw_ranked_model_quarantine_payload = _read_json(args.raw_ranked_model_quarantine_json)
     closure_payload = _read_json(args.win_gap_closure_json)
     goal_scorecard_payload = _read_json(args.win_tier_goal_scorecard_json)
+    win_tier_metric_surface_contract_payload = _read_json(args.win_tier_metric_surface_contract_json)
     active_scope_decision_payload = _read_json(args.active_scope_decision_json)
+    organizer_notice_payload = _read_json(args.organizer_notice_packet_json)
+    massivefold_external_pool_intake_payload = _read_json(args.massivefold_external_pool_intake_json)
+    rna_hybrid_massivefold_priority_queue_payload = _read_json(
+        args.rna_hybrid_massivefold_priority_queue_json
+    )
     capri_round65_readiness_payload = _read_json(args.capri_round65_readiness_json)
     capri_round65_format_preflight_payload = _read_json(args.capri_round65_format_preflight_json)
     scaffold_payload = _read_json(args.input_scaffold_json)
@@ -444,6 +465,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_payload = _read_json(
         args.historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_json
+    )
+    historical_seed_official_archive_baseline_lane_payload = _read_json(
+        args.historical_seed_official_archive_baseline_lane_json
     )
     historical_seed_ablation_candidate_manifests_payload = _read_json(
         args.historical_seed_ablation_candidate_manifests_json
@@ -576,10 +600,17 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     target_object_viewer_smoke_summary = _summary(target_object_viewer_smoke_payload)
     target_object_model_review_summary = _summary(target_object_model_review_payload)
     protein_object_library_summary = _summary(protein_object_library_payload)
+    protein_object_library_completion_audit_summary = _summary(protein_object_library_completion_audit_payload)
     raw_ranked_model_quarantine_summary = _summary(raw_ranked_model_quarantine_payload)
     closure_summary = _summary(closure_payload)
     goal_scorecard_summary = _summary(goal_scorecard_payload)
+    win_tier_metric_surface_contract_summary = _summary(win_tier_metric_surface_contract_payload)
     active_scope_decision_summary = _summary(active_scope_decision_payload)
+    organizer_notice_summary = _summary(organizer_notice_payload)
+    massivefold_external_pool_intake_summary = _summary(massivefold_external_pool_intake_payload)
+    rna_hybrid_massivefold_priority_queue_summary = _summary(
+        rna_hybrid_massivefold_priority_queue_payload
+    )
     capri_round65_readiness_summary = _summary(capri_round65_readiness_payload)
     capri_round65_format_preflight_summary = _summary(capri_round65_format_preflight_payload)
     capri_round65_deferred = _text(
@@ -669,6 +700,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary = _summary(
         historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_payload
+    )
+    historical_seed_official_archive_baseline_lane_summary = _summary(
+        historical_seed_official_archive_baseline_lane_payload
     )
     historical_seed_ablation_candidate_manifests_summary = _summary(
         historical_seed_ablation_candidate_manifests_payload
@@ -956,6 +990,36 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             ),
         ),
         _artifact_row(
+            "protein_object_library_completion_audit",
+            "Completion audit for protein-name folders and per-object 3D molecular assets",
+            _text(protein_object_library_completion_audit_summary.get("completion_audit_status")),
+            args.protein_object_library_completion_audit_json,
+            ready_count=_int(protein_object_library_completion_audit_summary.get("object_pass_count")),
+            blocked_count=_int(protein_object_library_completion_audit_summary.get("object_blocked_count")),
+            total_count=_int(protein_object_library_completion_audit_summary.get("object_folder_count")),
+            next_action=_text(protein_object_library_completion_audit_summary.get("next_action")),
+            blockers=(
+                "proteins:"
+                + str(protein_object_library_completion_audit_summary.get("protein_folder_pass_count", ""))
+                + "/"
+                + str(protein_object_library_completion_audit_summary.get("protein_folder_blocked_count", ""))
+                + "/"
+                + str(protein_object_library_completion_audit_summary.get("protein_folder_count", ""))
+                + ",assets:"
+                + str(protein_object_library_completion_audit_summary.get("model_file_present_count", ""))
+                + "/"
+                + str(protein_object_library_completion_audit_summary.get("projection_file_present_count", ""))
+                + "/"
+                + str(protein_object_library_completion_audit_summary.get("viewer_file_present_count", ""))
+                + ",manifests:"
+                + str(protein_object_library_completion_audit_summary.get("object_manifest_present_count", ""))
+                + "/"
+                + str(protein_object_library_completion_audit_summary.get("protein_manifest_present_count", ""))
+                + ",first_blocked:"
+                + (_text(protein_object_library_completion_audit_summary.get("first_blocked_blockers")) or "-")
+            ),
+        ),
+        _artifact_row(
             "raw_ranked_model_quarantine",
             "Quarantine audit for untracked raw-ranked internal model PDBs",
             _text(raw_ranked_model_quarantine_summary.get("raw_ranked_model_quarantine_status")),
@@ -1009,6 +1073,38 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             blockers=_text(goal_scorecard_summary.get("first_blocked_gate")),
         ),
         _artifact_row(
+            "win_tier_metric_surface_contract",
+            "CASP17 win-tier official-like metric surface input/output contract",
+            _text(win_tier_metric_surface_contract_summary.get("metric_surface_contract_status")),
+            args.win_tier_metric_surface_contract_json,
+            ready_count=_int(win_tier_metric_surface_contract_summary.get("ready_metric_row_count")),
+            blocked_count=_int(win_tier_metric_surface_contract_summary.get("blocked_metric_row_count")),
+            total_count=_int(win_tier_metric_surface_contract_summary.get("metric_surface_row_count")),
+            next_action=_text(win_tier_metric_surface_contract_summary.get("next_action")),
+            blockers=(
+                "metrics:"
+                + str(win_tier_metric_surface_contract_summary.get("covered_required_metric_count", ""))
+                + "/"
+                + str(win_tier_metric_surface_contract_summary.get("required_metric_count", ""))
+                + ",slots:"
+                + str(win_tier_metric_surface_contract_summary.get("ready_slot_count", ""))
+                + "/"
+                + str(win_tier_metric_surface_contract_summary.get("blocked_slot_count", ""))
+                + "/"
+                + str(win_tier_metric_surface_contract_summary.get("strict_blind_slot_count", ""))
+                + ",rows:"
+                + str(win_tier_metric_surface_contract_summary.get("ready_metric_row_count", ""))
+                + "/"
+                + str(win_tier_metric_surface_contract_summary.get("blocked_metric_row_count", ""))
+                + "/"
+                + str(win_tier_metric_surface_contract_summary.get("metric_surface_row_count", ""))
+                + ",ligand_slots:"
+                + str(win_tier_metric_surface_contract_summary.get("organic_ligand_slot_count", ""))
+                + ",official_archive:"
+                + _text(win_tier_metric_surface_contract_summary.get("official_archive_baseline_policy"))
+            ),
+        ),
+        _artifact_row(
             "active_scope_decision",
             "CASP17 active scope and CAPRI hold decision",
             _text(active_scope_decision_summary.get("scope_decision_status")),
@@ -1022,6 +1118,96 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + _text(active_scope_decision_summary.get("active_competition_scope"))
                 + ",capri:"
                 + _text(active_scope_decision_summary.get("capri_round65_participation_status"))
+            ),
+        ),
+        _artifact_row(
+            "organizer_notice_packet",
+            "CASP17 organizer notice intake and MassiveFold external model-pool guardrails",
+            _text(organizer_notice_summary.get("organizer_notice_status")),
+            args.organizer_notice_packet_json,
+            ready_count=_int(organizer_notice_summary.get("massivefold_link_count")),
+            blocked_count=0,
+            total_count=_int(organizer_notice_summary.get("massivefold_link_count")),
+            next_action=_text(organizer_notice_summary.get("next_action")),
+            blockers=(
+                "r2345_first:"
+                + _text(organizer_notice_summary.get("r2345_first_request_status"))
+                + ",r2345_second:"
+                + _text(organizer_notice_summary.get("r2345_replacement_request_status"))
+                + ",massivefold_rna_hybrid:"
+                + str(organizer_notice_summary.get("massivefold_rna_hybrid_link_count", ""))
+                + ",r2341:"
+                + str(organizer_notice_summary.get("massivefold_r2341_link_present", ""))
+                + ",r2345:"
+                + str(organizer_notice_summary.get("massivefold_r2345_link_present", ""))
+                + ",policy:"
+                + _text(organizer_notice_summary.get("massivefold_internal_prediction_policy"))
+            ),
+        ),
+        _artifact_row(
+            "massivefold_external_pool_intake",
+            "CASP17 MassiveFold external pool acquisition and rerank guardrail lane",
+            _text(massivefold_external_pool_intake_summary.get("massivefold_external_pool_intake_status")),
+            args.massivefold_external_pool_intake_json,
+            ready_count=_int(massivefold_external_pool_intake_summary.get("ready_pool_count")),
+            blocked_count=_int(massivefold_external_pool_intake_summary.get("blocked_pool_count")),
+            total_count=_int(massivefold_external_pool_intake_summary.get("massivefold_pool_count")),
+            next_action=_text(massivefold_external_pool_intake_summary.get("next_action")),
+            blockers=(
+                "rna_hybrid:"
+                + str(massivefold_external_pool_intake_summary.get("rna_hybrid_pool_count", ""))
+                + ",protein_complex:"
+                + str(massivefold_external_pool_intake_summary.get("protein_complex_pool_count", ""))
+                + ",proof_eligible:"
+                + str(massivefold_external_pool_intake_summary.get("competitive_proof_eligible_count", ""))
+                + ",internal_blocked:"
+                + str(massivefold_external_pool_intake_summary.get("internal_prediction_blocked_count", ""))
+                + ",r2341:"
+                + str(massivefold_external_pool_intake_summary.get("r2341_pool_present", ""))
+                + ",r2345:"
+                + str(massivefold_external_pool_intake_summary.get("r2345_pool_present", ""))
+                + ",largest:"
+                + _text(massivefold_external_pool_intake_summary.get("largest_model_set_id"))
+            ),
+        ),
+        _artifact_row(
+            "rna_hybrid_massivefold_priority_queue",
+            "CASP17 RNA/hybrid MassiveFold external-pool priority and sequence-guard queue",
+            _text(
+                rna_hybrid_massivefold_priority_queue_summary.get(
+                    "rna_hybrid_massivefold_priority_queue_status"
+                )
+            ),
+            args.rna_hybrid_massivefold_priority_queue_json,
+            ready_count=_int(rna_hybrid_massivefold_priority_queue_summary.get("ready_queue_row_count")),
+            blocked_count=_int(rna_hybrid_massivefold_priority_queue_summary.get("blocked_queue_row_count")),
+            total_count=_int(rna_hybrid_massivefold_priority_queue_summary.get("queue_row_count")),
+            next_action=_text(rna_hybrid_massivefold_priority_queue_summary.get("next_action")),
+            blockers=(
+                "first:"
+                + _text(rna_hybrid_massivefold_priority_queue_summary.get("first_priority_target_id"))
+                + ",r2341_rank:"
+                + str(rna_hybrid_massivefold_priority_queue_summary.get("r2341_queue_rank", ""))
+                + ",r2345_rank:"
+                + str(rna_hybrid_massivefold_priority_queue_summary.get("r2345_queue_rank", ""))
+                + ",r2345_invalid:"
+                + _text(rna_hybrid_massivefold_priority_queue_summary.get("r2345_invalid_request_status"))
+                + ",r2345_active:"
+                + _text(rna_hybrid_massivefold_priority_queue_summary.get("r2345_active_request_status"))
+                + ",proof_eligible:"
+                + str(
+                    rna_hybrid_massivefold_priority_queue_summary.get(
+                        "competitive_proof_eligible_count",
+                        "",
+                    )
+                )
+                + ",internal_blocked:"
+                + str(
+                    rna_hybrid_massivefold_priority_queue_summary.get(
+                        "internal_prediction_blocked_count",
+                        "",
+                    )
+                )
             ),
         ),
         _artifact_row(
@@ -2562,7 +2748,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 )
             ),
             next_action=(
-                "download first native-authority-ready official prediction tarball and RCSB native into the strict-blind first-slot dropzone"
+                "keep official archive submissions in the baseline replay lane; source internal pre-native predictions separately"
             ),
             blockers=(
                 "sources:"
@@ -2661,6 +2847,34 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                         "first_ready_native_pdb_code", ""
                     )
                 )
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_official_archive_baseline_lane",
+            "Official CASP archive baseline replay lane kept outside strict-blind competitive proof",
+            _text(historical_seed_official_archive_baseline_lane_summary.get("official_archive_baseline_lane_status")),
+            args.historical_seed_official_archive_baseline_lane_json,
+            ready_count=_int(historical_seed_official_archive_baseline_lane_summary.get("ready_count")),
+            blocked_count=_int(historical_seed_official_archive_baseline_lane_summary.get("blocked_count")),
+            total_count=_int(historical_seed_official_archive_baseline_lane_summary.get("baseline_candidate_count")),
+            next_action=_text(historical_seed_official_archive_baseline_lane_summary.get("next_action")),
+            blockers=(
+                "source_ready:"
+                + str(historical_seed_official_archive_baseline_lane_summary.get("source_ready_candidate_count", ""))
+                + "/"
+                + str(historical_seed_official_archive_baseline_lane_summary.get("source_candidate_count", ""))
+                + ",proof_eligible:"
+                + str(historical_seed_official_archive_baseline_lane_summary.get("competitive_proof_eligible_count", ""))
+                + ",strict_blind_blocked:"
+                + str(historical_seed_official_archive_baseline_lane_summary.get("strict_blind_import_blocked_count", ""))
+                + ",other_team_baseline:"
+                + str(historical_seed_official_archive_baseline_lane_summary.get("other_team_model_baseline_only_count", ""))
+                + ",first:"
+                + str(historical_seed_official_archive_baseline_lane_summary.get("first_competition", ""))
+                + "/"
+                + str(historical_seed_official_archive_baseline_lane_summary.get("first_target_id", ""))
+                + "/"
+                + str(historical_seed_official_archive_baseline_lane_summary.get("first_native_pdb_code", ""))
             ),
         ),
         _artifact_row(
@@ -4511,6 +4725,42 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             protein_object_library_summary.get("viewer_pointer_count")
         ),
         "protein_object_library_dir": _text(protein_object_library_summary.get("library_dir")),
+        "protein_object_library_completion_status": _text(
+            protein_object_library_completion_audit_summary.get("completion_audit_status")
+        ),
+        "protein_object_library_completion_protein_pass_count": _int(
+            protein_object_library_completion_audit_summary.get("protein_folder_pass_count")
+        ),
+        "protein_object_library_completion_protein_blocked_count": _int(
+            protein_object_library_completion_audit_summary.get("protein_folder_blocked_count")
+        ),
+        "protein_object_library_completion_protein_count": _int(
+            protein_object_library_completion_audit_summary.get("protein_folder_count")
+        ),
+        "protein_object_library_completion_object_pass_count": _int(
+            protein_object_library_completion_audit_summary.get("object_pass_count")
+        ),
+        "protein_object_library_completion_object_blocked_count": _int(
+            protein_object_library_completion_audit_summary.get("object_blocked_count")
+        ),
+        "protein_object_library_completion_object_count": _int(
+            protein_object_library_completion_audit_summary.get("object_folder_count")
+        ),
+        "protein_object_library_completion_model_count": _int(
+            protein_object_library_completion_audit_summary.get("model_file_present_count")
+        ),
+        "protein_object_library_completion_projection_count": _int(
+            protein_object_library_completion_audit_summary.get("projection_file_present_count")
+        ),
+        "protein_object_library_completion_viewer_count": _int(
+            protein_object_library_completion_audit_summary.get("viewer_file_present_count")
+        ),
+        "protein_object_library_completion_object_manifest_count": _int(
+            protein_object_library_completion_audit_summary.get("object_manifest_present_count")
+        ),
+        "protein_object_library_completion_protein_manifest_count": _int(
+            protein_object_library_completion_audit_summary.get("protein_manifest_present_count")
+        ),
         "raw_ranked_model_quarantine_status": _text(
             raw_ranked_model_quarantine_summary.get("raw_ranked_model_quarantine_status")
         ),
@@ -4541,6 +4791,45 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "win_tier_goal_scorecard_blocked_count": _int(goal_scorecard_summary.get("blocked_count")),
         "win_tier_goal_scorecard_row_count": _int(goal_scorecard_summary.get("row_count")),
         "win_tier_goal_scorecard_first_blocked_gate": _text(goal_scorecard_summary.get("first_blocked_gate")),
+        "win_tier_metric_surface_contract_status": _text(
+            win_tier_metric_surface_contract_summary.get("metric_surface_contract_status")
+        ),
+        "win_tier_metric_surface_contract_required_metric_count": _int(
+            win_tier_metric_surface_contract_summary.get("required_metric_count")
+        ),
+        "win_tier_metric_surface_contract_covered_metric_count": _int(
+            win_tier_metric_surface_contract_summary.get("covered_required_metric_count")
+        ),
+        "win_tier_metric_surface_contract_slot_count": _int(
+            win_tier_metric_surface_contract_summary.get("strict_blind_slot_count")
+        ),
+        "win_tier_metric_surface_contract_ready_slot_count": _int(
+            win_tier_metric_surface_contract_summary.get("ready_slot_count")
+        ),
+        "win_tier_metric_surface_contract_blocked_slot_count": _int(
+            win_tier_metric_surface_contract_summary.get("blocked_slot_count")
+        ),
+        "win_tier_metric_surface_contract_metric_row_count": _int(
+            win_tier_metric_surface_contract_summary.get("metric_surface_row_count")
+        ),
+        "win_tier_metric_surface_contract_ready_metric_row_count": _int(
+            win_tier_metric_surface_contract_summary.get("ready_metric_row_count")
+        ),
+        "win_tier_metric_surface_contract_blocked_metric_row_count": _int(
+            win_tier_metric_surface_contract_summary.get("blocked_metric_row_count")
+        ),
+        "win_tier_metric_surface_contract_ligand_slot_count": _int(
+            win_tier_metric_surface_contract_summary.get("organic_ligand_slot_count")
+        ),
+        "win_tier_metric_surface_contract_official_archive_policy": _text(
+            win_tier_metric_surface_contract_summary.get("official_archive_baseline_policy")
+        ),
+        "win_tier_metric_surface_contract_first_blocked_metric": _text(
+            win_tier_metric_surface_contract_summary.get("first_blocked_metric")
+        ),
+        "win_tier_metric_surface_contract_first_blocked_benchmark": _text(
+            win_tier_metric_surface_contract_summary.get("first_blocked_benchmark_id")
+        ),
         "active_scope_decision_status": _text(active_scope_decision_summary.get("scope_decision_status")),
         "active_competition_scope": _text(active_scope_decision_summary.get("active_competition_scope")),
         "active_scope_casp17_continuation_status": _text(
@@ -4560,6 +4849,126 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "active_scope_active_lane_count": _int(active_scope_decision_summary.get("active_lane_count")),
         "active_scope_deferred_lane_count": _int(active_scope_decision_summary.get("deferred_lane_count")),
         "active_scope_row_count": _int(active_scope_decision_summary.get("row_count")),
+        "organizer_notice_status": _text(organizer_notice_summary.get("organizer_notice_status")),
+        "organizer_notice_source_ref": _text(organizer_notice_summary.get("source_notice_ref")),
+        "organizer_notice_r2345_first_request_status": _text(
+            organizer_notice_summary.get("r2345_first_request_status")
+        ),
+        "organizer_notice_r2345_replacement_request_status": _text(
+            organizer_notice_summary.get("r2345_replacement_request_status")
+        ),
+        "organizer_notice_r2345_sequence_validation_gate": _text(
+            organizer_notice_summary.get("r2345_sequence_validation_gate")
+        ),
+        "organizer_notice_massivefold_link_count": _int(organizer_notice_summary.get("massivefold_link_count")),
+        "organizer_notice_massivefold_rna_hybrid_link_count": _int(
+            organizer_notice_summary.get("massivefold_rna_hybrid_link_count")
+        ),
+        "organizer_notice_massivefold_protein_complex_link_count": _int(
+            organizer_notice_summary.get("massivefold_protein_complex_link_count")
+        ),
+        "organizer_notice_massivefold_r2341_link_present": _text(
+            organizer_notice_summary.get("massivefold_r2341_link_present")
+        ),
+        "organizer_notice_massivefold_r2345_link_present": _text(
+            organizer_notice_summary.get("massivefold_r2345_link_present")
+        ),
+        "organizer_notice_massivefold_model_pool_policy": _text(
+            organizer_notice_summary.get("massivefold_model_pool_policy")
+        ),
+        "organizer_notice_massivefold_internal_prediction_policy": _text(
+            organizer_notice_summary.get("massivefold_internal_prediction_policy")
+        ),
+        "organizer_notice_large_download_policy": _text(
+            organizer_notice_summary.get("large_download_policy")
+        ),
+        "organizer_notice_next_action": _text(organizer_notice_summary.get("next_action")),
+        "massivefold_external_pool_intake_status": _text(
+            massivefold_external_pool_intake_summary.get("massivefold_external_pool_intake_status")
+        ),
+        "massivefold_external_pool_count": _int(
+            massivefold_external_pool_intake_summary.get("massivefold_pool_count")
+        ),
+        "massivefold_external_pool_ready_count": _int(
+            massivefold_external_pool_intake_summary.get("ready_pool_count")
+        ),
+        "massivefold_external_pool_blocked_count": _int(
+            massivefold_external_pool_intake_summary.get("blocked_pool_count")
+        ),
+        "massivefold_external_pool_rna_hybrid_count": _int(
+            massivefold_external_pool_intake_summary.get("rna_hybrid_pool_count")
+        ),
+        "massivefold_external_pool_protein_complex_count": _int(
+            massivefold_external_pool_intake_summary.get("protein_complex_pool_count")
+        ),
+        "massivefold_external_pool_proof_eligible_count": _int(
+            massivefold_external_pool_intake_summary.get("competitive_proof_eligible_count")
+        ),
+        "massivefold_external_pool_internal_blocked_count": _int(
+            massivefold_external_pool_intake_summary.get("internal_prediction_blocked_count")
+        ),
+        "massivefold_external_pool_total_size_bytes": _int(
+            massivefold_external_pool_intake_summary.get("total_declared_size_bytes")
+        ),
+        "massivefold_external_pool_largest_model_set_id": _text(
+            massivefold_external_pool_intake_summary.get("largest_model_set_id")
+        ),
+        "massivefold_external_pool_r2341_present": _text(
+            massivefold_external_pool_intake_summary.get("r2341_pool_present")
+        ),
+        "massivefold_external_pool_r2345_present": _text(
+            massivefold_external_pool_intake_summary.get("r2345_pool_present")
+        ),
+        "massivefold_external_pool_download_policy": _text(
+            massivefold_external_pool_intake_summary.get("download_policy")
+        ),
+        "rna_hybrid_massivefold_priority_queue_status": _text(
+            rna_hybrid_massivefold_priority_queue_summary.get(
+                "rna_hybrid_massivefold_priority_queue_status"
+            )
+        ),
+        "rna_hybrid_massivefold_priority_queue_count": _int(
+            rna_hybrid_massivefold_priority_queue_summary.get("queue_row_count")
+        ),
+        "rna_hybrid_massivefold_priority_queue_ready_count": _int(
+            rna_hybrid_massivefold_priority_queue_summary.get("ready_queue_row_count")
+        ),
+        "rna_hybrid_massivefold_priority_queue_blocked_count": _int(
+            rna_hybrid_massivefold_priority_queue_summary.get("blocked_queue_row_count")
+        ),
+        "rna_hybrid_massivefold_priority_queue_first_target_id": _text(
+            rna_hybrid_massivefold_priority_queue_summary.get("first_priority_target_id")
+        ),
+        "rna_hybrid_massivefold_priority_queue_first_reason": _text(
+            rna_hybrid_massivefold_priority_queue_summary.get("first_priority_reason")
+        ),
+        "rna_hybrid_massivefold_priority_queue_r2341_rank": _int(
+            rna_hybrid_massivefold_priority_queue_summary.get("r2341_queue_rank")
+        ),
+        "rna_hybrid_massivefold_priority_queue_r2345_rank": _int(
+            rna_hybrid_massivefold_priority_queue_summary.get("r2345_queue_rank")
+        ),
+        "rna_hybrid_massivefold_priority_queue_r2345_invalid_status": _text(
+            rna_hybrid_massivefold_priority_queue_summary.get("r2345_invalid_request_status")
+        ),
+        "rna_hybrid_massivefold_priority_queue_r2345_active_status": _text(
+            rna_hybrid_massivefold_priority_queue_summary.get("r2345_active_request_status")
+        ),
+        "rna_hybrid_massivefold_priority_queue_r2345_sequence_guard": _text(
+            rna_hybrid_massivefold_priority_queue_summary.get("r2345_sequence_guard")
+        ),
+        "rna_hybrid_massivefold_priority_queue_proof_eligible_count": _int(
+            rna_hybrid_massivefold_priority_queue_summary.get("competitive_proof_eligible_count")
+        ),
+        "rna_hybrid_massivefold_priority_queue_internal_blocked_count": _int(
+            rna_hybrid_massivefold_priority_queue_summary.get("internal_prediction_blocked_count")
+        ),
+        "rna_hybrid_massivefold_priority_queue_total_size_bytes": _int(
+            rna_hybrid_massivefold_priority_queue_summary.get("total_declared_size_bytes")
+        ),
+        "rna_hybrid_massivefold_priority_queue_download_policy": _text(
+            rna_hybrid_massivefold_priority_queue_summary.get("download_policy")
+        ),
         "capri_round65_readiness_status": _text(
             capri_round65_readiness_summary.get("capri_readiness_status")
         ),
@@ -6234,6 +6643,51 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 "first_ready_targetlist_target_url"
             )
         ),
+        "historical_seed_official_archive_baseline_lane_status": _text(
+            historical_seed_official_archive_baseline_lane_summary.get("official_archive_baseline_lane_status")
+        ),
+        "historical_seed_official_archive_baseline_lane_source_count": _int(
+            historical_seed_official_archive_baseline_lane_summary.get("source_candidate_count")
+        ),
+        "historical_seed_official_archive_baseline_lane_source_ready_count": _int(
+            historical_seed_official_archive_baseline_lane_summary.get("source_ready_candidate_count")
+        ),
+        "historical_seed_official_archive_baseline_lane_candidate_count": _int(
+            historical_seed_official_archive_baseline_lane_summary.get("baseline_candidate_count")
+        ),
+        "historical_seed_official_archive_baseline_lane_ready_count": _int(
+            historical_seed_official_archive_baseline_lane_summary.get("ready_count")
+        ),
+        "historical_seed_official_archive_baseline_lane_blocked_count": _int(
+            historical_seed_official_archive_baseline_lane_summary.get("blocked_count")
+        ),
+        "historical_seed_official_archive_baseline_lane_proof_eligible_count": _int(
+            historical_seed_official_archive_baseline_lane_summary.get("competitive_proof_eligible_count")
+        ),
+        "historical_seed_official_archive_baseline_lane_strict_blind_blocked_count": _int(
+            historical_seed_official_archive_baseline_lane_summary.get("strict_blind_import_blocked_count")
+        ),
+        "historical_seed_official_archive_baseline_lane_other_team_count": _int(
+            historical_seed_official_archive_baseline_lane_summary.get("other_team_model_baseline_only_count")
+        ),
+        "historical_seed_official_archive_baseline_lane_policy": _text(
+            historical_seed_official_archive_baseline_lane_summary.get("strict_blind_intake_policy")
+        ),
+        "historical_seed_official_archive_baseline_lane_first_candidate_id": _text(
+            historical_seed_official_archive_baseline_lane_summary.get("first_baseline_candidate_id")
+        ),
+        "historical_seed_official_archive_baseline_lane_first_competition": _text(
+            historical_seed_official_archive_baseline_lane_summary.get("first_competition")
+        ),
+        "historical_seed_official_archive_baseline_lane_first_target_id": _text(
+            historical_seed_official_archive_baseline_lane_summary.get("first_target_id")
+        ),
+        "historical_seed_official_archive_baseline_lane_first_native_pdb_code": _text(
+            historical_seed_official_archive_baseline_lane_summary.get("first_native_pdb_code")
+        ),
+        "historical_seed_official_archive_baseline_lane_first_manifest": _text(
+            historical_seed_official_archive_baseline_lane_summary.get("first_acquisition_manifest")
+        ),
         "historical_seed_ablation_candidate_manifests_status": _text(
             historical_seed_ablation_candidate_manifests_summary.get("ablation_candidate_status")
         ),
@@ -7894,10 +8348,15 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- target object viewer smoke: `{summary['target_object_viewer_smoke_status'] or '-'}` rows `{summary['target_object_viewer_smoke_pass_count']}/{summary['target_object_viewer_smoke_total']}`",
         f"- target object model review: `{summary['target_object_model_review_status'] or '-'}` pass/blocked/total `{summary['target_object_model_review_pass_count']}/{summary['target_object_model_review_blocked_count']}/{summary['target_object_model_review_total']}` review md/viewers `{summary['target_object_model_review_md_count']}/{summary['target_object_model_review_viewer_local_pass_count']}` protein/CA/residue `{summary['target_object_model_review_protein_atom_count']}/{summary['target_object_model_review_ca_atom_count']}/{summary['target_object_model_review_residue_count']}` radius `{summary['target_object_model_review_min_radius']}/{summary['target_object_model_review_max_radius']}` gallery `{summary['target_object_model_review_gallery_status'] or '-'}` `{summary['target_object_model_review_gallery_html'] or '-'}`",
         f"- protein object library: `{summary['protein_object_library_status'] or '-'}` protein/object folders `{summary['protein_object_library_protein_folder_count']}/{summary['protein_object_library_object_folder_count']}` pass/blocked `{summary['protein_object_library_pass_count']}/{summary['protein_object_library_blocked_count']}` model/projection/viewer pointers `{summary['protein_object_library_model_pointer_count']}/{summary['protein_object_library_projection_pointer_count']}/{summary['protein_object_library_viewer_pointer_count']}` `{summary['protein_object_library_dir'] or '-'}`",
+        f"- protein object library completion audit: `{summary['protein_object_library_completion_status'] or '-'}` proteins pass/blocked/total `{summary['protein_object_library_completion_protein_pass_count']}/{summary['protein_object_library_completion_protein_blocked_count']}/{summary['protein_object_library_completion_protein_count']}` objects pass/blocked/total `{summary['protein_object_library_completion_object_pass_count']}/{summary['protein_object_library_completion_object_blocked_count']}/{summary['protein_object_library_completion_object_count']}` assets model/projection/viewer `{summary['protein_object_library_completion_model_count']}/{summary['protein_object_library_completion_projection_count']}/{summary['protein_object_library_completion_viewer_count']}` manifests object/protein `{summary['protein_object_library_completion_object_manifest_count']}/{summary['protein_object_library_completion_protein_manifest_count']}`",
         f"- raw-ranked model quarantine: `{summary['raw_ranked_model_quarantine_status'] or '-'}` targets/models/top5 `{summary['raw_ranked_model_quarantine_target_count']}/{summary['raw_ranked_model_quarantine_model_count']}/{summary['raw_ranked_model_quarantine_top5_count']}` quarantined/linked/author-present `{summary['raw_ranked_model_quarantine_quarantined_count']}/{summary['raw_ranked_model_quarantine_linked_count']}/{summary['raw_ranked_model_quarantine_author_present_count']}` atoms `{summary['raw_ranked_model_quarantine_atom_count']}`",
         f"- benchmark rows ready/total: `{summary['benchmark_rows_ready_count']}/{summary['benchmark_rows_total']}`",
         f"- win-tier goal scorecard: `{summary['win_tier_goal_scorecard_status'] or '-'}` pass/partial/blocked `{summary['win_tier_goal_scorecard_pass_count']}/{summary['win_tier_goal_scorecard_partial_count']}/{summary['win_tier_goal_scorecard_blocked_count']}` first blocked `{summary['win_tier_goal_scorecard_first_blocked_gate'] or '-'}`",
+        f"- win-tier metric surface contract: `{summary['win_tier_metric_surface_contract_status'] or '-'}` metrics covered/required `{summary['win_tier_metric_surface_contract_covered_metric_count']}/{summary['win_tier_metric_surface_contract_required_metric_count']}` slots ready/blocked/total `{summary['win_tier_metric_surface_contract_ready_slot_count']}/{summary['win_tier_metric_surface_contract_blocked_slot_count']}/{summary['win_tier_metric_surface_contract_slot_count']}` rows ready/blocked/total `{summary['win_tier_metric_surface_contract_ready_metric_row_count']}/{summary['win_tier_metric_surface_contract_blocked_metric_row_count']}/{summary['win_tier_metric_surface_contract_metric_row_count']}` ligand slots `{summary['win_tier_metric_surface_contract_ligand_slot_count']}` official archive `{summary['win_tier_metric_surface_contract_official_archive_policy'] or '-'}` first `{summary['win_tier_metric_surface_contract_first_blocked_benchmark'] or '-'}` `{summary['win_tier_metric_surface_contract_first_blocked_metric'] or '-'}`",
         f"- active competition scope: `{summary['active_competition_scope'] or '-'}` CASP17 `{summary['active_scope_casp17_continuation_status'] or '-'}` priority `{summary['active_scope_casp17_priority_status'] or '-'}` CAPRI `{summary['active_scope_capri_round65_participation_status'] or '-'}` reason `{summary['active_scope_capri_round65_hold_reason'] or '-'}` next `{summary['active_scope_next_action'] or '-'}`",
+        f"- organizer notice intake: `{summary['organizer_notice_status'] or '-'}` source `{summary['organizer_notice_source_ref'] or '-'}` R2345 first/second `{summary['organizer_notice_r2345_first_request_status'] or '-'}`/`{summary['organizer_notice_r2345_replacement_request_status'] or '-'}` sequence gate `{summary['organizer_notice_r2345_sequence_validation_gate'] or '-'}` MassiveFold links RNA-hybrid/protein-total `{summary['organizer_notice_massivefold_rna_hybrid_link_count']}/{summary['organizer_notice_massivefold_protein_complex_link_count']}/{summary['organizer_notice_massivefold_link_count']}` R2341/R2345 `{summary['organizer_notice_massivefold_r2341_link_present'] or '-'}`/`{summary['organizer_notice_massivefold_r2345_link_present'] or '-'}` policy `{summary['organizer_notice_massivefold_internal_prediction_policy'] or '-'}` download `{summary['organizer_notice_large_download_policy'] or '-'}`",
+        f"- MassiveFold external pool intake: `{summary['massivefold_external_pool_intake_status'] or '-'}` pools ready/blocked/total `{summary['massivefold_external_pool_ready_count']}/{summary['massivefold_external_pool_blocked_count']}/{summary['massivefold_external_pool_count']}` RNA-hybrid/protein-complex `{summary['massivefold_external_pool_rna_hybrid_count']}/{summary['massivefold_external_pool_protein_complex_count']}` proof/internal-blocked `{summary['massivefold_external_pool_proof_eligible_count']}/{summary['massivefold_external_pool_internal_blocked_count']}` R2341/R2345 `{summary['massivefold_external_pool_r2341_present'] or '-'}`/`{summary['massivefold_external_pool_r2345_present'] or '-'}` largest `{summary['massivefold_external_pool_largest_model_set_id'] or '-'}` bytes `{summary['massivefold_external_pool_total_size_bytes']}` download `{summary['massivefold_external_pool_download_policy'] or '-'}`",
+        f"- RNA/hybrid MassiveFold priority queue: `{summary['rna_hybrid_massivefold_priority_queue_status'] or '-'}` rows ready/blocked/total `{summary['rna_hybrid_massivefold_priority_queue_ready_count']}/{summary['rna_hybrid_massivefold_priority_queue_blocked_count']}/{summary['rna_hybrid_massivefold_priority_queue_count']}` first `{summary['rna_hybrid_massivefold_priority_queue_first_target_id'] or '-'}` `{summary['rna_hybrid_massivefold_priority_queue_first_reason'] or '-'}` R2341/R2345 rank `{summary['rna_hybrid_massivefold_priority_queue_r2341_rank']}/{summary['rna_hybrid_massivefold_priority_queue_r2345_rank']}` R2345 invalid/active `{summary['rna_hybrid_massivefold_priority_queue_r2345_invalid_status'] or '-'}`/`{summary['rna_hybrid_massivefold_priority_queue_r2345_active_status'] or '-'}` guard `{summary['rna_hybrid_massivefold_priority_queue_r2345_sequence_guard'] or '-'}` proof/internal-blocked `{summary['rna_hybrid_massivefold_priority_queue_proof_eligible_count']}/{summary['rna_hybrid_massivefold_priority_queue_internal_blocked_count']}` bytes `{summary['rna_hybrid_massivefold_priority_queue_total_size_bytes']}` download `{summary['rna_hybrid_massivefold_priority_queue_download_policy'] or '-'}`",
         (
             f"- CAPRI Round 65 readiness context: `{summary['active_scope_capri_round65_participation_status'] or '-'}` not active blocker; preserved targets active/closed/total `{summary['capri_round65_active_target_count']}/{summary['capri_round65_closed_target_count']}/{summary['capri_round65_target_count']}` artifact policy `{summary['active_scope_capri_round65_artifact_policy'] or '-'}`"
             if summary["active_scope_capri_round65_participation_status"].startswith("deferred")
@@ -7940,6 +8399,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- historical seed strict-blind first slot repair feasibility: `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_status'] or '-'}` required `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_required_benchmark_id'] or '-'}` actions `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_action_count']}` post-native/eligibility `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_post_native_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_post_native_eligibility_count']}` external actions/targets `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_external_action_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_external_target_count']}` repairable source/evidence/date `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_source_required_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_evidence_required_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_date_required_count']}` primary/pre-native `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_primary_blocked_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_pre_native_count']}` first external `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_first_external_action_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_first_external_target_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_first_external_blocker'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_first_external_next_route'] or '-'}` first actionable `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_first_actionable_action_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_first_actionable_target_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_first_actionable_status'] or '-'}`",
         f"- historical seed strict-blind first slot source route: `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_status'] or '-'}` required `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_required_benchmark_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_required_target_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_required_scope'] or '-'}` routes in/out/total `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_in_scope_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_out_of_scope_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_route_count']}` allowed `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_allowed_count']}` external targets/actions `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_external_required_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_external_action_count']}` out-scope source/date `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_out_scope_source_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_out_scope_date_count']}` first external `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_first_external_route_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_first_external_target_id'] or '-'}` prediction/native `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_first_external_prediction_created_at'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_first_external_native_release_date'] or '-'}`",
         f"- historical seed strict-blind first slot official archive sources: `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_status'] or '-'}` required `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_required_benchmark_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_required_target_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_required_scope'] or '-'}` sources `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_source_count']}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_source_competitions'] or '-'}` candidates ready/blocked/total `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_ready_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_blocked_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_candidate_count']}` pre/native-ready/lookup `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_pre_native_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_native_ready_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_native_lookup_count']}` native PDB/mmCIF `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_native_pdb_ready_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_native_mmcif_only_count']}` metadata/CAPRI/special `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_metadata_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_capri_marker_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_special_mode_count']}` regular/domain/variant `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_regular_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_domain_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_variant_count']}` first `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_candidate_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_competition'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_target_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_native_pdb_code'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_native_download_status'] or '-'}` prediction/native `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_prediction_at'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_native_anchor'] or '-'}`",
+        f"- historical seed official archive baseline lane: `{summary['historical_seed_official_archive_baseline_lane_status'] or '-'}` source ready/total `{summary['historical_seed_official_archive_baseline_lane_source_ready_count']}/{summary['historical_seed_official_archive_baseline_lane_source_count']}` baseline ready/blocked/total `{summary['historical_seed_official_archive_baseline_lane_ready_count']}/{summary['historical_seed_official_archive_baseline_lane_blocked_count']}/{summary['historical_seed_official_archive_baseline_lane_candidate_count']}` proof-eligible/strict-blocked/other-team `{summary['historical_seed_official_archive_baseline_lane_proof_eligible_count']}/{summary['historical_seed_official_archive_baseline_lane_strict_blind_blocked_count']}/{summary['historical_seed_official_archive_baseline_lane_other_team_count']}` policy `{summary['historical_seed_official_archive_baseline_lane_policy'] or '-'}` first `{summary['historical_seed_official_archive_baseline_lane_first_candidate_id'] or '-'}` `{summary['historical_seed_official_archive_baseline_lane_first_competition'] or '-'}` `{summary['historical_seed_official_archive_baseline_lane_first_target_id'] or '-'}` `{summary['historical_seed_official_archive_baseline_lane_first_native_pdb_code'] or '-'}` manifest `{summary['historical_seed_official_archive_baseline_lane_first_manifest'] or '-'}`",
         f"- historical seed ablation candidates: `{summary['historical_seed_ablation_candidate_manifests_status'] or '-'}` seeds/manifests/candidate-rows `{summary['historical_seed_ablation_candidate_manifests_seed_count']}/{summary['historical_seed_ablation_candidate_manifests_manifest_count']}/{summary['historical_seed_ablation_candidate_manifests_candidate_row_count']}` selected/native `{summary['historical_seed_ablation_candidate_manifests_selected_present_count']}/{summary['historical_seed_ablation_candidate_manifests_native_present_count']}` baseline/gaps `{summary['historical_seed_ablation_candidate_manifests_baseline_count']}/{summary['historical_seed_ablation_candidate_manifests_layer_gap_count']}` ready/review/core-blocked `{summary['historical_seed_ablation_candidate_manifests_ready_count']}/{summary['historical_seed_ablation_candidate_manifests_operator_review_count']}/{summary['historical_seed_ablation_candidate_manifests_core_blocked_count']}` first `{summary['historical_seed_ablation_candidate_manifests_first_target_id'] or '-'}` `{summary['historical_seed_ablation_candidate_manifests_first_next_action'] or '-'}`",
         f"- historical seed ablation gap repair: `{summary['historical_seed_ablation_gap_repair_plan_status'] or '-'}` seeds/repair-csvs `{summary['historical_seed_ablation_gap_repair_plan_seed_count']}/{summary['historical_seed_ablation_gap_repair_plan_repair_csv_count']}` real/missing-real/top5-decoys/top5-copy `{summary['historical_seed_ablation_gap_repair_plan_real_count']}/{summary['historical_seed_ablation_gap_repair_plan_missing_real_count']}/{summary['historical_seed_ablation_gap_repair_plan_top5_decoy_count']}/{summary['historical_seed_ablation_gap_repair_plan_top5_copy_count']}` ready/gap/core-blocked `{summary['historical_seed_ablation_gap_repair_plan_ready_count']}/{summary['historical_seed_ablation_gap_repair_plan_gap_count']}/{summary['historical_seed_ablation_gap_repair_plan_core_blocked_count']}` first `{summary['historical_seed_ablation_gap_repair_plan_first_target_id'] or '-'}` `{summary['historical_seed_ablation_gap_repair_plan_first_next_action'] or '-'}`",
         f"- historical seed top5 pools: `{summary['historical_seed_top5_candidate_pools_status'] or '-'}` seeds/pools/models `{summary['historical_seed_top5_candidate_pools_seed_count']}/{summary['historical_seed_top5_candidate_pools_pool_count']}/{summary['historical_seed_top5_candidate_pools_candidate_model_count']}` complete/gaps/source-present/source-blocked `{summary['historical_seed_top5_candidate_pools_complete_count']}/{summary['historical_seed_top5_candidate_pools_gap_count']}/{summary['historical_seed_top5_candidate_pools_source_present_count']}/{summary['historical_seed_top5_candidate_pools_blocked_source_count']}` generated `{summary['historical_seed_top5_candidate_pools_generated_perturbation_count']}` first `{summary['historical_seed_top5_candidate_pools_first_target_id'] or '-'}` `{summary['historical_seed_top5_candidate_pools_first_next_action'] or '-'}`",
@@ -8046,10 +8506,24 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--target-object-viewer-smoke-json", default=DEFAULT_TARGET_OBJECT_VIEWER_SMOKE_JSON)
     parser.add_argument("--target-object-model-review-json", default=DEFAULT_TARGET_OBJECT_MODEL_REVIEW_JSON)
     parser.add_argument("--protein-object-library-json", default=DEFAULT_PROTEIN_OBJECT_LIBRARY_JSON)
+    parser.add_argument(
+        "--protein-object-library-completion-audit-json",
+        default=DEFAULT_PROTEIN_OBJECT_LIBRARY_COMPLETION_AUDIT_JSON,
+    )
     parser.add_argument("--raw-ranked-model-quarantine-json", default=DEFAULT_RAW_RANKED_MODEL_QUARANTINE_JSON)
     parser.add_argument("--win-gap-closure-json", default=DEFAULT_WIN_GAP_CLOSURE_JSON)
     parser.add_argument("--win-tier-goal-scorecard-json", default=DEFAULT_WIN_TIER_GOAL_SCORECARD_JSON)
+    parser.add_argument("--win-tier-metric-surface-contract-json", default=DEFAULT_WIN_TIER_METRIC_SURFACE_CONTRACT_JSON)
     parser.add_argument("--active-scope-decision-json", default=DEFAULT_ACTIVE_SCOPE_DECISION_JSON)
+    parser.add_argument("--organizer-notice-packet-json", default=DEFAULT_ORGANIZER_NOTICE_PACKET_JSON)
+    parser.add_argument(
+        "--massivefold-external-pool-intake-json",
+        default=DEFAULT_MASSIVEFOLD_EXTERNAL_POOL_INTAKE_JSON,
+    )
+    parser.add_argument(
+        "--rna-hybrid-massivefold-priority-queue-json",
+        default=DEFAULT_RNA_HYBRID_MASSIVEFOLD_PRIORITY_QUEUE_JSON,
+    )
     parser.add_argument("--capri-round65-readiness-json", default=DEFAULT_CAPRI_ROUND65_READINESS_JSON)
     parser.add_argument("--capri-round65-format-preflight-json", default=DEFAULT_CAPRI_ROUND65_FORMAT_PREFLIGHT_JSON)
     parser.add_argument("--input-scaffold-json", default=DEFAULT_INPUT_SCAFFOLD_JSON)
@@ -8164,6 +8638,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--historical-seed-strict-blind-replacement-first-slot-official-archive-source-candidates-json",
         default=DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_FIRST_SLOT_OFFICIAL_ARCHIVE_SOURCE_CANDIDATES_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-official-archive-baseline-lane-json",
+        default=DEFAULT_HISTORICAL_SEED_OFFICIAL_ARCHIVE_BASELINE_LANE_JSON,
     )
     parser.add_argument(
         "--historical-seed-ablation-candidate-manifests-json",
