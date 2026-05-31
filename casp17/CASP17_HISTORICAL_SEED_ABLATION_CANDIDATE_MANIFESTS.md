@@ -1,6 +1,6 @@
 # CASP17 Historical Seed Ablation Candidate Manifests
 
-- generated: `2026-05-28T03:30:22+09:00`
+- generated: `2026-05-31T14:46:50+09:00`
 - ablation_candidate_status: `operator_ablation_review_required`
 - seed rows/manifests/candidate rows: `15/15/50`
 - selected prediction/native present: `15/15`

@@ -1481,7 +1481,7 @@
     "complete_top5_pool_count": 15,
     "first_next_action": "feed candidate pool into calibration ledger, then attach native oracle metrics and internal scores",
     "first_open_target_id": "HIST_BBA5",
-    "generated_at_local": "2026-05-28T03:59:02+09:00",
+    "generated_at_local": "2026-05-31T14:46:50+09:00",
     "generated_perturbation_count": 60,
     "input_blockers": "",
     "operator_clearance_csv": "runs/casp17_historical_identity_seed_operator_clearance_current.csv",

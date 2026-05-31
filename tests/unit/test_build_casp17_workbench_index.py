@@ -18,6 +18,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     raw_ranked_model_quarantine_json = tmp_path / "raw_ranked_model_quarantine.json"
     closure_json = tmp_path / "closure.json"
     goal_scorecard_json = tmp_path / "goal_scorecard.json"
+    active_scope_decision_json = tmp_path / "active_scope_decision.json"
+    capri_round65_readiness_json = tmp_path / "capri_round65_readiness.json"
+    capri_round65_format_preflight_json = tmp_path / "capri_round65_format_preflight.json"
     scaffold_json = tmp_path / "scaffold.json"
     inventory_json = tmp_path / "inventory.json"
     dashboard_json = tmp_path / "dashboard.json"
@@ -32,14 +35,93 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     historical_seed_no_leak_provenance_dossiers_json = (
         tmp_path / "historical_seed_no_leak_provenance_dossiers.json"
     )
+    historical_seed_no_leak_gap_repair_plan_json = tmp_path / "historical_seed_no_leak_gap_repair_plan.json"
     historical_seed_current_target_prefill_json = tmp_path / "historical_seed_current_target_prefill.json"
+    historical_seed_native_authority_audit_json = tmp_path / "historical_seed_native_authority_audit.json"
+    historical_seed_native_replacement_candidates_json = (
+        tmp_path / "historical_seed_native_replacement_candidates.json"
+    )
+    historical_seed_complex_source_authority_candidates_json = (
+        tmp_path / "historical_seed_complex_source_authority_candidates.json"
+    )
     historical_seed_chronology_candidate_board_json = tmp_path / "historical_seed_chronology_candidate_board.json"
+    historical_seed_authoritative_chronology_audit_json = (
+        tmp_path / "historical_seed_authoritative_chronology_audit.json"
+    )
+    historical_seed_lane_decision_packet_json = tmp_path / "historical_seed_lane_decision_packet.json"
+    historical_seed_strict_blind_replacement_queue_json = (
+        tmp_path / "historical_seed_strict_blind_replacement_queue.json"
+    )
+    historical_seed_strict_blind_replacement_intake_json = (
+        tmp_path / "historical_seed_strict_blind_replacement_intake.json"
+    )
+    historical_seed_strict_blind_replacement_evidence_dropzones_json = (
+        tmp_path / "historical_seed_strict_blind_replacement_evidence_dropzones.json"
+    )
+    historical_seed_strict_blind_replacement_evidence_action_board_json = (
+        tmp_path / "historical_seed_strict_blind_replacement_evidence_action_board.json"
+    )
+    historical_seed_strict_blind_replacement_evidence_quality_audit_json = (
+        tmp_path / "historical_seed_strict_blind_replacement_evidence_quality_audit.json"
+    )
+    historical_seed_strict_blind_replacement_evidence_import_gate_json = (
+        tmp_path / "historical_seed_strict_blind_replacement_evidence_import_gate.json"
+    )
+    historical_seed_strict_blind_replacement_operator_value_gate_json = (
+        tmp_path / "historical_seed_strict_blind_replacement_operator_value_gate.json"
+    )
+    historical_seed_strict_blind_replacement_operator_action_board_json = (
+        tmp_path / "historical_seed_strict_blind_replacement_operator_action_board.json"
+    )
+    historical_seed_strict_blind_replacement_promotion_gate_json = (
+        tmp_path / "historical_seed_strict_blind_replacement_promotion_gate.json"
+    )
+    historical_seed_strict_blind_replacement_cycle_json = (
+        tmp_path / "historical_seed_strict_blind_replacement_cycle.json"
+    )
+    historical_seed_strict_blind_replacement_first_slot_kit_json = (
+        tmp_path / "historical_seed_strict_blind_replacement_first_slot_kit.json"
+    )
+    historical_seed_strict_blind_replacement_first_slot_local_candidate_board_json = (
+        tmp_path / "historical_seed_strict_blind_replacement_first_slot_local_candidate_board.json"
+    )
+    historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_json = (
+        tmp_path / "historical_seed_strict_blind_replacement_first_slot_candidate_repair_board.json"
+    )
+    historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_json = (
+        tmp_path / "historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board.json"
+    )
+    historical_seed_strict_blind_replacement_first_slot_source_route_board_json = (
+        tmp_path / "historical_seed_strict_blind_replacement_first_slot_source_route_board.json"
+    )
+    historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_json = (
+        tmp_path / "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates.json"
+    )
     historical_seed_ablation_candidate_manifests_json = (
         tmp_path / "historical_seed_ablation_candidate_manifests.json"
     )
+    historical_seed_ablation_gap_repair_plan_json = tmp_path / "historical_seed_ablation_gap_repair_plan.json"
     historical_seed_top5_candidate_pools_json = tmp_path / "historical_seed_top5_candidate_pools.json"
+    historical_seed_internal_score_candidates_json = (
+        tmp_path / "historical_seed_internal_score_candidates.json"
+    )
+    historical_seed_native_oracle_metric_candidates_json = (
+        tmp_path / "historical_seed_native_oracle_metric_candidates.json"
+    )
     historical_seed_calibration_candidate_ledgers_json = (
         tmp_path / "historical_seed_calibration_candidate_ledgers.json"
+    )
+    historical_seed_calibration_field_candidates_json = (
+        tmp_path / "historical_seed_calibration_field_candidates.json"
+    )
+    historical_seed_clearance_fill_candidate_packet_json = (
+        tmp_path / "historical_seed_clearance_fill_candidate_packet.json"
+    )
+    historical_seed_clearance_execution_board_json = (
+        tmp_path / "historical_seed_clearance_execution_board.json"
+    )
+    historical_seed_first_clearance_operator_kit_json = (
+        tmp_path / "historical_seed_first_clearance_operator_kit.json"
     )
     historical_seed_clearance_to_identity_intake_sync_json = (
         tmp_path / "historical_seed_clearance_to_identity_intake_sync.json"
@@ -278,6 +360,74 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        capri_round65_readiness_json,
+        {
+            "summary": {
+                "capri_readiness_status": "blocked_registration_role_selection",
+                "round_status": "Active",
+                "registration_end": "2026-06-01 midnight",
+                "registration_days_remaining": 1,
+                "registration_gate_status": "operator_input_required",
+                "registration_ready_field_count": 0,
+                "registration_required_field_count": 4,
+                "role_selection_status": "operator_input_required",
+                "target_count": 13,
+                "active_target_count": 11,
+                "closed_target_count": 2,
+                "scorer_priority_target_count": 4,
+                "predictor_priority_target_count": 7,
+                "blocked_target_count": 11,
+                "format_preflight_target_count": 0,
+                "target_folder_count": 13,
+                "first_open_target_id": "T329",
+                "first_next_action": "confirm CASP ID, CAPRI registration, selected role, and submitter contact",
+            }
+        },
+    )
+    _write_json(
+        active_scope_decision_json,
+        {
+            "summary": {
+                "scope_decision_status": "casp17_only_active",
+                "active_competition_scope": "casp17_only",
+                "casp17_continuation_status": "active",
+                "casp17_priority_status": "historical_benchmark_then_competitive_floor",
+                "capri_round65_participation_status": "deferred_pi_required",
+                "capri_round65_hold_reason": (
+                    "operator_not_pi_capri_registration_requires_pi_or_research_group_lead"
+                ),
+                "capri_round65_artifact_policy": "preserve_context_no_registration_no_submission",
+                "active_lane_count": 3,
+                "deferred_lane_count": 1,
+                "row_count": 4,
+                "first_next_action": (
+                    "clear historical non-CASP17 target identity, no-leak provenance, native files, and prediction files"
+                ),
+            }
+        },
+    )
+    _write_json(
+        capri_round65_format_preflight_json,
+        {
+            "summary": {
+                "format_preflight_status": "blocked_format_preflight",
+                "target_count": 13,
+                "active_target_count": 11,
+                "closed_target_count": 2,
+                "local_pass_count": 0,
+                "blocked_target_count": 11,
+                "checked_submission_count": 0,
+                "target_template_missing_count": 11,
+                "candidate_submission_missing_count": 11,
+                "format_error_count": 0,
+                "first_blocked_target_id": "T329",
+                "first_next_action": (
+                    "place target_template.pdb and candidate_submission.pdb, then rerun local format preflight"
+                ),
+            }
+        },
+    )
+    _write_json(
         scaffold_json,
         {
             "summary": {
@@ -437,6 +587,28 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        historical_seed_no_leak_gap_repair_plan_json,
+        {
+            "summary": {
+                "no_leak_gap_repair_status": "no_leak_gap_repair_required",
+                "seed_row_count": 15,
+                "repair_csv_count": 15,
+                "field_count": 150,
+                "operator_required_field_count": 150,
+                "weak_local_candidate_field_count": 30,
+                "authoritative_candidate_field_count": 0,
+                "chronology_field_count": 45,
+                "negative_control_field_count": 45,
+                "clearance_field_count": 60,
+                "mtime_risk_row_count": 15,
+                "first_open_target_id": "HIST_BBA5",
+                "first_next_action": (
+                    "attach independent no-leak evidence, authoritative dates, negative controls, and operator clearance"
+                ),
+            }
+        },
+    )
+    _write_json(
         historical_seed_current_target_prefill_json,
         {
             "summary": {
@@ -451,6 +623,70 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "remaining_open_current_target_count": 0,
                 "hist_prefix_pass_count": 15,
                 "first_next_action": "set current_casp17_target=false",
+            }
+        },
+    )
+    _write_json(
+        historical_seed_native_authority_audit_json,
+        {
+            "summary": {
+                "native_authority_audit_status": "blocked_native_authority",
+                "seed_row_count": 15,
+                "native_authority_pass_count": 0,
+                "native_authority_blocked_count": 15,
+                "placeholder_native_count": 10,
+                "ca_only_native_count": 10,
+                "local_generated_native_without_authority_count": 5,
+                "authority_ref_missing_count": 15,
+                "first_blocked_target_id": "HIST_BBA5",
+                "first_blocked_next_action": (
+                    "replace the placeholder or CA-only native with an authoritative all-atom native/reference PDB"
+                ),
+            }
+        },
+    )
+    _write_json(
+        historical_seed_native_replacement_candidates_json,
+        {
+            "summary": {
+                "native_replacement_candidate_status": "partial_native_replacement_candidates_ready",
+                "candidate_row_count": 17,
+                "operator_review_ready_count": 10,
+                "source_download_required_count": 0,
+                "candidate_file_blocked_count": 0,
+                "complex_authority_required_count": 7,
+                "monomer_candidate_count": 10,
+                "candidate_dir": "casp17/historical_seed_native_replacement_candidates",
+                "first_blocked_target_id": (
+                    "HIST_COMPLEX_01_TCRUZI_PDE_EXTERNAL_PDEB1_010_CHEMBL4453005"
+                ),
+                "first_blocked_next_action": (
+                    "attach external native/source authority for this complex reference or replace the seed row"
+                ),
+            }
+        },
+    )
+    _write_json(
+        historical_seed_complex_source_authority_candidates_json,
+        {
+            "summary": {
+                "complex_source_authority_candidate_status": (
+                    "complex_homolog_source_authority_candidates_ready_claim_limited"
+                ),
+                "candidate_row_count": 7,
+                "operator_review_ready_count": 7,
+                "direct_source_authority_ready_count": 0,
+                "homolog_source_authority_ready_count": 7,
+                "source_authority_blocked_count": 0,
+                "operator_apply_allowed_count": 0,
+                "claim_promotion_allowed_count": 0,
+                "protein_authority_ref": "rcsb:3V94;chain:B;doi:10.2210/pdb3v94/pdb",
+                "first_blocked_target_id": (
+                    "HIST_COMPLEX_01_TCRUZI_PDE_EXTERNAL_PDEB1_010_CHEMBL4453005"
+                ),
+                "first_next_action": (
+                    "operator may cite this as source authority only after accepting the homolog-only claim boundary"
+                ),
             }
         },
     )
@@ -476,6 +712,502 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        historical_seed_authoritative_chronology_audit_json,
+        {
+            "summary": {
+                "authoritative_chronology_audit_status": "post_native_prediction_chronology_blocked",
+                "seed_row_count": 17,
+                "native_authority_date_count": 10,
+                "prediction_date_candidate_count": 10,
+                "before_native_candidate_count": 0,
+                "post_native_blocked_count": 10,
+                "evidence_required_count": 7,
+                "native_authority_not_pass_count": 7,
+                "missing_native_authority_date_count": 7,
+                "missing_prediction_date_count": 7,
+                "first_blocked_target_id": "HIST_BBA5",
+                "first_next_action": (
+                    "replace with a pre-native blind prediction artifact, or keep this row in a separate "
+                    "post-native retrospective lane with explicit no-template evidence"
+                ),
+            }
+        },
+    )
+    _write_json(
+        historical_seed_lane_decision_packet_json,
+        {
+            "summary": {
+                "lane_decision_status": "strict_blind_replacement_required",
+                "seed_row_count": 17,
+                "strict_blind_eligible_count": 0,
+                "retrospective_calibration_review_count": 10,
+                "authority_or_replacement_required_count": 7,
+                "competitive_proof_allowed_count": 0,
+                "identity_intake_allowed_count": 0,
+                "sidechain_native_benchmark_allowed_count": 0,
+                "strict_blind_replacement_required_count": 17,
+                "operator_decision_required_count": 17,
+                "first_blocked_target_id": "HIST_BBA5",
+                "first_next_action": (
+                    "keep this row outside competitive proof unless operator supplies a pre-native blind "
+                    "prediction artifact; otherwise use only for retrospective no-template calibration review"
+                ),
+            }
+        },
+    )
+    _write_json(
+        historical_seed_strict_blind_replacement_queue_json,
+        {
+            "summary": {
+                "strict_blind_replacement_queue_status": "strict_blind_replacement_queue_open",
+                "scaffold_slot_count": 40,
+                "monomer_slot_count": 25,
+                "complex_slot_count": 15,
+                "strict_blind_replacement_required_count": 40,
+                "strict_blind_ready_slot_count": 0,
+                "competitive_proof_allowed_slot_count": 0,
+                "requirement_field_count": 640,
+                "current_seed_count": 17,
+                "current_seed_strict_blind_count": 0,
+                "current_seed_retrospective_count": 10,
+                "current_seed_authority_required_count": 7,
+                "current_seed_competitive_allowed_count": 0,
+                "first_open_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "first_next_action": (
+                    "select a non-current historical target with pre-native internal prediction, "
+                    "authoritative native, no-leak evidence, ablation layers, calibration values, "
+                    "and operator clearance"
+                ),
+            }
+        },
+    )
+    _write_json(
+        historical_seed_strict_blind_replacement_intake_json,
+        {
+            "summary": {
+                "strict_blind_replacement_intake_status": "awaiting_strict_blind_replacement_intake",
+                "intake_slot_count": 40,
+                "required_field_count": 640,
+                "filled_field_count": 0,
+                "missing_field_count": 640,
+                "ready_for_preflight_count": 0,
+                "blocked_or_awaiting_count": 40,
+                "created_template_count": 40,
+                "preserved_template_count": 0,
+                "first_open_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "first_next_action": (
+                    "fill replacement_candidate_intake.csv with strict-blind evidence, then rerun intake preflight"
+                ),
+            }
+        },
+    )
+    _write_json(
+        historical_seed_strict_blind_replacement_evidence_dropzones_json,
+        {
+            "summary": {
+                "strict_blind_replacement_evidence_dropzone_status": "awaiting_strict_blind_evidence_files",
+                "dropzone_count": 40,
+                "ready_for_intake_patch_count": 0,
+                "awaiting_file_count": 40,
+                "file_required_count": 240,
+                "file_present_count": 0,
+                "file_missing_count": 240,
+                "operator_value_required_count": 400,
+                "patch_preview_count": 40,
+                "first_open_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "first_next_action": (
+                    "place strict-blind evidence files in this dropzone, then rerun dropzone and intake preflight"
+                ),
+            }
+        },
+    )
+    _write_json(
+        historical_seed_strict_blind_replacement_evidence_quality_audit_json,
+        {
+            "summary": {
+                "strict_blind_replacement_evidence_quality_audit_status": (
+                    "awaiting_strict_blind_evidence_quality_files"
+                ),
+                "slot_count": 40,
+                "ready_for_quality_review_count": 0,
+                "awaiting_evidence_files_count": 40,
+                "blocked_evidence_quality_count": 0,
+                "file_required_count": 240,
+                "file_present_count": 0,
+                "file_missing_count": 240,
+                "pdb_valid_slot_count": 0,
+                "pdb_invalid_slot_count": 0,
+                "supporting_valid_slot_count": 0,
+                "supporting_invalid_slot_count": 0,
+                "prediction_native_distinct_count": 0,
+                "prediction_native_identical_count": 0,
+                "first_open_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "first_open_status": "awaiting_evidence_files",
+                "first_next_action": (
+                    "place all six strict-blind evidence files in the dropzone and rerun dropzones/quality audit"
+                ),
+            }
+        },
+    )
+    _write_json(
+        historical_seed_strict_blind_replacement_evidence_action_board_json,
+        {
+            "summary": {
+                "strict_blind_replacement_evidence_action_board_status": (
+                    "awaiting_strict_blind_evidence_actions"
+                ),
+                "action_count": 240,
+                "ready_for_quality_audit_count": 0,
+                "open_missing_file_count": 240,
+                "blocked_count": 0,
+                "prediction_pdb_missing_count": 40,
+                "native_pdb_missing_count": 40,
+                "native_authority_missing_count": 40,
+                "no_leak_evidence_missing_count": 40,
+                "ablation_manifest_missing_count": 40,
+                "calibration_values_missing_count": 40,
+                "first_open_action_id": "strict_blind_evidence_001",
+                "first_open_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "first_open_field": "prediction_pdb",
+                "first_next_action": (
+                    "place prediction_pdb evidence at casp17/historical_seed_strict_blind_replacement_evidence_dropzones/01_hist_required_monomer_001/prediction/replacement_prediction.pdb"
+                ),
+            }
+        },
+    )
+    _write_json(
+        historical_seed_strict_blind_replacement_evidence_import_gate_json,
+        {
+            "summary": {
+                "strict_blind_replacement_evidence_import_gate_status": (
+                    "awaiting_strict_blind_evidence_import"
+                ),
+                "apply_mode": "dry_run",
+                "action_count": 640,
+                "file_action_count": 240,
+                "operator_value_action_count": 400,
+                "ready_for_apply_count": 0,
+                "applied_count": 0,
+                "already_applied_count": 0,
+                "operator_value_present_count": 0,
+                "awaiting_file_count": 240,
+                "awaiting_operator_value_count": 400,
+                "blocked_count": 0,
+                "first_open_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "first_open_field": "prediction_pdb",
+                "first_open_status": "awaiting_file",
+                "first_next_action": (
+                    "place the missing evidence file in the strict-blind dropzone and rerun dropzones/import gate"
+                ),
+            }
+        },
+    )
+    _write_json(
+        historical_seed_strict_blind_replacement_operator_value_gate_json,
+        {
+            "summary": {
+                "strict_blind_replacement_operator_value_gate_status": "awaiting_operator_values",
+                "apply_mode": "dry_run",
+                "template_count": 40,
+                "created_template_count": 40,
+                "preserved_template_count": 0,
+                "action_count": 400,
+                "ready_for_apply_count": 0,
+                "applied_count": 0,
+                "already_applied_count": 0,
+                "awaiting_operator_value_count": 400,
+                "awaiting_evidence_ref_count": 0,
+                "awaiting_operator_clearance_count": 0,
+                "blocked_count": 0,
+                "first_open_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "first_open_field": "replacement_target_id",
+                "first_open_status": "awaiting_operator_value",
+                "first_next_action": (
+                    "fill operator_value for replacement_target_id in replacement_operator_values.csv"
+                ),
+            }
+        },
+    )
+    _write_json(
+        historical_seed_strict_blind_replacement_operator_action_board_json,
+        {
+            "summary": {
+                "strict_blind_replacement_operator_action_board_status": (
+                    "awaiting_strict_blind_operator_actions"
+                ),
+                "action_count": 400,
+                "ready_for_apply_count": 0,
+                "applied_count": 0,
+                "already_applied_count": 0,
+                "open_operator_value_count": 400,
+                "open_evidence_ref_count": 400,
+                "open_operator_clearance_count": 400,
+                "blocked_count": 0,
+                "replacement_target_id_missing_count": 40,
+                "replacement_benchmark_id_missing_count": 40,
+                "target_identity_non_current_missing_count": 40,
+                "prediction_created_at_missing_count": 40,
+                "native_release_date_missing_count": 40,
+                "prediction_before_native_missing_count": 40,
+                "public_template_false_missing_count": 40,
+                "other_team_false_missing_count": 40,
+                "post_release_false_missing_count": 40,
+                "operator_clearance_value_missing_count": 40,
+                "first_open_action_id": "strict_blind_operator_001",
+                "first_open_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "first_open_field": "replacement_target_id",
+                "first_open_status": "open_operator_value",
+                "first_next_action": "fill operator_value for replacement_target_id in replacement_operator_values.csv",
+            }
+        },
+    )
+    _write_json(
+        historical_seed_strict_blind_replacement_promotion_gate_json,
+        {
+            "summary": {
+                "strict_blind_replacement_promotion_gate_status": (
+                    "awaiting_strict_blind_replacement_promotion"
+                ),
+                "slot_count": 40,
+                "ready_for_competitive_proof_count": 0,
+                "awaiting_file_evidence_count": 40,
+                "awaiting_operator_values_count": 40,
+                "awaiting_apply_count": 0,
+                "awaiting_intake_preflight_count": 40,
+                "blocked_review_count": 0,
+                "intake_ready_count": 0,
+                "file_complete_slot_count": 0,
+                "operator_complete_slot_count": 0,
+                "file_awaiting_action_count": 240,
+                "operator_awaiting_action_count": 400,
+                "first_open_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "first_open_phase": "file_evidence",
+                "first_open_status": "awaiting_file_evidence",
+                "first_next_action": (
+                    "place required strict-blind evidence files, rerun dropzones/import gate"
+                ),
+            }
+        },
+    )
+    _write_json(
+        historical_seed_strict_blind_replacement_cycle_json,
+        {
+            "summary": {
+                "strict_blind_replacement_cycle_status": "awaiting_evidence_files",
+                "slot_count": 40,
+                "promotion_ready_count": 0,
+                "evidence_file_present_count": 0,
+                "evidence_file_missing_count": 240,
+                "quality_ready_count": 0,
+                "quality_awaiting_count": 40,
+                "quality_blocked_count": 0,
+                "import_ready_count": 0,
+                "import_awaiting_file_count": 240,
+                "import_awaiting_operator_count": 400,
+                "operator_ready_count": 0,
+                "operator_awaiting_value_count": 400,
+                "operator_action_board_ready_count": 0,
+                "operator_action_board_action_count": 400,
+                "operator_action_board_open_value_count": 400,
+                "operator_action_board_open_evidence_count": 400,
+                "operator_action_board_open_clearance_count": 400,
+                "first_blocking_stage": "evidence_dropzones",
+                "first_open_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "first_next_action": "place strict-blind evidence files",
+            }
+        },
+    )
+    _write_json(
+        historical_seed_strict_blind_replacement_first_slot_kit_json,
+        {
+            "summary": {
+                "strict_blind_replacement_first_slot_kit_status": "awaiting_first_slot_evidence_files",
+                "required_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "required_target_id": "REQUIRED_MONOMER_001",
+                "scope": "monomer",
+                "evidence_action_count": 6,
+                "evidence_ready_count": 0,
+                "evidence_open_count": 6,
+                "evidence_blocked_count": 0,
+                "operator_action_count": 10,
+                "operator_ready_count": 0,
+                "operator_open_count": 10,
+                "operator_blocked_count": 0,
+                "operator_open_value_count": 10,
+                "operator_open_evidence_count": 10,
+                "operator_open_clearance_count": 10,
+                "first_open_action_group": "evidence_file",
+                "first_open_action_id": "strict_blind_evidence_001",
+                "first_open_field": "prediction_pdb",
+                "first_open_status": "open_missing_file",
+                "first_next_action": "place prediction_pdb evidence",
+                "kit_folder": "casp17/historical_seed_strict_blind_replacement_first_slot_kit/hist_REQUIRED_MONOMER_001",
+            }
+        },
+    )
+    _write_json(
+        historical_seed_strict_blind_replacement_first_slot_local_candidate_board_json,
+        {
+            "summary": {
+                "strict_blind_replacement_first_slot_local_candidate_board_status": (
+                    "first_slot_local_candidates_review_only"
+                ),
+                "required_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "required_target_id": "REQUIRED_MONOMER_001",
+                "scope": "monomer",
+                "candidate_count": 15,
+                "ready_for_first_slot_count": 0,
+                "strict_blind_eligible_count": 0,
+                "material_present_count": 15,
+                "prediction_present_count": 15,
+                "native_present_count": 15,
+                "native_authority_present_count": 15,
+                "blocked_chronology_count": 10,
+                "blocked_no_leak_count": 15,
+                "blocked_ablation_count": 14,
+                "blocked_calibration_count": 15,
+                "first_review_target_id": "HIST_BBA5",
+                "first_review_benchmark_id": "hist_seed_bba5",
+                "first_review_status": "blocked_chronology_not_strict_blind",
+                "first_review_next_action": (
+                    "find or attach a prediction artifact created before authoritative native release"
+                ),
+            }
+        },
+    )
+    _write_json(
+        historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_json,
+        {
+            "summary": {
+                "strict_blind_replacement_first_slot_candidate_repair_board_status": (
+                    "awaiting_first_slot_candidate_repairs"
+                ),
+                "required_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "candidate_count": 17,
+                "action_count": 96,
+                "open_repair_action_count": 79,
+                "blocked_action_count": 17,
+                "chronology_action_count": 17,
+                "no_leak_action_count": 17,
+                "ablation_action_count": 17,
+                "calibration_action_count": 17,
+                "prediction_file_action_count": 2,
+                "native_file_action_count": 2,
+                "native_authority_action_count": 7,
+                "eligibility_action_count": 17,
+                "first_open_action_id": "first_slot_repair_001",
+                "first_open_target_id": "HIST_BBA5",
+                "first_open_repair_class": "chronology",
+                "first_open_blocker": "prediction_not_before_native",
+                "first_open_status": "open_repair_action",
+                "first_next_action": (
+                    "attach a prediction artifact created before the authoritative native release date"
+                ),
+            }
+        },
+    )
+    _write_json(
+        historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_json,
+        {
+            "summary": {
+                "strict_blind_replacement_first_slot_repair_feasibility_board_status": (
+                    "first_slot_current_local_candidate_source_required"
+                ),
+                "required_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "candidate_count": 17,
+                "action_count": 96,
+                "not_repairable_with_current_prediction_count": 17,
+                "blocked_by_post_native_prediction_count": 17,
+                "external_pre_native_artifact_required_action_count": 34,
+                "external_pre_native_artifact_required_target_count": 17,
+                "repairable_operator_source_required_count": 11,
+                "repairable_operator_evidence_required_count": 51,
+                "needs_chronology_date_evidence_count": 0,
+                "blocked_by_primary_repairs_count": 0,
+                "repairable_current_prediction_pre_native_count": 0,
+                "first_external_action_id": "first_slot_repair_001",
+                "first_external_target_id": "HIST_BBA5",
+                "first_external_blocker": "prediction_not_before_native",
+                "first_external_next_route": "source_external_pre_native_prediction_or_replace_candidate",
+                "first_actionable_action_id": "first_slot_repair_011",
+                "first_actionable_target_id": "HIST_COMPLEX_01",
+                "first_actionable_status": "repairable_operator_source_required",
+                "first_actionable_required_input": "attach authoritative native/source reference",
+            }
+        },
+    )
+    _write_json(
+        historical_seed_strict_blind_replacement_first_slot_source_route_board_json,
+        {
+            "summary": {
+                "strict_blind_replacement_first_slot_source_route_board_status": (
+                    "first_slot_requires_pre_native_monomer_source_or_replacement"
+                ),
+                "required_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "required_target_id": "REQUIRED_MONOMER_001",
+                "required_scope": "monomer",
+                "route_count": 17,
+                "in_scope_route_count": 10,
+                "out_of_scope_route_count": 7,
+                "allowed_for_first_slot_count": 0,
+                "in_scope_external_required_count": 10,
+                "in_scope_external_action_count": 20,
+                "out_of_scope_source_required_count": 7,
+                "out_of_scope_date_required_count": 7,
+                "first_external_route_id": "first_slot_source_route_001",
+                "first_external_target_id": "HIST_BBA5",
+                "first_external_prediction_created_at": "2026-02-19",
+                "first_external_native_release_date": "2004-05-13",
+                "first_external_next_action": (
+                    "source a pre-native prediction archive for this monomer or replace with a strict-blind monomer candidate"
+                ),
+            }
+        },
+    )
+    _write_json(
+        historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_json,
+        {
+            "summary": {
+                "strict_blind_replacement_first_slot_official_archive_source_candidates_status": (
+                    "first_slot_official_archive_native_authority_candidates_available"
+                ),
+                "required_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "required_target_id": "REQUIRED_MONOMER_001",
+                "required_scope": "monomer",
+                "source_count": 2,
+                "source_competitions": "CASP15,CASP16",
+                "candidate_count": 24,
+                "pre_native_candidate_count": 24,
+                "ready_candidate_count": 24,
+                "blocked_candidate_count": 0,
+                "native_authority_ready_count": 24,
+                "native_authority_lookup_required_count": 0,
+                "native_pdb_download_ready_count": 24,
+                "native_mmcif_only_count": 0,
+                "targetlist_metadata_present_count": 24,
+                "targetlist_capri_marker_count": 3,
+                "targetlist_special_mode_count": 2,
+                "regular_monomer_count": 13,
+                "domain_subunit_count": 9,
+                "variant_count": 2,
+                "first_ready_candidate_id": "official_archive_source_001",
+                "first_ready_competition": "CASP16",
+                "first_ready_target_id": "T1210",
+                "first_ready_prediction_archive_modified_at": "2024-05-30 09:21",
+                "first_ready_native_public_anchor_date": "2025-02-01",
+                "first_ready_native_pdb_code": "9enr",
+                "first_ready_native_pdb_url": "https://www.rcsb.org/structure/9enr",
+                "first_ready_native_structure_file_url": "https://files.rcsb.org/download/9ENR.pdb",
+                "first_ready_native_structure_file_format": "pdb",
+                "first_ready_native_pdb_download_status": "pdb_available",
+                "first_ready_targetlist_target_url": "https://predictioncenter.org/casp16/target.cgi?id=60&view=all",
+                "first_ready_prediction_tarball_url": (
+                    "https://predictioncenter.org/download_area/CASP16/predictions/regular/T1210.tar.gz"
+                ),
+            }
+        },
+    )
+    _write_json(
         historical_seed_ablation_candidate_manifests_json,
         {
             "summary": {
@@ -492,6 +1224,28 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "blocked_core_candidate_input_count": 0,
                 "first_open_target_id": "HIST_BBA5",
                 "first_next_action": "attach real ablation layer evidence before setting ablation_manifest_ref",
+            }
+        },
+    )
+    _write_json(
+        historical_seed_ablation_gap_repair_plan_json,
+        {
+            "summary": {
+                "ablation_gap_repair_status": "ablation_gap_repair_required",
+                "seed_row_count": 15,
+                "repair_csv_count": 15,
+                "real_ablation_candidate_count": 1,
+                "missing_real_ablation_candidate_count": 19,
+                "top5_review_decoy_count": 60,
+                "top5_selected_copy_count": 15,
+                "ready_for_operator_review_count": 1,
+                "gap_repair_required_count": 14,
+                "blocked_core_ablation_input_count": 0,
+                "first_open_target_id": "HIST_BBA5",
+                "first_next_action": (
+                    "generate or attach true same-run/pre-minimization ablation layers; "
+                    "keep top5 decoys as review-only context"
+                ),
             }
         },
     )
@@ -527,15 +1281,50 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "top5_candidate_pool_ready_count": 15,
                 "selected_prediction_candidate_count": 15,
                 "selected_model_rank_candidate_count": 15,
-                "native_oracle_metric_available_count": 0,
-                "internal_score_available_count": 0,
+                "native_oracle_metric_available_count": 76,
+                "internal_score_available_count": 76,
                 "ready_for_calibration_fill_count": 0,
                 "operator_review_required_count": 15,
                 "blocked_selected_prediction_count": 0,
                 "open_calibration_field_count": 90,
                 "first_open_target_id": "HIST_BBA5",
+                "first_next_action": "operator-fill calibration fields after no-leak provenance clearance",
+            }
+        },
+    )
+    _write_json(
+        historical_seed_internal_score_candidates_json,
+        {
+            "summary": {
+                "internal_score_candidate_status": "internal_score_candidates_ready_for_review",
+                "seed_row_count": 15,
+                "candidate_count": 76,
+                "scored_candidate_count": 76,
+                "top5_scored_ready_count": 15,
+                "selected_score_candidate_count": 15,
+                "blocked_candidate_input_count": 0,
+                "first_open_target_id": "HIST_BBA5",
                 "first_next_action": (
-                    "attach native oracle metrics and internal scores before filling calibration fields"
+                    "feed internal scores into calibration ledger, then attach native oracle metrics"
+                ),
+            }
+        },
+    )
+    _write_json(
+        historical_seed_native_oracle_metric_candidates_json,
+        {
+            "summary": {
+                "native_metric_candidate_status": "native_oracle_metric_candidates_ready_for_review",
+                "seed_row_count": 15,
+                "candidate_count": 76,
+                "metric_candidate_count": 76,
+                "top5_native_metric_ready_count": 15,
+                "selected_native_metric_candidate_count": 15,
+                "best_native_metric_candidate_count": 15,
+                "blocked_candidate_input_count": 0,
+                "first_open_target_id": "HIST_BBA5",
+                "first_next_action": (
+                    "feed native metrics into calibration ledger, then keep no-leak provenance and operator fill separate"
                 ),
             }
         },
@@ -554,6 +1343,101 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "applied_count": 0,
                 "intake_row_count": 15,
                 "first_next_action": "clear historical seed rows before syncing competitive identity intake",
+            }
+        },
+    )
+    _write_json(
+        historical_seed_calibration_field_candidates_json,
+        {
+            "summary": {
+                "calibration_field_candidate_status": "calibration_field_candidates_ready_for_operator_apply",
+                "seed_row_count": 15,
+                "field_candidate_count": 90,
+                "proposed_field_count": 90,
+                "already_matching_field_count": 0,
+                "conflict_field_count": 0,
+                "blocked_field_count": 0,
+                "ready_to_apply_row_count": 15,
+                "blocked_row_count": 0,
+                "first_open_target_id": "HIST_BBA5",
+                "first_next_action": (
+                    "operator may apply calibration field candidates after no-leak provenance clearance"
+                ),
+            }
+        },
+    )
+    _write_json(
+        historical_seed_clearance_fill_candidate_packet_json,
+        {
+            "summary": {
+                "clearance_fill_candidate_status": "operator_provenance_required_with_field_candidates",
+                "seed_row_count": 15,
+                "field_count": 255,
+                "proposed_field_count": 91,
+                "already_matching_field_count": 0,
+                "operator_required_field_count": 150,
+                "blocked_field_count": 14,
+                "conflict_field_count": 0,
+                "calibration_candidate_count": 90,
+                "ablation_candidate_count": 1,
+                "no_leak_manual_field_count": 150,
+                "partial_candidate_row_count": 15,
+                "full_clearance_ready_row_count": 0,
+                "blocked_row_count": 15,
+                "first_open_target_id": "HIST_BBA5",
+                "first_next_action": (
+                    "complete no-leak provenance and repair blocked ablation fields before any cleared manifest promotion"
+                ),
+            }
+        },
+    )
+    _write_json(
+        historical_seed_clearance_execution_board_json,
+        {
+            "summary": {
+                "execution_board_status": "first_row_operator_no_leak_only",
+                "seed_row_count": 15,
+                "operator_no_leak_only_row_count": 1,
+                "ablation_repair_required_row_count": 14,
+                "operator_no_leak_field_count": 150,
+                "proposed_field_count": 91,
+                "calibration_candidate_count": 90,
+                "ablation_candidate_count": 1,
+                "blocked_ablation_field_count": 14,
+                "first_execution_target_id": "HIST_CHIGNOLIN",
+                "first_execution_status": "operator_no_leak_only",
+                "first_execution_next_action": (
+                    "fill operator no-leak evidence fields, then apply prepared calibration and ablation candidates"
+                ),
+                "first_execution_folder": (
+                    "casp17/historical_seed_clearance_execution_board/02_hist_chignolin"
+                ),
+            }
+        },
+    )
+    _write_json(
+        historical_seed_first_clearance_operator_kit_json,
+        {
+            "summary": {
+                "first_clearance_kit_status": "operator_no_leak_intake_ready",
+                "target_id": "HIST_CHIGNOLIN",
+                "benchmark_id": "hist_seed_chignolin",
+                "scope": "monomer",
+                "no_leak_field_count": 10,
+                "ready_candidate_field_count": 7,
+                "total_field_count": 17,
+                "calibration_candidate_count": 6,
+                "ablation_candidate_count": 1,
+                "weak_hint_count": 2,
+                "promotion_preview_status": "waiting_on_operator_no_leak_fields",
+                "kit_folder": "casp17/historical_seed_first_clearance_operator_kit/HIST_CHIGNOLIN",
+                "no_leak_operator_intake_csv": (
+                    "casp17/historical_seed_first_clearance_operator_kit/"
+                    "HIST_CHIGNOLIN/no_leak_operator_intake.csv"
+                ),
+                "next_action": (
+                    "fill no_leak_operator_intake.csv with independent evidence, then review promotion_preview.csv"
+                ),
             }
         },
     )
@@ -1427,6 +2311,12 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(closure_json),
             "--win-tier-goal-scorecard-json",
             str(goal_scorecard_json),
+            "--active-scope-decision-json",
+            str(active_scope_decision_json),
+            "--capri-round65-readiness-json",
+            str(capri_round65_readiness_json),
+            "--capri-round65-format-preflight-json",
+            str(capri_round65_format_preflight_json),
             "--input-scaffold-json",
             str(scaffold_json),
             "--input-inventory-json",
@@ -1443,16 +2333,74 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(historical_identity_seed_clearance_field_board_json),
             "--historical-seed-no-leak-provenance-dossiers-json",
             str(historical_seed_no_leak_provenance_dossiers_json),
+            "--historical-seed-no-leak-gap-repair-plan-json",
+            str(historical_seed_no_leak_gap_repair_plan_json),
             "--historical-seed-current-target-prefill-json",
             str(historical_seed_current_target_prefill_json),
+            "--historical-seed-native-authority-audit-json",
+            str(historical_seed_native_authority_audit_json),
+            "--historical-seed-native-replacement-candidates-json",
+            str(historical_seed_native_replacement_candidates_json),
+            "--historical-seed-complex-source-authority-candidates-json",
+            str(historical_seed_complex_source_authority_candidates_json),
             "--historical-seed-chronology-candidate-board-json",
             str(historical_seed_chronology_candidate_board_json),
+            "--historical-seed-authoritative-chronology-audit-json",
+            str(historical_seed_authoritative_chronology_audit_json),
+            "--historical-seed-lane-decision-packet-json",
+            str(historical_seed_lane_decision_packet_json),
+            "--historical-seed-strict-blind-replacement-queue-json",
+            str(historical_seed_strict_blind_replacement_queue_json),
+            "--historical-seed-strict-blind-replacement-intake-json",
+            str(historical_seed_strict_blind_replacement_intake_json),
+            "--historical-seed-strict-blind-replacement-evidence-dropzones-json",
+            str(historical_seed_strict_blind_replacement_evidence_dropzones_json),
+            "--historical-seed-strict-blind-replacement-evidence-action-board-json",
+            str(historical_seed_strict_blind_replacement_evidence_action_board_json),
+            "--historical-seed-strict-blind-replacement-evidence-quality-audit-json",
+            str(historical_seed_strict_blind_replacement_evidence_quality_audit_json),
+            "--historical-seed-strict-blind-replacement-evidence-import-gate-json",
+            str(historical_seed_strict_blind_replacement_evidence_import_gate_json),
+            "--historical-seed-strict-blind-replacement-operator-value-gate-json",
+            str(historical_seed_strict_blind_replacement_operator_value_gate_json),
+            "--historical-seed-strict-blind-replacement-operator-action-board-json",
+            str(historical_seed_strict_blind_replacement_operator_action_board_json),
+            "--historical-seed-strict-blind-replacement-promotion-gate-json",
+            str(historical_seed_strict_blind_replacement_promotion_gate_json),
+            "--historical-seed-strict-blind-replacement-cycle-json",
+            str(historical_seed_strict_blind_replacement_cycle_json),
+            "--historical-seed-strict-blind-replacement-first-slot-kit-json",
+            str(historical_seed_strict_blind_replacement_first_slot_kit_json),
+            "--historical-seed-strict-blind-replacement-first-slot-local-candidate-board-json",
+            str(historical_seed_strict_blind_replacement_first_slot_local_candidate_board_json),
+            "--historical-seed-strict-blind-replacement-first-slot-candidate-repair-board-json",
+            str(historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_json),
+            "--historical-seed-strict-blind-replacement-first-slot-repair-feasibility-board-json",
+            str(historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_json),
+            "--historical-seed-strict-blind-replacement-first-slot-source-route-board-json",
+            str(historical_seed_strict_blind_replacement_first_slot_source_route_board_json),
+            "--historical-seed-strict-blind-replacement-first-slot-official-archive-source-candidates-json",
+            str(historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_json),
             "--historical-seed-ablation-candidate-manifests-json",
             str(historical_seed_ablation_candidate_manifests_json),
+            "--historical-seed-ablation-gap-repair-plan-json",
+            str(historical_seed_ablation_gap_repair_plan_json),
             "--historical-seed-top5-candidate-pools-json",
             str(historical_seed_top5_candidate_pools_json),
+            "--historical-seed-internal-score-candidates-json",
+            str(historical_seed_internal_score_candidates_json),
+            "--historical-seed-native-oracle-metric-candidates-json",
+            str(historical_seed_native_oracle_metric_candidates_json),
             "--historical-seed-calibration-candidate-ledgers-json",
             str(historical_seed_calibration_candidate_ledgers_json),
+            "--historical-seed-calibration-field-candidates-json",
+            str(historical_seed_calibration_field_candidates_json),
+            "--historical-seed-clearance-fill-candidate-packet-json",
+            str(historical_seed_clearance_fill_candidate_packet_json),
+            "--historical-seed-clearance-execution-board-json",
+            str(historical_seed_clearance_execution_board_json),
+            "--historical-seed-first-clearance-operator-kit-json",
+            str(historical_seed_first_clearance_operator_kit_json),
             "--historical-seed-clearance-to-identity-intake-sync-json",
             str(historical_seed_clearance_to_identity_intake_sync_json),
             "--sidechain-native-benchmark-json",
@@ -1571,6 +2519,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "- goal objective addendum: `casp17/CASP17_WIN_TIER_GOAL.md`" in workbench_md
     assert "competitive proof `15-25 -> 85-90`" in workbench_md
     assert "leaderboard `top-5/top-3/top-1-2` by category" in workbench_md
+    assert "active competition scope: `casp17_only`" in workbench_md
+    assert "CAPRI Round 65 readiness context: `deferred_pi_required`" in workbench_md
+    assert "CAPRI Round 65 format preflight context: `deferred_pi_required`" in workbench_md
     assert payload["summary"]["target_model_ready_count"] == 2
     assert payload["summary"]["target_model_object_count"] == 4
     assert payload["summary"]["target_model_object_projection_count"] == 4
@@ -2119,6 +3070,42 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["win_tier_goal_scorecard_pass_count"] == 1
     assert payload["summary"]["win_tier_goal_scorecard_blocked_count"] == 9
     assert payload["summary"]["win_tier_goal_scorecard_first_blocked_gate"] == "historical_identity_clearance"
+    assert payload["summary"]["active_scope_decision_status"] == "casp17_only_active"
+    assert payload["summary"]["active_competition_scope"] == "casp17_only"
+    assert payload["summary"]["active_scope_casp17_continuation_status"] == "active"
+    assert payload["summary"]["active_scope_casp17_priority_status"] == "historical_benchmark_then_competitive_floor"
+    assert payload["summary"]["active_scope_capri_round65_participation_status"] == "deferred_pi_required"
+    assert payload["summary"]["active_scope_active_lane_count"] == 3
+    assert payload["summary"]["active_scope_deferred_lane_count"] == 1
+    assert payload["summary"]["active_scope_row_count"] == 4
+    assert payload["summary"]["capri_round65_readiness_status"] == "blocked_registration_role_selection"
+    assert payload["summary"]["capri_round65_round_status"] == "Active"
+    assert payload["summary"]["capri_round65_registration_end"] == "2026-06-01 midnight"
+    assert payload["summary"]["capri_round65_registration_days_remaining"] == 1
+    assert payload["summary"]["capri_round65_registration_gate_status"] == "operator_input_required"
+    assert payload["summary"]["capri_round65_registration_ready_field_count"] == 0
+    assert payload["summary"]["capri_round65_registration_required_field_count"] == 4
+    assert payload["summary"]["capri_round65_role_selection_status"] == "operator_input_required"
+    assert payload["summary"]["capri_round65_target_count"] == 13
+    assert payload["summary"]["capri_round65_active_target_count"] == 11
+    assert payload["summary"]["capri_round65_closed_target_count"] == 2
+    assert payload["summary"]["capri_round65_scorer_priority_target_count"] == 4
+    assert payload["summary"]["capri_round65_predictor_priority_target_count"] == 7
+    assert payload["summary"]["capri_round65_blocked_target_count"] == 11
+    assert payload["summary"]["capri_round65_readiness_format_preflight_target_count"] == 0
+    assert payload["summary"]["capri_round65_target_folder_count"] == 13
+    assert payload["summary"]["capri_round65_first_open_target_id"] == "T329"
+    assert payload["summary"]["capri_round65_format_preflight_status"] == "blocked_format_preflight"
+    assert payload["summary"]["capri_round65_format_preflight_target_count"] == 13
+    assert payload["summary"]["capri_round65_format_preflight_active_target_count"] == 11
+    assert payload["summary"]["capri_round65_format_preflight_closed_target_count"] == 2
+    assert payload["summary"]["capri_round65_format_preflight_local_pass_count"] == 0
+    assert payload["summary"]["capri_round65_format_preflight_blocked_count"] == 11
+    assert payload["summary"]["capri_round65_format_preflight_checked_count"] == 0
+    assert payload["summary"]["capri_round65_format_preflight_template_missing_count"] == 11
+    assert payload["summary"]["capri_round65_format_preflight_candidate_missing_count"] == 11
+    assert payload["summary"]["capri_round65_format_preflight_error_count"] == 0
+    assert payload["summary"]["capri_round65_format_preflight_first_blocked_target_id"] == "T329"
     assert payload["summary"]["win_gap_closure_status"] == "blocked_input"
     assert payload["summary"]["win_gap_closed_count"] == 4
     assert payload["summary"]["win_gap_not_closed_count"] == 5
@@ -2221,6 +3208,18 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["historical_seed_no_leak_provenance_dossiers_first_next_action"] == (
         "attach independent no-leak evidence and operator clearance before setting leakage_clearance"
     )
+    assert payload["summary"]["historical_seed_no_leak_gap_repair_plan_status"] == "no_leak_gap_repair_required"
+    assert payload["summary"]["historical_seed_no_leak_gap_repair_plan_seed_count"] == 15
+    assert payload["summary"]["historical_seed_no_leak_gap_repair_plan_repair_csv_count"] == 15
+    assert payload["summary"]["historical_seed_no_leak_gap_repair_plan_field_count"] == 150
+    assert payload["summary"]["historical_seed_no_leak_gap_repair_plan_operator_required_count"] == 150
+    assert payload["summary"]["historical_seed_no_leak_gap_repair_plan_weak_count"] == 30
+    assert payload["summary"]["historical_seed_no_leak_gap_repair_plan_authoritative_count"] == 0
+    assert payload["summary"]["historical_seed_no_leak_gap_repair_plan_chronology_count"] == 45
+    assert payload["summary"]["historical_seed_no_leak_gap_repair_plan_negative_control_count"] == 45
+    assert payload["summary"]["historical_seed_no_leak_gap_repair_plan_clearance_count"] == 60
+    assert payload["summary"]["historical_seed_no_leak_gap_repair_plan_mtime_risk_count"] == 15
+    assert payload["summary"]["historical_seed_no_leak_gap_repair_plan_first_target_id"] == "HIST_BBA5"
     assert payload["summary"]["historical_seed_current_target_prefill_status"] == "applied"
     assert payload["summary"]["historical_seed_current_target_prefill_apply_mode"] == "apply"
     assert payload["summary"]["historical_seed_current_target_prefill_row_count"] == 15
@@ -2233,6 +3232,40 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["historical_seed_current_target_prefill_hist_prefix_count"] == 15
     assert payload["summary"]["historical_seed_current_target_prefill_first_next_action"] == (
         "set current_casp17_target=false"
+    )
+    assert payload["summary"]["historical_seed_native_authority_audit_status"] == "blocked_native_authority"
+    assert payload["summary"]["historical_seed_native_authority_audit_seed_count"] == 15
+    assert payload["summary"]["historical_seed_native_authority_audit_pass_count"] == 0
+    assert payload["summary"]["historical_seed_native_authority_audit_blocked_count"] == 15
+    assert payload["summary"]["historical_seed_native_authority_audit_placeholder_count"] == 10
+    assert payload["summary"]["historical_seed_native_authority_audit_ca_only_count"] == 10
+    assert payload["summary"]["historical_seed_native_authority_audit_local_generated_no_authority_count"] == 5
+    assert payload["summary"]["historical_seed_native_authority_audit_ref_missing_count"] == 15
+    assert payload["summary"]["historical_seed_native_authority_audit_first_target_id"] == "HIST_BBA5"
+    assert payload["summary"]["historical_seed_native_replacement_candidates_status"] == (
+        "partial_native_replacement_candidates_ready"
+    )
+    assert payload["summary"]["historical_seed_native_replacement_candidates_candidate_count"] == 17
+    assert payload["summary"]["historical_seed_native_replacement_candidates_ready_count"] == 10
+    assert payload["summary"]["historical_seed_native_replacement_candidates_download_required_count"] == 0
+    assert payload["summary"]["historical_seed_native_replacement_candidates_file_blocked_count"] == 0
+    assert payload["summary"]["historical_seed_native_replacement_candidates_complex_authority_count"] == 7
+    assert payload["summary"]["historical_seed_native_replacement_candidates_monomer_count"] == 10
+    assert payload["summary"]["historical_seed_native_replacement_candidates_candidate_dir"] == (
+        "casp17/historical_seed_native_replacement_candidates"
+    )
+    assert payload["summary"]["historical_seed_complex_source_authority_candidates_status"] == (
+        "complex_homolog_source_authority_candidates_ready_claim_limited"
+    )
+    assert payload["summary"]["historical_seed_complex_source_authority_candidates_candidate_count"] == 7
+    assert payload["summary"]["historical_seed_complex_source_authority_candidates_review_ready_count"] == 7
+    assert payload["summary"]["historical_seed_complex_source_authority_candidates_direct_count"] == 0
+    assert payload["summary"]["historical_seed_complex_source_authority_candidates_homolog_count"] == 7
+    assert payload["summary"]["historical_seed_complex_source_authority_candidates_blocked_count"] == 0
+    assert payload["summary"]["historical_seed_complex_source_authority_candidates_operator_apply_count"] == 0
+    assert payload["summary"]["historical_seed_complex_source_authority_candidates_claim_promotion_count"] == 0
+    assert payload["summary"]["historical_seed_complex_source_authority_candidates_protein_ref"] == (
+        "rcsb:3V94;chain:B;doi:10.2210/pdb3v94/pdb"
     )
     assert payload["summary"]["historical_seed_chronology_candidate_board_status"] == (
         "operator_evidence_required"
@@ -2263,6 +3296,19 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["historical_seed_ablation_candidate_manifests_first_next_action"] == (
         "attach real ablation layer evidence before setting ablation_manifest_ref"
     )
+    assert payload["summary"]["historical_seed_ablation_gap_repair_plan_status"] == (
+        "ablation_gap_repair_required"
+    )
+    assert payload["summary"]["historical_seed_ablation_gap_repair_plan_seed_count"] == 15
+    assert payload["summary"]["historical_seed_ablation_gap_repair_plan_repair_csv_count"] == 15
+    assert payload["summary"]["historical_seed_ablation_gap_repair_plan_real_count"] == 1
+    assert payload["summary"]["historical_seed_ablation_gap_repair_plan_missing_real_count"] == 19
+    assert payload["summary"]["historical_seed_ablation_gap_repair_plan_top5_decoy_count"] == 60
+    assert payload["summary"]["historical_seed_ablation_gap_repair_plan_top5_copy_count"] == 15
+    assert payload["summary"]["historical_seed_ablation_gap_repair_plan_ready_count"] == 1
+    assert payload["summary"]["historical_seed_ablation_gap_repair_plan_gap_count"] == 14
+    assert payload["summary"]["historical_seed_ablation_gap_repair_plan_core_blocked_count"] == 0
+    assert payload["summary"]["historical_seed_ablation_gap_repair_plan_first_target_id"] == "HIST_BBA5"
     assert payload["summary"]["historical_seed_top5_candidate_pools_status"] == (
         "top5_candidate_pool_ready_for_review"
     )
@@ -2275,6 +3321,27 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["historical_seed_top5_candidate_pools_generated_perturbation_count"] == 60
     assert payload["summary"]["historical_seed_top5_candidate_pools_blocked_source_count"] == 0
     assert payload["summary"]["historical_seed_top5_candidate_pools_first_target_id"] == "HIST_BBA5"
+    assert payload["summary"]["historical_seed_internal_score_candidates_status"] == (
+        "internal_score_candidates_ready_for_review"
+    )
+    assert payload["summary"]["historical_seed_internal_score_candidates_seed_count"] == 15
+    assert payload["summary"]["historical_seed_internal_score_candidates_candidate_count"] == 76
+    assert payload["summary"]["historical_seed_internal_score_candidates_scored_count"] == 76
+    assert payload["summary"]["historical_seed_internal_score_candidates_top5_scored_count"] == 15
+    assert payload["summary"]["historical_seed_internal_score_candidates_selected_score_count"] == 15
+    assert payload["summary"]["historical_seed_internal_score_candidates_blocked_count"] == 0
+    assert payload["summary"]["historical_seed_internal_score_candidates_first_target_id"] == "HIST_BBA5"
+    assert payload["summary"]["historical_seed_native_oracle_metric_candidates_status"] == (
+        "native_oracle_metric_candidates_ready_for_review"
+    )
+    assert payload["summary"]["historical_seed_native_oracle_metric_candidates_seed_count"] == 15
+    assert payload["summary"]["historical_seed_native_oracle_metric_candidates_candidate_count"] == 76
+    assert payload["summary"]["historical_seed_native_oracle_metric_candidates_metric_count"] == 76
+    assert payload["summary"]["historical_seed_native_oracle_metric_candidates_top5_ready_count"] == 15
+    assert payload["summary"]["historical_seed_native_oracle_metric_candidates_selected_count"] == 15
+    assert payload["summary"]["historical_seed_native_oracle_metric_candidates_best_count"] == 15
+    assert payload["summary"]["historical_seed_native_oracle_metric_candidates_blocked_count"] == 0
+    assert payload["summary"]["historical_seed_native_oracle_metric_candidates_first_target_id"] == "HIST_BBA5"
     assert payload["summary"]["historical_seed_calibration_candidate_ledgers_status"] == (
         "operator_calibration_review_required"
     )
@@ -2284,15 +3351,75 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["historical_seed_calibration_candidate_ledgers_top5_ready_count"] == 15
     assert payload["summary"]["historical_seed_calibration_candidate_ledgers_selected_prediction_count"] == 15
     assert payload["summary"]["historical_seed_calibration_candidate_ledgers_selected_rank_candidate_count"] == 15
-    assert payload["summary"]["historical_seed_calibration_candidate_ledgers_native_metric_count"] == 0
-    assert payload["summary"]["historical_seed_calibration_candidate_ledgers_internal_score_count"] == 0
+    assert payload["summary"]["historical_seed_calibration_candidate_ledgers_native_metric_count"] == 76
+    assert payload["summary"]["historical_seed_calibration_candidate_ledgers_internal_score_count"] == 76
     assert payload["summary"]["historical_seed_calibration_candidate_ledgers_ready_count"] == 0
     assert payload["summary"]["historical_seed_calibration_candidate_ledgers_operator_review_count"] == 15
     assert payload["summary"]["historical_seed_calibration_candidate_ledgers_blocked_selected_prediction_count"] == 0
     assert payload["summary"]["historical_seed_calibration_candidate_ledgers_open_field_count"] == 90
     assert payload["summary"]["historical_seed_calibration_candidate_ledgers_first_target_id"] == "HIST_BBA5"
     assert payload["summary"]["historical_seed_calibration_candidate_ledgers_first_next_action"] == (
-        "attach native oracle metrics and internal scores before filling calibration fields"
+        "operator-fill calibration fields after no-leak provenance clearance"
+    )
+    assert payload["summary"]["historical_seed_calibration_field_candidates_status"] == (
+        "calibration_field_candidates_ready_for_operator_apply"
+    )
+    assert payload["summary"]["historical_seed_calibration_field_candidates_seed_count"] == 15
+    assert payload["summary"]["historical_seed_calibration_field_candidates_field_count"] == 90
+    assert payload["summary"]["historical_seed_calibration_field_candidates_proposed_count"] == 90
+    assert payload["summary"]["historical_seed_calibration_field_candidates_matching_count"] == 0
+    assert payload["summary"]["historical_seed_calibration_field_candidates_conflict_count"] == 0
+    assert payload["summary"]["historical_seed_calibration_field_candidates_blocked_field_count"] == 0
+    assert payload["summary"]["historical_seed_calibration_field_candidates_ready_count"] == 15
+    assert payload["summary"]["historical_seed_calibration_field_candidates_blocked_row_count"] == 0
+    assert payload["summary"]["historical_seed_calibration_field_candidates_first_target_id"] == "HIST_BBA5"
+    assert payload["summary"]["historical_seed_clearance_fill_candidate_packet_status"] == (
+        "operator_provenance_required_with_field_candidates"
+    )
+    assert payload["summary"]["historical_seed_clearance_fill_candidate_packet_seed_count"] == 15
+    assert payload["summary"]["historical_seed_clearance_fill_candidate_packet_field_count"] == 255
+    assert payload["summary"]["historical_seed_clearance_fill_candidate_packet_proposed_count"] == 91
+    assert payload["summary"]["historical_seed_clearance_fill_candidate_packet_operator_required_count"] == 150
+    assert payload["summary"]["historical_seed_clearance_fill_candidate_packet_blocked_field_count"] == 14
+    assert payload["summary"]["historical_seed_clearance_fill_candidate_packet_conflict_count"] == 0
+    assert payload["summary"]["historical_seed_clearance_fill_candidate_packet_calibration_count"] == 90
+    assert payload["summary"]["historical_seed_clearance_fill_candidate_packet_ablation_count"] == 1
+    assert payload["summary"]["historical_seed_clearance_fill_candidate_packet_no_leak_manual_count"] == 150
+    assert payload["summary"]["historical_seed_clearance_fill_candidate_packet_partial_row_count"] == 15
+    assert payload["summary"]["historical_seed_clearance_fill_candidate_packet_full_ready_row_count"] == 0
+    assert payload["summary"]["historical_seed_clearance_fill_candidate_packet_blocked_row_count"] == 15
+    assert payload["summary"]["historical_seed_clearance_fill_candidate_packet_first_target_id"] == "HIST_BBA5"
+    assert payload["summary"]["historical_seed_clearance_execution_board_status"] == (
+        "first_row_operator_no_leak_only"
+    )
+    assert payload["summary"]["historical_seed_clearance_execution_board_seed_count"] == 15
+    assert payload["summary"]["historical_seed_clearance_execution_board_no_leak_only_count"] == 1
+    assert payload["summary"]["historical_seed_clearance_execution_board_ablation_repair_count"] == 14
+    assert payload["summary"]["historical_seed_clearance_execution_board_operator_no_leak_field_count"] == 150
+    assert payload["summary"]["historical_seed_clearance_execution_board_proposed_field_count"] == 91
+    assert payload["summary"]["historical_seed_clearance_execution_board_calibration_count"] == 90
+    assert payload["summary"]["historical_seed_clearance_execution_board_ablation_count"] == 1
+    assert payload["summary"]["historical_seed_clearance_execution_board_blocked_ablation_count"] == 14
+    assert payload["summary"]["historical_seed_clearance_execution_board_first_target_id"] == "HIST_CHIGNOLIN"
+    assert payload["summary"]["historical_seed_clearance_execution_board_first_status"] == "operator_no_leak_only"
+    assert payload["summary"]["historical_seed_clearance_execution_board_first_folder"] == (
+        "casp17/historical_seed_clearance_execution_board/02_hist_chignolin"
+    )
+    assert payload["summary"]["historical_seed_first_clearance_operator_kit_status"] == (
+        "operator_no_leak_intake_ready"
+    )
+    assert payload["summary"]["historical_seed_first_clearance_operator_kit_target_id"] == "HIST_CHIGNOLIN"
+    assert payload["summary"]["historical_seed_first_clearance_operator_kit_benchmark_id"] == (
+        "hist_seed_chignolin"
+    )
+    assert payload["summary"]["historical_seed_first_clearance_operator_kit_no_leak_count"] == 10
+    assert payload["summary"]["historical_seed_first_clearance_operator_kit_ready_count"] == 7
+    assert payload["summary"]["historical_seed_first_clearance_operator_kit_total_count"] == 17
+    assert payload["summary"]["historical_seed_first_clearance_operator_kit_calibration_count"] == 6
+    assert payload["summary"]["historical_seed_first_clearance_operator_kit_ablation_count"] == 1
+    assert payload["summary"]["historical_seed_first_clearance_operator_kit_weak_count"] == 2
+    assert payload["summary"]["historical_seed_first_clearance_operator_kit_preview_status"] == (
+        "waiting_on_operator_no_leak_fields"
     )
     assert payload["summary"]["historical_seed_clearance_to_identity_intake_sync_status"] == (
         "waiting_on_cleared_seed_manifest"
@@ -2351,29 +3478,115 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["win_tier_goal_scorecard"]["status"] == "blocked_input"
     assert by_id["win_tier_goal_scorecard"]["ready_count"] == 1
     assert "historical_identity_clearance" in by_id["win_tier_goal_scorecard"]["blockers"]
+    assert by_id["active_scope_decision"]["status"] == "casp17_only_active"
+    assert by_id["active_scope_decision"]["ready_count"] == 3
+    assert by_id["active_scope_decision"]["total_count"] == 4
+    assert "scope:casp17_only" in by_id["active_scope_decision"]["blockers"]
+    assert "capri:deferred_pi_required" in by_id["active_scope_decision"]["blockers"]
+    assert by_id["capri_round65_readiness"]["status"] == "deferred_pi_required"
+    assert by_id["capri_round65_readiness"]["ready_count"] == 0
+    assert by_id["capri_round65_readiness"]["blocked_count"] == 0
+    assert by_id["capri_round65_readiness"]["total_count"] == 13
+    assert "not_active_scope" in by_id["capri_round65_readiness"]["blockers"]
+    assert "operator_not_pi" in by_id["capri_round65_readiness"]["blockers"]
+    assert by_id["capri_round65_format_preflight"]["status"] == "deferred_pi_required"
+    assert by_id["capri_round65_format_preflight"]["ready_count"] == 0
+    assert by_id["capri_round65_format_preflight"]["blocked_count"] == 0
+    assert by_id["capri_round65_format_preflight"]["total_count"] == 13
+    assert "not_active_scope" in by_id["capri_round65_format_preflight"]["blockers"]
+    assert "capri:deferred_pi_required" in by_id["capri_round65_format_preflight"]["blockers"]
     assert by_id["historical_seed_no_leak_provenance_dossiers"]["status"] == (
         "operator_provenance_review_required"
     )
     assert by_id["historical_seed_no_leak_provenance_dossiers"]["blocked_count"] == 15
     assert "current_false:15" in by_id["historical_seed_no_leak_provenance_dossiers"]["blockers"]
     assert "open_fields:150" in by_id["historical_seed_no_leak_provenance_dossiers"]["blockers"]
+    assert by_id["historical_seed_no_leak_gap_repair_plan"]["status"] == "no_leak_gap_repair_required"
+    assert by_id["historical_seed_no_leak_gap_repair_plan"]["ready_count"] == 0
+    assert by_id["historical_seed_no_leak_gap_repair_plan"]["blocked_count"] == 15
+    assert "fields:150" in by_id["historical_seed_no_leak_gap_repair_plan"]["blockers"]
+    assert "operator_required:150" in by_id["historical_seed_no_leak_gap_repair_plan"]["blockers"]
+    assert "weak:30" in by_id["historical_seed_no_leak_gap_repair_plan"]["blockers"]
+    assert "authoritative:0" in by_id["historical_seed_no_leak_gap_repair_plan"]["blockers"]
+    assert "mtime_risk:15" in by_id["historical_seed_no_leak_gap_repair_plan"]["blockers"]
     assert by_id["historical_seed_ablation_candidate_manifests"]["status"] == (
         "operator_ablation_review_required"
     )
     assert by_id["historical_seed_ablation_candidate_manifests"]["blocked_count"] == 15
     assert "baseline_candidates:1" in by_id["historical_seed_ablation_candidate_manifests"]["blockers"]
     assert "layer_gaps:14" in by_id["historical_seed_ablation_candidate_manifests"]["blockers"]
+    assert by_id["historical_seed_ablation_gap_repair_plan"]["status"] == "ablation_gap_repair_required"
+    assert by_id["historical_seed_ablation_gap_repair_plan"]["ready_count"] == 1
+    assert by_id["historical_seed_ablation_gap_repair_plan"]["blocked_count"] == 14
+    assert "real:1" in by_id["historical_seed_ablation_gap_repair_plan"]["blockers"]
+    assert "missing_real:19" in by_id["historical_seed_ablation_gap_repair_plan"]["blockers"]
+    assert "top5_decoys:60" in by_id["historical_seed_ablation_gap_repair_plan"]["blockers"]
+    assert "top5_copy:15" in by_id["historical_seed_ablation_gap_repair_plan"]["blockers"]
     assert by_id["historical_seed_top5_candidate_pools"]["status"] == "top5_candidate_pool_ready_for_review"
     assert by_id["historical_seed_top5_candidate_pools"]["ready_count"] == 15
     assert "models:75" in by_id["historical_seed_top5_candidate_pools"]["blockers"]
     assert "complete_top5:15" in by_id["historical_seed_top5_candidate_pools"]["blockers"]
+    assert by_id["historical_seed_internal_score_candidates"]["status"] == (
+        "internal_score_candidates_ready_for_review"
+    )
+    assert by_id["historical_seed_internal_score_candidates"]["ready_count"] == 15
+    assert by_id["historical_seed_internal_score_candidates"]["blocked_count"] == 0
+    assert "models:76" in by_id["historical_seed_internal_score_candidates"]["blockers"]
+    assert "scored:76" in by_id["historical_seed_internal_score_candidates"]["blockers"]
+    assert "selected_scores:15" in by_id["historical_seed_internal_score_candidates"]["blockers"]
+    assert by_id["historical_seed_native_oracle_metric_candidates"]["status"] == (
+        "native_oracle_metric_candidates_ready_for_review"
+    )
+    assert by_id["historical_seed_native_oracle_metric_candidates"]["ready_count"] == 15
+    assert by_id["historical_seed_native_oracle_metric_candidates"]["blocked_count"] == 0
+    assert "models:76" in by_id["historical_seed_native_oracle_metric_candidates"]["blockers"]
+    assert "metric_ready:76" in by_id["historical_seed_native_oracle_metric_candidates"]["blockers"]
+    assert "best_native:15" in by_id["historical_seed_native_oracle_metric_candidates"]["blockers"]
     assert by_id["historical_seed_calibration_candidate_ledgers"]["status"] == (
         "operator_calibration_review_required"
     )
     assert by_id["historical_seed_calibration_candidate_ledgers"]["blocked_count"] == 15
     assert "models:76" in by_id["historical_seed_calibration_candidate_ledgers"]["blockers"]
     assert "top5_ready:15" in by_id["historical_seed_calibration_candidate_ledgers"]["blockers"]
+    assert "native_metrics:76" in by_id["historical_seed_calibration_candidate_ledgers"]["blockers"]
+    assert "internal_scores:76" in by_id["historical_seed_calibration_candidate_ledgers"]["blockers"]
     assert "open_fields:90" in by_id["historical_seed_calibration_candidate_ledgers"]["blockers"]
+    assert by_id["historical_seed_calibration_field_candidates"]["status"] == (
+        "calibration_field_candidates_ready_for_operator_apply"
+    )
+    assert by_id["historical_seed_calibration_field_candidates"]["ready_count"] == 15
+    assert by_id["historical_seed_calibration_field_candidates"]["blocked_count"] == 0
+    assert "fields:90" in by_id["historical_seed_calibration_field_candidates"]["blockers"]
+    assert "proposed:90" in by_id["historical_seed_calibration_field_candidates"]["blockers"]
+    assert "conflicts:0" in by_id["historical_seed_calibration_field_candidates"]["blockers"]
+    assert "blocked_fields:0" in by_id["historical_seed_calibration_field_candidates"]["blockers"]
+    assert by_id["historical_seed_clearance_fill_candidate_packet"]["status"] == (
+        "operator_provenance_required_with_field_candidates"
+    )
+    assert by_id["historical_seed_clearance_fill_candidate_packet"]["ready_count"] == 15
+    assert by_id["historical_seed_clearance_fill_candidate_packet"]["blocked_count"] == 15
+    assert "fields:255" in by_id["historical_seed_clearance_fill_candidate_packet"]["blockers"]
+    assert "proposed:91" in by_id["historical_seed_clearance_fill_candidate_packet"]["blockers"]
+    assert "operator_required:150" in by_id["historical_seed_clearance_fill_candidate_packet"]["blockers"]
+    assert "blocked_fields:14" in by_id["historical_seed_clearance_fill_candidate_packet"]["blockers"]
+    assert "calibration:90" in by_id["historical_seed_clearance_fill_candidate_packet"]["blockers"]
+    assert "ablation:1" in by_id["historical_seed_clearance_fill_candidate_packet"]["blockers"]
+    assert by_id["historical_seed_clearance_execution_board"]["status"] == "first_row_operator_no_leak_only"
+    assert by_id["historical_seed_clearance_execution_board"]["ready_count"] == 1
+    assert by_id["historical_seed_clearance_execution_board"]["blocked_count"] == 14
+    assert by_id["historical_seed_clearance_execution_board"]["total_count"] == 15
+    assert "first:HIST_CHIGNOLIN" in by_id["historical_seed_clearance_execution_board"]["blockers"]
+    assert "status:operator_no_leak_only" in by_id["historical_seed_clearance_execution_board"]["blockers"]
+    assert "blocked_ablation:14" in by_id["historical_seed_clearance_execution_board"]["blockers"]
+    assert by_id["historical_seed_first_clearance_operator_kit"]["status"] == "operator_no_leak_intake_ready"
+    assert by_id["historical_seed_first_clearance_operator_kit"]["ready_count"] == 7
+    assert by_id["historical_seed_first_clearance_operator_kit"]["blocked_count"] == 10
+    assert by_id["historical_seed_first_clearance_operator_kit"]["total_count"] == 17
+    assert "target:HIST_CHIGNOLIN" in by_id["historical_seed_first_clearance_operator_kit"]["blockers"]
+    assert "preview:waiting_on_operator_no_leak_fields" in (
+        by_id["historical_seed_first_clearance_operator_kit"]["blockers"]
+    )
+    assert "weak:2" in by_id["historical_seed_first_clearance_operator_kit"]["blockers"]
     assert by_id["competitive_floor_batch"]["status"] == "ready_for_fill"
     assert by_id["competitive_floor_row_fill_status"]["status"] == "awaiting_fill"
     assert by_id["competitive_floor_row_fill_worklist"]["status"] == "open_actions"
@@ -2536,6 +3749,33 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "mode:apply" in by_id["historical_seed_current_target_prefill"]["blockers"]
     assert "collisions:0" in by_id["historical_seed_current_target_prefill"]["blockers"]
     assert "remaining_open:0" in by_id["historical_seed_current_target_prefill"]["blockers"]
+    assert by_id["historical_seed_native_authority_audit"]["status"] == "blocked_native_authority"
+    assert by_id["historical_seed_native_authority_audit"]["ready_count"] == 0
+    assert by_id["historical_seed_native_authority_audit"]["blocked_count"] == 15
+    assert "placeholder:10" in by_id["historical_seed_native_authority_audit"]["blockers"]
+    assert "ca_only:10" in by_id["historical_seed_native_authority_audit"]["blockers"]
+    assert "local_generated_no_authority:5" in by_id["historical_seed_native_authority_audit"]["blockers"]
+    assert "ref_missing:15" in by_id["historical_seed_native_authority_audit"]["blockers"]
+    assert by_id["historical_seed_native_replacement_candidates"]["status"] == (
+        "partial_native_replacement_candidates_ready"
+    )
+    assert by_id["historical_seed_native_replacement_candidates"]["ready_count"] == 10
+    assert by_id["historical_seed_native_replacement_candidates"]["blocked_count"] == 7
+    assert by_id["historical_seed_native_replacement_candidates"]["total_count"] == 17
+    assert "review_ready:10" in by_id["historical_seed_native_replacement_candidates"]["blockers"]
+    assert "download:0" in by_id["historical_seed_native_replacement_candidates"]["blockers"]
+    assert "file_blocked:0" in by_id["historical_seed_native_replacement_candidates"]["blockers"]
+    assert "complex_authority:7" in by_id["historical_seed_native_replacement_candidates"]["blockers"]
+    assert by_id["historical_seed_complex_source_authority_candidates"]["status"] == (
+        "complex_homolog_source_authority_candidates_ready_claim_limited"
+    )
+    assert by_id["historical_seed_complex_source_authority_candidates"]["ready_count"] == 7
+    assert by_id["historical_seed_complex_source_authority_candidates"]["blocked_count"] == 0
+    assert by_id["historical_seed_complex_source_authority_candidates"]["total_count"] == 7
+    assert "direct:0" in by_id["historical_seed_complex_source_authority_candidates"]["blockers"]
+    assert "homolog:7" in by_id["historical_seed_complex_source_authority_candidates"]["blockers"]
+    assert "operator_apply:0" in by_id["historical_seed_complex_source_authority_candidates"]["blockers"]
+    assert "claim_promotion:0" in by_id["historical_seed_complex_source_authority_candidates"]["blockers"]
     assert by_id["historical_seed_chronology_candidate_board"]["status"] == "operator_evidence_required"
     assert by_id["historical_seed_chronology_candidate_board"]["ready_count"] == 0
     assert by_id["historical_seed_chronology_candidate_board"]["blocked_count"] == 15
@@ -2543,6 +3783,249 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "path_dates:10" in by_id["historical_seed_chronology_candidate_board"]["blockers"]
     assert "mtimes:15" in by_id["historical_seed_chronology_candidate_board"]["blockers"]
     assert "mtime_risk:15" in by_id["historical_seed_chronology_candidate_board"]["blockers"]
+    assert by_id["historical_seed_authoritative_chronology_audit"]["status"] == (
+        "post_native_prediction_chronology_blocked"
+    )
+    assert by_id["historical_seed_authoritative_chronology_audit"]["ready_count"] == 0
+    assert by_id["historical_seed_authoritative_chronology_audit"]["blocked_count"] == 17
+    assert by_id["historical_seed_authoritative_chronology_audit"]["total_count"] == 17
+    assert "native_dates:10" in by_id["historical_seed_authoritative_chronology_audit"]["blockers"]
+    assert "prediction_dates:10" in by_id["historical_seed_authoritative_chronology_audit"]["blockers"]
+    assert "post_native:10" in by_id["historical_seed_authoritative_chronology_audit"]["blockers"]
+    assert "evidence_required:7" in by_id["historical_seed_authoritative_chronology_audit"]["blockers"]
+    assert by_id["historical_seed_lane_decision_packet"]["status"] == "strict_blind_replacement_required"
+    assert by_id["historical_seed_lane_decision_packet"]["ready_count"] == 0
+    assert by_id["historical_seed_lane_decision_packet"]["blocked_count"] == 17
+    assert by_id["historical_seed_lane_decision_packet"]["total_count"] == 17
+    assert "strict_blind:0" in by_id["historical_seed_lane_decision_packet"]["blockers"]
+    assert "retrospective:10" in by_id["historical_seed_lane_decision_packet"]["blockers"]
+    assert "authority_required:7" in by_id["historical_seed_lane_decision_packet"]["blockers"]
+    assert "competitive:0" in by_id["historical_seed_lane_decision_packet"]["blockers"]
+    assert "replacement_required:17" in by_id["historical_seed_lane_decision_packet"]["blockers"]
+    assert by_id["historical_seed_strict_blind_replacement_queue"]["status"] == (
+        "strict_blind_replacement_queue_open"
+    )
+    assert by_id["historical_seed_strict_blind_replacement_queue"]["ready_count"] == 0
+    assert by_id["historical_seed_strict_blind_replacement_queue"]["blocked_count"] == 40
+    assert by_id["historical_seed_strict_blind_replacement_queue"]["total_count"] == 40
+    assert "slots:40" in by_id["historical_seed_strict_blind_replacement_queue"]["blockers"]
+    assert "monomer_complex:25/15" in by_id["historical_seed_strict_blind_replacement_queue"]["blockers"]
+    assert "replacement_required:40" in by_id["historical_seed_strict_blind_replacement_queue"]["blockers"]
+    assert "current_seed_competitive:0" in by_id["historical_seed_strict_blind_replacement_queue"]["blockers"]
+    assert "fields:640" in by_id["historical_seed_strict_blind_replacement_queue"]["blockers"]
+    assert by_id["historical_seed_strict_blind_replacement_intake"]["status"] == (
+        "awaiting_strict_blind_replacement_intake"
+    )
+    assert by_id["historical_seed_strict_blind_replacement_intake"]["ready_count"] == 0
+    assert by_id["historical_seed_strict_blind_replacement_intake"]["blocked_count"] == 40
+    assert by_id["historical_seed_strict_blind_replacement_intake"]["total_count"] == 40
+    assert "slots:40" in by_id["historical_seed_strict_blind_replacement_intake"]["blockers"]
+    assert "ready:0" in by_id["historical_seed_strict_blind_replacement_intake"]["blockers"]
+    assert "awaiting:40" in by_id["historical_seed_strict_blind_replacement_intake"]["blockers"]
+    assert "missing:640" in by_id["historical_seed_strict_blind_replacement_intake"]["blockers"]
+    assert "fields:640" in by_id["historical_seed_strict_blind_replacement_intake"]["blockers"]
+    assert by_id["historical_seed_strict_blind_replacement_evidence_dropzones"]["status"] == (
+        "awaiting_strict_blind_evidence_files"
+    )
+    assert by_id["historical_seed_strict_blind_replacement_evidence_dropzones"]["ready_count"] == 0
+    assert by_id["historical_seed_strict_blind_replacement_evidence_dropzones"]["blocked_count"] == 40
+    assert by_id["historical_seed_strict_blind_replacement_evidence_dropzones"]["total_count"] == 40
+    assert "dropzones:40" in by_id["historical_seed_strict_blind_replacement_evidence_dropzones"]["blockers"]
+    assert "files_present:0" in by_id["historical_seed_strict_blind_replacement_evidence_dropzones"]["blockers"]
+    assert "files_missing:240" in by_id["historical_seed_strict_blind_replacement_evidence_dropzones"]["blockers"]
+    assert "operator_values:400" in by_id["historical_seed_strict_blind_replacement_evidence_dropzones"]["blockers"]
+    assert by_id["historical_seed_strict_blind_replacement_evidence_action_board"]["status"] == (
+        "awaiting_strict_blind_evidence_actions"
+    )
+    assert by_id["historical_seed_strict_blind_replacement_evidence_action_board"]["ready_count"] == 0
+    assert by_id["historical_seed_strict_blind_replacement_evidence_action_board"]["blocked_count"] == 240
+    assert by_id["historical_seed_strict_blind_replacement_evidence_action_board"]["total_count"] == 240
+    assert "actions:240" in by_id["historical_seed_strict_blind_replacement_evidence_action_board"]["blockers"]
+    assert "open:240" in by_id["historical_seed_strict_blind_replacement_evidence_action_board"]["blockers"]
+    assert "missing_by_field:40/40/40/40/40/40" in by_id[
+        "historical_seed_strict_blind_replacement_evidence_action_board"
+    ]["blockers"]
+    assert by_id["historical_seed_strict_blind_replacement_evidence_quality_audit"]["status"] == (
+        "awaiting_strict_blind_evidence_quality_files"
+    )
+    assert by_id["historical_seed_strict_blind_replacement_evidence_quality_audit"]["ready_count"] == 0
+    assert by_id["historical_seed_strict_blind_replacement_evidence_quality_audit"]["blocked_count"] == 40
+    assert by_id["historical_seed_strict_blind_replacement_evidence_quality_audit"]["total_count"] == 40
+    assert "awaiting:40" in by_id["historical_seed_strict_blind_replacement_evidence_quality_audit"]["blockers"]
+    assert "files:0/240/240" in by_id["historical_seed_strict_blind_replacement_evidence_quality_audit"]["blockers"]
+    assert "pdb_slots:0/0" in by_id["historical_seed_strict_blind_replacement_evidence_quality_audit"]["blockers"]
+    assert by_id["historical_seed_strict_blind_replacement_evidence_import_gate"]["status"] == (
+        "awaiting_strict_blind_evidence_import"
+    )
+    assert by_id["historical_seed_strict_blind_replacement_evidence_import_gate"]["ready_count"] == 0
+    assert by_id["historical_seed_strict_blind_replacement_evidence_import_gate"]["blocked_count"] == 640
+    assert by_id["historical_seed_strict_blind_replacement_evidence_import_gate"]["total_count"] == 640
+    assert "mode:dry_run" in by_id["historical_seed_strict_blind_replacement_evidence_import_gate"]["blockers"]
+    assert "actions:640" in by_id["historical_seed_strict_blind_replacement_evidence_import_gate"]["blockers"]
+    assert "file_operator:240/400" in by_id["historical_seed_strict_blind_replacement_evidence_import_gate"]["blockers"]
+    assert "awaiting_file:240" in by_id["historical_seed_strict_blind_replacement_evidence_import_gate"]["blockers"]
+    assert "awaiting_operator:400" in by_id["historical_seed_strict_blind_replacement_evidence_import_gate"]["blockers"]
+    assert by_id["historical_seed_strict_blind_replacement_operator_value_gate"]["status"] == (
+        "awaiting_operator_values"
+    )
+    assert by_id["historical_seed_strict_blind_replacement_operator_value_gate"]["ready_count"] == 0
+    assert by_id["historical_seed_strict_blind_replacement_operator_value_gate"]["blocked_count"] == 400
+    assert by_id["historical_seed_strict_blind_replacement_operator_value_gate"]["total_count"] == 400
+    assert "mode:dry_run" in by_id["historical_seed_strict_blind_replacement_operator_value_gate"]["blockers"]
+    assert "templates:40" in by_id["historical_seed_strict_blind_replacement_operator_value_gate"]["blockers"]
+    assert "actions:400" in by_id["historical_seed_strict_blind_replacement_operator_value_gate"]["blockers"]
+    assert "awaiting_value:400" in by_id["historical_seed_strict_blind_replacement_operator_value_gate"]["blockers"]
+    assert by_id["historical_seed_strict_blind_replacement_operator_action_board"]["status"] == (
+        "awaiting_strict_blind_operator_actions"
+    )
+    assert by_id["historical_seed_strict_blind_replacement_operator_action_board"]["ready_count"] == 0
+    assert by_id["historical_seed_strict_blind_replacement_operator_action_board"]["blocked_count"] == 400
+    assert by_id["historical_seed_strict_blind_replacement_operator_action_board"]["total_count"] == 400
+    assert "actions:400" in by_id["historical_seed_strict_blind_replacement_operator_action_board"]["blockers"]
+    assert "open_value:400" in by_id["historical_seed_strict_blind_replacement_operator_action_board"]["blockers"]
+    assert "open_evidence:400" in by_id["historical_seed_strict_blind_replacement_operator_action_board"]["blockers"]
+    assert "open_clearance:400" in by_id["historical_seed_strict_blind_replacement_operator_action_board"]["blockers"]
+    assert "missing_by_field:40/40/40/40/40/40/40/40/40/40" in by_id[
+        "historical_seed_strict_blind_replacement_operator_action_board"
+    ]["blockers"]
+    assert by_id["historical_seed_strict_blind_replacement_promotion_gate"]["status"] == (
+        "awaiting_strict_blind_replacement_promotion"
+    )
+    assert by_id["historical_seed_strict_blind_replacement_promotion_gate"]["ready_count"] == 0
+    assert by_id["historical_seed_strict_blind_replacement_promotion_gate"]["blocked_count"] == 40
+    assert by_id["historical_seed_strict_blind_replacement_promotion_gate"]["total_count"] == 40
+    assert "ready:0" in by_id["historical_seed_strict_blind_replacement_promotion_gate"]["blockers"]
+    assert "awaiting_file:40" in by_id["historical_seed_strict_blind_replacement_promotion_gate"]["blockers"]
+    assert "awaiting_operator:40" in by_id["historical_seed_strict_blind_replacement_promotion_gate"]["blockers"]
+    assert "awaiting_intake:40" in by_id["historical_seed_strict_blind_replacement_promotion_gate"]["blockers"]
+    assert "complete_slots:0/0/0" in by_id["historical_seed_strict_blind_replacement_promotion_gate"]["blockers"]
+    assert by_id["historical_seed_strict_blind_replacement_cycle"]["status"] == "awaiting_evidence_files"
+    assert by_id["historical_seed_strict_blind_replacement_cycle"]["ready_count"] == 0
+    assert by_id["historical_seed_strict_blind_replacement_cycle"]["blocked_count"] == 40
+    assert by_id["historical_seed_strict_blind_replacement_cycle"]["total_count"] == 40
+    assert "stage:evidence_dropzones" in by_id["historical_seed_strict_blind_replacement_cycle"]["blockers"]
+    assert "files:0/240" in by_id["historical_seed_strict_blind_replacement_cycle"]["blockers"]
+    assert "operator_awaiting:400" in by_id["historical_seed_strict_blind_replacement_cycle"]["blockers"]
+    assert "operator_board:400/400/400" in by_id["historical_seed_strict_blind_replacement_cycle"]["blockers"]
+    assert by_id["historical_seed_strict_blind_replacement_first_slot_kit"]["status"] == (
+        "awaiting_first_slot_evidence_files"
+    )
+    assert by_id["historical_seed_strict_blind_replacement_first_slot_kit"]["ready_count"] == 0
+    assert by_id["historical_seed_strict_blind_replacement_first_slot_kit"]["blocked_count"] == 16
+    assert by_id["historical_seed_strict_blind_replacement_first_slot_kit"]["total_count"] == 16
+    assert "benchmark:hist_REQUIRED_MONOMER_001" in by_id[
+        "historical_seed_strict_blind_replacement_first_slot_kit"
+    ]["blockers"]
+    assert "evidence:0/6/0" in by_id["historical_seed_strict_blind_replacement_first_slot_kit"]["blockers"]
+    assert "operator:0/10/0" in by_id["historical_seed_strict_blind_replacement_first_slot_kit"]["blockers"]
+    assert "operator_open:10/10/10" in by_id[
+        "historical_seed_strict_blind_replacement_first_slot_kit"
+    ]["blockers"]
+    assert by_id["historical_seed_strict_blind_replacement_first_slot_local_candidate_board"]["status"] == (
+        "first_slot_local_candidates_review_only"
+    )
+    assert by_id["historical_seed_strict_blind_replacement_first_slot_local_candidate_board"]["ready_count"] == 0
+    assert by_id["historical_seed_strict_blind_replacement_first_slot_local_candidate_board"]["blocked_count"] == 15
+    assert by_id["historical_seed_strict_blind_replacement_first_slot_local_candidate_board"]["total_count"] == 15
+    assert "candidates:0/0/15/15" in by_id[
+        "historical_seed_strict_blind_replacement_first_slot_local_candidate_board"
+    ]["blockers"]
+    assert "present:15/15/15" in by_id[
+        "historical_seed_strict_blind_replacement_first_slot_local_candidate_board"
+    ]["blockers"]
+    assert "blocked:10/15/14/15" in by_id[
+        "historical_seed_strict_blind_replacement_first_slot_local_candidate_board"
+    ]["blockers"]
+    assert by_id["historical_seed_strict_blind_replacement_first_slot_candidate_repair_board"]["status"] == (
+        "awaiting_first_slot_candidate_repairs"
+    )
+    assert by_id["historical_seed_strict_blind_replacement_first_slot_candidate_repair_board"]["ready_count"] == 0
+    assert by_id["historical_seed_strict_blind_replacement_first_slot_candidate_repair_board"]["blocked_count"] == 96
+    assert by_id["historical_seed_strict_blind_replacement_first_slot_candidate_repair_board"]["total_count"] == 96
+    assert "actions:79/17/96" in by_id[
+        "historical_seed_strict_blind_replacement_first_slot_candidate_repair_board"
+    ]["blockers"]
+    assert "classes:17/17/17/17" in by_id[
+        "historical_seed_strict_blind_replacement_first_slot_candidate_repair_board"
+    ]["blockers"]
+    assert "source:2/2/7" in by_id[
+        "historical_seed_strict_blind_replacement_first_slot_candidate_repair_board"
+    ]["blockers"]
+    assert "eligibility:17" in by_id[
+        "historical_seed_strict_blind_replacement_first_slot_candidate_repair_board"
+    ]["blockers"]
+    assert by_id["historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board"]["status"] == (
+        "first_slot_current_local_candidate_source_required"
+    )
+    assert by_id["historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board"]["ready_count"] == 62
+    assert by_id["historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board"]["blocked_count"] == 34
+    assert by_id["historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board"]["total_count"] == 96
+    assert "post_native:17/17" in by_id[
+        "historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board"
+    ]["blockers"]
+    assert "external:34/17" in by_id[
+        "historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board"
+    ]["blockers"]
+    assert "repairable:11/51/0" in by_id[
+        "historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board"
+    ]["blockers"]
+    assert "primary:0" in by_id[
+        "historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board"
+    ]["blockers"]
+    assert by_id["historical_seed_strict_blind_replacement_first_slot_source_route_board"]["status"] == (
+        "first_slot_requires_pre_native_monomer_source_or_replacement"
+    )
+    assert by_id["historical_seed_strict_blind_replacement_first_slot_source_route_board"]["ready_count"] == 0
+    assert by_id["historical_seed_strict_blind_replacement_first_slot_source_route_board"]["blocked_count"] == 10
+    assert by_id["historical_seed_strict_blind_replacement_first_slot_source_route_board"]["total_count"] == 17
+    assert "scope:10/7/17" in by_id[
+        "historical_seed_strict_blind_replacement_first_slot_source_route_board"
+    ]["blockers"]
+    assert "allowed:0" in by_id[
+        "historical_seed_strict_blind_replacement_first_slot_source_route_board"
+    ]["blockers"]
+    assert "external:10/20" in by_id[
+        "historical_seed_strict_blind_replacement_first_slot_source_route_board"
+    ]["blockers"]
+    assert "out_scope_repair:7/7" in by_id[
+        "historical_seed_strict_blind_replacement_first_slot_source_route_board"
+    ]["blockers"]
+    assert by_id[
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates"
+    ]["status"] == "first_slot_official_archive_native_authority_candidates_available"
+    assert by_id[
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates"
+    ]["ready_count"] == 24
+    assert by_id[
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates"
+    ]["blocked_count"] == 0
+    assert by_id[
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates"
+    ]["total_count"] == 24
+    assert "sources:2" in by_id[
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates"
+    ]["blockers"]
+    assert "candidates:24/0/24" in by_id[
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates"
+    ]["blockers"]
+    assert "native:24/0" in by_id[
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates"
+    ]["blockers"]
+    assert "pdb:24/0" in by_id[
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates"
+    ]["blockers"]
+    assert "metadata:24" in by_id[
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates"
+    ]["blockers"]
+    assert "capri_deferred:3" in by_id[
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates"
+    ]["blockers"]
+    assert "cat:13/9/2" in by_id[
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates"
+    ]["blockers"]
+    assert "first:CASP16/T1210/9enr" in by_id[
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates"
+    ]["blockers"]
     assert by_id["historical_seed_clearance_to_identity_intake_sync"]["status"] == (
         "waiting_on_cleared_seed_manifest"
     )
@@ -2594,8 +4077,52 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_historical_identity_seed_clearance_field_board.json"),
             "--historical-seed-current-target-prefill-json",
             str(tmp_path / "missing_historical_seed_current_target_prefill.json"),
+            "--historical-seed-native-authority-audit-json",
+            str(tmp_path / "missing_historical_seed_native_authority_audit.json"),
+            "--historical-seed-native-replacement-candidates-json",
+            str(tmp_path / "missing_historical_seed_native_replacement_candidates.json"),
+            "--historical-seed-complex-source-authority-candidates-json",
+            str(tmp_path / "missing_historical_seed_complex_source_authority_candidates.json"),
             "--historical-seed-chronology-candidate-board-json",
             str(tmp_path / "missing_historical_seed_chronology_candidate_board.json"),
+            "--historical-seed-authoritative-chronology-audit-json",
+            str(tmp_path / "missing_historical_seed_authoritative_chronology_audit.json"),
+            "--historical-seed-lane-decision-packet-json",
+            str(tmp_path / "missing_historical_seed_lane_decision_packet.json"),
+            "--historical-seed-strict-blind-replacement-queue-json",
+            str(tmp_path / "missing_historical_seed_strict_blind_replacement_queue.json"),
+            "--historical-seed-strict-blind-replacement-intake-json",
+            str(tmp_path / "missing_historical_seed_strict_blind_replacement_intake.json"),
+            "--historical-seed-strict-blind-replacement-evidence-dropzones-json",
+            str(tmp_path / "missing_historical_seed_strict_blind_replacement_evidence_dropzones.json"),
+            "--historical-seed-strict-blind-replacement-evidence-action-board-json",
+            str(tmp_path / "missing_historical_seed_strict_blind_replacement_evidence_action_board.json"),
+            "--historical-seed-strict-blind-replacement-evidence-quality-audit-json",
+            str(tmp_path / "missing_historical_seed_strict_blind_replacement_evidence_quality_audit.json"),
+            "--historical-seed-strict-blind-replacement-evidence-import-gate-json",
+            str(tmp_path / "missing_historical_seed_strict_blind_replacement_evidence_import_gate.json"),
+            "--historical-seed-strict-blind-replacement-operator-value-gate-json",
+            str(tmp_path / "missing_historical_seed_strict_blind_replacement_operator_value_gate.json"),
+            "--historical-seed-strict-blind-replacement-operator-action-board-json",
+            str(tmp_path / "missing_historical_seed_strict_blind_replacement_operator_action_board.json"),
+            "--historical-seed-strict-blind-replacement-promotion-gate-json",
+            str(tmp_path / "missing_historical_seed_strict_blind_replacement_promotion_gate.json"),
+            "--historical-seed-strict-blind-replacement-cycle-json",
+            str(tmp_path / "missing_historical_seed_strict_blind_replacement_cycle.json"),
+            "--historical-seed-strict-blind-replacement-first-slot-kit-json",
+            str(tmp_path / "missing_historical_seed_strict_blind_replacement_first_slot_kit.json"),
+            "--historical-seed-strict-blind-replacement-first-slot-local-candidate-board-json",
+            str(tmp_path / "missing_historical_seed_strict_blind_replacement_first_slot_local_candidate_board.json"),
+            "--historical-seed-strict-blind-replacement-first-slot-candidate-repair-board-json",
+            str(tmp_path / "missing_historical_seed_strict_blind_replacement_first_slot_candidate_repair_board.json"),
+            "--historical-seed-strict-blind-replacement-first-slot-repair-feasibility-board-json",
+            str(tmp_path / "missing_historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board.json"),
+            "--historical-seed-strict-blind-replacement-first-slot-source-route-board-json",
+            str(tmp_path / "missing_historical_seed_strict_blind_replacement_first_slot_source_route_board.json"),
+            "--historical-seed-strict-blind-replacement-first-slot-official-archive-source-candidates-json",
+            str(tmp_path / "missing_historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates.json"),
+            "--historical-seed-first-clearance-operator-kit-json",
+            str(tmp_path / "missing_historical_seed_first_clearance_operator_kit.json"),
             "--historical-seed-clearance-to-identity-intake-sync-json",
             str(tmp_path / "missing_historical_seed_clearance_to_identity_intake_sync.json"),
             "--sidechain-native-benchmark-json",

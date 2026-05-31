@@ -16,6 +16,9 @@ DEFAULT_CURRENT_TARGET_CSV = "casp17/casp17_target_model_folders_current.csv"
 DEFAULT_MONOMER_NATIVE_DIR = "data/native"
 DEFAULT_MONOMER_PREDICTION_ROOT = "data/internal_structures_refined"
 DEFAULT_COMPLEX_ROOT = "runs/wetlab_tcruzi_pde_atomized_parameterization_minimization_current"
+DEFAULT_NATIVE_REPLACEMENT_CANDIDATES_JSON = (
+    "casp17/casp17_historical_seed_native_replacement_candidates_current.json"
+)
 DEFAULT_OUT_JSON = "runs/casp17_historical_identity_seed_inventory_current.json"
 DEFAULT_OUT_CSV = "runs/casp17_historical_identity_seed_inventory_current.csv"
 DEFAULT_OUT_MD = "runs/CASP17_HISTORICAL_IDENTITY_SEED_INVENTORY.md"
@@ -35,6 +38,9 @@ SEED_COLUMNS = [
     "native_atom_count",
     "prediction_chain_count",
     "native_chain_count",
+    "native_authority_ref",
+    "native_replacement_status",
+    "native_replacement_source_pdb",
     "source_kind",
     "collision_status",
     "blockers",
@@ -115,6 +121,22 @@ def _read_csv(path_like: str | Path) -> tuple[list[dict[str, str]], list[str]]:
     return rows, blockers
 
 
+def _read_json(path_like: str | Path) -> dict[str, Any]:
+    path = _resolve(path_like)
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _json_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = payload.get("rows")
+    return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+
+
 def _write_json(path_like: str | Path, payload: dict[str, Any]) -> None:
     path = _resolve(path_like)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -150,6 +172,47 @@ def _pdb_stats(path_like: str | Path) -> tuple[int, int]:
             if chain_id:
                 chains.add(chain_id)
     return atom_count, len(chains)
+
+
+def _native_replacement_lookup(path_like: str | Path) -> dict[str, dict[str, Any]]:
+    lookup: dict[str, dict[str, Any]] = {}
+    for row in _json_rows(_read_json(path_like)):
+        if _text(row.get("candidate_status")) != "operator_review_ready":
+            continue
+        target_id = _text(row.get("target_id"))
+        candidate_pdb = _text(row.get("candidate_pdb"))
+        authority_ref = _text(row.get("native_authority_ref"))
+        if not target_id or not candidate_pdb or not authority_ref:
+            continue
+        if not _resolve(candidate_pdb).is_file():
+            continue
+        lookup[target_id] = row
+    return lookup
+
+
+def _apply_native_replacements(
+    rows: list[dict[str, Any]],
+    replacement_lookup: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    patched: list[dict[str, Any]] = []
+    for row in rows:
+        item = dict(row)
+        replacement = replacement_lookup.get(_text(item.get("target_id")))
+        if replacement:
+            candidate_pdb = _text(replacement.get("candidate_pdb"))
+            native_atoms, native_chains = _pdb_stats(candidate_pdb)
+            item["native_pdb"] = _artifact(candidate_pdb)
+            item["native_atom_count"] = native_atoms
+            item["native_chain_count"] = native_chains
+            item["native_authority_ref"] = _text(replacement.get("native_authority_ref"))
+            item["native_replacement_status"] = "applied_candidate_path"
+            item["native_replacement_source_pdb"] = _text(replacement.get("source_public_pdb"))
+        else:
+            item["native_authority_ref"] = ""
+            item["native_replacement_status"] = "not_applied"
+            item["native_replacement_source_pdb"] = ""
+        patched.append(item)
+    return patched
 
 
 def _current_target_tokens(path_like: str | Path) -> set[str]:
@@ -364,6 +427,8 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         batch_monomer_count=args.batch_monomer_count,
         batch_complex_count=args.batch_complex_count,
     )
+    native_replacement_lookup = _native_replacement_lookup(args.native_replacement_candidates_json)
+    rows = _apply_native_replacements(rows, native_replacement_lookup)
     manifest_rows = _manifest_rows(rows)
     selected_rows = [row for row in rows if _int(row.get("batch_slot")) > 0]
     eligible_monomer_count = sum(
@@ -388,6 +453,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "monomer_native_dir": _artifact(args.monomer_native_dir),
         "monomer_prediction_root": _artifact(args.monomer_prediction_root),
         "complex_root": _artifact(args.complex_root),
+        "native_replacement_candidates_json": _artifact(args.native_replacement_candidates_json),
         "seed_candidate_count": len(rows),
         "monomer_seed_candidate_count": sum(1 for row in rows if row["scope"] == "monomer"),
         "complex_seed_candidate_count": sum(1 for row in rows if row["scope"] == "complex"),
@@ -398,6 +464,10 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "batch_seed_slot_count": len(selected_rows),
         "candidate_manifest_row_count": len(manifest_rows),
         "candidate_manifest_csv": _artifact(args.out_manifest_csv),
+        "native_replacement_available_count": len(native_replacement_lookup),
+        "native_replacement_applied_count": sum(
+            1 for row in selected_rows if _text(row.get("native_replacement_status")) == "applied_candidate_path"
+        ),
         "operator_clearance_required_count": sum(1 for row in selected_rows if row["seed_status"] == "operator_clearance_required"),
         "blocked_seed_source_count": sum(1 for row in rows if row["seed_status"] == "blocked_seed_source"),
         "first_seed_benchmark_id": _text(first.get("benchmark_id")),
@@ -419,24 +489,26 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- eligible monomer/complex: `{summary['eligible_monomer_seed_count']}/{summary['eligible_complex_seed_count']}`",
         f"- batch required monomer/complex: `{summary['batch_monomer_required_count']}/{summary['batch_complex_required_count']}`",
         f"- batch seed slots / manifest rows: `{summary['batch_seed_slot_count']}/{summary['candidate_manifest_row_count']}`",
+        f"- native replacement available/applied: `{summary['native_replacement_available_count']}/{summary['native_replacement_applied_count']}`",
         f"- candidate manifest: `{summary['candidate_manifest_csv']}`",
         f"- first seed: `{summary['first_seed_benchmark_id'] or '-'}` `{summary['first_seed_target_id'] or '-'}`",
         f"- next action: {summary['first_next_action'] or '-'}",
         "",
         "## Batch Seeds",
         "",
-        "| slot | scope | benchmark | target | prediction atoms | native atoms | blockers |",
-        "| ---: | --- | --- | --- | ---: | ---: | --- |",
+        "| slot | scope | benchmark | target | prediction atoms | native atoms | native replacement | blockers |",
+        "| ---: | --- | --- | --- | ---: | ---: | --- | --- |",
     ]
     for row in payload["rows"]:
         if _int(row.get("batch_slot")) <= 0:
             continue
         lines.append(
             f"| {row['batch_slot']} | `{row['scope']}` | `{row['benchmark_id']}` | `{row['target_id']}` | "
-            f"{row['prediction_atom_count']} | {row['native_atom_count']} | `{row['blockers']}` |"
+            f"{row['prediction_atom_count']} | {row['native_atom_count']} | "
+            f"`{row.get('native_replacement_status', 'not_applied')}` | `{row['blockers']}` |"
         )
     if not payload["manifest_rows"]:
-        lines.append("| - | - | - | - | 0 | 0 | `missing_local_seed_sources` |")
+        lines.append("| - | - | - | - | 0 | 0 | `not_applied` | `missing_local_seed_sources` |")
     lines.extend(["", "## Claim Boundary", "", str(summary["claim_boundary"]), ""])
     path = _resolve(path_like)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -456,6 +528,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--monomer-native-dir", default=DEFAULT_MONOMER_NATIVE_DIR)
     parser.add_argument("--monomer-prediction-root", default=DEFAULT_MONOMER_PREDICTION_ROOT)
     parser.add_argument("--complex-root", default=DEFAULT_COMPLEX_ROOT)
+    parser.add_argument(
+        "--native-replacement-candidates-json",
+        default=DEFAULT_NATIVE_REPLACEMENT_CANDIDATES_JSON,
+    )
     parser.add_argument("--batch-monomer-count", type=int, default=10)
     parser.add_argument("--batch-complex-count", type=int, default=5)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)

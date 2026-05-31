@@ -89,6 +89,10 @@ def _args(tmp_path: Path, operator_csv: Path, seed_csv: Path, ablation_json: Pat
         str(ablation_json),
         "--top5-candidate-pool-json",
         str(tmp_path / "missing_top5.json"),
+        "--internal-score-candidates-json",
+        str(tmp_path / "missing_internal_scores.json"),
+        "--native-oracle-metric-candidates-json",
+        str(tmp_path / "missing_native_metrics.json"),
         "--ledger-dir",
         str(tmp_path / "ledgers"),
         "--out-json",
@@ -105,6 +109,33 @@ def _args_with_top5(
 ) -> list[str]:
     args = _args(tmp_path, operator_csv, seed_csv, ablation_json)
     args[args.index("--top5-candidate-pool-json") + 1] = str(top5_json)
+    return args
+
+
+def _args_with_internal_scores(
+    tmp_path: Path,
+    operator_csv: Path,
+    seed_csv: Path,
+    ablation_json: Path,
+    top5_json: Path,
+    internal_json: Path,
+) -> list[str]:
+    args = _args_with_top5(tmp_path, operator_csv, seed_csv, ablation_json, top5_json)
+    args[args.index("--internal-score-candidates-json") + 1] = str(internal_json)
+    return args
+
+
+def _args_with_internal_and_native_metrics(
+    tmp_path: Path,
+    operator_csv: Path,
+    seed_csv: Path,
+    ablation_json: Path,
+    top5_json: Path,
+    internal_json: Path,
+    native_json: Path,
+) -> list[str]:
+    args = _args_with_internal_scores(tmp_path, operator_csv, seed_csv, ablation_json, top5_json, internal_json)
+    args[args.index("--native-oracle-metric-candidates-json") + 1] = str(native_json)
     return args
 
 
@@ -209,6 +240,109 @@ def test_calibration_candidate_ledgers_accept_generated_top5_candidate_pool(tmp_
     assert payload["rows"][0]["top5_candidate_pool_ready"] is True
     assert "best_of_5_candidate_pool_missing" not in payload["rows"][0]["blockers"]
     assert "native_oracle_metrics_required" in payload["rows"][0]["blockers"]
+
+
+def test_calibration_candidate_ledgers_ingest_internal_score_candidates(tmp_path: Path) -> None:
+    row = _base_row(tmp_path)
+    operator_csv = tmp_path / "operator.csv"
+    seed_csv = tmp_path / "seed.csv"
+    ablation_json = tmp_path / "ablation.json"
+    top5_json = tmp_path / "top5.json"
+    internal_json = tmp_path / "internal_scores.json"
+    _write_csv(operator_csv, [row])
+    _write_csv(seed_csv, [row])
+    _write_json(ablation_json, {"manifest_rows_by_target": {row["target_id"]: []}})
+    top5_rows = [
+        _manifest_row(row, "selected_prediction_copy", str(tmp_path / "pool_model_1.pdb"), "pool1")
+    ]
+    top5_rows.extend(
+        _manifest_row(row, f"deterministic_perturbation_{index}", str(tmp_path / f"pool_model_{index}.pdb"), f"pool{index}")
+        for index in range(2, 6)
+    )
+    _write_json(top5_json, {"candidate_rows_by_target": {row["target_id"]: top5_rows}})
+    score_rows = []
+    for index, candidate in enumerate(top5_rows, start=1):
+        score_rows.append(
+            {
+                **candidate,
+                "score_status": "scored",
+                "internal_score_candidate": f"0.{40 + index:03d}",
+                "qscore_count": 0,
+                "chain_count": 1,
+            }
+        )
+    _write_json(internal_json, {"candidate_rows_by_target": {row["target_id"]: score_rows}})
+
+    payload = mod.build_payload(
+        mod.parse_args(
+            _args_with_internal_scores(tmp_path, operator_csv, seed_csv, ablation_json, top5_json, internal_json)
+        )
+    )
+
+    assert payload["summary"]["internal_score_available_count"] == 5
+    assert payload["rows"][0]["selected_score_candidate"] == "0.041"
+    assert payload["rows"][0]["best_score_candidate"] == "0.045"
+    assert "internal_score_candidates_required" not in payload["rows"][0]["blockers"]
+    assert "native_oracle_metrics_required" in payload["rows"][0]["blockers"]
+    assert payload["rows"][0]["next_action"] == "attach native oracle metrics before filling calibration fields"
+
+
+def test_calibration_candidate_ledgers_ingest_native_metric_candidates(tmp_path: Path) -> None:
+    row = _base_row(tmp_path)
+    operator_csv = tmp_path / "operator.csv"
+    seed_csv = tmp_path / "seed.csv"
+    ablation_json = tmp_path / "ablation.json"
+    top5_json = tmp_path / "top5.json"
+    internal_json = tmp_path / "internal_scores.json"
+    native_json = tmp_path / "native_metrics.json"
+    _write_csv(operator_csv, [row])
+    _write_csv(seed_csv, [row])
+    _write_json(ablation_json, {"manifest_rows_by_target": {row["target_id"]: []}})
+    top5_rows = [
+        _manifest_row(row, "selected_prediction_copy", str(tmp_path / "pool_model_1.pdb"), "pool1")
+    ]
+    top5_rows.extend(
+        _manifest_row(row, f"deterministic_perturbation_{index}", str(tmp_path / f"pool_model_{index}.pdb"), f"pool{index}")
+        for index in range(2, 6)
+    )
+    _write_json(top5_json, {"candidate_rows_by_target": {row["target_id"]: top5_rows}})
+    score_rows = []
+    native_rows = []
+    for index, candidate in enumerate(top5_rows, start=1):
+        score_rows.append(
+            {
+                **candidate,
+                "score_status": "scored",
+                "internal_score_candidate": f"0.{40 + index:03d}",
+            }
+        )
+        native_rows.append(
+            {
+                **candidate,
+                "metric_status": "metric_ready",
+                "native_metric_candidate": f"{70 + index:.3f}",
+            }
+        )
+    _write_json(internal_json, {"candidate_rows_by_target": {row["target_id"]: score_rows}})
+    _write_json(native_json, {"candidate_rows_by_target": {row["target_id"]: native_rows}})
+
+    payload = mod.build_payload(
+        mod.parse_args(
+            _args_with_internal_and_native_metrics(
+                tmp_path, operator_csv, seed_csv, ablation_json, top5_json, internal_json, native_json
+            )
+        )
+    )
+
+    assert payload["summary"]["native_oracle_metric_available_count"] == 5
+    assert payload["summary"]["internal_score_available_count"] == 5
+    assert payload["rows"][0]["selected_native_metric_candidate"] == "71.000"
+    assert payload["rows"][0]["best_native_metric_candidate"] == "75.000"
+    assert payload["rows"][0]["best_model_rank_candidate"] == "5"
+    assert "native_oracle_metrics_required" not in payload["rows"][0]["blockers"]
+    assert "internal_score_candidates_required" not in payload["rows"][0]["blockers"]
+    assert payload["rows"][0]["blockers"] == "operator_calibration_fields_required"
+    assert payload["rows"][0]["next_action"] == "operator-fill calibration fields after no-leak provenance clearance"
 
 
 def test_calibration_candidate_ledgers_block_missing_selected_prediction(tmp_path: Path) -> None:

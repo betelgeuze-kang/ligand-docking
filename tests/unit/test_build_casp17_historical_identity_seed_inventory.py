@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import json
 from pathlib import Path
 
 from tools import build_casp17_historical_identity_seed_inventory as mod
@@ -30,6 +31,11 @@ def _write_csv(path: Path, rows: list[dict[str, str]]) -> None:
         writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
+
+
+def _write_json(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def test_historical_identity_seed_inventory_builds_batch_seed_manifest(tmp_path: Path, monkeypatch) -> None:
@@ -82,6 +88,7 @@ def test_historical_identity_seed_inventory_builds_batch_seed_manifest(tmp_path:
     assert payload["summary"]["complex_seed_candidate_count"] == 2
     assert payload["summary"]["batch_seed_slot_count"] == 3
     assert payload["summary"]["candidate_manifest_row_count"] == 3
+    assert payload["summary"]["native_replacement_applied_count"] == 0
     assert all(row["current_casp17_target"] == "false" for row in payload["manifest_rows"])
     assert all(row["leakage_clearance"] == "" for row in payload["manifest_rows"])
     assert (tmp_path / "out.md").is_file()
@@ -119,3 +126,64 @@ def test_historical_identity_seed_inventory_blocks_current_name_collision(tmp_pa
     assert payload["summary"]["blocked_seed_source_count"] == 1
     assert payload["rows"][0]["seed_status"] == "blocked_seed_source"
     assert "current_casp17_target_collision" in payload["rows"][0]["blockers"]
+
+
+def test_historical_identity_seed_inventory_applies_ready_native_replacement_candidates(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    native_dir = tmp_path / "data/native"
+    prediction_root = tmp_path / "data/internal_structures_refined"
+    replacement_json = tmp_path / "replacement.json"
+    current_csv = tmp_path / "current.csv"
+    replacement_pdb = tmp_path / "casp17/replacements/crambin/native_candidate_1CRN.pdb"
+    source_pdb = tmp_path / "data/public_structures/2026-02-15/crambin_pdb_1CRN.pdb"
+    _write_csv(current_csv, [{"target_id": "T9999", "protein_name": "unrelated", "folder_name": "unrelated"}])
+    _write_pdb(native_dir / "crambin.pdb")
+    _write_pdb(prediction_root / "nightly/r1/visual_post_internal_post_crambin_sample000_step00020.pdb")
+    _write_pdb(replacement_pdb, chains="AB")
+    _write_pdb(source_pdb, chains="AB")
+    _write_json(
+        replacement_json,
+        {
+            "rows": [
+                {
+                    "target_id": "HIST_CRAMBIN",
+                    "candidate_status": "operator_review_ready",
+                    "candidate_pdb": str(replacement_pdb.relative_to(tmp_path)),
+                    "source_public_pdb": str(source_pdb.relative_to(tmp_path)),
+                    "native_authority_ref": "rcsb:1CRN;doi:10.2210/pdb1crn/pdb",
+                }
+            ]
+        },
+    )
+
+    args = mod.parse_args(
+        [
+            "--current-target-csv",
+            str(current_csv),
+            "--monomer-native-dir",
+            str(native_dir),
+            "--monomer-prediction-root",
+            str(prediction_root),
+            "--complex-root",
+            str(tmp_path / "missing_complexes"),
+            "--native-replacement-candidates-json",
+            str(replacement_json),
+            "--batch-monomer-count",
+            "1",
+            "--batch-complex-count",
+            "0",
+            "--out-manifest-csv",
+            str(tmp_path / "manifest.csv"),
+        ]
+    )
+
+    payload = mod.build_payload(args)
+
+    assert payload["summary"]["native_replacement_available_count"] == 1
+    assert payload["summary"]["native_replacement_applied_count"] == 1
+    assert payload["rows"][0]["native_pdb"] == "casp17/replacements/crambin/native_candidate_1CRN.pdb"
+    assert payload["rows"][0]["native_authority_ref"] == "rcsb:1CRN;doi:10.2210/pdb1crn/pdb"
+    assert payload["rows"][0]["native_replacement_status"] == "applied_candidate_path"
+    assert payload["manifest_rows"][0]["native_pdb"] == "casp17/replacements/crambin/native_candidate_1CRN.pdb"

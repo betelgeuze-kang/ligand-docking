@@ -1,6 +1,6 @@
 # CASP17 Historical Seed Chronology Candidate Board
 
-- generated: `2026-05-28T03:20:13+09:00`
+- generated: `2026-05-31T14:46:49+09:00`
 - chronology_board_status: `operator_evidence_required`
 - rows ready/warning/evidence-required/conflict/total: `0/0/15/0/15`
 - path-date candidates: `10`

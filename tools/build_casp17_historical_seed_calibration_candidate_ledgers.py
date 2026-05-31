@@ -16,6 +16,10 @@ DEFAULT_OPERATOR_CLEARANCE_CSV = "runs/casp17_historical_identity_seed_operator_
 DEFAULT_SEED_MANIFEST_CSV = "runs/casp17_historical_benchmark_manifest_seed_current.csv"
 DEFAULT_ABLATION_CANDIDATE_JSON = "casp17/casp17_historical_seed_ablation_candidate_manifests_current.json"
 DEFAULT_TOP5_CANDIDATE_POOL_JSON = "casp17/casp17_historical_seed_top5_candidate_pools_current.json"
+DEFAULT_INTERNAL_SCORE_CANDIDATES_JSON = "casp17/casp17_historical_seed_internal_score_candidates_current.json"
+DEFAULT_NATIVE_ORACLE_METRIC_CANDIDATES_JSON = (
+    "casp17/casp17_historical_seed_native_oracle_metric_candidates_current.json"
+)
 DEFAULT_LEDGER_DIR = "casp17/historical_seed_calibration_candidate_ledgers"
 DEFAULT_OUT_JSON = "casp17/casp17_historical_seed_calibration_candidate_ledgers_current.json"
 DEFAULT_OUT_CSV = "casp17/casp17_historical_seed_calibration_candidate_ledgers_current.csv"
@@ -202,6 +206,99 @@ def _top5_rows_by_target(payload: dict[str, Any]) -> dict[str, list[dict[str, An
     return {}
 
 
+def _internal_score_maps(payload: dict[str, Any]) -> dict[str, dict[str, str]]:
+    grouped = payload.get("candidate_rows_by_target")
+    by_path: dict[str, str] = {}
+    by_sha: dict[str, str] = {}
+    if not isinstance(grouped, dict):
+        return {"path": by_path, "sha": by_sha}
+    for rows in grouped.values():
+        if not isinstance(rows, list):
+            continue
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            if _text(row.get("score_status")) != "scored":
+                continue
+            score = _text(row.get("internal_score_candidate"))
+            if not score:
+                continue
+            path = _text(row.get("path"))
+            sha = _text(row.get("sha256_16"))
+            if path:
+                by_path[path] = score
+                by_path[_artifact(path)] = score
+            if sha:
+                by_sha[sha] = score
+    return {"path": by_path, "sha": by_sha}
+
+
+def _internal_score_for(raw: dict[str, Any], score_maps: dict[str, dict[str, str]]) -> str:
+    path = _text(raw.get("path"))
+    sha = _text(raw.get("sha256_16"))
+    by_path = score_maps.get("path", {})
+    by_sha = score_maps.get("sha", {})
+    if path and path in by_path:
+        return by_path[path]
+    if path:
+        artifact_path = _artifact(path)
+        if artifact_path in by_path:
+            return by_path[artifact_path]
+    if sha and sha in by_sha:
+        return by_sha[sha]
+    return ""
+
+
+def _native_metric_maps(payload: dict[str, Any]) -> dict[str, dict[str, str]]:
+    grouped = payload.get("candidate_rows_by_target")
+    by_path: dict[str, str] = {}
+    by_sha: dict[str, str] = {}
+    if not isinstance(grouped, dict):
+        return {"path": by_path, "sha": by_sha}
+    for rows in grouped.values():
+        if not isinstance(rows, list):
+            continue
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            if _text(row.get("metric_status")) != "metric_ready":
+                continue
+            metric = _text(row.get("native_metric_candidate"))
+            if not metric:
+                continue
+            path = _text(row.get("path"))
+            sha = _text(row.get("sha256_16"))
+            if path:
+                by_path[path] = metric
+                by_path[_artifact(path)] = metric
+            if sha:
+                by_sha[sha] = metric
+    return {"path": by_path, "sha": by_sha}
+
+
+def _native_metric_for(raw: dict[str, Any], metric_maps: dict[str, dict[str, str]]) -> str:
+    path = _text(raw.get("path"))
+    sha = _text(raw.get("sha256_16"))
+    by_path = metric_maps.get("path", {})
+    by_sha = metric_maps.get("sha", {})
+    if path and path in by_path:
+        return by_path[path]
+    if path:
+        artifact_path = _artifact(path)
+        if artifact_path in by_path:
+            return by_path[artifact_path]
+    if sha and sha in by_sha:
+        return by_sha[sha]
+    return ""
+
+
+def _float(value: Any) -> float:
+    try:
+        return float(_text(value))
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def _fallback_candidate_rows(row: dict[str, str]) -> list[dict[str, Any]]:
     prediction_pdb = _text(row.get("prediction_pdb"))
     stats = _pdb_stats(prediction_pdb)
@@ -225,6 +322,8 @@ def _candidate_pool(
     row: dict[str, str],
     ablation_by_target: dict[str, list[dict[str, Any]]],
     top5_by_target: dict[str, list[dict[str, Any]]],
+    score_maps: dict[str, dict[str, str]],
+    metric_maps: dict[str, dict[str, str]],
 ) -> list[dict[str, Any]]:
     target_id = _text(row.get("target_id")).upper()
     raw_rows = list(ablation_by_target.get(target_id) or [])
@@ -267,8 +366,8 @@ def _candidate_pool(
                     if role in {"selected_prediction", "selected_prediction_copy"} and exists_bool and coordinate_bool
                     else ""
                 ),
-                "internal_score_candidate": "",
-                "native_metric_candidate": "",
+                "internal_score_candidate": _internal_score_for(raw, score_maps),
+                "native_metric_candidate": _native_metric_for(raw, metric_maps),
                 "notes": _text(raw.get("notes")) or "candidate model for model-selection review",
             }
         )
@@ -295,15 +394,38 @@ def _build_seed_ledger(
     row: dict[str, str],
     ablation_by_target: dict[str, list[dict[str, Any]]],
     top5_by_target: dict[str, list[dict[str, Any]]],
+    score_maps: dict[str, dict[str, str]],
+    metric_maps: dict[str, dict[str, str]],
     ledger_dir: str | Path,
     row_rank: int,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     target_id = _text(row.get("target_id")).upper()
-    candidates = _candidate_pool(row, ablation_by_target, top5_by_target)
+    candidates = _candidate_pool(row, ablation_by_target, top5_by_target, score_maps, metric_maps)
     existing_candidates = [item for item in candidates if item["exists"] and item["coordinate_valid"]]
     selected_candidates = [
         item for item in existing_candidates if item["role"] in {"selected_prediction", "selected_prediction_copy"}
     ]
+    scored_candidates = [item for item in existing_candidates if _text(item.get("internal_score_candidate"))]
+    selected_scored_candidates = [item for item in selected_candidates if _text(item.get("internal_score_candidate"))]
+    selected_score_candidate = _text(selected_scored_candidates[0].get("internal_score_candidate")) if selected_scored_candidates else ""
+    best_scored_candidate = max(
+        scored_candidates,
+        key=lambda item: _float(item.get("internal_score_candidate")),
+        default={},
+    )
+    best_score_candidate = _text(best_scored_candidate.get("internal_score_candidate"))
+    native_metric_candidates = [item for item in existing_candidates if _text(item.get("native_metric_candidate"))]
+    selected_native_candidates = [item for item in selected_candidates if _text(item.get("native_metric_candidate"))]
+    selected_native_metric_candidate = (
+        _text(selected_native_candidates[0].get("native_metric_candidate")) if selected_native_candidates else ""
+    )
+    best_native_candidate = max(
+        native_metric_candidates,
+        key=lambda item: _float(item.get("native_metric_candidate")),
+        default={},
+    )
+    best_native_metric_candidate = _text(best_native_candidate.get("native_metric_candidate"))
+    best_model_rank_candidate = _text(best_native_candidate.get("candidate_rank")) if best_native_metric_candidate else ""
     top5_ready = len(existing_candidates) >= 5
     open_fields = [field for field in CALIBRATION_FIELDS if not _field_ready(row, field)]
     blockers: list[str] = []
@@ -311,8 +433,15 @@ def _build_seed_ledger(
         blockers.append("selected_prediction_candidate_missing")
     if not top5_ready:
         blockers.append("best_of_5_candidate_pool_missing")
-    blockers.append("native_oracle_metrics_required")
-    blockers.append("internal_score_candidates_required")
+    if (
+        len(native_metric_candidates) < len(existing_candidates)
+        or not selected_native_metric_candidate
+        or not best_native_metric_candidate
+        or not best_model_rank_candidate
+    ):
+        blockers.append("native_oracle_metrics_required")
+    if len(scored_candidates) < len(existing_candidates) or not selected_score_candidate or not best_score_candidate:
+        blockers.append("internal_score_candidates_required")
     if open_fields:
         blockers.append("operator_calibration_fields_required")
     status = "operator_calibration_review_required"
@@ -333,16 +462,24 @@ def _build_seed_ledger(
         "native_oracle_metric_available_count": sum(1 for item in candidates if _text(item.get("native_metric_candidate"))),
         "internal_score_available_count": sum(1 for item in candidates if _text(item.get("internal_score_candidate"))),
         "selected_model_rank_candidate": "1" if selected_candidates else "",
-        "best_model_rank_candidate": "REQUIRES_NATIVE_ORACLE",
-        "selected_native_metric_candidate": "REQUIRES_NATIVE_ORACLE",
-        "best_native_metric_candidate": "REQUIRES_NATIVE_ORACLE",
-        "selected_score_candidate": "REQUIRES_INTERNAL_SCORE",
-        "best_score_candidate": "REQUIRES_INTERNAL_SCORE",
+        "best_model_rank_candidate": best_model_rank_candidate or "REQUIRES_NATIVE_ORACLE",
+        "selected_native_metric_candidate": selected_native_metric_candidate or "REQUIRES_NATIVE_ORACLE",
+        "best_native_metric_candidate": best_native_metric_candidate or "REQUIRES_NATIVE_ORACLE",
+        "selected_score_candidate": selected_score_candidate or "REQUIRES_INTERNAL_SCORE",
+        "best_score_candidate": best_score_candidate or "REQUIRES_INTERNAL_SCORE",
         "open_calibration_field_count": len(open_fields),
         "open_calibration_fields": ",".join(open_fields),
         "next_action": (
-            "attach native oracle metrics and internal scores before filling calibration fields"
-            if top5_ready
+            "operator-fill calibration fields after no-leak provenance clearance"
+            if (
+                top5_ready
+                and selected_score_candidate
+                and best_score_candidate
+                and selected_native_metric_candidate
+                and best_native_metric_candidate
+            )
+            else "attach native oracle metrics before filling calibration fields"
+            if top5_ready and selected_score_candidate and best_score_candidate
             else "attach top-5 candidate pool, internal scores, and native oracle metrics before filling calibration fields"
         ),
         "blockers": ",".join(dict.fromkeys(blockers)),
@@ -355,8 +492,12 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     seed_rows, seed_blockers = _read_csv(args.seed_manifest_csv)
     ablation_payload = _read_json(args.ablation_candidate_json)
     top5_payload = _read_json(args.top5_candidate_pool_json)
+    internal_score_payload = _read_json(args.internal_score_candidates_json)
+    native_metric_payload = _read_json(args.native_oracle_metric_candidates_json)
     ablation_by_target = _ablation_rows_by_target(ablation_payload)
     top5_by_target = _top5_rows_by_target(top5_payload)
+    score_maps = _internal_score_maps(internal_score_payload)
+    metric_maps = _native_metric_maps(native_metric_payload)
     seed_by_target = {_text(row.get("target_id")).upper(): row for row in seed_rows}
     rows: list[dict[str, Any]] = []
     candidate_rows_by_target: dict[str, list[dict[str, Any]]] = {}
@@ -364,7 +505,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         target_id = _text(row.get("target_id")).upper()
         merged = dict(seed_by_target.get(target_id, {}))
         merged.update(row)
-        report, candidates = _build_seed_ledger(merged, ablation_by_target, top5_by_target, args.ledger_dir, index)
+        report, candidates = _build_seed_ledger(
+            merged, ablation_by_target, top5_by_target, score_maps, metric_maps, args.ledger_dir, index
+        )
         rows.append(report)
         candidate_rows_by_target[target_id] = candidates
     status_counts: dict[str, int] = {}
@@ -389,6 +532,8 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "seed_manifest_csv": _artifact(args.seed_manifest_csv),
         "ablation_candidate_json": _artifact(args.ablation_candidate_json),
         "top5_candidate_pool_json": _artifact(args.top5_candidate_pool_json),
+        "internal_score_candidates_json": _artifact(args.internal_score_candidates_json),
+        "native_oracle_metric_candidates_json": _artifact(args.native_oracle_metric_candidates_json),
         "ledger_dir": _artifact(args.ledger_dir),
         "seed_row_count": len(rows),
         "ledger_count": sum(1 for row in rows if _text(row.get("candidate_ledger_csv"))),
@@ -458,6 +603,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--seed-manifest-csv", default=DEFAULT_SEED_MANIFEST_CSV)
     parser.add_argument("--ablation-candidate-json", default=DEFAULT_ABLATION_CANDIDATE_JSON)
     parser.add_argument("--top5-candidate-pool-json", default=DEFAULT_TOP5_CANDIDATE_POOL_JSON)
+    parser.add_argument("--internal-score-candidates-json", default=DEFAULT_INTERNAL_SCORE_CANDIDATES_JSON)
+    parser.add_argument("--native-oracle-metric-candidates-json", default=DEFAULT_NATIVE_ORACLE_METRIC_CANDIDATES_JSON)
     parser.add_argument("--ledger-dir", default=DEFAULT_LEDGER_DIR)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)

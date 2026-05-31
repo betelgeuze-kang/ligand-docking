@@ -432,7 +432,7 @@
     "dossier_dir": "casp17/historical_seed_no_leak_provenance_dossiers",
     "first_next_action": "attach independent no-leak evidence and operator clearance before setting leakage_clearance",
     "first_open_target_id": "HIST_BBA5",
-    "generated_at_local": "2026-05-28T03:37:24+09:00",
+    "generated_at_local": "2026-05-31T14:46:49+09:00",
     "input_blockers": "",
     "mtime_order_risk_count": 15,
     "negative_leakage_control_gap_count": 15,

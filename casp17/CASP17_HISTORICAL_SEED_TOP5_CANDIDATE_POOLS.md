@@ -1,6 +1,6 @@
 # CASP17 Historical Seed Top-5 Candidate Pools
 
-- generated: `2026-05-28T03:59:02+09:00`
+- generated: `2026-05-31T14:46:50+09:00`
 - top5_candidate_pool_status: `top5_candidate_pool_ready_for_review`
 - seed rows/pools/models: `15/15/75`
 - complete/gap/source-present/source-blocked: `15/0/15/0`

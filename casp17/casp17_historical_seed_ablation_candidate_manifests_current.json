@@ -867,7 +867,7 @@
     "claim_boundary": "Local CASP17 historical seed ablation candidate manifests only. These files fingerprint existing local prediction/native paths and obvious same-run candidate layers for operator review. They do not fill ablation_manifest_ref, prove ablation coverage, clear no-leak provenance, score native accuracy, mutate operator CSVs, fetch native structures, run predictors, or submit to CASP.",
     "first_next_action": "attach real ablation layer evidence before setting ablation_manifest_ref",
     "first_open_target_id": "HIST_BBA5",
-    "generated_at_local": "2026-05-28T03:30:22+09:00",
+    "generated_at_local": "2026-05-31T14:46:50+09:00",
     "input_blockers": "",
     "layer_evidence_gap_count": 14,
     "manifest_dir": "casp17/historical_seed_ablation_candidate_manifests",

@@ -242,6 +242,57 @@ Targets:
 - flag wrong stoichiometry, bad interface, ligand mispose, and hallucinated
   contacts as low confidence
 
+## CAPRI Round 65 Addendum
+
+CAPRI Round 65 remains useful scientific context because it is the 7th joint
+CASP-CAPRI Assembly Prediction challenge for the CASP17 season and directly
+overlaps the priority complex categories. It is not an active blocker for the
+current operator lane. Operator decision on 2026-05-31: defer CAPRI Round 65
+because registration requires a PI/research-group-lead path and the operator is
+not the PI. Local context packet: `casp17/capri_round65/README.md`. Active scope
+packet: `casp17/CASP17_ACTIVE_SCOPE_DECISION.md`.
+
+Official-source status checked on 2026-05-31:
+
+- Round 65 status: `Active`
+- CAPRI registration start shown by the official page: 2026-04-10 11:14
+- CASP17 registration was required before CASP17 start, 2026-04-27, for groups
+  participating in the joint predictor/server challenge
+- CAPRI predictors must also be registered with CASP, and CAPRI registration
+  requires a CASP ID
+- groups participating only as scorers need CAPRI registration
+- the CAPRI active-round index records registration ending on 2026-06-01 at
+  midnight; the Round 65 target table also has 2026-06-01 scoring deadlines and
+  upcoming target starts
+
+Role objective:
+
+- `casp17_only`: current active lane. Continue historical benchmark
+  identity/no-leak clearance, sidechain-native benchmark fill, competitive-floor
+  batch fill, and per-object 3D model organization.
+- `CAPRI Round 65`: deferred unless a PI or research-group lead confirms the
+  CAPRI registration path, confidentiality responsibility, and submission role.
+- `predictor/server`: choose this only if the operator confirms the CASP ID and
+  CAPRI registration path immediately; submit through CAPRI so the top 5 models
+  can be forwarded to CASP and counted for the Scoring Experiment
+- `scorer`: keep as the fastest near-term route if CASP ID confirmation blocks
+  predictor participation; submit up to 10 ranked models from the anonymized
+  scoring set, not directly from the MassiveFold set
+
+CAPRI preflight gates:
+
+1. Confirm CASP ID and CAPRI registration status.
+2. Select role per target: predictor/server for open prediction windows,
+   scorer for active/upcoming scoring windows.
+3. Download or mirror target-specific CAPRI submission templates.
+4. Validate residue numbering, chain IDs, model ranking, and online-format
+   compatibility before any submission.
+5. If any MassiveFold-derived model is used for predictor work, preserve the
+   required REMARK line identifying the originating model.
+6. Keep the existing CASP17 no-leak rule: no native structure lookup, no other
+   team model reuse, and no post-release information in local performance
+   claims.
+
 ## Source Anchors To Recheck
 
 These links are source anchors for the goal contract and must be rechecked
@@ -259,9 +310,14 @@ before any public claim or leaderboard comparison:
   `https://predictioncenter.org/casp16/zscores_multimer.cgi`
 - CASP16 ligand pose/affinity assessment paper:
   `https://pmc.ncbi.nlm.nih.gov/articles/PMC12750038/`
+- CAPRI Round 65 official page:
+  `https://www.ebi.ac.uk/pdbe/complex-pred/capri/round/65/`
+- CASP-CAPRI instructions:
+  `https://www.ebi.ac.uk/pdbe/complex-pred/capri/casp-capri/`
 
 ## Claim Boundary
 
 This addendum is a goal and benchmark contract. It does not claim CASP17
-submission success, native accuracy, or leaderboard standing until the evidence
-gates above are closed with no-leak provenance and official-like metrics.
+or CAPRI submission success, native accuracy, or leaderboard standing until the
+evidence gates above are closed with no-leak provenance and official-like
+metrics.

@@ -19,6 +19,9 @@ DEFAULT_PROTEIN_OBJECT_LIBRARY_JSON = "casp17/casp17_protein_object_library_curr
 DEFAULT_RAW_RANKED_MODEL_QUARANTINE_JSON = "casp17/casp17_raw_ranked_model_quarantine_audit_current.json"
 DEFAULT_WIN_GAP_CLOSURE_JSON = "runs/casp17_win_gap_closure_packet_current.json"
 DEFAULT_WIN_TIER_GOAL_SCORECARD_JSON = "runs/casp17_win_tier_goal_scorecard_current.json"
+DEFAULT_ACTIVE_SCOPE_DECISION_JSON = "casp17/casp17_active_scope_decision_current.json"
+DEFAULT_CAPRI_ROUND65_READINESS_JSON = "casp17/capri_round65/capri_round65_readiness_current.json"
+DEFAULT_CAPRI_ROUND65_FORMAT_PREFLIGHT_JSON = "casp17/capri_round65/capri_round65_format_preflight_current.json"
 DEFAULT_INPUT_SCAFFOLD_JSON = "runs/casp17_win_tier_benchmark_input_scaffold_current.json"
 DEFAULT_INPUT_INVENTORY_JSON = "runs/casp17_win_tier_benchmark_input_inventory_current.json"
 DEFAULT_OPERATOR_DASHBOARD_JSON = "runs/casp17_win_tier_benchmark_operator_dashboard_current.json"
@@ -35,20 +38,107 @@ DEFAULT_HISTORICAL_IDENTITY_SEED_CLEARANCE_FIELD_BOARD_JSON = (
 DEFAULT_HISTORICAL_SEED_NO_LEAK_PROVENANCE_DOSSIERS_JSON = (
     "casp17/casp17_historical_seed_no_leak_provenance_dossiers_current.json"
 )
+DEFAULT_HISTORICAL_SEED_NO_LEAK_GAP_REPAIR_PLAN_JSON = (
+    "casp17/casp17_historical_seed_no_leak_gap_repair_plan_current.json"
+)
 DEFAULT_HISTORICAL_SEED_CURRENT_TARGET_PREFILL_JSON = (
     "casp17/casp17_historical_seed_current_target_prefill_current.json"
+)
+DEFAULT_HISTORICAL_SEED_NATIVE_AUTHORITY_AUDIT_JSON = (
+    "casp17/casp17_historical_seed_native_authority_audit_current.json"
+)
+DEFAULT_HISTORICAL_SEED_NATIVE_REPLACEMENT_CANDIDATES_JSON = (
+    "casp17/casp17_historical_seed_native_replacement_candidates_current.json"
+)
+DEFAULT_HISTORICAL_SEED_COMPLEX_SOURCE_AUTHORITY_CANDIDATES_JSON = (
+    "casp17/casp17_historical_seed_complex_source_authority_candidates_current.json"
 )
 DEFAULT_HISTORICAL_SEED_CHRONOLOGY_CANDIDATE_BOARD_JSON = (
     "casp17/casp17_historical_seed_chronology_candidate_board_current.json"
 )
+DEFAULT_HISTORICAL_SEED_AUTHORITATIVE_CHRONOLOGY_AUDIT_JSON = (
+    "casp17/casp17_historical_seed_authoritative_chronology_audit_current.json"
+)
+DEFAULT_HISTORICAL_SEED_LANE_DECISION_PACKET_JSON = (
+    "casp17/casp17_historical_seed_lane_decision_packet_current.json"
+)
+DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_QUEUE_JSON = (
+    "casp17/casp17_historical_seed_strict_blind_replacement_queue_current.json"
+)
+DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_INTAKE_JSON = (
+    "casp17/casp17_historical_seed_strict_blind_replacement_intake_current.json"
+)
+DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_EVIDENCE_DROPZONES_JSON = (
+    "casp17/casp17_historical_seed_strict_blind_replacement_evidence_dropzones_current.json"
+)
+DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_EVIDENCE_ACTION_BOARD_JSON = (
+    "casp17/casp17_historical_seed_strict_blind_replacement_evidence_action_board_current.json"
+)
+DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_EVIDENCE_QUALITY_AUDIT_JSON = (
+    "casp17/casp17_historical_seed_strict_blind_replacement_evidence_quality_audit_current.json"
+)
+DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_EVIDENCE_IMPORT_GATE_JSON = (
+    "casp17/casp17_historical_seed_strict_blind_replacement_evidence_import_gate_current.json"
+)
+DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_OPERATOR_VALUE_GATE_JSON = (
+    "casp17/casp17_historical_seed_strict_blind_replacement_operator_value_gate_current.json"
+)
+DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_OPERATOR_ACTION_BOARD_JSON = (
+    "casp17/casp17_historical_seed_strict_blind_replacement_operator_action_board_current.json"
+)
+DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_PROMOTION_GATE_JSON = (
+    "casp17/casp17_historical_seed_strict_blind_replacement_promotion_gate_current.json"
+)
+DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_CYCLE_JSON = (
+    "casp17/casp17_historical_seed_strict_blind_replacement_cycle_current.json"
+)
+DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_FIRST_SLOT_KIT_JSON = (
+    "casp17/casp17_historical_seed_strict_blind_replacement_first_slot_kit_current.json"
+)
+DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_FIRST_SLOT_LOCAL_CANDIDATE_BOARD_JSON = (
+    "casp17/casp17_historical_seed_strict_blind_replacement_first_slot_local_candidate_board_current.json"
+)
+DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_FIRST_SLOT_CANDIDATE_REPAIR_BOARD_JSON = (
+    "casp17/casp17_historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_current.json"
+)
+DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_FIRST_SLOT_REPAIR_FEASIBILITY_BOARD_JSON = (
+    "casp17/casp17_historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_current.json"
+)
+DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_FIRST_SLOT_SOURCE_ROUTE_BOARD_JSON = (
+    "casp17/casp17_historical_seed_strict_blind_replacement_first_slot_source_route_board_current.json"
+)
+DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_FIRST_SLOT_OFFICIAL_ARCHIVE_SOURCE_CANDIDATES_JSON = (
+    "casp17/casp17_historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_current.json"
+)
 DEFAULT_HISTORICAL_SEED_ABLATION_CANDIDATE_MANIFESTS_JSON = (
     "casp17/casp17_historical_seed_ablation_candidate_manifests_current.json"
+)
+DEFAULT_HISTORICAL_SEED_ABLATION_GAP_REPAIR_PLAN_JSON = (
+    "casp17/casp17_historical_seed_ablation_gap_repair_plan_current.json"
 )
 DEFAULT_HISTORICAL_SEED_TOP5_CANDIDATE_POOLS_JSON = (
     "casp17/casp17_historical_seed_top5_candidate_pools_current.json"
 )
+DEFAULT_HISTORICAL_SEED_INTERNAL_SCORE_CANDIDATES_JSON = (
+    "casp17/casp17_historical_seed_internal_score_candidates_current.json"
+)
+DEFAULT_HISTORICAL_SEED_NATIVE_ORACLE_METRIC_CANDIDATES_JSON = (
+    "casp17/casp17_historical_seed_native_oracle_metric_candidates_current.json"
+)
 DEFAULT_HISTORICAL_SEED_CALIBRATION_CANDIDATE_LEDGERS_JSON = (
     "casp17/casp17_historical_seed_calibration_candidate_ledgers_current.json"
+)
+DEFAULT_HISTORICAL_SEED_CALIBRATION_FIELD_CANDIDATES_JSON = (
+    "casp17/casp17_historical_seed_calibration_field_candidates_current.json"
+)
+DEFAULT_HISTORICAL_SEED_CLEARANCE_FILL_CANDIDATE_PACKET_JSON = (
+    "casp17/casp17_historical_seed_clearance_fill_candidate_packet_current.json"
+)
+DEFAULT_HISTORICAL_SEED_CLEARANCE_EXECUTION_BOARD_JSON = (
+    "casp17/casp17_historical_seed_clearance_execution_board_current.json"
+)
+DEFAULT_HISTORICAL_SEED_FIRST_CLEARANCE_OPERATOR_KIT_JSON = (
+    "casp17/casp17_historical_seed_first_clearance_operator_kit_current.json"
 )
 DEFAULT_HISTORICAL_SEED_CLEARANCE_TO_IDENTITY_INTAKE_SYNC_JSON = (
     "casp17/casp17_historical_seed_clearance_to_identity_intake_sync_current.json"
@@ -266,6 +356,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     raw_ranked_model_quarantine_payload = _read_json(args.raw_ranked_model_quarantine_json)
     closure_payload = _read_json(args.win_gap_closure_json)
     goal_scorecard_payload = _read_json(args.win_tier_goal_scorecard_json)
+    active_scope_decision_payload = _read_json(args.active_scope_decision_json)
+    capri_round65_readiness_payload = _read_json(args.capri_round65_readiness_json)
+    capri_round65_format_preflight_payload = _read_json(args.capri_round65_format_preflight_json)
     scaffold_payload = _read_json(args.input_scaffold_json)
     inventory_payload = _read_json(args.input_inventory_json)
     dashboard_payload = _read_json(args.operator_dashboard_json)
@@ -280,20 +373,107 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     historical_seed_no_leak_provenance_dossiers_payload = _read_json(
         args.historical_seed_no_leak_provenance_dossiers_json
     )
+    historical_seed_no_leak_gap_repair_plan_payload = _read_json(
+        args.historical_seed_no_leak_gap_repair_plan_json
+    )
     historical_seed_current_target_prefill_payload = _read_json(
         args.historical_seed_current_target_prefill_json
+    )
+    historical_seed_native_authority_audit_payload = _read_json(
+        args.historical_seed_native_authority_audit_json
+    )
+    historical_seed_native_replacement_candidates_payload = _read_json(
+        args.historical_seed_native_replacement_candidates_json
+    )
+    historical_seed_complex_source_authority_candidates_payload = _read_json(
+        args.historical_seed_complex_source_authority_candidates_json
     )
     historical_seed_chronology_candidate_board_payload = _read_json(
         args.historical_seed_chronology_candidate_board_json
     )
+    historical_seed_authoritative_chronology_audit_payload = _read_json(
+        args.historical_seed_authoritative_chronology_audit_json
+    )
+    historical_seed_lane_decision_packet_payload = _read_json(
+        args.historical_seed_lane_decision_packet_json
+    )
+    historical_seed_strict_blind_replacement_queue_payload = _read_json(
+        args.historical_seed_strict_blind_replacement_queue_json
+    )
+    historical_seed_strict_blind_replacement_intake_payload = _read_json(
+        args.historical_seed_strict_blind_replacement_intake_json
+    )
+    historical_seed_strict_blind_replacement_evidence_dropzones_payload = _read_json(
+        args.historical_seed_strict_blind_replacement_evidence_dropzones_json
+    )
+    historical_seed_strict_blind_replacement_evidence_action_board_payload = _read_json(
+        args.historical_seed_strict_blind_replacement_evidence_action_board_json
+    )
+    historical_seed_strict_blind_replacement_evidence_quality_audit_payload = _read_json(
+        args.historical_seed_strict_blind_replacement_evidence_quality_audit_json
+    )
+    historical_seed_strict_blind_replacement_evidence_import_gate_payload = _read_json(
+        args.historical_seed_strict_blind_replacement_evidence_import_gate_json
+    )
+    historical_seed_strict_blind_replacement_operator_value_gate_payload = _read_json(
+        args.historical_seed_strict_blind_replacement_operator_value_gate_json
+    )
+    historical_seed_strict_blind_replacement_operator_action_board_payload = _read_json(
+        args.historical_seed_strict_blind_replacement_operator_action_board_json
+    )
+    historical_seed_strict_blind_replacement_promotion_gate_payload = _read_json(
+        args.historical_seed_strict_blind_replacement_promotion_gate_json
+    )
+    historical_seed_strict_blind_replacement_cycle_payload = _read_json(
+        args.historical_seed_strict_blind_replacement_cycle_json
+    )
+    historical_seed_strict_blind_replacement_first_slot_kit_payload = _read_json(
+        args.historical_seed_strict_blind_replacement_first_slot_kit_json
+    )
+    historical_seed_strict_blind_replacement_first_slot_local_candidate_board_payload = _read_json(
+        args.historical_seed_strict_blind_replacement_first_slot_local_candidate_board_json
+    )
+    historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_payload = _read_json(
+        args.historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_json
+    )
+    historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_payload = _read_json(
+        args.historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_json
+    )
+    historical_seed_strict_blind_replacement_first_slot_source_route_board_payload = _read_json(
+        args.historical_seed_strict_blind_replacement_first_slot_source_route_board_json
+    )
+    historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_payload = _read_json(
+        args.historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_json
+    )
     historical_seed_ablation_candidate_manifests_payload = _read_json(
         args.historical_seed_ablation_candidate_manifests_json
+    )
+    historical_seed_ablation_gap_repair_plan_payload = _read_json(
+        args.historical_seed_ablation_gap_repair_plan_json
     )
     historical_seed_top5_candidate_pools_payload = _read_json(
         args.historical_seed_top5_candidate_pools_json
     )
+    historical_seed_internal_score_candidates_payload = _read_json(
+        args.historical_seed_internal_score_candidates_json
+    )
+    historical_seed_native_oracle_metric_candidates_payload = _read_json(
+        args.historical_seed_native_oracle_metric_candidates_json
+    )
     historical_seed_calibration_candidate_ledgers_payload = _read_json(
         args.historical_seed_calibration_candidate_ledgers_json
+    )
+    historical_seed_calibration_field_candidates_payload = _read_json(
+        args.historical_seed_calibration_field_candidates_json
+    )
+    historical_seed_clearance_fill_candidate_packet_payload = _read_json(
+        args.historical_seed_clearance_fill_candidate_packet_json
+    )
+    historical_seed_clearance_execution_board_payload = _read_json(
+        args.historical_seed_clearance_execution_board_json
+    )
+    historical_seed_first_clearance_operator_kit_payload = _read_json(
+        args.historical_seed_first_clearance_operator_kit_json
     )
     historical_seed_clearance_to_identity_intake_sync_payload = _read_json(
         args.historical_seed_clearance_to_identity_intake_sync_json
@@ -399,6 +579,12 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     raw_ranked_model_quarantine_summary = _summary(raw_ranked_model_quarantine_payload)
     closure_summary = _summary(closure_payload)
     goal_scorecard_summary = _summary(goal_scorecard_payload)
+    active_scope_decision_summary = _summary(active_scope_decision_payload)
+    capri_round65_readiness_summary = _summary(capri_round65_readiness_payload)
+    capri_round65_format_preflight_summary = _summary(capri_round65_format_preflight_payload)
+    capri_round65_deferred = _text(
+        active_scope_decision_summary.get("capri_round65_participation_status")
+    ).startswith("deferred")
     scaffold_summary = _summary(scaffold_payload)
     inventory_summary = _summary(inventory_payload)
     dashboard_summary = _summary(dashboard_payload)
@@ -418,16 +604,99 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     historical_seed_no_leak_provenance_dossiers_summary = _summary(
         historical_seed_no_leak_provenance_dossiers_payload
     )
+    historical_seed_no_leak_gap_repair_plan_summary = _summary(
+        historical_seed_no_leak_gap_repair_plan_payload
+    )
     historical_seed_current_target_prefill_summary = _summary(historical_seed_current_target_prefill_payload)
+    historical_seed_native_authority_audit_summary = _summary(historical_seed_native_authority_audit_payload)
+    historical_seed_native_replacement_candidates_summary = _summary(
+        historical_seed_native_replacement_candidates_payload
+    )
+    historical_seed_complex_source_authority_candidates_summary = _summary(
+        historical_seed_complex_source_authority_candidates_payload
+    )
     historical_seed_chronology_candidate_board_summary = _summary(
         historical_seed_chronology_candidate_board_payload
+    )
+    historical_seed_authoritative_chronology_audit_summary = _summary(
+        historical_seed_authoritative_chronology_audit_payload
+    )
+    historical_seed_lane_decision_packet_summary = _summary(historical_seed_lane_decision_packet_payload)
+    historical_seed_strict_blind_replacement_queue_summary = _summary(
+        historical_seed_strict_blind_replacement_queue_payload
+    )
+    historical_seed_strict_blind_replacement_intake_summary = _summary(
+        historical_seed_strict_blind_replacement_intake_payload
+    )
+    historical_seed_strict_blind_replacement_evidence_dropzones_summary = _summary(
+        historical_seed_strict_blind_replacement_evidence_dropzones_payload
+    )
+    historical_seed_strict_blind_replacement_evidence_action_board_summary = _summary(
+        historical_seed_strict_blind_replacement_evidence_action_board_payload
+    )
+    historical_seed_strict_blind_replacement_evidence_quality_audit_summary = _summary(
+        historical_seed_strict_blind_replacement_evidence_quality_audit_payload
+    )
+    historical_seed_strict_blind_replacement_evidence_import_gate_summary = _summary(
+        historical_seed_strict_blind_replacement_evidence_import_gate_payload
+    )
+    historical_seed_strict_blind_replacement_operator_value_gate_summary = _summary(
+        historical_seed_strict_blind_replacement_operator_value_gate_payload
+    )
+    historical_seed_strict_blind_replacement_operator_action_board_summary = _summary(
+        historical_seed_strict_blind_replacement_operator_action_board_payload
+    )
+    historical_seed_strict_blind_replacement_promotion_gate_summary = _summary(
+        historical_seed_strict_blind_replacement_promotion_gate_payload
+    )
+    historical_seed_strict_blind_replacement_cycle_summary = _summary(
+        historical_seed_strict_blind_replacement_cycle_payload
+    )
+    historical_seed_strict_blind_replacement_first_slot_kit_summary = _summary(
+        historical_seed_strict_blind_replacement_first_slot_kit_payload
+    )
+    historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary = _summary(
+        historical_seed_strict_blind_replacement_first_slot_local_candidate_board_payload
+    )
+    historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary = _summary(
+        historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_payload
+    )
+    historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary = _summary(
+        historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_payload
+    )
+    historical_seed_strict_blind_replacement_first_slot_source_route_board_summary = _summary(
+        historical_seed_strict_blind_replacement_first_slot_source_route_board_payload
+    )
+    historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary = _summary(
+        historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_payload
     )
     historical_seed_ablation_candidate_manifests_summary = _summary(
         historical_seed_ablation_candidate_manifests_payload
     )
+    historical_seed_ablation_gap_repair_plan_summary = _summary(
+        historical_seed_ablation_gap_repair_plan_payload
+    )
     historical_seed_top5_candidate_pools_summary = _summary(historical_seed_top5_candidate_pools_payload)
+    historical_seed_internal_score_candidates_summary = _summary(
+        historical_seed_internal_score_candidates_payload
+    )
+    historical_seed_native_oracle_metric_candidates_summary = _summary(
+        historical_seed_native_oracle_metric_candidates_payload
+    )
     historical_seed_calibration_candidate_ledgers_summary = _summary(
         historical_seed_calibration_candidate_ledgers_payload
+    )
+    historical_seed_calibration_field_candidates_summary = _summary(
+        historical_seed_calibration_field_candidates_payload
+    )
+    historical_seed_clearance_fill_candidate_packet_summary = _summary(
+        historical_seed_clearance_fill_candidate_packet_payload
+    )
+    historical_seed_clearance_execution_board_summary = _summary(
+        historical_seed_clearance_execution_board_payload
+    )
+    historical_seed_first_clearance_operator_kit_summary = _summary(
+        historical_seed_first_clearance_operator_kit_payload
     )
     historical_seed_clearance_to_identity_intake_sync_summary = _summary(
         historical_seed_clearance_to_identity_intake_sync_payload
@@ -740,6 +1009,94 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             blockers=_text(goal_scorecard_summary.get("first_blocked_gate")),
         ),
         _artifact_row(
+            "active_scope_decision",
+            "CASP17 active scope and CAPRI hold decision",
+            _text(active_scope_decision_summary.get("scope_decision_status")),
+            args.active_scope_decision_json,
+            ready_count=_int(active_scope_decision_summary.get("active_lane_count")),
+            blocked_count=0,
+            total_count=_int(active_scope_decision_summary.get("row_count")),
+            next_action=_text(active_scope_decision_summary.get("first_next_action")),
+            blockers=(
+                "scope:"
+                + _text(active_scope_decision_summary.get("active_competition_scope"))
+                + ",capri:"
+                + _text(active_scope_decision_summary.get("capri_round65_participation_status"))
+            ),
+        ),
+        _artifact_row(
+            "capri_round65_readiness",
+            "CAPRI Round 65 registration, role-selection, and format-preflight gate",
+            (
+                _text(active_scope_decision_summary.get("capri_round65_participation_status"))
+                if capri_round65_deferred
+                else _text(capri_round65_readiness_summary.get("capri_readiness_status"))
+            ),
+            args.capri_round65_readiness_json,
+            ready_count=0 if capri_round65_deferred else _int(capri_round65_readiness_summary.get("format_preflight_target_count")),
+            blocked_count=0 if capri_round65_deferred else _int(capri_round65_readiness_summary.get("blocked_target_count")),
+            total_count=_int(capri_round65_readiness_summary.get("target_count")),
+            next_action=(
+                "preserve CAPRI context only; continue CASP17 historical benchmark and competitive-floor work"
+                if capri_round65_deferred
+                else _text(capri_round65_readiness_summary.get("first_next_action"))
+            ),
+            blockers=(
+                (
+                    "not_active_scope,reason:"
+                    + _text(active_scope_decision_summary.get("capri_round65_hold_reason"))
+                )
+                if capri_round65_deferred
+                else (
+                    "registration:"
+                    + _text(capri_round65_readiness_summary.get("registration_gate_status"))
+                    + ",days:"
+                    + str(capri_round65_readiness_summary.get("registration_days_remaining", ""))
+                    + ",roles:"
+                    + _text(capri_round65_readiness_summary.get("role_selection_status"))
+                    + ",scorer:"
+                    + str(capri_round65_readiness_summary.get("scorer_priority_target_count", ""))
+                    + ",predictor:"
+                    + str(capri_round65_readiness_summary.get("predictor_priority_target_count", ""))
+                )
+            ),
+        ),
+        _artifact_row(
+            "capri_round65_format_preflight",
+            "CAPRI Round 65 local PDB format and online-validator preflight",
+            (
+                _text(active_scope_decision_summary.get("capri_round65_participation_status"))
+                if capri_round65_deferred
+                else _text(capri_round65_format_preflight_summary.get("format_preflight_status"))
+            ),
+            args.capri_round65_format_preflight_json,
+            ready_count=0 if capri_round65_deferred else _int(capri_round65_format_preflight_summary.get("local_pass_count")),
+            blocked_count=0 if capri_round65_deferred else _int(capri_round65_format_preflight_summary.get("blocked_target_count")),
+            total_count=_int(capri_round65_format_preflight_summary.get("target_count")),
+            next_action=(
+                "skip CAPRI format preflight while Round 65 participation is on PI-required hold"
+                if capri_round65_deferred
+                else _text(capri_round65_format_preflight_summary.get("first_next_action"))
+            ),
+            blockers=(
+                (
+                    "not_active_scope,capri:"
+                    + _text(active_scope_decision_summary.get("capri_round65_participation_status"))
+                )
+                if capri_round65_deferred
+                else (
+                    "checked:"
+                    + str(capri_round65_format_preflight_summary.get("checked_submission_count", ""))
+                    + ",template_missing:"
+                    + str(capri_round65_format_preflight_summary.get("target_template_missing_count", ""))
+                    + ",candidate_missing:"
+                    + str(capri_round65_format_preflight_summary.get("candidate_submission_missing_count", ""))
+                    + ",format_errors:"
+                    + str(capri_round65_format_preflight_summary.get("format_error_count", ""))
+                )
+            ),
+        ),
+        _artifact_row(
             "benchmark_input_scaffold",
             "No-leak historical benchmark row folders",
             _text(scaffold_summary.get("scaffold_status")),
@@ -927,6 +1284,28 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             ),
         ),
         _artifact_row(
+            "historical_seed_no_leak_gap_repair_plan",
+            "No-leak provenance repair plan separating operator-required fields from weak local hints",
+            _text(historical_seed_no_leak_gap_repair_plan_summary.get("no_leak_gap_repair_status")),
+            args.historical_seed_no_leak_gap_repair_plan_json,
+            ready_count=0,
+            blocked_count=_int(historical_seed_no_leak_gap_repair_plan_summary.get("seed_row_count")),
+            total_count=_int(historical_seed_no_leak_gap_repair_plan_summary.get("seed_row_count")),
+            next_action=_text(historical_seed_no_leak_gap_repair_plan_summary.get("first_next_action")),
+            blockers=(
+                "fields:"
+                + str(historical_seed_no_leak_gap_repair_plan_summary.get("field_count", ""))
+                + ",operator_required:"
+                + str(historical_seed_no_leak_gap_repair_plan_summary.get("operator_required_field_count", ""))
+                + ",weak:"
+                + str(historical_seed_no_leak_gap_repair_plan_summary.get("weak_local_candidate_field_count", ""))
+                + ",authoritative:"
+                + str(historical_seed_no_leak_gap_repair_plan_summary.get("authoritative_candidate_field_count", ""))
+                + ",mtime_risk:"
+                + str(historical_seed_no_leak_gap_repair_plan_summary.get("mtime_risk_row_count", ""))
+            ),
+        ),
+        _artifact_row(
             "historical_seed_current_target_prefill",
             "Fail-closed current-target=false prefill for historical seed rows",
             _text(historical_seed_current_target_prefill_summary.get("prefill_status")),
@@ -953,6 +1332,140 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             ),
         ),
         _artifact_row(
+            "historical_seed_native_authority_audit",
+            "Native/reference authority audit for historical seed benchmark rows",
+            _text(historical_seed_native_authority_audit_summary.get("native_authority_audit_status")),
+            args.historical_seed_native_authority_audit_json,
+            ready_count=_int(historical_seed_native_authority_audit_summary.get("native_authority_pass_count")),
+            blocked_count=_int(historical_seed_native_authority_audit_summary.get("native_authority_blocked_count")),
+            total_count=_int(historical_seed_native_authority_audit_summary.get("seed_row_count")),
+            next_action=_text(historical_seed_native_authority_audit_summary.get("first_blocked_next_action")),
+            blockers=(
+                "placeholder:"
+                + str(historical_seed_native_authority_audit_summary.get("placeholder_native_count", ""))
+                + ",ca_only:"
+                + str(historical_seed_native_authority_audit_summary.get("ca_only_native_count", ""))
+                + ",local_generated_no_authority:"
+                + str(
+                    historical_seed_native_authority_audit_summary.get(
+                        "local_generated_native_without_authority_count", ""
+                    )
+                )
+                + ",ref_missing:"
+                + str(historical_seed_native_authority_audit_summary.get("authority_ref_missing_count", ""))
+                + ",first:"
+                + _text(historical_seed_native_authority_audit_summary.get("first_blocked_target_id"))
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_native_replacement_candidates",
+            "RCSB public native replacement candidates for historical seed placeholders",
+            _text(
+                historical_seed_native_replacement_candidates_summary.get(
+                    "native_replacement_candidate_status"
+                )
+            ),
+            args.historical_seed_native_replacement_candidates_json,
+            ready_count=_int(
+                historical_seed_native_replacement_candidates_summary.get("operator_review_ready_count")
+            ),
+            blocked_count=(
+                _int(
+                    historical_seed_native_replacement_candidates_summary.get(
+                        "source_download_required_count"
+                    )
+                )
+                + _int(
+                    historical_seed_native_replacement_candidates_summary.get(
+                        "candidate_file_blocked_count"
+                    )
+                )
+                + _int(
+                    historical_seed_native_replacement_candidates_summary.get(
+                        "complex_authority_required_count"
+                    )
+                )
+            ),
+            total_count=_int(historical_seed_native_replacement_candidates_summary.get("candidate_row_count")),
+            next_action=_text(
+                historical_seed_native_replacement_candidates_summary.get("first_blocked_next_action")
+            ),
+            blockers=(
+                "review_ready:"
+                + str(historical_seed_native_replacement_candidates_summary.get("operator_review_ready_count", ""))
+                + ",download:"
+                + str(
+                    historical_seed_native_replacement_candidates_summary.get(
+                        "source_download_required_count", ""
+                    )
+                )
+                + ",file_blocked:"
+                + str(
+                    historical_seed_native_replacement_candidates_summary.get(
+                        "candidate_file_blocked_count", ""
+                    )
+                )
+                + ",complex_authority:"
+                + str(
+                    historical_seed_native_replacement_candidates_summary.get(
+                        "complex_authority_required_count", ""
+                    )
+                )
+                + ",dir:"
+                + _text(historical_seed_native_replacement_candidates_summary.get("candidate_dir"))
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_complex_source_authority_candidates",
+            "Complex source-authority review packet for generated T. cruzi PDE historical seeds",
+            _text(
+                historical_seed_complex_source_authority_candidates_summary.get(
+                    "complex_source_authority_candidate_status"
+                )
+            ),
+            args.historical_seed_complex_source_authority_candidates_json,
+            ready_count=_int(
+                historical_seed_complex_source_authority_candidates_summary.get("operator_review_ready_count")
+            ),
+            blocked_count=_int(
+                historical_seed_complex_source_authority_candidates_summary.get(
+                    "source_authority_blocked_count"
+                )
+            ),
+            total_count=_int(
+                historical_seed_complex_source_authority_candidates_summary.get("candidate_row_count")
+            ),
+            next_action=_text(historical_seed_complex_source_authority_candidates_summary.get("first_next_action")),
+            blockers=(
+                "direct:"
+                + str(
+                    historical_seed_complex_source_authority_candidates_summary.get(
+                        "direct_source_authority_ready_count", ""
+                    )
+                )
+                + ",homolog:"
+                + str(
+                    historical_seed_complex_source_authority_candidates_summary.get(
+                        "homolog_source_authority_ready_count", ""
+                    )
+                )
+                + ",operator_apply:"
+                + str(
+                    historical_seed_complex_source_authority_candidates_summary.get(
+                        "operator_apply_allowed_count", ""
+                    )
+                )
+                + ",claim_promotion:"
+                + str(
+                    historical_seed_complex_source_authority_candidates_summary.get(
+                        "claim_promotion_allowed_count", ""
+                    )
+                )
+                + ",protein:"
+                + _text(historical_seed_complex_source_authority_candidates_summary.get("protein_authority_ref"))
+            ),
+        ),
+        _artifact_row(
             "historical_seed_chronology_candidate_board",
             "Operator chronology candidate board for historical seed rows",
             _text(historical_seed_chronology_candidate_board_summary.get("chronology_board_status")),
@@ -976,6 +1489,1178 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + str(historical_seed_chronology_candidate_board_summary.get("file_mtime_order_risk_count", ""))
                 + ",conflicts:"
                 + str(historical_seed_chronology_candidate_board_summary.get("blocked_chronology_conflict_count", ""))
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_authoritative_chronology_audit",
+            "Authority-date chronology audit for historical seed rows",
+            _text(
+                historical_seed_authoritative_chronology_audit_summary.get(
+                    "authoritative_chronology_audit_status"
+                )
+            ),
+            args.historical_seed_authoritative_chronology_audit_json,
+            ready_count=_int(
+                historical_seed_authoritative_chronology_audit_summary.get("before_native_candidate_count")
+            ),
+            blocked_count=(
+                _int(historical_seed_authoritative_chronology_audit_summary.get("post_native_blocked_count"))
+                + _int(historical_seed_authoritative_chronology_audit_summary.get("evidence_required_count"))
+            ),
+            total_count=_int(historical_seed_authoritative_chronology_audit_summary.get("seed_row_count")),
+            next_action=_text(historical_seed_authoritative_chronology_audit_summary.get("first_next_action")),
+            blockers=(
+                "native_dates:"
+                + str(historical_seed_authoritative_chronology_audit_summary.get("native_authority_date_count", ""))
+                + ",prediction_dates:"
+                + str(historical_seed_authoritative_chronology_audit_summary.get("prediction_date_candidate_count", ""))
+                + ",before_native:"
+                + str(historical_seed_authoritative_chronology_audit_summary.get("before_native_candidate_count", ""))
+                + ",post_native:"
+                + str(historical_seed_authoritative_chronology_audit_summary.get("post_native_blocked_count", ""))
+                + ",evidence_required:"
+                + str(historical_seed_authoritative_chronology_audit_summary.get("evidence_required_count", ""))
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_lane_decision_packet",
+            "Lane decision packet separating strict blind proof from retrospective review",
+            _text(historical_seed_lane_decision_packet_summary.get("lane_decision_status")),
+            args.historical_seed_lane_decision_packet_json,
+            ready_count=_int(historical_seed_lane_decision_packet_summary.get("competitive_proof_allowed_count")),
+            blocked_count=_int(
+                historical_seed_lane_decision_packet_summary.get("strict_blind_replacement_required_count")
+            ),
+            total_count=_int(historical_seed_lane_decision_packet_summary.get("seed_row_count")),
+            next_action=_text(historical_seed_lane_decision_packet_summary.get("first_next_action")),
+            blockers=(
+                "strict_blind:"
+                + str(historical_seed_lane_decision_packet_summary.get("strict_blind_eligible_count", ""))
+                + ",retrospective:"
+                + str(historical_seed_lane_decision_packet_summary.get("retrospective_calibration_review_count", ""))
+                + ",authority_required:"
+                + str(historical_seed_lane_decision_packet_summary.get("authority_or_replacement_required_count", ""))
+                + ",competitive:"
+                + str(historical_seed_lane_decision_packet_summary.get("competitive_proof_allowed_count", ""))
+                + ",replacement_required:"
+                + str(historical_seed_lane_decision_packet_summary.get("strict_blind_replacement_required_count", ""))
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_strict_blind_replacement_queue",
+            "Strict-blind replacement queue for the 40-row historical benchmark scaffold",
+            _text(
+                historical_seed_strict_blind_replacement_queue_summary.get(
+                    "strict_blind_replacement_queue_status"
+                )
+            ),
+            args.historical_seed_strict_blind_replacement_queue_json,
+            ready_count=_int(
+                historical_seed_strict_blind_replacement_queue_summary.get("competitive_proof_allowed_slot_count")
+            ),
+            blocked_count=_int(
+                historical_seed_strict_blind_replacement_queue_summary.get(
+                    "strict_blind_replacement_required_count"
+                )
+            ),
+            total_count=_int(historical_seed_strict_blind_replacement_queue_summary.get("scaffold_slot_count")),
+            next_action=_text(historical_seed_strict_blind_replacement_queue_summary.get("first_next_action")),
+            blockers=(
+                "slots:"
+                + str(historical_seed_strict_blind_replacement_queue_summary.get("scaffold_slot_count", ""))
+                + ",monomer_complex:"
+                + str(historical_seed_strict_blind_replacement_queue_summary.get("monomer_slot_count", ""))
+                + "/"
+                + str(historical_seed_strict_blind_replacement_queue_summary.get("complex_slot_count", ""))
+                + ",replacement_required:"
+                + str(
+                    historical_seed_strict_blind_replacement_queue_summary.get(
+                        "strict_blind_replacement_required_count", ""
+                    )
+                )
+                + ",current_seed_competitive:"
+                + str(
+                    historical_seed_strict_blind_replacement_queue_summary.get(
+                        "current_seed_competitive_allowed_count", ""
+                    )
+                )
+                + ",fields:"
+                + str(historical_seed_strict_blind_replacement_queue_summary.get("requirement_field_count", ""))
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_strict_blind_replacement_intake",
+            "Strict-blind replacement intake and fail-closed preflight for queued scaffold slots",
+            _text(
+                historical_seed_strict_blind_replacement_intake_summary.get(
+                    "strict_blind_replacement_intake_status"
+                )
+            ),
+            args.historical_seed_strict_blind_replacement_intake_json,
+            ready_count=_int(
+                historical_seed_strict_blind_replacement_intake_summary.get("ready_for_preflight_count")
+            ),
+            blocked_count=_int(
+                historical_seed_strict_blind_replacement_intake_summary.get("blocked_or_awaiting_count")
+            ),
+            total_count=_int(historical_seed_strict_blind_replacement_intake_summary.get("intake_slot_count")),
+            next_action=_text(historical_seed_strict_blind_replacement_intake_summary.get("first_next_action")),
+            blockers=(
+                "slots:"
+                + str(historical_seed_strict_blind_replacement_intake_summary.get("intake_slot_count", ""))
+                + ",ready:"
+                + str(historical_seed_strict_blind_replacement_intake_summary.get("ready_for_preflight_count", ""))
+                + ",awaiting:"
+                + str(historical_seed_strict_blind_replacement_intake_summary.get("blocked_or_awaiting_count", ""))
+                + ",filled:"
+                + str(historical_seed_strict_blind_replacement_intake_summary.get("filled_field_count", ""))
+                + ",missing:"
+                + str(historical_seed_strict_blind_replacement_intake_summary.get("missing_field_count", ""))
+                + ",fields:"
+                + str(historical_seed_strict_blind_replacement_intake_summary.get("required_field_count", ""))
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_strict_blind_replacement_evidence_dropzones",
+            "Strict-blind replacement evidence dropzones and intake patch previews",
+            _text(
+                historical_seed_strict_blind_replacement_evidence_dropzones_summary.get(
+                    "strict_blind_replacement_evidence_dropzone_status"
+                )
+            ),
+            args.historical_seed_strict_blind_replacement_evidence_dropzones_json,
+            ready_count=_int(
+                historical_seed_strict_blind_replacement_evidence_dropzones_summary.get(
+                    "ready_for_intake_patch_count"
+                )
+            ),
+            blocked_count=_int(
+                historical_seed_strict_blind_replacement_evidence_dropzones_summary.get("awaiting_file_count")
+            ),
+            total_count=_int(historical_seed_strict_blind_replacement_evidence_dropzones_summary.get("dropzone_count")),
+            next_action=_text(
+                historical_seed_strict_blind_replacement_evidence_dropzones_summary.get("first_next_action")
+            ),
+            blockers=(
+                "dropzones:"
+                + str(historical_seed_strict_blind_replacement_evidence_dropzones_summary.get("dropzone_count", ""))
+                + ",ready:"
+                + str(
+                    historical_seed_strict_blind_replacement_evidence_dropzones_summary.get(
+                        "ready_for_intake_patch_count", ""
+                    )
+                )
+                + ",awaiting:"
+                + str(historical_seed_strict_blind_replacement_evidence_dropzones_summary.get("awaiting_file_count", ""))
+                + ",files_present:"
+                + str(historical_seed_strict_blind_replacement_evidence_dropzones_summary.get("file_present_count", ""))
+                + ",files_missing:"
+                + str(historical_seed_strict_blind_replacement_evidence_dropzones_summary.get("file_missing_count", ""))
+                + ",files_required:"
+                + str(historical_seed_strict_blind_replacement_evidence_dropzones_summary.get("file_required_count", ""))
+                + ",operator_values:"
+                + str(
+                    historical_seed_strict_blind_replacement_evidence_dropzones_summary.get(
+                        "operator_value_required_count", ""
+                    )
+                )
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_strict_blind_replacement_evidence_action_board",
+            "Strict-blind replacement evidence file placement action board",
+            _text(
+                historical_seed_strict_blind_replacement_evidence_action_board_summary.get(
+                    "strict_blind_replacement_evidence_action_board_status"
+                )
+            ),
+            args.historical_seed_strict_blind_replacement_evidence_action_board_json,
+            ready_count=_int(
+                historical_seed_strict_blind_replacement_evidence_action_board_summary.get(
+                    "ready_for_quality_audit_count"
+                )
+            ),
+            blocked_count=(
+                _int(historical_seed_strict_blind_replacement_evidence_action_board_summary.get("open_missing_file_count"))
+                + _int(historical_seed_strict_blind_replacement_evidence_action_board_summary.get("blocked_count"))
+            ),
+            total_count=_int(historical_seed_strict_blind_replacement_evidence_action_board_summary.get("action_count")),
+            next_action=_text(historical_seed_strict_blind_replacement_evidence_action_board_summary.get("first_next_action")),
+            blockers=(
+                "actions:"
+                + str(historical_seed_strict_blind_replacement_evidence_action_board_summary.get("action_count", ""))
+                + ",ready:"
+                + str(
+                    historical_seed_strict_blind_replacement_evidence_action_board_summary.get(
+                        "ready_for_quality_audit_count", ""
+                    )
+                )
+                + ",open:"
+                + str(historical_seed_strict_blind_replacement_evidence_action_board_summary.get("open_missing_file_count", ""))
+                + ",blocked:"
+                + str(historical_seed_strict_blind_replacement_evidence_action_board_summary.get("blocked_count", ""))
+                + ",missing_by_field:"
+                + str(historical_seed_strict_blind_replacement_evidence_action_board_summary.get("prediction_pdb_missing_count", ""))
+                + "/"
+                + str(historical_seed_strict_blind_replacement_evidence_action_board_summary.get("native_pdb_missing_count", ""))
+                + "/"
+                + str(historical_seed_strict_blind_replacement_evidence_action_board_summary.get("native_authority_missing_count", ""))
+                + "/"
+                + str(historical_seed_strict_blind_replacement_evidence_action_board_summary.get("no_leak_evidence_missing_count", ""))
+                + "/"
+                + str(historical_seed_strict_blind_replacement_evidence_action_board_summary.get("ablation_manifest_missing_count", ""))
+                + "/"
+                + str(historical_seed_strict_blind_replacement_evidence_action_board_summary.get("calibration_values_missing_count", ""))
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_strict_blind_replacement_evidence_quality_audit",
+            "Strict-blind replacement evidence file quality audit",
+            _text(
+                historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get(
+                    "strict_blind_replacement_evidence_quality_audit_status"
+                )
+            ),
+            args.historical_seed_strict_blind_replacement_evidence_quality_audit_json,
+            ready_count=_int(
+                historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get(
+                    "ready_for_quality_review_count"
+                )
+            ),
+            blocked_count=(
+                _int(historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get("slot_count"))
+                - _int(
+                    historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get(
+                        "ready_for_quality_review_count"
+                    )
+                )
+            ),
+            total_count=_int(historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get("slot_count")),
+            next_action=_text(
+                historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get("first_next_action")
+            ),
+            blockers=(
+                "ready:"
+                + str(
+                    historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get(
+                        "ready_for_quality_review_count", ""
+                    )
+                )
+                + ",awaiting:"
+                + str(
+                    historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get(
+                        "awaiting_evidence_files_count", ""
+                    )
+                )
+                + ",blocked:"
+                + str(
+                    historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get(
+                        "blocked_evidence_quality_count", ""
+                    )
+                )
+                + ",files:"
+                + str(historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get("file_present_count", ""))
+                + "/"
+                + str(historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get("file_missing_count", ""))
+                + "/"
+                + str(historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get("file_required_count", ""))
+                + ",pdb_slots:"
+                + str(historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get("pdb_valid_slot_count", ""))
+                + "/"
+                + str(historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get("pdb_invalid_slot_count", ""))
+                + ",distinct:"
+                + str(
+                    historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get(
+                        "prediction_native_distinct_count", ""
+                    )
+                )
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_strict_blind_replacement_evidence_import_gate",
+            "Strict-blind replacement evidence import gate from dropzone patch previews into intake CSVs",
+            _text(
+                historical_seed_strict_blind_replacement_evidence_import_gate_summary.get(
+                    "strict_blind_replacement_evidence_import_gate_status"
+                )
+            ),
+            args.historical_seed_strict_blind_replacement_evidence_import_gate_json,
+            ready_count=(
+                _int(historical_seed_strict_blind_replacement_evidence_import_gate_summary.get("ready_for_apply_count"))
+                + _int(historical_seed_strict_blind_replacement_evidence_import_gate_summary.get("applied_count"))
+                + _int(
+                    historical_seed_strict_blind_replacement_evidence_import_gate_summary.get(
+                        "already_applied_count"
+                    )
+                )
+            ),
+            blocked_count=(
+                _int(historical_seed_strict_blind_replacement_evidence_import_gate_summary.get("awaiting_file_count"))
+                + _int(
+                    historical_seed_strict_blind_replacement_evidence_import_gate_summary.get(
+                        "awaiting_operator_value_count"
+                    )
+                )
+                + _int(historical_seed_strict_blind_replacement_evidence_import_gate_summary.get("blocked_count"))
+            ),
+            total_count=_int(historical_seed_strict_blind_replacement_evidence_import_gate_summary.get("action_count")),
+            next_action=_text(
+                historical_seed_strict_blind_replacement_evidence_import_gate_summary.get("first_next_action")
+            ),
+            blockers=(
+                "mode:"
+                + str(historical_seed_strict_blind_replacement_evidence_import_gate_summary.get("apply_mode", ""))
+                + ",actions:"
+                + str(historical_seed_strict_blind_replacement_evidence_import_gate_summary.get("action_count", ""))
+                + ",file_operator:"
+                + str(historical_seed_strict_blind_replacement_evidence_import_gate_summary.get("file_action_count", ""))
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_evidence_import_gate_summary.get(
+                        "operator_value_action_count", ""
+                    )
+                )
+                + ",ready:"
+                + str(historical_seed_strict_blind_replacement_evidence_import_gate_summary.get("ready_for_apply_count", ""))
+                + ",awaiting_file:"
+                + str(historical_seed_strict_blind_replacement_evidence_import_gate_summary.get("awaiting_file_count", ""))
+                + ",awaiting_operator:"
+                + str(
+                    historical_seed_strict_blind_replacement_evidence_import_gate_summary.get(
+                        "awaiting_operator_value_count", ""
+                    )
+                )
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_strict_blind_replacement_operator_value_gate",
+            "Strict-blind replacement operator-value templates and apply gate",
+            _text(
+                historical_seed_strict_blind_replacement_operator_value_gate_summary.get(
+                    "strict_blind_replacement_operator_value_gate_status"
+                )
+            ),
+            args.historical_seed_strict_blind_replacement_operator_value_gate_json,
+            ready_count=(
+                _int(historical_seed_strict_blind_replacement_operator_value_gate_summary.get("ready_for_apply_count"))
+                + _int(historical_seed_strict_blind_replacement_operator_value_gate_summary.get("applied_count"))
+                + _int(historical_seed_strict_blind_replacement_operator_value_gate_summary.get("already_applied_count"))
+            ),
+            blocked_count=(
+                _int(
+                    historical_seed_strict_blind_replacement_operator_value_gate_summary.get(
+                        "awaiting_operator_value_count"
+                    )
+                )
+                + _int(historical_seed_strict_blind_replacement_operator_value_gate_summary.get("awaiting_evidence_ref_count"))
+                + _int(
+                    historical_seed_strict_blind_replacement_operator_value_gate_summary.get(
+                        "awaiting_operator_clearance_count"
+                    )
+                )
+                + _int(historical_seed_strict_blind_replacement_operator_value_gate_summary.get("blocked_count"))
+            ),
+            total_count=_int(historical_seed_strict_blind_replacement_operator_value_gate_summary.get("action_count")),
+            next_action=_text(historical_seed_strict_blind_replacement_operator_value_gate_summary.get("first_next_action")),
+            blockers=(
+                "mode:"
+                + str(historical_seed_strict_blind_replacement_operator_value_gate_summary.get("apply_mode", ""))
+                + ",templates:"
+                + str(historical_seed_strict_blind_replacement_operator_value_gate_summary.get("template_count", ""))
+                + ",actions:"
+                + str(historical_seed_strict_blind_replacement_operator_value_gate_summary.get("action_count", ""))
+                + ",ready:"
+                + str(historical_seed_strict_blind_replacement_operator_value_gate_summary.get("ready_for_apply_count", ""))
+                + ",awaiting_value:"
+                + str(
+                    historical_seed_strict_blind_replacement_operator_value_gate_summary.get(
+                        "awaiting_operator_value_count", ""
+                    )
+                )
+                + ",awaiting_evidence:"
+                + str(
+                    historical_seed_strict_blind_replacement_operator_value_gate_summary.get(
+                        "awaiting_evidence_ref_count", ""
+                    )
+                )
+                + ",awaiting_clearance:"
+                + str(
+                    historical_seed_strict_blind_replacement_operator_value_gate_summary.get(
+                        "awaiting_operator_clearance_count", ""
+                    )
+                )
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_strict_blind_replacement_operator_action_board",
+            "Strict-blind replacement operator value action board",
+            _text(
+                historical_seed_strict_blind_replacement_operator_action_board_summary.get(
+                    "strict_blind_replacement_operator_action_board_status"
+                )
+            ),
+            args.historical_seed_strict_blind_replacement_operator_action_board_json,
+            ready_count=(
+                _int(historical_seed_strict_blind_replacement_operator_action_board_summary.get("ready_for_apply_count"))
+                + _int(historical_seed_strict_blind_replacement_operator_action_board_summary.get("applied_count"))
+                + _int(historical_seed_strict_blind_replacement_operator_action_board_summary.get("already_applied_count"))
+            ),
+            blocked_count=(
+                _int(historical_seed_strict_blind_replacement_operator_action_board_summary.get("open_operator_value_count"))
+                + _int(historical_seed_strict_blind_replacement_operator_action_board_summary.get("blocked_count"))
+            ),
+            total_count=_int(historical_seed_strict_blind_replacement_operator_action_board_summary.get("action_count")),
+            next_action=_text(historical_seed_strict_blind_replacement_operator_action_board_summary.get("first_next_action")),
+            blockers=(
+                "actions:"
+                + str(historical_seed_strict_blind_replacement_operator_action_board_summary.get("action_count", ""))
+                + ",ready:"
+                + str(historical_seed_strict_blind_replacement_operator_action_board_summary.get("ready_for_apply_count", ""))
+                + ",open_value:"
+                + str(historical_seed_strict_blind_replacement_operator_action_board_summary.get("open_operator_value_count", ""))
+                + ",open_evidence:"
+                + str(historical_seed_strict_blind_replacement_operator_action_board_summary.get("open_evidence_ref_count", ""))
+                + ",open_clearance:"
+                + str(
+                    historical_seed_strict_blind_replacement_operator_action_board_summary.get(
+                        "open_operator_clearance_count", ""
+                    )
+                )
+                + ",missing_by_field:"
+                + str(
+                    historical_seed_strict_blind_replacement_operator_action_board_summary.get(
+                        "replacement_target_id_missing_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_operator_action_board_summary.get(
+                        "replacement_benchmark_id_missing_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_operator_action_board_summary.get(
+                        "target_identity_non_current_missing_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_operator_action_board_summary.get(
+                        "prediction_created_at_missing_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_operator_action_board_summary.get(
+                        "native_release_date_missing_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_operator_action_board_summary.get(
+                        "prediction_before_native_missing_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_operator_action_board_summary.get(
+                        "public_template_false_missing_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_operator_action_board_summary.get(
+                        "other_team_false_missing_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_operator_action_board_summary.get(
+                        "post_release_false_missing_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_operator_action_board_summary.get(
+                        "operator_clearance_value_missing_count", ""
+                    )
+                )
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_strict_blind_replacement_promotion_gate",
+            "Strict-blind replacement promotion gate for competitive proof entry",
+            _text(
+                historical_seed_strict_blind_replacement_promotion_gate_summary.get(
+                    "strict_blind_replacement_promotion_gate_status"
+                )
+            ),
+            args.historical_seed_strict_blind_replacement_promotion_gate_json,
+            ready_count=_int(
+                historical_seed_strict_blind_replacement_promotion_gate_summary.get(
+                    "ready_for_competitive_proof_count"
+                )
+            ),
+            blocked_count=(
+                _int(
+                    historical_seed_strict_blind_replacement_promotion_gate_summary.get("slot_count")
+                )
+                - _int(
+                    historical_seed_strict_blind_replacement_promotion_gate_summary.get(
+                        "ready_for_competitive_proof_count"
+                    )
+                )
+            ),
+            total_count=_int(historical_seed_strict_blind_replacement_promotion_gate_summary.get("slot_count")),
+            next_action=_text(historical_seed_strict_blind_replacement_promotion_gate_summary.get("first_next_action")),
+            blockers=(
+                "ready:"
+                + str(
+                    historical_seed_strict_blind_replacement_promotion_gate_summary.get(
+                        "ready_for_competitive_proof_count", ""
+                    )
+                )
+                + ",awaiting_file:"
+                + str(historical_seed_strict_blind_replacement_promotion_gate_summary.get("awaiting_file_evidence_count", ""))
+                + ",awaiting_operator:"
+                + str(
+                    historical_seed_strict_blind_replacement_promotion_gate_summary.get(
+                        "awaiting_operator_values_count", ""
+                    )
+                )
+                + ",awaiting_apply:"
+                + str(historical_seed_strict_blind_replacement_promotion_gate_summary.get("awaiting_apply_count", ""))
+                + ",awaiting_intake:"
+                + str(
+                    historical_seed_strict_blind_replacement_promotion_gate_summary.get(
+                        "awaiting_intake_preflight_count", ""
+                    )
+                )
+                + ",blocked_review:"
+                + str(historical_seed_strict_blind_replacement_promotion_gate_summary.get("blocked_review_count", ""))
+                + ",complete_slots:"
+                + str(historical_seed_strict_blind_replacement_promotion_gate_summary.get("intake_ready_count", ""))
+                + "/"
+                + str(historical_seed_strict_blind_replacement_promotion_gate_summary.get("file_complete_slot_count", ""))
+                + "/"
+                + str(historical_seed_strict_blind_replacement_promotion_gate_summary.get("operator_complete_slot_count", ""))
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_strict_blind_replacement_cycle",
+            "Strict-blind replacement cycle across queue, evidence, quality, operator, action-board, and promotion gates",
+            _text(
+                historical_seed_strict_blind_replacement_cycle_summary.get(
+                    "strict_blind_replacement_cycle_status"
+                )
+            ),
+            args.historical_seed_strict_blind_replacement_cycle_json,
+            ready_count=_int(historical_seed_strict_blind_replacement_cycle_summary.get("promotion_ready_count")),
+            blocked_count=(
+                _int(historical_seed_strict_blind_replacement_cycle_summary.get("slot_count"))
+                - _int(historical_seed_strict_blind_replacement_cycle_summary.get("promotion_ready_count"))
+            ),
+            total_count=_int(historical_seed_strict_blind_replacement_cycle_summary.get("slot_count")),
+            next_action=_text(historical_seed_strict_blind_replacement_cycle_summary.get("first_next_action")),
+            blockers=(
+                "stage:"
+                + str(historical_seed_strict_blind_replacement_cycle_summary.get("first_blocking_stage", ""))
+                + ",promotion:"
+                + str(historical_seed_strict_blind_replacement_cycle_summary.get("promotion_ready_count", ""))
+                + "/"
+                + str(historical_seed_strict_blind_replacement_cycle_summary.get("slot_count", ""))
+                + ",files:"
+                + str(historical_seed_strict_blind_replacement_cycle_summary.get("evidence_file_present_count", ""))
+                + "/"
+                + str(historical_seed_strict_blind_replacement_cycle_summary.get("evidence_file_missing_count", ""))
+                + ",quality:"
+                + str(historical_seed_strict_blind_replacement_cycle_summary.get("quality_ready_count", ""))
+                + "/"
+                + str(historical_seed_strict_blind_replacement_cycle_summary.get("quality_awaiting_count", ""))
+                + "/"
+                + str(historical_seed_strict_blind_replacement_cycle_summary.get("quality_blocked_count", ""))
+                + ",operator_awaiting:"
+                + str(historical_seed_strict_blind_replacement_cycle_summary.get("operator_awaiting_value_count", ""))
+                + ",operator_board:"
+                + str(
+                    historical_seed_strict_blind_replacement_cycle_summary.get(
+                        "operator_action_board_open_value_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_cycle_summary.get(
+                        "operator_action_board_open_evidence_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_cycle_summary.get(
+                        "operator_action_board_open_clearance_count", ""
+                    )
+                )
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_strict_blind_replacement_first_slot_kit",
+            "First strict-blind replacement slot evidence and operator execution kit",
+            _text(
+                historical_seed_strict_blind_replacement_first_slot_kit_summary.get(
+                    "strict_blind_replacement_first_slot_kit_status"
+                )
+            ),
+            args.historical_seed_strict_blind_replacement_first_slot_kit_json,
+            ready_count=(
+                _int(historical_seed_strict_blind_replacement_first_slot_kit_summary.get("evidence_ready_count"))
+                + _int(historical_seed_strict_blind_replacement_first_slot_kit_summary.get("operator_ready_count"))
+            ),
+            blocked_count=(
+                _int(historical_seed_strict_blind_replacement_first_slot_kit_summary.get("evidence_open_count"))
+                + _int(historical_seed_strict_blind_replacement_first_slot_kit_summary.get("operator_open_count"))
+                + _int(historical_seed_strict_blind_replacement_first_slot_kit_summary.get("evidence_blocked_count"))
+                + _int(historical_seed_strict_blind_replacement_first_slot_kit_summary.get("operator_blocked_count"))
+            ),
+            total_count=(
+                _int(historical_seed_strict_blind_replacement_first_slot_kit_summary.get("evidence_action_count"))
+                + _int(historical_seed_strict_blind_replacement_first_slot_kit_summary.get("operator_action_count"))
+            ),
+            next_action=_text(historical_seed_strict_blind_replacement_first_slot_kit_summary.get("first_next_action")),
+            blockers=(
+                "benchmark:"
+                + str(historical_seed_strict_blind_replacement_first_slot_kit_summary.get("required_benchmark_id", ""))
+                + ",evidence:"
+                + str(historical_seed_strict_blind_replacement_first_slot_kit_summary.get("evidence_ready_count", ""))
+                + "/"
+                + str(historical_seed_strict_blind_replacement_first_slot_kit_summary.get("evidence_open_count", ""))
+                + "/"
+                + str(historical_seed_strict_blind_replacement_first_slot_kit_summary.get("evidence_blocked_count", ""))
+                + ",operator:"
+                + str(historical_seed_strict_blind_replacement_first_slot_kit_summary.get("operator_ready_count", ""))
+                + "/"
+                + str(historical_seed_strict_blind_replacement_first_slot_kit_summary.get("operator_open_count", ""))
+                + "/"
+                + str(historical_seed_strict_blind_replacement_first_slot_kit_summary.get("operator_blocked_count", ""))
+                + ",operator_open:"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_kit_summary.get(
+                        "operator_open_value_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_kit_summary.get(
+                        "operator_open_evidence_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_kit_summary.get(
+                        "operator_open_clearance_count", ""
+                    )
+                )
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_strict_blind_replacement_first_slot_local_candidate_board",
+            "Local candidate source board for the first strict-blind replacement slot",
+            _text(
+                historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                    "strict_blind_replacement_first_slot_local_candidate_board_status"
+                )
+            ),
+            args.historical_seed_strict_blind_replacement_first_slot_local_candidate_board_json,
+            ready_count=_int(
+                historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                    "ready_for_first_slot_count"
+                )
+            ),
+            blocked_count=(
+                _int(historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get("candidate_count"))
+                - _int(
+                    historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                        "ready_for_first_slot_count"
+                    )
+                )
+            ),
+            total_count=_int(
+                historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get("candidate_count")
+            ),
+            next_action=_text(
+                historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                    "first_review_next_action"
+                )
+            ),
+            blockers=(
+                "candidates:"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                        "ready_for_first_slot_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                        "strict_blind_eligible_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                        "material_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                        "candidate_count", ""
+                    )
+                )
+                + ",present:"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                        "prediction_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                        "native_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                        "native_authority_present_count", ""
+                    )
+                )
+                + ",blocked:"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                        "blocked_chronology_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                        "blocked_no_leak_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                        "blocked_ablation_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                        "blocked_calibration_count", ""
+                    )
+                )
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_strict_blind_replacement_first_slot_candidate_repair_board",
+            "Repair action board for first strict-blind replacement slot local candidates",
+            _text(
+                historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                    "strict_blind_replacement_first_slot_candidate_repair_board_status"
+                )
+            ),
+            args.historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_json,
+            ready_count=0,
+            blocked_count=(
+                _int(
+                    historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                        "open_repair_action_count"
+                    )
+                )
+                + _int(
+                    historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                        "blocked_action_count"
+                    )
+                )
+            ),
+            total_count=_int(
+                historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get("action_count")
+            ),
+            next_action=_text(
+                historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                    "first_next_action"
+                )
+            ),
+            blockers=(
+                "actions:"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                        "open_repair_action_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                        "blocked_action_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                        "action_count", ""
+                    )
+                )
+                + ",classes:"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                        "chronology_action_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                        "no_leak_action_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                        "ablation_action_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                        "calibration_action_count", ""
+                    )
+                )
+                + ",source:"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                        "prediction_file_action_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                        "native_file_action_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                        "native_authority_action_count", ""
+                    )
+                )
+                + ",eligibility:"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                        "eligibility_action_count", ""
+                    )
+                )
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board",
+            "Feasibility gate for first strict-blind replacement slot repair actions",
+            _text(
+                historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                    "strict_blind_replacement_first_slot_repair_feasibility_board_status"
+                )
+            ),
+            args.historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_json,
+            ready_count=_int(
+                historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                    "repairable_operator_source_required_count"
+                )
+            )
+            + _int(
+                historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                    "repairable_operator_evidence_required_count"
+                )
+            )
+            + _int(
+                historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                    "needs_chronology_date_evidence_count"
+                )
+            ),
+            blocked_count=_int(
+                historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                    "external_pre_native_artifact_required_action_count"
+                )
+            )
+            + _int(
+                historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                    "blocked_by_primary_repairs_count"
+                )
+            ),
+            total_count=_int(
+                historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                    "action_count"
+                )
+            ),
+            next_action=_text(
+                historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                    "first_external_next_route"
+                )
+            )
+            or _text(
+                historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                    "first_actionable_required_input"
+                )
+            ),
+            blockers=(
+                "post_native:"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                        "not_repairable_with_current_prediction_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                        "blocked_by_post_native_prediction_count", ""
+                    )
+                )
+                + ",external:"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                        "external_pre_native_artifact_required_action_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                        "external_pre_native_artifact_required_target_count", ""
+                    )
+                )
+                + ",repairable:"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                        "repairable_operator_source_required_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                        "repairable_operator_evidence_required_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                        "needs_chronology_date_evidence_count", ""
+                    )
+                )
+                + ",primary:"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                        "blocked_by_primary_repairs_count", ""
+                    )
+                )
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_strict_blind_replacement_first_slot_source_route_board",
+            "Source-route decision board for the first strict-blind replacement slot",
+            _text(
+                historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get(
+                    "strict_blind_replacement_first_slot_source_route_board_status"
+                )
+            ),
+            args.historical_seed_strict_blind_replacement_first_slot_source_route_board_json,
+            ready_count=_int(
+                historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get(
+                    "allowed_for_first_slot_count"
+                )
+            ),
+            blocked_count=_int(
+                historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get(
+                    "in_scope_external_required_count"
+                )
+            ),
+            total_count=_int(
+                historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get("route_count")
+            ),
+            next_action=_text(
+                historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get(
+                    "first_external_next_action"
+                )
+            ),
+            blockers=(
+                "scope:"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get(
+                        "in_scope_route_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get(
+                        "out_of_scope_route_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get(
+                        "route_count", ""
+                    )
+                )
+                + ",allowed:"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get(
+                        "allowed_for_first_slot_count", ""
+                    )
+                )
+                + ",external:"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get(
+                        "in_scope_external_required_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get(
+                        "in_scope_external_action_count", ""
+                    )
+                )
+                + ",out_scope_repair:"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get(
+                        "out_of_scope_source_required_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get(
+                        "out_of_scope_date_required_count", ""
+                    )
+                )
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates",
+            "Official CASP15/16 archive source candidates for the first strict-blind monomer slot",
+            _text(
+                historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                    "strict_blind_replacement_first_slot_official_archive_source_candidates_status"
+                )
+            ),
+            args.historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_json,
+            ready_count=_int(
+                historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                    "ready_candidate_count"
+                )
+            ),
+            blocked_count=_int(
+                historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                    "blocked_candidate_count"
+                )
+            ),
+            total_count=_int(
+                historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                    "candidate_count"
+                )
+            ),
+            next_action=(
+                "download first native-authority-ready official prediction tarball and RCSB native into the strict-blind first-slot dropzone"
+            ),
+            blockers=(
+                "sources:"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                        "source_count", ""
+                    )
+                )
+                + ",candidates:"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                        "ready_candidate_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                        "blocked_candidate_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                        "candidate_count", ""
+                    )
+                )
+                + ",native:"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                        "native_authority_ready_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                        "native_authority_lookup_required_count", ""
+                    )
+                )
+                + ",pdb:"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                        "native_pdb_download_ready_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                        "native_mmcif_only_count", ""
+                    )
+                )
+                + ",metadata:"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                        "targetlist_metadata_present_count", ""
+                    )
+                )
+                + ",capri_deferred:"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                        "targetlist_capri_marker_count", ""
+                    )
+                )
+                + ",cat:"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                        "regular_monomer_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                        "domain_subunit_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                        "variant_count", ""
+                    )
+                )
+                + ",first:"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                        "first_ready_competition", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                        "first_ready_target_id", ""
+                    )
+                )
+                + "/"
+                + str(
+                    historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                        "first_ready_native_pdb_code", ""
+                    )
+                )
             ),
         ),
         _artifact_row(
@@ -1009,6 +2694,29 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             ),
         ),
         _artifact_row(
+            "historical_seed_ablation_gap_repair_plan",
+            "Ablation gap repair plan separating real layer candidates from top-5 review decoys",
+            _text(historical_seed_ablation_gap_repair_plan_summary.get("ablation_gap_repair_status")),
+            args.historical_seed_ablation_gap_repair_plan_json,
+            ready_count=_int(historical_seed_ablation_gap_repair_plan_summary.get("ready_for_operator_review_count")),
+            blocked_count=(
+                _int(historical_seed_ablation_gap_repair_plan_summary.get("gap_repair_required_count"))
+                + _int(historical_seed_ablation_gap_repair_plan_summary.get("blocked_core_ablation_input_count"))
+            ),
+            total_count=_int(historical_seed_ablation_gap_repair_plan_summary.get("seed_row_count")),
+            next_action=_text(historical_seed_ablation_gap_repair_plan_summary.get("first_next_action")),
+            blockers=(
+                "real:"
+                + str(historical_seed_ablation_gap_repair_plan_summary.get("real_ablation_candidate_count", ""))
+                + ",missing_real:"
+                + str(historical_seed_ablation_gap_repair_plan_summary.get("missing_real_ablation_candidate_count", ""))
+                + ",top5_decoys:"
+                + str(historical_seed_ablation_gap_repair_plan_summary.get("top5_review_decoy_count", ""))
+                + ",top5_copy:"
+                + str(historical_seed_ablation_gap_repair_plan_summary.get("top5_selected_copy_count", ""))
+            ),
+        ),
+        _artifact_row(
             "historical_seed_top5_candidate_pools",
             "Local top-5 candidate pools for historical seed model-selection calibration",
             _text(historical_seed_top5_candidate_pools_summary.get("top5_candidate_pool_status")),
@@ -1028,6 +2736,56 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + str(historical_seed_top5_candidate_pools_summary.get("generated_perturbation_count", ""))
                 + ",source_blocked:"
                 + str(historical_seed_top5_candidate_pools_summary.get("blocked_selected_source_count", ""))
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_internal_score_candidates",
+            "Internal score candidates for historical seed top-5 model-selection calibration",
+            _text(historical_seed_internal_score_candidates_summary.get("internal_score_candidate_status")),
+            args.historical_seed_internal_score_candidates_json,
+            ready_count=_int(
+                historical_seed_internal_score_candidates_summary.get("top5_scored_ready_count")
+            ),
+            blocked_count=_int(
+                historical_seed_internal_score_candidates_summary.get("blocked_candidate_input_count")
+            ),
+            total_count=_int(historical_seed_internal_score_candidates_summary.get("seed_row_count")),
+            next_action=_text(historical_seed_internal_score_candidates_summary.get("first_next_action")),
+            blockers=(
+                "models:"
+                + str(historical_seed_internal_score_candidates_summary.get("candidate_count", ""))
+                + ",scored:"
+                + str(historical_seed_internal_score_candidates_summary.get("scored_candidate_count", ""))
+                + ",top5_scored:"
+                + str(historical_seed_internal_score_candidates_summary.get("top5_scored_ready_count", ""))
+                + ",selected_scores:"
+                + str(historical_seed_internal_score_candidates_summary.get("selected_score_candidate_count", ""))
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_native_oracle_metric_candidates",
+            "Native metric candidates for historical seed top-5 model-selection calibration",
+            _text(historical_seed_native_oracle_metric_candidates_summary.get("native_metric_candidate_status")),
+            args.historical_seed_native_oracle_metric_candidates_json,
+            ready_count=_int(
+                historical_seed_native_oracle_metric_candidates_summary.get("top5_native_metric_ready_count")
+            ),
+            blocked_count=_int(
+                historical_seed_native_oracle_metric_candidates_summary.get("blocked_candidate_input_count")
+            ),
+            total_count=_int(historical_seed_native_oracle_metric_candidates_summary.get("seed_row_count")),
+            next_action=_text(historical_seed_native_oracle_metric_candidates_summary.get("first_next_action")),
+            blockers=(
+                "models:"
+                + str(historical_seed_native_oracle_metric_candidates_summary.get("candidate_count", ""))
+                + ",metric_ready:"
+                + str(historical_seed_native_oracle_metric_candidates_summary.get("metric_candidate_count", ""))
+                + ",top5_native:"
+                + str(historical_seed_native_oracle_metric_candidates_summary.get("top5_native_metric_ready_count", ""))
+                + ",selected_native:"
+                + str(historical_seed_native_oracle_metric_candidates_summary.get("selected_native_metric_candidate_count", ""))
+                + ",best_native:"
+                + str(historical_seed_native_oracle_metric_candidates_summary.get("best_native_metric_candidate_count", ""))
             ),
         ),
         _artifact_row(
@@ -1056,6 +2814,92 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + str(historical_seed_calibration_candidate_ledgers_summary.get("internal_score_available_count", ""))
                 + ",open_fields:"
                 + str(historical_seed_calibration_candidate_ledgers_summary.get("open_calibration_field_count", ""))
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_calibration_field_candidates",
+            "Operator-review calibration field candidates from historical seed ledgers",
+            _text(historical_seed_calibration_field_candidates_summary.get("calibration_field_candidate_status")),
+            args.historical_seed_calibration_field_candidates_json,
+            ready_count=_int(historical_seed_calibration_field_candidates_summary.get("ready_to_apply_row_count")),
+            blocked_count=_int(historical_seed_calibration_field_candidates_summary.get("blocked_row_count")),
+            total_count=_int(historical_seed_calibration_field_candidates_summary.get("seed_row_count")),
+            next_action=_text(historical_seed_calibration_field_candidates_summary.get("first_next_action")),
+            blockers=(
+                "fields:"
+                + str(historical_seed_calibration_field_candidates_summary.get("field_candidate_count", ""))
+                + ",proposed:"
+                + str(historical_seed_calibration_field_candidates_summary.get("proposed_field_count", ""))
+                + ",matching:"
+                + str(historical_seed_calibration_field_candidates_summary.get("already_matching_field_count", ""))
+                + ",conflicts:"
+                + str(historical_seed_calibration_field_candidates_summary.get("conflict_field_count", ""))
+                + ",blocked_fields:"
+                + str(historical_seed_calibration_field_candidates_summary.get("blocked_field_count", ""))
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_clearance_fill_candidate_packet",
+            "Consolidated operator-review fill candidates for historical seed clearance fields",
+            _text(historical_seed_clearance_fill_candidate_packet_summary.get("clearance_fill_candidate_status")),
+            args.historical_seed_clearance_fill_candidate_packet_json,
+            ready_count=_int(historical_seed_clearance_fill_candidate_packet_summary.get("partial_candidate_row_count")),
+            blocked_count=_int(historical_seed_clearance_fill_candidate_packet_summary.get("blocked_row_count")),
+            total_count=_int(historical_seed_clearance_fill_candidate_packet_summary.get("seed_row_count")),
+            next_action=_text(historical_seed_clearance_fill_candidate_packet_summary.get("first_next_action")),
+            blockers=(
+                "fields:"
+                + str(historical_seed_clearance_fill_candidate_packet_summary.get("field_count", ""))
+                + ",proposed:"
+                + str(historical_seed_clearance_fill_candidate_packet_summary.get("proposed_field_count", ""))
+                + ",operator_required:"
+                + str(historical_seed_clearance_fill_candidate_packet_summary.get("operator_required_field_count", ""))
+                + ",blocked_fields:"
+                + str(historical_seed_clearance_fill_candidate_packet_summary.get("blocked_field_count", ""))
+                + ",calibration:"
+                + str(historical_seed_clearance_fill_candidate_packet_summary.get("calibration_candidate_count", ""))
+                + ",ablation:"
+                + str(historical_seed_clearance_fill_candidate_packet_summary.get("ablation_candidate_count", ""))
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_clearance_execution_board",
+            "Shortest-path execution board for the first cleared historical seed row",
+            _text(historical_seed_clearance_execution_board_summary.get("execution_board_status")),
+            args.historical_seed_clearance_execution_board_json,
+            ready_count=_int(historical_seed_clearance_execution_board_summary.get("operator_no_leak_only_row_count")),
+            blocked_count=_int(historical_seed_clearance_execution_board_summary.get("ablation_repair_required_row_count")),
+            total_count=_int(historical_seed_clearance_execution_board_summary.get("seed_row_count")),
+            next_action=_text(historical_seed_clearance_execution_board_summary.get("first_execution_next_action")),
+            blockers=(
+                "first:"
+                + _text(historical_seed_clearance_execution_board_summary.get("first_execution_target_id"))
+                + ",status:"
+                + _text(historical_seed_clearance_execution_board_summary.get("first_execution_status"))
+                + ",no_leak_fields:"
+                + str(historical_seed_clearance_execution_board_summary.get("operator_no_leak_field_count", ""))
+                + ",blocked_ablation:"
+                + str(historical_seed_clearance_execution_board_summary.get("blocked_ablation_field_count", ""))
+            ),
+        ),
+        _artifact_row(
+            "historical_seed_first_clearance_operator_kit",
+            "Operator no-leak intake and promotion preview for the first historical seed row",
+            _text(historical_seed_first_clearance_operator_kit_summary.get("first_clearance_kit_status")),
+            args.historical_seed_first_clearance_operator_kit_json,
+            ready_count=_int(historical_seed_first_clearance_operator_kit_summary.get("ready_candidate_field_count")),
+            blocked_count=_int(historical_seed_first_clearance_operator_kit_summary.get("no_leak_field_count")),
+            total_count=_int(historical_seed_first_clearance_operator_kit_summary.get("total_field_count")),
+            next_action=_text(historical_seed_first_clearance_operator_kit_summary.get("next_action")),
+            blockers=(
+                "target:"
+                + _text(historical_seed_first_clearance_operator_kit_summary.get("target_id"))
+                + ",preview:"
+                + _text(historical_seed_first_clearance_operator_kit_summary.get("promotion_preview_status"))
+                + ",weak:"
+                + str(historical_seed_first_clearance_operator_kit_summary.get("weak_hint_count", ""))
+                + ",kit:"
+                + _text(historical_seed_first_clearance_operator_kit_summary.get("kit_folder"))
             ),
         ),
         _artifact_row(
@@ -2697,6 +4541,97 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "win_tier_goal_scorecard_blocked_count": _int(goal_scorecard_summary.get("blocked_count")),
         "win_tier_goal_scorecard_row_count": _int(goal_scorecard_summary.get("row_count")),
         "win_tier_goal_scorecard_first_blocked_gate": _text(goal_scorecard_summary.get("first_blocked_gate")),
+        "active_scope_decision_status": _text(active_scope_decision_summary.get("scope_decision_status")),
+        "active_competition_scope": _text(active_scope_decision_summary.get("active_competition_scope")),
+        "active_scope_casp17_continuation_status": _text(
+            active_scope_decision_summary.get("casp17_continuation_status")
+        ),
+        "active_scope_casp17_priority_status": _text(active_scope_decision_summary.get("casp17_priority_status")),
+        "active_scope_capri_round65_participation_status": _text(
+            active_scope_decision_summary.get("capri_round65_participation_status")
+        ),
+        "active_scope_capri_round65_hold_reason": _text(
+            active_scope_decision_summary.get("capri_round65_hold_reason")
+        ),
+        "active_scope_capri_round65_artifact_policy": _text(
+            active_scope_decision_summary.get("capri_round65_artifact_policy")
+        ),
+        "active_scope_next_action": _text(active_scope_decision_summary.get("first_next_action")),
+        "active_scope_active_lane_count": _int(active_scope_decision_summary.get("active_lane_count")),
+        "active_scope_deferred_lane_count": _int(active_scope_decision_summary.get("deferred_lane_count")),
+        "active_scope_row_count": _int(active_scope_decision_summary.get("row_count")),
+        "capri_round65_readiness_status": _text(
+            capri_round65_readiness_summary.get("capri_readiness_status")
+        ),
+        "capri_round65_round_status": _text(capri_round65_readiness_summary.get("round_status")),
+        "capri_round65_registration_end": _text(capri_round65_readiness_summary.get("registration_end")),
+        "capri_round65_registration_days_remaining": _int(
+            capri_round65_readiness_summary.get("registration_days_remaining")
+        ),
+        "capri_round65_registration_gate_status": _text(
+            capri_round65_readiness_summary.get("registration_gate_status")
+        ),
+        "capri_round65_registration_ready_field_count": _int(
+            capri_round65_readiness_summary.get("registration_ready_field_count")
+        ),
+        "capri_round65_registration_required_field_count": _int(
+            capri_round65_readiness_summary.get("registration_required_field_count")
+        ),
+        "capri_round65_role_selection_status": _text(
+            capri_round65_readiness_summary.get("role_selection_status")
+        ),
+        "capri_round65_target_count": _int(capri_round65_readiness_summary.get("target_count")),
+        "capri_round65_active_target_count": _int(capri_round65_readiness_summary.get("active_target_count")),
+        "capri_round65_closed_target_count": _int(capri_round65_readiness_summary.get("closed_target_count")),
+        "capri_round65_scorer_priority_target_count": _int(
+            capri_round65_readiness_summary.get("scorer_priority_target_count")
+        ),
+        "capri_round65_predictor_priority_target_count": _int(
+            capri_round65_readiness_summary.get("predictor_priority_target_count")
+        ),
+        "capri_round65_blocked_target_count": _int(capri_round65_readiness_summary.get("blocked_target_count")),
+        "capri_round65_readiness_format_preflight_target_count": _int(
+            capri_round65_readiness_summary.get("format_preflight_target_count")
+        ),
+        "capri_round65_target_folder_count": _int(capri_round65_readiness_summary.get("target_folder_count")),
+        "capri_round65_first_open_target_id": _text(capri_round65_readiness_summary.get("first_open_target_id")),
+        "capri_round65_first_next_action": _text(capri_round65_readiness_summary.get("first_next_action")),
+        "capri_round65_format_preflight_status": _text(
+            capri_round65_format_preflight_summary.get("format_preflight_status")
+        ),
+        "capri_round65_format_preflight_target_count": _int(
+            capri_round65_format_preflight_summary.get("target_count")
+        ),
+        "capri_round65_format_preflight_active_target_count": _int(
+            capri_round65_format_preflight_summary.get("active_target_count")
+        ),
+        "capri_round65_format_preflight_closed_target_count": _int(
+            capri_round65_format_preflight_summary.get("closed_target_count")
+        ),
+        "capri_round65_format_preflight_local_pass_count": _int(
+            capri_round65_format_preflight_summary.get("local_pass_count")
+        ),
+        "capri_round65_format_preflight_blocked_count": _int(
+            capri_round65_format_preflight_summary.get("blocked_target_count")
+        ),
+        "capri_round65_format_preflight_checked_count": _int(
+            capri_round65_format_preflight_summary.get("checked_submission_count")
+        ),
+        "capri_round65_format_preflight_template_missing_count": _int(
+            capri_round65_format_preflight_summary.get("target_template_missing_count")
+        ),
+        "capri_round65_format_preflight_candidate_missing_count": _int(
+            capri_round65_format_preflight_summary.get("candidate_submission_missing_count")
+        ),
+        "capri_round65_format_preflight_error_count": _int(
+            capri_round65_format_preflight_summary.get("format_error_count")
+        ),
+        "capri_round65_format_preflight_first_blocked_target_id": _text(
+            capri_round65_format_preflight_summary.get("first_blocked_target_id")
+        ),
+        "capri_round65_format_preflight_first_next_action": _text(
+            capri_round65_format_preflight_summary.get("first_next_action")
+        ),
         "win_gap_closure_status": _text(closure_summary.get("closure_status")),
         "win_gap_closed_count": _int(closure_summary.get("closed_count")),
         "win_gap_not_closed_count": _int(closure_summary.get("not_closed_count")),
@@ -2926,6 +4861,45 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "historical_seed_no_leak_provenance_dossiers_first_next_action": _text(
             historical_seed_no_leak_provenance_dossiers_summary.get("first_next_action")
         ),
+        "historical_seed_no_leak_gap_repair_plan_status": _text(
+            historical_seed_no_leak_gap_repair_plan_summary.get("no_leak_gap_repair_status")
+        ),
+        "historical_seed_no_leak_gap_repair_plan_seed_count": _int(
+            historical_seed_no_leak_gap_repair_plan_summary.get("seed_row_count")
+        ),
+        "historical_seed_no_leak_gap_repair_plan_repair_csv_count": _int(
+            historical_seed_no_leak_gap_repair_plan_summary.get("repair_csv_count")
+        ),
+        "historical_seed_no_leak_gap_repair_plan_field_count": _int(
+            historical_seed_no_leak_gap_repair_plan_summary.get("field_count")
+        ),
+        "historical_seed_no_leak_gap_repair_plan_operator_required_count": _int(
+            historical_seed_no_leak_gap_repair_plan_summary.get("operator_required_field_count")
+        ),
+        "historical_seed_no_leak_gap_repair_plan_weak_count": _int(
+            historical_seed_no_leak_gap_repair_plan_summary.get("weak_local_candidate_field_count")
+        ),
+        "historical_seed_no_leak_gap_repair_plan_authoritative_count": _int(
+            historical_seed_no_leak_gap_repair_plan_summary.get("authoritative_candidate_field_count")
+        ),
+        "historical_seed_no_leak_gap_repair_plan_chronology_count": _int(
+            historical_seed_no_leak_gap_repair_plan_summary.get("chronology_field_count")
+        ),
+        "historical_seed_no_leak_gap_repair_plan_negative_control_count": _int(
+            historical_seed_no_leak_gap_repair_plan_summary.get("negative_control_field_count")
+        ),
+        "historical_seed_no_leak_gap_repair_plan_clearance_count": _int(
+            historical_seed_no_leak_gap_repair_plan_summary.get("clearance_field_count")
+        ),
+        "historical_seed_no_leak_gap_repair_plan_mtime_risk_count": _int(
+            historical_seed_no_leak_gap_repair_plan_summary.get("mtime_risk_row_count")
+        ),
+        "historical_seed_no_leak_gap_repair_plan_first_target_id": _text(
+            historical_seed_no_leak_gap_repair_plan_summary.get("first_open_target_id")
+        ),
+        "historical_seed_no_leak_gap_repair_plan_first_next_action": _text(
+            historical_seed_no_leak_gap_repair_plan_summary.get("first_next_action")
+        ),
         "historical_seed_current_target_prefill_status": _text(
             historical_seed_current_target_prefill_summary.get("prefill_status")
         ),
@@ -2959,6 +4933,107 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "historical_seed_current_target_prefill_first_next_action": _text(
             historical_seed_current_target_prefill_summary.get("first_next_action")
         ),
+        "historical_seed_native_authority_audit_status": _text(
+            historical_seed_native_authority_audit_summary.get("native_authority_audit_status")
+        ),
+        "historical_seed_native_authority_audit_seed_count": _int(
+            historical_seed_native_authority_audit_summary.get("seed_row_count")
+        ),
+        "historical_seed_native_authority_audit_pass_count": _int(
+            historical_seed_native_authority_audit_summary.get("native_authority_pass_count")
+        ),
+        "historical_seed_native_authority_audit_blocked_count": _int(
+            historical_seed_native_authority_audit_summary.get("native_authority_blocked_count")
+        ),
+        "historical_seed_native_authority_audit_placeholder_count": _int(
+            historical_seed_native_authority_audit_summary.get("placeholder_native_count")
+        ),
+        "historical_seed_native_authority_audit_ca_only_count": _int(
+            historical_seed_native_authority_audit_summary.get("ca_only_native_count")
+        ),
+        "historical_seed_native_authority_audit_local_generated_no_authority_count": _int(
+            historical_seed_native_authority_audit_summary.get(
+                "local_generated_native_without_authority_count"
+            )
+        ),
+        "historical_seed_native_authority_audit_ref_missing_count": _int(
+            historical_seed_native_authority_audit_summary.get("authority_ref_missing_count")
+        ),
+        "historical_seed_native_authority_audit_first_target_id": _text(
+            historical_seed_native_authority_audit_summary.get("first_blocked_target_id")
+        ),
+        "historical_seed_native_authority_audit_first_next_action": _text(
+            historical_seed_native_authority_audit_summary.get("first_blocked_next_action")
+        ),
+        "historical_seed_native_replacement_candidates_status": _text(
+            historical_seed_native_replacement_candidates_summary.get("native_replacement_candidate_status")
+        ),
+        "historical_seed_native_replacement_candidates_candidate_count": _int(
+            historical_seed_native_replacement_candidates_summary.get("candidate_row_count")
+        ),
+        "historical_seed_native_replacement_candidates_ready_count": _int(
+            historical_seed_native_replacement_candidates_summary.get("operator_review_ready_count")
+        ),
+        "historical_seed_native_replacement_candidates_download_required_count": _int(
+            historical_seed_native_replacement_candidates_summary.get("source_download_required_count")
+        ),
+        "historical_seed_native_replacement_candidates_file_blocked_count": _int(
+            historical_seed_native_replacement_candidates_summary.get("candidate_file_blocked_count")
+        ),
+        "historical_seed_native_replacement_candidates_complex_authority_count": _int(
+            historical_seed_native_replacement_candidates_summary.get("complex_authority_required_count")
+        ),
+        "historical_seed_native_replacement_candidates_monomer_count": _int(
+            historical_seed_native_replacement_candidates_summary.get("monomer_candidate_count")
+        ),
+        "historical_seed_native_replacement_candidates_candidate_dir": _text(
+            historical_seed_native_replacement_candidates_summary.get("candidate_dir")
+        ),
+        "historical_seed_native_replacement_candidates_first_target_id": _text(
+            historical_seed_native_replacement_candidates_summary.get("first_blocked_target_id")
+        ),
+        "historical_seed_native_replacement_candidates_first_next_action": _text(
+            historical_seed_native_replacement_candidates_summary.get("first_blocked_next_action")
+        ),
+        "historical_seed_complex_source_authority_candidates_status": _text(
+            historical_seed_complex_source_authority_candidates_summary.get(
+                "complex_source_authority_candidate_status"
+            )
+        ),
+        "historical_seed_complex_source_authority_candidates_candidate_count": _int(
+            historical_seed_complex_source_authority_candidates_summary.get("candidate_row_count")
+        ),
+        "historical_seed_complex_source_authority_candidates_review_ready_count": _int(
+            historical_seed_complex_source_authority_candidates_summary.get("operator_review_ready_count")
+        ),
+        "historical_seed_complex_source_authority_candidates_direct_count": _int(
+            historical_seed_complex_source_authority_candidates_summary.get(
+                "direct_source_authority_ready_count"
+            )
+        ),
+        "historical_seed_complex_source_authority_candidates_homolog_count": _int(
+            historical_seed_complex_source_authority_candidates_summary.get(
+                "homolog_source_authority_ready_count"
+            )
+        ),
+        "historical_seed_complex_source_authority_candidates_blocked_count": _int(
+            historical_seed_complex_source_authority_candidates_summary.get("source_authority_blocked_count")
+        ),
+        "historical_seed_complex_source_authority_candidates_operator_apply_count": _int(
+            historical_seed_complex_source_authority_candidates_summary.get("operator_apply_allowed_count")
+        ),
+        "historical_seed_complex_source_authority_candidates_claim_promotion_count": _int(
+            historical_seed_complex_source_authority_candidates_summary.get("claim_promotion_allowed_count")
+        ),
+        "historical_seed_complex_source_authority_candidates_protein_ref": _text(
+            historical_seed_complex_source_authority_candidates_summary.get("protein_authority_ref")
+        ),
+        "historical_seed_complex_source_authority_candidates_first_target_id": _text(
+            historical_seed_complex_source_authority_candidates_summary.get("first_blocked_target_id")
+        ),
+        "historical_seed_complex_source_authority_candidates_first_next_action": _text(
+            historical_seed_complex_source_authority_candidates_summary.get("first_next_action")
+        ),
         "historical_seed_chronology_candidate_board_status": _text(
             historical_seed_chronology_candidate_board_summary.get("chronology_board_status")
         ),
@@ -2991,6 +5066,1173 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         ),
         "historical_seed_chronology_candidate_board_first_next_action": _text(
             historical_seed_chronology_candidate_board_summary.get("first_next_action")
+        ),
+        "historical_seed_authoritative_chronology_audit_status": _text(
+            historical_seed_authoritative_chronology_audit_summary.get("authoritative_chronology_audit_status")
+        ),
+        "historical_seed_authoritative_chronology_audit_seed_count": _int(
+            historical_seed_authoritative_chronology_audit_summary.get("seed_row_count")
+        ),
+        "historical_seed_authoritative_chronology_audit_native_date_count": _int(
+            historical_seed_authoritative_chronology_audit_summary.get("native_authority_date_count")
+        ),
+        "historical_seed_authoritative_chronology_audit_prediction_date_count": _int(
+            historical_seed_authoritative_chronology_audit_summary.get("prediction_date_candidate_count")
+        ),
+        "historical_seed_authoritative_chronology_audit_before_native_count": _int(
+            historical_seed_authoritative_chronology_audit_summary.get("before_native_candidate_count")
+        ),
+        "historical_seed_authoritative_chronology_audit_post_native_count": _int(
+            historical_seed_authoritative_chronology_audit_summary.get("post_native_blocked_count")
+        ),
+        "historical_seed_authoritative_chronology_audit_evidence_required_count": _int(
+            historical_seed_authoritative_chronology_audit_summary.get("evidence_required_count")
+        ),
+        "historical_seed_authoritative_chronology_audit_native_not_pass_count": _int(
+            historical_seed_authoritative_chronology_audit_summary.get("native_authority_not_pass_count")
+        ),
+        "historical_seed_authoritative_chronology_audit_missing_native_date_count": _int(
+            historical_seed_authoritative_chronology_audit_summary.get("missing_native_authority_date_count")
+        ),
+        "historical_seed_authoritative_chronology_audit_missing_prediction_date_count": _int(
+            historical_seed_authoritative_chronology_audit_summary.get("missing_prediction_date_count")
+        ),
+        "historical_seed_authoritative_chronology_audit_first_target_id": _text(
+            historical_seed_authoritative_chronology_audit_summary.get("first_blocked_target_id")
+        ),
+        "historical_seed_authoritative_chronology_audit_first_next_action": _text(
+            historical_seed_authoritative_chronology_audit_summary.get("first_next_action")
+        ),
+        "historical_seed_lane_decision_packet_status": _text(
+            historical_seed_lane_decision_packet_summary.get("lane_decision_status")
+        ),
+        "historical_seed_lane_decision_packet_seed_count": _int(
+            historical_seed_lane_decision_packet_summary.get("seed_row_count")
+        ),
+        "historical_seed_lane_decision_packet_strict_blind_count": _int(
+            historical_seed_lane_decision_packet_summary.get("strict_blind_eligible_count")
+        ),
+        "historical_seed_lane_decision_packet_retrospective_count": _int(
+            historical_seed_lane_decision_packet_summary.get("retrospective_calibration_review_count")
+        ),
+        "historical_seed_lane_decision_packet_authority_required_count": _int(
+            historical_seed_lane_decision_packet_summary.get("authority_or_replacement_required_count")
+        ),
+        "historical_seed_lane_decision_packet_competitive_count": _int(
+            historical_seed_lane_decision_packet_summary.get("competitive_proof_allowed_count")
+        ),
+        "historical_seed_lane_decision_packet_identity_count": _int(
+            historical_seed_lane_decision_packet_summary.get("identity_intake_allowed_count")
+        ),
+        "historical_seed_lane_decision_packet_sidechain_count": _int(
+            historical_seed_lane_decision_packet_summary.get("sidechain_native_benchmark_allowed_count")
+        ),
+        "historical_seed_lane_decision_packet_replacement_required_count": _int(
+            historical_seed_lane_decision_packet_summary.get("strict_blind_replacement_required_count")
+        ),
+        "historical_seed_lane_decision_packet_operator_decision_count": _int(
+            historical_seed_lane_decision_packet_summary.get("operator_decision_required_count")
+        ),
+        "historical_seed_lane_decision_packet_first_target_id": _text(
+            historical_seed_lane_decision_packet_summary.get("first_blocked_target_id")
+        ),
+        "historical_seed_lane_decision_packet_first_next_action": _text(
+            historical_seed_lane_decision_packet_summary.get("first_next_action")
+        ),
+        "historical_seed_strict_blind_replacement_queue_status": _text(
+            historical_seed_strict_blind_replacement_queue_summary.get("strict_blind_replacement_queue_status")
+        ),
+        "historical_seed_strict_blind_replacement_queue_slot_count": _int(
+            historical_seed_strict_blind_replacement_queue_summary.get("scaffold_slot_count")
+        ),
+        "historical_seed_strict_blind_replacement_queue_monomer_count": _int(
+            historical_seed_strict_blind_replacement_queue_summary.get("monomer_slot_count")
+        ),
+        "historical_seed_strict_blind_replacement_queue_complex_count": _int(
+            historical_seed_strict_blind_replacement_queue_summary.get("complex_slot_count")
+        ),
+        "historical_seed_strict_blind_replacement_queue_replacement_required_count": _int(
+            historical_seed_strict_blind_replacement_queue_summary.get("strict_blind_replacement_required_count")
+        ),
+        "historical_seed_strict_blind_replacement_queue_ready_count": _int(
+            historical_seed_strict_blind_replacement_queue_summary.get("strict_blind_ready_slot_count")
+        ),
+        "historical_seed_strict_blind_replacement_queue_competitive_count": _int(
+            historical_seed_strict_blind_replacement_queue_summary.get("competitive_proof_allowed_slot_count")
+        ),
+        "historical_seed_strict_blind_replacement_queue_requirement_field_count": _int(
+            historical_seed_strict_blind_replacement_queue_summary.get("requirement_field_count")
+        ),
+        "historical_seed_strict_blind_replacement_queue_current_seed_count": _int(
+            historical_seed_strict_blind_replacement_queue_summary.get("current_seed_count")
+        ),
+        "historical_seed_strict_blind_replacement_queue_current_seed_strict_count": _int(
+            historical_seed_strict_blind_replacement_queue_summary.get("current_seed_strict_blind_count")
+        ),
+        "historical_seed_strict_blind_replacement_queue_current_seed_retrospective_count": _int(
+            historical_seed_strict_blind_replacement_queue_summary.get("current_seed_retrospective_count")
+        ),
+        "historical_seed_strict_blind_replacement_queue_current_seed_authority_count": _int(
+            historical_seed_strict_blind_replacement_queue_summary.get("current_seed_authority_required_count")
+        ),
+        "historical_seed_strict_blind_replacement_queue_current_seed_competitive_count": _int(
+            historical_seed_strict_blind_replacement_queue_summary.get("current_seed_competitive_allowed_count")
+        ),
+        "historical_seed_strict_blind_replacement_queue_first_benchmark_id": _text(
+            historical_seed_strict_blind_replacement_queue_summary.get("first_open_benchmark_id")
+        ),
+        "historical_seed_strict_blind_replacement_queue_first_next_action": _text(
+            historical_seed_strict_blind_replacement_queue_summary.get("first_next_action")
+        ),
+        "historical_seed_strict_blind_replacement_intake_status": _text(
+            historical_seed_strict_blind_replacement_intake_summary.get(
+                "strict_blind_replacement_intake_status"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_intake_slot_count": _int(
+            historical_seed_strict_blind_replacement_intake_summary.get("intake_slot_count")
+        ),
+        "historical_seed_strict_blind_replacement_intake_required_field_count": _int(
+            historical_seed_strict_blind_replacement_intake_summary.get("required_field_count")
+        ),
+        "historical_seed_strict_blind_replacement_intake_filled_field_count": _int(
+            historical_seed_strict_blind_replacement_intake_summary.get("filled_field_count")
+        ),
+        "historical_seed_strict_blind_replacement_intake_missing_field_count": _int(
+            historical_seed_strict_blind_replacement_intake_summary.get("missing_field_count")
+        ),
+        "historical_seed_strict_blind_replacement_intake_ready_count": _int(
+            historical_seed_strict_blind_replacement_intake_summary.get("ready_for_preflight_count")
+        ),
+        "historical_seed_strict_blind_replacement_intake_blocked_count": _int(
+            historical_seed_strict_blind_replacement_intake_summary.get("blocked_or_awaiting_count")
+        ),
+        "historical_seed_strict_blind_replacement_intake_created_template_count": _int(
+            historical_seed_strict_blind_replacement_intake_summary.get("created_template_count")
+        ),
+        "historical_seed_strict_blind_replacement_intake_preserved_template_count": _int(
+            historical_seed_strict_blind_replacement_intake_summary.get("preserved_template_count")
+        ),
+        "historical_seed_strict_blind_replacement_intake_first_benchmark_id": _text(
+            historical_seed_strict_blind_replacement_intake_summary.get("first_open_benchmark_id")
+        ),
+        "historical_seed_strict_blind_replacement_intake_first_next_action": _text(
+            historical_seed_strict_blind_replacement_intake_summary.get("first_next_action")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_dropzones_status": _text(
+            historical_seed_strict_blind_replacement_evidence_dropzones_summary.get(
+                "strict_blind_replacement_evidence_dropzone_status"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_evidence_dropzones_count": _int(
+            historical_seed_strict_blind_replacement_evidence_dropzones_summary.get("dropzone_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_dropzones_ready_count": _int(
+            historical_seed_strict_blind_replacement_evidence_dropzones_summary.get("ready_for_intake_patch_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_dropzones_awaiting_count": _int(
+            historical_seed_strict_blind_replacement_evidence_dropzones_summary.get("awaiting_file_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_dropzones_file_required_count": _int(
+            historical_seed_strict_blind_replacement_evidence_dropzones_summary.get("file_required_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_dropzones_file_present_count": _int(
+            historical_seed_strict_blind_replacement_evidence_dropzones_summary.get("file_present_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_dropzones_file_missing_count": _int(
+            historical_seed_strict_blind_replacement_evidence_dropzones_summary.get("file_missing_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_dropzones_operator_value_count": _int(
+            historical_seed_strict_blind_replacement_evidence_dropzones_summary.get("operator_value_required_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_dropzones_patch_preview_count": _int(
+            historical_seed_strict_blind_replacement_evidence_dropzones_summary.get("patch_preview_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_dropzones_first_benchmark_id": _text(
+            historical_seed_strict_blind_replacement_evidence_dropzones_summary.get("first_open_benchmark_id")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_dropzones_first_next_action": _text(
+            historical_seed_strict_blind_replacement_evidence_dropzones_summary.get("first_next_action")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_action_board_status": _text(
+            historical_seed_strict_blind_replacement_evidence_action_board_summary.get(
+                "strict_blind_replacement_evidence_action_board_status"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_evidence_action_board_action_count": _int(
+            historical_seed_strict_blind_replacement_evidence_action_board_summary.get("action_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_action_board_ready_count": _int(
+            historical_seed_strict_blind_replacement_evidence_action_board_summary.get("ready_for_quality_audit_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_action_board_open_count": _int(
+            historical_seed_strict_blind_replacement_evidence_action_board_summary.get("open_missing_file_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_action_board_blocked_count": _int(
+            historical_seed_strict_blind_replacement_evidence_action_board_summary.get("blocked_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_action_board_prediction_missing_count": _int(
+            historical_seed_strict_blind_replacement_evidence_action_board_summary.get("prediction_pdb_missing_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_action_board_native_missing_count": _int(
+            historical_seed_strict_blind_replacement_evidence_action_board_summary.get("native_pdb_missing_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_action_board_authority_missing_count": _int(
+            historical_seed_strict_blind_replacement_evidence_action_board_summary.get("native_authority_missing_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_action_board_no_leak_missing_count": _int(
+            historical_seed_strict_blind_replacement_evidence_action_board_summary.get("no_leak_evidence_missing_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_action_board_ablation_missing_count": _int(
+            historical_seed_strict_blind_replacement_evidence_action_board_summary.get("ablation_manifest_missing_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_action_board_calibration_missing_count": _int(
+            historical_seed_strict_blind_replacement_evidence_action_board_summary.get("calibration_values_missing_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_action_board_first_action_id": _text(
+            historical_seed_strict_blind_replacement_evidence_action_board_summary.get("first_open_action_id")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_action_board_first_benchmark_id": _text(
+            historical_seed_strict_blind_replacement_evidence_action_board_summary.get("first_open_benchmark_id")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_action_board_first_field": _text(
+            historical_seed_strict_blind_replacement_evidence_action_board_summary.get("first_open_field")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_action_board_first_next_action": _text(
+            historical_seed_strict_blind_replacement_evidence_action_board_summary.get("first_next_action")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_quality_audit_status": _text(
+            historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get(
+                "strict_blind_replacement_evidence_quality_audit_status"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_evidence_quality_audit_slot_count": _int(
+            historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get("slot_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_quality_audit_ready_count": _int(
+            historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get(
+                "ready_for_quality_review_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_evidence_quality_audit_awaiting_count": _int(
+            historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get("awaiting_evidence_files_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_quality_audit_blocked_count": _int(
+            historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get("blocked_evidence_quality_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_quality_audit_file_required_count": _int(
+            historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get("file_required_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_quality_audit_file_present_count": _int(
+            historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get("file_present_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_quality_audit_file_missing_count": _int(
+            historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get("file_missing_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_quality_audit_pdb_valid_slot_count": _int(
+            historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get("pdb_valid_slot_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_quality_audit_pdb_invalid_slot_count": _int(
+            historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get("pdb_invalid_slot_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_quality_audit_supporting_valid_slot_count": _int(
+            historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get("supporting_valid_slot_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_quality_audit_supporting_invalid_slot_count": _int(
+            historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get("supporting_invalid_slot_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_quality_audit_distinct_count": _int(
+            historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get(
+                "prediction_native_distinct_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_evidence_quality_audit_identical_count": _int(
+            historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get(
+                "prediction_native_identical_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_evidence_quality_audit_first_benchmark_id": _text(
+            historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get("first_open_benchmark_id")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_quality_audit_first_status": _text(
+            historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get("first_open_status")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_quality_audit_first_next_action": _text(
+            historical_seed_strict_blind_replacement_evidence_quality_audit_summary.get("first_next_action")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_import_gate_status": _text(
+            historical_seed_strict_blind_replacement_evidence_import_gate_summary.get(
+                "strict_blind_replacement_evidence_import_gate_status"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_evidence_import_gate_apply_mode": _text(
+            historical_seed_strict_blind_replacement_evidence_import_gate_summary.get("apply_mode")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_import_gate_action_count": _int(
+            historical_seed_strict_blind_replacement_evidence_import_gate_summary.get("action_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_import_gate_file_action_count": _int(
+            historical_seed_strict_blind_replacement_evidence_import_gate_summary.get("file_action_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_import_gate_operator_action_count": _int(
+            historical_seed_strict_blind_replacement_evidence_import_gate_summary.get("operator_value_action_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_import_gate_ready_count": _int(
+            historical_seed_strict_blind_replacement_evidence_import_gate_summary.get("ready_for_apply_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_import_gate_applied_count": _int(
+            historical_seed_strict_blind_replacement_evidence_import_gate_summary.get("applied_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_import_gate_already_applied_count": _int(
+            historical_seed_strict_blind_replacement_evidence_import_gate_summary.get("already_applied_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_import_gate_awaiting_file_count": _int(
+            historical_seed_strict_blind_replacement_evidence_import_gate_summary.get("awaiting_file_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_import_gate_awaiting_operator_count": _int(
+            historical_seed_strict_blind_replacement_evidence_import_gate_summary.get("awaiting_operator_value_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_import_gate_blocked_count": _int(
+            historical_seed_strict_blind_replacement_evidence_import_gate_summary.get("blocked_count")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_import_gate_first_benchmark_id": _text(
+            historical_seed_strict_blind_replacement_evidence_import_gate_summary.get("first_open_benchmark_id")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_import_gate_first_field": _text(
+            historical_seed_strict_blind_replacement_evidence_import_gate_summary.get("first_open_field")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_import_gate_first_status": _text(
+            historical_seed_strict_blind_replacement_evidence_import_gate_summary.get("first_open_status")
+        ),
+        "historical_seed_strict_blind_replacement_evidence_import_gate_first_next_action": _text(
+            historical_seed_strict_blind_replacement_evidence_import_gate_summary.get("first_next_action")
+        ),
+        "historical_seed_strict_blind_replacement_operator_value_gate_status": _text(
+            historical_seed_strict_blind_replacement_operator_value_gate_summary.get(
+                "strict_blind_replacement_operator_value_gate_status"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_operator_value_gate_apply_mode": _text(
+            historical_seed_strict_blind_replacement_operator_value_gate_summary.get("apply_mode")
+        ),
+        "historical_seed_strict_blind_replacement_operator_value_gate_template_count": _int(
+            historical_seed_strict_blind_replacement_operator_value_gate_summary.get("template_count")
+        ),
+        "historical_seed_strict_blind_replacement_operator_value_gate_created_template_count": _int(
+            historical_seed_strict_blind_replacement_operator_value_gate_summary.get("created_template_count")
+        ),
+        "historical_seed_strict_blind_replacement_operator_value_gate_preserved_template_count": _int(
+            historical_seed_strict_blind_replacement_operator_value_gate_summary.get("preserved_template_count")
+        ),
+        "historical_seed_strict_blind_replacement_operator_value_gate_action_count": _int(
+            historical_seed_strict_blind_replacement_operator_value_gate_summary.get("action_count")
+        ),
+        "historical_seed_strict_blind_replacement_operator_value_gate_ready_count": _int(
+            historical_seed_strict_blind_replacement_operator_value_gate_summary.get("ready_for_apply_count")
+        ),
+        "historical_seed_strict_blind_replacement_operator_value_gate_applied_count": _int(
+            historical_seed_strict_blind_replacement_operator_value_gate_summary.get("applied_count")
+        ),
+        "historical_seed_strict_blind_replacement_operator_value_gate_already_applied_count": _int(
+            historical_seed_strict_blind_replacement_operator_value_gate_summary.get("already_applied_count")
+        ),
+        "historical_seed_strict_blind_replacement_operator_value_gate_awaiting_value_count": _int(
+            historical_seed_strict_blind_replacement_operator_value_gate_summary.get("awaiting_operator_value_count")
+        ),
+        "historical_seed_strict_blind_replacement_operator_value_gate_awaiting_evidence_count": _int(
+            historical_seed_strict_blind_replacement_operator_value_gate_summary.get("awaiting_evidence_ref_count")
+        ),
+        "historical_seed_strict_blind_replacement_operator_value_gate_awaiting_clearance_count": _int(
+            historical_seed_strict_blind_replacement_operator_value_gate_summary.get("awaiting_operator_clearance_count")
+        ),
+        "historical_seed_strict_blind_replacement_operator_value_gate_blocked_count": _int(
+            historical_seed_strict_blind_replacement_operator_value_gate_summary.get("blocked_count")
+        ),
+        "historical_seed_strict_blind_replacement_operator_value_gate_first_benchmark_id": _text(
+            historical_seed_strict_blind_replacement_operator_value_gate_summary.get("first_open_benchmark_id")
+        ),
+        "historical_seed_strict_blind_replacement_operator_value_gate_first_field": _text(
+            historical_seed_strict_blind_replacement_operator_value_gate_summary.get("first_open_field")
+        ),
+        "historical_seed_strict_blind_replacement_operator_value_gate_first_status": _text(
+            historical_seed_strict_blind_replacement_operator_value_gate_summary.get("first_open_status")
+        ),
+        "historical_seed_strict_blind_replacement_operator_value_gate_first_next_action": _text(
+            historical_seed_strict_blind_replacement_operator_value_gate_summary.get("first_next_action")
+        ),
+        "historical_seed_strict_blind_replacement_operator_action_board_status": _text(
+            historical_seed_strict_blind_replacement_operator_action_board_summary.get(
+                "strict_blind_replacement_operator_action_board_status"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_operator_action_board_action_count": _int(
+            historical_seed_strict_blind_replacement_operator_action_board_summary.get("action_count")
+        ),
+        "historical_seed_strict_blind_replacement_operator_action_board_ready_count": _int(
+            historical_seed_strict_blind_replacement_operator_action_board_summary.get("ready_for_apply_count")
+        ),
+        "historical_seed_strict_blind_replacement_operator_action_board_applied_count": _int(
+            historical_seed_strict_blind_replacement_operator_action_board_summary.get("applied_count")
+        ),
+        "historical_seed_strict_blind_replacement_operator_action_board_already_count": _int(
+            historical_seed_strict_blind_replacement_operator_action_board_summary.get("already_applied_count")
+        ),
+        "historical_seed_strict_blind_replacement_operator_action_board_open_value_count": _int(
+            historical_seed_strict_blind_replacement_operator_action_board_summary.get("open_operator_value_count")
+        ),
+        "historical_seed_strict_blind_replacement_operator_action_board_open_evidence_count": _int(
+            historical_seed_strict_blind_replacement_operator_action_board_summary.get("open_evidence_ref_count")
+        ),
+        "historical_seed_strict_blind_replacement_operator_action_board_open_clearance_count": _int(
+            historical_seed_strict_blind_replacement_operator_action_board_summary.get("open_operator_clearance_count")
+        ),
+        "historical_seed_strict_blind_replacement_operator_action_board_blocked_count": _int(
+            historical_seed_strict_blind_replacement_operator_action_board_summary.get("blocked_count")
+        ),
+        "historical_seed_strict_blind_replacement_operator_action_board_target_missing_count": _int(
+            historical_seed_strict_blind_replacement_operator_action_board_summary.get(
+                "replacement_target_id_missing_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_operator_action_board_benchmark_missing_count": _int(
+            historical_seed_strict_blind_replacement_operator_action_board_summary.get(
+                "replacement_benchmark_id_missing_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_operator_action_board_non_current_missing_count": _int(
+            historical_seed_strict_blind_replacement_operator_action_board_summary.get(
+                "target_identity_non_current_missing_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_operator_action_board_prediction_date_missing_count": _int(
+            historical_seed_strict_blind_replacement_operator_action_board_summary.get(
+                "prediction_created_at_missing_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_operator_action_board_native_date_missing_count": _int(
+            historical_seed_strict_blind_replacement_operator_action_board_summary.get("native_release_date_missing_count")
+        ),
+        "historical_seed_strict_blind_replacement_operator_action_board_before_native_missing_count": _int(
+            historical_seed_strict_blind_replacement_operator_action_board_summary.get(
+                "prediction_before_native_missing_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_operator_action_board_public_false_missing_count": _int(
+            historical_seed_strict_blind_replacement_operator_action_board_summary.get(
+                "public_template_false_missing_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_operator_action_board_other_team_missing_count": _int(
+            historical_seed_strict_blind_replacement_operator_action_board_summary.get("other_team_false_missing_count")
+        ),
+        "historical_seed_strict_blind_replacement_operator_action_board_post_release_missing_count": _int(
+            historical_seed_strict_blind_replacement_operator_action_board_summary.get(
+                "post_release_false_missing_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_operator_action_board_operator_clearance_missing_count": _int(
+            historical_seed_strict_blind_replacement_operator_action_board_summary.get(
+                "operator_clearance_value_missing_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_operator_action_board_first_action_id": _text(
+            historical_seed_strict_blind_replacement_operator_action_board_summary.get("first_open_action_id")
+        ),
+        "historical_seed_strict_blind_replacement_operator_action_board_first_benchmark_id": _text(
+            historical_seed_strict_blind_replacement_operator_action_board_summary.get("first_open_benchmark_id")
+        ),
+        "historical_seed_strict_blind_replacement_operator_action_board_first_field": _text(
+            historical_seed_strict_blind_replacement_operator_action_board_summary.get("first_open_field")
+        ),
+        "historical_seed_strict_blind_replacement_operator_action_board_first_status": _text(
+            historical_seed_strict_blind_replacement_operator_action_board_summary.get("first_open_status")
+        ),
+        "historical_seed_strict_blind_replacement_operator_action_board_first_next_action": _text(
+            historical_seed_strict_blind_replacement_operator_action_board_summary.get("first_next_action")
+        ),
+        "historical_seed_strict_blind_replacement_promotion_gate_status": _text(
+            historical_seed_strict_blind_replacement_promotion_gate_summary.get(
+                "strict_blind_replacement_promotion_gate_status"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_promotion_gate_slot_count": _int(
+            historical_seed_strict_blind_replacement_promotion_gate_summary.get("slot_count")
+        ),
+        "historical_seed_strict_blind_replacement_promotion_gate_ready_count": _int(
+            historical_seed_strict_blind_replacement_promotion_gate_summary.get(
+                "ready_for_competitive_proof_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_promotion_gate_awaiting_file_count": _int(
+            historical_seed_strict_blind_replacement_promotion_gate_summary.get("awaiting_file_evidence_count")
+        ),
+        "historical_seed_strict_blind_replacement_promotion_gate_awaiting_operator_count": _int(
+            historical_seed_strict_blind_replacement_promotion_gate_summary.get("awaiting_operator_values_count")
+        ),
+        "historical_seed_strict_blind_replacement_promotion_gate_awaiting_apply_count": _int(
+            historical_seed_strict_blind_replacement_promotion_gate_summary.get("awaiting_apply_count")
+        ),
+        "historical_seed_strict_blind_replacement_promotion_gate_awaiting_intake_count": _int(
+            historical_seed_strict_blind_replacement_promotion_gate_summary.get("awaiting_intake_preflight_count")
+        ),
+        "historical_seed_strict_blind_replacement_promotion_gate_blocked_review_count": _int(
+            historical_seed_strict_blind_replacement_promotion_gate_summary.get("blocked_review_count")
+        ),
+        "historical_seed_strict_blind_replacement_promotion_gate_intake_ready_count": _int(
+            historical_seed_strict_blind_replacement_promotion_gate_summary.get("intake_ready_count")
+        ),
+        "historical_seed_strict_blind_replacement_promotion_gate_file_complete_count": _int(
+            historical_seed_strict_blind_replacement_promotion_gate_summary.get("file_complete_slot_count")
+        ),
+        "historical_seed_strict_blind_replacement_promotion_gate_operator_complete_count": _int(
+            historical_seed_strict_blind_replacement_promotion_gate_summary.get("operator_complete_slot_count")
+        ),
+        "historical_seed_strict_blind_replacement_promotion_gate_file_awaiting_action_count": _int(
+            historical_seed_strict_blind_replacement_promotion_gate_summary.get("file_awaiting_action_count")
+        ),
+        "historical_seed_strict_blind_replacement_promotion_gate_operator_awaiting_action_count": _int(
+            historical_seed_strict_blind_replacement_promotion_gate_summary.get("operator_awaiting_action_count")
+        ),
+        "historical_seed_strict_blind_replacement_promotion_gate_first_benchmark_id": _text(
+            historical_seed_strict_blind_replacement_promotion_gate_summary.get("first_open_benchmark_id")
+        ),
+        "historical_seed_strict_blind_replacement_promotion_gate_first_phase": _text(
+            historical_seed_strict_blind_replacement_promotion_gate_summary.get("first_open_phase")
+        ),
+        "historical_seed_strict_blind_replacement_promotion_gate_first_status": _text(
+            historical_seed_strict_blind_replacement_promotion_gate_summary.get("first_open_status")
+        ),
+        "historical_seed_strict_blind_replacement_promotion_gate_first_next_action": _text(
+            historical_seed_strict_blind_replacement_promotion_gate_summary.get("first_next_action")
+        ),
+        "historical_seed_strict_blind_replacement_cycle_status": _text(
+            historical_seed_strict_blind_replacement_cycle_summary.get("strict_blind_replacement_cycle_status")
+        ),
+        "historical_seed_strict_blind_replacement_cycle_slot_count": _int(
+            historical_seed_strict_blind_replacement_cycle_summary.get("slot_count")
+        ),
+        "historical_seed_strict_blind_replacement_cycle_promotion_ready_count": _int(
+            historical_seed_strict_blind_replacement_cycle_summary.get("promotion_ready_count")
+        ),
+        "historical_seed_strict_blind_replacement_cycle_evidence_file_present_count": _int(
+            historical_seed_strict_blind_replacement_cycle_summary.get("evidence_file_present_count")
+        ),
+        "historical_seed_strict_blind_replacement_cycle_evidence_file_missing_count": _int(
+            historical_seed_strict_blind_replacement_cycle_summary.get("evidence_file_missing_count")
+        ),
+        "historical_seed_strict_blind_replacement_cycle_quality_ready_count": _int(
+            historical_seed_strict_blind_replacement_cycle_summary.get("quality_ready_count")
+        ),
+        "historical_seed_strict_blind_replacement_cycle_quality_awaiting_count": _int(
+            historical_seed_strict_blind_replacement_cycle_summary.get("quality_awaiting_count")
+        ),
+        "historical_seed_strict_blind_replacement_cycle_quality_blocked_count": _int(
+            historical_seed_strict_blind_replacement_cycle_summary.get("quality_blocked_count")
+        ),
+        "historical_seed_strict_blind_replacement_cycle_import_ready_count": _int(
+            historical_seed_strict_blind_replacement_cycle_summary.get("import_ready_count")
+        ),
+        "historical_seed_strict_blind_replacement_cycle_import_awaiting_file_count": _int(
+            historical_seed_strict_blind_replacement_cycle_summary.get("import_awaiting_file_count")
+        ),
+        "historical_seed_strict_blind_replacement_cycle_import_awaiting_operator_count": _int(
+            historical_seed_strict_blind_replacement_cycle_summary.get("import_awaiting_operator_count")
+        ),
+        "historical_seed_strict_blind_replacement_cycle_operator_ready_count": _int(
+            historical_seed_strict_blind_replacement_cycle_summary.get("operator_ready_count")
+        ),
+        "historical_seed_strict_blind_replacement_cycle_operator_awaiting_value_count": _int(
+            historical_seed_strict_blind_replacement_cycle_summary.get("operator_awaiting_value_count")
+        ),
+        "historical_seed_strict_blind_replacement_cycle_operator_action_board_ready_count": _int(
+            historical_seed_strict_blind_replacement_cycle_summary.get("operator_action_board_ready_count")
+        ),
+        "historical_seed_strict_blind_replacement_cycle_operator_action_board_action_count": _int(
+            historical_seed_strict_blind_replacement_cycle_summary.get("operator_action_board_action_count")
+        ),
+        "historical_seed_strict_blind_replacement_cycle_operator_action_board_open_value_count": _int(
+            historical_seed_strict_blind_replacement_cycle_summary.get("operator_action_board_open_value_count")
+        ),
+        "historical_seed_strict_blind_replacement_cycle_operator_action_board_open_evidence_count": _int(
+            historical_seed_strict_blind_replacement_cycle_summary.get("operator_action_board_open_evidence_count")
+        ),
+        "historical_seed_strict_blind_replacement_cycle_operator_action_board_open_clearance_count": _int(
+            historical_seed_strict_blind_replacement_cycle_summary.get("operator_action_board_open_clearance_count")
+        ),
+        "historical_seed_strict_blind_replacement_cycle_first_blocking_stage": _text(
+            historical_seed_strict_blind_replacement_cycle_summary.get("first_blocking_stage")
+        ),
+        "historical_seed_strict_blind_replacement_cycle_first_benchmark_id": _text(
+            historical_seed_strict_blind_replacement_cycle_summary.get("first_open_benchmark_id")
+        ),
+        "historical_seed_strict_blind_replacement_cycle_first_next_action": _text(
+            historical_seed_strict_blind_replacement_cycle_summary.get("first_next_action")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_kit_status": _text(
+            historical_seed_strict_blind_replacement_first_slot_kit_summary.get(
+                "strict_blind_replacement_first_slot_kit_status"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_kit_benchmark_id": _text(
+            historical_seed_strict_blind_replacement_first_slot_kit_summary.get("required_benchmark_id")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_kit_target_id": _text(
+            historical_seed_strict_blind_replacement_first_slot_kit_summary.get("required_target_id")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_kit_scope": _text(
+            historical_seed_strict_blind_replacement_first_slot_kit_summary.get("scope")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_kit_evidence_ready_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_kit_summary.get("evidence_ready_count")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_kit_evidence_open_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_kit_summary.get("evidence_open_count")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_kit_evidence_blocked_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_kit_summary.get("evidence_blocked_count")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_kit_evidence_action_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_kit_summary.get("evidence_action_count")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_kit_operator_ready_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_kit_summary.get("operator_ready_count")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_kit_operator_open_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_kit_summary.get("operator_open_count")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_kit_operator_blocked_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_kit_summary.get("operator_blocked_count")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_kit_operator_action_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_kit_summary.get("operator_action_count")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_kit_operator_open_value_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_kit_summary.get("operator_open_value_count")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_kit_operator_open_evidence_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_kit_summary.get("operator_open_evidence_count")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_kit_operator_open_clearance_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_kit_summary.get("operator_open_clearance_count")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_kit_first_action_group": _text(
+            historical_seed_strict_blind_replacement_first_slot_kit_summary.get("first_open_action_group")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_kit_first_action_id": _text(
+            historical_seed_strict_blind_replacement_first_slot_kit_summary.get("first_open_action_id")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_kit_first_field": _text(
+            historical_seed_strict_blind_replacement_first_slot_kit_summary.get("first_open_field")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_kit_first_status": _text(
+            historical_seed_strict_blind_replacement_first_slot_kit_summary.get("first_open_status")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_kit_kit_folder": _text(
+            historical_seed_strict_blind_replacement_first_slot_kit_summary.get("kit_folder")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_kit_first_next_action": _text(
+            historical_seed_strict_blind_replacement_first_slot_kit_summary.get("first_next_action")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_local_candidate_board_status": _text(
+            historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                "strict_blind_replacement_first_slot_local_candidate_board_status"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_local_candidate_board_required_benchmark_id": _text(
+            historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                "required_benchmark_id"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_local_candidate_board_candidate_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get("candidate_count")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_local_candidate_board_ready_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                "ready_for_first_slot_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_local_candidate_board_strict_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                "strict_blind_eligible_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_local_candidate_board_material_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                "material_present_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_local_candidate_board_prediction_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                "prediction_present_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_local_candidate_board_native_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                "native_present_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_local_candidate_board_authority_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                "native_authority_present_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_local_candidate_board_blocked_chronology_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                "blocked_chronology_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_local_candidate_board_blocked_no_leak_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                "blocked_no_leak_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_local_candidate_board_blocked_ablation_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                "blocked_ablation_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_local_candidate_board_blocked_calibration_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                "blocked_calibration_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_local_candidate_board_first_target_id": _text(
+            historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                "first_review_target_id"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_local_candidate_board_first_status": _text(
+            historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                "first_review_status"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_local_candidate_board_first_next_action": _text(
+            historical_seed_strict_blind_replacement_first_slot_local_candidate_board_summary.get(
+                "first_review_next_action"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_status": _text(
+            historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                "strict_blind_replacement_first_slot_candidate_repair_board_status"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_required_benchmark_id": _text(
+            historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                "required_benchmark_id"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_action_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get("action_count")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_open_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                "open_repair_action_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_blocked_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                "blocked_action_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_chronology_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                "chronology_action_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_no_leak_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                "no_leak_action_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_ablation_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                "ablation_action_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_calibration_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                "calibration_action_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_prediction_file_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                "prediction_file_action_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_native_file_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                "native_file_action_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_native_authority_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                "native_authority_action_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_eligibility_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                "eligibility_action_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_first_action_id": _text(
+            historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                "first_open_action_id"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_first_target_id": _text(
+            historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                "first_open_target_id"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_first_repair_class": _text(
+            historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                "first_open_repair_class"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_first_blocker": _text(
+            historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                "first_open_blocker"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_first_status": _text(
+            historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                "first_open_status"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_first_next_action": _text(
+            historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_summary.get(
+                "first_next_action"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_status": _text(
+            historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                "strict_blind_replacement_first_slot_repair_feasibility_board_status"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_required_benchmark_id": _text(
+            historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                "required_benchmark_id"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_action_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get("action_count")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_post_native_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                "not_repairable_with_current_prediction_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_post_native_eligibility_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                "blocked_by_post_native_prediction_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_external_action_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                "external_pre_native_artifact_required_action_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_external_target_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                "external_pre_native_artifact_required_target_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_source_required_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                "repairable_operator_source_required_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_evidence_required_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                "repairable_operator_evidence_required_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_date_required_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                "needs_chronology_date_evidence_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_primary_blocked_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                "blocked_by_primary_repairs_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_pre_native_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                "repairable_current_prediction_pre_native_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_first_external_action_id": _text(
+            historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                "first_external_action_id"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_first_external_target_id": _text(
+            historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                "first_external_target_id"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_first_external_blocker": _text(
+            historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                "first_external_blocker"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_first_external_next_route": _text(
+            historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                "first_external_next_route"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_first_actionable_action_id": _text(
+            historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                "first_actionable_action_id"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_first_actionable_target_id": _text(
+            historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                "first_actionable_target_id"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_first_actionable_status": _text(
+            historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_summary.get(
+                "first_actionable_status"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_source_route_board_status": _text(
+            historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get(
+                "strict_blind_replacement_first_slot_source_route_board_status"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_source_route_board_required_benchmark_id": _text(
+            historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get(
+                "required_benchmark_id"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_source_route_board_required_target_id": _text(
+            historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get("required_target_id")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_source_route_board_required_scope": _text(
+            historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get("required_scope")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_source_route_board_route_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get("route_count")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_source_route_board_in_scope_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get("in_scope_route_count")
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_source_route_board_out_of_scope_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get(
+                "out_of_scope_route_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_source_route_board_allowed_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get(
+                "allowed_for_first_slot_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_source_route_board_external_required_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get(
+                "in_scope_external_required_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_source_route_board_external_action_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get(
+                "in_scope_external_action_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_source_route_board_out_scope_source_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get(
+                "out_of_scope_source_required_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_source_route_board_out_scope_date_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get(
+                "out_of_scope_date_required_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_source_route_board_first_external_route_id": _text(
+            historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get(
+                "first_external_route_id"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_source_route_board_first_external_target_id": _text(
+            historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get(
+                "first_external_target_id"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_source_route_board_first_external_prediction_created_at": _text(
+            historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get(
+                "first_external_prediction_created_at"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_source_route_board_first_external_native_release_date": _text(
+            historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get(
+                "first_external_native_release_date"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_source_route_board_first_external_next_action": _text(
+            historical_seed_strict_blind_replacement_first_slot_source_route_board_summary.get(
+                "first_external_next_action"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_status": _text(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "strict_blind_replacement_first_slot_official_archive_source_candidates_status"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_required_benchmark_id": _text(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "required_benchmark_id"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_required_target_id": _text(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "required_target_id"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_required_scope": _text(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "required_scope"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_source_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "source_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_source_competitions": _text(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "source_competitions"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_candidate_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "candidate_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_pre_native_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "pre_native_candidate_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_ready_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "ready_candidate_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_blocked_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "blocked_candidate_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_native_ready_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "native_authority_ready_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_native_lookup_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "native_authority_lookup_required_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_native_pdb_ready_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "native_pdb_download_ready_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_native_mmcif_only_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "native_mmcif_only_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_metadata_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "targetlist_metadata_present_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_capri_marker_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "targetlist_capri_marker_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_special_mode_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "targetlist_special_mode_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_regular_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "regular_monomer_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_domain_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "domain_subunit_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_variant_count": _int(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "variant_count"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_candidate_id": _text(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "first_ready_candidate_id"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_competition": _text(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "first_ready_competition"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_target_id": _text(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "first_ready_target_id"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_prediction_at": _text(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "first_ready_prediction_archive_modified_at"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_native_anchor": _text(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "first_ready_native_public_anchor_date"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_tarball": _text(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "first_ready_prediction_tarball_url"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_native_pdb_code": _text(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "first_ready_native_pdb_code"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_native_pdb_url": _text(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "first_ready_native_pdb_url"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_native_structure_file_url": _text(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "first_ready_native_structure_file_url"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_native_structure_file_format": _text(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "first_ready_native_structure_file_format"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_native_download_status": _text(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "first_ready_native_pdb_download_status"
+            )
+        ),
+        "historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_targetlist_url": _text(
+            historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_summary.get(
+                "first_ready_targetlist_target_url"
+            )
         ),
         "historical_seed_ablation_candidate_manifests_status": _text(
             historical_seed_ablation_candidate_manifests_summary.get("ablation_candidate_status")
@@ -3031,6 +6273,42 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "historical_seed_ablation_candidate_manifests_first_next_action": _text(
             historical_seed_ablation_candidate_manifests_summary.get("first_next_action")
         ),
+        "historical_seed_ablation_gap_repair_plan_status": _text(
+            historical_seed_ablation_gap_repair_plan_summary.get("ablation_gap_repair_status")
+        ),
+        "historical_seed_ablation_gap_repair_plan_seed_count": _int(
+            historical_seed_ablation_gap_repair_plan_summary.get("seed_row_count")
+        ),
+        "historical_seed_ablation_gap_repair_plan_repair_csv_count": _int(
+            historical_seed_ablation_gap_repair_plan_summary.get("repair_csv_count")
+        ),
+        "historical_seed_ablation_gap_repair_plan_real_count": _int(
+            historical_seed_ablation_gap_repair_plan_summary.get("real_ablation_candidate_count")
+        ),
+        "historical_seed_ablation_gap_repair_plan_missing_real_count": _int(
+            historical_seed_ablation_gap_repair_plan_summary.get("missing_real_ablation_candidate_count")
+        ),
+        "historical_seed_ablation_gap_repair_plan_top5_decoy_count": _int(
+            historical_seed_ablation_gap_repair_plan_summary.get("top5_review_decoy_count")
+        ),
+        "historical_seed_ablation_gap_repair_plan_top5_copy_count": _int(
+            historical_seed_ablation_gap_repair_plan_summary.get("top5_selected_copy_count")
+        ),
+        "historical_seed_ablation_gap_repair_plan_ready_count": _int(
+            historical_seed_ablation_gap_repair_plan_summary.get("ready_for_operator_review_count")
+        ),
+        "historical_seed_ablation_gap_repair_plan_gap_count": _int(
+            historical_seed_ablation_gap_repair_plan_summary.get("gap_repair_required_count")
+        ),
+        "historical_seed_ablation_gap_repair_plan_core_blocked_count": _int(
+            historical_seed_ablation_gap_repair_plan_summary.get("blocked_core_ablation_input_count")
+        ),
+        "historical_seed_ablation_gap_repair_plan_first_target_id": _text(
+            historical_seed_ablation_gap_repair_plan_summary.get("first_open_target_id")
+        ),
+        "historical_seed_ablation_gap_repair_plan_first_next_action": _text(
+            historical_seed_ablation_gap_repair_plan_summary.get("first_next_action")
+        ),
         "historical_seed_top5_candidate_pools_status": _text(
             historical_seed_top5_candidate_pools_summary.get("top5_candidate_pool_status")
         ),
@@ -3063,6 +6341,63 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         ),
         "historical_seed_top5_candidate_pools_first_next_action": _text(
             historical_seed_top5_candidate_pools_summary.get("first_next_action")
+        ),
+        "historical_seed_internal_score_candidates_status": _text(
+            historical_seed_internal_score_candidates_summary.get("internal_score_candidate_status")
+        ),
+        "historical_seed_internal_score_candidates_seed_count": _int(
+            historical_seed_internal_score_candidates_summary.get("seed_row_count")
+        ),
+        "historical_seed_internal_score_candidates_candidate_count": _int(
+            historical_seed_internal_score_candidates_summary.get("candidate_count")
+        ),
+        "historical_seed_internal_score_candidates_scored_count": _int(
+            historical_seed_internal_score_candidates_summary.get("scored_candidate_count")
+        ),
+        "historical_seed_internal_score_candidates_top5_scored_count": _int(
+            historical_seed_internal_score_candidates_summary.get("top5_scored_ready_count")
+        ),
+        "historical_seed_internal_score_candidates_selected_score_count": _int(
+            historical_seed_internal_score_candidates_summary.get("selected_score_candidate_count")
+        ),
+        "historical_seed_internal_score_candidates_blocked_count": _int(
+            historical_seed_internal_score_candidates_summary.get("blocked_candidate_input_count")
+        ),
+        "historical_seed_internal_score_candidates_first_target_id": _text(
+            historical_seed_internal_score_candidates_summary.get("first_open_target_id")
+        ),
+        "historical_seed_internal_score_candidates_first_next_action": _text(
+            historical_seed_internal_score_candidates_summary.get("first_next_action")
+        ),
+        "historical_seed_native_oracle_metric_candidates_status": _text(
+            historical_seed_native_oracle_metric_candidates_summary.get("native_metric_candidate_status")
+        ),
+        "historical_seed_native_oracle_metric_candidates_seed_count": _int(
+            historical_seed_native_oracle_metric_candidates_summary.get("seed_row_count")
+        ),
+        "historical_seed_native_oracle_metric_candidates_candidate_count": _int(
+            historical_seed_native_oracle_metric_candidates_summary.get("candidate_count")
+        ),
+        "historical_seed_native_oracle_metric_candidates_metric_count": _int(
+            historical_seed_native_oracle_metric_candidates_summary.get("metric_candidate_count")
+        ),
+        "historical_seed_native_oracle_metric_candidates_top5_ready_count": _int(
+            historical_seed_native_oracle_metric_candidates_summary.get("top5_native_metric_ready_count")
+        ),
+        "historical_seed_native_oracle_metric_candidates_selected_count": _int(
+            historical_seed_native_oracle_metric_candidates_summary.get("selected_native_metric_candidate_count")
+        ),
+        "historical_seed_native_oracle_metric_candidates_best_count": _int(
+            historical_seed_native_oracle_metric_candidates_summary.get("best_native_metric_candidate_count")
+        ),
+        "historical_seed_native_oracle_metric_candidates_blocked_count": _int(
+            historical_seed_native_oracle_metric_candidates_summary.get("blocked_candidate_input_count")
+        ),
+        "historical_seed_native_oracle_metric_candidates_first_target_id": _text(
+            historical_seed_native_oracle_metric_candidates_summary.get("first_open_target_id")
+        ),
+        "historical_seed_native_oracle_metric_candidates_first_next_action": _text(
+            historical_seed_native_oracle_metric_candidates_summary.get("first_next_action")
         ),
         "historical_seed_calibration_candidate_ledgers_status": _text(
             historical_seed_calibration_candidate_ledgers_summary.get("calibration_candidate_status")
@@ -3108,6 +6443,165 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         ),
         "historical_seed_calibration_candidate_ledgers_first_next_action": _text(
             historical_seed_calibration_candidate_ledgers_summary.get("first_next_action")
+        ),
+        "historical_seed_calibration_field_candidates_status": _text(
+            historical_seed_calibration_field_candidates_summary.get("calibration_field_candidate_status")
+        ),
+        "historical_seed_calibration_field_candidates_seed_count": _int(
+            historical_seed_calibration_field_candidates_summary.get("seed_row_count")
+        ),
+        "historical_seed_calibration_field_candidates_field_count": _int(
+            historical_seed_calibration_field_candidates_summary.get("field_candidate_count")
+        ),
+        "historical_seed_calibration_field_candidates_proposed_count": _int(
+            historical_seed_calibration_field_candidates_summary.get("proposed_field_count")
+        ),
+        "historical_seed_calibration_field_candidates_matching_count": _int(
+            historical_seed_calibration_field_candidates_summary.get("already_matching_field_count")
+        ),
+        "historical_seed_calibration_field_candidates_conflict_count": _int(
+            historical_seed_calibration_field_candidates_summary.get("conflict_field_count")
+        ),
+        "historical_seed_calibration_field_candidates_blocked_field_count": _int(
+            historical_seed_calibration_field_candidates_summary.get("blocked_field_count")
+        ),
+        "historical_seed_calibration_field_candidates_ready_count": _int(
+            historical_seed_calibration_field_candidates_summary.get("ready_to_apply_row_count")
+        ),
+        "historical_seed_calibration_field_candidates_blocked_row_count": _int(
+            historical_seed_calibration_field_candidates_summary.get("blocked_row_count")
+        ),
+        "historical_seed_calibration_field_candidates_first_target_id": _text(
+            historical_seed_calibration_field_candidates_summary.get("first_open_target_id")
+        ),
+        "historical_seed_calibration_field_candidates_first_next_action": _text(
+            historical_seed_calibration_field_candidates_summary.get("first_next_action")
+        ),
+        "historical_seed_clearance_fill_candidate_packet_status": _text(
+            historical_seed_clearance_fill_candidate_packet_summary.get("clearance_fill_candidate_status")
+        ),
+        "historical_seed_clearance_fill_candidate_packet_seed_count": _int(
+            historical_seed_clearance_fill_candidate_packet_summary.get("seed_row_count")
+        ),
+        "historical_seed_clearance_fill_candidate_packet_field_count": _int(
+            historical_seed_clearance_fill_candidate_packet_summary.get("field_count")
+        ),
+        "historical_seed_clearance_fill_candidate_packet_proposed_count": _int(
+            historical_seed_clearance_fill_candidate_packet_summary.get("proposed_field_count")
+        ),
+        "historical_seed_clearance_fill_candidate_packet_matching_count": _int(
+            historical_seed_clearance_fill_candidate_packet_summary.get("already_matching_field_count")
+        ),
+        "historical_seed_clearance_fill_candidate_packet_operator_required_count": _int(
+            historical_seed_clearance_fill_candidate_packet_summary.get("operator_required_field_count")
+        ),
+        "historical_seed_clearance_fill_candidate_packet_blocked_field_count": _int(
+            historical_seed_clearance_fill_candidate_packet_summary.get("blocked_field_count")
+        ),
+        "historical_seed_clearance_fill_candidate_packet_conflict_count": _int(
+            historical_seed_clearance_fill_candidate_packet_summary.get("conflict_field_count")
+        ),
+        "historical_seed_clearance_fill_candidate_packet_calibration_count": _int(
+            historical_seed_clearance_fill_candidate_packet_summary.get("calibration_candidate_count")
+        ),
+        "historical_seed_clearance_fill_candidate_packet_ablation_count": _int(
+            historical_seed_clearance_fill_candidate_packet_summary.get("ablation_candidate_count")
+        ),
+        "historical_seed_clearance_fill_candidate_packet_no_leak_manual_count": _int(
+            historical_seed_clearance_fill_candidate_packet_summary.get("no_leak_manual_field_count")
+        ),
+        "historical_seed_clearance_fill_candidate_packet_partial_row_count": _int(
+            historical_seed_clearance_fill_candidate_packet_summary.get("partial_candidate_row_count")
+        ),
+        "historical_seed_clearance_fill_candidate_packet_full_ready_row_count": _int(
+            historical_seed_clearance_fill_candidate_packet_summary.get("full_clearance_ready_row_count")
+        ),
+        "historical_seed_clearance_fill_candidate_packet_blocked_row_count": _int(
+            historical_seed_clearance_fill_candidate_packet_summary.get("blocked_row_count")
+        ),
+        "historical_seed_clearance_fill_candidate_packet_first_target_id": _text(
+            historical_seed_clearance_fill_candidate_packet_summary.get("first_open_target_id")
+        ),
+        "historical_seed_clearance_fill_candidate_packet_first_next_action": _text(
+            historical_seed_clearance_fill_candidate_packet_summary.get("first_next_action")
+        ),
+        "historical_seed_clearance_execution_board_status": _text(
+            historical_seed_clearance_execution_board_summary.get("execution_board_status")
+        ),
+        "historical_seed_clearance_execution_board_seed_count": _int(
+            historical_seed_clearance_execution_board_summary.get("seed_row_count")
+        ),
+        "historical_seed_clearance_execution_board_no_leak_only_count": _int(
+            historical_seed_clearance_execution_board_summary.get("operator_no_leak_only_row_count")
+        ),
+        "historical_seed_clearance_execution_board_ablation_repair_count": _int(
+            historical_seed_clearance_execution_board_summary.get("ablation_repair_required_row_count")
+        ),
+        "historical_seed_clearance_execution_board_operator_no_leak_field_count": _int(
+            historical_seed_clearance_execution_board_summary.get("operator_no_leak_field_count")
+        ),
+        "historical_seed_clearance_execution_board_proposed_field_count": _int(
+            historical_seed_clearance_execution_board_summary.get("proposed_field_count")
+        ),
+        "historical_seed_clearance_execution_board_calibration_count": _int(
+            historical_seed_clearance_execution_board_summary.get("calibration_candidate_count")
+        ),
+        "historical_seed_clearance_execution_board_ablation_count": _int(
+            historical_seed_clearance_execution_board_summary.get("ablation_candidate_count")
+        ),
+        "historical_seed_clearance_execution_board_blocked_ablation_count": _int(
+            historical_seed_clearance_execution_board_summary.get("blocked_ablation_field_count")
+        ),
+        "historical_seed_clearance_execution_board_first_target_id": _text(
+            historical_seed_clearance_execution_board_summary.get("first_execution_target_id")
+        ),
+        "historical_seed_clearance_execution_board_first_status": _text(
+            historical_seed_clearance_execution_board_summary.get("first_execution_status")
+        ),
+        "historical_seed_clearance_execution_board_first_next_action": _text(
+            historical_seed_clearance_execution_board_summary.get("first_execution_next_action")
+        ),
+        "historical_seed_clearance_execution_board_first_folder": _text(
+            historical_seed_clearance_execution_board_summary.get("first_execution_folder")
+        ),
+        "historical_seed_first_clearance_operator_kit_status": _text(
+            historical_seed_first_clearance_operator_kit_summary.get("first_clearance_kit_status")
+        ),
+        "historical_seed_first_clearance_operator_kit_target_id": _text(
+            historical_seed_first_clearance_operator_kit_summary.get("target_id")
+        ),
+        "historical_seed_first_clearance_operator_kit_benchmark_id": _text(
+            historical_seed_first_clearance_operator_kit_summary.get("benchmark_id")
+        ),
+        "historical_seed_first_clearance_operator_kit_no_leak_count": _int(
+            historical_seed_first_clearance_operator_kit_summary.get("no_leak_field_count")
+        ),
+        "historical_seed_first_clearance_operator_kit_ready_count": _int(
+            historical_seed_first_clearance_operator_kit_summary.get("ready_candidate_field_count")
+        ),
+        "historical_seed_first_clearance_operator_kit_total_count": _int(
+            historical_seed_first_clearance_operator_kit_summary.get("total_field_count")
+        ),
+        "historical_seed_first_clearance_operator_kit_calibration_count": _int(
+            historical_seed_first_clearance_operator_kit_summary.get("calibration_candidate_count")
+        ),
+        "historical_seed_first_clearance_operator_kit_ablation_count": _int(
+            historical_seed_first_clearance_operator_kit_summary.get("ablation_candidate_count")
+        ),
+        "historical_seed_first_clearance_operator_kit_weak_count": _int(
+            historical_seed_first_clearance_operator_kit_summary.get("weak_hint_count")
+        ),
+        "historical_seed_first_clearance_operator_kit_preview_status": _text(
+            historical_seed_first_clearance_operator_kit_summary.get("promotion_preview_status")
+        ),
+        "historical_seed_first_clearance_operator_kit_folder": _text(
+            historical_seed_first_clearance_operator_kit_summary.get("kit_folder")
+        ),
+        "historical_seed_first_clearance_operator_kit_intake_csv": _text(
+            historical_seed_first_clearance_operator_kit_summary.get("no_leak_operator_intake_csv")
+        ),
+        "historical_seed_first_clearance_operator_kit_next_action": _text(
+            historical_seed_first_clearance_operator_kit_summary.get("next_action")
         ),
         "historical_seed_clearance_to_identity_intake_sync_status": _text(
             historical_seed_clearance_to_identity_intake_sync_summary.get("seed_to_identity_sync_status")
@@ -4403,6 +7897,17 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- raw-ranked model quarantine: `{summary['raw_ranked_model_quarantine_status'] or '-'}` targets/models/top5 `{summary['raw_ranked_model_quarantine_target_count']}/{summary['raw_ranked_model_quarantine_model_count']}/{summary['raw_ranked_model_quarantine_top5_count']}` quarantined/linked/author-present `{summary['raw_ranked_model_quarantine_quarantined_count']}/{summary['raw_ranked_model_quarantine_linked_count']}/{summary['raw_ranked_model_quarantine_author_present_count']}` atoms `{summary['raw_ranked_model_quarantine_atom_count']}`",
         f"- benchmark rows ready/total: `{summary['benchmark_rows_ready_count']}/{summary['benchmark_rows_total']}`",
         f"- win-tier goal scorecard: `{summary['win_tier_goal_scorecard_status'] or '-'}` pass/partial/blocked `{summary['win_tier_goal_scorecard_pass_count']}/{summary['win_tier_goal_scorecard_partial_count']}/{summary['win_tier_goal_scorecard_blocked_count']}` first blocked `{summary['win_tier_goal_scorecard_first_blocked_gate'] or '-'}`",
+        f"- active competition scope: `{summary['active_competition_scope'] or '-'}` CASP17 `{summary['active_scope_casp17_continuation_status'] or '-'}` priority `{summary['active_scope_casp17_priority_status'] or '-'}` CAPRI `{summary['active_scope_capri_round65_participation_status'] or '-'}` reason `{summary['active_scope_capri_round65_hold_reason'] or '-'}` next `{summary['active_scope_next_action'] or '-'}`",
+        (
+            f"- CAPRI Round 65 readiness context: `{summary['active_scope_capri_round65_participation_status'] or '-'}` not active blocker; preserved targets active/closed/total `{summary['capri_round65_active_target_count']}/{summary['capri_round65_closed_target_count']}/{summary['capri_round65_target_count']}` artifact policy `{summary['active_scope_capri_round65_artifact_policy'] or '-'}`"
+            if summary["active_scope_capri_round65_participation_status"].startswith("deferred")
+            else f"- CAPRI Round 65 readiness: `{summary['capri_round65_readiness_status'] or '-'}` round `{summary['capri_round65_round_status'] or '-'}` registration-end `{summary['capri_round65_registration_end'] or '-'}` days `{summary['capri_round65_registration_days_remaining']}` registration fields `{summary['capri_round65_registration_ready_field_count']}/{summary['capri_round65_registration_required_field_count']}` active/closed/total `{summary['capri_round65_active_target_count']}/{summary['capri_round65_closed_target_count']}/{summary['capri_round65_target_count']}` scorer/predictor `{summary['capri_round65_scorer_priority_target_count']}/{summary['capri_round65_predictor_priority_target_count']}` blocked/preflight `{summary['capri_round65_blocked_target_count']}/{summary['capri_round65_readiness_format_preflight_target_count']}` first `{summary['capri_round65_first_open_target_id'] or '-'}` `{summary['capri_round65_first_next_action'] or '-'}`"
+        ),
+        (
+            f"- CAPRI Round 65 format preflight context: `{summary['active_scope_capri_round65_participation_status'] or '-'}` skipped while CAPRI is PI-required hold; local-pass/blocked/checked preserved as context `{summary['capri_round65_format_preflight_local_pass_count']}/{summary['capri_round65_format_preflight_blocked_count']}/{summary['capri_round65_format_preflight_checked_count']}`"
+            if summary["active_scope_capri_round65_participation_status"].startswith("deferred")
+            else f"- CAPRI Round 65 format preflight: `{summary['capri_round65_format_preflight_status'] or '-'}` active/closed/total `{summary['capri_round65_format_preflight_active_target_count']}/{summary['capri_round65_format_preflight_closed_target_count']}/{summary['capri_round65_format_preflight_target_count']}` local-pass/blocked/checked `{summary['capri_round65_format_preflight_local_pass_count']}/{summary['capri_round65_format_preflight_blocked_count']}/{summary['capri_round65_format_preflight_checked_count']}` missing template/candidate/errors `{summary['capri_round65_format_preflight_template_missing_count']}/{summary['capri_round65_format_preflight_candidate_missing_count']}/{summary['capri_round65_format_preflight_error_count']}` first `{summary['capri_round65_format_preflight_first_blocked_target_id'] or '-'}` `{summary['capri_round65_format_preflight_first_next_action'] or '-'}`"
+        ),
         f"- win gap closure: `{summary['win_gap_closure_status'] or '-'}` closed/open `{summary['win_gap_closed_count']}/{summary['win_gap_not_closed_count']}` missing win rows `{summary['benchmark_missing_win_total_rows']}`",
         f"- historical benchmark workorders: `{summary['historical_input_workorder_count']}` core `{summary['historical_core_workorder_count']}` missing core/ablation `{summary['historical_missing_core_file_count']}/{summary['historical_missing_ablation_layer_file_count']}` operator ready/blocked `{summary['benchmark_operator_ready_count']}/{summary['benchmark_operator_blocked_count']}`",
         f"- operator dashboard: `{summary['operator_dashboard_status'] or '-'}` rows ready/blocked/total `{summary['operator_dashboard_ready_count']}/{summary['operator_dashboard_blocked_count']}/{summary['operator_dashboard_row_count']}` needs target/core/ablation/calibration/provenance `{summary['operator_dashboard_needs_target_replacement_count']}/{summary['operator_dashboard_needs_core_file_count']}/{summary['operator_dashboard_needs_ablation_layer_count']}/{summary['operator_dashboard_needs_calibration_count']}/{summary['operator_dashboard_needs_provenance_count']}`",
@@ -4411,11 +7916,40 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- historical identity seed clearance action bundle: `{summary['historical_identity_seed_clearance_action_bundle_status'] or '-'}` targets/actions/open `{summary['historical_identity_seed_clearance_action_bundle_target_count']}/{summary['historical_identity_seed_clearance_action_bundle_action_count']}/{summary['historical_identity_seed_clearance_action_bundle_open_count']}` files/folders `{summary['historical_identity_seed_clearance_action_bundle_file_count']}/{summary['historical_identity_seed_clearance_action_bundle_folder_count']}` identity/core/no-leak/calibration/ablation `{summary['historical_identity_seed_clearance_action_bundle_identity_count']}/{summary['historical_identity_seed_clearance_action_bundle_core_count']}/{summary['historical_identity_seed_clearance_action_bundle_no_leak_count']}/{summary['historical_identity_seed_clearance_action_bundle_calibration_count']}/{summary['historical_identity_seed_clearance_action_bundle_ablation_count']}` first `{summary['historical_identity_seed_clearance_action_bundle_first_action'] or '-'}`",
         f"- historical identity seed clearance field board: `{summary['historical_identity_seed_clearance_field_board_status'] or '-'}` rows operator-fill/ready/total `{summary['historical_identity_seed_clearance_field_board_operator_fill_count']}/{summary['historical_identity_seed_clearance_field_board_ready_count']}/{summary['historical_identity_seed_clearance_field_board_seed_count']}` core pass/blocked `{summary['historical_identity_seed_clearance_field_board_core_pass_count']}/{summary['historical_identity_seed_clearance_field_board_blocked_core_count']}` open no-leak/calibration/ablation/total `{summary['historical_identity_seed_clearance_field_board_no_leak_open_count']}/{summary['historical_identity_seed_clearance_field_board_calibration_open_count']}/{summary['historical_identity_seed_clearance_field_board_ablation_open_count']}/{summary['historical_identity_seed_clearance_field_board_total_open_count']}` first `{summary['historical_identity_seed_clearance_field_board_first_target_id'] or '-'}` `{summary['historical_identity_seed_clearance_field_board_first_field'] or '-'}` `{summary['historical_identity_seed_clearance_field_board_first_next_action'] or '-'}`",
         f"- historical seed no-leak dossiers: `{summary['historical_seed_no_leak_provenance_dossiers_status'] or '-'}` seeds/dossiers `{summary['historical_seed_no_leak_provenance_dossiers_seed_count']}/{summary['historical_seed_no_leak_provenance_dossiers_dossier_count']}` core/current-false `{summary['historical_seed_no_leak_provenance_dossiers_core_pass_count']}/{summary['historical_seed_no_leak_provenance_dossiers_current_false_count']}` ready/review/core-blocked/current-risk `{summary['historical_seed_no_leak_provenance_dossiers_ready_count']}/{summary['historical_seed_no_leak_provenance_dossiers_operator_review_count']}/{summary['historical_seed_no_leak_provenance_dossiers_core_blocked_count']}/{summary['historical_seed_no_leak_provenance_dossiers_current_risk_count']}` open-fields/chronology/negative-control/mtime-risk `{summary['historical_seed_no_leak_provenance_dossiers_open_field_count']}/{summary['historical_seed_no_leak_provenance_dossiers_chronology_gap_count']}/{summary['historical_seed_no_leak_provenance_dossiers_negative_control_gap_count']}/{summary['historical_seed_no_leak_provenance_dossiers_mtime_risk_count']}` first `{summary['historical_seed_no_leak_provenance_dossiers_first_target_id'] or '-'}` `{summary['historical_seed_no_leak_provenance_dossiers_first_next_action'] or '-'}`",
+        f"- historical seed no-leak gap repair: `{summary['historical_seed_no_leak_gap_repair_plan_status'] or '-'}` seeds/repair-csvs `{summary['historical_seed_no_leak_gap_repair_plan_seed_count']}/{summary['historical_seed_no_leak_gap_repair_plan_repair_csv_count']}` fields/operator-required/weak/authoritative `{summary['historical_seed_no_leak_gap_repair_plan_field_count']}/{summary['historical_seed_no_leak_gap_repair_plan_operator_required_count']}/{summary['historical_seed_no_leak_gap_repair_plan_weak_count']}/{summary['historical_seed_no_leak_gap_repair_plan_authoritative_count']}` chronology/negative/clearance/mtime-risk `{summary['historical_seed_no_leak_gap_repair_plan_chronology_count']}/{summary['historical_seed_no_leak_gap_repair_plan_negative_control_count']}/{summary['historical_seed_no_leak_gap_repair_plan_clearance_count']}/{summary['historical_seed_no_leak_gap_repair_plan_mtime_risk_count']}` first `{summary['historical_seed_no_leak_gap_repair_plan_first_target_id'] or '-'}` `{summary['historical_seed_no_leak_gap_repair_plan_first_next_action'] or '-'}`",
         f"- historical seed current-target prefill: `{summary['historical_seed_current_target_prefill_status'] or '-'}` mode `{summary['historical_seed_current_target_prefill_apply_mode'] or '-'}` ready/applied/already/blocked/total `{summary['historical_seed_current_target_prefill_ready_to_apply_count']}/{summary['historical_seed_current_target_prefill_applied_count']}/{summary['historical_seed_current_target_prefill_already_count']}/{summary['historical_seed_current_target_prefill_blocked_count']}/{summary['historical_seed_current_target_prefill_row_count']}` collisions/remaining-open/hist-prefix `{summary['historical_seed_current_target_prefill_collision_count']}/{summary['historical_seed_current_target_prefill_remaining_open_count']}/{summary['historical_seed_current_target_prefill_hist_prefix_count']}` first `{summary['historical_seed_current_target_prefill_first_next_action'] or '-'}`",
+        f"- historical seed native authority audit: `{summary['historical_seed_native_authority_audit_status'] or '-'}` pass/blocked/total `{summary['historical_seed_native_authority_audit_pass_count']}/{summary['historical_seed_native_authority_audit_blocked_count']}/{summary['historical_seed_native_authority_audit_seed_count']}` placeholder/CA-only/local-no-authority/ref-missing `{summary['historical_seed_native_authority_audit_placeholder_count']}/{summary['historical_seed_native_authority_audit_ca_only_count']}/{summary['historical_seed_native_authority_audit_local_generated_no_authority_count']}/{summary['historical_seed_native_authority_audit_ref_missing_count']}` first `{summary['historical_seed_native_authority_audit_first_target_id'] or '-'}` `{summary['historical_seed_native_authority_audit_first_next_action'] or '-'}`",
+        f"- historical seed native replacement candidates: `{summary['historical_seed_native_replacement_candidates_status'] or '-'}` review-ready/download/file-blocked/complex-authority/total `{summary['historical_seed_native_replacement_candidates_ready_count']}/{summary['historical_seed_native_replacement_candidates_download_required_count']}/{summary['historical_seed_native_replacement_candidates_file_blocked_count']}/{summary['historical_seed_native_replacement_candidates_complex_authority_count']}/{summary['historical_seed_native_replacement_candidates_candidate_count']}` monomer `{summary['historical_seed_native_replacement_candidates_monomer_count']}` dir `{summary['historical_seed_native_replacement_candidates_candidate_dir'] or '-'}` first `{summary['historical_seed_native_replacement_candidates_first_target_id'] or '-'}` `{summary['historical_seed_native_replacement_candidates_first_next_action'] or '-'}`",
+        f"- historical seed complex source-authority candidates: `{summary['historical_seed_complex_source_authority_candidates_status'] or '-'}` review-ready/direct/homolog/blocked/total `{summary['historical_seed_complex_source_authority_candidates_review_ready_count']}/{summary['historical_seed_complex_source_authority_candidates_direct_count']}/{summary['historical_seed_complex_source_authority_candidates_homolog_count']}/{summary['historical_seed_complex_source_authority_candidates_blocked_count']}/{summary['historical_seed_complex_source_authority_candidates_candidate_count']}` operator-apply/claim-promotion `{summary['historical_seed_complex_source_authority_candidates_operator_apply_count']}/{summary['historical_seed_complex_source_authority_candidates_claim_promotion_count']}` protein `{summary['historical_seed_complex_source_authority_candidates_protein_ref'] or '-'}` first `{summary['historical_seed_complex_source_authority_candidates_first_target_id'] or '-'}` `{summary['historical_seed_complex_source_authority_candidates_first_next_action'] or '-'}`",
         f"- historical seed chronology candidates: `{summary['historical_seed_chronology_candidate_board_status'] or '-'}` ready/warning/evidence-required/conflict/total `{summary['historical_seed_chronology_candidate_board_ready_count']}/{summary['historical_seed_chronology_candidate_board_warning_count']}/{summary['historical_seed_chronology_candidate_board_evidence_required_count']}/{summary['historical_seed_chronology_candidate_board_conflict_count']}/{summary['historical_seed_chronology_candidate_board_row_count']}` path-date/mtime/risk `{summary['historical_seed_chronology_candidate_board_path_date_count']}/{summary['historical_seed_chronology_candidate_board_mtime_count']}/{summary['historical_seed_chronology_candidate_board_mtime_risk_count']}` first `{summary['historical_seed_chronology_candidate_board_first_target_id'] or '-'}` `{summary['historical_seed_chronology_candidate_board_first_next_action'] or '-'}`",
+        f"- historical seed authoritative chronology audit: `{summary['historical_seed_authoritative_chronology_audit_status'] or '-'}` before/post/evidence/total `{summary['historical_seed_authoritative_chronology_audit_before_native_count']}/{summary['historical_seed_authoritative_chronology_audit_post_native_count']}/{summary['historical_seed_authoritative_chronology_audit_evidence_required_count']}/{summary['historical_seed_authoritative_chronology_audit_seed_count']}` native-date/prediction-date `{summary['historical_seed_authoritative_chronology_audit_native_date_count']}/{summary['historical_seed_authoritative_chronology_audit_prediction_date_count']}` missing native/prediction `{summary['historical_seed_authoritative_chronology_audit_missing_native_date_count']}/{summary['historical_seed_authoritative_chronology_audit_missing_prediction_date_count']}` first `{summary['historical_seed_authoritative_chronology_audit_first_target_id'] or '-'}` `{summary['historical_seed_authoritative_chronology_audit_first_next_action'] or '-'}`",
+        f"- historical seed lane decision: `{summary['historical_seed_lane_decision_packet_status'] or '-'}` strict/retrospective/authority/total `{summary['historical_seed_lane_decision_packet_strict_blind_count']}/{summary['historical_seed_lane_decision_packet_retrospective_count']}/{summary['historical_seed_lane_decision_packet_authority_required_count']}/{summary['historical_seed_lane_decision_packet_seed_count']}` competitive/identity/sidechain `{summary['historical_seed_lane_decision_packet_competitive_count']}/{summary['historical_seed_lane_decision_packet_identity_count']}/{summary['historical_seed_lane_decision_packet_sidechain_count']}` replacement/operator-decision `{summary['historical_seed_lane_decision_packet_replacement_required_count']}/{summary['historical_seed_lane_decision_packet_operator_decision_count']}` first `{summary['historical_seed_lane_decision_packet_first_target_id'] or '-'}` `{summary['historical_seed_lane_decision_packet_first_next_action'] or '-'}`",
+        f"- historical seed strict-blind replacement queue: `{summary['historical_seed_strict_blind_replacement_queue_status'] or '-'}` slots monomer/complex/total `{summary['historical_seed_strict_blind_replacement_queue_monomer_count']}/{summary['historical_seed_strict_blind_replacement_queue_complex_count']}/{summary['historical_seed_strict_blind_replacement_queue_slot_count']}` replacement/ready/competitive `{summary['historical_seed_strict_blind_replacement_queue_replacement_required_count']}/{summary['historical_seed_strict_blind_replacement_queue_ready_count']}/{summary['historical_seed_strict_blind_replacement_queue_competitive_count']}` current seed strict/retrospective/authority/competitive `{summary['historical_seed_strict_blind_replacement_queue_current_seed_strict_count']}/{summary['historical_seed_strict_blind_replacement_queue_current_seed_retrospective_count']}/{summary['historical_seed_strict_blind_replacement_queue_current_seed_authority_count']}/{summary['historical_seed_strict_blind_replacement_queue_current_seed_competitive_count']}` fields `{summary['historical_seed_strict_blind_replacement_queue_requirement_field_count']}` first `{summary['historical_seed_strict_blind_replacement_queue_first_benchmark_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_queue_first_next_action'] or '-'}`",
+        f"- historical seed strict-blind replacement intake: `{summary['historical_seed_strict_blind_replacement_intake_status'] or '-'}` slots ready/awaiting/total `{summary['historical_seed_strict_blind_replacement_intake_ready_count']}/{summary['historical_seed_strict_blind_replacement_intake_blocked_count']}/{summary['historical_seed_strict_blind_replacement_intake_slot_count']}` fields filled/missing/required `{summary['historical_seed_strict_blind_replacement_intake_filled_field_count']}/{summary['historical_seed_strict_blind_replacement_intake_missing_field_count']}/{summary['historical_seed_strict_blind_replacement_intake_required_field_count']}` templates created/preserved `{summary['historical_seed_strict_blind_replacement_intake_created_template_count']}/{summary['historical_seed_strict_blind_replacement_intake_preserved_template_count']}` first `{summary['historical_seed_strict_blind_replacement_intake_first_benchmark_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_intake_first_next_action'] or '-'}`",
+        f"- historical seed strict-blind evidence dropzones: `{summary['historical_seed_strict_blind_replacement_evidence_dropzones_status'] or '-'}` dropzones ready/awaiting/total `{summary['historical_seed_strict_blind_replacement_evidence_dropzones_ready_count']}/{summary['historical_seed_strict_blind_replacement_evidence_dropzones_awaiting_count']}/{summary['historical_seed_strict_blind_replacement_evidence_dropzones_count']}` files present/missing/required `{summary['historical_seed_strict_blind_replacement_evidence_dropzones_file_present_count']}/{summary['historical_seed_strict_blind_replacement_evidence_dropzones_file_missing_count']}/{summary['historical_seed_strict_blind_replacement_evidence_dropzones_file_required_count']}` operator-values `{summary['historical_seed_strict_blind_replacement_evidence_dropzones_operator_value_count']}` patch-previews `{summary['historical_seed_strict_blind_replacement_evidence_dropzones_patch_preview_count']}` first `{summary['historical_seed_strict_blind_replacement_evidence_dropzones_first_benchmark_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_evidence_dropzones_first_next_action'] or '-'}`",
+        f"- historical seed strict-blind evidence action board: `{summary['historical_seed_strict_blind_replacement_evidence_action_board_status'] or '-'}` actions ready/open/blocked/total `{summary['historical_seed_strict_blind_replacement_evidence_action_board_ready_count']}/{summary['historical_seed_strict_blind_replacement_evidence_action_board_open_count']}/{summary['historical_seed_strict_blind_replacement_evidence_action_board_blocked_count']}/{summary['historical_seed_strict_blind_replacement_evidence_action_board_action_count']}` missing prediction/native/authority/no-leak/ablation/calibration `{summary['historical_seed_strict_blind_replacement_evidence_action_board_prediction_missing_count']}/{summary['historical_seed_strict_blind_replacement_evidence_action_board_native_missing_count']}/{summary['historical_seed_strict_blind_replacement_evidence_action_board_authority_missing_count']}/{summary['historical_seed_strict_blind_replacement_evidence_action_board_no_leak_missing_count']}/{summary['historical_seed_strict_blind_replacement_evidence_action_board_ablation_missing_count']}/{summary['historical_seed_strict_blind_replacement_evidence_action_board_calibration_missing_count']}` first `{summary['historical_seed_strict_blind_replacement_evidence_action_board_first_action_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_evidence_action_board_first_benchmark_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_evidence_action_board_first_field'] or '-'}`",
+        f"- historical seed strict-blind evidence quality audit: `{summary['historical_seed_strict_blind_replacement_evidence_quality_audit_status'] or '-'}` slots ready/awaiting/blocked/total `{summary['historical_seed_strict_blind_replacement_evidence_quality_audit_ready_count']}/{summary['historical_seed_strict_blind_replacement_evidence_quality_audit_awaiting_count']}/{summary['historical_seed_strict_blind_replacement_evidence_quality_audit_blocked_count']}/{summary['historical_seed_strict_blind_replacement_evidence_quality_audit_slot_count']}` files present/missing/required `{summary['historical_seed_strict_blind_replacement_evidence_quality_audit_file_present_count']}/{summary['historical_seed_strict_blind_replacement_evidence_quality_audit_file_missing_count']}/{summary['historical_seed_strict_blind_replacement_evidence_quality_audit_file_required_count']}` pdb slots valid/invalid `{summary['historical_seed_strict_blind_replacement_evidence_quality_audit_pdb_valid_slot_count']}/{summary['historical_seed_strict_blind_replacement_evidence_quality_audit_pdb_invalid_slot_count']}` supporting slots valid/invalid `{summary['historical_seed_strict_blind_replacement_evidence_quality_audit_supporting_valid_slot_count']}/{summary['historical_seed_strict_blind_replacement_evidence_quality_audit_supporting_invalid_slot_count']}` pred/native distinct/identical `{summary['historical_seed_strict_blind_replacement_evidence_quality_audit_distinct_count']}/{summary['historical_seed_strict_blind_replacement_evidence_quality_audit_identical_count']}` first `{summary['historical_seed_strict_blind_replacement_evidence_quality_audit_first_benchmark_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_evidence_quality_audit_first_status'] or '-'}`",
+        f"- historical seed strict-blind evidence import gate: `{summary['historical_seed_strict_blind_replacement_evidence_import_gate_status'] or '-'}` mode `{summary['historical_seed_strict_blind_replacement_evidence_import_gate_apply_mode'] or '-'}` actions file/operator/total `{summary['historical_seed_strict_blind_replacement_evidence_import_gate_file_action_count']}/{summary['historical_seed_strict_blind_replacement_evidence_import_gate_operator_action_count']}/{summary['historical_seed_strict_blind_replacement_evidence_import_gate_action_count']}` ready/applied/already `{summary['historical_seed_strict_blind_replacement_evidence_import_gate_ready_count']}/{summary['historical_seed_strict_blind_replacement_evidence_import_gate_applied_count']}/{summary['historical_seed_strict_blind_replacement_evidence_import_gate_already_applied_count']}` awaiting file/operator `{summary['historical_seed_strict_blind_replacement_evidence_import_gate_awaiting_file_count']}/{summary['historical_seed_strict_blind_replacement_evidence_import_gate_awaiting_operator_count']}` blocked `{summary['historical_seed_strict_blind_replacement_evidence_import_gate_blocked_count']}` first `{summary['historical_seed_strict_blind_replacement_evidence_import_gate_first_benchmark_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_evidence_import_gate_first_field'] or '-'}` `{summary['historical_seed_strict_blind_replacement_evidence_import_gate_first_status'] or '-'}`",
+        f"- historical seed strict-blind operator value gate: `{summary['historical_seed_strict_blind_replacement_operator_value_gate_status'] or '-'}` mode `{summary['historical_seed_strict_blind_replacement_operator_value_gate_apply_mode'] or '-'}` templates created/preserved/total `{summary['historical_seed_strict_blind_replacement_operator_value_gate_created_template_count']}/{summary['historical_seed_strict_blind_replacement_operator_value_gate_preserved_template_count']}/{summary['historical_seed_strict_blind_replacement_operator_value_gate_template_count']}` actions ready/applied/already/total `{summary['historical_seed_strict_blind_replacement_operator_value_gate_ready_count']}/{summary['historical_seed_strict_blind_replacement_operator_value_gate_applied_count']}/{summary['historical_seed_strict_blind_replacement_operator_value_gate_already_applied_count']}/{summary['historical_seed_strict_blind_replacement_operator_value_gate_action_count']}` awaiting value/evidence/clearance `{summary['historical_seed_strict_blind_replacement_operator_value_gate_awaiting_value_count']}/{summary['historical_seed_strict_blind_replacement_operator_value_gate_awaiting_evidence_count']}/{summary['historical_seed_strict_blind_replacement_operator_value_gate_awaiting_clearance_count']}` blocked `{summary['historical_seed_strict_blind_replacement_operator_value_gate_blocked_count']}` first `{summary['historical_seed_strict_blind_replacement_operator_value_gate_first_benchmark_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_operator_value_gate_first_field'] or '-'}` `{summary['historical_seed_strict_blind_replacement_operator_value_gate_first_status'] or '-'}`",
+        f"- historical seed strict-blind operator action board: `{summary['historical_seed_strict_blind_replacement_operator_action_board_status'] or '-'}` actions ready/applied/already/total `{summary['historical_seed_strict_blind_replacement_operator_action_board_ready_count']}/{summary['historical_seed_strict_blind_replacement_operator_action_board_applied_count']}/{summary['historical_seed_strict_blind_replacement_operator_action_board_already_count']}/{summary['historical_seed_strict_blind_replacement_operator_action_board_action_count']}` open value/evidence/clearance `{summary['historical_seed_strict_blind_replacement_operator_action_board_open_value_count']}/{summary['historical_seed_strict_blind_replacement_operator_action_board_open_evidence_count']}/{summary['historical_seed_strict_blind_replacement_operator_action_board_open_clearance_count']}` missing target/benchmark/non-current/pred-date/native-date/before-native `{summary['historical_seed_strict_blind_replacement_operator_action_board_target_missing_count']}/{summary['historical_seed_strict_blind_replacement_operator_action_board_benchmark_missing_count']}/{summary['historical_seed_strict_blind_replacement_operator_action_board_non_current_missing_count']}/{summary['historical_seed_strict_blind_replacement_operator_action_board_prediction_date_missing_count']}/{summary['historical_seed_strict_blind_replacement_operator_action_board_native_date_missing_count']}/{summary['historical_seed_strict_blind_replacement_operator_action_board_before_native_missing_count']}` false-controls/operator-clearance `{summary['historical_seed_strict_blind_replacement_operator_action_board_public_false_missing_count']}/{summary['historical_seed_strict_blind_replacement_operator_action_board_other_team_missing_count']}/{summary['historical_seed_strict_blind_replacement_operator_action_board_post_release_missing_count']}/{summary['historical_seed_strict_blind_replacement_operator_action_board_operator_clearance_missing_count']}` first `{summary['historical_seed_strict_blind_replacement_operator_action_board_first_action_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_operator_action_board_first_benchmark_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_operator_action_board_first_field'] or '-'}` `{summary['historical_seed_strict_blind_replacement_operator_action_board_first_status'] or '-'}`",
+        f"- historical seed strict-blind promotion gate: `{summary['historical_seed_strict_blind_replacement_promotion_gate_status'] or '-'}` slots ready/total `{summary['historical_seed_strict_blind_replacement_promotion_gate_ready_count']}/{summary['historical_seed_strict_blind_replacement_promotion_gate_slot_count']}` awaiting file/operator/apply/intake `{summary['historical_seed_strict_blind_replacement_promotion_gate_awaiting_file_count']}/{summary['historical_seed_strict_blind_replacement_promotion_gate_awaiting_operator_count']}/{summary['historical_seed_strict_blind_replacement_promotion_gate_awaiting_apply_count']}/{summary['historical_seed_strict_blind_replacement_promotion_gate_awaiting_intake_count']}` blocked review `{summary['historical_seed_strict_blind_replacement_promotion_gate_blocked_review_count']}` complete intake/file/operator `{summary['historical_seed_strict_blind_replacement_promotion_gate_intake_ready_count']}/{summary['historical_seed_strict_blind_replacement_promotion_gate_file_complete_count']}/{summary['historical_seed_strict_blind_replacement_promotion_gate_operator_complete_count']}` awaiting actions file/operator `{summary['historical_seed_strict_blind_replacement_promotion_gate_file_awaiting_action_count']}/{summary['historical_seed_strict_blind_replacement_promotion_gate_operator_awaiting_action_count']}` first `{summary['historical_seed_strict_blind_replacement_promotion_gate_first_benchmark_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_promotion_gate_first_phase'] or '-'}` `{summary['historical_seed_strict_blind_replacement_promotion_gate_first_status'] or '-'}`",
+        f"- historical seed strict-blind replacement cycle: `{summary['historical_seed_strict_blind_replacement_cycle_status'] or '-'}` promotion ready/total `{summary['historical_seed_strict_blind_replacement_cycle_promotion_ready_count']}/{summary['historical_seed_strict_blind_replacement_cycle_slot_count']}` files present/missing `{summary['historical_seed_strict_blind_replacement_cycle_evidence_file_present_count']}/{summary['historical_seed_strict_blind_replacement_cycle_evidence_file_missing_count']}` quality ready/awaiting/blocked `{summary['historical_seed_strict_blind_replacement_cycle_quality_ready_count']}/{summary['historical_seed_strict_blind_replacement_cycle_quality_awaiting_count']}/{summary['historical_seed_strict_blind_replacement_cycle_quality_blocked_count']}` import ready/file/operator `{summary['historical_seed_strict_blind_replacement_cycle_import_ready_count']}/{summary['historical_seed_strict_blind_replacement_cycle_import_awaiting_file_count']}/{summary['historical_seed_strict_blind_replacement_cycle_import_awaiting_operator_count']}` operator ready/awaiting `{summary['historical_seed_strict_blind_replacement_cycle_operator_ready_count']}/{summary['historical_seed_strict_blind_replacement_cycle_operator_awaiting_value_count']}` operator-board ready/open-value/open-evidence/open-clearance `{summary['historical_seed_strict_blind_replacement_cycle_operator_action_board_ready_count']}/{summary['historical_seed_strict_blind_replacement_cycle_operator_action_board_open_value_count']}/{summary['historical_seed_strict_blind_replacement_cycle_operator_action_board_open_evidence_count']}/{summary['historical_seed_strict_blind_replacement_cycle_operator_action_board_open_clearance_count']}` first `{summary['historical_seed_strict_blind_replacement_cycle_first_blocking_stage'] or '-'}` `{summary['historical_seed_strict_blind_replacement_cycle_first_benchmark_id'] or '-'}`",
+        f"- historical seed strict-blind first slot kit: `{summary['historical_seed_strict_blind_replacement_first_slot_kit_status'] or '-'}` benchmark/target/scope `{summary['historical_seed_strict_blind_replacement_first_slot_kit_benchmark_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_kit_target_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_kit_scope'] or '-'}` evidence ready/open/blocked/total `{summary['historical_seed_strict_blind_replacement_first_slot_kit_evidence_ready_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_kit_evidence_open_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_kit_evidence_blocked_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_kit_evidence_action_count']}` operator ready/open/blocked/total `{summary['historical_seed_strict_blind_replacement_first_slot_kit_operator_ready_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_kit_operator_open_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_kit_operator_blocked_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_kit_operator_action_count']}` operator open value/evidence/clearance `{summary['historical_seed_strict_blind_replacement_first_slot_kit_operator_open_value_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_kit_operator_open_evidence_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_kit_operator_open_clearance_count']}` kit `{summary['historical_seed_strict_blind_replacement_first_slot_kit_kit_folder'] or '-'}` first `{summary['historical_seed_strict_blind_replacement_first_slot_kit_first_action_group'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_kit_first_action_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_kit_first_field'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_kit_first_status'] or '-'}`",
+        f"- historical seed strict-blind first slot local candidates: `{summary['historical_seed_strict_blind_replacement_first_slot_local_candidate_board_status'] or '-'}` required `{summary['historical_seed_strict_blind_replacement_first_slot_local_candidate_board_required_benchmark_id'] or '-'}` candidates ready/strict/material/total `{summary['historical_seed_strict_blind_replacement_first_slot_local_candidate_board_ready_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_local_candidate_board_strict_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_local_candidate_board_material_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_local_candidate_board_candidate_count']}` present prediction/native/authority `{summary['historical_seed_strict_blind_replacement_first_slot_local_candidate_board_prediction_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_local_candidate_board_native_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_local_candidate_board_authority_count']}` blocked chronology/no-leak/ablation/calibration `{summary['historical_seed_strict_blind_replacement_first_slot_local_candidate_board_blocked_chronology_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_local_candidate_board_blocked_no_leak_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_local_candidate_board_blocked_ablation_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_local_candidate_board_blocked_calibration_count']}` first `{summary['historical_seed_strict_blind_replacement_first_slot_local_candidate_board_first_target_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_local_candidate_board_first_status'] or '-'}`",
+        f"- historical seed strict-blind first slot candidate repairs: `{summary['historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_status'] or '-'}` required `{summary['historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_required_benchmark_id'] or '-'}` actions open/blocked/total `{summary['historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_open_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_blocked_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_action_count']}` classes chronology/no-leak/ablation/calibration `{summary['historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_chronology_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_no_leak_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_ablation_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_calibration_count']}` source prediction/native/authority `{summary['historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_prediction_file_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_native_file_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_native_authority_count']}` eligibility `{summary['historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_eligibility_count']}` first `{summary['historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_first_action_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_first_target_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_first_repair_class'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_first_blocker'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_candidate_repair_board_first_status'] or '-'}`",
+        f"- historical seed strict-blind first slot repair feasibility: `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_status'] or '-'}` required `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_required_benchmark_id'] or '-'}` actions `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_action_count']}` post-native/eligibility `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_post_native_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_post_native_eligibility_count']}` external actions/targets `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_external_action_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_external_target_count']}` repairable source/evidence/date `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_source_required_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_evidence_required_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_date_required_count']}` primary/pre-native `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_primary_blocked_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_pre_native_count']}` first external `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_first_external_action_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_first_external_target_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_first_external_blocker'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_first_external_next_route'] or '-'}` first actionable `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_first_actionable_action_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_first_actionable_target_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_repair_feasibility_board_first_actionable_status'] or '-'}`",
+        f"- historical seed strict-blind first slot source route: `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_status'] or '-'}` required `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_required_benchmark_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_required_target_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_required_scope'] or '-'}` routes in/out/total `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_in_scope_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_out_of_scope_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_route_count']}` allowed `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_allowed_count']}` external targets/actions `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_external_required_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_external_action_count']}` out-scope source/date `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_out_scope_source_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_out_scope_date_count']}` first external `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_first_external_route_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_first_external_target_id'] or '-'}` prediction/native `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_first_external_prediction_created_at'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_first_external_native_release_date'] or '-'}`",
+        f"- historical seed strict-blind first slot official archive sources: `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_status'] or '-'}` required `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_required_benchmark_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_required_target_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_required_scope'] or '-'}` sources `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_source_count']}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_source_competitions'] or '-'}` candidates ready/blocked/total `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_ready_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_blocked_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_candidate_count']}` pre/native-ready/lookup `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_pre_native_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_native_ready_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_native_lookup_count']}` native PDB/mmCIF `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_native_pdb_ready_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_native_mmcif_only_count']}` metadata/CAPRI/special `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_metadata_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_capri_marker_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_special_mode_count']}` regular/domain/variant `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_regular_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_domain_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_variant_count']}` first `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_candidate_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_competition'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_target_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_native_pdb_code'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_native_download_status'] or '-'}` prediction/native `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_prediction_at'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_native_anchor'] or '-'}`",
         f"- historical seed ablation candidates: `{summary['historical_seed_ablation_candidate_manifests_status'] or '-'}` seeds/manifests/candidate-rows `{summary['historical_seed_ablation_candidate_manifests_seed_count']}/{summary['historical_seed_ablation_candidate_manifests_manifest_count']}/{summary['historical_seed_ablation_candidate_manifests_candidate_row_count']}` selected/native `{summary['historical_seed_ablation_candidate_manifests_selected_present_count']}/{summary['historical_seed_ablation_candidate_manifests_native_present_count']}` baseline/gaps `{summary['historical_seed_ablation_candidate_manifests_baseline_count']}/{summary['historical_seed_ablation_candidate_manifests_layer_gap_count']}` ready/review/core-blocked `{summary['historical_seed_ablation_candidate_manifests_ready_count']}/{summary['historical_seed_ablation_candidate_manifests_operator_review_count']}/{summary['historical_seed_ablation_candidate_manifests_core_blocked_count']}` first `{summary['historical_seed_ablation_candidate_manifests_first_target_id'] or '-'}` `{summary['historical_seed_ablation_candidate_manifests_first_next_action'] or '-'}`",
+        f"- historical seed ablation gap repair: `{summary['historical_seed_ablation_gap_repair_plan_status'] or '-'}` seeds/repair-csvs `{summary['historical_seed_ablation_gap_repair_plan_seed_count']}/{summary['historical_seed_ablation_gap_repair_plan_repair_csv_count']}` real/missing-real/top5-decoys/top5-copy `{summary['historical_seed_ablation_gap_repair_plan_real_count']}/{summary['historical_seed_ablation_gap_repair_plan_missing_real_count']}/{summary['historical_seed_ablation_gap_repair_plan_top5_decoy_count']}/{summary['historical_seed_ablation_gap_repair_plan_top5_copy_count']}` ready/gap/core-blocked `{summary['historical_seed_ablation_gap_repair_plan_ready_count']}/{summary['historical_seed_ablation_gap_repair_plan_gap_count']}/{summary['historical_seed_ablation_gap_repair_plan_core_blocked_count']}` first `{summary['historical_seed_ablation_gap_repair_plan_first_target_id'] or '-'}` `{summary['historical_seed_ablation_gap_repair_plan_first_next_action'] or '-'}`",
         f"- historical seed top5 pools: `{summary['historical_seed_top5_candidate_pools_status'] or '-'}` seeds/pools/models `{summary['historical_seed_top5_candidate_pools_seed_count']}/{summary['historical_seed_top5_candidate_pools_pool_count']}/{summary['historical_seed_top5_candidate_pools_candidate_model_count']}` complete/gaps/source-present/source-blocked `{summary['historical_seed_top5_candidate_pools_complete_count']}/{summary['historical_seed_top5_candidate_pools_gap_count']}/{summary['historical_seed_top5_candidate_pools_source_present_count']}/{summary['historical_seed_top5_candidate_pools_blocked_source_count']}` generated `{summary['historical_seed_top5_candidate_pools_generated_perturbation_count']}` first `{summary['historical_seed_top5_candidate_pools_first_target_id'] or '-'}` `{summary['historical_seed_top5_candidate_pools_first_next_action'] or '-'}`",
+        f"- historical seed internal scores: `{summary['historical_seed_internal_score_candidates_status'] or '-'}` seeds/candidates/scored `{summary['historical_seed_internal_score_candidates_seed_count']}/{summary['historical_seed_internal_score_candidates_candidate_count']}/{summary['historical_seed_internal_score_candidates_scored_count']}` top5-scored/selected-scores/blocked `{summary['historical_seed_internal_score_candidates_top5_scored_count']}/{summary['historical_seed_internal_score_candidates_selected_score_count']}/{summary['historical_seed_internal_score_candidates_blocked_count']}` first `{summary['historical_seed_internal_score_candidates_first_target_id'] or '-'}` `{summary['historical_seed_internal_score_candidates_first_next_action'] or '-'}`",
+        f"- historical seed native metrics: `{summary['historical_seed_native_oracle_metric_candidates_status'] or '-'}` seeds/candidates/metric-ready `{summary['historical_seed_native_oracle_metric_candidates_seed_count']}/{summary['historical_seed_native_oracle_metric_candidates_candidate_count']}/{summary['historical_seed_native_oracle_metric_candidates_metric_count']}` top5/selected/best/blocked `{summary['historical_seed_native_oracle_metric_candidates_top5_ready_count']}/{summary['historical_seed_native_oracle_metric_candidates_selected_count']}/{summary['historical_seed_native_oracle_metric_candidates_best_count']}/{summary['historical_seed_native_oracle_metric_candidates_blocked_count']}` first `{summary['historical_seed_native_oracle_metric_candidates_first_target_id'] or '-'}` `{summary['historical_seed_native_oracle_metric_candidates_first_next_action'] or '-'}`",
         f"- historical seed calibration candidates: `{summary['historical_seed_calibration_candidate_ledgers_status'] or '-'}` seeds/ledgers/models `{summary['historical_seed_calibration_candidate_ledgers_seed_count']}/{summary['historical_seed_calibration_candidate_ledgers_ledger_count']}/{summary['historical_seed_calibration_candidate_ledgers_candidate_model_count']}` top5/selected/rank `{summary['historical_seed_calibration_candidate_ledgers_top5_ready_count']}/{summary['historical_seed_calibration_candidate_ledgers_selected_prediction_count']}/{summary['historical_seed_calibration_candidate_ledgers_selected_rank_candidate_count']}` native/internal `{summary['historical_seed_calibration_candidate_ledgers_native_metric_count']}/{summary['historical_seed_calibration_candidate_ledgers_internal_score_count']}` ready/review/blocked-selected/open-fields `{summary['historical_seed_calibration_candidate_ledgers_ready_count']}/{summary['historical_seed_calibration_candidate_ledgers_operator_review_count']}/{summary['historical_seed_calibration_candidate_ledgers_blocked_selected_prediction_count']}/{summary['historical_seed_calibration_candidate_ledgers_open_field_count']}` first `{summary['historical_seed_calibration_candidate_ledgers_first_target_id'] or '-'}` `{summary['historical_seed_calibration_candidate_ledgers_first_next_action'] or '-'}`",
+        f"- historical seed calibration field candidates: `{summary['historical_seed_calibration_field_candidates_status'] or '-'}` seeds/fields/proposed/matching `{summary['historical_seed_calibration_field_candidates_seed_count']}/{summary['historical_seed_calibration_field_candidates_field_count']}/{summary['historical_seed_calibration_field_candidates_proposed_count']}/{summary['historical_seed_calibration_field_candidates_matching_count']}` ready/blocked/conflicts/blocked-fields `{summary['historical_seed_calibration_field_candidates_ready_count']}/{summary['historical_seed_calibration_field_candidates_blocked_row_count']}/{summary['historical_seed_calibration_field_candidates_conflict_count']}/{summary['historical_seed_calibration_field_candidates_blocked_field_count']}` first `{summary['historical_seed_calibration_field_candidates_first_target_id'] or '-'}` `{summary['historical_seed_calibration_field_candidates_first_next_action'] or '-'}`",
+        f"- historical seed clearance fill candidates: `{summary['historical_seed_clearance_fill_candidate_packet_status'] or '-'}` seeds/fields/proposed/manual/blocked `{summary['historical_seed_clearance_fill_candidate_packet_seed_count']}/{summary['historical_seed_clearance_fill_candidate_packet_field_count']}/{summary['historical_seed_clearance_fill_candidate_packet_proposed_count']}/{summary['historical_seed_clearance_fill_candidate_packet_operator_required_count']}/{summary['historical_seed_clearance_fill_candidate_packet_blocked_field_count']}` calibration/ablation/no-leak-manual/conflicts `{summary['historical_seed_clearance_fill_candidate_packet_calibration_count']}/{summary['historical_seed_clearance_fill_candidate_packet_ablation_count']}/{summary['historical_seed_clearance_fill_candidate_packet_no_leak_manual_count']}/{summary['historical_seed_clearance_fill_candidate_packet_conflict_count']}` partial/full-ready/blocked rows `{summary['historical_seed_clearance_fill_candidate_packet_partial_row_count']}/{summary['historical_seed_clearance_fill_candidate_packet_full_ready_row_count']}/{summary['historical_seed_clearance_fill_candidate_packet_blocked_row_count']}` first `{summary['historical_seed_clearance_fill_candidate_packet_first_target_id'] or '-'}` `{summary['historical_seed_clearance_fill_candidate_packet_first_next_action'] or '-'}`",
+        f"- historical seed clearance execution board: `{summary['historical_seed_clearance_execution_board_status'] or '-'}` seeds/no-leak-only/ablation-repair `{summary['historical_seed_clearance_execution_board_seed_count']}/{summary['historical_seed_clearance_execution_board_no_leak_only_count']}/{summary['historical_seed_clearance_execution_board_ablation_repair_count']}` no-leak/proposed/calibration/ablation/blocked-ablation `{summary['historical_seed_clearance_execution_board_operator_no_leak_field_count']}/{summary['historical_seed_clearance_execution_board_proposed_field_count']}/{summary['historical_seed_clearance_execution_board_calibration_count']}/{summary['historical_seed_clearance_execution_board_ablation_count']}/{summary['historical_seed_clearance_execution_board_blocked_ablation_count']}` first `{summary['historical_seed_clearance_execution_board_first_target_id'] or '-'}` `{summary['historical_seed_clearance_execution_board_first_status'] or '-'}` `{summary['historical_seed_clearance_execution_board_first_next_action'] or '-'}` folder `{summary['historical_seed_clearance_execution_board_first_folder'] or '-'}`",
+        f"- historical seed first clearance kit: `{summary['historical_seed_first_clearance_operator_kit_status'] or '-'}` target `{summary['historical_seed_first_clearance_operator_kit_target_id'] or '-'}` benchmark `{summary['historical_seed_first_clearance_operator_kit_benchmark_id'] or '-'}` no-leak/ready/weak `{summary['historical_seed_first_clearance_operator_kit_no_leak_count']}/{summary['historical_seed_first_clearance_operator_kit_ready_count']}/{summary['historical_seed_first_clearance_operator_kit_weak_count']}` calibration/ablation `{summary['historical_seed_first_clearance_operator_kit_calibration_count']}/{summary['historical_seed_first_clearance_operator_kit_ablation_count']}` preview `{summary['historical_seed_first_clearance_operator_kit_preview_status'] or '-'}` intake `{summary['historical_seed_first_clearance_operator_kit_intake_csv'] or '-'}`",
         f"- historical seed clearance to identity intake sync: `{summary['historical_seed_clearance_to_identity_intake_sync_status'] or '-'}` mode `{summary['historical_seed_clearance_to_identity_intake_sync_apply_mode'] or '-'}` seed eligible/total `{summary['historical_seed_clearance_to_identity_intake_sync_eligible_count']}/{summary['historical_seed_clearance_to_identity_intake_sync_seed_row_count']}` intake ready/waiting/blocked/total `{summary['historical_seed_clearance_to_identity_intake_sync_ready_count']}/{summary['historical_seed_clearance_to_identity_intake_sync_waiting_count']}/{summary['historical_seed_clearance_to_identity_intake_sync_blocked_count']}/{summary['historical_seed_clearance_to_identity_intake_sync_intake_row_count']}` applied `{summary['historical_seed_clearance_to_identity_intake_sync_applied_count']}` first `{summary['historical_seed_clearance_to_identity_intake_sync_first_next_action'] or '-'}`",
         f"- sidechain-native benchmark: `{summary['sidechain_native_benchmark_status'] or '-'}` pass/blocked/total `{summary['sidechain_native_pass_count']}/{summary['sidechain_native_blocked_count']}/{summary['sidechain_native_benchmark_count']}` core/leakage/pred/native/missing-files `{summary['sidechain_native_core_input_blocked_count']}/{summary['sidechain_native_leakage_blocked_count']}/{summary['sidechain_native_prediction_missing_count']}/{summary['sidechain_native_native_missing_count']}/{summary['sidechain_native_missing_core_file_count']}` exactness/metric `{summary['sidechain_native_exactness_blocked_count']}/{summary['sidechain_native_metric_blocked_count']}` first `{summary['sidechain_native_first_blocked_benchmark_id'] or '-'}` blockers `{summary['sidechain_native_first_blocked_blockers'] or '-'}`",
         f"- sidechain-native workorder: actions/open `{summary['sidechain_native_workorder_action_count']}/{summary['sidechain_native_open_workorder_action_count']}` files `{summary['sidechain_native_workorder_json'] or '-'}` `{summary['sidechain_native_workorder_md'] or '-'}`",
@@ -4515,6 +8049,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--raw-ranked-model-quarantine-json", default=DEFAULT_RAW_RANKED_MODEL_QUARANTINE_JSON)
     parser.add_argument("--win-gap-closure-json", default=DEFAULT_WIN_GAP_CLOSURE_JSON)
     parser.add_argument("--win-tier-goal-scorecard-json", default=DEFAULT_WIN_TIER_GOAL_SCORECARD_JSON)
+    parser.add_argument("--active-scope-decision-json", default=DEFAULT_ACTIVE_SCOPE_DECISION_JSON)
+    parser.add_argument("--capri-round65-readiness-json", default=DEFAULT_CAPRI_ROUND65_READINESS_JSON)
+    parser.add_argument("--capri-round65-format-preflight-json", default=DEFAULT_CAPRI_ROUND65_FORMAT_PREFLIGHT_JSON)
     parser.add_argument("--input-scaffold-json", default=DEFAULT_INPUT_SCAFFOLD_JSON)
     parser.add_argument("--input-inventory-json", default=DEFAULT_INPUT_INVENTORY_JSON)
     parser.add_argument("--operator-dashboard-json", default=DEFAULT_OPERATOR_DASHBOARD_JSON)
@@ -4533,24 +8070,140 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=DEFAULT_HISTORICAL_SEED_NO_LEAK_PROVENANCE_DOSSIERS_JSON,
     )
     parser.add_argument(
+        "--historical-seed-no-leak-gap-repair-plan-json",
+        default=DEFAULT_HISTORICAL_SEED_NO_LEAK_GAP_REPAIR_PLAN_JSON,
+    )
+    parser.add_argument(
         "--historical-seed-current-target-prefill-json",
         default=DEFAULT_HISTORICAL_SEED_CURRENT_TARGET_PREFILL_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-native-authority-audit-json",
+        default=DEFAULT_HISTORICAL_SEED_NATIVE_AUTHORITY_AUDIT_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-native-replacement-candidates-json",
+        default=DEFAULT_HISTORICAL_SEED_NATIVE_REPLACEMENT_CANDIDATES_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-complex-source-authority-candidates-json",
+        default=DEFAULT_HISTORICAL_SEED_COMPLEX_SOURCE_AUTHORITY_CANDIDATES_JSON,
     )
     parser.add_argument(
         "--historical-seed-chronology-candidate-board-json",
         default=DEFAULT_HISTORICAL_SEED_CHRONOLOGY_CANDIDATE_BOARD_JSON,
     )
     parser.add_argument(
+        "--historical-seed-authoritative-chronology-audit-json",
+        default=DEFAULT_HISTORICAL_SEED_AUTHORITATIVE_CHRONOLOGY_AUDIT_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-lane-decision-packet-json",
+        default=DEFAULT_HISTORICAL_SEED_LANE_DECISION_PACKET_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-strict-blind-replacement-queue-json",
+        default=DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_QUEUE_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-strict-blind-replacement-intake-json",
+        default=DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_INTAKE_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-strict-blind-replacement-evidence-dropzones-json",
+        default=DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_EVIDENCE_DROPZONES_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-strict-blind-replacement-evidence-action-board-json",
+        default=DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_EVIDENCE_ACTION_BOARD_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-strict-blind-replacement-evidence-quality-audit-json",
+        default=DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_EVIDENCE_QUALITY_AUDIT_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-strict-blind-replacement-evidence-import-gate-json",
+        default=DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_EVIDENCE_IMPORT_GATE_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-strict-blind-replacement-operator-value-gate-json",
+        default=DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_OPERATOR_VALUE_GATE_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-strict-blind-replacement-operator-action-board-json",
+        default=DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_OPERATOR_ACTION_BOARD_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-strict-blind-replacement-promotion-gate-json",
+        default=DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_PROMOTION_GATE_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-strict-blind-replacement-cycle-json",
+        default=DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_CYCLE_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-strict-blind-replacement-first-slot-kit-json",
+        default=DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_FIRST_SLOT_KIT_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-strict-blind-replacement-first-slot-local-candidate-board-json",
+        default=DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_FIRST_SLOT_LOCAL_CANDIDATE_BOARD_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-strict-blind-replacement-first-slot-candidate-repair-board-json",
+        default=DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_FIRST_SLOT_CANDIDATE_REPAIR_BOARD_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-strict-blind-replacement-first-slot-repair-feasibility-board-json",
+        default=DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_FIRST_SLOT_REPAIR_FEASIBILITY_BOARD_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-strict-blind-replacement-first-slot-source-route-board-json",
+        default=DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_FIRST_SLOT_SOURCE_ROUTE_BOARD_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-strict-blind-replacement-first-slot-official-archive-source-candidates-json",
+        default=DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_FIRST_SLOT_OFFICIAL_ARCHIVE_SOURCE_CANDIDATES_JSON,
+    )
+    parser.add_argument(
         "--historical-seed-ablation-candidate-manifests-json",
         default=DEFAULT_HISTORICAL_SEED_ABLATION_CANDIDATE_MANIFESTS_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-ablation-gap-repair-plan-json",
+        default=DEFAULT_HISTORICAL_SEED_ABLATION_GAP_REPAIR_PLAN_JSON,
     )
     parser.add_argument(
         "--historical-seed-top5-candidate-pools-json",
         default=DEFAULT_HISTORICAL_SEED_TOP5_CANDIDATE_POOLS_JSON,
     )
     parser.add_argument(
+        "--historical-seed-internal-score-candidates-json",
+        default=DEFAULT_HISTORICAL_SEED_INTERNAL_SCORE_CANDIDATES_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-native-oracle-metric-candidates-json",
+        default=DEFAULT_HISTORICAL_SEED_NATIVE_ORACLE_METRIC_CANDIDATES_JSON,
+    )
+    parser.add_argument(
         "--historical-seed-calibration-candidate-ledgers-json",
         default=DEFAULT_HISTORICAL_SEED_CALIBRATION_CANDIDATE_LEDGERS_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-calibration-field-candidates-json",
+        default=DEFAULT_HISTORICAL_SEED_CALIBRATION_FIELD_CANDIDATES_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-clearance-fill-candidate-packet-json",
+        default=DEFAULT_HISTORICAL_SEED_CLEARANCE_FILL_CANDIDATE_PACKET_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-clearance-execution-board-json",
+        default=DEFAULT_HISTORICAL_SEED_CLEARANCE_EXECUTION_BOARD_JSON,
+    )
+    parser.add_argument(
+        "--historical-seed-first-clearance-operator-kit-json",
+        default=DEFAULT_HISTORICAL_SEED_FIRST_CLEARANCE_OPERATOR_KIT_JSON,
     )
     parser.add_argument(
         "--historical-seed-clearance-to-identity-intake-sync-json",
