@@ -47,6 +47,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     massivefold_rna_model_selection_coverage_json = (
         tmp_path / "massivefold_rna_model_selection_coverage.json"
     )
+    protein_complex_massivefold_model_selection_coverage_json = (
+        tmp_path / "protein_complex_massivefold_model_selection_coverage.json"
+    )
     capri_round65_readiness_json = tmp_path / "capri_round65_readiness.json"
     capri_round65_format_preflight_json = tmp_path / "capri_round65_format_preflight.json"
     scaffold_json = tmp_path / "scaffold.json"
@@ -789,6 +792,32 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "first_partial_target_id": "",
                 "next_action": (
                     "use R2341/R2345 review-only model1/top5 picks as RNA model-selection inputs"
+                ),
+            }
+        },
+    )
+    _write_json(
+        protein_complex_massivefold_model_selection_coverage_json,
+        {
+            "summary": {
+                "protein_complex_massivefold_model_selection_coverage_status": (
+                    "protein_complex_massivefold_model_selection_coverage_ready_review_only"
+                ),
+                "target_count": 2,
+                "ready_target_count": 2,
+                "partial_target_count": 0,
+                "verified_acquisition_count": 2,
+                "representative_extracted_target_count": 2,
+                "viewer_ready_target_count": 2,
+                "rerank_ready_target_count": 2,
+                "selected_model_count": 260,
+                "extracted_model_count": 260,
+                "viewer_ready_model_count": 260,
+                "top5_candidate_count": 10,
+                "model1_candidate_count": 2,
+                "first_partial_target_id": "",
+                "next_action": (
+                    "use H1311/T2313 review-only model1/top5 picks as protein/complex model-selection inputs"
                 ),
             }
         },
@@ -2757,6 +2786,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(massivefold_representative_rerank_packet_json),
             "--massivefold-rna-model-selection-coverage-json",
             str(massivefold_rna_model_selection_coverage_json),
+            "--protein-complex-massivefold-model-selection-coverage-json",
+            str(protein_complex_massivefold_model_selection_coverage_json),
             "--capri-round65-readiness-json",
             str(capri_round65_readiness_json),
             "--capri-round65-format-preflight-json",
@@ -3012,6 +3043,11 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "targets ready/partial/total `2/0/2`" in workbench_md
     assert "models selected/extracted/viewer `80/80/80`" in workbench_md
     assert "model1/top5 `2/10`" in workbench_md
+    assert (
+        "Protein/complex MassiveFold model-selection coverage: "
+        "`protein_complex_massivefold_model_selection_coverage_ready_review_only`"
+    ) in workbench_md
+    assert "models selected/extracted/viewer `260/260/260`" in workbench_md
     assert "CAPRI Round 65 readiness context: `deferred_pi_required`" in workbench_md
     assert "CAPRI Round 65 format preflight context: `deferred_pi_required`" in workbench_md
     assert "historical seed official archive baseline lane: `official_archive_baseline_lane_ready`" in workbench_md
@@ -3766,6 +3802,31 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["massivefold_rna_model_selection_coverage_viewer_ready_model_count"] == 80
     assert payload["summary"]["massivefold_rna_model_selection_coverage_top5_candidate_count"] == 10
     assert payload["summary"]["massivefold_rna_model_selection_coverage_model1_candidate_count"] == 2
+    assert payload["summary"]["protein_complex_massivefold_model_selection_coverage_status"] == (
+        "protein_complex_massivefold_model_selection_coverage_ready_review_only"
+    )
+    assert payload["summary"]["protein_complex_massivefold_model_selection_coverage_target_count"] == 2
+    assert payload["summary"]["protein_complex_massivefold_model_selection_coverage_ready_target_count"] == 2
+    assert payload["summary"]["protein_complex_massivefold_model_selection_coverage_partial_target_count"] == 0
+    assert (
+        payload["summary"][
+            "protein_complex_massivefold_model_selection_coverage_verified_acquisition_count"
+        ]
+        == 2
+    )
+    assert (
+        payload["summary"][
+            "protein_complex_massivefold_model_selection_coverage_representative_extracted_target_count"
+        ]
+        == 2
+    )
+    assert payload["summary"]["protein_complex_massivefold_model_selection_coverage_viewer_ready_target_count"] == 2
+    assert payload["summary"]["protein_complex_massivefold_model_selection_coverage_rerank_ready_target_count"] == 2
+    assert payload["summary"]["protein_complex_massivefold_model_selection_coverage_selected_model_count"] == 260
+    assert payload["summary"]["protein_complex_massivefold_model_selection_coverage_extracted_model_count"] == 260
+    assert payload["summary"]["protein_complex_massivefold_model_selection_coverage_viewer_ready_model_count"] == 260
+    assert payload["summary"]["protein_complex_massivefold_model_selection_coverage_top5_candidate_count"] == 10
+    assert payload["summary"]["protein_complex_massivefold_model_selection_coverage_model1_candidate_count"] == 2
     assert payload["summary"]["capri_round65_readiness_status"] == "blocked_registration_role_selection"
     assert payload["summary"]["capri_round65_round_status"] == "Active"
     assert payload["summary"]["capri_round65_registration_end"] == "2026-06-01 midnight"
@@ -4325,6 +4386,16 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "verified:2" in by_id["massivefold_rna_model_selection_coverage"]["blockers"]
     assert "models:80/80/80" in by_id["massivefold_rna_model_selection_coverage"]["blockers"]
     assert "model1/top5:2/10" in by_id["massivefold_rna_model_selection_coverage"]["blockers"]
+    assert by_id["protein_complex_massivefold_model_selection_coverage"]["status"] == (
+        "protein_complex_massivefold_model_selection_coverage_ready_review_only"
+    )
+    assert by_id["protein_complex_massivefold_model_selection_coverage"]["ready_count"] == 2
+    assert by_id["protein_complex_massivefold_model_selection_coverage"]["blocked_count"] == 0
+    assert by_id["protein_complex_massivefold_model_selection_coverage"]["total_count"] == 2
+    assert "targets:2" in by_id["protein_complex_massivefold_model_selection_coverage"]["blockers"]
+    assert "verified:2" in by_id["protein_complex_massivefold_model_selection_coverage"]["blockers"]
+    assert "models:260/260/260" in by_id["protein_complex_massivefold_model_selection_coverage"]["blockers"]
+    assert "model1/top5:2/10" in by_id["protein_complex_massivefold_model_selection_coverage"]["blockers"]
     assert by_id["capri_round65_readiness"]["status"] == "deferred_pi_required"
     assert by_id["capri_round65_readiness"]["ready_count"] == 0
     assert by_id["capri_round65_readiness"]["blocked_count"] == 0

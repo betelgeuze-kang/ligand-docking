@@ -1,0 +1,22 @@
+# H2335 Selection 101 MassiveFold Model Review
+
+- target: `H2335`
+- model_set: `H2335_T335`
+- model: `Model_5773_af3_woPaired_woTemplates_af3_seed_220466_sample_2_pred_62.cif`
+- protocol: `woPaired_woTemplates`
+- seed/sample/pred: `220466/2/62`
+- review_status: `pass`
+- source_cif: `casp17/massivefold_external_pool_intake/h2335_t335/extracted_models/H2335_all_pdbs/Model_5773_af3_woPaired_woTemplates_af3_seed_220466_sample_2_pred_62.cif`
+- local_cif: `casp17/massivefold_representative_viewers/h2335/selection_101_woPaired_woTemplates_model_5773/model.cif`
+- projection: `casp17/massivefold_representative_viewers/h2335/selection_101_woPaired_woTemplates_model_5773/projection.svg`
+- viewer: `casp17/massivefold_representative_viewers/h2335/selection_101_woPaired_woTemplates_model_5773/viewer.html`
+- atoms/displayed/residues/chains: `14444/900/1820/5`
+- bbox xyz/diagonal: `139.958/120.421/160.239/244.471`
+- centroid xyz: `1.095/-2.246/-0.304`
+- radius_of_gyration: `50.355`
+- mean_b_iso: `70.187`
+- blockers: `-`
+
+## Claim Boundary
+
+CASP17 MassiveFold representative viewer packet only. It builds local review folders for organizer-provided external model-pool representatives for the selected target. These are external rerank and accuracy-estimation inputs, not internal predictions, not CASP submissions, and not competitive-proof evidence.

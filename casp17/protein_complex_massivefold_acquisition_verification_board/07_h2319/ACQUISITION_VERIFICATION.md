@@ -5,8 +5,8 @@
 - download_path: `casp17/massivefold_external_pool_intake/h2319_t333/downloads/H2319_T333_all_pdbs_MassiveFold.tar.gz`
 - sha256_path: `casp17/massivefold_external_pool_intake/h2319_t333/hashes/H2319_T333_all_pdbs_MassiveFold.tar.gz.sha256`
 - listing_path: `casp17/massivefold_external_pool_intake/h2319_t333/extracted_models/tarball_listing.txt`
-- verification_status: `open_tarball_download_required`
-- tarball/size/hash/listing: `awaiting_tarball_download`/`awaiting_tarball_size_check`/`awaiting_tarball`/`awaiting_tarball_listing`
+- verification_status: `verified_for_external_rerank_intake`
+- tarball/size/hash/listing: `tarball_present`/`size_matches_declared`/`sha256_match`/`tarball_listing_present`
 
 ## Acquisition Commands
 
@@ -19,7 +19,7 @@ tar -tzf casp17/massivefold_external_pool_intake/h2319_t333/downloads/H2319_T333
 
 ## Next Action
 
-download the tarball into the external-pool downloads folder, then record sha256 and tarball listing
+pool may be used only as an external rerank/accuracy-estimation input with provenance preserved
 
 ## Claim Boundary
 
