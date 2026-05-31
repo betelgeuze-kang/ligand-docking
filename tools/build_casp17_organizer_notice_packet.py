@@ -27,6 +27,8 @@ MASSIVEFOLD_MODEL_POOL_POLICY = "external_rerank_accuracy_estimation_pool"
 MASSIVEFOLD_INTERNAL_PREDICTION_POLICY = "do_not_mark_as_internal_prediction"
 MASSIVEFOLD_SUBMISSION_POLICY = "rule_check_required_before_any_human_submission_use"
 LARGE_DOWNLOAD_POLICY = "tarballs_not_downloaded_by_notice_packet"
+MASSIVEFOLD_GENERATION_SCOPE = "all_human_rna_and_hybrid_targets_plus_protein_targets"
+MASSIVEFOLD_FIRST_RNA_HYBRID_SET_TARGET = "R2341"
 
 
 def _resolve(path_like: str | Path) -> Path:
@@ -243,6 +245,7 @@ def _target_markdown(target_id: str, notice_rows: list[dict[str, Any]], model_ro
         f"- internal_prediction_policy: `{MASSIVEFOLD_INTERNAL_PREDICTION_POLICY}`",
         f"- submission_policy: `{MASSIVEFOLD_SUBMISSION_POLICY}`",
         f"- large_download_policy: `{LARGE_DOWNLOAD_POLICY}`",
+        f"- massivefold_generation_scope: `{MASSIVEFOLD_GENERATION_SCOPE}`",
         "",
         "## Notices",
         "",
@@ -307,6 +310,7 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- R2345 first request: `{summary['r2345_first_request_status']}`",
         f"- R2345 replacement request: `{summary['r2345_replacement_request_status']}`",
         f"- MassiveFold links: `{summary['massivefold_link_count']}` RNA/hybrid `{summary['massivefold_rna_hybrid_link_count']}` protein/complex `{summary['massivefold_protein_complex_link_count']}`",
+        f"- MassiveFold generation scope: `{summary['massivefold_generation_scope']}` first RNA/hybrid set `{summary['massivefold_first_rna_hybrid_set_target_id']}`",
         f"- R2341 available: `{summary['massivefold_r2341_link_present']}` `{summary['massivefold_r2341_tarball_url']}`",
         f"- R2345 available: `{summary['massivefold_r2345_link_present']}` `{summary['massivefold_r2345_tarball_url']}`",
         f"- model_pool_policy: `{summary['massivefold_model_pool_policy']}`",
@@ -376,6 +380,8 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "r2345_replacement_request_status": R2345_REPLACEMENT_REQUEST_STATUS,
         "r2345_sequence_validation_gate": "rna_sequence_requires_acgu_no_t",
         "massivefold_ftp_root": DEFAULT_MASSIVEFOLD_FTP_ROOT,
+        "massivefold_generation_scope": MASSIVEFOLD_GENERATION_SCOPE,
+        "massivefold_first_rna_hybrid_set_target_id": MASSIVEFOLD_FIRST_RNA_HYBRID_SET_TARGET,
         "massivefold_link_count": len(massivefold_rows),
         "massivefold_rna_hybrid_link_count": len(rna_rows),
         "massivefold_protein_complex_link_count": len(protein_rows),

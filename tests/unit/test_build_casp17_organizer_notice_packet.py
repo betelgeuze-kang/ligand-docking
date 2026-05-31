@@ -69,6 +69,10 @@ def test_build_casp17_organizer_notice_packet_guards_r2345_and_massivefold(tmp_p
     assert summary["massivefold_link_count"] == 3
     assert summary["massivefold_rna_hybrid_link_count"] == 2
     assert summary["massivefold_protein_complex_link_count"] == 1
+    assert summary["massivefold_generation_scope"] == (
+        "all_human_rna_and_hybrid_targets_plus_protein_targets"
+    )
+    assert summary["massivefold_first_rna_hybrid_set_target_id"] == "R2341"
     assert summary["massivefold_r2341_link_present"] is True
     assert summary["massivefold_r2345_link_present"] is True
     assert summary["massivefold_internal_prediction_policy"] == "do_not_mark_as_internal_prediction"
@@ -90,4 +94,5 @@ def test_build_casp17_organizer_notice_packet_guards_r2345_and_massivefold(tmp_p
     assert {row["row_type"] for row in csv_rows} == {"organizer_notice", "massivefold_model_set"}
     md_text = out_md.read_text(encoding="utf-8")
     assert "R2345 first request" in md_text
+    assert "all_human_rna_and_hybrid_targets_plus_protein_targets" in md_text
     assert "MassiveFold Links" in md_text

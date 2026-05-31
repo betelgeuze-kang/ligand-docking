@@ -1,11 +1,12 @@
 # CASP17 Organizer Notice Packet
 
-- generated: `2026-05-31T18:49:13+09:00`
+- generated: `2026-05-31T19:39:21+09:00`
 - organizer_notice_status: `organizer_notice_intake_ready`
 - source_notice_ref: `operator_email_excerpt_casp17_organizer`
 - R2345 first request: `ignored_invalid_dna_t_in_rna_sequence`
 - R2345 replacement request: `accepted_second_request_only`
 - MassiveFold links: `15` RNA/hybrid `6` protein/complex `9`
+- MassiveFold generation scope: `all_human_rna_and_hybrid_targets_plus_protein_targets` first RNA/hybrid set `R2341`
 - R2341 available: `True` `ftp://files.plbs.fr:21211/CASP17-CAPRI/R2341_all_cifs_MassiveFold.tar.gz`
 - R2345 available: `True` `ftp://files.plbs.fr:21211/CASP17-CAPRI/R2345_all_cifs_MassiveFold.tar.gz`
 - model_pool_policy: `external_rerank_accuracy_estimation_pool`

@@ -1,6 +1,6 @@
 # CASP17 MassiveFold External Pool Intake
 
-- generated: `2026-05-31T18:53:27+09:00`
+- generated: `2026-05-31T19:39:31+09:00`
 - status: `massivefold_external_pool_intake_ready`
 - pools ready/blocked/total: `15/0/15`
 - RNA-hybrid/protein-complex: `6/9`

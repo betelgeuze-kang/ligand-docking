@@ -20,10 +20,33 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     closure_json = tmp_path / "closure.json"
     goal_scorecard_json = tmp_path / "goal_scorecard.json"
     win_tier_metric_surface_contract_json = tmp_path / "win_tier_metric_surface_contract.json"
+    organic_ligand_slot_candidate_packet_json = tmp_path / "organic_ligand_slot_candidate_packet.json"
+    organic_ligand_slot_promotion_action_board_json = (
+        tmp_path / "organic_ligand_slot_promotion_action_board.json"
+    )
     active_scope_decision_json = tmp_path / "active_scope_decision.json"
     organizer_notice_json = tmp_path / "organizer_notice.json"
     massivefold_external_pool_intake_json = tmp_path / "massivefold_external_pool_intake.json"
     rna_hybrid_massivefold_priority_queue_json = tmp_path / "rna_hybrid_massivefold_priority_queue.json"
+    protein_complex_massivefold_priority_queue_json = (
+        tmp_path / "protein_complex_massivefold_priority_queue.json"
+    )
+    massivefold_acquisition_verification_board_json = (
+        tmp_path / "massivefold_acquisition_verification_board.json"
+    )
+    protein_complex_massivefold_acquisition_verification_board_json = (
+        tmp_path / "protein_complex_massivefold_acquisition_verification_board.json"
+    )
+    massivefold_model_pool_index_json = tmp_path / "massivefold_model_pool_index.json"
+    massivefold_representative_viewer_packet_json = (
+        tmp_path / "massivefold_representative_viewer_packet.json"
+    )
+    massivefold_representative_rerank_packet_json = (
+        tmp_path / "massivefold_representative_rerank_packet.json"
+    )
+    massivefold_rna_model_selection_coverage_json = (
+        tmp_path / "massivefold_rna_model_selection_coverage.json"
+    )
     capri_round65_readiness_json = tmp_path / "capri_round65_readiness.json"
     capri_round65_format_preflight_json = tmp_path / "capri_round65_format_preflight.json"
     scaffold_json = tmp_path / "scaffold.json"
@@ -411,6 +434,63 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        organic_ligand_slot_candidate_packet_json,
+        {
+            "summary": {
+                "organic_ligand_slot_candidate_status": (
+                    "organic_ligand_slot_candidates_ready_for_operator_review"
+                ),
+                "candidate_count": 2,
+                "chembl_candidate_count": 1,
+                "bindingdb_candidate_count": 1,
+                "review_ready_candidate_count": 2,
+                "competitive_proof_eligible_count": 0,
+                "strict_blind_promotion_blocked_count": 2,
+                "local_reference_present_count": 2,
+                "prediction_present_count": 2,
+                "ligand_mol2_present_count": 2,
+                "ligand_template_present_count": 2,
+                "lddt_pli_required_count": 2,
+                "bisyrmsd_required_count": 2,
+                "affinity_label_candidate_count": 1,
+                "metric_contract_ligand_slot_gap_count": 0,
+                "first_candidate_target_id": (
+                    "HIST_COMPLEX_01_TCRUZI_PDE_EXTERNAL_PDEB1_010_CHEMBL4453005"
+                ),
+                "first_candidate_ligand_id": "tcruzi_pde_external_pdeb1_010_chembl4453005",
+                "next_action": "choose review-ready organic ligand candidates only after direct authority",
+            }
+        },
+    )
+    _write_json(
+        organic_ligand_slot_promotion_action_board_json,
+        {
+            "summary": {
+                "organic_ligand_slot_promotion_action_board_status": (
+                    "awaiting_organic_ligand_strict_blind_evidence"
+                ),
+                "candidate_count": 2,
+                "action_count": 18,
+                "open_action_count": 16,
+                "reference_file_preflight_pass_count": 2,
+                "operator_evidence_required_count": 8,
+                "numeric_value_required_count": 1,
+                "affinity_source_required_count": 1,
+                "metric_input_required_count": 4,
+                "slot_mapping_required_count": 2,
+                "proof_ready_candidate_count": 0,
+                "competitive_proof_eligible_count": 0,
+                "strict_blind_promotion_blocked_count": 2,
+                "first_open_action_id": "organic_ligand_promotion_action_002",
+                "first_open_target_id": (
+                    "HIST_COMPLEX_01_TCRUZI_PDE_EXTERNAL_PDEB1_010_CHEMBL4453005"
+                ),
+                "first_open_action_type": "direct_native_or_source_authority",
+                "next_action": "work the direct-authority, no-leak, chronology, ligand-pose, affinity, and metric-input actions",
+            }
+        },
+    )
+    _write_json(
         capri_round65_readiness_json,
         {
             "summary": {
@@ -466,6 +546,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "r2345_first_request_status": "ignored_invalid_dna_t_in_rna_sequence",
                 "r2345_replacement_request_status": "accepted_second_request_only",
                 "r2345_sequence_validation_gate": "rna_sequence_requires_acgu_no_t",
+                "massivefold_generation_scope": "all_human_rna_and_hybrid_targets_plus_protein_targets",
+                "massivefold_first_rna_hybrid_set_target_id": "R2341",
                 "massivefold_link_count": 3,
                 "massivefold_rna_hybrid_link_count": 2,
                 "massivefold_protein_complex_link_count": 1,
@@ -523,6 +605,191 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "total_declared_size_bytes": 913683813,
                 "download_policy": "operator_explicit_download_required_no_automatic_tarball_fetch",
                 "next_action": "start with R2341 for rule-checked external-pool acquisition and reranking",
+            }
+        },
+    )
+    _write_json(
+        protein_complex_massivefold_priority_queue_json,
+        {
+            "summary": {
+                "protein_complex_massivefold_priority_queue_status": (
+                    "protein_complex_massivefold_priority_queue_ready"
+                ),
+                "queue_row_count": 1,
+                "ready_queue_row_count": 1,
+                "blocked_queue_row_count": 0,
+                "first_priority_target_id": "H1311",
+                "first_priority_model_set_id": "H1311_T327",
+                "first_priority_reason": (
+                    "protein_heteromer_or_immune_complex_massivefold_pool_from_organizer_ftp_listing"
+                ),
+                "largest_model_set_id": "H1311_T327",
+                "largest_pool_size_bytes": 1934629344,
+                "competitive_proof_eligible_count": 0,
+                "internal_prediction_blocked_count": 1,
+                "total_declared_size_bytes": 1934629344,
+                "download_policy": "operator_explicit_download_required_no_automatic_tarball_fetch",
+                "next_action": "start with the first protein/complex MassiveFold pool",
+            }
+        },
+    )
+    _write_json(
+        massivefold_acquisition_verification_board_json,
+        {
+            "summary": {
+                "massivefold_acquisition_verification_status": (
+                    "massivefold_external_pool_acquisition_verified"
+                ),
+                "acquisition_pool_count": 2,
+                "verified_pool_count": 2,
+                "open_acquisition_action_count": 0,
+                "tarball_present_count": 2,
+                "size_match_count": 2,
+                "sha256_record_present_count": 2,
+                "sha256_verified_count": 2,
+                "listing_present_count": 2,
+                "listing_entry_count": 16080,
+                "first_priority_target_id": "R2341",
+                "first_open_target_id": "",
+                "first_open_status": "",
+                "r2341_verification_status": "verified_for_external_rerank_intake",
+                "r2345_verification_status": "verified_for_external_rerank_intake",
+                "download_policy": "download_only_to_external_pool_lane_and_preserve_hash_listing",
+                "next_action": "use verified external tarballs only as review-only model-selection inputs",
+            }
+        },
+    )
+    _write_json(
+        protein_complex_massivefold_acquisition_verification_board_json,
+        {
+            "summary": {
+                "massivefold_acquisition_verification_status": (
+                    "awaiting_massivefold_external_pool_acquisition"
+                ),
+                "acquisition_pool_count": 1,
+                "verified_pool_count": 0,
+                "open_acquisition_action_count": 1,
+                "tarball_present_count": 0,
+                "size_match_count": 0,
+                "sha256_record_present_count": 0,
+                "sha256_verified_count": 0,
+                "listing_present_count": 0,
+                "listing_entry_count": 0,
+                "first_priority_target_id": "H1311",
+                "first_open_target_id": "H1311",
+                "first_open_status": "open_tarball_download_required",
+                "download_policy": "download_only_to_external_pool_lane_and_preserve_hash_listing",
+                "next_action": "download the tarball into the external-pool downloads folder",
+            }
+        },
+    )
+    _write_json(
+        massivefold_model_pool_index_json,
+        {
+            "summary": {
+                "massivefold_model_pool_index_status": (
+                    "massivefold_model_pool_representatives_extracted"
+                ),
+                "target_id": "R2341",
+                "model_count": 8040,
+                "protocol_bucket_count": 8,
+                "selected_extract_count": 40,
+                "selected_extracted_count": 40,
+                "selected_extract_pending_count": 0,
+                "basic_count": 1005,
+                "wo_templates_count": 1005,
+                "wo_unpaired_count": 1005,
+                "wo_paired_count": 1005,
+                "first_selected_model": (
+                    "Model_1_af3_woUnpaired_woPaired_woTemplates_af3_seed_210550_sample_3_pred_718.cif"
+                ),
+                "first_selected_protocol": "woUnpaired_woPaired_woTemplates",
+                "extraction_manifest": (
+                    "casp17/massivefold_model_pool_index/r2341/balanced_extract_members.txt"
+                ),
+                "tarball_sha256": "cfaaad6299ff4a5cd3e78c53d3a32e660ab95ce67f4b6e1ba42277d479fde3ea",
+                "next_action": "run external rerank and accuracy-estimation calibration",
+            }
+        },
+    )
+    _write_json(
+        massivefold_representative_viewer_packet_json,
+        {
+            "summary": {
+                "massivefold_representative_viewer_status": (
+                    "massivefold_representative_viewers_ready"
+                ),
+                "target_id": "R2341",
+                "selected_model_count": 40,
+                "viewer_ready_count": 40,
+                "viewer_blocked_count": 0,
+                "coordinate_valid_count": 40,
+                "model_cif_present_count": 40,
+                "projection_ready_count": 40,
+                "atom_count_total": 159280,
+                "display_atom_count_total": 36000,
+                "residue_count_total": 7440,
+                "protocol_bucket_count": 8,
+                "first_viewer_html": (
+                    "casp17/massivefold_representative_viewers/r2341/"
+                    "selection_001_woUnpaired_woPaired_woTemplates_model_1/viewer.html"
+                ),
+                "gallery_html_path": "casp17/casp17_massivefold_representative_viewer_gallery_current.html",
+                "next_action": "open the per-selection viewers for manual conformation triage",
+            }
+        },
+    )
+    _write_json(
+        massivefold_representative_rerank_packet_json,
+        {
+            "summary": {
+                "massivefold_representative_rerank_status": (
+                    "massivefold_representative_rerank_ready_review_only"
+                ),
+                "target_id": "R2341",
+                "candidate_count": 40,
+                "model1_candidate_count": 1,
+                "top5_candidate_count": 5,
+                "top5_protocol_count": 5,
+                "review_candidate_count": 35,
+                "competitive_proof_eligible_count": 0,
+                "confidence_score_min": 48.2803,
+                "confidence_score_max": 53.0992,
+                "model1_filename": "Model_2_af3_basic_af3_seed_672131_sample_4_pred_869.cif",
+                "model1_protocol": "basic",
+                "model1_confidence_score": 53.0992,
+                "model1_viewer_html": (
+                    "casp17/massivefold_representative_viewers/r2341/"
+                    "selection_031_basic_model_2/viewer.html"
+                ),
+                "top5_manifest_csv": "casp17/massivefold_representative_rerank/r2341/top5_manifest.csv",
+                "next_action": "use the review-only model1/top5 picks as accuracy-estimation inputs",
+            }
+        },
+    )
+    _write_json(
+        massivefold_rna_model_selection_coverage_json,
+        {
+            "summary": {
+                "massivefold_rna_model_selection_coverage_status": (
+                    "massivefold_rna_model_selection_coverage_ready_review_only"
+                ),
+                "target_count": 2,
+                "ready_target_count": 2,
+                "partial_target_count": 0,
+                "verified_acquisition_count": 2,
+                "representative_extracted_target_count": 2,
+                "viewer_ready_target_count": 2,
+                "rerank_ready_target_count": 2,
+                "selected_model_count": 80,
+                "extracted_model_count": 80,
+                "viewer_ready_model_count": 80,
+                "top5_candidate_count": 10,
+                "model1_candidate_count": 2,
+                "first_partial_target_id": "",
+                "next_action": (
+                    "use R2341/R2345 review-only model1/top5 picks as RNA model-selection inputs"
+                ),
             }
         },
     )
@@ -2464,6 +2731,10 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(goal_scorecard_json),
             "--win-tier-metric-surface-contract-json",
             str(win_tier_metric_surface_contract_json),
+            "--organic-ligand-slot-candidate-packet-json",
+            str(organic_ligand_slot_candidate_packet_json),
+            "--organic-ligand-slot-promotion-action-board-json",
+            str(organic_ligand_slot_promotion_action_board_json),
             "--active-scope-decision-json",
             str(active_scope_decision_json),
             "--organizer-notice-packet-json",
@@ -2472,6 +2743,20 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(massivefold_external_pool_intake_json),
             "--rna-hybrid-massivefold-priority-queue-json",
             str(rna_hybrid_massivefold_priority_queue_json),
+            "--protein-complex-massivefold-priority-queue-json",
+            str(protein_complex_massivefold_priority_queue_json),
+            "--massivefold-acquisition-verification-board-json",
+            str(massivefold_acquisition_verification_board_json),
+            "--protein-complex-massivefold-acquisition-verification-board-json",
+            str(protein_complex_massivefold_acquisition_verification_board_json),
+            "--massivefold-model-pool-index-json",
+            str(massivefold_model_pool_index_json),
+            "--massivefold-representative-viewer-packet-json",
+            str(massivefold_representative_viewer_packet_json),
+            "--massivefold-representative-rerank-packet-json",
+            str(massivefold_representative_rerank_packet_json),
+            "--massivefold-rna-model-selection-coverage-json",
+            str(massivefold_rna_model_selection_coverage_json),
             "--capri-round65-readiness-json",
             str(capri_round65_readiness_json),
             "--capri-round65-format-preflight-json",
@@ -2685,13 +2970,48 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "proteins pass/blocked/total `2/0/2`" in workbench_md
     assert "win-tier metric surface contract: `awaiting_strict_blind_evidence_files_and_ligand_category_slots`" in workbench_md
     assert "metrics covered/required `11/11`" in workbench_md
+    assert "organic ligand slot candidates: `organic_ligand_slot_candidates_ready_for_operator_review`" in workbench_md
+    assert "review/proof/total `2/0/2`" in workbench_md
+    assert "ChEMBL/BindingDB `1/1`" in workbench_md
+    assert "organic ligand strict-blind promotion board: `awaiting_organic_ligand_strict_blind_evidence`" in workbench_md
+    assert "candidates/actions/open `2/18/16`" in workbench_md
+    assert "operator/numeric/affinity-source `8/1/1`" in workbench_md
     assert "organizer notice intake: `organizer_notice_intake_ready`" in workbench_md
     assert "R2345 first/second `ignored_invalid_dna_t_in_rna_sequence`/`accepted_second_request_only`" in workbench_md
+    assert "MassiveFold scope `all_human_rna_and_hybrid_targets_plus_protein_targets`" in workbench_md
     assert "MassiveFold external pool intake: `massivefold_external_pool_intake_ready`" in workbench_md
     assert "pools ready/blocked/total `3/0/3`" in workbench_md
     assert "RNA/hybrid MassiveFold priority queue: `rna_hybrid_massivefold_priority_queue_ready`" in workbench_md
     assert "R2341/R2345 rank `1/2`" in workbench_md
     assert "R2345 invalid/active `ignored_invalid_dna_t_in_rna_sequence`/`accepted_second_request_only`" in workbench_md
+    assert "Protein/complex MassiveFold priority queue: `protein_complex_massivefold_priority_queue_ready`" in workbench_md
+    assert "rows ready/blocked/total `1/0/1`" in workbench_md
+    assert "first `H1311` `H1311_T327`" in workbench_md
+    assert "MassiveFold acquisition verification: `massivefold_external_pool_acquisition_verified`" in workbench_md
+    assert "pools verified/open/total `2/0/2`" in workbench_md
+    assert "R2341/R2345 `verified_for_external_rerank_intake`/`verified_for_external_rerank_intake`" in workbench_md
+    assert "Protein/complex MassiveFold acquisition verification: `awaiting_massivefold_external_pool_acquisition`" in workbench_md
+    assert "pools verified/open/total `0/1/1`" in workbench_md
+    assert "first/open `H1311`/`H1311` `open_tarball_download_required`" in workbench_md
+    assert "MassiveFold model pool index: `massivefold_model_pool_representatives_extracted`" in workbench_md
+    assert "models/protocols `8040/8`" in workbench_md
+    assert "selected/extracted/pending `40/40/0`" in workbench_md
+    assert "MassiveFold representative viewers: `massivefold_representative_viewers_ready`" in workbench_md
+    assert "selected/ready/blocked `40/40/0`" in workbench_md
+    assert "coordinate/model/projection `40/40/40`" in workbench_md
+    assert "atoms/displayed/residues `159280/36000/7440`" in workbench_md
+    assert "MassiveFold representative rerank: `massivefold_representative_rerank_ready_review_only`" in workbench_md
+    assert "candidates/model1/top5 `40/1/5`" in workbench_md
+    assert "top5 protocols `5`" in workbench_md
+    assert "review/proof-eligible `35/0`" in workbench_md
+    assert "Model_2_af3_basic_af3_seed_672131_sample_4_pred_869.cif" in workbench_md
+    assert (
+        "MassiveFold RNA model-selection coverage: "
+        "`massivefold_rna_model_selection_coverage_ready_review_only`"
+    ) in workbench_md
+    assert "targets ready/partial/total `2/0/2`" in workbench_md
+    assert "models selected/extracted/viewer `80/80/80`" in workbench_md
+    assert "model1/top5 `2/10`" in workbench_md
     assert "CAPRI Round 65 readiness context: `deferred_pi_required`" in workbench_md
     assert "CAPRI Round 65 format preflight context: `deferred_pi_required`" in workbench_md
     assert "historical seed official archive baseline lane: `official_archive_baseline_lane_ready`" in workbench_md
@@ -3266,6 +3586,40 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         "excluded_from_competitive_proof"
     )
     assert payload["summary"]["win_tier_metric_surface_contract_first_blocked_metric"] == "GDT_TS"
+    assert payload["summary"]["organic_ligand_slot_candidate_status"] == (
+        "organic_ligand_slot_candidates_ready_for_operator_review"
+    )
+    assert payload["summary"]["organic_ligand_slot_candidate_count"] == 2
+    assert payload["summary"]["organic_ligand_slot_candidate_chembl_count"] == 1
+    assert payload["summary"]["organic_ligand_slot_candidate_bindingdb_count"] == 1
+    assert payload["summary"]["organic_ligand_slot_candidate_review_ready_count"] == 2
+    assert payload["summary"]["organic_ligand_slot_candidate_proof_eligible_count"] == 0
+    assert payload["summary"]["organic_ligand_slot_candidate_strict_blocked_count"] == 2
+    assert payload["summary"]["organic_ligand_slot_candidate_reference_present_count"] == 2
+    assert payload["summary"]["organic_ligand_slot_candidate_prediction_present_count"] == 2
+    assert payload["summary"]["organic_ligand_slot_candidate_ligand_mol2_present_count"] == 2
+    assert payload["summary"]["organic_ligand_slot_candidate_lddt_pli_required_count"] == 2
+    assert payload["summary"]["organic_ligand_slot_candidate_bisyrmsd_required_count"] == 2
+    assert payload["summary"]["organic_ligand_slot_candidate_affinity_label_candidate_count"] == 1
+    assert payload["summary"]["organic_ligand_slot_candidate_first_target_id"] == (
+        "HIST_COMPLEX_01_TCRUZI_PDE_EXTERNAL_PDEB1_010_CHEMBL4453005"
+    )
+    assert payload["summary"]["organic_ligand_slot_promotion_action_board_status"] == (
+        "awaiting_organic_ligand_strict_blind_evidence"
+    )
+    assert payload["summary"]["organic_ligand_slot_promotion_candidate_count"] == 2
+    assert payload["summary"]["organic_ligand_slot_promotion_action_count"] == 18
+    assert payload["summary"]["organic_ligand_slot_promotion_open_action_count"] == 16
+    assert payload["summary"]["organic_ligand_slot_promotion_reference_preflight_pass_count"] == 2
+    assert payload["summary"]["organic_ligand_slot_promotion_operator_evidence_required_count"] == 8
+    assert payload["summary"]["organic_ligand_slot_promotion_numeric_value_required_count"] == 1
+    assert payload["summary"]["organic_ligand_slot_promotion_affinity_source_required_count"] == 1
+    assert payload["summary"]["organic_ligand_slot_promotion_metric_input_required_count"] == 4
+    assert payload["summary"]["organic_ligand_slot_promotion_slot_mapping_required_count"] == 2
+    assert payload["summary"]["organic_ligand_slot_promotion_proof_ready_candidate_count"] == 0
+    assert payload["summary"]["organic_ligand_slot_promotion_first_open_action_type"] == (
+        "direct_native_or_source_authority"
+    )
     assert payload["summary"]["active_scope_decision_status"] == "casp17_only_active"
     assert payload["summary"]["active_competition_scope"] == "casp17_only"
     assert payload["summary"]["active_scope_casp17_continuation_status"] == "active"
@@ -3279,6 +3633,10 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         "ignored_invalid_dna_t_in_rna_sequence"
     )
     assert payload["summary"]["organizer_notice_r2345_replacement_request_status"] == "accepted_second_request_only"
+    assert payload["summary"]["organizer_notice_massivefold_generation_scope"] == (
+        "all_human_rna_and_hybrid_targets_plus_protein_targets"
+    )
+    assert payload["summary"]["organizer_notice_massivefold_first_rna_hybrid_set_target_id"] == "R2341"
     assert payload["summary"]["organizer_notice_massivefold_link_count"] == 3
     assert payload["summary"]["organizer_notice_massivefold_rna_hybrid_link_count"] == 2
     assert payload["summary"]["organizer_notice_massivefold_internal_prediction_policy"] == (
@@ -3311,6 +3669,103 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     )
     assert payload["summary"]["rna_hybrid_massivefold_priority_queue_proof_eligible_count"] == 0
     assert payload["summary"]["rna_hybrid_massivefold_priority_queue_internal_blocked_count"] == 2
+    assert payload["summary"]["protein_complex_massivefold_priority_queue_status"] == (
+        "protein_complex_massivefold_priority_queue_ready"
+    )
+    assert payload["summary"]["protein_complex_massivefold_priority_queue_count"] == 1
+    assert payload["summary"]["protein_complex_massivefold_priority_queue_ready_count"] == 1
+    assert payload["summary"]["protein_complex_massivefold_priority_queue_first_target_id"] == "H1311"
+    assert payload["summary"]["protein_complex_massivefold_priority_queue_first_model_set_id"] == "H1311_T327"
+    assert payload["summary"]["protein_complex_massivefold_priority_queue_largest_model_set_id"] == "H1311_T327"
+    assert payload["summary"]["protein_complex_massivefold_priority_queue_largest_size_bytes"] == 1934629344
+    assert payload["summary"]["protein_complex_massivefold_priority_queue_proof_eligible_count"] == 0
+    assert payload["summary"]["protein_complex_massivefold_priority_queue_internal_blocked_count"] == 1
+    assert payload["summary"]["massivefold_acquisition_verification_status"] == (
+        "massivefold_external_pool_acquisition_verified"
+    )
+    assert payload["summary"]["massivefold_acquisition_verification_pool_count"] == 2
+    assert payload["summary"]["massivefold_acquisition_verification_verified_count"] == 2
+    assert payload["summary"]["massivefold_acquisition_verification_open_count"] == 0
+    assert payload["summary"]["massivefold_acquisition_verification_tarball_present_count"] == 2
+    assert payload["summary"]["massivefold_acquisition_verification_sha256_record_count"] == 2
+    assert payload["summary"]["massivefold_acquisition_verification_sha256_verified_count"] == 2
+    assert payload["summary"]["massivefold_acquisition_verification_listing_present_count"] == 2
+    assert payload["summary"]["massivefold_acquisition_verification_listing_entry_count"] == 16080
+    assert payload["summary"]["massivefold_acquisition_verification_first_priority_target_id"] == "R2341"
+    assert payload["summary"]["massivefold_acquisition_verification_first_open_target_id"] == ""
+    assert payload["summary"]["massivefold_acquisition_verification_r2341_status"] == (
+        "verified_for_external_rerank_intake"
+    )
+    assert payload["summary"]["massivefold_acquisition_verification_r2345_status"] == (
+        "verified_for_external_rerank_intake"
+    )
+    assert payload["summary"]["protein_complex_massivefold_acquisition_verification_status"] == (
+        "awaiting_massivefold_external_pool_acquisition"
+    )
+    assert payload["summary"]["protein_complex_massivefold_acquisition_verification_pool_count"] == 1
+    assert payload["summary"]["protein_complex_massivefold_acquisition_verification_verified_count"] == 0
+    assert payload["summary"]["protein_complex_massivefold_acquisition_verification_open_count"] == 1
+    assert payload["summary"]["protein_complex_massivefold_acquisition_verification_tarball_present_count"] == 0
+    assert payload["summary"]["protein_complex_massivefold_acquisition_verification_sha256_record_count"] == 0
+    assert payload["summary"]["protein_complex_massivefold_acquisition_verification_first_priority_target_id"] == "H1311"
+    assert payload["summary"]["protein_complex_massivefold_acquisition_verification_first_open_target_id"] == "H1311"
+    assert payload["summary"]["protein_complex_massivefold_acquisition_verification_first_open_status"] == (
+        "open_tarball_download_required"
+    )
+    assert payload["summary"]["massivefold_model_pool_index_status"] == (
+        "massivefold_model_pool_representatives_extracted"
+    )
+    assert payload["summary"]["massivefold_model_pool_index_target_id"] == "R2341"
+    assert payload["summary"]["massivefold_model_pool_index_model_count"] == 8040
+    assert payload["summary"]["massivefold_model_pool_index_protocol_count"] == 8
+    assert payload["summary"]["massivefold_model_pool_index_selected_count"] == 40
+    assert payload["summary"]["massivefold_model_pool_index_extracted_count"] == 40
+    assert payload["summary"]["massivefold_model_pool_index_pending_count"] == 0
+    assert payload["summary"]["massivefold_model_pool_index_basic_count"] == 1005
+    assert payload["summary"]["massivefold_model_pool_index_wo_templates_count"] == 1005
+    assert payload["summary"]["massivefold_model_pool_index_first_selected_protocol"] == (
+        "woUnpaired_woPaired_woTemplates"
+    )
+    assert payload["summary"]["massivefold_representative_viewer_status"] == (
+        "massivefold_representative_viewers_ready"
+    )
+    assert payload["summary"]["massivefold_representative_viewer_target_id"] == "R2341"
+    assert payload["summary"]["massivefold_representative_viewer_selected_count"] == 40
+    assert payload["summary"]["massivefold_representative_viewer_ready_count"] == 40
+    assert payload["summary"]["massivefold_representative_viewer_blocked_count"] == 0
+    assert payload["summary"]["massivefold_representative_viewer_coordinate_count"] == 40
+    assert payload["summary"]["massivefold_representative_viewer_model_cif_count"] == 40
+    assert payload["summary"]["massivefold_representative_viewer_projection_count"] == 40
+    assert payload["summary"]["massivefold_representative_viewer_atom_count"] == 159280
+    assert payload["summary"]["massivefold_representative_viewer_display_atom_count"] == 36000
+    assert payload["summary"]["massivefold_representative_viewer_residue_count"] == 7440
+    assert payload["summary"]["massivefold_representative_viewer_protocol_count"] == 8
+    assert payload["summary"]["massivefold_representative_rerank_status"] == (
+        "massivefold_representative_rerank_ready_review_only"
+    )
+    assert payload["summary"]["massivefold_representative_rerank_target_id"] == "R2341"
+    assert payload["summary"]["massivefold_representative_rerank_candidate_count"] == 40
+    assert payload["summary"]["massivefold_representative_rerank_model1_count"] == 1
+    assert payload["summary"]["massivefold_representative_rerank_top5_count"] == 5
+    assert payload["summary"]["massivefold_representative_rerank_top5_protocol_count"] == 5
+    assert payload["summary"]["massivefold_representative_rerank_review_candidate_count"] == 35
+    assert payload["summary"]["massivefold_representative_rerank_proof_eligible_count"] == 0
+    assert payload["summary"]["massivefold_representative_rerank_model1_protocol"] == "basic"
+    assert payload["summary"]["massivefold_rna_model_selection_coverage_status"] == (
+        "massivefold_rna_model_selection_coverage_ready_review_only"
+    )
+    assert payload["summary"]["massivefold_rna_model_selection_coverage_target_count"] == 2
+    assert payload["summary"]["massivefold_rna_model_selection_coverage_ready_target_count"] == 2
+    assert payload["summary"]["massivefold_rna_model_selection_coverage_partial_target_count"] == 0
+    assert payload["summary"]["massivefold_rna_model_selection_coverage_verified_acquisition_count"] == 2
+    assert payload["summary"]["massivefold_rna_model_selection_coverage_representative_extracted_target_count"] == 2
+    assert payload["summary"]["massivefold_rna_model_selection_coverage_viewer_ready_target_count"] == 2
+    assert payload["summary"]["massivefold_rna_model_selection_coverage_rerank_ready_target_count"] == 2
+    assert payload["summary"]["massivefold_rna_model_selection_coverage_selected_model_count"] == 80
+    assert payload["summary"]["massivefold_rna_model_selection_coverage_extracted_model_count"] == 80
+    assert payload["summary"]["massivefold_rna_model_selection_coverage_viewer_ready_model_count"] == 80
+    assert payload["summary"]["massivefold_rna_model_selection_coverage_top5_candidate_count"] == 10
+    assert payload["summary"]["massivefold_rna_model_selection_coverage_model1_candidate_count"] == 2
     assert payload["summary"]["capri_round65_readiness_status"] == "blocked_registration_role_selection"
     assert payload["summary"]["capri_round65_round_status"] == "Active"
     assert payload["summary"]["capri_round65_registration_end"] == "2026-06-01 midnight"
@@ -3730,6 +4185,28 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "official_archive:excluded_from_competitive_proof" in by_id[
         "win_tier_metric_surface_contract"
     ]["blockers"]
+    assert by_id["organic_ligand_slot_candidate_packet"]["status"] == (
+        "organic_ligand_slot_candidates_ready_for_operator_review"
+    )
+    assert by_id["organic_ligand_slot_candidate_packet"]["ready_count"] == 2
+    assert by_id["organic_ligand_slot_candidate_packet"]["blocked_count"] == 2
+    assert by_id["organic_ligand_slot_candidate_packet"]["total_count"] == 2
+    assert "chembl/bindingdb:1/1" in by_id["organic_ligand_slot_candidate_packet"]["blockers"]
+    assert "proof_eligible:0" in by_id["organic_ligand_slot_candidate_packet"]["blockers"]
+    assert "strict_blocked:2" in by_id["organic_ligand_slot_candidate_packet"]["blockers"]
+    assert "metrics:2/2" in by_id["organic_ligand_slot_candidate_packet"]["blockers"]
+    assert by_id["organic_ligand_slot_promotion_action_board"]["status"] == (
+        "awaiting_organic_ligand_strict_blind_evidence"
+    )
+    assert by_id["organic_ligand_slot_promotion_action_board"]["ready_count"] == 2
+    assert by_id["organic_ligand_slot_promotion_action_board"]["blocked_count"] == 16
+    assert by_id["organic_ligand_slot_promotion_action_board"]["total_count"] == 18
+    assert "candidates:2" in by_id["organic_ligand_slot_promotion_action_board"]["blockers"]
+    assert "operator:8" in by_id["organic_ligand_slot_promotion_action_board"]["blockers"]
+    assert "numeric:1" in by_id["organic_ligand_slot_promotion_action_board"]["blockers"]
+    assert "affinity_source:1" in by_id["organic_ligand_slot_promotion_action_board"]["blockers"]
+    assert "metric:4" in by_id["organic_ligand_slot_promotion_action_board"]["blockers"]
+    assert "slot:2" in by_id["organic_ligand_slot_promotion_action_board"]["blockers"]
     assert by_id["active_scope_decision"]["status"] == "casp17_only_active"
     assert by_id["active_scope_decision"]["ready_count"] == 3
     assert by_id["active_scope_decision"]["total_count"] == 4
@@ -3739,6 +4216,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["organizer_notice_packet"]["ready_count"] == 3
     assert by_id["organizer_notice_packet"]["total_count"] == 3
     assert "r2345_first:ignored_invalid_dna_t_in_rna_sequence" in by_id["organizer_notice_packet"]["blockers"]
+    assert "scope:all_human_rna_and_hybrid_targets_plus_protein_targets" in by_id[
+        "organizer_notice_packet"
+    ]["blockers"]
     assert "massivefold_rna_hybrid:2" in by_id["organizer_notice_packet"]["blockers"]
     assert "policy:do_not_mark_as_internal_prediction" in by_id["organizer_notice_packet"]["blockers"]
     assert by_id["massivefold_external_pool_intake"]["status"] == "massivefold_external_pool_intake_ready"
@@ -3763,6 +4243,88 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         "rna_hybrid_massivefold_priority_queue"
     ]["blockers"]
     assert "proof_eligible:0" in by_id["rna_hybrid_massivefold_priority_queue"]["blockers"]
+    assert by_id["protein_complex_massivefold_priority_queue"]["status"] == (
+        "protein_complex_massivefold_priority_queue_ready"
+    )
+    assert by_id["protein_complex_massivefold_priority_queue"]["ready_count"] == 1
+    assert by_id["protein_complex_massivefold_priority_queue"]["blocked_count"] == 0
+    assert by_id["protein_complex_massivefold_priority_queue"]["total_count"] == 1
+    assert "first:H1311" in by_id["protein_complex_massivefold_priority_queue"]["blockers"]
+    assert "model_set:H1311_T327" in by_id["protein_complex_massivefold_priority_queue"]["blockers"]
+    assert "largest:H1311_T327" in by_id["protein_complex_massivefold_priority_queue"]["blockers"]
+    assert "proof_eligible:0" in by_id["protein_complex_massivefold_priority_queue"]["blockers"]
+    assert by_id["massivefold_acquisition_verification_board"]["status"] == (
+        "massivefold_external_pool_acquisition_verified"
+    )
+    assert by_id["massivefold_acquisition_verification_board"]["ready_count"] == 2
+    assert by_id["massivefold_acquisition_verification_board"]["blocked_count"] == 0
+    assert by_id["massivefold_acquisition_verification_board"]["total_count"] == 2
+    assert "first:R2341" in by_id["massivefold_acquisition_verification_board"]["blockers"]
+    assert "download:2" in by_id["massivefold_acquisition_verification_board"]["blockers"]
+    assert "hash:2" in by_id["massivefold_acquisition_verification_board"]["blockers"]
+    assert "listing:2" in by_id["massivefold_acquisition_verification_board"]["blockers"]
+    assert "r2341:verified_for_external_rerank_intake" in by_id[
+        "massivefold_acquisition_verification_board"
+    ]["blockers"]
+    assert "r2345:verified_for_external_rerank_intake" in by_id[
+        "massivefold_acquisition_verification_board"
+    ]["blockers"]
+    assert by_id["protein_complex_massivefold_acquisition_verification_board"]["status"] == (
+        "awaiting_massivefold_external_pool_acquisition"
+    )
+    assert by_id["protein_complex_massivefold_acquisition_verification_board"]["ready_count"] == 0
+    assert by_id["protein_complex_massivefold_acquisition_verification_board"]["blocked_count"] == 1
+    assert by_id["protein_complex_massivefold_acquisition_verification_board"]["total_count"] == 1
+    assert "first:H1311" in by_id[
+        "protein_complex_massivefold_acquisition_verification_board"
+    ]["blockers"]
+    assert "open:H1311" in by_id[
+        "protein_complex_massivefold_acquisition_verification_board"
+    ]["blockers"]
+    assert "status:open_tarball_download_required" in by_id[
+        "protein_complex_massivefold_acquisition_verification_board"
+    ]["blockers"]
+    assert by_id["massivefold_model_pool_index"]["status"] == (
+        "massivefold_model_pool_representatives_extracted"
+    )
+    assert by_id["massivefold_model_pool_index"]["ready_count"] == 40
+    assert by_id["massivefold_model_pool_index"]["blocked_count"] == 0
+    assert by_id["massivefold_model_pool_index"]["total_count"] == 40
+    assert "target:R2341" in by_id["massivefold_model_pool_index"]["blockers"]
+    assert "models:8040" in by_id["massivefold_model_pool_index"]["blockers"]
+    assert "protocols:8" in by_id["massivefold_model_pool_index"]["blockers"]
+    assert "extracted:40" in by_id["massivefold_model_pool_index"]["blockers"]
+    assert "sha:cfaaad6299ff" in by_id["massivefold_model_pool_index"]["blockers"]
+    assert by_id["massivefold_representative_viewer_packet"]["status"] == (
+        "massivefold_representative_viewers_ready"
+    )
+    assert by_id["massivefold_representative_viewer_packet"]["ready_count"] == 40
+    assert by_id["massivefold_representative_viewer_packet"]["blocked_count"] == 0
+    assert by_id["massivefold_representative_viewer_packet"]["total_count"] == 40
+    assert "target:R2341" in by_id["massivefold_representative_viewer_packet"]["blockers"]
+    assert "viewers:40" in by_id["massivefold_representative_viewer_packet"]["blockers"]
+    assert "coordinates:40" in by_id["massivefold_representative_viewer_packet"]["blockers"]
+    assert "projection:40" in by_id["massivefold_representative_viewer_packet"]["blockers"]
+    assert by_id["massivefold_representative_rerank_packet"]["status"] == (
+        "massivefold_representative_rerank_ready_review_only"
+    )
+    assert by_id["massivefold_representative_rerank_packet"]["ready_count"] == 5
+    assert by_id["massivefold_representative_rerank_packet"]["blocked_count"] == 35
+    assert by_id["massivefold_representative_rerank_packet"]["total_count"] == 40
+    assert "target:R2341" in by_id["massivefold_representative_rerank_packet"]["blockers"]
+    assert "model1:1" in by_id["massivefold_representative_rerank_packet"]["blockers"]
+    assert "top5:5" in by_id["massivefold_representative_rerank_packet"]["blockers"]
+    assert "proof_eligible:0" in by_id["massivefold_representative_rerank_packet"]["blockers"]
+    assert by_id["massivefold_rna_model_selection_coverage"]["status"] == (
+        "massivefold_rna_model_selection_coverage_ready_review_only"
+    )
+    assert by_id["massivefold_rna_model_selection_coverage"]["ready_count"] == 2
+    assert by_id["massivefold_rna_model_selection_coverage"]["blocked_count"] == 0
+    assert by_id["massivefold_rna_model_selection_coverage"]["total_count"] == 2
+    assert "targets:2" in by_id["massivefold_rna_model_selection_coverage"]["blockers"]
+    assert "verified:2" in by_id["massivefold_rna_model_selection_coverage"]["blockers"]
+    assert "models:80/80/80" in by_id["massivefold_rna_model_selection_coverage"]["blockers"]
+    assert "model1/top5:2/10" in by_id["massivefold_rna_model_selection_coverage"]["blockers"]
     assert by_id["capri_round65_readiness"]["status"] == "deferred_pi_required"
     assert by_id["capri_round65_readiness"]["ready_count"] == 0
     assert by_id["capri_round65_readiness"]["blocked_count"] == 0
@@ -4354,6 +4916,22 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_massivefold_external_pool_intake.json"),
             "--rna-hybrid-massivefold-priority-queue-json",
             str(tmp_path / "missing_rna_hybrid_massivefold_priority_queue.json"),
+            "--protein-complex-massivefold-priority-queue-json",
+            str(tmp_path / "missing_protein_complex_massivefold_priority_queue.json"),
+            "--massivefold-acquisition-verification-board-json",
+            str(tmp_path / "missing_massivefold_acquisition_verification_board.json"),
+            "--protein-complex-massivefold-acquisition-verification-board-json",
+            str(tmp_path / "missing_protein_complex_massivefold_acquisition_verification_board.json"),
+            "--massivefold-model-pool-index-json",
+            str(tmp_path / "missing_massivefold_model_pool_index.json"),
+            "--massivefold-representative-viewer-packet-json",
+            str(tmp_path / "missing_massivefold_representative_viewer_packet.json"),
+            "--massivefold-representative-rerank-packet-json",
+            str(tmp_path / "missing_massivefold_representative_rerank_packet.json"),
+            "--organic-ligand-slot-candidate-packet-json",
+            str(tmp_path / "missing_organic_ligand_slot_candidate_packet.json"),
+            "--organic-ligand-slot-promotion-action-board-json",
+            str(tmp_path / "missing_organic_ligand_slot_promotion_action_board.json"),
             "--target-object-viewer-smoke-json",
             str(tmp_path / "missing_object_viewer_smoke.json"),
             "--target-object-model-review-json",

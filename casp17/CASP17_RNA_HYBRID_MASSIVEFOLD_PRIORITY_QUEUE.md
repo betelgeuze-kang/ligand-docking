@@ -1,6 +1,6 @@
 # CASP17 RNA/Hybrid MassiveFold Priority Queue
 
-- generated: `2026-05-31T19:15:39+09:00`
+- generated: `2026-05-31T19:39:34+09:00`
 - status: `rna_hybrid_massivefold_priority_queue_ready`
 - queue rows ready/blocked/total: `6/0/6`
 - first priority: `R2341` `organizer_notice_first_rna_massivefold_set_available`

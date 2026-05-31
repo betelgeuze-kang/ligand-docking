@@ -166,7 +166,7 @@
     "first_blocked_target_id": "",
     "first_priority_reason": "organizer_notice_first_rna_massivefold_set_available",
     "first_priority_target_id": "R2341",
-    "generated_at_local": "2026-05-31T19:15:39+09:00",
+    "generated_at_local": "2026-05-31T19:39:34+09:00",
     "internal_prediction_blocked_count": 6,
     "internal_prediction_policy": "do_not_mark_as_internal_prediction",
     "massivefold_external_pool_intake_json": "casp17/casp17_massivefold_external_pool_intake_current.json",

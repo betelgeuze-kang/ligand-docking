@@ -6,6 +6,7 @@
 - internal_prediction_policy: `do_not_mark_as_internal_prediction`
 - submission_policy: `rule_check_required_before_any_human_submission_use`
 - large_download_policy: `tarballs_not_downloaded_by_notice_packet`
+- massivefold_generation_scope: `all_human_rna_and_hybrid_targets_plus_protein_targets`
 
 ## Notices
 
