@@ -133,6 +133,17 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         tmp_path / "historical_seed_official_archive_baseline_lane.json"
     )
     strict_blind_first_slot_source_bridge_json = tmp_path / "strict_blind_first_slot_source_bridge.json"
+    strict_blind_internal_prediction_source_audit_json = (
+        tmp_path / "strict_blind_internal_prediction_source_audit.json"
+    )
+    strict_blind_internal_prediction_source_gate_json = (
+        tmp_path / "strict_blind_internal_prediction_source_gate.json"
+    )
+    strict_blind_internal_prediction_source_apply_plan_json = (
+        tmp_path / "strict_blind_internal_prediction_source_apply_plan.json"
+    )
+    strict_blind_first_slot_closure_kit_json = tmp_path / "strict_blind_first_slot_closure_kit.json"
+    strict_blind_batch_closure_runway_json = tmp_path / "strict_blind_batch_closure_runway.json"
     historical_seed_ablation_candidate_manifests_json = (
         tmp_path / "historical_seed_ablation_candidate_manifests.json"
     )
@@ -1711,6 +1722,146 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        strict_blind_internal_prediction_source_audit_json,
+        {
+            "summary": {
+                "internal_prediction_source_audit_status": "internal_prediction_source_missing_for_first_slot",
+                "required_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "required_target_id": "REQUIRED_MONOMER_001",
+                "required_scope": "monomer",
+                "first_open_field": "prediction_pdb",
+                "local_candidate_count": 17,
+                "local_strict_blind_eligible_count": 0,
+                "source_route_count": 17,
+                "source_route_allowed_count": 0,
+                "official_baseline_candidate_count": 24,
+                "official_strict_blind_blocked_count": 24,
+                "native_authority_bridge_ready_count": 2,
+                "internal_prediction_blocked_count": 1,
+                "allowed_internal_source_count": 0,
+                "template_count": 1,
+                "row_count": 6,
+                "first_blocker": "pre_native_internal_prediction_pdb_missing",
+                "internal_source_manifest_template": (
+                    "casp17/strict_blind_internal_prediction_source_audit/"
+                    "hist_REQUIRED_MONOMER_001/internal_prediction_source_manifest_template.csv"
+                ),
+                "next_action": "fill internal prediction source manifest and place verified PDB",
+            }
+        },
+    )
+    _write_json(
+        strict_blind_internal_prediction_source_gate_json,
+        {
+            "summary": {
+                "internal_prediction_source_gate_status": "awaiting_internal_prediction_source_gate_fields",
+                "required_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "required_target_id": "REQUIRED_MONOMER_001",
+                "required_scope": "monomer",
+                "manifest_csv": (
+                    "casp17/strict_blind_internal_prediction_source_audit/"
+                    "hist_REQUIRED_MONOMER_001/internal_prediction_source_manifest_template.csv"
+                ),
+                "manifest_row_count": 1,
+                "check_count": 16,
+                "pass_count": 3,
+                "blocked_count": 13,
+                "manifest_prediction_pdb": "",
+                "prediction_dropzone": (
+                    "casp17/historical_seed_strict_blind_replacement_evidence_dropzones/"
+                    "01_hist_required_monomer_001/prediction/replacement_prediction.pdb"
+                ),
+                "source_id": "",
+                "first_blocked_check": "source_id_internal",
+                "first_blocker": "internal_source_id_missing_or_external",
+                "first_next_action": "set source_id to an internal pre-native prediction source",
+            }
+        },
+    )
+    _write_json(
+        strict_blind_internal_prediction_source_apply_plan_json,
+        {
+            "summary": {
+                "internal_prediction_source_apply_plan_status": (
+                    "blocked_until_internal_prediction_source_gate_passes"
+                ),
+                "required_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "required_target_id": "REQUIRED_MONOMER_001",
+                "required_scope": "monomer",
+                "gate_status": "awaiting_internal_prediction_source_gate_fields",
+                "source_bridge_status": "first_slot_source_bridge_internal_prediction_required",
+                "action_count": 16,
+                "ready_action_count": 0,
+                "blocked_action_count": 16,
+                "file_action_count": 1,
+                "operator_value_action_count": 10,
+                "supplemental_evidence_action_count": 5,
+                "first_blocked_action_id": "internal_prediction_apply_001",
+                "first_blocker": "internal_prediction_source_gate_not_ready",
+                "first_next_action": (
+                    "copy verified internal prediction PDB into the first-slot prediction dropzone"
+                ),
+                "prediction_source": "",
+                "prediction_destination": (
+                    "casp17/historical_seed_strict_blind_replacement_evidence_dropzones/"
+                    "01_hist_required_monomer_001/prediction/replacement_prediction.pdb"
+                ),
+            }
+        },
+    )
+    _write_json(
+        strict_blind_first_slot_closure_kit_json,
+        {
+            "summary": {
+                "first_slot_closure_kit_status": "blocked_on_internal_prediction_source_gate",
+                "required_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "required_target_id": "REQUIRED_MONOMER_001",
+                "required_scope": "monomer",
+                "step_count": 5,
+                "step_ready_count": 0,
+                "step_blocked_count": 5,
+                "fill_item_count": 32,
+                "file_fill_count": 12,
+                "operator_fill_count": 20,
+                "source_gate_status": "awaiting_internal_prediction_source_gate_fields",
+                "apply_plan_status": "blocked_until_internal_prediction_source_gate_passes",
+                "dropzone_status": "awaiting_strict_blind_evidence_files",
+                "operator_gate_status": "awaiting_operator_values",
+                "intake_preflight_status": "awaiting_operator_input",
+                "first_blocked_step": "internal_prediction_source_gate",
+                "first_blocker": "internal_source_id_missing_or_external",
+                "first_next_action": "set source_id to an internal pre-native prediction source",
+                "kit_folder": "casp17/strict_blind_first_slot_closure_kit/hist_REQUIRED_MONOMER_001",
+            }
+        },
+    )
+    _write_json(
+        strict_blind_batch_closure_runway_json,
+        {
+            "summary": {
+                "batch_closure_runway_status": "blocked_on_first_slot_internal_prediction_source",
+                "slot_count": 40,
+                "ready_slot_count": 0,
+                "blocked_slot_count": 40,
+                "source_gate_blocked_count": 1,
+                "evidence_file_blocked_count": 39,
+                "operator_value_blocked_count": 0,
+                "intake_preflight_blocked_count": 0,
+                "file_present_count": 0,
+                "file_missing_count": 240,
+                "operator_ready_count": 0,
+                "operator_open_count": 400,
+                "intake_filled_count": 0,
+                "intake_missing_count": 640,
+                "first_blocked_rank": 1,
+                "first_blocked_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "first_blocking_stage": "internal_prediction_source_gate",
+                "first_blocker": "internal_source_id_missing_or_external",
+                "first_next_action": "set source_id to an internal pre-native prediction source",
+            }
+        },
+    )
+    _write_json(
         historical_seed_ablation_candidate_manifests_json,
         {
             "summary": {
@@ -2920,6 +3071,16 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(historical_seed_official_archive_baseline_lane_json),
             "--strict-blind-first-slot-source-bridge-json",
             str(strict_blind_first_slot_source_bridge_json),
+            "--strict-blind-internal-prediction-source-audit-json",
+            str(strict_blind_internal_prediction_source_audit_json),
+            "--strict-blind-internal-prediction-source-gate-json",
+            str(strict_blind_internal_prediction_source_gate_json),
+            "--strict-blind-internal-prediction-source-apply-plan-json",
+            str(strict_blind_internal_prediction_source_apply_plan_json),
+            "--strict-blind-first-slot-closure-kit-json",
+            str(strict_blind_first_slot_closure_kit_json),
+            "--strict-blind-batch-closure-runway-json",
+            str(strict_blind_batch_closure_runway_json),
             "--historical-seed-ablation-candidate-manifests-json",
             str(historical_seed_ablation_candidate_manifests_json),
             "--historical-seed-ablation-gap-repair-plan-json",
@@ -3120,6 +3281,21 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "strict-blind first slot source bridge: `first_slot_source_bridge_internal_prediction_required`" in workbench_md
     assert "official ready/total `24/24` native-bridge `2`" in workbench_md
     assert "baseline-only/strict-blocked `24/24` operator-only/internal-blocked `6/1`" in workbench_md
+    assert "strict-blind internal prediction source audit: `internal_prediction_source_missing_for_first_slot`" in workbench_md
+    assert "local eligible/total `0/17` routes allowed/total `0/17`" in workbench_md
+    assert "allowed/template `0/1` blocker `pre_native_internal_prediction_pdb_missing`" in workbench_md
+    assert "strict-blind internal prediction source gate: `awaiting_internal_prediction_source_gate_fields`" in workbench_md
+    assert "checks pass/blocked/total `3/13/16`" in workbench_md
+    assert "first `source_id_internal` `internal_source_id_missing_or_external`" in workbench_md
+    assert "strict-blind internal prediction source apply plan: `blocked_until_internal_prediction_source_gate_passes`" in workbench_md
+    assert "actions ready/blocked/total `0/16/16`" in workbench_md
+    assert "file/operator/supp `1/10/5`" in workbench_md
+    assert "strict-blind first slot closure kit: `blocked_on_internal_prediction_source_gate`" in workbench_md
+    assert "steps ready/blocked/total `0/5/5`" in workbench_md
+    assert "fills file/operator/total `12/20/32`" in workbench_md
+    assert "strict-blind batch closure runway: `blocked_on_first_slot_internal_prediction_source`" in workbench_md
+    assert "slots ready/blocked/total `0/40/40`" in workbench_md
+    assert "blocked source/evidence/operator/intake `1/39/0/0`" in workbench_md
     assert payload["summary"]["target_model_ready_count"] == 2
     assert payload["summary"]["target_model_object_count"] == 4
     assert payload["summary"]["target_model_object_projection_count"] == 4
@@ -3713,6 +3889,72 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["strict_blind_first_slot_source_bridge_operator_only_count"] == 6
     assert payload["summary"]["strict_blind_first_slot_source_bridge_internal_prediction_blocked_count"] == 1
     assert payload["summary"]["strict_blind_first_slot_source_bridge_auto_apply_count"] == 0
+    assert payload["summary"]["strict_blind_internal_prediction_source_audit_status"] == (
+        "internal_prediction_source_missing_for_first_slot"
+    )
+    assert payload["summary"]["strict_blind_internal_prediction_source_audit_local_eligible_count"] == 0
+    assert payload["summary"]["strict_blind_internal_prediction_source_audit_source_route_allowed_count"] == 0
+    assert payload["summary"]["strict_blind_internal_prediction_source_audit_official_blocked_count"] == 24
+    assert payload["summary"]["strict_blind_internal_prediction_source_audit_native_ready_count"] == 2
+    assert payload["summary"]["strict_blind_internal_prediction_source_audit_internal_blocked_count"] == 1
+    assert payload["summary"]["strict_blind_internal_prediction_source_audit_allowed_internal_source_count"] == 0
+    assert payload["summary"]["strict_blind_internal_prediction_source_audit_template_count"] == 1
+    assert payload["summary"]["strict_blind_internal_prediction_source_gate_status"] == (
+        "awaiting_internal_prediction_source_gate_fields"
+    )
+    assert payload["summary"]["strict_blind_internal_prediction_source_gate_manifest_row_count"] == 1
+    assert payload["summary"]["strict_blind_internal_prediction_source_gate_pass_count"] == 3
+    assert payload["summary"]["strict_blind_internal_prediction_source_gate_blocked_count"] == 13
+    assert payload["summary"]["strict_blind_internal_prediction_source_gate_check_count"] == 16
+    assert payload["summary"]["strict_blind_internal_prediction_source_gate_first_blocked_check"] == (
+        "source_id_internal"
+    )
+    assert payload["summary"]["strict_blind_internal_prediction_source_gate_first_blocker"] == (
+        "internal_source_id_missing_or_external"
+    )
+    assert payload["summary"]["strict_blind_internal_prediction_source_apply_plan_status"] == (
+        "blocked_until_internal_prediction_source_gate_passes"
+    )
+    assert payload["summary"]["strict_blind_internal_prediction_source_apply_plan_ready_action_count"] == 0
+    assert payload["summary"]["strict_blind_internal_prediction_source_apply_plan_blocked_action_count"] == 16
+    assert payload["summary"]["strict_blind_internal_prediction_source_apply_plan_action_count"] == 16
+    assert payload["summary"]["strict_blind_internal_prediction_source_apply_plan_file_action_count"] == 1
+    assert payload["summary"]["strict_blind_internal_prediction_source_apply_plan_operator_value_action_count"] == 10
+    assert payload["summary"]["strict_blind_internal_prediction_source_apply_plan_supplemental_action_count"] == 5
+    assert payload["summary"]["strict_blind_internal_prediction_source_apply_plan_first_blocked_action_id"] == (
+        "internal_prediction_apply_001"
+    )
+    assert payload["summary"]["strict_blind_internal_prediction_source_apply_plan_first_blocker"] == (
+        "internal_prediction_source_gate_not_ready"
+    )
+    assert payload["summary"]["strict_blind_first_slot_closure_kit_status"] == (
+        "blocked_on_internal_prediction_source_gate"
+    )
+    assert payload["summary"]["strict_blind_first_slot_closure_kit_step_ready_count"] == 0
+    assert payload["summary"]["strict_blind_first_slot_closure_kit_step_blocked_count"] == 5
+    assert payload["summary"]["strict_blind_first_slot_closure_kit_step_count"] == 5
+    assert payload["summary"]["strict_blind_first_slot_closure_kit_file_fill_count"] == 12
+    assert payload["summary"]["strict_blind_first_slot_closure_kit_operator_fill_count"] == 20
+    assert payload["summary"]["strict_blind_first_slot_closure_kit_fill_item_count"] == 32
+    assert payload["summary"]["strict_blind_first_slot_closure_kit_first_blocked_step"] == (
+        "internal_prediction_source_gate"
+    )
+    assert payload["summary"]["strict_blind_first_slot_closure_kit_first_blocker"] == (
+        "internal_source_id_missing_or_external"
+    )
+    assert payload["summary"]["strict_blind_batch_closure_runway_status"] == (
+        "blocked_on_first_slot_internal_prediction_source"
+    )
+    assert payload["summary"]["strict_blind_batch_closure_runway_ready_slot_count"] == 0
+    assert payload["summary"]["strict_blind_batch_closure_runway_blocked_slot_count"] == 40
+    assert payload["summary"]["strict_blind_batch_closure_runway_slot_count"] == 40
+    assert payload["summary"]["strict_blind_batch_closure_runway_source_gate_blocked_count"] == 1
+    assert payload["summary"]["strict_blind_batch_closure_runway_evidence_blocked_count"] == 39
+    assert payload["summary"]["strict_blind_batch_closure_runway_file_missing_count"] == 240
+    assert payload["summary"]["strict_blind_batch_closure_runway_operator_open_count"] == 400
+    assert payload["summary"]["strict_blind_batch_closure_runway_first_blocked_benchmark_id"] == (
+        "hist_REQUIRED_MONOMER_001"
+    )
     assert payload["summary"]["organic_ligand_slot_candidate_status"] == (
         "organic_ligand_slot_candidates_ready_for_operator_review"
     )
@@ -5065,6 +5307,61 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "operator_only:6" in by_id["strict_blind_first_slot_source_bridge"]["blockers"]
     assert "internal_prediction_blocked:1" in by_id["strict_blind_first_slot_source_bridge"]["blockers"]
     assert "auto_apply:0" in by_id["strict_blind_first_slot_source_bridge"]["blockers"]
+    assert by_id["strict_blind_internal_prediction_source_audit"]["status"] == (
+        "internal_prediction_source_missing_for_first_slot"
+    )
+    assert by_id["strict_blind_internal_prediction_source_audit"]["ready_count"] == 0
+    assert by_id["strict_blind_internal_prediction_source_audit"]["blocked_count"] == 1
+    assert by_id["strict_blind_internal_prediction_source_audit"]["total_count"] == 6
+    assert "local:0/17" in by_id["strict_blind_internal_prediction_source_audit"]["blockers"]
+    assert "routes:0/17" in by_id["strict_blind_internal_prediction_source_audit"]["blockers"]
+    assert "official_blocked:24" in by_id["strict_blind_internal_prediction_source_audit"]["blockers"]
+    assert "internal_blocked:1" in by_id["strict_blind_internal_prediction_source_audit"]["blockers"]
+    assert "template:1" in by_id["strict_blind_internal_prediction_source_audit"]["blockers"]
+    assert by_id["strict_blind_internal_prediction_source_gate"]["status"] == (
+        "awaiting_internal_prediction_source_gate_fields"
+    )
+    assert by_id["strict_blind_internal_prediction_source_gate"]["ready_count"] == 3
+    assert by_id["strict_blind_internal_prediction_source_gate"]["blocked_count"] == 13
+    assert by_id["strict_blind_internal_prediction_source_gate"]["total_count"] == 16
+    assert "manifest_rows:1" in by_id["strict_blind_internal_prediction_source_gate"]["blockers"]
+    assert "first:source_id_internal/internal_source_id_missing_or_external" in by_id[
+        "strict_blind_internal_prediction_source_gate"
+    ]["blockers"]
+    assert by_id["strict_blind_internal_prediction_source_apply_plan"]["status"] == (
+        "blocked_until_internal_prediction_source_gate_passes"
+    )
+    assert by_id["strict_blind_internal_prediction_source_apply_plan"]["ready_count"] == 0
+    assert by_id["strict_blind_internal_prediction_source_apply_plan"]["blocked_count"] == 16
+    assert by_id["strict_blind_internal_prediction_source_apply_plan"]["total_count"] == 16
+    assert "gate:awaiting_internal_prediction_source_gate_fields" in by_id[
+        "strict_blind_internal_prediction_source_apply_plan"
+    ]["blockers"]
+    assert "file/operator/supp:1/10/5" in by_id["strict_blind_internal_prediction_source_apply_plan"][
+        "blockers"
+    ]
+    assert "first:internal_prediction_apply_001/internal_prediction_source_gate_not_ready" in by_id[
+        "strict_blind_internal_prediction_source_apply_plan"
+    ]["blockers"]
+    assert by_id["strict_blind_first_slot_closure_kit"]["status"] == "blocked_on_internal_prediction_source_gate"
+    assert by_id["strict_blind_first_slot_closure_kit"]["ready_count"] == 0
+    assert by_id["strict_blind_first_slot_closure_kit"]["blocked_count"] == 5
+    assert by_id["strict_blind_first_slot_closure_kit"]["total_count"] == 5
+    assert "fills:12/20/32" in by_id["strict_blind_first_slot_closure_kit"]["blockers"]
+    assert "first:internal_prediction_source_gate/internal_source_id_missing_or_external" in by_id[
+        "strict_blind_first_slot_closure_kit"
+    ]["blockers"]
+    assert by_id["strict_blind_batch_closure_runway"]["status"] == (
+        "blocked_on_first_slot_internal_prediction_source"
+    )
+    assert by_id["strict_blind_batch_closure_runway"]["ready_count"] == 0
+    assert by_id["strict_blind_batch_closure_runway"]["blocked_count"] == 40
+    assert by_id["strict_blind_batch_closure_runway"]["total_count"] == 40
+    assert "source/evidence/operator/intake:1/39/0/0" in by_id["strict_blind_batch_closure_runway"][
+        "blockers"
+    ]
+    assert "files:0/240" in by_id["strict_blind_batch_closure_runway"]["blockers"]
+    assert "operators:0/400" in by_id["strict_blind_batch_closure_runway"]["blockers"]
     assert by_id["historical_seed_clearance_to_identity_intake_sync"]["status"] == (
         "waiting_on_cleared_seed_manifest"
     )
@@ -5190,6 +5487,16 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_historical_seed_official_archive_baseline_lane.json"),
             "--strict-blind-first-slot-source-bridge-json",
             str(tmp_path / "missing_strict_blind_first_slot_source_bridge.json"),
+            "--strict-blind-internal-prediction-source-audit-json",
+            str(tmp_path / "missing_strict_blind_internal_prediction_source_audit.json"),
+            "--strict-blind-internal-prediction-source-gate-json",
+            str(tmp_path / "missing_strict_blind_internal_prediction_source_gate.json"),
+            "--strict-blind-internal-prediction-source-apply-plan-json",
+            str(tmp_path / "missing_strict_blind_internal_prediction_source_apply_plan.json"),
+            "--strict-blind-first-slot-closure-kit-json",
+            str(tmp_path / "missing_strict_blind_first_slot_closure_kit.json"),
+            "--strict-blind-batch-closure-runway-json",
+            str(tmp_path / "missing_strict_blind_batch_closure_runway.json"),
             "--historical-seed-first-clearance-operator-kit-json",
             str(tmp_path / "missing_historical_seed_first_clearance_operator_kit.json"),
             "--historical-seed-clearance-to-identity-intake-sync-json",

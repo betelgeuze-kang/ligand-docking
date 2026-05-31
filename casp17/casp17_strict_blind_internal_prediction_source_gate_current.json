@@ -1,0 +1,153 @@
+{
+  "rows": [
+    {
+      "actual_value": "casp17/strict_blind_internal_prediction_source_audit/hist_REQUIRED_MONOMER_001/internal_prediction_source_manifest_template.csv",
+      "blocker": "",
+      "check_id": "manifest_exists",
+      "check_status": "pass",
+      "next_action": "",
+      "required_value": "one internal source manifest row"
+    },
+    {
+      "actual_value": "",
+      "blocker": "internal_source_id_missing_or_external",
+      "check_id": "source_id_internal",
+      "check_status": "blocked",
+      "next_action": "set source_id to an internal pre-native prediction source, not an official archive or MassiveFold pool",
+      "required_value": "non-official internal source_id"
+    },
+    {
+      "actual_value": "REQUIRED_MONOMER_001",
+      "blocker": "",
+      "check_id": "target_id_present",
+      "check_status": "pass",
+      "next_action": "",
+      "required_value": "target_id present"
+    },
+    {
+      "actual_value": "monomer",
+      "blocker": "",
+      "check_id": "scope_matches",
+      "check_status": "pass",
+      "next_action": "",
+      "required_value": "monomer"
+    },
+    {
+      "actual_value": "",
+      "blocker": "prediction_pdb_missing",
+      "check_id": "manifest_prediction_pdb_present",
+      "check_status": "blocked",
+      "next_action": "point prediction_pdb at the verified internal prediction PDB",
+      "required_value": "prediction_pdb path"
+    },
+    {
+      "actual_value": "",
+      "blocker": "prediction_pdb_not_found",
+      "check_id": "manifest_prediction_pdb_exists",
+      "check_status": "blocked",
+      "next_action": "place the internal prediction PDB at the manifest path",
+      "required_value": "existing local prediction PDB"
+    },
+    {
+      "actual_value": "casp17/historical_seed_strict_blind_replacement_evidence_dropzones/01_hist_required_monomer_001/prediction/replacement_prediction.pdb",
+      "blocker": "dropzone_prediction_pdb_missing",
+      "check_id": "dropzone_prediction_pdb_exists",
+      "check_status": "blocked",
+      "next_action": "copy the verified internal prediction PDB into the first-slot prediction dropzone",
+      "required_value": "first-slot prediction dropzone PDB present"
+    },
+    {
+      "actual_value": "",
+      "blocker": "prediction_pdb_has_no_atom_records",
+      "check_id": "prediction_pdb_has_atom_records",
+      "check_status": "blocked",
+      "next_action": "provide a structurally valid PDB with atom records",
+      "required_value": "ATOM or HETATM records"
+    },
+    {
+      "actual_value": "",
+      "blocker": "prediction_created_at_missing_or_invalid",
+      "check_id": "prediction_created_at_present",
+      "check_status": "blocked",
+      "next_action": "enter a verifiable prediction creation date before native release",
+      "required_value": "ISO date"
+    },
+    {
+      "actual_value": "",
+      "blocker": "native_release_date_missing_or_invalid",
+      "check_id": "native_release_date_present",
+      "check_status": "blocked",
+      "next_action": "enter the authoritative native public release date",
+      "required_value": "ISO date"
+    },
+    {
+      "actual_value": "/",
+      "blocker": "prediction_not_before_native",
+      "check_id": "prediction_before_native",
+      "check_status": "blocked",
+      "next_action": "use only prediction evidence created before the native structure was public",
+      "required_value": "prediction_created_at < native_release_date"
+    },
+    {
+      "actual_value": "",
+      "blocker": "native_authority_ref_missing",
+      "check_id": "native_authority_ref_present",
+      "check_status": "blocked",
+      "next_action": "attach authoritative native source reference",
+      "required_value": "native authority reference"
+    },
+    {
+      "actual_value": "",
+      "blocker": "creation_evidence_ref_missing",
+      "check_id": "creation_evidence_ref_present",
+      "check_status": "blocked",
+      "next_action": "attach independent timestamp evidence for the internal prediction",
+      "required_value": "prediction creation evidence reference"
+    },
+    {
+      "actual_value": "",
+      "blocker": "no_leak_evidence_ref_missing",
+      "check_id": "no_leak_evidence_ref_present",
+      "check_status": "blocked",
+      "next_action": "attach no-leak provenance for the internal prediction source",
+      "required_value": "no-leak evidence reference"
+    },
+    {
+      "actual_value": "",
+      "blocker": "method_summary_missing",
+      "check_id": "method_summary_present",
+      "check_status": "blocked",
+      "next_action": "summarize the internal prediction method and source package",
+      "required_value": "method summary"
+    },
+    {
+      "actual_value": "",
+      "blocker": "operator_clearance_missing",
+      "check_id": "operator_clearance_present",
+      "check_status": "blocked",
+      "next_action": "set operator_clearance after reviewing the prediction source and provenance",
+      "required_value": "operator clearance approved/clear"
+    }
+  ],
+  "summary": {
+    "blocked_count": 13,
+    "check_count": 16,
+    "claim_boundary": "Local CASP17 strict-blind internal prediction source gate only. It validates operator-provided manifest fields, prediction PDB presence, basic PDB atom records, chronology, no-leak evidence, and operator clearance for the first historical strict-blind slot. It does not create or copy prediction files, approve provenance, mutate strict-blind intake CSVs, compute CASP metrics, push remotes, or submit to CASP.",
+    "first_blocked_check": "source_id_internal",
+    "first_blocker": "internal_source_id_missing_or_external",
+    "first_next_action": "set source_id to an internal pre-native prediction source, not an official archive or MassiveFold pool",
+    "generated_at_local": "2026-06-01T02:29:26+09:00",
+    "input_blockers": "",
+    "internal_prediction_source_gate_status": "awaiting_internal_prediction_source_gate_fields",
+    "manifest_csv": "casp17/strict_blind_internal_prediction_source_audit/hist_REQUIRED_MONOMER_001/internal_prediction_source_manifest_template.csv",
+    "manifest_prediction_pdb": "",
+    "manifest_row_count": 1,
+    "packet_type": "casp17_strict_blind_internal_prediction_source_gate",
+    "pass_count": 3,
+    "prediction_dropzone": "casp17/historical_seed_strict_blind_replacement_evidence_dropzones/01_hist_required_monomer_001/prediction/replacement_prediction.pdb",
+    "required_benchmark_id": "hist_REQUIRED_MONOMER_001",
+    "required_scope": "monomer",
+    "required_target_id": "REQUIRED_MONOMER_001",
+    "source_id": ""
+  }
+}

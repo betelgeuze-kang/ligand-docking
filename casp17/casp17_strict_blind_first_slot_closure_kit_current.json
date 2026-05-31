@@ -1,0 +1,374 @@
+{
+  "fill_rows": [
+    {
+      "current_status": "missing",
+      "destination": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_candidate_intake.csv",
+      "field_name": "prediction_pdb",
+      "fill_id": "first_slot_fill_001",
+      "fill_kind": "file",
+      "next_action": "place valid local prediction PDB at source_path",
+      "source_or_template": "casp17/historical_seed_strict_blind_replacement_evidence_dropzones/01_hist_required_monomer_001/prediction/replacement_prediction.pdb"
+    },
+    {
+      "current_status": "missing",
+      "destination": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_candidate_intake.csv",
+      "field_name": "native_pdb",
+      "fill_id": "first_slot_fill_002",
+      "fill_kind": "file",
+      "next_action": "place authoritative local native PDB at source_path",
+      "source_or_template": "casp17/historical_seed_strict_blind_replacement_evidence_dropzones/01_hist_required_monomer_001/native/replacement_native.pdb"
+    },
+    {
+      "current_status": "missing",
+      "destination": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_candidate_intake.csv",
+      "field_name": "native_authority_ref",
+      "fill_id": "first_slot_fill_003",
+      "fill_kind": "file",
+      "next_action": "place native authority/source reference at source_path",
+      "source_or_template": "casp17/historical_seed_strict_blind_replacement_evidence_dropzones/01_hist_required_monomer_001/authority/native_authority.md"
+    },
+    {
+      "current_status": "missing",
+      "destination": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_candidate_intake.csv",
+      "field_name": "no_leak_evidence_ref",
+      "fill_id": "first_slot_fill_004",
+      "fill_kind": "file",
+      "next_action": "place independent no-leak evidence at source_path",
+      "source_or_template": "casp17/historical_seed_strict_blind_replacement_evidence_dropzones/01_hist_required_monomer_001/no_leak/no_leak_evidence.md"
+    },
+    {
+      "current_status": "missing",
+      "destination": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_candidate_intake.csv",
+      "field_name": "ablation_manifest_ref",
+      "fill_id": "first_slot_fill_005",
+      "fill_kind": "file",
+      "next_action": "place same-run ablation manifest at source_path",
+      "source_or_template": "casp17/historical_seed_strict_blind_replacement_evidence_dropzones/01_hist_required_monomer_001/ablation/ablation_manifest.json"
+    },
+    {
+      "current_status": "missing",
+      "destination": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_candidate_intake.csv",
+      "field_name": "calibration_values_ref",
+      "fill_id": "first_slot_fill_006",
+      "fill_kind": "file",
+      "next_action": "place calibration value ledger at source_path",
+      "source_or_template": "casp17/historical_seed_strict_blind_replacement_evidence_dropzones/01_hist_required_monomer_001/calibration/calibration_values.json"
+    },
+    {
+      "current_status": "operator_required",
+      "destination": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_candidate_intake.csv",
+      "field_name": "replacement_target_id",
+      "fill_id": "first_slot_fill_007",
+      "fill_kind": "operator_value",
+      "next_action": "fill and clear this value in replacement_candidate_intake.csv",
+      "source_or_template": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_operator_values.csv"
+    },
+    {
+      "current_status": "operator_required",
+      "destination": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_candidate_intake.csv",
+      "field_name": "replacement_benchmark_id",
+      "fill_id": "first_slot_fill_008",
+      "fill_kind": "operator_value",
+      "next_action": "fill and clear this value in replacement_candidate_intake.csv",
+      "source_or_template": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_operator_values.csv"
+    },
+    {
+      "current_status": "operator_required",
+      "destination": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_candidate_intake.csv",
+      "field_name": "target_identity_non_current_historical",
+      "fill_id": "first_slot_fill_009",
+      "fill_kind": "operator_value",
+      "next_action": "fill and clear this value in replacement_candidate_intake.csv",
+      "source_or_template": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_operator_values.csv"
+    },
+    {
+      "current_status": "operator_required",
+      "destination": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_candidate_intake.csv",
+      "field_name": "prediction_created_at",
+      "fill_id": "first_slot_fill_010",
+      "fill_kind": "operator_value",
+      "next_action": "fill and clear this value in replacement_candidate_intake.csv",
+      "source_or_template": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_operator_values.csv"
+    },
+    {
+      "current_status": "operator_required",
+      "destination": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_candidate_intake.csv",
+      "field_name": "native_release_date",
+      "fill_id": "first_slot_fill_011",
+      "fill_kind": "operator_value",
+      "next_action": "fill and clear this value in replacement_candidate_intake.csv",
+      "source_or_template": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_operator_values.csv"
+    },
+    {
+      "current_status": "operator_required",
+      "destination": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_candidate_intake.csv",
+      "field_name": "prediction_generated_before_native_release",
+      "fill_id": "first_slot_fill_012",
+      "fill_kind": "operator_value",
+      "next_action": "fill and clear this value in replacement_candidate_intake.csv",
+      "source_or_template": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_operator_values.csv"
+    },
+    {
+      "current_status": "operator_required",
+      "destination": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_candidate_intake.csv",
+      "field_name": "public_template_or_native_used_for_prediction",
+      "fill_id": "first_slot_fill_013",
+      "fill_kind": "operator_value",
+      "next_action": "fill and clear this value in replacement_candidate_intake.csv",
+      "source_or_template": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_operator_values.csv"
+    },
+    {
+      "current_status": "operator_required",
+      "destination": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_candidate_intake.csv",
+      "field_name": "other_team_model_used",
+      "fill_id": "first_slot_fill_014",
+      "fill_kind": "operator_value",
+      "next_action": "fill and clear this value in replacement_candidate_intake.csv",
+      "source_or_template": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_operator_values.csv"
+    },
+    {
+      "current_status": "operator_required",
+      "destination": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_candidate_intake.csv",
+      "field_name": "post_release_information_used",
+      "fill_id": "first_slot_fill_015",
+      "fill_kind": "operator_value",
+      "next_action": "fill and clear this value in replacement_candidate_intake.csv",
+      "source_or_template": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_operator_values.csv"
+    },
+    {
+      "current_status": "operator_required",
+      "destination": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_candidate_intake.csv",
+      "field_name": "operator_clearance",
+      "fill_id": "first_slot_fill_016",
+      "fill_kind": "operator_value",
+      "next_action": "fill and clear this value in replacement_candidate_intake.csv",
+      "source_or_template": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_operator_values.csv"
+    },
+    {
+      "current_status": "blocked",
+      "destination": "casp17/historical_seed_strict_blind_replacement_evidence_dropzones/01_hist_required_monomer_001/prediction/replacement_prediction.pdb",
+      "field_name": "prediction_pdb",
+      "fill_id": "apply_plan_action_001",
+      "fill_kind": "file_copy",
+      "next_action": "copy verified internal prediction PDB into the first-slot prediction dropzone",
+      "source_or_template": ""
+    },
+    {
+      "current_status": "blocked",
+      "destination": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_operator_values.csv",
+      "field_name": "replacement_target_id",
+      "fill_id": "apply_plan_action_002",
+      "fill_kind": "operator_value",
+      "next_action": "fill and clear replacement_operator_values.csv after source gate passes",
+      "source_or_template": ""
+    },
+    {
+      "current_status": "blocked",
+      "destination": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_operator_values.csv",
+      "field_name": "replacement_benchmark_id",
+      "fill_id": "apply_plan_action_003",
+      "fill_kind": "operator_value",
+      "next_action": "fill and clear replacement_operator_values.csv after source gate passes",
+      "source_or_template": ""
+    },
+    {
+      "current_status": "blocked",
+      "destination": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_operator_values.csv",
+      "field_name": "target_identity_non_current_historical",
+      "fill_id": "apply_plan_action_004",
+      "fill_kind": "operator_value",
+      "next_action": "fill and clear replacement_operator_values.csv after source gate passes",
+      "source_or_template": "true"
+    },
+    {
+      "current_status": "blocked",
+      "destination": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_operator_values.csv",
+      "field_name": "prediction_created_at",
+      "fill_id": "apply_plan_action_005",
+      "fill_kind": "operator_value",
+      "next_action": "fill and clear replacement_operator_values.csv after source gate passes",
+      "source_or_template": ""
+    },
+    {
+      "current_status": "blocked",
+      "destination": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_operator_values.csv",
+      "field_name": "native_release_date",
+      "fill_id": "apply_plan_action_006",
+      "fill_kind": "operator_value",
+      "next_action": "fill and clear replacement_operator_values.csv after source gate passes",
+      "source_or_template": ""
+    },
+    {
+      "current_status": "blocked",
+      "destination": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_operator_values.csv",
+      "field_name": "prediction_generated_before_native_release",
+      "fill_id": "apply_plan_action_007",
+      "fill_kind": "operator_value",
+      "next_action": "fill and clear replacement_operator_values.csv after source gate passes",
+      "source_or_template": "true"
+    },
+    {
+      "current_status": "blocked",
+      "destination": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_operator_values.csv",
+      "field_name": "public_template_or_native_used_for_prediction",
+      "fill_id": "apply_plan_action_008",
+      "fill_kind": "operator_value",
+      "next_action": "fill and clear replacement_operator_values.csv after source gate passes",
+      "source_or_template": "false"
+    },
+    {
+      "current_status": "blocked",
+      "destination": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_operator_values.csv",
+      "field_name": "other_team_model_used",
+      "fill_id": "apply_plan_action_009",
+      "fill_kind": "operator_value",
+      "next_action": "fill and clear replacement_operator_values.csv after source gate passes",
+      "source_or_template": "false"
+    },
+    {
+      "current_status": "blocked",
+      "destination": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_operator_values.csv",
+      "field_name": "post_release_information_used",
+      "fill_id": "apply_plan_action_010",
+      "fill_kind": "operator_value",
+      "next_action": "fill and clear replacement_operator_values.csv after source gate passes",
+      "source_or_template": "false"
+    },
+    {
+      "current_status": "blocked",
+      "destination": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_operator_values.csv",
+      "field_name": "operator_clearance",
+      "fill_id": "apply_plan_action_011",
+      "fill_kind": "operator_value",
+      "next_action": "fill and clear replacement_operator_values.csv after source gate passes",
+      "source_or_template": ""
+    },
+    {
+      "current_status": "blocked",
+      "destination": "casp17/historical_seed_strict_blind_replacement_evidence_dropzones/01_hist_required_monomer_001/native/replacement_native.pdb",
+      "field_name": "native_pdb",
+      "fill_id": "apply_plan_action_012",
+      "fill_kind": "supplemental_evidence",
+      "next_action": "attach native PDB file selected from accepted historical target identity",
+      "source_or_template": ""
+    },
+    {
+      "current_status": "blocked",
+      "destination": "casp17/historical_seed_strict_blind_replacement_evidence_dropzones/01_hist_required_monomer_001/authority/native_authority.md",
+      "field_name": "native_authority_ref",
+      "fill_id": "apply_plan_action_013",
+      "fill_kind": "supplemental_evidence",
+      "next_action": "attach native authority/source reference markdown",
+      "source_or_template": ""
+    },
+    {
+      "current_status": "blocked",
+      "destination": "casp17/historical_seed_strict_blind_replacement_evidence_dropzones/01_hist_required_monomer_001/no_leak/no_leak_evidence.md",
+      "field_name": "no_leak_evidence_ref",
+      "fill_id": "apply_plan_action_014",
+      "fill_kind": "supplemental_evidence",
+      "next_action": "attach independent no-leak provenance evidence",
+      "source_or_template": ""
+    },
+    {
+      "current_status": "blocked",
+      "destination": "casp17/historical_seed_strict_blind_replacement_evidence_dropzones/01_hist_required_monomer_001/ablation/ablation_manifest.json",
+      "field_name": "ablation_manifest_ref",
+      "fill_id": "apply_plan_action_015",
+      "fill_kind": "supplemental_evidence",
+      "next_action": "attach same-run/pre-minimization ablation manifest",
+      "source_or_template": ""
+    },
+    {
+      "current_status": "blocked",
+      "destination": "casp17/historical_seed_strict_blind_replacement_evidence_dropzones/01_hist_required_monomer_001/calibration/calibration_values.json",
+      "field_name": "calibration_values_ref",
+      "fill_id": "apply_plan_action_016",
+      "fill_kind": "supplemental_evidence",
+      "next_action": "attach model1/best-of-5 calibration values",
+      "source_or_template": ""
+    }
+  ],
+  "rows": [
+    {
+      "artifact": "casp17/casp17_strict_blind_internal_prediction_source_gate_current.json",
+      "blocked_count": 13,
+      "first_blocker": "internal_source_id_missing_or_external",
+      "next_action": "set source_id to an internal pre-native prediction source, not an official archive or MassiveFold pool",
+      "ready_count": 3,
+      "step_id": "internal_prediction_source_gate",
+      "step_order": 1,
+      "step_status": "awaiting_internal_prediction_source_gate_fields",
+      "total_count": 16
+    },
+    {
+      "artifact": "casp17/casp17_strict_blind_internal_prediction_source_apply_plan_current.json",
+      "blocked_count": 16,
+      "first_blocker": "internal_prediction_source_gate_not_ready",
+      "next_action": "copy verified internal prediction PDB into the first-slot prediction dropzone",
+      "ready_count": 0,
+      "step_id": "internal_prediction_apply_plan",
+      "step_order": 2,
+      "step_status": "blocked_until_internal_prediction_source_gate_passes",
+      "total_count": 16
+    },
+    {
+      "artifact": "casp17/historical_seed_strict_blind_replacement_evidence_dropzones/01_hist_required_monomer_001",
+      "blocked_count": 6,
+      "first_blocker": "missing_files:6,operator_values_required:10",
+      "next_action": "place strict-blind evidence files in this dropzone, then rerun dropzone and intake preflight",
+      "ready_count": 0,
+      "step_id": "first_slot_evidence_files",
+      "step_order": 3,
+      "step_status": "awaiting_strict_blind_evidence_files",
+      "total_count": 6
+    },
+    {
+      "artifact": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_operator_values.csv",
+      "blocked_count": 10,
+      "first_blocker": "replacement_target_id",
+      "next_action": "fill operator_value for replacement_target_id in replacement_operator_values.csv",
+      "ready_count": 0,
+      "step_id": "first_slot_operator_values",
+      "step_order": 4,
+      "step_status": "awaiting_operator_values",
+      "total_count": 10
+    },
+    {
+      "artifact": "casp17/historical_seed_strict_blind_replacement_intake/01_hist_required_monomer_001/replacement_candidate_intake.csv",
+      "blocked_count": 16,
+      "first_blocker": "replacement_target_id_required,replacement_benchmark_id_required,target_identity_non_current_historical_required,prediction_pdb_required,native_pdb_required,native_authority_ref_required,prediction_created_at_required,native_release_date_required,prediction_generated_before_native_release_required,no_leak_evidence_ref_required,public_template_or_native_used_for_prediction_required,other_team_model_used_required,post_release_information_used_required,ablation_manifest_ref_required,calibration_values_ref_required,operator_clearance_required",
+      "next_action": "fill replacement_candidate_intake.csv with strict-blind evidence, then rerun intake preflight",
+      "ready_count": 0,
+      "step_id": "first_slot_intake_preflight",
+      "step_order": 5,
+      "step_status": "awaiting_operator_input",
+      "total_count": 16
+    }
+  ],
+  "summary": {
+    "apply_plan_status": "blocked_until_internal_prediction_source_gate_passes",
+    "claim_boundary": "Local CASP17 first-slot closure kit only. It gathers existing source gate, apply-plan, evidence-dropzone, operator-value, and intake-preflight blockers for the first strict-blind historical slot. It does not create or copy evidence files, mutate intake/operator CSVs, approve provenance, compute CASP metrics, push remotes, or submit to CASP.",
+    "dropzone_status": "awaiting_strict_blind_evidence_files",
+    "file_fill_count": 12,
+    "fill_item_count": 32,
+    "first_blocked_step": "internal_prediction_source_gate",
+    "first_blocker": "internal_source_id_missing_or_external",
+    "first_next_action": "set source_id to an internal pre-native prediction source, not an official archive or MassiveFold pool",
+    "first_slot_closure_kit_status": "blocked_on_internal_prediction_source_gate",
+    "generated_at_local": "2026-06-01T02:29:30+09:00",
+    "input_blockers": "",
+    "intake_preflight_status": "awaiting_operator_input",
+    "kit_folder": "casp17/strict_blind_first_slot_closure_kit/hist_REQUIRED_MONOMER_001",
+    "operator_fill_count": 20,
+    "operator_gate_status": "awaiting_operator_values",
+    "packet_type": "casp17_strict_blind_first_slot_closure_kit",
+    "required_benchmark_id": "hist_REQUIRED_MONOMER_001",
+    "required_scope": "monomer",
+    "required_target_id": "REQUIRED_MONOMER_001",
+    "source_gate_status": "awaiting_internal_prediction_source_gate_fields",
+    "step_blocked_count": 5,
+    "step_count": 5,
+    "step_ready_count": 0
+  }
+}
