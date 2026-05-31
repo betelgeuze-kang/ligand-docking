@@ -1916,11 +1916,12 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "required_benchmark_id": "hist_REQUIRED_MONOMER_001",
                 "required_target_id": "REQUIRED_MONOMER_001",
                 "required_scope": "monomer",
-                "step_count": 6,
+                "step_count": 7,
                 "step_ready_count": 0,
-                "step_blocked_count": 6,
-                "fill_item_count": 43,
+                "step_blocked_count": 7,
+                "fill_item_count": 60,
                 "source_gate_fill_count": 11,
+                "source_request_fill_count": 17,
                 "file_fill_count": 12,
                 "operator_fill_count": 20,
                 "source_gate_status": "awaiting_internal_prediction_source_gate_fields",
@@ -1937,6 +1938,13 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "source_gate_operator_packet_dir": (
                     "casp17/strict_blind_source_gate_operator_packet/hist_REQUIRED_MONOMER_001"
                 ),
+                "source_gate_source_request_packet_status": (
+                    "awaiting_pre_native_source_or_candidate_replacement"
+                ),
+                "source_gate_source_request_count": 17,
+                "source_gate_pre_native_source_request_count": 10,
+                "source_gate_candidate_replacement_request_count": 7,
+                "source_gate_operator_evidence_repair_request_count": 0,
                 "apply_plan_status": "blocked_until_internal_prediction_source_gate_passes",
                 "dropzone_status": "awaiting_strict_blind_evidence_files",
                 "operator_gate_status": "awaiting_operator_values",
@@ -3417,8 +3425,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "actions ready/blocked/total `0/16/16`" in workbench_md
     assert "file/operator/supp `1/10/5`" in workbench_md
     assert "strict-blind first slot closure kit: `blocked_on_internal_prediction_source_gate`" in workbench_md
-    assert "steps ready/blocked/total `0/6/6`" in workbench_md
-    assert "fills source-gate/file/operator/total `11/12/20/43`" in workbench_md
+    assert "steps ready/blocked/total `0/7/7`" in workbench_md
+    assert "fills source-gate/source-request/file/operator/total `11/17/12/20/60`" in workbench_md
+    assert "source-requests `10/7/0/17`" in workbench_md
     assert "strict-blind batch closure runway: `blocked_on_first_slot_internal_prediction_source`" in workbench_md
     assert "slots ready/blocked/total `0/40/40`" in workbench_md
     assert "blocked source/evidence/operator/intake `1/39/0/0`" in workbench_md
@@ -4105,12 +4114,20 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         "blocked_on_internal_prediction_source_gate"
     )
     assert payload["summary"]["strict_blind_first_slot_closure_kit_step_ready_count"] == 0
-    assert payload["summary"]["strict_blind_first_slot_closure_kit_step_blocked_count"] == 6
-    assert payload["summary"]["strict_blind_first_slot_closure_kit_step_count"] == 6
+    assert payload["summary"]["strict_blind_first_slot_closure_kit_step_blocked_count"] == 7
+    assert payload["summary"]["strict_blind_first_slot_closure_kit_step_count"] == 7
     assert payload["summary"]["strict_blind_first_slot_closure_kit_source_gate_fill_count"] == 11
+    assert payload["summary"]["strict_blind_first_slot_closure_kit_source_request_fill_count"] == 17
     assert payload["summary"]["strict_blind_first_slot_closure_kit_file_fill_count"] == 12
     assert payload["summary"]["strict_blind_first_slot_closure_kit_operator_fill_count"] == 20
-    assert payload["summary"]["strict_blind_first_slot_closure_kit_fill_item_count"] == 43
+    assert payload["summary"]["strict_blind_first_slot_closure_kit_fill_item_count"] == 60
+    assert payload["summary"]["strict_blind_first_slot_closure_kit_source_request_packet_status"] == (
+        "awaiting_pre_native_source_or_candidate_replacement"
+    )
+    assert payload["summary"]["strict_blind_first_slot_closure_kit_source_request_count"] == 17
+    assert payload["summary"]["strict_blind_first_slot_closure_kit_source_request_pre_native_count"] == 10
+    assert payload["summary"]["strict_blind_first_slot_closure_kit_source_request_candidate_replacement_count"] == 7
+    assert payload["summary"]["strict_blind_first_slot_closure_kit_source_request_operator_repair_count"] == 0
     assert payload["summary"]["strict_blind_first_slot_closure_kit_first_blocked_step"] == (
         "internal_prediction_source_gate"
     )
@@ -5553,9 +5570,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     ]["blockers"]
     assert by_id["strict_blind_first_slot_closure_kit"]["status"] == "blocked_on_internal_prediction_source_gate"
     assert by_id["strict_blind_first_slot_closure_kit"]["ready_count"] == 0
-    assert by_id["strict_blind_first_slot_closure_kit"]["blocked_count"] == 6
-    assert by_id["strict_blind_first_slot_closure_kit"]["total_count"] == 6
-    assert "fills:11/12/20/43" in by_id["strict_blind_first_slot_closure_kit"]["blockers"]
+    assert by_id["strict_blind_first_slot_closure_kit"]["blocked_count"] == 7
+    assert by_id["strict_blind_first_slot_closure_kit"]["total_count"] == 7
+    assert "fills:11/17/12/20/60" in by_id["strict_blind_first_slot_closure_kit"]["blockers"]
     assert "first:internal_prediction_source_gate/internal_source_id_missing_or_external" in by_id[
         "strict_blind_first_slot_closure_kit"
     ]["blockers"]

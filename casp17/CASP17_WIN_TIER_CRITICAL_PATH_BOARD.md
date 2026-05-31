@@ -2,7 +2,7 @@
 
 This board separates completed local review surfaces from the fail-closed competitive-proof gates.
 
-- generated: `2026-06-01T03:11:48+09:00`
+- generated: `2026-06-01T03:30:30+09:00`
 - status: `competitive_proof_blocked_on_strict_blind_evidence`
 - stages ready/blocked/total: `3/6/9`
 - 3D objects ready/total: `58/58`

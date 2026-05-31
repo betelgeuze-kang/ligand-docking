@@ -56,6 +56,7 @@ def test_first_slot_closure_kit_surfaces_first_gate_blocker(tmp_path):
     first_slot = tmp_path / "first_slot.json"
     gate = tmp_path / "gate.json"
     operator_packet = tmp_path / "operator_packet.json"
+    source_request_packet = tmp_path / "source_request_packet.json"
     apply_plan = tmp_path / "apply_plan.json"
     dropzones = tmp_path / "dropzones.json"
     operator_gate = tmp_path / "operator_gate.json"
@@ -131,6 +132,41 @@ def test_first_slot_closure_kit_surfaces_first_gate_blocker(tmp_path):
                     "next_action": f"fill {field}",
                 }
                 for field in operator_fields
+            ],
+        },
+    )
+    _write_json(
+        source_request_packet,
+        {
+            "summary": {
+                "source_request_packet_status": "awaiting_pre_native_source_or_candidate_replacement",
+                "required_benchmark_id": benchmark_id,
+                "required_target_id": "REQUIRED_MONOMER_001",
+                "required_scope": "monomer",
+                "request_count": 2,
+                "pre_native_source_required_count": 1,
+                "candidate_replacement_required_count": 1,
+                "operator_evidence_repair_required_count": 0,
+                "first_request_id": "source_request_001",
+                "first_request_target_id": "HIST_BBA5",
+                "first_request_kind": "pre_native_prediction_source_required",
+                "first_request_blocker": "prediction_not_before_native",
+                "first_next_action": "attach a pre-native prediction source",
+                "request_dir": "source_requests",
+            },
+            "rows": [
+                {
+                    "candidate_target_id": "HIST_BBA5",
+                    "request_folder": "source_requests/source_request_001",
+                    "request_status": "awaiting_pre_native_source_or_replacement",
+                    "next_action": "attach a pre-native prediction source",
+                },
+                {
+                    "candidate_target_id": "HIST_COMPLEX_01",
+                    "request_folder": "source_requests/source_request_002",
+                    "request_status": "awaiting_candidate_replacement",
+                    "next_action": "replace with a strict-blind monomer candidate",
+                },
             ],
         },
     )
@@ -215,6 +251,8 @@ def test_first_slot_closure_kit_surfaces_first_gate_blocker(tmp_path):
             str(gate),
             "--source-gate-operator-packet-json",
             str(operator_packet),
+            "--source-gate-source-request-packet-json",
+            str(source_request_packet),
             "--apply-plan-json",
             str(apply_plan),
             "--evidence-dropzones-json",
@@ -237,15 +275,23 @@ def test_first_slot_closure_kit_surfaces_first_gate_blocker(tmp_path):
     mod.write_outputs(args, payload)
 
     assert payload["summary"]["first_slot_closure_kit_status"] == "blocked_on_internal_prediction_source_gate"
-    assert payload["summary"]["step_blocked_count"] == 6
+    assert payload["summary"]["step_blocked_count"] == 7
+    assert payload["summary"]["step_count"] == 7
     assert payload["summary"]["first_blocker"] == "internal_source_id_missing_or_external"
     assert payload["summary"]["source_gate_operator_packet_status"] == "awaiting_source_gate_operator_values"
     assert payload["summary"]["source_gate_operator_awaiting_count"] == 11
+    assert payload["summary"]["source_gate_source_request_packet_status"] == (
+        "awaiting_pre_native_source_or_candidate_replacement"
+    )
+    assert payload["summary"]["source_request_fill_count"] == 2
     assert payload["summary"]["source_gate_fill_count"] == 11
-    assert payload["summary"]["fill_item_count"] == 14
+    assert payload["summary"]["fill_item_count"] == 16
     assert payload["rows"][1]["step_id"] == "source_gate_operator_packet"
+    assert payload["rows"][2]["step_id"] == "source_gate_source_requests"
     assert payload["fill_rows"][0]["fill_kind"] == "source_gate_operator_value"
     assert payload["fill_rows"][0]["field_name"] == "source_id"
+    assert payload["fill_rows"][11]["fill_kind"] == "source_request"
+    assert payload["fill_rows"][11]["field_name"] == "HIST_BBA5"
     assert (tmp_path / "kit" / benchmark_id / "fill_order.csv").exists()
 
 
@@ -258,6 +304,8 @@ def test_first_slot_closure_kit_blocks_missing_inputs(tmp_path):
             str(tmp_path / "missing_gate.json"),
             "--source-gate-operator-packet-json",
             str(tmp_path / "missing_operator_packet.json"),
+            "--source-gate-source-request-packet-json",
+            str(tmp_path / "missing_source_request_packet.json"),
             "--apply-plan-json",
             str(tmp_path / "missing_apply_plan.json"),
             "--evidence-dropzones-json",
@@ -273,3 +321,4 @@ def test_first_slot_closure_kit_blocks_missing_inputs(tmp_path):
     assert payload["summary"]["first_slot_closure_kit_status"] == "blocked_missing_inputs"
     assert "first_slot_kit_json_missing" in payload["summary"]["input_blockers"]
     assert "source_gate_operator_packet_json_missing" in payload["summary"]["input_blockers"]
+    assert "source_gate_source_request_packet_json_missing" in payload["summary"]["input_blockers"]

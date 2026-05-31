@@ -79,10 +79,10 @@ SOURCE_GATE_FILE_CHECKS = {
     "prediction_pdb_has_atom_records",
 }
 CLAIM_BOUNDARY = (
-    "Local CASP17 first-slot closure kit only. It gathers existing source gate, apply-plan, evidence-dropzone, "
-    "operator-value, and intake-preflight blockers for the first strict-blind historical slot. It does not create "
-    "or copy evidence files, mutate intake/operator CSVs, approve provenance, compute CASP metrics, push remotes, "
-    "or submit to CASP."
+    "Local CASP17 first-slot closure kit only. It gathers existing source gate, source-acquisition request, "
+    "apply-plan, evidence-dropzone, operator-value, and intake-preflight blockers for the first strict-blind "
+    "historical slot. It does not fetch external archives, create or copy evidence files, mutate intake/operator "
+    "CSVs, approve provenance, compute CASP metrics, push remotes, or submit to CASP."
 )
 
 
@@ -515,10 +515,14 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "source_gate_candidate_replacement_request_count": _int(
             source_gate_source_request_packet.get("candidate_replacement_required_count")
         ),
+        "source_gate_operator_evidence_repair_request_count": _int(
+            source_gate_source_request_packet.get("operator_evidence_repair_required_count")
+        ),
         "source_gate_first_source_request_id": _text(source_gate_source_request_packet.get("first_request_id")),
         "source_gate_first_source_request_target_id": _text(
             source_gate_source_request_packet.get("first_request_target_id")
         ),
+        "source_gate_first_source_request_kind": _text(source_gate_source_request_packet.get("first_request_kind")),
         "source_gate_first_source_request_blocker": _text(
             source_gate_source_request_packet.get("first_request_blocker")
         ),
@@ -549,8 +553,9 @@ def _write_kit_folder(args: argparse.Namespace, payload: dict[str, Any]) -> None
         f"- status: `{summary['first_slot_closure_kit_status']}`",
         f"- required benchmark/target/scope: `{summary['required_benchmark_id']}` `{summary['required_target_id']}` `{summary['required_scope']}`",
         f"- steps ready/blocked/total: `{summary['step_ready_count']}/{summary['step_blocked_count']}/{summary['step_count']}`",
-        f"- fill items source-gate/file/operator/total: `{summary['source_gate_fill_count']}/{summary['file_fill_count']}/{summary['operator_fill_count']}/{summary['fill_item_count']}`",
+        f"- fill items source-gate/source-request/file/operator/total: `{summary['source_gate_fill_count']}/{summary['source_request_fill_count']}/{summary['file_fill_count']}/{summary['operator_fill_count']}/{summary['fill_item_count']}`",
         f"- source-gate operator packet: `{summary['source_gate_operator_packet_status']}` ready/awaiting/total `{summary['source_gate_operator_ready_count']}/{summary['source_gate_operator_awaiting_count']}/{summary['source_gate_operator_field_action_count']}` patch `{summary['source_gate_operator_patch_ready_count']}/{summary['source_gate_operator_patch_awaiting_count']}`",
+        f"- source-gate source requests: `{summary['source_gate_source_request_packet_status']}` pre-native/replacement/operator-repair/total `{summary['source_gate_pre_native_source_request_count']}/{summary['source_gate_candidate_replacement_request_count']}/{summary['source_gate_operator_evidence_repair_request_count']}/{summary['source_gate_source_request_count']}` first `{summary['source_gate_first_source_request_id'] or '-'}` `{summary['source_gate_first_source_request_target_id'] or '-'}` `{summary['source_gate_first_source_request_kind'] or '-'}` `{summary['source_gate_first_source_request_blocker'] or '-'}`",
         f"- first blocker: `{summary['first_blocked_step'] or '-'}` `{summary['first_blocker'] or '-'}`",
         f"- next action: {summary['first_next_action'] or '-'}",
         "",
@@ -569,8 +574,9 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- status: `{summary['first_slot_closure_kit_status']}`",
         f"- required benchmark/target/scope: `{summary['required_benchmark_id']}` `{summary['required_target_id']}` `{summary['required_scope']}`",
         f"- steps ready/blocked/total: `{summary['step_ready_count']}/{summary['step_blocked_count']}/{summary['step_count']}`",
-        f"- fill items source-gate/file/operator/total: `{summary['source_gate_fill_count']}/{summary['file_fill_count']}/{summary['operator_fill_count']}/{summary['fill_item_count']}`",
+        f"- fill items source-gate/source-request/file/operator/total: `{summary['source_gate_fill_count']}/{summary['source_request_fill_count']}/{summary['file_fill_count']}/{summary['operator_fill_count']}/{summary['fill_item_count']}`",
         f"- source-gate operator packet: `{summary['source_gate_operator_packet_status']}` ready/awaiting/total `{summary['source_gate_operator_ready_count']}/{summary['source_gate_operator_awaiting_count']}/{summary['source_gate_operator_field_action_count']}` patch `{summary['source_gate_operator_patch_ready_count']}/{summary['source_gate_operator_patch_awaiting_count']}` csv `{summary['source_gate_operator_packet_csv'] or '-'}`",
+        f"- source-gate source requests: `{summary['source_gate_source_request_packet_status']}` pre-native/replacement/operator-repair/total `{summary['source_gate_pre_native_source_request_count']}/{summary['source_gate_candidate_replacement_request_count']}/{summary['source_gate_operator_evidence_repair_request_count']}/{summary['source_gate_source_request_count']}` first `{summary['source_gate_first_source_request_id'] or '-'}` `{summary['source_gate_first_source_request_target_id'] or '-'}` `{summary['source_gate_first_source_request_kind'] or '-'}` `{summary['source_gate_first_source_request_blocker'] or '-'}` folder `{summary['source_gate_source_request_dir'] or '-'}`",
         f"- source/apply/dropzone/operator/intake: `{summary['source_gate_status']}` `{summary['apply_plan_status']}` `{summary['dropzone_status']}` `{summary['operator_gate_status']}` `{summary['intake_preflight_status']}`",
         f"- first blocker: `{summary['first_blocked_step'] or '-'}` `{summary['first_blocker'] or '-'}`",
         f"- kit folder: `{summary['kit_folder']}`",
@@ -603,6 +609,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--first-slot-kit-json", default=DEFAULT_FIRST_SLOT_KIT_JSON)
     parser.add_argument("--source-gate-json", default=DEFAULT_SOURCE_GATE_JSON)
     parser.add_argument("--source-gate-operator-packet-json", default=DEFAULT_SOURCE_GATE_OPERATOR_PACKET_JSON)
+    parser.add_argument("--source-gate-source-request-packet-json", default=DEFAULT_SOURCE_GATE_SOURCE_REQUEST_PACKET_JSON)
     parser.add_argument("--apply-plan-json", default=DEFAULT_APPLY_PLAN_JSON)
     parser.add_argument("--evidence-dropzones-json", default=DEFAULT_EVIDENCE_DROPZONES_JSON)
     parser.add_argument("--operator-gate-json", default=DEFAULT_OPERATOR_GATE_JSON)
