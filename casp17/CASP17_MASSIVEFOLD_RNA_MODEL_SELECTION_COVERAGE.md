@@ -1,6 +1,6 @@
 # CASP17 MassiveFold RNA Model-Selection Coverage
 
-- generated: `2026-05-31T21:31:37+09:00`
+- generated: `2026-06-01T04:05:50+09:00`
 - status: `massivefold_rna_model_selection_coverage_ready_review_only`
 - targets ready/partial/total: `6/0/6`
 - acquisition/index/viewer/rerank ready: `6/6/6/6`

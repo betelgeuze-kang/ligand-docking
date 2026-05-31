@@ -4,6 +4,14 @@ from pathlib import Path
 from tools import build_casp17_massivefold_rna_model_selection_coverage as mod
 
 
+def test_r2341_default_artifacts_are_target_canonical():
+    artifacts = mod.TARGET_ARTIFACTS["R2341"]
+
+    assert artifacts["index_json"] == "casp17/casp17_massivefold_model_pool_index_r2341_current.json"
+    assert artifacts["viewer_json"] == "casp17/casp17_massivefold_representative_viewer_packet_r2341_current.json"
+    assert artifacts["rerank_json"] == "casp17/casp17_massivefold_representative_rerank_packet_r2341_current.json"
+
+
 def _write_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload), encoding="utf-8")

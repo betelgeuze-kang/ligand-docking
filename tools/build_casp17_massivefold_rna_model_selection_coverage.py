@@ -19,9 +19,9 @@ DEFAULT_TARGET_IDS = "R2341,R2345,R2350,R2351,R2352,R2353"
 
 TARGET_ARTIFACTS = {
     "R2341": {
-        "index_json": "casp17/casp17_massivefold_model_pool_index_current.json",
-        "viewer_json": "casp17/casp17_massivefold_representative_viewer_packet_current.json",
-        "rerank_json": "casp17/casp17_massivefold_representative_rerank_packet_current.json",
+        "index_json": "casp17/casp17_massivefold_model_pool_index_r2341_current.json",
+        "viewer_json": "casp17/casp17_massivefold_representative_viewer_packet_r2341_current.json",
+        "rerank_json": "casp17/casp17_massivefold_representative_rerank_packet_r2341_current.json",
     },
     "R2345": {
         "index_json": "casp17/casp17_massivefold_model_pool_index_r2345_current.json",

@@ -5,7 +5,7 @@ This is the local navigation surface for the current CASP17 internal-physics lan
 - goal objective addendum: `casp17/CASP17_WIN_TIER_GOAL.md`
 - win-tier target: scaffold `65 -> 90`, competitive proof `15-25 -> 85-90`, leaderboard `top-5/top-3/top-1-2` by category.
 
-- generated: `2026-06-01T04:01:03+09:00`
+- generated: `2026-06-01T04:05:50+09:00`
 - workbench_status: `ready_for_operator_fill`
 - target model folders: `19/19`
 - target object folders: `58`
