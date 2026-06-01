@@ -53,6 +53,58 @@
       "total_count": 0
     },
     {
+      "artifact_path": "casp17/casp17_strict_blind_first_unlock_handoff_current.json",
+      "blocked_count": 11,
+      "first_blocker": "operator_value_missing",
+      "label": "Consolidate first source request into field-level unlock handoff",
+      "next_action": "fill operator_value for source_id",
+      "ready_count": 0,
+      "source_status": "awaiting_first_unlock_operator_values",
+      "stage_id": "first_unlock_handoff",
+      "stage_order": 5,
+      "stage_status": "stage_blocked",
+      "total_count": 11
+    },
+    {
+      "artifact_path": "casp17/casp17_strict_blind_first_unlock_evidence_packet_current.json",
+      "blocked_count": 11,
+      "first_blocker": "operator_value_missing",
+      "label": "Collect first-unlock field evidence and file dropzone references",
+      "next_action": "collect evidence in casp17/strict_blind_first_unlock_evidence_packet/source_request_001_hist_bba5/field_evidence/source_id.md, then fill operator_value and operator_evidence_ref for source_id",
+      "ready_count": 0,
+      "source_status": "awaiting_first_unlock_evidence_collection",
+      "stage_id": "first_unlock_evidence_packet",
+      "stage_order": 6,
+      "stage_status": "stage_blocked",
+      "total_count": 11
+    },
+    {
+      "artifact_path": "casp17/casp17_strict_blind_first_unlock_evidence_review_gate_current.json",
+      "blocked_count": 11,
+      "first_blocker": "template_operator_value_missing",
+      "label": "Review first-unlock evidence for source-gate sync eligibility",
+      "next_action": "fill operator_value for source_id in operator_evidence_template.csv",
+      "ready_count": 0,
+      "source_status": "awaiting_first_unlock_evidence_review",
+      "stage_id": "first_unlock_evidence_review_gate",
+      "stage_order": 7,
+      "stage_status": "stage_blocked",
+      "total_count": 11
+    },
+    {
+      "artifact_path": "casp17/casp17_strict_blind_first_unlock_evidence_sync_plan_current.json",
+      "blocked_count": 11,
+      "first_blocker": "template_operator_value_missing",
+      "label": "Sync reviewed first-unlock evidence into source-gate operator packet",
+      "next_action": "complete first-unlock evidence review before syncing into the source gate",
+      "ready_count": 0,
+      "source_status": "awaiting_first_unlock_evidence_review",
+      "stage_id": "first_unlock_evidence_sync_plan",
+      "stage_order": 8,
+      "stage_status": "stage_blocked",
+      "total_count": 11
+    },
+    {
       "artifact_path": "casp17/casp17_strict_blind_source_gate_operator_packet_current.json",
       "blocked_count": 11,
       "first_blocker": "source_id:awaiting_operator_value",
@@ -61,7 +113,7 @@
       "ready_count": 0,
       "source_status": "awaiting_source_gate_operator_values",
       "stage_id": "source_gate_operator_packet",
-      "stage_order": 5,
+      "stage_order": 9,
       "stage_status": "stage_blocked",
       "total_count": 11
     },
@@ -74,7 +126,7 @@
       "ready_count": 3,
       "source_status": "awaiting_internal_prediction_source_gate_fields",
       "stage_id": "internal_prediction_source_gate",
-      "stage_order": 6,
+      "stage_order": 10,
       "stage_status": "stage_blocked",
       "total_count": 16
     },
@@ -87,7 +139,7 @@
       "ready_count": 0,
       "source_status": "blocked_until_internal_prediction_source_gate_passes",
       "stage_id": "internal_prediction_source_apply_plan",
-      "stage_order": 7,
+      "stage_order": 11,
       "stage_status": "stage_blocked",
       "total_count": 16
     },
@@ -100,7 +152,7 @@
       "ready_count": 0,
       "source_status": "blocked_on_internal_prediction_source_gate",
       "stage_id": "first_slot_closure_kit",
-      "stage_order": 8,
+      "stage_order": 12,
       "stage_status": "stage_blocked",
       "total_count": 7
     },
@@ -113,21 +165,25 @@
       "ready_count": 0,
       "source_status": "blocked_on_first_slot_internal_prediction_source",
       "stage_id": "batch_closure_runway",
-      "stage_order": 9,
+      "stage_order": 13,
       "stage_status": "stage_blocked",
       "total_count": 40
     }
   ],
   "summary": {
     "batch_closure_runway_status": "blocked_on_first_slot_internal_prediction_source",
-    "blocked_stage_count": 9,
-    "claim_boundary": "Local CASP17 strict-blind source-request closure board only. It aggregates the first-slot pre-native internal prediction source request, fulfillment, operator fill, sync, source gate, apply-plan, first-slot closure, and batch runway statuses. It does not fill operator values, copy prediction files, approve provenance, compute CASP metrics, push remotes, or submit to CASP.",
+    "blocked_stage_count": 13,
+    "claim_boundary": "Local CASP17 strict-blind source-request closure board only. It aggregates the first-slot pre-native internal prediction source request, fulfillment, operator fill, first-unlock evidence collection/review/sync, source gate, apply-plan, first-slot closure, and batch runway statuses. It does not fill operator values, copy prediction files, approve provenance, compute CASP metrics, push remotes, or submit to CASP.",
     "first_blocked_stage_id": "source_request_packet",
     "first_blocked_stage_status": "awaiting_pre_native_source_or_candidate_replacement",
     "first_blocker": "prediction_not_before_native",
     "first_slot_closure_kit_status": "blocked_on_internal_prediction_source_gate",
+    "first_unlock_evidence_packet_status": "awaiting_first_unlock_evidence_collection",
+    "first_unlock_evidence_review_gate_status": "awaiting_first_unlock_evidence_review",
+    "first_unlock_evidence_sync_plan_status": "awaiting_first_unlock_evidence_review",
+    "first_unlock_handoff_status": "awaiting_first_unlock_operator_values",
     "fulfillment_gate_status": "awaiting_source_request_operator_values",
-    "generated_at_local": "2026-06-01T05:12:03+09:00",
+    "generated_at_local": "2026-06-01T21:33:50+09:00",
     "input_blockers": "",
     "internal_prediction_apply_plan_status": "blocked_until_internal_prediction_source_gate_passes",
     "internal_prediction_source_gate_status": "awaiting_internal_prediction_source_gate_fields",
@@ -141,7 +197,7 @@
     "required_target_id": "REQUIRED_MONOMER_001",
     "source_gate_operator_packet_status": "awaiting_source_gate_operator_values",
     "source_request_status": "awaiting_pre_native_source_or_candidate_replacement",
-    "stage_count": 9,
+    "stage_count": 13,
     "strict_blind_source_request_closure_board_status": "awaiting_strict_blind_source_request_closure"
   }
 }

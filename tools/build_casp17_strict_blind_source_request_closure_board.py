@@ -15,6 +15,16 @@ DEFAULT_SOURCE_REQUEST_PACKET_JSON = "casp17/casp17_strict_blind_source_gate_sou
 DEFAULT_FULFILLMENT_GATE_JSON = "casp17/casp17_strict_blind_source_request_fulfillment_gate_current.json"
 DEFAULT_OPERATOR_FILL_WORKLIST_JSON = "casp17/casp17_strict_blind_source_request_operator_fill_worklist_current.json"
 DEFAULT_OPERATOR_SYNC_PLAN_JSON = "casp17/casp17_strict_blind_source_request_operator_sync_plan_current.json"
+DEFAULT_FIRST_UNLOCK_HANDOFF_JSON = "casp17/casp17_strict_blind_first_unlock_handoff_current.json"
+DEFAULT_FIRST_UNLOCK_EVIDENCE_PACKET_JSON = (
+    "casp17/casp17_strict_blind_first_unlock_evidence_packet_current.json"
+)
+DEFAULT_FIRST_UNLOCK_EVIDENCE_REVIEW_GATE_JSON = (
+    "casp17/casp17_strict_blind_first_unlock_evidence_review_gate_current.json"
+)
+DEFAULT_FIRST_UNLOCK_EVIDENCE_SYNC_PLAN_JSON = (
+    "casp17/casp17_strict_blind_first_unlock_evidence_sync_plan_current.json"
+)
 DEFAULT_SOURCE_GATE_OPERATOR_PACKET_JSON = "casp17/casp17_strict_blind_source_gate_operator_packet_current.json"
 DEFAULT_INTERNAL_SOURCE_GATE_JSON = "casp17/casp17_strict_blind_internal_prediction_source_gate_current.json"
 DEFAULT_INTERNAL_APPLY_PLAN_JSON = "casp17/casp17_strict_blind_internal_prediction_source_apply_plan_current.json"
@@ -40,9 +50,10 @@ ROW_COLUMNS = [
 
 CLAIM_BOUNDARY = (
     "Local CASP17 strict-blind source-request closure board only. It aggregates the first-slot "
-    "pre-native internal prediction source request, fulfillment, operator fill, sync, source gate, "
-    "apply-plan, first-slot closure, and batch runway statuses. It does not fill operator values, "
-    "copy prediction files, approve provenance, compute CASP metrics, push remotes, or submit to CASP."
+    "pre-native internal prediction source request, fulfillment, operator fill, first-unlock evidence "
+    "collection/review/sync, source gate, apply-plan, first-slot closure, and batch runway statuses. "
+    "It does not fill operator values, copy prediction files, approve provenance, compute CASP metrics, "
+    "push remotes, or submit to CASP."
 )
 
 
@@ -140,6 +151,10 @@ def _build_rows(args: argparse.Namespace, summaries: dict[str, dict[str, Any]]) 
     fulfillment = summaries["fulfillment"]
     fill = summaries["fill"]
     sync = summaries["sync"]
+    handoff = summaries["handoff"]
+    evidence_packet = summaries["evidence_packet"]
+    evidence_review = summaries["evidence_review"]
+    evidence_sync = summaries["evidence_sync"]
     operator = summaries["operator"]
     gate = summaries["gate"]
     apply = summaries["apply"]
@@ -153,6 +168,14 @@ def _build_rows(args: argparse.Namespace, summaries: dict[str, dict[str, Any]]) 
     fill_total = _int(fill.get("field_action_count"))
     sync_ready = _int(sync.get("ready_sync_action_count"))
     sync_total = _int(sync.get("sync_action_count"))
+    handoff_ready = _int(handoff.get("ready_field_count"))
+    handoff_total = _int(handoff.get("field_count"))
+    evidence_packet_ready = _int(evidence_packet.get("ready_field_count"))
+    evidence_packet_total = _int(evidence_packet.get("field_count"))
+    evidence_review_ready = _int(evidence_review.get("ready_field_count"))
+    evidence_review_total = _int(evidence_review.get("field_count"))
+    evidence_sync_ready = _int(evidence_sync.get("ready_action_count"))
+    evidence_sync_total = _int(evidence_sync.get("action_count"))
     operator_ready = _int(operator.get("operator_ready_count"))
     operator_total = _int(operator.get("operator_ready_count")) + _int(operator.get("operator_awaiting_count"))
     gate_pass = _int(gate.get("pass_count"))
@@ -221,6 +244,63 @@ def _build_rows(args: argparse.Namespace, summaries: dict[str, dict[str, Any]]) 
         ),
         _stage(
             5,
+            "first_unlock_handoff",
+            "Consolidate first source request into field-level unlock handoff",
+            _text(handoff.get("first_unlock_handoff_status")),
+            _text(handoff.get("first_unlock_handoff_status")) == "first_unlock_handoff_ready_for_source_gate_review",
+            handoff_ready,
+            _int(handoff.get("blocked_field_count")),
+            handoff_total,
+            args.first_unlock_handoff_json,
+            _text(handoff.get("first_blocker")),
+            _text(handoff.get("first_next_action")),
+        ),
+        _stage(
+            6,
+            "first_unlock_evidence_packet",
+            "Collect first-unlock field evidence and file dropzone references",
+            _text(evidence_packet.get("first_unlock_evidence_packet_status")),
+            _text(evidence_packet.get("first_unlock_evidence_packet_status"))
+            == "first_unlock_evidence_packet_ready_for_source_gate_review",
+            evidence_packet_ready,
+            _int(evidence_packet.get("open_field_count")),
+            evidence_packet_total,
+            args.first_unlock_evidence_packet_json,
+            _text(evidence_packet.get("first_blocker")),
+            _text(evidence_packet.get("first_next_action")),
+        ),
+        _stage(
+            7,
+            "first_unlock_evidence_review_gate",
+            "Review first-unlock evidence for source-gate sync eligibility",
+            _text(evidence_review.get("first_unlock_evidence_review_gate_status")),
+            _text(evidence_review.get("first_unlock_evidence_review_gate_status"))
+            == "first_unlock_evidence_ready_for_source_gate_sync",
+            evidence_review_ready,
+            _int(evidence_review.get("blocked_field_count")),
+            evidence_review_total,
+            args.first_unlock_evidence_review_gate_json,
+            _text(evidence_review.get("first_blocker")),
+            _text(evidence_review.get("first_next_action")),
+        ),
+        _stage(
+            8,
+            "first_unlock_evidence_sync_plan",
+            "Sync reviewed first-unlock evidence into source-gate operator packet",
+            _text(evidence_sync.get("first_unlock_evidence_sync_plan_status")),
+            _text(evidence_sync.get("first_unlock_evidence_sync_plan_status")) in {
+                "first_unlock_evidence_sync_ready_dry_run",
+                "first_unlock_evidence_sync_applied",
+            },
+            evidence_sync_ready,
+            _int(evidence_sync.get("blocked_action_count")),
+            evidence_sync_total,
+            args.first_unlock_evidence_sync_plan_json,
+            _text(evidence_sync.get("first_blocker")),
+            _text(evidence_sync.get("first_next_action")),
+        ),
+        _stage(
+            9,
             "source_gate_operator_packet",
             "Complete first-slot source-gate operator packet",
             _text(operator.get("source_gate_operator_packet_status")),
@@ -233,7 +313,7 @@ def _build_rows(args: argparse.Namespace, summaries: dict[str, dict[str, Any]]) 
             _text(operator.get("first_next_action")),
         ),
         _stage(
-            6,
+            10,
             "internal_prediction_source_gate",
             "Validate internal pre-native prediction source manifest and PDB",
             _text(gate.get("internal_prediction_source_gate_status")),
@@ -246,7 +326,7 @@ def _build_rows(args: argparse.Namespace, summaries: dict[str, dict[str, Any]]) 
             _text(gate.get("first_next_action")),
         ),
         _stage(
-            7,
+            11,
             "internal_prediction_source_apply_plan",
             "Copy verified internal prediction PDB into first-slot dropzone",
             _text(apply.get("internal_prediction_source_apply_plan_status")),
@@ -262,7 +342,7 @@ def _build_rows(args: argparse.Namespace, summaries: dict[str, dict[str, Any]]) 
             _text(apply.get("first_next_action")),
         ),
         _stage(
-            8,
+            12,
             "first_slot_closure_kit",
             "Close first strict-blind historical slot",
             _text(first_slot.get("first_slot_closure_kit_status")),
@@ -275,7 +355,7 @@ def _build_rows(args: argparse.Namespace, summaries: dict[str, dict[str, Any]]) 
             _text(first_slot.get("first_next_action")),
         ),
         _stage(
-            9,
+            13,
             "batch_closure_runway",
             "Propagate first-slot closure into 40-slot strict-blind runway",
             _text(batch.get("batch_closure_runway_status")),
@@ -296,6 +376,10 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         ("fulfillment_gate", args.fulfillment_gate_json),
         ("operator_fill_worklist", args.operator_fill_worklist_json),
         ("operator_sync_plan", args.operator_sync_plan_json),
+        ("first_unlock_handoff", args.first_unlock_handoff_json),
+        ("first_unlock_evidence_packet", args.first_unlock_evidence_packet_json),
+        ("first_unlock_evidence_review_gate", args.first_unlock_evidence_review_gate_json),
+        ("first_unlock_evidence_sync_plan", args.first_unlock_evidence_sync_plan_json),
         ("source_gate_operator_packet", args.source_gate_operator_packet_json),
         ("internal_source_gate", args.internal_source_gate_json),
         ("internal_apply_plan", args.internal_apply_plan_json),
@@ -308,6 +392,10 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "fulfillment": _read_json(args.fulfillment_gate_json),
         "fill": _read_json(args.operator_fill_worklist_json),
         "sync": _read_json(args.operator_sync_plan_json),
+        "handoff": _read_json(args.first_unlock_handoff_json),
+        "evidence_packet": _read_json(args.first_unlock_evidence_packet_json),
+        "evidence_review": _read_json(args.first_unlock_evidence_review_gate_json),
+        "evidence_sync": _read_json(args.first_unlock_evidence_sync_plan_json),
         "operator": _read_json(args.source_gate_operator_packet_json),
         "gate": _read_json(args.internal_source_gate_json),
         "apply": _read_json(args.internal_apply_plan_json),
@@ -347,6 +435,16 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             summaries["fill"].get("source_request_operator_fill_worklist_status")
         ),
         "operator_sync_plan_status": _text(summaries["sync"].get("source_request_operator_sync_plan_status")),
+        "first_unlock_handoff_status": _text(summaries["handoff"].get("first_unlock_handoff_status")),
+        "first_unlock_evidence_packet_status": _text(
+            summaries["evidence_packet"].get("first_unlock_evidence_packet_status")
+        ),
+        "first_unlock_evidence_review_gate_status": _text(
+            summaries["evidence_review"].get("first_unlock_evidence_review_gate_status")
+        ),
+        "first_unlock_evidence_sync_plan_status": _text(
+            summaries["evidence_sync"].get("first_unlock_evidence_sync_plan_status")
+        ),
         "source_gate_operator_packet_status": _text(summaries["operator"].get("source_gate_operator_packet_status")),
         "internal_prediction_source_gate_status": _text(
             summaries["gate"].get("internal_prediction_source_gate_status")
@@ -405,6 +503,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--fulfillment-gate-json", default=DEFAULT_FULFILLMENT_GATE_JSON)
     parser.add_argument("--operator-fill-worklist-json", default=DEFAULT_OPERATOR_FILL_WORKLIST_JSON)
     parser.add_argument("--operator-sync-plan-json", default=DEFAULT_OPERATOR_SYNC_PLAN_JSON)
+    parser.add_argument("--first-unlock-handoff-json", default=DEFAULT_FIRST_UNLOCK_HANDOFF_JSON)
+    parser.add_argument("--first-unlock-evidence-packet-json", default=DEFAULT_FIRST_UNLOCK_EVIDENCE_PACKET_JSON)
+    parser.add_argument(
+        "--first-unlock-evidence-review-gate-json",
+        default=DEFAULT_FIRST_UNLOCK_EVIDENCE_REVIEW_GATE_JSON,
+    )
+    parser.add_argument(
+        "--first-unlock-evidence-sync-plan-json",
+        default=DEFAULT_FIRST_UNLOCK_EVIDENCE_SYNC_PLAN_JSON,
+    )
     parser.add_argument("--source-gate-operator-packet-json", default=DEFAULT_SOURCE_GATE_OPERATOR_PACKET_JSON)
     parser.add_argument("--internal-source-gate-json", default=DEFAULT_INTERNAL_SOURCE_GATE_JSON)
     parser.add_argument("--internal-apply-plan-json", default=DEFAULT_INTERNAL_APPLY_PLAN_JSON)

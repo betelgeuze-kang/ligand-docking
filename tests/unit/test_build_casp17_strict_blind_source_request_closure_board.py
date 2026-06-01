@@ -21,6 +21,14 @@ def _args(tmp_path: Path) -> list[str]:
         str(tmp_path / "fill.json"),
         "--operator-sync-plan-json",
         str(tmp_path / "sync.json"),
+        "--first-unlock-handoff-json",
+        str(tmp_path / "handoff.json"),
+        "--first-unlock-evidence-packet-json",
+        str(tmp_path / "evidence_packet.json"),
+        "--first-unlock-evidence-review-gate-json",
+        str(tmp_path / "evidence_review.json"),
+        "--first-unlock-evidence-sync-plan-json",
+        str(tmp_path / "evidence_sync.json"),
         "--source-gate-operator-packet-json",
         str(tmp_path / "operator.json"),
         "--internal-source-gate-json",
@@ -94,6 +102,58 @@ def _write_blocked_inputs(tmp_path: Path) -> None:
                 "sync_action_count": 0,
                 "first_blocker": "source_id_missing",
                 "first_next_action": "fill operator_value for source_id",
+            }
+        },
+    )
+    _write_json(
+        tmp_path / "handoff.json",
+        {
+            "summary": {
+                "first_unlock_handoff_status": "awaiting_first_unlock_operator_values",
+                "ready_field_count": 0,
+                "blocked_field_count": 11,
+                "field_count": 11,
+                "first_blocker": "operator_value_missing",
+                "first_next_action": "fill operator_value for source_id",
+            }
+        },
+    )
+    _write_json(
+        tmp_path / "evidence_packet.json",
+        {
+            "summary": {
+                "first_unlock_evidence_packet_status": "awaiting_first_unlock_evidence_collection",
+                "ready_field_count": 0,
+                "open_field_count": 11,
+                "field_count": 11,
+                "first_blocker": "operator_value_missing",
+                "first_next_action": "collect evidence for source_id",
+            }
+        },
+    )
+    _write_json(
+        tmp_path / "evidence_review.json",
+        {
+            "summary": {
+                "first_unlock_evidence_review_gate_status": "awaiting_first_unlock_evidence_review",
+                "ready_field_count": 0,
+                "blocked_field_count": 11,
+                "field_count": 11,
+                "first_blocker": "template_operator_value_missing",
+                "first_next_action": "fill operator_value for source_id in operator_evidence_template.csv",
+            }
+        },
+    )
+    _write_json(
+        tmp_path / "evidence_sync.json",
+        {
+            "summary": {
+                "first_unlock_evidence_sync_plan_status": "awaiting_first_unlock_evidence_review",
+                "ready_action_count": 0,
+                "blocked_action_count": 11,
+                "action_count": 11,
+                "first_blocker": "template_operator_value_missing",
+                "first_next_action": "complete first-unlock evidence review before syncing into the source gate",
             }
         },
     )
@@ -176,13 +236,15 @@ def test_source_request_closure_board_orders_blocked_first_slot_runway(tmp_path:
         "awaiting_strict_blind_source_request_closure"
     )
     assert summary["required_benchmark_id"] == "hist_REQUIRED_MONOMER_001"
-    assert summary["stage_count"] == 9
+    assert summary["stage_count"] == 13
     assert summary["ready_stage_count"] == 0
-    assert summary["blocked_stage_count"] == 9
+    assert summary["blocked_stage_count"] == 13
     assert summary["first_blocked_stage_id"] == "source_request_packet"
     assert summary["first_blocker"] == "prediction_not_before_native"
     assert payload["rows"][0]["stage_id"] == "source_request_packet"
     assert payload["rows"][0]["stage_status"] == "stage_blocked"
+    assert payload["rows"][4]["stage_id"] == "first_unlock_handoff"
+    assert payload["rows"][7]["stage_id"] == "first_unlock_evidence_sync_plan"
     assert (tmp_path / "CLOSURE.md").is_file()
 
 
@@ -203,6 +265,22 @@ def test_source_request_closure_board_ready_when_all_stages_ready(tmp_path: Path
     _write_json(
         tmp_path / "sync.json",
         {"summary": {"source_request_operator_sync_plan_status": "source_request_operator_sync_ready_dry_run", "ready_sync_action_count": 4, "blocked_sync_action_count": 0, "sync_action_count": 4}},
+    )
+    _write_json(
+        tmp_path / "handoff.json",
+        {"summary": {"first_unlock_handoff_status": "first_unlock_handoff_ready_for_source_gate_review", "ready_field_count": 4, "blocked_field_count": 0, "field_count": 4}},
+    )
+    _write_json(
+        tmp_path / "evidence_packet.json",
+        {"summary": {"first_unlock_evidence_packet_status": "first_unlock_evidence_packet_ready_for_source_gate_review", "ready_field_count": 4, "open_field_count": 0, "field_count": 4}},
+    )
+    _write_json(
+        tmp_path / "evidence_review.json",
+        {"summary": {"first_unlock_evidence_review_gate_status": "first_unlock_evidence_ready_for_source_gate_sync", "ready_field_count": 4, "blocked_field_count": 0, "field_count": 4}},
+    )
+    _write_json(
+        tmp_path / "evidence_sync.json",
+        {"summary": {"first_unlock_evidence_sync_plan_status": "first_unlock_evidence_sync_ready_dry_run", "ready_action_count": 4, "blocked_action_count": 0, "action_count": 4}},
     )
     _write_json(
         tmp_path / "operator.json",
@@ -230,7 +308,7 @@ def test_source_request_closure_board_ready_when_all_stages_ready(tmp_path: Path
     assert payload["summary"]["strict_blind_source_request_closure_board_status"] == (
         "strict_blind_source_request_closure_ready_for_first_slot"
     )
-    assert payload["summary"]["ready_stage_count"] == 9
+    assert payload["summary"]["ready_stage_count"] == 13
     assert payload["summary"]["blocked_stage_count"] == 0
     assert {row["stage_status"] for row in payload["rows"]} == {"stage_ready"}
 

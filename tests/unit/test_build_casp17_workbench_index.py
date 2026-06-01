@@ -163,12 +163,18 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     strict_blind_source_request_closure_board_json = (
         tmp_path / "strict_blind_source_request_closure_board.json"
     )
+    strict_blind_first_source_request_pickup_json = (
+        tmp_path / "strict_blind_first_source_request_pickup.json"
+    )
     strict_blind_first_unlock_handoff_json = tmp_path / "strict_blind_first_unlock_handoff.json"
     strict_blind_first_unlock_evidence_packet_json = (
         tmp_path / "strict_blind_first_unlock_evidence_packet.json"
     )
     strict_blind_first_unlock_evidence_review_gate_json = (
         tmp_path / "strict_blind_first_unlock_evidence_review_gate.json"
+    )
+    strict_blind_first_unlock_evidence_sync_plan_json = (
+        tmp_path / "strict_blind_first_unlock_evidence_sync_plan.json"
     )
     strict_blind_internal_prediction_source_apply_plan_json = (
         tmp_path / "strict_blind_internal_prediction_source_apply_plan.json"
@@ -2070,9 +2076,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "required_benchmark_id": "hist_REQUIRED_MONOMER_001",
                 "required_target_id": "REQUIRED_MONOMER_001",
                 "required_scope": "monomer",
-                "stage_count": 9,
+                "stage_count": 13,
                 "ready_stage_count": 0,
-                "blocked_stage_count": 9,
+                "blocked_stage_count": 13,
                 "first_blocked_stage_id": "source_request_packet",
                 "first_blocked_stage_status": "awaiting_pre_native_source_or_candidate_replacement",
                 "first_blocker": "prediction_not_before_native",
@@ -2081,11 +2087,60 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "fulfillment_gate_status": "awaiting_source_request_operator_values",
                 "operator_fill_worklist_status": "awaiting_source_request_operator_values",
                 "operator_sync_plan_status": "awaiting_source_request_fulfillment",
+                "first_unlock_handoff_status": "awaiting_first_unlock_operator_values",
+                "first_unlock_evidence_packet_status": "awaiting_first_unlock_evidence_collection",
+                "first_unlock_evidence_review_gate_status": "awaiting_first_unlock_evidence_review",
+                "first_unlock_evidence_sync_plan_status": "awaiting_first_unlock_evidence_review",
                 "source_gate_operator_packet_status": "awaiting_source_gate_operator_values",
                 "internal_prediction_source_gate_status": "awaiting_internal_prediction_source_gate_fields",
                 "internal_prediction_apply_plan_status": "blocked_until_internal_prediction_source_gate_passes",
                 "first_slot_closure_kit_status": "blocked_on_internal_prediction_source_gate",
                 "batch_closure_runway_status": "blocked_on_first_slot_internal_prediction_source",
+            }
+        },
+    )
+    _write_json(
+        strict_blind_first_source_request_pickup_json,
+        {
+            "summary": {
+                "first_source_request_pickup_status": "first_source_request_requires_pre_native_source",
+                "source_request_packet_status": "awaiting_pre_native_source_or_candidate_replacement",
+                "source_route_board_status": "first_slot_requires_pre_native_monomer_source_or_replacement",
+                "repair_feasibility_status": "first_slot_current_local_candidate_source_required",
+                "evidence_packet_status": "awaiting_first_unlock_evidence_collection",
+                "request_id": "source_request_001",
+                "candidate_target_id": "HIST_BBA5",
+                "candidate_scope": "monomer",
+                "request_kind": "pre_native_prediction_source_required",
+                "current_prediction_pdb": (
+                    "data/internal_structures_refined/nightly/2026-02-19-ops-full-dashboard-r1/"
+                    "visual_post_internal_post_bba5_sample000_step00020.pdb"
+                ),
+                "current_prediction_created_at": "2026-02-19",
+                "native_release_date": "2004-05-13",
+                "current_prediction_before_native": "False",
+                "pickup_option_count": 3,
+                "ready_option_count": 0,
+                "blocked_option_count": 3,
+                "in_scope_external_required_count": 10,
+                "external_pre_native_artifact_required_target_count": 10,
+                "pickup_folder": (
+                    "casp17/strict_blind_first_source_request_pickup/"
+                    "source_request_001_hist_bba5"
+                ),
+                "operator_decision_template_csv": (
+                    "casp17/strict_blind_first_source_request_pickup/"
+                    "source_request_001_hist_bba5/operator_decision_template.csv"
+                ),
+                "required_files_manifest_csv": (
+                    "casp17/strict_blind_first_source_request_pickup/"
+                    "source_request_001_hist_bba5/required_files_manifest.csv"
+                ),
+                "first_action_id": "first_source_pickup_001",
+                "first_blocker": "prediction_not_before_native",
+                "first_next_action": (
+                    "attach a prediction artifact created before the authoritative native release date"
+                ),
             }
         },
     )
@@ -2176,6 +2231,34 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "first_blocker": "template_operator_value_missing",
                 "first_next_action": (
                     "fill operator_value for source_id in operator_evidence_template.csv"
+                ),
+            }
+        },
+    )
+    _write_json(
+        strict_blind_first_unlock_evidence_sync_plan_json,
+        {
+            "summary": {
+                "first_unlock_evidence_sync_plan_status": "awaiting_first_unlock_evidence_review",
+                "sync_mode": "dry_run",
+                "review_gate_status": "awaiting_first_unlock_evidence_review",
+                "request_id": "source_request_001",
+                "candidate_target_id": "HIST_BBA5",
+                "action_count": 11,
+                "ready_action_count": 0,
+                "blocked_action_count": 11,
+                "applied_action_count": 0,
+                "review_ready_field_count": 0,
+                "review_blocked_field_count": 11,
+                "destination_operator_csv": (
+                    "casp17/strict_blind_source_gate_operator_packet/"
+                    "hist_REQUIRED_MONOMER_001/source_gate_operator_values.csv"
+                ),
+                "first_action_id": "first_unlock_evidence_sync_001",
+                "first_blocked_field": "source_id",
+                "first_blocker": "template_operator_value_missing",
+                "first_next_action": (
+                    "complete first-unlock evidence review before syncing into the source gate"
                 ),
             }
         },
@@ -3657,12 +3740,16 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(strict_blind_source_request_operator_sync_plan_json),
             "--strict-blind-source-request-closure-board-json",
             str(strict_blind_source_request_closure_board_json),
+            "--strict-blind-first-source-request-pickup-json",
+            str(strict_blind_first_source_request_pickup_json),
             "--strict-blind-first-unlock-handoff-json",
             str(strict_blind_first_unlock_handoff_json),
             "--strict-blind-first-unlock-evidence-packet-json",
             str(strict_blind_first_unlock_evidence_packet_json),
             "--strict-blind-first-unlock-evidence-review-gate-json",
             str(strict_blind_first_unlock_evidence_review_gate_json),
+            "--strict-blind-first-unlock-evidence-sync-plan-json",
+            str(strict_blind_first_unlock_evidence_sync_plan_json),
             "--strict-blind-internal-prediction-source-apply-plan-json",
             str(strict_blind_internal_prediction_source_apply_plan_json),
             "--strict-blind-first-slot-closure-kit-json",
@@ -4694,9 +4781,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         "REQUIRED_MONOMER_001"
     )
     assert payload["summary"]["strict_blind_source_request_closure_board_required_scope"] == "monomer"
-    assert payload["summary"]["strict_blind_source_request_closure_board_stage_count"] == 9
+    assert payload["summary"]["strict_blind_source_request_closure_board_stage_count"] == 13
     assert payload["summary"]["strict_blind_source_request_closure_board_ready_stage_count"] == 0
-    assert payload["summary"]["strict_blind_source_request_closure_board_blocked_stage_count"] == 9
+    assert payload["summary"]["strict_blind_source_request_closure_board_blocked_stage_count"] == 13
     assert payload["summary"]["strict_blind_source_request_closure_board_first_blocked_stage_id"] == (
         "source_request_packet"
     )
@@ -4721,6 +4808,18 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["strict_blind_source_request_closure_board_operator_sync_plan_status"] == (
         "awaiting_source_request_fulfillment"
     )
+    assert payload["summary"]["strict_blind_source_request_closure_board_first_unlock_handoff_status"] == (
+        "awaiting_first_unlock_operator_values"
+    )
+    assert payload["summary"][
+        "strict_blind_source_request_closure_board_first_unlock_evidence_packet_status"
+    ] == "awaiting_first_unlock_evidence_collection"
+    assert payload["summary"][
+        "strict_blind_source_request_closure_board_first_unlock_evidence_review_gate_status"
+    ] == "awaiting_first_unlock_evidence_review"
+    assert payload["summary"][
+        "strict_blind_source_request_closure_board_first_unlock_evidence_sync_plan_status"
+    ] == "awaiting_first_unlock_evidence_review"
     assert payload["summary"]["strict_blind_source_request_closure_board_source_gate_operator_packet_status"] == (
         "awaiting_source_gate_operator_values"
     )
@@ -4735,6 +4834,35 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     )
     assert payload["summary"]["strict_blind_source_request_closure_board_batch_closure_runway_status"] == (
         "blocked_on_first_slot_internal_prediction_source"
+    )
+    assert payload["summary"]["strict_blind_first_source_request_pickup_status"] == (
+        "first_source_request_requires_pre_native_source"
+    )
+    assert payload["summary"]["strict_blind_first_source_request_pickup_request_id"] == "source_request_001"
+    assert payload["summary"]["strict_blind_first_source_request_pickup_candidate_target_id"] == "HIST_BBA5"
+    assert payload["summary"]["strict_blind_first_source_request_pickup_candidate_scope"] == "monomer"
+    assert payload["summary"]["strict_blind_first_source_request_pickup_request_kind"] == (
+        "pre_native_prediction_source_required"
+    )
+    assert payload["summary"]["strict_blind_first_source_request_pickup_current_prediction_before_native"] == (
+        "False"
+    )
+    assert payload["summary"]["strict_blind_first_source_request_pickup_current_prediction_created_at"] == (
+        "2026-02-19"
+    )
+    assert payload["summary"]["strict_blind_first_source_request_pickup_native_release_date"] == (
+        "2004-05-13"
+    )
+    assert payload["summary"]["strict_blind_first_source_request_pickup_option_count"] == 3
+    assert payload["summary"]["strict_blind_first_source_request_pickup_ready_option_count"] == 0
+    assert payload["summary"]["strict_blind_first_source_request_pickup_blocked_option_count"] == 3
+    assert payload["summary"]["strict_blind_first_source_request_pickup_external_required_count"] == 10
+    assert payload["summary"]["strict_blind_first_source_request_pickup_external_target_count"] == 10
+    assert payload["summary"]["strict_blind_first_source_request_pickup_first_action_id"] == (
+        "first_source_pickup_001"
+    )
+    assert payload["summary"]["strict_blind_first_source_request_pickup_first_blocker"] == (
+        "prediction_not_before_native"
     )
     assert payload["summary"]["strict_blind_first_unlock_handoff_status"] == (
         "awaiting_first_unlock_operator_values"
@@ -4817,6 +4945,34 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         "source_id"
     )
     assert payload["summary"]["strict_blind_first_unlock_evidence_review_gate_first_blocker"] == (
+        "template_operator_value_missing"
+    )
+    assert payload["summary"]["strict_blind_first_unlock_evidence_sync_plan_status"] == (
+        "awaiting_first_unlock_evidence_review"
+    )
+    assert payload["summary"]["strict_blind_first_unlock_evidence_sync_plan_mode"] == "dry_run"
+    assert payload["summary"]["strict_blind_first_unlock_evidence_sync_plan_review_gate_status"] == (
+        "awaiting_first_unlock_evidence_review"
+    )
+    assert payload["summary"]["strict_blind_first_unlock_evidence_sync_plan_request_id"] == (
+        "source_request_001"
+    )
+    assert payload["summary"]["strict_blind_first_unlock_evidence_sync_plan_candidate_target_id"] == (
+        "HIST_BBA5"
+    )
+    assert payload["summary"]["strict_blind_first_unlock_evidence_sync_plan_action_count"] == 11
+    assert payload["summary"]["strict_blind_first_unlock_evidence_sync_plan_ready_action_count"] == 0
+    assert payload["summary"]["strict_blind_first_unlock_evidence_sync_plan_blocked_action_count"] == 11
+    assert payload["summary"]["strict_blind_first_unlock_evidence_sync_plan_applied_action_count"] == 0
+    assert payload["summary"]["strict_blind_first_unlock_evidence_sync_plan_review_ready_field_count"] == 0
+    assert payload["summary"]["strict_blind_first_unlock_evidence_sync_plan_review_blocked_field_count"] == 11
+    assert payload["summary"]["strict_blind_first_unlock_evidence_sync_plan_first_action_id"] == (
+        "first_unlock_evidence_sync_001"
+    )
+    assert payload["summary"]["strict_blind_first_unlock_evidence_sync_plan_first_blocked_field"] == (
+        "source_id"
+    )
+    assert payload["summary"]["strict_blind_first_unlock_evidence_sync_plan_first_blocker"] == (
         "template_operator_value_missing"
     )
     assert payload["summary"]["strict_blind_internal_prediction_source_apply_plan_status"] == (
@@ -6543,17 +6699,40 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         "awaiting_strict_blind_source_request_closure"
     )
     assert by_id["strict_blind_source_request_closure_board"]["ready_count"] == 0
-    assert by_id["strict_blind_source_request_closure_board"]["blocked_count"] == 9
-    assert by_id["strict_blind_source_request_closure_board"]["total_count"] == 9
+    assert by_id["strict_blind_source_request_closure_board"]["blocked_count"] == 13
+    assert by_id["strict_blind_source_request_closure_board"]["total_count"] == 13
     assert "required:hist_REQUIRED_MONOMER_001/REQUIRED_MONOMER_001/monomer" in by_id[
         "strict_blind_source_request_closure_board"
     ]["blockers"]
-    assert "stages:0/9/9" in by_id["strict_blind_source_request_closure_board"]["blockers"]
+    assert "stages:0/13/13" in by_id["strict_blind_source_request_closure_board"]["blockers"]
+    assert "awaiting_first_unlock_operator_values" in by_id[
+        "strict_blind_source_request_closure_board"
+    ]["blockers"]
+    assert "awaiting_first_unlock_evidence_review" in by_id[
+        "strict_blind_source_request_closure_board"
+    ]["blockers"]
     assert "awaiting_pre_native_source_or_candidate_replacement" in by_id[
         "strict_blind_source_request_closure_board"
     ]["blockers"]
     assert "first:source_request_packet/awaiting_pre_native_source_or_candidate_replacement/prediction_not_before_native" in by_id[
         "strict_blind_source_request_closure_board"
+    ]["blockers"]
+    assert by_id["strict_blind_first_source_request_pickup"]["status"] == (
+        "first_source_request_requires_pre_native_source"
+    )
+    assert by_id["strict_blind_first_source_request_pickup"]["ready_count"] == 0
+    assert by_id["strict_blind_first_source_request_pickup"]["blocked_count"] == 3
+    assert by_id["strict_blind_first_source_request_pickup"]["total_count"] == 3
+    assert "request:source_request_001/HIST_BBA5/monomer" in by_id[
+        "strict_blind_first_source_request_pickup"
+    ]["blockers"]
+    assert "dates:2026-02-19/2004-05-13/before:False" in by_id[
+        "strict_blind_first_source_request_pickup"
+    ]["blockers"]
+    assert "options:0/3/3" in by_id["strict_blind_first_source_request_pickup"]["blockers"]
+    assert "external:10/10" in by_id["strict_blind_first_source_request_pickup"]["blockers"]
+    assert "first:first_source_pickup_001/prediction_not_before_native" in by_id[
+        "strict_blind_first_source_request_pickup"
     ]["blockers"]
     assert by_id["strict_blind_first_unlock_handoff"]["status"] == "awaiting_first_unlock_operator_values"
     assert by_id["strict_blind_first_unlock_handoff"]["ready_count"] == 0
@@ -6599,6 +6778,23 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "file:0/2" in by_id["strict_blind_first_unlock_evidence_review_gate"]["blockers"]
     assert "first:source_id/template_operator_value_missing" in by_id[
         "strict_blind_first_unlock_evidence_review_gate"
+    ]["blockers"]
+    assert by_id["strict_blind_first_unlock_evidence_sync_plan"]["status"] == (
+        "awaiting_first_unlock_evidence_review"
+    )
+    assert by_id["strict_blind_first_unlock_evidence_sync_plan"]["ready_count"] == 0
+    assert by_id["strict_blind_first_unlock_evidence_sync_plan"]["blocked_count"] == 11
+    assert by_id["strict_blind_first_unlock_evidence_sync_plan"]["total_count"] == 11
+    assert "mode:dry_run" in by_id["strict_blind_first_unlock_evidence_sync_plan"]["blockers"]
+    assert "review:awaiting_first_unlock_evidence_review" in by_id[
+        "strict_blind_first_unlock_evidence_sync_plan"
+    ]["blockers"]
+    assert "request:source_request_001/HIST_BBA5" in by_id[
+        "strict_blind_first_unlock_evidence_sync_plan"
+    ]["blockers"]
+    assert "actions:0/11/0/11" in by_id["strict_blind_first_unlock_evidence_sync_plan"]["blockers"]
+    assert "first:first_unlock_evidence_sync_001/template_operator_value_missing" in by_id[
+        "strict_blind_first_unlock_evidence_sync_plan"
     ]["blockers"]
     assert by_id["strict_blind_internal_prediction_source_apply_plan"]["status"] == (
         "blocked_until_internal_prediction_source_gate_passes"
@@ -6781,12 +6977,16 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_strict_blind_source_request_operator_sync_plan.json"),
             "--strict-blind-source-request-closure-board-json",
             str(tmp_path / "missing_strict_blind_source_request_closure_board.json"),
+            "--strict-blind-first-source-request-pickup-json",
+            str(tmp_path / "missing_strict_blind_first_source_request_pickup.json"),
             "--strict-blind-first-unlock-handoff-json",
             str(tmp_path / "missing_strict_blind_first_unlock_handoff.json"),
             "--strict-blind-first-unlock-evidence-packet-json",
             str(tmp_path / "missing_strict_blind_first_unlock_evidence_packet.json"),
             "--strict-blind-first-unlock-evidence-review-gate-json",
             str(tmp_path / "missing_strict_blind_first_unlock_evidence_review_gate.json"),
+            "--strict-blind-first-unlock-evidence-sync-plan-json",
+            str(tmp_path / "missing_strict_blind_first_unlock_evidence_sync_plan.json"),
             "--strict-blind-internal-prediction-source-apply-plan-json",
             str(tmp_path / "missing_strict_blind_internal_prediction_source_apply_plan.json"),
             "--strict-blind-first-slot-closure-kit-json",
