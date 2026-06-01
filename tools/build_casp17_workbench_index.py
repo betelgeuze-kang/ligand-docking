@@ -190,6 +190,15 @@ DEFAULT_STRICT_BLIND_SOURCE_REQUEST_OPERATOR_SYNC_PLAN_JSON = (
 DEFAULT_STRICT_BLIND_SOURCE_REQUEST_CLOSURE_BOARD_JSON = (
     "casp17/casp17_strict_blind_source_request_closure_board_current.json"
 )
+DEFAULT_STRICT_BLIND_FIRST_UNLOCK_HANDOFF_JSON = (
+    "casp17/casp17_strict_blind_first_unlock_handoff_current.json"
+)
+DEFAULT_STRICT_BLIND_FIRST_UNLOCK_EVIDENCE_PACKET_JSON = (
+    "casp17/casp17_strict_blind_first_unlock_evidence_packet_current.json"
+)
+DEFAULT_STRICT_BLIND_FIRST_UNLOCK_EVIDENCE_REVIEW_GATE_JSON = (
+    "casp17/casp17_strict_blind_first_unlock_evidence_review_gate_current.json"
+)
 DEFAULT_STRICT_BLIND_INTERNAL_PREDICTION_SOURCE_APPLY_PLAN_JSON = (
     "casp17/casp17_strict_blind_internal_prediction_source_apply_plan_current.json"
 )
@@ -629,6 +638,15 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     strict_blind_source_request_closure_board_payload = _read_json(
         args.strict_blind_source_request_closure_board_json
     )
+    strict_blind_first_unlock_handoff_payload = _read_json(
+        args.strict_blind_first_unlock_handoff_json
+    )
+    strict_blind_first_unlock_evidence_packet_payload = _read_json(
+        args.strict_blind_first_unlock_evidence_packet_json
+    )
+    strict_blind_first_unlock_evidence_review_gate_payload = _read_json(
+        args.strict_blind_first_unlock_evidence_review_gate_json
+    )
     strict_blind_internal_prediction_source_apply_plan_payload = _read_json(
         args.strict_blind_internal_prediction_source_apply_plan_json
     )
@@ -953,6 +971,15 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     strict_blind_source_request_closure_board_summary = _summary(
         strict_blind_source_request_closure_board_payload
+    )
+    strict_blind_first_unlock_handoff_summary = _summary(
+        strict_blind_first_unlock_handoff_payload
+    )
+    strict_blind_first_unlock_evidence_packet_summary = _summary(
+        strict_blind_first_unlock_evidence_packet_payload
+    )
+    strict_blind_first_unlock_evidence_review_gate_summary = _summary(
+        strict_blind_first_unlock_evidence_review_gate_payload
     )
     strict_blind_internal_prediction_source_apply_plan_summary = _summary(
         strict_blind_internal_prediction_source_apply_plan_payload
@@ -4158,6 +4185,116 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + str(strict_blind_source_request_closure_board_summary.get("first_blocked_stage_status", ""))
                 + "/"
                 + str(strict_blind_source_request_closure_board_summary.get("first_blocker", ""))
+            ),
+        ),
+        _artifact_row(
+            "strict_blind_first_unlock_handoff",
+            "First strict-blind slot operator handoff for winner-normalized unlock",
+            _text(strict_blind_first_unlock_handoff_summary.get("first_unlock_handoff_status")),
+            args.strict_blind_first_unlock_handoff_json,
+            ready_count=_int(strict_blind_first_unlock_handoff_summary.get("ready_field_count")),
+            blocked_count=_int(strict_blind_first_unlock_handoff_summary.get("blocked_field_count")),
+            total_count=_int(strict_blind_first_unlock_handoff_summary.get("field_count")),
+            next_action=_text(strict_blind_first_unlock_handoff_summary.get("first_next_action")),
+            blockers=(
+                "request:"
+                + str(strict_blind_first_unlock_handoff_summary.get("request_id", ""))
+                + "/"
+                + str(strict_blind_first_unlock_handoff_summary.get("candidate_target_id", ""))
+                + ",fields:"
+                + str(strict_blind_first_unlock_handoff_summary.get("ready_field_count", ""))
+                + "/"
+                + str(strict_blind_first_unlock_handoff_summary.get("blocked_field_count", ""))
+                + "/"
+                + str(strict_blind_first_unlock_handoff_summary.get("field_count", ""))
+                + ",chronology:"
+                + str(strict_blind_first_unlock_handoff_summary.get("current_prediction_created_at", ""))
+                + "/"
+                + str(strict_blind_first_unlock_handoff_summary.get("current_native_release_date", ""))
+                + ",first:"
+                + str(strict_blind_first_unlock_handoff_summary.get("first_blocked_field_key", ""))
+                + "/"
+                + str(strict_blind_first_unlock_handoff_summary.get("first_blocker", ""))
+            ),
+        ),
+        _artifact_row(
+            "strict_blind_first_unlock_evidence_packet",
+            "Field-level evidence packet for first strict-blind unlock",
+            _text(strict_blind_first_unlock_evidence_packet_summary.get("first_unlock_evidence_packet_status")),
+            args.strict_blind_first_unlock_evidence_packet_json,
+            ready_count=_int(strict_blind_first_unlock_evidence_packet_summary.get("ready_field_count")),
+            blocked_count=_int(strict_blind_first_unlock_evidence_packet_summary.get("open_field_count")),
+            total_count=_int(strict_blind_first_unlock_evidence_packet_summary.get("field_count")),
+            next_action=_text(strict_blind_first_unlock_evidence_packet_summary.get("first_next_action")),
+            blockers=(
+                "request:"
+                + str(strict_blind_first_unlock_evidence_packet_summary.get("request_id", ""))
+                + "/"
+                + str(strict_blind_first_unlock_evidence_packet_summary.get("candidate_target_id", ""))
+                + ",fields:"
+                + str(strict_blind_first_unlock_evidence_packet_summary.get("ready_field_count", ""))
+                + "/"
+                + str(strict_blind_first_unlock_evidence_packet_summary.get("open_field_count", ""))
+                + "/"
+                + str(strict_blind_first_unlock_evidence_packet_summary.get("field_count", ""))
+                + ",stubs:"
+                + str(strict_blind_first_unlock_evidence_packet_summary.get("evidence_stub_count", ""))
+                + ",files:"
+                + str(strict_blind_first_unlock_evidence_packet_summary.get("file_field_count", ""))
+                + ",first:"
+                + str(strict_blind_first_unlock_evidence_packet_summary.get("first_open_field", ""))
+                + "/"
+                + str(strict_blind_first_unlock_evidence_packet_summary.get("first_blocker", ""))
+            ),
+        ),
+        _artifact_row(
+            "strict_blind_first_unlock_evidence_review_gate",
+            "Review gate for first strict-blind unlock evidence packet",
+            _text(
+                strict_blind_first_unlock_evidence_review_gate_summary.get(
+                    "first_unlock_evidence_review_gate_status"
+                )
+            ),
+            args.strict_blind_first_unlock_evidence_review_gate_json,
+            ready_count=_int(strict_blind_first_unlock_evidence_review_gate_summary.get("ready_field_count")),
+            blocked_count=_int(strict_blind_first_unlock_evidence_review_gate_summary.get("blocked_field_count")),
+            total_count=_int(strict_blind_first_unlock_evidence_review_gate_summary.get("field_count")),
+            next_action=_text(strict_blind_first_unlock_evidence_review_gate_summary.get("first_next_action")),
+            blockers=(
+                "request:"
+                + str(strict_blind_first_unlock_evidence_review_gate_summary.get("request_id", ""))
+                + "/"
+                + str(strict_blind_first_unlock_evidence_review_gate_summary.get("candidate_target_id", ""))
+                + ",fields:"
+                + str(strict_blind_first_unlock_evidence_review_gate_summary.get("ready_field_count", ""))
+                + "/"
+                + str(strict_blind_first_unlock_evidence_review_gate_summary.get("blocked_field_count", ""))
+                + "/"
+                + str(strict_blind_first_unlock_evidence_review_gate_summary.get("field_count", ""))
+                + ",template_missing:"
+                + str(strict_blind_first_unlock_evidence_review_gate_summary.get("template_operator_value_missing_count", ""))
+                + "/"
+                + str(strict_blind_first_unlock_evidence_review_gate_summary.get("template_operator_evidence_ref_missing_count", ""))
+                + "/"
+                + str(strict_blind_first_unlock_evidence_review_gate_summary.get("template_operator_clearance_missing_count", ""))
+                + "/"
+                + str(strict_blind_first_unlock_evidence_review_gate_summary.get("template_operator_id_missing_count", ""))
+                + ",stub:"
+                + str(strict_blind_first_unlock_evidence_review_gate_summary.get("stub_present_count", ""))
+                + "/"
+                + str(strict_blind_first_unlock_evidence_review_gate_summary.get("stub_evidence_missing_count", ""))
+                + ",policy:"
+                + str(strict_blind_first_unlock_evidence_review_gate_summary.get("policy_pass_count", ""))
+                + "/"
+                + str(strict_blind_first_unlock_evidence_review_gate_summary.get("policy_blocked_count", ""))
+                + ",file:"
+                + str(strict_blind_first_unlock_evidence_review_gate_summary.get("file_ready_count", ""))
+                + "/"
+                + str(strict_blind_first_unlock_evidence_review_gate_summary.get("file_blocked_count", ""))
+                + ",first:"
+                + str(strict_blind_first_unlock_evidence_review_gate_summary.get("first_blocked_field", ""))
+                + "/"
+                + str(strict_blind_first_unlock_evidence_review_gate_summary.get("first_blocker", ""))
             ),
         ),
         _artifact_row(
@@ -9364,6 +9501,156 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "strict_blind_source_request_closure_board_batch_closure_runway_status": _text(
             strict_blind_source_request_closure_board_summary.get("batch_closure_runway_status")
         ),
+        "strict_blind_first_unlock_handoff_status": _text(
+            strict_blind_first_unlock_handoff_summary.get("first_unlock_handoff_status")
+        ),
+        "strict_blind_first_unlock_handoff_required_benchmark_id": _text(
+            strict_blind_first_unlock_handoff_summary.get("required_benchmark_id")
+        ),
+        "strict_blind_first_unlock_handoff_required_target_id": _text(
+            strict_blind_first_unlock_handoff_summary.get("required_target_id")
+        ),
+        "strict_blind_first_unlock_handoff_request_id": _text(
+            strict_blind_first_unlock_handoff_summary.get("request_id")
+        ),
+        "strict_blind_first_unlock_handoff_candidate_target_id": _text(
+            strict_blind_first_unlock_handoff_summary.get("candidate_target_id")
+        ),
+        "strict_blind_first_unlock_handoff_field_count": _int(
+            strict_blind_first_unlock_handoff_summary.get("field_count")
+        ),
+        "strict_blind_first_unlock_handoff_ready_field_count": _int(
+            strict_blind_first_unlock_handoff_summary.get("ready_field_count")
+        ),
+        "strict_blind_first_unlock_handoff_blocked_field_count": _int(
+            strict_blind_first_unlock_handoff_summary.get("blocked_field_count")
+        ),
+        "strict_blind_first_unlock_handoff_first_blocked_field_key": _text(
+            strict_blind_first_unlock_handoff_summary.get("first_blocked_field_key")
+        ),
+        "strict_blind_first_unlock_handoff_first_blocker": _text(
+            strict_blind_first_unlock_handoff_summary.get("first_blocker")
+        ),
+        "strict_blind_first_unlock_handoff_first_next_action": _text(
+            strict_blind_first_unlock_handoff_summary.get("first_next_action")
+        ),
+        "strict_blind_first_unlock_handoff_operator_template_csv": _text(
+            strict_blind_first_unlock_handoff_summary.get("operator_template_csv")
+        ),
+        "strict_blind_first_unlock_handoff_prediction_dropzone": _text(
+            strict_blind_first_unlock_handoff_summary.get("prediction_dropzone")
+        ),
+        "strict_blind_first_unlock_handoff_current_prediction_created_at": _text(
+            strict_blind_first_unlock_handoff_summary.get("current_prediction_created_at")
+        ),
+        "strict_blind_first_unlock_handoff_current_native_release_date": _text(
+            strict_blind_first_unlock_handoff_summary.get("current_native_release_date")
+        ),
+        "strict_blind_first_unlock_evidence_packet_status": _text(
+            strict_blind_first_unlock_evidence_packet_summary.get("first_unlock_evidence_packet_status")
+        ),
+        "strict_blind_first_unlock_evidence_packet_request_id": _text(
+            strict_blind_first_unlock_evidence_packet_summary.get("request_id")
+        ),
+        "strict_blind_first_unlock_evidence_packet_candidate_target_id": _text(
+            strict_blind_first_unlock_evidence_packet_summary.get("candidate_target_id")
+        ),
+        "strict_blind_first_unlock_evidence_packet_field_count": _int(
+            strict_blind_first_unlock_evidence_packet_summary.get("field_count")
+        ),
+        "strict_blind_first_unlock_evidence_packet_ready_field_count": _int(
+            strict_blind_first_unlock_evidence_packet_summary.get("ready_field_count")
+        ),
+        "strict_blind_first_unlock_evidence_packet_open_field_count": _int(
+            strict_blind_first_unlock_evidence_packet_summary.get("open_field_count")
+        ),
+        "strict_blind_first_unlock_evidence_packet_evidence_stub_count": _int(
+            strict_blind_first_unlock_evidence_packet_summary.get("evidence_stub_count")
+        ),
+        "strict_blind_first_unlock_evidence_packet_file_field_count": _int(
+            strict_blind_first_unlock_evidence_packet_summary.get("file_field_count")
+        ),
+        "strict_blind_first_unlock_evidence_packet_first_open_field": _text(
+            strict_blind_first_unlock_evidence_packet_summary.get("first_open_field")
+        ),
+        "strict_blind_first_unlock_evidence_packet_first_blocker": _text(
+            strict_blind_first_unlock_evidence_packet_summary.get("first_blocker")
+        ),
+        "strict_blind_first_unlock_evidence_packet_first_next_action": _text(
+            strict_blind_first_unlock_evidence_packet_summary.get("first_next_action")
+        ),
+        "strict_blind_first_unlock_evidence_packet_packet_folder": _text(
+            strict_blind_first_unlock_evidence_packet_summary.get("packet_folder")
+        ),
+        "strict_blind_first_unlock_evidence_packet_operator_evidence_template_csv": _text(
+            strict_blind_first_unlock_evidence_packet_summary.get("operator_evidence_template_csv")
+        ),
+        "strict_blind_first_unlock_evidence_packet_dropzone_manifest_csv": _text(
+            strict_blind_first_unlock_evidence_packet_summary.get("dropzone_manifest_csv")
+        ),
+        "strict_blind_first_unlock_evidence_review_gate_status": _text(
+            strict_blind_first_unlock_evidence_review_gate_summary.get(
+                "first_unlock_evidence_review_gate_status"
+            )
+        ),
+        "strict_blind_first_unlock_evidence_review_gate_request_id": _text(
+            strict_blind_first_unlock_evidence_review_gate_summary.get("request_id")
+        ),
+        "strict_blind_first_unlock_evidence_review_gate_candidate_target_id": _text(
+            strict_blind_first_unlock_evidence_review_gate_summary.get("candidate_target_id")
+        ),
+        "strict_blind_first_unlock_evidence_review_gate_field_count": _int(
+            strict_blind_first_unlock_evidence_review_gate_summary.get("field_count")
+        ),
+        "strict_blind_first_unlock_evidence_review_gate_ready_field_count": _int(
+            strict_blind_first_unlock_evidence_review_gate_summary.get("ready_field_count")
+        ),
+        "strict_blind_first_unlock_evidence_review_gate_blocked_field_count": _int(
+            strict_blind_first_unlock_evidence_review_gate_summary.get("blocked_field_count")
+        ),
+        "strict_blind_first_unlock_evidence_review_gate_template_operator_value_missing_count": _int(
+            strict_blind_first_unlock_evidence_review_gate_summary.get("template_operator_value_missing_count")
+        ),
+        "strict_blind_first_unlock_evidence_review_gate_template_operator_evidence_ref_missing_count": _int(
+            strict_blind_first_unlock_evidence_review_gate_summary.get(
+                "template_operator_evidence_ref_missing_count"
+            )
+        ),
+        "strict_blind_first_unlock_evidence_review_gate_template_operator_clearance_missing_count": _int(
+            strict_blind_first_unlock_evidence_review_gate_summary.get(
+                "template_operator_clearance_missing_count"
+            )
+        ),
+        "strict_blind_first_unlock_evidence_review_gate_template_operator_id_missing_count": _int(
+            strict_blind_first_unlock_evidence_review_gate_summary.get("template_operator_id_missing_count")
+        ),
+        "strict_blind_first_unlock_evidence_review_gate_stub_present_count": _int(
+            strict_blind_first_unlock_evidence_review_gate_summary.get("stub_present_count")
+        ),
+        "strict_blind_first_unlock_evidence_review_gate_stub_evidence_missing_count": _int(
+            strict_blind_first_unlock_evidence_review_gate_summary.get("stub_evidence_missing_count")
+        ),
+        "strict_blind_first_unlock_evidence_review_gate_policy_pass_count": _int(
+            strict_blind_first_unlock_evidence_review_gate_summary.get("policy_pass_count")
+        ),
+        "strict_blind_first_unlock_evidence_review_gate_policy_blocked_count": _int(
+            strict_blind_first_unlock_evidence_review_gate_summary.get("policy_blocked_count")
+        ),
+        "strict_blind_first_unlock_evidence_review_gate_file_ready_count": _int(
+            strict_blind_first_unlock_evidence_review_gate_summary.get("file_ready_count")
+        ),
+        "strict_blind_first_unlock_evidence_review_gate_file_blocked_count": _int(
+            strict_blind_first_unlock_evidence_review_gate_summary.get("file_blocked_count")
+        ),
+        "strict_blind_first_unlock_evidence_review_gate_first_blocked_field": _text(
+            strict_blind_first_unlock_evidence_review_gate_summary.get("first_blocked_field")
+        ),
+        "strict_blind_first_unlock_evidence_review_gate_first_blocker": _text(
+            strict_blind_first_unlock_evidence_review_gate_summary.get("first_blocker")
+        ),
+        "strict_blind_first_unlock_evidence_review_gate_first_next_action": _text(
+            strict_blind_first_unlock_evidence_review_gate_summary.get("first_next_action")
+        ),
         "strict_blind_internal_prediction_source_apply_plan_status": _text(
             strict_blind_internal_prediction_source_apply_plan_summary.get(
                 "internal_prediction_source_apply_plan_status"
@@ -11534,6 +11821,9 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- strict-blind source request operator fill worklist: `{summary['strict_blind_source_request_operator_fill_worklist_status'] or '-'}` fields ready/value-missing/evidence-missing/total `{summary['strict_blind_source_request_operator_fill_worklist_field_ready_count']}/{summary['strict_blind_source_request_operator_fill_worklist_operator_value_missing_count']}/{summary['strict_blind_source_request_operator_fill_worklist_operator_evidence_missing_count']}/{summary['strict_blind_source_request_operator_fill_worklist_field_action_count']}` candidate fields `{summary['strict_blind_source_request_operator_fill_worklist_candidate_replacement_field_count']}` first `{summary['strict_blind_source_request_operator_fill_worklist_first_fill_id'] or '-'}` `{summary['strict_blind_source_request_operator_fill_worklist_first_request_id'] or '-'}` `{summary['strict_blind_source_request_operator_fill_worklist_first_target_id'] or '-'}` `{summary['strict_blind_source_request_operator_fill_worklist_first_field_key'] or '-'}` `{summary['strict_blind_source_request_operator_fill_worklist_first_blocker'] or '-'}`",
         f"- strict-blind source request operator sync plan: `{summary['strict_blind_source_request_operator_sync_plan_status'] or '-'}` mode `{summary['strict_blind_source_request_operator_sync_plan_mode'] or '-'}` fulfillment ready/blocked `{summary['strict_blind_source_request_operator_sync_plan_ready_request_count']}/{summary['strict_blind_source_request_operator_sync_plan_blocked_request_count']}` actions ready/blocked/applied/total `{summary['strict_blind_source_request_operator_sync_plan_ready_sync_action_count']}/{summary['strict_blind_source_request_operator_sync_plan_blocked_sync_action_count']}/{summary['strict_blind_source_request_operator_sync_plan_applied_sync_action_count']}/{summary['strict_blind_source_request_operator_sync_plan_sync_action_count']}` selected `{summary['strict_blind_source_request_operator_sync_plan_selected_request_id'] or '-'}` `{summary['strict_blind_source_request_operator_sync_plan_selected_target_id'] or '-'}` first `{summary['strict_blind_source_request_operator_sync_plan_first_action_id'] or '-'}` `{summary['strict_blind_source_request_operator_sync_plan_first_blocker'] or '-'}` destination `{summary['strict_blind_source_request_operator_sync_plan_destination_operator_csv'] or '-'}`",
         f"- strict-blind source request closure board: `{summary['strict_blind_source_request_closure_board_status'] or '-'}` required `{summary['strict_blind_source_request_closure_board_required_benchmark_id'] or '-'}` `{summary['strict_blind_source_request_closure_board_required_target_id'] or '-'}` `{summary['strict_blind_source_request_closure_board_required_scope'] or '-'}` stages ready/blocked/total `{summary['strict_blind_source_request_closure_board_ready_stage_count']}/{summary['strict_blind_source_request_closure_board_blocked_stage_count']}/{summary['strict_blind_source_request_closure_board_stage_count']}` source/fulfill/fill/sync/operator/gate/apply/slot/batch `{summary['strict_blind_source_request_closure_board_source_request_status'] or '-'}` `{summary['strict_blind_source_request_closure_board_fulfillment_gate_status'] or '-'}` `{summary['strict_blind_source_request_closure_board_operator_fill_worklist_status'] or '-'}` `{summary['strict_blind_source_request_closure_board_operator_sync_plan_status'] or '-'}` `{summary['strict_blind_source_request_closure_board_source_gate_operator_packet_status'] or '-'}` `{summary['strict_blind_source_request_closure_board_internal_prediction_source_gate_status'] or '-'}` `{summary['strict_blind_source_request_closure_board_internal_prediction_apply_plan_status'] or '-'}` `{summary['strict_blind_source_request_closure_board_first_slot_closure_kit_status'] or '-'}` `{summary['strict_blind_source_request_closure_board_batch_closure_runway_status'] or '-'}` first `{summary['strict_blind_source_request_closure_board_first_blocked_stage_id'] or '-'}` `{summary['strict_blind_source_request_closure_board_first_blocked_stage_status'] or '-'}` `{summary['strict_blind_source_request_closure_board_first_blocker'] or '-'}` next `{summary['strict_blind_source_request_closure_board_next_action'] or '-'}`",
+        f"- strict-blind first unlock handoff: `{summary['strict_blind_first_unlock_handoff_status'] or '-'}` required `{summary['strict_blind_first_unlock_handoff_required_benchmark_id'] or '-'}` `{summary['strict_blind_first_unlock_handoff_required_target_id'] or '-'}` request `{summary['strict_blind_first_unlock_handoff_request_id'] or '-'}` `{summary['strict_blind_first_unlock_handoff_candidate_target_id'] or '-'}` fields ready/blocked/total `{summary['strict_blind_first_unlock_handoff_ready_field_count']}/{summary['strict_blind_first_unlock_handoff_blocked_field_count']}/{summary['strict_blind_first_unlock_handoff_field_count']}` chronology `{summary['strict_blind_first_unlock_handoff_current_prediction_created_at'] or '-'}`/`{summary['strict_blind_first_unlock_handoff_current_native_release_date'] or '-'}` first `{summary['strict_blind_first_unlock_handoff_first_blocked_field_key'] or '-'}` `{summary['strict_blind_first_unlock_handoff_first_blocker'] or '-'}` template `{summary['strict_blind_first_unlock_handoff_operator_template_csv'] or '-'}` dropzone `{summary['strict_blind_first_unlock_handoff_prediction_dropzone'] or '-'}` next `{summary['strict_blind_first_unlock_handoff_first_next_action'] or '-'}`",
+        f"- strict-blind first unlock evidence packet: `{summary['strict_blind_first_unlock_evidence_packet_status'] or '-'}` request `{summary['strict_blind_first_unlock_evidence_packet_request_id'] or '-'}` `{summary['strict_blind_first_unlock_evidence_packet_candidate_target_id'] or '-'}` fields ready/open/total `{summary['strict_blind_first_unlock_evidence_packet_ready_field_count']}/{summary['strict_blind_first_unlock_evidence_packet_open_field_count']}/{summary['strict_blind_first_unlock_evidence_packet_field_count']}` stubs/files `{summary['strict_blind_first_unlock_evidence_packet_evidence_stub_count']}/{summary['strict_blind_first_unlock_evidence_packet_file_field_count']}` first `{summary['strict_blind_first_unlock_evidence_packet_first_open_field'] or '-'}` `{summary['strict_blind_first_unlock_evidence_packet_first_blocker'] or '-'}` folder `{summary['strict_blind_first_unlock_evidence_packet_packet_folder'] or '-'}` template `{summary['strict_blind_first_unlock_evidence_packet_operator_evidence_template_csv'] or '-'}` dropzone-manifest `{summary['strict_blind_first_unlock_evidence_packet_dropzone_manifest_csv'] or '-'}` next `{summary['strict_blind_first_unlock_evidence_packet_first_next_action'] or '-'}`",
+        f"- strict-blind first unlock evidence review gate: `{summary['strict_blind_first_unlock_evidence_review_gate_status'] or '-'}` request `{summary['strict_blind_first_unlock_evidence_review_gate_request_id'] or '-'}` `{summary['strict_blind_first_unlock_evidence_review_gate_candidate_target_id'] or '-'}` fields ready/blocked/total `{summary['strict_blind_first_unlock_evidence_review_gate_ready_field_count']}/{summary['strict_blind_first_unlock_evidence_review_gate_blocked_field_count']}/{summary['strict_blind_first_unlock_evidence_review_gate_field_count']}` template missing value/evidence/clearance/id `{summary['strict_blind_first_unlock_evidence_review_gate_template_operator_value_missing_count']}/{summary['strict_blind_first_unlock_evidence_review_gate_template_operator_evidence_ref_missing_count']}/{summary['strict_blind_first_unlock_evidence_review_gate_template_operator_clearance_missing_count']}/{summary['strict_blind_first_unlock_evidence_review_gate_template_operator_id_missing_count']}` stub present/missing `{summary['strict_blind_first_unlock_evidence_review_gate_stub_present_count']}/{summary['strict_blind_first_unlock_evidence_review_gate_stub_evidence_missing_count']}` policy `{summary['strict_blind_first_unlock_evidence_review_gate_policy_pass_count']}/{summary['strict_blind_first_unlock_evidence_review_gate_policy_blocked_count']}` file `{summary['strict_blind_first_unlock_evidence_review_gate_file_ready_count']}/{summary['strict_blind_first_unlock_evidence_review_gate_file_blocked_count']}` first `{summary['strict_blind_first_unlock_evidence_review_gate_first_blocked_field'] or '-'}` `{summary['strict_blind_first_unlock_evidence_review_gate_first_blocker'] or '-'}` next `{summary['strict_blind_first_unlock_evidence_review_gate_first_next_action'] or '-'}`",
         f"- strict-blind internal prediction source apply plan: `{summary['strict_blind_internal_prediction_source_apply_plan_status'] or '-'}` required `{summary['strict_blind_internal_prediction_source_apply_plan_required_benchmark_id'] or '-'}` `{summary['strict_blind_internal_prediction_source_apply_plan_required_target_id'] or '-'}` `{summary['strict_blind_internal_prediction_source_apply_plan_required_scope'] or '-'}` gate `{summary['strict_blind_internal_prediction_source_apply_plan_gate_status'] or '-'}` actions ready/blocked/total `{summary['strict_blind_internal_prediction_source_apply_plan_ready_action_count']}/{summary['strict_blind_internal_prediction_source_apply_plan_blocked_action_count']}/{summary['strict_blind_internal_prediction_source_apply_plan_action_count']}` file/operator/supp `{summary['strict_blind_internal_prediction_source_apply_plan_file_action_count']}/{summary['strict_blind_internal_prediction_source_apply_plan_operator_value_action_count']}/{summary['strict_blind_internal_prediction_source_apply_plan_supplemental_action_count']}` prediction `{summary['strict_blind_internal_prediction_source_apply_plan_prediction_source'] or '-'}` `->{summary['strict_blind_internal_prediction_source_apply_plan_prediction_destination'] or '-'}` first `{summary['strict_blind_internal_prediction_source_apply_plan_first_blocked_action_id'] or '-'}` `{summary['strict_blind_internal_prediction_source_apply_plan_first_blocker'] or '-'}`",
         f"- strict-blind first slot closure kit: `{summary['strict_blind_first_slot_closure_kit_status'] or '-'}` required `{summary['strict_blind_first_slot_closure_kit_required_benchmark_id'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_required_target_id'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_required_scope'] or '-'}` steps ready/blocked/total `{summary['strict_blind_first_slot_closure_kit_step_ready_count']}/{summary['strict_blind_first_slot_closure_kit_step_blocked_count']}/{summary['strict_blind_first_slot_closure_kit_step_count']}` fills source-gate/source-request/file/operator/total `{summary['strict_blind_first_slot_closure_kit_source_gate_fill_count']}/{summary['strict_blind_first_slot_closure_kit_source_request_fill_count']}/{summary['strict_blind_first_slot_closure_kit_file_fill_count']}/{summary['strict_blind_first_slot_closure_kit_operator_fill_count']}/{summary['strict_blind_first_slot_closure_kit_fill_item_count']}` source/source-request/apply/dropzone/operator/intake `{summary['strict_blind_first_slot_closure_kit_source_gate_status'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_source_request_packet_status'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_apply_plan_status'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_dropzone_status'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_operator_gate_status'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_intake_preflight_status'] or '-'}` source-requests `{summary['strict_blind_first_slot_closure_kit_source_request_pre_native_count']}/{summary['strict_blind_first_slot_closure_kit_source_request_candidate_replacement_count']}/{summary['strict_blind_first_slot_closure_kit_source_request_operator_repair_count']}/{summary['strict_blind_first_slot_closure_kit_source_request_count']}` first `{summary['strict_blind_first_slot_closure_kit_first_blocked_step'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_first_blocker'] or '-'}` folder `{summary['strict_blind_first_slot_closure_kit_folder'] or '-'}`",
         f"- strict-blind batch closure runway: `{summary['strict_blind_batch_closure_runway_status'] or '-'}` slots ready/blocked/total `{summary['strict_blind_batch_closure_runway_ready_slot_count']}/{summary['strict_blind_batch_closure_runway_blocked_slot_count']}/{summary['strict_blind_batch_closure_runway_slot_count']}` blocked source/evidence/operator/intake `{summary['strict_blind_batch_closure_runway_source_gate_blocked_count']}/{summary['strict_blind_batch_closure_runway_evidence_blocked_count']}/{summary['strict_blind_batch_closure_runway_operator_blocked_count']}/{summary['strict_blind_batch_closure_runway_intake_blocked_count']}` files present/missing `{summary['strict_blind_batch_closure_runway_file_present_count']}/{summary['strict_blind_batch_closure_runway_file_missing_count']}` operators ready/open `{summary['strict_blind_batch_closure_runway_operator_ready_count']}/{summary['strict_blind_batch_closure_runway_operator_open_count']}` intake filled/missing `{summary['strict_blind_batch_closure_runway_intake_filled_count']}/{summary['strict_blind_batch_closure_runway_intake_missing_count']}` first `{summary['strict_blind_batch_closure_runway_first_blocked_rank']}` `{summary['strict_blind_batch_closure_runway_first_blocked_benchmark_id'] or '-'}` `{summary['strict_blind_batch_closure_runway_first_stage'] or '-'}` `{summary['strict_blind_batch_closure_runway_first_blocker'] or '-'}`",
@@ -11877,6 +12167,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--strict-blind-source-request-closure-board-json",
         default=DEFAULT_STRICT_BLIND_SOURCE_REQUEST_CLOSURE_BOARD_JSON,
+    )
+    parser.add_argument(
+        "--strict-blind-first-unlock-handoff-json",
+        default=DEFAULT_STRICT_BLIND_FIRST_UNLOCK_HANDOFF_JSON,
+    )
+    parser.add_argument(
+        "--strict-blind-first-unlock-evidence-packet-json",
+        default=DEFAULT_STRICT_BLIND_FIRST_UNLOCK_EVIDENCE_PACKET_JSON,
+    )
+    parser.add_argument(
+        "--strict-blind-first-unlock-evidence-review-gate-json",
+        default=DEFAULT_STRICT_BLIND_FIRST_UNLOCK_EVIDENCE_REVIEW_GATE_JSON,
     )
     parser.add_argument(
         "--strict-blind-internal-prediction-source-apply-plan-json",

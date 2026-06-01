@@ -163,6 +163,13 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     strict_blind_source_request_closure_board_json = (
         tmp_path / "strict_blind_source_request_closure_board.json"
     )
+    strict_blind_first_unlock_handoff_json = tmp_path / "strict_blind_first_unlock_handoff.json"
+    strict_blind_first_unlock_evidence_packet_json = (
+        tmp_path / "strict_blind_first_unlock_evidence_packet.json"
+    )
+    strict_blind_first_unlock_evidence_review_gate_json = (
+        tmp_path / "strict_blind_first_unlock_evidence_review_gate.json"
+    )
     strict_blind_internal_prediction_source_apply_plan_json = (
         tmp_path / "strict_blind_internal_prediction_source_apply_plan.json"
     )
@@ -2083,6 +2090,97 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        strict_blind_first_unlock_handoff_json,
+        {
+            "summary": {
+                "first_unlock_handoff_status": "awaiting_first_unlock_operator_values",
+                "required_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "required_target_id": "REQUIRED_MONOMER_001",
+                "request_id": "source_request_001",
+                "candidate_target_id": "HIST_BBA5",
+                "field_count": 11,
+                "ready_field_count": 0,
+                "blocked_field_count": 11,
+                "first_blocked_field_key": "source_id",
+                "first_blocker": "operator_value_missing",
+                "first_next_action": "fill operator_value for source_id",
+                "operator_template_csv": (
+                    "casp17/strict_blind_source_gate_source_request_packet/"
+                    "source_request_001/operator_source_values_template.csv"
+                ),
+                "prediction_dropzone": (
+                    "casp17/historical_seed_strict_blind_replacement_evidence_dropzones/"
+                    "01_hist_required_monomer_001/prediction/replacement_prediction.pdb"
+                ),
+                "current_prediction_created_at": "2026-02-19",
+                "current_native_release_date": "2004-05-13",
+            }
+        },
+    )
+    _write_json(
+        strict_blind_first_unlock_evidence_packet_json,
+        {
+            "summary": {
+                "first_unlock_evidence_packet_status": "awaiting_first_unlock_evidence_collection",
+                "request_id": "source_request_001",
+                "candidate_target_id": "HIST_BBA5",
+                "field_count": 11,
+                "ready_field_count": 0,
+                "open_field_count": 11,
+                "evidence_stub_count": 11,
+                "file_field_count": 2,
+                "first_open_field": "source_id",
+                "first_blocker": "operator_value_missing",
+                "first_next_action": (
+                    "collect evidence in "
+                    "casp17/strict_blind_first_unlock_evidence_packet/"
+                    "source_request_001_hist_bba5/field_evidence/source_id.md"
+                    ", then fill operator_value and operator_evidence_ref for source_id"
+                ),
+                "packet_folder": (
+                    "casp17/strict_blind_first_unlock_evidence_packet/"
+                    "source_request_001_hist_bba5"
+                ),
+                "operator_evidence_template_csv": (
+                    "casp17/strict_blind_first_unlock_evidence_packet/"
+                    "source_request_001_hist_bba5/operator_evidence_template.csv"
+                ),
+                "dropzone_manifest_csv": (
+                    "casp17/strict_blind_first_unlock_evidence_packet/"
+                    "source_request_001_hist_bba5/dropzone_manifest.csv"
+                ),
+            }
+        },
+    )
+    _write_json(
+        strict_blind_first_unlock_evidence_review_gate_json,
+        {
+            "summary": {
+                "first_unlock_evidence_review_gate_status": "awaiting_first_unlock_evidence_review",
+                "request_id": "source_request_001",
+                "candidate_target_id": "HIST_BBA5",
+                "field_count": 11,
+                "ready_field_count": 0,
+                "blocked_field_count": 11,
+                "template_operator_value_missing_count": 11,
+                "template_operator_evidence_ref_missing_count": 0,
+                "template_operator_clearance_missing_count": 11,
+                "template_operator_id_missing_count": 11,
+                "stub_present_count": 11,
+                "stub_evidence_missing_count": 11,
+                "policy_pass_count": 0,
+                "policy_blocked_count": 11,
+                "file_ready_count": 0,
+                "file_blocked_count": 2,
+                "first_blocked_field": "source_id",
+                "first_blocker": "template_operator_value_missing",
+                "first_next_action": (
+                    "fill operator_value for source_id in operator_evidence_template.csv"
+                ),
+            }
+        },
+    )
+    _write_json(
         strict_blind_internal_prediction_source_apply_plan_json,
         {
             "summary": {
@@ -3559,6 +3657,12 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(strict_blind_source_request_operator_sync_plan_json),
             "--strict-blind-source-request-closure-board-json",
             str(strict_blind_source_request_closure_board_json),
+            "--strict-blind-first-unlock-handoff-json",
+            str(strict_blind_first_unlock_handoff_json),
+            "--strict-blind-first-unlock-evidence-packet-json",
+            str(strict_blind_first_unlock_evidence_packet_json),
+            "--strict-blind-first-unlock-evidence-review-gate-json",
+            str(strict_blind_first_unlock_evidence_review_gate_json),
             "--strict-blind-internal-prediction-source-apply-plan-json",
             str(strict_blind_internal_prediction_source_apply_plan_json),
             "--strict-blind-first-slot-closure-kit-json",
@@ -4631,6 +4735,89 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     )
     assert payload["summary"]["strict_blind_source_request_closure_board_batch_closure_runway_status"] == (
         "blocked_on_first_slot_internal_prediction_source"
+    )
+    assert payload["summary"]["strict_blind_first_unlock_handoff_status"] == (
+        "awaiting_first_unlock_operator_values"
+    )
+    assert payload["summary"]["strict_blind_first_unlock_handoff_required_benchmark_id"] == (
+        "hist_REQUIRED_MONOMER_001"
+    )
+    assert payload["summary"]["strict_blind_first_unlock_handoff_required_target_id"] == (
+        "REQUIRED_MONOMER_001"
+    )
+    assert payload["summary"]["strict_blind_first_unlock_handoff_request_id"] == "source_request_001"
+    assert payload["summary"]["strict_blind_first_unlock_handoff_candidate_target_id"] == "HIST_BBA5"
+    assert payload["summary"]["strict_blind_first_unlock_handoff_field_count"] == 11
+    assert payload["summary"]["strict_blind_first_unlock_handoff_ready_field_count"] == 0
+    assert payload["summary"]["strict_blind_first_unlock_handoff_blocked_field_count"] == 11
+    assert payload["summary"]["strict_blind_first_unlock_handoff_first_blocked_field_key"] == "source_id"
+    assert payload["summary"]["strict_blind_first_unlock_handoff_first_blocker"] == "operator_value_missing"
+    assert payload["summary"]["strict_blind_first_unlock_handoff_first_next_action"] == (
+        "fill operator_value for source_id"
+    )
+    assert payload["summary"]["strict_blind_first_unlock_handoff_current_prediction_created_at"] == (
+        "2026-02-19"
+    )
+    assert payload["summary"]["strict_blind_first_unlock_handoff_current_native_release_date"] == (
+        "2004-05-13"
+    )
+    assert payload["summary"]["strict_blind_first_unlock_evidence_packet_status"] == (
+        "awaiting_first_unlock_evidence_collection"
+    )
+    assert payload["summary"]["strict_blind_first_unlock_evidence_packet_request_id"] == (
+        "source_request_001"
+    )
+    assert payload["summary"]["strict_blind_first_unlock_evidence_packet_candidate_target_id"] == (
+        "HIST_BBA5"
+    )
+    assert payload["summary"]["strict_blind_first_unlock_evidence_packet_field_count"] == 11
+    assert payload["summary"]["strict_blind_first_unlock_evidence_packet_ready_field_count"] == 0
+    assert payload["summary"]["strict_blind_first_unlock_evidence_packet_open_field_count"] == 11
+    assert payload["summary"]["strict_blind_first_unlock_evidence_packet_evidence_stub_count"] == 11
+    assert payload["summary"]["strict_blind_first_unlock_evidence_packet_file_field_count"] == 2
+    assert payload["summary"]["strict_blind_first_unlock_evidence_packet_first_open_field"] == (
+        "source_id"
+    )
+    assert payload["summary"]["strict_blind_first_unlock_evidence_packet_first_blocker"] == (
+        "operator_value_missing"
+    )
+    assert payload["summary"]["strict_blind_first_unlock_evidence_review_gate_status"] == (
+        "awaiting_first_unlock_evidence_review"
+    )
+    assert payload["summary"]["strict_blind_first_unlock_evidence_review_gate_request_id"] == (
+        "source_request_001"
+    )
+    assert payload["summary"]["strict_blind_first_unlock_evidence_review_gate_candidate_target_id"] == (
+        "HIST_BBA5"
+    )
+    assert payload["summary"]["strict_blind_first_unlock_evidence_review_gate_field_count"] == 11
+    assert payload["summary"]["strict_blind_first_unlock_evidence_review_gate_ready_field_count"] == 0
+    assert payload["summary"]["strict_blind_first_unlock_evidence_review_gate_blocked_field_count"] == 11
+    assert payload["summary"][
+        "strict_blind_first_unlock_evidence_review_gate_template_operator_value_missing_count"
+    ] == 11
+    assert payload["summary"][
+        "strict_blind_first_unlock_evidence_review_gate_template_operator_evidence_ref_missing_count"
+    ] == 0
+    assert payload["summary"][
+        "strict_blind_first_unlock_evidence_review_gate_template_operator_clearance_missing_count"
+    ] == 11
+    assert payload["summary"][
+        "strict_blind_first_unlock_evidence_review_gate_template_operator_id_missing_count"
+    ] == 11
+    assert payload["summary"]["strict_blind_first_unlock_evidence_review_gate_stub_present_count"] == 11
+    assert payload["summary"][
+        "strict_blind_first_unlock_evidence_review_gate_stub_evidence_missing_count"
+    ] == 11
+    assert payload["summary"]["strict_blind_first_unlock_evidence_review_gate_policy_pass_count"] == 0
+    assert payload["summary"]["strict_blind_first_unlock_evidence_review_gate_policy_blocked_count"] == 11
+    assert payload["summary"]["strict_blind_first_unlock_evidence_review_gate_file_ready_count"] == 0
+    assert payload["summary"]["strict_blind_first_unlock_evidence_review_gate_file_blocked_count"] == 2
+    assert payload["summary"]["strict_blind_first_unlock_evidence_review_gate_first_blocked_field"] == (
+        "source_id"
+    )
+    assert payload["summary"]["strict_blind_first_unlock_evidence_review_gate_first_blocker"] == (
+        "template_operator_value_missing"
     )
     assert payload["summary"]["strict_blind_internal_prediction_source_apply_plan_status"] == (
         "blocked_until_internal_prediction_source_gate_passes"
@@ -6368,6 +6555,51 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "first:source_request_packet/awaiting_pre_native_source_or_candidate_replacement/prediction_not_before_native" in by_id[
         "strict_blind_source_request_closure_board"
     ]["blockers"]
+    assert by_id["strict_blind_first_unlock_handoff"]["status"] == "awaiting_first_unlock_operator_values"
+    assert by_id["strict_blind_first_unlock_handoff"]["ready_count"] == 0
+    assert by_id["strict_blind_first_unlock_handoff"]["blocked_count"] == 11
+    assert by_id["strict_blind_first_unlock_handoff"]["total_count"] == 11
+    assert "request:source_request_001/HIST_BBA5" in by_id["strict_blind_first_unlock_handoff"][
+        "blockers"
+    ]
+    assert "fields:0/11/11" in by_id["strict_blind_first_unlock_handoff"]["blockers"]
+    assert "first:source_id/operator_value_missing" in by_id["strict_blind_first_unlock_handoff"][
+        "blockers"
+    ]
+    assert by_id["strict_blind_first_unlock_evidence_packet"]["status"] == (
+        "awaiting_first_unlock_evidence_collection"
+    )
+    assert by_id["strict_blind_first_unlock_evidence_packet"]["ready_count"] == 0
+    assert by_id["strict_blind_first_unlock_evidence_packet"]["blocked_count"] == 11
+    assert by_id["strict_blind_first_unlock_evidence_packet"]["total_count"] == 11
+    assert "request:source_request_001/HIST_BBA5" in by_id[
+        "strict_blind_first_unlock_evidence_packet"
+    ]["blockers"]
+    assert "fields:0/11/11" in by_id["strict_blind_first_unlock_evidence_packet"]["blockers"]
+    assert "stubs:11" in by_id["strict_blind_first_unlock_evidence_packet"]["blockers"]
+    assert "files:2" in by_id["strict_blind_first_unlock_evidence_packet"]["blockers"]
+    assert "first:source_id/operator_value_missing" in by_id[
+        "strict_blind_first_unlock_evidence_packet"
+    ]["blockers"]
+    assert by_id["strict_blind_first_unlock_evidence_review_gate"]["status"] == (
+        "awaiting_first_unlock_evidence_review"
+    )
+    assert by_id["strict_blind_first_unlock_evidence_review_gate"]["ready_count"] == 0
+    assert by_id["strict_blind_first_unlock_evidence_review_gate"]["blocked_count"] == 11
+    assert by_id["strict_blind_first_unlock_evidence_review_gate"]["total_count"] == 11
+    assert "request:source_request_001/HIST_BBA5" in by_id[
+        "strict_blind_first_unlock_evidence_review_gate"
+    ]["blockers"]
+    assert "fields:0/11/11" in by_id["strict_blind_first_unlock_evidence_review_gate"]["blockers"]
+    assert "template_missing:11/0/11/11" in by_id[
+        "strict_blind_first_unlock_evidence_review_gate"
+    ]["blockers"]
+    assert "stub:11/11" in by_id["strict_blind_first_unlock_evidence_review_gate"]["blockers"]
+    assert "policy:0/11" in by_id["strict_blind_first_unlock_evidence_review_gate"]["blockers"]
+    assert "file:0/2" in by_id["strict_blind_first_unlock_evidence_review_gate"]["blockers"]
+    assert "first:source_id/template_operator_value_missing" in by_id[
+        "strict_blind_first_unlock_evidence_review_gate"
+    ]["blockers"]
     assert by_id["strict_blind_internal_prediction_source_apply_plan"]["status"] == (
         "blocked_until_internal_prediction_source_gate_passes"
     )
@@ -6549,6 +6781,12 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_strict_blind_source_request_operator_sync_plan.json"),
             "--strict-blind-source-request-closure-board-json",
             str(tmp_path / "missing_strict_blind_source_request_closure_board.json"),
+            "--strict-blind-first-unlock-handoff-json",
+            str(tmp_path / "missing_strict_blind_first_unlock_handoff.json"),
+            "--strict-blind-first-unlock-evidence-packet-json",
+            str(tmp_path / "missing_strict_blind_first_unlock_evidence_packet.json"),
+            "--strict-blind-first-unlock-evidence-review-gate-json",
+            str(tmp_path / "missing_strict_blind_first_unlock_evidence_review_gate.json"),
             "--strict-blind-internal-prediction-source-apply-plan-json",
             str(tmp_path / "missing_strict_blind_internal_prediction_source_apply_plan.json"),
             "--strict-blind-first-slot-closure-kit-json",
