@@ -20,6 +20,10 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     raw_ranked_model_quarantine_json = tmp_path / "raw_ranked_model_quarantine.json"
     closure_json = tmp_path / "closure.json"
     goal_scorecard_json = tmp_path / "goal_scorecard.json"
+    historical_winner_normalized_bands_json = tmp_path / "historical_winner_normalized_bands.json"
+    historical_winner_normalized_unlock_plan_json = (
+        tmp_path / "historical_winner_normalized_unlock_plan.json"
+    )
     win_tier_metric_surface_contract_json = tmp_path / "win_tier_metric_surface_contract.json"
     win_tier_critical_path_board_json = tmp_path / "win_tier_critical_path_board.json"
     organic_ligand_slot_candidate_packet_json = tmp_path / "organic_ligand_slot_candidate_packet.json"
@@ -478,6 +482,52 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "first_blocked_next_action": (
                     "Replace placeholder benchmark/target IDs with operator-cleared historical non-CASP17 targets."
                 ),
+            }
+        },
+    )
+    _write_json(
+        historical_winner_normalized_bands_json,
+        {
+            "summary": {
+                "historical_winner_normalized_bands_status": "blocked_strict_blind_metrics_missing",
+                "band_count": 5,
+                "top5_or_better_count": 0,
+                "winner_proximity_count": 0,
+                "blocked_band_count": 5,
+                "strict_blind_ready_slot_count": 0,
+                "strict_blind_slot_count": 40,
+                "metric_surface_ready_row_count": 0,
+                "metric_surface_row_count": 440,
+                "official_archive_baseline_candidate_count": 24,
+                "official_archive_competitive_proof_eligible_count": 0,
+                "first_blocked_band_id": "casp15_regular_domain",
+                "first_blocker": "strict_blind_historical_metric_surface_missing",
+                "first_next_action": "score CASP15-style no-leak regular-domain replay rows",
+            }
+        },
+    )
+    _write_json(
+        historical_winner_normalized_unlock_plan_json,
+        {
+            "summary": {
+                "historical_winner_normalized_unlock_plan_status": (
+                    "awaiting_historical_winner_normalized_unlocks"
+                ),
+                "action_count": 6,
+                "ready_action_count": 1,
+                "blocked_action_count": 5,
+                "strict_blind_ready_slot_count": 0,
+                "strict_blind_slot_count": 40,
+                "metric_surface_ready_row_count": 0,
+                "metric_surface_row_count": 440,
+                "sidechain_native_pass_count": 0,
+                "sidechain_native_benchmark_count": 40,
+                "winner_band_top5_or_better_count": 0,
+                "winner_band_count": 5,
+                "first_blocked_action_id": "close_first_source_request",
+                "first_blocked_gate": "strict_blind_internal_prediction_source",
+                "first_blocker": "prediction_not_before_native",
+                "first_next_action": "attach pre-native source",
             }
         },
     )
@@ -3383,6 +3433,10 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(closure_json),
             "--win-tier-goal-scorecard-json",
             str(goal_scorecard_json),
+            "--historical-winner-normalized-bands-json",
+            str(historical_winner_normalized_bands_json),
+            "--historical-winner-normalized-unlock-plan-json",
+            str(historical_winner_normalized_unlock_plan_json),
             "--win-tier-metric-surface-contract-json",
             str(win_tier_metric_surface_contract_json),
             "--win-tier-critical-path-board-json",
@@ -4330,6 +4384,48 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["win_tier_goal_scorecard_pass_count"] == 1
     assert payload["summary"]["win_tier_goal_scorecard_blocked_count"] == 9
     assert payload["summary"]["win_tier_goal_scorecard_first_blocked_gate"] == "historical_identity_clearance"
+    assert payload["summary"]["historical_winner_normalized_bands_status"] == (
+        "blocked_strict_blind_metrics_missing"
+    )
+    assert payload["summary"]["historical_winner_normalized_bands_band_count"] == 5
+    assert payload["summary"]["historical_winner_normalized_bands_top5_or_better_count"] == 0
+    assert payload["summary"]["historical_winner_normalized_bands_winner_proximity_count"] == 0
+    assert payload["summary"]["historical_winner_normalized_bands_blocked_band_count"] == 5
+    assert payload["summary"]["historical_winner_normalized_bands_strict_ready_slot_count"] == 0
+    assert payload["summary"]["historical_winner_normalized_bands_strict_slot_count"] == 40
+    assert payload["summary"]["historical_winner_normalized_bands_metric_surface_ready_row_count"] == 0
+    assert payload["summary"]["historical_winner_normalized_bands_metric_surface_row_count"] == 440
+    assert payload["summary"]["historical_winner_normalized_bands_official_archive_candidate_count"] == 24
+    assert payload["summary"]["historical_winner_normalized_bands_official_archive_proof_eligible_count"] == 0
+    assert payload["summary"]["historical_winner_normalized_bands_first_blocked_band"] == (
+        "casp15_regular_domain"
+    )
+    assert payload["summary"]["historical_winner_normalized_bands_first_blocker"] == (
+        "strict_blind_historical_metric_surface_missing"
+    )
+    assert payload["summary"]["historical_winner_normalized_unlock_plan_status"] == (
+        "awaiting_historical_winner_normalized_unlocks"
+    )
+    assert payload["summary"]["historical_winner_normalized_unlock_plan_action_count"] == 6
+    assert payload["summary"]["historical_winner_normalized_unlock_plan_ready_action_count"] == 1
+    assert payload["summary"]["historical_winner_normalized_unlock_plan_blocked_action_count"] == 5
+    assert payload["summary"]["historical_winner_normalized_unlock_plan_strict_ready_slot_count"] == 0
+    assert payload["summary"]["historical_winner_normalized_unlock_plan_strict_slot_count"] == 40
+    assert payload["summary"]["historical_winner_normalized_unlock_plan_metric_surface_ready_row_count"] == 0
+    assert payload["summary"]["historical_winner_normalized_unlock_plan_metric_surface_row_count"] == 440
+    assert payload["summary"]["historical_winner_normalized_unlock_plan_sidechain_native_pass_count"] == 0
+    assert payload["summary"]["historical_winner_normalized_unlock_plan_sidechain_native_benchmark_count"] == 40
+    assert payload["summary"]["historical_winner_normalized_unlock_plan_winner_band_top5_or_better_count"] == 0
+    assert payload["summary"]["historical_winner_normalized_unlock_plan_winner_band_count"] == 5
+    assert payload["summary"]["historical_winner_normalized_unlock_plan_first_blocked_action"] == (
+        "close_first_source_request"
+    )
+    assert payload["summary"]["historical_winner_normalized_unlock_plan_first_blocked_gate"] == (
+        "strict_blind_internal_prediction_source"
+    )
+    assert payload["summary"]["historical_winner_normalized_unlock_plan_first_blocker"] == (
+        "prediction_not_before_native"
+    )
     assert payload["summary"]["win_tier_metric_surface_contract_status"] == (
         "awaiting_strict_blind_evidence_files_and_ligand_category_slots"
     )
@@ -5329,6 +5425,33 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["win_tier_goal_scorecard"]["status"] == "blocked_input"
     assert by_id["win_tier_goal_scorecard"]["ready_count"] == 1
     assert "historical_identity_clearance" in by_id["win_tier_goal_scorecard"]["blockers"]
+    assert by_id["historical_winner_normalized_bands"]["status"] == (
+        "blocked_strict_blind_metrics_missing"
+    )
+    assert by_id["historical_winner_normalized_bands"]["ready_count"] == 0
+    assert by_id["historical_winner_normalized_bands"]["blocked_count"] == 5
+    assert by_id["historical_winner_normalized_bands"]["total_count"] == 5
+    assert "bands:0/0/5/5" in by_id["historical_winner_normalized_bands"]["blockers"]
+    assert "strict:0/40" in by_id["historical_winner_normalized_bands"]["blockers"]
+    assert "metrics:0/440" in by_id["historical_winner_normalized_bands"]["blockers"]
+    assert "official_archive:24/0" in by_id["historical_winner_normalized_bands"]["blockers"]
+    assert "first:casp15_regular_domain/strict_blind_historical_metric_surface_missing" in by_id[
+        "historical_winner_normalized_bands"
+    ]["blockers"]
+    assert by_id["historical_winner_normalized_unlock_plan"]["status"] == (
+        "awaiting_historical_winner_normalized_unlocks"
+    )
+    assert by_id["historical_winner_normalized_unlock_plan"]["ready_count"] == 1
+    assert by_id["historical_winner_normalized_unlock_plan"]["blocked_count"] == 5
+    assert by_id["historical_winner_normalized_unlock_plan"]["total_count"] == 6
+    assert "actions:1/5/6" in by_id["historical_winner_normalized_unlock_plan"]["blockers"]
+    assert "strict:0/40" in by_id["historical_winner_normalized_unlock_plan"]["blockers"]
+    assert "metrics:0/440" in by_id["historical_winner_normalized_unlock_plan"]["blockers"]
+    assert "sidechain:0/40" in by_id["historical_winner_normalized_unlock_plan"]["blockers"]
+    assert "winner_bands:0/5" in by_id["historical_winner_normalized_unlock_plan"]["blockers"]
+    assert "first:close_first_source_request/strict_blind_internal_prediction_source/prediction_not_before_native" in by_id[
+        "historical_winner_normalized_unlock_plan"
+    ]["blockers"]
     assert by_id["win_tier_metric_surface_contract"]["status"] == (
         "awaiting_strict_blind_evidence_files_and_ligand_category_slots"
     )
@@ -6332,6 +6455,10 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_organic_ligand_slot_candidate_packet.json"),
             "--organic-ligand-slot-promotion-action-board-json",
             str(tmp_path / "missing_organic_ligand_slot_promotion_action_board.json"),
+            "--historical-winner-normalized-bands-json",
+            str(tmp_path / "missing_historical_winner_normalized_bands.json"),
+            "--historical-winner-normalized-unlock-plan-json",
+            str(tmp_path / "missing_historical_winner_normalized_unlock_plan.json"),
             "--win-tier-critical-path-board-json",
             str(tmp_path / "missing_win_tier_critical_path_board.json"),
             "--target-object-viewer-smoke-json",

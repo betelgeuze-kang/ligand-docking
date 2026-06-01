@@ -1,0 +1,100 @@
+{
+  "rows": [
+    {
+      "action_id": "close_first_source_request",
+      "action_order": 1,
+      "action_status": "unlock_blocked",
+      "blocked_count": 9,
+      "blocker": "prediction_not_before_native",
+      "gate": "strict_blind_internal_prediction_source",
+      "next_action": "attach a prediction artifact created before the authoritative native release date, with timestamp and no-leak evidence",
+      "ready_count": 0,
+      "source_artifact": "casp17/casp17_strict_blind_source_request_closure_board_current.json",
+      "total_count": 9
+    },
+    {
+      "action_id": "close_strict_blind_batch_slots",
+      "action_order": 2,
+      "action_status": "unlock_blocked",
+      "blocked_count": 40,
+      "blocker": "internal_source_id_missing_or_external",
+      "gate": "strict_blind_batch_closure_runway",
+      "next_action": "set source_id to an internal pre-native prediction source, not an official archive or MassiveFold pool",
+      "ready_count": 0,
+      "source_artifact": "casp17/casp17_strict_blind_batch_closure_runway_current.json",
+      "total_count": 40
+    },
+    {
+      "action_id": "pass_sidechain_native_40",
+      "action_order": 3,
+      "action_status": "unlock_blocked",
+      "blocked_count": 40,
+      "blocker": "sidechain_native_40_pass_not_proven",
+      "gate": "sidechain_native_benchmark",
+      "next_action": "replace placeholder leakage_clearance with operator-confirmed no_leak provenance; place the cleared prediction/native PDB files for this benchmark row.",
+      "ready_count": 0,
+      "source_artifact": "runs/casp17_sidechain_native_benchmark_packet_current.json",
+      "total_count": 40
+    },
+    {
+      "action_id": "generate_metric_surface_rows",
+      "action_order": 4,
+      "action_status": "unlock_blocked",
+      "blocked_count": 440,
+      "blocker": "metric_surface_rows_not_ready",
+      "gate": "official_like_metric_surface",
+      "next_action": "fill strict-blind prediction/native/no-leak evidence for 40 historical slots and add organic ligand-protein historical slots before claiming full CASP17 win-tier metric surface",
+      "ready_count": 0,
+      "source_artifact": "casp17/casp17_win_tier_metric_surface_contract_current.json",
+      "total_count": 440
+    },
+    {
+      "action_id": "preserve_official_archive_as_baseline",
+      "action_order": 5,
+      "action_status": "unlock_ready",
+      "blocked_count": 0,
+      "blocker": "",
+      "gate": "official_archive_baseline_guard",
+      "next_action": "keep official CASP archive submissions baseline-only and excluded from internal strict-blind proof",
+      "ready_count": 24,
+      "source_artifact": "casp17/casp17_historical_seed_official_archive_baseline_lane_current.json",
+      "total_count": 24
+    },
+    {
+      "action_id": "score_winner_normalized_bands",
+      "action_order": 6,
+      "action_status": "unlock_blocked",
+      "blocked_count": 5,
+      "blocker": "strict_blind_historical_metric_surface_missing",
+      "gate": "casp15_casp16_winner_normalized_comparison",
+      "next_action": "score CASP15-style no-leak regular-domain replay rows and compare SUM Zscore to official top bands",
+      "ready_count": 0,
+      "source_artifact": "casp17/casp17_historical_winner_normalized_bands_current.json",
+      "total_count": 5
+    }
+  ],
+  "summary": {
+    "action_count": 6,
+    "blocked_action_count": 5,
+    "claim_boundary": "Local CASP17 historical winner-normalized unlock plan only. It orders the local gates required before CASP15/16 winner-normalized band comparison can be treated as competitive evidence. It does not fill operator values, create or copy PDB files, compute official CASP metrics, import official archive submissions as internal predictions, push remotes, or submit to CASP.",
+    "first_blocked_action_id": "close_first_source_request",
+    "first_blocked_gate": "strict_blind_internal_prediction_source",
+    "first_blocker": "prediction_not_before_native",
+    "first_next_action": "attach a prediction artifact created before the authoritative native release date, with timestamp and no-leak evidence",
+    "generated_at_local": "2026-06-01T20:49:56+09:00",
+    "historical_winner_normalized_unlock_plan_status": "awaiting_historical_winner_normalized_unlocks",
+    "input_blockers": "",
+    "metric_surface_ready_row_count": 0,
+    "metric_surface_row_count": 440,
+    "official_archive_baseline_candidate_count": 24,
+    "official_archive_competitive_proof_eligible_count": 0,
+    "packet_type": "casp17_historical_winner_normalized_unlock_plan",
+    "ready_action_count": 1,
+    "sidechain_native_benchmark_count": 40,
+    "sidechain_native_pass_count": 0,
+    "strict_blind_ready_slot_count": 0,
+    "strict_blind_slot_count": 40,
+    "winner_band_count": 5,
+    "winner_band_top5_or_better_count": 0
+  }
+}

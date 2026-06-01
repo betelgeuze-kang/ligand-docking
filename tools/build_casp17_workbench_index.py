@@ -25,6 +25,12 @@ DEFAULT_PROTEIN_OBJECT_LIBRARY_NAVIGATION_CATALOG_JSON = (
 DEFAULT_RAW_RANKED_MODEL_QUARANTINE_JSON = "casp17/casp17_raw_ranked_model_quarantine_audit_current.json"
 DEFAULT_WIN_GAP_CLOSURE_JSON = "runs/casp17_win_gap_closure_packet_current.json"
 DEFAULT_WIN_TIER_GOAL_SCORECARD_JSON = "runs/casp17_win_tier_goal_scorecard_current.json"
+DEFAULT_HISTORICAL_WINNER_NORMALIZED_BANDS_JSON = (
+    "casp17/casp17_historical_winner_normalized_bands_current.json"
+)
+DEFAULT_HISTORICAL_WINNER_NORMALIZED_UNLOCK_PLAN_JSON = (
+    "casp17/casp17_historical_winner_normalized_unlock_plan_current.json"
+)
 DEFAULT_WIN_TIER_METRIC_SURFACE_CONTRACT_JSON = "casp17/casp17_win_tier_metric_surface_contract_current.json"
 DEFAULT_WIN_TIER_CRITICAL_PATH_BOARD_JSON = "casp17/casp17_win_tier_critical_path_board_current.json"
 DEFAULT_ORGANIC_LIGAND_SLOT_CANDIDATE_PACKET_JSON = (
@@ -460,6 +466,12 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     raw_ranked_model_quarantine_payload = _read_json(args.raw_ranked_model_quarantine_json)
     closure_payload = _read_json(args.win_gap_closure_json)
     goal_scorecard_payload = _read_json(args.win_tier_goal_scorecard_json)
+    historical_winner_normalized_bands_payload = _read_json(
+        args.historical_winner_normalized_bands_json
+    )
+    historical_winner_normalized_unlock_plan_payload = _read_json(
+        args.historical_winner_normalized_unlock_plan_json
+    )
     win_tier_metric_surface_contract_payload = _read_json(args.win_tier_metric_surface_contract_json)
     win_tier_critical_path_board_payload = _read_json(args.win_tier_critical_path_board_json)
     organic_ligand_slot_candidate_packet_payload = _read_json(
@@ -777,6 +789,12 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     raw_ranked_model_quarantine_summary = _summary(raw_ranked_model_quarantine_payload)
     closure_summary = _summary(closure_payload)
     goal_scorecard_summary = _summary(goal_scorecard_payload)
+    historical_winner_normalized_bands_summary = _summary(
+        historical_winner_normalized_bands_payload
+    )
+    historical_winner_normalized_unlock_plan_summary = _summary(
+        historical_winner_normalized_unlock_plan_payload
+    )
     win_tier_metric_surface_contract_summary = _summary(win_tier_metric_surface_contract_payload)
     win_tier_critical_path_board_summary = _summary(win_tier_critical_path_board_payload)
     organic_ligand_slot_candidate_packet_summary = _summary(
@@ -1355,6 +1373,90 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             total_count=_int(goal_scorecard_summary.get("row_count")),
             next_action=_text(goal_scorecard_summary.get("first_blocked_next_action")),
             blockers=_text(goal_scorecard_summary.get("first_blocked_gate")),
+        ),
+        _artifact_row(
+            "historical_winner_normalized_bands",
+            "CASP15/16 winner-normalized top-band comparison contract",
+            _text(
+                historical_winner_normalized_bands_summary.get(
+                    "historical_winner_normalized_bands_status"
+                )
+            ),
+            args.historical_winner_normalized_bands_json,
+            ready_count=_int(historical_winner_normalized_bands_summary.get("top5_or_better_count")),
+            blocked_count=_int(historical_winner_normalized_bands_summary.get("blocked_band_count")),
+            total_count=_int(historical_winner_normalized_bands_summary.get("band_count")),
+            next_action=_text(historical_winner_normalized_bands_summary.get("first_next_action")),
+            blockers=(
+                "bands:"
+                + str(historical_winner_normalized_bands_summary.get("top5_or_better_count", ""))
+                + "/"
+                + str(historical_winner_normalized_bands_summary.get("winner_proximity_count", ""))
+                + "/"
+                + str(historical_winner_normalized_bands_summary.get("blocked_band_count", ""))
+                + "/"
+                + str(historical_winner_normalized_bands_summary.get("band_count", ""))
+                + ",strict:"
+                + str(historical_winner_normalized_bands_summary.get("strict_blind_ready_slot_count", ""))
+                + "/"
+                + str(historical_winner_normalized_bands_summary.get("strict_blind_slot_count", ""))
+                + ",metrics:"
+                + str(historical_winner_normalized_bands_summary.get("metric_surface_ready_row_count", ""))
+                + "/"
+                + str(historical_winner_normalized_bands_summary.get("metric_surface_row_count", ""))
+                + ",official_archive:"
+                + str(historical_winner_normalized_bands_summary.get("official_archive_baseline_candidate_count", ""))
+                + "/"
+                + str(historical_winner_normalized_bands_summary.get("official_archive_competitive_proof_eligible_count", ""))
+                + ",first:"
+                + str(historical_winner_normalized_bands_summary.get("first_blocked_band_id", ""))
+                + "/"
+                + str(historical_winner_normalized_bands_summary.get("first_blocker", ""))
+            ),
+        ),
+        _artifact_row(
+            "historical_winner_normalized_unlock_plan",
+            "CASP15/16 winner-normalized unlock action plan",
+            _text(
+                historical_winner_normalized_unlock_plan_summary.get(
+                    "historical_winner_normalized_unlock_plan_status"
+                )
+            ),
+            args.historical_winner_normalized_unlock_plan_json,
+            ready_count=_int(historical_winner_normalized_unlock_plan_summary.get("ready_action_count")),
+            blocked_count=_int(historical_winner_normalized_unlock_plan_summary.get("blocked_action_count")),
+            total_count=_int(historical_winner_normalized_unlock_plan_summary.get("action_count")),
+            next_action=_text(historical_winner_normalized_unlock_plan_summary.get("first_next_action")),
+            blockers=(
+                "actions:"
+                + str(historical_winner_normalized_unlock_plan_summary.get("ready_action_count", ""))
+                + "/"
+                + str(historical_winner_normalized_unlock_plan_summary.get("blocked_action_count", ""))
+                + "/"
+                + str(historical_winner_normalized_unlock_plan_summary.get("action_count", ""))
+                + ",strict:"
+                + str(historical_winner_normalized_unlock_plan_summary.get("strict_blind_ready_slot_count", ""))
+                + "/"
+                + str(historical_winner_normalized_unlock_plan_summary.get("strict_blind_slot_count", ""))
+                + ",metrics:"
+                + str(historical_winner_normalized_unlock_plan_summary.get("metric_surface_ready_row_count", ""))
+                + "/"
+                + str(historical_winner_normalized_unlock_plan_summary.get("metric_surface_row_count", ""))
+                + ",sidechain:"
+                + str(historical_winner_normalized_unlock_plan_summary.get("sidechain_native_pass_count", ""))
+                + "/"
+                + str(historical_winner_normalized_unlock_plan_summary.get("sidechain_native_benchmark_count", ""))
+                + ",winner_bands:"
+                + str(historical_winner_normalized_unlock_plan_summary.get("winner_band_top5_or_better_count", ""))
+                + "/"
+                + str(historical_winner_normalized_unlock_plan_summary.get("winner_band_count", ""))
+                + ",first:"
+                + str(historical_winner_normalized_unlock_plan_summary.get("first_blocked_action_id", ""))
+                + "/"
+                + str(historical_winner_normalized_unlock_plan_summary.get("first_blocked_gate", ""))
+                + "/"
+                + str(historical_winner_normalized_unlock_plan_summary.get("first_blocker", ""))
+            ),
         ),
         _artifact_row(
             "win_tier_metric_surface_contract",
@@ -6294,6 +6396,92 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "win_tier_goal_scorecard_blocked_count": _int(goal_scorecard_summary.get("blocked_count")),
         "win_tier_goal_scorecard_row_count": _int(goal_scorecard_summary.get("row_count")),
         "win_tier_goal_scorecard_first_blocked_gate": _text(goal_scorecard_summary.get("first_blocked_gate")),
+        "historical_winner_normalized_bands_status": _text(
+            historical_winner_normalized_bands_summary.get("historical_winner_normalized_bands_status")
+        ),
+        "historical_winner_normalized_bands_band_count": _int(
+            historical_winner_normalized_bands_summary.get("band_count")
+        ),
+        "historical_winner_normalized_bands_top5_or_better_count": _int(
+            historical_winner_normalized_bands_summary.get("top5_or_better_count")
+        ),
+        "historical_winner_normalized_bands_winner_proximity_count": _int(
+            historical_winner_normalized_bands_summary.get("winner_proximity_count")
+        ),
+        "historical_winner_normalized_bands_blocked_band_count": _int(
+            historical_winner_normalized_bands_summary.get("blocked_band_count")
+        ),
+        "historical_winner_normalized_bands_strict_ready_slot_count": _int(
+            historical_winner_normalized_bands_summary.get("strict_blind_ready_slot_count")
+        ),
+        "historical_winner_normalized_bands_strict_slot_count": _int(
+            historical_winner_normalized_bands_summary.get("strict_blind_slot_count")
+        ),
+        "historical_winner_normalized_bands_metric_surface_ready_row_count": _int(
+            historical_winner_normalized_bands_summary.get("metric_surface_ready_row_count")
+        ),
+        "historical_winner_normalized_bands_metric_surface_row_count": _int(
+            historical_winner_normalized_bands_summary.get("metric_surface_row_count")
+        ),
+        "historical_winner_normalized_bands_official_archive_candidate_count": _int(
+            historical_winner_normalized_bands_summary.get("official_archive_baseline_candidate_count")
+        ),
+        "historical_winner_normalized_bands_official_archive_proof_eligible_count": _int(
+            historical_winner_normalized_bands_summary.get("official_archive_competitive_proof_eligible_count")
+        ),
+        "historical_winner_normalized_bands_first_blocked_band": _text(
+            historical_winner_normalized_bands_summary.get("first_blocked_band_id")
+        ),
+        "historical_winner_normalized_bands_first_blocker": _text(
+            historical_winner_normalized_bands_summary.get("first_blocker")
+        ),
+        "historical_winner_normalized_unlock_plan_status": _text(
+            historical_winner_normalized_unlock_plan_summary.get(
+                "historical_winner_normalized_unlock_plan_status"
+            )
+        ),
+        "historical_winner_normalized_unlock_plan_action_count": _int(
+            historical_winner_normalized_unlock_plan_summary.get("action_count")
+        ),
+        "historical_winner_normalized_unlock_plan_ready_action_count": _int(
+            historical_winner_normalized_unlock_plan_summary.get("ready_action_count")
+        ),
+        "historical_winner_normalized_unlock_plan_blocked_action_count": _int(
+            historical_winner_normalized_unlock_plan_summary.get("blocked_action_count")
+        ),
+        "historical_winner_normalized_unlock_plan_strict_ready_slot_count": _int(
+            historical_winner_normalized_unlock_plan_summary.get("strict_blind_ready_slot_count")
+        ),
+        "historical_winner_normalized_unlock_plan_strict_slot_count": _int(
+            historical_winner_normalized_unlock_plan_summary.get("strict_blind_slot_count")
+        ),
+        "historical_winner_normalized_unlock_plan_metric_surface_ready_row_count": _int(
+            historical_winner_normalized_unlock_plan_summary.get("metric_surface_ready_row_count")
+        ),
+        "historical_winner_normalized_unlock_plan_metric_surface_row_count": _int(
+            historical_winner_normalized_unlock_plan_summary.get("metric_surface_row_count")
+        ),
+        "historical_winner_normalized_unlock_plan_sidechain_native_pass_count": _int(
+            historical_winner_normalized_unlock_plan_summary.get("sidechain_native_pass_count")
+        ),
+        "historical_winner_normalized_unlock_plan_sidechain_native_benchmark_count": _int(
+            historical_winner_normalized_unlock_plan_summary.get("sidechain_native_benchmark_count")
+        ),
+        "historical_winner_normalized_unlock_plan_winner_band_top5_or_better_count": _int(
+            historical_winner_normalized_unlock_plan_summary.get("winner_band_top5_or_better_count")
+        ),
+        "historical_winner_normalized_unlock_plan_winner_band_count": _int(
+            historical_winner_normalized_unlock_plan_summary.get("winner_band_count")
+        ),
+        "historical_winner_normalized_unlock_plan_first_blocked_action": _text(
+            historical_winner_normalized_unlock_plan_summary.get("first_blocked_action_id")
+        ),
+        "historical_winner_normalized_unlock_plan_first_blocked_gate": _text(
+            historical_winner_normalized_unlock_plan_summary.get("first_blocked_gate")
+        ),
+        "historical_winner_normalized_unlock_plan_first_blocker": _text(
+            historical_winner_normalized_unlock_plan_summary.get("first_blocker")
+        ),
         "win_tier_metric_surface_contract_status": _text(
             win_tier_metric_surface_contract_summary.get("metric_surface_contract_status")
         ),
@@ -11275,6 +11463,8 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- raw-ranked model quarantine: `{summary['raw_ranked_model_quarantine_status'] or '-'}` targets/models/top5 `{summary['raw_ranked_model_quarantine_target_count']}/{summary['raw_ranked_model_quarantine_model_count']}/{summary['raw_ranked_model_quarantine_top5_count']}` quarantined/linked/author-present `{summary['raw_ranked_model_quarantine_quarantined_count']}/{summary['raw_ranked_model_quarantine_linked_count']}/{summary['raw_ranked_model_quarantine_author_present_count']}` atoms `{summary['raw_ranked_model_quarantine_atom_count']}`",
         f"- benchmark rows ready/total: `{summary['benchmark_rows_ready_count']}/{summary['benchmark_rows_total']}`",
         f"- win-tier goal scorecard: `{summary['win_tier_goal_scorecard_status'] or '-'}` pass/partial/blocked `{summary['win_tier_goal_scorecard_pass_count']}/{summary['win_tier_goal_scorecard_partial_count']}/{summary['win_tier_goal_scorecard_blocked_count']}` first blocked `{summary['win_tier_goal_scorecard_first_blocked_gate'] or '-'}`",
+        f"- historical winner-normalized bands: `{summary['historical_winner_normalized_bands_status'] or '-'}` top5/winner-proximity/blocked/total `{summary['historical_winner_normalized_bands_top5_or_better_count']}/{summary['historical_winner_normalized_bands_winner_proximity_count']}/{summary['historical_winner_normalized_bands_blocked_band_count']}/{summary['historical_winner_normalized_bands_band_count']}` strict slots `{summary['historical_winner_normalized_bands_strict_ready_slot_count']}/{summary['historical_winner_normalized_bands_strict_slot_count']}` metric rows `{summary['historical_winner_normalized_bands_metric_surface_ready_row_count']}/{summary['historical_winner_normalized_bands_metric_surface_row_count']}` official archive proof `{summary['historical_winner_normalized_bands_official_archive_candidate_count']}/{summary['historical_winner_normalized_bands_official_archive_proof_eligible_count']}` first `{summary['historical_winner_normalized_bands_first_blocked_band'] or '-'}` `{summary['historical_winner_normalized_bands_first_blocker'] or '-'}`",
+        f"- historical winner-normalized unlock plan: `{summary['historical_winner_normalized_unlock_plan_status'] or '-'}` actions ready/blocked/total `{summary['historical_winner_normalized_unlock_plan_ready_action_count']}/{summary['historical_winner_normalized_unlock_plan_blocked_action_count']}/{summary['historical_winner_normalized_unlock_plan_action_count']}` strict slots `{summary['historical_winner_normalized_unlock_plan_strict_ready_slot_count']}/{summary['historical_winner_normalized_unlock_plan_strict_slot_count']}` metric rows `{summary['historical_winner_normalized_unlock_plan_metric_surface_ready_row_count']}/{summary['historical_winner_normalized_unlock_plan_metric_surface_row_count']}` sidechain `{summary['historical_winner_normalized_unlock_plan_sidechain_native_pass_count']}/{summary['historical_winner_normalized_unlock_plan_sidechain_native_benchmark_count']}` winner bands `{summary['historical_winner_normalized_unlock_plan_winner_band_top5_or_better_count']}/{summary['historical_winner_normalized_unlock_plan_winner_band_count']}` first `{summary['historical_winner_normalized_unlock_plan_first_blocked_action'] or '-'}` `{summary['historical_winner_normalized_unlock_plan_first_blocked_gate'] or '-'}` `{summary['historical_winner_normalized_unlock_plan_first_blocker'] or '-'}`",
         f"- win-tier metric surface contract: `{summary['win_tier_metric_surface_contract_status'] or '-'}` metrics covered/required `{summary['win_tier_metric_surface_contract_covered_metric_count']}/{summary['win_tier_metric_surface_contract_required_metric_count']}` slots ready/blocked/total `{summary['win_tier_metric_surface_contract_ready_slot_count']}/{summary['win_tier_metric_surface_contract_blocked_slot_count']}/{summary['win_tier_metric_surface_contract_slot_count']}` rows ready/blocked/total `{summary['win_tier_metric_surface_contract_ready_metric_row_count']}/{summary['win_tier_metric_surface_contract_blocked_metric_row_count']}/{summary['win_tier_metric_surface_contract_metric_row_count']}` ligand slots `{summary['win_tier_metric_surface_contract_ligand_slot_count']}` official archive `{summary['win_tier_metric_surface_contract_official_archive_policy'] or '-'}` first `{summary['win_tier_metric_surface_contract_first_blocked_benchmark'] or '-'}` `{summary['win_tier_metric_surface_contract_first_blocked_metric'] or '-'}`",
         f"- win-tier critical path board: `{summary['win_tier_critical_path_status'] or '-'}` stages ready/blocked/total `{summary['win_tier_critical_path_stage_ready_count']}/{summary['win_tier_critical_path_stage_blocked_count']}/{summary['win_tier_critical_path_stage_count']}` 3D objects `{summary['win_tier_critical_path_3d_ready_count']}/{summary['win_tier_critical_path_3d_count']}` external targets `{summary['win_tier_critical_path_external_ready_target_count']}/{summary['win_tier_critical_path_external_target_count']}` model1/top5 `{summary['win_tier_critical_path_external_model1_count']}/{summary['win_tier_critical_path_external_top5_count']}` strict slots `{summary['win_tier_critical_path_strict_ready_slot_count']}/{summary['win_tier_critical_path_strict_slot_count']}` missing evidence/operator-open `{summary['win_tier_critical_path_missing_evidence_file_count']}/{summary['win_tier_critical_path_operator_open_value_count']}` first `{summary['win_tier_critical_path_first_blocked_stage'] or '-'}` `{summary['win_tier_critical_path_first_blocker'] or '-'}`",
         f"- organic ligand slot candidates: `{summary['organic_ligand_slot_candidate_status'] or '-'}` review/proof/total `{summary['organic_ligand_slot_candidate_review_ready_count']}/{summary['organic_ligand_slot_candidate_proof_eligible_count']}/{summary['organic_ligand_slot_candidate_count']}` ChEMBL/BindingDB `{summary['organic_ligand_slot_candidate_chembl_count']}/{summary['organic_ligand_slot_candidate_bindingdb_count']}` strict-blocked `{summary['organic_ligand_slot_candidate_strict_blocked_count']}` files reference/prediction/ligand/template `{summary['organic_ligand_slot_candidate_reference_present_count']}/{summary['organic_ligand_slot_candidate_prediction_present_count']}/{summary['organic_ligand_slot_candidate_ligand_mol2_present_count']}/{summary['organic_ligand_slot_candidate_ligand_template_present_count']}` metrics LDDT-PLI/BiSyRMSD `{summary['organic_ligand_slot_candidate_lddt_pli_required_count']}/{summary['organic_ligand_slot_candidate_bisyrmsd_required_count']}` affinity labels `{summary['organic_ligand_slot_candidate_affinity_label_candidate_count']}` metric ligand slots `{summary['organic_ligand_slot_candidate_metric_contract_ligand_slot_gap_count']}` first `{summary['organic_ligand_slot_candidate_first_target_id'] or '-'}` `{summary['organic_ligand_slot_candidate_first_ligand_id'] or '-'}`",
@@ -11469,6 +11659,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--raw-ranked-model-quarantine-json", default=DEFAULT_RAW_RANKED_MODEL_QUARANTINE_JSON)
     parser.add_argument("--win-gap-closure-json", default=DEFAULT_WIN_GAP_CLOSURE_JSON)
     parser.add_argument("--win-tier-goal-scorecard-json", default=DEFAULT_WIN_TIER_GOAL_SCORECARD_JSON)
+    parser.add_argument(
+        "--historical-winner-normalized-bands-json",
+        default=DEFAULT_HISTORICAL_WINNER_NORMALIZED_BANDS_JSON,
+    )
+    parser.add_argument(
+        "--historical-winner-normalized-unlock-plan-json",
+        default=DEFAULT_HISTORICAL_WINNER_NORMALIZED_UNLOCK_PLAN_JSON,
+    )
     parser.add_argument("--win-tier-metric-surface-contract-json", default=DEFAULT_WIN_TIER_METRIC_SURFACE_CONTRACT_JSON)
     parser.add_argument("--win-tier-critical-path-board-json", default=DEFAULT_WIN_TIER_CRITICAL_PATH_BOARD_JSON)
     parser.add_argument(
