@@ -64,8 +64,17 @@ DEFAULT_MASSIVEFOLD_REPRESENTATIVE_RERANK_PACKET_JSON = (
 DEFAULT_MASSIVEFOLD_RNA_MODEL_SELECTION_COVERAGE_JSON = (
     "casp17/casp17_massivefold_rna_model_selection_coverage_current.json"
 )
+DEFAULT_MASSIVEFOLD_RNA_MODEL_SELECTION_INPUT_PACKET_JSON = (
+    "casp17/casp17_massivefold_rna_model_selection_input_packet_current.json"
+)
+DEFAULT_MASSIVEFOLD_RNA_SELF_ASSESSMENT_PACKET_JSON = (
+    "casp17/casp17_massivefold_rna_self_assessment_packet_current.json"
+)
 DEFAULT_PROTEIN_COMPLEX_MASSIVEFOLD_MODEL_SELECTION_COVERAGE_JSON = (
     "casp17/casp17_protein_complex_massivefold_model_selection_coverage_current.json"
+)
+DEFAULT_PROTEIN_COMPLEX_MASSIVEFOLD_SELF_ASSESSMENT_PACKET_JSON = (
+    "casp17/casp17_protein_complex_massivefold_self_assessment_packet_current.json"
 )
 DEFAULT_CAPRI_ROUND65_READINESS_JSON = "casp17/capri_round65/capri_round65_readiness_current.json"
 DEFAULT_CAPRI_ROUND65_FORMAT_PREFLIGHT_JSON = "casp17/capri_round65/capri_round65_format_preflight_current.json"
@@ -520,8 +529,17 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     massivefold_rna_model_selection_coverage_payload = _read_json(
         args.massivefold_rna_model_selection_coverage_json
     )
+    massivefold_rna_model_selection_input_packet_payload = _read_json(
+        args.massivefold_rna_model_selection_input_packet_json
+    )
+    massivefold_rna_self_assessment_packet_payload = _read_json(
+        args.massivefold_rna_self_assessment_packet_json
+    )
     protein_complex_massivefold_model_selection_coverage_payload = _read_json(
         args.protein_complex_massivefold_model_selection_coverage_json
+    )
+    protein_complex_massivefold_self_assessment_packet_payload = _read_json(
+        args.protein_complex_massivefold_self_assessment_packet_json
     )
     capri_round65_readiness_payload = _read_json(args.capri_round65_readiness_json)
     capri_round65_format_preflight_payload = _read_json(args.capri_round65_format_preflight_json)
@@ -858,8 +876,17 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     massivefold_rna_model_selection_coverage_summary = _summary(
         massivefold_rna_model_selection_coverage_payload
     )
+    massivefold_rna_model_selection_input_packet_summary = _summary(
+        massivefold_rna_model_selection_input_packet_payload
+    )
+    massivefold_rna_self_assessment_packet_summary = _summary(
+        massivefold_rna_self_assessment_packet_payload
+    )
     protein_complex_massivefold_model_selection_coverage_summary = _summary(
         protein_complex_massivefold_model_selection_coverage_payload
+    )
+    protein_complex_massivefold_self_assessment_packet_summary = _summary(
+        protein_complex_massivefold_self_assessment_packet_payload
     )
     capri_round65_readiness_summary = _summary(capri_round65_readiness_payload)
     capri_round65_format_preflight_summary = _summary(capri_round65_format_preflight_payload)
@@ -2090,6 +2117,72 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             ),
         ),
         _artifact_row(
+            "massivefold_rna_model_selection_input_packet",
+            "CASP17 MassiveFold RNA external-only model1/top5 model-selection input packet",
+            _text(
+                massivefold_rna_model_selection_input_packet_summary.get(
+                    "massivefold_rna_model_selection_input_status"
+                )
+            ),
+            args.massivefold_rna_model_selection_input_packet_json,
+            ready_count=_int(massivefold_rna_model_selection_input_packet_summary.get("ready_target_count")),
+            blocked_count=_int(massivefold_rna_model_selection_input_packet_summary.get("blocked_target_count")),
+            total_count=_int(massivefold_rna_model_selection_input_packet_summary.get("target_count")),
+            next_action=_text(massivefold_rna_model_selection_input_packet_summary.get("next_action")),
+            blockers=(
+                "targets:"
+                + str(massivefold_rna_model_selection_input_packet_summary.get("target_count", ""))
+                + ",ready:"
+                + str(massivefold_rna_model_selection_input_packet_summary.get("ready_target_count", ""))
+                + ",model1/top5:"
+                + str(massivefold_rna_model_selection_input_packet_summary.get("model1_input_count", ""))
+                + "/"
+                + str(massivefold_rna_model_selection_input_packet_summary.get("top5_input_count", ""))
+                + ",missing:"
+                + str(massivefold_rna_model_selection_input_packet_summary.get("missing_artifact_count", ""))
+                + ",r2345_guard:"
+                + _text(massivefold_rna_model_selection_input_packet_summary.get("r2345_sequence_guard"))
+                + ",policy:"
+                + _text(massivefold_rna_model_selection_input_packet_summary.get("internal_prediction_policy"))
+                + ",first:"
+                + _text(massivefold_rna_model_selection_input_packet_summary.get("first_blocked_target_id"))
+            ),
+        ),
+        _artifact_row(
+            "massivefold_rna_self_assessment_packet",
+            "CASP17 MassiveFold RNA external-only self-assessment and model1 risk feature packet",
+            _text(
+                massivefold_rna_self_assessment_packet_summary.get(
+                    "massivefold_rna_self_assessment_status"
+                )
+            ),
+            args.massivefold_rna_self_assessment_packet_json,
+            ready_count=_int(massivefold_rna_self_assessment_packet_summary.get("ready_target_count")),
+            blocked_count=_int(massivefold_rna_self_assessment_packet_summary.get("blocked_target_count")),
+            total_count=_int(massivefold_rna_self_assessment_packet_summary.get("target_count")),
+            next_action=_text(massivefold_rna_self_assessment_packet_summary.get("next_action")),
+            blockers=(
+                "targets:"
+                + str(massivefold_rna_self_assessment_packet_summary.get("target_count", ""))
+                + ",ready:"
+                + str(massivefold_rna_self_assessment_packet_summary.get("ready_target_count", ""))
+                + ",candidates:"
+                + str(massivefold_rna_self_assessment_packet_summary.get("candidate_count", ""))
+                + ",model1/top5:"
+                + str(massivefold_rna_self_assessment_packet_summary.get("model1_input_count", ""))
+                + "/"
+                + str(massivefold_rna_self_assessment_packet_summary.get("top5_input_count", ""))
+                + ",low_margin:"
+                + str(massivefold_rna_self_assessment_packet_summary.get("low_margin_target_count", ""))
+                + ",r2345_guard:"
+                + _text(massivefold_rna_self_assessment_packet_summary.get("r2345_sequence_guard"))
+                + ",policy:"
+                + _text(massivefold_rna_self_assessment_packet_summary.get("internal_prediction_policy"))
+                + ",first:"
+                + _text(massivefold_rna_self_assessment_packet_summary.get("first_blocked_target_id"))
+            ),
+        ),
+        _artifact_row(
             "protein_complex_massivefold_model_selection_coverage",
             "CASP17 MassiveFold protein/complex acquisition, viewer, and review-only rerank coverage",
             _text(
@@ -2189,6 +2282,53 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                         "first_partial_target_id"
                     )
                 )
+            ),
+        ),
+        _artifact_row(
+            "protein_complex_massivefold_self_assessment_packet",
+            "CASP17 protein/complex MassiveFold external-only self-assessment and model1 risk feature packet",
+            _text(
+                protein_complex_massivefold_self_assessment_packet_summary.get(
+                    "protein_complex_massivefold_self_assessment_status"
+                )
+            ),
+            args.protein_complex_massivefold_self_assessment_packet_json,
+            ready_count=_int(
+                protein_complex_massivefold_self_assessment_packet_summary.get("ready_target_count")
+            ),
+            blocked_count=_int(
+                protein_complex_massivefold_self_assessment_packet_summary.get("blocked_target_count")
+            ),
+            total_count=_int(
+                protein_complex_massivefold_self_assessment_packet_summary.get("target_count")
+            ),
+            next_action=_text(protein_complex_massivefold_self_assessment_packet_summary.get("next_action")),
+            blockers=(
+                "targets:"
+                + str(protein_complex_massivefold_self_assessment_packet_summary.get("target_count", ""))
+                + ",ready:"
+                + str(protein_complex_massivefold_self_assessment_packet_summary.get("ready_target_count", ""))
+                + ",heteromer:"
+                + str(
+                    protein_complex_massivefold_self_assessment_packet_summary.get(
+                        "heteromer_or_immune_complex_count",
+                        "",
+                    )
+                )
+                + ",candidates:"
+                + str(protein_complex_massivefold_self_assessment_packet_summary.get("candidate_count", ""))
+                + ",model1/top5:"
+                + str(protein_complex_massivefold_self_assessment_packet_summary.get("model1_input_count", ""))
+                + "/"
+                + str(protein_complex_massivefold_self_assessment_packet_summary.get("top5_input_count", ""))
+                + ",missing:"
+                + str(protein_complex_massivefold_self_assessment_packet_summary.get("missing_artifact_count", ""))
+                + ",low_margin:"
+                + str(protein_complex_massivefold_self_assessment_packet_summary.get("low_margin_target_count", ""))
+                + ",policy:"
+                + _text(protein_complex_massivefold_self_assessment_packet_summary.get("internal_prediction_policy"))
+                + ",first:"
+                + _text(protein_complex_massivefold_self_assessment_packet_summary.get("first_blocked_target_id"))
             ),
         ),
         _artifact_row(
@@ -7366,6 +7506,74 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "massivefold_rna_model_selection_coverage_first_partial_target_id": _text(
             massivefold_rna_model_selection_coverage_summary.get("first_partial_target_id")
         ),
+        "massivefold_rna_model_selection_input_status": _text(
+            massivefold_rna_model_selection_input_packet_summary.get(
+                "massivefold_rna_model_selection_input_status"
+            )
+        ),
+        "massivefold_rna_model_selection_input_target_count": _int(
+            massivefold_rna_model_selection_input_packet_summary.get("target_count")
+        ),
+        "massivefold_rna_model_selection_input_ready_target_count": _int(
+            massivefold_rna_model_selection_input_packet_summary.get("ready_target_count")
+        ),
+        "massivefold_rna_model_selection_input_blocked_target_count": _int(
+            massivefold_rna_model_selection_input_packet_summary.get("blocked_target_count")
+        ),
+        "massivefold_rna_model_selection_input_model1_count": _int(
+            massivefold_rna_model_selection_input_packet_summary.get("model1_input_count")
+        ),
+        "massivefold_rna_model_selection_input_top5_count": _int(
+            massivefold_rna_model_selection_input_packet_summary.get("top5_input_count")
+        ),
+        "massivefold_rna_model_selection_input_missing_artifact_count": _int(
+            massivefold_rna_model_selection_input_packet_summary.get("missing_artifact_count")
+        ),
+        "massivefold_rna_model_selection_input_r2345_guard": _text(
+            massivefold_rna_model_selection_input_packet_summary.get("r2345_sequence_guard")
+        ),
+        "massivefold_rna_model_selection_input_policy": _text(
+            massivefold_rna_model_selection_input_packet_summary.get("internal_prediction_policy")
+        ),
+        "massivefold_rna_model_selection_input_first_blocked_target_id": _text(
+            massivefold_rna_model_selection_input_packet_summary.get("first_blocked_target_id")
+        ),
+        "massivefold_rna_self_assessment_status": _text(
+            massivefold_rna_self_assessment_packet_summary.get("massivefold_rna_self_assessment_status")
+        ),
+        "massivefold_rna_self_assessment_target_count": _int(
+            massivefold_rna_self_assessment_packet_summary.get("target_count")
+        ),
+        "massivefold_rna_self_assessment_ready_target_count": _int(
+            massivefold_rna_self_assessment_packet_summary.get("ready_target_count")
+        ),
+        "massivefold_rna_self_assessment_blocked_target_count": _int(
+            massivefold_rna_self_assessment_packet_summary.get("blocked_target_count")
+        ),
+        "massivefold_rna_self_assessment_candidate_count": _int(
+            massivefold_rna_self_assessment_packet_summary.get("candidate_count")
+        ),
+        "massivefold_rna_self_assessment_model1_count": _int(
+            massivefold_rna_self_assessment_packet_summary.get("model1_input_count")
+        ),
+        "massivefold_rna_self_assessment_top5_count": _int(
+            massivefold_rna_self_assessment_packet_summary.get("top5_input_count")
+        ),
+        "massivefold_rna_self_assessment_low_margin_count": _int(
+            massivefold_rna_self_assessment_packet_summary.get("low_margin_target_count")
+        ),
+        "massivefold_rna_self_assessment_low_margin_threshold": _text(
+            massivefold_rna_self_assessment_packet_summary.get("low_margin_threshold")
+        ),
+        "massivefold_rna_self_assessment_r2345_guard": _text(
+            massivefold_rna_self_assessment_packet_summary.get("r2345_sequence_guard")
+        ),
+        "massivefold_rna_self_assessment_policy": _text(
+            massivefold_rna_self_assessment_packet_summary.get("internal_prediction_policy")
+        ),
+        "massivefold_rna_self_assessment_first_blocked_target_id": _text(
+            massivefold_rna_self_assessment_packet_summary.get("first_blocked_target_id")
+        ),
         "protein_complex_massivefold_model_selection_coverage_status": _text(
             protein_complex_massivefold_model_selection_coverage_summary.get(
                 "protein_complex_massivefold_model_selection_coverage_status"
@@ -7411,6 +7619,49 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         ),
         "protein_complex_massivefold_model_selection_coverage_first_partial_target_id": _text(
             protein_complex_massivefold_model_selection_coverage_summary.get("first_partial_target_id")
+        ),
+        "protein_complex_massivefold_self_assessment_status": _text(
+            protein_complex_massivefold_self_assessment_packet_summary.get(
+                "protein_complex_massivefold_self_assessment_status"
+            )
+        ),
+        "protein_complex_massivefold_self_assessment_target_count": _int(
+            protein_complex_massivefold_self_assessment_packet_summary.get("target_count")
+        ),
+        "protein_complex_massivefold_self_assessment_ready_target_count": _int(
+            protein_complex_massivefold_self_assessment_packet_summary.get("ready_target_count")
+        ),
+        "protein_complex_massivefold_self_assessment_blocked_target_count": _int(
+            protein_complex_massivefold_self_assessment_packet_summary.get("blocked_target_count")
+        ),
+        "protein_complex_massivefold_self_assessment_heteromer_count": _int(
+            protein_complex_massivefold_self_assessment_packet_summary.get(
+                "heteromer_or_immune_complex_count"
+            )
+        ),
+        "protein_complex_massivefold_self_assessment_candidate_count": _int(
+            protein_complex_massivefold_self_assessment_packet_summary.get("candidate_count")
+        ),
+        "protein_complex_massivefold_self_assessment_model1_count": _int(
+            protein_complex_massivefold_self_assessment_packet_summary.get("model1_input_count")
+        ),
+        "protein_complex_massivefold_self_assessment_top5_count": _int(
+            protein_complex_massivefold_self_assessment_packet_summary.get("top5_input_count")
+        ),
+        "protein_complex_massivefold_self_assessment_missing_artifact_count": _int(
+            protein_complex_massivefold_self_assessment_packet_summary.get("missing_artifact_count")
+        ),
+        "protein_complex_massivefold_self_assessment_low_margin_count": _int(
+            protein_complex_massivefold_self_assessment_packet_summary.get("low_margin_target_count")
+        ),
+        "protein_complex_massivefold_self_assessment_low_margin_threshold": _text(
+            protein_complex_massivefold_self_assessment_packet_summary.get("low_margin_threshold")
+        ),
+        "protein_complex_massivefold_self_assessment_policy": _text(
+            protein_complex_massivefold_self_assessment_packet_summary.get("internal_prediction_policy")
+        ),
+        "protein_complex_massivefold_self_assessment_first_blocked_target_id": _text(
+            protein_complex_massivefold_self_assessment_packet_summary.get("first_blocked_target_id")
         ),
         "capri_round65_readiness_status": _text(
             capri_round65_readiness_summary.get("capri_readiness_status")
@@ -11992,7 +12243,10 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- MassiveFold representative viewers: `{summary['massivefold_representative_viewer_status'] or '-'}` target `{summary['massivefold_representative_viewer_target_id'] or '-'}` selected/ready/blocked `{summary['massivefold_representative_viewer_selected_count']}/{summary['massivefold_representative_viewer_ready_count']}/{summary['massivefold_representative_viewer_blocked_count']}` coordinate/model/projection `{summary['massivefold_representative_viewer_coordinate_count']}/{summary['massivefold_representative_viewer_model_cif_count']}/{summary['massivefold_representative_viewer_projection_count']}` atoms/displayed/residues `{summary['massivefold_representative_viewer_atom_count']}/{summary['massivefold_representative_viewer_display_atom_count']}/{summary['massivefold_representative_viewer_residue_count']}` protocols `{summary['massivefold_representative_viewer_protocol_count']}` first `{summary['massivefold_representative_viewer_first_html'] or '-'}` gallery `{summary['massivefold_representative_viewer_gallery_html'] or '-'}`",
         f"- MassiveFold representative rerank: `{summary['massivefold_representative_rerank_status'] or '-'}` target `{summary['massivefold_representative_rerank_target_id'] or '-'}` candidates/model1/top5 `{summary['massivefold_representative_rerank_candidate_count']}/{summary['massivefold_representative_rerank_model1_count']}/{summary['massivefold_representative_rerank_top5_count']}` top5 protocols `{summary['massivefold_representative_rerank_top5_protocol_count']}` review/proof-eligible `{summary['massivefold_representative_rerank_review_candidate_count']}/{summary['massivefold_representative_rerank_proof_eligible_count']}` confidence min/max `{summary['massivefold_representative_rerank_confidence_min'] or '-'}`/`{summary['massivefold_representative_rerank_confidence_max'] or '-'}` model1 `{summary['massivefold_representative_rerank_model1_file'] or '-'}` `{summary['massivefold_representative_rerank_model1_protocol'] or '-'}` score `{summary['massivefold_representative_rerank_model1_score'] or '-'}` top5 `{summary['massivefold_representative_rerank_top5_manifest'] or '-'}`",
         f"- MassiveFold RNA model-selection coverage: `{summary['massivefold_rna_model_selection_coverage_status'] or '-'}` targets ready/partial/total `{summary['massivefold_rna_model_selection_coverage_ready_target_count']}/{summary['massivefold_rna_model_selection_coverage_partial_target_count']}/{summary['massivefold_rna_model_selection_coverage_target_count']}` acquisition/index/viewer/rerank `{summary['massivefold_rna_model_selection_coverage_verified_acquisition_count']}/{summary['massivefold_rna_model_selection_coverage_representative_extracted_target_count']}/{summary['massivefold_rna_model_selection_coverage_viewer_ready_target_count']}/{summary['massivefold_rna_model_selection_coverage_rerank_ready_target_count']}` models selected/extracted/viewer `{summary['massivefold_rna_model_selection_coverage_selected_model_count']}/{summary['massivefold_rna_model_selection_coverage_extracted_model_count']}/{summary['massivefold_rna_model_selection_coverage_viewer_ready_model_count']}` model1/top5 `{summary['massivefold_rna_model_selection_coverage_model1_candidate_count']}/{summary['massivefold_rna_model_selection_coverage_top5_candidate_count']}` first partial `{summary['massivefold_rna_model_selection_coverage_first_partial_target_id'] or '-'}`",
+        f"- MassiveFold RNA model-selection inputs: `{summary['massivefold_rna_model_selection_input_status'] or '-'}` targets ready/blocked/total `{summary['massivefold_rna_model_selection_input_ready_target_count']}/{summary['massivefold_rna_model_selection_input_blocked_target_count']}/{summary['massivefold_rna_model_selection_input_target_count']}` model1/top5 `{summary['massivefold_rna_model_selection_input_model1_count']}/{summary['massivefold_rna_model_selection_input_top5_count']}` missing `{summary['massivefold_rna_model_selection_input_missing_artifact_count']}` R2345 guard `{summary['massivefold_rna_model_selection_input_r2345_guard'] or '-'}` policy `{summary['massivefold_rna_model_selection_input_policy'] or '-'}` first blocked `{summary['massivefold_rna_model_selection_input_first_blocked_target_id'] or '-'}`",
+        f"- MassiveFold RNA self-assessment: `{summary['massivefold_rna_self_assessment_status'] or '-'}` targets ready/blocked/total `{summary['massivefold_rna_self_assessment_ready_target_count']}/{summary['massivefold_rna_self_assessment_blocked_target_count']}/{summary['massivefold_rna_self_assessment_target_count']}` candidates/model1/top5 `{summary['massivefold_rna_self_assessment_candidate_count']}/{summary['massivefold_rna_self_assessment_model1_count']}/{summary['massivefold_rna_self_assessment_top5_count']}` low-margin `{summary['massivefold_rna_self_assessment_low_margin_count']}` threshold `{summary['massivefold_rna_self_assessment_low_margin_threshold'] or '-'}` R2345 guard `{summary['massivefold_rna_self_assessment_r2345_guard'] or '-'}` policy `{summary['massivefold_rna_self_assessment_policy'] or '-'}` first blocked `{summary['massivefold_rna_self_assessment_first_blocked_target_id'] or '-'}`",
         f"- Protein/complex MassiveFold model-selection coverage: `{summary['protein_complex_massivefold_model_selection_coverage_status'] or '-'}` targets ready/partial/total `{summary['protein_complex_massivefold_model_selection_coverage_ready_target_count']}/{summary['protein_complex_massivefold_model_selection_coverage_partial_target_count']}/{summary['protein_complex_massivefold_model_selection_coverage_target_count']}` acquisition/index/viewer/rerank `{summary['protein_complex_massivefold_model_selection_coverage_verified_acquisition_count']}/{summary['protein_complex_massivefold_model_selection_coverage_representative_extracted_target_count']}/{summary['protein_complex_massivefold_model_selection_coverage_viewer_ready_target_count']}/{summary['protein_complex_massivefold_model_selection_coverage_rerank_ready_target_count']}` models selected/extracted/viewer `{summary['protein_complex_massivefold_model_selection_coverage_selected_model_count']}/{summary['protein_complex_massivefold_model_selection_coverage_extracted_model_count']}/{summary['protein_complex_massivefold_model_selection_coverage_viewer_ready_model_count']}` model1/top5 `{summary['protein_complex_massivefold_model_selection_coverage_model1_candidate_count']}/{summary['protein_complex_massivefold_model_selection_coverage_top5_candidate_count']}` first partial `{summary['protein_complex_massivefold_model_selection_coverage_first_partial_target_id'] or '-'}`",
+        f"- Protein/complex MassiveFold self-assessment: `{summary['protein_complex_massivefold_self_assessment_status'] or '-'}` targets ready/blocked/total `{summary['protein_complex_massivefold_self_assessment_ready_target_count']}/{summary['protein_complex_massivefold_self_assessment_blocked_target_count']}/{summary['protein_complex_massivefold_self_assessment_target_count']}` heteromer/immune `{summary['protein_complex_massivefold_self_assessment_heteromer_count']}` candidates/model1/top5 `{summary['protein_complex_massivefold_self_assessment_candidate_count']}/{summary['protein_complex_massivefold_self_assessment_model1_count']}/{summary['protein_complex_massivefold_self_assessment_top5_count']}` missing `{summary['protein_complex_massivefold_self_assessment_missing_artifact_count']}` low-margin `{summary['protein_complex_massivefold_self_assessment_low_margin_count']}` threshold `{summary['protein_complex_massivefold_self_assessment_low_margin_threshold'] or '-'}` policy `{summary['protein_complex_massivefold_self_assessment_policy'] or '-'}` first blocked `{summary['protein_complex_massivefold_self_assessment_first_blocked_target_id'] or '-'}`",
         (
             f"- CAPRI Round 65 readiness context: `{summary['active_scope_capri_round65_participation_status'] or '-'}` not active blocker; preserved targets active/closed/total `{summary['capri_round65_active_target_count']}/{summary['capri_round65_closed_target_count']}/{summary['capri_round65_target_count']}` artifact policy `{summary['active_scope_capri_round65_artifact_policy'] or '-'}`"
             if summary["active_scope_capri_round65_participation_status"].startswith("deferred")
@@ -12233,8 +12487,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=DEFAULT_MASSIVEFOLD_RNA_MODEL_SELECTION_COVERAGE_JSON,
     )
     parser.add_argument(
+        "--massivefold-rna-model-selection-input-packet-json",
+        default=DEFAULT_MASSIVEFOLD_RNA_MODEL_SELECTION_INPUT_PACKET_JSON,
+    )
+    parser.add_argument(
+        "--massivefold-rna-self-assessment-packet-json",
+        default=DEFAULT_MASSIVEFOLD_RNA_SELF_ASSESSMENT_PACKET_JSON,
+    )
+    parser.add_argument(
         "--protein-complex-massivefold-model-selection-coverage-json",
         default=DEFAULT_PROTEIN_COMPLEX_MASSIVEFOLD_MODEL_SELECTION_COVERAGE_JSON,
+    )
+    parser.add_argument(
+        "--protein-complex-massivefold-self-assessment-packet-json",
+        default=DEFAULT_PROTEIN_COMPLEX_MASSIVEFOLD_SELF_ASSESSMENT_PACKET_JSON,
     )
     parser.add_argument("--capri-round65-readiness-json", default=DEFAULT_CAPRI_ROUND65_READINESS_JSON)
     parser.add_argument("--capri-round65-format-preflight-json", default=DEFAULT_CAPRI_ROUND65_FORMAT_PREFLIGHT_JSON)
