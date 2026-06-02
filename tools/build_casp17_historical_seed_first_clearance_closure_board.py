@@ -20,6 +20,9 @@ DEFAULT_EVIDENCE_REVIEW_GATE_JSON = (
 DEFAULT_EVIDENCE_SYNC_PLAN_JSON = (
     "casp17/casp17_historical_seed_first_clearance_no_leak_evidence_sync_plan_current.json"
 )
+DEFAULT_AUTHORITATIVE_CHRONOLOGY_AUDIT_JSON = (
+    "casp17/casp17_historical_seed_authoritative_chronology_audit_current.json"
+)
 DEFAULT_CLEARANCE_TO_IDENTITY_SYNC_JSON = "casp17/casp17_historical_seed_clearance_to_identity_intake_sync_current.json"
 DEFAULT_OUT_JSON = "casp17/casp17_historical_seed_first_clearance_closure_board_current.json"
 DEFAULT_OUT_CSV = "casp17/casp17_historical_seed_first_clearance_closure_board_current.csv"
@@ -89,6 +92,11 @@ def _summary(payload: dict[str, Any]) -> dict[str, Any]:
     return summary if isinstance(summary, dict) else {}
 
 
+def _rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = payload.get("rows")
+    return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+
+
 def _write_json(path_like: str | Path, payload: dict[str, Any]) -> None:
     path = _resolve(path_like)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -132,7 +140,52 @@ def _stage(
     }
 
 
-def _build_rows(args: argparse.Namespace, summaries: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+def _matching_chronology_row(
+    chronology_rows: list[dict[str, Any]],
+    target_id: str,
+    benchmark_id: str,
+) -> dict[str, Any]:
+    for row in chronology_rows:
+        if _text(row.get("target_id")) == target_id and _text(row.get("benchmark_id")) == benchmark_id:
+            return row
+    for row in chronology_rows:
+        if _text(row.get("target_id")) == target_id:
+            return row
+    for row in chronology_rows:
+        if _text(row.get("benchmark_id")) == benchmark_id:
+            return row
+    return {}
+
+
+def _chronology_stage(args: argparse.Namespace, chronology_row: dict[str, Any]) -> dict[str, Any]:
+    status = _text(chronology_row.get("chronology_authority_status")) or "chronology_row_missing"
+    ready = status == "chronology_candidate_before_native_review"
+    first_blocker = ""
+    if not ready:
+        first_blocker = _text(chronology_row.get("blockers")) or status
+    next_action = _text(chronology_row.get("next_action"))
+    if not next_action:
+        next_action = "attach a matching authoritative chronology row before no-leak closure"
+    return _stage(
+        2,
+        "authoritative_chronology_guard",
+        "Reject post-native first-clearance candidates before no-leak promotion",
+        status,
+        ready,
+        1 if ready else 0,
+        0 if ready else 1,
+        1,
+        args.authoritative_chronology_audit_json,
+        first_blocker,
+        next_action,
+    )
+
+
+def _build_rows(
+    args: argparse.Namespace,
+    summaries: dict[str, dict[str, Any]],
+    chronology_row: dict[str, Any],
+) -> list[dict[str, Any]]:
     kit = summaries["kit"]
     gate = summaries["gate"]
     packet = summaries["packet"]
@@ -179,8 +232,9 @@ def _build_rows(args: argparse.Namespace, summaries: dict[str, dict[str, Any]]) 
             "" if kit_ready else "operator_kit_not_ready",
             _text(kit.get("next_action")),
         ),
+        _chronology_stage(args, chronology_row),
         _stage(
-            2,
+            3,
             "evidence_packet",
             "Collect independent no-leak evidence",
             _text(packet.get("first_clearance_no_leak_evidence_packet_status")),
@@ -193,7 +247,7 @@ def _build_rows(args: argparse.Namespace, summaries: dict[str, dict[str, Any]]) 
             _text(packet.get("next_action")),
         ),
         _stage(
-            3,
+            4,
             "evidence_review_gate",
             "Review filled no-leak evidence template and stubs",
             _text(review.get("first_clearance_no_leak_evidence_review_gate_status")),
@@ -206,7 +260,7 @@ def _build_rows(args: argparse.Namespace, summaries: dict[str, dict[str, Any]]) 
             _text(review.get("next_action")),
         ),
         _stage(
-            4,
+            5,
             "evidence_sync_plan",
             "Dry-run/apply reviewed evidence into no-leak intake",
             _text(sync.get("first_clearance_no_leak_evidence_sync_plan_status")),
@@ -219,7 +273,7 @@ def _build_rows(args: argparse.Namespace, summaries: dict[str, dict[str, Any]]) 
             _text(sync.get("next_action")),
         ),
         _stage(
-            5,
+            6,
             "no_leak_gate",
             "Validate no-leak intake after evidence sync",
             _text(gate.get("first_clearance_no_leak_gate_status")),
@@ -232,7 +286,7 @@ def _build_rows(args: argparse.Namespace, summaries: dict[str, dict[str, Any]]) 
             _text(gate.get("next_action")),
         ),
         _stage(
-            6,
+            7,
             "promotion_preview",
             "Review promotion preview for cleared seed manifest",
             _text(kit.get("promotion_preview_status")),
@@ -245,7 +299,7 @@ def _build_rows(args: argparse.Namespace, summaries: dict[str, dict[str, Any]]) 
             "review promotion preview after no-leak gate is ready",
         ),
         _stage(
-            7,
+            8,
             "identity_intake_sync",
             "Sync cleared first seed into competitive identity intake",
             _text(identity.get("seed_to_identity_sync_status")),
@@ -267,9 +321,13 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "packet": _read_json(args.evidence_packet_json),
         "review": _read_json(args.evidence_review_gate_json),
         "sync": _read_json(args.evidence_sync_plan_json),
+        "chronology": _read_json(args.authoritative_chronology_audit_json),
         "identity": _read_json(args.clearance_to_identity_sync_json),
     }
     summaries = {key: _summary(payload) for key, payload in payloads.items()}
+    target_id = _text(summaries["kit"].get("target_id")) or _text(summaries["gate"].get("target_id"))
+    benchmark_id = _text(summaries["kit"].get("benchmark_id")) or _text(summaries["gate"].get("benchmark_id"))
+    chronology_row = _matching_chronology_row(_rows(payloads["chronology"]), target_id, benchmark_id)
     input_blockers = [
         f"{name}_json_missing"
         for name, path in [
@@ -278,11 +336,12 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             ("evidence_packet", args.evidence_packet_json),
             ("evidence_review_gate", args.evidence_review_gate_json),
             ("evidence_sync_plan", args.evidence_sync_plan_json),
+            ("authoritative_chronology_audit", args.authoritative_chronology_audit_json),
             ("clearance_to_identity_sync", args.clearance_to_identity_sync_json),
         ]
         if not _resolve(path).exists()
     ]
-    rows = [] if input_blockers else _build_rows(args, summaries)
+    rows = [] if input_blockers else _build_rows(args, summaries, chronology_row)
     ready_rows = [row for row in rows if row["stage_status"] == "stage_ready"]
     blocked_rows = [row for row in rows if row["stage_status"] != "stage_ready"]
     first_blocked = blocked_rows[0] if blocked_rows else {}
@@ -295,8 +354,8 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "packet_type": "casp17_historical_seed_first_clearance_closure_board",
         "generated_at_local": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
         "first_clearance_closure_board_status": status,
-        "target_id": _text(summaries["kit"].get("target_id")) or _text(summaries["gate"].get("target_id")),
-        "benchmark_id": _text(summaries["kit"].get("benchmark_id")) or _text(summaries["gate"].get("benchmark_id")),
+        "target_id": target_id,
+        "benchmark_id": benchmark_id,
         "stage_count": len(rows),
         "ready_stage_count": len(ready_rows),
         "blocked_stage_count": len(blocked_rows),
@@ -314,6 +373,17 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         ),
         "evidence_sync_plan_status": _text(
             summaries["sync"].get("first_clearance_no_leak_evidence_sync_plan_status")
+        ),
+        "authoritative_chronology_guard_status": _text(
+            chronology_row.get("chronology_authority_status")
+        )
+        or "chronology_row_missing",
+        "authoritative_chronology_guard_blockers": _text(chronology_row.get("blockers")),
+        "authoritative_chronology_guard_prediction_created_candidate": _text(
+            chronology_row.get("prediction_created_candidate")
+        ),
+        "authoritative_chronology_guard_native_authority_date": _text(
+            chronology_row.get("native_authority_date")
         ),
         "promotion_preview_status": _text(summaries["kit"].get("promotion_preview_status")),
         "identity_sync_status": _text(summaries["identity"].get("seed_to_identity_sync_status")),
@@ -367,6 +437,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--evidence-packet-json", default=DEFAULT_EVIDENCE_PACKET_JSON)
     parser.add_argument("--evidence-review-gate-json", default=DEFAULT_EVIDENCE_REVIEW_GATE_JSON)
     parser.add_argument("--evidence-sync-plan-json", default=DEFAULT_EVIDENCE_SYNC_PLAN_JSON)
+    parser.add_argument(
+        "--authoritative-chronology-audit-json",
+        default=DEFAULT_AUTHORITATIVE_CHRONOLOGY_AUDIT_JSON,
+    )
     parser.add_argument("--clearance-to-identity-sync-json", default=DEFAULT_CLEARANCE_TO_IDENTITY_SYNC_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)

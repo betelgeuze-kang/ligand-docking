@@ -5,7 +5,7 @@
 - candidate_sha256: `982aec7f9046afaef122546c9ef580d42da2a5ac371d39b94f3580691a775ea0`
 - sha256_match: `True`
 - upload_queue_status: `upload_ready_future_window`
-- review_md: `casp17/current_upload_review_packet/10_h1355_hemagglutinin_antibody/UPLOAD_REVIEW.md`
+- review_md: `casp17/current_upload_review_packet/08_h1355_hemagglutinin_antibody/UPLOAD_REVIEW.md`
 - native_status: `official_native_release_pending`
 - external_timestamp_status: `external_timestamp_required`
 - competitive_proof_eligible: `false`

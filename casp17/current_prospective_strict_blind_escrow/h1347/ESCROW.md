@@ -5,7 +5,7 @@
 - candidate_sha256: `1d638861190c477d93170143d1747cc11eb4b4807aa4f75ba7d65e4a0433c64d`
 - sha256_match: `True`
 - upload_queue_status: `upload_ready_expiring_soon`
-- review_md: `casp17/current_upload_review_packet/06_h1347_regn15499_fab-fab_complex/UPLOAD_REVIEW.md`
+- review_md: `casp17/current_upload_review_packet/04_h1347_regn15499_fab-fab_complex/UPLOAD_REVIEW.md`
 - native_status: `official_native_release_pending`
 - external_timestamp_status: `external_timestamp_required`
 - competitive_proof_eligible: `false`

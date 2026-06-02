@@ -69,6 +69,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     current_post_native_scoring_scaffold_json = (
         tmp_path / "current_post_native_scoring_scaffold.json"
     )
+    current_queue_rollover_hygiene_audit_json = tmp_path / "current_queue_rollover_hygiene_audit.json"
     closure_json = tmp_path / "closure.json"
     goal_scorecard_json = tmp_path / "goal_scorecard.json"
     historical_winner_normalized_bands_json = tmp_path / "historical_winner_normalized_bands.json"
@@ -287,6 +288,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     )
     strict_blind_source_gate_source_request_packet_json = (
         tmp_path / "strict_blind_source_gate_source_request_packet.json"
+    )
+    strict_blind_monomer_pre_native_acquisition_board_json = (
+        tmp_path / "strict_blind_monomer_pre_native_acquisition_board.json"
     )
     strict_blind_source_request_resolution_board_json = (
         tmp_path / "strict_blind_source_request_resolution_board.json"
@@ -1471,6 +1475,28 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "metric_rows_csv": "casp17/casp17_current_post_native_scoring_metric_rows_current.csv",
                 "scaffold_dir": "casp17/current_post_native_scoring_scaffold",
                 "next_action": "attach official native structures and chain mappings after native release",
+            }
+        },
+    )
+    _write_json(
+        current_queue_rollover_hygiene_audit_json,
+        {
+            "summary": {
+                "status": "current_queue_rollover_hygiene_stale_generated_folders_retained",
+                "surface_count": 3,
+                "surface_pass_count": 0,
+                "surface_stale_count": 3,
+                "surface_blocked_count": 0,
+                "active_folder_count": 35,
+                "actual_folder_count": 73,
+                "missing_active_folder_count": 0,
+                "stale_extra_folder_count": 38,
+                "first_stale_surface_id": "current_upload_review_packet",
+                "first_stale_extra_folder": (
+                    "casp17/current_upload_review_packet/"
+                    "01_h2319_human_astrovirus_va1_capsid_spike_-_antibody_7c8_complex"
+                ),
+                "next_action": "cleanup stale generated folders only after operator approval",
             }
         },
     )
@@ -4008,6 +4034,36 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        strict_blind_monomer_pre_native_acquisition_board_json,
+        {
+            "summary": {
+                "monomer_pre_native_acquisition_board_status": (
+                    "strict_blind_monomer_pre_native_acquisition_required"
+                ),
+                "source_request_packet_status": "awaiting_pre_native_source_or_candidate_replacement",
+                "internal_like_source_review_status": "strict_blind_internal_like_source_review_all_post_native",
+                "internal_source_audit_status": "internal_prediction_source_missing_for_first_slot",
+                "monomer_request_count": 10,
+                "ready_pre_native_local_candidate_count": 0,
+                "acquisition_required_count": 10,
+                "internal_like_pre_native_candidate_count": 0,
+                "internal_like_post_native_candidate_count": 166,
+                "operator_field_count": 110,
+                "operator_field_filled_count": 0,
+                "operator_field_missing_count": 110,
+                "first_request_id": "source_request_001",
+                "first_target_id": "HIST_BBA5",
+                "first_blocker": "prediction_not_before_native",
+                "first_slot_prediction_dropzone": (
+                    "casp17/historical_seed_strict_blind_replacement_evidence_dropzones/"
+                    "01_hist_required_monomer_001/prediction/replacement_prediction.pdb"
+                ),
+                "board_dir": "casp17/strict_blind_monomer_pre_native_acquisition_board",
+                "next_action": "fill acquisition templates with a verified pre-native internal prediction source",
+            }
+        },
+    )
+    _write_json(
         strict_blind_source_request_resolution_board_json,
         {
             "summary": {
@@ -6280,6 +6336,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(current_escrow_external_timestamp_packet_json),
             "--current-post-native-scoring-scaffold-json",
             str(current_post_native_scoring_scaffold_json),
+            "--current-queue-rollover-hygiene-audit-json",
+            str(current_queue_rollover_hygiene_audit_json),
             "--win-gap-closure-json",
             str(closure_json),
             "--win-tier-goal-scorecard-json",
@@ -6466,6 +6524,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(strict_blind_source_gate_operator_packet_json),
             "--strict-blind-source-gate-source-request-packet-json",
             str(strict_blind_source_gate_source_request_packet_json),
+            "--strict-blind-monomer-pre-native-acquisition-board-json",
+            str(strict_blind_monomer_pre_native_acquisition_board_json),
             "--strict-blind-source-request-resolution-board-json",
             str(strict_blind_source_request_resolution_board_json),
             "--strict-blind-source-request-fulfillment-gate-json",
@@ -6934,6 +6994,12 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "metrics ready/blocked/total `0/162/162` metric class complex/monomer `144/18`" in workbench_md
     assert "files dropzone/manifest/chainmap/metriccsv `19/19/19/19`" in workbench_md
     assert "metric rows `casp17/casp17_current_post_native_scoring_metric_rows_current.csv`" in workbench_md
+    assert (
+        "current CASP17 queue rollover hygiene audit: "
+        "`current_queue_rollover_hygiene_stale_generated_folders_retained`"
+    ) in workbench_md
+    assert "surfaces pass/stale/blocked/total `0/3/0/3`" in workbench_md
+    assert "folders active/actual `35/73` missing/stale `0/38`" in workbench_md
     assert "win-tier metric surface contract: `awaiting_strict_blind_evidence_files_and_ligand_category_slots`" in workbench_md
     assert "metrics covered/required `11/11`" in workbench_md
     assert "win-tier critical path board: `competitive_proof_blocked_on_strict_blind_evidence`" in workbench_md
@@ -7224,6 +7290,17 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "mapped/pre/post/same/missing/unmapped `166/0/166/0/0/0`" in workbench_md
     assert "targets/all-post/pre-targets `10/10/0`" in workbench_md
     assert "range `2026-02-19`-`2026-02-22` first `HIST_BBA5` `prediction_not_before_native`" in workbench_md
+    assert (
+        "strict-blind monomer pre-native acquisition board: "
+        "`strict_blind_monomer_pre_native_acquisition_required`"
+    ) in workbench_md
+    assert "monomer requests ready/acquire/total `0/10/10`" in workbench_md
+    assert "internal-like pre/post `0/166`" in workbench_md
+    assert "operator fields filled/missing/total `0/110/110`" in workbench_md
+    assert (
+        "first `source_request_001` `HIST_BBA5` `prediction_not_before_native`"
+        in workbench_md
+    )
     assert "strict-blind internal prediction source gate: `awaiting_internal_prediction_source_gate_fields`" in workbench_md
     assert "checks pass/blocked/total `3/13/16`" in workbench_md
     assert "first `source_id_internal` `internal_source_id_missing_or_external`" in workbench_md
@@ -8113,6 +8190,20 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     )
     assert payload["summary"]["current_post_native_scoring_scaffold_dir"] == (
         "casp17/current_post_native_scoring_scaffold"
+    )
+    assert payload["summary"]["current_queue_rollover_hygiene_audit_status"] == (
+        "current_queue_rollover_hygiene_stale_generated_folders_retained"
+    )
+    assert payload["summary"]["current_queue_rollover_hygiene_audit_surface_count"] == 3
+    assert payload["summary"]["current_queue_rollover_hygiene_audit_surface_pass_count"] == 0
+    assert payload["summary"]["current_queue_rollover_hygiene_audit_surface_stale_count"] == 3
+    assert payload["summary"]["current_queue_rollover_hygiene_audit_surface_blocked_count"] == 0
+    assert payload["summary"]["current_queue_rollover_hygiene_audit_active_folder_count"] == 35
+    assert payload["summary"]["current_queue_rollover_hygiene_audit_actual_folder_count"] == 73
+    assert payload["summary"]["current_queue_rollover_hygiene_audit_missing_active_folder_count"] == 0
+    assert payload["summary"]["current_queue_rollover_hygiene_audit_stale_extra_folder_count"] == 38
+    assert payload["summary"]["current_queue_rollover_hygiene_audit_first_stale_surface_id"] == (
+        "current_upload_review_packet"
     )
     assert payload["summary"]["benchmark_rows_total"] == 40
     assert payload["summary"]["competitive_batch_status"] == "ready_for_fill"
@@ -9694,6 +9785,24 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     )
     assert payload["summary"]["strict_blind_source_gate_source_request_packet_first_missing_operator_field"] == (
         "source_id"
+    )
+    assert payload["summary"]["strict_blind_monomer_pre_native_acquisition_board_status"] == (
+        "strict_blind_monomer_pre_native_acquisition_required"
+    )
+    assert payload["summary"]["strict_blind_monomer_pre_native_acquisition_board_monomer_request_count"] == 10
+    assert payload["summary"]["strict_blind_monomer_pre_native_acquisition_board_ready_count"] == 0
+    assert payload["summary"]["strict_blind_monomer_pre_native_acquisition_board_acquisition_required_count"] == 10
+    assert payload["summary"]["strict_blind_monomer_pre_native_acquisition_board_internal_like_pre_count"] == 0
+    assert payload["summary"]["strict_blind_monomer_pre_native_acquisition_board_internal_like_post_count"] == 166
+    assert payload["summary"]["strict_blind_monomer_pre_native_acquisition_board_operator_field_count"] == 110
+    assert payload["summary"]["strict_blind_monomer_pre_native_acquisition_board_operator_filled_count"] == 0
+    assert payload["summary"]["strict_blind_monomer_pre_native_acquisition_board_operator_missing_count"] == 110
+    assert payload["summary"]["strict_blind_monomer_pre_native_acquisition_board_first_request_id"] == (
+        "source_request_001"
+    )
+    assert payload["summary"]["strict_blind_monomer_pre_native_acquisition_board_first_target_id"] == "HIST_BBA5"
+    assert payload["summary"]["strict_blind_monomer_pre_native_acquisition_board_first_blocker"] == (
+        "prediction_not_before_native"
     )
     assert payload["summary"]["strict_blind_source_request_resolution_board_status"] == (
         "source_request_resolution_all_current_candidates_blocked"
@@ -11957,6 +12066,15 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "files:19/19/19/19" in by_id["current_casp17_post_native_scoring_scaffold"]["blockers"]
     assert "proof/hygiene:0/0/0/0" in by_id["current_casp17_post_native_scoring_scaffold"]["blockers"]
     assert "first:H2319/-/-" in by_id["current_casp17_post_native_scoring_scaffold"]["blockers"]
+    assert by_id["current_casp17_queue_rollover_hygiene_audit"]["status"] == (
+        "current_queue_rollover_hygiene_stale_generated_folders_retained"
+    )
+    assert by_id["current_casp17_queue_rollover_hygiene_audit"]["ready_count"] == 0
+    assert by_id["current_casp17_queue_rollover_hygiene_audit"]["blocked_count"] == 0
+    assert by_id["current_casp17_queue_rollover_hygiene_audit"]["total_count"] == 3
+    assert "stale:3" in by_id["current_casp17_queue_rollover_hygiene_audit"]["blockers"]
+    assert "folders active/actual:35/73" in by_id["current_casp17_queue_rollover_hygiene_audit"]["blockers"]
+    assert "missing/stale:0/38" in by_id["current_casp17_queue_rollover_hygiene_audit"]["blockers"]
     assert by_id["win_tier_goal_scorecard"]["status"] == "blocked_input"
     assert by_id["win_tier_goal_scorecard"]["ready_count"] == 1
     assert "historical_identity_clearance" in by_id["win_tier_goal_scorecard"]["blockers"]
@@ -13578,6 +13696,20 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     ]["blockers"]
     assert "targets/all-post/pre-targets:10/10/0" in by_id[
         "strict_blind_internal_like_source_review"
+    ]["blockers"]
+    assert by_id["strict_blind_monomer_pre_native_acquisition_board"]["status"] == (
+        "strict_blind_monomer_pre_native_acquisition_required"
+    )
+    assert by_id["strict_blind_monomer_pre_native_acquisition_board"]["ready_count"] == 0
+    assert by_id["strict_blind_monomer_pre_native_acquisition_board"]["blocked_count"] == 10
+    assert by_id["strict_blind_monomer_pre_native_acquisition_board"]["total_count"] == 10
+    assert "requests:0/10/10" in by_id["strict_blind_monomer_pre_native_acquisition_board"]["blockers"]
+    assert "internal_like pre/post:0/166" in by_id[
+        "strict_blind_monomer_pre_native_acquisition_board"
+    ]["blockers"]
+    assert "fields:0/110/110" in by_id["strict_blind_monomer_pre_native_acquisition_board"]["blockers"]
+    assert "first:source_request_001/HIST_BBA5/prediction_not_before_native" in by_id[
+        "strict_blind_monomer_pre_native_acquisition_board"
     ]["blockers"]
     assert by_id["strict_blind_internal_prediction_source_gate"]["status"] == (
         "awaiting_internal_prediction_source_gate_fields"

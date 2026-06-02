@@ -1,13 +1,13 @@
 # CASP17 Current Upload Operator Decision Kit
 
-- generated: `2026-06-02T23:30:05+09:00`
+- generated: `2026-06-03T00:38:29+09:00`
 - status: `current_upload_operator_decision_kit_awaiting_operator_decisions`
 - review packet: `current_upload_review_packet_ready`
-- reviews ready/blocked/total: `10/0/10`
-- decisions approve/hold/reject/missing/invalid: `0/0/0/10/0`
-- author serialization missing: `10`
-- urgency today/soon/future: `2/4/4`
-- first: `H2319` `operator_decision_missing`
+- reviews ready/blocked/total: `8/0/8`
+- decisions approve/hold/reject/missing/invalid: `0/0/0/8/0`
+- author serialization missing: `8`
+- urgency today/soon/future: `2/4/2`
+- first: `H1344` `operator_decision_missing`
 
 ## Kit Files
 

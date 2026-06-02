@@ -4,12 +4,12 @@
 - candidate_pdb: `runs/casp17_predictions_sidechain_repacked_current/T1342TS.pdb`
 - candidate_sha256: `9e3a276fc923414a63e06a8fac586285a545ca29b56336573b71a59e0e26b231`
 - sha256_match: `True`
-- upload_queue_status: `upload_ready_expiring_today`
-- review_md: `casp17/current_upload_review_packet/02_t1342_spike_glycoprotein_ectodomain/UPLOAD_REVIEW.md`
+- upload_queue_status: `blocked_official_deadline_expired`
+- review_md: `-`
 - native_status: `official_native_release_pending`
 - external_timestamp_status: `external_timestamp_required`
 - competitive_proof_eligible: `false`
-- blockers: `official_native_release_pending,external_timestamp_required`
+- blockers: `upload_queue_blocked:human_submission_deadline_expired;official_human_deadline_expired,upload_review_packet_missing,official_native_release_pending,external_timestamp_required`
 
 ## Claim Boundary
 

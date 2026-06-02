@@ -4,12 +4,12 @@
 - candidate_pdb: `runs/casp17_predictions_sidechain_repacked_current/H2319TS.pdb`
 - candidate_sha256: `c278eff01708e2e00a63c32158df09767a2a45c0a78be7f66a8ac7277e223abb`
 - sha256_match: `True`
-- upload_queue_status: `upload_ready_expiring_today`
-- review_md: `casp17/current_upload_review_packet/01_h2319_human_astrovirus_va1_capsid_spike_-_antibody_7c8_complex/UPLOAD_REVIEW.md`
+- upload_queue_status: `blocked_official_deadline_expired`
+- review_md: `-`
 - native_status: `official_native_release_pending`
 - external_timestamp_status: `external_timestamp_required`
 - competitive_proof_eligible: `false`
-- blockers: `official_native_release_pending,external_timestamp_required`
+- blockers: `upload_queue_blocked:human_submission_deadline_expired;official_human_deadline_expired,upload_review_packet_missing,official_native_release_pending,external_timestamp_required`
 
 ## Claim Boundary
 

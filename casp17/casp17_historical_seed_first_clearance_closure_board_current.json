@@ -14,6 +14,19 @@
       "total_count": 17
     },
     {
+      "artifact_path": "casp17/casp17_historical_seed_authoritative_chronology_audit_current.json",
+      "blocked_count": 1,
+      "first_blocker": "prediction_not_before_authoritative_native_date",
+      "label": "Reject post-native first-clearance candidates before no-leak promotion",
+      "next_action": "replace with a pre-native blind prediction artifact, or keep this row in a separate post-native retrospective lane with explicit no-template evidence",
+      "ready_count": 0,
+      "source_status": "post_native_prediction_chronology_blocked",
+      "stage_id": "authoritative_chronology_guard",
+      "stage_order": 2,
+      "stage_status": "stage_blocked",
+      "total_count": 1
+    },
+    {
       "artifact_path": "casp17/casp17_historical_seed_first_clearance_no_leak_evidence_packet_current.json",
       "blocked_count": 10,
       "first_blocker": "operator_value_missing",
@@ -22,7 +35,7 @@
       "ready_count": 0,
       "source_status": "awaiting_first_clearance_no_leak_evidence_collection",
       "stage_id": "evidence_packet",
-      "stage_order": 2,
+      "stage_order": 3,
       "stage_status": "stage_blocked",
       "total_count": 10
     },
@@ -35,7 +48,7 @@
       "ready_count": 0,
       "source_status": "awaiting_first_clearance_no_leak_evidence_review",
       "stage_id": "evidence_review_gate",
-      "stage_order": 3,
+      "stage_order": 4,
       "stage_status": "stage_blocked",
       "total_count": 10
     },
@@ -48,7 +61,7 @@
       "ready_count": 0,
       "source_status": "awaiting_first_clearance_no_leak_evidence_review",
       "stage_id": "evidence_sync_plan",
-      "stage_order": 4,
+      "stage_order": 5,
       "stage_status": "stage_blocked",
       "total_count": 10
     },
@@ -61,7 +74,7 @@
       "ready_count": 0,
       "source_status": "awaiting_operator_no_leak_values",
       "stage_id": "no_leak_gate",
-      "stage_order": 5,
+      "stage_order": 6,
       "stage_status": "stage_blocked",
       "total_count": 10
     },
@@ -74,7 +87,7 @@
       "ready_count": 0,
       "source_status": "waiting_on_operator_no_leak_fields",
       "stage_id": "promotion_preview",
-      "stage_order": 6,
+      "stage_order": 7,
       "stage_status": "stage_blocked",
       "total_count": 1
     },
@@ -87,32 +100,36 @@
       "ready_count": 0,
       "source_status": "waiting_on_cleared_seed_manifest",
       "stage_id": "identity_intake_sync",
-      "stage_order": 7,
+      "stage_order": 8,
       "stage_status": "stage_blocked",
       "total_count": 15
     }
   ],
   "summary": {
+    "authoritative_chronology_guard_blockers": "prediction_not_before_authoritative_native_date",
+    "authoritative_chronology_guard_native_authority_date": "2003-03-13",
+    "authoritative_chronology_guard_prediction_created_candidate": "2026-02-19",
+    "authoritative_chronology_guard_status": "post_native_prediction_chronology_blocked",
     "benchmark_id": "hist_seed_chignolin",
-    "blocked_stage_count": 6,
+    "blocked_stage_count": 7,
     "claim_boundary": "Local CASP17 first historical seed clearance closure board only. It aggregates existing first-clearance no-leak kit, evidence, review, sync, gate, promotion-preview, and identity-sync status into an ordered operator runway. It does not fill operator values, approve provenance, compute CASP metrics, mutate intake CSVs, push remotes, or submit to CASP.",
     "evidence_packet_status": "awaiting_first_clearance_no_leak_evidence_collection",
     "evidence_review_gate_status": "awaiting_first_clearance_no_leak_evidence_review",
     "evidence_sync_plan_status": "awaiting_first_clearance_no_leak_evidence_review",
-    "first_blocked_stage_id": "evidence_packet",
-    "first_blocked_stage_status": "awaiting_first_clearance_no_leak_evidence_collection",
-    "first_blocker": "operator_value_missing",
+    "first_blocked_stage_id": "authoritative_chronology_guard",
+    "first_blocked_stage_status": "post_native_prediction_chronology_blocked",
+    "first_blocker": "prediction_not_before_authoritative_native_date",
     "first_clearance_closure_board_status": "awaiting_first_clearance_no_leak_closure",
-    "generated_at_local": "2026-06-01T05:01:31+09:00",
+    "generated_at_local": "2026-06-03T00:44:00+09:00",
     "identity_sync_status": "waiting_on_cleared_seed_manifest",
     "input_blockers": "",
-    "next_action": "collect evidence for no_leak_evidence_ref in casp17/historical_seed_first_clearance_no_leak_evidence_packet/hist_chignolin/field_evidence/no_leak_evidence_ref.md",
+    "next_action": "replace with a pre-native blind prediction artifact, or keep this row in a separate post-native retrospective lane with explicit no-template evidence",
     "no_leak_gate_status": "awaiting_operator_no_leak_values",
     "operator_kit_status": "operator_no_leak_intake_ready",
     "packet_type": "casp17_historical_seed_first_clearance_closure_board",
     "promotion_preview_status": "waiting_on_operator_no_leak_fields",
     "ready_stage_count": 1,
-    "stage_count": 7,
+    "stage_count": 8,
     "target_id": "HIST_CHIGNOLIN"
   }
 }

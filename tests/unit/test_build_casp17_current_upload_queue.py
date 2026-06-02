@@ -164,3 +164,9 @@ def test_current_upload_queue_merges_package_deadlines_and_official_targetlist(
     assert by_target["T9004"]["upload_queue_status"] == "blocked_package_preflight"
     assert "package_preflight_not_ready" in by_target["T9004"]["blockers"]
     assert "upload ready/blocked/total: `1/3/4`" in Path(args.out_md).read_text(encoding="utf-8")
+
+
+def test_official_targetlist_csv_normalization_strips_trailing_spaces() -> None:
+    assert mod._normalize_official_csv_text("Target;Description   \nT1;Name   \n\n  \n") == (
+        "Target;Description\nT1;Name\n"
+    )

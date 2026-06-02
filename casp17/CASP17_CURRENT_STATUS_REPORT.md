@@ -1,7 +1,7 @@
 # CASP17 Current Status Report
 
 This report is the GitHub-facing summary for the CASP17 workbench state on
-2026-06-02 KST. The source of truth is `casp17/WORKBENCH.md` and the linked
+2026-06-03 KST. The source of truth is `casp17/WORKBENCH.md` and the linked
 machine-readable `casp17/*_current.json` files.
 
 ## Current Position
@@ -20,20 +20,24 @@ Current headline state:
 - 3D coordinate materialized library: `24` protein folders, `68` object
   folders, `68/68` source/materialized sha256 matches, local symlink mode
 - current submission package preflight: `19/19` ready
-- official upload queue: `10/19` ready, `9/19` blocked
-- upload review packet: `10/10` ready for operator review
-- upload operator decision kit: completion audit pass for `10/0/10`
-  target pass/blocked/total, `4/4` root files, and `10/10/10`
-  intake/summary/per-target rows; awaiting `10` approve/hold/reject decisions,
-  with `10` author-serialization gaps; first target `H2319`
+- official upload queue: `8/19` ready, `11/19` blocked
+- upload review packet: `8/8` ready for operator review
+- upload operator decision kit: completion audit pass for `8/0/8`
+  target pass/blocked/total, `4/4` root files, and `8/8/8`
+  intake/summary/per-target rows; awaiting `8` approve/hold/reject decisions,
+  with `8` author-serialization gaps; first target `H1344`
 - prospective strict-blind escrow: `19/19` ready, native pending, proof `0`
 - escrow external timestamp packet: `19/0/19` timestamp ready/blocked/total,
-  `10/9` upload ready/blocked, `19/19/19` sha256/escrow-md/manifest rows,
+  `8/11` upload ready/blocked, `19/19/19` sha256/escrow-md/manifest rows,
   native/external-timestamp-required `19/19`, proof/author/hygiene `0/0/0/0/0`
 - post-native scoring scaffold: `19/0/19` targets ready/blocked/total,
-  class complex/monomer `16/3`, native pending/present/missing `19/0/19`,
-  metric rows ready/blocked/total `0/162/162`, metric class complex/monomer
-  `144/18`, files dropzone/manifest/chainmap/metriccsv `19/19/19/19`
+  class complex/monomer `16/3`, upload/blocked/timestamp-ready `8/11/19`,
+  native pending/present/missing `19/0/19`, metric rows ready/blocked/total
+  `0/162/162`, metric class complex/monomer `144/18`, files
+  dropzone/manifest/chainmap/metriccsv `19/19/19/19`
+- queue rollover hygiene audit: stale generated folders retained at
+  surfaces pass/stale/blocked/total `0/3/0/3`, active/actual folders `35/73`,
+  and missing/stale folders `0/38`; active manifests remain the source of truth
 - strict-blind source-request operator-fill surface: completion audit pass
   for `17/17` requests and `187/187/187` expected/template/worklist rows;
   the batch kit completion audit also passes at `17/0/17`
@@ -41,6 +45,15 @@ Current headline state:
   expected/batch/per-request rows, `17/17/17` request folder/readme/csv
   files, and `0/0/0` coordinate/proof/author hygiene markers; operator
   values/evidence refs/candidate replacements are still missing at `187/153/77`
+- strict-blind monomer pre-native acquisition board: `0/10/10`
+  ready/acquire/total monomer requests, internal-like pre/post `0/166`,
+  operator fields filled/missing/total `0/110/110`; first request
+  `source_request_001` for `HIST_BBA5`, blocked by `prediction_not_before_native`
+- first historical-seed clearance closure board: `1/7/8`
+  stages ready/blocked/total, now failing closed first on
+  `authoritative_chronology_guard` for `HIST_CHIGNOLIN` with
+  `post_native_prediction_chronology_blocked` and
+  `prediction_not_before_authoritative_native_date`
 - MassiveFold external model-selection lane: `15/15` ready for review-only
   external reranking
 - organic ligand metric batch fill kit completion audit: `7/7` candidate
@@ -69,6 +82,12 @@ expected/batch/per-request rows. This does not close proof: the operator still
 must provide the missing `187` values, `153` evidence refs, and `77`
 candidate-replacement field decisions.
 
+The strict-blind monomer pre-native acquisition board now narrows the first
+monomer bottleneck to a separate operator surface. It has `10` monomer requests,
+but `0` local pre-native candidates are ready, all `166` internal-like candidates
+are post-native blockers, and `110/110` operator fields are still missing. This
+board is a routing and acquisition aid, not proof closure.
+
 The current prospective escrow now has a separate external timestamp packet.
 It packages all `19` escrow rows into
 `casp17/current_escrow_external_timestamp_packet/TIMESTAMP_MANIFEST.csv` with
@@ -89,16 +108,29 @@ sha256 accounting are all present for `19/19` targets. This is still an
 operator-supervised package surface, not an automatic CASP server submission.
 
 The current upload review route is now the immediate P0 path. The upload review
-packet has `10/10` ready rows, and the new operator decision kit turns those
-rows into an approve/hold/reject intake surface. It starts with `H2319`, keeps
-`2/4/4` today/soon/future urgency visible, and its completion audit verifies the
-root files plus per-target decision folders without adding coordinate, proof, or
-portal-submit markers. It remains blocked until an operator records decisions
-and runtime author serialization.
+packet has `8/8` active ready rows after the 2026-06-03 queue rollover, and the
+operator decision kit turns those rows into an approve/hold/reject intake
+surface. It starts with `H1344`, keeps `2/4/2` today/soon/future urgency
+visible, and its completion audit verifies the root files plus per-target
+decision folders without adding coordinate, proof, or portal-submit markers. It
+remains blocked until an operator records decisions and runtime author
+serialization.
+
+The queue rollover hygiene audit now makes the retained rank-stale generated
+folders explicit. It finds `0` missing active folders and `38` stale folders
+across the upload review packet, upload operator decision kit, and post-native
+scoring scaffold. No stale folder is deleted by this audit; cleanup requires a
+separate operator-approved action.
 
 The MassiveFold lane is mature as an external, no-native, review-only model
 selection lane. It can support candidate reranking and model-selection
 calibration, but it must not be counted as internal prediction proof.
+
+The first historical-seed clearance runway now includes the authoritative
+chronology guard as an explicit early blocker. For `HIST_CHIGNOLIN`, the local
+candidate date is not before the authoritative native date, so the route must
+replace the candidate with a pre-native blind prediction artifact or keep the
+row in a post-native retrospective lane rather than competitive proof.
 
 ## What Is Not Yet Proven
 
@@ -112,15 +144,18 @@ Blocked proof surfaces:
 - metric rows ready: `0/440`
 - required files present: `0/480`
 - sidechain-native benchmark: `0/40`
+- strict-blind monomer pre-native acquisition: `0/10` requests ready
 - current prospective proof: `0`, because native structures are pending
 - organic ligand LDDT-PLI and BiSyRMSD evidence: mapped but operator values
   missing
+- first historical-seed clearance: blocked by authoritative chronology for
+  `HIST_CHIGNOLIN`
 
 Acceptable wording:
 
 - "review-quality CASP17 scaffold"
 - "current package preflight ready"
-- "10 current targets are operator upload-review-ready"
+- "8 current targets are operator upload-review-ready as of 2026-06-03 KST"
 - "prospective escrow is ready for future post-native scoring"
 
 Avoid these claims:
@@ -139,7 +174,7 @@ new model-generation branch.
 Immediate operator-fill path:
 
 1. Work `casp17/current_upload_operator_decision_kit/operator_decision_intake.csv`
-   from `H2319` in queue order; set each target to `approve`, `hold`, or
+   from `H1344` in queue order; set each target to `approve`, `hold`, or
    `reject`, and do not treat this as a CASP submission without runtime author
    serialization.
 2. Use the green batch fill kit completion audit as the file-surface gate.
@@ -161,11 +196,14 @@ Competitive floor path:
 
 Strict-blind first-source path:
 
-1. Fill `casp17/strict_blind_source_request_operator_fill_batch_kit/operator_fill_intake_batch.csv`
+1. Start with
+   `casp17/strict_blind_monomer_pre_native_acquisition_board/01_source_request_001_hist_bba5/`
+   and provide a verified pre-native internal prediction source for `HIST_BBA5`.
+2. Fill `casp17/strict_blind_source_request_operator_fill_batch_kit/operator_fill_intake_batch.csv`
    and the linked `17` source-request operator templates.
-2. Attach pre-native prediction artifacts, timestamp evidence, native authority,
+3. Attach pre-native prediction artifacts, timestamp evidence, native authority,
    no-leak evidence, method summaries, and operator clearance.
-3. Rerun fulfillment, source-request sync, internal prediction source gate, and
+4. Rerun fulfillment, source-request sync, internal prediction source gate, and
    first-slot closure.
 
 ## CAPRI Scope

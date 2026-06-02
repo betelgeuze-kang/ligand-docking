@@ -23,6 +23,8 @@ def _args(tmp_path: Path) -> list[str]:
         str(tmp_path / "review.json"),
         "--evidence-sync-plan-json",
         str(tmp_path / "sync.json"),
+        "--authoritative-chronology-audit-json",
+        str(tmp_path / "chronology.json"),
         "--clearance-to-identity-sync-json",
         str(tmp_path / "identity.json"),
         "--out-json",
@@ -113,6 +115,27 @@ def _write_blocked_inputs(tmp_path: Path) -> None:
         },
     )
     _write_json(
+        tmp_path / "chronology.json",
+        {
+            "summary": {
+                "authoritative_chronology_audit_status": "post_native_prediction_chronology_blocked",
+                "post_native_blocked_count": 1,
+                "before_native_candidate_count": 0,
+            },
+            "rows": [
+                {
+                    "target_id": "HIST_CHIGNOLIN",
+                    "benchmark_id": "hist_seed_chignolin",
+                    "chronology_authority_status": "post_native_prediction_chronology_blocked",
+                    "prediction_created_candidate": "2026-02-19",
+                    "native_authority_date": "2003-03-13",
+                    "blockers": "prediction_not_before_authoritative_native_date",
+                    "next_action": "replace with a pre-native blind prediction artifact",
+                }
+            ],
+        },
+    )
+    _write_json(
         tmp_path / "identity.json",
         {
             "summary": {
@@ -138,14 +161,15 @@ def test_first_clearance_closure_board_orders_blocked_operator_runway(tmp_path: 
     assert summary["first_clearance_closure_board_status"] == "awaiting_first_clearance_no_leak_closure"
     assert summary["target_id"] == "HIST_CHIGNOLIN"
     assert summary["benchmark_id"] == "hist_seed_chignolin"
-    assert summary["stage_count"] == 7
+    assert summary["stage_count"] == 8
     assert summary["ready_stage_count"] == 1
-    assert summary["blocked_stage_count"] == 6
-    assert summary["first_blocked_stage_id"] == "evidence_packet"
-    assert summary["first_blocker"] == "operator_value_missing"
+    assert summary["blocked_stage_count"] == 7
+    assert summary["first_blocked_stage_id"] == "authoritative_chronology_guard"
+    assert summary["first_blocker"] == "prediction_not_before_authoritative_native_date"
+    assert summary["authoritative_chronology_guard_status"] == "post_native_prediction_chronology_blocked"
     assert payload["rows"][0]["stage_id"] == "operator_kit"
     assert payload["rows"][0]["stage_status"] == "stage_ready"
-    assert payload["rows"][1]["stage_id"] == "evidence_packet"
+    assert payload["rows"][1]["stage_id"] == "authoritative_chronology_guard"
     assert payload["rows"][1]["stage_status"] == "stage_blocked"
     assert (tmp_path / "CLOSURE.md").is_file()
 
@@ -183,6 +207,27 @@ def test_first_clearance_closure_board_ready_when_all_stages_ready(tmp_path: Pat
         },
     )
     _write_json(
+        tmp_path / "chronology.json",
+        {
+            "summary": {
+                "authoritative_chronology_audit_status": "chronology_candidate_before_native_review",
+                "post_native_blocked_count": 0,
+                "before_native_candidate_count": 1,
+            },
+            "rows": [
+                {
+                    "target_id": "HIST_CHIGNOLIN",
+                    "benchmark_id": "hist_seed_chignolin",
+                    "chronology_authority_status": "chronology_candidate_before_native_review",
+                    "prediction_created_candidate": "2002-01-01",
+                    "native_authority_date": "2003-03-13",
+                    "blockers": "",
+                    "next_action": "collect independent no-leak evidence",
+                }
+            ],
+        },
+    )
+    _write_json(
         tmp_path / "identity.json",
         {"summary": {"seed_to_identity_sync_status": "seed_to_identity_sync_ready_dry_run", "ready_to_sync_count": 1, "waiting_intake_count": 0, "blocked_count": 0, "intake_row_count": 1}},
     )
@@ -192,7 +237,7 @@ def test_first_clearance_closure_board_ready_when_all_stages_ready(tmp_path: Pat
     assert payload["summary"]["first_clearance_closure_board_status"] == (
         "first_clearance_closure_ready_for_identity_sync"
     )
-    assert payload["summary"]["ready_stage_count"] == 7
+    assert payload["summary"]["ready_stage_count"] == 8
     assert payload["summary"]["blocked_stage_count"] == 0
     assert {row["stage_status"] for row in payload["rows"]} == {"stage_ready"}
 

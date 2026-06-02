@@ -123,7 +123,7 @@
     "first_blocked_stage_id": "strict_blind_batch_closure_runway",
     "first_blocker": "internal_prediction_source_gate",
     "first_next_action": "set source_id to an internal pre-native prediction source, not an official archive or MassiveFold pool",
-    "generated_at_local": "2026-06-01T03:36:16+09:00",
+    "generated_at_local": "2026-06-03T00:44:00+09:00",
     "input_blockers": "",
     "metric_surface_ready_row_count": 0,
     "metric_surface_row_count": 440,

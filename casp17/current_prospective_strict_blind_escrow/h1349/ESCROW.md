@@ -4,8 +4,8 @@
 - candidate_pdb: `runs/casp17_predictions_sidechain_repacked_current/H1349TS.pdb`
 - candidate_sha256: `a65d6a6f47de74a751c08101d35f4737620b2b77ea9116e25c5031f1dc0eddc2`
 - sha256_match: `True`
-- upload_queue_status: `upload_ready_future_window`
-- review_md: `casp17/current_upload_review_packet/08_h1349_gp130_antibody_complex/UPLOAD_REVIEW.md`
+- upload_queue_status: `upload_ready_expiring_soon`
+- review_md: `casp17/current_upload_review_packet/06_h1349_gp130_antibody_complex/UPLOAD_REVIEW.md`
 - native_status: `official_native_release_pending`
 - external_timestamp_status: `external_timestamp_required`
 - competitive_proof_eligible: `false`

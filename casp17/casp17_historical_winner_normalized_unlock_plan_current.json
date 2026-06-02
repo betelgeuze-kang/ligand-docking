@@ -4,13 +4,13 @@
       "action_id": "close_first_source_request",
       "action_order": 1,
       "action_status": "unlock_blocked",
-      "blocked_count": 9,
+      "blocked_count": 13,
       "blocker": "prediction_not_before_native",
       "gate": "strict_blind_internal_prediction_source",
       "next_action": "attach a prediction artifact created before the authoritative native release date, with timestamp and no-leak evidence",
       "ready_count": 0,
       "source_artifact": "casp17/casp17_strict_blind_source_request_closure_board_current.json",
-      "total_count": 9
+      "total_count": 13
     },
     {
       "action_id": "close_strict_blind_batch_slots",
@@ -81,7 +81,7 @@
     "first_blocked_gate": "strict_blind_internal_prediction_source",
     "first_blocker": "prediction_not_before_native",
     "first_next_action": "attach a prediction artifact created before the authoritative native release date, with timestamp and no-leak evidence",
-    "generated_at_local": "2026-06-01T20:49:56+09:00",
+    "generated_at_local": "2026-06-03T00:44:00+09:00",
     "historical_winner_normalized_unlock_plan_status": "awaiting_historical_winner_normalized_unlocks",
     "input_blockers": "",
     "metric_surface_ready_row_count": 0,

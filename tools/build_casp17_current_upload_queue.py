@@ -90,13 +90,20 @@ def _clean_description(value: Any) -> str:
     return " ".join(text.split())
 
 
+def _normalize_official_csv_text(text: str) -> str:
+    lines = [line.rstrip() for line in text.splitlines()]
+    while lines and not lines[-1]:
+        lines.pop()
+    return "\n".join(lines) + ("\n" if lines else "")
+
+
 def _fetch_official_csv(args: argparse.Namespace) -> tuple[str, str]:
     source_path = _text(args.official_targetlist_csv)
     if source_path:
         path = _resolve(source_path)
-        return path.read_text(encoding="utf-8"), f"file:{_artifact(path)}"
+        return _normalize_official_csv_text(path.read_text(encoding="utf-8")), f"file:{_artifact(path)}"
     with urllib.request.urlopen(args.official_targetlist_url, timeout=int(args.fetch_timeout_seconds)) as response:
-        text = response.read().decode("utf-8", errors="replace")
+        text = _normalize_official_csv_text(response.read().decode("utf-8", errors="replace"))
     snapshot = _resolve(args.official_targetlist_snapshot_csv)
     snapshot.parent.mkdir(parents=True, exist_ok=True)
     snapshot.write_text(text, encoding="utf-8")

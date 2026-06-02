@@ -90,6 +90,9 @@ DEFAULT_CURRENT_ESCROW_EXTERNAL_TIMESTAMP_PACKET_JSON = (
 DEFAULT_CURRENT_POST_NATIVE_SCORING_SCAFFOLD_JSON = (
     "casp17/casp17_current_post_native_scoring_scaffold_current.json"
 )
+DEFAULT_CURRENT_QUEUE_ROLLOVER_HYGIENE_AUDIT_JSON = (
+    "casp17/casp17_current_queue_rollover_hygiene_audit_current.json"
+)
 DEFAULT_WIN_GAP_CLOSURE_JSON = "runs/casp17_win_gap_closure_packet_current.json"
 DEFAULT_WIN_TIER_GOAL_SCORECARD_JSON = "runs/casp17_win_tier_goal_scorecard_current.json"
 DEFAULT_HISTORICAL_WINNER_NORMALIZED_BANDS_JSON = (
@@ -340,6 +343,9 @@ DEFAULT_STRICT_BLIND_SOURCE_GATE_OPERATOR_PACKET_JSON = (
 )
 DEFAULT_STRICT_BLIND_SOURCE_GATE_SOURCE_REQUEST_PACKET_JSON = (
     "casp17/casp17_strict_blind_source_gate_source_request_packet_current.json"
+)
+DEFAULT_STRICT_BLIND_MONOMER_PRE_NATIVE_ACQUISITION_BOARD_JSON = (
+    "casp17/casp17_strict_blind_monomer_pre_native_acquisition_board_current.json"
 )
 DEFAULT_STRICT_BLIND_SOURCE_REQUEST_RESOLUTION_BOARD_JSON = (
     "casp17/casp17_strict_blind_source_request_resolution_board_current.json"
@@ -753,6 +759,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     current_post_native_scoring_scaffold_payload = _read_json(
         args.current_post_native_scoring_scaffold_json
     )
+    current_queue_rollover_hygiene_audit_payload = _read_json(
+        args.current_queue_rollover_hygiene_audit_json
+    )
     closure_payload = _read_json(args.win_gap_closure_json)
     goal_scorecard_payload = _read_json(args.win_tier_goal_scorecard_json)
     historical_winner_normalized_bands_payload = _read_json(
@@ -999,6 +1008,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     strict_blind_source_gate_source_request_packet_payload = _read_json(
         args.strict_blind_source_gate_source_request_packet_json
+    )
+    strict_blind_monomer_pre_native_acquisition_board_payload = _read_json(
+        args.strict_blind_monomer_pre_native_acquisition_board_json
     )
     strict_blind_source_request_resolution_board_payload = _read_json(
         args.strict_blind_source_request_resolution_board_json
@@ -1290,6 +1302,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     current_post_native_scoring_scaffold_summary = _summary(
         current_post_native_scoring_scaffold_payload
     )
+    current_queue_rollover_hygiene_audit_summary = _summary(
+        current_queue_rollover_hygiene_audit_payload
+    )
     current_submission_gate_status = (
         "current_casp17_submission_gate_ready"
         if _int(current_submission_gate_summary.get("target_row_count"))
@@ -1551,6 +1566,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     strict_blind_source_gate_source_request_packet_summary = _summary(
         strict_blind_source_gate_source_request_packet_payload
+    )
+    strict_blind_monomer_pre_native_acquisition_board_summary = _summary(
+        strict_blind_monomer_pre_native_acquisition_board_payload
     )
     strict_blind_source_request_resolution_board_summary = _summary(
         strict_blind_source_request_resolution_board_payload
@@ -3455,6 +3473,32 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + (_text(current_post_native_scoring_scaffold_summary.get("first_blocked_target_id")) or "-")
                 + "/"
                 + (_text(current_post_native_scoring_scaffold_summary.get("first_blocker")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "current_casp17_queue_rollover_hygiene_audit",
+            "Stale generated folder audit after current CASP17 upload queue rollover",
+            _text(current_queue_rollover_hygiene_audit_summary.get("status")),
+            args.current_queue_rollover_hygiene_audit_json,
+            ready_count=_int(current_queue_rollover_hygiene_audit_summary.get("surface_pass_count")),
+            blocked_count=_int(current_queue_rollover_hygiene_audit_summary.get("surface_blocked_count")),
+            total_count=_int(current_queue_rollover_hygiene_audit_summary.get("surface_count")),
+            next_action=_text(current_queue_rollover_hygiene_audit_summary.get("next_action")),
+            blockers=(
+                "stale:"
+                + str(current_queue_rollover_hygiene_audit_summary.get("surface_stale_count", ""))
+                + ",folders active/actual:"
+                + str(current_queue_rollover_hygiene_audit_summary.get("active_folder_count", ""))
+                + "/"
+                + str(current_queue_rollover_hygiene_audit_summary.get("actual_folder_count", ""))
+                + ",missing/stale:"
+                + str(current_queue_rollover_hygiene_audit_summary.get("missing_active_folder_count", ""))
+                + "/"
+                + str(current_queue_rollover_hygiene_audit_summary.get("stale_extra_folder_count", ""))
+                + ",first:"
+                + (_text(current_queue_rollover_hygiene_audit_summary.get("first_stale_surface_id")) or "-")
+                + "/"
+                + (_text(current_queue_rollover_hygiene_audit_summary.get("first_stale_extra_folder")) or "-")
             ),
         ),
         _artifact_row(
@@ -7755,6 +7799,111 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + (_text(strict_blind_internal_like_source_review_summary.get("first_blocked_target_id")) or "-")
                 + "/"
                 + (_text(strict_blind_internal_like_source_review_summary.get("first_blocker")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "strict_blind_monomer_pre_native_acquisition_board",
+            "Monomer source-request acquisition board for pre-native strict-blind artifacts",
+            _text(
+                strict_blind_monomer_pre_native_acquisition_board_summary.get(
+                    "monomer_pre_native_acquisition_board_status"
+                )
+            ),
+            args.strict_blind_monomer_pre_native_acquisition_board_json,
+            ready_count=_int(
+                strict_blind_monomer_pre_native_acquisition_board_summary.get(
+                    "ready_pre_native_local_candidate_count"
+                )
+            ),
+            blocked_count=_int(
+                strict_blind_monomer_pre_native_acquisition_board_summary.get(
+                    "acquisition_required_count"
+                )
+            ),
+            total_count=_int(
+                strict_blind_monomer_pre_native_acquisition_board_summary.get(
+                    "monomer_request_count"
+                )
+            ),
+            next_action=_text(
+                strict_blind_monomer_pre_native_acquisition_board_summary.get("next_action")
+            ),
+            blockers=(
+                "requests:"
+                + str(
+                    strict_blind_monomer_pre_native_acquisition_board_summary.get(
+                        "ready_pre_native_local_candidate_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_monomer_pre_native_acquisition_board_summary.get(
+                        "acquisition_required_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_monomer_pre_native_acquisition_board_summary.get(
+                        "monomer_request_count", ""
+                    )
+                )
+                + ",internal_like pre/post:"
+                + str(
+                    strict_blind_monomer_pre_native_acquisition_board_summary.get(
+                        "internal_like_pre_native_candidate_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_monomer_pre_native_acquisition_board_summary.get(
+                        "internal_like_post_native_candidate_count", ""
+                    )
+                )
+                + ",fields:"
+                + str(
+                    strict_blind_monomer_pre_native_acquisition_board_summary.get(
+                        "operator_field_filled_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_monomer_pre_native_acquisition_board_summary.get(
+                        "operator_field_missing_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_monomer_pre_native_acquisition_board_summary.get(
+                        "operator_field_count", ""
+                    )
+                )
+                + ",first:"
+                + (
+                    _text(
+                        strict_blind_monomer_pre_native_acquisition_board_summary.get(
+                            "first_request_id"
+                        )
+                    )
+                    or "-"
+                )
+                + "/"
+                + (
+                    _text(
+                        strict_blind_monomer_pre_native_acquisition_board_summary.get(
+                            "first_target_id"
+                        )
+                    )
+                    or "-"
+                )
+                + "/"
+                + (
+                    _text(
+                        strict_blind_monomer_pre_native_acquisition_board_summary.get(
+                            "first_blocker"
+                        )
+                    )
+                    or "-"
+                )
             ),
         ),
         _artifact_row(
@@ -14164,6 +14313,39 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "current_post_native_scoring_scaffold_dir": _text(
             current_post_native_scoring_scaffold_summary.get("scaffold_dir")
         ),
+        "current_queue_rollover_hygiene_audit_status": _text(
+            current_queue_rollover_hygiene_audit_summary.get("status")
+        ),
+        "current_queue_rollover_hygiene_audit_surface_count": _int(
+            current_queue_rollover_hygiene_audit_summary.get("surface_count")
+        ),
+        "current_queue_rollover_hygiene_audit_surface_pass_count": _int(
+            current_queue_rollover_hygiene_audit_summary.get("surface_pass_count")
+        ),
+        "current_queue_rollover_hygiene_audit_surface_stale_count": _int(
+            current_queue_rollover_hygiene_audit_summary.get("surface_stale_count")
+        ),
+        "current_queue_rollover_hygiene_audit_surface_blocked_count": _int(
+            current_queue_rollover_hygiene_audit_summary.get("surface_blocked_count")
+        ),
+        "current_queue_rollover_hygiene_audit_active_folder_count": _int(
+            current_queue_rollover_hygiene_audit_summary.get("active_folder_count")
+        ),
+        "current_queue_rollover_hygiene_audit_actual_folder_count": _int(
+            current_queue_rollover_hygiene_audit_summary.get("actual_folder_count")
+        ),
+        "current_queue_rollover_hygiene_audit_missing_active_folder_count": _int(
+            current_queue_rollover_hygiene_audit_summary.get("missing_active_folder_count")
+        ),
+        "current_queue_rollover_hygiene_audit_stale_extra_folder_count": _int(
+            current_queue_rollover_hygiene_audit_summary.get("stale_extra_folder_count")
+        ),
+        "current_queue_rollover_hygiene_audit_first_stale_surface_id": _text(
+            current_queue_rollover_hygiene_audit_summary.get("first_stale_surface_id")
+        ),
+        "current_queue_rollover_hygiene_audit_first_stale_extra_folder": _text(
+            current_queue_rollover_hygiene_audit_summary.get("first_stale_extra_folder")
+        ),
         "benchmark_rows_ready_count": benchmark_rows_ready,
         "benchmark_rows_total": benchmark_rows_total,
         "win_tier_goal_scorecard_status": _text(goal_scorecard_summary.get("scorecard_status")),
@@ -18731,6 +18913,58 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "strict_blind_internal_like_source_review_first_blocker": _text(
             strict_blind_internal_like_source_review_summary.get("first_blocker")
         ),
+        "strict_blind_monomer_pre_native_acquisition_board_status": _text(
+            strict_blind_monomer_pre_native_acquisition_board_summary.get(
+                "monomer_pre_native_acquisition_board_status"
+            )
+        ),
+        "strict_blind_monomer_pre_native_acquisition_board_monomer_request_count": _int(
+            strict_blind_monomer_pre_native_acquisition_board_summary.get("monomer_request_count")
+        ),
+        "strict_blind_monomer_pre_native_acquisition_board_ready_count": _int(
+            strict_blind_monomer_pre_native_acquisition_board_summary.get(
+                "ready_pre_native_local_candidate_count"
+            )
+        ),
+        "strict_blind_monomer_pre_native_acquisition_board_acquisition_required_count": _int(
+            strict_blind_monomer_pre_native_acquisition_board_summary.get("acquisition_required_count")
+        ),
+        "strict_blind_monomer_pre_native_acquisition_board_internal_like_pre_count": _int(
+            strict_blind_monomer_pre_native_acquisition_board_summary.get(
+                "internal_like_pre_native_candidate_count"
+            )
+        ),
+        "strict_blind_monomer_pre_native_acquisition_board_internal_like_post_count": _int(
+            strict_blind_monomer_pre_native_acquisition_board_summary.get(
+                "internal_like_post_native_candidate_count"
+            )
+        ),
+        "strict_blind_monomer_pre_native_acquisition_board_operator_field_count": _int(
+            strict_blind_monomer_pre_native_acquisition_board_summary.get("operator_field_count")
+        ),
+        "strict_blind_monomer_pre_native_acquisition_board_operator_filled_count": _int(
+            strict_blind_monomer_pre_native_acquisition_board_summary.get("operator_field_filled_count")
+        ),
+        "strict_blind_monomer_pre_native_acquisition_board_operator_missing_count": _int(
+            strict_blind_monomer_pre_native_acquisition_board_summary.get("operator_field_missing_count")
+        ),
+        "strict_blind_monomer_pre_native_acquisition_board_first_request_id": _text(
+            strict_blind_monomer_pre_native_acquisition_board_summary.get("first_request_id")
+        ),
+        "strict_blind_monomer_pre_native_acquisition_board_first_target_id": _text(
+            strict_blind_monomer_pre_native_acquisition_board_summary.get("first_target_id")
+        ),
+        "strict_blind_monomer_pre_native_acquisition_board_first_blocker": _text(
+            strict_blind_monomer_pre_native_acquisition_board_summary.get("first_blocker")
+        ),
+        "strict_blind_monomer_pre_native_acquisition_board_dropzone": _text(
+            strict_blind_monomer_pre_native_acquisition_board_summary.get(
+                "first_slot_prediction_dropzone"
+            )
+        ),
+        "strict_blind_monomer_pre_native_acquisition_board_dir": _text(
+            strict_blind_monomer_pre_native_acquisition_board_summary.get("board_dir")
+        ),
         "strict_blind_internal_prediction_source_gate_status": _text(
             strict_blind_internal_prediction_source_gate_summary.get("internal_prediction_source_gate_status")
         ),
@@ -23049,6 +23283,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- current CASP17 prospective strict-blind escrow: `{summary['current_prospective_strict_blind_escrow_status'] or '-'}` escrow ready/blocked/total `{summary['current_prospective_strict_blind_escrow_ready_count']}/{summary['current_prospective_strict_blind_escrow_blocked_count']}/{summary['current_prospective_strict_blind_escrow_target_count']}` upload ready/blocked `{summary['current_prospective_strict_blind_escrow_upload_ready_count']}/{summary['current_prospective_strict_blind_escrow_upload_blocked_count']}` sha/review/native/ext-ts `{summary['current_prospective_strict_blind_escrow_sha256_match_count']}/{summary['current_prospective_strict_blind_escrow_review_link_count']}/{summary['current_prospective_strict_blind_escrow_native_pending_count']}/{summary['current_prospective_strict_blind_escrow_external_timestamp_required_count']}` proof `{summary['current_prospective_strict_blind_escrow_competitive_proof_eligible_count']}` author-serialized `{summary['current_prospective_strict_blind_escrow_author_serialized_count']}` first upload/blocked `{summary['current_prospective_strict_blind_escrow_first_upload_ready_target_id'] or '-'}`/`{summary['current_prospective_strict_blind_escrow_first_upload_blocked_target_id'] or '-'}` manifest `{summary['current_prospective_strict_blind_escrow_manifest_signature_sha256'] or '-'}`",
         f"- current CASP17 escrow external timestamp packet: `{summary['current_escrow_external_timestamp_packet_status'] or '-'}` escrow `{summary['current_escrow_external_timestamp_packet_prospective_escrow_status'] or '-'}` timestamp ready/blocked/total `{summary['current_escrow_external_timestamp_packet_timestamp_ready_count']}/{summary['current_escrow_external_timestamp_packet_timestamp_blocked_count']}/{summary['current_escrow_external_timestamp_packet_target_count']}` upload ready/blocked `{summary['current_escrow_external_timestamp_packet_upload_ready_count']}/{summary['current_escrow_external_timestamp_packet_upload_blocked_count']}` urgency today/soon/future `{summary['current_escrow_external_timestamp_packet_urgency_today_count']}/{summary['current_escrow_external_timestamp_packet_urgency_soon_count']}/{summary['current_escrow_external_timestamp_packet_urgency_future_count']}` sha/escrow-md/manifest `{summary['current_escrow_external_timestamp_packet_sha256_match_count']}/{summary['current_escrow_external_timestamp_packet_escrow_md_present_count']}/{summary['current_escrow_external_timestamp_packet_timestamp_manifest_row_count']}` native/ext-ts `{summary['current_escrow_external_timestamp_packet_native_pending_count']}/{summary['current_escrow_external_timestamp_packet_external_timestamp_required_count']}` proof/author/hygiene `{summary['current_escrow_external_timestamp_packet_competitive_proof_eligible_count']}/{summary['current_escrow_external_timestamp_packet_author_serialized_count']}/{summary['current_escrow_external_timestamp_packet_coordinate_copy_count']}/{summary['current_escrow_external_timestamp_packet_proof_marker_count']}/{summary['current_escrow_external_timestamp_packet_portal_submit_marker_count']}` first `{summary['current_escrow_external_timestamp_packet_first_ready_target_id'] or '-'}`/`{summary['current_escrow_external_timestamp_packet_first_blocked_target_id'] or '-'}` `{summary['current_escrow_external_timestamp_packet_first_blocker'] or '-'}` manifest `{summary['current_escrow_external_timestamp_packet_manifest_signature_sha256'] or '-'}` timestamp `{summary['current_escrow_external_timestamp_packet_timestamp_manifest_csv'] or '-'}`",
         f"- current CASP17 post-native scoring scaffold: `{summary['current_post_native_scoring_scaffold_status'] or '-'}` escrow/timestamp `{summary['current_post_native_scoring_scaffold_prospective_escrow_status'] or '-'}` `{summary['current_post_native_scoring_scaffold_timestamp_packet_status'] or '-'}` targets ready/blocked/total `{summary['current_post_native_scoring_scaffold_target_ready_count']}/{summary['current_post_native_scoring_scaffold_target_blocked_count']}/{summary['current_post_native_scoring_scaffold_target_count']}` class complex/monomer `{summary['current_post_native_scoring_scaffold_complex_target_count']}/{summary['current_post_native_scoring_scaffold_monomer_target_count']}` upload/timestamp `{summary['current_post_native_scoring_scaffold_upload_ready_count']}/{summary['current_post_native_scoring_scaffold_upload_blocked_count']}/{summary['current_post_native_scoring_scaffold_timestamp_ready_count']}` native pending/present/missing `{summary['current_post_native_scoring_scaffold_native_pending_count']}/{summary['current_post_native_scoring_scaffold_native_file_present_count']}/{summary['current_post_native_scoring_scaffold_native_file_missing_count']}` metrics ready/blocked/total `{summary['current_post_native_scoring_scaffold_metric_ready_count']}/{summary['current_post_native_scoring_scaffold_metric_blocked_count']}/{summary['current_post_native_scoring_scaffold_metric_row_count']}` metric class complex/monomer `{summary['current_post_native_scoring_scaffold_complex_metric_row_count']}/{summary['current_post_native_scoring_scaffold_monomer_metric_row_count']}` files dropzone/manifest/chainmap/metriccsv `{summary['current_post_native_scoring_scaffold_dropzone_count']}/{summary['current_post_native_scoring_scaffold_native_input_manifest_count']}/{summary['current_post_native_scoring_scaffold_chain_mapping_template_count']}/{summary['current_post_native_scoring_scaffold_metric_requirements_csv_count']}` proof/hygiene `{summary['current_post_native_scoring_scaffold_competitive_proof_eligible_count']}/{summary['current_post_native_scoring_scaffold_coordinate_copy_count']}/{summary['current_post_native_scoring_scaffold_proof_marker_count']}/{summary['current_post_native_scoring_scaffold_portal_submit_marker_count']}` first `{summary['current_post_native_scoring_scaffold_first_ready_target_id'] or '-'}`/`{summary['current_post_native_scoring_scaffold_first_blocked_target_id'] or '-'}` `{summary['current_post_native_scoring_scaffold_first_blocker'] or '-'}` metric rows `{summary['current_post_native_scoring_scaffold_metric_rows_csv'] or '-'}` dir `{summary['current_post_native_scoring_scaffold_dir'] or '-'}`",
+        f"- current CASP17 queue rollover hygiene audit: `{summary['current_queue_rollover_hygiene_audit_status'] or '-'}` surfaces pass/stale/blocked/total `{summary['current_queue_rollover_hygiene_audit_surface_pass_count']}/{summary['current_queue_rollover_hygiene_audit_surface_stale_count']}/{summary['current_queue_rollover_hygiene_audit_surface_blocked_count']}/{summary['current_queue_rollover_hygiene_audit_surface_count']}` folders active/actual `{summary['current_queue_rollover_hygiene_audit_active_folder_count']}/{summary['current_queue_rollover_hygiene_audit_actual_folder_count']}` missing/stale `{summary['current_queue_rollover_hygiene_audit_missing_active_folder_count']}/{summary['current_queue_rollover_hygiene_audit_stale_extra_folder_count']}` first stale `{summary['current_queue_rollover_hygiene_audit_first_stale_surface_id'] or '-'}` `{summary['current_queue_rollover_hygiene_audit_first_stale_extra_folder'] or '-'}`",
         f"- benchmark rows ready/total: `{summary['benchmark_rows_ready_count']}/{summary['benchmark_rows_total']}`",
         f"- win-tier goal scorecard: `{summary['win_tier_goal_scorecard_status'] or '-'}` pass/partial/blocked `{summary['win_tier_goal_scorecard_pass_count']}/{summary['win_tier_goal_scorecard_partial_count']}/{summary['win_tier_goal_scorecard_blocked_count']}` first blocked `{summary['win_tier_goal_scorecard_first_blocked_gate'] or '-'}`",
         f"- historical winner-normalized bands: `{summary['historical_winner_normalized_bands_status'] or '-'}` top5/winner-proximity/blocked/total `{summary['historical_winner_normalized_bands_top5_or_better_count']}/{summary['historical_winner_normalized_bands_winner_proximity_count']}/{summary['historical_winner_normalized_bands_blocked_band_count']}/{summary['historical_winner_normalized_bands_band_count']}` strict slots `{summary['historical_winner_normalized_bands_strict_ready_slot_count']}/{summary['historical_winner_normalized_bands_strict_slot_count']}` metric rows `{summary['historical_winner_normalized_bands_metric_surface_ready_row_count']}/{summary['historical_winner_normalized_bands_metric_surface_row_count']}` official archive proof `{summary['historical_winner_normalized_bands_official_archive_candidate_count']}/{summary['historical_winner_normalized_bands_official_archive_proof_eligible_count']}` first `{summary['historical_winner_normalized_bands_first_blocked_band'] or '-'}` `{summary['historical_winner_normalized_bands_first_blocker'] or '-'}`",
@@ -23146,6 +23381,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- strict-blind internal candidate filesystem sweep: `{summary['strict_blind_internal_candidate_filesystem_sweep_status'] or '-'}` scan `{summary['strict_blind_internal_candidate_filesystem_sweep_scan_root'] or '-'}` files/atom-like `{summary['strict_blind_internal_candidate_filesystem_sweep_file_count']}/{summary['strict_blind_internal_candidate_filesystem_sweep_atom_like_count']}` verified/unknown `{summary['strict_blind_internal_candidate_filesystem_sweep_verified_count']}/{summary['strict_blind_internal_candidate_filesystem_sweep_unknown_count']}` current/MassiveFold/official/native/top5/dropzone `{summary['strict_blind_internal_candidate_filesystem_sweep_current_count']}/{summary['strict_blind_internal_candidate_filesystem_sweep_massivefold_count']}/{summary['strict_blind_internal_candidate_filesystem_sweep_official_count']}/{summary['strict_blind_internal_candidate_filesystem_sweep_native_count']}/{summary['strict_blind_internal_candidate_filesystem_sweep_top5_count']}/{summary['strict_blind_internal_candidate_filesystem_sweep_dropzone_count']}` first unknown `{summary['strict_blind_internal_candidate_filesystem_sweep_first_unknown'] or '-'}`",
         f"- strict-blind unknown candidate triage: `{summary['strict_blind_unknown_candidate_triage_status'] or '-'}` unknown/sweep `{summary['strict_blind_unknown_candidate_triage_unknown_count']}/{summary['strict_blind_unknown_candidate_triage_sweep_unknown_count']}` promotion/internal-like `{summary['strict_blind_unknown_candidate_triage_promotion_ready_count']}/{summary['strict_blind_unknown_candidate_triage_internal_like_count']}` public/run/archive/data/tmp/other `{summary['strict_blind_unknown_candidate_triage_public_count']}/{summary['strict_blind_unknown_candidate_triage_run_review_count']}/{summary['strict_blind_unknown_candidate_triage_archive_count']}/{summary['strict_blind_unknown_candidate_triage_data_other_count']}/{summary['strict_blind_unknown_candidate_triage_tmp_misc_count']}/{summary['strict_blind_unknown_candidate_triage_other_count']}` first internal `{summary['strict_blind_unknown_candidate_triage_first_internal'] or '-'}`",
         f"- strict-blind internal-like source review: `{summary['strict_blind_internal_like_source_review_status'] or '-'}` candidates/triage `{summary['strict_blind_internal_like_source_review_candidate_count']}/{summary['strict_blind_internal_like_source_review_triage_internal_like_count']}` match `{summary['strict_blind_internal_like_source_review_triage_count_match'] or '-'}` mapped/pre/post/same/missing/unmapped `{summary['strict_blind_internal_like_source_review_mapped_candidate_count']}/{summary['strict_blind_internal_like_source_review_pre_native_candidate_count']}/{summary['strict_blind_internal_like_source_review_post_native_blocked_count']}/{summary['strict_blind_internal_like_source_review_same_day_timestamp_required_count']}/{summary['strict_blind_internal_like_source_review_prediction_date_missing_count']}/{summary['strict_blind_internal_like_source_review_unmapped_candidate_count']}` targets/all-post/pre-targets `{summary['strict_blind_internal_like_source_review_target_count']}/{summary['strict_blind_internal_like_source_review_target_all_post_native_count']}/{summary['strict_blind_internal_like_source_review_target_pre_native_candidate_count']}` range `{summary['strict_blind_internal_like_source_review_earliest_prediction_date'] or '-'}`-`{summary['strict_blind_internal_like_source_review_latest_prediction_date'] or '-'}` first `{summary['strict_blind_internal_like_source_review_first_blocked_target_id'] or '-'}` `{summary['strict_blind_internal_like_source_review_first_blocker'] or '-'}`",
+        f"- strict-blind monomer pre-native acquisition board: `{summary['strict_blind_monomer_pre_native_acquisition_board_status'] or '-'}` monomer requests ready/acquire/total `{summary['strict_blind_monomer_pre_native_acquisition_board_ready_count']}/{summary['strict_blind_monomer_pre_native_acquisition_board_acquisition_required_count']}/{summary['strict_blind_monomer_pre_native_acquisition_board_monomer_request_count']}` internal-like pre/post `{summary['strict_blind_monomer_pre_native_acquisition_board_internal_like_pre_count']}/{summary['strict_blind_monomer_pre_native_acquisition_board_internal_like_post_count']}` operator fields filled/missing/total `{summary['strict_blind_monomer_pre_native_acquisition_board_operator_filled_count']}/{summary['strict_blind_monomer_pre_native_acquisition_board_operator_missing_count']}/{summary['strict_blind_monomer_pre_native_acquisition_board_operator_field_count']}` first `{summary['strict_blind_monomer_pre_native_acquisition_board_first_request_id'] or '-'}` `{summary['strict_blind_monomer_pre_native_acquisition_board_first_target_id'] or '-'}` `{summary['strict_blind_monomer_pre_native_acquisition_board_first_blocker'] or '-'}` dropzone `{summary['strict_blind_monomer_pre_native_acquisition_board_dropzone'] or '-'}` dir `{summary['strict_blind_monomer_pre_native_acquisition_board_dir'] or '-'}`",
         f"- strict-blind internal prediction source gate: `{summary['strict_blind_internal_prediction_source_gate_status'] or '-'}` required `{summary['strict_blind_internal_prediction_source_gate_required_benchmark_id'] or '-'}` `{summary['strict_blind_internal_prediction_source_gate_required_target_id'] or '-'}` `{summary['strict_blind_internal_prediction_source_gate_required_scope'] or '-'}` manifest rows `{summary['strict_blind_internal_prediction_source_gate_manifest_row_count']}` checks pass/blocked/total `{summary['strict_blind_internal_prediction_source_gate_pass_count']}/{summary['strict_blind_internal_prediction_source_gate_blocked_count']}/{summary['strict_blind_internal_prediction_source_gate_check_count']}` source `{summary['strict_blind_internal_prediction_source_gate_source_id'] or '-'}` prediction/dropzone `{summary['strict_blind_internal_prediction_source_gate_prediction_pdb'] or '-'}` `{summary['strict_blind_internal_prediction_source_gate_prediction_dropzone'] or '-'}` first `{summary['strict_blind_internal_prediction_source_gate_first_blocked_check'] or '-'}` `{summary['strict_blind_internal_prediction_source_gate_first_blocker'] or '-'}` manifest `{summary['strict_blind_internal_prediction_source_gate_manifest_csv'] or '-'}`",
         f"- strict-blind source gate field board: `{summary['strict_blind_source_gate_field_board_status'] or '-'}` required `{summary['strict_blind_source_gate_field_board_required_benchmark_id'] or '-'}` `{summary['strict_blind_source_gate_field_board_required_target_id'] or '-'}` `{summary['strict_blind_source_gate_field_board_required_scope'] or '-'}` actions manifest/file/manifest-file/total `{summary['strict_blind_source_gate_field_board_manifest_value_action_count']}/{summary['strict_blind_source_gate_field_board_file_action_count']}/{summary['strict_blind_source_gate_field_board_manifest_file_action_count']}/{summary['strict_blind_source_gate_field_board_field_action_count']}` blocked checks covered `{summary['strict_blind_source_gate_field_board_blocked_check_covered_count']}` first `{summary['strict_blind_source_gate_field_board_first_field_key'] or '-'}` `{summary['strict_blind_source_gate_field_board_first_blockers'] or '-'}` folder `{summary['strict_blind_source_gate_field_board_dir'] or '-'}`",
         f"- strict-blind source gate operator packet: `{summary['strict_blind_source_gate_operator_packet_status'] or '-'}` required `{summary['strict_blind_source_gate_operator_packet_required_benchmark_id'] or '-'}` `{summary['strict_blind_source_gate_operator_packet_required_target_id'] or '-'}` `{summary['strict_blind_source_gate_operator_packet_required_scope'] or '-'}` operator ready/awaiting/total `{summary['strict_blind_source_gate_operator_packet_operator_ready_count']}/{summary['strict_blind_source_gate_operator_packet_operator_awaiting_count']}/{summary['strict_blind_source_gate_operator_packet_field_action_count']}` patch ready/awaiting `{summary['strict_blind_source_gate_operator_packet_patch_ready_count']}/{summary['strict_blind_source_gate_operator_packet_patch_awaiting_count']}` actions manifest/file/derived `{summary['strict_blind_source_gate_operator_packet_manifest_patch_count']}/{summary['strict_blind_source_gate_operator_packet_file_copy_count']}/{summary['strict_blind_source_gate_operator_packet_derived_check_count']}` first `{summary['strict_blind_source_gate_operator_packet_first_field_key'] or '-'}` `{summary['strict_blind_source_gate_operator_packet_first_operator_status'] or '-'}` csv `{summary['strict_blind_source_gate_operator_packet_operator_csv'] or '-'}` folder `{summary['strict_blind_source_gate_operator_packet_dir'] or '-'}`",
@@ -23387,6 +23623,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--current-post-native-scoring-scaffold-json",
         default=DEFAULT_CURRENT_POST_NATIVE_SCORING_SCAFFOLD_JSON,
+    )
+    parser.add_argument(
+        "--current-queue-rollover-hygiene-audit-json",
+        default=DEFAULT_CURRENT_QUEUE_ROLLOVER_HYGIENE_AUDIT_JSON,
     )
     parser.add_argument("--win-gap-closure-json", default=DEFAULT_WIN_GAP_CLOSURE_JSON)
     parser.add_argument("--win-tier-goal-scorecard-json", default=DEFAULT_WIN_TIER_GOAL_SCORECARD_JSON)
@@ -23720,6 +23960,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--strict-blind-source-gate-source-request-packet-json",
         default=DEFAULT_STRICT_BLIND_SOURCE_GATE_SOURCE_REQUEST_PACKET_JSON,
+    )
+    parser.add_argument(
+        "--strict-blind-monomer-pre-native-acquisition-board-json",
+        default=DEFAULT_STRICT_BLIND_MONOMER_PRE_NATIVE_ACQUISITION_BOARD_JSON,
     )
     parser.add_argument(
         "--strict-blind-source-request-resolution-board-json",
