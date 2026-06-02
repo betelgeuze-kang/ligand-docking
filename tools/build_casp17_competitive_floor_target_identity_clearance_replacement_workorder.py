@@ -36,7 +36,9 @@ WORKORDER_COLUMNS = [
     "ts_prediction_pdb",
     "raw_validation_json",
     "scorecard_json",
+    "native_dropzone_folder",
     "native_dropzone_pdb",
+    "native_dropzone_readme",
     "provenance_template_csv",
     "manifest_stub_csv",
     "identity_discovery_blockers",
@@ -288,6 +290,28 @@ def _write_native_request(folder: Path, row: dict[str, Any], native_dropzone: Pa
     return _artifact(path)
 
 
+def _write_native_dropzone_readme(folder: Path, row: dict[str, Any], native_dropzone: Path) -> str:
+    lines = [
+        f"# {row['target_id']} Replacement Native Dropzone",
+        "",
+        f"- replaces: `{row['replace_target_id']}`",
+        f"- expected_native_pdb: `{_artifact(native_dropzone)}`",
+        f"- workorder_status: `{row['workorder_status']}`",
+        f"- prediction_pdb: `{row['prediction_pdb'] or row['ts_prediction_pdb'] or '-'}`",
+        f"- scorecard_json: `{row['scorecard_json'] or '-'}`",
+        "",
+        "Place only an independently cleared native protein PDB at the expected filename.",
+        "Do not place prediction models, public templates, current CASP17 unreleased native material, or evidence request templates here.",
+        "After the native PDB is placed, complete provenance_template.csv and rerun replacement workorder audit.",
+        "",
+        "This dropzone README is tracked so the empty native directory survives GitHub checkout without storing coordinates.",
+        "",
+    ]
+    path = folder / "README.md"
+    path.write_text("\n".join(lines), encoding="utf-8")
+    return _artifact(path)
+
+
 def _source_rows_by_replace(rows: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
@@ -320,7 +344,9 @@ def _base_workorder_row(source: dict[str, Any], *, status: str, blockers: list[s
         "ts_prediction_pdb": _text(source.get("ts_prediction_pdb")),
         "raw_validation_json": _text(source.get("raw_validation_json")),
         "scorecard_json": _text(source.get("scorecard_json")),
+        "native_dropzone_folder": "",
         "native_dropzone_pdb": "",
+        "native_dropzone_readme": "",
         "provenance_template_csv": "",
         "manifest_stub_csv": "",
         "identity_discovery_blockers": ",".join(blockers),
@@ -346,6 +372,7 @@ def _materialize_selected_row(args: argparse.Namespace, row: dict[str, Any]) -> 
     provenance_template = folder / "provenance_template.csv"
     manifest_stub = folder / "manifest_stub.csv"
     row["workorder_folder"] = _artifact(folder)
+    row["native_dropzone_folder"] = _artifact(native_dropzone.parent)
     row["native_dropzone_pdb"] = _artifact(native_dropzone)
     row["provenance_template_csv"] = _artifact(provenance_template)
     row["manifest_stub_csv"] = _artifact(manifest_stub)
@@ -363,6 +390,7 @@ def _materialize_selected_row(args: argparse.Namespace, row: dict[str, Any]) -> 
     )
     row["readme_path"] = _write_readme(folder, row)
     row["native_request_md"] = _write_native_request(folder, row, native_dropzone)
+    row["native_dropzone_readme"] = _write_native_dropzone_readme(native_dropzone.parent, row, native_dropzone)
     return row
 
 
@@ -450,6 +478,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "duplicate_candidate_blocked_count": statuses["blocked_duplicate_candidate_assignment"],
         "no_ready_candidate_blocked_count": statuses["blocked_no_ready_replacement_candidate"],
         "native_dropzone_count": selected_count,
+        "native_dropzone_readme_count": sum(1 for row in rows if row.get("native_dropzone_readme")),
         "provenance_template_count": selected_count,
         "manifest_stub_count": selected_count,
         "provenance_template_created_count": sum(
@@ -485,6 +514,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- replacement targets/workorder rows: `{summary['replacement_target_count']}/{summary['workorder_row_count']}`",
         f"- selected/duplicate/no-ready: `{summary['selected_workorder_count']}/{summary['duplicate_candidate_blocked_count']}/{summary['no_ready_candidate_blocked_count']}`",
         f"- dropzones/templates/stubs: `{summary['native_dropzone_count']}/{summary['provenance_template_count']}/{summary['manifest_stub_count']}`",
+        f"- native dropzone readmes: `{summary['native_dropzone_readme_count']}`",
         f"- first open: `{summary['first_open_replace_target_id'] or '-'}` -> `{summary['first_open_candidate_target_id'] or '-'}` `{summary['first_open_status'] or '-'}`",
         f"- first next action: {summary['first_open_next_action'] or '-'}",
         "",

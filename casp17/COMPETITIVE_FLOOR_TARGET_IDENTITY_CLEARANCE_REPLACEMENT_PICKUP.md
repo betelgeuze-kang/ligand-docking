@@ -1,6 +1,6 @@
 # CASP17 Replacement Clearance Pickup Packet
 
-- generated: `2026-05-28T01:02:26+09:00`
+- generated: `2026-06-02T21:13:23+09:00`
 - replacement_pickup_status: `open_actions`
 - selected/ready/awaiting/blocked-selection: `1/0/1/1`
 - native missing: `1`

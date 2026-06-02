@@ -28,7 +28,9 @@ WORKORDER_COLUMNS = [
     "workorder_folder",
     "prediction_pdb",
     "ts_prediction_pdb",
+    "native_dropzone_folder",
     "native_dropzone_pdb",
+    "native_dropzone_readme",
     "provenance_template_csv",
     "manifest_stub_csv",
     "identity_discovery_blockers",
@@ -283,6 +285,26 @@ def _write_native_request(folder: Path, row: dict[str, Any], native_dropzone: Pa
     return _artifact(path)
 
 
+def _write_native_dropzone_readme(folder: Path, row: dict[str, Any], native_dropzone: Path) -> str:
+    lines = [
+        f"# {row['target_id']} Native Dropzone",
+        "",
+        f"- expected_native_pdb: `{_artifact(native_dropzone)}`",
+        f"- current_workorder_status: `{row['workorder_status']}`",
+        f"- prediction_pdb: `{row['prediction_pdb'] or row['ts_prediction_pdb'] or '-'}`",
+        "",
+        "Place only an independently cleared native protein PDB at the expected filename.",
+        "Do not place prediction models, public templates, current CASP17 unreleased native material, or evidence request templates here.",
+        "After the native PDB is placed, complete provenance_template.csv and rerun the clearance cycle.",
+        "",
+        "This dropzone README is tracked so the empty native directory survives GitHub checkout without storing coordinates.",
+        "",
+    ]
+    path = folder / "README.md"
+    path.write_text("\n".join(lines), encoding="utf-8")
+    return _artifact(path)
+
+
 def _materialize_row(args: argparse.Namespace, row: dict[str, Any], rank: int) -> dict[str, Any]:
     target_id = _text(row.get("target_id")).upper()
     folder = _folder_for_row(args, row)
@@ -313,6 +335,7 @@ def _materialize_row(args: argparse.Namespace, row: dict[str, Any], rank: int) -
         "workorder_folder": _artifact(folder),
         "prediction_pdb": _text(row.get("prediction_pdb")),
         "ts_prediction_pdb": _text(row.get("ts_prediction_pdb")),
+        "native_dropzone_folder": _artifact(native_dropzone.parent),
         "native_dropzone_pdb": _artifact(native_dropzone),
         "provenance_template_csv": _artifact(provenance_template),
         "manifest_stub_csv": _artifact(manifest_stub),
@@ -327,6 +350,9 @@ def _materialize_row(args: argparse.Namespace, row: dict[str, Any], rank: int) -
     }
     workorder_row["readme_path"] = _write_readme(folder, workorder_row, workorder_row)
     workorder_row["native_request_md"] = _write_native_request(folder, workorder_row, native_dropzone)
+    workorder_row["native_dropzone_readme"] = _write_native_dropzone_readme(
+        native_dropzone.parent, workorder_row, native_dropzone
+    )
     return workorder_row
 
 
@@ -364,6 +390,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "native_required_count": by_status["native_required"],
         "provenance_required_count": by_status["provenance_required"],
         "native_dropzone_count": len(workorder_rows),
+        "native_dropzone_readme_count": sum(1 for row in workorder_rows if row.get("native_dropzone_readme")),
         "provenance_template_count": len(workorder_rows),
         "manifest_stub_count": len(workorder_rows),
         "force_refresh_templates": bool(args.force_refresh_templates),
@@ -402,6 +429,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- workorders: `{summary['workorder_count']}`",
         f"- ready/native+provenance/native/provenance: `{summary['ready_for_manifest_stub_count']}/{summary['native_and_provenance_required_count']}/{summary['native_required_count']}/{summary['provenance_required_count']}`",
         f"- dropzones/templates/stubs: `{summary['native_dropzone_count']}/{summary['provenance_template_count']}/{summary['manifest_stub_count']}`",
+        f"- native dropzone readmes: `{summary['native_dropzone_readme_count']}`",
         f"- template mode force_refresh: `{summary['force_refresh_templates']}`",
         f"- provenance templates created/preserved/refreshed: `{summary['provenance_template_created_count']}/{summary['provenance_template_preserved_count']}/{summary['provenance_template_refreshed_count']}`",
         f"- manifest stubs created/preserved/refreshed: `{summary['manifest_stub_created_count']}/{summary['manifest_stub_preserved_count']}/{summary['manifest_stub_refreshed_count']}`",
@@ -410,17 +438,18 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         "## Workorders",
         "",
-        "| rank | target | status | folder | native dropzone | provenance template | manifest stub | next action |",
-        "| ---: | --- | --- | --- | --- | --- | --- | --- |",
+        "| rank | target | status | folder | native folder | native dropzone | provenance template | manifest stub | next action |",
+        "| ---: | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
             f"| {row['workorder_rank']} | `{row['target_id']}` | `{row['workorder_status']}` | "
-            f"`{row['workorder_folder']}` | `{row['native_dropzone_pdb']}` | "
-            f"`{row['provenance_template_csv']}` | `{row['manifest_stub_csv']}` | {row['next_action']} |"
+            f"`{row['workorder_folder']}` | `{row['native_dropzone_folder']}` | "
+            f"`{row['native_dropzone_pdb']}` | `{row['provenance_template_csv']}` | "
+            f"`{row['manifest_stub_csv']}` | {row['next_action']} |"
         )
     if not payload["rows"]:
-        lines.append("| 0 | - | `missing_clearance_queue` | - | - | - | - | rerun clearance queue |")
+        lines.append("| 0 | - | `missing_clearance_queue` | - | - | - | - | - | rerun clearance queue |")
     lines.extend(["", "## Claim Boundary", "", str(summary["claim_boundary"]), ""])
     path = _resolve(path_like)
     path.parent.mkdir(parents=True, exist_ok=True)

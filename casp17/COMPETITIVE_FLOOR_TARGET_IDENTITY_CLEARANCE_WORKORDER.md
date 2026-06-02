@@ -1,11 +1,12 @@
 # CASP17 Competitive-Floor Target Identity Clearance Workorder
 
-- generated: `2026-05-26T03:04:46+09:00`
+- generated: `2026-06-02T21:12:55+09:00`
 - clearance_workorder_status: `awaiting_native_or_provenance`
 - clearance_queue_status: `awaiting_target_identity_clearance`
 - workorders: `3`
 - ready/native+provenance/native/provenance: `0/3/0/0`
 - dropzones/templates/stubs: `3/3/3`
+- native dropzone readmes: `3`
 - template mode force_refresh: `False`
 - provenance templates created/preserved/refreshed: `0/3/0`
 - manifest stubs created/preserved/refreshed: `0/3/0`
@@ -14,11 +15,11 @@
 
 ## Workorders
 
-| rank | target | status | folder | native dropzone | provenance template | manifest stub | next action |
-| ---: | --- | --- | --- | --- | --- | --- | --- |
-| 1 | `H1319` | `native_and_provenance_required` | `casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex` | `casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/native/H1319_native.pdb` | `casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/provenance_template.csv` | `casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/manifest_stub.csv` | place a cleared native PDB and complete the no-leak provenance template |
-| 2 | `H1321` | `native_and_provenance_required` | `casp17/competitive_floor_target_identity_clearance_workorders/H1321_Human_astrovirus_VA1_capsid_spike_-_antibody_2A2_complex` | `casp17/competitive_floor_target_identity_clearance_workorders/H1321_Human_astrovirus_VA1_capsid_spike_-_antibody_2A2_complex/native/H1321_native.pdb` | `casp17/competitive_floor_target_identity_clearance_workorders/H1321_Human_astrovirus_VA1_capsid_spike_-_antibody_2A2_complex/provenance_template.csv` | `casp17/competitive_floor_target_identity_clearance_workorders/H1321_Human_astrovirus_VA1_capsid_spike_-_antibody_2A2_complex/manifest_stub.csv` | place a cleared native PDB and complete the no-leak provenance template |
-| 3 | `H2324` | `native_and_provenance_required` | `casp17/competitive_floor_target_identity_clearance_workorders/H2324_T_Cell_Receptor_N17.2_complex_5_chains` | `casp17/competitive_floor_target_identity_clearance_workorders/H2324_T_Cell_Receptor_N17.2_complex_5_chains/native/H2324_native.pdb` | `casp17/competitive_floor_target_identity_clearance_workorders/H2324_T_Cell_Receptor_N17.2_complex_5_chains/provenance_template.csv` | `casp17/competitive_floor_target_identity_clearance_workorders/H2324_T_Cell_Receptor_N17.2_complex_5_chains/manifest_stub.csv` | place a cleared native PDB and complete the no-leak provenance template |
+| rank | target | status | folder | native folder | native dropzone | provenance template | manifest stub | next action |
+| ---: | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | `H1319` | `native_and_provenance_required` | `casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex` | `casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/native` | `casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/native/H1319_native.pdb` | `casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/provenance_template.csv` | `casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/manifest_stub.csv` | place a cleared native PDB and complete the no-leak provenance template |
+| 2 | `H1321` | `native_and_provenance_required` | `casp17/competitive_floor_target_identity_clearance_workorders/H1321_Human_astrovirus_VA1_capsid_spike_-_antibody_2A2_complex` | `casp17/competitive_floor_target_identity_clearance_workorders/H1321_Human_astrovirus_VA1_capsid_spike_-_antibody_2A2_complex/native` | `casp17/competitive_floor_target_identity_clearance_workorders/H1321_Human_astrovirus_VA1_capsid_spike_-_antibody_2A2_complex/native/H1321_native.pdb` | `casp17/competitive_floor_target_identity_clearance_workorders/H1321_Human_astrovirus_VA1_capsid_spike_-_antibody_2A2_complex/provenance_template.csv` | `casp17/competitive_floor_target_identity_clearance_workorders/H1321_Human_astrovirus_VA1_capsid_spike_-_antibody_2A2_complex/manifest_stub.csv` | place a cleared native PDB and complete the no-leak provenance template |
+| 3 | `H2324` | `native_and_provenance_required` | `casp17/competitive_floor_target_identity_clearance_workorders/H2324_T_Cell_Receptor_N17.2_complex_5_chains` | `casp17/competitive_floor_target_identity_clearance_workorders/H2324_T_Cell_Receptor_N17.2_complex_5_chains/native` | `casp17/competitive_floor_target_identity_clearance_workorders/H2324_T_Cell_Receptor_N17.2_complex_5_chains/native/H2324_native.pdb` | `casp17/competitive_floor_target_identity_clearance_workorders/H2324_T_Cell_Receptor_N17.2_complex_5_chains/provenance_template.csv` | `casp17/competitive_floor_target_identity_clearance_workorders/H2324_T_Cell_Receptor_N17.2_complex_5_chains/manifest_stub.csv` | place a cleared native PDB and complete the no-leak provenance template |
 
 ## Claim Boundary
 

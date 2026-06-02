@@ -1,6 +1,6 @@
 # CASP17 Competitive Floor Batch Native/Provenance Value Gate
 
-- generated: `2026-06-02T06:35:40+09:00`
+- generated: `2026-06-02T21:13:30+09:00`
 - status: `casp17_competitive_floor_batch_native_provenance_value_gate_blocked_awaiting_operator_values`
 - targets ready/blocked/total: `0/3/3`
 - fields per-target/total: `13/39`

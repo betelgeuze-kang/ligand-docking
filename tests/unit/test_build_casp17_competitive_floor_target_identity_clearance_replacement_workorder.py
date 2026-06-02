@@ -72,10 +72,14 @@ def test_replacement_workorder_selects_unique_ready_candidate_and_blocks_duplica
     )
     assert payload["summary"]["selected_workorder_count"] == 1
     assert payload["summary"]["duplicate_candidate_blocked_count"] == 1
+    assert payload["summary"]["native_dropzone_readme_count"] == 1
     by_replace = {row["replace_target_id"]: row for row in payload["rows"]}
     assert by_replace["H1001"]["selection_status"] == "selected_for_replacement_workorder"
     assert by_replace["H1001"]["scope"] == "complex"
     assert by_replace["H1001"]["native_dropzone_pdb"].endswith("H2001_native.pdb")
+    assert by_replace["H1001"]["native_dropzone_folder"].endswith("native")
+    assert by_replace["H1001"]["native_dropzone_readme"].endswith("native/README.md")
+    assert Path(by_replace["H1001"]["native_dropzone_readme"]).is_file()
     assert by_replace["H1002"]["selection_status"] == "blocked_duplicate_candidate_assignment"
     assert by_replace["H1002"]["duplicate_candidate_for_replace_target_ids"] == "H1001"
     assert (tmp_path / "replacement_workorder.json").is_file()

@@ -395,6 +395,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     competitive_target_identity_metric_runway_json = (
         tmp_path / "competitive_target_identity_metric_runway.json"
     )
+    competitive_floor_native_dropzone_registry_json = (
+        tmp_path / "competitive_floor_native_dropzone_registry.json"
+    )
     competitive_floor_native_provenance_operator_packet_json = (
         tmp_path / "competitive_floor_native_provenance_operator_packet.json"
     )
@@ -4568,6 +4571,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "native_required_count": 0,
                 "provenance_required_count": 0,
                 "native_dropzone_count": 3,
+                "native_dropzone_readme_count": 3,
                 "provenance_template_count": 3,
                 "manifest_stub_count": 3,
                 "provenance_template_preserved_count": 3,
@@ -4681,9 +4685,31 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "duplicate_candidate_blocked_count": 1,
                 "no_ready_candidate_blocked_count": 0,
                 "native_dropzone_count": 1,
+                "native_dropzone_readme_count": 1,
                 "provenance_template_count": 1,
                 "manifest_stub_count": 1,
                 "first_open_next_action": "choose a different ready replacement candidate",
+            }
+        },
+    )
+    _write_json(
+        competitive_floor_native_dropzone_registry_json,
+        {
+            "summary": {
+                "native_dropzone_registry_status": "awaiting_native_files",
+                "dropzone_count": 4,
+                "primary_dropzone_count": 3,
+                "replacement_dropzone_count": 1,
+                "dropzone_readme_count": 4,
+                "native_present_count": 0,
+                "blocked_dropzone_count": 4,
+                "unexpected_coordinate_count": 0,
+                "coordinate_copy_count": 0,
+                "proof_eligible_count": 0,
+                "author_serialized_count": 0,
+                "first_blocked_target_id": "H1319",
+                "first_blocked_blockers": "native_pdb_missing",
+                "first_blocked_next_action": "place the operator-cleared native PDB at the expected native_dropzone_pdb path",
             }
         },
     )
@@ -5895,6 +5921,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(competitive_target_identity_clearance_workorder_audit_json),
             "--competitive-target-identity-metric-runway-json",
             str(competitive_target_identity_metric_runway_json),
+            "--competitive-floor-native-dropzone-registry-json",
+            str(competitive_floor_native_dropzone_registry_json),
             "--competitive-floor-native-provenance-operator-packet-json",
             str(competitive_floor_native_provenance_operator_packet_json),
             "--competitive-floor-native-provenance-operator-packet-completion-audit-json",
@@ -6923,6 +6951,7 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["competitive_target_identity_clearance_workorder_native_count"] == 0
     assert payload["summary"]["competitive_target_identity_clearance_workorder_provenance_count"] == 0
     assert payload["summary"]["competitive_target_identity_clearance_workorder_dropzone_count"] == 3
+    assert payload["summary"]["competitive_target_identity_clearance_workorder_dropzone_readme_count"] == 3
     assert payload["summary"]["competitive_target_identity_clearance_workorder_template_count"] == 3
     assert payload["summary"]["competitive_target_identity_clearance_workorder_stub_count"] == 3
     assert payload["summary"]["competitive_target_identity_clearance_workorder_template_preserved_count"] == 3
@@ -6988,8 +7017,24 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["competitive_target_identity_clearance_replacement_workorder_duplicate_count"] == 1
     assert payload["summary"]["competitive_target_identity_clearance_replacement_workorder_no_ready_count"] == 0
     assert payload["summary"]["competitive_target_identity_clearance_replacement_workorder_dropzone_count"] == 1
+    assert payload["summary"]["competitive_target_identity_clearance_replacement_workorder_dropzone_readme_count"] == 1
     assert payload["summary"]["competitive_target_identity_clearance_replacement_workorder_template_count"] == 1
     assert payload["summary"]["competitive_target_identity_clearance_replacement_workorder_stub_count"] == 1
+    assert payload["summary"]["competitive_floor_native_dropzone_registry_status"] == "awaiting_native_files"
+    assert payload["summary"]["competitive_floor_native_dropzone_registry_count"] == 4
+    assert payload["summary"]["competitive_floor_native_dropzone_registry_primary_count"] == 3
+    assert payload["summary"]["competitive_floor_native_dropzone_registry_replacement_count"] == 1
+    assert payload["summary"]["competitive_floor_native_dropzone_registry_readme_count"] == 4
+    assert payload["summary"]["competitive_floor_native_dropzone_registry_native_count"] == 0
+    assert payload["summary"]["competitive_floor_native_dropzone_registry_blocked_count"] == 4
+    assert payload["summary"]["competitive_floor_native_dropzone_registry_unexpected_coordinate_count"] == 0
+    assert payload["summary"]["competitive_floor_native_dropzone_registry_coordinate_copy_count"] == 0
+    assert payload["summary"]["competitive_floor_native_dropzone_registry_proof_eligible_count"] == 0
+    assert payload["summary"]["competitive_floor_native_dropzone_registry_author_serialized_count"] == 0
+    assert payload["summary"]["competitive_floor_native_dropzone_registry_first_blocked_target_id"] == "H1319"
+    assert payload["summary"]["competitive_floor_native_dropzone_registry_first_blocked_blockers"] == (
+        "native_pdb_missing"
+    )
     assert payload["summary"]["competitive_target_identity_clearance_replacement_workorder_audit_status"] == "blocked"
     assert payload["summary"]["competitive_target_identity_clearance_replacement_workorder_audit_target_count"] == 2
     assert payload["summary"]["competitive_target_identity_clearance_replacement_workorder_audit_pass_count"] == 0
@@ -11016,6 +11061,13 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert by_id["competitive_floor_target_identity_clearance_replacement_workorder"]["ready_count"] == 1
     assert by_id["competitive_floor_target_identity_clearance_replacement_workorder"]["blocked_count"] == 1
     assert "duplicate:1" in by_id["competitive_floor_target_identity_clearance_replacement_workorder"]["blockers"]
+    assert by_id["competitive_floor_native_dropzone_registry"]["status"] == "awaiting_native_files"
+    assert by_id["competitive_floor_native_dropzone_registry"]["ready_count"] == 0
+    assert by_id["competitive_floor_native_dropzone_registry"]["blocked_count"] == 4
+    assert by_id["competitive_floor_native_dropzone_registry"]["total_count"] == 4
+    assert "primary/replacement:3/1" in by_id["competitive_floor_native_dropzone_registry"]["blockers"]
+    assert "readmes/native:4/0" in by_id["competitive_floor_native_dropzone_registry"]["blockers"]
+    assert "proof_author:0/0" in by_id["competitive_floor_native_dropzone_registry"]["blockers"]
     assert by_id["competitive_floor_target_identity_clearance_replacement_workorder_audit"]["status"] == "blocked"
     assert by_id["competitive_floor_target_identity_clearance_replacement_workorder_audit"]["blocked_count"] == 2
     assert "prediction:2" in by_id["competitive_floor_target_identity_clearance_replacement_workorder_audit"]["blockers"]

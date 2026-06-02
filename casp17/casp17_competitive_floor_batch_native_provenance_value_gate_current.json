@@ -109,7 +109,7 @@
     "first_blocked_target_id": "H1319",
     "first_blocker": "native_source_pdb_required",
     "first_target_id": "H1319",
-    "generated_at_local": "2026-06-02T06:35:40+09:00",
+    "generated_at_local": "2026-06-02T21:13:30+09:00",
     "native_source_ready_count": 0,
     "next_action": "Fill blocked batch native/provenance values, then rerun this value gate.",
     "packet_type": "casp17_competitive_floor_batch_native_provenance_value_gate",

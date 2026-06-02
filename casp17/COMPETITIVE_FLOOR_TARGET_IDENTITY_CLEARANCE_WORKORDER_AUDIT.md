@@ -1,6 +1,6 @@
 # CASP17 Competitive-Floor Target Identity Clearance Workorder Audit
 
-- generated: `2026-05-26T04:08:51+09:00`
+- generated: `2026-06-02T21:13:07+09:00`
 - clearance_workorder_audit_status: `blocked`
 - clearance_workorder_status: `awaiting_native_or_provenance`
 - audit pass/blocked/total: `0/3/3`

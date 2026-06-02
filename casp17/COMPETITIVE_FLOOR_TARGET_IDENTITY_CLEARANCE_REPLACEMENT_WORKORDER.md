@@ -1,11 +1,12 @@
 # CASP17 Target Identity Clearance Replacement Workorder
 
-- generated: `2026-05-26T05:16:27+09:00`
+- generated: `2026-06-02T21:12:55+09:00`
 - replacement_workorder_status: `partial_replacement_workorders_ready_for_operator_intake`
 - queue_status: `candidate_ready_for_operator_clearance`
 - replacement targets/workorder rows: `2/2`
 - selected/duplicate/no-ready: `1/1/0`
 - dropzones/templates/stubs: `1/1/1`
+- native dropzone readmes: `1`
 - first open: `H1321` -> `H1311` `blocked_duplicate_candidate_assignment`
 - first next action: choose a different ready replacement candidate before materializing this workorder
 

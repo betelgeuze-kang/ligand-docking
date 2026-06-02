@@ -90,10 +90,14 @@ def test_clearance_workorder_materializes_per_target_dropzones_and_templates(tmp
     assert payload["summary"]["ready_for_manifest_stub_count"] == 1
     assert payload["summary"]["native_and_provenance_required_count"] == 1
     assert payload["summary"]["native_dropzone_count"] == 2
+    assert payload["summary"]["native_dropzone_readme_count"] == 2
     assert by_id["H1001"]["workorder_status"] == "native_and_provenance_required"
     assert by_id["H1001"]["identity_discovery_blockers"] == "no_leak_clearance_required"
     assert by_id["H1001"]["identity_discovery_next_action"] == "operator must confirm no-leak clearance"
     assert by_id["H1002"]["workorder_status"] == "ready_for_manifest_stub_review"
+    assert Path(tmp_path, by_id["H1001"]["native_dropzone_folder"]).is_dir()
+    assert Path(tmp_path, by_id["H1001"]["native_dropzone_readme"]).is_file()
+    assert by_id["H1001"]["native_dropzone_readme"].endswith("native/README.md")
     assert Path(tmp_path, by_id["H1001"]["provenance_template_csv"]).is_file()
     assert Path(tmp_path, by_id["H1001"]["manifest_stub_csv"]).is_file()
     assert Path(tmp_path, by_id["H1001"]["readme_path"]).is_file()
