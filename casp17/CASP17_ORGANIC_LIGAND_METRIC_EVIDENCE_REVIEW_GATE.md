@@ -1,6 +1,6 @@
 # CASP17 Organic Ligand Metric Evidence Review Gate
 
-- generated: `2026-06-02T21:52:08+09:00`
+- generated: `2026-06-02T22:00:30+09:00`
 - status: `awaiting_organic_ligand_metric_evidence_review`
 - candidates ready/blocked/total: `0/7/7`
 - fields ready/blocked/total: `0/35/35`

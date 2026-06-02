@@ -1,6 +1,6 @@
 # CASP17 Organic Ligand Metric Evidence Sync Plan
 
-- generated: `2026-06-02T21:52:12+09:00`
+- generated: `2026-06-02T22:07:14+09:00`
 - status: `awaiting_organic_ligand_metric_evidence_review`
 - mode: `dry_run`
 - candidates ready/blocked/total: `0/7/7`

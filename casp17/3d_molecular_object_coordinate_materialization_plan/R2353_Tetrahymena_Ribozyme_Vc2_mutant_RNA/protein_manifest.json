@@ -1,0 +1,44 @@
+{
+  "rows": [
+    {
+      "atlas_object_folder": "casp17/casp17_3d_molecular_object_atlas/R2353_Tetrahymena_Ribozyme_Vc2_mutant_RNA/massivefold_model1_candidate",
+      "atlas_object_folder_present": "true",
+      "atlas_object_key": "massivefold_model1_candidate",
+      "atlas_object_manifest": "casp17/casp17_3d_molecular_object_atlas/R2353_Tetrahymena_Ribozyme_Vc2_mutant_RNA/massivefold_model1_candidate/object_manifest.json",
+      "atlas_object_manifest_present": "true",
+      "atlas_object_readme": "casp17/casp17_3d_molecular_object_atlas/R2353_Tetrahymena_Ribozyme_Vc2_mutant_RNA/massivefold_model1_candidate/README.md",
+      "atlas_object_readme_present": "true",
+      "atlas_protein_folder": "casp17/casp17_3d_molecular_object_atlas/R2353_Tetrahymena_Ribozyme_Vc2_mutant_RNA",
+      "atlas_protein_folder_present": "true",
+      "atlas_protein_key": "R2353_Tetrahymena_Ribozyme_Vc2_mutant_RNA",
+      "atlas_protein_manifest": "casp17/casp17_3d_molecular_object_atlas/R2353_Tetrahymena_Ribozyme_Vc2_mutant_RNA/protein_manifest.json",
+      "atlas_protein_manifest_present": "true",
+      "atlas_protein_readme": "casp17/casp17_3d_molecular_object_atlas/R2353_Tetrahymena_Ribozyme_Vc2_mutant_RNA/README.md",
+      "atlas_protein_readme_present": "true",
+      "blockers": "",
+      "claim_boundary": "CASP17 3D molecular object coordinate materialization dry-run only. It verifies that each protein/object atlas folder has a present source coordinate model and a deterministic proposed destination under the per-object folder. It does not copy coordinates, alter source models, compute native accuracy, serialize a CASP author code, or submit to CASP.",
+      "coordinate_copy_policy": "dry_run_no_copy",
+      "existing_coordinate_copy_count": 0,
+      "materialization_status": "coordinate_materialization_ready_dry_run",
+      "next_action": "Keep link-only atlas as the tracked state; copy this source into the proposed per-object coordinates path only after operator approval.",
+      "object_id": "model1_candidate",
+      "proposed_coordinate_copy_path": "casp17/casp17_3d_molecular_object_atlas/R2353_Tetrahymena_Ribozyme_Vc2_mutant_RNA/massivefold_model1_candidate/coordinates/model.cif",
+      "proposed_coordinate_copy_present": "false",
+      "protein_name": "Tetrahymena Ribozyme Vc2 mutant RNA",
+      "source_coordinate_format": "cif",
+      "source_coordinate_path": "casp17/massivefold_representative_viewers/r2353/selection_021_woPaired_model_7/model.cif",
+      "source_coordinate_present": "true",
+      "source_lane": "massivefold_freeze_candidate",
+      "target_id": "R2353"
+    }
+  ],
+  "summary": {
+    "blocked_object_count": 0,
+    "claim_boundary": "CASP17 3D molecular object coordinate materialization dry-run only. It verifies that each protein/object atlas folder has a present source coordinate model and a deterministic proposed destination under the per-object folder. It does not copy coordinates, alter source models, compute native accuracy, serialize a CASP author code, or submit to CASP.",
+    "coordinate_copy_policy": "dry_run_no_copy",
+    "object_count": 1,
+    "packet_type": "casp17_3d_molecular_object_coordinate_materialization_protein_packet",
+    "protein_key": "R2353_Tetrahymena_Ribozyme_Vc2_mutant_RNA",
+    "ready_object_count": 1
+  }
+}

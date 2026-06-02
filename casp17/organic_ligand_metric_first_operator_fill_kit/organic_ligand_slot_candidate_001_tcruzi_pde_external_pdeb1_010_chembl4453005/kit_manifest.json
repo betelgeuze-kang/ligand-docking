@@ -1,0 +1,41 @@
+{
+  "claim_boundary": "Local CASP17 organic ligand metric first-operator-fill kit only. It focuses the first blocked organic ligand candidate into one manual fill folder with source template, evidence stub, linked action, and rerun commands. It does not mutate evidence templates, fill operator values, approve no-leak provenance, compute LDDT-PLI or BiSyRMSD, mark competitive proof, serialize a CASP author code, or submit to CASP.",
+  "rerun_commands": [
+    "python3 tools/build_casp17_organic_ligand_metric_evidence_review_gate.py",
+    "python3 tools/build_casp17_organic_ligand_metric_operator_fill_worklist.py",
+    "python3 tools/build_casp17_organic_ligand_metric_first_operator_fill_kit.py",
+    "python3 tools/build_casp17_organic_ligand_metric_evidence_sync_plan.py",
+    "python3 tools/build_casp17_workbench_index.py"
+  ],
+  "summary": {
+    "candidate_id": "organic_ligand_slot_candidate_001",
+    "claim_boundary": "Local CASP17 organic ligand metric first-operator-fill kit only. It focuses the first blocked organic ligand candidate into one manual fill folder with source template, evidence stub, linked action, and rerun commands. It does not mutate evidence templates, fill operator values, approve no-leak provenance, compute LDDT-PLI or BiSyRMSD, mark competitive proof, serialize a CASP author code, or submit to CASP.",
+    "field_action_csv": "casp17/organic_ligand_metric_first_operator_fill_kit/organic_ligand_slot_candidate_001_tcruzi_pde_external_pdeb1_010_chembl4453005/field_actions.csv",
+    "field_blocked_count": 5,
+    "field_count": 5,
+    "field_ready_count": 0,
+    "first_blocker": "operator_value_missing",
+    "first_field_key": "direct_native_or_source_authority",
+    "first_fill_id": "organic_ligand_metric_operator_fill_001",
+    "first_next_action": "fill operator_value for direct_native_or_source_authority in casp17/organic_ligand_metric_evidence_intake/01_tcruzi_pde_external_pdeb1_010_chembl4453005/operator_evidence_template.csv",
+    "generated_at_local": "2026-06-02T22:07:14+09:00",
+    "kit_folder": "casp17/organic_ligand_metric_first_operator_fill_kit/organic_ligand_slot_candidate_001_tcruzi_pde_external_pdeb1_010_chembl4453005",
+    "kit_manifest_json": "casp17/organic_ligand_metric_first_operator_fill_kit/organic_ligand_slot_candidate_001_tcruzi_pde_external_pdeb1_010_chembl4453005/kit_manifest.json",
+    "ligand_id": "tcruzi_pde_external_pdeb1_010_chembl4453005",
+    "linked_action_count": 5,
+    "next_action": "fill operator_value for direct_native_or_source_authority in casp17/organic_ligand_metric_evidence_intake/01_tcruzi_pde_external_pdeb1_010_chembl4453005/operator_evidence_template.csv",
+    "operator_clearance_missing_count": 5,
+    "operator_evidence_ref_missing_count": 5,
+    "operator_fill_template_csv": "casp17/organic_ligand_metric_first_operator_fill_kit/organic_ligand_slot_candidate_001_tcruzi_pde_external_pdeb1_010_chembl4453005/operator_fill_template.csv",
+    "operator_id_missing_count": 5,
+    "operator_value_missing_count": 5,
+    "organic_ligand_metric_first_operator_fill_kit_status": "organic_ligand_metric_first_operator_fill_kit_ready_for_operator_fill",
+    "packet_type": "casp17_organic_ligand_metric_first_operator_fill_kit",
+    "rerun_commands_md": "casp17/organic_ligand_metric_first_operator_fill_kit/organic_ligand_slot_candidate_001_tcruzi_pde_external_pdeb1_010_chembl4453005/RERUN_COMMANDS.md",
+    "source_stub_count": 5,
+    "source_template_count": 1,
+    "target_id": "HIST_COMPLEX_01_TCRUZI_PDE_EXTERNAL_PDEB1_010_CHEMBL4453005",
+    "worklist_json": "casp17/casp17_organic_ligand_metric_operator_fill_worklist_current.json",
+    "worklist_status": "awaiting_organic_ligand_metric_operator_fill_values"
+  }
+}

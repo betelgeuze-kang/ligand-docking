@@ -1133,7 +1133,7 @@
     "first_blocked_field_key": "direct_native_or_source_authority",
     "first_blocker": "template_operator_value_missing",
     "first_next_action": "fill operator_value for direct_native_or_source_authority in operator_evidence_template.csv",
-    "generated_at_local": "2026-06-02T21:52:08+09:00",
+    "generated_at_local": "2026-06-02T22:00:30+09:00",
     "next_action": "Fill operator evidence templates and field stubs, then rerun this review gate before promoting organic ligand rows into LDDT-PLI or BiSyRMSD metric computation.",
     "organic_ligand_metric_evidence_review_gate_status": "awaiting_organic_ligand_metric_evidence_review",
     "out_dir": "casp17/organic_ligand_metric_evidence_review_gate",
