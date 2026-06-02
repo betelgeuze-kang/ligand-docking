@@ -29,6 +29,18 @@ DEFAULT_3D_MOLECULAR_OBJECT_ATLAS_COMPLETION_AUDIT_JSON = (
 DEFAULT_3D_MOLECULAR_OBJECT_METRIC_HANDOFF_JSON = (
     "casp17/casp17_3d_molecular_object_metric_handoff_current.json"
 )
+DEFAULT_3D_LIGAND_METRIC_GAP_BRIDGE_JSON = (
+    "casp17/casp17_3d_ligand_metric_gap_bridge_current.json"
+)
+DEFAULT_ORGANIC_LIGAND_METRIC_EVIDENCE_INTAKE_JSON = (
+    "casp17/casp17_organic_ligand_metric_evidence_intake_current.json"
+)
+DEFAULT_ORGANIC_LIGAND_METRIC_EVIDENCE_REVIEW_GATE_JSON = (
+    "casp17/casp17_organic_ligand_metric_evidence_review_gate_current.json"
+)
+DEFAULT_ORGANIC_LIGAND_METRIC_EVIDENCE_SYNC_PLAN_JSON = (
+    "casp17/casp17_organic_ligand_metric_evidence_sync_plan_current.json"
+)
 DEFAULT_3D_MOLECULAR_OBJECT_METRIC_HANDOFF_COMPLETION_AUDIT_JSON = (
     "casp17/casp17_3d_molecular_object_metric_handoff_completion_audit_current.json"
 )
@@ -649,6 +661,16 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         args.molecular_object_atlas_completion_audit_json
     )
     molecular_object_metric_handoff_payload = _read_json(args.molecular_object_metric_handoff_json)
+    ligand_metric_gap_bridge_payload = _read_json(args.ligand_metric_gap_bridge_json)
+    organic_ligand_metric_evidence_intake_payload = _read_json(
+        args.organic_ligand_metric_evidence_intake_json
+    )
+    organic_ligand_metric_evidence_review_gate_payload = _read_json(
+        args.organic_ligand_metric_evidence_review_gate_json
+    )
+    organic_ligand_metric_evidence_sync_plan_payload = _read_json(
+        args.organic_ligand_metric_evidence_sync_plan_json
+    )
     molecular_object_metric_handoff_completion_audit_payload = _read_json(
         args.molecular_object_metric_handoff_completion_audit_json
     )
@@ -1143,6 +1165,14 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     molecular_object_atlas_summary = _summary(molecular_object_atlas_payload)
     molecular_object_atlas_completion_audit_summary = _summary(molecular_object_atlas_completion_audit_payload)
     molecular_object_metric_handoff_summary = _summary(molecular_object_metric_handoff_payload)
+    ligand_metric_gap_bridge_summary = _summary(ligand_metric_gap_bridge_payload)
+    organic_ligand_metric_evidence_intake_summary = _summary(organic_ligand_metric_evidence_intake_payload)
+    organic_ligand_metric_evidence_review_gate_summary = _summary(
+        organic_ligand_metric_evidence_review_gate_payload
+    )
+    organic_ligand_metric_evidence_sync_plan_summary = _summary(
+        organic_ligand_metric_evidence_sync_plan_payload
+    )
     molecular_object_metric_handoff_completion_audit_summary = _summary(
         molecular_object_metric_handoff_completion_audit_payload
     )
@@ -2033,6 +2063,226 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + (_text(molecular_object_metric_handoff_summary.get("first_object_key")) or "-")
                 + ",blocked:"
                 + (_text(molecular_object_metric_handoff_summary.get("first_blocked_protein_key")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "casp17_3d_ligand_metric_gap_bridge",
+            "Bridge from 3D ligand metric gaps to organic ligand promotion actions",
+            _text(ligand_metric_gap_bridge_summary.get("ligand_metric_gap_bridge_status")),
+            args.ligand_metric_gap_bridge_json,
+            ready_count=_int(ligand_metric_gap_bridge_summary.get("proof_eligible_candidate_count")),
+            blocked_count=_int(ligand_metric_gap_bridge_summary.get("blocked_bridge_row_count")),
+            total_count=_int(ligand_metric_gap_bridge_summary.get("bridge_row_count")),
+            next_action=_text(ligand_metric_gap_bridge_summary.get("next_action")),
+            blockers=(
+                "missing:"
+                + (_text(ligand_metric_gap_bridge_summary.get("missing_ligand_metric_names")) or "-")
+                + ",rows:"
+                + str(ligand_metric_gap_bridge_summary.get("bridge_row_count", ""))
+                + ",lddt/bisyrmsd:"
+                + str(ligand_metric_gap_bridge_summary.get("lddt_pli_bridge_row_count", ""))
+                + "/"
+                + str(ligand_metric_gap_bridge_summary.get("bisyrmsd_bridge_row_count", ""))
+                + ",actions:"
+                + str(ligand_metric_gap_bridge_summary.get("metric_action_link_count", ""))
+                + ",open_direct/no_leak/chronology/pose/slot:"
+                + str(ligand_metric_gap_bridge_summary.get("direct_authority_open_count", ""))
+                + "/"
+                + str(ligand_metric_gap_bridge_summary.get("no_leak_open_count", ""))
+                + "/"
+                + str(ligand_metric_gap_bridge_summary.get("chronology_open_count", ""))
+                + "/"
+                + str(ligand_metric_gap_bridge_summary.get("ligand_pose_open_count", ""))
+                + "/"
+                + str(ligand_metric_gap_bridge_summary.get("strict_slot_open_count", ""))
+                + ",candidates:"
+                + str(ligand_metric_gap_bridge_summary.get("review_ready_candidate_count", ""))
+                + "/"
+                + str(ligand_metric_gap_bridge_summary.get("proof_eligible_candidate_count", ""))
+                + "/"
+                + str(ligand_metric_gap_bridge_summary.get("candidate_count", ""))
+                + ",first:"
+                + (_text(ligand_metric_gap_bridge_summary.get("first_candidate_id")) or "-")
+                + "/"
+                + (_text(ligand_metric_gap_bridge_summary.get("first_blocker")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "organic_ligand_metric_evidence_intake",
+            "Operator evidence intake for organic ligand LDDT-PLI and BiSyRMSD gaps",
+            _text(
+                organic_ligand_metric_evidence_intake_summary.get(
+                    "organic_ligand_metric_evidence_intake_status"
+                )
+            ),
+            args.organic_ligand_metric_evidence_intake_json,
+            ready_count=_int(organic_ligand_metric_evidence_intake_summary.get("ready_field_count")),
+            blocked_count=_int(organic_ligand_metric_evidence_intake_summary.get("open_field_count")),
+            total_count=_int(organic_ligand_metric_evidence_intake_summary.get("field_count")),
+            next_action=_text(organic_ligand_metric_evidence_intake_summary.get("next_action")),
+            blockers=(
+                "candidates:"
+                + str(organic_ligand_metric_evidence_intake_summary.get("ready_candidate_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_intake_summary.get("blocked_candidate_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_intake_summary.get("candidate_count", ""))
+                + ",fields:"
+                + str(organic_ligand_metric_evidence_intake_summary.get("ready_field_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_intake_summary.get("open_field_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_intake_summary.get("field_count", ""))
+                + ",templates/stubs/dropzones:"
+                + str(organic_ligand_metric_evidence_intake_summary.get("operator_template_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_intake_summary.get("evidence_stub_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_intake_summary.get("dropzone_manifest_count", ""))
+                + ",metric_bridge:"
+                + str(organic_ligand_metric_evidence_intake_summary.get("lddt_pli_bridge_row_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_intake_summary.get("bisyrmsd_bridge_row_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_intake_summary.get("metric_bridge_row_count", ""))
+                + ",lanes:"
+                + str(organic_ligand_metric_evidence_intake_summary.get("direct_authority_field_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_intake_summary.get("no_leak_field_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_intake_summary.get("chronology_field_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_intake_summary.get("ligand_pose_field_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_intake_summary.get("strict_slot_field_count", ""))
+                + ",linked_actions:"
+                + str(organic_ligand_metric_evidence_intake_summary.get("linked_action_count", ""))
+                + ",first:"
+                + (_text(organic_ligand_metric_evidence_intake_summary.get("first_open_candidate_id")) or "-")
+                + "/"
+                + (_text(organic_ligand_metric_evidence_intake_summary.get("first_open_field_key")) or "-")
+                + "/"
+                + (_text(organic_ligand_metric_evidence_intake_summary.get("first_open_blocker")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "organic_ligand_metric_evidence_review_gate",
+            "Review gate for organic ligand metric evidence templates and stubs",
+            _text(
+                organic_ligand_metric_evidence_review_gate_summary.get(
+                    "organic_ligand_metric_evidence_review_gate_status"
+                )
+            ),
+            args.organic_ligand_metric_evidence_review_gate_json,
+            ready_count=_int(organic_ligand_metric_evidence_review_gate_summary.get("ready_field_count")),
+            blocked_count=_int(organic_ligand_metric_evidence_review_gate_summary.get("blocked_field_count")),
+            total_count=_int(organic_ligand_metric_evidence_review_gate_summary.get("field_count")),
+            next_action=_text(organic_ligand_metric_evidence_review_gate_summary.get("next_action")),
+            blockers=(
+                "candidates:"
+                + str(organic_ligand_metric_evidence_review_gate_summary.get("ready_candidate_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_review_gate_summary.get("blocked_candidate_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_review_gate_summary.get("candidate_count", ""))
+                + ",fields:"
+                + str(organic_ligand_metric_evidence_review_gate_summary.get("ready_field_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_review_gate_summary.get("blocked_field_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_review_gate_summary.get("field_count", ""))
+                + ",template_missing:"
+                + str(
+                    organic_ligand_metric_evidence_review_gate_summary.get(
+                        "template_operator_value_missing_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    organic_ligand_metric_evidence_review_gate_summary.get(
+                        "template_operator_evidence_ref_missing_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    organic_ligand_metric_evidence_review_gate_summary.get(
+                        "template_operator_clearance_missing_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    organic_ligand_metric_evidence_review_gate_summary.get(
+                        "template_operator_id_missing_count", ""
+                    )
+                )
+                + ",stubs:"
+                + str(organic_ligand_metric_evidence_review_gate_summary.get("stub_present_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_review_gate_summary.get("stub_missing_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_review_gate_summary.get("stub_evidence_missing_count", ""))
+                + ",policy:"
+                + str(organic_ligand_metric_evidence_review_gate_summary.get("policy_pass_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_review_gate_summary.get("policy_blocked_count", ""))
+                + ",first:"
+                + (_text(organic_ligand_metric_evidence_review_gate_summary.get("first_blocked_candidate_id")) or "-")
+                + "/"
+                + (_text(organic_ligand_metric_evidence_review_gate_summary.get("first_blocked_field_key")) or "-")
+                + "/"
+                + (_text(organic_ligand_metric_evidence_review_gate_summary.get("first_blocker")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "organic_ligand_metric_evidence_sync_plan",
+            "Dry-run sync plan for reviewed organic ligand metric evidence into promotion actions",
+            _text(
+                organic_ligand_metric_evidence_sync_plan_summary.get(
+                    "organic_ligand_metric_evidence_sync_plan_status"
+                )
+            ),
+            args.organic_ligand_metric_evidence_sync_plan_json,
+            ready_count=_int(organic_ligand_metric_evidence_sync_plan_summary.get("ready_action_count")),
+            blocked_count=_int(organic_ligand_metric_evidence_sync_plan_summary.get("blocked_action_count")),
+            total_count=_int(organic_ligand_metric_evidence_sync_plan_summary.get("action_count")),
+            next_action=_text(organic_ligand_metric_evidence_sync_plan_summary.get("next_action")),
+            blockers=(
+                "candidates:"
+                + str(organic_ligand_metric_evidence_sync_plan_summary.get("ready_candidate_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_sync_plan_summary.get("blocked_candidate_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_sync_plan_summary.get("candidate_count", ""))
+                + ",actions:"
+                + str(organic_ligand_metric_evidence_sync_plan_summary.get("ready_action_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_sync_plan_summary.get("blocked_action_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_sync_plan_summary.get("action_count", ""))
+                + ",destination:"
+                + str(organic_ligand_metric_evidence_sync_plan_summary.get("destination_action_present_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_sync_plan_summary.get("destination_action_missing_count", ""))
+                + ",source_missing:"
+                + str(organic_ligand_metric_evidence_sync_plan_summary.get("source_value_missing_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_sync_plan_summary.get("source_evidence_ref_missing_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_sync_plan_summary.get("source_clearance_missing_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_sync_plan_summary.get("source_operator_id_missing_count", ""))
+                + ",review_blocks:"
+                + str(organic_ligand_metric_evidence_sync_plan_summary.get("review_gate_blocked_action_count", ""))
+                + "/"
+                + str(organic_ligand_metric_evidence_sync_plan_summary.get("review_field_blocked_action_count", ""))
+                + ",folders:"
+                + str(organic_ligand_metric_evidence_sync_plan_summary.get("candidate_sync_folder_count", ""))
+                + ",first:"
+                + (_text(organic_ligand_metric_evidence_sync_plan_summary.get("first_blocked_candidate_id")) or "-")
+                + "/"
+                + (_text(organic_ligand_metric_evidence_sync_plan_summary.get("first_blocked_field_key")) or "-")
+                + "/"
+                + (_text(organic_ligand_metric_evidence_sync_plan_summary.get("first_blocker")) or "-")
             ),
         ),
         _artifact_row(
@@ -11371,6 +11621,268 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "casp17_3d_molecular_object_metric_handoff_next_action": _text(
             molecular_object_metric_handoff_summary.get("next_action")
         ),
+        "casp17_3d_ligand_metric_gap_bridge_status": _text(
+            ligand_metric_gap_bridge_summary.get("ligand_metric_gap_bridge_status")
+        ),
+        "casp17_3d_ligand_metric_gap_bridge_missing_metric_count": _int(
+            ligand_metric_gap_bridge_summary.get("missing_ligand_metric_count")
+        ),
+        "casp17_3d_ligand_metric_gap_bridge_missing_metric_names": _text(
+            ligand_metric_gap_bridge_summary.get("missing_ligand_metric_names")
+        ),
+        "casp17_3d_ligand_metric_gap_bridge_row_count": _int(
+            ligand_metric_gap_bridge_summary.get("bridge_row_count")
+        ),
+        "casp17_3d_ligand_metric_gap_bridge_blocked_row_count": _int(
+            ligand_metric_gap_bridge_summary.get("blocked_bridge_row_count")
+        ),
+        "casp17_3d_ligand_metric_gap_bridge_candidate_count": _int(
+            ligand_metric_gap_bridge_summary.get("candidate_count")
+        ),
+        "casp17_3d_ligand_metric_gap_bridge_review_ready_candidate_count": _int(
+            ligand_metric_gap_bridge_summary.get("review_ready_candidate_count")
+        ),
+        "casp17_3d_ligand_metric_gap_bridge_strict_blocked_candidate_count": _int(
+            ligand_metric_gap_bridge_summary.get("strict_blind_blocked_candidate_count")
+        ),
+        "casp17_3d_ligand_metric_gap_bridge_proof_eligible_candidate_count": _int(
+            ligand_metric_gap_bridge_summary.get("proof_eligible_candidate_count")
+        ),
+        "casp17_3d_ligand_metric_gap_bridge_lddt_pli_count": _int(
+            ligand_metric_gap_bridge_summary.get("lddt_pli_bridge_row_count")
+        ),
+        "casp17_3d_ligand_metric_gap_bridge_bisyrmsd_count": _int(
+            ligand_metric_gap_bridge_summary.get("bisyrmsd_bridge_row_count")
+        ),
+        "casp17_3d_ligand_metric_gap_bridge_metric_action_link_count": _int(
+            ligand_metric_gap_bridge_summary.get("metric_action_link_count")
+        ),
+        "casp17_3d_ligand_metric_gap_bridge_direct_open_count": _int(
+            ligand_metric_gap_bridge_summary.get("direct_authority_open_count")
+        ),
+        "casp17_3d_ligand_metric_gap_bridge_no_leak_open_count": _int(
+            ligand_metric_gap_bridge_summary.get("no_leak_open_count")
+        ),
+        "casp17_3d_ligand_metric_gap_bridge_chronology_open_count": _int(
+            ligand_metric_gap_bridge_summary.get("chronology_open_count")
+        ),
+        "casp17_3d_ligand_metric_gap_bridge_pose_open_count": _int(
+            ligand_metric_gap_bridge_summary.get("ligand_pose_open_count")
+        ),
+        "casp17_3d_ligand_metric_gap_bridge_slot_open_count": _int(
+            ligand_metric_gap_bridge_summary.get("strict_slot_open_count")
+        ),
+        "casp17_3d_ligand_metric_gap_bridge_first_candidate_id": _text(
+            ligand_metric_gap_bridge_summary.get("first_candidate_id")
+        ),
+        "casp17_3d_ligand_metric_gap_bridge_first_metric_name": _text(
+            ligand_metric_gap_bridge_summary.get("first_metric_name")
+        ),
+        "casp17_3d_ligand_metric_gap_bridge_first_blocker": _text(
+            ligand_metric_gap_bridge_summary.get("first_blocker")
+        ),
+        "organic_ligand_metric_evidence_intake_status": _text(
+            organic_ligand_metric_evidence_intake_summary.get(
+                "organic_ligand_metric_evidence_intake_status"
+            )
+        ),
+        "organic_ligand_metric_evidence_intake_candidate_count": _int(
+            organic_ligand_metric_evidence_intake_summary.get("candidate_count")
+        ),
+        "organic_ligand_metric_evidence_intake_ready_candidate_count": _int(
+            organic_ligand_metric_evidence_intake_summary.get("ready_candidate_count")
+        ),
+        "organic_ligand_metric_evidence_intake_blocked_candidate_count": _int(
+            organic_ligand_metric_evidence_intake_summary.get("blocked_candidate_count")
+        ),
+        "organic_ligand_metric_evidence_intake_field_count": _int(
+            organic_ligand_metric_evidence_intake_summary.get("field_count")
+        ),
+        "organic_ligand_metric_evidence_intake_ready_field_count": _int(
+            organic_ligand_metric_evidence_intake_summary.get("ready_field_count")
+        ),
+        "organic_ligand_metric_evidence_intake_open_field_count": _int(
+            organic_ligand_metric_evidence_intake_summary.get("open_field_count")
+        ),
+        "organic_ligand_metric_evidence_intake_template_count": _int(
+            organic_ligand_metric_evidence_intake_summary.get("operator_template_count")
+        ),
+        "organic_ligand_metric_evidence_intake_stub_count": _int(
+            organic_ligand_metric_evidence_intake_summary.get("evidence_stub_count")
+        ),
+        "organic_ligand_metric_evidence_intake_dropzone_count": _int(
+            organic_ligand_metric_evidence_intake_summary.get("dropzone_manifest_count")
+        ),
+        "organic_ligand_metric_evidence_intake_metric_bridge_row_count": _int(
+            organic_ligand_metric_evidence_intake_summary.get("metric_bridge_row_count")
+        ),
+        "organic_ligand_metric_evidence_intake_lddt_pli_count": _int(
+            organic_ligand_metric_evidence_intake_summary.get("lddt_pli_bridge_row_count")
+        ),
+        "organic_ligand_metric_evidence_intake_bisyrmsd_count": _int(
+            organic_ligand_metric_evidence_intake_summary.get("bisyrmsd_bridge_row_count")
+        ),
+        "organic_ligand_metric_evidence_intake_direct_count": _int(
+            organic_ligand_metric_evidence_intake_summary.get("direct_authority_field_count")
+        ),
+        "organic_ligand_metric_evidence_intake_no_leak_count": _int(
+            organic_ligand_metric_evidence_intake_summary.get("no_leak_field_count")
+        ),
+        "organic_ligand_metric_evidence_intake_chronology_count": _int(
+            organic_ligand_metric_evidence_intake_summary.get("chronology_field_count")
+        ),
+        "organic_ligand_metric_evidence_intake_pose_count": _int(
+            organic_ligand_metric_evidence_intake_summary.get("ligand_pose_field_count")
+        ),
+        "organic_ligand_metric_evidence_intake_slot_count": _int(
+            organic_ligand_metric_evidence_intake_summary.get("strict_slot_field_count")
+        ),
+        "organic_ligand_metric_evidence_intake_linked_action_count": _int(
+            organic_ligand_metric_evidence_intake_summary.get("linked_action_count")
+        ),
+        "organic_ligand_metric_evidence_intake_first_candidate_id": _text(
+            organic_ligand_metric_evidence_intake_summary.get("first_open_candidate_id")
+        ),
+        "organic_ligand_metric_evidence_intake_first_field_key": _text(
+            organic_ligand_metric_evidence_intake_summary.get("first_open_field_key")
+        ),
+        "organic_ligand_metric_evidence_intake_first_blocker": _text(
+            organic_ligand_metric_evidence_intake_summary.get("first_open_blocker")
+        ),
+        "organic_ligand_metric_evidence_intake_first_packet_folder": _text(
+            organic_ligand_metric_evidence_intake_summary.get("first_packet_folder")
+        ),
+        "organic_ligand_metric_evidence_review_gate_status": _text(
+            organic_ligand_metric_evidence_review_gate_summary.get(
+                "organic_ligand_metric_evidence_review_gate_status"
+            )
+        ),
+        "organic_ligand_metric_evidence_review_gate_candidate_count": _int(
+            organic_ligand_metric_evidence_review_gate_summary.get("candidate_count")
+        ),
+        "organic_ligand_metric_evidence_review_gate_ready_candidate_count": _int(
+            organic_ligand_metric_evidence_review_gate_summary.get("ready_candidate_count")
+        ),
+        "organic_ligand_metric_evidence_review_gate_blocked_candidate_count": _int(
+            organic_ligand_metric_evidence_review_gate_summary.get("blocked_candidate_count")
+        ),
+        "organic_ligand_metric_evidence_review_gate_field_count": _int(
+            organic_ligand_metric_evidence_review_gate_summary.get("field_count")
+        ),
+        "organic_ligand_metric_evidence_review_gate_ready_field_count": _int(
+            organic_ligand_metric_evidence_review_gate_summary.get("ready_field_count")
+        ),
+        "organic_ligand_metric_evidence_review_gate_blocked_field_count": _int(
+            organic_ligand_metric_evidence_review_gate_summary.get("blocked_field_count")
+        ),
+        "organic_ligand_metric_evidence_review_gate_template_value_missing_count": _int(
+            organic_ligand_metric_evidence_review_gate_summary.get("template_operator_value_missing_count")
+        ),
+        "organic_ligand_metric_evidence_review_gate_template_evidence_ref_missing_count": _int(
+            organic_ligand_metric_evidence_review_gate_summary.get(
+                "template_operator_evidence_ref_missing_count"
+            )
+        ),
+        "organic_ligand_metric_evidence_review_gate_template_clearance_missing_count": _int(
+            organic_ligand_metric_evidence_review_gate_summary.get(
+                "template_operator_clearance_missing_count"
+            )
+        ),
+        "organic_ligand_metric_evidence_review_gate_template_operator_id_missing_count": _int(
+            organic_ligand_metric_evidence_review_gate_summary.get("template_operator_id_missing_count")
+        ),
+        "organic_ligand_metric_evidence_review_gate_stub_present_count": _int(
+            organic_ligand_metric_evidence_review_gate_summary.get("stub_present_count")
+        ),
+        "organic_ligand_metric_evidence_review_gate_stub_missing_count": _int(
+            organic_ligand_metric_evidence_review_gate_summary.get("stub_missing_count")
+        ),
+        "organic_ligand_metric_evidence_review_gate_stub_evidence_missing_count": _int(
+            organic_ligand_metric_evidence_review_gate_summary.get("stub_evidence_missing_count")
+        ),
+        "organic_ligand_metric_evidence_review_gate_policy_pass_count": _int(
+            organic_ligand_metric_evidence_review_gate_summary.get("policy_pass_count")
+        ),
+        "organic_ligand_metric_evidence_review_gate_policy_blocked_count": _int(
+            organic_ligand_metric_evidence_review_gate_summary.get("policy_blocked_count")
+        ),
+        "organic_ligand_metric_evidence_review_gate_first_candidate_id": _text(
+            organic_ligand_metric_evidence_review_gate_summary.get("first_blocked_candidate_id")
+        ),
+        "organic_ligand_metric_evidence_review_gate_first_field_key": _text(
+            organic_ligand_metric_evidence_review_gate_summary.get("first_blocked_field_key")
+        ),
+        "organic_ligand_metric_evidence_review_gate_first_blocker": _text(
+            organic_ligand_metric_evidence_review_gate_summary.get("first_blocker")
+        ),
+        "organic_ligand_metric_evidence_review_gate_first_next_action": _text(
+            organic_ligand_metric_evidence_review_gate_summary.get("first_next_action")
+        ),
+        "organic_ligand_metric_evidence_sync_plan_status": _text(
+            organic_ligand_metric_evidence_sync_plan_summary.get(
+                "organic_ligand_metric_evidence_sync_plan_status"
+            )
+        ),
+        "organic_ligand_metric_evidence_sync_plan_mode": _text(
+            organic_ligand_metric_evidence_sync_plan_summary.get("sync_mode")
+        ),
+        "organic_ligand_metric_evidence_sync_plan_candidate_count": _int(
+            organic_ligand_metric_evidence_sync_plan_summary.get("candidate_count")
+        ),
+        "organic_ligand_metric_evidence_sync_plan_ready_candidate_count": _int(
+            organic_ligand_metric_evidence_sync_plan_summary.get("ready_candidate_count")
+        ),
+        "organic_ligand_metric_evidence_sync_plan_blocked_candidate_count": _int(
+            organic_ligand_metric_evidence_sync_plan_summary.get("blocked_candidate_count")
+        ),
+        "organic_ligand_metric_evidence_sync_plan_action_count": _int(
+            organic_ligand_metric_evidence_sync_plan_summary.get("action_count")
+        ),
+        "organic_ligand_metric_evidence_sync_plan_ready_action_count": _int(
+            organic_ligand_metric_evidence_sync_plan_summary.get("ready_action_count")
+        ),
+        "organic_ligand_metric_evidence_sync_plan_blocked_action_count": _int(
+            organic_ligand_metric_evidence_sync_plan_summary.get("blocked_action_count")
+        ),
+        "organic_ligand_metric_evidence_sync_plan_destination_present_count": _int(
+            organic_ligand_metric_evidence_sync_plan_summary.get("destination_action_present_count")
+        ),
+        "organic_ligand_metric_evidence_sync_plan_destination_missing_count": _int(
+            organic_ligand_metric_evidence_sync_plan_summary.get("destination_action_missing_count")
+        ),
+        "organic_ligand_metric_evidence_sync_plan_source_value_missing_count": _int(
+            organic_ligand_metric_evidence_sync_plan_summary.get("source_value_missing_count")
+        ),
+        "organic_ligand_metric_evidence_sync_plan_source_evidence_ref_missing_count": _int(
+            organic_ligand_metric_evidence_sync_plan_summary.get("source_evidence_ref_missing_count")
+        ),
+        "organic_ligand_metric_evidence_sync_plan_source_clearance_missing_count": _int(
+            organic_ligand_metric_evidence_sync_plan_summary.get("source_clearance_missing_count")
+        ),
+        "organic_ligand_metric_evidence_sync_plan_source_operator_id_missing_count": _int(
+            organic_ligand_metric_evidence_sync_plan_summary.get("source_operator_id_missing_count")
+        ),
+        "organic_ligand_metric_evidence_sync_plan_review_gate_blocked_action_count": _int(
+            organic_ligand_metric_evidence_sync_plan_summary.get("review_gate_blocked_action_count")
+        ),
+        "organic_ligand_metric_evidence_sync_plan_review_field_blocked_action_count": _int(
+            organic_ligand_metric_evidence_sync_plan_summary.get("review_field_blocked_action_count")
+        ),
+        "organic_ligand_metric_evidence_sync_plan_candidate_folder_count": _int(
+            organic_ligand_metric_evidence_sync_plan_summary.get("candidate_sync_folder_count")
+        ),
+        "organic_ligand_metric_evidence_sync_plan_first_candidate_id": _text(
+            organic_ligand_metric_evidence_sync_plan_summary.get("first_blocked_candidate_id")
+        ),
+        "organic_ligand_metric_evidence_sync_plan_first_field_key": _text(
+            organic_ligand_metric_evidence_sync_plan_summary.get("first_blocked_field_key")
+        ),
+        "organic_ligand_metric_evidence_sync_plan_first_blocker": _text(
+            organic_ligand_metric_evidence_sync_plan_summary.get("first_blocker")
+        ),
+        "organic_ligand_metric_evidence_sync_plan_first_next_action": _text(
+            organic_ligand_metric_evidence_sync_plan_summary.get("first_next_action")
+        ),
         "casp17_3d_molecular_object_metric_handoff_completion_audit_status": _text(
             molecular_object_metric_handoff_completion_audit_summary.get(
                 "metric_handoff_completion_audit_status"
@@ -20393,6 +20905,10 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- CASP17 3D molecular object atlas: `{summary['casp17_3d_molecular_object_atlas_status'] or '-'}` proteins pass/blocked/total `{summary['casp17_3d_molecular_object_atlas_protein_pass_count']}/{summary['casp17_3d_molecular_object_atlas_protein_blocked_count']}/{summary['casp17_3d_molecular_object_atlas_protein_count']}` objects pass/blocked/total `{summary['casp17_3d_molecular_object_atlas_object_pass_count']}/{summary['casp17_3d_molecular_object_atlas_object_blocked_count']}/{summary['casp17_3d_molecular_object_atlas_object_count']}` source objects current/massivefold `{summary['casp17_3d_molecular_object_atlas_current_object_count']}/{summary['casp17_3d_molecular_object_atlas_massivefold_object_count']}` source proteins current/massivefold/overlap `{summary['casp17_3d_molecular_object_atlas_current_protein_count']}/{summary['casp17_3d_molecular_object_atlas_massivefold_protein_count']}/{summary['casp17_3d_molecular_object_atlas_overlap_protein_count']}` links model/viewer/projection/top5/escrow `{summary['casp17_3d_molecular_object_atlas_model_link_count']}/{summary['casp17_3d_molecular_object_atlas_viewer_link_count']}/{summary['casp17_3d_molecular_object_atlas_projection_link_count']}/{summary['casp17_3d_molecular_object_atlas_top5_link_count']}/{summary['casp17_3d_molecular_object_atlas_escrow_link_count']}` sha model/top5 `{summary['casp17_3d_molecular_object_atlas_model_sha256_count']}/{summary['casp17_3d_molecular_object_atlas_top5_sha256_count']}` native/proof/author `{summary['casp17_3d_molecular_object_atlas_native_accuracy_count']}/{summary['casp17_3d_molecular_object_atlas_proof_eligible_count']}/{summary['casp17_3d_molecular_object_atlas_author_serialized_count']}` first `{summary['casp17_3d_molecular_object_atlas_first_protein_key'] or '-'}` `{summary['casp17_3d_molecular_object_atlas_first_object_key'] or '-'}` html `{summary['casp17_3d_molecular_object_atlas_html'] or '-'}`",
         f"- CASP17 3D molecular object atlas completion audit: `{summary['casp17_3d_molecular_object_atlas_completion_audit_status'] or '-'}` proteins folder/readme/manifest/total `{summary['casp17_3d_molecular_object_atlas_completion_audit_protein_folder_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_protein_readme_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_protein_manifest_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_protein_count']}` objects pass/blocked/total `{summary['casp17_3d_molecular_object_atlas_completion_audit_object_pass_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_object_blocked_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_object_count']}` source objects current/massivefold `{summary['casp17_3d_molecular_object_atlas_completion_audit_current_object_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_massivefold_object_count']}` object folder/readme/manifest `{summary['casp17_3d_molecular_object_atlas_completion_audit_object_folder_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_object_readme_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_object_manifest_count']}` links model/viewer/projection/top5/escrow `{summary['casp17_3d_molecular_object_atlas_completion_audit_model_link_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_viewer_link_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_projection_link_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_top5_link_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_escrow_link_count']}` coordinate copies object/atlas `{summary['casp17_3d_molecular_object_atlas_completion_audit_object_coordinate_copy_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_atlas_coordinate_copy_count']}` proof/author `{summary['casp17_3d_molecular_object_atlas_completion_audit_proof_eligible_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_author_serialized_count']}` first `{summary['casp17_3d_molecular_object_atlas_completion_audit_first_protein_key'] or '-'}` `{summary['casp17_3d_molecular_object_atlas_completion_audit_first_object_key'] or '-'}` html `{summary['casp17_3d_molecular_object_atlas_completion_audit_html'] or '-'}`",
         f"- CASP17 3D molecular object metric handoff: `{summary['casp17_3d_molecular_object_metric_handoff_status'] or '-'}` objects ready/blocked/total `{summary['casp17_3d_molecular_object_metric_handoff_object_ready_count']}/{summary['casp17_3d_molecular_object_metric_handoff_object_blocked_count']}/{summary['casp17_3d_molecular_object_metric_handoff_object_count']}` source objects current/massivefold `{summary['casp17_3d_molecular_object_metric_handoff_current_object_count']}/{summary['casp17_3d_molecular_object_metric_handoff_massivefold_object_count']}` metric requirements `{summary['casp17_3d_molecular_object_metric_handoff_metric_requirement_count']}` required metrics covered/total/missing `{summary['casp17_3d_molecular_object_metric_handoff_covered_required_metric_count']}/{summary['casp17_3d_molecular_object_metric_handoff_required_metric_count']}/{summary['casp17_3d_molecular_object_metric_handoff_missing_required_metric_count']}` missing `{summary['casp17_3d_molecular_object_metric_handoff_missing_required_metric_names'] or '-'}` families monomer/complex/rna/ligand `{summary['casp17_3d_molecular_object_metric_handoff_monomer_object_count']}/{summary['casp17_3d_molecular_object_metric_handoff_complex_object_count']}/{summary['casp17_3d_molecular_object_metric_handoff_rna_hybrid_object_count']}/{summary['casp17_3d_molecular_object_metric_handoff_ligand_object_count']}` folders protein/object `{summary['casp17_3d_molecular_object_metric_handoff_protein_folder_count']}/{summary['casp17_3d_molecular_object_metric_handoff_object_folder_count']}` native/proof/author `{summary['casp17_3d_molecular_object_metric_handoff_native_accuracy_count']}/{summary['casp17_3d_molecular_object_metric_handoff_proof_eligible_count']}/{summary['casp17_3d_molecular_object_metric_handoff_author_serialized_count']}` first `{summary['casp17_3d_molecular_object_metric_handoff_first_protein_key'] or '-'}` `{summary['casp17_3d_molecular_object_metric_handoff_first_object_key'] or '-'}` html `{summary['casp17_3d_molecular_object_metric_handoff_html'] or '-'}`",
+        f"- CASP17 3D ligand metric gap bridge: `{summary['casp17_3d_ligand_metric_gap_bridge_status'] or '-'}` missing `{summary['casp17_3d_ligand_metric_gap_bridge_missing_metric_names'] or '-'}` rows blocked/total `{summary['casp17_3d_ligand_metric_gap_bridge_blocked_row_count']}/{summary['casp17_3d_ligand_metric_gap_bridge_row_count']}` candidates review/proof/strict-blocked/total `{summary['casp17_3d_ligand_metric_gap_bridge_review_ready_candidate_count']}/{summary['casp17_3d_ligand_metric_gap_bridge_proof_eligible_candidate_count']}/{summary['casp17_3d_ligand_metric_gap_bridge_strict_blocked_candidate_count']}/{summary['casp17_3d_ligand_metric_gap_bridge_candidate_count']}` LDDT-PLI/BiSyRMSD `{summary['casp17_3d_ligand_metric_gap_bridge_lddt_pli_count']}/{summary['casp17_3d_ligand_metric_gap_bridge_bisyrmsd_count']}` actions/direct/no-leak/chronology/pose/slot `{summary['casp17_3d_ligand_metric_gap_bridge_metric_action_link_count']}/{summary['casp17_3d_ligand_metric_gap_bridge_direct_open_count']}/{summary['casp17_3d_ligand_metric_gap_bridge_no_leak_open_count']}/{summary['casp17_3d_ligand_metric_gap_bridge_chronology_open_count']}/{summary['casp17_3d_ligand_metric_gap_bridge_pose_open_count']}/{summary['casp17_3d_ligand_metric_gap_bridge_slot_open_count']}` first `{summary['casp17_3d_ligand_metric_gap_bridge_first_candidate_id'] or '-'}` `{summary['casp17_3d_ligand_metric_gap_bridge_first_metric_name'] or '-'}` `{summary['casp17_3d_ligand_metric_gap_bridge_first_blocker'] or '-'}`",
+        f"- organic ligand metric evidence intake: `{summary['organic_ligand_metric_evidence_intake_status'] or '-'}` candidates ready/blocked/total `{summary['organic_ligand_metric_evidence_intake_ready_candidate_count']}/{summary['organic_ligand_metric_evidence_intake_blocked_candidate_count']}/{summary['organic_ligand_metric_evidence_intake_candidate_count']}` fields ready/open/total `{summary['organic_ligand_metric_evidence_intake_ready_field_count']}/{summary['organic_ligand_metric_evidence_intake_open_field_count']}/{summary['organic_ligand_metric_evidence_intake_field_count']}` templates/stubs/dropzones `{summary['organic_ligand_metric_evidence_intake_template_count']}/{summary['organic_ligand_metric_evidence_intake_stub_count']}/{summary['organic_ligand_metric_evidence_intake_dropzone_count']}` metric bridge LDDT-PLI/BiSyRMSD/total `{summary['organic_ligand_metric_evidence_intake_lddt_pli_count']}/{summary['organic_ligand_metric_evidence_intake_bisyrmsd_count']}/{summary['organic_ligand_metric_evidence_intake_metric_bridge_row_count']}` lanes direct/no-leak/chronology/pose/slot `{summary['organic_ligand_metric_evidence_intake_direct_count']}/{summary['organic_ligand_metric_evidence_intake_no_leak_count']}/{summary['organic_ligand_metric_evidence_intake_chronology_count']}/{summary['organic_ligand_metric_evidence_intake_pose_count']}/{summary['organic_ligand_metric_evidence_intake_slot_count']}` linked actions `{summary['organic_ligand_metric_evidence_intake_linked_action_count']}` first `{summary['organic_ligand_metric_evidence_intake_first_candidate_id'] or '-'}` `{summary['organic_ligand_metric_evidence_intake_first_field_key'] or '-'}` `{summary['organic_ligand_metric_evidence_intake_first_blocker'] or '-'}` folder `{summary['organic_ligand_metric_evidence_intake_first_packet_folder'] or '-'}`",
+        f"- organic ligand metric evidence review gate: `{summary['organic_ligand_metric_evidence_review_gate_status'] or '-'}` candidates ready/blocked/total `{summary['organic_ligand_metric_evidence_review_gate_ready_candidate_count']}/{summary['organic_ligand_metric_evidence_review_gate_blocked_candidate_count']}/{summary['organic_ligand_metric_evidence_review_gate_candidate_count']}` fields ready/blocked/total `{summary['organic_ligand_metric_evidence_review_gate_ready_field_count']}/{summary['organic_ligand_metric_evidence_review_gate_blocked_field_count']}/{summary['organic_ligand_metric_evidence_review_gate_field_count']}` template missing value/evidence/clearance/operator `{summary['organic_ligand_metric_evidence_review_gate_template_value_missing_count']}/{summary['organic_ligand_metric_evidence_review_gate_template_evidence_ref_missing_count']}/{summary['organic_ligand_metric_evidence_review_gate_template_clearance_missing_count']}/{summary['organic_ligand_metric_evidence_review_gate_template_operator_id_missing_count']}` stubs present/missing/evidence-missing `{summary['organic_ligand_metric_evidence_review_gate_stub_present_count']}/{summary['organic_ligand_metric_evidence_review_gate_stub_missing_count']}/{summary['organic_ligand_metric_evidence_review_gate_stub_evidence_missing_count']}` policy pass/blocked `{summary['organic_ligand_metric_evidence_review_gate_policy_pass_count']}/{summary['organic_ligand_metric_evidence_review_gate_policy_blocked_count']}` first `{summary['organic_ligand_metric_evidence_review_gate_first_candidate_id'] or '-'}` `{summary['organic_ligand_metric_evidence_review_gate_first_field_key'] or '-'}` `{summary['organic_ligand_metric_evidence_review_gate_first_blocker'] or '-'}` next `{summary['organic_ligand_metric_evidence_review_gate_first_next_action'] or '-'}`",
+        f"- organic ligand metric evidence sync plan: `{summary['organic_ligand_metric_evidence_sync_plan_status'] or '-'}` mode `{summary['organic_ligand_metric_evidence_sync_plan_mode'] or '-'}` candidates ready/blocked/total `{summary['organic_ligand_metric_evidence_sync_plan_ready_candidate_count']}/{summary['organic_ligand_metric_evidence_sync_plan_blocked_candidate_count']}/{summary['organic_ligand_metric_evidence_sync_plan_candidate_count']}` actions ready/blocked/total `{summary['organic_ligand_metric_evidence_sync_plan_ready_action_count']}/{summary['organic_ligand_metric_evidence_sync_plan_blocked_action_count']}/{summary['organic_ligand_metric_evidence_sync_plan_action_count']}` destination present/missing `{summary['organic_ligand_metric_evidence_sync_plan_destination_present_count']}/{summary['organic_ligand_metric_evidence_sync_plan_destination_missing_count']}` source missing value/evidence/clearance/operator `{summary['organic_ligand_metric_evidence_sync_plan_source_value_missing_count']}/{summary['organic_ligand_metric_evidence_sync_plan_source_evidence_ref_missing_count']}/{summary['organic_ligand_metric_evidence_sync_plan_source_clearance_missing_count']}/{summary['organic_ligand_metric_evidence_sync_plan_source_operator_id_missing_count']}` review blocks gate/field `{summary['organic_ligand_metric_evidence_sync_plan_review_gate_blocked_action_count']}/{summary['organic_ligand_metric_evidence_sync_plan_review_field_blocked_action_count']}` folders `{summary['organic_ligand_metric_evidence_sync_plan_candidate_folder_count']}` first `{summary['organic_ligand_metric_evidence_sync_plan_first_candidate_id'] or '-'}` `{summary['organic_ligand_metric_evidence_sync_plan_first_field_key'] or '-'}` `{summary['organic_ligand_metric_evidence_sync_plan_first_blocker'] or '-'}` next `{summary['organic_ligand_metric_evidence_sync_plan_first_next_action'] or '-'}`",
         f"- CASP17 3D molecular object metric handoff completion audit: `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_status'] or '-'}` proteins folder/readme/manifest/total `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_protein_folder_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_protein_readme_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_protein_manifest_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_protein_count']}` objects pass/blocked/total `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_object_pass_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_object_blocked_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_object_count']}` source objects current/massivefold `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_current_object_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_massivefold_object_count']}` object files folder/manifest/csv/md `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_object_folder_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_object_manifest_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_metric_csv_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_metric_md_count']}` metric rows expected/csv/mismatch `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_metric_requirement_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_metric_csv_row_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_metric_csv_mismatch_count']}` evidence awaiting `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_metric_evidence_awaiting_count']}` coordinate copies object/out_dir `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_object_coordinate_copy_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_out_dir_coordinate_copy_count']}` proof/author `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_proof_eligible_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_author_serialized_count']}` first `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_first_protein_key'] or '-'}` `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_first_object_key'] or '-'}` html `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_html'] or '-'}`",
         f"- raw-ranked model quarantine: `{summary['raw_ranked_model_quarantine_status'] or '-'}` targets/models/top5 `{summary['raw_ranked_model_quarantine_target_count']}/{summary['raw_ranked_model_quarantine_model_count']}/{summary['raw_ranked_model_quarantine_top5_count']}` quarantined/linked/author-present `{summary['raw_ranked_model_quarantine_quarantined_count']}/{summary['raw_ranked_model_quarantine_linked_count']}/{summary['raw_ranked_model_quarantine_author_present_count']}` atoms `{summary['raw_ranked_model_quarantine_atom_count']}`",
         f"- current CASP17 submission gate: `{summary['current_submission_gate_status'] or '-'}` go/no-go/total `{summary['current_submission_gate_go_count']}/{summary['current_submission_gate_no_go_count']}/{summary['current_submission_gate_target_count']}` framework `{summary['current_submission_gate_framework_gate_pass'] or '-'}` shape `{summary['current_submission_gate_shape_status'] or '-'}` `{summary['current_submission_gate_shape_pass_count']}/{summary['current_submission_gate_shape_blocked_count']}/{summary['current_submission_gate_shape_target_count']}` difficult lane `{summary['current_submission_gate_difficult_lane_count']}` server `{summary['current_submission_gate_server_ready'] or '-'}`",
@@ -20657,6 +21173,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--molecular-object-metric-handoff-json",
         default=DEFAULT_3D_MOLECULAR_OBJECT_METRIC_HANDOFF_JSON,
+    )
+    parser.add_argument(
+        "--ligand-metric-gap-bridge-json",
+        default=DEFAULT_3D_LIGAND_METRIC_GAP_BRIDGE_JSON,
+    )
+    parser.add_argument(
+        "--organic-ligand-metric-evidence-intake-json",
+        default=DEFAULT_ORGANIC_LIGAND_METRIC_EVIDENCE_INTAKE_JSON,
+    )
+    parser.add_argument(
+        "--organic-ligand-metric-evidence-review-gate-json",
+        default=DEFAULT_ORGANIC_LIGAND_METRIC_EVIDENCE_REVIEW_GATE_JSON,
+    )
+    parser.add_argument(
+        "--organic-ligand-metric-evidence-sync-plan-json",
+        default=DEFAULT_ORGANIC_LIGAND_METRIC_EVIDENCE_SYNC_PLAN_JSON,
     )
     parser.add_argument(
         "--molecular-object-metric-handoff-completion-audit-json",

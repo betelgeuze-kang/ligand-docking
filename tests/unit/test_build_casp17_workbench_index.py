@@ -20,6 +20,14 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     molecular_object_atlas_json = tmp_path / "molecular_object_atlas.json"
     molecular_object_atlas_completion_audit_json = tmp_path / "molecular_object_atlas_completion_audit.json"
     molecular_object_metric_handoff_json = tmp_path / "molecular_object_metric_handoff.json"
+    ligand_metric_gap_bridge_json = tmp_path / "ligand_metric_gap_bridge.json"
+    organic_ligand_metric_evidence_intake_json = tmp_path / "organic_ligand_metric_evidence_intake.json"
+    organic_ligand_metric_evidence_review_gate_json = (
+        tmp_path / "organic_ligand_metric_evidence_review_gate.json"
+    )
+    organic_ligand_metric_evidence_sync_plan_json = (
+        tmp_path / "organic_ligand_metric_evidence_sync_plan.json"
+    )
     molecular_object_metric_handoff_completion_audit_json = (
         tmp_path / "molecular_object_metric_handoff_completion_audit.json"
     )
@@ -700,6 +708,149 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                     "casp17/casp17_3d_molecular_object_metric_handoff_current.html"
                 ),
                 "next_action": "connect each 3D object to required win-tier metrics",
+            }
+        },
+    )
+    _write_json(
+        ligand_metric_gap_bridge_json,
+        {
+            "summary": {
+                "ligand_metric_gap_bridge_status": (
+                    "ligand_metric_gap_mapped_awaiting_strict_blind_evidence"
+                ),
+                "missing_ligand_metric_count": 2,
+                "missing_ligand_metric_names": "LDDT-PLI,BiSyRMSD",
+                "bridge_row_count": 4,
+                "blocked_bridge_row_count": 4,
+                "candidate_count": 2,
+                "review_ready_candidate_count": 2,
+                "strict_blind_blocked_candidate_count": 2,
+                "proof_eligible_candidate_count": 0,
+                "lddt_pli_bridge_row_count": 2,
+                "bisyrmsd_bridge_row_count": 2,
+                "metric_action_link_count": 4,
+                "direct_authority_open_count": 4,
+                "no_leak_open_count": 4,
+                "chronology_open_count": 4,
+                "ligand_pose_open_count": 4,
+                "strict_slot_open_count": 4,
+                "first_candidate_id": "organic_ligand_slot_candidate_001",
+                "first_metric_name": "LDDT-PLI",
+                "first_blocker": "candidate_not_competitive_proof_eligible",
+                "next_action": (
+                    "Use the linked organic ligand promotion actions to clear direct authority, no-leak "
+                    "chronology, ligand pose mapping, and strict-blind slot mapping before computing ligand "
+                    "metrics."
+                ),
+            }
+        },
+    )
+    _write_json(
+        organic_ligand_metric_evidence_intake_json,
+        {
+            "summary": {
+                "organic_ligand_metric_evidence_intake_status": (
+                    "awaiting_organic_ligand_metric_evidence_intake"
+                ),
+                "candidate_count": 2,
+                "ready_candidate_count": 0,
+                "blocked_candidate_count": 2,
+                "field_count": 10,
+                "ready_field_count": 0,
+                "open_field_count": 10,
+                "operator_template_count": 2,
+                "evidence_stub_count": 10,
+                "dropzone_manifest_count": 2,
+                "metric_bridge_row_count": 4,
+                "lddt_pli_bridge_row_count": 2,
+                "bisyrmsd_bridge_row_count": 2,
+                "direct_authority_field_count": 2,
+                "no_leak_field_count": 2,
+                "chronology_field_count": 2,
+                "ligand_pose_field_count": 2,
+                "strict_slot_field_count": 2,
+                "linked_action_count": 10,
+                "first_open_candidate_id": "organic_ligand_slot_candidate_001",
+                "first_open_field_key": "direct_native_or_source_authority",
+                "first_open_blocker": "open_operator_evidence_required",
+                "first_packet_folder": "casp17/organic_ligand_metric_evidence_intake/01_ligand_001",
+                "next_action": (
+                    "Fill the generated operator evidence templates and stubs for direct authority, no-leak, "
+                    "chronology, ligand pose, and strict-blind slot mapping before computing LDDT-PLI or "
+                    "BiSyRMSD."
+                ),
+            }
+        },
+    )
+    _write_json(
+        organic_ligand_metric_evidence_review_gate_json,
+        {
+            "summary": {
+                "organic_ligand_metric_evidence_review_gate_status": (
+                    "awaiting_organic_ligand_metric_evidence_review"
+                ),
+                "candidate_count": 2,
+                "ready_candidate_count": 0,
+                "blocked_candidate_count": 2,
+                "field_count": 10,
+                "ready_field_count": 0,
+                "blocked_field_count": 10,
+                "template_operator_value_missing_count": 10,
+                "template_operator_evidence_ref_missing_count": 10,
+                "template_operator_clearance_missing_count": 10,
+                "template_operator_id_missing_count": 10,
+                "stub_present_count": 10,
+                "stub_missing_count": 0,
+                "stub_evidence_missing_count": 10,
+                "policy_pass_count": 0,
+                "policy_blocked_count": 10,
+                "first_blocked_candidate_id": "organic_ligand_slot_candidate_001",
+                "first_blocked_field_key": "direct_native_or_source_authority",
+                "first_blocker": "template_operator_value_missing",
+                "first_next_action": (
+                    "fill operator_value for direct_native_or_source_authority in "
+                    "operator_evidence_template.csv"
+                ),
+                "next_action": (
+                    "Fill operator evidence templates and field stubs, then rerun this review gate before "
+                    "promoting organic ligand rows into LDDT-PLI or BiSyRMSD metric computation."
+                ),
+            }
+        },
+    )
+    _write_json(
+        organic_ligand_metric_evidence_sync_plan_json,
+        {
+            "summary": {
+                "organic_ligand_metric_evidence_sync_plan_status": (
+                    "awaiting_organic_ligand_metric_evidence_review"
+                ),
+                "sync_mode": "dry_run",
+                "candidate_count": 2,
+                "ready_candidate_count": 0,
+                "blocked_candidate_count": 2,
+                "action_count": 10,
+                "ready_action_count": 0,
+                "blocked_action_count": 10,
+                "destination_action_present_count": 10,
+                "destination_action_missing_count": 0,
+                "source_value_missing_count": 10,
+                "source_evidence_ref_missing_count": 10,
+                "source_clearance_missing_count": 10,
+                "source_operator_id_missing_count": 10,
+                "review_gate_blocked_action_count": 10,
+                "review_field_blocked_action_count": 0,
+                "candidate_sync_folder_count": 2,
+                "first_blocked_candidate_id": "organic_ligand_slot_candidate_001",
+                "first_blocked_field_key": "direct_native_or_source_authority",
+                "first_blocker": "template_operator_value_missing",
+                "first_next_action": (
+                    "complete organic ligand metric evidence review gate before sync"
+                ),
+                "next_action": (
+                    "Complete organic ligand metric evidence review before syncing evidence into promotion "
+                    "actions."
+                ),
             }
         },
     )
@@ -5591,6 +5742,14 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(molecular_object_atlas_completion_audit_json),
             "--molecular-object-metric-handoff-json",
             str(molecular_object_metric_handoff_json),
+            "--ligand-metric-gap-bridge-json",
+            str(ligand_metric_gap_bridge_json),
+            "--organic-ligand-metric-evidence-intake-json",
+            str(organic_ligand_metric_evidence_intake_json),
+            "--organic-ligand-metric-evidence-review-gate-json",
+            str(organic_ligand_metric_evidence_review_gate_json),
+            "--organic-ligand-metric-evidence-sync-plan-json",
+            str(organic_ligand_metric_evidence_sync_plan_json),
             "--molecular-object-metric-handoff-completion-audit-json",
             str(molecular_object_metric_handoff_completion_audit_json),
             "--raw-ranked-model-quarantine-json",
@@ -6022,6 +6181,33 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     ) in workbench_md
     assert "metric requirements `118` required metrics covered/total/missing `9/11/2`" in workbench_md
     assert "missing `LDDT-PLI,BiSyRMSD` families monomer/complex/rna/ligand `1/12/1/0`" in workbench_md
+    assert (
+        "CASP17 3D ligand metric gap bridge: "
+        "`ligand_metric_gap_mapped_awaiting_strict_blind_evidence`"
+    ) in workbench_md
+    assert "rows blocked/total `4/4` candidates review/proof/strict-blocked/total `2/0/2/2`" in workbench_md
+    assert "LDDT-PLI/BiSyRMSD `2/2` actions/direct/no-leak/chronology/pose/slot `4/4/4/4/4/4`" in workbench_md
+    assert (
+        "organic ligand metric evidence intake: "
+        "`awaiting_organic_ligand_metric_evidence_intake`"
+    ) in workbench_md
+    assert "fields ready/open/total `0/10/10` templates/stubs/dropzones `2/10/2`" in workbench_md
+    assert "metric bridge LDDT-PLI/BiSyRMSD/total `2/2/4`" in workbench_md
+    assert "lanes direct/no-leak/chronology/pose/slot `2/2/2/2/2`" in workbench_md
+    assert (
+        "organic ligand metric evidence review gate: "
+        "`awaiting_organic_ligand_metric_evidence_review`"
+    ) in workbench_md
+    assert "fields ready/blocked/total `0/10/10`" in workbench_md
+    assert "template missing value/evidence/clearance/operator `10/10/10/10`" in workbench_md
+    assert "stubs present/missing/evidence-missing `10/0/10` policy pass/blocked `0/10`" in workbench_md
+    assert (
+        "organic ligand metric evidence sync plan: "
+        "`awaiting_organic_ligand_metric_evidence_review`"
+    ) in workbench_md
+    assert "actions ready/blocked/total `0/10/10` destination present/missing `10/0`" in workbench_md
+    assert "source missing value/evidence/clearance/operator `10/10/10/10`" in workbench_md
+    assert "review blocks gate/field `10/0` folders `2`" in workbench_md
     assert (
         "CASP17 3D molecular object metric handoff completion audit: "
         "`casp17_3d_molecular_object_metric_handoff_completion_audit_pass`"
@@ -6645,6 +6831,128 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_first_blocked_protein_key"] == ""
     assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_html"] == (
         "casp17/casp17_3d_molecular_object_metric_handoff_current.html"
+    )
+    assert payload["summary"]["casp17_3d_ligand_metric_gap_bridge_status"] == (
+        "ligand_metric_gap_mapped_awaiting_strict_blind_evidence"
+    )
+    assert payload["summary"]["casp17_3d_ligand_metric_gap_bridge_missing_metric_count"] == 2
+    assert payload["summary"]["casp17_3d_ligand_metric_gap_bridge_missing_metric_names"] == (
+        "LDDT-PLI,BiSyRMSD"
+    )
+    assert payload["summary"]["casp17_3d_ligand_metric_gap_bridge_row_count"] == 4
+    assert payload["summary"]["casp17_3d_ligand_metric_gap_bridge_blocked_row_count"] == 4
+    assert payload["summary"]["casp17_3d_ligand_metric_gap_bridge_candidate_count"] == 2
+    assert payload["summary"]["casp17_3d_ligand_metric_gap_bridge_review_ready_candidate_count"] == 2
+    assert payload["summary"]["casp17_3d_ligand_metric_gap_bridge_strict_blocked_candidate_count"] == 2
+    assert payload["summary"]["casp17_3d_ligand_metric_gap_bridge_proof_eligible_candidate_count"] == 0
+    assert payload["summary"]["casp17_3d_ligand_metric_gap_bridge_lddt_pli_count"] == 2
+    assert payload["summary"]["casp17_3d_ligand_metric_gap_bridge_bisyrmsd_count"] == 2
+    assert payload["summary"]["casp17_3d_ligand_metric_gap_bridge_metric_action_link_count"] == 4
+    assert payload["summary"]["casp17_3d_ligand_metric_gap_bridge_direct_open_count"] == 4
+    assert payload["summary"]["casp17_3d_ligand_metric_gap_bridge_no_leak_open_count"] == 4
+    assert payload["summary"]["casp17_3d_ligand_metric_gap_bridge_chronology_open_count"] == 4
+    assert payload["summary"]["casp17_3d_ligand_metric_gap_bridge_pose_open_count"] == 4
+    assert payload["summary"]["casp17_3d_ligand_metric_gap_bridge_slot_open_count"] == 4
+    assert payload["summary"]["casp17_3d_ligand_metric_gap_bridge_first_candidate_id"] == (
+        "organic_ligand_slot_candidate_001"
+    )
+    assert payload["summary"]["casp17_3d_ligand_metric_gap_bridge_first_metric_name"] == "LDDT-PLI"
+    assert payload["summary"]["casp17_3d_ligand_metric_gap_bridge_first_blocker"] == (
+        "candidate_not_competitive_proof_eligible"
+    )
+    assert payload["summary"]["organic_ligand_metric_evidence_intake_status"] == (
+        "awaiting_organic_ligand_metric_evidence_intake"
+    )
+    assert payload["summary"]["organic_ligand_metric_evidence_intake_candidate_count"] == 2
+    assert payload["summary"]["organic_ligand_metric_evidence_intake_ready_candidate_count"] == 0
+    assert payload["summary"]["organic_ligand_metric_evidence_intake_blocked_candidate_count"] == 2
+    assert payload["summary"]["organic_ligand_metric_evidence_intake_field_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_evidence_intake_ready_field_count"] == 0
+    assert payload["summary"]["organic_ligand_metric_evidence_intake_open_field_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_evidence_intake_template_count"] == 2
+    assert payload["summary"]["organic_ligand_metric_evidence_intake_stub_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_evidence_intake_dropzone_count"] == 2
+    assert payload["summary"]["organic_ligand_metric_evidence_intake_metric_bridge_row_count"] == 4
+    assert payload["summary"]["organic_ligand_metric_evidence_intake_lddt_pli_count"] == 2
+    assert payload["summary"]["organic_ligand_metric_evidence_intake_bisyrmsd_count"] == 2
+    assert payload["summary"]["organic_ligand_metric_evidence_intake_direct_count"] == 2
+    assert payload["summary"]["organic_ligand_metric_evidence_intake_no_leak_count"] == 2
+    assert payload["summary"]["organic_ligand_metric_evidence_intake_chronology_count"] == 2
+    assert payload["summary"]["organic_ligand_metric_evidence_intake_pose_count"] == 2
+    assert payload["summary"]["organic_ligand_metric_evidence_intake_slot_count"] == 2
+    assert payload["summary"]["organic_ligand_metric_evidence_intake_linked_action_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_evidence_intake_first_candidate_id"] == (
+        "organic_ligand_slot_candidate_001"
+    )
+    assert payload["summary"]["organic_ligand_metric_evidence_intake_first_field_key"] == (
+        "direct_native_or_source_authority"
+    )
+    assert payload["summary"]["organic_ligand_metric_evidence_intake_first_blocker"] == (
+        "open_operator_evidence_required"
+    )
+    assert payload["summary"]["organic_ligand_metric_evidence_intake_first_packet_folder"] == (
+        "casp17/organic_ligand_metric_evidence_intake/01_ligand_001"
+    )
+    assert payload["summary"]["organic_ligand_metric_evidence_review_gate_status"] == (
+        "awaiting_organic_ligand_metric_evidence_review"
+    )
+    assert payload["summary"]["organic_ligand_metric_evidence_review_gate_candidate_count"] == 2
+    assert payload["summary"]["organic_ligand_metric_evidence_review_gate_ready_candidate_count"] == 0
+    assert payload["summary"]["organic_ligand_metric_evidence_review_gate_blocked_candidate_count"] == 2
+    assert payload["summary"]["organic_ligand_metric_evidence_review_gate_field_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_evidence_review_gate_ready_field_count"] == 0
+    assert payload["summary"]["organic_ligand_metric_evidence_review_gate_blocked_field_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_evidence_review_gate_template_value_missing_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_evidence_review_gate_template_evidence_ref_missing_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_evidence_review_gate_template_clearance_missing_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_evidence_review_gate_template_operator_id_missing_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_evidence_review_gate_stub_present_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_evidence_review_gate_stub_missing_count"] == 0
+    assert payload["summary"]["organic_ligand_metric_evidence_review_gate_stub_evidence_missing_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_evidence_review_gate_policy_pass_count"] == 0
+    assert payload["summary"]["organic_ligand_metric_evidence_review_gate_policy_blocked_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_evidence_review_gate_first_candidate_id"] == (
+        "organic_ligand_slot_candidate_001"
+    )
+    assert payload["summary"]["organic_ligand_metric_evidence_review_gate_first_field_key"] == (
+        "direct_native_or_source_authority"
+    )
+    assert payload["summary"]["organic_ligand_metric_evidence_review_gate_first_blocker"] == (
+        "template_operator_value_missing"
+    )
+    assert payload["summary"]["organic_ligand_metric_evidence_review_gate_first_next_action"] == (
+        "fill operator_value for direct_native_or_source_authority in operator_evidence_template.csv"
+    )
+    assert payload["summary"]["organic_ligand_metric_evidence_sync_plan_status"] == (
+        "awaiting_organic_ligand_metric_evidence_review"
+    )
+    assert payload["summary"]["organic_ligand_metric_evidence_sync_plan_mode"] == "dry_run"
+    assert payload["summary"]["organic_ligand_metric_evidence_sync_plan_candidate_count"] == 2
+    assert payload["summary"]["organic_ligand_metric_evidence_sync_plan_ready_candidate_count"] == 0
+    assert payload["summary"]["organic_ligand_metric_evidence_sync_plan_blocked_candidate_count"] == 2
+    assert payload["summary"]["organic_ligand_metric_evidence_sync_plan_action_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_evidence_sync_plan_ready_action_count"] == 0
+    assert payload["summary"]["organic_ligand_metric_evidence_sync_plan_blocked_action_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_evidence_sync_plan_destination_present_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_evidence_sync_plan_destination_missing_count"] == 0
+    assert payload["summary"]["organic_ligand_metric_evidence_sync_plan_source_value_missing_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_evidence_sync_plan_source_evidence_ref_missing_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_evidence_sync_plan_source_clearance_missing_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_evidence_sync_plan_source_operator_id_missing_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_evidence_sync_plan_review_gate_blocked_action_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_evidence_sync_plan_review_field_blocked_action_count"] == 0
+    assert payload["summary"]["organic_ligand_metric_evidence_sync_plan_candidate_folder_count"] == 2
+    assert payload["summary"]["organic_ligand_metric_evidence_sync_plan_first_candidate_id"] == (
+        "organic_ligand_slot_candidate_001"
+    )
+    assert payload["summary"]["organic_ligand_metric_evidence_sync_plan_first_field_key"] == (
+        "direct_native_or_source_authority"
+    )
+    assert payload["summary"]["organic_ligand_metric_evidence_sync_plan_first_blocker"] == (
+        "template_operator_value_missing"
+    )
+    assert payload["summary"]["organic_ligand_metric_evidence_sync_plan_first_next_action"] == (
+        "complete organic ligand metric evidence review gate before sync"
     )
     assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_status"] == (
         "casp17_3d_molecular_object_metric_handoff_completion_audit_pass"
@@ -10113,6 +10421,66 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "folders:5/14" in by_id["casp17_3d_molecular_object_metric_handoff"]["blockers"]
     assert "native_proof_author:0/0/0" in by_id[
         "casp17_3d_molecular_object_metric_handoff"
+    ]["blockers"]
+    assert by_id["casp17_3d_ligand_metric_gap_bridge"]["status"] == (
+        "ligand_metric_gap_mapped_awaiting_strict_blind_evidence"
+    )
+    assert by_id["casp17_3d_ligand_metric_gap_bridge"]["ready_count"] == 0
+    assert by_id["casp17_3d_ligand_metric_gap_bridge"]["blocked_count"] == 4
+    assert by_id["casp17_3d_ligand_metric_gap_bridge"]["total_count"] == 4
+    assert "missing:LDDT-PLI,BiSyRMSD" in by_id["casp17_3d_ligand_metric_gap_bridge"]["blockers"]
+    assert "lddt/bisyrmsd:2/2" in by_id["casp17_3d_ligand_metric_gap_bridge"]["blockers"]
+    assert "actions:4" in by_id["casp17_3d_ligand_metric_gap_bridge"]["blockers"]
+    assert "open_direct/no_leak/chronology/pose/slot:4/4/4/4/4" in by_id[
+        "casp17_3d_ligand_metric_gap_bridge"
+    ]["blockers"]
+    assert "candidates:2/0/2" in by_id["casp17_3d_ligand_metric_gap_bridge"]["blockers"]
+    assert by_id["organic_ligand_metric_evidence_intake"]["status"] == (
+        "awaiting_organic_ligand_metric_evidence_intake"
+    )
+    assert by_id["organic_ligand_metric_evidence_intake"]["ready_count"] == 0
+    assert by_id["organic_ligand_metric_evidence_intake"]["blocked_count"] == 10
+    assert by_id["organic_ligand_metric_evidence_intake"]["total_count"] == 10
+    assert "candidates:0/2/2" in by_id["organic_ligand_metric_evidence_intake"]["blockers"]
+    assert "fields:0/10/10" in by_id["organic_ligand_metric_evidence_intake"]["blockers"]
+    assert "templates/stubs/dropzones:2/10/2" in by_id[
+        "organic_ligand_metric_evidence_intake"
+    ]["blockers"]
+    assert "metric_bridge:2/2/4" in by_id["organic_ligand_metric_evidence_intake"]["blockers"]
+    assert "lanes:2/2/2/2/2" in by_id["organic_ligand_metric_evidence_intake"]["blockers"]
+    assert "linked_actions:10" in by_id["organic_ligand_metric_evidence_intake"]["blockers"]
+    assert by_id["organic_ligand_metric_evidence_review_gate"]["status"] == (
+        "awaiting_organic_ligand_metric_evidence_review"
+    )
+    assert by_id["organic_ligand_metric_evidence_review_gate"]["ready_count"] == 0
+    assert by_id["organic_ligand_metric_evidence_review_gate"]["blocked_count"] == 10
+    assert by_id["organic_ligand_metric_evidence_review_gate"]["total_count"] == 10
+    assert "candidates:0/2/2" in by_id["organic_ligand_metric_evidence_review_gate"]["blockers"]
+    assert "fields:0/10/10" in by_id["organic_ligand_metric_evidence_review_gate"]["blockers"]
+    assert "template_missing:10/10/10/10" in by_id[
+        "organic_ligand_metric_evidence_review_gate"
+    ]["blockers"]
+    assert "stubs:10/0/10" in by_id["organic_ligand_metric_evidence_review_gate"]["blockers"]
+    assert "policy:0/10" in by_id["organic_ligand_metric_evidence_review_gate"]["blockers"]
+    assert "first:organic_ligand_slot_candidate_001/direct_native_or_source_authority" in by_id[
+        "organic_ligand_metric_evidence_review_gate"
+    ]["blockers"]
+    assert by_id["organic_ligand_metric_evidence_sync_plan"]["status"] == (
+        "awaiting_organic_ligand_metric_evidence_review"
+    )
+    assert by_id["organic_ligand_metric_evidence_sync_plan"]["ready_count"] == 0
+    assert by_id["organic_ligand_metric_evidence_sync_plan"]["blocked_count"] == 10
+    assert by_id["organic_ligand_metric_evidence_sync_plan"]["total_count"] == 10
+    assert "candidates:0/2/2" in by_id["organic_ligand_metric_evidence_sync_plan"]["blockers"]
+    assert "actions:0/10/10" in by_id["organic_ligand_metric_evidence_sync_plan"]["blockers"]
+    assert "destination:10/0" in by_id["organic_ligand_metric_evidence_sync_plan"]["blockers"]
+    assert "source_missing:10/10/10/10" in by_id[
+        "organic_ligand_metric_evidence_sync_plan"
+    ]["blockers"]
+    assert "review_blocks:10/0" in by_id["organic_ligand_metric_evidence_sync_plan"]["blockers"]
+    assert "folders:2" in by_id["organic_ligand_metric_evidence_sync_plan"]["blockers"]
+    assert "first:organic_ligand_slot_candidate_001/direct_native_or_source_authority" in by_id[
+        "organic_ligand_metric_evidence_sync_plan"
     ]["blockers"]
     assert by_id["casp17_3d_molecular_object_metric_handoff_completion_audit"]["status"] == (
         "casp17_3d_molecular_object_metric_handoff_completion_audit_pass"
