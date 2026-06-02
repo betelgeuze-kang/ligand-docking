@@ -22,7 +22,32 @@ DEFAULT_PROTEIN_OBJECT_LIBRARY_COMPLETION_AUDIT_JSON = (
 DEFAULT_PROTEIN_OBJECT_LIBRARY_NAVIGATION_CATALOG_JSON = (
     "casp17/casp17_protein_object_library_navigation_catalog_current.json"
 )
+DEFAULT_3D_MOLECULAR_OBJECT_ATLAS_JSON = "casp17/casp17_3d_molecular_object_atlas_current.json"
+DEFAULT_3D_MOLECULAR_OBJECT_ATLAS_COMPLETION_AUDIT_JSON = (
+    "casp17/casp17_3d_molecular_object_atlas_completion_audit_current.json"
+)
+DEFAULT_3D_MOLECULAR_OBJECT_METRIC_HANDOFF_JSON = (
+    "casp17/casp17_3d_molecular_object_metric_handoff_current.json"
+)
+DEFAULT_3D_MOLECULAR_OBJECT_METRIC_HANDOFF_COMPLETION_AUDIT_JSON = (
+    "casp17/casp17_3d_molecular_object_metric_handoff_completion_audit_current.json"
+)
 DEFAULT_RAW_RANKED_MODEL_QUARANTINE_JSON = "casp17/casp17_raw_ranked_model_quarantine_audit_current.json"
+DEFAULT_CURRENT_SUBMISSION_GATE_JSON = "runs/casp17_submission_gate_packet_current.json"
+DEFAULT_CURRENT_SIDECHAIN_REPACK_JSON = "runs/casp17_sidechain_repack_packet_current.json"
+DEFAULT_CURRENT_SUBMISSION_PACKAGE_PREFLIGHT_JSON = (
+    "casp17/casp17_current_submission_package_preflight_current.json"
+)
+DEFAULT_CURRENT_SUBMISSION_DEADLINE_GUARD_JSON = (
+    "casp17/casp17_current_submission_deadline_guard_current.json"
+)
+DEFAULT_CURRENT_UPLOAD_QUEUE_JSON = "casp17/casp17_current_upload_queue_current.json"
+DEFAULT_CURRENT_UPLOAD_REVIEW_PACKET_JSON = (
+    "casp17/casp17_current_upload_review_packet_current.json"
+)
+DEFAULT_CURRENT_PROSPECTIVE_STRICT_BLIND_ESCROW_JSON = (
+    "casp17/casp17_current_prospective_strict_blind_escrow_current.json"
+)
 DEFAULT_WIN_GAP_CLOSURE_JSON = "runs/casp17_win_gap_closure_packet_current.json"
 DEFAULT_WIN_TIER_GOAL_SCORECARD_JSON = "runs/casp17_win_tier_goal_scorecard_current.json"
 DEFAULT_HISTORICAL_WINNER_NORMALIZED_BANDS_JSON = (
@@ -75,6 +100,57 @@ DEFAULT_PROTEIN_COMPLEX_MASSIVEFOLD_MODEL_SELECTION_COVERAGE_JSON = (
 )
 DEFAULT_PROTEIN_COMPLEX_MASSIVEFOLD_SELF_ASSESSMENT_PACKET_JSON = (
     "casp17/casp17_protein_complex_massivefold_self_assessment_packet_current.json"
+)
+DEFAULT_MASSIVEFOLD_MODEL1_RISK_QUEUE_JSON = (
+    "casp17/casp17_massivefold_model1_risk_queue_current.json"
+)
+DEFAULT_MASSIVEFOLD_CRITICAL_RERANK_EXPERIMENT_JSON = (
+    "casp17/casp17_massivefold_critical_rerank_experiment_current.json"
+)
+DEFAULT_MASSIVEFOLD_CRITICAL_RERANK_SCORE_LEDGER_JSON = (
+    "casp17/casp17_massivefold_critical_rerank_score_ledger_current.json"
+)
+DEFAULT_MASSIVEFOLD_MODEL1_SELECTION_CALIBRATION_GATE_JSON = (
+    "casp17/casp17_massivefold_model1_selection_calibration_gate_current.json"
+)
+DEFAULT_MASSIVEFOLD_MODEL1_PROBE_WORKLIST_JSON = (
+    "casp17/casp17_massivefold_model1_probe_worklist_current.json"
+)
+DEFAULT_MASSIVEFOLD_MODEL1_PROBE_OUTCOME_JSON = (
+    "casp17/casp17_massivefold_model1_probe_outcome_current.json"
+)
+DEFAULT_MASSIVEFOLD_MODEL1_FREEZE_DECISION_PACKET_JSON = (
+    "casp17/casp17_massivefold_model1_freeze_decision_packet_current.json"
+)
+DEFAULT_MASSIVEFOLD_MODEL_SELECTION_LEDGER_JSON = (
+    "casp17/casp17_massivefold_model_selection_ledger_current.json"
+)
+DEFAULT_MASSIVEFOLD_MODEL1_COMBINED_SELECTOR_OVERLAY_JSON = (
+    "casp17/casp17_massivefold_model1_combined_selector_overlay_current.json"
+)
+DEFAULT_MASSIVEFOLD_FREEZE_READY_REVIEW_PACKET_JSON = (
+    "casp17/casp17_massivefold_freeze_ready_review_packet_current.json"
+)
+DEFAULT_MASSIVEFOLD_HOLD_PROBE_REVIEW_PACKET_JSON = (
+    "casp17/casp17_massivefold_hold_probe_review_packet_current.json"
+)
+DEFAULT_MASSIVEFOLD_PROBE_REQUIRED_TARGETED_PROBE_PACKET_JSON = (
+    "casp17/casp17_massivefold_probe_required_targeted_probe_packet_current.json"
+)
+DEFAULT_MASSIVEFOLD_POST_PROBE_SELECTOR_DECISION_PACKET_JSON = (
+    "casp17/casp17_massivefold_post_probe_selector_decision_packet_current.json"
+)
+DEFAULT_MASSIVEFOLD_WATCH_MANUAL_ACTION_PACKET_JSON = (
+    "casp17/casp17_massivefold_watch_manual_action_packet_current.json"
+)
+DEFAULT_MASSIVEFOLD_FREEZE_CANDIDATE_FORMAT_PREFLIGHT_JSON = (
+    "casp17/casp17_massivefold_freeze_candidate_format_preflight_current.json"
+)
+DEFAULT_MASSIVEFOLD_FREEZE_CANDIDATE_ESCROW_JSON = (
+    "casp17/casp17_massivefold_freeze_candidate_escrow_current.json"
+)
+DEFAULT_MASSIVEFOLD_FREEZE_CANDIDATE_PROTEIN_LIBRARY_JSON = (
+    "casp17/casp17_massivefold_freeze_candidate_protein_library_current.json"
 )
 DEFAULT_CAPRI_ROUND65_READINESS_JSON = "casp17/capri_round65/capri_round65_readiness_current.json"
 DEFAULT_CAPRI_ROUND65_FORMAT_PREFLIGHT_JSON = "casp17/capri_round65/capri_round65_format_preflight_current.json"
@@ -169,11 +245,47 @@ DEFAULT_HISTORICAL_SEED_STRICT_BLIND_REPLACEMENT_FIRST_SLOT_OFFICIAL_ARCHIVE_SOU
 DEFAULT_HISTORICAL_SEED_OFFICIAL_ARCHIVE_BASELINE_LANE_JSON = (
     "casp17/casp17_historical_seed_official_archive_baseline_lane_current.json"
 )
+DEFAULT_OFFICIAL_ARCHIVE_FIRST_BASELINE_ACQUISITION_AUDIT_JSON = (
+    "casp17/casp17_official_archive_first_baseline_acquisition_audit_current.json"
+)
+DEFAULT_OFFICIAL_ARCHIVE_FIRST_BASELINE_MODEL_POOL_JSON = (
+    "casp17/casp17_official_archive_first_baseline_model_pool_current.json"
+)
+DEFAULT_OFFICIAL_ARCHIVE_FIRST_BASELINE_SCORE_LEDGER_JSON = (
+    "casp17/casp17_official_archive_first_baseline_score_ledger_current.json"
+)
+DEFAULT_OFFICIAL_ARCHIVE_FIRST_BASELINE_REPLAY_COMPARISON_JSON = (
+    "casp17/casp17_official_archive_first_baseline_replay_comparison_current.json"
+)
+DEFAULT_OFFICIAL_ARCHIVE_FIRST_BASELINE_MODEL1_GAP_TRIAGE_JSON = (
+    "casp17/casp17_official_archive_first_baseline_model1_gap_triage_current.json"
+)
+DEFAULT_OFFICIAL_ARCHIVE_FIRST_BASELINE_MODEL1_GAP_VIEWER_PACKET_JSON = (
+    "casp17/casp17_official_archive_first_baseline_model1_gap_viewer_packet_current.json"
+)
+DEFAULT_OFFICIAL_ARCHIVE_FIRST_BASELINE_MODEL1_GAP_FEATURE_PROBE_JSON = (
+    "casp17/casp17_official_archive_first_baseline_model1_gap_feature_probe_current.json"
+)
+DEFAULT_OFFICIAL_ARCHIVE_FIRST_BASELINE_MODEL1_GAP_CONSENSUS_PROBE_JSON = (
+    "casp17/casp17_official_archive_first_baseline_model1_gap_consensus_probe_current.json"
+)
+DEFAULT_OFFICIAL_ARCHIVE_FIRST_BASELINE_MODEL1_GAP_COMBINED_SELECTOR_LEDGER_JSON = (
+    "casp17/casp17_official_archive_first_baseline_model1_gap_combined_selector_ledger_current.json"
+)
 DEFAULT_STRICT_BLIND_FIRST_SLOT_SOURCE_BRIDGE_JSON = (
     "casp17/casp17_strict_blind_first_slot_source_bridge_current.json"
 )
 DEFAULT_STRICT_BLIND_INTERNAL_PREDICTION_SOURCE_AUDIT_JSON = (
     "casp17/casp17_strict_blind_internal_prediction_source_audit_current.json"
+)
+DEFAULT_STRICT_BLIND_INTERNAL_CANDIDATE_FILESYSTEM_SWEEP_JSON = (
+    "casp17/casp17_strict_blind_internal_candidate_filesystem_sweep_current.json"
+)
+DEFAULT_STRICT_BLIND_UNKNOWN_CANDIDATE_TRIAGE_JSON = (
+    "casp17/casp17_strict_blind_unknown_candidate_triage_current.json"
+)
+DEFAULT_STRICT_BLIND_INTERNAL_LIKE_SOURCE_REVIEW_JSON = (
+    "casp17/casp17_strict_blind_internal_like_source_review_current.json"
 )
 DEFAULT_STRICT_BLIND_INTERNAL_PREDICTION_SOURCE_GATE_JSON = (
     "casp17/casp17_strict_blind_internal_prediction_source_gate_current.json"
@@ -186,6 +298,9 @@ DEFAULT_STRICT_BLIND_SOURCE_GATE_OPERATOR_PACKET_JSON = (
 )
 DEFAULT_STRICT_BLIND_SOURCE_GATE_SOURCE_REQUEST_PACKET_JSON = (
     "casp17/casp17_strict_blind_source_gate_source_request_packet_current.json"
+)
+DEFAULT_STRICT_BLIND_SOURCE_REQUEST_RESOLUTION_BOARD_JSON = (
+    "casp17/casp17_strict_blind_source_request_resolution_board_current.json"
 )
 DEFAULT_STRICT_BLIND_SOURCE_REQUEST_FULFILLMENT_GATE_JSON = (
     "casp17/casp17_strict_blind_source_request_fulfillment_gate_current.json"
@@ -210,6 +325,9 @@ DEFAULT_STRICT_BLIND_FIRST_UNLOCK_EVIDENCE_PACKET_JSON = (
 )
 DEFAULT_STRICT_BLIND_FIRST_UNLOCK_EVIDENCE_REVIEW_GATE_JSON = (
     "casp17/casp17_strict_blind_first_unlock_evidence_review_gate_current.json"
+)
+DEFAULT_STRICT_BLIND_FIRST_SLOT_SOURCE_GATE_BLOCKER_LEDGER_JSON = (
+    "casp17/casp17_strict_blind_first_slot_source_gate_blocker_ledger_current.json"
 )
 DEFAULT_STRICT_BLIND_FIRST_UNLOCK_EVIDENCE_SYNC_PLAN_JSON = (
     "casp17/casp17_strict_blind_first_unlock_evidence_sync_plan_current.json"
@@ -336,6 +454,42 @@ DEFAULT_COMPETITIVE_TARGET_IDENTITY_CLEARANCE_MANIFEST_SYNC_JSON = (
 )
 DEFAULT_COMPETITIVE_TARGET_IDENTITY_CLEARANCE_WORKORDER_AUDIT_JSON = (
     "casp17/casp17_competitive_floor_target_identity_clearance_workorder_audit_current.json"
+)
+DEFAULT_COMPETITIVE_TARGET_IDENTITY_METRIC_RUNWAY_JSON = (
+    "casp17/casp17_competitive_floor_target_identity_metric_runway_current.json"
+)
+DEFAULT_COMPETITIVE_FLOOR_NATIVE_PROVENANCE_OPERATOR_PACKET_JSON = (
+    "casp17/casp17_competitive_floor_native_provenance_operator_packet_current.json"
+)
+DEFAULT_COMPETITIVE_FLOOR_NATIVE_PROVENANCE_OPERATOR_PACKET_COMPLETION_AUDIT_JSON = (
+    "casp17/casp17_competitive_floor_native_provenance_operator_packet_completion_audit_current.json"
+)
+DEFAULT_COMPETITIVE_FLOOR_NATIVE_PROVENANCE_METRIC_UNLOCK_BRIDGE_JSON = (
+    "casp17/casp17_competitive_floor_native_provenance_metric_unlock_bridge_current.json"
+)
+DEFAULT_COMPETITIVE_FLOOR_FIRST_NATIVE_PROVENANCE_UNLOCK_KIT_JSON = (
+    "casp17/casp17_competitive_floor_first_native_provenance_unlock_kit_current.json"
+)
+DEFAULT_COMPETITIVE_FLOOR_BATCH_NATIVE_PROVENANCE_UNLOCK_KIT_JSON = (
+    "casp17/casp17_competitive_floor_batch_native_provenance_unlock_kit_current.json"
+)
+DEFAULT_COMPETITIVE_FLOOR_BATCH_NATIVE_PROVENANCE_UNLOCK_KIT_COMPLETION_AUDIT_JSON = (
+    "casp17/casp17_competitive_floor_batch_native_provenance_unlock_kit_completion_audit_current.json"
+)
+DEFAULT_COMPETITIVE_FLOOR_BATCH_NATIVE_PROVENANCE_VALUE_GATE_JSON = (
+    "casp17/casp17_competitive_floor_batch_native_provenance_value_gate_current.json"
+)
+DEFAULT_COMPETITIVE_FLOOR_BATCH_NATIVE_PROVENANCE_VALUE_ACTION_BOARD_JSON = (
+    "casp17/casp17_competitive_floor_batch_native_provenance_value_action_board_current.json"
+)
+DEFAULT_COMPETITIVE_FLOOR_BATCH_NATIVE_PROVENANCE_VALUE_ACTION_BOARD_COMPLETION_AUDIT_JSON = (
+    "casp17/casp17_competitive_floor_batch_native_provenance_value_action_board_completion_audit_current.json"
+)
+DEFAULT_COMPETITIVE_FLOOR_BATCH_NATIVE_PROVENANCE_OPERATOR_FILL_PREFLIGHT_JSON = (
+    "casp17/casp17_competitive_floor_batch_native_provenance_operator_fill_preflight_current.json"
+)
+DEFAULT_COMPETITIVE_FLOOR_BATCH_NATIVE_PROVENANCE_OPERATOR_FILL_PREFLIGHT_COMPLETION_AUDIT_JSON = (
+    "casp17/casp17_competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_current.json"
 )
 DEFAULT_COMPETITIVE_TARGET_IDENTITY_CLEARANCE_ACTION_BOARD_JSON = (
     "casp17/casp17_competitive_floor_target_identity_clearance_action_board_current.json"
@@ -487,7 +641,26 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     protein_object_library_navigation_catalog_payload = _read_json(
         args.protein_object_library_navigation_catalog_json
     )
+    molecular_object_atlas_payload = _read_json(args.molecular_object_atlas_json)
+    molecular_object_atlas_completion_audit_payload = _read_json(
+        args.molecular_object_atlas_completion_audit_json
+    )
+    molecular_object_metric_handoff_payload = _read_json(args.molecular_object_metric_handoff_json)
+    molecular_object_metric_handoff_completion_audit_payload = _read_json(
+        args.molecular_object_metric_handoff_completion_audit_json
+    )
     raw_ranked_model_quarantine_payload = _read_json(args.raw_ranked_model_quarantine_json)
+    current_submission_gate_payload = _read_json(args.current_submission_gate_json)
+    current_sidechain_repack_payload = _read_json(args.current_sidechain_repack_json)
+    current_submission_package_preflight_payload = _read_json(
+        args.current_submission_package_preflight_json
+    )
+    current_submission_deadline_guard_payload = _read_json(args.current_submission_deadline_guard_json)
+    current_upload_queue_payload = _read_json(args.current_upload_queue_json)
+    current_upload_review_packet_payload = _read_json(args.current_upload_review_packet_json)
+    current_prospective_strict_blind_escrow_payload = _read_json(
+        args.current_prospective_strict_blind_escrow_json
+    )
     closure_payload = _read_json(args.win_gap_closure_json)
     goal_scorecard_payload = _read_json(args.win_tier_goal_scorecard_json)
     historical_winner_normalized_bands_payload = _read_json(
@@ -540,6 +713,55 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     protein_complex_massivefold_self_assessment_packet_payload = _read_json(
         args.protein_complex_massivefold_self_assessment_packet_json
+    )
+    massivefold_model1_risk_queue_payload = _read_json(args.massivefold_model1_risk_queue_json)
+    massivefold_critical_rerank_experiment_payload = _read_json(
+        args.massivefold_critical_rerank_experiment_json
+    )
+    massivefold_critical_rerank_score_ledger_payload = _read_json(
+        args.massivefold_critical_rerank_score_ledger_json
+    )
+    massivefold_model1_selection_calibration_gate_payload = _read_json(
+        args.massivefold_model1_selection_calibration_gate_json
+    )
+    massivefold_model1_probe_worklist_payload = _read_json(
+        args.massivefold_model1_probe_worklist_json
+    )
+    massivefold_model1_probe_outcome_payload = _read_json(
+        args.massivefold_model1_probe_outcome_json
+    )
+    massivefold_model1_freeze_decision_packet_payload = _read_json(
+        args.massivefold_model1_freeze_decision_packet_json
+    )
+    massivefold_model_selection_ledger_payload = _read_json(
+        args.massivefold_model_selection_ledger_json
+    )
+    massivefold_model1_combined_selector_overlay_payload = _read_json(
+        args.massivefold_model1_combined_selector_overlay_json
+    )
+    massivefold_freeze_ready_review_packet_payload = _read_json(
+        args.massivefold_freeze_ready_review_packet_json
+    )
+    massivefold_hold_probe_review_packet_payload = _read_json(
+        args.massivefold_hold_probe_review_packet_json
+    )
+    massivefold_probe_required_targeted_probe_packet_payload = _read_json(
+        args.massivefold_probe_required_targeted_probe_packet_json
+    )
+    massivefold_post_probe_selector_decision_packet_payload = _read_json(
+        args.massivefold_post_probe_selector_decision_packet_json
+    )
+    massivefold_watch_manual_action_packet_payload = _read_json(
+        args.massivefold_watch_manual_action_packet_json
+    )
+    massivefold_freeze_candidate_format_preflight_payload = _read_json(
+        args.massivefold_freeze_candidate_format_preflight_json
+    )
+    massivefold_freeze_candidate_escrow_payload = _read_json(
+        args.massivefold_freeze_candidate_escrow_json
+    )
+    massivefold_freeze_candidate_protein_library_payload = _read_json(
+        args.massivefold_freeze_candidate_protein_library_json
     )
     capri_round65_readiness_payload = _read_json(args.capri_round65_readiness_json)
     capri_round65_format_preflight_payload = _read_json(args.capri_round65_format_preflight_json)
@@ -632,11 +854,47 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     historical_seed_official_archive_baseline_lane_payload = _read_json(
         args.historical_seed_official_archive_baseline_lane_json
     )
+    official_archive_first_baseline_acquisition_audit_payload = _read_json(
+        args.official_archive_first_baseline_acquisition_audit_json
+    )
+    official_archive_first_baseline_model_pool_payload = _read_json(
+        args.official_archive_first_baseline_model_pool_json
+    )
+    official_archive_first_baseline_score_ledger_payload = _read_json(
+        args.official_archive_first_baseline_score_ledger_json
+    )
+    official_archive_first_baseline_replay_comparison_payload = _read_json(
+        args.official_archive_first_baseline_replay_comparison_json
+    )
+    official_archive_first_baseline_model1_gap_triage_payload = _read_json(
+        args.official_archive_first_baseline_model1_gap_triage_json
+    )
+    official_archive_first_baseline_model1_gap_viewer_packet_payload = _read_json(
+        args.official_archive_first_baseline_model1_gap_viewer_packet_json
+    )
+    official_archive_first_baseline_model1_gap_feature_probe_payload = _read_json(
+        args.official_archive_first_baseline_model1_gap_feature_probe_json
+    )
+    official_archive_first_baseline_model1_gap_consensus_probe_payload = _read_json(
+        args.official_archive_first_baseline_model1_gap_consensus_probe_json
+    )
+    official_archive_first_baseline_model1_gap_combined_selector_ledger_payload = _read_json(
+        args.official_archive_first_baseline_model1_gap_combined_selector_ledger_json
+    )
     strict_blind_first_slot_source_bridge_payload = _read_json(
         args.strict_blind_first_slot_source_bridge_json
     )
     strict_blind_internal_prediction_source_audit_payload = _read_json(
         args.strict_blind_internal_prediction_source_audit_json
+    )
+    strict_blind_internal_candidate_filesystem_sweep_payload = _read_json(
+        args.strict_blind_internal_candidate_filesystem_sweep_json
+    )
+    strict_blind_unknown_candidate_triage_payload = _read_json(
+        args.strict_blind_unknown_candidate_triage_json
+    )
+    strict_blind_internal_like_source_review_payload = _read_json(
+        args.strict_blind_internal_like_source_review_json
     )
     strict_blind_internal_prediction_source_gate_payload = _read_json(
         args.strict_blind_internal_prediction_source_gate_json
@@ -649,6 +907,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     strict_blind_source_gate_source_request_packet_payload = _read_json(
         args.strict_blind_source_gate_source_request_packet_json
+    )
+    strict_blind_source_request_resolution_board_payload = _read_json(
+        args.strict_blind_source_request_resolution_board_json
     )
     strict_blind_source_request_fulfillment_gate_payload = _read_json(
         args.strict_blind_source_request_fulfillment_gate_json
@@ -673,6 +934,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     strict_blind_first_unlock_evidence_review_gate_payload = _read_json(
         args.strict_blind_first_unlock_evidence_review_gate_json
+    )
+    strict_blind_first_slot_source_gate_blocker_ledger_payload = _read_json(
+        args.strict_blind_first_slot_source_gate_blocker_ledger_json
     )
     strict_blind_first_unlock_evidence_sync_plan_payload = _read_json(
         args.strict_blind_first_unlock_evidence_sync_plan_json
@@ -796,6 +1060,42 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     competitive_target_identity_clearance_workorder_audit_payload = _read_json(
         args.competitive_target_identity_clearance_workorder_audit_json
     )
+    competitive_target_identity_metric_runway_payload = _read_json(
+        args.competitive_target_identity_metric_runway_json
+    )
+    competitive_floor_native_provenance_operator_packet_payload = _read_json(
+        args.competitive_floor_native_provenance_operator_packet_json
+    )
+    competitive_floor_native_provenance_operator_packet_completion_audit_payload = _read_json(
+        args.competitive_floor_native_provenance_operator_packet_completion_audit_json
+    )
+    competitive_floor_native_provenance_metric_unlock_bridge_payload = _read_json(
+        args.competitive_floor_native_provenance_metric_unlock_bridge_json
+    )
+    competitive_floor_first_native_provenance_unlock_kit_payload = _read_json(
+        args.competitive_floor_first_native_provenance_unlock_kit_json
+    )
+    competitive_floor_batch_native_provenance_unlock_kit_payload = _read_json(
+        args.competitive_floor_batch_native_provenance_unlock_kit_json
+    )
+    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_payload = _read_json(
+        args.competitive_floor_batch_native_provenance_unlock_kit_completion_audit_json
+    )
+    competitive_floor_batch_native_provenance_value_gate_payload = _read_json(
+        args.competitive_floor_batch_native_provenance_value_gate_json
+    )
+    competitive_floor_batch_native_provenance_value_action_board_payload = _read_json(
+        args.competitive_floor_batch_native_provenance_value_action_board_json
+    )
+    competitive_floor_batch_native_provenance_value_action_board_completion_audit_payload = _read_json(
+        args.competitive_floor_batch_native_provenance_value_action_board_completion_audit_json
+    )
+    competitive_floor_batch_native_provenance_operator_fill_preflight_payload = _read_json(
+        args.competitive_floor_batch_native_provenance_operator_fill_preflight_json
+    )
+    competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_payload = _read_json(
+        args.competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_json
+    )
     competitive_target_identity_clearance_action_board_payload = _read_json(
         args.competitive_target_identity_clearance_action_board_json
     )
@@ -834,7 +1134,35 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     protein_object_library_summary = _summary(protein_object_library_payload)
     protein_object_library_completion_audit_summary = _summary(protein_object_library_completion_audit_payload)
     protein_object_library_navigation_catalog_summary = _summary(protein_object_library_navigation_catalog_payload)
+    molecular_object_atlas_summary = _summary(molecular_object_atlas_payload)
+    molecular_object_atlas_completion_audit_summary = _summary(molecular_object_atlas_completion_audit_payload)
+    molecular_object_metric_handoff_summary = _summary(molecular_object_metric_handoff_payload)
+    molecular_object_metric_handoff_completion_audit_summary = _summary(
+        molecular_object_metric_handoff_completion_audit_payload
+    )
     raw_ranked_model_quarantine_summary = _summary(raw_ranked_model_quarantine_payload)
+    current_submission_gate_summary = _summary(current_submission_gate_payload)
+    current_sidechain_repack_summary = _summary(current_sidechain_repack_payload)
+    current_submission_package_preflight_summary = _summary(current_submission_package_preflight_payload)
+    current_submission_deadline_guard_summary = _summary(current_submission_deadline_guard_payload)
+    current_upload_queue_summary = _summary(current_upload_queue_payload)
+    current_upload_review_packet_summary = _summary(current_upload_review_packet_payload)
+    current_prospective_strict_blind_escrow_summary = _summary(
+        current_prospective_strict_blind_escrow_payload
+    )
+    current_submission_gate_status = (
+        "current_casp17_submission_gate_ready"
+        if _int(current_submission_gate_summary.get("target_row_count"))
+        and _int(current_submission_gate_summary.get("submission_go_count"))
+        == _int(current_submission_gate_summary.get("target_row_count"))
+        and _int(current_submission_gate_summary.get("submission_no_go_count")) == 0
+        and current_submission_gate_summary.get("framework_gate_pass") is True
+        else (
+            "current_casp17_submission_gate_blocked"
+            if _int(current_submission_gate_summary.get("target_row_count"))
+            else ""
+        )
+    )
     closure_summary = _summary(closure_payload)
     goal_scorecard_summary = _summary(goal_scorecard_payload)
     historical_winner_normalized_bands_summary = _summary(
@@ -887,6 +1215,55 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     protein_complex_massivefold_self_assessment_packet_summary = _summary(
         protein_complex_massivefold_self_assessment_packet_payload
+    )
+    massivefold_model1_risk_queue_summary = _summary(massivefold_model1_risk_queue_payload)
+    massivefold_critical_rerank_experiment_summary = _summary(
+        massivefold_critical_rerank_experiment_payload
+    )
+    massivefold_critical_rerank_score_ledger_summary = _summary(
+        massivefold_critical_rerank_score_ledger_payload
+    )
+    massivefold_model1_selection_calibration_gate_summary = _summary(
+        massivefold_model1_selection_calibration_gate_payload
+    )
+    massivefold_model1_probe_worklist_summary = _summary(
+        massivefold_model1_probe_worklist_payload
+    )
+    massivefold_model1_probe_outcome_summary = _summary(
+        massivefold_model1_probe_outcome_payload
+    )
+    massivefold_model1_freeze_decision_packet_summary = _summary(
+        massivefold_model1_freeze_decision_packet_payload
+    )
+    massivefold_model_selection_ledger_summary = _summary(
+        massivefold_model_selection_ledger_payload
+    )
+    massivefold_model1_combined_selector_overlay_summary = _summary(
+        massivefold_model1_combined_selector_overlay_payload
+    )
+    massivefold_freeze_ready_review_packet_summary = _summary(
+        massivefold_freeze_ready_review_packet_payload
+    )
+    massivefold_hold_probe_review_packet_summary = _summary(
+        massivefold_hold_probe_review_packet_payload
+    )
+    massivefold_probe_required_targeted_probe_packet_summary = _summary(
+        massivefold_probe_required_targeted_probe_packet_payload
+    )
+    massivefold_post_probe_selector_decision_packet_summary = _summary(
+        massivefold_post_probe_selector_decision_packet_payload
+    )
+    massivefold_watch_manual_action_packet_summary = _summary(
+        massivefold_watch_manual_action_packet_payload
+    )
+    massivefold_freeze_candidate_format_preflight_summary = _summary(
+        massivefold_freeze_candidate_format_preflight_payload
+    )
+    massivefold_freeze_candidate_escrow_summary = _summary(
+        massivefold_freeze_candidate_escrow_payload
+    )
+    massivefold_freeze_candidate_protein_library_summary = _summary(
+        massivefold_freeze_candidate_protein_library_payload
     )
     capri_round65_readiness_summary = _summary(capri_round65_readiness_payload)
     capri_round65_format_preflight_summary = _summary(capri_round65_format_preflight_payload)
@@ -981,11 +1358,47 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     historical_seed_official_archive_baseline_lane_summary = _summary(
         historical_seed_official_archive_baseline_lane_payload
     )
+    official_archive_first_baseline_acquisition_audit_summary = _summary(
+        official_archive_first_baseline_acquisition_audit_payload
+    )
+    official_archive_first_baseline_model_pool_summary = _summary(
+        official_archive_first_baseline_model_pool_payload
+    )
+    official_archive_first_baseline_score_ledger_summary = _summary(
+        official_archive_first_baseline_score_ledger_payload
+    )
+    official_archive_first_baseline_replay_comparison_summary = _summary(
+        official_archive_first_baseline_replay_comparison_payload
+    )
+    official_archive_first_baseline_model1_gap_triage_summary = _summary(
+        official_archive_first_baseline_model1_gap_triage_payload
+    )
+    official_archive_first_baseline_model1_gap_viewer_packet_summary = _summary(
+        official_archive_first_baseline_model1_gap_viewer_packet_payload
+    )
+    official_archive_first_baseline_model1_gap_feature_probe_summary = _summary(
+        official_archive_first_baseline_model1_gap_feature_probe_payload
+    )
+    official_archive_first_baseline_model1_gap_consensus_probe_summary = _summary(
+        official_archive_first_baseline_model1_gap_consensus_probe_payload
+    )
+    official_archive_first_baseline_model1_gap_combined_selector_ledger_summary = _summary(
+        official_archive_first_baseline_model1_gap_combined_selector_ledger_payload
+    )
     strict_blind_first_slot_source_bridge_summary = _summary(
         strict_blind_first_slot_source_bridge_payload
     )
     strict_blind_internal_prediction_source_audit_summary = _summary(
         strict_blind_internal_prediction_source_audit_payload
+    )
+    strict_blind_internal_candidate_filesystem_sweep_summary = _summary(
+        strict_blind_internal_candidate_filesystem_sweep_payload
+    )
+    strict_blind_unknown_candidate_triage_summary = _summary(
+        strict_blind_unknown_candidate_triage_payload
+    )
+    strict_blind_internal_like_source_review_summary = _summary(
+        strict_blind_internal_like_source_review_payload
     )
     strict_blind_internal_prediction_source_gate_summary = _summary(
         strict_blind_internal_prediction_source_gate_payload
@@ -998,6 +1411,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     strict_blind_source_gate_source_request_packet_summary = _summary(
         strict_blind_source_gate_source_request_packet_payload
+    )
+    strict_blind_source_request_resolution_board_summary = _summary(
+        strict_blind_source_request_resolution_board_payload
     )
     strict_blind_source_request_fulfillment_gate_summary = _summary(
         strict_blind_source_request_fulfillment_gate_payload
@@ -1022,6 +1438,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     strict_blind_first_unlock_evidence_review_gate_summary = _summary(
         strict_blind_first_unlock_evidence_review_gate_payload
+    )
+    strict_blind_first_slot_source_gate_blocker_ledger_summary = _summary(
+        strict_blind_first_slot_source_gate_blocker_ledger_payload
     )
     strict_blind_first_unlock_evidence_sync_plan_summary = _summary(
         strict_blind_first_unlock_evidence_sync_plan_payload
@@ -1154,6 +1573,42 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     competitive_target_identity_clearance_workorder_audit_summary = _summary(
         competitive_target_identity_clearance_workorder_audit_payload
+    )
+    competitive_target_identity_metric_runway_summary = _summary(
+        competitive_target_identity_metric_runway_payload
+    )
+    competitive_floor_native_provenance_operator_packet_summary = _summary(
+        competitive_floor_native_provenance_operator_packet_payload
+    )
+    competitive_floor_native_provenance_operator_packet_completion_audit_summary = _summary(
+        competitive_floor_native_provenance_operator_packet_completion_audit_payload
+    )
+    competitive_floor_native_provenance_metric_unlock_bridge_summary = _summary(
+        competitive_floor_native_provenance_metric_unlock_bridge_payload
+    )
+    competitive_floor_first_native_provenance_unlock_kit_summary = _summary(
+        competitive_floor_first_native_provenance_unlock_kit_payload
+    )
+    competitive_floor_batch_native_provenance_unlock_kit_summary = _summary(
+        competitive_floor_batch_native_provenance_unlock_kit_payload
+    )
+    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary = _summary(
+        competitive_floor_batch_native_provenance_unlock_kit_completion_audit_payload
+    )
+    competitive_floor_batch_native_provenance_value_gate_summary = _summary(
+        competitive_floor_batch_native_provenance_value_gate_payload
+    )
+    competitive_floor_batch_native_provenance_value_action_board_summary = _summary(
+        competitive_floor_batch_native_provenance_value_action_board_payload
+    )
+    competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary = _summary(
+        competitive_floor_batch_native_provenance_value_action_board_completion_audit_payload
+    )
+    competitive_floor_batch_native_provenance_operator_fill_preflight_summary = _summary(
+        competitive_floor_batch_native_provenance_operator_fill_preflight_payload
+    )
+    competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary = _summary(
+        competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_payload
     )
     competitive_target_identity_clearance_action_board_summary = _summary(
         competitive_target_identity_clearance_action_board_payload
@@ -1394,6 +1849,261 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             ),
         ),
         _artifact_row(
+            "casp17_3d_molecular_object_atlas",
+            "Unified CASP17 3D molecular object atlas",
+            _text(molecular_object_atlas_summary.get("casp17_3d_molecular_object_atlas_status")),
+            args.molecular_object_atlas_json,
+            ready_count=_int(molecular_object_atlas_summary.get("object_pass_count")),
+            blocked_count=_int(molecular_object_atlas_summary.get("object_blocked_count")),
+            total_count=_int(molecular_object_atlas_summary.get("object_count")),
+            next_action=_text(molecular_object_atlas_summary.get("next_action")),
+            blockers=(
+                "proteins:"
+                + str(molecular_object_atlas_summary.get("protein_pass_count", ""))
+                + "/"
+                + str(molecular_object_atlas_summary.get("protein_blocked_count", ""))
+                + "/"
+                + str(molecular_object_atlas_summary.get("protein_count", ""))
+                + ",objects:"
+                + str(molecular_object_atlas_summary.get("object_pass_count", ""))
+                + "/"
+                + str(molecular_object_atlas_summary.get("object_blocked_count", ""))
+                + "/"
+                + str(molecular_object_atlas_summary.get("object_count", ""))
+                + ",source_objects:"
+                + str(molecular_object_atlas_summary.get("current_object_count", ""))
+                + "/"
+                + str(molecular_object_atlas_summary.get("massivefold_freeze_object_count", ""))
+                + ",source_proteins:"
+                + str(molecular_object_atlas_summary.get("current_protein_count", ""))
+                + "/"
+                + str(molecular_object_atlas_summary.get("massivefold_freeze_protein_count", ""))
+                + "/overlap:"
+                + str(molecular_object_atlas_summary.get("overlap_protein_count", ""))
+                + ",links:"
+                + str(molecular_object_atlas_summary.get("model_link_count", ""))
+                + "/"
+                + str(molecular_object_atlas_summary.get("viewer_link_count", ""))
+                + "/"
+                + str(molecular_object_atlas_summary.get("projection_link_count", ""))
+                + "/"
+                + str(molecular_object_atlas_summary.get("top5_link_count", ""))
+                + "/"
+                + str(molecular_object_atlas_summary.get("escrow_link_count", ""))
+                + ",sha:"
+                + str(molecular_object_atlas_summary.get("model_sha256_count", ""))
+                + "/"
+                + str(molecular_object_atlas_summary.get("top5_sha256_count", ""))
+                + ",native_proof_author:"
+                + str(molecular_object_atlas_summary.get("native_accuracy_count", ""))
+                + "/"
+                + str(molecular_object_atlas_summary.get("competitive_proof_eligible_count", ""))
+                + "/"
+                + str(molecular_object_atlas_summary.get("author_serialized_count", ""))
+                + ",first:"
+                + (_text(molecular_object_atlas_summary.get("first_protein_key")) or "-")
+                + "/"
+                + (_text(molecular_object_atlas_summary.get("first_object_key")) or "-")
+                + ",blocked:"
+                + (_text(molecular_object_atlas_summary.get("first_blocked_protein_key")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "casp17_3d_molecular_object_atlas_completion_audit",
+            "Completion audit for CASP17 3D molecular object atlas folders and links",
+            _text(molecular_object_atlas_completion_audit_summary.get("atlas_completion_audit_status")),
+            args.molecular_object_atlas_completion_audit_json,
+            ready_count=_int(molecular_object_atlas_completion_audit_summary.get("object_pass_count")),
+            blocked_count=_int(molecular_object_atlas_completion_audit_summary.get("object_blocked_count")),
+            total_count=_int(molecular_object_atlas_completion_audit_summary.get("object_count")),
+            next_action=_text(molecular_object_atlas_completion_audit_summary.get("next_action")),
+            blockers=(
+                "proteins:"
+                + str(molecular_object_atlas_completion_audit_summary.get("protein_folder_present_count", ""))
+                + "/"
+                + str(molecular_object_atlas_completion_audit_summary.get("protein_readme_present_count", ""))
+                + "/"
+                + str(molecular_object_atlas_completion_audit_summary.get("protein_manifest_present_count", ""))
+                + "/"
+                + str(molecular_object_atlas_completion_audit_summary.get("protein_count", ""))
+                + ",objects:"
+                + str(molecular_object_atlas_completion_audit_summary.get("object_pass_count", ""))
+                + "/"
+                + str(molecular_object_atlas_completion_audit_summary.get("object_blocked_count", ""))
+                + "/"
+                + str(molecular_object_atlas_completion_audit_summary.get("object_count", ""))
+                + ",source_objects:"
+                + str(molecular_object_atlas_completion_audit_summary.get("current_object_count", ""))
+                + "/"
+                + str(molecular_object_atlas_completion_audit_summary.get("massivefold_freeze_object_count", ""))
+                + ",atlas_object_files:"
+                + str(molecular_object_atlas_completion_audit_summary.get("atlas_object_folder_present_count", ""))
+                + "/"
+                + str(molecular_object_atlas_completion_audit_summary.get("atlas_object_readme_present_count", ""))
+                + "/"
+                + str(molecular_object_atlas_completion_audit_summary.get("atlas_object_manifest_present_count", ""))
+                + ",links:"
+                + str(molecular_object_atlas_completion_audit_summary.get("model_link_present_count", ""))
+                + "/"
+                + str(molecular_object_atlas_completion_audit_summary.get("viewer_link_present_count", ""))
+                + "/"
+                + str(molecular_object_atlas_completion_audit_summary.get("projection_link_present_count", ""))
+                + "/"
+                + str(molecular_object_atlas_completion_audit_summary.get("top5_link_present_count", ""))
+                + "/"
+                + str(molecular_object_atlas_completion_audit_summary.get("escrow_link_present_count", ""))
+                + ",coordinate_copies:"
+                + str(molecular_object_atlas_completion_audit_summary.get("object_coordinate_copy_count", ""))
+                + "/"
+                + str(molecular_object_atlas_completion_audit_summary.get("atlas_coordinate_copy_count", ""))
+                + ",proof_author:"
+                + str(molecular_object_atlas_completion_audit_summary.get("competitive_proof_eligible_count", ""))
+                + "/"
+                + str(molecular_object_atlas_completion_audit_summary.get("author_serialized_count", ""))
+                + ",first:"
+                + (_text(molecular_object_atlas_completion_audit_summary.get("first_protein_key")) or "-")
+                + "/"
+                + (_text(molecular_object_atlas_completion_audit_summary.get("first_object_key")) or "-")
+                + ",blocked:"
+                + (_text(molecular_object_atlas_completion_audit_summary.get("first_blocked_protein_key")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "casp17_3d_molecular_object_metric_handoff",
+            "Review-only handoff from 3D molecular objects to win-tier metric requirements",
+            _text(molecular_object_metric_handoff_summary.get("metric_handoff_status")),
+            args.molecular_object_metric_handoff_json,
+            ready_count=_int(molecular_object_metric_handoff_summary.get("object_ready_count")),
+            blocked_count=_int(molecular_object_metric_handoff_summary.get("object_blocked_count")),
+            total_count=_int(molecular_object_metric_handoff_summary.get("object_count")),
+            next_action=_text(molecular_object_metric_handoff_summary.get("next_action")),
+            blockers=(
+                "objects:"
+                + str(molecular_object_metric_handoff_summary.get("object_ready_count", ""))
+                + "/"
+                + str(molecular_object_metric_handoff_summary.get("object_blocked_count", ""))
+                + "/"
+                + str(molecular_object_metric_handoff_summary.get("object_count", ""))
+                + ",source_objects:"
+                + str(molecular_object_metric_handoff_summary.get("current_object_count", ""))
+                + "/"
+                + str(molecular_object_metric_handoff_summary.get("massivefold_freeze_object_count", ""))
+                + ",metric_requirements:"
+                + str(molecular_object_metric_handoff_summary.get("metric_requirement_count", ""))
+                + ",covered_required:"
+                + str(molecular_object_metric_handoff_summary.get("covered_required_metric_count", ""))
+                + "/"
+                + str(molecular_object_metric_handoff_summary.get("required_metric_count", ""))
+                + ",missing_required:"
+                + str(molecular_object_metric_handoff_summary.get("missing_required_metric_count", ""))
+                + "/"
+                + (_text(molecular_object_metric_handoff_summary.get("missing_required_metric_names")) or "-")
+                + ",ligand_gap:"
+                + str(molecular_object_metric_handoff_summary.get("ligand_metric_gap_count", ""))
+                + ",families:"
+                + str(molecular_object_metric_handoff_summary.get("monomer_object_count", ""))
+                + "/"
+                + str(molecular_object_metric_handoff_summary.get("complex_object_count", ""))
+                + "/"
+                + str(molecular_object_metric_handoff_summary.get("rna_hybrid_object_count", ""))
+                + "/"
+                + str(molecular_object_metric_handoff_summary.get("ligand_object_count", ""))
+                + ",folders:"
+                + str(molecular_object_metric_handoff_summary.get("protein_handoff_folder_expected_count", ""))
+                + "/"
+                + str(molecular_object_metric_handoff_summary.get("object_handoff_folder_expected_count", ""))
+                + ",native_proof_author:"
+                + str(molecular_object_metric_handoff_summary.get("native_accuracy_count", ""))
+                + "/"
+                + str(molecular_object_metric_handoff_summary.get("competitive_proof_eligible_count", ""))
+                + "/"
+                + str(molecular_object_metric_handoff_summary.get("author_serialized_count", ""))
+                + ",first:"
+                + (_text(molecular_object_metric_handoff_summary.get("first_protein_key")) or "-")
+                + "/"
+                + (_text(molecular_object_metric_handoff_summary.get("first_object_key")) or "-")
+                + ",blocked:"
+                + (_text(molecular_object_metric_handoff_summary.get("first_blocked_protein_key")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "casp17_3d_molecular_object_metric_handoff_completion_audit",
+            "Completion audit for review-only 3D object metric handoff folders and requirement files",
+            _text(
+                molecular_object_metric_handoff_completion_audit_summary.get(
+                    "metric_handoff_completion_audit_status"
+                )
+            ),
+            args.molecular_object_metric_handoff_completion_audit_json,
+            ready_count=_int(molecular_object_metric_handoff_completion_audit_summary.get("object_pass_count")),
+            blocked_count=_int(molecular_object_metric_handoff_completion_audit_summary.get("object_blocked_count")),
+            total_count=_int(molecular_object_metric_handoff_completion_audit_summary.get("object_count")),
+            next_action=_text(molecular_object_metric_handoff_completion_audit_summary.get("next_action")),
+            blockers=(
+                "proteins:"
+                + str(molecular_object_metric_handoff_completion_audit_summary.get("protein_folder_present_count", ""))
+                + "/"
+                + str(molecular_object_metric_handoff_completion_audit_summary.get("protein_readme_present_count", ""))
+                + "/"
+                + str(molecular_object_metric_handoff_completion_audit_summary.get("protein_manifest_present_count", ""))
+                + "/"
+                + str(molecular_object_metric_handoff_completion_audit_summary.get("protein_count", ""))
+                + ",objects:"
+                + str(molecular_object_metric_handoff_completion_audit_summary.get("object_pass_count", ""))
+                + "/"
+                + str(molecular_object_metric_handoff_completion_audit_summary.get("object_blocked_count", ""))
+                + "/"
+                + str(molecular_object_metric_handoff_completion_audit_summary.get("object_count", ""))
+                + ",source_objects:"
+                + str(molecular_object_metric_handoff_completion_audit_summary.get("current_object_count", ""))
+                + "/"
+                + str(molecular_object_metric_handoff_completion_audit_summary.get("massivefold_freeze_object_count", ""))
+                + ",object_files:"
+                + str(molecular_object_metric_handoff_completion_audit_summary.get("handoff_object_folder_present_count", ""))
+                + "/"
+                + str(molecular_object_metric_handoff_completion_audit_summary.get("handoff_object_manifest_present_count", ""))
+                + "/"
+                + str(molecular_object_metric_handoff_completion_audit_summary.get("metric_requirements_csv_present_count", ""))
+                + "/"
+                + str(molecular_object_metric_handoff_completion_audit_summary.get("metric_handoff_md_present_count", ""))
+                + ",metric_rows:"
+                + str(molecular_object_metric_handoff_completion_audit_summary.get("metric_requirement_count", ""))
+                + "/"
+                + str(molecular_object_metric_handoff_completion_audit_summary.get("metric_requirement_csv_row_count", ""))
+                + "/mismatch:"
+                + str(molecular_object_metric_handoff_completion_audit_summary.get("metric_requirement_csv_mismatch_count", ""))
+                + ",links:"
+                + str(molecular_object_metric_handoff_completion_audit_summary.get("model_link_present_count", ""))
+                + "/"
+                + str(molecular_object_metric_handoff_completion_audit_summary.get("viewer_link_present_count", ""))
+                + "/"
+                + str(molecular_object_metric_handoff_completion_audit_summary.get("projection_link_present_count", ""))
+                + "/"
+                + str(molecular_object_metric_handoff_completion_audit_summary.get("top5_link_present_count", ""))
+                + "/"
+                + str(molecular_object_metric_handoff_completion_audit_summary.get("escrow_link_present_count", ""))
+                + ",evidence_awaiting:"
+                + str(molecular_object_metric_handoff_completion_audit_summary.get("metric_evidence_awaiting_count", ""))
+                + ",coordinate_copies:"
+                + str(molecular_object_metric_handoff_completion_audit_summary.get("object_coordinate_copy_count", ""))
+                + "/"
+                + str(molecular_object_metric_handoff_completion_audit_summary.get("out_dir_coordinate_copy_count", ""))
+                + ",proof_author:"
+                + str(molecular_object_metric_handoff_completion_audit_summary.get("competitive_proof_eligible_count", ""))
+                + "/"
+                + str(molecular_object_metric_handoff_completion_audit_summary.get("author_serialized_count", ""))
+                + ",first:"
+                + (_text(molecular_object_metric_handoff_completion_audit_summary.get("first_protein_key")) or "-")
+                + "/"
+                + (_text(molecular_object_metric_handoff_completion_audit_summary.get("first_object_key")) or "-")
+                + ",blocked:"
+                + (
+                    _text(molecular_object_metric_handoff_completion_audit_summary.get("first_blocked_protein_key"))
+                    or "-"
+                )
+            ),
+        ),
+        _artifact_row(
             "raw_ranked_model_quarantine",
             "Quarantine audit for untracked raw-ranked internal model PDBs",
             _text(raw_ranked_model_quarantine_summary.get("raw_ranked_model_quarantine_status")),
@@ -1419,6 +2129,273 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + str(raw_ranked_model_quarantine_summary.get("author_record_present_count", ""))
                 + ",atoms:"
                 + str(raw_ranked_model_quarantine_summary.get("total_atom_record_count", ""))
+            ),
+        ),
+        _artifact_row(
+            "current_casp17_submission_gate",
+            "Current CASP17 TS submission gate and prospective blind-readiness packet",
+            current_submission_gate_status,
+            args.current_submission_gate_json,
+            ready_count=_int(current_submission_gate_summary.get("submission_go_count")),
+            blocked_count=_int(current_submission_gate_summary.get("submission_no_go_count")),
+            total_count=_int(current_submission_gate_summary.get("target_row_count")),
+            next_action=(
+                "keep local TS gate green, package only with operator-approved CASP author code, and wait for native release before any performance claim"
+            ),
+            blockers=(
+                "go/no-go/total:"
+                + str(current_submission_gate_summary.get("submission_go_count", ""))
+                + "/"
+                + str(current_submission_gate_summary.get("submission_no_go_count", ""))
+                + "/"
+                + str(current_submission_gate_summary.get("target_row_count", ""))
+                + ",framework:"
+                + str(current_submission_gate_summary.get("framework_gate_pass", ""))
+                + ",shape:"
+                + _text(current_submission_gate_summary.get("shape_sanity_status"))
+                + "/"
+                + str(current_submission_gate_summary.get("shape_sanity_pass_count", ""))
+                + "/"
+                + str(current_submission_gate_summary.get("shape_sanity_target_count", ""))
+                + ",lane_difficult:"
+                + str(
+                    (current_submission_gate_summary.get("lane_target_counts") or {}).get(
+                        "difficult_protein_complexes",
+                        "",
+                    )
+                    if isinstance(current_submission_gate_summary.get("lane_target_counts"), dict)
+                    else ""
+                )
+                + ",server:"
+                + str(current_submission_gate_summary.get("server_registration_ready", ""))
+            ),
+        ),
+        _artifact_row(
+            "current_casp17_sidechain_repack",
+            "Current CASP17 sidechain repack and local TS format/geometry/confidence pass",
+            _text(current_sidechain_repack_summary.get("sidechain_repack_status")),
+            args.current_sidechain_repack_json,
+            ready_count=_int(current_sidechain_repack_summary.get("pass_count")),
+            blocked_count=_int(current_sidechain_repack_summary.get("blocked_count")),
+            total_count=_int(current_sidechain_repack_summary.get("target_count")),
+            next_action=(
+                "use repacked or shape-guarded TS files as local submission candidates; do not treat them as native accuracy proof"
+            ),
+            blockers=(
+                "pass/blocked/total:"
+                + str(current_sidechain_repack_summary.get("pass_count", ""))
+                + "/"
+                + str(current_sidechain_repack_summary.get("blocked_count", ""))
+                + "/"
+                + str(current_sidechain_repack_summary.get("target_count", ""))
+                + ",soft_delta:"
+                + str(current_sidechain_repack_summary.get("total_soft_clash_delta", ""))
+                + ",soft_before_after:"
+                + str(current_sidechain_repack_summary.get("total_soft_clash_count_before", ""))
+                + "/"
+                + str(current_sidechain_repack_summary.get("total_soft_clash_count_after", ""))
+                + ",improved/repacked:"
+                + str(current_sidechain_repack_summary.get("total_improved_residue_count", ""))
+                + "/"
+                + str(current_sidechain_repack_summary.get("total_repacked_residue_count", ""))
+                + ",revert_guard:"
+                + str(current_sidechain_repack_summary.get("revert_guard_count", ""))
+            ),
+        ),
+        _artifact_row(
+            "current_casp17_submission_package_preflight",
+            "Manifest-only preflight for current CASP17 TS submission candidates",
+            _text(current_submission_package_preflight_summary.get("package_preflight_status")),
+            args.current_submission_package_preflight_json,
+            ready_count=_int(current_submission_package_preflight_summary.get("ready_count")),
+            blocked_count=_int(current_submission_package_preflight_summary.get("blocked_count")),
+            total_count=_int(current_submission_package_preflight_summary.get("target_count")),
+            next_action=_text(current_submission_package_preflight_summary.get("next_action")),
+            blockers=(
+                "gate:"
+                + _text(current_submission_package_preflight_summary.get("submission_gate_status"))
+                + "/"
+                + str(current_submission_package_preflight_summary.get("submission_gate_go_count", ""))
+                + "/"
+                + str(current_submission_package_preflight_summary.get("submission_gate_no_go_count", ""))
+                + "/"
+                + str(current_submission_package_preflight_summary.get("submission_gate_target_count", ""))
+                + ",files:"
+                + str(current_submission_package_preflight_summary.get("candidate_file_present_count", ""))
+                + ",format:"
+                + str(current_submission_package_preflight_summary.get("format_pass_count", ""))
+                + ",author:"
+                + str(current_submission_package_preflight_summary.get("author_record_pass_count", ""))
+                + ",sidechain:"
+                + str(current_submission_package_preflight_summary.get("sidechain_repack_pass_count", ""))
+                + ",sha256:"
+                + str(current_submission_package_preflight_summary.get("candidate_sha256_count", ""))
+                + ",server:"
+                + str(current_submission_package_preflight_summary.get("server_registration_ready", ""))
+            ),
+        ),
+        _artifact_row(
+            "current_casp17_submission_deadline_guard",
+            "Current-date deadline guard for CASP17 TS submission candidates",
+            _text(current_submission_deadline_guard_summary.get("deadline_guard_status")),
+            args.current_submission_deadline_guard_json,
+            ready_count=_int(current_submission_deadline_guard_summary.get("upload_window_ready_count")),
+            blocked_count=_int(current_submission_deadline_guard_summary.get("deadline_blocked_count")),
+            total_count=_int(current_submission_deadline_guard_summary.get("target_count")),
+            next_action=_text(current_submission_deadline_guard_summary.get("next_action")),
+            blockers=(
+                "date:"
+                + _text(current_submission_deadline_guard_summary.get("current_date"))
+                + ",expired/today/future:"
+                + str(current_submission_deadline_guard_summary.get("human_expired_count", ""))
+                + "/"
+                + str(current_submission_deadline_guard_summary.get("human_expiring_today_count", ""))
+                + "/"
+                + str(current_submission_deadline_guard_summary.get("human_future_count", ""))
+                + ",qa:"
+                + str(current_submission_deadline_guard_summary.get("qa_open_count", ""))
+                + "/"
+                + str(current_submission_deadline_guard_summary.get("qa_expired_count", ""))
+                + "/"
+                + str(current_submission_deadline_guard_summary.get("qa_unknown_count", ""))
+                + ",package:"
+                + _text(current_submission_deadline_guard_summary.get("package_preflight_status"))
+                + "/"
+                + str(current_submission_deadline_guard_summary.get("package_ready_count", ""))
+                + "/"
+                + str(current_submission_deadline_guard_summary.get("package_blocked_count", ""))
+                + "/"
+                + str(current_submission_deadline_guard_summary.get("package_target_count", ""))
+                + ",watchlist_stale:"
+                + str(current_submission_deadline_guard_summary.get("watchlist_stale", ""))
+                + "/"
+                + str(current_submission_deadline_guard_summary.get("watchlist_stale_days", ""))
+                + ",first:"
+                + (_text(current_submission_deadline_guard_summary.get("first_blocked_target_id")) or "-")
+                + "/"
+                + (_text(current_submission_deadline_guard_summary.get("first_blocked_reason")) or "-")
+                + ",nearest:"
+                + (_text(current_submission_deadline_guard_summary.get("nearest_open_target_id")) or "-")
+                + "/"
+                + (_text(current_submission_deadline_guard_summary.get("nearest_open_human_expiration")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "current_casp17_upload_queue",
+            "Official-targetlist-aware current CASP17 upload queue",
+            _text(current_upload_queue_summary.get("upload_queue_status")),
+            args.current_upload_queue_json,
+            ready_count=_int(current_upload_queue_summary.get("upload_ready_count")),
+            blocked_count=_int(current_upload_queue_summary.get("blocked_count")),
+            total_count=_int(current_upload_queue_summary.get("target_count")),
+            next_action=_text(current_upload_queue_summary.get("next_action")),
+            blockers=(
+                "official:"
+                + _text(current_upload_queue_summary.get("official_source"))
+                + "/targets:"
+                + str(current_upload_queue_summary.get("official_target_count", ""))
+                + ",direct/mapped/missing:"
+                + str(current_upload_queue_summary.get("official_direct_match_count", ""))
+                + "/"
+                + str(current_upload_queue_summary.get("official_phase_mapped_count", ""))
+                + "/"
+                + str(current_upload_queue_summary.get("official_missing_count", ""))
+                + ",ready/blocked:"
+                + str(current_upload_queue_summary.get("upload_ready_count", ""))
+                + "/"
+                + str(current_upload_queue_summary.get("blocked_count", ""))
+                + ",today/soon/future:"
+                + str(current_upload_queue_summary.get("ready_today_count", ""))
+                + "/"
+                + str(current_upload_queue_summary.get("ready_soon_count", ""))
+                + "/"
+                + str(current_upload_queue_summary.get("ready_future_count", ""))
+                + ",expired/cancelled/mismatch:"
+                + str(current_upload_queue_summary.get("official_expired_count", ""))
+                + "/"
+                + str(current_upload_queue_summary.get("official_cancelled_count", ""))
+                + "/"
+                + str(current_upload_queue_summary.get("official_local_deadline_mismatch_count", ""))
+                + ",first_ready:"
+                + (_text(current_upload_queue_summary.get("first_upload_target_id")) or "-")
+                + "/"
+                + (_text(current_upload_queue_summary.get("first_upload_human_expiration")) or "-")
+                + ",first_blocked:"
+                + (_text(current_upload_queue_summary.get("first_blocked_target_id")) or "-")
+                + "/"
+                + (_text(current_upload_queue_summary.get("first_blocked_reason")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "current_casp17_upload_review_packet",
+            "Operator review packet for official-upload-ready CASP17 targets and 3D object folders",
+            _text(current_upload_review_packet_summary.get("review_packet_status")),
+            args.current_upload_review_packet_json,
+            ready_count=_int(current_upload_review_packet_summary.get("review_ready_count")),
+            blocked_count=_int(current_upload_review_packet_summary.get("review_blocked_count")),
+            total_count=_int(current_upload_review_packet_summary.get("review_target_count")),
+            next_action=_text(current_upload_review_packet_summary.get("next_action")),
+            blockers=(
+                "queue:"
+                + _text(current_upload_review_packet_summary.get("upload_queue_status"))
+                + "/"
+                + str(current_upload_review_packet_summary.get("upload_ready_count", ""))
+                + "/"
+                + str(current_upload_review_packet_summary.get("upload_blocked_count", ""))
+                + "/"
+                + str(current_upload_review_packet_summary.get("upload_target_count", ""))
+                + ",urgency:"
+                + str(current_upload_review_packet_summary.get("urgency_today_count", ""))
+                + "/"
+                + str(current_upload_review_packet_summary.get("urgency_soon_count", ""))
+                + "/"
+                + str(current_upload_review_packet_summary.get("urgency_future_count", ""))
+                + ",candidate/object/viewer:"
+                + str(current_upload_review_packet_summary.get("candidate_present_count", ""))
+                + "/"
+                + str(current_upload_review_packet_summary.get("object_catalog_pass_count", ""))
+                + "/"
+                + str(current_upload_review_packet_summary.get("viewer_link_count", ""))
+                + ",first:"
+                + (_text(current_upload_review_packet_summary.get("first_review_target_id")) or "-")
+                + "/"
+                + (_text(current_upload_review_packet_summary.get("first_review_md")) or "-")
+                + ",blocked:"
+                + (_text(current_upload_review_packet_summary.get("first_blocked_target_id")) or "-")
+                + "/"
+                + (_text(current_upload_review_packet_summary.get("first_blocker")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "current_casp17_prospective_strict_blind_escrow",
+            "Prospective strict-blind escrow for current CASP17 candidates",
+            _text(current_prospective_strict_blind_escrow_summary.get("prospective_escrow_status")),
+            args.current_prospective_strict_blind_escrow_json,
+            ready_count=_int(current_prospective_strict_blind_escrow_summary.get("escrow_ready_count")),
+            blocked_count=_int(current_prospective_strict_blind_escrow_summary.get("escrow_blocked_count")),
+            total_count=_int(current_prospective_strict_blind_escrow_summary.get("target_count")),
+            next_action=_text(current_prospective_strict_blind_escrow_summary.get("next_action")),
+            blockers=(
+                "upload:"
+                + str(current_prospective_strict_blind_escrow_summary.get("upload_ready_count", ""))
+                + "/"
+                + str(current_prospective_strict_blind_escrow_summary.get("upload_blocked_count", ""))
+                + ",sha/review/native/ext-ts:"
+                + str(current_prospective_strict_blind_escrow_summary.get("sha256_match_count", ""))
+                + "/"
+                + str(current_prospective_strict_blind_escrow_summary.get("review_link_count", ""))
+                + "/"
+                + str(current_prospective_strict_blind_escrow_summary.get("native_pending_count", ""))
+                + "/"
+                + str(current_prospective_strict_blind_escrow_summary.get("external_timestamp_required_count", ""))
+                + ",proof:"
+                + str(current_prospective_strict_blind_escrow_summary.get("competitive_proof_eligible_count", ""))
+                + ",author:"
+                + str(current_prospective_strict_blind_escrow_summary.get("author_serialized_count", ""))
+                + ",first_upload:"
+                + (_text(current_prospective_strict_blind_escrow_summary.get("first_upload_ready_target_id")) or "-")
+                + ",first_blocked_upload:"
+                + (_text(current_prospective_strict_blind_escrow_summary.get("first_upload_blocked_target_id")) or "-")
             ),
         ),
         _artifact_row(
@@ -2329,6 +3306,1029 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + _text(protein_complex_massivefold_self_assessment_packet_summary.get("internal_prediction_policy"))
                 + ",first:"
                 + _text(protein_complex_massivefold_self_assessment_packet_summary.get("first_blocked_target_id"))
+            ),
+        ),
+        _artifact_row(
+            "massivefold_model1_risk_queue",
+            "CASP17 MassiveFold external-only unified model1 risk queue for RNA and protein/complex targets",
+            _text(
+                massivefold_model1_risk_queue_summary.get(
+                    "massivefold_model1_risk_queue_status"
+                )
+            ),
+            args.massivefold_model1_risk_queue_json,
+            ready_count=_int(massivefold_model1_risk_queue_summary.get("ready_target_count")),
+            blocked_count=_int(massivefold_model1_risk_queue_summary.get("blocked_target_count")),
+            total_count=_int(massivefold_model1_risk_queue_summary.get("target_count")),
+            next_action=_text(massivefold_model1_risk_queue_summary.get("next_action")),
+            blockers=(
+                "targets:"
+                + str(massivefold_model1_risk_queue_summary.get("target_count", ""))
+                + ",ready:"
+                + str(massivefold_model1_risk_queue_summary.get("ready_target_count", ""))
+                + ",low_margin:"
+                + str(massivefold_model1_risk_queue_summary.get("low_margin_target_count", ""))
+                + ",critical:"
+                + str(massivefold_model1_risk_queue_summary.get("critical_margin_target_count", ""))
+                + ",rna/protein:"
+                + str(massivefold_model1_risk_queue_summary.get("rna_hybrid_target_count", ""))
+                + "/"
+                + str(massivefold_model1_risk_queue_summary.get("protein_complex_target_count", ""))
+                + ",first:"
+                + _text(massivefold_model1_risk_queue_summary.get("first_priority_target_id"))
+                + ",gap:"
+                + _text(massivefold_model1_risk_queue_summary.get("first_priority_gap"))
+                + ",tier:"
+                + _text(massivefold_model1_risk_queue_summary.get("first_priority_risk_tier"))
+                + ",policy:"
+                + _text(massivefold_model1_risk_queue_summary.get("internal_prediction_policy"))
+            ),
+        ),
+        _artifact_row(
+            "massivefold_critical_rerank_experiment",
+            "CASP17 MassiveFold critical no-native rerank and calibration experiment packet",
+            _text(
+                massivefold_critical_rerank_experiment_summary.get(
+                    "massivefold_critical_rerank_experiment_status"
+                )
+            ),
+            args.massivefold_critical_rerank_experiment_json,
+            ready_count=_int(massivefold_critical_rerank_experiment_summary.get("ready_experiment_count")),
+            blocked_count=_int(
+                massivefold_critical_rerank_experiment_summary.get("blocked_experiment_count")
+            ),
+            total_count=_int(massivefold_critical_rerank_experiment_summary.get("experiment_count")),
+            next_action=_text(massivefold_critical_rerank_experiment_summary.get("next_action")),
+            blockers=(
+                "experiments:"
+                + str(massivefold_critical_rerank_experiment_summary.get("experiment_count", ""))
+                + ",ready:"
+                + str(massivefold_critical_rerank_experiment_summary.get("ready_experiment_count", ""))
+                + ",rna/protein:"
+                + str(massivefold_critical_rerank_experiment_summary.get("rna_hybrid_experiment_count", ""))
+                + "/"
+                + str(
+                    massivefold_critical_rerank_experiment_summary.get(
+                        "protein_complex_experiment_count",
+                        "",
+                    )
+                )
+                + ",reviews:"
+                + str(
+                    massivefold_critical_rerank_experiment_summary.get(
+                        "high_diversity_review_count",
+                        "",
+                    )
+                )
+                + "/"
+                + str(massivefold_critical_rerank_experiment_summary.get("geometry_review_count", ""))
+                + "/"
+                + str(
+                    massivefold_critical_rerank_experiment_summary.get(
+                        "low_confidence_review_count",
+                        "",
+                    )
+                )
+                + ",first:"
+                + _text(massivefold_critical_rerank_experiment_summary.get("first_experiment_target_id"))
+                + ",formula:"
+                + _text(massivefold_critical_rerank_experiment_summary.get("rerank_formula_id"))
+                + ",policy:"
+                + _text(massivefold_critical_rerank_experiment_summary.get("internal_prediction_policy"))
+            ),
+        ),
+        _artifact_row(
+            "massivefold_critical_rerank_score_ledger",
+            "CASP17 MassiveFold critical no-native rerank score ledger",
+            _text(
+                massivefold_critical_rerank_score_ledger_summary.get(
+                    "massivefold_critical_rerank_score_ledger_status"
+                )
+            ),
+            args.massivefold_critical_rerank_score_ledger_json,
+            ready_count=_int(massivefold_critical_rerank_score_ledger_summary.get("ready_ledger_count")),
+            blocked_count=_int(massivefold_critical_rerank_score_ledger_summary.get("blocked_ledger_count")),
+            total_count=_int(massivefold_critical_rerank_score_ledger_summary.get("ledger_count")),
+            next_action=_text(massivefold_critical_rerank_score_ledger_summary.get("next_action")),
+            blockers=(
+                "ledger:"
+                + str(massivefold_critical_rerank_score_ledger_summary.get("ledger_count", ""))
+                + ",ready:"
+                + str(massivefold_critical_rerank_score_ledger_summary.get("ready_ledger_count", ""))
+                + ",bands:"
+                + str(
+                    massivefold_critical_rerank_score_ledger_summary.get(
+                        "immediate_rerank_required_count",
+                        "",
+                    )
+                )
+                + "/"
+                + str(
+                    massivefold_critical_rerank_score_ledger_summary.get(
+                        "calibrate_before_model1_freeze_count",
+                        "",
+                    )
+                )
+                + "/"
+                + str(massivefold_critical_rerank_score_ledger_summary.get("critical_watch_count", ""))
+                + ",rna/protein:"
+                + str(massivefold_critical_rerank_score_ledger_summary.get("rna_hybrid_ledger_count", ""))
+                + "/"
+                + str(
+                    massivefold_critical_rerank_score_ledger_summary.get(
+                        "protein_complex_ledger_count",
+                        "",
+                    )
+                )
+                + ",top:"
+                + _text(massivefold_critical_rerank_score_ledger_summary.get("top_risk_target_id"))
+                + ",score:"
+                + _text(massivefold_critical_rerank_score_ledger_summary.get("top_risk_score"))
+                + ",action:"
+                + _text(massivefold_critical_rerank_score_ledger_summary.get("top_rerank_action"))
+                + ",policy:"
+                + _text(massivefold_critical_rerank_score_ledger_summary.get("internal_prediction_policy"))
+            ),
+        ),
+        _artifact_row(
+            "massivefold_model1_selection_calibration_gate",
+            "CASP17 MassiveFold model1 selection freeze/probe calibration gate",
+            _text(
+                massivefold_model1_selection_calibration_gate_summary.get(
+                    "massivefold_model1_selection_calibration_gate_status"
+                )
+            ),
+            args.massivefold_model1_selection_calibration_gate_json,
+            ready_count=_int(massivefold_model1_selection_calibration_gate_summary.get("ready_gate_count")),
+            blocked_count=_int(massivefold_model1_selection_calibration_gate_summary.get("blocked_gate_count")),
+            total_count=_int(massivefold_model1_selection_calibration_gate_summary.get("gate_count")),
+            next_action=_text(massivefold_model1_selection_calibration_gate_summary.get("next_action")),
+            blockers=(
+                "gates:"
+                + str(massivefold_model1_selection_calibration_gate_summary.get("gate_count", ""))
+                + ",ready:"
+                + str(massivefold_model1_selection_calibration_gate_summary.get("ready_gate_count", ""))
+                + ",freeze_gate:"
+                + _text(massivefold_model1_selection_calibration_gate_summary.get("freeze_gate_status"))
+                + ",hold/watch/probe/freeze:"
+                + str(
+                    massivefold_model1_selection_calibration_gate_summary.get(
+                        "hold_model1_freeze_count",
+                        "",
+                    )
+                )
+                + "/"
+                + str(massivefold_model1_selection_calibration_gate_summary.get("watch_probe_count", ""))
+                + "/"
+                + str(massivefold_model1_selection_calibration_gate_summary.get("probe_required_count", ""))
+                + "/"
+                + str(massivefold_model1_selection_calibration_gate_summary.get("freeze_ready_count", ""))
+                + ",rna/protein:"
+                + str(massivefold_model1_selection_calibration_gate_summary.get("rna_hybrid_gate_count", ""))
+                + "/"
+                + str(
+                    massivefold_model1_selection_calibration_gate_summary.get(
+                        "protein_complex_gate_count",
+                        "",
+                    )
+                )
+                + ",first:"
+                + _text(massivefold_model1_selection_calibration_gate_summary.get("first_gate_target_id"))
+                + ",decision:"
+                + _text(massivefold_model1_selection_calibration_gate_summary.get("first_gate_decision"))
+                + ",rule:"
+                + _text(massivefold_model1_selection_calibration_gate_summary.get("selection_rule_id"))
+                + ",policy:"
+                + _text(massivefold_model1_selection_calibration_gate_summary.get("internal_prediction_policy"))
+            ),
+        ),
+        _artifact_row(
+            "massivefold_model1_probe_worklist",
+            "CASP17 MassiveFold model1 no-native probe execution worklist",
+            _text(massivefold_model1_probe_worklist_summary.get("massivefold_model1_probe_worklist_status")),
+            args.massivefold_model1_probe_worklist_json,
+            ready_count=_int(massivefold_model1_probe_worklist_summary.get("ready_workitem_count")),
+            blocked_count=_int(massivefold_model1_probe_worklist_summary.get("blocked_workitem_count")),
+            total_count=_int(massivefold_model1_probe_worklist_summary.get("workitem_count")),
+            next_action=_text(massivefold_model1_probe_worklist_summary.get("next_action")),
+            blockers=(
+                "workitems:"
+                + str(massivefold_model1_probe_worklist_summary.get("workitem_count", ""))
+                + ",ready:"
+                + str(massivefold_model1_probe_worklist_summary.get("ready_workitem_count", ""))
+                + ",probes:"
+                + str(
+                    massivefold_model1_probe_worklist_summary.get(
+                        "top5_rerank_consistency_probe_count",
+                        "",
+                    )
+                )
+                + "/"
+                + str(massivefold_model1_probe_worklist_summary.get("lightweight_rescore_probe_count", ""))
+                + ",priority:"
+                + str(massivefold_model1_probe_worklist_summary.get("priority1_workitem_count", ""))
+                + "/"
+                + str(massivefold_model1_probe_worklist_summary.get("priority2_workitem_count", ""))
+                + ",rna/protein:"
+                + str(massivefold_model1_probe_worklist_summary.get("rna_hybrid_workitem_count", ""))
+                + "/"
+                + str(massivefold_model1_probe_worklist_summary.get("protein_complex_workitem_count", ""))
+                + ",first:"
+                + _text(massivefold_model1_probe_worklist_summary.get("first_workitem_target_id"))
+                + ",probe:"
+                + _text(massivefold_model1_probe_worklist_summary.get("first_workitem_probe_type"))
+                + ",unlock:"
+                + _text(massivefold_model1_probe_worklist_summary.get("freeze_unlock_policy"))
+                + ",policy:"
+                + _text(massivefold_model1_probe_worklist_summary.get("internal_prediction_policy"))
+            ),
+        ),
+        _artifact_row(
+            "massivefold_model1_probe_outcome",
+            "CASP17 MassiveFold model1 no-native probe outcome packet",
+            _text(massivefold_model1_probe_outcome_summary.get("massivefold_model1_probe_outcome_status")),
+            args.massivefold_model1_probe_outcome_json,
+            ready_count=_int(massivefold_model1_probe_outcome_summary.get("ready_outcome_count")),
+            blocked_count=_int(massivefold_model1_probe_outcome_summary.get("blocked_outcome_count")),
+            total_count=_int(massivefold_model1_probe_outcome_summary.get("outcome_count")),
+            next_action=_text(massivefold_model1_probe_outcome_summary.get("next_action")),
+            blockers=(
+                "outcomes:"
+                + str(massivefold_model1_probe_outcome_summary.get("outcome_count", ""))
+                + ",ready:"
+                + str(massivefold_model1_probe_outcome_summary.get("ready_outcome_count", ""))
+                + ",pass/fail/freeze:"
+                + str(massivefold_model1_probe_outcome_summary.get("probe_pass_count", ""))
+                + "/"
+                + str(massivefold_model1_probe_outcome_summary.get("probe_fail_count", ""))
+                + "/"
+                + str(massivefold_model1_probe_outcome_summary.get("freeze_ready_recommendation_count", ""))
+                + ",probes:"
+                + str(massivefold_model1_probe_outcome_summary.get("top5_probe_outcome_count", ""))
+                + "/"
+                + str(massivefold_model1_probe_outcome_summary.get("lightweight_probe_outcome_count", ""))
+                + ",rna/protein:"
+                + str(massivefold_model1_probe_outcome_summary.get("rna_hybrid_outcome_count", ""))
+                + "/"
+                + str(massivefold_model1_probe_outcome_summary.get("protein_complex_outcome_count", ""))
+                + ",first:"
+                + _text(massivefold_model1_probe_outcome_summary.get("first_outcome_target_id"))
+                + ",result:"
+                + _text(massivefold_model1_probe_outcome_summary.get("first_outcome_result"))
+                + ",recommendation:"
+                + _text(massivefold_model1_probe_outcome_summary.get("first_freeze_recommendation"))
+                + ",rule:"
+                + _text(massivefold_model1_probe_outcome_summary.get("scoring_rule_id"))
+                + ",policy:"
+                + _text(massivefold_model1_probe_outcome_summary.get("internal_prediction_policy"))
+            ),
+        ),
+        _artifact_row(
+            "massivefold_model1_freeze_decision_packet",
+            "CASP17 MassiveFold model1 no-native freeze decision packet",
+            _text(
+                massivefold_model1_freeze_decision_packet_summary.get(
+                    "massivefold_model1_freeze_decision_packet_status"
+                )
+            ),
+            args.massivefold_model1_freeze_decision_packet_json,
+            ready_count=_int(
+                massivefold_model1_freeze_decision_packet_summary.get("ready_decision_count")
+            ),
+            blocked_count=_int(
+                massivefold_model1_freeze_decision_packet_summary.get("blocked_decision_count")
+            ),
+            total_count=_int(
+                massivefold_model1_freeze_decision_packet_summary.get("decision_count")
+            ),
+            next_action=_text(massivefold_model1_freeze_decision_packet_summary.get("next_action")),
+            blockers=(
+                "decisions:"
+                + str(massivefold_model1_freeze_decision_packet_summary.get("decision_count", ""))
+                + ",ready:"
+                + str(massivefold_model1_freeze_decision_packet_summary.get("ready_decision_count", ""))
+                + ",freeze-ready/blocked:"
+                + str(
+                    massivefold_model1_freeze_decision_packet_summary.get(
+                        "freeze_ready_total_count",
+                        "",
+                    )
+                )
+                + "/"
+                + str(
+                    massivefold_model1_freeze_decision_packet_summary.get(
+                        "freeze_blocked_total_count",
+                        "",
+                    )
+                )
+                + ",conditional/watch/manual:"
+                + str(
+                    massivefold_model1_freeze_decision_packet_summary.get(
+                        "conditional_freeze_ready_count",
+                        "",
+                    )
+                )
+                + "/"
+                + str(
+                    massivefold_model1_freeze_decision_packet_summary.get(
+                        "watch_freeze_ready_count",
+                        "",
+                    )
+                )
+                + "/"
+                + str(
+                    massivefold_model1_freeze_decision_packet_summary.get(
+                        "manual_review_blocked_count",
+                        "",
+                    )
+                )
+                + ",rna/protein:"
+                + str(massivefold_model1_freeze_decision_packet_summary.get("rna_hybrid_decision_count", ""))
+                + "/"
+                + str(
+                    massivefold_model1_freeze_decision_packet_summary.get(
+                        "protein_complex_decision_count",
+                        "",
+                    )
+                )
+                + ",first-ready:"
+                + _text(
+                    massivefold_model1_freeze_decision_packet_summary.get(
+                        "first_freeze_ready_target_id"
+                    )
+                )
+                + ",first-blocked:"
+                + _text(
+                    massivefold_model1_freeze_decision_packet_summary.get(
+                        "first_blocked_target_id"
+                    )
+                )
+                + ",rule:"
+                + _text(massivefold_model1_freeze_decision_packet_summary.get("decision_rule_id"))
+                + ",policy:"
+                + _text(
+                    massivefold_model1_freeze_decision_packet_summary.get(
+                        "internal_prediction_policy"
+                    )
+                )
+            ),
+        ),
+        _artifact_row(
+            "massivefold_model_selection_ledger",
+            "CASP17 MassiveFold external no-native model-selection ledger",
+            _text(massivefold_model_selection_ledger_summary.get("massivefold_model_selection_ledger_status")),
+            args.massivefold_model_selection_ledger_json,
+            ready_count=_int(massivefold_model_selection_ledger_summary.get("ready_ledger_count")),
+            blocked_count=_int(massivefold_model_selection_ledger_summary.get("blocked_ledger_count")),
+            total_count=_int(massivefold_model_selection_ledger_summary.get("ledger_count")),
+            next_action=_text(massivefold_model_selection_ledger_summary.get("next_action")),
+            blockers=(
+                "ledgers:"
+                + str(massivefold_model_selection_ledger_summary.get("ledger_count", ""))
+                + ",ready:"
+                + str(massivefold_model_selection_ledger_summary.get("ready_ledger_count", ""))
+                + ",selected:"
+                + str(
+                    massivefold_model_selection_ledger_summary.get(
+                        "conditional_selected_count",
+                        "",
+                    )
+                )
+                + "/"
+                + str(massivefold_model_selection_ledger_summary.get("watch_selected_count", ""))
+                + ",manual/review:"
+                + str(massivefold_model_selection_ledger_summary.get("manual_review_blocked_count", ""))
+                + "/"
+                + str(massivefold_model_selection_ledger_summary.get("review_only_unfrozen_count", ""))
+                + ",freeze-ready:"
+                + str(massivefold_model_selection_ledger_summary.get("freeze_ready_selected_count", ""))
+                + ",rna/protein:"
+                + str(massivefold_model_selection_ledger_summary.get("rna_hybrid_ledger_count", ""))
+                + "/"
+                + str(massivefold_model_selection_ledger_summary.get("protein_complex_ledger_count", ""))
+                + ",first:"
+                + _text(massivefold_model_selection_ledger_summary.get("first_ledger_target_id"))
+                + ",decision:"
+                + _text(massivefold_model_selection_ledger_summary.get("first_ledger_decision"))
+                + ",manual:"
+                + _text(massivefold_model_selection_ledger_summary.get("first_manual_review_target_id"))
+                + ",rule:"
+                + _text(massivefold_model_selection_ledger_summary.get("ledger_rule_id"))
+                + ",policy:"
+                + _text(massivefold_model_selection_ledger_summary.get("internal_prediction_policy"))
+            ),
+        ),
+        _artifact_row(
+            "massivefold_model1_combined_selector_overlay",
+            "Applied baseline-calibrated no-native selector overlay to MassiveFold model1 freeze decisions",
+            _text(
+                massivefold_model1_combined_selector_overlay_summary.get(
+                    "massivefold_model1_combined_selector_overlay_status"
+                )
+            ),
+            args.massivefold_model1_combined_selector_overlay_json,
+            ready_count=_int(
+                massivefold_model1_combined_selector_overlay_summary.get("overlay_ready_count")
+            ),
+            blocked_count=_int(
+                massivefold_model1_combined_selector_overlay_summary.get("overlay_blocked_count")
+            ),
+            total_count=_int(
+                massivefold_model1_combined_selector_overlay_summary.get("overlay_count")
+            ),
+            next_action=_text(massivefold_model1_combined_selector_overlay_summary.get("next_action")),
+            blockers=(
+                "overlay:"
+                + str(massivefold_model1_combined_selector_overlay_summary.get("overlay_ready_count", ""))
+                + "/"
+                + str(massivefold_model1_combined_selector_overlay_summary.get("overlay_blocked_count", ""))
+                + "/"
+                + str(massivefold_model1_combined_selector_overlay_summary.get("overlay_count", ""))
+                + ",freeze:"
+                + str(
+                    massivefold_model1_combined_selector_overlay_summary.get(
+                        "freeze_ready_overlay_count",
+                        "",
+                    )
+                )
+                + "/"
+                + str(
+                    massivefold_model1_combined_selector_overlay_summary.get(
+                        "not_freeze_ready_overlay_count",
+                        "",
+                    )
+                )
+                + ",holds:"
+                + str(
+                    massivefold_model1_combined_selector_overlay_summary.get(
+                        "manual_blocked_overlay_count",
+                        "",
+                    )
+                )
+                + "/"
+                + str(
+                    massivefold_model1_combined_selector_overlay_summary.get(
+                        "interface_hold_overlay_count",
+                        "",
+                    )
+                )
+                + "/"
+                + str(
+                    massivefold_model1_combined_selector_overlay_summary.get(
+                        "weak_probe_hold_overlay_count",
+                        "",
+                    )
+                )
+                + "/"
+                + str(
+                    massivefold_model1_combined_selector_overlay_summary.get(
+                        "probe_required_overlay_count",
+                        "",
+                    )
+                )
+                + "/"
+                + str(
+                    massivefold_model1_combined_selector_overlay_summary.get(
+                        "review_watch_overlay_count",
+                        "",
+                    )
+                )
+                + "/"
+                + str(
+                    massivefold_model1_combined_selector_overlay_summary.get(
+                        "unknown_hold_overlay_count",
+                        "",
+                    )
+                )
+                + ",baseline:"
+                + _text(massivefold_model1_combined_selector_overlay_summary.get("baseline_capture_rate"))
+                + "/"
+                + _text(
+                    massivefold_model1_combined_selector_overlay_summary.get(
+                        "baseline_non_capture_rate"
+                    )
+                )
+                + ",first:"
+                + _text(massivefold_model1_combined_selector_overlay_summary.get("first_overlay_target_id"))
+                + "/"
+                + _text(massivefold_model1_combined_selector_overlay_summary.get("first_overlay_decision"))
+                + ",first_freeze:"
+                + _text(
+                    massivefold_model1_combined_selector_overlay_summary.get(
+                        "first_freeze_ready_target_id"
+                    )
+                )
+                + "/"
+                + _text(
+                    massivefold_model1_combined_selector_overlay_summary.get(
+                        "first_freeze_ready_action"
+                    )
+                )
+                + ",proof_eligible:"
+                + str(
+                    massivefold_model1_combined_selector_overlay_summary.get(
+                        "competitive_proof_eligible",
+                        "",
+                    )
+                )
+                + ",policy:"
+                + _text(
+                    massivefold_model1_combined_selector_overlay_summary.get(
+                        "internal_prediction_policy"
+                    )
+                )
+            ),
+        ),
+        _artifact_row(
+            "massivefold_freeze_ready_review_packet",
+            "CASP17 MassiveFold freeze-ready model1/top5 review packet",
+            _text(
+                massivefold_freeze_ready_review_packet_summary.get(
+                    "massivefold_freeze_ready_review_packet_status"
+                )
+            ),
+            args.massivefold_freeze_ready_review_packet_json,
+            ready_count=_int(massivefold_freeze_ready_review_packet_summary.get("ready_review_count")),
+            blocked_count=_int(massivefold_freeze_ready_review_packet_summary.get("blocked_review_count")),
+            total_count=_int(massivefold_freeze_ready_review_packet_summary.get("freeze_ready_target_count")),
+            next_action=_text(massivefold_freeze_ready_review_packet_summary.get("next_action")),
+            blockers=(
+                "reviews:"
+                + str(massivefold_freeze_ready_review_packet_summary.get("ready_review_count", ""))
+                + "/"
+                + str(massivefold_freeze_ready_review_packet_summary.get("blocked_review_count", ""))
+                + "/"
+                + str(massivefold_freeze_ready_review_packet_summary.get("freeze_ready_target_count", ""))
+                + ",artifacts:"
+                + str(massivefold_freeze_ready_review_packet_summary.get("model_present_count", ""))
+                + "/"
+                + str(massivefold_freeze_ready_review_packet_summary.get("viewer_present_count", ""))
+                + "/"
+                + str(massivefold_freeze_ready_review_packet_summary.get("projection_present_count", ""))
+                + "/"
+                + str(massivefold_freeze_ready_review_packet_summary.get("top5_manifest_present_count", ""))
+                + ",top5:"
+                + str(massivefold_freeze_ready_review_packet_summary.get("top5_candidate_total", ""))
+                + ",first:"
+                + _text(massivefold_freeze_ready_review_packet_summary.get("first_review_target_id"))
+                + "/"
+                + _text(massivefold_freeze_ready_review_packet_summary.get("first_review_model_filename"))
+                + ",proof_eligible:"
+                + str(
+                    massivefold_freeze_ready_review_packet_summary.get(
+                        "competitive_proof_eligible",
+                        "",
+                    )
+                )
+                + ",policy:"
+                + _text(
+                    massivefold_freeze_ready_review_packet_summary.get(
+                        "internal_prediction_policy"
+                    )
+                )
+            ),
+        ),
+        _artifact_row(
+            "massivefold_hold_probe_review_packet",
+            "CASP17 MassiveFold held/probe-required model1/top5 review packet",
+            _text(
+                massivefold_hold_probe_review_packet_summary.get(
+                    "massivefold_hold_probe_review_packet_status"
+                )
+            ),
+            args.massivefold_hold_probe_review_packet_json,
+            ready_count=_int(massivefold_hold_probe_review_packet_summary.get("ready_review_count")),
+            blocked_count=_int(massivefold_hold_probe_review_packet_summary.get("blocked_review_count")),
+            total_count=_int(massivefold_hold_probe_review_packet_summary.get("hold_probe_review_count")),
+            next_action=_text(massivefold_hold_probe_review_packet_summary.get("next_action")),
+            blockers=(
+                "reviews:"
+                + str(massivefold_hold_probe_review_packet_summary.get("ready_review_count", ""))
+                + "/"
+                + str(massivefold_hold_probe_review_packet_summary.get("blocked_review_count", ""))
+                + "/"
+                + str(massivefold_hold_probe_review_packet_summary.get("hold_probe_review_count", ""))
+                + ",classes:"
+                + str(massivefold_hold_probe_review_packet_summary.get("manual_blocked_review_count", ""))
+                + "/"
+                + str(massivefold_hold_probe_review_packet_summary.get("interface_hold_review_count", ""))
+                + "/"
+                + str(massivefold_hold_probe_review_packet_summary.get("probe_required_review_count", ""))
+                + "/"
+                + str(massivefold_hold_probe_review_packet_summary.get("weak_probe_hold_review_count", ""))
+                + "/"
+                + str(massivefold_hold_probe_review_packet_summary.get("unknown_hold_review_count", ""))
+                + ",artifacts:"
+                + str(massivefold_hold_probe_review_packet_summary.get("model_present_count", ""))
+                + "/"
+                + str(massivefold_hold_probe_review_packet_summary.get("viewer_present_count", ""))
+                + "/"
+                + str(massivefold_hold_probe_review_packet_summary.get("projection_present_count", ""))
+                + "/"
+                + str(massivefold_hold_probe_review_packet_summary.get("top5_manifest_present_count", ""))
+                + "/alt:"
+                + str(massivefold_hold_probe_review_packet_summary.get("alternate_present_count", ""))
+                + ",top5:"
+                + str(massivefold_hold_probe_review_packet_summary.get("top5_candidate_total", ""))
+                + ",first:"
+                + _text(massivefold_hold_probe_review_packet_summary.get("first_review_target_id"))
+                + "/"
+                + _text(massivefold_hold_probe_review_packet_summary.get("first_review_class"))
+                + ",proof_eligible:"
+                + str(
+                    massivefold_hold_probe_review_packet_summary.get(
+                        "competitive_proof_eligible",
+                        "",
+                    )
+                )
+                + ",policy:"
+                + _text(
+                    massivefold_hold_probe_review_packet_summary.get(
+                        "internal_prediction_policy"
+                    )
+                )
+            ),
+        ),
+        _artifact_row(
+            "massivefold_probe_required_targeted_probe_packet",
+            "CASP17 MassiveFold probe-required targeted no-native probe packet",
+            _text(
+                massivefold_probe_required_targeted_probe_packet_summary.get(
+                    "massivefold_probe_required_targeted_probe_packet_status"
+                )
+            ),
+            args.massivefold_probe_required_targeted_probe_packet_json,
+            ready_count=_int(massivefold_probe_required_targeted_probe_packet_summary.get("ready_probe_count")),
+            blocked_count=_int(massivefold_probe_required_targeted_probe_packet_summary.get("blocked_probe_count")),
+            total_count=_int(massivefold_probe_required_targeted_probe_packet_summary.get("probe_target_count")),
+            next_action=_text(massivefold_probe_required_targeted_probe_packet_summary.get("next_action")),
+            blockers=(
+                "probes:"
+                + str(massivefold_probe_required_targeted_probe_packet_summary.get("ready_probe_count", ""))
+                + "/"
+                + str(massivefold_probe_required_targeted_probe_packet_summary.get("blocked_probe_count", ""))
+                + "/"
+                + str(massivefold_probe_required_targeted_probe_packet_summary.get("probe_target_count", ""))
+                + ",pass_watch_fail:"
+                + str(massivefold_probe_required_targeted_probe_packet_summary.get("probe_pass_count", ""))
+                + "/"
+                + str(massivefold_probe_required_targeted_probe_packet_summary.get("probe_watch_count", ""))
+                + "/"
+                + str(massivefold_probe_required_targeted_probe_packet_summary.get("probe_fail_count", ""))
+                + ",recommend:"
+                + str(massivefold_probe_required_targeted_probe_packet_summary.get("freeze_candidate_count", ""))
+                + "/"
+                + str(massivefold_probe_required_targeted_probe_packet_summary.get("watch_recommendation_count", ""))
+                + "/"
+                + str(massivefold_probe_required_targeted_probe_packet_summary.get("manual_review_recommendation_count", ""))
+                + ",rna_protein:"
+                + str(massivefold_probe_required_targeted_probe_packet_summary.get("rna_hybrid_probe_count", ""))
+                + "/"
+                + str(massivefold_probe_required_targeted_probe_packet_summary.get("protein_complex_probe_count", ""))
+                + ",artifacts:"
+                + str(massivefold_probe_required_targeted_probe_packet_summary.get("model_present_count", ""))
+                + "/"
+                + str(massivefold_probe_required_targeted_probe_packet_summary.get("viewer_present_count", ""))
+                + "/"
+                + str(massivefold_probe_required_targeted_probe_packet_summary.get("projection_present_count", ""))
+                + "/"
+                + str(massivefold_probe_required_targeted_probe_packet_summary.get("top_candidate_present_count", ""))
+                + "/"
+                + str(massivefold_probe_required_targeted_probe_packet_summary.get("top_candidate_viewer_present_count", ""))
+                + "/"
+                + str(massivefold_probe_required_targeted_probe_packet_summary.get("top5_manifest_present_count", ""))
+                + ",top5:"
+                + str(massivefold_probe_required_targeted_probe_packet_summary.get("top5_candidate_total", ""))
+                + ",first:"
+                + _text(massivefold_probe_required_targeted_probe_packet_summary.get("first_probe_target_id"))
+                + "/"
+                + _text(massivefold_probe_required_targeted_probe_packet_summary.get("first_probe_result"))
+                + ",margin:"
+                + _text(massivefold_probe_required_targeted_probe_packet_summary.get("first_probe_margin"))
+                + ",proof_eligible:"
+                + str(
+                    massivefold_probe_required_targeted_probe_packet_summary.get(
+                        "competitive_proof_eligible",
+                        "",
+                    )
+                )
+                + ",policy:"
+                + _text(
+                    massivefold_probe_required_targeted_probe_packet_summary.get(
+                        "internal_prediction_policy"
+                    )
+                )
+            ),
+        ),
+        _artifact_row(
+            "massivefold_post_probe_selector_decision_packet",
+            "CASP17 MassiveFold post-probe selector decision map",
+            _text(
+                massivefold_post_probe_selector_decision_packet_summary.get(
+                    "massivefold_post_probe_selector_decision_packet_status"
+                )
+            ),
+            args.massivefold_post_probe_selector_decision_packet_json,
+            ready_count=_int(massivefold_post_probe_selector_decision_packet_summary.get("ready_decision_count")),
+            blocked_count=_int(massivefold_post_probe_selector_decision_packet_summary.get("blocked_decision_count")),
+            total_count=_int(massivefold_post_probe_selector_decision_packet_summary.get("decision_count")),
+            next_action=_text(massivefold_post_probe_selector_decision_packet_summary.get("next_action")),
+            blockers=(
+                "decisions:"
+                + str(massivefold_post_probe_selector_decision_packet_summary.get("ready_decision_count", ""))
+                + "/"
+                + str(massivefold_post_probe_selector_decision_packet_summary.get("blocked_decision_count", ""))
+                + "/"
+                + str(massivefold_post_probe_selector_decision_packet_summary.get("decision_count", ""))
+                + ",freeze_watch_manual:"
+                + str(massivefold_post_probe_selector_decision_packet_summary.get("freeze_candidate_count", ""))
+                + "/"
+                + str(massivefold_post_probe_selector_decision_packet_summary.get("watch_decision_count", ""))
+                + "/"
+                + str(massivefold_post_probe_selector_decision_packet_summary.get("manual_block_decision_count", ""))
+                + ",freeze_existing_probe:"
+                + str(massivefold_post_probe_selector_decision_packet_summary.get("existing_freeze_candidate_count", ""))
+                + "/"
+                + str(massivefold_post_probe_selector_decision_packet_summary.get("probe_freeze_candidate_count", ""))
+                + ",watch_probe_interface:"
+                + str(massivefold_post_probe_selector_decision_packet_summary.get("probe_watch_count", ""))
+                + "/"
+                + str(massivefold_post_probe_selector_decision_packet_summary.get("interface_hold_count", ""))
+                + ",manual_probe_manual:"
+                + str(massivefold_post_probe_selector_decision_packet_summary.get("manual_review_after_probe_failure_count", ""))
+                + "/"
+                + str(massivefold_post_probe_selector_decision_packet_summary.get("manual_block_count", ""))
+                + ",rna_protein:"
+                + str(massivefold_post_probe_selector_decision_packet_summary.get("rna_hybrid_decision_count", ""))
+                + "/"
+                + str(massivefold_post_probe_selector_decision_packet_summary.get("protein_complex_decision_count", ""))
+                + ",artifacts:"
+                + str(massivefold_post_probe_selector_decision_packet_summary.get("model_present_count", ""))
+                + "/"
+                + str(massivefold_post_probe_selector_decision_packet_summary.get("viewer_present_count", ""))
+                + "/"
+                + str(massivefold_post_probe_selector_decision_packet_summary.get("projection_present_count", ""))
+                + "/"
+                + str(massivefold_post_probe_selector_decision_packet_summary.get("top5_manifest_present_count", ""))
+                + "/alt:"
+                + str(massivefold_post_probe_selector_decision_packet_summary.get("alternate_present_count", ""))
+                + ",first:"
+                + _text(massivefold_post_probe_selector_decision_packet_summary.get("first_decision_target_id"))
+                + "/"
+                + _text(massivefold_post_probe_selector_decision_packet_summary.get("first_decision_class"))
+                + ",proof_eligible:"
+                + str(
+                    massivefold_post_probe_selector_decision_packet_summary.get(
+                        "competitive_proof_eligible",
+                        "",
+                    )
+                )
+                + ",policy:"
+                + _text(
+                    massivefold_post_probe_selector_decision_packet_summary.get(
+                        "internal_prediction_policy"
+                    )
+                )
+            ),
+        ),
+        _artifact_row(
+            "massivefold_watch_manual_action_packet",
+            "CASP17 MassiveFold watch/manual/interface action packet",
+            _text(
+                massivefold_watch_manual_action_packet_summary.get(
+                    "massivefold_watch_manual_action_packet_status"
+                )
+            ),
+            args.massivefold_watch_manual_action_packet_json,
+            ready_count=_int(massivefold_watch_manual_action_packet_summary.get("ready_action_count")),
+            blocked_count=_int(massivefold_watch_manual_action_packet_summary.get("blocked_action_count")),
+            total_count=_int(massivefold_watch_manual_action_packet_summary.get("action_count")),
+            next_action=_text(massivefold_watch_manual_action_packet_summary.get("next_action")),
+            blockers=(
+                "actions:"
+                + str(massivefold_watch_manual_action_packet_summary.get("ready_action_count", ""))
+                + "/"
+                + str(massivefold_watch_manual_action_packet_summary.get("blocked_action_count", ""))
+                + "/"
+                + str(massivefold_watch_manual_action_packet_summary.get("action_count", ""))
+                + ",classes:"
+                + str(massivefold_watch_manual_action_packet_summary.get("manual_alternate_review_count", ""))
+                + "/"
+                + str(massivefold_watch_manual_action_packet_summary.get("interface_geometry_review_count", ""))
+                + "/"
+                + str(massivefold_watch_manual_action_packet_summary.get("low_margin_top5_review_count", ""))
+                + ",priority:"
+                + str(massivefold_watch_manual_action_packet_summary.get("priority1_action_count", ""))
+                + "/"
+                + str(massivefold_watch_manual_action_packet_summary.get("priority2_action_count", ""))
+                + ",rna_protein:"
+                + str(massivefold_watch_manual_action_packet_summary.get("rna_hybrid_action_count", ""))
+                + "/"
+                + str(massivefold_watch_manual_action_packet_summary.get("protein_complex_action_count", ""))
+                + ",artifacts:"
+                + str(massivefold_watch_manual_action_packet_summary.get("model_present_count", ""))
+                + "/"
+                + str(massivefold_watch_manual_action_packet_summary.get("viewer_present_count", ""))
+                + "/"
+                + str(massivefold_watch_manual_action_packet_summary.get("projection_present_count", ""))
+                + "/"
+                + str(massivefold_watch_manual_action_packet_summary.get("top5_manifest_present_count", ""))
+                + "/alt:"
+                + str(massivefold_watch_manual_action_packet_summary.get("alternate_present_count", ""))
+                + ",first:"
+                + _text(massivefold_watch_manual_action_packet_summary.get("first_action_target_id"))
+                + "/"
+                + _text(massivefold_watch_manual_action_packet_summary.get("first_action_class"))
+                + ",proof_eligible:"
+                + str(
+                    massivefold_watch_manual_action_packet_summary.get(
+                        "competitive_proof_eligible",
+                        "",
+                    )
+                )
+                + ",policy:"
+                + _text(
+                    massivefold_watch_manual_action_packet_summary.get(
+                        "internal_prediction_policy"
+                    )
+                )
+            ),
+        ),
+        _artifact_row(
+            "massivefold_freeze_candidate_format_preflight",
+            "CASP17 MassiveFold freeze-candidate external format preflight",
+            _text(
+                massivefold_freeze_candidate_format_preflight_summary.get(
+                    "massivefold_freeze_candidate_format_preflight_status"
+                )
+            ),
+            args.massivefold_freeze_candidate_format_preflight_json,
+            ready_count=_int(massivefold_freeze_candidate_format_preflight_summary.get("ready_preflight_count")),
+            blocked_count=_int(massivefold_freeze_candidate_format_preflight_summary.get("blocked_preflight_count")),
+            total_count=_int(massivefold_freeze_candidate_format_preflight_summary.get("freeze_candidate_count")),
+            next_action=_text(massivefold_freeze_candidate_format_preflight_summary.get("next_action")),
+            blockers=(
+                "preflight:"
+                + str(massivefold_freeze_candidate_format_preflight_summary.get("ready_preflight_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_format_preflight_summary.get("blocked_preflight_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_format_preflight_summary.get("freeze_candidate_count", ""))
+                + ",freeze_existing_probe:"
+                + str(massivefold_freeze_candidate_format_preflight_summary.get("existing_freeze_candidate_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_format_preflight_summary.get("probe_freeze_candidate_count", ""))
+                + ",rna_protein:"
+                + str(massivefold_freeze_candidate_format_preflight_summary.get("rna_hybrid_preflight_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_format_preflight_summary.get("protein_complex_preflight_count", ""))
+                + ",selected_pdb_cif:"
+                + str(massivefold_freeze_candidate_format_preflight_summary.get("selected_pdb_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_format_preflight_summary.get("selected_cif_count", ""))
+                + ",packaged_pdb_cif:"
+                + str(massivefold_freeze_candidate_format_preflight_summary.get("packaged_pdb_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_format_preflight_summary.get("packaged_cif_count", ""))
+                + ",checks:"
+                + str(massivefold_freeze_candidate_format_preflight_summary.get("target_id_format_ok_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_format_preflight_summary.get("selected_extension_ok_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_format_preflight_summary.get("model_present_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_format_preflight_summary.get("model_nonempty_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_format_preflight_summary.get("viewer_present_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_format_preflight_summary.get("projection_present_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_format_preflight_summary.get("top5_manifest_present_count", ""))
+                + ",first:"
+                + _text(massivefold_freeze_candidate_format_preflight_summary.get("first_preflight_target_id"))
+                + ",proof_eligible:"
+                + str(
+                    massivefold_freeze_candidate_format_preflight_summary.get(
+                        "competitive_proof_eligible",
+                        "",
+                    )
+                )
+                + ",policy:"
+                + _text(
+                    massivefold_freeze_candidate_format_preflight_summary.get(
+                        "internal_prediction_policy"
+                    )
+                )
+            ),
+        ),
+        _artifact_row(
+            "massivefold_freeze_candidate_escrow",
+            "CASP17 MassiveFold freeze-candidate SHA escrow",
+            _text(
+                massivefold_freeze_candidate_escrow_summary.get(
+                    "massivefold_freeze_candidate_escrow_status"
+                )
+            ),
+            args.massivefold_freeze_candidate_escrow_json,
+            ready_count=_int(massivefold_freeze_candidate_escrow_summary.get("ready_escrow_count")),
+            blocked_count=_int(massivefold_freeze_candidate_escrow_summary.get("blocked_escrow_count")),
+            total_count=_int(massivefold_freeze_candidate_escrow_summary.get("escrow_count")),
+            next_action=_text(massivefold_freeze_candidate_escrow_summary.get("next_action")),
+            blockers=(
+                "escrow:"
+                + str(massivefold_freeze_candidate_escrow_summary.get("ready_escrow_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_escrow_summary.get("blocked_escrow_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_escrow_summary.get("escrow_count", ""))
+                + ",sha_model_top5:"
+                + str(massivefold_freeze_candidate_escrow_summary.get("model_sha256_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_escrow_summary.get("top5_sha256_count", ""))
+                + ",artifacts:"
+                + str(massivefold_freeze_candidate_escrow_summary.get("model_present_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_escrow_summary.get("viewer_present_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_escrow_summary.get("projection_present_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_escrow_summary.get("top5_manifest_present_count", ""))
+                + ",freeze_existing_probe:"
+                + str(massivefold_freeze_candidate_escrow_summary.get("existing_freeze_candidate_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_escrow_summary.get("probe_freeze_candidate_count", ""))
+                + ",rna_protein:"
+                + str(massivefold_freeze_candidate_escrow_summary.get("rna_hybrid_escrow_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_escrow_summary.get("protein_complex_escrow_count", ""))
+                + ",native_proof_author:"
+                + str(massivefold_freeze_candidate_escrow_summary.get("native_pending_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_escrow_summary.get("competitive_proof_eligible_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_escrow_summary.get("author_serialized_count", ""))
+                + ",first:"
+                + (_text(massivefold_freeze_candidate_escrow_summary.get("first_escrow_target_id")) or "-")
+                + ",blocked:"
+                + (_text(massivefold_freeze_candidate_escrow_summary.get("first_blocked_target_id")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "massivefold_freeze_candidate_protein_library",
+            "CASP17 MassiveFold freeze-candidate protein-name 3D library",
+            _text(
+                massivefold_freeze_candidate_protein_library_summary.get(
+                    "massivefold_freeze_candidate_protein_library_status"
+                )
+            ),
+            args.massivefold_freeze_candidate_protein_library_json,
+            ready_count=_int(massivefold_freeze_candidate_protein_library_summary.get("protein_ready_count")),
+            blocked_count=_int(massivefold_freeze_candidate_protein_library_summary.get("protein_blocked_count")),
+            total_count=_int(massivefold_freeze_candidate_protein_library_summary.get("protein_count")),
+            next_action=_text(massivefold_freeze_candidate_protein_library_summary.get("next_action")),
+            blockers=(
+                "library:"
+                + str(massivefold_freeze_candidate_protein_library_summary.get("protein_ready_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_protein_library_summary.get("protein_blocked_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_protein_library_summary.get("protein_count", ""))
+                + ",objects:"
+                + str(massivefold_freeze_candidate_protein_library_summary.get("object_ready_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_protein_library_summary.get("object_blocked_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_protein_library_summary.get("object_count", ""))
+                + ",links:"
+                + str(massivefold_freeze_candidate_protein_library_summary.get("model_link_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_protein_library_summary.get("viewer_link_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_protein_library_summary.get("projection_link_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_protein_library_summary.get("top5_link_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_protein_library_summary.get("escrow_link_count", ""))
+                + ",sha_model_top5:"
+                + str(massivefold_freeze_candidate_protein_library_summary.get("model_sha256_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_protein_library_summary.get("top5_sha256_count", ""))
+                + ",name_sources:"
+                + str(massivefold_freeze_candidate_protein_library_summary.get("current_name_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_protein_library_summary.get("official_name_count", ""))
+                + ",rna_protein:"
+                + str(massivefold_freeze_candidate_protein_library_summary.get("rna_hybrid_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_protein_library_summary.get("protein_complex_count", ""))
+                + ",proof_author:"
+                + str(massivefold_freeze_candidate_protein_library_summary.get("competitive_proof_eligible_count", ""))
+                + "/"
+                + str(massivefold_freeze_candidate_protein_library_summary.get("author_serialized_count", ""))
+                + ",first:"
+                + (_text(massivefold_freeze_candidate_protein_library_summary.get("first_protein_key")) or "-")
+                + ",blocked:"
+                + (_text(massivefold_freeze_candidate_protein_library_summary.get("first_blocked_protein_key")) or "-")
             ),
         ),
         _artifact_row(
@@ -3999,6 +5999,470 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             ),
         ),
         _artifact_row(
+            "official_archive_first_baseline_acquisition_audit",
+            "Downloaded first official-archive baseline tarball/native audit kept outside strict-blind proof",
+            _text(
+                official_archive_first_baseline_acquisition_audit_summary.get(
+                    "official_archive_first_baseline_acquisition_audit_status"
+                )
+            ),
+            args.official_archive_first_baseline_acquisition_audit_json,
+            ready_count=_int(official_archive_first_baseline_acquisition_audit_summary.get("ready_artifact_count")),
+            blocked_count=_int(
+                official_archive_first_baseline_acquisition_audit_summary.get("blocked_artifact_count")
+            ),
+            total_count=_int(official_archive_first_baseline_acquisition_audit_summary.get("artifact_count")),
+            next_action=_text(official_archive_first_baseline_acquisition_audit_summary.get("next_action")),
+            blockers=(
+                "first:"
+                + str(official_archive_first_baseline_acquisition_audit_summary.get("first_competition", ""))
+                + "/"
+                + str(official_archive_first_baseline_acquisition_audit_summary.get("first_target_id", ""))
+                + "/"
+                + str(official_archive_first_baseline_acquisition_audit_summary.get("first_native_pdb_code", ""))
+                + ",artifacts:"
+                + str(official_archive_first_baseline_acquisition_audit_summary.get("ready_artifact_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_acquisition_audit_summary.get("blocked_artifact_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_acquisition_audit_summary.get("artifact_count", ""))
+                + ",tar_models:"
+                + str(official_archive_first_baseline_acquisition_audit_summary.get("tarball_model_count", ""))
+                + ",native_atoms:"
+                + str(official_archive_first_baseline_acquisition_audit_summary.get("native_pdb_atom_count", ""))
+                + ",proof_eligible:"
+                + str(official_archive_first_baseline_acquisition_audit_summary.get("competitive_proof_eligible", ""))
+                + ",policy:"
+                + str(official_archive_first_baseline_acquisition_audit_summary.get("strict_blind_intake_policy", ""))
+            ),
+        ),
+        _artifact_row(
+            "official_archive_first_baseline_model_pool",
+            "Extracted first official-archive baseline model1/top5 pool kept outside strict-blind proof",
+            _text(
+                official_archive_first_baseline_model_pool_summary.get(
+                    "official_archive_first_baseline_model_pool_status"
+                )
+            ),
+            args.official_archive_first_baseline_model_pool_json,
+            ready_count=_int(official_archive_first_baseline_model_pool_summary.get("ready_model_count")),
+            blocked_count=_int(official_archive_first_baseline_model_pool_summary.get("blocked_model_count")),
+            total_count=_int(official_archive_first_baseline_model_pool_summary.get("expected_model_count")),
+            next_action=_text(official_archive_first_baseline_model_pool_summary.get("next_action")),
+            blockers=(
+                "first:"
+                + str(official_archive_first_baseline_model_pool_summary.get("first_competition", ""))
+                + "/"
+                + str(official_archive_first_baseline_model_pool_summary.get("first_target_id", ""))
+                + "/"
+                + str(official_archive_first_baseline_model_pool_summary.get("first_native_pdb_code", ""))
+                + ",models:"
+                + str(official_archive_first_baseline_model_pool_summary.get("ready_model_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model_pool_summary.get("blocked_model_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model_pool_summary.get("expected_model_count", ""))
+                + ",groups:"
+                + str(official_archive_first_baseline_model_pool_summary.get("group_count", ""))
+                + ",model1:"
+                + str(official_archive_first_baseline_model_pool_summary.get("model1_count", ""))
+                + ",top5:"
+                + str(official_archive_first_baseline_model_pool_summary.get("top5_model_count", ""))
+                + ",complete_top5:"
+                + str(official_archive_first_baseline_model_pool_summary.get("complete_top5_group_count", ""))
+                + ",extra:"
+                + str(official_archive_first_baseline_model_pool_summary.get("extra_model_count", ""))
+                + ",proof_eligible:"
+                + str(official_archive_first_baseline_model_pool_summary.get("competitive_proof_eligible", ""))
+                + ",policy:"
+                + str(official_archive_first_baseline_model_pool_summary.get("strict_blind_intake_policy", ""))
+            ),
+        ),
+        _artifact_row(
+            "official_archive_first_baseline_score_ledger",
+            "Scored first official-archive baseline model1/top5 proxy ledger kept outside strict-blind proof",
+            _text(
+                official_archive_first_baseline_score_ledger_summary.get(
+                    "official_archive_first_baseline_score_ledger_status"
+                )
+            ),
+            args.official_archive_first_baseline_score_ledger_json,
+            ready_count=_int(official_archive_first_baseline_score_ledger_summary.get("ready_model_count")),
+            blocked_count=_int(official_archive_first_baseline_score_ledger_summary.get("blocked_model_count")),
+            total_count=_int(official_archive_first_baseline_score_ledger_summary.get("scored_model_count")),
+            next_action=_text(official_archive_first_baseline_score_ledger_summary.get("next_action")),
+            blockers=(
+                "first:"
+                + str(official_archive_first_baseline_score_ledger_summary.get("first_competition", ""))
+                + "/"
+                + str(official_archive_first_baseline_score_ledger_summary.get("first_target_id", ""))
+                + "/"
+                + str(official_archive_first_baseline_score_ledger_summary.get("first_native_pdb_code", ""))
+                + ",models:"
+                + str(official_archive_first_baseline_score_ledger_summary.get("ready_model_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_score_ledger_summary.get("blocked_model_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_score_ledger_summary.get("scored_model_count", ""))
+                + ",groups:"
+                + str(official_archive_first_baseline_score_ledger_summary.get("group_count", ""))
+                + ",model1:"
+                + str(official_archive_first_baseline_score_ledger_summary.get("model1_group_count", ""))
+                + ",best_top5:"
+                + str(official_archive_first_baseline_score_ledger_summary.get("best_top5_group_count", ""))
+                + ",complete_top5:"
+                + str(official_archive_first_baseline_score_ledger_summary.get("complete_top5_group_count", ""))
+                + ",improved:"
+                + str(official_archive_first_baseline_score_ledger_summary.get("top5_improved_group_count", ""))
+                + ",mean_model1:"
+                + str(official_archive_first_baseline_score_ledger_summary.get("mean_model1_gdt_ts_proxy", ""))
+                + ",mean_best:"
+                + str(official_archive_first_baseline_score_ledger_summary.get("mean_best_top5_gdt_ts_proxy", ""))
+                + ",proof_eligible:"
+                + str(official_archive_first_baseline_score_ledger_summary.get("competitive_proof_eligible", ""))
+                + ",policy:"
+                + str(official_archive_first_baseline_score_ledger_summary.get("strict_blind_intake_policy", ""))
+            ),
+        ),
+        _artifact_row(
+            "official_archive_first_baseline_replay_comparison",
+            "Compared first official-archive baseline proxy replay with historical winner-band constants",
+            _text(
+                official_archive_first_baseline_replay_comparison_summary.get(
+                    "official_archive_first_baseline_replay_comparison_status"
+                )
+            ),
+            args.official_archive_first_baseline_replay_comparison_json,
+            ready_count=_int(
+                official_archive_first_baseline_replay_comparison_summary.get("direct_comparable_band_count")
+            ),
+            blocked_count=_int(official_archive_first_baseline_replay_comparison_summary.get("blocked_band_count")),
+            total_count=_int(official_archive_first_baseline_replay_comparison_summary.get("band_count")),
+            next_action=_text(official_archive_first_baseline_replay_comparison_summary.get("next_action")),
+            blockers=(
+                "first:"
+                + str(official_archive_first_baseline_replay_comparison_summary.get("first_competition", ""))
+                + "/"
+                + str(official_archive_first_baseline_replay_comparison_summary.get("first_target_id", ""))
+                + "/"
+                + str(official_archive_first_baseline_replay_comparison_summary.get("first_native_pdb_code", ""))
+                + ",bands:"
+                + str(official_archive_first_baseline_replay_comparison_summary.get("direct_comparable_band_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_replay_comparison_summary.get("blocked_band_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_replay_comparison_summary.get("band_count", ""))
+                + ",direct:"
+                + str(official_archive_first_baseline_replay_comparison_summary.get("direct_comparison_status", ""))
+                + ",model1_best:"
+                + str(official_archive_first_baseline_replay_comparison_summary.get("model1_best_group_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_replay_comparison_summary.get("ready_group_count", ""))
+                + ",top5_improved:"
+                + str(official_archive_first_baseline_replay_comparison_summary.get("top5_improved_group_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_replay_comparison_summary.get("ready_group_count", ""))
+                + ",rates:"
+                + str(official_archive_first_baseline_replay_comparison_summary.get("model1_best_rate", ""))
+                + "/"
+                + str(official_archive_first_baseline_replay_comparison_summary.get("top5_improved_rate", ""))
+                + ",mean_model1:"
+                + str(official_archive_first_baseline_replay_comparison_summary.get("mean_model1_gdt_ts_proxy", ""))
+                + ",mean_best:"
+                + str(official_archive_first_baseline_replay_comparison_summary.get("mean_best_top5_gdt_ts_proxy", ""))
+                + ",proof_eligible:"
+                + str(official_archive_first_baseline_replay_comparison_summary.get("competitive_proof_eligible", ""))
+                + ",policy:"
+                + str(official_archive_first_baseline_replay_comparison_summary.get("strict_blind_intake_policy", ""))
+            ),
+        ),
+        _artifact_row(
+            "official_archive_first_baseline_model1_gap_triage",
+            "Triaged first official-archive baseline model1-vs-best-of-5 selection gaps",
+            _text(
+                official_archive_first_baseline_model1_gap_triage_summary.get(
+                    "official_archive_first_baseline_model1_gap_triage_status"
+                )
+            ),
+            args.official_archive_first_baseline_model1_gap_triage_json,
+            ready_count=_int(official_archive_first_baseline_model1_gap_triage_summary.get("ready_group_count")),
+            blocked_count=_int(official_archive_first_baseline_model1_gap_triage_summary.get("blocked_group_count")),
+            total_count=_int(official_archive_first_baseline_model1_gap_triage_summary.get("group_count")),
+            next_action=_text(official_archive_first_baseline_model1_gap_triage_summary.get("next_action")),
+            blockers=(
+                "first:"
+                + str(official_archive_first_baseline_model1_gap_triage_summary.get("first_competition", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_triage_summary.get("first_target_id", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_triage_summary.get("first_native_pdb_code", ""))
+                + ",groups:"
+                + str(official_archive_first_baseline_model1_gap_triage_summary.get("ready_group_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_triage_summary.get("blocked_group_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_triage_summary.get("group_count", ""))
+                + ",model1_best:"
+                + str(official_archive_first_baseline_model1_gap_triage_summary.get("model1_best_group_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_triage_summary.get("ready_group_count", ""))
+                + ",top5_improved:"
+                + str(official_archive_first_baseline_model1_gap_triage_summary.get("top5_improved_group_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_triage_summary.get("ready_group_count", ""))
+                + ",rates:"
+                + str(official_archive_first_baseline_model1_gap_triage_summary.get("model1_best_rate", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_triage_summary.get("top5_improved_rate", ""))
+                + ",gaps:"
+                + str(official_archive_first_baseline_model1_gap_triage_summary.get("small_gap_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_triage_summary.get("medium_gap_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_triage_summary.get("large_gap_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_triage_summary.get("catastrophic_gap_count", ""))
+                + ",critical:"
+                + str(official_archive_first_baseline_model1_gap_triage_summary.get("critical_calibration_case_count", ""))
+                + ",first_triage:"
+                + str(official_archive_first_baseline_model1_gap_triage_summary.get("first_triage_group_id", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_triage_summary.get("first_triage_band", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_triage_summary.get("first_triage_delta", ""))
+                + ",proof_eligible:"
+                + str(official_archive_first_baseline_model1_gap_triage_summary.get("competitive_proof_eligible", ""))
+                + ",policy:"
+                + str(official_archive_first_baseline_model1_gap_triage_summary.get("strict_blind_intake_policy", ""))
+            ),
+        ),
+        _artifact_row(
+            "official_archive_first_baseline_model1_gap_viewer_packet",
+            "Rendered 3D overlay viewers for high-gap first official-archive baseline model1 failures",
+            _text(
+                official_archive_first_baseline_model1_gap_viewer_packet_summary.get(
+                    "official_archive_first_baseline_model1_gap_viewer_packet_status"
+                )
+            ),
+            args.official_archive_first_baseline_model1_gap_viewer_packet_json,
+            ready_count=_int(official_archive_first_baseline_model1_gap_viewer_packet_summary.get("viewer_ready_count")),
+            blocked_count=_int(
+                official_archive_first_baseline_model1_gap_viewer_packet_summary.get("viewer_blocked_count")
+            ),
+            total_count=_int(official_archive_first_baseline_model1_gap_viewer_packet_summary.get("selected_case_count")),
+            next_action=_text(official_archive_first_baseline_model1_gap_viewer_packet_summary.get("next_action")),
+            blockers=(
+                "first:"
+                + str(official_archive_first_baseline_model1_gap_viewer_packet_summary.get("first_competition", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_viewer_packet_summary.get("first_target_id", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_viewer_packet_summary.get("first_native_pdb_code", ""))
+                + ",viewers:"
+                + str(official_archive_first_baseline_model1_gap_viewer_packet_summary.get("viewer_ready_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_viewer_packet_summary.get("viewer_blocked_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_viewer_packet_summary.get("selected_case_count", ""))
+                + ",cases:"
+                + str(official_archive_first_baseline_model1_gap_viewer_packet_summary.get("catastrophic_case_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_viewer_packet_summary.get("large_case_count", ""))
+                + ",pairs:"
+                + str(official_archive_first_baseline_model1_gap_viewer_packet_summary.get("copied_model_pair_count", ""))
+                + ",native:"
+                + str(official_archive_first_baseline_model1_gap_viewer_packet_summary.get("native_reference_ready", ""))
+                + ",first_viewer:"
+                + str(official_archive_first_baseline_model1_gap_viewer_packet_summary.get("first_viewer_group_id", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_viewer_packet_summary.get("first_viewer_band", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_viewer_packet_summary.get("first_viewer_delta", ""))
+                + ",proof_eligible:"
+                + str(official_archive_first_baseline_model1_gap_viewer_packet_summary.get("competitive_proof_eligible", ""))
+                + ",policy:"
+                + str(official_archive_first_baseline_model1_gap_viewer_packet_summary.get("strict_blind_intake_policy", ""))
+            ),
+        ),
+        _artifact_row(
+            "official_archive_first_baseline_model1_gap_feature_probe",
+            "Computed no-native geometry features for high-gap official-archive baseline model1 failures",
+            _text(
+                official_archive_first_baseline_model1_gap_feature_probe_summary.get(
+                    "official_archive_first_baseline_model1_gap_feature_probe_status"
+                )
+            ),
+            args.official_archive_first_baseline_model1_gap_feature_probe_json,
+            ready_count=_int(official_archive_first_baseline_model1_gap_feature_probe_summary.get("feature_ready_count")),
+            blocked_count=_int(
+                official_archive_first_baseline_model1_gap_feature_probe_summary.get("feature_blocked_count")
+            ),
+            total_count=_int(official_archive_first_baseline_model1_gap_feature_probe_summary.get("selected_case_count")),
+            next_action=_text(official_archive_first_baseline_model1_gap_feature_probe_summary.get("next_action")),
+            blockers=(
+                "first:"
+                + str(official_archive_first_baseline_model1_gap_feature_probe_summary.get("first_competition", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_feature_probe_summary.get("first_target_id", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_feature_probe_summary.get("first_native_pdb_code", ""))
+                + ",features:"
+                + str(official_archive_first_baseline_model1_gap_feature_probe_summary.get("feature_ready_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_feature_probe_summary.get("feature_blocked_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_feature_probe_summary.get("selected_case_count", ""))
+                + ",signals:"
+                + str(official_archive_first_baseline_model1_gap_feature_probe_summary.get("supports_best_top5_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_feature_probe_summary.get("supports_model1_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_feature_probe_summary.get("ambiguous_count", ""))
+                + ",rate:"
+                + str(official_archive_first_baseline_model1_gap_feature_probe_summary.get("supports_best_top5_rate", ""))
+                + ",cases:"
+                + str(official_archive_first_baseline_model1_gap_feature_probe_summary.get("catastrophic_case_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_feature_probe_summary.get("large_case_count", ""))
+                + ",matrix:"
+                + str(official_archive_first_baseline_model1_gap_feature_probe_summary.get("matrix_row_count", ""))
+                + ",first_signal:"
+                + str(official_archive_first_baseline_model1_gap_feature_probe_summary.get("first_signal_group_id", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_feature_probe_summary.get("first_signal", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_feature_probe_summary.get("first_risk_delta_model1_minus_best", ""))
+                + ",proof_eligible:"
+                + str(official_archive_first_baseline_model1_gap_feature_probe_summary.get("competitive_proof_eligible", ""))
+                + ",policy:"
+                + str(official_archive_first_baseline_model1_gap_feature_probe_summary.get("strict_blind_intake_policy", ""))
+            ),
+        ),
+        _artifact_row(
+            "official_archive_first_baseline_model1_gap_consensus_probe",
+            "Computed no-native top5 consensus features for high-gap official-archive baseline model1 failures",
+            _text(
+                official_archive_first_baseline_model1_gap_consensus_probe_summary.get(
+                    "official_archive_first_baseline_model1_gap_consensus_probe_status"
+                )
+            ),
+            args.official_archive_first_baseline_model1_gap_consensus_probe_json,
+            ready_count=_int(official_archive_first_baseline_model1_gap_consensus_probe_summary.get("consensus_ready_count")),
+            blocked_count=_int(
+                official_archive_first_baseline_model1_gap_consensus_probe_summary.get("consensus_blocked_count")
+            ),
+            total_count=_int(official_archive_first_baseline_model1_gap_consensus_probe_summary.get("selected_case_count")),
+            next_action=_text(official_archive_first_baseline_model1_gap_consensus_probe_summary.get("next_action")),
+            blockers=(
+                "first:"
+                + str(official_archive_first_baseline_model1_gap_consensus_probe_summary.get("first_competition", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_consensus_probe_summary.get("first_target_id", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_consensus_probe_summary.get("first_native_pdb_code", ""))
+                + ",consensus:"
+                + str(official_archive_first_baseline_model1_gap_consensus_probe_summary.get("consensus_ready_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_consensus_probe_summary.get("consensus_blocked_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_consensus_probe_summary.get("selected_case_count", ""))
+                + ",signals:"
+                + str(official_archive_first_baseline_model1_gap_consensus_probe_summary.get("supports_best_top5_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_consensus_probe_summary.get("supports_model1_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_consensus_probe_summary.get("ambiguous_count", ""))
+                + ",rate:"
+                + str(official_archive_first_baseline_model1_gap_consensus_probe_summary.get("supports_best_top5_rate", ""))
+                + ",top_matches:"
+                + str(official_archive_first_baseline_model1_gap_consensus_probe_summary.get("consensus_top_matches_best_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_consensus_probe_summary.get("consensus_top_matches_model1_count", ""))
+                + ",cases:"
+                + str(official_archive_first_baseline_model1_gap_consensus_probe_summary.get("catastrophic_case_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_consensus_probe_summary.get("large_case_count", ""))
+                + ",pairs:"
+                + str(official_archive_first_baseline_model1_gap_consensus_probe_summary.get("pairwise_row_count", ""))
+                + ",first_signal:"
+                + str(official_archive_first_baseline_model1_gap_consensus_probe_summary.get("first_signal_group_id", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_consensus_probe_summary.get("first_signal", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_consensus_probe_summary.get("first_consensus_margin_model1_minus_best", ""))
+                + ",proof_eligible:"
+                + str(official_archive_first_baseline_model1_gap_consensus_probe_summary.get("competitive_proof_eligible", ""))
+                + ",policy:"
+                + str(official_archive_first_baseline_model1_gap_consensus_probe_summary.get("strict_blind_intake_policy", ""))
+            ),
+        ),
+        _artifact_row(
+            "official_archive_first_baseline_model1_gap_combined_selector_ledger",
+            "Combined no-native geometry and consensus probes into a model1 selector ledger",
+            _text(
+                official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get(
+                    "official_archive_first_baseline_model1_gap_combined_selector_ledger_status"
+                )
+            ),
+            args.official_archive_first_baseline_model1_gap_combined_selector_ledger_json,
+            ready_count=_int(
+                official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("selector_ready_count")
+            ),
+            blocked_count=_int(
+                official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("selector_blocked_count")
+            ),
+            total_count=_int(
+                official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("selected_case_count")
+            ),
+            next_action=_text(official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("next_action")),
+            blockers=(
+                "first:"
+                + str(official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("first_competition", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("first_target_id", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("first_native_pdb_code", ""))
+                + ",selector:"
+                + str(official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("selector_ready_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("selector_blocked_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("selected_case_count", ""))
+                + ",decisions:"
+                + str(official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("promote_best_top5_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("retain_model1_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("hold_manual_review_count", ""))
+                + ",baseline:"
+                + str(official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("corrected_model1_failure_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("retained_model1_failure_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("manual_hold_model1_failure_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("false_positive_demote_count", ""))
+                + ",rates:"
+                + str(official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("baseline_capture_rate", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("baseline_non_capture_rate", ""))
+                + ",cases:"
+                + str(official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("catastrophic_case_count", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("large_case_count", ""))
+                + ",first_selector:"
+                + str(official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("first_selector_group_id", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("first_selector_decision", ""))
+                + "/"
+                + str(official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("first_baseline_result", ""))
+                + ",proof_eligible:"
+                + str(official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("competitive_proof_eligible", ""))
+                + ",policy:"
+                + str(official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("strict_blind_intake_policy", ""))
+            ),
+        ),
+        _artifact_row(
             "strict_blind_first_slot_source_bridge",
             "First strict-blind slot source bridge for native authority and operator-only fields",
             _text(strict_blind_first_slot_source_bridge_summary.get("source_bridge_status")),
@@ -4065,6 +6529,173 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + str(strict_blind_internal_prediction_source_audit_summary.get("template_count", ""))
                 + ",first:"
                 + _text(strict_blind_internal_prediction_source_audit_summary.get("first_blocker"))
+            ),
+        ),
+        _artifact_row(
+            "strict_blind_internal_candidate_filesystem_sweep",
+            "Filesystem sweep for possible strict-blind internal prediction candidates",
+            _text(strict_blind_internal_candidate_filesystem_sweep_summary.get("filesystem_sweep_status")),
+            args.strict_blind_internal_candidate_filesystem_sweep_json,
+            ready_count=_int(
+                strict_blind_internal_candidate_filesystem_sweep_summary.get(
+                    "verified_pre_native_internal_count"
+                )
+            ),
+            blocked_count=_int(
+                strict_blind_internal_candidate_filesystem_sweep_summary.get(
+                    "unknown_possible_internal_review_count"
+                )
+            ),
+            total_count=_int(
+                strict_blind_internal_candidate_filesystem_sweep_summary.get(
+                    "scanned_structure_file_count"
+                )
+            ),
+            next_action=_text(strict_blind_internal_candidate_filesystem_sweep_summary.get("next_action")),
+            blockers=(
+                "scan:"
+                + _text(strict_blind_internal_candidate_filesystem_sweep_summary.get("scan_root"))
+                + ",files/atom:"
+                + str(
+                    strict_blind_internal_candidate_filesystem_sweep_summary.get(
+                        "scanned_structure_file_count", ""
+                    )
+                )
+                + "/"
+                + str(strict_blind_internal_candidate_filesystem_sweep_summary.get("atom_like_file_count", ""))
+                + ",verified:"
+                + str(
+                    strict_blind_internal_candidate_filesystem_sweep_summary.get(
+                        "verified_pre_native_internal_count", ""
+                    )
+                )
+                + ",unknown:"
+                + str(
+                    strict_blind_internal_candidate_filesystem_sweep_summary.get(
+                        "unknown_possible_internal_review_count", ""
+                    )
+                )
+                + ",current/mf/official/native/top5/dropzone:"
+                + str(
+                    strict_blind_internal_candidate_filesystem_sweep_summary.get(
+                        "current_casp17_or_review_only_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_internal_candidate_filesystem_sweep_summary.get(
+                        "massivefold_external_baseline_only_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_internal_candidate_filesystem_sweep_summary.get(
+                        "official_archive_baseline_only_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_internal_candidate_filesystem_sweep_summary.get(
+                        "native_or_reference_not_prediction_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_internal_candidate_filesystem_sweep_summary.get(
+                        "historical_seed_top5_post_native_review_only_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_internal_candidate_filesystem_sweep_summary.get(
+                        "strict_blind_dropzone_unverified_count", ""
+                    )
+                )
+                + ",gate:"
+                + _text(strict_blind_internal_candidate_filesystem_sweep_summary.get("source_gate_status"))
+                + "/"
+                + _text(strict_blind_internal_candidate_filesystem_sweep_summary.get("source_gate_first_blocker"))
+            ),
+        ),
+        _artifact_row(
+            "strict_blind_unknown_candidate_triage",
+            "Triage of unknown filesystem candidates into internal-like and review-only buckets",
+            _text(strict_blind_unknown_candidate_triage_summary.get("unknown_candidate_triage_status")),
+            args.strict_blind_unknown_candidate_triage_json,
+            ready_count=_int(strict_blind_unknown_candidate_triage_summary.get("promotion_ready_count")),
+            blocked_count=_int(strict_blind_unknown_candidate_triage_summary.get("internal_like_review_count")),
+            total_count=_int(strict_blind_unknown_candidate_triage_summary.get("unknown_possible_internal_review_count")),
+            next_action=_text(strict_blind_unknown_candidate_triage_summary.get("next_action")),
+            blockers=(
+                "unknown:"
+                + str(strict_blind_unknown_candidate_triage_summary.get("unknown_possible_internal_review_count", ""))
+                + ",internal_like:"
+                + str(strict_blind_unknown_candidate_triage_summary.get("internal_like_review_count", ""))
+                + ",promotion_ready:"
+                + str(strict_blind_unknown_candidate_triage_summary.get("promotion_ready_count", ""))
+                + ",public/run/archive/data/tmp/other:"
+                + str(strict_blind_unknown_candidate_triage_summary.get("public_structure_count", ""))
+                + "/"
+                + str(strict_blind_unknown_candidate_triage_summary.get("run_review_count", ""))
+                + "/"
+                + str(strict_blind_unknown_candidate_triage_summary.get("archive_review_count", ""))
+                + "/"
+                + str(strict_blind_unknown_candidate_triage_summary.get("data_other_count", ""))
+                + "/"
+                + str(strict_blind_unknown_candidate_triage_summary.get("tmp_misc_count", ""))
+                + "/"
+                + str(strict_blind_unknown_candidate_triage_summary.get("other_unclassified_count", ""))
+                + ",gate:"
+                + _text(strict_blind_unknown_candidate_triage_summary.get("source_gate_status"))
+                + "/"
+                + _text(strict_blind_unknown_candidate_triage_summary.get("source_gate_first_blocker"))
+                + ",first_internal:"
+                + (_text(strict_blind_unknown_candidate_triage_summary.get("first_internal_like_sample_path")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "strict_blind_internal_like_source_review",
+            "Chronology review of internal-like strict-blind source candidates",
+            _text(strict_blind_internal_like_source_review_summary.get("internal_like_source_review_status")),
+            args.strict_blind_internal_like_source_review_json,
+            ready_count=_int(strict_blind_internal_like_source_review_summary.get("pre_native_candidate_count")),
+            blocked_count=(
+                _int(strict_blind_internal_like_source_review_summary.get("post_native_blocked_count"))
+                + _int(strict_blind_internal_like_source_review_summary.get("same_day_timestamp_required_count"))
+                + _int(strict_blind_internal_like_source_review_summary.get("prediction_date_missing_count"))
+                + _int(strict_blind_internal_like_source_review_summary.get("unmapped_candidate_count"))
+            ),
+            total_count=_int(strict_blind_internal_like_source_review_summary.get("internal_like_candidate_count")),
+            next_action=_text(strict_blind_internal_like_source_review_summary.get("next_action")),
+            blockers=(
+                "candidates:"
+                + str(strict_blind_internal_like_source_review_summary.get("internal_like_candidate_count", ""))
+                + "/triage:"
+                + str(strict_blind_internal_like_source_review_summary.get("triage_internal_like_count", ""))
+                + ",match:"
+                + str(strict_blind_internal_like_source_review_summary.get("triage_count_match", ""))
+                + ",mapped/pre/post/same/missing/unmapped:"
+                + str(strict_blind_internal_like_source_review_summary.get("mapped_candidate_count", ""))
+                + "/"
+                + str(strict_blind_internal_like_source_review_summary.get("pre_native_candidate_count", ""))
+                + "/"
+                + str(strict_blind_internal_like_source_review_summary.get("post_native_blocked_count", ""))
+                + "/"
+                + str(strict_blind_internal_like_source_review_summary.get("same_day_timestamp_required_count", ""))
+                + "/"
+                + str(strict_blind_internal_like_source_review_summary.get("prediction_date_missing_count", ""))
+                + "/"
+                + str(strict_blind_internal_like_source_review_summary.get("unmapped_candidate_count", ""))
+                + ",targets/all-post/pre-targets:"
+                + str(strict_blind_internal_like_source_review_summary.get("target_count", ""))
+                + "/"
+                + str(strict_blind_internal_like_source_review_summary.get("target_all_post_native_count", ""))
+                + "/"
+                + str(strict_blind_internal_like_source_review_summary.get("target_pre_native_candidate_count", ""))
+                + ",first:"
+                + (_text(strict_blind_internal_like_source_review_summary.get("first_blocked_target_id")) or "-")
+                + "/"
+                + (_text(strict_blind_internal_like_source_review_summary.get("first_blocker")) or "-")
             ),
         ),
         _artifact_row(
@@ -4195,6 +6826,46 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + str(strict_blind_source_gate_source_request_packet_summary.get("first_request_kind", ""))
                 + "/"
                 + str(strict_blind_source_gate_source_request_packet_summary.get("first_request_blocker", ""))
+            ),
+        ),
+        _artifact_row(
+            "strict_blind_source_request_resolution_board",
+            "Resolution classes for strict-blind source requests after internal-like chronology review",
+            _text(strict_blind_source_request_resolution_board_summary.get("source_request_resolution_board_status")),
+            args.strict_blind_source_request_resolution_board_json,
+            ready_count=_int(strict_blind_source_request_resolution_board_summary.get("ready_for_source_gate_count")),
+            blocked_count=_int(strict_blind_source_request_resolution_board_summary.get("blocked_request_count")),
+            total_count=_int(strict_blind_source_request_resolution_board_summary.get("request_count")),
+            next_action=_text(strict_blind_source_request_resolution_board_summary.get("next_action")),
+            blockers=(
+                "requests:"
+                + str(strict_blind_source_request_resolution_board_summary.get("ready_for_source_gate_count", ""))
+                + "/"
+                + str(strict_blind_source_request_resolution_board_summary.get("blocked_request_count", ""))
+                + "/"
+                + str(strict_blind_source_request_resolution_board_summary.get("request_count", ""))
+                + ",monomer/complex:"
+                + str(strict_blind_source_request_resolution_board_summary.get("monomer_request_count", ""))
+                + "/"
+                + str(strict_blind_source_request_resolution_board_summary.get("complex_request_count", ""))
+                + ",postnative/replacement/prenative-review/missing:"
+                + str(strict_blind_source_request_resolution_board_summary.get("all_post_native_monomer_request_count", ""))
+                + "/"
+                + str(strict_blind_source_request_resolution_board_summary.get("candidate_replacement_required_count", ""))
+                + "/"
+                + str(strict_blind_source_request_resolution_board_summary.get("pre_native_review_possible_count", ""))
+                + "/"
+                + str(strict_blind_source_request_resolution_board_summary.get("chronology_review_missing_count", ""))
+                + ",internal-like-post/pre:"
+                + str(strict_blind_source_request_resolution_board_summary.get("internal_like_post_native_candidate_count", ""))
+                + "/"
+                + str(strict_blind_source_request_resolution_board_summary.get("internal_like_pre_native_candidate_count", ""))
+                + ",first:"
+                + str(strict_blind_source_request_resolution_board_summary.get("first_blocked_request_id", ""))
+                + "/"
+                + str(strict_blind_source_request_resolution_board_summary.get("first_blocked_target_id", ""))
+                + "/"
+                + str(strict_blind_source_request_resolution_board_summary.get("first_blocker", ""))
             ),
         ),
         _artifact_row(
@@ -4501,6 +7172,54 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + str(strict_blind_first_unlock_evidence_review_gate_summary.get("first_blocked_field", ""))
                 + "/"
                 + str(strict_blind_first_unlock_evidence_review_gate_summary.get("first_blocker", ""))
+            ),
+        ),
+        _artifact_row(
+            "strict_blind_first_slot_source_gate_blocker_ledger",
+            "Merged blocker ledger for the first strict-blind source gate",
+            _text(
+                strict_blind_first_slot_source_gate_blocker_ledger_summary.get(
+                    "strict_blind_first_slot_source_gate_blocker_ledger_status"
+                )
+            ),
+            args.strict_blind_first_slot_source_gate_blocker_ledger_json,
+            ready_count=_int(strict_blind_first_slot_source_gate_blocker_ledger_summary.get("ready_field_count")),
+            blocked_count=_int(strict_blind_first_slot_source_gate_blocker_ledger_summary.get("blocked_field_count")),
+            total_count=_int(strict_blind_first_slot_source_gate_blocker_ledger_summary.get("ledger_field_count")),
+            next_action=_text(strict_blind_first_slot_source_gate_blocker_ledger_summary.get("first_next_action")),
+            blockers=(
+                "required:"
+                + str(strict_blind_first_slot_source_gate_blocker_ledger_summary.get("required_benchmark_id", ""))
+                + "/"
+                + str(strict_blind_first_slot_source_gate_blocker_ledger_summary.get("required_target_id", ""))
+                + ",fields:"
+                + str(strict_blind_first_slot_source_gate_blocker_ledger_summary.get("ready_field_count", ""))
+                + "/"
+                + str(strict_blind_first_slot_source_gate_blocker_ledger_summary.get("blocked_field_count", ""))
+                + "/"
+                + str(strict_blind_first_slot_source_gate_blocker_ledger_summary.get("ledger_field_count", ""))
+                + ",gate:"
+                + str(strict_blind_first_slot_source_gate_blocker_ledger_summary.get("source_gate_pass_count", ""))
+                + "/"
+                + str(strict_blind_first_slot_source_gate_blocker_ledger_summary.get("source_gate_blocked_count", ""))
+                + "/"
+                + str(strict_blind_first_slot_source_gate_blocker_ledger_summary.get("source_gate_check_count", ""))
+                + ",operator:"
+                + str(strict_blind_first_slot_source_gate_blocker_ledger_summary.get("operator_ready_count", ""))
+                + "/"
+                + str(strict_blind_first_slot_source_gate_blocker_ledger_summary.get("operator_awaiting_count", ""))
+                + ",review:"
+                + str(strict_blind_first_slot_source_gate_blocker_ledger_summary.get("review_ready_field_count", ""))
+                + "/"
+                + str(strict_blind_first_slot_source_gate_blocker_ledger_summary.get("review_blocked_field_count", ""))
+                + ",file:"
+                + str(strict_blind_first_slot_source_gate_blocker_ledger_summary.get("file_ready_count", ""))
+                + "/"
+                + str(strict_blind_first_slot_source_gate_blocker_ledger_summary.get("file_blocked_count", ""))
+                + ",first:"
+                + str(strict_blind_first_slot_source_gate_blocker_ledger_summary.get("first_blocked_field", ""))
+                + "/"
+                + str(strict_blind_first_slot_source_gate_blocker_ledger_summary.get("first_blocker", ""))
             ),
         ),
         _artifact_row(
@@ -6244,6 +8963,1621 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             ),
         ),
         _artifact_row(
+            "competitive_floor_target_identity_metric_runway",
+            "Metric runway for target-identity clearance workorders after native/provenance fill",
+            _text(competitive_target_identity_metric_runway_summary.get("metric_runway_status")),
+            args.competitive_target_identity_metric_runway_json,
+            ready_count=_int(competitive_target_identity_metric_runway_summary.get("target_ready_count")),
+            blocked_count=_int(competitive_target_identity_metric_runway_summary.get("target_blocked_count")),
+            total_count=_int(competitive_target_identity_metric_runway_summary.get("target_count")),
+            next_action=_text(competitive_target_identity_metric_runway_summary.get("next_action")),
+            blockers=(
+                "targets:"
+                + str(competitive_target_identity_metric_runway_summary.get("target_ready_count", ""))
+                + "/"
+                + str(competitive_target_identity_metric_runway_summary.get("target_blocked_count", ""))
+                + "/"
+                + str(competitive_target_identity_metric_runway_summary.get("target_count", ""))
+                + ",families:"
+                + str(competitive_target_identity_metric_runway_summary.get("complex_target_count", ""))
+                + "/"
+                + str(competitive_target_identity_metric_runway_summary.get("monomer_target_count", ""))
+                + ",metric_requirements:"
+                + str(competitive_target_identity_metric_runway_summary.get("metric_requirement_count", ""))
+                + ",prediction_native_provenance_evidence:"
+                + str(competitive_target_identity_metric_runway_summary.get("prediction_present_count", ""))
+                + "/"
+                + str(competitive_target_identity_metric_runway_summary.get("native_present_count", ""))
+                + "/"
+                + str(competitive_target_identity_metric_runway_summary.get("provenance_ready_count", ""))
+                + "/"
+                + str(competitive_target_identity_metric_runway_summary.get("evidence_ref_ready_count", ""))
+                + ",native_candidates:"
+                + str(competitive_target_identity_metric_runway_summary.get("native_candidate_blocked_count", ""))
+                + "/"
+                + str(competitive_target_identity_metric_runway_summary.get("native_candidate_no_candidate_count", ""))
+                + "/"
+                + str(competitive_target_identity_metric_runway_summary.get("native_candidate_count", ""))
+                + ",proof_author:"
+                + str(competitive_target_identity_metric_runway_summary.get("competitive_proof_eligible_count", ""))
+                + "/"
+                + str(competitive_target_identity_metric_runway_summary.get("author_serialized_count", ""))
+                + ",first:"
+                + (_text(competitive_target_identity_metric_runway_summary.get("first_target_id")) or "-")
+                + ",blocked:"
+                + (_text(competitive_target_identity_metric_runway_summary.get("first_blocked_target_id")) or "-")
+                + "/"
+                + (_text(competitive_target_identity_metric_runway_summary.get("first_blocker")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "competitive_floor_native_provenance_operator_packet",
+            "Target-grouped operator packet for native PDB, no-leak evidence, provenance, and manifest fill",
+            _text(competitive_floor_native_provenance_operator_packet_summary.get("operator_packet_status")),
+            args.competitive_floor_native_provenance_operator_packet_json,
+            ready_count=_int(competitive_floor_native_provenance_operator_packet_summary.get("target_ready_count")),
+            blocked_count=_int(competitive_floor_native_provenance_operator_packet_summary.get("target_open_count")),
+            total_count=_int(competitive_floor_native_provenance_operator_packet_summary.get("target_count")),
+            next_action=_text(competitive_floor_native_provenance_operator_packet_summary.get("next_action")),
+            blockers=(
+                "targets:"
+                + str(competitive_floor_native_provenance_operator_packet_summary.get("target_open_count", ""))
+                + "/"
+                + str(competitive_floor_native_provenance_operator_packet_summary.get("target_ready_count", ""))
+                + "/"
+                + str(competitive_floor_native_provenance_operator_packet_summary.get("target_count", ""))
+                + ",actions:"
+                + str(competitive_floor_native_provenance_operator_packet_summary.get("open_action_count", ""))
+                + "/"
+                + str(competitive_floor_native_provenance_operator_packet_summary.get("action_count", ""))
+                + ",lanes:"
+                + str(competitive_floor_native_provenance_operator_packet_summary.get("native_action_count", ""))
+                + "/"
+                + str(competitive_floor_native_provenance_operator_packet_summary.get("evidence_action_count", ""))
+                + "/"
+                + str(competitive_floor_native_provenance_operator_packet_summary.get("provenance_action_count", ""))
+                + "/"
+                + str(competitive_floor_native_provenance_operator_packet_summary.get("manifest_action_count", ""))
+                + ",metric_requirements:"
+                + str(competitive_floor_native_provenance_operator_packet_summary.get("metric_requirement_count", ""))
+                + ",prediction_native_provenance_evidence:"
+                + str(competitive_floor_native_provenance_operator_packet_summary.get("prediction_present_count", ""))
+                + "/"
+                + str(competitive_floor_native_provenance_operator_packet_summary.get("native_present_count", ""))
+                + "/"
+                + str(competitive_floor_native_provenance_operator_packet_summary.get("provenance_ready_count", ""))
+                + "/"
+                + str(competitive_floor_native_provenance_operator_packet_summary.get("evidence_ref_ready_count", ""))
+                + ",native_candidates:"
+                + str(competitive_floor_native_provenance_operator_packet_summary.get("native_candidate_blocked_count", ""))
+                + "/"
+                + str(competitive_floor_native_provenance_operator_packet_summary.get("native_candidate_no_candidate_count", ""))
+                + "/"
+                + str(competitive_floor_native_provenance_operator_packet_summary.get("native_candidate_count", ""))
+                + ",proof_author:"
+                + str(competitive_floor_native_provenance_operator_packet_summary.get("competitive_proof_eligible_count", ""))
+                + "/"
+                + str(competitive_floor_native_provenance_operator_packet_summary.get("author_serialized_count", ""))
+                + ",first_open:"
+                + (_text(competitive_floor_native_provenance_operator_packet_summary.get("first_open_target_id")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "competitive_floor_native_provenance_operator_packet_completion_audit",
+            "Completion audit for target-grouped native/provenance operator packet files",
+            _text(
+                competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                    "operator_packet_completion_audit_status"
+                )
+            ),
+            args.competitive_floor_native_provenance_operator_packet_completion_audit_json,
+            ready_count=_int(
+                competitive_floor_native_provenance_operator_packet_completion_audit_summary.get("target_pass_count")
+            ),
+            blocked_count=_int(
+                competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                    "target_blocked_count"
+                )
+            ),
+            total_count=_int(
+                competitive_floor_native_provenance_operator_packet_completion_audit_summary.get("target_count")
+            ),
+            next_action=_text(
+                competitive_floor_native_provenance_operator_packet_completion_audit_summary.get("next_action")
+            ),
+            blockers=(
+                "targets:"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "target_pass_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "target_blocked_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "target_count", ""
+                    )
+                )
+                + ",packet_files:"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "packet_folder_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "packet_readme_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "packet_manifest_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "actions_csv_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "native_candidates_csv_present_count", ""
+                    )
+                )
+                + ",action_rows:"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "action_expected_row_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "action_csv_row_count", ""
+                    )
+                )
+                + "/mismatch:"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "action_csv_mismatch_count", ""
+                    )
+                )
+                + ",native_candidates:"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "native_candidate_expected_row_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "native_candidate_csv_row_count", ""
+                    )
+                )
+                + "/mismatch:"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "native_candidate_csv_mismatch_count", ""
+                    )
+                )
+                + ",lanes:"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "native_action_csv_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "evidence_action_csv_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "provenance_action_csv_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "manifest_action_csv_count", ""
+                    )
+                )
+                + ",inputs:"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "prediction_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "ts_prediction_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "native_dropzone_path_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "native_file_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "provenance_template_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "manifest_stub_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "metric_runway_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "workorder_folder_present_count", ""
+                    )
+                )
+                + ",coordinate_copies:"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "packet_coordinate_copy_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "out_dir_coordinate_copy_count", ""
+                    )
+                )
+                + ",proof_author:"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "competitive_proof_eligible_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                        "author_serialized_count", ""
+                    )
+                )
+                + ",first:"
+                + (
+                    _text(
+                        competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                            "first_target_id"
+                        )
+                    )
+                    or "-"
+                )
+                + ",blocked:"
+                + (
+                    _text(
+                        competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                            "first_blocked_target_id"
+                        )
+                    )
+                    or "-"
+                )
+            ),
+        ),
+        _artifact_row(
+            "competitive_floor_native_provenance_metric_unlock_bridge",
+            "Bridge from native/provenance operator packets to metric runway execution",
+            _text(
+                competitive_floor_native_provenance_metric_unlock_bridge_summary.get(
+                    "metric_unlock_bridge_status"
+                )
+            ),
+            args.competitive_floor_native_provenance_metric_unlock_bridge_json,
+            ready_count=_int(competitive_floor_native_provenance_metric_unlock_bridge_summary.get("target_ready_count")),
+            blocked_count=_int(
+                competitive_floor_native_provenance_metric_unlock_bridge_summary.get("target_blocked_count")
+            ),
+            total_count=_int(competitive_floor_native_provenance_metric_unlock_bridge_summary.get("target_count")),
+            next_action=_text(competitive_floor_native_provenance_metric_unlock_bridge_summary.get("next_action")),
+            blockers=(
+                "targets:"
+                + str(competitive_floor_native_provenance_metric_unlock_bridge_summary.get("target_ready_count", ""))
+                + "/"
+                + str(competitive_floor_native_provenance_metric_unlock_bridge_summary.get("target_blocked_count", ""))
+                + "/"
+                + str(competitive_floor_native_provenance_metric_unlock_bridge_summary.get("target_count", ""))
+                + ",packet/workorder/runway:"
+                + str(competitive_floor_native_provenance_metric_unlock_bridge_summary.get("packet_pass_count", ""))
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_metric_unlock_bridge_summary.get(
+                        "workorder_audit_pass_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_metric_unlock_bridge_summary.get(
+                        "metric_runway_ready_count", ""
+                    )
+                )
+                + ",metric_requirements:"
+                + str(
+                    competitive_floor_native_provenance_metric_unlock_bridge_summary.get(
+                        "metric_requirement_count", ""
+                    )
+                )
+                + ",inputs:"
+                + str(
+                    competitive_floor_native_provenance_metric_unlock_bridge_summary.get(
+                        "prediction_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_metric_unlock_bridge_summary.get(
+                        "ts_prediction_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_metric_unlock_bridge_summary.get(
+                        "native_dropzone_path_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_metric_unlock_bridge_summary.get(
+                        "native_file_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_metric_unlock_bridge_summary.get(
+                        "provenance_template_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_metric_unlock_bridge_summary.get(
+                        "manifest_stub_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_metric_unlock_bridge_summary.get(
+                        "metric_runway_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_metric_unlock_bridge_summary.get(
+                        "workorder_present_count", ""
+                    )
+                )
+                + ",actions:"
+                + str(
+                    competitive_floor_native_provenance_metric_unlock_bridge_summary.get(
+                        "packet_native_action_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_metric_unlock_bridge_summary.get(
+                        "packet_evidence_action_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_metric_unlock_bridge_summary.get(
+                        "packet_provenance_action_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_metric_unlock_bridge_summary.get(
+                        "packet_manifest_action_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_metric_unlock_bridge_summary.get("packet_action_count", "")
+                )
+                + ",native_candidates:"
+                + str(
+                    competitive_floor_native_provenance_metric_unlock_bridge_summary.get(
+                        "native_candidate_blocked_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_metric_unlock_bridge_summary.get(
+                        "native_candidate_no_candidate_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_metric_unlock_bridge_summary.get(
+                        "native_candidate_count", ""
+                    )
+                )
+                + ",provenance_evidence_identity:"
+                + str(
+                    competitive_floor_native_provenance_metric_unlock_bridge_summary.get(
+                        "provenance_ready_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_metric_unlock_bridge_summary.get(
+                        "evidence_ref_verified_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_metric_unlock_bridge_summary.get(
+                        "identity_discovery_cleared_count", ""
+                    )
+                )
+                + ",proof_author:"
+                + str(
+                    competitive_floor_native_provenance_metric_unlock_bridge_summary.get(
+                        "competitive_proof_eligible_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_native_provenance_metric_unlock_bridge_summary.get(
+                        "author_serialized_count", ""
+                    )
+                )
+                + ",first:"
+                + (_text(competitive_floor_native_provenance_metric_unlock_bridge_summary.get("first_target_id")) or "-")
+                + ",blocked:"
+                + (
+                    _text(
+                        competitive_floor_native_provenance_metric_unlock_bridge_summary.get(
+                            "first_blocked_target_id"
+                        )
+                    )
+                    or "-"
+                )
+                + "/"
+                + (_text(competitive_floor_native_provenance_metric_unlock_bridge_summary.get("first_blocker")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "competitive_floor_first_native_provenance_unlock_kit",
+            "First blocked target native/provenance unlock operator kit",
+            _text(competitive_floor_first_native_provenance_unlock_kit_summary.get("first_unlock_kit_status")),
+            args.competitive_floor_first_native_provenance_unlock_kit_json,
+            ready_count=1
+            if _text(
+                competitive_floor_first_native_provenance_unlock_kit_summary.get("first_unlock_kit_status")
+            )
+            == "casp17_competitive_floor_first_native_provenance_unlock_kit_ready_for_operator_fill"
+            else 0,
+            blocked_count=0
+            if _text(
+                competitive_floor_first_native_provenance_unlock_kit_summary.get("first_unlock_kit_status")
+            )
+            == "casp17_competitive_floor_first_native_provenance_unlock_kit_ready_for_operator_fill"
+            else _int(competitive_floor_first_native_provenance_unlock_kit_summary.get("target_count")),
+            total_count=_int(competitive_floor_first_native_provenance_unlock_kit_summary.get("target_count")),
+            next_action=_text(competitive_floor_first_native_provenance_unlock_kit_summary.get("next_action")),
+            blockers=(
+                "target:"
+                + (_text(competitive_floor_first_native_provenance_unlock_kit_summary.get("target_id")) or "-")
+                + ",fields:"
+                + str(competitive_floor_first_native_provenance_unlock_kit_summary.get("required_field_count", ""))
+                + ",actions:"
+                + str(competitive_floor_first_native_provenance_unlock_kit_summary.get("required_action_count", ""))
+                + ",bundle_actions:"
+                + str(
+                    competitive_floor_first_native_provenance_unlock_kit_summary.get(
+                        "action_bundle_action_count", ""
+                    )
+                )
+                + ",packet_pass:"
+                + str(competitive_floor_first_native_provenance_unlock_kit_summary.get("packet_file_pass", ""))
+                + ",metric_ready:"
+                + str(competitive_floor_first_native_provenance_unlock_kit_summary.get("metric_runway_ready", ""))
+                + ",workorder_pass:"
+                + str(competitive_floor_first_native_provenance_unlock_kit_summary.get("workorder_audit_pass", ""))
+                + ",inputs:"
+                + str(
+                    competitive_floor_first_native_provenance_unlock_kit_summary.get(
+                        "prediction_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_first_native_provenance_unlock_kit_summary.get(
+                        "ts_prediction_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_first_native_provenance_unlock_kit_summary.get(
+                        "native_dropzone_path_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_first_native_provenance_unlock_kit_summary.get(
+                        "native_file_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_first_native_provenance_unlock_kit_summary.get(
+                        "provenance_template_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_first_native_provenance_unlock_kit_summary.get(
+                        "manifest_stub_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_first_native_provenance_unlock_kit_summary.get(
+                        "metric_runway_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_first_native_provenance_unlock_kit_summary.get("workorder_present_count", "")
+                )
+                + ",provenance_evidence_identity:"
+                + str(
+                    competitive_floor_first_native_provenance_unlock_kit_summary.get(
+                        "provenance_ready_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_first_native_provenance_unlock_kit_summary.get(
+                        "evidence_ref_verified_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_first_native_provenance_unlock_kit_summary.get(
+                        "identity_discovery_cleared_count", ""
+                    )
+                )
+                + ",proof_author:"
+                + str(
+                    competitive_floor_first_native_provenance_unlock_kit_summary.get(
+                        "competitive_proof_eligible_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_first_native_provenance_unlock_kit_summary.get("author_serialized_count", "")
+                )
+                + ",coordinate_copies:"
+                + str(competitive_floor_first_native_provenance_unlock_kit_summary.get("coordinate_copy_count", ""))
+                + ",first:"
+                + (_text(competitive_floor_first_native_provenance_unlock_kit_summary.get("first_blocker")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "competitive_floor_batch_native_provenance_unlock_kit",
+            "Batch native/provenance unlock operator kit for all blocked targets",
+            _text(competitive_floor_batch_native_provenance_unlock_kit_summary.get("batch_unlock_kit_status")),
+            args.competitive_floor_batch_native_provenance_unlock_kit_json,
+            ready_count=_int(
+                competitive_floor_batch_native_provenance_unlock_kit_summary.get(
+                    "target_ready_for_operator_fill_count"
+                )
+            ),
+            blocked_count=_int(competitive_floor_batch_native_provenance_unlock_kit_summary.get("target_blocked_count")),
+            total_count=_int(competitive_floor_batch_native_provenance_unlock_kit_summary.get("target_count")),
+            next_action=_text(competitive_floor_batch_native_provenance_unlock_kit_summary.get("next_action")),
+            blockers=(
+                "targets:"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_summary.get(
+                        "target_ready_for_operator_fill_count", ""
+                    )
+                )
+                + "/"
+                + str(competitive_floor_batch_native_provenance_unlock_kit_summary.get("target_blocked_count", ""))
+                + "/"
+                + str(competitive_floor_batch_native_provenance_unlock_kit_summary.get("target_count", ""))
+                + ",target_ids:"
+                + (_text(competitive_floor_batch_native_provenance_unlock_kit_summary.get("target_ids")) or "-")
+                + ",fields:"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_summary.get(
+                        "required_field_per_target_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_summary.get(
+                        "required_field_total_count", ""
+                    )
+                )
+                + ",actions:"
+                + str(competitive_floor_batch_native_provenance_unlock_kit_summary.get("required_action_count", ""))
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_summary.get(
+                        "action_bundle_action_count", ""
+                    )
+                )
+                + ",packet/workorder/runway:"
+                + str(competitive_floor_batch_native_provenance_unlock_kit_summary.get("packet_file_pass_count", ""))
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_summary.get(
+                        "workorder_audit_pass_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_summary.get(
+                        "metric_runway_ready_count", ""
+                    )
+                )
+                + ",inputs:"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_summary.get(
+                        "prediction_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_summary.get(
+                        "ts_prediction_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_summary.get(
+                        "native_dropzone_path_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_summary.get(
+                        "native_file_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_summary.get(
+                        "provenance_template_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_summary.get(
+                        "manifest_stub_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_summary.get(
+                        "metric_runway_present_count", ""
+                    )
+                )
+                + "/"
+                + str(competitive_floor_batch_native_provenance_unlock_kit_summary.get("workorder_present_count", ""))
+                + ",provenance_evidence_identity:"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_summary.get(
+                        "provenance_ready_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_summary.get(
+                        "evidence_ref_verified_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_summary.get(
+                        "identity_discovery_cleared_count", ""
+                    )
+                )
+                + ",proof_author:"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_summary.get(
+                        "competitive_proof_eligible_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_summary.get("author_serialized_count", "")
+                )
+                + ",coordinate_copies:"
+                + str(competitive_floor_batch_native_provenance_unlock_kit_summary.get("coordinate_copy_count", ""))
+                + ",first:"
+                + (_text(competitive_floor_batch_native_provenance_unlock_kit_summary.get("first_blocker")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "competitive_floor_batch_native_provenance_unlock_kit_completion_audit",
+            "Completion audit for the batch native/provenance unlock operator kit",
+            _text(
+                competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                    "batch_unlock_kit_completion_audit_status"
+                )
+            ),
+            args.competitive_floor_batch_native_provenance_unlock_kit_completion_audit_json,
+            ready_count=_int(
+                competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                    "target_pass_count"
+                )
+            ),
+            blocked_count=_int(
+                competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                    "target_blocked_count"
+                )
+            ),
+            total_count=_int(
+                competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get("target_count")
+            ),
+            next_action=_text(
+                competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get("next_action")
+            ),
+            blockers=(
+                "targets:"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "target_pass_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "target_blocked_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "target_count", ""
+                    )
+                )
+                + ",batch_files:"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "batch_file_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "batch_file_expected_count", ""
+                    )
+                )
+                + ",batch_intake:"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "batch_operator_fill_intake_expected_rows", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "batch_operator_fill_intake_csv_rows", ""
+                    )
+                )
+                + "/mismatch:"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "batch_operator_fill_intake_row_mismatch_count", ""
+                    )
+                )
+                + ",batch_actions:"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "batch_required_actions_expected_rows", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "batch_required_actions_csv_rows", ""
+                    )
+                )
+                + "/mismatch:"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "batch_required_actions_row_mismatch_count", ""
+                    )
+                )
+                + ",target_files:"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "target_folder_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "target_readme_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "target_manifest_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "target_operator_fill_intake_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "target_required_actions_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "target_rerun_commands_present_count", ""
+                    )
+                )
+                + ",target_intake:"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "target_operator_fill_intake_expected_rows", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "target_operator_fill_intake_csv_rows", ""
+                    )
+                )
+                + "/mismatch:"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "target_operator_fill_intake_row_mismatch_count", ""
+                    )
+                )
+                + ",target_actions:"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "target_required_actions_expected_rows", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "target_required_actions_csv_rows", ""
+                    )
+                )
+                + "/mismatch:"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "target_required_actions_row_mismatch_count", ""
+                    )
+                )
+                + ",coordinate_copies:"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "coordinate_copy_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "target_coordinate_copy_count", ""
+                    )
+                )
+                + ",native_provenance_evidence_identity:"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "native_file_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "provenance_ready_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "evidence_ref_verified_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "identity_discovery_cleared_count", ""
+                    )
+                )
+                + ",proof_author:"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "competitive_proof_eligible_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                        "author_serialized_count", ""
+                    )
+                )
+                + ",first:"
+                + (
+                    _text(
+                        competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                            "first_blocked_target_id"
+                        )
+                    )
+                    or "-"
+                )
+                + "/"
+                + (
+                    _text(
+                        competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                            "first_blocker"
+                        )
+                    )
+                    or "-"
+                )
+            ),
+        ),
+        _artifact_row(
+            "competitive_floor_batch_native_provenance_value_gate",
+            "Dry value gate for batch native/provenance operator fill",
+            _text(
+                competitive_floor_batch_native_provenance_value_gate_summary.get(
+                    "batch_native_provenance_value_gate_status"
+                )
+            ),
+            args.competitive_floor_batch_native_provenance_value_gate_json,
+            ready_count=_int(competitive_floor_batch_native_provenance_value_gate_summary.get("target_ready_count")),
+            blocked_count=_int(competitive_floor_batch_native_provenance_value_gate_summary.get("target_blocked_count")),
+            total_count=_int(competitive_floor_batch_native_provenance_value_gate_summary.get("target_count")),
+            next_action=_text(competitive_floor_batch_native_provenance_value_gate_summary.get("next_action")),
+            blockers=(
+                "targets:"
+                + str(competitive_floor_batch_native_provenance_value_gate_summary.get("target_ready_count", ""))
+                + "/"
+                + str(competitive_floor_batch_native_provenance_value_gate_summary.get("target_blocked_count", ""))
+                + "/"
+                + str(competitive_floor_batch_native_provenance_value_gate_summary.get("target_count", ""))
+                + ",fields:"
+                + str(
+                    competitive_floor_batch_native_provenance_value_gate_summary.get(
+                        "required_field_per_target_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_value_gate_summary.get(
+                        "required_field_total_count", ""
+                    )
+                )
+                + ",values:"
+                + str(competitive_floor_batch_native_provenance_value_gate_summary.get("ready_value_count", ""))
+                + "/"
+                + str(competitive_floor_batch_native_provenance_value_gate_summary.get("blocked_value_count", ""))
+                + ",native/evidence:"
+                + str(competitive_floor_batch_native_provenance_value_gate_summary.get("native_source_ready_count", ""))
+                + "/"
+                + str(competitive_floor_batch_native_provenance_value_gate_summary.get("evidence_ref_ready_count", ""))
+                + ",clearance/date/boolean:"
+                + str(competitive_floor_batch_native_provenance_value_gate_summary.get("clearance_ready_count", ""))
+                + "/"
+                + str(competitive_floor_batch_native_provenance_value_gate_summary.get("date_ready_count", ""))
+                + "/"
+                + str(competitive_floor_batch_native_provenance_value_gate_summary.get("boolean_ready_count", ""))
+                + ",coordinate_copies:"
+                + str(competitive_floor_batch_native_provenance_value_gate_summary.get("coordinate_copy_count", ""))
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_value_gate_summary.get(
+                        "target_coordinate_copy_count", ""
+                    )
+                )
+                + ",proof_author:"
+                + str(
+                    competitive_floor_batch_native_provenance_value_gate_summary.get(
+                        "competitive_proof_eligible_count", ""
+                    )
+                )
+                + "/"
+                + str(competitive_floor_batch_native_provenance_value_gate_summary.get("author_serialized_count", ""))
+                + ",first:"
+                + (_text(competitive_floor_batch_native_provenance_value_gate_summary.get("first_blocked_target_id")) or "-")
+                + "/"
+                + (_text(competitive_floor_batch_native_provenance_value_gate_summary.get("first_blocker")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "competitive_floor_batch_native_provenance_value_action_board",
+            "Field-level action board for batch native/provenance operator values",
+            _text(
+                competitive_floor_batch_native_provenance_value_action_board_summary.get(
+                    "batch_native_provenance_value_action_board_status"
+                )
+            ),
+            args.competitive_floor_batch_native_provenance_value_action_board_json,
+            ready_count=_int(
+                competitive_floor_batch_native_provenance_value_action_board_summary.get("target_ready_count")
+            ),
+            blocked_count=_int(
+                competitive_floor_batch_native_provenance_value_action_board_summary.get(
+                    "target_with_open_action_count"
+                )
+            ),
+            total_count=_int(competitive_floor_batch_native_provenance_value_action_board_summary.get("target_count")),
+            next_action=_text(competitive_floor_batch_native_provenance_value_action_board_summary.get("next_action")),
+            blockers=(
+                "targets:"
+                + str(
+                    competitive_floor_batch_native_provenance_value_action_board_summary.get(
+                        "target_with_open_action_count", ""
+                    )
+                )
+                + "/"
+                + str(competitive_floor_batch_native_provenance_value_action_board_summary.get("target_ready_count", ""))
+                + "/"
+                + str(competitive_floor_batch_native_provenance_value_action_board_summary.get("target_count", ""))
+                + ",actions:"
+                + str(competitive_floor_batch_native_provenance_value_action_board_summary.get("open_action_count", ""))
+                + "/"
+                + str(competitive_floor_batch_native_provenance_value_action_board_summary.get("action_count", ""))
+                + ",lanes:"
+                + str(competitive_floor_batch_native_provenance_value_action_board_summary.get("native_action_count", ""))
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_value_action_board_summary.get(
+                        "evidence_action_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_value_action_board_summary.get(
+                        "clearance_action_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_value_action_board_summary.get(
+                        "operator_action_count", ""
+                    )
+                )
+                + "/"
+                + str(competitive_floor_batch_native_provenance_value_action_board_summary.get("date_action_count", ""))
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_value_action_board_summary.get(
+                        "boolean_action_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_value_action_board_summary.get(
+                        "review_action_count", ""
+                    )
+                )
+                + ",coordinate_copies:"
+                + str(
+                    competitive_floor_batch_native_provenance_value_action_board_summary.get(
+                        "coordinate_copy_count", ""
+                    )
+                )
+                + ",proof_author:"
+                + str(
+                    competitive_floor_batch_native_provenance_value_action_board_summary.get(
+                        "competitive_proof_eligible_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_value_action_board_summary.get(
+                        "author_serialized_count", ""
+                    )
+                )
+                + ",first:"
+                + (
+                    _text(
+                        competitive_floor_batch_native_provenance_value_action_board_summary.get(
+                            "first_open_target_id"
+                        )
+                    )
+                    or "-"
+                )
+                + "/"
+                + (
+                    _text(
+                        competitive_floor_batch_native_provenance_value_action_board_summary.get(
+                            "first_open_field"
+                        )
+                    )
+                    or "-"
+                )
+                + "/"
+                + (
+                    _text(
+                        competitive_floor_batch_native_provenance_value_action_board_summary.get(
+                            "first_open_blocker"
+                        )
+                    )
+                    or "-"
+                )
+            ),
+        ),
+        _artifact_row(
+            "competitive_floor_batch_native_provenance_value_action_board_completion_audit",
+            "Completion audit for batch native/provenance value action board",
+            _text(
+                competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                    "batch_native_provenance_value_action_board_completion_audit_status"
+                )
+            ),
+            args.competitive_floor_batch_native_provenance_value_action_board_completion_audit_json,
+            ready_count=_int(
+                competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                    "target_pass_count"
+                )
+            ),
+            blocked_count=_int(
+                competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                    "target_blocked_count"
+                )
+            ),
+            total_count=_int(
+                competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                    "target_count"
+                )
+            ),
+            next_action=_text(
+                competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                    "next_action"
+                )
+            ),
+            blockers=(
+                "targets:"
+                + str(
+                    competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                        "target_pass_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                        "target_blocked_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                        "target_count", ""
+                    )
+                )
+                + ",actions:"
+                + str(
+                    competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                        "action_expected_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                        "action_board_json_rows", ""
+                    )
+                )
+                + "/mismatch:"
+                + str(
+                    competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                        "action_json_row_mismatch_count", ""
+                    )
+                )
+                + ",target_files:"
+                + str(
+                    competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                        "target_folder_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                        "target_readme_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                        "target_value_actions_present_count", ""
+                    )
+                )
+                + ",target_rows:"
+                + str(
+                    competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                        "target_value_actions_expected_rows", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                        "target_value_actions_csv_rows", ""
+                    )
+                )
+                + "/mismatch:"
+                + str(
+                    competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                        "target_value_actions_row_mismatch_count", ""
+                    )
+                )
+                + ",coordinate_copies:"
+                + str(
+                    competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                        "coordinate_copy_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                        "target_coordinate_copy_count", ""
+                    )
+                )
+                + ",proof_author:"
+                + str(
+                    competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                        "competitive_proof_eligible_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                        "author_serialized_count", ""
+                    )
+                )
+                + ",first:"
+                + (
+                    _text(
+                        competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                            "first_blocked_target_id"
+                        )
+                    )
+                    or "-"
+                )
+                + "/"
+                + (
+                    _text(
+                        competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                            "first_blocker"
+                        )
+                    )
+                    or "-"
+                )
+            ),
+        ),
+        _artifact_row(
+            "competitive_floor_batch_native_provenance_operator_fill_preflight",
+            "Operator-fill preflight packet for batch native/provenance values",
+            _text(
+                competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                    "batch_native_provenance_operator_fill_preflight_status"
+                )
+            ),
+            args.competitive_floor_batch_native_provenance_operator_fill_preflight_json,
+            ready_count=_int(
+                competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                    "target_ready_for_fill_count"
+                )
+            ),
+            blocked_count=_int(
+                competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                    "target_blocked_count"
+                )
+            ),
+            total_count=_int(
+                competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                    "target_count"
+                )
+            ),
+            next_action=_text(
+                competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get("next_action")
+            ),
+            blockers=(
+                "targets:"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                        "target_ready_for_fill_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                        "target_blocked_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                        "target_count", ""
+                    )
+                )
+                + ",actions:"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                        "native_action_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                        "evidence_action_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                        "clearance_action_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                        "operator_action_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                        "date_action_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                        "boolean_action_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                        "review_action_count", ""
+                    )
+                )
+                + ",coordinate_copies:"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                        "coordinate_copy_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                        "target_coordinate_copy_count", ""
+                    )
+                )
+                + ",proof_author:"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                        "competitive_proof_eligible_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                        "author_serialized_count", ""
+                    )
+                )
+                + ",first:"
+                + (
+                    _text(
+                        competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                            "first_ready_target_id"
+                        )
+                    )
+                    or "-"
+                )
+                + "/"
+                + (
+                    _text(
+                        competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                            "first_blocked_target_id"
+                        )
+                    )
+                    or "-"
+                )
+                + "/"
+                + (
+                    _text(
+                        competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                            "first_blocker"
+                        )
+                    )
+                    or "-"
+                )
+            ),
+        ),
+        _artifact_row(
+            "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit",
+            "Completion audit for batch native/provenance operator-fill preflight packet",
+            _text(
+                competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                    "batch_native_provenance_operator_fill_preflight_completion_audit_status"
+                )
+            ),
+            args.competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_json,
+            ready_count=_int(
+                competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                    "target_pass_count"
+                )
+            ),
+            blocked_count=_int(
+                competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                    "target_blocked_count"
+                )
+            ),
+            total_count=_int(
+                competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                    "target_count"
+                )
+            ),
+            next_action=_text(
+                competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                    "next_action"
+                )
+            ),
+            blockers=(
+                "targets:"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                        "target_pass_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                        "target_blocked_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                        "target_count", ""
+                    )
+                )
+                + ",target_files:"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                        "target_folder_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                        "target_readme_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                        "target_operator_template_file_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                        "target_field_policy_file_count", ""
+                    )
+                )
+                + ",template_rows:"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                        "operator_template_expected_rows", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                        "operator_template_csv_rows", ""
+                    )
+                )
+                + "/mismatch:"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                        "operator_template_row_mismatch_count", ""
+                    )
+                )
+                + ",policy_rows:"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                        "field_policy_expected_rows", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                        "field_policy_csv_rows", ""
+                    )
+                )
+                + "/mismatch:"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                        "field_policy_row_mismatch_count", ""
+                    )
+                )
+                + ",coordinate_copies:"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                        "coordinate_copy_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                        "target_coordinate_copy_count", ""
+                    )
+                )
+                + ",proof_author:"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                        "competitive_proof_eligible_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                        "author_serialized_count", ""
+                    )
+                )
+                + ",first:"
+                + (
+                    _text(
+                        competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                            "first_blocked_target_id"
+                        )
+                    )
+                    or "-"
+                )
+                + "/"
+                + (
+                    _text(
+                        competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                            "first_blocker"
+                        )
+                    )
+                    or "-"
+                )
+            ),
+        ),
+        _artifact_row(
             "competitive_floor_target_identity_clearance_action_board",
             "Operator action board for clearing target identity native/provenance blockers",
             _text(competitive_target_identity_clearance_action_board_summary.get("action_board_status")),
@@ -6747,6 +11081,347 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "protein_object_library_navigation_html": _text(
             protein_object_library_navigation_catalog_summary.get("html_catalog_path")
         ),
+        "casp17_3d_molecular_object_atlas_status": _text(
+            molecular_object_atlas_summary.get("casp17_3d_molecular_object_atlas_status")
+        ),
+        "casp17_3d_molecular_object_atlas_protein_count": _int(
+            molecular_object_atlas_summary.get("protein_count")
+        ),
+        "casp17_3d_molecular_object_atlas_protein_pass_count": _int(
+            molecular_object_atlas_summary.get("protein_pass_count")
+        ),
+        "casp17_3d_molecular_object_atlas_protein_blocked_count": _int(
+            molecular_object_atlas_summary.get("protein_blocked_count")
+        ),
+        "casp17_3d_molecular_object_atlas_object_count": _int(
+            molecular_object_atlas_summary.get("object_count")
+        ),
+        "casp17_3d_molecular_object_atlas_object_pass_count": _int(
+            molecular_object_atlas_summary.get("object_pass_count")
+        ),
+        "casp17_3d_molecular_object_atlas_object_blocked_count": _int(
+            molecular_object_atlas_summary.get("object_blocked_count")
+        ),
+        "casp17_3d_molecular_object_atlas_current_object_count": _int(
+            molecular_object_atlas_summary.get("current_object_count")
+        ),
+        "casp17_3d_molecular_object_atlas_massivefold_object_count": _int(
+            molecular_object_atlas_summary.get("massivefold_freeze_object_count")
+        ),
+        "casp17_3d_molecular_object_atlas_current_protein_count": _int(
+            molecular_object_atlas_summary.get("current_protein_count")
+        ),
+        "casp17_3d_molecular_object_atlas_massivefold_protein_count": _int(
+            molecular_object_atlas_summary.get("massivefold_freeze_protein_count")
+        ),
+        "casp17_3d_molecular_object_atlas_overlap_protein_count": _int(
+            molecular_object_atlas_summary.get("overlap_protein_count")
+        ),
+        "casp17_3d_molecular_object_atlas_model_link_count": _int(
+            molecular_object_atlas_summary.get("model_link_count")
+        ),
+        "casp17_3d_molecular_object_atlas_viewer_link_count": _int(
+            molecular_object_atlas_summary.get("viewer_link_count")
+        ),
+        "casp17_3d_molecular_object_atlas_projection_link_count": _int(
+            molecular_object_atlas_summary.get("projection_link_count")
+        ),
+        "casp17_3d_molecular_object_atlas_top5_link_count": _int(
+            molecular_object_atlas_summary.get("top5_link_count")
+        ),
+        "casp17_3d_molecular_object_atlas_escrow_link_count": _int(
+            molecular_object_atlas_summary.get("escrow_link_count")
+        ),
+        "casp17_3d_molecular_object_atlas_model_sha256_count": _int(
+            molecular_object_atlas_summary.get("model_sha256_count")
+        ),
+        "casp17_3d_molecular_object_atlas_top5_sha256_count": _int(
+            molecular_object_atlas_summary.get("top5_sha256_count")
+        ),
+        "casp17_3d_molecular_object_atlas_native_accuracy_count": _int(
+            molecular_object_atlas_summary.get("native_accuracy_count")
+        ),
+        "casp17_3d_molecular_object_atlas_proof_eligible_count": _int(
+            molecular_object_atlas_summary.get("competitive_proof_eligible_count")
+        ),
+        "casp17_3d_molecular_object_atlas_author_serialized_count": _int(
+            molecular_object_atlas_summary.get("author_serialized_count")
+        ),
+        "casp17_3d_molecular_object_atlas_first_protein_key": _text(
+            molecular_object_atlas_summary.get("first_protein_key")
+        ),
+        "casp17_3d_molecular_object_atlas_first_object_key": _text(
+            molecular_object_atlas_summary.get("first_object_key")
+        ),
+        "casp17_3d_molecular_object_atlas_first_blocked_protein_key": _text(
+            molecular_object_atlas_summary.get("first_blocked_protein_key")
+        ),
+        "casp17_3d_molecular_object_atlas_html": _text(
+            molecular_object_atlas_summary.get("html_atlas_path")
+        ),
+        "casp17_3d_molecular_object_atlas_next_action": _text(
+            molecular_object_atlas_summary.get("next_action")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_status": _text(
+            molecular_object_atlas_completion_audit_summary.get("atlas_completion_audit_status")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_protein_count": _int(
+            molecular_object_atlas_completion_audit_summary.get("protein_count")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_protein_folder_count": _int(
+            molecular_object_atlas_completion_audit_summary.get("protein_folder_present_count")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_protein_readme_count": _int(
+            molecular_object_atlas_completion_audit_summary.get("protein_readme_present_count")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_protein_manifest_count": _int(
+            molecular_object_atlas_completion_audit_summary.get("protein_manifest_present_count")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_object_count": _int(
+            molecular_object_atlas_completion_audit_summary.get("object_count")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_object_pass_count": _int(
+            molecular_object_atlas_completion_audit_summary.get("object_pass_count")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_object_blocked_count": _int(
+            molecular_object_atlas_completion_audit_summary.get("object_blocked_count")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_current_object_count": _int(
+            molecular_object_atlas_completion_audit_summary.get("current_object_count")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_massivefold_object_count": _int(
+            molecular_object_atlas_completion_audit_summary.get("massivefold_freeze_object_count")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_object_folder_count": _int(
+            molecular_object_atlas_completion_audit_summary.get("atlas_object_folder_present_count")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_object_readme_count": _int(
+            molecular_object_atlas_completion_audit_summary.get("atlas_object_readme_present_count")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_object_manifest_count": _int(
+            molecular_object_atlas_completion_audit_summary.get("atlas_object_manifest_present_count")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_model_link_count": _int(
+            molecular_object_atlas_completion_audit_summary.get("model_link_present_count")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_viewer_link_count": _int(
+            molecular_object_atlas_completion_audit_summary.get("viewer_link_present_count")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_projection_link_count": _int(
+            molecular_object_atlas_completion_audit_summary.get("projection_link_present_count")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_top5_link_count": _int(
+            molecular_object_atlas_completion_audit_summary.get("top5_link_present_count")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_escrow_link_count": _int(
+            molecular_object_atlas_completion_audit_summary.get("escrow_link_present_count")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_object_coordinate_copy_count": _int(
+            molecular_object_atlas_completion_audit_summary.get("object_coordinate_copy_count")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_atlas_coordinate_copy_count": _int(
+            molecular_object_atlas_completion_audit_summary.get("atlas_coordinate_copy_count")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_proof_eligible_count": _int(
+            molecular_object_atlas_completion_audit_summary.get("competitive_proof_eligible_count")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_author_serialized_count": _int(
+            molecular_object_atlas_completion_audit_summary.get("author_serialized_count")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_first_protein_key": _text(
+            molecular_object_atlas_completion_audit_summary.get("first_protein_key")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_first_object_key": _text(
+            molecular_object_atlas_completion_audit_summary.get("first_object_key")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_first_blocked_protein_key": _text(
+            molecular_object_atlas_completion_audit_summary.get("first_blocked_protein_key")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_html": _text(
+            molecular_object_atlas_completion_audit_summary.get("html_audit_path")
+        ),
+        "casp17_3d_molecular_object_atlas_completion_audit_next_action": _text(
+            molecular_object_atlas_completion_audit_summary.get("next_action")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_status": _text(
+            molecular_object_metric_handoff_summary.get("metric_handoff_status")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_protein_count": _int(
+            molecular_object_metric_handoff_summary.get("protein_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_object_count": _int(
+            molecular_object_metric_handoff_summary.get("object_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_object_ready_count": _int(
+            molecular_object_metric_handoff_summary.get("object_ready_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_object_blocked_count": _int(
+            molecular_object_metric_handoff_summary.get("object_blocked_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_current_object_count": _int(
+            molecular_object_metric_handoff_summary.get("current_object_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_massivefold_object_count": _int(
+            molecular_object_metric_handoff_summary.get("massivefold_freeze_object_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_metric_requirement_count": _int(
+            molecular_object_metric_handoff_summary.get("metric_requirement_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_covered_required_metric_count": _int(
+            molecular_object_metric_handoff_summary.get("covered_required_metric_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_required_metric_count": _int(
+            molecular_object_metric_handoff_summary.get("required_metric_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_missing_required_metric_count": _int(
+            molecular_object_metric_handoff_summary.get("missing_required_metric_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_missing_required_metric_names": _text(
+            molecular_object_metric_handoff_summary.get("missing_required_metric_names")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_ligand_gap_count": _int(
+            molecular_object_metric_handoff_summary.get("ligand_metric_gap_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_monomer_object_count": _int(
+            molecular_object_metric_handoff_summary.get("monomer_object_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_complex_object_count": _int(
+            molecular_object_metric_handoff_summary.get("complex_object_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_rna_hybrid_object_count": _int(
+            molecular_object_metric_handoff_summary.get("rna_hybrid_object_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_ligand_object_count": _int(
+            molecular_object_metric_handoff_summary.get("ligand_object_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_protein_folder_count": _int(
+            molecular_object_metric_handoff_summary.get("protein_handoff_folder_expected_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_object_folder_count": _int(
+            molecular_object_metric_handoff_summary.get("object_handoff_folder_expected_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_native_accuracy_count": _int(
+            molecular_object_metric_handoff_summary.get("native_accuracy_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_proof_eligible_count": _int(
+            molecular_object_metric_handoff_summary.get("competitive_proof_eligible_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_author_serialized_count": _int(
+            molecular_object_metric_handoff_summary.get("author_serialized_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_first_protein_key": _text(
+            molecular_object_metric_handoff_summary.get("first_protein_key")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_first_object_key": _text(
+            molecular_object_metric_handoff_summary.get("first_object_key")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_first_blocked_protein_key": _text(
+            molecular_object_metric_handoff_summary.get("first_blocked_protein_key")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_html": _text(
+            molecular_object_metric_handoff_summary.get("html_handoff_path")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_next_action": _text(
+            molecular_object_metric_handoff_summary.get("next_action")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_status": _text(
+            molecular_object_metric_handoff_completion_audit_summary.get(
+                "metric_handoff_completion_audit_status"
+            )
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_protein_count": _int(
+            molecular_object_metric_handoff_completion_audit_summary.get("protein_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_protein_folder_count": _int(
+            molecular_object_metric_handoff_completion_audit_summary.get("protein_folder_present_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_protein_readme_count": _int(
+            molecular_object_metric_handoff_completion_audit_summary.get("protein_readme_present_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_protein_manifest_count": _int(
+            molecular_object_metric_handoff_completion_audit_summary.get("protein_manifest_present_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_object_count": _int(
+            molecular_object_metric_handoff_completion_audit_summary.get("object_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_object_pass_count": _int(
+            molecular_object_metric_handoff_completion_audit_summary.get("object_pass_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_object_blocked_count": _int(
+            molecular_object_metric_handoff_completion_audit_summary.get("object_blocked_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_current_object_count": _int(
+            molecular_object_metric_handoff_completion_audit_summary.get("current_object_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_massivefold_object_count": _int(
+            molecular_object_metric_handoff_completion_audit_summary.get("massivefold_freeze_object_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_object_folder_count": _int(
+            molecular_object_metric_handoff_completion_audit_summary.get("handoff_object_folder_present_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_object_manifest_count": _int(
+            molecular_object_metric_handoff_completion_audit_summary.get("handoff_object_manifest_present_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_metric_csv_count": _int(
+            molecular_object_metric_handoff_completion_audit_summary.get("metric_requirements_csv_present_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_metric_md_count": _int(
+            molecular_object_metric_handoff_completion_audit_summary.get("metric_handoff_md_present_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_metric_requirement_count": _int(
+            molecular_object_metric_handoff_completion_audit_summary.get("metric_requirement_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_metric_csv_row_count": _int(
+            molecular_object_metric_handoff_completion_audit_summary.get("metric_requirement_csv_row_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_metric_csv_mismatch_count": _int(
+            molecular_object_metric_handoff_completion_audit_summary.get("metric_requirement_csv_mismatch_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_metric_evidence_awaiting_count": _int(
+            molecular_object_metric_handoff_completion_audit_summary.get("metric_evidence_awaiting_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_model_link_count": _int(
+            molecular_object_metric_handoff_completion_audit_summary.get("model_link_present_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_viewer_link_count": _int(
+            molecular_object_metric_handoff_completion_audit_summary.get("viewer_link_present_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_projection_link_count": _int(
+            molecular_object_metric_handoff_completion_audit_summary.get("projection_link_present_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_top5_link_count": _int(
+            molecular_object_metric_handoff_completion_audit_summary.get("top5_link_present_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_escrow_link_count": _int(
+            molecular_object_metric_handoff_completion_audit_summary.get("escrow_link_present_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_object_coordinate_copy_count": _int(
+            molecular_object_metric_handoff_completion_audit_summary.get("object_coordinate_copy_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_out_dir_coordinate_copy_count": _int(
+            molecular_object_metric_handoff_completion_audit_summary.get("out_dir_coordinate_copy_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_proof_eligible_count": _int(
+            molecular_object_metric_handoff_completion_audit_summary.get("competitive_proof_eligible_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_author_serialized_count": _int(
+            molecular_object_metric_handoff_completion_audit_summary.get("author_serialized_count")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_first_protein_key": _text(
+            molecular_object_metric_handoff_completion_audit_summary.get("first_protein_key")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_first_object_key": _text(
+            molecular_object_metric_handoff_completion_audit_summary.get("first_object_key")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_first_blocked_protein_key": _text(
+            molecular_object_metric_handoff_completion_audit_summary.get("first_blocked_protein_key")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_html": _text(
+            molecular_object_metric_handoff_completion_audit_summary.get("html_audit_path")
+        ),
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_next_action": _text(
+            molecular_object_metric_handoff_completion_audit_summary.get("next_action")
+        ),
         "raw_ranked_model_quarantine_status": _text(
             raw_ranked_model_quarantine_summary.get("raw_ranked_model_quarantine_status")
         ),
@@ -6768,6 +11443,302 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         ),
         "raw_ranked_model_quarantine_atom_count": _int(
             raw_ranked_model_quarantine_summary.get("total_atom_record_count")
+        ),
+        "current_submission_gate_status": current_submission_gate_status,
+        "current_submission_gate_go_count": _int(current_submission_gate_summary.get("submission_go_count")),
+        "current_submission_gate_no_go_count": _int(
+            current_submission_gate_summary.get("submission_no_go_count")
+        ),
+        "current_submission_gate_target_count": _int(current_submission_gate_summary.get("target_row_count")),
+        "current_submission_gate_framework_gate_pass": str(
+            current_submission_gate_summary.get("framework_gate_pass", "")
+        ),
+        "current_submission_gate_registration_action": _text(
+            current_submission_gate_summary.get("registration_action")
+        ),
+        "current_submission_gate_registration_class": _text(
+            current_submission_gate_summary.get("registration_class_recommendation")
+        ),
+        "current_submission_gate_server_ready": str(
+            current_submission_gate_summary.get("server_registration_ready", "")
+        ),
+        "current_submission_gate_shape_status": _text(
+            current_submission_gate_summary.get("shape_sanity_status")
+        ),
+        "current_submission_gate_shape_pass_count": _int(
+            current_submission_gate_summary.get("shape_sanity_pass_count")
+        ),
+        "current_submission_gate_shape_blocked_count": _int(
+            current_submission_gate_summary.get("shape_sanity_blocked_count")
+        ),
+        "current_submission_gate_shape_target_count": _int(
+            current_submission_gate_summary.get("shape_sanity_target_count")
+        ),
+        "current_submission_gate_difficult_lane_count": _int(
+            (current_submission_gate_summary.get("lane_target_counts") or {}).get(
+                "difficult_protein_complexes"
+            )
+            if isinstance(current_submission_gate_summary.get("lane_target_counts"), dict)
+            else 0
+        ),
+        "current_sidechain_repack_status": _text(
+            current_sidechain_repack_summary.get("sidechain_repack_status")
+        ),
+        "current_sidechain_repack_pass_count": _int(current_sidechain_repack_summary.get("pass_count")),
+        "current_sidechain_repack_blocked_count": _int(
+            current_sidechain_repack_summary.get("blocked_count")
+        ),
+        "current_sidechain_repack_target_count": _int(current_sidechain_repack_summary.get("target_count")),
+        "current_sidechain_repack_soft_delta": _int(
+            current_sidechain_repack_summary.get("total_soft_clash_delta")
+        ),
+        "current_sidechain_repack_soft_before": _int(
+            current_sidechain_repack_summary.get("total_soft_clash_count_before")
+        ),
+        "current_sidechain_repack_soft_after": _int(
+            current_sidechain_repack_summary.get("total_soft_clash_count_after")
+        ),
+        "current_sidechain_repack_improved_residue_count": _int(
+            current_sidechain_repack_summary.get("total_improved_residue_count")
+        ),
+        "current_sidechain_repack_repacked_residue_count": _int(
+            current_sidechain_repack_summary.get("total_repacked_residue_count")
+        ),
+        "current_sidechain_repack_revert_guard_count": _int(
+            current_sidechain_repack_summary.get("revert_guard_count")
+        ),
+        "current_submission_package_preflight_status": _text(
+            current_submission_package_preflight_summary.get("package_preflight_status")
+        ),
+        "current_submission_package_preflight_ready_count": _int(
+            current_submission_package_preflight_summary.get("ready_count")
+        ),
+        "current_submission_package_preflight_blocked_count": _int(
+            current_submission_package_preflight_summary.get("blocked_count")
+        ),
+        "current_submission_package_preflight_target_count": _int(
+            current_submission_package_preflight_summary.get("target_count")
+        ),
+        "current_submission_package_preflight_file_present_count": _int(
+            current_submission_package_preflight_summary.get("candidate_file_present_count")
+        ),
+        "current_submission_package_preflight_sha256_count": _int(
+            current_submission_package_preflight_summary.get("candidate_sha256_count")
+        ),
+        "current_submission_package_preflight_format_pass_count": _int(
+            current_submission_package_preflight_summary.get("format_pass_count")
+        ),
+        "current_submission_package_preflight_author_pass_count": _int(
+            current_submission_package_preflight_summary.get("author_record_pass_count")
+        ),
+        "current_submission_package_preflight_sidechain_pass_count": _int(
+            current_submission_package_preflight_summary.get("sidechain_repack_pass_count")
+        ),
+        "current_submission_package_preflight_gate_status": _text(
+            current_submission_package_preflight_summary.get("submission_gate_status")
+        ),
+        "current_submission_package_preflight_gate_go_count": _int(
+            current_submission_package_preflight_summary.get("submission_gate_go_count")
+        ),
+        "current_submission_package_preflight_gate_no_go_count": _int(
+            current_submission_package_preflight_summary.get("submission_gate_no_go_count")
+        ),
+        "current_submission_package_preflight_gate_target_count": _int(
+            current_submission_package_preflight_summary.get("submission_gate_target_count")
+        ),
+        "current_submission_package_preflight_server_ready": str(
+            current_submission_package_preflight_summary.get("server_registration_ready", "")
+        ),
+        "current_submission_package_preflight_package_mode": _text(
+            current_submission_package_preflight_summary.get("package_mode")
+        ),
+        "current_submission_deadline_guard_status": _text(
+            current_submission_deadline_guard_summary.get("deadline_guard_status")
+        ),
+        "current_submission_deadline_guard_current_date": _text(
+            current_submission_deadline_guard_summary.get("current_date")
+        ),
+        "current_submission_deadline_guard_ready_count": _int(
+            current_submission_deadline_guard_summary.get("upload_window_ready_count")
+        ),
+        "current_submission_deadline_guard_blocked_count": _int(
+            current_submission_deadline_guard_summary.get("deadline_blocked_count")
+        ),
+        "current_submission_deadline_guard_target_count": _int(
+            current_submission_deadline_guard_summary.get("target_count")
+        ),
+        "current_submission_deadline_guard_human_expired_count": _int(
+            current_submission_deadline_guard_summary.get("human_expired_count")
+        ),
+        "current_submission_deadline_guard_human_expiring_today_count": _int(
+            current_submission_deadline_guard_summary.get("human_expiring_today_count")
+        ),
+        "current_submission_deadline_guard_human_future_count": _int(
+            current_submission_deadline_guard_summary.get("human_future_count")
+        ),
+        "current_submission_deadline_guard_qa_open_count": _int(
+            current_submission_deadline_guard_summary.get("qa_open_count")
+        ),
+        "current_submission_deadline_guard_qa_expired_count": _int(
+            current_submission_deadline_guard_summary.get("qa_expired_count")
+        ),
+        "current_submission_deadline_guard_qa_unknown_count": _int(
+            current_submission_deadline_guard_summary.get("qa_unknown_count")
+        ),
+        "current_submission_deadline_guard_package_status": _text(
+            current_submission_deadline_guard_summary.get("package_preflight_status")
+        ),
+        "current_submission_deadline_guard_package_ready_count": _int(
+            current_submission_deadline_guard_summary.get("package_ready_count")
+        ),
+        "current_submission_deadline_guard_package_blocked_count": _int(
+            current_submission_deadline_guard_summary.get("package_blocked_count")
+        ),
+        "current_submission_deadline_guard_package_target_count": _int(
+            current_submission_deadline_guard_summary.get("package_target_count")
+        ),
+        "current_submission_deadline_guard_watchlist_stale": str(
+            current_submission_deadline_guard_summary.get("watchlist_stale", "")
+        ),
+        "current_submission_deadline_guard_watchlist_stale_days": _int(
+            current_submission_deadline_guard_summary.get("watchlist_stale_days")
+        ),
+        "current_submission_deadline_guard_first_blocked_target_id": _text(
+            current_submission_deadline_guard_summary.get("first_blocked_target_id")
+        ),
+        "current_submission_deadline_guard_first_blocked_reason": _text(
+            current_submission_deadline_guard_summary.get("first_blocked_reason")
+        ),
+        "current_submission_deadline_guard_nearest_open_target_id": _text(
+            current_submission_deadline_guard_summary.get("nearest_open_target_id")
+        ),
+        "current_submission_deadline_guard_nearest_open_human_expiration": _text(
+            current_submission_deadline_guard_summary.get("nearest_open_human_expiration")
+        ),
+        "current_submission_deadline_guard_nearest_open_days": _int(
+            current_submission_deadline_guard_summary.get("nearest_open_days_to_human_expiration")
+        ),
+        "current_upload_queue_status": _text(current_upload_queue_summary.get("upload_queue_status")),
+        "current_upload_queue_current_date": _text(current_upload_queue_summary.get("current_date")),
+        "current_upload_queue_ready_count": _int(current_upload_queue_summary.get("upload_ready_count")),
+        "current_upload_queue_blocked_count": _int(current_upload_queue_summary.get("blocked_count")),
+        "current_upload_queue_target_count": _int(current_upload_queue_summary.get("target_count")),
+        "current_upload_queue_ready_today_count": _int(current_upload_queue_summary.get("ready_today_count")),
+        "current_upload_queue_ready_soon_count": _int(current_upload_queue_summary.get("ready_soon_count")),
+        "current_upload_queue_ready_future_count": _int(current_upload_queue_summary.get("ready_future_count")),
+        "current_upload_queue_official_target_count": _int(
+            current_upload_queue_summary.get("official_target_count")
+        ),
+        "current_upload_queue_official_direct_match_count": _int(
+            current_upload_queue_summary.get("official_direct_match_count")
+        ),
+        "current_upload_queue_official_phase_mapped_count": _int(
+            current_upload_queue_summary.get("official_phase_mapped_count")
+        ),
+        "current_upload_queue_official_missing_count": _int(
+            current_upload_queue_summary.get("official_missing_count")
+        ),
+        "current_upload_queue_official_cancelled_count": _int(
+            current_upload_queue_summary.get("official_cancelled_count")
+        ),
+        "current_upload_queue_official_expired_count": _int(
+            current_upload_queue_summary.get("official_expired_count")
+        ),
+        "current_upload_queue_official_mismatch_count": _int(
+            current_upload_queue_summary.get("official_local_deadline_mismatch_count")
+        ),
+        "current_upload_queue_first_upload_target_id": _text(
+            current_upload_queue_summary.get("first_upload_target_id")
+        ),
+        "current_upload_queue_first_upload_human_expiration": _text(
+            current_upload_queue_summary.get("first_upload_human_expiration")
+        ),
+        "current_upload_queue_first_blocked_target_id": _text(
+            current_upload_queue_summary.get("first_blocked_target_id")
+        ),
+        "current_upload_queue_first_blocked_reason": _text(
+            current_upload_queue_summary.get("first_blocked_reason")
+        ),
+        "current_upload_review_packet_status": _text(
+            current_upload_review_packet_summary.get("review_packet_status")
+        ),
+        "current_upload_review_packet_review_count": _int(
+            current_upload_review_packet_summary.get("review_target_count")
+        ),
+        "current_upload_review_packet_ready_count": _int(
+            current_upload_review_packet_summary.get("review_ready_count")
+        ),
+        "current_upload_review_packet_blocked_count": _int(
+            current_upload_review_packet_summary.get("review_blocked_count")
+        ),
+        "current_upload_review_packet_urgency_today_count": _int(
+            current_upload_review_packet_summary.get("urgency_today_count")
+        ),
+        "current_upload_review_packet_urgency_soon_count": _int(
+            current_upload_review_packet_summary.get("urgency_soon_count")
+        ),
+        "current_upload_review_packet_urgency_future_count": _int(
+            current_upload_review_packet_summary.get("urgency_future_count")
+        ),
+        "current_upload_review_packet_candidate_count": _int(
+            current_upload_review_packet_summary.get("candidate_present_count")
+        ),
+        "current_upload_review_packet_object_catalog_count": _int(
+            current_upload_review_packet_summary.get("object_catalog_pass_count")
+        ),
+        "current_upload_review_packet_viewer_count": _int(
+            current_upload_review_packet_summary.get("viewer_link_count")
+        ),
+        "current_upload_review_packet_first_target_id": _text(
+            current_upload_review_packet_summary.get("first_review_target_id")
+        ),
+        "current_upload_review_packet_first_review_md": _text(
+            current_upload_review_packet_summary.get("first_review_md")
+        ),
+        "current_prospective_strict_blind_escrow_status": _text(
+            current_prospective_strict_blind_escrow_summary.get("prospective_escrow_status")
+        ),
+        "current_prospective_strict_blind_escrow_target_count": _int(
+            current_prospective_strict_blind_escrow_summary.get("target_count")
+        ),
+        "current_prospective_strict_blind_escrow_ready_count": _int(
+            current_prospective_strict_blind_escrow_summary.get("escrow_ready_count")
+        ),
+        "current_prospective_strict_blind_escrow_blocked_count": _int(
+            current_prospective_strict_blind_escrow_summary.get("escrow_blocked_count")
+        ),
+        "current_prospective_strict_blind_escrow_upload_ready_count": _int(
+            current_prospective_strict_blind_escrow_summary.get("upload_ready_count")
+        ),
+        "current_prospective_strict_blind_escrow_upload_blocked_count": _int(
+            current_prospective_strict_blind_escrow_summary.get("upload_blocked_count")
+        ),
+        "current_prospective_strict_blind_escrow_sha256_match_count": _int(
+            current_prospective_strict_blind_escrow_summary.get("sha256_match_count")
+        ),
+        "current_prospective_strict_blind_escrow_review_link_count": _int(
+            current_prospective_strict_blind_escrow_summary.get("review_link_count")
+        ),
+        "current_prospective_strict_blind_escrow_native_pending_count": _int(
+            current_prospective_strict_blind_escrow_summary.get("native_pending_count")
+        ),
+        "current_prospective_strict_blind_escrow_external_timestamp_required_count": _int(
+            current_prospective_strict_blind_escrow_summary.get("external_timestamp_required_count")
+        ),
+        "current_prospective_strict_blind_escrow_competitive_proof_eligible_count": _int(
+            current_prospective_strict_blind_escrow_summary.get("competitive_proof_eligible_count")
+        ),
+        "current_prospective_strict_blind_escrow_author_serialized_count": _int(
+            current_prospective_strict_blind_escrow_summary.get("author_serialized_count")
+        ),
+        "current_prospective_strict_blind_escrow_first_upload_ready_target_id": _text(
+            current_prospective_strict_blind_escrow_summary.get("first_upload_ready_target_id")
+        ),
+        "current_prospective_strict_blind_escrow_first_upload_blocked_target_id": _text(
+            current_prospective_strict_blind_escrow_summary.get("first_upload_blocked_target_id")
+        ),
+        "current_prospective_strict_blind_escrow_manifest_signature_sha256": _text(
+            current_prospective_strict_blind_escrow_summary.get("manifest_signature_sha256")
         ),
         "benchmark_rows_ready_count": benchmark_rows_ready,
         "benchmark_rows_total": benchmark_rows_total,
@@ -7662,6 +12633,1076 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         ),
         "protein_complex_massivefold_self_assessment_first_blocked_target_id": _text(
             protein_complex_massivefold_self_assessment_packet_summary.get("first_blocked_target_id")
+        ),
+        "massivefold_model1_risk_queue_status": _text(
+            massivefold_model1_risk_queue_summary.get("massivefold_model1_risk_queue_status")
+        ),
+        "massivefold_model1_risk_queue_target_count": _int(
+            massivefold_model1_risk_queue_summary.get("target_count")
+        ),
+        "massivefold_model1_risk_queue_ready_target_count": _int(
+            massivefold_model1_risk_queue_summary.get("ready_target_count")
+        ),
+        "massivefold_model1_risk_queue_blocked_target_count": _int(
+            massivefold_model1_risk_queue_summary.get("blocked_target_count")
+        ),
+        "massivefold_model1_risk_queue_low_margin_count": _int(
+            massivefold_model1_risk_queue_summary.get("low_margin_target_count")
+        ),
+        "massivefold_model1_risk_queue_critical_count": _int(
+            massivefold_model1_risk_queue_summary.get("critical_margin_target_count")
+        ),
+        "massivefold_model1_risk_queue_rna_hybrid_count": _int(
+            massivefold_model1_risk_queue_summary.get("rna_hybrid_target_count")
+        ),
+        "massivefold_model1_risk_queue_protein_complex_count": _int(
+            massivefold_model1_risk_queue_summary.get("protein_complex_target_count")
+        ),
+        "massivefold_model1_risk_queue_first_target_id": _text(
+            massivefold_model1_risk_queue_summary.get("first_priority_target_id")
+        ),
+        "massivefold_model1_risk_queue_first_group": _text(
+            massivefold_model1_risk_queue_summary.get("first_priority_group")
+        ),
+        "massivefold_model1_risk_queue_first_gap": _text(
+            massivefold_model1_risk_queue_summary.get("first_priority_gap")
+        ),
+        "massivefold_model1_risk_queue_first_tier": _text(
+            massivefold_model1_risk_queue_summary.get("first_priority_risk_tier")
+        ),
+        "massivefold_model1_risk_queue_policy": _text(
+            massivefold_model1_risk_queue_summary.get("internal_prediction_policy")
+        ),
+        "massivefold_critical_rerank_experiment_status": _text(
+            massivefold_critical_rerank_experiment_summary.get(
+                "massivefold_critical_rerank_experiment_status"
+            )
+        ),
+        "massivefold_critical_rerank_experiment_count": _int(
+            massivefold_critical_rerank_experiment_summary.get("experiment_count")
+        ),
+        "massivefold_critical_rerank_ready_experiment_count": _int(
+            massivefold_critical_rerank_experiment_summary.get("ready_experiment_count")
+        ),
+        "massivefold_critical_rerank_blocked_experiment_count": _int(
+            massivefold_critical_rerank_experiment_summary.get("blocked_experiment_count")
+        ),
+        "massivefold_critical_rerank_rna_hybrid_count": _int(
+            massivefold_critical_rerank_experiment_summary.get("rna_hybrid_experiment_count")
+        ),
+        "massivefold_critical_rerank_protein_complex_count": _int(
+            massivefold_critical_rerank_experiment_summary.get("protein_complex_experiment_count")
+        ),
+        "massivefold_critical_rerank_high_diversity_count": _int(
+            massivefold_critical_rerank_experiment_summary.get("high_diversity_review_count")
+        ),
+        "massivefold_critical_rerank_geometry_review_count": _int(
+            massivefold_critical_rerank_experiment_summary.get("geometry_review_count")
+        ),
+        "massivefold_critical_rerank_low_confidence_review_count": _int(
+            massivefold_critical_rerank_experiment_summary.get("low_confidence_review_count")
+        ),
+        "massivefold_critical_rerank_first_target_id": _text(
+            massivefold_critical_rerank_experiment_summary.get("first_experiment_target_id")
+        ),
+        "massivefold_critical_rerank_first_group": _text(
+            massivefold_critical_rerank_experiment_summary.get("first_experiment_group")
+        ),
+        "massivefold_critical_rerank_first_gap": _text(
+            massivefold_critical_rerank_experiment_summary.get("first_experiment_gap")
+        ),
+        "massivefold_critical_rerank_first_order": _text(
+            massivefold_critical_rerank_experiment_summary.get("first_experiment_order")
+        ),
+        "massivefold_critical_rerank_formula_id": _text(
+            massivefold_critical_rerank_experiment_summary.get("rerank_formula_id")
+        ),
+        "massivefold_critical_rerank_policy": _text(
+            massivefold_critical_rerank_experiment_summary.get("internal_prediction_policy")
+        ),
+        "massivefold_critical_rerank_score_ledger_status": _text(
+            massivefold_critical_rerank_score_ledger_summary.get(
+                "massivefold_critical_rerank_score_ledger_status"
+            )
+        ),
+        "massivefold_critical_rerank_score_ledger_count": _int(
+            massivefold_critical_rerank_score_ledger_summary.get("ledger_count")
+        ),
+        "massivefold_critical_rerank_score_ledger_ready_count": _int(
+            massivefold_critical_rerank_score_ledger_summary.get("ready_ledger_count")
+        ),
+        "massivefold_critical_rerank_score_ledger_blocked_count": _int(
+            massivefold_critical_rerank_score_ledger_summary.get("blocked_ledger_count")
+        ),
+        "massivefold_critical_rerank_score_ledger_immediate_count": _int(
+            massivefold_critical_rerank_score_ledger_summary.get("immediate_rerank_required_count")
+        ),
+        "massivefold_critical_rerank_score_ledger_calibrate_count": _int(
+            massivefold_critical_rerank_score_ledger_summary.get(
+                "calibrate_before_model1_freeze_count"
+            )
+        ),
+        "massivefold_critical_rerank_score_ledger_watch_count": _int(
+            massivefold_critical_rerank_score_ledger_summary.get("critical_watch_count")
+        ),
+        "massivefold_critical_rerank_score_ledger_rna_hybrid_count": _int(
+            massivefold_critical_rerank_score_ledger_summary.get("rna_hybrid_ledger_count")
+        ),
+        "massivefold_critical_rerank_score_ledger_protein_complex_count": _int(
+            massivefold_critical_rerank_score_ledger_summary.get("protein_complex_ledger_count")
+        ),
+        "massivefold_critical_rerank_score_ledger_top_target_id": _text(
+            massivefold_critical_rerank_score_ledger_summary.get("top_risk_target_id")
+        ),
+        "massivefold_critical_rerank_score_ledger_top_group": _text(
+            massivefold_critical_rerank_score_ledger_summary.get("top_risk_group")
+        ),
+        "massivefold_critical_rerank_score_ledger_top_score": _text(
+            massivefold_critical_rerank_score_ledger_summary.get("top_risk_score")
+        ),
+        "massivefold_critical_rerank_score_ledger_top_band": _text(
+            massivefold_critical_rerank_score_ledger_summary.get("top_risk_band")
+        ),
+        "massivefold_critical_rerank_score_ledger_top_action": _text(
+            massivefold_critical_rerank_score_ledger_summary.get("top_rerank_action")
+        ),
+        "massivefold_critical_rerank_score_ledger_policy": _text(
+            massivefold_critical_rerank_score_ledger_summary.get("internal_prediction_policy")
+        ),
+        "massivefold_model1_selection_calibration_gate_status": _text(
+            massivefold_model1_selection_calibration_gate_summary.get(
+                "massivefold_model1_selection_calibration_gate_status"
+            )
+        ),
+        "massivefold_model1_selection_calibration_gate_freeze_status": _text(
+            massivefold_model1_selection_calibration_gate_summary.get("freeze_gate_status")
+        ),
+        "massivefold_model1_selection_calibration_gate_count": _int(
+            massivefold_model1_selection_calibration_gate_summary.get("gate_count")
+        ),
+        "massivefold_model1_selection_calibration_gate_ready_count": _int(
+            massivefold_model1_selection_calibration_gate_summary.get("ready_gate_count")
+        ),
+        "massivefold_model1_selection_calibration_gate_blocked_count": _int(
+            massivefold_model1_selection_calibration_gate_summary.get("blocked_gate_count")
+        ),
+        "massivefold_model1_selection_calibration_gate_hold_count": _int(
+            massivefold_model1_selection_calibration_gate_summary.get("hold_model1_freeze_count")
+        ),
+        "massivefold_model1_selection_calibration_gate_watch_count": _int(
+            massivefold_model1_selection_calibration_gate_summary.get("watch_probe_count")
+        ),
+        "massivefold_model1_selection_calibration_gate_probe_required_count": _int(
+            massivefold_model1_selection_calibration_gate_summary.get("probe_required_count")
+        ),
+        "massivefold_model1_selection_calibration_gate_freeze_ready_count": _int(
+            massivefold_model1_selection_calibration_gate_summary.get("freeze_ready_count")
+        ),
+        "massivefold_model1_selection_calibration_gate_rna_hybrid_count": _int(
+            massivefold_model1_selection_calibration_gate_summary.get("rna_hybrid_gate_count")
+        ),
+        "massivefold_model1_selection_calibration_gate_protein_complex_count": _int(
+            massivefold_model1_selection_calibration_gate_summary.get("protein_complex_gate_count")
+        ),
+        "massivefold_model1_selection_calibration_gate_first_target_id": _text(
+            massivefold_model1_selection_calibration_gate_summary.get("first_gate_target_id")
+        ),
+        "massivefold_model1_selection_calibration_gate_first_group": _text(
+            massivefold_model1_selection_calibration_gate_summary.get("first_gate_group")
+        ),
+        "massivefold_model1_selection_calibration_gate_top_risk_score": _text(
+            massivefold_model1_selection_calibration_gate_summary.get("top_risk_score")
+        ),
+        "massivefold_model1_selection_calibration_gate_first_decision": _text(
+            massivefold_model1_selection_calibration_gate_summary.get("first_gate_decision")
+        ),
+        "massivefold_model1_selection_calibration_gate_first_probe": _text(
+            massivefold_model1_selection_calibration_gate_summary.get("first_gate_probe_type")
+        ),
+        "massivefold_model1_selection_calibration_gate_rule_id": _text(
+            massivefold_model1_selection_calibration_gate_summary.get("selection_rule_id")
+        ),
+        "massivefold_model1_selection_calibration_gate_policy": _text(
+            massivefold_model1_selection_calibration_gate_summary.get("internal_prediction_policy")
+        ),
+        "massivefold_model1_probe_worklist_status": _text(
+            massivefold_model1_probe_worklist_summary.get("massivefold_model1_probe_worklist_status")
+        ),
+        "massivefold_model1_probe_worklist_count": _int(
+            massivefold_model1_probe_worklist_summary.get("workitem_count")
+        ),
+        "massivefold_model1_probe_worklist_ready_count": _int(
+            massivefold_model1_probe_worklist_summary.get("ready_workitem_count")
+        ),
+        "massivefold_model1_probe_worklist_blocked_count": _int(
+            massivefold_model1_probe_worklist_summary.get("blocked_workitem_count")
+        ),
+        "massivefold_model1_probe_worklist_top5_count": _int(
+            massivefold_model1_probe_worklist_summary.get("top5_rerank_consistency_probe_count")
+        ),
+        "massivefold_model1_probe_worklist_lightweight_count": _int(
+            massivefold_model1_probe_worklist_summary.get("lightweight_rescore_probe_count")
+        ),
+        "massivefold_model1_probe_worklist_priority1_count": _int(
+            massivefold_model1_probe_worklist_summary.get("priority1_workitem_count")
+        ),
+        "massivefold_model1_probe_worklist_priority2_count": _int(
+            massivefold_model1_probe_worklist_summary.get("priority2_workitem_count")
+        ),
+        "massivefold_model1_probe_worklist_rna_hybrid_count": _int(
+            massivefold_model1_probe_worklist_summary.get("rna_hybrid_workitem_count")
+        ),
+        "massivefold_model1_probe_worklist_protein_complex_count": _int(
+            massivefold_model1_probe_worklist_summary.get("protein_complex_workitem_count")
+        ),
+        "massivefold_model1_probe_worklist_first_target_id": _text(
+            massivefold_model1_probe_worklist_summary.get("first_workitem_target_id")
+        ),
+        "massivefold_model1_probe_worklist_first_group": _text(
+            massivefold_model1_probe_worklist_summary.get("first_workitem_group")
+        ),
+        "massivefold_model1_probe_worklist_first_score": _text(
+            massivefold_model1_probe_worklist_summary.get("first_workitem_risk_score")
+        ),
+        "massivefold_model1_probe_worklist_first_probe": _text(
+            massivefold_model1_probe_worklist_summary.get("first_workitem_probe_type")
+        ),
+        "massivefold_model1_probe_worklist_unlock_policy": _text(
+            massivefold_model1_probe_worklist_summary.get("freeze_unlock_policy")
+        ),
+        "massivefold_model1_probe_worklist_policy": _text(
+            massivefold_model1_probe_worklist_summary.get("internal_prediction_policy")
+        ),
+        "massivefold_model1_probe_outcome_status": _text(
+            massivefold_model1_probe_outcome_summary.get("massivefold_model1_probe_outcome_status")
+        ),
+        "massivefold_model1_probe_outcome_count": _int(
+            massivefold_model1_probe_outcome_summary.get("outcome_count")
+        ),
+        "massivefold_model1_probe_outcome_ready_count": _int(
+            massivefold_model1_probe_outcome_summary.get("ready_outcome_count")
+        ),
+        "massivefold_model1_probe_outcome_blocked_count": _int(
+            massivefold_model1_probe_outcome_summary.get("blocked_outcome_count")
+        ),
+        "massivefold_model1_probe_outcome_pass_count": _int(
+            massivefold_model1_probe_outcome_summary.get("probe_pass_count")
+        ),
+        "massivefold_model1_probe_outcome_fail_count": _int(
+            massivefold_model1_probe_outcome_summary.get("probe_fail_count")
+        ),
+        "massivefold_model1_probe_outcome_freeze_ready_count": _int(
+            massivefold_model1_probe_outcome_summary.get("freeze_ready_recommendation_count")
+        ),
+        "massivefold_model1_probe_outcome_top5_count": _int(
+            massivefold_model1_probe_outcome_summary.get("top5_probe_outcome_count")
+        ),
+        "massivefold_model1_probe_outcome_lightweight_count": _int(
+            massivefold_model1_probe_outcome_summary.get("lightweight_probe_outcome_count")
+        ),
+        "massivefold_model1_probe_outcome_rna_hybrid_count": _int(
+            massivefold_model1_probe_outcome_summary.get("rna_hybrid_outcome_count")
+        ),
+        "massivefold_model1_probe_outcome_protein_complex_count": _int(
+            massivefold_model1_probe_outcome_summary.get("protein_complex_outcome_count")
+        ),
+        "massivefold_model1_probe_outcome_first_target_id": _text(
+            massivefold_model1_probe_outcome_summary.get("first_outcome_target_id")
+        ),
+        "massivefold_model1_probe_outcome_first_group": _text(
+            massivefold_model1_probe_outcome_summary.get("first_outcome_group")
+        ),
+        "massivefold_model1_probe_outcome_first_result": _text(
+            massivefold_model1_probe_outcome_summary.get("first_outcome_result")
+        ),
+        "massivefold_model1_probe_outcome_first_margin": _text(
+            massivefold_model1_probe_outcome_summary.get("first_outcome_margin")
+        ),
+        "massivefold_model1_probe_outcome_first_recommendation": _text(
+            massivefold_model1_probe_outcome_summary.get("first_freeze_recommendation")
+        ),
+        "massivefold_model1_probe_outcome_rule_id": _text(
+            massivefold_model1_probe_outcome_summary.get("scoring_rule_id")
+        ),
+        "massivefold_model1_probe_outcome_policy": _text(
+            massivefold_model1_probe_outcome_summary.get("internal_prediction_policy")
+        ),
+        "massivefold_model1_freeze_decision_packet_status": _text(
+            massivefold_model1_freeze_decision_packet_summary.get(
+                "massivefold_model1_freeze_decision_packet_status"
+            )
+        ),
+        "massivefold_model1_freeze_decision_packet_count": _int(
+            massivefold_model1_freeze_decision_packet_summary.get("decision_count")
+        ),
+        "massivefold_model1_freeze_decision_packet_ready_count": _int(
+            massivefold_model1_freeze_decision_packet_summary.get("ready_decision_count")
+        ),
+        "massivefold_model1_freeze_decision_packet_blocked_count": _int(
+            massivefold_model1_freeze_decision_packet_summary.get("blocked_decision_count")
+        ),
+        "massivefold_model1_freeze_decision_packet_freeze_ready_count": _int(
+            massivefold_model1_freeze_decision_packet_summary.get("freeze_ready_total_count")
+        ),
+        "massivefold_model1_freeze_decision_packet_freeze_blocked_count": _int(
+            massivefold_model1_freeze_decision_packet_summary.get("freeze_blocked_total_count")
+        ),
+        "massivefold_model1_freeze_decision_packet_conditional_count": _int(
+            massivefold_model1_freeze_decision_packet_summary.get("conditional_freeze_ready_count")
+        ),
+        "massivefold_model1_freeze_decision_packet_watch_count": _int(
+            massivefold_model1_freeze_decision_packet_summary.get("watch_freeze_ready_count")
+        ),
+        "massivefold_model1_freeze_decision_packet_manual_review_count": _int(
+            massivefold_model1_freeze_decision_packet_summary.get("manual_review_blocked_count")
+        ),
+        "massivefold_model1_freeze_decision_packet_rna_hybrid_count": _int(
+            massivefold_model1_freeze_decision_packet_summary.get("rna_hybrid_decision_count")
+        ),
+        "massivefold_model1_freeze_decision_packet_protein_complex_count": _int(
+            massivefold_model1_freeze_decision_packet_summary.get("protein_complex_decision_count")
+        ),
+        "massivefold_model1_freeze_decision_packet_first_ready_target_id": _text(
+            massivefold_model1_freeze_decision_packet_summary.get("first_freeze_ready_target_id")
+        ),
+        "massivefold_model1_freeze_decision_packet_first_ready_group": _text(
+            massivefold_model1_freeze_decision_packet_summary.get("first_freeze_ready_group")
+        ),
+        "massivefold_model1_freeze_decision_packet_first_ready_decision": _text(
+            massivefold_model1_freeze_decision_packet_summary.get("first_freeze_ready_decision")
+        ),
+        "massivefold_model1_freeze_decision_packet_first_blocked_target_id": _text(
+            massivefold_model1_freeze_decision_packet_summary.get("first_blocked_target_id")
+        ),
+        "massivefold_model1_freeze_decision_packet_first_blocked_group": _text(
+            massivefold_model1_freeze_decision_packet_summary.get("first_blocked_group")
+        ),
+        "massivefold_model1_freeze_decision_packet_first_blocked_decision": _text(
+            massivefold_model1_freeze_decision_packet_summary.get("first_blocked_decision")
+        ),
+        "massivefold_model1_freeze_decision_packet_rule_id": _text(
+            massivefold_model1_freeze_decision_packet_summary.get("decision_rule_id")
+        ),
+        "massivefold_model1_freeze_decision_packet_policy": _text(
+            massivefold_model1_freeze_decision_packet_summary.get("internal_prediction_policy")
+        ),
+        "massivefold_model_selection_ledger_status": _text(
+            massivefold_model_selection_ledger_summary.get("massivefold_model_selection_ledger_status")
+        ),
+        "massivefold_model_selection_ledger_count": _int(
+            massivefold_model_selection_ledger_summary.get("ledger_count")
+        ),
+        "massivefold_model_selection_ledger_ready_count": _int(
+            massivefold_model_selection_ledger_summary.get("ready_ledger_count")
+        ),
+        "massivefold_model_selection_ledger_blocked_count": _int(
+            massivefold_model_selection_ledger_summary.get("blocked_ledger_count")
+        ),
+        "massivefold_model_selection_ledger_conditional_count": _int(
+            massivefold_model_selection_ledger_summary.get("conditional_selected_count")
+        ),
+        "massivefold_model_selection_ledger_watch_count": _int(
+            massivefold_model_selection_ledger_summary.get("watch_selected_count")
+        ),
+        "massivefold_model_selection_ledger_manual_review_count": _int(
+            massivefold_model_selection_ledger_summary.get("manual_review_blocked_count")
+        ),
+        "massivefold_model_selection_ledger_review_only_count": _int(
+            massivefold_model_selection_ledger_summary.get("review_only_unfrozen_count")
+        ),
+        "massivefold_model_selection_ledger_freeze_ready_count": _int(
+            massivefold_model_selection_ledger_summary.get("freeze_ready_selected_count")
+        ),
+        "massivefold_model_selection_ledger_rna_hybrid_count": _int(
+            massivefold_model_selection_ledger_summary.get("rna_hybrid_ledger_count")
+        ),
+        "massivefold_model_selection_ledger_protein_complex_count": _int(
+            massivefold_model_selection_ledger_summary.get("protein_complex_ledger_count")
+        ),
+        "massivefold_model_selection_ledger_first_target_id": _text(
+            massivefold_model_selection_ledger_summary.get("first_ledger_target_id")
+        ),
+        "massivefold_model_selection_ledger_first_group": _text(
+            massivefold_model_selection_ledger_summary.get("first_ledger_group")
+        ),
+        "massivefold_model_selection_ledger_first_decision": _text(
+            massivefold_model_selection_ledger_summary.get("first_ledger_decision")
+        ),
+        "massivefold_model_selection_ledger_first_manual_review_target_id": _text(
+            massivefold_model_selection_ledger_summary.get("first_manual_review_target_id")
+        ),
+        "massivefold_model_selection_ledger_rule_id": _text(
+            massivefold_model_selection_ledger_summary.get("ledger_rule_id")
+        ),
+        "massivefold_model_selection_ledger_policy": _text(
+            massivefold_model_selection_ledger_summary.get("internal_prediction_policy")
+        ),
+        "massivefold_model1_combined_selector_overlay_status": _text(
+            massivefold_model1_combined_selector_overlay_summary.get(
+                "massivefold_model1_combined_selector_overlay_status"
+            )
+        ),
+        "massivefold_model1_combined_selector_overlay_ready_count": _int(
+            massivefold_model1_combined_selector_overlay_summary.get("overlay_ready_count")
+        ),
+        "massivefold_model1_combined_selector_overlay_blocked_count": _int(
+            massivefold_model1_combined_selector_overlay_summary.get("overlay_blocked_count")
+        ),
+        "massivefold_model1_combined_selector_overlay_count": _int(
+            massivefold_model1_combined_selector_overlay_summary.get("overlay_count")
+        ),
+        "massivefold_model1_combined_selector_overlay_freeze_ready_count": _int(
+            massivefold_model1_combined_selector_overlay_summary.get("freeze_ready_overlay_count")
+        ),
+        "massivefold_model1_combined_selector_overlay_not_freeze_ready_count": _int(
+            massivefold_model1_combined_selector_overlay_summary.get("not_freeze_ready_overlay_count")
+        ),
+        "massivefold_model1_combined_selector_overlay_manual_blocked_count": _int(
+            massivefold_model1_combined_selector_overlay_summary.get("manual_blocked_overlay_count")
+        ),
+        "massivefold_model1_combined_selector_overlay_interface_hold_count": _int(
+            massivefold_model1_combined_selector_overlay_summary.get("interface_hold_overlay_count")
+        ),
+        "massivefold_model1_combined_selector_overlay_weak_probe_hold_count": _int(
+            massivefold_model1_combined_selector_overlay_summary.get("weak_probe_hold_overlay_count")
+        ),
+        "massivefold_model1_combined_selector_overlay_probe_required_count": _int(
+            massivefold_model1_combined_selector_overlay_summary.get("probe_required_overlay_count")
+        ),
+        "massivefold_model1_combined_selector_overlay_review_watch_count": _int(
+            massivefold_model1_combined_selector_overlay_summary.get("review_watch_overlay_count")
+        ),
+        "massivefold_model1_combined_selector_overlay_unknown_hold_count": _int(
+            massivefold_model1_combined_selector_overlay_summary.get("unknown_hold_overlay_count")
+        ),
+        "massivefold_model1_combined_selector_overlay_rna_hybrid_count": _int(
+            massivefold_model1_combined_selector_overlay_summary.get("rna_hybrid_overlay_count")
+        ),
+        "massivefold_model1_combined_selector_overlay_protein_complex_count": _int(
+            massivefold_model1_combined_selector_overlay_summary.get("protein_complex_overlay_count")
+        ),
+        "massivefold_model1_combined_selector_overlay_baseline_capture_rate": _text(
+            massivefold_model1_combined_selector_overlay_summary.get("baseline_capture_rate")
+        ),
+        "massivefold_model1_combined_selector_overlay_baseline_non_capture_rate": _text(
+            massivefold_model1_combined_selector_overlay_summary.get("baseline_non_capture_rate")
+        ),
+        "massivefold_model1_combined_selector_overlay_first_target_id": _text(
+            massivefold_model1_combined_selector_overlay_summary.get("first_overlay_target_id")
+        ),
+        "massivefold_model1_combined_selector_overlay_first_decision": _text(
+            massivefold_model1_combined_selector_overlay_summary.get("first_overlay_decision")
+        ),
+        "massivefold_model1_combined_selector_overlay_first_action": _text(
+            massivefold_model1_combined_selector_overlay_summary.get("first_overlay_action")
+        ),
+        "massivefold_model1_combined_selector_overlay_first_freeze_ready_target_id": _text(
+            massivefold_model1_combined_selector_overlay_summary.get("first_freeze_ready_target_id")
+        ),
+        "massivefold_model1_combined_selector_overlay_first_freeze_ready_action": _text(
+            massivefold_model1_combined_selector_overlay_summary.get("first_freeze_ready_action")
+        ),
+        "massivefold_model1_combined_selector_overlay_policy": _text(
+            massivefold_model1_combined_selector_overlay_summary.get("internal_prediction_policy")
+        ),
+        "massivefold_model1_combined_selector_overlay_proof_eligible": str(
+            massivefold_model1_combined_selector_overlay_summary.get("competitive_proof_eligible", "")
+        ),
+        "massivefold_model1_combined_selector_overlay_next_action": _text(
+            massivefold_model1_combined_selector_overlay_summary.get("next_action")
+        ),
+        "massivefold_freeze_ready_review_packet_status": _text(
+            massivefold_freeze_ready_review_packet_summary.get(
+                "massivefold_freeze_ready_review_packet_status"
+            )
+        ),
+        "massivefold_freeze_ready_review_packet_count": _int(
+            massivefold_freeze_ready_review_packet_summary.get("freeze_ready_target_count")
+        ),
+        "massivefold_freeze_ready_review_packet_ready_count": _int(
+            massivefold_freeze_ready_review_packet_summary.get("ready_review_count")
+        ),
+        "massivefold_freeze_ready_review_packet_blocked_count": _int(
+            massivefold_freeze_ready_review_packet_summary.get("blocked_review_count")
+        ),
+        "massivefold_freeze_ready_review_packet_model_present_count": _int(
+            massivefold_freeze_ready_review_packet_summary.get("model_present_count")
+        ),
+        "massivefold_freeze_ready_review_packet_viewer_present_count": _int(
+            massivefold_freeze_ready_review_packet_summary.get("viewer_present_count")
+        ),
+        "massivefold_freeze_ready_review_packet_projection_present_count": _int(
+            massivefold_freeze_ready_review_packet_summary.get("projection_present_count")
+        ),
+        "massivefold_freeze_ready_review_packet_top5_manifest_present_count": _int(
+            massivefold_freeze_ready_review_packet_summary.get("top5_manifest_present_count")
+        ),
+        "massivefold_freeze_ready_review_packet_top5_total": _int(
+            massivefold_freeze_ready_review_packet_summary.get("top5_candidate_total")
+        ),
+        "massivefold_freeze_ready_review_packet_first_target_id": _text(
+            massivefold_freeze_ready_review_packet_summary.get("first_review_target_id")
+        ),
+        "massivefold_freeze_ready_review_packet_first_model_filename": _text(
+            massivefold_freeze_ready_review_packet_summary.get("first_review_model_filename")
+        ),
+        "massivefold_freeze_ready_review_packet_first_viewer_html": _text(
+            massivefold_freeze_ready_review_packet_summary.get("first_review_viewer_html")
+        ),
+        "massivefold_freeze_ready_review_packet_html": _text(
+            massivefold_freeze_ready_review_packet_summary.get("review_html")
+        ),
+        "massivefold_freeze_ready_review_packet_policy": _text(
+            massivefold_freeze_ready_review_packet_summary.get("internal_prediction_policy")
+        ),
+        "massivefold_freeze_ready_review_packet_proof_eligible": str(
+            massivefold_freeze_ready_review_packet_summary.get("competitive_proof_eligible", "")
+        ),
+        "massivefold_freeze_ready_review_packet_next_action": _text(
+            massivefold_freeze_ready_review_packet_summary.get("next_action")
+        ),
+        "massivefold_hold_probe_review_packet_status": _text(
+            massivefold_hold_probe_review_packet_summary.get(
+                "massivefold_hold_probe_review_packet_status"
+            )
+        ),
+        "massivefold_hold_probe_review_packet_count": _int(
+            massivefold_hold_probe_review_packet_summary.get("hold_probe_review_count")
+        ),
+        "massivefold_hold_probe_review_packet_ready_count": _int(
+            massivefold_hold_probe_review_packet_summary.get("ready_review_count")
+        ),
+        "massivefold_hold_probe_review_packet_blocked_count": _int(
+            massivefold_hold_probe_review_packet_summary.get("blocked_review_count")
+        ),
+        "massivefold_hold_probe_review_packet_manual_blocked_count": _int(
+            massivefold_hold_probe_review_packet_summary.get("manual_blocked_review_count")
+        ),
+        "massivefold_hold_probe_review_packet_interface_hold_count": _int(
+            massivefold_hold_probe_review_packet_summary.get("interface_hold_review_count")
+        ),
+        "massivefold_hold_probe_review_packet_probe_required_count": _int(
+            massivefold_hold_probe_review_packet_summary.get("probe_required_review_count")
+        ),
+        "massivefold_hold_probe_review_packet_weak_probe_hold_count": _int(
+            massivefold_hold_probe_review_packet_summary.get("weak_probe_hold_review_count")
+        ),
+        "massivefold_hold_probe_review_packet_unknown_hold_count": _int(
+            massivefold_hold_probe_review_packet_summary.get("unknown_hold_review_count")
+        ),
+        "massivefold_hold_probe_review_packet_model_present_count": _int(
+            massivefold_hold_probe_review_packet_summary.get("model_present_count")
+        ),
+        "massivefold_hold_probe_review_packet_viewer_present_count": _int(
+            massivefold_hold_probe_review_packet_summary.get("viewer_present_count")
+        ),
+        "massivefold_hold_probe_review_packet_projection_present_count": _int(
+            massivefold_hold_probe_review_packet_summary.get("projection_present_count")
+        ),
+        "massivefold_hold_probe_review_packet_top5_manifest_present_count": _int(
+            massivefold_hold_probe_review_packet_summary.get("top5_manifest_present_count")
+        ),
+        "massivefold_hold_probe_review_packet_alternate_present_count": _int(
+            massivefold_hold_probe_review_packet_summary.get("alternate_present_count")
+        ),
+        "massivefold_hold_probe_review_packet_top5_total": _int(
+            massivefold_hold_probe_review_packet_summary.get("top5_candidate_total")
+        ),
+        "massivefold_hold_probe_review_packet_first_target_id": _text(
+            massivefold_hold_probe_review_packet_summary.get("first_review_target_id")
+        ),
+        "massivefold_hold_probe_review_packet_first_class": _text(
+            massivefold_hold_probe_review_packet_summary.get("first_review_class")
+        ),
+        "massivefold_hold_probe_review_packet_first_action": _text(
+            massivefold_hold_probe_review_packet_summary.get("first_review_action")
+        ),
+        "massivefold_hold_probe_review_packet_first_model_filename": _text(
+            massivefold_hold_probe_review_packet_summary.get("first_review_model_filename")
+        ),
+        "massivefold_hold_probe_review_packet_first_viewer_html": _text(
+            massivefold_hold_probe_review_packet_summary.get("first_review_viewer_html")
+        ),
+        "massivefold_hold_probe_review_packet_html": _text(
+            massivefold_hold_probe_review_packet_summary.get("review_html")
+        ),
+        "massivefold_hold_probe_review_packet_policy": _text(
+            massivefold_hold_probe_review_packet_summary.get("internal_prediction_policy")
+        ),
+        "massivefold_hold_probe_review_packet_proof_eligible": str(
+            massivefold_hold_probe_review_packet_summary.get("competitive_proof_eligible", "")
+        ),
+        "massivefold_hold_probe_review_packet_next_action": _text(
+            massivefold_hold_probe_review_packet_summary.get("next_action")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_status": _text(
+            massivefold_probe_required_targeted_probe_packet_summary.get(
+                "massivefold_probe_required_targeted_probe_packet_status"
+            )
+        ),
+        "massivefold_probe_required_targeted_probe_packet_count": _int(
+            massivefold_probe_required_targeted_probe_packet_summary.get("probe_target_count")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_ready_count": _int(
+            massivefold_probe_required_targeted_probe_packet_summary.get("ready_probe_count")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_blocked_count": _int(
+            massivefold_probe_required_targeted_probe_packet_summary.get("blocked_probe_count")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_pass_count": _int(
+            massivefold_probe_required_targeted_probe_packet_summary.get("probe_pass_count")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_watch_count": _int(
+            massivefold_probe_required_targeted_probe_packet_summary.get("probe_watch_count")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_fail_count": _int(
+            massivefold_probe_required_targeted_probe_packet_summary.get("probe_fail_count")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_freeze_candidate_count": _int(
+            massivefold_probe_required_targeted_probe_packet_summary.get("freeze_candidate_count")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_watch_recommendation_count": _int(
+            massivefold_probe_required_targeted_probe_packet_summary.get("watch_recommendation_count")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_manual_review_count": _int(
+            massivefold_probe_required_targeted_probe_packet_summary.get("manual_review_recommendation_count")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_rna_hybrid_count": _int(
+            massivefold_probe_required_targeted_probe_packet_summary.get("rna_hybrid_probe_count")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_protein_complex_count": _int(
+            massivefold_probe_required_targeted_probe_packet_summary.get("protein_complex_probe_count")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_model_present_count": _int(
+            massivefold_probe_required_targeted_probe_packet_summary.get("model_present_count")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_viewer_present_count": _int(
+            massivefold_probe_required_targeted_probe_packet_summary.get("viewer_present_count")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_projection_present_count": _int(
+            massivefold_probe_required_targeted_probe_packet_summary.get("projection_present_count")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_top_candidate_present_count": _int(
+            massivefold_probe_required_targeted_probe_packet_summary.get("top_candidate_present_count")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_top_candidate_viewer_present_count": _int(
+            massivefold_probe_required_targeted_probe_packet_summary.get("top_candidate_viewer_present_count")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_top5_manifest_present_count": _int(
+            massivefold_probe_required_targeted_probe_packet_summary.get("top5_manifest_present_count")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_top5_total": _int(
+            massivefold_probe_required_targeted_probe_packet_summary.get("top5_candidate_total")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_clear_margin": _text(
+            massivefold_probe_required_targeted_probe_packet_summary.get("clear_margin_threshold")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_first_target_id": _text(
+            massivefold_probe_required_targeted_probe_packet_summary.get("first_probe_target_id")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_first_result": _text(
+            massivefold_probe_required_targeted_probe_packet_summary.get("first_probe_result")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_first_margin": _text(
+            massivefold_probe_required_targeted_probe_packet_summary.get("first_probe_margin")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_first_recommendation": _text(
+            massivefold_probe_required_targeted_probe_packet_summary.get("first_probe_recommendation")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_html": _text(
+            massivefold_probe_required_targeted_probe_packet_summary.get("probe_html")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_policy": _text(
+            massivefold_probe_required_targeted_probe_packet_summary.get("internal_prediction_policy")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_proof_eligible": str(
+            massivefold_probe_required_targeted_probe_packet_summary.get("competitive_proof_eligible", "")
+        ),
+        "massivefold_probe_required_targeted_probe_packet_next_action": _text(
+            massivefold_probe_required_targeted_probe_packet_summary.get("next_action")
+        ),
+        "massivefold_post_probe_selector_decision_packet_status": _text(
+            massivefold_post_probe_selector_decision_packet_summary.get(
+                "massivefold_post_probe_selector_decision_packet_status"
+            )
+        ),
+        "massivefold_post_probe_selector_decision_packet_count": _int(
+            massivefold_post_probe_selector_decision_packet_summary.get("decision_count")
+        ),
+        "massivefold_post_probe_selector_decision_packet_ready_count": _int(
+            massivefold_post_probe_selector_decision_packet_summary.get("ready_decision_count")
+        ),
+        "massivefold_post_probe_selector_decision_packet_blocked_count": _int(
+            massivefold_post_probe_selector_decision_packet_summary.get("blocked_decision_count")
+        ),
+        "massivefold_post_probe_selector_decision_packet_freeze_count": _int(
+            massivefold_post_probe_selector_decision_packet_summary.get("freeze_candidate_count")
+        ),
+        "massivefold_post_probe_selector_decision_packet_watch_count": _int(
+            massivefold_post_probe_selector_decision_packet_summary.get("watch_decision_count")
+        ),
+        "massivefold_post_probe_selector_decision_packet_manual_count": _int(
+            massivefold_post_probe_selector_decision_packet_summary.get("manual_block_decision_count")
+        ),
+        "massivefold_post_probe_selector_decision_packet_existing_freeze_count": _int(
+            massivefold_post_probe_selector_decision_packet_summary.get("existing_freeze_candidate_count")
+        ),
+        "massivefold_post_probe_selector_decision_packet_probe_freeze_count": _int(
+            massivefold_post_probe_selector_decision_packet_summary.get("probe_freeze_candidate_count")
+        ),
+        "massivefold_post_probe_selector_decision_packet_probe_watch_count": _int(
+            massivefold_post_probe_selector_decision_packet_summary.get("probe_watch_count")
+        ),
+        "massivefold_post_probe_selector_decision_packet_interface_hold_count": _int(
+            massivefold_post_probe_selector_decision_packet_summary.get("interface_hold_count")
+        ),
+        "massivefold_post_probe_selector_decision_packet_probe_manual_count": _int(
+            massivefold_post_probe_selector_decision_packet_summary.get("manual_review_after_probe_failure_count")
+        ),
+        "massivefold_post_probe_selector_decision_packet_manual_block_count": _int(
+            massivefold_post_probe_selector_decision_packet_summary.get("manual_block_count")
+        ),
+        "massivefold_post_probe_selector_decision_packet_rna_hybrid_count": _int(
+            massivefold_post_probe_selector_decision_packet_summary.get("rna_hybrid_decision_count")
+        ),
+        "massivefold_post_probe_selector_decision_packet_protein_complex_count": _int(
+            massivefold_post_probe_selector_decision_packet_summary.get("protein_complex_decision_count")
+        ),
+        "massivefold_post_probe_selector_decision_packet_model_present_count": _int(
+            massivefold_post_probe_selector_decision_packet_summary.get("model_present_count")
+        ),
+        "massivefold_post_probe_selector_decision_packet_viewer_present_count": _int(
+            massivefold_post_probe_selector_decision_packet_summary.get("viewer_present_count")
+        ),
+        "massivefold_post_probe_selector_decision_packet_projection_present_count": _int(
+            massivefold_post_probe_selector_decision_packet_summary.get("projection_present_count")
+        ),
+        "massivefold_post_probe_selector_decision_packet_top5_manifest_present_count": _int(
+            massivefold_post_probe_selector_decision_packet_summary.get("top5_manifest_present_count")
+        ),
+        "massivefold_post_probe_selector_decision_packet_alternate_present_count": _int(
+            massivefold_post_probe_selector_decision_packet_summary.get("alternate_present_count")
+        ),
+        "massivefold_post_probe_selector_decision_packet_first_target_id": _text(
+            massivefold_post_probe_selector_decision_packet_summary.get("first_decision_target_id")
+        ),
+        "massivefold_post_probe_selector_decision_packet_first_class": _text(
+            massivefold_post_probe_selector_decision_packet_summary.get("first_decision_class")
+        ),
+        "massivefold_post_probe_selector_decision_packet_first_decision": _text(
+            massivefold_post_probe_selector_decision_packet_summary.get("first_selector_decision")
+        ),
+        "massivefold_post_probe_selector_decision_packet_first_model_filename": _text(
+            massivefold_post_probe_selector_decision_packet_summary.get("first_selected_model_filename")
+        ),
+        "massivefold_post_probe_selector_decision_packet_html": _text(
+            massivefold_post_probe_selector_decision_packet_summary.get("decision_html")
+        ),
+        "massivefold_post_probe_selector_decision_packet_policy": _text(
+            massivefold_post_probe_selector_decision_packet_summary.get("internal_prediction_policy")
+        ),
+        "massivefold_post_probe_selector_decision_packet_proof_eligible": str(
+            massivefold_post_probe_selector_decision_packet_summary.get("competitive_proof_eligible", "")
+        ),
+        "massivefold_post_probe_selector_decision_packet_next_action": _text(
+            massivefold_post_probe_selector_decision_packet_summary.get("next_action")
+        ),
+        "massivefold_watch_manual_action_packet_status": _text(
+            massivefold_watch_manual_action_packet_summary.get(
+                "massivefold_watch_manual_action_packet_status"
+            )
+        ),
+        "massivefold_watch_manual_action_packet_count": _int(
+            massivefold_watch_manual_action_packet_summary.get("action_count")
+        ),
+        "massivefold_watch_manual_action_packet_ready_count": _int(
+            massivefold_watch_manual_action_packet_summary.get("ready_action_count")
+        ),
+        "massivefold_watch_manual_action_packet_blocked_count": _int(
+            massivefold_watch_manual_action_packet_summary.get("blocked_action_count")
+        ),
+        "massivefold_watch_manual_action_packet_manual_count": _int(
+            massivefold_watch_manual_action_packet_summary.get("manual_alternate_review_count")
+        ),
+        "massivefold_watch_manual_action_packet_interface_count": _int(
+            massivefold_watch_manual_action_packet_summary.get("interface_geometry_review_count")
+        ),
+        "massivefold_watch_manual_action_packet_low_margin_count": _int(
+            massivefold_watch_manual_action_packet_summary.get("low_margin_top5_review_count")
+        ),
+        "massivefold_watch_manual_action_packet_priority1_count": _int(
+            massivefold_watch_manual_action_packet_summary.get("priority1_action_count")
+        ),
+        "massivefold_watch_manual_action_packet_priority2_count": _int(
+            massivefold_watch_manual_action_packet_summary.get("priority2_action_count")
+        ),
+        "massivefold_watch_manual_action_packet_rna_hybrid_count": _int(
+            massivefold_watch_manual_action_packet_summary.get("rna_hybrid_action_count")
+        ),
+        "massivefold_watch_manual_action_packet_protein_complex_count": _int(
+            massivefold_watch_manual_action_packet_summary.get("protein_complex_action_count")
+        ),
+        "massivefold_watch_manual_action_packet_model_present_count": _int(
+            massivefold_watch_manual_action_packet_summary.get("model_present_count")
+        ),
+        "massivefold_watch_manual_action_packet_viewer_present_count": _int(
+            massivefold_watch_manual_action_packet_summary.get("viewer_present_count")
+        ),
+        "massivefold_watch_manual_action_packet_projection_present_count": _int(
+            massivefold_watch_manual_action_packet_summary.get("projection_present_count")
+        ),
+        "massivefold_watch_manual_action_packet_top5_manifest_present_count": _int(
+            massivefold_watch_manual_action_packet_summary.get("top5_manifest_present_count")
+        ),
+        "massivefold_watch_manual_action_packet_alternate_present_count": _int(
+            massivefold_watch_manual_action_packet_summary.get("alternate_present_count")
+        ),
+        "massivefold_watch_manual_action_packet_first_target_id": _text(
+            massivefold_watch_manual_action_packet_summary.get("first_action_target_id")
+        ),
+        "massivefold_watch_manual_action_packet_first_class": _text(
+            massivefold_watch_manual_action_packet_summary.get("first_action_class")
+        ),
+        "massivefold_watch_manual_action_packet_first_priority": _text(
+            massivefold_watch_manual_action_packet_summary.get("first_action_priority")
+        ),
+        "massivefold_watch_manual_action_packet_first_exit": _text(
+            massivefold_watch_manual_action_packet_summary.get("first_exit_criterion")
+        ),
+        "massivefold_watch_manual_action_packet_html": _text(
+            massivefold_watch_manual_action_packet_summary.get("action_html")
+        ),
+        "massivefold_watch_manual_action_packet_policy": _text(
+            massivefold_watch_manual_action_packet_summary.get("internal_prediction_policy")
+        ),
+        "massivefold_watch_manual_action_packet_proof_eligible": str(
+            massivefold_watch_manual_action_packet_summary.get("competitive_proof_eligible", "")
+        ),
+        "massivefold_watch_manual_action_packet_next_action": _text(
+            massivefold_watch_manual_action_packet_summary.get("next_action")
+        ),
+        "massivefold_freeze_candidate_format_preflight_status": _text(
+            massivefold_freeze_candidate_format_preflight_summary.get(
+                "massivefold_freeze_candidate_format_preflight_status"
+            )
+        ),
+        "massivefold_freeze_candidate_format_preflight_count": _int(
+            massivefold_freeze_candidate_format_preflight_summary.get("freeze_candidate_count")
+        ),
+        "massivefold_freeze_candidate_format_preflight_ready_count": _int(
+            massivefold_freeze_candidate_format_preflight_summary.get("ready_preflight_count")
+        ),
+        "massivefold_freeze_candidate_format_preflight_blocked_count": _int(
+            massivefold_freeze_candidate_format_preflight_summary.get("blocked_preflight_count")
+        ),
+        "massivefold_freeze_candidate_format_preflight_existing_count": _int(
+            massivefold_freeze_candidate_format_preflight_summary.get("existing_freeze_candidate_count")
+        ),
+        "massivefold_freeze_candidate_format_preflight_probe_count": _int(
+            massivefold_freeze_candidate_format_preflight_summary.get("probe_freeze_candidate_count")
+        ),
+        "massivefold_freeze_candidate_format_preflight_rna_hybrid_count": _int(
+            massivefold_freeze_candidate_format_preflight_summary.get("rna_hybrid_preflight_count")
+        ),
+        "massivefold_freeze_candidate_format_preflight_protein_complex_count": _int(
+            massivefold_freeze_candidate_format_preflight_summary.get("protein_complex_preflight_count")
+        ),
+        "massivefold_freeze_candidate_format_preflight_selected_pdb_count": _int(
+            massivefold_freeze_candidate_format_preflight_summary.get("selected_pdb_count")
+        ),
+        "massivefold_freeze_candidate_format_preflight_selected_cif_count": _int(
+            massivefold_freeze_candidate_format_preflight_summary.get("selected_cif_count")
+        ),
+        "massivefold_freeze_candidate_format_preflight_packaged_pdb_count": _int(
+            massivefold_freeze_candidate_format_preflight_summary.get("packaged_pdb_count")
+        ),
+        "massivefold_freeze_candidate_format_preflight_packaged_cif_count": _int(
+            massivefold_freeze_candidate_format_preflight_summary.get("packaged_cif_count")
+        ),
+        "massivefold_freeze_candidate_format_preflight_target_id_ok_count": _int(
+            massivefold_freeze_candidate_format_preflight_summary.get("target_id_format_ok_count")
+        ),
+        "massivefold_freeze_candidate_format_preflight_selected_ext_ok_count": _int(
+            massivefold_freeze_candidate_format_preflight_summary.get("selected_extension_ok_count")
+        ),
+        "massivefold_freeze_candidate_format_preflight_packaged_ext_ok_count": _int(
+            massivefold_freeze_candidate_format_preflight_summary.get("packaged_extension_ok_count")
+        ),
+        "massivefold_freeze_candidate_format_preflight_model_present_count": _int(
+            massivefold_freeze_candidate_format_preflight_summary.get("model_present_count")
+        ),
+        "massivefold_freeze_candidate_format_preflight_model_nonempty_count": _int(
+            massivefold_freeze_candidate_format_preflight_summary.get("model_nonempty_count")
+        ),
+        "massivefold_freeze_candidate_format_preflight_viewer_present_count": _int(
+            massivefold_freeze_candidate_format_preflight_summary.get("viewer_present_count")
+        ),
+        "massivefold_freeze_candidate_format_preflight_projection_present_count": _int(
+            massivefold_freeze_candidate_format_preflight_summary.get("projection_present_count")
+        ),
+        "massivefold_freeze_candidate_format_preflight_top5_manifest_present_count": _int(
+            massivefold_freeze_candidate_format_preflight_summary.get("top5_manifest_present_count")
+        ),
+        "massivefold_freeze_candidate_format_preflight_first_target_id": _text(
+            massivefold_freeze_candidate_format_preflight_summary.get("first_preflight_target_id")
+        ),
+        "massivefold_freeze_candidate_format_preflight_first_model_filename": _text(
+            massivefold_freeze_candidate_format_preflight_summary.get("first_preflight_model_filename")
+        ),
+        "massivefold_freeze_candidate_format_preflight_html": _text(
+            massivefold_freeze_candidate_format_preflight_summary.get("preflight_html")
+        ),
+        "massivefold_freeze_candidate_format_preflight_policy": _text(
+            massivefold_freeze_candidate_format_preflight_summary.get("internal_prediction_policy")
+        ),
+        "massivefold_freeze_candidate_format_preflight_proof_eligible": str(
+            massivefold_freeze_candidate_format_preflight_summary.get("competitive_proof_eligible", "")
+        ),
+        "massivefold_freeze_candidate_format_preflight_next_action": _text(
+            massivefold_freeze_candidate_format_preflight_summary.get("next_action")
+        ),
+        "massivefold_freeze_candidate_escrow_status": _text(
+            massivefold_freeze_candidate_escrow_summary.get("massivefold_freeze_candidate_escrow_status")
+        ),
+        "massivefold_freeze_candidate_escrow_count": _int(
+            massivefold_freeze_candidate_escrow_summary.get("escrow_count")
+        ),
+        "massivefold_freeze_candidate_escrow_ready_count": _int(
+            massivefold_freeze_candidate_escrow_summary.get("ready_escrow_count")
+        ),
+        "massivefold_freeze_candidate_escrow_blocked_count": _int(
+            massivefold_freeze_candidate_escrow_summary.get("blocked_escrow_count")
+        ),
+        "massivefold_freeze_candidate_escrow_model_sha256_count": _int(
+            massivefold_freeze_candidate_escrow_summary.get("model_sha256_count")
+        ),
+        "massivefold_freeze_candidate_escrow_top5_sha256_count": _int(
+            massivefold_freeze_candidate_escrow_summary.get("top5_sha256_count")
+        ),
+        "massivefold_freeze_candidate_escrow_model_present_count": _int(
+            massivefold_freeze_candidate_escrow_summary.get("model_present_count")
+        ),
+        "massivefold_freeze_candidate_escrow_viewer_present_count": _int(
+            massivefold_freeze_candidate_escrow_summary.get("viewer_present_count")
+        ),
+        "massivefold_freeze_candidate_escrow_projection_present_count": _int(
+            massivefold_freeze_candidate_escrow_summary.get("projection_present_count")
+        ),
+        "massivefold_freeze_candidate_escrow_top5_manifest_present_count": _int(
+            massivefold_freeze_candidate_escrow_summary.get("top5_manifest_present_count")
+        ),
+        "massivefold_freeze_candidate_escrow_existing_count": _int(
+            massivefold_freeze_candidate_escrow_summary.get("existing_freeze_candidate_count")
+        ),
+        "massivefold_freeze_candidate_escrow_probe_count": _int(
+            massivefold_freeze_candidate_escrow_summary.get("probe_freeze_candidate_count")
+        ),
+        "massivefold_freeze_candidate_escrow_rna_hybrid_count": _int(
+            massivefold_freeze_candidate_escrow_summary.get("rna_hybrid_escrow_count")
+        ),
+        "massivefold_freeze_candidate_escrow_protein_complex_count": _int(
+            massivefold_freeze_candidate_escrow_summary.get("protein_complex_escrow_count")
+        ),
+        "massivefold_freeze_candidate_escrow_native_pending_count": _int(
+            massivefold_freeze_candidate_escrow_summary.get("native_pending_count")
+        ),
+        "massivefold_freeze_candidate_escrow_proof_eligible_count": _int(
+            massivefold_freeze_candidate_escrow_summary.get("competitive_proof_eligible_count")
+        ),
+        "massivefold_freeze_candidate_escrow_author_serialized_count": _int(
+            massivefold_freeze_candidate_escrow_summary.get("author_serialized_count")
+        ),
+        "massivefold_freeze_candidate_escrow_first_target_id": _text(
+            massivefold_freeze_candidate_escrow_summary.get("first_escrow_target_id")
+        ),
+        "massivefold_freeze_candidate_escrow_first_blocked_target_id": _text(
+            massivefold_freeze_candidate_escrow_summary.get("first_blocked_target_id")
+        ),
+        "massivefold_freeze_candidate_escrow_manifest_signature_sha256": _text(
+            massivefold_freeze_candidate_escrow_summary.get("manifest_signature_sha256")
+        ),
+        "massivefold_freeze_candidate_escrow_policy": _text(
+            massivefold_freeze_candidate_escrow_summary.get("internal_prediction_policy")
+        ),
+        "massivefold_freeze_candidate_escrow_next_action": _text(
+            massivefold_freeze_candidate_escrow_summary.get("next_action")
+        ),
+        "massivefold_freeze_candidate_protein_library_status": _text(
+            massivefold_freeze_candidate_protein_library_summary.get(
+                "massivefold_freeze_candidate_protein_library_status"
+            )
+        ),
+        "massivefold_freeze_candidate_protein_library_protein_count": _int(
+            massivefold_freeze_candidate_protein_library_summary.get("protein_count")
+        ),
+        "massivefold_freeze_candidate_protein_library_protein_ready_count": _int(
+            massivefold_freeze_candidate_protein_library_summary.get("protein_ready_count")
+        ),
+        "massivefold_freeze_candidate_protein_library_protein_blocked_count": _int(
+            massivefold_freeze_candidate_protein_library_summary.get("protein_blocked_count")
+        ),
+        "massivefold_freeze_candidate_protein_library_object_count": _int(
+            massivefold_freeze_candidate_protein_library_summary.get("object_count")
+        ),
+        "massivefold_freeze_candidate_protein_library_object_ready_count": _int(
+            massivefold_freeze_candidate_protein_library_summary.get("object_ready_count")
+        ),
+        "massivefold_freeze_candidate_protein_library_object_blocked_count": _int(
+            massivefold_freeze_candidate_protein_library_summary.get("object_blocked_count")
+        ),
+        "massivefold_freeze_candidate_protein_library_model_link_count": _int(
+            massivefold_freeze_candidate_protein_library_summary.get("model_link_count")
+        ),
+        "massivefold_freeze_candidate_protein_library_viewer_link_count": _int(
+            massivefold_freeze_candidate_protein_library_summary.get("viewer_link_count")
+        ),
+        "massivefold_freeze_candidate_protein_library_projection_link_count": _int(
+            massivefold_freeze_candidate_protein_library_summary.get("projection_link_count")
+        ),
+        "massivefold_freeze_candidate_protein_library_top5_link_count": _int(
+            massivefold_freeze_candidate_protein_library_summary.get("top5_link_count")
+        ),
+        "massivefold_freeze_candidate_protein_library_escrow_link_count": _int(
+            massivefold_freeze_candidate_protein_library_summary.get("escrow_link_count")
+        ),
+        "massivefold_freeze_candidate_protein_library_model_sha256_count": _int(
+            massivefold_freeze_candidate_protein_library_summary.get("model_sha256_count")
+        ),
+        "massivefold_freeze_candidate_protein_library_top5_sha256_count": _int(
+            massivefold_freeze_candidate_protein_library_summary.get("top5_sha256_count")
+        ),
+        "massivefold_freeze_candidate_protein_library_current_name_count": _int(
+            massivefold_freeze_candidate_protein_library_summary.get("current_name_count")
+        ),
+        "massivefold_freeze_candidate_protein_library_official_name_count": _int(
+            massivefold_freeze_candidate_protein_library_summary.get("official_name_count")
+        ),
+        "massivefold_freeze_candidate_protein_library_rna_hybrid_count": _int(
+            massivefold_freeze_candidate_protein_library_summary.get("rna_hybrid_count")
+        ),
+        "massivefold_freeze_candidate_protein_library_protein_complex_count": _int(
+            massivefold_freeze_candidate_protein_library_summary.get("protein_complex_count")
+        ),
+        "massivefold_freeze_candidate_protein_library_proof_eligible_count": _int(
+            massivefold_freeze_candidate_protein_library_summary.get("competitive_proof_eligible_count")
+        ),
+        "massivefold_freeze_candidate_protein_library_author_serialized_count": _int(
+            massivefold_freeze_candidate_protein_library_summary.get("author_serialized_count")
+        ),
+        "massivefold_freeze_candidate_protein_library_first_protein_key": _text(
+            massivefold_freeze_candidate_protein_library_summary.get("first_protein_key")
+        ),
+        "massivefold_freeze_candidate_protein_library_first_blocked_protein_key": _text(
+            massivefold_freeze_candidate_protein_library_summary.get("first_blocked_protein_key")
+        ),
+        "massivefold_freeze_candidate_protein_library_html": _text(
+            massivefold_freeze_candidate_protein_library_summary.get("html_catalog_path")
+        ),
+        "massivefold_freeze_candidate_protein_library_policy": _text(
+            massivefold_freeze_candidate_protein_library_summary.get("internal_prediction_policy")
+        ),
+        "massivefold_freeze_candidate_protein_library_next_action": _text(
+            massivefold_freeze_candidate_protein_library_summary.get("next_action")
         ),
         "capri_round65_readiness_status": _text(
             capri_round65_readiness_summary.get("capri_readiness_status")
@@ -9382,6 +15423,654 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "historical_seed_official_archive_baseline_lane_first_manifest": _text(
             historical_seed_official_archive_baseline_lane_summary.get("first_acquisition_manifest")
         ),
+        "official_archive_first_baseline_acquisition_audit_status": _text(
+            official_archive_first_baseline_acquisition_audit_summary.get(
+                "official_archive_first_baseline_acquisition_audit_status"
+            )
+        ),
+        "official_archive_first_baseline_acquisition_audit_first_candidate_id": _text(
+            official_archive_first_baseline_acquisition_audit_summary.get("first_baseline_candidate_id")
+        ),
+        "official_archive_first_baseline_acquisition_audit_first_competition": _text(
+            official_archive_first_baseline_acquisition_audit_summary.get("first_competition")
+        ),
+        "official_archive_first_baseline_acquisition_audit_first_target_id": _text(
+            official_archive_first_baseline_acquisition_audit_summary.get("first_target_id")
+        ),
+        "official_archive_first_baseline_acquisition_audit_first_native_pdb_code": _text(
+            official_archive_first_baseline_acquisition_audit_summary.get("first_native_pdb_code")
+        ),
+        "official_archive_first_baseline_acquisition_audit_ready_artifact_count": _int(
+            official_archive_first_baseline_acquisition_audit_summary.get("ready_artifact_count")
+        ),
+        "official_archive_first_baseline_acquisition_audit_blocked_artifact_count": _int(
+            official_archive_first_baseline_acquisition_audit_summary.get("blocked_artifact_count")
+        ),
+        "official_archive_first_baseline_acquisition_audit_artifact_count": _int(
+            official_archive_first_baseline_acquisition_audit_summary.get("artifact_count")
+        ),
+        "official_archive_first_baseline_acquisition_audit_tarball_present": _text(
+            official_archive_first_baseline_acquisition_audit_summary.get("tarball_present")
+        ),
+        "official_archive_first_baseline_acquisition_audit_tarball_size_bytes": _int(
+            official_archive_first_baseline_acquisition_audit_summary.get("tarball_size_bytes")
+        ),
+        "official_archive_first_baseline_acquisition_audit_tarball_model_count": _int(
+            official_archive_first_baseline_acquisition_audit_summary.get("tarball_model_count")
+        ),
+        "official_archive_first_baseline_acquisition_audit_native_pdb_present": _text(
+            official_archive_first_baseline_acquisition_audit_summary.get("native_pdb_present")
+        ),
+        "official_archive_first_baseline_acquisition_audit_native_pdb_atom_count": _int(
+            official_archive_first_baseline_acquisition_audit_summary.get("native_pdb_atom_count")
+        ),
+        "official_archive_first_baseline_acquisition_audit_proof_eligible": str(
+            official_archive_first_baseline_acquisition_audit_summary.get("competitive_proof_eligible", "")
+        ),
+        "official_archive_first_baseline_acquisition_audit_policy": _text(
+            official_archive_first_baseline_acquisition_audit_summary.get("strict_blind_intake_policy")
+        ),
+        "official_archive_first_baseline_acquisition_audit_next_action": _text(
+            official_archive_first_baseline_acquisition_audit_summary.get("next_action")
+        ),
+        "official_archive_first_baseline_model_pool_status": _text(
+            official_archive_first_baseline_model_pool_summary.get(
+                "official_archive_first_baseline_model_pool_status"
+            )
+        ),
+        "official_archive_first_baseline_model_pool_first_candidate_id": _text(
+            official_archive_first_baseline_model_pool_summary.get("first_baseline_candidate_id")
+        ),
+        "official_archive_first_baseline_model_pool_first_competition": _text(
+            official_archive_first_baseline_model_pool_summary.get("first_competition")
+        ),
+        "official_archive_first_baseline_model_pool_first_target_id": _text(
+            official_archive_first_baseline_model_pool_summary.get("first_target_id")
+        ),
+        "official_archive_first_baseline_model_pool_first_native_pdb_code": _text(
+            official_archive_first_baseline_model_pool_summary.get("first_native_pdb_code")
+        ),
+        "official_archive_first_baseline_model_pool_expected_model_count": _int(
+            official_archive_first_baseline_model_pool_summary.get("expected_model_count")
+        ),
+        "official_archive_first_baseline_model_pool_ready_model_count": _int(
+            official_archive_first_baseline_model_pool_summary.get("ready_model_count")
+        ),
+        "official_archive_first_baseline_model_pool_blocked_model_count": _int(
+            official_archive_first_baseline_model_pool_summary.get("blocked_model_count")
+        ),
+        "official_archive_first_baseline_model_pool_group_count": _int(
+            official_archive_first_baseline_model_pool_summary.get("group_count")
+        ),
+        "official_archive_first_baseline_model_pool_model1_count": _int(
+            official_archive_first_baseline_model_pool_summary.get("model1_count")
+        ),
+        "official_archive_first_baseline_model_pool_top5_model_count": _int(
+            official_archive_first_baseline_model_pool_summary.get("top5_model_count")
+        ),
+        "official_archive_first_baseline_model_pool_complete_top5_group_count": _int(
+            official_archive_first_baseline_model_pool_summary.get("complete_top5_group_count")
+        ),
+        "official_archive_first_baseline_model_pool_extra_model_count": _int(
+            official_archive_first_baseline_model_pool_summary.get("extra_model_count")
+        ),
+        "official_archive_first_baseline_model_pool_proof_eligible": str(
+            official_archive_first_baseline_model_pool_summary.get("competitive_proof_eligible", "")
+        ),
+        "official_archive_first_baseline_model_pool_policy": _text(
+            official_archive_first_baseline_model_pool_summary.get("strict_blind_intake_policy")
+        ),
+        "official_archive_first_baseline_model_pool_model1_manifest": _text(
+            official_archive_first_baseline_model_pool_summary.get("model1_manifest_csv")
+        ),
+        "official_archive_first_baseline_model_pool_top5_manifest": _text(
+            official_archive_first_baseline_model_pool_summary.get("top5_manifest_csv")
+        ),
+        "official_archive_first_baseline_model_pool_next_action": _text(
+            official_archive_first_baseline_model_pool_summary.get("next_action")
+        ),
+        "official_archive_first_baseline_score_ledger_status": _text(
+            official_archive_first_baseline_score_ledger_summary.get(
+                "official_archive_first_baseline_score_ledger_status"
+            )
+        ),
+        "official_archive_first_baseline_score_ledger_first_candidate_id": _text(
+            official_archive_first_baseline_score_ledger_summary.get("first_baseline_candidate_id")
+        ),
+        "official_archive_first_baseline_score_ledger_first_competition": _text(
+            official_archive_first_baseline_score_ledger_summary.get("first_competition")
+        ),
+        "official_archive_first_baseline_score_ledger_first_target_id": _text(
+            official_archive_first_baseline_score_ledger_summary.get("first_target_id")
+        ),
+        "official_archive_first_baseline_score_ledger_first_native_pdb_code": _text(
+            official_archive_first_baseline_score_ledger_summary.get("first_native_pdb_code")
+        ),
+        "official_archive_first_baseline_score_ledger_top5_model_count": _int(
+            official_archive_first_baseline_score_ledger_summary.get("top5_model_count")
+        ),
+        "official_archive_first_baseline_score_ledger_scored_model_count": _int(
+            official_archive_first_baseline_score_ledger_summary.get("scored_model_count")
+        ),
+        "official_archive_first_baseline_score_ledger_ready_model_count": _int(
+            official_archive_first_baseline_score_ledger_summary.get("ready_model_count")
+        ),
+        "official_archive_first_baseline_score_ledger_blocked_model_count": _int(
+            official_archive_first_baseline_score_ledger_summary.get("blocked_model_count")
+        ),
+        "official_archive_first_baseline_score_ledger_group_count": _int(
+            official_archive_first_baseline_score_ledger_summary.get("group_count")
+        ),
+        "official_archive_first_baseline_score_ledger_model1_group_count": _int(
+            official_archive_first_baseline_score_ledger_summary.get("model1_group_count")
+        ),
+        "official_archive_first_baseline_score_ledger_best_top5_group_count": _int(
+            official_archive_first_baseline_score_ledger_summary.get("best_top5_group_count")
+        ),
+        "official_archive_first_baseline_score_ledger_complete_top5_group_count": _int(
+            official_archive_first_baseline_score_ledger_summary.get("complete_top5_group_count")
+        ),
+        "official_archive_first_baseline_score_ledger_top5_improved_group_count": _int(
+            official_archive_first_baseline_score_ledger_summary.get("top5_improved_group_count")
+        ),
+        "official_archive_first_baseline_score_ledger_mean_model1_gdt_ts_proxy": _text(
+            official_archive_first_baseline_score_ledger_summary.get("mean_model1_gdt_ts_proxy")
+        ),
+        "official_archive_first_baseline_score_ledger_mean_best_top5_gdt_ts_proxy": _text(
+            official_archive_first_baseline_score_ledger_summary.get("mean_best_top5_gdt_ts_proxy")
+        ),
+        "official_archive_first_baseline_score_ledger_mean_best_minus_model1_gdt_ts_proxy": _text(
+            official_archive_first_baseline_score_ledger_summary.get("mean_best_minus_model1_gdt_ts_proxy")
+        ),
+        "official_archive_first_baseline_score_ledger_max_gap_group_id": _text(
+            official_archive_first_baseline_score_ledger_summary.get("max_gap_group_id")
+        ),
+        "official_archive_first_baseline_score_ledger_max_gap": _text(
+            official_archive_first_baseline_score_ledger_summary.get("max_best_minus_model1_gdt_ts_proxy")
+        ),
+        "official_archive_first_baseline_score_ledger_proof_eligible": str(
+            official_archive_first_baseline_score_ledger_summary.get("competitive_proof_eligible", "")
+        ),
+        "official_archive_first_baseline_score_ledger_policy": _text(
+            official_archive_first_baseline_score_ledger_summary.get("strict_blind_intake_policy")
+        ),
+        "official_archive_first_baseline_score_ledger_group_score_csv": _text(
+            official_archive_first_baseline_score_ledger_summary.get("group_score_csv")
+        ),
+        "official_archive_first_baseline_score_ledger_model_score_csv": _text(
+            official_archive_first_baseline_score_ledger_summary.get("model_score_csv")
+        ),
+        "official_archive_first_baseline_score_ledger_next_action": _text(
+            official_archive_first_baseline_score_ledger_summary.get("next_action")
+        ),
+        "official_archive_first_baseline_replay_comparison_status": _text(
+            official_archive_first_baseline_replay_comparison_summary.get(
+                "official_archive_first_baseline_replay_comparison_status"
+            )
+        ),
+        "official_archive_first_baseline_replay_comparison_first_candidate_id": _text(
+            official_archive_first_baseline_replay_comparison_summary.get("first_baseline_candidate_id")
+        ),
+        "official_archive_first_baseline_replay_comparison_first_competition": _text(
+            official_archive_first_baseline_replay_comparison_summary.get("first_competition")
+        ),
+        "official_archive_first_baseline_replay_comparison_first_target_id": _text(
+            official_archive_first_baseline_replay_comparison_summary.get("first_target_id")
+        ),
+        "official_archive_first_baseline_replay_comparison_first_native_pdb_code": _text(
+            official_archive_first_baseline_replay_comparison_summary.get("first_native_pdb_code")
+        ),
+        "official_archive_first_baseline_replay_comparison_band_count": _int(
+            official_archive_first_baseline_replay_comparison_summary.get("band_count")
+        ),
+        "official_archive_first_baseline_replay_comparison_direct_comparable_band_count": _int(
+            official_archive_first_baseline_replay_comparison_summary.get("direct_comparable_band_count")
+        ),
+        "official_archive_first_baseline_replay_comparison_blocked_band_count": _int(
+            official_archive_first_baseline_replay_comparison_summary.get("blocked_band_count")
+        ),
+        "official_archive_first_baseline_replay_comparison_direct_status": _text(
+            official_archive_first_baseline_replay_comparison_summary.get("direct_comparison_status")
+        ),
+        "official_archive_first_baseline_replay_comparison_scored_model_count": _int(
+            official_archive_first_baseline_replay_comparison_summary.get("scored_model_count")
+        ),
+        "official_archive_first_baseline_replay_comparison_group_count": _int(
+            official_archive_first_baseline_replay_comparison_summary.get("group_count")
+        ),
+        "official_archive_first_baseline_replay_comparison_ready_group_count": _int(
+            official_archive_first_baseline_replay_comparison_summary.get("ready_group_count")
+        ),
+        "official_archive_first_baseline_replay_comparison_model1_best_group_count": _int(
+            official_archive_first_baseline_replay_comparison_summary.get("model1_best_group_count")
+        ),
+        "official_archive_first_baseline_replay_comparison_top5_improved_group_count": _int(
+            official_archive_first_baseline_replay_comparison_summary.get("top5_improved_group_count")
+        ),
+        "official_archive_first_baseline_replay_comparison_model1_best_rate": _text(
+            official_archive_first_baseline_replay_comparison_summary.get("model1_best_rate")
+        ),
+        "official_archive_first_baseline_replay_comparison_top5_improved_rate": _text(
+            official_archive_first_baseline_replay_comparison_summary.get("top5_improved_rate")
+        ),
+        "official_archive_first_baseline_replay_comparison_mean_model1_gdt_ts_proxy": _text(
+            official_archive_first_baseline_replay_comparison_summary.get("mean_model1_gdt_ts_proxy")
+        ),
+        "official_archive_first_baseline_replay_comparison_mean_best_top5_gdt_ts_proxy": _text(
+            official_archive_first_baseline_replay_comparison_summary.get("mean_best_top5_gdt_ts_proxy")
+        ),
+        "official_archive_first_baseline_replay_comparison_mean_best_minus_model1_gdt_ts_proxy": _text(
+            official_archive_first_baseline_replay_comparison_summary.get("mean_best_minus_model1_gdt_ts_proxy")
+        ),
+        "official_archive_first_baseline_replay_comparison_proof_eligible": str(
+            official_archive_first_baseline_replay_comparison_summary.get("competitive_proof_eligible", "")
+        ),
+        "official_archive_first_baseline_replay_comparison_policy": _text(
+            official_archive_first_baseline_replay_comparison_summary.get("strict_blind_intake_policy")
+        ),
+        "official_archive_first_baseline_replay_comparison_csv": _text(
+            official_archive_first_baseline_replay_comparison_summary.get("comparison_csv")
+        ),
+        "official_archive_first_baseline_replay_comparison_next_action": _text(
+            official_archive_first_baseline_replay_comparison_summary.get("next_action")
+        ),
+        "official_archive_first_baseline_model1_gap_triage_status": _text(
+            official_archive_first_baseline_model1_gap_triage_summary.get(
+                "official_archive_first_baseline_model1_gap_triage_status"
+            )
+        ),
+        "official_archive_first_baseline_model1_gap_triage_first_candidate_id": _text(
+            official_archive_first_baseline_model1_gap_triage_summary.get("first_baseline_candidate_id")
+        ),
+        "official_archive_first_baseline_model1_gap_triage_first_competition": _text(
+            official_archive_first_baseline_model1_gap_triage_summary.get("first_competition")
+        ),
+        "official_archive_first_baseline_model1_gap_triage_first_target_id": _text(
+            official_archive_first_baseline_model1_gap_triage_summary.get("first_target_id")
+        ),
+        "official_archive_first_baseline_model1_gap_triage_first_native_pdb_code": _text(
+            official_archive_first_baseline_model1_gap_triage_summary.get("first_native_pdb_code")
+        ),
+        "official_archive_first_baseline_model1_gap_triage_group_count": _int(
+            official_archive_first_baseline_model1_gap_triage_summary.get("group_count")
+        ),
+        "official_archive_first_baseline_model1_gap_triage_ready_group_count": _int(
+            official_archive_first_baseline_model1_gap_triage_summary.get("ready_group_count")
+        ),
+        "official_archive_first_baseline_model1_gap_triage_blocked_group_count": _int(
+            official_archive_first_baseline_model1_gap_triage_summary.get("blocked_group_count")
+        ),
+        "official_archive_first_baseline_model1_gap_triage_model1_best_group_count": _int(
+            official_archive_first_baseline_model1_gap_triage_summary.get("model1_best_group_count")
+        ),
+        "official_archive_first_baseline_model1_gap_triage_top5_improved_group_count": _int(
+            official_archive_first_baseline_model1_gap_triage_summary.get("top5_improved_group_count")
+        ),
+        "official_archive_first_baseline_model1_gap_triage_model1_best_rate": _text(
+            official_archive_first_baseline_model1_gap_triage_summary.get("model1_best_rate")
+        ),
+        "official_archive_first_baseline_model1_gap_triage_top5_improved_rate": _text(
+            official_archive_first_baseline_model1_gap_triage_summary.get("top5_improved_rate")
+        ),
+        "official_archive_first_baseline_model1_gap_triage_small_gap_count": _int(
+            official_archive_first_baseline_model1_gap_triage_summary.get("small_gap_count")
+        ),
+        "official_archive_first_baseline_model1_gap_triage_medium_gap_count": _int(
+            official_archive_first_baseline_model1_gap_triage_summary.get("medium_gap_count")
+        ),
+        "official_archive_first_baseline_model1_gap_triage_large_gap_count": _int(
+            official_archive_first_baseline_model1_gap_triage_summary.get("large_gap_count")
+        ),
+        "official_archive_first_baseline_model1_gap_triage_catastrophic_gap_count": _int(
+            official_archive_first_baseline_model1_gap_triage_summary.get("catastrophic_gap_count")
+        ),
+        "official_archive_first_baseline_model1_gap_triage_calibration_case_count": _int(
+            official_archive_first_baseline_model1_gap_triage_summary.get("calibration_case_count")
+        ),
+        "official_archive_first_baseline_model1_gap_triage_critical_case_count": _int(
+            official_archive_first_baseline_model1_gap_triage_summary.get("critical_calibration_case_count")
+        ),
+        "official_archive_first_baseline_model1_gap_triage_first_group_id": _text(
+            official_archive_first_baseline_model1_gap_triage_summary.get("first_triage_group_id")
+        ),
+        "official_archive_first_baseline_model1_gap_triage_first_band": _text(
+            official_archive_first_baseline_model1_gap_triage_summary.get("first_triage_band")
+        ),
+        "official_archive_first_baseline_model1_gap_triage_first_delta": _text(
+            official_archive_first_baseline_model1_gap_triage_summary.get("first_triage_delta")
+        ),
+        "official_archive_first_baseline_model1_gap_triage_first_action": _text(
+            official_archive_first_baseline_model1_gap_triage_summary.get("first_triage_action")
+        ),
+        "official_archive_first_baseline_model1_gap_triage_proof_eligible": str(
+            official_archive_first_baseline_model1_gap_triage_summary.get("competitive_proof_eligible", "")
+        ),
+        "official_archive_first_baseline_model1_gap_triage_policy": _text(
+            official_archive_first_baseline_model1_gap_triage_summary.get("strict_blind_intake_policy")
+        ),
+        "official_archive_first_baseline_model1_gap_triage_triage_csv": _text(
+            official_archive_first_baseline_model1_gap_triage_summary.get("triage_csv")
+        ),
+        "official_archive_first_baseline_model1_gap_triage_top_gap_worklist_csv": _text(
+            official_archive_first_baseline_model1_gap_triage_summary.get("top_gap_worklist_csv")
+        ),
+        "official_archive_first_baseline_model1_gap_triage_next_action": _text(
+            official_archive_first_baseline_model1_gap_triage_summary.get("next_action")
+        ),
+        "official_archive_first_baseline_model1_gap_viewer_packet_status": _text(
+            official_archive_first_baseline_model1_gap_viewer_packet_summary.get(
+                "official_archive_first_baseline_model1_gap_viewer_packet_status"
+            )
+        ),
+        "official_archive_first_baseline_model1_gap_viewer_packet_first_candidate_id": _text(
+            official_archive_first_baseline_model1_gap_viewer_packet_summary.get("first_baseline_candidate_id")
+        ),
+        "official_archive_first_baseline_model1_gap_viewer_packet_first_competition": _text(
+            official_archive_first_baseline_model1_gap_viewer_packet_summary.get("first_competition")
+        ),
+        "official_archive_first_baseline_model1_gap_viewer_packet_first_target_id": _text(
+            official_archive_first_baseline_model1_gap_viewer_packet_summary.get("first_target_id")
+        ),
+        "official_archive_first_baseline_model1_gap_viewer_packet_first_native_pdb_code": _text(
+            official_archive_first_baseline_model1_gap_viewer_packet_summary.get("first_native_pdb_code")
+        ),
+        "official_archive_first_baseline_model1_gap_viewer_packet_selected_case_count": _int(
+            official_archive_first_baseline_model1_gap_viewer_packet_summary.get("selected_case_count")
+        ),
+        "official_archive_first_baseline_model1_gap_viewer_packet_viewer_ready_count": _int(
+            official_archive_first_baseline_model1_gap_viewer_packet_summary.get("viewer_ready_count")
+        ),
+        "official_archive_first_baseline_model1_gap_viewer_packet_viewer_blocked_count": _int(
+            official_archive_first_baseline_model1_gap_viewer_packet_summary.get("viewer_blocked_count")
+        ),
+        "official_archive_first_baseline_model1_gap_viewer_packet_catastrophic_case_count": _int(
+            official_archive_first_baseline_model1_gap_viewer_packet_summary.get("catastrophic_case_count")
+        ),
+        "official_archive_first_baseline_model1_gap_viewer_packet_large_case_count": _int(
+            official_archive_first_baseline_model1_gap_viewer_packet_summary.get("large_case_count")
+        ),
+        "official_archive_first_baseline_model1_gap_viewer_packet_copied_model_pair_count": _int(
+            official_archive_first_baseline_model1_gap_viewer_packet_summary.get("copied_model_pair_count")
+        ),
+        "official_archive_first_baseline_model1_gap_viewer_packet_native_reference_ready": str(
+            official_archive_first_baseline_model1_gap_viewer_packet_summary.get("native_reference_ready", "")
+        ),
+        "official_archive_first_baseline_model1_gap_viewer_packet_first_group_id": _text(
+            official_archive_first_baseline_model1_gap_viewer_packet_summary.get("first_viewer_group_id")
+        ),
+        "official_archive_first_baseline_model1_gap_viewer_packet_first_band": _text(
+            official_archive_first_baseline_model1_gap_viewer_packet_summary.get("first_viewer_band")
+        ),
+        "official_archive_first_baseline_model1_gap_viewer_packet_first_delta": _text(
+            official_archive_first_baseline_model1_gap_viewer_packet_summary.get("first_viewer_delta")
+        ),
+        "official_archive_first_baseline_model1_gap_viewer_packet_first_viewer_html": _text(
+            official_archive_first_baseline_model1_gap_viewer_packet_summary.get("first_viewer_html")
+        ),
+        "official_archive_first_baseline_model1_gap_viewer_packet_first_projection_svg": _text(
+            official_archive_first_baseline_model1_gap_viewer_packet_summary.get("first_projection_svg")
+        ),
+        "official_archive_first_baseline_model1_gap_viewer_packet_gallery_html": _text(
+            official_archive_first_baseline_model1_gap_viewer_packet_summary.get("gallery_html")
+        ),
+        "official_archive_first_baseline_model1_gap_viewer_packet_manifest_csv": _text(
+            official_archive_first_baseline_model1_gap_viewer_packet_summary.get("manifest_csv")
+        ),
+        "official_archive_first_baseline_model1_gap_viewer_packet_proof_eligible": str(
+            official_archive_first_baseline_model1_gap_viewer_packet_summary.get("competitive_proof_eligible", "")
+        ),
+        "official_archive_first_baseline_model1_gap_viewer_packet_policy": _text(
+            official_archive_first_baseline_model1_gap_viewer_packet_summary.get("strict_blind_intake_policy")
+        ),
+        "official_archive_first_baseline_model1_gap_viewer_packet_next_action": _text(
+            official_archive_first_baseline_model1_gap_viewer_packet_summary.get("next_action")
+        ),
+        "official_archive_first_baseline_model1_gap_feature_probe_status": _text(
+            official_archive_first_baseline_model1_gap_feature_probe_summary.get(
+                "official_archive_first_baseline_model1_gap_feature_probe_status"
+            )
+        ),
+        "official_archive_first_baseline_model1_gap_feature_probe_first_candidate_id": _text(
+            official_archive_first_baseline_model1_gap_feature_probe_summary.get("first_baseline_candidate_id")
+        ),
+        "official_archive_first_baseline_model1_gap_feature_probe_first_competition": _text(
+            official_archive_first_baseline_model1_gap_feature_probe_summary.get("first_competition")
+        ),
+        "official_archive_first_baseline_model1_gap_feature_probe_first_target_id": _text(
+            official_archive_first_baseline_model1_gap_feature_probe_summary.get("first_target_id")
+        ),
+        "official_archive_first_baseline_model1_gap_feature_probe_first_native_pdb_code": _text(
+            official_archive_first_baseline_model1_gap_feature_probe_summary.get("first_native_pdb_code")
+        ),
+        "official_archive_first_baseline_model1_gap_feature_probe_selected_case_count": _int(
+            official_archive_first_baseline_model1_gap_feature_probe_summary.get("selected_case_count")
+        ),
+        "official_archive_first_baseline_model1_gap_feature_probe_ready_count": _int(
+            official_archive_first_baseline_model1_gap_feature_probe_summary.get("feature_ready_count")
+        ),
+        "official_archive_first_baseline_model1_gap_feature_probe_blocked_count": _int(
+            official_archive_first_baseline_model1_gap_feature_probe_summary.get("feature_blocked_count")
+        ),
+        "official_archive_first_baseline_model1_gap_feature_probe_matrix_row_count": _int(
+            official_archive_first_baseline_model1_gap_feature_probe_summary.get("matrix_row_count")
+        ),
+        "official_archive_first_baseline_model1_gap_feature_probe_supports_best_count": _int(
+            official_archive_first_baseline_model1_gap_feature_probe_summary.get("supports_best_top5_count")
+        ),
+        "official_archive_first_baseline_model1_gap_feature_probe_supports_model1_count": _int(
+            official_archive_first_baseline_model1_gap_feature_probe_summary.get("supports_model1_count")
+        ),
+        "official_archive_first_baseline_model1_gap_feature_probe_ambiguous_count": _int(
+            official_archive_first_baseline_model1_gap_feature_probe_summary.get("ambiguous_count")
+        ),
+        "official_archive_first_baseline_model1_gap_feature_probe_supports_best_rate": _text(
+            official_archive_first_baseline_model1_gap_feature_probe_summary.get("supports_best_top5_rate")
+        ),
+        "official_archive_first_baseline_model1_gap_feature_probe_catastrophic_count": _int(
+            official_archive_first_baseline_model1_gap_feature_probe_summary.get("catastrophic_case_count")
+        ),
+        "official_archive_first_baseline_model1_gap_feature_probe_large_count": _int(
+            official_archive_first_baseline_model1_gap_feature_probe_summary.get("large_case_count")
+        ),
+        "official_archive_first_baseline_model1_gap_feature_probe_first_group_id": _text(
+            official_archive_first_baseline_model1_gap_feature_probe_summary.get("first_signal_group_id")
+        ),
+        "official_archive_first_baseline_model1_gap_feature_probe_first_signal": _text(
+            official_archive_first_baseline_model1_gap_feature_probe_summary.get("first_signal")
+        ),
+        "official_archive_first_baseline_model1_gap_feature_probe_first_model1_risk": _text(
+            official_archive_first_baseline_model1_gap_feature_probe_summary.get("first_model1_geometry_risk_score")
+        ),
+        "official_archive_first_baseline_model1_gap_feature_probe_first_best_risk": _text(
+            official_archive_first_baseline_model1_gap_feature_probe_summary.get("first_best_top5_geometry_risk_score")
+        ),
+        "official_archive_first_baseline_model1_gap_feature_probe_first_risk_delta": _text(
+            official_archive_first_baseline_model1_gap_feature_probe_summary.get("first_risk_delta_model1_minus_best")
+        ),
+        "official_archive_first_baseline_model1_gap_feature_probe_feature_csv": _text(
+            official_archive_first_baseline_model1_gap_feature_probe_summary.get("feature_probe_csv")
+        ),
+        "official_archive_first_baseline_model1_gap_feature_probe_pair_matrix_csv": _text(
+            official_archive_first_baseline_model1_gap_feature_probe_summary.get("pair_feature_matrix_csv")
+        ),
+        "official_archive_first_baseline_model1_gap_feature_probe_proof_eligible": str(
+            official_archive_first_baseline_model1_gap_feature_probe_summary.get("competitive_proof_eligible", "")
+        ),
+        "official_archive_first_baseline_model1_gap_feature_probe_policy": _text(
+            official_archive_first_baseline_model1_gap_feature_probe_summary.get("strict_blind_intake_policy")
+        ),
+        "official_archive_first_baseline_model1_gap_feature_probe_next_action": _text(
+            official_archive_first_baseline_model1_gap_feature_probe_summary.get("next_action")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_status": _text(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get(
+                "official_archive_first_baseline_model1_gap_consensus_probe_status"
+            )
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_first_candidate_id": _text(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("first_baseline_candidate_id")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_first_competition": _text(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("first_competition")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_first_target_id": _text(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("first_target_id")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_first_native_pdb_code": _text(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("first_native_pdb_code")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_selected_case_count": _int(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("selected_case_count")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_ready_count": _int(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("consensus_ready_count")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_blocked_count": _int(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("consensus_blocked_count")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_pairwise_row_count": _int(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("pairwise_row_count")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_supports_best_count": _int(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("supports_best_top5_count")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_supports_model1_count": _int(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("supports_model1_count")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_ambiguous_count": _int(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("ambiguous_count")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_supports_best_rate": _text(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("supports_best_top5_rate")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_top_matches_best_count": _int(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("consensus_top_matches_best_count")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_top_matches_model1_count": _int(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("consensus_top_matches_model1_count")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_catastrophic_count": _int(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("catastrophic_case_count")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_large_count": _int(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("large_case_count")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_first_group_id": _text(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("first_signal_group_id")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_first_signal": _text(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("first_signal")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_first_model1_rank": _text(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("first_model1_consensus_rank")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_first_best_rank": _text(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("first_best_top5_consensus_rank")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_first_top_model_id": _text(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("first_consensus_top_model_id")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_first_margin": _text(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("first_consensus_margin_model1_minus_best")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_csv": _text(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("consensus_probe_csv")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_pairwise_csv": _text(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("pairwise_consensus_matrix_csv")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_proof_eligible": str(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("competitive_proof_eligible", "")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_policy": _text(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("strict_blind_intake_policy")
+        ),
+        "official_archive_first_baseline_model1_gap_consensus_probe_next_action": _text(
+            official_archive_first_baseline_model1_gap_consensus_probe_summary.get("next_action")
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_status": _text(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get(
+                "official_archive_first_baseline_model1_gap_combined_selector_ledger_status"
+            )
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_first_candidate_id": _text(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("first_baseline_candidate_id")
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_first_competition": _text(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("first_competition")
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_first_target_id": _text(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("first_target_id")
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_first_native_pdb_code": _text(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("first_native_pdb_code")
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_selected_case_count": _int(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("selected_case_count")
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_ready_count": _int(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("selector_ready_count")
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_blocked_count": _int(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("selector_blocked_count")
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_promote_count": _int(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("promote_best_top5_count")
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_retain_count": _int(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("retain_model1_count")
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_hold_count": _int(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("hold_manual_review_count")
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_corrected_count": _int(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("corrected_model1_failure_count")
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_retained_failure_count": _int(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("retained_model1_failure_count")
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_manual_failure_count": _int(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("manual_hold_model1_failure_count")
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_false_positive_count": _int(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("false_positive_demote_count")
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_capture_rate": _text(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("baseline_capture_rate")
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_non_capture_rate": _text(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("baseline_non_capture_rate")
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_catastrophic_count": _int(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("catastrophic_case_count")
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_large_count": _int(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("large_case_count")
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_first_group_id": _text(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("first_selector_group_id")
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_first_decision": _text(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("first_selector_decision")
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_first_selected_model_id": _text(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("first_selected_model_id")
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_first_result": _text(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("first_baseline_result")
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_csv": _text(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("combined_selector_csv")
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_proof_eligible": str(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("competitive_proof_eligible", "")
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_policy": _text(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("strict_blind_intake_policy")
+        ),
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_next_action": _text(
+            official_archive_first_baseline_model1_gap_combined_selector_ledger_summary.get("next_action")
+        ),
         "strict_blind_first_slot_source_bridge_status": _text(
             strict_blind_first_slot_source_bridge_summary.get("source_bridge_status")
         ),
@@ -9483,6 +16172,140 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         ),
         "strict_blind_internal_prediction_source_audit_first_blocker": _text(
             strict_blind_internal_prediction_source_audit_summary.get("first_blocker")
+        ),
+        "strict_blind_internal_candidate_filesystem_sweep_status": _text(
+            strict_blind_internal_candidate_filesystem_sweep_summary.get("filesystem_sweep_status")
+        ),
+        "strict_blind_internal_candidate_filesystem_sweep_scan_root": _text(
+            strict_blind_internal_candidate_filesystem_sweep_summary.get("scan_root")
+        ),
+        "strict_blind_internal_candidate_filesystem_sweep_file_count": _int(
+            strict_blind_internal_candidate_filesystem_sweep_summary.get("scanned_structure_file_count")
+        ),
+        "strict_blind_internal_candidate_filesystem_sweep_atom_like_count": _int(
+            strict_blind_internal_candidate_filesystem_sweep_summary.get("atom_like_file_count")
+        ),
+        "strict_blind_internal_candidate_filesystem_sweep_verified_count": _int(
+            strict_blind_internal_candidate_filesystem_sweep_summary.get("verified_pre_native_internal_count")
+        ),
+        "strict_blind_internal_candidate_filesystem_sweep_unknown_count": _int(
+            strict_blind_internal_candidate_filesystem_sweep_summary.get("unknown_possible_internal_review_count")
+        ),
+        "strict_blind_internal_candidate_filesystem_sweep_current_count": _int(
+            strict_blind_internal_candidate_filesystem_sweep_summary.get("current_casp17_or_review_only_count")
+        ),
+        "strict_blind_internal_candidate_filesystem_sweep_massivefold_count": _int(
+            strict_blind_internal_candidate_filesystem_sweep_summary.get("massivefold_external_baseline_only_count")
+        ),
+        "strict_blind_internal_candidate_filesystem_sweep_official_count": _int(
+            strict_blind_internal_candidate_filesystem_sweep_summary.get("official_archive_baseline_only_count")
+        ),
+        "strict_blind_internal_candidate_filesystem_sweep_native_count": _int(
+            strict_blind_internal_candidate_filesystem_sweep_summary.get("native_or_reference_not_prediction_count")
+        ),
+        "strict_blind_internal_candidate_filesystem_sweep_top5_count": _int(
+            strict_blind_internal_candidate_filesystem_sweep_summary.get(
+                "historical_seed_top5_post_native_review_only_count"
+            )
+        ),
+        "strict_blind_internal_candidate_filesystem_sweep_dropzone_count": _int(
+            strict_blind_internal_candidate_filesystem_sweep_summary.get("strict_blind_dropzone_unverified_count")
+        ),
+        "strict_blind_internal_candidate_filesystem_sweep_first_unknown": _text(
+            strict_blind_internal_candidate_filesystem_sweep_summary.get("first_unknown_sample_path")
+        ),
+        "strict_blind_unknown_candidate_triage_status": _text(
+            strict_blind_unknown_candidate_triage_summary.get("unknown_candidate_triage_status")
+        ),
+        "strict_blind_unknown_candidate_triage_unknown_count": _int(
+            strict_blind_unknown_candidate_triage_summary.get("unknown_possible_internal_review_count")
+        ),
+        "strict_blind_unknown_candidate_triage_sweep_unknown_count": _int(
+            strict_blind_unknown_candidate_triage_summary.get("filesystem_sweep_unknown_count")
+        ),
+        "strict_blind_unknown_candidate_triage_promotion_ready_count": _int(
+            strict_blind_unknown_candidate_triage_summary.get("promotion_ready_count")
+        ),
+        "strict_blind_unknown_candidate_triage_internal_like_count": _int(
+            strict_blind_unknown_candidate_triage_summary.get("internal_like_review_count")
+        ),
+        "strict_blind_unknown_candidate_triage_public_count": _int(
+            strict_blind_unknown_candidate_triage_summary.get("public_structure_count")
+        ),
+        "strict_blind_unknown_candidate_triage_run_review_count": _int(
+            strict_blind_unknown_candidate_triage_summary.get("run_review_count")
+        ),
+        "strict_blind_unknown_candidate_triage_archive_count": _int(
+            strict_blind_unknown_candidate_triage_summary.get("archive_review_count")
+        ),
+        "strict_blind_unknown_candidate_triage_data_other_count": _int(
+            strict_blind_unknown_candidate_triage_summary.get("data_other_count")
+        ),
+        "strict_blind_unknown_candidate_triage_tmp_misc_count": _int(
+            strict_blind_unknown_candidate_triage_summary.get("tmp_misc_count")
+        ),
+        "strict_blind_unknown_candidate_triage_other_count": _int(
+            strict_blind_unknown_candidate_triage_summary.get("other_unclassified_count")
+        ),
+        "strict_blind_unknown_candidate_triage_first_internal": _text(
+            strict_blind_unknown_candidate_triage_summary.get("first_internal_like_sample_path")
+        ),
+        "strict_blind_internal_like_source_review_status": _text(
+            strict_blind_internal_like_source_review_summary.get("internal_like_source_review_status")
+        ),
+        "strict_blind_internal_like_source_review_candidate_count": _int(
+            strict_blind_internal_like_source_review_summary.get("internal_like_candidate_count")
+        ),
+        "strict_blind_internal_like_source_review_triage_internal_like_count": _int(
+            strict_blind_internal_like_source_review_summary.get("triage_internal_like_count")
+        ),
+        "strict_blind_internal_like_source_review_triage_count_match": _text(
+            strict_blind_internal_like_source_review_summary.get("triage_count_match")
+        ),
+        "strict_blind_internal_like_source_review_mapped_candidate_count": _int(
+            strict_blind_internal_like_source_review_summary.get("mapped_candidate_count")
+        ),
+        "strict_blind_internal_like_source_review_pre_native_candidate_count": _int(
+            strict_blind_internal_like_source_review_summary.get("pre_native_candidate_count")
+        ),
+        "strict_blind_internal_like_source_review_post_native_blocked_count": _int(
+            strict_blind_internal_like_source_review_summary.get("post_native_blocked_count")
+        ),
+        "strict_blind_internal_like_source_review_same_day_timestamp_required_count": _int(
+            strict_blind_internal_like_source_review_summary.get("same_day_timestamp_required_count")
+        ),
+        "strict_blind_internal_like_source_review_prediction_date_missing_count": _int(
+            strict_blind_internal_like_source_review_summary.get("prediction_date_missing_count")
+        ),
+        "strict_blind_internal_like_source_review_unmapped_candidate_count": _int(
+            strict_blind_internal_like_source_review_summary.get("unmapped_candidate_count")
+        ),
+        "strict_blind_internal_like_source_review_promotion_ready_count": _int(
+            strict_blind_internal_like_source_review_summary.get("promotion_ready_count")
+        ),
+        "strict_blind_internal_like_source_review_target_count": _int(
+            strict_blind_internal_like_source_review_summary.get("target_count")
+        ),
+        "strict_blind_internal_like_source_review_target_all_post_native_count": _int(
+            strict_blind_internal_like_source_review_summary.get("target_all_post_native_count")
+        ),
+        "strict_blind_internal_like_source_review_target_pre_native_candidate_count": _int(
+            strict_blind_internal_like_source_review_summary.get("target_pre_native_candidate_count")
+        ),
+        "strict_blind_internal_like_source_review_earliest_prediction_date": _text(
+            strict_blind_internal_like_source_review_summary.get("earliest_prediction_date")
+        ),
+        "strict_blind_internal_like_source_review_latest_prediction_date": _text(
+            strict_blind_internal_like_source_review_summary.get("latest_prediction_date")
+        ),
+        "strict_blind_internal_like_source_review_first_blocked_candidate": _text(
+            strict_blind_internal_like_source_review_summary.get("first_blocked_candidate_path")
+        ),
+        "strict_blind_internal_like_source_review_first_blocked_target_id": _text(
+            strict_blind_internal_like_source_review_summary.get("first_blocked_target_id")
+        ),
+        "strict_blind_internal_like_source_review_first_blocker": _text(
+            strict_blind_internal_like_source_review_summary.get("first_blocker")
         ),
         "strict_blind_internal_prediction_source_gate_status": _text(
             strict_blind_internal_prediction_source_gate_summary.get("internal_prediction_source_gate_status")
@@ -9675,6 +16498,51 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         ),
         "strict_blind_source_gate_source_request_packet_dir": _text(
             strict_blind_source_gate_source_request_packet_summary.get("request_dir")
+        ),
+        "strict_blind_source_request_resolution_board_status": _text(
+            strict_blind_source_request_resolution_board_summary.get("source_request_resolution_board_status")
+        ),
+        "strict_blind_source_request_resolution_board_request_count": _int(
+            strict_blind_source_request_resolution_board_summary.get("request_count")
+        ),
+        "strict_blind_source_request_resolution_board_ready_count": _int(
+            strict_blind_source_request_resolution_board_summary.get("ready_for_source_gate_count")
+        ),
+        "strict_blind_source_request_resolution_board_blocked_count": _int(
+            strict_blind_source_request_resolution_board_summary.get("blocked_request_count")
+        ),
+        "strict_blind_source_request_resolution_board_monomer_count": _int(
+            strict_blind_source_request_resolution_board_summary.get("monomer_request_count")
+        ),
+        "strict_blind_source_request_resolution_board_complex_count": _int(
+            strict_blind_source_request_resolution_board_summary.get("complex_request_count")
+        ),
+        "strict_blind_source_request_resolution_board_all_post_native_monomer_count": _int(
+            strict_blind_source_request_resolution_board_summary.get("all_post_native_monomer_request_count")
+        ),
+        "strict_blind_source_request_resolution_board_candidate_replacement_required_count": _int(
+            strict_blind_source_request_resolution_board_summary.get("candidate_replacement_required_count")
+        ),
+        "strict_blind_source_request_resolution_board_pre_native_review_possible_count": _int(
+            strict_blind_source_request_resolution_board_summary.get("pre_native_review_possible_count")
+        ),
+        "strict_blind_source_request_resolution_board_chronology_review_missing_count": _int(
+            strict_blind_source_request_resolution_board_summary.get("chronology_review_missing_count")
+        ),
+        "strict_blind_source_request_resolution_board_internal_like_post_native_candidate_count": _int(
+            strict_blind_source_request_resolution_board_summary.get("internal_like_post_native_candidate_count")
+        ),
+        "strict_blind_source_request_resolution_board_internal_like_pre_native_candidate_count": _int(
+            strict_blind_source_request_resolution_board_summary.get("internal_like_pre_native_candidate_count")
+        ),
+        "strict_blind_source_request_resolution_board_first_blocked_request_id": _text(
+            strict_blind_source_request_resolution_board_summary.get("first_blocked_request_id")
+        ),
+        "strict_blind_source_request_resolution_board_first_blocked_target_id": _text(
+            strict_blind_source_request_resolution_board_summary.get("first_blocked_target_id")
+        ),
+        "strict_blind_source_request_resolution_board_first_blocker": _text(
+            strict_blind_source_request_resolution_board_summary.get("first_blocker")
         ),
         "strict_blind_source_request_fulfillment_gate_status": _text(
             strict_blind_source_request_fulfillment_gate_summary.get("source_request_fulfillment_gate_status")
@@ -10076,6 +16944,65 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         ),
         "strict_blind_first_unlock_evidence_review_gate_first_next_action": _text(
             strict_blind_first_unlock_evidence_review_gate_summary.get("first_next_action")
+        ),
+        "strict_blind_first_slot_source_gate_blocker_ledger_status": _text(
+            strict_blind_first_slot_source_gate_blocker_ledger_summary.get(
+                "strict_blind_first_slot_source_gate_blocker_ledger_status"
+            )
+        ),
+        "strict_blind_first_slot_source_gate_blocker_ledger_required_benchmark_id": _text(
+            strict_blind_first_slot_source_gate_blocker_ledger_summary.get("required_benchmark_id")
+        ),
+        "strict_blind_first_slot_source_gate_blocker_ledger_required_target_id": _text(
+            strict_blind_first_slot_source_gate_blocker_ledger_summary.get("required_target_id")
+        ),
+        "strict_blind_first_slot_source_gate_blocker_ledger_required_scope": _text(
+            strict_blind_first_slot_source_gate_blocker_ledger_summary.get("required_scope")
+        ),
+        "strict_blind_first_slot_source_gate_blocker_ledger_field_count": _int(
+            strict_blind_first_slot_source_gate_blocker_ledger_summary.get("ledger_field_count")
+        ),
+        "strict_blind_first_slot_source_gate_blocker_ledger_ready_field_count": _int(
+            strict_blind_first_slot_source_gate_blocker_ledger_summary.get("ready_field_count")
+        ),
+        "strict_blind_first_slot_source_gate_blocker_ledger_blocked_field_count": _int(
+            strict_blind_first_slot_source_gate_blocker_ledger_summary.get("blocked_field_count")
+        ),
+        "strict_blind_first_slot_source_gate_blocker_ledger_gate_pass_count": _int(
+            strict_blind_first_slot_source_gate_blocker_ledger_summary.get("source_gate_pass_count")
+        ),
+        "strict_blind_first_slot_source_gate_blocker_ledger_gate_blocked_count": _int(
+            strict_blind_first_slot_source_gate_blocker_ledger_summary.get("source_gate_blocked_count")
+        ),
+        "strict_blind_first_slot_source_gate_blocker_ledger_gate_check_count": _int(
+            strict_blind_first_slot_source_gate_blocker_ledger_summary.get("source_gate_check_count")
+        ),
+        "strict_blind_first_slot_source_gate_blocker_ledger_operator_ready_count": _int(
+            strict_blind_first_slot_source_gate_blocker_ledger_summary.get("operator_ready_count")
+        ),
+        "strict_blind_first_slot_source_gate_blocker_ledger_operator_awaiting_count": _int(
+            strict_blind_first_slot_source_gate_blocker_ledger_summary.get("operator_awaiting_count")
+        ),
+        "strict_blind_first_slot_source_gate_blocker_ledger_review_ready_count": _int(
+            strict_blind_first_slot_source_gate_blocker_ledger_summary.get("review_ready_field_count")
+        ),
+        "strict_blind_first_slot_source_gate_blocker_ledger_review_blocked_count": _int(
+            strict_blind_first_slot_source_gate_blocker_ledger_summary.get("review_blocked_field_count")
+        ),
+        "strict_blind_first_slot_source_gate_blocker_ledger_file_ready_count": _int(
+            strict_blind_first_slot_source_gate_blocker_ledger_summary.get("file_ready_count")
+        ),
+        "strict_blind_first_slot_source_gate_blocker_ledger_file_blocked_count": _int(
+            strict_blind_first_slot_source_gate_blocker_ledger_summary.get("file_blocked_count")
+        ),
+        "strict_blind_first_slot_source_gate_blocker_ledger_first_blocked_field": _text(
+            strict_blind_first_slot_source_gate_blocker_ledger_summary.get("first_blocked_field")
+        ),
+        "strict_blind_first_slot_source_gate_blocker_ledger_first_blocker": _text(
+            strict_blind_first_slot_source_gate_blocker_ledger_summary.get("first_blocker")
+        ),
+        "strict_blind_first_slot_source_gate_blocker_ledger_first_next_action": _text(
+            strict_blind_first_slot_source_gate_blocker_ledger_summary.get("first_next_action")
         ),
         "strict_blind_first_unlock_evidence_sync_plan_status": _text(
             strict_blind_first_unlock_evidence_sync_plan_summary.get(
@@ -11832,6 +18759,1154 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "competitive_target_identity_clearance_workorder_audit_native_prediction_waiting_count": _int(
             competitive_target_identity_clearance_workorder_audit_summary.get("native_prediction_waiting_count")
         ),
+        "competitive_target_identity_metric_runway_status": _text(
+            competitive_target_identity_metric_runway_summary.get("metric_runway_status")
+        ),
+        "competitive_target_identity_metric_runway_target_count": _int(
+            competitive_target_identity_metric_runway_summary.get("target_count")
+        ),
+        "competitive_target_identity_metric_runway_ready_count": _int(
+            competitive_target_identity_metric_runway_summary.get("target_ready_count")
+        ),
+        "competitive_target_identity_metric_runway_blocked_count": _int(
+            competitive_target_identity_metric_runway_summary.get("target_blocked_count")
+        ),
+        "competitive_target_identity_metric_runway_complex_count": _int(
+            competitive_target_identity_metric_runway_summary.get("complex_target_count")
+        ),
+        "competitive_target_identity_metric_runway_monomer_count": _int(
+            competitive_target_identity_metric_runway_summary.get("monomer_target_count")
+        ),
+        "competitive_target_identity_metric_runway_metric_requirement_count": _int(
+            competitive_target_identity_metric_runway_summary.get("metric_requirement_count")
+        ),
+        "competitive_target_identity_metric_runway_prediction_count": _int(
+            competitive_target_identity_metric_runway_summary.get("prediction_present_count")
+        ),
+        "competitive_target_identity_metric_runway_native_count": _int(
+            competitive_target_identity_metric_runway_summary.get("native_present_count")
+        ),
+        "competitive_target_identity_metric_runway_provenance_count": _int(
+            competitive_target_identity_metric_runway_summary.get("provenance_ready_count")
+        ),
+        "competitive_target_identity_metric_runway_evidence_ref_count": _int(
+            competitive_target_identity_metric_runway_summary.get("evidence_ref_ready_count")
+        ),
+        "competitive_target_identity_metric_runway_native_candidate_count": _int(
+            competitive_target_identity_metric_runway_summary.get("native_candidate_count")
+        ),
+        "competitive_target_identity_metric_runway_native_candidate_blocked_count": _int(
+            competitive_target_identity_metric_runway_summary.get("native_candidate_blocked_count")
+        ),
+        "competitive_target_identity_metric_runway_native_candidate_no_candidate_count": _int(
+            competitive_target_identity_metric_runway_summary.get("native_candidate_no_candidate_count")
+        ),
+        "competitive_target_identity_metric_runway_proof_eligible_count": _int(
+            competitive_target_identity_metric_runway_summary.get("competitive_proof_eligible_count")
+        ),
+        "competitive_target_identity_metric_runway_author_serialized_count": _int(
+            competitive_target_identity_metric_runway_summary.get("author_serialized_count")
+        ),
+        "competitive_target_identity_metric_runway_first_target_id": _text(
+            competitive_target_identity_metric_runway_summary.get("first_target_id")
+        ),
+        "competitive_target_identity_metric_runway_first_blocked_target_id": _text(
+            competitive_target_identity_metric_runway_summary.get("first_blocked_target_id")
+        ),
+        "competitive_target_identity_metric_runway_first_blocker": _text(
+            competitive_target_identity_metric_runway_summary.get("first_blocker")
+        ),
+        "competitive_target_identity_metric_runway_html": _text(
+            competitive_target_identity_metric_runway_summary.get("html_runway_path")
+        ),
+        "competitive_target_identity_metric_runway_next_action": _text(
+            competitive_target_identity_metric_runway_summary.get("next_action")
+        ),
+        "competitive_floor_native_provenance_operator_packet_status": _text(
+            competitive_floor_native_provenance_operator_packet_summary.get("operator_packet_status")
+        ),
+        "competitive_floor_native_provenance_operator_packet_target_count": _int(
+            competitive_floor_native_provenance_operator_packet_summary.get("target_count")
+        ),
+        "competitive_floor_native_provenance_operator_packet_target_open_count": _int(
+            competitive_floor_native_provenance_operator_packet_summary.get("target_open_count")
+        ),
+        "competitive_floor_native_provenance_operator_packet_target_ready_count": _int(
+            competitive_floor_native_provenance_operator_packet_summary.get("target_ready_count")
+        ),
+        "competitive_floor_native_provenance_operator_packet_action_count": _int(
+            competitive_floor_native_provenance_operator_packet_summary.get("action_count")
+        ),
+        "competitive_floor_native_provenance_operator_packet_open_action_count": _int(
+            competitive_floor_native_provenance_operator_packet_summary.get("open_action_count")
+        ),
+        "competitive_floor_native_provenance_operator_packet_native_action_count": _int(
+            competitive_floor_native_provenance_operator_packet_summary.get("native_action_count")
+        ),
+        "competitive_floor_native_provenance_operator_packet_evidence_action_count": _int(
+            competitive_floor_native_provenance_operator_packet_summary.get("evidence_action_count")
+        ),
+        "competitive_floor_native_provenance_operator_packet_provenance_action_count": _int(
+            competitive_floor_native_provenance_operator_packet_summary.get("provenance_action_count")
+        ),
+        "competitive_floor_native_provenance_operator_packet_manifest_action_count": _int(
+            competitive_floor_native_provenance_operator_packet_summary.get("manifest_action_count")
+        ),
+        "competitive_floor_native_provenance_operator_packet_metric_requirement_count": _int(
+            competitive_floor_native_provenance_operator_packet_summary.get("metric_requirement_count")
+        ),
+        "competitive_floor_native_provenance_operator_packet_prediction_count": _int(
+            competitive_floor_native_provenance_operator_packet_summary.get("prediction_present_count")
+        ),
+        "competitive_floor_native_provenance_operator_packet_native_count": _int(
+            competitive_floor_native_provenance_operator_packet_summary.get("native_present_count")
+        ),
+        "competitive_floor_native_provenance_operator_packet_provenance_count": _int(
+            competitive_floor_native_provenance_operator_packet_summary.get("provenance_ready_count")
+        ),
+        "competitive_floor_native_provenance_operator_packet_evidence_ref_count": _int(
+            competitive_floor_native_provenance_operator_packet_summary.get("evidence_ref_ready_count")
+        ),
+        "competitive_floor_native_provenance_operator_packet_native_candidate_count": _int(
+            competitive_floor_native_provenance_operator_packet_summary.get("native_candidate_count")
+        ),
+        "competitive_floor_native_provenance_operator_packet_native_candidate_blocked_count": _int(
+            competitive_floor_native_provenance_operator_packet_summary.get("native_candidate_blocked_count")
+        ),
+        "competitive_floor_native_provenance_operator_packet_native_candidate_no_candidate_count": _int(
+            competitive_floor_native_provenance_operator_packet_summary.get("native_candidate_no_candidate_count")
+        ),
+        "competitive_floor_native_provenance_operator_packet_proof_eligible_count": _int(
+            competitive_floor_native_provenance_operator_packet_summary.get("competitive_proof_eligible_count")
+        ),
+        "competitive_floor_native_provenance_operator_packet_author_serialized_count": _int(
+            competitive_floor_native_provenance_operator_packet_summary.get("author_serialized_count")
+        ),
+        "competitive_floor_native_provenance_operator_packet_first_target_id": _text(
+            competitive_floor_native_provenance_operator_packet_summary.get("first_target_id")
+        ),
+        "competitive_floor_native_provenance_operator_packet_first_open_target_id": _text(
+            competitive_floor_native_provenance_operator_packet_summary.get("first_open_target_id")
+        ),
+        "competitive_floor_native_provenance_operator_packet_html": _text(
+            competitive_floor_native_provenance_operator_packet_summary.get("html_packet_path")
+        ),
+        "competitive_floor_native_provenance_operator_packet_next_action": _text(
+            competitive_floor_native_provenance_operator_packet_summary.get("next_action")
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_status": _text(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "operator_packet_completion_audit_status"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_target_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get("target_count")
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_target_pass_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get("target_pass_count")
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_target_blocked_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get("target_blocked_count")
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_packet_folder_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "packet_folder_present_count"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_packet_readme_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "packet_readme_present_count"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_packet_manifest_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "packet_manifest_present_count"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_actions_csv_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "actions_csv_present_count"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_native_candidates_csv_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "native_candidates_csv_present_count"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_action_expected_row_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "action_expected_row_count"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_action_csv_row_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get("action_csv_row_count")
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_action_csv_mismatch_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "action_csv_mismatch_count"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_native_candidate_expected_row_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "native_candidate_expected_row_count"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_native_candidate_csv_row_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "native_candidate_csv_row_count"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_native_candidate_csv_mismatch_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "native_candidate_csv_mismatch_count"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_native_action_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get("native_action_csv_count")
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_evidence_action_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "evidence_action_csv_count"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_provenance_action_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "provenance_action_csv_count"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_manifest_action_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "manifest_action_csv_count"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_metric_requirement_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "metric_requirement_count"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_prediction_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "prediction_present_count"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_ts_prediction_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "ts_prediction_present_count"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_native_dropzone_path_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "native_dropzone_path_present_count"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_native_file_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "native_file_present_count"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_provenance_template_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "provenance_template_present_count"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_manifest_stub_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "manifest_stub_present_count"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_metric_runway_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "metric_runway_present_count"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_workorder_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "workorder_folder_present_count"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_packet_coordinate_copy_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "packet_coordinate_copy_count"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_out_dir_coordinate_copy_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "out_dir_coordinate_copy_count"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_proof_eligible_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "competitive_proof_eligible_count"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_author_serialized_count": _int(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get(
+                "author_serialized_count"
+            )
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_first_target_id": _text(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get("first_target_id")
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_first_blocked_target_id": _text(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get("first_blocked_target_id")
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_html": _text(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get("html_audit_path")
+        ),
+        "competitive_floor_native_provenance_operator_packet_completion_audit_next_action": _text(
+            competitive_floor_native_provenance_operator_packet_completion_audit_summary.get("next_action")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_status": _text(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("metric_unlock_bridge_status")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_target_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("target_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_target_ready_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("target_ready_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_target_blocked_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("target_blocked_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_packet_pass_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("packet_pass_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_workorder_audit_pass_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("workorder_audit_pass_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_metric_runway_ready_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("metric_runway_ready_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_metric_requirement_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("metric_requirement_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_prediction_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("prediction_present_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_ts_prediction_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("ts_prediction_present_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_native_dropzone_path_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("native_dropzone_path_present_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_native_file_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("native_file_present_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_provenance_template_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("provenance_template_present_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_manifest_stub_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("manifest_stub_present_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_metric_runway_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("metric_runway_present_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_workorder_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("workorder_present_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_packet_action_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("packet_action_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_packet_native_action_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("packet_native_action_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_packet_evidence_action_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("packet_evidence_action_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_packet_provenance_action_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("packet_provenance_action_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_packet_manifest_action_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("packet_manifest_action_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_native_candidate_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("native_candidate_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_native_candidate_blocked_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("native_candidate_blocked_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_native_candidate_no_candidate_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("native_candidate_no_candidate_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_provenance_ready_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("provenance_ready_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_evidence_ref_verified_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("evidence_ref_verified_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_identity_discovery_cleared_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("identity_discovery_cleared_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_proof_eligible_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("competitive_proof_eligible_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_author_serialized_count": _int(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("author_serialized_count")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_first_target_id": _text(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("first_target_id")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_first_blocked_target_id": _text(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("first_blocked_target_id")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_first_blocker": _text(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("first_blocker")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_first_next_action": _text(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("first_next_action")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_html": _text(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("html_bridge_path")
+        ),
+        "competitive_floor_native_provenance_metric_unlock_bridge_next_action": _text(
+            competitive_floor_native_provenance_metric_unlock_bridge_summary.get("next_action")
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_status": _text(
+            competitive_floor_first_native_provenance_unlock_kit_summary.get("first_unlock_kit_status")
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_target_id": _text(
+            competitive_floor_first_native_provenance_unlock_kit_summary.get("target_id")
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_target_name": _text(
+            competitive_floor_first_native_provenance_unlock_kit_summary.get("target_name")
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_target_count": _int(
+            competitive_floor_first_native_provenance_unlock_kit_summary.get("target_count")
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_required_field_count": _int(
+            competitive_floor_first_native_provenance_unlock_kit_summary.get("required_field_count")
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_required_action_count": _int(
+            competitive_floor_first_native_provenance_unlock_kit_summary.get("required_action_count")
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_action_bundle_action_count": _int(
+            competitive_floor_first_native_provenance_unlock_kit_summary.get("action_bundle_action_count")
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_packet_file_pass": _text(
+            str(competitive_floor_first_native_provenance_unlock_kit_summary.get("packet_file_pass"))
+            if competitive_floor_first_native_provenance_unlock_kit_summary.get("packet_file_pass") is not None
+            else ""
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_metric_runway_ready": _text(
+            str(competitive_floor_first_native_provenance_unlock_kit_summary.get("metric_runway_ready"))
+            if competitive_floor_first_native_provenance_unlock_kit_summary.get("metric_runway_ready") is not None
+            else ""
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_workorder_audit_pass": _text(
+            str(competitive_floor_first_native_provenance_unlock_kit_summary.get("workorder_audit_pass"))
+            if competitive_floor_first_native_provenance_unlock_kit_summary.get("workorder_audit_pass") is not None
+            else ""
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_prediction_count": _int(
+            competitive_floor_first_native_provenance_unlock_kit_summary.get("prediction_present_count")
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_ts_prediction_count": _int(
+            competitive_floor_first_native_provenance_unlock_kit_summary.get("ts_prediction_present_count")
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_native_dropzone_path_count": _int(
+            competitive_floor_first_native_provenance_unlock_kit_summary.get("native_dropzone_path_present_count")
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_native_file_count": _int(
+            competitive_floor_first_native_provenance_unlock_kit_summary.get("native_file_present_count")
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_provenance_template_count": _int(
+            competitive_floor_first_native_provenance_unlock_kit_summary.get("provenance_template_present_count")
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_manifest_stub_count": _int(
+            competitive_floor_first_native_provenance_unlock_kit_summary.get("manifest_stub_present_count")
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_metric_runway_count": _int(
+            competitive_floor_first_native_provenance_unlock_kit_summary.get("metric_runway_present_count")
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_workorder_count": _int(
+            competitive_floor_first_native_provenance_unlock_kit_summary.get("workorder_present_count")
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_provenance_ready_count": _int(
+            competitive_floor_first_native_provenance_unlock_kit_summary.get("provenance_ready_count")
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_evidence_ref_verified_count": _int(
+            competitive_floor_first_native_provenance_unlock_kit_summary.get("evidence_ref_verified_count")
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_identity_discovery_cleared_count": _int(
+            competitive_floor_first_native_provenance_unlock_kit_summary.get("identity_discovery_cleared_count")
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_proof_eligible_count": _int(
+            competitive_floor_first_native_provenance_unlock_kit_summary.get("competitive_proof_eligible_count")
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_author_serialized_count": _int(
+            competitive_floor_first_native_provenance_unlock_kit_summary.get("author_serialized_count")
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_coordinate_copy_count": _int(
+            competitive_floor_first_native_provenance_unlock_kit_summary.get("coordinate_copy_count")
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_folder": _text(
+            competitive_floor_first_native_provenance_unlock_kit_summary.get("kit_folder")
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_first_blocker": _text(
+            competitive_floor_first_native_provenance_unlock_kit_summary.get("first_blocker")
+        ),
+        "competitive_floor_first_native_provenance_unlock_kit_next_action": _text(
+            competitive_floor_first_native_provenance_unlock_kit_summary.get("next_action")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_status": _text(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("batch_unlock_kit_status")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_target_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("target_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_target_ready_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get(
+                "target_ready_for_operator_fill_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_target_blocked_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("target_blocked_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_target_ids": _text(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("target_ids")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_required_field_per_target_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("required_field_per_target_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_required_field_total_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("required_field_total_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_required_action_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("required_action_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_action_bundle_action_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("action_bundle_action_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_packet_file_pass_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("packet_file_pass_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_metric_runway_ready_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("metric_runway_ready_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_workorder_audit_pass_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("workorder_audit_pass_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_prediction_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("prediction_present_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_ts_prediction_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("ts_prediction_present_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_native_dropzone_path_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("native_dropzone_path_present_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_native_file_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("native_file_present_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_provenance_template_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("provenance_template_present_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_manifest_stub_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("manifest_stub_present_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_metric_runway_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("metric_runway_present_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_workorder_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("workorder_present_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_provenance_ready_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("provenance_ready_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_evidence_ref_verified_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("evidence_ref_verified_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_identity_discovery_cleared_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("identity_discovery_cleared_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_proof_eligible_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("competitive_proof_eligible_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_author_serialized_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("author_serialized_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_coordinate_copy_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("coordinate_copy_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_folder": _text(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("batch_folder")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_first_blocked_target_id": _text(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("first_blocked_target_id")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_first_blocker": _text(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("first_blocker")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_next_action": _text(
+            competitive_floor_batch_native_provenance_unlock_kit_summary.get("next_action")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_status": _text(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "batch_unlock_kit_completion_audit_status"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get("target_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_pass_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get("target_pass_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_blocked_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get("target_blocked_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_batch_file_present_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "batch_file_present_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_batch_file_expected_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "batch_file_expected_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_batch_intake_expected_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "batch_operator_fill_intake_expected_rows"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_batch_intake_csv_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "batch_operator_fill_intake_csv_rows"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_batch_intake_mismatch_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "batch_operator_fill_intake_row_mismatch_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_batch_action_expected_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "batch_required_actions_expected_rows"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_batch_action_csv_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "batch_required_actions_csv_rows"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_batch_action_mismatch_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "batch_required_actions_row_mismatch_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_folder_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "target_folder_present_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_readme_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "target_readme_present_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_manifest_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "target_manifest_present_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_intake_file_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "target_operator_fill_intake_present_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_action_file_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "target_required_actions_present_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_rerun_file_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "target_rerun_commands_present_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_intake_expected_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "target_operator_fill_intake_expected_rows"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_intake_csv_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "target_operator_fill_intake_csv_rows"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_intake_mismatch_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "target_operator_fill_intake_row_mismatch_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_action_expected_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "target_required_actions_expected_rows"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_action_csv_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "target_required_actions_csv_rows"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_action_mismatch_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "target_required_actions_row_mismatch_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_coordinate_copy_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get("coordinate_copy_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_coordinate_copy_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "target_coordinate_copy_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_native_file_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get("native_file_present_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_provenance_ready_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get("provenance_ready_count")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_evidence_ref_verified_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "evidence_ref_verified_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_identity_discovery_cleared_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "identity_discovery_cleared_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_proof_eligible_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "competitive_proof_eligible_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_author_serialized_count": _int(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "author_serialized_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_first_blocked_target_id": _text(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get(
+                "first_blocked_target_id"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_first_blocker": _text(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get("first_blocker")
+        ),
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_next_action": _text(
+            competitive_floor_batch_native_provenance_unlock_kit_completion_audit_summary.get("next_action")
+        ),
+        "competitive_floor_batch_native_provenance_value_gate_status": _text(
+            competitive_floor_batch_native_provenance_value_gate_summary.get(
+                "batch_native_provenance_value_gate_status"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_value_gate_target_count": _int(
+            competitive_floor_batch_native_provenance_value_gate_summary.get("target_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_gate_target_ready_count": _int(
+            competitive_floor_batch_native_provenance_value_gate_summary.get("target_ready_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_gate_target_blocked_count": _int(
+            competitive_floor_batch_native_provenance_value_gate_summary.get("target_blocked_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_gate_required_field_per_target_count": _int(
+            competitive_floor_batch_native_provenance_value_gate_summary.get("required_field_per_target_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_gate_required_field_total_count": _int(
+            competitive_floor_batch_native_provenance_value_gate_summary.get("required_field_total_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_gate_ready_value_count": _int(
+            competitive_floor_batch_native_provenance_value_gate_summary.get("ready_value_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_gate_blocked_value_count": _int(
+            competitive_floor_batch_native_provenance_value_gate_summary.get("blocked_value_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_gate_native_source_ready_count": _int(
+            competitive_floor_batch_native_provenance_value_gate_summary.get("native_source_ready_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_gate_evidence_ref_ready_count": _int(
+            competitive_floor_batch_native_provenance_value_gate_summary.get("evidence_ref_ready_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_gate_clearance_ready_count": _int(
+            competitive_floor_batch_native_provenance_value_gate_summary.get("clearance_ready_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_gate_date_ready_count": _int(
+            competitive_floor_batch_native_provenance_value_gate_summary.get("date_ready_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_gate_boolean_ready_count": _int(
+            competitive_floor_batch_native_provenance_value_gate_summary.get("boolean_ready_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_gate_coordinate_copy_count": _int(
+            competitive_floor_batch_native_provenance_value_gate_summary.get("coordinate_copy_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_gate_target_coordinate_copy_count": _int(
+            competitive_floor_batch_native_provenance_value_gate_summary.get("target_coordinate_copy_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_gate_proof_eligible_count": _int(
+            competitive_floor_batch_native_provenance_value_gate_summary.get("competitive_proof_eligible_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_gate_author_serialized_count": _int(
+            competitive_floor_batch_native_provenance_value_gate_summary.get("author_serialized_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_gate_first_blocked_target_id": _text(
+            competitive_floor_batch_native_provenance_value_gate_summary.get("first_blocked_target_id")
+        ),
+        "competitive_floor_batch_native_provenance_value_gate_first_blocker": _text(
+            competitive_floor_batch_native_provenance_value_gate_summary.get("first_blocker")
+        ),
+        "competitive_floor_batch_native_provenance_value_gate_next_action": _text(
+            competitive_floor_batch_native_provenance_value_gate_summary.get("next_action")
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_status": _text(
+            competitive_floor_batch_native_provenance_value_action_board_summary.get(
+                "batch_native_provenance_value_action_board_status"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_target_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_summary.get("target_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_target_open_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_summary.get("target_with_open_action_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_target_ready_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_summary.get("target_ready_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_action_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_summary.get("action_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_open_action_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_summary.get("open_action_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_native_action_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_summary.get("native_action_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_evidence_action_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_summary.get("evidence_action_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_clearance_action_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_summary.get("clearance_action_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_operator_action_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_summary.get("operator_action_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_date_action_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_summary.get("date_action_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_boolean_action_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_summary.get("boolean_action_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_review_action_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_summary.get("review_action_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_coordinate_copy_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_summary.get("coordinate_copy_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_proof_eligible_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_summary.get(
+                "competitive_proof_eligible_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_author_serialized_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_summary.get("author_serialized_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_first_open_target_id": _text(
+            competitive_floor_batch_native_provenance_value_action_board_summary.get("first_open_target_id")
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_first_open_field": _text(
+            competitive_floor_batch_native_provenance_value_action_board_summary.get("first_open_field")
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_first_open_blocker": _text(
+            competitive_floor_batch_native_provenance_value_action_board_summary.get("first_open_blocker")
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_next_action": _text(
+            competitive_floor_batch_native_provenance_value_action_board_summary.get("next_action")
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_completion_audit_status": _text(
+            competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                "batch_native_provenance_value_action_board_completion_audit_status"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get("target_count")
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_pass_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                "target_pass_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_blocked_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                "target_blocked_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_completion_audit_action_expected_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                "action_expected_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_completion_audit_action_json_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                "action_board_json_rows"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_completion_audit_action_mismatch_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                "action_json_row_mismatch_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_folder_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                "target_folder_present_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_readme_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                "target_readme_present_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_action_file_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                "target_value_actions_present_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_action_expected_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                "target_value_actions_expected_rows"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_action_csv_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                "target_value_actions_csv_rows"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_action_mismatch_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                "target_value_actions_row_mismatch_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_completion_audit_coordinate_copy_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                "coordinate_copy_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_coordinate_copy_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                "target_coordinate_copy_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_completion_audit_proof_eligible_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                "competitive_proof_eligible_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_completion_audit_author_serialized_count": _int(
+            competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                "author_serialized_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_completion_audit_first_blocked_target_id": _text(
+            competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get(
+                "first_blocked_target_id"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_completion_audit_first_blocker": _text(
+            competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get("first_blocker")
+        ),
+        "competitive_floor_batch_native_provenance_value_action_board_completion_audit_next_action": _text(
+            competitive_floor_batch_native_provenance_value_action_board_completion_audit_summary.get("next_action")
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_status": _text(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                "batch_native_provenance_operator_fill_preflight_status"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_target_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get("target_count")
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_target_ready_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                "target_ready_for_fill_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_target_blocked_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                "target_blocked_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_open_action_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get("open_action_count")
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_native_action_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get("native_action_count")
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_evidence_action_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                "evidence_action_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_clearance_action_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                "clearance_action_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_operator_action_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                "operator_action_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_date_action_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get("date_action_count")
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_boolean_action_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get("boolean_action_count")
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_review_action_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get("review_action_count")
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_coordinate_copy_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get("coordinate_copy_count")
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_target_coordinate_copy_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                "target_coordinate_copy_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_proof_eligible_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                "competitive_proof_eligible_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_author_serialized_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get(
+                "author_serialized_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_first_ready_target_id": _text(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get("first_ready_target_id")
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_first_blocked_target_id": _text(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get("first_blocked_target_id")
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_first_blocker": _text(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get("first_blocker")
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_next_action": _text(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_summary.get("next_action")
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_status": _text(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                "batch_native_provenance_operator_fill_preflight_completion_audit_status"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_target_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                "target_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_target_pass_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                "target_pass_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_target_blocked_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                "target_blocked_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_root_manifest_present": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                "root_manifest_present"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_target_folder_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                "target_folder_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_target_readme_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                "target_readme_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_target_operator_template_file_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                "target_operator_template_file_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_target_field_policy_file_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                "target_field_policy_file_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_operator_template_expected_rows": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                "operator_template_expected_rows"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_operator_template_csv_rows": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                "operator_template_csv_rows"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_operator_template_row_mismatch_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                "operator_template_row_mismatch_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_field_policy_expected_rows": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                "field_policy_expected_rows"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_field_policy_csv_rows": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                "field_policy_csv_rows"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_field_policy_row_mismatch_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                "field_policy_row_mismatch_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_coordinate_copy_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                "coordinate_copy_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_target_coordinate_copy_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                "target_coordinate_copy_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_proof_eligible_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                "competitive_proof_eligible_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_author_serialized_count": _int(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                "author_serialized_count"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_first_blocked_target_id": _text(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                "first_blocked_target_id"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_first_blocker": _text(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                "first_blocker"
+            )
+        ),
+        "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_next_action": _text(
+            competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_summary.get(
+                "next_action"
+            )
+        ),
         "competitive_target_identity_clearance_action_board_status": _text(
             competitive_target_identity_clearance_action_board_summary.get("action_board_status")
         ),
@@ -12223,7 +20298,18 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- protein object library: `{summary['protein_object_library_status'] or '-'}` protein/object folders `{summary['protein_object_library_protein_folder_count']}/{summary['protein_object_library_object_folder_count']}` pass/blocked `{summary['protein_object_library_pass_count']}/{summary['protein_object_library_blocked_count']}` model/projection/viewer pointers `{summary['protein_object_library_model_pointer_count']}/{summary['protein_object_library_projection_pointer_count']}/{summary['protein_object_library_viewer_pointer_count']}` `{summary['protein_object_library_dir'] or '-'}`",
         f"- protein object library completion audit: `{summary['protein_object_library_completion_status'] or '-'}` proteins pass/blocked/total `{summary['protein_object_library_completion_protein_pass_count']}/{summary['protein_object_library_completion_protein_blocked_count']}/{summary['protein_object_library_completion_protein_count']}` objects pass/blocked/total `{summary['protein_object_library_completion_object_pass_count']}/{summary['protein_object_library_completion_object_blocked_count']}/{summary['protein_object_library_completion_object_count']}` assets model/projection/viewer `{summary['protein_object_library_completion_model_count']}/{summary['protein_object_library_completion_projection_count']}/{summary['protein_object_library_completion_viewer_count']}` manifests object/protein `{summary['protein_object_library_completion_object_manifest_count']}/{summary['protein_object_library_completion_protein_manifest_count']}`",
         f"- protein object library navigation catalog: `{summary['protein_object_library_navigation_status'] or '-'}` proteins pass/blocked/total `{summary['protein_object_library_navigation_protein_pass_count']}/{summary['protein_object_library_navigation_protein_blocked_count']}/{summary['protein_object_library_navigation_protein_count']}` objects pass/blocked/total `{summary['protein_object_library_navigation_object_pass_count']}/{summary['protein_object_library_navigation_object_blocked_count']}/{summary['protein_object_library_navigation_object_count']}` readme/manifest links `{summary['protein_object_library_navigation_readme_link_count']}/{summary['protein_object_library_navigation_manifest_link_count']}` largest `{summary['protein_object_library_navigation_largest_protein_key'] or '-'}` `{summary['protein_object_library_navigation_largest_object_count']}` html `{summary['protein_object_library_navigation_html'] or '-'}`",
+        f"- CASP17 3D molecular object atlas: `{summary['casp17_3d_molecular_object_atlas_status'] or '-'}` proteins pass/blocked/total `{summary['casp17_3d_molecular_object_atlas_protein_pass_count']}/{summary['casp17_3d_molecular_object_atlas_protein_blocked_count']}/{summary['casp17_3d_molecular_object_atlas_protein_count']}` objects pass/blocked/total `{summary['casp17_3d_molecular_object_atlas_object_pass_count']}/{summary['casp17_3d_molecular_object_atlas_object_blocked_count']}/{summary['casp17_3d_molecular_object_atlas_object_count']}` source objects current/massivefold `{summary['casp17_3d_molecular_object_atlas_current_object_count']}/{summary['casp17_3d_molecular_object_atlas_massivefold_object_count']}` source proteins current/massivefold/overlap `{summary['casp17_3d_molecular_object_atlas_current_protein_count']}/{summary['casp17_3d_molecular_object_atlas_massivefold_protein_count']}/{summary['casp17_3d_molecular_object_atlas_overlap_protein_count']}` links model/viewer/projection/top5/escrow `{summary['casp17_3d_molecular_object_atlas_model_link_count']}/{summary['casp17_3d_molecular_object_atlas_viewer_link_count']}/{summary['casp17_3d_molecular_object_atlas_projection_link_count']}/{summary['casp17_3d_molecular_object_atlas_top5_link_count']}/{summary['casp17_3d_molecular_object_atlas_escrow_link_count']}` sha model/top5 `{summary['casp17_3d_molecular_object_atlas_model_sha256_count']}/{summary['casp17_3d_molecular_object_atlas_top5_sha256_count']}` native/proof/author `{summary['casp17_3d_molecular_object_atlas_native_accuracy_count']}/{summary['casp17_3d_molecular_object_atlas_proof_eligible_count']}/{summary['casp17_3d_molecular_object_atlas_author_serialized_count']}` first `{summary['casp17_3d_molecular_object_atlas_first_protein_key'] or '-'}` `{summary['casp17_3d_molecular_object_atlas_first_object_key'] or '-'}` html `{summary['casp17_3d_molecular_object_atlas_html'] or '-'}`",
+        f"- CASP17 3D molecular object atlas completion audit: `{summary['casp17_3d_molecular_object_atlas_completion_audit_status'] or '-'}` proteins folder/readme/manifest/total `{summary['casp17_3d_molecular_object_atlas_completion_audit_protein_folder_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_protein_readme_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_protein_manifest_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_protein_count']}` objects pass/blocked/total `{summary['casp17_3d_molecular_object_atlas_completion_audit_object_pass_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_object_blocked_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_object_count']}` source objects current/massivefold `{summary['casp17_3d_molecular_object_atlas_completion_audit_current_object_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_massivefold_object_count']}` object folder/readme/manifest `{summary['casp17_3d_molecular_object_atlas_completion_audit_object_folder_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_object_readme_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_object_manifest_count']}` links model/viewer/projection/top5/escrow `{summary['casp17_3d_molecular_object_atlas_completion_audit_model_link_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_viewer_link_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_projection_link_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_top5_link_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_escrow_link_count']}` coordinate copies object/atlas `{summary['casp17_3d_molecular_object_atlas_completion_audit_object_coordinate_copy_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_atlas_coordinate_copy_count']}` proof/author `{summary['casp17_3d_molecular_object_atlas_completion_audit_proof_eligible_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_author_serialized_count']}` first `{summary['casp17_3d_molecular_object_atlas_completion_audit_first_protein_key'] or '-'}` `{summary['casp17_3d_molecular_object_atlas_completion_audit_first_object_key'] or '-'}` html `{summary['casp17_3d_molecular_object_atlas_completion_audit_html'] or '-'}`",
+        f"- CASP17 3D molecular object metric handoff: `{summary['casp17_3d_molecular_object_metric_handoff_status'] or '-'}` objects ready/blocked/total `{summary['casp17_3d_molecular_object_metric_handoff_object_ready_count']}/{summary['casp17_3d_molecular_object_metric_handoff_object_blocked_count']}/{summary['casp17_3d_molecular_object_metric_handoff_object_count']}` source objects current/massivefold `{summary['casp17_3d_molecular_object_metric_handoff_current_object_count']}/{summary['casp17_3d_molecular_object_metric_handoff_massivefold_object_count']}` metric requirements `{summary['casp17_3d_molecular_object_metric_handoff_metric_requirement_count']}` required metrics covered/total/missing `{summary['casp17_3d_molecular_object_metric_handoff_covered_required_metric_count']}/{summary['casp17_3d_molecular_object_metric_handoff_required_metric_count']}/{summary['casp17_3d_molecular_object_metric_handoff_missing_required_metric_count']}` missing `{summary['casp17_3d_molecular_object_metric_handoff_missing_required_metric_names'] or '-'}` families monomer/complex/rna/ligand `{summary['casp17_3d_molecular_object_metric_handoff_monomer_object_count']}/{summary['casp17_3d_molecular_object_metric_handoff_complex_object_count']}/{summary['casp17_3d_molecular_object_metric_handoff_rna_hybrid_object_count']}/{summary['casp17_3d_molecular_object_metric_handoff_ligand_object_count']}` folders protein/object `{summary['casp17_3d_molecular_object_metric_handoff_protein_folder_count']}/{summary['casp17_3d_molecular_object_metric_handoff_object_folder_count']}` native/proof/author `{summary['casp17_3d_molecular_object_metric_handoff_native_accuracy_count']}/{summary['casp17_3d_molecular_object_metric_handoff_proof_eligible_count']}/{summary['casp17_3d_molecular_object_metric_handoff_author_serialized_count']}` first `{summary['casp17_3d_molecular_object_metric_handoff_first_protein_key'] or '-'}` `{summary['casp17_3d_molecular_object_metric_handoff_first_object_key'] or '-'}` html `{summary['casp17_3d_molecular_object_metric_handoff_html'] or '-'}`",
+        f"- CASP17 3D molecular object metric handoff completion audit: `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_status'] or '-'}` proteins folder/readme/manifest/total `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_protein_folder_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_protein_readme_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_protein_manifest_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_protein_count']}` objects pass/blocked/total `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_object_pass_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_object_blocked_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_object_count']}` source objects current/massivefold `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_current_object_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_massivefold_object_count']}` object files folder/manifest/csv/md `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_object_folder_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_object_manifest_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_metric_csv_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_metric_md_count']}` metric rows expected/csv/mismatch `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_metric_requirement_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_metric_csv_row_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_metric_csv_mismatch_count']}` evidence awaiting `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_metric_evidence_awaiting_count']}` coordinate copies object/out_dir `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_object_coordinate_copy_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_out_dir_coordinate_copy_count']}` proof/author `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_proof_eligible_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_author_serialized_count']}` first `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_first_protein_key'] or '-'}` `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_first_object_key'] or '-'}` html `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_html'] or '-'}`",
         f"- raw-ranked model quarantine: `{summary['raw_ranked_model_quarantine_status'] or '-'}` targets/models/top5 `{summary['raw_ranked_model_quarantine_target_count']}/{summary['raw_ranked_model_quarantine_model_count']}/{summary['raw_ranked_model_quarantine_top5_count']}` quarantined/linked/author-present `{summary['raw_ranked_model_quarantine_quarantined_count']}/{summary['raw_ranked_model_quarantine_linked_count']}/{summary['raw_ranked_model_quarantine_author_present_count']}` atoms `{summary['raw_ranked_model_quarantine_atom_count']}`",
+        f"- current CASP17 submission gate: `{summary['current_submission_gate_status'] or '-'}` go/no-go/total `{summary['current_submission_gate_go_count']}/{summary['current_submission_gate_no_go_count']}/{summary['current_submission_gate_target_count']}` framework `{summary['current_submission_gate_framework_gate_pass'] or '-'}` shape `{summary['current_submission_gate_shape_status'] or '-'}` `{summary['current_submission_gate_shape_pass_count']}/{summary['current_submission_gate_shape_blocked_count']}/{summary['current_submission_gate_shape_target_count']}` difficult lane `{summary['current_submission_gate_difficult_lane_count']}` server `{summary['current_submission_gate_server_ready'] or '-'}`",
+        f"- current CASP17 sidechain repack: `{summary['current_sidechain_repack_status'] or '-'}` pass/blocked/total `{summary['current_sidechain_repack_pass_count']}/{summary['current_sidechain_repack_blocked_count']}/{summary['current_sidechain_repack_target_count']}` soft-clash before/after/delta `{summary['current_sidechain_repack_soft_before']}/{summary['current_sidechain_repack_soft_after']}/{summary['current_sidechain_repack_soft_delta']}` improved/repacked `{summary['current_sidechain_repack_improved_residue_count']}/{summary['current_sidechain_repack_repacked_residue_count']}` revert-guard `{summary['current_sidechain_repack_revert_guard_count']}`",
+        f"- current CASP17 submission package preflight: `{summary['current_submission_package_preflight_status'] or '-'}` ready/blocked/total `{summary['current_submission_package_preflight_ready_count']}/{summary['current_submission_package_preflight_blocked_count']}/{summary['current_submission_package_preflight_target_count']}` files/format/author/sidechain/sha256 `{summary['current_submission_package_preflight_file_present_count']}/{summary['current_submission_package_preflight_format_pass_count']}/{summary['current_submission_package_preflight_author_pass_count']}/{summary['current_submission_package_preflight_sidechain_pass_count']}/{summary['current_submission_package_preflight_sha256_count']}` gate `{summary['current_submission_package_preflight_gate_status'] or '-'}` `{summary['current_submission_package_preflight_gate_go_count']}/{summary['current_submission_package_preflight_gate_no_go_count']}/{summary['current_submission_package_preflight_gate_target_count']}` server `{summary['current_submission_package_preflight_server_ready'] or '-'}` mode `{summary['current_submission_package_preflight_package_mode'] or '-'}`",
+        f"- current CASP17 submission deadline guard: `{summary['current_submission_deadline_guard_status'] or '-'}` date `{summary['current_submission_deadline_guard_current_date'] or '-'}` ready/blocked/total `{summary['current_submission_deadline_guard_ready_count']}/{summary['current_submission_deadline_guard_blocked_count']}/{summary['current_submission_deadline_guard_target_count']}` expired/today/future `{summary['current_submission_deadline_guard_human_expired_count']}/{summary['current_submission_deadline_guard_human_expiring_today_count']}/{summary['current_submission_deadline_guard_human_future_count']}` QA open/expired/unknown `{summary['current_submission_deadline_guard_qa_open_count']}/{summary['current_submission_deadline_guard_qa_expired_count']}/{summary['current_submission_deadline_guard_qa_unknown_count']}` package `{summary['current_submission_deadline_guard_package_status'] or '-'}` `{summary['current_submission_deadline_guard_package_ready_count']}/{summary['current_submission_deadline_guard_package_blocked_count']}/{summary['current_submission_deadline_guard_package_target_count']}` watchlist stale `{summary['current_submission_deadline_guard_watchlist_stale'] or '-'}` `{summary['current_submission_deadline_guard_watchlist_stale_days']}` first `{summary['current_submission_deadline_guard_first_blocked_target_id'] or '-'}` `{summary['current_submission_deadline_guard_first_blocked_reason'] or '-'}` nearest `{summary['current_submission_deadline_guard_nearest_open_target_id'] or '-'}` `{summary['current_submission_deadline_guard_nearest_open_human_expiration'] or '-'}` `{summary['current_submission_deadline_guard_nearest_open_days']}`",
+        f"- current CASP17 official upload queue: `{summary['current_upload_queue_status'] or '-'}` date `{summary['current_upload_queue_current_date'] or '-'}` ready/blocked/total `{summary['current_upload_queue_ready_count']}/{summary['current_upload_queue_blocked_count']}/{summary['current_upload_queue_target_count']}` today/soon/future `{summary['current_upload_queue_ready_today_count']}/{summary['current_upload_queue_ready_soon_count']}/{summary['current_upload_queue_ready_future_count']}` official targets/direct/mapped/missing `{summary['current_upload_queue_official_target_count']}/{summary['current_upload_queue_official_direct_match_count']}/{summary['current_upload_queue_official_phase_mapped_count']}/{summary['current_upload_queue_official_missing_count']}` expired/cancelled/mismatch `{summary['current_upload_queue_official_expired_count']}/{summary['current_upload_queue_official_cancelled_count']}/{summary['current_upload_queue_official_mismatch_count']}` first upload `{summary['current_upload_queue_first_upload_target_id'] or '-'}` `{summary['current_upload_queue_first_upload_human_expiration'] or '-'}` first blocked `{summary['current_upload_queue_first_blocked_target_id'] or '-'}` `{summary['current_upload_queue_first_blocked_reason'] or '-'}`",
+        f"- current CASP17 upload review packet: `{summary['current_upload_review_packet_status'] or '-'}` reviews ready/blocked/total `{summary['current_upload_review_packet_ready_count']}/{summary['current_upload_review_packet_blocked_count']}/{summary['current_upload_review_packet_review_count']}` urgency today/soon/future `{summary['current_upload_review_packet_urgency_today_count']}/{summary['current_upload_review_packet_urgency_soon_count']}/{summary['current_upload_review_packet_urgency_future_count']}` candidate/object/viewer `{summary['current_upload_review_packet_candidate_count']}/{summary['current_upload_review_packet_object_catalog_count']}/{summary['current_upload_review_packet_viewer_count']}` first `{summary['current_upload_review_packet_first_target_id'] or '-'}` `{summary['current_upload_review_packet_first_review_md'] or '-'}`",
+        f"- current CASP17 prospective strict-blind escrow: `{summary['current_prospective_strict_blind_escrow_status'] or '-'}` escrow ready/blocked/total `{summary['current_prospective_strict_blind_escrow_ready_count']}/{summary['current_prospective_strict_blind_escrow_blocked_count']}/{summary['current_prospective_strict_blind_escrow_target_count']}` upload ready/blocked `{summary['current_prospective_strict_blind_escrow_upload_ready_count']}/{summary['current_prospective_strict_blind_escrow_upload_blocked_count']}` sha/review/native/ext-ts `{summary['current_prospective_strict_blind_escrow_sha256_match_count']}/{summary['current_prospective_strict_blind_escrow_review_link_count']}/{summary['current_prospective_strict_blind_escrow_native_pending_count']}/{summary['current_prospective_strict_blind_escrow_external_timestamp_required_count']}` proof `{summary['current_prospective_strict_blind_escrow_competitive_proof_eligible_count']}` author-serialized `{summary['current_prospective_strict_blind_escrow_author_serialized_count']}` first upload/blocked `{summary['current_prospective_strict_blind_escrow_first_upload_ready_target_id'] or '-'}`/`{summary['current_prospective_strict_blind_escrow_first_upload_blocked_target_id'] or '-'}` manifest `{summary['current_prospective_strict_blind_escrow_manifest_signature_sha256'] or '-'}`",
         f"- benchmark rows ready/total: `{summary['benchmark_rows_ready_count']}/{summary['benchmark_rows_total']}`",
         f"- win-tier goal scorecard: `{summary['win_tier_goal_scorecard_status'] or '-'}` pass/partial/blocked `{summary['win_tier_goal_scorecard_pass_count']}/{summary['win_tier_goal_scorecard_partial_count']}/{summary['win_tier_goal_scorecard_blocked_count']}` first blocked `{summary['win_tier_goal_scorecard_first_blocked_gate'] or '-'}`",
         f"- historical winner-normalized bands: `{summary['historical_winner_normalized_bands_status'] or '-'}` top5/winner-proximity/blocked/total `{summary['historical_winner_normalized_bands_top5_or_better_count']}/{summary['historical_winner_normalized_bands_winner_proximity_count']}/{summary['historical_winner_normalized_bands_blocked_band_count']}/{summary['historical_winner_normalized_bands_band_count']}` strict slots `{summary['historical_winner_normalized_bands_strict_ready_slot_count']}/{summary['historical_winner_normalized_bands_strict_slot_count']}` metric rows `{summary['historical_winner_normalized_bands_metric_surface_ready_row_count']}/{summary['historical_winner_normalized_bands_metric_surface_row_count']}` official archive proof `{summary['historical_winner_normalized_bands_official_archive_candidate_count']}/{summary['historical_winner_normalized_bands_official_archive_proof_eligible_count']}` first `{summary['historical_winner_normalized_bands_first_blocked_band'] or '-'}` `{summary['historical_winner_normalized_bands_first_blocker'] or '-'}`",
@@ -12247,6 +20333,23 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- MassiveFold RNA self-assessment: `{summary['massivefold_rna_self_assessment_status'] or '-'}` targets ready/blocked/total `{summary['massivefold_rna_self_assessment_ready_target_count']}/{summary['massivefold_rna_self_assessment_blocked_target_count']}/{summary['massivefold_rna_self_assessment_target_count']}` candidates/model1/top5 `{summary['massivefold_rna_self_assessment_candidate_count']}/{summary['massivefold_rna_self_assessment_model1_count']}/{summary['massivefold_rna_self_assessment_top5_count']}` low-margin `{summary['massivefold_rna_self_assessment_low_margin_count']}` threshold `{summary['massivefold_rna_self_assessment_low_margin_threshold'] or '-'}` R2345 guard `{summary['massivefold_rna_self_assessment_r2345_guard'] or '-'}` policy `{summary['massivefold_rna_self_assessment_policy'] or '-'}` first blocked `{summary['massivefold_rna_self_assessment_first_blocked_target_id'] or '-'}`",
         f"- Protein/complex MassiveFold model-selection coverage: `{summary['protein_complex_massivefold_model_selection_coverage_status'] or '-'}` targets ready/partial/total `{summary['protein_complex_massivefold_model_selection_coverage_ready_target_count']}/{summary['protein_complex_massivefold_model_selection_coverage_partial_target_count']}/{summary['protein_complex_massivefold_model_selection_coverage_target_count']}` acquisition/index/viewer/rerank `{summary['protein_complex_massivefold_model_selection_coverage_verified_acquisition_count']}/{summary['protein_complex_massivefold_model_selection_coverage_representative_extracted_target_count']}/{summary['protein_complex_massivefold_model_selection_coverage_viewer_ready_target_count']}/{summary['protein_complex_massivefold_model_selection_coverage_rerank_ready_target_count']}` models selected/extracted/viewer `{summary['protein_complex_massivefold_model_selection_coverage_selected_model_count']}/{summary['protein_complex_massivefold_model_selection_coverage_extracted_model_count']}/{summary['protein_complex_massivefold_model_selection_coverage_viewer_ready_model_count']}` model1/top5 `{summary['protein_complex_massivefold_model_selection_coverage_model1_candidate_count']}/{summary['protein_complex_massivefold_model_selection_coverage_top5_candidate_count']}` first partial `{summary['protein_complex_massivefold_model_selection_coverage_first_partial_target_id'] or '-'}`",
         f"- Protein/complex MassiveFold self-assessment: `{summary['protein_complex_massivefold_self_assessment_status'] or '-'}` targets ready/blocked/total `{summary['protein_complex_massivefold_self_assessment_ready_target_count']}/{summary['protein_complex_massivefold_self_assessment_blocked_target_count']}/{summary['protein_complex_massivefold_self_assessment_target_count']}` heteromer/immune `{summary['protein_complex_massivefold_self_assessment_heteromer_count']}` candidates/model1/top5 `{summary['protein_complex_massivefold_self_assessment_candidate_count']}/{summary['protein_complex_massivefold_self_assessment_model1_count']}/{summary['protein_complex_massivefold_self_assessment_top5_count']}` missing `{summary['protein_complex_massivefold_self_assessment_missing_artifact_count']}` low-margin `{summary['protein_complex_massivefold_self_assessment_low_margin_count']}` threshold `{summary['protein_complex_massivefold_self_assessment_low_margin_threshold'] or '-'}` policy `{summary['protein_complex_massivefold_self_assessment_policy'] or '-'}` first blocked `{summary['protein_complex_massivefold_self_assessment_first_blocked_target_id'] or '-'}`",
+        f"- MassiveFold model1 risk queue: `{summary['massivefold_model1_risk_queue_status'] or '-'}` targets ready/blocked/total `{summary['massivefold_model1_risk_queue_ready_target_count']}/{summary['massivefold_model1_risk_queue_blocked_target_count']}/{summary['massivefold_model1_risk_queue_target_count']}` low-margin/critical `{summary['massivefold_model1_risk_queue_low_margin_count']}/{summary['massivefold_model1_risk_queue_critical_count']}` RNA/protein-complex `{summary['massivefold_model1_risk_queue_rna_hybrid_count']}/{summary['massivefold_model1_risk_queue_protein_complex_count']}` first `{summary['massivefold_model1_risk_queue_first_target_id'] or '-'}` `{summary['massivefold_model1_risk_queue_first_group'] or '-'}` gap `{summary['massivefold_model1_risk_queue_first_gap'] or '-'}` tier `{summary['massivefold_model1_risk_queue_first_tier'] or '-'}` policy `{summary['massivefold_model1_risk_queue_policy'] or '-'}`",
+        f"- MassiveFold critical rerank experiment: `{summary['massivefold_critical_rerank_experiment_status'] or '-'}` experiments ready/blocked/total `{summary['massivefold_critical_rerank_ready_experiment_count']}/{summary['massivefold_critical_rerank_blocked_experiment_count']}/{summary['massivefold_critical_rerank_experiment_count']}` RNA/protein-complex `{summary['massivefold_critical_rerank_rna_hybrid_count']}/{summary['massivefold_critical_rerank_protein_complex_count']}` review flags diversity/geometry/low-conf `{summary['massivefold_critical_rerank_high_diversity_count']}/{summary['massivefold_critical_rerank_geometry_review_count']}/{summary['massivefold_critical_rerank_low_confidence_review_count']}` first `{summary['massivefold_critical_rerank_first_target_id'] or '-'}` `{summary['massivefold_critical_rerank_first_group'] or '-'}` gap `{summary['massivefold_critical_rerank_first_gap'] or '-'}` order `{summary['massivefold_critical_rerank_first_order'] or '-'}` formula `{summary['massivefold_critical_rerank_formula_id'] or '-'}` policy `{summary['massivefold_critical_rerank_policy'] or '-'}`",
+        f"- MassiveFold critical rerank score ledger: `{summary['massivefold_critical_rerank_score_ledger_status'] or '-'}` rows ready/blocked/total `{summary['massivefold_critical_rerank_score_ledger_ready_count']}/{summary['massivefold_critical_rerank_score_ledger_blocked_count']}/{summary['massivefold_critical_rerank_score_ledger_count']}` bands immediate/calibrate/watch `{summary['massivefold_critical_rerank_score_ledger_immediate_count']}/{summary['massivefold_critical_rerank_score_ledger_calibrate_count']}/{summary['massivefold_critical_rerank_score_ledger_watch_count']}` RNA/protein-complex `{summary['massivefold_critical_rerank_score_ledger_rna_hybrid_count']}/{summary['massivefold_critical_rerank_score_ledger_protein_complex_count']}` top `{summary['massivefold_critical_rerank_score_ledger_top_target_id'] or '-'}` `{summary['massivefold_critical_rerank_score_ledger_top_group'] or '-'}` score `{summary['massivefold_critical_rerank_score_ledger_top_score'] or '-'}` band `{summary['massivefold_critical_rerank_score_ledger_top_band'] or '-'}` action `{summary['massivefold_critical_rerank_score_ledger_top_action'] or '-'}` policy `{summary['massivefold_critical_rerank_score_ledger_policy'] or '-'}`",
+        f"- MassiveFold model1 selection calibration gate: `{summary['massivefold_model1_selection_calibration_gate_status'] or '-'}` freeze `{summary['massivefold_model1_selection_calibration_gate_freeze_status'] or '-'}` gates ready/blocked/total `{summary['massivefold_model1_selection_calibration_gate_ready_count']}/{summary['massivefold_model1_selection_calibration_gate_blocked_count']}/{summary['massivefold_model1_selection_calibration_gate_count']}` hold/watch/probe/freeze `{summary['massivefold_model1_selection_calibration_gate_hold_count']}/{summary['massivefold_model1_selection_calibration_gate_watch_count']}/{summary['massivefold_model1_selection_calibration_gate_probe_required_count']}/{summary['massivefold_model1_selection_calibration_gate_freeze_ready_count']}` RNA/protein-complex `{summary['massivefold_model1_selection_calibration_gate_rna_hybrid_count']}/{summary['massivefold_model1_selection_calibration_gate_protein_complex_count']}` first `{summary['massivefold_model1_selection_calibration_gate_first_target_id'] or '-'}` `{summary['massivefold_model1_selection_calibration_gate_first_group'] or '-'}` score `{summary['massivefold_model1_selection_calibration_gate_top_risk_score'] or '-'}` decision `{summary['massivefold_model1_selection_calibration_gate_first_decision'] or '-'}` probe `{summary['massivefold_model1_selection_calibration_gate_first_probe'] or '-'}` rule `{summary['massivefold_model1_selection_calibration_gate_rule_id'] or '-'}` policy `{summary['massivefold_model1_selection_calibration_gate_policy'] or '-'}`",
+        f"- MassiveFold model1 probe worklist: `{summary['massivefold_model1_probe_worklist_status'] or '-'}` workitems ready/blocked/total `{summary['massivefold_model1_probe_worklist_ready_count']}/{summary['massivefold_model1_probe_worklist_blocked_count']}/{summary['massivefold_model1_probe_worklist_count']}` probes top5/lightweight `{summary['massivefold_model1_probe_worklist_top5_count']}/{summary['massivefold_model1_probe_worklist_lightweight_count']}` priority 1/2 `{summary['massivefold_model1_probe_worklist_priority1_count']}/{summary['massivefold_model1_probe_worklist_priority2_count']}` RNA/protein-complex `{summary['massivefold_model1_probe_worklist_rna_hybrid_count']}/{summary['massivefold_model1_probe_worklist_protein_complex_count']}` first `{summary['massivefold_model1_probe_worklist_first_target_id'] or '-'}` `{summary['massivefold_model1_probe_worklist_first_group'] or '-'}` score `{summary['massivefold_model1_probe_worklist_first_score'] or '-'}` probe `{summary['massivefold_model1_probe_worklist_first_probe'] or '-'}` unlock `{summary['massivefold_model1_probe_worklist_unlock_policy'] or '-'}` policy `{summary['massivefold_model1_probe_worklist_policy'] or '-'}`",
+        f"- MassiveFold model1 probe outcome: `{summary['massivefold_model1_probe_outcome_status'] or '-'}` outcomes ready/blocked/total `{summary['massivefold_model1_probe_outcome_ready_count']}/{summary['massivefold_model1_probe_outcome_blocked_count']}/{summary['massivefold_model1_probe_outcome_count']}` pass/fail/freeze-ready `{summary['massivefold_model1_probe_outcome_pass_count']}/{summary['massivefold_model1_probe_outcome_fail_count']}/{summary['massivefold_model1_probe_outcome_freeze_ready_count']}` probes top5/lightweight `{summary['massivefold_model1_probe_outcome_top5_count']}/{summary['massivefold_model1_probe_outcome_lightweight_count']}` RNA/protein-complex `{summary['massivefold_model1_probe_outcome_rna_hybrid_count']}/{summary['massivefold_model1_probe_outcome_protein_complex_count']}` first `{summary['massivefold_model1_probe_outcome_first_target_id'] or '-'}` `{summary['massivefold_model1_probe_outcome_first_group'] or '-'}` result `{summary['massivefold_model1_probe_outcome_first_result'] or '-'}` margin `{summary['massivefold_model1_probe_outcome_first_margin'] or '-'}` recommendation `{summary['massivefold_model1_probe_outcome_first_recommendation'] or '-'}` rule `{summary['massivefold_model1_probe_outcome_rule_id'] or '-'}` policy `{summary['massivefold_model1_probe_outcome_policy'] or '-'}`",
+        f"- MassiveFold model1 freeze decision packet: `{summary['massivefold_model1_freeze_decision_packet_status'] or '-'}` decisions ready/blocked/total `{summary['massivefold_model1_freeze_decision_packet_ready_count']}/{summary['massivefold_model1_freeze_decision_packet_blocked_count']}/{summary['massivefold_model1_freeze_decision_packet_count']}` freeze-ready/blocked `{summary['massivefold_model1_freeze_decision_packet_freeze_ready_count']}/{summary['massivefold_model1_freeze_decision_packet_freeze_blocked_count']}` conditional/watch/manual `{summary['massivefold_model1_freeze_decision_packet_conditional_count']}/{summary['massivefold_model1_freeze_decision_packet_watch_count']}/{summary['massivefold_model1_freeze_decision_packet_manual_review_count']}` RNA/protein-complex `{summary['massivefold_model1_freeze_decision_packet_rna_hybrid_count']}/{summary['massivefold_model1_freeze_decision_packet_protein_complex_count']}` first-ready `{summary['massivefold_model1_freeze_decision_packet_first_ready_target_id'] or '-'}` `{summary['massivefold_model1_freeze_decision_packet_first_ready_group'] or '-'}` `{summary['massivefold_model1_freeze_decision_packet_first_ready_decision'] or '-'}` first-blocked `{summary['massivefold_model1_freeze_decision_packet_first_blocked_target_id'] or '-'}` `{summary['massivefold_model1_freeze_decision_packet_first_blocked_group'] or '-'}` `{summary['massivefold_model1_freeze_decision_packet_first_blocked_decision'] or '-'}` rule `{summary['massivefold_model1_freeze_decision_packet_rule_id'] or '-'}` policy `{summary['massivefold_model1_freeze_decision_packet_policy'] or '-'}`",
+        f"- MassiveFold model-selection ledger: `{summary['massivefold_model_selection_ledger_status'] or '-'}` ledgers ready/blocked/total `{summary['massivefold_model_selection_ledger_ready_count']}/{summary['massivefold_model_selection_ledger_blocked_count']}/{summary['massivefold_model_selection_ledger_count']}` selected conditional/watch `{summary['massivefold_model_selection_ledger_conditional_count']}/{summary['massivefold_model_selection_ledger_watch_count']}` manual/review-only `{summary['massivefold_model_selection_ledger_manual_review_count']}/{summary['massivefold_model_selection_ledger_review_only_count']}` freeze-ready `{summary['massivefold_model_selection_ledger_freeze_ready_count']}` RNA/protein-complex `{summary['massivefold_model_selection_ledger_rna_hybrid_count']}/{summary['massivefold_model_selection_ledger_protein_complex_count']}` first `{summary['massivefold_model_selection_ledger_first_target_id'] or '-'}` `{summary['massivefold_model_selection_ledger_first_group'] or '-'}` `{summary['massivefold_model_selection_ledger_first_decision'] or '-'}` manual `{summary['massivefold_model_selection_ledger_first_manual_review_target_id'] or '-'}` rule `{summary['massivefold_model_selection_ledger_rule_id'] or '-'}` policy `{summary['massivefold_model_selection_ledger_policy'] or '-'}`",
+        f"- MassiveFold model1 combined selector overlay: `{summary['massivefold_model1_combined_selector_overlay_status'] or '-'}` overlay ready/blocked/total `{summary['massivefold_model1_combined_selector_overlay_ready_count']}/{summary['massivefold_model1_combined_selector_overlay_blocked_count']}/{summary['massivefold_model1_combined_selector_overlay_count']}` freeze-ready/not-freeze-ready `{summary['massivefold_model1_combined_selector_overlay_freeze_ready_count']}/{summary['massivefold_model1_combined_selector_overlay_not_freeze_ready_count']}` manual/interface/weak/probe/watch/unknown `{summary['massivefold_model1_combined_selector_overlay_manual_blocked_count']}/{summary['massivefold_model1_combined_selector_overlay_interface_hold_count']}/{summary['massivefold_model1_combined_selector_overlay_weak_probe_hold_count']}/{summary['massivefold_model1_combined_selector_overlay_probe_required_count']}/{summary['massivefold_model1_combined_selector_overlay_review_watch_count']}/{summary['massivefold_model1_combined_selector_overlay_unknown_hold_count']}` RNA/protein-complex `{summary['massivefold_model1_combined_selector_overlay_rna_hybrid_count']}/{summary['massivefold_model1_combined_selector_overlay_protein_complex_count']}` baseline `{summary['massivefold_model1_combined_selector_overlay_baseline_capture_rate'] or '-'}`/`{summary['massivefold_model1_combined_selector_overlay_baseline_non_capture_rate'] or '-'}` first `{summary['massivefold_model1_combined_selector_overlay_first_target_id'] or '-'}` `{summary['massivefold_model1_combined_selector_overlay_first_decision'] or '-'}` `{summary['massivefold_model1_combined_selector_overlay_first_action'] or '-'}` first-freeze `{summary['massivefold_model1_combined_selector_overlay_first_freeze_ready_target_id'] or '-'}` `{summary['massivefold_model1_combined_selector_overlay_first_freeze_ready_action'] or '-'}` proof `{summary['massivefold_model1_combined_selector_overlay_proof_eligible'] or '-'}` policy `{summary['massivefold_model1_combined_selector_overlay_policy'] or '-'}`",
+        f"- MassiveFold freeze-ready review packet: `{summary['massivefold_freeze_ready_review_packet_status'] or '-'}` reviews ready/blocked/total `{summary['massivefold_freeze_ready_review_packet_ready_count']}/{summary['massivefold_freeze_ready_review_packet_blocked_count']}/{summary['massivefold_freeze_ready_review_packet_count']}` model/viewer/projection/top5 `{summary['massivefold_freeze_ready_review_packet_model_present_count']}/{summary['massivefold_freeze_ready_review_packet_viewer_present_count']}/{summary['massivefold_freeze_ready_review_packet_projection_present_count']}/{summary['massivefold_freeze_ready_review_packet_top5_manifest_present_count']}` top5 total `{summary['massivefold_freeze_ready_review_packet_top5_total']}` first `{summary['massivefold_freeze_ready_review_packet_first_target_id'] or '-'}` `{summary['massivefold_freeze_ready_review_packet_first_model_filename'] or '-'}` viewer `{summary['massivefold_freeze_ready_review_packet_first_viewer_html'] or '-'}` html `{summary['massivefold_freeze_ready_review_packet_html'] or '-'}` proof `{summary['massivefold_freeze_ready_review_packet_proof_eligible'] or '-'}` policy `{summary['massivefold_freeze_ready_review_packet_policy'] or '-'}`",
+        f"- MassiveFold hold/probe review packet: `{summary['massivefold_hold_probe_review_packet_status'] or '-'}` reviews ready/blocked/total `{summary['massivefold_hold_probe_review_packet_ready_count']}/{summary['massivefold_hold_probe_review_packet_blocked_count']}/{summary['massivefold_hold_probe_review_packet_count']}` manual/interface/probe/weak/unknown `{summary['massivefold_hold_probe_review_packet_manual_blocked_count']}/{summary['massivefold_hold_probe_review_packet_interface_hold_count']}/{summary['massivefold_hold_probe_review_packet_probe_required_count']}/{summary['massivefold_hold_probe_review_packet_weak_probe_hold_count']}/{summary['massivefold_hold_probe_review_packet_unknown_hold_count']}` model/viewer/projection/top5/alternate `{summary['massivefold_hold_probe_review_packet_model_present_count']}/{summary['massivefold_hold_probe_review_packet_viewer_present_count']}/{summary['massivefold_hold_probe_review_packet_projection_present_count']}/{summary['massivefold_hold_probe_review_packet_top5_manifest_present_count']}/{summary['massivefold_hold_probe_review_packet_alternate_present_count']}` top5 total `{summary['massivefold_hold_probe_review_packet_top5_total']}` first `{summary['massivefold_hold_probe_review_packet_first_target_id'] or '-'}` `{summary['massivefold_hold_probe_review_packet_first_class'] or '-'}` `{summary['massivefold_hold_probe_review_packet_first_action'] or '-'}` html `{summary['massivefold_hold_probe_review_packet_html'] or '-'}` proof `{summary['massivefold_hold_probe_review_packet_proof_eligible'] or '-'}` policy `{summary['massivefold_hold_probe_review_packet_policy'] or '-'}`",
+        f"- MassiveFold probe-required targeted probe packet: `{summary['massivefold_probe_required_targeted_probe_packet_status'] or '-'}` probes ready/blocked/total `{summary['massivefold_probe_required_targeted_probe_packet_ready_count']}/{summary['massivefold_probe_required_targeted_probe_packet_blocked_count']}/{summary['massivefold_probe_required_targeted_probe_packet_count']}` pass/watch/fail `{summary['massivefold_probe_required_targeted_probe_packet_pass_count']}/{summary['massivefold_probe_required_targeted_probe_packet_watch_count']}/{summary['massivefold_probe_required_targeted_probe_packet_fail_count']}` recommendations freeze/watch/manual `{summary['massivefold_probe_required_targeted_probe_packet_freeze_candidate_count']}/{summary['massivefold_probe_required_targeted_probe_packet_watch_recommendation_count']}/{summary['massivefold_probe_required_targeted_probe_packet_manual_review_count']}` RNA/protein-complex `{summary['massivefold_probe_required_targeted_probe_packet_rna_hybrid_count']}/{summary['massivefold_probe_required_targeted_probe_packet_protein_complex_count']}` artifacts model/viewer/projection/top/top-viewer/top5 `{summary['massivefold_probe_required_targeted_probe_packet_model_present_count']}/{summary['massivefold_probe_required_targeted_probe_packet_viewer_present_count']}/{summary['massivefold_probe_required_targeted_probe_packet_projection_present_count']}/{summary['massivefold_probe_required_targeted_probe_packet_top_candidate_present_count']}/{summary['massivefold_probe_required_targeted_probe_packet_top_candidate_viewer_present_count']}/{summary['massivefold_probe_required_targeted_probe_packet_top5_manifest_present_count']}` top5 total `{summary['massivefold_probe_required_targeted_probe_packet_top5_total']}` margin `{summary['massivefold_probe_required_targeted_probe_packet_clear_margin'] or '-'}` first `{summary['massivefold_probe_required_targeted_probe_packet_first_target_id'] or '-'}` `{summary['massivefold_probe_required_targeted_probe_packet_first_result'] or '-'}` `{summary['massivefold_probe_required_targeted_probe_packet_first_margin'] or '-'}` html `{summary['massivefold_probe_required_targeted_probe_packet_html'] or '-'}` proof `{summary['massivefold_probe_required_targeted_probe_packet_proof_eligible'] or '-'}` policy `{summary['massivefold_probe_required_targeted_probe_packet_policy'] or '-'}`",
+        f"- MassiveFold post-probe selector decision packet: `{summary['massivefold_post_probe_selector_decision_packet_status'] or '-'}` decisions ready/blocked/total `{summary['massivefold_post_probe_selector_decision_packet_ready_count']}/{summary['massivefold_post_probe_selector_decision_packet_blocked_count']}/{summary['massivefold_post_probe_selector_decision_packet_count']}` freeze/watch/manual `{summary['massivefold_post_probe_selector_decision_packet_freeze_count']}/{summary['massivefold_post_probe_selector_decision_packet_watch_count']}/{summary['massivefold_post_probe_selector_decision_packet_manual_count']}` freeze existing/probe `{summary['massivefold_post_probe_selector_decision_packet_existing_freeze_count']}/{summary['massivefold_post_probe_selector_decision_packet_probe_freeze_count']}` watch probe/interface `{summary['massivefold_post_probe_selector_decision_packet_probe_watch_count']}/{summary['massivefold_post_probe_selector_decision_packet_interface_hold_count']}` manual probe/manual-block `{summary['massivefold_post_probe_selector_decision_packet_probe_manual_count']}/{summary['massivefold_post_probe_selector_decision_packet_manual_block_count']}` RNA/protein-complex `{summary['massivefold_post_probe_selector_decision_packet_rna_hybrid_count']}/{summary['massivefold_post_probe_selector_decision_packet_protein_complex_count']}` artifacts model/viewer/projection/top5/alternate `{summary['massivefold_post_probe_selector_decision_packet_model_present_count']}/{summary['massivefold_post_probe_selector_decision_packet_viewer_present_count']}/{summary['massivefold_post_probe_selector_decision_packet_projection_present_count']}/{summary['massivefold_post_probe_selector_decision_packet_top5_manifest_present_count']}/{summary['massivefold_post_probe_selector_decision_packet_alternate_present_count']}` first `{summary['massivefold_post_probe_selector_decision_packet_first_target_id'] or '-'}` `{summary['massivefold_post_probe_selector_decision_packet_first_class'] or '-'}` `{summary['massivefold_post_probe_selector_decision_packet_first_decision'] or '-'}` html `{summary['massivefold_post_probe_selector_decision_packet_html'] or '-'}` proof `{summary['massivefold_post_probe_selector_decision_packet_proof_eligible'] or '-'}` policy `{summary['massivefold_post_probe_selector_decision_packet_policy'] or '-'}`",
+        f"- MassiveFold watch/manual action packet: `{summary['massivefold_watch_manual_action_packet_status'] or '-'}` actions ready/blocked/total `{summary['massivefold_watch_manual_action_packet_ready_count']}/{summary['massivefold_watch_manual_action_packet_blocked_count']}/{summary['massivefold_watch_manual_action_packet_count']}` manual/interface/low-margin `{summary['massivefold_watch_manual_action_packet_manual_count']}/{summary['massivefold_watch_manual_action_packet_interface_count']}/{summary['massivefold_watch_manual_action_packet_low_margin_count']}` priority 1/2 `{summary['massivefold_watch_manual_action_packet_priority1_count']}/{summary['massivefold_watch_manual_action_packet_priority2_count']}` RNA/protein-complex `{summary['massivefold_watch_manual_action_packet_rna_hybrid_count']}/{summary['massivefold_watch_manual_action_packet_protein_complex_count']}` artifacts model/viewer/projection/top5/alternate `{summary['massivefold_watch_manual_action_packet_model_present_count']}/{summary['massivefold_watch_manual_action_packet_viewer_present_count']}/{summary['massivefold_watch_manual_action_packet_projection_present_count']}/{summary['massivefold_watch_manual_action_packet_top5_manifest_present_count']}/{summary['massivefold_watch_manual_action_packet_alternate_present_count']}` first `{summary['massivefold_watch_manual_action_packet_first_target_id'] or '-'}` `{summary['massivefold_watch_manual_action_packet_first_class'] or '-'}` priority `{summary['massivefold_watch_manual_action_packet_first_priority'] or '-'}` html `{summary['massivefold_watch_manual_action_packet_html'] or '-'}` proof `{summary['massivefold_watch_manual_action_packet_proof_eligible'] or '-'}` policy `{summary['massivefold_watch_manual_action_packet_policy'] or '-'}`",
+        f"- MassiveFold freeze-candidate format preflight: `{summary['massivefold_freeze_candidate_format_preflight_status'] or '-'}` preflight ready/blocked/total `{summary['massivefold_freeze_candidate_format_preflight_ready_count']}/{summary['massivefold_freeze_candidate_format_preflight_blocked_count']}/{summary['massivefold_freeze_candidate_format_preflight_count']}` freeze existing/probe `{summary['massivefold_freeze_candidate_format_preflight_existing_count']}/{summary['massivefold_freeze_candidate_format_preflight_probe_count']}` RNA/protein-complex `{summary['massivefold_freeze_candidate_format_preflight_rna_hybrid_count']}/{summary['massivefold_freeze_candidate_format_preflight_protein_complex_count']}` selected pdb/cif `{summary['massivefold_freeze_candidate_format_preflight_selected_pdb_count']}/{summary['massivefold_freeze_candidate_format_preflight_selected_cif_count']}` packaged pdb/cif `{summary['massivefold_freeze_candidate_format_preflight_packaged_pdb_count']}/{summary['massivefold_freeze_candidate_format_preflight_packaged_cif_count']}` checks target/selected-ext/packaged-ext/model/nonempty/viewer/projection/top5 `{summary['massivefold_freeze_candidate_format_preflight_target_id_ok_count']}/{summary['massivefold_freeze_candidate_format_preflight_selected_ext_ok_count']}/{summary['massivefold_freeze_candidate_format_preflight_packaged_ext_ok_count']}/{summary['massivefold_freeze_candidate_format_preflight_model_present_count']}/{summary['massivefold_freeze_candidate_format_preflight_model_nonempty_count']}/{summary['massivefold_freeze_candidate_format_preflight_viewer_present_count']}/{summary['massivefold_freeze_candidate_format_preflight_projection_present_count']}/{summary['massivefold_freeze_candidate_format_preflight_top5_manifest_present_count']}` first `{summary['massivefold_freeze_candidate_format_preflight_first_target_id'] or '-'}` `{summary['massivefold_freeze_candidate_format_preflight_first_model_filename'] or '-'}` html `{summary['massivefold_freeze_candidate_format_preflight_html'] or '-'}` proof `{summary['massivefold_freeze_candidate_format_preflight_proof_eligible'] or '-'}` policy `{summary['massivefold_freeze_candidate_format_preflight_policy'] or '-'}`",
+        f"- MassiveFold freeze-candidate escrow: `{summary['massivefold_freeze_candidate_escrow_status'] or '-'}` escrow ready/blocked/total `{summary['massivefold_freeze_candidate_escrow_ready_count']}/{summary['massivefold_freeze_candidate_escrow_blocked_count']}/{summary['massivefold_freeze_candidate_escrow_count']}` sha model/top5 `{summary['massivefold_freeze_candidate_escrow_model_sha256_count']}/{summary['massivefold_freeze_candidate_escrow_top5_sha256_count']}` artifacts model/viewer/projection/top5 `{summary['massivefold_freeze_candidate_escrow_model_present_count']}/{summary['massivefold_freeze_candidate_escrow_viewer_present_count']}/{summary['massivefold_freeze_candidate_escrow_projection_present_count']}/{summary['massivefold_freeze_candidate_escrow_top5_manifest_present_count']}` freeze existing/probe `{summary['massivefold_freeze_candidate_escrow_existing_count']}/{summary['massivefold_freeze_candidate_escrow_probe_count']}` RNA/protein-complex `{summary['massivefold_freeze_candidate_escrow_rna_hybrid_count']}/{summary['massivefold_freeze_candidate_escrow_protein_complex_count']}` native/proof/author `{summary['massivefold_freeze_candidate_escrow_native_pending_count']}/{summary['massivefold_freeze_candidate_escrow_proof_eligible_count']}/{summary['massivefold_freeze_candidate_escrow_author_serialized_count']}` first `{summary['massivefold_freeze_candidate_escrow_first_target_id'] or '-'}` blocked `{summary['massivefold_freeze_candidate_escrow_first_blocked_target_id'] or '-'}` manifest `{summary['massivefold_freeze_candidate_escrow_manifest_signature_sha256'] or '-'}` policy `{summary['massivefold_freeze_candidate_escrow_policy'] or '-'}`",
+        f"- MassiveFold freeze-candidate protein library: `{summary['massivefold_freeze_candidate_protein_library_status'] or '-'}` proteins ready/blocked/total `{summary['massivefold_freeze_candidate_protein_library_protein_ready_count']}/{summary['massivefold_freeze_candidate_protein_library_protein_blocked_count']}/{summary['massivefold_freeze_candidate_protein_library_protein_count']}` objects ready/blocked/total `{summary['massivefold_freeze_candidate_protein_library_object_ready_count']}/{summary['massivefold_freeze_candidate_protein_library_object_blocked_count']}/{summary['massivefold_freeze_candidate_protein_library_object_count']}` links model/viewer/projection/top5/escrow `{summary['massivefold_freeze_candidate_protein_library_model_link_count']}/{summary['massivefold_freeze_candidate_protein_library_viewer_link_count']}/{summary['massivefold_freeze_candidate_protein_library_projection_link_count']}/{summary['massivefold_freeze_candidate_protein_library_top5_link_count']}/{summary['massivefold_freeze_candidate_protein_library_escrow_link_count']}` sha model/top5 `{summary['massivefold_freeze_candidate_protein_library_model_sha256_count']}/{summary['massivefold_freeze_candidate_protein_library_top5_sha256_count']}` name current/official `{summary['massivefold_freeze_candidate_protein_library_current_name_count']}/{summary['massivefold_freeze_candidate_protein_library_official_name_count']}` RNA/protein-complex `{summary['massivefold_freeze_candidate_protein_library_rna_hybrid_count']}/{summary['massivefold_freeze_candidate_protein_library_protein_complex_count']}` proof/author `{summary['massivefold_freeze_candidate_protein_library_proof_eligible_count']}/{summary['massivefold_freeze_candidate_protein_library_author_serialized_count']}` first `{summary['massivefold_freeze_candidate_protein_library_first_protein_key'] or '-'}` html `{summary['massivefold_freeze_candidate_protein_library_html'] or '-'}` policy `{summary['massivefold_freeze_candidate_protein_library_policy'] or '-'}`",
         (
             f"- CAPRI Round 65 readiness context: `{summary['active_scope_capri_round65_participation_status'] or '-'}` not active blocker; preserved targets active/closed/total `{summary['capri_round65_active_target_count']}/{summary['capri_round65_closed_target_count']}/{summary['capri_round65_target_count']}` artifact policy `{summary['active_scope_capri_round65_artifact_policy'] or '-'}`"
             if summary["active_scope_capri_round65_participation_status"].startswith("deferred")
@@ -12290,12 +20393,25 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- historical seed strict-blind first slot source route: `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_status'] or '-'}` required `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_required_benchmark_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_required_target_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_required_scope'] or '-'}` routes in/out/total `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_in_scope_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_out_of_scope_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_route_count']}` allowed `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_allowed_count']}` external targets/actions `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_external_required_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_external_action_count']}` out-scope source/date `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_out_scope_source_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_out_scope_date_count']}` first external `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_first_external_route_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_first_external_target_id'] or '-'}` prediction/native `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_first_external_prediction_created_at'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_source_route_board_first_external_native_release_date'] or '-'}`",
         f"- historical seed strict-blind first slot official archive sources: `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_status'] or '-'}` required `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_required_benchmark_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_required_target_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_required_scope'] or '-'}` sources `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_source_count']}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_source_competitions'] or '-'}` candidates ready/blocked/total `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_ready_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_blocked_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_candidate_count']}` pre/native-ready/lookup `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_pre_native_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_native_ready_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_native_lookup_count']}` native PDB/mmCIF `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_native_pdb_ready_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_native_mmcif_only_count']}` metadata/CAPRI/special `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_metadata_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_capri_marker_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_special_mode_count']}` regular/domain/variant `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_regular_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_domain_count']}/{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_variant_count']}` first `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_candidate_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_competition'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_target_id'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_native_pdb_code'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_native_download_status'] or '-'}` prediction/native `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_prediction_at'] or '-'}` `{summary['historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_first_native_anchor'] or '-'}`",
         f"- historical seed official archive baseline lane: `{summary['historical_seed_official_archive_baseline_lane_status'] or '-'}` source ready/total `{summary['historical_seed_official_archive_baseline_lane_source_ready_count']}/{summary['historical_seed_official_archive_baseline_lane_source_count']}` baseline ready/blocked/total `{summary['historical_seed_official_archive_baseline_lane_ready_count']}/{summary['historical_seed_official_archive_baseline_lane_blocked_count']}/{summary['historical_seed_official_archive_baseline_lane_candidate_count']}` proof-eligible/strict-blocked/other-team `{summary['historical_seed_official_archive_baseline_lane_proof_eligible_count']}/{summary['historical_seed_official_archive_baseline_lane_strict_blind_blocked_count']}/{summary['historical_seed_official_archive_baseline_lane_other_team_count']}` policy `{summary['historical_seed_official_archive_baseline_lane_policy'] or '-'}` first `{summary['historical_seed_official_archive_baseline_lane_first_candidate_id'] or '-'}` `{summary['historical_seed_official_archive_baseline_lane_first_competition'] or '-'}` `{summary['historical_seed_official_archive_baseline_lane_first_target_id'] or '-'}` `{summary['historical_seed_official_archive_baseline_lane_first_native_pdb_code'] or '-'}` manifest `{summary['historical_seed_official_archive_baseline_lane_first_manifest'] or '-'}`",
+        f"- official archive first baseline acquisition audit: `{summary['official_archive_first_baseline_acquisition_audit_status'] or '-'}` first `{summary['official_archive_first_baseline_acquisition_audit_first_candidate_id'] or '-'}` `{summary['official_archive_first_baseline_acquisition_audit_first_competition'] or '-'}` `{summary['official_archive_first_baseline_acquisition_audit_first_target_id'] or '-'}` `{summary['official_archive_first_baseline_acquisition_audit_first_native_pdb_code'] or '-'}` artifacts ready/blocked/total `{summary['official_archive_first_baseline_acquisition_audit_ready_artifact_count']}/{summary['official_archive_first_baseline_acquisition_audit_blocked_artifact_count']}/{summary['official_archive_first_baseline_acquisition_audit_artifact_count']}` tar present/size/models `{summary['official_archive_first_baseline_acquisition_audit_tarball_present'] or '-'}` `{summary['official_archive_first_baseline_acquisition_audit_tarball_size_bytes']}` `{summary['official_archive_first_baseline_acquisition_audit_tarball_model_count']}` native present/atoms `{summary['official_archive_first_baseline_acquisition_audit_native_pdb_present'] or '-'}` `{summary['official_archive_first_baseline_acquisition_audit_native_pdb_atom_count']}` proof `{summary['official_archive_first_baseline_acquisition_audit_proof_eligible'] or '-'}` policy `{summary['official_archive_first_baseline_acquisition_audit_policy'] or '-'}` next `{summary['official_archive_first_baseline_acquisition_audit_next_action'] or '-'}`",
+        f"- official archive first baseline model pool: `{summary['official_archive_first_baseline_model_pool_status'] or '-'}` first `{summary['official_archive_first_baseline_model_pool_first_candidate_id'] or '-'}` `{summary['official_archive_first_baseline_model_pool_first_competition'] or '-'}` `{summary['official_archive_first_baseline_model_pool_first_target_id'] or '-'}` `{summary['official_archive_first_baseline_model_pool_first_native_pdb_code'] or '-'}` models ready/blocked/expected `{summary['official_archive_first_baseline_model_pool_ready_model_count']}/{summary['official_archive_first_baseline_model_pool_blocked_model_count']}/{summary['official_archive_first_baseline_model_pool_expected_model_count']}` groups/model1/top5/complete/extra `{summary['official_archive_first_baseline_model_pool_group_count']}/{summary['official_archive_first_baseline_model_pool_model1_count']}/{summary['official_archive_first_baseline_model_pool_top5_model_count']}/{summary['official_archive_first_baseline_model_pool_complete_top5_group_count']}/{summary['official_archive_first_baseline_model_pool_extra_model_count']}` proof `{summary['official_archive_first_baseline_model_pool_proof_eligible'] or '-'}` policy `{summary['official_archive_first_baseline_model_pool_policy'] or '-'}` manifests `{summary['official_archive_first_baseline_model_pool_model1_manifest'] or '-'}` `{summary['official_archive_first_baseline_model_pool_top5_manifest'] or '-'}` next `{summary['official_archive_first_baseline_model_pool_next_action'] or '-'}`",
+        f"- official archive first baseline score ledger: `{summary['official_archive_first_baseline_score_ledger_status'] or '-'}` first `{summary['official_archive_first_baseline_score_ledger_first_candidate_id'] or '-'}` `{summary['official_archive_first_baseline_score_ledger_first_competition'] or '-'}` `{summary['official_archive_first_baseline_score_ledger_first_target_id'] or '-'}` `{summary['official_archive_first_baseline_score_ledger_first_native_pdb_code'] or '-'}` models ready/blocked/scored/top5 `{summary['official_archive_first_baseline_score_ledger_ready_model_count']}/{summary['official_archive_first_baseline_score_ledger_blocked_model_count']}/{summary['official_archive_first_baseline_score_ledger_scored_model_count']}/{summary['official_archive_first_baseline_score_ledger_top5_model_count']}` groups/model1/best/complete/improved `{summary['official_archive_first_baseline_score_ledger_group_count']}/{summary['official_archive_first_baseline_score_ledger_model1_group_count']}/{summary['official_archive_first_baseline_score_ledger_best_top5_group_count']}/{summary['official_archive_first_baseline_score_ledger_complete_top5_group_count']}/{summary['official_archive_first_baseline_score_ledger_top5_improved_group_count']}` mean model1/best/gap `{summary['official_archive_first_baseline_score_ledger_mean_model1_gdt_ts_proxy'] or '-'}` `{summary['official_archive_first_baseline_score_ledger_mean_best_top5_gdt_ts_proxy'] or '-'}` `{summary['official_archive_first_baseline_score_ledger_mean_best_minus_model1_gdt_ts_proxy'] or '-'}` max gap `{summary['official_archive_first_baseline_score_ledger_max_gap_group_id'] or '-'}` `{summary['official_archive_first_baseline_score_ledger_max_gap'] or '-'}` proof `{summary['official_archive_first_baseline_score_ledger_proof_eligible'] or '-'}` policy `{summary['official_archive_first_baseline_score_ledger_policy'] or '-'}` ledgers `{summary['official_archive_first_baseline_score_ledger_group_score_csv'] or '-'}` `{summary['official_archive_first_baseline_score_ledger_model_score_csv'] or '-'}` next `{summary['official_archive_first_baseline_score_ledger_next_action'] or '-'}`",
+        f"- official archive first baseline replay comparison: `{summary['official_archive_first_baseline_replay_comparison_status'] or '-'}` first `{summary['official_archive_first_baseline_replay_comparison_first_candidate_id'] or '-'}` `{summary['official_archive_first_baseline_replay_comparison_first_competition'] or '-'}` `{summary['official_archive_first_baseline_replay_comparison_first_target_id'] or '-'}` `{summary['official_archive_first_baseline_replay_comparison_first_native_pdb_code'] or '-'}` bands comparable/blocked/total `{summary['official_archive_first_baseline_replay_comparison_direct_comparable_band_count']}/{summary['official_archive_first_baseline_replay_comparison_blocked_band_count']}/{summary['official_archive_first_baseline_replay_comparison_band_count']}` direct `{summary['official_archive_first_baseline_replay_comparison_direct_status'] or '-'}` model1-best/top5-improved `{summary['official_archive_first_baseline_replay_comparison_model1_best_group_count']}/{summary['official_archive_first_baseline_replay_comparison_ready_group_count']}` `{summary['official_archive_first_baseline_replay_comparison_top5_improved_group_count']}/{summary['official_archive_first_baseline_replay_comparison_ready_group_count']}` rates `{summary['official_archive_first_baseline_replay_comparison_model1_best_rate'] or '-'}` `{summary['official_archive_first_baseline_replay_comparison_top5_improved_rate'] or '-'}` mean model1/best/gap `{summary['official_archive_first_baseline_replay_comparison_mean_model1_gdt_ts_proxy'] or '-'}` `{summary['official_archive_first_baseline_replay_comparison_mean_best_top5_gdt_ts_proxy'] or '-'}` `{summary['official_archive_first_baseline_replay_comparison_mean_best_minus_model1_gdt_ts_proxy'] or '-'}` proof `{summary['official_archive_first_baseline_replay_comparison_proof_eligible'] or '-'}` policy `{summary['official_archive_first_baseline_replay_comparison_policy'] or '-'}` csv `{summary['official_archive_first_baseline_replay_comparison_csv'] or '-'}` next `{summary['official_archive_first_baseline_replay_comparison_next_action'] or '-'}`",
+        f"- official archive first baseline model1 gap triage: `{summary['official_archive_first_baseline_model1_gap_triage_status'] or '-'}` first `{summary['official_archive_first_baseline_model1_gap_triage_first_candidate_id'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_triage_first_competition'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_triage_first_target_id'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_triage_first_native_pdb_code'] or '-'}` groups ready/blocked/total `{summary['official_archive_first_baseline_model1_gap_triage_ready_group_count']}/{summary['official_archive_first_baseline_model1_gap_triage_blocked_group_count']}/{summary['official_archive_first_baseline_model1_gap_triage_group_count']}` model1-best/top5-improved `{summary['official_archive_first_baseline_model1_gap_triage_model1_best_group_count']}/{summary['official_archive_first_baseline_model1_gap_triage_ready_group_count']}` `{summary['official_archive_first_baseline_model1_gap_triage_top5_improved_group_count']}/{summary['official_archive_first_baseline_model1_gap_triage_ready_group_count']}` rates `{summary['official_archive_first_baseline_model1_gap_triage_model1_best_rate'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_triage_top5_improved_rate'] or '-'}` gaps small/medium/large/catastrophic `{summary['official_archive_first_baseline_model1_gap_triage_small_gap_count']}/{summary['official_archive_first_baseline_model1_gap_triage_medium_gap_count']}/{summary['official_archive_first_baseline_model1_gap_triage_large_gap_count']}/{summary['official_archive_first_baseline_model1_gap_triage_catastrophic_gap_count']}` calibration/critical `{summary['official_archive_first_baseline_model1_gap_triage_calibration_case_count']}/{summary['official_archive_first_baseline_model1_gap_triage_critical_case_count']}` first triage `{summary['official_archive_first_baseline_model1_gap_triage_first_group_id'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_triage_first_band'] or '-'}` delta `{summary['official_archive_first_baseline_model1_gap_triage_first_delta'] or '-'}` action `{summary['official_archive_first_baseline_model1_gap_triage_first_action'] or '-'}` proof `{summary['official_archive_first_baseline_model1_gap_triage_proof_eligible'] or '-'}` policy `{summary['official_archive_first_baseline_model1_gap_triage_policy'] or '-'}` csv `{summary['official_archive_first_baseline_model1_gap_triage_triage_csv'] or '-'}` worklist `{summary['official_archive_first_baseline_model1_gap_triage_top_gap_worklist_csv'] or '-'}` next `{summary['official_archive_first_baseline_model1_gap_triage_next_action'] or '-'}`",
+        f"- official archive first baseline model1 gap viewer packet: `{summary['official_archive_first_baseline_model1_gap_viewer_packet_status'] or '-'}` first `{summary['official_archive_first_baseline_model1_gap_viewer_packet_first_candidate_id'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_viewer_packet_first_competition'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_viewer_packet_first_target_id'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_viewer_packet_first_native_pdb_code'] or '-'}` viewers ready/blocked/selected `{summary['official_archive_first_baseline_model1_gap_viewer_packet_viewer_ready_count']}/{summary['official_archive_first_baseline_model1_gap_viewer_packet_viewer_blocked_count']}/{summary['official_archive_first_baseline_model1_gap_viewer_packet_selected_case_count']}` catastrophic/large `{summary['official_archive_first_baseline_model1_gap_viewer_packet_catastrophic_case_count']}/{summary['official_archive_first_baseline_model1_gap_viewer_packet_large_case_count']}` copied pairs/native `{summary['official_archive_first_baseline_model1_gap_viewer_packet_copied_model_pair_count']}` `{summary['official_archive_first_baseline_model1_gap_viewer_packet_native_reference_ready'] or '-'}` first viewer `{summary['official_archive_first_baseline_model1_gap_viewer_packet_first_group_id'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_viewer_packet_first_band'] or '-'}` delta `{summary['official_archive_first_baseline_model1_gap_viewer_packet_first_delta'] or '-'}` viewer `{summary['official_archive_first_baseline_model1_gap_viewer_packet_first_viewer_html'] or '-'}` projection `{summary['official_archive_first_baseline_model1_gap_viewer_packet_first_projection_svg'] or '-'}` gallery `{summary['official_archive_first_baseline_model1_gap_viewer_packet_gallery_html'] or '-'}` proof `{summary['official_archive_first_baseline_model1_gap_viewer_packet_proof_eligible'] or '-'}` policy `{summary['official_archive_first_baseline_model1_gap_viewer_packet_policy'] or '-'}` next `{summary['official_archive_first_baseline_model1_gap_viewer_packet_next_action'] or '-'}`",
+        f"- official archive first baseline model1 gap feature probe: `{summary['official_archive_first_baseline_model1_gap_feature_probe_status'] or '-'}` first `{summary['official_archive_first_baseline_model1_gap_feature_probe_first_candidate_id'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_feature_probe_first_competition'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_feature_probe_first_target_id'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_feature_probe_first_native_pdb_code'] or '-'}` features ready/blocked/selected `{summary['official_archive_first_baseline_model1_gap_feature_probe_ready_count']}/{summary['official_archive_first_baseline_model1_gap_feature_probe_blocked_count']}/{summary['official_archive_first_baseline_model1_gap_feature_probe_selected_case_count']}` signals best/model1/ambiguous `{summary['official_archive_first_baseline_model1_gap_feature_probe_supports_best_count']}/{summary['official_archive_first_baseline_model1_gap_feature_probe_supports_model1_count']}/{summary['official_archive_first_baseline_model1_gap_feature_probe_ambiguous_count']}` rate `{summary['official_archive_first_baseline_model1_gap_feature_probe_supports_best_rate'] or '-'}` catastrophic/large `{summary['official_archive_first_baseline_model1_gap_feature_probe_catastrophic_count']}/{summary['official_archive_first_baseline_model1_gap_feature_probe_large_count']}` matrix `{summary['official_archive_first_baseline_model1_gap_feature_probe_matrix_row_count']}` first signal `{summary['official_archive_first_baseline_model1_gap_feature_probe_first_group_id'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_feature_probe_first_signal'] or '-'}` model1/best/delta `{summary['official_archive_first_baseline_model1_gap_feature_probe_first_model1_risk'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_feature_probe_first_best_risk'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_feature_probe_first_risk_delta'] or '-'}` csv `{summary['official_archive_first_baseline_model1_gap_feature_probe_feature_csv'] or '-'}` matrix `{summary['official_archive_first_baseline_model1_gap_feature_probe_pair_matrix_csv'] or '-'}` proof `{summary['official_archive_first_baseline_model1_gap_feature_probe_proof_eligible'] or '-'}` policy `{summary['official_archive_first_baseline_model1_gap_feature_probe_policy'] or '-'}` next `{summary['official_archive_first_baseline_model1_gap_feature_probe_next_action'] or '-'}`",
+        f"- official archive first baseline model1 gap consensus probe: `{summary['official_archive_first_baseline_model1_gap_consensus_probe_status'] or '-'}` first `{summary['official_archive_first_baseline_model1_gap_consensus_probe_first_candidate_id'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_consensus_probe_first_competition'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_consensus_probe_first_target_id'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_consensus_probe_first_native_pdb_code'] or '-'}` consensus ready/blocked/selected `{summary['official_archive_first_baseline_model1_gap_consensus_probe_ready_count']}/{summary['official_archive_first_baseline_model1_gap_consensus_probe_blocked_count']}/{summary['official_archive_first_baseline_model1_gap_consensus_probe_selected_case_count']}` signals best/model1/ambiguous `{summary['official_archive_first_baseline_model1_gap_consensus_probe_supports_best_count']}/{summary['official_archive_first_baseline_model1_gap_consensus_probe_supports_model1_count']}/{summary['official_archive_first_baseline_model1_gap_consensus_probe_ambiguous_count']}` rate `{summary['official_archive_first_baseline_model1_gap_consensus_probe_supports_best_rate'] or '-'}` top matches best/model1 `{summary['official_archive_first_baseline_model1_gap_consensus_probe_top_matches_best_count']}/{summary['official_archive_first_baseline_model1_gap_consensus_probe_top_matches_model1_count']}` catastrophic/large `{summary['official_archive_first_baseline_model1_gap_consensus_probe_catastrophic_count']}/{summary['official_archive_first_baseline_model1_gap_consensus_probe_large_count']}` pairwise `{summary['official_archive_first_baseline_model1_gap_consensus_probe_pairwise_row_count']}` first signal `{summary['official_archive_first_baseline_model1_gap_consensus_probe_first_group_id'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_consensus_probe_first_signal'] or '-'}` ranks/top/margin `{summary['official_archive_first_baseline_model1_gap_consensus_probe_first_model1_rank'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_consensus_probe_first_best_rank'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_consensus_probe_first_top_model_id'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_consensus_probe_first_margin'] or '-'}` csv `{summary['official_archive_first_baseline_model1_gap_consensus_probe_csv'] or '-'}` pairwise `{summary['official_archive_first_baseline_model1_gap_consensus_probe_pairwise_csv'] or '-'}` proof `{summary['official_archive_first_baseline_model1_gap_consensus_probe_proof_eligible'] or '-'}` policy `{summary['official_archive_first_baseline_model1_gap_consensus_probe_policy'] or '-'}` next `{summary['official_archive_first_baseline_model1_gap_consensus_probe_next_action'] or '-'}`",
+        f"- official archive first baseline model1 gap combined selector: `{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_status'] or '-'}` first `{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_first_candidate_id'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_first_competition'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_first_target_id'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_first_native_pdb_code'] or '-'}` selector ready/blocked/selected `{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_ready_count']}/{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_blocked_count']}/{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_selected_case_count']}` decisions promote/retain/hold `{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_promote_count']}/{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_retain_count']}/{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_hold_count']}` baseline corrected/retained/manual/false-positive `{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_corrected_count']}/{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_retained_failure_count']}/{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_manual_failure_count']}/{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_false_positive_count']}` capture/non-capture `{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_capture_rate'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_non_capture_rate'] or '-'}` catastrophic/large `{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_catastrophic_count']}/{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_large_count']}` first selector `{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_first_group_id'] or '-'}` `{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_first_decision'] or '-'}` selected `{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_first_selected_model_id'] or '-'}` result `{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_first_result'] or '-'}` csv `{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_csv'] or '-'}` proof `{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_proof_eligible'] or '-'}` policy `{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_policy'] or '-'}` next `{summary['official_archive_first_baseline_model1_gap_combined_selector_ledger_next_action'] or '-'}`",
         f"- strict-blind first slot source bridge: `{summary['strict_blind_first_slot_source_bridge_status'] or '-'}` required `{summary['strict_blind_first_slot_source_bridge_required_benchmark_id'] or '-'}` `{summary['strict_blind_first_slot_source_bridge_required_target_id'] or '-'}` `{summary['strict_blind_first_slot_source_bridge_required_scope'] or '-'}` official ready/total `{summary['strict_blind_first_slot_source_bridge_official_ready_count']}/{summary['strict_blind_first_slot_source_bridge_official_candidate_count']}` native-bridge `{summary['strict_blind_first_slot_source_bridge_native_ready_count']}` baseline-only/strict-blocked `{summary['strict_blind_first_slot_source_bridge_baseline_only_count']}/{summary['strict_blind_first_slot_source_bridge_strict_blocked_count']}` operator-only/internal-blocked `{summary['strict_blind_first_slot_source_bridge_operator_only_count']}/{summary['strict_blind_first_slot_source_bridge_internal_prediction_blocked_count']}` auto-apply `{summary['strict_blind_first_slot_source_bridge_auto_apply_count']}` first `{summary['strict_blind_first_slot_source_bridge_first_candidate_competition'] or '-'}` `{summary['strict_blind_first_slot_source_bridge_first_candidate_target_id'] or '-'}` `{summary['strict_blind_first_slot_source_bridge_first_candidate_native_pdb_code'] or '-'}` blocker `{summary['strict_blind_first_slot_source_bridge_first_blocker'] or '-'}` folder `{summary['strict_blind_first_slot_source_bridge_bridge_folder'] or '-'}`",
         f"- strict-blind internal prediction source audit: `{summary['strict_blind_internal_prediction_source_audit_status'] or '-'}` required `{summary['strict_blind_internal_prediction_source_audit_required_benchmark_id'] or '-'}` `{summary['strict_blind_internal_prediction_source_audit_required_target_id'] or '-'}` `{summary['strict_blind_internal_prediction_source_audit_required_scope'] or '-'}` first-field `{summary['strict_blind_internal_prediction_source_audit_first_open_field'] or '-'}` local eligible/total `{summary['strict_blind_internal_prediction_source_audit_local_eligible_count']}/{summary['strict_blind_internal_prediction_source_audit_local_candidate_count']}` routes allowed/total `{summary['strict_blind_internal_prediction_source_audit_source_route_allowed_count']}/{summary['strict_blind_internal_prediction_source_audit_source_route_count']}` official blocked/total `{summary['strict_blind_internal_prediction_source_audit_official_blocked_count']}/{summary['strict_blind_internal_prediction_source_audit_official_baseline_count']}` native/internal-blocked `{summary['strict_blind_internal_prediction_source_audit_native_ready_count']}/{summary['strict_blind_internal_prediction_source_audit_internal_blocked_count']}` allowed/template `{summary['strict_blind_internal_prediction_source_audit_allowed_internal_source_count']}/{summary['strict_blind_internal_prediction_source_audit_template_count']}` blocker `{summary['strict_blind_internal_prediction_source_audit_first_blocker'] or '-'}` template `{summary['strict_blind_internal_prediction_source_audit_manifest_template'] or '-'}`",
+        f"- strict-blind internal candidate filesystem sweep: `{summary['strict_blind_internal_candidate_filesystem_sweep_status'] or '-'}` scan `{summary['strict_blind_internal_candidate_filesystem_sweep_scan_root'] or '-'}` files/atom-like `{summary['strict_blind_internal_candidate_filesystem_sweep_file_count']}/{summary['strict_blind_internal_candidate_filesystem_sweep_atom_like_count']}` verified/unknown `{summary['strict_blind_internal_candidate_filesystem_sweep_verified_count']}/{summary['strict_blind_internal_candidate_filesystem_sweep_unknown_count']}` current/MassiveFold/official/native/top5/dropzone `{summary['strict_blind_internal_candidate_filesystem_sweep_current_count']}/{summary['strict_blind_internal_candidate_filesystem_sweep_massivefold_count']}/{summary['strict_blind_internal_candidate_filesystem_sweep_official_count']}/{summary['strict_blind_internal_candidate_filesystem_sweep_native_count']}/{summary['strict_blind_internal_candidate_filesystem_sweep_top5_count']}/{summary['strict_blind_internal_candidate_filesystem_sweep_dropzone_count']}` first unknown `{summary['strict_blind_internal_candidate_filesystem_sweep_first_unknown'] or '-'}`",
+        f"- strict-blind unknown candidate triage: `{summary['strict_blind_unknown_candidate_triage_status'] or '-'}` unknown/sweep `{summary['strict_blind_unknown_candidate_triage_unknown_count']}/{summary['strict_blind_unknown_candidate_triage_sweep_unknown_count']}` promotion/internal-like `{summary['strict_blind_unknown_candidate_triage_promotion_ready_count']}/{summary['strict_blind_unknown_candidate_triage_internal_like_count']}` public/run/archive/data/tmp/other `{summary['strict_blind_unknown_candidate_triage_public_count']}/{summary['strict_blind_unknown_candidate_triage_run_review_count']}/{summary['strict_blind_unknown_candidate_triage_archive_count']}/{summary['strict_blind_unknown_candidate_triage_data_other_count']}/{summary['strict_blind_unknown_candidate_triage_tmp_misc_count']}/{summary['strict_blind_unknown_candidate_triage_other_count']}` first internal `{summary['strict_blind_unknown_candidate_triage_first_internal'] or '-'}`",
+        f"- strict-blind internal-like source review: `{summary['strict_blind_internal_like_source_review_status'] or '-'}` candidates/triage `{summary['strict_blind_internal_like_source_review_candidate_count']}/{summary['strict_blind_internal_like_source_review_triage_internal_like_count']}` match `{summary['strict_blind_internal_like_source_review_triage_count_match'] or '-'}` mapped/pre/post/same/missing/unmapped `{summary['strict_blind_internal_like_source_review_mapped_candidate_count']}/{summary['strict_blind_internal_like_source_review_pre_native_candidate_count']}/{summary['strict_blind_internal_like_source_review_post_native_blocked_count']}/{summary['strict_blind_internal_like_source_review_same_day_timestamp_required_count']}/{summary['strict_blind_internal_like_source_review_prediction_date_missing_count']}/{summary['strict_blind_internal_like_source_review_unmapped_candidate_count']}` targets/all-post/pre-targets `{summary['strict_blind_internal_like_source_review_target_count']}/{summary['strict_blind_internal_like_source_review_target_all_post_native_count']}/{summary['strict_blind_internal_like_source_review_target_pre_native_candidate_count']}` range `{summary['strict_blind_internal_like_source_review_earliest_prediction_date'] or '-'}`-`{summary['strict_blind_internal_like_source_review_latest_prediction_date'] or '-'}` first `{summary['strict_blind_internal_like_source_review_first_blocked_target_id'] or '-'}` `{summary['strict_blind_internal_like_source_review_first_blocker'] or '-'}`",
         f"- strict-blind internal prediction source gate: `{summary['strict_blind_internal_prediction_source_gate_status'] or '-'}` required `{summary['strict_blind_internal_prediction_source_gate_required_benchmark_id'] or '-'}` `{summary['strict_blind_internal_prediction_source_gate_required_target_id'] or '-'}` `{summary['strict_blind_internal_prediction_source_gate_required_scope'] or '-'}` manifest rows `{summary['strict_blind_internal_prediction_source_gate_manifest_row_count']}` checks pass/blocked/total `{summary['strict_blind_internal_prediction_source_gate_pass_count']}/{summary['strict_blind_internal_prediction_source_gate_blocked_count']}/{summary['strict_blind_internal_prediction_source_gate_check_count']}` source `{summary['strict_blind_internal_prediction_source_gate_source_id'] or '-'}` prediction/dropzone `{summary['strict_blind_internal_prediction_source_gate_prediction_pdb'] or '-'}` `{summary['strict_blind_internal_prediction_source_gate_prediction_dropzone'] or '-'}` first `{summary['strict_blind_internal_prediction_source_gate_first_blocked_check'] or '-'}` `{summary['strict_blind_internal_prediction_source_gate_first_blocker'] or '-'}` manifest `{summary['strict_blind_internal_prediction_source_gate_manifest_csv'] or '-'}`",
         f"- strict-blind source gate field board: `{summary['strict_blind_source_gate_field_board_status'] or '-'}` required `{summary['strict_blind_source_gate_field_board_required_benchmark_id'] or '-'}` `{summary['strict_blind_source_gate_field_board_required_target_id'] or '-'}` `{summary['strict_blind_source_gate_field_board_required_scope'] or '-'}` actions manifest/file/manifest-file/total `{summary['strict_blind_source_gate_field_board_manifest_value_action_count']}/{summary['strict_blind_source_gate_field_board_file_action_count']}/{summary['strict_blind_source_gate_field_board_manifest_file_action_count']}/{summary['strict_blind_source_gate_field_board_field_action_count']}` blocked checks covered `{summary['strict_blind_source_gate_field_board_blocked_check_covered_count']}` first `{summary['strict_blind_source_gate_field_board_first_field_key'] or '-'}` `{summary['strict_blind_source_gate_field_board_first_blockers'] or '-'}` folder `{summary['strict_blind_source_gate_field_board_dir'] or '-'}`",
         f"- strict-blind source gate operator packet: `{summary['strict_blind_source_gate_operator_packet_status'] or '-'}` required `{summary['strict_blind_source_gate_operator_packet_required_benchmark_id'] or '-'}` `{summary['strict_blind_source_gate_operator_packet_required_target_id'] or '-'}` `{summary['strict_blind_source_gate_operator_packet_required_scope'] or '-'}` operator ready/awaiting/total `{summary['strict_blind_source_gate_operator_packet_operator_ready_count']}/{summary['strict_blind_source_gate_operator_packet_operator_awaiting_count']}/{summary['strict_blind_source_gate_operator_packet_field_action_count']}` patch ready/awaiting `{summary['strict_blind_source_gate_operator_packet_patch_ready_count']}/{summary['strict_blind_source_gate_operator_packet_patch_awaiting_count']}` actions manifest/file/derived `{summary['strict_blind_source_gate_operator_packet_manifest_patch_count']}/{summary['strict_blind_source_gate_operator_packet_file_copy_count']}/{summary['strict_blind_source_gate_operator_packet_derived_check_count']}` first `{summary['strict_blind_source_gate_operator_packet_first_field_key'] or '-'}` `{summary['strict_blind_source_gate_operator_packet_first_operator_status'] or '-'}` csv `{summary['strict_blind_source_gate_operator_packet_operator_csv'] or '-'}` folder `{summary['strict_blind_source_gate_operator_packet_dir'] or '-'}`",
         f"- strict-blind source gate source requests: `{summary['strict_blind_source_gate_source_request_packet_status'] or '-'}` required `{summary['strict_blind_source_gate_source_request_packet_required_benchmark_id'] or '-'}` `{summary['strict_blind_source_gate_source_request_packet_required_target_id'] or '-'}` `{summary['strict_blind_source_gate_source_request_packet_required_scope'] or '-'}` requests pre-native/replacement/operator-repair/total `{summary['strict_blind_source_gate_source_request_packet_pre_native_source_count']}/{summary['strict_blind_source_gate_source_request_packet_candidate_replacement_count']}/{summary['strict_blind_source_gate_source_request_packet_operator_repair_count']}/{summary['strict_blind_source_gate_source_request_packet_request_count']}` templates ready/awaiting `{summary['strict_blind_source_gate_source_request_packet_operator_template_ready_count']}/{summary['strict_blind_source_gate_source_request_packet_operator_template_awaiting_count']}` fields filled/missing/total `{summary['strict_blind_source_gate_source_request_packet_operator_field_filled_count']}/{summary['strict_blind_source_gate_source_request_packet_operator_field_missing_count']}/{summary['strict_blind_source_gate_source_request_packet_operator_field_count']}` monomer/complex `{summary['strict_blind_source_gate_source_request_packet_monomer_request_count']}/{summary['strict_blind_source_gate_source_request_packet_complex_request_count']}` first `{summary['strict_blind_source_gate_source_request_packet_first_request_id'] or '-'}` `{summary['strict_blind_source_gate_source_request_packet_first_target_id'] or '-'}` `{summary['strict_blind_source_gate_source_request_packet_first_kind'] or '-'}` `{summary['strict_blind_source_gate_source_request_packet_first_blocker'] or '-'}` missing `{summary['strict_blind_source_gate_source_request_packet_first_missing_operator_field'] or '-'}` folder `{summary['strict_blind_source_gate_source_request_packet_dir'] or '-'}`",
+        f"- strict-blind source request resolution board: `{summary['strict_blind_source_request_resolution_board_status'] or '-'}` requests ready/blocked/total `{summary['strict_blind_source_request_resolution_board_ready_count']}/{summary['strict_blind_source_request_resolution_board_blocked_count']}/{summary['strict_blind_source_request_resolution_board_request_count']}` monomer/complex `{summary['strict_blind_source_request_resolution_board_monomer_count']}/{summary['strict_blind_source_request_resolution_board_complex_count']}` postnative/replacement/pre-review/missing `{summary['strict_blind_source_request_resolution_board_all_post_native_monomer_count']}/{summary['strict_blind_source_request_resolution_board_candidate_replacement_required_count']}/{summary['strict_blind_source_request_resolution_board_pre_native_review_possible_count']}/{summary['strict_blind_source_request_resolution_board_chronology_review_missing_count']}` internal-like post/pre `{summary['strict_blind_source_request_resolution_board_internal_like_post_native_candidate_count']}/{summary['strict_blind_source_request_resolution_board_internal_like_pre_native_candidate_count']}` first `{summary['strict_blind_source_request_resolution_board_first_blocked_request_id'] or '-'}` `{summary['strict_blind_source_request_resolution_board_first_blocked_target_id'] or '-'}` `{summary['strict_blind_source_request_resolution_board_first_blocker'] or '-'}`",
         f"- strict-blind source request fulfillment gate: `{summary['strict_blind_source_request_fulfillment_gate_status'] or '-'}` requests ready/blocked/total `{summary['strict_blind_source_request_fulfillment_gate_ready_request_count']}/{summary['strict_blind_source_request_fulfillment_gate_blocked_request_count']}/{summary['strict_blind_source_request_fulfillment_gate_request_count']}` fields filled/missing/total `{summary['strict_blind_source_request_fulfillment_gate_operator_field_filled_count']}/{summary['strict_blind_source_request_fulfillment_gate_operator_field_missing_count']}/{summary['strict_blind_source_request_fulfillment_gate_operator_field_count']}` evidence present/missing `{summary['strict_blind_source_request_fulfillment_gate_operator_evidence_ref_count']}/{summary['strict_blind_source_request_fulfillment_gate_operator_evidence_ref_missing_count']}` validation pdb/chronology/internal-source `{summary['strict_blind_source_request_fulfillment_gate_prediction_pdb_valid_count']}/{summary['strict_blind_source_request_fulfillment_gate_chronology_pass_count']}/{summary['strict_blind_source_request_fulfillment_gate_internal_source_pass_count']}` first `{summary['strict_blind_source_request_fulfillment_gate_first_blocked_request_id'] or '-'}` `{summary['strict_blind_source_request_fulfillment_gate_first_blocked_target_id'] or '-'}` `{summary['strict_blind_source_request_fulfillment_gate_first_blocker'] or '-'}`",
         f"- strict-blind source request operator fill worklist: `{summary['strict_blind_source_request_operator_fill_worklist_status'] or '-'}` fields ready/value-missing/evidence-missing/total `{summary['strict_blind_source_request_operator_fill_worklist_field_ready_count']}/{summary['strict_blind_source_request_operator_fill_worklist_operator_value_missing_count']}/{summary['strict_blind_source_request_operator_fill_worklist_operator_evidence_missing_count']}/{summary['strict_blind_source_request_operator_fill_worklist_field_action_count']}` candidate fields `{summary['strict_blind_source_request_operator_fill_worklist_candidate_replacement_field_count']}` first `{summary['strict_blind_source_request_operator_fill_worklist_first_fill_id'] or '-'}` `{summary['strict_blind_source_request_operator_fill_worklist_first_request_id'] or '-'}` `{summary['strict_blind_source_request_operator_fill_worklist_first_target_id'] or '-'}` `{summary['strict_blind_source_request_operator_fill_worklist_first_field_key'] or '-'}` `{summary['strict_blind_source_request_operator_fill_worklist_first_blocker'] or '-'}`",
         f"- strict-blind source request operator sync plan: `{summary['strict_blind_source_request_operator_sync_plan_status'] or '-'}` mode `{summary['strict_blind_source_request_operator_sync_plan_mode'] or '-'}` fulfillment ready/blocked `{summary['strict_blind_source_request_operator_sync_plan_ready_request_count']}/{summary['strict_blind_source_request_operator_sync_plan_blocked_request_count']}` actions ready/blocked/applied/total `{summary['strict_blind_source_request_operator_sync_plan_ready_sync_action_count']}/{summary['strict_blind_source_request_operator_sync_plan_blocked_sync_action_count']}/{summary['strict_blind_source_request_operator_sync_plan_applied_sync_action_count']}/{summary['strict_blind_source_request_operator_sync_plan_sync_action_count']}` selected `{summary['strict_blind_source_request_operator_sync_plan_selected_request_id'] or '-'}` `{summary['strict_blind_source_request_operator_sync_plan_selected_target_id'] or '-'}` first `{summary['strict_blind_source_request_operator_sync_plan_first_action_id'] or '-'}` `{summary['strict_blind_source_request_operator_sync_plan_first_blocker'] or '-'}` destination `{summary['strict_blind_source_request_operator_sync_plan_destination_operator_csv'] or '-'}`",
@@ -12304,6 +20420,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- strict-blind first unlock handoff: `{summary['strict_blind_first_unlock_handoff_status'] or '-'}` required `{summary['strict_blind_first_unlock_handoff_required_benchmark_id'] or '-'}` `{summary['strict_blind_first_unlock_handoff_required_target_id'] or '-'}` request `{summary['strict_blind_first_unlock_handoff_request_id'] or '-'}` `{summary['strict_blind_first_unlock_handoff_candidate_target_id'] or '-'}` fields ready/blocked/total `{summary['strict_blind_first_unlock_handoff_ready_field_count']}/{summary['strict_blind_first_unlock_handoff_blocked_field_count']}/{summary['strict_blind_first_unlock_handoff_field_count']}` chronology `{summary['strict_blind_first_unlock_handoff_current_prediction_created_at'] or '-'}`/`{summary['strict_blind_first_unlock_handoff_current_native_release_date'] or '-'}` first `{summary['strict_blind_first_unlock_handoff_first_blocked_field_key'] or '-'}` `{summary['strict_blind_first_unlock_handoff_first_blocker'] or '-'}` template `{summary['strict_blind_first_unlock_handoff_operator_template_csv'] or '-'}` dropzone `{summary['strict_blind_first_unlock_handoff_prediction_dropzone'] or '-'}` next `{summary['strict_blind_first_unlock_handoff_first_next_action'] or '-'}`",
         f"- strict-blind first unlock evidence packet: `{summary['strict_blind_first_unlock_evidence_packet_status'] or '-'}` request `{summary['strict_blind_first_unlock_evidence_packet_request_id'] or '-'}` `{summary['strict_blind_first_unlock_evidence_packet_candidate_target_id'] or '-'}` fields ready/open/total `{summary['strict_blind_first_unlock_evidence_packet_ready_field_count']}/{summary['strict_blind_first_unlock_evidence_packet_open_field_count']}/{summary['strict_blind_first_unlock_evidence_packet_field_count']}` stubs/files `{summary['strict_blind_first_unlock_evidence_packet_evidence_stub_count']}/{summary['strict_blind_first_unlock_evidence_packet_file_field_count']}` first `{summary['strict_blind_first_unlock_evidence_packet_first_open_field'] or '-'}` `{summary['strict_blind_first_unlock_evidence_packet_first_blocker'] or '-'}` folder `{summary['strict_blind_first_unlock_evidence_packet_packet_folder'] or '-'}` template `{summary['strict_blind_first_unlock_evidence_packet_operator_evidence_template_csv'] or '-'}` dropzone-manifest `{summary['strict_blind_first_unlock_evidence_packet_dropzone_manifest_csv'] or '-'}` next `{summary['strict_blind_first_unlock_evidence_packet_first_next_action'] or '-'}`",
         f"- strict-blind first unlock evidence review gate: `{summary['strict_blind_first_unlock_evidence_review_gate_status'] or '-'}` request `{summary['strict_blind_first_unlock_evidence_review_gate_request_id'] or '-'}` `{summary['strict_blind_first_unlock_evidence_review_gate_candidate_target_id'] or '-'}` fields ready/blocked/total `{summary['strict_blind_first_unlock_evidence_review_gate_ready_field_count']}/{summary['strict_blind_first_unlock_evidence_review_gate_blocked_field_count']}/{summary['strict_blind_first_unlock_evidence_review_gate_field_count']}` template missing value/evidence/clearance/id `{summary['strict_blind_first_unlock_evidence_review_gate_template_operator_value_missing_count']}/{summary['strict_blind_first_unlock_evidence_review_gate_template_operator_evidence_ref_missing_count']}/{summary['strict_blind_first_unlock_evidence_review_gate_template_operator_clearance_missing_count']}/{summary['strict_blind_first_unlock_evidence_review_gate_template_operator_id_missing_count']}` stub present/missing `{summary['strict_blind_first_unlock_evidence_review_gate_stub_present_count']}/{summary['strict_blind_first_unlock_evidence_review_gate_stub_evidence_missing_count']}` policy `{summary['strict_blind_first_unlock_evidence_review_gate_policy_pass_count']}/{summary['strict_blind_first_unlock_evidence_review_gate_policy_blocked_count']}` file `{summary['strict_blind_first_unlock_evidence_review_gate_file_ready_count']}/{summary['strict_blind_first_unlock_evidence_review_gate_file_blocked_count']}` first `{summary['strict_blind_first_unlock_evidence_review_gate_first_blocked_field'] or '-'}` `{summary['strict_blind_first_unlock_evidence_review_gate_first_blocker'] or '-'}` next `{summary['strict_blind_first_unlock_evidence_review_gate_first_next_action'] or '-'}`",
+        f"- strict-blind first slot source gate blocker ledger: `{summary['strict_blind_first_slot_source_gate_blocker_ledger_status'] or '-'}` required `{summary['strict_blind_first_slot_source_gate_blocker_ledger_required_benchmark_id'] or '-'}` `{summary['strict_blind_first_slot_source_gate_blocker_ledger_required_target_id'] or '-'}` `{summary['strict_blind_first_slot_source_gate_blocker_ledger_required_scope'] or '-'}` fields ready/blocked/total `{summary['strict_blind_first_slot_source_gate_blocker_ledger_ready_field_count']}/{summary['strict_blind_first_slot_source_gate_blocker_ledger_blocked_field_count']}/{summary['strict_blind_first_slot_source_gate_blocker_ledger_field_count']}` gate pass/blocked/total `{summary['strict_blind_first_slot_source_gate_blocker_ledger_gate_pass_count']}/{summary['strict_blind_first_slot_source_gate_blocker_ledger_gate_blocked_count']}/{summary['strict_blind_first_slot_source_gate_blocker_ledger_gate_check_count']}` operator `{summary['strict_blind_first_slot_source_gate_blocker_ledger_operator_ready_count']}/{summary['strict_blind_first_slot_source_gate_blocker_ledger_operator_awaiting_count']}` review `{summary['strict_blind_first_slot_source_gate_blocker_ledger_review_ready_count']}/{summary['strict_blind_first_slot_source_gate_blocker_ledger_review_blocked_count']}` file `{summary['strict_blind_first_slot_source_gate_blocker_ledger_file_ready_count']}/{summary['strict_blind_first_slot_source_gate_blocker_ledger_file_blocked_count']}` first `{summary['strict_blind_first_slot_source_gate_blocker_ledger_first_blocked_field'] or '-'}` `{summary['strict_blind_first_slot_source_gate_blocker_ledger_first_blocker'] or '-'}` next `{summary['strict_blind_first_slot_source_gate_blocker_ledger_first_next_action'] or '-'}`",
         f"- strict-blind first unlock evidence sync plan: `{summary['strict_blind_first_unlock_evidence_sync_plan_status'] or '-'}` mode `{summary['strict_blind_first_unlock_evidence_sync_plan_mode'] or '-'}` review `{summary['strict_blind_first_unlock_evidence_sync_plan_review_gate_status'] or '-'}` request `{summary['strict_blind_first_unlock_evidence_sync_plan_request_id'] or '-'}` `{summary['strict_blind_first_unlock_evidence_sync_plan_candidate_target_id'] or '-'}` actions ready/blocked/applied/total `{summary['strict_blind_first_unlock_evidence_sync_plan_ready_action_count']}/{summary['strict_blind_first_unlock_evidence_sync_plan_blocked_action_count']}/{summary['strict_blind_first_unlock_evidence_sync_plan_applied_action_count']}/{summary['strict_blind_first_unlock_evidence_sync_plan_action_count']}` review fields `{summary['strict_blind_first_unlock_evidence_sync_plan_review_ready_field_count']}/{summary['strict_blind_first_unlock_evidence_sync_plan_review_blocked_field_count']}` first `{summary['strict_blind_first_unlock_evidence_sync_plan_first_action_id'] or '-'}` `{summary['strict_blind_first_unlock_evidence_sync_plan_first_blocked_field'] or '-'}` `{summary['strict_blind_first_unlock_evidence_sync_plan_first_blocker'] or '-'}` destination `{summary['strict_blind_first_unlock_evidence_sync_plan_destination_operator_csv'] or '-'}` next `{summary['strict_blind_first_unlock_evidence_sync_plan_first_next_action'] or '-'}`",
         f"- strict-blind internal prediction source apply plan: `{summary['strict_blind_internal_prediction_source_apply_plan_status'] or '-'}` required `{summary['strict_blind_internal_prediction_source_apply_plan_required_benchmark_id'] or '-'}` `{summary['strict_blind_internal_prediction_source_apply_plan_required_target_id'] or '-'}` `{summary['strict_blind_internal_prediction_source_apply_plan_required_scope'] or '-'}` gate `{summary['strict_blind_internal_prediction_source_apply_plan_gate_status'] or '-'}` actions ready/blocked/total `{summary['strict_blind_internal_prediction_source_apply_plan_ready_action_count']}/{summary['strict_blind_internal_prediction_source_apply_plan_blocked_action_count']}/{summary['strict_blind_internal_prediction_source_apply_plan_action_count']}` file/operator/supp `{summary['strict_blind_internal_prediction_source_apply_plan_file_action_count']}/{summary['strict_blind_internal_prediction_source_apply_plan_operator_value_action_count']}/{summary['strict_blind_internal_prediction_source_apply_plan_supplemental_action_count']}` prediction `{summary['strict_blind_internal_prediction_source_apply_plan_prediction_source'] or '-'}` `->{summary['strict_blind_internal_prediction_source_apply_plan_prediction_destination'] or '-'}` first `{summary['strict_blind_internal_prediction_source_apply_plan_first_blocked_action_id'] or '-'}` `{summary['strict_blind_internal_prediction_source_apply_plan_first_blocker'] or '-'}`",
         f"- strict-blind first slot closure kit: `{summary['strict_blind_first_slot_closure_kit_status'] or '-'}` required `{summary['strict_blind_first_slot_closure_kit_required_benchmark_id'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_required_target_id'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_required_scope'] or '-'}` steps ready/blocked/total `{summary['strict_blind_first_slot_closure_kit_step_ready_count']}/{summary['strict_blind_first_slot_closure_kit_step_blocked_count']}/{summary['strict_blind_first_slot_closure_kit_step_count']}` fills source-gate/source-request/file/operator/total `{summary['strict_blind_first_slot_closure_kit_source_gate_fill_count']}/{summary['strict_blind_first_slot_closure_kit_source_request_fill_count']}/{summary['strict_blind_first_slot_closure_kit_file_fill_count']}/{summary['strict_blind_first_slot_closure_kit_operator_fill_count']}/{summary['strict_blind_first_slot_closure_kit_fill_item_count']}` source/source-request/apply/dropzone/operator/intake `{summary['strict_blind_first_slot_closure_kit_source_gate_status'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_source_request_packet_status'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_apply_plan_status'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_dropzone_status'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_operator_gate_status'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_intake_preflight_status'] or '-'}` source-requests `{summary['strict_blind_first_slot_closure_kit_source_request_pre_native_count']}/{summary['strict_blind_first_slot_closure_kit_source_request_candidate_replacement_count']}/{summary['strict_blind_first_slot_closure_kit_source_request_operator_repair_count']}/{summary['strict_blind_first_slot_closure_kit_source_request_count']}` first `{summary['strict_blind_first_slot_closure_kit_first_blocked_step'] or '-'}` `{summary['strict_blind_first_slot_closure_kit_first_blocker'] or '-'}` folder `{summary['strict_blind_first_slot_closure_kit_folder'] or '-'}`",
@@ -12357,6 +20474,18 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- competitive target identity clearance replacement decision preflight: `{summary['competitive_target_identity_clearance_replacement_decision_preflight_status'] or '-'}` decisions ready-new/ready-duplicate/awaiting/conflict/total `{summary['competitive_target_identity_clearance_replacement_decision_preflight_ready_new_count']}/{summary['competitive_target_identity_clearance_replacement_decision_preflight_ready_duplicate_count']}/{summary['competitive_target_identity_clearance_replacement_decision_preflight_awaiting_count']}/{summary['competitive_target_identity_clearance_replacement_decision_preflight_conflict_count']}/{summary['competitive_target_identity_clearance_replacement_decision_preflight_row_count']}` blocker rows new-unique/duplicate-exception `{summary['competitive_target_identity_clearance_replacement_decision_preflight_new_unique_blocker_count']}/{summary['competitive_target_identity_clearance_replacement_decision_preflight_duplicate_exception_blocker_count']}`",
         f"- competitive target identity clearance manifest sync: `{summary['competitive_target_identity_clearance_manifest_sync_status'] or '-'}` rows ready/awaiting/blocked/synced `{summary['competitive_target_identity_clearance_manifest_sync_row_count']}/{summary['competitive_target_identity_clearance_manifest_sync_ready_count']}/{summary['competitive_target_identity_clearance_manifest_sync_awaiting_count']}/{summary['competitive_target_identity_clearance_manifest_sync_blocked_count']}/{summary['competitive_target_identity_clearance_manifest_sync_synced_count']}` changed/applied `{summary['competitive_target_identity_clearance_manifest_sync_changed_count']}/{summary['competitive_target_identity_clearance_manifest_sync_applied_count']}`",
         f"- competitive target identity clearance workorder audit: `{summary['competitive_target_identity_clearance_workorder_audit_status'] or '-'}` pass/blocked/total `{summary['competitive_target_identity_clearance_workorder_audit_pass_count']}/{summary['competitive_target_identity_clearance_workorder_audit_blocked_count']}/{summary['competitive_target_identity_clearance_workorder_audit_target_count']}` prediction/native/provenance/evidence/manifest `{summary['competitive_target_identity_clearance_workorder_audit_prediction_count']}/{summary['competitive_target_identity_clearance_workorder_audit_native_count']}/{summary['competitive_target_identity_clearance_workorder_audit_provenance_count']}/{summary['competitive_target_identity_clearance_workorder_audit_evidence_ref_count']}/{summary['competitive_target_identity_clearance_workorder_audit_manifest_count']}` prediction protein-atoms/coordinate-valid `{summary['competitive_target_identity_clearance_workorder_audit_prediction_protein_atom_count']}/{summary['competitive_target_identity_clearance_workorder_audit_prediction_coordinate_valid_count']}` identity discovery blocked/cleared `{summary['competitive_target_identity_clearance_workorder_audit_identity_discovery_blocked_count']}/{summary['competitive_target_identity_clearance_workorder_audit_identity_discovery_cleared_count']}` native protein-atoms/coordinate-valid `{summary['competitive_target_identity_clearance_workorder_audit_native_protein_atom_count']}/{summary['competitive_target_identity_clearance_workorder_audit_native_coordinate_valid_count']}` evidence verified/content-blocked/blocked/waiting `{summary['competitive_target_identity_clearance_workorder_audit_evidence_ref_verified_count']}/{summary['competitive_target_identity_clearance_workorder_audit_evidence_ref_content_blocked_count']}/{summary['competitive_target_identity_clearance_workorder_audit_evidence_ref_blocked_count']}/{summary['competitive_target_identity_clearance_workorder_audit_evidence_ref_waiting_count']}` manifest/provenance matched/mismatches `{summary['competitive_target_identity_clearance_workorder_audit_manifest_provenance_matched_count']}/{summary['competitive_target_identity_clearance_workorder_audit_manifest_provenance_mismatch_count']}` native/prediction distinct/same/waiting `{summary['competitive_target_identity_clearance_workorder_audit_native_prediction_distinct_count']}/{summary['competitive_target_identity_clearance_workorder_audit_native_prediction_same_count']}/{summary['competitive_target_identity_clearance_workorder_audit_native_prediction_waiting_count']}`",
+        f"- competitive target identity metric runway: `{summary['competitive_target_identity_metric_runway_status'] or '-'}` targets ready/blocked/total `{summary['competitive_target_identity_metric_runway_ready_count']}/{summary['competitive_target_identity_metric_runway_blocked_count']}/{summary['competitive_target_identity_metric_runway_target_count']}` families complex/monomer `{summary['competitive_target_identity_metric_runway_complex_count']}/{summary['competitive_target_identity_metric_runway_monomer_count']}` metric requirements `{summary['competitive_target_identity_metric_runway_metric_requirement_count']}` prediction/native/provenance/evidence `{summary['competitive_target_identity_metric_runway_prediction_count']}/{summary['competitive_target_identity_metric_runway_native_count']}/{summary['competitive_target_identity_metric_runway_provenance_count']}/{summary['competitive_target_identity_metric_runway_evidence_ref_count']}` native candidates blocked/no-candidate/total `{summary['competitive_target_identity_metric_runway_native_candidate_blocked_count']}/{summary['competitive_target_identity_metric_runway_native_candidate_no_candidate_count']}/{summary['competitive_target_identity_metric_runway_native_candidate_count']}` proof/author `{summary['competitive_target_identity_metric_runway_proof_eligible_count']}/{summary['competitive_target_identity_metric_runway_author_serialized_count']}` first `{summary['competitive_target_identity_metric_runway_first_target_id'] or '-'}` blocked `{summary['competitive_target_identity_metric_runway_first_blocked_target_id'] or '-'}` `{summary['competitive_target_identity_metric_runway_first_blocker'] or '-'}` html `{summary['competitive_target_identity_metric_runway_html'] or '-'}`",
+        f"- competitive native/provenance operator packet: `{summary['competitive_floor_native_provenance_operator_packet_status'] or '-'}` targets open/ready/total `{summary['competitive_floor_native_provenance_operator_packet_target_open_count']}/{summary['competitive_floor_native_provenance_operator_packet_target_ready_count']}/{summary['competitive_floor_native_provenance_operator_packet_target_count']}` actions open/total `{summary['competitive_floor_native_provenance_operator_packet_open_action_count']}/{summary['competitive_floor_native_provenance_operator_packet_action_count']}` lanes native/evidence/provenance/manifest `{summary['competitive_floor_native_provenance_operator_packet_native_action_count']}/{summary['competitive_floor_native_provenance_operator_packet_evidence_action_count']}/{summary['competitive_floor_native_provenance_operator_packet_provenance_action_count']}/{summary['competitive_floor_native_provenance_operator_packet_manifest_action_count']}` metric requirements `{summary['competitive_floor_native_provenance_operator_packet_metric_requirement_count']}` prediction/native/provenance/evidence `{summary['competitive_floor_native_provenance_operator_packet_prediction_count']}/{summary['competitive_floor_native_provenance_operator_packet_native_count']}/{summary['competitive_floor_native_provenance_operator_packet_provenance_count']}/{summary['competitive_floor_native_provenance_operator_packet_evidence_ref_count']}` native candidates blocked/no-candidate/total `{summary['competitive_floor_native_provenance_operator_packet_native_candidate_blocked_count']}/{summary['competitive_floor_native_provenance_operator_packet_native_candidate_no_candidate_count']}/{summary['competitive_floor_native_provenance_operator_packet_native_candidate_count']}` proof/author `{summary['competitive_floor_native_provenance_operator_packet_proof_eligible_count']}/{summary['competitive_floor_native_provenance_operator_packet_author_serialized_count']}` first `{summary['competitive_floor_native_provenance_operator_packet_first_target_id'] or '-'}` open `{summary['competitive_floor_native_provenance_operator_packet_first_open_target_id'] or '-'}` html `{summary['competitive_floor_native_provenance_operator_packet_html'] or '-'}`",
+        f"- competitive native/provenance operator packet completion audit: `{summary['competitive_floor_native_provenance_operator_packet_completion_audit_status'] or '-'}` targets pass/blocked/total `{summary['competitive_floor_native_provenance_operator_packet_completion_audit_target_pass_count']}/{summary['competitive_floor_native_provenance_operator_packet_completion_audit_target_blocked_count']}/{summary['competitive_floor_native_provenance_operator_packet_completion_audit_target_count']}` packet files folder/readme/manifest/actions/native-candidates `{summary['competitive_floor_native_provenance_operator_packet_completion_audit_packet_folder_count']}/{summary['competitive_floor_native_provenance_operator_packet_completion_audit_packet_readme_count']}/{summary['competitive_floor_native_provenance_operator_packet_completion_audit_packet_manifest_count']}/{summary['competitive_floor_native_provenance_operator_packet_completion_audit_actions_csv_count']}/{summary['competitive_floor_native_provenance_operator_packet_completion_audit_native_candidates_csv_count']}` action rows expected/csv/mismatch `{summary['competitive_floor_native_provenance_operator_packet_completion_audit_action_expected_row_count']}/{summary['competitive_floor_native_provenance_operator_packet_completion_audit_action_csv_row_count']}/{summary['competitive_floor_native_provenance_operator_packet_completion_audit_action_csv_mismatch_count']}` native candidates expected/csv/mismatch `{summary['competitive_floor_native_provenance_operator_packet_completion_audit_native_candidate_expected_row_count']}/{summary['competitive_floor_native_provenance_operator_packet_completion_audit_native_candidate_csv_row_count']}/{summary['competitive_floor_native_provenance_operator_packet_completion_audit_native_candidate_csv_mismatch_count']}` lanes native/evidence/provenance/manifest `{summary['competitive_floor_native_provenance_operator_packet_completion_audit_native_action_count']}/{summary['competitive_floor_native_provenance_operator_packet_completion_audit_evidence_action_count']}/{summary['competitive_floor_native_provenance_operator_packet_completion_audit_provenance_action_count']}/{summary['competitive_floor_native_provenance_operator_packet_completion_audit_manifest_action_count']}` metric requirements `{summary['competitive_floor_native_provenance_operator_packet_completion_audit_metric_requirement_count']}` inputs prediction/ts/native-path/native-file/provenance/manifest/runway/workorder `{summary['competitive_floor_native_provenance_operator_packet_completion_audit_prediction_count']}/{summary['competitive_floor_native_provenance_operator_packet_completion_audit_ts_prediction_count']}/{summary['competitive_floor_native_provenance_operator_packet_completion_audit_native_dropzone_path_count']}/{summary['competitive_floor_native_provenance_operator_packet_completion_audit_native_file_count']}/{summary['competitive_floor_native_provenance_operator_packet_completion_audit_provenance_template_count']}/{summary['competitive_floor_native_provenance_operator_packet_completion_audit_manifest_stub_count']}/{summary['competitive_floor_native_provenance_operator_packet_completion_audit_metric_runway_count']}/{summary['competitive_floor_native_provenance_operator_packet_completion_audit_workorder_count']}` coordinate copies target/out-dir `{summary['competitive_floor_native_provenance_operator_packet_completion_audit_packet_coordinate_copy_count']}/{summary['competitive_floor_native_provenance_operator_packet_completion_audit_out_dir_coordinate_copy_count']}` proof/author `{summary['competitive_floor_native_provenance_operator_packet_completion_audit_proof_eligible_count']}/{summary['competitive_floor_native_provenance_operator_packet_completion_audit_author_serialized_count']}` first `{summary['competitive_floor_native_provenance_operator_packet_completion_audit_first_target_id'] or '-'}` blocked `{summary['competitive_floor_native_provenance_operator_packet_completion_audit_first_blocked_target_id'] or '-'}` html `{summary['competitive_floor_native_provenance_operator_packet_completion_audit_html'] or '-'}`",
+        f"- competitive native/provenance metric unlock bridge: `{summary['competitive_floor_native_provenance_metric_unlock_bridge_status'] or '-'}` targets ready/blocked/total `{summary['competitive_floor_native_provenance_metric_unlock_bridge_target_ready_count']}/{summary['competitive_floor_native_provenance_metric_unlock_bridge_target_blocked_count']}/{summary['competitive_floor_native_provenance_metric_unlock_bridge_target_count']}` packet/workorder/runway ready `{summary['competitive_floor_native_provenance_metric_unlock_bridge_packet_pass_count']}/{summary['competitive_floor_native_provenance_metric_unlock_bridge_workorder_audit_pass_count']}/{summary['competitive_floor_native_provenance_metric_unlock_bridge_metric_runway_ready_count']}` metric requirements `{summary['competitive_floor_native_provenance_metric_unlock_bridge_metric_requirement_count']}` inputs prediction/ts/native-path/native-file/provenance-template/manifest/runway/workorder `{summary['competitive_floor_native_provenance_metric_unlock_bridge_prediction_count']}/{summary['competitive_floor_native_provenance_metric_unlock_bridge_ts_prediction_count']}/{summary['competitive_floor_native_provenance_metric_unlock_bridge_native_dropzone_path_count']}/{summary['competitive_floor_native_provenance_metric_unlock_bridge_native_file_count']}/{summary['competitive_floor_native_provenance_metric_unlock_bridge_provenance_template_count']}/{summary['competitive_floor_native_provenance_metric_unlock_bridge_manifest_stub_count']}/{summary['competitive_floor_native_provenance_metric_unlock_bridge_metric_runway_count']}/{summary['competitive_floor_native_provenance_metric_unlock_bridge_workorder_count']}` actions native/evidence/provenance/manifest/total `{summary['competitive_floor_native_provenance_metric_unlock_bridge_packet_native_action_count']}/{summary['competitive_floor_native_provenance_metric_unlock_bridge_packet_evidence_action_count']}/{summary['competitive_floor_native_provenance_metric_unlock_bridge_packet_provenance_action_count']}/{summary['competitive_floor_native_provenance_metric_unlock_bridge_packet_manifest_action_count']}/{summary['competitive_floor_native_provenance_metric_unlock_bridge_packet_action_count']}` native candidates blocked/no-candidate/total `{summary['competitive_floor_native_provenance_metric_unlock_bridge_native_candidate_blocked_count']}/{summary['competitive_floor_native_provenance_metric_unlock_bridge_native_candidate_no_candidate_count']}/{summary['competitive_floor_native_provenance_metric_unlock_bridge_native_candidate_count']}` provenance/evidence/identity `{summary['competitive_floor_native_provenance_metric_unlock_bridge_provenance_ready_count']}/{summary['competitive_floor_native_provenance_metric_unlock_bridge_evidence_ref_verified_count']}/{summary['competitive_floor_native_provenance_metric_unlock_bridge_identity_discovery_cleared_count']}` proof/author `{summary['competitive_floor_native_provenance_metric_unlock_bridge_proof_eligible_count']}/{summary['competitive_floor_native_provenance_metric_unlock_bridge_author_serialized_count']}` first `{summary['competitive_floor_native_provenance_metric_unlock_bridge_first_target_id'] or '-'}` blocked `{summary['competitive_floor_native_provenance_metric_unlock_bridge_first_blocked_target_id'] or '-'}` `{summary['competitive_floor_native_provenance_metric_unlock_bridge_first_blocker'] or '-'}` html `{summary['competitive_floor_native_provenance_metric_unlock_bridge_html'] or '-'}`",
+        f"- competitive first native/provenance unlock kit: `{summary['competitive_floor_first_native_provenance_unlock_kit_status'] or '-'}` target `{summary['competitive_floor_first_native_provenance_unlock_kit_target_id'] or '-'}` fields/actions/bundle `{summary['competitive_floor_first_native_provenance_unlock_kit_required_field_count']}/{summary['competitive_floor_first_native_provenance_unlock_kit_required_action_count']}/{summary['competitive_floor_first_native_provenance_unlock_kit_action_bundle_action_count']}` packet/workorder/runway `{summary['competitive_floor_first_native_provenance_unlock_kit_packet_file_pass'] or '-'}`/`{summary['competitive_floor_first_native_provenance_unlock_kit_workorder_audit_pass'] or '-'}`/`{summary['competitive_floor_first_native_provenance_unlock_kit_metric_runway_ready'] or '-'}` inputs prediction/ts/native-path/native-file/provenance/manifest/runway/workorder `{summary['competitive_floor_first_native_provenance_unlock_kit_prediction_count']}/{summary['competitive_floor_first_native_provenance_unlock_kit_ts_prediction_count']}/{summary['competitive_floor_first_native_provenance_unlock_kit_native_dropzone_path_count']}/{summary['competitive_floor_first_native_provenance_unlock_kit_native_file_count']}/{summary['competitive_floor_first_native_provenance_unlock_kit_provenance_template_count']}/{summary['competitive_floor_first_native_provenance_unlock_kit_manifest_stub_count']}/{summary['competitive_floor_first_native_provenance_unlock_kit_metric_runway_count']}/{summary['competitive_floor_first_native_provenance_unlock_kit_workorder_count']}` provenance/evidence/identity `{summary['competitive_floor_first_native_provenance_unlock_kit_provenance_ready_count']}/{summary['competitive_floor_first_native_provenance_unlock_kit_evidence_ref_verified_count']}/{summary['competitive_floor_first_native_provenance_unlock_kit_identity_discovery_cleared_count']}` proof/author `{summary['competitive_floor_first_native_provenance_unlock_kit_proof_eligible_count']}/{summary['competitive_floor_first_native_provenance_unlock_kit_author_serialized_count']}` coordinate copies `{summary['competitive_floor_first_native_provenance_unlock_kit_coordinate_copy_count']}` first `{summary['competitive_floor_first_native_provenance_unlock_kit_first_blocker'] or '-'}` folder `{summary['competitive_floor_first_native_provenance_unlock_kit_folder'] or '-'}`",
+        f"- competitive batch native/provenance unlock kit: `{summary['competitive_floor_batch_native_provenance_unlock_kit_status'] or '-'}` targets ready/blocked/total `{summary['competitive_floor_batch_native_provenance_unlock_kit_target_ready_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_target_blocked_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_target_count']}` ids `{summary['competitive_floor_batch_native_provenance_unlock_kit_target_ids'] or '-'}` fields per-target/total `{summary['competitive_floor_batch_native_provenance_unlock_kit_required_field_per_target_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_required_field_total_count']}` actions required/bundle `{summary['competitive_floor_batch_native_provenance_unlock_kit_required_action_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_action_bundle_action_count']}` packet/workorder/runway `{summary['competitive_floor_batch_native_provenance_unlock_kit_packet_file_pass_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_workorder_audit_pass_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_metric_runway_ready_count']}` inputs prediction/ts/native-path/native-file/provenance/manifest/runway/workorder `{summary['competitive_floor_batch_native_provenance_unlock_kit_prediction_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_ts_prediction_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_native_dropzone_path_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_native_file_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_provenance_template_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_manifest_stub_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_metric_runway_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_workorder_count']}` provenance/evidence/identity `{summary['competitive_floor_batch_native_provenance_unlock_kit_provenance_ready_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_evidence_ref_verified_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_identity_discovery_cleared_count']}` proof/author `{summary['competitive_floor_batch_native_provenance_unlock_kit_proof_eligible_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_author_serialized_count']}` coordinate copies `{summary['competitive_floor_batch_native_provenance_unlock_kit_coordinate_copy_count']}` first `{summary['competitive_floor_batch_native_provenance_unlock_kit_first_blocked_target_id'] or '-'}` `{summary['competitive_floor_batch_native_provenance_unlock_kit_first_blocker'] or '-'}` folder `{summary['competitive_floor_batch_native_provenance_unlock_kit_folder'] or '-'}`",
+        f"- competitive batch native/provenance unlock kit completion audit: `{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_status'] or '-'}` targets pass/blocked/total `{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_pass_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_blocked_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_count']}` batch files `{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_batch_file_present_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_batch_file_expected_count']}` batch intake expected/csv/mismatch `{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_batch_intake_expected_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_batch_intake_csv_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_batch_intake_mismatch_count']}` batch actions expected/csv/mismatch `{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_batch_action_expected_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_batch_action_csv_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_batch_action_mismatch_count']}` target files folder/readme/manifest/intake/actions/rerun `{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_folder_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_readme_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_manifest_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_intake_file_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_action_file_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_rerun_file_count']}` target intake expected/csv/mismatch `{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_intake_expected_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_intake_csv_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_intake_mismatch_count']}` target actions expected/csv/mismatch `{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_action_expected_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_action_csv_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_action_mismatch_count']}` coordinate copies batch/target `{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_coordinate_copy_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_coordinate_copy_count']}` native/provenance/evidence/identity `{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_native_file_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_provenance_ready_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_evidence_ref_verified_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_identity_discovery_cleared_count']}` proof/author `{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_proof_eligible_count']}/{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_author_serialized_count']}` first `{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_first_blocked_target_id'] or '-'}` `{summary['competitive_floor_batch_native_provenance_unlock_kit_completion_audit_first_blocker'] or '-'}`",
+        f"- competitive batch native/provenance value gate: `{summary['competitive_floor_batch_native_provenance_value_gate_status'] or '-'}` targets ready/blocked/total `{summary['competitive_floor_batch_native_provenance_value_gate_target_ready_count']}/{summary['competitive_floor_batch_native_provenance_value_gate_target_blocked_count']}/{summary['competitive_floor_batch_native_provenance_value_gate_target_count']}` fields per-target/total `{summary['competitive_floor_batch_native_provenance_value_gate_required_field_per_target_count']}/{summary['competitive_floor_batch_native_provenance_value_gate_required_field_total_count']}` values ready/blocked `{summary['competitive_floor_batch_native_provenance_value_gate_ready_value_count']}/{summary['competitive_floor_batch_native_provenance_value_gate_blocked_value_count']}` native/evidence `{summary['competitive_floor_batch_native_provenance_value_gate_native_source_ready_count']}/{summary['competitive_floor_batch_native_provenance_value_gate_evidence_ref_ready_count']}` clearance/date/boolean `{summary['competitive_floor_batch_native_provenance_value_gate_clearance_ready_count']}/{summary['competitive_floor_batch_native_provenance_value_gate_date_ready_count']}/{summary['competitive_floor_batch_native_provenance_value_gate_boolean_ready_count']}` coordinate copies batch/target `{summary['competitive_floor_batch_native_provenance_value_gate_coordinate_copy_count']}/{summary['competitive_floor_batch_native_provenance_value_gate_target_coordinate_copy_count']}` proof/author `{summary['competitive_floor_batch_native_provenance_value_gate_proof_eligible_count']}/{summary['competitive_floor_batch_native_provenance_value_gate_author_serialized_count']}` first `{summary['competitive_floor_batch_native_provenance_value_gate_first_blocked_target_id'] or '-'}` `{summary['competitive_floor_batch_native_provenance_value_gate_first_blocker'] or '-'}`",
+        f"- competitive batch native/provenance value action board: `{summary['competitive_floor_batch_native_provenance_value_action_board_status'] or '-'}` targets open/ready/total `{summary['competitive_floor_batch_native_provenance_value_action_board_target_open_count']}/{summary['competitive_floor_batch_native_provenance_value_action_board_target_ready_count']}/{summary['competitive_floor_batch_native_provenance_value_action_board_target_count']}` actions open/total `{summary['competitive_floor_batch_native_provenance_value_action_board_open_action_count']}/{summary['competitive_floor_batch_native_provenance_value_action_board_action_count']}` lanes native/evidence/clearance/operator/date/boolean/review `{summary['competitive_floor_batch_native_provenance_value_action_board_native_action_count']}/{summary['competitive_floor_batch_native_provenance_value_action_board_evidence_action_count']}/{summary['competitive_floor_batch_native_provenance_value_action_board_clearance_action_count']}/{summary['competitive_floor_batch_native_provenance_value_action_board_operator_action_count']}/{summary['competitive_floor_batch_native_provenance_value_action_board_date_action_count']}/{summary['competitive_floor_batch_native_provenance_value_action_board_boolean_action_count']}/{summary['competitive_floor_batch_native_provenance_value_action_board_review_action_count']}` coordinate copies `{summary['competitive_floor_batch_native_provenance_value_action_board_coordinate_copy_count']}` proof/author `{summary['competitive_floor_batch_native_provenance_value_action_board_proof_eligible_count']}/{summary['competitive_floor_batch_native_provenance_value_action_board_author_serialized_count']}` first `{summary['competitive_floor_batch_native_provenance_value_action_board_first_open_target_id'] or '-'}` `{summary['competitive_floor_batch_native_provenance_value_action_board_first_open_field'] or '-'}` `{summary['competitive_floor_batch_native_provenance_value_action_board_first_open_blocker'] or '-'}`",
+        f"- competitive batch native/provenance value action board completion audit: `{summary['competitive_floor_batch_native_provenance_value_action_board_completion_audit_status'] or '-'}` targets pass/blocked/total `{summary['competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_pass_count']}/{summary['competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_blocked_count']}/{summary['competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_count']}` actions expected/json/mismatch `{summary['competitive_floor_batch_native_provenance_value_action_board_completion_audit_action_expected_count']}/{summary['competitive_floor_batch_native_provenance_value_action_board_completion_audit_action_json_count']}/{summary['competitive_floor_batch_native_provenance_value_action_board_completion_audit_action_mismatch_count']}` target files folder/readme/actions `{summary['competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_folder_count']}/{summary['competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_readme_count']}/{summary['competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_action_file_count']}` target rows expected/csv/mismatch `{summary['competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_action_expected_count']}/{summary['competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_action_csv_count']}/{summary['competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_action_mismatch_count']}` coordinate copies board/target `{summary['competitive_floor_batch_native_provenance_value_action_board_completion_audit_coordinate_copy_count']}/{summary['competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_coordinate_copy_count']}` proof/author `{summary['competitive_floor_batch_native_provenance_value_action_board_completion_audit_proof_eligible_count']}/{summary['competitive_floor_batch_native_provenance_value_action_board_completion_audit_author_serialized_count']}` first `{summary['competitive_floor_batch_native_provenance_value_action_board_completion_audit_first_blocked_target_id'] or '-'}` `{summary['competitive_floor_batch_native_provenance_value_action_board_completion_audit_first_blocker'] or '-'}`",
+        f"- competitive batch native/provenance operator fill preflight: `{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_status'] or '-'}` targets ready/blocked/total `{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_target_ready_count']}/{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_target_blocked_count']}/{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_target_count']}` actions open `{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_open_action_count']}` actions native/evidence/clearance/operator/date/boolean/review `{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_native_action_count']}/{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_evidence_action_count']}/{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_clearance_action_count']}/{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_operator_action_count']}/{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_date_action_count']}/{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_boolean_action_count']}/{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_review_action_count']}` coordinate copies preflight/target `{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_coordinate_copy_count']}/{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_target_coordinate_copy_count']}` proof/author `{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_proof_eligible_count']}/{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_author_serialized_count']}` first `{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_first_ready_target_id'] or '-'}` `{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_first_blocked_target_id'] or '-'}` `{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_first_blocker'] or '-'}`",
+        f"- competitive batch native/provenance operator fill preflight completion audit: `{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_status'] or '-'}` targets pass/blocked/total `{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_target_pass_count']}/{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_target_blocked_count']}/{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_target_count']}` root manifest `{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_root_manifest_present']}` target files folder/readme/template/policy `{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_target_folder_count']}/{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_target_readme_count']}/{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_target_operator_template_file_count']}/{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_target_field_policy_file_count']}` template rows expected/csv/mismatch `{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_operator_template_expected_rows']}/{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_operator_template_csv_rows']}/{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_operator_template_row_mismatch_count']}` field policy expected/csv/mismatch `{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_field_policy_expected_rows']}/{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_field_policy_csv_rows']}/{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_field_policy_row_mismatch_count']}` coordinate copies preflight/target `{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_coordinate_copy_count']}/{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_target_coordinate_copy_count']}` proof/author `{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_proof_eligible_count']}/{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_author_serialized_count']}` first `{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_first_blocked_target_id'] or '-'}` `{summary['competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_first_blocker'] or '-'}`",
         f"- competitive target identity clearance action board: `{summary['competitive_target_identity_clearance_action_board_status'] or '-'}` actions/open `{summary['competitive_target_identity_clearance_action_board_action_count']}/{summary['competitive_target_identity_clearance_action_board_open_count']}` native/evidence/provenance/manifest `{summary['competitive_target_identity_clearance_action_board_native_count']}/{summary['competitive_target_identity_clearance_action_board_evidence_count']}/{summary['competitive_target_identity_clearance_action_board_provenance_count']}/{summary['competitive_target_identity_clearance_action_board_manifest_count']}`",
         f"- competitive target identity clearance action bundle: `{summary['competitive_target_identity_clearance_action_bundle_status'] or '-'}` targets/actions/open `{summary['competitive_target_identity_clearance_action_bundle_target_count']}/{summary['competitive_target_identity_clearance_action_bundle_action_count']}/{summary['competitive_target_identity_clearance_action_bundle_open_count']}` files/folders `{summary['competitive_target_identity_clearance_action_bundle_file_count']}/{summary['competitive_target_identity_clearance_action_bundle_folder_count']}` native/evidence/provenance/manifest `{summary['competitive_target_identity_clearance_action_bundle_native_count']}/{summary['competitive_target_identity_clearance_action_bundle_evidence_count']}/{summary['competitive_target_identity_clearance_action_bundle_provenance_count']}/{summary['competitive_target_identity_clearance_action_bundle_manifest_count']}`",
         f"- competitive target identity clearance promotion: `{summary['competitive_target_identity_clearance_promotion_status'] or '-'}` rows/promoted/blocked `{summary['competitive_target_identity_clearance_promotion_row_count']}/{summary['competitive_target_identity_clearance_promotion_promoted_count']}/{summary['competitive_target_identity_clearance_promotion_blocked_count']}` ready/audit-pass `{summary['competitive_target_identity_clearance_promotion_ready_count']}/{summary['competitive_target_identity_clearance_promotion_audit_pass_count']}`",
@@ -12427,7 +20556,39 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--protein-object-library-navigation-catalog-json",
         default=DEFAULT_PROTEIN_OBJECT_LIBRARY_NAVIGATION_CATALOG_JSON,
     )
+    parser.add_argument("--molecular-object-atlas-json", default=DEFAULT_3D_MOLECULAR_OBJECT_ATLAS_JSON)
+    parser.add_argument(
+        "--molecular-object-atlas-completion-audit-json",
+        default=DEFAULT_3D_MOLECULAR_OBJECT_ATLAS_COMPLETION_AUDIT_JSON,
+    )
+    parser.add_argument(
+        "--molecular-object-metric-handoff-json",
+        default=DEFAULT_3D_MOLECULAR_OBJECT_METRIC_HANDOFF_JSON,
+    )
+    parser.add_argument(
+        "--molecular-object-metric-handoff-completion-audit-json",
+        default=DEFAULT_3D_MOLECULAR_OBJECT_METRIC_HANDOFF_COMPLETION_AUDIT_JSON,
+    )
     parser.add_argument("--raw-ranked-model-quarantine-json", default=DEFAULT_RAW_RANKED_MODEL_QUARANTINE_JSON)
+    parser.add_argument("--current-submission-gate-json", default=DEFAULT_CURRENT_SUBMISSION_GATE_JSON)
+    parser.add_argument("--current-sidechain-repack-json", default=DEFAULT_CURRENT_SIDECHAIN_REPACK_JSON)
+    parser.add_argument(
+        "--current-submission-package-preflight-json",
+        default=DEFAULT_CURRENT_SUBMISSION_PACKAGE_PREFLIGHT_JSON,
+    )
+    parser.add_argument(
+        "--current-submission-deadline-guard-json",
+        default=DEFAULT_CURRENT_SUBMISSION_DEADLINE_GUARD_JSON,
+    )
+    parser.add_argument("--current-upload-queue-json", default=DEFAULT_CURRENT_UPLOAD_QUEUE_JSON)
+    parser.add_argument(
+        "--current-upload-review-packet-json",
+        default=DEFAULT_CURRENT_UPLOAD_REVIEW_PACKET_JSON,
+    )
+    parser.add_argument(
+        "--current-prospective-strict-blind-escrow-json",
+        default=DEFAULT_CURRENT_PROSPECTIVE_STRICT_BLIND_ESCROW_JSON,
+    )
     parser.add_argument("--win-gap-closure-json", default=DEFAULT_WIN_GAP_CLOSURE_JSON)
     parser.add_argument("--win-tier-goal-scorecard-json", default=DEFAULT_WIN_TIER_GOAL_SCORECARD_JSON)
     parser.add_argument(
@@ -12501,6 +20662,74 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--protein-complex-massivefold-self-assessment-packet-json",
         default=DEFAULT_PROTEIN_COMPLEX_MASSIVEFOLD_SELF_ASSESSMENT_PACKET_JSON,
+    )
+    parser.add_argument(
+        "--massivefold-model1-risk-queue-json",
+        default=DEFAULT_MASSIVEFOLD_MODEL1_RISK_QUEUE_JSON,
+    )
+    parser.add_argument(
+        "--massivefold-critical-rerank-experiment-json",
+        default=DEFAULT_MASSIVEFOLD_CRITICAL_RERANK_EXPERIMENT_JSON,
+    )
+    parser.add_argument(
+        "--massivefold-critical-rerank-score-ledger-json",
+        default=DEFAULT_MASSIVEFOLD_CRITICAL_RERANK_SCORE_LEDGER_JSON,
+    )
+    parser.add_argument(
+        "--massivefold-model1-selection-calibration-gate-json",
+        default=DEFAULT_MASSIVEFOLD_MODEL1_SELECTION_CALIBRATION_GATE_JSON,
+    )
+    parser.add_argument(
+        "--massivefold-model1-probe-worklist-json",
+        default=DEFAULT_MASSIVEFOLD_MODEL1_PROBE_WORKLIST_JSON,
+    )
+    parser.add_argument(
+        "--massivefold-model1-probe-outcome-json",
+        default=DEFAULT_MASSIVEFOLD_MODEL1_PROBE_OUTCOME_JSON,
+    )
+    parser.add_argument(
+        "--massivefold-model1-freeze-decision-packet-json",
+        default=DEFAULT_MASSIVEFOLD_MODEL1_FREEZE_DECISION_PACKET_JSON,
+    )
+    parser.add_argument(
+        "--massivefold-model-selection-ledger-json",
+        default=DEFAULT_MASSIVEFOLD_MODEL_SELECTION_LEDGER_JSON,
+    )
+    parser.add_argument(
+        "--massivefold-model1-combined-selector-overlay-json",
+        default=DEFAULT_MASSIVEFOLD_MODEL1_COMBINED_SELECTOR_OVERLAY_JSON,
+    )
+    parser.add_argument(
+        "--massivefold-freeze-ready-review-packet-json",
+        default=DEFAULT_MASSIVEFOLD_FREEZE_READY_REVIEW_PACKET_JSON,
+    )
+    parser.add_argument(
+        "--massivefold-hold-probe-review-packet-json",
+        default=DEFAULT_MASSIVEFOLD_HOLD_PROBE_REVIEW_PACKET_JSON,
+    )
+    parser.add_argument(
+        "--massivefold-probe-required-targeted-probe-packet-json",
+        default=DEFAULT_MASSIVEFOLD_PROBE_REQUIRED_TARGETED_PROBE_PACKET_JSON,
+    )
+    parser.add_argument(
+        "--massivefold-post-probe-selector-decision-packet-json",
+        default=DEFAULT_MASSIVEFOLD_POST_PROBE_SELECTOR_DECISION_PACKET_JSON,
+    )
+    parser.add_argument(
+        "--massivefold-watch-manual-action-packet-json",
+        default=DEFAULT_MASSIVEFOLD_WATCH_MANUAL_ACTION_PACKET_JSON,
+    )
+    parser.add_argument(
+        "--massivefold-freeze-candidate-format-preflight-json",
+        default=DEFAULT_MASSIVEFOLD_FREEZE_CANDIDATE_FORMAT_PREFLIGHT_JSON,
+    )
+    parser.add_argument(
+        "--massivefold-freeze-candidate-escrow-json",
+        default=DEFAULT_MASSIVEFOLD_FREEZE_CANDIDATE_ESCROW_JSON,
+    )
+    parser.add_argument(
+        "--massivefold-freeze-candidate-protein-library-json",
+        default=DEFAULT_MASSIVEFOLD_FREEZE_CANDIDATE_PROTEIN_LIBRARY_JSON,
     )
     parser.add_argument("--capri-round65-readiness-json", default=DEFAULT_CAPRI_ROUND65_READINESS_JSON)
     parser.add_argument("--capri-round65-format-preflight-json", default=DEFAULT_CAPRI_ROUND65_FORMAT_PREFLIGHT_JSON)
@@ -12622,12 +20851,60 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=DEFAULT_HISTORICAL_SEED_OFFICIAL_ARCHIVE_BASELINE_LANE_JSON,
     )
     parser.add_argument(
+        "--official-archive-first-baseline-acquisition-audit-json",
+        default=DEFAULT_OFFICIAL_ARCHIVE_FIRST_BASELINE_ACQUISITION_AUDIT_JSON,
+    )
+    parser.add_argument(
+        "--official-archive-first-baseline-model-pool-json",
+        default=DEFAULT_OFFICIAL_ARCHIVE_FIRST_BASELINE_MODEL_POOL_JSON,
+    )
+    parser.add_argument(
+        "--official-archive-first-baseline-score-ledger-json",
+        default=DEFAULT_OFFICIAL_ARCHIVE_FIRST_BASELINE_SCORE_LEDGER_JSON,
+    )
+    parser.add_argument(
+        "--official-archive-first-baseline-replay-comparison-json",
+        default=DEFAULT_OFFICIAL_ARCHIVE_FIRST_BASELINE_REPLAY_COMPARISON_JSON,
+    )
+    parser.add_argument(
+        "--official-archive-first-baseline-model1-gap-triage-json",
+        default=DEFAULT_OFFICIAL_ARCHIVE_FIRST_BASELINE_MODEL1_GAP_TRIAGE_JSON,
+    )
+    parser.add_argument(
+        "--official-archive-first-baseline-model1-gap-viewer-packet-json",
+        default=DEFAULT_OFFICIAL_ARCHIVE_FIRST_BASELINE_MODEL1_GAP_VIEWER_PACKET_JSON,
+    )
+    parser.add_argument(
+        "--official-archive-first-baseline-model1-gap-feature-probe-json",
+        default=DEFAULT_OFFICIAL_ARCHIVE_FIRST_BASELINE_MODEL1_GAP_FEATURE_PROBE_JSON,
+    )
+    parser.add_argument(
+        "--official-archive-first-baseline-model1-gap-consensus-probe-json",
+        default=DEFAULT_OFFICIAL_ARCHIVE_FIRST_BASELINE_MODEL1_GAP_CONSENSUS_PROBE_JSON,
+    )
+    parser.add_argument(
+        "--official-archive-first-baseline-model1-gap-combined-selector-ledger-json",
+        default=DEFAULT_OFFICIAL_ARCHIVE_FIRST_BASELINE_MODEL1_GAP_COMBINED_SELECTOR_LEDGER_JSON,
+    )
+    parser.add_argument(
         "--strict-blind-first-slot-source-bridge-json",
         default=DEFAULT_STRICT_BLIND_FIRST_SLOT_SOURCE_BRIDGE_JSON,
     )
     parser.add_argument(
         "--strict-blind-internal-prediction-source-audit-json",
         default=DEFAULT_STRICT_BLIND_INTERNAL_PREDICTION_SOURCE_AUDIT_JSON,
+    )
+    parser.add_argument(
+        "--strict-blind-internal-candidate-filesystem-sweep-json",
+        default=DEFAULT_STRICT_BLIND_INTERNAL_CANDIDATE_FILESYSTEM_SWEEP_JSON,
+    )
+    parser.add_argument(
+        "--strict-blind-unknown-candidate-triage-json",
+        default=DEFAULT_STRICT_BLIND_UNKNOWN_CANDIDATE_TRIAGE_JSON,
+    )
+    parser.add_argument(
+        "--strict-blind-internal-like-source-review-json",
+        default=DEFAULT_STRICT_BLIND_INTERNAL_LIKE_SOURCE_REVIEW_JSON,
     )
     parser.add_argument(
         "--strict-blind-internal-prediction-source-gate-json",
@@ -12644,6 +20921,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--strict-blind-source-gate-source-request-packet-json",
         default=DEFAULT_STRICT_BLIND_SOURCE_GATE_SOURCE_REQUEST_PACKET_JSON,
+    )
+    parser.add_argument(
+        "--strict-blind-source-request-resolution-board-json",
+        default=DEFAULT_STRICT_BLIND_SOURCE_REQUEST_RESOLUTION_BOARD_JSON,
     )
     parser.add_argument(
         "--strict-blind-source-request-fulfillment-gate-json",
@@ -12676,6 +20957,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--strict-blind-first-unlock-evidence-review-gate-json",
         default=DEFAULT_STRICT_BLIND_FIRST_UNLOCK_EVIDENCE_REVIEW_GATE_JSON,
+    )
+    parser.add_argument(
+        "--strict-blind-first-slot-source-gate-blocker-ledger-json",
+        default=DEFAULT_STRICT_BLIND_FIRST_SLOT_SOURCE_GATE_BLOCKER_LEDGER_JSON,
     )
     parser.add_argument(
         "--strict-blind-first-unlock-evidence-sync-plan-json",
@@ -12844,6 +21129,54 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--competitive-target-identity-clearance-workorder-audit-json",
         default=DEFAULT_COMPETITIVE_TARGET_IDENTITY_CLEARANCE_WORKORDER_AUDIT_JSON,
+    )
+    parser.add_argument(
+        "--competitive-target-identity-metric-runway-json",
+        default=DEFAULT_COMPETITIVE_TARGET_IDENTITY_METRIC_RUNWAY_JSON,
+    )
+    parser.add_argument(
+        "--competitive-floor-native-provenance-operator-packet-json",
+        default=DEFAULT_COMPETITIVE_FLOOR_NATIVE_PROVENANCE_OPERATOR_PACKET_JSON,
+    )
+    parser.add_argument(
+        "--competitive-floor-native-provenance-operator-packet-completion-audit-json",
+        default=DEFAULT_COMPETITIVE_FLOOR_NATIVE_PROVENANCE_OPERATOR_PACKET_COMPLETION_AUDIT_JSON,
+    )
+    parser.add_argument(
+        "--competitive-floor-native-provenance-metric-unlock-bridge-json",
+        default=DEFAULT_COMPETITIVE_FLOOR_NATIVE_PROVENANCE_METRIC_UNLOCK_BRIDGE_JSON,
+    )
+    parser.add_argument(
+        "--competitive-floor-first-native-provenance-unlock-kit-json",
+        default=DEFAULT_COMPETITIVE_FLOOR_FIRST_NATIVE_PROVENANCE_UNLOCK_KIT_JSON,
+    )
+    parser.add_argument(
+        "--competitive-floor-batch-native-provenance-unlock-kit-json",
+        default=DEFAULT_COMPETITIVE_FLOOR_BATCH_NATIVE_PROVENANCE_UNLOCK_KIT_JSON,
+    )
+    parser.add_argument(
+        "--competitive-floor-batch-native-provenance-unlock-kit-completion-audit-json",
+        default=DEFAULT_COMPETITIVE_FLOOR_BATCH_NATIVE_PROVENANCE_UNLOCK_KIT_COMPLETION_AUDIT_JSON,
+    )
+    parser.add_argument(
+        "--competitive-floor-batch-native-provenance-value-gate-json",
+        default=DEFAULT_COMPETITIVE_FLOOR_BATCH_NATIVE_PROVENANCE_VALUE_GATE_JSON,
+    )
+    parser.add_argument(
+        "--competitive-floor-batch-native-provenance-value-action-board-json",
+        default=DEFAULT_COMPETITIVE_FLOOR_BATCH_NATIVE_PROVENANCE_VALUE_ACTION_BOARD_JSON,
+    )
+    parser.add_argument(
+        "--competitive-floor-batch-native-provenance-value-action-board-completion-audit-json",
+        default=DEFAULT_COMPETITIVE_FLOOR_BATCH_NATIVE_PROVENANCE_VALUE_ACTION_BOARD_COMPLETION_AUDIT_JSON,
+    )
+    parser.add_argument(
+        "--competitive-floor-batch-native-provenance-operator-fill-preflight-json",
+        default=DEFAULT_COMPETITIVE_FLOOR_BATCH_NATIVE_PROVENANCE_OPERATOR_FILL_PREFLIGHT_JSON,
+    )
+    parser.add_argument(
+        "--competitive-floor-batch-native-provenance-operator-fill-preflight-completion-audit-json",
+        default=DEFAULT_COMPETITIVE_FLOOR_BATCH_NATIVE_PROVENANCE_OPERATOR_FILL_PREFLIGHT_COMPLETION_AUDIT_JSON,
     )
     parser.add_argument(
         "--competitive-target-identity-clearance-action-board-json",

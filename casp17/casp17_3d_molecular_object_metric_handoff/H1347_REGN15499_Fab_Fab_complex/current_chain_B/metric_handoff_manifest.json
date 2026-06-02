@@ -1,0 +1,125 @@
+{
+  "metric_rows": [
+    {
+      "claim_boundary": "CASP17 3D molecular object metric handoff only. It maps organized 3D object folders to win-tier metric requirements for review. It does not copy model coordinates, compute native accuracy, serialize a CASP author code, claim strict-blind competitive proof, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_output_status": "not_computed_review_only",
+      "metric_evidence_status": "awaiting_strict_blind_native_metric_evidence",
+      "metric_family": "protein_complex",
+      "metric_input_contract": "prediction/native chain mapping",
+      "metric_name": "GDT_TS"
+    },
+    {
+      "claim_boundary": "CASP17 3D molecular object metric handoff only. It maps organized 3D object folders to win-tier metric requirements for review. It does not copy model coordinates, compute native accuracy, serialize a CASP author code, claim strict-blind competitive proof, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_output_status": "not_computed_review_only",
+      "metric_evidence_status": "awaiting_strict_blind_native_metric_evidence",
+      "metric_family": "protein_complex",
+      "metric_input_contract": "prediction/native residue mapping",
+      "metric_name": "lDDT"
+    },
+    {
+      "claim_boundary": "CASP17 3D molecular object metric handoff only. It maps organized 3D object folders to win-tier metric requirements for review. It does not copy model coordinates, compute native accuracy, serialize a CASP author code, claim strict-blind competitive proof, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_output_status": "not_computed_review_only",
+      "metric_evidence_status": "awaiting_strict_blind_native_metric_evidence",
+      "metric_family": "protein_complex",
+      "metric_input_contract": "prediction/native chain mapping",
+      "metric_name": "TM-score"
+    },
+    {
+      "claim_boundary": "CASP17 3D molecular object metric handoff only. It maps organized 3D object folders to win-tier metric requirements for review. It does not copy model coordinates, compute native accuracy, serialize a CASP author code, claim strict-blind competitive proof, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_output_status": "not_computed_review_only",
+      "metric_evidence_status": "awaiting_strict_blind_native_metric_evidence",
+      "metric_family": "protein_complex",
+      "metric_input_contract": "prediction/native chain mapping",
+      "metric_name": "RMSD"
+    },
+    {
+      "claim_boundary": "CASP17 3D molecular object metric handoff only. It maps organized 3D object folders to win-tier metric requirements for review. It does not copy model coordinates, compute native accuracy, serialize a CASP author code, claim strict-blind competitive proof, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_output_status": "not_computed_review_only",
+      "metric_evidence_status": "awaiting_strict_blind_native_metric_evidence",
+      "metric_family": "protein_complex",
+      "metric_input_contract": "prediction/native chain mapping",
+      "metric_name": "GDT_HA"
+    },
+    {
+      "claim_boundary": "CASP17 3D molecular object metric handoff only. It maps organized 3D object folders to win-tier metric requirements for review. It does not copy model coordinates, compute native accuracy, serialize a CASP author code, claim strict-blind competitive proof, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_output_status": "not_computed_review_only",
+      "metric_evidence_status": "awaiting_strict_blind_native_metric_evidence",
+      "metric_family": "protein_complex",
+      "metric_input_contract": "prediction coordinate geometry validation",
+      "metric_name": "MolProbity"
+    },
+    {
+      "claim_boundary": "CASP17 3D molecular object metric handoff only. It maps organized 3D object folders to win-tier metric requirements for review. It does not copy model coordinates, compute native accuracy, serialize a CASP author code, claim strict-blind competitive proof, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_output_status": "not_computed_review_only",
+      "metric_evidence_status": "awaiting_strict_blind_native_metric_evidence",
+      "metric_family": "protein_complex",
+      "metric_input_contract": "prediction/native interface chain mapping",
+      "metric_name": "DockQ"
+    },
+    {
+      "claim_boundary": "CASP17 3D molecular object metric handoff only. It maps organized 3D object folders to win-tier metric requirements for review. It does not copy model coordinates, compute native accuracy, serialize a CASP author code, claim strict-blind competitive proof, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_output_status": "not_computed_review_only",
+      "metric_evidence_status": "awaiting_strict_blind_native_metric_evidence",
+      "metric_family": "protein_complex",
+      "metric_input_contract": "prediction/native interface chain mapping",
+      "metric_name": "ICS"
+    },
+    {
+      "claim_boundary": "CASP17 3D molecular object metric handoff only. It maps organized 3D object folders to win-tier metric requirements for review. It does not copy model coordinates, compute native accuracy, serialize a CASP author code, claim strict-blind competitive proof, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_output_status": "not_computed_review_only",
+      "metric_evidence_status": "awaiting_strict_blind_native_metric_evidence",
+      "metric_family": "protein_complex",
+      "metric_input_contract": "prediction/native interface chain mapping",
+      "metric_name": "IPS"
+    }
+  ],
+  "summary": {
+    "atlas_object_folder": "casp17/casp17_3d_molecular_object_atlas/H1347_REGN15499_Fab_Fab_complex/current_chain_B",
+    "atlas_object_key": "current_chain_B",
+    "atlas_object_manifest": "casp17/casp17_3d_molecular_object_atlas/H1347_REGN15499_Fab_Fab_complex/current_chain_B/object_manifest.json",
+    "atlas_protein_folder": "casp17/casp17_3d_molecular_object_atlas/H1347_REGN15499_Fab_Fab_complex",
+    "atlas_protein_key": "H1347_REGN15499_Fab_Fab_complex",
+    "atlas_protein_manifest": "casp17/casp17_3d_molecular_object_atlas/H1347_REGN15499_Fab_Fab_complex/protein_manifest.json",
+    "author_serialized": "false",
+    "blockers": "",
+    "claim_boundary": "CASP17 3D molecular object metric handoff only. It maps organized 3D object folders to win-tier metric requirements for review. It does not copy model coordinates, compute native accuracy, serialize a CASP author code, claim strict-blind competitive proof, or submit to CASP.",
+    "competitive_proof_eligible": "false",
+    "escrow_md": "",
+    "handoff_object_folder": "casp17/casp17_3d_molecular_object_metric_handoff/H1347_REGN15499_Fab_Fab_complex/current_chain_B",
+    "handoff_object_manifest": "casp17/casp17_3d_molecular_object_metric_handoff/H1347_REGN15499_Fab_Fab_complex/current_chain_B/metric_handoff_manifest.json",
+    "handoff_protein_folder": "casp17/casp17_3d_molecular_object_metric_handoff/H1347_REGN15499_Fab_Fab_complex",
+    "handoff_protein_manifest": "casp17/casp17_3d_molecular_object_metric_handoff/H1347_REGN15499_Fab_Fab_complex/protein_metric_handoff_manifest.json",
+    "handoff_status": "ready_review_only",
+    "metric_evidence_status": "awaiting_strict_blind_native_metric_evidence",
+    "metric_extension_notes": "",
+    "metric_family": "protein_complex",
+    "metric_handoff_md": "casp17/casp17_3d_molecular_object_metric_handoff/H1347_REGN15499_Fab_Fab_complex/current_chain_B/METRIC_HANDOFF.md",
+    "metric_requirement_count": 9,
+    "metric_requirements_csv": "casp17/casp17_3d_molecular_object_metric_handoff/H1347_REGN15499_Fab_Fab_complex/current_chain_B/metric_requirements.csv",
+    "model_path": "casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_B/models/H1347_chain_B.pdb",
+    "model_sha256": "",
+    "native_status": "native_accuracy_not_scored",
+    "object_id": "chain_B",
+    "object_role": "B",
+    "projection_svg": "casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_B/renders/H1347_chain_B_projection.svg",
+    "protein_name": "REGN15499 Fab-Fab complex",
+    "required_metric_names": "GDT_TS|lDDT|TM-score|RMSD|GDT_HA|MolProbity|DockQ|ICS|IPS",
+    "source_lane": "current_object_library",
+    "source_policy": "local_current_object_library_review_only_not_competitive_proof",
+    "submission_policy": "do_not_submit_without_rule_check_and_operator_approval",
+    "target_group": "protein_complex",
+    "target_id": "H1347",
+    "top5_manifest_csv": "",
+    "top5_manifest_sha256": "",
+    "viewer_html": "casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_B/viewer.html"
+  }
+}

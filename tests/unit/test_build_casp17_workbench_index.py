@@ -17,7 +17,22 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     protein_object_library_json = tmp_path / "protein_object_library.json"
     protein_object_library_completion_audit_json = tmp_path / "protein_object_library_completion_audit.json"
     protein_object_library_navigation_catalog_json = tmp_path / "protein_object_library_navigation_catalog.json"
+    molecular_object_atlas_json = tmp_path / "molecular_object_atlas.json"
+    molecular_object_atlas_completion_audit_json = tmp_path / "molecular_object_atlas_completion_audit.json"
+    molecular_object_metric_handoff_json = tmp_path / "molecular_object_metric_handoff.json"
+    molecular_object_metric_handoff_completion_audit_json = (
+        tmp_path / "molecular_object_metric_handoff_completion_audit.json"
+    )
     raw_ranked_model_quarantine_json = tmp_path / "raw_ranked_model_quarantine.json"
+    current_submission_gate_json = tmp_path / "current_submission_gate.json"
+    current_sidechain_repack_json = tmp_path / "current_sidechain_repack.json"
+    current_submission_package_preflight_json = tmp_path / "current_submission_package_preflight.json"
+    current_submission_deadline_guard_json = tmp_path / "current_submission_deadline_guard.json"
+    current_upload_queue_json = tmp_path / "current_upload_queue.json"
+    current_upload_review_packet_json = tmp_path / "current_upload_review_packet.json"
+    current_prospective_strict_blind_escrow_json = (
+        tmp_path / "current_prospective_strict_blind_escrow.json"
+    )
     closure_json = tmp_path / "closure.json"
     goal_scorecard_json = tmp_path / "goal_scorecard.json"
     historical_winner_normalized_bands_json = tmp_path / "historical_winner_normalized_bands.json"
@@ -64,6 +79,47 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     )
     protein_complex_massivefold_self_assessment_packet_json = (
         tmp_path / "protein_complex_massivefold_self_assessment_packet.json"
+    )
+    massivefold_model1_risk_queue_json = tmp_path / "massivefold_model1_risk_queue.json"
+    massivefold_critical_rerank_experiment_json = (
+        tmp_path / "massivefold_critical_rerank_experiment.json"
+    )
+    massivefold_critical_rerank_score_ledger_json = (
+        tmp_path / "massivefold_critical_rerank_score_ledger.json"
+    )
+    massivefold_model1_selection_calibration_gate_json = (
+        tmp_path / "massivefold_model1_selection_calibration_gate.json"
+    )
+    massivefold_model1_probe_worklist_json = tmp_path / "massivefold_model1_probe_worklist.json"
+    massivefold_model1_probe_outcome_json = tmp_path / "massivefold_model1_probe_outcome.json"
+    massivefold_model1_freeze_decision_packet_json = (
+        tmp_path / "massivefold_model1_freeze_decision_packet.json"
+    )
+    massivefold_model_selection_ledger_json = tmp_path / "massivefold_model_selection_ledger.json"
+    massivefold_model1_combined_selector_overlay_json = (
+        tmp_path / "massivefold_model1_combined_selector_overlay.json"
+    )
+    massivefold_freeze_ready_review_packet_json = (
+        tmp_path / "massivefold_freeze_ready_review_packet.json"
+    )
+    massivefold_hold_probe_review_packet_json = (
+        tmp_path / "massivefold_hold_probe_review_packet.json"
+    )
+    massivefold_probe_required_targeted_probe_packet_json = (
+        tmp_path / "massivefold_probe_required_targeted_probe_packet.json"
+    )
+    massivefold_post_probe_selector_decision_packet_json = (
+        tmp_path / "massivefold_post_probe_selector_decision_packet.json"
+    )
+    massivefold_watch_manual_action_packet_json = (
+        tmp_path / "massivefold_watch_manual_action_packet.json"
+    )
+    massivefold_freeze_candidate_format_preflight_json = (
+        tmp_path / "massivefold_freeze_candidate_format_preflight.json"
+    )
+    massivefold_freeze_candidate_escrow_json = tmp_path / "massivefold_freeze_candidate_escrow.json"
+    massivefold_freeze_candidate_protein_library_json = (
+        tmp_path / "massivefold_freeze_candidate_protein_library.json"
     )
     capri_round65_readiness_json = tmp_path / "capri_round65_readiness.json"
     capri_round65_format_preflight_json = tmp_path / "capri_round65_format_preflight.json"
@@ -146,9 +202,45 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     historical_seed_official_archive_baseline_lane_json = (
         tmp_path / "historical_seed_official_archive_baseline_lane.json"
     )
+    official_archive_first_baseline_acquisition_audit_json = (
+        tmp_path / "official_archive_first_baseline_acquisition_audit.json"
+    )
+    official_archive_first_baseline_model_pool_json = (
+        tmp_path / "official_archive_first_baseline_model_pool.json"
+    )
+    official_archive_first_baseline_score_ledger_json = (
+        tmp_path / "official_archive_first_baseline_score_ledger.json"
+    )
+    official_archive_first_baseline_replay_comparison_json = (
+        tmp_path / "official_archive_first_baseline_replay_comparison.json"
+    )
+    official_archive_first_baseline_model1_gap_triage_json = (
+        tmp_path / "official_archive_first_baseline_model1_gap_triage.json"
+    )
+    official_archive_first_baseline_model1_gap_viewer_packet_json = (
+        tmp_path / "official_archive_first_baseline_model1_gap_viewer_packet.json"
+    )
+    official_archive_first_baseline_model1_gap_feature_probe_json = (
+        tmp_path / "official_archive_first_baseline_model1_gap_feature_probe.json"
+    )
+    official_archive_first_baseline_model1_gap_consensus_probe_json = (
+        tmp_path / "official_archive_first_baseline_model1_gap_consensus_probe.json"
+    )
+    official_archive_first_baseline_model1_gap_combined_selector_ledger_json = (
+        tmp_path / "official_archive_first_baseline_model1_gap_combined_selector_ledger.json"
+    )
     strict_blind_first_slot_source_bridge_json = tmp_path / "strict_blind_first_slot_source_bridge.json"
     strict_blind_internal_prediction_source_audit_json = (
         tmp_path / "strict_blind_internal_prediction_source_audit.json"
+    )
+    strict_blind_internal_candidate_filesystem_sweep_json = (
+        tmp_path / "strict_blind_internal_candidate_filesystem_sweep.json"
+    )
+    strict_blind_unknown_candidate_triage_json = (
+        tmp_path / "strict_blind_unknown_candidate_triage.json"
+    )
+    strict_blind_internal_like_source_review_json = (
+        tmp_path / "strict_blind_internal_like_source_review.json"
     )
     strict_blind_internal_prediction_source_gate_json = (
         tmp_path / "strict_blind_internal_prediction_source_gate.json"
@@ -159,6 +251,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     )
     strict_blind_source_gate_source_request_packet_json = (
         tmp_path / "strict_blind_source_gate_source_request_packet.json"
+    )
+    strict_blind_source_request_resolution_board_json = (
+        tmp_path / "strict_blind_source_request_resolution_board.json"
     )
     strict_blind_source_request_fulfillment_gate_json = (
         tmp_path / "strict_blind_source_request_fulfillment_gate.json"
@@ -181,6 +276,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     )
     strict_blind_first_unlock_evidence_review_gate_json = (
         tmp_path / "strict_blind_first_unlock_evidence_review_gate.json"
+    )
+    strict_blind_first_slot_source_gate_blocker_ledger_json = (
+        tmp_path / "strict_blind_first_slot_source_gate_blocker_ledger.json"
     )
     strict_blind_first_unlock_evidence_sync_plan_json = (
         tmp_path / "strict_blind_first_unlock_evidence_sync_plan.json"
@@ -293,6 +391,42 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     )
     competitive_target_identity_clearance_workorder_audit_json = (
         tmp_path / "competitive_target_identity_clearance_workorder_audit.json"
+    )
+    competitive_target_identity_metric_runway_json = (
+        tmp_path / "competitive_target_identity_metric_runway.json"
+    )
+    competitive_floor_native_provenance_operator_packet_json = (
+        tmp_path / "competitive_floor_native_provenance_operator_packet.json"
+    )
+    competitive_floor_native_provenance_operator_packet_completion_audit_json = (
+        tmp_path / "competitive_floor_native_provenance_operator_packet_completion_audit.json"
+    )
+    competitive_floor_native_provenance_metric_unlock_bridge_json = (
+        tmp_path / "competitive_floor_native_provenance_metric_unlock_bridge.json"
+    )
+    competitive_floor_first_native_provenance_unlock_kit_json = (
+        tmp_path / "competitive_floor_first_native_provenance_unlock_kit.json"
+    )
+    competitive_floor_batch_native_provenance_unlock_kit_json = (
+        tmp_path / "competitive_floor_batch_native_provenance_unlock_kit.json"
+    )
+    competitive_floor_batch_native_provenance_unlock_kit_completion_audit_json = (
+        tmp_path / "competitive_floor_batch_native_provenance_unlock_kit_completion_audit.json"
+    )
+    competitive_floor_batch_native_provenance_value_gate_json = (
+        tmp_path / "competitive_floor_batch_native_provenance_value_gate.json"
+    )
+    competitive_floor_batch_native_provenance_value_action_board_json = (
+        tmp_path / "competitive_floor_batch_native_provenance_value_action_board.json"
+    )
+    competitive_floor_batch_native_provenance_value_action_board_completion_audit_json = (
+        tmp_path / "competitive_floor_batch_native_provenance_value_action_board_completion_audit.json"
+    )
+    competitive_floor_batch_native_provenance_operator_fill_preflight_json = (
+        tmp_path / "competitive_floor_batch_native_provenance_operator_fill_preflight.json"
+    )
+    competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_json = (
+        tmp_path / "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit.json"
     )
     competitive_target_identity_clearance_action_board_json = (
         tmp_path / "competitive_target_identity_clearance_action_board.json"
@@ -455,6 +589,161 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        molecular_object_atlas_json,
+        {
+            "summary": {
+                "casp17_3d_molecular_object_atlas_status": (
+                    "casp17_3d_molecular_object_atlas_ready_review_only"
+                ),
+                "protein_count": 5,
+                "protein_pass_count": 5,
+                "protein_blocked_count": 0,
+                "object_count": 14,
+                "object_pass_count": 14,
+                "object_blocked_count": 0,
+                "current_object_count": 4,
+                "massivefold_freeze_object_count": 10,
+                "current_protein_count": 2,
+                "massivefold_freeze_protein_count": 4,
+                "overlap_protein_count": 1,
+                "model_link_count": 14,
+                "viewer_link_count": 14,
+                "projection_link_count": 14,
+                "top5_link_count": 10,
+                "escrow_link_count": 10,
+                "model_sha256_count": 10,
+                "top5_sha256_count": 10,
+                "native_accuracy_count": 0,
+                "competitive_proof_eligible_count": 0,
+                "author_serialized_count": 0,
+                "first_protein_key": "H9002_Example_Fab_Complex",
+                "first_object_key": "current_chain_A",
+                "first_blocked_protein_key": "",
+                "html_atlas_path": "casp17/casp17_3d_molecular_object_atlas_current.html",
+                "next_action": "inspect every CASP17 3D object by protein name",
+            }
+        },
+    )
+    _write_json(
+        molecular_object_atlas_completion_audit_json,
+        {
+            "summary": {
+                "atlas_completion_audit_status": (
+                    "casp17_3d_molecular_object_atlas_completion_audit_pass"
+                ),
+                "protein_count": 5,
+                "protein_folder_present_count": 5,
+                "protein_readme_present_count": 5,
+                "protein_manifest_present_count": 5,
+                "object_count": 14,
+                "object_pass_count": 14,
+                "object_blocked_count": 0,
+                "current_object_count": 4,
+                "massivefold_freeze_object_count": 10,
+                "atlas_object_folder_present_count": 14,
+                "atlas_object_readme_present_count": 14,
+                "atlas_object_manifest_present_count": 14,
+                "model_link_present_count": 14,
+                "viewer_link_present_count": 14,
+                "projection_link_present_count": 14,
+                "top5_link_present_count": 10,
+                "escrow_link_present_count": 10,
+                "object_coordinate_copy_count": 0,
+                "atlas_coordinate_copy_count": 0,
+                "competitive_proof_eligible_count": 0,
+                "author_serialized_count": 0,
+                "first_protein_key": "H9002_Example_Fab_Complex",
+                "first_object_key": "current_chain_A",
+                "first_blocked_protein_key": "",
+                "html_audit_path": (
+                    "casp17/casp17_3d_molecular_object_atlas_completion_audit_current.html"
+                ),
+                "next_action": "use this green audit as the 3D object organization gate",
+            }
+        },
+    )
+    _write_json(
+        molecular_object_metric_handoff_json,
+        {
+            "summary": {
+                "metric_handoff_status": (
+                    "casp17_3d_molecular_object_metric_handoff_ready_review_only_ligand_gap"
+                ),
+                "protein_count": 5,
+                "protein_handoff_folder_expected_count": 5,
+                "object_count": 14,
+                "object_ready_count": 14,
+                "object_blocked_count": 0,
+                "object_handoff_folder_expected_count": 14,
+                "current_object_count": 4,
+                "massivefold_freeze_object_count": 10,
+                "metric_requirement_count": 118,
+                "required_metric_count": 11,
+                "covered_required_metric_count": 9,
+                "missing_required_metric_count": 2,
+                "missing_required_metric_names": "LDDT-PLI,BiSyRMSD",
+                "ligand_metric_gap_count": 2,
+                "monomer_object_count": 1,
+                "complex_object_count": 12,
+                "rna_hybrid_object_count": 1,
+                "ligand_object_count": 0,
+                "native_accuracy_count": 0,
+                "competitive_proof_eligible_count": 0,
+                "author_serialized_count": 0,
+                "first_protein_key": "H9002_Example_Fab_Complex",
+                "first_object_key": "current_chain_A",
+                "first_blocked_protein_key": "",
+                "html_handoff_path": (
+                    "casp17/casp17_3d_molecular_object_metric_handoff_current.html"
+                ),
+                "next_action": "connect each 3D object to required win-tier metrics",
+            }
+        },
+    )
+    _write_json(
+        molecular_object_metric_handoff_completion_audit_json,
+        {
+            "summary": {
+                "metric_handoff_completion_audit_status": (
+                    "casp17_3d_molecular_object_metric_handoff_completion_audit_pass"
+                ),
+                "protein_count": 5,
+                "protein_folder_present_count": 5,
+                "protein_readme_present_count": 5,
+                "protein_manifest_present_count": 5,
+                "object_count": 14,
+                "object_pass_count": 14,
+                "object_blocked_count": 0,
+                "current_object_count": 4,
+                "massivefold_freeze_object_count": 10,
+                "handoff_object_folder_present_count": 14,
+                "handoff_object_manifest_present_count": 14,
+                "metric_requirements_csv_present_count": 14,
+                "metric_handoff_md_present_count": 14,
+                "metric_requirement_count": 118,
+                "metric_requirement_csv_row_count": 118,
+                "metric_requirement_csv_mismatch_count": 0,
+                "metric_evidence_awaiting_count": 14,
+                "model_link_present_count": 14,
+                "viewer_link_present_count": 14,
+                "projection_link_present_count": 14,
+                "top5_link_present_count": 10,
+                "escrow_link_present_count": 10,
+                "object_coordinate_copy_count": 0,
+                "out_dir_coordinate_copy_count": 0,
+                "competitive_proof_eligible_count": 0,
+                "author_serialized_count": 0,
+                "first_protein_key": "H9002_Example_Fab_Complex",
+                "first_object_key": "current_chain_A",
+                "first_blocked_protein_key": "",
+                "html_audit_path": (
+                    "casp17/casp17_3d_molecular_object_metric_handoff_completion_audit_current.html"
+                ),
+                "next_action": "use green metric handoff completion audit",
+            }
+        },
+    )
+    _write_json(
         raw_ranked_model_quarantine_json,
         {
             "summary": {
@@ -466,6 +755,178 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "author_record_present_count": 15,
                 "complete_top5_target_count": 3,
                 "total_atom_record_count": 42000,
+            }
+        },
+    )
+    _write_json(
+        current_submission_gate_json,
+        {
+            "summary": {
+                "submission_go_count": 19,
+                "submission_no_go_count": 0,
+                "target_row_count": 19,
+                "framework_gate_pass": True,
+                "registration_action": "user_register_regular_group_now_submission_gated",
+                "registration_class_recommendation": "regular_prediction_group",
+                "server_registration_ready": False,
+                "shape_sanity_status": "pass",
+                "shape_sanity_pass_count": 19,
+                "shape_sanity_blocked_count": 0,
+                "shape_sanity_target_count": 19,
+                "lane_target_counts": {"difficult_protein_complexes": 19},
+            }
+        },
+    )
+    _write_json(
+        current_sidechain_repack_json,
+        {
+            "summary": {
+                "sidechain_repack_status": "pass",
+                "pass_count": 19,
+                "blocked_count": 0,
+                "target_count": 19,
+                "total_soft_clash_delta": 529,
+                "total_soft_clash_count_before": 1955,
+                "total_soft_clash_count_after": 1426,
+                "total_improved_residue_count": 7179,
+                "total_repacked_residue_count": 15657,
+                "revert_guard_count": 8,
+            }
+        },
+    )
+    _write_json(
+        current_submission_package_preflight_json,
+        {
+            "summary": {
+                "package_preflight_status": "ready",
+                "package_mode": "manifest_only_no_author_code_export",
+                "ready_count": 19,
+                "blocked_count": 0,
+                "target_count": 19,
+                "candidate_file_present_count": 19,
+                "candidate_sha256_count": 19,
+                "format_pass_count": 19,
+                "author_record_pass_count": 19,
+                "sidechain_repack_pass_count": 19,
+                "submission_gate_status": "current_casp17_submission_gate_ready",
+                "submission_gate_go_count": 19,
+                "submission_gate_no_go_count": 0,
+                "submission_gate_target_count": 19,
+                "server_registration_ready": False,
+                "next_action": "final local review before operator-approved upload",
+            }
+        },
+    )
+    _write_json(
+        current_submission_deadline_guard_json,
+        {
+            "summary": {
+                "deadline_guard_status": "partial_current_upload_window_ready",
+                "current_date": "2026-06-02",
+                "upload_window_ready_count": 11,
+                "deadline_blocked_count": 8,
+                "target_count": 19,
+                "human_expired_count": 8,
+                "human_expiring_today_count": 2,
+                "human_future_count": 9,
+                "qa_open_count": 15,
+                "qa_expired_count": 4,
+                "qa_unknown_count": 0,
+                "package_preflight_status": "ready",
+                "package_ready_count": 19,
+                "package_blocked_count": 0,
+                "package_target_count": 19,
+                "watchlist_stale": True,
+                "watchlist_stale_days": 7,
+                "first_blocked_target_id": "T1331",
+                "first_blocked_reason": "human_submission_deadline_expired",
+                "nearest_open_target_id": "H2319",
+                "nearest_open_human_expiration": "2026-06-02",
+                "nearest_open_days_to_human_expiration": 0,
+                "next_action": "submit or archive only targets whose human deadline remains open",
+            }
+        },
+    )
+    _write_json(
+        current_upload_queue_json,
+        {
+            "summary": {
+                "upload_queue_status": "official_verified_current_upload_queue_partial",
+                "current_date": "2026-06-02",
+                "target_count": 19,
+                "upload_ready_count": 10,
+                "blocked_count": 9,
+                "ready_today_count": 2,
+                "ready_soon_count": 4,
+                "ready_future_count": 4,
+                "official_target_count": 77,
+                "official_direct_match_count": 18,
+                "official_phase_mapped_count": 1,
+                "official_missing_count": 0,
+                "official_cancelled_count": 1,
+                "official_expired_count": 9,
+                "official_local_deadline_mismatch_count": 1,
+                "official_source": "https://predictioncenter.org/casp17/targetlist.cgi?type=csv",
+                "first_upload_target_id": "H2319",
+                "first_upload_human_expiration": "2026-06-02",
+                "first_blocked_target_id": "H1335",
+                "first_blocked_reason": "official_human_deadline_expired",
+                "next_action": "work queue_rank > 0 only",
+            }
+        },
+    )
+    _write_json(
+        current_upload_review_packet_json,
+        {
+            "summary": {
+                "review_packet_status": "current_upload_review_packet_ready",
+                "review_target_count": 10,
+                "review_ready_count": 10,
+                "review_blocked_count": 0,
+                "urgency_today_count": 2,
+                "urgency_soon_count": 4,
+                "urgency_future_count": 4,
+                "candidate_present_count": 10,
+                "object_catalog_pass_count": 10,
+                "viewer_link_count": 10,
+                "upload_queue_status": "official_verified_current_upload_queue_partial",
+                "upload_ready_count": 10,
+                "upload_blocked_count": 9,
+                "upload_target_count": 19,
+                "first_review_target_id": "H2319",
+                "first_review_md": (
+                    "casp17/current_upload_review_packet/"
+                    "01_h2319_human_astrovirus_va1_capsid_spike_-_antibody_7c8_complex/"
+                    "UPLOAD_REVIEW.md"
+                ),
+                "first_blocked_target_id": "",
+                "first_blocker": "",
+                "next_action": "open each UPLOAD_REVIEW.md in queue_rank order",
+            }
+        },
+    )
+    _write_json(
+        current_prospective_strict_blind_escrow_json,
+        {
+            "summary": {
+                "prospective_escrow_status": (
+                    "current_prospective_strict_blind_escrow_ready_native_pending_partial_upload_window"
+                ),
+                "target_count": 19,
+                "escrow_ready_count": 19,
+                "escrow_blocked_count": 0,
+                "upload_ready_count": 10,
+                "upload_blocked_count": 9,
+                "sha256_match_count": 19,
+                "review_link_count": 10,
+                "native_pending_count": 19,
+                "external_timestamp_required_count": 19,
+                "competitive_proof_eligible_count": 0,
+                "author_serialized_count": 0,
+                "manifest_signature_sha256": "abc123",
+                "first_upload_ready_target_id": "H2319",
+                "first_upload_blocked_target_id": "H1335",
+                "next_action": "externally timestamp the escrow manifest",
             }
         },
     )
@@ -1052,6 +1513,520 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "internal_prediction_policy": "do_not_mark_as_internal_prediction",
                 "first_blocked_target_id": "",
                 "next_action": "use protein/complex self-assessment features for calibration",
+            }
+        },
+    )
+    _write_json(
+        massivefold_model1_risk_queue_json,
+        {
+            "summary": {
+                "massivefold_model1_risk_queue_status": (
+                    "massivefold_model1_risk_queue_ready_external_only"
+                ),
+                "target_count": 4,
+                "ready_target_count": 4,
+                "blocked_target_count": 0,
+                "low_margin_target_count": 2,
+                "critical_margin_target_count": 1,
+                "rna_hybrid_target_count": 2,
+                "protein_complex_target_count": 2,
+                "first_priority_target_id": "H1311",
+                "first_priority_group": "protein_complex",
+                "first_priority_gap": "0.05",
+                "first_priority_risk_tier": "critical_model1_margin",
+                "internal_prediction_policy": "do_not_mark_as_internal_prediction",
+                "next_action": "work low-margin model1 targets first",
+            }
+        },
+    )
+    _write_json(
+        massivefold_critical_rerank_experiment_json,
+        {
+            "summary": {
+                "massivefold_critical_rerank_experiment_status": (
+                    "massivefold_critical_rerank_experiment_ready_external_only"
+                ),
+                "experiment_count": 2,
+                "ready_experiment_count": 2,
+                "blocked_experiment_count": 0,
+                "rna_hybrid_experiment_count": 1,
+                "protein_complex_experiment_count": 1,
+                "high_diversity_review_count": 1,
+                "geometry_review_count": 1,
+                "low_confidence_review_count": 1,
+                "first_experiment_target_id": "R2350",
+                "first_experiment_group": "rna_hybrid",
+                "first_experiment_gap": "0.02",
+                "first_experiment_order": "top5_diversity_then_geometry_then_model1_gap",
+                "rerank_formula_id": "gap_plus_geometry_plus_diversity_penalty_v1",
+                "internal_prediction_policy": "do_not_mark_as_internal_prediction",
+                "next_action": "run the critical no-native rerank probes",
+            }
+        },
+    )
+    _write_json(
+        massivefold_critical_rerank_score_ledger_json,
+        {
+            "summary": {
+                "massivefold_critical_rerank_score_ledger_status": (
+                    "massivefold_critical_rerank_score_ledger_ready_external_only"
+                ),
+                "ledger_count": 2,
+                "ready_ledger_count": 2,
+                "blocked_ledger_count": 0,
+                "immediate_rerank_required_count": 0,
+                "calibrate_before_model1_freeze_count": 2,
+                "critical_watch_count": 0,
+                "rna_hybrid_ledger_count": 1,
+                "protein_complex_ledger_count": 1,
+                "top_risk_target_id": "R2350",
+                "top_risk_group": "rna_hybrid",
+                "top_risk_score": "66",
+                "top_risk_band": "calibrate_before_model1_freeze",
+                "top_rerank_action": "run_targeted_probe_then_freeze_model1_if_consistent",
+                "internal_prediction_policy": "do_not_mark_as_internal_prediction",
+                "next_action": "review the top score-ledger rows first",
+            }
+        },
+    )
+    _write_json(
+        massivefold_model1_selection_calibration_gate_json,
+        {
+            "summary": {
+                "massivefold_model1_selection_calibration_gate_status": (
+                    "massivefold_model1_selection_calibration_gate_ready_external_only"
+                ),
+                "freeze_gate_status": "model1_freeze_blocked_by_calibration",
+                "gate_count": 2,
+                "ready_gate_count": 2,
+                "blocked_gate_count": 0,
+                "hold_model1_freeze_count": 1,
+                "watch_probe_count": 1,
+                "probe_required_count": 2,
+                "freeze_ready_count": 0,
+                "rna_hybrid_gate_count": 1,
+                "protein_complex_gate_count": 1,
+                "first_gate_target_id": "R2350",
+                "first_gate_group": "rna_hybrid",
+                "top_risk_score": "66",
+                "first_gate_decision": "hold_model1_freeze_probe_required",
+                "first_gate_probe_type": "top5_rerank_consistency_probe",
+                "selection_rule_id": "no_native_model1_selection_gate_v1",
+                "internal_prediction_policy": "do_not_mark_as_internal_prediction",
+                "next_action": "run required no-native probes",
+            }
+        },
+    )
+    _write_json(
+        massivefold_model1_probe_worklist_json,
+        {
+            "summary": {
+                "massivefold_model1_probe_worklist_status": (
+                    "massivefold_model1_probe_worklist_ready_external_only"
+                ),
+                "workitem_count": 2,
+                "ready_workitem_count": 2,
+                "blocked_workitem_count": 0,
+                "top5_rerank_consistency_probe_count": 1,
+                "lightweight_rescore_probe_count": 1,
+                "priority1_workitem_count": 1,
+                "priority2_workitem_count": 1,
+                "rna_hybrid_workitem_count": 1,
+                "protein_complex_workitem_count": 1,
+                "first_workitem_target_id": "R2350",
+                "first_workitem_group": "rna_hybrid",
+                "first_workitem_risk_score": "66",
+                "first_workitem_probe_type": "top5_rerank_consistency_probe",
+                "freeze_unlock_policy": "freeze_after_probe_allowed_only_if_exit_criterion_passes",
+                "internal_prediction_policy": "do_not_mark_as_internal_prediction",
+                "next_action": "execute priority-1 no-native probes",
+            }
+        },
+    )
+    _write_json(
+        massivefold_model1_probe_outcome_json,
+        {
+            "summary": {
+                "massivefold_model1_probe_outcome_status": (
+                    "massivefold_model1_probe_outcome_ready_external_only"
+                ),
+                "outcome_count": 2,
+                "ready_outcome_count": 2,
+                "blocked_outcome_count": 0,
+                "probe_pass_count": 2,
+                "probe_fail_count": 0,
+                "freeze_ready_recommendation_count": 2,
+                "top5_probe_outcome_count": 1,
+                "lightweight_probe_outcome_count": 1,
+                "rna_hybrid_outcome_count": 1,
+                "protein_complex_outcome_count": 1,
+                "first_outcome_target_id": "R2350",
+                "first_outcome_group": "rna_hybrid",
+                "first_outcome_result": "probe_pass_model1_retained",
+                "first_outcome_margin": "0.1",
+                "first_freeze_recommendation": (
+                    "conditional_model1_freeze_ready_external_only"
+                ),
+                "scoring_rule_id": "no_native_probe_rescore_v1",
+                "internal_prediction_policy": "do_not_mark_as_internal_prediction",
+                "next_action": "feed probe outcomes into freeze decision packet",
+            }
+        },
+    )
+    _write_json(
+        massivefold_model1_freeze_decision_packet_json,
+        {
+            "summary": {
+                "massivefold_model1_freeze_decision_packet_status": (
+                    "massivefold_model1_freeze_decision_packet_ready_external_only"
+                ),
+                "decision_count": 2,
+                "ready_decision_count": 2,
+                "blocked_decision_count": 0,
+                "freeze_ready_total_count": 1,
+                "freeze_blocked_total_count": 1,
+                "conditional_freeze_ready_count": 1,
+                "watch_freeze_ready_count": 0,
+                "manual_review_blocked_count": 1,
+                "rna_hybrid_decision_count": 1,
+                "protein_complex_decision_count": 1,
+                "first_freeze_ready_target_id": "R2350",
+                "first_freeze_ready_group": "rna_hybrid",
+                "first_freeze_ready_decision": "freeze_ready_external_only_conditional",
+                "first_blocked_target_id": "H2312",
+                "first_blocked_group": "protein_complex",
+                "first_blocked_decision": "freeze_blocked_manual_review",
+                "decision_rule_id": "no_native_model1_freeze_decision_v1",
+                "internal_prediction_policy": "do_not_mark_as_internal_prediction",
+                "next_action": "feed freeze-ready decisions into model-selection ledger",
+            }
+        },
+    )
+    _write_json(
+        massivefold_model_selection_ledger_json,
+        {
+            "summary": {
+                "massivefold_model_selection_ledger_status": (
+                    "massivefold_model_selection_ledger_ready_external_only"
+                ),
+                "ledger_count": 15,
+                "ready_ledger_count": 15,
+                "blocked_ledger_count": 0,
+                "conditional_selected_count": 2,
+                "watch_selected_count": 1,
+                "manual_review_blocked_count": 1,
+                "review_only_unfrozen_count": 11,
+                "freeze_ready_selected_count": 3,
+                "rna_hybrid_ledger_count": 6,
+                "protein_complex_ledger_count": 9,
+                "first_ledger_target_id": "R2350",
+                "first_ledger_group": "rna_hybrid",
+                "first_ledger_decision": "external_model1_selected_conditional",
+                "first_manual_review_target_id": "R2352",
+                "ledger_rule_id": "no_native_massivefold_model_selection_ledger_v1",
+                "internal_prediction_policy": "do_not_mark_as_internal_prediction",
+                "next_action": "use this external-only ledger for accuracy-estimation review",
+            }
+        },
+    )
+    _write_json(
+        massivefold_model1_combined_selector_overlay_json,
+        {
+            "summary": {
+                "massivefold_model1_combined_selector_overlay_status": (
+                    "massivefold_model1_combined_selector_overlay_ready_external_only"
+                ),
+                "overlay_count": 4,
+                "overlay_ready_count": 4,
+                "overlay_blocked_count": 0,
+                "freeze_ready_overlay_count": 1,
+                "not_freeze_ready_overlay_count": 3,
+                "manual_blocked_overlay_count": 1,
+                "interface_hold_overlay_count": 1,
+                "weak_probe_hold_overlay_count": 0,
+                "probe_required_overlay_count": 1,
+                "review_watch_overlay_count": 0,
+                "unknown_hold_overlay_count": 0,
+                "rna_hybrid_overlay_count": 2,
+                "protein_complex_overlay_count": 2,
+                "baseline_capture_rate": "0.500",
+                "baseline_non_capture_rate": "0.500",
+                "first_overlay_target_id": "R2352",
+                "first_overlay_decision": "selector_blocked_manual_review",
+                "first_overlay_action": "do_not_freeze_model1_external_only",
+                "first_freeze_ready_target_id": "R2350",
+                "first_freeze_ready_action": "carry_model1_as_external_only_freeze_ready",
+                "competitive_proof_eligible": False,
+                "internal_prediction_policy": "do_not_mark_as_internal_prediction",
+                "next_action": "keep selector overlay external-only until strict-blind proof exists",
+            }
+        },
+    )
+    _write_json(
+        massivefold_freeze_ready_review_packet_json,
+        {
+            "summary": {
+                "massivefold_freeze_ready_review_packet_status": (
+                    "massivefold_freeze_ready_review_packet_ready_external_only"
+                ),
+                "freeze_ready_target_count": 2,
+                "ready_review_count": 2,
+                "blocked_review_count": 0,
+                "model_present_count": 2,
+                "viewer_present_count": 2,
+                "projection_present_count": 2,
+                "top5_manifest_present_count": 2,
+                "top5_candidate_total": 10,
+                "first_review_target_id": "R2350",
+                "first_review_model_filename": "Model_20_af3_woPaired_seed_1.cif",
+                "first_review_viewer_html": "casp17/viewers/r2350/viewer.html",
+                "first_review_md": "casp17/review/r2350/FREEZE_READY_REVIEW.md",
+                "review_html": "casp17/casp17_massivefold_freeze_ready_review_packet_current.html",
+                "competitive_proof_eligible": False,
+                "internal_prediction_policy": "do_not_mark_as_internal_prediction",
+                "next_action": "operator visually inspects freeze-ready model1/top5 viewers",
+            }
+        },
+    )
+    _write_json(
+        massivefold_hold_probe_review_packet_json,
+        {
+            "summary": {
+                "massivefold_hold_probe_review_packet_status": (
+                    "massivefold_hold_probe_review_packet_ready_external_only"
+                ),
+                "hold_probe_review_count": 3,
+                "ready_review_count": 3,
+                "blocked_review_count": 0,
+                "manual_blocked_review_count": 1,
+                "interface_hold_review_count": 1,
+                "probe_required_review_count": 1,
+                "weak_probe_hold_review_count": 0,
+                "unknown_hold_review_count": 0,
+                "model_present_count": 3,
+                "viewer_present_count": 3,
+                "projection_present_count": 3,
+                "top5_manifest_present_count": 3,
+                "alternate_present_count": 1,
+                "top5_candidate_total": 15,
+                "first_review_target_id": "R2352",
+                "first_review_class": "manual_blocked_review",
+                "first_review_action": "do_not_freeze_model1_external_only",
+                "first_review_model_filename": "Model_15_af3_woUnpaired_seed_1.cif",
+                "first_review_viewer_html": "casp17/viewers/r2352/viewer.html",
+                "review_html": "casp17/casp17_massivefold_hold_probe_review_packet_current.html",
+                "competitive_proof_eligible": False,
+                "internal_prediction_policy": "do_not_mark_as_internal_prediction",
+                "next_action": "operator reviews manual block, interface hold, and probe-required viewers",
+            }
+        },
+    )
+    _write_json(
+        massivefold_probe_required_targeted_probe_packet_json,
+        {
+            "summary": {
+                "massivefold_probe_required_targeted_probe_packet_status": (
+                    "massivefold_probe_required_targeted_probe_packet_ready_external_only"
+                ),
+                "probe_target_count": 3,
+                "ready_probe_count": 3,
+                "blocked_probe_count": 0,
+                "probe_pass_count": 2,
+                "probe_watch_count": 1,
+                "probe_fail_count": 0,
+                "freeze_candidate_count": 2,
+                "watch_recommendation_count": 1,
+                "manual_review_recommendation_count": 0,
+                "rna_hybrid_probe_count": 1,
+                "protein_complex_probe_count": 2,
+                "model_present_count": 3,
+                "viewer_present_count": 3,
+                "projection_present_count": 3,
+                "top_candidate_present_count": 3,
+                "top_candidate_viewer_present_count": 3,
+                "top5_manifest_present_count": 3,
+                "top5_candidate_total": 15,
+                "clear_margin_threshold": "0.5",
+                "first_probe_target_id": "H1311",
+                "first_probe_result": "probe_pass_model1_retained_clear",
+                "first_probe_margin": "0.75",
+                "first_probe_recommendation": "external_model1_freeze_candidate_after_probe",
+                "probe_html": "casp17/casp17_massivefold_probe_required_targeted_probe_packet_current.html",
+                "competitive_proof_eligible": False,
+                "internal_prediction_policy": "do_not_mark_as_internal_prediction",
+                "next_action": "feed clear/watch/fail probe recommendations into overlay review",
+            }
+        },
+    )
+    _write_json(
+        massivefold_post_probe_selector_decision_packet_json,
+        {
+            "summary": {
+                "massivefold_post_probe_selector_decision_packet_status": (
+                    "massivefold_post_probe_selector_decision_packet_ready_external_only"
+                ),
+                "decision_count": 5,
+                "ready_decision_count": 5,
+                "blocked_decision_count": 0,
+                "freeze_candidate_count": 2,
+                "watch_decision_count": 2,
+                "manual_block_decision_count": 1,
+                "existing_freeze_candidate_count": 1,
+                "probe_freeze_candidate_count": 1,
+                "probe_watch_count": 1,
+                "interface_hold_count": 1,
+                "manual_review_after_probe_failure_count": 0,
+                "manual_block_count": 1,
+                "rna_hybrid_decision_count": 2,
+                "protein_complex_decision_count": 3,
+                "model_present_count": 5,
+                "viewer_present_count": 5,
+                "projection_present_count": 5,
+                "top5_manifest_present_count": 5,
+                "alternate_present_count": 1,
+                "first_decision_target_id": "R2352",
+                "first_decision_class": "manual_block",
+                "first_selector_decision": "external_model1_freeze_blocked_manual_review",
+                "first_selected_model_filename": "Model_15_af3_woUnpaired_seed_1.cif",
+                "decision_html": "casp17/casp17_massivefold_post_probe_selector_decision_packet_current.html",
+                "competitive_proof_eligible": False,
+                "internal_prediction_policy": "do_not_mark_as_internal_prediction",
+                "next_action": "review watch/manual/interface rows before formatting",
+            }
+        },
+    )
+    _write_json(
+        massivefold_watch_manual_action_packet_json,
+        {
+            "summary": {
+                "massivefold_watch_manual_action_packet_status": (
+                    "massivefold_watch_manual_action_packet_ready_external_only"
+                ),
+                "action_count": 5,
+                "ready_action_count": 5,
+                "blocked_action_count": 0,
+                "manual_alternate_review_count": 1,
+                "interface_geometry_review_count": 1,
+                "low_margin_top5_review_count": 3,
+                "priority1_action_count": 2,
+                "priority2_action_count": 3,
+                "rna_hybrid_action_count": 2,
+                "protein_complex_action_count": 3,
+                "model_present_count": 5,
+                "viewer_present_count": 5,
+                "projection_present_count": 5,
+                "top5_manifest_present_count": 5,
+                "alternate_present_count": 1,
+                "first_action_target_id": "R2352",
+                "first_action_class": "manual_alternate_review",
+                "first_action_priority": "1",
+                "first_exit_criterion": "operator records manual decision",
+                "action_html": "casp17/casp17_massivefold_watch_manual_action_packet_current.html",
+                "competitive_proof_eligible": False,
+                "internal_prediction_policy": "do_not_mark_as_internal_prediction",
+                "next_action": "operator resolves the five watch/manual/interface actions",
+            }
+        },
+    )
+    _write_json(
+        massivefold_freeze_candidate_format_preflight_json,
+        {
+            "summary": {
+                "massivefold_freeze_candidate_format_preflight_status": (
+                    "massivefold_freeze_candidate_format_preflight_ready_external_only"
+                ),
+                "freeze_candidate_count": 10,
+                "ready_preflight_count": 10,
+                "blocked_preflight_count": 0,
+                "existing_freeze_candidate_count": 2,
+                "probe_freeze_candidate_count": 8,
+                "rna_hybrid_preflight_count": 4,
+                "protein_complex_preflight_count": 6,
+                "selected_pdb_count": 6,
+                "selected_cif_count": 4,
+                "packaged_pdb_count": 0,
+                "packaged_cif_count": 10,
+                "target_id_format_ok_count": 10,
+                "selected_extension_ok_count": 10,
+                "packaged_extension_ok_count": 10,
+                "model_present_count": 10,
+                "model_nonempty_count": 10,
+                "viewer_present_count": 10,
+                "projection_present_count": 10,
+                "top5_manifest_present_count": 10,
+                "first_preflight_target_id": "H2319",
+                "first_preflight_model_filename": "Model_1_afm_basic_model_4_multimer_v3_pred_25.pdb",
+                "preflight_html": "casp17/casp17_massivefold_freeze_candidate_format_preflight_current.html",
+                "competitive_proof_eligible": False,
+                "internal_prediction_policy": "do_not_mark_as_internal_prediction",
+                "next_action": "run official CASP rule checks only after operator approval",
+            }
+        },
+    )
+    _write_json(
+        massivefold_freeze_candidate_escrow_json,
+        {
+            "summary": {
+                "massivefold_freeze_candidate_escrow_status": (
+                    "massivefold_freeze_candidate_escrow_ready_external_only"
+                ),
+                "escrow_count": 10,
+                "ready_escrow_count": 10,
+                "blocked_escrow_count": 0,
+                "model_sha256_count": 10,
+                "top5_sha256_count": 10,
+                "model_present_count": 10,
+                "viewer_present_count": 10,
+                "projection_present_count": 10,
+                "top5_manifest_present_count": 10,
+                "existing_freeze_candidate_count": 2,
+                "probe_freeze_candidate_count": 8,
+                "rna_hybrid_escrow_count": 4,
+                "protein_complex_escrow_count": 6,
+                "native_pending_count": 10,
+                "competitive_proof_eligible_count": 0,
+                "author_serialized_count": 0,
+                "first_escrow_target_id": "H2319",
+                "first_blocked_target_id": "",
+                "manifest_signature_sha256": "freezeabc123",
+                "internal_prediction_policy": "do_not_mark_as_internal_prediction",
+                "next_action": "hold these external-only hashes for rule-checked formatting review",
+            }
+        },
+    )
+    _write_json(
+        massivefold_freeze_candidate_protein_library_json,
+        {
+            "summary": {
+                "massivefold_freeze_candidate_protein_library_status": (
+                    "massivefold_freeze_candidate_protein_library_ready_external_only"
+                ),
+                "protein_count": 10,
+                "protein_ready_count": 10,
+                "protein_blocked_count": 0,
+                "object_count": 10,
+                "object_ready_count": 10,
+                "object_blocked_count": 0,
+                "model_link_count": 10,
+                "viewer_link_count": 10,
+                "projection_link_count": 10,
+                "top5_link_count": 10,
+                "escrow_link_count": 10,
+                "model_sha256_count": 10,
+                "top5_sha256_count": 10,
+                "current_name_count": 5,
+                "official_name_count": 10,
+                "rna_hybrid_count": 4,
+                "protein_complex_count": 6,
+                "competitive_proof_eligible_count": 0,
+                "author_serialized_count": 0,
+                "first_protein_key": "H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex",
+                "first_blocked_protein_key": "",
+                "html_catalog_path": (
+                    "casp17/casp17_massivefold_freeze_candidate_protein_library_current.html"
+                ),
+                "internal_prediction_policy": "do_not_mark_as_internal_prediction",
+                "next_action": "open protein-name folders for external-only visual review",
             }
         },
     )
@@ -1886,6 +2861,344 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        official_archive_first_baseline_acquisition_audit_json,
+        {
+            "summary": {
+                "official_archive_first_baseline_acquisition_audit_status": (
+                    "official_archive_first_baseline_acquired"
+                ),
+                "first_baseline_candidate_id": "official_archive_baseline_001",
+                "first_competition": "CASP16",
+                "first_target_id": "T1210",
+                "first_native_pdb_code": "9ENR",
+                "ready_artifact_count": 2,
+                "blocked_artifact_count": 0,
+                "artifact_count": 2,
+                "tarball_present": True,
+                "tarball_size_bytes": 25069184,
+                "tarball_model_count": 357,
+                "native_pdb_present": True,
+                "native_pdb_atom_count": 7051,
+                "competitive_proof_eligible": False,
+                "strict_blind_intake_policy": "do_not_import_as_internal_prediction",
+                "next_action": (
+                    "extract and score the baseline-only model1/best-of-5 set without importing it "
+                    "as internal proof"
+                ),
+            }
+        },
+    )
+    _write_json(
+        official_archive_first_baseline_model_pool_json,
+        {
+            "summary": {
+                "official_archive_first_baseline_model_pool_status": (
+                    "official_archive_first_baseline_model_pool_ready"
+                ),
+                "first_baseline_candidate_id": "official_archive_baseline_001",
+                "first_competition": "CASP16",
+                "first_target_id": "T1210",
+                "first_native_pdb_code": "9ENR",
+                "expected_model_count": 357,
+                "ready_model_count": 357,
+                "blocked_model_count": 0,
+                "group_count": 74,
+                "model1_count": 73,
+                "top5_model_count": 348,
+                "complete_top5_group_count": 67,
+                "extra_model_count": 9,
+                "competitive_proof_eligible": False,
+                "strict_blind_intake_policy": "do_not_import_as_internal_prediction",
+                "model1_manifest_csv": "casp17/official_archive_first_baseline_model_pool/model1_manifest.csv",
+                "top5_manifest_csv": "casp17/official_archive_first_baseline_model_pool/top5_manifest.csv",
+                "next_action": (
+                    "score baseline-only model1 and best-of-5 against the native PDB without importing "
+                    "as internal proof"
+                ),
+            }
+        },
+    )
+    _write_json(
+        official_archive_first_baseline_score_ledger_json,
+        {
+            "summary": {
+                "official_archive_first_baseline_score_ledger_status": (
+                    "official_archive_first_baseline_score_ledger_ready_baseline_only"
+                ),
+                "first_baseline_candidate_id": "official_archive_baseline_001",
+                "first_competition": "CASP16",
+                "first_target_id": "T1210",
+                "first_native_pdb_code": "9ENR",
+                "top5_model_count": 348,
+                "scored_model_count": 348,
+                "ready_model_count": 348,
+                "blocked_model_count": 0,
+                "group_count": 74,
+                "model1_group_count": 73,
+                "best_top5_group_count": 74,
+                "complete_top5_group_count": 67,
+                "top5_improved_group_count": 41,
+                "mean_model1_gdt_ts_proxy": "55.123",
+                "mean_best_top5_gdt_ts_proxy": "62.456",
+                "mean_best_minus_model1_gdt_ts_proxy": "7.333",
+                "max_gap_group_id": "999",
+                "max_best_minus_model1_gdt_ts_proxy": "22.100",
+                "competitive_proof_eligible": False,
+                "strict_blind_intake_policy": "do_not_import_as_internal_prediction",
+                "group_score_csv": "casp17/official_archive_first_baseline_score_ledger/group_score_ledger.csv",
+                "model_score_csv": "casp17/official_archive_first_baseline_score_ledger/model_score_rows.csv",
+                "next_action": (
+                    "use the baseline-only score ledger for historical replay calibration; keep "
+                    "strict-blind proof blocked"
+                ),
+            }
+        },
+    )
+    _write_json(
+        official_archive_first_baseline_replay_comparison_json,
+        {
+            "summary": {
+                "official_archive_first_baseline_replay_comparison_status": (
+                    "official_archive_first_baseline_replay_comparison_ready_baseline_only"
+                ),
+                "first_baseline_candidate_id": "official_archive_baseline_001",
+                "first_competition": "CASP16",
+                "first_target_id": "T1210",
+                "first_native_pdb_code": "9ENR",
+                "band_count": 3,
+                "direct_comparable_band_count": 0,
+                "blocked_band_count": 3,
+                "direct_comparison_status": "not_directly_comparable_proxy_single_target_not_sum_zscore",
+                "scored_model_count": 348,
+                "group_count": 74,
+                "ready_group_count": 73,
+                "model1_best_group_count": 32,
+                "top5_improved_group_count": 41,
+                "model1_best_rate": "0.438",
+                "top5_improved_rate": "0.562",
+                "mean_model1_gdt_ts_proxy": "55.123",
+                "mean_best_top5_gdt_ts_proxy": "62.456",
+                "mean_best_minus_model1_gdt_ts_proxy": "7.333",
+                "competitive_proof_eligible": False,
+                "strict_blind_intake_policy": "do_not_import_as_internal_prediction",
+                "comparison_csv": (
+                    "casp17/official_archive_first_baseline_replay_comparison/"
+                    "winner_band_comparison.csv"
+                ),
+                "next_action": (
+                    "keep this as baseline-only model-selection calibration, then close "
+                    "strict-blind source evidence before any winner-normalized competitive claim"
+                ),
+            }
+        },
+    )
+    _write_json(
+        official_archive_first_baseline_model1_gap_triage_json,
+        {
+            "summary": {
+                "official_archive_first_baseline_model1_gap_triage_status": (
+                    "official_archive_first_baseline_model1_gap_triage_ready_baseline_only"
+                ),
+                "first_baseline_candidate_id": "official_archive_baseline_001",
+                "first_competition": "CASP16",
+                "first_target_id": "T1210",
+                "first_native_pdb_code": "9ENR",
+                "group_count": 74,
+                "ready_group_count": 73,
+                "blocked_group_count": 1,
+                "model1_best_group_count": 32,
+                "top5_improved_group_count": 41,
+                "model1_best_rate": "0.438",
+                "top5_improved_rate": "0.562",
+                "small_gap_count": 10,
+                "medium_gap_count": 20,
+                "large_gap_count": 8,
+                "catastrophic_gap_count": 3,
+                "calibration_case_count": 41,
+                "critical_calibration_case_count": 11,
+                "first_triage_group_id": "999",
+                "first_triage_band": "catastrophic_model1_selection_gap",
+                "first_triage_delta": "70.000",
+                "first_triage_action": "critical_model1_failure_case_for_accuracy_estimation_training",
+                "competitive_proof_eligible": False,
+                "strict_blind_intake_policy": "do_not_import_as_internal_prediction",
+                "triage_csv": "casp17/official_archive_first_baseline_model1_gap_triage/model1_gap_triage.csv",
+                "top_gap_worklist_csv": (
+                    "casp17/official_archive_first_baseline_model1_gap_triage/top_gap_worklist.csv"
+                ),
+                "next_action": (
+                    "use high-gap baseline-only cases to calibrate no-native model1 selection features; "
+                    "keep strict-blind competitive proof blocked until internal evidence is supplied"
+                ),
+            }
+        },
+    )
+    _write_json(
+        official_archive_first_baseline_model1_gap_viewer_packet_json,
+        {
+            "summary": {
+                "official_archive_first_baseline_model1_gap_viewer_packet_status": (
+                    "official_archive_first_baseline_model1_gap_viewer_packet_ready_baseline_only"
+                ),
+                "first_baseline_candidate_id": "official_archive_baseline_001",
+                "first_competition": "CASP16",
+                "first_target_id": "T1210",
+                "first_native_pdb_code": "9ENR",
+                "selected_case_count": 11,
+                "viewer_ready_count": 11,
+                "viewer_blocked_count": 0,
+                "catastrophic_case_count": 3,
+                "large_case_count": 8,
+                "copied_model_pair_count": 11,
+                "native_reference_ready": True,
+                "first_viewer_group_id": "999",
+                "first_viewer_band": "catastrophic_model1_selection_gap",
+                "first_viewer_delta": "70.000",
+                "first_viewer_html": (
+                    "casp17/official_archive_first_baseline_model1_gap_viewer_packet/"
+                    "t1210_group_999_delta_70_000/viewer.html"
+                ),
+                "first_projection_svg": (
+                    "casp17/official_archive_first_baseline_model1_gap_viewer_packet/"
+                    "t1210_group_999_delta_70_000/projection.svg"
+                ),
+                "gallery_html": "casp17/official_archive_first_baseline_model1_gap_viewer_packet/gallery.html",
+                "manifest_csv": "casp17/official_archive_first_baseline_model1_gap_viewer_packet/viewer_manifest.csv",
+                "competitive_proof_eligible": False,
+                "strict_blind_intake_policy": "do_not_import_as_internal_prediction",
+                "next_action": (
+                    "inspect high-gap overlay viewers and translate recurring model1-selection failures "
+                    "into no-native accuracy-estimation features; keep strict-blind proof blocked"
+                ),
+            }
+        },
+    )
+    _write_json(
+        official_archive_first_baseline_model1_gap_feature_probe_json,
+        {
+            "summary": {
+                "official_archive_first_baseline_model1_gap_feature_probe_status": (
+                    "official_archive_first_baseline_model1_gap_feature_probe_ready_baseline_only"
+                ),
+                "first_baseline_candidate_id": "official_archive_baseline_001",
+                "first_competition": "CASP16",
+                "first_target_id": "T1210",
+                "first_native_pdb_code": "9ENR",
+                "selected_case_count": 11,
+                "feature_ready_count": 11,
+                "feature_blocked_count": 0,
+                "matrix_row_count": 22,
+                "supports_best_top5_count": 4,
+                "supports_model1_count": 1,
+                "ambiguous_count": 6,
+                "supports_best_top5_rate": "0.364",
+                "catastrophic_case_count": 3,
+                "large_case_count": 8,
+                "first_signal_group_id": "999",
+                "first_signal": "supports_best_top5",
+                "first_model1_geometry_risk_score": "122.500",
+                "first_best_top5_geometry_risk_score": "7.500",
+                "first_risk_delta_model1_minus_best": "115.000",
+                "feature_probe_csv": "casp17/official_archive_first_baseline_model1_gap_feature_probe/feature_probe.csv",
+                "pair_feature_matrix_csv": (
+                    "casp17/official_archive_first_baseline_model1_gap_feature_probe/"
+                    "pair_feature_matrix.csv"
+                ),
+                "competitive_proof_eligible": False,
+                "strict_blind_intake_policy": "do_not_import_as_internal_prediction",
+                "next_action": (
+                    "use native-free feature signals to tune model1 selection calibration, then repeat on "
+                    "strict-blind eligible internal predictions only"
+                ),
+            }
+        },
+    )
+    _write_json(
+        official_archive_first_baseline_model1_gap_consensus_probe_json,
+        {
+            "summary": {
+                "official_archive_first_baseline_model1_gap_consensus_probe_status": (
+                    "official_archive_first_baseline_model1_gap_consensus_probe_ready_baseline_only"
+                ),
+                "first_baseline_candidate_id": "official_archive_baseline_001",
+                "first_competition": "CASP16",
+                "first_target_id": "T1210",
+                "first_native_pdb_code": "9ENR",
+                "selected_case_count": 11,
+                "consensus_ready_count": 11,
+                "consensus_blocked_count": 0,
+                "pairwise_row_count": 110,
+                "supports_best_top5_count": 5,
+                "supports_model1_count": 2,
+                "ambiguous_count": 4,
+                "supports_best_top5_rate": "0.455",
+                "consensus_top_matches_best_count": 3,
+                "consensus_top_matches_model1_count": 2,
+                "catastrophic_case_count": 3,
+                "large_case_count": 8,
+                "first_signal_group_id": "999",
+                "first_signal": "supports_best_top5",
+                "first_model1_consensus_rank": "5",
+                "first_best_top5_consensus_rank": "1",
+                "first_consensus_top_model_id": "T1210TS999_4",
+                "first_consensus_margin_model1_minus_best": "12.345",
+                "consensus_probe_csv": "casp17/official_archive_first_baseline_model1_gap_consensus_probe/consensus_probe.csv",
+                "pairwise_consensus_matrix_csv": (
+                    "casp17/official_archive_first_baseline_model1_gap_consensus_probe/"
+                    "pairwise_consensus_matrix.csv"
+                ),
+                "competitive_proof_eligible": False,
+                "strict_blind_intake_policy": "do_not_import_as_internal_prediction",
+                "next_action": (
+                    "combine consensus-rank, diversity, and confidence features into a no-native model1 "
+                    "selector; repeat only on strict-blind eligible internal predictions before competitive claims"
+                ),
+            }
+        },
+    )
+    _write_json(
+        official_archive_first_baseline_model1_gap_combined_selector_ledger_json,
+        {
+            "summary": {
+                "official_archive_first_baseline_model1_gap_combined_selector_ledger_status": (
+                    "official_archive_first_baseline_model1_gap_combined_selector_ledger_ready_baseline_only"
+                ),
+                "first_baseline_candidate_id": "official_archive_baseline_001",
+                "first_competition": "CASP16",
+                "first_target_id": "T1210",
+                "first_native_pdb_code": "9ENR",
+                "selected_case_count": 11,
+                "selector_ready_count": 11,
+                "selector_blocked_count": 0,
+                "promote_best_top5_count": 5,
+                "retain_model1_count": 5,
+                "hold_manual_review_count": 1,
+                "corrected_model1_failure_count": 5,
+                "retained_model1_failure_count": 5,
+                "manual_hold_model1_failure_count": 1,
+                "false_positive_demote_count": 0,
+                "baseline_capture_rate": "0.455",
+                "baseline_non_capture_rate": "0.545",
+                "catastrophic_case_count": 3,
+                "large_case_count": 8,
+                "first_selector_group_id": "999",
+                "first_selector_decision": "promote_best_top5",
+                "first_selected_model_id": "T1210TS999_4",
+                "first_baseline_result": "corrected_model1_failure_baseline_proxy",
+                "combined_selector_csv": (
+                    "casp17/official_archive_first_baseline_model1_gap_combined_selector_ledger/"
+                    "combined_selector_ledger.csv"
+                ),
+                "competitive_proof_eligible": False,
+                "strict_blind_intake_policy": "do_not_import_as_internal_prediction",
+                "next_action": (
+                    "apply this conservative combined selector design to external CASP17 MassiveFold model1 "
+                    "freeze ledgers, then repeat on strict-blind eligible internal predictions before competitive claims"
+                ),
+            }
+        },
+    )
+    _write_json(
         strict_blind_first_slot_source_bridge_json,
         {
             "summary": {
@@ -1943,6 +3256,84 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                     "hist_REQUIRED_MONOMER_001/internal_prediction_source_manifest_template.csv"
                 ),
                 "next_action": "fill internal prediction source manifest and place verified PDB",
+            }
+        },
+    )
+    _write_json(
+        strict_blind_internal_candidate_filesystem_sweep_json,
+        {
+            "summary": {
+                "filesystem_sweep_status": "strict_blind_filesystem_sweep_operator_review_required",
+                "scan_root": ".",
+                "scanned_structure_file_count": 9968,
+                "atom_like_file_count": 9968,
+                "verified_pre_native_internal_count": 0,
+                "unknown_possible_internal_review_count": 4551,
+                "current_casp17_or_review_only_count": 1810,
+                "massivefold_external_baseline_only_count": 2895,
+                "official_archive_baseline_only_count": 387,
+                "native_or_reference_not_prediction_count": 257,
+                "historical_seed_top5_post_native_review_only_count": 75,
+                "strict_blind_dropzone_unverified_count": 0,
+                "source_gate_status": "awaiting_internal_prediction_source_gate_fields",
+                "source_gate_first_blocker": "internal_source_id_missing_or_external",
+                "first_unknown_sample_path": "archives/old_internal/candidate.pdb",
+                "next_action": "review unknown_possible_internal_review samples",
+            }
+        },
+    )
+    _write_json(
+        strict_blind_unknown_candidate_triage_json,
+        {
+            "summary": {
+                "unknown_candidate_triage_status": (
+                    "strict_blind_unknown_triage_internal_like_review_required"
+                ),
+                "unknown_possible_internal_review_count": 4551,
+                "filesystem_sweep_unknown_count": 4551,
+                "promotion_ready_count": 0,
+                "internal_like_review_count": 166,
+                "public_structure_count": 3962,
+                "run_review_count": 406,
+                "archive_review_count": 16,
+                "data_other_count": 0,
+                "tmp_misc_count": 1,
+                "other_unclassified_count": 0,
+                "source_gate_status": "awaiting_internal_prediction_source_gate_fields",
+                "source_gate_first_blocker": "internal_source_id_missing_or_external",
+                "first_internal_like_sample_path": (
+                    "data/internal_structures/nightly/internal_candidate.pdb"
+                ),
+                "next_action": "start with internal_structure_archive_unverified rows",
+            }
+        },
+    )
+    _write_json(
+        strict_blind_internal_like_source_review_json,
+        {
+            "summary": {
+                "internal_like_source_review_status": "strict_blind_internal_like_source_review_all_post_native",
+                "triage_internal_like_count": 166,
+                "triage_count_match": "True",
+                "internal_like_candidate_count": 166,
+                "mapped_candidate_count": 166,
+                "unmapped_candidate_count": 0,
+                "pre_native_candidate_count": 0,
+                "same_day_timestamp_required_count": 0,
+                "post_native_blocked_count": 166,
+                "prediction_date_missing_count": 0,
+                "promotion_ready_count": 0,
+                "target_count": 10,
+                "target_all_post_native_count": 10,
+                "target_pre_native_candidate_count": 0,
+                "earliest_prediction_date": "2026-02-19",
+                "latest_prediction_date": "2026-02-22",
+                "first_blocked_candidate_path": (
+                    "data/internal_structures/nightly/2026-02-19-run/internal_post_bba5_sample000_step00020.pdb"
+                ),
+                "first_blocked_target_id": "HIST_BBA5",
+                "first_blocker": "prediction_not_before_native",
+                "next_action": "treat these internal-like files as post-native blockers",
             }
         },
     )
@@ -2069,6 +3460,31 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                     "attach a prediction artifact created before the authoritative native release date"
                 ),
                 "request_dir": "casp17/strict_blind_source_gate_source_request_packet",
+            }
+        },
+    )
+    _write_json(
+        strict_blind_source_request_resolution_board_json,
+        {
+            "summary": {
+                "source_request_resolution_board_status": "source_request_resolution_all_current_candidates_blocked",
+                "source_request_packet_status": "awaiting_pre_native_source_or_candidate_replacement",
+                "internal_like_source_review_status": "strict_blind_internal_like_source_review_all_post_native",
+                "request_count": 17,
+                "ready_for_source_gate_count": 0,
+                "blocked_request_count": 17,
+                "monomer_request_count": 10,
+                "complex_request_count": 7,
+                "all_post_native_monomer_request_count": 10,
+                "candidate_replacement_required_count": 7,
+                "pre_native_review_possible_count": 0,
+                "chronology_review_missing_count": 0,
+                "internal_like_post_native_candidate_count": 166,
+                "internal_like_pre_native_candidate_count": 0,
+                "first_blocked_request_id": "source_request_001",
+                "first_blocked_target_id": "HIST_BBA5",
+                "first_blocker": "all_internal_like_candidates_post_native",
+                "next_action": "replace the 10 monomer requests with pre-native internal prediction artifacts",
             }
         },
     )
@@ -2303,6 +3719,36 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "stub_evidence_missing_count": 11,
                 "policy_pass_count": 0,
                 "policy_blocked_count": 11,
+                "file_ready_count": 0,
+                "file_blocked_count": 2,
+                "first_blocked_field": "source_id",
+                "first_blocker": "template_operator_value_missing",
+                "first_next_action": (
+                    "fill operator_value for source_id in operator_evidence_template.csv"
+                ),
+            }
+        },
+    )
+    _write_json(
+        strict_blind_first_slot_source_gate_blocker_ledger_json,
+        {
+            "summary": {
+                "strict_blind_first_slot_source_gate_blocker_ledger_status": (
+                    "awaiting_first_slot_source_gate_operator_evidence"
+                ),
+                "required_benchmark_id": "hist_REQUIRED_MONOMER_001",
+                "required_target_id": "REQUIRED_MONOMER_001",
+                "required_scope": "monomer",
+                "ledger_field_count": 11,
+                "ready_field_count": 0,
+                "blocked_field_count": 11,
+                "source_gate_pass_count": 3,
+                "source_gate_blocked_count": 13,
+                "source_gate_check_count": 16,
+                "operator_ready_count": 0,
+                "operator_awaiting_count": 11,
+                "review_ready_field_count": 0,
+                "review_blocked_field_count": 11,
                 "file_ready_count": 0,
                 "file_blocked_count": 2,
                 "first_blocked_field": "source_id",
@@ -3386,6 +4832,433 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        competitive_target_identity_metric_runway_json,
+        {
+            "summary": {
+                "metric_runway_status": (
+                    "casp17_competitive_floor_target_identity_metric_runway_blocked_awaiting_native_provenance"
+                ),
+                "target_count": 3,
+                "target_ready_count": 0,
+                "target_blocked_count": 3,
+                "complex_target_count": 3,
+                "monomer_target_count": 0,
+                "metric_requirement_count": 27,
+                "prediction_present_count": 3,
+                "native_present_count": 0,
+                "provenance_ready_count": 0,
+                "evidence_ref_ready_count": 0,
+                "native_candidate_count": 5,
+                "native_candidate_blocked_count": 4,
+                "native_candidate_no_candidate_count": 1,
+                "competitive_proof_eligible_count": 0,
+                "author_serialized_count": 0,
+                "first_target_id": "H1319",
+                "first_blocked_target_id": "H1319",
+                "first_blocker": "native_pdb_missing",
+                "html_runway_path": "casp17/casp17_competitive_floor_target_identity_metric_runway_current.html",
+                "next_action": "fill native/provenance workorders",
+            }
+        },
+    )
+    _write_json(
+        competitive_floor_native_provenance_operator_packet_json,
+        {
+            "summary": {
+                "operator_packet_status": (
+                    "casp17_competitive_floor_native_provenance_operator_packet_open_actions"
+                ),
+                "target_count": 3,
+                "target_open_count": 3,
+                "target_ready_count": 0,
+                "action_count": 12,
+                "open_action_count": 12,
+                "native_action_count": 3,
+                "evidence_action_count": 3,
+                "provenance_action_count": 3,
+                "manifest_action_count": 3,
+                "metric_requirement_count": 27,
+                "prediction_present_count": 3,
+                "native_present_count": 0,
+                "provenance_ready_count": 0,
+                "evidence_ref_ready_count": 0,
+                "native_candidate_count": 5,
+                "native_candidate_blocked_count": 4,
+                "native_candidate_no_candidate_count": 1,
+                "competitive_proof_eligible_count": 0,
+                "author_serialized_count": 0,
+                "first_target_id": "H1319",
+                "first_open_target_id": "H1319",
+                "html_packet_path": (
+                    "casp17/casp17_competitive_floor_native_provenance_operator_packet_current.html"
+                ),
+                "next_action": "fill each target packet",
+            }
+        },
+    )
+    _write_json(
+        competitive_floor_native_provenance_operator_packet_completion_audit_json,
+        {
+            "summary": {
+                "operator_packet_completion_audit_status": (
+                    "casp17_competitive_floor_native_provenance_operator_packet_completion_audit_pass"
+                ),
+                "target_count": 3,
+                "target_pass_count": 3,
+                "target_blocked_count": 0,
+                "packet_folder_present_count": 3,
+                "packet_readme_present_count": 3,
+                "packet_manifest_present_count": 3,
+                "actions_csv_present_count": 3,
+                "native_candidates_csv_present_count": 3,
+                "action_expected_row_count": 12,
+                "action_csv_row_count": 12,
+                "action_csv_mismatch_count": 0,
+                "native_candidate_expected_row_count": 5,
+                "native_candidate_csv_row_count": 5,
+                "native_candidate_csv_mismatch_count": 0,
+                "native_action_csv_count": 3,
+                "evidence_action_csv_count": 3,
+                "provenance_action_csv_count": 3,
+                "manifest_action_csv_count": 3,
+                "metric_requirement_count": 27,
+                "prediction_present_count": 3,
+                "ts_prediction_present_count": 3,
+                "native_dropzone_path_present_count": 3,
+                "native_file_present_count": 0,
+                "provenance_template_present_count": 3,
+                "manifest_stub_present_count": 3,
+                "metric_runway_present_count": 3,
+                "workorder_folder_present_count": 3,
+                "packet_coordinate_copy_count": 0,
+                "out_dir_coordinate_copy_count": 0,
+                "competitive_proof_eligible_count": 0,
+                "author_serialized_count": 0,
+                "first_target_id": "H1319",
+                "first_blocked_target_id": "",
+                "html_audit_path": (
+                    "casp17/casp17_competitive_floor_native_provenance_operator_packet_completion_audit_current.html"
+                ),
+                "next_action": "use the packet-file audit before native/provenance fill",
+            }
+        },
+    )
+    _write_json(
+        competitive_floor_native_provenance_metric_unlock_bridge_json,
+        {
+            "summary": {
+                "metric_unlock_bridge_status": (
+                    "casp17_competitive_floor_native_provenance_metric_unlock_bridge_blocked_awaiting_operator_values"
+                ),
+                "target_count": 3,
+                "target_ready_count": 0,
+                "target_blocked_count": 3,
+                "packet_pass_count": 3,
+                "workorder_audit_pass_count": 0,
+                "metric_runway_ready_count": 0,
+                "metric_requirement_count": 27,
+                "prediction_present_count": 3,
+                "ts_prediction_present_count": 3,
+                "native_dropzone_path_present_count": 3,
+                "native_file_present_count": 0,
+                "provenance_template_present_count": 3,
+                "manifest_stub_present_count": 3,
+                "metric_runway_present_count": 3,
+                "workorder_present_count": 3,
+                "packet_action_count": 12,
+                "packet_native_action_count": 3,
+                "packet_evidence_action_count": 3,
+                "packet_provenance_action_count": 3,
+                "packet_manifest_action_count": 3,
+                "native_candidate_count": 5,
+                "native_candidate_blocked_count": 4,
+                "native_candidate_no_candidate_count": 1,
+                "provenance_ready_count": 0,
+                "evidence_ref_verified_count": 0,
+                "identity_discovery_cleared_count": 0,
+                "competitive_proof_eligible_count": 0,
+                "author_serialized_count": 0,
+                "first_target_id": "H1319",
+                "first_blocked_target_id": "H1319",
+                "first_blocker": "native_pdb_missing",
+                "first_next_action": "place operator-cleared native PDB in the native dropzone",
+                "html_bridge_path": (
+                    "casp17/casp17_competitive_floor_native_provenance_metric_unlock_bridge_current.html"
+                ),
+                "next_action": "fill native/provenance values, then rerun audits",
+            }
+        },
+    )
+    _write_json(
+        competitive_floor_first_native_provenance_unlock_kit_json,
+        {
+            "summary": {
+                "first_unlock_kit_status": (
+                    "casp17_competitive_floor_first_native_provenance_unlock_kit_ready_for_operator_fill"
+                ),
+                "target_count": 1,
+                "target_id": "H1319",
+                "target_name": "Human astrovirus VA1 capsid spike - antibody 7C8 complex",
+                "required_field_count": 13,
+                "required_action_count": 4,
+                "action_bundle_action_count": 4,
+                "packet_file_pass": True,
+                "metric_runway_ready": False,
+                "workorder_audit_pass": False,
+                "prediction_present_count": 1,
+                "ts_prediction_present_count": 1,
+                "native_dropzone_path_present_count": 1,
+                "native_file_present_count": 0,
+                "provenance_template_present_count": 1,
+                "manifest_stub_present_count": 1,
+                "metric_runway_present_count": 1,
+                "workorder_present_count": 1,
+                "provenance_ready_count": 0,
+                "evidence_ref_verified_count": 0,
+                "identity_discovery_cleared_count": 0,
+                "competitive_proof_eligible_count": 0,
+                "author_serialized_count": 0,
+                "coordinate_copy_count": 0,
+                "kit_folder": (
+                    "casp17/competitive_floor_first_native_provenance_unlock_kit/"
+                    "H1319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex"
+                ),
+                "first_blocker": "native_pdb_missing",
+                "next_action": "place operator-cleared native PDB in the native dropzone",
+            }
+        },
+    )
+    _write_json(
+        competitive_floor_batch_native_provenance_unlock_kit_json,
+        {
+            "summary": {
+                "batch_unlock_kit_status": (
+                    "casp17_competitive_floor_batch_native_provenance_unlock_kit_ready_for_operator_fill"
+                ),
+                "target_count": 3,
+                "target_ready_for_operator_fill_count": 3,
+                "target_blocked_count": 0,
+                "target_ids": "H1319,H1321,H2324",
+                "required_field_per_target_count": 13,
+                "required_field_total_count": 39,
+                "required_action_count": 12,
+                "action_bundle_action_count": 12,
+                "packet_file_pass_count": 3,
+                "metric_runway_ready_count": 0,
+                "workorder_audit_pass_count": 0,
+                "prediction_present_count": 3,
+                "ts_prediction_present_count": 3,
+                "native_dropzone_path_present_count": 3,
+                "native_file_present_count": 0,
+                "provenance_template_present_count": 3,
+                "manifest_stub_present_count": 3,
+                "metric_runway_present_count": 3,
+                "workorder_present_count": 3,
+                "provenance_ready_count": 0,
+                "evidence_ref_verified_count": 0,
+                "identity_discovery_cleared_count": 0,
+                "competitive_proof_eligible_count": 0,
+                "author_serialized_count": 0,
+                "coordinate_copy_count": 0,
+                "batch_folder": "casp17/competitive_floor_batch_native_provenance_unlock_kit",
+                "first_blocked_target_id": "H1319",
+                "first_blocker": "native_pdb_missing",
+                "next_action": "fill batch native/provenance values",
+            }
+        },
+    )
+    _write_json(
+        competitive_floor_batch_native_provenance_unlock_kit_completion_audit_json,
+        {
+            "summary": {
+                "batch_unlock_kit_completion_audit_status": (
+                    "casp17_competitive_floor_batch_native_provenance_unlock_kit_completion_audit_pass"
+                ),
+                "target_count": 3,
+                "target_pass_count": 3,
+                "target_blocked_count": 0,
+                "batch_file_present_count": 6,
+                "batch_file_expected_count": 6,
+                "batch_operator_fill_intake_expected_rows": 3,
+                "batch_operator_fill_intake_csv_rows": 3,
+                "batch_operator_fill_intake_row_mismatch_count": 0,
+                "batch_required_actions_expected_rows": 12,
+                "batch_required_actions_csv_rows": 12,
+                "batch_required_actions_row_mismatch_count": 0,
+                "target_folder_present_count": 3,
+                "target_readme_present_count": 3,
+                "target_manifest_present_count": 3,
+                "target_operator_fill_intake_present_count": 3,
+                "target_required_actions_present_count": 3,
+                "target_rerun_commands_present_count": 3,
+                "target_operator_fill_intake_expected_rows": 3,
+                "target_operator_fill_intake_csv_rows": 3,
+                "target_operator_fill_intake_row_mismatch_count": 0,
+                "target_required_actions_expected_rows": 12,
+                "target_required_actions_csv_rows": 12,
+                "target_required_actions_row_mismatch_count": 0,
+                "coordinate_copy_count": 0,
+                "target_coordinate_copy_count": 0,
+                "native_file_present_count": 0,
+                "provenance_ready_count": 0,
+                "evidence_ref_verified_count": 0,
+                "identity_discovery_cleared_count": 0,
+                "competitive_proof_eligible_count": 0,
+                "author_serialized_count": 0,
+                "first_blocked_target_id": "",
+                "first_blocker": "",
+                "next_action": "fill batch native/provenance operator values",
+            }
+        },
+    )
+    _write_json(
+        competitive_floor_batch_native_provenance_value_gate_json,
+        {
+            "summary": {
+                "batch_native_provenance_value_gate_status": (
+                    "casp17_competitive_floor_batch_native_provenance_value_gate_blocked_awaiting_operator_values"
+                ),
+                "target_count": 3,
+                "target_ready_count": 0,
+                "target_blocked_count": 3,
+                "required_field_per_target_count": 13,
+                "required_field_total_count": 39,
+                "ready_value_count": 3,
+                "blocked_value_count": 36,
+                "native_source_ready_count": 0,
+                "evidence_ref_ready_count": 0,
+                "clearance_ready_count": 0,
+                "date_ready_count": 0,
+                "boolean_ready_count": 0,
+                "coordinate_copy_count": 0,
+                "target_coordinate_copy_count": 0,
+                "competitive_proof_eligible_count": 0,
+                "author_serialized_count": 0,
+                "first_blocked_target_id": "H1319",
+                "first_blocker": "native_source_pdb_required",
+                "next_action": "Fill blocked batch native/provenance values, then rerun this value gate.",
+            }
+        },
+    )
+    _write_json(
+        competitive_floor_batch_native_provenance_value_action_board_json,
+        {
+            "summary": {
+                "batch_native_provenance_value_action_board_status": (
+                    "casp17_competitive_floor_batch_native_provenance_value_action_board_open_actions"
+                ),
+                "target_count": 3,
+                "target_with_open_action_count": 3,
+                "target_ready_count": 0,
+                "action_count": 36,
+                "open_action_count": 36,
+                "native_action_count": 3,
+                "evidence_action_count": 3,
+                "clearance_action_count": 6,
+                "operator_action_count": 3,
+                "date_action_count": 6,
+                "boolean_action_count": 15,
+                "review_action_count": 0,
+                "coordinate_copy_count": 0,
+                "competitive_proof_eligible_count": 0,
+                "author_serialized_count": 0,
+                "first_open_target_id": "H1319",
+                "first_open_field": "native_source_pdb",
+                "first_open_blocker": "native_source_pdb_required",
+                "next_action": "Fill native_source_pdb in batch intake.",
+            }
+        },
+    )
+    _write_json(
+        competitive_floor_batch_native_provenance_value_action_board_completion_audit_json,
+        {
+            "summary": {
+                "batch_native_provenance_value_action_board_completion_audit_status": (
+                    "casp17_competitive_floor_batch_native_provenance_value_action_board_completion_audit_pass"
+                ),
+                "target_count": 3,
+                "target_pass_count": 3,
+                "target_blocked_count": 0,
+                "action_expected_count": 36,
+                "action_board_json_rows": 36,
+                "action_json_row_mismatch_count": 0,
+                "target_folder_present_count": 3,
+                "target_readme_present_count": 3,
+                "target_value_actions_present_count": 3,
+                "target_value_actions_expected_rows": 36,
+                "target_value_actions_csv_rows": 36,
+                "target_value_actions_row_mismatch_count": 0,
+                "coordinate_copy_count": 0,
+                "target_coordinate_copy_count": 0,
+                "competitive_proof_eligible_count": 0,
+                "author_serialized_count": 0,
+                "first_blocked_target_id": "",
+                "first_blocker": "",
+                "next_action": "Fill the 36 operator values in the batch intake CSV, then rerun the value gate.",
+            }
+        },
+    )
+    _write_json(
+        competitive_floor_batch_native_provenance_operator_fill_preflight_json,
+        {
+            "summary": {
+                "batch_native_provenance_operator_fill_preflight_status": (
+                    "casp17_competitive_floor_batch_native_provenance_operator_fill_preflight_ready_for_operator_fill"
+                ),
+                "target_count": 3,
+                "target_ready_for_fill_count": 3,
+                "target_blocked_count": 0,
+                "open_action_count": 36,
+                "native_action_count": 3,
+                "evidence_action_count": 3,
+                "clearance_action_count": 6,
+                "operator_action_count": 3,
+                "date_action_count": 6,
+                "boolean_action_count": 15,
+                "review_action_count": 0,
+                "coordinate_copy_count": 0,
+                "target_coordinate_copy_count": 0,
+                "competitive_proof_eligible_count": 0,
+                "author_serialized_count": 0,
+                "first_ready_target_id": "H1319",
+                "first_blocked_target_id": "",
+                "first_blocker": "",
+                "next_action": "Fill the target operator templates or batch intake CSV, then rerun the value gate.",
+            }
+        },
+    )
+    _write_json(
+        competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_json,
+        {
+            "summary": {
+                "batch_native_provenance_operator_fill_preflight_completion_audit_status": (
+                    "casp17_competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_pass"
+                ),
+                "target_count": 3,
+                "target_pass_count": 3,
+                "target_blocked_count": 0,
+                "root_manifest_present": 1,
+                "target_folder_count": 3,
+                "target_readme_count": 3,
+                "target_operator_template_file_count": 3,
+                "target_field_policy_file_count": 3,
+                "operator_template_expected_rows": 3,
+                "operator_template_csv_rows": 3,
+                "operator_template_row_mismatch_count": 0,
+                "field_policy_expected_rows": 36,
+                "field_policy_csv_rows": 36,
+                "field_policy_row_mismatch_count": 0,
+                "coordinate_copy_count": 0,
+                "target_coordinate_copy_count": 0,
+                "competitive_proof_eligible_count": 0,
+                "author_serialized_count": 0,
+                "first_blocked_target_id": "",
+                "first_blocker": "",
+                "next_action": "Fill the target operator templates or batch intake CSV, then rerun the value gate.",
+            }
+        },
+    )
+    _write_json(
         competitive_target_identity_clearance_action_board_json,
         {
             "summary": {
@@ -3686,8 +5559,30 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(protein_object_library_completion_audit_json),
             "--protein-object-library-navigation-catalog-json",
             str(protein_object_library_navigation_catalog_json),
+            "--molecular-object-atlas-json",
+            str(molecular_object_atlas_json),
+            "--molecular-object-atlas-completion-audit-json",
+            str(molecular_object_atlas_completion_audit_json),
+            "--molecular-object-metric-handoff-json",
+            str(molecular_object_metric_handoff_json),
+            "--molecular-object-metric-handoff-completion-audit-json",
+            str(molecular_object_metric_handoff_completion_audit_json),
             "--raw-ranked-model-quarantine-json",
             str(raw_ranked_model_quarantine_json),
+            "--current-submission-gate-json",
+            str(current_submission_gate_json),
+            "--current-sidechain-repack-json",
+            str(current_sidechain_repack_json),
+            "--current-submission-package-preflight-json",
+            str(current_submission_package_preflight_json),
+            "--current-submission-deadline-guard-json",
+            str(current_submission_deadline_guard_json),
+            "--current-upload-queue-json",
+            str(current_upload_queue_json),
+            "--current-upload-review-packet-json",
+            str(current_upload_review_packet_json),
+            "--current-prospective-strict-blind-escrow-json",
+            str(current_prospective_strict_blind_escrow_json),
             "--win-gap-closure-json",
             str(closure_json),
             "--win-tier-goal-scorecard-json",
@@ -3734,6 +5629,40 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(protein_complex_massivefold_model_selection_coverage_json),
             "--protein-complex-massivefold-self-assessment-packet-json",
             str(protein_complex_massivefold_self_assessment_packet_json),
+            "--massivefold-model1-risk-queue-json",
+            str(massivefold_model1_risk_queue_json),
+            "--massivefold-critical-rerank-experiment-json",
+            str(massivefold_critical_rerank_experiment_json),
+            "--massivefold-critical-rerank-score-ledger-json",
+            str(massivefold_critical_rerank_score_ledger_json),
+            "--massivefold-model1-selection-calibration-gate-json",
+            str(massivefold_model1_selection_calibration_gate_json),
+            "--massivefold-model1-probe-worklist-json",
+            str(massivefold_model1_probe_worklist_json),
+            "--massivefold-model1-probe-outcome-json",
+            str(massivefold_model1_probe_outcome_json),
+            "--massivefold-model1-freeze-decision-packet-json",
+            str(massivefold_model1_freeze_decision_packet_json),
+            "--massivefold-model-selection-ledger-json",
+            str(massivefold_model_selection_ledger_json),
+            "--massivefold-model1-combined-selector-overlay-json",
+            str(massivefold_model1_combined_selector_overlay_json),
+            "--massivefold-freeze-ready-review-packet-json",
+            str(massivefold_freeze_ready_review_packet_json),
+            "--massivefold-hold-probe-review-packet-json",
+            str(massivefold_hold_probe_review_packet_json),
+            "--massivefold-probe-required-targeted-probe-packet-json",
+            str(massivefold_probe_required_targeted_probe_packet_json),
+            "--massivefold-post-probe-selector-decision-packet-json",
+            str(massivefold_post_probe_selector_decision_packet_json),
+            "--massivefold-watch-manual-action-packet-json",
+            str(massivefold_watch_manual_action_packet_json),
+            "--massivefold-freeze-candidate-format-preflight-json",
+            str(massivefold_freeze_candidate_format_preflight_json),
+            "--massivefold-freeze-candidate-escrow-json",
+            str(massivefold_freeze_candidate_escrow_json),
+            "--massivefold-freeze-candidate-protein-library-json",
+            str(massivefold_freeze_candidate_protein_library_json),
             "--capri-round65-readiness-json",
             str(capri_round65_readiness_json),
             "--capri-round65-format-preflight-json",
@@ -3804,10 +5733,34 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates_json),
             "--historical-seed-official-archive-baseline-lane-json",
             str(historical_seed_official_archive_baseline_lane_json),
+            "--official-archive-first-baseline-acquisition-audit-json",
+            str(official_archive_first_baseline_acquisition_audit_json),
+            "--official-archive-first-baseline-model-pool-json",
+            str(official_archive_first_baseline_model_pool_json),
+            "--official-archive-first-baseline-score-ledger-json",
+            str(official_archive_first_baseline_score_ledger_json),
+            "--official-archive-first-baseline-replay-comparison-json",
+            str(official_archive_first_baseline_replay_comparison_json),
+            "--official-archive-first-baseline-model1-gap-triage-json",
+            str(official_archive_first_baseline_model1_gap_triage_json),
+            "--official-archive-first-baseline-model1-gap-viewer-packet-json",
+            str(official_archive_first_baseline_model1_gap_viewer_packet_json),
+            "--official-archive-first-baseline-model1-gap-feature-probe-json",
+            str(official_archive_first_baseline_model1_gap_feature_probe_json),
+            "--official-archive-first-baseline-model1-gap-consensus-probe-json",
+            str(official_archive_first_baseline_model1_gap_consensus_probe_json),
+            "--official-archive-first-baseline-model1-gap-combined-selector-ledger-json",
+            str(official_archive_first_baseline_model1_gap_combined_selector_ledger_json),
             "--strict-blind-first-slot-source-bridge-json",
             str(strict_blind_first_slot_source_bridge_json),
             "--strict-blind-internal-prediction-source-audit-json",
             str(strict_blind_internal_prediction_source_audit_json),
+            "--strict-blind-internal-candidate-filesystem-sweep-json",
+            str(strict_blind_internal_candidate_filesystem_sweep_json),
+            "--strict-blind-unknown-candidate-triage-json",
+            str(strict_blind_unknown_candidate_triage_json),
+            "--strict-blind-internal-like-source-review-json",
+            str(strict_blind_internal_like_source_review_json),
             "--strict-blind-internal-prediction-source-gate-json",
             str(strict_blind_internal_prediction_source_gate_json),
             "--strict-blind-source-gate-field-board-json",
@@ -3816,6 +5769,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(strict_blind_source_gate_operator_packet_json),
             "--strict-blind-source-gate-source-request-packet-json",
             str(strict_blind_source_gate_source_request_packet_json),
+            "--strict-blind-source-request-resolution-board-json",
+            str(strict_blind_source_request_resolution_board_json),
             "--strict-blind-source-request-fulfillment-gate-json",
             str(strict_blind_source_request_fulfillment_gate_json),
             "--strict-blind-source-request-operator-fill-worklist-json",
@@ -3832,6 +5787,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(strict_blind_first_unlock_evidence_packet_json),
             "--strict-blind-first-unlock-evidence-review-gate-json",
             str(strict_blind_first_unlock_evidence_review_gate_json),
+            "--strict-blind-first-slot-source-gate-blocker-ledger-json",
+            str(strict_blind_first_slot_source_gate_blocker_ledger_json),
             "--strict-blind-first-unlock-evidence-sync-plan-json",
             str(strict_blind_first_unlock_evidence_sync_plan_json),
             "--strict-blind-internal-prediction-source-apply-plan-json",
@@ -3936,6 +5893,30 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(competitive_target_identity_clearance_manifest_sync_json),
             "--competitive-target-identity-clearance-workorder-audit-json",
             str(competitive_target_identity_clearance_workorder_audit_json),
+            "--competitive-target-identity-metric-runway-json",
+            str(competitive_target_identity_metric_runway_json),
+            "--competitive-floor-native-provenance-operator-packet-json",
+            str(competitive_floor_native_provenance_operator_packet_json),
+            "--competitive-floor-native-provenance-operator-packet-completion-audit-json",
+            str(competitive_floor_native_provenance_operator_packet_completion_audit_json),
+            "--competitive-floor-native-provenance-metric-unlock-bridge-json",
+            str(competitive_floor_native_provenance_metric_unlock_bridge_json),
+            "--competitive-floor-first-native-provenance-unlock-kit-json",
+            str(competitive_floor_first_native_provenance_unlock_kit_json),
+            "--competitive-floor-batch-native-provenance-unlock-kit-json",
+            str(competitive_floor_batch_native_provenance_unlock_kit_json),
+            "--competitive-floor-batch-native-provenance-unlock-kit-completion-audit-json",
+            str(competitive_floor_batch_native_provenance_unlock_kit_completion_audit_json),
+            "--competitive-floor-batch-native-provenance-value-gate-json",
+            str(competitive_floor_batch_native_provenance_value_gate_json),
+            "--competitive-floor-batch-native-provenance-value-action-board-json",
+            str(competitive_floor_batch_native_provenance_value_action_board_json),
+            "--competitive-floor-batch-native-provenance-value-action-board-completion-audit-json",
+            str(competitive_floor_batch_native_provenance_value_action_board_completion_audit_json),
+            "--competitive-floor-batch-native-provenance-operator-fill-preflight-json",
+            str(competitive_floor_batch_native_provenance_operator_fill_preflight_json),
+            "--competitive-floor-batch-native-provenance-operator-fill-preflight-completion-audit-json",
+            str(competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_json),
             "--competitive-target-identity-clearance-action-board-json",
             str(competitive_target_identity_clearance_action_board_json),
             "--competitive-target-identity-clearance-action-bundle-json",
@@ -3993,6 +5974,158 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "proteins pass/blocked/total `2/0/2`" in workbench_md
     assert "protein object library navigation catalog: `protein_object_library_navigation_catalog_ready`" in workbench_md
     assert "readme/manifest links `2/2`" in workbench_md
+    assert "CASP17 3D molecular object atlas: `casp17_3d_molecular_object_atlas_ready_review_only`" in workbench_md
+    assert "proteins pass/blocked/total `5/0/5` objects pass/blocked/total `14/0/14`" in workbench_md
+    assert "source objects current/massivefold `4/10`" in workbench_md
+    assert "source proteins current/massivefold/overlap `2/4/1`" in workbench_md
+    assert "links model/viewer/projection/top5/escrow `14/14/14/10/10`" in workbench_md
+    assert "native/proof/author `0/0/0` first `H9002_Example_Fab_Complex` `current_chain_A`" in workbench_md
+    assert (
+        "CASP17 3D molecular object atlas completion audit: "
+        "`casp17_3d_molecular_object_atlas_completion_audit_pass`"
+    ) in workbench_md
+    assert "proteins folder/readme/manifest/total `5/5/5/5`" in workbench_md
+    assert "objects pass/blocked/total `14/0/14` source objects current/massivefold `4/10`" in workbench_md
+    assert "object folder/readme/manifest `14/14/14`" in workbench_md
+    assert "coordinate copies object/atlas `0/0` proof/author `0/0`" in workbench_md
+    assert (
+        "CASP17 3D molecular object metric handoff: "
+        "`casp17_3d_molecular_object_metric_handoff_ready_review_only_ligand_gap`"
+    ) in workbench_md
+    assert "metric requirements `118` required metrics covered/total/missing `9/11/2`" in workbench_md
+    assert "missing `LDDT-PLI,BiSyRMSD` families monomer/complex/rna/ligand `1/12/1/0`" in workbench_md
+    assert (
+        "CASP17 3D molecular object metric handoff completion audit: "
+        "`casp17_3d_molecular_object_metric_handoff_completion_audit_pass`"
+    ) in workbench_md
+    assert "object files folder/manifest/csv/md `14/14/14/14`" in workbench_md
+    assert "metric rows expected/csv/mismatch `118/118/0` evidence awaiting `14`" in workbench_md
+    assert "coordinate copies object/out_dir `0/0` proof/author `0/0`" in workbench_md
+    assert (
+        "competitive native/provenance operator packet: "
+        "`casp17_competitive_floor_native_provenance_operator_packet_open_actions`"
+    ) in workbench_md
+    assert "targets open/ready/total `3/0/3` actions open/total `12/12`" in workbench_md
+    assert "lanes native/evidence/provenance/manifest `3/3/3/3` metric requirements `27`" in workbench_md
+    assert (
+        "competitive native/provenance operator packet completion audit: "
+        "`casp17_competitive_floor_native_provenance_operator_packet_completion_audit_pass`"
+    ) in workbench_md
+    assert "targets pass/blocked/total `3/0/3`" in workbench_md
+    assert "packet files folder/readme/manifest/actions/native-candidates `3/3/3/3/3`" in workbench_md
+    assert "action rows expected/csv/mismatch `12/12/0`" in workbench_md
+    assert "native candidates expected/csv/mismatch `5/5/0`" in workbench_md
+    assert "inputs prediction/ts/native-path/native-file/provenance/manifest/runway/workorder `3/3/3/0/3/3/3/3`" in workbench_md
+    assert "coordinate copies target/out-dir `0/0` proof/author `0/0`" in workbench_md
+    assert (
+        "competitive native/provenance metric unlock bridge: "
+        "`casp17_competitive_floor_native_provenance_metric_unlock_bridge_blocked_awaiting_operator_values`"
+    ) in workbench_md
+    assert "targets ready/blocked/total `0/3/3` packet/workorder/runway ready `3/0/0`" in workbench_md
+    assert "metric requirements `27` inputs prediction/ts/native-path/native-file/provenance-template/manifest/runway/workorder `3/3/3/0/3/3/3/3`" in workbench_md
+    assert "actions native/evidence/provenance/manifest/total `3/3/3/3/12`" in workbench_md
+    assert "native candidates blocked/no-candidate/total `4/1/5`" in workbench_md
+    assert "provenance/evidence/identity `0/0/0` proof/author `0/0`" in workbench_md
+    assert (
+        "competitive first native/provenance unlock kit: "
+        "`casp17_competitive_floor_first_native_provenance_unlock_kit_ready_for_operator_fill`"
+    ) in workbench_md
+    assert "target `H1319` fields/actions/bundle `13/4/4`" in workbench_md
+    assert (
+        "inputs prediction/ts/native-path/native-file/provenance/manifest/runway/workorder "
+        "`1/1/1/0/1/1/1/1`"
+    ) in workbench_md
+    assert (
+        "competitive batch native/provenance unlock kit: "
+        "`casp17_competitive_floor_batch_native_provenance_unlock_kit_ready_for_operator_fill`"
+    ) in workbench_md
+    assert "targets ready/blocked/total `3/0/3` ids `H1319,H1321,H2324`" in workbench_md
+    assert "fields per-target/total `13/39` actions required/bundle `12/12`" in workbench_md
+    assert (
+        "inputs prediction/ts/native-path/native-file/provenance/manifest/runway/workorder "
+        "`3/3/3/0/3/3/3/3`"
+    ) in workbench_md
+    assert (
+        "competitive batch native/provenance unlock kit completion audit: "
+        "`casp17_competitive_floor_batch_native_provenance_unlock_kit_completion_audit_pass`"
+    ) in workbench_md
+    assert "targets pass/blocked/total `3/0/3` batch files `6/6`" in workbench_md
+    assert "batch intake expected/csv/mismatch `3/3/0`" in workbench_md
+    assert "batch actions expected/csv/mismatch `12/12/0`" in workbench_md
+    assert "target files folder/readme/manifest/intake/actions/rerun `3/3/3/3/3/3`" in workbench_md
+    assert "coordinate copies batch/target `0/0`" in workbench_md
+    assert (
+        "competitive batch native/provenance value gate: "
+        "`casp17_competitive_floor_batch_native_provenance_value_gate_blocked_awaiting_operator_values`"
+    ) in workbench_md
+    assert "targets ready/blocked/total `0/3/3` fields per-target/total `13/39`" in workbench_md
+    assert "values ready/blocked `3/36` native/evidence `0/0`" in workbench_md
+    assert "clearance/date/boolean `0/0/0` coordinate copies batch/target `0/0`" in workbench_md
+    assert "proof/author `0/0` first `H1319` `native_source_pdb_required`" in workbench_md
+    assert (
+        "competitive batch native/provenance value action board: "
+        "`casp17_competitive_floor_batch_native_provenance_value_action_board_open_actions`"
+    ) in workbench_md
+    assert "targets open/ready/total `3/0/3` actions open/total `36/36`" in workbench_md
+    assert "lanes native/evidence/clearance/operator/date/boolean/review `3/3/6/3/6/15/0`" in workbench_md
+    assert "coordinate copies `0` proof/author `0/0` first `H1319` `native_source_pdb`" in workbench_md
+    assert (
+        "competitive batch native/provenance value action board completion audit: "
+        "`casp17_competitive_floor_batch_native_provenance_value_action_board_completion_audit_pass`"
+    ) in workbench_md
+    assert "targets pass/blocked/total `3/0/3` actions expected/json/mismatch `36/36/0`" in workbench_md
+    assert "target files folder/readme/actions `3/3/3`" in workbench_md
+    assert "target rows expected/csv/mismatch `36/36/0` coordinate copies board/target `0/0`" in workbench_md
+    assert (
+        "competitive batch native/provenance operator fill preflight: "
+        "`casp17_competitive_floor_batch_native_provenance_operator_fill_preflight_ready_for_operator_fill`"
+    ) in workbench_md
+    assert "targets ready/blocked/total `3/0/3` actions open `36`" in workbench_md
+    assert "actions native/evidence/clearance/operator/date/boolean/review `3/3/6/3/6/15/0`" in workbench_md
+    assert "coordinate copies preflight/target `0/0` proof/author `0/0` first `H1319` `-` `-`" in workbench_md
+    assert (
+        "competitive batch native/provenance operator fill preflight completion audit: "
+        "`casp17_competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_pass`"
+    ) in workbench_md
+    assert "targets pass/blocked/total `3/0/3` root manifest `1`" in workbench_md
+    assert "target files folder/readme/template/policy `3/3/3/3`" in workbench_md
+    assert "template rows expected/csv/mismatch `3/3/0`" in workbench_md
+    assert "field policy expected/csv/mismatch `36/36/0` coordinate copies preflight/target `0/0`" in workbench_md
+    assert "current CASP17 submission gate: `current_casp17_submission_gate_ready`" in workbench_md
+    assert "go/no-go/total `19/0/19` framework `True` shape `pass` `19/0/19`" in workbench_md
+    assert "difficult lane `19` server `False`" in workbench_md
+    assert "current CASP17 sidechain repack: `pass` pass/blocked/total `19/0/19`" in workbench_md
+    assert "soft-clash before/after/delta `1955/1426/529` improved/repacked `7179/15657`" in workbench_md
+    assert "current CASP17 submission package preflight: `ready` ready/blocked/total `19/0/19`" in workbench_md
+    assert "files/format/author/sidechain/sha256 `19/19/19/19/19`" in workbench_md
+    assert "gate `current_casp17_submission_gate_ready` `19/0/19` server `False`" in workbench_md
+    assert (
+        "current CASP17 submission deadline guard: `partial_current_upload_window_ready` "
+        "date `2026-06-02` ready/blocked/total `11/8/19`"
+    ) in workbench_md
+    assert "expired/today/future `8/2/9` QA open/expired/unknown `15/4/0`" in workbench_md
+    assert "package `ready` `19/0/19` watchlist stale `True` `7`" in workbench_md
+    assert "first `T1331` `human_submission_deadline_expired` nearest `H2319` `2026-06-02` `0`" in workbench_md
+    assert (
+        "current CASP17 official upload queue: `official_verified_current_upload_queue_partial` "
+        "date `2026-06-02` ready/blocked/total `10/9/19`"
+    ) in workbench_md
+    assert "today/soon/future `2/4/4` official targets/direct/mapped/missing `77/18/1/0`" in workbench_md
+    assert "expired/cancelled/mismatch `9/1/1` first upload `H2319` `2026-06-02`" in workbench_md
+    assert "first blocked `H1335` `official_human_deadline_expired`" in workbench_md
+    assert (
+        "current CASP17 upload review packet: `current_upload_review_packet_ready` "
+        "reviews ready/blocked/total `10/0/10`"
+    ) in workbench_md
+    assert "urgency today/soon/future `2/4/4` candidate/object/viewer `10/10/10`" in workbench_md
+    assert "first `H2319` `casp17/current_upload_review_packet/" in workbench_md
+    assert (
+        "current CASP17 prospective strict-blind escrow: "
+        "`current_prospective_strict_blind_escrow_ready_native_pending_partial_upload_window` "
+        "escrow ready/blocked/total `19/0/19`"
+    ) in workbench_md
+    assert "upload ready/blocked `10/9` sha/review/native/ext-ts `19/10/19/19`" in workbench_md
+    assert "proof `0` author-serialized `0` first upload/blocked `H2319`/`H1335`" in workbench_md
     assert "win-tier metric surface contract: `awaiting_strict_blind_evidence_files_and_ligand_category_slots`" in workbench_md
     assert "metrics covered/required `11/11`" in workbench_md
     assert "win-tier critical path board: `competitive_proof_blocked_on_strict_blind_evidence`" in workbench_md
@@ -4062,16 +6195,227 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     ) in workbench_md
     assert "heteromer/immune `1` candidates/model1/top5 `10/2/10`" in workbench_md
     assert "missing `0` low-margin `1` threshold `2.0`" in workbench_md
+    assert (
+        "MassiveFold model1 risk queue: "
+        "`massivefold_model1_risk_queue_ready_external_only`"
+    ) in workbench_md
+    assert "low-margin/critical `2/1` RNA/protein-complex `2/2`" in workbench_md
+    assert "first `H1311` `protein_complex` gap `0.05` tier `critical_model1_margin`" in workbench_md
+    assert (
+        "MassiveFold critical rerank experiment: "
+        "`massivefold_critical_rerank_experiment_ready_external_only`"
+    ) in workbench_md
+    assert "experiments ready/blocked/total `2/0/2` RNA/protein-complex `1/1`" in workbench_md
+    assert "review flags diversity/geometry/low-conf `1/1/1`" in workbench_md
+    assert "first `R2350` `rna_hybrid` gap `0.02`" in workbench_md
+    assert (
+        "MassiveFold critical rerank score ledger: "
+        "`massivefold_critical_rerank_score_ledger_ready_external_only`"
+    ) in workbench_md
+    assert "rows ready/blocked/total `2/0/2` bands immediate/calibrate/watch `0/2/0`" in workbench_md
+    assert "top `R2350` `rna_hybrid` score `66` band `calibrate_before_model1_freeze`" in workbench_md
+    assert (
+        "MassiveFold model1 selection calibration gate: "
+        "`massivefold_model1_selection_calibration_gate_ready_external_only`"
+    ) in workbench_md
+    assert "freeze `model1_freeze_blocked_by_calibration` gates ready/blocked/total `2/0/2`" in workbench_md
+    assert "hold/watch/probe/freeze `1/1/2/0` RNA/protein-complex `1/1`" in workbench_md
+    assert "decision `hold_model1_freeze_probe_required` probe `top5_rerank_consistency_probe`" in workbench_md
+    assert (
+        "MassiveFold model1 probe worklist: "
+        "`massivefold_model1_probe_worklist_ready_external_only`"
+    ) in workbench_md
+    assert "workitems ready/blocked/total `2/0/2` probes top5/lightweight `1/1`" in workbench_md
+    assert "priority 1/2 `1/1` RNA/protein-complex `1/1`" in workbench_md
+    assert "unlock `freeze_after_probe_allowed_only_if_exit_criterion_passes`" in workbench_md
+    assert (
+        "MassiveFold model1 probe outcome: "
+        "`massivefold_model1_probe_outcome_ready_external_only`"
+    ) in workbench_md
+    assert "outcomes ready/blocked/total `2/0/2` pass/fail/freeze-ready `2/0/2`" in workbench_md
+    assert "result `probe_pass_model1_retained` margin `0.1`" in workbench_md
+    assert "recommendation `conditional_model1_freeze_ready_external_only`" in workbench_md
+    assert (
+        "MassiveFold model1 freeze decision packet: "
+        "`massivefold_model1_freeze_decision_packet_ready_external_only`"
+    ) in workbench_md
+    assert "decisions ready/blocked/total `2/0/2` freeze-ready/blocked `1/1`" in workbench_md
+    assert "conditional/watch/manual `1/0/1` RNA/protein-complex `1/1`" in workbench_md
+    assert (
+        "MassiveFold model-selection ledger: "
+        "`massivefold_model_selection_ledger_ready_external_only`"
+    ) in workbench_md
+    assert "ledgers ready/blocked/total `15/0/15` selected conditional/watch `2/1`" in workbench_md
+    assert "manual/review-only `1/11` freeze-ready `3` RNA/protein-complex `6/9`" in workbench_md
+    assert (
+        "MassiveFold model1 combined selector overlay: "
+        "`massivefold_model1_combined_selector_overlay_ready_external_only`"
+    ) in workbench_md
+    assert "overlay ready/blocked/total `4/0/4` freeze-ready/not-freeze-ready `1/3`" in workbench_md
+    assert "manual/interface/weak/probe/watch/unknown `1/1/0/1/0/0`" in workbench_md
+    assert "baseline `0.500`/`0.500` first `R2352` `selector_blocked_manual_review`" in workbench_md
+    assert (
+        "MassiveFold freeze-ready review packet: "
+        "`massivefold_freeze_ready_review_packet_ready_external_only`"
+    ) in workbench_md
+    assert "reviews ready/blocked/total `2/0/2` model/viewer/projection/top5 `2/2/2/2`" in workbench_md
+    assert "top5 total `10` first `R2350` `Model_20_af3_woPaired_seed_1.cif`" in workbench_md
+    assert (
+        "MassiveFold hold/probe review packet: "
+        "`massivefold_hold_probe_review_packet_ready_external_only`"
+    ) in workbench_md
+    assert "reviews ready/blocked/total `3/0/3` manual/interface/probe/weak/unknown `1/1/1/0/0`" in workbench_md
+    assert "model/viewer/projection/top5/alternate `3/3/3/3/1` top5 total `15`" in workbench_md
+    assert "first `R2352` `manual_blocked_review` `do_not_freeze_model1_external_only`" in workbench_md
+    assert (
+        "MassiveFold probe-required targeted probe packet: "
+        "`massivefold_probe_required_targeted_probe_packet_ready_external_only`"
+    ) in workbench_md
+    assert "probes ready/blocked/total `3/0/3` pass/watch/fail `2/1/0`" in workbench_md
+    assert "recommendations freeze/watch/manual `2/1/0` RNA/protein-complex `1/2`" in workbench_md
+    assert "artifacts model/viewer/projection/top/top-viewer/top5 `3/3/3/3/3/3`" in workbench_md
+    assert "top5 total `15` margin `0.5` first `H1311` `probe_pass_model1_retained_clear`" in workbench_md
+    assert (
+        "MassiveFold post-probe selector decision packet: "
+        "`massivefold_post_probe_selector_decision_packet_ready_external_only`"
+    ) in workbench_md
+    assert "decisions ready/blocked/total `5/0/5` freeze/watch/manual `2/2/1`" in workbench_md
+    assert "freeze existing/probe `1/1` watch probe/interface `1/1`" in workbench_md
+    assert "manual probe/manual-block `0/1` RNA/protein-complex `2/3`" in workbench_md
+    assert "artifacts model/viewer/projection/top5/alternate `5/5/5/5/1`" in workbench_md
+    assert "first `R2352` `manual_block` `external_model1_freeze_blocked_manual_review`" in workbench_md
+    assert (
+        "MassiveFold watch/manual action packet: "
+        "`massivefold_watch_manual_action_packet_ready_external_only`"
+    ) in workbench_md
+    assert "actions ready/blocked/total `5/0/5` manual/interface/low-margin `1/1/3`" in workbench_md
+    assert "priority 1/2 `2/3` RNA/protein-complex `2/3`" in workbench_md
+    assert "artifacts model/viewer/projection/top5/alternate `5/5/5/5/1`" in workbench_md
+    assert "first `R2352` `manual_alternate_review` priority `1`" in workbench_md
+    assert (
+        "MassiveFold freeze-candidate format preflight: "
+        "`massivefold_freeze_candidate_format_preflight_ready_external_only`"
+    ) in workbench_md
+    assert "preflight ready/blocked/total `10/0/10` freeze existing/probe `2/8`" in workbench_md
+    assert "RNA/protein-complex `4/6` selected pdb/cif `6/4`" in workbench_md
+    assert "packaged pdb/cif `0/10`" in workbench_md
+    assert (
+        "checks target/selected-ext/packaged-ext/model/nonempty/viewer/projection/top5 "
+        "`10/10/10/10/10/10/10/10`"
+    ) in workbench_md
+    assert "first `H2319` `Model_1_afm_basic_model_4_multimer_v3_pred_25.pdb`" in workbench_md
+    assert (
+        "MassiveFold freeze-candidate escrow: "
+        "`massivefold_freeze_candidate_escrow_ready_external_only`"
+    ) in workbench_md
+    assert "escrow ready/blocked/total `10/0/10` sha model/top5 `10/10`" in workbench_md
+    assert "artifacts model/viewer/projection/top5 `10/10/10/10`" in workbench_md
+    assert "freeze existing/probe `2/8` RNA/protein-complex `4/6`" in workbench_md
+    assert "native/proof/author `10/0/0` first `H2319` blocked `-`" in workbench_md
+    assert "manifest `freezeabc123` policy `do_not_mark_as_internal_prediction`" in workbench_md
+    assert (
+        "MassiveFold freeze-candidate protein library: "
+        "`massivefold_freeze_candidate_protein_library_ready_external_only`"
+    ) in workbench_md
+    assert "proteins ready/blocked/total `10/0/10` objects ready/blocked/total `10/0/10`" in workbench_md
+    assert "links model/viewer/projection/top5/escrow `10/10/10/10/10`" in workbench_md
+    assert "sha model/top5 `10/10` name current/official `5/10` RNA/protein-complex `4/6`" in workbench_md
+    assert "proof/author `0/0`" in workbench_md
+    assert "casp17/casp17_massivefold_freeze_candidate_protein_library_current.html" in workbench_md
     assert "CAPRI Round 65 readiness context: `deferred_pi_required`" in workbench_md
     assert "CAPRI Round 65 format preflight context: `deferred_pi_required`" in workbench_md
     assert "historical seed official archive baseline lane: `official_archive_baseline_lane_ready`" in workbench_md
     assert "proof-eligible/strict-blocked/other-team `0/24/24`" in workbench_md
+    assert (
+        "official archive first baseline acquisition audit: `official_archive_first_baseline_acquired`"
+        in workbench_md
+    )
+    assert "artifacts ready/blocked/total `2/0/2`" in workbench_md
+    assert "tar present/size/models `True` `25069184` `357`" in workbench_md
+    assert "proof `False` policy `do_not_import_as_internal_prediction`" in workbench_md
+    assert "official archive first baseline model pool: `official_archive_first_baseline_model_pool_ready`" in workbench_md
+    assert "models ready/blocked/expected `357/0/357`" in workbench_md
+    assert "groups/model1/top5/complete/extra `74/73/348/67/9`" in workbench_md
+    assert (
+        "official archive first baseline score ledger: "
+        "`official_archive_first_baseline_score_ledger_ready_baseline_only`"
+    ) in workbench_md
+    assert "models ready/blocked/scored/top5 `348/0/348/348`" in workbench_md
+    assert "groups/model1/best/complete/improved `74/73/74/67/41`" in workbench_md
+    assert "mean model1/best/gap `55.123` `62.456` `7.333`" in workbench_md
+    assert (
+        "official archive first baseline replay comparison: "
+        "`official_archive_first_baseline_replay_comparison_ready_baseline_only`"
+    ) in workbench_md
+    assert "bands comparable/blocked/total `0/3/3`" in workbench_md
+    assert "direct `not_directly_comparable_proxy_single_target_not_sum_zscore`" in workbench_md
+    assert "model1-best/top5-improved `32/73` `41/73`" in workbench_md
+    assert "rates `0.438` `0.562`" in workbench_md
+    assert (
+        "official archive first baseline model1 gap triage: "
+        "`official_archive_first_baseline_model1_gap_triage_ready_baseline_only`"
+    ) in workbench_md
+    assert "groups ready/blocked/total `73/1/74`" in workbench_md
+    assert "gaps small/medium/large/catastrophic `10/20/8/3`" in workbench_md
+    assert "calibration/critical `41/11`" in workbench_md
+    assert "first triage `999` `catastrophic_model1_selection_gap` delta `70.000`" in workbench_md
+    assert (
+        "official archive first baseline model1 gap viewer packet: "
+        "`official_archive_first_baseline_model1_gap_viewer_packet_ready_baseline_only`"
+    ) in workbench_md
+    assert "viewers ready/blocked/selected `11/0/11`" in workbench_md
+    assert "catastrophic/large `3/8` copied pairs/native `11` `True`" in workbench_md
+    assert "first viewer `999` `catastrophic_model1_selection_gap` delta `70.000`" in workbench_md
+    assert (
+        "official archive first baseline model1 gap feature probe: "
+        "`official_archive_first_baseline_model1_gap_feature_probe_ready_baseline_only`"
+    ) in workbench_md
+    assert "features ready/blocked/selected `11/0/11`" in workbench_md
+    assert "signals best/model1/ambiguous `4/1/6` rate `0.364`" in workbench_md
+    assert "first signal `999` `supports_best_top5` model1/best/delta `122.500` `7.500` `115.000`" in workbench_md
+    assert (
+        "official archive first baseline model1 gap consensus probe: "
+        "`official_archive_first_baseline_model1_gap_consensus_probe_ready_baseline_only`"
+    ) in workbench_md
+    assert "consensus ready/blocked/selected `11/0/11`" in workbench_md
+    assert "signals best/model1/ambiguous `5/2/4` rate `0.455`" in workbench_md
+    assert "top matches best/model1 `3/2`" in workbench_md
+    assert "first signal `999` `supports_best_top5` ranks/top/margin `5` `1` `T1210TS999_4` `12.345`" in workbench_md
+    assert (
+        "official archive first baseline model1 gap combined selector: "
+        "`official_archive_first_baseline_model1_gap_combined_selector_ledger_ready_baseline_only`"
+    ) in workbench_md
+    assert "selector ready/blocked/selected `11/0/11`" in workbench_md
+    assert "decisions promote/retain/hold `5/5/1`" in workbench_md
+    assert "baseline corrected/retained/manual/false-positive `5/5/1/0`" in workbench_md
+    assert "capture/non-capture `0.455` `0.545`" in workbench_md
+    assert "first selector `999` `promote_best_top5` selected `T1210TS999_4`" in workbench_md
     assert "strict-blind first slot source bridge: `first_slot_source_bridge_internal_prediction_required`" in workbench_md
     assert "official ready/total `24/24` native-bridge `2`" in workbench_md
     assert "baseline-only/strict-blocked `24/24` operator-only/internal-blocked `6/1`" in workbench_md
     assert "strict-blind internal prediction source audit: `internal_prediction_source_missing_for_first_slot`" in workbench_md
     assert "local eligible/total `0/17` routes allowed/total `0/17`" in workbench_md
     assert "allowed/template `0/1` blocker `pre_native_internal_prediction_pdb_missing`" in workbench_md
+    assert (
+        "strict-blind internal candidate filesystem sweep: "
+        "`strict_blind_filesystem_sweep_operator_review_required`"
+    ) in workbench_md
+    assert "files/atom-like `9968/9968` verified/unknown `0/4551`" in workbench_md
+    assert "current/MassiveFold/official/native/top5/dropzone `1810/2895/387/257/75/0`" in workbench_md
+    assert (
+        "strict-blind unknown candidate triage: "
+        "`strict_blind_unknown_triage_internal_like_review_required`"
+    ) in workbench_md
+    assert "unknown/sweep `4551/4551` promotion/internal-like `0/166`" in workbench_md
+    assert "public/run/archive/data/tmp/other `3962/406/16/0/1/0`" in workbench_md
+    assert (
+        "strict-blind internal-like source review: "
+        "`strict_blind_internal_like_source_review_all_post_native`"
+    ) in workbench_md
+    assert "candidates/triage `166/166` match `True`" in workbench_md
+    assert "mapped/pre/post/same/missing/unmapped `166/0/166/0/0/0`" in workbench_md
+    assert "targets/all-post/pre-targets `10/10/0`" in workbench_md
+    assert "range `2026-02-19`-`2026-02-22` first `HIST_BBA5` `prediction_not_before_native`" in workbench_md
     assert "strict-blind internal prediction source gate: `awaiting_internal_prediction_source_gate_fields`" in workbench_md
     assert "checks pass/blocked/total `3/13/16`" in workbench_md
     assert "first `source_id_internal` `internal_source_id_missing_or_external`" in workbench_md
@@ -4084,6 +6428,13 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "requests pre-native/replacement/operator-repair/total `10/7/0/17`" in workbench_md
     assert "templates ready/awaiting `0/17`" in workbench_md
     assert "fields filled/missing/total `0/187/187`" in workbench_md
+    assert (
+        "strict-blind source request resolution board: "
+        "`source_request_resolution_all_current_candidates_blocked`"
+    ) in workbench_md
+    assert "requests ready/blocked/total `0/17/17` monomer/complex `10/7`" in workbench_md
+    assert "postnative/replacement/pre-review/missing `10/7/0/0`" in workbench_md
+    assert "internal-like post/pre `166/0` first `source_request_001` `HIST_BBA5`" in workbench_md
     assert "strict-blind source request fulfillment gate: `awaiting_source_request_operator_values`" in workbench_md
     assert "requests ready/blocked/total `0/17/17`" in workbench_md
     assert "evidence present/missing `0/153`" in workbench_md
@@ -4165,6 +6516,147 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["protein_object_library_navigation_html"] == (
         "casp17/casp17_protein_object_library_navigation_catalog_current.html"
     )
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_status"] == (
+        "casp17_3d_molecular_object_atlas_ready_review_only"
+    )
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_protein_count"] == 5
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_protein_pass_count"] == 5
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_protein_blocked_count"] == 0
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_object_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_object_pass_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_object_blocked_count"] == 0
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_current_object_count"] == 4
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_massivefold_object_count"] == 10
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_current_protein_count"] == 2
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_massivefold_protein_count"] == 4
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_overlap_protein_count"] == 1
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_model_link_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_viewer_link_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_projection_link_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_top5_link_count"] == 10
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_escrow_link_count"] == 10
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_model_sha256_count"] == 10
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_top5_sha256_count"] == 10
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_native_accuracy_count"] == 0
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_proof_eligible_count"] == 0
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_author_serialized_count"] == 0
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_first_protein_key"] == (
+        "H9002_Example_Fab_Complex"
+    )
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_first_object_key"] == "current_chain_A"
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_first_blocked_protein_key"] == ""
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_html"] == (
+        "casp17/casp17_3d_molecular_object_atlas_current.html"
+    )
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_completion_audit_status"] == (
+        "casp17_3d_molecular_object_atlas_completion_audit_pass"
+    )
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_completion_audit_protein_count"] == 5
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_completion_audit_protein_folder_count"] == 5
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_completion_audit_protein_readme_count"] == 5
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_completion_audit_protein_manifest_count"] == 5
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_completion_audit_object_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_completion_audit_object_pass_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_completion_audit_object_blocked_count"] == 0
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_completion_audit_current_object_count"] == 4
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_completion_audit_massivefold_object_count"] == 10
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_completion_audit_object_folder_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_completion_audit_object_readme_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_completion_audit_object_manifest_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_completion_audit_model_link_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_completion_audit_viewer_link_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_completion_audit_projection_link_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_completion_audit_top5_link_count"] == 10
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_completion_audit_escrow_link_count"] == 10
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_completion_audit_object_coordinate_copy_count"] == 0
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_completion_audit_atlas_coordinate_copy_count"] == 0
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_completion_audit_proof_eligible_count"] == 0
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_completion_audit_author_serialized_count"] == 0
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_completion_audit_first_protein_key"] == (
+        "H9002_Example_Fab_Complex"
+    )
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_completion_audit_first_object_key"] == (
+        "current_chain_A"
+    )
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_completion_audit_first_blocked_protein_key"] == ""
+    assert payload["summary"]["casp17_3d_molecular_object_atlas_completion_audit_html"] == (
+        "casp17/casp17_3d_molecular_object_atlas_completion_audit_current.html"
+    )
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_status"] == (
+        "casp17_3d_molecular_object_metric_handoff_ready_review_only_ligand_gap"
+    )
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_protein_count"] == 5
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_object_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_object_ready_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_object_blocked_count"] == 0
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_current_object_count"] == 4
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_massivefold_object_count"] == 10
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_metric_requirement_count"] == 118
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_covered_required_metric_count"] == 9
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_required_metric_count"] == 11
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_missing_required_metric_count"] == 2
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_missing_required_metric_names"] == (
+        "LDDT-PLI,BiSyRMSD"
+    )
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_ligand_gap_count"] == 2
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_monomer_object_count"] == 1
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_complex_object_count"] == 12
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_rna_hybrid_object_count"] == 1
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_ligand_object_count"] == 0
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_protein_folder_count"] == 5
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_object_folder_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_native_accuracy_count"] == 0
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_proof_eligible_count"] == 0
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_author_serialized_count"] == 0
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_first_protein_key"] == (
+        "H9002_Example_Fab_Complex"
+    )
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_first_object_key"] == (
+        "current_chain_A"
+    )
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_first_blocked_protein_key"] == ""
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_html"] == (
+        "casp17/casp17_3d_molecular_object_metric_handoff_current.html"
+    )
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_status"] == (
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_pass"
+    )
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_protein_count"] == 5
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_protein_folder_count"] == 5
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_protein_readme_count"] == 5
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_protein_manifest_count"] == 5
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_object_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_object_pass_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_object_blocked_count"] == 0
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_current_object_count"] == 4
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_massivefold_object_count"] == 10
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_object_folder_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_object_manifest_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_metric_csv_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_metric_md_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_metric_requirement_count"] == 118
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_metric_csv_row_count"] == 118
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_metric_csv_mismatch_count"] == 0
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_metric_evidence_awaiting_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_model_link_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_viewer_link_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_projection_link_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_top5_link_count"] == 10
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_escrow_link_count"] == 10
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_object_coordinate_copy_count"] == 0
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_out_dir_coordinate_copy_count"] == 0
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_proof_eligible_count"] == 0
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_author_serialized_count"] == 0
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_first_protein_key"] == (
+        "H9002_Example_Fab_Complex"
+    )
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_first_object_key"] == (
+        "current_chain_A"
+    )
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_first_blocked_protein_key"] == ""
+    assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_completion_audit_html"] == (
+        "casp17/casp17_3d_molecular_object_metric_handoff_completion_audit_current.html"
+    )
     assert payload["summary"]["raw_ranked_model_quarantine_status"] == "pass"
     assert payload["summary"]["raw_ranked_model_quarantine_target_count"] == 3
     assert payload["summary"]["raw_ranked_model_quarantine_model_count"] == 15
@@ -4173,6 +6665,142 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["raw_ranked_model_quarantine_author_present_count"] == 15
     assert payload["summary"]["raw_ranked_model_quarantine_top5_count"] == 3
     assert payload["summary"]["raw_ranked_model_quarantine_atom_count"] == 42000
+    assert payload["summary"]["current_submission_gate_status"] == "current_casp17_submission_gate_ready"
+    assert payload["summary"]["current_submission_gate_go_count"] == 19
+    assert payload["summary"]["current_submission_gate_no_go_count"] == 0
+    assert payload["summary"]["current_submission_gate_target_count"] == 19
+    assert payload["summary"]["current_submission_gate_framework_gate_pass"] == "True"
+    assert payload["summary"]["current_submission_gate_shape_status"] == "pass"
+    assert payload["summary"]["current_submission_gate_shape_pass_count"] == 19
+    assert payload["summary"]["current_submission_gate_shape_blocked_count"] == 0
+    assert payload["summary"]["current_submission_gate_shape_target_count"] == 19
+    assert payload["summary"]["current_submission_gate_difficult_lane_count"] == 19
+    assert payload["summary"]["current_submission_gate_server_ready"] == "False"
+    assert payload["summary"]["current_sidechain_repack_status"] == "pass"
+    assert payload["summary"]["current_sidechain_repack_pass_count"] == 19
+    assert payload["summary"]["current_sidechain_repack_blocked_count"] == 0
+    assert payload["summary"]["current_sidechain_repack_target_count"] == 19
+    assert payload["summary"]["current_sidechain_repack_soft_delta"] == 529
+    assert payload["summary"]["current_sidechain_repack_soft_before"] == 1955
+    assert payload["summary"]["current_sidechain_repack_soft_after"] == 1426
+    assert payload["summary"]["current_sidechain_repack_improved_residue_count"] == 7179
+    assert payload["summary"]["current_sidechain_repack_repacked_residue_count"] == 15657
+    assert payload["summary"]["current_sidechain_repack_revert_guard_count"] == 8
+    assert payload["summary"]["current_submission_package_preflight_status"] == "ready"
+    assert payload["summary"]["current_submission_package_preflight_ready_count"] == 19
+    assert payload["summary"]["current_submission_package_preflight_blocked_count"] == 0
+    assert payload["summary"]["current_submission_package_preflight_target_count"] == 19
+    assert payload["summary"]["current_submission_package_preflight_file_present_count"] == 19
+    assert payload["summary"]["current_submission_package_preflight_sha256_count"] == 19
+    assert payload["summary"]["current_submission_package_preflight_format_pass_count"] == 19
+    assert payload["summary"]["current_submission_package_preflight_author_pass_count"] == 19
+    assert payload["summary"]["current_submission_package_preflight_sidechain_pass_count"] == 19
+    assert payload["summary"]["current_submission_package_preflight_gate_status"] == (
+        "current_casp17_submission_gate_ready"
+    )
+    assert payload["summary"]["current_submission_package_preflight_gate_go_count"] == 19
+    assert payload["summary"]["current_submission_package_preflight_gate_no_go_count"] == 0
+    assert payload["summary"]["current_submission_package_preflight_gate_target_count"] == 19
+    assert payload["summary"]["current_submission_package_preflight_server_ready"] == "False"
+    assert payload["summary"]["current_submission_package_preflight_package_mode"] == (
+        "manifest_only_no_author_code_export"
+    )
+    assert payload["summary"]["current_submission_deadline_guard_status"] == (
+        "partial_current_upload_window_ready"
+    )
+    assert payload["summary"]["current_submission_deadline_guard_current_date"] == "2026-06-02"
+    assert payload["summary"]["current_submission_deadline_guard_ready_count"] == 11
+    assert payload["summary"]["current_submission_deadline_guard_blocked_count"] == 8
+    assert payload["summary"]["current_submission_deadline_guard_target_count"] == 19
+    assert payload["summary"]["current_submission_deadline_guard_human_expired_count"] == 8
+    assert payload["summary"]["current_submission_deadline_guard_human_expiring_today_count"] == 2
+    assert payload["summary"]["current_submission_deadline_guard_human_future_count"] == 9
+    assert payload["summary"]["current_submission_deadline_guard_qa_open_count"] == 15
+    assert payload["summary"]["current_submission_deadline_guard_qa_expired_count"] == 4
+    assert payload["summary"]["current_submission_deadline_guard_qa_unknown_count"] == 0
+    assert payload["summary"]["current_submission_deadline_guard_package_status"] == "ready"
+    assert payload["summary"]["current_submission_deadline_guard_package_ready_count"] == 19
+    assert payload["summary"]["current_submission_deadline_guard_package_blocked_count"] == 0
+    assert payload["summary"]["current_submission_deadline_guard_package_target_count"] == 19
+    assert payload["summary"]["current_submission_deadline_guard_watchlist_stale"] == "True"
+    assert payload["summary"]["current_submission_deadline_guard_watchlist_stale_days"] == 7
+    assert payload["summary"]["current_submission_deadline_guard_first_blocked_target_id"] == "T1331"
+    assert payload["summary"]["current_submission_deadline_guard_first_blocked_reason"] == (
+        "human_submission_deadline_expired"
+    )
+    assert payload["summary"]["current_submission_deadline_guard_nearest_open_target_id"] == "H2319"
+    assert payload["summary"]["current_submission_deadline_guard_nearest_open_human_expiration"] == (
+        "2026-06-02"
+    )
+    assert payload["summary"]["current_submission_deadline_guard_nearest_open_days"] == 0
+    assert payload["summary"]["current_upload_queue_status"] == (
+        "official_verified_current_upload_queue_partial"
+    )
+    assert payload["summary"]["current_upload_queue_current_date"] == "2026-06-02"
+    assert payload["summary"]["current_upload_queue_ready_count"] == 10
+    assert payload["summary"]["current_upload_queue_blocked_count"] == 9
+    assert payload["summary"]["current_upload_queue_target_count"] == 19
+    assert payload["summary"]["current_upload_queue_ready_today_count"] == 2
+    assert payload["summary"]["current_upload_queue_ready_soon_count"] == 4
+    assert payload["summary"]["current_upload_queue_ready_future_count"] == 4
+    assert payload["summary"]["current_upload_queue_official_target_count"] == 77
+    assert payload["summary"]["current_upload_queue_official_direct_match_count"] == 18
+    assert payload["summary"]["current_upload_queue_official_phase_mapped_count"] == 1
+    assert payload["summary"]["current_upload_queue_official_missing_count"] == 0
+    assert payload["summary"]["current_upload_queue_official_cancelled_count"] == 1
+    assert payload["summary"]["current_upload_queue_official_expired_count"] == 9
+    assert payload["summary"]["current_upload_queue_official_mismatch_count"] == 1
+    assert payload["summary"]["current_upload_queue_first_upload_target_id"] == "H2319"
+    assert payload["summary"]["current_upload_queue_first_upload_human_expiration"] == "2026-06-02"
+    assert payload["summary"]["current_upload_queue_first_blocked_target_id"] == "H1335"
+    assert payload["summary"]["current_upload_queue_first_blocked_reason"] == (
+        "official_human_deadline_expired"
+    )
+    assert payload["summary"]["current_upload_review_packet_status"] == (
+        "current_upload_review_packet_ready"
+    )
+    assert payload["summary"]["current_upload_review_packet_review_count"] == 10
+    assert payload["summary"]["current_upload_review_packet_ready_count"] == 10
+    assert payload["summary"]["current_upload_review_packet_blocked_count"] == 0
+    assert payload["summary"]["current_upload_review_packet_urgency_today_count"] == 2
+    assert payload["summary"]["current_upload_review_packet_urgency_soon_count"] == 4
+    assert payload["summary"]["current_upload_review_packet_urgency_future_count"] == 4
+    assert payload["summary"]["current_upload_review_packet_candidate_count"] == 10
+    assert payload["summary"]["current_upload_review_packet_object_catalog_count"] == 10
+    assert payload["summary"]["current_upload_review_packet_viewer_count"] == 10
+    assert payload["summary"]["current_upload_review_packet_first_target_id"] == "H2319"
+    assert payload["summary"]["current_upload_review_packet_first_review_md"].endswith(
+        "UPLOAD_REVIEW.md"
+    )
+    assert payload["summary"]["current_prospective_strict_blind_escrow_status"] == (
+        "current_prospective_strict_blind_escrow_ready_native_pending_partial_upload_window"
+    )
+    assert payload["summary"]["current_prospective_strict_blind_escrow_target_count"] == 19
+    assert payload["summary"]["current_prospective_strict_blind_escrow_ready_count"] == 19
+    assert payload["summary"]["current_prospective_strict_blind_escrow_blocked_count"] == 0
+    assert payload["summary"]["current_prospective_strict_blind_escrow_upload_ready_count"] == 10
+    assert payload["summary"]["current_prospective_strict_blind_escrow_upload_blocked_count"] == 9
+    assert payload["summary"]["current_prospective_strict_blind_escrow_sha256_match_count"] == 19
+    assert payload["summary"]["current_prospective_strict_blind_escrow_review_link_count"] == 10
+    assert payload["summary"]["current_prospective_strict_blind_escrow_native_pending_count"] == 19
+    assert (
+        payload["summary"]["current_prospective_strict_blind_escrow_external_timestamp_required_count"]
+        == 19
+    )
+    assert (
+        payload["summary"]["current_prospective_strict_blind_escrow_competitive_proof_eligible_count"]
+        == 0
+    )
+    assert payload["summary"]["current_prospective_strict_blind_escrow_author_serialized_count"] == 0
+    assert payload["summary"]["current_prospective_strict_blind_escrow_first_upload_ready_target_id"] == (
+        "H2319"
+    )
+    assert payload["summary"]["current_prospective_strict_blind_escrow_first_upload_blocked_target_id"] == (
+        "H1335"
+    )
+    assert payload["summary"]["current_prospective_strict_blind_escrow_manifest_signature_sha256"] == (
+        "abc123"
+    )
     assert payload["summary"]["benchmark_rows_total"] == 40
     assert payload["summary"]["competitive_batch_status"] == "ready_for_fill"
     assert payload["summary"]["competitive_batch_row_count"] == 15
@@ -4556,6 +7184,859 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         payload["summary"]["competitive_target_identity_clearance_workorder_audit_native_prediction_waiting_count"]
         == 3
     )
+    assert payload["summary"]["competitive_target_identity_metric_runway_status"] == (
+        "casp17_competitive_floor_target_identity_metric_runway_blocked_awaiting_native_provenance"
+    )
+    assert payload["summary"]["competitive_target_identity_metric_runway_target_count"] == 3
+    assert payload["summary"]["competitive_target_identity_metric_runway_ready_count"] == 0
+    assert payload["summary"]["competitive_target_identity_metric_runway_blocked_count"] == 3
+    assert payload["summary"]["competitive_target_identity_metric_runway_complex_count"] == 3
+    assert payload["summary"]["competitive_target_identity_metric_runway_monomer_count"] == 0
+    assert payload["summary"]["competitive_target_identity_metric_runway_metric_requirement_count"] == 27
+    assert payload["summary"]["competitive_target_identity_metric_runway_prediction_count"] == 3
+    assert payload["summary"]["competitive_target_identity_metric_runway_native_count"] == 0
+    assert payload["summary"]["competitive_target_identity_metric_runway_provenance_count"] == 0
+    assert payload["summary"]["competitive_target_identity_metric_runway_evidence_ref_count"] == 0
+    assert payload["summary"]["competitive_target_identity_metric_runway_native_candidate_count"] == 5
+    assert payload["summary"]["competitive_target_identity_metric_runway_native_candidate_blocked_count"] == 4
+    assert payload["summary"]["competitive_target_identity_metric_runway_native_candidate_no_candidate_count"] == 1
+    assert payload["summary"]["competitive_target_identity_metric_runway_proof_eligible_count"] == 0
+    assert payload["summary"]["competitive_target_identity_metric_runway_author_serialized_count"] == 0
+    assert payload["summary"]["competitive_target_identity_metric_runway_first_target_id"] == "H1319"
+    assert payload["summary"]["competitive_target_identity_metric_runway_first_blocked_target_id"] == "H1319"
+    assert payload["summary"]["competitive_target_identity_metric_runway_first_blocker"] == "native_pdb_missing"
+    assert payload["summary"]["competitive_target_identity_metric_runway_html"] == (
+        "casp17/casp17_competitive_floor_target_identity_metric_runway_current.html"
+    )
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_status"] == (
+        "casp17_competitive_floor_native_provenance_operator_packet_open_actions"
+    )
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_target_count"] == 3
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_target_open_count"] == 3
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_target_ready_count"] == 0
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_action_count"] == 12
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_open_action_count"] == 12
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_native_action_count"] == 3
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_evidence_action_count"] == 3
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_provenance_action_count"] == 3
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_manifest_action_count"] == 3
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_metric_requirement_count"] == 27
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_prediction_count"] == 3
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_native_count"] == 0
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_provenance_count"] == 0
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_evidence_ref_count"] == 0
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_native_candidate_count"] == 5
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_native_candidate_blocked_count"] == 4
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_native_candidate_no_candidate_count"] == 1
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_proof_eligible_count"] == 0
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_author_serialized_count"] == 0
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_first_target_id"] == "H1319"
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_first_open_target_id"] == "H1319"
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_html"] == (
+        "casp17/casp17_competitive_floor_native_provenance_operator_packet_current.html"
+    )
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_completion_audit_status"] == (
+        "casp17_competitive_floor_native_provenance_operator_packet_completion_audit_pass"
+    )
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_completion_audit_target_count"] == 3
+    assert (
+        payload["summary"]["competitive_floor_native_provenance_operator_packet_completion_audit_target_pass_count"]
+        == 3
+    )
+    assert (
+        payload["summary"]["competitive_floor_native_provenance_operator_packet_completion_audit_target_blocked_count"]
+        == 0
+    )
+    assert (
+        payload["summary"]["competitive_floor_native_provenance_operator_packet_completion_audit_packet_folder_count"]
+        == 3
+    )
+    assert (
+        payload["summary"]["competitive_floor_native_provenance_operator_packet_completion_audit_packet_readme_count"]
+        == 3
+    )
+    assert (
+        payload["summary"]["competitive_floor_native_provenance_operator_packet_completion_audit_packet_manifest_count"]
+        == 3
+    )
+    assert (
+        payload["summary"]["competitive_floor_native_provenance_operator_packet_completion_audit_actions_csv_count"]
+        == 3
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_native_provenance_operator_packet_completion_audit_native_candidates_csv_count"
+        ]
+        == 3
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_native_provenance_operator_packet_completion_audit_action_expected_row_count"
+        ]
+        == 12
+    )
+    assert (
+        payload["summary"]["competitive_floor_native_provenance_operator_packet_completion_audit_action_csv_row_count"]
+        == 12
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_native_provenance_operator_packet_completion_audit_action_csv_mismatch_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_native_provenance_operator_packet_completion_audit_native_candidate_expected_row_count"
+        ]
+        == 5
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_native_provenance_operator_packet_completion_audit_native_candidate_csv_row_count"
+        ]
+        == 5
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_native_provenance_operator_packet_completion_audit_native_candidate_csv_mismatch_count"
+        ]
+        == 0
+    )
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_completion_audit_native_action_count"] == 3
+    assert (
+        payload["summary"]["competitive_floor_native_provenance_operator_packet_completion_audit_evidence_action_count"]
+        == 3
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_native_provenance_operator_packet_completion_audit_provenance_action_count"
+        ]
+        == 3
+    )
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_completion_audit_manifest_action_count"] == 3
+    assert (
+        payload["summary"][
+            "competitive_floor_native_provenance_operator_packet_completion_audit_metric_requirement_count"
+        ]
+        == 27
+    )
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_completion_audit_prediction_count"] == 3
+    assert (
+        payload["summary"]["competitive_floor_native_provenance_operator_packet_completion_audit_ts_prediction_count"]
+        == 3
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_native_provenance_operator_packet_completion_audit_native_dropzone_path_count"
+        ]
+        == 3
+    )
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_completion_audit_native_file_count"] == 0
+    assert (
+        payload["summary"][
+            "competitive_floor_native_provenance_operator_packet_completion_audit_provenance_template_count"
+        ]
+        == 3
+    )
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_completion_audit_manifest_stub_count"] == 3
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_completion_audit_metric_runway_count"] == 3
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_completion_audit_workorder_count"] == 3
+    assert (
+        payload["summary"][
+            "competitive_floor_native_provenance_operator_packet_completion_audit_packet_coordinate_copy_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_native_provenance_operator_packet_completion_audit_out_dir_coordinate_copy_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"]["competitive_floor_native_provenance_operator_packet_completion_audit_proof_eligible_count"]
+        == 0
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_native_provenance_operator_packet_completion_audit_author_serialized_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"]["competitive_floor_native_provenance_operator_packet_completion_audit_first_target_id"]
+        == "H1319"
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_native_provenance_operator_packet_completion_audit_first_blocked_target_id"
+        ]
+        == ""
+    )
+    assert payload["summary"]["competitive_floor_native_provenance_operator_packet_completion_audit_html"] == (
+        "casp17/casp17_competitive_floor_native_provenance_operator_packet_completion_audit_current.html"
+    )
+    assert payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_status"] == (
+        "casp17_competitive_floor_native_provenance_metric_unlock_bridge_blocked_awaiting_operator_values"
+    )
+    assert payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_target_count"] == 3
+    assert payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_target_ready_count"] == 0
+    assert payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_target_blocked_count"] == 3
+    assert payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_packet_pass_count"] == 3
+    assert (
+        payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_workorder_audit_pass_count"]
+        == 0
+    )
+    assert payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_metric_runway_ready_count"] == 0
+    assert payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_metric_requirement_count"] == 27
+    assert payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_prediction_count"] == 3
+    assert payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_ts_prediction_count"] == 3
+    assert (
+        payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_native_dropzone_path_count"]
+        == 3
+    )
+    assert payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_native_file_count"] == 0
+    assert payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_provenance_template_count"] == 3
+    assert payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_manifest_stub_count"] == 3
+    assert payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_metric_runway_count"] == 3
+    assert payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_workorder_count"] == 3
+    assert payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_packet_action_count"] == 12
+    assert payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_packet_native_action_count"] == 3
+    assert payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_packet_evidence_action_count"] == 3
+    assert (
+        payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_packet_provenance_action_count"]
+        == 3
+    )
+    assert payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_packet_manifest_action_count"] == 3
+    assert payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_native_candidate_count"] == 5
+    assert (
+        payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_native_candidate_blocked_count"]
+        == 4
+    )
+    assert (
+        payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_native_candidate_no_candidate_count"]
+        == 1
+    )
+    assert payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_provenance_ready_count"] == 0
+    assert (
+        payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_evidence_ref_verified_count"]
+        == 0
+    )
+    assert (
+        payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_identity_discovery_cleared_count"]
+        == 0
+    )
+    assert payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_proof_eligible_count"] == 0
+    assert payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_author_serialized_count"] == 0
+    assert payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_first_target_id"] == "H1319"
+    assert (
+        payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_first_blocked_target_id"]
+        == "H1319"
+    )
+    assert (
+        payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_first_blocker"]
+        == "native_pdb_missing"
+    )
+    assert payload["summary"]["competitive_floor_native_provenance_metric_unlock_bridge_html"] == (
+        "casp17/casp17_competitive_floor_native_provenance_metric_unlock_bridge_current.html"
+    )
+    assert payload["summary"]["competitive_floor_first_native_provenance_unlock_kit_status"] == (
+        "casp17_competitive_floor_first_native_provenance_unlock_kit_ready_for_operator_fill"
+    )
+    assert payload["summary"]["competitive_floor_first_native_provenance_unlock_kit_target_id"] == "H1319"
+    assert payload["summary"]["competitive_floor_first_native_provenance_unlock_kit_target_count"] == 1
+    assert payload["summary"]["competitive_floor_first_native_provenance_unlock_kit_required_field_count"] == 13
+    assert payload["summary"]["competitive_floor_first_native_provenance_unlock_kit_required_action_count"] == 4
+    assert payload["summary"]["competitive_floor_first_native_provenance_unlock_kit_action_bundle_action_count"] == 4
+    assert payload["summary"]["competitive_floor_first_native_provenance_unlock_kit_packet_file_pass"] == "True"
+    assert payload["summary"]["competitive_floor_first_native_provenance_unlock_kit_metric_runway_ready"] == "False"
+    assert payload["summary"]["competitive_floor_first_native_provenance_unlock_kit_workorder_audit_pass"] == "False"
+    assert payload["summary"]["competitive_floor_first_native_provenance_unlock_kit_prediction_count"] == 1
+    assert payload["summary"]["competitive_floor_first_native_provenance_unlock_kit_ts_prediction_count"] == 1
+    assert payload["summary"]["competitive_floor_first_native_provenance_unlock_kit_native_dropzone_path_count"] == 1
+    assert payload["summary"]["competitive_floor_first_native_provenance_unlock_kit_native_file_count"] == 0
+    assert payload["summary"]["competitive_floor_first_native_provenance_unlock_kit_provenance_template_count"] == 1
+    assert payload["summary"]["competitive_floor_first_native_provenance_unlock_kit_manifest_stub_count"] == 1
+    assert payload["summary"]["competitive_floor_first_native_provenance_unlock_kit_metric_runway_count"] == 1
+    assert payload["summary"]["competitive_floor_first_native_provenance_unlock_kit_workorder_count"] == 1
+    assert payload["summary"]["competitive_floor_first_native_provenance_unlock_kit_provenance_ready_count"] == 0
+    assert payload["summary"]["competitive_floor_first_native_provenance_unlock_kit_evidence_ref_verified_count"] == 0
+    assert (
+        payload["summary"]["competitive_floor_first_native_provenance_unlock_kit_identity_discovery_cleared_count"]
+        == 0
+    )
+    assert payload["summary"]["competitive_floor_first_native_provenance_unlock_kit_proof_eligible_count"] == 0
+    assert payload["summary"]["competitive_floor_first_native_provenance_unlock_kit_author_serialized_count"] == 0
+    assert payload["summary"]["competitive_floor_first_native_provenance_unlock_kit_coordinate_copy_count"] == 0
+    assert (
+        payload["summary"]["competitive_floor_first_native_provenance_unlock_kit_folder"]
+        == (
+            "casp17/competitive_floor_first_native_provenance_unlock_kit/"
+            "H1319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex"
+        )
+    )
+    assert (
+        payload["summary"]["competitive_floor_first_native_provenance_unlock_kit_first_blocker"]
+        == "native_pdb_missing"
+    )
+    assert payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_status"] == (
+        "casp17_competitive_floor_batch_native_provenance_unlock_kit_ready_for_operator_fill"
+    )
+    assert payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_target_count"] == 3
+    assert payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_target_ready_count"] == 3
+    assert payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_target_blocked_count"] == 0
+    assert payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_target_ids"] == "H1319,H1321,H2324"
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_required_field_per_target_count"]
+        == 13
+    )
+    assert payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_required_field_total_count"] == 39
+    assert payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_required_action_count"] == 12
+    assert payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_action_bundle_action_count"] == 12
+    assert payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_packet_file_pass_count"] == 3
+    assert payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_metric_runway_ready_count"] == 0
+    assert payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_workorder_audit_pass_count"] == 0
+    assert payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_prediction_count"] == 3
+    assert payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_ts_prediction_count"] == 3
+    assert payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_native_dropzone_path_count"] == 3
+    assert payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_native_file_count"] == 0
+    assert payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_provenance_template_count"] == 3
+    assert payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_manifest_stub_count"] == 3
+    assert payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_metric_runway_count"] == 3
+    assert payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_workorder_count"] == 3
+    assert payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_provenance_ready_count"] == 0
+    assert payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_evidence_ref_verified_count"] == 0
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_identity_discovery_cleared_count"]
+        == 0
+    )
+    assert payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_proof_eligible_count"] == 0
+    assert payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_author_serialized_count"] == 0
+    assert payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_coordinate_copy_count"] == 0
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_folder"]
+        == "casp17/competitive_floor_batch_native_provenance_unlock_kit"
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_first_blocked_target_id"]
+        == "H1319"
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_first_blocker"]
+        == "native_pdb_missing"
+    )
+    assert payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_completion_audit_status"] == (
+        "casp17_competitive_floor_batch_native_provenance_unlock_kit_completion_audit_pass"
+    )
+    assert payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_count"] == 3
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_pass_count"]
+        == 3
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_blocked_count"]
+        == 0
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_batch_file_present_count"
+        ]
+        == 6
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_batch_file_expected_count"
+        ]
+        == 6
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_batch_intake_expected_count"
+        ]
+        == 3
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_completion_audit_batch_intake_csv_count"]
+        == 3
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_batch_intake_mismatch_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_batch_action_expected_count"
+        ]
+        == 12
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_completion_audit_batch_action_csv_count"]
+        == 12
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_batch_action_mismatch_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_folder_count"]
+        == 3
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_readme_count"]
+        == 3
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_manifest_count"]
+        == 3
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_intake_file_count"
+        ]
+        == 3
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_action_file_count"
+        ]
+        == 3
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_rerun_file_count"
+        ]
+        == 3
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_intake_expected_count"
+        ]
+        == 3
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_intake_csv_count"]
+        == 3
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_intake_mismatch_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_action_expected_count"
+        ]
+        == 12
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_action_csv_count"]
+        == 12
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_action_mismatch_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_completion_audit_coordinate_copy_count"]
+        == 0
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_target_coordinate_copy_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_completion_audit_native_file_count"]
+        == 0
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_completion_audit_provenance_ready_count"]
+        == 0
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_evidence_ref_verified_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_unlock_kit_completion_audit_identity_discovery_cleared_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_completion_audit_proof_eligible_count"]
+        == 0
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_unlock_kit_completion_audit_author_serialized_count"]
+        == 0
+    )
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_gate_status"] == (
+        "casp17_competitive_floor_batch_native_provenance_value_gate_blocked_awaiting_operator_values"
+    )
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_gate_target_count"] == 3
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_gate_target_ready_count"] == 0
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_gate_target_blocked_count"] == 3
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_value_gate_required_field_per_target_count"]
+        == 13
+    )
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_gate_required_field_total_count"] == 39
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_gate_ready_value_count"] == 3
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_gate_blocked_value_count"] == 36
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_gate_native_source_ready_count"] == 0
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_gate_evidence_ref_ready_count"] == 0
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_gate_clearance_ready_count"] == 0
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_gate_date_ready_count"] == 0
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_gate_boolean_ready_count"] == 0
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_gate_coordinate_copy_count"] == 0
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_gate_target_coordinate_copy_count"] == 0
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_gate_proof_eligible_count"] == 0
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_gate_author_serialized_count"] == 0
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_value_gate_first_blocked_target_id"]
+        == "H1319"
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_value_gate_first_blocker"]
+        == "native_source_pdb_required"
+    )
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_action_board_status"] == (
+        "casp17_competitive_floor_batch_native_provenance_value_action_board_open_actions"
+    )
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_action_board_target_count"] == 3
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_action_board_target_open_count"] == 3
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_action_board_target_ready_count"] == 0
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_action_board_action_count"] == 36
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_action_board_open_action_count"] == 36
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_action_board_native_action_count"] == 3
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_action_board_evidence_action_count"] == 3
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_action_board_clearance_action_count"] == 6
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_action_board_operator_action_count"] == 3
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_action_board_date_action_count"] == 6
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_action_board_boolean_action_count"] == 15
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_action_board_review_action_count"] == 0
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_action_board_coordinate_copy_count"] == 0
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_action_board_proof_eligible_count"] == 0
+    assert payload["summary"]["competitive_floor_batch_native_provenance_value_action_board_author_serialized_count"] == 0
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_value_action_board_first_open_target_id"]
+        == "H1319"
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_value_action_board_first_open_field"]
+        == "native_source_pdb"
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_value_action_board_first_open_blocker"]
+        == "native_source_pdb_required"
+    )
+    assert payload["summary"][
+        "competitive_floor_batch_native_provenance_value_action_board_completion_audit_status"
+    ] == "casp17_competitive_floor_batch_native_provenance_value_action_board_completion_audit_pass"
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_count"]
+        == 3
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_pass_count"
+        ]
+        == 3
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_blocked_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_value_action_board_completion_audit_action_expected_count"
+        ]
+        == 36
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_value_action_board_completion_audit_action_json_count"
+        ]
+        == 36
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_value_action_board_completion_audit_action_mismatch_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_folder_count"
+        ]
+        == 3
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_readme_count"
+        ]
+        == 3
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_action_file_count"
+        ]
+        == 3
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_action_expected_count"
+        ]
+        == 36
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_action_csv_count"
+        ]
+        == 36
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_action_mismatch_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_value_action_board_completion_audit_coordinate_copy_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_value_action_board_completion_audit_target_coordinate_copy_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_value_action_board_completion_audit_proof_eligible_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_value_action_board_completion_audit_author_serialized_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_operator_fill_preflight_status"]
+        == "casp17_competitive_floor_batch_native_provenance_operator_fill_preflight_ready_for_operator_fill"
+    )
+    assert payload["summary"]["competitive_floor_batch_native_provenance_operator_fill_preflight_target_count"] == 3
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_operator_fill_preflight_target_ready_count"]
+        == 3
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_operator_fill_preflight_target_blocked_count"]
+        == 0
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_operator_fill_preflight_open_action_count"]
+        == 36
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_operator_fill_preflight_native_action_count"]
+        == 3
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_operator_fill_preflight_evidence_action_count"]
+        == 3
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_operator_fill_preflight_clearance_action_count"]
+        == 6
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_operator_fill_preflight_operator_action_count"]
+        == 3
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_operator_fill_preflight_date_action_count"]
+        == 6
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_operator_fill_preflight_boolean_action_count"]
+        == 15
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_operator_fill_preflight_review_action_count"]
+        == 0
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_operator_fill_preflight_coordinate_copy_count"]
+        == 0
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_operator_fill_preflight_target_coordinate_copy_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_operator_fill_preflight_proof_eligible_count"]
+        == 0
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_operator_fill_preflight_author_serialized_count"]
+        == 0
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_operator_fill_preflight_first_ready_target_id"]
+        == "H1319"
+    )
+    assert (
+        payload["summary"]["competitive_floor_batch_native_provenance_operator_fill_preflight_first_blocked_target_id"]
+        == ""
+    )
+    assert payload["summary"]["competitive_floor_batch_native_provenance_operator_fill_preflight_first_blocker"] == ""
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_status"
+        ]
+        == "casp17_competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_pass"
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_target_count"
+        ]
+        == 3
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_target_pass_count"
+        ]
+        == 3
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_target_blocked_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_root_manifest_present"
+        ]
+        == 1
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_target_folder_count"
+        ]
+        == 3
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_target_readme_count"
+        ]
+        == 3
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_target_operator_template_file_count"
+        ]
+        == 3
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_target_field_policy_file_count"
+        ]
+        == 3
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_operator_template_expected_rows"
+        ]
+        == 3
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_operator_template_csv_rows"
+        ]
+        == 3
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_operator_template_row_mismatch_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_field_policy_expected_rows"
+        ]
+        == 36
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_field_policy_csv_rows"
+        ]
+        == 36
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_field_policy_row_mismatch_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_coordinate_copy_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_target_coordinate_copy_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_proof_eligible_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_author_serialized_count"
+        ]
+        == 0
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_first_blocked_target_id"
+        ]
+        == ""
+    )
+    assert (
+        payload["summary"][
+            "competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit_first_blocker"
+        ]
+        == ""
+    )
     assert payload["summary"]["competitive_target_identity_clearance_action_board_status"] == "open_actions"
     assert payload["summary"]["competitive_target_identity_clearance_action_board_action_count"] == 12
     assert payload["summary"]["competitive_target_identity_clearance_action_board_open_count"] == 12
@@ -4765,6 +8246,58 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["strict_blind_internal_prediction_source_audit_internal_blocked_count"] == 1
     assert payload["summary"]["strict_blind_internal_prediction_source_audit_allowed_internal_source_count"] == 0
     assert payload["summary"]["strict_blind_internal_prediction_source_audit_template_count"] == 1
+    assert payload["summary"]["strict_blind_internal_candidate_filesystem_sweep_status"] == (
+        "strict_blind_filesystem_sweep_operator_review_required"
+    )
+    assert payload["summary"]["strict_blind_internal_candidate_filesystem_sweep_file_count"] == 9968
+    assert payload["summary"]["strict_blind_internal_candidate_filesystem_sweep_atom_like_count"] == 9968
+    assert payload["summary"]["strict_blind_internal_candidate_filesystem_sweep_verified_count"] == 0
+    assert payload["summary"]["strict_blind_internal_candidate_filesystem_sweep_unknown_count"] == 4551
+    assert payload["summary"]["strict_blind_internal_candidate_filesystem_sweep_current_count"] == 1810
+    assert payload["summary"]["strict_blind_internal_candidate_filesystem_sweep_massivefold_count"] == 2895
+    assert payload["summary"]["strict_blind_internal_candidate_filesystem_sweep_official_count"] == 387
+    assert payload["summary"]["strict_blind_internal_candidate_filesystem_sweep_native_count"] == 257
+    assert payload["summary"]["strict_blind_internal_candidate_filesystem_sweep_top5_count"] == 75
+    assert payload["summary"]["strict_blind_internal_candidate_filesystem_sweep_dropzone_count"] == 0
+    assert payload["summary"]["strict_blind_internal_candidate_filesystem_sweep_first_unknown"] == (
+        "archives/old_internal/candidate.pdb"
+    )
+    assert payload["summary"]["strict_blind_unknown_candidate_triage_status"] == (
+        "strict_blind_unknown_triage_internal_like_review_required"
+    )
+    assert payload["summary"]["strict_blind_unknown_candidate_triage_unknown_count"] == 4551
+    assert payload["summary"]["strict_blind_unknown_candidate_triage_sweep_unknown_count"] == 4551
+    assert payload["summary"]["strict_blind_unknown_candidate_triage_promotion_ready_count"] == 0
+    assert payload["summary"]["strict_blind_unknown_candidate_triage_internal_like_count"] == 166
+    assert payload["summary"]["strict_blind_unknown_candidate_triage_public_count"] == 3962
+    assert payload["summary"]["strict_blind_unknown_candidate_triage_run_review_count"] == 406
+    assert payload["summary"]["strict_blind_unknown_candidate_triage_archive_count"] == 16
+    assert payload["summary"]["strict_blind_unknown_candidate_triage_data_other_count"] == 0
+    assert payload["summary"]["strict_blind_unknown_candidate_triage_tmp_misc_count"] == 1
+    assert payload["summary"]["strict_blind_unknown_candidate_triage_other_count"] == 0
+    assert payload["summary"]["strict_blind_unknown_candidate_triage_first_internal"] == (
+        "data/internal_structures/nightly/internal_candidate.pdb"
+    )
+    assert payload["summary"]["strict_blind_internal_like_source_review_status"] == (
+        "strict_blind_internal_like_source_review_all_post_native"
+    )
+    assert payload["summary"]["strict_blind_internal_like_source_review_candidate_count"] == 166
+    assert payload["summary"]["strict_blind_internal_like_source_review_triage_internal_like_count"] == 166
+    assert payload["summary"]["strict_blind_internal_like_source_review_triage_count_match"] == "True"
+    assert payload["summary"]["strict_blind_internal_like_source_review_mapped_candidate_count"] == 166
+    assert payload["summary"]["strict_blind_internal_like_source_review_pre_native_candidate_count"] == 0
+    assert payload["summary"]["strict_blind_internal_like_source_review_post_native_blocked_count"] == 166
+    assert payload["summary"]["strict_blind_internal_like_source_review_same_day_timestamp_required_count"] == 0
+    assert payload["summary"]["strict_blind_internal_like_source_review_prediction_date_missing_count"] == 0
+    assert payload["summary"]["strict_blind_internal_like_source_review_unmapped_candidate_count"] == 0
+    assert payload["summary"]["strict_blind_internal_like_source_review_promotion_ready_count"] == 0
+    assert payload["summary"]["strict_blind_internal_like_source_review_target_count"] == 10
+    assert payload["summary"]["strict_blind_internal_like_source_review_target_all_post_native_count"] == 10
+    assert payload["summary"]["strict_blind_internal_like_source_review_target_pre_native_candidate_count"] == 0
+    assert payload["summary"]["strict_blind_internal_like_source_review_earliest_prediction_date"] == "2026-02-19"
+    assert payload["summary"]["strict_blind_internal_like_source_review_latest_prediction_date"] == "2026-02-22"
+    assert payload["summary"]["strict_blind_internal_like_source_review_first_blocked_target_id"] == "HIST_BBA5"
+    assert payload["summary"]["strict_blind_internal_like_source_review_first_blocker"] == "prediction_not_before_native"
     assert payload["summary"]["strict_blind_internal_prediction_source_gate_status"] == (
         "awaiting_internal_prediction_source_gate_fields"
     )
@@ -4831,6 +8364,27 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     )
     assert payload["summary"]["strict_blind_source_gate_source_request_packet_first_missing_operator_field"] == (
         "source_id"
+    )
+    assert payload["summary"]["strict_blind_source_request_resolution_board_status"] == (
+        "source_request_resolution_all_current_candidates_blocked"
+    )
+    assert payload["summary"]["strict_blind_source_request_resolution_board_request_count"] == 17
+    assert payload["summary"]["strict_blind_source_request_resolution_board_ready_count"] == 0
+    assert payload["summary"]["strict_blind_source_request_resolution_board_blocked_count"] == 17
+    assert payload["summary"]["strict_blind_source_request_resolution_board_monomer_count"] == 10
+    assert payload["summary"]["strict_blind_source_request_resolution_board_complex_count"] == 7
+    assert payload["summary"]["strict_blind_source_request_resolution_board_all_post_native_monomer_count"] == 10
+    assert payload["summary"]["strict_blind_source_request_resolution_board_candidate_replacement_required_count"] == 7
+    assert payload["summary"]["strict_blind_source_request_resolution_board_pre_native_review_possible_count"] == 0
+    assert payload["summary"]["strict_blind_source_request_resolution_board_chronology_review_missing_count"] == 0
+    assert payload["summary"]["strict_blind_source_request_resolution_board_internal_like_post_native_candidate_count"] == 166
+    assert payload["summary"]["strict_blind_source_request_resolution_board_internal_like_pre_native_candidate_count"] == 0
+    assert payload["summary"]["strict_blind_source_request_resolution_board_first_blocked_request_id"] == (
+        "source_request_001"
+    )
+    assert payload["summary"]["strict_blind_source_request_resolution_board_first_blocked_target_id"] == "HIST_BBA5"
+    assert payload["summary"]["strict_blind_source_request_resolution_board_first_blocker"] == (
+        "all_internal_like_candidates_post_native"
     )
     assert payload["summary"]["strict_blind_source_request_fulfillment_gate_status"] == (
         "awaiting_source_request_operator_values"
@@ -5046,6 +8600,34 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         "source_id"
     )
     assert payload["summary"]["strict_blind_first_unlock_evidence_review_gate_first_blocker"] == (
+        "template_operator_value_missing"
+    )
+    assert payload["summary"]["strict_blind_first_slot_source_gate_blocker_ledger_status"] == (
+        "awaiting_first_slot_source_gate_operator_evidence"
+    )
+    assert payload["summary"]["strict_blind_first_slot_source_gate_blocker_ledger_required_benchmark_id"] == (
+        "hist_REQUIRED_MONOMER_001"
+    )
+    assert payload["summary"]["strict_blind_first_slot_source_gate_blocker_ledger_required_target_id"] == (
+        "REQUIRED_MONOMER_001"
+    )
+    assert payload["summary"]["strict_blind_first_slot_source_gate_blocker_ledger_required_scope"] == "monomer"
+    assert payload["summary"]["strict_blind_first_slot_source_gate_blocker_ledger_field_count"] == 11
+    assert payload["summary"]["strict_blind_first_slot_source_gate_blocker_ledger_ready_field_count"] == 0
+    assert payload["summary"]["strict_blind_first_slot_source_gate_blocker_ledger_blocked_field_count"] == 11
+    assert payload["summary"]["strict_blind_first_slot_source_gate_blocker_ledger_gate_pass_count"] == 3
+    assert payload["summary"]["strict_blind_first_slot_source_gate_blocker_ledger_gate_blocked_count"] == 13
+    assert payload["summary"]["strict_blind_first_slot_source_gate_blocker_ledger_gate_check_count"] == 16
+    assert payload["summary"]["strict_blind_first_slot_source_gate_blocker_ledger_operator_ready_count"] == 0
+    assert payload["summary"]["strict_blind_first_slot_source_gate_blocker_ledger_operator_awaiting_count"] == 11
+    assert payload["summary"]["strict_blind_first_slot_source_gate_blocker_ledger_review_ready_count"] == 0
+    assert payload["summary"]["strict_blind_first_slot_source_gate_blocker_ledger_review_blocked_count"] == 11
+    assert payload["summary"]["strict_blind_first_slot_source_gate_blocker_ledger_file_ready_count"] == 0
+    assert payload["summary"]["strict_blind_first_slot_source_gate_blocker_ledger_file_blocked_count"] == 2
+    assert payload["summary"]["strict_blind_first_slot_source_gate_blocker_ledger_first_blocked_field"] == (
+        "source_id"
+    )
+    assert payload["summary"]["strict_blind_first_slot_source_gate_blocker_ledger_first_blocker"] == (
         "template_operator_value_missing"
     )
     assert payload["summary"]["strict_blind_first_unlock_evidence_sync_plan_status"] == (
@@ -5379,6 +8961,524 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["protein_complex_massivefold_self_assessment_low_margin_count"] == 1
     assert payload["summary"]["protein_complex_massivefold_self_assessment_low_margin_threshold"] == "2.0"
     assert payload["summary"]["protein_complex_massivefold_self_assessment_policy"] == (
+        "do_not_mark_as_internal_prediction"
+    )
+    assert payload["summary"]["massivefold_model1_risk_queue_status"] == (
+        "massivefold_model1_risk_queue_ready_external_only"
+    )
+    assert payload["summary"]["massivefold_model1_risk_queue_target_count"] == 4
+    assert payload["summary"]["massivefold_model1_risk_queue_ready_target_count"] == 4
+    assert payload["summary"]["massivefold_model1_risk_queue_blocked_target_count"] == 0
+    assert payload["summary"]["massivefold_model1_risk_queue_low_margin_count"] == 2
+    assert payload["summary"]["massivefold_model1_risk_queue_critical_count"] == 1
+    assert payload["summary"]["massivefold_model1_risk_queue_rna_hybrid_count"] == 2
+    assert payload["summary"]["massivefold_model1_risk_queue_protein_complex_count"] == 2
+    assert payload["summary"]["massivefold_model1_risk_queue_first_target_id"] == "H1311"
+    assert payload["summary"]["massivefold_model1_risk_queue_first_group"] == "protein_complex"
+    assert payload["summary"]["massivefold_model1_risk_queue_first_gap"] == "0.05"
+    assert payload["summary"]["massivefold_model1_risk_queue_first_tier"] == "critical_model1_margin"
+    assert payload["summary"]["massivefold_model1_risk_queue_policy"] == (
+        "do_not_mark_as_internal_prediction"
+    )
+    assert payload["summary"]["massivefold_critical_rerank_experiment_status"] == (
+        "massivefold_critical_rerank_experiment_ready_external_only"
+    )
+    assert payload["summary"]["massivefold_critical_rerank_experiment_count"] == 2
+    assert payload["summary"]["massivefold_critical_rerank_ready_experiment_count"] == 2
+    assert payload["summary"]["massivefold_critical_rerank_blocked_experiment_count"] == 0
+    assert payload["summary"]["massivefold_critical_rerank_rna_hybrid_count"] == 1
+    assert payload["summary"]["massivefold_critical_rerank_protein_complex_count"] == 1
+    assert payload["summary"]["massivefold_critical_rerank_high_diversity_count"] == 1
+    assert payload["summary"]["massivefold_critical_rerank_geometry_review_count"] == 1
+    assert payload["summary"]["massivefold_critical_rerank_low_confidence_review_count"] == 1
+    assert payload["summary"]["massivefold_critical_rerank_first_target_id"] == "R2350"
+    assert payload["summary"]["massivefold_critical_rerank_first_group"] == "rna_hybrid"
+    assert payload["summary"]["massivefold_critical_rerank_first_gap"] == "0.02"
+    assert payload["summary"]["massivefold_critical_rerank_first_order"] == (
+        "top5_diversity_then_geometry_then_model1_gap"
+    )
+    assert payload["summary"]["massivefold_critical_rerank_formula_id"] == (
+        "gap_plus_geometry_plus_diversity_penalty_v1"
+    )
+    assert payload["summary"]["massivefold_critical_rerank_policy"] == (
+        "do_not_mark_as_internal_prediction"
+    )
+    assert payload["summary"]["massivefold_critical_rerank_score_ledger_status"] == (
+        "massivefold_critical_rerank_score_ledger_ready_external_only"
+    )
+    assert payload["summary"]["massivefold_critical_rerank_score_ledger_count"] == 2
+    assert payload["summary"]["massivefold_critical_rerank_score_ledger_ready_count"] == 2
+    assert payload["summary"]["massivefold_critical_rerank_score_ledger_blocked_count"] == 0
+    assert payload["summary"]["massivefold_critical_rerank_score_ledger_immediate_count"] == 0
+    assert payload["summary"]["massivefold_critical_rerank_score_ledger_calibrate_count"] == 2
+    assert payload["summary"]["massivefold_critical_rerank_score_ledger_watch_count"] == 0
+    assert payload["summary"]["massivefold_critical_rerank_score_ledger_rna_hybrid_count"] == 1
+    assert payload["summary"]["massivefold_critical_rerank_score_ledger_protein_complex_count"] == 1
+    assert payload["summary"]["massivefold_critical_rerank_score_ledger_top_target_id"] == "R2350"
+    assert payload["summary"]["massivefold_critical_rerank_score_ledger_top_group"] == "rna_hybrid"
+    assert payload["summary"]["massivefold_critical_rerank_score_ledger_top_score"] == "66"
+    assert payload["summary"]["massivefold_critical_rerank_score_ledger_top_band"] == (
+        "calibrate_before_model1_freeze"
+    )
+    assert payload["summary"]["massivefold_critical_rerank_score_ledger_top_action"] == (
+        "run_targeted_probe_then_freeze_model1_if_consistent"
+    )
+    assert payload["summary"]["massivefold_critical_rerank_score_ledger_policy"] == (
+        "do_not_mark_as_internal_prediction"
+    )
+    assert payload["summary"]["massivefold_model1_selection_calibration_gate_status"] == (
+        "massivefold_model1_selection_calibration_gate_ready_external_only"
+    )
+    assert payload["summary"]["massivefold_model1_selection_calibration_gate_freeze_status"] == (
+        "model1_freeze_blocked_by_calibration"
+    )
+    assert payload["summary"]["massivefold_model1_selection_calibration_gate_count"] == 2
+    assert payload["summary"]["massivefold_model1_selection_calibration_gate_ready_count"] == 2
+    assert payload["summary"]["massivefold_model1_selection_calibration_gate_blocked_count"] == 0
+    assert payload["summary"]["massivefold_model1_selection_calibration_gate_hold_count"] == 1
+    assert payload["summary"]["massivefold_model1_selection_calibration_gate_watch_count"] == 1
+    assert payload["summary"]["massivefold_model1_selection_calibration_gate_probe_required_count"] == 2
+    assert payload["summary"]["massivefold_model1_selection_calibration_gate_freeze_ready_count"] == 0
+    assert payload["summary"]["massivefold_model1_selection_calibration_gate_rna_hybrid_count"] == 1
+    assert payload["summary"]["massivefold_model1_selection_calibration_gate_protein_complex_count"] == 1
+    assert payload["summary"]["massivefold_model1_selection_calibration_gate_first_target_id"] == "R2350"
+    assert payload["summary"]["massivefold_model1_selection_calibration_gate_first_group"] == "rna_hybrid"
+    assert payload["summary"]["massivefold_model1_selection_calibration_gate_top_risk_score"] == "66"
+    assert payload["summary"]["massivefold_model1_selection_calibration_gate_first_decision"] == (
+        "hold_model1_freeze_probe_required"
+    )
+    assert payload["summary"]["massivefold_model1_selection_calibration_gate_first_probe"] == (
+        "top5_rerank_consistency_probe"
+    )
+    assert payload["summary"]["massivefold_model1_selection_calibration_gate_rule_id"] == (
+        "no_native_model1_selection_gate_v1"
+    )
+    assert payload["summary"]["massivefold_model1_selection_calibration_gate_policy"] == (
+        "do_not_mark_as_internal_prediction"
+    )
+    assert payload["summary"]["massivefold_model1_probe_worklist_status"] == (
+        "massivefold_model1_probe_worklist_ready_external_only"
+    )
+    assert payload["summary"]["massivefold_model1_probe_worklist_count"] == 2
+    assert payload["summary"]["massivefold_model1_probe_worklist_ready_count"] == 2
+    assert payload["summary"]["massivefold_model1_probe_worklist_blocked_count"] == 0
+    assert payload["summary"]["massivefold_model1_probe_worklist_top5_count"] == 1
+    assert payload["summary"]["massivefold_model1_probe_worklist_lightweight_count"] == 1
+    assert payload["summary"]["massivefold_model1_probe_worklist_priority1_count"] == 1
+    assert payload["summary"]["massivefold_model1_probe_worklist_priority2_count"] == 1
+    assert payload["summary"]["massivefold_model1_probe_worklist_rna_hybrid_count"] == 1
+    assert payload["summary"]["massivefold_model1_probe_worklist_protein_complex_count"] == 1
+    assert payload["summary"]["massivefold_model1_probe_worklist_first_target_id"] == "R2350"
+    assert payload["summary"]["massivefold_model1_probe_worklist_first_group"] == "rna_hybrid"
+    assert payload["summary"]["massivefold_model1_probe_worklist_first_score"] == "66"
+    assert payload["summary"]["massivefold_model1_probe_worklist_first_probe"] == (
+        "top5_rerank_consistency_probe"
+    )
+    assert payload["summary"]["massivefold_model1_probe_worklist_unlock_policy"] == (
+        "freeze_after_probe_allowed_only_if_exit_criterion_passes"
+    )
+    assert payload["summary"]["massivefold_model1_probe_worklist_policy"] == (
+        "do_not_mark_as_internal_prediction"
+    )
+    assert payload["summary"]["massivefold_model1_probe_outcome_status"] == (
+        "massivefold_model1_probe_outcome_ready_external_only"
+    )
+    assert payload["summary"]["massivefold_model1_probe_outcome_count"] == 2
+    assert payload["summary"]["massivefold_model1_probe_outcome_ready_count"] == 2
+    assert payload["summary"]["massivefold_model1_probe_outcome_blocked_count"] == 0
+    assert payload["summary"]["massivefold_model1_probe_outcome_pass_count"] == 2
+    assert payload["summary"]["massivefold_model1_probe_outcome_fail_count"] == 0
+    assert payload["summary"]["massivefold_model1_probe_outcome_freeze_ready_count"] == 2
+    assert payload["summary"]["massivefold_model1_probe_outcome_top5_count"] == 1
+    assert payload["summary"]["massivefold_model1_probe_outcome_lightweight_count"] == 1
+    assert payload["summary"]["massivefold_model1_probe_outcome_rna_hybrid_count"] == 1
+    assert payload["summary"]["massivefold_model1_probe_outcome_protein_complex_count"] == 1
+    assert payload["summary"]["massivefold_model1_probe_outcome_first_target_id"] == "R2350"
+    assert payload["summary"]["massivefold_model1_probe_outcome_first_group"] == "rna_hybrid"
+    assert payload["summary"]["massivefold_model1_probe_outcome_first_result"] == (
+        "probe_pass_model1_retained"
+    )
+    assert payload["summary"]["massivefold_model1_probe_outcome_first_margin"] == "0.1"
+    assert payload["summary"]["massivefold_model1_probe_outcome_first_recommendation"] == (
+        "conditional_model1_freeze_ready_external_only"
+    )
+    assert payload["summary"]["massivefold_model1_probe_outcome_rule_id"] == (
+        "no_native_probe_rescore_v1"
+    )
+    assert payload["summary"]["massivefold_model1_probe_outcome_policy"] == (
+        "do_not_mark_as_internal_prediction"
+    )
+    assert payload["summary"]["massivefold_model1_freeze_decision_packet_status"] == (
+        "massivefold_model1_freeze_decision_packet_ready_external_only"
+    )
+    assert payload["summary"]["massivefold_model1_freeze_decision_packet_count"] == 2
+    assert payload["summary"]["massivefold_model1_freeze_decision_packet_ready_count"] == 2
+    assert payload["summary"]["massivefold_model1_freeze_decision_packet_blocked_count"] == 0
+    assert payload["summary"]["massivefold_model1_freeze_decision_packet_freeze_ready_count"] == 1
+    assert payload["summary"]["massivefold_model1_freeze_decision_packet_freeze_blocked_count"] == 1
+    assert payload["summary"]["massivefold_model1_freeze_decision_packet_conditional_count"] == 1
+    assert payload["summary"]["massivefold_model1_freeze_decision_packet_watch_count"] == 0
+    assert payload["summary"]["massivefold_model1_freeze_decision_packet_manual_review_count"] == 1
+    assert payload["summary"]["massivefold_model1_freeze_decision_packet_rna_hybrid_count"] == 1
+    assert payload["summary"]["massivefold_model1_freeze_decision_packet_protein_complex_count"] == 1
+    assert payload["summary"]["massivefold_model1_freeze_decision_packet_first_ready_target_id"] == "R2350"
+    assert payload["summary"]["massivefold_model1_freeze_decision_packet_first_ready_group"] == "rna_hybrid"
+    assert payload["summary"]["massivefold_model1_freeze_decision_packet_first_ready_decision"] == (
+        "freeze_ready_external_only_conditional"
+    )
+    assert payload["summary"]["massivefold_model1_freeze_decision_packet_first_blocked_target_id"] == "H2312"
+    assert payload["summary"]["massivefold_model1_freeze_decision_packet_first_blocked_group"] == (
+        "protein_complex"
+    )
+    assert payload["summary"]["massivefold_model1_freeze_decision_packet_first_blocked_decision"] == (
+        "freeze_blocked_manual_review"
+    )
+    assert payload["summary"]["massivefold_model1_freeze_decision_packet_rule_id"] == (
+        "no_native_model1_freeze_decision_v1"
+    )
+    assert payload["summary"]["massivefold_model1_freeze_decision_packet_policy"] == (
+        "do_not_mark_as_internal_prediction"
+    )
+    assert payload["summary"]["massivefold_model_selection_ledger_status"] == (
+        "massivefold_model_selection_ledger_ready_external_only"
+    )
+    assert payload["summary"]["massivefold_model_selection_ledger_count"] == 15
+    assert payload["summary"]["massivefold_model_selection_ledger_ready_count"] == 15
+    assert payload["summary"]["massivefold_model_selection_ledger_blocked_count"] == 0
+    assert payload["summary"]["massivefold_model_selection_ledger_conditional_count"] == 2
+    assert payload["summary"]["massivefold_model_selection_ledger_watch_count"] == 1
+    assert payload["summary"]["massivefold_model_selection_ledger_manual_review_count"] == 1
+    assert payload["summary"]["massivefold_model_selection_ledger_review_only_count"] == 11
+    assert payload["summary"]["massivefold_model_selection_ledger_freeze_ready_count"] == 3
+    assert payload["summary"]["massivefold_model_selection_ledger_rna_hybrid_count"] == 6
+    assert payload["summary"]["massivefold_model_selection_ledger_protein_complex_count"] == 9
+    assert payload["summary"]["massivefold_model_selection_ledger_first_target_id"] == "R2350"
+    assert payload["summary"]["massivefold_model_selection_ledger_first_group"] == "rna_hybrid"
+    assert payload["summary"]["massivefold_model_selection_ledger_first_decision"] == (
+        "external_model1_selected_conditional"
+    )
+    assert payload["summary"]["massivefold_model_selection_ledger_first_manual_review_target_id"] == (
+        "R2352"
+    )
+    assert payload["summary"]["massivefold_model_selection_ledger_rule_id"] == (
+        "no_native_massivefold_model_selection_ledger_v1"
+    )
+    assert payload["summary"]["massivefold_model_selection_ledger_policy"] == (
+        "do_not_mark_as_internal_prediction"
+    )
+    assert payload["summary"]["massivefold_model1_combined_selector_overlay_status"] == (
+        "massivefold_model1_combined_selector_overlay_ready_external_only"
+    )
+    assert payload["summary"]["massivefold_model1_combined_selector_overlay_count"] == 4
+    assert payload["summary"]["massivefold_model1_combined_selector_overlay_ready_count"] == 4
+    assert payload["summary"]["massivefold_model1_combined_selector_overlay_blocked_count"] == 0
+    assert payload["summary"]["massivefold_model1_combined_selector_overlay_freeze_ready_count"] == 1
+    assert (
+        payload["summary"]["massivefold_model1_combined_selector_overlay_not_freeze_ready_count"]
+        == 3
+    )
+    assert payload["summary"]["massivefold_model1_combined_selector_overlay_manual_blocked_count"] == 1
+    assert payload["summary"]["massivefold_model1_combined_selector_overlay_interface_hold_count"] == 1
+    assert payload["summary"]["massivefold_model1_combined_selector_overlay_weak_probe_hold_count"] == 0
+    assert payload["summary"]["massivefold_model1_combined_selector_overlay_probe_required_count"] == 1
+    assert payload["summary"]["massivefold_model1_combined_selector_overlay_review_watch_count"] == 0
+    assert payload["summary"]["massivefold_model1_combined_selector_overlay_unknown_hold_count"] == 0
+    assert payload["summary"]["massivefold_model1_combined_selector_overlay_rna_hybrid_count"] == 2
+    assert payload["summary"]["massivefold_model1_combined_selector_overlay_protein_complex_count"] == 2
+    assert payload["summary"]["massivefold_model1_combined_selector_overlay_baseline_capture_rate"] == "0.500"
+    assert payload["summary"]["massivefold_model1_combined_selector_overlay_baseline_non_capture_rate"] == (
+        "0.500"
+    )
+    assert payload["summary"]["massivefold_model1_combined_selector_overlay_first_target_id"] == "R2352"
+    assert payload["summary"]["massivefold_model1_combined_selector_overlay_first_decision"] == (
+        "selector_blocked_manual_review"
+    )
+    assert payload["summary"]["massivefold_model1_combined_selector_overlay_first_action"] == (
+        "do_not_freeze_model1_external_only"
+    )
+    assert payload["summary"]["massivefold_model1_combined_selector_overlay_first_freeze_ready_target_id"] == (
+        "R2350"
+    )
+    assert payload["summary"]["massivefold_model1_combined_selector_overlay_first_freeze_ready_action"] == (
+        "carry_model1_as_external_only_freeze_ready"
+    )
+    assert payload["summary"]["massivefold_model1_combined_selector_overlay_policy"] == (
+        "do_not_mark_as_internal_prediction"
+    )
+    assert payload["summary"]["massivefold_model1_combined_selector_overlay_proof_eligible"] == (
+        "False"
+    )
+    assert payload["summary"]["massivefold_freeze_ready_review_packet_status"] == (
+        "massivefold_freeze_ready_review_packet_ready_external_only"
+    )
+    assert payload["summary"]["massivefold_freeze_ready_review_packet_count"] == 2
+    assert payload["summary"]["massivefold_freeze_ready_review_packet_ready_count"] == 2
+    assert payload["summary"]["massivefold_freeze_ready_review_packet_blocked_count"] == 0
+    assert payload["summary"]["massivefold_freeze_ready_review_packet_model_present_count"] == 2
+    assert payload["summary"]["massivefold_freeze_ready_review_packet_viewer_present_count"] == 2
+    assert payload["summary"]["massivefold_freeze_ready_review_packet_projection_present_count"] == 2
+    assert payload["summary"]["massivefold_freeze_ready_review_packet_top5_manifest_present_count"] == 2
+    assert payload["summary"]["massivefold_freeze_ready_review_packet_top5_total"] == 10
+    assert payload["summary"]["massivefold_freeze_ready_review_packet_first_target_id"] == "R2350"
+    assert payload["summary"]["massivefold_freeze_ready_review_packet_first_model_filename"] == (
+        "Model_20_af3_woPaired_seed_1.cif"
+    )
+    assert payload["summary"]["massivefold_freeze_ready_review_packet_first_viewer_html"] == (
+        "casp17/viewers/r2350/viewer.html"
+    )
+    assert payload["summary"]["massivefold_freeze_ready_review_packet_html"] == (
+        "casp17/casp17_massivefold_freeze_ready_review_packet_current.html"
+    )
+    assert payload["summary"]["massivefold_freeze_ready_review_packet_policy"] == (
+        "do_not_mark_as_internal_prediction"
+    )
+    assert payload["summary"]["massivefold_freeze_ready_review_packet_proof_eligible"] == (
+        "False"
+    )
+    assert payload["summary"]["massivefold_hold_probe_review_packet_status"] == (
+        "massivefold_hold_probe_review_packet_ready_external_only"
+    )
+    assert payload["summary"]["massivefold_hold_probe_review_packet_count"] == 3
+    assert payload["summary"]["massivefold_hold_probe_review_packet_ready_count"] == 3
+    assert payload["summary"]["massivefold_hold_probe_review_packet_blocked_count"] == 0
+    assert payload["summary"]["massivefold_hold_probe_review_packet_manual_blocked_count"] == 1
+    assert payload["summary"]["massivefold_hold_probe_review_packet_interface_hold_count"] == 1
+    assert payload["summary"]["massivefold_hold_probe_review_packet_probe_required_count"] == 1
+    assert payload["summary"]["massivefold_hold_probe_review_packet_weak_probe_hold_count"] == 0
+    assert payload["summary"]["massivefold_hold_probe_review_packet_unknown_hold_count"] == 0
+    assert payload["summary"]["massivefold_hold_probe_review_packet_model_present_count"] == 3
+    assert payload["summary"]["massivefold_hold_probe_review_packet_viewer_present_count"] == 3
+    assert payload["summary"]["massivefold_hold_probe_review_packet_projection_present_count"] == 3
+    assert payload["summary"]["massivefold_hold_probe_review_packet_top5_manifest_present_count"] == 3
+    assert payload["summary"]["massivefold_hold_probe_review_packet_alternate_present_count"] == 1
+    assert payload["summary"]["massivefold_hold_probe_review_packet_top5_total"] == 15
+    assert payload["summary"]["massivefold_hold_probe_review_packet_first_target_id"] == "R2352"
+    assert payload["summary"]["massivefold_hold_probe_review_packet_first_class"] == (
+        "manual_blocked_review"
+    )
+    assert payload["summary"]["massivefold_hold_probe_review_packet_first_action"] == (
+        "do_not_freeze_model1_external_only"
+    )
+    assert payload["summary"]["massivefold_hold_probe_review_packet_first_model_filename"] == (
+        "Model_15_af3_woUnpaired_seed_1.cif"
+    )
+    assert payload["summary"]["massivefold_hold_probe_review_packet_first_viewer_html"] == (
+        "casp17/viewers/r2352/viewer.html"
+    )
+    assert payload["summary"]["massivefold_hold_probe_review_packet_html"] == (
+        "casp17/casp17_massivefold_hold_probe_review_packet_current.html"
+    )
+    assert payload["summary"]["massivefold_hold_probe_review_packet_policy"] == (
+        "do_not_mark_as_internal_prediction"
+    )
+    assert payload["summary"]["massivefold_hold_probe_review_packet_proof_eligible"] == (
+        "False"
+    )
+    assert payload["summary"]["massivefold_probe_required_targeted_probe_packet_status"] == (
+        "massivefold_probe_required_targeted_probe_packet_ready_external_only"
+    )
+    assert payload["summary"]["massivefold_probe_required_targeted_probe_packet_count"] == 3
+    assert payload["summary"]["massivefold_probe_required_targeted_probe_packet_ready_count"] == 3
+    assert payload["summary"]["massivefold_probe_required_targeted_probe_packet_blocked_count"] == 0
+    assert payload["summary"]["massivefold_probe_required_targeted_probe_packet_pass_count"] == 2
+    assert payload["summary"]["massivefold_probe_required_targeted_probe_packet_watch_count"] == 1
+    assert payload["summary"]["massivefold_probe_required_targeted_probe_packet_fail_count"] == 0
+    assert payload["summary"]["massivefold_probe_required_targeted_probe_packet_freeze_candidate_count"] == 2
+    assert payload["summary"]["massivefold_probe_required_targeted_probe_packet_watch_recommendation_count"] == 1
+    assert payload["summary"]["massivefold_probe_required_targeted_probe_packet_manual_review_count"] == 0
+    assert payload["summary"]["massivefold_probe_required_targeted_probe_packet_rna_hybrid_count"] == 1
+    assert payload["summary"]["massivefold_probe_required_targeted_probe_packet_protein_complex_count"] == 2
+    assert payload["summary"]["massivefold_probe_required_targeted_probe_packet_model_present_count"] == 3
+    assert payload["summary"]["massivefold_probe_required_targeted_probe_packet_viewer_present_count"] == 3
+    assert payload["summary"]["massivefold_probe_required_targeted_probe_packet_projection_present_count"] == 3
+    assert payload["summary"]["massivefold_probe_required_targeted_probe_packet_top_candidate_present_count"] == 3
+    assert (
+        payload["summary"]["massivefold_probe_required_targeted_probe_packet_top_candidate_viewer_present_count"]
+        == 3
+    )
+    assert payload["summary"]["massivefold_probe_required_targeted_probe_packet_top5_manifest_present_count"] == 3
+    assert payload["summary"]["massivefold_probe_required_targeted_probe_packet_top5_total"] == 15
+    assert payload["summary"]["massivefold_probe_required_targeted_probe_packet_clear_margin"] == "0.5"
+    assert payload["summary"]["massivefold_probe_required_targeted_probe_packet_first_target_id"] == "H1311"
+    assert payload["summary"]["massivefold_probe_required_targeted_probe_packet_first_result"] == (
+        "probe_pass_model1_retained_clear"
+    )
+    assert payload["summary"]["massivefold_probe_required_targeted_probe_packet_first_margin"] == "0.75"
+    assert payload["summary"]["massivefold_probe_required_targeted_probe_packet_first_recommendation"] == (
+        "external_model1_freeze_candidate_after_probe"
+    )
+    assert payload["summary"]["massivefold_probe_required_targeted_probe_packet_html"] == (
+        "casp17/casp17_massivefold_probe_required_targeted_probe_packet_current.html"
+    )
+    assert payload["summary"]["massivefold_probe_required_targeted_probe_packet_policy"] == (
+        "do_not_mark_as_internal_prediction"
+    )
+    assert payload["summary"]["massivefold_probe_required_targeted_probe_packet_proof_eligible"] == (
+        "False"
+    )
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_status"] == (
+        "massivefold_post_probe_selector_decision_packet_ready_external_only"
+    )
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_count"] == 5
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_ready_count"] == 5
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_blocked_count"] == 0
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_freeze_count"] == 2
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_watch_count"] == 2
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_manual_count"] == 1
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_existing_freeze_count"] == 1
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_probe_freeze_count"] == 1
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_probe_watch_count"] == 1
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_interface_hold_count"] == 1
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_probe_manual_count"] == 0
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_manual_block_count"] == 1
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_rna_hybrid_count"] == 2
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_protein_complex_count"] == 3
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_model_present_count"] == 5
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_viewer_present_count"] == 5
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_projection_present_count"] == 5
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_top5_manifest_present_count"] == 5
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_alternate_present_count"] == 1
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_first_target_id"] == "R2352"
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_first_class"] == "manual_block"
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_first_decision"] == (
+        "external_model1_freeze_blocked_manual_review"
+    )
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_first_model_filename"] == (
+        "Model_15_af3_woUnpaired_seed_1.cif"
+    )
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_html"] == (
+        "casp17/casp17_massivefold_post_probe_selector_decision_packet_current.html"
+    )
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_policy"] == (
+        "do_not_mark_as_internal_prediction"
+    )
+    assert payload["summary"]["massivefold_post_probe_selector_decision_packet_proof_eligible"] == (
+        "False"
+    )
+    assert payload["summary"]["massivefold_watch_manual_action_packet_status"] == (
+        "massivefold_watch_manual_action_packet_ready_external_only"
+    )
+    assert payload["summary"]["massivefold_watch_manual_action_packet_count"] == 5
+    assert payload["summary"]["massivefold_watch_manual_action_packet_ready_count"] == 5
+    assert payload["summary"]["massivefold_watch_manual_action_packet_blocked_count"] == 0
+    assert payload["summary"]["massivefold_watch_manual_action_packet_manual_count"] == 1
+    assert payload["summary"]["massivefold_watch_manual_action_packet_interface_count"] == 1
+    assert payload["summary"]["massivefold_watch_manual_action_packet_low_margin_count"] == 3
+    assert payload["summary"]["massivefold_watch_manual_action_packet_priority1_count"] == 2
+    assert payload["summary"]["massivefold_watch_manual_action_packet_priority2_count"] == 3
+    assert payload["summary"]["massivefold_watch_manual_action_packet_rna_hybrid_count"] == 2
+    assert payload["summary"]["massivefold_watch_manual_action_packet_protein_complex_count"] == 3
+    assert payload["summary"]["massivefold_watch_manual_action_packet_model_present_count"] == 5
+    assert payload["summary"]["massivefold_watch_manual_action_packet_viewer_present_count"] == 5
+    assert payload["summary"]["massivefold_watch_manual_action_packet_projection_present_count"] == 5
+    assert payload["summary"]["massivefold_watch_manual_action_packet_top5_manifest_present_count"] == 5
+    assert payload["summary"]["massivefold_watch_manual_action_packet_alternate_present_count"] == 1
+    assert payload["summary"]["massivefold_watch_manual_action_packet_first_target_id"] == "R2352"
+    assert payload["summary"]["massivefold_watch_manual_action_packet_first_class"] == (
+        "manual_alternate_review"
+    )
+    assert payload["summary"]["massivefold_watch_manual_action_packet_first_priority"] == "1"
+    assert payload["summary"]["massivefold_watch_manual_action_packet_html"] == (
+        "casp17/casp17_massivefold_watch_manual_action_packet_current.html"
+    )
+    assert payload["summary"]["massivefold_watch_manual_action_packet_policy"] == (
+        "do_not_mark_as_internal_prediction"
+    )
+    assert payload["summary"]["massivefold_watch_manual_action_packet_proof_eligible"] == (
+        "False"
+    )
+    assert payload["summary"]["massivefold_freeze_candidate_format_preflight_status"] == (
+        "massivefold_freeze_candidate_format_preflight_ready_external_only"
+    )
+    assert payload["summary"]["massivefold_freeze_candidate_format_preflight_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_format_preflight_ready_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_format_preflight_blocked_count"] == 0
+    assert payload["summary"]["massivefold_freeze_candidate_format_preflight_existing_count"] == 2
+    assert payload["summary"]["massivefold_freeze_candidate_format_preflight_probe_count"] == 8
+    assert payload["summary"]["massivefold_freeze_candidate_format_preflight_rna_hybrid_count"] == 4
+    assert payload["summary"]["massivefold_freeze_candidate_format_preflight_protein_complex_count"] == 6
+    assert payload["summary"]["massivefold_freeze_candidate_format_preflight_selected_pdb_count"] == 6
+    assert payload["summary"]["massivefold_freeze_candidate_format_preflight_selected_cif_count"] == 4
+    assert payload["summary"]["massivefold_freeze_candidate_format_preflight_packaged_pdb_count"] == 0
+    assert payload["summary"]["massivefold_freeze_candidate_format_preflight_packaged_cif_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_format_preflight_target_id_ok_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_format_preflight_selected_ext_ok_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_format_preflight_packaged_ext_ok_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_format_preflight_model_present_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_format_preflight_model_nonempty_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_format_preflight_viewer_present_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_format_preflight_projection_present_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_format_preflight_top5_manifest_present_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_format_preflight_first_target_id"] == "H2319"
+    assert payload["summary"]["massivefold_freeze_candidate_format_preflight_first_model_filename"] == (
+        "Model_1_afm_basic_model_4_multimer_v3_pred_25.pdb"
+    )
+    assert payload["summary"]["massivefold_freeze_candidate_format_preflight_html"] == (
+        "casp17/casp17_massivefold_freeze_candidate_format_preflight_current.html"
+    )
+    assert payload["summary"]["massivefold_freeze_candidate_format_preflight_policy"] == (
+        "do_not_mark_as_internal_prediction"
+    )
+    assert payload["summary"]["massivefold_freeze_candidate_format_preflight_proof_eligible"] == (
+        "False"
+    )
+    assert payload["summary"]["massivefold_freeze_candidate_escrow_status"] == (
+        "massivefold_freeze_candidate_escrow_ready_external_only"
+    )
+    assert payload["summary"]["massivefold_freeze_candidate_escrow_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_escrow_ready_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_escrow_blocked_count"] == 0
+    assert payload["summary"]["massivefold_freeze_candidate_escrow_model_sha256_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_escrow_top5_sha256_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_escrow_model_present_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_escrow_viewer_present_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_escrow_projection_present_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_escrow_top5_manifest_present_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_escrow_existing_count"] == 2
+    assert payload["summary"]["massivefold_freeze_candidate_escrow_probe_count"] == 8
+    assert payload["summary"]["massivefold_freeze_candidate_escrow_rna_hybrid_count"] == 4
+    assert payload["summary"]["massivefold_freeze_candidate_escrow_protein_complex_count"] == 6
+    assert payload["summary"]["massivefold_freeze_candidate_escrow_native_pending_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_escrow_proof_eligible_count"] == 0
+    assert payload["summary"]["massivefold_freeze_candidate_escrow_author_serialized_count"] == 0
+    assert payload["summary"]["massivefold_freeze_candidate_escrow_first_target_id"] == "H2319"
+    assert payload["summary"]["massivefold_freeze_candidate_escrow_first_blocked_target_id"] == ""
+    assert payload["summary"]["massivefold_freeze_candidate_escrow_manifest_signature_sha256"] == (
+        "freezeabc123"
+    )
+    assert payload["summary"]["massivefold_freeze_candidate_escrow_policy"] == (
+        "do_not_mark_as_internal_prediction"
+    )
+    assert payload["summary"]["massivefold_freeze_candidate_protein_library_status"] == (
+        "massivefold_freeze_candidate_protein_library_ready_external_only"
+    )
+    assert payload["summary"]["massivefold_freeze_candidate_protein_library_protein_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_protein_library_protein_ready_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_protein_library_protein_blocked_count"] == 0
+    assert payload["summary"]["massivefold_freeze_candidate_protein_library_object_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_protein_library_object_ready_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_protein_library_object_blocked_count"] == 0
+    assert payload["summary"]["massivefold_freeze_candidate_protein_library_model_link_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_protein_library_viewer_link_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_protein_library_projection_link_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_protein_library_top5_link_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_protein_library_escrow_link_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_protein_library_model_sha256_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_protein_library_top5_sha256_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_protein_library_current_name_count"] == 5
+    assert payload["summary"]["massivefold_freeze_candidate_protein_library_official_name_count"] == 10
+    assert payload["summary"]["massivefold_freeze_candidate_protein_library_rna_hybrid_count"] == 4
+    assert payload["summary"]["massivefold_freeze_candidate_protein_library_protein_complex_count"] == 6
+    assert payload["summary"]["massivefold_freeze_candidate_protein_library_proof_eligible_count"] == 0
+    assert payload["summary"]["massivefold_freeze_candidate_protein_library_author_serialized_count"] == 0
+    assert payload["summary"]["massivefold_freeze_candidate_protein_library_first_protein_key"] == (
+        "H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex"
+    )
+    assert payload["summary"]["massivefold_freeze_candidate_protein_library_first_blocked_protein_key"] == ""
+    assert payload["summary"]["massivefold_freeze_candidate_protein_library_html"] == (
+        "casp17/casp17_massivefold_freeze_candidate_protein_library_current.html"
+    )
+    assert payload["summary"]["massivefold_freeze_candidate_protein_library_policy"] == (
         "do_not_mark_as_internal_prediction"
     )
     assert payload["summary"]["capri_round65_readiness_status"] == "blocked_registration_role_selection"
@@ -5910,10 +10010,188 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "largest:H9002_Example_Fab_Complex/3" in by_id[
         "protein_object_library_navigation_catalog"
     ]["blockers"]
+    assert by_id["casp17_3d_molecular_object_atlas"]["status"] == (
+        "casp17_3d_molecular_object_atlas_ready_review_only"
+    )
+    assert by_id["casp17_3d_molecular_object_atlas"]["ready_count"] == 14
+    assert by_id["casp17_3d_molecular_object_atlas"]["blocked_count"] == 0
+    assert by_id["casp17_3d_molecular_object_atlas"]["total_count"] == 14
+    assert "proteins:5/0/5" in by_id["casp17_3d_molecular_object_atlas"]["blockers"]
+    assert "objects:14/0/14" in by_id["casp17_3d_molecular_object_atlas"]["blockers"]
+    assert "source_objects:4/10" in by_id["casp17_3d_molecular_object_atlas"]["blockers"]
+    assert "source_proteins:2/4/overlap:1" in by_id["casp17_3d_molecular_object_atlas"]["blockers"]
+    assert "links:14/14/14/10/10" in by_id["casp17_3d_molecular_object_atlas"]["blockers"]
+    assert "sha:10/10" in by_id["casp17_3d_molecular_object_atlas"]["blockers"]
+    assert "native_proof_author:0/0/0" in by_id["casp17_3d_molecular_object_atlas"]["blockers"]
+    assert "first:H9002_Example_Fab_Complex/current_chain_A" in by_id[
+        "casp17_3d_molecular_object_atlas"
+    ]["blockers"]
+    assert by_id["casp17_3d_molecular_object_atlas_completion_audit"]["status"] == (
+        "casp17_3d_molecular_object_atlas_completion_audit_pass"
+    )
+    assert by_id["casp17_3d_molecular_object_atlas_completion_audit"]["ready_count"] == 14
+    assert by_id["casp17_3d_molecular_object_atlas_completion_audit"]["blocked_count"] == 0
+    assert by_id["casp17_3d_molecular_object_atlas_completion_audit"]["total_count"] == 14
+    assert "proteins:5/5/5/5" in by_id[
+        "casp17_3d_molecular_object_atlas_completion_audit"
+    ]["blockers"]
+    assert "objects:14/0/14" in by_id[
+        "casp17_3d_molecular_object_atlas_completion_audit"
+    ]["blockers"]
+    assert "atlas_object_files:14/14/14" in by_id[
+        "casp17_3d_molecular_object_atlas_completion_audit"
+    ]["blockers"]
+    assert "links:14/14/14/10/10" in by_id[
+        "casp17_3d_molecular_object_atlas_completion_audit"
+    ]["blockers"]
+    assert "coordinate_copies:0/0" in by_id[
+        "casp17_3d_molecular_object_atlas_completion_audit"
+    ]["blockers"]
+    assert "proof_author:0/0" in by_id[
+        "casp17_3d_molecular_object_atlas_completion_audit"
+    ]["blockers"]
+    assert by_id["casp17_3d_molecular_object_metric_handoff"]["status"] == (
+        "casp17_3d_molecular_object_metric_handoff_ready_review_only_ligand_gap"
+    )
+    assert by_id["casp17_3d_molecular_object_metric_handoff"]["ready_count"] == 14
+    assert by_id["casp17_3d_molecular_object_metric_handoff"]["blocked_count"] == 0
+    assert by_id["casp17_3d_molecular_object_metric_handoff"]["total_count"] == 14
+    assert "objects:14/0/14" in by_id["casp17_3d_molecular_object_metric_handoff"]["blockers"]
+    assert "source_objects:4/10" in by_id["casp17_3d_molecular_object_metric_handoff"]["blockers"]
+    assert "metric_requirements:118" in by_id["casp17_3d_molecular_object_metric_handoff"]["blockers"]
+    assert "covered_required:9/11" in by_id["casp17_3d_molecular_object_metric_handoff"]["blockers"]
+    assert "missing_required:2/LDDT-PLI,BiSyRMSD" in by_id[
+        "casp17_3d_molecular_object_metric_handoff"
+    ]["blockers"]
+    assert "ligand_gap:2" in by_id["casp17_3d_molecular_object_metric_handoff"]["blockers"]
+    assert "families:1/12/1/0" in by_id["casp17_3d_molecular_object_metric_handoff"]["blockers"]
+    assert "folders:5/14" in by_id["casp17_3d_molecular_object_metric_handoff"]["blockers"]
+    assert "native_proof_author:0/0/0" in by_id[
+        "casp17_3d_molecular_object_metric_handoff"
+    ]["blockers"]
+    assert by_id["casp17_3d_molecular_object_metric_handoff_completion_audit"]["status"] == (
+        "casp17_3d_molecular_object_metric_handoff_completion_audit_pass"
+    )
+    assert by_id["casp17_3d_molecular_object_metric_handoff_completion_audit"]["ready_count"] == 14
+    assert by_id["casp17_3d_molecular_object_metric_handoff_completion_audit"]["blocked_count"] == 0
+    assert by_id["casp17_3d_molecular_object_metric_handoff_completion_audit"]["total_count"] == 14
+    assert "proteins:5/5/5/5" in by_id[
+        "casp17_3d_molecular_object_metric_handoff_completion_audit"
+    ]["blockers"]
+    assert "objects:14/0/14" in by_id[
+        "casp17_3d_molecular_object_metric_handoff_completion_audit"
+    ]["blockers"]
+    assert "object_files:14/14/14/14" in by_id[
+        "casp17_3d_molecular_object_metric_handoff_completion_audit"
+    ]["blockers"]
+    assert "metric_rows:118/118/mismatch:0" in by_id[
+        "casp17_3d_molecular_object_metric_handoff_completion_audit"
+    ]["blockers"]
+    assert "evidence_awaiting:14" in by_id[
+        "casp17_3d_molecular_object_metric_handoff_completion_audit"
+    ]["blockers"]
+    assert "coordinate_copies:0/0" in by_id[
+        "casp17_3d_molecular_object_metric_handoff_completion_audit"
+    ]["blockers"]
+    assert "proof_author:0/0" in by_id[
+        "casp17_3d_molecular_object_metric_handoff_completion_audit"
+    ]["blockers"]
     assert by_id["raw_ranked_model_quarantine"]["status"] == "pass"
     assert by_id["raw_ranked_model_quarantine"]["ready_count"] == 15
     assert by_id["raw_ranked_model_quarantine"]["blocked_count"] == 0
     assert "author_present:15" in by_id["raw_ranked_model_quarantine"]["blockers"]
+    assert by_id["current_casp17_submission_gate"]["status"] == "current_casp17_submission_gate_ready"
+    assert by_id["current_casp17_submission_gate"]["ready_count"] == 19
+    assert by_id["current_casp17_submission_gate"]["blocked_count"] == 0
+    assert by_id["current_casp17_submission_gate"]["total_count"] == 19
+    assert "go/no-go/total:19/0/19" in by_id["current_casp17_submission_gate"]["blockers"]
+    assert "framework:True" in by_id["current_casp17_submission_gate"]["blockers"]
+    assert "shape:pass/19/19" in by_id["current_casp17_submission_gate"]["blockers"]
+    assert "lane_difficult:19" in by_id["current_casp17_submission_gate"]["blockers"]
+    assert "server:False" in by_id["current_casp17_submission_gate"]["blockers"]
+    assert by_id["current_casp17_sidechain_repack"]["status"] == "pass"
+    assert by_id["current_casp17_sidechain_repack"]["ready_count"] == 19
+    assert by_id["current_casp17_sidechain_repack"]["blocked_count"] == 0
+    assert by_id["current_casp17_sidechain_repack"]["total_count"] == 19
+    assert "pass/blocked/total:19/0/19" in by_id["current_casp17_sidechain_repack"]["blockers"]
+    assert "soft_delta:529" in by_id["current_casp17_sidechain_repack"]["blockers"]
+    assert "soft_before_after:1955/1426" in by_id["current_casp17_sidechain_repack"]["blockers"]
+    assert "improved/repacked:7179/15657" in by_id["current_casp17_sidechain_repack"]["blockers"]
+    assert "revert_guard:8" in by_id["current_casp17_sidechain_repack"]["blockers"]
+    assert by_id["current_casp17_submission_package_preflight"]["status"] == "ready"
+    assert by_id["current_casp17_submission_package_preflight"]["ready_count"] == 19
+    assert by_id["current_casp17_submission_package_preflight"]["blocked_count"] == 0
+    assert by_id["current_casp17_submission_package_preflight"]["total_count"] == 19
+    assert "gate:current_casp17_submission_gate_ready/19/0/19" in by_id[
+        "current_casp17_submission_package_preflight"
+    ]["blockers"]
+    assert "files:19" in by_id["current_casp17_submission_package_preflight"]["blockers"]
+    assert "format:19" in by_id["current_casp17_submission_package_preflight"]["blockers"]
+    assert "author:19" in by_id["current_casp17_submission_package_preflight"]["blockers"]
+    assert "sidechain:19" in by_id["current_casp17_submission_package_preflight"]["blockers"]
+    assert "sha256:19" in by_id["current_casp17_submission_package_preflight"]["blockers"]
+    assert "server:False" in by_id["current_casp17_submission_package_preflight"]["blockers"]
+    assert by_id["current_casp17_submission_deadline_guard"]["status"] == (
+        "partial_current_upload_window_ready"
+    )
+    assert by_id["current_casp17_submission_deadline_guard"]["ready_count"] == 11
+    assert by_id["current_casp17_submission_deadline_guard"]["blocked_count"] == 8
+    assert by_id["current_casp17_submission_deadline_guard"]["total_count"] == 19
+    assert "date:2026-06-02" in by_id["current_casp17_submission_deadline_guard"]["blockers"]
+    assert "expired/today/future:8/2/9" in by_id["current_casp17_submission_deadline_guard"]["blockers"]
+    assert "qa:15/4/0" in by_id["current_casp17_submission_deadline_guard"]["blockers"]
+    assert "package:ready/19/0/19" in by_id["current_casp17_submission_deadline_guard"]["blockers"]
+    assert "watchlist_stale:True/7" in by_id["current_casp17_submission_deadline_guard"]["blockers"]
+    assert "first:T1331/human_submission_deadline_expired" in by_id[
+        "current_casp17_submission_deadline_guard"
+    ]["blockers"]
+    assert "nearest:H2319/2026-06-02" in by_id["current_casp17_submission_deadline_guard"]["blockers"]
+    assert by_id["current_casp17_upload_queue"]["status"] == (
+        "official_verified_current_upload_queue_partial"
+    )
+    assert by_id["current_casp17_upload_queue"]["ready_count"] == 10
+    assert by_id["current_casp17_upload_queue"]["blocked_count"] == 9
+    assert by_id["current_casp17_upload_queue"]["total_count"] == 19
+    assert "targets:77" in by_id["current_casp17_upload_queue"]["blockers"]
+    assert "direct/mapped/missing:18/1/0" in by_id["current_casp17_upload_queue"]["blockers"]
+    assert "ready/blocked:10/9" in by_id["current_casp17_upload_queue"]["blockers"]
+    assert "today/soon/future:2/4/4" in by_id["current_casp17_upload_queue"]["blockers"]
+    assert "expired/cancelled/mismatch:9/1/1" in by_id["current_casp17_upload_queue"]["blockers"]
+    assert "first_ready:H2319/2026-06-02" in by_id["current_casp17_upload_queue"]["blockers"]
+    assert "first_blocked:H1335/official_human_deadline_expired" in by_id[
+        "current_casp17_upload_queue"
+    ]["blockers"]
+    assert by_id["current_casp17_upload_review_packet"]["status"] == (
+        "current_upload_review_packet_ready"
+    )
+    assert by_id["current_casp17_upload_review_packet"]["ready_count"] == 10
+    assert by_id["current_casp17_upload_review_packet"]["blocked_count"] == 0
+    assert by_id["current_casp17_upload_review_packet"]["total_count"] == 10
+    assert "queue:official_verified_current_upload_queue_partial/10/9/19" in by_id[
+        "current_casp17_upload_review_packet"
+    ]["blockers"]
+    assert "urgency:2/4/4" in by_id["current_casp17_upload_review_packet"]["blockers"]
+    assert "candidate/object/viewer:10/10/10" in by_id[
+        "current_casp17_upload_review_packet"
+    ]["blockers"]
+    assert "first:H2319/casp17/current_upload_review_packet/" in by_id[
+        "current_casp17_upload_review_packet"
+    ]["blockers"]
+    assert by_id["current_casp17_prospective_strict_blind_escrow"]["status"] == (
+        "current_prospective_strict_blind_escrow_ready_native_pending_partial_upload_window"
+    )
+    assert by_id["current_casp17_prospective_strict_blind_escrow"]["ready_count"] == 19
+    assert by_id["current_casp17_prospective_strict_blind_escrow"]["blocked_count"] == 0
+    assert by_id["current_casp17_prospective_strict_blind_escrow"]["total_count"] == 19
+    assert "upload:10/9" in by_id["current_casp17_prospective_strict_blind_escrow"]["blockers"]
+    assert "sha/review/native/ext-ts:19/10/19/19" in by_id[
+        "current_casp17_prospective_strict_blind_escrow"
+    ]["blockers"]
+    assert "proof:0,author:0" in by_id["current_casp17_prospective_strict_blind_escrow"]["blockers"]
+    assert "first_upload:H2319" in by_id["current_casp17_prospective_strict_blind_escrow"]["blockers"]
+    assert "first_blocked_upload:H1335" in by_id[
+        "current_casp17_prospective_strict_blind_escrow"
+    ]["blockers"]
     assert by_id["win_tier_goal_scorecard"]["status"] == "blocked_input"
     assert by_id["win_tier_goal_scorecard"]["ready_count"] == 1
     assert "historical_identity_clearance" in by_id["win_tier_goal_scorecard"]["blockers"]
@@ -6163,6 +10441,359 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "policy:do_not_mark_as_internal_prediction" in by_id[
         "protein_complex_massivefold_self_assessment_packet"
     ]["blockers"]
+    assert by_id["massivefold_model1_risk_queue"]["status"] == (
+        "massivefold_model1_risk_queue_ready_external_only"
+    )
+    assert by_id["massivefold_model1_risk_queue"]["ready_count"] == 4
+    assert by_id["massivefold_model1_risk_queue"]["blocked_count"] == 0
+    assert by_id["massivefold_model1_risk_queue"]["total_count"] == 4
+    assert "targets:4" in by_id["massivefold_model1_risk_queue"]["blockers"]
+    assert "low_margin:2" in by_id["massivefold_model1_risk_queue"]["blockers"]
+    assert "critical:1" in by_id["massivefold_model1_risk_queue"]["blockers"]
+    assert "rna/protein:2/2" in by_id["massivefold_model1_risk_queue"]["blockers"]
+    assert "first:H1311" in by_id["massivefold_model1_risk_queue"]["blockers"]
+    assert "tier:critical_model1_margin" in by_id["massivefold_model1_risk_queue"]["blockers"]
+    assert "policy:do_not_mark_as_internal_prediction" in by_id[
+        "massivefold_model1_risk_queue"
+    ]["blockers"]
+    assert by_id["massivefold_critical_rerank_experiment"]["status"] == (
+        "massivefold_critical_rerank_experiment_ready_external_only"
+    )
+    assert by_id["massivefold_critical_rerank_experiment"]["ready_count"] == 2
+    assert by_id["massivefold_critical_rerank_experiment"]["blocked_count"] == 0
+    assert by_id["massivefold_critical_rerank_experiment"]["total_count"] == 2
+    assert "experiments:2" in by_id["massivefold_critical_rerank_experiment"]["blockers"]
+    assert "rna/protein:1/1" in by_id["massivefold_critical_rerank_experiment"]["blockers"]
+    assert "reviews:1/1/1" in by_id["massivefold_critical_rerank_experiment"]["blockers"]
+    assert "first:R2350" in by_id["massivefold_critical_rerank_experiment"]["blockers"]
+    assert "formula:gap_plus_geometry_plus_diversity_penalty_v1" in by_id[
+        "massivefold_critical_rerank_experiment"
+    ]["blockers"]
+    assert "policy:do_not_mark_as_internal_prediction" in by_id[
+        "massivefold_critical_rerank_experiment"
+    ]["blockers"]
+    assert by_id["massivefold_critical_rerank_score_ledger"]["status"] == (
+        "massivefold_critical_rerank_score_ledger_ready_external_only"
+    )
+    assert by_id["massivefold_critical_rerank_score_ledger"]["ready_count"] == 2
+    assert by_id["massivefold_critical_rerank_score_ledger"]["blocked_count"] == 0
+    assert by_id["massivefold_critical_rerank_score_ledger"]["total_count"] == 2
+    assert "ledger:2" in by_id["massivefold_critical_rerank_score_ledger"]["blockers"]
+    assert "bands:0/2/0" in by_id["massivefold_critical_rerank_score_ledger"]["blockers"]
+    assert "rna/protein:1/1" in by_id["massivefold_critical_rerank_score_ledger"]["blockers"]
+    assert "top:R2350" in by_id["massivefold_critical_rerank_score_ledger"]["blockers"]
+    assert "score:66" in by_id["massivefold_critical_rerank_score_ledger"]["blockers"]
+    assert "action:run_targeted_probe_then_freeze_model1_if_consistent" in by_id[
+        "massivefold_critical_rerank_score_ledger"
+    ]["blockers"]
+    assert "policy:do_not_mark_as_internal_prediction" in by_id[
+        "massivefold_critical_rerank_score_ledger"
+    ]["blockers"]
+    assert by_id["massivefold_model1_selection_calibration_gate"]["status"] == (
+        "massivefold_model1_selection_calibration_gate_ready_external_only"
+    )
+    assert by_id["massivefold_model1_selection_calibration_gate"]["ready_count"] == 2
+    assert by_id["massivefold_model1_selection_calibration_gate"]["blocked_count"] == 0
+    assert by_id["massivefold_model1_selection_calibration_gate"]["total_count"] == 2
+    assert "gates:2" in by_id["massivefold_model1_selection_calibration_gate"]["blockers"]
+    assert "freeze_gate:model1_freeze_blocked_by_calibration" in by_id[
+        "massivefold_model1_selection_calibration_gate"
+    ]["blockers"]
+    assert "hold/watch/probe/freeze:1/1/2/0" in by_id[
+        "massivefold_model1_selection_calibration_gate"
+    ]["blockers"]
+    assert "rna/protein:1/1" in by_id["massivefold_model1_selection_calibration_gate"]["blockers"]
+    assert "first:R2350" in by_id["massivefold_model1_selection_calibration_gate"]["blockers"]
+    assert "decision:hold_model1_freeze_probe_required" in by_id[
+        "massivefold_model1_selection_calibration_gate"
+    ]["blockers"]
+    assert "rule:no_native_model1_selection_gate_v1" in by_id[
+        "massivefold_model1_selection_calibration_gate"
+    ]["blockers"]
+    assert "policy:do_not_mark_as_internal_prediction" in by_id[
+        "massivefold_model1_selection_calibration_gate"
+    ]["blockers"]
+    assert by_id["massivefold_model1_probe_worklist"]["status"] == (
+        "massivefold_model1_probe_worklist_ready_external_only"
+    )
+    assert by_id["massivefold_model1_probe_worklist"]["ready_count"] == 2
+    assert by_id["massivefold_model1_probe_worklist"]["blocked_count"] == 0
+    assert by_id["massivefold_model1_probe_worklist"]["total_count"] == 2
+    assert "workitems:2" in by_id["massivefold_model1_probe_worklist"]["blockers"]
+    assert "probes:1/1" in by_id["massivefold_model1_probe_worklist"]["blockers"]
+    assert "priority:1/1" in by_id["massivefold_model1_probe_worklist"]["blockers"]
+    assert "rna/protein:1/1" in by_id["massivefold_model1_probe_worklist"]["blockers"]
+    assert "first:R2350" in by_id["massivefold_model1_probe_worklist"]["blockers"]
+    assert "probe:top5_rerank_consistency_probe" in by_id["massivefold_model1_probe_worklist"]["blockers"]
+    assert "unlock:freeze_after_probe_allowed_only_if_exit_criterion_passes" in by_id[
+        "massivefold_model1_probe_worklist"
+    ]["blockers"]
+    assert "policy:do_not_mark_as_internal_prediction" in by_id[
+        "massivefold_model1_probe_worklist"
+    ]["blockers"]
+    assert by_id["massivefold_model1_probe_outcome"]["status"] == (
+        "massivefold_model1_probe_outcome_ready_external_only"
+    )
+    assert by_id["massivefold_model1_probe_outcome"]["ready_count"] == 2
+    assert by_id["massivefold_model1_probe_outcome"]["blocked_count"] == 0
+    assert by_id["massivefold_model1_probe_outcome"]["total_count"] == 2
+    assert "outcomes:2" in by_id["massivefold_model1_probe_outcome"]["blockers"]
+    assert "pass/fail/freeze:2/0/2" in by_id["massivefold_model1_probe_outcome"]["blockers"]
+    assert "probes:1/1" in by_id["massivefold_model1_probe_outcome"]["blockers"]
+    assert "rna/protein:1/1" in by_id["massivefold_model1_probe_outcome"]["blockers"]
+    assert "first:R2350" in by_id["massivefold_model1_probe_outcome"]["blockers"]
+    assert "result:probe_pass_model1_retained" in by_id["massivefold_model1_probe_outcome"]["blockers"]
+    assert "recommendation:conditional_model1_freeze_ready_external_only" in by_id[
+        "massivefold_model1_probe_outcome"
+    ]["blockers"]
+    assert "rule:no_native_probe_rescore_v1" in by_id["massivefold_model1_probe_outcome"]["blockers"]
+    assert "policy:do_not_mark_as_internal_prediction" in by_id[
+        "massivefold_model1_probe_outcome"
+    ]["blockers"]
+    assert by_id["massivefold_model1_freeze_decision_packet"]["status"] == (
+        "massivefold_model1_freeze_decision_packet_ready_external_only"
+    )
+    assert by_id["massivefold_model1_freeze_decision_packet"]["ready_count"] == 2
+    assert by_id["massivefold_model1_freeze_decision_packet"]["blocked_count"] == 0
+    assert by_id["massivefold_model1_freeze_decision_packet"]["total_count"] == 2
+    assert "decisions:2" in by_id["massivefold_model1_freeze_decision_packet"]["blockers"]
+    assert "freeze-ready/blocked:1/1" in by_id[
+        "massivefold_model1_freeze_decision_packet"
+    ]["blockers"]
+    assert "conditional/watch/manual:1/0/1" in by_id[
+        "massivefold_model1_freeze_decision_packet"
+    ]["blockers"]
+    assert "rna/protein:1/1" in by_id["massivefold_model1_freeze_decision_packet"]["blockers"]
+    assert "first-ready:R2350" in by_id["massivefold_model1_freeze_decision_packet"]["blockers"]
+    assert "first-blocked:H2312" in by_id["massivefold_model1_freeze_decision_packet"]["blockers"]
+    assert "rule:no_native_model1_freeze_decision_v1" in by_id[
+        "massivefold_model1_freeze_decision_packet"
+    ]["blockers"]
+    assert "policy:do_not_mark_as_internal_prediction" in by_id[
+        "massivefold_model1_freeze_decision_packet"
+    ]["blockers"]
+    assert by_id["massivefold_model_selection_ledger"]["status"] == (
+        "massivefold_model_selection_ledger_ready_external_only"
+    )
+    assert by_id["massivefold_model_selection_ledger"]["ready_count"] == 15
+    assert by_id["massivefold_model_selection_ledger"]["blocked_count"] == 0
+    assert by_id["massivefold_model_selection_ledger"]["total_count"] == 15
+    assert "ledgers:15" in by_id["massivefold_model_selection_ledger"]["blockers"]
+    assert "selected:2/1" in by_id["massivefold_model_selection_ledger"]["blockers"]
+    assert "manual/review:1/11" in by_id["massivefold_model_selection_ledger"]["blockers"]
+    assert "freeze-ready:3" in by_id["massivefold_model_selection_ledger"]["blockers"]
+    assert "rna/protein:6/9" in by_id["massivefold_model_selection_ledger"]["blockers"]
+    assert "first:R2350" in by_id["massivefold_model_selection_ledger"]["blockers"]
+    assert "decision:external_model1_selected_conditional" in by_id[
+        "massivefold_model_selection_ledger"
+    ]["blockers"]
+    assert "manual:R2352" in by_id["massivefold_model_selection_ledger"]["blockers"]
+    assert "rule:no_native_massivefold_model_selection_ledger_v1" in by_id[
+        "massivefold_model_selection_ledger"
+    ]["blockers"]
+    assert "policy:do_not_mark_as_internal_prediction" in by_id[
+        "massivefold_model_selection_ledger"
+    ]["blockers"]
+    assert by_id["massivefold_model1_combined_selector_overlay"]["status"] == (
+        "massivefold_model1_combined_selector_overlay_ready_external_only"
+    )
+    assert by_id["massivefold_model1_combined_selector_overlay"]["ready_count"] == 4
+    assert by_id["massivefold_model1_combined_selector_overlay"]["blocked_count"] == 0
+    assert by_id["massivefold_model1_combined_selector_overlay"]["total_count"] == 4
+    assert "overlay:4/0/4" in by_id["massivefold_model1_combined_selector_overlay"]["blockers"]
+    assert "freeze:1/3" in by_id["massivefold_model1_combined_selector_overlay"]["blockers"]
+    assert "holds:1/1/0/1/0/0" in by_id[
+        "massivefold_model1_combined_selector_overlay"
+    ]["blockers"]
+    assert "baseline:0.500/0.500" in by_id[
+        "massivefold_model1_combined_selector_overlay"
+    ]["blockers"]
+    assert "first:R2352/selector_blocked_manual_review" in by_id[
+        "massivefold_model1_combined_selector_overlay"
+    ]["blockers"]
+    assert "first_freeze:R2350/carry_model1_as_external_only_freeze_ready" in by_id[
+        "massivefold_model1_combined_selector_overlay"
+    ]["blockers"]
+    assert "proof_eligible:False" in by_id[
+        "massivefold_model1_combined_selector_overlay"
+    ]["blockers"]
+    assert "policy:do_not_mark_as_internal_prediction" in by_id[
+        "massivefold_model1_combined_selector_overlay"
+    ]["blockers"]
+    assert by_id["massivefold_freeze_ready_review_packet"]["status"] == (
+        "massivefold_freeze_ready_review_packet_ready_external_only"
+    )
+    assert by_id["massivefold_freeze_ready_review_packet"]["ready_count"] == 2
+    assert by_id["massivefold_freeze_ready_review_packet"]["blocked_count"] == 0
+    assert by_id["massivefold_freeze_ready_review_packet"]["total_count"] == 2
+    assert "reviews:2/0/2" in by_id["massivefold_freeze_ready_review_packet"]["blockers"]
+    assert "artifacts:2/2/2/2" in by_id["massivefold_freeze_ready_review_packet"]["blockers"]
+    assert "top5:10" in by_id["massivefold_freeze_ready_review_packet"]["blockers"]
+    assert "first:R2350/Model_20_af3_woPaired_seed_1.cif" in by_id[
+        "massivefold_freeze_ready_review_packet"
+    ]["blockers"]
+    assert "proof_eligible:False" in by_id["massivefold_freeze_ready_review_packet"]["blockers"]
+    assert "policy:do_not_mark_as_internal_prediction" in by_id[
+        "massivefold_freeze_ready_review_packet"
+    ]["blockers"]
+    assert by_id["massivefold_hold_probe_review_packet"]["status"] == (
+        "massivefold_hold_probe_review_packet_ready_external_only"
+    )
+    assert by_id["massivefold_hold_probe_review_packet"]["ready_count"] == 3
+    assert by_id["massivefold_hold_probe_review_packet"]["blocked_count"] == 0
+    assert by_id["massivefold_hold_probe_review_packet"]["total_count"] == 3
+    assert "reviews:3/0/3" in by_id["massivefold_hold_probe_review_packet"]["blockers"]
+    assert "classes:1/1/1/0/0" in by_id["massivefold_hold_probe_review_packet"]["blockers"]
+    assert "artifacts:3/3/3/3/alt:1" in by_id["massivefold_hold_probe_review_packet"]["blockers"]
+    assert "top5:15" in by_id["massivefold_hold_probe_review_packet"]["blockers"]
+    assert "first:R2352/manual_blocked_review" in by_id[
+        "massivefold_hold_probe_review_packet"
+    ]["blockers"]
+    assert "proof_eligible:False" in by_id["massivefold_hold_probe_review_packet"]["blockers"]
+    assert "policy:do_not_mark_as_internal_prediction" in by_id[
+        "massivefold_hold_probe_review_packet"
+    ]["blockers"]
+    assert by_id["massivefold_probe_required_targeted_probe_packet"]["status"] == (
+        "massivefold_probe_required_targeted_probe_packet_ready_external_only"
+    )
+    assert by_id["massivefold_probe_required_targeted_probe_packet"]["ready_count"] == 3
+    assert by_id["massivefold_probe_required_targeted_probe_packet"]["blocked_count"] == 0
+    assert by_id["massivefold_probe_required_targeted_probe_packet"]["total_count"] == 3
+    assert "probes:3/0/3" in by_id["massivefold_probe_required_targeted_probe_packet"]["blockers"]
+    assert "pass_watch_fail:2/1/0" in by_id[
+        "massivefold_probe_required_targeted_probe_packet"
+    ]["blockers"]
+    assert "recommend:2/1/0" in by_id[
+        "massivefold_probe_required_targeted_probe_packet"
+    ]["blockers"]
+    assert "rna_protein:1/2" in by_id[
+        "massivefold_probe_required_targeted_probe_packet"
+    ]["blockers"]
+    assert "artifacts:3/3/3/3/3/3" in by_id[
+        "massivefold_probe_required_targeted_probe_packet"
+    ]["blockers"]
+    assert "top5:15" in by_id["massivefold_probe_required_targeted_probe_packet"]["blockers"]
+    assert "first:H1311/probe_pass_model1_retained_clear" in by_id[
+        "massivefold_probe_required_targeted_probe_packet"
+    ]["blockers"]
+    assert "margin:0.75" in by_id["massivefold_probe_required_targeted_probe_packet"]["blockers"]
+    assert "proof_eligible:False" in by_id[
+        "massivefold_probe_required_targeted_probe_packet"
+    ]["blockers"]
+    assert "policy:do_not_mark_as_internal_prediction" in by_id[
+        "massivefold_probe_required_targeted_probe_packet"
+    ]["blockers"]
+    assert by_id["massivefold_post_probe_selector_decision_packet"]["status"] == (
+        "massivefold_post_probe_selector_decision_packet_ready_external_only"
+    )
+    assert by_id["massivefold_post_probe_selector_decision_packet"]["ready_count"] == 5
+    assert by_id["massivefold_post_probe_selector_decision_packet"]["blocked_count"] == 0
+    assert by_id["massivefold_post_probe_selector_decision_packet"]["total_count"] == 5
+    assert "decisions:5/0/5" in by_id[
+        "massivefold_post_probe_selector_decision_packet"
+    ]["blockers"]
+    assert "freeze_watch_manual:2/2/1" in by_id[
+        "massivefold_post_probe_selector_decision_packet"
+    ]["blockers"]
+    assert "freeze_existing_probe:1/1" in by_id[
+        "massivefold_post_probe_selector_decision_packet"
+    ]["blockers"]
+    assert "watch_probe_interface:1/1" in by_id[
+        "massivefold_post_probe_selector_decision_packet"
+    ]["blockers"]
+    assert "manual_probe_manual:0/1" in by_id[
+        "massivefold_post_probe_selector_decision_packet"
+    ]["blockers"]
+    assert "rna_protein:2/3" in by_id[
+        "massivefold_post_probe_selector_decision_packet"
+    ]["blockers"]
+    assert "artifacts:5/5/5/5/alt:1" in by_id[
+        "massivefold_post_probe_selector_decision_packet"
+    ]["blockers"]
+    assert "first:R2352/manual_block" in by_id[
+        "massivefold_post_probe_selector_decision_packet"
+    ]["blockers"]
+    assert "proof_eligible:False" in by_id[
+        "massivefold_post_probe_selector_decision_packet"
+    ]["blockers"]
+    assert "policy:do_not_mark_as_internal_prediction" in by_id[
+        "massivefold_post_probe_selector_decision_packet"
+    ]["blockers"]
+    assert by_id["massivefold_watch_manual_action_packet"]["status"] == (
+        "massivefold_watch_manual_action_packet_ready_external_only"
+    )
+    assert by_id["massivefold_watch_manual_action_packet"]["ready_count"] == 5
+    assert by_id["massivefold_watch_manual_action_packet"]["blocked_count"] == 0
+    assert by_id["massivefold_watch_manual_action_packet"]["total_count"] == 5
+    assert "actions:5/0/5" in by_id["massivefold_watch_manual_action_packet"]["blockers"]
+    assert "classes:1/1/3" in by_id["massivefold_watch_manual_action_packet"]["blockers"]
+    assert "priority:2/3" in by_id["massivefold_watch_manual_action_packet"]["blockers"]
+    assert "rna_protein:2/3" in by_id["massivefold_watch_manual_action_packet"]["blockers"]
+    assert "artifacts:5/5/5/5/alt:1" in by_id[
+        "massivefold_watch_manual_action_packet"
+    ]["blockers"]
+    assert "first:R2352/manual_alternate_review" in by_id[
+        "massivefold_watch_manual_action_packet"
+    ]["blockers"]
+    assert "proof_eligible:False" in by_id["massivefold_watch_manual_action_packet"]["blockers"]
+    assert "policy:do_not_mark_as_internal_prediction" in by_id[
+        "massivefold_watch_manual_action_packet"
+    ]["blockers"]
+    assert by_id["massivefold_freeze_candidate_format_preflight"]["status"] == (
+        "massivefold_freeze_candidate_format_preflight_ready_external_only"
+    )
+    assert by_id["massivefold_freeze_candidate_format_preflight"]["ready_count"] == 10
+    assert by_id["massivefold_freeze_candidate_format_preflight"]["blocked_count"] == 0
+    assert by_id["massivefold_freeze_candidate_format_preflight"]["total_count"] == 10
+    assert "preflight:10/0/10" in by_id["massivefold_freeze_candidate_format_preflight"]["blockers"]
+    assert "freeze_existing_probe:2/8" in by_id[
+        "massivefold_freeze_candidate_format_preflight"
+    ]["blockers"]
+    assert "rna_protein:4/6" in by_id["massivefold_freeze_candidate_format_preflight"]["blockers"]
+    assert "selected_pdb_cif:6/4" in by_id[
+        "massivefold_freeze_candidate_format_preflight"
+    ]["blockers"]
+    assert "packaged_pdb_cif:0/10" in by_id[
+        "massivefold_freeze_candidate_format_preflight"
+    ]["blockers"]
+    assert "checks:10/10/10/10/10/10/10" in by_id[
+        "massivefold_freeze_candidate_format_preflight"
+    ]["blockers"]
+    assert "first:H2319" in by_id["massivefold_freeze_candidate_format_preflight"]["blockers"]
+    assert "proof_eligible:False" in by_id[
+        "massivefold_freeze_candidate_format_preflight"
+    ]["blockers"]
+    assert "policy:do_not_mark_as_internal_prediction" in by_id[
+        "massivefold_freeze_candidate_format_preflight"
+    ]["blockers"]
+    assert by_id["massivefold_freeze_candidate_escrow"]["status"] == (
+        "massivefold_freeze_candidate_escrow_ready_external_only"
+    )
+    assert by_id["massivefold_freeze_candidate_escrow"]["ready_count"] == 10
+    assert by_id["massivefold_freeze_candidate_escrow"]["blocked_count"] == 0
+    assert by_id["massivefold_freeze_candidate_escrow"]["total_count"] == 10
+    assert "escrow:10/0/10" in by_id["massivefold_freeze_candidate_escrow"]["blockers"]
+    assert "sha_model_top5:10/10" in by_id["massivefold_freeze_candidate_escrow"]["blockers"]
+    assert "artifacts:10/10/10/10" in by_id["massivefold_freeze_candidate_escrow"]["blockers"]
+    assert "freeze_existing_probe:2/8" in by_id["massivefold_freeze_candidate_escrow"]["blockers"]
+    assert "rna_protein:4/6" in by_id["massivefold_freeze_candidate_escrow"]["blockers"]
+    assert "native_proof_author:10/0/0" in by_id["massivefold_freeze_candidate_escrow"]["blockers"]
+    assert "first:H2319" in by_id["massivefold_freeze_candidate_escrow"]["blockers"]
+    assert "blocked:-" in by_id["massivefold_freeze_candidate_escrow"]["blockers"]
+    assert by_id["massivefold_freeze_candidate_protein_library"]["status"] == (
+        "massivefold_freeze_candidate_protein_library_ready_external_only"
+    )
+    assert by_id["massivefold_freeze_candidate_protein_library"]["ready_count"] == 10
+    assert by_id["massivefold_freeze_candidate_protein_library"]["blocked_count"] == 0
+    assert by_id["massivefold_freeze_candidate_protein_library"]["total_count"] == 10
+    assert "library:10/0/10" in by_id["massivefold_freeze_candidate_protein_library"]["blockers"]
+    assert "objects:10/0/10" in by_id["massivefold_freeze_candidate_protein_library"]["blockers"]
+    assert "links:10/10/10/10/10" in by_id["massivefold_freeze_candidate_protein_library"]["blockers"]
+    assert "sha_model_top5:10/10" in by_id["massivefold_freeze_candidate_protein_library"]["blockers"]
+    assert "name_sources:5/10" in by_id["massivefold_freeze_candidate_protein_library"]["blockers"]
+    assert "rna_protein:4/6" in by_id["massivefold_freeze_candidate_protein_library"]["blockers"]
+    assert "proof_author:0/0" in by_id["massivefold_freeze_candidate_protein_library"]["blockers"]
+    assert "blocked:-" in by_id["massivefold_freeze_candidate_protein_library"]["blockers"]
     assert by_id["capri_round65_readiness"]["status"] == "deferred_pi_required"
     assert by_id["capri_round65_readiness"]["ready_count"] == 0
     assert by_id["capri_round65_readiness"]["blocked_count"] == 0
@@ -6441,6 +11072,170 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         "identity_discovery_blocked:3"
         in by_id["competitive_floor_target_identity_clearance_workorder_audit"]["blockers"]
     )
+    assert by_id["competitive_floor_target_identity_metric_runway"]["status"] == (
+        "casp17_competitive_floor_target_identity_metric_runway_blocked_awaiting_native_provenance"
+    )
+    assert by_id["competitive_floor_target_identity_metric_runway"]["ready_count"] == 0
+    assert by_id["competitive_floor_target_identity_metric_runway"]["blocked_count"] == 3
+    assert by_id["competitive_floor_target_identity_metric_runway"]["total_count"] == 3
+    assert "targets:0/3/3" in by_id["competitive_floor_target_identity_metric_runway"]["blockers"]
+    assert "families:3/0" in by_id["competitive_floor_target_identity_metric_runway"]["blockers"]
+    assert "metric_requirements:27" in by_id["competitive_floor_target_identity_metric_runway"]["blockers"]
+    assert "prediction_native_provenance_evidence:3/0/0/0" in by_id[
+        "competitive_floor_target_identity_metric_runway"
+    ]["blockers"]
+    assert "native_candidates:4/1/5" in by_id["competitive_floor_target_identity_metric_runway"]["blockers"]
+    assert "proof_author:0/0" in by_id["competitive_floor_target_identity_metric_runway"]["blockers"]
+    assert by_id["competitive_floor_native_provenance_operator_packet"]["status"] == (
+        "casp17_competitive_floor_native_provenance_operator_packet_open_actions"
+    )
+    assert by_id["competitive_floor_native_provenance_operator_packet"]["ready_count"] == 0
+    assert by_id["competitive_floor_native_provenance_operator_packet"]["blocked_count"] == 3
+    assert by_id["competitive_floor_native_provenance_operator_packet"]["total_count"] == 3
+    assert "targets:3/0/3" in by_id["competitive_floor_native_provenance_operator_packet"]["blockers"]
+    assert "actions:12/12" in by_id["competitive_floor_native_provenance_operator_packet"]["blockers"]
+    assert "lanes:3/3/3/3" in by_id["competitive_floor_native_provenance_operator_packet"]["blockers"]
+    assert "metric_requirements:27" in by_id["competitive_floor_native_provenance_operator_packet"]["blockers"]
+    assert "prediction_native_provenance_evidence:3/0/0/0" in by_id[
+        "competitive_floor_native_provenance_operator_packet"
+    ]["blockers"]
+    assert "native_candidates:4/1/5" in by_id["competitive_floor_native_provenance_operator_packet"]["blockers"]
+    assert "proof_author:0/0" in by_id["competitive_floor_native_provenance_operator_packet"]["blockers"]
+    assert by_id["competitive_floor_native_provenance_operator_packet_completion_audit"]["status"] == (
+        "casp17_competitive_floor_native_provenance_operator_packet_completion_audit_pass"
+    )
+    assert by_id["competitive_floor_native_provenance_operator_packet_completion_audit"]["ready_count"] == 3
+    assert by_id["competitive_floor_native_provenance_operator_packet_completion_audit"]["blocked_count"] == 0
+    assert by_id["competitive_floor_native_provenance_operator_packet_completion_audit"]["total_count"] == 3
+    assert "targets:3/0/3" in by_id[
+        "competitive_floor_native_provenance_operator_packet_completion_audit"
+    ]["blockers"]
+    assert "packet_files:3/3/3/3/3" in by_id[
+        "competitive_floor_native_provenance_operator_packet_completion_audit"
+    ]["blockers"]
+    assert "action_rows:12/12/mismatch:0" in by_id[
+        "competitive_floor_native_provenance_operator_packet_completion_audit"
+    ]["blockers"]
+    assert "native_candidates:5/5/mismatch:0" in by_id[
+        "competitive_floor_native_provenance_operator_packet_completion_audit"
+    ]["blockers"]
+    assert "inputs:3/3/3/0/3/3/3/3" in by_id[
+        "competitive_floor_native_provenance_operator_packet_completion_audit"
+    ]["blockers"]
+    assert "coordinate_copies:0/0" in by_id[
+        "competitive_floor_native_provenance_operator_packet_completion_audit"
+    ]["blockers"]
+    assert "proof_author:0/0" in by_id[
+        "competitive_floor_native_provenance_operator_packet_completion_audit"
+    ]["blockers"]
+    assert by_id["competitive_floor_native_provenance_metric_unlock_bridge"]["status"] == (
+        "casp17_competitive_floor_native_provenance_metric_unlock_bridge_blocked_awaiting_operator_values"
+    )
+    assert by_id["competitive_floor_native_provenance_metric_unlock_bridge"]["ready_count"] == 0
+    assert by_id["competitive_floor_native_provenance_metric_unlock_bridge"]["blocked_count"] == 3
+    assert by_id["competitive_floor_native_provenance_metric_unlock_bridge"]["total_count"] == 3
+    assert "targets:0/3/3" in by_id["competitive_floor_native_provenance_metric_unlock_bridge"]["blockers"]
+    assert "packet/workorder/runway:3/0/0" in by_id[
+        "competitive_floor_native_provenance_metric_unlock_bridge"
+    ]["blockers"]
+    assert "metric_requirements:27" in by_id[
+        "competitive_floor_native_provenance_metric_unlock_bridge"
+    ]["blockers"]
+    assert "inputs:3/3/3/0/3/3/3/3" in by_id[
+        "competitive_floor_native_provenance_metric_unlock_bridge"
+    ]["blockers"]
+    assert "actions:3/3/3/3/12" in by_id[
+        "competitive_floor_native_provenance_metric_unlock_bridge"
+    ]["blockers"]
+    assert "native_candidates:4/1/5" in by_id[
+        "competitive_floor_native_provenance_metric_unlock_bridge"
+    ]["blockers"]
+    assert "provenance_evidence_identity:0/0/0" in by_id[
+        "competitive_floor_native_provenance_metric_unlock_bridge"
+    ]["blockers"]
+    assert "proof_author:0/0" in by_id[
+        "competitive_floor_native_provenance_metric_unlock_bridge"
+    ]["blockers"]
+    assert by_id["competitive_floor_first_native_provenance_unlock_kit"]["status"] == (
+        "casp17_competitive_floor_first_native_provenance_unlock_kit_ready_for_operator_fill"
+    )
+    assert by_id["competitive_floor_first_native_provenance_unlock_kit"]["ready_count"] == 1
+    assert by_id["competitive_floor_first_native_provenance_unlock_kit"]["blocked_count"] == 0
+    assert by_id["competitive_floor_first_native_provenance_unlock_kit"]["total_count"] == 1
+    assert "target:H1319" in by_id["competitive_floor_first_native_provenance_unlock_kit"]["blockers"]
+    assert "fields:13" in by_id["competitive_floor_first_native_provenance_unlock_kit"]["blockers"]
+    assert "actions:4" in by_id["competitive_floor_first_native_provenance_unlock_kit"]["blockers"]
+    assert "bundle_actions:4" in by_id["competitive_floor_first_native_provenance_unlock_kit"]["blockers"]
+    assert "packet_pass:True" in by_id["competitive_floor_first_native_provenance_unlock_kit"]["blockers"]
+    assert "metric_ready:False" in by_id["competitive_floor_first_native_provenance_unlock_kit"]["blockers"]
+    assert "workorder_pass:False" in by_id["competitive_floor_first_native_provenance_unlock_kit"]["blockers"]
+    assert "inputs:1/1/1/0/1/1/1/1" in by_id[
+        "competitive_floor_first_native_provenance_unlock_kit"
+    ]["blockers"]
+    assert "provenance_evidence_identity:0/0/0" in by_id[
+        "competitive_floor_first_native_provenance_unlock_kit"
+    ]["blockers"]
+    assert "proof_author:0/0" in by_id["competitive_floor_first_native_provenance_unlock_kit"]["blockers"]
+    assert "coordinate_copies:0" in by_id["competitive_floor_first_native_provenance_unlock_kit"]["blockers"]
+    assert by_id["competitive_floor_batch_native_provenance_unlock_kit"]["status"] == (
+        "casp17_competitive_floor_batch_native_provenance_unlock_kit_ready_for_operator_fill"
+    )
+    assert by_id["competitive_floor_batch_native_provenance_unlock_kit"]["ready_count"] == 3
+    assert by_id["competitive_floor_batch_native_provenance_unlock_kit"]["blocked_count"] == 0
+    assert by_id["competitive_floor_batch_native_provenance_unlock_kit"]["total_count"] == 3
+    assert "targets:3/0/3" in by_id["competitive_floor_batch_native_provenance_unlock_kit"]["blockers"]
+    assert "target_ids:H1319,H1321,H2324" in by_id[
+        "competitive_floor_batch_native_provenance_unlock_kit"
+    ]["blockers"]
+    assert "fields:13/39" in by_id["competitive_floor_batch_native_provenance_unlock_kit"]["blockers"]
+    assert "actions:12/12" in by_id["competitive_floor_batch_native_provenance_unlock_kit"]["blockers"]
+    assert "packet/workorder/runway:3/0/0" in by_id[
+        "competitive_floor_batch_native_provenance_unlock_kit"
+    ]["blockers"]
+    assert "inputs:3/3/3/0/3/3/3/3" in by_id[
+        "competitive_floor_batch_native_provenance_unlock_kit"
+    ]["blockers"]
+    assert "provenance_evidence_identity:0/0/0" in by_id[
+        "competitive_floor_batch_native_provenance_unlock_kit"
+    ]["blockers"]
+    assert "proof_author:0/0" in by_id["competitive_floor_batch_native_provenance_unlock_kit"]["blockers"]
+    assert "coordinate_copies:0" in by_id["competitive_floor_batch_native_provenance_unlock_kit"]["blockers"]
+    assert by_id["competitive_floor_batch_native_provenance_unlock_kit_completion_audit"]["status"] == (
+        "casp17_competitive_floor_batch_native_provenance_unlock_kit_completion_audit_pass"
+    )
+    assert by_id["competitive_floor_batch_native_provenance_unlock_kit_completion_audit"]["ready_count"] == 3
+    assert by_id["competitive_floor_batch_native_provenance_unlock_kit_completion_audit"]["blocked_count"] == 0
+    assert by_id["competitive_floor_batch_native_provenance_unlock_kit_completion_audit"]["total_count"] == 3
+    assert "targets:3/0/3" in by_id[
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit"
+    ]["blockers"]
+    assert "batch_files:6/6" in by_id[
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit"
+    ]["blockers"]
+    assert "batch_intake:3/3/mismatch:0" in by_id[
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit"
+    ]["blockers"]
+    assert "batch_actions:12/12/mismatch:0" in by_id[
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit"
+    ]["blockers"]
+    assert "target_files:3/3/3/3/3/3" in by_id[
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit"
+    ]["blockers"]
+    assert "target_intake:3/3/mismatch:0" in by_id[
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit"
+    ]["blockers"]
+    assert "target_actions:12/12/mismatch:0" in by_id[
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit"
+    ]["blockers"]
+    assert "coordinate_copies:0/0" in by_id[
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit"
+    ]["blockers"]
+    assert "native_provenance_evidence_identity:0/0/0/0" in by_id[
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit"
+    ]["blockers"]
+    assert "proof_author:0/0" in by_id[
+        "competitive_floor_batch_native_provenance_unlock_kit_completion_audit"
+    ]["blockers"]
     assert by_id["competitive_floor_target_identity_clearance_action_board"]["status"] == "open_actions"
     assert by_id["competitive_floor_target_identity_clearance_action_board"]["blocked_count"] == 12
     assert "native:3" in by_id["competitive_floor_target_identity_clearance_action_board"]["blockers"]
@@ -6787,6 +11582,168 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "strict_blind_blocked:24" in by_id["historical_seed_official_archive_baseline_lane"]["blockers"]
     assert "other_team_baseline:24" in by_id["historical_seed_official_archive_baseline_lane"]["blockers"]
     assert "first:CASP16/T1210/9enr" in by_id["historical_seed_official_archive_baseline_lane"]["blockers"]
+    assert by_id["official_archive_first_baseline_acquisition_audit"]["status"] == (
+        "official_archive_first_baseline_acquired"
+    )
+    assert by_id["official_archive_first_baseline_acquisition_audit"]["ready_count"] == 2
+    assert by_id["official_archive_first_baseline_acquisition_audit"]["blocked_count"] == 0
+    assert by_id["official_archive_first_baseline_acquisition_audit"]["total_count"] == 2
+    assert "first:CASP16/T1210/9ENR" in by_id[
+        "official_archive_first_baseline_acquisition_audit"
+    ]["blockers"]
+    assert "artifacts:2/0/2" in by_id["official_archive_first_baseline_acquisition_audit"]["blockers"]
+    assert "tar_models:357" in by_id["official_archive_first_baseline_acquisition_audit"]["blockers"]
+    assert "native_atoms:7051" in by_id["official_archive_first_baseline_acquisition_audit"]["blockers"]
+    assert "proof_eligible:False" in by_id[
+        "official_archive_first_baseline_acquisition_audit"
+    ]["blockers"]
+    assert by_id["official_archive_first_baseline_model_pool"]["status"] == (
+        "official_archive_first_baseline_model_pool_ready"
+    )
+    assert by_id["official_archive_first_baseline_model_pool"]["ready_count"] == 357
+    assert by_id["official_archive_first_baseline_model_pool"]["blocked_count"] == 0
+    assert by_id["official_archive_first_baseline_model_pool"]["total_count"] == 357
+    assert "first:CASP16/T1210/9ENR" in by_id[
+        "official_archive_first_baseline_model_pool"
+    ]["blockers"]
+    assert "models:357/0/357" in by_id["official_archive_first_baseline_model_pool"]["blockers"]
+    assert "groups:74" in by_id["official_archive_first_baseline_model_pool"]["blockers"]
+    assert "model1:73" in by_id["official_archive_first_baseline_model_pool"]["blockers"]
+    assert "top5:348" in by_id["official_archive_first_baseline_model_pool"]["blockers"]
+    assert "complete_top5:67" in by_id["official_archive_first_baseline_model_pool"]["blockers"]
+    assert "proof_eligible:False" in by_id["official_archive_first_baseline_model_pool"]["blockers"]
+    assert by_id["official_archive_first_baseline_score_ledger"]["status"] == (
+        "official_archive_first_baseline_score_ledger_ready_baseline_only"
+    )
+    assert by_id["official_archive_first_baseline_score_ledger"]["ready_count"] == 348
+    assert by_id["official_archive_first_baseline_score_ledger"]["blocked_count"] == 0
+    assert by_id["official_archive_first_baseline_score_ledger"]["total_count"] == 348
+    assert "first:CASP16/T1210/9ENR" in by_id[
+        "official_archive_first_baseline_score_ledger"
+    ]["blockers"]
+    assert "models:348/0/348" in by_id["official_archive_first_baseline_score_ledger"]["blockers"]
+    assert "model1:73" in by_id["official_archive_first_baseline_score_ledger"]["blockers"]
+    assert "best_top5:74" in by_id["official_archive_first_baseline_score_ledger"]["blockers"]
+    assert "improved:41" in by_id["official_archive_first_baseline_score_ledger"]["blockers"]
+    assert "mean_model1:55.123" in by_id["official_archive_first_baseline_score_ledger"]["blockers"]
+    assert "mean_best:62.456" in by_id["official_archive_first_baseline_score_ledger"]["blockers"]
+    assert "proof_eligible:False" in by_id["official_archive_first_baseline_score_ledger"]["blockers"]
+    assert by_id["official_archive_first_baseline_replay_comparison"]["status"] == (
+        "official_archive_first_baseline_replay_comparison_ready_baseline_only"
+    )
+    assert by_id["official_archive_first_baseline_replay_comparison"]["ready_count"] == 0
+    assert by_id["official_archive_first_baseline_replay_comparison"]["blocked_count"] == 3
+    assert by_id["official_archive_first_baseline_replay_comparison"]["total_count"] == 3
+    assert "first:CASP16/T1210/9ENR" in by_id[
+        "official_archive_first_baseline_replay_comparison"
+    ]["blockers"]
+    assert "bands:0/3/3" in by_id["official_archive_first_baseline_replay_comparison"]["blockers"]
+    assert "direct:not_directly_comparable_proxy_single_target_not_sum_zscore" in by_id[
+        "official_archive_first_baseline_replay_comparison"
+    ]["blockers"]
+    assert "model1_best:32/73" in by_id["official_archive_first_baseline_replay_comparison"]["blockers"]
+    assert "top5_improved:41/73" in by_id["official_archive_first_baseline_replay_comparison"]["blockers"]
+    assert "rates:0.438/0.562" in by_id["official_archive_first_baseline_replay_comparison"]["blockers"]
+    assert "proof_eligible:False" in by_id["official_archive_first_baseline_replay_comparison"]["blockers"]
+    assert by_id["official_archive_first_baseline_model1_gap_triage"]["status"] == (
+        "official_archive_first_baseline_model1_gap_triage_ready_baseline_only"
+    )
+    assert by_id["official_archive_first_baseline_model1_gap_triage"]["ready_count"] == 73
+    assert by_id["official_archive_first_baseline_model1_gap_triage"]["blocked_count"] == 1
+    assert by_id["official_archive_first_baseline_model1_gap_triage"]["total_count"] == 74
+    assert "first:CASP16/T1210/9ENR" in by_id[
+        "official_archive_first_baseline_model1_gap_triage"
+    ]["blockers"]
+    assert "groups:73/1/74" in by_id["official_archive_first_baseline_model1_gap_triage"]["blockers"]
+    assert "model1_best:32/73" in by_id["official_archive_first_baseline_model1_gap_triage"]["blockers"]
+    assert "top5_improved:41/73" in by_id["official_archive_first_baseline_model1_gap_triage"]["blockers"]
+    assert "rates:0.438/0.562" in by_id["official_archive_first_baseline_model1_gap_triage"]["blockers"]
+    assert "gaps:10/20/8/3" in by_id["official_archive_first_baseline_model1_gap_triage"]["blockers"]
+    assert "critical:11" in by_id["official_archive_first_baseline_model1_gap_triage"]["blockers"]
+    assert "first_triage:999/catastrophic_model1_selection_gap/70.000" in by_id[
+        "official_archive_first_baseline_model1_gap_triage"
+    ]["blockers"]
+    assert "proof_eligible:False" in by_id["official_archive_first_baseline_model1_gap_triage"]["blockers"]
+    assert by_id["official_archive_first_baseline_model1_gap_viewer_packet"]["status"] == (
+        "official_archive_first_baseline_model1_gap_viewer_packet_ready_baseline_only"
+    )
+    assert by_id["official_archive_first_baseline_model1_gap_viewer_packet"]["ready_count"] == 11
+    assert by_id["official_archive_first_baseline_model1_gap_viewer_packet"]["blocked_count"] == 0
+    assert by_id["official_archive_first_baseline_model1_gap_viewer_packet"]["total_count"] == 11
+    assert "first:CASP16/T1210/9ENR" in by_id[
+        "official_archive_first_baseline_model1_gap_viewer_packet"
+    ]["blockers"]
+    assert "viewers:11/0/11" in by_id["official_archive_first_baseline_model1_gap_viewer_packet"]["blockers"]
+    assert "cases:3/8" in by_id["official_archive_first_baseline_model1_gap_viewer_packet"]["blockers"]
+    assert "pairs:11" in by_id["official_archive_first_baseline_model1_gap_viewer_packet"]["blockers"]
+    assert "native:True" in by_id["official_archive_first_baseline_model1_gap_viewer_packet"]["blockers"]
+    assert "first_viewer:999/catastrophic_model1_selection_gap/70.000" in by_id[
+        "official_archive_first_baseline_model1_gap_viewer_packet"
+    ]["blockers"]
+    assert "proof_eligible:False" in by_id["official_archive_first_baseline_model1_gap_viewer_packet"]["blockers"]
+    assert by_id["official_archive_first_baseline_model1_gap_feature_probe"]["status"] == (
+        "official_archive_first_baseline_model1_gap_feature_probe_ready_baseline_only"
+    )
+    assert by_id["official_archive_first_baseline_model1_gap_feature_probe"]["ready_count"] == 11
+    assert by_id["official_archive_first_baseline_model1_gap_feature_probe"]["blocked_count"] == 0
+    assert by_id["official_archive_first_baseline_model1_gap_feature_probe"]["total_count"] == 11
+    assert "first:CASP16/T1210/9ENR" in by_id[
+        "official_archive_first_baseline_model1_gap_feature_probe"
+    ]["blockers"]
+    assert "features:11/0/11" in by_id["official_archive_first_baseline_model1_gap_feature_probe"]["blockers"]
+    assert "signals:4/1/6" in by_id["official_archive_first_baseline_model1_gap_feature_probe"]["blockers"]
+    assert "rate:0.364" in by_id["official_archive_first_baseline_model1_gap_feature_probe"]["blockers"]
+    assert "cases:3/8" in by_id["official_archive_first_baseline_model1_gap_feature_probe"]["blockers"]
+    assert "matrix:22" in by_id["official_archive_first_baseline_model1_gap_feature_probe"]["blockers"]
+    assert "first_signal:999/supports_best_top5/115.000" in by_id[
+        "official_archive_first_baseline_model1_gap_feature_probe"
+    ]["blockers"]
+    assert "proof_eligible:False" in by_id["official_archive_first_baseline_model1_gap_feature_probe"]["blockers"]
+    assert by_id["official_archive_first_baseline_model1_gap_consensus_probe"]["status"] == (
+        "official_archive_first_baseline_model1_gap_consensus_probe_ready_baseline_only"
+    )
+    assert by_id["official_archive_first_baseline_model1_gap_consensus_probe"]["ready_count"] == 11
+    assert by_id["official_archive_first_baseline_model1_gap_consensus_probe"]["blocked_count"] == 0
+    assert by_id["official_archive_first_baseline_model1_gap_consensus_probe"]["total_count"] == 11
+    assert "first:CASP16/T1210/9ENR" in by_id[
+        "official_archive_first_baseline_model1_gap_consensus_probe"
+    ]["blockers"]
+    assert "consensus:11/0/11" in by_id["official_archive_first_baseline_model1_gap_consensus_probe"]["blockers"]
+    assert "signals:5/2/4" in by_id["official_archive_first_baseline_model1_gap_consensus_probe"]["blockers"]
+    assert "rate:0.455" in by_id["official_archive_first_baseline_model1_gap_consensus_probe"]["blockers"]
+    assert "top_matches:3/2" in by_id["official_archive_first_baseline_model1_gap_consensus_probe"]["blockers"]
+    assert "pairs:110" in by_id["official_archive_first_baseline_model1_gap_consensus_probe"]["blockers"]
+    assert "first_signal:999/supports_best_top5/12.345" in by_id[
+        "official_archive_first_baseline_model1_gap_consensus_probe"
+    ]["blockers"]
+    assert "proof_eligible:False" in by_id["official_archive_first_baseline_model1_gap_consensus_probe"]["blockers"]
+    assert by_id["official_archive_first_baseline_model1_gap_combined_selector_ledger"]["status"] == (
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger_ready_baseline_only"
+    )
+    assert by_id["official_archive_first_baseline_model1_gap_combined_selector_ledger"]["ready_count"] == 11
+    assert by_id["official_archive_first_baseline_model1_gap_combined_selector_ledger"]["blocked_count"] == 0
+    assert by_id["official_archive_first_baseline_model1_gap_combined_selector_ledger"]["total_count"] == 11
+    assert "first:CASP16/T1210/9ENR" in by_id[
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger"
+    ]["blockers"]
+    assert "selector:11/0/11" in by_id[
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger"
+    ]["blockers"]
+    assert "decisions:5/5/1" in by_id[
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger"
+    ]["blockers"]
+    assert "baseline:5/5/1/0" in by_id[
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger"
+    ]["blockers"]
+    assert "rates:0.455/0.545" in by_id[
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger"
+    ]["blockers"]
+    assert "first_selector:999/promote_best_top5/corrected_model1_failure_baseline_proxy" in by_id[
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger"
+    ]["blockers"]
+    assert "proof_eligible:False" in by_id[
+        "official_archive_first_baseline_model1_gap_combined_selector_ledger"
+    ]["blockers"]
     assert by_id["strict_blind_first_slot_source_bridge"]["status"] == (
         "first_slot_source_bridge_internal_prediction_required"
     )
@@ -6811,6 +11768,45 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "official_blocked:24" in by_id["strict_blind_internal_prediction_source_audit"]["blockers"]
     assert "internal_blocked:1" in by_id["strict_blind_internal_prediction_source_audit"]["blockers"]
     assert "template:1" in by_id["strict_blind_internal_prediction_source_audit"]["blockers"]
+    assert by_id["strict_blind_internal_candidate_filesystem_sweep"]["status"] == (
+        "strict_blind_filesystem_sweep_operator_review_required"
+    )
+    assert by_id["strict_blind_internal_candidate_filesystem_sweep"]["ready_count"] == 0
+    assert by_id["strict_blind_internal_candidate_filesystem_sweep"]["blocked_count"] == 4551
+    assert by_id["strict_blind_internal_candidate_filesystem_sweep"]["total_count"] == 9968
+    assert "files/atom:9968/9968" in by_id[
+        "strict_blind_internal_candidate_filesystem_sweep"
+    ]["blockers"]
+    assert "verified:0" in by_id["strict_blind_internal_candidate_filesystem_sweep"]["blockers"]
+    assert "unknown:4551" in by_id["strict_blind_internal_candidate_filesystem_sweep"]["blockers"]
+    assert "current/mf/official/native/top5/dropzone:1810/2895/387/257/75/0" in by_id[
+        "strict_blind_internal_candidate_filesystem_sweep"
+    ]["blockers"]
+    assert by_id["strict_blind_unknown_candidate_triage"]["status"] == (
+        "strict_blind_unknown_triage_internal_like_review_required"
+    )
+    assert by_id["strict_blind_unknown_candidate_triage"]["ready_count"] == 0
+    assert by_id["strict_blind_unknown_candidate_triage"]["blocked_count"] == 166
+    assert by_id["strict_blind_unknown_candidate_triage"]["total_count"] == 4551
+    assert "unknown:4551" in by_id["strict_blind_unknown_candidate_triage"]["blockers"]
+    assert "internal_like:166" in by_id["strict_blind_unknown_candidate_triage"]["blockers"]
+    assert "promotion_ready:0" in by_id["strict_blind_unknown_candidate_triage"]["blockers"]
+    assert "public/run/archive/data/tmp/other:3962/406/16/0/1/0" in by_id[
+        "strict_blind_unknown_candidate_triage"
+    ]["blockers"]
+    assert by_id["strict_blind_internal_like_source_review"]["status"] == (
+        "strict_blind_internal_like_source_review_all_post_native"
+    )
+    assert by_id["strict_blind_internal_like_source_review"]["ready_count"] == 0
+    assert by_id["strict_blind_internal_like_source_review"]["blocked_count"] == 166
+    assert by_id["strict_blind_internal_like_source_review"]["total_count"] == 166
+    assert "candidates:166/triage:166" in by_id["strict_blind_internal_like_source_review"]["blockers"]
+    assert "mapped/pre/post/same/missing/unmapped:166/0/166/0/0/0" in by_id[
+        "strict_blind_internal_like_source_review"
+    ]["blockers"]
+    assert "targets/all-post/pre-targets:10/10/0" in by_id[
+        "strict_blind_internal_like_source_review"
+    ]["blockers"]
     assert by_id["strict_blind_internal_prediction_source_gate"]["status"] == (
         "awaiting_internal_prediction_source_gate_fields"
     )
@@ -6855,6 +11851,21 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "fields:0/187/187" in by_id["strict_blind_source_gate_source_request_packet"]["blockers"]
     assert "first:source_request_001/HIST_BBA5/pre_native_prediction_source_required/prediction_not_before_native" in by_id[
         "strict_blind_source_gate_source_request_packet"
+    ]["blockers"]
+    assert by_id["strict_blind_source_request_resolution_board"]["status"] == (
+        "source_request_resolution_all_current_candidates_blocked"
+    )
+    assert by_id["strict_blind_source_request_resolution_board"]["ready_count"] == 0
+    assert by_id["strict_blind_source_request_resolution_board"]["blocked_count"] == 17
+    assert by_id["strict_blind_source_request_resolution_board"]["total_count"] == 17
+    assert "requests:0/17/17" in by_id["strict_blind_source_request_resolution_board"]["blockers"]
+    assert "monomer/complex:10/7" in by_id["strict_blind_source_request_resolution_board"]["blockers"]
+    assert "postnative/replacement/prenative-review/missing:10/7/0/0" in by_id[
+        "strict_blind_source_request_resolution_board"
+    ]["blockers"]
+    assert "internal-like-post/pre:166/0" in by_id["strict_blind_source_request_resolution_board"]["blockers"]
+    assert "first:source_request_001/HIST_BBA5/all_internal_like_candidates_post_native" in by_id[
+        "strict_blind_source_request_resolution_board"
     ]["blockers"]
     assert by_id["strict_blind_source_request_fulfillment_gate"]["status"] == (
         "awaiting_source_request_operator_values"
@@ -6973,6 +11984,25 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "file:0/2" in by_id["strict_blind_first_unlock_evidence_review_gate"]["blockers"]
     assert "first:source_id/template_operator_value_missing" in by_id[
         "strict_blind_first_unlock_evidence_review_gate"
+    ]["blockers"]
+    assert by_id["strict_blind_first_slot_source_gate_blocker_ledger"]["status"] == (
+        "awaiting_first_slot_source_gate_operator_evidence"
+    )
+    assert by_id["strict_blind_first_slot_source_gate_blocker_ledger"]["ready_count"] == 0
+    assert by_id["strict_blind_first_slot_source_gate_blocker_ledger"]["blocked_count"] == 11
+    assert by_id["strict_blind_first_slot_source_gate_blocker_ledger"]["total_count"] == 11
+    assert "required:hist_REQUIRED_MONOMER_001/REQUIRED_MONOMER_001" in by_id[
+        "strict_blind_first_slot_source_gate_blocker_ledger"
+    ]["blockers"]
+    assert "fields:0/11/11" in by_id[
+        "strict_blind_first_slot_source_gate_blocker_ledger"
+    ]["blockers"]
+    assert "gate:3/13/16" in by_id["strict_blind_first_slot_source_gate_blocker_ledger"]["blockers"]
+    assert "operator:0/11" in by_id["strict_blind_first_slot_source_gate_blocker_ledger"]["blockers"]
+    assert "review:0/11" in by_id["strict_blind_first_slot_source_gate_blocker_ledger"]["blockers"]
+    assert "file:0/2" in by_id["strict_blind_first_slot_source_gate_blocker_ledger"]["blockers"]
+    assert "first:source_id/template_operator_value_missing" in by_id[
+        "strict_blind_first_slot_source_gate_blocker_ledger"
     ]["blockers"]
     assert by_id["strict_blind_first_unlock_evidence_sync_plan"]["status"] == (
         "awaiting_first_unlock_evidence_review"
@@ -7152,6 +12182,24 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_historical_seed_strict_blind_replacement_first_slot_official_archive_source_candidates.json"),
             "--historical-seed-official-archive-baseline-lane-json",
             str(tmp_path / "missing_historical_seed_official_archive_baseline_lane.json"),
+            "--official-archive-first-baseline-acquisition-audit-json",
+            str(tmp_path / "missing_official_archive_first_baseline_acquisition_audit.json"),
+            "--official-archive-first-baseline-model-pool-json",
+            str(tmp_path / "missing_official_archive_first_baseline_model_pool.json"),
+            "--official-archive-first-baseline-score-ledger-json",
+            str(tmp_path / "missing_official_archive_first_baseline_score_ledger.json"),
+            "--official-archive-first-baseline-replay-comparison-json",
+            str(tmp_path / "missing_official_archive_first_baseline_replay_comparison.json"),
+            "--official-archive-first-baseline-model1-gap-triage-json",
+            str(tmp_path / "missing_official_archive_first_baseline_model1_gap_triage.json"),
+            "--official-archive-first-baseline-model1-gap-viewer-packet-json",
+            str(tmp_path / "missing_official_archive_first_baseline_model1_gap_viewer_packet.json"),
+            "--official-archive-first-baseline-model1-gap-feature-probe-json",
+            str(tmp_path / "missing_official_archive_first_baseline_model1_gap_feature_probe.json"),
+            "--official-archive-first-baseline-model1-gap-consensus-probe-json",
+            str(tmp_path / "missing_official_archive_first_baseline_model1_gap_consensus_probe.json"),
+            "--official-archive-first-baseline-model1-gap-combined-selector-ledger-json",
+            str(tmp_path / "missing_official_archive_first_baseline_model1_gap_combined_selector_ledger.json"),
             "--strict-blind-first-slot-source-bridge-json",
             str(tmp_path / "missing_strict_blind_first_slot_source_bridge.json"),
             "--strict-blind-internal-prediction-source-audit-json",
@@ -7180,6 +12228,8 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_strict_blind_first_unlock_evidence_packet.json"),
             "--strict-blind-first-unlock-evidence-review-gate-json",
             str(tmp_path / "missing_strict_blind_first_unlock_evidence_review_gate.json"),
+            "--strict-blind-first-slot-source-gate-blocker-ledger-json",
+            str(tmp_path / "missing_strict_blind_first_slot_source_gate_blocker_ledger.json"),
             "--strict-blind-first-unlock-evidence-sync-plan-json",
             str(tmp_path / "missing_strict_blind_first_unlock_evidence_sync_plan.json"),
             "--strict-blind-internal-prediction-source-apply-plan-json",
@@ -7244,6 +12294,36 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_competitive_target_identity_clearance_manifest_sync.json"),
             "--competitive-target-identity-clearance-workorder-audit-json",
             str(tmp_path / "missing_competitive_target_identity_clearance_workorder_audit.json"),
+            "--competitive-target-identity-metric-runway-json",
+            str(tmp_path / "missing_competitive_target_identity_metric_runway.json"),
+            "--competitive-floor-native-provenance-operator-packet-json",
+            str(tmp_path / "missing_competitive_floor_native_provenance_operator_packet.json"),
+            "--competitive-floor-native-provenance-operator-packet-completion-audit-json",
+            str(tmp_path / "missing_competitive_floor_native_provenance_operator_packet_completion_audit.json"),
+            "--competitive-floor-native-provenance-metric-unlock-bridge-json",
+            str(tmp_path / "missing_competitive_floor_native_provenance_metric_unlock_bridge.json"),
+            "--competitive-floor-first-native-provenance-unlock-kit-json",
+            str(tmp_path / "missing_competitive_floor_first_native_provenance_unlock_kit.json"),
+            "--competitive-floor-batch-native-provenance-unlock-kit-json",
+            str(tmp_path / "missing_competitive_floor_batch_native_provenance_unlock_kit.json"),
+            "--competitive-floor-batch-native-provenance-unlock-kit-completion-audit-json",
+            str(tmp_path / "missing_competitive_floor_batch_native_provenance_unlock_kit_completion_audit.json"),
+            "--competitive-floor-batch-native-provenance-value-gate-json",
+            str(tmp_path / "missing_competitive_floor_batch_native_provenance_value_gate.json"),
+            "--competitive-floor-batch-native-provenance-value-action-board-json",
+            str(tmp_path / "missing_competitive_floor_batch_native_provenance_value_action_board.json"),
+            "--competitive-floor-batch-native-provenance-value-action-board-completion-audit-json",
+            str(
+                tmp_path
+                / "missing_competitive_floor_batch_native_provenance_value_action_board_completion_audit.json"
+            ),
+            "--competitive-floor-batch-native-provenance-operator-fill-preflight-json",
+            str(tmp_path / "missing_competitive_floor_batch_native_provenance_operator_fill_preflight.json"),
+            "--competitive-floor-batch-native-provenance-operator-fill-preflight-completion-audit-json",
+            str(
+                tmp_path
+                / "missing_competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit.json"
+            ),
             "--competitive-target-identity-clearance-action-board-json",
             str(tmp_path / "missing_competitive_target_identity_clearance_action_board.json"),
             "--competitive-target-identity-clearance-action-bundle-json",

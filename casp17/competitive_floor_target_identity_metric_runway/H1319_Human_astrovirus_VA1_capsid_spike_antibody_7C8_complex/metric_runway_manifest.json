@@ -1,0 +1,133 @@
+{
+  "metric_rows": [
+    {
+      "claim_boundary": "CASP17 competitive-floor target identity metric runway only. It maps target-identity clearance workorders to review-only metric requirements and native/provenance blockers. It does not fetch native structures, clear no-leak provenance, compute native accuracy, serialize a CASP author code, promote identities, mutate intake files, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_input_native_pdb": "casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/native/H1319_native.pdb",
+      "expected_input_prediction_pdb": "runs/casp17_prediction_jobs_current/H1319/H1319_model_1.pdb",
+      "expected_output_status": "not_computed_awaiting_native_provenance",
+      "metric_family": "protein_complex",
+      "metric_input_contract": "prediction/native chain mapping",
+      "metric_name": "GDT_TS"
+    },
+    {
+      "claim_boundary": "CASP17 competitive-floor target identity metric runway only. It maps target-identity clearance workorders to review-only metric requirements and native/provenance blockers. It does not fetch native structures, clear no-leak provenance, compute native accuracy, serialize a CASP author code, promote identities, mutate intake files, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_input_native_pdb": "casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/native/H1319_native.pdb",
+      "expected_input_prediction_pdb": "runs/casp17_prediction_jobs_current/H1319/H1319_model_1.pdb",
+      "expected_output_status": "not_computed_awaiting_native_provenance",
+      "metric_family": "protein_complex",
+      "metric_input_contract": "prediction/native residue mapping",
+      "metric_name": "lDDT"
+    },
+    {
+      "claim_boundary": "CASP17 competitive-floor target identity metric runway only. It maps target-identity clearance workorders to review-only metric requirements and native/provenance blockers. It does not fetch native structures, clear no-leak provenance, compute native accuracy, serialize a CASP author code, promote identities, mutate intake files, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_input_native_pdb": "casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/native/H1319_native.pdb",
+      "expected_input_prediction_pdb": "runs/casp17_prediction_jobs_current/H1319/H1319_model_1.pdb",
+      "expected_output_status": "not_computed_awaiting_native_provenance",
+      "metric_family": "protein_complex",
+      "metric_input_contract": "prediction/native chain mapping",
+      "metric_name": "TM-score"
+    },
+    {
+      "claim_boundary": "CASP17 competitive-floor target identity metric runway only. It maps target-identity clearance workorders to review-only metric requirements and native/provenance blockers. It does not fetch native structures, clear no-leak provenance, compute native accuracy, serialize a CASP author code, promote identities, mutate intake files, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_input_native_pdb": "casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/native/H1319_native.pdb",
+      "expected_input_prediction_pdb": "runs/casp17_prediction_jobs_current/H1319/H1319_model_1.pdb",
+      "expected_output_status": "not_computed_awaiting_native_provenance",
+      "metric_family": "protein_complex",
+      "metric_input_contract": "prediction/native chain mapping",
+      "metric_name": "RMSD"
+    },
+    {
+      "claim_boundary": "CASP17 competitive-floor target identity metric runway only. It maps target-identity clearance workorders to review-only metric requirements and native/provenance blockers. It does not fetch native structures, clear no-leak provenance, compute native accuracy, serialize a CASP author code, promote identities, mutate intake files, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_input_native_pdb": "casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/native/H1319_native.pdb",
+      "expected_input_prediction_pdb": "runs/casp17_prediction_jobs_current/H1319/H1319_model_1.pdb",
+      "expected_output_status": "not_computed_awaiting_native_provenance",
+      "metric_family": "protein_complex",
+      "metric_input_contract": "prediction/native chain mapping",
+      "metric_name": "GDT_HA"
+    },
+    {
+      "claim_boundary": "CASP17 competitive-floor target identity metric runway only. It maps target-identity clearance workorders to review-only metric requirements and native/provenance blockers. It does not fetch native structures, clear no-leak provenance, compute native accuracy, serialize a CASP author code, promote identities, mutate intake files, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_input_native_pdb": "casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/native/H1319_native.pdb",
+      "expected_input_prediction_pdb": "runs/casp17_prediction_jobs_current/H1319/H1319_model_1.pdb",
+      "expected_output_status": "not_computed_awaiting_native_provenance",
+      "metric_family": "protein_complex",
+      "metric_input_contract": "prediction coordinate geometry validation",
+      "metric_name": "MolProbity"
+    },
+    {
+      "claim_boundary": "CASP17 competitive-floor target identity metric runway only. It maps target-identity clearance workorders to review-only metric requirements and native/provenance blockers. It does not fetch native structures, clear no-leak provenance, compute native accuracy, serialize a CASP author code, promote identities, mutate intake files, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_input_native_pdb": "casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/native/H1319_native.pdb",
+      "expected_input_prediction_pdb": "runs/casp17_prediction_jobs_current/H1319/H1319_model_1.pdb",
+      "expected_output_status": "not_computed_awaiting_native_provenance",
+      "metric_family": "protein_complex",
+      "metric_input_contract": "prediction/native interface chain mapping",
+      "metric_name": "DockQ"
+    },
+    {
+      "claim_boundary": "CASP17 competitive-floor target identity metric runway only. It maps target-identity clearance workorders to review-only metric requirements and native/provenance blockers. It does not fetch native structures, clear no-leak provenance, compute native accuracy, serialize a CASP author code, promote identities, mutate intake files, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_input_native_pdb": "casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/native/H1319_native.pdb",
+      "expected_input_prediction_pdb": "runs/casp17_prediction_jobs_current/H1319/H1319_model_1.pdb",
+      "expected_output_status": "not_computed_awaiting_native_provenance",
+      "metric_family": "protein_complex",
+      "metric_input_contract": "prediction/native interface chain mapping",
+      "metric_name": "ICS"
+    },
+    {
+      "claim_boundary": "CASP17 competitive-floor target identity metric runway only. It maps target-identity clearance workorders to review-only metric requirements and native/provenance blockers. It does not fetch native structures, clear no-leak provenance, compute native accuracy, serialize a CASP author code, promote identities, mutate intake files, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_input_native_pdb": "casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/native/H1319_native.pdb",
+      "expected_input_prediction_pdb": "runs/casp17_prediction_jobs_current/H1319/H1319_model_1.pdb",
+      "expected_output_status": "not_computed_awaiting_native_provenance",
+      "metric_family": "protein_complex",
+      "metric_input_contract": "prediction/native interface chain mapping",
+      "metric_name": "IPS"
+    }
+  ],
+  "summary": {
+    "author_serialized": "false",
+    "blockers": "native_pdb_missing,identity_discovery_no_leak_clearance_required,operator_required,evidence_ref_required,leakage_clearance_required,operator_clearance_required,native_candidate_blocked_review_required",
+    "claim_boundary": "CASP17 competitive-floor target identity metric runway only. It maps target-identity clearance workorders to review-only metric requirements and native/provenance blockers. It does not fetch native structures, clear no-leak provenance, compute native accuracy, serialize a CASP author code, promote identities, mutate intake files, or submit to CASP.",
+    "competitive_proof_eligible": "false",
+    "evidence_ref_status": "missing",
+    "first_native_candidate_blockers": "current_target_name_collision,relaxed_query_match_requires_operator_review,candidate_public_before_target_entry",
+    "first_native_candidate_pdb_id": "8UFN",
+    "first_native_candidate_status": "blocked_current_target_collision",
+    "identity_discovery_status": "blocked",
+    "manifest_stub_csv": "casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/manifest_stub.csv",
+    "metric_family": "protein_complex",
+    "metric_requirement_count": 9,
+    "metric_requirements_csv": "casp17/competitive_floor_target_identity_metric_runway/H1319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/metric_requirements.csv",
+    "metric_runway_md": "casp17/competitive_floor_target_identity_metric_runway/H1319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/METRIC_RUNWAY.md",
+    "native_candidate_blocked_count": 2,
+    "native_candidate_count": 2,
+    "native_candidate_no_candidate_count": 0,
+    "native_candidate_review_count": 0,
+    "native_dropzone_pdb": "casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/native/H1319_native.pdb",
+    "native_status": "missing",
+    "next_action": "place cleared native PDB, complete no-leak provenance, then run review-only metric calculations",
+    "operator_clearance_status": "required",
+    "prediction_pdb": "runs/casp17_prediction_jobs_current/H1319/H1319_model_1.pdb",
+    "prediction_status": "present",
+    "provenance_status": "blocked",
+    "provenance_template_csv": "casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/provenance_template.csv",
+    "readme_path": "casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/README.md",
+    "required_metric_names": "GDT_TS|lDDT|TM-score|RMSD|GDT_HA|MolProbity|DockQ|ICS|IPS",
+    "runway_folder": "casp17/competitive_floor_target_identity_metric_runway/H1319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex",
+    "runway_manifest": "casp17/competitive_floor_target_identity_metric_runway/H1319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/metric_runway_manifest.json",
+    "runway_status": "blocked_awaiting_native_provenance",
+    "scope": "complex",
+    "submission_policy": "do_not_submit_without_rule_check_and_operator_approval",
+    "target_id": "H1319",
+    "target_name": "Human astrovirus VA1 capsid spike - antibody 7C8 complex",
+    "ts_prediction_pdb": "runs/casp17_predictions_current/H1319TS.pdb",
+    "workorder_folder": "casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex"
+  }
+}

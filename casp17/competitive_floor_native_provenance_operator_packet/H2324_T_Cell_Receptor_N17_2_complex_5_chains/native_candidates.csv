@@ -1,0 +1,2 @@
+pdb_id,candidate_status,blockers,download_url,initial_release_date,experimental_method,resolution_combined,struct_title,native_source_pdb_suggestion,next_action
+,no_rcsb_candidate_found,rcsb_candidate_missing,,,,,,,broaden RCSB/manual native search and document no-leak evidence

@@ -1,0 +1,29 @@
+{
+  "claim_boundary": "CASP17 competitive-floor first native/provenance unlock operator kit only. It collects the first blocked target's native dropzone, no-leak evidence, provenance intake fields, manifest stub, action links, and rerun commands for operator fill. It does not fetch native structures, copy coordinates, fill or trust provenance, clear no-leak evidence, compute native accuracy, serialize a CASP author code, or submit to CASP.",
+  "packet_type": "casp17_competitive_floor_first_native_provenance_unlock_kit_manifest",
+  "paths": {
+    "kit_manifest_json": "casp17/competitive_floor_first_native_provenance_unlock_kit/H1319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/kit_manifest.json",
+    "manifest_stub_csv": "casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/manifest_stub.csv",
+    "metric_runway_md": "casp17/competitive_floor_target_identity_metric_runway/H1319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/METRIC_RUNWAY.md",
+    "operator_fill_intake_csv": "casp17/competitive_floor_first_native_provenance_unlock_kit/H1319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/operator_fill_intake.csv",
+    "packet_actions_csv": "casp17/competitive_floor_native_provenance_operator_packet/H1319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/actions.csv",
+    "packet_native_candidates_csv": "casp17/competitive_floor_native_provenance_operator_packet/H1319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/native_candidates.csv",
+    "provenance_template_csv": "casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/provenance_template.csv",
+    "readme_md": "casp17/competitive_floor_first_native_provenance_unlock_kit/H1319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/README.md",
+    "required_actions_csv": "casp17/competitive_floor_first_native_provenance_unlock_kit/H1319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/required_actions.csv",
+    "rerun_commands_md": "casp17/competitive_floor_first_native_provenance_unlock_kit/H1319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/rerun_commands.md"
+  },
+  "required_action_count": 4,
+  "required_field_count": 13,
+  "source_paths": {
+    "manifest_stub_csv": "casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/manifest_stub.csv",
+    "metric_runway_md": "casp17/competitive_floor_target_identity_metric_runway/H1319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/METRIC_RUNWAY.md",
+    "native_dropzone_pdb": "casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/native/H1319_native.pdb",
+    "packet_folder": "casp17/competitive_floor_native_provenance_operator_packet/H1319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex",
+    "prediction_pdb": "runs/casp17_prediction_jobs_current/H1319/H1319_model_1.pdb",
+    "provenance_template_csv": "casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/provenance_template.csv",
+    "ts_prediction_pdb": "runs/casp17_predictions_current/H1319TS.pdb"
+  },
+  "target_id": "H1319",
+  "target_name": "Human astrovirus VA1 capsid spike - antibody 7C8 complex"
+}
