@@ -100,11 +100,12 @@ Current local status as of 2026-06-02 KST:
 
 - The CASP17 workbench status is `ready_for_operator_fill`; highest proven local level remains `review_quality`.
 - Current target organization is green: target model folders `19/19`, target object folders/viewers/projections `58/58/58`, and a 3D molecular object atlas with `24` protein folders and `68` object folders.
+- The 3D molecular object coordinate materialized library is green in local symlink mode: `24` protein folders, `68` object folders, `68/68` source/materialized sha256 matches, and `68/0` symlink/copy coordinates. Coordinate symlinks remain local review artifacts; GitHub tracks the manifests, reports, and generator.
 - Current package preflight is green for `19/19` targets, with files, format, author fields, sidechain repack status, and sha256 accounting present.
 - The official upload queue is intentionally partial: `10/19` current targets are operator upload-review-ready, while `9/19` are blocked by deadline or official-target state.
 - Prospective strict-blind escrow is ready for `19/19` targets, but competitive proof is still `0` because current-target native structures are pending.
 - MassiveFold external model-selection inputs are `15/15` ready for review-only reranking; this remains external no-native evidence and is not internal prediction proof.
-- Organic ligand LDDT-PLI/BiSyRMSD closure is mapped into a batch operator fill kit, but `0/7` candidates and `0/35` fields are complete.
+- Organic ligand LDDT-PLI/BiSyRMSD closure is mapped into a batch operator fill kit, and the kit completion audit passes for `7/7` candidate folders and `35/35` batch/per-candidate rows. Operator values are still missing, so metric evidence remains `0/7` candidates and `0/35` fields complete.
 - Win-tier proof is still fail-closed: strict-blind slots `0/40`, metric rows `0/440`, required files `0/480`, and sidechain-native benchmark `0/40`.
 
 Primary current documents and artifacts:
@@ -113,7 +114,9 @@ Primary current documents and artifacts:
 - `casp17/CASP17_CURRENT_STATUS_REPORT.md`
 - `casp17/CASP17_WIN_TIER_GOAL.md`
 - `casp17/CASP17_ORGANIC_LIGAND_METRIC_BATCH_OPERATOR_FILL_KIT.md`
+- `casp17/CASP17_ORGANIC_LIGAND_METRIC_BATCH_OPERATOR_FILL_KIT_COMPLETION_AUDIT.md`
 - `casp17/CASP17_3D_MOLECULAR_OBJECT_ATLAS.md`
+- `casp17/CASP17_3D_MOLECULAR_OBJECT_COORDINATE_MATERIALIZED_LIBRARY.md`
 - `casp17/CASP17_CURRENT_UPLOAD_QUEUE.md`
 - `docs/casp17_participation_gate_2026-05-21.md`
 - `runs/casp17_readiness_dashboard_current.json`

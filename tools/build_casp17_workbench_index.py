@@ -29,6 +29,9 @@ DEFAULT_3D_MOLECULAR_OBJECT_ATLAS_COMPLETION_AUDIT_JSON = (
 DEFAULT_3D_MOLECULAR_OBJECT_COORDINATE_MATERIALIZATION_PLAN_JSON = (
     "casp17/casp17_3d_molecular_object_coordinate_materialization_plan_current.json"
 )
+DEFAULT_3D_MOLECULAR_OBJECT_COORDINATE_MATERIALIZED_LIBRARY_JSON = (
+    "casp17/casp17_3d_molecular_object_coordinate_materialized_library_current.json"
+)
 DEFAULT_3D_MOLECULAR_OBJECT_METRIC_HANDOFF_JSON = (
     "casp17/casp17_3d_molecular_object_metric_handoff_current.json"
 )
@@ -49,6 +52,9 @@ DEFAULT_ORGANIC_LIGAND_METRIC_FIRST_OPERATOR_FILL_KIT_JSON = (
 )
 DEFAULT_ORGANIC_LIGAND_METRIC_BATCH_OPERATOR_FILL_KIT_JSON = (
     "casp17/casp17_organic_ligand_metric_batch_operator_fill_kit_current.json"
+)
+DEFAULT_ORGANIC_LIGAND_METRIC_BATCH_OPERATOR_FILL_KIT_COMPLETION_AUDIT_JSON = (
+    "casp17/casp17_organic_ligand_metric_batch_operator_fill_kit_completion_audit_current.json"
 )
 DEFAULT_ORGANIC_LIGAND_METRIC_EVIDENCE_SYNC_PLAN_JSON = (
     "casp17/casp17_organic_ligand_metric_evidence_sync_plan_current.json"
@@ -675,6 +681,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     molecular_object_coordinate_materialization_plan_payload = _read_json(
         args.molecular_object_coordinate_materialization_plan_json
     )
+    molecular_object_coordinate_materialized_library_payload = _read_json(
+        args.molecular_object_coordinate_materialized_library_json
+    )
     molecular_object_metric_handoff_payload = _read_json(args.molecular_object_metric_handoff_json)
     ligand_metric_gap_bridge_payload = _read_json(args.ligand_metric_gap_bridge_json)
     organic_ligand_metric_evidence_intake_payload = _read_json(
@@ -691,6 +700,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     organic_ligand_metric_batch_operator_fill_kit_payload = _read_json(
         args.organic_ligand_metric_batch_operator_fill_kit_json
+    )
+    organic_ligand_metric_batch_operator_fill_kit_completion_audit_payload = _read_json(
+        args.organic_ligand_metric_batch_operator_fill_kit_completion_audit_json
     )
     organic_ligand_metric_evidence_sync_plan_payload = _read_json(
         args.organic_ligand_metric_evidence_sync_plan_json
@@ -1191,6 +1203,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     molecular_object_coordinate_materialization_plan_summary = _summary(
         molecular_object_coordinate_materialization_plan_payload
     )
+    molecular_object_coordinate_materialized_library_summary = _summary(
+        molecular_object_coordinate_materialized_library_payload
+    )
     molecular_object_metric_handoff_summary = _summary(molecular_object_metric_handoff_payload)
     ligand_metric_gap_bridge_summary = _summary(ligand_metric_gap_bridge_payload)
     organic_ligand_metric_evidence_intake_summary = _summary(organic_ligand_metric_evidence_intake_payload)
@@ -1205,6 +1220,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     organic_ligand_metric_batch_operator_fill_kit_summary = _summary(
         organic_ligand_metric_batch_operator_fill_kit_payload
+    )
+    organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary = _summary(
+        organic_ligand_metric_batch_operator_fill_kit_completion_audit_payload
     )
     organic_ligand_metric_evidence_sync_plan_summary = _summary(
         organic_ligand_metric_evidence_sync_plan_payload
@@ -2124,6 +2142,82 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             ),
         ),
         _artifact_row(
+            "casp17_3d_molecular_object_coordinate_materialized_library",
+            "Materialized coordinate library for per-protein/per-object 3D model folders",
+            _text(
+                molecular_object_coordinate_materialized_library_summary.get(
+                    "coordinate_materialized_library_status"
+                )
+            ),
+            args.molecular_object_coordinate_materialized_library_json,
+            ready_count=_int(
+                molecular_object_coordinate_materialized_library_summary.get("object_materialized_count")
+            ),
+            blocked_count=_int(molecular_object_coordinate_materialized_library_summary.get("object_blocked_count")),
+            total_count=_int(molecular_object_coordinate_materialized_library_summary.get("object_count")),
+            next_action=_text(molecular_object_coordinate_materialized_library_summary.get("next_action")),
+            blockers=(
+                "plan:"
+                + (
+                    _text(
+                        molecular_object_coordinate_materialized_library_summary.get(
+                            "coordinate_materialization_plan_status"
+                        )
+                    )
+                    or "-"
+                )
+                + ",mode:"
+                + (_text(molecular_object_coordinate_materialized_library_summary.get("materialization_mode")) or "-")
+                + ",proteins:"
+                + str(molecular_object_coordinate_materialized_library_summary.get("protein_count", ""))
+                + ",objects:"
+                + str(molecular_object_coordinate_materialized_library_summary.get("object_materialized_count", ""))
+                + "/"
+                + str(molecular_object_coordinate_materialized_library_summary.get("object_blocked_count", ""))
+                + "/"
+                + str(molecular_object_coordinate_materialized_library_summary.get("object_count", ""))
+                + ",source_materialized_sha:"
+                + str(molecular_object_coordinate_materialized_library_summary.get("source_present_count", ""))
+                + "/"
+                + str(molecular_object_coordinate_materialized_library_summary.get("materialized_present_count", ""))
+                + "/"
+                + str(molecular_object_coordinate_materialized_library_summary.get("sha256_match_count", ""))
+                + ",source_objects:"
+                + str(molecular_object_coordinate_materialized_library_summary.get("current_object_count", ""))
+                + "/"
+                + str(molecular_object_coordinate_materialized_library_summary.get("massivefold_object_count", ""))
+                + ",formats:"
+                + str(molecular_object_coordinate_materialized_library_summary.get("pdb_count", ""))
+                + "/"
+                + str(molecular_object_coordinate_materialized_library_summary.get("cif_count", ""))
+                + ",symlink_copy:"
+                + str(molecular_object_coordinate_materialized_library_summary.get("symlink_count", ""))
+                + "/"
+                + str(molecular_object_coordinate_materialized_library_summary.get("copy_count", ""))
+                + ",folders:"
+                + str(molecular_object_coordinate_materialized_library_summary.get("protein_folder_count", ""))
+                + "/"
+                + str(molecular_object_coordinate_materialized_library_summary.get("object_folder_count", ""))
+                + "/"
+                + str(molecular_object_coordinate_materialized_library_summary.get("coordinate_folder_count", ""))
+                + ",proof_author:"
+                + str(molecular_object_coordinate_materialized_library_summary.get("proof_eligible_count", ""))
+                + "/"
+                + str(molecular_object_coordinate_materialized_library_summary.get("author_serialized_count", ""))
+                + ",first:"
+                + (_text(molecular_object_coordinate_materialized_library_summary.get("first_protein_key")) or "-")
+                + "/"
+                + (_text(molecular_object_coordinate_materialized_library_summary.get("first_object_key")) or "-")
+                + ",blocked:"
+                + (
+                    _text(molecular_object_coordinate_materialized_library_summary.get("first_blocked_protein_key"))
+                    or "-"
+                )
+                + "/"
+                + (_text(molecular_object_coordinate_materialized_library_summary.get("first_blocker")) or "-")
+            ),
+        ),
+        _artifact_row(
             "casp17_3d_molecular_object_metric_handoff",
             "Review-only handoff from 3D molecular objects to win-tier metric requirements",
             _text(molecular_object_metric_handoff_summary.get("metric_handoff_status")),
@@ -2501,6 +2595,118 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + (_text(organic_ligand_metric_batch_operator_fill_kit_summary.get("first_field_key")) or "-")
                 + "/"
                 + (_text(organic_ligand_metric_batch_operator_fill_kit_summary.get("first_blocker")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "organic_ligand_metric_batch_operator_fill_kit_completion_audit",
+            "Completion audit for the organic ligand metric batch operator fill kit",
+            _text(
+                organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get(
+                    "organic_ligand_metric_batch_operator_fill_kit_completion_audit_status"
+                )
+            ),
+            args.organic_ligand_metric_batch_operator_fill_kit_completion_audit_json,
+            ready_count=_int(
+                organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get("candidate_pass_count")
+            ),
+            blocked_count=_int(
+                organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get(
+                    "candidate_blocked_count"
+                )
+            ),
+            total_count=_int(
+                organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get("candidate_count")
+            ),
+            next_action=_text(
+                organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get("next_action")
+            ),
+            blockers=(
+                "fields:"
+                + str(organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get("field_count", ""))
+                + "/"
+                + str(
+                    organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get(
+                        "batch_csv_row_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get(
+                        "per_candidate_csv_row_count", ""
+                    )
+                )
+                + ",root:"
+                + str(
+                    organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get(
+                        "root_file_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get(
+                        "root_file_required_count", ""
+                    )
+                )
+                + ",candidate-files:"
+                + str(
+                    organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get(
+                        "candidate_folder_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get(
+                        "candidate_readme_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get(
+                        "candidate_operator_fill_csv_present_count", ""
+                    )
+                )
+                + ",hygiene:"
+                + str(
+                    organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get(
+                        "candidate_row_mismatch_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get(
+                        "coordinate_copy_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get(
+                        "proof_marker_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get(
+                        "author_marker_count", ""
+                    )
+                )
+                + ",first:"
+                + (
+                    _text(
+                        organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get(
+                            "first_blocked_candidate_id"
+                        )
+                    )
+                    or "-"
+                )
+                + "/"
+                + (
+                    _text(
+                        organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get(
+                            "first_blocker"
+                        )
+                    )
+                    or "-"
+                )
             ),
         ),
         _artifact_row(
@@ -11876,6 +12082,84 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "casp17_3d_molecular_object_coordinate_materialization_plan_next_action": _text(
             molecular_object_coordinate_materialization_plan_summary.get("next_action")
         ),
+        "casp17_3d_molecular_object_coordinate_materialized_library_status": _text(
+            molecular_object_coordinate_materialized_library_summary.get("coordinate_materialized_library_status")
+        ),
+        "casp17_3d_molecular_object_coordinate_materialized_library_plan_status": _text(
+            molecular_object_coordinate_materialized_library_summary.get("coordinate_materialization_plan_status")
+        ),
+        "casp17_3d_molecular_object_coordinate_materialized_library_mode": _text(
+            molecular_object_coordinate_materialized_library_summary.get("materialization_mode")
+        ),
+        "casp17_3d_molecular_object_coordinate_materialized_library_protein_count": _int(
+            molecular_object_coordinate_materialized_library_summary.get("protein_count")
+        ),
+        "casp17_3d_molecular_object_coordinate_materialized_library_object_count": _int(
+            molecular_object_coordinate_materialized_library_summary.get("object_count")
+        ),
+        "casp17_3d_molecular_object_coordinate_materialized_library_materialized_count": _int(
+            molecular_object_coordinate_materialized_library_summary.get("object_materialized_count")
+        ),
+        "casp17_3d_molecular_object_coordinate_materialized_library_blocked_count": _int(
+            molecular_object_coordinate_materialized_library_summary.get("object_blocked_count")
+        ),
+        "casp17_3d_molecular_object_coordinate_materialized_library_current_object_count": _int(
+            molecular_object_coordinate_materialized_library_summary.get("current_object_count")
+        ),
+        "casp17_3d_molecular_object_coordinate_materialized_library_massivefold_object_count": _int(
+            molecular_object_coordinate_materialized_library_summary.get("massivefold_object_count")
+        ),
+        "casp17_3d_molecular_object_coordinate_materialized_library_source_present_count": _int(
+            molecular_object_coordinate_materialized_library_summary.get("source_present_count")
+        ),
+        "casp17_3d_molecular_object_coordinate_materialized_library_materialized_present_count": _int(
+            molecular_object_coordinate_materialized_library_summary.get("materialized_present_count")
+        ),
+        "casp17_3d_molecular_object_coordinate_materialized_library_sha256_match_count": _int(
+            molecular_object_coordinate_materialized_library_summary.get("sha256_match_count")
+        ),
+        "casp17_3d_molecular_object_coordinate_materialized_library_pdb_count": _int(
+            molecular_object_coordinate_materialized_library_summary.get("pdb_count")
+        ),
+        "casp17_3d_molecular_object_coordinate_materialized_library_cif_count": _int(
+            molecular_object_coordinate_materialized_library_summary.get("cif_count")
+        ),
+        "casp17_3d_molecular_object_coordinate_materialized_library_symlink_count": _int(
+            molecular_object_coordinate_materialized_library_summary.get("symlink_count")
+        ),
+        "casp17_3d_molecular_object_coordinate_materialized_library_copy_count": _int(
+            molecular_object_coordinate_materialized_library_summary.get("copy_count")
+        ),
+        "casp17_3d_molecular_object_coordinate_materialized_library_protein_folder_count": _int(
+            molecular_object_coordinate_materialized_library_summary.get("protein_folder_count")
+        ),
+        "casp17_3d_molecular_object_coordinate_materialized_library_object_folder_count": _int(
+            molecular_object_coordinate_materialized_library_summary.get("object_folder_count")
+        ),
+        "casp17_3d_molecular_object_coordinate_materialized_library_coordinate_folder_count": _int(
+            molecular_object_coordinate_materialized_library_summary.get("coordinate_folder_count")
+        ),
+        "casp17_3d_molecular_object_coordinate_materialized_library_proof_count": _int(
+            molecular_object_coordinate_materialized_library_summary.get("proof_eligible_count")
+        ),
+        "casp17_3d_molecular_object_coordinate_materialized_library_author_count": _int(
+            molecular_object_coordinate_materialized_library_summary.get("author_serialized_count")
+        ),
+        "casp17_3d_molecular_object_coordinate_materialized_library_first_protein_key": _text(
+            molecular_object_coordinate_materialized_library_summary.get("first_protein_key")
+        ),
+        "casp17_3d_molecular_object_coordinate_materialized_library_first_object_key": _text(
+            molecular_object_coordinate_materialized_library_summary.get("first_object_key")
+        ),
+        "casp17_3d_molecular_object_coordinate_materialized_library_first_blocked_protein_key": _text(
+            molecular_object_coordinate_materialized_library_summary.get("first_blocked_protein_key")
+        ),
+        "casp17_3d_molecular_object_coordinate_materialized_library_first_blocker": _text(
+            molecular_object_coordinate_materialized_library_summary.get("first_blocker")
+        ),
+        "casp17_3d_molecular_object_coordinate_materialized_library_next_action": _text(
+            molecular_object_coordinate_materialized_library_summary.get("next_action")
+        ),
         "casp17_3d_molecular_object_metric_handoff_status": _text(
             molecular_object_metric_handoff_summary.get("metric_handoff_status")
         ),
@@ -12339,6 +12623,80 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         ),
         "organic_ligand_metric_batch_operator_fill_kit_first_next_action": _text(
             organic_ligand_metric_batch_operator_fill_kit_summary.get("first_next_action")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_completion_audit_status": _text(
+            organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get(
+                "organic_ligand_metric_batch_operator_fill_kit_completion_audit_status"
+            )
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_completion_audit_batch_kit_status": _text(
+            organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get("batch_kit_status")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_completion_audit_candidate_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get("candidate_count")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_completion_audit_candidate_pass_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get("candidate_pass_count")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_completion_audit_candidate_blocked_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get("candidate_blocked_count")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_completion_audit_field_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get("field_count")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_completion_audit_batch_csv_row_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get("batch_csv_row_count")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_completion_audit_per_candidate_csv_row_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get(
+                "per_candidate_csv_row_count"
+            )
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_completion_audit_root_file_present_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get("root_file_present_count")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_completion_audit_root_file_required_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get("root_file_required_count")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_completion_audit_candidate_folder_present_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get(
+                "candidate_folder_present_count"
+            )
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_completion_audit_candidate_readme_present_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get(
+                "candidate_readme_present_count"
+            )
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_completion_audit_candidate_csv_present_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get(
+                "candidate_operator_fill_csv_present_count"
+            )
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_completion_audit_candidate_row_mismatch_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get(
+                "candidate_row_mismatch_count"
+            )
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_completion_audit_coordinate_copy_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get("coordinate_copy_count")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_completion_audit_proof_marker_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get("proof_marker_count")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_completion_audit_author_marker_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get("author_marker_count")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_completion_audit_first_blocked_candidate_id": _text(
+            organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get(
+                "first_blocked_candidate_id"
+            )
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_completion_audit_first_blocker": _text(
+            organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get("first_blocker")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_completion_audit_next_action": _text(
+            organic_ligand_metric_batch_operator_fill_kit_completion_audit_summary.get("next_action")
         ),
         "organic_ligand_metric_evidence_sync_plan_status": _text(
             organic_ligand_metric_evidence_sync_plan_summary.get(
@@ -21428,6 +21786,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- CASP17 3D molecular object atlas: `{summary['casp17_3d_molecular_object_atlas_status'] or '-'}` proteins pass/blocked/total `{summary['casp17_3d_molecular_object_atlas_protein_pass_count']}/{summary['casp17_3d_molecular_object_atlas_protein_blocked_count']}/{summary['casp17_3d_molecular_object_atlas_protein_count']}` objects pass/blocked/total `{summary['casp17_3d_molecular_object_atlas_object_pass_count']}/{summary['casp17_3d_molecular_object_atlas_object_blocked_count']}/{summary['casp17_3d_molecular_object_atlas_object_count']}` source objects current/massivefold `{summary['casp17_3d_molecular_object_atlas_current_object_count']}/{summary['casp17_3d_molecular_object_atlas_massivefold_object_count']}` source proteins current/massivefold/overlap `{summary['casp17_3d_molecular_object_atlas_current_protein_count']}/{summary['casp17_3d_molecular_object_atlas_massivefold_protein_count']}/{summary['casp17_3d_molecular_object_atlas_overlap_protein_count']}` links model/viewer/projection/top5/escrow `{summary['casp17_3d_molecular_object_atlas_model_link_count']}/{summary['casp17_3d_molecular_object_atlas_viewer_link_count']}/{summary['casp17_3d_molecular_object_atlas_projection_link_count']}/{summary['casp17_3d_molecular_object_atlas_top5_link_count']}/{summary['casp17_3d_molecular_object_atlas_escrow_link_count']}` sha model/top5 `{summary['casp17_3d_molecular_object_atlas_model_sha256_count']}/{summary['casp17_3d_molecular_object_atlas_top5_sha256_count']}` native/proof/author `{summary['casp17_3d_molecular_object_atlas_native_accuracy_count']}/{summary['casp17_3d_molecular_object_atlas_proof_eligible_count']}/{summary['casp17_3d_molecular_object_atlas_author_serialized_count']}` first `{summary['casp17_3d_molecular_object_atlas_first_protein_key'] or '-'}` `{summary['casp17_3d_molecular_object_atlas_first_object_key'] or '-'}` html `{summary['casp17_3d_molecular_object_atlas_html'] or '-'}`",
         f"- CASP17 3D molecular object atlas completion audit: `{summary['casp17_3d_molecular_object_atlas_completion_audit_status'] or '-'}` proteins folder/readme/manifest/total `{summary['casp17_3d_molecular_object_atlas_completion_audit_protein_folder_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_protein_readme_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_protein_manifest_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_protein_count']}` objects pass/blocked/total `{summary['casp17_3d_molecular_object_atlas_completion_audit_object_pass_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_object_blocked_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_object_count']}` source objects current/massivefold `{summary['casp17_3d_molecular_object_atlas_completion_audit_current_object_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_massivefold_object_count']}` object folder/readme/manifest `{summary['casp17_3d_molecular_object_atlas_completion_audit_object_folder_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_object_readme_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_object_manifest_count']}` links model/viewer/projection/top5/escrow `{summary['casp17_3d_molecular_object_atlas_completion_audit_model_link_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_viewer_link_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_projection_link_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_top5_link_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_escrow_link_count']}` coordinate copies object/atlas `{summary['casp17_3d_molecular_object_atlas_completion_audit_object_coordinate_copy_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_atlas_coordinate_copy_count']}` proof/author `{summary['casp17_3d_molecular_object_atlas_completion_audit_proof_eligible_count']}/{summary['casp17_3d_molecular_object_atlas_completion_audit_author_serialized_count']}` first `{summary['casp17_3d_molecular_object_atlas_completion_audit_first_protein_key'] or '-'}` `{summary['casp17_3d_molecular_object_atlas_completion_audit_first_object_key'] or '-'}` html `{summary['casp17_3d_molecular_object_atlas_completion_audit_html'] or '-'}`",
         f"- CASP17 3D molecular object coordinate materialization plan: `{summary['casp17_3d_molecular_object_coordinate_materialization_plan_status'] or '-'}` objects ready/blocked/total `{summary['casp17_3d_molecular_object_coordinate_materialization_plan_ready_object_count']}/{summary['casp17_3d_molecular_object_coordinate_materialization_plan_blocked_object_count']}/{summary['casp17_3d_molecular_object_coordinate_materialization_plan_object_count']}` source objects current/massivefold `{summary['casp17_3d_molecular_object_coordinate_materialization_plan_current_object_count']}/{summary['casp17_3d_molecular_object_coordinate_materialization_plan_massivefold_object_count']}` source coordinates present/missing `{summary['casp17_3d_molecular_object_coordinate_materialization_plan_source_present_count']}/{summary['casp17_3d_molecular_object_coordinate_materialization_plan_source_missing_count']}` formats pdb/cif/unsupported `{summary['casp17_3d_molecular_object_coordinate_materialization_plan_pdb_source_count']}/{summary['casp17_3d_molecular_object_coordinate_materialization_plan_cif_source_count']}/{summary['casp17_3d_molecular_object_coordinate_materialization_plan_unsupported_format_count']}` atlas folders protein/object `{summary['casp17_3d_molecular_object_coordinate_materialization_plan_protein_folder_count']}/{summary['casp17_3d_molecular_object_coordinate_materialization_plan_object_folder_count']}` proposed/existing copies `{summary['casp17_3d_molecular_object_coordinate_materialization_plan_proposed_copy_count']}/{summary['casp17_3d_molecular_object_coordinate_materialization_plan_existing_copy_count']}` policy `{summary['casp17_3d_molecular_object_coordinate_materialization_plan_policy'] or '-'}` first `{summary['casp17_3d_molecular_object_coordinate_materialization_plan_first_protein_key'] or '-'}` `{summary['casp17_3d_molecular_object_coordinate_materialization_plan_first_object_key'] or '-'}` blocked `{summary['casp17_3d_molecular_object_coordinate_materialization_plan_first_blocked_protein_key'] or '-'}` `{summary['casp17_3d_molecular_object_coordinate_materialization_plan_first_blocker'] or '-'}`",
+        f"- CASP17 3D molecular object coordinate materialized library: `{summary['casp17_3d_molecular_object_coordinate_materialized_library_status'] or '-'}` plan `{summary['casp17_3d_molecular_object_coordinate_materialized_library_plan_status'] or '-'}` mode `{summary['casp17_3d_molecular_object_coordinate_materialized_library_mode'] or '-'}` proteins/objects `{summary['casp17_3d_molecular_object_coordinate_materialized_library_protein_count']}/{summary['casp17_3d_molecular_object_coordinate_materialized_library_object_count']}` materialized/blocked `{summary['casp17_3d_molecular_object_coordinate_materialized_library_materialized_count']}/{summary['casp17_3d_molecular_object_coordinate_materialized_library_blocked_count']}` source/materialized/sha `{summary['casp17_3d_molecular_object_coordinate_materialized_library_source_present_count']}/{summary['casp17_3d_molecular_object_coordinate_materialized_library_materialized_present_count']}/{summary['casp17_3d_molecular_object_coordinate_materialized_library_sha256_match_count']}` source objects current/massivefold `{summary['casp17_3d_molecular_object_coordinate_materialized_library_current_object_count']}/{summary['casp17_3d_molecular_object_coordinate_materialized_library_massivefold_object_count']}` formats pdb/cif `{summary['casp17_3d_molecular_object_coordinate_materialized_library_pdb_count']}/{summary['casp17_3d_molecular_object_coordinate_materialized_library_cif_count']}` symlink/copy `{summary['casp17_3d_molecular_object_coordinate_materialized_library_symlink_count']}/{summary['casp17_3d_molecular_object_coordinate_materialized_library_copy_count']}` folders protein/object/coordinate `{summary['casp17_3d_molecular_object_coordinate_materialized_library_protein_folder_count']}/{summary['casp17_3d_molecular_object_coordinate_materialized_library_object_folder_count']}/{summary['casp17_3d_molecular_object_coordinate_materialized_library_coordinate_folder_count']}` proof/author `{summary['casp17_3d_molecular_object_coordinate_materialized_library_proof_count']}/{summary['casp17_3d_molecular_object_coordinate_materialized_library_author_count']}` first `{summary['casp17_3d_molecular_object_coordinate_materialized_library_first_protein_key'] or '-'}` `{summary['casp17_3d_molecular_object_coordinate_materialized_library_first_object_key'] or '-'}` blocked `{summary['casp17_3d_molecular_object_coordinate_materialized_library_first_blocked_protein_key'] or '-'}` `{summary['casp17_3d_molecular_object_coordinate_materialized_library_first_blocker'] or '-'}`",
         f"- CASP17 3D molecular object metric handoff: `{summary['casp17_3d_molecular_object_metric_handoff_status'] or '-'}` objects ready/blocked/total `{summary['casp17_3d_molecular_object_metric_handoff_object_ready_count']}/{summary['casp17_3d_molecular_object_metric_handoff_object_blocked_count']}/{summary['casp17_3d_molecular_object_metric_handoff_object_count']}` source objects current/massivefold `{summary['casp17_3d_molecular_object_metric_handoff_current_object_count']}/{summary['casp17_3d_molecular_object_metric_handoff_massivefold_object_count']}` metric requirements `{summary['casp17_3d_molecular_object_metric_handoff_metric_requirement_count']}` required metrics covered/total/missing `{summary['casp17_3d_molecular_object_metric_handoff_covered_required_metric_count']}/{summary['casp17_3d_molecular_object_metric_handoff_required_metric_count']}/{summary['casp17_3d_molecular_object_metric_handoff_missing_required_metric_count']}` missing `{summary['casp17_3d_molecular_object_metric_handoff_missing_required_metric_names'] or '-'}` families monomer/complex/rna/ligand `{summary['casp17_3d_molecular_object_metric_handoff_monomer_object_count']}/{summary['casp17_3d_molecular_object_metric_handoff_complex_object_count']}/{summary['casp17_3d_molecular_object_metric_handoff_rna_hybrid_object_count']}/{summary['casp17_3d_molecular_object_metric_handoff_ligand_object_count']}` folders protein/object `{summary['casp17_3d_molecular_object_metric_handoff_protein_folder_count']}/{summary['casp17_3d_molecular_object_metric_handoff_object_folder_count']}` native/proof/author `{summary['casp17_3d_molecular_object_metric_handoff_native_accuracy_count']}/{summary['casp17_3d_molecular_object_metric_handoff_proof_eligible_count']}/{summary['casp17_3d_molecular_object_metric_handoff_author_serialized_count']}` first `{summary['casp17_3d_molecular_object_metric_handoff_first_protein_key'] or '-'}` `{summary['casp17_3d_molecular_object_metric_handoff_first_object_key'] or '-'}` html `{summary['casp17_3d_molecular_object_metric_handoff_html'] or '-'}`",
         f"- CASP17 3D ligand metric gap bridge: `{summary['casp17_3d_ligand_metric_gap_bridge_status'] or '-'}` missing `{summary['casp17_3d_ligand_metric_gap_bridge_missing_metric_names'] or '-'}` rows blocked/total `{summary['casp17_3d_ligand_metric_gap_bridge_blocked_row_count']}/{summary['casp17_3d_ligand_metric_gap_bridge_row_count']}` candidates review/proof/strict-blocked/total `{summary['casp17_3d_ligand_metric_gap_bridge_review_ready_candidate_count']}/{summary['casp17_3d_ligand_metric_gap_bridge_proof_eligible_candidate_count']}/{summary['casp17_3d_ligand_metric_gap_bridge_strict_blocked_candidate_count']}/{summary['casp17_3d_ligand_metric_gap_bridge_candidate_count']}` LDDT-PLI/BiSyRMSD `{summary['casp17_3d_ligand_metric_gap_bridge_lddt_pli_count']}/{summary['casp17_3d_ligand_metric_gap_bridge_bisyrmsd_count']}` actions/direct/no-leak/chronology/pose/slot `{summary['casp17_3d_ligand_metric_gap_bridge_metric_action_link_count']}/{summary['casp17_3d_ligand_metric_gap_bridge_direct_open_count']}/{summary['casp17_3d_ligand_metric_gap_bridge_no_leak_open_count']}/{summary['casp17_3d_ligand_metric_gap_bridge_chronology_open_count']}/{summary['casp17_3d_ligand_metric_gap_bridge_pose_open_count']}/{summary['casp17_3d_ligand_metric_gap_bridge_slot_open_count']}` first `{summary['casp17_3d_ligand_metric_gap_bridge_first_candidate_id'] or '-'}` `{summary['casp17_3d_ligand_metric_gap_bridge_first_metric_name'] or '-'}` `{summary['casp17_3d_ligand_metric_gap_bridge_first_blocker'] or '-'}`",
         f"- organic ligand metric evidence intake: `{summary['organic_ligand_metric_evidence_intake_status'] or '-'}` candidates ready/blocked/total `{summary['organic_ligand_metric_evidence_intake_ready_candidate_count']}/{summary['organic_ligand_metric_evidence_intake_blocked_candidate_count']}/{summary['organic_ligand_metric_evidence_intake_candidate_count']}` fields ready/open/total `{summary['organic_ligand_metric_evidence_intake_ready_field_count']}/{summary['organic_ligand_metric_evidence_intake_open_field_count']}/{summary['organic_ligand_metric_evidence_intake_field_count']}` templates/stubs/dropzones `{summary['organic_ligand_metric_evidence_intake_template_count']}/{summary['organic_ligand_metric_evidence_intake_stub_count']}/{summary['organic_ligand_metric_evidence_intake_dropzone_count']}` metric bridge LDDT-PLI/BiSyRMSD/total `{summary['organic_ligand_metric_evidence_intake_lddt_pli_count']}/{summary['organic_ligand_metric_evidence_intake_bisyrmsd_count']}/{summary['organic_ligand_metric_evidence_intake_metric_bridge_row_count']}` lanes direct/no-leak/chronology/pose/slot `{summary['organic_ligand_metric_evidence_intake_direct_count']}/{summary['organic_ligand_metric_evidence_intake_no_leak_count']}/{summary['organic_ligand_metric_evidence_intake_chronology_count']}/{summary['organic_ligand_metric_evidence_intake_pose_count']}/{summary['organic_ligand_metric_evidence_intake_slot_count']}` linked actions `{summary['organic_ligand_metric_evidence_intake_linked_action_count']}` first `{summary['organic_ligand_metric_evidence_intake_first_candidate_id'] or '-'}` `{summary['organic_ligand_metric_evidence_intake_first_field_key'] or '-'}` `{summary['organic_ligand_metric_evidence_intake_first_blocker'] or '-'}` folder `{summary['organic_ligand_metric_evidence_intake_first_packet_folder'] or '-'}`",
@@ -21435,6 +21794,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- organic ligand metric operator fill worklist: `{summary['organic_ligand_metric_operator_fill_worklist_status'] or '-'}` review `{summary['organic_ligand_metric_operator_fill_worklist_review_gate_status'] or '-'}` candidates ready/blocked/total `{summary['organic_ligand_metric_operator_fill_worklist_ready_candidate_count']}/{summary['organic_ligand_metric_operator_fill_worklist_blocked_candidate_count']}/{summary['organic_ligand_metric_operator_fill_worklist_candidate_count']}` fields ready/blocked/total `{summary['organic_ligand_metric_operator_fill_worklist_ready_field_count']}/{summary['organic_ligand_metric_operator_fill_worklist_blocked_field_count']}/{summary['organic_ligand_metric_operator_fill_worklist_field_count']}` missing value/evidence/clearance/operator `{summary['organic_ligand_metric_operator_fill_worklist_value_missing_count']}/{summary['organic_ligand_metric_operator_fill_worklist_evidence_ref_missing_count']}/{summary['organic_ligand_metric_operator_fill_worklist_clearance_missing_count']}/{summary['organic_ligand_metric_operator_fill_worklist_operator_id_missing_count']}` templates/stubs/actions `{summary['organic_ligand_metric_operator_fill_worklist_template_count']}/{summary['organic_ligand_metric_operator_fill_worklist_stub_count']}/{summary['organic_ligand_metric_operator_fill_worklist_linked_action_count']}` folders `{summary['organic_ligand_metric_operator_fill_worklist_candidate_folder_count']}` first `{summary['organic_ligand_metric_operator_fill_worklist_first_candidate_id'] or '-'}` `{summary['organic_ligand_metric_operator_fill_worklist_first_field_key'] or '-'}` `{summary['organic_ligand_metric_operator_fill_worklist_first_blocker'] or '-'}` next `{summary['organic_ligand_metric_operator_fill_worklist_first_next_action'] or '-'}`",
         f"- organic ligand metric first operator fill kit: `{summary['organic_ligand_metric_first_operator_fill_kit_status'] or '-'}` worklist `{summary['organic_ligand_metric_first_operator_fill_kit_worklist_status'] or '-'}` candidate `{summary['organic_ligand_metric_first_operator_fill_kit_candidate_id'] or '-'}` target `{summary['organic_ligand_metric_first_operator_fill_kit_target_id'] or '-'}` ligand `{summary['organic_ligand_metric_first_operator_fill_kit_ligand_id'] or '-'}` fields ready/blocked/total `{summary['organic_ligand_metric_first_operator_fill_kit_ready_field_count']}/{summary['organic_ligand_metric_first_operator_fill_kit_blocked_field_count']}/{summary['organic_ligand_metric_first_operator_fill_kit_field_count']}` missing value/evidence/clearance/operator `{summary['organic_ligand_metric_first_operator_fill_kit_value_missing_count']}/{summary['organic_ligand_metric_first_operator_fill_kit_evidence_ref_missing_count']}/{summary['organic_ligand_metric_first_operator_fill_kit_clearance_missing_count']}/{summary['organic_ligand_metric_first_operator_fill_kit_operator_id_missing_count']}` sources template/stub/action `{summary['organic_ligand_metric_first_operator_fill_kit_source_template_count']}/{summary['organic_ligand_metric_first_operator_fill_kit_source_stub_count']}/{summary['organic_ligand_metric_first_operator_fill_kit_linked_action_count']}` first `{summary['organic_ligand_metric_first_operator_fill_kit_first_field_key'] or '-'}` `{summary['organic_ligand_metric_first_operator_fill_kit_first_blocker'] or '-'}` folder `{summary['organic_ligand_metric_first_operator_fill_kit_folder'] or '-'}` next `{summary['organic_ligand_metric_first_operator_fill_kit_first_next_action'] or '-'}`",
         f"- organic ligand metric batch operator fill kit: `{summary['organic_ligand_metric_batch_operator_fill_kit_status'] or '-'}` worklist `{summary['organic_ligand_metric_batch_operator_fill_kit_worklist_status'] or '-'}` candidates ready/blocked/total `{summary['organic_ligand_metric_batch_operator_fill_kit_ready_candidate_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_blocked_candidate_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_candidate_count']}` fields ready/blocked/total `{summary['organic_ligand_metric_batch_operator_fill_kit_ready_field_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_blocked_field_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_field_count']}` missing value/evidence/clearance/operator `{summary['organic_ligand_metric_batch_operator_fill_kit_value_missing_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_evidence_ref_missing_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_clearance_missing_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_operator_id_missing_count']}` sources template/stub/action `{summary['organic_ligand_metric_batch_operator_fill_kit_source_template_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_source_stub_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_linked_action_count']}` folder `{summary['organic_ligand_metric_batch_operator_fill_kit_folder'] or '-'}` batch `{summary['organic_ligand_metric_batch_operator_fill_kit_batch_csv'] or '-'}` first `{summary['organic_ligand_metric_batch_operator_fill_kit_first_candidate_id'] or '-'}` `{summary['organic_ligand_metric_batch_operator_fill_kit_first_field_key'] or '-'}` `{summary['organic_ligand_metric_batch_operator_fill_kit_first_blocker'] or '-'}`",
+        f"- organic ligand metric batch operator fill kit completion audit: `{summary['organic_ligand_metric_batch_operator_fill_kit_completion_audit_status'] or '-'}` batch `{summary['organic_ligand_metric_batch_operator_fill_kit_completion_audit_batch_kit_status'] or '-'}` candidates pass/blocked/total `{summary['organic_ligand_metric_batch_operator_fill_kit_completion_audit_candidate_pass_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_completion_audit_candidate_blocked_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_completion_audit_candidate_count']}` fields expected/batch/per-candidate `{summary['organic_ligand_metric_batch_operator_fill_kit_completion_audit_field_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_completion_audit_batch_csv_row_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_completion_audit_per_candidate_csv_row_count']}` root files `{summary['organic_ligand_metric_batch_operator_fill_kit_completion_audit_root_file_present_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_completion_audit_root_file_required_count']}` candidate folder/readme/csv `{summary['organic_ligand_metric_batch_operator_fill_kit_completion_audit_candidate_folder_present_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_completion_audit_candidate_readme_present_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_completion_audit_candidate_csv_present_count']}` mismatch/coordinate/proof/author `{summary['organic_ligand_metric_batch_operator_fill_kit_completion_audit_candidate_row_mismatch_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_completion_audit_coordinate_copy_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_completion_audit_proof_marker_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_completion_audit_author_marker_count']}` first `{summary['organic_ligand_metric_batch_operator_fill_kit_completion_audit_first_blocked_candidate_id'] or '-'}` `{summary['organic_ligand_metric_batch_operator_fill_kit_completion_audit_first_blocker'] or '-'}`",
         f"- organic ligand metric evidence sync plan: `{summary['organic_ligand_metric_evidence_sync_plan_status'] or '-'}` mode `{summary['organic_ligand_metric_evidence_sync_plan_mode'] or '-'}` candidates ready/blocked/total `{summary['organic_ligand_metric_evidence_sync_plan_ready_candidate_count']}/{summary['organic_ligand_metric_evidence_sync_plan_blocked_candidate_count']}/{summary['organic_ligand_metric_evidence_sync_plan_candidate_count']}` actions ready/blocked/total `{summary['organic_ligand_metric_evidence_sync_plan_ready_action_count']}/{summary['organic_ligand_metric_evidence_sync_plan_blocked_action_count']}/{summary['organic_ligand_metric_evidence_sync_plan_action_count']}` destination present/missing `{summary['organic_ligand_metric_evidence_sync_plan_destination_present_count']}/{summary['organic_ligand_metric_evidence_sync_plan_destination_missing_count']}` source missing value/evidence/clearance/operator `{summary['organic_ligand_metric_evidence_sync_plan_source_value_missing_count']}/{summary['organic_ligand_metric_evidence_sync_plan_source_evidence_ref_missing_count']}/{summary['organic_ligand_metric_evidence_sync_plan_source_clearance_missing_count']}/{summary['organic_ligand_metric_evidence_sync_plan_source_operator_id_missing_count']}` review blocks gate/field `{summary['organic_ligand_metric_evidence_sync_plan_review_gate_blocked_action_count']}/{summary['organic_ligand_metric_evidence_sync_plan_review_field_blocked_action_count']}` folders `{summary['organic_ligand_metric_evidence_sync_plan_candidate_folder_count']}` first `{summary['organic_ligand_metric_evidence_sync_plan_first_candidate_id'] or '-'}` `{summary['organic_ligand_metric_evidence_sync_plan_first_field_key'] or '-'}` `{summary['organic_ligand_metric_evidence_sync_plan_first_blocker'] or '-'}` next `{summary['organic_ligand_metric_evidence_sync_plan_first_next_action'] or '-'}`",
         f"- CASP17 3D molecular object metric handoff completion audit: `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_status'] or '-'}` proteins folder/readme/manifest/total `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_protein_folder_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_protein_readme_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_protein_manifest_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_protein_count']}` objects pass/blocked/total `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_object_pass_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_object_blocked_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_object_count']}` source objects current/massivefold `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_current_object_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_massivefold_object_count']}` object files folder/manifest/csv/md `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_object_folder_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_object_manifest_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_metric_csv_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_metric_md_count']}` metric rows expected/csv/mismatch `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_metric_requirement_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_metric_csv_row_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_metric_csv_mismatch_count']}` evidence awaiting `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_metric_evidence_awaiting_count']}` coordinate copies object/out_dir `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_object_coordinate_copy_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_out_dir_coordinate_copy_count']}` proof/author `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_proof_eligible_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_author_serialized_count']}` first `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_first_protein_key'] or '-'}` `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_first_object_key'] or '-'}` html `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_html'] or '-'}`",
         f"- raw-ranked model quarantine: `{summary['raw_ranked_model_quarantine_status'] or '-'}` targets/models/top5 `{summary['raw_ranked_model_quarantine_target_count']}/{summary['raw_ranked_model_quarantine_model_count']}/{summary['raw_ranked_model_quarantine_top5_count']}` quarantined/linked/author-present `{summary['raw_ranked_model_quarantine_quarantined_count']}/{summary['raw_ranked_model_quarantine_linked_count']}/{summary['raw_ranked_model_quarantine_author_present_count']}` atoms `{summary['raw_ranked_model_quarantine_atom_count']}`",
@@ -21702,6 +22062,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=DEFAULT_3D_MOLECULAR_OBJECT_COORDINATE_MATERIALIZATION_PLAN_JSON,
     )
     parser.add_argument(
+        "--molecular-object-coordinate-materialized-library-json",
+        default=DEFAULT_3D_MOLECULAR_OBJECT_COORDINATE_MATERIALIZED_LIBRARY_JSON,
+    )
+    parser.add_argument(
         "--molecular-object-metric-handoff-json",
         default=DEFAULT_3D_MOLECULAR_OBJECT_METRIC_HANDOFF_JSON,
     )
@@ -21728,6 +22092,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--organic-ligand-metric-batch-operator-fill-kit-json",
         default=DEFAULT_ORGANIC_LIGAND_METRIC_BATCH_OPERATOR_FILL_KIT_JSON,
+    )
+    parser.add_argument(
+        "--organic-ligand-metric-batch-operator-fill-kit-completion-audit-json",
+        default=DEFAULT_ORGANIC_LIGAND_METRIC_BATCH_OPERATOR_FILL_KIT_COMPLETION_AUDIT_JSON,
     )
     parser.add_argument(
         "--organic-ligand-metric-evidence-sync-plan-json",

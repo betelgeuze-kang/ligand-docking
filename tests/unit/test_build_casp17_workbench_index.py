@@ -22,6 +22,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     molecular_object_coordinate_materialization_plan_json = (
         tmp_path / "molecular_object_coordinate_materialization_plan.json"
     )
+    molecular_object_coordinate_materialized_library_json = (
+        tmp_path / "molecular_object_coordinate_materialized_library.json"
+    )
     molecular_object_metric_handoff_json = tmp_path / "molecular_object_metric_handoff.json"
     ligand_metric_gap_bridge_json = tmp_path / "ligand_metric_gap_bridge.json"
     organic_ligand_metric_evidence_intake_json = tmp_path / "organic_ligand_metric_evidence_intake.json"
@@ -36,6 +39,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     )
     organic_ligand_metric_batch_operator_fill_kit_json = (
         tmp_path / "organic_ligand_metric_batch_operator_fill_kit.json"
+    )
+    organic_ligand_metric_batch_operator_fill_kit_completion_audit_json = (
+        tmp_path / "organic_ligand_metric_batch_operator_fill_kit_completion_audit.json"
     )
     organic_ligand_metric_evidence_sync_plan_json = (
         tmp_path / "organic_ligand_metric_evidence_sync_plan.json"
@@ -715,6 +721,41 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        molecular_object_coordinate_materialized_library_json,
+        {
+            "summary": {
+                "coordinate_materialized_library_status": (
+                    "casp17_3d_molecular_object_coordinate_materialized_library_pass"
+                ),
+                "coordinate_materialization_plan_status": "coordinate_materialization_plan_ready_dry_run",
+                "materialization_mode": "symlink",
+                "protein_count": 5,
+                "object_count": 14,
+                "object_materialized_count": 14,
+                "object_blocked_count": 0,
+                "current_object_count": 4,
+                "massivefold_object_count": 10,
+                "source_present_count": 14,
+                "materialized_present_count": 14,
+                "sha256_match_count": 14,
+                "pdb_count": 9,
+                "cif_count": 5,
+                "symlink_count": 14,
+                "copy_count": 0,
+                "protein_folder_count": 5,
+                "object_folder_count": 14,
+                "coordinate_folder_count": 14,
+                "proof_eligible_count": 0,
+                "author_serialized_count": 0,
+                "first_protein_key": "H9002_Example_Fab_Complex",
+                "first_object_key": "current_chain_A",
+                "first_blocked_protein_key": "",
+                "first_blocker": "",
+                "next_action": "use materialized per-object coordinates for local 3D review",
+            }
+        },
+    )
+    _write_json(
         molecular_object_metric_handoff_json,
         {
             "summary": {
@@ -968,6 +1009,35 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                     "fill operator_value for direct_native_or_source_authority in "
                     "operator_evidence_template.csv"
                 ),
+            }
+        },
+    )
+    _write_json(
+        organic_ligand_metric_batch_operator_fill_kit_completion_audit_json,
+        {
+            "summary": {
+                "organic_ligand_metric_batch_operator_fill_kit_completion_audit_status": (
+                    "casp17_organic_ligand_metric_batch_operator_fill_kit_completion_audit_pass"
+                ),
+                "batch_kit_status": "organic_ligand_metric_batch_operator_fill_kit_ready_for_operator_fill",
+                "candidate_count": 2,
+                "candidate_pass_count": 2,
+                "candidate_blocked_count": 0,
+                "field_count": 10,
+                "batch_csv_row_count": 10,
+                "per_candidate_csv_row_count": 10,
+                "root_file_present_count": 4,
+                "root_file_required_count": 4,
+                "candidate_folder_present_count": 2,
+                "candidate_readme_present_count": 2,
+                "candidate_operator_fill_csv_present_count": 2,
+                "candidate_row_mismatch_count": 0,
+                "coordinate_copy_count": 0,
+                "proof_marker_count": 0,
+                "author_marker_count": 0,
+                "first_blocked_candidate_id": "",
+                "first_blocker": "",
+                "next_action": "fill operator values in the batch intake CSV, then rerun review and sync gates",
             }
         },
     )
@@ -5895,6 +5965,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(molecular_object_atlas_completion_audit_json),
             "--molecular-object-coordinate-materialization-plan-json",
             str(molecular_object_coordinate_materialization_plan_json),
+            "--molecular-object-coordinate-materialized-library-json",
+            str(molecular_object_coordinate_materialized_library_json),
             "--molecular-object-metric-handoff-json",
             str(molecular_object_metric_handoff_json),
             "--ligand-metric-gap-bridge-json",
@@ -5909,6 +5981,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(organic_ligand_metric_first_operator_fill_kit_json),
             "--organic-ligand-metric-batch-operator-fill-kit-json",
             str(organic_ligand_metric_batch_operator_fill_kit_json),
+            "--organic-ligand-metric-batch-operator-fill-kit-completion-audit-json",
+            str(organic_ligand_metric_batch_operator_fill_kit_completion_audit_json),
             "--organic-ligand-metric-evidence-sync-plan-json",
             str(organic_ligand_metric_evidence_sync_plan_json),
             "--molecular-object-metric-handoff-completion-audit-json",
@@ -6344,6 +6418,15 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "source coordinates present/missing `14/0` formats pdb/cif/unsupported `9/5/0`" in workbench_md
     assert "proposed/existing copies `14/0` policy `dry_run_no_copy`" in workbench_md
     assert (
+        "CASP17 3D molecular object coordinate materialized library: "
+        "`casp17_3d_molecular_object_coordinate_materialized_library_pass`"
+    ) in workbench_md
+    assert "plan `coordinate_materialization_plan_ready_dry_run` mode `symlink`" in workbench_md
+    assert "proteins/objects `5/14` materialized/blocked `14/0`" in workbench_md
+    assert "source/materialized/sha `14/14/14`" in workbench_md
+    assert "formats pdb/cif `9/5` symlink/copy `14/0`" in workbench_md
+    assert "folders protein/object/coordinate `5/14/14` proof/author `0/0`" in workbench_md
+    assert (
         "CASP17 3D molecular object metric handoff: "
         "`casp17_3d_molecular_object_metric_handoff_ready_review_only_ligand_gap`"
     ) in workbench_md
@@ -6389,6 +6472,13 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "candidates ready/blocked/total `0/2/2` fields ready/blocked/total `0/10/10`" in workbench_md
     assert "folder `casp17/organic_ligand_metric_batch_operator_fill_kit`" in workbench_md
     assert "batch `casp17/organic_ligand_metric_batch_operator_fill_kit/operator_fill_intake_batch.csv`" in workbench_md
+    assert (
+        "organic ligand metric batch operator fill kit completion audit: "
+        "`casp17_organic_ligand_metric_batch_operator_fill_kit_completion_audit_pass`"
+    ) in workbench_md
+    assert "candidates pass/blocked/total `2/0/2` fields expected/batch/per-candidate `10/10/10`" in workbench_md
+    assert "root files `4/4` candidate folder/readme/csv `2/2/2`" in workbench_md
+    assert "mismatch/coordinate/proof/author `0/0/0/0`" in workbench_md
     assert (
         "organic ligand metric evidence sync plan: "
         "`awaiting_organic_ligand_metric_evidence_review`"
@@ -7012,6 +7102,38 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         "current_chain_A"
     )
     assert payload["summary"]["casp17_3d_molecular_object_coordinate_materialization_plan_first_blocked_protein_key"] == ""
+    assert payload["summary"]["casp17_3d_molecular_object_coordinate_materialized_library_status"] == (
+        "casp17_3d_molecular_object_coordinate_materialized_library_pass"
+    )
+    assert payload["summary"]["casp17_3d_molecular_object_coordinate_materialized_library_plan_status"] == (
+        "coordinate_materialization_plan_ready_dry_run"
+    )
+    assert payload["summary"]["casp17_3d_molecular_object_coordinate_materialized_library_mode"] == "symlink"
+    assert payload["summary"]["casp17_3d_molecular_object_coordinate_materialized_library_protein_count"] == 5
+    assert payload["summary"]["casp17_3d_molecular_object_coordinate_materialized_library_object_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_coordinate_materialized_library_materialized_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_coordinate_materialized_library_blocked_count"] == 0
+    assert payload["summary"]["casp17_3d_molecular_object_coordinate_materialized_library_current_object_count"] == 4
+    assert payload["summary"]["casp17_3d_molecular_object_coordinate_materialized_library_massivefold_object_count"] == 10
+    assert payload["summary"]["casp17_3d_molecular_object_coordinate_materialized_library_source_present_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_coordinate_materialized_library_materialized_present_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_coordinate_materialized_library_sha256_match_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_coordinate_materialized_library_pdb_count"] == 9
+    assert payload["summary"]["casp17_3d_molecular_object_coordinate_materialized_library_cif_count"] == 5
+    assert payload["summary"]["casp17_3d_molecular_object_coordinate_materialized_library_symlink_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_coordinate_materialized_library_copy_count"] == 0
+    assert payload["summary"]["casp17_3d_molecular_object_coordinate_materialized_library_protein_folder_count"] == 5
+    assert payload["summary"]["casp17_3d_molecular_object_coordinate_materialized_library_object_folder_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_coordinate_materialized_library_coordinate_folder_count"] == 14
+    assert payload["summary"]["casp17_3d_molecular_object_coordinate_materialized_library_proof_count"] == 0
+    assert payload["summary"]["casp17_3d_molecular_object_coordinate_materialized_library_author_count"] == 0
+    assert payload["summary"]["casp17_3d_molecular_object_coordinate_materialized_library_first_protein_key"] == (
+        "H9002_Example_Fab_Complex"
+    )
+    assert payload["summary"]["casp17_3d_molecular_object_coordinate_materialized_library_first_object_key"] == (
+        "current_chain_A"
+    )
+    assert payload["summary"]["casp17_3d_molecular_object_coordinate_materialized_library_first_blocked_protein_key"] == ""
     assert payload["summary"]["casp17_3d_molecular_object_metric_handoff_status"] == (
         "casp17_3d_molecular_object_metric_handoff_ready_review_only_ligand_gap"
     )
@@ -7238,6 +7360,44 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     )
     assert payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_first_blocker"] == (
         "operator_value_missing"
+    )
+    assert payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_completion_audit_status"] == (
+        "casp17_organic_ligand_metric_batch_operator_fill_kit_completion_audit_pass"
+    )
+    assert payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_completion_audit_batch_kit_status"] == (
+        "organic_ligand_metric_batch_operator_fill_kit_ready_for_operator_fill"
+    )
+    assert payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_completion_audit_candidate_count"] == 2
+    assert (
+        payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_completion_audit_candidate_pass_count"]
+        == 2
+    )
+    assert (
+        payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_completion_audit_candidate_blocked_count"]
+        == 0
+    )
+    assert payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_completion_audit_field_count"] == 10
+    assert (
+        payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_completion_audit_batch_csv_row_count"]
+        == 10
+    )
+    assert (
+        payload["summary"][
+            "organic_ligand_metric_batch_operator_fill_kit_completion_audit_per_candidate_csv_row_count"
+        ]
+        == 10
+    )
+    assert (
+        payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_completion_audit_root_file_present_count"]
+        == 4
+    )
+    assert (
+        payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_completion_audit_candidate_csv_present_count"]
+        == 2
+    )
+    assert (
+        payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_completion_audit_coordinate_copy_count"]
+        == 0
     )
     assert payload["summary"]["organic_ligand_metric_evidence_sync_plan_status"] == (
         "awaiting_organic_ligand_metric_evidence_review"
@@ -10744,6 +10904,28 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "policy:dry_run_no_copy" in by_id[
         "casp17_3d_molecular_object_coordinate_materialization_plan"
     ]["blockers"]
+    assert by_id["casp17_3d_molecular_object_coordinate_materialized_library"]["status"] == (
+        "casp17_3d_molecular_object_coordinate_materialized_library_pass"
+    )
+    assert by_id["casp17_3d_molecular_object_coordinate_materialized_library"]["ready_count"] == 14
+    assert by_id["casp17_3d_molecular_object_coordinate_materialized_library"]["blocked_count"] == 0
+    assert by_id["casp17_3d_molecular_object_coordinate_materialized_library"]["total_count"] == 14
+    assert "plan:coordinate_materialization_plan_ready_dry_run" in by_id[
+        "casp17_3d_molecular_object_coordinate_materialized_library"
+    ]["blockers"]
+    assert "mode:symlink" in by_id["casp17_3d_molecular_object_coordinate_materialized_library"]["blockers"]
+    assert "proteins:5" in by_id["casp17_3d_molecular_object_coordinate_materialized_library"]["blockers"]
+    assert "objects:14/0/14" in by_id["casp17_3d_molecular_object_coordinate_materialized_library"]["blockers"]
+    assert "source_materialized_sha:14/14/14" in by_id[
+        "casp17_3d_molecular_object_coordinate_materialized_library"
+    ]["blockers"]
+    assert "source_objects:4/10" in by_id[
+        "casp17_3d_molecular_object_coordinate_materialized_library"
+    ]["blockers"]
+    assert "formats:9/5" in by_id["casp17_3d_molecular_object_coordinate_materialized_library"]["blockers"]
+    assert "symlink_copy:14/0" in by_id["casp17_3d_molecular_object_coordinate_materialized_library"]["blockers"]
+    assert "folders:5/14/14" in by_id["casp17_3d_molecular_object_coordinate_materialized_library"]["blockers"]
+    assert "proof_author:0/0" in by_id["casp17_3d_molecular_object_coordinate_materialized_library"]["blockers"]
     assert by_id["casp17_3d_molecular_object_metric_handoff"]["status"] == (
         "casp17_3d_molecular_object_metric_handoff_ready_review_only_ligand_gap"
     )
@@ -10858,6 +11040,22 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     ]["blockers"]
     assert "first:organic_ligand_slot_candidate_001/direct_native_or_source_authority" in by_id[
         "organic_ligand_metric_batch_operator_fill_kit"
+    ]["blockers"]
+    assert by_id["organic_ligand_metric_batch_operator_fill_kit_completion_audit"]["status"] == (
+        "casp17_organic_ligand_metric_batch_operator_fill_kit_completion_audit_pass"
+    )
+    assert by_id["organic_ligand_metric_batch_operator_fill_kit_completion_audit"]["ready_count"] == 2
+    assert by_id["organic_ligand_metric_batch_operator_fill_kit_completion_audit"]["blocked_count"] == 0
+    assert by_id["organic_ligand_metric_batch_operator_fill_kit_completion_audit"]["total_count"] == 2
+    assert "fields:10/10/10" in by_id[
+        "organic_ligand_metric_batch_operator_fill_kit_completion_audit"
+    ]["blockers"]
+    assert "root:4/4" in by_id["organic_ligand_metric_batch_operator_fill_kit_completion_audit"]["blockers"]
+    assert "candidate-files:2/2/2" in by_id[
+        "organic_ligand_metric_batch_operator_fill_kit_completion_audit"
+    ]["blockers"]
+    assert "hygiene:0/0/0/0" in by_id[
+        "organic_ligand_metric_batch_operator_fill_kit_completion_audit"
     ]["blockers"]
     assert by_id["organic_ligand_metric_evidence_sync_plan"]["status"] == (
         "awaiting_organic_ligand_metric_evidence_review"

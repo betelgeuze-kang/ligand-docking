@@ -17,14 +17,17 @@ Current headline state:
 - target model folders: `19/19`
 - target object folders/viewers/projections: `58/58/58`
 - 3D molecular object atlas: `24` protein folders and `68` object folders
+- 3D coordinate materialized library: `24` protein folders, `68` object
+  folders, `68/68` source/materialized sha256 matches, local symlink mode
 - current submission package preflight: `19/19` ready
 - official upload queue: `10/19` ready, `9/19` blocked
 - upload review packet: `10/10` ready for operator review
 - prospective strict-blind escrow: `19/19` ready, native pending, proof `0`
 - MassiveFold external model-selection lane: `15/15` ready for review-only
   external reranking
-- organic ligand metric batch fill kit: `0/7` candidates ready,
-  `0/35` fields ready, all operator values still missing
+- organic ligand metric batch fill kit completion audit: `7/7` candidate
+  folders and `35/35` batch/per-candidate rows present; operator metric
+  values are still `0/35` complete
 
 ## What Is Green
 
@@ -32,6 +35,10 @@ The review scaffold is green. Current CASP17 target folders, chain/object
 folders, local viewers, projections, folder audits, and model reviews are
 present and synchronized. The 3D object atlas now separates each molecular
 object into protein-named folders, with object-level readmes and manifests.
+The coordinate materialized library also passes: every one of the `68` objects
+has a local per-object coordinate symlink with a matching source sha256. The
+coordinate links are local review artifacts; GitHub tracks the manifests,
+reports, and generator rather than raw generated coordinate copies.
 
 The submission-package preflight is also green for the current local package
 surface: files, format, author field checks, sidechain repack status, and
@@ -80,10 +87,11 @@ new model-generation branch.
 
 Immediate operator-fill path:
 
-1. Fill `casp17/organic_ligand_metric_batch_operator_fill_kit/operator_fill_intake_batch.csv`.
-2. Complete direct source authority, no-leak evidence, chronology, pose metric,
+1. Use the green batch fill kit completion audit as the file-surface gate.
+2. Fill `casp17/organic_ligand_metric_batch_operator_fill_kit/operator_fill_intake_batch.csv`.
+3. Complete direct source authority, no-leak evidence, chronology, pose metric,
    and slot promotion fields for all `7` organic ligand candidates.
-3. Sync filled values through the organic ligand evidence review gate.
+4. Sync filled values through the organic ligand evidence review gate.
 
 Competitive floor path:
 

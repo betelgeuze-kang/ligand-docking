@@ -1,0 +1,18 @@
+{
+  "claim_boundary": "CASP17 3D molecular object coordinate materialized library only. It materializes each source coordinate model from the dry-run plan into a protein-name/object folder with sha256 verification. The default symlink mode avoids duplicating raw coordinate bytes. It does not alter source models, compute native accuracy, serialize a CASP author code, or submit to CASP.",
+  "summary": {
+    "atlas_object_key": "current_chain_C",
+    "atlas_protein_key": "H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA",
+    "blockers": "",
+    "materialization_mode": "symlink",
+    "materialization_status": "coordinate_materialized",
+    "materialized_coordinate_path": "casp17/3d_molecular_object_coordinate_materialized_library/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/current_chain_C/coordinates/H2332_chain_C.pdb",
+    "materialized_sha256": "d170af5c6783239e769cf6ecfa1db81c4371000886ee19537eeefd76a7633811",
+    "object_id": "chain_C",
+    "protein_name": "Fab 047-09_1A02 binding influenza virus H1 HA",
+    "sha256_match": "true",
+    "source_coordinate_path": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_C/models/H2332_chain_C.pdb",
+    "source_sha256": "d170af5c6783239e769cf6ecfa1db81c4371000886ee19537eeefd76a7633811",
+    "target_id": "H2332"
+  }
+}
