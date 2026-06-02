@@ -22,7 +22,25 @@ Current headline state:
 - current submission package preflight: `19/19` ready
 - official upload queue: `10/19` ready, `9/19` blocked
 - upload review packet: `10/10` ready for operator review
+- upload operator decision kit: completion audit pass for `10/0/10`
+  target pass/blocked/total, `4/4` root files, and `10/10/10`
+  intake/summary/per-target rows; awaiting `10` approve/hold/reject decisions,
+  with `10` author-serialization gaps; first target `H2319`
 - prospective strict-blind escrow: `19/19` ready, native pending, proof `0`
+- escrow external timestamp packet: `19/0/19` timestamp ready/blocked/total,
+  `10/9` upload ready/blocked, `19/19/19` sha256/escrow-md/manifest rows,
+  native/external-timestamp-required `19/19`, proof/author/hygiene `0/0/0/0/0`
+- post-native scoring scaffold: `19/0/19` targets ready/blocked/total,
+  class complex/monomer `16/3`, native pending/present/missing `19/0/19`,
+  metric rows ready/blocked/total `0/162/162`, metric class complex/monomer
+  `144/18`, files dropzone/manifest/chainmap/metriccsv `19/19/19/19`
+- strict-blind source-request operator-fill surface: completion audit pass
+  for `17/17` requests and `187/187/187` expected/template/worklist rows;
+  the batch kit completion audit also passes at `17/0/17`
+  request pass/blocked/total, `4/4` root files, `187/187/187`
+  expected/batch/per-request rows, `17/17/17` request folder/readme/csv
+  files, and `0/0/0` coordinate/proof/author hygiene markers; operator
+  values/evidence refs/candidate replacements are still missing at `187/153/77`
 - MassiveFold external model-selection lane: `15/15` ready for review-only
   external reranking
 - organic ligand metric batch fill kit completion audit: `7/7` candidate
@@ -40,10 +58,43 @@ has a local per-object coordinate symlink with a matching source sha256. The
 coordinate links are local review artifacts; GitHub tracks the manifests,
 reports, and generator rather than raw generated coordinate copies.
 
+The strict-blind source-request operator-fill worklist now has a green
+completion audit for the file surface. The source request folders,
+`SOURCE_REQUEST.md` files, operator templates, and worklist rows are synchronized
+for `17` requests and `187` field rows, with no coordinate/proof/author hygiene
+markers. The new batch kit adds a single intake CSV plus per-request folders for
+those `187` fields, and its completion audit passes with `4/4` root files,
+`17/17/17` request folder/readme/csv files, and `187/187/187`
+expected/batch/per-request rows. This does not close proof: the operator still
+must provide the missing `187` values, `153` evidence refs, and `77`
+candidate-replacement field decisions.
+
+The current prospective escrow now has a separate external timestamp packet.
+It packages all `19` escrow rows into
+`casp17/current_escrow_external_timestamp_packet/TIMESTAMP_MANIFEST.csv` with
+`19/19` SHA and escrow-md coverage, while preserving the boundary that this is
+not a commit, push, CASP submission, native-accuracy result, or strict-blind
+competitive proof. It is ready for the next operator-approved external timestamp
+action.
+
+The post-native scoring scaffold is also ready-native-pending. It creates `19`
+native dropzones, `19` native input manifests, `19` chain-mapping templates, and
+`162` expected metric rows so released native structures can be attached and
+scored without reshaping the workflow. The metric rows remain blocked until
+official native structures and chain mappings are present.
+
 The submission-package preflight is also green for the current local package
 surface: files, format, author field checks, sidechain repack status, and
 sha256 accounting are all present for `19/19` targets. This is still an
 operator-supervised package surface, not an automatic CASP server submission.
+
+The current upload review route is now the immediate P0 path. The upload review
+packet has `10/10` ready rows, and the new operator decision kit turns those
+rows into an approve/hold/reject intake surface. It starts with `H2319`, keeps
+`2/4/4` today/soon/future urgency visible, and its completion audit verifies the
+root files plus per-target decision folders without adding coordinate, proof, or
+portal-submit markers. It remains blocked until an operator records decisions
+and runtime author serialization.
 
 The MassiveFold lane is mature as an external, no-native, review-only model
 selection lane. It can support candidate reranking and model-selection
@@ -87,11 +138,15 @@ new model-generation branch.
 
 Immediate operator-fill path:
 
-1. Use the green batch fill kit completion audit as the file-surface gate.
-2. Fill `casp17/organic_ligand_metric_batch_operator_fill_kit/operator_fill_intake_batch.csv`.
-3. Complete direct source authority, no-leak evidence, chronology, pose metric,
+1. Work `casp17/current_upload_operator_decision_kit/operator_decision_intake.csv`
+   from `H2319` in queue order; set each target to `approve`, `hold`, or
+   `reject`, and do not treat this as a CASP submission without runtime author
+   serialization.
+2. Use the green batch fill kit completion audit as the file-surface gate.
+3. Fill `casp17/organic_ligand_metric_batch_operator_fill_kit/operator_fill_intake_batch.csv`.
+4. Complete direct source authority, no-leak evidence, chronology, pose metric,
    and slot promotion fields for all `7` organic ligand candidates.
-4. Sync filled values through the organic ligand evidence review gate.
+5. Sync filled values through the organic ligand evidence review gate.
 
 Competitive floor path:
 
@@ -103,6 +158,15 @@ Competitive floor path:
 6. Generate GDT_TS, lDDT, TM-score, RMSD, GDT_HA, MolProbity, DockQ, ICS, IPS,
    LDDT-PLI, and BiSyRMSD metric surfaces.
 7. Compare against CASP15/CASP16 official-like winner-normalized bands.
+
+Strict-blind first-source path:
+
+1. Fill `casp17/strict_blind_source_request_operator_fill_batch_kit/operator_fill_intake_batch.csv`
+   and the linked `17` source-request operator templates.
+2. Attach pre-native prediction artifacts, timestamp evidence, native authority,
+   no-leak evidence, method summaries, and operator clearance.
+3. Rerun fulfillment, source-request sync, internal prediction source gate, and
+   first-slot closure.
 
 ## CAPRI Scope
 

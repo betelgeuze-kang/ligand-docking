@@ -56,8 +56,18 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     current_submission_deadline_guard_json = tmp_path / "current_submission_deadline_guard.json"
     current_upload_queue_json = tmp_path / "current_upload_queue.json"
     current_upload_review_packet_json = tmp_path / "current_upload_review_packet.json"
+    current_upload_operator_decision_kit_json = tmp_path / "current_upload_operator_decision_kit.json"
+    current_upload_operator_decision_kit_completion_audit_json = (
+        tmp_path / "current_upload_operator_decision_kit_completion_audit.json"
+    )
     current_prospective_strict_blind_escrow_json = (
         tmp_path / "current_prospective_strict_blind_escrow.json"
+    )
+    current_escrow_external_timestamp_packet_json = (
+        tmp_path / "current_escrow_external_timestamp_packet.json"
+    )
+    current_post_native_scoring_scaffold_json = (
+        tmp_path / "current_post_native_scoring_scaffold.json"
     )
     closure_json = tmp_path / "closure.json"
     goal_scorecard_json = tmp_path / "goal_scorecard.json"
@@ -286,6 +296,15 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     )
     strict_blind_source_request_operator_fill_worklist_json = (
         tmp_path / "strict_blind_source_request_operator_fill_worklist.json"
+    )
+    strict_blind_source_request_operator_fill_batch_kit_json = (
+        tmp_path / "strict_blind_source_request_operator_fill_batch_kit.json"
+    )
+    strict_blind_source_request_operator_fill_batch_kit_completion_audit_json = (
+        tmp_path / "strict_blind_source_request_operator_fill_batch_kit_completion_audit.json"
+    )
+    strict_blind_source_request_operator_fill_worklist_completion_audit_json = (
+        tmp_path / "strict_blind_source_request_operator_fill_worklist_completion_audit.json"
     )
     strict_blind_source_request_operator_sync_plan_json = (
         tmp_path / "strict_blind_source_request_operator_sync_plan.json"
@@ -1283,6 +1302,69 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        current_upload_operator_decision_kit_json,
+        {
+            "summary": {
+                "current_upload_operator_decision_kit_status": (
+                    "current_upload_operator_decision_kit_awaiting_operator_decisions"
+                ),
+                "review_packet_status": "current_upload_review_packet_ready",
+                "review_target_count": 10,
+                "ready_review_count": 10,
+                "blocked_review_count": 0,
+                "operator_decision_missing_count": 10,
+                "invalid_operator_decision_count": 0,
+                "approve_count": 0,
+                "hold_count": 0,
+                "reject_count": 0,
+                "author_serialization_missing_count": 10,
+                "urgency_today_count": 2,
+                "urgency_soon_count": 4,
+                "urgency_future_count": 4,
+                "first_target_id": "H2319",
+                "first_blocker": "operator_decision_missing",
+                "operator_decision_intake_csv": (
+                    "casp17/current_upload_operator_decision_kit/operator_decision_intake.csv"
+                ),
+                "next_action": "set operator_decision to approve, hold, or reject",
+            }
+        },
+    )
+    _write_json(
+        current_upload_operator_decision_kit_completion_audit_json,
+        {
+            "summary": {
+                "current_upload_operator_decision_kit_completion_audit_status": (
+                    "casp17_current_upload_operator_decision_kit_completion_audit_pass"
+                ),
+                "decision_kit_status": "current_upload_operator_decision_kit_awaiting_operator_decisions",
+                "review_packet_status": "current_upload_review_packet_ready",
+                "review_target_count": 10,
+                "target_pass_count": 10,
+                "target_blocked_count": 0,
+                "root_file_present_count": 4,
+                "root_file_required_count": 4,
+                "intake_csv_row_count": 10,
+                "target_summary_csv_row_count": 10,
+                "per_target_csv_row_count": 10,
+                "decision_folder_present_count": 10,
+                "decision_md_present_count": 10,
+                "operator_decision_row_csv_present_count": 10,
+                "target_summary_csv_match_count": 10,
+                "operator_decision_missing_count": 10,
+                "invalid_operator_decision_count": 0,
+                "author_serialization_missing_count": 10,
+                "final_upload_filename_missing_count": 0,
+                "coordinate_copy_count": 0,
+                "proof_marker_count": 0,
+                "portal_submit_marker_count": 0,
+                "first_blocked_target_id": "",
+                "first_blocker": "",
+                "next_action": "fill approve/hold/reject operator decisions",
+            }
+        },
+    )
+    _write_json(
         current_prospective_strict_blind_escrow_json,
         {
             "summary": {
@@ -1304,6 +1386,91 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "first_upload_ready_target_id": "H2319",
                 "first_upload_blocked_target_id": "H1335",
                 "next_action": "externally timestamp the escrow manifest",
+            }
+        },
+    )
+    _write_json(
+        current_escrow_external_timestamp_packet_json,
+        {
+            "summary": {
+                "current_escrow_external_timestamp_packet_status": (
+                    "current_escrow_external_timestamp_packet_ready_for_external_timestamp"
+                ),
+                "prospective_escrow_status": (
+                    "current_prospective_strict_blind_escrow_ready_native_pending_partial_upload_window"
+                ),
+                "target_count": 19,
+                "timestamp_ready_count": 19,
+                "timestamp_blocked_count": 0,
+                "upload_ready_count": 10,
+                "upload_blocked_count": 9,
+                "urgency_today_count": 2,
+                "urgency_soon_count": 4,
+                "urgency_future_count": 4,
+                "sha256_match_count": 19,
+                "escrow_md_present_count": 19,
+                "timestamp_manifest_row_count": 19,
+                "native_pending_count": 19,
+                "external_timestamp_required_count": 19,
+                "competitive_proof_eligible_count": 0,
+                "author_serialized_count": 0,
+                "coordinate_copy_count": 0,
+                "proof_marker_count": 0,
+                "portal_submit_marker_count": 0,
+                "first_ready_target_id": "H2319",
+                "first_blocked_target_id": "",
+                "first_blocker": "",
+                "timestamp_manifest_csv": (
+                    "casp17/current_escrow_external_timestamp_packet/TIMESTAMP_MANIFEST.csv"
+                ),
+                "manifest_signature_sha256": "abc123",
+                "next_action": "commit/push timestamp packet only when operator requests it",
+            }
+        },
+    )
+    _write_json(
+        current_post_native_scoring_scaffold_json,
+        {
+            "summary": {
+                "current_post_native_scoring_scaffold_status": (
+                    "current_post_native_scoring_scaffold_ready_native_pending"
+                ),
+                "prospective_escrow_status": (
+                    "current_prospective_strict_blind_escrow_ready_native_pending_partial_upload_window"
+                ),
+                "timestamp_packet_status": (
+                    "current_escrow_external_timestamp_packet_ready_for_external_timestamp"
+                ),
+                "target_count": 19,
+                "target_ready_count": 19,
+                "target_blocked_count": 0,
+                "complex_target_count": 16,
+                "monomer_target_count": 3,
+                "upload_ready_count": 10,
+                "upload_blocked_count": 9,
+                "timestamp_ready_count": 19,
+                "native_pending_count": 19,
+                "native_file_present_count": 0,
+                "native_file_missing_count": 19,
+                "metric_row_count": 162,
+                "metric_ready_count": 0,
+                "metric_blocked_count": 162,
+                "complex_metric_row_count": 144,
+                "monomer_metric_row_count": 18,
+                "dropzone_count": 19,
+                "native_input_manifest_count": 19,
+                "chain_mapping_template_count": 19,
+                "metric_requirements_csv_count": 19,
+                "competitive_proof_eligible_count": 0,
+                "coordinate_copy_count": 0,
+                "proof_marker_count": 0,
+                "portal_submit_marker_count": 0,
+                "first_ready_target_id": "H2319",
+                "first_blocked_target_id": "",
+                "first_blocker": "",
+                "metric_rows_csv": "casp17/casp17_current_post_native_scoring_metric_rows_current.csv",
+                "scaffold_dir": "casp17/current_post_native_scoring_scaffold",
+                "next_action": "attach official native structures and chain mappings after native release",
             }
         },
     )
@@ -3913,6 +4080,108 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         },
     )
     _write_json(
+        strict_blind_source_request_operator_fill_batch_kit_json,
+        {
+            "summary": {
+                "strict_blind_source_request_operator_fill_batch_kit_status": (
+                    "strict_blind_source_request_operator_fill_batch_kit_ready_for_operator_fill"
+                ),
+                "worklist_status": "awaiting_source_request_operator_values",
+                "batch_folder": "casp17/strict_blind_source_request_operator_fill_batch_kit",
+                "operator_fill_intake_batch_csv": (
+                    "casp17/strict_blind_source_request_operator_fill_batch_kit/"
+                    "operator_fill_intake_batch.csv"
+                ),
+                "request_count": 17,
+                "ready_request_count": 0,
+                "blocked_request_count": 17,
+                "field_count": 187,
+                "field_ready_count": 0,
+                "field_blocked_count": 187,
+                "operator_value_missing_count": 187,
+                "operator_evidence_missing_count": 153,
+                "candidate_replacement_field_count": 77,
+                "source_template_count": 17,
+                "source_request_folder_count": 17,
+                "first_request_id": "source_request_001",
+                "first_target_id": "HIST_BBA5",
+                "first_field_key": "source_id",
+                "first_blocker": "operator_value_missing",
+                "next_action": "fill operator_value for source_id",
+            }
+        },
+    )
+    _write_json(
+        strict_blind_source_request_operator_fill_batch_kit_completion_audit_json,
+        {
+            "summary": {
+                "strict_blind_source_request_operator_fill_batch_kit_completion_audit_status": (
+                    "casp17_strict_blind_source_request_operator_fill_batch_kit_completion_audit_pass"
+                ),
+                "batch_kit_status": "strict_blind_source_request_operator_fill_batch_kit_ready_for_operator_fill",
+                "worklist_status": "awaiting_source_request_operator_values",
+                "request_count": 17,
+                "request_pass_count": 17,
+                "request_blocked_count": 0,
+                "root_file_present_count": 4,
+                "root_file_required_count": 4,
+                "field_count": 187,
+                "batch_csv_row_count": 187,
+                "per_request_csv_row_count": 187,
+                "request_summary_csv_row_count": 17,
+                "request_summary_csv_match_count": 17,
+                "request_folder_present_count": 17,
+                "request_readme_present_count": 17,
+                "request_operator_fill_csv_present_count": 17,
+                "request_row_mismatch_count": 0,
+                "operator_value_missing_count": 187,
+                "operator_evidence_missing_count": 153,
+                "candidate_replacement_field_count": 77,
+                "coordinate_copy_count": 0,
+                "proof_marker_count": 0,
+                "author_marker_count": 0,
+                "first_blocked_request_id": "",
+                "first_blocker": "",
+                "next_action": (
+                    "fill operator values/evidence refs and rerun source-request fulfillment, sync, and closure"
+                ),
+            }
+        },
+    )
+    _write_json(
+        strict_blind_source_request_operator_fill_worklist_completion_audit_json,
+        {
+            "summary": {
+                "source_request_operator_fill_worklist_completion_audit_status": (
+                    "casp17_strict_blind_source_request_operator_fill_worklist_completion_audit_pass"
+                ),
+                "source_request_packet_status": "awaiting_pre_native_source_or_candidate_replacement",
+                "operator_fill_worklist_status": "awaiting_source_request_operator_values",
+                "request_count": 17,
+                "request_pass_count": 17,
+                "request_blocked_count": 0,
+                "expected_field_count": 187,
+                "template_csv_row_count": 187,
+                "worklist_row_count": 187,
+                "field_row_mismatch_count": 0,
+                "template_missing_field_count": 0,
+                "operator_value_missing_count": 187,
+                "operator_evidence_missing_count": 153,
+                "candidate_replacement_field_count": 77,
+                "request_folder_present_count": 17,
+                "source_request_md_present_count": 17,
+                "operator_template_csv_present_count": 17,
+                "coordinate_copy_count": 0,
+                "proof_marker_count": 0,
+                "author_marker_count": 0,
+                "first_blocked_request_id": "",
+                "first_blocked_target_id": "",
+                "first_blocker": "",
+                "next_action": "fill operator values/evidence refs and rerun source request fulfillment",
+            }
+        },
+    )
+    _write_json(
         strict_blind_source_request_operator_sync_plan_json,
         {
             "summary": {
@@ -6001,8 +6270,16 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(current_upload_queue_json),
             "--current-upload-review-packet-json",
             str(current_upload_review_packet_json),
+            "--current-upload-operator-decision-kit-json",
+            str(current_upload_operator_decision_kit_json),
+            "--current-upload-operator-decision-kit-completion-audit-json",
+            str(current_upload_operator_decision_kit_completion_audit_json),
             "--current-prospective-strict-blind-escrow-json",
             str(current_prospective_strict_blind_escrow_json),
+            "--current-escrow-external-timestamp-packet-json",
+            str(current_escrow_external_timestamp_packet_json),
+            "--current-post-native-scoring-scaffold-json",
+            str(current_post_native_scoring_scaffold_json),
             "--win-gap-closure-json",
             str(closure_json),
             "--win-tier-goal-scorecard-json",
@@ -6195,6 +6472,12 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(strict_blind_source_request_fulfillment_gate_json),
             "--strict-blind-source-request-operator-fill-worklist-json",
             str(strict_blind_source_request_operator_fill_worklist_json),
+            "--strict-blind-source-request-operator-fill-batch-kit-json",
+            str(strict_blind_source_request_operator_fill_batch_kit_json),
+            "--strict-blind-source-request-operator-fill-batch-kit-completion-audit-json",
+            str(strict_blind_source_request_operator_fill_batch_kit_completion_audit_json),
+            "--strict-blind-source-request-operator-fill-worklist-completion-audit-json",
+            str(strict_blind_source_request_operator_fill_worklist_completion_audit_json),
             "--strict-blind-source-request-operator-sync-plan-json",
             str(strict_blind_source_request_operator_sync_plan_json),
             "--strict-blind-source-request-closure-board-json",
@@ -6612,12 +6895,45 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "urgency today/soon/future `2/4/4` candidate/object/viewer `10/10/10`" in workbench_md
     assert "first `H2319` `casp17/current_upload_review_packet/" in workbench_md
     assert (
+        "current CASP17 upload operator decision kit: "
+        "`current_upload_operator_decision_kit_awaiting_operator_decisions`"
+    ) in workbench_md
+    assert "decisions approve/hold/reject/missing/invalid `0/0/0/10/0`" in workbench_md
+    assert "author missing `10` urgency today/soon/future `2/4/4`" in workbench_md
+    assert "intake `casp17/current_upload_operator_decision_kit/operator_decision_intake.csv`" in workbench_md
+    assert (
+        "current CASP17 upload operator decision kit completion audit: "
+        "`casp17_current_upload_operator_decision_kit_completion_audit_pass`"
+    ) in workbench_md
+    assert "targets pass/blocked/total `10/0/10`" in workbench_md
+    assert "root `4/4` rows intake/summary/per-target `10/10/10`" in workbench_md
+    assert "folders/md/csv/summary-match `10/10/10/10`" in workbench_md
+    assert "missing decision/invalid/author/final-name `10/0/10/0`" in workbench_md
+    assert "hygiene coordinate/proof/portal `0/0/0`" in workbench_md
+    assert (
         "current CASP17 prospective strict-blind escrow: "
         "`current_prospective_strict_blind_escrow_ready_native_pending_partial_upload_window` "
         "escrow ready/blocked/total `19/0/19`"
     ) in workbench_md
     assert "upload ready/blocked `10/9` sha/review/native/ext-ts `19/10/19/19`" in workbench_md
     assert "proof `0` author-serialized `0` first upload/blocked `H2319`/`H1335`" in workbench_md
+    assert (
+        "current CASP17 escrow external timestamp packet: "
+        "`current_escrow_external_timestamp_packet_ready_for_external_timestamp`"
+    ) in workbench_md
+    assert "timestamp ready/blocked/total `19/0/19`" in workbench_md
+    assert "sha/escrow-md/manifest `19/19/19`" in workbench_md
+    assert "native/ext-ts `19/19` proof/author/hygiene `0/0/0/0/0`" in workbench_md
+    assert "timestamp `casp17/current_escrow_external_timestamp_packet/TIMESTAMP_MANIFEST.csv`" in workbench_md
+    assert (
+        "current CASP17 post-native scoring scaffold: "
+        "`current_post_native_scoring_scaffold_ready_native_pending`"
+    ) in workbench_md
+    assert "targets ready/blocked/total `19/0/19` class complex/monomer `16/3`" in workbench_md
+    assert "upload/timestamp `10/9/19` native pending/present/missing `19/0/19`" in workbench_md
+    assert "metrics ready/blocked/total `0/162/162` metric class complex/monomer `144/18`" in workbench_md
+    assert "files dropzone/manifest/chainmap/metriccsv `19/19/19/19`" in workbench_md
+    assert "metric rows `casp17/casp17_current_post_native_scoring_metric_rows_current.csv`" in workbench_md
     assert "win-tier metric surface contract: `awaiting_strict_blind_evidence_files_and_ligand_category_slots`" in workbench_md
     assert "metrics covered/required `11/11`" in workbench_md
     assert "win-tier critical path board: `competitive_proof_blocked_on_strict_blind_evidence`" in workbench_md
@@ -6933,6 +7249,33 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "validation pdb/chronology/internal-source `0/0/0`" in workbench_md
     assert "strict-blind source request operator fill worklist: `awaiting_source_request_operator_values`" in workbench_md
     assert "fields ready/value-missing/evidence-missing/total `0/187/153/187`" in workbench_md
+    assert (
+        "strict-blind source request operator fill batch kit: "
+        "`strict_blind_source_request_operator_fill_batch_kit_ready_for_operator_fill`"
+    ) in workbench_md
+    assert "requests ready/blocked/total `0/17/17`" in workbench_md
+    assert "fields ready/blocked/total `0/187/187`" in workbench_md
+    assert "batch `casp17/strict_blind_source_request_operator_fill_batch_kit/operator_fill_intake_batch.csv`" in workbench_md
+    assert (
+        "strict-blind source request operator fill batch kit completion audit: "
+        "`casp17_strict_blind_source_request_operator_fill_batch_kit_completion_audit_pass`"
+    ) in workbench_md
+    assert "batch/worklist `strict_blind_source_request_operator_fill_batch_kit_ready_for_operator_fill`" in workbench_md
+    assert "root `4/4`" in workbench_md
+    assert "fields expected/batch/per-request `187/187/187`" in workbench_md
+    assert "request summary rows/matches `17/17`" in workbench_md
+    assert "request folder/readme/csv `17/17/17`" in workbench_md
+    assert "missing value/evidence/candidate-replacement `187/153/77`" in workbench_md
+    assert (
+        "strict-blind source request operator fill worklist completion audit: "
+        "`casp17_strict_blind_source_request_operator_fill_worklist_completion_audit_pass`"
+    ) in workbench_md
+    assert "requests pass/blocked/total `17/0/17`" in workbench_md
+    assert "fields expected/template/worklist `187/187/187`" in workbench_md
+    assert "mismatch/missing-template `0/0`" in workbench_md
+    assert "operator value/evidence missing `187/153`" in workbench_md
+    assert "files folder/source-md/template `17/17/17`" in workbench_md
+    assert "hygiene coordinate/proof/author `0/0/0`" in workbench_md
     assert "strict-blind source request operator sync plan: `awaiting_source_request_fulfillment`" in workbench_md
     assert "actions ready/blocked/applied/total `0/1/0/0`" in workbench_md
     assert "strict-blind internal prediction source apply plan: `blocked_until_internal_prediction_source_gate_passes`" in workbench_md
@@ -7584,6 +7927,91 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["current_upload_review_packet_first_review_md"].endswith(
         "UPLOAD_REVIEW.md"
     )
+    assert payload["summary"]["current_upload_operator_decision_kit_status"] == (
+        "current_upload_operator_decision_kit_awaiting_operator_decisions"
+    )
+    assert payload["summary"]["current_upload_operator_decision_kit_review_packet_status"] == (
+        "current_upload_review_packet_ready"
+    )
+    assert payload["summary"]["current_upload_operator_decision_kit_review_count"] == 10
+    assert payload["summary"]["current_upload_operator_decision_kit_ready_review_count"] == 10
+    assert payload["summary"]["current_upload_operator_decision_kit_blocked_review_count"] == 0
+    assert payload["summary"]["current_upload_operator_decision_kit_operator_decision_missing_count"] == 10
+    assert payload["summary"]["current_upload_operator_decision_kit_invalid_operator_decision_count"] == 0
+    assert payload["summary"]["current_upload_operator_decision_kit_approve_count"] == 0
+    assert payload["summary"]["current_upload_operator_decision_kit_hold_count"] == 0
+    assert payload["summary"]["current_upload_operator_decision_kit_reject_count"] == 0
+    assert payload["summary"]["current_upload_operator_decision_kit_author_serialization_missing_count"] == 10
+    assert payload["summary"]["current_upload_operator_decision_kit_urgency_today_count"] == 2
+    assert payload["summary"]["current_upload_operator_decision_kit_urgency_soon_count"] == 4
+    assert payload["summary"]["current_upload_operator_decision_kit_urgency_future_count"] == 4
+    assert payload["summary"]["current_upload_operator_decision_kit_first_target_id"] == "H2319"
+    assert payload["summary"]["current_upload_operator_decision_kit_first_blocker"] == (
+        "operator_decision_missing"
+    )
+    assert payload["summary"]["current_upload_operator_decision_kit_intake_csv"] == (
+        "casp17/current_upload_operator_decision_kit/operator_decision_intake.csv"
+    )
+    assert payload["summary"]["current_upload_operator_decision_kit_completion_audit_status"] == (
+        "casp17_current_upload_operator_decision_kit_completion_audit_pass"
+    )
+    assert payload[
+        "summary"
+    ]["current_upload_operator_decision_kit_completion_audit_decision_kit_status"] == (
+        "current_upload_operator_decision_kit_awaiting_operator_decisions"
+    )
+    assert payload[
+        "summary"
+    ]["current_upload_operator_decision_kit_completion_audit_review_packet_status"] == (
+        "current_upload_review_packet_ready"
+    )
+    assert payload["summary"]["current_upload_operator_decision_kit_completion_audit_review_target_count"] == 10
+    assert payload["summary"]["current_upload_operator_decision_kit_completion_audit_target_pass_count"] == 10
+    assert payload["summary"]["current_upload_operator_decision_kit_completion_audit_target_blocked_count"] == 0
+    assert payload["summary"]["current_upload_operator_decision_kit_completion_audit_root_file_present_count"] == 4
+    assert payload["summary"]["current_upload_operator_decision_kit_completion_audit_root_file_required_count"] == 4
+    assert payload["summary"]["current_upload_operator_decision_kit_completion_audit_intake_csv_row_count"] == 10
+    assert (
+        payload["summary"]["current_upload_operator_decision_kit_completion_audit_target_summary_csv_row_count"]
+        == 10
+    )
+    assert payload["summary"]["current_upload_operator_decision_kit_completion_audit_per_target_csv_row_count"] == 10
+    assert (
+        payload["summary"]["current_upload_operator_decision_kit_completion_audit_decision_folder_present_count"]
+        == 10
+    )
+    assert payload["summary"]["current_upload_operator_decision_kit_completion_audit_decision_md_present_count"] == 10
+    assert (
+        payload["summary"][
+            "current_upload_operator_decision_kit_completion_audit_operator_decision_row_csv_present_count"
+        ]
+        == 10
+    )
+    assert (
+        payload["summary"]["current_upload_operator_decision_kit_completion_audit_target_summary_csv_match_count"]
+        == 10
+    )
+    assert (
+        payload["summary"]["current_upload_operator_decision_kit_completion_audit_operator_decision_missing_count"]
+        == 10
+    )
+    assert (
+        payload["summary"]["current_upload_operator_decision_kit_completion_audit_invalid_operator_decision_count"]
+        == 0
+    )
+    assert (
+        payload["summary"]["current_upload_operator_decision_kit_completion_audit_author_serialization_missing_count"]
+        == 10
+    )
+    assert (
+        payload["summary"]["current_upload_operator_decision_kit_completion_audit_final_upload_filename_missing_count"]
+        == 0
+    )
+    assert payload["summary"]["current_upload_operator_decision_kit_completion_audit_coordinate_copy_count"] == 0
+    assert payload["summary"]["current_upload_operator_decision_kit_completion_audit_proof_marker_count"] == 0
+    assert payload["summary"]["current_upload_operator_decision_kit_completion_audit_portal_submit_marker_count"] == 0
+    assert payload["summary"]["current_upload_operator_decision_kit_completion_audit_first_blocked_target_id"] == ""
+    assert payload["summary"]["current_upload_operator_decision_kit_completion_audit_first_blocker"] == ""
     assert payload["summary"]["current_prospective_strict_blind_escrow_status"] == (
         "current_prospective_strict_blind_escrow_ready_native_pending_partial_upload_window"
     )
@@ -7612,6 +8040,79 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     )
     assert payload["summary"]["current_prospective_strict_blind_escrow_manifest_signature_sha256"] == (
         "abc123"
+    )
+    assert payload["summary"]["current_escrow_external_timestamp_packet_status"] == (
+        "current_escrow_external_timestamp_packet_ready_for_external_timestamp"
+    )
+    assert payload["summary"]["current_escrow_external_timestamp_packet_prospective_escrow_status"] == (
+        "current_prospective_strict_blind_escrow_ready_native_pending_partial_upload_window"
+    )
+    assert payload["summary"]["current_escrow_external_timestamp_packet_target_count"] == 19
+    assert payload["summary"]["current_escrow_external_timestamp_packet_timestamp_ready_count"] == 19
+    assert payload["summary"]["current_escrow_external_timestamp_packet_timestamp_blocked_count"] == 0
+    assert payload["summary"]["current_escrow_external_timestamp_packet_upload_ready_count"] == 10
+    assert payload["summary"]["current_escrow_external_timestamp_packet_upload_blocked_count"] == 9
+    assert payload["summary"]["current_escrow_external_timestamp_packet_urgency_today_count"] == 2
+    assert payload["summary"]["current_escrow_external_timestamp_packet_urgency_soon_count"] == 4
+    assert payload["summary"]["current_escrow_external_timestamp_packet_urgency_future_count"] == 4
+    assert payload["summary"]["current_escrow_external_timestamp_packet_sha256_match_count"] == 19
+    assert payload["summary"]["current_escrow_external_timestamp_packet_escrow_md_present_count"] == 19
+    assert payload["summary"]["current_escrow_external_timestamp_packet_timestamp_manifest_row_count"] == 19
+    assert payload["summary"]["current_escrow_external_timestamp_packet_native_pending_count"] == 19
+    assert payload["summary"]["current_escrow_external_timestamp_packet_external_timestamp_required_count"] == 19
+    assert payload["summary"]["current_escrow_external_timestamp_packet_competitive_proof_eligible_count"] == 0
+    assert payload["summary"]["current_escrow_external_timestamp_packet_author_serialized_count"] == 0
+    assert payload["summary"]["current_escrow_external_timestamp_packet_coordinate_copy_count"] == 0
+    assert payload["summary"]["current_escrow_external_timestamp_packet_proof_marker_count"] == 0
+    assert payload["summary"]["current_escrow_external_timestamp_packet_portal_submit_marker_count"] == 0
+    assert payload["summary"]["current_escrow_external_timestamp_packet_first_ready_target_id"] == "H2319"
+    assert payload["summary"]["current_escrow_external_timestamp_packet_first_blocked_target_id"] == ""
+    assert payload["summary"]["current_escrow_external_timestamp_packet_first_blocker"] == ""
+    assert payload["summary"]["current_escrow_external_timestamp_packet_timestamp_manifest_csv"] == (
+        "casp17/current_escrow_external_timestamp_packet/TIMESTAMP_MANIFEST.csv"
+    )
+    assert payload["summary"]["current_escrow_external_timestamp_packet_manifest_signature_sha256"] == "abc123"
+    assert payload["summary"]["current_post_native_scoring_scaffold_status"] == (
+        "current_post_native_scoring_scaffold_ready_native_pending"
+    )
+    assert payload["summary"]["current_post_native_scoring_scaffold_prospective_escrow_status"] == (
+        "current_prospective_strict_blind_escrow_ready_native_pending_partial_upload_window"
+    )
+    assert payload["summary"]["current_post_native_scoring_scaffold_timestamp_packet_status"] == (
+        "current_escrow_external_timestamp_packet_ready_for_external_timestamp"
+    )
+    assert payload["summary"]["current_post_native_scoring_scaffold_target_count"] == 19
+    assert payload["summary"]["current_post_native_scoring_scaffold_target_ready_count"] == 19
+    assert payload["summary"]["current_post_native_scoring_scaffold_target_blocked_count"] == 0
+    assert payload["summary"]["current_post_native_scoring_scaffold_complex_target_count"] == 16
+    assert payload["summary"]["current_post_native_scoring_scaffold_monomer_target_count"] == 3
+    assert payload["summary"]["current_post_native_scoring_scaffold_upload_ready_count"] == 10
+    assert payload["summary"]["current_post_native_scoring_scaffold_upload_blocked_count"] == 9
+    assert payload["summary"]["current_post_native_scoring_scaffold_timestamp_ready_count"] == 19
+    assert payload["summary"]["current_post_native_scoring_scaffold_native_pending_count"] == 19
+    assert payload["summary"]["current_post_native_scoring_scaffold_native_file_present_count"] == 0
+    assert payload["summary"]["current_post_native_scoring_scaffold_native_file_missing_count"] == 19
+    assert payload["summary"]["current_post_native_scoring_scaffold_metric_row_count"] == 162
+    assert payload["summary"]["current_post_native_scoring_scaffold_metric_ready_count"] == 0
+    assert payload["summary"]["current_post_native_scoring_scaffold_metric_blocked_count"] == 162
+    assert payload["summary"]["current_post_native_scoring_scaffold_complex_metric_row_count"] == 144
+    assert payload["summary"]["current_post_native_scoring_scaffold_monomer_metric_row_count"] == 18
+    assert payload["summary"]["current_post_native_scoring_scaffold_dropzone_count"] == 19
+    assert payload["summary"]["current_post_native_scoring_scaffold_native_input_manifest_count"] == 19
+    assert payload["summary"]["current_post_native_scoring_scaffold_chain_mapping_template_count"] == 19
+    assert payload["summary"]["current_post_native_scoring_scaffold_metric_requirements_csv_count"] == 19
+    assert payload["summary"]["current_post_native_scoring_scaffold_competitive_proof_eligible_count"] == 0
+    assert payload["summary"]["current_post_native_scoring_scaffold_coordinate_copy_count"] == 0
+    assert payload["summary"]["current_post_native_scoring_scaffold_proof_marker_count"] == 0
+    assert payload["summary"]["current_post_native_scoring_scaffold_portal_submit_marker_count"] == 0
+    assert payload["summary"]["current_post_native_scoring_scaffold_first_ready_target_id"] == "H2319"
+    assert payload["summary"]["current_post_native_scoring_scaffold_first_blocked_target_id"] == ""
+    assert payload["summary"]["current_post_native_scoring_scaffold_first_blocker"] == ""
+    assert payload["summary"]["current_post_native_scoring_scaffold_metric_rows_csv"] == (
+        "casp17/casp17_current_post_native_scoring_metric_rows_current.csv"
+    )
+    assert payload["summary"]["current_post_native_scoring_scaffold_dir"] == (
+        "casp17/current_post_native_scoring_scaffold"
     )
     assert payload["summary"]["benchmark_rows_total"] == 40
     assert payload["summary"]["competitive_batch_status"] == "ready_for_fill"
@@ -9244,6 +9745,194 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["strict_blind_source_request_operator_fill_worklist_first_blocker"] == (
         "operator_value_missing"
     )
+    assert payload["summary"]["strict_blind_source_request_operator_fill_batch_kit_status"] == (
+        "strict_blind_source_request_operator_fill_batch_kit_ready_for_operator_fill"
+    )
+    assert payload["summary"]["strict_blind_source_request_operator_fill_batch_kit_worklist_status"] == (
+        "awaiting_source_request_operator_values"
+    )
+    assert payload["summary"]["strict_blind_source_request_operator_fill_batch_kit_request_count"] == 17
+    assert payload["summary"]["strict_blind_source_request_operator_fill_batch_kit_ready_request_count"] == 0
+    assert payload["summary"]["strict_blind_source_request_operator_fill_batch_kit_blocked_request_count"] == 17
+    assert payload["summary"]["strict_blind_source_request_operator_fill_batch_kit_field_count"] == 187
+    assert payload["summary"]["strict_blind_source_request_operator_fill_batch_kit_field_ready_count"] == 0
+    assert payload["summary"]["strict_blind_source_request_operator_fill_batch_kit_field_blocked_count"] == 187
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_operator_value_missing_count"] == 187
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_operator_evidence_missing_count"] == 153
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_candidate_replacement_field_count"] == 77
+    assert payload["summary"]["strict_blind_source_request_operator_fill_batch_kit_source_template_count"] == 17
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_source_request_folder_count"] == 17
+    assert payload["summary"]["strict_blind_source_request_operator_fill_batch_kit_folder"] == (
+        "casp17/strict_blind_source_request_operator_fill_batch_kit"
+    )
+    assert payload["summary"]["strict_blind_source_request_operator_fill_batch_kit_batch_csv"] == (
+        "casp17/strict_blind_source_request_operator_fill_batch_kit/operator_fill_intake_batch.csv"
+    )
+    assert payload["summary"]["strict_blind_source_request_operator_fill_batch_kit_first_request_id"] == (
+        "source_request_001"
+    )
+    assert payload["summary"]["strict_blind_source_request_operator_fill_batch_kit_first_target_id"] == "HIST_BBA5"
+    assert payload["summary"]["strict_blind_source_request_operator_fill_batch_kit_first_field_key"] == "source_id"
+    assert payload["summary"]["strict_blind_source_request_operator_fill_batch_kit_first_blocker"] == (
+        "operator_value_missing"
+    )
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_completion_audit_status"] == (
+        "casp17_strict_blind_source_request_operator_fill_batch_kit_completion_audit_pass"
+    )
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_completion_audit_batch_kit_status"] == (
+        "strict_blind_source_request_operator_fill_batch_kit_ready_for_operator_fill"
+    )
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_completion_audit_worklist_status"] == (
+        "awaiting_source_request_operator_values"
+    )
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_count"] == 17
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_pass_count"] == 17
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_blocked_count"] == 0
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_completion_audit_root_file_present_count"] == 4
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_completion_audit_root_file_required_count"] == 4
+    assert payload["summary"]["strict_blind_source_request_operator_fill_batch_kit_completion_audit_field_count"] == 187
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_completion_audit_batch_csv_row_count"] == 187
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_completion_audit_per_request_csv_row_count"] == 187
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_summary_csv_row_count"] == 17
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_summary_csv_match_count"] == 17
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_folder_present_count"] == 17
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_readme_present_count"] == 17
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_operator_fill_csv_present_count"] == 17
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_row_mismatch_count"] == 0
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_completion_audit_operator_value_missing_count"] == 187
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_completion_audit_operator_evidence_missing_count"] == 153
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_completion_audit_candidate_replacement_field_count"] == 77
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_completion_audit_coordinate_copy_count"] == 0
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_completion_audit_proof_marker_count"] == 0
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_completion_audit_author_marker_count"] == 0
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_completion_audit_first_blocked_request_id"] == ""
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_batch_kit_completion_audit_first_blocker"] == ""
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_worklist_completion_audit_status"] == (
+        "casp17_strict_blind_source_request_operator_fill_worklist_completion_audit_pass"
+    )
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_worklist_completion_audit_source_request_status"] == (
+        "awaiting_pre_native_source_or_candidate_replacement"
+    )
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_worklist_completion_audit_worklist_status"] == (
+        "awaiting_source_request_operator_values"
+    )
+    assert payload["summary"]["strict_blind_source_request_operator_fill_worklist_completion_audit_request_count"] == 17
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_worklist_completion_audit_request_pass_count"] == 17
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_worklist_completion_audit_request_blocked_count"] == 0
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_worklist_completion_audit_expected_field_count"] == 187
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_worklist_completion_audit_template_csv_row_count"] == 187
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_worklist_completion_audit_worklist_row_count"] == 187
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_worklist_completion_audit_field_row_mismatch_count"] == 0
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_worklist_completion_audit_template_missing_field_count"] == 0
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_worklist_completion_audit_operator_value_missing_count"] == 187
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_worklist_completion_audit_operator_evidence_missing_count"] == 153
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_worklist_completion_audit_candidate_replacement_field_count"] == 77
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_worklist_completion_audit_request_folder_present_count"] == 17
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_worklist_completion_audit_source_request_md_present_count"] == 17
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_worklist_completion_audit_operator_template_csv_present_count"] == 17
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_worklist_completion_audit_coordinate_copy_count"] == 0
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_worklist_completion_audit_proof_marker_count"] == 0
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_worklist_completion_audit_author_marker_count"] == 0
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_worklist_completion_audit_first_blocked_request_id"] == ""
+    assert payload[
+        "summary"
+    ]["strict_blind_source_request_operator_fill_worklist_completion_audit_first_blocker"] == ""
     assert payload["summary"]["strict_blind_source_request_operator_sync_plan_status"] == (
         "awaiting_source_request_fulfillment"
     )
@@ -11182,6 +11871,44 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "first:H2319/casp17/current_upload_review_packet/" in by_id[
         "current_casp17_upload_review_packet"
     ]["blockers"]
+    assert by_id["current_casp17_upload_operator_decision_kit"]["status"] == (
+        "current_upload_operator_decision_kit_awaiting_operator_decisions"
+    )
+    assert by_id["current_casp17_upload_operator_decision_kit"]["ready_count"] == 0
+    assert by_id["current_casp17_upload_operator_decision_kit"]["blocked_count"] == 10
+    assert by_id["current_casp17_upload_operator_decision_kit"]["total_count"] == 10
+    assert "reviews:10/0/10" in by_id["current_casp17_upload_operator_decision_kit"]["blockers"]
+    assert "decisions:0/0/0/10/0" in by_id[
+        "current_casp17_upload_operator_decision_kit"
+    ]["blockers"]
+    assert "author:10" in by_id["current_casp17_upload_operator_decision_kit"]["blockers"]
+    assert "first:H2319/operator_decision_missing" in by_id[
+        "current_casp17_upload_operator_decision_kit"
+    ]["blockers"]
+    assert by_id["current_casp17_upload_operator_decision_kit_completion_audit"]["status"] == (
+        "casp17_current_upload_operator_decision_kit_completion_audit_pass"
+    )
+    assert by_id["current_casp17_upload_operator_decision_kit_completion_audit"]["ready_count"] == 10
+    assert by_id["current_casp17_upload_operator_decision_kit_completion_audit"]["blocked_count"] == 0
+    assert by_id["current_casp17_upload_operator_decision_kit_completion_audit"]["total_count"] == 10
+    assert "targets:10/0/10" in by_id[
+        "current_casp17_upload_operator_decision_kit_completion_audit"
+    ]["blockers"]
+    assert "root:4/4" in by_id[
+        "current_casp17_upload_operator_decision_kit_completion_audit"
+    ]["blockers"]
+    assert "rows:10/10/10" in by_id[
+        "current_casp17_upload_operator_decision_kit_completion_audit"
+    ]["blockers"]
+    assert "folders:10/10/10/10" in by_id[
+        "current_casp17_upload_operator_decision_kit_completion_audit"
+    ]["blockers"]
+    assert "missing:10/0/10/0" in by_id[
+        "current_casp17_upload_operator_decision_kit_completion_audit"
+    ]["blockers"]
+    assert "hygiene:0/0/0" in by_id[
+        "current_casp17_upload_operator_decision_kit_completion_audit"
+    ]["blockers"]
     assert by_id["current_casp17_prospective_strict_blind_escrow"]["status"] == (
         "current_prospective_strict_blind_escrow_ready_native_pending_partial_upload_window"
     )
@@ -11197,6 +11924,39 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "first_blocked_upload:H1335" in by_id[
         "current_casp17_prospective_strict_blind_escrow"
     ]["blockers"]
+    assert by_id["current_casp17_escrow_external_timestamp_packet"]["status"] == (
+        "current_escrow_external_timestamp_packet_ready_for_external_timestamp"
+    )
+    assert by_id["current_casp17_escrow_external_timestamp_packet"]["ready_count"] == 19
+    assert by_id["current_casp17_escrow_external_timestamp_packet"]["blocked_count"] == 0
+    assert by_id["current_casp17_escrow_external_timestamp_packet"]["total_count"] == 19
+    assert "upload:10/9" in by_id["current_casp17_escrow_external_timestamp_packet"]["blockers"]
+    assert "urgency:2/4/4" in by_id["current_casp17_escrow_external_timestamp_packet"]["blockers"]
+    assert "sha/escrow-md/manifest:19/19/19" in by_id[
+        "current_casp17_escrow_external_timestamp_packet"
+    ]["blockers"]
+    assert "native/ext-ts:19/19" in by_id["current_casp17_escrow_external_timestamp_packet"]["blockers"]
+    assert "proof/author/hygiene:0/0/0/0/0" in by_id[
+        "current_casp17_escrow_external_timestamp_packet"
+    ]["blockers"]
+    assert "first:H2319/-/-" in by_id["current_casp17_escrow_external_timestamp_packet"]["blockers"]
+    assert by_id["current_casp17_post_native_scoring_scaffold"]["status"] == (
+        "current_post_native_scoring_scaffold_ready_native_pending"
+    )
+    assert by_id["current_casp17_post_native_scoring_scaffold"]["ready_count"] == 19
+    assert by_id["current_casp17_post_native_scoring_scaffold"]["blocked_count"] == 0
+    assert by_id["current_casp17_post_native_scoring_scaffold"]["total_count"] == 19
+    assert "targets:19/0/19" in by_id["current_casp17_post_native_scoring_scaffold"]["blockers"]
+    assert "class:16/3" in by_id["current_casp17_post_native_scoring_scaffold"]["blockers"]
+    assert "upload/timestamp:10/9/19" in by_id[
+        "current_casp17_post_native_scoring_scaffold"
+    ]["blockers"]
+    assert "native:19/0/19" in by_id["current_casp17_post_native_scoring_scaffold"]["blockers"]
+    assert "metrics:0/162/162" in by_id["current_casp17_post_native_scoring_scaffold"]["blockers"]
+    assert "metric_class:144/18" in by_id["current_casp17_post_native_scoring_scaffold"]["blockers"]
+    assert "files:19/19/19/19" in by_id["current_casp17_post_native_scoring_scaffold"]["blockers"]
+    assert "proof/hygiene:0/0/0/0" in by_id["current_casp17_post_native_scoring_scaffold"]["blockers"]
+    assert "first:H2319/-/-" in by_id["current_casp17_post_native_scoring_scaffold"]["blockers"]
     assert by_id["win_tier_goal_scorecard"]["status"] == "blocked_input"
     assert by_id["win_tier_goal_scorecard"]["ready_count"] == 1
     assert "historical_identity_clearance" in by_id["win_tier_goal_scorecard"]["blockers"]
@@ -12903,6 +13663,81 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "first:source_request_operator_fill_001/source_request_001/source_id/operator_value_missing" in by_id[
         "strict_blind_source_request_operator_fill_worklist"
     ]["blockers"]
+    assert by_id["strict_blind_source_request_operator_fill_batch_kit"]["status"] == (
+        "strict_blind_source_request_operator_fill_batch_kit_ready_for_operator_fill"
+    )
+    assert by_id["strict_blind_source_request_operator_fill_batch_kit"]["ready_count"] == 0
+    assert by_id["strict_blind_source_request_operator_fill_batch_kit"]["blocked_count"] == 187
+    assert by_id["strict_blind_source_request_operator_fill_batch_kit"]["total_count"] == 187
+    assert "requests:0/17/17" in by_id[
+        "strict_blind_source_request_operator_fill_batch_kit"
+    ]["blockers"]
+    assert "fields:0/187/187" in by_id[
+        "strict_blind_source_request_operator_fill_batch_kit"
+    ]["blockers"]
+    assert "missing:187/153" in by_id[
+        "strict_blind_source_request_operator_fill_batch_kit"
+    ]["blockers"]
+    assert "candidate:77" in by_id[
+        "strict_blind_source_request_operator_fill_batch_kit"
+    ]["blockers"]
+    assert "sources:17/17" in by_id[
+        "strict_blind_source_request_operator_fill_batch_kit"
+    ]["blockers"]
+    assert "folder:casp17/strict_blind_source_request_operator_fill_batch_kit" in by_id[
+        "strict_blind_source_request_operator_fill_batch_kit"
+    ]["blockers"]
+    assert "batch:casp17/strict_blind_source_request_operator_fill_batch_kit/operator_fill_intake_batch.csv" in by_id[
+        "strict_blind_source_request_operator_fill_batch_kit"
+    ]["blockers"]
+    assert by_id["strict_blind_source_request_operator_fill_batch_kit_completion_audit"]["status"] == (
+        "casp17_strict_blind_source_request_operator_fill_batch_kit_completion_audit_pass"
+    )
+    assert by_id["strict_blind_source_request_operator_fill_batch_kit_completion_audit"]["ready_count"] == 17
+    assert by_id["strict_blind_source_request_operator_fill_batch_kit_completion_audit"]["blocked_count"] == 0
+    assert by_id["strict_blind_source_request_operator_fill_batch_kit_completion_audit"]["total_count"] == 17
+    assert "root:4/4" in by_id[
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit"
+    ]["blockers"]
+    assert "fields:187/187/187" in by_id[
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit"
+    ]["blockers"]
+    assert "summary:17/17" in by_id[
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit"
+    ]["blockers"]
+    assert "files:17/17/17" in by_id[
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit"
+    ]["blockers"]
+    assert "missing:187/153/77" in by_id[
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit"
+    ]["blockers"]
+    assert "hygiene:0/0/0" in by_id[
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit"
+    ]["blockers"]
+    assert by_id["strict_blind_source_request_operator_fill_worklist_completion_audit"]["status"] == (
+        "casp17_strict_blind_source_request_operator_fill_worklist_completion_audit_pass"
+    )
+    assert by_id["strict_blind_source_request_operator_fill_worklist_completion_audit"]["ready_count"] == 17
+    assert by_id["strict_blind_source_request_operator_fill_worklist_completion_audit"]["blocked_count"] == 0
+    assert by_id["strict_blind_source_request_operator_fill_worklist_completion_audit"]["total_count"] == 17
+    assert "fields:187/187/187" in by_id[
+        "strict_blind_source_request_operator_fill_worklist_completion_audit"
+    ]["blockers"]
+    assert "mismatch_missing:0/0" in by_id[
+        "strict_blind_source_request_operator_fill_worklist_completion_audit"
+    ]["blockers"]
+    assert "operator:187/153" in by_id[
+        "strict_blind_source_request_operator_fill_worklist_completion_audit"
+    ]["blockers"]
+    assert "candidate:77" in by_id[
+        "strict_blind_source_request_operator_fill_worklist_completion_audit"
+    ]["blockers"]
+    assert "files:17/17/17" in by_id[
+        "strict_blind_source_request_operator_fill_worklist_completion_audit"
+    ]["blockers"]
+    assert "hygiene:0/0/0" in by_id[
+        "strict_blind_source_request_operator_fill_worklist_completion_audit"
+    ]["blockers"]
     assert by_id["strict_blind_source_request_operator_sync_plan"]["status"] == (
         "awaiting_source_request_fulfillment"
     )
@@ -13228,6 +14063,12 @@ def test_build_casp17_workbench_index_blocks_missing_target_folders(tmp_path):
             str(tmp_path / "missing_strict_blind_source_request_fulfillment_gate.json"),
             "--strict-blind-source-request-operator-fill-worklist-json",
             str(tmp_path / "missing_strict_blind_source_request_operator_fill_worklist.json"),
+            "--strict-blind-source-request-operator-fill-batch-kit-json",
+            str(tmp_path / "missing_strict_blind_source_request_operator_fill_batch_kit.json"),
+            "--strict-blind-source-request-operator-fill-batch-kit-completion-audit-json",
+            str(tmp_path / "missing_strict_blind_source_request_operator_fill_batch_kit_completion_audit.json"),
+            "--strict-blind-source-request-operator-fill-worklist-completion-audit-json",
+            str(tmp_path / "missing_strict_blind_source_request_operator_fill_worklist_completion_audit.json"),
             "--strict-blind-source-request-operator-sync-plan-json",
             str(tmp_path / "missing_strict_blind_source_request_operator_sync_plan.json"),
             "--strict-blind-source-request-closure-board-json",

@@ -75,8 +75,20 @@ DEFAULT_CURRENT_UPLOAD_QUEUE_JSON = "casp17/casp17_current_upload_queue_current.
 DEFAULT_CURRENT_UPLOAD_REVIEW_PACKET_JSON = (
     "casp17/casp17_current_upload_review_packet_current.json"
 )
+DEFAULT_CURRENT_UPLOAD_OPERATOR_DECISION_KIT_JSON = (
+    "casp17/casp17_current_upload_operator_decision_kit_current.json"
+)
+DEFAULT_CURRENT_UPLOAD_OPERATOR_DECISION_KIT_COMPLETION_AUDIT_JSON = (
+    "casp17/casp17_current_upload_operator_decision_kit_completion_audit_current.json"
+)
 DEFAULT_CURRENT_PROSPECTIVE_STRICT_BLIND_ESCROW_JSON = (
     "casp17/casp17_current_prospective_strict_blind_escrow_current.json"
+)
+DEFAULT_CURRENT_ESCROW_EXTERNAL_TIMESTAMP_PACKET_JSON = (
+    "casp17/casp17_current_escrow_external_timestamp_packet_current.json"
+)
+DEFAULT_CURRENT_POST_NATIVE_SCORING_SCAFFOLD_JSON = (
+    "casp17/casp17_current_post_native_scoring_scaffold_current.json"
 )
 DEFAULT_WIN_GAP_CLOSURE_JSON = "runs/casp17_win_gap_closure_packet_current.json"
 DEFAULT_WIN_TIER_GOAL_SCORECARD_JSON = "runs/casp17_win_tier_goal_scorecard_current.json"
@@ -337,6 +349,15 @@ DEFAULT_STRICT_BLIND_SOURCE_REQUEST_FULFILLMENT_GATE_JSON = (
 )
 DEFAULT_STRICT_BLIND_SOURCE_REQUEST_OPERATOR_FILL_WORKLIST_JSON = (
     "casp17/casp17_strict_blind_source_request_operator_fill_worklist_current.json"
+)
+DEFAULT_STRICT_BLIND_SOURCE_REQUEST_OPERATOR_FILL_BATCH_KIT_JSON = (
+    "casp17/casp17_strict_blind_source_request_operator_fill_batch_kit_current.json"
+)
+DEFAULT_STRICT_BLIND_SOURCE_REQUEST_OPERATOR_FILL_BATCH_KIT_COMPLETION_AUDIT_JSON = (
+    "casp17/casp17_strict_blind_source_request_operator_fill_batch_kit_completion_audit_current.json"
+)
+DEFAULT_STRICT_BLIND_SOURCE_REQUEST_OPERATOR_FILL_WORKLIST_COMPLETION_AUDIT_JSON = (
+    "casp17/casp17_strict_blind_source_request_operator_fill_worklist_completion_audit_current.json"
 )
 DEFAULT_STRICT_BLIND_SOURCE_REQUEST_OPERATOR_SYNC_PLAN_JSON = (
     "casp17/casp17_strict_blind_source_request_operator_sync_plan_current.json"
@@ -719,8 +740,18 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     current_submission_deadline_guard_payload = _read_json(args.current_submission_deadline_guard_json)
     current_upload_queue_payload = _read_json(args.current_upload_queue_json)
     current_upload_review_packet_payload = _read_json(args.current_upload_review_packet_json)
+    current_upload_operator_decision_kit_payload = _read_json(args.current_upload_operator_decision_kit_json)
+    current_upload_operator_decision_kit_completion_audit_payload = _read_json(
+        args.current_upload_operator_decision_kit_completion_audit_json
+    )
     current_prospective_strict_blind_escrow_payload = _read_json(
         args.current_prospective_strict_blind_escrow_json
+    )
+    current_escrow_external_timestamp_packet_payload = _read_json(
+        args.current_escrow_external_timestamp_packet_json
+    )
+    current_post_native_scoring_scaffold_payload = _read_json(
+        args.current_post_native_scoring_scaffold_json
     )
     closure_payload = _read_json(args.win_gap_closure_json)
     goal_scorecard_payload = _read_json(args.win_tier_goal_scorecard_json)
@@ -977,6 +1008,15 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     strict_blind_source_request_operator_fill_worklist_payload = _read_json(
         args.strict_blind_source_request_operator_fill_worklist_json
+    )
+    strict_blind_source_request_operator_fill_batch_kit_payload = _read_json(
+        args.strict_blind_source_request_operator_fill_batch_kit_json
+    )
+    strict_blind_source_request_operator_fill_batch_kit_completion_audit_payload = _read_json(
+        args.strict_blind_source_request_operator_fill_batch_kit_completion_audit_json
+    )
+    strict_blind_source_request_operator_fill_worklist_completion_audit_payload = _read_json(
+        args.strict_blind_source_request_operator_fill_worklist_completion_audit_json
     )
     strict_blind_source_request_operator_sync_plan_payload = _read_json(
         args.strict_blind_source_request_operator_sync_plan_json
@@ -1237,8 +1277,18 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     current_submission_deadline_guard_summary = _summary(current_submission_deadline_guard_payload)
     current_upload_queue_summary = _summary(current_upload_queue_payload)
     current_upload_review_packet_summary = _summary(current_upload_review_packet_payload)
+    current_upload_operator_decision_kit_summary = _summary(current_upload_operator_decision_kit_payload)
+    current_upload_operator_decision_kit_completion_audit_summary = _summary(
+        current_upload_operator_decision_kit_completion_audit_payload
+    )
     current_prospective_strict_blind_escrow_summary = _summary(
         current_prospective_strict_blind_escrow_payload
+    )
+    current_escrow_external_timestamp_packet_summary = _summary(
+        current_escrow_external_timestamp_packet_payload
+    )
+    current_post_native_scoring_scaffold_summary = _summary(
+        current_post_native_scoring_scaffold_payload
     )
     current_submission_gate_status = (
         "current_casp17_submission_gate_ready"
@@ -1510,6 +1560,15 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     strict_blind_source_request_operator_fill_worklist_summary = _summary(
         strict_blind_source_request_operator_fill_worklist_payload
+    )
+    strict_blind_source_request_operator_fill_batch_kit_summary = _summary(
+        strict_blind_source_request_operator_fill_batch_kit_payload
+    )
+    strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary = _summary(
+        strict_blind_source_request_operator_fill_batch_kit_completion_audit_payload
+    )
+    strict_blind_source_request_operator_fill_worklist_completion_audit_summary = _summary(
+        strict_blind_source_request_operator_fill_worklist_completion_audit_payload
     )
     strict_blind_source_request_operator_sync_plan_summary = _summary(
         strict_blind_source_request_operator_sync_plan_payload
@@ -3102,6 +3161,149 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             ),
         ),
         _artifact_row(
+            "current_casp17_upload_operator_decision_kit",
+            "Operator approve/hold/reject decision kit for current CASP17 upload reviews",
+            _text(
+                current_upload_operator_decision_kit_summary.get(
+                    "current_upload_operator_decision_kit_status"
+                )
+            ),
+            args.current_upload_operator_decision_kit_json,
+            ready_count=_int(current_upload_operator_decision_kit_summary.get("approve_count")),
+            blocked_count=_int(
+                current_upload_operator_decision_kit_summary.get("operator_decision_missing_count")
+            ),
+            total_count=_int(current_upload_operator_decision_kit_summary.get("review_target_count")),
+            next_action=_text(current_upload_operator_decision_kit_summary.get("next_action")),
+            blockers=(
+                "reviews:"
+                + str(current_upload_operator_decision_kit_summary.get("ready_review_count", ""))
+                + "/"
+                + str(current_upload_operator_decision_kit_summary.get("blocked_review_count", ""))
+                + "/"
+                + str(current_upload_operator_decision_kit_summary.get("review_target_count", ""))
+                + ",decisions:"
+                + str(current_upload_operator_decision_kit_summary.get("approve_count", ""))
+                + "/"
+                + str(current_upload_operator_decision_kit_summary.get("hold_count", ""))
+                + "/"
+                + str(current_upload_operator_decision_kit_summary.get("reject_count", ""))
+                + "/"
+                + str(current_upload_operator_decision_kit_summary.get("operator_decision_missing_count", ""))
+                + "/"
+                + str(current_upload_operator_decision_kit_summary.get("invalid_operator_decision_count", ""))
+                + ",author:"
+                + str(current_upload_operator_decision_kit_summary.get("author_serialization_missing_count", ""))
+                + ",urgency:"
+                + str(current_upload_operator_decision_kit_summary.get("urgency_today_count", ""))
+                + "/"
+                + str(current_upload_operator_decision_kit_summary.get("urgency_soon_count", ""))
+                + "/"
+                + str(current_upload_operator_decision_kit_summary.get("urgency_future_count", ""))
+                + ",first:"
+                + (_text(current_upload_operator_decision_kit_summary.get("first_target_id")) or "-")
+                + "/"
+                + (_text(current_upload_operator_decision_kit_summary.get("first_blocker")) or "-")
+                + ",intake:"
+                + (
+                    _text(current_upload_operator_decision_kit_summary.get("operator_decision_intake_csv"))
+                    or "-"
+                )
+            ),
+        ),
+        _artifact_row(
+            "current_casp17_upload_operator_decision_kit_completion_audit",
+            "Completion audit for current CASP17 upload operator decision kit file surface",
+            _text(
+                current_upload_operator_decision_kit_completion_audit_summary.get(
+                    "current_upload_operator_decision_kit_completion_audit_status"
+                )
+            ),
+            args.current_upload_operator_decision_kit_completion_audit_json,
+            ready_count=_int(current_upload_operator_decision_kit_completion_audit_summary.get("target_pass_count")),
+            blocked_count=_int(
+                current_upload_operator_decision_kit_completion_audit_summary.get("target_blocked_count")
+            ),
+            total_count=_int(current_upload_operator_decision_kit_completion_audit_summary.get("review_target_count")),
+            next_action=_text(current_upload_operator_decision_kit_completion_audit_summary.get("next_action")),
+            blockers=(
+                "targets:"
+                + str(current_upload_operator_decision_kit_completion_audit_summary.get("target_pass_count", ""))
+                + "/"
+                + str(current_upload_operator_decision_kit_completion_audit_summary.get("target_blocked_count", ""))
+                + "/"
+                + str(current_upload_operator_decision_kit_completion_audit_summary.get("review_target_count", ""))
+                + ",root:"
+                + str(current_upload_operator_decision_kit_completion_audit_summary.get("root_file_present_count", ""))
+                + "/"
+                + str(current_upload_operator_decision_kit_completion_audit_summary.get("root_file_required_count", ""))
+                + ",rows:"
+                + str(current_upload_operator_decision_kit_completion_audit_summary.get("intake_csv_row_count", ""))
+                + "/"
+                + str(current_upload_operator_decision_kit_completion_audit_summary.get("target_summary_csv_row_count", ""))
+                + "/"
+                + str(current_upload_operator_decision_kit_completion_audit_summary.get("per_target_csv_row_count", ""))
+                + ",folders:"
+                + str(
+                    current_upload_operator_decision_kit_completion_audit_summary.get(
+                        "decision_folder_present_count", ""
+                    )
+                )
+                + "/"
+                + str(current_upload_operator_decision_kit_completion_audit_summary.get("decision_md_present_count", ""))
+                + "/"
+                + str(
+                    current_upload_operator_decision_kit_completion_audit_summary.get(
+                        "operator_decision_row_csv_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    current_upload_operator_decision_kit_completion_audit_summary.get(
+                        "target_summary_csv_match_count", ""
+                    )
+                )
+                + ",missing:"
+                + str(
+                    current_upload_operator_decision_kit_completion_audit_summary.get(
+                        "operator_decision_missing_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    current_upload_operator_decision_kit_completion_audit_summary.get(
+                        "invalid_operator_decision_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    current_upload_operator_decision_kit_completion_audit_summary.get(
+                        "author_serialization_missing_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    current_upload_operator_decision_kit_completion_audit_summary.get(
+                        "final_upload_filename_missing_count", ""
+                    )
+                )
+                + ",hygiene:"
+                + str(current_upload_operator_decision_kit_completion_audit_summary.get("coordinate_copy_count", ""))
+                + "/"
+                + str(current_upload_operator_decision_kit_completion_audit_summary.get("proof_marker_count", ""))
+                + "/"
+                + str(
+                    current_upload_operator_decision_kit_completion_audit_summary.get(
+                        "portal_submit_marker_count", ""
+                    )
+                )
+                + ",first:"
+                + (_text(current_upload_operator_decision_kit_completion_audit_summary.get("first_blocked_target_id")) or "-")
+                + "/"
+                + (_text(current_upload_operator_decision_kit_completion_audit_summary.get("first_blocker")) or "-")
+            ),
+        ),
+        _artifact_row(
             "current_casp17_prospective_strict_blind_escrow",
             "Prospective strict-blind escrow for current CASP17 candidates",
             _text(current_prospective_strict_blind_escrow_summary.get("prospective_escrow_status")),
@@ -3131,6 +3333,128 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + (_text(current_prospective_strict_blind_escrow_summary.get("first_upload_ready_target_id")) or "-")
                 + ",first_blocked_upload:"
                 + (_text(current_prospective_strict_blind_escrow_summary.get("first_upload_blocked_target_id")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "current_casp17_escrow_external_timestamp_packet",
+            "Current CASP17 escrow external timestamp packet",
+            _text(
+                current_escrow_external_timestamp_packet_summary.get(
+                    "current_escrow_external_timestamp_packet_status"
+                )
+            ),
+            args.current_escrow_external_timestamp_packet_json,
+            ready_count=_int(current_escrow_external_timestamp_packet_summary.get("timestamp_ready_count")),
+            blocked_count=_int(current_escrow_external_timestamp_packet_summary.get("timestamp_blocked_count")),
+            total_count=_int(current_escrow_external_timestamp_packet_summary.get("target_count")),
+            next_action=_text(current_escrow_external_timestamp_packet_summary.get("next_action")),
+            blockers=(
+                "upload:"
+                + str(current_escrow_external_timestamp_packet_summary.get("upload_ready_count", ""))
+                + "/"
+                + str(current_escrow_external_timestamp_packet_summary.get("upload_blocked_count", ""))
+                + ",urgency:"
+                + str(current_escrow_external_timestamp_packet_summary.get("urgency_today_count", ""))
+                + "/"
+                + str(current_escrow_external_timestamp_packet_summary.get("urgency_soon_count", ""))
+                + "/"
+                + str(current_escrow_external_timestamp_packet_summary.get("urgency_future_count", ""))
+                + ",sha/escrow-md/manifest:"
+                + str(current_escrow_external_timestamp_packet_summary.get("sha256_match_count", ""))
+                + "/"
+                + str(current_escrow_external_timestamp_packet_summary.get("escrow_md_present_count", ""))
+                + "/"
+                + str(current_escrow_external_timestamp_packet_summary.get("timestamp_manifest_row_count", ""))
+                + ",native/ext-ts:"
+                + str(current_escrow_external_timestamp_packet_summary.get("native_pending_count", ""))
+                + "/"
+                + str(current_escrow_external_timestamp_packet_summary.get("external_timestamp_required_count", ""))
+                + ",proof/author/hygiene:"
+                + str(current_escrow_external_timestamp_packet_summary.get("competitive_proof_eligible_count", ""))
+                + "/"
+                + str(current_escrow_external_timestamp_packet_summary.get("author_serialized_count", ""))
+                + "/"
+                + str(current_escrow_external_timestamp_packet_summary.get("coordinate_copy_count", ""))
+                + "/"
+                + str(current_escrow_external_timestamp_packet_summary.get("proof_marker_count", ""))
+                + "/"
+                + str(current_escrow_external_timestamp_packet_summary.get("portal_submit_marker_count", ""))
+                + ",first:"
+                + (_text(current_escrow_external_timestamp_packet_summary.get("first_ready_target_id")) or "-")
+                + "/"
+                + (_text(current_escrow_external_timestamp_packet_summary.get("first_blocked_target_id")) or "-")
+                + "/"
+                + (_text(current_escrow_external_timestamp_packet_summary.get("first_blocker")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "current_casp17_post_native_scoring_scaffold",
+            "Current CASP17 post-native scoring scaffold",
+            _text(
+                current_post_native_scoring_scaffold_summary.get(
+                    "current_post_native_scoring_scaffold_status"
+                )
+            ),
+            args.current_post_native_scoring_scaffold_json,
+            ready_count=_int(current_post_native_scoring_scaffold_summary.get("target_ready_count")),
+            blocked_count=_int(current_post_native_scoring_scaffold_summary.get("target_blocked_count")),
+            total_count=_int(current_post_native_scoring_scaffold_summary.get("target_count")),
+            next_action=_text(current_post_native_scoring_scaffold_summary.get("next_action")),
+            blockers=(
+                "targets:"
+                + str(current_post_native_scoring_scaffold_summary.get("target_ready_count", ""))
+                + "/"
+                + str(current_post_native_scoring_scaffold_summary.get("target_blocked_count", ""))
+                + "/"
+                + str(current_post_native_scoring_scaffold_summary.get("target_count", ""))
+                + ",class:"
+                + str(current_post_native_scoring_scaffold_summary.get("complex_target_count", ""))
+                + "/"
+                + str(current_post_native_scoring_scaffold_summary.get("monomer_target_count", ""))
+                + ",upload/timestamp:"
+                + str(current_post_native_scoring_scaffold_summary.get("upload_ready_count", ""))
+                + "/"
+                + str(current_post_native_scoring_scaffold_summary.get("upload_blocked_count", ""))
+                + "/"
+                + str(current_post_native_scoring_scaffold_summary.get("timestamp_ready_count", ""))
+                + ",native:"
+                + str(current_post_native_scoring_scaffold_summary.get("native_pending_count", ""))
+                + "/"
+                + str(current_post_native_scoring_scaffold_summary.get("native_file_present_count", ""))
+                + "/"
+                + str(current_post_native_scoring_scaffold_summary.get("native_file_missing_count", ""))
+                + ",metrics:"
+                + str(current_post_native_scoring_scaffold_summary.get("metric_ready_count", ""))
+                + "/"
+                + str(current_post_native_scoring_scaffold_summary.get("metric_blocked_count", ""))
+                + "/"
+                + str(current_post_native_scoring_scaffold_summary.get("metric_row_count", ""))
+                + ",metric_class:"
+                + str(current_post_native_scoring_scaffold_summary.get("complex_metric_row_count", ""))
+                + "/"
+                + str(current_post_native_scoring_scaffold_summary.get("monomer_metric_row_count", ""))
+                + ",files:"
+                + str(current_post_native_scoring_scaffold_summary.get("dropzone_count", ""))
+                + "/"
+                + str(current_post_native_scoring_scaffold_summary.get("native_input_manifest_count", ""))
+                + "/"
+                + str(current_post_native_scoring_scaffold_summary.get("chain_mapping_template_count", ""))
+                + "/"
+                + str(current_post_native_scoring_scaffold_summary.get("metric_requirements_csv_count", ""))
+                + ",proof/hygiene:"
+                + str(current_post_native_scoring_scaffold_summary.get("competitive_proof_eligible_count", ""))
+                + "/"
+                + str(current_post_native_scoring_scaffold_summary.get("coordinate_copy_count", ""))
+                + "/"
+                + str(current_post_native_scoring_scaffold_summary.get("proof_marker_count", ""))
+                + "/"
+                + str(current_post_native_scoring_scaffold_summary.get("portal_submit_marker_count", ""))
+                + ",first:"
+                + (_text(current_post_native_scoring_scaffold_summary.get("first_ready_target_id")) or "-")
+                + "/"
+                + (_text(current_post_native_scoring_scaffold_summary.get("first_blocked_target_id")) or "-")
+                + "/"
+                + (_text(current_post_native_scoring_scaffold_summary.get("first_blocker")) or "-")
             ),
         ),
         _artifact_row(
@@ -7663,6 +7987,367 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + str(strict_blind_source_request_operator_fill_worklist_summary.get("first_field_key", ""))
                 + "/"
                 + str(strict_blind_source_request_operator_fill_worklist_summary.get("first_blocker", ""))
+            ),
+        ),
+        _artifact_row(
+            "strict_blind_source_request_operator_fill_batch_kit",
+            "Strict-blind source request operator fill batch kit",
+            _text(
+                strict_blind_source_request_operator_fill_batch_kit_summary.get(
+                    "strict_blind_source_request_operator_fill_batch_kit_status"
+                )
+            ),
+            args.strict_blind_source_request_operator_fill_batch_kit_json,
+            ready_count=_int(strict_blind_source_request_operator_fill_batch_kit_summary.get("field_ready_count")),
+            blocked_count=_int(
+                strict_blind_source_request_operator_fill_batch_kit_summary.get("field_blocked_count")
+            ),
+            total_count=_int(strict_blind_source_request_operator_fill_batch_kit_summary.get("field_count")),
+            next_action=_text(strict_blind_source_request_operator_fill_batch_kit_summary.get("next_action")),
+            blockers=(
+                "requests:"
+                + str(strict_blind_source_request_operator_fill_batch_kit_summary.get("ready_request_count", ""))
+                + "/"
+                + str(strict_blind_source_request_operator_fill_batch_kit_summary.get("blocked_request_count", ""))
+                + "/"
+                + str(strict_blind_source_request_operator_fill_batch_kit_summary.get("request_count", ""))
+                + ",fields:"
+                + str(strict_blind_source_request_operator_fill_batch_kit_summary.get("field_ready_count", ""))
+                + "/"
+                + str(strict_blind_source_request_operator_fill_batch_kit_summary.get("field_blocked_count", ""))
+                + "/"
+                + str(strict_blind_source_request_operator_fill_batch_kit_summary.get("field_count", ""))
+                + ",missing:"
+                + str(strict_blind_source_request_operator_fill_batch_kit_summary.get("operator_value_missing_count", ""))
+                + "/"
+                + str(
+                    strict_blind_source_request_operator_fill_batch_kit_summary.get(
+                        "operator_evidence_missing_count", ""
+                    )
+                )
+                + ",candidate:"
+                + str(
+                    strict_blind_source_request_operator_fill_batch_kit_summary.get(
+                        "candidate_replacement_field_count", ""
+                    )
+                )
+                + ",sources:"
+                + str(strict_blind_source_request_operator_fill_batch_kit_summary.get("source_template_count", ""))
+                + "/"
+                + str(
+                    strict_blind_source_request_operator_fill_batch_kit_summary.get(
+                        "source_request_folder_count", ""
+                    )
+                )
+                + ",folder:"
+                + (_text(strict_blind_source_request_operator_fill_batch_kit_summary.get("batch_folder")) or "-")
+                + ",batch:"
+                + (
+                    _text(
+                        strict_blind_source_request_operator_fill_batch_kit_summary.get(
+                            "operator_fill_intake_batch_csv"
+                        )
+                    )
+                    or "-"
+                )
+                + ",first:"
+                + (_text(strict_blind_source_request_operator_fill_batch_kit_summary.get("first_request_id")) or "-")
+                + "/"
+                + (_text(strict_blind_source_request_operator_fill_batch_kit_summary.get("first_field_key")) or "-")
+                + "/"
+                + (_text(strict_blind_source_request_operator_fill_batch_kit_summary.get("first_blocker")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "strict_blind_source_request_operator_fill_batch_kit_completion_audit",
+            "Strict-blind source request operator fill batch kit completion audit",
+            _text(
+                strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                    "strict_blind_source_request_operator_fill_batch_kit_completion_audit_status"
+                )
+            ),
+            args.strict_blind_source_request_operator_fill_batch_kit_completion_audit_json,
+            ready_count=_int(
+                strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                    "request_pass_count"
+                )
+            ),
+            blocked_count=_int(
+                strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                    "request_blocked_count"
+                )
+            ),
+            total_count=_int(
+                strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get("request_count")
+            ),
+            next_action=_text(
+                strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get("next_action")
+            ),
+            blockers=(
+                "requests:"
+                + str(
+                    strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                        "request_pass_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                        "request_blocked_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                        "request_count", ""
+                    )
+                )
+                + ",root:"
+                + str(
+                    strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                        "root_file_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                        "root_file_required_count", ""
+                    )
+                )
+                + ",fields:"
+                + str(
+                    strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                        "field_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                        "batch_csv_row_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                        "per_request_csv_row_count", ""
+                    )
+                )
+                + ",summary:"
+                + str(
+                    strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                        "request_summary_csv_row_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                        "request_summary_csv_match_count", ""
+                    )
+                )
+                + ",files:"
+                + str(
+                    strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                        "request_folder_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                        "request_readme_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                        "request_operator_fill_csv_present_count", ""
+                    )
+                )
+                + ",mismatch:"
+                + str(
+                    strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                        "request_row_mismatch_count", ""
+                    )
+                )
+                + ",missing:"
+                + str(
+                    strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                        "operator_value_missing_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                        "operator_evidence_missing_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                        "candidate_replacement_field_count", ""
+                    )
+                )
+                + ",hygiene:"
+                + str(
+                    strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                        "coordinate_copy_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                        "proof_marker_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                        "author_marker_count", ""
+                    )
+                )
+                + ",first:"
+                + (
+                    _text(
+                        strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                            "first_blocked_request_id"
+                        )
+                    )
+                    or "-"
+                )
+                + "/"
+                + (
+                    _text(
+                        strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                            "first_blocker"
+                        )
+                    )
+                    or "-"
+                )
+            ),
+        ),
+        _artifact_row(
+            "strict_blind_source_request_operator_fill_worklist_completion_audit",
+            "Strict-blind source request operator fill worklist completion audit",
+            _text(
+                strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                    "source_request_operator_fill_worklist_completion_audit_status"
+                )
+            ),
+            args.strict_blind_source_request_operator_fill_worklist_completion_audit_json,
+            ready_count=_int(
+                strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                    "request_pass_count"
+                )
+            ),
+            blocked_count=_int(
+                strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                    "request_blocked_count"
+                )
+            ),
+            total_count=_int(
+                strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get("request_count")
+            ),
+            next_action=_text(
+                strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get("next_action")
+            ),
+            blockers=(
+                "fields:"
+                + str(
+                    strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                        "expected_field_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                        "template_csv_row_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                        "worklist_row_count", ""
+                    )
+                )
+                + ",mismatch_missing:"
+                + str(
+                    strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                        "field_row_mismatch_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                        "template_missing_field_count", ""
+                    )
+                )
+                + ",operator:"
+                + str(
+                    strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                        "operator_value_missing_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                        "operator_evidence_missing_count", ""
+                    )
+                )
+                + ",candidate:"
+                + str(
+                    strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                        "candidate_replacement_field_count", ""
+                    )
+                )
+                + ",files:"
+                + str(
+                    strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                        "request_folder_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                        "source_request_md_present_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                        "operator_template_csv_present_count", ""
+                    )
+                )
+                + ",hygiene:"
+                + str(
+                    strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                        "coordinate_copy_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                        "proof_marker_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                        "author_marker_count", ""
+                    )
+                )
+                + ",first:"
+                + str(
+                    strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                        "first_blocked_request_id"
+                    )
+                    or "-"
+                )
+                + "/"
+                + str(
+                    strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                        "first_blocker"
+                    )
+                    or "-"
+                )
             ),
         ),
         _artifact_row(
@@ -13134,6 +13819,133 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "current_upload_review_packet_first_review_md": _text(
             current_upload_review_packet_summary.get("first_review_md")
         ),
+        "current_upload_operator_decision_kit_status": _text(
+            current_upload_operator_decision_kit_summary.get("current_upload_operator_decision_kit_status")
+        ),
+        "current_upload_operator_decision_kit_review_packet_status": _text(
+            current_upload_operator_decision_kit_summary.get("review_packet_status")
+        ),
+        "current_upload_operator_decision_kit_review_count": _int(
+            current_upload_operator_decision_kit_summary.get("review_target_count")
+        ),
+        "current_upload_operator_decision_kit_ready_review_count": _int(
+            current_upload_operator_decision_kit_summary.get("ready_review_count")
+        ),
+        "current_upload_operator_decision_kit_blocked_review_count": _int(
+            current_upload_operator_decision_kit_summary.get("blocked_review_count")
+        ),
+        "current_upload_operator_decision_kit_operator_decision_missing_count": _int(
+            current_upload_operator_decision_kit_summary.get("operator_decision_missing_count")
+        ),
+        "current_upload_operator_decision_kit_invalid_operator_decision_count": _int(
+            current_upload_operator_decision_kit_summary.get("invalid_operator_decision_count")
+        ),
+        "current_upload_operator_decision_kit_approve_count": _int(
+            current_upload_operator_decision_kit_summary.get("approve_count")
+        ),
+        "current_upload_operator_decision_kit_hold_count": _int(
+            current_upload_operator_decision_kit_summary.get("hold_count")
+        ),
+        "current_upload_operator_decision_kit_reject_count": _int(
+            current_upload_operator_decision_kit_summary.get("reject_count")
+        ),
+        "current_upload_operator_decision_kit_author_serialization_missing_count": _int(
+            current_upload_operator_decision_kit_summary.get("author_serialization_missing_count")
+        ),
+        "current_upload_operator_decision_kit_urgency_today_count": _int(
+            current_upload_operator_decision_kit_summary.get("urgency_today_count")
+        ),
+        "current_upload_operator_decision_kit_urgency_soon_count": _int(
+            current_upload_operator_decision_kit_summary.get("urgency_soon_count")
+        ),
+        "current_upload_operator_decision_kit_urgency_future_count": _int(
+            current_upload_operator_decision_kit_summary.get("urgency_future_count")
+        ),
+        "current_upload_operator_decision_kit_first_target_id": _text(
+            current_upload_operator_decision_kit_summary.get("first_target_id")
+        ),
+        "current_upload_operator_decision_kit_first_blocker": _text(
+            current_upload_operator_decision_kit_summary.get("first_blocker")
+        ),
+        "current_upload_operator_decision_kit_intake_csv": _text(
+            current_upload_operator_decision_kit_summary.get("operator_decision_intake_csv")
+        ),
+        "current_upload_operator_decision_kit_completion_audit_status": _text(
+            current_upload_operator_decision_kit_completion_audit_summary.get(
+                "current_upload_operator_decision_kit_completion_audit_status"
+            )
+        ),
+        "current_upload_operator_decision_kit_completion_audit_decision_kit_status": _text(
+            current_upload_operator_decision_kit_completion_audit_summary.get("decision_kit_status")
+        ),
+        "current_upload_operator_decision_kit_completion_audit_review_packet_status": _text(
+            current_upload_operator_decision_kit_completion_audit_summary.get("review_packet_status")
+        ),
+        "current_upload_operator_decision_kit_completion_audit_review_target_count": _int(
+            current_upload_operator_decision_kit_completion_audit_summary.get("review_target_count")
+        ),
+        "current_upload_operator_decision_kit_completion_audit_target_pass_count": _int(
+            current_upload_operator_decision_kit_completion_audit_summary.get("target_pass_count")
+        ),
+        "current_upload_operator_decision_kit_completion_audit_target_blocked_count": _int(
+            current_upload_operator_decision_kit_completion_audit_summary.get("target_blocked_count")
+        ),
+        "current_upload_operator_decision_kit_completion_audit_root_file_present_count": _int(
+            current_upload_operator_decision_kit_completion_audit_summary.get("root_file_present_count")
+        ),
+        "current_upload_operator_decision_kit_completion_audit_root_file_required_count": _int(
+            current_upload_operator_decision_kit_completion_audit_summary.get("root_file_required_count")
+        ),
+        "current_upload_operator_decision_kit_completion_audit_intake_csv_row_count": _int(
+            current_upload_operator_decision_kit_completion_audit_summary.get("intake_csv_row_count")
+        ),
+        "current_upload_operator_decision_kit_completion_audit_target_summary_csv_row_count": _int(
+            current_upload_operator_decision_kit_completion_audit_summary.get("target_summary_csv_row_count")
+        ),
+        "current_upload_operator_decision_kit_completion_audit_per_target_csv_row_count": _int(
+            current_upload_operator_decision_kit_completion_audit_summary.get("per_target_csv_row_count")
+        ),
+        "current_upload_operator_decision_kit_completion_audit_decision_folder_present_count": _int(
+            current_upload_operator_decision_kit_completion_audit_summary.get("decision_folder_present_count")
+        ),
+        "current_upload_operator_decision_kit_completion_audit_decision_md_present_count": _int(
+            current_upload_operator_decision_kit_completion_audit_summary.get("decision_md_present_count")
+        ),
+        "current_upload_operator_decision_kit_completion_audit_operator_decision_row_csv_present_count": _int(
+            current_upload_operator_decision_kit_completion_audit_summary.get(
+                "operator_decision_row_csv_present_count"
+            )
+        ),
+        "current_upload_operator_decision_kit_completion_audit_target_summary_csv_match_count": _int(
+            current_upload_operator_decision_kit_completion_audit_summary.get("target_summary_csv_match_count")
+        ),
+        "current_upload_operator_decision_kit_completion_audit_operator_decision_missing_count": _int(
+            current_upload_operator_decision_kit_completion_audit_summary.get("operator_decision_missing_count")
+        ),
+        "current_upload_operator_decision_kit_completion_audit_invalid_operator_decision_count": _int(
+            current_upload_operator_decision_kit_completion_audit_summary.get("invalid_operator_decision_count")
+        ),
+        "current_upload_operator_decision_kit_completion_audit_author_serialization_missing_count": _int(
+            current_upload_operator_decision_kit_completion_audit_summary.get("author_serialization_missing_count")
+        ),
+        "current_upload_operator_decision_kit_completion_audit_final_upload_filename_missing_count": _int(
+            current_upload_operator_decision_kit_completion_audit_summary.get("final_upload_filename_missing_count")
+        ),
+        "current_upload_operator_decision_kit_completion_audit_coordinate_copy_count": _int(
+            current_upload_operator_decision_kit_completion_audit_summary.get("coordinate_copy_count")
+        ),
+        "current_upload_operator_decision_kit_completion_audit_proof_marker_count": _int(
+            current_upload_operator_decision_kit_completion_audit_summary.get("proof_marker_count")
+        ),
+        "current_upload_operator_decision_kit_completion_audit_portal_submit_marker_count": _int(
+            current_upload_operator_decision_kit_completion_audit_summary.get("portal_submit_marker_count")
+        ),
+        "current_upload_operator_decision_kit_completion_audit_first_blocked_target_id": _text(
+            current_upload_operator_decision_kit_completion_audit_summary.get("first_blocked_target_id")
+        ),
+        "current_upload_operator_decision_kit_completion_audit_first_blocker": _text(
+            current_upload_operator_decision_kit_completion_audit_summary.get("first_blocker")
+        ),
         "current_prospective_strict_blind_escrow_status": _text(
             current_prospective_strict_blind_escrow_summary.get("prospective_escrow_status")
         ),
@@ -13178,6 +13990,179 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         ),
         "current_prospective_strict_blind_escrow_manifest_signature_sha256": _text(
             current_prospective_strict_blind_escrow_summary.get("manifest_signature_sha256")
+        ),
+        "current_escrow_external_timestamp_packet_status": _text(
+            current_escrow_external_timestamp_packet_summary.get(
+                "current_escrow_external_timestamp_packet_status"
+            )
+        ),
+        "current_escrow_external_timestamp_packet_prospective_escrow_status": _text(
+            current_escrow_external_timestamp_packet_summary.get("prospective_escrow_status")
+        ),
+        "current_escrow_external_timestamp_packet_target_count": _int(
+            current_escrow_external_timestamp_packet_summary.get("target_count")
+        ),
+        "current_escrow_external_timestamp_packet_timestamp_ready_count": _int(
+            current_escrow_external_timestamp_packet_summary.get("timestamp_ready_count")
+        ),
+        "current_escrow_external_timestamp_packet_timestamp_blocked_count": _int(
+            current_escrow_external_timestamp_packet_summary.get("timestamp_blocked_count")
+        ),
+        "current_escrow_external_timestamp_packet_upload_ready_count": _int(
+            current_escrow_external_timestamp_packet_summary.get("upload_ready_count")
+        ),
+        "current_escrow_external_timestamp_packet_upload_blocked_count": _int(
+            current_escrow_external_timestamp_packet_summary.get("upload_blocked_count")
+        ),
+        "current_escrow_external_timestamp_packet_urgency_today_count": _int(
+            current_escrow_external_timestamp_packet_summary.get("urgency_today_count")
+        ),
+        "current_escrow_external_timestamp_packet_urgency_soon_count": _int(
+            current_escrow_external_timestamp_packet_summary.get("urgency_soon_count")
+        ),
+        "current_escrow_external_timestamp_packet_urgency_future_count": _int(
+            current_escrow_external_timestamp_packet_summary.get("urgency_future_count")
+        ),
+        "current_escrow_external_timestamp_packet_sha256_match_count": _int(
+            current_escrow_external_timestamp_packet_summary.get("sha256_match_count")
+        ),
+        "current_escrow_external_timestamp_packet_escrow_md_present_count": _int(
+            current_escrow_external_timestamp_packet_summary.get("escrow_md_present_count")
+        ),
+        "current_escrow_external_timestamp_packet_timestamp_manifest_row_count": _int(
+            current_escrow_external_timestamp_packet_summary.get("timestamp_manifest_row_count")
+        ),
+        "current_escrow_external_timestamp_packet_native_pending_count": _int(
+            current_escrow_external_timestamp_packet_summary.get("native_pending_count")
+        ),
+        "current_escrow_external_timestamp_packet_external_timestamp_required_count": _int(
+            current_escrow_external_timestamp_packet_summary.get("external_timestamp_required_count")
+        ),
+        "current_escrow_external_timestamp_packet_competitive_proof_eligible_count": _int(
+            current_escrow_external_timestamp_packet_summary.get("competitive_proof_eligible_count")
+        ),
+        "current_escrow_external_timestamp_packet_author_serialized_count": _int(
+            current_escrow_external_timestamp_packet_summary.get("author_serialized_count")
+        ),
+        "current_escrow_external_timestamp_packet_coordinate_copy_count": _int(
+            current_escrow_external_timestamp_packet_summary.get("coordinate_copy_count")
+        ),
+        "current_escrow_external_timestamp_packet_proof_marker_count": _int(
+            current_escrow_external_timestamp_packet_summary.get("proof_marker_count")
+        ),
+        "current_escrow_external_timestamp_packet_portal_submit_marker_count": _int(
+            current_escrow_external_timestamp_packet_summary.get("portal_submit_marker_count")
+        ),
+        "current_escrow_external_timestamp_packet_first_ready_target_id": _text(
+            current_escrow_external_timestamp_packet_summary.get("first_ready_target_id")
+        ),
+        "current_escrow_external_timestamp_packet_first_blocked_target_id": _text(
+            current_escrow_external_timestamp_packet_summary.get("first_blocked_target_id")
+        ),
+        "current_escrow_external_timestamp_packet_first_blocker": _text(
+            current_escrow_external_timestamp_packet_summary.get("first_blocker")
+        ),
+        "current_escrow_external_timestamp_packet_timestamp_manifest_csv": _text(
+            current_escrow_external_timestamp_packet_summary.get("timestamp_manifest_csv")
+        ),
+        "current_escrow_external_timestamp_packet_manifest_signature_sha256": _text(
+            current_escrow_external_timestamp_packet_summary.get("manifest_signature_sha256")
+        ),
+        "current_post_native_scoring_scaffold_status": _text(
+            current_post_native_scoring_scaffold_summary.get("current_post_native_scoring_scaffold_status")
+        ),
+        "current_post_native_scoring_scaffold_prospective_escrow_status": _text(
+            current_post_native_scoring_scaffold_summary.get("prospective_escrow_status")
+        ),
+        "current_post_native_scoring_scaffold_timestamp_packet_status": _text(
+            current_post_native_scoring_scaffold_summary.get("timestamp_packet_status")
+        ),
+        "current_post_native_scoring_scaffold_target_count": _int(
+            current_post_native_scoring_scaffold_summary.get("target_count")
+        ),
+        "current_post_native_scoring_scaffold_target_ready_count": _int(
+            current_post_native_scoring_scaffold_summary.get("target_ready_count")
+        ),
+        "current_post_native_scoring_scaffold_target_blocked_count": _int(
+            current_post_native_scoring_scaffold_summary.get("target_blocked_count")
+        ),
+        "current_post_native_scoring_scaffold_complex_target_count": _int(
+            current_post_native_scoring_scaffold_summary.get("complex_target_count")
+        ),
+        "current_post_native_scoring_scaffold_monomer_target_count": _int(
+            current_post_native_scoring_scaffold_summary.get("monomer_target_count")
+        ),
+        "current_post_native_scoring_scaffold_upload_ready_count": _int(
+            current_post_native_scoring_scaffold_summary.get("upload_ready_count")
+        ),
+        "current_post_native_scoring_scaffold_upload_blocked_count": _int(
+            current_post_native_scoring_scaffold_summary.get("upload_blocked_count")
+        ),
+        "current_post_native_scoring_scaffold_timestamp_ready_count": _int(
+            current_post_native_scoring_scaffold_summary.get("timestamp_ready_count")
+        ),
+        "current_post_native_scoring_scaffold_native_pending_count": _int(
+            current_post_native_scoring_scaffold_summary.get("native_pending_count")
+        ),
+        "current_post_native_scoring_scaffold_native_file_present_count": _int(
+            current_post_native_scoring_scaffold_summary.get("native_file_present_count")
+        ),
+        "current_post_native_scoring_scaffold_native_file_missing_count": _int(
+            current_post_native_scoring_scaffold_summary.get("native_file_missing_count")
+        ),
+        "current_post_native_scoring_scaffold_metric_row_count": _int(
+            current_post_native_scoring_scaffold_summary.get("metric_row_count")
+        ),
+        "current_post_native_scoring_scaffold_metric_ready_count": _int(
+            current_post_native_scoring_scaffold_summary.get("metric_ready_count")
+        ),
+        "current_post_native_scoring_scaffold_metric_blocked_count": _int(
+            current_post_native_scoring_scaffold_summary.get("metric_blocked_count")
+        ),
+        "current_post_native_scoring_scaffold_complex_metric_row_count": _int(
+            current_post_native_scoring_scaffold_summary.get("complex_metric_row_count")
+        ),
+        "current_post_native_scoring_scaffold_monomer_metric_row_count": _int(
+            current_post_native_scoring_scaffold_summary.get("monomer_metric_row_count")
+        ),
+        "current_post_native_scoring_scaffold_dropzone_count": _int(
+            current_post_native_scoring_scaffold_summary.get("dropzone_count")
+        ),
+        "current_post_native_scoring_scaffold_native_input_manifest_count": _int(
+            current_post_native_scoring_scaffold_summary.get("native_input_manifest_count")
+        ),
+        "current_post_native_scoring_scaffold_chain_mapping_template_count": _int(
+            current_post_native_scoring_scaffold_summary.get("chain_mapping_template_count")
+        ),
+        "current_post_native_scoring_scaffold_metric_requirements_csv_count": _int(
+            current_post_native_scoring_scaffold_summary.get("metric_requirements_csv_count")
+        ),
+        "current_post_native_scoring_scaffold_competitive_proof_eligible_count": _int(
+            current_post_native_scoring_scaffold_summary.get("competitive_proof_eligible_count")
+        ),
+        "current_post_native_scoring_scaffold_coordinate_copy_count": _int(
+            current_post_native_scoring_scaffold_summary.get("coordinate_copy_count")
+        ),
+        "current_post_native_scoring_scaffold_proof_marker_count": _int(
+            current_post_native_scoring_scaffold_summary.get("proof_marker_count")
+        ),
+        "current_post_native_scoring_scaffold_portal_submit_marker_count": _int(
+            current_post_native_scoring_scaffold_summary.get("portal_submit_marker_count")
+        ),
+        "current_post_native_scoring_scaffold_first_ready_target_id": _text(
+            current_post_native_scoring_scaffold_summary.get("first_ready_target_id")
+        ),
+        "current_post_native_scoring_scaffold_first_blocked_target_id": _text(
+            current_post_native_scoring_scaffold_summary.get("first_blocked_target_id")
+        ),
+        "current_post_native_scoring_scaffold_first_blocker": _text(
+            current_post_native_scoring_scaffold_summary.get("first_blocker")
+        ),
+        "current_post_native_scoring_scaffold_metric_rows_csv": _text(
+            current_post_native_scoring_scaffold_summary.get("metric_rows_csv")
+        ),
+        "current_post_native_scoring_scaffold_dir": _text(
+            current_post_native_scoring_scaffold_summary.get("scaffold_dir")
         ),
         "benchmark_rows_ready_count": benchmark_rows_ready,
         "benchmark_rows_total": benchmark_rows_total,
@@ -18064,6 +19049,261 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "strict_blind_source_request_operator_fill_worklist_first_blocker": _text(
             strict_blind_source_request_operator_fill_worklist_summary.get("first_blocker")
         ),
+        "strict_blind_source_request_operator_fill_batch_kit_status": _text(
+            strict_blind_source_request_operator_fill_batch_kit_summary.get(
+                "strict_blind_source_request_operator_fill_batch_kit_status"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_worklist_status": _text(
+            strict_blind_source_request_operator_fill_batch_kit_summary.get("worklist_status")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_request_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_summary.get("request_count")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_ready_request_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_summary.get("ready_request_count")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_blocked_request_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_summary.get("blocked_request_count")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_field_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_summary.get("field_count")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_field_ready_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_summary.get("field_ready_count")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_field_blocked_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_summary.get("field_blocked_count")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_operator_value_missing_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_summary.get("operator_value_missing_count")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_operator_evidence_missing_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_summary.get("operator_evidence_missing_count")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_candidate_replacement_field_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_summary.get("candidate_replacement_field_count")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_source_template_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_summary.get("source_template_count")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_source_request_folder_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_summary.get("source_request_folder_count")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_folder": _text(
+            strict_blind_source_request_operator_fill_batch_kit_summary.get("batch_folder")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_batch_csv": _text(
+            strict_blind_source_request_operator_fill_batch_kit_summary.get("operator_fill_intake_batch_csv")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_first_request_id": _text(
+            strict_blind_source_request_operator_fill_batch_kit_summary.get("first_request_id")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_first_target_id": _text(
+            strict_blind_source_request_operator_fill_batch_kit_summary.get("first_target_id")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_first_field_key": _text(
+            strict_blind_source_request_operator_fill_batch_kit_summary.get("first_field_key")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_first_blocker": _text(
+            strict_blind_source_request_operator_fill_batch_kit_summary.get("first_blocker")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit_status": _text(
+            strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                "strict_blind_source_request_operator_fill_batch_kit_completion_audit_status"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit_batch_kit_status": _text(
+            strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get("batch_kit_status")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit_worklist_status": _text(
+            strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get("worklist_status")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get("request_count")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_pass_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get("request_pass_count")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_blocked_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get("request_blocked_count")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit_root_file_present_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                "root_file_present_count"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit_root_file_required_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                "root_file_required_count"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit_field_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get("field_count")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit_batch_csv_row_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get("batch_csv_row_count")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit_per_request_csv_row_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                "per_request_csv_row_count"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_summary_csv_row_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                "request_summary_csv_row_count"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_summary_csv_match_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                "request_summary_csv_match_count"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_folder_present_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                "request_folder_present_count"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_readme_present_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                "request_readme_present_count"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_operator_fill_csv_present_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                "request_operator_fill_csv_present_count"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_row_mismatch_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                "request_row_mismatch_count"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit_operator_value_missing_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                "operator_value_missing_count"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit_operator_evidence_missing_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                "operator_evidence_missing_count"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit_candidate_replacement_field_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                "candidate_replacement_field_count"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit_coordinate_copy_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get("coordinate_copy_count")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit_proof_marker_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get("proof_marker_count")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit_author_marker_count": _int(
+            strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get("author_marker_count")
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit_first_blocked_request_id": _text(
+            strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get(
+                "first_blocked_request_id"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_batch_kit_completion_audit_first_blocker": _text(
+            strict_blind_source_request_operator_fill_batch_kit_completion_audit_summary.get("first_blocker")
+        ),
+        "strict_blind_source_request_operator_fill_worklist_completion_audit_status": _text(
+            strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                "source_request_operator_fill_worklist_completion_audit_status"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_worklist_completion_audit_source_request_status": _text(
+            strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                "source_request_packet_status"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_worklist_completion_audit_worklist_status": _text(
+            strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                "operator_fill_worklist_status"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_worklist_completion_audit_request_count": _int(
+            strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get("request_count")
+        ),
+        "strict_blind_source_request_operator_fill_worklist_completion_audit_request_pass_count": _int(
+            strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get("request_pass_count")
+        ),
+        "strict_blind_source_request_operator_fill_worklist_completion_audit_request_blocked_count": _int(
+            strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get("request_blocked_count")
+        ),
+        "strict_blind_source_request_operator_fill_worklist_completion_audit_expected_field_count": _int(
+            strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get("expected_field_count")
+        ),
+        "strict_blind_source_request_operator_fill_worklist_completion_audit_template_csv_row_count": _int(
+            strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get("template_csv_row_count")
+        ),
+        "strict_blind_source_request_operator_fill_worklist_completion_audit_worklist_row_count": _int(
+            strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get("worklist_row_count")
+        ),
+        "strict_blind_source_request_operator_fill_worklist_completion_audit_field_row_mismatch_count": _int(
+            strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                "field_row_mismatch_count"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_worklist_completion_audit_template_missing_field_count": _int(
+            strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                "template_missing_field_count"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_worklist_completion_audit_operator_value_missing_count": _int(
+            strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                "operator_value_missing_count"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_worklist_completion_audit_operator_evidence_missing_count": _int(
+            strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                "operator_evidence_missing_count"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_worklist_completion_audit_candidate_replacement_field_count": _int(
+            strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                "candidate_replacement_field_count"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_worklist_completion_audit_request_folder_present_count": _int(
+            strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                "request_folder_present_count"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_worklist_completion_audit_source_request_md_present_count": _int(
+            strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                "source_request_md_present_count"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_worklist_completion_audit_operator_template_csv_present_count": _int(
+            strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                "operator_template_csv_present_count"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_worklist_completion_audit_coordinate_copy_count": _int(
+            strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get("coordinate_copy_count")
+        ),
+        "strict_blind_source_request_operator_fill_worklist_completion_audit_proof_marker_count": _int(
+            strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get("proof_marker_count")
+        ),
+        "strict_blind_source_request_operator_fill_worklist_completion_audit_author_marker_count": _int(
+            strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get("author_marker_count")
+        ),
+        "strict_blind_source_request_operator_fill_worklist_completion_audit_first_blocked_request_id": _text(
+            strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get(
+                "first_blocked_request_id"
+            )
+        ),
+        "strict_blind_source_request_operator_fill_worklist_completion_audit_first_blocked_target_id": _text(
+            strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get("first_blocked_target_id")
+        ),
+        "strict_blind_source_request_operator_fill_worklist_completion_audit_first_blocker": _text(
+            strict_blind_source_request_operator_fill_worklist_completion_audit_summary.get("first_blocker")
+        ),
         "strict_blind_source_request_operator_sync_plan_status": _text(
             strict_blind_source_request_operator_sync_plan_summary.get("source_request_operator_sync_plan_status")
         ),
@@ -21804,7 +23044,11 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- current CASP17 submission deadline guard: `{summary['current_submission_deadline_guard_status'] or '-'}` date `{summary['current_submission_deadline_guard_current_date'] or '-'}` ready/blocked/total `{summary['current_submission_deadline_guard_ready_count']}/{summary['current_submission_deadline_guard_blocked_count']}/{summary['current_submission_deadline_guard_target_count']}` expired/today/future `{summary['current_submission_deadline_guard_human_expired_count']}/{summary['current_submission_deadline_guard_human_expiring_today_count']}/{summary['current_submission_deadline_guard_human_future_count']}` QA open/expired/unknown `{summary['current_submission_deadline_guard_qa_open_count']}/{summary['current_submission_deadline_guard_qa_expired_count']}/{summary['current_submission_deadline_guard_qa_unknown_count']}` package `{summary['current_submission_deadline_guard_package_status'] or '-'}` `{summary['current_submission_deadline_guard_package_ready_count']}/{summary['current_submission_deadline_guard_package_blocked_count']}/{summary['current_submission_deadline_guard_package_target_count']}` watchlist stale `{summary['current_submission_deadline_guard_watchlist_stale'] or '-'}` `{summary['current_submission_deadline_guard_watchlist_stale_days']}` first `{summary['current_submission_deadline_guard_first_blocked_target_id'] or '-'}` `{summary['current_submission_deadline_guard_first_blocked_reason'] or '-'}` nearest `{summary['current_submission_deadline_guard_nearest_open_target_id'] or '-'}` `{summary['current_submission_deadline_guard_nearest_open_human_expiration'] or '-'}` `{summary['current_submission_deadline_guard_nearest_open_days']}`",
         f"- current CASP17 official upload queue: `{summary['current_upload_queue_status'] or '-'}` date `{summary['current_upload_queue_current_date'] or '-'}` ready/blocked/total `{summary['current_upload_queue_ready_count']}/{summary['current_upload_queue_blocked_count']}/{summary['current_upload_queue_target_count']}` today/soon/future `{summary['current_upload_queue_ready_today_count']}/{summary['current_upload_queue_ready_soon_count']}/{summary['current_upload_queue_ready_future_count']}` official targets/direct/mapped/missing `{summary['current_upload_queue_official_target_count']}/{summary['current_upload_queue_official_direct_match_count']}/{summary['current_upload_queue_official_phase_mapped_count']}/{summary['current_upload_queue_official_missing_count']}` expired/cancelled/mismatch `{summary['current_upload_queue_official_expired_count']}/{summary['current_upload_queue_official_cancelled_count']}/{summary['current_upload_queue_official_mismatch_count']}` first upload `{summary['current_upload_queue_first_upload_target_id'] or '-'}` `{summary['current_upload_queue_first_upload_human_expiration'] or '-'}` first blocked `{summary['current_upload_queue_first_blocked_target_id'] or '-'}` `{summary['current_upload_queue_first_blocked_reason'] or '-'}`",
         f"- current CASP17 upload review packet: `{summary['current_upload_review_packet_status'] or '-'}` reviews ready/blocked/total `{summary['current_upload_review_packet_ready_count']}/{summary['current_upload_review_packet_blocked_count']}/{summary['current_upload_review_packet_review_count']}` urgency today/soon/future `{summary['current_upload_review_packet_urgency_today_count']}/{summary['current_upload_review_packet_urgency_soon_count']}/{summary['current_upload_review_packet_urgency_future_count']}` candidate/object/viewer `{summary['current_upload_review_packet_candidate_count']}/{summary['current_upload_review_packet_object_catalog_count']}/{summary['current_upload_review_packet_viewer_count']}` first `{summary['current_upload_review_packet_first_target_id'] or '-'}` `{summary['current_upload_review_packet_first_review_md'] or '-'}`",
+        f"- current CASP17 upload operator decision kit: `{summary['current_upload_operator_decision_kit_status'] or '-'}` review packet `{summary['current_upload_operator_decision_kit_review_packet_status'] or '-'}` reviews ready/blocked/total `{summary['current_upload_operator_decision_kit_ready_review_count']}/{summary['current_upload_operator_decision_kit_blocked_review_count']}/{summary['current_upload_operator_decision_kit_review_count']}` decisions approve/hold/reject/missing/invalid `{summary['current_upload_operator_decision_kit_approve_count']}/{summary['current_upload_operator_decision_kit_hold_count']}/{summary['current_upload_operator_decision_kit_reject_count']}/{summary['current_upload_operator_decision_kit_operator_decision_missing_count']}/{summary['current_upload_operator_decision_kit_invalid_operator_decision_count']}` author missing `{summary['current_upload_operator_decision_kit_author_serialization_missing_count']}` urgency today/soon/future `{summary['current_upload_operator_decision_kit_urgency_today_count']}/{summary['current_upload_operator_decision_kit_urgency_soon_count']}/{summary['current_upload_operator_decision_kit_urgency_future_count']}` first `{summary['current_upload_operator_decision_kit_first_target_id'] or '-'}` `{summary['current_upload_operator_decision_kit_first_blocker'] or '-'}` intake `{summary['current_upload_operator_decision_kit_intake_csv'] or '-'}`",
+        f"- current CASP17 upload operator decision kit completion audit: `{summary['current_upload_operator_decision_kit_completion_audit_status'] or '-'}` decision/review `{summary['current_upload_operator_decision_kit_completion_audit_decision_kit_status'] or '-'}` `{summary['current_upload_operator_decision_kit_completion_audit_review_packet_status'] or '-'}` targets pass/blocked/total `{summary['current_upload_operator_decision_kit_completion_audit_target_pass_count']}/{summary['current_upload_operator_decision_kit_completion_audit_target_blocked_count']}/{summary['current_upload_operator_decision_kit_completion_audit_review_target_count']}` root `{summary['current_upload_operator_decision_kit_completion_audit_root_file_present_count']}/{summary['current_upload_operator_decision_kit_completion_audit_root_file_required_count']}` rows intake/summary/per-target `{summary['current_upload_operator_decision_kit_completion_audit_intake_csv_row_count']}/{summary['current_upload_operator_decision_kit_completion_audit_target_summary_csv_row_count']}/{summary['current_upload_operator_decision_kit_completion_audit_per_target_csv_row_count']}` folders/md/csv/summary-match `{summary['current_upload_operator_decision_kit_completion_audit_decision_folder_present_count']}/{summary['current_upload_operator_decision_kit_completion_audit_decision_md_present_count']}/{summary['current_upload_operator_decision_kit_completion_audit_operator_decision_row_csv_present_count']}/{summary['current_upload_operator_decision_kit_completion_audit_target_summary_csv_match_count']}` missing decision/invalid/author/final-name `{summary['current_upload_operator_decision_kit_completion_audit_operator_decision_missing_count']}/{summary['current_upload_operator_decision_kit_completion_audit_invalid_operator_decision_count']}/{summary['current_upload_operator_decision_kit_completion_audit_author_serialization_missing_count']}/{summary['current_upload_operator_decision_kit_completion_audit_final_upload_filename_missing_count']}` hygiene coordinate/proof/portal `{summary['current_upload_operator_decision_kit_completion_audit_coordinate_copy_count']}/{summary['current_upload_operator_decision_kit_completion_audit_proof_marker_count']}/{summary['current_upload_operator_decision_kit_completion_audit_portal_submit_marker_count']}` first `{summary['current_upload_operator_decision_kit_completion_audit_first_blocked_target_id'] or '-'}` `{summary['current_upload_operator_decision_kit_completion_audit_first_blocker'] or '-'}`",
         f"- current CASP17 prospective strict-blind escrow: `{summary['current_prospective_strict_blind_escrow_status'] or '-'}` escrow ready/blocked/total `{summary['current_prospective_strict_blind_escrow_ready_count']}/{summary['current_prospective_strict_blind_escrow_blocked_count']}/{summary['current_prospective_strict_blind_escrow_target_count']}` upload ready/blocked `{summary['current_prospective_strict_blind_escrow_upload_ready_count']}/{summary['current_prospective_strict_blind_escrow_upload_blocked_count']}` sha/review/native/ext-ts `{summary['current_prospective_strict_blind_escrow_sha256_match_count']}/{summary['current_prospective_strict_blind_escrow_review_link_count']}/{summary['current_prospective_strict_blind_escrow_native_pending_count']}/{summary['current_prospective_strict_blind_escrow_external_timestamp_required_count']}` proof `{summary['current_prospective_strict_blind_escrow_competitive_proof_eligible_count']}` author-serialized `{summary['current_prospective_strict_blind_escrow_author_serialized_count']}` first upload/blocked `{summary['current_prospective_strict_blind_escrow_first_upload_ready_target_id'] or '-'}`/`{summary['current_prospective_strict_blind_escrow_first_upload_blocked_target_id'] or '-'}` manifest `{summary['current_prospective_strict_blind_escrow_manifest_signature_sha256'] or '-'}`",
+        f"- current CASP17 escrow external timestamp packet: `{summary['current_escrow_external_timestamp_packet_status'] or '-'}` escrow `{summary['current_escrow_external_timestamp_packet_prospective_escrow_status'] or '-'}` timestamp ready/blocked/total `{summary['current_escrow_external_timestamp_packet_timestamp_ready_count']}/{summary['current_escrow_external_timestamp_packet_timestamp_blocked_count']}/{summary['current_escrow_external_timestamp_packet_target_count']}` upload ready/blocked `{summary['current_escrow_external_timestamp_packet_upload_ready_count']}/{summary['current_escrow_external_timestamp_packet_upload_blocked_count']}` urgency today/soon/future `{summary['current_escrow_external_timestamp_packet_urgency_today_count']}/{summary['current_escrow_external_timestamp_packet_urgency_soon_count']}/{summary['current_escrow_external_timestamp_packet_urgency_future_count']}` sha/escrow-md/manifest `{summary['current_escrow_external_timestamp_packet_sha256_match_count']}/{summary['current_escrow_external_timestamp_packet_escrow_md_present_count']}/{summary['current_escrow_external_timestamp_packet_timestamp_manifest_row_count']}` native/ext-ts `{summary['current_escrow_external_timestamp_packet_native_pending_count']}/{summary['current_escrow_external_timestamp_packet_external_timestamp_required_count']}` proof/author/hygiene `{summary['current_escrow_external_timestamp_packet_competitive_proof_eligible_count']}/{summary['current_escrow_external_timestamp_packet_author_serialized_count']}/{summary['current_escrow_external_timestamp_packet_coordinate_copy_count']}/{summary['current_escrow_external_timestamp_packet_proof_marker_count']}/{summary['current_escrow_external_timestamp_packet_portal_submit_marker_count']}` first `{summary['current_escrow_external_timestamp_packet_first_ready_target_id'] or '-'}`/`{summary['current_escrow_external_timestamp_packet_first_blocked_target_id'] or '-'}` `{summary['current_escrow_external_timestamp_packet_first_blocker'] or '-'}` manifest `{summary['current_escrow_external_timestamp_packet_manifest_signature_sha256'] or '-'}` timestamp `{summary['current_escrow_external_timestamp_packet_timestamp_manifest_csv'] or '-'}`",
+        f"- current CASP17 post-native scoring scaffold: `{summary['current_post_native_scoring_scaffold_status'] or '-'}` escrow/timestamp `{summary['current_post_native_scoring_scaffold_prospective_escrow_status'] or '-'}` `{summary['current_post_native_scoring_scaffold_timestamp_packet_status'] or '-'}` targets ready/blocked/total `{summary['current_post_native_scoring_scaffold_target_ready_count']}/{summary['current_post_native_scoring_scaffold_target_blocked_count']}/{summary['current_post_native_scoring_scaffold_target_count']}` class complex/monomer `{summary['current_post_native_scoring_scaffold_complex_target_count']}/{summary['current_post_native_scoring_scaffold_monomer_target_count']}` upload/timestamp `{summary['current_post_native_scoring_scaffold_upload_ready_count']}/{summary['current_post_native_scoring_scaffold_upload_blocked_count']}/{summary['current_post_native_scoring_scaffold_timestamp_ready_count']}` native pending/present/missing `{summary['current_post_native_scoring_scaffold_native_pending_count']}/{summary['current_post_native_scoring_scaffold_native_file_present_count']}/{summary['current_post_native_scoring_scaffold_native_file_missing_count']}` metrics ready/blocked/total `{summary['current_post_native_scoring_scaffold_metric_ready_count']}/{summary['current_post_native_scoring_scaffold_metric_blocked_count']}/{summary['current_post_native_scoring_scaffold_metric_row_count']}` metric class complex/monomer `{summary['current_post_native_scoring_scaffold_complex_metric_row_count']}/{summary['current_post_native_scoring_scaffold_monomer_metric_row_count']}` files dropzone/manifest/chainmap/metriccsv `{summary['current_post_native_scoring_scaffold_dropzone_count']}/{summary['current_post_native_scoring_scaffold_native_input_manifest_count']}/{summary['current_post_native_scoring_scaffold_chain_mapping_template_count']}/{summary['current_post_native_scoring_scaffold_metric_requirements_csv_count']}` proof/hygiene `{summary['current_post_native_scoring_scaffold_competitive_proof_eligible_count']}/{summary['current_post_native_scoring_scaffold_coordinate_copy_count']}/{summary['current_post_native_scoring_scaffold_proof_marker_count']}/{summary['current_post_native_scoring_scaffold_portal_submit_marker_count']}` first `{summary['current_post_native_scoring_scaffold_first_ready_target_id'] or '-'}`/`{summary['current_post_native_scoring_scaffold_first_blocked_target_id'] or '-'}` `{summary['current_post_native_scoring_scaffold_first_blocker'] or '-'}` metric rows `{summary['current_post_native_scoring_scaffold_metric_rows_csv'] or '-'}` dir `{summary['current_post_native_scoring_scaffold_dir'] or '-'}`",
         f"- benchmark rows ready/total: `{summary['benchmark_rows_ready_count']}/{summary['benchmark_rows_total']}`",
         f"- win-tier goal scorecard: `{summary['win_tier_goal_scorecard_status'] or '-'}` pass/partial/blocked `{summary['win_tier_goal_scorecard_pass_count']}/{summary['win_tier_goal_scorecard_partial_count']}/{summary['win_tier_goal_scorecard_blocked_count']}` first blocked `{summary['win_tier_goal_scorecard_first_blocked_gate'] or '-'}`",
         f"- historical winner-normalized bands: `{summary['historical_winner_normalized_bands_status'] or '-'}` top5/winner-proximity/blocked/total `{summary['historical_winner_normalized_bands_top5_or_better_count']}/{summary['historical_winner_normalized_bands_winner_proximity_count']}/{summary['historical_winner_normalized_bands_blocked_band_count']}/{summary['historical_winner_normalized_bands_band_count']}` strict slots `{summary['historical_winner_normalized_bands_strict_ready_slot_count']}/{summary['historical_winner_normalized_bands_strict_slot_count']}` metric rows `{summary['historical_winner_normalized_bands_metric_surface_ready_row_count']}/{summary['historical_winner_normalized_bands_metric_surface_row_count']}` official archive proof `{summary['historical_winner_normalized_bands_official_archive_candidate_count']}/{summary['historical_winner_normalized_bands_official_archive_proof_eligible_count']}` first `{summary['historical_winner_normalized_bands_first_blocked_band'] or '-'}` `{summary['historical_winner_normalized_bands_first_blocker'] or '-'}`",
@@ -21909,6 +23153,9 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- strict-blind source request resolution board: `{summary['strict_blind_source_request_resolution_board_status'] or '-'}` requests ready/blocked/total `{summary['strict_blind_source_request_resolution_board_ready_count']}/{summary['strict_blind_source_request_resolution_board_blocked_count']}/{summary['strict_blind_source_request_resolution_board_request_count']}` monomer/complex `{summary['strict_blind_source_request_resolution_board_monomer_count']}/{summary['strict_blind_source_request_resolution_board_complex_count']}` postnative/replacement/pre-review/missing `{summary['strict_blind_source_request_resolution_board_all_post_native_monomer_count']}/{summary['strict_blind_source_request_resolution_board_candidate_replacement_required_count']}/{summary['strict_blind_source_request_resolution_board_pre_native_review_possible_count']}/{summary['strict_blind_source_request_resolution_board_chronology_review_missing_count']}` internal-like post/pre `{summary['strict_blind_source_request_resolution_board_internal_like_post_native_candidate_count']}/{summary['strict_blind_source_request_resolution_board_internal_like_pre_native_candidate_count']}` first `{summary['strict_blind_source_request_resolution_board_first_blocked_request_id'] or '-'}` `{summary['strict_blind_source_request_resolution_board_first_blocked_target_id'] or '-'}` `{summary['strict_blind_source_request_resolution_board_first_blocker'] or '-'}`",
         f"- strict-blind source request fulfillment gate: `{summary['strict_blind_source_request_fulfillment_gate_status'] or '-'}` requests ready/blocked/total `{summary['strict_blind_source_request_fulfillment_gate_ready_request_count']}/{summary['strict_blind_source_request_fulfillment_gate_blocked_request_count']}/{summary['strict_blind_source_request_fulfillment_gate_request_count']}` fields filled/missing/total `{summary['strict_blind_source_request_fulfillment_gate_operator_field_filled_count']}/{summary['strict_blind_source_request_fulfillment_gate_operator_field_missing_count']}/{summary['strict_blind_source_request_fulfillment_gate_operator_field_count']}` evidence present/missing `{summary['strict_blind_source_request_fulfillment_gate_operator_evidence_ref_count']}/{summary['strict_blind_source_request_fulfillment_gate_operator_evidence_ref_missing_count']}` validation pdb/chronology/internal-source `{summary['strict_blind_source_request_fulfillment_gate_prediction_pdb_valid_count']}/{summary['strict_blind_source_request_fulfillment_gate_chronology_pass_count']}/{summary['strict_blind_source_request_fulfillment_gate_internal_source_pass_count']}` first `{summary['strict_blind_source_request_fulfillment_gate_first_blocked_request_id'] or '-'}` `{summary['strict_blind_source_request_fulfillment_gate_first_blocked_target_id'] or '-'}` `{summary['strict_blind_source_request_fulfillment_gate_first_blocker'] or '-'}`",
         f"- strict-blind source request operator fill worklist: `{summary['strict_blind_source_request_operator_fill_worklist_status'] or '-'}` fields ready/value-missing/evidence-missing/total `{summary['strict_blind_source_request_operator_fill_worklist_field_ready_count']}/{summary['strict_blind_source_request_operator_fill_worklist_operator_value_missing_count']}/{summary['strict_blind_source_request_operator_fill_worklist_operator_evidence_missing_count']}/{summary['strict_blind_source_request_operator_fill_worklist_field_action_count']}` candidate fields `{summary['strict_blind_source_request_operator_fill_worklist_candidate_replacement_field_count']}` first `{summary['strict_blind_source_request_operator_fill_worklist_first_fill_id'] or '-'}` `{summary['strict_blind_source_request_operator_fill_worklist_first_request_id'] or '-'}` `{summary['strict_blind_source_request_operator_fill_worklist_first_target_id'] or '-'}` `{summary['strict_blind_source_request_operator_fill_worklist_first_field_key'] or '-'}` `{summary['strict_blind_source_request_operator_fill_worklist_first_blocker'] or '-'}`",
+        f"- strict-blind source request operator fill batch kit: `{summary['strict_blind_source_request_operator_fill_batch_kit_status'] or '-'}` worklist `{summary['strict_blind_source_request_operator_fill_batch_kit_worklist_status'] or '-'}` requests ready/blocked/total `{summary['strict_blind_source_request_operator_fill_batch_kit_ready_request_count']}/{summary['strict_blind_source_request_operator_fill_batch_kit_blocked_request_count']}/{summary['strict_blind_source_request_operator_fill_batch_kit_request_count']}` fields ready/blocked/total `{summary['strict_blind_source_request_operator_fill_batch_kit_field_ready_count']}/{summary['strict_blind_source_request_operator_fill_batch_kit_field_blocked_count']}/{summary['strict_blind_source_request_operator_fill_batch_kit_field_count']}` missing value/evidence `{summary['strict_blind_source_request_operator_fill_batch_kit_operator_value_missing_count']}/{summary['strict_blind_source_request_operator_fill_batch_kit_operator_evidence_missing_count']}` candidate fields `{summary['strict_blind_source_request_operator_fill_batch_kit_candidate_replacement_field_count']}` sources template/folder `{summary['strict_blind_source_request_operator_fill_batch_kit_source_template_count']}/{summary['strict_blind_source_request_operator_fill_batch_kit_source_request_folder_count']}` folder `{summary['strict_blind_source_request_operator_fill_batch_kit_folder'] or '-'}` batch `{summary['strict_blind_source_request_operator_fill_batch_kit_batch_csv'] or '-'}` first `{summary['strict_blind_source_request_operator_fill_batch_kit_first_request_id'] or '-'}` `{summary['strict_blind_source_request_operator_fill_batch_kit_first_target_id'] or '-'}` `{summary['strict_blind_source_request_operator_fill_batch_kit_first_field_key'] or '-'}` `{summary['strict_blind_source_request_operator_fill_batch_kit_first_blocker'] or '-'}`",
+        f"- strict-blind source request operator fill batch kit completion audit: `{summary['strict_blind_source_request_operator_fill_batch_kit_completion_audit_status'] or '-'}` batch/worklist `{summary['strict_blind_source_request_operator_fill_batch_kit_completion_audit_batch_kit_status'] or '-'}` `{summary['strict_blind_source_request_operator_fill_batch_kit_completion_audit_worklist_status'] or '-'}` requests pass/blocked/total `{summary['strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_pass_count']}/{summary['strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_blocked_count']}/{summary['strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_count']}` root `{summary['strict_blind_source_request_operator_fill_batch_kit_completion_audit_root_file_present_count']}/{summary['strict_blind_source_request_operator_fill_batch_kit_completion_audit_root_file_required_count']}` fields expected/batch/per-request `{summary['strict_blind_source_request_operator_fill_batch_kit_completion_audit_field_count']}/{summary['strict_blind_source_request_operator_fill_batch_kit_completion_audit_batch_csv_row_count']}/{summary['strict_blind_source_request_operator_fill_batch_kit_completion_audit_per_request_csv_row_count']}` request summary rows/matches `{summary['strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_summary_csv_row_count']}/{summary['strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_summary_csv_match_count']}` request folder/readme/csv `{summary['strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_folder_present_count']}/{summary['strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_readme_present_count']}/{summary['strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_operator_fill_csv_present_count']}` mismatch `{summary['strict_blind_source_request_operator_fill_batch_kit_completion_audit_request_row_mismatch_count']}` missing value/evidence/candidate-replacement `{summary['strict_blind_source_request_operator_fill_batch_kit_completion_audit_operator_value_missing_count']}/{summary['strict_blind_source_request_operator_fill_batch_kit_completion_audit_operator_evidence_missing_count']}/{summary['strict_blind_source_request_operator_fill_batch_kit_completion_audit_candidate_replacement_field_count']}` hygiene coordinate/proof/author `{summary['strict_blind_source_request_operator_fill_batch_kit_completion_audit_coordinate_copy_count']}/{summary['strict_blind_source_request_operator_fill_batch_kit_completion_audit_proof_marker_count']}/{summary['strict_blind_source_request_operator_fill_batch_kit_completion_audit_author_marker_count']}` first `{summary['strict_blind_source_request_operator_fill_batch_kit_completion_audit_first_blocked_request_id'] or '-'}` `{summary['strict_blind_source_request_operator_fill_batch_kit_completion_audit_first_blocker'] or '-'}`",
+        f"- strict-blind source request operator fill worklist completion audit: `{summary['strict_blind_source_request_operator_fill_worklist_completion_audit_status'] or '-'}` source/worklist `{summary['strict_blind_source_request_operator_fill_worklist_completion_audit_source_request_status'] or '-'}` `{summary['strict_blind_source_request_operator_fill_worklist_completion_audit_worklist_status'] or '-'}` requests pass/blocked/total `{summary['strict_blind_source_request_operator_fill_worklist_completion_audit_request_pass_count']}/{summary['strict_blind_source_request_operator_fill_worklist_completion_audit_request_blocked_count']}/{summary['strict_blind_source_request_operator_fill_worklist_completion_audit_request_count']}` fields expected/template/worklist `{summary['strict_blind_source_request_operator_fill_worklist_completion_audit_expected_field_count']}/{summary['strict_blind_source_request_operator_fill_worklist_completion_audit_template_csv_row_count']}/{summary['strict_blind_source_request_operator_fill_worklist_completion_audit_worklist_row_count']}` mismatch/missing-template `{summary['strict_blind_source_request_operator_fill_worklist_completion_audit_field_row_mismatch_count']}/{summary['strict_blind_source_request_operator_fill_worklist_completion_audit_template_missing_field_count']}` operator value/evidence missing `{summary['strict_blind_source_request_operator_fill_worklist_completion_audit_operator_value_missing_count']}/{summary['strict_blind_source_request_operator_fill_worklist_completion_audit_operator_evidence_missing_count']}` candidate fields `{summary['strict_blind_source_request_operator_fill_worklist_completion_audit_candidate_replacement_field_count']}` files folder/source-md/template `{summary['strict_blind_source_request_operator_fill_worklist_completion_audit_request_folder_present_count']}/{summary['strict_blind_source_request_operator_fill_worklist_completion_audit_source_request_md_present_count']}/{summary['strict_blind_source_request_operator_fill_worklist_completion_audit_operator_template_csv_present_count']}` hygiene coordinate/proof/author `{summary['strict_blind_source_request_operator_fill_worklist_completion_audit_coordinate_copy_count']}/{summary['strict_blind_source_request_operator_fill_worklist_completion_audit_proof_marker_count']}/{summary['strict_blind_source_request_operator_fill_worklist_completion_audit_author_marker_count']}` first `{summary['strict_blind_source_request_operator_fill_worklist_completion_audit_first_blocked_request_id'] or '-'}` `{summary['strict_blind_source_request_operator_fill_worklist_completion_audit_first_blocker'] or '-'}`",
         f"- strict-blind source request operator sync plan: `{summary['strict_blind_source_request_operator_sync_plan_status'] or '-'}` mode `{summary['strict_blind_source_request_operator_sync_plan_mode'] or '-'}` fulfillment ready/blocked `{summary['strict_blind_source_request_operator_sync_plan_ready_request_count']}/{summary['strict_blind_source_request_operator_sync_plan_blocked_request_count']}` actions ready/blocked/applied/total `{summary['strict_blind_source_request_operator_sync_plan_ready_sync_action_count']}/{summary['strict_blind_source_request_operator_sync_plan_blocked_sync_action_count']}/{summary['strict_blind_source_request_operator_sync_plan_applied_sync_action_count']}/{summary['strict_blind_source_request_operator_sync_plan_sync_action_count']}` selected `{summary['strict_blind_source_request_operator_sync_plan_selected_request_id'] or '-'}` `{summary['strict_blind_source_request_operator_sync_plan_selected_target_id'] or '-'}` first `{summary['strict_blind_source_request_operator_sync_plan_first_action_id'] or '-'}` `{summary['strict_blind_source_request_operator_sync_plan_first_blocker'] or '-'}` destination `{summary['strict_blind_source_request_operator_sync_plan_destination_operator_csv'] or '-'}`",
         f"- strict-blind source request closure board: `{summary['strict_blind_source_request_closure_board_status'] or '-'}` required `{summary['strict_blind_source_request_closure_board_required_benchmark_id'] or '-'}` `{summary['strict_blind_source_request_closure_board_required_target_id'] or '-'}` `{summary['strict_blind_source_request_closure_board_required_scope'] or '-'}` stages ready/blocked/total `{summary['strict_blind_source_request_closure_board_ready_stage_count']}/{summary['strict_blind_source_request_closure_board_blocked_stage_count']}/{summary['strict_blind_source_request_closure_board_stage_count']}` source/fulfill/fill/sync/handoff/packet/review/evidence-sync/operator/gate/apply/slot/batch `{summary['strict_blind_source_request_closure_board_source_request_status'] or '-'}` `{summary['strict_blind_source_request_closure_board_fulfillment_gate_status'] or '-'}` `{summary['strict_blind_source_request_closure_board_operator_fill_worklist_status'] or '-'}` `{summary['strict_blind_source_request_closure_board_operator_sync_plan_status'] or '-'}` `{summary['strict_blind_source_request_closure_board_first_unlock_handoff_status'] or '-'}` `{summary['strict_blind_source_request_closure_board_first_unlock_evidence_packet_status'] or '-'}` `{summary['strict_blind_source_request_closure_board_first_unlock_evidence_review_gate_status'] or '-'}` `{summary['strict_blind_source_request_closure_board_first_unlock_evidence_sync_plan_status'] or '-'}` `{summary['strict_blind_source_request_closure_board_source_gate_operator_packet_status'] or '-'}` `{summary['strict_blind_source_request_closure_board_internal_prediction_source_gate_status'] or '-'}` `{summary['strict_blind_source_request_closure_board_internal_prediction_apply_plan_status'] or '-'}` `{summary['strict_blind_source_request_closure_board_first_slot_closure_kit_status'] or '-'}` `{summary['strict_blind_source_request_closure_board_batch_closure_runway_status'] or '-'}` first `{summary['strict_blind_source_request_closure_board_first_blocked_stage_id'] or '-'}` `{summary['strict_blind_source_request_closure_board_first_blocked_stage_status'] or '-'}` `{summary['strict_blind_source_request_closure_board_first_blocker'] or '-'}` next `{summary['strict_blind_source_request_closure_board_next_action'] or '-'}`",
         f"- strict-blind first source request pickup: `{summary['strict_blind_first_source_request_pickup_status'] or '-'}` request `{summary['strict_blind_first_source_request_pickup_request_id'] or '-'}` `{summary['strict_blind_first_source_request_pickup_candidate_target_id'] or '-'}` `{summary['strict_blind_first_source_request_pickup_candidate_scope'] or '-'}` kind `{summary['strict_blind_first_source_request_pickup_request_kind'] or '-'}` dates `{summary['strict_blind_first_source_request_pickup_current_prediction_created_at'] or '-'}`/`{summary['strict_blind_first_source_request_pickup_native_release_date'] or '-'}` before-native `{summary['strict_blind_first_source_request_pickup_current_prediction_before_native'] or '-'}` options ready/blocked/total `{summary['strict_blind_first_source_request_pickup_ready_option_count']}/{summary['strict_blind_first_source_request_pickup_blocked_option_count']}/{summary['strict_blind_first_source_request_pickup_option_count']}` external `{summary['strict_blind_first_source_request_pickup_external_required_count']}/{summary['strict_blind_first_source_request_pickup_external_target_count']}` first `{summary['strict_blind_first_source_request_pickup_first_action_id'] or '-'}` `{summary['strict_blind_first_source_request_pickup_first_blocker'] or '-'}` folder `{summary['strict_blind_first_source_request_pickup_folder'] or '-'}` decision `{summary['strict_blind_first_source_request_pickup_decision_template_csv'] or '-'}` files `{summary['strict_blind_first_source_request_pickup_required_files_manifest_csv'] or '-'}` next `{summary['strict_blind_first_source_request_pickup_first_next_action'] or '-'}`",
@@ -22122,8 +23369,24 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=DEFAULT_CURRENT_UPLOAD_REVIEW_PACKET_JSON,
     )
     parser.add_argument(
+        "--current-upload-operator-decision-kit-json",
+        default=DEFAULT_CURRENT_UPLOAD_OPERATOR_DECISION_KIT_JSON,
+    )
+    parser.add_argument(
+        "--current-upload-operator-decision-kit-completion-audit-json",
+        default=DEFAULT_CURRENT_UPLOAD_OPERATOR_DECISION_KIT_COMPLETION_AUDIT_JSON,
+    )
+    parser.add_argument(
         "--current-prospective-strict-blind-escrow-json",
         default=DEFAULT_CURRENT_PROSPECTIVE_STRICT_BLIND_ESCROW_JSON,
+    )
+    parser.add_argument(
+        "--current-escrow-external-timestamp-packet-json",
+        default=DEFAULT_CURRENT_ESCROW_EXTERNAL_TIMESTAMP_PACKET_JSON,
+    )
+    parser.add_argument(
+        "--current-post-native-scoring-scaffold-json",
+        default=DEFAULT_CURRENT_POST_NATIVE_SCORING_SCAFFOLD_JSON,
     )
     parser.add_argument("--win-gap-closure-json", default=DEFAULT_WIN_GAP_CLOSURE_JSON)
     parser.add_argument("--win-tier-goal-scorecard-json", default=DEFAULT_WIN_TIER_GOAL_SCORECARD_JSON)
@@ -22469,6 +23732,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--strict-blind-source-request-operator-fill-worklist-json",
         default=DEFAULT_STRICT_BLIND_SOURCE_REQUEST_OPERATOR_FILL_WORKLIST_JSON,
+    )
+    parser.add_argument(
+        "--strict-blind-source-request-operator-fill-batch-kit-json",
+        default=DEFAULT_STRICT_BLIND_SOURCE_REQUEST_OPERATOR_FILL_BATCH_KIT_JSON,
+    )
+    parser.add_argument(
+        "--strict-blind-source-request-operator-fill-batch-kit-completion-audit-json",
+        default=DEFAULT_STRICT_BLIND_SOURCE_REQUEST_OPERATOR_FILL_BATCH_KIT_COMPLETION_AUDIT_JSON,
+    )
+    parser.add_argument(
+        "--strict-blind-source-request-operator-fill-worklist-completion-audit-json",
+        default=DEFAULT_STRICT_BLIND_SOURCE_REQUEST_OPERATOR_FILL_WORKLIST_COMPLETION_AUDIT_JSON,
     )
     parser.add_argument(
         "--strict-blind-source-request-operator-sync-plan-json",
