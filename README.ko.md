@@ -96,16 +96,25 @@ python3 tools/build_local_delivery_verdict_gate.py
 
 이 저장소에는 현재 CASP17 참가 준비용 내부 물리 lane이 포함되어 있습니다. 활성 lane은 로컬 분자동역학/coarse-grain physics stack 안에서만 동작하며, AlphaFold, ColabFold, ESMFold, OmegaFold, public/template 구조, current-target native lookup, 타 팀 모델을 사용하지 않습니다.
 
-2026-05-25 KST 기준 로컬 상태:
+2026-06-02 KST 기준 로컬 상태:
 
-- 현재 선택된 CASP17 protein target 16/16개에 대해 FASTA materialization과 내부 TS 산출물이 있습니다.
-- 로컬 제출 floor는 green입니다. 현재 선택 target 표면에서 TS import, format, geometry, confidence, scorecard, shape sanity, submission gate가 통과합니다.
-- 리뷰용 3D 시각화는 green입니다. internal-canvas viewer smoke 16/16, PyMOL/studio/surface/confidence/QC render coverage 16/16, molecular showcase image 16/16, image-quality smoke 272/272입니다.
-- operational win-tier threshold packet은 submission, visual review, local all-atom/sidechain QC, no-leak historical monomer/complex native accuracy, refinement ablation, model selection, confidence calibration까지 27개 row를 추적합니다.
-- 현재 증명된 최고 로컬 단계는 `review_quality`입니다. Competitive/win-tier readiness는 no-leak historical/native benchmark row, refinement-ablation evidence, model-selection/confidence calibration이 채워질 때까지 의도적으로 fail-closed 상태를 유지합니다.
+- CASP17 workbench 상태는 `ready_for_operator_fill`이고, 현재 증명된 최고 로컬 단계는 여전히 `review_quality`입니다.
+- 현재 target 정리는 green입니다. target model folder `19/19`, target object folder/viewer/projection `58/58/58`, 3D molecular object atlas는 protein folder `24`, object folder `68`개입니다.
+- current package preflight는 `19/19` target에서 green입니다. 파일, 포맷, author field, sidechain repack 상태, sha256 accounting이 준비되어 있습니다.
+- official upload queue는 의도적으로 partial입니다. 현재 target `10/19`개만 operator upload-review-ready이고, `9/19`개는 deadline 또는 official-target 상태 때문에 blocked입니다.
+- prospective strict-blind escrow는 `19/19` target에서 준비됐지만, current-target native가 아직 pending이므로 competitive proof는 `0`입니다.
+- MassiveFold external model-selection input은 `15/15` ready입니다. 단, external no-native review evidence일 뿐 internal prediction proof는 아닙니다.
+- Organic ligand LDDT-PLI/BiSyRMSD closure는 batch operator fill kit로 묶였지만, 아직 candidate `0/7`, field `0/35`만 complete입니다.
+- Win-tier proof는 계속 fail-closed입니다. strict-blind slot `0/40`, metric row `0/440`, required file `0/480`, sidechain-native benchmark `0/40`입니다.
 
 주요 현재 문서와 artifact:
 
+- `casp17/WORKBENCH.md`
+- `casp17/CASP17_CURRENT_STATUS_REPORT.md`
+- `casp17/CASP17_WIN_TIER_GOAL.md`
+- `casp17/CASP17_ORGANIC_LIGAND_METRIC_BATCH_OPERATOR_FILL_KIT.md`
+- `casp17/CASP17_3D_MOLECULAR_OBJECT_ATLAS.md`
+- `casp17/CASP17_CURRENT_UPLOAD_QUEUE.md`
 - `docs/casp17_participation_gate_2026-05-21.md`
 - `runs/casp17_readiness_dashboard_current.json`
 - `runs/casp17_win_tier_threshold_packet_current.json`

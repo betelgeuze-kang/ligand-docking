@@ -2,6 +2,12 @@
 
 This folder mirrors the current local CASP17 data artifacts while keeping the original project paths intact.
 
+Current status navigation:
+
+- `casp17/WORKBENCH.md` is the live workbench index.
+- `casp17/CASP17_CURRENT_STATUS_REPORT.md` is the concise GitHub-facing status report.
+- This data-bundle mirror was generated earlier and should not be treated as the live competitive-proof score.
+
 - generated: `2026-05-28T00:46:34+09:00`
 - bundle_status: `ready`
 - out_dir: `casp17`

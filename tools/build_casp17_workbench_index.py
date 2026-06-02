@@ -47,6 +47,9 @@ DEFAULT_ORGANIC_LIGAND_METRIC_OPERATOR_FILL_WORKLIST_JSON = (
 DEFAULT_ORGANIC_LIGAND_METRIC_FIRST_OPERATOR_FILL_KIT_JSON = (
     "casp17/casp17_organic_ligand_metric_first_operator_fill_kit_current.json"
 )
+DEFAULT_ORGANIC_LIGAND_METRIC_BATCH_OPERATOR_FILL_KIT_JSON = (
+    "casp17/casp17_organic_ligand_metric_batch_operator_fill_kit_current.json"
+)
 DEFAULT_ORGANIC_LIGAND_METRIC_EVIDENCE_SYNC_PLAN_JSON = (
     "casp17/casp17_organic_ligand_metric_evidence_sync_plan_current.json"
 )
@@ -686,6 +689,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     organic_ligand_metric_first_operator_fill_kit_payload = _read_json(
         args.organic_ligand_metric_first_operator_fill_kit_json
     )
+    organic_ligand_metric_batch_operator_fill_kit_payload = _read_json(
+        args.organic_ligand_metric_batch_operator_fill_kit_json
+    )
     organic_ligand_metric_evidence_sync_plan_payload = _read_json(
         args.organic_ligand_metric_evidence_sync_plan_json
     )
@@ -1196,6 +1202,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     organic_ligand_metric_first_operator_fill_kit_summary = _summary(
         organic_ligand_metric_first_operator_fill_kit_payload
+    )
+    organic_ligand_metric_batch_operator_fill_kit_summary = _summary(
+        organic_ligand_metric_batch_operator_fill_kit_payload
     )
     organic_ligand_metric_evidence_sync_plan_summary = _summary(
         organic_ligand_metric_evidence_sync_plan_payload
@@ -2434,6 +2443,64 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + (_text(organic_ligand_metric_first_operator_fill_kit_summary.get("first_field_key")) or "-")
                 + "/"
                 + (_text(organic_ligand_metric_first_operator_fill_kit_summary.get("first_blocker")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "organic_ligand_metric_batch_operator_fill_kit",
+            "Batch operator fill kit for all organic ligand metric evidence fields",
+            _text(
+                organic_ligand_metric_batch_operator_fill_kit_summary.get(
+                    "organic_ligand_metric_batch_operator_fill_kit_status"
+                )
+            ),
+            args.organic_ligand_metric_batch_operator_fill_kit_json,
+            ready_count=_int(organic_ligand_metric_batch_operator_fill_kit_summary.get("field_ready_count")),
+            blocked_count=_int(organic_ligand_metric_batch_operator_fill_kit_summary.get("field_blocked_count")),
+            total_count=_int(organic_ligand_metric_batch_operator_fill_kit_summary.get("field_count")),
+            next_action=_text(organic_ligand_metric_batch_operator_fill_kit_summary.get("next_action")),
+            blockers=(
+                "candidates:"
+                + str(organic_ligand_metric_batch_operator_fill_kit_summary.get("ready_candidate_count", ""))
+                + "/"
+                + str(organic_ligand_metric_batch_operator_fill_kit_summary.get("blocked_candidate_count", ""))
+                + "/"
+                + str(organic_ligand_metric_batch_operator_fill_kit_summary.get("candidate_count", ""))
+                + ",fields:"
+                + str(organic_ligand_metric_batch_operator_fill_kit_summary.get("field_ready_count", ""))
+                + "/"
+                + str(organic_ligand_metric_batch_operator_fill_kit_summary.get("field_blocked_count", ""))
+                + "/"
+                + str(organic_ligand_metric_batch_operator_fill_kit_summary.get("field_count", ""))
+                + ",missing:"
+                + str(organic_ligand_metric_batch_operator_fill_kit_summary.get("operator_value_missing_count", ""))
+                + "/"
+                + str(
+                    organic_ligand_metric_batch_operator_fill_kit_summary.get(
+                        "operator_evidence_ref_missing_count", ""
+                    )
+                )
+                + "/"
+                + str(
+                    organic_ligand_metric_batch_operator_fill_kit_summary.get(
+                        "operator_clearance_missing_count", ""
+                    )
+                )
+                + "/"
+                + str(organic_ligand_metric_batch_operator_fill_kit_summary.get("operator_id_missing_count", ""))
+                + ",sources:"
+                + str(organic_ligand_metric_batch_operator_fill_kit_summary.get("source_template_count", ""))
+                + "/"
+                + str(organic_ligand_metric_batch_operator_fill_kit_summary.get("source_stub_count", ""))
+                + "/"
+                + str(organic_ligand_metric_batch_operator_fill_kit_summary.get("linked_action_count", ""))
+                + ",folder:"
+                + (_text(organic_ligand_metric_batch_operator_fill_kit_summary.get("batch_folder")) or "-")
+                + ",first:"
+                + (_text(organic_ligand_metric_batch_operator_fill_kit_summary.get("first_candidate_id")) or "-")
+                + "/"
+                + (_text(organic_ligand_metric_batch_operator_fill_kit_summary.get("first_field_key")) or "-")
+                + "/"
+                + (_text(organic_ligand_metric_batch_operator_fill_kit_summary.get("first_blocker")) or "-")
             ),
         ),
         _artifact_row(
@@ -12208,6 +12275,71 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "organic_ligand_metric_first_operator_fill_kit_first_next_action": _text(
             organic_ligand_metric_first_operator_fill_kit_summary.get("first_next_action")
         ),
+        "organic_ligand_metric_batch_operator_fill_kit_status": _text(
+            organic_ligand_metric_batch_operator_fill_kit_summary.get(
+                "organic_ligand_metric_batch_operator_fill_kit_status"
+            )
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_worklist_status": _text(
+            organic_ligand_metric_batch_operator_fill_kit_summary.get("worklist_status")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_candidate_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_summary.get("candidate_count")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_ready_candidate_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_summary.get("ready_candidate_count")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_blocked_candidate_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_summary.get("blocked_candidate_count")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_field_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_summary.get("field_count")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_ready_field_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_summary.get("field_ready_count")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_blocked_field_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_summary.get("field_blocked_count")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_value_missing_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_summary.get("operator_value_missing_count")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_evidence_ref_missing_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_summary.get("operator_evidence_ref_missing_count")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_clearance_missing_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_summary.get("operator_clearance_missing_count")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_operator_id_missing_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_summary.get("operator_id_missing_count")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_source_template_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_summary.get("source_template_count")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_source_stub_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_summary.get("source_stub_count")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_linked_action_count": _int(
+            organic_ligand_metric_batch_operator_fill_kit_summary.get("linked_action_count")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_folder": _text(
+            organic_ligand_metric_batch_operator_fill_kit_summary.get("batch_folder")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_batch_csv": _text(
+            organic_ligand_metric_batch_operator_fill_kit_summary.get("operator_fill_intake_batch_csv")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_first_candidate_id": _text(
+            organic_ligand_metric_batch_operator_fill_kit_summary.get("first_candidate_id")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_first_field_key": _text(
+            organic_ligand_metric_batch_operator_fill_kit_summary.get("first_field_key")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_first_blocker": _text(
+            organic_ligand_metric_batch_operator_fill_kit_summary.get("first_blocker")
+        ),
+        "organic_ligand_metric_batch_operator_fill_kit_first_next_action": _text(
+            organic_ligand_metric_batch_operator_fill_kit_summary.get("first_next_action")
+        ),
         "organic_ligand_metric_evidence_sync_plan_status": _text(
             organic_ligand_metric_evidence_sync_plan_summary.get(
                 "organic_ligand_metric_evidence_sync_plan_status"
@@ -21277,6 +21409,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         "This is the local navigation surface for the current CASP17 internal-physics lane.",
         "",
         "- goal objective addendum: `casp17/CASP17_WIN_TIER_GOAL.md`",
+        "- current status report: `casp17/CASP17_CURRENT_STATUS_REPORT.md`",
         "- win-tier target: scaffold `65 -> 90`, competitive proof `15-25 -> 85-90`, "
         "leaderboard `top-5/top-3/top-1-2` by category.",
         "",
@@ -21301,6 +21434,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- organic ligand metric evidence review gate: `{summary['organic_ligand_metric_evidence_review_gate_status'] or '-'}` candidates ready/blocked/total `{summary['organic_ligand_metric_evidence_review_gate_ready_candidate_count']}/{summary['organic_ligand_metric_evidence_review_gate_blocked_candidate_count']}/{summary['organic_ligand_metric_evidence_review_gate_candidate_count']}` fields ready/blocked/total `{summary['organic_ligand_metric_evidence_review_gate_ready_field_count']}/{summary['organic_ligand_metric_evidence_review_gate_blocked_field_count']}/{summary['organic_ligand_metric_evidence_review_gate_field_count']}` template missing value/evidence/clearance/operator `{summary['organic_ligand_metric_evidence_review_gate_template_value_missing_count']}/{summary['organic_ligand_metric_evidence_review_gate_template_evidence_ref_missing_count']}/{summary['organic_ligand_metric_evidence_review_gate_template_clearance_missing_count']}/{summary['organic_ligand_metric_evidence_review_gate_template_operator_id_missing_count']}` stubs present/missing/evidence-missing `{summary['organic_ligand_metric_evidence_review_gate_stub_present_count']}/{summary['organic_ligand_metric_evidence_review_gate_stub_missing_count']}/{summary['organic_ligand_metric_evidence_review_gate_stub_evidence_missing_count']}` policy pass/blocked `{summary['organic_ligand_metric_evidence_review_gate_policy_pass_count']}/{summary['organic_ligand_metric_evidence_review_gate_policy_blocked_count']}` first `{summary['organic_ligand_metric_evidence_review_gate_first_candidate_id'] or '-'}` `{summary['organic_ligand_metric_evidence_review_gate_first_field_key'] or '-'}` `{summary['organic_ligand_metric_evidence_review_gate_first_blocker'] or '-'}` next `{summary['organic_ligand_metric_evidence_review_gate_first_next_action'] or '-'}`",
         f"- organic ligand metric operator fill worklist: `{summary['organic_ligand_metric_operator_fill_worklist_status'] or '-'}` review `{summary['organic_ligand_metric_operator_fill_worklist_review_gate_status'] or '-'}` candidates ready/blocked/total `{summary['organic_ligand_metric_operator_fill_worklist_ready_candidate_count']}/{summary['organic_ligand_metric_operator_fill_worklist_blocked_candidate_count']}/{summary['organic_ligand_metric_operator_fill_worklist_candidate_count']}` fields ready/blocked/total `{summary['organic_ligand_metric_operator_fill_worklist_ready_field_count']}/{summary['organic_ligand_metric_operator_fill_worklist_blocked_field_count']}/{summary['organic_ligand_metric_operator_fill_worklist_field_count']}` missing value/evidence/clearance/operator `{summary['organic_ligand_metric_operator_fill_worklist_value_missing_count']}/{summary['organic_ligand_metric_operator_fill_worklist_evidence_ref_missing_count']}/{summary['organic_ligand_metric_operator_fill_worklist_clearance_missing_count']}/{summary['organic_ligand_metric_operator_fill_worklist_operator_id_missing_count']}` templates/stubs/actions `{summary['organic_ligand_metric_operator_fill_worklist_template_count']}/{summary['organic_ligand_metric_operator_fill_worklist_stub_count']}/{summary['organic_ligand_metric_operator_fill_worklist_linked_action_count']}` folders `{summary['organic_ligand_metric_operator_fill_worklist_candidate_folder_count']}` first `{summary['organic_ligand_metric_operator_fill_worklist_first_candidate_id'] or '-'}` `{summary['organic_ligand_metric_operator_fill_worklist_first_field_key'] or '-'}` `{summary['organic_ligand_metric_operator_fill_worklist_first_blocker'] or '-'}` next `{summary['organic_ligand_metric_operator_fill_worklist_first_next_action'] or '-'}`",
         f"- organic ligand metric first operator fill kit: `{summary['organic_ligand_metric_first_operator_fill_kit_status'] or '-'}` worklist `{summary['organic_ligand_metric_first_operator_fill_kit_worklist_status'] or '-'}` candidate `{summary['organic_ligand_metric_first_operator_fill_kit_candidate_id'] or '-'}` target `{summary['organic_ligand_metric_first_operator_fill_kit_target_id'] or '-'}` ligand `{summary['organic_ligand_metric_first_operator_fill_kit_ligand_id'] or '-'}` fields ready/blocked/total `{summary['organic_ligand_metric_first_operator_fill_kit_ready_field_count']}/{summary['organic_ligand_metric_first_operator_fill_kit_blocked_field_count']}/{summary['organic_ligand_metric_first_operator_fill_kit_field_count']}` missing value/evidence/clearance/operator `{summary['organic_ligand_metric_first_operator_fill_kit_value_missing_count']}/{summary['organic_ligand_metric_first_operator_fill_kit_evidence_ref_missing_count']}/{summary['organic_ligand_metric_first_operator_fill_kit_clearance_missing_count']}/{summary['organic_ligand_metric_first_operator_fill_kit_operator_id_missing_count']}` sources template/stub/action `{summary['organic_ligand_metric_first_operator_fill_kit_source_template_count']}/{summary['organic_ligand_metric_first_operator_fill_kit_source_stub_count']}/{summary['organic_ligand_metric_first_operator_fill_kit_linked_action_count']}` first `{summary['organic_ligand_metric_first_operator_fill_kit_first_field_key'] or '-'}` `{summary['organic_ligand_metric_first_operator_fill_kit_first_blocker'] or '-'}` folder `{summary['organic_ligand_metric_first_operator_fill_kit_folder'] or '-'}` next `{summary['organic_ligand_metric_first_operator_fill_kit_first_next_action'] or '-'}`",
+        f"- organic ligand metric batch operator fill kit: `{summary['organic_ligand_metric_batch_operator_fill_kit_status'] or '-'}` worklist `{summary['organic_ligand_metric_batch_operator_fill_kit_worklist_status'] or '-'}` candidates ready/blocked/total `{summary['organic_ligand_metric_batch_operator_fill_kit_ready_candidate_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_blocked_candidate_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_candidate_count']}` fields ready/blocked/total `{summary['organic_ligand_metric_batch_operator_fill_kit_ready_field_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_blocked_field_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_field_count']}` missing value/evidence/clearance/operator `{summary['organic_ligand_metric_batch_operator_fill_kit_value_missing_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_evidence_ref_missing_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_clearance_missing_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_operator_id_missing_count']}` sources template/stub/action `{summary['organic_ligand_metric_batch_operator_fill_kit_source_template_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_source_stub_count']}/{summary['organic_ligand_metric_batch_operator_fill_kit_linked_action_count']}` folder `{summary['organic_ligand_metric_batch_operator_fill_kit_folder'] or '-'}` batch `{summary['organic_ligand_metric_batch_operator_fill_kit_batch_csv'] or '-'}` first `{summary['organic_ligand_metric_batch_operator_fill_kit_first_candidate_id'] or '-'}` `{summary['organic_ligand_metric_batch_operator_fill_kit_first_field_key'] or '-'}` `{summary['organic_ligand_metric_batch_operator_fill_kit_first_blocker'] or '-'}`",
         f"- organic ligand metric evidence sync plan: `{summary['organic_ligand_metric_evidence_sync_plan_status'] or '-'}` mode `{summary['organic_ligand_metric_evidence_sync_plan_mode'] or '-'}` candidates ready/blocked/total `{summary['organic_ligand_metric_evidence_sync_plan_ready_candidate_count']}/{summary['organic_ligand_metric_evidence_sync_plan_blocked_candidate_count']}/{summary['organic_ligand_metric_evidence_sync_plan_candidate_count']}` actions ready/blocked/total `{summary['organic_ligand_metric_evidence_sync_plan_ready_action_count']}/{summary['organic_ligand_metric_evidence_sync_plan_blocked_action_count']}/{summary['organic_ligand_metric_evidence_sync_plan_action_count']}` destination present/missing `{summary['organic_ligand_metric_evidence_sync_plan_destination_present_count']}/{summary['organic_ligand_metric_evidence_sync_plan_destination_missing_count']}` source missing value/evidence/clearance/operator `{summary['organic_ligand_metric_evidence_sync_plan_source_value_missing_count']}/{summary['organic_ligand_metric_evidence_sync_plan_source_evidence_ref_missing_count']}/{summary['organic_ligand_metric_evidence_sync_plan_source_clearance_missing_count']}/{summary['organic_ligand_metric_evidence_sync_plan_source_operator_id_missing_count']}` review blocks gate/field `{summary['organic_ligand_metric_evidence_sync_plan_review_gate_blocked_action_count']}/{summary['organic_ligand_metric_evidence_sync_plan_review_field_blocked_action_count']}` folders `{summary['organic_ligand_metric_evidence_sync_plan_candidate_folder_count']}` first `{summary['organic_ligand_metric_evidence_sync_plan_first_candidate_id'] or '-'}` `{summary['organic_ligand_metric_evidence_sync_plan_first_field_key'] or '-'}` `{summary['organic_ligand_metric_evidence_sync_plan_first_blocker'] or '-'}` next `{summary['organic_ligand_metric_evidence_sync_plan_first_next_action'] or '-'}`",
         f"- CASP17 3D molecular object metric handoff completion audit: `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_status'] or '-'}` proteins folder/readme/manifest/total `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_protein_folder_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_protein_readme_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_protein_manifest_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_protein_count']}` objects pass/blocked/total `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_object_pass_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_object_blocked_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_object_count']}` source objects current/massivefold `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_current_object_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_massivefold_object_count']}` object files folder/manifest/csv/md `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_object_folder_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_object_manifest_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_metric_csv_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_metric_md_count']}` metric rows expected/csv/mismatch `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_metric_requirement_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_metric_csv_row_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_metric_csv_mismatch_count']}` evidence awaiting `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_metric_evidence_awaiting_count']}` coordinate copies object/out_dir `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_object_coordinate_copy_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_out_dir_coordinate_copy_count']}` proof/author `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_proof_eligible_count']}/{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_author_serialized_count']}` first `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_first_protein_key'] or '-'}` `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_first_object_key'] or '-'}` html `{summary['casp17_3d_molecular_object_metric_handoff_completion_audit_html'] or '-'}`",
         f"- raw-ranked model quarantine: `{summary['raw_ranked_model_quarantine_status'] or '-'}` targets/models/top5 `{summary['raw_ranked_model_quarantine_target_count']}/{summary['raw_ranked_model_quarantine_model_count']}/{summary['raw_ranked_model_quarantine_top5_count']}` quarantined/linked/author-present `{summary['raw_ranked_model_quarantine_quarantined_count']}/{summary['raw_ranked_model_quarantine_linked_count']}/{summary['raw_ranked_model_quarantine_author_present_count']}` atoms `{summary['raw_ranked_model_quarantine_atom_count']}`",
@@ -21590,6 +21724,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--organic-ligand-metric-first-operator-fill-kit-json",
         default=DEFAULT_ORGANIC_LIGAND_METRIC_FIRST_OPERATOR_FILL_KIT_JSON,
+    )
+    parser.add_argument(
+        "--organic-ligand-metric-batch-operator-fill-kit-json",
+        default=DEFAULT_ORGANIC_LIGAND_METRIC_BATCH_OPERATOR_FILL_KIT_JSON,
     )
     parser.add_argument(
         "--organic-ligand-metric-evidence-sync-plan-json",

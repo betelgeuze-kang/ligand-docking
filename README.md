@@ -96,16 +96,25 @@ Start with these documents when reviewing delivery readiness:
 
 The repository now includes a CASP17 participation workstream that stays inside the local molecular-dynamics/coarse-grain physics stack. It does not use AlphaFold, ColabFold, ESMFold, OmegaFold, public/template structures, current-target native lookups, or other-team models for the active lane.
 
-Current local status as of 2026-05-25 KST:
+Current local status as of 2026-06-02 KST:
 
-- 16/16 current selected CASP17 protein targets have local FASTA materialization and internal TS artifacts.
-- The local submission floor is green: TS import, format, geometry, confidence, scorecard, shape sanity, and submission gate pass for the current selected target surface.
-- Review-quality visual artifacts are green: local internal-canvas viewer smoke 16/16, PyMOL/studio/surface/confidence/QC render coverage 16/16, molecular showcase images 16/16, and image-quality smoke 272/272.
-- The operational win-tier threshold packet now tracks 27 rows across submission, visual review, local all-atom/sidechain QC, no-leak historical monomer/complex native accuracy, refinement ablation, model selection, and confidence calibration.
-- Highest proven local level remains `review_quality`. Competitive/win-tier readiness is intentionally fail-closed until no-leak historical/native benchmark rows, refinement-ablation evidence, and model-selection/confidence calibration are populated.
+- The CASP17 workbench status is `ready_for_operator_fill`; highest proven local level remains `review_quality`.
+- Current target organization is green: target model folders `19/19`, target object folders/viewers/projections `58/58/58`, and a 3D molecular object atlas with `24` protein folders and `68` object folders.
+- Current package preflight is green for `19/19` targets, with files, format, author fields, sidechain repack status, and sha256 accounting present.
+- The official upload queue is intentionally partial: `10/19` current targets are operator upload-review-ready, while `9/19` are blocked by deadline or official-target state.
+- Prospective strict-blind escrow is ready for `19/19` targets, but competitive proof is still `0` because current-target native structures are pending.
+- MassiveFold external model-selection inputs are `15/15` ready for review-only reranking; this remains external no-native evidence and is not internal prediction proof.
+- Organic ligand LDDT-PLI/BiSyRMSD closure is mapped into a batch operator fill kit, but `0/7` candidates and `0/35` fields are complete.
+- Win-tier proof is still fail-closed: strict-blind slots `0/40`, metric rows `0/440`, required files `0/480`, and sidechain-native benchmark `0/40`.
 
 Primary current documents and artifacts:
 
+- `casp17/WORKBENCH.md`
+- `casp17/CASP17_CURRENT_STATUS_REPORT.md`
+- `casp17/CASP17_WIN_TIER_GOAL.md`
+- `casp17/CASP17_ORGANIC_LIGAND_METRIC_BATCH_OPERATOR_FILL_KIT.md`
+- `casp17/CASP17_3D_MOLECULAR_OBJECT_ATLAS.md`
+- `casp17/CASP17_CURRENT_UPLOAD_QUEUE.md`
 - `docs/casp17_participation_gate_2026-05-21.md`
 - `runs/casp17_readiness_dashboard_current.json`
 - `runs/casp17_win_tier_threshold_packet_current.json`

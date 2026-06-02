@@ -34,6 +34,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     organic_ligand_metric_first_operator_fill_kit_json = (
         tmp_path / "organic_ligand_metric_first_operator_fill_kit.json"
     )
+    organic_ligand_metric_batch_operator_fill_kit_json = (
+        tmp_path / "organic_ligand_metric_batch_operator_fill_kit.json"
+    )
     organic_ligand_metric_evidence_sync_plan_json = (
         tmp_path / "organic_ligand_metric_evidence_sync_plan.json"
     )
@@ -915,6 +918,46 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                 "source_template_count": 1,
                 "source_stub_count": 5,
                 "linked_action_count": 5,
+                "first_field_key": "direct_native_or_source_authority",
+                "first_blocker": "operator_value_missing",
+                "first_next_action": (
+                    "fill operator_value for direct_native_or_source_authority in "
+                    "operator_evidence_template.csv"
+                ),
+                "next_action": (
+                    "fill operator_value for direct_native_or_source_authority in "
+                    "operator_evidence_template.csv"
+                ),
+            }
+        },
+    )
+    _write_json(
+        organic_ligand_metric_batch_operator_fill_kit_json,
+        {
+            "summary": {
+                "organic_ligand_metric_batch_operator_fill_kit_status": (
+                    "organic_ligand_metric_batch_operator_fill_kit_ready_for_operator_fill"
+                ),
+                "worklist_status": "awaiting_organic_ligand_metric_operator_fill_values",
+                "candidate_count": 2,
+                "ready_candidate_count": 0,
+                "blocked_candidate_count": 2,
+                "field_count": 10,
+                "field_ready_count": 0,
+                "field_blocked_count": 10,
+                "operator_value_missing_count": 10,
+                "operator_evidence_ref_missing_count": 10,
+                "operator_clearance_missing_count": 10,
+                "operator_id_missing_count": 10,
+                "source_template_count": 2,
+                "source_stub_count": 10,
+                "linked_action_count": 10,
+                "batch_folder": "casp17/organic_ligand_metric_batch_operator_fill_kit",
+                "operator_fill_intake_batch_csv": (
+                    "casp17/organic_ligand_metric_batch_operator_fill_kit/"
+                    "operator_fill_intake_batch.csv"
+                ),
+                "first_candidate_id": "organic_ligand_slot_candidate_001",
                 "first_field_key": "direct_native_or_source_authority",
                 "first_blocker": "operator_value_missing",
                 "first_next_action": (
@@ -5864,6 +5907,8 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(organic_ligand_metric_operator_fill_worklist_json),
             "--organic-ligand-metric-first-operator-fill-kit-json",
             str(organic_ligand_metric_first_operator_fill_kit_json),
+            "--organic-ligand-metric-batch-operator-fill-kit-json",
+            str(organic_ligand_metric_batch_operator_fill_kit_json),
             "--organic-ligand-metric-evidence-sync-plan-json",
             str(organic_ligand_metric_evidence_sync_plan_json),
             "--molecular-object-metric-handoff-completion-audit-json",
@@ -6337,6 +6382,13 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "candidate `organic_ligand_slot_candidate_001` target `HIST_COMPLEX_01` ligand `ligand_001`" in workbench_md
     assert "fields ready/blocked/total `0/5/5` missing value/evidence/clearance/operator `5/5/5/5`" in workbench_md
     assert "sources template/stub/action `1/5/5`" in workbench_md
+    assert (
+        "organic ligand metric batch operator fill kit: "
+        "`organic_ligand_metric_batch_operator_fill_kit_ready_for_operator_fill`"
+    ) in workbench_md
+    assert "candidates ready/blocked/total `0/2/2` fields ready/blocked/total `0/10/10`" in workbench_md
+    assert "folder `casp17/organic_ligand_metric_batch_operator_fill_kit`" in workbench_md
+    assert "batch `casp17/organic_ligand_metric_batch_operator_fill_kit/operator_fill_intake_batch.csv`" in workbench_md
     assert (
         "organic ligand metric evidence sync plan: "
         "`awaiting_organic_ligand_metric_evidence_review`"
@@ -7152,6 +7204,40 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     )
     assert payload["summary"]["organic_ligand_metric_first_operator_fill_kit_first_next_action"] == (
         "fill operator_value for direct_native_or_source_authority in operator_evidence_template.csv"
+    )
+    assert payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_status"] == (
+        "organic_ligand_metric_batch_operator_fill_kit_ready_for_operator_fill"
+    )
+    assert payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_worklist_status"] == (
+        "awaiting_organic_ligand_metric_operator_fill_values"
+    )
+    assert payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_candidate_count"] == 2
+    assert payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_ready_candidate_count"] == 0
+    assert payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_blocked_candidate_count"] == 2
+    assert payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_field_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_ready_field_count"] == 0
+    assert payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_blocked_field_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_value_missing_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_evidence_ref_missing_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_clearance_missing_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_operator_id_missing_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_source_template_count"] == 2
+    assert payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_source_stub_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_linked_action_count"] == 10
+    assert payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_folder"] == (
+        "casp17/organic_ligand_metric_batch_operator_fill_kit"
+    )
+    assert payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_batch_csv"] == (
+        "casp17/organic_ligand_metric_batch_operator_fill_kit/operator_fill_intake_batch.csv"
+    )
+    assert payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_first_candidate_id"] == (
+        "organic_ligand_slot_candidate_001"
+    )
+    assert payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_first_field_key"] == (
+        "direct_native_or_source_authority"
+    )
+    assert payload["summary"]["organic_ligand_metric_batch_operator_fill_kit_first_blocker"] == (
+        "operator_value_missing"
     )
     assert payload["summary"]["organic_ligand_metric_evidence_sync_plan_status"] == (
         "awaiting_organic_ligand_metric_evidence_review"
@@ -10754,6 +10840,24 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "sources:1/5/5" in by_id["organic_ligand_metric_first_operator_fill_kit"]["blockers"]
     assert "first:direct_native_or_source_authority/operator_value_missing" in by_id[
         "organic_ligand_metric_first_operator_fill_kit"
+    ]["blockers"]
+    assert by_id["organic_ligand_metric_batch_operator_fill_kit"]["status"] == (
+        "organic_ligand_metric_batch_operator_fill_kit_ready_for_operator_fill"
+    )
+    assert by_id["organic_ligand_metric_batch_operator_fill_kit"]["ready_count"] == 0
+    assert by_id["organic_ligand_metric_batch_operator_fill_kit"]["blocked_count"] == 10
+    assert by_id["organic_ligand_metric_batch_operator_fill_kit"]["total_count"] == 10
+    assert "candidates:0/2/2" in by_id["organic_ligand_metric_batch_operator_fill_kit"]["blockers"]
+    assert "fields:0/10/10" in by_id["organic_ligand_metric_batch_operator_fill_kit"]["blockers"]
+    assert "missing:10/10/10/10" in by_id[
+        "organic_ligand_metric_batch_operator_fill_kit"
+    ]["blockers"]
+    assert "sources:2/10/10" in by_id["organic_ligand_metric_batch_operator_fill_kit"]["blockers"]
+    assert "folder:casp17/organic_ligand_metric_batch_operator_fill_kit" in by_id[
+        "organic_ligand_metric_batch_operator_fill_kit"
+    ]["blockers"]
+    assert "first:organic_ligand_slot_candidate_001/direct_native_or_source_authority" in by_id[
+        "organic_ligand_metric_batch_operator_fill_kit"
     ]["blockers"]
     assert by_id["organic_ligand_metric_evidence_sync_plan"]["status"] == (
         "awaiting_organic_ligand_metric_evidence_review"
