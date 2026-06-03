@@ -187,6 +187,13 @@ def build_goal_release_decision_gate(
     product_architecture_cameo_registration_tokens = list(
         product_architecture.get("cameo_registration_approval_tokens_required") or []
     )
+    public_benchmark_required_for_product_release = True
+    cameo_live_validation_channel = True
+    cameo_live_validation_required_for_product_release = False
+    cameo_registration_required_for_product_release = False
+    cameo_official_results_required_for_product_release = False
+    release_blocked_by_public_benchmark = not product_architecture_public_benchmark_ready
+    release_blocked_by_cameo_live_validation = False
     product_commercial_independence_ready = (
         _text(product_independence.get("status")) == "product_commercial_independence_gate_ready"
         and bool(product_independence.get("commercial_independent_product_claim_allowed") is True)
@@ -497,6 +504,13 @@ def build_goal_release_decision_gate(
         "product_architecture_public_benchmark_requires_paid_vps": bool(
             product_architecture.get("public_benchmark_requires_paid_vps") is True
         ),
+        "public_benchmark_required_for_product_release": public_benchmark_required_for_product_release,
+        "release_blocked_by_public_benchmark": release_blocked_by_public_benchmark,
+        "cameo_live_validation_channel": cameo_live_validation_channel,
+        "cameo_live_validation_required_for_product_release": cameo_live_validation_required_for_product_release,
+        "cameo_registration_required_for_product_release": cameo_registration_required_for_product_release,
+        "cameo_official_results_required_for_product_release": cameo_official_results_required_for_product_release,
+        "release_blocked_by_cameo_live_validation": release_blocked_by_cameo_live_validation,
         "product_architecture_cameo_official_validation_evidence_ready": product_architecture_cameo_official_evidence_ready,
         "product_architecture_cameo_receiver_smoke_status": product_architecture_cameo_receiver_smoke_status,
         "product_architecture_cameo_api_dependency_status": product_architecture_cameo_api_dependency_status,
@@ -649,6 +663,13 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_architecture_public_benchmark_requires_24h_server: `{s['product_architecture_public_benchmark_requires_24h_server']}`",
         f"- product_architecture_public_benchmark_requires_competition_season: `{s['product_architecture_public_benchmark_requires_competition_season']}`",
         f"- product_architecture_public_benchmark_requires_paid_vps: `{s['product_architecture_public_benchmark_requires_paid_vps']}`",
+        f"- public_benchmark_required_for_product_release: `{s['public_benchmark_required_for_product_release']}`",
+        f"- release_blocked_by_public_benchmark: `{s['release_blocked_by_public_benchmark']}`",
+        f"- cameo_live_validation_channel: `{s['cameo_live_validation_channel']}`",
+        f"- cameo_live_validation_required_for_product_release: `{s['cameo_live_validation_required_for_product_release']}`",
+        f"- cameo_registration_required_for_product_release: `{s['cameo_registration_required_for_product_release']}`",
+        f"- cameo_official_results_required_for_product_release: `{s['cameo_official_results_required_for_product_release']}`",
+        f"- release_blocked_by_cameo_live_validation: `{s['release_blocked_by_cameo_live_validation']}`",
         f"- product_architecture_cameo_official_validation_evidence_ready: `{s['product_architecture_cameo_official_validation_evidence_ready']}`",
         f"- product_architecture_cameo_receiver_smoke_status: `{s['product_architecture_cameo_receiver_smoke_status']}`",
         f"- product_architecture_cameo_api_dependency_status: `{s['product_architecture_cameo_api_dependency_status']}`",

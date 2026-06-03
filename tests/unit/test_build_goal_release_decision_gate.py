@@ -388,6 +388,13 @@ def test_goal_release_decision_gate_blocks_current_incomplete_goal() -> None:
     assert summary["product_architecture_public_benchmark_status"] == "blocked_product_public_benchmark_contract"
     assert summary["product_architecture_public_benchmark_blocked_suite_count"] == 5
     assert summary["product_architecture_public_benchmark_requires_24h_server"] is False
+    assert summary["public_benchmark_required_for_product_release"] is True
+    assert summary["release_blocked_by_public_benchmark"] is True
+    assert summary["cameo_live_validation_channel"] is True
+    assert summary["cameo_live_validation_required_for_product_release"] is False
+    assert summary["cameo_registration_required_for_product_release"] is False
+    assert summary["cameo_official_results_required_for_product_release"] is False
+    assert summary["release_blocked_by_cameo_live_validation"] is False
     assert summary["product_architecture_cameo_official_validation_evidence_ready"] is False
     assert summary["product_architecture_cameo_receiver_smoke_status"] == "blocked_cameo_receiver_smoke"
     assert summary["product_architecture_cameo_api_dependency_status"] == "blocked_cameo_api_dependency_readiness"
@@ -462,6 +469,34 @@ def test_goal_release_decision_gate_allows_only_when_all_lanes_are_complete() ->
     assert summary["release_allowed"] is True
     assert summary["blocker_count"] == 0
     assert all(row["status"] == "pass" for row in payload["rows"])
+
+
+def test_goal_release_decision_gate_does_not_block_on_optional_cameo_live_validation() -> None:
+    payload = mod.build_goal_release_decision_gate(
+        product_pilot_packet=_ready_product(),
+        product_architecture_packet=_ready_product_architecture(),
+        product_commercial_independence_packet=_ready_product_independence(),
+        cameo_validation_packet=_blocked_cameo_validation(),
+        cameo_capability_packet=_blocked_cameo_capability(),
+        goal_rollup_packet=_ready_rollup(),
+        operator_action_board_packet=_clear_action_board(),
+        transition_cleanup_preflight_packet=_transition_cleanup("transition_cleanup_execution_complete"),
+        ligand_cleanup_preflight_packet=_ligand_cleanup("ligand_heavy_cleanup_execution_complete"),
+        protected_cleanup_review_packet=_protected_cleanup(0),
+        cleanup_postcheck_contract_packet=_ready_cleanup_postcheck(),
+        goal_api_surface_contract_packet=_ready_goal_api_surface_contract(),
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "goal_release_ready"
+    assert summary["release_allowed"] is True
+    assert summary["cameo_architecture_validation_ready"] is False
+    assert summary["cameo_live_validation_channel"] is True
+    assert summary["cameo_live_validation_required_for_product_release"] is False
+    assert summary["cameo_registration_required_for_product_release"] is False
+    assert summary["cameo_official_results_required_for_product_release"] is False
+    assert summary["release_blocked_by_cameo_live_validation"] is False
+    assert not any("cameo" in row["check"] for row in payload["rows"])
 
 
 def test_goal_release_decision_gate_accepts_explicit_keep_policy_gate() -> None:
@@ -729,6 +764,11 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
         ]
     )
 
-    assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["status"] == "blocked_goal_release_decision"
+    summary = json.loads(out_json.read_text(encoding="utf-8"))["summary"]
+    assert summary["status"] == "blocked_goal_release_decision"
+    assert summary["release_blocked_by_public_benchmark"] is True
+    assert summary["cameo_live_validation_required_for_product_release"] is False
     assert out_csv.read_text(encoding="utf-8").startswith("lane_id,check,")
-    assert "Goal Release Decision Gate" in out_md.read_text(encoding="utf-8")
+    md_text = out_md.read_text(encoding="utf-8")
+    assert "Goal Release Decision Gate" in md_text
+    assert "cameo_live_validation_required_for_product_release" in md_text
