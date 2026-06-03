@@ -399,6 +399,8 @@ def test_goal_bottleneck_briefing_links_public_benchmark_work_order() -> None:
             "open_suite_count": 5,
             "materialization_required_suite_count": 5,
             "scorecard_required_suite_count": 0,
+            "continuous_validation_command_count": 5,
+            "continuous_validation_command": "python3 tools/build_lit_pcba_materialization_manifest.py && python3 tools/build_lit_pcba_scorecard.py",
         }
     }
 
@@ -415,9 +417,13 @@ def test_goal_bottleneck_briefing_links_public_benchmark_work_order() -> None:
     assert summary["public_benchmark_work_order_status"] == "product_public_benchmark_work_order_ready"
     assert summary["public_benchmark_open_suite_count"] == 5
     assert summary["public_benchmark_materialization_required_suite_count"] == 5
+    assert summary["public_benchmark_continuous_validation_command_count"] == 5
+    assert "build_lit_pcba_scorecard.py" in summary["public_benchmark_continuous_validation_command"]
     assert row["bottleneck_kind"] == "blocked_until_public_benchmark_validation"
     assert row["public_benchmark_work_order_json"] == "runs/product_public_benchmark_work_order_current.json"
     assert row["public_benchmark_open_suite_count"] == 5
+    assert row["public_benchmark_continuous_validation_command_count"] == 5
+    assert "build_lit_pcba_scorecard.py" in row["public_benchmark_continuous_validation_command"]
     assert "runs/product_public_benchmark_work_order_current.json" in row["source_artifacts"]
 
 

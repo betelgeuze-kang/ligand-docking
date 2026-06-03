@@ -193,6 +193,21 @@ def _product_work_order() -> dict:
     }
 
 
+def _public_benchmark_work_order() -> dict:
+    return {
+        "summary": {
+            "status": "product_public_benchmark_work_order_ready",
+            "continuous_validation_command_count": 5,
+            "continuous_validation_command": (
+                "python3 tools/build_lit_pcba_materialization_manifest.py && "
+                "python3 tools/build_lit_pcba_scorecard.py && "
+                "python3 tools/sync_product_public_benchmark_scorecard_intake.py && "
+                "python3 tools/build_product_public_benchmark_contract.py"
+            ),
+        }
+    }
+
+
 def _cameo_validation_repair() -> dict:
     return {
         "summary": {"status": "operator_input_required"},
@@ -575,6 +590,7 @@ def test_goal_release_burndown_public_benchmark_blocker_builds_work_order_comman
         operator_action_board_packet=_operator_action_board(),
         product_work_order_packet=_product_work_order(),
         product_pilot_packet=product_pilot,
+        public_benchmark_work_order_packet=_public_benchmark_work_order(),
         cameo_validation_repair_packet={},
         cameo_runtime_repair_packet={},
         cameo_capability_packet={},
@@ -585,11 +601,11 @@ def test_goal_release_burndown_public_benchmark_blocker_builds_work_order_comman
 
     row = payload["rows"][0]
     assert row["burndown_status"] == "blocked_until_public_benchmark_validation"
-    assert "build_product_public_benchmark_work_order.py" in row["command"]
+    assert row["command"].startswith("python3 tools/build_lit_pcba_materialization_manifest.py")
+    assert "build_lit_pcba_scorecard.py" in row["command"]
+    assert "sync_product_public_benchmark_scorecard_intake.py" in row["command"]
     assert "build_product_public_benchmark_contract.py" in row["command"]
-    assert "build_product_commercial_independence_gate.py" in row["command"]
-    assert "build_product_release_operations_dossier.py" in row["command"]
-    assert "build_goal_bottleneck_briefing.py" in row["command"]
+    assert "public_benchmark_continuous_validation_command_count=5" in row["reason"]
     assert "runs/product_public_benchmark_work_order_current.json" in row["source_artifact"]
 
 

@@ -283,6 +283,7 @@ def _product_burndown_row(
     product_gate_repair: dict[str, Any],
     product_work_order: dict[str, Any],
     product_pilot_packet: dict[str, Any],
+    public_benchmark_work_order: dict[str, Any],
     product_preflight_path: str,
     product_gate_repair_path: str,
     product_work_order_path: str,
@@ -308,6 +309,18 @@ def _product_burndown_row(
     recommended_action = "Review and approve product execution, then assemble and validate the product local-delivery bundle before refreshing pilot evidence."
     command = _first_command(product_work_order, "execution") or _first_command(product_work_order)
     reason = _text(release_row.get("reason"))
+    public_benchmark = _summary(public_benchmark_work_order)
+    public_benchmark_continuous_command = _text(public_benchmark.get("continuous_validation_command"))
+    public_benchmark_refresh_command = (
+        "python3 tools/build_product_public_benchmark_work_order.py && "
+        "python3 tools/build_product_public_benchmark_contract.py && "
+        "python3 tools/build_product_commercial_independence_gate.py && "
+        "python3 tools/build_product_architecture_contract.py && "
+        "python3 tools/build_product_release_operations_dossier.py && "
+        "python3 tools/build_goal_release_decision_gate.py && "
+        "python3 tools/build_goal_release_burndown_work_order.py && "
+        "python3 tools/build_goal_bottleneck_briefing.py"
+    )
     if (
         preflight_ready
         and pilot_delivery_ready
@@ -316,21 +329,16 @@ def _product_burndown_row(
         token = ""
         burndown_status = "blocked_until_public_benchmark_validation"
         recommended_action = (
-            "Product docking execution, bundle assembly, and pilot delivery evidence are ready; run and attach the "
-            "required public benchmark scorecards before treating the architecture contract as release-ready."
+            "Product docking execution, bundle assembly, and pilot delivery evidence are ready; run the public "
+            "benchmark continuous-validation chain, attach scorecard evidence, then refresh release gates."
         )
-        command = (
-            "python3 tools/build_product_public_benchmark_work_order.py && "
-            "python3 tools/build_product_public_benchmark_contract.py && "
-            "python3 tools/build_product_commercial_independence_gate.py && "
-            "python3 tools/build_product_architecture_contract.py && "
-            "python3 tools/build_product_release_operations_dossier.py && "
-            "python3 tools/build_goal_release_decision_gate.py && "
-            "python3 tools/build_goal_release_burndown_work_order.py && "
-            "python3 tools/build_goal_bottleneck_briefing.py"
-        )
+        command = public_benchmark_continuous_command or public_benchmark_refresh_command
         source_artifact = f"{source_artifact};{public_benchmark_work_order_path}"
-        reason = f"{reason}; product_pilot_delivery_ready=True, product_execution_no_longer_blocks_this_check=True"
+        reason = (
+            f"{reason}; product_pilot_delivery_ready=True, product_execution_no_longer_blocks_this_check=True, "
+            f"public_benchmark_work_order_status={_text(public_benchmark.get('status')) or 'missing'}, "
+            f"public_benchmark_continuous_validation_command_count={_int(public_benchmark.get('continuous_validation_command_count'))}"
+        )
     if not preflight_ready:
         source_artifact = f"{product_preflight_path};{product_gate_repair_path};{source_artifact}" if gate_repair else f"{product_preflight_path};{source_artifact}"
         burndown_status = "operator_action_required"
@@ -631,6 +639,7 @@ def build_goal_release_burndown_work_order(
     cleanup_postcheck_contract_packet: dict[str, Any] | None = None,
     product_preflight_packet: dict[str, Any] | None = None,
     product_gate_repair_packet: dict[str, Any] | None = None,
+    public_benchmark_work_order_packet: dict[str, Any] | None = None,
     release_gate_path: str = DEFAULT_RELEASE_GATE_JSON,
     operator_action_board_path: str = DEFAULT_OPERATOR_ACTION_BOARD_JSON,
     product_preflight_path: str = DEFAULT_PRODUCT_PREFLIGHT_JSON,
@@ -671,6 +680,7 @@ def build_goal_release_burndown_work_order(
                         product_gate_repair=product_gate_repair_packet or {},
                         product_work_order=product_work_order_packet,
                         product_pilot_packet=product_pilot_packet,
+                        public_benchmark_work_order=public_benchmark_work_order_packet or {},
                         product_preflight_path=product_preflight_path,
                         product_gate_repair_path=product_gate_repair_path,
                         product_work_order_path=product_work_order_path,
@@ -948,6 +958,7 @@ def main(argv: list[str] | None = None) -> None:
         cleanup_postcheck_contract_packet=_read_json_if_present(args.cleanup_postcheck_contract_json),
         product_preflight_packet=_read_json_if_present(args.product_preflight_json),
         product_gate_repair_packet=_read_json_if_present(args.product_gate_repair_json),
+        public_benchmark_work_order_packet=_read_json_if_present(args.public_benchmark_work_order_json),
         release_gate_path=args.release_gate_json,
         operator_action_board_path=args.operator_action_board_json,
         product_preflight_path=args.product_preflight_json,

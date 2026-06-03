@@ -216,6 +216,9 @@ def build_goal_bottleneck_briefing(
         public_benchmark_blocked = _text(burndown_row.get("burndown_status")) == "blocked_until_public_benchmark_validation"
         if public_benchmark_blocked and public_benchmark_work_order_path not in source_artifacts:
             source_artifacts.append(public_benchmark_work_order_path)
+        public_benchmark_continuous_command = (
+            _text(public_benchmark_work_order.get("continuous_validation_command")) if public_benchmark_blocked else ""
+        )
         size_gb = round(sum(_float(row.get("size_gb")) for row in matched_actions), 3)
         if not size_gb:
             size_gb = round(_float(burndown_row.get("size_gb")), 3)
@@ -257,6 +260,10 @@ def build_goal_bottleneck_briefing(
             "public_benchmark_scorecard_required_suite_count": (
                 _int(public_benchmark_work_order.get("scorecard_required_suite_count")) if public_benchmark_blocked else 0
             ),
+            "public_benchmark_continuous_validation_command_count": (
+                _int(public_benchmark_work_order.get("continuous_validation_command_count")) if public_benchmark_blocked else 0
+            ),
+            "public_benchmark_continuous_validation_command": public_benchmark_continuous_command,
             "size_gb": size_gb,
             **_mutation_flags(),
         }
@@ -312,6 +319,12 @@ def build_goal_bottleneck_briefing(
         "public_benchmark_scorecard_required_suite_count": _int(
             public_benchmark_work_order.get("scorecard_required_suite_count")
         ),
+        "public_benchmark_continuous_validation_command_count": _int(
+            public_benchmark_work_order.get("continuous_validation_command_count")
+        ),
+        "public_benchmark_continuous_validation_command": _text(
+            public_benchmark_work_order.get("continuous_validation_command")
+        ),
         "primary_bottleneck_sequence": _int(primary.get("sequence")),
         "primary_bottleneck_kind": _text(primary.get("bottleneck_kind")),
         "primary_bottleneck_phase": _text(primary.get("phase")),
@@ -356,6 +369,7 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- public_benchmark_open_suite_count: `{s['public_benchmark_open_suite_count']}`",
         f"- public_benchmark_materialization_required_suite_count: `{s['public_benchmark_materialization_required_suite_count']}`",
         f"- public_benchmark_scorecard_required_suite_count: `{s['public_benchmark_scorecard_required_suite_count']}`",
+        f"- public_benchmark_continuous_validation_command_count: `{s['public_benchmark_continuous_validation_command_count']}`",
         "",
         "## Bottlenecks",
         "",
