@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import json
 import re
 from pathlib import Path
 from typing import Any
@@ -28,6 +29,10 @@ REQUIRED_CONSOLE_SCRIPTS = {
     "betelgeuze-cleanup": "betelgeuze_cleanup.cli:main",
 }
 REQUIRED_PACKAGE_PATTERNS = ("betelgeuze_product*", "betelgeuze_cameo*", "betelgeuze_cleanup*")
+DEFAULT_ENVIRONMENT_MANIFEST_JSON = "runs/local_delivery_environment_manifest_current.json"
+DEFAULT_REQUIREMENTS_LOCK_JSON = "runs/local_delivery_requirements_lock_current.json"
+DEFAULT_REQUIREMENTS_LOCK_MD = "runs/local_delivery_requirements_lock_current.md"
+DEFAULT_REQUIREMENTS_LOCK_TXT = "runs/local_delivery_requirements_lock_current.txt"
 
 
 def _text(value: Any) -> str:
@@ -71,6 +76,32 @@ def _read_requirement_lines(path: Path) -> list[str]:
             continue
         lines.append(line)
     return lines
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _summary(payload: dict[str, Any]) -> dict[str, Any]:
+    summary = payload.get("summary")
+    return summary if isinstance(summary, dict) else {}
+
+
+def _bool(value: Any) -> bool:
+    return bool(value is True)
+
+
+def _int(value: Any) -> int:
+    try:
+        return int(float(value or 0))
+    except (TypeError, ValueError):
+        return 0
 
 
 def _requirement_name(line: str) -> str:
@@ -162,6 +193,10 @@ def build_product_commercial_independence_gate(
     root: str | Path = ".",
     runtime_requirements: str = RUNTIME_REQUIREMENTS,
     optional_requirements: tuple[str, ...] = OPTIONAL_REQUIREMENTS,
+    environment_manifest_json: str = DEFAULT_ENVIRONMENT_MANIFEST_JSON,
+    requirements_lock_json: str = DEFAULT_REQUIREMENTS_LOCK_JSON,
+    requirements_lock_md: str = DEFAULT_REQUIREMENTS_LOCK_MD,
+    requirements_lock_txt: str = DEFAULT_REQUIREMENTS_LOCK_TXT,
 ) -> dict[str, Any]:
     root_path = Path(root).resolve()
     runtime_path = root_path / runtime_requirements
@@ -172,6 +207,15 @@ def build_product_commercial_independence_gate(
     project = pyproject["project"]
     scripts = pyproject["scripts"]
     package_includes = pyproject["package_includes"]
+    environment_manifest_path = root_path / environment_manifest_json
+    requirements_lock_json_path = root_path / requirements_lock_json
+    requirements_lock_md_path = root_path / requirements_lock_md
+    requirements_lock_txt_path = root_path / requirements_lock_txt
+    environment_manifest_payload = _read_json(environment_manifest_path)
+    requirements_lock_payload = _read_json(requirements_lock_json_path)
+    environment_manifest = _summary(environment_manifest_payload)
+    requirements_lock = _summary(requirements_lock_payload)
+    requirements_lock_generated_at = _text(requirements_lock.get("generated_at") or requirements_lock_payload.get("generated_at"))
 
     license_path = next((root_path / name for name in LICENSE_CANDIDATES if (root_path / name).is_file()), None)
     license_present = bool(license_path and license_path.read_text(encoding="utf-8", errors="ignore").strip())
@@ -214,6 +258,26 @@ def build_product_commercial_independence_gate(
     non_core_runtime = sorted(runtime_names & NON_CORE_RUNTIME_DEPENDENCIES)
     optional_profiles_separated = optional_profiles_present and not non_core_runtime
     external_api_free_core_runtime = not external_api_runtime
+    dependency_provenance_manifest_present = bool(environment_manifest_path.is_file() and environment_manifest)
+    requirements_lock_artifacts_present = bool(
+        requirements_lock_json_path.is_file()
+        and requirements_lock_md_path.is_file()
+        and requirements_lock_txt_path.is_file()
+        and requirements_lock
+    )
+    requirements_lock_complete = (
+        requirements_lock_artifacts_present
+        and _int(requirements_lock.get("missing_count")) == 0
+        and _int(requirements_lock.get("loose_source_requirement_count")) == 0
+        and _int(requirements_lock.get("missing_input_file_count")) == 0
+    )
+    reproducible_install_manifest_ready = (
+        dependency_provenance_manifest_present
+        and requirements_lock_artifacts_present
+        and _bool(environment_manifest.get("requirements_lock_complete"))
+        and _text(environment_manifest.get("requirements_lock_txt_sha256"))
+        and requirements_lock_generated_at
+    )
 
     rows = [
         _row(
@@ -239,6 +303,42 @@ def build_product_commercial_independence_gate(
             "all runtime requirements use exact pins or direct references",
             runtime_requirements,
             "Commercial handoff needs reproducible runtime dependency resolution rather than loose package names.",
+        ),
+        _row(
+            "dependency_provenance_manifest_present",
+            dependency_provenance_manifest_present,
+            (
+                f"python={_text(environment_manifest.get('python_version')) or 'missing'};"
+                f"git={_text(environment_manifest.get('git_short_commit')) or 'missing'};"
+                f"lock_sha={_text(environment_manifest.get('requirements_lock_txt_sha256')) or 'missing'}"
+            ),
+            "local delivery environment manifest with python, git, and requirements-lock provenance",
+            environment_manifest_json,
+            "Commercial handoff needs an explicit dependency provenance artifact tied to the local delivery environment.",
+        ),
+        _row(
+            "requirements_lock_artifacts_present",
+            requirements_lock_artifacts_present,
+            (
+                f"json={requirements_lock_json_path.is_file()};md={requirements_lock_md_path.is_file()};"
+                f"txt={requirements_lock_txt_path.is_file()};declared={_int(requirements_lock.get('declared_count'))}"
+            ),
+            "requirements lock JSON, Markdown, and TXT artifacts present",
+            f"{requirements_lock_json};{requirements_lock_md};{requirements_lock_txt}",
+            "Reproducible install evidence needs machine-readable, human-readable, and installable lock artifacts.",
+        ),
+        _row(
+            "reproducible_install_manifest_ready",
+            reproducible_install_manifest_ready and requirements_lock_complete,
+            (
+                f"manifest_lock_complete={_bool(environment_manifest.get('requirements_lock_complete'))};"
+                f"lock_missing={_int(requirements_lock.get('missing_count'))};"
+                f"lock_loose_source={_int(requirements_lock.get('loose_source_requirement_count'))};"
+                f"lock_missing_inputs={_int(requirements_lock.get('missing_input_file_count'))}"
+            ),
+            "environment manifest references complete requirements lock with no missing or loose source requirements",
+            f"{environment_manifest_json};{requirements_lock_json}",
+            "The product release gate should prove local install reproduction with explicit lock provenance, not only loose requirements files.",
         ),
         _row(
             "external_api_free_core_runtime",
@@ -321,6 +421,20 @@ def build_product_commercial_independence_gate(
         "runtime_dependency_count": len(runtime_lines),
         "loose_runtime_dependency_count": len(loose_runtime),
         "loose_runtime_dependencies": loose_runtime,
+        "dependency_provenance_manifest_present": dependency_provenance_manifest_present,
+        "dependency_provenance_python_version": _text(environment_manifest.get("python_version")),
+        "dependency_provenance_git_short_commit": _text(environment_manifest.get("git_short_commit")),
+        "dependency_provenance_requirements_lock_txt_sha256": _text(
+            environment_manifest.get("requirements_lock_txt_sha256")
+        ),
+        "requirements_lock_artifacts_present": requirements_lock_artifacts_present,
+        "requirements_lock_complete": requirements_lock_complete,
+        "requirements_lock_declared_count": _int(requirements_lock.get("declared_count")),
+        "requirements_lock_missing_count": _int(requirements_lock.get("missing_count")),
+        "requirements_lock_loose_source_requirement_count": _int(requirements_lock.get("loose_source_requirement_count")),
+        "requirements_lock_missing_input_file_count": _int(requirements_lock.get("missing_input_file_count")),
+        "requirements_lock_generated_at": requirements_lock_generated_at,
+        "reproducible_install_manifest_ready": reproducible_install_manifest_ready and requirements_lock_complete,
         "external_api_runtime_dependency_count": len(external_api_runtime),
         "external_api_runtime_dependencies": external_api_runtime,
         "optional_profiles_present": optional_profiles_present,

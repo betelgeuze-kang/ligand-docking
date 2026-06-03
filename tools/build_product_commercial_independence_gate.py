@@ -39,6 +39,12 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- license_present: `{s['license_present']}`",
         f"- runtime_requirements_present: `{s['runtime_requirements_present']}`",
         f"- loose_runtime_dependency_count: `{s['loose_runtime_dependency_count']}`",
+        f"- dependency_provenance_manifest_present: `{s['dependency_provenance_manifest_present']}`",
+        f"- dependency_provenance_git_short_commit: `{s['dependency_provenance_git_short_commit']}`",
+        f"- dependency_provenance_requirements_lock_txt_sha256: `{s['dependency_provenance_requirements_lock_txt_sha256']}`",
+        f"- requirements_lock_artifacts_present: `{s['requirements_lock_artifacts_present']}`",
+        f"- requirements_lock_complete: `{s['requirements_lock_complete']}`",
+        f"- reproducible_install_manifest_ready: `{s['reproducible_install_manifest_ready']}`",
         f"- external_api_runtime_dependency_count: `{s['external_api_runtime_dependency_count']}`",
         f"- optional_profiles_separated: `{s['optional_profiles_separated']}`",
         f"- deployment_manifest_present: `{s['deployment_manifest_present']}`",
@@ -75,6 +81,10 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build a commercial independent-product packaging gate without installing packages.")
     parser.add_argument("--root", default=str(ROOT))
+    parser.add_argument("--environment-manifest-json", default="runs/local_delivery_environment_manifest_current.json")
+    parser.add_argument("--requirements-lock-json", default="runs/local_delivery_requirements_lock_current.json")
+    parser.add_argument("--requirements-lock-md", default="runs/local_delivery_requirements_lock_current.md")
+    parser.add_argument("--requirements-lock-txt", default="runs/local_delivery_requirements_lock_current.txt")
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -83,7 +93,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
-    payload = build_product_commercial_independence_gate(root=args.root)
+    payload = build_product_commercial_independence_gate(
+        root=args.root,
+        environment_manifest_json=args.environment_manifest_json,
+        requirements_lock_json=args.requirements_lock_json,
+        requirements_lock_md=args.requirements_lock_md,
+        requirements_lock_txt=args.requirements_lock_txt,
+    )
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])
     _write_markdown(args.out_md, payload)

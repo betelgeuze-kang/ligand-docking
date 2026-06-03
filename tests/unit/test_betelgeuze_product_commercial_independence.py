@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from betelgeuze_product.commercial_independence import build_product_commercial_independence_gate
@@ -39,6 +40,39 @@ include = ["betelgeuze_product*", "betelgeuze_cameo*", "betelgeuze_cleanup*"]
     (root / "requirements.txt").write_text(requirements, encoding="utf-8")
     for name in ("requirements-api.txt", "requirements-deploy.txt", "requirements-optional.txt", "requirements-train.txt"):
         (root / name).write_text("# optional profile\nexample-extra==1.0.0\n", encoding="utf-8")
+    runs = root / "runs"
+    runs.mkdir()
+    (runs / "local_delivery_requirements_lock_current.txt").write_text(requirements, encoding="utf-8")
+    (runs / "local_delivery_requirements_lock_current.md").write_text("# Requirements Lock\n", encoding="utf-8")
+    (runs / "local_delivery_requirements_lock_current.json").write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "generated_at": "2026-06-03T00:00:00+09:00",
+                    "declared_count": len([line for line in requirements.splitlines() if line.strip()]),
+                    "missing_count": 0,
+                    "loose_source_requirement_count": 0,
+                    "missing_input_file_count": 0,
+                }
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (runs / "local_delivery_environment_manifest_current.json").write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "python_version": "3.12.2",
+                    "git_short_commit": "abc1234",
+                    "requirements_lock_complete": True,
+                    "requirements_lock_txt_sha256": "abc123",
+                }
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
 
 def test_product_commercial_independence_gate_ready_for_pinned_local_product_tree(tmp_path: Path) -> None:
@@ -52,6 +86,9 @@ def test_product_commercial_independence_gate_ready_for_pinned_local_product_tre
     assert payload["summary"]["pyproject_packaging_metadata_present"] is True
     assert payload["summary"]["package_discovery_present"] is True
     assert payload["summary"]["console_entrypoint_targets_present"] is True
+    assert payload["summary"]["dependency_provenance_manifest_present"] is True
+    assert payload["summary"]["requirements_lock_artifacts_present"] is True
+    assert payload["summary"]["reproducible_install_manifest_ready"] is True
     assert payload["summary"]["blocker_count"] == 0
     assert all(row["status"] == "pass" for row in payload["rows"])
 
@@ -65,8 +102,25 @@ def test_product_commercial_independence_gate_blocks_loose_external_runtime_and_
     assert payload["summary"]["commercial_independent_product_claim_allowed"] is False
     assert payload["summary"]["loose_runtime_dependency_count"] == 3
     assert payload["summary"]["external_api_runtime_dependencies"] == ["openai"]
+    assert payload["summary"]["reproducible_install_manifest_ready"] is True
     failed_checks = {row["check"] for row in payload["rows"] if row["status"] == "fail"}
     assert {"license_file_present", "runtime_dependencies_pinned", "external_api_free_core_runtime"} <= failed_checks
+
+
+def test_product_commercial_independence_gate_blocks_missing_install_provenance(tmp_path: Path) -> None:
+    _write_minimal_product_tree(tmp_path, "numpy==1.26.4\n")
+    for path in (tmp_path / "runs").iterdir():
+        path.unlink()
+
+    payload = build_product_commercial_independence_gate(root=tmp_path)
+
+    failed_checks = {row["check"] for row in payload["rows"] if row["status"] == "fail"}
+    assert {
+        "dependency_provenance_manifest_present",
+        "requirements_lock_artifacts_present",
+        "reproducible_install_manifest_ready",
+    } <= failed_checks
+    assert payload["summary"]["reproducible_install_manifest_ready"] is False
 
 
 def test_product_commercial_independence_gate_blocks_non_core_runtime_dependencies(tmp_path: Path) -> None:

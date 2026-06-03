@@ -42,6 +42,39 @@ include = ["betelgeuze_product*", "betelgeuze_cameo*", "betelgeuze_cleanup*"]
     (root / "requirements.txt").write_text("numpy==1.26.4\n", encoding="utf-8")
     for name in ("requirements-api.txt", "requirements-deploy.txt", "requirements-optional.txt", "requirements-train.txt"):
         (root / name).write_text("# optional profile\n", encoding="utf-8")
+    runs = root / "runs"
+    runs.mkdir()
+    (runs / "local_delivery_requirements_lock_current.txt").write_text("numpy==1.26.4\n", encoding="utf-8")
+    (runs / "local_delivery_requirements_lock_current.md").write_text("# Requirements Lock\n", encoding="utf-8")
+    (runs / "local_delivery_requirements_lock_current.json").write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "generated_at": "2026-06-03T00:00:00+09:00",
+                    "declared_count": 1,
+                    "missing_count": 0,
+                    "loose_source_requirement_count": 0,
+                    "missing_input_file_count": 0,
+                }
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (runs / "local_delivery_environment_manifest_current.json").write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "python_version": "3.12.2",
+                    "git_short_commit": "abc1234",
+                    "requirements_lock_complete": True,
+                    "requirements_lock_txt_sha256": "abc123",
+                }
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     out_json = tmp_path / "gate.json"
     out_csv = tmp_path / "gate.csv"
     out_md = tmp_path / "gate.md"
@@ -53,5 +86,6 @@ include = ["betelgeuze_product*", "betelgeuze_cameo*", "betelgeuze_cleanup*"]
     assert payload["summary"]["product_cli_surface_present"] is True
     assert payload["summary"]["pyproject_packaging_metadata_present"] is True
     assert payload["summary"]["console_entrypoint_targets_present"] is True
+    assert payload["summary"]["reproducible_install_manifest_ready"] is True
     assert out_csv.read_text(encoding="utf-8").startswith("check,status,")
     assert "Product Commercial Independence Gate" in out_md.read_text(encoding="utf-8")

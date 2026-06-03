@@ -295,11 +295,14 @@ def build_product_architecture_contract(
             observed=(
                 f"commercial_status={_text(commercial.get('status')) or 'missing'};"
                 f"claim_allowed={_bool(commercial.get('commercial_independent_product_claim_allowed'))};"
+                f"dependency_provenance={_bool(commercial.get('dependency_provenance_manifest_present'))};"
+                f"requirements_lock={_bool(commercial.get('requirements_lock_artifacts_present'))};"
+                f"reproducible_install={_bool(commercial.get('reproducible_install_manifest_ready'))};"
                 f"release_allowed={release_allowed}"
             ),
-            required="commercial-independence gate ready and release claim allowed by local evidence",
+            required="commercial-independence gate ready with license, dependency provenance, reproducible install, and release claim allowed by local evidence",
             artifact_path=f"{commercial_independence_path};{product_release_path}",
-            reason="The product cannot be called commercially independent until license and packaging evidence clear.",
+            reason="The product cannot be called commercially independent until license, packaging, dependency provenance, and reproducible install evidence clear.",
         ),
         _row(
             lane_id="product_service_boundary_contract",
@@ -497,6 +500,15 @@ def build_product_architecture_contract(
         "public_benchmark_requires_competition_season": _bool(public_benchmark.get("requires_competition_season")),
         "public_benchmark_requires_paid_vps": _bool(public_benchmark.get("requires_paid_vps")),
         "commercial_independence_ready": commercial_ready,
+        "commercial_dependency_provenance_manifest_present": _bool(commercial.get("dependency_provenance_manifest_present")),
+        "commercial_requirements_lock_artifacts_present": _bool(commercial.get("requirements_lock_artifacts_present")),
+        "commercial_reproducible_install_manifest_ready": _bool(commercial.get("reproducible_install_manifest_ready")),
+        "commercial_dependency_provenance_git_short_commit": _text(
+            commercial.get("dependency_provenance_git_short_commit")
+        ),
+        "commercial_dependency_provenance_requirements_lock_txt_sha256": _text(
+            commercial.get("dependency_provenance_requirements_lock_txt_sha256")
+        ),
         "cameo_local_surface_ready": cameo_local_surface_ready,
         "cameo_service_boundary_ready": cameo_service_boundary_ready,
         "cameo_service_boundary_status": _text(cameo_architecture.get("cameo_service_boundary_status")),
