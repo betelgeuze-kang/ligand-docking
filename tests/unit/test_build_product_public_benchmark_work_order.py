@@ -30,10 +30,13 @@ def _blocked_public_benchmark_packet() -> dict:
                 "primary_metric_threshold": 0.6,
                 "materialization_manifest_status": "blocked_public_benchmark_materialization",
                 "materialization_manifest_blockers": "dataset_artifact_missing;result_artifact_missing",
+                "operator_input_artifacts": "data/public_benchmarks/dude_z_decoy_smoke",
+                "operator_output_artifacts": "runs/dude_z_decoy_smoke_benchmark_results_current.csv",
                 "scorecard_json_summary_status": "blocked_public_benchmark_suite_scorecard",
                 "blockers": "materialization_manifest_not_ready,scorecard_json_status_not_pass",
                 "materialization_run_command": "python3 tools/build_public_benchmark_materialization_manifest.py --suite-id dude_z_decoy_smoke",
                 "run_command": "python3 tools/build_public_benchmark_suite_scorecard.py --suite-id dude_z_decoy_smoke",
+                "scorecard_run_command_template": "python3 tools/build_public_benchmark_suite_scorecard.py --suite-id dude_z_decoy_smoke --primary-metric-value OPERATOR_FILL_METRIC",
             },
             {
                 "suite_id": "casp_archive_structure_regression",
@@ -47,10 +50,13 @@ def _blocked_public_benchmark_packet() -> dict:
                 "primary_metric_value": 0.0,
                 "primary_metric_threshold": 0.5,
                 "materialization_manifest_status": "public_benchmark_materialization_ready",
+                "operator_input_artifacts": "data/public_benchmarks/casp_archive_structure_regression",
+                "operator_output_artifacts": "runs/casp_archive_structure_regression_benchmark_results_current.csv",
                 "scorecard_json_summary_status": "blocked_public_benchmark_suite_scorecard",
                 "blockers": "scorecard_json_status_not_pass,scorecard_status_not_pass",
                 "materialization_run_command": "python3 tools/build_public_benchmark_materialization_manifest.py --suite-id casp_archive_structure_regression",
                 "run_command": "python3 tools/build_public_benchmark_suite_scorecard.py --suite-id casp_archive_structure_regression",
+                "scorecard_run_command_template": "python3 tools/build_public_benchmark_suite_scorecard.py --suite-id casp_archive_structure_regression --primary-metric-value OPERATOR_FILL_METRIC",
             },
         ],
     }
@@ -85,20 +91,25 @@ def test_product_public_benchmark_work_order_maps_suite_blockers_to_commands() -
         assert row["blocker"]
         assert row["required_input"]
         assert row["required_output"]
+        assert row["operator_input_artifacts"].startswith("data/")
+        assert row["operator_output_artifacts"].startswith("runs/")
         assert row["operator_input_required"] is True
         assert row["run_command"]
         assert row["continuous_validation_command"]
         assert row["scorecard_row_csv"].endswith("_scorecard_row_current.csv")
         assert "sync_product_public_benchmark_scorecard_intake.py" in row["scorecard_intake_sync_command"]
     assert "local public benchmark dataset/result artifacts" in rows_by_suite["dude_z_decoy_smoke"]["required_input"]
+    assert "operator_input_artifacts=data/public_benchmarks/dude_z_decoy_smoke" in rows_by_suite["dude_z_decoy_smoke"]["required_input"]
     assert "passing scorecard JSON/CSV evidence" in rows_by_suite["casp_archive_structure_regression"]["required_input"]
     assert "materialization_manifest=" in rows_by_suite["dude_z_decoy_smoke"]["required_output"]
     assert "scorecard_json=" in rows_by_suite["dude_z_decoy_smoke"]["required_output"]
     assert "scorecard_row_csv=runs/dude_z_decoy_smoke_scorecard_row_current.csv" in rows_by_suite["dude_z_decoy_smoke"]["required_output"]
+    assert "operator_output_artifacts=runs/dude_z_decoy_smoke_benchmark_results_current.csv" in rows_by_suite["dude_z_decoy_smoke"]["required_output"]
     assert "build_public_benchmark_materialization_manifest.py" in rows_by_suite["dude_z_decoy_smoke"]["materialization_command"]
     assert "build_public_benchmark_materialization_manifest.py" in rows_by_suite["dude_z_decoy_smoke"]["run_command"]
     assert "build_public_benchmark_suite_scorecard.py" in rows_by_suite["casp_archive_structure_regression"]["run_command"]
     assert "build_public_benchmark_suite_scorecard.py" in rows_by_suite["casp_archive_structure_regression"]["continuous_validation_command"]
+    assert "OPERATOR_FILL_METRIC" in rows_by_suite["casp_archive_structure_regression"]["scorecard_command_template"]
     assert "sync_product_public_benchmark_scorecard_intake.py" not in rows_by_suite["casp_archive_structure_regression"]["continuous_validation_command"]
     assert "build_product_public_benchmark_contract.py" in rows_by_suite["dude_z_decoy_smoke"]["refresh_command"]
     assert "build_goal_release_decision_gate.py" in rows_by_suite["dude_z_decoy_smoke"]["refresh_command"]
@@ -121,6 +132,8 @@ def test_product_public_benchmark_work_order_uses_lit_pcba_scorecard_row_csv() -
             "primary_metric_threshold": 1.2,
             "materialization_manifest_status": "blocked_lit_pcba_materialization",
             "materialization_manifest_blockers": "archive_missing",
+            "operator_input_artifacts": "data/public_benchmarks/lit_pcba/LIT_PCBA_AVE_docked_released.tar.xz",
+            "operator_output_artifacts": "runs/lit_pcba_scores_current.csv;runs/lit_pcba_labels_current.csv",
             "scorecard_json_summary_status": "blocked_lit_pcba_scorecard",
             "blockers": "materialization_manifest_not_ready,scorecard_json_status_not_pass",
             "materialization_run_command": "python3 tools/build_lit_pcba_materialization_manifest.py",
@@ -165,6 +178,8 @@ def test_build_product_public_benchmark_work_order_tool_writes_outputs(tmp_path:
     assert "materialization_manifest" in csv_text
     assert "required_input" in csv_text
     assert "required_output" in csv_text
+    assert "operator_input_artifacts" in csv_text
+    assert "operator_output_artifacts" in csv_text
     assert "run_command" in csv_text
     assert "continuous_validation_command" in csv_text
     assert "scorecard_row_csv" in csv_text
@@ -173,3 +188,5 @@ def test_build_product_public_benchmark_work_order_tool_writes_outputs(tmp_path:
     assert "run_command" in md_text
     assert "Continuous Validation" in md_text
     assert "scorecard_intake_sync" in md_text
+    assert "input artifacts" in md_text
+    assert "scorecard_template" in md_text

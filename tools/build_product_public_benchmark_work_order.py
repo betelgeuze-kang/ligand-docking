@@ -66,14 +66,14 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         "## Suites",
         "",
-        "| suite | status | metric | threshold | required_input | required_output | blocker |",
-        "| --- | --- | --- | ---: | --- | --- | --- |",
+        "| suite | status | metric | threshold | input artifacts | output artifacts | required_input | required_output | blocker |",
+        "| --- | --- | --- | ---: | --- | --- | --- | --- | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
             f"| `{row['suite_id']}` | `{row['work_order_status']}` | `{row['primary_metric']}` | "
-            f"`{row['threshold']}` | `{row['required_input']}` | `{row['required_output']}` | "
-            f"`{row['blocker']}` |"
+            f"`{row['threshold']}` | `{row['operator_input_artifacts']}` | `{row['operator_output_artifacts']}` | "
+            f"`{row['required_input']}` | `{row['required_output']}` | `{row['blocker']}` |"
         )
     lines.extend(["", "## Commands", ""])
     lines.extend(["### Continuous Validation", "", f"- command: `{s['continuous_validation_command']}`", ""])
@@ -86,6 +86,7 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
                 f"- continuous_validation_command: `{row['continuous_validation_command']}`",
                 f"- materialization: `{row['materialization_command']}`",
                 f"- scorecard: `{row['scorecard_command']}`",
+                f"- scorecard_template: `{row['scorecard_command_template']}`",
                 f"- scorecard_row_csv: `{row['scorecard_row_csv']}`",
                 f"- scorecard_intake_sync: `{row['scorecard_intake_sync_command']}`",
                 f"- refresh: `{row['refresh_command']}`",

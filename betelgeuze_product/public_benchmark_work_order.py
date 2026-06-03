@@ -85,10 +85,13 @@ def _required_input(source: dict[str, Any], *, status: str) -> str:
     dataset_source_url = _text(source.get("dataset_source_url"))
     materialization_manifest = _text(source.get("materialization_manifest_json"))
     scorecard_json = _text(source.get("scorecard_json"))
+    operator_inputs = _text(source.get("operator_input_artifacts"))
     if status == "materialization_required":
         return (
             f"local public benchmark dataset/result artifacts for {dataset_source_url}; "
-            f"materialization_manifest={materialization_manifest}; blockers={materialization_blockers or blockers or 'not_ready'}"
+            f"materialization_manifest={materialization_manifest}; "
+            f"operator_input_artifacts={operator_inputs or 'missing'}; "
+            f"blockers={materialization_blockers or blockers or 'not_ready'}"
         )
     if status == "scorecard_required":
         return (
@@ -132,10 +135,14 @@ def build_product_public_benchmark_work_order(
             scorecard_command=scorecard_command,
         )
         required_input = _required_input(source, status=status)
+        operator_input_artifacts = _text(source.get("operator_input_artifacts"))
+        operator_output_artifacts = _text(source.get("operator_output_artifacts"))
+        scorecard_command_template = _text(source.get("scorecard_run_command_template"))
         required_output = (
             f"materialization_manifest={_text(source.get('materialization_manifest_json'))};"
             f"scorecard_json={_text(source.get('scorecard_json'))};"
             f"scorecard_row_csv={scorecard_row_csv};"
+            f"operator_output_artifacts={operator_output_artifacts or 'missing'};"
             f"refresh={public_benchmark_path}"
         )
         rows.append(
@@ -157,6 +164,8 @@ def build_product_public_benchmark_work_order(
                 "continuous_validation_command": continuous_validation_command,
                 "dataset_artifact": _text(source.get("materialization_manifest_json")),
                 "result_artifact": _text(source.get("scorecard_json")),
+                "operator_input_artifacts": operator_input_artifacts,
+                "operator_output_artifacts": operator_output_artifacts,
                 "scorecard_row_csv": scorecard_row_csv,
                 "primary_metric": _text(source.get("primary_metric")),
                 "primary_metric_value": source.get("primary_metric_value", 0.0),
@@ -167,6 +176,7 @@ def build_product_public_benchmark_work_order(
                 "scorecard_blockers": blockers,
                 "materialization_command": materialization_command,
                 "scorecard_command": scorecard_command,
+                "scorecard_command_template": scorecard_command_template,
                 "scorecard_intake_sync_command": scorecard_intake_sync_command,
                 "refresh_command": refresh_command,
                 "requires_download_approval": False,

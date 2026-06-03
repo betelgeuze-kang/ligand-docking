@@ -133,6 +133,27 @@ def _read_materialization_summary(suite_id: str, *, root: Path) -> tuple[Path, b
     return path, True, summary if isinstance(summary, dict) else {}
 
 
+def _materialization_operator_artifacts(summary: dict[str, Any]) -> tuple[list[str], list[str]]:
+    if _text(summary.get("suite_id")) == "lit_pcba_virtual_screening":
+        inputs = [
+            summary.get("archive_path"),
+            summary.get("extracted_dir"),
+            summary.get("source_score_csv"),
+            summary.get("source_label_csv"),
+        ]
+        outputs = [summary.get("out_scores_csv"), summary.get("out_labels_csv")]
+    else:
+        inputs = [summary.get("dataset_artifact")]
+        outputs = [summary.get("result_artifact")]
+    input_artifacts = [_text(value) for value in inputs if _text(value)]
+    output_artifacts = [_text(value) for value in outputs if _text(value)]
+    if not input_artifacts and _text(summary.get("dataset_artifact")):
+        input_artifacts = [_text(summary.get("dataset_artifact"))]
+    if not output_artifacts and _text(summary.get("result_artifact")):
+        output_artifacts = [_text(summary.get("result_artifact"))]
+    return input_artifacts, output_artifacts
+
+
 def _row(
     suite: dict[str, Any],
     evidence: dict[str, str] | None,
@@ -165,6 +186,8 @@ def _row(
     materialization_blockers = materialization_summary.get("blockers") if isinstance(materialization_summary, dict) else []
     materialization_blocker_text = ";".join(_text(blocker) for blocker in materialization_blockers or [] if _text(blocker))
     materialization_run_command = _text(materialization_summary.get("run_command"))
+    operator_input_artifacts, operator_output_artifacts = _materialization_operator_artifacts(materialization_summary)
+    scorecard_run_command_template = _text(materialization_summary.get("scorecard_run_command_template"))
     missing_fields = [
         field
         for field in REQUIRED_SCORECARD_FIELDS
@@ -241,6 +264,9 @@ def _row(
         "materialization_manifest_materialized": bool(materialization_summary.get("materialized") is True),
         "materialization_manifest_blockers": materialization_blocker_text,
         "materialization_run_command": materialization_run_command,
+        "operator_input_artifacts": ";".join(operator_input_artifacts),
+        "operator_output_artifacts": ";".join(operator_output_artifacts),
+        "scorecard_run_command_template": scorecard_run_command_template,
         "regression_baseline_ref": baseline,
         "run_command": run_command,
         "blockers": ",".join(blockers),

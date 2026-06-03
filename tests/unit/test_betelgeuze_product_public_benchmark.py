@@ -42,7 +42,10 @@ def test_public_benchmark_contract_ready_with_complete_passing_rows(tmp_path: Pa
                         "status": "public_benchmark_materialization_ready",
                         "materialized": True,
                         "blockers": [],
+                        "dataset_artifact": f"data/{suite['suite_id']}",
+                        "result_artifact": f"runs/{suite['suite_id']}_benchmark_results_current.csv",
                         "run_command": f"python3 tools/build_public_benchmark_materialization_manifest.py --suite-id {suite['suite_id']}",
+                        "scorecard_run_command_template": f"python3 tools/build_public_benchmark_suite_scorecard.py --suite-id {suite['suite_id']}",
                     }
                 }
             ),
@@ -88,6 +91,44 @@ def test_public_benchmark_contract_ready_with_complete_passing_rows(tmp_path: Pa
     assert payload["blockers"] == []
     assert all(row["status"] == "ready" for row in payload["rows"])
     assert all(row["materialization_manifest_present"] is True for row in payload["rows"])
+    assert all(row["operator_input_artifacts"] for row in payload["rows"])
+    assert all(row["operator_output_artifacts"] for row in payload["rows"])
+    assert all(row["scorecard_run_command_template"] for row in payload["rows"])
+
+
+def test_public_benchmark_contract_exposes_lit_pcba_operator_artifacts(tmp_path: Path) -> None:
+    suite = BENCHMARK_SUITES[0]
+    manifest = tmp_path / "runs" / "lit_pcba_materialization_manifest_current.json"
+    manifest.parent.mkdir(parents=True, exist_ok=True)
+    manifest.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "suite_id": suite["suite_id"],
+                    "status": "blocked_lit_pcba_materialization",
+                    "materialized": False,
+                    "blockers": ["zenodo_archive_missing"],
+                    "archive_path": "data/public_benchmarks/lit_pcba/LIT_PCBA_AVE_docked_released.tar.xz",
+                    "extracted_dir": "data/public_benchmarks/lit_pcba/LIT_PCBA_AVE_docked_released",
+                    "source_score_csv": "data/public_benchmarks/lit_pcba/lit_pcba_source_scores.csv",
+                    "source_label_csv": "data/public_benchmarks/lit_pcba/lit_pcba_source_labels.csv",
+                    "out_scores_csv": "runs/lit_pcba_scores_current.csv",
+                    "out_labels_csv": "runs/lit_pcba_labels_current.csv",
+                    "run_command": "python3 tools/build_lit_pcba_materialization_manifest.py",
+                    "scorecard_run_command_template": "python3 tools/build_lit_pcba_scorecard.py",
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = build_product_public_benchmark_contract(scorecard_csv=tmp_path / "missing.csv", root=tmp_path)
+
+    row = next(row for row in payload["rows"] if row["suite_id"] == suite["suite_id"])
+    assert "LIT_PCBA_AVE_docked_released.tar.xz" in row["operator_input_artifacts"]
+    assert "lit_pcba_source_scores.csv" in row["operator_input_artifacts"]
+    assert "runs/lit_pcba_scores_current.csv" in row["operator_output_artifacts"]
+    assert row["scorecard_run_command_template"] == "python3 tools/build_lit_pcba_scorecard.py"
 
 
 def test_public_benchmark_contract_blocks_passing_row_without_scorecard_json(tmp_path: Path) -> None:
