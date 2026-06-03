@@ -116,6 +116,15 @@ def test_cameo_architecture_validation_contract_reports_local_protocol_without_o
     assert summary["public_registration_authorized"] is False
     assert summary["public_registration_blocker_count"] == 4
     assert summary["official_cameo_results_used"] is False
+    assert summary["live_external_validation_channel"] is True
+    assert summary["cameo_live_validation_required_for_product_release"] is False
+    assert summary["cameo_live_validation_evidence_ready"] is False
+    assert summary["official_results_required_for_product_release"] is False
+    assert summary["official_results_intake_artifact"] == "runs/cameo_official_results_intake_gate_current.json"
+    assert summary["registration_required_for_product_release"] is False
+    assert summary["registration_evidence_artifact"] == "runs/cameo_public_registration_approval_gate_current.json"
+    assert summary["receiver_api_readiness_ready"] is True
+    assert summary["development_blocked_by_cameo_registration"] is False
     assert summary["server_registration_mutated"] is False
     assert summary["prediction_generation_enabled"] is False
     assert summary["outbound_email_enabled"] is False
@@ -126,6 +135,8 @@ def test_cameo_architecture_validation_contract_reports_local_protocol_without_o
     assert rows_by_lane["cameo_api_contract"] == "ready"
     assert rows_by_lane["cameo_performance_threshold_policy"] == "ready"
     assert rows_by_lane["cameo_performance_scorecard"] == "blocked"
+    assert all(row["live_external_validation_channel"] is True for row in payload["rows"])
+    assert all(row["product_release_blocker"] is False for row in payload["rows"])
 
 
 def test_cameo_architecture_validation_uses_component_surface_before_public_benchmarks_clear() -> None:
@@ -193,6 +204,8 @@ def test_cameo_architecture_validation_contract_ready_requires_official_evidence
 
     assert payload["summary"]["status"] == "cameo_architecture_validation_contract_ready"
     assert payload["summary"]["cameo_architecture_validation_ready"] is True
+    assert payload["summary"]["cameo_live_validation_evidence_ready"] is True
+    assert payload["summary"]["cameo_live_validation_required_for_product_release"] is False
     assert payload["summary"]["official_results_status"] == "cameo_official_results_intake_ready"
     assert payload["summary"]["accepted_official_result_count"] == 1
     assert payload["summary"]["public_registration_status"] == "cameo_public_registration_approval_ready"
@@ -295,6 +308,12 @@ def test_cameo_architecture_validation_tool_writes_outputs(tmp_path: Path) -> No
     assert summary["cameo_architecture_validation_ready"] is False
     assert summary["official_results_status"] == "blocked_cameo_official_results_intake"
     assert summary["operator_intake_csv"] == "runs/cameo_official_results_operator_intake.csv"
+    assert summary["registration_required_for_product_release"] is False
+    assert summary["receiver_api_readiness_ready"] is True
     assert summary["public_registration_blocker_count"] == 4
-    assert out_csv.read_text(encoding="utf-8").startswith("lane_id,status,")
-    assert "CAMEO Architecture Validation Contract" in out_md.read_text(encoding="utf-8")
+    csv_text = out_csv.read_text(encoding="utf-8")
+    md_text = out_md.read_text(encoding="utf-8")
+    assert csv_text.startswith("lane_id,status,")
+    assert "product_release_blocker" in csv_text
+    assert "CAMEO Architecture Validation Contract" in md_text
+    assert "cameo_live_validation_required_for_product_release" in md_text

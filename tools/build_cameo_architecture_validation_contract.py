@@ -84,6 +84,15 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- public_registration_prepared: `{s['public_registration_prepared']}`",
         f"- public_registration_blocker_count: `{s['public_registration_blocker_count']}`",
         f"- official_cameo_results_used: `{s['official_cameo_results_used']}`",
+        f"- live_external_validation_channel: `{s['live_external_validation_channel']}`",
+        f"- cameo_live_validation_required_for_product_release: `{s['cameo_live_validation_required_for_product_release']}`",
+        f"- cameo_live_validation_evidence_ready: `{s['cameo_live_validation_evidence_ready']}`",
+        f"- official_results_required_for_product_release: `{s['official_results_required_for_product_release']}`",
+        f"- official_results_intake_artifact: `{s['official_results_intake_artifact']}`",
+        f"- registration_required_for_product_release: `{s['registration_required_for_product_release']}`",
+        f"- registration_evidence_artifact: `{s['registration_evidence_artifact']}`",
+        f"- receiver_api_readiness_ready: `{s['receiver_api_readiness_ready']}`",
+        f"- development_blocked_by_cameo_registration: `{s['development_blocked_by_cameo_registration']}`",
         f"- server_registration_mutated: `{s['server_registration_mutated']}`",
         f"- prediction_generation_enabled: `{s['prediction_generation_enabled']}`",
         f"- outbound_email_enabled: `{s['outbound_email_enabled']}`",
@@ -92,12 +101,13 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         "## Lanes",
         "",
-        "| lane | status | observed | required | approval token | artifact | reason |",
-        "| --- | --- | --- | --- | --- | --- | --- |",
+        "| lane | status | live | product_release_blocker | observed | required | approval token | artifact | reason |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
-            f"| `{row['lane_id']}` | `{row['status']}` | `{row['observed']}` | `{row['required']}` | "
+            f"| `{row['lane_id']}` | `{row['status']}` | `{row['live_external_validation_channel']}` | "
+            f"`{row['product_release_blocker']}` | `{row['observed']}` | `{row['required']}` | "
             f"`{row['approval_token_required']}` | `{row['artifact_path']}` | {row['reason']} |"
         )
     lines.extend(["", "## Blockers", ""])
