@@ -59,6 +59,10 @@ def build_public_benchmark_materialization_manifest(
     dataset_present = dataset.exists()
     result_present = result.exists()
     result_rows = _row_count(result)
+    operator_input_artifacts = [str(dataset)]
+    operator_output_artifacts = [str(result)]
+    missing_input_artifacts = [str(dataset)] if not dataset_present else []
+    missing_output_artifacts = [str(result)] if not result_present else []
     if not dataset_present:
         blockers.append("dataset_artifact_missing")
     if not result_present:
@@ -82,6 +86,10 @@ def build_public_benchmark_materialization_manifest(
         "dataset_artifact_present": dataset_present,
         "result_artifact": str(result),
         "result_artifact_present": result_present,
+        "operator_input_artifacts": ";".join(operator_input_artifacts),
+        "operator_output_artifacts": ";".join(operator_output_artifacts),
+        "missing_input_artifacts": ";".join(missing_input_artifacts),
+        "missing_output_artifacts": ";".join(missing_output_artifacts),
         "result_row_count": result_rows,
         "min_result_rows": int(min_result_rows),
         "run_command": materialization_command,

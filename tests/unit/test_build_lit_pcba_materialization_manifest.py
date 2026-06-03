@@ -40,5 +40,11 @@ def test_build_lit_pcba_materialization_manifest_tool_writes_outputs(tmp_path: P
     assert payload["summary"]["dataset_record_url"] == "https://zenodo.org/records/4588239"
     assert payload["summary"]["dataset_source_url"] == "https://zenodo.org/records/4588239"
     assert payload["summary"]["run_command"].startswith("python3 tools/build_lit_pcba_materialization_manifest.py")
+    assert str(tmp_path / "source_scores.csv") in payload["summary"]["operator_input_artifacts"]
+    assert str(tmp_path / "scores.csv") in payload["summary"]["operator_output_artifacts"]
+    assert str(tmp_path / "source_scores.csv") in payload["summary"]["missing_input_artifacts"]
+    assert str(tmp_path / "scores.csv") in payload["summary"]["missing_output_artifacts"]
     assert out_csv.read_text(encoding="utf-8").startswith("check,status,")
-    assert "LIT-PCBA Materialization Manifest" in out_md.read_text(encoding="utf-8")
+    md_text = out_md.read_text(encoding="utf-8")
+    assert "LIT-PCBA Materialization Manifest" in md_text
+    assert "operator_input_artifacts" in md_text

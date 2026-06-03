@@ -22,6 +22,11 @@ def test_lit_pcba_materialization_blocks_missing_local_sources(tmp_path: Path) -
     assert summary["primary_metric"] == "EF1"
     assert summary["primary_metric_threshold"] == 1.2
     assert summary["materialized"] is False
+    assert str(tmp_path / "missing.tar.xz") in summary["operator_input_artifacts"]
+    assert str(tmp_path / "scores_source.csv") in summary["operator_input_artifacts"]
+    assert str(tmp_path / "scores.csv") in summary["operator_output_artifacts"]
+    assert str(tmp_path / "missing.tar.xz") in summary["missing_input_artifacts"]
+    assert str(tmp_path / "scores.csv") in summary["missing_output_artifacts"]
     assert "zenodo_archive_missing" in summary["blockers"]
     assert "source_score_csv_missing" in summary["blockers"]
     assert summary["download_executed"] is False
@@ -54,6 +59,10 @@ def test_lit_pcba_materialization_standardizes_source_csvs(tmp_path: Path) -> No
     assert summary["materialized"] is True
     assert summary["score_row_count"] == 2
     assert summary["label_row_count"] == 2
+    assert str(archive) in summary["operator_input_artifacts"]
+    assert str(out_scores) in summary["operator_output_artifacts"]
+    assert summary["missing_input_artifacts"] == ""
+    assert summary["missing_output_artifacts"] == ""
     assert summary["run_command"].startswith("python3 tools/build_lit_pcba_materialization_manifest.py")
     assert summary["scorecard_run_command_template"].startswith("python3 tools/build_lit_pcba_scorecard.py")
     assert out_scores.read_text(encoding="utf-8").startswith("target,ligand_id,binding_score")

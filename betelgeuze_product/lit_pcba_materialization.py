@@ -187,6 +187,21 @@ def build_lit_pcba_materialization_manifest(
 
     out_scores_present = out_scores.exists()
     out_labels_present = out_labels.exists()
+    operator_input_artifacts = [str(archive), str(extracted), str(source_scores), str(source_labels)]
+    operator_output_artifacts = [str(out_scores), str(out_labels)]
+    missing_input_artifacts = [
+        path
+        for path, present in (
+            (str(archive), archive_present),
+            (str(extracted), extracted_present),
+            (str(source_scores), source_scores_present),
+            (str(source_labels), source_labels_present),
+        )
+        if not present
+    ]
+    missing_output_artifacts = [
+        path for path, present in ((str(out_scores), out_scores_present), (str(out_labels), out_labels_present)) if not present
+    ]
     if out_scores_present and score_row_count == 0:
         score_row_count = len(_read_rows(out_scores))
     if out_labels_present and label_row_count == 0:
@@ -229,6 +244,10 @@ def build_lit_pcba_materialization_manifest(
         "out_scores_csv_present": out_scores_present,
         "out_labels_csv": str(out_labels),
         "out_labels_csv_present": out_labels_present,
+        "operator_input_artifacts": ";".join(operator_input_artifacts),
+        "operator_output_artifacts": ";".join(operator_output_artifacts),
+        "missing_input_artifacts": ";".join(missing_input_artifacts),
+        "missing_output_artifacts": ";".join(missing_output_artifacts),
         "score_row_count": score_row_count,
         "label_row_count": label_row_count,
         "target_col": target_col,
