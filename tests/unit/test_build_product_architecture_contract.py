@@ -137,6 +137,12 @@ def test_product_architecture_contract_reports_local_surface_and_gates(tmp_path:
                 "cameo_architecture_validation_ready": False,
                 "validation_evidence_ready": False,
                 "official_results_ready": False,
+                "official_results_status": "blocked_cameo_official_results_intake",
+                "accepted_official_result_count": 0,
+                "model1_official_result_ready": False,
+                "operator_intake_csv": "runs/cameo_official_results_operator_intake.csv",
+                "public_registration_status": "blocked_cameo_public_registration_approval_gate",
+                "public_registration_authorized": False,
             }
         ),
         cleanup_operations_packet=_packet(
@@ -209,6 +215,12 @@ def test_product_architecture_contract_reports_local_surface_and_gates(tmp_path:
     assert summary["cameo_architecture_validation_protocol_ready"] is True
     assert summary["cameo_architecture_validation_ready"] is False
     assert summary["cameo_official_validation_evidence_ready"] is False
+    assert summary["cameo_official_results_status"] == "blocked_cameo_official_results_intake"
+    assert summary["cameo_accepted_official_result_count"] == 0
+    assert summary["cameo_model1_official_result_ready"] is False
+    assert summary["cameo_operator_intake_csv"] == "runs/cameo_official_results_operator_intake.csv"
+    assert summary["cameo_public_registration_status"] == "blocked_cameo_public_registration_approval_gate"
+    assert summary["cameo_public_registration_authorized"] is False
     assert summary["cameo_receiver_smoke_ready"] is False
     assert summary["cameo_receiver_smoke_status"] == "blocked_cameo_receiver_smoke"
     assert summary["cameo_api_dependency_ready"] is False

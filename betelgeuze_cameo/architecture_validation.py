@@ -97,7 +97,15 @@ def build_cameo_architecture_validation_contract(
     service_boundary = _summary(service_boundary_packet or {})
     api_contract = _summary(api_contract_packet or {})
 
-    product_local_ready = _bool(architecture.get("local_architecture_surface_ready"))
+    product_architecture_component_surface_ready = (
+        _bool(architecture.get("structure_analysis_product_surface_ready"))
+        and _bool(architecture.get("ligand_docking_execution_contract_ready"))
+        and _bool(architecture.get("scoring_ranking_contract_ready"))
+        and _bool(architecture.get("product_service_boundary_ready"))
+        and _bool(architecture.get("product_api_contract_ready"))
+        and _bool(architecture.get("cameo_local_surface_ready"))
+    )
+    product_local_ready = _bool(architecture.get("local_architecture_surface_ready")) or product_architecture_component_surface_ready
     service_boundary_status = _text(service_boundary.get("status"))
     service_boundary_ready = (
         service_boundary_status == "cameo_service_boundary_contract_ready"
@@ -165,9 +173,10 @@ def build_cameo_architecture_validation_contract(
             status="ready" if product_local_ready else "blocked",
             observed=(
                 f"architecture_status={_text(architecture.get('status')) or 'missing'};"
-                f"local_architecture_surface_ready={product_local_ready}"
+                f"local_architecture_surface_ready={_bool(architecture.get('local_architecture_surface_ready'))};"
+                f"component_surface_ready={product_architecture_component_surface_ready}"
             ),
-            required="local product architecture surface ready before CAMEO validation can support product claims",
+            required="local product architecture surface or structure/docking/scoring/API component surface ready before CAMEO validation can support product claims",
             artifact_path=product_architecture_path,
             reason="CAMEO validation must be tied to the current product architecture, not a detached benchmark note.",
         ),
@@ -313,6 +322,8 @@ def build_cameo_architecture_validation_contract(
         "local_validation_protocol_ready": local_validation_protocol_ready,
         "cameo_architecture_validation_ready": cameo_architecture_validation_ready,
         "product_architecture_local_surface_ready": product_local_ready,
+        "product_architecture_full_local_surface_ready": _bool(architecture.get("local_architecture_surface_ready")),
+        "product_architecture_component_surface_ready": product_architecture_component_surface_ready,
         "cameo_service_boundary_ready": service_boundary_ready,
         "cameo_service_boundary_status": service_boundary_status,
         "cameo_service_boundary_api_route_count": _int(service_boundary.get("api_route_count")),
@@ -327,8 +338,18 @@ def build_cameo_architecture_validation_contract(
         "performance_threshold_policy_ready": threshold_policy_ready,
         "performance_threshold_profile_name": _text(threshold_policy.get("profile_name")),
         "performance_scorecard_evidence_ready": performance_evidence_ready,
+        "performance_scorecard_status": performance_status,
+        "performance_model1_official_result_count": _int(performance.get("model1_official_result_count")),
         "official_results_ready": official_results_ready,
+        "official_results_status": official_status,
+        "accepted_official_result_count": _int(official.get("accepted_official_result_count")),
+        "model1_official_result_ready": _bool(official.get("model1_official_result_ready")),
+        "operator_intake_csv": _text(official.get("operator_intake_csv")),
+        "operator_template_csv": _text(official.get("operator_template_csv")),
         "public_registration_authorized": registration_authorized,
+        "public_registration_status": registration_status,
+        "public_registration_prepared": registration_prepared,
+        "public_registration_blocker_count": _int(registration.get("blocker_count")),
         "official_cameo_results_used": validation_evidence_ready or performance_evidence_ready or official_results_ready,
         "server_registration_mutated": False,
         "prediction_generation_enabled": False,

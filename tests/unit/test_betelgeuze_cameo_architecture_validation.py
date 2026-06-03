@@ -53,9 +53,84 @@ def _api_contract_packet() -> dict:
     )
 
 
+def _component_ready_product_architecture_packet() -> dict:
+    return _packet(
+        {
+            "status": "blocked_product_architecture_contract",
+            "local_architecture_surface_ready": False,
+            "structure_analysis_product_surface_ready": True,
+            "ligand_docking_execution_contract_ready": True,
+            "scoring_ranking_contract_ready": True,
+            "product_service_boundary_ready": True,
+            "product_api_contract_ready": True,
+            "cameo_local_surface_ready": True,
+            "public_benchmark_validation_ready": False,
+        }
+    )
+
+
 def test_cameo_architecture_validation_contract_reports_local_protocol_without_official_claim() -> None:
     payload = build_cameo_architecture_validation_contract(
         product_architecture_packet=_packet({"status": "blocked_product_architecture_contract", "local_architecture_surface_ready": True}),
+        validation_operations_packet=_packet({"status": "blocked_cameo_validation_operations_dossier", "stage_count": 6}),
+        validation_readiness_packet=_packet(
+            {"status": "blocked_cameo_validation_readiness", "official_cameo_results_used": False}
+        ),
+        performance_threshold_policy_packet=_threshold_policy_packet(),
+        performance_scorecard_packet={},
+        official_results_packet=_packet(
+            {
+                "status": "blocked_cameo_official_results_intake",
+                "accepted_official_result_count": 0,
+                "model1_official_result_ready": False,
+                "operator_intake_csv": "runs/cameo_official_results_operator_intake.csv",
+                "operator_template_csv": "runs/cameo_official_results_operator_template_current.csv",
+            }
+        ),
+        public_registration_packet=_packet(
+            {
+                "status": "blocked_cameo_public_registration_approval_gate",
+                "authorized_for_registration_review": False,
+                "blocker_count": 4,
+            }
+        ),
+        service_boundary_packet=_service_boundary_packet(),
+        api_contract_packet=_api_contract_packet(),
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "blocked_cameo_architecture_validation_contract"
+    assert summary["local_validation_protocol_ready"] is True
+    assert summary["product_architecture_full_local_surface_ready"] is True
+    assert summary["product_architecture_component_surface_ready"] is False
+    assert summary["cameo_service_boundary_ready"] is True
+    assert summary["cameo_api_contract_ready"] is True
+    assert summary["performance_threshold_policy_ready"] is True
+    assert summary["performance_threshold_profile_name"] == "product_grade_model1"
+    assert summary["cameo_architecture_validation_ready"] is False
+    assert summary["official_results_status"] == "blocked_cameo_official_results_intake"
+    assert summary["accepted_official_result_count"] == 0
+    assert summary["model1_official_result_ready"] is False
+    assert summary["operator_intake_csv"] == "runs/cameo_official_results_operator_intake.csv"
+    assert summary["public_registration_status"] == "blocked_cameo_public_registration_approval_gate"
+    assert summary["public_registration_authorized"] is False
+    assert summary["public_registration_blocker_count"] == 4
+    assert summary["official_cameo_results_used"] is False
+    assert summary["server_registration_mutated"] is False
+    assert summary["prediction_generation_enabled"] is False
+    assert summary["outbound_email_enabled"] is False
+    assert summary["native_local_accuracy_used"] is False
+    assert summary["external_state_mutated"] is False
+    rows_by_lane = {row["lane_id"]: row["status"] for row in payload["rows"]}
+    assert rows_by_lane["cameo_service_boundary_contract"] == "ready"
+    assert rows_by_lane["cameo_api_contract"] == "ready"
+    assert rows_by_lane["cameo_performance_threshold_policy"] == "ready"
+    assert rows_by_lane["cameo_performance_scorecard"] == "blocked"
+
+
+def test_cameo_architecture_validation_uses_component_surface_before_public_benchmarks_clear() -> None:
+    payload = build_cameo_architecture_validation_contract(
+        product_architecture_packet=_component_ready_product_architecture_packet(),
         validation_operations_packet=_packet({"status": "blocked_cameo_validation_operations_dossier", "stage_count": 6}),
         validation_readiness_packet=_packet(
             {"status": "blocked_cameo_validation_readiness", "official_cameo_results_used": False}
@@ -77,24 +152,13 @@ def test_cameo_architecture_validation_contract_reports_local_protocol_without_o
     )
 
     summary = payload["summary"]
-    assert summary["status"] == "blocked_cameo_architecture_validation_contract"
     assert summary["local_validation_protocol_ready"] is True
-    assert summary["cameo_service_boundary_ready"] is True
-    assert summary["cameo_api_contract_ready"] is True
-    assert summary["performance_threshold_policy_ready"] is True
-    assert summary["performance_threshold_profile_name"] == "product_grade_model1"
-    assert summary["cameo_architecture_validation_ready"] is False
-    assert summary["official_cameo_results_used"] is False
-    assert summary["server_registration_mutated"] is False
-    assert summary["prediction_generation_enabled"] is False
-    assert summary["outbound_email_enabled"] is False
-    assert summary["native_local_accuracy_used"] is False
-    assert summary["external_state_mutated"] is False
-    rows_by_lane = {row["lane_id"]: row["status"] for row in payload["rows"]}
-    assert rows_by_lane["cameo_service_boundary_contract"] == "ready"
-    assert rows_by_lane["cameo_api_contract"] == "ready"
-    assert rows_by_lane["cameo_performance_threshold_policy"] == "ready"
-    assert rows_by_lane["cameo_performance_scorecard"] == "blocked"
+    assert summary["product_architecture_local_surface_ready"] is True
+    assert summary["product_architecture_full_local_surface_ready"] is False
+    assert summary["product_architecture_component_surface_ready"] is True
+    product_row = next(row for row in payload["rows"] if row["lane_id"] == "product_architecture_local_surface")
+    assert product_row["status"] == "ready"
+    assert "component_surface_ready=True" in product_row["observed"]
 
 
 def test_cameo_architecture_validation_contract_ready_requires_official_evidence_and_registration() -> None:
@@ -117,6 +181,7 @@ def test_cameo_architecture_validation_contract_ready_requires_official_evidence
                 "status": "cameo_official_results_intake_ready",
                 "accepted_official_result_count": 1,
                 "model1_official_result_ready": True,
+                "operator_intake_csv": "runs/cameo_official_results_operator_intake.csv",
             }
         ),
         public_registration_packet=_packet(
@@ -128,6 +193,9 @@ def test_cameo_architecture_validation_contract_ready_requires_official_evidence
 
     assert payload["summary"]["status"] == "cameo_architecture_validation_contract_ready"
     assert payload["summary"]["cameo_architecture_validation_ready"] is True
+    assert payload["summary"]["official_results_status"] == "cameo_official_results_intake_ready"
+    assert payload["summary"]["accepted_official_result_count"] == 1
+    assert payload["summary"]["public_registration_status"] == "cameo_public_registration_approval_ready"
     assert payload["blockers"] == []
     assert payload["approval_required"] == []
 
@@ -174,8 +242,14 @@ def test_cameo_architecture_validation_tool_writes_outputs(tmp_path: Path) -> No
         "readiness": _packet({"status": "blocked_cameo_validation_readiness", "official_cameo_results_used": False}),
         "threshold_policy": _threshold_policy_packet(),
         "performance": {},
-        "official": _packet({"status": "blocked_cameo_official_results_intake"}),
-        "registration": _packet({"status": "blocked_cameo_public_registration_approval_gate"}),
+        "official": _packet(
+            {
+                "status": "blocked_cameo_official_results_intake",
+                "accepted_official_result_count": 0,
+                "operator_intake_csv": "runs/cameo_official_results_operator_intake.csv",
+            }
+        ),
+        "registration": _packet({"status": "blocked_cameo_public_registration_approval_gate", "blocker_count": 4}),
         "service_boundary": _service_boundary_packet(),
         "api_contract": _api_contract_packet(),
     }
@@ -219,5 +293,8 @@ def test_cameo_architecture_validation_tool_writes_outputs(tmp_path: Path) -> No
     summary = json.loads(out_json.read_text(encoding="utf-8"))["summary"]
     assert summary["local_validation_protocol_ready"] is True
     assert summary["cameo_architecture_validation_ready"] is False
+    assert summary["official_results_status"] == "blocked_cameo_official_results_intake"
+    assert summary["operator_intake_csv"] == "runs/cameo_official_results_operator_intake.csv"
+    assert summary["public_registration_blocker_count"] == 4
     assert out_csv.read_text(encoding="utf-8").startswith("lane_id,status,")
     assert "CAMEO Architecture Validation Contract" in out_md.read_text(encoding="utf-8")
