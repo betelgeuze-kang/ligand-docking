@@ -322,8 +322,12 @@ def _product_burndown_row(
         command = (
             "python3 tools/build_product_public_benchmark_work_order.py && "
             "python3 tools/build_product_public_benchmark_contract.py && "
-            "python3 tools/build_product_architecture_contract.py && python3 tools/build_goal_release_decision_gate.py && "
-            "python3 tools/build_goal_release_burndown_work_order.py"
+            "python3 tools/build_product_commercial_independence_gate.py && "
+            "python3 tools/build_product_architecture_contract.py && "
+            "python3 tools/build_product_release_operations_dossier.py && "
+            "python3 tools/build_goal_release_decision_gate.py && "
+            "python3 tools/build_goal_release_burndown_work_order.py && "
+            "python3 tools/build_goal_bottleneck_briefing.py"
         )
         source_artifact = f"{source_artifact};{public_benchmark_work_order_path}"
         reason = f"{reason}; product_pilot_delivery_ready=True, product_execution_no_longer_blocks_this_check=True"
