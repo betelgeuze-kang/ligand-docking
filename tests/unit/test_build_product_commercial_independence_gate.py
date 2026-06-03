@@ -155,7 +155,13 @@ include = ["betelgeuze_product*", "betelgeuze_cameo*", "betelgeuze_cleanup*"]
     assert payload["summary"]["reproducible_install_manifest_ready"] is True
     assert payload["summary"]["product_service_boundary_ready"] is True
     assert payload["summary"]["product_api_contract_ready"] is True
+    assert payload["summary"]["local_self_hosted_operation_ready"] is True
+    assert payload["summary"]["external_saas_runtime_dependency_count"] == 0
     assert payload["summary"]["local_delivery_bundle_ready"] is True
     assert payload["summary"]["public_benchmark_evidence_ready"] is True
-    assert out_csv.read_text(encoding="utf-8").startswith("check,status,")
-    assert "Product Commercial Independence Gate" in out_md.read_text(encoding="utf-8")
+    csv_text = out_csv.read_text(encoding="utf-8")
+    md_text = out_md.read_text(encoding="utf-8")
+    assert csv_text.startswith("check,status,")
+    assert "local_self_hosted_operation_ready" in csv_text
+    assert "Product Commercial Independence Gate" in md_text
+    assert "local_self_hosted_operation_ready" in md_text

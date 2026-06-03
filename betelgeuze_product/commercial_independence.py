@@ -324,6 +324,14 @@ def build_product_commercial_independence_gate(
         and _bool(product_pilot.get("pilot_delivery_ready"))
         and _bool(product_pilot.get("bundle_validation_passed"))
     )
+    local_self_hosted_operation_ready = (
+        core_product_surface_present
+        and external_api_free_core_runtime
+        and product_service_boundary_ready
+        and product_api_contract_ready
+        and product_cli_present
+        and local_delivery_bundle_ready
+    )
     public_benchmark_evidence_ready = (
         _text(public_benchmark.get("status")) == "product_public_benchmark_contract_ready"
         and _bool(public_benchmark.get("public_benchmark_validation_ready"))
@@ -481,6 +489,25 @@ def build_product_commercial_independence_gate(
             "Commercial handoff needs a verified API contract for local/self-hosted operation.",
         ),
         _row(
+            "local_self_hosted_operation_ready",
+            local_self_hosted_operation_ready,
+            (
+                f"core_product_surface={core_product_surface_present};"
+                f"external_api_runtime_dependency_count={len(external_api_runtime)};"
+                f"service_boundary_ready={product_service_boundary_ready};"
+                f"api_contract_ready={product_api_contract_ready};"
+                f"cli_surface={product_cli_present};"
+                f"local_delivery_bundle_ready={local_delivery_bundle_ready}"
+            ),
+            "core API/package/CLI present, no external API SDK in runtime, service/API contracts ready, and local delivery bundle ready",
+            (
+                f"api/product.py;betelgeuze_product/__init__.py;betelgeuze_product/cli.py;"
+                f"{product_service_boundary_json};{product_api_contract_json};{product_bundle_json};"
+                f"{product_delivery_evidence_json};{product_pilot_json};{runtime_requirements}"
+            ),
+            "The commercial product must be operable from local/self-hosted API and CLI surfaces without a SaaS runtime dependency.",
+        ),
+        _row(
             "local_delivery_bundle_ready",
             local_delivery_bundle_ready,
             (
@@ -546,6 +573,8 @@ def build_product_commercial_independence_gate(
         "reproducible_install_manifest_ready": reproducible_install_manifest_ready and requirements_lock_complete,
         "external_api_runtime_dependency_count": len(external_api_runtime),
         "external_api_runtime_dependencies": external_api_runtime,
+        "external_saas_runtime_dependency_count": len(external_api_runtime),
+        "external_saas_runtime_dependencies": external_api_runtime,
         "optional_profiles_present": optional_profiles_present,
         "optional_profiles_separated": optional_profiles_separated,
         "deployment_manifest_present": deployment_manifest_present,
@@ -561,6 +590,10 @@ def build_product_commercial_independence_gate(
         "product_service_boundary_cli_command_count": _int(product_service_boundary.get("cli_command_count")),
         "product_api_contract_ready": product_api_contract_ready,
         "product_api_contract_missing_route_count": _int(product_api_contract.get("missing_route_count")),
+        "local_self_hosted_operation_ready": local_self_hosted_operation_ready,
+        "local_self_hosted_core_product_surface_present": core_product_surface_present,
+        "local_self_hosted_external_saas_free_runtime": external_api_free_core_runtime,
+        "local_self_hosted_api_cli_ready": product_service_boundary_ready and product_api_contract_ready and product_cli_present,
         "local_delivery_bundle_ready": local_delivery_bundle_ready,
         "local_delivery_bundle_assembled": _bool(product_bundle.get("bundle_assembled")),
         "local_delivery_bundle_validation_passed": _bool(product_bundle.get("bundle_validation_passed")),

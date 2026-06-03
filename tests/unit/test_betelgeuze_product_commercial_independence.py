@@ -172,6 +172,10 @@ def test_product_commercial_independence_gate_ready_for_pinned_local_product_tre
     assert payload["summary"]["reproducible_install_manifest_ready"] is True
     assert payload["summary"]["product_service_boundary_ready"] is True
     assert payload["summary"]["product_api_contract_ready"] is True
+    assert payload["summary"]["local_self_hosted_operation_ready"] is True
+    assert payload["summary"]["local_self_hosted_external_saas_free_runtime"] is True
+    assert payload["summary"]["local_self_hosted_api_cli_ready"] is True
+    assert payload["summary"]["external_saas_runtime_dependency_count"] == 0
     assert payload["summary"]["local_delivery_bundle_ready"] is True
     assert payload["summary"]["public_benchmark_evidence_ready"] is True
     assert payload["summary"]["blocker_count"] == 0
@@ -187,9 +191,16 @@ def test_product_commercial_independence_gate_blocks_loose_external_runtime_and_
     assert payload["summary"]["commercial_independent_product_claim_allowed"] is False
     assert payload["summary"]["loose_runtime_dependency_count"] == 3
     assert payload["summary"]["external_api_runtime_dependencies"] == ["openai"]
+    assert payload["summary"]["external_saas_runtime_dependencies"] == ["openai"]
+    assert payload["summary"]["local_self_hosted_operation_ready"] is False
     assert payload["summary"]["reproducible_install_manifest_ready"] is True
     failed_checks = {row["check"] for row in payload["rows"] if row["status"] == "fail"}
-    assert {"license_file_present", "runtime_dependencies_pinned", "external_api_free_core_runtime"} <= failed_checks
+    assert {
+        "license_file_present",
+        "runtime_dependencies_pinned",
+        "external_api_free_core_runtime",
+        "local_self_hosted_operation_ready",
+    } <= failed_checks
 
 
 def test_product_commercial_independence_gate_blocks_missing_install_provenance(tmp_path: Path) -> None:
@@ -224,6 +235,7 @@ def test_product_commercial_independence_gate_blocks_missing_release_evidence(tm
     } <= failed_checks
     assert payload["summary"]["product_service_boundary_ready"] is False
     assert payload["summary"]["product_api_contract_ready"] is False
+    assert payload["summary"]["local_self_hosted_operation_ready"] is False
     assert payload["summary"]["local_delivery_bundle_ready"] is False
     assert payload["summary"]["public_benchmark_evidence_ready"] is False
 
