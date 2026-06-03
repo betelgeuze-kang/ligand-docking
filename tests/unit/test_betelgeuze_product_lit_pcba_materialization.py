@@ -17,6 +17,10 @@ def test_lit_pcba_materialization_blocks_missing_local_sources(tmp_path: Path) -
 
     summary = payload["summary"]
     assert summary["status"] == "blocked_lit_pcba_materialization"
+    assert summary["suite_id"] == "lit_pcba_virtual_screening"
+    assert summary["dataset_source_url"] == "https://zenodo.org/records/4588239"
+    assert summary["primary_metric"] == "EF1"
+    assert summary["primary_metric_threshold"] == 1.2
     assert summary["materialized"] is False
     assert "zenodo_archive_missing" in summary["blockers"]
     assert "source_score_csv_missing" in summary["blockers"]
@@ -50,5 +54,7 @@ def test_lit_pcba_materialization_standardizes_source_csvs(tmp_path: Path) -> No
     assert summary["materialized"] is True
     assert summary["score_row_count"] == 2
     assert summary["label_row_count"] == 2
+    assert summary["run_command"].startswith("python3 tools/build_lit_pcba_materialization_manifest.py")
+    assert summary["scorecard_run_command_template"].startswith("python3 tools/build_lit_pcba_scorecard.py")
     assert out_scores.read_text(encoding="utf-8").startswith("target,ligand_id,binding_score")
     assert out_labels.read_text(encoding="utf-8").startswith("target,ligand_id,is_binder")

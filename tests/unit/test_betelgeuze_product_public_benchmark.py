@@ -6,6 +6,10 @@ from pathlib import Path
 from betelgeuze_product.public_benchmark import BENCHMARK_SUITES, build_product_public_benchmark_contract
 
 
+def _manifest_stem(suite_id: str) -> str:
+    return "lit_pcba" if suite_id == "lit_pcba_virtual_screening" else suite_id
+
+
 def test_public_benchmark_contract_blocks_missing_scorecard_intake(tmp_path: Path) -> None:
     payload = build_product_public_benchmark_contract(scorecard_csv=tmp_path / "missing.csv")
 
@@ -29,6 +33,21 @@ def test_public_benchmark_contract_ready_with_complete_passing_rows(tmp_path: Pa
     for suite in BENCHMARK_SUITES:
         scorecard_json = tmp_path / "runs" / f"{suite['suite_id']}_scorecard.json"
         scorecard_json.parent.mkdir(parents=True, exist_ok=True)
+        materialization_json = tmp_path / "runs" / f"{_manifest_stem(str(suite['suite_id']))}_materialization_manifest_current.json"
+        materialization_json.write_text(
+            json.dumps(
+                {
+                    "summary": {
+                        "suite_id": suite["suite_id"],
+                        "status": "public_benchmark_materialization_ready",
+                        "materialized": True,
+                        "blockers": [],
+                        "run_command": f"python3 tools/build_public_benchmark_materialization_manifest.py --suite-id {suite['suite_id']}",
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
         scorecard_json.write_text(
             json.dumps(
                 {
@@ -68,6 +87,7 @@ def test_public_benchmark_contract_ready_with_complete_passing_rows(tmp_path: Pa
     assert summary["blocked_suite_count"] == 0
     assert payload["blockers"] == []
     assert all(row["status"] == "ready" for row in payload["rows"])
+    assert all(row["materialization_manifest_present"] is True for row in payload["rows"])
 
 
 def test_public_benchmark_contract_blocks_passing_row_without_scorecard_json(tmp_path: Path) -> None:
@@ -84,3 +104,33 @@ def test_public_benchmark_contract_blocks_passing_row_without_scorecard_json(tmp
     row = next(row for row in payload["rows"] if row["suite_id"] == suite["suite_id"])
     assert row["status"] == "blocked"
     assert "scorecard_json_missing" in row["blockers"]
+
+
+def test_public_benchmark_contract_blocks_row_without_materialization_manifest(tmp_path: Path) -> None:
+    scorecard = tmp_path / "scorecards.csv"
+    suite = BENCHMARK_SUITES[0]
+    scorecard_json = tmp_path / "runs" / "scorecard.json"
+    scorecard_json.parent.mkdir(parents=True, exist_ok=True)
+    scorecard_json.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "suite_id": suite["suite_id"],
+                    "status": "public_benchmark_suite_scorecard_pass",
+                    "pass": True,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    scorecard.write_text(
+        "suite_id,benchmark_family,dataset_source_url,scorecard_json,status,primary_metric,primary_metric_value,primary_metric_threshold,regression_baseline_ref,run_command\n"
+        f"{suite['suite_id']},{suite['benchmark_family']},{suite['dataset_source_url']},runs/scorecard.json,pass,{suite['primary_metric']},999,{suite['primary_metric_threshold']},baseline:v1,cmd\n",
+        encoding="utf-8",
+    )
+
+    payload = build_product_public_benchmark_contract(scorecard_csv=scorecard)
+
+    row = next(row for row in payload["rows"] if row["suite_id"] == suite["suite_id"])
+    assert row["status"] == "blocked"
+    assert "materialization_manifest_missing" in row["blockers"]

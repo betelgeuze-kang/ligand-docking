@@ -102,6 +102,11 @@ def _resolve_scorecard_json(path_like: str, *, root: Path) -> Path:
     return path if path.is_absolute() else root / path
 
 
+def _materialization_manifest_path(suite_id: str, *, root: Path) -> Path:
+    stem = "lit_pcba" if suite_id == "lit_pcba_virtual_screening" else suite_id
+    return root / "runs" / f"{stem}_materialization_manifest_current.json"
+
+
 def _read_scorecard_summary(path_like: str, *, root: Path) -> tuple[bool, dict[str, Any]]:
     if not _text(path_like):
         return False, {}
@@ -114,6 +119,18 @@ def _read_scorecard_summary(path_like: str, *, root: Path) -> tuple[bool, dict[s
         return True, {}
     summary = payload.get("summary") if isinstance(payload, dict) else {}
     return True, summary if isinstance(summary, dict) else {}
+
+
+def _read_materialization_summary(suite_id: str, *, root: Path) -> tuple[Path, bool, dict[str, Any]]:
+    path = _materialization_manifest_path(suite_id, root=root)
+    if not path.exists():
+        return path, False, {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return path, True, {}
+    summary = payload.get("summary") if isinstance(payload, dict) else {}
+    return path, True, summary if isinstance(summary, dict) else {}
 
 
 def _row(
@@ -132,9 +149,22 @@ def _row(
     run_command = _text(evidence.get("run_command") if evidence else "")
     baseline = _text(evidence.get("regression_baseline_ref") if evidence else "")
     scorecard_json_present, scorecard_summary = _read_scorecard_summary(scorecard_json, root=root)
+    materialization_manifest, materialization_present, materialization_summary = _read_materialization_summary(
+        _text(suite["suite_id"]),
+        root=root,
+    )
     scorecard_summary_suite_id = _text(scorecard_summary.get("suite_id"))
     scorecard_summary_status = _text(scorecard_summary.get("status"))
     scorecard_summary_pass = bool(scorecard_summary.get("pass") is True) or scorecard_summary_status.endswith("_pass")
+    materialization_summary_suite_id = _text(materialization_summary.get("suite_id"))
+    materialization_status = _text(materialization_summary.get("status"))
+    materialization_ready = bool(materialization_summary.get("materialized") is True) and materialization_status.endswith(
+        "_ready"
+    )
+    materialization_matches = materialization_summary_suite_id == _text(suite["suite_id"])
+    materialization_blockers = materialization_summary.get("blockers") if isinstance(materialization_summary, dict) else []
+    materialization_blocker_text = ";".join(_text(blocker) for blocker in materialization_blockers or [] if _text(blocker))
+    materialization_run_command = _text(materialization_summary.get("run_command"))
     missing_fields = [
         field
         for field in REQUIRED_SCORECARD_FIELDS
@@ -151,6 +181,10 @@ def _row(
         scorecard_csv_present
         and evidence is not None
         and not missing_fields
+        and materialization_present
+        and materialization_matches
+        and materialization_ready
+        and bool(materialization_run_command)
         and source_matches
         and scorecard_json_present
         and scorecard_json_matches
@@ -166,6 +200,14 @@ def _row(
         blockers.append("scorecard_row_missing")
     if missing_fields:
         blockers.append("missing_fields=" + ";".join(missing_fields))
+    if not materialization_present:
+        blockers.append("materialization_manifest_missing")
+    if materialization_present and not materialization_matches:
+        blockers.append("materialization_manifest_suite_id_mismatch")
+    if materialization_present and not materialization_ready:
+        blockers.append("materialization_manifest_not_ready")
+    if materialization_present and not materialization_run_command:
+        blockers.append("materialization_run_command_missing")
     if evidence is not None and not source_matches:
         blockers.append("dataset_source_url_mismatch")
     if evidence is not None and not scorecard_json_present:
@@ -193,6 +235,12 @@ def _row(
         "scorecard_json": scorecard_json,
         "scorecard_json_present": scorecard_json_present,
         "scorecard_json_summary_status": scorecard_summary_status,
+        "materialization_manifest_json": str(materialization_manifest),
+        "materialization_manifest_present": materialization_present,
+        "materialization_manifest_status": materialization_status,
+        "materialization_manifest_materialized": bool(materialization_summary.get("materialized") is True),
+        "materialization_manifest_blockers": materialization_blocker_text,
+        "materialization_run_command": materialization_run_command,
         "regression_baseline_ref": baseline,
         "run_command": run_command,
         "blockers": ",".join(blockers),

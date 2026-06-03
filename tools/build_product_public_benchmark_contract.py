@@ -70,13 +70,15 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         "## Suites",
         "",
-        "| suite | family | status | source | metric | threshold | blockers |",
-        "| --- | --- | --- | --- | --- | --- | --- |",
+        "| suite | family | status | materialization | scorecard | metric | threshold | blockers |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
             f"| `{row['suite_id']}` | `{row['benchmark_family']}` | `{row['status']}` | "
-            f"`{row['dataset_source_url']}` | `{row['primary_metric']}` | `{row['primary_metric_threshold']}` | "
+            f"`{row['materialization_manifest_status'] or 'missing'}` | "
+            f"`{row['scorecard_json_summary_status'] or 'missing'}` | "
+            f"`{row['primary_metric']}` | `{row['primary_metric_threshold']}` | "
             f"`{row['blockers']}` |"
         )
     lines.extend(["", "## Required Scorecard Fields", "", ", ".join(f"`{field}`" for field in REQUIRED_SCORECARD_FIELDS)])

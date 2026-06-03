@@ -36,6 +36,9 @@ def test_build_lit_pcba_materialization_manifest_tool_writes_outputs(tmp_path: P
 
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["summary"]["status"] == "blocked_lit_pcba_materialization"
+    assert payload["summary"]["suite_id"] == "lit_pcba_virtual_screening"
     assert payload["summary"]["dataset_record_url"] == "https://zenodo.org/records/4588239"
+    assert payload["summary"]["dataset_source_url"] == "https://zenodo.org/records/4588239"
+    assert payload["summary"]["run_command"].startswith("python3 tools/build_lit_pcba_materialization_manifest.py")
     assert out_csv.read_text(encoding="utf-8").startswith("check,status,")
     assert "LIT-PCBA Materialization Manifest" in out_md.read_text(encoding="utf-8")

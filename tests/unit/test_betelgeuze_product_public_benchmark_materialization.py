@@ -16,6 +16,9 @@ def test_public_benchmark_materialization_blocks_missing_artifacts(tmp_path: Pat
     assert summary["status"] == "blocked_public_benchmark_materialization"
     assert "dataset_artifact_missing" in summary["blockers"]
     assert "result_artifact_missing" in summary["blockers"]
+    assert summary["primary_metric"] == "dockq_acceptable_rate"
+    assert summary["primary_metric_threshold"] == 0.2
+    assert "--suite-id protein_protein_docking_benchmark_v5" in summary["run_command"]
     assert summary["download_executed"] is False
 
 
@@ -35,4 +38,5 @@ def test_public_benchmark_materialization_ready_with_local_artifacts(tmp_path: P
     assert summary["status"] == "public_benchmark_materialization_ready"
     assert summary["materialized"] is True
     assert summary["result_row_count"] == 1
+    assert summary["scorecard_run_command_template"].startswith("python3 tools/build_public_benchmark_suite_scorecard.py")
     assert all(row["status"] == "pass" for row in payload["rows"])

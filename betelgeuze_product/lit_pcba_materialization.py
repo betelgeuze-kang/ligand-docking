@@ -10,6 +10,10 @@ DATASET_DOI = "10.5281/zenodo.4588239"
 ARCHIVE_FILENAME = "LIT_PCBA_AVE_docked_released.tar.xz"
 ARCHIVE_MD5 = "931de7c5b7904ab6e3a97ddef244b2d4"
 ARCHIVE_SIZE_GB = 1.6
+SUITE_ID = "lit_pcba_virtual_screening"
+BENCHMARK_FAMILY = "protein_ligand_virtual_screening"
+PRIMARY_METRIC = "EF1"
+PRIMARY_METRIC_THRESHOLD = 1.2
 
 CLAIM_BOUNDARY = (
     "LIT-PCBA materialization manifest only; it validates local benchmark source files and can standardize "
@@ -129,6 +133,13 @@ def build_lit_pcba_materialization_manifest(
     source_labels = Path(source_label_csv)
     out_scores = Path(out_scores_csv)
     out_labels = Path(out_labels_csv)
+    materialization_command = (
+        "python3 tools/build_lit_pcba_materialization_manifest.py "
+        f"--archive-path {archive} --extracted-dir {extracted} "
+        f"--source-score-csv {source_scores} --source-label-csv {source_labels} "
+        f"--out-scores-csv {out_scores} --out-labels-csv {out_labels} "
+        f"--target-col {target_col} --ligand-col {ligand_col} --score-col {score_col} --binder-col {binder_col}"
+    )
 
     archive_present = archive.exists()
     extracted_present = extracted.exists() and extracted.is_dir()
@@ -190,12 +201,17 @@ def build_lit_pcba_materialization_manifest(
     status = "lit_pcba_materialization_ready" if materialized and not blockers else "blocked_lit_pcba_materialization"
     summary = {
         "packet_type": "lit_pcba_materialization_manifest",
+        "suite_id": SUITE_ID,
         "status": status,
         "materialized": materialized,
         "blocker_count": len(blockers),
         "blockers": blockers,
+        "benchmark_family": BENCHMARK_FAMILY,
+        "dataset_source_url": DATASET_RECORD_URL,
         "dataset_record_url": DATASET_RECORD_URL,
         "dataset_doi": DATASET_DOI,
+        "primary_metric": PRIMARY_METRIC,
+        "primary_metric_threshold": PRIMARY_METRIC_THRESHOLD,
         "archive_filename": ARCHIVE_FILENAME,
         "archive_md5_expected": ARCHIVE_MD5,
         "archive_md5_observed": archive_md5_observed,
@@ -219,6 +235,11 @@ def build_lit_pcba_materialization_manifest(
         "ligand_col": ligand_col,
         "score_col": score_col,
         "binder_col": binder_col,
+        "run_command": materialization_command,
+        "scorecard_run_command_template": (
+            "python3 tools/build_lit_pcba_scorecard.py "
+            f"--scores-csv {out_scores} --labels-csv {out_labels} --score-col {score_col}"
+        ),
         "external_state_mutated": False,
         "download_executed": False,
         "docking_results_emitted": False,

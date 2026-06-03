@@ -51,6 +51,11 @@ def build_public_benchmark_materialization_manifest(
 
     dataset = Path(dataset_artifact)
     result = Path(result_artifact)
+    materialization_command = (
+        "python3 tools/build_public_benchmark_materialization_manifest.py "
+        f"--suite-id {_text(suite_id)} --dataset-artifact {dataset} --result-artifact {result} "
+        f"--min-result-rows {int(min_result_rows)}"
+    )
     dataset_present = dataset.exists()
     result_present = result.exists()
     result_rows = _row_count(result)
@@ -71,12 +76,21 @@ def build_public_benchmark_materialization_manifest(
         "blockers": sorted(set(blockers)),
         "benchmark_family": family,
         "dataset_source_url": source_url,
+        "primary_metric": _text(suite["primary_metric"]) if suite else "",
+        "primary_metric_threshold": float(suite["primary_metric_threshold"]) if suite else 0.0,
         "dataset_artifact": str(dataset),
         "dataset_artifact_present": dataset_present,
         "result_artifact": str(result),
         "result_artifact_present": result_present,
         "result_row_count": result_rows,
         "min_result_rows": int(min_result_rows),
+        "run_command": materialization_command,
+        "scorecard_run_command_template": (
+            "python3 tools/build_public_benchmark_suite_scorecard.py "
+            f"--suite-id {_text(suite_id)} --primary-metric-value OPERATOR_FILL_METRIC "
+            f"--evidence-artifact {result} --evidence-row-count {result_rows} "
+            f"--min-evidence-rows {int(min_result_rows)} --regression-baseline-ref OPERATOR_FILL_BASELINE_REF"
+        ),
         "external_state_mutated": False,
         "download_executed": False,
         "docking_results_emitted": False,
