@@ -83,9 +83,19 @@ def main(argv: list[str] | None = None) -> None:
     out_json = args.out_json or _default_out_json(args.suite_id)
     out_md = args.out_md or _default_out_md(args.suite_id)
     row_csv = args.row_csv or _default_row_csv(args.suite_id)
+    evidence_arg = f" --evidence-artifact {args.evidence_artifact}" if args.evidence_artifact else ""
+    baseline_arg = f" --regression-baseline-ref {args.regression_baseline_ref}" if args.regression_baseline_ref else ""
+    metric_name_arg = f" --primary-metric-name {args.primary_metric_name}" if args.primary_metric_name else ""
+    threshold_arg = (
+        f" --primary-metric-threshold {args.primary_metric_threshold}"
+        if args.primary_metric_threshold is not None
+        else ""
+    )
     run_command = args.run_command or (
         "python3 tools/build_public_benchmark_suite_scorecard.py "
         f"--suite-id {args.suite_id} --primary-metric-value {args.primary_metric_value}"
+        f"{metric_name_arg}{threshold_arg}{evidence_arg} --evidence-row-count {args.evidence_row_count}"
+        f" --min-evidence-rows {args.min_evidence_rows}{baseline_arg}"
     )
     payload = build_public_benchmark_suite_scorecard(
         suite_id=args.suite_id,
