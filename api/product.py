@@ -23,6 +23,13 @@ PRODUCT_OPERATIONAL_QUALITY_ARTIFACT = ROOT / "runs" / "product_operational_qual
 PRODUCT_RELEASE_OPERATIONS_ARTIFACT = ROOT / "runs" / "product_release_operations_dossier_current.json"
 PRODUCT_EXECUTION_APPROVAL_ARTIFACT = ROOT / "runs" / "product_execution_approval_gate_current.json"
 PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_ARTIFACT = ROOT / "runs" / "product_public_benchmark_work_order_current.json"
+CAMEO_VALIDATION_OPERATIONS_ARTIFACT = ROOT / "runs" / "cameo_validation_operations_dossier_current.json"
+CAMEO_OFFICIAL_RESULTS_ARTIFACT = ROOT / "runs" / "cameo_official_results_intake_gate_current.json"
+CAMEO_OFFICIAL_RESULTS_TEMPLATE = ROOT / "runs" / "cameo_official_results_operator_template_current.csv"
+CAMEO_OFFICIAL_RESULTS_INTAKE = ROOT / "runs" / "cameo_official_results_operator_intake.csv"
+CAMEO_PUBLIC_REGISTRATION_ARTIFACT = ROOT / "runs" / "cameo_public_registration_approval_gate_current.json"
+CAMEO_PUBLIC_REGISTRATION_TEMPLATE = ROOT / "runs" / "cameo_public_registration_operator_approval_template_current.csv"
+CAMEO_PUBLIC_REGISTRATION_INTAKE = ROOT / "runs" / "cameo_public_registration_operator_approval_intake.csv"
 PRODUCT_LICENSE_DECISION_ARTIFACT = ROOT / "runs" / "product_license_decision_gate_current.json"
 PRODUCT_LICENSE_DECISION_PACKET_ARTIFACT = ROOT / "runs" / "product_license_decision_packet_current.json"
 PRODUCT_LICENSE_FILE_WORK_ORDER_ARTIFACT = ROOT / "runs" / "product_license_file_creation_work_order_current.json"
@@ -401,6 +408,12 @@ async def get_product_public_benchmark() -> dict[str, Any]:
             "scorecard_required_suite_count": 0,
             "continuous_validation_command_count": 0,
             "continuous_validation_command": "",
+            "suite_run_command_count": 0,
+            "suite_threshold_count": 0,
+            "suite_materialization_manifest_count": 0,
+            "suite_scorecard_row_csv_count": 0,
+            "suite_required_output_count": 0,
+            "suite_no_external_dependency_count": 0,
             "requires_24h_server": False,
             "requires_competition_season": False,
             "requires_paid_vps": False,
@@ -426,6 +439,12 @@ async def get_product_public_benchmark() -> dict[str, Any]:
         "continuous_validation_command": summary.get("continuous_validation_command", ""),
         "scorecard_intake_sync_command": summary.get("scorecard_intake_sync_command", ""),
         "scorecard_row_csvs": list(summary.get("scorecard_row_csvs") or []),
+        "suite_run_command_count": int(summary.get("suite_run_command_count") or 0),
+        "suite_threshold_count": int(summary.get("suite_threshold_count") or 0),
+        "suite_materialization_manifest_count": int(summary.get("suite_materialization_manifest_count") or 0),
+        "suite_scorecard_row_csv_count": int(summary.get("suite_scorecard_row_csv_count") or 0),
+        "suite_required_output_count": int(summary.get("suite_required_output_count") or 0),
+        "suite_no_external_dependency_count": int(summary.get("suite_no_external_dependency_count") or 0),
         "requires_24h_server": bool(summary.get("requires_24h_server") is True),
         "requires_competition_season": bool(summary.get("requires_competition_season") is True),
         "requires_paid_vps": bool(summary.get("requires_paid_vps") is True),
@@ -435,6 +454,95 @@ async def get_product_public_benchmark() -> dict[str, Any]:
         "execution_enabled": False,
         "docking_results_emitted": False,
         "external_state_mutated": False,
+        "claim_boundary": summary.get("claim_boundary", ""),
+    }
+
+
+@router.get("/cameo-live-validation")
+async def get_product_cameo_live_validation() -> dict[str, Any]:
+    packet = _read_json_object(CAMEO_VALIDATION_OPERATIONS_ARTIFACT)
+    official_packet = _read_json_object(CAMEO_OFFICIAL_RESULTS_ARTIFACT)
+    registration_packet = _read_json_object(CAMEO_PUBLIC_REGISTRATION_ARTIFACT)
+    summary = _summary(packet)
+    official = _summary(official_packet)
+    registration = _summary(registration_packet)
+    rows = packet.get("rows") if isinstance(packet.get("rows"), list) else []
+    if not summary:
+        return {
+            "status": "missing_cameo_validation_operations_dossier",
+            "artifact_path": str(CAMEO_VALIDATION_OPERATIONS_ARTIFACT),
+            "validation_ready": False,
+            "official_result_required": True,
+            "official_results_intake_ready": False,
+            "official_results_intake_status": "",
+            "official_results_operator_template_csv": str(CAMEO_OFFICIAL_RESULTS_TEMPLATE),
+            "official_results_operator_intake_csv": str(CAMEO_OFFICIAL_RESULTS_INTAKE),
+            "official_results_blocker_codes": [],
+            "public_registration_allowed": False,
+            "registration_gate_status": "",
+            "registration_operator_template_csv": str(CAMEO_PUBLIC_REGISTRATION_TEMPLATE),
+            "registration_operator_approval_csv": str(CAMEO_PUBLIC_REGISTRATION_INTAKE),
+            "approval_tokens_required": [],
+            "next_required_step": "",
+            "server_started": False,
+            "outbound_email_enabled": False,
+            "server_registration_mutated": False,
+            "execution_enabled": False,
+            "docking_results_emitted": False,
+            "external_state_mutated": False,
+            "claim_boundary": (
+                "Product CAMEO live-validation endpoint only; the local CAMEO validation operations dossier is missing "
+                "or invalid. It does not start a server, register a CAMEO server, send email, fetch official results, "
+                "submit predictions, or mutate external state."
+            ),
+        }
+    return {
+        "status": summary.get("status"),
+        "artifact_path": str(CAMEO_VALIDATION_OPERATIONS_ARTIFACT),
+        "validation_ready": bool(summary.get("validation_ready") is True),
+        "validation_readiness_status": summary.get("validation_readiness_status", ""),
+        "official_result_required": bool(summary.get("official_result_required") is True),
+        "official_results_intake_ready": bool(summary.get("official_results_intake_ready") is True),
+        "official_results_intake_status": summary.get("official_results_intake_status", ""),
+        "official_results_intake_blocker_count": int(summary.get("official_results_intake_blocker_count") or 0),
+        "official_results_gate_status": official.get("status", ""),
+        "official_results_result_row_count": int(official.get("result_row_count") or 0),
+        "official_results_accepted_count": int(official.get("accepted_official_result_count") or 0),
+        "official_results_rejected_count": int(official.get("rejected_official_result_count") or 0),
+        "official_results_blocker_codes": list(official.get("blocker_codes") or []),
+        "official_results_operator_template_csv": official.get("operator_template_csv") or str(CAMEO_OFFICIAL_RESULTS_TEMPLATE),
+        "official_results_operator_intake_csv": official.get("operator_intake_csv") or str(CAMEO_OFFICIAL_RESULTS_INTAKE),
+        "official_results_required_columns": list(official.get("required_columns") or []),
+        "official_results_missing_required_columns": list(official.get("missing_required_columns") or []),
+        "official_results_metric_columns": list(official.get("official_metric_columns") or []),
+        "official_model1_result_ready": bool(summary.get("official_model1_result_ready") is True),
+        "official_cameo_results_used": bool(summary.get("official_cameo_results_used") is True),
+        "official_results_pending_honest": bool(summary.get("official_results_pending_honest") is True),
+        "receiver_smoke_status": summary.get("receiver_smoke_status", ""),
+        "api_dependency_status": summary.get("api_dependency_status", ""),
+        "evidence_integrity_ready": bool(summary.get("evidence_integrity_ready") is True),
+        "evidence_integrity_status": summary.get("evidence_integrity_status", ""),
+        "public_registration_allowed": bool(summary.get("public_registration_allowed") is True),
+        "registration_gate_status": registration.get("status", ""),
+        "registration_authorized_for_review": bool(registration.get("authorized_for_registration_review") is True),
+        "registration_operator_template_csv": registration.get("operator_template_csv")
+        or str(CAMEO_PUBLIC_REGISTRATION_TEMPLATE),
+        "registration_operator_approval_csv": registration.get("operator_approval_csv")
+        or str(CAMEO_PUBLIC_REGISTRATION_INTAKE),
+        "registration_blocker_count": int(registration.get("blocker_count") or 0),
+        "registration_blockers": list(registration.get("blockers") or []),
+        "registration_approval_token_required": summary.get("registration_approval_token_required", ""),
+        "outbound_email_approval_token_required": summary.get("outbound_email_approval_token_required", ""),
+        "approval_token_count": int(summary.get("approval_token_count") or 0),
+        "approval_tokens_required": list(summary.get("approval_tokens_required") or []),
+        "next_required_step": summary.get("next_required_step", ""),
+        "stages": rows,
+        "server_started": bool(summary.get("server_started") is True),
+        "outbound_email_enabled": bool(summary.get("outbound_email_enabled") is True),
+        "server_registration_mutated": bool(summary.get("server_registration_mutated") is True),
+        "execution_enabled": False,
+        "docking_results_emitted": False,
+        "external_state_mutated": bool(summary.get("external_state_mutated") is True),
         "claim_boundary": summary.get("claim_boundary", ""),
     }
 
@@ -492,6 +600,38 @@ async def get_product_operations() -> dict[str, Any]:
         ),
         "product_service_boundary_ready": bool(release.get("product_service_boundary_ready") is True),
         "product_api_contract_ready": bool(release.get("product_api_contract_ready") is True),
+        "public_benchmark_work_order_status": release.get("public_benchmark_work_order_status", ""),
+        "public_benchmark_work_order_artifact": release.get("public_benchmark_work_order_artifact", ""),
+        "public_benchmark_work_order_open_suite_count": int(
+            release.get("public_benchmark_work_order_open_suite_count") or 0
+        ),
+        "public_benchmark_work_order_materialization_required_suite_count": int(
+            release.get("public_benchmark_work_order_materialization_required_suite_count") or 0
+        ),
+        "public_benchmark_work_order_scorecard_required_suite_count": int(
+            release.get("public_benchmark_work_order_scorecard_required_suite_count") or 0
+        ),
+        "public_benchmark_work_order_continuous_validation_command_count": int(
+            release.get("public_benchmark_work_order_continuous_validation_command_count") or 0
+        ),
+        "public_benchmark_work_order_continuous_validation_command": release.get(
+            "public_benchmark_work_order_continuous_validation_command", ""
+        ),
+        "public_benchmark_work_order_suite_run_command_count": int(
+            release.get("public_benchmark_work_order_suite_run_command_count") or 0
+        ),
+        "public_benchmark_work_order_suite_threshold_count": int(
+            release.get("public_benchmark_work_order_suite_threshold_count") or 0
+        ),
+        "public_benchmark_work_order_suite_materialization_manifest_count": int(
+            release.get("public_benchmark_work_order_suite_materialization_manifest_count") or 0
+        ),
+        "public_benchmark_work_order_suite_scorecard_row_csv_count": int(
+            release.get("public_benchmark_work_order_suite_scorecard_row_csv_count") or 0
+        ),
+        "public_benchmark_work_order_suite_no_external_dependency_count": int(
+            release.get("public_benchmark_work_order_suite_no_external_dependency_count") or 0
+        ),
         "cameo_architecture_validation_ready": bool(release.get("cameo_architecture_validation_ready") is True),
         "cleanup_postcheck_contract_ready": bool(release.get("cleanup_postcheck_contract_ready") is True),
         "cleanup_postcheck_blocked_row_count": int(release.get("cleanup_postcheck_blocked_row_count") or 0),
@@ -847,6 +987,38 @@ async def get_product_release_readiness() -> dict[str, Any]:
         "product_architecture_approval_required_lane_count": int(architecture.get("approval_required_lane_count") or 0),
         "product_service_boundary_ready": bool(architecture.get("product_service_boundary_ready") is True),
         "product_api_contract_ready": bool(architecture.get("product_api_contract_ready") is True),
+        "public_benchmark_work_order_status": release.get("public_benchmark_work_order_status", ""),
+        "public_benchmark_work_order_artifact": release.get("public_benchmark_work_order_artifact", ""),
+        "public_benchmark_work_order_open_suite_count": int(
+            release.get("public_benchmark_work_order_open_suite_count") or 0
+        ),
+        "public_benchmark_work_order_materialization_required_suite_count": int(
+            release.get("public_benchmark_work_order_materialization_required_suite_count") or 0
+        ),
+        "public_benchmark_work_order_scorecard_required_suite_count": int(
+            release.get("public_benchmark_work_order_scorecard_required_suite_count") or 0
+        ),
+        "public_benchmark_work_order_continuous_validation_command_count": int(
+            release.get("public_benchmark_work_order_continuous_validation_command_count") or 0
+        ),
+        "public_benchmark_work_order_continuous_validation_command": release.get(
+            "public_benchmark_work_order_continuous_validation_command", ""
+        ),
+        "public_benchmark_work_order_suite_run_command_count": int(
+            release.get("public_benchmark_work_order_suite_run_command_count") or 0
+        ),
+        "public_benchmark_work_order_suite_threshold_count": int(
+            release.get("public_benchmark_work_order_suite_threshold_count") or 0
+        ),
+        "public_benchmark_work_order_suite_materialization_manifest_count": int(
+            release.get("public_benchmark_work_order_suite_materialization_manifest_count") or 0
+        ),
+        "public_benchmark_work_order_suite_scorecard_row_csv_count": int(
+            release.get("public_benchmark_work_order_suite_scorecard_row_csv_count") or 0
+        ),
+        "public_benchmark_work_order_suite_no_external_dependency_count": int(
+            release.get("public_benchmark_work_order_suite_no_external_dependency_count") or 0
+        ),
         "product_architecture_cleanup_postcheck_ready": bool(architecture.get("cleanup_postcheck_contract_ready") is True),
         "product_architecture_cleanup_postcheck_row_count": int(architecture.get("cleanup_postcheck_row_count") or 0),
         "product_architecture_cleanup_postcheck_blocked_row_count": int(architecture.get("cleanup_postcheck_blocked_row_count") or 0),

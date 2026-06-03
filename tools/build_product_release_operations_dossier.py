@@ -13,6 +13,7 @@ DEFAULT_READINESS_JSON = "runs/product_readiness_gate_current.json"
 DEFAULT_CAPABILITY_SURFACE_JSON = "runs/product_capability_surface_contract_current.json"
 DEFAULT_OPERATIONAL_QUALITY_JSON = "runs/product_operational_quality_contract_current.json"
 DEFAULT_ARCHITECTURE_JSON = "runs/product_architecture_contract_current.json"
+DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_JSON = "runs/product_public_benchmark_work_order_current.json"
 DEFAULT_PREFLIGHT_JSON = "runs/product_execution_preflight_current.json"
 DEFAULT_WORK_ORDER_JSON = "runs/product_execution_work_order_current.json"
 DEFAULT_APPROVAL_GATE_JSON = "runs/product_execution_approval_gate_current.json"
@@ -127,6 +128,7 @@ def build_product_release_operations_dossier(
     capability_surface_packet: dict[str, Any] | None = None,
     operational_quality_packet: dict[str, Any] | None = None,
     architecture_packet: dict[str, Any] | None = None,
+    public_benchmark_work_order_packet: dict[str, Any] | None = None,
     commercial_independence_packet: dict[str, Any] | None = None,
     license_decision_packet: dict[str, Any] | None = None,
     license_decision_options_packet: dict[str, Any] | None = None,
@@ -135,6 +137,7 @@ def build_product_release_operations_dossier(
     capability_surface_path: str = DEFAULT_CAPABILITY_SURFACE_JSON,
     operational_quality_path: str = DEFAULT_OPERATIONAL_QUALITY_JSON,
     architecture_path: str = DEFAULT_ARCHITECTURE_JSON,
+    public_benchmark_work_order_path: str = DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_JSON,
     preflight_path: str = DEFAULT_PREFLIGHT_JSON,
     work_order_path: str = DEFAULT_WORK_ORDER_JSON,
     approval_gate_path: str = DEFAULT_APPROVAL_GATE_JSON,
@@ -150,6 +153,7 @@ def build_product_release_operations_dossier(
     capability_surface = _summary(capability_surface_packet or {})
     operational_quality = _summary(operational_quality_packet or {})
     architecture = _summary(architecture_packet or {})
+    public_benchmark_work_order = _summary(public_benchmark_work_order_packet or {})
     preflight = _summary(preflight_packet)
     work_order = _summary(work_order_packet)
     approval_gate = _summary(approval_gate_packet)
@@ -179,6 +183,31 @@ def build_product_release_operations_dossier(
     public_benchmark_blocked_suite_count = _int(architecture.get("public_benchmark_blocked_suite_count"))
     public_benchmark_ready_required_suite_count = _int(architecture.get("public_benchmark_ready_required_suite_count"))
     public_benchmark_required_suite_count = _int(architecture.get("public_benchmark_required_suite_count"))
+    public_benchmark_work_order_status = _text(public_benchmark_work_order.get("status"))
+    public_benchmark_work_order_open_suite_count = _int(public_benchmark_work_order.get("open_suite_count"))
+    public_benchmark_work_order_materialization_required_suite_count = _int(
+        public_benchmark_work_order.get("materialization_required_suite_count")
+    )
+    public_benchmark_work_order_scorecard_required_suite_count = _int(
+        public_benchmark_work_order.get("scorecard_required_suite_count")
+    )
+    public_benchmark_work_order_continuous_validation_command_count = _int(
+        public_benchmark_work_order.get("continuous_validation_command_count")
+    )
+    public_benchmark_work_order_suite_run_command_count = _int(public_benchmark_work_order.get("suite_run_command_count"))
+    public_benchmark_work_order_suite_threshold_count = _int(public_benchmark_work_order.get("suite_threshold_count"))
+    public_benchmark_work_order_suite_materialization_manifest_count = _int(
+        public_benchmark_work_order.get("suite_materialization_manifest_count")
+    )
+    public_benchmark_work_order_suite_scorecard_row_csv_count = _int(
+        public_benchmark_work_order.get("suite_scorecard_row_csv_count")
+    )
+    public_benchmark_work_order_suite_no_external_dependency_count = _int(
+        public_benchmark_work_order.get("suite_no_external_dependency_count")
+    )
+    public_benchmark_work_order_continuous_validation_command = _text(
+        public_benchmark_work_order.get("continuous_validation_command")
+    )
     preflight_ready = preflight.get("status") == "product_execution_preflight_ready"
     work_order_ready = work_order.get("status") == "product_execution_work_order_ready"
     approval_authorized = approval_gate.get("authorized_for_execution") is True
@@ -258,6 +287,9 @@ def build_product_release_operations_dossier(
                 f"public_benchmark_ready_required_suite_count={public_benchmark_ready_required_suite_count}, "
                 f"public_benchmark_required_suite_count={public_benchmark_required_suite_count}, "
                 f"public_benchmark_blocked_suite_count={public_benchmark_blocked_suite_count}, "
+                f"public_benchmark_work_order_status={public_benchmark_work_order_status or 'missing'}, "
+                f"public_benchmark_work_order_open_suite_count={public_benchmark_work_order_open_suite_count}, "
+                f"public_benchmark_work_order_continuous_validation_command_count={public_benchmark_work_order_continuous_validation_command_count}, "
                 f"cameo_architecture_validation_ready={_bool(architecture.get('cameo_architecture_validation_ready'))}, "
                 f"cameo_official_validation_evidence_ready={_bool(architecture.get('cameo_official_validation_evidence_ready'))}, "
                 f"cameo_receiver_smoke_status={_text(architecture.get('cameo_receiver_smoke_status')) or 'missing'}, "
@@ -406,6 +438,7 @@ def build_product_release_operations_dossier(
         license_file_work_order_packet or {},
         preflight_packet,
         work_order_packet,
+        public_benchmark_work_order_packet or {},
         approval_gate_packet,
         bundle_contract_packet,
         delivery_evidence_packet,
@@ -449,6 +482,18 @@ def build_product_release_operations_dossier(
         "public_benchmark_requires_24h_server": _bool(architecture.get("public_benchmark_requires_24h_server")),
         "public_benchmark_requires_competition_season": _bool(architecture.get("public_benchmark_requires_competition_season")),
         "public_benchmark_requires_paid_vps": _bool(architecture.get("public_benchmark_requires_paid_vps")),
+        "public_benchmark_work_order_status": public_benchmark_work_order_status,
+        "public_benchmark_work_order_artifact": public_benchmark_work_order_path,
+        "public_benchmark_work_order_open_suite_count": public_benchmark_work_order_open_suite_count,
+        "public_benchmark_work_order_materialization_required_suite_count": public_benchmark_work_order_materialization_required_suite_count,
+        "public_benchmark_work_order_scorecard_required_suite_count": public_benchmark_work_order_scorecard_required_suite_count,
+        "public_benchmark_work_order_continuous_validation_command_count": public_benchmark_work_order_continuous_validation_command_count,
+        "public_benchmark_work_order_suite_run_command_count": public_benchmark_work_order_suite_run_command_count,
+        "public_benchmark_work_order_suite_threshold_count": public_benchmark_work_order_suite_threshold_count,
+        "public_benchmark_work_order_suite_materialization_manifest_count": public_benchmark_work_order_suite_materialization_manifest_count,
+        "public_benchmark_work_order_suite_scorecard_row_csv_count": public_benchmark_work_order_suite_scorecard_row_csv_count,
+        "public_benchmark_work_order_suite_no_external_dependency_count": public_benchmark_work_order_suite_no_external_dependency_count,
+        "public_benchmark_work_order_continuous_validation_command": public_benchmark_work_order_continuous_validation_command,
         "cameo_architecture_validation_ready": _bool(architecture.get("cameo_architecture_validation_ready")),
         "cameo_official_validation_evidence_ready": _bool(architecture.get("cameo_official_validation_evidence_ready")),
         "cameo_receiver_smoke_ready": _bool(architecture.get("cameo_receiver_smoke_ready")),
@@ -531,6 +576,18 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- public_benchmark_requires_24h_server: `{s['public_benchmark_requires_24h_server']}`",
         f"- public_benchmark_requires_competition_season: `{s['public_benchmark_requires_competition_season']}`",
         f"- public_benchmark_requires_paid_vps: `{s['public_benchmark_requires_paid_vps']}`",
+        f"- public_benchmark_work_order_status: `{s['public_benchmark_work_order_status']}`",
+        f"- public_benchmark_work_order_artifact: `{s['public_benchmark_work_order_artifact']}`",
+        f"- public_benchmark_work_order_open_suite_count: `{s['public_benchmark_work_order_open_suite_count']}`",
+        f"- public_benchmark_work_order_materialization_required_suite_count: `{s['public_benchmark_work_order_materialization_required_suite_count']}`",
+        f"- public_benchmark_work_order_scorecard_required_suite_count: `{s['public_benchmark_work_order_scorecard_required_suite_count']}`",
+        f"- public_benchmark_work_order_continuous_validation_command_count: `{s['public_benchmark_work_order_continuous_validation_command_count']}`",
+        f"- public_benchmark_work_order_suite_run_command_count: `{s['public_benchmark_work_order_suite_run_command_count']}`",
+        f"- public_benchmark_work_order_suite_threshold_count: `{s['public_benchmark_work_order_suite_threshold_count']}`",
+        f"- public_benchmark_work_order_suite_materialization_manifest_count: `{s['public_benchmark_work_order_suite_materialization_manifest_count']}`",
+        f"- public_benchmark_work_order_suite_scorecard_row_csv_count: `{s['public_benchmark_work_order_suite_scorecard_row_csv_count']}`",
+        f"- public_benchmark_work_order_suite_no_external_dependency_count: `{s['public_benchmark_work_order_suite_no_external_dependency_count']}`",
+        f"- public_benchmark_work_order_continuous_validation_command: `{s['public_benchmark_work_order_continuous_validation_command']}`",
         f"- cameo_architecture_validation_ready: `{s['cameo_architecture_validation_ready']}`",
         f"- cameo_official_validation_evidence_ready: `{s['cameo_official_validation_evidence_ready']}`",
         f"- cameo_receiver_smoke_ready: `{s['cameo_receiver_smoke_ready']}`",
@@ -590,6 +647,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--capability-surface-json", default=DEFAULT_CAPABILITY_SURFACE_JSON)
     parser.add_argument("--operational-quality-json", default=DEFAULT_OPERATIONAL_QUALITY_JSON)
     parser.add_argument("--architecture-json", default=DEFAULT_ARCHITECTURE_JSON)
+    parser.add_argument("--public-benchmark-work-order-json", default=DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_JSON)
     parser.add_argument("--preflight-json", default=DEFAULT_PREFLIGHT_JSON)
     parser.add_argument("--work-order-json", default=DEFAULT_WORK_ORDER_JSON)
     parser.add_argument("--approval-gate-json", default=DEFAULT_APPROVAL_GATE_JSON)
@@ -620,6 +678,7 @@ def main(argv: list[str] | None = None) -> None:
         pilot_packet=_read_json_if_present(args.pilot_packet_json),
         commercial_independence_packet=_read_json_if_present(args.commercial_independence_json),
         architecture_packet=_read_json_if_present(args.architecture_json),
+        public_benchmark_work_order_packet=_read_json_if_present(args.public_benchmark_work_order_json),
         license_decision_packet=_read_json_if_present(args.license_decision_json),
         license_decision_options_packet=_read_json_if_present(args.license_decision_options_json),
         license_file_work_order_packet=_read_json_if_present(args.license_file_work_order_json),
@@ -634,6 +693,7 @@ def main(argv: list[str] | None = None) -> None:
         delivery_evidence_path=args.delivery_evidence_json,
         pilot_packet_path=args.pilot_packet_json,
         commercial_independence_path=args.commercial_independence_json,
+        public_benchmark_work_order_path=args.public_benchmark_work_order_json,
         license_decision_path=args.license_decision_json,
         license_decision_options_path=args.license_decision_options_json,
         license_file_work_order_path=args.license_file_work_order_json,

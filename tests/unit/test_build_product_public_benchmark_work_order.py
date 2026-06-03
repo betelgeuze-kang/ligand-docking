@@ -71,6 +71,12 @@ def test_product_public_benchmark_work_order_maps_suite_blockers_to_commands() -
     assert summary["materialization_required_suite_count"] == 1
     assert summary["scorecard_required_suite_count"] == 1
     assert summary["continuous_validation_command_count"] == 2
+    assert summary["suite_run_command_count"] == 2
+    assert summary["suite_threshold_count"] == 2
+    assert summary["suite_materialization_manifest_count"] == 2
+    assert summary["suite_scorecard_row_csv_count"] == 2
+    assert summary["suite_required_output_count"] == 2
+    assert summary["suite_no_external_dependency_count"] == 2
     assert "sync_product_public_benchmark_scorecard_intake.py" in summary["scorecard_intake_sync_command"]
     assert summary["scorecard_row_csvs"] == [
         "runs/dude_z_decoy_smoke_scorecard_row_current.csv",

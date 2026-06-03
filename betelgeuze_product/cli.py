@@ -16,6 +16,7 @@ ARTIFACTS = {
     "operational-quality": "runs/product_operational_quality_contract_current.json",
     "operations": "runs/product_release_operations_dossier_current.json",
     "public-benchmark": "runs/product_public_benchmark_work_order_current.json",
+    "cameo-live-validation": "runs/cameo_validation_operations_dossier_current.json",
     "commercial-independence": "runs/product_commercial_independence_gate_current.json",
     "license-decision": "runs/product_license_decision_gate_current.json",
     "license-options": "runs/product_license_decision_packet_current.json",
@@ -133,10 +134,20 @@ def build_all_status(*, root: str | Path = ROOT) -> dict[str, Any]:
         for command, payload in statuses.items()
         if str(payload.get("status", "")).startswith(("blocked_", "missing_"))
     ]
-    approval_tokens = sorted({token for payload in statuses.values() for token in _approval_tokens_from_status(payload)})
+    release_statuses = {command: payload for command, payload in statuses.items() if command != "cameo-live-validation"}
+    approval_tokens = sorted({token for payload in release_statuses.values() for token in _approval_tokens_from_status(payload)})
+    cameo_live_summary = statuses.get("cameo-live-validation", {}).get("summary", {})
+    if not isinstance(cameo_live_summary, dict):
+        cameo_live_summary = {}
+    cameo_live_approval_tokens = sorted(
+        _approval_tokens_from_status(statuses.get("cameo-live-validation", {}))
+    )
     operations_summary = statuses.get("operations", {}).get("summary", {})
     if not isinstance(operations_summary, dict):
         operations_summary = {}
+    public_benchmark_summary = statuses.get("public-benchmark", {}).get("summary", {})
+    if not isinstance(public_benchmark_summary, dict):
+        public_benchmark_summary = {}
     return {
         "packet_type": "product_cli_status_set",
         "status": "blocked_product_cli_status_set" if blocked_or_missing else "product_cli_status_set_ready",
@@ -158,31 +169,40 @@ def build_all_status(*, root: str | Path = ROOT) -> dict[str, Any]:
         "cleanup_postcheck_contract_ready": _bool_value(operations_summary.get("cleanup_postcheck_contract_ready")),
         "commercial_independence_ready": _bool_value(operations_summary.get("commercial_independence_ready")),
         "public_benchmark_work_order_status": statuses.get("public-benchmark", {}).get("status", ""),
-        "public_benchmark_validation_ready": _bool_value(
-            statuses.get("public-benchmark", {}).get("summary", {}).get("public_benchmark_validation_ready")
-            if isinstance(statuses.get("public-benchmark", {}).get("summary"), dict)
-            else False
-        ),
-        "public_benchmark_open_suite_count": _int_value(
-            statuses.get("public-benchmark", {}).get("summary", {}).get("open_suite_count")
-            if isinstance(statuses.get("public-benchmark", {}).get("summary"), dict)
-            else 0
-        ),
+        "public_benchmark_validation_ready": _bool_value(public_benchmark_summary.get("public_benchmark_validation_ready")),
+        "public_benchmark_open_suite_count": _int_value(public_benchmark_summary.get("open_suite_count")),
         "public_benchmark_materialization_required_suite_count": _int_value(
-            statuses.get("public-benchmark", {}).get("summary", {}).get("materialization_required_suite_count")
-            if isinstance(statuses.get("public-benchmark", {}).get("summary"), dict)
-            else 0
+            public_benchmark_summary.get("materialization_required_suite_count")
         ),
         "public_benchmark_scorecard_required_suite_count": _int_value(
-            statuses.get("public-benchmark", {}).get("summary", {}).get("scorecard_required_suite_count")
-            if isinstance(statuses.get("public-benchmark", {}).get("summary"), dict)
-            else 0
+            public_benchmark_summary.get("scorecard_required_suite_count")
         ),
         "public_benchmark_continuous_validation_command_count": _int_value(
-            statuses.get("public-benchmark", {}).get("summary", {}).get("continuous_validation_command_count")
-            if isinstance(statuses.get("public-benchmark", {}).get("summary"), dict)
-            else 0
+            public_benchmark_summary.get("continuous_validation_command_count")
         ),
+        "public_benchmark_suite_run_command_count": _int_value(public_benchmark_summary.get("suite_run_command_count")),
+        "public_benchmark_suite_threshold_count": _int_value(public_benchmark_summary.get("suite_threshold_count")),
+        "public_benchmark_suite_materialization_manifest_count": _int_value(
+            public_benchmark_summary.get("suite_materialization_manifest_count")
+        ),
+        "public_benchmark_suite_scorecard_row_csv_count": _int_value(
+            public_benchmark_summary.get("suite_scorecard_row_csv_count")
+        ),
+        "public_benchmark_suite_required_output_count": _int_value(
+            public_benchmark_summary.get("suite_required_output_count")
+        ),
+        "public_benchmark_suite_no_external_dependency_count": _int_value(
+            public_benchmark_summary.get("suite_no_external_dependency_count")
+        ),
+        "cameo_live_validation_status": statuses.get("cameo-live-validation", {}).get("status", ""),
+        "cameo_live_validation_ready": _bool_value(cameo_live_summary.get("validation_ready")),
+        "cameo_live_official_results_intake_ready": _bool_value(
+            cameo_live_summary.get("official_results_intake_ready")
+        ),
+        "cameo_live_official_result_required": _bool_value(cameo_live_summary.get("official_result_required")),
+        "cameo_live_public_registration_allowed": _bool_value(cameo_live_summary.get("public_registration_allowed")),
+        "cameo_live_approval_token_count": len(cameo_live_approval_tokens),
+        "cameo_live_approval_tokens_required": cameo_live_approval_tokens,
         "license_present": _bool_value(operations_summary.get("license_present")),
         "license_authorized_for_file_creation_review": _bool_value(
             operations_summary.get("license_authorized_for_file_creation_review")

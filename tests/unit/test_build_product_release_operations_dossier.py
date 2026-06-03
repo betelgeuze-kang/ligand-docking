@@ -84,6 +84,27 @@ def _architecture(ready: bool = False) -> dict:
     }
 
 
+def _public_benchmark_work_order() -> dict:
+    return {
+        "summary": {
+            "status": "product_public_benchmark_work_order_ready",
+            "open_suite_count": 5,
+            "materialization_required_suite_count": 5,
+            "scorecard_required_suite_count": 0,
+            "continuous_validation_command_count": 5,
+            "suite_run_command_count": 5,
+            "suite_threshold_count": 5,
+            "suite_materialization_manifest_count": 5,
+            "suite_scorecard_row_csv_count": 5,
+            "suite_no_external_dependency_count": 5,
+            "continuous_validation_command": "python3 tools/build_lit_pcba_materialization_manifest.py && python3 tools/build_lit_pcba_scorecard.py",
+            "execution_enabled": False,
+            "docking_results_emitted": False,
+            "external_state_mutated": False,
+        }
+    }
+
+
 def _preflight() -> dict:
     return {
         "summary": {
@@ -241,6 +262,7 @@ def test_product_release_operations_dossier_consolidates_blocked_current_lane() 
         capability_surface_packet=_capability_surface(),
         operational_quality_packet=_operational_quality(),
         architecture_packet=_architecture(False),
+        public_benchmark_work_order_packet=_public_benchmark_work_order(),
         preflight_packet=_preflight(),
         work_order_packet=_work_order(),
         approval_gate_packet=_approval_gate(False),
@@ -270,6 +292,17 @@ def test_product_release_operations_dossier_consolidates_blocked_current_lane() 
     assert summary["architecture_approval_required_lane_count"] == 2
     assert summary["product_service_boundary_ready"] is True
     assert summary["product_api_contract_ready"] is True
+    assert summary["public_benchmark_work_order_status"] == "product_public_benchmark_work_order_ready"
+    assert summary["public_benchmark_work_order_open_suite_count"] == 5
+    assert summary["public_benchmark_work_order_materialization_required_suite_count"] == 5
+    assert summary["public_benchmark_work_order_scorecard_required_suite_count"] == 0
+    assert summary["public_benchmark_work_order_continuous_validation_command_count"] == 5
+    assert summary["public_benchmark_work_order_suite_run_command_count"] == 5
+    assert summary["public_benchmark_work_order_suite_threshold_count"] == 5
+    assert summary["public_benchmark_work_order_suite_materialization_manifest_count"] == 5
+    assert summary["public_benchmark_work_order_suite_scorecard_row_csv_count"] == 5
+    assert summary["public_benchmark_work_order_suite_no_external_dependency_count"] == 5
+    assert "build_lit_pcba_scorecard.py" in summary["public_benchmark_work_order_continuous_validation_command"]
     assert summary["cameo_architecture_validation_ready"] is False
     assert summary["cameo_official_validation_evidence_ready"] is False
     assert summary["cameo_receiver_smoke_ready"] is False
@@ -305,6 +338,8 @@ def test_product_release_operations_dossier_consolidates_blocked_current_lane() 
     assert summary["pilot_delivery_ready"] is False
     assert summary["external_state_mutated"] is False
     architecture_row = next(row for row in payload["rows"] if row["stage"] == "architecture_contract")
+    assert "public_benchmark_work_order_status=product_public_benchmark_work_order_ready" in architecture_row["reason"]
+    assert "public_benchmark_work_order_continuous_validation_command_count=5" in architecture_row["reason"]
     assert "cameo_official_validation_evidence_ready=False" in architecture_row["reason"]
     assert "cameo_receiver_smoke_status=blocked_cameo_receiver_smoke" in architecture_row["reason"]
     assert "cameo_api_dependency_status=blocked_cameo_api_dependency_readiness" in architecture_row["reason"]
@@ -324,6 +359,7 @@ def test_product_release_operations_dossier_ready_when_bundle_and_pilot_are_read
         capability_surface_packet=_capability_surface(),
         operational_quality_packet=_operational_quality(),
         architecture_packet=_architecture(True),
+        public_benchmark_work_order_packet=_public_benchmark_work_order(),
         preflight_packet=_preflight(),
         work_order_packet=_work_order(),
         approval_gate_packet=_approval_gate(True),
@@ -348,6 +384,7 @@ def test_product_release_operations_dossier_tool_writes_outputs(tmp_path: Path) 
         "capability_surface": tmp_path / "capability_surface.json",
         "operational_quality": tmp_path / "operational_quality.json",
         "architecture": tmp_path / "architecture.json",
+        "public_benchmark_work_order": tmp_path / "public_benchmark_work_order.json",
         "preflight": tmp_path / "preflight.json",
         "work_order": tmp_path / "work_order.json",
         "approval_gate": tmp_path / "approval_gate.json",
@@ -363,6 +400,7 @@ def test_product_release_operations_dossier_tool_writes_outputs(tmp_path: Path) 
     paths["capability_surface"].write_text(json.dumps(_capability_surface()) + "\n", encoding="utf-8")
     paths["operational_quality"].write_text(json.dumps(_operational_quality()) + "\n", encoding="utf-8")
     paths["architecture"].write_text(json.dumps(_architecture(False)) + "\n", encoding="utf-8")
+    paths["public_benchmark_work_order"].write_text(json.dumps(_public_benchmark_work_order()) + "\n", encoding="utf-8")
     paths["preflight"].write_text(json.dumps(_preflight()) + "\n", encoding="utf-8")
     paths["work_order"].write_text(json.dumps(_work_order()) + "\n", encoding="utf-8")
     paths["approval_gate"].write_text(json.dumps(_approval_gate(False)) + "\n", encoding="utf-8")
@@ -387,6 +425,8 @@ def test_product_release_operations_dossier_tool_writes_outputs(tmp_path: Path) 
             str(paths["operational_quality"]),
             "--architecture-json",
             str(paths["architecture"]),
+            "--public-benchmark-work-order-json",
+            str(paths["public_benchmark_work_order"]),
             "--preflight-json",
             str(paths["preflight"]),
             "--work-order-json",
@@ -416,6 +456,10 @@ def test_product_release_operations_dossier_tool_writes_outputs(tmp_path: Path) 
         ]
     )
 
-    assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["status"] == "blocked_product_release_operations_dossier"
+    summary = json.loads(out_json.read_text(encoding="utf-8"))["summary"]
+    assert summary["status"] == "blocked_product_release_operations_dossier"
+    assert summary["public_benchmark_work_order_suite_run_command_count"] == 5
     assert out_csv.read_text(encoding="utf-8").startswith("priority,stage,")
-    assert "Product Release Operations Dossier" in out_md.read_text(encoding="utf-8")
+    md_text = out_md.read_text(encoding="utf-8")
+    assert "Product Release Operations Dossier" in md_text
+    assert "public_benchmark_work_order_continuous_validation_command" in md_text

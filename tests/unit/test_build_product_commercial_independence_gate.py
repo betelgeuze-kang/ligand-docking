@@ -81,8 +81,8 @@ include = ["betelgeuze_product*", "betelgeuze_cameo*", "betelgeuze_cleanup*"]
                 "summary": {
                     "status": "product_service_boundary_contract_ready",
                     "service_boundary_ready": True,
-                    "api_route_count": 14,
-                    "cli_command_count": 11,
+                    "api_route_count": 16,
+                    "cli_command_count": 13,
                 }
             }
         )
@@ -156,6 +156,8 @@ include = ["betelgeuze_product*", "betelgeuze_cameo*", "betelgeuze_cleanup*"]
     assert payload["summary"]["console_entrypoint_targets_present"] is True
     assert payload["summary"]["reproducible_install_manifest_ready"] is True
     assert payload["summary"]["product_service_boundary_ready"] is True
+    assert payload["summary"]["product_service_boundary_api_route_count"] == 16
+    assert payload["summary"]["product_service_boundary_cli_command_count"] == 13
     assert payload["summary"]["product_api_contract_ready"] is True
     assert payload["summary"]["local_self_hosted_operation_ready"] is True
     assert payload["summary"]["external_saas_runtime_dependency_count"] == 0

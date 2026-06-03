@@ -243,6 +243,12 @@
     "source_public_benchmark_json": "runs/product_public_benchmark_contract_current.json",
     "source_public_benchmark_status": "blocked_product_public_benchmark_contract",
     "status": "product_public_benchmark_work_order_ready",
-    "suite_count": 5
+    "suite_count": 5,
+    "suite_materialization_manifest_count": 5,
+    "suite_no_external_dependency_count": 5,
+    "suite_required_output_count": 5,
+    "suite_run_command_count": 5,
+    "suite_scorecard_row_csv_count": 5,
+    "suite_threshold_count": 5
   }
 }

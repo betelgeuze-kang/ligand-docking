@@ -77,6 +77,12 @@ def test_product_cli_reads_public_benchmark_work_order_status(tmp_path: Path) ->
             "materialization_required_suite_count": 5,
             "scorecard_required_suite_count": 0,
             "continuous_validation_command_count": 5,
+            "suite_run_command_count": 5,
+            "suite_threshold_count": 5,
+            "suite_materialization_manifest_count": 5,
+            "suite_scorecard_row_csv_count": 5,
+            "suite_required_output_count": 5,
+            "suite_no_external_dependency_count": 5,
         },
     )
 
@@ -85,6 +91,69 @@ def test_product_cli_reads_public_benchmark_work_order_status(tmp_path: Path) ->
     assert payload["status"] == "product_public_benchmark_work_order_ready"
     assert payload["artifact_present"] is True
     assert payload["summary"]["open_suite_count"] == 5
+    assert payload["summary"]["suite_run_command_count"] == 5
+    assert payload["execution_enabled"] is False
+    assert payload["external_state_mutated"] is False
+
+
+def test_product_cli_reads_cameo_live_validation_without_release_token_rollup(tmp_path: Path) -> None:
+    _write_packet(
+        tmp_path,
+        cli.ARTIFACTS["cameo-live-validation"],
+        "blocked_cameo_validation_operations_dossier",
+        extra_summary={
+            "validation_ready": False,
+            "official_result_required": True,
+            "official_results_intake_ready": False,
+            "public_registration_allowed": False,
+            "approval_tokens_required": [
+                "APPROVE_CAMEO_OUTBOUND_EMAIL",
+                "APPROVE_CAMEO_SERVER_REGISTRATION",
+            ],
+        },
+    )
+
+    payload = cli.build_cli_status("cameo-live-validation", root=tmp_path)
+
+    assert payload["status"] == "blocked_cameo_validation_operations_dossier"
+    assert payload["summary"]["official_result_required"] is True
+    assert payload["execution_enabled"] is False
+    assert payload["external_state_mutated"] is False
+
+
+def test_product_cli_all_rolls_up_public_benchmark_suite_evidence_counts(tmp_path: Path) -> None:
+    _write_packet(tmp_path, cli.ARTIFACTS["capabilities"], "product_capability_surface_contract_ready")
+    _write_packet(
+        tmp_path,
+        cli.ARTIFACTS["public-benchmark"],
+        "product_public_benchmark_work_order_ready",
+        extra_summary={
+            "public_benchmark_validation_ready": False,
+            "open_suite_count": 5,
+            "materialization_required_suite_count": 5,
+            "scorecard_required_suite_count": 0,
+            "continuous_validation_command_count": 5,
+            "suite_run_command_count": 5,
+            "suite_threshold_count": 5,
+            "suite_materialization_manifest_count": 5,
+            "suite_scorecard_row_csv_count": 5,
+            "suite_required_output_count": 5,
+            "suite_no_external_dependency_count": 5,
+        },
+    )
+
+    payload = cli.build_all_status(root=tmp_path)
+
+    assert payload["public_benchmark_work_order_status"] == "product_public_benchmark_work_order_ready"
+    assert payload["public_benchmark_open_suite_count"] == 5
+    assert payload["public_benchmark_materialization_required_suite_count"] == 5
+    assert payload["public_benchmark_continuous_validation_command_count"] == 5
+    assert payload["public_benchmark_suite_run_command_count"] == 5
+    assert payload["public_benchmark_suite_threshold_count"] == 5
+    assert payload["public_benchmark_suite_materialization_manifest_count"] == 5
+    assert payload["public_benchmark_suite_scorecard_row_csv_count"] == 5
+    assert payload["public_benchmark_suite_required_output_count"] == 5
+    assert payload["public_benchmark_suite_no_external_dependency_count"] == 5
     assert payload["execution_enabled"] is False
     assert payload["external_state_mutated"] is False
 
@@ -124,6 +193,21 @@ def test_product_cli_all_surfaces_blocked_when_required_artifacts_missing(tmp_pa
             "pilot_delivery_ready": False,
         },
     )
+    _write_packet(
+        tmp_path,
+        cli.ARTIFACTS["cameo-live-validation"],
+        "blocked_cameo_validation_operations_dossier",
+        extra_summary={
+            "validation_ready": False,
+            "official_result_required": True,
+            "official_results_intake_ready": False,
+            "public_registration_allowed": False,
+            "approval_tokens_required": [
+                "APPROVE_CAMEO_OUTBOUND_EMAIL",
+                "APPROVE_CAMEO_SERVER_REGISTRATION",
+            ],
+        },
+    )
 
     payload = cli.build_all_status(root=tmp_path)
 
@@ -154,6 +238,22 @@ def test_product_cli_all_surfaces_blocked_when_required_artifacts_missing(tmp_pa
     assert payload["public_benchmark_materialization_required_suite_count"] == 0
     assert payload["public_benchmark_scorecard_required_suite_count"] == 0
     assert payload["public_benchmark_continuous_validation_command_count"] == 0
+    assert payload["public_benchmark_suite_run_command_count"] == 0
+    assert payload["public_benchmark_suite_threshold_count"] == 0
+    assert payload["public_benchmark_suite_materialization_manifest_count"] == 0
+    assert payload["public_benchmark_suite_scorecard_row_csv_count"] == 0
+    assert payload["public_benchmark_suite_required_output_count"] == 0
+    assert payload["public_benchmark_suite_no_external_dependency_count"] == 0
+    assert payload["cameo_live_validation_status"] == "blocked_cameo_validation_operations_dossier"
+    assert payload["cameo_live_validation_ready"] is False
+    assert payload["cameo_live_official_results_intake_ready"] is False
+    assert payload["cameo_live_official_result_required"] is True
+    assert payload["cameo_live_public_registration_allowed"] is False
+    assert payload["cameo_live_approval_token_count"] == 2
+    assert payload["cameo_live_approval_tokens_required"] == [
+        "APPROVE_CAMEO_OUTBOUND_EMAIL",
+        "APPROVE_CAMEO_SERVER_REGISTRATION",
+    ]
     assert payload["license_present"] is False
     assert payload["license_authorized_for_file_creation_review"] is False
     assert payload["license_decision_packet_ready"] is True

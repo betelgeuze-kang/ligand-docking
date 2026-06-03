@@ -194,6 +194,20 @@ def build_product_public_benchmark_work_order(
     materialization_rows = [row for row in open_rows if row["work_order_status"] == "materialization_required"]
     scorecard_rows = [row for row in open_rows if row["work_order_status"] == "scorecard_required"]
     suite_validation_commands = [row["continuous_validation_command"] for row in rows if row["continuous_validation_command"]]
+    suite_run_command_rows = [row for row in rows if row["run_command"]]
+    suite_threshold_rows = [row for row in rows if row["primary_metric_threshold"] not in ("", None)]
+    suite_materialization_rows = [row for row in rows if row["materialization_manifest"]]
+    suite_scorecard_row_csv_rows = [row for row in rows if row["scorecard_row_csv"]]
+    suite_required_output_rows = [row for row in rows if row["required_output"]]
+    suite_no_external_dependency_rows = [
+        row
+        for row in rows
+        if not row["requires_24h_server"]
+        and not row["requires_competition_season"]
+        and not row["requires_paid_vps"]
+        and not row["download_executed"]
+        and not row["external_state_mutated"]
+    ]
     continuous_validation_command = " && ".join(suite_validation_commands + ([_refresh_command()] if suite_validation_commands else []))
     payload_summary = {
         "packet_type": "product_public_benchmark_work_order",
@@ -209,6 +223,12 @@ def build_product_public_benchmark_work_order(
         "continuous_validation_command": continuous_validation_command,
         "scorecard_intake_sync_command": _scorecard_intake_sync_command(),
         "scorecard_row_csvs": [row["scorecard_row_csv"] for row in rows],
+        "suite_run_command_count": len(suite_run_command_rows),
+        "suite_threshold_count": len(suite_threshold_rows),
+        "suite_materialization_manifest_count": len(suite_materialization_rows),
+        "suite_scorecard_row_csv_count": len(suite_scorecard_row_csv_rows),
+        "suite_required_output_count": len(suite_required_output_rows),
+        "suite_no_external_dependency_count": len(suite_no_external_dependency_rows),
         "ready_required_suite_count": _int(summary.get("ready_required_suite_count")),
         "required_suite_count": _int(summary.get("required_suite_count")),
         "blocked_suite_count": _int(summary.get("blocked_suite_count")),

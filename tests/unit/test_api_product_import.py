@@ -18,6 +18,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert "/product/api-contract" in paths
     assert "/product/operational-quality" in paths
     assert "/product/public-benchmark" in paths
+    assert "/product/cameo-live-validation" in paths
     assert "/product/operations" in paths
     assert "/product/license-decision" in paths
     assert "/product/license-options" in paths
@@ -129,6 +130,12 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert public_benchmark["materialization_required_suite_count"] == 5
     assert public_benchmark["scorecard_required_suite_count"] == 0
     assert public_benchmark["continuous_validation_command_count"] == 5
+    assert public_benchmark["suite_run_command_count"] == 5
+    assert public_benchmark["suite_threshold_count"] == 5
+    assert public_benchmark["suite_materialization_manifest_count"] == 5
+    assert public_benchmark["suite_scorecard_row_csv_count"] == 5
+    assert public_benchmark["suite_required_output_count"] == 5
+    assert public_benchmark["suite_no_external_dependency_count"] == 5
     assert public_benchmark["requires_24h_server"] is False
     assert public_benchmark["requires_competition_season"] is False
     assert public_benchmark["requires_paid_vps"] is False
@@ -136,6 +143,60 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert public_benchmark["execution_enabled"] is False
     assert public_benchmark["docking_results_emitted"] is False
     assert public_benchmark["external_state_mutated"] is False
+
+    cameo_live_validation = asyncio.run(product.get_product_cameo_live_validation())
+
+    assert cameo_live_validation["status"] == "blocked_cameo_validation_operations_dossier"
+    assert cameo_live_validation["validation_ready"] is False
+    assert cameo_live_validation["official_result_required"] is True
+    assert cameo_live_validation["official_results_intake_ready"] is False
+    assert cameo_live_validation["official_results_intake_status"] == "blocked_cameo_official_results_intake"
+    assert cameo_live_validation["official_results_intake_blocker_count"] == 2
+    assert cameo_live_validation["official_results_gate_status"] == "blocked_cameo_official_results_intake"
+    assert cameo_live_validation["official_results_result_row_count"] == 0
+    assert cameo_live_validation["official_results_accepted_count"] == 0
+    assert cameo_live_validation["official_results_rejected_count"] == 0
+    assert cameo_live_validation["official_results_blocker_codes"] == [
+        "official_result_required_columns_missing",
+        "official_result_rows_missing",
+    ]
+    assert cameo_live_validation["official_results_operator_template_csv"].endswith(
+        "runs/cameo_official_results_operator_template_current.csv"
+    )
+    assert cameo_live_validation["official_results_operator_intake_csv"].endswith(
+        "runs/cameo_official_results_operator_intake.csv"
+    )
+    assert "target_id" in cameo_live_validation["official_results_required_columns"]
+    assert "target_id" in cameo_live_validation["official_results_missing_required_columns"]
+    assert "lddt" in cameo_live_validation["official_results_metric_columns"]
+    assert cameo_live_validation["official_model1_result_ready"] is False
+    assert cameo_live_validation["official_cameo_results_used"] is False
+    assert cameo_live_validation["official_results_pending_honest"] is True
+    assert cameo_live_validation["receiver_smoke_status"] == "cameo_receiver_smoke_ready"
+    assert cameo_live_validation["api_dependency_status"] == "cameo_api_dependency_ready"
+    assert cameo_live_validation["evidence_integrity_ready"] is True
+    assert cameo_live_validation["public_registration_allowed"] is False
+    assert cameo_live_validation["registration_gate_status"] == "blocked_cameo_public_registration_approval_gate"
+    assert cameo_live_validation["registration_authorized_for_review"] is False
+    assert cameo_live_validation["registration_operator_template_csv"].endswith(
+        "runs/cameo_public_registration_operator_approval_template_current.csv"
+    )
+    assert cameo_live_validation["registration_operator_approval_csv"].endswith(
+        "runs/cameo_public_registration_operator_approval_intake.csv"
+    )
+    assert cameo_live_validation["registration_blocker_count"] == 4
+    assert "operator_decision_missing" in cameo_live_validation["registration_blockers"]
+    assert cameo_live_validation["approval_tokens_required"] == [
+        "APPROVE_CAMEO_OUTBOUND_EMAIL",
+        "APPROVE_CAMEO_SERVER_REGISTRATION",
+    ]
+    assert "official CAMEO result intake" in cameo_live_validation["next_required_step"]
+    assert cameo_live_validation["server_started"] is False
+    assert cameo_live_validation["outbound_email_enabled"] is False
+    assert cameo_live_validation["server_registration_mutated"] is False
+    assert cameo_live_validation["execution_enabled"] is False
+    assert cameo_live_validation["docking_results_emitted"] is False
+    assert cameo_live_validation["external_state_mutated"] is False
 
     operations = asyncio.run(product.get_product_operations())
 
@@ -151,6 +212,19 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert operations["operational_quality_blocker_count"] == 0
     assert operations["product_service_boundary_ready"] is True
     assert operations["product_api_contract_ready"] is True
+    assert operations["public_benchmark_work_order_status"] == "product_public_benchmark_work_order_ready"
+    assert operations["public_benchmark_work_order_artifact"] == "runs/product_public_benchmark_work_order_current.json"
+    assert operations["public_benchmark_work_order_open_suite_count"] == 5
+    assert operations["public_benchmark_work_order_materialization_required_suite_count"] == 5
+    assert operations["public_benchmark_work_order_scorecard_required_suite_count"] == 0
+    assert operations["public_benchmark_work_order_continuous_validation_command_count"] == 5
+    assert "build_lit_pcba_scorecard.py" in operations["public_benchmark_work_order_continuous_validation_command"]
+    assert "build_goal_bottleneck_briefing.py" in operations["public_benchmark_work_order_continuous_validation_command"]
+    assert operations["public_benchmark_work_order_suite_run_command_count"] == 5
+    assert operations["public_benchmark_work_order_suite_threshold_count"] == 5
+    assert operations["public_benchmark_work_order_suite_materialization_manifest_count"] == 5
+    assert operations["public_benchmark_work_order_suite_scorecard_row_csv_count"] == 5
+    assert operations["public_benchmark_work_order_suite_no_external_dependency_count"] == 5
     assert operations["cameo_architecture_validation_ready"] is False
     assert operations["cleanup_postcheck_contract_ready"] is True
     assert operations["cleanup_postcheck_blocked_row_count"] == 0
@@ -268,6 +342,19 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert release["product_architecture_approval_required_lane_count"] == 0
     assert release["product_service_boundary_ready"] is True
     assert release["product_api_contract_ready"] is True
+    assert release["public_benchmark_work_order_status"] == "product_public_benchmark_work_order_ready"
+    assert release["public_benchmark_work_order_artifact"] == "runs/product_public_benchmark_work_order_current.json"
+    assert release["public_benchmark_work_order_open_suite_count"] == 5
+    assert release["public_benchmark_work_order_materialization_required_suite_count"] == 5
+    assert release["public_benchmark_work_order_scorecard_required_suite_count"] == 0
+    assert release["public_benchmark_work_order_continuous_validation_command_count"] == 5
+    assert "build_lit_pcba_scorecard.py" in release["public_benchmark_work_order_continuous_validation_command"]
+    assert "build_goal_bottleneck_briefing.py" in release["public_benchmark_work_order_continuous_validation_command"]
+    assert release["public_benchmark_work_order_suite_run_command_count"] == 5
+    assert release["public_benchmark_work_order_suite_threshold_count"] == 5
+    assert release["public_benchmark_work_order_suite_materialization_manifest_count"] == 5
+    assert release["public_benchmark_work_order_suite_scorecard_row_csv_count"] == 5
+    assert release["public_benchmark_work_order_suite_no_external_dependency_count"] == 5
     assert release["product_architecture_cleanup_postcheck_ready"] is True
     assert release["product_architecture_cleanup_postcheck_row_count"] == 5
     assert release["product_architecture_cleanup_postcheck_blocked_row_count"] == 0
