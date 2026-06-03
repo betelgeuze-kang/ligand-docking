@@ -15,6 +15,7 @@ DEFAULT_PRODUCT_RELEASE_JSON = "runs/product_release_operations_dossier_current.
 DEFAULT_COMMERCIAL_INDEPENDENCE_JSON = "runs/product_commercial_independence_gate_current.json"
 DEFAULT_PRODUCT_SERVICE_BOUNDARY_JSON = "runs/product_service_boundary_contract_current.json"
 DEFAULT_PRODUCT_API_CONTRACT_JSON = "runs/product_api_contract_current.json"
+DEFAULT_PRODUCT_EXECUTION_PREFLIGHT_JSON = "runs/product_execution_preflight_current.json"
 DEFAULT_PUBLIC_BENCHMARK_JSON = "runs/product_public_benchmark_contract_current.json"
 DEFAULT_CAMEO_CAPABILITY_JSON = "runs/cameo_capability_preflight_current.json"
 DEFAULT_CAMEO_ARCHITECTURE_VALIDATION_JSON = "runs/cameo_architecture_validation_contract_current.json"
@@ -67,6 +68,14 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- approval_required_lane_count: `{s['approval_required_lane_count']}`",
         f"- structure_analysis_product_surface_ready: `{s['structure_analysis_product_surface_ready']}`",
         f"- ligand_docking_execution_contract_ready: `{s['ligand_docking_execution_contract_ready']}`",
+        f"- scoring_ranking_contract_ready: `{s['scoring_ranking_contract_ready']}`",
+        f"- scoring_ranking_eval_unique_keys: `{s['scoring_ranking_eval_unique_keys']}`",
+        f"- scoring_ranking_gate_min_eval_unique_keys: `{s['scoring_ranking_gate_min_eval_unique_keys']}`",
+        f"- scoring_ranking_gate_ef1_min: `{s['scoring_ranking_gate_ef1_min']}`",
+        f"- local_delivery_bundle_validation_ready: `{s['local_delivery_bundle_validation_ready']}`",
+        f"- local_delivery_bundle_assembled: `{s['local_delivery_bundle_assembled']}`",
+        f"- local_delivery_bundle_validation_passed: `{s['local_delivery_bundle_validation_passed']}`",
+        f"- local_delivery_pilot_delivery_ready: `{s['local_delivery_pilot_delivery_ready']}`",
         f"- product_service_boundary_ready: `{s['product_service_boundary_ready']}`",
         f"- product_api_contract_ready: `{s['product_api_contract_ready']}`",
         f"- public_benchmark_validation_ready: `{s['public_benchmark_validation_ready']}`",
@@ -152,6 +161,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--commercial-independence-json", default=DEFAULT_COMMERCIAL_INDEPENDENCE_JSON)
     parser.add_argument("--product-service-boundary-json", default=DEFAULT_PRODUCT_SERVICE_BOUNDARY_JSON)
     parser.add_argument("--product-api-contract-json", default=DEFAULT_PRODUCT_API_CONTRACT_JSON)
+    parser.add_argument("--product-execution-preflight-json", default=DEFAULT_PRODUCT_EXECUTION_PREFLIGHT_JSON)
     parser.add_argument("--public-benchmark-json", default=DEFAULT_PUBLIC_BENCHMARK_JSON)
     parser.add_argument("--cameo-capability-json", default=DEFAULT_CAMEO_CAPABILITY_JSON)
     parser.add_argument("--cameo-architecture-validation-json", default=DEFAULT_CAMEO_ARCHITECTURE_VALIDATION_JSON)
@@ -177,6 +187,7 @@ def main(argv: list[str] | None = None) -> None:
         commercial_independence_packet=_read_json_if_present(args.commercial_independence_json),
         product_service_boundary_packet=_read_json_if_present(args.product_service_boundary_json),
         product_api_contract_packet=_read_json_if_present(args.product_api_contract_json),
+        product_execution_preflight_packet=_read_json_if_present(args.product_execution_preflight_json),
         public_benchmark_packet=_read_json_if_present(args.public_benchmark_json),
         cameo_capability_packet=_read_json_if_present(args.cameo_capability_json),
         cameo_architecture_validation_packet=_read_json_if_present(args.cameo_architecture_validation_json),
@@ -193,6 +204,7 @@ def main(argv: list[str] | None = None) -> None:
         commercial_independence_path=args.commercial_independence_json,
         product_service_boundary_path=args.product_service_boundary_json,
         product_api_contract_path=args.product_api_contract_json,
+        product_execution_preflight_path=args.product_execution_preflight_json,
         public_benchmark_path=args.public_benchmark_json,
         cameo_capability_path=args.cameo_capability_json,
         cameo_architecture_validation_path=args.cameo_architecture_validation_json,

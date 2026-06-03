@@ -116,6 +116,7 @@ def build_product_architecture_contract(
     casp17_transition_packet: dict[str, Any],
     product_service_boundary_packet: dict[str, Any] | None = None,
     product_api_contract_packet: dict[str, Any] | None = None,
+    product_execution_preflight_packet: dict[str, Any] | None = None,
     public_benchmark_packet: dict[str, Any] | None = None,
     cameo_architecture_validation_packet: dict[str, Any] | None = None,
     cleanup_postcheck_packet: dict[str, Any] | None = None,
@@ -126,6 +127,7 @@ def build_product_architecture_contract(
     commercial_independence_path: str = "runs/product_commercial_independence_gate_current.json",
     product_service_boundary_path: str = "runs/product_service_boundary_contract_current.json",
     product_api_contract_path: str = "runs/product_api_contract_current.json",
+    product_execution_preflight_path: str = "runs/product_execution_preflight_current.json",
     public_benchmark_path: str = "runs/product_public_benchmark_contract_current.json",
     cameo_capability_path: str = "runs/cameo_capability_preflight_current.json",
     cameo_architecture_validation_path: str = "runs/cameo_architecture_validation_contract_current.json",
@@ -143,6 +145,7 @@ def build_product_architecture_contract(
     commercial = _summary(commercial_independence_packet)
     service_boundary = _summary(product_service_boundary_packet or {})
     api_contract = _summary(product_api_contract_packet or {})
+    execution_preflight = _summary(product_execution_preflight_packet or {})
     public_benchmark = _summary(public_benchmark_packet or {})
     cameo = _summary(cameo_capability_packet)
     cameo_architecture = _summary(cameo_architecture_validation_packet or {})
@@ -261,6 +264,27 @@ def build_product_architecture_contract(
         and _bool(casp17.get("surface_ready"))
     )
     release_allowed = _bool(release.get("delivery_ready_claim_allowed")) and _bool(release.get("authorized_for_execution"))
+    gate_checks = (
+        product_execution_preflight_packet.get("operational_gate_feasibility_checks")
+        if isinstance((product_execution_preflight_packet or {}).get("operational_gate_feasibility_checks"), list)
+        else []
+    )
+    ranking_gate = gate_checks[0] if gate_checks and isinstance(gate_checks[0], dict) else {}
+    scoring_ranking_ready = (
+        _text(execution_preflight.get("status")) == "product_execution_preflight_ready"
+        and _text(execution_preflight.get("operational_gate_feasibility_status")) == "pass"
+        and _text(ranking_gate.get("status")) == "pass"
+        and _int(ranking_gate.get("eval_unique_keys")) >= _int(ranking_gate.get("gate_min_eval_unique_keys"))
+        and _float(ranking_gate.get("gate_ef1_min")) > 0
+        and bool(_text(ranking_gate.get("ranking_labels_csv")))
+    )
+    local_delivery_bundle_ready = (
+        _bool(product.get("local_delivery_bundle_capability_ready"))
+        and _bool(release.get("bundle_assembled"))
+        and _bool(release.get("bundle_validation_passed"))
+        and _bool(release.get("delivery_ready_claim_allowed"))
+        and _bool(release.get("pilot_delivery_ready"))
+    )
 
     rows = [
         _row(
@@ -289,6 +313,23 @@ def build_product_architecture_contract(
             reason="The architecture must expose a bounded docking execution contract before any approved run.",
         ),
         _row(
+            lane_id="scoring_ranking_contract",
+            domain="scoring_ranking",
+            status="ready" if scoring_ranking_ready else "blocked",
+            observed=(
+                f"preflight_status={_text(execution_preflight.get('status')) or 'missing'};"
+                f"operational_gate={_text(execution_preflight.get('operational_gate_feasibility_status')) or 'missing'};"
+                f"ranking_gate_status={_text(ranking_gate.get('status')) or 'missing'};"
+                f"eval_unique_keys={_int(ranking_gate.get('eval_unique_keys'))};"
+                f"gate_min_eval_unique_keys={_int(ranking_gate.get('gate_min_eval_unique_keys'))};"
+                f"gate_ef1_min={_float(ranking_gate.get('gate_ef1_min'))};"
+                f"ranking_labels_csv={_text(ranking_gate.get('ranking_labels_csv')) or 'missing'}"
+            ),
+            required="execution preflight with operational gate pass, ranking labels, eval coverage, and scoring/ranking thresholds",
+            artifact_path=product_execution_preflight_path,
+            reason="The product architecture needs a distinct scoring/ranking contract, not only a docking command surface.",
+        ),
+        _row(
             lane_id="commercial_independence_release_gate",
             domain="product",
             status="ready" if commercial_ready else "blocked",
@@ -303,6 +344,22 @@ def build_product_architecture_contract(
             required="commercial-independence gate ready with license, dependency provenance, reproducible install, and release claim allowed by local evidence",
             artifact_path=f"{commercial_independence_path};{product_release_path}",
             reason="The product cannot be called commercially independent until license, packaging, dependency provenance, and reproducible install evidence clear.",
+        ),
+        _row(
+            lane_id="local_delivery_bundle_validation",
+            domain="local_delivery",
+            status="ready" if local_delivery_bundle_ready else "blocked",
+            observed=(
+                f"capability_bundle_ready={_bool(product.get('local_delivery_bundle_capability_ready'))};"
+                f"bundle_assembled={_bool(release.get('bundle_assembled'))};"
+                f"bundle_validation_passed={_bool(release.get('bundle_validation_passed'))};"
+                f"delivery_ready_claim_allowed={_bool(release.get('delivery_ready_claim_allowed'))};"
+                f"pilot_delivery_ready={_bool(release.get('pilot_delivery_ready'))};"
+                f"bundle_tag={_text(release.get('bundle_tag')) or 'missing'}"
+            ),
+            required="local-delivery capability, assembled bundle, passing bundle validation, and delivery/pilot evidence",
+            artifact_path=f"{product_release_path};runs/product_bundle_contract_current.json;runs/product_delivery_evidence_contract_current.json;runs/product_pilot_packet_contract_current.json",
+            reason="A standalone commercial product needs a validated local delivery bundle lane separate from benchmark and license gates.",
         ),
         _row(
             lane_id="product_service_boundary_contract",
@@ -468,6 +525,8 @@ def build_product_architecture_contract(
     local_architecture_surface_ready = (
         structure_ready
         and docking_ready
+        and scoring_ranking_ready
+        and local_delivery_bundle_ready
         and service_boundary_ready
         and api_contract_ready
         and public_benchmark_ready
@@ -489,6 +548,14 @@ def build_product_architecture_contract(
         "architecture_release_ready": architecture_release_ready,
         "structure_analysis_product_surface_ready": structure_ready,
         "ligand_docking_execution_contract_ready": docking_ready,
+        "scoring_ranking_contract_ready": scoring_ranking_ready,
+        "scoring_ranking_eval_unique_keys": _int(ranking_gate.get("eval_unique_keys")),
+        "scoring_ranking_gate_min_eval_unique_keys": _int(ranking_gate.get("gate_min_eval_unique_keys")),
+        "scoring_ranking_gate_ef1_min": _float(ranking_gate.get("gate_ef1_min")),
+        "local_delivery_bundle_validation_ready": local_delivery_bundle_ready,
+        "local_delivery_bundle_assembled": _bool(release.get("bundle_assembled")),
+        "local_delivery_bundle_validation_passed": _bool(release.get("bundle_validation_passed")),
+        "local_delivery_pilot_delivery_ready": _bool(release.get("pilot_delivery_ready")),
         "product_service_boundary_ready": service_boundary_ready,
         "product_api_contract_ready": api_contract_ready,
         "public_benchmark_validation_ready": public_benchmark_ready,

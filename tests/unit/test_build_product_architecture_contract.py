@@ -28,6 +28,38 @@ def _root(tmp_path: Path) -> Path:
     return tmp_path
 
 
+def _product_release_ready() -> dict:
+    return _packet(
+        {
+            "status": "blocked_product_release_operations_dossier",
+            "authorized_for_execution": True,
+            "delivery_ready_claim_allowed": True,
+            "bundle_assembled": True,
+            "bundle_validation_passed": True,
+            "pilot_delivery_ready": True,
+            "bundle_tag": "product_gpcr_adrb2",
+        }
+    )
+
+
+def _execution_preflight_ready() -> dict:
+    return {
+        "summary": {
+            "status": "product_execution_preflight_ready",
+            "operational_gate_feasibility_status": "pass",
+        },
+        "operational_gate_feasibility_checks": [
+            {
+                "status": "pass",
+                "eval_unique_keys": 200,
+                "gate_min_eval_unique_keys": 200,
+                "gate_ef1_min": 1.2,
+                "ranking_labels_csv": "config/labels.csv",
+            }
+        ],
+    }
+
+
 def test_product_architecture_contract_reports_local_surface_and_gates(tmp_path: Path) -> None:
     payload = mod.build_product_architecture_contract(
         product_capability_packet=_packet(
@@ -35,9 +67,10 @@ def test_product_architecture_contract_reports_local_surface_and_gates(tmp_path:
                 "status": "product_capability_surface_contract_ready",
                 "structure_analysis_capability_ready": True,
                 "ligand_docking_capability_ready": True,
+                "local_delivery_bundle_capability_ready": True,
             }
         ),
-        product_release_packet=_packet({"status": "blocked_product_release_operations_dossier", "authorized_for_execution": False}),
+        product_release_packet=_product_release_ready(),
         commercial_independence_packet=_packet(
             {
                 "status": "blocked_product_commercial_independence_gate",
@@ -61,6 +94,7 @@ def test_product_architecture_contract_reports_local_surface_and_gates(tmp_path:
                 "status_response_missing_key_count": 0,
             }
         ),
+        product_execution_preflight_packet=_execution_preflight_ready(),
         public_benchmark_packet=_packet(
             {
                 "status": "blocked_product_public_benchmark_contract",
@@ -139,11 +173,19 @@ def test_product_architecture_contract_reports_local_surface_and_gates(tmp_path:
     assert summary["status"] == "blocked_product_architecture_contract"
     assert summary["local_architecture_surface_ready"] is False
     assert summary["architecture_release_ready"] is False
-    assert summary["ready_lane_count"] == 9
+    assert summary["ready_lane_count"] == 11
     assert summary["blocked_lane_count"] == 2
     assert summary["approval_required_lane_count"] == 1
     assert summary["structure_analysis_product_surface_ready"] is True
     assert summary["ligand_docking_execution_contract_ready"] is True
+    assert summary["scoring_ranking_contract_ready"] is True
+    assert summary["scoring_ranking_eval_unique_keys"] == 200
+    assert summary["scoring_ranking_gate_min_eval_unique_keys"] == 200
+    assert summary["scoring_ranking_gate_ef1_min"] == 1.2
+    assert summary["local_delivery_bundle_validation_ready"] is True
+    assert summary["local_delivery_bundle_assembled"] is True
+    assert summary["local_delivery_bundle_validation_passed"] is True
+    assert summary["local_delivery_pilot_delivery_ready"] is True
     assert summary["product_service_boundary_ready"] is True
     assert summary["product_api_contract_ready"] is True
     assert summary["public_benchmark_validation_ready"] is False
@@ -206,6 +248,12 @@ def test_product_architecture_contract_reports_local_surface_and_gates(tmp_path:
     assert "receiver_smoke_status=blocked_cameo_receiver_smoke" in cameo_row["observed"]
     assert "api_dependency_ready=False" in cameo_row["observed"]
     assert "registration_tokens=APPROVE_CAMEO_SERVER_REGISTRATION;APPROVE_CAMEO_OUTBOUND_EMAIL" in cameo_row["observed"]
+    scoring_row = next(row for row in payload["rows"] if row["lane_id"] == "scoring_ranking_contract")
+    assert scoring_row["status"] == "ready"
+    assert "eval_unique_keys=200" in scoring_row["observed"]
+    local_delivery_row = next(row for row in payload["rows"] if row["lane_id"] == "local_delivery_bundle_validation")
+    assert local_delivery_row["status"] == "ready"
+    assert "bundle_validation_passed=True" in local_delivery_row["observed"]
 
 
 def test_product_architecture_contract_uses_cleanup_completion_gate(tmp_path: Path) -> None:
@@ -215,9 +263,10 @@ def test_product_architecture_contract_uses_cleanup_completion_gate(tmp_path: Pa
                 "status": "product_capability_surface_contract_ready",
                 "structure_analysis_capability_ready": True,
                 "ligand_docking_capability_ready": True,
+                "local_delivery_bundle_capability_ready": True,
             }
         ),
-        product_release_packet=_packet({"status": "blocked_product_release_operations_dossier", "authorized_for_execution": False}),
+        product_release_packet=_product_release_ready(),
         commercial_independence_packet=_packet(
             {
                 "status": "blocked_product_commercial_independence_gate",
@@ -241,6 +290,7 @@ def test_product_architecture_contract_uses_cleanup_completion_gate(tmp_path: Pa
                 "status_response_missing_key_count": 0,
             }
         ),
+        product_execution_preflight_packet=_execution_preflight_ready(),
         cameo_capability_packet=_packet(
             {
                 "status": "blocked_cameo_capability_preflight",
@@ -323,9 +373,10 @@ def test_product_architecture_contract_tool_writes_outputs(tmp_path: Path) -> No
                 "status": "product_capability_surface_contract_ready",
                 "structure_analysis_capability_ready": True,
                 "ligand_docking_capability_ready": True,
+                "local_delivery_bundle_capability_ready": True,
             }
         ),
-        "product_release": _packet({"status": "blocked_product_release_operations_dossier", "authorized_for_execution": False}),
+        "product_release": _product_release_ready(),
         "commercial": _packet({"status": "blocked_product_commercial_independence_gate", "commercial_independent_product_claim_allowed": False}),
         "service_boundary": _packet(
             {
@@ -344,6 +395,7 @@ def test_product_architecture_contract_tool_writes_outputs(tmp_path: Path) -> No
                 "status_response_missing_key_count": 0,
             }
         ),
+        "product_preflight": _execution_preflight_ready(),
         "public_benchmark": _packet(
             {
                 "status": "blocked_product_public_benchmark_contract",
@@ -418,6 +470,8 @@ def test_product_architecture_contract_tool_writes_outputs(tmp_path: Path) -> No
             str(paths["service_boundary"]),
             "--product-api-contract-json",
             str(paths["api_contract"]),
+            "--product-execution-preflight-json",
+            str(paths["product_preflight"]),
             "--public-benchmark-json",
             str(paths["public_benchmark"]),
             "--cameo-capability-json",
@@ -452,6 +506,8 @@ def test_product_architecture_contract_tool_writes_outputs(tmp_path: Path) -> No
     assert summary["local_architecture_surface_ready"] is False
     assert summary["product_service_boundary_ready"] is True
     assert summary["product_api_contract_ready"] is True
+    assert summary["scoring_ranking_contract_ready"] is True
+    assert summary["local_delivery_bundle_validation_ready"] is True
     assert summary["public_benchmark_validation_ready"] is False
     assert summary["public_benchmark_requires_24h_server"] is False
     assert summary["cameo_architecture_validation_protocol_ready"] is True
