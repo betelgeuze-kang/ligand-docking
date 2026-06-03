@@ -53,6 +53,20 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- console_entrypoint_targets_present: `{s['console_entrypoint_targets_present']}`",
         f"- core_product_surface_present: `{s['core_product_surface_present']}`",
         f"- product_cli_surface_present: `{s['product_cli_surface_present']}`",
+        f"- product_service_boundary_ready: `{s['product_service_boundary_ready']}`",
+        f"- product_service_boundary_api_route_count: `{s['product_service_boundary_api_route_count']}`",
+        f"- product_service_boundary_cli_command_count: `{s['product_service_boundary_cli_command_count']}`",
+        f"- product_api_contract_ready: `{s['product_api_contract_ready']}`",
+        f"- product_api_contract_missing_route_count: `{s['product_api_contract_missing_route_count']}`",
+        f"- local_delivery_bundle_ready: `{s['local_delivery_bundle_ready']}`",
+        f"- local_delivery_bundle_assembled: `{s['local_delivery_bundle_assembled']}`",
+        f"- local_delivery_bundle_validation_passed: `{s['local_delivery_bundle_validation_passed']}`",
+        f"- local_delivery_pilot_delivery_ready: `{s['local_delivery_pilot_delivery_ready']}`",
+        f"- public_benchmark_evidence_ready: `{s['public_benchmark_evidence_ready']}`",
+        f"- public_benchmark_status: `{s['public_benchmark_status']}`",
+        f"- public_benchmark_ready_required_suite_count: `{s['public_benchmark_ready_required_suite_count']}`",
+        f"- public_benchmark_required_suite_count: `{s['public_benchmark_required_suite_count']}`",
+        f"- public_benchmark_blocked_suite_count: `{s['public_benchmark_blocked_suite_count']}`",
         f"- execution_enabled: `{s['execution_enabled']}`",
         f"- docking_results_emitted: `{s['docking_results_emitted']}`",
         f"- external_state_mutated: `{s['external_state_mutated']}`",
@@ -85,6 +99,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--requirements-lock-json", default="runs/local_delivery_requirements_lock_current.json")
     parser.add_argument("--requirements-lock-md", default="runs/local_delivery_requirements_lock_current.md")
     parser.add_argument("--requirements-lock-txt", default="runs/local_delivery_requirements_lock_current.txt")
+    parser.add_argument("--product-service-boundary-json", default="runs/product_service_boundary_contract_current.json")
+    parser.add_argument("--product-api-contract-json", default="runs/product_api_contract_current.json")
+    parser.add_argument("--product-bundle-json", default="runs/product_bundle_contract_current.json")
+    parser.add_argument("--product-delivery-evidence-json", default="runs/product_delivery_evidence_contract_current.json")
+    parser.add_argument("--product-pilot-json", default="runs/product_pilot_packet_contract_current.json")
+    parser.add_argument("--public-benchmark-json", default="runs/product_public_benchmark_contract_current.json")
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -99,6 +119,12 @@ def main(argv: list[str] | None = None) -> None:
         requirements_lock_json=args.requirements_lock_json,
         requirements_lock_md=args.requirements_lock_md,
         requirements_lock_txt=args.requirements_lock_txt,
+        product_service_boundary_json=args.product_service_boundary_json,
+        product_api_contract_json=args.product_api_contract_json,
+        product_bundle_json=args.product_bundle_json,
+        product_delivery_evidence_json=args.product_delivery_evidence_json,
+        product_pilot_json=args.product_pilot_json,
+        public_benchmark_json=args.public_benchmark_json,
     )
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])

@@ -73,6 +73,87 @@ include = ["betelgeuze_product*", "betelgeuze_cameo*", "betelgeuze_cleanup*"]
         + "\n",
         encoding="utf-8",
     )
+    (runs / "product_service_boundary_contract_current.json").write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "product_service_boundary_contract_ready",
+                    "service_boundary_ready": True,
+                    "api_route_count": 14,
+                    "cli_command_count": 11,
+                }
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (runs / "product_api_contract_current.json").write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "product_api_contract_ready",
+                    "api_contract_ready": True,
+                    "missing_route_count": 0,
+                    "status_response_missing_key_count": 0,
+                }
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (runs / "product_bundle_contract_current.json").write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "product_bundle_contract_ready",
+                    "bundle_assembled": True,
+                    "bundle_validation_passed": True,
+                }
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (runs / "product_delivery_evidence_contract_current.json").write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "product_delivery_evidence_contract_ready",
+                    "delivery_ready_claim_allowed": True,
+                }
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (runs / "product_pilot_packet_contract_current.json").write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "product_pilot_packet_ready",
+                    "pilot_delivery_ready": True,
+                    "bundle_validation_passed": True,
+                }
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (runs / "product_public_benchmark_contract_current.json").write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "product_public_benchmark_contract_ready",
+                    "public_benchmark_validation_ready": True,
+                    "required_suite_count": 5,
+                    "ready_required_suite_count": 5,
+                    "blocked_suite_count": 0,
+                }
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
 
 def test_product_commercial_independence_gate_ready_for_pinned_local_product_tree(tmp_path: Path) -> None:
@@ -89,6 +170,10 @@ def test_product_commercial_independence_gate_ready_for_pinned_local_product_tre
     assert payload["summary"]["dependency_provenance_manifest_present"] is True
     assert payload["summary"]["requirements_lock_artifacts_present"] is True
     assert payload["summary"]["reproducible_install_manifest_ready"] is True
+    assert payload["summary"]["product_service_boundary_ready"] is True
+    assert payload["summary"]["product_api_contract_ready"] is True
+    assert payload["summary"]["local_delivery_bundle_ready"] is True
+    assert payload["summary"]["public_benchmark_evidence_ready"] is True
     assert payload["summary"]["blocker_count"] == 0
     assert all(row["status"] == "pass" for row in payload["rows"])
 
@@ -121,6 +206,52 @@ def test_product_commercial_independence_gate_blocks_missing_install_provenance(
         "reproducible_install_manifest_ready",
     } <= failed_checks
     assert payload["summary"]["reproducible_install_manifest_ready"] is False
+
+
+def test_product_commercial_independence_gate_blocks_missing_release_evidence(tmp_path: Path) -> None:
+    _write_minimal_product_tree(tmp_path, "numpy==1.26.4\n")
+    for path in (tmp_path / "runs").glob("product_*_current.json"):
+        path.unlink()
+
+    payload = build_product_commercial_independence_gate(root=tmp_path)
+
+    failed_checks = {row["check"] for row in payload["rows"] if row["status"] == "fail"}
+    assert {
+        "product_service_boundary_ready",
+        "product_api_contract_ready",
+        "local_delivery_bundle_ready",
+        "public_benchmark_evidence_ready",
+    } <= failed_checks
+    assert payload["summary"]["product_service_boundary_ready"] is False
+    assert payload["summary"]["product_api_contract_ready"] is False
+    assert payload["summary"]["local_delivery_bundle_ready"] is False
+    assert payload["summary"]["public_benchmark_evidence_ready"] is False
+
+
+def test_product_commercial_independence_gate_blocks_failed_public_benchmarks(tmp_path: Path) -> None:
+    _write_minimal_product_tree(tmp_path, "numpy==1.26.4\n")
+    (tmp_path / "runs" / "product_public_benchmark_contract_current.json").write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "blocked_product_public_benchmark_contract",
+                    "public_benchmark_validation_ready": False,
+                    "required_suite_count": 5,
+                    "ready_required_suite_count": 0,
+                    "blocked_suite_count": 5,
+                }
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = build_product_commercial_independence_gate(root=tmp_path)
+
+    assert payload["summary"]["status"] == "blocked_product_commercial_independence_gate"
+    assert payload["summary"]["public_benchmark_evidence_ready"] is False
+    assert payload["summary"]["public_benchmark_blocked_suite_count"] == 5
+    assert next(row for row in payload["rows"] if row["check"] == "public_benchmark_evidence_ready")["status"] == "fail"
 
 
 def test_product_commercial_independence_gate_blocks_non_core_runtime_dependencies(tmp_path: Path) -> None:

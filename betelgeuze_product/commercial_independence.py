@@ -33,6 +33,12 @@ DEFAULT_ENVIRONMENT_MANIFEST_JSON = "runs/local_delivery_environment_manifest_cu
 DEFAULT_REQUIREMENTS_LOCK_JSON = "runs/local_delivery_requirements_lock_current.json"
 DEFAULT_REQUIREMENTS_LOCK_MD = "runs/local_delivery_requirements_lock_current.md"
 DEFAULT_REQUIREMENTS_LOCK_TXT = "runs/local_delivery_requirements_lock_current.txt"
+DEFAULT_PRODUCT_SERVICE_BOUNDARY_JSON = "runs/product_service_boundary_contract_current.json"
+DEFAULT_PRODUCT_API_CONTRACT_JSON = "runs/product_api_contract_current.json"
+DEFAULT_PRODUCT_BUNDLE_JSON = "runs/product_bundle_contract_current.json"
+DEFAULT_PRODUCT_DELIVERY_EVIDENCE_JSON = "runs/product_delivery_evidence_contract_current.json"
+DEFAULT_PRODUCT_PILOT_JSON = "runs/product_pilot_packet_contract_current.json"
+DEFAULT_PUBLIC_BENCHMARK_JSON = "runs/product_public_benchmark_contract_current.json"
 
 
 def _text(value: Any) -> str:
@@ -197,6 +203,12 @@ def build_product_commercial_independence_gate(
     requirements_lock_json: str = DEFAULT_REQUIREMENTS_LOCK_JSON,
     requirements_lock_md: str = DEFAULT_REQUIREMENTS_LOCK_MD,
     requirements_lock_txt: str = DEFAULT_REQUIREMENTS_LOCK_TXT,
+    product_service_boundary_json: str = DEFAULT_PRODUCT_SERVICE_BOUNDARY_JSON,
+    product_api_contract_json: str = DEFAULT_PRODUCT_API_CONTRACT_JSON,
+    product_bundle_json: str = DEFAULT_PRODUCT_BUNDLE_JSON,
+    product_delivery_evidence_json: str = DEFAULT_PRODUCT_DELIVERY_EVIDENCE_JSON,
+    product_pilot_json: str = DEFAULT_PRODUCT_PILOT_JSON,
+    public_benchmark_json: str = DEFAULT_PUBLIC_BENCHMARK_JSON,
 ) -> dict[str, Any]:
     root_path = Path(root).resolve()
     runtime_path = root_path / runtime_requirements
@@ -211,8 +223,20 @@ def build_product_commercial_independence_gate(
     requirements_lock_json_path = root_path / requirements_lock_json
     requirements_lock_md_path = root_path / requirements_lock_md
     requirements_lock_txt_path = root_path / requirements_lock_txt
+    product_service_boundary_path = root_path / product_service_boundary_json
+    product_api_contract_path = root_path / product_api_contract_json
+    product_bundle_path = root_path / product_bundle_json
+    product_delivery_evidence_path = root_path / product_delivery_evidence_json
+    product_pilot_path = root_path / product_pilot_json
+    public_benchmark_path = root_path / public_benchmark_json
     environment_manifest_payload = _read_json(environment_manifest_path)
     requirements_lock_payload = _read_json(requirements_lock_json_path)
+    product_service_boundary = _summary(_read_json(product_service_boundary_path))
+    product_api_contract = _summary(_read_json(product_api_contract_path))
+    product_bundle = _summary(_read_json(product_bundle_path))
+    product_delivery_evidence = _summary(_read_json(product_delivery_evidence_path))
+    product_pilot = _summary(_read_json(product_pilot_path))
+    public_benchmark = _summary(_read_json(public_benchmark_path))
     environment_manifest = _summary(environment_manifest_payload)
     requirements_lock = _summary(requirements_lock_payload)
     requirements_lock_generated_at = _text(requirements_lock.get("generated_at") or requirements_lock_payload.get("generated_at"))
@@ -277,6 +301,35 @@ def build_product_commercial_independence_gate(
         and _bool(environment_manifest.get("requirements_lock_complete"))
         and _text(environment_manifest.get("requirements_lock_txt_sha256"))
         and requirements_lock_generated_at
+    )
+    product_service_boundary_ready = (
+        _text(product_service_boundary.get("status")) == "product_service_boundary_contract_ready"
+        and _bool(product_service_boundary.get("service_boundary_ready"))
+        and _int(product_service_boundary.get("api_route_count")) > 0
+        and _int(product_service_boundary.get("cli_command_count")) > 0
+    )
+    product_api_contract_ready = (
+        _text(product_api_contract.get("status")) == "product_api_contract_ready"
+        and _bool(product_api_contract.get("api_contract_ready"))
+        and _int(product_api_contract.get("missing_route_count")) == 0
+        and _int(product_api_contract.get("status_response_missing_key_count")) == 0
+    )
+    local_delivery_bundle_ready = (
+        _text(product_bundle.get("status")) == "product_bundle_contract_ready"
+        and _bool(product_bundle.get("bundle_assembled"))
+        and _bool(product_bundle.get("bundle_validation_passed"))
+        and _text(product_delivery_evidence.get("status")) == "product_delivery_evidence_contract_ready"
+        and _bool(product_delivery_evidence.get("delivery_ready_claim_allowed"))
+        and _text(product_pilot.get("status")) == "product_pilot_packet_ready"
+        and _bool(product_pilot.get("pilot_delivery_ready"))
+        and _bool(product_pilot.get("bundle_validation_passed"))
+    )
+    public_benchmark_evidence_ready = (
+        _text(public_benchmark.get("status")) == "product_public_benchmark_contract_ready"
+        and _bool(public_benchmark.get("public_benchmark_validation_ready"))
+        and _int(public_benchmark.get("required_suite_count")) > 0
+        and _int(public_benchmark.get("ready_required_suite_count")) == _int(public_benchmark.get("required_suite_count"))
+        and _int(public_benchmark.get("blocked_suite_count")) == 0
     )
 
     rows = [
@@ -401,6 +454,62 @@ def build_product_commercial_independence_gate(
             "api/product.py;betelgeuze_product/__init__.py;betelgeuze_product/cli.py",
             "The product lane must expose API, local package, and CLI status surfaces before it can be treated as a standalone product.",
         ),
+        _row(
+            "product_service_boundary_ready",
+            product_service_boundary_ready,
+            (
+                f"status={_text(product_service_boundary.get('status')) or 'missing'};"
+                f"service_boundary_ready={_bool(product_service_boundary.get('service_boundary_ready'))};"
+                f"api_route_count={_int(product_service_boundary.get('api_route_count'))};"
+                f"cli_command_count={_int(product_service_boundary.get('cli_command_count'))}"
+            ),
+            "product service boundary contract ready with API and CLI command coverage",
+            product_service_boundary_json,
+            "Commercial independence needs an audited product API/CLI service boundary, not just source files.",
+        ),
+        _row(
+            "product_api_contract_ready",
+            product_api_contract_ready,
+            (
+                f"status={_text(product_api_contract.get('status')) or 'missing'};"
+                f"api_contract_ready={_bool(product_api_contract.get('api_contract_ready'))};"
+                f"missing_route_count={_int(product_api_contract.get('missing_route_count'))};"
+                f"status_response_missing_key_count={_int(product_api_contract.get('status_response_missing_key_count'))}"
+            ),
+            "product API contract ready with no missing routes or status response keys",
+            product_api_contract_json,
+            "Commercial handoff needs a verified API contract for local/self-hosted operation.",
+        ),
+        _row(
+            "local_delivery_bundle_ready",
+            local_delivery_bundle_ready,
+            (
+                f"bundle_status={_text(product_bundle.get('status')) or 'missing'};"
+                f"bundle_assembled={_bool(product_bundle.get('bundle_assembled'))};"
+                f"bundle_validation_passed={_bool(product_bundle.get('bundle_validation_passed'))};"
+                f"delivery_status={_text(product_delivery_evidence.get('status')) or 'missing'};"
+                f"delivery_ready_claim_allowed={_bool(product_delivery_evidence.get('delivery_ready_claim_allowed'))};"
+                f"pilot_status={_text(product_pilot.get('status')) or 'missing'};"
+                f"pilot_delivery_ready={_bool(product_pilot.get('pilot_delivery_ready'))}"
+            ),
+            "validated local delivery bundle, delivery evidence, and pilot packet ready",
+            f"{product_bundle_json};{product_delivery_evidence_json};{product_pilot_json}",
+            "A commercial independent product needs local bundle and delivery evidence before customer-facing claims.",
+        ),
+        _row(
+            "public_benchmark_evidence_ready",
+            public_benchmark_evidence_ready,
+            (
+                f"status={_text(public_benchmark.get('status')) or 'missing'};"
+                f"validation_ready={_bool(public_benchmark.get('public_benchmark_validation_ready'))};"
+                f"ready_required_suites={_int(public_benchmark.get('ready_required_suite_count'))};"
+                f"required_suites={_int(public_benchmark.get('required_suite_count'))};"
+                f"blocked_suites={_int(public_benchmark.get('blocked_suite_count'))}"
+            ),
+            "public benchmark contract ready with all required suites passing",
+            public_benchmark_json,
+            "Commercial independence claims need reproducible public benchmark evidence, independent of live CAMEO.",
+        ),
     ]
 
     blockers = [_blocker(row) for row in rows if row["status"] != "pass"]
@@ -447,6 +556,20 @@ def build_product_commercial_independence_gate(
         "required_console_scripts": dict(REQUIRED_CONSOLE_SCRIPTS),
         "core_product_surface_present": core_product_surface_present,
         "product_cli_surface_present": product_cli_present,
+        "product_service_boundary_ready": product_service_boundary_ready,
+        "product_service_boundary_api_route_count": _int(product_service_boundary.get("api_route_count")),
+        "product_service_boundary_cli_command_count": _int(product_service_boundary.get("cli_command_count")),
+        "product_api_contract_ready": product_api_contract_ready,
+        "product_api_contract_missing_route_count": _int(product_api_contract.get("missing_route_count")),
+        "local_delivery_bundle_ready": local_delivery_bundle_ready,
+        "local_delivery_bundle_assembled": _bool(product_bundle.get("bundle_assembled")),
+        "local_delivery_bundle_validation_passed": _bool(product_bundle.get("bundle_validation_passed")),
+        "local_delivery_pilot_delivery_ready": _bool(product_pilot.get("pilot_delivery_ready")),
+        "public_benchmark_evidence_ready": public_benchmark_evidence_ready,
+        "public_benchmark_status": _text(public_benchmark.get("status")),
+        "public_benchmark_ready_required_suite_count": _int(public_benchmark.get("ready_required_suite_count")),
+        "public_benchmark_required_suite_count": _int(public_benchmark.get("required_suite_count")),
+        "public_benchmark_blocked_suite_count": _int(public_benchmark.get("blocked_suite_count")),
         "commercial_independent_product_claim_allowed": commercial_independent_product_claim_allowed,
         "execution_enabled": False,
         "docking_results_emitted": False,
@@ -459,6 +582,10 @@ def build_product_commercial_independence_gate(
         "next_required_step": (
             "Add explicit operator-approved license evidence before commercial independent-product claims."
             if blocker_checks == {"license_file_present"}
+            else "Add license evidence and pass the public benchmark contract before commercial independent-product claims."
+            if blocker_checks == {"license_file_present", "public_benchmark_evidence_ready"}
+            else "Materialize public benchmarks and pass all required scorecards before commercial independent-product claims."
+            if blocker_checks == {"public_benchmark_evidence_ready"}
             else "Resolve the listed license, dependency, packaging, and product-surface blockers before commercial independent-product claims."
             if blockers
             else "Commercial-independence packaging gate is clear; keep this packet with final bundle evidence before customer-facing claims."

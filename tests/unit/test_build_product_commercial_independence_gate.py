@@ -75,6 +75,72 @@ include = ["betelgeuze_product*", "betelgeuze_cameo*", "betelgeuze_cleanup*"]
         + "\n",
         encoding="utf-8",
     )
+    (runs / "product_service_boundary_contract_current.json").write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "product_service_boundary_contract_ready",
+                    "service_boundary_ready": True,
+                    "api_route_count": 14,
+                    "cli_command_count": 11,
+                }
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (runs / "product_api_contract_current.json").write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "product_api_contract_ready",
+                    "api_contract_ready": True,
+                    "missing_route_count": 0,
+                    "status_response_missing_key_count": 0,
+                }
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (runs / "product_bundle_contract_current.json").write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "product_bundle_contract_ready",
+                    "bundle_assembled": True,
+                    "bundle_validation_passed": True,
+                }
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (runs / "product_delivery_evidence_contract_current.json").write_text(
+        json.dumps({"summary": {"status": "product_delivery_evidence_contract_ready", "delivery_ready_claim_allowed": True}})
+        + "\n",
+        encoding="utf-8",
+    )
+    (runs / "product_pilot_packet_contract_current.json").write_text(
+        json.dumps({"summary": {"status": "product_pilot_packet_ready", "pilot_delivery_ready": True, "bundle_validation_passed": True}})
+        + "\n",
+        encoding="utf-8",
+    )
+    (runs / "product_public_benchmark_contract_current.json").write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "product_public_benchmark_contract_ready",
+                    "public_benchmark_validation_ready": True,
+                    "required_suite_count": 5,
+                    "ready_required_suite_count": 5,
+                    "blocked_suite_count": 0,
+                }
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     out_json = tmp_path / "gate.json"
     out_csv = tmp_path / "gate.csv"
     out_md = tmp_path / "gate.md"
@@ -87,5 +153,9 @@ include = ["betelgeuze_product*", "betelgeuze_cameo*", "betelgeuze_cleanup*"]
     assert payload["summary"]["pyproject_packaging_metadata_present"] is True
     assert payload["summary"]["console_entrypoint_targets_present"] is True
     assert payload["summary"]["reproducible_install_manifest_ready"] is True
+    assert payload["summary"]["product_service_boundary_ready"] is True
+    assert payload["summary"]["product_api_contract_ready"] is True
+    assert payload["summary"]["local_delivery_bundle_ready"] is True
+    assert payload["summary"]["public_benchmark_evidence_ready"] is True
     assert out_csv.read_text(encoding="utf-8").startswith("check,status,")
     assert "Product Commercial Independence Gate" in out_md.read_text(encoding="utf-8")
