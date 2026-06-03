@@ -51,6 +51,9 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- open_suite_count: `{s['open_suite_count']}`",
         f"- materialization_required_suite_count: `{s['materialization_required_suite_count']}`",
         f"- scorecard_required_suite_count: `{s['scorecard_required_suite_count']}`",
+        f"- continuous_validation_command_count: `{s['continuous_validation_command_count']}`",
+        f"- scorecard_intake_sync_command: `{s['scorecard_intake_sync_command']}`",
+        f"- scorecard_row_csvs: `{';'.join(s['scorecard_row_csvs'])}`",
         f"- ready_required_suite_count: `{s['ready_required_suite_count']}`",
         f"- required_suite_count: `{s['required_suite_count']}`",
         f"- blocked_suite_count: `{s['blocked_suite_count']}`",
@@ -73,14 +76,18 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
             f"`{row['blocker']}` |"
         )
     lines.extend(["", "## Commands", ""])
+    lines.extend(["### Continuous Validation", "", f"- command: `{s['continuous_validation_command']}`", ""])
     for row in payload["rows"]:
         lines.extend(
             [
                 f"### {row['suite_id']}",
                 "",
                 f"- run_command: `{row['run_command']}`",
+                f"- continuous_validation_command: `{row['continuous_validation_command']}`",
                 f"- materialization: `{row['materialization_command']}`",
                 f"- scorecard: `{row['scorecard_command']}`",
+                f"- scorecard_row_csv: `{row['scorecard_row_csv']}`",
+                f"- scorecard_intake_sync: `{row['scorecard_intake_sync_command']}`",
                 f"- refresh: `{row['refresh_command']}`",
                 "",
             ]

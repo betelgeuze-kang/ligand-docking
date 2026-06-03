@@ -49,12 +49,38 @@ def _refresh_command() -> str:
     )
 
 
+def _scorecard_row_csv(suite_id: str) -> str:
+    if suite_id == "lit_pcba_virtual_screening":
+        return "runs/lit_pcba_scorecard_row_current.csv"
+    return f"runs/{suite_id}_scorecard_row_current.csv"
+
+
+def _scorecard_intake_sync_command() -> str:
+    return "python3 tools/sync_product_public_benchmark_scorecard_intake.py"
+
+
 def _next_run_command(*, status: str, materialization_command: str, scorecard_command: str, refresh_command: str) -> str:
     if status == "materialization_required":
         return materialization_command
     if status in {"scorecard_required", "operator_input_required"}:
         return scorecard_command
     return refresh_command
+
+
+def _continuous_validation_command(
+    *,
+    materialization_command: str,
+    scorecard_command: str,
+    scorecard_intake_sync_command: str,
+    refresh_command: str,
+) -> str:
+    commands = [
+        materialization_command,
+        scorecard_command,
+        scorecard_intake_sync_command,
+        refresh_command,
+    ]
+    return " && ".join(command for command in commands if command)
 
 
 def _required_input(source: dict[str, Any], *, status: str) -> str:
@@ -97,16 +123,25 @@ def build_product_public_benchmark_work_order(
         blockers = _text(source.get("blockers"))
         status = _work_order_status(source)
         refresh_command = _refresh_command()
+        scorecard_intake_sync_command = _scorecard_intake_sync_command()
+        scorecard_row_csv = _scorecard_row_csv(suite_id)
         run_command = _next_run_command(
             status=status,
             materialization_command=materialization_command,
             scorecard_command=scorecard_command,
             refresh_command=refresh_command,
         )
+        continuous_validation_command = _continuous_validation_command(
+            materialization_command=materialization_command,
+            scorecard_command=scorecard_command,
+            scorecard_intake_sync_command=scorecard_intake_sync_command,
+            refresh_command=refresh_command,
+        )
         required_input = _required_input(source, status=status)
         required_output = (
             f"materialization_manifest={_text(source.get('materialization_manifest_json'))};"
             f"scorecard_json={_text(source.get('scorecard_json'))};"
+            f"scorecard_row_csv={scorecard_row_csv};"
             f"refresh={public_benchmark_path}"
         )
         rows.append(
@@ -125,8 +160,10 @@ def build_product_public_benchmark_work_order(
                 "required_output": required_output,
                 "operator_input_required": status != "ready",
                 "run_command": run_command,
+                "continuous_validation_command": continuous_validation_command,
                 "dataset_artifact": _text(source.get("materialization_manifest_json")),
                 "result_artifact": _text(source.get("scorecard_json")),
+                "scorecard_row_csv": scorecard_row_csv,
                 "primary_metric": _text(source.get("primary_metric")),
                 "primary_metric_value": source.get("primary_metric_value", 0.0),
                 "primary_metric_threshold": source.get("primary_metric_threshold", 0.0),
@@ -136,6 +173,7 @@ def build_product_public_benchmark_work_order(
                 "scorecard_blockers": blockers,
                 "materialization_command": materialization_command,
                 "scorecard_command": scorecard_command,
+                "scorecard_intake_sync_command": scorecard_intake_sync_command,
                 "refresh_command": refresh_command,
                 "requires_download_approval": False,
                 "requires_24h_server": False,
@@ -151,6 +189,8 @@ def build_product_public_benchmark_work_order(
     open_rows = [row for row in rows if row["work_order_status"] != "ready"]
     materialization_rows = [row for row in open_rows if row["work_order_status"] == "materialization_required"]
     scorecard_rows = [row for row in open_rows if row["work_order_status"] == "scorecard_required"]
+    continuous_validation_commands = [row["continuous_validation_command"] for row in rows if row["continuous_validation_command"]]
+    continuous_validation_command = " && ".join(continuous_validation_commands)
     payload_summary = {
         "packet_type": "product_public_benchmark_work_order",
         "status": "product_public_benchmark_work_order_clear" if not open_rows else "product_public_benchmark_work_order_ready",
@@ -161,6 +201,10 @@ def build_product_public_benchmark_work_order(
         "open_suite_count": len(open_rows),
         "materialization_required_suite_count": len(materialization_rows),
         "scorecard_required_suite_count": len(scorecard_rows),
+        "continuous_validation_command_count": len(continuous_validation_commands),
+        "continuous_validation_command": continuous_validation_command,
+        "scorecard_intake_sync_command": _scorecard_intake_sync_command(),
+        "scorecard_row_csvs": [row["scorecard_row_csv"] for row in rows],
         "ready_required_suite_count": _int(summary.get("ready_required_suite_count")),
         "required_suite_count": _int(summary.get("required_suite_count")),
         "blocked_suite_count": _int(summary.get("blocked_suite_count")),
