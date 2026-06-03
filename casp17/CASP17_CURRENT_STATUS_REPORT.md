@@ -38,6 +38,15 @@ Current headline state:
 - queue rollover hygiene audit: stale generated folders retained at
   surfaces pass/stale/blocked/total `0/3/0/3`, active/actual folders `35/73`,
   and missing/stale folders `0/38`; active manifests remain the source of truth
+- current upload active-manifest lock: `8/0/8` active locked/blocked/total,
+  stale readonly/with-values/total `38/0/38`, operator values active/stale
+  `0/0`; upload work must use the active `H1344`-first decision intake only
+- current upload decision-rule gate: active/technical/blocked `8/8/0`,
+  conditional approve-after-operator `8`, missing operator/author `8/8`,
+  decisions approve/hold/reject `0/0/0`, first `H1344`
+- current upload operator action runway: active/technical/blocked `8/8/0`,
+  operator/author/runtime `8/0/0`, urgency today/soon/future `2/4/2`,
+  first `H1344` with required operator fields
 - strict-blind source-request operator-fill surface: completion audit pass
   for `17/17` requests and `187/187/187` expected/template/worklist rows;
   the batch kit completion audit also passes at `17/0/17`
@@ -122,6 +131,28 @@ across the upload review packet, upload operator decision kit, and post-native
 scoring scaffold. No stale folder is deleted by this audit; cleanup requires a
 separate operator-approved action.
 
+The active-manifest lock now confirms that stale folder retention has not
+contaminated operator decisions. The active `8` decision folders are locked to
+the current manifest, while all `38` stale folders have `0` operator decision,
+author serialization, or final upload filename values. That means the next
+operator work can proceed from the active `H1344` row without using retained
+H2319/T1342 stale folders.
+
+The current upload decision-rule gate now separates technical queue readiness
+from human/operator authority. All active `8` rows pass the technical upload
+candidate checks, and all `8` are conditional approve-after-operator-review
+rows, but operator decisions and runtime CASP author serialization are still
+missing at `8/8`. It does not enter approvals, generate final upload filenames,
+submit to CASP, or claim native accuracy.
+
+The current upload operator action runway now turns that gate into a concrete
+human-fill order. It keeps all active `8` rows on the same intake surface,
+starts at `H1344`, and lists the first required fields as
+`operator_decision,operator_id,operator_decision_ref,operator_notes_optional`.
+It remains a handoff surface only: runtime upload readiness is still `0`
+because no operator decision has been entered and no author code has been
+serialized.
+
 The MassiveFold lane is mature as an external, no-native, review-only model
 selection lane. It can support candidate reranking and model-selection
 calibration, but it must not be counted as internal prediction proof.
@@ -177,11 +208,20 @@ Immediate operator-fill path:
    from `H1344` in queue order; set each target to `approve`, `hold`, or
    `reject`, and do not treat this as a CASP submission without runtime author
    serialization.
-2. Use the green batch fill kit completion audit as the file-surface gate.
-3. Fill `casp17/organic_ligand_metric_batch_operator_fill_kit/operator_fill_intake_batch.csv`.
-4. Complete direct source authority, no-leak evidence, chronology, pose metric,
+2. Use `casp17/CASP17_CURRENT_UPLOAD_ACTIVE_MANIFEST_LOCK.md` as the stale-folder
+   guard: only active decision rows are editable, retained stale folders stay
+   read-only until operator-approved cleanup.
+3. Use `casp17/CASP17_CURRENT_UPLOAD_DECISION_RULE_GATE.md` to review the
+   conditional approve/hold/reject recommendations before editing the operator
+   decision intake.
+4. Use `casp17/CASP17_CURRENT_UPLOAD_OPERATOR_ACTION_RUNWAY.md` as the
+   H1344-first fill order and keep runtime upload readiness at `0` until both
+   operator decision and author serialization are present.
+5. Use the green batch fill kit completion audit as the file-surface gate.
+6. Fill `casp17/organic_ligand_metric_batch_operator_fill_kit/operator_fill_intake_batch.csv`.
+7. Complete direct source authority, no-leak evidence, chronology, pose metric,
    and slot promotion fields for all `7` organic ligand candidates.
-5. Sync filled values through the organic ligand evidence review gate.
+8. Sync filled values through the organic ligand evidence review gate.
 
 Competitive floor path:
 

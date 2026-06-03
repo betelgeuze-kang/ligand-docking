@@ -1,0 +1,358 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from tools import build_goal_operator_intake_kit as mod
+
+
+def _action_board() -> dict:
+    return {
+        "summary": {"status": "operator_actions_required", "action_count": 5},
+        "rows": [
+            {
+                "lane_id": "cameo_validation",
+                "action_type": "fill_cameo_official_results_intake",
+                "status": "required",
+                "artifact_path": "runs/cameo_official_results_intake_gate_current.json",
+                "approval_token": "",
+            },
+            {
+                "lane_id": "cameo_validation",
+                "action_type": "repair_cameo_receiver_runtime_smoke",
+                "status": "approval_required",
+                "artifact_path": "runs/cameo_runtime_repair_work_order_current.json",
+                "approval_token": "APPROVE_API_DEPENDENCY_INSTALL",
+            },
+            {
+                "lane_id": "commercial_product_execution",
+                "action_type": "review_product_execution_approval",
+                "status": "approval_required",
+                "artifact_path": "runs/product_execution_preflight_current.json",
+                "approval_token": "APPROVE_PRODUCT_DOCKING_EXECUTION",
+            },
+            {
+                "lane_id": "commercial_product_license",
+                "action_type": "fill_product_license_decision",
+                "status": "required",
+                "artifact_path": "runs/product_license_decision_gate_current.json",
+                "approval_token": "APPROVE_PRODUCT_LICENSE_FILE_CREATION",
+            },
+            {
+                "lane_id": "ligand_heavy_cleanup",
+                "action_type": "review_protected_ligand_heavy_policy",
+                "status": "policy_decision_required",
+                "artifact_path": "runs/protected_cleanup_policy_decision_gate_current.json",
+                "approval_token": "",
+            },
+        ],
+    }
+
+
+def _source_packets() -> dict[str, dict]:
+    return {
+        mod.DEFAULT_CAMEO_OFFICIAL_RESULTS_GATE_JSON: {"summary": {"status": "blocked_cameo_official_results_intake"}},
+        mod.DEFAULT_CAMEO_REGISTRATION_GATE_JSON: {"summary": {"status": "blocked_cameo_public_registration_approval_gate"}},
+        mod.DEFAULT_PRODUCT_EXECUTION_GATE_JSON: {"summary": {"status": "blocked_product_execution_operator_approval_gate"}},
+        mod.DEFAULT_PRODUCT_COMMERCIAL_INDEPENDENCE_JSON: {
+            "summary": {
+                "status": "blocked_product_commercial_independence_gate",
+                "commercial_independent_product_claim_allowed": False,
+                "blocker_count": 1,
+                "license_present": False,
+                "check_count": 10,
+            }
+        },
+        mod.DEFAULT_PRODUCT_LICENSE_GATE_JSON: {"summary": {"status": "blocked_product_license_decision_gate"}},
+        mod.DEFAULT_CLEANUP_APPROVAL_GATE_JSON: {"summary": {"status": "blocked_cleanup_execution_approval_gate"}},
+        mod.DEFAULT_PROTECTED_POLICY_GATE_JSON: {"summary": {"status": "blocked_protected_cleanup_policy_decision_gate"}},
+        mod.DEFAULT_GOAL_API_SURFACE_CONTRACT_JSON: {
+            "summary": {
+                "status": "goal_api_surface_contract_ready",
+                "surface_ready": True,
+                "check_count": 7,
+                "blocker_count": 0,
+                "missing_endpoint_count": 0,
+                "missing_status_key_count": 0,
+            }
+        },
+    }
+
+
+def _release_burndown() -> dict:
+    return {
+        "summary": {"status": "goal_release_burndown_work_order_ready", "work_item_count": 7},
+        "rows": [
+            {
+                "sequence": 1,
+                "phase": "P1_product_execution_and_bundle_validation",
+                "burndown_status": "approval_required",
+                "release_checks": "product_architecture_release_ready;pilot_delivery_ready;bundle_validation_passed;delivery_ready_claim_allowed",
+                "source_artifact": "runs/product_execution_work_order_current.json;runs/product_pilot_packet_contract_current.json",
+                "recommended_action": "Review product execution and bundle validation.",
+            },
+            {
+                "sequence": 2,
+                "phase": "P1_product_commercial_independence",
+                "burndown_status": "approval_required",
+                "release_checks": "commercial_independence_gate_ready",
+                "source_artifact": "runs/product_commercial_independence_gate_current.json",
+                "recommended_action": "Fill the product license decision intake.",
+            },
+            {
+                "sequence": 3,
+                "phase": "P2_cameo_official_validation_and_registration",
+                "burndown_status": "official_results_required",
+                "release_checks": "official_cameo_validation_evidence_ready;official_cameo_results_used",
+                "source_artifact": "runs/cameo_official_results_intake_gate_current.json",
+                "recommended_action": "Attach official CAMEO result rows.",
+            },
+            {
+                "sequence": 4,
+                "phase": "P2_cameo_official_validation_and_registration",
+                "burndown_status": "approval_required",
+                "release_checks": "cameo_public_registration_allowed",
+                "source_artifact": "runs/cameo_runtime_repair_work_order_current.json",
+                "recommended_action": "Repair API dependency and receiver smoke.",
+            },
+            {
+                "sequence": 6,
+                "phase": "P3_cleanup_execution_or_policy_resolution",
+                "burndown_status": "approval_required",
+                "release_checks": "transition_cleanup_complete",
+                "source_artifact": "runs/transition_cleanup_work_order_current.json",
+                "recommended_action": "Review transition cleanup approvals.",
+            },
+            {
+                "sequence": 7,
+                "phase": "P3_cleanup_execution_or_policy_resolution",
+                "burndown_status": "approval_required",
+                "release_checks": "ligand_heavy_cleanup_complete",
+                "source_artifact": "runs/ligand_heavy_cleanup_work_order_current.json",
+                "recommended_action": "Review ligand-heavy cleanup approvals.",
+            },
+            {
+                "sequence": 8,
+                "phase": "P3_cleanup_execution_or_policy_resolution",
+                "burndown_status": "policy_decision_required",
+                "release_checks": "protected_cleanup_policy_resolved",
+                "source_artifact": "runs/protected_cleanup_payload_review_current.json",
+                "recommended_action": "Review protected cleanup policy.",
+            },
+        ],
+    }
+
+
+def _release_burndown_runtime_ready_registration_only() -> dict:
+    payload = _release_burndown()
+    for row in payload["rows"]:
+        if row.get("release_checks") == "cameo_public_registration_allowed":
+            row["approval_token_required"] = "APPROVE_CAMEO_SERVER_REGISTRATION;APPROVE_CAMEO_OUTBOUND_EMAIL"
+            row["source_artifact"] = "runs/cameo_capability_preflight_current.json"
+            row["recommended_action"] = "Review CAMEO registration and outbound-email approval only after official validation evidence is ready."
+    return payload
+
+
+def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp_path: Path) -> None:
+    payload = mod.build_goal_operator_intake_kit(
+        action_board_packet=_action_board(),
+        release_burndown_packet=_release_burndown(),
+        source_packets=_source_packets(),
+        out_dir=tmp_path / "kit",
+    )
+
+    summary = payload["summary"]
+    by_id = {row["kit_entry_id"]: row for row in payload["rows"]}
+    assert summary["status"] == "goal_operator_intake_kit_ready"
+    assert summary["entry_count"] == 8
+    assert summary["source_action_count"] == 5
+    assert summary["release_burndown_source_row_count"] == 7
+    assert summary["release_burndown_linked_entry_count"] == 7
+    assert summary["operator_input_required_count"] == 7
+    assert summary["current_action_required_count"] == 5
+    assert summary["deferred_operator_input_count"] == 2
+    assert summary["official_results_required_count"] == 1
+    assert summary["policy_decision_required_count"] == 1
+    assert summary["product_commercial_independence_status"] == "blocked_product_commercial_independence_gate"
+    assert summary["product_commercial_independent_claim_allowed"] is False
+    assert summary["product_commercial_independence_blocker_count"] == 1
+    assert summary["product_commercial_independence_license_present"] is False
+    assert summary["product_commercial_independence_check_count"] == 10
+    assert summary["goal_api_surface_contract_status"] == "goal_api_surface_contract_ready"
+    assert summary["goal_api_surface_ready"] is True
+    assert summary["goal_api_surface_check_count"] == 7
+    assert summary["goal_api_surface_blocker_count"] == 0
+    assert summary["goal_api_status_endpoint"] == "/goal/status"
+    assert summary["goal_api_contract_endpoint"] == "/goal/api-contract"
+    assert "APPROVE_API_DEPENDENCY_INSTALL" in summary["approval_tokens"]
+    assert summary["current_action_approval_token_count"] == 3
+    assert summary["current_action_approval_tokens"] == [
+        "APPROVE_API_DEPENDENCY_INSTALL",
+        "APPROVE_PRODUCT_DOCKING_EXECUTION",
+        "APPROVE_PRODUCT_LICENSE_FILE_CREATION",
+    ]
+    assert summary["action_executed"] is False
+    assert summary["delete_executed"] is False
+    assert summary["external_state_mutated"] is False
+    assert by_id["cameo_official_results"]["kit_status"] == "operator_input_required"
+    assert by_id["cameo_official_results"]["current_action_surfaced"] is True
+    assert by_id["cameo_official_results"]["operator_input_required_now"] is True
+    assert by_id["cameo_official_results"]["release_burndown_surfaced"] is True
+    assert by_id["cameo_official_results"]["release_sequence"] == "3"
+    assert by_id["cameo_official_results"]["release_burndown_status"] == "official_results_required"
+    assert by_id["cameo_api_dependency_install"]["template_required"] is False
+    assert by_id["cameo_api_dependency_install"]["kit_status"] == "approval_required"
+    assert by_id["cameo_api_dependency_install"]["release_sequence"] == "4"
+    assert by_id["cameo_public_registration"]["kit_status"] == "approval_required"
+    assert by_id["cameo_public_registration"]["current_action_surfaced"] is False
+    assert by_id["cameo_public_registration"]["operator_input_required"] is True
+    assert by_id["cameo_public_registration"]["operator_input_required_now"] is False
+    assert by_id["cameo_public_registration"]["release_sequence"] == "4"
+    assert by_id["cleanup_execution_approval"]["current_action_surfaced"] is False
+    assert by_id["cleanup_execution_approval"]["operator_input_required"] is True
+    assert by_id["cleanup_execution_approval"]["operator_input_required_now"] is False
+    assert by_id["cleanup_execution_approval"]["release_sequence"] == "6;7"
+    assert by_id["cleanup_execution_approval"]["release_burndown_status"] == "approval_required"
+    assert by_id["product_license_decision"]["related_source_json"] == mod.DEFAULT_PRODUCT_COMMERCIAL_INDEPENDENCE_JSON
+    assert by_id["product_license_decision"]["related_source_status"] == "blocked_product_commercial_independence_gate"
+    assert by_id["product_license_decision"]["release_sequence"] == "2"
+    assert by_id["protected_cleanup_policy"]["kit_status"] == "policy_decision_required"
+    assert by_id["protected_cleanup_policy"]["operator_input_required_now"] is True
+    assert by_id["protected_cleanup_policy"]["release_burndown_status"] == "policy_decision_required"
+    assert by_id["goal_api_status_surface"]["template_required"] is False
+    assert by_id["goal_api_status_surface"]["operator_input_required"] is False
+    assert by_id["goal_api_status_surface"]["kit_status"] == "ready"
+    assert by_id["goal_api_status_surface"]["api_endpoints"] == "/goal/status;/goal/api-contract"
+    assert by_id["goal_api_status_surface"]["release_burndown_surfaced"] is False
+
+
+def test_goal_operator_intake_kit_suppresses_stale_api_install_entry_when_runtime_ready(tmp_path: Path) -> None:
+    action_board = _action_board()
+    action_board["rows"] = [
+        row for row in action_board["rows"] if row["action_type"] != "repair_cameo_receiver_runtime_smoke"
+    ]
+
+    payload = mod.build_goal_operator_intake_kit(
+        action_board_packet=action_board,
+        release_burndown_packet=_release_burndown_runtime_ready_registration_only(),
+        source_packets=_source_packets(),
+        out_dir=tmp_path / "kit",
+    )
+
+    by_id = {row["kit_entry_id"]: row for row in payload["rows"]}
+    api_entry = by_id["cameo_api_dependency_install"]
+    registration_entry = by_id["cameo_public_registration"]
+    assert api_entry["kit_status"] == "not_surfaced"
+    assert api_entry["approval_token_required"] == ""
+    assert api_entry["release_burndown_surfaced"] is False
+    assert registration_entry["kit_status"] == "approval_required"
+    assert registration_entry["release_burndown_surfaced"] is True
+    assert "APPROVE_API_DEPENDENCY_INSTALL" not in payload["summary"]["approval_tokens"]
+    assert "APPROVE_API_DEPENDENCY_INSTALL" not in payload["summary"]["current_action_approval_tokens"]
+
+
+def test_goal_operator_intake_kit_blocks_when_required_template_is_missing(tmp_path: Path) -> None:
+    missing_template = tmp_path / "missing.csv"
+    original_catalog = mod.CATALOG
+    try:
+        mod.CATALOG = [
+            {
+                "kit_entry_id": "missing",
+                "lane_id": "test",
+                "action_types": ["fill"],
+                "input_kind": "approval_intake",
+                "source_gate_json": "",
+                "template_path": str(missing_template),
+                "intake_path": str(tmp_path / "intake.csv"),
+            }
+        ]
+        payload = mod.build_goal_operator_intake_kit(
+            action_board_packet={"rows": []},
+            source_packets={},
+            out_dir=tmp_path / "kit",
+        )
+    finally:
+        mod.CATALOG = original_catalog
+
+    assert payload["summary"]["status"] == "blocked_goal_operator_intake_kit"
+    assert payload["summary"]["template_missing_count"] == 1
+    assert payload["rows"][0]["template_present"] is False
+
+
+def test_goal_operator_intake_kit_tool_writes_manifest_and_copies_templates(tmp_path: Path) -> None:
+    template_names = [
+        "cameo_official.csv",
+        "cameo_registration.csv",
+        "product_execution.csv",
+        "product_license.csv",
+        "cleanup_approval.csv",
+        "protected_policy.csv",
+    ]
+    template_paths = [tmp_path / name for name in template_names]
+    for path in template_paths:
+        path.write_text("field\nOPERATOR_FILL\n", encoding="utf-8")
+
+    original_catalog = mod.CATALOG
+    try:
+        mod.CATALOG = [
+            {**entry, "template_path": str(path)}
+            for entry, path in zip([entry for entry in original_catalog if entry.get("template_required") is not False], template_paths)
+        ] + [entry for entry in original_catalog if entry.get("template_required") is False]
+        action_board = tmp_path / "action_board.json"
+        action_board.write_text(json.dumps(_action_board()) + "\n", encoding="utf-8")
+        release_burndown = tmp_path / "release_burndown.json"
+        release_burndown.write_text(json.dumps(_release_burndown()) + "\n", encoding="utf-8")
+        source_paths: dict[str, Path] = {}
+        for source_path, packet in _source_packets().items():
+            path = tmp_path / Path(source_path).name
+            path.write_text(json.dumps(packet) + "\n", encoding="utf-8")
+            source_paths[source_path] = path
+        out_dir = tmp_path / "kit"
+        out_json = out_dir / "manifest.json"
+        out_csv = out_dir / "manifest.csv"
+        out_md = out_dir / "README.md"
+
+        mod.main(
+            [
+                "--action-board-json",
+                str(action_board),
+                "--release-burndown-json",
+                str(release_burndown),
+                "--cameo-official-results-gate-json",
+                str(source_paths[mod.DEFAULT_CAMEO_OFFICIAL_RESULTS_GATE_JSON]),
+                "--cameo-registration-gate-json",
+                str(source_paths[mod.DEFAULT_CAMEO_REGISTRATION_GATE_JSON]),
+                "--product-execution-gate-json",
+                str(source_paths[mod.DEFAULT_PRODUCT_EXECUTION_GATE_JSON]),
+                "--product-commercial-independence-json",
+                str(source_paths[mod.DEFAULT_PRODUCT_COMMERCIAL_INDEPENDENCE_JSON]),
+                "--product-license-gate-json",
+                str(source_paths[mod.DEFAULT_PRODUCT_LICENSE_GATE_JSON]),
+                "--cleanup-approval-gate-json",
+                str(source_paths[mod.DEFAULT_CLEANUP_APPROVAL_GATE_JSON]),
+                "--protected-policy-gate-json",
+                str(source_paths[mod.DEFAULT_PROTECTED_POLICY_GATE_JSON]),
+                "--goal-api-surface-contract-json",
+                str(source_paths[mod.DEFAULT_GOAL_API_SURFACE_CONTRACT_JSON]),
+                "--out-dir",
+                str(out_dir),
+                "--out-json",
+                str(out_json),
+                "--out-csv",
+                str(out_csv),
+                "--out-md",
+                str(out_md),
+            ]
+        )
+    finally:
+        mod.CATALOG = original_catalog
+
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    assert payload["summary"]["template_copied_count"] == 6
+    assert payload["summary"]["release_burndown_linked_entry_count"] == 7
+    assert payload["summary"]["goal_api_surface_contract_status"] == "goal_api_surface_contract_ready"
+    assert out_csv.read_text(encoding="utf-8").startswith("kit_entry_id,lane_id,")
+    md = out_md.read_text(encoding="utf-8")
+    assert "Goal Operator Intake Kit" in md
+    assert "release sequence" in md
+    assert (out_dir / "templates" / "product_license.csv").read_text(encoding="utf-8").startswith("field")

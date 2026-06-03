@@ -70,6 +70,9 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
         tmp_path / "current_post_native_scoring_scaffold.json"
     )
     current_queue_rollover_hygiene_audit_json = tmp_path / "current_queue_rollover_hygiene_audit.json"
+    current_upload_active_manifest_lock_json = tmp_path / "current_upload_active_manifest_lock.json"
+    current_upload_decision_rule_gate_json = tmp_path / "current_upload_decision_rule_gate.json"
+    current_upload_operator_action_runway_json = tmp_path / "current_upload_operator_action_runway.json"
     closure_json = tmp_path / "closure.json"
     goal_scorecard_json = tmp_path / "goal_scorecard.json"
     historical_winner_normalized_bands_json = tmp_path / "historical_winner_normalized_bands.json"
@@ -1497,6 +1500,95 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
                     "01_h2319_human_astrovirus_va1_capsid_spike_-_antibody_7c8_complex"
                 ),
                 "next_action": "cleanup stale generated folders only after operator approval",
+            }
+        },
+    )
+    _write_json(
+        current_upload_active_manifest_lock_json,
+        {
+            "summary": {
+                "active_manifest_lock_status": "current_upload_active_manifest_lock_pass_stale_readonly",
+                "active_target_count": 8,
+                "active_locked_count": 8,
+                "active_blocked_count": 0,
+                "active_operator_value_row_count": 0,
+                "stale_folder_count": 38,
+                "stale_readonly_count": 38,
+                "stale_operator_value_folder_count": 0,
+                "blocked_row_count": 0,
+                "first_active_target_id": "H1344",
+                "first_stale_folder": (
+                    "casp17/current_upload_review_packet/"
+                    "01_h2319_human_astrovirus_va1_capsid_spike_-_antibody_7c8_complex"
+                ),
+                "first_blocker": "",
+                "review_packet_status": "current_upload_review_packet_ready",
+                "decision_kit_status": "current_upload_operator_decision_kit_awaiting_operator_decisions",
+                "queue_rollover_hygiene_status": (
+                    "current_queue_rollover_hygiene_stale_generated_folders_retained"
+                ),
+                "next_action": "work only the active 8-row operator decision intake",
+            }
+        },
+    )
+    _write_json(
+        current_upload_decision_rule_gate_json,
+        {
+            "summary": {
+                "upload_decision_rule_gate_status": (
+                    "current_upload_decision_rule_gate_ready_for_operator_decisions"
+                ),
+                "active_target_count": 8,
+                "technical_upload_candidate_count": 8,
+                "technical_blocked_count": 0,
+                "conditional_approve_after_operator_count": 8,
+                "operator_decision_missing_count": 8,
+                "author_serialization_missing_count": 8,
+                "approve_count": 0,
+                "hold_count": 0,
+                "reject_count": 0,
+                "first_target_id": "H1344",
+                "first_status": "awaiting_operator_decision",
+                "first_recommendation": (
+                    "conditional_approve_after_operator_review_and_author_serialization"
+                ),
+                "first_blockers": "operator_decision_missing",
+                "next_action": (
+                    "start with H1344, enter operator decision, then serialize runtime "
+                    "CASP author code before any upload"
+                ),
+            }
+        },
+    )
+    _write_json(
+        current_upload_operator_action_runway_json,
+        {
+            "summary": {
+                "operator_action_runway_status": (
+                    "current_upload_operator_action_runway_ready_for_human_decisions"
+                ),
+                "active_target_count": 8,
+                "technical_upload_candidate_count": 8,
+                "technical_blocked_count": 0,
+                "operator_decision_required_count": 8,
+                "author_serialization_required_count": 0,
+                "ready_for_runtime_upload_count": 0,
+                "urgency_today_count": 2,
+                "urgency_soon_count": 4,
+                "urgency_future_count": 2,
+                "first_target_id": "H1344",
+                "first_action_status": "operator_decision_required",
+                "first_required_operator_fields": (
+                    "operator_decision,operator_id,operator_decision_ref,operator_notes_optional"
+                ),
+                "first_fill_surface": (
+                    "casp17/current_upload_operator_decision_kit/operator_decision_intake.csv"
+                ),
+                "first_blockers": "operator_decision_missing",
+                "next_action": (
+                    "start with H1344; enter approve, hold, or reject in the active "
+                    "operator decision intake row"
+                ),
             }
         },
     )
@@ -6338,6 +6430,12 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
             str(current_post_native_scoring_scaffold_json),
             "--current-queue-rollover-hygiene-audit-json",
             str(current_queue_rollover_hygiene_audit_json),
+            "--current-upload-active-manifest-lock-json",
+            str(current_upload_active_manifest_lock_json),
+            "--current-upload-decision-rule-gate-json",
+            str(current_upload_decision_rule_gate_json),
+            "--current-upload-operator-action-runway-json",
+            str(current_upload_operator_action_runway_json),
             "--win-gap-closure-json",
             str(closure_json),
             "--win-tier-goal-scorecard-json",
@@ -7000,6 +7098,33 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     ) in workbench_md
     assert "surfaces pass/stale/blocked/total `0/3/0/3`" in workbench_md
     assert "folders active/actual `35/73` missing/stale `0/38`" in workbench_md
+    assert (
+        "current upload active-manifest lock: "
+        "`current_upload_active_manifest_lock_pass_stale_readonly`"
+    ) in workbench_md
+    assert "active locked/blocked/total `8/0/8`" in workbench_md
+    assert "stale readonly/value/total `38/0/38`" in workbench_md
+    assert "operator values active/stale `0/0`" in workbench_md
+    assert (
+        "current upload decision-rule gate: "
+        "`current_upload_decision_rule_gate_ready_for_operator_decisions`"
+    ) in workbench_md
+    assert "active/technical/blocked `8/8/0`" in workbench_md
+    assert "conditional `8`" in workbench_md
+    assert "missing decision/author `8/8`" in workbench_md
+    assert "decisions approve/hold/reject `0/0/0`" in workbench_md
+    assert (
+        "current upload operator action runway: "
+        "`current_upload_operator_action_runway_ready_for_human_decisions`"
+    ) in workbench_md
+    assert "active/technical/blocked `8/8/0`" in workbench_md
+    assert "operator/author/runtime `8/0/0`" in workbench_md
+    assert "urgency today/soon/future `2/4/2`" in workbench_md
+    assert (
+        "first `H1344` `operator_decision_required` "
+        "`operator_decision,operator_id,operator_decision_ref,operator_notes_optional` "
+        "`operator_decision_missing`"
+    ) in workbench_md
     assert "win-tier metric surface contract: `awaiting_strict_blind_evidence_files_and_ligand_category_slots`" in workbench_md
     assert "metrics covered/required `11/11`" in workbench_md
     assert "win-tier critical path board: `competitive_proof_blocked_on_strict_blind_evidence`" in workbench_md
@@ -8204,6 +8329,62 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert payload["summary"]["current_queue_rollover_hygiene_audit_stale_extra_folder_count"] == 38
     assert payload["summary"]["current_queue_rollover_hygiene_audit_first_stale_surface_id"] == (
         "current_upload_review_packet"
+    )
+    assert payload["summary"]["current_upload_active_manifest_lock_status"] == (
+        "current_upload_active_manifest_lock_pass_stale_readonly"
+    )
+    assert payload["summary"]["current_upload_active_manifest_lock_active_target_count"] == 8
+    assert payload["summary"]["current_upload_active_manifest_lock_active_locked_count"] == 8
+    assert payload["summary"]["current_upload_active_manifest_lock_active_blocked_count"] == 0
+    assert payload["summary"]["current_upload_active_manifest_lock_active_operator_value_row_count"] == 0
+    assert payload["summary"]["current_upload_active_manifest_lock_stale_folder_count"] == 38
+    assert payload["summary"]["current_upload_active_manifest_lock_stale_readonly_count"] == 38
+    assert payload["summary"]["current_upload_active_manifest_lock_stale_operator_value_folder_count"] == 0
+    assert payload["summary"]["current_upload_active_manifest_lock_blocked_row_count"] == 0
+    assert payload["summary"]["current_upload_active_manifest_lock_first_active_target_id"] == "H1344"
+    assert payload["summary"]["current_upload_active_manifest_lock_first_blocker"] == ""
+    assert payload["summary"]["current_upload_decision_rule_gate_status"] == (
+        "current_upload_decision_rule_gate_ready_for_operator_decisions"
+    )
+    assert payload["summary"]["current_upload_decision_rule_gate_active_target_count"] == 8
+    assert payload["summary"]["current_upload_decision_rule_gate_technical_upload_candidate_count"] == 8
+    assert payload["summary"]["current_upload_decision_rule_gate_technical_blocked_count"] == 0
+    assert payload["summary"]["current_upload_decision_rule_gate_conditional_approve_after_operator_count"] == 8
+    assert payload["summary"]["current_upload_decision_rule_gate_operator_decision_missing_count"] == 8
+    assert payload["summary"]["current_upload_decision_rule_gate_author_serialization_missing_count"] == 8
+    assert payload["summary"]["current_upload_decision_rule_gate_approve_count"] == 0
+    assert payload["summary"]["current_upload_decision_rule_gate_hold_count"] == 0
+    assert payload["summary"]["current_upload_decision_rule_gate_reject_count"] == 0
+    assert payload["summary"]["current_upload_decision_rule_gate_first_target_id"] == "H1344"
+    assert payload["summary"]["current_upload_decision_rule_gate_first_status"] == "awaiting_operator_decision"
+    assert payload["summary"]["current_upload_decision_rule_gate_first_recommendation"] == (
+        "conditional_approve_after_operator_review_and_author_serialization"
+    )
+    assert payload["summary"]["current_upload_decision_rule_gate_first_blockers"] == "operator_decision_missing"
+    assert payload["summary"]["current_upload_operator_action_runway_status"] == (
+        "current_upload_operator_action_runway_ready_for_human_decisions"
+    )
+    assert payload["summary"]["current_upload_operator_action_runway_active_target_count"] == 8
+    assert payload["summary"]["current_upload_operator_action_runway_technical_upload_candidate_count"] == 8
+    assert payload["summary"]["current_upload_operator_action_runway_technical_blocked_count"] == 0
+    assert payload["summary"]["current_upload_operator_action_runway_operator_decision_required_count"] == 8
+    assert payload["summary"]["current_upload_operator_action_runway_author_serialization_required_count"] == 0
+    assert payload["summary"]["current_upload_operator_action_runway_ready_for_runtime_upload_count"] == 0
+    assert payload["summary"]["current_upload_operator_action_runway_urgency_today_count"] == 2
+    assert payload["summary"]["current_upload_operator_action_runway_urgency_soon_count"] == 4
+    assert payload["summary"]["current_upload_operator_action_runway_urgency_future_count"] == 2
+    assert payload["summary"]["current_upload_operator_action_runway_first_target_id"] == "H1344"
+    assert payload["summary"]["current_upload_operator_action_runway_first_action_status"] == (
+        "operator_decision_required"
+    )
+    assert payload["summary"]["current_upload_operator_action_runway_first_required_operator_fields"] == (
+        "operator_decision,operator_id,operator_decision_ref,operator_notes_optional"
+    )
+    assert payload["summary"]["current_upload_operator_action_runway_first_fill_surface"] == (
+        "casp17/current_upload_operator_decision_kit/operator_decision_intake.csv"
+    )
+    assert payload["summary"]["current_upload_operator_action_runway_first_blockers"] == (
+        "operator_decision_missing"
     )
     assert payload["summary"]["benchmark_rows_total"] == 40
     assert payload["summary"]["competitive_batch_status"] == "ready_for_fill"
@@ -12075,6 +12256,36 @@ def test_build_casp17_workbench_index_links_target_and_benchmark_state(tmp_path)
     assert "stale:3" in by_id["current_casp17_queue_rollover_hygiene_audit"]["blockers"]
     assert "folders active/actual:35/73" in by_id["current_casp17_queue_rollover_hygiene_audit"]["blockers"]
     assert "missing/stale:0/38" in by_id["current_casp17_queue_rollover_hygiene_audit"]["blockers"]
+    assert by_id["current_upload_active_manifest_lock"]["status"] == (
+        "current_upload_active_manifest_lock_pass_stale_readonly"
+    )
+    assert by_id["current_upload_active_manifest_lock"]["ready_count"] == 8
+    assert by_id["current_upload_active_manifest_lock"]["blocked_count"] == 0
+    assert by_id["current_upload_active_manifest_lock"]["total_count"] == 8
+    assert "active:8/0/8" in by_id["current_upload_active_manifest_lock"]["blockers"]
+    assert "stale:38/0/38" in by_id["current_upload_active_manifest_lock"]["blockers"]
+    assert "operator_values:0/0" in by_id["current_upload_active_manifest_lock"]["blockers"]
+    assert by_id["current_upload_decision_rule_gate"]["status"] == (
+        "current_upload_decision_rule_gate_ready_for_operator_decisions"
+    )
+    assert by_id["current_upload_decision_rule_gate"]["ready_count"] == 8
+    assert by_id["current_upload_decision_rule_gate"]["blocked_count"] == 0
+    assert by_id["current_upload_decision_rule_gate"]["total_count"] == 8
+    assert "technical:8/0/8" in by_id["current_upload_decision_rule_gate"]["blockers"]
+    assert "conditional:8" in by_id["current_upload_decision_rule_gate"]["blockers"]
+    assert "missing:8/8" in by_id["current_upload_decision_rule_gate"]["blockers"]
+    assert "decisions:0/0/0" in by_id["current_upload_decision_rule_gate"]["blockers"]
+    assert by_id["current_upload_operator_action_runway"]["status"] == (
+        "current_upload_operator_action_runway_ready_for_human_decisions"
+    )
+    assert by_id["current_upload_operator_action_runway"]["ready_count"] == 8
+    assert by_id["current_upload_operator_action_runway"]["blocked_count"] == 0
+    assert by_id["current_upload_operator_action_runway"]["total_count"] == 8
+    assert "actions:8/0/0" in by_id["current_upload_operator_action_runway"]["blockers"]
+    assert "urgency:2/4/2" in by_id["current_upload_operator_action_runway"]["blockers"]
+    assert "first:H1344/operator_decision_required/operator_decision_missing" in by_id[
+        "current_upload_operator_action_runway"
+    ]["blockers"]
     assert by_id["win_tier_goal_scorecard"]["status"] == "blocked_input"
     assert by_id["win_tier_goal_scorecard"]["ready_count"] == 1
     assert "historical_identity_clearance" in by_id["win_tier_goal_scorecard"]["blockers"]

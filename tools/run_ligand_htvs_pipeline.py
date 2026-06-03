@@ -123,6 +123,37 @@ def _csv_rows_minus_header(path: str) -> int:
         return 0
 
 
+def _stage1_reuse_diagnostics(args: argparse.Namespace, stage1_obj: Dict[str, Any], stage1_roles_csv: str) -> Dict[str, Any]:
+    expected = {
+        "target_native_csv": str(args.target_native_csv),
+        "ligand_csv": str(args.ligand_csv),
+        "ligand_meta_csv": str(args.leakage_ligand_meta_csv),
+        "target_ligand_csv": str(args.eval_split_csv),
+        "csv_smiles_cache_json": str(args.csv_smiles_cache_json),
+    }
+    mismatches: List[Dict[str, str]] = []
+    for key, value in expected.items():
+        observed = str(stage1_obj.get(key, ""))
+        if observed and observed != value:
+            mismatches.append({"field": key, "observed": observed, "expected": value})
+    expected_roles = [x.strip() for x in str(stage1_roles_csv).split(",") if x.strip()]
+    observed_roles = stage1_obj.get("target_ligand_roles")
+    if isinstance(observed_roles, list) and [str(x).strip() for x in observed_roles if str(x).strip()] != expected_roles:
+        mismatches.append(
+            {
+                "field": "target_ligand_roles",
+                "observed": ",".join(str(x).strip() for x in observed_roles if str(x).strip()),
+                "expected": ",".join(expected_roles),
+            }
+        )
+    return {
+        "ok": not mismatches,
+        "mismatches": mismatches,
+        "expected": expected,
+        "expected_target_ligand_roles": expected_roles,
+    }
+
+
 def _sanitize_run_name(path_like: str) -> str:
     name = os.path.basename(str(path_like).rstrip("/"))
     if not name:
@@ -1708,21 +1739,27 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         queue_rows = int(float(stage1_obj.get("queue_rows", 0) or 0))
         if queue_rows <= 0:
             queue_rows = _csv_rows_minus_header(queue_csv)
-        rec1 = {
-            "cmd": [],
-            "cmd_str": "",
-            "ok": bool(queue_rows > 0),
-            "returncode": 0 if queue_rows > 0 else 1,
-            "stdout_tail": "",
-            "stderr_tail": "" if queue_rows > 0 else "stage1 reuse requested but queue rows <= 0",
-            "skipped": True,
-            "reused": True,
-            "queue_rows": int(queue_rows),
-            "queue_csv": queue_csv,
-            "ligand_json": ligand_json,
-            "stage1_summary_json": stage1_summary,
-        }
-    else:
+        reuse_diag = _stage1_reuse_diagnostics(args, stage1_obj, stage1_roles_csv)
+        if queue_rows > 0 and bool(reuse_diag.get("ok")):
+            rec1 = {
+                "cmd": [],
+                "cmd_str": "",
+                "ok": True,
+                "returncode": 0,
+                "stdout_tail": "",
+                "stderr_tail": "",
+                "skipped": True,
+                "reused": True,
+                "reuse_diagnostics": reuse_diag,
+                "queue_rows": int(queue_rows),
+                "queue_csv": queue_csv,
+                "ligand_json": ligand_json,
+                "stage1_summary_json": stage1_summary,
+            }
+        else:
+            reuse_stage1 = False
+
+    if (not resume_stage3_only) and (not (reuse_stage1 and "rec1" in locals())):
         stage1_cmd = [
             sys.executable,
             "tools/build_ligand_mapping_queue.py",
@@ -1756,6 +1793,8 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
             str(int(args.csv_relax_workers)),
             "--csv-smiles-cache-json",
             str(args.csv_smiles_cache_json),
+            "--ligand-meta-csv",
+            str(args.leakage_ligand_meta_csv),
             "--target-pocket-csv",
             str(args.target_pocket_csv),
             "--target-native-csv",

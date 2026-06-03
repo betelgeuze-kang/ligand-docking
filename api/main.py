@@ -1,25 +1,42 @@
 # api/main.py
 
+from typing import Any
+
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from fastapi.responses import FileResponse
-import asyncio
 import uuid
 import os
 import json
+from api.cameo import router as cameo_router
+from api.casp17 import router as casp17_router
+from api.cleanup import router as cleanup_router
+from api.goal import router as goal_router
+from api.product import router as product_router
 from api.models import SimulationRequest, SimulationResponse, StatusResponse, ResultsResponse
 from api.tasks import run_simulation_async
 from api.config import settings
-from core.config import config as core_config # Import core config if needed
 
 app = FastAPI(title=settings.app_name)
+app.include_router(cameo_router)
+app.include_router(casp17_router)
+app.include_router(cleanup_router)
+app.include_router(goal_router)
+app.include_router(product_router)
 
 # In-memory job store (use Redis or DB for production)
 jobs = {}
 
+
+def _model_to_dict(model: SimulationRequest) -> dict[str, Any]:
+    if hasattr(model, "model_dump"):
+        return model.model_dump()
+    return model.dict()
+
 @app.post("/simulate", response_model=SimulationResponse)
 async def submit_simulation(request: SimulationRequest, background_tasks: BackgroundTasks):
     job_id = str(uuid.uuid4())
-    jobs[job_id] = {"status": "submitted", "request": request.dict()}
+    request_data = _model_to_dict(request)
+    jobs[job_id] = {"status": "submitted", "request": request_data}
 
     # Create status file
     results_dir = os.path.join(settings.results_storage_path, job_id)
@@ -29,11 +46,11 @@ async def submit_simulation(request: SimulationRequest, background_tasks: Backgr
         json.dump({"job_id": job_id, "status": "submitted"}, sf)
 
     # Add background task to run simulation
-    background_tasks.add_task(run_simulation_async_wrapper, job_id, request.dict())
+    background_tasks.add_task(run_simulation_async_wrapper, job_id, request_data)
 
     return SimulationResponse(job_id=job_id, status="submitted", message="Simulation submitted successfully.")
 
-async def run_simulation_async_wrapper(job_id: str, request_ dict):
+async def run_simulation_async_wrapper(job_id: str, request_data: dict[str, Any]):
     """Wrapper to handle the async task and update job status."""
     jobs[job_id]["status"] = "running"
     try:

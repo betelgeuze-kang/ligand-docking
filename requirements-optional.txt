@@ -1,3 +1,4 @@
-# Optional hardware/model-extension profile with in-code fallbacks or feature gates.
+# Optional hardware/model-extension and external-API profile with in-code fallbacks or feature gates.
 GPUtil
 torch-geometric
+openai==2.21.0

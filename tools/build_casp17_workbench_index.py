@@ -93,6 +93,15 @@ DEFAULT_CURRENT_POST_NATIVE_SCORING_SCAFFOLD_JSON = (
 DEFAULT_CURRENT_QUEUE_ROLLOVER_HYGIENE_AUDIT_JSON = (
     "casp17/casp17_current_queue_rollover_hygiene_audit_current.json"
 )
+DEFAULT_CURRENT_UPLOAD_ACTIVE_MANIFEST_LOCK_JSON = (
+    "casp17/casp17_current_upload_active_manifest_lock_current.json"
+)
+DEFAULT_CURRENT_UPLOAD_DECISION_RULE_GATE_JSON = (
+    "casp17/casp17_current_upload_decision_rule_gate_current.json"
+)
+DEFAULT_CURRENT_UPLOAD_OPERATOR_ACTION_RUNWAY_JSON = (
+    "casp17/casp17_current_upload_operator_action_runway_current.json"
+)
 DEFAULT_WIN_GAP_CLOSURE_JSON = "runs/casp17_win_gap_closure_packet_current.json"
 DEFAULT_WIN_TIER_GOAL_SCORECARD_JSON = "runs/casp17_win_tier_goal_scorecard_current.json"
 DEFAULT_HISTORICAL_WINNER_NORMALIZED_BANDS_JSON = (
@@ -762,6 +771,15 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     current_queue_rollover_hygiene_audit_payload = _read_json(
         args.current_queue_rollover_hygiene_audit_json
     )
+    current_upload_active_manifest_lock_payload = _read_json(
+        args.current_upload_active_manifest_lock_json
+    )
+    current_upload_decision_rule_gate_payload = _read_json(
+        args.current_upload_decision_rule_gate_json
+    )
+    current_upload_operator_action_runway_payload = _read_json(
+        args.current_upload_operator_action_runway_json
+    )
     closure_payload = _read_json(args.win_gap_closure_json)
     goal_scorecard_payload = _read_json(args.win_tier_goal_scorecard_json)
     historical_winner_normalized_bands_payload = _read_json(
@@ -1304,6 +1322,15 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     current_queue_rollover_hygiene_audit_summary = _summary(
         current_queue_rollover_hygiene_audit_payload
+    )
+    current_upload_active_manifest_lock_summary = _summary(
+        current_upload_active_manifest_lock_payload
+    )
+    current_upload_decision_rule_gate_summary = _summary(
+        current_upload_decision_rule_gate_payload
+    )
+    current_upload_operator_action_runway_summary = _summary(
+        current_upload_operator_action_runway_payload
     )
     current_submission_gate_status = (
         "current_casp17_submission_gate_ready"
@@ -3499,6 +3526,106 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 + (_text(current_queue_rollover_hygiene_audit_summary.get("first_stale_surface_id")) or "-")
                 + "/"
                 + (_text(current_queue_rollover_hygiene_audit_summary.get("first_stale_extra_folder")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "current_upload_active_manifest_lock",
+            "Active-manifest lock that keeps retained stale upload folders read-only",
+            _text(current_upload_active_manifest_lock_summary.get("active_manifest_lock_status")),
+            args.current_upload_active_manifest_lock_json,
+            ready_count=_int(current_upload_active_manifest_lock_summary.get("active_locked_count")),
+            blocked_count=_int(current_upload_active_manifest_lock_summary.get("blocked_row_count")),
+            total_count=_int(current_upload_active_manifest_lock_summary.get("active_target_count")),
+            next_action=_text(current_upload_active_manifest_lock_summary.get("next_action")),
+            blockers=(
+                "active:"
+                + str(current_upload_active_manifest_lock_summary.get("active_locked_count", ""))
+                + "/"
+                + str(current_upload_active_manifest_lock_summary.get("active_blocked_count", ""))
+                + "/"
+                + str(current_upload_active_manifest_lock_summary.get("active_target_count", ""))
+                + ",stale:"
+                + str(current_upload_active_manifest_lock_summary.get("stale_readonly_count", ""))
+                + "/"
+                + str(current_upload_active_manifest_lock_summary.get("stale_operator_value_folder_count", ""))
+                + "/"
+                + str(current_upload_active_manifest_lock_summary.get("stale_folder_count", ""))
+                + ",operator_values:"
+                + str(current_upload_active_manifest_lock_summary.get("active_operator_value_row_count", ""))
+                + "/"
+                + str(current_upload_active_manifest_lock_summary.get("stale_operator_value_folder_count", ""))
+                + ",first:"
+                + (_text(current_upload_active_manifest_lock_summary.get("first_active_target_id")) or "-")
+                + "/"
+                + (_text(current_upload_active_manifest_lock_summary.get("first_stale_folder")) or "-")
+                + "/"
+                + (_text(current_upload_active_manifest_lock_summary.get("first_blocker")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "current_upload_decision_rule_gate",
+            "Decision-rule gate for active CASP17 upload candidates",
+            _text(current_upload_decision_rule_gate_summary.get("upload_decision_rule_gate_status")),
+            args.current_upload_decision_rule_gate_json,
+            ready_count=_int(current_upload_decision_rule_gate_summary.get("technical_upload_candidate_count")),
+            blocked_count=_int(current_upload_decision_rule_gate_summary.get("technical_blocked_count")),
+            total_count=_int(current_upload_decision_rule_gate_summary.get("active_target_count")),
+            next_action=_text(current_upload_decision_rule_gate_summary.get("next_action")),
+            blockers=(
+                "technical:"
+                + str(current_upload_decision_rule_gate_summary.get("technical_upload_candidate_count", ""))
+                + "/"
+                + str(current_upload_decision_rule_gate_summary.get("technical_blocked_count", ""))
+                + "/"
+                + str(current_upload_decision_rule_gate_summary.get("active_target_count", ""))
+                + ",conditional:"
+                + str(current_upload_decision_rule_gate_summary.get("conditional_approve_after_operator_count", ""))
+                + ",missing:"
+                + str(current_upload_decision_rule_gate_summary.get("operator_decision_missing_count", ""))
+                + "/"
+                + str(current_upload_decision_rule_gate_summary.get("author_serialization_missing_count", ""))
+                + ",decisions:"
+                + str(current_upload_decision_rule_gate_summary.get("approve_count", ""))
+                + "/"
+                + str(current_upload_decision_rule_gate_summary.get("hold_count", ""))
+                + "/"
+                + str(current_upload_decision_rule_gate_summary.get("reject_count", ""))
+                + ",first:"
+                + (_text(current_upload_decision_rule_gate_summary.get("first_target_id")) or "-")
+                + "/"
+                + (_text(current_upload_decision_rule_gate_summary.get("first_status")) or "-")
+                + "/"
+                + (_text(current_upload_decision_rule_gate_summary.get("first_blockers")) or "-")
+            ),
+        ),
+        _artifact_row(
+            "current_upload_operator_action_runway",
+            "Human-fill runway for active CASP17 upload operator decisions",
+            _text(current_upload_operator_action_runway_summary.get("operator_action_runway_status")),
+            args.current_upload_operator_action_runway_json,
+            ready_count=_int(current_upload_operator_action_runway_summary.get("technical_upload_candidate_count")),
+            blocked_count=_int(current_upload_operator_action_runway_summary.get("technical_blocked_count")),
+            total_count=_int(current_upload_operator_action_runway_summary.get("active_target_count")),
+            next_action=_text(current_upload_operator_action_runway_summary.get("next_action")),
+            blockers=(
+                "actions:"
+                + str(current_upload_operator_action_runway_summary.get("operator_decision_required_count", ""))
+                + "/"
+                + str(current_upload_operator_action_runway_summary.get("author_serialization_required_count", ""))
+                + "/"
+                + str(current_upload_operator_action_runway_summary.get("ready_for_runtime_upload_count", ""))
+                + ",urgency:"
+                + str(current_upload_operator_action_runway_summary.get("urgency_today_count", ""))
+                + "/"
+                + str(current_upload_operator_action_runway_summary.get("urgency_soon_count", ""))
+                + "/"
+                + str(current_upload_operator_action_runway_summary.get("urgency_future_count", ""))
+                + ",first:"
+                + (_text(current_upload_operator_action_runway_summary.get("first_target_id")) or "-")
+                + "/"
+                + (_text(current_upload_operator_action_runway_summary.get("first_action_status")) or "-")
+                + "/"
+                + (_text(current_upload_operator_action_runway_summary.get("first_blockers")) or "-")
             ),
         ),
         _artifact_row(
@@ -14346,6 +14473,129 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "current_queue_rollover_hygiene_audit_first_stale_extra_folder": _text(
             current_queue_rollover_hygiene_audit_summary.get("first_stale_extra_folder")
         ),
+        "current_upload_active_manifest_lock_status": _text(
+            current_upload_active_manifest_lock_summary.get("active_manifest_lock_status")
+        ),
+        "current_upload_active_manifest_lock_active_target_count": _int(
+            current_upload_active_manifest_lock_summary.get("active_target_count")
+        ),
+        "current_upload_active_manifest_lock_active_locked_count": _int(
+            current_upload_active_manifest_lock_summary.get("active_locked_count")
+        ),
+        "current_upload_active_manifest_lock_active_blocked_count": _int(
+            current_upload_active_manifest_lock_summary.get("active_blocked_count")
+        ),
+        "current_upload_active_manifest_lock_active_operator_value_row_count": _int(
+            current_upload_active_manifest_lock_summary.get("active_operator_value_row_count")
+        ),
+        "current_upload_active_manifest_lock_stale_folder_count": _int(
+            current_upload_active_manifest_lock_summary.get("stale_folder_count")
+        ),
+        "current_upload_active_manifest_lock_stale_readonly_count": _int(
+            current_upload_active_manifest_lock_summary.get("stale_readonly_count")
+        ),
+        "current_upload_active_manifest_lock_stale_operator_value_folder_count": _int(
+            current_upload_active_manifest_lock_summary.get("stale_operator_value_folder_count")
+        ),
+        "current_upload_active_manifest_lock_blocked_row_count": _int(
+            current_upload_active_manifest_lock_summary.get("blocked_row_count")
+        ),
+        "current_upload_active_manifest_lock_first_active_target_id": _text(
+            current_upload_active_manifest_lock_summary.get("first_active_target_id")
+        ),
+        "current_upload_active_manifest_lock_first_stale_folder": _text(
+            current_upload_active_manifest_lock_summary.get("first_stale_folder")
+        ),
+        "current_upload_active_manifest_lock_first_blocker": _text(
+            current_upload_active_manifest_lock_summary.get("first_blocker")
+        ),
+        "current_upload_decision_rule_gate_status": _text(
+            current_upload_decision_rule_gate_summary.get("upload_decision_rule_gate_status")
+        ),
+        "current_upload_decision_rule_gate_active_target_count": _int(
+            current_upload_decision_rule_gate_summary.get("active_target_count")
+        ),
+        "current_upload_decision_rule_gate_technical_upload_candidate_count": _int(
+            current_upload_decision_rule_gate_summary.get("technical_upload_candidate_count")
+        ),
+        "current_upload_decision_rule_gate_technical_blocked_count": _int(
+            current_upload_decision_rule_gate_summary.get("technical_blocked_count")
+        ),
+        "current_upload_decision_rule_gate_conditional_approve_after_operator_count": _int(
+            current_upload_decision_rule_gate_summary.get("conditional_approve_after_operator_count")
+        ),
+        "current_upload_decision_rule_gate_operator_decision_missing_count": _int(
+            current_upload_decision_rule_gate_summary.get("operator_decision_missing_count")
+        ),
+        "current_upload_decision_rule_gate_author_serialization_missing_count": _int(
+            current_upload_decision_rule_gate_summary.get("author_serialization_missing_count")
+        ),
+        "current_upload_decision_rule_gate_approve_count": _int(
+            current_upload_decision_rule_gate_summary.get("approve_count")
+        ),
+        "current_upload_decision_rule_gate_hold_count": _int(
+            current_upload_decision_rule_gate_summary.get("hold_count")
+        ),
+        "current_upload_decision_rule_gate_reject_count": _int(
+            current_upload_decision_rule_gate_summary.get("reject_count")
+        ),
+        "current_upload_decision_rule_gate_first_target_id": _text(
+            current_upload_decision_rule_gate_summary.get("first_target_id")
+        ),
+        "current_upload_decision_rule_gate_first_status": _text(
+            current_upload_decision_rule_gate_summary.get("first_status")
+        ),
+        "current_upload_decision_rule_gate_first_recommendation": _text(
+            current_upload_decision_rule_gate_summary.get("first_recommendation")
+        ),
+        "current_upload_decision_rule_gate_first_blockers": _text(
+            current_upload_decision_rule_gate_summary.get("first_blockers")
+        ),
+        "current_upload_operator_action_runway_status": _text(
+            current_upload_operator_action_runway_summary.get("operator_action_runway_status")
+        ),
+        "current_upload_operator_action_runway_active_target_count": _int(
+            current_upload_operator_action_runway_summary.get("active_target_count")
+        ),
+        "current_upload_operator_action_runway_technical_upload_candidate_count": _int(
+            current_upload_operator_action_runway_summary.get("technical_upload_candidate_count")
+        ),
+        "current_upload_operator_action_runway_technical_blocked_count": _int(
+            current_upload_operator_action_runway_summary.get("technical_blocked_count")
+        ),
+        "current_upload_operator_action_runway_operator_decision_required_count": _int(
+            current_upload_operator_action_runway_summary.get("operator_decision_required_count")
+        ),
+        "current_upload_operator_action_runway_author_serialization_required_count": _int(
+            current_upload_operator_action_runway_summary.get("author_serialization_required_count")
+        ),
+        "current_upload_operator_action_runway_ready_for_runtime_upload_count": _int(
+            current_upload_operator_action_runway_summary.get("ready_for_runtime_upload_count")
+        ),
+        "current_upload_operator_action_runway_urgency_today_count": _int(
+            current_upload_operator_action_runway_summary.get("urgency_today_count")
+        ),
+        "current_upload_operator_action_runway_urgency_soon_count": _int(
+            current_upload_operator_action_runway_summary.get("urgency_soon_count")
+        ),
+        "current_upload_operator_action_runway_urgency_future_count": _int(
+            current_upload_operator_action_runway_summary.get("urgency_future_count")
+        ),
+        "current_upload_operator_action_runway_first_target_id": _text(
+            current_upload_operator_action_runway_summary.get("first_target_id")
+        ),
+        "current_upload_operator_action_runway_first_action_status": _text(
+            current_upload_operator_action_runway_summary.get("first_action_status")
+        ),
+        "current_upload_operator_action_runway_first_required_operator_fields": _text(
+            current_upload_operator_action_runway_summary.get("first_required_operator_fields")
+        ),
+        "current_upload_operator_action_runway_first_fill_surface": _text(
+            current_upload_operator_action_runway_summary.get("first_fill_surface")
+        ),
+        "current_upload_operator_action_runway_first_blockers": _text(
+            current_upload_operator_action_runway_summary.get("first_blockers")
+        ),
         "benchmark_rows_ready_count": benchmark_rows_ready,
         "benchmark_rows_total": benchmark_rows_total,
         "win_tier_goal_scorecard_status": _text(goal_scorecard_summary.get("scorecard_status")),
@@ -23284,6 +23534,9 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- current CASP17 escrow external timestamp packet: `{summary['current_escrow_external_timestamp_packet_status'] or '-'}` escrow `{summary['current_escrow_external_timestamp_packet_prospective_escrow_status'] or '-'}` timestamp ready/blocked/total `{summary['current_escrow_external_timestamp_packet_timestamp_ready_count']}/{summary['current_escrow_external_timestamp_packet_timestamp_blocked_count']}/{summary['current_escrow_external_timestamp_packet_target_count']}` upload ready/blocked `{summary['current_escrow_external_timestamp_packet_upload_ready_count']}/{summary['current_escrow_external_timestamp_packet_upload_blocked_count']}` urgency today/soon/future `{summary['current_escrow_external_timestamp_packet_urgency_today_count']}/{summary['current_escrow_external_timestamp_packet_urgency_soon_count']}/{summary['current_escrow_external_timestamp_packet_urgency_future_count']}` sha/escrow-md/manifest `{summary['current_escrow_external_timestamp_packet_sha256_match_count']}/{summary['current_escrow_external_timestamp_packet_escrow_md_present_count']}/{summary['current_escrow_external_timestamp_packet_timestamp_manifest_row_count']}` native/ext-ts `{summary['current_escrow_external_timestamp_packet_native_pending_count']}/{summary['current_escrow_external_timestamp_packet_external_timestamp_required_count']}` proof/author/hygiene `{summary['current_escrow_external_timestamp_packet_competitive_proof_eligible_count']}/{summary['current_escrow_external_timestamp_packet_author_serialized_count']}/{summary['current_escrow_external_timestamp_packet_coordinate_copy_count']}/{summary['current_escrow_external_timestamp_packet_proof_marker_count']}/{summary['current_escrow_external_timestamp_packet_portal_submit_marker_count']}` first `{summary['current_escrow_external_timestamp_packet_first_ready_target_id'] or '-'}`/`{summary['current_escrow_external_timestamp_packet_first_blocked_target_id'] or '-'}` `{summary['current_escrow_external_timestamp_packet_first_blocker'] or '-'}` manifest `{summary['current_escrow_external_timestamp_packet_manifest_signature_sha256'] or '-'}` timestamp `{summary['current_escrow_external_timestamp_packet_timestamp_manifest_csv'] or '-'}`",
         f"- current CASP17 post-native scoring scaffold: `{summary['current_post_native_scoring_scaffold_status'] or '-'}` escrow/timestamp `{summary['current_post_native_scoring_scaffold_prospective_escrow_status'] or '-'}` `{summary['current_post_native_scoring_scaffold_timestamp_packet_status'] or '-'}` targets ready/blocked/total `{summary['current_post_native_scoring_scaffold_target_ready_count']}/{summary['current_post_native_scoring_scaffold_target_blocked_count']}/{summary['current_post_native_scoring_scaffold_target_count']}` class complex/monomer `{summary['current_post_native_scoring_scaffold_complex_target_count']}/{summary['current_post_native_scoring_scaffold_monomer_target_count']}` upload/timestamp `{summary['current_post_native_scoring_scaffold_upload_ready_count']}/{summary['current_post_native_scoring_scaffold_upload_blocked_count']}/{summary['current_post_native_scoring_scaffold_timestamp_ready_count']}` native pending/present/missing `{summary['current_post_native_scoring_scaffold_native_pending_count']}/{summary['current_post_native_scoring_scaffold_native_file_present_count']}/{summary['current_post_native_scoring_scaffold_native_file_missing_count']}` metrics ready/blocked/total `{summary['current_post_native_scoring_scaffold_metric_ready_count']}/{summary['current_post_native_scoring_scaffold_metric_blocked_count']}/{summary['current_post_native_scoring_scaffold_metric_row_count']}` metric class complex/monomer `{summary['current_post_native_scoring_scaffold_complex_metric_row_count']}/{summary['current_post_native_scoring_scaffold_monomer_metric_row_count']}` files dropzone/manifest/chainmap/metriccsv `{summary['current_post_native_scoring_scaffold_dropzone_count']}/{summary['current_post_native_scoring_scaffold_native_input_manifest_count']}/{summary['current_post_native_scoring_scaffold_chain_mapping_template_count']}/{summary['current_post_native_scoring_scaffold_metric_requirements_csv_count']}` proof/hygiene `{summary['current_post_native_scoring_scaffold_competitive_proof_eligible_count']}/{summary['current_post_native_scoring_scaffold_coordinate_copy_count']}/{summary['current_post_native_scoring_scaffold_proof_marker_count']}/{summary['current_post_native_scoring_scaffold_portal_submit_marker_count']}` first `{summary['current_post_native_scoring_scaffold_first_ready_target_id'] or '-'}`/`{summary['current_post_native_scoring_scaffold_first_blocked_target_id'] or '-'}` `{summary['current_post_native_scoring_scaffold_first_blocker'] or '-'}` metric rows `{summary['current_post_native_scoring_scaffold_metric_rows_csv'] or '-'}` dir `{summary['current_post_native_scoring_scaffold_dir'] or '-'}`",
         f"- current CASP17 queue rollover hygiene audit: `{summary['current_queue_rollover_hygiene_audit_status'] or '-'}` surfaces pass/stale/blocked/total `{summary['current_queue_rollover_hygiene_audit_surface_pass_count']}/{summary['current_queue_rollover_hygiene_audit_surface_stale_count']}/{summary['current_queue_rollover_hygiene_audit_surface_blocked_count']}/{summary['current_queue_rollover_hygiene_audit_surface_count']}` folders active/actual `{summary['current_queue_rollover_hygiene_audit_active_folder_count']}/{summary['current_queue_rollover_hygiene_audit_actual_folder_count']}` missing/stale `{summary['current_queue_rollover_hygiene_audit_missing_active_folder_count']}/{summary['current_queue_rollover_hygiene_audit_stale_extra_folder_count']}` first stale `{summary['current_queue_rollover_hygiene_audit_first_stale_surface_id'] or '-'}` `{summary['current_queue_rollover_hygiene_audit_first_stale_extra_folder'] or '-'}`",
+        f"- current upload active-manifest lock: `{summary['current_upload_active_manifest_lock_status'] or '-'}` active locked/blocked/total `{summary['current_upload_active_manifest_lock_active_locked_count']}/{summary['current_upload_active_manifest_lock_active_blocked_count']}/{summary['current_upload_active_manifest_lock_active_target_count']}` stale readonly/value/total `{summary['current_upload_active_manifest_lock_stale_readonly_count']}/{summary['current_upload_active_manifest_lock_stale_operator_value_folder_count']}/{summary['current_upload_active_manifest_lock_stale_folder_count']}` operator values active/stale `{summary['current_upload_active_manifest_lock_active_operator_value_row_count']}/{summary['current_upload_active_manifest_lock_stale_operator_value_folder_count']}` first active/stale/blocker `{summary['current_upload_active_manifest_lock_first_active_target_id'] or '-'}` `{summary['current_upload_active_manifest_lock_first_stale_folder'] or '-'}` `{summary['current_upload_active_manifest_lock_first_blocker'] or '-'}`",
+        f"- current upload decision-rule gate: `{summary['current_upload_decision_rule_gate_status'] or '-'}` active/technical/blocked `{summary['current_upload_decision_rule_gate_active_target_count']}/{summary['current_upload_decision_rule_gate_technical_upload_candidate_count']}/{summary['current_upload_decision_rule_gate_technical_blocked_count']}` conditional `{summary['current_upload_decision_rule_gate_conditional_approve_after_operator_count']}` missing decision/author `{summary['current_upload_decision_rule_gate_operator_decision_missing_count']}/{summary['current_upload_decision_rule_gate_author_serialization_missing_count']}` decisions approve/hold/reject `{summary['current_upload_decision_rule_gate_approve_count']}/{summary['current_upload_decision_rule_gate_hold_count']}/{summary['current_upload_decision_rule_gate_reject_count']}` first `{summary['current_upload_decision_rule_gate_first_target_id'] or '-'}` `{summary['current_upload_decision_rule_gate_first_status'] or '-'}` `{summary['current_upload_decision_rule_gate_first_recommendation'] or '-'}` `{summary['current_upload_decision_rule_gate_first_blockers'] or '-'}`",
+        f"- current upload operator action runway: `{summary['current_upload_operator_action_runway_status'] or '-'}` active/technical/blocked `{summary['current_upload_operator_action_runway_active_target_count']}/{summary['current_upload_operator_action_runway_technical_upload_candidate_count']}/{summary['current_upload_operator_action_runway_technical_blocked_count']}` operator/author/runtime `{summary['current_upload_operator_action_runway_operator_decision_required_count']}/{summary['current_upload_operator_action_runway_author_serialization_required_count']}/{summary['current_upload_operator_action_runway_ready_for_runtime_upload_count']}` urgency today/soon/future `{summary['current_upload_operator_action_runway_urgency_today_count']}/{summary['current_upload_operator_action_runway_urgency_soon_count']}/{summary['current_upload_operator_action_runway_urgency_future_count']}` first `{summary['current_upload_operator_action_runway_first_target_id'] or '-'}` `{summary['current_upload_operator_action_runway_first_action_status'] or '-'}` `{summary['current_upload_operator_action_runway_first_required_operator_fields'] or '-'}` `{summary['current_upload_operator_action_runway_first_blockers'] or '-'}`",
         f"- benchmark rows ready/total: `{summary['benchmark_rows_ready_count']}/{summary['benchmark_rows_total']}`",
         f"- win-tier goal scorecard: `{summary['win_tier_goal_scorecard_status'] or '-'}` pass/partial/blocked `{summary['win_tier_goal_scorecard_pass_count']}/{summary['win_tier_goal_scorecard_partial_count']}/{summary['win_tier_goal_scorecard_blocked_count']}` first blocked `{summary['win_tier_goal_scorecard_first_blocked_gate'] or '-'}`",
         f"- historical winner-normalized bands: `{summary['historical_winner_normalized_bands_status'] or '-'}` top5/winner-proximity/blocked/total `{summary['historical_winner_normalized_bands_top5_or_better_count']}/{summary['historical_winner_normalized_bands_winner_proximity_count']}/{summary['historical_winner_normalized_bands_blocked_band_count']}/{summary['historical_winner_normalized_bands_band_count']}` strict slots `{summary['historical_winner_normalized_bands_strict_ready_slot_count']}/{summary['historical_winner_normalized_bands_strict_slot_count']}` metric rows `{summary['historical_winner_normalized_bands_metric_surface_ready_row_count']}/{summary['historical_winner_normalized_bands_metric_surface_row_count']}` official archive proof `{summary['historical_winner_normalized_bands_official_archive_candidate_count']}/{summary['historical_winner_normalized_bands_official_archive_proof_eligible_count']}` first `{summary['historical_winner_normalized_bands_first_blocked_band'] or '-'}` `{summary['historical_winner_normalized_bands_first_blocker'] or '-'}`",
@@ -23627,6 +23880,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--current-queue-rollover-hygiene-audit-json",
         default=DEFAULT_CURRENT_QUEUE_ROLLOVER_HYGIENE_AUDIT_JSON,
+    )
+    parser.add_argument(
+        "--current-upload-active-manifest-lock-json",
+        default=DEFAULT_CURRENT_UPLOAD_ACTIVE_MANIFEST_LOCK_JSON,
+    )
+    parser.add_argument(
+        "--current-upload-decision-rule-gate-json",
+        default=DEFAULT_CURRENT_UPLOAD_DECISION_RULE_GATE_JSON,
+    )
+    parser.add_argument(
+        "--current-upload-operator-action-runway-json",
+        default=DEFAULT_CURRENT_UPLOAD_OPERATOR_ACTION_RUNWAY_JSON,
     )
     parser.add_argument("--win-gap-closure-json", default=DEFAULT_WIN_GAP_CLOSURE_JSON)
     parser.add_argument("--win-tier-goal-scorecard-json", default=DEFAULT_WIN_TIER_GOAL_SCORECARD_JSON)

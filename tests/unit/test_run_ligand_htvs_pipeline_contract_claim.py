@@ -95,6 +95,53 @@ def test_validate_data_contract_input_detects_missing_column(tmp_path: Path):
     assert any("ligand_csv missing columns" in e for e in rep["errors"])
 
 
+def test_stage1_reuse_diagnostics_rejects_changed_split_and_ligand_inputs():
+    args = argparse.Namespace(
+        target_native_csv="config/native.csv",
+        ligand_csv="config/repaired_reference.csv",
+        leakage_ligand_meta_csv="config/repaired_meta.csv",
+        eval_split_csv="config/repaired_split.csv",
+        csv_smiles_cache_json="runs/repaired_cache.json",
+    )
+    old_stage1 = {
+        "target_native_csv": "config/native.csv",
+        "ligand_csv": "config/base_reference.csv",
+        "ligand_meta_csv": "config/base_meta.csv",
+        "target_ligand_csv": "config/base_split.csv",
+        "csv_smiles_cache_json": "runs/base_cache.json",
+        "target_ligand_roles": ["fit", "far_ood_eval"],
+    }
+
+    diag = mod._stage1_reuse_diagnostics(args, old_stage1, "fit,far_ood_eval")
+
+    assert diag["ok"] is False
+    fields = {row["field"] for row in diag["mismatches"]}
+    assert {"ligand_csv", "ligand_meta_csv", "target_ligand_csv", "csv_smiles_cache_json"} <= fields
+
+
+def test_stage1_reuse_diagnostics_accepts_matching_inputs():
+    args = argparse.Namespace(
+        target_native_csv="config/native.csv",
+        ligand_csv="config/repaired_reference.csv",
+        leakage_ligand_meta_csv="config/repaired_meta.csv",
+        eval_split_csv="config/repaired_split.csv",
+        csv_smiles_cache_json="runs/repaired_cache.json",
+    )
+    stage1 = {
+        "target_native_csv": "config/native.csv",
+        "ligand_csv": "config/repaired_reference.csv",
+        "ligand_meta_csv": "config/repaired_meta.csv",
+        "target_ligand_csv": "config/repaired_split.csv",
+        "csv_smiles_cache_json": "runs/repaired_cache.json",
+        "target_ligand_roles": ["fit", "far_ood_eval"],
+    }
+
+    diag = mod._stage1_reuse_diagnostics(args, stage1, "fit,far_ood_eval")
+
+    assert diag["ok"] is True
+    assert diag["mismatches"] == []
+
+
 def test_build_claim_split_contains_both_domains():
     gate = {
         "pass": True,

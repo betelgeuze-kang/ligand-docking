@@ -1,0 +1,122 @@
+{
+  "blockers": [],
+  "rows": [
+    {
+      "artifact_path": "api/casp17.py",
+      "check": "casp17_api_file_present",
+      "delete_executed": false,
+      "external_state_mutated": false,
+      "observed": "api/casp17.py=True",
+      "reason": "CASP17 transition status needs a dedicated read-only API surface before upload and cleanup state can be inspected consistently.",
+      "release_blocker": false,
+      "required": "api/casp17.py exists",
+      "status": "pass",
+      "upload_executed": false
+    },
+    {
+      "artifact_path": "api/main.py",
+      "check": "casp17_router_registered",
+      "delete_executed": false,
+      "external_state_mutated": false,
+      "observed": "casp17_router_registered=True",
+      "reason": "The CASP17 API must be mounted into the FastAPI app, not only defined as a detached module.",
+      "release_blocker": false,
+      "required": "api.main imports and includes casp17_router",
+      "status": "pass",
+      "upload_executed": false
+    },
+    {
+      "artifact_path": "api/casp17.py",
+      "check": "casp17_upload_endpoint_present",
+      "delete_executed": false,
+      "external_state_mutated": false,
+      "observed": "upload_endpoint=True",
+      "reason": "Operators need a consolidated CASP17 current-upload status endpoint before any human upload decision.",
+      "release_blocker": false,
+      "required": "/casp17/upload route present",
+      "status": "pass",
+      "upload_executed": false
+    },
+    {
+      "artifact_path": "api/casp17.py",
+      "check": "casp17_transition_endpoint_present",
+      "delete_executed": false,
+      "external_state_mutated": false,
+      "observed": "transition_endpoint=True",
+      "reason": "CASP17 transition and cleanup state need one read-only inspection surface during the move to CAMEO/product validation.",
+      "release_blocker": false,
+      "required": "/casp17/transition route present",
+      "status": "pass",
+      "upload_executed": false
+    },
+    {
+      "artifact_path": "api/casp17.py",
+      "check": "casp17_upload_artifacts_referenced",
+      "delete_executed": false,
+      "external_state_mutated": false,
+      "observed": "upload_artifacts_referenced=True",
+      "reason": "CASP17 upload status must be grounded in the existing fail-closed upload evidence packets.",
+      "release_blocker": false,
+      "required": "decision-rule, action-runway, and active-manifest lock artifacts referenced",
+      "status": "pass",
+      "upload_executed": false
+    },
+    {
+      "artifact_path": "api/casp17.py",
+      "check": "casp17_cleanup_artifacts_referenced",
+      "delete_executed": false,
+      "external_state_mutated": false,
+      "observed": "cleanup_artifacts_referenced=True",
+      "reason": "CASP17 transition status must expose the cleanup payload context without promoting deletion.",
+      "release_blocker": false,
+      "required": "large cleanup drilldown and protected cleanup review artifacts referenced",
+      "status": "pass",
+      "upload_executed": false
+    },
+    {
+      "artifact_path": "api/casp17.py",
+      "check": "casp17_cleanup_gate_artifacts_referenced",
+      "delete_executed": false,
+      "external_state_mutated": false,
+      "observed": "cleanup_gate_artifacts_referenced=True",
+      "reason": "CASP17 transition status must expose cleanup approval, postcheck, and completion gates before cleanup can be claimed.",
+      "release_blocker": false,
+      "required": "cleanup approval gate, postcheck contract, and completion gate artifacts referenced",
+      "status": "pass",
+      "upload_executed": false
+    },
+    {
+      "artifact_path": "api/casp17.py",
+      "check": "casp17_fail_closed_flags_present",
+      "delete_executed": false,
+      "external_state_mutated": false,
+      "observed": "fail_closed_flags_present=True",
+      "reason": "The CASP17 API must be visibly read-only and must not imply upload, deletion, or native-accuracy computation happened.",
+      "release_blocker": false,
+      "required": "upload/delete/native-accuracy/external-mutation flags returned as disabled",
+      "status": "pass",
+      "upload_executed": false
+    }
+  ],
+  "summary": {
+    "blocker_count": 0,
+    "casp17_api_file_present": true,
+    "casp17_cleanup_artifacts_referenced": true,
+    "casp17_cleanup_gate_artifacts_referenced": true,
+    "casp17_fail_closed_flags_present": true,
+    "casp17_router_registered": true,
+    "casp17_transition_endpoint_present": true,
+    "casp17_upload_artifacts_referenced": true,
+    "casp17_upload_endpoint_present": true,
+    "check_count": 8,
+    "claim_boundary": "CASP17 transition surface contract only; it audits whether the repository exposes read-only CASP17 upload and transition status surfaces from local files. It does not enter operator decisions, serialize an author code, create final upload files, submit to CASP, compute native accuracy, delete, move, archive, externalize, upload, or mutate external state.",
+    "delete_executed": false,
+    "external_state_mutated": false,
+    "native_accuracy_computed": false,
+    "next_required_step": "CASP17 transition surface is ready; operator decisions, author serialization, upload, and cleanup remain separately gated.",
+    "packet_type": "casp17_transition_surface_contract",
+    "status": "casp17_transition_surface_contract_ready",
+    "surface_ready": true,
+    "upload_executed": false
+  }
+}

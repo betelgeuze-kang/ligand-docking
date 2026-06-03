@@ -458,6 +458,7 @@ def _load_ligands_from_csv(
     csv_relax_embed_seed: int,
     csv_relax_workers: int = 0,
     csv_smiles_cache_json: str = "",
+    ligand_meta_csv: str = "",
     csv_prioritize_binders: bool = False,
     csv_binder_col: str = "is_binder",
 ) -> List[LigandRecord]:
@@ -467,14 +468,43 @@ def _load_ligands_from_csv(
     df = pd.read_csv(src)
     if df.empty:
         return []
+    meta_by_ligand: Dict[str, Dict[str, Any]] = {}
+    meta_src = str(ligand_meta_csv or "").strip()
+    if meta_src and os.path.exists(meta_src):
+        meta_df = pd.read_csv(meta_src)
+        if "ligand_id" not in meta_df.columns:
+            raise ValueError(f"ligand meta csv missing column: ligand_id")
+        for meta_row in meta_df.to_dict(orient="records"):
+            raw_lid = _clean_text_field(meta_row.get("ligand_id", ""))
+            if not raw_lid:
+                continue
+            meta_by_ligand.setdefault(raw_lid, dict(meta_row))
+            meta_by_ligand.setdefault(_slug(raw_lid), dict(meta_row))
     binder_col = str(csv_binder_col).strip()
     if bool(csv_prioritize_binders) and binder_col and (binder_col in df.columns):
         # Ensure positive/binder examples are retained under max_ligands truncation.
         df = df.sort_values(by=[binder_col], ascending=False, kind="stable").reset_index(drop=True)
 
     normalized_rows: List[Dict[str, Any]] = []
+    meta_overlay_cols = (
+        "smiles",
+        "molecular_weight",
+        "logp",
+        "h_donors",
+        "h_acceptors",
+        "rot_bonds",
+        "bead_coords_json",
+    )
     for row in df.to_dict(orient="records"):
         row_copy = dict(row)
+        raw_lid = _clean_text_field(row_copy.get("ligand_id", row_copy.get("id", row_copy.get("name", ""))))
+        meta = meta_by_ligand.get(raw_lid) or meta_by_ligand.get(_slug(raw_lid)) or {}
+        if meta:
+            for col in meta_overlay_cols:
+                if col not in meta:
+                    continue
+                if not _clean_text_field(row_copy.get(col, "")):
+                    row_copy[col] = meta.get(col, "")
         row_copy["smiles"] = _clean_text_field(row_copy.get("smiles", ""))
         row_copy["bead_coords_json"] = _clean_text_field(row_copy.get("bead_coords_json", ""))
         # Rows without a valid SMILES can still survive only if explicit bead coordinates were supplied.
@@ -625,6 +655,7 @@ def _resolve_ligands(
     csv_relax_embed_seed: int,
     csv_relax_workers: int = 0,
     csv_smiles_cache_json: str = "",
+    ligand_meta_csv: str = "",
     required_ligand_ids: Optional[Sequence[str]] = None,
     csv_prioritize_binders: bool = False,
     csv_binder_col: str = "is_binder",
@@ -636,6 +667,7 @@ def _resolve_ligands(
         csv_relax_embed_seed=int(csv_relax_embed_seed),
         csv_relax_workers=int(csv_relax_workers),
         csv_smiles_cache_json=str(csv_smiles_cache_json),
+        ligand_meta_csv=str(ligand_meta_csv),
         csv_prioritize_binders=bool(csv_prioritize_binders),
         csv_binder_col=str(csv_binder_col),
     )
@@ -727,6 +759,7 @@ def build_queue(args: argparse.Namespace) -> Dict[str, Any]:
         csv_relax_embed_seed=int(args.csv_relax_embed_seed),
         csv_relax_workers=int(args.csv_relax_workers),
         csv_smiles_cache_json=str(args.csv_smiles_cache_json),
+        ligand_meta_csv=str(args.ligand_meta_csv),
         required_ligand_ids=required_override_ids,
         csv_prioritize_binders=bool(args.csv_prioritize_binders),
         csv_binder_col=str(args.csv_binder_col),
@@ -863,6 +896,8 @@ def build_queue(args: argparse.Namespace) -> Dict[str, Any]:
         "queue_policy": str(args.queue_policy),
         "runtime_defaults": runtime_defaults,
         "target_native_csv": str(args.target_native_csv),
+        "ligand_csv": str(args.ligand_csv),
+        "ligand_meta_csv": str(args.ligand_meta_csv),
         "target_ligand_csv": str(args.target_ligand_csv),
         "target_ligand_roles": _parse_csv_list(str(args.target_ligand_roles)),
         "targets_with_ligand_overrides": sorted([k for k, v in target_ligand_overrides.items() if v]),
@@ -923,6 +958,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--csv-relax-embed-seed", type=int, default=13)
     p.add_argument("--csv-relax-workers", type=int, default=0)
     p.add_argument("--csv-smiles-cache-json", type=str, default="runs/ligand_smiles_bead_cache.json")
+    p.add_argument("--ligand-meta-csv", type=str, default="")
     p.add_argument("--target-pocket-csv", type=str, default="")
     p.add_argument("--target-native-csv", type=str, default="")
     p.add_argument("--target-ligand-csv", type=str, default="")
