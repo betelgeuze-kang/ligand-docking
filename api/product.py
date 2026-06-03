@@ -22,6 +22,7 @@ PRODUCT_API_CONTRACT_ARTIFACT = ROOT / "runs" / "product_api_contract_current.js
 PRODUCT_OPERATIONAL_QUALITY_ARTIFACT = ROOT / "runs" / "product_operational_quality_contract_current.json"
 PRODUCT_RELEASE_OPERATIONS_ARTIFACT = ROOT / "runs" / "product_release_operations_dossier_current.json"
 PRODUCT_EXECUTION_APPROVAL_ARTIFACT = ROOT / "runs" / "product_execution_approval_gate_current.json"
+PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_ARTIFACT = ROOT / "runs" / "product_public_benchmark_work_order_current.json"
 PRODUCT_LICENSE_DECISION_ARTIFACT = ROOT / "runs" / "product_license_decision_gate_current.json"
 PRODUCT_LICENSE_DECISION_PACKET_ARTIFACT = ROOT / "runs" / "product_license_decision_packet_current.json"
 PRODUCT_LICENSE_FILE_WORK_ORDER_ARTIFACT = ROOT / "runs" / "product_license_file_creation_work_order_current.json"
@@ -380,6 +381,59 @@ async def get_product_operational_quality() -> dict[str, Any]:
         "docking_results_emitted": False,
         "license_file_written": False,
         "bundle_assembled": False,
+        "external_state_mutated": False,
+        "claim_boundary": summary.get("claim_boundary", ""),
+    }
+
+
+@router.get("/public-benchmark")
+async def get_product_public_benchmark() -> dict[str, Any]:
+    packet = _read_json_object(PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_ARTIFACT)
+    summary = _summary(packet)
+    rows = packet.get("rows") if isinstance(packet.get("rows"), list) else []
+    if not summary:
+        return {
+            "status": "missing_product_public_benchmark_work_order",
+            "artifact_path": str(PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_ARTIFACT),
+            "public_benchmark_validation_ready": False,
+            "open_suite_count": 0,
+            "materialization_required_suite_count": 0,
+            "scorecard_required_suite_count": 0,
+            "continuous_validation_command_count": 0,
+            "continuous_validation_command": "",
+            "requires_24h_server": False,
+            "requires_competition_season": False,
+            "requires_paid_vps": False,
+            "execution_enabled": False,
+            "docking_results_emitted": False,
+            "external_state_mutated": False,
+            "claim_boundary": (
+                "Product public-benchmark endpoint only; the local public benchmark work-order artifact is missing or invalid. "
+                "It does not download datasets, run docking, compute metrics, or mutate external state."
+            ),
+        }
+    return {
+        "status": summary.get("status"),
+        "artifact_path": str(PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_ARTIFACT),
+        "source_public_benchmark_status": summary.get("source_public_benchmark_status", ""),
+        "source_public_benchmark_json": summary.get("source_public_benchmark_json", ""),
+        "public_benchmark_validation_ready": bool(summary.get("public_benchmark_validation_ready") is True),
+        "suite_count": int(summary.get("suite_count") or 0),
+        "open_suite_count": int(summary.get("open_suite_count") or 0),
+        "materialization_required_suite_count": int(summary.get("materialization_required_suite_count") or 0),
+        "scorecard_required_suite_count": int(summary.get("scorecard_required_suite_count") or 0),
+        "continuous_validation_command_count": int(summary.get("continuous_validation_command_count") or 0),
+        "continuous_validation_command": summary.get("continuous_validation_command", ""),
+        "scorecard_intake_sync_command": summary.get("scorecard_intake_sync_command", ""),
+        "scorecard_row_csvs": list(summary.get("scorecard_row_csvs") or []),
+        "requires_24h_server": bool(summary.get("requires_24h_server") is True),
+        "requires_competition_season": bool(summary.get("requires_competition_season") is True),
+        "requires_paid_vps": bool(summary.get("requires_paid_vps") is True),
+        "requires_institution_registration": bool(summary.get("requires_institution_registration") is True),
+        "download_executed": bool(summary.get("download_executed") is True),
+        "suites": rows,
+        "execution_enabled": False,
+        "docking_results_emitted": False,
         "external_state_mutated": False,
         "claim_boundary": summary.get("claim_boundary", ""),
     }

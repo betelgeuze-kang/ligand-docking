@@ -66,6 +66,29 @@ def test_product_cli_main_prints_json(tmp_path: Path, capsys) -> None:
     assert output["execution_enabled"] is False
 
 
+def test_product_cli_reads_public_benchmark_work_order_status(tmp_path: Path) -> None:
+    _write_packet(
+        tmp_path,
+        cli.ARTIFACTS["public-benchmark"],
+        "product_public_benchmark_work_order_ready",
+        extra_summary={
+            "public_benchmark_validation_ready": False,
+            "open_suite_count": 5,
+            "materialization_required_suite_count": 5,
+            "scorecard_required_suite_count": 0,
+            "continuous_validation_command_count": 5,
+        },
+    )
+
+    payload = cli.build_cli_status("public-benchmark", root=tmp_path)
+
+    assert payload["status"] == "product_public_benchmark_work_order_ready"
+    assert payload["artifact_present"] is True
+    assert payload["summary"]["open_suite_count"] == 5
+    assert payload["execution_enabled"] is False
+    assert payload["external_state_mutated"] is False
+
+
 def test_product_cli_all_surfaces_blocked_when_required_artifacts_missing(tmp_path: Path) -> None:
     _write_packet(tmp_path, cli.ARTIFACTS["capabilities"], "product_capability_surface_contract_ready")
     _write_packet(
@@ -125,6 +148,12 @@ def test_product_cli_all_surfaces_blocked_when_required_artifacts_missing(tmp_pa
     assert payload["cameo_architecture_validation_ready"] is False
     assert payload["cleanup_postcheck_contract_ready"] is True
     assert payload["commercial_independence_ready"] is False
+    assert payload["public_benchmark_work_order_status"] == "missing_public_benchmark_artifact"
+    assert payload["public_benchmark_validation_ready"] is False
+    assert payload["public_benchmark_open_suite_count"] == 0
+    assert payload["public_benchmark_materialization_required_suite_count"] == 0
+    assert payload["public_benchmark_scorecard_required_suite_count"] == 0
+    assert payload["public_benchmark_continuous_validation_command_count"] == 0
     assert payload["license_present"] is False
     assert payload["license_authorized_for_file_creation_review"] is False
     assert payload["license_decision_packet_ready"] is True

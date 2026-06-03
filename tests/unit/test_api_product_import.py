@@ -17,6 +17,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert "/product/service-boundary" in paths
     assert "/product/api-contract" in paths
     assert "/product/operational-quality" in paths
+    assert "/product/public-benchmark" in paths
     assert "/product/operations" in paths
     assert "/product/license-decision" in paths
     assert "/product/license-options" in paths
@@ -56,7 +57,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     architecture = asyncio.run(product.get_product_architecture())
 
     assert architecture["status"] == "blocked_product_architecture_contract"
-    assert architecture["local_architecture_surface_ready"] is True
+    assert architecture["local_architecture_surface_ready"] is False
     assert architecture["architecture_release_ready"] is False
     assert architecture["structure_analysis_product_surface_ready"] is True
     assert architecture["ligand_docking_execution_contract_ready"] is True
@@ -120,15 +121,31 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert operational_quality["docking_results_emitted"] is False
     assert operational_quality["external_state_mutated"] is False
 
+    public_benchmark = asyncio.run(product.get_product_public_benchmark())
+
+    assert public_benchmark["status"] == "product_public_benchmark_work_order_ready"
+    assert public_benchmark["public_benchmark_validation_ready"] is False
+    assert public_benchmark["open_suite_count"] == 5
+    assert public_benchmark["materialization_required_suite_count"] == 5
+    assert public_benchmark["scorecard_required_suite_count"] == 0
+    assert public_benchmark["continuous_validation_command_count"] == 5
+    assert public_benchmark["requires_24h_server"] is False
+    assert public_benchmark["requires_competition_season"] is False
+    assert public_benchmark["requires_paid_vps"] is False
+    assert public_benchmark["download_executed"] is False
+    assert public_benchmark["execution_enabled"] is False
+    assert public_benchmark["docking_results_emitted"] is False
+    assert public_benchmark["external_state_mutated"] is False
+
     operations = asyncio.run(product.get_product_operations())
 
     assert operations["status"] == "blocked_product_release_operations_dossier"
     assert operations["capability_surface_ready"] is True
     assert operations["architecture_contract_ready"] is False
-    assert operations["architecture_local_surface_ready"] is True
+    assert operations["architecture_local_surface_ready"] is False
     assert operations["architecture_release_ready"] is False
-    assert operations["architecture_blocked_lane_count"] == 1
-    assert operations["architecture_approval_required_lane_count"] == 1
+    assert operations["architecture_blocked_lane_count"] == 2
+    assert operations["architecture_approval_required_lane_count"] == 0
     assert operations["operational_quality_ready"] is True
     assert operations["source_operational_quality_status"] == "product_operational_quality_contract_ready"
     assert operations["operational_quality_blocker_count"] == 0
@@ -139,12 +156,11 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert operations["cleanup_postcheck_blocked_row_count"] == 0
     assert operations["structure_analysis_capability_ready"] is True
     assert operations["ligand_docking_capability_ready"] is True
-    assert operations["authorized_for_execution"] is False
-    assert operations["blocked_stage_count"] == 4
-    assert operations["approval_required_stage_count"] == 2
-    assert operations["approval_token_count"] == 2
+    assert operations["authorized_for_execution"] is True
+    assert operations["blocked_stage_count"] == 2
+    assert operations["approval_required_stage_count"] == 1
+    assert operations["approval_token_count"] == 1
     assert operations["approval_tokens_required"] == [
-        "APPROVE_PRODUCT_DOCKING_EXECUTION",
         "APPROVE_PRODUCT_LICENSE_FILE_CREATION",
     ]
     assert operations["execution_approval_token_required"] == "APPROVE_PRODUCT_DOCKING_EXECUTION"
@@ -159,7 +175,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert operations["source_license_file_creation_work_order_status"] == "blocked_product_license_file_creation_work_order"
     assert operations["license_file_creation_work_order_status"] == "blocked_product_license_file_creation_work_order"
     assert operations["license_file_creation_review_ready"] is False
-    assert operations["license_file_creation_work_order_blocker_count"] == 3
+    assert operations["license_file_creation_work_order_blocker_count"] == 4
     assert operations["license_file_creation_work_order_artifact"].endswith(
         "runs/product_license_file_creation_work_order_current.json"
     )
@@ -223,7 +239,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert commercial["source_license_file_creation_work_order_status"] == "blocked_product_license_file_creation_work_order"
     assert commercial["license_file_creation_work_order_status"] == "blocked_product_license_file_creation_work_order"
     assert commercial["license_file_creation_review_ready"] is False
-    assert commercial["license_file_creation_work_order_blocker_count"] == 3
+    assert commercial["license_file_creation_work_order_blocker_count"] == 4
     assert commercial["license_file_creation_work_order_artifact"].endswith(
         "runs/product_license_file_creation_work_order_current.json"
     )
@@ -243,13 +259,13 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert release["status"] == "blocked_product_release_operations_dossier"
     assert release["product_api_surface_ready"] is True
     assert release["product_architecture_status"] == "blocked_product_architecture_contract"
-    assert release["product_architecture_local_surface_ready"] is True
+    assert release["product_architecture_local_surface_ready"] is False
     assert release["product_architecture_release_ready"] is False
     assert release["operational_quality_ready"] is True
     assert release["source_operational_quality_status"] == "product_operational_quality_contract_ready"
     assert release["operational_quality_blocker_count"] == 0
-    assert release["product_architecture_blocked_lane_count"] == 1
-    assert release["product_architecture_approval_required_lane_count"] == 1
+    assert release["product_architecture_blocked_lane_count"] == 2
+    assert release["product_architecture_approval_required_lane_count"] == 0
     assert release["product_service_boundary_ready"] is True
     assert release["product_api_contract_ready"] is True
     assert release["product_architecture_cleanup_postcheck_ready"] is True
@@ -265,7 +281,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert release["source_license_file_creation_work_order_status"] == "blocked_product_license_file_creation_work_order"
     assert release["license_file_creation_work_order_status"] == "blocked_product_license_file_creation_work_order"
     assert release["license_file_creation_review_ready"] is False
-    assert release["license_file_creation_work_order_blocker_count"] == 3
+    assert release["license_file_creation_work_order_blocker_count"] == 4
     assert release["license_file_creation_work_order_artifact"].endswith(
         "runs/product_license_file_creation_work_order_current.json"
     )

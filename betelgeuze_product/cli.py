@@ -15,6 +15,7 @@ ARTIFACTS = {
     "api-contract": "runs/product_api_contract_current.json",
     "operational-quality": "runs/product_operational_quality_contract_current.json",
     "operations": "runs/product_release_operations_dossier_current.json",
+    "public-benchmark": "runs/product_public_benchmark_work_order_current.json",
     "commercial-independence": "runs/product_commercial_independence_gate_current.json",
     "license-decision": "runs/product_license_decision_gate_current.json",
     "license-options": "runs/product_license_decision_packet_current.json",
@@ -156,6 +157,32 @@ def build_all_status(*, root: str | Path = ROOT) -> dict[str, Any]:
         "cameo_architecture_validation_ready": _bool_value(operations_summary.get("cameo_architecture_validation_ready")),
         "cleanup_postcheck_contract_ready": _bool_value(operations_summary.get("cleanup_postcheck_contract_ready")),
         "commercial_independence_ready": _bool_value(operations_summary.get("commercial_independence_ready")),
+        "public_benchmark_work_order_status": statuses.get("public-benchmark", {}).get("status", ""),
+        "public_benchmark_validation_ready": _bool_value(
+            statuses.get("public-benchmark", {}).get("summary", {}).get("public_benchmark_validation_ready")
+            if isinstance(statuses.get("public-benchmark", {}).get("summary"), dict)
+            else False
+        ),
+        "public_benchmark_open_suite_count": _int_value(
+            statuses.get("public-benchmark", {}).get("summary", {}).get("open_suite_count")
+            if isinstance(statuses.get("public-benchmark", {}).get("summary"), dict)
+            else 0
+        ),
+        "public_benchmark_materialization_required_suite_count": _int_value(
+            statuses.get("public-benchmark", {}).get("summary", {}).get("materialization_required_suite_count")
+            if isinstance(statuses.get("public-benchmark", {}).get("summary"), dict)
+            else 0
+        ),
+        "public_benchmark_scorecard_required_suite_count": _int_value(
+            statuses.get("public-benchmark", {}).get("summary", {}).get("scorecard_required_suite_count")
+            if isinstance(statuses.get("public-benchmark", {}).get("summary"), dict)
+            else 0
+        ),
+        "public_benchmark_continuous_validation_command_count": _int_value(
+            statuses.get("public-benchmark", {}).get("summary", {}).get("continuous_validation_command_count")
+            if isinstance(statuses.get("public-benchmark", {}).get("summary"), dict)
+            else 0
+        ),
         "license_present": _bool_value(operations_summary.get("license_present")),
         "license_authorized_for_file_creation_review": _bool_value(
             operations_summary.get("license_authorized_for_file_creation_review")
