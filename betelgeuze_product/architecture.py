@@ -275,7 +275,9 @@ def build_product_architecture_contract(
         and _text(casp17.get("status")) == "casp17_transition_surface_contract_ready"
         and _bool(casp17.get("surface_ready"))
     )
-    release_allowed = _bool(release.get("delivery_ready_claim_allowed")) and _bool(release.get("authorized_for_execution"))
+    product_execution_authorized = _bool(release.get("authorized_for_execution"))
+    delivery_ready_claim_allowed = _bool(release.get("delivery_ready_claim_allowed"))
+    release_allowed = product_execution_authorized and delivery_ready_claim_allowed
     gate_checks = (
         product_execution_preflight_packet.get("operational_gate_feasibility_checks")
         if isinstance((product_execution_preflight_packet or {}).get("operational_gate_feasibility_checks"), list)
@@ -356,7 +358,9 @@ def build_product_architecture_contract(
                 f"dependency_provenance={_bool(commercial.get('dependency_provenance_manifest_present'))};"
                 f"requirements_lock={_bool(commercial.get('requirements_lock_artifacts_present'))};"
                 f"reproducible_install={_bool(commercial.get('reproducible_install_manifest_ready'))};"
-                f"release_allowed={release_allowed}"
+                f"product_execution_authorized={product_execution_authorized};"
+                f"delivery_ready_claim_allowed={delivery_ready_claim_allowed};"
+                f"release_claim_allowed={commercial_ready}"
             ),
             required="commercial-independence gate ready with license, dependency provenance, reproducible install, and release claim allowed by local evidence",
             artifact_path=f"{commercial_independence_path};{product_release_path}",
@@ -674,6 +678,9 @@ def build_product_architecture_contract(
         "casp17_transition_surface_ready": casp17_transition_ready,
         "cleanup_execution_approved": cleanup_approved,
         "cleanup_reclaim_size_gb": _float(cleanup_approval.get("total_reclaim_size_gb")),
+        "product_execution_authorized": product_execution_authorized,
+        "delivery_ready_claim_allowed": delivery_ready_claim_allowed,
+        "release_claim_allowed": architecture_release_ready,
         "release_allowed": release_allowed,
         "execution_enabled": False,
         "docking_results_emitted": False,

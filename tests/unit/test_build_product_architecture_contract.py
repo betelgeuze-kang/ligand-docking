@@ -185,6 +185,10 @@ def test_product_architecture_contract_reports_local_surface_and_gates(tmp_path:
     assert summary["status"] == "blocked_product_architecture_contract"
     assert summary["local_architecture_surface_ready"] is False
     assert summary["architecture_release_ready"] is False
+    assert summary["release_claim_allowed"] is False
+    assert summary["product_execution_authorized"] is True
+    assert summary["delivery_ready_claim_allowed"] is True
+    assert summary["release_allowed"] is True
     assert summary["ready_lane_count"] == 11
     assert summary["blocked_lane_count"] == 2
     assert summary["approval_required_lane_count"] == 1
