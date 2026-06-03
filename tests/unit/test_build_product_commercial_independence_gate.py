@@ -149,6 +149,8 @@ include = ["betelgeuze_product*", "betelgeuze_cameo*", "betelgeuze_cleanup*"]
 
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["summary"]["status"] == "product_commercial_independence_gate_ready"
+    assert payload["summary"]["license_approval_token_required"] == ""
+    assert payload["summary"]["license_creation_executed"] is False
     assert payload["summary"]["product_cli_surface_present"] is True
     assert payload["summary"]["pyproject_packaging_metadata_present"] is True
     assert payload["summary"]["console_entrypoint_targets_present"] is True
@@ -163,5 +165,9 @@ include = ["betelgeuze_product*", "betelgeuze_cameo*", "betelgeuze_cleanup*"]
     md_text = out_md.read_text(encoding="utf-8")
     assert csv_text.startswith("check,status,")
     assert "local_self_hosted_operation_ready" in csv_text
+    assert "approval_token_required" in csv_text
+    assert "license_creation_executed" in csv_text
     assert "Product Commercial Independence Gate" in md_text
     assert "local_self_hosted_operation_ready" in md_text
+    assert "license_approval_token_required" in md_text
+    assert "license_generation_command_template" in md_text

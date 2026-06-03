@@ -163,6 +163,9 @@ def test_product_commercial_independence_gate_ready_for_pinned_local_product_tre
 
     assert payload["summary"]["status"] == "product_commercial_independence_gate_ready"
     assert payload["summary"]["commercial_independent_product_claim_allowed"] is True
+    assert payload["summary"]["license_approval_token_required"] == ""
+    assert payload["summary"]["license_generation_command_template"] == ""
+    assert payload["summary"]["license_creation_executed"] is False
     assert payload["summary"]["product_cli_surface_present"] is True
     assert payload["summary"]["pyproject_packaging_metadata_present"] is True
     assert payload["summary"]["package_discovery_present"] is True
@@ -189,6 +192,11 @@ def test_product_commercial_independence_gate_blocks_loose_external_runtime_and_
 
     assert payload["summary"]["status"] == "blocked_product_commercial_independence_gate"
     assert payload["summary"]["commercial_independent_product_claim_allowed"] is False
+    assert payload["summary"]["license_approval_token_required"] == "APPROVE_PRODUCT_LICENSE_FILE_CREATION"
+    assert "operator-approved license template" in payload["summary"]["license_operator_required_input"]
+    assert payload["summary"]["license_required_output"] == "non-empty LICENSE, LICENSE.md, or LICENSE.txt"
+    assert "write_product_license_file.py" in payload["summary"]["license_generation_command_template"]
+    assert payload["summary"]["license_creation_executed"] is False
     assert payload["summary"]["loose_runtime_dependency_count"] == 3
     assert payload["summary"]["external_api_runtime_dependencies"] == ["openai"]
     assert payload["summary"]["external_saas_runtime_dependencies"] == ["openai"]
@@ -201,6 +209,11 @@ def test_product_commercial_independence_gate_blocks_loose_external_runtime_and_
         "external_api_free_core_runtime",
         "local_self_hosted_operation_ready",
     } <= failed_checks
+    license_row = next(row for row in payload["rows"] if row["check"] == "license_file_present")
+    assert license_row["approval_token_required"] == "APPROVE_PRODUCT_LICENSE_FILE_CREATION"
+    assert "operator-approved license template" in license_row["operator_required_input"]
+    assert "write_product_license_file.py" in license_row["next_command_template"]
+    assert license_row["license_creation_executed"] is False
 
 
 def test_product_commercial_independence_gate_blocks_missing_install_provenance(tmp_path: Path) -> None:

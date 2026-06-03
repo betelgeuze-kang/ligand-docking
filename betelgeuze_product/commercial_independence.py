@@ -20,6 +20,11 @@ OPTIONAL_REQUIREMENTS = (
     "requirements-train.txt",
 )
 LICENSE_CANDIDATES = ("LICENSE", "LICENSE.md", "LICENSE.txt")
+LICENSE_APPROVAL_TOKEN = "APPROVE_PRODUCT_LICENSE_FILE_CREATION"
+LICENSE_GENERATION_COMMAND_TEMPLATE = (
+    "APPROVE_PRODUCT_LICENSE_FILE_CREATION=1 "
+    "python3 tools/write_product_license_file.py --license-template OPERATOR_APPROVED_TEMPLATE --out LICENSE"
+)
 DEPLOYMENT_CANDIDATES = ("Dockerfile", "Dockerfile.product", "requirements-deploy.txt")
 EXTERNAL_API_RUNTIME_DEPENDENCIES = {"openai"}
 NON_CORE_RUNTIME_DEPENDENCIES = {"fastapi", "uvicorn", "mlflow", "optuna", "torch-geometric", "gputil"}
@@ -538,6 +543,22 @@ def build_product_commercial_independence_gate(
             "Commercial independence claims need reproducible public benchmark evidence, independent of live CAMEO.",
         ),
     ]
+    for row in rows:
+        if row["check"] == "license_file_present":
+            row.update(
+                {
+                    "approval_token_required": "" if license_present else LICENSE_APPROVAL_TOKEN,
+                    "operator_required_input": (
+                        "none"
+                        if license_present
+                        else "operator-approved license template and explicit approval token before LICENSE creation"
+                    ),
+                    "operator_required_output": "non-empty LICENSE, LICENSE.md, or LICENSE.txt",
+                    "next_command_template": "" if license_present else LICENSE_GENERATION_COMMAND_TEMPLATE,
+                    "license_creation_executed": False,
+                }
+            )
+            break
 
     blockers = [_blocker(row) for row in rows if row["status"] != "pass"]
     blocker_checks = {blocker["check"] for blocker in blockers}
@@ -553,6 +574,15 @@ def build_product_commercial_independence_gate(
         "blocker_count": len(blockers),
         "check_count": len(rows),
         "license_present": license_present,
+        "license_approval_token_required": "" if license_present else LICENSE_APPROVAL_TOKEN,
+        "license_operator_required_input": (
+            "none"
+            if license_present
+            else "operator-approved license template and explicit approval token before LICENSE creation"
+        ),
+        "license_required_output": "non-empty LICENSE, LICENSE.md, or LICENSE.txt",
+        "license_generation_command_template": "" if license_present else LICENSE_GENERATION_COMMAND_TEMPLATE,
+        "license_creation_executed": False,
         "runtime_requirements_present": runtime_requirements_present,
         "runtime_dependency_count": len(runtime_lines),
         "loose_runtime_dependency_count": len(loose_runtime),
