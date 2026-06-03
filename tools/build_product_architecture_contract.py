@@ -66,6 +66,11 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- ready_lane_count: `{s['ready_lane_count']}`",
         f"- blocked_lane_count: `{s['blocked_lane_count']}`",
         f"- approval_required_lane_count: `{s['approval_required_lane_count']}`",
+        f"- canonical_architecture_lanes_required: `{';'.join(s['canonical_architecture_lanes_required'])}`",
+        f"- canonical_architecture_required_lanes_present: `{s['canonical_architecture_required_lanes_present']}`",
+        f"- canonical_architecture_ready_lane_count: `{s['canonical_architecture_ready_lane_count']}`",
+        f"- canonical_architecture_blocked_lane_count: `{s['canonical_architecture_blocked_lane_count']}`",
+        f"- canonical_architecture_blocked_lanes: `{';'.join(s['canonical_architecture_blocked_lanes'])}`",
         f"- structure_analysis_product_surface_ready: `{s['structure_analysis_product_surface_ready']}`",
         f"- ligand_docking_execution_contract_ready: `{s['ligand_docking_execution_contract_ready']}`",
         f"- scoring_ranking_contract_ready: `{s['scoring_ranking_contract_ready']}`",
@@ -133,12 +138,12 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         "## Lanes",
         "",
-        "| lane | domain | status | observed | required | approval token | artifact | reason |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| lane | canonical | domain | status | observed | required | approval token | artifact | reason |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
-            f"| `{row['lane_id']}` | `{row['domain']}` | `{row['status']}` | "
+            f"| `{row['lane_id']}` | `{row['canonical_lane']}` | `{row['domain']}` | `{row['status']}` | "
             f"`{row['observed']}` | `{row['required']}` | `{row['approval_token_required']}` | "
             f"`{row['artifact_path']}` | {row['reason']} |"
         )

@@ -10,6 +10,16 @@ CLAIM_BOUNDARY = (
     "delete files, archive files, upload, or mutate external state."
 )
 
+CANONICAL_ARCHITECTURE_LANES = (
+    "structure_analysis",
+    "ligand_docking",
+    "scoring_ranking",
+    "benchmark_validation",
+    "local_delivery",
+    "commercial_independence",
+    "CAMEO_live_validation",
+)
+
 
 def _summary(packet: dict[str, Any]) -> dict[str, Any]:
     summary = packet.get("summary")
@@ -74,9 +84,11 @@ def _row(
     artifact_path: str,
     reason: str,
     approval_token_required: str = "",
+    canonical_lane: str = "",
 ) -> dict[str, Any]:
     return {
         "lane_id": lane_id,
+        "canonical_lane": canonical_lane,
         "domain": domain,
         "status": status,
         "observed": observed,
@@ -289,6 +301,7 @@ def build_product_architecture_contract(
     rows = [
         _row(
             lane_id="structure_analysis_product_surface",
+            canonical_lane="structure_analysis",
             domain="product",
             status="ready" if structure_ready else "blocked",
             observed=(
@@ -302,6 +315,7 @@ def build_product_architecture_contract(
         ),
         _row(
             lane_id="ligand_docking_execution_contract",
+            canonical_lane="ligand_docking",
             domain="product",
             status="ready" if docking_ready else "blocked",
             observed=(
@@ -314,6 +328,7 @@ def build_product_architecture_contract(
         ),
         _row(
             lane_id="scoring_ranking_contract",
+            canonical_lane="scoring_ranking",
             domain="scoring_ranking",
             status="ready" if scoring_ranking_ready else "blocked",
             observed=(
@@ -331,6 +346,7 @@ def build_product_architecture_contract(
         ),
         _row(
             lane_id="commercial_independence_release_gate",
+            canonical_lane="commercial_independence",
             domain="product",
             status="ready" if commercial_ready else "blocked",
             observed=(
@@ -347,6 +363,7 @@ def build_product_architecture_contract(
         ),
         _row(
             lane_id="local_delivery_bundle_validation",
+            canonical_lane="local_delivery",
             domain="local_delivery",
             status="ready" if local_delivery_bundle_ready else "blocked",
             observed=(
@@ -394,6 +411,7 @@ def build_product_architecture_contract(
         ),
         _row(
             lane_id="public_benchmark_validation_gate",
+            canonical_lane="benchmark_validation",
             domain="performance_validation",
             status="ready" if public_benchmark_ready else "blocked",
             observed=(
@@ -416,6 +434,7 @@ def build_product_architecture_contract(
         ),
         _row(
             lane_id="cameo_optional_live_validation_surface",
+            canonical_lane="CAMEO_live_validation",
             domain="cameo_validation",
             status="ready" if cameo_local_surface_ready else "blocked",
             observed=(
@@ -522,6 +541,22 @@ def build_product_architecture_contract(
     blockers = [_blocker(row) for row in rows if row["status"] == "blocked"]
     approval_required = [row for row in rows if row["status"] == "approval_required"]
     ready_count = sum(1 for row in rows if row["status"] == "ready")
+    canonical_lane_statuses = {
+        _text(row.get("canonical_lane")): _text(row.get("status"))
+        for row in rows
+        if _text(row.get("canonical_lane"))
+    }
+    canonical_lane_ids = {
+        _text(row.get("canonical_lane")): _text(row.get("lane_id"))
+        for row in rows
+        if _text(row.get("canonical_lane"))
+    }
+    missing_canonical_lanes = [
+        lane for lane in CANONICAL_ARCHITECTURE_LANES if lane not in canonical_lane_statuses
+    ]
+    blocked_canonical_lanes = [
+        lane for lane in CANONICAL_ARCHITECTURE_LANES if canonical_lane_statuses.get(lane) != "ready"
+    ]
     local_architecture_surface_ready = (
         structure_ready
         and docking_ready
@@ -544,6 +579,17 @@ def build_product_architecture_contract(
         "ready_lane_count": ready_count,
         "blocked_lane_count": len(blockers),
         "approval_required_lane_count": len(approval_required),
+        "canonical_architecture_lanes_required": list(CANONICAL_ARCHITECTURE_LANES),
+        "canonical_architecture_lane_count": len(CANONICAL_ARCHITECTURE_LANES),
+        "canonical_architecture_required_lanes_present": not missing_canonical_lanes,
+        "canonical_architecture_missing_lanes": missing_canonical_lanes,
+        "canonical_architecture_lane_statuses": canonical_lane_statuses,
+        "canonical_architecture_lane_ids": canonical_lane_ids,
+        "canonical_architecture_ready_lane_count": sum(
+            1 for lane in CANONICAL_ARCHITECTURE_LANES if canonical_lane_statuses.get(lane) == "ready"
+        ),
+        "canonical_architecture_blocked_lane_count": len(blocked_canonical_lanes),
+        "canonical_architecture_blocked_lanes": blocked_canonical_lanes,
         "local_architecture_surface_ready": local_architecture_surface_ready,
         "architecture_release_ready": architecture_release_ready,
         "structure_analysis_product_surface_ready": structure_ready,

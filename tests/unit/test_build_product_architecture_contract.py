@@ -182,6 +182,34 @@ def test_product_architecture_contract_reports_local_surface_and_gates(tmp_path:
     assert summary["ready_lane_count"] == 11
     assert summary["blocked_lane_count"] == 2
     assert summary["approval_required_lane_count"] == 1
+    assert summary["canonical_architecture_lanes_required"] == [
+        "structure_analysis",
+        "ligand_docking",
+        "scoring_ranking",
+        "benchmark_validation",
+        "local_delivery",
+        "commercial_independence",
+        "CAMEO_live_validation",
+    ]
+    assert summary["canonical_architecture_lane_count"] == 7
+    assert summary["canonical_architecture_required_lanes_present"] is True
+    assert summary["canonical_architecture_missing_lanes"] == []
+    assert summary["canonical_architecture_ready_lane_count"] == 5
+    assert summary["canonical_architecture_blocked_lane_count"] == 2
+    assert summary["canonical_architecture_blocked_lanes"] == [
+        "benchmark_validation",
+        "commercial_independence",
+    ]
+    assert summary["canonical_architecture_lane_statuses"] == {
+        "structure_analysis": "ready",
+        "ligand_docking": "ready",
+        "scoring_ranking": "ready",
+        "benchmark_validation": "blocked",
+        "local_delivery": "ready",
+        "commercial_independence": "blocked",
+        "CAMEO_live_validation": "ready",
+    }
+    assert summary["canonical_architecture_lane_ids"]["benchmark_validation"] == "public_benchmark_validation_gate"
     assert summary["structure_analysis_product_surface_ready"] is True
     assert summary["ligand_docking_execution_contract_ready"] is True
     assert summary["scoring_ranking_contract_ready"] is True
@@ -254,17 +282,21 @@ def test_product_architecture_contract_reports_local_surface_and_gates(tmp_path:
     assert approval_tokens["ligand_heavy_cleanup_preflight"] == "APPROVE_CLEANUP_EXECUTION"
     public_benchmark_row = next(row for row in payload["rows"] if row["lane_id"] == "public_benchmark_validation_gate")
     assert public_benchmark_row["status"] == "blocked"
+    assert public_benchmark_row["canonical_lane"] == "benchmark_validation"
     assert "requires_24h_server=False" in public_benchmark_row["observed"]
     cameo_row = next(row for row in payload["rows"] if row["lane_id"] == "cameo_optional_live_validation_surface")
     assert cameo_row["status"] == "ready"
+    assert cameo_row["canonical_lane"] == "CAMEO_live_validation"
     assert "receiver_smoke_status=blocked_cameo_receiver_smoke" in cameo_row["observed"]
     assert "api_dependency_ready=False" in cameo_row["observed"]
     assert "registration_tokens=APPROVE_CAMEO_SERVER_REGISTRATION;APPROVE_CAMEO_OUTBOUND_EMAIL" in cameo_row["observed"]
     scoring_row = next(row for row in payload["rows"] if row["lane_id"] == "scoring_ranking_contract")
     assert scoring_row["status"] == "ready"
+    assert scoring_row["canonical_lane"] == "scoring_ranking"
     assert "eval_unique_keys=200" in scoring_row["observed"]
     local_delivery_row = next(row for row in payload["rows"] if row["lane_id"] == "local_delivery_bundle_validation")
     assert local_delivery_row["status"] == "ready"
+    assert local_delivery_row["canonical_lane"] == "local_delivery"
     assert "bundle_validation_passed=True" in local_delivery_row["observed"]
 
 
@@ -528,5 +560,9 @@ def test_product_architecture_contract_tool_writes_outputs(tmp_path: Path) -> No
     assert summary["cameo_registration_approval_token_count"] == 2
     assert summary["cameo_receiver_smoke_status"] == "blocked_cameo_receiver_smoke"
     assert summary["cleanup_postcheck_contract_ready"] is True
-    assert out_csv.read_text(encoding="utf-8").startswith("lane_id,domain,")
-    assert "Product Architecture Contract" in out_md.read_text(encoding="utf-8")
+    csv_text = out_csv.read_text(encoding="utf-8")
+    md_text = out_md.read_text(encoding="utf-8")
+    assert csv_text.startswith("lane_id,canonical_lane,domain,")
+    assert "benchmark_validation" in csv_text
+    assert "Product Architecture Contract" in md_text
+    assert "canonical_architecture_lanes_required" in md_text
