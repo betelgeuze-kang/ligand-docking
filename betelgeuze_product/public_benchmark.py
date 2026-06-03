@@ -107,6 +107,12 @@ def _materialization_manifest_path(suite_id: str, *, root: Path) -> Path:
     return root / "runs" / f"{stem}_materialization_manifest_current.json"
 
 
+def _scorecard_row_csv(suite_id: str) -> str:
+    if suite_id == "lit_pcba_virtual_screening":
+        return "runs/lit_pcba_scorecard_row_current.csv"
+    return f"runs/{suite_id}_scorecard_row_current.csv"
+
+
 def _read_scorecard_summary(path_like: str, *, root: Path) -> tuple[bool, dict[str, Any]]:
     if not _text(path_like):
         return False, {}
@@ -244,6 +250,7 @@ def _row(
     if evidence is not None and metric_value < metric_threshold:
         blockers.append("primary_metric_below_threshold")
 
+    blocker_text = ",".join(blockers)
     return {
         "suite_id": _text(suite["suite_id"]),
         "benchmark_family": _text(suite["benchmark_family"]),
@@ -256,8 +263,10 @@ def _row(
         "primary_metric_value": metric_value,
         "primary_metric_threshold": metric_threshold,
         "scorecard_json": scorecard_json,
+        "scorecard_row_csv": _scorecard_row_csv(_text(suite["suite_id"])),
         "scorecard_json_present": scorecard_json_present,
         "scorecard_json_summary_status": scorecard_summary_status,
+        "materialization_manifest": str(materialization_manifest),
         "materialization_manifest_json": str(materialization_manifest),
         "materialization_manifest_present": materialization_present,
         "materialization_manifest_status": materialization_status,
@@ -269,7 +278,9 @@ def _row(
         "scorecard_run_command_template": scorecard_run_command_template,
         "regression_baseline_ref": baseline,
         "run_command": run_command,
-        "blockers": ",".join(blockers),
+        "threshold": metric_threshold,
+        "blocker": blocker_text,
+        "blockers": blocker_text,
         "execution_enabled": False,
         "docking_results_emitted": False,
         "external_state_mutated": False,

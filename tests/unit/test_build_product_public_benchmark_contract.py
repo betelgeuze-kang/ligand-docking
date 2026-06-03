@@ -28,8 +28,18 @@ def test_build_product_public_benchmark_contract_tool_writes_outputs(tmp_path: P
     )
 
     payload = json.loads(out_json.read_text(encoding="utf-8"))
+    csv_text = out_csv.read_text(encoding="utf-8")
+    md_text = out_md.read_text(encoding="utf-8")
     assert payload["summary"]["status"] == "blocked_product_public_benchmark_contract"
     assert payload["summary"]["requires_24h_server"] is False
-    assert out_csv.read_text(encoding="utf-8").startswith("suite_id,benchmark_family,")
+    assert csv_text.startswith("suite_id,benchmark_family,")
+    assert "materialization_manifest" in csv_text
+    assert "scorecard_row_csv" in csv_text
+    assert "threshold" in csv_text
+    assert "blocker" in csv_text
+    assert "run_command" in csv_text
     assert template_csv.read_text(encoding="utf-8").startswith("suite_id,benchmark_family,")
-    assert "Product Public Benchmark Contract" in out_md.read_text(encoding="utf-8")
+    assert "Product Public Benchmark Contract" in md_text
+    assert "scorecard row" in md_text
+    assert "run command" in md_text
+    assert "runs/lit_pcba_scorecard_row_current.csv" in md_text

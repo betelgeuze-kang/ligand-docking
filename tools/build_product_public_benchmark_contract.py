@@ -70,16 +70,16 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         "## Suites",
         "",
-        "| suite | family | status | materialization | scorecard | metric | threshold | blockers |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| suite | family | status | materialization | scorecard row | metric | threshold | blocker | run command |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
             f"| `{row['suite_id']}` | `{row['benchmark_family']}` | `{row['status']}` | "
             f"`{row['materialization_manifest_status'] or 'missing'}` | "
-            f"`{row['scorecard_json_summary_status'] or 'missing'}` | "
-            f"`{row['primary_metric']}` | `{row['primary_metric_threshold']}` | "
-            f"`{row['blockers']}` |"
+            f"`{row['scorecard_row_csv']}` | "
+            f"`{row['primary_metric']}` | `{row['threshold']}` | "
+            f"`{row['blocker']}` | `{row['run_command'] or 'missing'}` |"
         )
     lines.extend(["", "## Required Scorecard Fields", "", ", ".join(f"`{field}`" for field in REQUIRED_SCORECARD_FIELDS)])
     lines.extend(["", "## Blockers", ""])

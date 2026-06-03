@@ -91,6 +91,11 @@ def test_public_benchmark_contract_ready_with_complete_passing_rows(tmp_path: Pa
     assert payload["blockers"] == []
     assert all(row["status"] == "ready" for row in payload["rows"])
     assert all(row["materialization_manifest_present"] is True for row in payload["rows"])
+    assert all(row["materialization_manifest"] == row["materialization_manifest_json"] for row in payload["rows"])
+    assert all(row["scorecard_row_csv"].endswith("_scorecard_row_current.csv") for row in payload["rows"])
+    assert all(row["threshold"] == row["primary_metric_threshold"] for row in payload["rows"])
+    assert all(row["blocker"] == row["blockers"] for row in payload["rows"])
+    assert all(row["run_command"] for row in payload["rows"])
     assert all(row["operator_input_artifacts"] for row in payload["rows"])
     assert all(row["operator_output_artifacts"] for row in payload["rows"])
     assert all(row["scorecard_run_command_template"] for row in payload["rows"])
@@ -128,6 +133,9 @@ def test_public_benchmark_contract_exposes_lit_pcba_operator_artifacts(tmp_path:
     assert "LIT_PCBA_AVE_docked_released.tar.xz" in row["operator_input_artifacts"]
     assert "lit_pcba_source_scores.csv" in row["operator_input_artifacts"]
     assert "runs/lit_pcba_scores_current.csv" in row["operator_output_artifacts"]
+    assert row["scorecard_row_csv"] == "runs/lit_pcba_scorecard_row_current.csv"
+    assert row["threshold"] == suite["primary_metric_threshold"]
+    assert row["blocker"] == row["blockers"]
     assert row["scorecard_run_command_template"] == "python3 tools/build_lit_pcba_scorecard.py"
 
 
