@@ -63,13 +63,13 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         "## Suites",
         "",
-        "| suite | status | metric | threshold | materialization_manifest | scorecard_row | blocker |",
+        "| suite | status | metric | threshold | required_input | required_output | blocker |",
         "| --- | --- | --- | ---: | --- | --- | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
             f"| `{row['suite_id']}` | `{row['work_order_status']}` | `{row['primary_metric']}` | "
-            f"`{row['threshold']}` | `{row['materialization_manifest']}` | `{row['scorecard_row']}` | "
+            f"`{row['threshold']}` | `{row['required_input']}` | `{row['required_output']}` | "
             f"`{row['blocker']}` |"
         )
     lines.extend(["", "## Commands", ""])

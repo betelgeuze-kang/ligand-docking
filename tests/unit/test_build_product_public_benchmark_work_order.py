@@ -75,7 +75,14 @@ def test_product_public_benchmark_work_order_maps_suite_blockers_to_commands() -
         assert row["scorecard_row"].startswith("runs/")
         assert row["threshold"] == row["primary_metric_threshold"]
         assert row["blocker"]
+        assert row["required_input"]
+        assert row["required_output"]
+        assert row["operator_input_required"] is True
         assert row["run_command"]
+    assert "local public benchmark dataset/result artifacts" in rows_by_suite["dude_z_decoy_smoke"]["required_input"]
+    assert "passing scorecard JSON/CSV evidence" in rows_by_suite["casp_archive_structure_regression"]["required_input"]
+    assert "materialization_manifest=" in rows_by_suite["dude_z_decoy_smoke"]["required_output"]
+    assert "scorecard_json=" in rows_by_suite["dude_z_decoy_smoke"]["required_output"]
     assert "build_public_benchmark_materialization_manifest.py" in rows_by_suite["dude_z_decoy_smoke"]["materialization_command"]
     assert "build_public_benchmark_materialization_manifest.py" in rows_by_suite["dude_z_decoy_smoke"]["run_command"]
     assert "build_public_benchmark_suite_scorecard.py" in rows_by_suite["casp_archive_structure_regression"]["run_command"]
@@ -110,6 +117,9 @@ def test_build_product_public_benchmark_work_order_tool_writes_outputs(tmp_path:
     md_text = out_md.read_text(encoding="utf-8")
     assert csv_text.startswith("sequence,suite_id,")
     assert "materialization_manifest" in csv_text
+    assert "required_input" in csv_text
+    assert "required_output" in csv_text
     assert "run_command" in csv_text
     assert "Product Public Benchmark Work Order" in md_text
+    assert "required_input" in md_text
     assert "run_command" in md_text

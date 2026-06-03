@@ -57,6 +57,30 @@ def _next_run_command(*, status: str, materialization_command: str, scorecard_co
     return refresh_command
 
 
+def _required_input(source: dict[str, Any], *, status: str) -> str:
+    materialization_blockers = _text(source.get("materialization_manifest_blockers"))
+    blockers = _text(source.get("blockers"))
+    dataset_source_url = _text(source.get("dataset_source_url"))
+    materialization_manifest = _text(source.get("materialization_manifest_json"))
+    scorecard_json = _text(source.get("scorecard_json"))
+    if status == "materialization_required":
+        return (
+            f"local public benchmark dataset/result artifacts for {dataset_source_url}; "
+            f"materialization_manifest={materialization_manifest}; blockers={materialization_blockers or blockers or 'not_ready'}"
+        )
+    if status == "scorecard_required":
+        return (
+            f"passing scorecard JSON/CSV evidence for {dataset_source_url}; "
+            f"scorecard_json={scorecard_json}; blockers={blockers or 'scorecard_not_ready'}"
+        )
+    if status == "operator_input_required":
+        return (
+            f"operator-supplied scorecard row and local benchmark evidence for {dataset_source_url}; "
+            f"scorecard_json={scorecard_json or 'missing'}; materialization_manifest={materialization_manifest or 'missing'}"
+        )
+    return "none"
+
+
 def build_product_public_benchmark_work_order(
     *,
     public_benchmark_packet: dict[str, Any],
@@ -79,6 +103,12 @@ def build_product_public_benchmark_work_order(
             scorecard_command=scorecard_command,
             refresh_command=refresh_command,
         )
+        required_input = _required_input(source, status=status)
+        required_output = (
+            f"materialization_manifest={_text(source.get('materialization_manifest_json'))};"
+            f"scorecard_json={_text(source.get('scorecard_json'))};"
+            f"refresh={public_benchmark_path}"
+        )
         rows.append(
             {
                 "sequence": index,
@@ -91,6 +121,9 @@ def build_product_public_benchmark_work_order(
                 "scorecard_row": _text(source.get("scorecard_json")) or "missing_scorecard_row",
                 "threshold": source.get("primary_metric_threshold", 0.0),
                 "blocker": blockers,
+                "required_input": required_input,
+                "required_output": required_output,
+                "operator_input_required": status != "ready",
                 "run_command": run_command,
                 "dataset_artifact": _text(source.get("materialization_manifest_json")),
                 "result_artifact": _text(source.get("scorecard_json")),
