@@ -60,9 +60,12 @@ def test_build_product_license_file_creation_work_order_tool_writes_outputs(tmp_
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["summary"]["status"] == "product_license_file_creation_work_order_ready"
     assert payload["summary"]["license_file_written"] is False
+    assert "tools/write_product_license_file.py" in payload["summary"]["license_file_write_command_template"]
     assert payload["summary"]["external_state_mutated"] is False
     assert out_csv.read_text(encoding="utf-8").startswith("check,status,")
-    assert "Product License File Creation Work Order" in out_md.read_text(encoding="utf-8")
+    md_text = out_md.read_text(encoding="utf-8")
+    assert "Product License File Creation Work Order" in md_text
+    assert "license_file_write_command_template" in md_text
 
 
 def test_build_product_license_file_creation_work_order_tool_blocks_missing_inputs(tmp_path: Path) -> None:

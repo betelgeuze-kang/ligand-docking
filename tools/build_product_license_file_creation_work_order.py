@@ -53,6 +53,7 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- license_text_source: `{s['license_text_source']}`",
         f"- license_review_manifest_ready: `{s['license_review_manifest_ready']}`",
         f"- license_review_manifest_fingerprint_sha256: `{s['license_review_manifest_fingerprint_sha256']}`",
+        f"- license_file_write_command_template: `{s['license_file_write_command_template']}`",
         f"- authorized_for_license_file_creation_review: `{s['authorized_for_license_file_creation_review']}`",
         f"- commercial_gate_only_license_blocked: `{s['commercial_gate_only_license_blocked']}`",
         f"- license_file_written: `{s['license_file_written']}`",

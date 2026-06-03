@@ -98,6 +98,15 @@ def _fingerprint(payload: dict[str, Any]) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def _write_command_template(target_license_path: str) -> str:
+    return (
+        f"{APPROVAL_TOKEN}=1 python3 tools/write_product_license_file.py "
+        " --work-order-json runs/product_license_file_creation_work_order_current.json"
+        " --license-template OPERATOR_APPROVED_LICENSE_TEXT_FILE"
+        f" --out {target_license_path}"
+    )
+
+
 def build_product_license_file_creation_work_order(
     *,
     license_decision_gate_packet: dict[str, Any],
@@ -123,6 +132,7 @@ def build_product_license_file_creation_work_order(
         effective_year=effective_year,
     )
     review_manifest_fingerprint_sha256 = _fingerprint(review_manifest)
+    write_command_template = _write_command_template(target_license_path)
 
     rows = [
         _row(
@@ -182,6 +192,7 @@ def build_product_license_file_creation_work_order(
         "license_review_manifest_ready": ready,
         "license_review_manifest": review_manifest,
         "license_review_manifest_fingerprint_sha256": review_manifest_fingerprint_sha256,
+        "license_file_write_command_template": write_command_template if ready else "",
         "license_decision_gate_status": _text(license_decision.get("status")),
         "authorized_for_license_file_creation_review": authorized,
         "license_present": license_present,
@@ -211,6 +222,7 @@ def build_product_license_file_creation_work_order(
             "effective_year": effective_year,
             "license_review_manifest_fingerprint_sha256": review_manifest_fingerprint_sha256,
             "approval_token_required": APPROVAL_TOKEN,
+            "command_template": write_command_template if ready else "",
             "license_file_written": False,
             "external_state_mutated": False,
         },

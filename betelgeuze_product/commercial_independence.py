@@ -23,7 +23,9 @@ LICENSE_CANDIDATES = ("LICENSE", "LICENSE.md", "LICENSE.txt")
 LICENSE_APPROVAL_TOKEN = "APPROVE_PRODUCT_LICENSE_FILE_CREATION"
 LICENSE_GENERATION_COMMAND_TEMPLATE = (
     "APPROVE_PRODUCT_LICENSE_FILE_CREATION=1 "
-    "python3 tools/write_product_license_file.py --license-template OPERATOR_APPROVED_TEMPLATE --out LICENSE"
+    "python3 tools/write_product_license_file.py "
+    "--work-order-json runs/product_license_file_creation_work_order_current.json "
+    "--license-template OPERATOR_APPROVED_LICENSE_TEXT_FILE --out LICENSE"
 )
 DEPLOYMENT_CANDIDATES = ("Dockerfile", "Dockerfile.product", "requirements-deploy.txt")
 EXTERNAL_API_RUNTIME_DEPENDENCIES = {"openai"}

@@ -82,6 +82,8 @@ def test_license_file_creation_work_order_ready_without_writing_license() -> Non
     assert summary["spdx_license_id"] == "ProprietaryRef-Betelgeuze"
     assert summary["license_review_manifest_ready"] is True
     assert len(summary["license_review_manifest_fingerprint_sha256"]) == 64
+    assert "tools/write_product_license_file.py" in summary["license_file_write_command_template"]
+    assert "OPERATOR_APPROVED_LICENSE_TEXT_FILE" in summary["license_file_write_command_template"]
     assert summary["license_review_manifest"]["target_license_path"] == "LICENSE"
     assert summary["license_review_manifest"]["license_file_written"] is False
     assert summary["license_file_written"] is False
@@ -90,6 +92,7 @@ def test_license_file_creation_work_order_ready_without_writing_license() -> Non
     create_item = next(row for row in payload["work_items"] if row["step"] == "create_or_review_license_file")
     assert create_item["status"] == "ready_for_separate_operator_step"
     assert create_item["license_review_manifest_fingerprint_sha256"] == summary["license_review_manifest_fingerprint_sha256"]
+    assert create_item["command_template"] == summary["license_file_write_command_template"]
     assert create_item["license_file_written"] is False
 
 
