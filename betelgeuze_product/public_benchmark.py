@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import json
 from pathlib import Path
 from typing import Any
 
@@ -96,11 +97,31 @@ def _read_scorecard_rows(path: str | Path) -> tuple[bool, list[dict[str, str]]]:
         return True, [{str(k): _text(v) for k, v in row.items()} for row in csv.DictReader(handle)]
 
 
+def _resolve_scorecard_json(path_like: str, *, root: Path) -> Path:
+    path = Path(path_like)
+    return path if path.is_absolute() else root / path
+
+
+def _read_scorecard_summary(path_like: str, *, root: Path) -> tuple[bool, dict[str, Any]]:
+    if not _text(path_like):
+        return False, {}
+    path = _resolve_scorecard_json(path_like, root=root)
+    if not path.exists():
+        return False, {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return True, {}
+    summary = payload.get("summary") if isinstance(payload, dict) else {}
+    return True, summary if isinstance(summary, dict) else {}
+
+
 def _row(
     suite: dict[str, Any],
     evidence: dict[str, str] | None,
     *,
     scorecard_csv_present: bool,
+    root: Path,
 ) -> dict[str, Any]:
     status = _text(evidence.get("status") if evidence else "")
     scorecard_json = _text(evidence.get("scorecard_json") if evidence else "")
@@ -110,6 +131,10 @@ def _row(
     metric_threshold = _float(evidence.get("primary_metric_threshold") if evidence else suite["primary_metric_threshold"])
     run_command = _text(evidence.get("run_command") if evidence else "")
     baseline = _text(evidence.get("regression_baseline_ref") if evidence else "")
+    scorecard_json_present, scorecard_summary = _read_scorecard_summary(scorecard_json, root=root)
+    scorecard_summary_suite_id = _text(scorecard_summary.get("suite_id"))
+    scorecard_summary_status = _text(scorecard_summary.get("status"))
+    scorecard_summary_pass = bool(scorecard_summary.get("pass") is True) or scorecard_summary_status.endswith("_pass")
     missing_fields = [
         field
         for field in REQUIRED_SCORECARD_FIELDS
@@ -117,12 +142,19 @@ def _row(
     ]
     source_matches = dataset_source_url == _text(suite["dataset_source_url"])
     metric_pass = status == "pass" and metric_value >= metric_threshold
+    scorecard_json_matches = scorecard_summary_suite_id == _text(suite["suite_id"])
+    scorecard_json_passes = scorecard_summary_pass and scorecard_summary_status not in {
+        "blocked_lit_pcba_scorecard",
+        "blocked_public_benchmark_suite_scorecard",
+    }
     evidence_ready = (
         scorecard_csv_present
         and evidence is not None
         and not missing_fields
         and source_matches
-        and bool(scorecard_json)
+        and scorecard_json_present
+        and scorecard_json_matches
+        and scorecard_json_passes
         and bool(run_command)
         and bool(baseline)
         and metric_pass
@@ -136,6 +168,12 @@ def _row(
         blockers.append("missing_fields=" + ";".join(missing_fields))
     if evidence is not None and not source_matches:
         blockers.append("dataset_source_url_mismatch")
+    if evidence is not None and not scorecard_json_present:
+        blockers.append("scorecard_json_missing")
+    if evidence is not None and scorecard_json_present and not scorecard_json_matches:
+        blockers.append("scorecard_json_suite_id_mismatch")
+    if evidence is not None and scorecard_json_present and not scorecard_json_passes:
+        blockers.append("scorecard_json_status_not_pass")
     if evidence is not None and status != "pass":
         blockers.append("scorecard_status_not_pass")
     if evidence is not None and metric_value < metric_threshold:
@@ -153,6 +191,8 @@ def _row(
         "primary_metric_value": metric_value,
         "primary_metric_threshold": metric_threshold,
         "scorecard_json": scorecard_json,
+        "scorecard_json_present": scorecard_json_present,
+        "scorecard_json_summary_status": scorecard_summary_status,
         "regression_baseline_ref": baseline,
         "run_command": run_command,
         "blockers": ",".join(blockers),
@@ -162,11 +202,17 @@ def _row(
     }
 
 
-def build_product_public_benchmark_contract(*, scorecard_csv: str | Path) -> dict[str, Any]:
+def build_product_public_benchmark_contract(*, scorecard_csv: str | Path, root: str | Path | None = None) -> dict[str, Any]:
+    root_path = Path(root).resolve() if root is not None else Path(scorecard_csv).resolve().parent
     scorecard_csv_present, scorecard_rows = _read_scorecard_rows(scorecard_csv)
     evidence_by_suite = {_text(row.get("suite_id")): row for row in scorecard_rows}
     rows = [
-        _row(suite, evidence_by_suite.get(_text(suite["suite_id"])), scorecard_csv_present=scorecard_csv_present)
+        _row(
+            suite,
+            evidence_by_suite.get(_text(suite["suite_id"])),
+            scorecard_csv_present=scorecard_csv_present,
+            root=root_path,
+        )
         for suite in BENCHMARK_SUITES
     ]
     required_rows = [row for row in rows if row["required_for_commercial_release"]]

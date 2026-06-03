@@ -102,7 +102,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
-    payload = build_product_public_benchmark_contract(scorecard_csv=_resolve(args.scorecard_csv))
+    payload = build_product_public_benchmark_contract(scorecard_csv=_resolve(args.scorecard_csv), root=ROOT)
     _write_template(args.template_csv)
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])

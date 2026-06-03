@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from betelgeuze_product.public_benchmark import BENCHMARK_SUITES, build_product_public_benchmark_contract
@@ -26,6 +27,20 @@ def test_public_benchmark_contract_ready_with_complete_passing_rows(tmp_path: Pa
         "suite_id,benchmark_family,dataset_source_url,scorecard_json,status,primary_metric,primary_metric_value,primary_metric_threshold,regression_baseline_ref,run_command"
     ]
     for suite in BENCHMARK_SUITES:
+        scorecard_json = tmp_path / "runs" / f"{suite['suite_id']}_scorecard.json"
+        scorecard_json.parent.mkdir(parents=True, exist_ok=True)
+        scorecard_json.write_text(
+            json.dumps(
+                {
+                    "summary": {
+                        "suite_id": suite["suite_id"],
+                        "status": "public_benchmark_suite_scorecard_pass",
+                        "pass": True,
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
         lines.append(
             ",".join(
                 [
@@ -53,3 +68,19 @@ def test_public_benchmark_contract_ready_with_complete_passing_rows(tmp_path: Pa
     assert summary["blocked_suite_count"] == 0
     assert payload["blockers"] == []
     assert all(row["status"] == "ready" for row in payload["rows"])
+
+
+def test_public_benchmark_contract_blocks_passing_row_without_scorecard_json(tmp_path: Path) -> None:
+    scorecard = tmp_path / "scorecards.csv"
+    suite = BENCHMARK_SUITES[0]
+    scorecard.write_text(
+        "suite_id,benchmark_family,dataset_source_url,scorecard_json,status,primary_metric,primary_metric_value,primary_metric_threshold,regression_baseline_ref,run_command\n"
+        f"{suite['suite_id']},{suite['benchmark_family']},{suite['dataset_source_url']},runs/missing.json,pass,{suite['primary_metric']},999,{suite['primary_metric_threshold']},baseline:v1,cmd\n",
+        encoding="utf-8",
+    )
+
+    payload = build_product_public_benchmark_contract(scorecard_csv=scorecard)
+
+    row = next(row for row in payload["rows"] if row["suite_id"] == suite["suite_id"])
+    assert row["status"] == "blocked"
+    assert "scorecard_json_missing" in row["blockers"]
