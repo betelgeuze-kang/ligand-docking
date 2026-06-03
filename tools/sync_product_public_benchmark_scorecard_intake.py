@@ -11,7 +11,13 @@ from betelgeuze_product.public_benchmark import BENCHMARK_SUITES, REQUIRED_SCORE
 from tools.builder_table_utils import write_csv_rows
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_ROW_CSVS = ("runs/lit_pcba_scorecard_row_current.csv",)
+DEFAULT_ROW_CSVS = (
+    "runs/lit_pcba_scorecard_row_current.csv",
+    "runs/dude_z_decoy_smoke_scorecard_row_current.csv",
+    "runs/pdbbind_casf_pose_affinity_scorecard_row_current.csv",
+    "runs/protein_protein_docking_benchmark_v5_scorecard_row_current.csv",
+    "runs/casp_archive_structure_regression_scorecard_row_current.csv",
+)
 DEFAULT_OUT_CSV = "runs/product_public_benchmark_scorecard_intake.csv"
 DEFAULT_OUT_JSON = "runs/product_public_benchmark_scorecard_intake_sync_current.json"
 DEFAULT_OUT_MD = "runs/product_public_benchmark_scorecard_intake_sync_current.md"
