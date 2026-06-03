@@ -554,6 +554,41 @@ def test_goal_release_burndown_next_step_omits_runtime_and_cleanup_when_not_work
     )
 
 
+def test_goal_release_burndown_public_benchmark_blocker_builds_work_order_command() -> None:
+    release_gate = {
+        "summary": {"status": "blocked_goal_release_decision", "release_allowed": False, "blocker_count": 1},
+        "rows": [
+            {
+                "lane_id": "commercial_product_release",
+                "check": "product_architecture_release_ready",
+                "observed": "public_benchmark_ready=false",
+                "required": "architecture_release_ready=true",
+                "release_blocker": True,
+                "reason": "public benchmark evidence required",
+            }
+        ],
+    }
+    product_pilot = {"summary": {"pilot_delivery_ready": True}}
+
+    payload = mod.build_goal_release_burndown_work_order(
+        release_gate_packet=release_gate,
+        operator_action_board_packet=_operator_action_board(),
+        product_work_order_packet=_product_work_order(),
+        product_pilot_packet=product_pilot,
+        cameo_validation_repair_packet={},
+        cameo_runtime_repair_packet={},
+        cameo_capability_packet={},
+        transition_cleanup_work_order_packet={},
+        ligand_cleanup_work_order_packet={},
+        protected_cleanup_review_packet={},
+    )
+
+    row = payload["rows"][0]
+    assert row["burndown_status"] == "blocked_until_public_benchmark_validation"
+    assert "build_product_public_benchmark_work_order.py" in row["command"]
+    assert "build_product_public_benchmark_contract.py" in row["command"]
+
+
 def test_goal_release_burndown_work_order_clears_when_release_gate_has_no_blockers() -> None:
     payload = mod.build_goal_release_burndown_work_order(
         release_gate_packet=_release_gate_ready(),

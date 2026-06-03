@@ -318,6 +318,7 @@ def _product_burndown_row(
             "required public benchmark scorecards before treating the architecture contract as release-ready."
         )
         command = (
+            "python3 tools/build_product_public_benchmark_work_order.py && "
             "python3 tools/build_product_public_benchmark_contract.py && "
             "python3 tools/build_product_architecture_contract.py && python3 tools/build_goal_release_decision_gate.py && "
             "python3 tools/build_goal_release_burndown_work_order.py"
