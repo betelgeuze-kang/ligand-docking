@@ -15,6 +15,7 @@ DEFAULT_PRODUCT_PREFLIGHT_JSON = "runs/product_execution_preflight_current.json"
 DEFAULT_PRODUCT_GATE_REPAIR_JSON = "runs/product_operational_gate_repair_work_order_current.json"
 DEFAULT_PRODUCT_WORK_ORDER_JSON = "runs/product_execution_work_order_current.json"
 DEFAULT_PRODUCT_PILOT_JSON = "runs/product_pilot_packet_contract_current.json"
+DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_JSON = "runs/product_public_benchmark_work_order_current.json"
 DEFAULT_CAMEO_VALIDATION_REPAIR_JSON = "runs/cameo_validation_repair_work_order_current.json"
 DEFAULT_CAMEO_RUNTIME_REPAIR_JSON = "runs/cameo_runtime_repair_work_order_current.json"
 DEFAULT_CAMEO_CAPABILITY_JSON = "runs/cameo_capability_preflight_current.json"
@@ -286,6 +287,7 @@ def _product_burndown_row(
     product_gate_repair_path: str,
     product_work_order_path: str,
     product_pilot_path: str,
+    public_benchmark_work_order_path: str,
 ) -> dict[str, Any]:
     preflight = _summary(product_preflight)
     pilot = _summary(product_pilot_packet)
@@ -323,6 +325,7 @@ def _product_burndown_row(
             "python3 tools/build_product_architecture_contract.py && python3 tools/build_goal_release_decision_gate.py && "
             "python3 tools/build_goal_release_burndown_work_order.py"
         )
+        source_artifact = f"{source_artifact};{public_benchmark_work_order_path}"
         reason = f"{reason}; product_pilot_delivery_ready=True, product_execution_no_longer_blocks_this_check=True"
     if not preflight_ready:
         source_artifact = f"{product_preflight_path};{product_gate_repair_path};{source_artifact}" if gate_repair else f"{product_preflight_path};{source_artifact}"
@@ -630,6 +633,7 @@ def build_goal_release_burndown_work_order(
     product_gate_repair_path: str = DEFAULT_PRODUCT_GATE_REPAIR_JSON,
     product_work_order_path: str = DEFAULT_PRODUCT_WORK_ORDER_JSON,
     product_pilot_path: str = DEFAULT_PRODUCT_PILOT_JSON,
+    public_benchmark_work_order_path: str = DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_JSON,
     cameo_validation_repair_path: str = DEFAULT_CAMEO_VALIDATION_REPAIR_JSON,
     cameo_runtime_repair_path: str = DEFAULT_CAMEO_RUNTIME_REPAIR_JSON,
     cameo_capability_path: str = DEFAULT_CAMEO_CAPABILITY_JSON,
@@ -667,6 +671,7 @@ def build_goal_release_burndown_work_order(
                         product_gate_repair_path=product_gate_repair_path,
                         product_work_order_path=product_work_order_path,
                         product_pilot_path=product_pilot_path,
+                        public_benchmark_work_order_path=public_benchmark_work_order_path,
                     )
                 )
         elif lane == "cameo_architecture_validation":
@@ -909,6 +914,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--product-gate-repair-json", default=DEFAULT_PRODUCT_GATE_REPAIR_JSON)
     parser.add_argument("--product-work-order-json", default=DEFAULT_PRODUCT_WORK_ORDER_JSON)
     parser.add_argument("--product-pilot-json", default=DEFAULT_PRODUCT_PILOT_JSON)
+    parser.add_argument("--public-benchmark-work-order-json", default=DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_JSON)
     parser.add_argument("--cameo-validation-repair-json", default=DEFAULT_CAMEO_VALIDATION_REPAIR_JSON)
     parser.add_argument("--cameo-runtime-repair-json", default=DEFAULT_CAMEO_RUNTIME_REPAIR_JSON)
     parser.add_argument("--cameo-capability-json", default=DEFAULT_CAMEO_CAPABILITY_JSON)
@@ -944,6 +950,7 @@ def main(argv: list[str] | None = None) -> None:
         product_gate_repair_path=args.product_gate_repair_json,
         product_work_order_path=args.product_work_order_json,
         product_pilot_path=args.product_pilot_json,
+        public_benchmark_work_order_path=args.public_benchmark_work_order_json,
         cameo_validation_repair_path=args.cameo_validation_repair_json,
         cameo_runtime_repair_path=args.cameo_runtime_repair_json,
         cameo_capability_path=args.cameo_capability_json,

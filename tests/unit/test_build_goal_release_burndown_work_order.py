@@ -587,6 +587,7 @@ def test_goal_release_burndown_public_benchmark_blocker_builds_work_order_comman
     assert row["burndown_status"] == "blocked_until_public_benchmark_validation"
     assert "build_product_public_benchmark_work_order.py" in row["command"]
     assert "build_product_public_benchmark_contract.py" in row["command"]
+    assert "runs/product_public_benchmark_work_order_current.json" in row["source_artifact"]
 
 
 def test_goal_release_burndown_work_order_clears_when_release_gate_has_no_blockers() -> None:

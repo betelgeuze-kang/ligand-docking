@@ -372,6 +372,55 @@ def test_goal_bottleneck_briefing_zeroes_cleanup_sizes_when_cleanup_objective_re
     assert "cleanup approvals/policy" not in summary["next_required_step"]
 
 
+def test_goal_bottleneck_briefing_links_public_benchmark_work_order() -> None:
+    burndown = {
+        "summary": {"status": "goal_release_burndown_work_order_ready"},
+        "rows": [
+            {
+                "sequence": 1,
+                "phase": "P1_product_execution_and_bundle_validation",
+                "lane_id": "commercial_product_release",
+                "burndown_status": "blocked_until_public_benchmark_validation",
+                "approval_token_required": "",
+                "release_checks": "product_architecture_release_ready",
+                "release_check_count": 1,
+                "release_observed": "public_benchmark_ready=false",
+                "release_required": "architecture_release_ready=true",
+                "requires_operator_action": True,
+                "source_artifact": "runs/product_pilot_packet_contract_current.json",
+                "command": "python3 tools/build_product_public_benchmark_work_order.py",
+                "recommended_action": "Run and attach public benchmark scorecards.",
+            }
+        ],
+    }
+    work_order = {
+        "summary": {
+            "status": "product_public_benchmark_work_order_ready",
+            "open_suite_count": 5,
+            "materialization_required_suite_count": 5,
+            "scorecard_required_suite_count": 0,
+        }
+    }
+
+    payload = mod.build_goal_bottleneck_briefing(
+        release_gate_packet=_release_gate(),
+        burndown_packet=burndown,
+        action_board_packet={"summary": {"status": "operator_actions_required"}, "rows": []},
+        intake_kit_packet={"summary": {"status": "goal_operator_intake_kit_ready"}, "rows": []},
+        public_benchmark_work_order_packet=work_order,
+    )
+
+    summary = payload["summary"]
+    row = payload["rows"][0]
+    assert summary["public_benchmark_work_order_status"] == "product_public_benchmark_work_order_ready"
+    assert summary["public_benchmark_open_suite_count"] == 5
+    assert summary["public_benchmark_materialization_required_suite_count"] == 5
+    assert row["bottleneck_kind"] == "blocked_until_public_benchmark_validation"
+    assert row["public_benchmark_work_order_json"] == "runs/product_public_benchmark_work_order_current.json"
+    assert row["public_benchmark_open_suite_count"] == 5
+    assert "runs/product_public_benchmark_work_order_current.json" in row["source_artifacts"]
+
+
 def test_goal_bottleneck_briefing_tool_writes_outputs(tmp_path: Path) -> None:
     release = tmp_path / "release.json"
     burndown = tmp_path / "burndown.json"

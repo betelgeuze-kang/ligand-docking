@@ -13,6 +13,7 @@ from tools.build_goal_release_burndown_work_order import DEFAULT_OUT_JSON as DEF
 from tools.build_goal_release_decision_gate import DEFAULT_OUT_JSON as DEFAULT_RELEASE_GATE_JSON
 
 ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_JSON = "runs/product_public_benchmark_work_order_current.json"
 DEFAULT_OUT_JSON = "runs/goal_bottleneck_briefing_current.json"
 DEFAULT_OUT_CSV = "runs/goal_bottleneck_briefing_current.csv"
 DEFAULT_OUT_MD = "runs/goal_bottleneck_briefing_current.md"
@@ -171,15 +172,18 @@ def build_goal_bottleneck_briefing(
     burndown_packet: dict[str, Any],
     action_board_packet: dict[str, Any],
     intake_kit_packet: dict[str, Any],
+    public_benchmark_work_order_packet: dict[str, Any] | None = None,
     release_gate_path: str = DEFAULT_RELEASE_GATE_JSON,
     burndown_path: str = DEFAULT_BURNDOWN_JSON,
     action_board_path: str = DEFAULT_ACTION_BOARD_JSON,
     intake_kit_path: str = DEFAULT_INTAKE_KIT_JSON,
+    public_benchmark_work_order_path: str = DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_JSON,
 ) -> dict[str, Any]:
     release = _summary(release_gate_packet)
     burndown = _summary(burndown_packet)
     actions = _summary(action_board_packet)
     intake = _summary(intake_kit_packet)
+    public_benchmark_work_order = _summary(public_benchmark_work_order_packet or {})
     burndown_rows = _rows(burndown_packet)
     action_rows = _rows(action_board_packet)
     intake_rows = _rows(intake_kit_packet)
@@ -209,6 +213,9 @@ def build_goal_bottleneck_briefing(
             + [row.get("source_artifacts") for row in matched_intake]
             + [row.get("artifact_path") for row in matched_actions]
         )
+        public_benchmark_blocked = _text(burndown_row.get("burndown_status")) == "blocked_until_public_benchmark_validation"
+        if public_benchmark_blocked and public_benchmark_work_order_path not in source_artifacts:
+            source_artifacts.append(public_benchmark_work_order_path)
         size_gb = round(sum(_float(row.get("size_gb")) for row in matched_actions), 3)
         if not size_gb:
             size_gb = round(_float(burndown_row.get("size_gb")), 3)
@@ -238,6 +245,18 @@ def build_goal_bottleneck_briefing(
             "source_artifact_count": len(source_artifacts),
             "command": _text(burndown_row.get("command")),
             "recommended_action": _text(burndown_row.get("recommended_action")),
+            "public_benchmark_work_order_json": (public_benchmark_work_order_path if public_benchmark_blocked else ""),
+            "public_benchmark_open_suite_count": (
+                _int(public_benchmark_work_order.get("open_suite_count")) if public_benchmark_blocked else 0
+            ),
+            "public_benchmark_materialization_required_suite_count": (
+                _int(public_benchmark_work_order.get("materialization_required_suite_count"))
+                if public_benchmark_blocked
+                else 0
+            ),
+            "public_benchmark_scorecard_required_suite_count": (
+                _int(public_benchmark_work_order.get("scorecard_required_suite_count")) if public_benchmark_blocked else 0
+            ),
             "size_gb": size_gb,
             **_mutation_flags(),
         }
@@ -284,6 +303,15 @@ def build_goal_bottleneck_briefing(
         "operator_intake_kit_release_burndown_linked_entry_count": _int(
             intake.get("release_burndown_linked_entry_count")
         ),
+        "public_benchmark_work_order_status": _text(public_benchmark_work_order.get("status")),
+        "public_benchmark_work_order_json": public_benchmark_work_order_path,
+        "public_benchmark_open_suite_count": _int(public_benchmark_work_order.get("open_suite_count")),
+        "public_benchmark_materialization_required_suite_count": _int(
+            public_benchmark_work_order.get("materialization_required_suite_count")
+        ),
+        "public_benchmark_scorecard_required_suite_count": _int(
+            public_benchmark_work_order.get("scorecard_required_suite_count")
+        ),
         "primary_bottleneck_sequence": _int(primary.get("sequence")),
         "primary_bottleneck_kind": _text(primary.get("bottleneck_kind")),
         "primary_bottleneck_phase": _text(primary.get("phase")),
@@ -324,6 +352,10 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- cleanup_ligand_heavy_candidate_size_gb: `{s['cleanup_ligand_heavy_candidate_size_gb']}`",
         f"- protected_cleanup_payload_size_gb: `{s['protected_cleanup_payload_size_gb']}`",
         f"- approval_tokens_required: `{';'.join(s['approval_tokens_required'])}`",
+        f"- public_benchmark_work_order_status: `{s['public_benchmark_work_order_status']}`",
+        f"- public_benchmark_open_suite_count: `{s['public_benchmark_open_suite_count']}`",
+        f"- public_benchmark_materialization_required_suite_count: `{s['public_benchmark_materialization_required_suite_count']}`",
+        f"- public_benchmark_scorecard_required_suite_count: `{s['public_benchmark_scorecard_required_suite_count']}`",
         "",
         "## Bottlenecks",
         "",
@@ -347,6 +379,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--burndown-json", default=DEFAULT_BURNDOWN_JSON)
     parser.add_argument("--action-board-json", default=DEFAULT_ACTION_BOARD_JSON)
     parser.add_argument("--intake-kit-json", default=DEFAULT_INTAKE_KIT_JSON)
+    parser.add_argument("--public-benchmark-work-order-json", default=DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -360,10 +393,12 @@ def main(argv: list[str] | None = None) -> None:
         burndown_packet=_read_json_if_present(args.burndown_json),
         action_board_packet=_read_json_if_present(args.action_board_json),
         intake_kit_packet=_read_json_if_present(args.intake_kit_json),
+        public_benchmark_work_order_packet=_read_json_if_present(args.public_benchmark_work_order_json),
         release_gate_path=args.release_gate_json,
         burndown_path=args.burndown_json,
         action_board_path=args.action_board_json,
         intake_kit_path=args.intake_kit_json,
+        public_benchmark_work_order_path=args.public_benchmark_work_order_json,
     )
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])
