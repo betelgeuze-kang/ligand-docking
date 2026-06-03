@@ -71,14 +71,10 @@ def _continuous_validation_command(
     *,
     materialization_command: str,
     scorecard_command: str,
-    scorecard_intake_sync_command: str,
-    refresh_command: str,
 ) -> str:
     commands = [
         materialization_command,
         scorecard_command,
-        scorecard_intake_sync_command,
-        refresh_command,
     ]
     return " && ".join(command for command in commands if command)
 
@@ -134,8 +130,6 @@ def build_product_public_benchmark_work_order(
         continuous_validation_command = _continuous_validation_command(
             materialization_command=materialization_command,
             scorecard_command=scorecard_command,
-            scorecard_intake_sync_command=scorecard_intake_sync_command,
-            refresh_command=refresh_command,
         )
         required_input = _required_input(source, status=status)
         required_output = (
@@ -189,8 +183,8 @@ def build_product_public_benchmark_work_order(
     open_rows = [row for row in rows if row["work_order_status"] != "ready"]
     materialization_rows = [row for row in open_rows if row["work_order_status"] == "materialization_required"]
     scorecard_rows = [row for row in open_rows if row["work_order_status"] == "scorecard_required"]
-    continuous_validation_commands = [row["continuous_validation_command"] for row in rows if row["continuous_validation_command"]]
-    continuous_validation_command = " && ".join(continuous_validation_commands)
+    suite_validation_commands = [row["continuous_validation_command"] for row in rows if row["continuous_validation_command"]]
+    continuous_validation_command = " && ".join(suite_validation_commands + ([_refresh_command()] if suite_validation_commands else []))
     payload_summary = {
         "packet_type": "product_public_benchmark_work_order",
         "status": "product_public_benchmark_work_order_clear" if not open_rows else "product_public_benchmark_work_order_ready",
@@ -201,7 +195,7 @@ def build_product_public_benchmark_work_order(
         "open_suite_count": len(open_rows),
         "materialization_required_suite_count": len(materialization_rows),
         "scorecard_required_suite_count": len(scorecard_rows),
-        "continuous_validation_command_count": len(continuous_validation_commands),
+        "continuous_validation_command_count": len(suite_validation_commands),
         "continuous_validation_command": continuous_validation_command,
         "scorecard_intake_sync_command": _scorecard_intake_sync_command(),
         "scorecard_row_csvs": [row["scorecard_row_csv"] for row in rows],

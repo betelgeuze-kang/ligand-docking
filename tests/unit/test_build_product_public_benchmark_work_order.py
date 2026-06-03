@@ -71,6 +71,7 @@ def test_product_public_benchmark_work_order_maps_suite_blockers_to_commands() -
         "runs/casp_archive_structure_regression_scorecard_row_current.csv",
     ]
     assert "build_product_public_benchmark_contract.py" in summary["continuous_validation_command"]
+    assert summary["continuous_validation_command"].count("sync_product_public_benchmark_scorecard_intake.py") == 1
     assert summary["requires_24h_server"] is False
     assert summary["download_executed"] is False
     assert summary["external_state_mutated"] is False
@@ -98,6 +99,7 @@ def test_product_public_benchmark_work_order_maps_suite_blockers_to_commands() -
     assert "build_public_benchmark_materialization_manifest.py" in rows_by_suite["dude_z_decoy_smoke"]["run_command"]
     assert "build_public_benchmark_suite_scorecard.py" in rows_by_suite["casp_archive_structure_regression"]["run_command"]
     assert "build_public_benchmark_suite_scorecard.py" in rows_by_suite["casp_archive_structure_regression"]["continuous_validation_command"]
+    assert "sync_product_public_benchmark_scorecard_intake.py" not in rows_by_suite["casp_archive_structure_regression"]["continuous_validation_command"]
     assert "build_product_public_benchmark_contract.py" in rows_by_suite["dude_z_decoy_smoke"]["refresh_command"]
     assert "build_goal_release_decision_gate.py" in rows_by_suite["dude_z_decoy_smoke"]["refresh_command"]
     assert "build_goal_bottleneck_briefing.py" in rows_by_suite["dude_z_decoy_smoke"]["refresh_command"]

@@ -201,6 +201,8 @@ def _public_benchmark_work_order() -> dict:
             "continuous_validation_command": (
                 "python3 tools/build_lit_pcba_materialization_manifest.py && "
                 "python3 tools/build_lit_pcba_scorecard.py && "
+                "python3 tools/build_public_benchmark_materialization_manifest.py --suite-id dude_z_decoy_smoke && "
+                "python3 tools/build_public_benchmark_suite_scorecard.py --suite-id dude_z_decoy_smoke && "
                 "python3 tools/sync_product_public_benchmark_scorecard_intake.py && "
                 "python3 tools/build_product_public_benchmark_contract.py"
             ),
@@ -604,6 +606,8 @@ def test_goal_release_burndown_public_benchmark_blocker_builds_work_order_comman
     assert row["command"].startswith("python3 tools/build_lit_pcba_materialization_manifest.py")
     assert "build_lit_pcba_scorecard.py" in row["command"]
     assert "sync_product_public_benchmark_scorecard_intake.py" in row["command"]
+    assert row["command"].count("sync_product_public_benchmark_scorecard_intake.py") == 1
+    assert "build_public_benchmark_suite_scorecard.py --suite-id dude_z_decoy_smoke" in row["command"]
     assert "build_product_public_benchmark_contract.py" in row["command"]
     assert "public_benchmark_continuous_validation_command_count=5" in row["reason"]
     assert "runs/product_public_benchmark_work_order_current.json" in row["source_artifact"]
