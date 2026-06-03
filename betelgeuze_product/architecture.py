@@ -292,6 +292,7 @@ def build_product_architecture_contract(
     )
     local_delivery_bundle_ready = (
         _bool(product.get("local_delivery_bundle_capability_ready"))
+        and _bool(product.get("result_bundle_generation_contract_ready"))
         and _bool(release.get("bundle_assembled"))
         and _bool(release.get("bundle_validation_passed"))
         and _bool(release.get("delivery_ready_claim_allowed"))
@@ -368,15 +369,17 @@ def build_product_architecture_contract(
             status="ready" if local_delivery_bundle_ready else "blocked",
             observed=(
                 f"capability_bundle_ready={_bool(product.get('local_delivery_bundle_capability_ready'))};"
+                f"result_bundle_generation_contract_ready={_bool(product.get('result_bundle_generation_contract_ready'))};"
+                f"result_bundle_artifact_count={_int(product.get('result_bundle_artifact_count'))};"
                 f"bundle_assembled={_bool(release.get('bundle_assembled'))};"
                 f"bundle_validation_passed={_bool(release.get('bundle_validation_passed'))};"
                 f"delivery_ready_claim_allowed={_bool(release.get('delivery_ready_claim_allowed'))};"
                 f"pilot_delivery_ready={_bool(release.get('pilot_delivery_ready'))};"
                 f"bundle_tag={_text(release.get('bundle_tag')) or 'missing'}"
             ),
-            required="local-delivery capability, assembled bundle, passing bundle validation, and delivery/pilot evidence",
+            required="result-bundle generation contract, local-delivery capability, assembled bundle, passing bundle validation, and delivery/pilot evidence",
             artifact_path=f"{product_release_path};runs/product_bundle_contract_current.json;runs/product_delivery_evidence_contract_current.json;runs/product_pilot_packet_contract_current.json",
-            reason="A standalone commercial product needs a validated local delivery bundle lane separate from benchmark and license gates.",
+            reason="A standalone commercial product needs a validated local result bundle lane for structure/docking outputs, separate from benchmark and license gates.",
         ),
         _row(
             lane_id="product_service_boundary_contract",
@@ -599,6 +602,14 @@ def build_product_architecture_contract(
         "scoring_ranking_gate_min_eval_unique_keys": _int(ranking_gate.get("gate_min_eval_unique_keys")),
         "scoring_ranking_gate_ef1_min": _float(ranking_gate.get("gate_ef1_min")),
         "local_delivery_bundle_validation_ready": local_delivery_bundle_ready,
+        "result_bundle_generation_contract_ready": _bool(product.get("result_bundle_generation_contract_ready")),
+        "result_bundle_expected_dir": _text(product.get("result_bundle_expected_dir")),
+        "result_bundle_artifact_count": _int(product.get("result_bundle_artifact_count")),
+        "result_bundle_planned_artifact_paths": product.get("result_bundle_planned_artifact_paths")
+        if isinstance(product.get("result_bundle_planned_artifact_paths"), list)
+        else [],
+        "result_bundle_validation_command_matches": _bool(product.get("result_bundle_validation_command_matches")),
+        "result_bundle_rerun_command_present": _bool(product.get("result_bundle_rerun_command_present")),
         "local_delivery_bundle_assembled": _bool(release.get("bundle_assembled")),
         "local_delivery_bundle_validation_passed": _bool(release.get("bundle_validation_passed")),
         "local_delivery_pilot_delivery_ready": _bool(release.get("pilot_delivery_ready")),

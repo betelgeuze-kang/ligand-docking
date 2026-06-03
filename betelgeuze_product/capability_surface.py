@@ -107,6 +107,26 @@ def build_product_capability_surface_contract(
     bundle = _summary(bundle_contract_packet)
     delivery = _summary(delivery_evidence_packet)
     pilot = _summary(pilot_packet)
+    bundle_command_check = (
+        bundle_contract_packet.get("bundle_command_check")
+        if isinstance(bundle_contract_packet.get("bundle_command_check"), dict)
+        else {}
+    )
+    bundle_parsed_args = (
+        bundle_command_check.get("parsed_args")
+        if isinstance(bundle_command_check.get("parsed_args"), dict)
+        else {}
+    )
+    planned_artifact_checks = (
+        bundle_contract_packet.get("planned_artifact_checks")
+        if isinstance(bundle_contract_packet.get("planned_artifact_checks"), list)
+        else []
+    )
+    result_bundle_planned_artifact_paths = [
+        _text(row.get("path"))
+        for row in planned_artifact_checks
+        if isinstance(row, dict) and _text(row.get("path"))
+    ]
 
     product_package_present = _artifact_present(root_path, "betelgeuze_product/docking_request.py")
     product_cli_present = _artifact_present(root_path, "betelgeuze_product/cli.py")
@@ -147,6 +167,15 @@ def build_product_capability_surface_contract(
         and _text(delivery.get("status")) == "product_delivery_evidence_contract_ready"
         and _text(pilot.get("status")) in {"product_pilot_packet_preflight_ready", "product_pilot_packet_ready"}
     )
+    result_bundle_generation_contract_ready = (
+        bundle_contract_ready
+        and _text(bundle.get("bundle_parser_status")) == "parsed"
+        and _int(bundle.get("bundle_unknown_arg_count")) == 0
+        and _bool(bundle.get("bundle_validation_command_matches"))
+        and bool(_text(bundle.get("expected_bundle_dir")))
+        and (_int(bundle.get("artifact_count")) > 0 or bool(result_bundle_planned_artifact_paths))
+        and bool(_text(bundle_parsed_args.get("rerun_command")))
+    )
     api_surface_ready = (
         product_api_present
         and product_package_present
@@ -169,12 +198,16 @@ def build_product_capability_surface_contract(
     execution_flags_clear = all(packet.get("execution_enabled") is False for packet in source_packets if packet)
     results_flags_clear = all(packet.get("docking_results_emitted") is False for packet in source_packets if packet)
     external_flags_clear = all(packet.get("external_state_mutated") is False for packet in source_packets if packet)
+    delivery_or_pilot_claimed = _bool(delivery.get("delivery_ready_claim_allowed")) or _bool(pilot.get("pilot_delivery_ready"))
+    delivery_claim_backed_by_bundle_validation = (
+        _bool(bundle.get("bundle_assembled") or delivery.get("bundle_assembled") or pilot.get("bundle_assembled"))
+        and _bool(bundle.get("bundle_validation_passed") or delivery.get("bundle_validation_passed") or pilot.get("bundle_validation_passed"))
+    )
     guarded_claims_ready = (
         execution_flags_clear
         and results_flags_clear
         and external_flags_clear
-        and _bool(delivery.get("delivery_ready_claim_allowed")) is False
-        and _bool(pilot.get("pilot_delivery_ready")) is False
+        and (not delivery_or_pilot_claimed or delivery_claim_backed_by_bundle_validation)
     )
 
     rows = [
@@ -230,15 +263,19 @@ def build_product_capability_surface_contract(
         _row(
             capability_id="local_delivery_bundle_contract",
             domain="delivery",
-            status="ready" if bundle_contract_ready else "blocked",
+            status="ready" if result_bundle_generation_contract_ready else "blocked",
             observed=(
                 f"bundle={_text(bundle.get('status')) or 'missing'};"
                 f"delivery={_text(delivery.get('status')) or 'missing'};"
-                f"pilot={_text(pilot.get('status')) or 'missing'}"
+                f"pilot={_text(pilot.get('status')) or 'missing'};"
+                f"expected_bundle_dir={_text(bundle.get('expected_bundle_dir')) or 'missing'};"
+                f"artifact_count={_int(bundle.get('artifact_count'))};"
+                f"validation_command_matches={_bool(bundle.get('bundle_validation_command_matches'))};"
+                f"rerun_command_present={bool(_text(bundle_parsed_args.get('rerun_command')))}"
             ),
-            required="ready bundle contract, delivery evidence contract, and pilot packet preflight",
+            required="ready bundle/delivery/pilot contracts with expected bundle dir, planned result artifact, validator command, and rerun command",
             artifact_path=f"{bundle_contract_path};{delivery_evidence_path};{pilot_packet_path}",
-            reason="A commercial product surface needs a reproducible local-delivery bundle path, even before execution is authorized.",
+            reason="A commercial product surface needs a reproducible result-bundle generation path for structure/docking outputs, even before execution is authorized.",
         ),
         _row(
             capability_id="api_and_package_surface",
@@ -272,11 +309,12 @@ def build_product_capability_surface_contract(
             observed=(
                 f"execution_flags_clear={execution_flags_clear};results_flags_clear={results_flags_clear};"
                 f"external_flags_clear={external_flags_clear};delivery_ready_claim_allowed={_bool(delivery.get('delivery_ready_claim_allowed'))};"
-                f"pilot_delivery_ready={_bool(pilot.get('pilot_delivery_ready'))}"
+                f"pilot_delivery_ready={_bool(pilot.get('pilot_delivery_ready'))};"
+                f"delivery_claim_backed_by_bundle_validation={delivery_claim_backed_by_bundle_validation}"
             ),
-            required="no execution/results/external mutation and no delivery-ready claim before approval and validation",
+            required="no execution/results/external mutation and any delivery-ready claim backed by assembled, validated bundle evidence",
             artifact_path=f"{readiness_path};{work_order_path};{preflight_path};{bundle_contract_path};{delivery_evidence_path};{pilot_packet_path}",
-            reason="The pre-execution product surface must remain honest: no fake docking results and no delivery-ready claim.",
+            reason="The product surface must remain honest: no fake docking results and no delivery-ready claim unless bundle validation evidence backs it.",
         ),
     ]
 
@@ -293,7 +331,13 @@ def build_product_capability_surface_contract(
         "blocked_capability_count": len(blockers),
         "structure_analysis_capability_ready": structure_surface_ready,
         "ligand_docking_capability_ready": ligand_surface_ready and execution_contract_ready,
-        "local_delivery_bundle_capability_ready": bundle_contract_ready,
+        "local_delivery_bundle_capability_ready": result_bundle_generation_contract_ready,
+        "result_bundle_generation_contract_ready": result_bundle_generation_contract_ready,
+        "result_bundle_expected_dir": _text(bundle.get("expected_bundle_dir")),
+        "result_bundle_artifact_count": max(_int(bundle.get("artifact_count")), len(result_bundle_planned_artifact_paths)),
+        "result_bundle_planned_artifact_paths": result_bundle_planned_artifact_paths,
+        "result_bundle_validation_command_matches": _bool(bundle.get("bundle_validation_command_matches")),
+        "result_bundle_rerun_command_present": bool(_text(bundle_parsed_args.get("rerun_command"))),
         "api_surface_ready": api_surface_ready,
         "product_structure_analysis_endpoint_present": product_structure_analysis_endpoint_present,
         "product_structure_analysis_report_ready": structure_report_ready,
@@ -312,6 +356,7 @@ def build_product_capability_surface_contract(
         "product_release_readiness_endpoint_present": product_release_readiness_endpoint_present,
         "product_cli_surface_present": product_cli_present,
         "guarded_claims_ready": guarded_claims_ready,
+        "delivery_claim_backed_by_bundle_validation": delivery_claim_backed_by_bundle_validation,
         "allowed_scope_families": sorted(ALLOWED_SCOPE_FAMILIES),
         "max_p0_ligand_count": MAX_P0_LIGAND_COUNT,
         "execution_enabled": False,

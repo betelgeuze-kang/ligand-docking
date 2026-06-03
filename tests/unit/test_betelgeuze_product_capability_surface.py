@@ -52,7 +52,21 @@ def _structure_report() -> dict:
 
 
 def _bundle() -> dict:
-    return {"summary": {"status": "product_bundle_contract_ready", "execution_enabled": False, "docking_results_emitted": False, "external_state_mutated": False}}
+    return {
+        "summary": {
+            "status": "product_bundle_contract_ready",
+            "bundle_parser_status": "parsed",
+            "bundle_unknown_arg_count": 0,
+            "expected_bundle_dir": "runs/local_delivery/bundle_product_gpcr_adrb2",
+            "artifact_count": 1,
+            "bundle_validation_command_matches": True,
+            "execution_enabled": False,
+            "docking_results_emitted": False,
+            "external_state_mutated": False,
+        },
+        "bundle_command_check": {"parsed_args": {"rerun_command": "python3 tools/run_ligand_htvs_pipeline.py --out-prefix runs/product_gpcr_adrb2_after_approval"}},
+        "planned_artifact_checks": [{"path": "runs/product_gpcr_adrb2_after_approval_summary.json"}],
+    }
 
 
 def _delivery() -> dict:
@@ -123,6 +137,12 @@ def test_product_capability_surface_contract_ready_for_guarded_product_surface(t
     assert summary["product_structure_analysis_report_ready"] is True
     assert summary["product_structure_analysis_atom_count"] == 42
     assert summary["ligand_docking_capability_ready"] is True
+    assert summary["result_bundle_generation_contract_ready"] is True
+    assert summary["result_bundle_expected_dir"] == "runs/local_delivery/bundle_product_gpcr_adrb2"
+    assert summary["result_bundle_artifact_count"] == 1
+    assert summary["result_bundle_planned_artifact_paths"] == ["runs/product_gpcr_adrb2_after_approval_summary.json"]
+    assert summary["result_bundle_validation_command_matches"] is True
+    assert summary["result_bundle_rerun_command_present"] is True
     assert summary["api_surface_ready"] is True
     assert summary["product_structure_analysis_endpoint_present"] is True
     assert summary["product_capability_endpoint_present"] is True
@@ -138,6 +158,7 @@ def test_product_capability_surface_contract_ready_for_guarded_product_surface(t
     assert summary["product_release_readiness_endpoint_present"] is True
     assert summary["product_cli_surface_present"] is True
     assert summary["guarded_claims_ready"] is True
+    assert summary["delivery_claim_backed_by_bundle_validation"] is False
     assert summary["execution_enabled"] is False
     assert summary["docking_results_emitted"] is False
     assert summary["external_state_mutated"] is False
@@ -159,3 +180,32 @@ def test_product_capability_surface_blocks_failed_request_contract(tmp_path: Pat
     assert payload["summary"]["structure_analysis_capability_ready"] is False
     assert payload["summary"]["ligand_docking_capability_ready"] is False
     assert any(blocker["code"] == "molecular_structure_analysis_intake_not_ready" for blocker in payload["blockers"])
+
+
+def test_product_capability_surface_allows_delivery_claim_when_validated_bundle_backs_it(tmp_path: Path) -> None:
+    bundle = _bundle()
+    bundle["summary"]["bundle_assembled"] = True
+    bundle["summary"]["bundle_validation_passed"] = True
+    delivery = _delivery()
+    delivery["summary"]["delivery_ready_claim_allowed"] = True
+    pilot = _pilot()
+    pilot["summary"]["pilot_delivery_ready"] = True
+
+    payload = build_product_capability_surface_contract(
+        readiness_packet=_readiness(),
+        work_order_packet=_work_order(),
+        preflight_packet=_preflight(),
+        structure_report_packet=_structure_report(),
+        bundle_contract_packet=bundle,
+        delivery_evidence_packet=delivery,
+        pilot_packet=pilot,
+        root=_root(tmp_path),
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "product_capability_surface_contract_ready"
+    assert summary["guarded_claims_ready"] is True
+    assert summary["delivery_claim_backed_by_bundle_validation"] is True
+    guard_row = next(row for row in payload["rows"] if row["capability_id"] == "guarded_claim_and_execution_flags")
+    assert "delivery_ready_claim_allowed=True" in guard_row["observed"]
+    assert "delivery_claim_backed_by_bundle_validation=True" in guard_row["observed"]

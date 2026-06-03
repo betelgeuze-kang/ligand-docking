@@ -53,7 +53,21 @@ def _structure_report() -> dict:
 
 
 def _bundle() -> dict:
-    return {"summary": {"status": "product_bundle_contract_ready", "execution_enabled": False, "docking_results_emitted": False, "external_state_mutated": False}}
+    return {
+        "summary": {
+            "status": "product_bundle_contract_ready",
+            "bundle_parser_status": "parsed",
+            "bundle_unknown_arg_count": 0,
+            "expected_bundle_dir": "runs/local_delivery/bundle_product_gpcr_adrb2",
+            "artifact_count": 1,
+            "bundle_validation_command_matches": True,
+            "execution_enabled": False,
+            "docking_results_emitted": False,
+            "external_state_mutated": False,
+        },
+        "bundle_command_check": {"parsed_args": {"rerun_command": "python3 tools/run_ligand_htvs_pipeline.py --out-prefix runs/product_gpcr_adrb2_after_approval"}},
+        "planned_artifact_checks": [{"path": "runs/product_gpcr_adrb2_after_approval_summary.json"}],
+    }
 
 
 def _delivery() -> dict:
@@ -155,6 +169,10 @@ def test_product_capability_surface_contract_tool_writes_outputs(tmp_path: Path)
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["status"] == "product_capability_surface_contract_ready"
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["product_structure_analysis_endpoint_present"] is True
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["product_structure_analysis_report_ready"] is True
+    assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["result_bundle_generation_contract_ready"] is True
+    assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["result_bundle_artifact_count"] == 1
+    assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["result_bundle_rerun_command_present"] is True
+    assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["delivery_claim_backed_by_bundle_validation"] is False
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["product_architecture_endpoint_present"] is True
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["product_service_boundary_endpoint_present"] is True
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["product_api_contract_endpoint_present"] is True
@@ -165,3 +183,5 @@ def test_product_capability_surface_contract_tool_writes_outputs(tmp_path: Path)
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["product_cli_surface_present"] is True
     assert out_csv.read_text(encoding="utf-8").startswith("capability_id,domain,")
     assert "Product Capability Surface Contract" in out_md.read_text(encoding="utf-8")
+    assert "result_bundle_generation_contract_ready" in out_md.read_text(encoding="utf-8")
+    assert "delivery_claim_backed_by_bundle_validation" in out_md.read_text(encoding="utf-8")

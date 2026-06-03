@@ -68,6 +68,12 @@ def test_product_architecture_contract_reports_local_surface_and_gates(tmp_path:
                 "structure_analysis_capability_ready": True,
                 "ligand_docking_capability_ready": True,
                 "local_delivery_bundle_capability_ready": True,
+                "result_bundle_generation_contract_ready": True,
+                "result_bundle_expected_dir": "runs/local_delivery/bundle_product_gpcr_adrb2",
+                "result_bundle_artifact_count": 1,
+                "result_bundle_planned_artifact_paths": ["runs/product_gpcr_adrb2_after_approval_summary.json"],
+                "result_bundle_validation_command_matches": True,
+                "result_bundle_rerun_command_present": True,
             }
         ),
         product_release_packet=_product_release_ready(),
@@ -217,6 +223,12 @@ def test_product_architecture_contract_reports_local_surface_and_gates(tmp_path:
     assert summary["scoring_ranking_gate_min_eval_unique_keys"] == 200
     assert summary["scoring_ranking_gate_ef1_min"] == 1.2
     assert summary["local_delivery_bundle_validation_ready"] is True
+    assert summary["result_bundle_generation_contract_ready"] is True
+    assert summary["result_bundle_expected_dir"] == "runs/local_delivery/bundle_product_gpcr_adrb2"
+    assert summary["result_bundle_artifact_count"] == 1
+    assert summary["result_bundle_planned_artifact_paths"] == ["runs/product_gpcr_adrb2_after_approval_summary.json"]
+    assert summary["result_bundle_validation_command_matches"] is True
+    assert summary["result_bundle_rerun_command_present"] is True
     assert summary["local_delivery_bundle_assembled"] is True
     assert summary["local_delivery_bundle_validation_passed"] is True
     assert summary["local_delivery_pilot_delivery_ready"] is True
@@ -297,6 +309,8 @@ def test_product_architecture_contract_reports_local_surface_and_gates(tmp_path:
     local_delivery_row = next(row for row in payload["rows"] if row["lane_id"] == "local_delivery_bundle_validation")
     assert local_delivery_row["status"] == "ready"
     assert local_delivery_row["canonical_lane"] == "local_delivery"
+    assert "result_bundle_generation_contract_ready=True" in local_delivery_row["observed"]
+    assert "result_bundle_artifact_count=1" in local_delivery_row["observed"]
     assert "bundle_validation_passed=True" in local_delivery_row["observed"]
 
 
@@ -308,6 +322,12 @@ def test_product_architecture_contract_uses_cleanup_completion_gate(tmp_path: Pa
                 "structure_analysis_capability_ready": True,
                 "ligand_docking_capability_ready": True,
                 "local_delivery_bundle_capability_ready": True,
+                "result_bundle_generation_contract_ready": True,
+                "result_bundle_expected_dir": "runs/local_delivery/bundle_product_gpcr_adrb2",
+                "result_bundle_artifact_count": 1,
+                "result_bundle_planned_artifact_paths": ["runs/product_gpcr_adrb2_after_approval_summary.json"],
+                "result_bundle_validation_command_matches": True,
+                "result_bundle_rerun_command_present": True,
             }
         ),
         product_release_packet=_product_release_ready(),
@@ -418,6 +438,12 @@ def test_product_architecture_contract_tool_writes_outputs(tmp_path: Path) -> No
                 "structure_analysis_capability_ready": True,
                 "ligand_docking_capability_ready": True,
                 "local_delivery_bundle_capability_ready": True,
+                "result_bundle_generation_contract_ready": True,
+                "result_bundle_expected_dir": "runs/local_delivery/bundle_product_gpcr_adrb2",
+                "result_bundle_artifact_count": 1,
+                "result_bundle_planned_artifact_paths": ["runs/product_gpcr_adrb2_after_approval_summary.json"],
+                "result_bundle_validation_command_matches": True,
+                "result_bundle_rerun_command_present": True,
             }
         ),
         "product_release": _product_release_ready(),
@@ -552,6 +578,8 @@ def test_product_architecture_contract_tool_writes_outputs(tmp_path: Path) -> No
     assert summary["product_api_contract_ready"] is True
     assert summary["scoring_ranking_contract_ready"] is True
     assert summary["local_delivery_bundle_validation_ready"] is True
+    assert summary["result_bundle_generation_contract_ready"] is True
+    assert summary["result_bundle_artifact_count"] == 1
     assert summary["public_benchmark_validation_ready"] is False
     assert summary["public_benchmark_requires_24h_server"] is False
     assert summary["cameo_architecture_validation_protocol_ready"] is True
