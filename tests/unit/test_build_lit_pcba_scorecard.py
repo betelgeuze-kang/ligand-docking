@@ -28,6 +28,15 @@ def test_build_lit_pcba_scorecard_tool_writes_blocked_outputs(tmp_path: Path) ->
 
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["summary"]["status"] == "blocked_lit_pcba_scorecard"
+    assert str(tmp_path / "missing_scores.csv") in payload["summary"]["operator_input_artifacts"]
+    assert str(tmp_path / "missing_labels.csv") in payload["summary"]["missing_input_artifacts"]
+    assert payload["summary"]["operator_output_artifacts"] == str(out_json)
+    assert payload["summary"]["threshold"] == payload["summary"]["primary_metric_threshold"]
+    assert payload["summary"]["metric_gap_to_threshold"] < 0
+    assert "scores_csv_missing" in payload["summary"]["blocker"]
     assert payload["scorecard_row"]["suite_id"] == "lit_pcba_virtual_screening"
     assert row_csv.read_text(encoding="utf-8").startswith("suite_id,benchmark_family,")
-    assert "LIT-PCBA Scorecard" in out_md.read_text(encoding="utf-8")
+    md_text = out_md.read_text(encoding="utf-8")
+    assert "LIT-PCBA Scorecard" in md_text
+    assert "operator_input_artifacts" in md_text
+    assert "metric_gap_to_threshold" in md_text

@@ -38,5 +38,13 @@ def test_build_public_benchmark_suite_scorecard_writes_json_md_and_row(tmp_path:
 
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["summary"]["status"] == "public_benchmark_suite_scorecard_pass"
+    assert payload["summary"]["operator_input_artifacts"] == str(evidence)
+    assert payload["summary"]["operator_output_artifacts"] == str(out_json)
+    assert payload["summary"]["missing_input_artifacts"] == ""
+    assert payload["summary"]["threshold"] == 0.35
+    assert payload["summary"]["metric_gap_to_threshold"] > 0
     assert row_csv.read_text(encoding="utf-8").startswith("suite_id,benchmark_family,")
-    assert "Public Benchmark Suite Scorecard" in out_md.read_text(encoding="utf-8")
+    md_text = out_md.read_text(encoding="utf-8")
+    assert "Public Benchmark Suite Scorecard" in md_text
+    assert "metric_gap_to_threshold" in md_text
+    assert "operator_input_artifacts" in md_text

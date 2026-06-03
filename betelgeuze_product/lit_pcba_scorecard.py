@@ -76,6 +76,12 @@ def _blocked_summary(
     regression_baseline_ref: str,
     run_command: str,
 ) -> dict[str, Any]:
+    blocker_text = ",".join(blockers)
+    missing_inputs = [
+        _artifact(path)
+        for path in (scores_csv, labels_csv)
+        if not Path(path).exists()
+    ]
     return {
         "packet_type": "lit_pcba_scorecard",
         "suite_id": SUITE_ID,
@@ -86,9 +92,14 @@ def _blocked_summary(
         "scores_csv": _artifact(scores_csv),
         "labels_csv": _artifact(labels_csv),
         "scorecard_json": _artifact(out_json),
+        "operator_input_artifacts": f"{_artifact(scores_csv)};{_artifact(labels_csv)}",
+        "operator_output_artifacts": _artifact(out_json),
+        "missing_input_artifacts": ";".join(missing_inputs),
         "primary_metric": PRIMARY_METRIC,
         "primary_metric_value": 0.0,
         "primary_metric_threshold": float(primary_metric_threshold),
+        "threshold": float(primary_metric_threshold),
+        "metric_gap_to_threshold": 0.0 - float(primary_metric_threshold),
         "min_eval_unique_keys": int(min_eval_unique_keys),
         "eval_unique_keys": 0,
         "roc_auc": 0.0,
@@ -96,6 +107,7 @@ def _blocked_summary(
         "bedroc_alpha20": 0.0,
         "regression_baseline_ref": regression_baseline_ref,
         "run_command": run_command,
+        "blocker": blocker_text,
         "pass": False,
         "external_state_mutated": False,
         "docking_results_emitted": False,
@@ -195,6 +207,7 @@ def build_lit_pcba_scorecard(
     if ef1 + 1e-12 < float(primary_metric_threshold):
         scorecard_blockers.append("ef1_below_threshold")
     status = "lit_pcba_scorecard_pass" if not scorecard_blockers else "blocked_lit_pcba_scorecard"
+    blocker_text = ",".join(scorecard_blockers)
     summary = {
         "packet_type": "lit_pcba_scorecard",
         "suite_id": SUITE_ID,
@@ -205,11 +218,18 @@ def build_lit_pcba_scorecard(
         "scores_csv": _artifact(scores_csv),
         "labels_csv": _artifact(labels_csv),
         "scorecard_json": _artifact(out_json),
+        "operator_input_artifacts": f"{_artifact(scores_csv)};{_artifact(labels_csv)}",
+        "operator_output_artifacts": (
+            f"{_artifact(out_json)};{_artifact(out_detail_csv)};{_artifact(out_topk_csv)};{_artifact(out_unique_csv)}"
+        ),
+        "missing_input_artifacts": "",
         "ranking_eval_json": eval_payload.get("artifacts", {}).get("summary_json", ""),
         "ranking_eval_md": eval_payload.get("artifacts", {}).get("summary_md", ""),
         "primary_metric": PRIMARY_METRIC,
         "primary_metric_value": ef1,
         "primary_metric_threshold": float(primary_metric_threshold),
+        "threshold": float(primary_metric_threshold),
+        "metric_gap_to_threshold": ef1 - float(primary_metric_threshold),
         "min_eval_unique_keys": int(min_eval_unique_keys),
         "eval_unique_keys": eval_unique,
         "roc_auc": roc_auc,
@@ -217,6 +237,7 @@ def build_lit_pcba_scorecard(
         "bedroc_alpha20": bedroc,
         "regression_baseline_ref": regression_baseline_ref,
         "run_command": run_command,
+        "blocker": blocker_text,
         "pass": status == "lit_pcba_scorecard_pass",
         "external_state_mutated": False,
         "docking_results_emitted": False,

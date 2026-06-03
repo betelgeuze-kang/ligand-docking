@@ -19,6 +19,12 @@ def test_public_benchmark_suite_scorecard_blocks_missing_evidence(tmp_path: Path
     summary = payload["summary"]
     assert summary["status"] == "blocked_public_benchmark_suite_scorecard"
     assert "evidence_artifact_missing" in summary["blockers"]
+    assert summary["operator_input_artifacts"] == str(tmp_path / "missing.csv")
+    assert summary["operator_output_artifacts"] == str(tmp_path / "scorecard.json")
+    assert summary["missing_input_artifacts"] == str(tmp_path / "missing.csv")
+    assert summary["threshold"] == summary["primary_metric_threshold"]
+    assert summary["metric_gap_to_threshold"] > 0
+    assert summary["blocker"] == "evidence_artifact_missing"
     assert payload["scorecard_row"]["status"] == "fail"
 
 
@@ -40,6 +46,10 @@ def test_public_benchmark_suite_scorecard_passes_with_metric_above_threshold(tmp
     assert summary["status"] == "public_benchmark_suite_scorecard_pass"
     assert summary["primary_metric"] == "ROC_AUC"
     assert summary["primary_metric_threshold"] == 0.6
+    assert summary["threshold"] == 0.6
+    assert summary["metric_gap_to_threshold"] > 0
+    assert summary["blocker"] == ""
+    assert summary["missing_input_artifacts"] == ""
     assert payload["scorecard_row"]["suite_id"] == "dude_z_decoy_smoke"
     assert payload["scorecard_row"]["status"] == "pass"
 

@@ -84,6 +84,8 @@ def build_public_benchmark_suite_scorecard(
     evidence_present = evidence_path.exists() if evidence_path else False
     metric_value = _float(primary_metric_value)
     rows = _int(evidence_row_count)
+    metric_gap = metric_value - threshold
+    evidence_artifact_text = str(evidence_artifact) if _text(evidence_artifact) else ""
     if not _text(regression_baseline_ref):
         blockers.append("regression_baseline_ref_missing")
     if not _text(run_command):
@@ -98,6 +100,7 @@ def build_public_benchmark_suite_scorecard(
         blockers.append("primary_metric_below_threshold")
 
     status = "public_benchmark_suite_scorecard_pass" if not blockers else "blocked_public_benchmark_suite_scorecard"
+    blocker_text = ",".join(sorted(set(blockers)))
     summary = {
         "packet_type": "public_benchmark_suite_scorecard",
         "suite_id": _text(suite_id),
@@ -108,15 +111,21 @@ def build_public_benchmark_suite_scorecard(
         "benchmark_family": family,
         "dataset_source_url": source_url,
         "scorecard_json": str(out_json),
-        "evidence_artifact": str(evidence_artifact) if _text(evidence_artifact) else "",
+        "evidence_artifact": evidence_artifact_text,
         "evidence_artifact_present": evidence_present,
+        "operator_input_artifacts": evidence_artifact_text,
+        "operator_output_artifacts": str(out_json),
+        "missing_input_artifacts": evidence_artifact_text if evidence_path and not evidence_present else "",
         "evidence_row_count": rows,
         "min_evidence_rows": int(min_evidence_rows),
         "primary_metric": metric_name,
         "primary_metric_value": metric_value,
         "primary_metric_threshold": threshold,
+        "threshold": threshold,
+        "metric_gap_to_threshold": metric_gap,
         "regression_baseline_ref": _text(regression_baseline_ref),
         "run_command": _text(run_command),
+        "blocker": blocker_text,
         "external_state_mutated": False,
         "execution_enabled": False,
         "docking_results_emitted": False,
