@@ -36,6 +36,27 @@ def _work_order_status(row: dict[str, Any]) -> str:
     return "operator_input_required"
 
 
+def _refresh_command() -> str:
+    return (
+        "python3 tools/sync_product_public_benchmark_scorecard_intake.py && "
+        "python3 tools/build_product_public_benchmark_contract.py && "
+        "python3 tools/build_product_commercial_independence_gate.py && "
+        "python3 tools/build_product_architecture_contract.py && "
+        "python3 tools/build_product_release_operations_dossier.py && "
+        "python3 tools/build_goal_release_decision_gate.py && "
+        "python3 tools/build_goal_release_burndown_work_order.py && "
+        "python3 tools/build_goal_bottleneck_briefing.py"
+    )
+
+
+def _next_run_command(*, status: str, materialization_command: str, scorecard_command: str, refresh_command: str) -> str:
+    if status == "materialization_required":
+        return materialization_command
+    if status in {"scorecard_required", "operator_input_required"}:
+        return scorecard_command
+    return refresh_command
+
+
 def build_product_public_benchmark_work_order(
     *,
     public_benchmark_packet: dict[str, Any],
@@ -51,6 +72,13 @@ def build_product_public_benchmark_work_order(
         scorecard_command = _text(source.get("run_command"))
         blockers = _text(source.get("blockers"))
         status = _work_order_status(source)
+        refresh_command = _refresh_command()
+        run_command = _next_run_command(
+            status=status,
+            materialization_command=materialization_command,
+            scorecard_command=scorecard_command,
+            refresh_command=refresh_command,
+        )
         rows.append(
             {
                 "sequence": index,
@@ -59,6 +87,11 @@ def build_product_public_benchmark_work_order(
                 "work_order_status": status,
                 "required_for_commercial_release": bool(source.get("required_for_commercial_release") is True),
                 "dataset_source_url": _text(source.get("dataset_source_url")),
+                "materialization_manifest": _text(source.get("materialization_manifest_json")),
+                "scorecard_row": _text(source.get("scorecard_json")) or "missing_scorecard_row",
+                "threshold": source.get("primary_metric_threshold", 0.0),
+                "blocker": blockers,
+                "run_command": run_command,
                 "dataset_artifact": _text(source.get("materialization_manifest_json")),
                 "result_artifact": _text(source.get("scorecard_json")),
                 "primary_metric": _text(source.get("primary_metric")),
@@ -70,14 +103,7 @@ def build_product_public_benchmark_work_order(
                 "scorecard_blockers": blockers,
                 "materialization_command": materialization_command,
                 "scorecard_command": scorecard_command,
-                "refresh_command": (
-                    "python3 tools/sync_product_public_benchmark_scorecard_intake.py && "
-                    "python3 tools/build_product_public_benchmark_contract.py && "
-                    "python3 tools/build_product_commercial_independence_gate.py && "
-                    "python3 tools/build_product_architecture_contract.py && "
-                    "python3 tools/build_product_release_operations_dossier.py && "
-                    "python3 tools/build_goal_bottleneck_briefing.py"
-                ),
+                "refresh_command": refresh_command,
                 "requires_download_approval": False,
                 "requires_24h_server": False,
                 "requires_competition_season": False,

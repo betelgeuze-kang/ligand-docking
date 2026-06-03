@@ -63,13 +63,14 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         "## Suites",
         "",
-        "| suite | status | metric | threshold | materialization | scorecard |",
-        "| --- | --- | --- | ---: | --- | --- |",
+        "| suite | status | metric | threshold | materialization_manifest | scorecard_row | blocker |",
+        "| --- | --- | --- | ---: | --- | --- | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
             f"| `{row['suite_id']}` | `{row['work_order_status']}` | `{row['primary_metric']}` | "
-            f"`{row['primary_metric_threshold']}` | `{row['materialization_status']}` | `{row['scorecard_status']}` |"
+            f"`{row['threshold']}` | `{row['materialization_manifest']}` | `{row['scorecard_row']}` | "
+            f"`{row['blocker']}` |"
         )
     lines.extend(["", "## Commands", ""])
     for row in payload["rows"]:
@@ -77,6 +78,7 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
             [
                 f"### {row['suite_id']}",
                 "",
+                f"- run_command: `{row['run_command']}`",
                 f"- materialization: `{row['materialization_command']}`",
                 f"- scorecard: `{row['scorecard_command']}`",
                 f"- refresh: `{row['refresh_command']}`",

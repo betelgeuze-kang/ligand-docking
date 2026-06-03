@@ -70,8 +70,18 @@ def test_product_public_benchmark_work_order_maps_suite_blockers_to_commands() -
     rows_by_suite = {row["suite_id"]: row for row in payload["rows"]}
     assert rows_by_suite["dude_z_decoy_smoke"]["work_order_status"] == "materialization_required"
     assert rows_by_suite["casp_archive_structure_regression"]["work_order_status"] == "scorecard_required"
+    for row in payload["rows"]:
+        assert row["materialization_manifest"].startswith("runs/")
+        assert row["scorecard_row"].startswith("runs/")
+        assert row["threshold"] == row["primary_metric_threshold"]
+        assert row["blocker"]
+        assert row["run_command"]
     assert "build_public_benchmark_materialization_manifest.py" in rows_by_suite["dude_z_decoy_smoke"]["materialization_command"]
+    assert "build_public_benchmark_materialization_manifest.py" in rows_by_suite["dude_z_decoy_smoke"]["run_command"]
+    assert "build_public_benchmark_suite_scorecard.py" in rows_by_suite["casp_archive_structure_regression"]["run_command"]
     assert "build_product_public_benchmark_contract.py" in rows_by_suite["dude_z_decoy_smoke"]["refresh_command"]
+    assert "build_goal_release_decision_gate.py" in rows_by_suite["dude_z_decoy_smoke"]["refresh_command"]
+    assert "build_goal_bottleneck_briefing.py" in rows_by_suite["dude_z_decoy_smoke"]["refresh_command"]
 
 
 def test_build_product_public_benchmark_work_order_tool_writes_outputs(tmp_path: Path) -> None:
@@ -96,5 +106,10 @@ def test_build_product_public_benchmark_work_order_tool_writes_outputs(tmp_path:
 
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["summary"]["status"] == "product_public_benchmark_work_order_ready"
-    assert out_csv.read_text(encoding="utf-8").startswith("sequence,suite_id,")
-    assert "Product Public Benchmark Work Order" in out_md.read_text(encoding="utf-8")
+    csv_text = out_csv.read_text(encoding="utf-8")
+    md_text = out_md.read_text(encoding="utf-8")
+    assert csv_text.startswith("sequence,suite_id,")
+    assert "materialization_manifest" in csv_text
+    assert "run_command" in csv_text
+    assert "Product Public Benchmark Work Order" in md_text
+    assert "run_command" in md_text
