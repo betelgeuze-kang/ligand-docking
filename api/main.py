@@ -4,27 +4,47 @@ from typing import Any
 
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from fastapi.responses import FileResponse
+from fastapi.responses import PlainTextResponse
 import uuid
 import os
-import json
 from api.cameo import router as cameo_router
 from api.casp17 import router as casp17_router
 from api.cleanup import router as cleanup_router
 from api.goal import router as goal_router
 from api.product import router as product_router
 from api.models import SimulationRequest, SimulationResponse, StatusResponse, ResultsResponse
+from api.simulation_scope import (
+    PRODUCT_SIMULATION_SCOPE,
+    UnsupportedSimulationScopeError,
+    validate_simulation_request_scope,
+)
 from api.tasks import run_simulation_async
 from api.config import settings
+from api.job_store import SQLiteJobStore
+from api.security import ProductSecurityMiddleware, security_metrics_text
+from api.worker import (
+    job_results_dir,
+    job_status_path,
+    process_next_job_once,
+    read_status_file,
+    run_job_once,
+    write_status_file,
+)
 
 app = FastAPI(title=settings.app_name)
+app.add_middleware(ProductSecurityMiddleware)
 app.include_router(cameo_router)
 app.include_router(casp17_router)
 app.include_router(cleanup_router)
 app.include_router(goal_router)
 app.include_router(product_router)
 
-# In-memory job store (use Redis or DB for production)
-jobs = {}
+job_store = SQLiteJobStore(settings.api_job_store_path)
+
+
+@app.get("/metrics", response_class=PlainTextResponse)
+def get_metrics() -> str:
+    return security_metrics_text()
 
 
 def _model_to_dict(model: SimulationRequest) -> dict[str, Any]:
@@ -32,48 +52,70 @@ def _model_to_dict(model: SimulationRequest) -> dict[str, Any]:
         return model.model_dump()
     return model.dict()
 
+
 @app.post("/simulate", response_model=SimulationResponse)
 async def submit_simulation(request: SimulationRequest, background_tasks: BackgroundTasks):
     job_id = str(uuid.uuid4())
     request_data = _model_to_dict(request)
-    jobs[job_id] = {"status": "submitted", "request": request_data}
+    try:
+        validate_simulation_request_scope(request_data)
+    except UnsupportedSimulationScopeError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "unsupported_simulation_scope",
+                "message": str(exc),
+                "product_scope": exc.product_scope or PRODUCT_SIMULATION_SCOPE,
+            },
+        ) from exc
+
+    job_store.create_job(job_id, request_data, status="submitted")
 
     # Create status file
-    results_dir = os.path.join(settings.results_storage_path, job_id)
+    results_dir = job_results_dir(job_id)
     os.makedirs(results_dir, exist_ok=True)
-    status_file_path = os.path.join(results_dir, "status.json")
-    with open(status_file_path, 'w') as sf:
-        json.dump({"job_id": job_id, "status": "submitted"}, sf)
+    status_file_path = job_status_path(job_id)
+    write_status_file(status_file_path, {"job_id": job_id, "status": "submitted"})
 
-    # Add background task to run simulation
-    background_tasks.add_task(run_simulation_async_wrapper, job_id, request_data)
+    if settings.api_inline_worker_enabled:
+        background_tasks.add_task(
+            process_next_job_once,
+            job_store,
+            worker_id=f"api-inline-{job_id}",
+            runner=run_simulation_async,
+            lease_seconds=settings.api_worker_lease_seconds,
+        )
 
-    return SimulationResponse(job_id=job_id, status="submitted", message="Simulation submitted successfully.")
+    return SimulationResponse(
+        job_id=job_id,
+        status="submitted",
+        message=(
+            "Validated ligand runner job submitted. Product scope: "
+            f"{PRODUCT_SIMULATION_SCOPE}."
+        ),
+    )
 
 async def run_simulation_async_wrapper(job_id: str, request_data: dict[str, Any]):
     """Wrapper to handle the async task and update job status."""
-    jobs[job_id]["status"] = "running"
-    try:
-        await run_simulation_async(job_id, request_data)
-        # Status is updated within run_simulation_async
-    except Exception as e:
-        jobs[job_id]["status"] = "failed"
-        jobs[job_id]["error"] = str(e)
-        # Status is also updated in run_simulation_async on failure
+    return await run_job_once(
+        job_store,
+        job_id=job_id,
+        request_data=request_data,
+        runner=run_simulation_async,
+        lease_seconds=settings.api_worker_lease_seconds,
+    )
 
 @app.get("/status/{job_id}", response_model=StatusResponse)
 def get_simulation_status(job_id: str):
-    if job_id not in jobs:
+    if not job_store.job_exists(job_id):
         raise HTTPException(status_code=404, detail="Job not found")
 
     # Read status from file
-    results_dir = os.path.join(settings.results_storage_path, job_id)
-    status_file_path = os.path.join(results_dir, "status.json")
+    status_file_path = job_status_path(job_id)
     if not os.path.exists(status_file_path):
         return StatusResponse(job_id=job_id, status="unknown", message="Status file missing")
 
-    with open(status_file_path, 'r') as sf:
-        status_data = json.load(sf)
+    status_data = read_status_file(status_file_path)
 
     return StatusResponse(
         job_id=job_id,
@@ -83,16 +125,14 @@ def get_simulation_status(job_id: str):
 
 @app.get("/results/{job_id}", response_model=ResultsResponse)
 def get_simulation_results(job_id: str):
-    if job_id not in jobs:
+    if not job_store.job_exists(job_id):
         raise HTTPException(status_code=404, detail="Job not found")
 
-    results_dir = os.path.join(settings.results_storage_path, job_id)
-    status_file_path = os.path.join(results_dir, "status.json")
+    status_file_path = job_status_path(job_id)
     if not os.path.exists(status_file_path):
         raise HTTPException(status_code=404, detail="Results not ready or job failed")
 
-    with open(status_file_path, 'r') as sf:
-        status_data = json.load(sf)
+    status_data = read_status_file(status_file_path)
 
     if status_data["status"] != "completed":
         raise HTTPException(status_code=400, detail=f"Job not completed. Status: {status_data['status']}")

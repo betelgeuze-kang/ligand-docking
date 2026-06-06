@@ -68,6 +68,27 @@ python3 tools/build_local_delivery_verdict_gate.py
 
 The verdict gate is designed to fail closed until required P0 evidence, wetlab state, and delivery readiness conditions are satisfied.
 
+## Product API (`/simulate`)
+
+The HTTP API product surface is **ligand HTVS and backmapping scoring only**, executed through operator-approved validated runner profiles. Generic molecular-dynamics simulation is intentionally unsupported.
+
+```bash
+pip install -r requirements-api.txt
+uvicorn api.main:app --host 127.0.0.1 --port 8000
+```
+
+Submit a validated-runner job (requires an enabled profile under `config/api_validated_runner_profiles/`):
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/simulate \
+  -H 'Content-Type: application/json' \
+  -d '{"target_name":"ExampleTarget","runner_profile_id":"backmapping_scoring.example"}'
+```
+
+Requests without `runner_profile_id` receive HTTP 422/400 with an explicit unsupported-scope response. The API refuses to emit fake or generic MD results.
+
+Installable CLIs (`betelgeuze-product`, `betelgeuze-cameo`, `betelgeuze-cleanup`) resolve repository paths via `BETELGEUZE_REPO_ROOT` or the installed package layout.
+
 ## Main Workflows
 
 | Workflow | Entry Points |

@@ -6,7 +6,9 @@ import sys
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+from betelgeuze_product.runtime_paths import repo_root
+
+ROOT = repo_root()
 
 ARTIFACTS = {
     "capabilities": "runs/product_capability_surface_contract_current.json",
@@ -16,12 +18,23 @@ ARTIFACTS = {
     "operational-quality": "runs/product_operational_quality_contract_current.json",
     "operations": "runs/product_release_operations_dossier_current.json",
     "public-benchmark": "runs/product_public_benchmark_work_order_current.json",
+    "ai-decision-graph": "runs/product_ai_decision_graph_contract_current.json",
+    "ai-report-ux": "runs/product_ai_report_ux_contract_current.json",
     "cameo-live-validation": "runs/cameo_validation_operations_dossier_current.json",
     "commercial-independence": "runs/product_commercial_independence_gate_current.json",
     "license-decision": "runs/product_license_decision_gate_current.json",
     "license-options": "runs/product_license_decision_packet_current.json",
     "license-file-work-order": "runs/product_license_file_creation_work_order_current.json",
     "release-readiness": "runs/product_release_operations_dossier_current.json",
+    "production-ai-checkpoint-readiness": "runs/product_production_ai_checkpoint_readiness_current.json",
+    "production-ai-gpu-return-intake": "runs/product_production_ai_gpu_return_intake_current.json",
+    "production-ai-promotion-workbench": "runs/product_production_ai_promotion_workbench_current.json",
+    "scope-claim-guard": "runs/product_scope_breadth_closure_checklist_current.json",
+    "scope-evidence-priority": "runs/product_scope_breadth_evidence_priority_packet_current.json",
+    "scope-evidence-intake-readiness": "runs/product_scope_breadth_evidence_intake_readiness_current.json",
+    "transporter-manual-review-intake": "runs/transporter_manual_review_intake_template_current.json",
+    "pxr-exact-review-intake": "runs/pxr_exact_evidence_review_intake_template_current.json",
+    "goal-completion-audit": "runs/product_goal_completion_audit_current.json",
 }
 
 CLAIM_BOUNDARY = (
@@ -148,6 +161,9 @@ def build_all_status(*, root: str | Path = ROOT) -> dict[str, Any]:
     public_benchmark_summary = statuses.get("public-benchmark", {}).get("summary", {})
     if not isinstance(public_benchmark_summary, dict):
         public_benchmark_summary = {}
+    goal_completion_summary = statuses.get("goal-completion-audit", {}).get("summary", {})
+    if not isinstance(goal_completion_summary, dict):
+        goal_completion_summary = {}
     return {
         "packet_type": "product_cli_status_set",
         "status": "blocked_product_cli_status_set" if blocked_or_missing else "product_cli_status_set_ready",
@@ -181,7 +197,20 @@ def build_all_status(*, root: str | Path = ROOT) -> dict[str, Any]:
             public_benchmark_summary.get("continuous_validation_command_count")
         ),
         "public_benchmark_suite_run_command_count": _int_value(public_benchmark_summary.get("suite_run_command_count")),
+        "public_benchmark_suite_materialization_run_command_count": _int_value(
+            public_benchmark_summary.get("suite_materialization_run_command_count")
+        ),
+        "public_benchmark_suite_scorecard_command_count": _int_value(
+            public_benchmark_summary.get("suite_scorecard_command_count")
+        ),
+        "public_benchmark_suite_result_provenance_command_count": _int_value(
+            public_benchmark_summary.get("suite_result_provenance_command_count")
+        ),
+        "public_benchmark_suite_result_provenance_present_count": _int_value(
+            public_benchmark_summary.get("suite_result_provenance_present_count")
+        ),
         "public_benchmark_suite_threshold_count": _int_value(public_benchmark_summary.get("suite_threshold_count")),
+        "public_benchmark_suite_blocker_count": _int_value(public_benchmark_summary.get("suite_blocker_count")),
         "public_benchmark_suite_materialization_manifest_count": _int_value(
             public_benchmark_summary.get("suite_materialization_manifest_count")
         ),
@@ -194,6 +223,30 @@ def build_all_status(*, root: str | Path = ROOT) -> dict[str, Any]:
         "public_benchmark_suite_no_external_dependency_count": _int_value(
             public_benchmark_summary.get("suite_no_external_dependency_count")
         ),
+        "public_benchmark_local_artifact_preflight_ready_suite_count": _int_value(
+            public_benchmark_summary.get("local_artifact_preflight_ready_suite_count")
+        ),
+        "public_benchmark_local_artifact_preflight_blocked_suite_count": _int_value(
+            public_benchmark_summary.get("local_artifact_preflight_blocked_suite_count")
+        ),
+        "public_benchmark_missing_local_input_artifact_count": _int_value(
+            public_benchmark_summary.get("missing_local_input_artifact_count")
+        ),
+        "public_benchmark_missing_local_output_artifact_count": _int_value(
+            public_benchmark_summary.get("missing_local_output_artifact_count")
+        ),
+        "goal_completion_audit_status": statuses.get("goal-completion-audit", {}).get("status", ""),
+        "goal_complete": _bool_value(goal_completion_summary.get("goal_complete")),
+        "goal_completion_pass_count": _int_value(goal_completion_summary.get("pass_count")),
+        "goal_completion_fail_count": _int_value(goal_completion_summary.get("fail_count")),
+        "goal_completion_primary_bottleneck_phase": str(
+            goal_completion_summary.get("primary_bottleneck_phase") or ""
+        ),
+        "goal_completion_next_command": str(goal_completion_summary.get("next_command") or ""),
+        "goal_completion_next_command_candidate_count": _int_value(
+            goal_completion_summary.get("next_command_candidate_count")
+        ),
+        "goal_completion_next_command_candidates": goal_completion_summary.get("next_command_candidates") or [],
         "cameo_live_validation_status": statuses.get("cameo-live-validation", {}).get("status", ""),
         "cameo_live_validation_ready": _bool_value(cameo_live_summary.get("validation_ready")),
         "cameo_live_official_results_intake_ready": _bool_value(

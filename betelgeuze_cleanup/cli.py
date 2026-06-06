@@ -6,7 +6,9 @@ import sys
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+from betelgeuze_product.runtime_paths import repo_root
+
+ROOT = repo_root()
 
 ARTIFACTS = {
     "operations-surface": "runs/cleanup_operations_surface_contract_current.json",

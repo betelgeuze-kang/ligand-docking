@@ -5,6 +5,21 @@
 
 # Local tooling / agent metadata
 .agents/
+.betelgeuze/
+!.betelgeuze/cameo_transition_doc_audit_*.md
+!.betelgeuze/state.md
+!.betelgeuze/run_log.md
+
+# Generated accounting/status packets (source builders live under tools/accounting/)
+runs/*_current.json
+runs/*_current.csv
+runs/*_current.md
+runs/*_packet_current.md
+
+# Python packaging artifacts
+*.egg-info/
+build/
+dist/
 
 # Python caches and virtualenvs
 __pycache__/

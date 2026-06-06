@@ -6,7 +6,9 @@ import sys
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+from betelgeuze_product.runtime_paths import repo_root
+
+ROOT = repo_root()
 
 ARTIFACTS = {
     "operator-inputs": "runs/cameo_operator_input_validation_current.json",
@@ -23,6 +25,8 @@ ARTIFACTS = {
     "service-boundary": "runs/cameo_service_boundary_contract_current.json",
     "evidence-integrity": "runs/cameo_evidence_integrity_contract_current.json",
     "registration-approval": "runs/cameo_public_registration_approval_gate_current.json",
+    "outbound-email-send-preflight": "runs/cameo_outbound_email_send_preflight_current.json",
+    "official-result-fetch-preflight": "runs/cameo_official_result_fetch_preflight_current.json",
 }
 
 CLAIM_BOUNDARY = (
@@ -192,6 +196,8 @@ def build_all_status(*, root: str | Path = ROOT) -> dict[str, Any]:
     architecture = summaries.get("architecture", {})
     evidence_integrity = summaries.get("evidence-integrity", {})
     registration = summaries.get("registration-approval", {})
+    send_preflight = summaries.get("outbound-email-send-preflight", {})
+    fetch_preflight = summaries.get("official-result-fetch-preflight", {})
     capability = summaries.get("capability", {})
     runtime = summaries.get("runtime", {})
     receiver_smoke = summaries.get("receiver-smoke", {})
@@ -242,6 +248,16 @@ def build_all_status(*, root: str | Path = ROOT) -> dict[str, Any]:
         or _bool_value(architecture.get("public_registration_authorized")),
         "registration_awaiting_operator_approval_row_count": _int_value(registration.get("awaiting_operator_approval_row_count")),
         "registration_blocked_row_count": _int_value(registration.get("blocked_row_count")),
+        "outbound_email_send_preflight_ready": str(send_preflight.get("status") or "")
+        == "cameo_outbound_email_send_preflight_ready",
+        "outbound_email_send_authorized": _bool_value(send_preflight.get("authorized_for_separate_operator_send")),
+        "outbound_email_send_blocker_count": _int_value(send_preflight.get("blocker_count")),
+        "outbound_email_send_operator_csv_present": _bool_value(send_preflight.get("operator_send_csv_present")),
+        "official_result_fetch_preflight_ready": str(fetch_preflight.get("status") or "")
+        == "cameo_official_result_fetch_preflight_ready",
+        "official_result_fetch_authorized": _bool_value(fetch_preflight.get("authorized_for_separate_operator_fetch")),
+        "official_result_fetch_blocker_count": _int_value(fetch_preflight.get("blocker_count")),
+        "official_result_fetch_operator_csv_present": _bool_value(fetch_preflight.get("operator_fetch_csv_present")),
         "statuses": statuses,
         "package_install_executed": False,
         "server_started": False,

@@ -68,6 +68,17 @@ python3 tools/build_local_delivery_verdict_gate.py
 
 이 verdict gate는 필수 P0 evidence, wetlab 상태, delivery readiness 조건이 모두 충족되기 전까지 의도적으로 fail-closed 됩니다.
 
+## 제품 API (`/simulate`)
+
+HTTP API 제품 surface는 **ligand HTVS 및 backmapping scoring**만 지원하며, operator-approved validated runner profile을 통해서만 실행됩니다. 범용 MD 시뮬레이션은 지원하지 않습니다.
+
+```bash
+pip install -r requirements-api.txt
+uvicorn api.main:app --host 127.0.0.1 --port 8000
+```
+
+`runner_profile_id` 없이 `/simulate`를 호출하면 422/400과 함께 unsupported-scope 응답을 반환합니다.
+
 ## 주요 워크플로우
 
 | 워크플로우 | 주요 entry point |

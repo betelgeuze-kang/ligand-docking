@@ -2,6 +2,11 @@
 
 import torch
 import torch.nn as nn
+from .claim_boundary import (
+    TOPOLOGY_FIDELITY_PLACEHOLDER_ALANINE,
+    TOPOLOGY_FIDELITY_SEQUENCE_MAPPED,
+    default_topology_claim_metadata,
+)
 from .definitions import StrategyType
 
 class TopologyFactory:
@@ -15,6 +20,10 @@ class TopologyFactory:
         self.device = device
         self.target_name = target_name
         self.strategy_type = strategy_type
+        self.residue_types_source = TOPOLOGY_FIDELITY_PLACEHOLDER_ALANINE
+        self.claim_metadata = default_topology_claim_metadata(
+            residue_types_source=self.residue_types_source
+        )
 
         # [NEW] AdResS support flags
         self.use_adress = strategy_type == StrategyType.ADRESS
@@ -44,7 +53,24 @@ class TopologyFactory:
         """
         # Placeholder: All residues are Alanine (index 1) for simplicity
         # In practice, this would come from a sequence or PDB file
+        self.residue_types_source = TOPOLOGY_FIDELITY_PLACEHOLDER_ALANINE
+        self.claim_metadata = default_topology_claim_metadata(
+            residue_types_source=self.residue_types_source
+        )
         return torch.ones(self.n_res, dtype=torch.long, device=self.device) # Example: all Alanine
+
+    def set_residue_types_from_sequence(self, residue_type_indices: torch.Tensor) -> None:
+        """Inject sequence-mapped residue types when authoritative sequence data exists."""
+        if residue_type_indices.shape[0] != self.n_res:
+            raise ValueError("residue_type_indices length must match n_res")
+        self.residue_types = residue_type_indices.to(dtype=torch.long, device=self.device)
+        self.residue_types_source = TOPOLOGY_FIDELITY_SEQUENCE_MAPPED
+        self.claim_metadata = default_topology_claim_metadata(
+            residue_types_source=self.residue_types_source
+        )
+
+    def topology_fidelity(self) -> str:
+        return str(self.claim_metadata.get("topology_fidelity", TOPOLOGY_FIDELITY_PLACEHOLDER_ALANINE))
 
     def _initialize_virtual_sc_coords(self):
         """
