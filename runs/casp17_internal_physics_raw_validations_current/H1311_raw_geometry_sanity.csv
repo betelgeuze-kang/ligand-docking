@@ -1,2 +1,0 @@
-target_id,geometry_sanity_status,blocker_count,warning_count,atom_count,finite_atom_count,severe_clash_count,ca_pair_checked_count,ca_too_close_count,ca_too_far_count
-H1311,pass,0,0,4063,4063,0,817,0,0
