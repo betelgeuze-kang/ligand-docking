@@ -145,6 +145,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
+    if not _resolve("runs/product_capability_surface_contract_current.json").exists():
+        from tools.product.bootstrap_api_worker_contract_artifacts import materialize
+
+        materialize()
     payload = build_product_commercial_independence_gate(
         root=args.root,
         environment_manifest_json=args.environment_manifest_json,

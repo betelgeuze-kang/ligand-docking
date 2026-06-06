@@ -9,6 +9,9 @@ from tools.product import build_self_hosted_license_distribution_audit as mod
 
 
 def test_self_hosted_license_distribution_audit_records_current_license_state() -> None:
+    from tools.product.bootstrap_api_worker_contract_artifacts import materialize
+
+    materialize()
     payload = mod.build_audit()
     summary = payload["summary"]
 
@@ -95,6 +98,9 @@ def test_self_hosted_license_distribution_audit_blocks_license_source_mismatch(t
 
 
 def test_self_hosted_license_distribution_audit_cli_writes_json(tmp_path: Path) -> None:
+    from tools.product.bootstrap_api_worker_contract_artifacts import materialize
+
+    materialize()
     out_json = tmp_path / "audit.json"
 
     result = subprocess.run(

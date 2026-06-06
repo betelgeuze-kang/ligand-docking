@@ -247,7 +247,7 @@ def test_submit_simulation_defaults_to_queue_handoff(
 
     response = asyncio.run(
         main.submit_simulation(
-            SimulationRequest(target_name="Chignolin", pdb_id="1abc"),
+            SimulationRequest(target_name="Chignolin", pdb_id="1abc", runner_profile_id="smoke"),
             BackgroundTasks(),
         )
     )

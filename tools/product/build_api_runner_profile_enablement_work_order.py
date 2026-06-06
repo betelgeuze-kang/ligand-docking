@@ -138,14 +138,14 @@ def _markdown(payload: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Build API runner profile enablement work order.")
     parser.add_argument("--profiles-dir", default="config/api_validated_runner_profiles")
     parser.add_argument("--evidence-dir", default="config/api_validated_runner_profiles/evidence")
     parser.add_argument("--write-evidence-templates", action="store_true")
     parser.add_argument("--out-json", default="runs/api_runner_profile_enablement_work_order_current.json")
     parser.add_argument("--out-md", default="runs/api_runner_profile_enablement_work_order_current.md")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     payload = build_work_order(
         Path(args.profiles_dir),
