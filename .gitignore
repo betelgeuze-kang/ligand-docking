@@ -54,6 +54,7 @@ data/
 logs/
 models/
 output/
+results/
 runs/
 runtime/cache/
 test-results/
