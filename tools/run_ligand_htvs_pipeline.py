@@ -17,6 +17,10 @@ from typing import Any, Dict, List, Optional, Sequence
 import pandas as pd
 
 from tools.product.engine_refinement_config import load_engine_refinement_config, stage2_defaults, stage3_defaults
+from tools.product.four_bead_gate_evaluator import evaluate_four_bead_gate
+from tools.product.materialize_docking_htvs_request import materialize_from_docking_request
+from tools.product.merge_stage2_manifests import merge_stage2_manifests
+from tools.product.stage2_skip_inline_scorer import build_skip_inline_manifest
 from tools.product.stage2_skip_router import apply_stage2_skip_router
 
 try:
@@ -1421,6 +1425,72 @@ def _clone_gate_summary(template: Dict[str, Any], enabled: bool) -> Dict[str, An
     return out
 
 
+def _apply_pipeline_preset_json(args: argparse.Namespace) -> Dict[str, Any]:
+    preset_path = str(getattr(args, "pipeline_preset_json", "") or "").strip()
+    if not preset_path or (not os.path.exists(preset_path)):
+        return {"applied": False, "reason": "preset_missing"}
+    try:
+        with open(preset_path, "r", encoding="utf-8") as preset_handle:
+            preset = json.load(preset_handle)
+    except (OSError, json.JSONDecodeError) as exc:
+        return {"applied": False, "reason": f"preset_unreadable:{exc}"}
+    if not isinstance(preset, dict):
+        return {"applied": False, "reason": "preset_not_object"}
+    mapping = {
+        "targets": "targets",
+        "run_scope": "run_scope",
+        "trajectory_engine_mode": "trajectory_engine_mode",
+        "require_rust_hip": "traj_require_rust_hip",
+        "stage3_ligand_model": "stage3_ligand_model",
+        "stage3_onsps_4bead_cascade": "stage3_onsps_4bead_cascade",
+        "stage3_two_pass_scoring": "stage3_two_pass_scoring",
+        "stage3_two_pass_topk_pct": "stage3_two_pass_topk_pct",
+        "stage3_residual_assist_mode": "stage3_residual_assist_mode",
+        "stage3_hbond_onsps_weight": "stage3_hbond_onsps_weight",
+        "stage2_skip_router_enabled": "stage2_skip_router_enabled",
+        "stage3_force_residual_shortlist": "stage3_force_residual_shortlist",
+        "traj_multi_start_count": "traj_multi_start_count",
+        "traj_pocket_protein_max_atoms": "traj_pocket_protein_max_atoms",
+        "target_native_csv": "target_native_csv",
+        "native_path_col": "native_path_col",
+        "ligand_csv": "ligand_csv",
+        "csv_relax_3d": "csv_relax_3d",
+        "stage3_min_frames": "stage3_min_frames",
+        "stage3_score_only": "stage3_score_only",
+        "ranking_score_col": "ranking_score_col",
+        "ranking_eval_roles": "ranking_eval_roles",
+        "require_split_for_ranking": "require_split_for_ranking",
+        "protein_sequence": "protein_sequence",
+    }
+    applied_keys: List[str] = []
+    for src, dst in mapping.items():
+        if src in preset:
+            setattr(args, dst, preset[src])
+            applied_keys.append(dst)
+    gate = preset.get("gate", {})
+    if isinstance(gate, dict):
+        gate_mapping = {
+            "enforce_operational_gate": "enforce_operational_gate",
+            "strict_fail_fast": "strict_fail_fast",
+            "min_frames": "gate_min_frames",
+            "ranking_auc_min": "gate_ranking_unique_auc_min",
+            "pr_auc_min": "gate_pr_auc_min",
+            "roc_auc_ci_lower_min": "gate_roc_auc_ci_lower_min",
+            "topk_k": "gate_topk_k",
+            "topk_hit_rate_min": "gate_topk_hit_rate_min",
+            "four_bead_cascade_enabled": "gate_four_bead_cascade_enabled",
+            "four_bead_delta_backmap_max": "gate_four_bead_delta_backmap_max",
+            "four_bead_topo_correction_delta_max": "gate_four_bead_topo_correction_delta_max",
+            "four_bead_no_pass_to_fail_vs_2bead": "gate_four_bead_no_pass_to_fail_vs_2bead",
+            "onsps_hbond_angle_score_min": "gate_onsps_hbond_angle_score_min",
+        }
+        for src, dst in gate_mapping.items():
+            if src in gate:
+                setattr(args, dst, gate[src])
+                applied_keys.append(dst)
+    return {"applied": True, "preset_path": preset_path, "applied_keys": applied_keys}
+
+
 def _strict_gate_from_operational(op_gate: Dict[str, Any], args: argparse.Namespace) -> Dict[str, Any]:
     strict_gate = _clone_gate_summary(op_gate, enabled=bool(getattr(args, "enforce_strict_gate", False)))
     if not bool(strict_gate.get("enabled", False)):
@@ -1517,10 +1587,12 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
     date_tag = str(args.date_tag).strip() or dt.date.today().isoformat()
     out_prefix = str(args.out_prefix).strip() or f"runs/ligand_htvs_pipeline_{date_tag}"
     _ensure_parent(f"{out_prefix}_summary.json")
+    preset_meta = _apply_pipeline_preset_json(args)
     engine_cfg = load_engine_refinement_config(str(getattr(args, "engine_refinement_config", "") or "") or None)
     s2_defaults = stage2_defaults(engine_cfg)
     s3_defaults = stage3_defaults(engine_cfg)
     resume_stage3_only = bool(getattr(args, "resume_stage3_only", False))
+    docking_materialized_meta: Dict[str, Any] = {"applied": False}
     stage_lock = {
         "enabled": bool(getattr(args, "single_instance", True)),
         "ok": True,
@@ -1701,6 +1773,8 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
     ligand_json = f"{stage1_prefix}_ligands.json"
     stage1_summary = f"{stage1_prefix}_summary.json"
     stage1_md = f"{stage1_prefix}_summary.md"
+    docking_request_json = str(getattr(args, "docking_request_json", "") or "").strip()
+    use_docking_request_queue = bool(docking_request_json) and os.path.exists(docking_request_json)
 
     stage1_positive_check: Dict[str, Any] = {"ok": True, "skipped": True}
     rec1: Dict[str, Any]
@@ -1711,6 +1785,23 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
                 stage1_roles.append(tok)
     stage1_roles_csv = ",".join(stage1_roles)
     reuse_stage1 = bool(args.reuse_stage1_if_exists)
+    if use_docking_request_queue and (not resume_stage3_only):
+        mat_dir = f"{out_prefix}_docking_materialized"
+        docking_materialized_meta = materialize_from_docking_request(
+            docking_request_json,
+            out_dir=mat_dir,
+        )
+        queue_csv = str(docking_materialized_meta.get("queue_csv", queue_csv))
+        docking_materialized_meta["applied"] = True
+        rec1 = {
+            "ok": True,
+            "skipped": True,
+            "reused": False,
+            "docking_request_materialized": True,
+            "cmd": [],
+            "cmd_str": "",
+            "materialized_meta": docking_materialized_meta,
+        }
     if resume_stage3_only:
         if not os.path.exists(queue_csv):
             payload = {
@@ -1765,7 +1856,7 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         else:
             reuse_stage1 = False
 
-    if (not resume_stage3_only) and (not (reuse_stage1 and "rec1" in locals())):
+    if (not resume_stage3_only) and (not use_docking_request_queue) and (not (reuse_stage1 and "rec1" in locals())):
         stage1_cmd = [
             sys.executable,
             "tools/build_ligand_mapping_queue.py",
@@ -1885,6 +1976,10 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
     stage2_traj_prefix = f"{out_prefix}_stage2_traj"
     generated_trajectory_root = str(args.trajectory_root).strip()
     rec_traj: Optional[Dict[str, Any]] = None
+    stage2_router_meta: Dict[str, Any] = {"enabled": False}
+    stage2_skip_manifest_csv = ""
+    stage2_traj_manifest_csv = f"{stage2_traj_prefix}_manifest.csv"
+    stage2_merged_manifest_csv = stage2_traj_manifest_csv
     if resume_stage3_only:
         if (not generated_trajectory_root) and bool(heavy_paths.get("enabled", False)):
             generated_trajectory_root = str(heavy_paths.get("stage2_trajectory_root", ""))
@@ -1951,7 +2046,6 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
             else "tools/generate_ligand_trajectory_batch.py"
         )
         traj_queue_csv = queue_csv
-        stage2_router_meta: Dict[str, Any] = {"enabled": False}
         if bool(getattr(args, "stage2_skip_router_enabled", True)) and os.path.exists(queue_csv):
             qdf = pd.read_csv(queue_csv)
             if not qdf.empty:
@@ -1967,6 +2061,15 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
                 traj_queue_csv = routed_csv
                 stage2_router_meta["routed_queue_csv"] = routed_csv
                 stage2_router_meta["enabled"] = True
+                skipped_rows = list(stage2_router_meta.get("skipped_rows", []) or [])
+                if skipped_rows:
+                    stage2_skip_manifest_csv = f"{stage2_traj_prefix}_skip_manifest.csv"
+                    skip_inline_meta = build_skip_inline_manifest(
+                        skipped_rows,
+                        out_csv=stage2_skip_manifest_csv,
+                        contact_cutoff_A=float(args.contact_cutoff_A),
+                    )
+                    stage2_router_meta["skip_inline_manifest"] = skip_inline_meta
         traj_cmd = [
             sys.executable,
             traj_script,
@@ -2137,12 +2240,33 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
                 "artifacts": {"summary_json": f"{out_prefix}_summary.json"},
             }
             return _finalize_and_write(out_prefix, payload, args)
+        if stage2_skip_manifest_csv and os.path.exists(stage2_traj_manifest_csv):
+            try:
+                merged_meta = merge_stage2_manifests(
+                    stage2_traj_manifest_csv,
+                    stage2_skip_manifest_csv,
+                    out_csv=f"{stage2_traj_prefix}_merged_manifest.csv",
+                )
+                stage2_merged_manifest_csv = str(merged_meta.get("merged_manifest_csv", stage2_traj_manifest_csv))
+                stage2_router_meta["merged_manifest"] = merged_meta
+            except Exception as exc:
+                stage2_router_meta.setdefault("warnings", []).append(f"stage2_manifest_merge_failed:{exc}")
+        elif stage2_skip_manifest_csv and os.path.exists(stage2_skip_manifest_csv):
+            stage2_merged_manifest_csv = stage2_skip_manifest_csv
+            stage2_router_meta["merged_manifest"] = {
+                "merged_manifest_csv": stage2_skip_manifest_csv,
+                "row_count": int(_csv_rows_minus_header(stage2_skip_manifest_csv)),
+                "traj_manifest_csv": "",
+                "skip_manifest_csv": stage2_skip_manifest_csv,
+            }
     elif not generated_trajectory_root:
         raise ValueError("trajectory source missing: set --trajectory-root or enable --run-trajectory-sim")
     if isinstance(rec_traj, dict):
         rec_traj.setdefault("traj_stage2_settings", traj_stage2_settings)
         rec_traj.setdefault("traj_stage2_preset_diagnostics", traj_stage2_diag)
         rec_traj.setdefault("traj_prod", traj_prod_summary)
+        if stage2_router_meta.get("enabled"):
+            rec_traj["stage2_router_meta"] = stage2_router_meta
 
     stage2_prefix = f"{out_prefix}_stage2"
     stage2_cmd = [
@@ -2232,7 +2356,7 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         "--queue-csv",
         queue_csv,
         "--stage2-manifest-csv",
-        f"{stage2_traj_prefix}_manifest.csv",
+        stage2_merged_manifest_csv,
         "--trajectory-root",
         str(generated_trajectory_root),
         "--trajectory-glob",
@@ -2361,6 +2485,16 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         stage3_cmd.append("--two-pass-scoring")
     else:
         stage3_cmd.append("--no-two-pass-scoring")
+    if bool(getattr(args, "stage3_force_residual_shortlist", False)):
+        stage3_cmd.append("--force-residual-shortlist")
+        stage3_cmd.extend(
+            [
+                "--force-residual-topk-fraction",
+                str(float(getattr(args, "stage3_force_residual_topk_fraction", 0.05))),
+            ]
+        )
+    else:
+        stage3_cmd.append("--no-force-residual-shortlist")
     rec3 = _run_cmd(stage3_cmd)
     if not rec3["ok"]:
         payload = {
@@ -2933,6 +3067,22 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
                     if gate_distance_source == "scores_all_mean":
                         gate_mean_d_candidate = mean_all
                         gate_mean_d_source = "scores_all_mean"
+                if bool(getattr(args, "gate_four_bead_cascade_enabled", False)):
+                    four_bead_summary = evaluate_four_bead_gate(
+                        gate_df,
+                        enabled=True,
+                        delta_backmap_max=float(getattr(args, "gate_four_bead_delta_backmap_max", 2.5)),
+                        topo_correction_delta_max=float(
+                            getattr(args, "gate_four_bead_topo_correction_delta_max", 1.0)
+                        ),
+                        no_pass_to_fail_vs_2bead=bool(
+                            getattr(args, "gate_four_bead_no_pass_to_fail_vs_2bead", True)
+                        ),
+                        onsps_hbond_angle_score_min=float(getattr(args, "gate_onsps_hbond_angle_score_min", 0.0)),
+                    )
+                    gate_summary["four_bead_gate"] = four_bead_summary
+                    if not bool(four_bead_summary.get("pass", True)):
+                        gate_summary["failed_metrics"].extend(list(four_bead_summary.get("failed_metrics", []) or []))
 
         if bool(args.run_ranking_eval) and os.path.exists(stage5_summary_json):
             rank_payload = _read_json_if_exists(stage5_summary_json)
@@ -3665,6 +3815,9 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         "gate_enforcement_mode": gate_enforcement_mode,
         "traj_prod": traj_prod_summary,
         "physics_refinement": physics_refinement_runtime,
+        "pipeline_preset_meta": preset_meta,
+        "docking_materialized_meta": docking_materialized_meta,
+        "stage2_router_meta": stage2_router_meta,
         "stages": {
             "stage_lock": stage_lock,
             "stage_contract_input": contract_input,
@@ -4153,6 +4306,24 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--ranking-missing-score-policy", type=str, default="worst", choices=["worst", "drop"])
     p.add_argument("--ranking-missing-score-worst-margin", type=float, default=1000.0)
     p.add_argument("--ranking-missing-score-worst-value", type=float, default=None)
+    p.add_argument("--docking-request-json", type=str, default="")
+    p.add_argument("--pipeline-preset-json", type=str, default="")
+    p.add_argument("--engine-refinement-config", type=str, default="")
+    p.add_argument("--protein-sequence", type=str, default="")
+    p.add_argument("--stage2-skip-router-enabled", action=argparse.BooleanOptionalAction, default=True)
+    p.add_argument("--stage3-ligand-model", type=str, default="auto")
+    p.add_argument("--stage3-onsps-4bead-cascade", action=argparse.BooleanOptionalAction, default=True)
+    p.add_argument("--stage3-two-pass-scoring", action=argparse.BooleanOptionalAction, default=True)
+    p.add_argument("--stage3-two-pass-topk-pct", type=float, default=0.05)
+    p.add_argument("--stage3-residual-assist-mode", type=str, default="assist")
+    p.add_argument("--stage3-hbond-onsps-weight", type=float, default=1.0)
+    p.add_argument("--stage3-force-residual-shortlist", action=argparse.BooleanOptionalAction, default=False)
+    p.add_argument("--stage3-force-residual-topk-fraction", type=float, default=0.05)
+    p.add_argument("--gate-four-bead-cascade-enabled", action=argparse.BooleanOptionalAction, default=False)
+    p.add_argument("--gate-four-bead-delta-backmap-max", type=float, default=2.5)
+    p.add_argument("--gate-four-bead-topo-correction-delta-max", type=float, default=1.0)
+    p.add_argument("--gate-four-bead-no-pass-to-fail-vs-2bead", action=argparse.BooleanOptionalAction, default=True)
+    p.add_argument("--gate-onsps-hbond-angle-score-min", type=float, default=0.0)
     return p
 
 

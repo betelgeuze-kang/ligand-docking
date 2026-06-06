@@ -2467,10 +2467,12 @@ def _frame_mmpbsa_proxy(
     if model == "4bead_onsps_hbond":
         hb_contacts = 0.0
         angle_scores: List[float] = []
+        bead_min_distances: List[float] = []
         pocket_center = lig.mean(axis=0) if lig.size else np.zeros(3, dtype=np.float32)
         for bead_idx in range(int(lig.shape[0])):
             bead = lig[bead_idx]
             bead_d = np.linalg.norm(prot - bead.reshape(1, 3), axis=1)
+            bead_min_distances.append(float(np.min(bead_d)) if bead_d.size else 999.0)
             element = ""
             if backmap_meta.get("elements"):
                 elements = list(backmap_meta.get("elements", []))
@@ -2482,6 +2484,8 @@ def _frame_mmpbsa_proxy(
             hb_contacts += float(np.sum(hb_core))
             angle_scores.append(float(hbond_angle_score(prot, bead, pocket_center)))
         hb_contacts = float(hb_contacts)
+        backmap_meta["onsps_min_distances"] = bead_min_distances
+        backmap_meta["onsps_angle_scores"] = angle_scores
     elif model == "3bead_implicit_hbond":
         hb_core = np.exp(-((d - 2.9) / 0.45) ** 2)
         hb_contacts = float(np.sum(hb_core))
@@ -2533,6 +2537,9 @@ def _frame_mmpbsa_proxy(
     if model == "4bead_onsps_hbond":
         out["onsps_backmap_status"] = str(backmap_meta.get("backmap_status", ""))
         out["onsps_site_count"] = int(backmap_meta.get("site_count", 0) or 0)
+        out["onsps_min_distances"] = list(backmap_meta.get("onsps_min_distances", []) or [])
+        out["onsps_angle_scores"] = list(backmap_meta.get("onsps_angle_scores", []) or [])
+        out["onsps_roles"] = list(backmap_meta.get("roles", []) or [])
     return out
 
 
@@ -2944,7 +2951,7 @@ def _score_frames(
         if isinstance(representative_ligand_xyz, np.ndarray) and representative_ligand_xyz.ndim == 2
         else np.asarray(ligand_default, dtype=np.float32).astype(float).tolist()
     )
-    return {
+    score_out: Dict[str, Any] = {
         "frame_count": int(frame_count),
         "frame_with_ligand_count": int(frame_with_ligand),
         "trajectory_ligand_presence_fraction": float(frame_with_ligand / max(int(frame_count), 1)),
@@ -3019,6 +3026,26 @@ def _score_frames(
         "ligand_h_acceptors": float(props.get("h_acceptors", 0.0)),
         "ligand_model": str(ligand_model),
     }
+    if str(ligand_model) == "4bead_onsps_hbond":
+        rep_lig = (
+            np.asarray(representative_ligand_xyz, dtype=np.float32)
+            if isinstance(representative_ligand_xyz, np.ndarray) and representative_ligand_xyz.ndim == 2
+            else np.asarray(ligand_default, dtype=np.float32)
+        )
+        meta_ff = _frame_mmpbsa_proxy(
+            protein_xyz=protein_default,
+            ligand_xyz=rep_lig,
+            props=props,
+            contact_cutoff_A=float(contact_cutoff_A),
+            ligand_model=str(ligand_model),
+            hbond_onsps_weight=float(hbond_onsps_weight),
+            smiles=smiles,
+        )
+        score_out["onsps_site_count"] = int(meta_ff.get("onsps_site_count", 0) or 0)
+        score_out["onsps_min_distances"] = list(meta_ff.get("onsps_min_distances", []) or [])
+        score_out["onsps_angle_scores"] = list(meta_ff.get("onsps_angle_scores", []) or [])
+        score_out["onsps_roles"] = list(meta_ff.get("onsps_roles", []) or [])
+    return score_out
 
 
 def _feature_vector_from_scores(df: pd.DataFrame, feature_names: Sequence[str]) -> np.ndarray:
@@ -3424,6 +3451,10 @@ def _process_queue_row(row: Dict[str, Any], cfg: Dict[str, Any]) -> Dict[str, An
         "ligand_h_donors": float(score.get("ligand_h_donors", 0.0)),
         "ligand_h_acceptors": float(score.get("ligand_h_acceptors", 0.0)),
         "ligand_model": str(score.get("ligand_model", str(cfg["ligand_model"]))),
+        "onsps_site_count": score.get("onsps_site_count"),
+        "onsps_min_distances": score.get("onsps_min_distances"),
+        "onsps_angle_scores": score.get("onsps_angle_scores"),
+        "onsps_roles": score.get("onsps_roles"),
         "mean_e_vdw": score.get("mean_e_vdw"),
         "mean_e_polar": score.get("mean_e_polar"),
         "mean_e_nonpolar": score.get("mean_e_nonpolar"),
@@ -3597,6 +3628,80 @@ def _append_replicate_export_metrics(
     return out
 
 
+def _topo_meta_from_row(row: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "site_count": int(row.get("onsps_site_count", 0) or 0),
+        "roles": list(row.get("onsps_roles", []) or []),
+        "onsps_min_distances": list(row.get("onsps_min_distances", []) or []),
+        "onsps_angle_scores": list(row.get("onsps_angle_scores", []) or []),
+    }
+
+
+def _compute_binding_composite_scores(result_df: pd.DataFrame, args: argparse.Namespace) -> pd.DataFrame:
+    if result_df.empty:
+        return result_df
+    for _c in [
+        "binding_energy_mmpbsa_kcal_mol_proxy",
+        "mean_min_distance_A",
+        "stability_score",
+        "contact_fraction",
+        "binding_energy_mmpbsa_std",
+        "ligand_affinity_hint",
+        "ligand_onsps_norm",
+        "ligand_mw",
+        "ligand_logp",
+        "ligand_rot_bonds",
+        "ligand_h_donors",
+        "ligand_h_acceptors",
+    ]:
+        if _c in result_df.columns:
+            result_df[_c] = pd.to_numeric(result_df[_c], errors="coerce")
+    score_reference_scaling = _load_score_reference_scaling(
+        mode=str(args.score_reference_scaling_mode),
+        stats_json=str(args.score_reference_stats_json),
+    )
+
+    def _z(col: str) -> pd.Series:
+        return _zscore_with_reference(result_df, col, score_reference_scaling)
+
+    z_e = _z("binding_energy_mmpbsa_kcal_mol_proxy")
+    z_d = _z("mean_min_distance_A")
+    z_s = _z("stability_score")
+    z_c = _z("contact_fraction")
+    z_std = _z("binding_energy_mmpbsa_std")
+    z_mw = _z("ligand_mw")
+    z_logp = _z("ligand_logp")
+    z_rot = _z("ligand_rot_bonds")
+    z_hd = _z("ligand_h_donors")
+    z_ha = _z("ligand_h_acceptors")
+    z_aff = _z("ligand_affinity_hint")
+    z_onsps = _z("ligand_onsps_norm")
+    dist = pd.to_numeric(result_df["mean_min_distance_A"], errors="coerce")
+    clash_thr = 2.22
+    clash_scale = 0.25
+    clash_penalty = np.where(
+        np.isfinite(dist.to_numpy()) & (dist.to_numpy() < clash_thr),
+        np.square((clash_thr - dist.to_numpy()) / clash_scale),
+        0.0,
+    )
+    result_df["binding_score_composite_v7"] = (
+        0.95 * z_e
+        + 0.00 * z_d
+        - 0.05 * z_s
+        - 0.15 * z_c
+        + 0.02 * z_std
+        - 1.20 * z_aff
+        - 1.00 * z_onsps
+        - 0.00 * z_mw
+        - 1.20 * z_hd
+        - 1.00 * z_ha
+        - 0.40 * z_rot
+        + 0.24 * z_logp
+        + 0.05 * clash_penalty
+    )
+    return result_df
+
+
 def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
     queue_csv = str(args.queue_csv).strip()
     if (not queue_csv) or (not os.path.exists(queue_csv)):
@@ -3764,8 +3869,11 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         if len(rows_pass1) != len(all_rows):
             raise RuntimeError("two-pass scoring pass1 row count mismatch")
         pass1_df = pd.DataFrame(rows_pass1)
-        rank_metric = "binding_energy_mmpbsa_kcal_mol_proxy"
-        pass1_df["rank_pct"] = pass1_df[rank_metric].rank(method="first", ascending=True) / max(len(pass1_df), 1)
+        pass1_df = _compute_binding_composite_scores(pass1_df, args)
+        pass1_df["rank_pct"] = pass1_df["binding_score_composite_v7"].rank(
+            method="first", ascending=True
+        ) / max(len(pass1_df), 1)
+        two_pass_meta["rank_metric"] = "binding_score_composite_v7"
         rows: List[Dict[str, Any]] = []
         pass2_count = 0
         for i, row in enumerate(all_rows):
@@ -3786,7 +3894,7 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
                 score_2bead = float(p1.get("binding_energy_mmpbsa_kcal_mol_proxy", 0.0))
                 score_4bead = float(p2.get("binding_energy_mmpbsa_kcal_mol_proxy", 0.0))
                 topo = summarize_topo_correction(
-                    {"site_count": int(p2.get("onsps_site_count", onsps_site_count(str(row.get("ligand_smiles", "")))) or 0)},
+                    _topo_meta_from_row(p2),
                     score_2bead,
                     score_4bead,
                 )
@@ -3938,6 +4046,15 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
             + 0.24 * z_logp
             + 0.05 * clash_penalty
         )
+        force_residual_meta: Dict[str, Any] = {"applied": False, "reason": "disabled"}
+        if bool(getattr(args, "force_residual_shortlist", False)):
+            from tools.product.force_residual_shortlist_hook import apply_force_residual_shortlist_hook
+
+            result_df, force_residual_meta = apply_force_residual_shortlist_hook(
+                result_df,
+                top_k_fraction=float(getattr(args, "force_residual_topk_fraction", 0.05)),
+                score_col="binding_score_composite_v7",
+            )
         result_df, aux_meta = _apply_aux_binding_model(
             result_df,
             checkpoint_path=str(args.aux_model_checkpoint),
@@ -3962,6 +4079,7 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
     else:
         aux_meta = {"applied": False, "reason": "empty_scores"}
         residual_shadow_meta = {"enabled": False, "status": "empty_scores"}
+        force_residual_meta = {"applied": False, "reason": "empty_scores"}
         score_reference_scaling = _load_score_reference_scaling(
             mode=str(args.score_reference_scaling_mode),
             stats_json=str(args.score_reference_stats_json),
@@ -4006,6 +4124,7 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         "onsps_4bead_cascade": bool(getattr(args, "onsps_4bead_cascade", True)),
         "two_pass_scoring": bool(getattr(args, "two_pass_scoring", False)),
         "two_pass_meta": two_pass_meta,
+        "force_residual_shortlist": force_residual_meta,
         "residual_assist_mode": str(getattr(args, "residual_assist_mode", "assist")),
         "hbond_onsps_weight": float(args.hbond_onsps_weight),
         "clash_relief_mode": str(args.clash_relief_mode),
@@ -4223,6 +4342,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--two-pass-scoring", action=argparse.BooleanOptionalAction, default=True)
     p.add_argument("--two-pass-topk-pct", type=float, default=0.05)
+    p.add_argument("--force-residual-shortlist", action=argparse.BooleanOptionalAction, default=False)
+    p.add_argument("--force-residual-topk-fraction", type=float, default=0.05)
     p.add_argument("--hbond-onsps-weight", type=float, default=1.0)
     p.add_argument(
         "--clash-relief-mode",

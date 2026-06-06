@@ -15,6 +15,39 @@ from api.tasks import run_simulation_async
 SimulationRunner = Callable[[str, dict[str, Any]], Awaitable[None]]
 
 
+def _sync_docking_ledger_if_needed(
+    *,
+    job_id: str,
+    request_data: dict[str, Any],
+    status: str,
+    result_file: str = "",
+    error: str = "",
+    worker_id: str = "",
+) -> None:
+    params = request_data.get("runner_profile_params", {})
+    if not isinstance(params, dict):
+        return
+    docking_job_id = str(params.get("docking_job_id", "") or "").strip()
+    if not docking_job_id:
+        return
+    try:
+        from pathlib import Path
+
+        from api.docking_dispatch import sync_ledger_from_simulation_result
+
+        jobs_dir = Path(settings.results_storage_path) / "product_docking_jobs"
+        sync_ledger_from_simulation_result(
+            jobs_dir,
+            docking_job_id,
+            status=status,
+            result_file=result_file,
+            error=error,
+            worker_id=worker_id,
+        )
+    except Exception:
+        return
+
+
 def job_results_dir(job_id: str) -> str:
     return os.path.join(settings.results_storage_path, job_id)
 
@@ -107,6 +140,13 @@ async def run_job_once(
         )
         status_data.update({"job_id": job_id, "status": "completed", "result_manifest": manifest_path})
         write_status_file(status_file_path, status_data)
+        _sync_docking_ledger_if_needed(
+            job_id=job_id,
+            request_data=request_data,
+            status="completed",
+            result_file=result_file,
+            worker_id=worker_id,
+        )
         return store.update_job(
             job_id,
             status="completed",
@@ -115,6 +155,13 @@ async def run_job_once(
         )
     except Exception as exc:
         error = str(exc)
+        _sync_docking_ledger_if_needed(
+            job_id=job_id,
+            request_data=request_data,
+            status="failed",
+            error=error,
+            worker_id=worker_id,
+        )
         if retry_on_failure and worker_id:
             released = store.release_job_for_retry(job_id, worker_id, error=error)
             if released is not None and released.get("status") == "retry_ready":

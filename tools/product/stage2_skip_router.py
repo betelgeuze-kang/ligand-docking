@@ -75,6 +75,7 @@ def apply_stage2_skip_router(rows: list[dict[str, Any]], *, family: str = "") ->
         routed.append(updated)
         if route["stage2_skip_applied"]:
             skip_count += 1
+    skipped_rows = [row for row in routed if row.get("stage2_skip_applied")]
     traj_rows = [row for row in routed if not row.get("stage2_skip_applied")]
     summary = {
         "router_enabled": True,
@@ -83,5 +84,7 @@ def apply_stage2_skip_router(rows: list[dict[str, Any]], *, family: str = "") ->
         "stage2_full_count": int(len(traj_rows)),
         "stage2_skip_fraction": float(skip_count / max(len(routed), 1)),
         "family": _normalize_family(family),
+        "skipped_rows": skipped_rows,
+        "routed_rows": routed,
     }
     return traj_rows, summary

@@ -66,7 +66,51 @@ def build_simulate_request(record: dict[str, Any]) -> dict[str, Any]:
             "structure_source_kind": str(record.get("structure_source_kind", "")),
             "ligand_model_hint": str(manifest.get("ligand_model_hint", "auto")),
             "engine_dispatch_manifest": manifest,
+            "intake_payload": record.get("intake_payload", {}),
+            "ligands": list((record.get("intake_payload") or {}).get("ligands", []) or []),
         },
+    }
+
+
+def sync_ledger_from_simulation_result(
+    jobs_dir: Path,
+    job_id: str,
+    *,
+    status: str,
+    result_file: str = "",
+    error: str = "",
+    worker_id: str = "",
+) -> dict[str, Any]:
+    record = read_job_record(jobs_dir, job_id)
+    if not record:
+        return {"synced": False, "reason": "ledger_not_found", "job_id": job_id}
+    event_type = "worker_dispatch_completed" if str(status) == "completed" else "worker_dispatch_failed"
+    updated = append_job_event(
+        record,
+        event_type=event_type,
+        reason=str(error or status),
+        actor=worker_id or "api_worker",
+        details={
+            "worker_state": "completed_fail_closed" if status == "completed" else "failed_fail_closed",
+            "progress_state": event_type,
+            "current_step": event_type,
+            "simulation_status": str(status),
+            "simulation_result_file": str(result_file or ""),
+            "execution_enabled": False,
+            "docking_results_emitted": False,
+        },
+    )
+    updated["worker_state"] = updated.get("worker_state") or (
+        "completed_fail_closed" if status == "completed" else "failed_fail_closed"
+    )
+    updated["simulation_sync_status"] = str(status)
+    updated["simulation_result_file"] = str(result_file or "")
+    write_job_record(jobs_dir, updated)
+    return {
+        "synced": True,
+        "job_id": job_id,
+        "status": str(status),
+        "worker_state": str(updated.get("worker_state", "")),
     }
 
 

@@ -85,8 +85,16 @@ def topo_correction_delta(features: np.ndarray, *, weights: np.ndarray | None = 
 
 def summarize_topo_correction(meta: dict[str, Any], score_2bead: float, score_4bead: float) -> dict[str, Any]:
     site_count = int(meta.get("site_count", 0) or 0)
-    distances = [2.5 + 0.1 * i for i in range(site_count)]
-    angles = [0.5 + 0.05 * i for i in range(site_count)]
+    distances_raw = meta.get("onsps_min_distances", meta.get("min_distances", []))
+    angles_raw = meta.get("onsps_angle_scores", meta.get("angle_scores", []))
+    if isinstance(distances_raw, (list, tuple)) and distances_raw:
+        distances = [float(x) for x in distances_raw]
+    else:
+        distances = [2.5 + 0.1 * i for i in range(site_count)]
+    if isinstance(angles_raw, (list, tuple)) and angles_raw:
+        angles = [float(x) for x in angles_raw]
+    else:
+        angles = [0.5 + 0.05 * i for i in range(site_count)]
     roles = list(meta.get("roles", []) or [])
     match = [1.0 if r in {"donor", "acceptor", "both"} else 0.0 for r in roles]
     unsat_donor = float(sum(1 for r in roles if r in {"donor", "both"}))

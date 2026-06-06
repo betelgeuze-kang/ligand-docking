@@ -178,3 +178,177 @@ def test_docking_dispatch_roundtrip(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     assert outcome.get("dispatched") is True
     ledger = read_job_record(jobs_dir, "dock-dispatch-1")
     assert ledger.get("worker_dispatch_enqueued") is True
+
+
+def test_topo_corrector_uses_measured_geometry_not_synthetic_only():
+    from core.topo_corrector import summarize_topo_correction
+
+    meta = {
+        "site_count": 2,
+        "onsps_min_distances": [2.1, 2.4],
+        "onsps_angle_scores": [0.82, 0.77],
+        "roles": ["donor", "acceptor"],
+    }
+    out = summarize_topo_correction(meta, score_2bead=-5.0, score_4bead=-5.8)
+    assert out["delta_backmap"] == pytest.approx(-0.8)
+    assert out["topo_feature_dim"] == 18
+
+
+def test_stage2_skip_inline_manifest_and_merge(tmp_path: Path):
+    from tools.product.merge_stage2_manifests import merge_stage2_manifests
+    from tools.product.stage2_skip_inline_scorer import build_skip_inline_manifest
+
+    skipped = [
+        {
+            "queue_id": "skip-1",
+            "target": "ADRB2",
+            "ligand_id": "lig-1",
+            "ligand_smiles": "CCO",
+            "stage2_route_decision": "skip_stage2_inline_score",
+            "stage2_skip_applied": True,
+        }
+    ]
+    skip_csv = tmp_path / "skip_manifest.csv"
+    skip_meta = build_skip_inline_manifest(skipped, out_csv=str(skip_csv))
+    assert skip_meta["skip_row_count"] == 1
+    traj_csv = tmp_path / "traj_manifest.csv"
+    pd.DataFrame(
+        [
+            {
+                "queue_id": "traj-1",
+                "binding_energy_proxy": -4.0,
+                "trajectory_frames": 120,
+            }
+        ]
+    ).to_csv(traj_csv, index=False)
+    merged_csv = tmp_path / "merged_manifest.csv"
+    merged = merge_stage2_manifests(str(traj_csv), str(skip_csv), out_csv=str(merged_csv))
+    merged_df = pd.read_csv(merged["merged_manifest_csv"])
+    assert set(merged_df["queue_id"].astype(str)) == {"traj-1", "skip-1"}
+
+
+def test_sync_ledger_from_simulation_result(tmp_path: Path):
+    from api.docking_dispatch import sync_ledger_from_simulation_result
+    from betelgeuze_product.job_orchestration import read_job_record
+
+    jobs_dir = tmp_path / "jobs"
+    jobs_dir.mkdir()
+    record = {"job_id": "dock-sync-1", "status": "accepted_fail_closed"}
+    (jobs_dir / "dock-sync-1.json").write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    out = sync_ledger_from_simulation_result(
+        jobs_dir,
+        "dock-sync-1",
+        status="completed",
+        result_file="/tmp/result.json",
+        worker_id="test-worker",
+    )
+    assert out.get("synced") is True
+    ledger = read_job_record(jobs_dir, "dock-sync-1")
+    assert ledger.get("simulation_sync_status") == "completed"
+    assert ledger.get("worker_state") == "completed_fail_closed"
+
+
+def test_materialize_from_docking_request(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    from api.config import settings
+    from tools.product.materialize_docking_htvs_request import materialize_from_docking_request
+
+    jobs_dir = tmp_path / "product_docking_jobs"
+    jobs_dir.mkdir()
+    monkeypatch.setattr(settings, "results_storage_path", str(tmp_path / "results"))
+    ledger = {
+        "job_id": "dock-mat-1",
+        "intake_payload": {
+            "family": "gpcr",
+            "target_id": "ADRB2",
+            "ligands": [{"compound_id": "cmp-1", "smiles": "CCO"}],
+        },
+    }
+    (jobs_dir / "dock-mat-1.json").write_text(json.dumps(ledger, indent=2) + "\n", encoding="utf-8")
+    request = {
+        "job_id": "sim-1",
+        "target_name": "ADRB2",
+        "runner_profile_params": {"docking_job_id": "dock-mat-1"},
+    }
+    request_path = tmp_path / "request.json"
+    request_path.write_text(json.dumps(request, indent=2) + "\n", encoding="utf-8")
+    out = materialize_from_docking_request(str(request_path), out_dir=str(tmp_path / "mat"))
+    assert out["ligand_count"] == 1
+    queue_df = pd.read_csv(out["queue_csv"])
+    assert len(queue_df) == 1
+    assert str(queue_df.iloc[0]["target"]) == "ADRB2"
+
+
+def test_four_bead_gate_evaluator_pass_and_fail():
+    from tools.product.four_bead_gate_evaluator import evaluate_four_bead_gate
+
+    ok_df = pd.DataFrame(
+        [
+            {
+                "ligand_model_pass2": "4bead_onsps_hbond",
+                "score_2bead": -6.0,
+                "score_4bead": -6.5,
+                "topo_correction_delta": 0.2,
+                "onsps_angle_scores": "[0.8, 0.7]",
+            }
+        ]
+    )
+    ok = evaluate_four_bead_gate(ok_df, enabled=True, delta_backmap_max=2.5)
+    assert ok["pass"] is True
+    bad_df = pd.DataFrame(
+        [
+            {
+                "ligand_model_pass2": "4bead_onsps_hbond",
+                "score_2bead": -6.0,
+                "score_4bead": -1.0,
+                "topo_correction_delta": 2.0,
+                "onsps_angle_scores": "[0.8, 0.7]",
+            }
+        ]
+    )
+    bad = evaluate_four_bead_gate(bad_df, enabled=True, delta_backmap_max=2.5, no_pass_to_fail_vs_2bead=True)
+    assert bad["pass"] is False
+    assert bad["pass_to_fail_regression_count"] >= 1
+
+
+def test_force_residual_shortlist_hook_applies_to_top_fraction():
+    from tools.product.force_residual_shortlist_hook import apply_force_residual_shortlist_hook
+
+    rep = np.asarray([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]], dtype=np.float32)
+    df = pd.DataFrame(
+        [
+            {"queue_id": "a", "binding_score_composite_v7": 1.0, "representative_ligand_xyz": rep},
+            {"queue_id": "b", "binding_score_composite_v7": 5.0, "representative_ligand_xyz": rep},
+        ]
+    )
+    out, meta = apply_force_residual_shortlist_hook(df, top_k_fraction=0.5)
+    assert meta["applied"] is True
+    assert bool(out.loc[out["queue_id"] == "a", "force_residual_applied"].iloc[0]) is True
+
+
+def test_stage2_skip_router_exposes_skipped_rows():
+    rows = [
+        {"family": "gpcr", "affinity_hint": 0.0, "prior_rank_proxy": 0.95},
+        {"family": "gpcr", "affinity_hint": 0.8, "prior_rank_proxy": 0.05},
+    ]
+    traj_rows, summary = apply_stage2_skip_router(rows, family="gpcr")
+    assert len(summary.get("skipped_rows", [])) >= 1
+    assert len(summary.get("routed_rows", [])) == 2
+    assert len(traj_rows) >= 1
+
+
+def test_build_simulate_request_includes_intake_payload():
+    record = {
+        "job_id": "dock-2",
+        "target_id": "ADRB2",
+        "family": "gpcr",
+        "request_sha256": "abc",
+        "ligand_count": 1,
+        "structure_source_kind": "pdb_id",
+        "intake_payload": {"ligands": [{"compound_id": "x", "smiles": "CCO"}]},
+        "engine_dispatch_manifest": {"runner_profile_id": "ligand_htvs_pipeline_default"},
+    }
+    req = build_simulate_request(record)
+    params = req["runner_profile_params"]
+    assert params["docking_job_id"] == "dock-2"
+    assert len(params.get("ligands", [])) == 1
+    assert params.get("intake_payload", {}).get("ligands")

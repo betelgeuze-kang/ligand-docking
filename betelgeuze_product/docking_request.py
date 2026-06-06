@@ -757,6 +757,16 @@ def build_docking_job_record(
         "engine_dispatch_manifest": engine_dispatch,
         "engine_dispatch_ready": bool(engine_dispatch.get("dispatch_ready", False)),
         "scoring_ranking_contract_ready": bool(engine_dispatch.get("engine_roadmap_ready", False)),
+        "intake_payload": {
+            "family": str(normalized["family"]),
+            "target_id": str(normalized["target_id"]),
+            "structure_source_kind": str(normalized["structure_source_kind"]),
+            "ligand_count": int(normalized["ligand_count"]),
+            "ligands": _as_list(payload.get("ligands")),
+            "pdb_id": _text(payload.get("pdb_id")),
+            "pdb_path": _text(payload.get("pdb_path")),
+            "mmcif_path": _text(payload.get("mmcif_path")),
+        },
         "claim_boundary": CLAIM_BOUNDARY,
     }
 

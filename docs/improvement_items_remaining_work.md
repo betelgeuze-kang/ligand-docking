@@ -48,6 +48,21 @@
 
 ---
 
+## 1c) Half-wired 갭 6건 클로저 (2026-06-06) — CLOSED
+
+| # | 항목 | 상태 | 근거 |
+|---|---|---|---|
+| 1 | 2-pass rank가 composite v7 기준 | CLOSED | `run_ligand_backmapping_scoring.py` `two_pass_meta.rank_metric=binding_score_composite_v7`, `summarize_topo_correction` + measured `onsps_*` |
+| 2 | stage2 skip → inline score/manifest 병합 | CLOSED | `stage2_skip_inline_scorer.py`, `merge_stage2_manifests.py`, HTVS `stage2_router_meta` + merged manifest → stage3 |
+| 3 | dispatch polling worker + ledger completion sync | CLOSED | `run_api_docking_dispatch_worker.py`, `api/worker.py` `_sync_docking_ledger_if_needed`, `sync_ledger_from_simulation_result` |
+| 4 | HTVS profile이 docking `request.json` 소비 | CLOSED | `materialize_docking_htvs_request.py`, `--docking-request-json`, profile `{request_json_path}` |
+| 5 | 4-bead blind gate evaluator 연결 | CLOSED | `four_bead_gate_evaluator.py`, HTVS `gate_four_bead_*` + blind preset JSON |
+| 6 | force_residual_shortlist hook | CLOSED | `force_residual_shortlist_hook.py`, backmapping `--force-residual-shortlist`, HTVS `stage3_force_residual_shortlist` |
+
+검증: `tests/unit/test_gap_closure_e2e.py` 확장 (v7/topo, skip merge, dispatch sync, materialize, 4-bead gate, force hook).
+
+---
+
 ## 2) 덜 닫힌 영역과 병목 원인
 
 ### A. API ↔ Engine wiring — P0/P1 갭 클로저 완료 (2026-06-06)
