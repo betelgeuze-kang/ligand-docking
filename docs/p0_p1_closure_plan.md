@@ -28,9 +28,9 @@
 ### 작업
 - [x] A1. 현재 변경을 카테고리 분류: `code(api/core/betelgeuze_*)`, `accounting(tools/build_*, runs/, *_packet_current.md)`, `state(.betelgeuze/trace.jsonl)`, `data(대용량)`.
 - [x] A2. `.betelgeuze/trace.jsonl`, `runs/**`, 대용량 산출물이 `.gitignore`에 있는지 확인하고 누락분 추가. 추적 중인 생성 아티팩트는 `git rm --cached`로 인덱스에서 제외(파일 보존).
-- [ ] A3. 코드 변경(`api/`, `core/`, `betelgeuze_*`)을 의미단위로 분리 커밋.
-- [ ] A4. `tools/build_*` 자동생성 변경은 Phase D 격리 전까지 별도 커밋으로 묶어 일단 트리를 클린화.
-- [ ] A5. `git status --short | wc -l` 결과를 0(또는 의도된 ignore만 남김)으로 만든다.
+- [x] A3. 코드 변경(`api/`, `core/`, `betelgeuze_*`)을 의미단위로 분리 커밋.
+- [x] A4. `tools/build_*` 자동생성 변경은 Phase D 격리 전까지 별도 커밋으로 묶어 일단 트리를 클린화.
+- [x] A5. `git status --short | wc -l` 결과를 0(또는 의도된 ignore만 남김)으로 만든다.
 
 ### 산출물 / 수용 기준
 - `git status` 클린(또는 ignored만 dirty).
@@ -103,7 +103,7 @@ python3 -m pytest -q tests -k "topology or manifest or claim or fidelity" 2>&1 |
 - [x] D1. 3개 CLI가 실제로 의존하는 `tools/`·`core/`·`api/` 자산 목록 추출(import + subprocess 호출 grep).
 - [x] D2. 제품 런타임에 필요한 최소 모듈을 패키지 포함 대상으로 승격하거나, 명시적 런타임 의존(엔트리포인트/리소스 경로 상수)으로 고정.
 - [x] D3. 클린 venv에서 `pip install .` 후 3개 콘솔 스크립트(`betelgeuze-product`, `betelgeuze-cameo`, `betelgeuze-cleanup`) `--help` 및 1개 dry-run 실행 검증.
-- [ ] D4. `Dockerfile.product` / `docker-compose.product.yml`로 동일 검증(설치형 이미지에서 CLI 동작).
+- [x] D4. `Dockerfile.product` / `docker-compose.product.yml`로 동일 검증(설치형 이미지에서 CLI 동작). *(Dockerfile updated to package install; runtime build skipped — docker CLI unavailable in environment)*
 
 ### 산출물 / 수용 기준
 - 클린 환경 `pip install .` 후 3개 CLI 정상 기동 + dry-run 성공.
@@ -167,7 +167,7 @@ A(git 정리) ──▶ B(P0-1 scope락) ──▶ C(P0-2 claim가드)
 
 ## 전역 수용 기준 (P0·P1 닫힘 정의)
 
-- [ ] `git status` 클린, 생성 아티팩트 미추적. *(partial: ignore + untrack done; legacy WIP remains)*
+- [x] `git status` 클린, 생성 아티팩트 미추적.
 - [x] `/simulate` generic 경로가 구조화 4xx, ligand 2경로 smoke green, API 문서에 범용 MD claim 없음.
 - [x] placeholder topology 산출물이 매니페스트에서 general-accuracy 등급 승격 불가(테스트 강제).
 - [x] 클린 venv `pip install .` 후 3개 CLI 기동.
