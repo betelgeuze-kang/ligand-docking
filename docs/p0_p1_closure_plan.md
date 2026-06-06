@@ -180,4 +180,4 @@ A(git 정리) ──▶ B(P0-1 scope락) ──▶ C(P0-2 claim가드)
 
 - 본 계획은 **코드 구현 작업표**이며, 실제 착수 시 Phase 단위로 별도 커밋/검증.
 - 안전 게이트(P1-4의 git 인덱스 조작, P1-5의 설치형 변경)는 실행 전 확인.
-- P2(데이터 externalize, DockQ/MolProbity 등 외부 metric, 상태보고 자기참조성 일부)는 후속 계획에서 다룬다.
+- P2(데이터 externalize, DockQ/MolProbity 등 외부 metric, 상태보고 자기참조성 일부)는 후속 계획 [`p2_expansion_plan.md`](p2_expansion_plan.md)에서 다룬다.
