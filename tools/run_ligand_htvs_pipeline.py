@@ -16,6 +16,9 @@ from typing import Any, Dict, List, Optional, Sequence
 
 import pandas as pd
 
+from tools.product.engine_refinement_config import load_engine_refinement_config, stage2_defaults, stage3_defaults
+from tools.product.stage2_skip_router import apply_stage2_skip_router
+
 try:
     from tools.update_closeout_latest import write_closeout as _write_closeout_latest
 except Exception:  # pragma: no cover
@@ -1514,6 +1517,9 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
     date_tag = str(args.date_tag).strip() or dt.date.today().isoformat()
     out_prefix = str(args.out_prefix).strip() or f"runs/ligand_htvs_pipeline_{date_tag}"
     _ensure_parent(f"{out_prefix}_summary.json")
+    engine_cfg = load_engine_refinement_config(str(getattr(args, "engine_refinement_config", "") or "") or None)
+    s2_defaults = stage2_defaults(engine_cfg)
+    s3_defaults = stage3_defaults(engine_cfg)
     resume_stage3_only = bool(getattr(args, "resume_stage3_only", False))
     stage_lock = {
         "enabled": bool(getattr(args, "single_instance", True)),
@@ -1944,11 +1950,28 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
             if trajectory_engine_mode == "rust_hip"
             else "tools/generate_ligand_trajectory_batch.py"
         )
+        traj_queue_csv = queue_csv
+        stage2_router_meta: Dict[str, Any] = {"enabled": False}
+        if bool(getattr(args, "stage2_skip_router_enabled", True)) and os.path.exists(queue_csv):
+            qdf = pd.read_csv(queue_csv)
+            if not qdf.empty:
+                family_hint = _infer_traj_prod_stage2_preset_family(args)
+                traj_rows, stage2_router_meta = apply_stage2_skip_router(
+                    qdf.to_dict(orient="records"),
+                    family=str(getattr(args, "target_family", "") or family_hint),
+                )
+                routed_csv = f"{stage2_traj_prefix}_routed_queue.csv"
+                pd.DataFrame(traj_rows if traj_rows else qdf.to_dict(orient="records")).to_csv(
+                    routed_csv, index=False
+                )
+                traj_queue_csv = routed_csv
+                stage2_router_meta["routed_queue_csv"] = routed_csv
+                stage2_router_meta["enabled"] = True
         traj_cmd = [
             sys.executable,
             traj_script,
             "--queue-csv",
-            queue_csv,
+            traj_queue_csv,
             "--out-root",
             generated_trajectory_root,
             "--frames",
@@ -1987,6 +2010,17 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
             "25",
             *_traj_resume_existing_stage2_arg(args),
         ]
+        traj_cmd.extend(
+            [
+                "--multi-start-count",
+                str(int(getattr(args, "traj_multi_start_count", s2_defaults.get("multi_start_count", 3)))),
+                "--pocket-protein-max-atoms",
+                str(int(getattr(args, "traj_pocket_protein_max_atoms", s2_defaults.get("pocket_protein_max_atoms", 256)))),
+            ]
+        )
+        protein_sequence = str(getattr(args, "protein_sequence", "") or "").strip()
+        if protein_sequence:
+            traj_cmd.extend(["--protein-sequence", protein_sequence])
         if trajectory_engine_mode == "rust_hip":
             traj_cmd.extend(
                 [
@@ -2307,6 +2341,26 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         stage3_cmd.append("--allow-missing-trajectory")
     else:
         stage3_cmd.append("--no-allow-missing-trajectory")
+    stage3_cmd.extend(
+        [
+            "--ligand-model",
+            str(getattr(args, "stage3_ligand_model", s3_defaults.get("ligand_model_default", "auto"))),
+            "--hbond-onsps-weight",
+            str(float(getattr(args, "stage3_hbond_onsps_weight", s3_defaults.get("hbond_onsps_weight", 1.0)))),
+            "--residual-assist-mode",
+            str(getattr(args, "stage3_residual_assist_mode", s3_defaults.get("residual_assist_mode", "assist"))),
+            "--two-pass-topk-pct",
+            str(float(getattr(args, "stage3_two_pass_topk_pct", s3_defaults.get("two_pass_topk_pct", 0.05)))),
+        ]
+    )
+    if bool(getattr(args, "stage3_onsps_4bead_cascade", s3_defaults.get("onsps_4bead_cascade", True))):
+        stage3_cmd.append("--onsps-4bead-cascade")
+    else:
+        stage3_cmd.append("--no-onsps-4bead-cascade")
+    if bool(getattr(args, "stage3_two_pass_scoring", s3_defaults.get("two_pass_scoring", True))):
+        stage3_cmd.append("--two-pass-scoring")
+    else:
+        stage3_cmd.append("--no-two-pass-scoring")
     rec3 = _run_cmd(stage3_cmd)
     if not rec3["ok"]:
         payload = {

@@ -388,6 +388,7 @@ def _apply_residual_prototype_shadow(
 ) -> tuple[pd.DataFrame, Dict[str, Any]]:
     enabled = bool(getattr(args, "residual_prototype_enabled", False))
     mode = str(getattr(args, "residual_prototype_mode", "shadow_only") or "shadow_only").strip().lower()
+    assist_mode = str(getattr(args, "residual_assist_mode", "assist") or "assist").strip().lower()
     family = str(getattr(args, "residual_prototype_family", "") or "").strip().lower()
     spec_json = str(getattr(args, "residual_prototype_spec_json", "") or "").strip()
     runtime_hook_ready = bool(getattr(args, "residual_prototype_runtime_hook_ready", False))
@@ -426,13 +427,17 @@ def _apply_residual_prototype_shadow(
     if (not enabled) or result_df.empty:
         return result_df, summary
     if family in {"ion_channel", "kinase"}:
+        effective_mode = assist_mode if assist_mode in {"assist", "production", "production_guarded"} else mode
         base_score = pd.to_numeric(result_df["binding_score_composite_v7"], errors="coerce")
         prior_pressure = (
             0.55 * _clip_pos(z_hd) + 0.45 * _clip_pos(z_ha) + 0.20 * _clip_pos(z_rot) + 0.15 * _clip_pos(-z_logp)
         )
         structural_weakness = 0.35 * _clip_pos(z_d) + 0.30 * _clip_pos(-z_c) + 0.20 * _clip_pos(-z_s)
         structural_support = 0.25 * _clip_pos(z_c) + 0.20 * _clip_pos(z_s)
-        topo_delta = pd.Series(np.zeros(len(result_df)), index=result_df.index, dtype=float)
+        topo_delta = pd.to_numeric(
+            result_df.get("topo_correction_delta", pd.Series(np.zeros(len(result_df)))),
+            errors="coerce",
+        ).fillna(0.0)
         delta_backmap = pd.to_numeric(
             result_df.get("topo_delta_backmap", pd.Series(np.zeros(len(result_df)))),
             errors="coerce",
@@ -450,7 +455,7 @@ def _apply_residual_prototype_shadow(
                 structural_support=float(structural_support.iloc[i]),
                 topo_delta=float(topo_delta.iloc[i]),
                 delta_backmap=float(delta_backmap.iloc[i]),
-                mode=mode,
+                mode=effective_mode,
                 max_abs_delta=float(max_abs_delta),
             )
             residual_deltas.append(float(residual["residual_delta"]))
@@ -466,7 +471,7 @@ def _apply_residual_prototype_shadow(
         result_df["binding_score_composite_v7_residual_shadow"] = shadow_scores
         result_df["binding_score_composite_v7_residual_active"] = active_scores
         result_df["residual_shadow_family"] = family
-        result_df["residual_shadow_mode"] = mode
+        result_df["residual_shadow_mode"] = effective_mode
         result_df["residual_shadow_runtime_hook_ready"] = bool(runtime_hook_ready)
         summary.update(
             {
@@ -477,6 +482,7 @@ def _apply_residual_prototype_shadow(
                 "mean_delta": float(np.mean(residual_deltas)) if residual_deltas else 0.0,
                 "max_delta": float(np.max(residual_deltas)) if residual_deltas else 0.0,
                 "status": "residual_assist_ready",
+                "residual_assist_mode": effective_mode,
                 "max_abs_delta_score": float(max_abs_delta),
                 "yellow_band_abs_delta_score": float(yellow_band),
                 "tuning_variant": "family_assist_v1",
@@ -1679,8 +1685,13 @@ def _apply_residual_prototype_shadow(
         "gpcr_core_truebase_gap_penalty_shadow_v15",
         "gpcr_core_false_support_discriminator_shadow_v16",
     }
+    gpcr_effective_mode = mode
+    if assist_mode in {"assist", "production", "production_guarded"} and not shadow_only_active_locked:
+        gpcr_effective_mode = "apply_ranking"
     result_df["binding_score_composite_v7_residual_active"] = (
-        shadow_score if mode in {"apply", "apply_ranking"} and not shadow_only_active_locked else base_score
+        shadow_score
+        if gpcr_effective_mode in {"apply", "apply_ranking"} and not shadow_only_active_locked
+        else base_score
     )
     result_df["residual_shadow_family"] = family
     result_df["residual_shadow_mode"] = mode
@@ -1707,9 +1718,10 @@ def _apply_residual_prototype_shadow(
         {
             "active_score_col": (
                 "binding_score_composite_v7_residual_active"
-                if mode in {"apply", "apply_ranking"} and not shadow_only_active_locked
+                if gpcr_effective_mode in {"apply", "apply_ranking"} and not shadow_only_active_locked
                 else "binding_score_composite_v7"
             ),
+            "residual_assist_mode": assist_mode,
             "shadow_score_col": "binding_score_composite_v7_residual_shadow",
             "positive_delta_count": int((delta > 0.0).sum()),
             "gated_positive_delta_count": int(activation_mask.sum()),
@@ -1726,8 +1738,10 @@ def _apply_residual_prototype_shadow(
             "status": (
                 "shadow_ready_claim_locked"
                 if shadow_only_active_locked
+                else "residual_assist_ready"
+                if assist_mode in {"assist", "production", "production_guarded"} and not shadow_only_active_locked
                 else "shadow_ready"
-                if mode == "shadow_only"
+                if gpcr_effective_mode == "shadow_only"
                 else "apply_ready"
             ),
             "top_shadow": top_shadow,
@@ -2355,15 +2369,27 @@ def _ligand_props(row: Dict[str, Any]) -> Dict[str, float]:
     }
 
 
-def _resolve_ligand_model_for_row(row: Dict[str, Any], default_model: str, *, rank_pct: float = 1.0) -> str:
-    hint = str(row.get("ligand_model_hint", "") or "").strip().lower()
-    if hint in {"2bead", "3bead_implicit_hbond", "4bead_onsps_hbond"}:
-        return hint
+def _resolve_ligand_model_for_row(
+    row: Dict[str, Any],
+    default_model: str,
+    *,
+    rank_pct: float = 1.0,
+    cascade_ignore_hint: bool = False,
+    onsps_4bead_cascade: bool = True,
+) -> str:
     requested = str(row.get("ligand_model", default_model) or default_model).strip().lower()
+    if requested == "auto":
+        requested = "2bead"
+    if not cascade_ignore_hint:
+        hint = str(row.get("ligand_model_hint", "") or "").strip().lower()
+        if hint in {"2bead", "3bead_implicit_hbond", "4bead_onsps_hbond"}:
+            return hint
     if requested == "4bead_onsps_hbond":
         return requested
     if bool(row.get("force_4bead_onsps", False)):
         return "4bead_onsps_hbond"
+    if not bool(onsps_4bead_cascade):
+        return requested if requested else "2bead"
     smiles = str(row.get("ligand_smiles", row.get("smiles", "")) or "")
     family = str(row.get("family", row.get("target_family", "")) or "")
     if needs_onsps_4bead(smiles=smiles, family=family, rank_pct=float(rank_pct)):
@@ -3279,7 +3305,13 @@ def _process_queue_row(row: Dict[str, Any], cfg: Dict[str, Any]) -> Dict[str, An
     )
     clash_relief_mode = str(cfg.get("clash_relief_mode", "off") or "off").strip().lower()
     clash_relief_enabled = clash_relief_mode not in {"", "off", "none", "disabled", "false", "0"}
-    resolved_model = _resolve_ligand_model_for_row(row, str(cfg["ligand_model"]))
+    resolved_model = _resolve_ligand_model_for_row(
+        row,
+        str(cfg["ligand_model"]),
+        rank_pct=float(cfg.get("rank_pct", 1.0)),
+        cascade_ignore_hint=bool(cfg.get("cascade_ignore_hint", False)),
+        onsps_4bead_cascade=bool(cfg.get("onsps_4bead_cascade", True)),
+    )
     inline_score = None if clash_relief_enabled else _inline_score_from_row(row, ligand_model=str(resolved_model))
     if (inline_score is None) and (not frame_paths) and (not trajectory_npz) and (not bool(cfg["allow_missing_trajectory"])):
         raise FileNotFoundError(f"no frames found for queue_id={queue_id}")
@@ -3665,7 +3697,9 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
     if not score_only:
         _ensure_dir(jobs_root)
 
-    rows: List[Dict[str, Any]] = []
+    two_pass_scoring = bool(getattr(args, "two_pass_scoring", False))
+    onsps_4bead_cascade = bool(getattr(args, "onsps_4bead_cascade", True))
+    two_pass_topk_pct = float(getattr(args, "two_pass_topk_pct", 0.05))
     cfg = {
         "jobs_root": jobs_root,
         "trajectory_root": str(args.trajectory_root),
@@ -3680,6 +3714,8 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         "clash_relief_target_min_distance_A": float(args.clash_relief_target_min_distance_A),
         "clash_relief_max_translation_A": float(args.clash_relief_max_translation_A),
         "clash_relief_max_steps": int(args.clash_relief_max_steps),
+        "onsps_4bead_cascade": bool(onsps_4bead_cascade),
+        "residual_assist_mode": str(getattr(args, "residual_assist_mode", "assist")),
     }
     all_rows = df.to_dict(orient="records")
     workers_requested = int(max(0, int(args.workers)))
@@ -3688,26 +3724,87 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
     parallel_threshold = int(max(1, int(args.parallel_threshold)))
     parallel_enabled = bool(workers_used > 1 and len(all_rows) >= parallel_threshold)
     error_rows: List[str] = []
+    two_pass_meta: Dict[str, Any] = {"enabled": bool(two_pass_scoring), "pass2_count": 0}
 
-    if parallel_enabled:
-        with ProcessPoolExecutor(max_workers=workers_used) as ex:
-            fut_map = {ex.submit(_process_queue_row, row, cfg): idx for idx, row in enumerate(all_rows)}
-            for fut in as_completed(fut_map):
-                idx = int(fut_map[fut])
-                row_obj = all_rows[idx]
+    def _run_rows(row_list: List[Dict[str, Any]], row_cfg: Dict[str, Any]) -> List[Dict[str, Any]]:
+        out_rows: List[Dict[str, Any]] = []
+        if parallel_enabled:
+            with ProcessPoolExecutor(max_workers=workers_used) as ex:
+                fut_map = {ex.submit(_process_queue_row, row, row_cfg): idx for idx, row in enumerate(row_list)}
+                ordered: Dict[int, Dict[str, Any]] = {}
+                for fut in as_completed(fut_map):
+                    idx = int(fut_map[fut])
+                    row_obj = row_list[idx]
+                    try:
+                        ordered[idx] = fut.result()
+                    except Exception as e:
+                        qid = str(row_obj.get("queue_id", "")).strip()
+                        error_rows.append(f"{qid or idx}:{e}")
+                for idx in range(len(row_list)):
+                    if idx in ordered:
+                        out_rows.append(ordered[idx])
+        else:
+            for row in row_list:
                 try:
-                    rows.append(fut.result())
+                    out_rows.append(_process_queue_row(row, row_cfg))
                 except Exception as e:
-                    qid = str(row_obj.get("queue_id", "")).strip()
-                    error_rows.append(f"{qid or idx}:{e}")
+                    qid = str(row.get("queue_id", "")).strip()
+                    error_rows.append(f"{qid or '?'}:{e}")
+        return out_rows
+
+    if two_pass_scoring and onsps_4bead_cascade:
+        cfg_pass1 = {
+            **cfg,
+            "ligand_model": "2bead",
+            "cascade_ignore_hint": True,
+            "onsps_4bead_cascade": False,
+            "rank_pct": 1.0,
+        }
+        rows_pass1 = _run_rows(all_rows, cfg_pass1)
+        if len(rows_pass1) != len(all_rows):
+            raise RuntimeError("two-pass scoring pass1 row count mismatch")
+        pass1_df = pd.DataFrame(rows_pass1)
+        rank_metric = "binding_energy_mmpbsa_kcal_mol_proxy"
+        pass1_df["rank_pct"] = pass1_df[rank_metric].rank(method="first", ascending=True) / max(len(pass1_df), 1)
+        rows: List[Dict[str, Any]] = []
+        pass2_count = 0
+        for i, row in enumerate(all_rows):
+            p1 = dict(rows_pass1[i])
+            rank_pct = float(pass1_df.iloc[i]["rank_pct"])
+            p1["rank_pct"] = rank_pct
+            p1["ligand_model_pass1"] = "2bead"
+            resolved = _resolve_ligand_model_for_row(
+                row,
+                str(cfg["ligand_model"]),
+                rank_pct=rank_pct,
+                cascade_ignore_hint=False,
+                onsps_4bead_cascade=True,
+            )
+            if resolved == "4bead_onsps_hbond" and rank_pct <= two_pass_topk_pct:
+                cfg_pass2 = {**cfg, "ligand_model": "4bead_onsps_hbond", "rank_pct": rank_pct}
+                p2 = _process_queue_row(row, cfg_pass2)
+                score_2bead = float(p1.get("binding_energy_mmpbsa_kcal_mol_proxy", 0.0))
+                score_4bead = float(p2.get("binding_energy_mmpbsa_kcal_mol_proxy", 0.0))
+                topo = summarize_topo_correction(
+                    {"site_count": int(p2.get("onsps_site_count", onsps_site_count(str(row.get("ligand_smiles", "")))) or 0)},
+                    score_2bead,
+                    score_4bead,
+                )
+                merged = {**p2, **topo}
+                merged["score_2bead"] = score_2bead
+                merged["score_4bead"] = score_4bead
+                merged["rank_pct"] = rank_pct
+                merged["ligand_model_pass1"] = "2bead"
+                merged["ligand_model_pass2"] = "4bead_onsps_hbond"
+                merged["two_pass_scoring"] = True
+                rows.append(merged)
+                pass2_count += 1
+            else:
+                p1["two_pass_scoring"] = True
+                rows.append(p1)
+        two_pass_meta.update({"pass2_count": int(pass2_count), "topk_pct": float(two_pass_topk_pct)})
     else:
-        workers_used = 1
-        for row in all_rows:
-            try:
-                rows.append(_process_queue_row(row, cfg))
-            except Exception as e:
-                qid = str(row.get("queue_id", "")).strip()
-                error_rows.append(f"{qid or '?'}:{e}")
+        rows = _run_rows(all_rows, cfg)
 
     if error_rows:
         raise RuntimeError(
@@ -3906,6 +4003,10 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         "balance_targets_for_max_jobs": bool(args.balance_targets_for_max_jobs),
         "priority_sampling": priority_sampling,
         "ligand_model": str(args.ligand_model),
+        "onsps_4bead_cascade": bool(getattr(args, "onsps_4bead_cascade", True)),
+        "two_pass_scoring": bool(getattr(args, "two_pass_scoring", False)),
+        "two_pass_meta": two_pass_meta,
+        "residual_assist_mode": str(getattr(args, "residual_assist_mode", "assist")),
         "hbond_onsps_weight": float(args.hbond_onsps_weight),
         "clash_relief_mode": str(args.clash_relief_mode),
         "clash_relief_target_min_distance_A": (
@@ -4114,7 +4215,14 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["2bead", "3bead_implicit_hbond", "4bead_onsps_hbond", "auto"],
     )
     p.add_argument("--onsps-4bead-cascade", action=argparse.BooleanOptionalAction, default=True)
-    p.add_argument("--residual-assist-mode", type=str, default="assist", choices=["shadow_only", "assist", "production"])
+    p.add_argument(
+        "--residual-assist-mode",
+        type=str,
+        default="assist",
+        choices=["shadow_only", "assist", "production", "production_guarded"],
+    )
+    p.add_argument("--two-pass-scoring", action=argparse.BooleanOptionalAction, default=True)
+    p.add_argument("--two-pass-topk-pct", type=float, default=0.05)
     p.add_argument("--hbond-onsps-weight", type=float, default=1.0)
     p.add_argument(
         "--clash-relief-mode",

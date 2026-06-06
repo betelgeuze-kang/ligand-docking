@@ -1256,6 +1256,7 @@ def _engine_cache_key(
     dt_fs: float,
     friction: float,
     kT: float,
+    protein_sequence: str = "",
 ) -> Tuple[Any, ...]:
     return (
         int(n_total),
@@ -1269,6 +1270,7 @@ def _engine_cache_key(
         float(friction),
         float(kT),
         str(config.DEVICE),
+        str(protein_sequence or ""),
     )
 
 
@@ -1286,6 +1288,7 @@ def _get_engine_resources(
     kT: float,
     engine_cache: Optional[Dict[Tuple[Any, ...], Dict[str, Any]]],
     engine_cache_max_entries: int,
+    protein_sequence: str = "",
 ) -> Dict[str, Any]:
     key = _engine_cache_key(
         n_total=n_total,
@@ -1298,6 +1301,7 @@ def _get_engine_resources(
         dt_fs=dt_fs,
         friction=friction,
         kT=kT,
+        protein_sequence=protein_sequence,
     )
     cache_enabled = engine_cache is not None and int(engine_cache_max_entries) > 0
     if cache_enabled and key in engine_cache:
@@ -1312,6 +1316,9 @@ def _get_engine_resources(
         target_name="ligand_htvs",
         strategy_type=str(strategy_type),
     )
+    seq = str(protein_sequence or "").strip()
+    if seq:
+        top.set_residue_types_from_sequence_string(seq)
     ff = ForceField(
         top,
         params={
@@ -1497,6 +1504,7 @@ def _simulate_with_engine_batch(
     engine_cache: Optional[Dict[Tuple[Any, ...], Dict[str, Any]]] = None,
     engine_cache_max_entries: int = 16,
     pocket_protein_max_atoms: int = 256,
+    protein_sequence: str = "",
 ) -> Tuple[np.ndarray, np.ndarray, str, int, bool, int, Dict[str, Any]]:
     if protein.shape[0] <= 0:
         protein = np.zeros((1, 3), dtype=np.float32)
@@ -1559,6 +1567,7 @@ def _simulate_with_engine_batch(
         kT=float(kT),
         engine_cache=engine_cache,
         engine_cache_max_entries=int(engine_cache_max_entries),
+        protein_sequence=str(protein_sequence or ""),
     )
     ff = engine["ff"]
     integrator = engine["integrator"]
@@ -2307,6 +2316,7 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                 engine_cache=engine_cache,
                 engine_cache_max_entries=int(args.engine_cache_max_entries),
                 pocket_protein_max_atoms=int(getattr(args, "pocket_protein_max_atoms", 256) or 256),
+                protein_sequence=str(getattr(args, "protein_sequence", "") or ""),
             )
             prod_early_stop_eval_keep_count += int(sim_telemetry.get("prod_early_stop_eval_keep_count", 0))
             prod_early_stop_eval_row_count += int(sim_telemetry.get("prod_early_stop_eval_row_count", 0))

@@ -71,6 +71,17 @@ def _safe_slug_path_target(name: str) -> str:
     return s or "target"
 
 
+def _infer_target_family(target: str) -> str:
+    t = str(target or "").strip().lower()
+    if any(tok in t for tok in ("adrb", "gpcr", "oprm", "htr", "drd", "mchr", "adrb2")):
+        return "gpcr"
+    if any(tok in t for tok in ("trpv", "ion_channel", "ionchannel")):
+        return "ion_channel"
+    if any(tok in t for tok in ("kinase", "cdk", "jak", "protease")):
+        return "kinase"
+    return ""
+
+
 def _slug(text: str) -> str:
     s = re.sub(r"[^a-zA-Z0-9]+", "_", str(text).strip()).strip("_")
     return s or "ligand"
@@ -441,7 +452,7 @@ def _ligand_from_csv_row(
     bead_count = int(max(len(bead_coords), 1))
     site_count = int(onsps_site_count(smiles))
     family = _clean_text_field(row.get("family", row.get("target_family", "")))
-    model_hint = "4bead_onsps_hbond" if needs_onsps_4bead(smiles=smiles, family=family) else "2bead"
+    model_hint = "2bead"
     return LigandRecord(
         ligand_id=ligand_id,
         smiles=smiles,
@@ -838,9 +849,12 @@ def build_queue(args: argparse.Namespace) -> Dict[str, Any]:
             queue_id = f"{_slug(target)}__rep{replica_idx:04d}__{_slug(lig.ligand_id)}"
             bead0 = lig.bead_coords[0] if lig.bead_coords else [0.0, 0.0, 0.0]
             bead1 = lig.bead_coords[1] if len(lig.bead_coords) > 1 else bead0
+            target_family = _infer_target_family(target)
             row = {
                 "queue_id": queue_id,
                 "target": target,
+                "family": str(target_family),
+                "target_family": str(target_family),
                 "replica_idx": int(replica_idx),
                 "ligand_id": lig.ligand_id,
                 "ligand_smiles": lig.smiles,

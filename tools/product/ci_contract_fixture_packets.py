@@ -143,6 +143,106 @@ def write_capability_prerequisite_packets(runs_dir: Path) -> None:
             }
         },
     )
+    write_production_ai_checkpoint_fixture_packets(runs_dir)
+    write_claim_expansion_gate_scaffolds(runs_dir)
+
+
+def write_production_ai_checkpoint_fixture_packets(runs_dir: Path) -> None:
+    _write(
+        runs_dir / "residual_model_registry_current.json",
+        {
+            "summary": {
+                "status": "residual_model_registry_ready",
+                "default_residual_mode": "production_guarded",
+                "production_promotion_allowed": True,
+                "families": ["gpcr", "kinase", "ion_channel"],
+            },
+            "components": {
+                "stage_router": {"output": "stage2_route_decision", "ready": True},
+                "score_residual": {"mode": "production_guarded", "ready": True},
+            },
+        },
+    )
+    _write(
+        runs_dir / "product_production_ai_checkpoint_readiness_current.json",
+        {
+            "summary": {
+                "status": "product_production_ai_checkpoint_readiness_ready",
+                "checkpoint_chain_ready": True,
+                "production_guarded_residual_ready": True,
+                "execution_enabled": False,
+                "docking_results_emitted": False,
+            }
+        },
+    )
+    _write(
+        runs_dir / "residual_production_checkpoint_preflight_current.json",
+        {
+            "summary": {
+                "status": "residual_production_checkpoint_preflight_ready",
+                "promotion_mode": "production_guarded",
+                "preflight_green": True,
+                "execution_enabled": False,
+            }
+        },
+    )
+    _write(
+        runs_dir / "residual_production_training_data_contract_current.json",
+        {
+            "summary": {
+                "status": "residual_production_training_data_contract_ready",
+                "training_data_contract_ready": True,
+                "gpu_return_receipt_ready": True,
+            }
+        },
+    )
+
+
+def write_claim_expansion_gate_scaffolds(runs_dir: Path) -> None:
+    _write(
+        runs_dir / "cameo_claim_boundary_expansion_scaffold_current.json",
+        {
+            "summary": {
+                "status": "cameo_claim_boundary_scaffold_ready",
+                "official_results_claim_allowed": False,
+                "receiver_smoke_ready": True,
+                "expansion_stage": "scaffold_ready",
+            }
+        },
+    )
+    _write(
+        runs_dir / "ca2_claim_boundary_expansion_scaffold_current.json",
+        {
+            "summary": {
+                "status": "ca2_claim_boundary_scaffold_ready",
+                "packet_replacement_ready": False,
+                "review_policy_closure_ready": True,
+                "expansion_stage": "scaffold_ready",
+            }
+        },
+    )
+    _write(
+        runs_dir / "pxr_claim_boundary_expansion_scaffold_current.json",
+        {
+            "summary": {
+                "status": "pxr_claim_boundary_scaffold_ready",
+                "blocked_row_count": 6,
+                "ready_row_count": 8,
+                "expansion_stage": "scaffold_ready",
+            }
+        },
+    )
+    _write(
+        runs_dir / "transporter_claim_boundary_expansion_scaffold_current.json",
+        {
+            "summary": {
+                "status": "transporter_claim_boundary_scaffold_ready",
+                "direct_binding_kcal_claim_allowed": False,
+                "binder_promotion_gate_ready": True,
+                "expansion_stage": "scaffold_ready",
+            }
+        },
+    )
 
 
 def write_license_packets(runs_dir: Path) -> None:

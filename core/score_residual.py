@@ -7,6 +7,7 @@ from typing import Any
 import numpy as np
 
 SUPPORTED_FAMILIES = {"gpcr", "kinase", "ion_channel"}
+PRODUCTION_MODES = {"assist", "production", "production_guarded"}
 DEFAULT_MAX_ABS_DELTA = 1.5
 DEFAULT_YELLOW_BAND = 0.75
 
@@ -60,14 +61,40 @@ def apply_score_residual(
     gated = raw if (raw > 0.0 and prior_pressure > 0.05) else 0.0
     delta = _clip_delta(gated, max_abs_delta)
     shadow = float(base_score) + float(delta)
-    active = float(base_score) if str(mode).lower() == "shadow_only" else float(shadow)
+    mode_norm = str(mode).lower()
+    abstention_reason = ""
+    if mode_norm == "shadow_only":
+        active = float(base_score)
+        status = "residual_shadow_only"
+    elif mode_norm == "production_guarded":
+        yellow = float(DEFAULT_YELLOW_BAND)
+        if float(abs(delta)) <= 0.0:
+            active = float(base_score)
+            status = "production_guarded_abstained"
+            abstention_reason = "zero_delta"
+        elif float(abs(delta)) > yellow:
+            active = float(base_score)
+            status = "production_guarded_abstained"
+            abstention_reason = "yellow_band_exceeded"
+        else:
+            active = float(shadow)
+            status = "production_guarded_applied"
+    elif mode_norm in PRODUCTION_MODES:
+        active = float(shadow)
+        status = "residual_ready"
+    else:
+        active = float(shadow)
+        status = "residual_ready"
     return {
         "active_score": float(active),
         "shadow_score": float(shadow),
         "residual_delta": float(delta),
         "residual_delta_raw": float(raw),
         "residual_band": residual_band(abs(float(delta))),
-        "status": "residual_ready",
+        "status": status,
         "mode": str(mode),
         "family": fam,
+        "abstention_reason": abstention_reason,
+        "corrected_score": float(shadow),
+        "uncertainty": float(abs(delta) / max(float(max_abs_delta), 1e-6)),
     }

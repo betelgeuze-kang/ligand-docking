@@ -8,6 +8,8 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 
 from api.config import settings
+from api.docking_dispatch import dispatch_docking_job_if_eligible
+from api.job_store import SQLiteJobStore
 from betelgeuze_product.docking_request import build_docking_job_record, persist_docking_job_record
 from betelgeuze_product.job_orchestration import (
     cancel_job_record,
@@ -189,6 +191,11 @@ async def submit_docking_job(payload: DockingJobRequest, request: Request) -> di
         scope_claim_guard_packet=_read_json_object(PRODUCT_SCOPE_CLAIM_GUARD_ARTIFACT),
     )
     path = persist_docking_job_record(record, _jobs_dir())
+    dispatch_outcome = dispatch_docking_job_if_eligible(
+        record,
+        jobs_dir=_jobs_dir(),
+        store=SQLiteJobStore(settings.api_job_store_path),
+    )
     return {
         "job_id": record["job_id"],
         "status": record["status"],
@@ -287,6 +294,9 @@ async def submit_docking_job(payload: DockingJobRequest, request: Request) -> di
         "reproducible_rerun_ready": record["reproducible_rerun_ready"],
         "long_running_status_persistence_ready": record["long_running_status_persistence_ready"],
         "ledger_path": str(path),
+        "engine_dispatch_ready": record.get("engine_dispatch_ready", False),
+        "worker_dispatch_enqueued": bool(dispatch_outcome.get("dispatched", False)),
+        "worker_dispatch_reason": str(dispatch_outcome.get("reason", "")),
         "claim_boundary": record["claim_boundary"],
     }
 

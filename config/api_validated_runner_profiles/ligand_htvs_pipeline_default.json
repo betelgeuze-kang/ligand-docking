@@ -1,0 +1,22 @@
+{
+  "enabled": true,
+  "profile_id": "ligand_htvs_pipeline_default",
+  "runner_script": "tools/run_ligand_htvs_pipeline.py",
+  "arguments": [
+    "--out-prefix",
+    "{job_results_dir}/htvs",
+    "--run-scope",
+    "smoke",
+    "--out-summary-json",
+    "{result_file}"
+  ],
+  "result_file_template": "{job_results_dir}/runner_result.json",
+  "claim_boundary": "Operator-approved HTVS pipeline dispatch. Execution remains fail-closed for customer pose emission until delivery bundle validation is green.",
+  "production_readiness": {
+    "approved_by": "operator-gap-closure",
+    "approved_at_utc": "2026-06-06T12:00:00+00:00",
+    "claim_scope": "restricted_local_delivery_proxy_refinement_only",
+    "evidence_artifact": "config/api_validated_runner_profiles/evidence/ligand_htvs_pipeline_default.evidence.json",
+    "runner_script_sha256": "6ad6169f496014d571f7c6466f013928757e039042d03d31c59d078de3657789"
+  }
+}

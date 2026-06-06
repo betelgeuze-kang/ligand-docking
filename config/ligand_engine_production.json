@@ -12,7 +12,9 @@
     "ligand_model_default": "auto",
     "onsps_4bead_cascade": true,
     "residual_assist_mode": "assist",
-    "hbond_onsps_weight": 1.0
+    "hbond_onsps_weight": 1.0,
+    "two_pass_scoring": true,
+    "two_pass_topk_pct": 0.05
   },
   "claim_boundary": "restricted_local_delivery_proxy_refinement_only"
 }

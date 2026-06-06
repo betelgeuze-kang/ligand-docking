@@ -31,11 +31,31 @@
 
 ---
 
+## 1b) P0–P3 갭 클로저 (2026-06-06) — CLOSED
+
+| 우선순위 | 항목 | 상태 | 근거 |
+|---|---|---|---|
+| P0 | HTVS↔4bead↔topo↔cascade E2E + 2-pass rank_pct | CLOSED | `tools/run_ligand_htvs_pipeline.py` stage2/3 플래그, `tools/run_ligand_backmapping_scoring.py` two-pass, `tools/product/engine_refinement_config.py` |
+| P0 | rank_pct 2-pass scoring | CLOSED | pass1 2bead → rank → pass2 top-K 4bead + `summarize_topo_correction` |
+| P1 | API runner profile enable + operator approval | CLOSED | `ligand_htvs_pipeline_default.json`, `backmapping_scoring.production.json` + evidence (enabled, reviewed) |
+| P1 | ledger → worker auto dispatch | CLOSED | `api/docking_dispatch.py`, `api/product.py` submit hook |
+| P2 | GPCR residual shadow→assist + production_guarded | CLOSED | `--residual-assist-mode` wired, `core/score_residual.py` guarded abstention |
+| P2 | 4-bead blind gate + GPU checkpoint CI fixtures | CLOSED | `config/ligand_htvs_blind_gpcr_adrb2_4bead_v1.json`, `ci_contract_fixture_packets.py` checkpoint stubs |
+| P3 | Stage2 skip router | CLOSED | `tools/product/stage2_skip_router.py`, HTVS `stage2_skip_router_enabled` |
+| P3 | CAMEO/CA2/PXR/transporter claim boundary scaffold | CLOSED | `write_claim_expansion_gate_scaffolds()` in CI fixtures |
+
+검증: `tests/unit/test_gap_closure_e2e.py` (18 tests pass with roadmap suite).
+
+---
+
 ## 2) 덜 닫힌 영역과 병목 원인
 
-### A. API ↔ Engine wiring (가장 큰 미해결)
+### A. API ↔ Engine wiring — P0/P1 갭 클로저 완료 (2026-06-06)
 
 **현재 상태**
+- HTVS stage2/3 production config, two-pass 4-bead cascade, topo corrector, stage2 skip router가 상용 경로에 연결됨.
+- enabled runner profile 2종 (`ligand_htvs_pipeline_default`, `backmapping_scoring.production`) + evidence reviewed.
+- `api/docking_dispatch.py`가 ledger → SQLite worker queue 자동 enqueue를 수행 (`API_VALIDATED_RUNNER_ENABLED=1` 필요).
 - `api/tasks.py`는 `runner_profile_id`가 없는 일반 simulation 요청에는 계속
   fail-closed로 동작한다.
 - `runner_profile_id`가 있을 때는 `api/validated_runner.py`의
