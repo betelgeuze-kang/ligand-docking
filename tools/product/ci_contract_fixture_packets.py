@@ -149,6 +149,9 @@ def write_capability_prerequisite_packets(runs_dir: Path) -> None:
     write_science_claim_promotion_closure_packets(runs_dir)
     write_deploy_ops_legal_closure_packets(runs_dir)
     write_storage_tools_closure_packets(runs_dir)
+    from tools.product.write_full_gap_closure_fixture_packets import write_full_gap_closure_fixture_packets
+
+    write_full_gap_closure_fixture_packets(runs_dir)
 
 
 def write_production_ai_checkpoint_fixture_packets(runs_dir: Path) -> None:

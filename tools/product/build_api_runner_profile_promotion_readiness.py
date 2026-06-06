@@ -22,6 +22,7 @@ APPROVAL_TOKEN = "APPROVE_API_RUNNER_PROFILE_PROMOTION"
 ALLOWED_RUNNER_SCRIPTS = {
     "tools/run_ligand_htvs_pipeline.py",
     "tools/run_ligand_backmapping_scoring.py",
+    "tools/run_ligand_topk_delivery.py",
 }
 REQUIRED_TRUE_EVIDENCE = (
     "input_contract_reviewed",
@@ -138,8 +139,18 @@ def _profile_paths(profiles_dir: Path) -> list[Path]:
     return sorted(path for path in profiles_dir.glob("*.json") if path.is_file())
 
 
-def _expected_evidence_path(evidence_dir: Path, profile_id: str) -> Path:
-    return evidence_dir / f"{profile_id}.evidence.template.json"
+def _evidence_paths(evidence_dir: Path, profile_id: str) -> list[Path]:
+    return [
+        evidence_dir / f"{profile_id}.evidence.template.json",
+        evidence_dir / f"{profile_id}.evidence.json",
+    ]
+
+
+def _read_profile_evidence(evidence_dir: Path, profile_id: str) -> tuple[Path, dict[str, Any]]:
+    for path in _evidence_paths(evidence_dir, profile_id):
+        if path.is_file():
+            return path, _read_json_if_present(path)
+    return _evidence_paths(evidence_dir, profile_id)[0], {}
 
 
 def _evidence_status(evidence: dict[str, Any]) -> tuple[bool, list[str]]:
@@ -171,11 +182,16 @@ def build_api_runner_profile_promotion_readiness(
         runner_exists = bool(runner_script and runner_path.is_file())
         runner_hash = _sha256(runner_path)
         runner_allowlisted = runner_script in ALLOWED_RUNNER_SCRIPTS
-        evidence_path = _expected_evidence_path(evidence_root, profile_id)
-        evidence = _read_json_if_present(evidence_path)
+        evidence_path, evidence = _read_profile_evidence(evidence_root, profile_id)
         evidence_ready, evidence_blockers = _evidence_status(evidence)
+        production_readiness = profile.get("production_readiness")
+        production_readiness = production_readiness if isinstance(production_readiness, dict) else {}
+        production_evidence_path = _text(production_readiness.get("evidence_artifact"))
+        production_evidence = _read_json_if_present(production_evidence_path) if production_evidence_path else {}
+        production_evidence_ready, _ = _evidence_status(production_evidence) if production_evidence else (False, [])
+        already_promoted = enabled and production_evidence_ready
         profile_blockers: list[str] = []
-        if enabled:
+        if enabled and not already_promoted:
             profile_blockers.append("profile_already_enabled")
         if not runner_script:
             profile_blockers.append("runner_script_missing")
@@ -187,10 +203,11 @@ def build_api_runner_profile_promotion_readiness(
             profile_blockers.append("result_file_template_missing")
         if not _text(profile.get("claim_boundary")):
             profile_blockers.append("claim_boundary_missing")
-        if not evidence_path.is_file():
+        if not evidence_path.is_file() and not production_evidence_path:
             profile_blockers.append("evidence_file_missing")
-        profile_blockers.extend(evidence_blockers)
-        ready = not profile_blockers
+        if not already_promoted:
+            profile_blockers.extend(evidence_blockers)
+        ready = already_promoted or not profile_blockers
         rows.append(
             {
                 "profile_id": profile_id,

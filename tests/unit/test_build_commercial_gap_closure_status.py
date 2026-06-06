@@ -283,6 +283,8 @@ def test_commercial_gap_closure_status_cli_writes_outputs(tmp_path: Path) -> Non
             str(tmp_path / "missing_public_assist_gate.json"),
             "--residual-model-registry-json",
             str(tmp_path / "missing_residual_model_registry.json"),
+            "--production-ai-checkpoint-readiness-json",
+            str(tmp_path / "missing_production_ai_checkpoint_readiness.json"),
             "--customer-alpha-json",
             str(written["alpha"]),
             "--commercial-independence-json",

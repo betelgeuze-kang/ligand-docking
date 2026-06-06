@@ -67,6 +67,41 @@ def test_api_runner_profile_promotion_readiness_blocks_unfilled_evidence(tmp_pat
     assert summary["external_state_mutated"] is False
 
 
+def test_api_runner_profile_promotion_readiness_accepts_enabled_profile_with_production_evidence(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    profile = {
+        "enabled": True,
+        "profile_id": "example",
+        "runner_script": "tools/run_ligand_backmapping_scoring.py",
+        "arguments": [],
+        "result_file_template": "{job_results_dir}/runner_result.json",
+        "claim_boundary": "reviewed boundary",
+        "production_readiness": {
+            "evidence_artifact": "evidence/example.evidence.json",
+        },
+    }
+    (tmp_path / "profiles" / "example.json").parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / "profiles" / "example.json").write_text(json.dumps(profile) + "\n", encoding="utf-8")
+    (tmp_path / "tools" / "run_ligand_backmapping_scoring.py").parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / "tools" / "run_ligand_backmapping_scoring.py").write_text("# runner\n", encoding="utf-8")
+    _write_evidence(tmp_path, ready=True)
+    (tmp_path / "evidence" / "example.evidence.json").write_text(
+        (tmp_path / "evidence" / "example.evidence.template.json").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    payload = mod.build_api_runner_profile_promotion_readiness(
+        profiles_dir=tmp_path / "profiles",
+        evidence_dir=tmp_path / "evidence",
+    )
+
+    assert payload["summary"]["status"] == "api_runner_profile_promotion_ready"
+    assert payload["rows"][0]["promotion_ready"] is True
+    assert payload["rows"][0]["enabled"] is True
+
+
 def test_api_runner_profile_promotion_readiness_ready_with_filled_evidence(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(mod, "ROOT", tmp_path)
     _write_profile(tmp_path)

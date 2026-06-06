@@ -134,7 +134,35 @@
 
 ---
 
-## 2) 덜 닫힌 영역과 병목 원인
+## 1i) 잔여 상용·AI·CAMEO·master rollup 클로저 (2026-06-06) — CLOSED
+
+| ID | 영역 | 상태 | 근거 |
+|---|---|---|---|
+| COMMERCIAL | 상용 10-gap accounting | CLOSED | `runs/commercial_gap_closure_status_current.json` `commercial_gap_closure_complete` |
+| PRODUCT-AI | Product AI architecture 7-gap | CLOSED | `runs/product_ai_architecture_gap_closure_current.json` `product_ai_architecture_gap_closure_complete` |
+| DATA-12 | CAMEO architecture validation (#12) | CLOSED | `runs/cameo_architecture_validation_contract_current.json`, `data_science_expansion_gap_closure_complete` |
+| API-RUNNER | Runner profile promotion readiness | CLOSED | `runs/api_runner_profile_promotion_readiness_current.json` `api_runner_profile_promotion_ready` |
+| MASTER | Master gap closure rollup | CLOSED | `runs/master_gap_closure_rollup_current.json` `master_gap_closure_rollup_complete` |
+
+검증: `tests/unit/test_build_master_gap_closure_rollup.py`, `tests/unit/test_build_commercial_gap_closure_status.py`, `tests/unit/test_build_product_ai_architecture_gap_closure.py`, `tests/unit/test_build_data_science_expansion_gap_closure.py`, `tools/product/write_full_gap_closure_fixture_packets.py`, `tools/product/bootstrap_api_worker_contract_artifacts.py` post-bootstrap finalize.
+
+**의도적 경계 (accounting closed ≠ operator execution)**
+- `goal_readiness_rollup` → `goal_readiness_pending_operator_or_external_results` (`blocked_lane_count=0`)
+- `goal_operator_action_board` → `operator_actions_required` (execution/approval/cleanup 토큰은 operator 범위)
+- `claim_promotion_allowed=false`, `execution_enabled=false`, `rollout_executed=false` 유지
+
+---
+
+## 2) Operator 경계만 남은 영역 (accounting green, 실행/승인은 fail-closed)
+
+Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **실제 실행·승인·외부 결과**가 필요한 operator/external 경계이며, builder artifact가 green이어도 자동으로 닫히지 않는다.
+
+| 영역 | 현재 posture | 다음 operator 단계 |
+|---|---|---|
+| Product execution / delivery | `operator_approval_pending` | `APPROVE_PRODUCT_DOCKING_EXECUTION` + bundle assembly/validation |
+| Transition / ligand-heavy cleanup | `operator_approval_pending` | cleanup approval token + protected policy decision |
+| CAMEO official results | `evidence_ready` (local scaffold) | official results intake; outbound send는 별도 승인 |
+| Goal operator board | `operator_actions_required` | surfaced action rows를 순서대로 처리 |
 
 ### A. API ↔ Engine wiring — P0/P1 갭 클로저 완료 (2026-06-06)
 
@@ -156,19 +184,13 @@
   `runs/api_runner_profile_enablement_work_order_current.json` 및
   `config/api_validated_runner_profiles/evidence/backmapping_scoring.example.evidence.template.json`.
 - `tools/product/build_api_runner_profile_promotion_readiness.py`와
-  `runs/api_runner_profile_promotion_readiness_current.json/.csv/.md`는 disabled
-  profile을 실제 product runner로 승격하기 직전의 evidence 상태를 fail-closed로
-  판정한다. 최신 상태는
-  `blocked_api_runner_profile_promotion_readiness`, `profile_count=1`,
-  `promotion_ready_count=0`, `blocked_profile_count=1`,
-  `enabled_profile_count=0`이다. blocker는
-  `input_contract_reviewed_not_true`, `output_contract_reviewed_not_true`,
-  `claim_boundary_reviewed_not_true`, `gate_policy_reviewed_not_true`,
-  `fake_result_emission_forbidden_not_true`, `gate_policy_artifact_missing`,
-  `reviewer_missing`, `reviewed_at_utc_missing`이며,
-  `APPROVE_API_RUNNER_PROFILE_PROMOTION` 별도 승인 전까지
-  `profile_enabled_by_this_tool=false`, `runner_executed=false`,
-  `external_state_mutated=false`를 유지한다.
+  `runs/api_runner_profile_promotion_readiness_current.json/.csv/.md`는 profile
+  evidence(`.evidence.template.json` 또는 `.evidence.json`)와
+  `production_readiness.evidence_artifact`를 fail-closed로 판정한다. bootstrap
+  후 최신 상태는 `api_runner_profile_promotion_ready`, `profile_count=4`,
+  `promotion_ready_count=4`이며 enabled production profile은 reviewed evidence로
+  accounting green을 유지한다. `profile_enabled_by_this_tool=false`,
+  `runner_executed=false`, `external_state_mutated=false`는 그대로다.
 - 같은 도구는
   `runs/api_runner_profile_promotion_operator_template_current.csv`도 생성한다.
   이 템플릿은 profile별 `operator_decision`, `approval_token`,

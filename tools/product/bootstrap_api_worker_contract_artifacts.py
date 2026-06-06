@@ -76,8 +76,26 @@ def materialize(*, evidence_dir: str = "/tmp/api_runner_profile_evidence_templat
         ("tools/build_tools_package_other_review_classification_plan.py",),
         ("tools/build_tools_package_batch3_review_plan.py",),
         ("tools/build_tools_refactor_gap_closure.py",),
+        ("tools/build_product_infrastructure_gap_closure.py",),
     ]
     for command in builders:
+        _run(*command)
+    from tools.product.write_full_gap_closure_fixture_packets import write_full_gap_closure_fixture_packets
+
+    write_full_gap_closure_fixture_packets(runs_dir)
+    post_builders = [
+        ("tools/product/build_self_hosted_license_distribution_audit.py",),
+        ("tools/build_third_party_license_review_gate.py",),
+        ("tools/build_deploy_ops_legal_gap_closure.py",),
+        ("tools/build_commercial_gap_closure_status.py",),
+        ("tools/build_product_ai_architecture_gap_closure.py",),
+        ("tools/build_product_ai_architecture_execution_backlog.py",),
+        ("tools/build_data_science_expansion_gap_closure.py",),
+        ("tools/build_master_gap_closure_rollup.py",),
+        ("tools/build_goal_readiness_rollup.py",),
+        ("tools/build_goal_operator_action_board.py",),
+    ]
+    for command in post_builders:
         _run(*command)
 
 
