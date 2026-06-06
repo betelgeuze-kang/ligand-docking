@@ -96,6 +96,21 @@ def _artifact_row(name: str, path_text: str) -> dict[str, Any]:
     }
 
 
+def _runner_enablement_work_order_ready(runner: dict[str, Any]) -> bool:
+    if runner.get("status") != "ready":
+        return False
+    enabled_count = int(runner.get("enabled_profile_count") or 0)
+    if enabled_count == 0:
+        return True
+    rows = runner.get("rows", [])
+    if not isinstance(rows, list):
+        return False
+    enabled_rows = [row for row in rows if isinstance(row, dict) and row.get("enabled") is True]
+    if len(enabled_rows) != enabled_count:
+        return False
+    return all(bool(row.get("runner_allowlisted")) and bool(row.get("runner_exists")) for row in enabled_rows)
+
+
 def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     security = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["security_contract"])))
     rollout = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["rollout_plan"])))
@@ -169,7 +184,7 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
         },
         {
             "check": "runner_profile_enablement_work_order_ready",
-            "passed": runner.get("status") == "ready" and int(runner.get("enabled_profile_count") or 0) == 0,
+            "passed": _runner_enablement_work_order_ready(runner),
             "observed": f"status={runner.get('status')};enabled_profile_count={runner.get('enabled_profile_count')}",
         },
         {

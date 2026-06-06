@@ -61,8 +61,11 @@ def test_build_api_runner_profile_enablement_work_order_writes_templates(tmp_pat
     assert template["required_operator_action"]
 
 
-def test_repo_api_runner_profile_enablement_work_order_keeps_examples_disabled(tmp_path: Path) -> None:
+def test_repo_api_runner_profile_enablement_work_order_reflects_operator_approved_profiles(
+    tmp_path: Path,
+) -> None:
     from tools.product.build_api_runner_profile_enablement_work_order import build_work_order
+    from tools.product.validate_api_runner_profiles import validate_profiles
 
     payload = build_work_order(
         Path("config/api_validated_runner_profiles"),
@@ -70,7 +73,14 @@ def test_repo_api_runner_profile_enablement_work_order_keeps_examples_disabled(t
         write_templates=True,
     )
 
-    assert payload["profile_count"] >= 1
-    assert payload["enabled_profile_count"] == 0
-    assert payload["disabled_profile_count"] >= 1
-    assert all(row["enabled"] is False for row in payload["rows"])
+    assert payload["profile_count"] >= 3
+    example_rows = [row for row in payload["rows"] if "example" in row["profile_id"]]
+    assert example_rows
+    assert all(row["enabled"] is False for row in example_rows)
+    enabled_rows = [row for row in payload["rows"] if row["enabled"]]
+    assert len(enabled_rows) == 2
+    assert all(row["runner_allowlisted"] and row["runner_exists"] for row in enabled_rows)
+
+    validation = validate_profiles(Path("config/api_validated_runner_profiles"))
+    assert validation["status"] == "pass"
+    assert validation["enabled_profile_count"] == 2
