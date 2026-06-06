@@ -26,6 +26,7 @@ import numpy as np
 import pandas as pd
 
 from core.definitions import ResearchConstants
+from core.onsps_backmap import needs_onsps_4bead, onsps_site_count
 from tools.pdb_loader import load_native_structure
 
 try:
@@ -51,6 +52,8 @@ class LigandRecord:
     rot_bonds: int
     bead_count: int
     bead_coords: List[List[float]]
+    onsps_site_count: int = 0
+    ligand_model_hint: str = "2bead"
 
 
 def _safe_slug_path_target(name: str) -> str:
@@ -436,6 +439,9 @@ def _ligand_from_csv_row(
         if len(bead_coords) <= 0:
             bead_coords = [[-0.8, 0.0, 0.0], [0.8, 0.0, 0.0]]
     bead_count = int(max(len(bead_coords), 1))
+    site_count = int(onsps_site_count(smiles))
+    family = _clean_text_field(row.get("family", row.get("target_family", "")))
+    model_hint = "4bead_onsps_hbond" if needs_onsps_4bead(smiles=smiles, family=family) else "2bead"
     return LigandRecord(
         ligand_id=ligand_id,
         smiles=smiles,
@@ -447,6 +453,8 @@ def _ligand_from_csv_row(
         rot_bonds=int(rot),
         bead_count=bead_count,
         bead_coords=bead_coords,
+        onsps_site_count=site_count,
+        ligand_model_hint=model_hint,
     )
 
 
@@ -843,6 +851,8 @@ def build_queue(args: argparse.Namespace) -> Dict[str, Any]:
                 "ligand_h_acceptors": int(lig.h_acceptors),
                 "ligand_rot_bonds": int(lig.rot_bonds),
                 "ligand_bead_count": int(lig.bead_count),
+                "onsps_site_count": int(lig.onsps_site_count),
+                "ligand_model_hint": str(lig.ligand_model_hint),
                 "ligand_bead0_x": float(bead0[0]),
                 "ligand_bead0_y": float(bead0[1]),
                 "ligand_bead0_z": float(bead0[2]),

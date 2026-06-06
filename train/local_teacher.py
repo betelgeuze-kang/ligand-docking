@@ -98,15 +98,19 @@ class LocalTeacher:
             precise_forces: [1, local_N, 3] 정밀 계산된 힘
             precise_energy: [1] 정밀 계산된 에너지
         """
-        # Placeholder: Use high-level physics engine
-        # Example: Call ORCA, Gaussian, Amber, etc. via subprocess
-        # This is highly dependent on the specific precise engine used
-        # For simulation, return a perturbed version of the original forces
-        print(f"    Running precise calculation for {len(local_indices)} atoms...")
-        # Simulate a precise calculation result
-        precise_forces = torch.randn_like(local_coords) * 10.0 # Placeholder forces
-        precise_energy = torch.randn(1) * 100.0 # Placeholder energy
-        print(f"    Precise calculation completed.")
+        # Lightweight local analytic correction (no external engine dependency).
+        print(f"    Running local analytic correction for {len(local_indices)} atoms...")
+        b, local_n, _ = local_coords.shape
+        device = local_coords.device
+        box = torch.tensor([100.0, 100.0, 100.0], dtype=local_coords.dtype, device=device)
+        sh = GridSpatialHash(box, 12.0, device)
+        nb_data = sh.get_neighbor_data(local_coords)
+        from core.interaction_forces import analytic_hbond_forces, analytic_hydrophobic_forces
+
+        precise_forces = analytic_hbond_forces(local_coords, nb_data, strength=-0.8)
+        precise_forces = precise_forces + analytic_hydrophobic_forces(local_coords, nb_data, strength=0.25)
+        precise_energy = precise_forces.norm(dim=-1).mean().reshape(1)
+        print("    Local analytic correction completed.")
         return precise_forces, precise_energy
 
 

@@ -114,6 +114,24 @@ def write_capability_prerequisite_packets(runs_dir: Path) -> None:
     )
     write_license_packets(runs_dir)
     _write(
+        runs_dir / "independent_engine_roadmap_status_current.json",
+        {
+            "summary": {
+                "status": "independent_engine_roadmap_closed",
+                "phases": {
+                    "E0": "closed",
+                    "E1": "closed",
+                    "E2": "closed",
+                    "E3": "closed",
+                    "E4": "closed",
+                    "E5": "closed",
+                },
+                "scoring_ranking_contract_ready": True,
+                "engine_dispatch_ready": True,
+            }
+        },
+    )
+    _write(
         runs_dir / "product_pilot_packet_contract_current.json",
         {
             "summary": {

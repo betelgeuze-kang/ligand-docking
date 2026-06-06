@@ -1,0 +1,18 @@
+{
+  "version": "ligand_engine_production_v1",
+  "description": "Production-oriented ligand engine settings separated from frozen validation path.",
+  "stage2": {
+    "multi_start_count": 3,
+    "pocket_protein_max_atoms": 256,
+    "prod_mode": true,
+    "prod_early_stop": true,
+    "require_rust_hip": true
+  },
+  "stage3": {
+    "ligand_model_default": "auto",
+    "onsps_4bead_cascade": true,
+    "residual_assist_mode": "assist",
+    "hbond_onsps_weight": 1.0
+  },
+  "claim_boundary": "restricted_local_delivery_proxy_refinement_only"
+}

@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from betelgeuze_product.engine_dispatch import build_dispatch_manifest
 from betelgeuze_product.structure_analysis import analyze_structure_source
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -671,6 +672,12 @@ def build_docking_job_record(
         retryable=retryable,
         retry_limit_reached=retry_limit_reached,
     )
+    engine_dispatch = build_dispatch_manifest(
+        job_id=resolved_job_id,
+        target_id=str(normalized["target_id"]),
+        family=str(normalized["family"]),
+        ligand_model_hint="auto",
+    )
     return {
         "job_id": resolved_job_id,
         "status": status,
@@ -747,6 +754,9 @@ def build_docking_job_record(
         **ai_decision_trace,
         **customer_report,
         "heavy_artifact_policy": "manifest_first_externalize_before_delete",
+        "engine_dispatch_manifest": engine_dispatch,
+        "engine_dispatch_ready": bool(engine_dispatch.get("dispatch_ready", False)),
+        "scoring_ranking_contract_ready": bool(engine_dispatch.get("engine_roadmap_ready", False)),
         "claim_boundary": CLAIM_BOUNDARY,
     }
 

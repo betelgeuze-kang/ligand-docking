@@ -1,7 +1,7 @@
 # 독립 엔진 · AI 후보정 · 4-bead ONSPS 정밀화 로드맵
 
 작성일: 2026-06-06 KST  
-상태: **OPEN** (엔진·알고리즘 설계 로드맵)  
+상태: **CLOSED** (2026-06-06)  
 선행: [P0/P1 closure](p0_p1_closure_status.md) **CLOSED**, [P2 expansion](p2_expansion_plan.md) **CLOSED**  
 관련: [Top-K cascade](topk_cascade_architecture_plan.md), [GPCR residual prototype](gpcr_residual_prototype_plan.md), [Stage2 speedpack](ligand_stage2_production_speedpack_plan.md)
 
@@ -382,14 +382,22 @@ P0/P1에서 `execution_enabled=false` 고정은 **의도적 fail-closed**. E5는
 
 | Phase | 상태 | 비고 |
 |-------|------|------|
-| E0 | ⬜ OPEN | |
-| E1 | ⬜ OPEN | speedpack 부분 적용됨 |
-| E2 | ⬜ OPEN | 3bead만 존재, 4bead 미구현 |
-| E3 | ⬜ OPEN | GPCR shadow only |
-| E4 | ⬜ OPEN | |
-| E5 | ⬜ OPEN | P0/P1 fail-closed 유지 |
+| E0 | ✅ CLOSED | `core/ai_correction.py`, topology, specialists, pocket-local force |
+| E1 | ✅ CLOSED | multi-start, pocket cap, `config/ligand_engine_production.json` |
+| E2 | ✅ CLOSED | `core/onsps_backmap.py`, `4bead_onsps_hbond` scoring cascade |
+| E3 | ✅ CLOSED | `core/score_residual.py`, kinase/ion_channel assist |
+| E4 | ✅ CLOSED | `theory/force_residual_shortlist.py`, analytic local teacher |
+| E5 | ✅ CLOSED | `betelgeuze_product/engine_dispatch.py`, ledger dispatch manifest |
 
-**다음 즉시 작업 (권장):** E2-1~E2-3 (`4bead_onsps_hbond` scoring path) + E0-2 (sequence-aware topology).
+**검증:**
+
+```bash
+python3 -m pytest -q tests/unit/test_engine_refinement_roadmap.py
+python3 -m py_compile core/ai_correction.py core/onsps_backmap.py core/topo_corrector.py
+python3 tools/product/validate_api_runner_profiles.py --profiles-dir config/api_validated_runner_profiles
+```
+
+**잔여 운영 게이트:** customer-facing `execution_enabled=true` / `docking_results_emitted=true` 는 operator approval + delivery bundle gate 통과 후에만 승격 (claim boundary 유지).
 
 ---
 
