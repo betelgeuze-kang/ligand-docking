@@ -17,13 +17,13 @@ def _commercial_gate_only_license_blocked() -> dict:
     }
 
 
-def _license_decision_ready() -> dict:
+def _license_decision_ready(license_text_source: str = "legal/product-license-template.txt") -> dict:
     return {
         "summary": {
             "status": "product_license_decision_gate_ready",
             "authorized_for_license_file_creation_review": True,
             "spdx_license_id": "ProprietaryRef-Betelgeuze",
-            "license_text_source": "internal counsel approved text",
+            "license_text_source": license_text_source,
             "copyright_holder": "Betelgeuze",
             "effective_year": "2026",
             "license_present": False,
@@ -37,7 +37,9 @@ def test_build_product_license_file_creation_work_order_tool_writes_outputs(tmp_
     out_json = tmp_path / "license_work_order.json"
     out_csv = tmp_path / "license_work_order.csv"
     out_md = tmp_path / "license_work_order.md"
-    license_json.write_text(json.dumps(_license_decision_ready()) + "\n", encoding="utf-8")
+    license_text = tmp_path / "product-license-template.txt"
+    license_text.write_text("Operator approved license text.\n", encoding="utf-8")
+    license_json.write_text(json.dumps(_license_decision_ready(str(license_text))) + "\n", encoding="utf-8")
     commercial_json.write_text(json.dumps(_commercial_gate_only_license_blocked()) + "\n", encoding="utf-8")
 
     mod.main(
@@ -60,12 +62,16 @@ def test_build_product_license_file_creation_work_order_tool_writes_outputs(tmp_
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["summary"]["status"] == "product_license_file_creation_work_order_ready"
     assert payload["summary"]["license_file_written"] is False
+    assert payload["summary"]["license_text_source_present"] is True
+    assert len(payload["summary"]["license_text_source_sha256"]) == 64
     assert "tools/write_product_license_file.py" in payload["summary"]["license_file_write_command_template"]
+    assert str(license_text) in payload["summary"]["license_file_write_command_template"]
     assert payload["summary"]["external_state_mutated"] is False
     assert out_csv.read_text(encoding="utf-8").startswith("check,status,")
     md_text = out_md.read_text(encoding="utf-8")
     assert "Product License File Creation Work Order" in md_text
     assert "license_file_write_command_template" in md_text
+    assert "license_text_source_sha256" in md_text
 
 
 def test_build_product_license_file_creation_work_order_tool_blocks_missing_inputs(tmp_path: Path) -> None:

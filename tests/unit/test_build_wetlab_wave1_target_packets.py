@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_wetlab_wave1_target_packets as mod
+from tools.wetlab import build_wetlab_wave1_target_packets as mod
 
 
 def test_build_wetlab_wave1_target_packets() -> None:

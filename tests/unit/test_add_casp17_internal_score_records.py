@@ -55,7 +55,7 @@ def test_add_casp17_internal_score_records_emits_conservative_score_copy(tmp_pat
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/add_casp17_internal_score_records.py"),
+            str(ROOT / "tools/casp17/add_casp17_internal_score_records.py"),
             "--target-ids",
             "T9999,H9998",
             "--source-dir",
@@ -104,7 +104,7 @@ def test_add_casp17_internal_score_records_emits_low_qscore_for_no_contact_assem
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/add_casp17_internal_score_records.py"),
+            str(ROOT / "tools/casp17/add_casp17_internal_score_records.py"),
             "--target-ids",
             "H9997",
             "--source-dir",

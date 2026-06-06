@@ -4,7 +4,7 @@ import csv
 import json
 from pathlib import Path
 
-from tools import build_casp17_competitive_floor_row_fill_status_packet as mod
+from tools.casp17 import build_casp17_competitive_floor_row_fill_status_packet as mod
 
 
 LAYERS = [

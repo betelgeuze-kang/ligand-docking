@@ -107,7 +107,8 @@ def _root(tmp_path: Path) -> Path:
         '@router.get("/license-options")\n'
         '@router.get("/license-file-work-order")\n'
         '@router.get("/commercial-independence")\n'
-        '@router.get("/release-readiness")\n',
+        '@router.get("/release-readiness")\n'
+        '@router.get("/goal-completion-audit")\n',
         encoding="utf-8",
     )
     (tmp_path / "betelgeuze_product").mkdir()
@@ -130,8 +131,8 @@ def test_product_capability_surface_contract_ready_for_guarded_product_surface(t
 
     summary = payload["summary"]
     assert summary["status"] == "product_capability_surface_contract_ready"
-    assert summary["capability_count"] == 7
-    assert summary["ready_capability_count"] == 7
+    assert summary["capability_count"] == 8
+    assert summary["ready_capability_count"] == 8
     assert summary["blocked_capability_count"] == 0
     assert summary["structure_analysis_capability_ready"] is True
     assert summary["product_structure_analysis_report_ready"] is True
@@ -156,8 +157,18 @@ def test_product_capability_surface_contract_ready_for_guarded_product_surface(t
     assert summary["product_license_file_work_order_endpoint_present"] is True
     assert summary["product_commercial_independence_endpoint_present"] is True
     assert summary["product_release_readiness_endpoint_present"] is True
+    assert summary["product_goal_completion_audit_endpoint_present"] is True
     assert summary["product_cli_surface_present"] is True
     assert summary["guarded_claims_ready"] is True
+    assert summary["restricted_scope_claim_guard_ready"] is True
+    assert summary["allowed_scope_families"] == ["gpcr", "ion_channel", "kinase"]
+    assert summary["blocked_claim_scopes"] == [
+        "transporter_domain_promotion",
+        "pxr_domain_promotion",
+        "general_protein_ligand_platform",
+    ]
+    assert summary["general_platform_claim_allowed"] is False
+    assert "general_platform_claim_allowed=False" in summary["scope_claim_boundary_detail"]
     assert summary["delivery_claim_backed_by_bundle_validation"] is False
     assert summary["execution_enabled"] is False
     assert summary["docking_results_emitted"] is False
@@ -206,6 +217,9 @@ def test_product_capability_surface_allows_delivery_claim_when_validated_bundle_
     assert summary["status"] == "product_capability_surface_contract_ready"
     assert summary["guarded_claims_ready"] is True
     assert summary["delivery_claim_backed_by_bundle_validation"] is True
+    scope_row = next(row for row in payload["rows"] if row["capability_id"] == "restricted_scope_claim_guard")
+    assert scope_row["status"] == "ready"
+    assert "blocked_claim_scopes=transporter_domain_promotion,pxr_domain_promotion,general_protein_ligand_platform" in scope_row["observed"]
     guard_row = next(row for row in payload["rows"] if row["capability_id"] == "guarded_claim_and_execution_flags")
     assert "delivery_ready_claim_allowed=True" in guard_row["observed"]
     assert "delivery_claim_backed_by_bundle_validation=True" in guard_row["observed"]

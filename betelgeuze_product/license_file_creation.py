@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shlex
+from pathlib import Path
 from typing import Any
 
 from betelgeuze_product.license_decision import APPROVAL_TOKEN
@@ -78,6 +80,7 @@ def _review_manifest(
     target_license_path: str,
     spdx_license_id: str,
     license_text_source: str,
+    license_text_source_sha256: str,
     copyright_holder: str,
     effective_year: str,
 ) -> dict[str, Any]:
@@ -85,6 +88,7 @@ def _review_manifest(
         "target_license_path": target_license_path,
         "spdx_license_id": spdx_license_id,
         "license_text_source": license_text_source,
+        "license_text_source_sha256": license_text_source_sha256,
         "copyright_holder": copyright_holder,
         "effective_year": effective_year,
         "approval_token_required": APPROVAL_TOKEN,
@@ -98,12 +102,44 @@ def _fingerprint(payload: dict[str, Any]) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-def _write_command_template(target_license_path: str) -> str:
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _license_text_source_state(source: str) -> dict[str, Any]:
+    if not source:
+        return {
+            "path": "",
+            "present": False,
+            "non_empty": False,
+            "size_bytes": 0,
+            "sha256": "",
+            "reason": "missing",
+        }
+    path = Path(source)
+    present = path.is_file()
+    size_bytes = path.stat().st_size if present else 0
+    non_empty = size_bytes > 0
+    return {
+        "path": str(path),
+        "present": present,
+        "non_empty": non_empty,
+        "size_bytes": size_bytes,
+        "sha256": _file_sha256(path) if present and non_empty else "",
+        "reason": "ready" if present and non_empty else ("empty_file" if present else "file_missing"),
+    }
+
+
+def _write_command_template(target_license_path: str, license_text_source: str) -> str:
     return (
         f"{APPROVAL_TOKEN}=1 python3 tools/write_product_license_file.py "
         " --work-order-json runs/product_license_file_creation_work_order_current.json"
-        " --license-template OPERATOR_APPROVED_LICENSE_TEXT_FILE"
-        f" --out {target_license_path}"
+        f" --license-template {shlex.quote(license_text_source or 'OPERATOR_APPROVED_LICENSE_TEXT_FILE')}"
+        f" --out {shlex.quote(target_license_path)}"
     )
 
 
@@ -124,15 +160,18 @@ def build_product_license_file_creation_work_order(
     copyright_holder = _text(license_decision.get("copyright_holder"))
     effective_year = _text(license_decision.get("effective_year"))
     metadata_ready = all((spdx_license_id, license_text_source, copyright_holder, effective_year))
+    license_text_state = _license_text_source_state(license_text_source)
+    license_text_source_ready = bool(license_text_state["present"] and license_text_state["non_empty"])
     review_manifest = _review_manifest(
         target_license_path=target_license_path,
         spdx_license_id=spdx_license_id,
         license_text_source=license_text_source,
+        license_text_source_sha256=str(license_text_state["sha256"]),
         copyright_holder=copyright_holder,
         effective_year=effective_year,
     )
     review_manifest_fingerprint_sha256 = _fingerprint(review_manifest)
-    write_command_template = _write_command_template(target_license_path)
+    write_command_template = _write_command_template(target_license_path, license_text_source)
 
     rows = [
         _row(
@@ -162,6 +201,18 @@ def build_product_license_file_creation_work_order(
             "LICENSE file creation needs complete operator-approved metadata.",
         ),
         _row(
+            "license_text_source_file_ready",
+            license_text_source_ready,
+            (
+                f"path={license_text_source or 'missing'};"
+                f"present={license_text_state['present']};"
+                f"size_bytes={license_text_state['size_bytes']};"
+                f"reason={license_text_state['reason']}"
+            ),
+            "operator-approved local license text file exists and is non-empty",
+            "The LICENSE creation command reads license_text_source as a local file, so the source must be present before review can be ready.",
+        ),
+        _row(
             "license_not_already_present",
             not license_present,
             f"license_present={license_present}",
@@ -187,6 +238,11 @@ def build_product_license_file_creation_work_order(
         "target_license_path": target_license_path,
         "spdx_license_id": spdx_license_id,
         "license_text_source": license_text_source,
+        "license_text_source_path": str(license_text_state["path"]),
+        "license_text_source_present": bool(license_text_state["present"]),
+        "license_text_source_non_empty": bool(license_text_state["non_empty"]),
+        "license_text_source_size_bytes": int(license_text_state["size_bytes"]),
+        "license_text_source_sha256": str(license_text_state["sha256"]),
         "copyright_holder": copyright_holder,
         "effective_year": effective_year,
         "license_review_manifest_ready": ready,
@@ -218,6 +274,7 @@ def build_product_license_file_creation_work_order(
             "target_license_path": target_license_path,
             "spdx_license_id": spdx_license_id,
             "license_text_source": license_text_source,
+            "license_text_source_sha256": str(license_text_state["sha256"]),
             "copyright_holder": copyright_holder,
             "effective_year": effective_year,
             "license_review_manifest_fingerprint_sha256": review_manifest_fingerprint_sha256,

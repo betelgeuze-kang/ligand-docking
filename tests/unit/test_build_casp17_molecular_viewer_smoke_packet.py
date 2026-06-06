@@ -90,7 +90,7 @@ def test_build_casp17_molecular_viewer_smoke_packet_passes_internal_canvas_viewe
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_molecular_viewer_smoke_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_molecular_viewer_smoke_packet.py"),
             "--viewer-json",
             str(viewer_json),
             "--viewer-html",
@@ -133,7 +133,7 @@ def test_build_casp17_molecular_viewer_smoke_packet_blocks_external_runtime_and_
     result = subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_molecular_viewer_smoke_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_molecular_viewer_smoke_packet.py"),
             "--viewer-json",
             str(viewer_json),
             "--viewer-html",

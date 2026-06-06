@@ -70,7 +70,7 @@ def test_casp17_prediction_batch_gate_plans_ready_and_blocked_rows(tmp_path: Pat
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/run_casp17_prediction_batch_gate.py"),
+            str(ROOT / "tools/casp17/run_casp17_prediction_batch_gate.py"),
             "--launch-packet-json",
             str(launch),
             "--prediction-dir",
@@ -145,7 +145,7 @@ def test_casp17_prediction_batch_gate_executes_ready_row_to_conversion(tmp_path:
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/run_casp17_prediction_batch_gate.py"),
+            str(ROOT / "tools/casp17/run_casp17_prediction_batch_gate.py"),
             "--launch-packet-json",
             str(launch),
             "--execute",

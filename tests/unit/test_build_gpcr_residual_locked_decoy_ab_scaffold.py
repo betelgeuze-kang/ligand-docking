@@ -95,7 +95,7 @@ def test_build_gpcr_residual_locked_decoy_ab_scaffold(tmp_path: Path) -> None:
     subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools/build_gpcr_residual_locked_decoy_ab_scaffold.py"),
+            str(ROOT / "tools/product/build_gpcr_residual_locked_decoy_ab_scaffold.py"),
             "--baseline-run-root",
             str(baseline_root),
             "--source-spec-json",
@@ -170,7 +170,7 @@ def test_build_gpcr_residual_locked_decoy_apply_scaffold(tmp_path: Path) -> None
     subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools/build_gpcr_residual_locked_decoy_ab_scaffold.py"),
+            str(ROOT / "tools/product/build_gpcr_residual_locked_decoy_ab_scaffold.py"),
             "--baseline-run-root",
             str(baseline_root),
             "--source-spec-json",
@@ -243,7 +243,7 @@ def test_build_gpcr_residual_locked_decoy_scaffold_overrides_spec_json(tmp_path:
     subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools/build_gpcr_residual_locked_decoy_ab_scaffold.py"),
+            str(ROOT / "tools/product/build_gpcr_residual_locked_decoy_ab_scaffold.py"),
             "--baseline-run-root",
             str(baseline_root),
             "--source-spec-json",

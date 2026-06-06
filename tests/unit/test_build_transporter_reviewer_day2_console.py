@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from tools import build_transporter_reviewer_day2_console as mod
+from tools.product import build_transporter_reviewer_day2_console as mod
 
 
 def _contains_tokens(text: str, *tokens: str) -> None:

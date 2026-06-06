@@ -67,7 +67,7 @@ def test_build_gpcr_residual_equal_size_ab_scaffold(tmp_path: Path) -> None:
     subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools/build_gpcr_residual_equal_size_ab_scaffold.py"),
+            str(ROOT / "tools/product/build_gpcr_residual_equal_size_ab_scaffold.py"),
             "--source-spec-json",
             str(source_spec),
             "--prototype-spec-json",

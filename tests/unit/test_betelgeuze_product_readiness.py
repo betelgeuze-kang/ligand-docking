@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from betelgeuze_product.readiness import build_product_readiness_gate
-from tools import build_product_readiness_gate as tool
+from tools.product import build_product_readiness_gate as tool
 
 
 def _request() -> dict:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_ca2_negative_review_day_plan as mod
+from tools.product import build_ca2_negative_review_day_plan as mod
 
 
 def test_build_ca2_negative_review_day_plan() -> None:

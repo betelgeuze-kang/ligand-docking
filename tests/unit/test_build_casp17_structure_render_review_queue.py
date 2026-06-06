@@ -108,7 +108,7 @@ def test_build_casp17_structure_render_review_queue_prioritizes_hotspots(tmp_pat
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_structure_render_review_queue.py"),
+            str(ROOT / "tools/casp17/build_casp17_structure_render_review_queue.py"),
             "--render-json",
             str(render),
             "--top-n",

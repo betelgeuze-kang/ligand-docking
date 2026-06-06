@@ -84,7 +84,20 @@ def build_product_operational_quality_contract(sample_request: dict[str, Any] | 
         and record.get("validation_status") == "pass"
         and record.get("execution_enabled") is False
         and record.get("docking_results_emitted") is False
+        and record.get("production_ai_correction_applied") is False
         and record.get("external_state_mutated") is False
+    )
+    production_ai_posture_ready = (
+        record.get("production_ai_correction_applied") is False
+        and record.get("production_ai_inference_subject_active") is False
+        and record.get("production_ai_abstention_enforced") is True
+        and _text(record.get("production_ai_default_residual_mode")) == "shadow"
+        and record.get("production_ai_promotion_allowed") is False
+        and record.get("production_ai_customer_facing_auto_correction_allowed") is False
+        and record.get("production_ai_customer_facing_score_mutation_allowed") is False
+        and record.get("production_ai_customer_facing_ranking_mutation_allowed") is False
+        and int(record.get("production_ai_trained_checkpoint_count") or 0) == 0
+        and "delta_force" in [str(item) for item in record.get("production_ai_selected_sidecar_missing_output_fields") or []]
     )
     sensitive_values = ["ATOM      1", "CCO", "CCC"]
     sensitive_keys_absent = all(key not in record for key in ("request_payload", "ligands", "pdb_content", "mmcif_content"))
@@ -110,10 +123,29 @@ def build_product_operational_quality_contract(sample_request: dict[str, Any] | 
             fail_closed_ready,
             (
                 f"status={record.get('status')};validation_status={record.get('validation_status')};"
-                f"execution_enabled={record.get('execution_enabled')};docking_results_emitted={record.get('docking_results_emitted')}"
+                f"execution_enabled={record.get('execution_enabled')};docking_results_emitted={record.get('docking_results_emitted')};"
+                f"production_ai_correction_applied={record.get('production_ai_correction_applied')}"
             ),
-            "accepted_fail_closed validation pass with execution/results/external mutation disabled",
+            "accepted_fail_closed validation pass with execution/results/production AI correction/external mutation disabled",
             "Commercial intake must accept valid requests only as queued fail-closed records until explicit execution approval.",
+        ),
+        _row(
+            "production_ai_correction_fail_closed",
+            production_ai_posture_ready,
+            (
+                f"production_ai_inference_subject_active={record.get('production_ai_inference_subject_active')};"
+                f"production_ai_correction_applied={record.get('production_ai_correction_applied')};"
+                f"production_ai_abstention_enforced={record.get('production_ai_abstention_enforced')};"
+                f"default_residual_mode={record.get('production_ai_default_residual_mode')};"
+                f"production_promotion_allowed={record.get('production_ai_promotion_allowed')};"
+                f"customer_facing_auto_correction_allowed={record.get('production_ai_customer_facing_auto_correction_allowed')};"
+                f"customer_facing_score_mutation_allowed={record.get('production_ai_customer_facing_score_mutation_allowed')};"
+                f"customer_facing_ranking_mutation_allowed={record.get('production_ai_customer_facing_ranking_mutation_allowed')};"
+                f"trained_checkpoint_count={record.get('production_ai_trained_checkpoint_count')};"
+                f"missing_sidecar_outputs={','.join(str(item) for item in record.get('production_ai_selected_sidecar_missing_output_fields') or [])}"
+            ),
+            "job ledger records no production AI correction, active inference subject false, abstention enforced, shadow residual mode, no trained checkpoint, and missing delta_force output",
+            "Commercial job records must not imply learned AI score correction before production checkpoint evidence is green.",
         ),
         _row(
             "ledger_payload_privacy",
@@ -158,6 +190,25 @@ def build_product_operational_quality_contract(sample_request: dict[str, Any] | 
         "pass_count": sum(1 for row in rows if row["status"] == "pass"),
         "blocker_count": len(blockers),
         "fail_closed_docking_intake_ready": fail_closed_ready,
+        "production_ai_correction_fail_closed_ready": production_ai_posture_ready,
+        "sample_production_ai_inference_subject_active": record.get("production_ai_inference_subject_active") is True,
+        "sample_production_ai_correction_applied": record.get("production_ai_correction_applied") is True,
+        "sample_production_ai_abstention_enforced": record.get("production_ai_abstention_enforced") is True,
+        "sample_production_ai_default_residual_mode": _text(record.get("production_ai_default_residual_mode")),
+        "sample_production_ai_promotion_allowed": record.get("production_ai_promotion_allowed") is True,
+        "sample_production_ai_customer_facing_auto_correction_allowed": record.get(
+            "production_ai_customer_facing_auto_correction_allowed"
+        )
+        is True,
+        "sample_production_ai_customer_facing_score_mutation_allowed": record.get(
+            "production_ai_customer_facing_score_mutation_allowed"
+        )
+        is True,
+        "sample_production_ai_customer_facing_ranking_mutation_allowed": record.get(
+            "production_ai_customer_facing_ranking_mutation_allowed"
+        )
+        is True,
+        "sample_production_ai_trained_checkpoint_count": int(record.get("production_ai_trained_checkpoint_count") or 0),
         "ledger_payload_privacy_ready": privacy_ready,
         "request_traceability_ready": traceability_ready,
         "scope_limit_enforcement_ready": scope_limit_ready,

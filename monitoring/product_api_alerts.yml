@@ -1,0 +1,57 @@
+groups:
+- name: micf-product-api
+  rules:
+  - alert: MicfApiMetricsTargetDown
+    expr: up{job="micf-api"} == 0
+    for: 2m
+    labels:
+      severity: critical
+      service: micf-api
+    annotations:
+      summary: "MICF product API metrics target is down"
+      description: "Prometheus cannot scrape the micf-api /metrics endpoint for more than 2 minutes."
+
+  - alert: MicfApiAuditWriteFailures
+    expr: increase(betelgeuze_product_audit_write_failures_total[5m]) > 0
+    for: 1m
+    labels:
+      severity: critical
+      service: micf-api
+    annotations:
+      summary: "MICF product API audit logging failed"
+      description: "At least one audit log write failed in the last 5 minutes."
+
+  - alert: MicfApiHighServerErrorRate
+    expr: |
+      (
+        sum(rate(betelgeuze_product_http_requests_total{job="micf-api",status_code=~"5.."}[5m]))
+        /
+        clamp_min(sum(rate(betelgeuze_product_http_requests_total{job="micf-api"}[5m])), 1)
+      ) > 0.05
+    for: 10m
+    labels:
+      severity: warning
+      service: micf-api
+    annotations:
+      summary: "MICF product API 5xx rate is elevated"
+      description: "More than 5% of micf-api requests have returned 5xx responses over the last 10 minutes."
+
+  - alert: MicfApiAuthFailureSpike
+    expr: sum(rate(betelgeuze_product_blocked_requests_total{job="micf-api",code="auth_required"}[5m])) > 0.2
+    for: 5m
+    labels:
+      severity: warning
+      service: micf-api
+    annotations:
+      summary: "MICF product API authentication failures increased"
+      description: "Authentication blocks are arriving at more than 0.2 requests per second for 5 minutes."
+
+  - alert: MicfApiRateLimitSpike
+    expr: sum(rate(betelgeuze_product_blocked_requests_total{job="micf-api",code="rate_limited"}[5m])) > 1
+    for: 5m
+    labels:
+      severity: warning
+      service: micf-api
+    annotations:
+      summary: "MICF product API rate limiting increased"
+      description: "Rate-limit blocks are arriving at more than 1 request per second for 5 minutes."

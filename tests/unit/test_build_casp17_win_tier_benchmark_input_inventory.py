@@ -143,7 +143,7 @@ def test_build_casp17_win_tier_benchmark_input_inventory_detects_ready_and_block
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_win_tier_benchmark_input_inventory.py"),
+            str(ROOT / "tools/casp17/build_casp17_win_tier_benchmark_input_inventory.py"),
             "--input-scaffold-json",
             str(scaffold),
             "--out-json",

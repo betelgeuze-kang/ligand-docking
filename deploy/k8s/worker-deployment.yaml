@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: micf-api-worker
+  namespace: micf-product
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: micf-api-worker
+  template:
+    metadata:
+      labels:
+        app: micf-api-worker
+    spec:
+      containers:
+        - name: api-worker
+          image: micf-api:product
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - >
+              python3 tools/run_api_simulation_worker.py
+              --worker-id api-worker-${HOSTNAME}
+              --lease-seconds ${API_WORKER_LEASE_SECONDS}
+              --heartbeat-interval-seconds ${API_WORKER_HEARTBEAT_INTERVAL_SECONDS}
+          envFrom:
+            - configMapRef:
+                name: micf-api-config
+            - secretRef:
+                name: micf-api-secrets
+          volumeMounts:
+            - name: results
+              mountPath: /data
+      volumes:
+        - name: results
+          persistentVolumeClaim:
+            claimName: micf-product-results

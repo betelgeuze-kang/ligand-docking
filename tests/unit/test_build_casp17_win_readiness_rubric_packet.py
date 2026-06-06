@@ -199,7 +199,7 @@ def test_build_casp17_win_readiness_rubric_packet_keeps_win_tier_fail_closed(tmp
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_win_readiness_rubric_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_win_readiness_rubric_packet.py"),
             "--competitive-readiness-json",
             str(competitive),
             "--structure-render-json",
@@ -435,7 +435,7 @@ def test_build_casp17_win_readiness_rubric_packet_accepts_full_review_and_benchm
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_win_readiness_rubric_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_win_readiness_rubric_packet.py"),
             "--competitive-readiness-json",
             str(competitive),
             "--structure-render-json",

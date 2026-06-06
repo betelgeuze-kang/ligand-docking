@@ -257,7 +257,8 @@ def build_lit_pcba_materialization_manifest(
         "run_command": materialization_command,
         "scorecard_run_command_template": (
             "python3 tools/build_lit_pcba_scorecard.py "
-            f"--scores-csv {out_scores} --labels-csv {out_labels} --score-col {score_col}"
+            f"--scores-csv {out_scores} --labels-csv {out_labels} --score-col {score_col} "
+            "--product-provenance-json OPERATOR_FILL_PRODUCT_PROVENANCE_JSON"
         ),
         "external_state_mutated": False,
         "download_executed": False,

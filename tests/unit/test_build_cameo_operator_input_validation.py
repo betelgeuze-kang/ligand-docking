@@ -4,7 +4,7 @@ import csv
 import json
 from pathlib import Path
 
-from tools import build_cameo_operator_input_validation as mod
+from tools.cameo import build_cameo_operator_input_validation as mod
 
 
 def _write_csv(path: Path, rows: list[dict[str, str]]) -> None:

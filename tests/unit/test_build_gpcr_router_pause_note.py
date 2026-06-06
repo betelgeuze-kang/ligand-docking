@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_gpcr_router_pause_note as mod
+from tools.gpcr_replay import build_gpcr_router_pause_note as mod
 
 
 def test_build_gpcr_router_pause_note() -> None:

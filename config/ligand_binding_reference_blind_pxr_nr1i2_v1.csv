@@ -1,4 +1,6 @@
 target,ligand_id,reference_binding_kcal_mol,is_binder,source
+PXR_NR1I2_BLIND,chembl242526,-6.8212,0,chembl_direct_binding::CHEMBL3401::CHEMBL242526::activity_1940803::assay_CHEMBL891766::IC50_10000.0_nM::doc_CHEMBL1146359
+PXR_NR1I2_BLIND,chembl4863661,-6.8706,0,chembl_direct_binding::CHEMBL3401::CHEMBL4863661::activity_23266509::assay_CHEMBL4834539::IC50_9200.0_nM::doc_CHEMBL4834393
 PXR_NR1I2_BLIND,rifampicin,-9.1390,1,chembl_activity_proxy::CHEMBL3401::CHEMBL374478::activity_15448139::assay_CHEMBL3531878::EC50_200.0_nM::doc_CHEMBL3525965
 PXR_NR1I2_BLIND,clotrimazole,-7.5970,1,chembl_activity_proxy::CHEMBL3401::CHEMBL104::activity_25049993::assay_CHEMBL5246992::EC50_2700.0_nM::doc_CHEMBL5244274
 PXR_NR1I2_BLIND,hyperforin,-10.3255,1,chembl_direct_binding::CHEMBL3401::CHEMBL1237210::activity_2532000::assay_CHEMBL1012196::Ki_27.0_nM::doc_CHEMBL1148111

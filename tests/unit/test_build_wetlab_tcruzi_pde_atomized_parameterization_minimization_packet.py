@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools import build_wetlab_tcruzi_pde_atomized_parameterization_minimization_packet as mod
+from tools.wetlab import build_wetlab_tcruzi_pde_atomized_parameterization_minimization_packet as mod
 
 
 def _write_json(path: Path, payload: dict) -> None:

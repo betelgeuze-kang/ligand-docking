@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from tools import build_tcruzi_krs1_run_record as mod
+from tools.wetlab import build_tcruzi_krs1_run_record as mod
 
 
 LAUNCH = {

@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from tools import build_gpcr_guarded_100k_rerun_readiness as mod
+from tools.gpcr_replay import build_gpcr_guarded_100k_rerun_readiness as mod
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -398,7 +398,7 @@ def test_cli_writes_readiness_packet_and_markdown(tmp_path: Path) -> None:
     result = subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools" / "build_gpcr_guarded_100k_rerun_readiness.py"),
+            str(ROOT / "tools" / "gpcr_replay/build_gpcr_guarded_100k_rerun_readiness.py"),
             "--positive-json",
             str(positive),
             "--scoreability-json",

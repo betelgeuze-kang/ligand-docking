@@ -41,9 +41,22 @@ def test_product_license_decision_packet_lists_options_without_writing_license()
     assert summary["license_file_written"] is False
     assert summary["legal_advice_provided"] is False
     assert summary["external_state_mutated"] is False
+    assert summary["ready_local_license_text_source_candidate_count"] >= 3
+    assert "fill_product_license_decision_operator_intake.py" in summary["operator_intake_fill_command_template"]
+    assert "--out-csv runs/product_license_decision_operator_intake.csv" in summary["operator_intake_fill_command_template"]
     spdx_ids = {row["spdx_license_id"] for row in payload["rows"]}
     assert {"Apache-2.0", "MIT", "BSD-3-Clause", "GPL-3.0-only", "ProprietaryRef-Betelgeuze"} <= spdx_ids
     assert all(row["approval_token_required"] == "APPROVE_PRODUCT_LICENSE_FILE_CREATION" for row in payload["rows"])
+    assert all("fill_product_license_decision_operator_intake.py" in row["operator_intake_fill_command_template"] for row in payload["rows"])
+    rows = {row["spdx_license_id"]: row for row in payload["rows"]}
+    assert rows["Apache-2.0"]["local_license_text_source_candidate"] == "/usr/share/common-licenses/Apache-2.0"
+    assert rows["Apache-2.0"]["local_license_text_source_present"] is True
+    assert rows["Apache-2.0"]["local_license_text_source_non_empty"] is True
+    assert "--license-text-source /usr/share/common-licenses/Apache-2.0" in rows["Apache-2.0"][
+        "operator_intake_fill_command_local_source_example"
+    ]
+    assert rows["MIT"]["local_license_text_source_candidate"] == ""
+    assert rows["MIT"]["operator_intake_fill_command_local_source_example"] == ""
 
 
 def test_product_license_decision_packet_blocks_when_commercial_gate_has_other_blockers() -> None:
@@ -94,4 +107,7 @@ def test_build_product_license_decision_packet_tool_writes_outputs(tmp_path: Pat
 
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["status"] == "product_license_decision_packet_ready"
     assert out_csv.read_text(encoding="utf-8").startswith("option_rank,spdx_license_id,")
-    assert "Product License Decision Packet" in out_md.read_text(encoding="utf-8")
+    md_text = out_md.read_text(encoding="utf-8")
+    assert "Product License Decision Packet" in md_text
+    assert "fill_product_license_decision_operator_intake.py" in md_text
+    assert "Local Source Command Examples" in md_text

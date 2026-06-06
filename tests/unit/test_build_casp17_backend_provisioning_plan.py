@@ -20,7 +20,7 @@ def _run_builder(tmp_path: Path, *, summary: dict, probe: dict) -> dict:
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_backend_provisioning_plan.py"),
+            str(ROOT / "tools/casp17/build_casp17_backend_provisioning_plan.py"),
             "--backend-readiness-json",
             str(readiness_json),
             "--env-path",
@@ -123,7 +123,7 @@ def test_provisioning_plan_missing_readiness_artifact_is_blocked(tmp_path: Path)
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_backend_provisioning_plan.py"),
+            str(ROOT / "tools/casp17/build_casp17_backend_provisioning_plan.py"),
             "--backend-readiness-json",
             str(tmp_path / "missing.json"),
             "--out-json",

@@ -60,6 +60,35 @@ def _execution_preflight_ready() -> dict:
     }
 
 
+def _public_benchmark_work_order() -> dict:
+    return _packet(
+        {
+            "status": "product_public_benchmark_work_order_ready",
+            "open_suite_count": 5,
+            "materialization_required_suite_count": 5,
+            "scorecard_required_suite_count": 0,
+            "continuous_validation_command_count": 5,
+            "continuous_validation_command": (
+                "python3 tools/build_lit_pcba_scorecard.py && "
+                "python3 tools/build_goal_bottleneck_briefing.py"
+            ),
+            "suite_run_command_count": 5,
+            "suite_result_provenance_command_count": 5,
+            "suite_result_provenance_present_count": 0,
+            "suite_threshold_count": 5,
+            "suite_materialization_manifest_count": 5,
+            "suite_scorecard_row_csv_count": 5,
+            "suite_no_external_dependency_count": 5,
+            "local_artifact_preflight_ready_suite_count": 0,
+            "local_artifact_preflight_blocked_suite_count": 5,
+            "missing_local_input_artifact_count": 8,
+            "missing_local_output_artifact_count": 6,
+            "missing_local_input_artifacts": ["data/public_benchmarks/lit_pcba/archive.tar.xz"],
+            "missing_local_output_artifacts": ["runs/lit_pcba_scores_current.csv"],
+        }
+    )
+
+
 def test_product_architecture_contract_reports_local_surface_and_gates(tmp_path: Path) -> None:
     payload = mod.build_product_architecture_contract(
         product_capability_packet=_packet(
@@ -109,11 +138,19 @@ def test_product_architecture_contract_reports_local_surface_and_gates(tmp_path:
                 "required_suite_count": 5,
                 "ready_required_suite_count": 0,
                 "blocked_suite_count": 5,
+                "suite_materialization_manifest_count": 5,
+                "suite_scorecard_row_csv_count": 5,
+                "suite_threshold_count": 5,
+                "suite_blocker_count": 5,
+                "suite_run_command_count": 5,
+                "suite_materialization_run_command_count": 5,
+                "suite_no_external_dependency_count": 5,
                 "requires_24h_server": False,
                 "requires_competition_season": False,
                 "requires_paid_vps": False,
             }
         ),
+        public_benchmark_work_order_packet=_public_benchmark_work_order(),
         cameo_capability_packet=_packet(
             {
                 "status": "blocked_cameo_capability_preflight",
@@ -243,9 +280,42 @@ def test_product_architecture_contract_reports_local_surface_and_gates(tmp_path:
     assert summary["public_benchmark_required_suite_count"] == 5
     assert summary["public_benchmark_ready_required_suite_count"] == 0
     assert summary["public_benchmark_blocked_suite_count"] == 5
+    assert summary["public_benchmark_suite_materialization_manifest_count"] == 5
+    assert summary["public_benchmark_suite_scorecard_row_csv_count"] == 5
+    assert summary["public_benchmark_suite_threshold_count"] == 5
+    assert summary["public_benchmark_suite_blocker_count"] == 5
+    assert summary["public_benchmark_suite_run_command_count"] == 5
+    assert summary["public_benchmark_suite_materialization_run_command_count"] == 5
+    assert summary["public_benchmark_suite_no_external_dependency_count"] == 5
     assert summary["public_benchmark_requires_24h_server"] is False
     assert summary["public_benchmark_requires_competition_season"] is False
     assert summary["public_benchmark_requires_paid_vps"] is False
+    assert summary["public_benchmark_work_order_status"] == "product_public_benchmark_work_order_ready"
+    assert summary["public_benchmark_work_order_artifact"] == "runs/product_public_benchmark_work_order_current.json"
+    assert summary["public_benchmark_work_order_open_suite_count"] == 5
+    assert summary["public_benchmark_work_order_materialization_required_suite_count"] == 5
+    assert summary["public_benchmark_work_order_scorecard_required_suite_count"] == 0
+    assert summary["public_benchmark_work_order_continuous_validation_command_count"] == 5
+    assert summary["public_benchmark_work_order_suite_run_command_count"] == 5
+    assert summary["public_benchmark_work_order_suite_result_provenance_command_count"] == 5
+    assert summary["public_benchmark_work_order_suite_result_provenance_present_count"] == 0
+    assert summary["public_benchmark_suite_result_provenance_command_count"] == 5
+    assert summary["public_benchmark_suite_result_provenance_present_count"] == 0
+    assert summary["public_benchmark_work_order_suite_threshold_count"] == 5
+    assert summary["public_benchmark_work_order_suite_materialization_manifest_count"] == 5
+    assert summary["public_benchmark_work_order_suite_scorecard_row_csv_count"] == 5
+    assert summary["public_benchmark_work_order_suite_no_external_dependency_count"] == 5
+    assert summary["public_benchmark_work_order_local_artifact_preflight_ready_suite_count"] == 0
+    assert summary["public_benchmark_work_order_local_artifact_preflight_blocked_suite_count"] == 5
+    assert summary["public_benchmark_work_order_missing_local_input_artifact_count"] == 8
+    assert summary["public_benchmark_work_order_missing_local_output_artifact_count"] == 6
+    assert summary["public_benchmark_work_order_missing_local_input_artifacts"] == [
+        "data/public_benchmarks/lit_pcba/archive.tar.xz"
+    ]
+    assert summary["public_benchmark_work_order_missing_local_output_artifacts"] == [
+        "runs/lit_pcba_scores_current.csv"
+    ]
+    assert "build_lit_pcba_scorecard.py" in summary["public_benchmark_work_order_continuous_validation_command"]
     assert summary["cameo_local_surface_ready"] is True
     assert summary["cameo_service_boundary_ready"] is True
     assert summary["cameo_service_boundary_status"] == "cameo_service_boundary_contract_ready"
@@ -300,6 +370,16 @@ def test_product_architecture_contract_reports_local_surface_and_gates(tmp_path:
     assert public_benchmark_row["status"] == "blocked"
     assert public_benchmark_row["canonical_lane"] == "benchmark_validation"
     assert "requires_24h_server=False" in public_benchmark_row["observed"]
+    assert "suite_materialization_manifest_count=5" in public_benchmark_row["observed"]
+    assert "suite_scorecard_row_csv_count=5" in public_benchmark_row["observed"]
+    assert "suite_run_command_count=5" in public_benchmark_row["observed"]
+    assert "work_order_status=product_public_benchmark_work_order_ready" in public_benchmark_row["observed"]
+    assert "work_order_suite_run_command_count=5" in public_benchmark_row["observed"]
+    assert "work_order_suite_scorecard_row_csv_count=5" in public_benchmark_row["observed"]
+    assert "work_order_local_artifact_preflight_blocked_suite_count=5" in public_benchmark_row["observed"]
+    assert "work_order_missing_local_input_artifact_count=8" in public_benchmark_row["observed"]
+    assert "work_order_missing_local_output_artifact_count=6" in public_benchmark_row["observed"]
+    assert "runs/product_public_benchmark_work_order_current.json" in public_benchmark_row["artifact_path"]
     cameo_row = next(row for row in payload["rows"] if row["lane_id"] == "cameo_optional_live_validation_surface")
     assert cameo_row["status"] == "ready"
     assert cameo_row["canonical_lane"] == "CAMEO_live_validation"
@@ -478,11 +558,19 @@ def test_product_architecture_contract_tool_writes_outputs(tmp_path: Path) -> No
                 "required_suite_count": 5,
                 "ready_required_suite_count": 0,
                 "blocked_suite_count": 5,
+                "suite_materialization_manifest_count": 5,
+                "suite_scorecard_row_csv_count": 5,
+                "suite_threshold_count": 5,
+                "suite_blocker_count": 5,
+                "suite_run_command_count": 5,
+                "suite_materialization_run_command_count": 5,
+                "suite_no_external_dependency_count": 5,
                 "requires_24h_server": False,
                 "requires_competition_season": False,
                 "requires_paid_vps": False,
             }
         ),
+        "public_benchmark_work_order": _public_benchmark_work_order(),
         "cameo": _packet(
             {
                 "status": "blocked_cameo_capability_preflight",
@@ -548,6 +636,8 @@ def test_product_architecture_contract_tool_writes_outputs(tmp_path: Path) -> No
             str(paths["product_preflight"]),
             "--public-benchmark-json",
             str(paths["public_benchmark"]),
+            "--public-benchmark-work-order-json",
+            str(paths["public_benchmark_work_order"]),
             "--cameo-capability-json",
             str(paths["cameo"]),
             "--cameo-architecture-validation-json",
@@ -585,6 +675,16 @@ def test_product_architecture_contract_tool_writes_outputs(tmp_path: Path) -> No
     assert summary["result_bundle_generation_contract_ready"] is True
     assert summary["result_bundle_artifact_count"] == 1
     assert summary["public_benchmark_validation_ready"] is False
+    assert summary["public_benchmark_suite_materialization_manifest_count"] == 5
+    assert summary["public_benchmark_suite_scorecard_row_csv_count"] == 5
+    assert summary["public_benchmark_suite_run_command_count"] == 5
+    assert summary["public_benchmark_work_order_status"] == "product_public_benchmark_work_order_ready"
+    assert summary["public_benchmark_work_order_open_suite_count"] == 5
+    assert summary["public_benchmark_work_order_suite_run_command_count"] == 5
+    assert summary["public_benchmark_work_order_local_artifact_preflight_blocked_suite_count"] == 5
+    assert summary["public_benchmark_work_order_missing_local_input_artifact_count"] == 8
+    assert summary["public_benchmark_work_order_missing_local_output_artifact_count"] == 6
+    assert "build_goal_bottleneck_briefing.py" in summary["public_benchmark_work_order_continuous_validation_command"]
     assert summary["public_benchmark_requires_24h_server"] is False
     assert summary["cameo_architecture_validation_protocol_ready"] is True
     assert summary["cameo_service_boundary_ready"] is True
@@ -598,3 +698,5 @@ def test_product_architecture_contract_tool_writes_outputs(tmp_path: Path) -> No
     assert "benchmark_validation" in csv_text
     assert "Product Architecture Contract" in md_text
     assert "canonical_architecture_lanes_required" in md_text
+    assert "public_benchmark_work_order_continuous_validation_command" in md_text
+    assert "public_benchmark_work_order_missing_local_input_artifact_count" in md_text

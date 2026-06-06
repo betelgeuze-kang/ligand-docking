@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools import build_transition_cleanup_execution_preflight as mod
+from tools.cleanup import build_transition_cleanup_execution_preflight as mod
 
 
 def _work_order(tmp_path: Path) -> dict:

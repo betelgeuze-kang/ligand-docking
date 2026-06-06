@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_pxr_pending_policy_note as mod
+from tools.product import build_pxr_pending_policy_note as mod
 
 
 def test_build_pxr_pending_policy_note() -> None:

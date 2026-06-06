@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tools import build_transition_cleanup_manifest as mod
+from tools.cleanup import build_transition_cleanup_manifest as mod
 
 
 def _touch(path: Path, size: int = 16) -> None:

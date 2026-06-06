@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_transporter_seed_row_promotion_board as mod
+from tools.product import build_transporter_seed_row_promotion_board as mod
 
 
 def test_build_transporter_seed_row_promotion_board_prioritizes_aqp1_first_wave_binders() -> None:

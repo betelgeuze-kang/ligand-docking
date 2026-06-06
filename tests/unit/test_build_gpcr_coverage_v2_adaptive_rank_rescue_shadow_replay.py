@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from tools import build_gpcr_coverage_v2_adaptive_rank_rescue_shadow_replay as mod
+from tools.gpcr_replay import build_gpcr_coverage_v2_adaptive_rank_rescue_shadow_replay as mod
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -118,7 +118,7 @@ def test_replay_cli_writes_artifacts(tmp_path: Path) -> None:
     result = subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools/build_gpcr_coverage_v2_adaptive_rank_rescue_shadow_replay.py"),
+            str(ROOT / "tools/gpcr_replay/build_gpcr_coverage_v2_adaptive_rank_rescue_shadow_replay.py"),
             "--stage3-scores-csv",
             str(scores_csv),
             "--feature-cache-csv",

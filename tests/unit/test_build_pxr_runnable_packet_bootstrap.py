@@ -179,3 +179,53 @@ def test_build_pxr_runnable_packet_bootstrap(tmp_path: Path) -> None:
     _contains_tokens(md_text, "scaffold", "status")
     _contains_tokens(md_text, "freeze", "pocket_x", "pocket_y", "pocket_z")
     _contains_tokens(md_text, "fit-donor", "policy")
+
+    workbook_csv = runs / "pxr_packet_replacement_workbook_current.csv"
+    _write_csv(
+        workbook_csv,
+        [
+            "packet",
+            "packet_step",
+            "current_ligand_id",
+            "replacement_ligand_id",
+            "replacement_reference_binding_kcal_mol",
+            "replacement_is_binder",
+            "replacement_source",
+            "replacement_role",
+            "replacement_smiles",
+            "replacement_scaffold",
+            "required_missing_fields",
+            "row_ready_for_apply",
+        ],
+        [
+            ["core", "core_fit_binder_01", "core_fit_1", "core_fit_1", "-8.0", "1", "chembl_direct_binding::x", "fit", "CCO", "core_fit", "", "yes"],
+            ["core", "core_eval_binder_01", "core_eval_1", "core_eval_1", "-7.5", "1", "chembl_activity_proxy::x", "far_ood_eval", "CCN", "core_eval", "", "yes"],
+            ["core", "core_eval_non_binder_01", "core_decoy_1", "core_decoy_1", "-5.0", "0", "chembl_direct_binding::x", "far_ood_eval", "CCC", "core_decoy", "", "yes"],
+            ["ood", "ood_fit_binder_01", "ood_fit_1", "ood_fit_1", "-8.2", "1", "chembl_direct_binding::x", "fit", "COC", "ood_fit", "", "yes"],
+            ["ood", "ood_eval_binder_01", "ood_eval_1", "ood_eval_1", "-7.8", "1", "chembl_activity_proxy::x", "far_ood_eval", "CNC", "ood_eval", "", "yes"],
+            ["ood", "ood_eval_non_binder_01", "ood_decoy_1", "ood_decoy_1", "-5.2", "0", "chembl_direct_binding::x", "far_ood_eval", "CO", "ood_decoy", "", "yes"],
+        ],
+    )
+    rerun_json = runs / "pxr_runnable_packet_bootstrap_with_freeze_current.json"
+    subprocess.run(
+        [
+            "python3",
+            str(ROOT / "tools/build_pxr_runnable_packet_bootstrap.py"),
+            "--template-json",
+            "config/external_validation_biorxiv_nuclear_receptor_pxr_v1_template.json",
+            "--workbook-csv",
+            str(workbook_csv),
+            "--out-json",
+            str(rerun_json),
+            "--out-csv",
+            str(runs / "pxr_runnable_packet_bootstrap_with_freeze_current.csv"),
+            "--out-md",
+            str(runs / "pxr_runnable_packet_bootstrap_with_freeze_current.md"),
+        ],
+        check=True,
+        cwd=tmp_path,
+    )
+    rerun_payload = json.loads(rerun_json.read_text(encoding="utf-8"))
+    assert rerun_payload["summary"]["curated_freeze_row_count"] == 6
+    assert rerun_payload["summary"]["curated_freeze_blocked_row_count"] == 0
+    assert rerun_payload["summary"]["claim_ready"] is True

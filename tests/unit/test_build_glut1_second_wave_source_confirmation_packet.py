@@ -38,6 +38,7 @@ def test_build_glut1_second_wave_source_confirmation_packet_reads_current_artifa
     assert summary["direct_quantitative_binding_count"] == 1
     assert summary["exact_target_pair_activity_count"] == 2
     assert summary["structured_pair_absent_count"] == 1
+    assert summary["apparent_functional_affinity_count"] == 1
     assert summary["source_anchor_pmid_count"] == 3
     assert summary["claim_safe_kcal_ready_count"] == 0
     _contains_tokens(
@@ -48,6 +49,7 @@ def test_build_glut1_second_wave_source_confirmation_packet_reads_current_artifa
         "stf-31",
         "replacement_reference_binding_kcal_mol",
         "blank",
+        "apparent functional affinity",
     )
 
     row_01 = rows["core_binder_01"]
@@ -66,12 +68,15 @@ def test_build_glut1_second_wave_source_confirmation_packet_reads_current_artifa
     row_02 = rows["core_binder_02"]
     assert row_02["candidate_name"] == "WZB117"
     assert row_02["confirmation_scope"] == "exact_target_pair_activity_source_confirmation"
-    assert row_02["source_anchor"] == "PMID 22689530"
-    assert row_02["source_anchor_pmid"] == "22689530"
+    assert row_02["source_anchor"] == "PMID 27836974"
+    assert row_02["source_anchor_pmid"] == "27836974"
     assert row_02["public_provenance_status"] == "exact_human_glut1_activity_present_nonbinding"
     assert row_02["chembl_molecule_chembl_id"] == "CHEMBL3092944"
     assert row_02["chembl_activity_record_count"] == 3
-    _contains_tokens(row_02["representative_activity"], "10.9", "6 uM")
+    _contains_tokens(row_02["representative_activity"], "10.9", "6.2 uM")
+    assert row_02["apparent_affinity_measure"] == "Ki(app)=6.2 uM"
+    assert row_02["apparent_delta_g_298k_kcal_mol"] == "-7.1045"
+    assert row_02["claim_safe_binding_kcal_ready"] == "no"
     _contains_tokens(row_02["rejection_gate"], "binder", "direct binding")
 
     row_03 = rows["core_binder_03"]

@@ -69,7 +69,7 @@ def test_target_object_folder_audit_passes_independent_object_folder(tmp_path: P
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_target_object_folder_audit_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_target_object_folder_audit_packet.py"),
             "--target-model-folders-json",
             str(target_json),
             "--out-json",
@@ -111,7 +111,7 @@ def test_target_object_folder_audit_blocks_wrong_chain_and_hosted_viewer(tmp_pat
     result = subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_target_object_folder_audit_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_target_object_folder_audit_packet.py"),
             "--target-model-folders-json",
             str(target_json),
             "--out-json",
@@ -162,7 +162,7 @@ def test_target_object_folder_audit_blocks_hetatm_only_and_invalid_coordinates(t
     result = subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_target_object_folder_audit_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_target_object_folder_audit_packet.py"),
             "--target-model-folders-json",
             str(target_json),
             "--out-json",

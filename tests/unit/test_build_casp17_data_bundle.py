@@ -26,7 +26,7 @@ def test_build_casp17_data_bundle_mirrors_runs_docs_and_config(tmp_path: Path) -
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_data_bundle.py"),
+            str(ROOT / "tools/casp17/build_casp17_data_bundle.py"),
             "--runs-dir",
             str(runs),
             "--docs-dir",
@@ -80,7 +80,7 @@ def test_build_casp17_data_bundle_manifest_only_does_not_copy(tmp_path: Path) ->
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_data_bundle.py"),
+            str(ROOT / "tools/casp17/build_casp17_data_bundle.py"),
             "--runs-dir",
             str(runs),
             "--docs-dir",

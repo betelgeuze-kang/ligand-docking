@@ -8,7 +8,7 @@ from pathlib import Path
 
 import numpy as np
 
-from tools import build_gpcr_drd2_atom_typed_backmapping_support as mod
+from tools.gpcr_replay import build_gpcr_drd2_atom_typed_backmapping_support as mod
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -403,7 +403,7 @@ def test_cli_writes_support_artifacts(tmp_path: Path) -> None:
     subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools/build_gpcr_drd2_atom_typed_backmapping_support.py"),
+            str(ROOT / "tools/gpcr_replay/build_gpcr_drd2_atom_typed_backmapping_support.py"),
             "--stage3-csv",
             str(stage3),
             "--ranking-rows-csv",

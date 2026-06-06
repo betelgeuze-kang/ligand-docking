@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from tools import build_transporter_operator_console as mod
+from tools.product import build_transporter_operator_console as mod
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -56,12 +56,12 @@ def test_build_transporter_operator_console_outputs_expected_open_order() -> Non
         encoding="utf-8",
     )
     subprocess.run(
-        [sys.executable, "tools/build_aqp1_manual_verdict_handoff_packet.py"],
+        [sys.executable, "tools/product/build_aqp1_manual_verdict_handoff_packet.py"],
         cwd=ROOT,
         check=True,
     )
     subprocess.run(
-        [sys.executable, "tools/build_glut1_manual_verdict_handoff_packet.py"],
+        [sys.executable, "tools/product/build_glut1_manual_verdict_handoff_packet.py"],
         cwd=ROOT,
         check=True,
     )
@@ -86,12 +86,12 @@ def test_build_transporter_operator_console_outputs_expected_open_order() -> Non
         check=True,
     )
     subprocess.run(
-        [sys.executable, "tools/build_aqp1_quantitative_provenance_packet.py"],
+        [sys.executable, "tools/product/build_aqp1_quantitative_provenance_packet.py"],
         cwd=ROOT,
         check=True,
     )
     subprocess.run(
-        [sys.executable, "tools/build_aqp1_first_wave_source_confirmation_packet.py"],
+        [sys.executable, "tools/product/build_aqp1_first_wave_source_confirmation_packet.py"],
         cwd=ROOT,
         check=True,
     )
@@ -218,7 +218,7 @@ def test_build_transporter_operator_console_outputs_expected_open_order() -> Non
     strict=True,
 )
 def test_build_transporter_operator_console_exposes_glut1_second_wave_source_confirmation_row() -> None:
-    from tools import build_transporter_operator_console as mod
+    from tools.product import build_transporter_operator_console as mod
 
     rows = mod.build_target_rows(
         {"summary": {"binder_first_wave_count": 3, "pending_manual_verdict_count": 0}},

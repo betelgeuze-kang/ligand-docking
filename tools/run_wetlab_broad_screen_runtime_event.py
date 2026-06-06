@@ -15,7 +15,7 @@ from tools.wetlab_target_render_utils import maybe_load_json, write_artifact
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PROGRESS_MD = "runs/wetlab_broad_screen_progress_current.md"
 DEFAULT_EXECUTION_QUEUE_SCRIPT = "tools/build_wetlab_broad_screen_execution_queue.py"
-DEFAULT_RUNBOOK_SCRIPT = "tools/build_wetlab_broad_screen_runtime_runbook.py"
+DEFAULT_RUNBOOK_SCRIPT = "tools/wetlab/wetlab/build_wetlab_broad_screen_runtime_runbook.py"
 DEFAULT_THROUGHPUT_BRIDGE_SCRIPT = "tools/build_wetlab_broad_screen_throughput_bridge.py"
 DEFAULT_APPEND_SCRIPT = "tools/run_wetlab_broad_screen_actual_append.py"
 DEFAULT_APPEND_BATCH_MD = "runs/wetlab_broad_screen_actual_append_batch_current.md"

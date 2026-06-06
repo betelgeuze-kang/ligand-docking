@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_wetlab_partner_send_round as mod
+from tools.wetlab import build_wetlab_partner_send_round as mod
 
 
 def test_build_wetlab_partner_send_round_orders_tracks_by_dispatch_rank() -> None:

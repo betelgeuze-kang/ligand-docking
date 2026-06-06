@@ -181,7 +181,7 @@ def test_build_casp17_model_selected_refinement_comparison_packet_blocks_promoti
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_model_selected_refinement_comparison_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_model_selected_refinement_comparison_packet.py"),
             "--active-prediction-dir",
             str(active_dir),
             "--model-selected-prediction-dir",

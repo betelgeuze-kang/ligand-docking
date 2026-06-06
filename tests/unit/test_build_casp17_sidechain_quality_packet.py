@@ -49,7 +49,7 @@ def test_build_casp17_sidechain_quality_packet_scores_rotamer_proxy(tmp_path: Pa
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_sidechain_quality_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_sidechain_quality_packet.py"),
             "--target-ids",
             "T9999",
             "--prediction-dir",

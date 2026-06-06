@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tools.build_wetlab_tcruzi_pde_atomized_ligand_draft_packet import build_payload
+from tools.wetlab.build_wetlab_tcruzi_pde_atomized_ligand_draft_packet import build_payload
 
 
 def _write_anchor_pdb(path: Path) -> None:

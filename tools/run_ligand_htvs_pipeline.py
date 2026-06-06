@@ -2113,7 +2113,7 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
     stage2_prefix = f"{out_prefix}_stage2"
     stage2_cmd = [
         sys.executable,
-        "tools/run_ligand_residual_meta_cycle.py",
+        "tools/product/run_ligand_residual_meta_cycle.py",
         "--ligand-queue-csv",
         queue_csv,
         "--date-tag",

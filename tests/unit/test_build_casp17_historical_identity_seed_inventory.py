@@ -4,7 +4,7 @@ import csv
 import json
 from pathlib import Path
 
-from tools import build_casp17_historical_identity_seed_inventory as mod
+from tools.casp17 import build_casp17_historical_identity_seed_inventory as mod
 
 
 def _write_pdb(path: Path, chains: str = "A") -> None:

@@ -1,14 +1,19 @@
-# monitoring/alertmanager.yml
+global:
+  resolve_timeout: 5m
 
 route:
-  receiver: 'slack-notifications' # Default receiver
+  receiver: 'operator-paged-webhook'
+  group_by: ['alertname', 'job', 'severity']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
 
 receivers:
-- name: 'slack-notifications'
-  slack_configs:
-  - api_url: 'YOUR_SLACK_WEBHOOK_URL_FOR_ALERTMANAGER' # Separate webhook for Alertmanager
-    channel: '#alerts'
-    text: '{{ .CommonAnnotations.Summary }}\n{{ .CommonAnnotations.Description }}'
+- name: 'operator-paged-webhook'
+  webhook_configs:
+  - url_file: '/etc/alertmanager/paged-webhook-url'
+    send_resolved: true
+    max_alerts: 20
 
 inhibit_rules:
 - source_match:

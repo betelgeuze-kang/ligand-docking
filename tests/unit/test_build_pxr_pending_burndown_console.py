@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_pxr_pending_burndown_console as mod
+from tools.product import build_pxr_pending_burndown_console as mod
 
 
 def test_build_pxr_pending_burndown_console() -> None:

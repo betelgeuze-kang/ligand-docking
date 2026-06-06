@@ -1,4 +1,4 @@
-from tools import build_aqp1_quantitative_binding_capture_intake as mod
+from tools.product import build_aqp1_quantitative_binding_capture_intake as mod
 
 
 def test_build_aqp1_quantitative_binding_capture_intake_without_supportive_rows() -> None:

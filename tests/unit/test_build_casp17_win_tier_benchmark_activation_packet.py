@@ -137,7 +137,7 @@ def test_build_casp17_win_tier_benchmark_activation_packet_writes_active_csvs_on
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_win_tier_benchmark_activation_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_win_tier_benchmark_activation_packet.py"),
             "--operator-import-json",
             str(import_json),
             "--historical-manifest-candidate-csv",
@@ -206,7 +206,7 @@ def test_build_casp17_win_tier_benchmark_activation_packet_blocks_current_target
     result = subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_win_tier_benchmark_activation_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_win_tier_benchmark_activation_packet.py"),
             "--operator-import-json",
             str(import_json),
             "--historical-manifest-candidate-csv",

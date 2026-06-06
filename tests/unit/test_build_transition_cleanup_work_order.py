@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools import build_transition_cleanup_work_order as mod
+from tools.cleanup import build_transition_cleanup_work_order as mod
 
 
 def _manifest(status: str = "transition_cleanup_manifest_dry_run_ready") -> dict:

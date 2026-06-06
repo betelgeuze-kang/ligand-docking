@@ -87,7 +87,7 @@ def test_win_tier_benchmark_operator_preflight_passes_ready_rows(tmp_path: Path)
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_win_tier_benchmark_operator_preflight.py"),
+            str(ROOT / "tools/casp17/build_casp17_win_tier_benchmark_operator_preflight.py"),
             "--operator-template-csv",
             str(template),
             "--target-watchlist-json",
@@ -134,7 +134,7 @@ def test_win_tier_benchmark_operator_preflight_blocks_placeholders_and_missing_f
     result = subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_win_tier_benchmark_operator_preflight.py"),
+            str(ROOT / "tools/casp17/build_casp17_win_tier_benchmark_operator_preflight.py"),
             "--operator-template-csv",
             str(template),
             "--target-watchlist-json",

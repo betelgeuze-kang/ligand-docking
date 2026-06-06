@@ -94,7 +94,7 @@ Next refresh:
 
 ```bash
 python3 tools/run_transporter_membrane_scaffold_check.py
-python3 tools/build_transporter_membrane_readiness.py
+python3 tools/product/build_transporter_membrane_readiness.py
 python3 tools/build_transporter_external_evidence_crosscheck.py
 python3 tools/build_aqp1_negative_evidence_gap_matrix.py
 python3 tools/build_aqp1_negative_evidence_request_packet.py
@@ -119,7 +119,7 @@ Next refresh:
 
 ```bash
 python3 tools/build_ca2_packet_replacement_workbook.py
-python3 tools/build_ca2_packet_replacement_readiness.py
+python3 tools/product/build_ca2_packet_replacement_readiness.py
 ```
 
 ### PXR

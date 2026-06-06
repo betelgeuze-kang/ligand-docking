@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
-from tools import build_gpcr_drd2_full_forcefield_local_minimization_survival as mod
+from tools.gpcr_replay import build_gpcr_drd2_full_forcefield_local_minimization_survival as mod
 
 
 def test_rmsd_A_is_absolute_heavy_atom_rmsd() -> None:

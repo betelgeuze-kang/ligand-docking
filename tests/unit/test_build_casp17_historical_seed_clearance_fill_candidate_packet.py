@@ -4,7 +4,7 @@ import csv
 import json
 from pathlib import Path
 
-from tools import build_casp17_historical_seed_clearance_fill_candidate_packet as mod
+from tools.casp17 import build_casp17_historical_seed_clearance_fill_candidate_packet as mod
 
 
 OPERATOR_FIELDS = [

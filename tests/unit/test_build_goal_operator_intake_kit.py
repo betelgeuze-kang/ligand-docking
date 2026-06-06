@@ -8,8 +8,33 @@ from tools import build_goal_operator_intake_kit as mod
 
 def _action_board() -> dict:
     return {
-        "summary": {"status": "operator_actions_required", "action_count": 5},
+        "summary": {
+            "status": "operator_actions_required",
+            "action_count": 7,
+            "operator_input_required_count": 4,
+            "primary_action_id": "product_ai_production:return_gpu_force_regeneration_receipt",
+            "top_action_id": "product_ai_production:return_gpu_force_regeneration_receipt",
+            "primary_action_priority": 0,
+            "primary_action_lane_id": "product_ai_production",
+            "primary_action_type": "return_gpu_force_regeneration_receipt",
+            "primary_action_status": "required",
+            "primary_action_required_input": "GPU full-regeneration summary and manifest with operator verification",
+            "primary_action_command": "python3 tools/generate_ligand_trajectory_engine.py --prod-mode",
+            "primary_action_recommended_action": (
+                "Run the full regeneration command on a GPU worker, return the identity-locked manifest and summary."
+            ),
+        },
         "rows": [
+            {
+                "lane_id": "product_ai_production",
+                "action_type": "return_gpu_force_regeneration_receipt",
+                "status": "required",
+                "artifact_path": (
+                    "runs/product_goal_completion_audit_current.json;"
+                    "runs/product_production_ai_gpu_return_intake_current.json"
+                ),
+                "approval_token": "",
+            },
             {
                 "lane_id": "cameo_validation",
                 "action_type": "fill_cameo_official_results_intake",
@@ -39,6 +64,13 @@ def _action_board() -> dict:
                 "approval_token": "APPROVE_PRODUCT_LICENSE_FILE_CREATION",
             },
             {
+                "lane_id": "product_scope_expansion",
+                "action_type": "curate_scope_evidence_priority_item",
+                "status": "review_required",
+                "artifact_path": "runs/product_goal_completion_audit_current.json",
+                "approval_token": "",
+            },
+            {
                 "lane_id": "ligand_heavy_cleanup",
                 "action_type": "review_protected_ligand_heavy_policy",
                 "status": "policy_decision_required",
@@ -64,6 +96,21 @@ def _source_packets() -> dict[str, dict]:
             }
         },
         mod.DEFAULT_PRODUCT_LICENSE_GATE_JSON: {"summary": {"status": "blocked_product_license_decision_gate"}},
+        mod.DEFAULT_PRODUCTION_AI_GPU_RETURN_INTAKE_JSON: {
+            "summary": {"status": "blocked_product_production_ai_gpu_return_intake"}
+        },
+        mod.DEFAULT_PRODUCT_SCOPE_EVIDENCE_INTAKE_READINESS_JSON: {
+            "summary": {
+                "packet_type": "product_scope_breadth_evidence_intake_readiness",
+                "intake_readiness_ready": True,
+            }
+        },
+        mod.DEFAULT_PRODUCT_SCOPE_EVIDENCE_PRIORITY_JSON: {
+            "summary": {
+                "packet_type": "product_scope_breadth_evidence_priority_packet",
+                "priority_packet_ready": True,
+            }
+        },
         mod.DEFAULT_CLEANUP_APPROVAL_GATE_JSON: {"summary": {"status": "blocked_cleanup_execution_approval_gate"}},
         mod.DEFAULT_PROTECTED_POLICY_GATE_JSON: {"summary": {"status": "blocked_protected_cleanup_policy_decision_gate"}},
         mod.DEFAULT_GOAL_API_SURFACE_CONTRACT_JSON: {
@@ -81,8 +128,16 @@ def _source_packets() -> dict[str, dict]:
 
 def _release_burndown() -> dict:
     return {
-        "summary": {"status": "goal_release_burndown_work_order_ready", "work_item_count": 7},
+        "summary": {"status": "goal_release_burndown_work_order_ready", "work_item_count": 8},
         "rows": [
+            {
+                "sequence": "0",
+                "phase": "P0_product_ai_architecture_production_inference_closure",
+                "burndown_status": "operator_input_required",
+                "release_checks": "product_ai_architecture_gap_closure_ready",
+                "source_artifact": "runs/product_production_ai_gpu_return_intake_current.json",
+                "recommended_action": "Return GPU regeneration manifest and summary.",
+            },
             {
                 "sequence": 1,
                 "phase": "P1_product_execution_and_bundle_validation",
@@ -164,13 +219,26 @@ def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp
     summary = payload["summary"]
     by_id = {row["kit_entry_id"]: row for row in payload["rows"]}
     assert summary["status"] == "goal_operator_intake_kit_ready"
-    assert summary["entry_count"] == 8
-    assert summary["source_action_count"] == 5
-    assert summary["release_burndown_source_row_count"] == 7
-    assert summary["release_burndown_linked_entry_count"] == 7
-    assert summary["operator_input_required_count"] == 7
-    assert summary["current_action_required_count"] == 5
+    assert summary["entry_count"] == 12
+    assert summary["source_action_count"] == 7
+    assert summary["release_burndown_source_row_count"] == 8
+    assert summary["release_burndown_linked_entry_count"] == 11
+    assert summary["operator_input_required_count"] == 11
+    assert summary["current_action_required_count"] == 9
     assert summary["deferred_operator_input_count"] == 2
+    assert summary["primary_action_id"] == "product_ai_production:return_gpu_force_regeneration_receipt"
+    assert summary["top_action_id"] == summary["primary_action_id"]
+    assert summary["primary_action_priority"] == 0
+    assert summary["primary_action_lane_id"] == "product_ai_production"
+    assert summary["primary_action_type"] == "return_gpu_force_regeneration_receipt"
+    assert summary["primary_action_status"] == "required"
+    assert summary["primary_action_required_input"] == (
+        "GPU full-regeneration summary and manifest with operator verification"
+    )
+    assert "generate_ligand_trajectory_engine.py" in summary["primary_action_command"]
+    assert "Run the full regeneration command on a GPU worker" in summary[
+        "primary_action_recommended_action"
+    ]
     assert summary["official_results_required_count"] == 1
     assert summary["policy_decision_required_count"] == 1
     assert summary["product_commercial_independence_status"] == "blocked_product_commercial_independence_gate"
@@ -216,6 +284,48 @@ def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp
     assert by_id["product_license_decision"]["related_source_json"] == mod.DEFAULT_PRODUCT_COMMERCIAL_INDEPENDENCE_JSON
     assert by_id["product_license_decision"]["related_source_status"] == "blocked_product_commercial_independence_gate"
     assert by_id["product_license_decision"]["release_sequence"] == "2"
+    assert by_id["production_ai_gpu_return"]["kit_status"] == "operator_input_required"
+    assert by_id["production_ai_gpu_return"]["current_action_surfaced"] is True
+    assert by_id["production_ai_gpu_return"]["operator_input_required_now"] is True
+    assert by_id["production_ai_gpu_return"]["source_gate_status"] == (
+        "blocked_product_production_ai_gpu_return_intake"
+    )
+    assert by_id["production_ai_gpu_return"]["release_sequence"] == "0"
+    assert by_id["production_ai_gpu_return"]["release_phase"] == (
+        "P0_product_ai_architecture_production_inference_closure"
+    )
+    assert by_id["production_ai_gpu_return_summary"]["kit_status"] == "operator_input_required"
+    assert by_id["production_ai_gpu_return_summary"]["current_action_surfaced"] is True
+    assert by_id["production_ai_gpu_return_summary"]["operator_input_required_now"] is True
+    assert by_id["production_ai_gpu_return_summary"]["template_path"] == (
+        "runs/residual_force_trajectory_regeneration_current_summary_template.json"
+    )
+    assert by_id["production_ai_gpu_return_summary"]["intake_path"] == (
+        "runs/residual_force_trajectory_regeneration_current_summary.json"
+    )
+    assert "out_manifest_csv" in by_id["production_ai_gpu_return_summary"]["recommended_action"]
+    assert "out_summary_json" in by_id["production_ai_gpu_return_summary"]["recommended_action"]
+    assert by_id["production_ai_gpu_return_summary"]["release_sequence"] == "0"
+    assert by_id["scope_transporter_manual_review"]["kit_status"] == "review_required"
+    assert by_id["scope_transporter_manual_review"]["current_action_surfaced"] is True
+    assert by_id["scope_transporter_manual_review"]["operator_input_required_now"] is True
+    assert by_id["scope_transporter_manual_review"]["source_gate_status"] == (
+        "product_scope_breadth_evidence_intake_readiness_ready"
+    )
+    assert by_id["scope_transporter_manual_review"]["related_source_status"] == (
+        "product_scope_breadth_evidence_priority_packet_ready"
+    )
+    assert by_id["scope_transporter_manual_review"]["template_path"] == (
+        "runs/transporter_manual_review_intake_template_current.csv"
+    )
+    assert by_id["scope_transporter_manual_review"]["release_sequence"] == "0"
+    assert by_id["scope_pxr_exact_evidence_review"]["kit_status"] == "review_required"
+    assert by_id["scope_pxr_exact_evidence_review"]["current_action_surfaced"] is True
+    assert by_id["scope_pxr_exact_evidence_review"]["operator_input_required_now"] is True
+    assert by_id["scope_pxr_exact_evidence_review"]["template_path"] == (
+        "runs/pxr_exact_evidence_review_intake_template_current.csv"
+    )
+    assert by_id["scope_pxr_exact_evidence_review"]["release_sequence"] == "0"
     assert by_id["protected_cleanup_policy"]["kit_status"] == "policy_decision_required"
     assert by_id["protected_cleanup_policy"]["operator_input_required_now"] is True
     assert by_id["protected_cleanup_policy"]["release_burndown_status"] == "policy_decision_required"
@@ -285,6 +395,10 @@ def test_goal_operator_intake_kit_tool_writes_manifest_and_copies_templates(tmp_
         "cameo_registration.csv",
         "product_execution.csv",
         "product_license.csv",
+        "gpu_return_manifest.csv",
+        "gpu_return_summary.json",
+        "scope_transporter_manual_review.csv",
+        "scope_pxr_exact_evidence_review.csv",
         "cleanup_approval.csv",
         "protected_policy.csv",
     ]
@@ -328,6 +442,12 @@ def test_goal_operator_intake_kit_tool_writes_manifest_and_copies_templates(tmp_
                 str(source_paths[mod.DEFAULT_PRODUCT_COMMERCIAL_INDEPENDENCE_JSON]),
                 "--product-license-gate-json",
                 str(source_paths[mod.DEFAULT_PRODUCT_LICENSE_GATE_JSON]),
+                "--production-ai-gpu-return-intake-json",
+                str(source_paths[mod.DEFAULT_PRODUCTION_AI_GPU_RETURN_INTAKE_JSON]),
+                "--product-scope-evidence-intake-readiness-json",
+                str(source_paths[mod.DEFAULT_PRODUCT_SCOPE_EVIDENCE_INTAKE_READINESS_JSON]),
+                "--product-scope-evidence-priority-json",
+                str(source_paths[mod.DEFAULT_PRODUCT_SCOPE_EVIDENCE_PRIORITY_JSON]),
                 "--cleanup-approval-gate-json",
                 str(source_paths[mod.DEFAULT_CLEANUP_APPROVAL_GATE_JSON]),
                 "--protected-policy-gate-json",
@@ -348,11 +468,18 @@ def test_goal_operator_intake_kit_tool_writes_manifest_and_copies_templates(tmp_
         mod.CATALOG = original_catalog
 
     payload = json.loads(out_json.read_text(encoding="utf-8"))
-    assert payload["summary"]["template_copied_count"] == 6
-    assert payload["summary"]["release_burndown_linked_entry_count"] == 7
+    assert payload["summary"]["template_copied_count"] == 10
+    assert payload["summary"]["release_burndown_linked_entry_count"] == 11
     assert payload["summary"]["goal_api_surface_contract_status"] == "goal_api_surface_contract_ready"
     assert out_csv.read_text(encoding="utf-8").startswith("kit_entry_id,lane_id,")
     md = out_md.read_text(encoding="utf-8")
     assert "Goal Operator Intake Kit" in md
     assert "release sequence" in md
     assert (out_dir / "templates" / "product_license.csv").read_text(encoding="utf-8").startswith("field")
+    assert (out_dir / "templates" / "gpu_return_summary.json").read_text(encoding="utf-8").startswith("field")
+    assert (out_dir / "templates" / "scope_transporter_manual_review.csv").read_text(
+        encoding="utf-8"
+    ).startswith("field")
+    assert (out_dir / "templates" / "scope_pxr_exact_evidence_review.csv").read_text(
+        encoding="utf-8"
+    ).startswith("field")

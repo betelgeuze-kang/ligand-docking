@@ -64,7 +64,7 @@ def test_build_ligand_scaleup_100k_validity_audit(tmp_path: Path) -> None:
     subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools/build_ligand_scaleup_100k_validity_audit.py"),
+            str(ROOT / "tools/product/build_ligand_scaleup_100k_validity_audit.py"),
             "--run-root",
             str(run_root),
             "--pilot-json",

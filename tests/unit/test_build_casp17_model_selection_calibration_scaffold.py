@@ -40,7 +40,7 @@ def test_calibration_scaffold_blocks_without_historical_or_existing_csv(tmp_path
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_model_selection_calibration_scaffold.py"),
+            str(ROOT / "tools/casp17/build_casp17_model_selection_calibration_scaffold.py"),
             "--historical-benchmark-json",
             str(historical),
             "--existing-calibration-csv",
@@ -88,7 +88,7 @@ def test_calibration_scaffold_uses_historical_pass_rows_but_requires_oracle_metr
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_model_selection_calibration_scaffold.py"),
+            str(ROOT / "tools/casp17/build_casp17_model_selection_calibration_scaffold.py"),
             "--historical-benchmark-json",
             str(historical),
             "--existing-calibration-csv",
@@ -140,7 +140,7 @@ def test_calibration_scaffold_accepts_ready_existing_csv(tmp_path: Path) -> None
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_model_selection_calibration_scaffold.py"),
+            str(ROOT / "tools/casp17/build_casp17_model_selection_calibration_scaffold.py"),
             "--historical-benchmark-json",
             str(historical),
             "--existing-calibration-csv",

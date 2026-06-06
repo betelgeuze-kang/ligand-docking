@@ -4,7 +4,7 @@ import csv
 import json
 from pathlib import Path
 
-from tools import build_casp17_historical_seed_first_clearance_no_leak_evidence_sync_plan as mod
+from tools.casp17 import build_casp17_historical_seed_first_clearance_no_leak_evidence_sync_plan as mod
 
 
 INTAKE_COLUMNS = [

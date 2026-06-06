@@ -70,7 +70,7 @@ def test_build_casp17_refinement_ablation_packet_passes_when_final_improves_no_l
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_refinement_ablation_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_refinement_ablation_packet.py"),
             "--manifest-csv",
             str(manifest),
             "--layer",
@@ -118,7 +118,7 @@ def test_build_casp17_refinement_ablation_packet_fails_closed_without_manifest(t
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_refinement_ablation_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_refinement_ablation_packet.py"),
             "--manifest-csv",
             str(tmp_path / "missing.csv"),
             "--out-json",

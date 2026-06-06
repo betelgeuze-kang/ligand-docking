@@ -41,7 +41,7 @@ def test_build_casp17_structure_shape_sanity_packet_passes_compact_trace(tmp_pat
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_structure_shape_sanity_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_structure_shape_sanity_packet.py"),
             "--prediction-dir",
             str(prediction_dir),
             "--out-json",
@@ -74,7 +74,7 @@ def test_build_casp17_structure_shape_sanity_packet_blocks_overextended_trace(tm
     result = subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_structure_shape_sanity_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_structure_shape_sanity_packet.py"),
             "--prediction-dir",
             str(prediction_dir),
             "--out-json",

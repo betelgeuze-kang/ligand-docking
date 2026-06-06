@@ -59,7 +59,7 @@ def test_build_casp17_protein_object_library_creates_protein_named_object_folder
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_protein_object_library.py"),
+            str(ROOT / "tools/casp17/build_casp17_protein_object_library.py"),
             "--target-object-csv",
             str(source_csv),
             "--out-dir",
@@ -96,7 +96,7 @@ def test_build_casp17_protein_object_library_blocks_missing_model(tmp_path: Path
     result = subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_protein_object_library.py"),
+            str(ROOT / "tools/casp17/build_casp17_protein_object_library.py"),
             "--target-object-csv",
             str(source_csv),
             "--out-dir",

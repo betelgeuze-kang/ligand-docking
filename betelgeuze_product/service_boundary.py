@@ -15,7 +15,11 @@ CLAIM_BOUNDARY = (
 
 EXPECTED_API_ROUTES = {
     ("POST", "/docking/jobs"),
+    ("GET", "/docking/jobs"),
     ("GET", "/docking/jobs/{job_id}"),
+    ("GET", "/docking/jobs/{job_id}/history"),
+    ("POST", "/docking/jobs/{job_id}/cancel"),
+    ("POST", "/docking/jobs/{job_id}/retry"),
     ("POST", "/structure/analyze"),
     ("GET", "/capabilities"),
     ("GET", "/architecture"),
@@ -23,6 +27,8 @@ EXPECTED_API_ROUTES = {
     ("GET", "/api-contract"),
     ("GET", "/operational-quality"),
     ("GET", "/public-benchmark"),
+    ("GET", "/ai-decision-graph"),
+    ("GET", "/ai-report-ux"),
     ("GET", "/cameo-live-validation"),
     ("GET", "/operations"),
     ("GET", "/license-decision"),
@@ -30,6 +36,15 @@ EXPECTED_API_ROUTES = {
     ("GET", "/license-file-work-order"),
     ("GET", "/commercial-independence"),
     ("GET", "/release-readiness"),
+    ("GET", "/production-ai-checkpoint-readiness"),
+    ("GET", "/production-ai-gpu-return-intake"),
+    ("GET", "/production-ai-promotion-workbench"),
+    ("GET", "/scope-claim-guard"),
+    ("GET", "/scope-evidence-priority"),
+    ("GET", "/scope-evidence-intake-readiness"),
+    ("GET", "/transporter-manual-review-intake"),
+    ("GET", "/pxr-exact-review-intake"),
+    ("GET", "/goal-completion-audit"),
 }
 
 EXPECTED_CLI_COMMANDS = {
@@ -39,6 +54,8 @@ EXPECTED_CLI_COMMANDS = {
     "api-contract",
     "operational-quality",
     "public-benchmark",
+    "ai-decision-graph",
+    "ai-report-ux",
     "cameo-live-validation",
     "operations",
     "commercial-independence",
@@ -46,6 +63,15 @@ EXPECTED_CLI_COMMANDS = {
     "license-options",
     "license-file-work-order",
     "release-readiness",
+    "production-ai-checkpoint-readiness",
+    "production-ai-gpu-return-intake",
+    "production-ai-promotion-workbench",
+    "scope-claim-guard",
+    "scope-evidence-priority",
+    "scope-evidence-intake-readiness",
+    "transporter-manual-review-intake",
+    "pxr-exact-review-intake",
+    "goal-completion-audit",
 }
 
 EXPECTED_CONSOLE_SCRIPT = {"betelgeuze-product": "betelgeuze_product.cli:main"}
@@ -56,6 +82,8 @@ EXPECTED_ARTIFACTS = {
     "api-contract": "runs/product_api_contract_current.json",
     "operational-quality": "runs/product_operational_quality_contract_current.json",
     "public-benchmark": "runs/product_public_benchmark_work_order_current.json",
+    "ai-decision-graph": "runs/product_ai_decision_graph_contract_current.json",
+    "ai-report-ux": "runs/product_ai_report_ux_contract_current.json",
     "cameo-live-validation": "runs/cameo_validation_operations_dossier_current.json",
     "operations": "runs/product_release_operations_dossier_current.json",
     "commercial-independence": "runs/product_commercial_independence_gate_current.json",
@@ -63,6 +91,15 @@ EXPECTED_ARTIFACTS = {
     "license-options": "runs/product_license_decision_packet_current.json",
     "license-file-work-order": "runs/product_license_file_creation_work_order_current.json",
     "release-readiness": "runs/product_release_operations_dossier_current.json",
+    "production-ai-checkpoint-readiness": "runs/product_production_ai_checkpoint_readiness_current.json",
+    "production-ai-gpu-return-intake": "runs/product_production_ai_gpu_return_intake_current.json",
+    "production-ai-promotion-workbench": "runs/product_production_ai_promotion_workbench_current.json",
+    "scope-claim-guard": "runs/product_scope_breadth_closure_checklist_current.json",
+    "scope-evidence-priority": "runs/product_scope_breadth_evidence_priority_packet_current.json",
+    "scope-evidence-intake-readiness": "runs/product_scope_breadth_evidence_intake_readiness_current.json",
+    "transporter-manual-review-intake": "runs/transporter_manual_review_intake_template_current.json",
+    "pxr-exact-review-intake": "runs/pxr_exact_evidence_review_intake_template_current.json",
+    "goal-completion-audit": "runs/product_goal_completion_audit_current.json",
 }
 
 

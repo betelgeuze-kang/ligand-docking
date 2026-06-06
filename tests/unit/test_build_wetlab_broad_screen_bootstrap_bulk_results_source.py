@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_wetlab_broad_screen_bootstrap_bulk_results_source as mod
+from tools.wetlab import build_wetlab_broad_screen_bootstrap_bulk_results_source as mod
 
 
 def test_build_wetlab_broad_screen_bootstrap_bulk_results_source_rolls_up_fill_maps() -> None:

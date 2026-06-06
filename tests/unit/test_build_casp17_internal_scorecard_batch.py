@@ -58,7 +58,7 @@ def _run_builder(root: Path, intake_csv: Path) -> dict:
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_internal_scorecard_batch.py"),
+            str(ROOT / "tools/casp17/build_casp17_internal_scorecard_batch.py"),
             "--intake-csv",
             str(intake_csv),
             "--out-dir",

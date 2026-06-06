@@ -76,6 +76,49 @@ def test_cameo_cli_main_prints_json(tmp_path: Path, capsys) -> None:
     assert output["prediction_generation_enabled"] is False
 
 
+def test_cameo_cli_reads_outbound_email_send_preflight_status(tmp_path: Path) -> None:
+    _write_packet(
+        tmp_path,
+        cli.ARTIFACTS["outbound-email-send-preflight"],
+        "blocked_cameo_outbound_email_send_preflight",
+        summary_extra={
+            "blocker_count": 3,
+            "authorized_for_separate_operator_send": False,
+            "operator_send_csv_present": False,
+        },
+    )
+
+    payload = cli.build_cli_status("outbound-email-send-preflight", root=tmp_path)
+
+    assert payload["status"] == "blocked_cameo_outbound_email_send_preflight"
+    assert payload["blocker_count"] == 3
+    assert payload["summary"]["authorized_for_separate_operator_send"] is False
+    assert payload["outbound_email_enabled"] is False
+
+
+def test_cameo_cli_reads_official_result_fetch_preflight_status(tmp_path: Path) -> None:
+    _write_packet(
+        tmp_path,
+        cli.ARTIFACTS["official-result-fetch-preflight"],
+        "blocked_cameo_official_result_fetch_preflight",
+        summary_extra={
+            "blocker_count": 2,
+            "authorized_for_separate_operator_fetch": False,
+            "operator_fetch_csv_present": False,
+            "network_request_opened": False,
+            "official_results_fetched": False,
+        },
+    )
+
+    payload = cli.build_cli_status("official-result-fetch-preflight", root=tmp_path)
+
+    assert payload["status"] == "blocked_cameo_official_result_fetch_preflight"
+    assert payload["blocker_count"] == 2
+    assert payload["summary"]["authorized_for_separate_operator_fetch"] is False
+    assert payload["official_results_fetched"] is False
+    assert payload["external_state_mutated"] is False
+
+
 def test_cameo_cli_all_surfaces_blocked_when_required_artifacts_missing(tmp_path: Path) -> None:
     _write_packet(tmp_path, cli.ARTIFACTS["operator-inputs"], "cameo_operator_inputs_ready")
 
@@ -162,6 +205,26 @@ def test_cameo_cli_all_aggregates_approval_tokens_official_results_and_registrat
             "outbound_email_approval_token_required": "APPROVE_CAMEO_OUTBOUND_EMAIL",
         },
     )
+    _write_packet(
+        tmp_path,
+        cli.ARTIFACTS["outbound-email-send-preflight"],
+        "blocked_cameo_outbound_email_send_preflight",
+        summary_extra={
+            "authorized_for_separate_operator_send": False,
+            "operator_send_csv_present": False,
+            "blocker_count": 3,
+        },
+    )
+    _write_packet(
+        tmp_path,
+        cli.ARTIFACTS["official-result-fetch-preflight"],
+        "blocked_cameo_official_result_fetch_preflight",
+        summary_extra={
+            "authorized_for_separate_operator_fetch": False,
+            "operator_fetch_csv_present": False,
+            "blocker_count": 2,
+        },
+    )
 
     payload = cli.build_all_status(root=tmp_path)
 
@@ -187,6 +250,14 @@ def test_cameo_cli_all_aggregates_approval_tokens_official_results_and_registrat
     assert payload["public_registration_authorized"] is False
     assert payload["registration_awaiting_operator_approval_row_count"] == 1
     assert payload["registration_blocked_row_count"] == 1
+    assert payload["outbound_email_send_preflight_ready"] is False
+    assert payload["outbound_email_send_authorized"] is False
+    assert payload["outbound_email_send_blocker_count"] == 3
+    assert payload["outbound_email_send_operator_csv_present"] is False
+    assert payload["official_result_fetch_preflight_ready"] is False
+    assert payload["official_result_fetch_authorized"] is False
+    assert payload["official_result_fetch_blocker_count"] == 2
+    assert payload["official_result_fetch_operator_csv_present"] is False
     assert payload["server_registration_mutated"] is False
     assert payload["prediction_generation_enabled"] is False
     assert payload["outbound_email_enabled"] is False

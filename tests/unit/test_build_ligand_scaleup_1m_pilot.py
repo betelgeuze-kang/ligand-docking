@@ -3,7 +3,7 @@ import json
 from types import SimpleNamespace
 
 from tools import build_ligand_scaleup_1m_pilot as build_mod
-from tools import ligand_scaleup_pilot_helper as helper_mod
+from tools.product import ligand_scaleup_pilot_helper as helper_mod
 from tools import run_ligand_scaleup_1m_pilot_current as run_mod
 
 
@@ -575,7 +575,7 @@ def test_run_ligand_scaleup_1m_pilot_current_refreshes_current_summaries_when_co
         "run_external_validation_blind_sets.py",
         "build_ligand_scaleup_kpi_table.py",
         "build_ligand_scaleup_1m_pilot.py",
-        "build_ligand_scaleup_benchmark_summary.py",
+        "build_ligand_scaleup_benchmark_summary.py",  # tools/product/build_ligand_scaleup_benchmark_summary.py
     ]
 
 

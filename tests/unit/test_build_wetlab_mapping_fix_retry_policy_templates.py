@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_wetlab_mapping_fix_retry_policy_templates as mod
+from tools.wetlab import build_wetlab_mapping_fix_retry_policy_templates as mod
 
 
 def test_build_wetlab_mapping_fix_retry_policy_templates_groups_stage1_repair_targets() -> None:

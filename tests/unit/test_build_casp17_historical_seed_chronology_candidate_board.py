@@ -5,7 +5,7 @@ import json
 import os
 from pathlib import Path
 
-from tools import build_casp17_historical_seed_chronology_candidate_board as mod
+from tools.casp17 import build_casp17_historical_seed_chronology_candidate_board as mod
 
 
 FIELDS = [

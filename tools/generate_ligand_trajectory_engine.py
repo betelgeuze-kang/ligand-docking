@@ -43,6 +43,10 @@ TRAJECTORY_NPZ_RESERVED_KEYS: Dict[str, str] = {
     "protein_atom_frames": "Optional vNext. Shape [T, A, 3]. Full protein atom coordinates for frame-wise in-place protein motion, aligned to viewer proteinTemplateAtoms order.",
     "protein_atom_template_index": "Optional vNext. Shape [A]. Integer mapping from stored protein_atom_frames atom order to viewer proteinTemplateAtoms order when direct order cannot be guaranteed.",
     "protein_atom_schema_version": "Optional vNext. Scalar numeric contract version for atom-level frame mutation.",
+    "queue_id": "Required for production returns. Scalar string identity copied from the regeneration queue row.",
+    "target": "Required for production returns. Scalar string target identity copied from the regeneration queue row.",
+    "ligand_id": "Required for production returns. Scalar string ligand identity copied from the regeneration queue row.",
+    "simulation_seed": "Required for production returns. Scalar integer seed used for deterministic regeneration.",
 }
 
 
@@ -734,6 +738,7 @@ def _write_npz_bundle(
     frame_indices: np.ndarray,
     compression: str = "store",
     extra_arrays: Optional[Dict[str, Any]] = None,
+    identity_metadata: Optional[Dict[str, Any]] = None,
 ) -> None:
     _ensure_dir(os.path.dirname(path) or ".")
     mode = str(compression or "store").strip().lower()
@@ -743,6 +748,11 @@ def _write_npz_bundle(
         ligand_frames=np.asarray(ligand_frames, dtype=np.float32),
         frame_indices=np.asarray(frame_indices, dtype=np.int32),
     )
+    if identity_metadata:
+        payload["queue_id"] = np.asarray(str(identity_metadata.get("queue_id", "")))
+        payload["target"] = np.asarray(str(identity_metadata.get("target", "")))
+        payload["ligand_id"] = np.asarray(str(identity_metadata.get("ligand_id", "")))
+        payload["simulation_seed"] = np.asarray(_safe_int(identity_metadata.get("simulation_seed", 0)), dtype=np.int64)
     if extra_arrays:
         for key, value in extra_arrays.items():
             if key not in TRAJECTORY_NPZ_RESERVED_KEYS:
@@ -964,6 +974,7 @@ def _write_trajectory_artifact(
     npz_compression: str,
     protein_atom_template: Optional[np.ndarray] = None,
     npz_extra_arrays: Optional[Dict[str, Any]] = None,
+    identity_metadata: Optional[Dict[str, Any]] = None,
 ) -> int:
     if str(frame_output_format) == "manifest_only":
         arr = np.asarray(ligand_frames)
@@ -995,6 +1006,7 @@ def _write_trajectory_artifact(
             frame_indices=np.asarray(frame_indices, dtype=np.int32),
             compression=str(npz_compression),
             extra_arrays=resolved_extra_arrays,
+            identity_metadata=identity_metadata,
         )
         arr = np.asarray(ligand_frames)
         return int(arr.shape[0]) if arr.ndim >= 1 else 0
@@ -1049,6 +1061,7 @@ def _writer_process_main(task_queue: Any, result_queue: Any) -> None:
                 npz_compression=task["npz_compression"],
                 protein_atom_template=task.get("protein_atom_template"),
                 npz_extra_arrays=task.get("npz_extra_arrays"),
+                identity_metadata=task.get("identity_metadata"),
             )
             result_queue.put({"ok": True})
         except Exception as exc:
@@ -1719,6 +1732,13 @@ def _simulate_with_engine_batch(
     )
 
 
+def _summary_return_contract_fields(out_manifest_csv: str, out_summary_json: str) -> Dict[str, str]:
+    return {
+        "out_manifest_csv": str(out_manifest_csv),
+        "out_summary_json": str(out_summary_json),
+    }
+
+
 def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
     queue_csv = str(args.queue_csv).strip()
     if (not queue_csv) or (not os.path.exists(queue_csv)):
@@ -2019,6 +2039,7 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                 tdir=entry["tdir"],
                 npz_compression=str(args.npz_compression),
                 protein_atom_template=None if bool(prod_light_artifacts) else entry.get("protein_atom_template"),
+                identity_metadata=entry.get("npz_identity_metadata"),
             )
             return
         if writer_mode == "process":
@@ -2038,6 +2059,7 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                     "npz_compression": str(args.npz_compression),
                     "protein_atom_template": None if bool(prod_light_artifacts) else entry.get("protein_atom_template"),
                     "npz_extra_arrays": entry.get("npz_extra_arrays"),
+                    "identity_metadata": entry.get("npz_identity_metadata"),
                     "protein_atom_template_source_type": entry.get("protein_atom_template_source_type", ""),
                 }
             )
@@ -2063,6 +2085,7 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                 npz_compression=str(args.npz_compression),
                 protein_atom_template=None if bool(prod_light_artifacts) else entry.get("protein_atom_template"),
                 npz_extra_arrays=entry.get("npz_extra_arrays"),
+                identity_metadata=entry.get("npz_identity_metadata"),
             )
         )
         writer_pending_peak = max(writer_pending_peak, int(len(writer_futures)))
@@ -2564,6 +2587,12 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                 "npz_path": npz_path,
                 "npz_layout_effective": str(npz_layout_effective),
                 "cached_is_npz": False,
+                "npz_identity_metadata": {
+                    "queue_id": queue_id,
+                    "target": target,
+                    "ligand_id": ligand_id,
+                    "simulation_seed": int(seed_i),
+                },
             }
             effective_frames_requested, prod_frame_budget_score, prod_frame_budget_applied = _resolve_prod_effective_frames(
                 requested_frames=int(args.frames),
@@ -2765,6 +2794,7 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
         "contact_attract_cutoff_A": float(args.contact_attract_cutoff_A),
         "contact_attract_enabled": float(args.contact_attract_base) > 0.0,
         "out_root": os.path.abspath(out_root),
+        **_summary_return_contract_fields(out_manifest_csv, out_summary_json),
         "frame_output_format": frame_output_format,
         "npz_layout": str(args.npz_layout),
         "npz_shard_size": int(args.npz_shard_size),

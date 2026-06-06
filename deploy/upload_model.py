@@ -1,59 +1,59 @@
 #!/usr/bin/env python3
-"""
-Upload a trained model to MLflow or a model registry.
-"""
+from __future__ import annotations
 
-import torch
 import argparse
+import json
 import os
+from pathlib import Path
+from typing import Any
 
-try:
-    import mlflow
-except ImportError:
-    mlflow = None
+from deploy.model_registry import default_version, publish_model_artifact
 
-def upload_model(model_path, model_name, conda_env_path=None):
-    """
-    Uploads a model to MLflow.
-    Args:
-        model_path (str): Path to the saved model file (e.g., .pth).
-        model_name (str): Name to register the model under in MLflow.
-        conda_env_path (str, optional): Path to conda environment file.
-    """
-    if mlflow is None:
-        raise ImportError("mlflow is required to upload models. Install mlflow first.")
 
-    tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
-    mlflow.set_tracking_uri(tracking_uri)
+def _metadata(path: str) -> dict[str, Any]:
+    if not path:
+        return {}
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("metadata JSON must contain an object")
+    return payload
 
-    # Load model (specific loading logic depends on how it was saved)
-    # Example: If saved with torch.save(model.state_dict(), ...)
-    # model_artifact = torch.load(model_path)
-    # Example: If saved with torch.save(model, ...) (full model)
-    model_artifact = torch.load(model_path, map_location='cpu') # Load on CPU for registration
 
-    # Log model
-    with mlflow.start_run():
-        mlflow.pytorch.log_model(
-            pytorch_model=model_artifact,
-            artifact_path="model",
-            conda_env=conda_env_path,
-            code_paths=["core/", "theory/", "api/"] # Include relevant code
-        )
-        model_uri = f"runs:/{mlflow.active_run().info.run_id}/model"
-        print(f"Model logged to MLflow: {model_uri}")
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Publish a signed model artifact to the product model registry.")
+    parser.add_argument("--model_path", required=True, help="Path to the model artifact file.")
+    parser.add_argument("--model_name", required=True, help="Registry model name.")
+    parser.add_argument("--version", default="", help="Registry version. Defaults to a UTC timestamp.")
+    parser.add_argument(
+        "--registry-dir",
+        default=os.getenv("MODEL_REGISTRY_DIR", "model_registry"),
+        help="Filesystem model registry root.",
+    )
+    parser.add_argument(
+        "--signing-key",
+        default=os.getenv("MODEL_REGISTRY_SIGNING_KEY", ""),
+        help="HMAC signing key. Prefer MODEL_REGISTRY_SIGNING_KEY.",
+    )
+    parser.add_argument(
+        "--key-id",
+        default=os.getenv("MODEL_REGISTRY_KEY_ID", "local-product-registry"),
+        help="Signing key identifier recorded in manifests.",
+    )
+    parser.add_argument("--metadata-json", default="", help="Optional JSON object with operator metadata.")
+    args = parser.parse_args()
 
-    # Register model (optional, requires Model Registry)
-    # client = mlflow.MlflowClient()
-    # client.create_model_version(name=model_name, source=model_uri)
+    manifest = publish_model_artifact(
+        model_path=args.model_path,
+        model_name=args.model_name,
+        version=args.version or default_version(),
+        registry_dir=args.registry_dir,
+        signing_key=args.signing_key,
+        key_id=args.key_id,
+        metadata=_metadata(args.metadata_json),
+    )
+    print(json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False))
+    return 0
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Upload a model to MLflow.')
-    parser.add_argument('--model_path', type=str, required=True, help='Path to the saved model file (.pth)')
-    parser.add_argument('--model_name', type=str, required=True, help='Name to register the model')
-    parser.add_argument('--conda_env', type=str, help='Path to conda environment file (optional)')
-
-    args = parser.parse_args()
-
-    upload_model(args.model_path, args.model_name, args.conda_env)
+    raise SystemExit(main())

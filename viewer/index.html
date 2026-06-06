@@ -5,25 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>MD Dynamics Viewer — 분자동역학 시각화</title>
   <meta name="description" content="분자동역학 시뮬레이션 결과 시각화 도구. 인터랙티브 3D 뷰어, 트래젝토리 재생, 결합 포즈 비교."/>
-  <script>
-    if (window.location.protocol === 'file:') {
-      const redirected = 'http://127.0.0.1:8765/viewer/index.html' + window.location.search + window.location.hash;
-      window.location.replace(redirected);
-    }
-  </script>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='10' fill='%239A5A16'/%3E%3Cg fill='none' stroke='%23177E89' stroke-width='3'%3E%3Ccircle cx='32' cy='32' r='22'/%3E%3Cellipse cx='32' cy='32' rx='26' ry='12'/%3E%3Cellipse cx='32' cy='32' rx='12' ry='26'/%3E%3C/g%3E%3C/svg%3E"/>
 
-  <!-- Mol* (Molstar) -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/molstar@4.5.0/build/viewer/molstar.css"/>
-  <script src="https://cdn.jsdelivr.net/npm/molstar@4.5.0/build/viewer/molstar.js"></script>
+  <!-- Vendored runtime assets; see viewer/vendor/manifest.json for pinned upstream provenance. -->
+  <link rel="stylesheet" href="vendor/molstar/4.5.0/molstar.css"/>
+  <script src="vendor/molstar/4.5.0/molstar.js"></script>
 
-  <!-- Plotly for charts -->
-  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-
-  <!-- Google Font: DESIGN.md typography -->
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <script src="vendor/plotly/2.35.2/plotly-2.35.2.min.js"></script>
+  <script src="vendor/jszip/3.10.1/jszip.min.js"></script>
 
   <link rel="stylesheet" href="style.css?v=20260421-blockersurfacing2"/>
 </head>

@@ -16,7 +16,7 @@ def test_run_casp17_ranked_model_depth_batch_executes_small_cpu_lane(tmp_path: P
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/run_casp17_ranked_model_depth_batch.py"),
+            str(ROOT / "tools/casp17/run_casp17_ranked_model_depth_batch.py"),
             "--target-ids",
             "T9998",
             "--sequence-dir",

@@ -72,7 +72,7 @@ def test_build_casp17_sequence_packet_materializes_and_enriches_intake(tmp_path:
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_sequence_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_sequence_packet.py"),
             "--intake-csv",
             str(intake_csv),
             "--sequence-source-dir",

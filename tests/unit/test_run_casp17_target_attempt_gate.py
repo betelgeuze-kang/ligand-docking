@@ -46,7 +46,7 @@ def _write_dummy_backend(path: Path) -> None:
 def _base_attempt_command(tmp_path: Path, launch: Path, *, execute: bool = False, stop_after: str = "submission_gate") -> list[str]:
     command = [
         "python3",
-        str(ROOT / "tools/run_casp17_target_attempt_gate.py"),
+        str(ROOT / "tools/casp17/run_casp17_target_attempt_gate.py"),
         "--target-id",
         "T8300",
         "--launch-packet-json",
@@ -122,7 +122,7 @@ def test_casp17_target_attempt_gate_plans_ready_launch_row(tmp_path: Path) -> No
     assert all(row["status"] == "planned" for row in payload["steps"])
     shape_step = next(row for row in payload["steps"] if row["step"] == "shape_sanity")
     submission_step = next(row for row in payload["steps"] if row["step"] == "submission_gate")
-    assert "build_casp17_structure_shape_sanity_packet.py" in shape_step["command"]
+    assert "casp17/build_casp17_structure_shape_sanity_packet.py" in shape_step["command"]
     assert "--shape-sanity-json" in submission_step["command"]
 
 

@@ -41,7 +41,7 @@ def test_build_gpcr_residual_apply_decision_no_go(tmp_path: Path) -> None:
     subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools/build_gpcr_residual_apply_decision.py"),
+            str(ROOT / "tools/product/build_gpcr_residual_apply_decision.py"),
             "--comparison-json",
             str(comparison_json),
             "--out-json",

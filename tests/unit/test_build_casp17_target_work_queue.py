@@ -81,7 +81,7 @@ def test_build_casp17_target_work_queue_prioritizes_tractable_open_target(tmp_pa
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_target_work_queue.py"),
+            str(ROOT / "tools/casp17/build_casp17_target_work_queue.py"),
             "--watchlist-json",
             str(watchlist),
             "--sequence-packet-json",

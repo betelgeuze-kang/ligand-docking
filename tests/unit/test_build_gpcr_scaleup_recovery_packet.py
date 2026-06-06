@@ -4,7 +4,7 @@ import csv
 import json
 from pathlib import Path
 
-from tools import build_gpcr_scaleup_recovery_packet as mod
+from tools.gpcr_replay import build_gpcr_scaleup_recovery_packet as mod
 
 
 def _write_json(path: Path, payload: dict) -> None:

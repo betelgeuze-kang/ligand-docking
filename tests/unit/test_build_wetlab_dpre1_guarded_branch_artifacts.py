@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from tools import build_wetlab_dpre1_guarded_branch_summary as branch_mod
-from tools import build_wetlab_dpre1_guarded_operator_packet as packet_mod
+from tools.wetlab import build_wetlab_dpre1_guarded_operator_packet as packet_mod
 
 
 def _queue_payload() -> dict:

@@ -1,0 +1,21 @@
+[Unit]
+Description=MICF Product API Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/micf
+EnvironmentFile=/etc/micf/api-server.env
+ExecStart=/usr/bin/python3 -m uvicorn api.main:app --host ${API_HOST} --port ${API_PORT}
+Restart=always
+RestartSec=5
+User=micf
+Group=micf
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/micf
+
+[Install]
+WantedBy=multi-user.target

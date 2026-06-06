@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from tools import build_aqp1_negative_slot_closure_packet as mod
+from tools.product import build_aqp1_negative_slot_closure_packet as mod
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -66,7 +66,7 @@ def test_build_aqp1_negative_slot_closure_packet_cli(tmp_path: Path) -> None:
     subprocess.run(
         [
             sys.executable,
-            "tools/build_aqp1_negative_slot_closure_packet.py",
+            "tools/product/build_aqp1_negative_slot_closure_packet.py",
             "--negative-source-exclusion-json",
             str(exclusion_json),
             "--out-json",

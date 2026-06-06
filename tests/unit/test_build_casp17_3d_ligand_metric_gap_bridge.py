@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools import build_casp17_3d_ligand_metric_gap_bridge as mod
+from tools.casp17 import build_casp17_3d_ligand_metric_gap_bridge as mod
 
 
 def _write_json(path: Path, payload: dict) -> None:

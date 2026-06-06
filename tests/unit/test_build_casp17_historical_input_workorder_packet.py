@@ -77,7 +77,7 @@ def test_historical_input_workorder_builds_operator_template(tmp_path: Path) -> 
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_historical_input_workorder_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_historical_input_workorder_packet.py"),
             "--preflight-json",
             str(preflight),
             "--out-json",
@@ -117,7 +117,7 @@ def test_historical_input_workorder_blocks_when_preflight_missing(tmp_path: Path
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_historical_input_workorder_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_historical_input_workorder_packet.py"),
             "--preflight-json",
             str(tmp_path / "missing.json"),
             "--out-json",

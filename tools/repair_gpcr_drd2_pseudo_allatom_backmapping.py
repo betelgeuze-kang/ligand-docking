@@ -12,7 +12,7 @@ from typing import Any
 
 import numpy as np
 
-from tools.build_gpcr_atom_window_anchor_feature_cache import _parse_pdb_anchor_template
+from tools.gpcr_replay.build_gpcr_atom_window_anchor_feature_cache import _parse_pdb_anchor_template
 
 try:  # pragma: no cover - exercised only when RDKit is missing.
     from rdkit import Chem  # type: ignore

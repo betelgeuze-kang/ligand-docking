@@ -9,7 +9,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from tools import build_gpcr_drd2_local_minimization_survival as mod
+from tools.gpcr_replay import build_gpcr_drd2_local_minimization_survival as mod
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -217,7 +217,7 @@ def test_cli_writes_json_csv_and_markdown_outputs(tmp_path: Path) -> None:
     subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools/build_gpcr_drd2_local_minimization_survival.py"),
+            str(ROOT / "tools/gpcr_replay/build_gpcr_drd2_local_minimization_survival.py"),
             "--input-csv",
             str(input_csv),
             "--engine",

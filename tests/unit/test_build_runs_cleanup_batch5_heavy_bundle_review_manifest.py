@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools import build_runs_cleanup_batch5_heavy_bundle_review_manifest as mod
+from tools.cleanup import build_runs_cleanup_batch5_heavy_bundle_review_manifest as mod
 
 
 def _write_text(path: Path, text: str) -> None:

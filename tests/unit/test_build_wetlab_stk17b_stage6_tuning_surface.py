@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_wetlab_stk17b_stage6_tuning_surface as mod
+from tools.wetlab import build_wetlab_stk17b_stage6_tuning_surface as mod
 
 
 def test_build_wetlab_stk17b_stage6_tuning_surface_summarizes_retry_band() -> None:

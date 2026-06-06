@@ -130,6 +130,7 @@ def build_product_architecture_contract(
     product_api_contract_packet: dict[str, Any] | None = None,
     product_execution_preflight_packet: dict[str, Any] | None = None,
     public_benchmark_packet: dict[str, Any] | None = None,
+    public_benchmark_work_order_packet: dict[str, Any] | None = None,
     cameo_architecture_validation_packet: dict[str, Any] | None = None,
     cleanup_postcheck_packet: dict[str, Any] | None = None,
     cleanup_completion_packet: dict[str, Any] | None = None,
@@ -141,6 +142,7 @@ def build_product_architecture_contract(
     product_api_contract_path: str = "runs/product_api_contract_current.json",
     product_execution_preflight_path: str = "runs/product_execution_preflight_current.json",
     public_benchmark_path: str = "runs/product_public_benchmark_contract_current.json",
+    public_benchmark_work_order_path: str = "runs/product_public_benchmark_work_order_current.json",
     cameo_capability_path: str = "runs/cameo_capability_preflight_current.json",
     cameo_architecture_validation_path: str = "runs/cameo_architecture_validation_contract_current.json",
     cleanup_operations_path: str = "runs/cleanup_operations_surface_contract_current.json",
@@ -159,6 +161,7 @@ def build_product_architecture_contract(
     api_contract = _summary(product_api_contract_packet or {})
     execution_preflight = _summary(product_execution_preflight_packet or {})
     public_benchmark = _summary(public_benchmark_packet or {})
+    public_benchmark_work_order = _summary(public_benchmark_work_order_packet or {})
     cameo = _summary(cameo_capability_packet)
     cameo_architecture = _summary(cameo_architecture_validation_packet or {})
     cleanup_ops = _summary(cleanup_operations_packet)
@@ -428,12 +431,37 @@ def build_product_architecture_contract(
                 f"required_suite_count={_int(public_benchmark.get('required_suite_count'))};"
                 f"ready_required_suite_count={_int(public_benchmark.get('ready_required_suite_count'))};"
                 f"blocked_suite_count={_int(public_benchmark.get('blocked_suite_count'))};"
+                f"suite_materialization_manifest_count={_int(public_benchmark.get('suite_materialization_manifest_count'))};"
+                f"suite_scorecard_row_csv_count={_int(public_benchmark.get('suite_scorecard_row_csv_count'))};"
+                f"suite_threshold_count={_int(public_benchmark.get('suite_threshold_count'))};"
+                f"suite_blocker_count={_int(public_benchmark.get('suite_blocker_count'))};"
+                f"suite_run_command_count={_int(public_benchmark.get('suite_run_command_count'))};"
+                f"suite_materialization_run_command_count={_int(public_benchmark.get('suite_materialization_run_command_count'))};"
+                f"suite_result_provenance_command_count={_int(public_benchmark_work_order.get('suite_result_provenance_command_count'))};"
+                f"suite_result_provenance_present_count={_int(public_benchmark_work_order.get('suite_result_provenance_present_count'))};"
+                f"suite_no_external_dependency_count={_int(public_benchmark.get('suite_no_external_dependency_count'))};"
+                f"work_order_status={_text(public_benchmark_work_order.get('status')) or 'missing'};"
+                f"work_order_open_suite_count={_int(public_benchmark_work_order.get('open_suite_count'))};"
+                f"work_order_materialization_required_suite_count={_int(public_benchmark_work_order.get('materialization_required_suite_count'))};"
+                f"work_order_scorecard_required_suite_count={_int(public_benchmark_work_order.get('scorecard_required_suite_count'))};"
+                f"work_order_continuous_validation_command_count={_int(public_benchmark_work_order.get('continuous_validation_command_count'))};"
+                f"work_order_suite_run_command_count={_int(public_benchmark_work_order.get('suite_run_command_count'))};"
+                f"work_order_suite_result_provenance_command_count={_int(public_benchmark_work_order.get('suite_result_provenance_command_count'))};"
+                f"work_order_suite_result_provenance_present_count={_int(public_benchmark_work_order.get('suite_result_provenance_present_count'))};"
+                f"work_order_suite_threshold_count={_int(public_benchmark_work_order.get('suite_threshold_count'))};"
+                f"work_order_suite_materialization_manifest_count={_int(public_benchmark_work_order.get('suite_materialization_manifest_count'))};"
+                f"work_order_suite_scorecard_row_csv_count={_int(public_benchmark_work_order.get('suite_scorecard_row_csv_count'))};"
+                f"work_order_suite_no_external_dependency_count={_int(public_benchmark_work_order.get('suite_no_external_dependency_count'))};"
+                f"work_order_local_artifact_preflight_ready_suite_count={_int(public_benchmark_work_order.get('local_artifact_preflight_ready_suite_count'))};"
+                f"work_order_local_artifact_preflight_blocked_suite_count={_int(public_benchmark_work_order.get('local_artifact_preflight_blocked_suite_count'))};"
+                f"work_order_missing_local_input_artifact_count={_int(public_benchmark_work_order.get('missing_local_input_artifact_count'))};"
+                f"work_order_missing_local_output_artifact_count={_int(public_benchmark_work_order.get('missing_local_output_artifact_count'))};"
                 f"requires_24h_server={_bool(public_benchmark.get('requires_24h_server'))};"
                 f"requires_competition_season={_bool(public_benchmark.get('requires_competition_season'))};"
                 f"requires_paid_vps={_bool(public_benchmark.get('requires_paid_vps'))}"
             ),
             required="ready reproducible public benchmark contract covering ligand screening, pose/affinity, complex docking, and structure-regression suites",
-            artifact_path=public_benchmark_path,
+            artifact_path=f"{public_benchmark_path};{public_benchmark_work_order_path}",
             reason=(
                 "Commercial product performance validation should be reproducible on public benchmarks without requiring "
                 "CAMEO registration, a paid 24-hour server, or an active competition season."
@@ -624,9 +652,84 @@ def build_product_architecture_contract(
         "public_benchmark_required_suite_count": _int(public_benchmark.get("required_suite_count")),
         "public_benchmark_ready_required_suite_count": _int(public_benchmark.get("ready_required_suite_count")),
         "public_benchmark_blocked_suite_count": _int(public_benchmark.get("blocked_suite_count")),
+        "public_benchmark_suite_materialization_manifest_count": _int(
+            public_benchmark.get("suite_materialization_manifest_count")
+        ),
+        "public_benchmark_suite_scorecard_row_csv_count": _int(public_benchmark.get("suite_scorecard_row_csv_count")),
+        "public_benchmark_suite_threshold_count": _int(public_benchmark.get("suite_threshold_count")),
+        "public_benchmark_suite_blocker_count": _int(public_benchmark.get("suite_blocker_count")),
+        "public_benchmark_suite_run_command_count": _int(public_benchmark.get("suite_run_command_count")),
+        "public_benchmark_suite_materialization_run_command_count": _int(
+            public_benchmark.get("suite_materialization_run_command_count")
+        ),
+        "public_benchmark_suite_result_provenance_command_count": _int(
+            public_benchmark_work_order.get("suite_result_provenance_command_count")
+        ),
+        "public_benchmark_suite_result_provenance_present_count": _int(
+            public_benchmark_work_order.get("suite_result_provenance_present_count")
+        ),
+        "public_benchmark_suite_no_external_dependency_count": _int(
+            public_benchmark.get("suite_no_external_dependency_count")
+        ),
         "public_benchmark_requires_24h_server": _bool(public_benchmark.get("requires_24h_server")),
         "public_benchmark_requires_competition_season": _bool(public_benchmark.get("requires_competition_season")),
         "public_benchmark_requires_paid_vps": _bool(public_benchmark.get("requires_paid_vps")),
+        "public_benchmark_work_order_status": _text(public_benchmark_work_order.get("status")),
+        "public_benchmark_work_order_artifact": public_benchmark_work_order_path,
+        "public_benchmark_work_order_open_suite_count": _int(public_benchmark_work_order.get("open_suite_count")),
+        "public_benchmark_work_order_materialization_required_suite_count": _int(
+            public_benchmark_work_order.get("materialization_required_suite_count")
+        ),
+        "public_benchmark_work_order_scorecard_required_suite_count": _int(
+            public_benchmark_work_order.get("scorecard_required_suite_count")
+        ),
+        "public_benchmark_work_order_continuous_validation_command_count": _int(
+            public_benchmark_work_order.get("continuous_validation_command_count")
+        ),
+        "public_benchmark_work_order_suite_run_command_count": _int(
+            public_benchmark_work_order.get("suite_run_command_count")
+        ),
+        "public_benchmark_work_order_suite_result_provenance_command_count": _int(
+            public_benchmark_work_order.get("suite_result_provenance_command_count")
+        ),
+        "public_benchmark_work_order_suite_result_provenance_present_count": _int(
+            public_benchmark_work_order.get("suite_result_provenance_present_count")
+        ),
+        "public_benchmark_work_order_suite_threshold_count": _int(
+            public_benchmark_work_order.get("suite_threshold_count")
+        ),
+        "public_benchmark_work_order_suite_materialization_manifest_count": _int(
+            public_benchmark_work_order.get("suite_materialization_manifest_count")
+        ),
+        "public_benchmark_work_order_suite_scorecard_row_csv_count": _int(
+            public_benchmark_work_order.get("suite_scorecard_row_csv_count")
+        ),
+        "public_benchmark_work_order_suite_no_external_dependency_count": _int(
+            public_benchmark_work_order.get("suite_no_external_dependency_count")
+        ),
+        "public_benchmark_work_order_local_artifact_preflight_ready_suite_count": _int(
+            public_benchmark_work_order.get("local_artifact_preflight_ready_suite_count")
+        ),
+        "public_benchmark_work_order_local_artifact_preflight_blocked_suite_count": _int(
+            public_benchmark_work_order.get("local_artifact_preflight_blocked_suite_count")
+        ),
+        "public_benchmark_work_order_missing_local_input_artifact_count": _int(
+            public_benchmark_work_order.get("missing_local_input_artifact_count")
+        ),
+        "public_benchmark_work_order_missing_local_output_artifact_count": _int(
+            public_benchmark_work_order.get("missing_local_output_artifact_count")
+        ),
+        "public_benchmark_work_order_missing_local_input_artifacts": public_benchmark_work_order.get(
+            "missing_local_input_artifacts"
+        )
+        or [],
+        "public_benchmark_work_order_missing_local_output_artifacts": public_benchmark_work_order.get(
+            "missing_local_output_artifacts"
+        )
+        or [],
+        "public_benchmark_work_order_continuous_validation_command": _text(
+            public_benchmark_work_order.get("continuous_validation_command")
+        ),
         "commercial_independence_ready": commercial_ready,
         "commercial_dependency_provenance_manifest_present": _bool(commercial.get("dependency_provenance_manifest_present")),
         "commercial_requirements_lock_artifacts_present": _bool(commercial.get("requirements_lock_artifacts_present")),

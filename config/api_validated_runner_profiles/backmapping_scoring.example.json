@@ -1,0 +1,16 @@
+{
+  "enabled": false,
+  "profile_id": "backmapping_scoring.example",
+  "runner_script": "tools/run_ligand_backmapping_scoring.py",
+  "arguments": [
+    "--queue-csv",
+    "config/operator_supplied_queue.csv",
+    "--out-summary-json",
+    "{result_file}",
+    "--out-dir",
+    "{job_results_dir}/delivery",
+    "--score-only"
+  ],
+  "result_file_template": "{job_results_dir}/runner_result.json",
+  "claim_boundary": "Example only. Enable only after the operator supplies a reviewed queue CSV, native structure provenance, and downstream gate policy."
+}

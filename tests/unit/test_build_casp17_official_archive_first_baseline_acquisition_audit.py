@@ -2,7 +2,7 @@ import json
 import tarfile
 from pathlib import Path
 
-from tools import build_casp17_official_archive_first_baseline_acquisition_audit as mod
+from tools.casp17 import build_casp17_official_archive_first_baseline_acquisition_audit as mod
 
 
 def _write_json(path: Path, payload: dict) -> None:

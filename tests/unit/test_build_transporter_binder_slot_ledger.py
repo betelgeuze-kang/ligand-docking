@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_transporter_binder_slot_ledger as mod
+from tools.product import build_transporter_binder_slot_ledger as mod
 
 
 def test_build_transporter_binder_slot_ledger() -> None:

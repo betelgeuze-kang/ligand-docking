@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_wetlab_stk17b_exploratory_followup_lane as mod
+from tools.wetlab import build_wetlab_stk17b_exploratory_followup_lane as mod
 
 
 def test_build_wetlab_stk17b_exploratory_followup_lane_targets_18_to_20() -> None:

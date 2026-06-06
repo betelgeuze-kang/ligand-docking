@@ -4,7 +4,7 @@ import csv
 import json
 from pathlib import Path
 
-from tools import build_product_eval_panel_repair_profile as mod
+from tools.product import build_product_eval_panel_repair_profile as mod
 
 
 def _write_csv(path: Path, rows: list[dict[str, object]]) -> None:

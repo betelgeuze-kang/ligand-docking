@@ -60,7 +60,7 @@ def test_build_pxr_packet_replacement_workbook(tmp_path: Path) -> None:
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_pxr_packet_replacement_workbook.py"),
+            str(ROOT / "tools/product/build_pxr_packet_replacement_workbook.py"),
             "--queue-json",
             str(queue_json),
             "--out-json",

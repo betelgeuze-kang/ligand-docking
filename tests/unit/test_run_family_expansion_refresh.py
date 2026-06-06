@@ -11,8 +11,8 @@ def test_refresh_chain_includes_aqp1_reviewer_workbench_step() -> None:
     )
     text = refresh_script.read_text(encoding="utf-8")
 
-    reviewer_step = '(\"aqp1_reviewer_workbench\", [sys.executable, _script(\"build_aqp1_reviewer_workbench.py\")])'
-    manual_handoff_step = '(\"aqp1_manual_handoff\", [sys.executable, _script(\"build_aqp1_manual_verdict_handoff_packet.py\")])'
+    reviewer_step = '(\"aqp1_reviewer_workbench\", [sys.executable, _script(\"product/build_aqp1_reviewer_workbench.py\")])'
+    manual_handoff_step = '(\"aqp1_manual_handoff\", [sys.executable, _script(\"product/build_aqp1_manual_verdict_handoff_packet.py\")])'
     catalog_step = '(\"family_packet_catalog\", [sys.executable, _script(\"build_family_packet_catalog.py\")])'
 
     assert reviewer_step in text
@@ -29,9 +29,9 @@ def test_refresh_chain_includes_aqp1_source_confirmation_after_quantitative_prov
     )
     text = refresh_script.read_text(encoding="utf-8")
 
-    quant_step = '(\"aqp1_quantitative_provenance_packet\", [sys.executable, _script(\"build_aqp1_quantitative_provenance_packet.py\")])'
-    confirmation_step = '(\"aqp1_first_wave_source_confirmation_packet\", [sys.executable, _script(\"build_aqp1_first_wave_source_confirmation_packet.py\")])'
-    ledger_step = '(\"aqp1_candidate_ledger\", [sys.executable, _script(\"build_aqp1_candidate_evidence_ledger.py\")])'
+    quant_step = '(\"aqp1_quantitative_provenance_packet\", [sys.executable, _script(\"product/build_aqp1_quantitative_provenance_packet.py\")])'
+    confirmation_step = '(\"aqp1_first_wave_source_confirmation_packet\", [sys.executable, _script(\"product/build_aqp1_first_wave_source_confirmation_packet.py\")])'
+    ledger_step = '(\"aqp1_candidate_ledger\", [sys.executable, _script(\"product/build_aqp1_candidate_evidence_ledger.py\")])'
 
     assert quant_step in text
     assert confirmation_step in text
@@ -67,7 +67,7 @@ def test_refresh_chain_includes_aqp1_follow_on_source_confirmation_before_blocke
 
     follow_on_step = '(\"aqp1_first_wave_follow_on_packet\", [sys.executable, _script(\"build_aqp1_first_wave_follow_on_packet.py\")])'
     source_confirmation_step = '(\"aqp1_follow_on_source_confirmation_packet\", [sys.executable, _script(\"build_aqp1_follow_on_source_confirmation_packet.py\")])'
-    decomposition_step = '(\"aqp1_follow_on_blocker_decomposition\", [sys.executable, _script(\"build_aqp1_follow_on_blocker_decomposition.py\")])'
+    decomposition_step = '(\"aqp1_follow_on_blocker_decomposition\", [sys.executable, _script(\"product/build_aqp1_follow_on_blocker_decomposition.py\")])'
     execution_step = '(\"transporter_seed_execution\", [sys.executable, _script(\"build_transporter_seed_row_execution_packet.py\")])'
 
     assert follow_on_step in text
@@ -205,7 +205,7 @@ def test_refresh_chain_includes_transporter_negative_target_packets_before_famil
     )
     text = refresh_script.read_text(encoding="utf-8")
 
-    negative_day_plan_step = '(\"transporter_negative_day_plan\", [sys.executable, _script(\"build_transporter_negative_reviewer_day_plan.py\")])'
+    negative_day_plan_step = '(\"transporter_negative_day_plan\", [sys.executable, _script(\"product/build_transporter_negative_reviewer_day_plan.py\")])'
     target_packets_step = '(\"transporter_negative_target_packets\", [sys.executable, _script(\"build_transporter_negative_evidence_target_packets.py\")])'
     catalog_step = '(\"family_packet_catalog\", [sys.executable, _script(\"build_family_packet_catalog.py\")])'
 
@@ -223,19 +223,19 @@ def test_refresh_chain_includes_aqp1_negative_source_exclusion_before_transporte
     )
     text = refresh_script.read_text(encoding="utf-8")
 
-    aqp1_negative_handoff_step = '(\"aqp1_negative_handoff\", [sys.executable, _script(\"build_aqp1_negative_review_handoff_packet.py\")])'
-    exclusion_step = '(\"aqp1_negative_source_exclusion\", [sys.executable, _script(\"build_aqp1_negative_source_exclusion_packet.py\")])'
-    slot_closure_step = '(\"aqp1_negative_slot_closure\", [sys.executable, _script(\"build_aqp1_negative_slot_closure_packet.py\")])'
-    acquisition_step = '(\"aqp1_negative_acquisition\", [sys.executable, _script(\"build_aqp1_negative_evidence_acquisition_packet.py\")])'
-    confirmation_step = '(\"aqp1_negative_confirmation\", [sys.executable, _script(\"build_aqp1_negative_evidence_confirmation_packet.py\")])'
-    slot_resolution_step = '(\"aqp1_negative_slot_resolution\", [sys.executable, _script(\"build_aqp1_negative_slot_resolution_packet.py\")])'
-    frontier_step = '(\"aqp1_negative_candidate_frontier\", [sys.executable, _script(\"build_aqp1_negative_candidate_frontier_packet.py\")])'
-    frontier_resolution_step = '(\"aqp1_negative_frontier_resolution\", [sys.executable, _script(\"build_aqp1_negative_frontier_resolution_packet.py\")])'
-    primary_probe_step = '(\"aqp1_negative_primary_probe\", [sys.executable, _script(\"build_aqp1_negative_primary_probe_packet.py\")])'
-    exact_source_outcome_step = '(\"aqp1_negative_exact_source_outcome\", [sys.executable, _script(\"build_aqp1_negative_exact_source_outcome_packet.py\")])'
-    primary_probe_resolution_step = '(\"aqp1_negative_primary_probe_resolution\", [sys.executable, _script(\"build_aqp1_negative_primary_probe_resolution_packet.py\")])'
-    glut1_negative_handoff_step = '(\"glut1_negative_handoff\", [sys.executable, _script(\"build_glut1_negative_review_handoff_packet.py\")])'
-    negative_day_plan_step = '(\"transporter_negative_day_plan\", [sys.executable, _script(\"build_transporter_negative_reviewer_day_plan.py\")])'
+    aqp1_negative_handoff_step = '(\"aqp1_negative_handoff\", [sys.executable, _script(\"product/build_aqp1_negative_review_handoff_packet.py\")])'
+    exclusion_step = '(\"aqp1_negative_source_exclusion\", [sys.executable, _script(\"product/build_aqp1_negative_source_exclusion_packet.py\")])'
+    slot_closure_step = '(\"aqp1_negative_slot_closure\", [sys.executable, _script(\"product/build_aqp1_negative_slot_closure_packet.py\")])'
+    acquisition_step = '(\"aqp1_negative_acquisition\", [sys.executable, _script(\"product/build_aqp1_negative_evidence_acquisition_packet.py\")])'
+    confirmation_step = '(\"aqp1_negative_confirmation\", [sys.executable, _script(\"product/build_aqp1_negative_evidence_confirmation_packet.py\")])'
+    slot_resolution_step = '(\"aqp1_negative_slot_resolution\", [sys.executable, _script(\"product/build_aqp1_negative_slot_resolution_packet.py\")])'
+    frontier_step = '(\"aqp1_negative_candidate_frontier\", [sys.executable, _script(\"product/build_aqp1_negative_candidate_frontier_packet.py\")])'
+    frontier_resolution_step = '(\"aqp1_negative_frontier_resolution\", [sys.executable, _script(\"product/build_aqp1_negative_frontier_resolution_packet.py\")])'
+    primary_probe_step = '(\"aqp1_negative_primary_probe\", [sys.executable, _script(\"product/build_aqp1_negative_primary_probe_packet.py\")])'
+    exact_source_outcome_step = '(\"aqp1_negative_exact_source_outcome\", [sys.executable, _script(\"product/build_aqp1_negative_exact_source_outcome_packet.py\")])'
+    primary_probe_resolution_step = '(\"aqp1_negative_primary_probe_resolution\", [sys.executable, _script(\"product/build_aqp1_negative_primary_probe_resolution_packet.py\")])'
+    glut1_negative_handoff_step = '(\"glut1_negative_handoff\", [sys.executable, _script(\"product/build_glut1_negative_review_handoff_packet.py\")])'
+    negative_day_plan_step = '(\"transporter_negative_day_plan\", [sys.executable, _script(\"product/build_transporter_negative_reviewer_day_plan.py\")])'
 
     assert aqp1_negative_handoff_step in text
     assert exclusion_step in text

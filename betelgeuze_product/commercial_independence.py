@@ -42,6 +42,7 @@ DEFAULT_REQUIREMENTS_LOCK_MD = "runs/local_delivery_requirements_lock_current.md
 DEFAULT_REQUIREMENTS_LOCK_TXT = "runs/local_delivery_requirements_lock_current.txt"
 DEFAULT_PRODUCT_SERVICE_BOUNDARY_JSON = "runs/product_service_boundary_contract_current.json"
 DEFAULT_PRODUCT_API_CONTRACT_JSON = "runs/product_api_contract_current.json"
+DEFAULT_PRODUCT_CAPABILITY_JSON = "runs/product_capability_surface_contract_current.json"
 DEFAULT_PRODUCT_BUNDLE_JSON = "runs/product_bundle_contract_current.json"
 DEFAULT_PRODUCT_DELIVERY_EVIDENCE_JSON = "runs/product_delivery_evidence_contract_current.json"
 DEFAULT_PRODUCT_PILOT_JSON = "runs/product_pilot_packet_contract_current.json"
@@ -212,10 +213,12 @@ def build_product_commercial_independence_gate(
     requirements_lock_txt: str = DEFAULT_REQUIREMENTS_LOCK_TXT,
     product_service_boundary_json: str = DEFAULT_PRODUCT_SERVICE_BOUNDARY_JSON,
     product_api_contract_json: str = DEFAULT_PRODUCT_API_CONTRACT_JSON,
+    product_capability_json: str = DEFAULT_PRODUCT_CAPABILITY_JSON,
     product_bundle_json: str = DEFAULT_PRODUCT_BUNDLE_JSON,
     product_delivery_evidence_json: str = DEFAULT_PRODUCT_DELIVERY_EVIDENCE_JSON,
     product_pilot_json: str = DEFAULT_PRODUCT_PILOT_JSON,
     public_benchmark_json: str = DEFAULT_PUBLIC_BENCHMARK_JSON,
+    public_benchmark_work_order_json: str = "runs/product_public_benchmark_work_order_current.json",
 ) -> dict[str, Any]:
     root_path = Path(root).resolve()
     runtime_path = root_path / runtime_requirements
@@ -232,18 +235,22 @@ def build_product_commercial_independence_gate(
     requirements_lock_txt_path = root_path / requirements_lock_txt
     product_service_boundary_path = root_path / product_service_boundary_json
     product_api_contract_path = root_path / product_api_contract_json
+    product_capability_path = root_path / product_capability_json
     product_bundle_path = root_path / product_bundle_json
     product_delivery_evidence_path = root_path / product_delivery_evidence_json
     product_pilot_path = root_path / product_pilot_json
     public_benchmark_path = root_path / public_benchmark_json
+    public_benchmark_work_order_path = root_path / public_benchmark_work_order_json
     environment_manifest_payload = _read_json(environment_manifest_path)
     requirements_lock_payload = _read_json(requirements_lock_json_path)
     product_service_boundary = _summary(_read_json(product_service_boundary_path))
     product_api_contract = _summary(_read_json(product_api_contract_path))
+    product_capability = _summary(_read_json(product_capability_path))
     product_bundle = _summary(_read_json(product_bundle_path))
     product_delivery_evidence = _summary(_read_json(product_delivery_evidence_path))
     product_pilot = _summary(_read_json(product_pilot_path))
     public_benchmark = _summary(_read_json(public_benchmark_path))
+    public_benchmark_work_order = _summary(_read_json(public_benchmark_work_order_path))
     environment_manifest = _summary(environment_manifest_payload)
     requirements_lock = _summary(requirements_lock_payload)
     requirements_lock_generated_at = _text(requirements_lock.get("generated_at") or requirements_lock_payload.get("generated_at"))
@@ -321,6 +328,23 @@ def build_product_commercial_independence_gate(
         and _int(product_api_contract.get("missing_route_count")) == 0
         and _int(product_api_contract.get("status_response_missing_key_count")) == 0
     )
+    allowed_scope_families = [str(item) for item in product_capability.get("allowed_scope_families") or []]
+    blocked_claim_scopes = [str(item) for item in product_capability.get("blocked_claim_scopes") or []]
+    general_platform_claim_allowed = _bool(product_capability.get("general_platform_claim_allowed"))
+    restricted_commercial_scope_claim_ready = (
+        _text(product_capability.get("status")) == "product_capability_surface_contract_ready"
+        and _bool(product_capability.get("restricted_scope_claim_guard_ready"))
+        and allowed_scope_families == ["gpcr", "ion_channel", "kinase"]
+        and "general_protein_ligand_platform" in blocked_claim_scopes
+        and not general_platform_claim_allowed
+    )
+    commercial_claim_scope_tier = "restricted_family_local_product" if restricted_commercial_scope_claim_ready else "scope_claim_not_ready"
+    commercial_claim_scope_detail = (
+        f"tier={commercial_claim_scope_tier};"
+        f"allowed_scope_families={','.join(allowed_scope_families)};"
+        f"blocked_claim_scopes={','.join(blocked_claim_scopes)};"
+        f"general_platform_claim_allowed={general_platform_claim_allowed}"
+    )
     local_delivery_bundle_ready = (
         _text(product_bundle.get("status")) == "product_bundle_contract_ready"
         and _bool(product_bundle.get("bundle_assembled"))
@@ -339,12 +363,70 @@ def build_product_commercial_independence_gate(
         and product_cli_present
         and local_delivery_bundle_ready
     )
+    public_benchmark_required_suite_count = _int(public_benchmark.get("required_suite_count"))
+    public_benchmark_ready_required_suite_count = _int(public_benchmark.get("ready_required_suite_count"))
+    public_benchmark_blocked_suite_count = _int(public_benchmark.get("blocked_suite_count"))
+    public_benchmark_suite_materialization_manifest_count = _int(
+        public_benchmark.get("suite_materialization_manifest_count")
+    )
+    public_benchmark_suite_scorecard_row_csv_count = _int(public_benchmark.get("suite_scorecard_row_csv_count"))
+    public_benchmark_suite_threshold_count = _int(public_benchmark.get("suite_threshold_count"))
+    public_benchmark_suite_blocker_count = _int(public_benchmark.get("suite_blocker_count"))
+    public_benchmark_suite_run_command_count = _int(public_benchmark.get("suite_run_command_count"))
+    public_benchmark_suite_materialization_run_command_count = _int(
+        public_benchmark.get("suite_materialization_run_command_count")
+    )
+    public_benchmark_suite_result_provenance_command_count = _int(
+        public_benchmark_work_order.get("suite_result_provenance_command_count")
+    )
+    public_benchmark_suite_result_provenance_present_count = _int(
+        public_benchmark_work_order.get("suite_result_provenance_present_count")
+    )
+    public_benchmark_suite_no_external_dependency_count = _int(
+        public_benchmark.get("suite_no_external_dependency_count")
+    )
+    public_benchmark_work_order_status = _text(public_benchmark_work_order.get("status"))
+    public_benchmark_work_order_local_artifact_preflight_ready_suite_count = _int(
+        public_benchmark_work_order.get("local_artifact_preflight_ready_suite_count")
+    )
+    public_benchmark_work_order_local_artifact_preflight_blocked_suite_count = _int(
+        public_benchmark_work_order.get("local_artifact_preflight_blocked_suite_count")
+    )
+    public_benchmark_work_order_missing_local_input_artifact_count = _int(
+        public_benchmark_work_order.get("missing_local_input_artifact_count")
+    )
+    public_benchmark_work_order_missing_local_output_artifact_count = _int(
+        public_benchmark_work_order.get("missing_local_output_artifact_count")
+    )
+    public_benchmark_work_order_local_artifact_preflight_ready = (
+        public_benchmark_required_suite_count > 0
+        and public_benchmark_work_order_status in {
+            "product_public_benchmark_work_order_ready",
+            "product_public_benchmark_work_order_clear",
+        }
+        and public_benchmark_work_order_local_artifact_preflight_ready_suite_count >= public_benchmark_required_suite_count
+        and public_benchmark_work_order_local_artifact_preflight_blocked_suite_count == 0
+        and public_benchmark_work_order_missing_local_input_artifact_count == 0
+        and public_benchmark_work_order_missing_local_output_artifact_count == 0
+    )
+    public_benchmark_suite_coverage_ready = (
+        public_benchmark_required_suite_count > 0
+        and public_benchmark_suite_materialization_manifest_count >= public_benchmark_required_suite_count
+        and public_benchmark_suite_scorecard_row_csv_count >= public_benchmark_required_suite_count
+        and public_benchmark_suite_threshold_count >= public_benchmark_required_suite_count
+        and public_benchmark_suite_blocker_count >= public_benchmark_required_suite_count
+        and public_benchmark_suite_run_command_count >= public_benchmark_required_suite_count
+        and public_benchmark_suite_materialization_run_command_count >= public_benchmark_required_suite_count
+        and public_benchmark_suite_result_provenance_command_count >= public_benchmark_required_suite_count
+        and public_benchmark_suite_no_external_dependency_count >= public_benchmark_required_suite_count
+    )
     public_benchmark_evidence_ready = (
         _text(public_benchmark.get("status")) == "product_public_benchmark_contract_ready"
         and _bool(public_benchmark.get("public_benchmark_validation_ready"))
-        and _int(public_benchmark.get("required_suite_count")) > 0
-        and _int(public_benchmark.get("ready_required_suite_count")) == _int(public_benchmark.get("required_suite_count"))
-        and _int(public_benchmark.get("blocked_suite_count")) == 0
+        and public_benchmark_ready_required_suite_count == public_benchmark_required_suite_count
+        and public_benchmark_blocked_suite_count == 0
+        and public_benchmark_suite_coverage_ready
+        and public_benchmark_work_order_local_artifact_preflight_ready
     )
 
     rows = [
@@ -496,6 +578,14 @@ def build_product_commercial_independence_gate(
             "Commercial handoff needs a verified API contract for local/self-hosted operation.",
         ),
         _row(
+            "restricted_commercial_scope_claim_ready",
+            restricted_commercial_scope_claim_ready,
+            commercial_claim_scope_detail,
+            "capability surface declares restricted gpcr/ion_channel/kinase scope, blocks transporter/PXR/general platform claims, and general_platform_claim_allowed=false",
+            product_capability_json,
+            "Commercial independence must be tied to the current restricted product scope, not a broad protein-ligand platform claim.",
+        ),
+        _row(
             "local_self_hosted_operation_ready",
             local_self_hosted_operation_ready,
             (
@@ -536,12 +626,25 @@ def build_product_commercial_independence_gate(
             (
                 f"status={_text(public_benchmark.get('status')) or 'missing'};"
                 f"validation_ready={_bool(public_benchmark.get('public_benchmark_validation_ready'))};"
-                f"ready_required_suites={_int(public_benchmark.get('ready_required_suite_count'))};"
-                f"required_suites={_int(public_benchmark.get('required_suite_count'))};"
-                f"blocked_suites={_int(public_benchmark.get('blocked_suite_count'))}"
+                f"ready_required_suites={public_benchmark_ready_required_suite_count};"
+                f"required_suites={public_benchmark_required_suite_count};"
+                f"blocked_suites={public_benchmark_blocked_suite_count};"
+                f"suite_materialization_manifest_count={public_benchmark_suite_materialization_manifest_count};"
+                f"suite_scorecard_row_csv_count={public_benchmark_suite_scorecard_row_csv_count};"
+                f"suite_threshold_count={public_benchmark_suite_threshold_count};"
+                f"suite_blocker_count={public_benchmark_suite_blocker_count};"
+                f"suite_run_command_count={public_benchmark_suite_run_command_count};"
+                f"suite_materialization_run_command_count={public_benchmark_suite_materialization_run_command_count};"
+                f"suite_no_external_dependency_count={public_benchmark_suite_no_external_dependency_count};"
+                f"work_order_status={public_benchmark_work_order_status or 'missing'};"
+                f"work_order_local_artifact_preflight_ready={public_benchmark_work_order_local_artifact_preflight_ready};"
+                f"work_order_local_artifact_preflight_ready_suite_count={public_benchmark_work_order_local_artifact_preflight_ready_suite_count};"
+                f"work_order_local_artifact_preflight_blocked_suite_count={public_benchmark_work_order_local_artifact_preflight_blocked_suite_count};"
+                f"work_order_missing_local_input_artifact_count={public_benchmark_work_order_missing_local_input_artifact_count};"
+                f"work_order_missing_local_output_artifact_count={public_benchmark_work_order_missing_local_output_artifact_count}"
             ),
-            "public benchmark contract ready with all required suites passing",
-            public_benchmark_json,
+            "public benchmark contract ready with all required suites passing and suite-level manifest/scorecard/threshold/blocker/run-command evidence",
+            f"{public_benchmark_json};{public_benchmark_work_order_json}",
             "Commercial independence claims need reproducible public benchmark evidence, independent of live CAMEO.",
         ),
     ]
@@ -622,6 +725,12 @@ def build_product_commercial_independence_gate(
         "product_service_boundary_cli_command_count": _int(product_service_boundary.get("cli_command_count")),
         "product_api_contract_ready": product_api_contract_ready,
         "product_api_contract_missing_route_count": _int(product_api_contract.get("missing_route_count")),
+        "restricted_commercial_scope_claim_ready": restricted_commercial_scope_claim_ready,
+        "commercial_claim_scope_tier": commercial_claim_scope_tier,
+        "commercial_claim_scope_detail": commercial_claim_scope_detail,
+        "allowed_scope_families": allowed_scope_families,
+        "blocked_claim_scopes": blocked_claim_scopes,
+        "general_platform_claim_allowed": general_platform_claim_allowed,
         "local_self_hosted_operation_ready": local_self_hosted_operation_ready,
         "local_self_hosted_core_product_surface_present": core_product_surface_present,
         "local_self_hosted_external_saas_free_runtime": external_api_free_core_runtime,
@@ -632,9 +741,25 @@ def build_product_commercial_independence_gate(
         "local_delivery_pilot_delivery_ready": _bool(product_pilot.get("pilot_delivery_ready")),
         "public_benchmark_evidence_ready": public_benchmark_evidence_ready,
         "public_benchmark_status": _text(public_benchmark.get("status")),
-        "public_benchmark_ready_required_suite_count": _int(public_benchmark.get("ready_required_suite_count")),
-        "public_benchmark_required_suite_count": _int(public_benchmark.get("required_suite_count")),
-        "public_benchmark_blocked_suite_count": _int(public_benchmark.get("blocked_suite_count")),
+        "public_benchmark_ready_required_suite_count": public_benchmark_ready_required_suite_count,
+        "public_benchmark_required_suite_count": public_benchmark_required_suite_count,
+        "public_benchmark_blocked_suite_count": public_benchmark_blocked_suite_count,
+        "public_benchmark_suite_coverage_ready": public_benchmark_suite_coverage_ready,
+        "public_benchmark_suite_materialization_manifest_count": public_benchmark_suite_materialization_manifest_count,
+        "public_benchmark_suite_scorecard_row_csv_count": public_benchmark_suite_scorecard_row_csv_count,
+        "public_benchmark_suite_threshold_count": public_benchmark_suite_threshold_count,
+        "public_benchmark_suite_blocker_count": public_benchmark_suite_blocker_count,
+        "public_benchmark_suite_run_command_count": public_benchmark_suite_run_command_count,
+        "public_benchmark_suite_materialization_run_command_count": public_benchmark_suite_materialization_run_command_count,
+        "public_benchmark_suite_result_provenance_command_count": public_benchmark_suite_result_provenance_command_count,
+        "public_benchmark_suite_result_provenance_present_count": public_benchmark_suite_result_provenance_present_count,
+        "public_benchmark_suite_no_external_dependency_count": public_benchmark_suite_no_external_dependency_count,
+        "public_benchmark_work_order_status": public_benchmark_work_order_status,
+        "public_benchmark_work_order_local_artifact_preflight_ready": public_benchmark_work_order_local_artifact_preflight_ready,
+        "public_benchmark_work_order_local_artifact_preflight_ready_suite_count": public_benchmark_work_order_local_artifact_preflight_ready_suite_count,
+        "public_benchmark_work_order_local_artifact_preflight_blocked_suite_count": public_benchmark_work_order_local_artifact_preflight_blocked_suite_count,
+        "public_benchmark_work_order_missing_local_input_artifact_count": public_benchmark_work_order_missing_local_input_artifact_count,
+        "public_benchmark_work_order_missing_local_output_artifact_count": public_benchmark_work_order_missing_local_output_artifact_count,
         "commercial_independent_product_claim_allowed": commercial_independent_product_claim_allowed,
         "execution_enabled": False,
         "docking_results_emitted": False,

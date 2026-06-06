@@ -84,7 +84,7 @@ def test_build_ligand_scaleup_100k_audit_marks_valid_completed_run(tmp_path: Pat
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools" / "build_ligand_scaleup_100k_audit.py"),
+            str(ROOT / "tools" / "product/build_ligand_scaleup_100k_audit.py"),
             "--run-root",
             str(run_root),
             "--pilot-json",

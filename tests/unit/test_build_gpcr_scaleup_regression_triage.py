@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools import build_gpcr_scaleup_regression_triage as mod
+from tools.gpcr_replay import build_gpcr_scaleup_regression_triage as mod
 
 
 class _Args:

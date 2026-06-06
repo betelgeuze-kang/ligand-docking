@@ -12,7 +12,7 @@
   --design-color-success: #2F7D59;
   --design-color-warning: #A66512;
   --design-color-danger: #A6423A;
-  --design-font-body: "IBM Plex Sans KR", "Noto Sans KR", sans-serif;
+  --design-font-body: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --design-radius-sm: 12px;
   --design-radius-md: 18px;
   --design-radius-lg: 24px;

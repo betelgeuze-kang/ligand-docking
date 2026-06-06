@@ -53,13 +53,50 @@ def _split_missing_fields(value: str) -> list[str]:
     return [item.strip() for item in str(value or "").split(",") if item.strip()]
 
 
+def _fallback_queue_rows_from_replacement_workbook(
+    replacement_rows: list[dict[str, str]],
+) -> list[dict[str, Any]]:
+    """Treat a completed replacement workbook as the effective queue.
+
+    The placeholder fill queue is intentionally empty once all PXR slots are
+    materialized. Downstream gates still need row-level readiness evidence, so
+    synthesize the same queue shape from the authoritative workbook.
+    """
+    rows: list[dict[str, Any]] = []
+    for row in replacement_rows:
+        packet = str(row.get("packet", "")).strip()
+        current_ligand_id = str(row.get("current_ligand_id", "")).strip()
+        current_role = str(row.get("replacement_role") or row.get("current_role", "")).strip()
+        packet_step = str(row.get("packet_step", "")).strip()
+        if not packet or not current_ligand_id or not current_role or not packet_step:
+            continue
+        rows.append(
+            {
+                "packet": packet,
+                "packet_step": packet_step,
+                "current_ligand_id": current_ligand_id,
+                "current_role": current_role,
+                "placeholder_sources": str(row.get("placeholder_sources", "")).strip(),
+                "replacement_ligand_id": str(row.get("replacement_ligand_id", "")).strip(),
+                "queue_source": "replacement_workbook_fallback",
+            }
+        )
+    return rows
+
+
 def build_payload(
     queue_payload: dict[str, Any],
     ligand_workbook_payload: dict[str, Any],
     replacement_rows: list[dict[str, str]],
 ) -> dict[str, Any]:
-    queue_rows = list(queue_payload.get("queue_rows", []))
+    source_queue_rows = list(queue_payload.get("queue_rows", []))
     ligand_rows = list(ligand_workbook_payload.get("workbook_rows", []))
+    queue_empty_fallback = not source_queue_rows and bool(replacement_rows)
+    queue_rows = (
+        _fallback_queue_rows_from_replacement_workbook(replacement_rows)
+        if queue_empty_fallback
+        else source_queue_rows
+    )
 
     queue_step_counts = Counter(str(row.get("packet_step", "")).strip() for row in queue_rows)
     queue_index = {
@@ -99,6 +136,15 @@ def build_payload(
         current_ligand_id = str(queue_row.get("current_ligand_id", "")).strip()
         packet_step = str(queue_row.get("packet_step", "")).strip()
         ligand_row = ligand_index.get(key, {})
+        if not ligand_row and str(queue_row.get("replacement_ligand_id", "")).strip():
+            ligand_row = ligand_index.get(
+                _row_key(
+                    packet,
+                    current_role,
+                    str(queue_row.get("replacement_ligand_id", "")).strip(),
+                ),
+                {},
+            )
         replacement_row = replacement_index.get(key, {})
         missing_fields = _split_missing_fields(str(replacement_row.get("required_missing_fields", "")))
         for field in missing_fields:
@@ -116,6 +162,7 @@ def build_payload(
                 "current_role": current_role,
                 "current_ligand_id": current_ligand_id,
                 "queue_row_present": "yes",
+                "queue_source": str(queue_row.get("queue_source", "placeholder_fill_queue")).strip(),
                 "ligand_workbook_row_present": "yes" if ligand_row else "no",
                 "replacement_workbook_row_present": "yes" if replacement_row else "no",
                 "placeholder_sources": str(queue_row.get("placeholder_sources", "")).strip(),
@@ -147,6 +194,8 @@ def build_payload(
 
     summary = {
         "queue_row_count": len(queue_rows),
+        "source_queue_row_count": len(source_queue_rows),
+        "queue_empty_fallback_from_replacement_workbook": queue_empty_fallback,
         "ligand_workbook_row_count": len(ligand_rows),
         "replacement_workbook_row_count": len(replacement_rows),
         "matched_queue_rows": len(readiness_rows),
@@ -157,6 +206,8 @@ def build_payload(
         "next_required_step": (
             "Disambiguate duplicate packet_step names and fill replacement workbook rows until required_missing_fields is empty."
             if any(count > 1 for count in queue_step_counts.values()) or any(count > 1 for count in replacement_step_counts.values())
+            else "All replacement workbook rows are ready for authoritative PXR packet apply."
+            if readiness_rows and all(row["ready_for_apply"] == "yes" for row in readiness_rows)
             else "Fill replacement workbook rows until required_missing_fields is empty."
         ),
     }
@@ -174,6 +225,8 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         "# PXR Packet Fill Readiness",
         "",
         f"- target: `{payload['target']}`",
+        f"- source_queue_row_count: `{payload['summary']['source_queue_row_count']}`",
+        f"- queue_empty_fallback_from_replacement_workbook: `{payload['summary']['queue_empty_fallback_from_replacement_workbook']}`",
         f"- matched_queue_rows: `{payload['summary']['matched_queue_rows']}`",
         f"- ready_for_apply_row_count: `{payload['summary']['ready_for_apply_row_count']}`",
         f"- blocked_row_count: `{payload['summary']['blocked_row_count']}`",

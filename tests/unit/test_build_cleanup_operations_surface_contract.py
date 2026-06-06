@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools import build_cleanup_operations_surface_contract as mod
+from tools.cleanup import build_cleanup_operations_surface_contract as mod
 
 
 def _write_api_surface(root: Path, *, include_router: bool = True) -> None:

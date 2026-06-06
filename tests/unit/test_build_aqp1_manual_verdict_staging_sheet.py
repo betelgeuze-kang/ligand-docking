@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def test_build_aqp1_manual_verdict_staging_sheet() -> None:
     subprocess.run(
-        [sys.executable, "tools/build_aqp1_manual_verdict_staging_sheet.py"],
+        [sys.executable, "tools/product/build_aqp1_manual_verdict_staging_sheet.py"],
         cwd=ROOT,
         check=True,
     )

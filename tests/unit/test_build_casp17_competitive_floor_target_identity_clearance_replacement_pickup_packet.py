@@ -31,7 +31,7 @@ def _run(tmp_path: Path, workorder_json: Path, audit_json: Path) -> dict:
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_competitive_floor_target_identity_clearance_replacement_pickup_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_competitive_floor_target_identity_clearance_replacement_pickup_packet.py"),
             "--workorder-json",
             str(workorder_json),
             "--audit-json",

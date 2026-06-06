@@ -2,7 +2,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from tools import build_casp17_massivefold_freeze_candidate_escrow as mod
+from tools.casp17 import build_casp17_massivefold_freeze_candidate_escrow as mod
 
 
 def _write_json(path: Path, payload: dict) -> None:

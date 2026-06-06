@@ -78,7 +78,7 @@ def test_operator_import_packet_writes_candidate_manifests_when_preflight_passes
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_win_tier_benchmark_operator_import_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_win_tier_benchmark_operator_import_packet.py"),
             "--operator-template-csv",
             str(template),
             "--operator-preflight-json",
@@ -123,7 +123,7 @@ def test_operator_import_packet_blocks_when_preflight_not_pass(tmp_path: Path) -
     result = subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_win_tier_benchmark_operator_import_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_win_tier_benchmark_operator_import_packet.py"),
             "--operator-template-csv",
             str(template),
             "--operator-preflight-json",

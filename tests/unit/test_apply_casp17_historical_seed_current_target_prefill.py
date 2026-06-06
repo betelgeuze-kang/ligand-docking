@@ -4,7 +4,7 @@ import csv
 import json
 from pathlib import Path
 
-from tools import apply_casp17_historical_seed_current_target_prefill as mod
+from tools.casp17 import apply_casp17_historical_seed_current_target_prefill as mod
 
 
 FIELDS = ["benchmark_id", "target_id", "current_casp17_target", "notes"]

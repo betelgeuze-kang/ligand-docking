@@ -103,6 +103,25 @@ include = ["betelgeuze_product*", "betelgeuze_cameo*", "betelgeuze_cleanup*"]
         + "\n",
         encoding="utf-8",
     )
+    (runs / "product_capability_surface_contract_current.json").write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "product_capability_surface_contract_ready",
+                    "restricted_scope_claim_guard_ready": True,
+                    "allowed_scope_families": ["gpcr", "ion_channel", "kinase"],
+                    "blocked_claim_scopes": [
+                        "transporter_domain_promotion",
+                        "pxr_domain_promotion",
+                        "general_protein_ligand_platform",
+                    ],
+                    "general_platform_claim_allowed": False,
+                }
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     (runs / "product_bundle_contract_current.json").write_text(
         json.dumps(
             {
@@ -135,6 +154,32 @@ include = ["betelgeuze_product*", "betelgeuze_cameo*", "betelgeuze_cleanup*"]
                     "required_suite_count": 5,
                     "ready_required_suite_count": 5,
                     "blocked_suite_count": 0,
+                    "suite_materialization_manifest_count": 5,
+                    "suite_scorecard_row_csv_count": 5,
+                    "suite_threshold_count": 5,
+                    "suite_blocker_count": 5,
+                    "suite_run_command_count": 5,
+                    "suite_materialization_run_command_count": 5,
+                    "suite_result_provenance_command_count": 5,
+                    "suite_result_provenance_present_count": 5,
+                    "suite_no_external_dependency_count": 5,
+                }
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (runs / "product_public_benchmark_work_order_current.json").write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "product_public_benchmark_work_order_ready",
+                    "local_artifact_preflight_ready_suite_count": 5,
+                    "local_artifact_preflight_blocked_suite_count": 0,
+                    "suite_result_provenance_command_count": 5,
+                    "suite_result_provenance_present_count": 5,
+                    "missing_local_input_artifact_count": 0,
+                    "missing_local_output_artifact_count": 0,
                 }
             }
         )
@@ -159,10 +204,23 @@ include = ["betelgeuze_product*", "betelgeuze_cameo*", "betelgeuze_cleanup*"]
     assert payload["summary"]["product_service_boundary_api_route_count"] == 16
     assert payload["summary"]["product_service_boundary_cli_command_count"] == 13
     assert payload["summary"]["product_api_contract_ready"] is True
+    assert payload["summary"]["restricted_commercial_scope_claim_ready"] is True
+    assert payload["summary"]["commercial_claim_scope_tier"] == "restricted_family_local_product"
+    assert payload["summary"]["general_platform_claim_allowed"] is False
     assert payload["summary"]["local_self_hosted_operation_ready"] is True
     assert payload["summary"]["external_saas_runtime_dependency_count"] == 0
     assert payload["summary"]["local_delivery_bundle_ready"] is True
     assert payload["summary"]["public_benchmark_evidence_ready"] is True
+    assert payload["summary"]["public_benchmark_suite_coverage_ready"] is True
+    assert payload["summary"]["public_benchmark_work_order_status"] == "product_public_benchmark_work_order_ready"
+    assert payload["summary"]["public_benchmark_work_order_local_artifact_preflight_ready"] is True
+    assert payload["summary"]["public_benchmark_work_order_local_artifact_preflight_ready_suite_count"] == 5
+    assert payload["summary"]["public_benchmark_work_order_local_artifact_preflight_blocked_suite_count"] == 0
+    assert payload["summary"]["public_benchmark_work_order_missing_local_input_artifact_count"] == 0
+    assert payload["summary"]["public_benchmark_work_order_missing_local_output_artifact_count"] == 0
+    assert payload["summary"]["public_benchmark_suite_materialization_manifest_count"] == 5
+    assert payload["summary"]["public_benchmark_suite_scorecard_row_csv_count"] == 5
+    assert payload["summary"]["public_benchmark_suite_run_command_count"] == 5
     csv_text = out_csv.read_text(encoding="utf-8")
     md_text = out_md.read_text(encoding="utf-8")
     assert csv_text.startswith("check,status,")
@@ -173,3 +231,7 @@ include = ["betelgeuze_product*", "betelgeuze_cameo*", "betelgeuze_cleanup*"]
     assert "local_self_hosted_operation_ready" in md_text
     assert "license_approval_token_required" in md_text
     assert "license_generation_command_template" in md_text
+    assert "public_benchmark_suite_coverage_ready" in md_text
+    assert "public_benchmark_work_order_local_artifact_preflight_ready" in md_text
+    assert "restricted_commercial_scope_claim_ready" in md_text
+    assert "commercial_claim_scope_tier" in md_text

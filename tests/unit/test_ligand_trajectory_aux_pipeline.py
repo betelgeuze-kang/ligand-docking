@@ -6,8 +6,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from tools import build_ligand_trajectory_aux_dataset as build_aux
-from tools import train_ligand_trajectory_aux_model as train_aux
+from tools.product import build_ligand_trajectory_aux_dataset as build_aux
+from tools.product import train_ligand_trajectory_aux_model as train_aux
 
 
 def _write_npz(path: Path, offset: float) -> None:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools import build_cameo_operator_input_kit as mod
+from tools.cameo import build_cameo_operator_input_kit as mod
 
 
 def _repair_work_order(status: str = "operator_input_required") -> dict:

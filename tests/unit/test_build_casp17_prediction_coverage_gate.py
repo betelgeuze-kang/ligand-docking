@@ -34,7 +34,7 @@ def _run_gate(tmp_path: Path, intake: Path, launch: Path, profile: Path) -> dict
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_prediction_coverage_gate.py"),
+            str(ROOT / "tools/casp17/build_casp17_prediction_coverage_gate.py"),
             "--intake-csv",
             str(intake),
             "--launch-packet-json",

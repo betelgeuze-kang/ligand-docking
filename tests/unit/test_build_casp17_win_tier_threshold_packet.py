@@ -172,7 +172,7 @@ def test_build_casp17_win_tier_threshold_packet_names_required_win_bands(tmp_pat
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_win_tier_threshold_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_win_tier_threshold_packet.py"),
             "--win-rubric-json",
             str(win),
             "--competitive-readiness-json",

@@ -96,6 +96,28 @@ def _action_board() -> dict:
         "summary": {
             "status": "operator_actions_required",
             "approval_reclaim_size_gb": 49.216,
+            "parallel_product_action_count": 1,
+            "parallel_product_action_ids": [
+                "product_scope_expansion:curate_scope_evidence_priority_item"
+            ],
+            "first_parallel_product_action_id": (
+                "product_scope_expansion:curate_scope_evidence_priority_item"
+            ),
+            "first_parallel_product_action_lane_id": "product_scope_expansion",
+            "first_parallel_product_action_type": "curate_scope_evidence_priority_item",
+            "first_parallel_product_action_required_input": "AQP1.core_binder_01",
+            "first_parallel_product_action_artifact_path": (
+                "runs/product_goal_completion_audit_current.json"
+            ),
+            "first_parallel_product_action_recommended_action": (
+                "Acquire exact target-pair quantitative evidence for AQP1."
+            ),
+            "first_parallel_product_action_primary_action_id": (
+                "product_ai_production:return_gpu_force_regeneration_receipt"
+            ),
+            "first_parallel_product_action_precondition": (
+                "Can be completed while production GPU work proceeds; does not require production GPU execution."
+            ),
         },
         "rows": [
             {
@@ -144,6 +166,21 @@ def _intake_kit() -> dict:
         "summary": {
             "status": "goal_operator_intake_kit_ready",
             "release_burndown_linked_entry_count": 4,
+            "primary_action_id": "product_ai_production:return_gpu_force_regeneration_receipt",
+            "top_action_id": "product_ai_production:return_gpu_force_regeneration_receipt",
+            "primary_action_priority": 0,
+            "primary_action_lane_id": "product_ai_production",
+            "primary_action_type": "return_gpu_force_regeneration_receipt",
+            "primary_action_status": "required",
+            "primary_action_required_input": "GPU full-regeneration summary and manifest with operator verification",
+            "primary_action_artifact_path": (
+                "runs/product_goal_completion_audit_current.json;"
+                "runs/product_production_ai_gpu_return_intake_current.json"
+            ),
+            "primary_action_command": "python3 tools/generate_ligand_trajectory_engine.py --prod-mode",
+            "primary_action_recommended_action": (
+                "Run the full regeneration command on a GPU worker, return the identity-locked manifest and summary."
+            ),
         },
         "rows": [
             {
@@ -190,6 +227,82 @@ def _intake_kit() -> dict:
     }
 
 
+def _burndown_with_scientific_scope_before_refresh() -> dict:
+    return {
+        "summary": {"status": "goal_release_burndown_work_order_ready"},
+        "rows": [
+            {
+                "sequence": 1,
+                "phase": "P0_product_ai_architecture_scope_closure",
+                "lane_id": "commercial_product_release",
+                "burndown_status": "scientific_scope_evidence_required",
+                "approval_token_required": "",
+                "release_checks": "product_ai_architecture_gap_closure_ready",
+                "release_check_count": 1,
+                "release_observed": "open_gap_count=1;work_item_count=21",
+                "release_required": "all_gaps_closed=true;work_item_count=0",
+                "requires_operator_action": True,
+                "source_artifact": "runs/product_ai_architecture_gap_closure_current.json;runs/product_ai_architecture_execution_backlog_current.json",
+                "command": "python3 tools/build_product_ai_architecture_execution_backlog.py",
+                "recommended_action": "Close product AI architecture scope breadth blockers.",
+            },
+            {
+                "sequence": 2,
+                "phase": "P4_refresh_release_evidence",
+                "lane_id": "goal_release",
+                "burndown_status": "blocked_until_prior_phases_clear",
+                "approval_token_required": "",
+                "release_checks": "product_release_evidence_ready",
+                "release_check_count": 1,
+                "release_observed": "blocked_goal_readiness",
+                "release_required": "no blocked rollup lanes",
+                "requires_operator_action": True,
+                "source_artifact": "runs/goal_release_decision_gate_current.json",
+                "command": "python3 tools/build_goal_readiness_rollup.py",
+                "recommended_action": "Refresh release evidence after prior phases.",
+            },
+        ],
+    }
+
+
+def _burndown_with_production_inference_before_refresh() -> dict:
+    return {
+        "summary": {"status": "goal_release_burndown_work_order_ready"},
+        "rows": [
+            {
+                "sequence": 1,
+                "phase": "P0_product_ai_architecture_production_inference_closure",
+                "lane_id": "commercial_product_release",
+                "burndown_status": "production_ai_checkpoint_evidence_required",
+                "approval_token_required": "",
+                "release_checks": "product_ai_architecture_gap_closure_ready",
+                "release_check_count": 1,
+                "release_observed": "current_primary_open_gap=production_ai_inference_checkpoint;primary_work_item_id=training_data.production_residual_output_head",
+                "release_required": "all_gaps_closed=true;work_item_count=0",
+                "requires_operator_action": True,
+                "source_artifact": "runs/product_ai_architecture_gap_closure_current.json;runs/product_ai_architecture_execution_backlog_current.json",
+                "command": "python3 tools/build_residual_production_checkpoint_preflight.py",
+                "recommended_action": "Close product AI production checkpoint evidence.",
+            },
+            {
+                "sequence": 2,
+                "phase": "P4_refresh_release_evidence",
+                "lane_id": "goal_release",
+                "burndown_status": "blocked_until_prior_phases_clear",
+                "approval_token_required": "",
+                "release_checks": "product_release_evidence_ready",
+                "release_check_count": 1,
+                "release_observed": "blocked_goal_readiness",
+                "release_required": "no blocked rollup lanes",
+                "requires_operator_action": True,
+                "source_artifact": "runs/goal_release_decision_gate_current.json",
+                "command": "python3 tools/build_goal_readiness_rollup.py",
+                "recommended_action": "Refresh release evidence after prior phases.",
+            },
+        ],
+    }
+
+
 def test_goal_bottleneck_briefing_links_release_blockers_to_intake_and_actions() -> None:
     payload = mod.build_goal_bottleneck_briefing(
         release_gate_packet=_release_gate(),
@@ -212,7 +325,31 @@ def test_goal_bottleneck_briefing_links_release_blockers_to_intake_and_actions()
     assert summary["cleanup_ligand_heavy_candidate_size_gb"] == 6.011
     assert summary["protected_cleanup_payload_size_gb"] == 396.794
     assert summary["operator_intake_kit_release_burndown_linked_entry_count"] == 4
+    assert summary["primary_action_id"] == "product_ai_production:return_gpu_force_regeneration_receipt"
+    assert summary["top_action_id"] == summary["primary_action_id"]
+    assert summary["primary_action_priority"] == 0
+    assert summary["primary_action_lane_id"] == "product_ai_production"
+    assert summary["primary_action_type"] == "return_gpu_force_regeneration_receipt"
+    assert summary["primary_action_status"] == "required"
+    assert summary["primary_action_required_input"] == (
+        "GPU full-regeneration summary and manifest with operator verification"
+    )
+    assert "generate_ligand_trajectory_engine.py" in summary["primary_action_command"]
+    assert "Run the full regeneration command on a GPU worker" in summary[
+        "primary_action_recommended_action"
+    ]
+    assert summary["parallel_product_action_count"] == 1
+    assert summary["parallel_product_action_ids"] == [
+        "product_scope_expansion:curate_scope_evidence_priority_item"
+    ]
+    assert summary["first_parallel_product_action_required_input"] == "AQP1.core_binder_01"
+    assert summary["first_parallel_product_action_primary_action_id"] == summary["primary_action_id"]
+    assert "does not require production GPU execution" in summary[
+        "first_parallel_product_action_precondition"
+    ]
     assert summary["primary_bottleneck_sequence"] == 1
+    assert summary["primary_bottleneck_command"] == "python3 tools/run_ligand_htvs_pipeline.py --no-dry-run"
+    assert summary["primary_bottleneck_command_candidate_count"] == 0
     assert "APPROVE_PRODUCT_DOCKING_EXECUTION" in summary["approval_tokens_required"]
     assert "APPROVE_EXTERNALIZE_HEAVY_ARTIFACTS" in summary["approval_tokens_required"]
     assert by_sequence[1]["bottleneck_kind"] == "operator_approval_required"
@@ -229,6 +366,65 @@ def test_goal_bottleneck_briefing_links_release_blockers_to_intake_and_actions()
     assert summary["execution_enabled"] is False
     assert summary["delete_executed"] is False
     assert summary["external_state_mutated"] is False
+
+
+def test_goal_bottleneck_briefing_prioritizes_scientific_scope_before_refresh() -> None:
+    payload = mod.build_goal_bottleneck_briefing(
+        release_gate_packet=_release_gate(),
+        burndown_packet=_burndown_with_scientific_scope_before_refresh(),
+        action_board_packet={"summary": {"status": "operator_actions_required"}, "rows": []},
+        intake_kit_packet={"summary": {"status": "goal_operator_intake_kit_ready"}, "rows": []},
+    )
+
+    summary = payload["summary"]
+    assert summary["primary_bottleneck_sequence"] == 1
+    assert summary["primary_bottleneck_kind"] == "scientific_scope_evidence_required"
+    assert summary["primary_bottleneck_phase"] == "P0_product_ai_architecture_scope_closure"
+    assert summary["primary_bottleneck_root_cause_category"] == "external_exact_scope_evidence"
+    assert summary["primary_bottleneck_locally_closable_without_operator_return"] is False
+    assert "replacement_reference_binding_kcal_mol" in summary[
+        "primary_bottleneck_required_external_return"
+    ]
+    assert summary["primary_bottleneck_first_acceptance_artifact"] == (
+        "runs/transporter_manual_review_intake_template_current.csv"
+    )
+    assert "build_product_ai_architecture_execution_backlog.py" in summary["primary_bottleneck_command"]
+    assert summary["kind_counts"]["scientific_scope_evidence_required"] == 1
+    assert "product AI architecture scope closure" in summary["next_required_step"]
+    assert "release evidence refresh" in summary["next_required_step"]
+
+
+def test_goal_bottleneck_briefing_prioritizes_production_inference_before_refresh() -> None:
+    payload = mod.build_goal_bottleneck_briefing(
+        release_gate_packet=_release_gate(),
+        burndown_packet=_burndown_with_production_inference_before_refresh(),
+        action_board_packet={"summary": {"status": "operator_actions_required"}, "rows": []},
+        intake_kit_packet={"summary": {"status": "goal_operator_intake_kit_ready"}, "rows": []},
+    )
+
+    summary = payload["summary"]
+    assert summary["primary_bottleneck_sequence"] == 1
+    assert summary["primary_bottleneck_kind"] == "production_ai_checkpoint_evidence_required"
+    assert summary["primary_bottleneck_phase"] == "P0_product_ai_architecture_production_inference_closure"
+    assert summary["primary_bottleneck_root_cause_category"] == (
+        "external_gpu_runtime_and_return_receipt"
+    )
+    assert summary["primary_bottleneck_locally_closable_without_operator_return"] is False
+    assert "visible_device_count>0" in summary["primary_bottleneck_required_external_return"]
+    assert summary["primary_bottleneck_first_acceptance_artifact"] == (
+        "runs/rocm_environment_manifest_current.json"
+    )
+    assert summary["primary_bottleneck_post_return_acceptance_artifact"] == (
+        "runs/residual_force_gpu_worker_return_receipt_current.json"
+    )
+    assert summary["irreducible_external_return_bottleneck_count"] == 1
+    assert "build_residual_production_checkpoint_preflight.py" in summary["primary_bottleneck_command"]
+    assert summary["kind_counts"]["production_ai_checkpoint_evidence_required"] == 1
+    assert "product AI production inference closure" in summary["next_required_step"]
+    assert "release evidence refresh" in summary["next_required_step"]
+    first_row = payload["rows"][0]
+    assert first_row["root_cause_category"] == "external_gpu_runtime_and_return_receipt"
+    assert first_row["locally_closable_without_operator_return"] is False
 
 
 def test_goal_bottleneck_briefing_filters_stale_intake_tokens_when_burndown_token_is_current() -> None:
@@ -400,6 +596,24 @@ def test_goal_bottleneck_briefing_links_public_benchmark_work_order() -> None:
             "materialization_required_suite_count": 5,
             "scorecard_required_suite_count": 0,
             "continuous_validation_command_count": 5,
+            "suite_run_command_count": 5,
+            "suite_blocker_count": 5,
+            "suite_threshold_count": 5,
+            "suite_materialization_manifest_count": 5,
+            "suite_materialization_run_command_count": 5,
+            "suite_scorecard_command_count": 5,
+            "suite_scorecard_row_csv_count": 5,
+            "suite_no_external_dependency_count": 5,
+            "local_artifact_preflight_ready_suite_count": 0,
+            "local_artifact_preflight_blocked_suite_count": 5,
+            "missing_local_input_artifact_count": 6,
+            "missing_local_output_artifact_count": 6,
+            "result_generation_required_suite_count": 5,
+            "benchmark_result_missing_artifact_count": 6,
+            "benchmark_result_missing_artifacts": ["runs/lit_pcba_scores_current.csv"],
+            "result_generation_approval_token_required": "APPROVE_PRODUCT_DOCKING_EXECUTION",
+            "missing_local_input_artifacts": ["data/public_benchmarks/lit_pcba/archive.tar.xz"],
+            "missing_local_output_artifacts": ["runs/lit_pcba_scores_current.csv"],
             "continuous_validation_command": "python3 tools/build_lit_pcba_materialization_manifest.py && python3 tools/build_lit_pcba_scorecard.py",
         }
     }
@@ -418,13 +632,120 @@ def test_goal_bottleneck_briefing_links_public_benchmark_work_order() -> None:
     assert summary["public_benchmark_open_suite_count"] == 5
     assert summary["public_benchmark_materialization_required_suite_count"] == 5
     assert summary["public_benchmark_continuous_validation_command_count"] == 5
+    assert summary["public_benchmark_suite_run_command_count"] == 5
+    assert summary["public_benchmark_suite_blocker_count"] == 5
+    assert summary["public_benchmark_suite_threshold_count"] == 5
+    assert summary["public_benchmark_suite_materialization_manifest_count"] == 5
+    assert summary["public_benchmark_suite_materialization_run_command_count"] == 5
+    assert summary["public_benchmark_suite_scorecard_command_count"] == 5
+    assert summary["public_benchmark_suite_scorecard_row_csv_count"] == 5
+    assert summary["public_benchmark_suite_no_external_dependency_count"] == 5
+    assert summary["public_benchmark_local_artifact_preflight_ready_suite_count"] == 0
+    assert summary["public_benchmark_local_artifact_preflight_blocked_suite_count"] == 5
+    assert summary["public_benchmark_missing_local_input_artifact_count"] == 6
+    assert summary["public_benchmark_missing_local_output_artifact_count"] == 6
+    assert summary["public_benchmark_result_generation_required_suite_count"] == 5
+    assert summary["public_benchmark_result_generation_approval_token_required"] == "APPROVE_PRODUCT_DOCKING_EXECUTION"
+    assert summary["public_benchmark_benchmark_result_missing_artifact_count"] == 6
+    assert summary["public_benchmark_benchmark_result_missing_artifacts"] == ["runs/lit_pcba_scores_current.csv"]
+    assert summary["public_benchmark_missing_local_input_artifacts"] == ["data/public_benchmarks/lit_pcba/archive.tar.xz"]
+    assert summary["public_benchmark_missing_local_output_artifacts"] == ["runs/lit_pcba_scores_current.csv"]
     assert "build_lit_pcba_scorecard.py" in summary["public_benchmark_continuous_validation_command"]
     assert row["bottleneck_kind"] == "blocked_until_public_benchmark_validation"
     assert row["public_benchmark_work_order_json"] == "runs/product_public_benchmark_work_order_current.json"
     assert row["public_benchmark_open_suite_count"] == 5
     assert row["public_benchmark_continuous_validation_command_count"] == 5
+    assert row["public_benchmark_suite_run_command_count"] == 5
+    assert row["public_benchmark_suite_blocker_count"] == 5
+    assert row["public_benchmark_suite_materialization_run_command_count"] == 5
+    assert row["public_benchmark_suite_scorecard_command_count"] == 5
+    assert row["public_benchmark_suite_scorecard_row_csv_count"] == 5
+    assert row["public_benchmark_suite_no_external_dependency_count"] == 5
+    assert row["public_benchmark_local_artifact_preflight_blocked_suite_count"] == 5
+    assert row["public_benchmark_missing_local_input_artifact_count"] == 6
+    assert row["public_benchmark_missing_local_output_artifact_count"] == 6
+    assert row["public_benchmark_result_generation_required_suite_count"] == 5
+    assert row["public_benchmark_result_generation_approval_token_required"] == "APPROVE_PRODUCT_DOCKING_EXECUTION"
+    assert row["public_benchmark_benchmark_result_missing_artifact_count"] == 6
     assert "build_lit_pcba_scorecard.py" in row["public_benchmark_continuous_validation_command"]
     assert "runs/product_public_benchmark_work_order_current.json" in row["source_artifacts"]
+
+
+def test_goal_bottleneck_briefing_demotes_stale_public_benchmark_block_when_work_order_is_clear() -> None:
+    burndown = {
+        "summary": {"status": "goal_release_burndown_work_order_ready"},
+        "rows": [
+            {
+                "sequence": 1,
+                "phase": "P1_product_execution_and_bundle_validation",
+                "lane_id": "commercial_product_release",
+                "burndown_status": "blocked_until_public_benchmark_validation",
+                "approval_token_required": "",
+                "release_checks": "product_architecture_release_ready",
+                "release_check_count": 1,
+                "release_observed": "public_benchmark_ready=true;public_benchmark_blocked_suites=0",
+                "release_required": "architecture_release_ready=true",
+                "requires_operator_action": True,
+                "source_artifact": "runs/product_architecture_contract_current.json",
+                "command": "python3 tools/build_product_public_benchmark_work_order.py",
+                "recommended_action": "Run and attach public benchmark scorecards.",
+            },
+            {
+                "sequence": 2,
+                "phase": "P2_commercial_independence",
+                "lane_id": "commercial_independence",
+                "burndown_status": "approval_required",
+                "approval_token_required": "APPROVE_PRODUCT_LICENSE_FILE_CREATION",
+                "release_checks": "commercial_independence_ready",
+                "release_check_count": 1,
+                "release_observed": "commercial_independence_ready=false",
+                "release_required": "commercial_independence_ready=true",
+                "requires_operator_action": True,
+                "source_artifact": "runs/product_license_file_creation_work_order_current.json",
+                "command": "python3 tools/write_product_license_file.py",
+                "license_local_source_command_examples": (
+                    "python3 tools/fill_product_license_decision_operator_intake.py "
+                    "--approval-token APPROVE_PRODUCT_LICENSE_FILE_CREATION "
+                    "--spdx-license-id Apache-2.0 "
+                    "--license-text-source /usr/share/common-licenses/Apache-2.0"
+                ),
+                "recommended_action": "Approve and create LICENSE file.",
+            },
+        ],
+    }
+    work_order = {
+        "summary": {
+            "status": "product_public_benchmark_work_order_clear",
+            "public_benchmark_validation_ready": True,
+            "ready_required_suite_count": 5,
+            "blocked_suite_count": 0,
+            "benchmark_result_missing_artifact_count": 0,
+        }
+    }
+
+    payload = mod.build_goal_bottleneck_briefing(
+        release_gate_packet=_release_gate(),
+        burndown_packet=burndown,
+        action_board_packet={"summary": {"status": "operator_actions_required"}, "rows": []},
+        intake_kit_packet={"summary": {"status": "goal_operator_intake_kit_ready"}, "rows": []},
+        public_benchmark_work_order_packet=work_order,
+    )
+
+    summary = payload["summary"]
+    first, second = payload["rows"]
+    assert first["bottleneck_kind"] == "stale_blocked_until_public_benchmark_validation"
+    assert first["is_current_bottleneck"] is False
+    assert first["superseded_by_current_evidence"] is True
+    assert first["requires_operator_action"] is False
+    assert second["bottleneck_kind"] == "operator_approval_required"
+    assert summary["primary_bottleneck_sequence"] == 2
+    assert summary["primary_bottleneck_kind"] == "operator_approval_required"
+    assert summary["primary_bottleneck_command"] == "python3 tools/write_product_license_file.py"
+    assert summary["primary_bottleneck_command_candidate_count"] == 1
+    assert "--spdx-license-id Apache-2.0" in summary["primary_bottleneck_command_candidates"][0]
+    assert summary["current_bottleneck_count"] == 1
+    assert summary["superseded_bottleneck_count"] == 1
+    assert summary["approval_tokens_required"] == ["APPROVE_PRODUCT_LICENSE_FILE_CREATION"]
 
 
 def test_goal_bottleneck_briefing_tool_writes_outputs(tmp_path: Path) -> None:

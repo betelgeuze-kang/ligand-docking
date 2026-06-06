@@ -120,23 +120,23 @@ Current implementation artifacts:
   artifacts.
 - `tools/build_cameo_validation_readiness_gate.py`: writes JSON/CSV/MD CAMEO
   validation readiness gates from current artifact paths.
-- `tools/build_cameo_validation_repair_work_order.py`: writes the local command
+- `tools/cameo/build_cameo_validation_repair_work_order.py`: writes the local command
   sequence needed to repair missing CAMEO selection, format, handoff, and
   performance artifacts.
 - `betelgeuze_cameo/operator_inputs.py`: validates operator-filled CAMEO repair
   CSVs before any local rebuild command can be treated as ready.
-- `tools/build_cameo_operator_input_kit.py`: writes placeholder CAMEO repair CSV
+- `tools/cameo/build_cameo_operator_input_kit.py`: writes placeholder CAMEO repair CSV
   templates and a manifest for operator input.
-- `tools/build_cameo_operator_input_validation.py`: writes JSON/CSV/MD
+- `tools/cameo/build_cameo_operator_input_validation.py`: writes JSON/CSV/MD
   validation packets for filled CAMEO repair inputs.
-- `tools/build_cameo_local_format_smoke_inputs.py`: writes a synthetic
+- `tools/cameo/build_cameo_local_format_smoke_inputs.py`: writes a synthetic
   CAMEO dry-run smoke model plus filled candidates/models CSV rows for local
   input, selection, format, handoff, and readiness validation without using a
   native structure, CASP model, official result, or external state.
 - `betelgeuze_cameo/repair_preflight.py`: validates the CAMEO repair work-order
   command sequence without executing selection, format, handoff, or performance
   rebuilds.
-- `tools/build_cameo_repair_execution_preflight.py`: writes JSON/CSV/MD repair
+- `tools/cameo/build_cameo_repair_execution_preflight.py`: writes JSON/CSV/MD repair
   execution preflight packets from the repair work order and operator input
   validation artifact.
 - `betelgeuze_cameo/capability_preflight.py`: audits CAMEO receiver capability,
@@ -152,9 +152,9 @@ Current implementation artifacts:
   email.
 - `tools/build_cameo_receiver_smoke_contract.py`: writes JSON/CSV/MD receiver
   smoke contracts without starting a public server or opening an external port.
-- `tools/build_cameo_api_dependency_readiness.py`: writes JSON/CSV/MD API
+- `tools/product/build_cameo_api_dependency_readiness.py`: writes JSON/CSV/MD API
   dependency readiness packets without installing packages.
-- `tools/build_cameo_runtime_repair_work_order.py`: writes JSON/CSV/MD
+- `tools/cameo/build_cameo_runtime_repair_work_order.py`: writes JSON/CSV/MD
   approval-gated API dependency activation and local CAMEO smoke rerun command
   packets without installing packages, starting a server, or mutating external
   state.
@@ -165,7 +165,7 @@ Current implementation artifacts:
 - `tools/build_cameo_public_registration_approval_gate.py`: validates CAMEO
   public endpoint, results/contact email, and registration/email approval
   tokens without registering a server or sending email.
-- `tools/build_transition_cleanup_manifest.py`: dry-run heavy-artifact cleanup
+- `tools/cleanup/build_transition_cleanup_manifest.py`: dry-run heavy-artifact cleanup
   classifier for CASP17 external pools, legacy archives, trajectory frames,
   config-referenced ligand-heavy roots, build output, and local virtual
   environments.
@@ -243,7 +243,7 @@ Current implementation artifacts:
 - `tools/build_product_api_contract.py`: writes JSON/CSV/MD API contract
   packets from local source metadata without starting a server or mutating
   external state.
-- `tools/build_casp17_transition_surface_contract.py tools/build_cleanup_snapshot_preflight.py`: cleanup safety gate that checks
+- `tools/casp17/build_casp17_transition_surface_contract.py tools/build_cleanup_snapshot_preflight.py`: cleanup safety gate that checks
   approval-gated archive/externalize/delete rows for required snapshots,
   frozen candidate manifests, and postcheck readiness before cleanup execution.
 - `tools/build_cleanup_snapshot_artifacts.py`: local cleanup snapshot artifact
@@ -270,7 +270,7 @@ Current implementation artifacts:
   ligand-heavy, postcheck, and completion artifacts; all-status aggregates
   cleanup approval tokens, reclaim/protected payload sizes, postcheck counts,
   and protected policy state without approving or executing cleanup.
-- `tools/build_cleanup_operations_surface_contract.py`: cleanup API surface
+- `tools/cleanup/build_cleanup_operations_surface_contract.py`: cleanup API surface
   contract that verifies the read-only cleanup CLI plus cleanup operations,
   approval-gate, postcheck, completion, payload, protected ligand-heavy review,
   and protected-policy endpoints are registered and fail-closed.
@@ -286,14 +286,14 @@ Current implementation artifacts:
   operator decisions, active-manifest stale-folder locks, and cleanup context
   without uploading, computing native accuracy, deleting, or mutating external
   state.
-- `tools/build_casp17_transition_surface_contract.py`: CASP17 transition API
+- `tools/casp17/build_casp17_transition_surface_contract.py`: CASP17 transition API
   surface contract that verifies the read-only upload/transition endpoints,
   CASP17 upload artifact references, cleanup artifact references, and
   fail-closed flags.
 - `tools/build_large_cleanup_surface_drilldown.py`: read-only drilldown for
   large review-only cleanup surfaces, including current ligand-heavy dry-run
   status for known payload directories.
-- `tools/build_protected_cleanup_payload_review.py`: read-only review packet
+- `tools/cleanup/build_protected_cleanup_payload_review.py`: read-only review packet
   for protected heavy payload rows that must not be promoted to deletion
   approval without an explicit cleanup-policy change.
 - `tools/build_protected_ligand_heavy_payload_deep_review.py`: read-only deep
@@ -355,7 +355,7 @@ Current implementation artifacts:
 
 Current verification:
 
-- `python3 -m py_compile api/main.py api/tasks.py api/cameo.py api/casp17.py api/cleanup.py api/goal.py api/product.py betelgeuze_cameo/intake.py betelgeuze_cameo/selector.py betelgeuze_cameo/format_validation.py betelgeuze_cameo/handoff.py betelgeuze_cameo/operator_inputs.py betelgeuze_cameo/repair_preflight.py betelgeuze_cameo/api_dependency.py betelgeuze_cameo/receiver_smoke.py betelgeuze_cameo/capability_preflight.py betelgeuze_cameo/official_results.py betelgeuze_cameo/architecture_validation.py betelgeuze_cameo/cli.py betelgeuze_cleanup/cli.py betelgeuze_product/docking_request.py betelgeuze_product/structure_analysis.py betelgeuze_product/structure_report.py betelgeuze_product/readiness.py betelgeuze_product/work_order.py betelgeuze_product/capability_surface.py betelgeuze_product/architecture.py betelgeuze_product/bundle_contract.py betelgeuze_product/delivery_evidence.py betelgeuze_product/pilot_packet.py betelgeuze_product/commercial_independence.py betelgeuze_product/license_decision.py betelgeuze_product/license_options.py betelgeuze_product/service_boundary.py betelgeuze_product/cli.py tools/build_transition_cleanup_manifest.py tools/build_cameo_model1_selection_packet.py tools/build_cameo_format_validation_packet.py tools/build_cameo_dry_run_handoff_packet.py tools/build_cameo_operator_input_validation.py tools/build_cameo_local_format_smoke_inputs.py tools/build_cameo_repair_execution_preflight.py tools/build_cameo_api_dependency_readiness.py tools/build_cameo_receiver_smoke_contract.py tools/build_cameo_capability_preflight.py tools/build_cameo_runtime_repair_work_order.py tools/build_cameo_official_results_intake_gate.py tools/build_cameo_performance_scorecard.py tools/build_cameo_validation_readiness_gate.py tools/build_cameo_validation_operations_dossier.py tools/build_cameo_architecture_validation_contract.py tools/build_cameo_public_registration_approval_gate.py tools/build_product_readiness_gate.py tools/build_product_structure_analysis_report.py tools/build_product_execution_work_order.py tools/build_product_execution_approval_gate.py tools/build_product_capability_surface_contract.py tools/build_product_architecture_contract.py tools/build_product_service_boundary_contract.py tools/build_product_bundle_contract.py tools/build_product_delivery_evidence_contract.py tools/build_product_pilot_packet_contract.py tools/build_product_release_operations_dossier.py tools/build_product_commercial_independence_gate.py tools/build_product_license_decision_gate.py tools/build_product_license_decision_packet.py tools/build_goal_api_surface_contract.py tools/build_goal_readiness_rollup.py tools/build_goal_operator_action_board.py tools/build_goal_operator_intake_kit.py tools/build_goal_release_decision_gate.py tools/build_goal_release_burndown_work_order.py tools/build_casp17_transition_surface_contract.py tools/build_cleanup_snapshot_preflight.py tools/build_cleanup_snapshot_artifacts.py tools/build_cleanup_execution_approval_dossier.py tools/build_cleanup_payload_manifest_lock.py tools/build_cleanup_postcheck_contract.py tools/build_cleanup_operations_surface_contract.py tools/build_cleanup_execution_approval_gate.py tools/build_cleanup_completion_gate.py tools/build_large_cleanup_surface_drilldown.py tools/build_protected_cleanup_payload_review.py tools/build_protected_ligand_heavy_payload_deep_review.py tools/build_protected_cleanup_policy_decision_gate.py`
+- `python3 -m py_compile api/main.py api/tasks.py api/cameo.py api/casp17.py api/cleanup.py api/goal.py api/product.py betelgeuze_cameo/intake.py betelgeuze_cameo/selector.py betelgeuze_cameo/format_validation.py betelgeuze_cameo/handoff.py betelgeuze_cameo/operator_inputs.py betelgeuze_cameo/repair_preflight.py betelgeuze_cameo/api_dependency.py betelgeuze_cameo/receiver_smoke.py betelgeuze_cameo/capability_preflight.py betelgeuze_cameo/official_results.py betelgeuze_cameo/architecture_validation.py betelgeuze_cameo/cli.py betelgeuze_cleanup/cli.py betelgeuze_product/docking_request.py betelgeuze_product/structure_analysis.py betelgeuze_product/structure_report.py betelgeuze_product/readiness.py betelgeuze_product/work_order.py betelgeuze_product/capability_surface.py betelgeuze_product/architecture.py betelgeuze_product/bundle_contract.py betelgeuze_product/delivery_evidence.py betelgeuze_product/pilot_packet.py betelgeuze_product/commercial_independence.py betelgeuze_product/license_decision.py betelgeuze_product/license_options.py betelgeuze_product/service_boundary.py betelgeuze_product/cli.py tools/cleanup/build_transition_cleanup_manifest.py tools/build_cameo_model1_selection_packet.py tools/build_cameo_format_validation_packet.py tools/build_cameo_dry_run_handoff_packet.py tools/cameo/build_cameo_operator_input_validation.py tools/cameo/build_cameo_local_format_smoke_inputs.py tools/cameo/build_cameo_repair_execution_preflight.py tools/product/build_cameo_api_dependency_readiness.py tools/build_cameo_receiver_smoke_contract.py tools/build_cameo_capability_preflight.py tools/cameo/build_cameo_runtime_repair_work_order.py tools/build_cameo_official_results_intake_gate.py tools/build_cameo_performance_scorecard.py tools/build_cameo_validation_readiness_gate.py tools/build_cameo_validation_operations_dossier.py tools/build_cameo_architecture_validation_contract.py tools/build_cameo_public_registration_approval_gate.py tools/build_product_readiness_gate.py tools/build_product_structure_analysis_report.py tools/build_product_execution_work_order.py tools/build_product_execution_approval_gate.py tools/build_product_capability_surface_contract.py tools/build_product_architecture_contract.py tools/build_product_service_boundary_contract.py tools/build_product_bundle_contract.py tools/build_product_delivery_evidence_contract.py tools/build_product_pilot_packet_contract.py tools/build_product_release_operations_dossier.py tools/build_product_commercial_independence_gate.py tools/build_product_license_decision_gate.py tools/build_product_license_decision_packet.py tools/build_goal_api_surface_contract.py tools/build_goal_readiness_rollup.py tools/build_goal_operator_action_board.py tools/build_goal_operator_intake_kit.py tools/build_goal_release_decision_gate.py tools/build_goal_release_burndown_work_order.py tools/casp17/build_casp17_transition_surface_contract.py tools/build_cleanup_snapshot_preflight.py tools/build_cleanup_snapshot_artifacts.py tools/build_cleanup_execution_approval_dossier.py tools/build_cleanup_payload_manifest_lock.py tools/build_cleanup_postcheck_contract.py tools/cleanup/build_cleanup_operations_surface_contract.py tools/build_cleanup_execution_approval_gate.py tools/build_cleanup_completion_gate.py tools/build_large_cleanup_surface_drilldown.py tools/cleanup/build_protected_cleanup_payload_review.py tools/build_protected_ligand_heavy_payload_deep_review.py tools/build_protected_cleanup_policy_decision_gate.py`
 - `python3 -m pytest -q tests/unit/test_betelgeuze_product_structure_analysis.py tests/unit/test_betelgeuze_product_structure_report.py tests/unit/test_betelgeuze_product_docking_request.py tests/unit/test_betelgeuze_product_readiness.py tests/unit/test_betelgeuze_product_work_order.py tests/unit/test_betelgeuze_product_capability_surface.py tests/unit/test_betelgeuze_product_service_boundary.py tests/unit/test_betelgeuze_product_cli.py tests/unit/test_build_product_capability_surface_contract.py tests/unit/test_build_product_architecture_contract.py tests/unit/test_build_product_service_boundary_contract.py tests/unit/test_build_product_execution_approval_gate.py tests/unit/test_betelgeuze_product_bundle_contract.py tests/unit/test_betelgeuze_product_delivery_evidence.py tests/unit/test_betelgeuze_product_pilot_packet.py tests/unit/test_betelgeuze_product_commercial_independence.py tests/unit/test_build_product_commercial_independence_gate.py tests/unit/test_betelgeuze_product_license_decision.py tests/unit/test_betelgeuze_product_license_options.py tests/unit/test_build_product_license_decision_gate.py tests/unit/test_build_product_release_operations_dossier.py tests/unit/test_api_product_import.py tests/unit/test_betelgeuze_cameo_intake.py tests/unit/test_betelgeuze_cameo_selector.py tests/unit/test_betelgeuze_cameo_format_validation.py tests/unit/test_betelgeuze_cameo_handoff.py tests/unit/test_betelgeuze_cameo_operator_inputs.py tests/unit/test_betelgeuze_cameo_repair_preflight.py tests/unit/test_betelgeuze_cameo_api_dependency.py tests/unit/test_betelgeuze_cameo_receiver_smoke.py tests/unit/test_betelgeuze_cameo_capability_preflight.py tests/unit/test_betelgeuze_cameo_cli.py tests/unit/test_betelgeuze_cameo_official_results.py tests/unit/test_betelgeuze_cameo_performance.py tests/unit/test_betelgeuze_cameo_readiness.py tests/unit/test_betelgeuze_cameo_architecture_validation.py tests/unit/test_betelgeuze_cleanup_cli.py tests/unit/test_api_cameo_import.py tests/unit/test_api_casp17_import.py tests/unit/test_api_cleanup_import.py tests/unit/test_api_goal_import.py tests/unit/test_build_cameo_api_dependency_readiness.py tests/unit/test_build_cameo_receiver_smoke_contract.py tests/unit/test_build_cameo_capability_preflight.py tests/unit/test_build_cameo_runtime_repair_work_order.py tests/unit/test_build_cameo_official_results_intake_gate.py tests/unit/test_build_cameo_validation_operations_dossier.py tests/unit/test_build_cameo_local_format_smoke_inputs.py tests/unit/test_build_cameo_public_registration_approval_gate.py tests/unit/test_build_casp17_transition_surface_contract.py tests/unit/test_build_transition_cleanup_manifest.py tests/unit/test_build_product_pilot_packet_contract.py tests/unit/test_build_goal_api_surface_contract.py tests/unit/test_build_goal_readiness_rollup.py tests/unit/test_build_goal_operator_action_board.py tests/unit/test_build_goal_operator_intake_kit.py tests/unit/test_build_goal_release_decision_gate.py tests/unit/test_build_goal_release_burndown_work_order.py tests/unit/test_build_cleanup_snapshot_preflight.py tests/unit/test_build_cleanup_snapshot_artifacts.py tests/unit/test_build_cleanup_execution_approval_dossier.py tests/unit/test_build_cleanup_payload_manifest_lock.py tests/unit/test_build_cleanup_operations_surface_contract.py tests/unit/test_api_cleanup_import.py tests/unit/test_build_cleanup_execution_approval_gate.py tests/unit/test_build_cleanup_completion_gate.py tests/unit/test_build_large_cleanup_surface_drilldown.py tests/unit/test_build_protected_cleanup_payload_review.py tests/unit/test_build_protected_ligand_heavy_payload_deep_review.py tests/unit/test_build_protected_cleanup_policy_decision_gate.py`
 
 The FastAPI runtime endpoint test is skipped unless the API dependency set from
@@ -741,7 +741,7 @@ Required behavior:
 
 Acceptance evidence:
 
-- `tools/build_cameo_operator_input_kit.py` writes template CSV files plus
+- `tools/cameo/build_cameo_operator_input_kit.py` writes template CSV files plus
   `manifest.json`, `manifest.csv`, and `README.md`.
 - `tests/unit/test_build_cameo_operator_input_kit.py` verifies ready, blocked,
   and CLI output states.
@@ -775,7 +775,7 @@ Acceptance evidence:
 - `betelgeuze_cameo/operator_inputs.py` validates filled CAMEO operator CSV
   rows without executing selection, format validation, handoff, or performance
   commands.
-- `tools/build_cameo_operator_input_validation.py` writes JSON/CSV/MD validation
+- `tools/cameo/build_cameo_operator_input_validation.py` writes JSON/CSV/MD validation
   packets.
 - `tests/unit/test_betelgeuze_cameo_operator_inputs.py` verifies filled-input
   readiness, placeholder blocking, and non-official result blocking.
@@ -813,7 +813,7 @@ Acceptance evidence:
 - `betelgeuze_cameo/repair_preflight.py` validates the repair command sequence
   without executing selection, format validation, dry-run handoff, or
   performance scoring.
-- `tools/build_cameo_repair_execution_preflight.py` writes JSON/CSV/MD preflight
+- `tools/cameo/build_cameo_repair_execution_preflight.py` writes JSON/CSV/MD preflight
   packets.
 - `tests/unit/test_betelgeuze_cameo_repair_preflight.py` verifies ready command
   rows, placeholder blocking, and input-validation blocking.
@@ -865,7 +865,7 @@ Acceptance evidence:
 
 - `betelgeuze_cameo/api_dependency.py` builds the API dependency readiness
   contract.
-- `tools/build_cameo_api_dependency_readiness.py` writes JSON/CSV/MD readiness
+- `tools/product/build_cameo_api_dependency_readiness.py` writes JSON/CSV/MD readiness
   packets.
 - `tests/unit/test_betelgeuze_cameo_api_dependency.py` verifies blocked,
   ready, and missing-requirements states.
@@ -900,7 +900,7 @@ Required behavior:
 
 Acceptance evidence:
 
-- `tools/build_cameo_runtime_repair_work_order.py` writes JSON/CSV/MD runtime
+- `tools/cameo/build_cameo_runtime_repair_work_order.py` writes JSON/CSV/MD runtime
   repair work orders without installing packages or starting a server.
 - `tests/unit/test_build_cameo_runtime_repair_work_order.py` verifies the
   approval-gated install command, ready dependency profile behavior, and CLI
@@ -1138,7 +1138,7 @@ Acceptance evidence:
 - `api/casp17.py` exposes the read-only CASP17 upload and transition routes;
   `/casp17/transition` also reports cleanup approval, postcheck, and completion
   gate state without promoting cleanup execution.
-- `tools/build_casp17_transition_surface_contract.py` writes JSON/CSV/MD
+- `tools/casp17/build_casp17_transition_surface_contract.py` writes JSON/CSV/MD
   CASP17 transition surface contracts without uploading or cleanup execution.
 - `tests/unit/test_api_casp17_import.py` verifies FastAPI route registration
   and current blocked/read-only CASP17 responses, including cleanup
@@ -2553,7 +2553,7 @@ Required behavior:
 
 Acceptance evidence:
 
-- `tools/build_casp17_transition_surface_contract.py tools/build_cleanup_snapshot_preflight.py` writes JSON/CSV/MD snapshot
+- `tools/casp17/build_casp17_transition_surface_contract.py tools/build_cleanup_snapshot_preflight.py` writes JSON/CSV/MD snapshot
   preflight packets from existing local artifacts only.
 - `tests/unit/test_build_cleanup_snapshot_preflight.py` verifies missing
   archive/externalize snapshot blocking, pass behavior when required snapshots
@@ -2724,7 +2724,7 @@ Acceptance evidence:
   `/cleanup/postcheck` post-execution evidence contract surface, and the
   `/cleanup/completion` final cleanup evidence surface, plus the
   `/cleanup/protected-ligand-heavy-review` protected payload split surface.
-- `tools/build_cleanup_operations_surface_contract.py` writes JSON/CSV/MD
+- `tools/cleanup/build_cleanup_operations_surface_contract.py` writes JSON/CSV/MD
   cleanup API surface contracts without executing cleanup.
 - `betelgeuze_cleanup/cli.py` all-status currently aggregates
   `approval_token_count=4`,
@@ -2942,7 +2942,7 @@ Required behavior:
 
 Acceptance evidence:
 
-- `tools/build_protected_cleanup_payload_review.py` writes JSON/CSV/MD review
+- `tools/cleanup/build_protected_cleanup_payload_review.py` writes JSON/CSV/MD review
   packets without deleting, moving, archiving, externalizing, or uploading.
 - `tests/unit/test_build_protected_cleanup_payload_review.py` verifies
   protected-only selection, policy-change-required flags, no approval
@@ -3109,7 +3109,7 @@ not keep heavy generated artifacts as committed product state.
 Suggested local verification before code work:
 
 ```bash
-python3 -m py_compile api/main.py api/tasks.py api/cameo.py api/casp17.py api/cleanup.py api/goal.py api/product.py betelgeuze_cameo/intake.py betelgeuze_cameo/selector.py betelgeuze_cameo/format_validation.py betelgeuze_cameo/handoff.py betelgeuze_cameo/operator_inputs.py betelgeuze_cameo/repair_preflight.py betelgeuze_cameo/api_dependency.py betelgeuze_cameo/receiver_smoke.py betelgeuze_cameo/capability_preflight.py betelgeuze_cameo/official_results.py betelgeuze_cameo/architecture_validation.py betelgeuze_product/docking_request.py betelgeuze_product/structure_analysis.py betelgeuze_product/structure_report.py betelgeuze_product/readiness.py betelgeuze_product/work_order.py betelgeuze_product/capability_surface.py betelgeuze_product/architecture.py betelgeuze_product/bundle_contract.py betelgeuze_product/delivery_evidence.py betelgeuze_product/pilot_packet.py betelgeuze_product/commercial_independence.py betelgeuze_product/license_decision.py betelgeuze_product/license_options.py betelgeuze_product/service_boundary.py betelgeuze_product/cli.py tools/build_transition_cleanup_manifest.py tools/build_cameo_model1_selection_packet.py tools/build_cameo_format_validation_packet.py tools/build_cameo_dry_run_handoff_packet.py tools/build_cameo_operator_input_validation.py tools/build_cameo_local_format_smoke_inputs.py tools/build_cameo_repair_execution_preflight.py tools/build_cameo_api_dependency_readiness.py tools/build_cameo_receiver_smoke_contract.py tools/build_cameo_capability_preflight.py tools/build_cameo_runtime_repair_work_order.py tools/build_cameo_official_results_intake_gate.py tools/build_cameo_performance_scorecard.py tools/build_cameo_validation_readiness_gate.py tools/build_cameo_validation_operations_dossier.py tools/build_cameo_architecture_validation_contract.py tools/build_cameo_public_registration_approval_gate.py tools/build_product_readiness_gate.py tools/build_product_structure_analysis_report.py tools/build_product_execution_work_order.py tools/build_product_execution_approval_gate.py tools/build_product_capability_surface_contract.py tools/build_product_architecture_contract.py tools/build_product_service_boundary_contract.py tools/build_product_bundle_contract.py tools/build_product_delivery_evidence_contract.py tools/build_product_pilot_packet_contract.py tools/build_product_release_operations_dossier.py tools/build_product_commercial_independence_gate.py tools/build_product_license_decision_gate.py tools/build_product_license_decision_packet.py tools/build_goal_readiness_rollup.py tools/build_goal_operator_action_board.py tools/build_goal_operator_intake_kit.py tools/build_goal_release_decision_gate.py tools/build_goal_release_burndown_work_order.py tools/build_casp17_transition_surface_contract.py tools/build_cleanup_snapshot_preflight.py tools/build_cleanup_snapshot_artifacts.py tools/build_cleanup_execution_approval_dossier.py tools/build_cleanup_payload_manifest_lock.py tools/build_cleanup_postcheck_contract.py tools/build_cleanup_operations_surface_contract.py tools/build_cleanup_execution_approval_gate.py tools/build_cleanup_completion_gate.py tools/build_large_cleanup_surface_drilldown.py tools/build_protected_cleanup_payload_review.py tools/build_protected_ligand_heavy_payload_deep_review.py tools/build_protected_cleanup_policy_decision_gate.py
+python3 -m py_compile api/main.py api/tasks.py api/cameo.py api/casp17.py api/cleanup.py api/goal.py api/product.py betelgeuze_cameo/intake.py betelgeuze_cameo/selector.py betelgeuze_cameo/format_validation.py betelgeuze_cameo/handoff.py betelgeuze_cameo/operator_inputs.py betelgeuze_cameo/repair_preflight.py betelgeuze_cameo/api_dependency.py betelgeuze_cameo/receiver_smoke.py betelgeuze_cameo/capability_preflight.py betelgeuze_cameo/official_results.py betelgeuze_cameo/architecture_validation.py betelgeuze_product/docking_request.py betelgeuze_product/structure_analysis.py betelgeuze_product/structure_report.py betelgeuze_product/readiness.py betelgeuze_product/work_order.py betelgeuze_product/capability_surface.py betelgeuze_product/architecture.py betelgeuze_product/bundle_contract.py betelgeuze_product/delivery_evidence.py betelgeuze_product/pilot_packet.py betelgeuze_product/commercial_independence.py betelgeuze_product/license_decision.py betelgeuze_product/license_options.py betelgeuze_product/service_boundary.py betelgeuze_product/cli.py tools/cleanup/build_transition_cleanup_manifest.py tools/build_cameo_model1_selection_packet.py tools/build_cameo_format_validation_packet.py tools/build_cameo_dry_run_handoff_packet.py tools/cameo/build_cameo_operator_input_validation.py tools/cameo/build_cameo_local_format_smoke_inputs.py tools/cameo/build_cameo_repair_execution_preflight.py tools/product/build_cameo_api_dependency_readiness.py tools/build_cameo_receiver_smoke_contract.py tools/build_cameo_capability_preflight.py tools/cameo/build_cameo_runtime_repair_work_order.py tools/build_cameo_official_results_intake_gate.py tools/build_cameo_performance_scorecard.py tools/build_cameo_validation_readiness_gate.py tools/build_cameo_validation_operations_dossier.py tools/build_cameo_architecture_validation_contract.py tools/build_cameo_public_registration_approval_gate.py tools/build_product_readiness_gate.py tools/build_product_structure_analysis_report.py tools/build_product_execution_work_order.py tools/build_product_execution_approval_gate.py tools/build_product_capability_surface_contract.py tools/build_product_architecture_contract.py tools/build_product_service_boundary_contract.py tools/build_product_bundle_contract.py tools/build_product_delivery_evidence_contract.py tools/build_product_pilot_packet_contract.py tools/build_product_release_operations_dossier.py tools/build_product_commercial_independence_gate.py tools/build_product_license_decision_gate.py tools/build_product_license_decision_packet.py tools/build_goal_readiness_rollup.py tools/build_goal_operator_action_board.py tools/build_goal_operator_intake_kit.py tools/build_goal_release_decision_gate.py tools/build_goal_release_burndown_work_order.py tools/casp17/build_casp17_transition_surface_contract.py tools/build_cleanup_snapshot_preflight.py tools/build_cleanup_snapshot_artifacts.py tools/build_cleanup_execution_approval_dossier.py tools/build_cleanup_payload_manifest_lock.py tools/build_cleanup_postcheck_contract.py tools/cleanup/build_cleanup_operations_surface_contract.py tools/build_cleanup_execution_approval_gate.py tools/build_cleanup_completion_gate.py tools/build_large_cleanup_surface_drilldown.py tools/cleanup/build_protected_cleanup_payload_review.py tools/build_protected_ligand_heavy_payload_deep_review.py tools/build_protected_cleanup_policy_decision_gate.py
 ```
 
 Expected current result: pass.

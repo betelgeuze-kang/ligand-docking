@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from tools import build_pxr_curated_packet_freeze as curated_freeze
+from tools.product import build_pxr_curated_packet_freeze as curated_freeze
 
 EXPECTED_TARGET = "PXR_NR1I2_BLIND"
 TEMPLATE_JSON = "config/external_validation_biorxiv_nuclear_receptor_pxr_v1_template.json"

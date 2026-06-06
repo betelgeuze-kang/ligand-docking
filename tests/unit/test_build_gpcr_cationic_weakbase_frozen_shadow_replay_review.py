@@ -62,7 +62,7 @@ def test_build_gpcr_cationic_weakbase_frozen_shadow_replay_review_blocks_partial
     subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools/build_gpcr_cationic_weakbase_frozen_shadow_replay_review.py"),
+            str(ROOT / "tools/gpcr_replay/build_gpcr_cationic_weakbase_frozen_shadow_replay_review.py"),
             "--input-scores-csv",
             str(scores),
             "--input-summary-json",

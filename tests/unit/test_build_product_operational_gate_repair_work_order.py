@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools import build_product_operational_gate_repair_work_order as mod
+from tools.product import build_product_operational_gate_repair_work_order as mod
 
 
 def _blocked_preflight() -> dict:

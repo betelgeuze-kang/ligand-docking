@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_stk17b_run_status as mod
+from tools.wetlab import build_stk17b_run_status as mod
 from tools.wetlab_target_render_utils import load_json
 
 

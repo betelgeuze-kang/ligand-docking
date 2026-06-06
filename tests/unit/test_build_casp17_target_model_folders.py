@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from tools import build_casp17_target_model_folders as mod
+from tools.casp17 import build_casp17_target_model_folders as mod
 
 
 def _write_pdb(path: Path) -> None:

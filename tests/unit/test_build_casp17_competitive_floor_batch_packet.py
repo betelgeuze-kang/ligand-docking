@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from tools import build_casp17_competitive_floor_batch_packet as mod
+from tools.casp17 import build_casp17_competitive_floor_batch_packet as mod
 
 
 def test_build_casp17_competitive_floor_batch_packet_materializes_competitive_rows(tmp_path):

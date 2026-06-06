@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from tools import build_casp17_organic_ligand_metric_first_operator_fill_kit as mod
+from tools.casp17 import build_casp17_organic_ligand_metric_first_operator_fill_kit as mod
 
 
 FIELDS = [

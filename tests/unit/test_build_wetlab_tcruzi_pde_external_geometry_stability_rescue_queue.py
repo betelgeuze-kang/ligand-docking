@@ -3,7 +3,7 @@ from __future__ import annotations
 import csv
 from pathlib import Path
 
-from tools.build_wetlab_tcruzi_pde_external_geometry_stability_rescue_queue import build_payload
+from tools.wetlab.build_wetlab_tcruzi_pde_external_geometry_stability_rescue_queue import build_payload
 
 
 def _write_csv(path: Path, rows: list[dict[str, object]]) -> None:

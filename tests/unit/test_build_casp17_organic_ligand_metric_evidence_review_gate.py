@@ -4,7 +4,7 @@ import csv
 import json
 from pathlib import Path
 
-from tools import build_casp17_organic_ligand_metric_evidence_review_gate as mod
+from tools.casp17 import build_casp17_organic_ligand_metric_evidence_review_gate as mod
 
 
 FIELDS = [

@@ -96,7 +96,8 @@ def build_public_benchmark_materialization_manifest(
         "scorecard_run_command_template": (
             "python3 tools/build_public_benchmark_suite_scorecard.py "
             f"--suite-id {_text(suite_id)} --primary-metric-value OPERATOR_FILL_METRIC "
-            f"--evidence-artifact {result} --evidence-row-count {result_rows} "
+            f"--evidence-artifact {result} --product-provenance-json OPERATOR_FILL_PRODUCT_PROVENANCE_JSON "
+            f"--evidence-row-count {result_rows} "
             f"--min-evidence-rows {int(min_result_rows)} --regression-baseline-ref OPERATOR_FILL_BASELINE_REF"
         ),
         "external_state_mutated": False,

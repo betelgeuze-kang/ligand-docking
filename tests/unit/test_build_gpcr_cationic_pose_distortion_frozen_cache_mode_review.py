@@ -75,7 +75,7 @@ def test_build_gpcr_cationic_pose_distortion_frozen_cache_mode_review_blocks_non
     subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools/build_gpcr_cationic_pose_distortion_frozen_cache_mode_review.py"),
+            str(ROOT / "tools/gpcr_replay/build_gpcr_cationic_pose_distortion_frozen_cache_mode_review.py"),
             "--none-positive-cache-csv",
             str(none_positive),
             "--allbasic-positive-cache-csv",

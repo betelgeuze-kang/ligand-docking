@@ -4,7 +4,7 @@ import csv
 import json
 from pathlib import Path
 
-from tools import build_casp17_historical_seed_top5_candidate_pools as mod
+from tools.casp17 import build_casp17_historical_seed_top5_candidate_pools as mod
 
 
 FIELDS = [

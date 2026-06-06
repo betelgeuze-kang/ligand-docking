@@ -87,6 +87,15 @@ def _product_license_decision_packet() -> dict:
             "option_count": 5,
             "commercial_gate_only_license_blocked": True,
             "approval_token_required": "APPROVE_PRODUCT_LICENSE_FILE_CREATION",
+            "operator_intake_fill_command_template": (
+                "python3 tools/fill_product_license_decision_operator_intake.py "
+                "--approval-token APPROVE_PRODUCT_LICENSE_FILE_CREATION "
+                "--spdx-license-id OPERATOR_FILL_SPDX "
+                "--license-text-source OPERATOR_APPROVED_LICENSE_TEXT_FILE "
+                "--copyright-holder OPERATOR_FILL_HOLDER "
+                "--effective-year OPERATOR_FILL_YEAR "
+                "--out-csv runs/product_license_decision_operator_intake.csv"
+            ),
             "legal_advice_provided": False,
             "license_file_written": False,
             "external_state_mutated": False,
@@ -628,6 +637,226 @@ def _goal_operator_intake_kit() -> dict:
     }
 
 
+def _product_goal_completion_audit() -> dict:
+    return {
+        "summary": {
+            "status": "blocked_product_goal_completion_audit",
+            "goal_complete": False,
+            "primary_bottleneck_kind": "production_ai_checkpoint_evidence_required",
+            "production_ai_checkpoint_ready": False,
+            "production_ai_checkpoint_failed_check_ids": [
+                "production_training_data_ready",
+                "force_gpu_worker_return_receipt_ready",
+            ],
+            "production_ai_gpu_return_intake_status": "blocked_product_production_ai_gpu_return_intake",
+            "production_ai_gpu_return_intake_artifact_path": (
+                "runs/product_production_ai_gpu_return_intake_current.json"
+            ),
+            "production_ai_gpu_return_intake_ready": True,
+            "production_ai_gpu_return_artifacts_ready": False,
+            "production_ai_gpu_return_failed_check_ids": [
+                "actual_summary_returned_complete",
+                "actual_manifest_operator_verified",
+            ],
+            "production_ai_gpu_return_actual_summary_return_path": (
+                "runs/residual_force_trajectory_regeneration_current_summary.json"
+            ),
+            "production_ai_gpu_return_actual_manifest_return_path": (
+                "runs/residual_force_trajectory_regeneration_current_manifest.csv"
+            ),
+            "production_ai_gpu_return_manifest_template_csv": (
+                "runs/residual_force_gpu_worker_return_manifest_template_current.csv"
+            ),
+            "production_ai_gpu_return_summary_template_csv": (
+                "runs/residual_force_gpu_worker_return_summary_template_current.csv"
+            ),
+            "production_ai_gpu_return_summary_template_payload_json": (
+                "runs/residual_force_trajectory_regeneration_current_summary_template.json"
+            ),
+            "production_ai_gpu_return_manifest_operator_verification_placeholder_count": 768,
+            "production_ai_force_gpu_worker_handoff_ready": True,
+            "production_ai_force_gpu_worker_operator_action_required": True,
+            "production_ai_force_gpu_full_regeneration_command": (
+                "python3 tools/generate_ligand_trajectory_engine.py --prod-mode"
+            ),
+            "production_ai_force_gpu_post_return_validation_command": (
+                "python3 tools/build_residual_force_gpu_worker_return_receipt.py"
+            ),
+            "production_ai_force_gpu_post_run_validation_commands": [
+                "python3 tools/build_residual_force_gpu_worker_return_receipt.py",
+                "python3 tools/build_product_goal_completion_audit.py",
+            ],
+            "production_ai_force_gpu_post_return_required_production_output_fields": [
+                "delta_score",
+                "corrected_score",
+                "delta_energy",
+                "delta_force",
+                "uncertainty",
+                "abstention_reason",
+                "stage2_route_decision",
+            ],
+            "production_ai_force_gpu_post_return_unlock_output_fields": [
+                "delta_force",
+                "uncertainty",
+                "abstention_reason",
+                "stage2_route_decision",
+            ],
+            "production_ai_force_gpu_post_return_min_expected_label_rows": 768,
+            "production_ai_force_gpu_post_return_promotion_ladder_stage_count": 10,
+            "production_ai_force_gpu_post_return_promotion_ladder_stage_ids": [
+                "gpu_return_receipt",
+                "product_goal_completion_audit",
+            ],
+            "production_ai_force_gpu_receipt_manifest_identity_row_count": 0,
+            "production_ai_force_gpu_receipt_matched_queue_id_count": 0,
+            "production_ai_force_gpu_receipt_matched_expected_npz_count": 0,
+            "production_ai_force_gpu_receipt_matched_queue_fingerprint_count": 0,
+            "product_scope_general_platform_claim_allowed": False,
+            "product_scope_evidence_priority_ready": True,
+            "product_scope_evidence_priority_queue_item_count": 21,
+            "product_scope_evidence_priority_open_item_count": 21,
+            "product_scope_evidence_priority_local_crosscheck_candidate_count": 11,
+            "product_scope_evidence_priority_external_primary_exact_required_count": 6,
+            "product_scope_evidence_priority_top_item_id": "AQP1.core_binder_01",
+            "product_scope_evidence_priority_top_domain": "transporter",
+            "product_scope_evidence_priority_top_bucket": "local_crosscheck_review_present_but_exact_quant_required",
+            "product_scope_evidence_priority_top_next_step": (
+                "Review local crosscheck files, capture exact evidence if present."
+            ),
+            "product_scope_evidence_intake_ready": True,
+            "product_scope_local_crosscheck_intake_ready_count": 10,
+            "product_scope_transporter_manual_review_direct_binding_evidence_required_count": 4,
+            "product_scope_transporter_manual_review_negative_quantitative_value_required_count": 6,
+            "product_scope_transporter_manual_review_decision_placeholder_count": 11,
+            "product_scope_transporter_candidate_ready_for_apply_count": 0,
+            "product_scope_pxr_exact_review_intake_ready": True,
+            "product_scope_pxr_exact_review_template_row_count": 6,
+            "product_scope_pxr_exact_review_kcal_placeholder_count": 6,
+            "product_scope_pxr_exact_review_conflict_resolution_required_count": 3,
+        }
+    }
+
+
+def test_goal_operator_action_board_surfaces_product_ai_goal_completion_actions() -> None:
+    actions = mod._product_goal_completion_actions(
+        goal_completion_audit=_product_goal_completion_audit(),
+        goal_completion_audit_path="runs/product_goal_completion_audit_current.json",
+    )
+
+    by_type = {row["action_type"]: row for row in actions}
+    gpu = by_type["return_gpu_force_regeneration_receipt"]
+    assert gpu["priority"] == 0
+    assert gpu["lane_id"] == "product_ai_production"
+    assert gpu["status"] == "required"
+    assert "product_production_ai_gpu_return_intake_current.json" in gpu["artifact_path"]
+    assert "generate_ligand_trajectory_engine.py" in gpu["command"]
+    assert gpu["gpu_return_intake_status"] == "blocked_product_production_ai_gpu_return_intake"
+    assert gpu["gpu_return_intake_ready"] is True
+    assert gpu["gpu_return_artifacts_ready"] is False
+    assert gpu["gpu_return_failed_check_ids"] == (
+        "actual_summary_returned_complete;actual_manifest_operator_verified"
+    )
+    assert gpu["gpu_return_actual_summary_return_path"] == (
+        "runs/residual_force_trajectory_regeneration_current_summary.json"
+    )
+    assert gpu["gpu_return_actual_manifest_return_path"] == (
+        "runs/residual_force_trajectory_regeneration_current_manifest.csv"
+    )
+    assert gpu["gpu_return_manifest_operator_verification_placeholder_count"] == 768
+    assert gpu["gpu_return_summary_template_csv"] == (
+        "runs/residual_force_gpu_worker_return_summary_template_current.csv"
+    )
+    assert gpu["gpu_return_summary_template_payload_json"] == (
+        "runs/residual_force_trajectory_regeneration_current_summary_template.json"
+    )
+    assert "delta_force;uncertainty;abstention_reason;stage2_route_decision" == gpu[
+        "post_return_unlock_output_fields"
+    ]
+    assert gpu["post_return_min_expected_label_rows"] == 768
+    assert gpu["post_return_promotion_ladder_stage_count"] == 10
+    assert gpu["post_return_promotion_ladder_stage_ids"] == "gpu_return_receipt;product_goal_completion_audit"
+    assert gpu["post_return_required_production_output_fields"] == (
+        "delta_score;corrected_score;delta_energy;delta_force;uncertainty;abstention_reason;stage2_route_decision"
+    )
+    assert gpu["post_run_validation_command_count"] == 2
+    assert gpu["parallelizable_with_primary_action"] is False
+    assert gpu["receipt_manifest_identity_row_count"] == 0
+    assert gpu["receipt_matched_queue_id_count"] == 0
+    assert gpu["receipt_matched_expected_npz_count"] == 0
+    assert gpu["receipt_matched_queue_fingerprint_count"] == 0
+    assert "gpu_return_failed_checks=actual_summary_returned_complete;actual_manifest_operator_verified" in gpu["reason"]
+    assert "receipt_manifest_identity_rows=0" in gpu["reason"]
+
+    scope = by_type["curate_scope_evidence_priority_item"]
+    assert scope["priority"] == 2
+    assert scope["lane_id"] == "product_scope_expansion"
+    assert scope["status"] == "review_required"
+    assert scope["parallelizable_with_primary_action"] is True
+    assert scope["parallel_primary_action_id"] == (
+        "product_ai_production:return_gpu_force_regeneration_receipt"
+    )
+    assert "does not require production GPU execution" in scope["parallel_lane_precondition"]
+    assert scope["required_input"] == "AQP1.core_binder_01"
+    assert scope["scope_priority_top_domain"] == "transporter"
+    assert scope["scope_evidence_intake_ready"] is True
+    assert scope["scope_local_crosscheck_intake_ready_count"] == 10
+    assert scope["scope_transporter_manual_review_direct_binding_required_count"] == 4
+    assert scope["scope_transporter_manual_review_negative_quantitative_required_count"] == 6
+    assert scope["scope_transporter_manual_review_decision_placeholder_count"] == 11
+    assert scope["scope_transporter_candidate_ready_for_apply_count"] == 0
+    assert scope["scope_pxr_exact_review_intake_ready"] is True
+    assert scope["scope_pxr_exact_review_template_row_count"] == 6
+    assert scope["scope_pxr_exact_review_kcal_placeholder_count"] == 6
+    assert scope["scope_pxr_exact_review_conflict_resolution_required_count"] == 3
+    assert "pxr_exact_review_kcal_placeholder_count=6" in scope["reason"]
+
+
+def test_goal_operator_action_board_summary_points_to_primary_product_ai_action() -> None:
+    payload = mod.build_action_board(
+        rollup_packet={},
+        product_preflight_packet={},
+        product_bundle_contract_packet={},
+        product_delivery_evidence_packet={},
+        product_goal_completion_audit_packet=_product_goal_completion_audit(),
+        cameo_input_kit_packet={},
+        cameo_input_validation_packet={},
+        cameo_repair_preflight_packet={},
+        transition_cleanup_preflight_packet={},
+        ligand_cleanup_preflight_packet={},
+        cleanup_completion_gate_packet=_cleanup_completion_gate_ready(),
+    )
+
+    summary = payload["summary"]
+    assert summary["primary_action_id"] == "product_ai_production:return_gpu_force_regeneration_receipt"
+    assert summary["top_action_id"] == summary["primary_action_id"]
+    assert summary["primary_action_priority"] == 0
+    assert summary["primary_action_lane_id"] == "product_ai_production"
+    assert summary["primary_action_type"] == "return_gpu_force_regeneration_receipt"
+    assert summary["primary_action_status"] == "required"
+    assert summary["primary_action_required_input"] == (
+        "GPU full-regeneration summary and manifest with operator verification"
+    )
+    assert "generate_ligand_trajectory_engine.py" in summary["primary_action_command"]
+    assert "Run the full regeneration command on a GPU worker" in summary[
+        "primary_action_recommended_action"
+    ]
+    assert summary["operator_input_required_count"] == 2
+    assert summary["blocked_or_required_action_count"] == 1
+    assert summary["review_required_count"] == 1
+    assert summary["parallel_product_action_count"] == 1
+    assert summary["parallel_product_action_ids"] == [
+        "product_scope_expansion:curate_scope_evidence_priority_item"
+    ]
+    assert summary["first_parallel_product_action_id"] == (
+        "product_scope_expansion:curate_scope_evidence_priority_item"
+    )
+    assert summary["first_parallel_product_action_required_input"] == "AQP1.core_binder_01"
+    assert summary["first_parallel_product_action_primary_action_id"] == summary["primary_action_id"]
+    assert "does not require production GPU execution" in summary[
+        "first_parallel_product_action_precondition"
+    ]
+
+
 def test_goal_operator_action_board_collects_blockers_approvals_and_review_rows(tmp_path: Path) -> None:
     payload = mod.build_action_board(
         rollup_packet=_rollup(),
@@ -946,6 +1175,9 @@ def test_goal_operator_action_board_collects_blockers_approvals_and_review_rows(
     assert any(row["action_type"] == "fill_product_license_decision" for row in rows)
     assert any(row["action_type"] == "review_product_license_options" for row in rows)
     assert any(row["approval_token"] == "APPROVE_PRODUCT_LICENSE_FILE_CREATION" for row in rows)
+    license_action = next(row for row in rows if row["action_type"] == "fill_product_license_decision")
+    assert "fill_product_license_decision_operator_intake.py" in license_action["command"]
+    assert "--license-text-source OPERATOR_APPROVED_LICENSE_TEXT_FILE" in license_action["command"]
     assert any(row["approval_token"] == "APPROVE_DELETE_STALE_LIGAND_HEAVY_PAYLOADS" for row in rows)
     assert not any(row["action_type"] == "review_large_cleanup_surface" for row in rows)
     assert any(row["action_type"] == "review_protected_ligand_heavy_policy" for row in rows)
@@ -973,6 +1205,10 @@ def test_goal_operator_action_board_suppresses_cleanup_actions_when_completion_r
 
     assert payload["summary"]["status"] == "goal_operator_actions_clear"
     assert payload["summary"]["action_count"] == 0
+    assert payload["summary"]["operator_input_required_count"] == 0
+    assert payload["summary"]["primary_action_id"] == ""
+    assert payload["summary"]["top_action_id"] == ""
+    assert payload["summary"]["primary_action_priority"] == 0
     assert payload["summary"]["cleanup_completion_gate_status"] == "cleanup_completion_gate_ready"
     assert payload["summary"]["cleanup_completion_complete"] is True
     assert not any(row["lane_id"] in {"transition_cleanup", "ligand_heavy_cleanup"} for row in payload["rows"])

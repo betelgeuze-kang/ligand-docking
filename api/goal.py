@@ -111,6 +111,15 @@ async def get_goal_status() -> dict[str, Any]:
             "action_board_artifact_path": str(GOAL_OPERATOR_ACTION_BOARD_ARTIFACT),
             "release_decision_artifact_path": str(GOAL_RELEASE_DECISION_ARTIFACT),
             "burndown_artifact_path": str(GOAL_RELEASE_BURNDOWN_ARTIFACT),
+            "primary_action_id": "",
+            "primary_action_status": "",
+            "primary_action_required_input": "",
+            "primary_action_command": "",
+            "primary_action_recommended_action": "",
+            "primary_action_artifact_path": "",
+            "primary_bottleneck_root_cause_category": "",
+            "primary_bottleneck_locally_closable_without_operator_return": False,
+            "primary_bottleneck_required_external_return": "",
             **_mutation_flags(),
             "claim_boundary": CLAIM_BOUNDARY,
         }
@@ -134,6 +143,15 @@ async def get_goal_status() -> dict[str, Any]:
         "bottleneck_count": _int(bottlenecks.get("bottleneck_count")),
         "primary_bottleneck_kind": bottlenecks.get("primary_bottleneck_kind", ""),
         "primary_bottleneck_phase": bottlenecks.get("primary_bottleneck_phase", ""),
+        "primary_bottleneck_root_cause_category": bottlenecks.get(
+            "primary_bottleneck_root_cause_category", ""
+        ),
+        "primary_bottleneck_locally_closable_without_operator_return": bool(
+            bottlenecks.get("primary_bottleneck_locally_closable_without_operator_return") is True
+        ),
+        "primary_bottleneck_required_external_return": bottlenecks.get(
+            "primary_bottleneck_required_external_return", ""
+        ),
         "official_results_required_bottleneck_count": _int(
             bottlenecks.get("official_results_required_bottleneck_count")
         ),
@@ -141,6 +159,15 @@ async def get_goal_status() -> dict[str, Any]:
         "operator_action_count": _int(actions.get("action_count") or release.get("operator_action_count")),
         "operator_approval_required_count": _int(actions.get("approval_required_count") or release.get("operator_approval_required_count")),
         "operator_input_required_count": _int(intake.get("operator_input_required_count")),
+        "primary_action_id": intake.get("primary_action_id") or actions.get("primary_action_id", ""),
+        "primary_action_status": intake.get("primary_action_status") or actions.get("primary_action_status", ""),
+        "primary_action_required_input": intake.get("primary_action_required_input")
+        or actions.get("primary_action_required_input", ""),
+        "primary_action_command": intake.get("primary_action_command") or actions.get("primary_action_command", ""),
+        "primary_action_recommended_action": intake.get("primary_action_recommended_action")
+        or actions.get("primary_action_recommended_action", ""),
+        "primary_action_artifact_path": intake.get("primary_action_artifact_path")
+        or actions.get("primary_action_artifact_path", ""),
         "operator_intake_kit_release_burndown_linked_entry_count": _int(
             intake.get("release_burndown_linked_entry_count")
         ),

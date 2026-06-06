@@ -1,0 +1,52 @@
+{
+  "manifest_version": "viewer_vendor_assets_v1",
+  "claim_boundary": "Viewer self-hosted asset manifest only; pins local browser assets for offline/self-hosted delivery. It records upstream license provenance, but does not replace operator legal review for commercial redistribution.",
+  "third_party_notice_path": "viewer/vendor/THIRD_PARTY_NOTICES.md",
+  "license_review_status": "recorded_not_legal_approved",
+  "assets": [
+    {
+      "name": "molstar_css",
+      "package": "molstar",
+      "version": "4.5.0",
+      "path": "viewer/vendor/molstar/4.5.0/molstar.css",
+      "source_url": "https://cdn.jsdelivr.net/npm/molstar@4.5.0/build/viewer/molstar.css",
+      "license_id": "MIT",
+      "license_source_url": "https://cdn.jsdelivr.net/npm/molstar@4.5.0/LICENSE",
+      "sha256": "274c2a57d21c6a3e5f7f5d5e51ca0a58c2fef6bcd44b6b588dbe2f622c197e64",
+      "size_bytes": 69936
+    },
+    {
+      "name": "molstar_js",
+      "package": "molstar",
+      "version": "4.5.0",
+      "path": "viewer/vendor/molstar/4.5.0/molstar.js",
+      "source_url": "https://cdn.jsdelivr.net/npm/molstar@4.5.0/build/viewer/molstar.js",
+      "license_id": "MIT",
+      "license_source_url": "https://cdn.jsdelivr.net/npm/molstar@4.5.0/LICENSE",
+      "sha256": "24ccbabdc5e96849581f691206535650ea9db74d61e14a44f6e7bb45f64d07a6",
+      "size_bytes": 4897515
+    },
+    {
+      "name": "plotly_js",
+      "package": "plotly.js-dist-min",
+      "version": "2.35.2",
+      "path": "viewer/vendor/plotly/2.35.2/plotly-2.35.2.min.js",
+      "source_url": "https://cdn.plot.ly/plotly-2.35.2.min.js",
+      "license_id": "MIT",
+      "license_source_url": "https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/LICENSE",
+      "sha256": "6d21266ce1bd7d9e5ab4e115989c70c20de0382fd973a8f26ab58619eba4d603",
+      "size_bytes": 4558696
+    },
+    {
+      "name": "jszip_js",
+      "package": "jszip",
+      "version": "3.10.1",
+      "path": "viewer/vendor/jszip/3.10.1/jszip.min.js",
+      "source_url": "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js",
+      "license_id": "(MIT OR GPL-3.0-or-later)",
+      "license_source_url": "https://cdn.jsdelivr.net/npm/jszip@3.10.1/LICENSE.markdown",
+      "sha256": "acc7e41455a80765b5fd9c7ee1b8078a6d160bbbca455aeae854de65c947d59e",
+      "size_bytes": 97630
+    }
+  ]
+}

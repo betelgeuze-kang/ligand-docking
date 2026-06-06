@@ -7,7 +7,7 @@ from pathlib import Path
 from betelgeuze_cameo.format_validation import build_format_validation_packet, validate_model_file
 from betelgeuze_cameo.operator_inputs import build_operator_input_validation
 from betelgeuze_cameo.selector import build_selection_packet
-from tools import build_cameo_local_format_smoke_inputs as mod
+from tools.cameo import build_cameo_local_format_smoke_inputs as mod
 
 
 def _read_csv_rows(path: Path) -> list[dict[str, str]]:

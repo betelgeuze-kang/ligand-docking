@@ -6,7 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from tools import build_gpcr_100k_failure_analysis as mod
+from tools.gpcr_replay import build_gpcr_100k_failure_analysis as mod
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -80,7 +80,7 @@ def test_build_gpcr_100k_failure_analysis(tmp_path: Path) -> None:
     subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools/build_gpcr_100k_failure_analysis.py"),
+            str(ROOT / "tools/gpcr_replay/build_gpcr_100k_failure_analysis.py"),
             "--baseline-csv",
             str(baseline),
             "--scaleup-csv",

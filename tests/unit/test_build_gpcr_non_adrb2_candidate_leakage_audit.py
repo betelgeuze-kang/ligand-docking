@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from tools import build_gpcr_non_adrb2_candidate_leakage_audit as mod
+from tools.gpcr_replay import build_gpcr_non_adrb2_candidate_leakage_audit as mod
 
 
 def _write_inputs(tmp_path: Path, candidates: list[dict[str, object]]):

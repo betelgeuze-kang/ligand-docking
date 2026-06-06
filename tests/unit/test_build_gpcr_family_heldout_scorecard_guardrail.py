@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools import build_gpcr_family_heldout_scorecard_guardrail as mod
+from tools.gpcr_replay import build_gpcr_family_heldout_scorecard_guardrail as mod
 
 
 def _write_json(path: Path, payload: dict) -> None:

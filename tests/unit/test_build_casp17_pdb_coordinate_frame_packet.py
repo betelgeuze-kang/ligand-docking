@@ -34,7 +34,7 @@ def test_coordinate_frame_packet_translates_negative_overflow_without_geometry_c
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_pdb_coordinate_frame_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_pdb_coordinate_frame_packet.py"),
             "--prediction-dir",
             str(prediction_dir),
             "--out-dir",

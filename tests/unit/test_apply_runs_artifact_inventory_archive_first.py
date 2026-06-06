@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from datetime import date
 
-from tools import apply_runs_artifact_inventory_archive_first as mod
+from tools.cleanup import apply_runs_artifact_inventory_archive_first as mod
 
 
 def _inventory_row(path: str, group: str, *, action: str = "archive_review", kind: str = "file", size: int = 7) -> dict[str, str]:

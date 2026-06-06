@@ -83,7 +83,7 @@ def test_completion_audit_passes_when_all_3d_object_assets_exist(tmp_path: Path)
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_protein_object_library_completion_audit.py"),
+            str(ROOT / "tools/casp17/build_casp17_protein_object_library_completion_audit.py"),
             "--protein-object-library-json",
             str(library_json),
             "--out-json",
@@ -125,7 +125,7 @@ def test_completion_audit_blocks_missing_viewer(tmp_path: Path) -> None:
     result = subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_protein_object_library_completion_audit.py"),
+            str(ROOT / "tools/casp17/build_casp17_protein_object_library_completion_audit.py"),
             "--protein-object-library-json",
             str(library_json),
             "--out-json",

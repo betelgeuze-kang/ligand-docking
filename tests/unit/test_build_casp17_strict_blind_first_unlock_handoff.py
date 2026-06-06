@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools import build_casp17_strict_blind_first_unlock_handoff as mod
+from tools.casp17 import build_casp17_strict_blind_first_unlock_handoff as mod
 
 
 def _write_json(path: Path, payload: dict) -> None:

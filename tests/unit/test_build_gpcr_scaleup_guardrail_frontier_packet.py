@@ -6,7 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from tools import build_gpcr_scaleup_guardrail_frontier_packet as mod
+from tools.gpcr_replay import build_gpcr_scaleup_guardrail_frontier_packet as mod
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -62,7 +62,7 @@ def test_build_gpcr_scaleup_guardrail_frontier_packet_cli(tmp_path: Path) -> Non
     subprocess.run(
         [
             sys.executable,
-            "tools/build_gpcr_scaleup_guardrail_frontier_packet.py",
+            "tools/gpcr_replay/build_gpcr_scaleup_guardrail_frontier_packet.py",
             "--candidate-csv",
             str(candidate),
             "--out-json",

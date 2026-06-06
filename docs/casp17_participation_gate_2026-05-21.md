@@ -306,7 +306,7 @@ python3 tools/build_casp17_internal_physics_raw_gate_packet.py \
 Convert raw PDBs to CASP TS and run downstream gates:
 
 ```bash
-python3 tools/run_casp17_internal_physics_ts_gate_batch.py \
+python3 tools/casp17/run_casp17_internal_physics_ts_gate_batch.py \
   --raw-gate-json runs/casp17_internal_physics_raw_gate_packet_recursive_current.json \
   --launch-packet-json runs/casp17_prediction_launch_packet_recursive_current.json \
   --intake-csv runs/casp17_target_intake_seed_with_sequences_current.csv \
@@ -744,7 +744,7 @@ This QC packet checks local heavy-atom completion, severe inter-residue clashes,
 Build sidechain completeness and rotamer-frame proxy QC:
 
 ```bash
-python3 tools/build_casp17_sidechain_quality_packet.py \
+python3 tools/casp17/build_casp17_sidechain_quality_packet.py \
   --target-watchlist-json runs/casp17_target_watchlist_current.json \
   --prediction-dir runs/casp17_predictions_statistical_rotamer_current \
   --out-json runs/casp17_sidechain_quality_packet_current.json \
@@ -919,7 +919,7 @@ Only after those exactness checks pass are TM/GDT/lDDT/interface-contact F1, IPS
 Build the no-leak historical refinement-ablation packet. This is the evidence lane that asks whether each internal refinement layer improves native proxy metrics on cleared historical targets, without touching current CASP17 target native data:
 
 ```bash
-python3 tools/build_casp17_refinement_ablation_packet.py \
+python3 tools/casp17/build_casp17_refinement_ablation_packet.py \
   --manifest-csv runs/casp17_historical_benchmark_manifest_current.csv \
   --out-json runs/casp17_refinement_ablation_packet_current.json \
   --out-csv runs/casp17_refinement_ablation_packet_current.csv \

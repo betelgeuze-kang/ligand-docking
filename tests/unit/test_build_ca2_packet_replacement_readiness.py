@@ -40,7 +40,7 @@ def test_build_ca2_packet_replacement_readiness(tmp_path: Path) -> None:
     subprocess.run(
         [
             'python3',
-            str(ROOT / 'tools/build_ca2_packet_replacement_readiness.py'),
+            str(ROOT / 'tools/product/build_ca2_packet_replacement_readiness.py'),
             '--workbook-csv',
             str(workbook_csv),
             '--out-json',

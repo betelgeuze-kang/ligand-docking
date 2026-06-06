@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from urllib.parse import parse_qs, urlparse
 
-from tools import build_pxr_public_evidence_overlay as mod
+from tools.product import build_pxr_public_evidence_overlay as mod
 
 
 def test_build_pxr_public_evidence_overlay_autofills_gap_rows() -> None:

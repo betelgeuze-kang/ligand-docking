@@ -41,6 +41,13 @@ def _ready_product_architecture() -> dict:
             "public_benchmark_required_suite_count": 5,
             "public_benchmark_ready_required_suite_count": 5,
             "public_benchmark_blocked_suite_count": 0,
+            "public_benchmark_suite_materialization_manifest_count": 5,
+            "public_benchmark_suite_scorecard_row_csv_count": 5,
+            "public_benchmark_suite_threshold_count": 5,
+            "public_benchmark_suite_blocker_count": 5,
+            "public_benchmark_suite_run_command_count": 5,
+            "public_benchmark_suite_materialization_run_command_count": 5,
+            "public_benchmark_suite_no_external_dependency_count": 5,
             "public_benchmark_requires_24h_server": False,
             "public_benchmark_requires_competition_season": False,
             "public_benchmark_requires_paid_vps": False,
@@ -67,6 +74,13 @@ def _blocked_product_architecture() -> dict:
             "public_benchmark_required_suite_count": 5,
             "public_benchmark_ready_required_suite_count": 0,
             "public_benchmark_blocked_suite_count": 5,
+            "public_benchmark_suite_materialization_manifest_count": 5,
+            "public_benchmark_suite_scorecard_row_csv_count": 5,
+            "public_benchmark_suite_threshold_count": 5,
+            "public_benchmark_suite_blocker_count": 5,
+            "public_benchmark_suite_run_command_count": 5,
+            "public_benchmark_suite_materialization_run_command_count": 5,
+            "public_benchmark_suite_no_external_dependency_count": 5,
             "public_benchmark_requires_24h_server": False,
             "public_benchmark_requires_competition_season": False,
             "public_benchmark_requires_paid_vps": False,
@@ -153,6 +167,17 @@ def _blocked_rollup() -> dict:
 
 def _ready_rollup() -> dict:
     return {"summary": {"status": "goal_readiness_ready"}}
+
+
+def _pending_nonblocking_rollup() -> dict:
+    return {
+        "summary": {
+            "status": "goal_readiness_pending_operator_or_external_results",
+            "blocked_lane_count": 0,
+            "operator_approval_pending_count": 3,
+            "external_results_pending_count": 1,
+        }
+    }
 
 
 def _blocked_action_board() -> dict:
@@ -330,6 +355,69 @@ def _blocked_goal_api_surface_contract() -> dict:
     }
 
 
+def _ready_product_ai_gap() -> dict:
+    return {
+        "summary": {
+            "status": "product_ai_architecture_gap_closure_complete",
+            "all_gaps_closed": True,
+            "open_gap_count": 0,
+            "current_primary_open_gap": "none",
+        }
+    }
+
+
+def _blocked_product_ai_gap() -> dict:
+    return {
+        "summary": {
+            "status": "blocked_product_ai_architecture_gap_closure",
+            "all_gaps_closed": False,
+            "open_gap_count": 1,
+            "current_primary_open_gap": "scope_breadth_expansion",
+        }
+    }
+
+
+def _ready_product_ai_backlog() -> dict:
+    return {
+        "summary": {
+            "status": "product_ai_architecture_execution_backlog_clear",
+            "backlog_clear": True,
+            "work_item_count": 0,
+            "primary_work_item_id": "none",
+        }
+    }
+
+
+def _blocked_product_ai_backlog() -> dict:
+    return {
+        "summary": {
+            "status": "product_ai_architecture_execution_backlog_ready",
+            "backlog_clear": False,
+            "work_item_count": 21,
+            "primary_work_item_id": "training_data.production_delta_force_label_evidence",
+            "scope_closure_detail": (
+                "scope_closure_blocker_classes=direct_binding_evidence_missing=4,exact_negative_quantitative_value_missing=6;"
+                "scope_closure_first_scientific_blocker=AQP1.core_binder_01;"
+                "scope_closure_pxr_reconciled_blocked_row_count=6;"
+                "scope_closure_general_claim_blocker_count=4;"
+                "scope_closure_authoritative_apply_allowed=False"
+            ),
+        },
+        "rows": [
+            {
+                "work_item_id": "training_data.production_delta_force_label_evidence",
+                "observed": (
+                    "gpu_worker_return_expected_queue_rows=768;"
+                    "gpu_worker_return_manifest_operator_verified=False;"
+                    "gpu_worker_return_operator_verified_true_count=0;"
+                    "gpu_worker_return_queue_fingerprints=768"
+                ),
+                "next_action": "Run the full GPU regeneration command and return the current summary JSON.",
+            }
+        ],
+    }
+
+
 def test_goal_release_decision_gate_blocks_current_incomplete_goal() -> None:
     payload = mod.build_goal_release_decision_gate(
         product_pilot_packet=_blocked_product(),
@@ -387,6 +475,13 @@ def test_goal_release_decision_gate_blocks_current_incomplete_goal() -> None:
     assert summary["product_architecture_public_benchmark_validation_ready"] is False
     assert summary["product_architecture_public_benchmark_status"] == "blocked_product_public_benchmark_contract"
     assert summary["product_architecture_public_benchmark_blocked_suite_count"] == 5
+    assert summary["product_architecture_public_benchmark_suite_materialization_manifest_count"] == 5
+    assert summary["product_architecture_public_benchmark_suite_scorecard_row_csv_count"] == 5
+    assert summary["product_architecture_public_benchmark_suite_threshold_count"] == 5
+    assert summary["product_architecture_public_benchmark_suite_blocker_count"] == 5
+    assert summary["product_architecture_public_benchmark_suite_run_command_count"] == 5
+    assert summary["product_architecture_public_benchmark_suite_materialization_run_command_count"] == 5
+    assert summary["product_architecture_public_benchmark_suite_no_external_dependency_count"] == 5
     assert summary["product_architecture_public_benchmark_requires_24h_server"] is False
     assert summary["public_benchmark_required_for_product_release"] is True
     assert summary["release_blocked_by_public_benchmark"] is True
@@ -430,12 +525,18 @@ def test_goal_release_decision_gate_blocks_current_incomplete_goal() -> None:
     assert any(row["check"] == "public_benchmark_validation_ready" and row["status"] == "fail" for row in payload["rows"])
     architecture_row = next(row for row in payload["rows"] if row["check"] == "product_architecture_release_ready")
     assert architecture_row["status"] == "fail"
+    assert "public_benchmark_suite_scorecard_row_csv_count=5" in architecture_row["observed"]
+    assert "public_benchmark_suite_run_command_count=5" in architecture_row["observed"]
     assert "cameo_official_evidence_ready=false" in architecture_row["observed"]
     assert "cameo_receiver_smoke_status=blocked_cameo_receiver_smoke" in architecture_row["observed"]
     assert "cameo_api_dependency_status=blocked_cameo_api_dependency_readiness" in architecture_row["observed"]
     assert "cameo_public_registration_blocker_count=4" in architecture_row["observed"]
     assert "cameo_registration_tokens=APPROVE_CAMEO_SERVER_REGISTRATION;APPROVE_CAMEO_OUTBOUND_EMAIL" in architecture_row["observed"]
     assert any(row["check"] == "commercial_independence_gate_ready" and row["status"] == "fail" for row in payload["rows"])
+    benchmark_row = next(row for row in payload["rows"] if row["check"] == "public_benchmark_validation_ready")
+    assert "suite_materialization_manifest_count=5" in benchmark_row["observed"]
+    assert "suite_scorecard_row_csv_count=5" in benchmark_row["observed"]
+    assert "suite_run_command_count=5" in benchmark_row["observed"]
     assert any(row["check"] == "protected_cleanup_policy_resolved" and row["status"] == "fail" for row in payload["rows"])
     transition_row = next(row for row in payload["rows"] if row["check"] == "transition_cleanup_complete")
     ligand_row = next(row for row in payload["rows"] if row["check"] == "ligand_heavy_cleanup_complete")
@@ -497,6 +598,31 @@ def test_goal_release_decision_gate_does_not_block_on_optional_cameo_live_valida
     assert summary["cameo_official_results_required_for_product_release"] is False
     assert summary["release_blocked_by_cameo_live_validation"] is False
     assert not any("cameo" in row["check"] for row in payload["rows"])
+
+
+def test_goal_release_decision_gate_accepts_nonblocking_pending_rollup_lanes() -> None:
+    payload = mod.build_goal_release_decision_gate(
+        product_pilot_packet=_ready_product(),
+        product_architecture_packet=_ready_product_architecture(),
+        product_commercial_independence_packet=_ready_product_independence(),
+        cameo_validation_packet=_blocked_cameo_validation(),
+        cameo_capability_packet=_blocked_cameo_capability(),
+        goal_rollup_packet=_pending_nonblocking_rollup(),
+        operator_action_board_packet=_clear_action_board(),
+        transition_cleanup_preflight_packet=_transition_cleanup("transition_cleanup_execution_complete"),
+        ligand_cleanup_preflight_packet=_ligand_cleanup("ligand_heavy_cleanup_execution_complete"),
+        protected_cleanup_review_packet=_protected_cleanup(0),
+        cleanup_postcheck_contract_packet=_ready_cleanup_postcheck(),
+        goal_api_surface_contract_packet=_ready_goal_api_surface_contract(),
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "goal_release_ready"
+    assert summary["release_allowed"] is True
+    row = next(row for row in payload["rows"] if row["check"] == "product_release_evidence_ready")
+    assert row["status"] == "pass"
+    assert "operator_approval_pending_count=3" in row["observed"]
+    assert "external_results_pending_count=1" in row["observed"]
 
 
 def test_goal_release_decision_gate_accepts_explicit_keep_policy_gate() -> None:
@@ -698,6 +824,71 @@ def test_goal_release_decision_gate_requires_goal_api_surface_contract() -> None
     assert "missing_endpoint_count=1" in row["observed"]
 
 
+def test_goal_release_decision_gate_requires_product_ai_architecture_closure_when_supplied() -> None:
+    payload = mod.build_goal_release_decision_gate(
+        product_pilot_packet=_ready_product(),
+        product_architecture_packet=_ready_product_architecture(),
+        product_commercial_independence_packet=_ready_product_independence(),
+        cameo_validation_packet=_ready_cameo_validation(),
+        cameo_capability_packet=_ready_cameo_capability(),
+        goal_rollup_packet=_ready_rollup(),
+        operator_action_board_packet=_clear_action_board(),
+        transition_cleanup_preflight_packet=_transition_cleanup("transition_cleanup_execution_complete"),
+        ligand_cleanup_preflight_packet=_ligand_cleanup("ligand_heavy_cleanup_execution_complete"),
+        protected_cleanup_review_packet=_protected_cleanup(0),
+        cleanup_postcheck_contract_packet=_ready_cleanup_postcheck(),
+        goal_api_surface_contract_packet=_ready_goal_api_surface_contract(),
+        product_ai_architecture_gap_packet=_blocked_product_ai_gap(),
+        product_ai_execution_backlog_packet=_blocked_product_ai_backlog(),
+    )
+
+    summary = payload["summary"]
+    row = next(row for row in payload["rows"] if row["check"] == "product_ai_architecture_gap_closure_ready")
+    assert summary["status"] == "blocked_goal_release_decision"
+    assert summary["release_allowed"] is False
+    assert summary["product_ai_architecture_gate_present"] is True
+    assert summary["product_ai_architecture_ready"] is False
+    assert summary["product_ai_architecture_open_gap_count"] == 1
+    assert summary["product_ai_execution_backlog_work_item_count"] == 21
+    assert summary["product_ai_execution_backlog_primary_work_item_id"] == "training_data.production_delta_force_label_evidence"
+    assert "gpu_worker_return_expected_queue_rows=768" in summary["product_ai_execution_backlog_primary_detail"]
+    assert "gpu_worker_return_manifest_operator_verified=False" in summary["product_ai_execution_backlog_primary_detail"]
+    assert "scope_closure_first_scientific_blocker=AQP1.core_binder_01" in summary[
+        "product_ai_execution_backlog_scope_closure_detail"
+    ]
+    assert row["status"] == "fail"
+    assert "scope_breadth_expansion" in row["observed"]
+    assert "primary_backlog_work_item_id=training_data.production_delta_force_label_evidence" in row["observed"]
+    assert "gpu_worker_return_operator_verified_true_count=0" in row["observed"]
+    assert "scope_closure_pxr_reconciled_blocked_row_count=6" in row["observed"]
+    assert "gpu_worker_return_queue_fingerprints=768" in row["reason"]
+    assert "scope_closure_authoritative_apply_allowed=False" in row["reason"]
+    assert "product AI architecture gap closure" in summary["next_required_step"]
+
+
+def test_goal_release_decision_gate_accepts_product_ai_architecture_closure_when_supplied() -> None:
+    payload = mod.build_goal_release_decision_gate(
+        product_pilot_packet=_ready_product(),
+        product_architecture_packet=_ready_product_architecture(),
+        product_commercial_independence_packet=_ready_product_independence(),
+        cameo_validation_packet=_ready_cameo_validation(),
+        cameo_capability_packet=_ready_cameo_capability(),
+        goal_rollup_packet=_ready_rollup(),
+        operator_action_board_packet=_clear_action_board(),
+        transition_cleanup_preflight_packet=_transition_cleanup("transition_cleanup_execution_complete"),
+        ligand_cleanup_preflight_packet=_ligand_cleanup("ligand_heavy_cleanup_execution_complete"),
+        protected_cleanup_review_packet=_protected_cleanup(0),
+        cleanup_postcheck_contract_packet=_ready_cleanup_postcheck(),
+        goal_api_surface_contract_packet=_ready_goal_api_surface_contract(),
+        product_ai_architecture_gap_packet=_ready_product_ai_gap(),
+        product_ai_execution_backlog_packet=_ready_product_ai_backlog(),
+    )
+
+    assert payload["summary"]["status"] == "goal_release_ready"
+    assert payload["summary"]["product_ai_architecture_ready"] is True
+    assert next(row for row in payload["rows"] if row["check"] == "product_ai_architecture_gap_closure_ready")["status"] == "pass"
+
+
 def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     paths = {
         "product": tmp_path / "product.json",
@@ -712,6 +903,8 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
         "protected_cleanup": tmp_path / "protected_cleanup.json",
         "cleanup_postcheck": tmp_path / "cleanup_postcheck.json",
         "goal_api_surface": tmp_path / "goal_api_surface.json",
+        "product_ai_gap": tmp_path / "product_ai_gap.json",
+        "product_ai_backlog": tmp_path / "product_ai_backlog.json",
     }
     paths["product"].write_text(json.dumps(_blocked_product()) + "\n", encoding="utf-8")
     paths["product_architecture"].write_text(json.dumps(_blocked_product_architecture()) + "\n", encoding="utf-8")
@@ -725,6 +918,8 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     paths["protected_cleanup"].write_text(json.dumps(_protected_cleanup(2)) + "\n", encoding="utf-8")
     paths["cleanup_postcheck"].write_text(json.dumps(_ready_cleanup_postcheck()) + "\n", encoding="utf-8")
     paths["goal_api_surface"].write_text(json.dumps(_ready_goal_api_surface_contract()) + "\n", encoding="utf-8")
+    paths["product_ai_gap"].write_text(json.dumps(_ready_product_ai_gap()) + "\n", encoding="utf-8")
+    paths["product_ai_backlog"].write_text(json.dumps(_ready_product_ai_backlog()) + "\n", encoding="utf-8")
     out_json = tmp_path / "release_gate.json"
     out_csv = tmp_path / "release_gate.csv"
     out_md = tmp_path / "release_gate.md"
@@ -755,6 +950,10 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
             str(paths["cleanup_postcheck"]),
             "--goal-api-surface-contract-json",
             str(paths["goal_api_surface"]),
+            "--product-ai-architecture-gap-json",
+            str(paths["product_ai_gap"]),
+            "--product-ai-execution-backlog-json",
+            str(paths["product_ai_backlog"]),
             "--out-json",
             str(out_json),
             "--out-csv",

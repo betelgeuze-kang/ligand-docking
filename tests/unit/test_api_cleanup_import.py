@@ -26,16 +26,16 @@ def test_api_app_imports_with_cleanup_router() -> None:
     deep_review = client.get("/cleanup/protected-ligand-heavy-review").json()
     protected = client.get("/cleanup/protected-policy").json()
 
-    assert operations["status"] == "blocked_cleanup_completion_gate"
-    assert operations["cleanup_complete"] is False
-    assert operations["authorized_row_count"] == 0
-    assert operations["awaiting_operator_approval_row_count"] == 5
+    assert operations["status"] == "cleanup_completion_gate_ready"
+    assert operations["cleanup_complete"] is True
+    assert operations["authorized_row_count"] == 5
+    assert operations["awaiting_operator_approval_row_count"] == 0
     assert operations["total_reclaim_size_gb"] == 49.216
-    assert operations["protected_payload_size_gb"] == 396.794
+    assert operations["protected_payload_size_gb"] == 0.0
     assert operations["postcheck_contract_ready"] is True
-    assert operations["postcheck_row_count"] == 7
+    assert operations["postcheck_row_count"] == 5
     assert operations["completion_postcheck_contract_ready"] is True
-    assert operations["completion_postcheck_row_count"] == 7
+    assert operations["completion_postcheck_row_count"] == 5
     assert operations["completion_postcheck_blocked_row_count"] == 0
     assert operations["completion_postcheck_global_refresh_command_count"] >= 1
     assert operations["postcheck_global_refresh_command_count"] >= 1
@@ -44,37 +44,37 @@ def test_api_app_imports_with_cleanup_router() -> None:
     assert operations["delete_executed"] is False
     assert operations["external_state_mutated"] is False
 
-    assert approval["status"] == "blocked_cleanup_execution_operator_approval_gate"
+    assert approval["status"] == "cleanup_execution_operator_approval_gate_ready"
     assert approval["operator_template_csv"].endswith("runs/cleanup_execution_operator_approval_template_current.csv")
     assert approval["operator_approval_csv"].endswith("runs/cleanup_execution_operator_approval_intake.csv")
     assert "payload_fingerprint_sha256" in approval["required_columns"]
     assert approval["valid_decisions"] == ["approve", "skip"]
     assert "APPROVE_DELETE_STALE_LIGAND_HEAVY_PAYLOADS" in approval["approval_tokens_required"]
-    assert approval["authorized_row_count"] == 0
-    assert approval["awaiting_operator_approval_row_count"] == 5
+    assert approval["authorized_row_count"] == 5
+    assert approval["awaiting_operator_approval_row_count"] == 0
     assert approval["delete_executed"] is False
     assert approval["external_state_mutated"] is False
 
-    assert completion["status"] == "blocked_cleanup_completion_gate"
-    assert completion["cleanup_complete"] is False
+    assert completion["status"] == "cleanup_completion_gate_ready"
+    assert completion["cleanup_complete"] is True
     assert completion["stage_count"] == 5
-    assert completion["blocked_stage_count"] == 4
-    assert completion["approval_ready"] is False
+    assert completion["blocked_stage_count"] == 0
+    assert completion["approval_ready"] is True
     assert completion["postcheck_contract_ready"] is True
-    assert completion["postcheck_row_count"] == 7
+    assert completion["postcheck_row_count"] == 5
     assert completion["postcheck_blocked_row_count"] == 0
     assert completion["postcheck_global_refresh_command_count"] >= 1
-    assert completion["transition_cleanup_complete"] is False
-    assert completion["ligand_heavy_cleanup_complete"] is False
-    assert completion["protected_policy_resolved"] is False
+    assert completion["transition_cleanup_complete"] is True
+    assert completion["ligand_heavy_cleanup_complete"] is True
+    assert completion["protected_policy_resolved"] is True
     assert completion["delete_executed"] is False
     assert completion["external_state_mutated"] is False
 
     assert postcheck["status"] == "cleanup_postcheck_contract_ready"
     assert postcheck["postcheck_contract_ready"] is True
     assert postcheck["approval_row_count"] == 5
-    assert postcheck["protected_policy_row_count"] == 2
-    assert postcheck["row_count"] == 7
+    assert postcheck["protected_policy_row_count"] == 0
+    assert postcheck["row_count"] == 5
     assert postcheck["global_refresh_command_count"] >= 1
     assert postcheck["delete_executed"] is False
     assert postcheck["archive_executed"] is False
@@ -82,26 +82,26 @@ def test_api_app_imports_with_cleanup_router() -> None:
     assert postcheck["external_state_mutated"] is False
 
     assert payloads["status"] == "large_cleanup_surface_drilldown_ready"
-    assert payloads["dry_run_delete_payload_row_count"] == 40
-    assert payloads["dry_run_delete_payload_size_gb"] == 6.012
-    assert payloads["dry_run_protected_payload_size_gb"] == 396.794
+    assert payloads["dry_run_delete_payload_row_count"] == 0
+    assert payloads["dry_run_delete_payload_size_gb"] == 0.0
+    assert payloads["dry_run_protected_payload_size_gb"] == 0.0
     assert payloads["protected_ligand_heavy_deep_review_status"] == "protected_ligand_heavy_payload_deep_review_ready"
-    assert payloads["protected_ligand_heavy_known_payload_child_count"] == 2
-    assert payloads["protected_ligand_heavy_known_payload_child_size_gb"] == 396.794
+    assert payloads["protected_ligand_heavy_known_payload_child_count"] == 0
+    assert payloads["protected_ligand_heavy_known_payload_child_size_gb"] == 0.0
     assert payloads["delete_executed"] is False
     assert payloads["external_state_mutated"] is False
 
     assert deep_review["status"] == "protected_ligand_heavy_payload_deep_review_ready"
-    assert deep_review["known_payload_child_count"] == 2
-    assert deep_review["known_payload_child_size_gb"] == 396.794
-    assert deep_review["preservation_sibling_count"] == 2
+    assert deep_review["known_payload_child_count"] == 0
+    assert deep_review["known_payload_child_size_gb"] == 0.0
+    assert deep_review["preservation_sibling_count"] == 0
     assert deep_review["approval_promoted_count"] == 0
     assert deep_review["delete_executed"] is False
     assert deep_review["external_state_mutated"] is False
 
-    assert protected["status"] == "blocked_protected_cleanup_policy_decision_gate"
-    assert protected["policy_resolved"] is False
-    assert protected["protected_payload_size_gb"] == 396.794
-    assert protected["operator_policy_csv_present"] is False
+    assert protected["status"] == "protected_cleanup_policy_decision_gate_ready"
+    assert protected["policy_resolved"] is True
+    assert protected["protected_payload_size_gb"] == 0.0
+    assert protected["operator_policy_csv_present"] is True
     assert protected["delete_executed"] is False
     assert protected["external_state_mutated"] is False

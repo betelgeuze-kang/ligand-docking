@@ -9,7 +9,18 @@ def test_product_operational_quality_contract_passes_current_fail_closed_surface
 
     assert summary["status"] == "product_operational_quality_contract_ready"
     assert summary["operational_quality_ready"] is True
+    assert summary["check_count"] == 6
     assert summary["fail_closed_docking_intake_ready"] is True
+    assert summary["production_ai_correction_fail_closed_ready"] is True
+    assert summary["sample_production_ai_inference_subject_active"] is False
+    assert summary["sample_production_ai_correction_applied"] is False
+    assert summary["sample_production_ai_abstention_enforced"] is True
+    assert summary["sample_production_ai_default_residual_mode"] == "shadow"
+    assert summary["sample_production_ai_promotion_allowed"] is False
+    assert summary["sample_production_ai_customer_facing_auto_correction_allowed"] is False
+    assert summary["sample_production_ai_customer_facing_score_mutation_allowed"] is False
+    assert summary["sample_production_ai_customer_facing_ranking_mutation_allowed"] is False
+    assert summary["sample_production_ai_trained_checkpoint_count"] == 0
     assert summary["ledger_payload_privacy_ready"] is True
     assert summary["request_traceability_ready"] is True
     assert summary["scope_limit_enforcement_ready"] is True
@@ -35,4 +46,5 @@ def test_product_operational_quality_contract_blocks_if_sample_request_is_invali
 
     assert payload["summary"]["status"] == "blocked_product_operational_quality_contract"
     assert payload["summary"]["fail_closed_docking_intake_ready"] is False
+    assert payload["summary"]["production_ai_correction_fail_closed_ready"] is True
     assert any(blocker["code"] == "fail_closed_docking_intake_not_ready" for blocker in payload["blockers"])

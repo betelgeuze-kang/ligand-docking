@@ -1,4 +1,4 @@
-from tools import build_aqp1_quantitative_binding_capture_sheet as mod
+from tools.product import build_aqp1_quantitative_binding_capture_sheet as mod
 
 
 def test_build_aqp1_quantitative_binding_capture_sheet_defaults_to_review_only_gap() -> None:

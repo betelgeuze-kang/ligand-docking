@@ -4,7 +4,7 @@ import csv
 import json
 from pathlib import Path
 
-from tools import build_casp17_competitive_floor_target_identity_clearance_replacement_source_repair as mod
+from tools.casp17 import build_casp17_competitive_floor_target_identity_clearance_replacement_source_repair as mod
 
 
 def _write_json(path: Path, payload: dict) -> None:
@@ -139,7 +139,7 @@ def test_replacement_source_repair_splits_source_states(tmp_path: Path, monkeypa
     assert "--sequence-path" in by_id["H2004"]["validation_command"]
     assert "validate_casp17_backend_contract.py" in by_id["H2004"]["validation_command"]
     assert (
-        "build_casp17_competitive_floor_target_identity_clearance_replacement_scorecard.py"
+        "tools/casp17/build_casp17_competitive_floor_target_identity_clearance_replacement_scorecard.py"
         in by_id["H2004"]["scorecard_command"]
     )
     assert (tmp_path / by_id["H2001"]["source_repair_md"]).is_file()

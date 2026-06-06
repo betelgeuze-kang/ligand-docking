@@ -36,7 +36,7 @@ def test_build_casp17_target_watchlist_and_intake_seed(tmp_path: Path) -> None:
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_target_watchlist.py"),
+            str(ROOT / "tools/casp17/build_casp17_target_watchlist.py"),
             "--input-csv",
             str(source_csv),
             "--today",

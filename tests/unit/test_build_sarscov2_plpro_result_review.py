@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_sarscov2_plpro_result_review as mod
+from tools.wetlab import build_sarscov2_plpro_result_review as mod
 from tools.wetlab_target_render_utils import load_json
 
 

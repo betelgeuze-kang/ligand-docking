@@ -8,7 +8,7 @@ from pathlib import Path
 
 import numpy as np
 
-from tools import build_gpcr_guarded_100k_rank_failure_diagnostics as mod
+from tools.gpcr_replay import build_gpcr_guarded_100k_rank_failure_diagnostics as mod
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -1083,7 +1083,7 @@ def test_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     result = subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools/build_gpcr_guarded_100k_rank_failure_diagnostics.py"),
+            str(ROOT / "tools/gpcr_replay/build_gpcr_guarded_100k_rank_failure_diagnostics.py"),
             "--rows-csv",
             str(rows_csv),
             "--stage3-csv",

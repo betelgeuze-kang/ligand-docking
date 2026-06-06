@@ -124,7 +124,7 @@ def _run_tool(tmp_path: Path, paths: dict[str, Path], *, require_backbone_atoms:
     out_json = tmp_path / "readiness.json"
     command = [
         "python3",
-        str(ROOT / "tools/build_casp17_internal_physics_accuracy_readiness_packet.py"),
+        str(ROOT / "tools/casp17/build_casp17_internal_physics_accuracy_readiness_packet.py"),
         "--target-watchlist-json",
         str(paths["watchlist"]),
         "--raw-gate-json",

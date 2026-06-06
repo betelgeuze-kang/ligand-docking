@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools import build_wetlab_stk17b_exploratory_trace as mod
+from tools.wetlab import build_wetlab_stk17b_exploratory_trace as mod
 
 
 def test_build_wetlab_stk17b_exploratory_trace_separates_gate45_success_from_standard_auto_holds(

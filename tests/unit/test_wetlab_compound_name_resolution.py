@@ -3,7 +3,7 @@ from __future__ import annotations
 import csv
 from pathlib import Path
 
-from tools import wetlab_compound_name_resolution as mod
+from tools.wetlab import wetlab_compound_name_resolution as mod
 
 
 class FakeResponse:

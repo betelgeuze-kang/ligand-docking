@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from tools import build_casp17_massivefold_rna_model_selection_coverage as mod
+from tools.casp17 import build_casp17_massivefold_rna_model_selection_coverage as mod
 
 
 def test_r2341_default_artifacts_are_target_canonical():

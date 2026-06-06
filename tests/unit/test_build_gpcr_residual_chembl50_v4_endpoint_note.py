@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_gpcr_residual_chembl50_v4_endpoint_note as mod
+from tools.product import build_gpcr_residual_chembl50_v4_endpoint_note as mod
 
 
 def test_build_gpcr_residual_chembl50_v4_endpoint_note() -> None:

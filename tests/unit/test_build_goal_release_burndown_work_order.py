@@ -112,11 +112,94 @@ def _release_gate_goal_api_surface_blocked() -> dict:
     }
 
 
+def _release_gate_product_ai_architecture_blocked() -> dict:
+    return {
+        "summary": {
+            "status": "blocked_goal_release_decision",
+            "release_allowed": False,
+            "blocker_count": 1,
+        },
+        "rows": [
+            {
+                "lane_id": "commercial_product_release",
+                "check": "product_ai_architecture_gap_closure_ready",
+                "observed": (
+                    "ai_gap_status=blocked_product_ai_architecture_gap_closure;"
+                    "open_gap_count=1;work_item_count=21;"
+                    "primary_work_item_id=scope_breadth.transporter.AQP1.core_binder_01"
+                ),
+                "required": "all_gaps_closed=true;open_gap_count=0;backlog_clear=true;work_item_count=0",
+                "artifact_path": "runs/product_ai_architecture_gap_closure_current.json;runs/product_ai_architecture_execution_backlog_current.json",
+                "release_blocker": True,
+                "reason": "product AI architecture scope breadth is not closed",
+            }
+        ],
+    }
+
+
+def _release_gate_product_ai_production_inference_blocked() -> dict:
+    return {
+        "summary": {
+            "status": "blocked_goal_release_decision",
+            "release_allowed": False,
+            "blocker_count": 1,
+        },
+        "rows": [
+            {
+                "lane_id": "commercial_product_release",
+                "check": "product_ai_architecture_gap_closure_ready",
+                "observed": (
+                    "ai_gap_status=blocked_product_ai_architecture_gap_closure;"
+                    "open_gap_count=2;current_primary_open_gap=production_ai_inference_checkpoint;"
+                    "work_item_count=24;primary_work_item_id=training_data.production_residual_output_head"
+                ),
+                "required": "all_gaps_closed=true;open_gap_count=0;backlog_clear=true;work_item_count=0",
+                "artifact_path": "runs/product_ai_architecture_gap_closure_current.json;runs/product_ai_architecture_execution_backlog_current.json",
+                "release_blocker": True,
+                "reason": "product AI architecture production checkpoint is not closed",
+            }
+        ],
+    }
+
+
 def _operator_action_board() -> dict:
     return {
         "summary": {
             "status": "operator_actions_required",
             "action_count": 17,
+            "primary_action_id": "product_ai_production:return_gpu_force_regeneration_receipt",
+            "top_action_id": "product_ai_production:return_gpu_force_regeneration_receipt",
+            "primary_action_priority": 0,
+            "primary_action_lane_id": "product_ai_production",
+            "primary_action_type": "return_gpu_force_regeneration_receipt",
+            "primary_action_status": "required",
+            "primary_action_required_input": "GPU full-regeneration summary and manifest with operator verification",
+            "primary_action_artifact_path": (
+                "runs/product_goal_completion_audit_current.json;"
+                "runs/product_production_ai_gpu_return_intake_current.json"
+            ),
+            "primary_action_command": "python3 tools/generate_ligand_trajectory_engine.py --prod-mode",
+            "primary_action_recommended_action": (
+                "Run the full regeneration command on a GPU worker, return the identity-locked manifest and summary."
+            ),
+            "parallel_product_action_count": 1,
+            "parallel_product_action_ids": [
+                "product_scope_expansion:curate_scope_evidence_priority_item",
+            ],
+            "first_parallel_product_action_id": "product_scope_expansion:curate_scope_evidence_priority_item",
+            "first_parallel_product_action_lane_id": "product_scope_expansion",
+            "first_parallel_product_action_type": "curate_scope_evidence_priority_item",
+            "first_parallel_product_action_required_input": "AQP1.core_binder_01",
+            "first_parallel_product_action_artifact_path": "runs/product_goal_completion_audit_current.json",
+            "first_parallel_product_action_recommended_action": (
+                "Review local crosscheck files, capture exact evidence if present."
+            ),
+            "first_parallel_product_action_primary_action_id": (
+                "product_ai_production:return_gpu_force_regeneration_receipt"
+            ),
+            "first_parallel_product_action_precondition": (
+                "Can be completed while GPU return work proceeds; does not require production GPU execution."
+            ),
             "approval_reclaim_size_gb": 49.216,
             "product_cli_status_set_status": "blocked_product_cli_status_set",
             "product_cli_approval_token_count": 2,
@@ -171,6 +254,15 @@ def _operator_action_board() -> dict:
                 "action_type": "fill_product_license_decision",
                 "approval_token": "APPROVE_PRODUCT_LICENSE_FILE_CREATION",
                 "status": "required",
+                "command": (
+                    "python3 tools/fill_product_license_decision_operator_intake.py "
+                    "--approval-token APPROVE_PRODUCT_LICENSE_FILE_CREATION "
+                    "--spdx-license-id OPERATOR_FILL_SPDX "
+                    "--license-text-source OPERATOR_APPROVED_LICENSE_TEXT_FILE "
+                    "--copyright-holder OPERATOR_FILL_HOLDER "
+                    "--effective-year OPERATOR_FILL_YEAR "
+                    "--out-csv runs/product_license_decision_operator_intake.csv"
+                ),
             }
         ],
     }
@@ -186,6 +278,29 @@ def _operator_action_board_runtime_ready() -> dict:
     return payload
 
 
+def _license_decision_packet() -> dict:
+    return {
+        "summary": {
+            "status": "product_license_decision_packet_ready",
+            "ready_local_license_text_source_candidate_count": 1,
+        },
+        "rows": [
+            {
+                "spdx_license_id": "Apache-2.0",
+                "operator_intake_fill_command_local_source_example": (
+                    "python3 tools/fill_product_license_decision_operator_intake.py "
+                    "--approval-token APPROVE_PRODUCT_LICENSE_FILE_CREATION "
+                    "--spdx-license-id Apache-2.0 "
+                    "--license-text-source /usr/share/common-licenses/Apache-2.0 "
+                    "--copyright-holder OPERATOR_FILL_HOLDER "
+                    "--effective-year OPERATOR_FILL_YEAR "
+                    "--out-csv runs/product_license_decision_operator_intake.csv"
+                ),
+            }
+        ],
+    }
+
+
 def _product_work_order() -> dict:
     return {
         "summary": {"status": "product_execution_work_order_ready", "approval_token_required": "APPROVE_PRODUCT_DOCKING_EXECUTION"},
@@ -198,6 +313,21 @@ def _public_benchmark_work_order() -> dict:
         "summary": {
             "status": "product_public_benchmark_work_order_ready",
             "continuous_validation_command_count": 5,
+            "suite_run_command_count": 5,
+            "suite_blocker_count": 5,
+            "suite_threshold_count": 5,
+            "suite_materialization_manifest_count": 5,
+            "suite_materialization_run_command_count": 5,
+            "suite_scorecard_command_count": 5,
+            "suite_scorecard_row_csv_count": 5,
+            "suite_no_external_dependency_count": 5,
+            "local_artifact_preflight_ready_suite_count": 0,
+            "local_artifact_preflight_blocked_suite_count": 5,
+            "missing_local_input_artifact_count": 6,
+            "missing_local_output_artifact_count": 6,
+            "result_generation_required_suite_count": 5,
+            "benchmark_result_missing_artifact_count": 6,
+            "result_generation_approval_token_required": "APPROVE_PRODUCT_DOCKING_EXECUTION",
             "continuous_validation_command": (
                 "python3 tools/build_lit_pcba_materialization_manifest.py && "
                 "python3 tools/build_lit_pcba_scorecard.py && "
@@ -269,6 +399,7 @@ def test_goal_release_burndown_work_order_maps_blockers_to_phases_and_tokens() -
         operator_action_board_packet=_operator_action_board(),
         product_work_order_packet=_product_work_order(),
         product_pilot_packet={},
+        product_license_decision_packet=_license_decision_packet(),
         cameo_validation_repair_packet=_cameo_validation_repair(),
         cameo_runtime_repair_packet=_cameo_runtime_repair(),
         cameo_capability_packet=_cameo_capability(),
@@ -295,6 +426,33 @@ def test_goal_release_burndown_work_order_maps_blockers_to_phases_and_tokens() -
     assert summary["official_results_required_item_count"] == 1
     assert summary["postcheck_required_item_count"] == 0
     assert summary["operator_action_count"] == 17
+    assert summary["primary_action_id"] == "product_ai_production:return_gpu_force_regeneration_receipt"
+    assert summary["top_action_id"] == summary["primary_action_id"]
+    assert summary["primary_action_priority"] == 0
+    assert summary["primary_action_lane_id"] == "product_ai_production"
+    assert summary["primary_action_type"] == "return_gpu_force_regeneration_receipt"
+    assert summary["primary_action_status"] == "required"
+    assert summary["primary_action_required_input"] == (
+        "GPU full-regeneration summary and manifest with operator verification"
+    )
+    assert "generate_ligand_trajectory_engine.py" in summary["primary_action_command"]
+    assert "Run the full regeneration command on a GPU worker" in summary[
+        "primary_action_recommended_action"
+    ]
+    assert summary["parallel_product_action_count"] == 1
+    assert summary["parallel_product_action_ids"] == [
+        "product_scope_expansion:curate_scope_evidence_priority_item",
+    ]
+    assert summary["first_parallel_product_action_id"] == (
+        "product_scope_expansion:curate_scope_evidence_priority_item"
+    )
+    assert summary["first_parallel_product_action_lane_id"] == "product_scope_expansion"
+    assert summary["first_parallel_product_action_type"] == "curate_scope_evidence_priority_item"
+    assert summary["first_parallel_product_action_required_input"] == "AQP1.core_binder_01"
+    assert summary["first_parallel_product_action_artifact_path"] == "runs/product_goal_completion_audit_current.json"
+    assert "local crosscheck" in summary["first_parallel_product_action_recommended_action"]
+    assert summary["first_parallel_product_action_primary_action_id"] == summary["primary_action_id"]
+    assert "does not require production GPU" in summary["first_parallel_product_action_precondition"]
     assert summary["product_cli_status_set_status"] == "blocked_product_cli_status_set"
     assert summary["product_cli_approval_token_count"] == 2
     assert summary["product_cli_operations_blocked_stage_count"] == 4
@@ -321,6 +479,9 @@ def test_goal_release_burndown_work_order_maps_blockers_to_phases_and_tokens() -
     assert summary["cleanup_cli_postcheck_contract_ready"] is True
     assert summary["cleanup_cli_protected_payload_size_gb"] == 396.794
     assert summary["cleanup_cli_protected_policy_change_required_count"] == 2
+    assert summary["product_license_decision_packet_status"] == "product_license_decision_packet_ready"
+    assert summary["product_license_ready_local_source_candidate_count"] == 1
+    assert summary["product_license_local_source_command_example_count"] == 1
     assert "APPROVE_PRODUCT_DOCKING_EXECUTION" in summary["approval_tokens_required"]
     assert "APPROVE_PRODUCT_LICENSE_FILE_CREATION" in summary["approval_tokens_required"]
     assert "APPROVE_API_DEPENDENCY_INSTALL" in summary["approval_tokens_required"]
@@ -331,6 +492,20 @@ def test_goal_release_burndown_work_order_maps_blockers_to_phases_and_tokens() -
     assert summary["external_state_mutated"] is False
     assert any(row["phase"] == "P1_product_execution_and_bundle_validation" for row in payload["rows"])
     assert any(row["phase"] == "P1_product_commercial_independence" for row in payload["rows"])
+    license_row = next(row for row in payload["rows"] if row["phase"] == "P1_product_commercial_independence")
+    assert "fill_product_license_decision_operator_intake.py" in license_row["command"]
+    assert "--license-text-source OPERATOR_APPROVED_LICENSE_TEXT_FILE" in license_row["command"]
+    assert "build_product_license_file_creation_work_order.py" in license_row["command"]
+    assert "APPROVE_PRODUCT_LICENSE_FILE_CREATION=1 python3 tools/write_product_license_file.py" in license_row["command"]
+    assert "--license-template OPERATOR_APPROVED_LICENSE_TEXT_FILE" in license_row["command"]
+    assert "build_product_goal_completion_audit.py" in license_row["command"]
+    assert license_row["license_decision_packet_status"] == "product_license_decision_packet_ready"
+    assert license_row["ready_local_license_text_source_candidate_count"] == 1
+    assert license_row["license_local_source_command_example_count"] == 1
+    assert "--license-text-source /usr/share/common-licenses/Apache-2.0" in license_row[
+        "license_local_source_command_examples"
+    ]
+    assert "--license-template /usr/share/common-licenses/Apache-2.0" in license_row["license_local_source_command_examples"]
     assert any(row["phase"] == "P2_cameo_official_validation_and_registration" for row in payload["rows"])
     cameo_rows = [row for row in payload["rows"] if row["phase"] == "P2_cameo_official_validation_and_registration"]
     assert any(row["burndown_status"] == "official_results_required" for row in cameo_rows)
@@ -390,6 +565,134 @@ def test_goal_release_burndown_work_order_maps_goal_api_surface_contract_blocker
     assert row["source_artifact"] == "runs/goal_release_decision_gate_current.json;runs/goal_api_surface_contract_current.json"
     assert "build_goal_api_surface_contract.py" in row["command"]
     assert "build_goal_release_decision_gate.py" in row["command"]
+
+
+def test_goal_release_burndown_work_order_maps_product_ai_architecture_blocker() -> None:
+    payload = mod.build_goal_release_burndown_work_order(
+        release_gate_packet=_release_gate_product_ai_architecture_blocked(),
+        operator_action_board_packet=_operator_action_board(),
+        product_work_order_packet={},
+        product_pilot_packet={},
+        cameo_validation_repair_packet={},
+        cameo_runtime_repair_packet={},
+        cameo_capability_packet={},
+        transition_cleanup_work_order_packet=_transition_cleanup(),
+        ligand_cleanup_work_order_packet=_ligand_cleanup(),
+        protected_cleanup_review_packet=_protected_cleanup(),
+    )
+
+    summary = payload["summary"]
+    row = payload["rows"][0]
+    assert summary["status"] == "goal_release_burndown_work_order_ready"
+    assert summary["work_item_count"] == 1
+    assert summary["approval_required_item_count"] == 0
+    assert row["phase"] == "P0_product_ai_architecture_scope_closure"
+    assert row["burndown_status"] == "scientific_scope_evidence_required"
+    assert row["source_artifact"] == "runs/product_ai_architecture_gap_closure_current.json;runs/product_ai_architecture_execution_backlog_current.json"
+    assert "build_transporter_manual_review_intake_template.py" in row["command"]
+    assert "build_pxr_exact_evidence_review_intake_template.py" in row["command"]
+    assert "build_product_scope_breadth_closure_checklist.py" in row["command"]
+    assert row["command"].index("build_transporter_manual_review_intake_template.py") < row["command"].index(
+        "build_product_scope_breadth_closure_checklist.py"
+    )
+    assert row["command"].index("build_pxr_exact_evidence_review_intake_template.py") < row["command"].index(
+        "build_product_scope_breadth_closure_checklist.py"
+    )
+    assert row["command"].index("build_product_scope_breadth_contract.py") < row["command"].index(
+        "build_product_scope_breadth_closure_checklist.py"
+    )
+    assert "build_product_ai_architecture_execution_backlog.py" in row["command"]
+    assert "build_product_goal_completion_audit.py" in row["command"]
+    assert "P0 product AI architecture scope closure" in summary["next_required_step"]
+
+
+def test_goal_release_burndown_work_order_maps_product_ai_production_inference_blocker() -> None:
+    payload = mod.build_goal_release_burndown_work_order(
+        release_gate_packet=_release_gate_product_ai_production_inference_blocked(),
+        operator_action_board_packet=_operator_action_board(),
+        product_work_order_packet={},
+        product_pilot_packet={},
+        cameo_validation_repair_packet={},
+        cameo_runtime_repair_packet={},
+        cameo_capability_packet={},
+        transition_cleanup_work_order_packet=_transition_cleanup(),
+        ligand_cleanup_work_order_packet=_ligand_cleanup(),
+        protected_cleanup_review_packet=_protected_cleanup(),
+        product_ai_architecture_backlog_packet={
+            "summary": {
+                "status": "product_ai_architecture_execution_backlog_ready",
+                "work_item_count": 25,
+                "primary_work_item_id": "training_data.production_delta_force_label_evidence",
+            },
+            "rows": [
+                {
+                    "work_item_id": "training_data.production_delta_force_label_evidence",
+                    "observed": (
+                        "gpu_worker_return_expected_queue_rows=768;"
+                        "gpu_worker_return_manifest_operator_verified=False;"
+                        "gpu_worker_return_operator_verified_true_count=0;"
+                        "gpu_worker_return_queue_fingerprints=768"
+                    ),
+                    "next_action": "Run the full GPU regeneration command and return the current summary JSON.",
+                }
+            ],
+        },
+    )
+
+    summary = payload["summary"]
+    row = payload["rows"][0]
+    assert row["phase"] == "P0_product_ai_architecture_production_inference_closure"
+    assert row["burndown_status"] == "production_ai_checkpoint_evidence_required"
+    assert "architecture_backlog_primary_work_item_id=training_data.production_delta_force_label_evidence" in row["release_observed"]
+    assert "gpu_worker_return_expected_queue_rows=768" in row["release_observed"]
+    assert "gpu_worker_return_manifest_operator_verified=False" in row["release_observed"]
+    assert "gpu_worker_return_operator_verified_true_count=0" in row["release_observed"]
+    assert "gpu_worker_return_queue_fingerprints=768" in row["release_observed"]
+    assert "Run the full GPU regeneration command" in row["reason"]
+    assert "build_residual_force_gpu_worker_return_manifest_template.py" in row["command"]
+    assert "build_residual_force_gpu_worker_return_summary_template.py" in row["command"]
+    assert "build_residual_force_gpu_worker_return_receipt.py" in row["command"]
+    assert "build_product_production_ai_gpu_return_intake.py" in row["command"]
+    assert "build_residual_force_derivation_validation.py" in row["command"]
+    assert "build_residual_uncertainty_policy_evidence_contract.py" in row["command"]
+    assert "build_residual_production_training_data_contract.py" in row["command"]
+    assert "train_residual_production_score_model.py" in row["command"]
+    assert "build_residual_production_checkpoint_sidecar.py" in row["command"]
+    assert row["command"].index("build_residual_force_gpu_worker_return_manifest_template.py") < row["command"].index(
+        "build_residual_force_gpu_worker_return_summary_template.py"
+    )
+    assert row["command"].index("build_residual_force_gpu_worker_return_summary_template.py") < row["command"].index(
+        "build_residual_force_gpu_worker_handoff_package.py"
+    )
+    assert row["command"].index("build_residual_force_gpu_worker_return_receipt.py") < row["command"].index(
+        "build_product_production_ai_gpu_return_intake.py"
+    )
+    assert row["command"].index("build_product_production_ai_gpu_return_intake.py") < row["command"].index(
+        "build_residual_production_checkpoint_preflight.py"
+    )
+    assert row["command"].index("build_residual_uncertainty_policy_evidence_contract.py") < row["command"].index(
+        "build_residual_production_training_data_contract.py"
+    )
+    assert row["command"].index("build_residual_production_training_data_contract.py") < row["command"].index(
+        "train_residual_production_score_model.py"
+    )
+    assert row["command"].index("train_residual_production_score_model.py") < row["command"].index(
+        "build_residual_production_checkpoint_sidecar.py"
+    )
+    assert row["command"].index("build_residual_production_checkpoint_sidecar.py") < row["command"].index(
+        "build_residual_production_checkpoint_preflight.py"
+    )
+    assert "build_residual_production_checkpoint_preflight.py" in row["command"]
+    assert "build_residual_model_registry.py" in row["command"]
+    assert row["command"].index("build_product_ai_architecture_execution_backlog.py") < row["command"].index(
+        "build_product_ai_architecture_gap_closure.py"
+    )
+    assert "build_product_goal_completion_audit.py" in row["command"]
+    assert "identity-preserving summary/manifest" in row["recommended_action"]
+    assert "production model training" in row["recommended_action"]
+    assert "checkpoint sidecar" in row["recommended_action"]
+    assert "runs/product_production_ai_gpu_return_intake_current.json" in row["source_artifact"]
+    assert "P0 product AI production inference closure" in summary["next_required_step"]
 
 
 def test_goal_release_burndown_work_order_merges_duplicate_operator_work_items() -> None:
@@ -601,8 +904,24 @@ def test_goal_release_burndown_public_benchmark_blocker_builds_work_order_comman
         protected_cleanup_review_packet={},
     )
 
+    summary = payload["summary"]
+    assert summary["public_benchmark_work_order_status"] == "product_public_benchmark_work_order_ready"
+    assert summary["public_benchmark_continuous_validation_command_count"] == 5
+    assert summary["public_benchmark_suite_run_command_count"] == 5
+    assert summary["public_benchmark_suite_blocker_count"] == 5
+    assert summary["public_benchmark_suite_threshold_count"] == 5
+    assert summary["public_benchmark_suite_materialization_manifest_count"] == 5
+    assert summary["public_benchmark_suite_materialization_run_command_count"] == 5
+    assert summary["public_benchmark_suite_scorecard_command_count"] == 5
+    assert summary["public_benchmark_suite_scorecard_row_csv_count"] == 5
+    assert summary["public_benchmark_suite_no_external_dependency_count"] == 5
+    assert summary["public_benchmark_local_artifact_preflight_ready_suite_count"] == 0
+    assert summary["public_benchmark_local_artifact_preflight_blocked_suite_count"] == 5
+    assert summary["public_benchmark_missing_local_input_artifact_count"] == 6
+    assert summary["public_benchmark_missing_local_output_artifact_count"] == 6
     row = payload["rows"][0]
     assert row["burndown_status"] == "blocked_until_public_benchmark_validation"
+    assert row["approval_token_required"] == "APPROVE_PRODUCT_DOCKING_EXECUTION"
     assert row["command"].startswith("python3 tools/build_lit_pcba_materialization_manifest.py")
     assert "build_lit_pcba_scorecard.py" in row["command"]
     assert "sync_product_public_benchmark_scorecard_intake.py" in row["command"]
@@ -610,6 +929,17 @@ def test_goal_release_burndown_public_benchmark_blocker_builds_work_order_comman
     assert "build_public_benchmark_suite_scorecard.py --suite-id dude_z_decoy_smoke" in row["command"]
     assert "build_product_public_benchmark_contract.py" in row["command"]
     assert "public_benchmark_continuous_validation_command_count=5" in row["reason"]
+    assert "public_benchmark_suite_run_command_count=5" in row["reason"]
+    assert "public_benchmark_suite_blocker_count=5" in row["reason"]
+    assert "public_benchmark_suite_materialization_run_command_count=5" in row["reason"]
+    assert "public_benchmark_suite_scorecard_command_count=5" in row["reason"]
+    assert "public_benchmark_suite_scorecard_row_csv_count=5" in row["reason"]
+    assert "public_benchmark_suite_no_external_dependency_count=5" in row["reason"]
+    assert "public_benchmark_local_artifact_preflight_blocked_suite_count=5" in row["reason"]
+    assert "public_benchmark_missing_local_input_artifact_count=6" in row["reason"]
+    assert "public_benchmark_missing_local_output_artifact_count=6" in row["reason"]
+    assert "public_benchmark_result_generation_required_suite_count=5" in row["reason"]
+    assert "public_benchmark_result_generation_approval_token_required=APPROVE_PRODUCT_DOCKING_EXECUTION" in row["reason"]
     assert "runs/product_public_benchmark_work_order_current.json" in row["source_artifact"]
 
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import apply_transporter_manual_verdict_prefill as mod
+from tools.product import apply_transporter_manual_verdict_prefill as mod
 
 
 def test_apply_prefill_copies_suggested_values() -> None:

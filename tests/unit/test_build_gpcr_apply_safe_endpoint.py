@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_gpcr_apply_safe_endpoint as mod
+from tools.gpcr_replay import build_gpcr_apply_safe_endpoint as mod
 
 
 def test_build_gpcr_apply_safe_endpoint_router_blocked() -> None:

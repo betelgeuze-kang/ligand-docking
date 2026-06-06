@@ -1,7 +1,7 @@
 from pathlib import Path
 import json
 
-from tools import build_ligand_scaleup_benchmark_summary as mod
+from tools.product import build_ligand_scaleup_benchmark_summary as mod
 
 
 def _write_json(path: Path, payload: dict) -> None:
@@ -772,6 +772,6 @@ def test_build_payload_gpcr_scaleup_failure_emits_repair_packet(tmp_path: Path, 
         "no_existing_score_column_recovers_gate",
     ]
     assert packet["rerun_required"] is True
-    _contains_tokens(packet["diagnostic_command"], "build_gpcr_100k_failure_analysis.py")
-    _contains_tokens(packet["next_command"], "build_gpcr_apply_safe_endpoint.py", "build_gpcr_residual_chembl50_v4_endpoint_note.py")
+    _contains_tokens(packet["diagnostic_command"], "gpcr_replay/build_gpcr_100k_failure_analysis.py")
+    _contains_tokens(packet["next_command"], "gpcr_replay/build_gpcr_apply_safe_endpoint.py", "product/build_gpcr_residual_chembl50_v4_endpoint_note.py")
     _contains_tokens(payload["recommended_next_action"], "gpcr_core_full", "chembl50_v4", "claim_safe=false")

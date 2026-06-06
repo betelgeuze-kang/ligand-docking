@@ -64,7 +64,7 @@ def test_build_casp17_publication_figure_packet_composes_high_res_figures(tmp_pa
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_publication_figure_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_publication_figure_packet.py"),
             "--render-json",
             str(render_json),
             "--out-dir",
@@ -170,7 +170,7 @@ def test_build_casp17_publication_figure_packet_blocks_missing_hero(tmp_path: Pa
     result = subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_publication_figure_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_publication_figure_packet.py"),
             "--render-json",
             str(render_json),
             "--out-dir",

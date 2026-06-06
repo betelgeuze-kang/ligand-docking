@@ -54,7 +54,7 @@ def test_build_casp17_win_tier_benchmark_closure_plan_expands_missing_rows(tmp_p
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_win_tier_benchmark_closure_plan.py"),
+            str(ROOT / "tools/casp17/build_casp17_win_tier_benchmark_closure_plan.py"),
             "--threshold-json",
             str(threshold),
             "--historical-workorder-json",
@@ -138,7 +138,7 @@ def test_build_casp17_win_tier_benchmark_closure_plan_passes_when_counts_satisfi
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_win_tier_benchmark_closure_plan.py"),
+            str(ROOT / "tools/casp17/build_casp17_win_tier_benchmark_closure_plan.py"),
             "--threshold-json",
             str(threshold),
             "--historical-workorder-json",

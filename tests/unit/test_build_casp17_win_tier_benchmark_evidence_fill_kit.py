@@ -132,7 +132,7 @@ def test_build_casp17_win_tier_benchmark_evidence_fill_kit_lists_required_items(
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_win_tier_benchmark_evidence_fill_kit.py"),
+            str(ROOT / "tools/casp17/build_casp17_win_tier_benchmark_evidence_fill_kit.py"),
             "--operator-template-csv",
             str(template),
             "--operator-dashboard-json",

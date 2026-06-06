@@ -4,7 +4,7 @@ from pathlib import Path
 from tools import (
     build_casp17_competitive_floor_batch_native_provenance_operator_fill_preflight as preflight,
 )
-from tools import (
+from tools.casp17 import (
     build_casp17_competitive_floor_batch_native_provenance_operator_fill_preflight_completion_audit as mod,
 )
 from tests.unit.test_build_casp17_competitive_floor_batch_native_provenance_operator_fill_preflight import (

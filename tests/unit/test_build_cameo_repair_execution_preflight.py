@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools import build_cameo_repair_execution_preflight as mod
+from tools.cameo import build_cameo_repair_execution_preflight as mod
 
 
 def _repair() -> dict:

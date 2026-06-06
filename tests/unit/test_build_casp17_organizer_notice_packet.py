@@ -42,7 +42,7 @@ def test_build_casp17_organizer_notice_packet_guards_r2345_and_massivefold(tmp_p
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_organizer_notice_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_organizer_notice_packet.py"),
             "--massivefold-links-csv",
             str(links_csv),
             "--ftp-listing-file",

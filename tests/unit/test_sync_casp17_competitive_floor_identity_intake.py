@@ -4,7 +4,7 @@ import csv
 import json
 from pathlib import Path
 
-from tools import sync_casp17_competitive_floor_identity_intake as mod
+from tools.casp17 import sync_casp17_competitive_floor_identity_intake as mod
 
 
 def _write_csv(path: Path, rows: list[dict[str, str]]) -> None:

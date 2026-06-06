@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_pxr_conflict_resolver_packet as mod
+from tools.product import build_pxr_conflict_resolver_packet as mod
 
 
 def test_build_pxr_conflict_resolver_packet_focuses_active_conflict_rows() -> None:

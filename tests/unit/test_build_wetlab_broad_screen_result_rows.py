@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_wetlab_broad_screen_result_rows as mod
+from tools.wetlab import build_wetlab_broad_screen_result_rows as mod
 
 
 def test_build_wetlab_broad_screen_result_rows_payload() -> None:

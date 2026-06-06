@@ -213,7 +213,7 @@ def test_build_casp17_win_gap_closure_packet_summarizes_open_win_tier_inputs(tmp
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_win_gap_closure_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_win_gap_closure_packet.py"),
             "--win-rubric-json",
             str(win),
             "--action-queue-json",

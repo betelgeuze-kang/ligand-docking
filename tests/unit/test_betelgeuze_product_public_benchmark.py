@@ -28,7 +28,7 @@ def test_public_benchmark_contract_blocks_missing_scorecard_intake(tmp_path: Pat
 def test_public_benchmark_contract_ready_with_complete_passing_rows(tmp_path: Path) -> None:
     scorecard = tmp_path / "scorecards.csv"
     lines = [
-        "suite_id,benchmark_family,dataset_source_url,scorecard_json,status,primary_metric,primary_metric_value,primary_metric_threshold,regression_baseline_ref,run_command"
+        "suite_id,benchmark_family,dataset_source_url,scorecard_json,product_provenance_json,status,primary_metric,primary_metric_value,primary_metric_threshold,regression_baseline_ref,run_command"
     ]
     for suite in BENCHMARK_SUITES:
         scorecard_json = tmp_path / "runs" / f"{suite['suite_id']}_scorecard.json"
@@ -68,9 +68,10 @@ def test_public_benchmark_contract_ready_with_complete_passing_rows(tmp_path: Pa
                 [
                     str(suite["suite_id"]),
                     str(suite["benchmark_family"]),
-                    str(suite["dataset_source_url"]),
-                    f"runs/{suite['suite_id']}_scorecard.json",
-                    "pass",
+                        str(suite["dataset_source_url"]),
+                        f"runs/{suite['suite_id']}_scorecard.json",
+                        f"runs/{suite['suite_id']}_result_provenance.json",
+                        "pass",
                     str(suite["primary_metric"]),
                     str(float(suite["primary_metric_threshold"]) + 0.1),
                     str(suite["primary_metric_threshold"]),

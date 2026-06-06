@@ -78,7 +78,7 @@ def test_build_casp17_structure_image_quality_packet_passes_colorful_images(tmp_
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_structure_image_quality_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_structure_image_quality_packet.py"),
             "--render-json",
             str(render_json),
             "--publication-figure-json",
@@ -184,7 +184,7 @@ def test_build_casp17_structure_image_quality_packet_blocks_blank_or_missing_ima
     result = subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_structure_image_quality_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_structure_image_quality_packet.py"),
             "--render-json",
             str(render_json),
             "--publication-figure-json",

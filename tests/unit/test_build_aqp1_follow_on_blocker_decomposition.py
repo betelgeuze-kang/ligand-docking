@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from tools import build_aqp1_follow_on_blocker_decomposition as mod
+from tools.product import build_aqp1_follow_on_blocker_decomposition as mod
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -110,7 +110,7 @@ def test_build_aqp1_follow_on_blocker_decomposition_cli(tmp_path: Path) -> None:
     subprocess.run(
         [
             sys.executable,
-            "tools/build_aqp1_follow_on_blocker_decomposition.py",
+            "tools/product/build_aqp1_follow_on_blocker_decomposition.py",
             "--out-json",
             str(out_json),
             "--out-csv",

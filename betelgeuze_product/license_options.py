@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import shlex
+from pathlib import Path
 from typing import Any
 
 from betelgeuze_product.license_decision import APPROVAL_TOKEN, DECISION_CREATE_LICENSE, REQUIRED_FIELDS
@@ -48,6 +50,12 @@ LICENSE_OPTIONS = (
     },
 )
 
+LOCAL_LICENSE_TEXT_SOURCE_CANDIDATES = {
+    "Apache-2.0": "/usr/share/common-licenses/Apache-2.0",
+    "BSD-3-Clause": "/usr/share/common-licenses/BSD",
+    "GPL-3.0-only": "/usr/share/common-licenses/GPL-3",
+}
+
 
 def _summary(packet: dict[str, Any]) -> dict[str, Any]:
     summary = packet.get("summary")
@@ -73,6 +81,45 @@ def _bool(value: Any) -> bool:
     return bool(value is True)
 
 
+def _local_license_text_source_candidate(spdx_license_id: str) -> dict[str, Any]:
+    path = LOCAL_LICENSE_TEXT_SOURCE_CANDIDATES.get(spdx_license_id, "")
+    if not path:
+        return {
+            "path": "",
+            "present": False,
+            "non_empty": False,
+            "size_bytes": 0,
+            "reason": "no_local_candidate_configured",
+        }
+    candidate = Path(path)
+    present = candidate.is_file()
+    size_bytes = candidate.stat().st_size if present else 0
+    return {
+        "path": path,
+        "present": present,
+        "non_empty": size_bytes > 0,
+        "size_bytes": size_bytes,
+        "reason": "ready" if present and size_bytes > 0 else ("empty_file" if present else "file_missing"),
+    }
+
+
+def _operator_command_with_source(
+    *,
+    spdx_license_id: str,
+    license_text_source: str,
+    operator_intake_csv: str,
+) -> str:
+    return (
+        "python3 tools/fill_product_license_decision_operator_intake.py "
+        f"--approval-token {APPROVAL_TOKEN} "
+        f"--spdx-license-id {shlex.quote(spdx_license_id)} "
+        f"--license-text-source {shlex.quote(license_text_source or 'OPERATOR_APPROVED_LICENSE_TEXT_FILE')} "
+        "--copyright-holder OPERATOR_FILL_HOLDER "
+        "--effective-year OPERATOR_FILL_YEAR "
+        f"--out-csv {shlex.quote(operator_intake_csv)}"
+    )
+
+
 def _only_license_blocker(commercial_packet: dict[str, Any]) -> bool:
     commercial = _summary(commercial_packet)
     failing_checks = {_text(row.get("check")) for row in _rows(commercial_packet) if _text(row.get("status")) == "fail"}
@@ -96,23 +143,53 @@ def build_product_license_decision_packet(
     commercial_only_license_blocked = _only_license_blocker(commercial_independence_gate_packet)
     authorized = _bool(license_decision.get("authorized_for_license_file_creation_review"))
     operator_intake_present = _bool(license_decision.get("operator_intake_csv_present"))
-    rows = [
-        {
-            "option_rank": index,
-            "spdx_license_id": option["spdx_license_id"],
-            "license_family": option["license_family"],
-            "commercial_distribution_fit": option["commercial_distribution_fit"],
-            "operator_review_focus": option["operator_review_focus"],
-            "license_text_source_hint": option["license_text_source_hint"],
-            "decision_value_required": DECISION_CREATE_LICENSE,
-            "approval_token_required": APPROVAL_TOKEN,
-            "operator_template_csv": operator_template_csv,
-            "operator_intake_csv": operator_intake_csv,
-            "license_file_written": False,
-            "external_state_mutated": False,
-        }
-        for index, option in enumerate(LICENSE_OPTIONS, start=1)
-    ]
+    operator_intake_fill_command_template = (
+        "python3 tools/fill_product_license_decision_operator_intake.py "
+        f"--approval-token {APPROVAL_TOKEN} "
+        "--spdx-license-id OPERATOR_FILL_SPDX "
+        "--license-text-source OPERATOR_APPROVED_LICENSE_TEXT_FILE "
+        "--copyright-holder OPERATOR_FILL_HOLDER "
+        "--effective-year OPERATOR_FILL_YEAR "
+        f"--out-csv {operator_intake_csv}"
+    )
+    rows = []
+    ready_local_source_count = 0
+    for index, option in enumerate(LICENSE_OPTIONS, start=1):
+        local_source = _local_license_text_source_candidate(str(option["spdx_license_id"]))
+        local_source_ready = bool(local_source["present"] and local_source["non_empty"])
+        if local_source_ready:
+            ready_local_source_count += 1
+        rows.append(
+            {
+                "option_rank": index,
+                "spdx_license_id": option["spdx_license_id"],
+                "license_family": option["license_family"],
+                "commercial_distribution_fit": option["commercial_distribution_fit"],
+                "operator_review_focus": option["operator_review_focus"],
+                "license_text_source_hint": option["license_text_source_hint"],
+                "local_license_text_source_candidate": local_source["path"],
+                "local_license_text_source_present": bool(local_source["present"]),
+                "local_license_text_source_non_empty": bool(local_source["non_empty"]),
+                "local_license_text_source_size_bytes": int(local_source["size_bytes"]),
+                "local_license_text_source_reason": local_source["reason"],
+                "decision_value_required": DECISION_CREATE_LICENSE,
+                "approval_token_required": APPROVAL_TOKEN,
+                "operator_template_csv": operator_template_csv,
+                "operator_intake_csv": operator_intake_csv,
+                "operator_intake_fill_command_template": operator_intake_fill_command_template,
+                "operator_intake_fill_command_local_source_example": (
+                    _operator_command_with_source(
+                        spdx_license_id=str(option["spdx_license_id"]),
+                        license_text_source=str(local_source["path"]),
+                        operator_intake_csv=operator_intake_csv,
+                    )
+                    if local_source_ready
+                    else ""
+                ),
+                "license_file_written": False,
+                "external_state_mutated": False,
+            }
+        )
     blockers: list[dict[str, str]] = []
     if license_present:
         blockers.append(
@@ -136,6 +213,7 @@ def build_product_license_decision_packet(
         "packet_type": "product_license_decision_packet",
         "status": status,
         "option_count": len(rows),
+        "ready_local_license_text_source_candidate_count": ready_local_source_count,
         "blocker_count": len(blockers),
         "commercial_gate_status": _text(commercial.get("status")),
         "commercial_gate_only_license_blocked": commercial_only_license_blocked,
@@ -144,6 +222,7 @@ def build_product_license_decision_packet(
         "operator_intake_csv_present": operator_intake_present,
         "operator_template_csv": operator_template_csv,
         "operator_intake_csv": operator_intake_csv,
+        "operator_intake_fill_command_template": operator_intake_fill_command_template,
         "required_decision": DECISION_CREATE_LICENSE,
         "required_fields": list(REQUIRED_FIELDS),
         "approval_token_required": APPROVAL_TOKEN,

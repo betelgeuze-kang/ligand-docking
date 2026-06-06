@@ -14,9 +14,9 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from tools import build_casp17_competitive_floor_evidence_import_packet as evidence_import
-from tools import build_casp17_competitive_floor_evidence_unlock_priority as unlock_priority
-from tools import build_casp17_competitive_floor_identity_unlock_kit as identity_kit
+from tools.casp17 import build_casp17_competitive_floor_evidence_import_packet as evidence_import
+from tools.casp17 import build_casp17_competitive_floor_evidence_unlock_priority as unlock_priority
+from tools.casp17 import build_casp17_competitive_floor_identity_unlock_kit as identity_kit
 
 
 DEFAULT_DROPZONE_JSON = "casp17/casp17_competitive_floor_evidence_dropzone_current.json"

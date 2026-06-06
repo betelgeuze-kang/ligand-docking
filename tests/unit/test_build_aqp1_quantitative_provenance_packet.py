@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_aqp1_quantitative_provenance_packet as mod
+from tools.product import build_aqp1_quantitative_provenance_packet as mod
 
 
 def test_build_aqp1_quantitative_provenance_packet_surfaces_exact_human_activity() -> None:

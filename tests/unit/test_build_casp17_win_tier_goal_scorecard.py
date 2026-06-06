@@ -111,7 +111,7 @@ def test_build_casp17_win_tier_goal_scorecard_tracks_operator_goal_bands(tmp_pat
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_win_tier_goal_scorecard.py"),
+            str(ROOT / "tools/casp17/build_casp17_win_tier_goal_scorecard.py"),
             "--goal-addendum-md",
             str(goal),
             "--win-gap-closure-json",
@@ -190,7 +190,7 @@ def test_build_casp17_win_tier_goal_scorecard_uses_replacement_audit_next_action
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_win_tier_goal_scorecard.py"),
+            str(ROOT / "tools/casp17/build_casp17_win_tier_goal_scorecard.py"),
             "--goal-addendum-md",
             str(goal),
             "--win-gap-closure-json",

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools import build_casp17_historical_seed_strict_blind_replacement_promotion_gate as mod
+from tools.casp17 import build_casp17_historical_seed_strict_blind_replacement_promotion_gate as mod
 
 
 def _write_json(path: Path, payload: dict) -> None:

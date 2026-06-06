@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from tools import replay_gpcr_residual_shadow_scores as mod
+from tools.product import replay_gpcr_residual_shadow_scores as mod
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -158,7 +158,7 @@ def test_replay_cli_writes_scores_and_summary(tmp_path: Path) -> None:
     result = subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools/replay_gpcr_residual_shadow_scores.py"),
+            str(ROOT / "tools/product/replay_gpcr_residual_shadow_scores.py"),
             "--input-scores-csv",
             str(scores_csv),
             "--residual-prototype-spec-json",

@@ -1,0 +1,947 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from tools import build_product_commercial_readiness_operator_packet as mod
+
+
+def _goal_audit() -> dict:
+    return {
+        "summary": {
+            "goal_complete": False,
+            "product_ai_architecture_open_gap_ids": [
+                "production_ai_inference_checkpoint",
+                "scope_breadth_expansion",
+            ],
+            "commercial_readiness_next_action_matrix": [
+                {
+                    "action_id": "production_gpu_execution_environment",
+                    "status": "blocked",
+                    "gap_id": "production_ai_inference_checkpoint",
+                    "release_blocker": True,
+                    "artifact": "runs/rocm_environment_manifest_current.json",
+                    "required_operator_inputs": [
+                        "manifest_ready",
+                        "rocm_stack_detected",
+                        "torch_rocm_ready",
+                        "amd_gpu_detected",
+                        "visible_device_count",
+                    ],
+                    "operator_completion_packet_ready": True,
+                    "operator_completion_packet": {
+                        "artifact_id": "rocm_environment_manifest_json",
+                        "artifact_path": "runs/rocm_environment_manifest_current.json",
+                        "required_fields_or_columns": [
+                            "manifest_ready",
+                            "rocm_stack_detected",
+                            "torch_rocm_ready",
+                            "amd_gpu_detected",
+                            "visible_device_count",
+                        ],
+                        "validation_command": "python3 tools/build_rocm_environment_manifest.py",
+                        "next_action": "Expose an AMD ROCm/HIP device to PyTorch.",
+                        "worker_runtime_receipt_contract": {
+                            "manifest_ready": True,
+                            "torch_rocm_ready": True,
+                            "amd_gpu_detected": True,
+                            "visible_device_count": 1,
+                        },
+                        "worker_runtime_receipt_required_fields_or_columns": [
+                            "manifest_ready",
+                            "torch_rocm_ready",
+                            "amd_gpu_detected",
+                            "visible_device_count",
+                            "backend_counts",
+                        ],
+                        "worker_runtime_receipt_required_field_count": 5,
+                        "worker_runtime_receipt_completion_rule": (
+                            "manifest_ready=true; torch_rocm_ready=true; visible_device_count>0"
+                        ),
+                        "post_environment_next_stage_id": "gpu_return_acceptance",
+                        "post_environment_next_artifact": (
+                            "runs/residual_force_gpu_worker_return_receipt_current.json"
+                        ),
+                        "post_environment_validation_command": (
+                            "python3 tools/build_residual_force_gpu_worker_return_receipt.py"
+                        ),
+                        "full_regeneration_command": (
+                            "python3 tools/generate_ligand_trajectory_engine.py --prod-mode"
+                        ),
+                        "worker_runtime_receipt_guardrails": [
+                            "cpu_fallback_does_not_satisfy_production_inference",
+                            "registry_promotion_blocked_until_gpu_receipt_and_sidecar_ready",
+                        ],
+                        "diagnostic_commands": [
+                            "python3 tools/build_rocm_environment_manifest.py",
+                            "rocminfo",
+                            "python3 -c \"import torch; print(torch.cuda.device_count())\"",
+                        ],
+                        "diagnostic_command_count": 3,
+                        "diagnostic_required_fields": [
+                            "torch_rocm_ready",
+                            "visible_device_count",
+                            "device_names",
+                        ],
+                        "diagnostic_required_field_count": 3,
+                        "diagnostic_completion_rule": (
+                            "torch_rocm_ready=true; visible_device_count>0; device_names nonempty"
+                        ),
+                        "diagnostic_return_artifacts": [
+                            "runs/rocm_environment_manifest_current.json",
+                        ],
+                        "torch_visibility_probe_command": (
+                            "python3 -c \"import torch; print(torch.cuda.device_count())\""
+                        ),
+                    },
+                    "next_action": "Expose an AMD ROCm/HIP device to PyTorch.",
+                    "execution_command": "python3 tools/build_rocm_environment_manifest.py",
+                    "validation_command": "python3 tools/build_rocm_environment_manifest.py",
+                    "unlock_claim": "production_ai_full_gpu_regeneration_authority",
+                    "workstream_lane_id": "primary_gpu_environment",
+                    "parallelizable_with_primary_blocker": False,
+                    "parallel_lane_priority": 0,
+                    "next_after_actionable_blocker_stage_id": "gpu_return_acceptance",
+                    "next_after_actionable_blocker_artifact": (
+                        "runs/residual_force_gpu_worker_return_receipt_current.json"
+                    ),
+                    "next_after_actionable_blocker_validation_command": (
+                        "python3 tools/build_residual_force_gpu_worker_return_receipt.py"
+                    ),
+                    "next_after_actionable_blocker_required_checks": [
+                        "force_gpu_worker_return_receipt_ready"
+                    ],
+                    "next_after_actionable_blocker_unlock_fields": [
+                        "delta_force",
+                        "uncertainty",
+                        "abstention_reason",
+                        "stage2_route_decision",
+                    ],
+                },
+                {
+                    "action_id": "production_ai_return_summary",
+                    "status": "blocked",
+                    "gap_id": "production_ai_inference_checkpoint",
+                    "release_blocker": True,
+                    "artifact": "runs/residual_force_trajectory_regeneration_current_summary.json",
+                    "required_operator_inputs": ["queue_rows", "processed_rows", "ok_rows"],
+                    "operator_completion_packet_ready": True,
+                    "operator_completion_packet": {
+                        "artifact_id": "returned_summary_json",
+                        "artifact_path": "runs/residual_force_trajectory_regeneration_current_summary.json",
+                        "required_fields_or_columns": ["queue_rows", "processed_rows", "ok_rows"],
+                        "expected_queue_rows": 768,
+                        "completion_rule": (
+                            "queue_rows equals expected_queue_rows; processed_rows>=expected_queue_rows"
+                        ),
+                        "backend_provenance_completion_rule": (
+                            "prod_mode=true; require_rust_hip=true"
+                        ),
+                        "failed_check_ids": [
+                            "actual_summary_returned_complete",
+                            "production_gpu_backend_provenance",
+                        ],
+                        "template_payload": {"queue_rows": 768},
+                        "template_payload_json": (
+                            "runs/residual_force_trajectory_regeneration_current_summary_template.json"
+                        ),
+                        "validation_command": "python3 tools/build_residual_force_gpu_worker_return_receipt.py",
+                        "next_action": "Return the completed GPU summary JSON.",
+                    },
+                    "next_action": "Return the completed GPU summary JSON.",
+                    "execution_command": "python3 tools/generate_ligand_trajectory_engine.py --prod-mode",
+                    "validation_command": "python3 tools/build_residual_force_gpu_worker_return_receipt.py",
+                    "return_bundle_required_artifacts": [
+                        "runs/residual_force_trajectory_regeneration_current_summary.json",
+                        "runs/residual_force_trajectory_regeneration_current_manifest.csv",
+                        "regenerated NPZ bundles referenced by the returned manifest",
+                        "runs/residual_force_derivation_validation_current.json",
+                    ],
+                    "return_bundle_required_artifact_count": 4,
+                    "return_bundle_artifact_completion_matrix": [
+                        {"artifact_id": "returned_summary_json", "status": "blocked"},
+                        {"artifact_id": "returned_manifest_csv", "status": "blocked"},
+                        {"artifact_id": "returned_npz_bundles", "status": "blocked"},
+                        {"artifact_id": "post_run_force_derivation_validation", "status": "blocked"},
+                    ],
+                    "return_bundle_artifact_completion_matrix_count": 4,
+                    "return_bundle_next_artifact_id": "returned_summary_json",
+                    "return_bundle_next_artifact_path": (
+                        "runs/residual_force_trajectory_regeneration_current_summary.json"
+                    ),
+                    "return_bundle_next_artifact_failed_check_ids": [
+                        "actual_summary_returned_complete"
+                    ],
+                    "return_bundle_manifest_required_columns": [
+                        "queue_id",
+                        "expected_regenerated_trajectory_npz",
+                        "status",
+                        "operator_verified_npz_exists",
+                    ],
+                    "return_bundle_post_return_validation_command": (
+                        "python3 tools/build_residual_force_gpu_worker_return_receipt.py"
+                    ),
+                    "return_bundle_guardrail": (
+                        "Returned summary alone does not unlock production AI."
+                    ),
+                    "unlock_claim": "production_ai_inference_subject",
+                    "workstream_lane_id": "gpu_return_after_environment",
+                    "parallelizable_with_primary_blocker": False,
+                    "parallel_lane_precondition": "production_gpu_execution_environment_ready",
+                    "parallel_lane_priority": 0,
+                    "blocked_by_action_id": "production_gpu_execution_environment",
+                },
+                {
+                    "action_id": "transporter_next_slot_exact_evidence",
+                    "status": "blocked",
+                    "gap_id": "scope_breadth_expansion",
+                    "release_blocker": True,
+                    "artifact": "runs/transporter_manual_review_intake_template_current.csv",
+                    "required_operator_inputs": [
+                        "target_id",
+                        "candidate_ligand_id",
+                        "reference_binding_kcal_mol",
+                        "source_url_or_doi",
+                    ],
+                    "required_exact_evidence_fields": [
+                        "target_id",
+                        "candidate_ligand_id",
+                        "direct_binding_or_claim_safe_kcal_basis",
+                        "reference_binding_kcal_mol",
+                        "source_url_or_doi",
+                        "target_match_decision",
+                        "operator_review_decision",
+                    ],
+                    "required_claim_guardrails": [
+                        "functional_surrogate_does_not_authorize_direct_binding_claim",
+                        "reference_split_meta_rows_must_be_synchronized_before_promotion",
+                    ],
+                    "claim_safe_completion_rule": (
+                        "Provide exact target-pair quantitative evidence before promotion."
+                    ),
+                    "operator_completion_packet_ready": True,
+                    "operator_completion_packet": {
+                        "completion_contract_version": "transporter_next_slot_exact_evidence_v2",
+                        "slot_id": "AQP1.core_binder_01",
+                        "expected_evidence_type": "direct_or_claim_safe_binding_kcal",
+                        "required_exact_evidence_fields": ["target_id", "candidate_ligand_id"],
+                        "required_claim_guardrails": ["functional_surrogate_does_not_authorize_direct_binding_claim"],
+                        "required_missing_fields": ["replacement_reference_binding_kcal_mol"],
+                        "next_slot_source_modality_guard_ready": True,
+                        "next_slot_source_modality": "functional_quantitative_surrogate",
+                        "next_slot_source_modality_claim_safe": False,
+                        "next_slot_source_modality_direct_binding_claim_allowed": False,
+                        "next_slot_source_modality_decision": (
+                            "keep_blocked_until_exact_direct_binding_or_claim_safe_kcal"
+                        ),
+                        "next_slot_source_modality_guardrails": [
+                            "functional_quantitative_surrogate_is_review_only",
+                            "direct_binding_claim_requires_exact_target_pair_source",
+                        ],
+                        "next_slot_source_modality_observed_signal": (
+                            "request_mode=exact_target_pair_quantitative_binder_kcal_required"
+                        ),
+                        "next_slot_source_modality_required_upgrade": (
+                            "exact target-pair direct/claim-safe binding kcal/mol"
+                        ),
+                        "next_slot_source_modality_triage_artifact": (
+                            "runs/aqp1_binding_source_modality_triage_current.json"
+                        ),
+                        "next_slot_source_modality_triage_decision": (
+                            "keep_blocked_until_direct_experimental_or_operator_verified_claim_safe_binding_kcal"
+                        ),
+                        "next_slot_source_modality_direct_experimental_binding_row_count": 0,
+                        "next_slot_source_modality_claim_safe_binding_kcal_ready_count": 0,
+                        "next_slot_source_modality_computational_binding_energy_row_count": 1,
+                        "next_slot_source_modality_best_computational_binding_energy_kcal_mol": "-34.48",
+                        "operator_validation_candidate_ready": True,
+                        "operator_validation_candidate_status": "operator_validation_required",
+                        "operator_validation_candidate_ligand_external_identifier": "CHEMBL20",
+                        "operator_validation_candidate_reference_binding_kcal_mol": "-5.13",
+                        "operator_validation_candidate_blocker": (
+                            "data_validity_outside_typical_range_and_assay_origin_unknown"
+                        ),
+                        "operator_validation_candidate_claim_safe_ready": False,
+                        "operator_review_artifact": "runs/transporter_manual_review_intake_template_current.csv",
+                        "post_intake_synchronization_targets": [
+                            "config/ligand_binding_reference_blind_aqp1_v1.csv",
+                            "config/ligand_eval_splits_blind_aqp1_v1.csv",
+                        ],
+                        "acceptance_gate_commands": [
+                            "python3 tools/build_transporter_binder_promotion_gate.py",
+                            "python3 tools/build_product_scope_breadth_contract.py",
+                        ],
+                        "source_signal": "https://pubmed.ncbi.nlm.nih.gov/27474162/",
+                    },
+                    "next_action": "Acquire exact transporter evidence.",
+                    "execution_command": "python3 tools/build_product_scope_breadth_contract.py",
+                    "validation_command": "python3 tools/build_product_scope_breadth_contract.py",
+                    "unlock_claim": "transporter_domain_promotion",
+                    "workstream_lane_id": "parallel_scope_evidence",
+                    "parallelizable_with_primary_blocker": True,
+                    "parallel_lane_precondition": (
+                        "Can be completed while ROCm/GPU environment is being prepared."
+                    ),
+                    "parallel_lane_priority": 1,
+                    "parallel_primary_blocker_action_id": "production_gpu_execution_environment",
+                    "next_slot_id": "AQP1.core_binder_01",
+                    "candidate_ligand_id": "aqp1_bacopaside_ii_review_seed",
+                    "target_scope_completion_packet": {
+                        "target_ready_for_promotion_ids": ["GLUT1"],
+                        "target_blocked_for_promotion_ids": ["AQP1"],
+                        "primary_blocker_target_id": "AQP1",
+                        "primary_blocker_packet_step": "core_binder_01",
+                        "primary_blocker_candidate_name": "bacopaside II",
+                        "claim_safe_guardrail": (
+                            "Ready transporter targets do not authorize blocked transporter target promotion."
+                        ),
+                    },
+                    "target_scope_guardrail": (
+                        "Ready transporter targets do not authorize blocked transporter target promotion."
+                    ),
+                    "target_ready_for_promotion_ids": ["GLUT1"],
+                    "target_blocked_for_promotion_ids": ["AQP1"],
+                    "primary_blocker_target_id": "AQP1",
+                    "primary_blocker_packet_step": "core_binder_01",
+                    "primary_blocker_candidate_name": "bacopaside II",
+                },
+                {
+                    "action_id": "pxr_next_exact_review",
+                    "status": "blocked",
+                    "gap_id": "scope_breadth_expansion",
+                    "release_blocker": True,
+                    "artifact": "runs/pxr_exact_evidence_review_intake_template_current.csv",
+                    "required_operator_inputs": [
+                        "review_row_id",
+                        "replacement_reference_binding_kcal_mol",
+                        "replacement_source_url_or_doi",
+                    ],
+                    "required_exact_evidence_fields": [
+                        "review_row_id",
+                        "target_gene",
+                        "target_species",
+                        "candidate_name",
+                        "replacement_reference_binding_kcal_mol",
+                        "replacement_source_url_or_doi",
+                        "assay_type_and_endpoint",
+                        "assay_is_direct_or_claim_safe",
+                        "target_match_confirmed",
+                        "review_decision",
+                        "authoritative_apply_requested",
+                        "conflict_resolution_decision",
+                    ],
+                    "required_claim_guardrails": [
+                        "human_NR1I2_PXR_target_match_required",
+                        "activity_proxy_conflict_must_be_resolved_or_deferred",
+                        "review_only_or_deferred_rows_do_not_authorize_pxr_promotion",
+                        "authoritative_apply_requested_only_when_direct_or_claim_safe",
+                        "scope_promotion_allowed_false_until_gate_green",
+                    ],
+                    "claim_safe_completion_rule": (
+                        "Provide exact human NR1I2/PXR quantitative kcal/source evidence, confirm target match "
+                        "and assay type, resolve any activity-proxy conflict or keep the row deferred."
+                    ),
+                    "operator_completion_packet_ready": True,
+                    "operator_completion_packet": {"review_row_id": "pxr_review_d603772038dff21e"},
+                    "return_bundle_required_artifacts": [
+                        "runs/pxr_exact_evidence_review_intake_template_current.csv",
+                        "runs/pxr_packet_fill_readiness_current.json",
+                        "runs/pxr_blocked_row_promotion_gate_current.json",
+                        "runs/pxr_authoritative_reconciliation_packet_current.json",
+                        "runs/product_scope_breadth_contract_current.json",
+                    ],
+                    "return_bundle_required_artifact_count": 5,
+                    "next_action": "Complete exact human NR1I2/PXR review rows.",
+                    "execution_command": "python3 tools/build_pxr_exact_evidence_review_intake_template.py",
+                    "validation_command": "python3 tools/build_pxr_exact_evidence_review_intake_template.py",
+                    "unlock_claim": "pxr_domain_promotion",
+                    "next_review_row_id": "pxr_review_d603772038dff21e",
+                    "candidate_name": "acetaminophen",
+                },
+                {
+                    "action_id": "broad_platform_claim_floor",
+                    "status": "blocked",
+                    "gap_id": "scope_breadth_expansion",
+                    "release_blocker": True,
+                    "artifact": "runs/product_scope_breadth_contract_current.json",
+                    "required_operator_inputs": [
+                        "transporter_claim_acceptance",
+                        "pxr_claim_acceptance",
+                        "breadth_domain_floor_acceptance",
+                        "general_platform_claim_acceptance",
+                    ],
+                    "required_claim_guardrails": [
+                        "general_platform_claim_allowed_false_until_all_scope_acceptance_stages_green",
+                        "transporter_and_pxr_domain_promotions_required_before_general_platform_claim",
+                        "breadth_domain_floor_acceptance_required_before_capability_surface_widening",
+                        "ready_restricted_families_do_not_authorize_general_protein_ligand_claim",
+                    ],
+                    "claim_safe_completion_rule": (
+                        "Keep general protein-ligand platform wording blocked until transporter, PXR, "
+                        "breadth-domain floor, and capability-surface acceptance stages are all green."
+                    ),
+                    "operator_completion_packet_ready": True,
+                    "operator_completion_packet": {
+                        "blocked_stage_evidence_count": 4,
+                        "blocked_stage_ids": [
+                            "transporter_claim_acceptance",
+                            "pxr_claim_acceptance",
+                            "breadth_domain_floor_acceptance",
+                            "general_platform_claim_acceptance",
+                        ],
+                        "blocked_stage_dependency_matrix": [
+                            {
+                                "stage_id": "transporter_claim_acceptance",
+                                "first_blocked_evidence_row_id": "AQP1.core_binder_01",
+                                "unlock_claim_scopes": ["transporter_domain_promotion"],
+                            },
+                            {
+                                "stage_id": "pxr_claim_acceptance",
+                                "first_blocked_evidence_row_id": "pxr_review_d603772038dff21e",
+                                "unlock_claim_scopes": ["pxr_domain_promotion"],
+                            },
+                        ],
+                        "first_blocked_stage_id": "transporter_claim_acceptance",
+                        "first_blocked_evidence_row_id": "AQP1.core_binder_01",
+                        "first_blocked_target_id": "AQP1",
+                        "first_blocked_candidate": "aqp1_bacopaside_ii_review_seed",
+                        "first_blocked_required_missing_fields": "replacement_reference_binding_kcal_mol",
+                        "required_claim_guardrails": [
+                            "general_platform_claim_allowed_false_until_all_scope_acceptance_stages_green",
+                            "ready_restricted_families_do_not_authorize_general_protein_ligand_claim",
+                        ],
+                        "completion_rule": (
+                            "Keep general protein-ligand platform wording blocked until transporter, PXR, "
+                            "breadth-domain floor, and capability-surface acceptance stages are all green."
+                        ),
+                    },
+                    "next_action": "Keep broad platform claim blocked.",
+                    "execution_command": "python3 tools/build_product_scope_breadth_contract.py",
+                    "validation_command": "python3 tools/build_product_scope_breadth_contract.py",
+                    "unlock_claim": "general_protein_ligand_platform",
+                    "blocked_stage_dependency_count": 4,
+                    "first_blocked_stage_id": "transporter_claim_acceptance",
+                    "first_blocked_evidence_row_id": "AQP1.core_binder_01",
+                    "first_blocked_target_id": "AQP1",
+                    "first_blocked_candidate": "aqp1_bacopaside_ii_review_seed",
+                    "first_blocked_required_missing_fields": "replacement_reference_binding_kcal_mol",
+                },
+            ],
+        }
+    }
+
+
+def _aqp1_procurement() -> dict:
+    return {
+        "summary": {
+            "status": "aqp1_direct_binding_procurement_packet_ready",
+            "procurement_packet_ready": True,
+            "direct_binding_gap_open": True,
+            "external_primary_evidence_required": True,
+            "first_required_external_action_id": "procure_aqp1_bacopaside_ii_direct_binding_measurement",
+            "current_operator_candidate_blocker": (
+                "data_validity_outside_typical_range_and_assay_origin_unknown"
+            ),
+            "minimum_acceptance_rule": (
+                "target_uniprot=P29972; standard_type in Kd,Ki; operator_claim_safe_decision=approve_claim_safe"
+            ),
+            "accepted_direct_binding_methods": ["SPR equilibrium Kd", "ITC Kd"],
+            "acceptance_fields": ["target_uniprot", "standard_value_nM", "operator_claim_safe_decision"],
+        }
+    }
+
+
+def test_build_product_commercial_readiness_operator_packet_flattens_next_actions() -> None:
+    payload = mod.build_product_commercial_readiness_operator_packet(
+        goal_audit_packet=_goal_audit(),
+        aqp1_direct_binding_procurement_packet=_aqp1_procurement(),
+        delta_force_closure_packet={
+            "summary": {
+                "packet_ready": True,
+                "delta_force_closure_ready": False,
+                "first_blocked_output_field": "delta_force",
+                "ready_output_field_count": 6,
+                "blocked_output_field_count": 1,
+                "closure_failed_stage_count": 9,
+                "closure_failed_stage_ids": ["gpu_worker_return_receipt"],
+                "next_stage_id": "gpu_worker_return_receipt",
+                "next_stage_artifact": "runs/product_production_ai_gpu_return_intake_current.json",
+                "next_stage_validation_command": "python3 tools/build_residual_force_gpu_worker_return_receipt.py",
+                "next_required_step": "Return GPU summary.",
+                "operator_return_required_artifact_count": 5,
+                "operator_return_required_artifacts": ["summary.json", "manifest.csv"],
+                "return_summary_required_fields": ["queue_rows", "backend_counts"],
+                "post_return_validation_command": "python3 tools/build_residual_force_gpu_worker_return_receipt.py",
+            }
+        },
+        scope_closure_packet={
+            "summary": {
+                "packet_ready": True,
+                "scope_closure_ready": False,
+                "scope_acceptance_stage_count": 5,
+                "scope_acceptance_blocked_stage_count": 4,
+                "scope_acceptance_blocked_stage_ids": [
+                    "transporter_claim_acceptance",
+                    "pxr_claim_acceptance",
+                ],
+                "scope_acceptance_next_stage_id": "transporter_claim_acceptance",
+                "scope_acceptance_next_stage_artifact": "runs/transporter.json",
+                "scope_acceptance_next_stage_validation_command": "python3 tools/build_product_scope_breadth_contract.py",
+                "first_blocked_evidence_row_id": "AQP1.core_binder_01",
+                "first_blocked_target_id": "AQP1",
+                "first_blocked_candidate": "aqp1_bacopaside_ii_review_seed",
+                "first_blocked_required_missing_fields": "replacement_reference_binding_kcal_mol",
+                "transporter_unresolved_slot_count": 11,
+                "pxr_direct_or_claim_safe_quantitative_ready_count": 0,
+                "general_platform_claim_allowed": False,
+                "next_required_step": "Acquire exact transporter evidence.",
+            }
+        },
+        goal_audit_path="runs/nonexistent_unit_goal_audit.json",
+        delta_force_closure_packet_path="runs/unit_delta_force_closure.json",
+        scope_closure_packet_path="runs/unit_scope_closure.json",
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "product_commercial_readiness_operator_packet_ready"
+    assert summary["packet_ready"] is True
+    assert summary["goal_complete"] is False
+    assert summary["open_gap_ids"] == [
+        "production_ai_inference_checkpoint",
+        "scope_breadth_expansion",
+    ]
+    assert len(summary["commercial_readiness_matrix_sha256"]) == 64
+    assert len(summary["goal_audit_sha256"]) == 64
+    assert summary["source_fingerprint_ready"] is True
+    assert summary["action_count"] == 5
+    assert summary["blocked_action_count"] == 5
+    assert summary["parallelizable_action_count"] == 1
+    assert summary["parallelizable_action_ids"] == ["transporter_next_slot_exact_evidence"]
+    assert summary["first_parallelizable_action_id"] == "transporter_next_slot_exact_evidence"
+    assert summary["first_parallelizable_action_lane_id"] == "parallel_scope_evidence"
+    assert "ROCm/GPU environment" in summary["first_parallelizable_action_precondition"]
+    assert "reference_binding_kcal_mol" in summary[
+        "first_parallelizable_action_required_operator_inputs"
+    ]
+    assert "direct_binding_or_claim_safe_kcal_basis" in summary[
+        "first_parallelizable_action_required_exact_evidence_fields"
+    ]
+    assert "functional_surrogate_does_not_authorize_direct_binding_claim" in summary[
+        "first_parallelizable_action_required_claim_guardrails"
+    ]
+    assert summary["first_parallelizable_action_expected_evidence_type"] == (
+        "direct_or_claim_safe_binding_kcal"
+    )
+    assert "replacement_reference_binding_kcal_mol" in summary[
+        "first_parallelizable_action_required_missing_fields"
+    ]
+    assert summary["first_parallelizable_action_operator_review_artifact"] == (
+        "runs/transporter_manual_review_intake_template_current.csv"
+    )
+    assert "ligand_binding_reference_blind_aqp1" in summary[
+        "first_parallelizable_action_post_intake_synchronization_targets"
+    ]
+    assert "build_product_scope_breadth_contract.py" in summary[
+        "first_parallelizable_action_acceptance_gate_commands"
+    ]
+    assert summary[
+        "first_parallelizable_action_next_slot_source_modality_guard_ready"
+    ] is True
+    assert summary["first_parallelizable_action_next_slot_source_modality"] == (
+        "functional_quantitative_surrogate"
+    )
+    assert summary[
+        "first_parallelizable_action_next_slot_source_modality_direct_binding_claim_allowed"
+    ] is False
+    assert summary["first_parallelizable_action_next_slot_source_modality_decision"] == (
+        "keep_blocked_until_exact_direct_binding_or_claim_safe_kcal"
+    )
+    assert summary[
+        "first_parallelizable_action_next_slot_source_modality_triage_artifact"
+    ] == "runs/aqp1_binding_source_modality_triage_current.json"
+    assert summary[
+        "first_parallelizable_action_next_slot_source_modality_triage_decision"
+    ] == "keep_blocked_until_direct_experimental_or_operator_verified_claim_safe_binding_kcal"
+    assert summary[
+        "first_parallelizable_action_next_slot_source_modality_direct_experimental_binding_row_count"
+    ] == 0
+    assert summary[
+        "first_parallelizable_action_next_slot_source_modality_claim_safe_binding_kcal_ready_count"
+    ] == 0
+    assert summary[
+        "first_parallelizable_action_next_slot_source_modality_computational_binding_energy_row_count"
+    ] == 1
+    assert summary[
+        "first_parallelizable_action_next_slot_source_modality_best_computational_binding_energy_kcal_mol"
+    ] == "-34.48"
+    assert summary["first_parallelizable_action_operator_validation_candidate_ready"] is True
+    assert summary[
+        "first_parallelizable_action_operator_validation_candidate_status"
+    ] == "operator_validation_required"
+    assert summary[
+        "first_parallelizable_action_operator_validation_candidate_ligand_external_identifier"
+    ] == "CHEMBL20"
+    assert summary[
+        "first_parallelizable_action_operator_validation_candidate_reference_binding_kcal_mol"
+    ] == "-5.13"
+    assert summary[
+        "first_parallelizable_action_operator_validation_candidate_blocker"
+    ] == "data_validity_outside_typical_range_and_assay_origin_unknown"
+    assert (
+        summary["first_parallelizable_action_operator_validation_candidate_claim_safe_ready"]
+        is False
+    )
+    assert summary["first_parallelizable_action_direct_binding_procurement_packet_ready"] is True
+    assert summary["first_parallelizable_action_direct_binding_procurement_packet_artifact"] == (
+        "runs/aqp1_direct_binding_procurement_packet_current.json"
+    )
+    assert (
+        summary["first_parallelizable_action_direct_binding_procurement_first_required_external_action_id"]
+        == "procure_aqp1_bacopaside_ii_direct_binding_measurement"
+    )
+    assert summary[
+        "first_parallelizable_action_direct_binding_procurement_direct_binding_gap_open"
+    ] is True
+    assert "standard_type in Kd,Ki" in summary[
+        "first_parallelizable_action_direct_binding_procurement_minimum_acceptance_rule"
+    ]
+    assert "SPR equilibrium Kd" in summary[
+        "first_parallelizable_action_direct_binding_procurement_accepted_direct_binding_methods"
+    ]
+    assert "functional_quantitative_surrogate_is_review_only" in summary[
+        "first_parallelizable_action_next_slot_source_modality_guardrails"
+    ]
+    assert summary["first_action_id"] == "production_gpu_execution_environment"
+    assert summary["first_artifact"] == "runs/rocm_environment_manifest_current.json"
+    assert summary["first_execution_command"] == "python3 tools/build_rocm_environment_manifest.py"
+    assert summary["first_operator_completion_packet_ready"] is True
+    assert summary["first_operator_completion_artifact_id"] == "rocm_environment_manifest_json"
+    assert summary["first_operator_completion_artifact_path"] == (
+        "runs/rocm_environment_manifest_current.json"
+    )
+    assert summary["first_operator_completion_required_fields_or_columns"] == [
+        "manifest_ready",
+        "rocm_stack_detected",
+        "torch_rocm_ready",
+        "amd_gpu_detected",
+        "visible_device_count",
+    ]
+    assert summary["first_operator_completion_validation_command"] == (
+        "python3 tools/build_rocm_environment_manifest.py"
+    )
+    assert "required_fields_or_columns" in summary["first_operator_completion_packet_keys"]
+    assert summary["first_operator_completion_worker_runtime_receipt_contract_ready"] is True
+    assert summary["first_operator_completion_worker_runtime_receipt_required_field_count"] == 5
+    assert "backend_counts" in summary[
+        "first_operator_completion_worker_runtime_receipt_required_fields_or_columns"
+    ]
+    assert "visible_device_count>0" in summary[
+        "first_operator_completion_worker_runtime_receipt_completion_rule"
+    ]
+    assert summary[
+        "first_operator_completion_worker_runtime_receipt_post_environment_next_stage_id"
+    ] == "gpu_return_acceptance"
+    assert summary[
+        "first_operator_completion_worker_runtime_receipt_post_environment_next_artifact"
+    ] == "runs/residual_force_gpu_worker_return_receipt_current.json"
+    assert "build_residual_force_gpu_worker_return_receipt.py" in summary[
+        "first_operator_completion_worker_runtime_receipt_post_environment_validation_command"
+    ]
+    assert "prod-mode" in summary[
+        "first_operator_completion_worker_runtime_receipt_full_regeneration_command"
+    ]
+    assert "cpu_fallback_does_not_satisfy_production_inference" in summary[
+        "first_operator_completion_worker_runtime_receipt_guardrails"
+    ]
+    assert summary["first_operator_completion_diagnostic_command_count"] == 3
+    assert "rocminfo" in summary["first_operator_completion_diagnostic_commands"]
+    assert "visible_device_count>0" in summary[
+        "first_operator_completion_diagnostic_completion_rule"
+    ]
+    assert "runs/rocm_environment_manifest_current.json" in summary[
+        "first_operator_completion_diagnostic_return_artifacts"
+    ]
+    assert summary["first_operator_completion_torch_visibility_probe_command"].startswith(
+        "python3 -c"
+    )
+    assert payload["rows"][0]["operator_completion_worker_runtime_receipt_contract_ready"] is True
+    assert "backend_counts" in payload["rows"][0][
+        "operator_completion_worker_runtime_receipt_required_fields_or_columns"
+    ]
+    assert payload["rows"][0][
+        "operator_completion_worker_runtime_receipt_post_environment_next_artifact"
+    ] == "runs/residual_force_gpu_worker_return_receipt_current.json"
+    assert payload["rows"][0]["operator_completion_diagnostic_command_count"] == 3
+    assert "torch.cuda.device_count" in payload["rows"][0][
+        "operator_completion_torch_visibility_probe_command"
+    ]
+    assert summary["production_ai_return_action_id"] == "production_ai_return_summary"
+    assert summary["production_ai_return_action_blocked_by_action_id"] == (
+        "production_gpu_execution_environment"
+    )
+    assert summary["production_ai_return_action_artifact"] == (
+        "runs/residual_force_trajectory_regeneration_current_summary.json"
+    )
+    assert summary["production_ai_return_operator_completion_packet_ready"] is True
+    assert summary["production_ai_return_operator_completion_artifact_id"] == (
+        "returned_summary_json"
+    )
+    assert summary["production_ai_return_operator_completion_artifact_path"] == (
+        "runs/residual_force_trajectory_regeneration_current_summary.json"
+    )
+    assert "queue_rows" in summary[
+        "production_ai_return_operator_completion_required_fields_or_columns"
+    ]
+    assert summary["production_ai_return_operator_completion_expected_queue_rows"] == 768
+    assert "processed_rows" in summary[
+        "production_ai_return_operator_completion_completion_rule"
+    ]
+    assert "require_rust_hip" in summary[
+        "production_ai_return_operator_completion_backend_provenance_completion_rule"
+    ]
+    assert "production_gpu_backend_provenance" in summary[
+        "production_ai_return_operator_completion_failed_check_ids"
+    ]
+    assert summary["production_ai_return_bundle_required_artifact_count"] == 4
+    assert any(
+        "residual_force_trajectory_regeneration_current_manifest.csv" in artifact
+        for artifact in summary["production_ai_return_bundle_required_artifacts"]
+    )
+    assert summary["production_ai_return_bundle_next_artifact_id"] == "returned_summary_json"
+    assert "actual_summary_returned_complete" in summary[
+        "production_ai_return_bundle_next_artifact_failed_check_ids"
+    ]
+    assert "operator_verified_npz_exists" in summary[
+        "production_ai_return_bundle_manifest_required_columns"
+    ]
+    assert "build_residual_force_gpu_worker_return_receipt.py" in summary[
+        "production_ai_return_bundle_post_return_validation_command"
+    ]
+    assert "summary alone does not unlock" in summary["production_ai_return_bundle_guardrail"]
+    assert summary["delta_force_closure_acceptance_packet_artifact"] == (
+        "runs/unit_delta_force_closure.json"
+    )
+    assert summary["delta_force_closure_acceptance_packet_ready"] is True
+    assert summary["delta_force_closure_ready"] is False
+    assert summary["delta_force_closure_first_blocked_output_field"] == "delta_force"
+    assert summary["delta_force_closure_ready_output_field_count"] == 6
+    assert summary["delta_force_closure_blocked_output_field_count"] == 1
+    assert summary["delta_force_closure_failed_stage_count"] == 9
+    assert summary["delta_force_closure_failed_stage_ids"] == ["gpu_worker_return_receipt"]
+    assert summary["delta_force_closure_next_stage_id"] == "gpu_worker_return_receipt"
+    assert summary["delta_force_closure_next_stage_artifact"] == (
+        "runs/product_production_ai_gpu_return_intake_current.json"
+    )
+    assert "build_residual_force_gpu_worker_return_receipt.py" in summary[
+        "delta_force_closure_next_stage_validation_command"
+    ]
+    assert summary["delta_force_closure_operator_return_required_artifact_count"] == 5
+    assert summary["delta_force_closure_operator_return_required_artifacts"] == [
+        "summary.json",
+        "manifest.csv",
+    ]
+    assert summary["delta_force_closure_return_summary_required_fields"] == [
+        "queue_rows",
+        "backend_counts",
+    ]
+    assert summary["scope_closure_acceptance_packet_artifact"] == (
+        "runs/unit_scope_closure.json"
+    )
+    assert summary["scope_closure_acceptance_packet_ready"] is True
+    assert summary["scope_closure_ready"] is False
+    assert summary["scope_closure_stage_count"] == 5
+    assert summary["scope_closure_blocked_stage_count"] == 4
+    assert summary["scope_closure_blocked_stage_ids"] == [
+        "transporter_claim_acceptance",
+        "pxr_claim_acceptance",
+    ]
+    assert summary["scope_closure_next_stage_id"] == "transporter_claim_acceptance"
+    assert summary["scope_closure_first_blocked_evidence_row_id"] == "AQP1.core_binder_01"
+    assert summary["scope_closure_first_blocked_target_id"] == "AQP1"
+    assert summary["scope_closure_first_blocked_required_missing_fields"] == (
+        "replacement_reference_binding_kcal_mol"
+    )
+    assert summary["scope_closure_transporter_unresolved_slot_count"] == 11
+    assert summary["scope_closure_pxr_direct_or_claim_safe_quantitative_ready_count"] == 0
+    assert summary["scope_closure_general_platform_claim_allowed"] is False
+    assert payload["rows"][0]["next_after_actionable_blocker_stage_id"] == "gpu_return_acceptance"
+    assert payload["rows"][0]["next_after_actionable_blocker_artifact"] == (
+        "runs/residual_force_gpu_worker_return_receipt_current.json"
+    )
+    assert payload["rows"][0]["next_after_actionable_blocker_required_checks"] == (
+        "force_gpu_worker_return_receipt_ready"
+    )
+    assert "delta_force" in payload["rows"][0]["next_after_actionable_blocker_unlock_fields"]
+    assert payload["rows"][1]["return_bundle_required_artifact_count"] == 4
+    assert "residual_force_trajectory_regeneration_current_manifest.csv" in payload["rows"][1][
+        "return_bundle_required_artifacts"
+    ]
+    assert payload["rows"][1]["return_bundle_artifact_completion_matrix_count"] == 4
+    assert payload["rows"][1]["return_bundle_next_artifact_id"] == "returned_summary_json"
+    assert payload["rows"][1]["return_bundle_next_artifact_path"] == (
+        "runs/residual_force_trajectory_regeneration_current_summary.json"
+    )
+    assert payload["rows"][1]["return_bundle_next_artifact_failed_check_ids"] == (
+        "actual_summary_returned_complete"
+    )
+    assert "operator_verified_npz_exists" in payload["rows"][1][
+        "return_bundle_manifest_required_columns"
+    ]
+    assert payload["rows"][1]["return_bundle_post_return_validation_command"] == (
+        "python3 tools/build_residual_force_gpu_worker_return_receipt.py"
+    )
+    assert "summary alone does not unlock" in payload["rows"][1]["return_bundle_guardrail"]
+    assert payload["rows"][1]["blocked_by_action_id"] == "production_gpu_execution_environment"
+    assert summary["operator_completion_packet_ready_count"] == 5
+    assert summary["operator_input_total_count"] == 19
+    assert summary["release_blocker_action_ids"] == [
+        "production_gpu_execution_environment",
+        "production_ai_return_summary",
+        "transporter_next_slot_exact_evidence",
+        "pxr_next_exact_review",
+        "broad_platform_claim_floor",
+    ]
+    assert payload["rows"][2]["next_slot_id"] == "AQP1.core_binder_01"
+    assert payload["rows"][2]["parallelizable_with_primary_blocker"] is True
+    assert payload["rows"][2]["parallel_primary_blocker_action_id"] == (
+        "production_gpu_execution_environment"
+    )
+    assert payload["rows"][2]["parallel_lane_priority"] == 1
+    assert "reference_binding_kcal_mol" in payload["rows"][2]["required_operator_inputs"]
+    assert "direct_binding_or_claim_safe_kcal_basis" in payload["rows"][2][
+        "required_exact_evidence_fields"
+    ]
+    assert "target_match_decision" in payload["rows"][2]["required_exact_evidence_fields"]
+    assert "functional_surrogate_does_not_authorize_direct_binding_claim" in payload["rows"][2][
+        "required_claim_guardrails"
+    ]
+    assert payload["rows"][2]["expected_evidence_type"] == "direct_or_claim_safe_binding_kcal"
+    assert "replacement_reference_binding_kcal_mol" in payload["rows"][2]["required_missing_fields"]
+    assert payload["rows"][2]["operator_review_artifact"] == (
+        "runs/transporter_manual_review_intake_template_current.csv"
+    )
+    assert "ligand_binding_reference_blind_aqp1" in payload["rows"][2][
+        "post_intake_synchronization_targets"
+    ]
+    assert "build_product_scope_breadth_contract.py" in payload["rows"][2][
+        "acceptance_gate_commands"
+    ]
+    assert payload["rows"][2]["source_signal"].startswith("https://pubmed")
+    assert payload["rows"][2]["next_slot_source_modality_guard_ready"] is True
+    assert payload["rows"][2]["next_slot_source_modality"] == "functional_quantitative_surrogate"
+    assert payload["rows"][2]["next_slot_source_modality_direct_binding_claim_allowed"] is False
+    assert payload["rows"][2]["next_slot_source_modality_decision"] == (
+        "keep_blocked_until_exact_direct_binding_or_claim_safe_kcal"
+    )
+    assert payload["rows"][2]["operator_validation_candidate_ready"] is True
+    assert payload["rows"][2]["operator_validation_candidate_status"] == (
+        "operator_validation_required"
+    )
+    assert payload["rows"][2]["operator_validation_candidate_ligand_external_identifier"] == (
+        "CHEMBL20"
+    )
+    assert payload["rows"][2]["operator_validation_candidate_reference_binding_kcal_mol"] == (
+        "-5.13"
+    )
+    assert payload["rows"][2]["operator_validation_candidate_claim_safe_ready"] is False
+    assert payload["rows"][2]["direct_binding_procurement_packet_ready"] is True
+    assert payload["rows"][2]["direct_binding_procurement_packet_artifact"] == (
+        "runs/aqp1_direct_binding_procurement_packet_current.json"
+    )
+    assert payload["rows"][2]["direct_binding_procurement_external_primary_evidence_required"] is True
+    assert "exact target-pair quantitative evidence" in payload["rows"][2][
+        "claim_safe_completion_rule"
+    ]
+    assert "completion_contract_version" in payload["rows"][2]["operator_completion_packet_keys"]
+    assert "required_exact_evidence_fields" in payload["rows"][2]["operator_completion_packet_keys"]
+    assert payload["rows"][2]["target_ready_for_promotion_ids"] == "GLUT1"
+    assert payload["rows"][2]["target_blocked_for_promotion_ids"] == "AQP1"
+    assert payload["rows"][2]["primary_blocker_target_id"] == "AQP1"
+    assert payload["rows"][2]["primary_blocker_packet_step"] == "core_binder_01"
+    assert payload["rows"][2]["primary_blocker_candidate_name"] == "bacopaside II"
+    assert "blocked transporter target promotion" in payload["rows"][2]["target_scope_guardrail"]
+    assert payload["operator_completion_packets"][2]["target_scope_completion_packet"][
+        "target_blocked_for_promotion_ids"
+    ] == ["AQP1"]
+    assert payload["rows"][3]["next_review_row_id"] == "pxr_review_d603772038dff21e"
+    assert "target_match_confirmed" in payload["rows"][3]["required_exact_evidence_fields"]
+    assert "conflict_resolution_decision" in payload["rows"][3]["required_exact_evidence_fields"]
+    assert "human_NR1I2_PXR_target_match_required" in payload["rows"][3]["required_claim_guardrails"]
+    assert "activity-proxy conflict" in payload["rows"][3]["claim_safe_completion_rule"]
+    assert "pxr_authoritative_reconciliation_packet_current.json" in payload["rows"][3][
+        "return_bundle_required_artifacts"
+    ]
+    assert payload["rows"][4]["first_blocked_stage_id"] == "transporter_claim_acceptance"
+    assert payload["rows"][4]["first_blocked_evidence_row_id"] == "AQP1.core_binder_01"
+    assert payload["rows"][4]["first_blocked_target_id"] == "AQP1"
+    assert payload["rows"][4]["first_blocked_required_missing_fields"] == (
+        "replacement_reference_binding_kcal_mol"
+    )
+    assert payload["rows"][4]["blocked_stage_evidence_count"] == 4
+    assert payload["rows"][4]["blocked_stage_dependency_matrix_count"] == 2
+    assert "pxr_claim_acceptance" in payload["rows"][4]["blocked_stage_dependency_stage_ids"]
+    assert "pxr_domain_promotion" in payload["rows"][4][
+        "blocked_stage_dependency_unlock_claim_scopes"
+    ]
+    assert "general_platform_claim_allowed_false" in payload["rows"][4][
+        "required_claim_guardrails"
+    ]
+    assert "general protein-ligand platform wording blocked" in payload["rows"][4][
+        "claim_safe_completion_rule"
+    ]
+    assert payload["operator_completion_packets"][1]["operator_completion_packet"]["template_payload"]["queue_rows"] == 768
+    assert payload["summary"]["execution_enabled"] is False
+    assert payload["summary"]["checkpoint_promoted"] is False
+
+
+def test_build_product_commercial_readiness_operator_packet_tool_writes_outputs(tmp_path: Path) -> None:
+    goal_audit = tmp_path / "goal_audit.json"
+    delta_force_closure = tmp_path / "delta_force_closure.json"
+    scope_closure = tmp_path / "scope_closure.json"
+    out_json = tmp_path / "operator_packet.json"
+    out_csv = tmp_path / "operator_packet.csv"
+    out_md = tmp_path / "operator_packet.md"
+    goal_audit.write_text(json.dumps(_goal_audit()) + "\n", encoding="utf-8")
+    delta_force_closure.write_text(
+        json.dumps({"summary": {"packet_ready": True, "next_stage_id": "gpu_worker_return_receipt"}}) + "\n",
+        encoding="utf-8",
+    )
+    scope_closure.write_text(
+        json.dumps({"summary": {"packet_ready": True, "scope_acceptance_next_stage_id": "transporter_claim_acceptance"}})
+        + "\n",
+        encoding="utf-8",
+    )
+
+    mod.main(
+        [
+            "--goal-audit-json",
+            str(goal_audit),
+            "--delta-force-closure-packet-json",
+            str(delta_force_closure),
+            "--scope-closure-packet-json",
+            str(scope_closure),
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ]
+    )
+
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    assert payload["summary"]["packet_ready"] is True
+    assert len(payload["summary"]["goal_audit_sha256"]) == 64
+    assert len(payload["summary"]["commercial_readiness_matrix_sha256"]) == 64
+    assert payload["summary"]["source_fingerprint_ready"] is True
+    assert payload["summary"]["delta_force_closure_acceptance_packet_ready"] is True
+    assert payload["summary"]["scope_closure_acceptance_packet_ready"] is True
+    assert out_csv.read_text(encoding="utf-8").startswith("action_id,status,gap_id,")
+    md_text = out_md.read_text(encoding="utf-8")
+    assert "Product Commercial Readiness Operator Packet" in md_text
+    assert "commercial_readiness_matrix_sha256" in md_text
+    assert "First Operator Completion Packet" in md_text
+    assert "rocm_environment_manifest_json" in md_text
+    assert "production_ai_return_summary" in md_text
+    assert "Delta Force Closure Acceptance" in md_text
+    assert "Scope Closure Acceptance" in md_text

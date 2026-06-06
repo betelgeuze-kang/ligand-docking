@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools import build_glut1_second_wave_seed_row_fill_draft as mod
+from tools.product import build_glut1_second_wave_seed_row_fill_draft as mod
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -19,8 +19,12 @@ def test_build_glut1_second_wave_seed_row_fill_draft_reads_current_artifacts() -
 
     assert summary["target_id"] == "GLUT1"
     assert summary["wave"] == "second"
-    assert summary["safe_prefill_field_count"] == 1
-    assert summary["blocked_field_count"] == 4
+    assert summary["safe_prefill_field_count"] == 4
+    assert summary["blocked_field_count"] == 1
     assert summary["authoritative_apply_allowed"] is False
+    assert rows[1]["field_name"] == "replacement_reference_binding_kcal_mol"
+    assert rows[1]["reviewer_safe_now"] == "no"
     assert rows[2]["field_name"] == "replacement_source"
     assert rows[2]["reviewer_safe_now"] == "yes"
+    assert rows[3]["reviewer_safe_now"] == "yes"
+    assert rows[4]["reviewer_safe_now"] == "yes"

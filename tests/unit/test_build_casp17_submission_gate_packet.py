@@ -64,7 +64,7 @@ def _run_builder(root: Path, extra_args: list[str] | None = None) -> dict:
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_submission_gate_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_submission_gate_packet.py"),
             "--root",
             str(root),
             *(extra_args or []),

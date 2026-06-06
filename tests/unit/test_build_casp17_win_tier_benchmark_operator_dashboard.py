@@ -126,7 +126,7 @@ def test_build_casp17_win_tier_benchmark_operator_dashboard_summarizes_blocked_r
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_win_tier_benchmark_operator_dashboard.py"),
+            str(ROOT / "tools/casp17/build_casp17_win_tier_benchmark_operator_dashboard.py"),
             "--operator-template-csv",
             str(template),
             "--operator-preflight-json",

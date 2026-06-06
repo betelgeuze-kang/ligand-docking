@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_wetlab_target_retry_policy_templates as mod
+from tools.wetlab import build_wetlab_target_retry_policy_templates as mod
 
 
 def test_build_wetlab_target_retry_policy_templates_includes_dhodh_branch() -> None:

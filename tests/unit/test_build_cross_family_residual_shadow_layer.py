@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_cross_family_residual_shadow_layer as mod
+from tools.product import build_cross_family_residual_shadow_layer as mod
 
 
 def test_build_payload_includes_ca2_and_pxr_blockers() -> None:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_glut1_manual_verdict_handoff_packet as mod
+from tools.product import build_glut1_manual_verdict_handoff_packet as mod
 
 
 def test_build_glut1_manual_verdict_handoff_packet_merges_binder_and_negative_rows() -> None:

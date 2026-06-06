@@ -41,9 +41,18 @@ def _write_goal_api_surface(root: Path, *, include_router: bool = True, include_
         '"bottleneck_count": 0,'
         '"primary_bottleneck_kind": "operator_approval_required",'
         '"primary_bottleneck_phase": "P1_product_execution_and_bundle_validation",'
+        '"primary_bottleneck_root_cause_category": "operator_decision_or_external_result_required",'
+        '"primary_bottleneck_locally_closable_without_operator_return": False,'
+        '"primary_bottleneck_required_external_return": "approval token",'
         '"operator_action_count": 0,'
         '"operator_intake_kit_status": "goal_operator_intake_kit_ready",'
         '"operator_intake_kit_release_burndown_linked_entry_count": 0,'
+        '"primary_action_id": "product_ai_production:return_gpu_force_regeneration_receipt",'
+        '"primary_action_status": "required",'
+        '"primary_action_required_input": "GPU full-regeneration summary and manifest with operator verification",'
+        '"primary_action_command": "python3 tools/generate_ligand_trajectory_engine.py --prod-mode",'
+        '"primary_action_recommended_action": "Run the full regeneration command on a GPU worker",'
+        '"primary_action_artifact_path": "runs/product_goal_completion_audit_current.json",'
         '"goal_api_surface_contract_status": "goal_api_surface_contract_ready",'
         '"execution_enabled": False,'
         '"action_executed": False,'
@@ -77,6 +86,10 @@ def _write_goal_api_surface(root: Path, *, include_router: bool = True, include_
         "from api.goal import router as goal_router\napp.include_router(goal_router)\n" if include_router else "",
         encoding="utf-8",
     )
+    (root / "api" / "security.py").write_text(
+        'ALLOWED_PRODUCT_PREFIXES = ("/product", "/goal", "/metrics")\n',
+        encoding="utf-8",
+    )
 
 
 def test_goal_api_surface_contract_reports_ready_for_current_source() -> None:
@@ -85,8 +98,8 @@ def test_goal_api_surface_contract_reports_ready_for_current_source() -> None:
     summary = payload["summary"]
     assert summary["status"] == "goal_api_surface_contract_ready"
     assert summary["surface_ready"] is True
-    assert summary["check_count"] == 7
-    assert summary["pass_count"] == 7
+    assert summary["check_count"] == 8
+    assert summary["pass_count"] == 8
     assert summary["blocker_count"] == 0
     assert summary["expected_endpoint_count"] == 8
     assert summary["missing_endpoint_count"] == 0
@@ -94,6 +107,7 @@ def test_goal_api_surface_contract_reports_ready_for_current_source() -> None:
     assert summary["missing_status_key_count"] == 0
     assert summary["missing_fail_closed_flag_count"] == 0
     assert summary["goal_router_registered"] is True
+    assert summary["goal_security_allowlist_permits_goal_prefix"] is True
     assert summary["goal_api_contract_endpoint_present"] is True
     assert summary["goal_api_contract_endpoint_reads_contract"] is True
     assert summary["execution_enabled"] is False
@@ -111,6 +125,23 @@ def test_goal_api_surface_contract_blocks_unmounted_router(tmp_path: Path) -> No
     assert payload["summary"]["status"] == "blocked_goal_api_surface_contract"
     assert payload["summary"]["goal_router_registered"] is False
     assert any(blocker["code"] == "goal_router_registered_not_ready" for blocker in payload["blockers"])
+
+
+def test_goal_api_surface_contract_blocks_security_allowlist_without_goal_prefix(tmp_path: Path) -> None:
+    _write_goal_api_surface(tmp_path)
+    (tmp_path / "api" / "security.py").write_text(
+        'ALLOWED_PRODUCT_PREFIXES = ("/product", "/metrics")\n',
+        encoding="utf-8",
+    )
+
+    payload = mod.build_goal_api_surface_contract(root=tmp_path)
+
+    assert payload["summary"]["status"] == "blocked_goal_api_surface_contract"
+    assert payload["summary"]["goal_security_allowlist_permits_goal_prefix"] is False
+    assert any(
+        blocker["code"] == "goal_security_allowlist_permits_goal_prefix_not_ready"
+        for blocker in payload["blockers"]
+    )
 
 
 def test_goal_api_surface_contract_blocks_missing_status_key(tmp_path: Path) -> None:

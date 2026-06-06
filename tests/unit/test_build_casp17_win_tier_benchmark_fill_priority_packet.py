@@ -161,7 +161,7 @@ def test_build_casp17_win_tier_benchmark_fill_priority_packet_orders_competitive
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_win_tier_benchmark_fill_priority_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_win_tier_benchmark_fill_priority_packet.py"),
             "--input-inventory-json",
             str(inventory_json),
             "--evidence-fill-kit-json",

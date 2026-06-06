@@ -19,7 +19,7 @@ DEFAULT_COMPOUND_UNIVERSE_JSON = "runs/wetlab_broad_screen_compound_universe_cur
 DEFAULT_PORTFOLIO_JSON = "runs/wetlab_partner_target_portfolio_current.json"
 DEFAULT_TARGET_NATIVE_CSV = "config/real_drug_targets_native_v1.csv"
 DEFAULT_OUT_MD = "runs/wetlab_broad_screen_antitarget_runner_current.md"
-DEFAULT_WATCH_LAUNCHER = "tools/launch_wetlab_broad_screen_antitarget_watch_loop.py"
+DEFAULT_WATCH_LAUNCHER = "tools/wetlab/launch_wetlab_broad_screen_antitarget_watch_loop.py"
 COMMAND_PREFERENCE = [
     "throughput_preflight_tuned_gate55",
     "throughput_preflight_tuned",
@@ -110,7 +110,7 @@ def run(
     summary_md = str(Path(bridge_paths["preferred_summary_md"]))
     launcher_cmd = [
         python_bin,
-        str(ROOT / "tools" / "launch_wetlab_broad_screen_antitarget_heartbeat_loop.py"),
+        str(ROOT / "tools" / "wetlab/launch_wetlab_broad_screen_antitarget_heartbeat_loop.py"),
         "--primary-target-id",
         primary_target_id,
         "--anti-target-id",

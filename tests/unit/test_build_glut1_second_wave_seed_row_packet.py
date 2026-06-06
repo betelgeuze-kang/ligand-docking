@@ -29,8 +29,10 @@ def test_build_glut1_second_wave_seed_row_packet_reads_current_artifacts() -> No
     assert summary["direct_quantitative_binding_count"] == 1
     assert summary["exact_target_pair_activity_count"] == 2
     assert summary["structured_pair_absent_count"] == 1
-    assert summary["blocked_field_count"] == 4
-    assert summary["ready_to_copy_field_count"] == 1
+    assert summary["blocked_field_count"] == 0
+    assert summary["ready_to_copy_field_count"] == 5
+    assert summary["remaining_unresolved_field_count"] == 0
+    assert summary["remaining_unresolved_fields"] == ""
     assert summary["authoritative_apply_allowed"] is False
 
 

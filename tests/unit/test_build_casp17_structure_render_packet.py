@@ -113,7 +113,7 @@ def test_build_casp17_structure_render_packet_outputs_nonblank_images(tmp_path: 
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_structure_render_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_structure_render_packet.py"),
             "--target-watchlist-json",
             str(watchlist),
             "--prediction-dir",
@@ -307,7 +307,7 @@ def test_build_casp17_structure_render_packet_can_emit_pymol_artifacts(tmp_path:
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_structure_render_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_structure_render_packet.py"),
             "--target-watchlist-json",
             str(watchlist),
             "--prediction-dir",
@@ -491,7 +491,7 @@ def test_build_casp17_structure_render_packet_keeps_qc_markers_capped_but_tracks
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_structure_render_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_structure_render_packet.py"),
             "--target-watchlist-json",
             str(watchlist),
             "--prediction-dir",

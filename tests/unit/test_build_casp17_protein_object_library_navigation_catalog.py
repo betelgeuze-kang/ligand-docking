@@ -88,7 +88,7 @@ def test_navigation_catalog_builds_protein_name_links(tmp_path: Path) -> None:
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_protein_object_library_navigation_catalog.py"),
+            str(ROOT / "tools/casp17/build_casp17_protein_object_library_navigation_catalog.py"),
             "--completion-audit-json",
             str(completion_json),
             "--out-json",
@@ -129,7 +129,7 @@ def test_navigation_catalog_blocks_when_completion_audit_is_not_pass(tmp_path: P
     result = subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_protein_object_library_navigation_catalog.py"),
+            str(ROOT / "tools/casp17/build_casp17_protein_object_library_navigation_catalog.py"),
             "--completion-audit-json",
             str(completion_json),
             "--out-json",

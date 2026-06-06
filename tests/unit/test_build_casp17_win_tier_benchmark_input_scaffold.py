@@ -133,7 +133,7 @@ def test_build_casp17_win_tier_benchmark_input_scaffold_writes_row_workbooks(tmp
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_win_tier_benchmark_input_scaffold.py"),
+            str(ROOT / "tools/casp17/build_casp17_win_tier_benchmark_input_scaffold.py"),
             "--operator-template-csv",
             str(template),
             "--operator-dashboard-json",

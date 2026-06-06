@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools import build_aqp1_p0_packet_plan as mod
+from tools.product import build_aqp1_p0_packet_plan as mod
 
 
 def test_aqp1_plan_current_outputs(tmp_path: Path, monkeypatch) -> None:

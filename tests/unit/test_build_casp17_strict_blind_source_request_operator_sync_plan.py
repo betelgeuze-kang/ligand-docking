@@ -2,7 +2,7 @@ import csv
 import json
 from pathlib import Path
 
-from tools import build_casp17_strict_blind_source_request_operator_sync_plan as mod
+from tools.casp17 import build_casp17_strict_blind_source_request_operator_sync_plan as mod
 
 
 FIELDS = [

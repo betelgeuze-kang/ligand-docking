@@ -104,7 +104,7 @@ def test_build_gpcr_residual_ab_comparison_partial(tmp_path: Path) -> None:
     subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools/build_gpcr_residual_ab_comparison.py"),
+            str(ROOT / "tools/product/build_gpcr_residual_ab_comparison.py"),
             "--baseline-run-root",
             str(baseline_root),
             "--candidate-run-root",

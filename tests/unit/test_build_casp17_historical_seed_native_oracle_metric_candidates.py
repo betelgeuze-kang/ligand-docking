@@ -4,7 +4,7 @@ import csv
 import json
 from pathlib import Path
 
-from tools import build_casp17_historical_seed_native_oracle_metric_candidates as mod
+from tools.casp17 import build_casp17_historical_seed_native_oracle_metric_candidates as mod
 
 
 FIELDS = [

@@ -2,7 +2,7 @@ import csv
 import json
 from pathlib import Path
 
-from tools import build_casp17_strict_blind_first_slot_closure_kit as mod
+from tools.casp17 import build_casp17_strict_blind_first_slot_closure_kit as mod
 
 
 def _write_json(path: Path, payload: dict) -> None:

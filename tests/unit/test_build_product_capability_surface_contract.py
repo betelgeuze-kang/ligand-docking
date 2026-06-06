@@ -108,7 +108,8 @@ def _root(tmp_path: Path) -> Path:
         '@router.get("/license-options")\n'
         '@router.get("/license-file-work-order")\n'
         '@router.get("/commercial-independence")\n'
-        '@router.get("/release-readiness")\n',
+        '@router.get("/release-readiness")\n'
+        '@router.get("/goal-completion-audit")\n',
         encoding="utf-8",
     )
     (tmp_path / "betelgeuze_product").mkdir()
@@ -173,6 +174,14 @@ def test_product_capability_surface_contract_tool_writes_outputs(tmp_path: Path)
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["result_bundle_artifact_count"] == 1
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["result_bundle_rerun_command_present"] is True
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["delivery_claim_backed_by_bundle_validation"] is False
+    assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["restricted_scope_claim_guard_ready"] is True
+    assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["allowed_scope_families"] == ["gpcr", "ion_channel", "kinase"]
+    assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["blocked_claim_scopes"] == [
+        "transporter_domain_promotion",
+        "pxr_domain_promotion",
+        "general_protein_ligand_platform",
+    ]
+    assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["general_platform_claim_allowed"] is False
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["product_architecture_endpoint_present"] is True
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["product_service_boundary_endpoint_present"] is True
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["product_api_contract_endpoint_present"] is True
@@ -180,8 +189,10 @@ def test_product_capability_surface_contract_tool_writes_outputs(tmp_path: Path)
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["product_license_decision_endpoint_present"] is True
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["product_license_options_endpoint_present"] is True
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["product_license_file_work_order_endpoint_present"] is True
+    assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["product_goal_completion_audit_endpoint_present"] is True
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["product_cli_surface_present"] is True
     assert out_csv.read_text(encoding="utf-8").startswith("capability_id,domain,")
     assert "Product Capability Surface Contract" in out_md.read_text(encoding="utf-8")
     assert "result_bundle_generation_contract_ready" in out_md.read_text(encoding="utf-8")
     assert "delivery_claim_backed_by_bundle_validation" in out_md.read_text(encoding="utf-8")
+    assert "restricted_scope_claim_guard_ready" in out_md.read_text(encoding="utf-8")

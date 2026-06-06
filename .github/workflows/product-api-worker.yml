@@ -1,0 +1,148 @@
+name: product-api-worker
+
+on:
+  push:
+    paths:
+      - "api/**"
+      - "tools/run_api_simulation_worker.py"
+      - "tools/smoke_alert_delivery.py"
+      - "tools/product/validate_api_runner_profiles.py"
+      - "tools/product/build_api_runner_profile_enablement_work_order.py"
+      - "tools/build_viewer_asset_base_url_decision.py"
+      - "tools/product/build_self_hosted_license_distribution_audit.py"
+      - "deploy/**"
+      - "monitoring/**"
+      - "viewer/**"
+      - "tests/unit/test_deploy_model_registry.py"
+      - "tests/unit/test_product_release_bundle.py"
+      - "tests/unit/test_product_rollout.py"
+      - "tests/unit/test_smoke_alert_delivery.py"
+      - "tests/unit/test_viewer_self_hosted_assets.py"
+      - "tests/unit/test_build_viewer_asset_base_url_decision.py"
+      - "tests/unit/test_build_self_hosted_license_distribution_audit.py"
+      - "tests/unit/test_api_job_store.py"
+      - "tests/unit/test_api_worker_deploy_artifacts.py"
+      - "tests/unit/test_api_security_middleware.py"
+      - ".github/workflows/product-api-worker.yml"
+  pull_request:
+    paths:
+      - "api/**"
+      - "tools/run_api_simulation_worker.py"
+      - "tools/smoke_alert_delivery.py"
+      - "tools/product/validate_api_runner_profiles.py"
+      - "tools/product/build_api_runner_profile_enablement_work_order.py"
+      - "tools/build_viewer_asset_base_url_decision.py"
+      - "tools/product/build_self_hosted_license_distribution_audit.py"
+      - "deploy/**"
+      - "monitoring/**"
+      - "viewer/**"
+      - "tests/unit/test_deploy_model_registry.py"
+      - "tests/unit/test_product_release_bundle.py"
+      - "tests/unit/test_product_rollout.py"
+      - "tests/unit/test_smoke_alert_delivery.py"
+      - "tests/unit/test_viewer_self_hosted_assets.py"
+      - "tests/unit/test_build_viewer_asset_base_url_decision.py"
+      - "tests/unit/test_build_self_hosted_license_distribution_audit.py"
+      - "tests/unit/test_api_job_store.py"
+      - "tests/unit/test_api_worker_deploy_artifacts.py"
+      - "tests/unit/test_api_security_middleware.py"
+      - ".github/workflows/product-api-worker.yml"
+  workflow_dispatch:
+
+jobs:
+  api-worker-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install API test dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r requirements.txt -r requirements-api.txt
+
+      - name: Compile API and worker modules
+        run: |
+          python3 -m py_compile \
+            api/config.py \
+            api/job_store.py \
+            api/security.py \
+            api/validated_runner.py \
+            api/worker.py \
+            api/main.py \
+            api/result_manifest.py \
+            api/tasks.py \
+            deploy/model_registry.py \
+            deploy/upload_model.py \
+            deploy/download_model.py \
+            deploy/rollback_model.py \
+            deploy/product_release_bundle.py \
+            deploy/product_rollout.py \
+            tools/run_api_simulation_worker.py \
+            tools/smoke_alert_delivery.py \
+            tools/product/validate_api_runner_profiles.py \
+            tools/product/build_api_runner_profile_enablement_work_order.py \
+            tools/build_viewer_asset_base_url_decision.py \
+            tools/product/build_self_hosted_license_distribution_audit.py
+
+      - name: Refresh release bundle local decision artifacts
+        run: |
+          python3 tools/build_viewer_asset_base_url_decision.py \
+            --out-json runs/viewer_asset_base_url_decision_current.json
+          python3 tools/build_product_commercial_independence_gate.py
+          python3 tools/product/build_self_hosted_license_distribution_audit.py \
+            --out-json runs/self_hosted_license_distribution_audit_current.json
+
+      - name: Run API worker and deploy artifact tests
+        run: |
+          python3 -m pytest -q \
+            tests/unit/test_api_job_store.py \
+            tests/unit/test_api_validated_runner_adapter.py \
+            tests/unit/test_api_runner_profile_enablement_work_order.py \
+            tests/unit/test_api_worker_deploy_artifacts.py \
+            tests/unit/test_api_security_middleware.py \
+            tests/unit/test_deploy_model_registry.py \
+            tests/unit/test_product_release_bundle.py \
+            tests/unit/test_product_rollout.py \
+            tests/unit/test_smoke_alert_delivery.py \
+            tests/unit/test_viewer_self_hosted_assets.py \
+            tests/unit/test_build_viewer_asset_base_url_decision.py \
+            tests/unit/test_build_self_hosted_license_distribution_audit.py \
+            tests/unit/test_api_goal_import.py \
+            tests/unit/test_api_casp17_import.py \
+            tests/unit/test_api_cleanup_import.py \
+            tests/unit/test_api_product_import.py
+
+      - name: Validate API runner profiles
+        run: |
+          python3 tools/product/validate_api_runner_profiles.py --profiles-dir config/api_validated_runner_profiles
+
+      - name: Build API runner profile enablement work order
+        run: |
+          python3 tools/product/build_api_runner_profile_enablement_work_order.py \
+            --profiles-dir config/api_validated_runner_profiles \
+            --evidence-dir /tmp/api_runner_profile_evidence_templates \
+            --write-evidence-templates \
+            --out-json /tmp/api_runner_profile_enablement_work_order.json \
+            --out-md /tmp/api_runner_profile_enablement_work_order.md
+
+      - name: Smoke worker CLI with empty durable queue
+        run: |
+          tmpdir="$(mktemp -d)"
+          API_JOB_STORE_PATH="$tmpdir/api_jobs.sqlite3" \
+          API_INLINE_WORKER_ENABLED=0 \
+          API_WORKER_HEARTBEAT_INTERVAL_SECONDS=0.05 \
+          python3 tools/run_api_simulation_worker.py \
+            --once \
+            --worker-id ci-smoke-worker \
+            --heartbeat-interval-seconds 0.05 \
+            --poll-interval-seconds 0.01
+
+      - name: Smoke alert delivery CLI with localhost receiver
+        run: |
+          python3 tools/smoke_alert_delivery.py --local-receiver-smoke

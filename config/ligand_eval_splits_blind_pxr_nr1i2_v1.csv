@@ -1,4 +1,6 @@
 target,ligand_id,role
+PXR_NR1I2_BLIND,chembl242526,far_ood_eval
+PXR_NR1I2_BLIND,chembl4863661,far_ood_eval
 PXR_NR1I2_BLIND,rifampicin,far_ood_eval
 PXR_NR1I2_BLIND,clotrimazole,far_ood_eval
 PXR_NR1I2_BLIND,hyperforin,fit

@@ -244,7 +244,7 @@ def test_build_casp17_readiness_dashboard_summarizes_levels_and_gaps(tmp_path: P
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_readiness_dashboard.py"),
+            str(ROOT / "tools/casp17/build_casp17_readiness_dashboard.py"),
             "--win-rubric-json",
             str(win),
             "--competitive-readiness-json",

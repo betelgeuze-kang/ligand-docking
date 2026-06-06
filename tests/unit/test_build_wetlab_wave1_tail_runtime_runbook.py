@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_wetlab_wave1_tail_runtime_runbook as mod
+from tools.wetlab import build_wetlab_wave1_tail_runtime_runbook as mod
 
 
 def test_build_wetlab_wave1_tail_runtime_runbook() -> None:

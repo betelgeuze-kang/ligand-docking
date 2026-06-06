@@ -430,11 +430,11 @@ def test_run_ligand_speedpack_ab_current_real_run_can_refresh_current_artifacts(
     assert payload["refresh_result"]["enabled"] is True
     assert payload["refresh_result"]["ok"] is True
     assert payload["refresh_result"]["single_task_sla_refresh"] is True
-    assert payload["refresh_result"]["runtime_cmd"][1].endswith("tools/extract_ligand_scaleup_results.py")
+    assert payload["refresh_result"]["runtime_cmd"][1].endswith("tools/product/extract_ligand_scaleup_results.py")
     assert payload["refresh_result"]["summary_cmd"][1].endswith("tools/build_ligand_speedpack_ab_summary.py")
     assert len(calls) == 4
     assert calls[0][0][1].endswith("tools/run_external_validation_blind_sets.py")
     assert calls[1][0][1].endswith("tools/compare_biorxiv_external_validation_runs.py")
     assert calls[1][0][-2:] == ["--task-scope", "candidate"]
-    assert calls[2][0][1].endswith("tools/extract_ligand_scaleup_results.py")
+    assert calls[2][0][1].endswith("tools/product/extract_ligand_scaleup_results.py")
     assert calls[3][0][1].endswith("tools/build_ligand_speedpack_ab_summary.py")

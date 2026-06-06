@@ -148,7 +148,7 @@ def test_build_casp17_molecular_viewer_packet_embeds_redacted_interactive_viewer
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_molecular_viewer_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_molecular_viewer_packet.py"),
             "--target-watchlist-json",
             str(watchlist),
             "--prediction-dir",

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools import build_cameo_runtime_repair_work_order as mod
+from tools.cameo import build_cameo_runtime_repair_work_order as mod
 
 
 def _api_dependency(status: str = "blocked_cameo_api_dependency_readiness") -> dict:

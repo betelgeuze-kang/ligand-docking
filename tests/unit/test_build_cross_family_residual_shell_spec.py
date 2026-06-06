@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools.build_cross_family_residual_shell_spec import build_payload
+from tools.product.build_cross_family_residual_shell_spec import build_payload
 
 
 def test_build_cross_family_residual_shell_spec() -> None:

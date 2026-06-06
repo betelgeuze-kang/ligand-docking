@@ -58,7 +58,7 @@ def test_target_object_viewer_smoke_passes_local_artifacts(tmp_path: Path) -> No
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_target_object_viewer_smoke_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_target_object_viewer_smoke_packet.py"),
             "--target-model-folders-json",
             str(target_json),
             "--out-json",
@@ -93,7 +93,7 @@ def test_target_object_viewer_smoke_blocks_missing_viewer_and_hosted_dependency(
     result = subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_target_object_viewer_smoke_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_target_object_viewer_smoke_packet.py"),
             "--target-model-folders-json",
             str(target_json),
             "--out-json",

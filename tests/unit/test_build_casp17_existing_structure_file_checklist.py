@@ -22,7 +22,7 @@ def _run_builder(tmp_path: Path, *, intake_csv: Path, structure_dir: Path, prove
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_existing_structure_file_checklist.py"),
+            str(ROOT / "tools/casp17/build_casp17_existing_structure_file_checklist.py"),
             "--intake-csv",
             str(intake_csv),
             "--work-queue-csv",

@@ -15,12 +15,12 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from tools import build_casp17_competitive_floor_execution_board as execution_board
-from tools import build_casp17_competitive_floor_file_source_plan as file_source_plan
-from tools import build_casp17_competitive_floor_readiness_gate as readiness_gate
-from tools import build_casp17_competitive_floor_value_entry_plan as value_entry_plan
+from tools.casp17 import build_casp17_competitive_floor_file_source_plan as file_source_plan
+from tools.casp17 import build_casp17_competitive_floor_readiness_gate as readiness_gate
+from tools.casp17 import build_casp17_competitive_floor_value_entry_plan as value_entry_plan
 from tools import build_casp17_workbench_index as workbench_index
 from tools import run_casp17_competitive_floor_identity_unlock_round as identity_round
-from tools import sync_casp17_competitive_floor_identity_intake as identity_sync
+from tools.casp17 import sync_casp17_competitive_floor_identity_intake as identity_sync
 
 
 DEFAULT_INTAKE_CSV = "casp17/casp17_competitive_floor_identity_intake_bundle_current.csv"

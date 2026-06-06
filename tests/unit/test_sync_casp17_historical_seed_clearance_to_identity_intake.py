@@ -4,7 +4,7 @@ import csv
 import json
 from pathlib import Path
 
-from tools import sync_casp17_historical_seed_clearance_to_identity_intake as mod
+from tools.casp17 import sync_casp17_historical_seed_clearance_to_identity_intake as mod
 
 
 SEED_FIELDS = [

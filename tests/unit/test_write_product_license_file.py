@@ -21,13 +21,13 @@ def _commercial_gate_only_license_blocked() -> dict:
     }
 
 
-def _license_decision_ready() -> dict:
+def _license_decision_ready(license_text_source: str) -> dict:
     return {
         "summary": {
             "status": "product_license_decision_gate_ready",
             "authorized_for_license_file_creation_review": True,
             "spdx_license_id": "ProprietaryRef-Betelgeuze",
-            "license_text_source": "operator-approved local file",
+            "license_text_source": license_text_source,
             "copyright_holder": "Betelgeuze",
             "effective_year": "2026",
             "license_present": False,
@@ -35,9 +35,9 @@ def _license_decision_ready() -> dict:
     }
 
 
-def _ready_work_order(path: Path) -> None:
+def _ready_work_order(path: Path, license_text_source: Path) -> None:
     payload = build_product_license_file_creation_work_order(
-        license_decision_gate_packet=_license_decision_ready(),
+        license_decision_gate_packet=_license_decision_ready(str(license_text_source)),
         commercial_independence_gate_packet=_commercial_gate_only_license_blocked(),
         target_license_path="LICENSE",
     )
@@ -48,8 +48,8 @@ def test_write_product_license_file_blocks_without_env_approval(tmp_path: Path, 
     work_order = tmp_path / "work_order.json"
     template = tmp_path / "approved_license.txt"
     out = tmp_path / "LICENSE"
-    _ready_work_order(work_order)
     template.write_text("Operator approved license text\n", encoding="utf-8")
+    _ready_work_order(work_order, template)
     monkeypatch.delenv(APPROVAL_TOKEN, raising=False)
 
     with pytest.raises(SystemExit) as exc:
@@ -65,8 +65,8 @@ def test_write_product_license_file_writes_only_when_work_order_ready_and_token_
 ) -> None:
     work_order = tmp_path / "work_order.json"
     template = tmp_path / "approved_license.txt"
-    _ready_work_order(work_order)
     template.write_text("Operator approved license text\n", encoding="utf-8")
+    _ready_work_order(work_order, template)
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv(APPROVAL_TOKEN, "1")
 
@@ -81,8 +81,8 @@ def test_write_product_license_file_writes_only_when_work_order_ready_and_token_
 def test_write_product_license_file_blocks_output_path_mismatch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     work_order = tmp_path / "work_order.json"
     template = tmp_path / "approved_license.txt"
-    _ready_work_order(work_order)
     template.write_text("Operator approved license text\n", encoding="utf-8")
+    _ready_work_order(work_order, template)
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv(APPROVAL_TOKEN, "1")
 

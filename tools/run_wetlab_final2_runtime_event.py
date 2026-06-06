@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from tools import build_wetlab_final2_runtime_event as runtime_event_mod
+from tools.wetlab import build_wetlab_final2_runtime_event as runtime_event_mod
 from tools.wetlab_target_render_utils import write_artifact
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,7 +24,7 @@ def _append_event_log(path: Path, row: dict[str, Any]) -> None:
 
 def _rebuild_support_artifacts(python_bin: str) -> None:
     subprocess.run([python_bin, "tools/build_wetlab_final2_protein_run_queue.py"], cwd=ROOT, check=True)
-    subprocess.run([python_bin, "tools/build_wetlab_final2_runtime_runbook.py"], cwd=ROOT, check=True)
+    subprocess.run([python_bin, "tools/wetlab/wetlab/build_wetlab_final2_runtime_runbook.py"], cwd=ROOT, check=True)
     subprocess.run([python_bin, "tools/build_wetlab_final2_execution_console.py"], cwd=ROOT, check=True)
     subprocess.run([python_bin, "tools/build_wetlab_partnering_stack.py"], cwd=ROOT, check=True)
 

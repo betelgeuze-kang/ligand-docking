@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools import build_casp17_transition_surface_contract as mod
+from tools.casp17 import build_casp17_transition_surface_contract as mod
 
 
 def _write_api_surface(root: Path, *, include_router: bool = True) -> None:

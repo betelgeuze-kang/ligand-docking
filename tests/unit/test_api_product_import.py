@@ -17,7 +17,12 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert "/product/service-boundary" in paths
     assert "/product/api-contract" in paths
     assert "/product/operational-quality" in paths
+    assert "/product/security-deployment-contract" in paths
     assert "/product/public-benchmark" in paths
+    assert "/product/job-orchestration-contract" in paths
+    assert "/product/trajectory-sla-contract" in paths
+    assert "/product/ai-decision-graph" in paths
+    assert "/product/ai-report-ux" in paths
     assert "/product/cameo-live-validation" in paths
     assert "/product/operations" in paths
     assert "/product/license-decision" in paths
@@ -25,20 +30,45 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert "/product/license-file-work-order" in paths
     assert "/product/commercial-independence" in paths
     assert "/product/release-readiness" in paths
+    assert "/product/residual-model-registry" in paths
+    assert "/product/production-ai-checkpoint-readiness" in paths
+    assert "/product/production-ai-gpu-worker-dispatch-manifest" in paths
+    assert "/product/production-ai-gpu-worker-dispatch-bundle" in paths
+    assert "/product/production-ai-gpu-worker-execution-runbook" in paths
+    assert "/product/production-ai-gpu-return-intake" in paths
+    assert "/product/production-ai-promotion-workbench" in paths
+    assert "/product/scope-breadth-contract" in paths
+    assert "/product/scope-claim-guard" in paths
+    assert "/product/scope-evidence-priority" in paths
+    assert "/product/scope-evidence-intake-readiness" in paths
+    assert "/product/transporter-manual-review-intake" in paths
+    assert "/product/pxr-exact-review-intake" in paths
+    assert "/product/aqp1-operator-validation-candidate" in paths
+    assert "/product/aqp1-direct-binding-procurement-packet" in paths
+    assert "/product/commercial-readiness-operator-packet" in paths
+    assert "/product/commercial-readiness-operator-packet-freshness" in paths
+    assert "/product/commercial-readiness-execution-ladder" in paths
+    assert "/product/commercial-readiness-handoff-bundle" in paths
+    assert "/product/goal-completion-audit" in paths
     assert "/product/structure/analyze" in paths
     assert "/product/docking/jobs" in paths
     assert "/product/docking/jobs/{job_id}" in paths
+    assert "/product/docking/jobs/{job_id}/history" in paths
+    assert "/product/docking/jobs/{job_id}/cancel" in paths
+    assert "/product/docking/jobs/{job_id}/retry" in paths
 
-    response = asyncio.run(product.get_product_capabilities())
-
-    assert response["status"] == "product_capability_surface_contract_ready"
-    assert response["structure_analysis_capability_ready"] is True
-    assert response["ligand_docking_capability_ready"] is True
-    assert response["product_service_boundary_endpoint_present"] is True
-    assert response["product_api_contract_endpoint_present"] is True
-    assert response["execution_enabled"] is False
-    assert response["docking_results_emitted"] is False
-    assert response["external_state_mutated"] is False
+    capabilities = asyncio.run(product.get_product_capabilities())
+    assert capabilities["status"] == "product_capability_surface_contract_ready"
+    assert capabilities["structure_analysis_capability_ready"] is True
+    assert capabilities["ligand_docking_capability_ready"] is True
+    assert capabilities["restricted_scope_claim_guard_ready"] is True
+    assert capabilities["allowed_scope_families"] == ["gpcr", "ion_channel", "kinase"]
+    assert capabilities["blocked_claim_scopes"] == [
+        "transporter_domain_promotion",
+        "general_protein_ligand_platform",
+    ]
+    assert capabilities["general_platform_claim_allowed"] is False
+    assert "general_platform_claim_allowed=False" in capabilities["scope_claim_boundary_detail"]
 
     structure = asyncio.run(
         product.analyze_product_structure(
@@ -47,338 +77,3097 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
             )
         )
     )
-
     assert structure["status"] == "structure_analysis_ready"
     assert structure["atom_count"] == 1
     assert structure["chain_count"] == 1
-    assert structure["execution_enabled"] is False
-    assert structure["docking_results_emitted"] is False
-    assert structure["external_state_mutated"] is False
 
     architecture = asyncio.run(product.get_product_architecture())
-
-    assert architecture["status"] == "blocked_product_architecture_contract"
-    assert architecture["local_architecture_surface_ready"] is False
-    assert architecture["architecture_release_ready"] is False
-    assert architecture["structure_analysis_product_surface_ready"] is True
-    assert architecture["ligand_docking_execution_contract_ready"] is True
-    assert architecture["product_service_boundary_ready"] is True
-    assert architecture["product_api_contract_ready"] is True
-    assert architecture["cameo_local_surface_ready"] is True
-    assert architecture["cameo_service_boundary_ready"] is True
-    assert architecture["cameo_service_boundary_status"] == "cameo_service_boundary_contract_ready"
-    assert architecture["cameo_service_boundary_api_route_count"] == 9
-    assert architecture["cameo_service_boundary_cli_command_count"] == 14
-    assert architecture["cameo_api_contract_ready"] is True
-    assert architecture["cameo_api_contract_status"] == "cameo_api_contract_ready"
-    assert architecture["cameo_api_contract_expected_route_count"] == 9
-    assert architecture["cameo_api_contract_missing_route_count"] == 0
-    assert architecture["cameo_api_contract_status_response_missing_key_count"] == 0
-    assert architecture["cameo_architecture_validation_ready"] is False
+    assert architecture["status"] == "product_architecture_contract_ready"
+    assert architecture["architecture_release_ready"] is True
+    assert architecture["commercial_independence_ready"] is True
     assert architecture["cleanup_control_surface_ready"] is True
-    assert architecture["cleanup_postcheck_contract_ready"] is True
-    assert architecture["cleanup_postcheck_row_count"] == 5
-    assert architecture["cleanup_postcheck_blocked_row_count"] == 0
-    assert architecture["cleanup_postcheck_global_refresh_command_count"] == 9
-    assert architecture["casp17_transition_surface_ready"] is True
-    assert architecture["execution_enabled"] is False
-    assert architecture["docking_results_emitted"] is False
-    assert architecture["cameo_submission_executed"] is False
-    assert architecture["casp_submission_executed"] is False
-    assert architecture["cleanup_executed"] is False
-    assert architecture["external_state_mutated"] is False
 
     service_boundary = asyncio.run(product.get_product_service_boundary())
-
     assert service_boundary["status"] == "product_service_boundary_contract_ready"
     assert service_boundary["service_boundary_ready"] is True
     assert service_boundary["blocker_count"] == 0
-    assert service_boundary["execution_enabled"] is False
-    assert service_boundary["docking_results_emitted"] is False
-    assert service_boundary["license_file_written"] is False
-    assert service_boundary["bundle_assembled"] is False
-    assert service_boundary["external_state_mutated"] is False
 
     api_contract = asyncio.run(product.get_product_api_contract())
-
     assert api_contract["status"] == "product_api_contract_ready"
     assert api_contract["api_contract_ready"] is True
     assert api_contract["blocker_count"] == 0
-    assert api_contract["server_started"] is False
-    assert api_contract["execution_enabled"] is False
-    assert api_contract["docking_results_emitted"] is False
-    assert api_contract["license_file_written"] is False
-    assert api_contract["bundle_assembled"] is False
-    assert api_contract["external_state_mutated"] is False
 
     operational_quality = asyncio.run(product.get_product_operational_quality())
-
     assert operational_quality["status"] == "product_operational_quality_contract_ready"
     assert operational_quality["operational_quality_ready"] is True
-    assert operational_quality["fail_closed_docking_intake_ready"] is True
-    assert operational_quality["ledger_payload_privacy_ready"] is True
-    assert operational_quality["input_payload_persisted"] is False
-    assert operational_quality["execution_enabled"] is False
-    assert operational_quality["docking_results_emitted"] is False
-    assert operational_quality["external_state_mutated"] is False
+    assert operational_quality["production_ai_correction_fail_closed_ready"] is True
+    assert operational_quality["sample_production_ai_correction_applied"] is False
+    assert operational_quality["sample_production_ai_default_residual_mode"] == "shadow"
+    assert operational_quality["sample_production_ai_customer_facing_auto_correction_allowed"] is False
+    assert operational_quality["sample_production_ai_customer_facing_score_mutation_allowed"] is False
+    assert operational_quality["sample_production_ai_customer_facing_ranking_mutation_allowed"] is False
+
+    job_list = asyncio.run(product.list_docking_jobs(limit=5))
+    assert job_list["status"] == "product_job_history_ready"
+    assert "source_host_filter" in job_list
+    assert "root_job_id_filter" in job_list
+    assert "customer_id_filter" in job_list
+    assert "user_id_filter" in job_list
+    assert job_list["execution_enabled"] is False
+    assert job_list["docking_results_emitted"] is False
+    assert job_list["external_state_mutated"] is False
+
+    job_orchestration = asyncio.run(product.get_product_job_orchestration_contract())
+    assert job_orchestration["status"] == "product_job_orchestration_contract_ready"
+    assert job_orchestration["product_job_orchestration_contract_ready"] is True
+    assert job_orchestration["ready_check_count"] == job_orchestration["check_count"]
+    assert job_orchestration["blocked_check_count"] == 0
+    assert job_orchestration["retry_child_attempt_created"] is True
+    assert job_orchestration["idempotency_preserved"] is True
+    assert job_orchestration["progress_fields_present"] is True
+    assert job_orchestration["listed_status_progress_contract_ready"] is True
+    assert job_orchestration["queue_lifecycle_progress_ready"] is True
+    assert job_orchestration["customer_run_history_lineage_ready"] is True
+    assert job_orchestration["status_snapshot_persistence_ready"] is True
+    assert job_orchestration["retention_policy_ready"] is True
+    assert job_orchestration["rerun_manifest_ready"] is True
+    assert job_orchestration["long_running_status_persistence_ready"] is True
+    assert job_orchestration["worker_backend_contract_ready"] is True
+    assert job_orchestration["worker_lease_heartbeat_ready"] is True
+    assert job_orchestration["retryable_failure_resume_ready"] is True
+    assert job_orchestration["running_cancel_ack_ready"] is True
+    assert job_orchestration["stale_worker_lease_recovery_ready"] is True
+    assert job_orchestration["stale_worker_lease_sweep_ready"] is True
+    assert job_orchestration["stale_worker_lease_detected_count"] == 1
+    assert job_orchestration["stale_worker_lease_updated_count"] == 1
+    assert job_orchestration["retryable_after_stale_count"] == 1
+    assert job_orchestration["stale_worker_lease_timeout_seconds"] == 1800
+    assert job_orchestration["job_retention_days"] == 90
+    assert job_orchestration["source_host_filter_job_count"] == 4
+    assert job_orchestration["root_job_id_filter_job_count"] == 3
+    assert job_orchestration["customer_id_filter_job_count"] == 4
+    assert job_orchestration["user_id_filter_job_count"] == 4
+    assert job_orchestration["root_attempt_count_after_retry"] == 3
+    assert job_orchestration["history_event_count"] == 3
+    assert job_orchestration["job_count_after_retry"] == 3
+    assert job_orchestration["job_count_after_stale_probe"] == 4
+    assert len(job_orchestration["checks"]) == job_orchestration["check_count"]
+    assert job_orchestration["execution_enabled"] is False
+    assert job_orchestration["docking_results_emitted"] is False
+    assert job_orchestration["external_state_mutated"] is False
+
+    security_deployment = asyncio.run(product.get_product_security_deployment_contract())
+    assert security_deployment["status"] == "product_security_deployment_contract_ready"
+    assert security_deployment["security_deployment_ready"] is True
+    assert security_deployment["auth_ready"] is True
+    assert security_deployment["tenant_isolation_ready"] is True
+    assert security_deployment["rate_limit_ready"] is True
+    assert security_deployment["payload_limit_ready"] is True
+    assert security_deployment["path_allowlist_ready"] is True
+    assert security_deployment["audit_log_ready"] is True
+    assert security_deployment["blocked_request_audit_ready"] is True
+    assert security_deployment["security_headers_ready"] is True
+    assert security_deployment["fail_closed_block_response_ready"] is True
+    assert security_deployment["audit_redaction_ready"] is True
+    assert security_deployment["sbom_ready"] is True
+    assert security_deployment["container_image_ready"] is True
+    assert security_deployment["metrics_endpoint_ready"] is True
+    assert security_deployment["rollback_ready"] is True
+    assert security_deployment["hosted_deployment_contract_ready"] is True
+    assert security_deployment["hosted_deployment_currently_satisfied"] is False
+    assert security_deployment["hosted_external_exposure_allowed"] is False
+    assert security_deployment["hosted_secret_injection_ready"] is False
+    assert security_deployment["tls_termination_operator_verified"] is False
+    assert security_deployment["hosted_deployment_blocked_stage_count"] == 5
+    assert security_deployment["hosted_deployment_next_stage_id"] == "operator_exposure_approval"
+    assert security_deployment["hosted_exposure_approval_token_required"] == (
+        "APPROVE_HOSTED_PRODUCT_API_EXPOSURE"
+    )
+    assert len(security_deployment["checks"]) == security_deployment["check_count"]
 
     public_benchmark = asyncio.run(product.get_product_public_benchmark())
-
-    assert public_benchmark["status"] == "product_public_benchmark_work_order_ready"
-    assert public_benchmark["public_benchmark_validation_ready"] is False
-    assert public_benchmark["open_suite_count"] == 5
-    assert public_benchmark["materialization_required_suite_count"] == 5
-    assert public_benchmark["scorecard_required_suite_count"] == 0
-    assert public_benchmark["continuous_validation_command_count"] == 5
-    assert public_benchmark["suite_run_command_count"] == 5
-    assert public_benchmark["suite_threshold_count"] == 5
-    assert public_benchmark["suite_materialization_manifest_count"] == 5
-    assert public_benchmark["suite_scorecard_row_csv_count"] == 5
-    assert public_benchmark["suite_required_output_count"] == 5
-    assert public_benchmark["suite_no_external_dependency_count"] == 5
+    assert public_benchmark["status"] == "product_public_benchmark_work_order_clear"
+    assert public_benchmark["public_benchmark_validation_ready"] is True
+    assert public_benchmark["suite_result_provenance_command_count"] == 5
+    assert public_benchmark["suite_result_provenance_present_count"] == 5
+    assert public_benchmark["local_artifact_preflight_ready_suite_count"] == 5
     assert public_benchmark["requires_24h_server"] is False
     assert public_benchmark["requires_competition_season"] is False
     assert public_benchmark["requires_paid_vps"] is False
-    assert public_benchmark["download_executed"] is False
-    assert public_benchmark["execution_enabled"] is False
-    assert public_benchmark["docking_results_emitted"] is False
-    assert public_benchmark["external_state_mutated"] is False
+
+    trajectory_sla = asyncio.run(product.get_product_trajectory_sla_contract())
+    assert trajectory_sla["status"] == "product_trajectory_sla_contract_ready"
+    assert trajectory_sla["production_trajectory_sla_ready"] is True
+    assert trajectory_sla["sla_claim_tier"] == "restricted_family_sla"
+    assert trajectory_sla["restricted_family_sla_allowed"] is True
+    assert trajectory_sla["broad_platform_sla_allowed"] is False
+    assert trajectory_sla["required_families"] == ["gpcr", "ion_channel", "kinase"]
+    assert trajectory_sla["qualified_ready_families"] == ["gpcr", "ion_channel", "kinase"]
+    assert trajectory_sla["missing_qualified_families"] == []
+    assert trajectory_sla["minimum_ready_rows_per_family"] == 10000
+    assert trajectory_sla["current_rocm_baseline_claim_scope"] == "single_target_gpcr_baseline"
+    assert trajectory_sla["current_rocm_baseline_production_trajectory_profile_enabled"] is False
+    assert trajectory_sla["current_rocm_baseline_supports_restricted_family_sla"] is False
+    assert trajectory_sla["current_rocm_baseline_supports_broad_platform_sla"] is False
+    assert trajectory_sla["customer_sla_disclosure_ready"] is True
+    assert "restricted_family_trajectory_profile_sla" in trajectory_sla["allowed_sla_claims"]
+    assert "single_target_gpcr_rocm_baseline" in trajectory_sla["allowed_sla_claims"]
+    assert "broad_platform_sla" in trajectory_sla["blocked_sla_claims"]
+    assert "general_protein_ligand_platform_sla" in trajectory_sla["blocked_sla_claims"]
+    assert trajectory_sla["general_platform_sla_allowed"] is False
+    assert trajectory_sla["customer_sla_disclosure_card"]["current_rocm_baseline_scope"] == (
+        "single_target_gpcr_baseline"
+    )
+    assert trajectory_sla["restricted_sla_backed_by_historical_profile_artifacts"] is True
+    assert trajectory_sla["rocm_baseline_profile_gap_acknowledged"] is True
+    assert all(row["qualified_for_restricted_family_sla"] for row in trajectory_sla["family_sla_matrix"])
+    assert len(trajectory_sla["trajectory_sla_rows"]) == trajectory_sla["candidate_artifact_count"]
+
+    ai_decision_graph = asyncio.run(product.get_product_ai_decision_graph())
+    assert ai_decision_graph["status"] == "product_ai_decision_graph_contract_ready"
+    assert ai_decision_graph["closed_loop_decision_graph_ready"] is True
+    assert ai_decision_graph["production_ai_inference_enabled"] is False
+    assert ai_decision_graph["ordered_graph_path"] == [
+        "structure_quality",
+        "binding_site_context",
+        "pose_generation_contract",
+        "scoring_ranking_gate",
+        "uncertainty_abstention_guard",
+        "report_bundle_contract",
+        "customer_report_ux",
+    ]
+    assert ai_decision_graph["node_count"] == len(ai_decision_graph["nodes"])
+    assert ai_decision_graph["edge_count"] == len(ai_decision_graph["edges"])
+    assert ai_decision_graph["customer_report_ux_node_ready"] is True
+    assert ai_decision_graph["viewer_interaction_surface_ready"] is True
+
+    ai_report_ux = asyncio.run(product.get_product_ai_report_ux())
+    assert ai_report_ux["status"] == "product_ai_report_ux_contract_ready"
+    assert ai_report_ux["ai_report_ux_ready"] is True
+    assert ai_report_ux["structured_customer_report_ready"] is True
+    assert ai_report_ux["customer_report_delivery_contract_ready"] is True
+    assert ai_report_ux["customer_report_evidence_binding_ready"] is True
+    assert ai_report_ux["customer_report_viewer_binding_ready"] is True
+    assert ai_report_ux["viewer_customer_report_binding_ready"] is True
+    assert ai_report_ux["canonical_customer_report_required_blocks"] == ai_report_ux["customer_report_required_blocks"]
+    assert ai_report_ux["customer_report_ready_block_count"] == ai_report_ux["customer_report_required_block_count"]
+    assert ai_report_ux["customer_report_blocked_block_count"] == 0
+    assert ai_report_ux["customer_report_card_ready"] is True
+    assert ai_report_ux["customer_report_card"]["primary_abstention_reason"] == (
+        "production_residual_checkpoint_not_promoted"
+    )
+    assert ai_report_ux["pose_comparison_ready"] is True
+    assert ai_report_ux["interaction_rationale_ready"] is True
+    assert ai_report_ux["uncertainty_narrative_ready"] is True
+    assert ai_report_ux["counterfactual_rescue_suggestion_ready"] is True
+    assert ai_report_ux["viewer_ready"] is True
+    assert ai_report_ux["viewer_interaction_surface_ready"] is True
+    assert ai_report_ux["general_platform_claim_allowed"] is False
+    assert "general_protein_ligand_platform" in ai_report_ux["blocked_claim_scopes"]
+    assert ai_report_ux["section_count"] == len(ai_report_ux["report_sections"])
 
     cameo_live_validation = asyncio.run(product.get_product_cameo_live_validation())
-
     assert cameo_live_validation["status"] == "blocked_cameo_validation_operations_dossier"
-    assert cameo_live_validation["validation_ready"] is False
-    assert cameo_live_validation["official_result_required"] is True
-    assert cameo_live_validation["official_results_intake_ready"] is False
-    assert cameo_live_validation["official_results_intake_status"] == "blocked_cameo_official_results_intake"
-    assert cameo_live_validation["official_results_intake_blocker_count"] == 2
-    assert cameo_live_validation["official_results_gate_status"] == "blocked_cameo_official_results_intake"
-    assert cameo_live_validation["official_results_result_row_count"] == 0
-    assert cameo_live_validation["official_results_accepted_count"] == 0
-    assert cameo_live_validation["official_results_rejected_count"] == 0
-    assert cameo_live_validation["official_results_blocker_codes"] == [
-        "official_result_required_columns_missing",
-        "official_result_rows_missing",
-    ]
-    assert cameo_live_validation["official_results_operator_template_csv"].endswith(
-        "runs/cameo_official_results_operator_template_current.csv"
-    )
-    assert cameo_live_validation["official_results_operator_intake_csv"].endswith(
-        "runs/cameo_official_results_operator_intake.csv"
-    )
-    assert "target_id" in cameo_live_validation["official_results_required_columns"]
-    assert "target_id" in cameo_live_validation["official_results_missing_required_columns"]
-    assert "lddt" in cameo_live_validation["official_results_metric_columns"]
-    assert cameo_live_validation["official_model1_result_ready"] is False
-    assert cameo_live_validation["official_cameo_results_used"] is False
     assert cameo_live_validation["official_results_pending_honest"] is True
     assert cameo_live_validation["receiver_smoke_status"] == "cameo_receiver_smoke_ready"
     assert cameo_live_validation["api_dependency_status"] == "cameo_api_dependency_ready"
-    assert cameo_live_validation["evidence_integrity_ready"] is True
     assert cameo_live_validation["public_registration_allowed"] is False
-    assert cameo_live_validation["registration_gate_status"] == "blocked_cameo_public_registration_approval_gate"
-    assert cameo_live_validation["registration_authorized_for_review"] is False
-    assert cameo_live_validation["registration_operator_template_csv"].endswith(
-        "runs/cameo_public_registration_operator_approval_template_current.csv"
-    )
-    assert cameo_live_validation["registration_operator_approval_csv"].endswith(
-        "runs/cameo_public_registration_operator_approval_intake.csv"
-    )
-    assert cameo_live_validation["registration_blocker_count"] == 4
-    assert "operator_decision_missing" in cameo_live_validation["registration_blockers"]
-    assert cameo_live_validation["approval_tokens_required"] == [
-        "APPROVE_CAMEO_OUTBOUND_EMAIL",
-        "APPROVE_CAMEO_SERVER_REGISTRATION",
-    ]
-    assert "official CAMEO result intake" in cameo_live_validation["next_required_step"]
-    assert cameo_live_validation["server_started"] is False
-    assert cameo_live_validation["outbound_email_enabled"] is False
-    assert cameo_live_validation["server_registration_mutated"] is False
-    assert cameo_live_validation["execution_enabled"] is False
-    assert cameo_live_validation["docking_results_emitted"] is False
-    assert cameo_live_validation["external_state_mutated"] is False
 
     operations = asyncio.run(product.get_product_operations())
-
-    assert operations["status"] == "blocked_product_release_operations_dossier"
-    assert operations["capability_surface_ready"] is True
-    assert operations["architecture_contract_ready"] is False
-    assert operations["architecture_local_surface_ready"] is False
-    assert operations["architecture_release_ready"] is False
-    assert operations["architecture_blocked_lane_count"] == 2
-    assert operations["architecture_approval_required_lane_count"] == 0
-    assert operations["operational_quality_ready"] is True
-    assert operations["source_operational_quality_status"] == "product_operational_quality_contract_ready"
-    assert operations["operational_quality_blocker_count"] == 0
-    assert operations["product_service_boundary_ready"] is True
-    assert operations["product_api_contract_ready"] is True
-    assert operations["public_benchmark_work_order_status"] == "product_public_benchmark_work_order_ready"
-    assert operations["public_benchmark_work_order_artifact"] == "runs/product_public_benchmark_work_order_current.json"
-    assert operations["public_benchmark_work_order_open_suite_count"] == 5
-    assert operations["public_benchmark_work_order_materialization_required_suite_count"] == 5
-    assert operations["public_benchmark_work_order_scorecard_required_suite_count"] == 0
-    assert operations["public_benchmark_work_order_continuous_validation_command_count"] == 5
-    assert "build_lit_pcba_scorecard.py" in operations["public_benchmark_work_order_continuous_validation_command"]
-    assert "build_goal_bottleneck_briefing.py" in operations["public_benchmark_work_order_continuous_validation_command"]
-    assert operations["public_benchmark_work_order_suite_run_command_count"] == 5
-    assert operations["public_benchmark_work_order_suite_threshold_count"] == 5
-    assert operations["public_benchmark_work_order_suite_materialization_manifest_count"] == 5
-    assert operations["public_benchmark_work_order_suite_scorecard_row_csv_count"] == 5
-    assert operations["public_benchmark_work_order_suite_no_external_dependency_count"] == 5
-    assert operations["cameo_architecture_validation_ready"] is False
-    assert operations["cleanup_postcheck_contract_ready"] is True
-    assert operations["cleanup_postcheck_blocked_row_count"] == 0
-    assert operations["structure_analysis_capability_ready"] is True
-    assert operations["ligand_docking_capability_ready"] is True
+    assert operations["status"] == "product_release_operations_dossier_ready"
+    assert operations["architecture_contract_ready"] is True
+    assert operations["architecture_release_ready"] is True
+    assert operations["commercial_independent_product_claim_allowed"] is True
     assert operations["authorized_for_execution"] is True
-    assert operations["blocked_stage_count"] == 2
-    assert operations["approval_required_stage_count"] == 1
-    assert operations["approval_token_count"] == 1
-    assert operations["approval_tokens_required"] == [
-        "APPROVE_PRODUCT_LICENSE_FILE_CREATION",
-    ]
-    assert operations["execution_approval_token_required"] == "APPROVE_PRODUCT_DOCKING_EXECUTION"
-    assert any(stage["stage"] == "architecture_contract" for stage in operations["stages"])
-    assert any(stage["stage"] == "operator_execution_approval" for stage in operations["stages"])
-    assert operations["license_operator_template_csv"].endswith("runs/product_license_decision_operator_template_current.csv")
-    assert operations["license_operator_intake_csv"].endswith("runs/product_license_decision_operator_intake.csv")
-    assert operations["license_decision_packet_status"] in {
-        "product_license_decision_packet_ready",
-        "missing_product_license_decision_packet",
-    }
-    assert operations["source_license_file_creation_work_order_status"] == "blocked_product_license_file_creation_work_order"
-    assert operations["license_file_creation_work_order_status"] == "blocked_product_license_file_creation_work_order"
-    assert operations["license_file_creation_review_ready"] is False
-    assert operations["license_file_creation_work_order_blocker_count"] == 4
-    assert operations["license_file_creation_work_order_artifact"].endswith(
-        "runs/product_license_file_creation_work_order_current.json"
-    )
-    assert "approval_token" in operations["license_required_fields"]
-    assert operations["license_approval_token_required"] == "APPROVE_PRODUCT_LICENSE_FILE_CREATION"
-    assert operations["license_file_written"] is False
-    assert operations["execution_enabled"] is False
-    assert operations["docking_results_emitted"] is False
-    assert operations["external_state_mutated"] is False
+    assert operations["blocked_stage_count"] == 0
+    assert operations["approval_required_stage_count"] == 0
+    assert operations["approval_tokens_required"] == []
+    assert operations["source_license_file_creation_work_order_status"] == "product_license_file_creation_work_order_ready"
 
     license_decision = asyncio.run(product.get_product_license_decision())
-
-    assert license_decision["status"] == "blocked_product_license_decision_gate"
-    assert license_decision["operator_template_csv"].endswith("runs/product_license_decision_operator_template_current.csv")
-    assert license_decision["operator_intake_csv"].endswith("runs/product_license_decision_operator_intake.csv")
-    assert license_decision["required_decision"] == "create_license_file"
+    assert license_decision["status"] == "product_license_decision_gate_ready"
+    assert license_decision["authorized_for_license_file_creation_review"] is True
     assert license_decision["approval_token_required"] == "APPROVE_PRODUCT_LICENSE_FILE_CREATION"
-    assert license_decision["authorized_for_license_file_creation_review"] is False
-    assert license_decision["license_file_written"] is False
-    assert license_decision["execution_enabled"] is False
-    assert license_decision["docking_results_emitted"] is False
-    assert license_decision["external_state_mutated"] is False
 
     license_options = asyncio.run(product.get_product_license_options())
-
-    assert license_options["status"] in {"product_license_decision_packet_ready", "missing_product_license_decision_packet"}
-    assert license_options["operator_template_csv"].endswith("runs/product_license_decision_operator_template_current.csv")
-    assert license_options["operator_intake_csv"].endswith("runs/product_license_decision_operator_intake.csv")
+    assert license_options["status"] == "product_license_decision_packet_ready"
     assert license_options["required_decision"] == "create_license_file"
     assert license_options["approval_token_required"] == "APPROVE_PRODUCT_LICENSE_FILE_CREATION"
-    assert license_options["license_file_written"] is False
-    assert license_options["legal_advice_provided"] is False
-    assert license_options["execution_enabled"] is False
-    assert license_options["docking_results_emitted"] is False
-    assert license_options["external_state_mutated"] is False
 
     license_work_order = asyncio.run(product.get_product_license_file_work_order())
-
-    assert license_work_order["status"] == "blocked_product_license_file_creation_work_order"
-    assert license_work_order["artifact_path"].endswith("runs/product_license_file_creation_work_order_current.json")
-    assert license_work_order["license_file_creation_review_ready"] is False
-    assert license_work_order["approval_token_required"] == "APPROVE_PRODUCT_LICENSE_FILE_CREATION"
+    assert license_work_order["status"] == "product_license_file_creation_work_order_ready"
+    assert license_work_order["license_file_creation_review_ready"] is True
     assert license_work_order["target_license_path"] == "LICENSE"
-    assert license_work_order["license_review_manifest_ready"] is False
-    assert license_work_order["license_review_manifest"]["target_license_path"] == "LICENSE"
-    assert len(license_work_order["license_review_manifest_fingerprint_sha256"]) == 64
-    assert license_work_order["license_decision_gate_status"] == "blocked_product_license_decision_gate"
-    assert license_work_order["license_file_written"] is False
-    assert license_work_order["execution_enabled"] is False
-    assert license_work_order["docking_results_emitted"] is False
-    assert license_work_order["external_state_mutated"] is False
+    assert license_work_order["license_decision_gate_status"] == "product_license_decision_gate_ready"
 
     commercial = asyncio.run(product.get_product_commercial_independence())
-
-    assert commercial["status"] == "blocked_product_commercial_independence_gate"
-    assert commercial["commercial_independent_product_claim_allowed"] is False
-    assert commercial["license_decision_status"] == "blocked_product_license_decision_gate"
-    assert commercial["license_decision_packet_status"] == "product_license_decision_packet_ready"
-    assert commercial["license_decision_packet_ready"] is True
-    assert commercial["license_decision_option_count"] == 5
-    assert commercial["source_license_file_creation_work_order_status"] == "blocked_product_license_file_creation_work_order"
-    assert commercial["license_file_creation_work_order_status"] == "blocked_product_license_file_creation_work_order"
-    assert commercial["license_file_creation_review_ready"] is False
-    assert commercial["license_file_creation_work_order_blocker_count"] == 4
-    assert commercial["license_file_creation_work_order_artifact"].endswith(
-        "runs/product_license_file_creation_work_order_current.json"
-    )
-    assert commercial["commercial_gate_only_license_blocked"] is True
-    assert commercial["operator_template_csv"].endswith("runs/product_license_decision_operator_template_current.csv")
-    assert commercial["operator_intake_csv"].endswith("runs/product_license_decision_operator_intake.csv")
-    assert "approval_token" in commercial["required_fields"]
-    assert commercial["required_decision"] == "create_license_file"
-    assert commercial["approval_token_required"] == "APPROVE_PRODUCT_LICENSE_FILE_CREATION"
-    assert commercial["license_file_written"] is False
-    assert commercial["execution_enabled"] is False
-    assert commercial["docking_results_emitted"] is False
-    assert commercial["external_state_mutated"] is False
+    assert commercial["status"] == "product_commercial_independence_gate_ready"
+    assert commercial["commercial_independent_product_claim_allowed"] is True
+    assert commercial["restricted_commercial_scope_claim_ready"] is True
+    assert commercial["commercial_claim_scope_tier"] == "restricted_family_local_product"
+    assert commercial["allowed_scope_families"] == ["gpcr", "ion_channel", "kinase"]
+    assert commercial["blocked_claim_scopes"] == [
+        "transporter_domain_promotion",
+        "general_protein_ligand_platform",
+    ]
+    assert commercial["general_platform_claim_allowed"] is False
+    assert commercial["license_present"] is True
+    assert commercial["public_benchmark_evidence_ready"] is True
 
     release = asyncio.run(product.get_product_release_readiness())
-
-    assert release["status"] == "blocked_product_release_operations_dossier"
-    assert release["product_api_surface_ready"] is True
-    assert release["product_architecture_status"] == "blocked_product_architecture_contract"
-    assert release["product_architecture_local_surface_ready"] is False
-    assert release["product_architecture_release_ready"] is False
-    assert release["operational_quality_ready"] is True
-    assert release["source_operational_quality_status"] == "product_operational_quality_contract_ready"
-    assert release["operational_quality_blocker_count"] == 0
-    assert release["product_architecture_blocked_lane_count"] == 2
-    assert release["product_architecture_approval_required_lane_count"] == 0
-    assert release["product_service_boundary_ready"] is True
-    assert release["product_api_contract_ready"] is True
-    assert release["public_benchmark_work_order_status"] == "product_public_benchmark_work_order_ready"
-    assert release["public_benchmark_work_order_artifact"] == "runs/product_public_benchmark_work_order_current.json"
-    assert release["public_benchmark_work_order_open_suite_count"] == 5
-    assert release["public_benchmark_work_order_materialization_required_suite_count"] == 5
-    assert release["public_benchmark_work_order_scorecard_required_suite_count"] == 0
-    assert release["public_benchmark_work_order_continuous_validation_command_count"] == 5
-    assert "build_lit_pcba_scorecard.py" in release["public_benchmark_work_order_continuous_validation_command"]
-    assert "build_goal_bottleneck_briefing.py" in release["public_benchmark_work_order_continuous_validation_command"]
-    assert release["public_benchmark_work_order_suite_run_command_count"] == 5
-    assert release["public_benchmark_work_order_suite_threshold_count"] == 5
-    assert release["public_benchmark_work_order_suite_materialization_manifest_count"] == 5
-    assert release["public_benchmark_work_order_suite_scorecard_row_csv_count"] == 5
-    assert release["public_benchmark_work_order_suite_no_external_dependency_count"] == 5
-    assert release["product_architecture_cleanup_postcheck_ready"] is True
-    assert release["product_architecture_cleanup_postcheck_row_count"] == 5
-    assert release["product_architecture_cleanup_postcheck_blocked_row_count"] == 0
-    assert release["commercial_independent_product_ready"] is False
-    assert release["license_present"] is False
-    assert release["license_decision_status"] == "blocked_product_license_decision_gate"
-    assert release["license_authorized_for_file_creation_review"] is False
-    assert release["license_decision_packet_status"] == "product_license_decision_packet_ready"
-    assert release["license_decision_packet_ready"] is True
-    assert release["license_decision_option_count"] == 5
-    assert release["source_license_file_creation_work_order_status"] == "blocked_product_license_file_creation_work_order"
-    assert release["license_file_creation_work_order_status"] == "blocked_product_license_file_creation_work_order"
-    assert release["license_file_creation_review_ready"] is False
-    assert release["license_file_creation_work_order_blocker_count"] == 4
-    assert release["license_file_creation_work_order_artifact"].endswith(
-        "runs/product_license_file_creation_work_order_current.json"
-    )
-    assert release["license_operator_template_csv"].endswith("runs/product_license_decision_operator_template_current.csv")
-    assert release["license_operator_intake_csv"].endswith("runs/product_license_decision_operator_intake.csv")
-    assert "approval_token" in release["license_required_fields"]
-    assert release["license_required_decision"] == "create_license_file"
-    assert release["license_approval_token_required"] == "APPROVE_PRODUCT_LICENSE_FILE_CREATION"
+    assert release["status"] == "product_release_operations_dossier_ready"
     assert release["release_allowed"] is False
-    assert release["execution_enabled"] is False
-    assert release["docking_results_emitted"] is False
-    assert release["license_file_written"] is False
-    assert release["external_state_mutated"] is False
+    assert release["commercial_independent_product_ready"] is True
+    assert release["restricted_commercial_scope_claim_ready"] is True
+    assert release["commercial_claim_scope_tier"] == "restricted_family_local_product"
+    assert release["commercial_allowed_scope_families"] == ["gpcr", "ion_channel", "kinase"]
+    assert release["commercial_blocked_claim_scopes"] == [
+        "transporter_domain_promotion",
+        "general_protein_ligand_platform",
+    ]
+    assert release["commercial_general_platform_claim_allowed"] is False
+    assert release["product_architecture_release_ready"] is True
+    assert release["license_present"] is True
+    assert release["license_file_creation_work_order_status"] == "product_license_file_creation_work_order_ready"
+
+    registry = asyncio.run(product.get_product_residual_model_registry())
+    assert registry["status"] == "residual_model_registry_ready"
+    assert registry["registry_ready"] is True
+    assert registry["product_model_layer_ready"] is True
+    assert registry["production_ai_inference_subject_active"] is False
+    assert registry["default_residual_mode"] == "shadow"
+    assert registry["production_promotion_allowed"] is False
+    assert registry["production_mode_allowed"] is False
+    assert registry["customer_facing_auto_correction_allowed"] is False
+    assert registry["customer_facing_score_mutation_allowed"] is False
+    assert registry["customer_facing_ranking_mutation_allowed"] is False
+    assert registry["trained_model_checkpoint_count"] == 0
+    assert registry["candidate_checkpoint_count"] == 1460
+    assert registry["checkpoint_preflight_ready"] is False
+    assert registry["production_checkpoint_blocked"] is True
+    assert registry["selected_sidecar_ready"] is False
+    assert registry["selected_sidecar_status"] == "blocked_residual_production_checkpoint_sidecar"
+    assert registry["selected_sidecar_missing_output_fields"] == ["delta_force"]
+    assert "delta_force" in registry["checkpoint_missing_output_fields"]
+    assert "delta_force" in registry["checkpoint_missing_adapter_output_policy_fields"]
+    assert registry["component_count"] == 6
+    assert registry["required_components_present"] is True
+    assert len(registry["components"]) == registry["component_count"]
+
+    checkpoint = asyncio.run(product.get_product_production_ai_checkpoint_readiness())
+    assert checkpoint["status"] == "blocked_product_production_ai_checkpoint_readiness"
+    assert checkpoint["check_count"] == 8
+    assert checkpoint["fail_check_count"] == 7
+    assert "checkpoint_preflight_ready" in checkpoint["failed_check_ids"]
+    assert "production_gpu_execution_environment_ready" in checkpoint["failed_check_ids"]
+    assert "production_output_heads_complete" in checkpoint["failed_check_ids"]
+    assert checkpoint["first_failed_check_id"] == "registry_customer_facing_promotion_allowed"
+    assert checkpoint["first_failed_source_artifact"] == "runs/residual_model_registry_current.json"
+    assert "default_residual_mode=shadow" in checkpoint["first_failed_observed"]
+    assert "production promotion" in checkpoint["first_failed_required"]
+    assert "Keep customer-facing mutation disabled" in checkpoint["first_failed_next_action"]
+    assert checkpoint["production_ai_checkpoint_ready"] is False
+    assert checkpoint["production_ai_inference_subject_active"] is False
+    assert checkpoint["product_model_layer_ready"] is True
+    assert checkpoint["default_residual_mode"] == "shadow"
+    assert checkpoint["production_promotion_allowed"] is False
+    assert checkpoint["customer_facing_auto_correction_allowed"] is False
+    assert checkpoint["customer_facing_score_mutation_allowed"] is False
+    assert checkpoint["customer_facing_ranking_mutation_allowed"] is False
+    assert checkpoint["trained_model_checkpoint_count"] == 0
+    assert checkpoint["candidate_checkpoint_count"] == 1460
+    assert checkpoint["ready_checkpoint_count"] == 0
+    assert checkpoint["checkpoint_preflight_ready"] is False
+    assert checkpoint["production_training_data_ready"] is False
+    assert checkpoint["production_output_head_gap_contract_ready"] is True
+    assert checkpoint["production_output_heads_complete"] is False
+    assert checkpoint["production_output_head_ready_field_count"] == 6
+    assert checkpoint["production_output_head_blocked_field_count"] == 1
+    assert checkpoint["production_output_head_blocked_fields"] == ["delta_force"]
+    assert checkpoint["production_output_head_first_blocked_field"] == "delta_force"
+    assert checkpoint["force_gpu_worker_return_receipt_ready"] is False
+    assert checkpoint["force_gpu_worker_handoff_ready"] is True
+    assert checkpoint["production_gpu_execution_environment_ready"] is False
+    assert checkpoint["production_gpu_execution_environment_artifact_path"] == (
+        "runs/rocm_environment_manifest_current.json"
+    )
+    assert checkpoint["production_gpu_execution_environment_status"] == "rocm_environment_manifest_ready"
+    assert checkpoint["production_gpu_rocm_manifest_ready"] is True
+    assert checkpoint["production_gpu_rocm_stack_detected"] is True
+    assert checkpoint["production_gpu_rocm_torch_ready"] is False
+    assert checkpoint["production_gpu_rocm_amd_gpu_detected"] is True
+    assert checkpoint["production_gpu_rocm_visible_device_count"] == 0
+    assert checkpoint["production_gpu_rocm_device_names"] == []
+    assert checkpoint["production_gpu_rocm_torch_version"].endswith("+rocm6.1")
+    assert checkpoint["production_gpu_rocm_torch_hip_version"]
+    assert checkpoint["production_gpu_rocm_visibility_diagnostic_packet_ready"] is True
+    assert checkpoint["production_gpu_rocm_visibility_diagnostic_command_count"] == 5
+    assert "rocminfo" in checkpoint["production_gpu_rocm_visibility_diagnostic_commands"]
+    assert "visible_device_count" in checkpoint[
+        "production_gpu_rocm_visibility_diagnostic_required_fields"
+    ]
+    assert "visible_device_count>0" in checkpoint[
+        "production_gpu_rocm_visibility_diagnostic_completion_rule"
+    ]
+    assert "runs/rocm_environment_manifest_current.json" in checkpoint[
+        "production_gpu_rocm_visibility_diagnostic_return_artifacts"
+    ]
+    assert checkpoint["production_gpu_rocm_visibility_torch_probe_command"].startswith("python3 -c")
+    assert checkpoint["force_gpu_worker_handoff_required"] is True
+    assert checkpoint["force_gpu_worker_operator_action_required"] is True
+    assert checkpoint["force_gpu_worker_operator_transfer_manifest_ready"] is True
+    assert checkpoint["force_gpu_worker_operator_transfer_outbound_artifact_count"] == 10
+    assert "tools/generate_ligand_trajectory_engine.py" in checkpoint[
+        "force_gpu_worker_operator_transfer_outbound_artifacts"
+    ]
+    assert "tools/build_rocm_environment_manifest.py" in checkpoint[
+        "force_gpu_worker_operator_transfer_outbound_artifacts"
+    ]
+    assert checkpoint["force_gpu_worker_operator_transfer_inbound_artifact_count"] == 5
+    assert checkpoint["force_gpu_worker_operator_transfer_first_return_artifact"] == (
+        "runs/rocm_environment_manifest_current.json"
+    )
+    assert checkpoint["force_gpu_worker_operator_transfer_return_manifest_artifact"] == (
+        "runs/residual_force_trajectory_regeneration_current_manifest.csv"
+    )
+    assert checkpoint["force_gpu_worker_operator_transfer_acceptance_artifact"] == (
+        "runs/residual_force_gpu_worker_return_receipt_current.json"
+    )
+    assert checkpoint["force_gpu_worker_operator_transfer_acceptance_ready_key"] == (
+        "gpu_worker_return_receipt_ready"
+    )
+    assert checkpoint["force_gpu_worker_return_summary_template_payload_json"] == (
+        "runs/residual_force_trajectory_regeneration_current_summary_template.json"
+    )
+    assert "generate_ligand_trajectory_engine.py" in checkpoint["force_gpu_worker_full_regeneration_command"]
+    assert "build_residual_force_gpu_worker_return_receipt.py" in checkpoint[
+        "force_gpu_worker_post_return_validation_command"
+    ]
+    assert checkpoint["force_gpu_worker_post_return_output_contract_ready"] is True
+    assert checkpoint["force_gpu_worker_post_return_required_production_output_fields"] == [
+        "delta_score",
+        "corrected_score",
+        "delta_energy",
+        "delta_force",
+        "uncertainty",
+        "abstention_reason",
+        "stage2_route_decision",
+    ]
+    assert checkpoint["force_gpu_worker_post_return_unlock_output_fields"] == [
+        "delta_force",
+        "uncertainty",
+        "abstention_reason",
+        "stage2_route_decision",
+    ]
+    assert "runs/residual_force_gpu_worker_return_receipt_current.json" in checkpoint[
+        "force_gpu_worker_post_return_gpu_unlock_artifacts"
+    ]
+    assert checkpoint["force_gpu_worker_post_return_min_expected_label_rows"] == 768
+    assert checkpoint["force_gpu_worker_post_return_promotion_ladder_ready"] is True
+    assert checkpoint["force_gpu_worker_post_return_promotion_ladder_contract_ready"] is True
+    assert checkpoint["force_gpu_worker_post_return_promotion_ladder_currently_satisfied"] is False
+    assert checkpoint["force_gpu_worker_post_return_promotion_ladder_current_blocked_stage_count"] == 8
+    assert checkpoint["force_gpu_worker_post_return_promotion_ladder_current_blocked_stage_ids"][0] == (
+        "production_gpu_execution_environment_acceptance"
+    )
+    assert checkpoint["force_gpu_worker_post_return_promotion_ladder_current_next_stage_id"] == (
+        "production_gpu_execution_environment_acceptance"
+    )
+    assert checkpoint["force_gpu_worker_post_return_promotion_ladder_current_next_stage_artifact"] == (
+        "runs/rocm_environment_manifest_current.json"
+    )
+    assert checkpoint["force_gpu_worker_post_return_promotion_ladder_current_next_stage_validation_command"] == (
+        "python3 tools/build_rocm_environment_manifest.py"
+    )
+    assert checkpoint["force_gpu_worker_post_return_promotion_ladder_stage_count"] == 10
+    assert checkpoint["force_gpu_worker_post_return_promotion_ladder_stage_ids"][:2] == [
+        "gpu_return_receipt",
+        "force_derivation_validation",
+    ]
+    assert checkpoint["force_gpu_worker_post_return_promotion_ladder"][-1]["stage_id"] == (
+        "product_goal_completion_audit"
+    )
+    assert checkpoint["force_gpu_worker_post_return_promotion_ladder_missing_ready_keys"] == []
+    assert checkpoint["production_inference_acceptance_matrix_ready"] is True
+    assert checkpoint["production_inference_acceptance_stage_count"] == 8
+    assert checkpoint["production_inference_acceptance_ready_stage_count"] == 0
+    assert checkpoint["production_inference_acceptance_blocked_stage_count"] == 8
+    assert checkpoint["production_inference_acceptance_blocked_stage_ids"][0] == (
+        "production_gpu_execution_environment_acceptance"
+    )
+    assert checkpoint["production_inference_acceptance_next_stage_id"] == (
+        "production_gpu_execution_environment_acceptance"
+    )
+    assert checkpoint["production_inference_acceptance_next_stage_artifact"] == (
+        "runs/rocm_environment_manifest_current.json"
+    )
+    assert checkpoint["production_inference_acceptance_next_stage_validation_command"] == (
+        "python3 tools/build_rocm_environment_manifest.py"
+    )
+    assert checkpoint["production_inference_acceptance_next_stage_unlock_fields"] == [
+        "manifest_ready",
+        "rocm_stack_detected",
+        "torch_rocm_ready",
+        "amd_gpu_detected",
+        "visible_device_count",
+    ]
+    assert checkpoint["production_inference_acceptance_next_stage_required_checks"] == [
+        "production_gpu_execution_environment_ready"
+    ]
+    assert checkpoint["production_inference_actionable_blocker_stage_id"] == (
+        "production_gpu_execution_environment_acceptance"
+    )
+    assert checkpoint["production_inference_actionable_blocker_check_id"] == (
+        "production_gpu_execution_environment_ready"
+    )
+    assert checkpoint["production_inference_actionable_blocker_artifact"] == (
+        "runs/rocm_environment_manifest_current.json"
+    )
+    assert "visible_device_count=0" in checkpoint[
+        "production_inference_actionable_blocker_observed"
+    ]
+    assert "ROCm/HIP runtime is ready" in checkpoint[
+        "production_inference_actionable_blocker_required"
+    ]
+    assert "Expose a visible ROCm/HIP AMD GPU device" in checkpoint[
+        "production_inference_actionable_blocker_next_action"
+    ]
+    assert checkpoint["production_inference_actionable_blocker_validation_command"] == (
+        "python3 tools/build_rocm_environment_manifest.py"
+    )
+    assert checkpoint["production_inference_actionable_blocker_unlock_fields"] == [
+        "manifest_ready",
+        "rocm_stack_detected",
+        "torch_rocm_ready",
+        "amd_gpu_detected",
+        "visible_device_count",
+    ]
+    assert checkpoint["production_inference_actionable_blocker_downstream_blocked_stage_count"] == 7
+    assert checkpoint["production_inference_next_after_actionable_blocker_stage_id"] == "gpu_return_acceptance"
+    assert checkpoint["production_inference_next_after_actionable_blocker_artifact"] == (
+        "runs/residual_force_gpu_worker_return_receipt_current.json"
+    )
+    assert checkpoint["production_inference_next_after_actionable_blocker_validation_command"] == (
+        "python3 tools/build_residual_force_gpu_worker_return_receipt.py"
+    )
+    assert checkpoint["production_inference_next_after_actionable_blocker_required_checks"] == [
+        "force_gpu_worker_return_receipt_ready"
+    ]
+    assert "delta_force" in checkpoint["production_inference_next_after_actionable_blocker_unlock_fields"]
+    assert "Return full regeneration summary/manifest" in checkpoint[
+        "production_inference_next_after_actionable_blocker_next_action"
+    ]
+    assert checkpoint["production_inference_actionable_blocker_blocks_registry_promotion"] is True
+    assert checkpoint["production_inference_actionable_operator_completion_packet_ready"] is True
+    assert checkpoint["production_inference_actionable_operator_completion_packet"]["artifact_id"] == (
+        "rocm_environment_manifest_json"
+    )
+    assert checkpoint["production_inference_actionable_operator_completion_diagnostic_command_count"] == 5
+    assert any(
+        "torch.cuda.device_count" in command
+        for command in checkpoint["production_inference_actionable_operator_completion_diagnostic_commands"]
+    )
+    assert "torch_version" in checkpoint[
+        "production_inference_actionable_operator_completion_diagnostic_required_fields"
+    ]
+    assert "device_names nonempty" in checkpoint[
+        "production_inference_actionable_operator_completion_diagnostic_completion_rule"
+    ]
+    assert checkpoint[
+        "production_inference_actionable_operator_completion_torch_visibility_probe_command"
+    ].startswith("python3 -c")
+    assert checkpoint["production_inference_worker_runtime_receipt_contract_ready"] is True
+    assert "backend_counts" in checkpoint[
+        "production_inference_worker_runtime_receipt_required_fields_or_columns"
+    ]
+    assert checkpoint["production_inference_worker_runtime_receipt_required_field_count"] == 11
+    assert "prod_mode=true" in checkpoint["production_inference_worker_runtime_receipt_completion_rule"]
+    assert checkpoint["production_inference_worker_runtime_receipt_post_environment_next_stage_id"] == (
+        "gpu_return_acceptance"
+    )
+    assert checkpoint["production_inference_worker_runtime_receipt_post_environment_next_artifact"] == (
+        "runs/residual_force_gpu_worker_return_receipt_current.json"
+    )
+    assert checkpoint["production_inference_worker_runtime_receipt_post_environment_validation_command"] == (
+        "python3 tools/build_residual_force_gpu_worker_return_receipt.py"
+    )
+    assert "generate_ligand_trajectory_engine.py" in checkpoint[
+        "production_inference_worker_runtime_receipt_full_regeneration_command"
+    ]
+    assert "cpu_fallback_does_not_satisfy_production_inference" in checkpoint[
+        "production_inference_worker_runtime_receipt_guardrails"
+    ]
+    assert len(checkpoint["production_inference_acceptance_matrix"]) == 8
+    assert checkpoint["force_gpu_worker_post_run_validation_chain_current"] is True
+    assert checkpoint["force_gpu_worker_post_run_validation_command_count"] == 18
+    assert checkpoint["force_gpu_worker_post_run_validation_commands"][0] == (
+        "python3 tools/build_residual_force_gpu_worker_return_receipt.py"
+    )
+    assert "force_gpu_return_receipt_not_ready" in checkpoint["checkpoint_closure_blockers"]
+    assert "production_gpu_execution_environment_not_ready" in checkpoint["checkpoint_closure_blockers"]
+    assert "delta_force" in checkpoint["checkpoint_missing_output_fields"]
+    assert checkpoint["selected_sidecar_ready"] is False
+    assert checkpoint["selected_sidecar_missing_output_fields"] == ["delta_force"]
+    assert checkpoint["selected_sidecar_training_contract_ready"] is False
+    assert checkpoint["selected_sidecar_force_receipt_ready"] is False
+    assert checkpoint["selected_sidecar_force_receipt_operator_verified"] is False
+    assert checkpoint["selected_sidecar_force_receipt_operator_verified_true_count"] == 0
+    assert checkpoint["selected_sidecar_force_receipt_expected_queue_rows"] == 768
+    assert "full_regeneration_manifest_complete" in checkpoint["gpu_receipt_blockers"]
+    assert checkpoint["gpu_receipt_summary_manifest_bound"] is False
+    assert checkpoint["gpu_receipt_summary_out_manifest_csv_bound"] is False
+    assert checkpoint["gpu_receipt_summary_out_summary_json_bound"] is False
+    assert checkpoint["gpu_receipt_summary_manifest_row_counts_consistent"] is False
+    assert checkpoint["gpu_receipt_summary_manifest_csv"] == ""
+    assert checkpoint["gpu_receipt_summary_out_manifest_csv"] == ""
+    assert checkpoint["gpu_receipt_summary_out_summary_json"] == ""
+    assert checkpoint["gpu_receipt_production_gpu_backend_provenance_ready"] is False
+    assert checkpoint["gpu_receipt_production_gpu_backend_rows"] == 0
+    assert checkpoint["gpu_receipt_production_gpu_backend_non_production_rows"] == 0
+    assert checkpoint["gpu_receipt_production_gpu_backend_prod_mode"] is False
+    assert checkpoint["gpu_receipt_production_gpu_backend_require_rust_hip"] is False
+    assert checkpoint["gpu_receipt_expected_queue_rows"] == 768
+    assert checkpoint["gpu_receipt_expected_npz_count"] == 768
+    assert checkpoint["gpu_receipt_queue_id_count"] == 768
+    assert checkpoint["gpu_receipt_queue_fingerprint_count"] == 768
+    assert checkpoint["gpu_receipt_manifest_row_count"] == 0
+    assert checkpoint["gpu_receipt_manifest_ok_row_count"] == 0
+    assert checkpoint["gpu_receipt_manifest_identity_row_count"] == 0
+    assert checkpoint["gpu_receipt_manifest_matched_queue_id_count"] == 0
+    assert checkpoint["gpu_receipt_manifest_matched_expected_npz_count"] == 0
+    assert checkpoint["gpu_receipt_manifest_matched_queue_fingerprint_count"] == 0
+    assert checkpoint["gpu_receipt_manifest_operator_verified"] is False
+    assert checkpoint["gpu_receipt_operator_verified_true_count"] == 0
+    assert checkpoint["gpu_receipt_identity_coverage_ready"] is False
+    assert "production_delta_force_label_evidence" in checkpoint["training_data_failed_check_ids"]
+    assert "delta_force" in checkpoint["training_data_missing_output_labels"]
+
+    gpu_dispatch = asyncio.run(product.get_product_production_ai_gpu_worker_dispatch_manifest())
+    assert gpu_dispatch["status"] == "residual_force_gpu_worker_dispatch_manifest_ready"
+    assert gpu_dispatch["dispatch_manifest_ready"] is True
+    assert gpu_dispatch["handoff_package_ready"] is True
+    assert gpu_dispatch["queue_rows"] == 768
+    assert gpu_dispatch["outbound_artifact_count"] == 10
+    assert gpu_dispatch["inbound_artifact_count"] == 5
+    assert gpu_dispatch["local_artifact_missing_count"] == 0
+    assert gpu_dispatch["native_pdb_dependency_count"] >= 1
+    assert gpu_dispatch["native_pdb_missing_count"] == 0
+    assert len(gpu_dispatch["queue_csv_sha256"]) == 64
+    assert "generate_ligand_trajectory_engine.py" in gpu_dispatch["tiny_pilot_command"]
+    assert "generate_ligand_trajectory_engine.py" in gpu_dispatch["full_regeneration_command"]
+    assert gpu_dispatch["acceptance_contract"]["return_receipt_ready_key"] == (
+        "gpu_worker_return_receipt_ready"
+    )
+    assert "queue_row_fingerprint" in gpu_dispatch["return_manifest_required_identity_rule"]
+    assert "visible_device_count>0" in gpu_dispatch["worker_rocm_manifest_completion_rule"]
+    assert sum(1 for row in gpu_dispatch["rows"] if row["local_file_reference"] is True) == (
+        gpu_dispatch["local_artifact_reference_count"]
+    )
+    assert gpu_dispatch["execution_enabled"] is False
+    assert gpu_dispatch["full_regeneration_executed"] is False
+    assert gpu_dispatch["model_promoted"] is False
+
+    gpu_bundle = asyncio.run(product.get_product_production_ai_gpu_worker_dispatch_bundle())
+    assert gpu_bundle["status"] == "residual_force_gpu_worker_dispatch_bundle_ready"
+    assert gpu_bundle["dispatch_bundle_ready"] is True
+    assert gpu_bundle["dispatch_manifest_ready"] is True
+    assert gpu_bundle["bundle_tar_exists"] is True
+    assert gpu_bundle["bundle_tar_path"] == "runs/residual_force_gpu_worker_dispatch_bundle_current.tar.gz"
+    assert len(gpu_bundle["bundle_tar_sha256"]) == 64
+    assert gpu_bundle["bundle_member_count"] == gpu_bundle["source_artifact_count"]
+    assert gpu_bundle["source_artifact_count"] == gpu_dispatch["local_artifact_reference_count"]
+    assert gpu_bundle["local_artifact_missing_count"] == 0
+    assert gpu_bundle["native_pdb_dependency_count"] == 3
+    assert gpu_bundle["native_pdb_missing_count"] == 0
+    assert gpu_bundle["queue_rows"] == 768
+    assert gpu_bundle["acceptance_contract"]["return_receipt_ready_key"] == (
+        "gpu_worker_return_receipt_ready"
+    )
+    assert gpu_bundle["execution_enabled"] is False
+    assert gpu_bundle["full_regeneration_executed"] is False
+    assert gpu_bundle["model_promoted"] is False
+
+    gpu_runbook = asyncio.run(product.get_product_production_ai_gpu_worker_execution_runbook())
+    assert gpu_runbook["status"] == "residual_force_gpu_worker_execution_runbook_ready"
+    assert gpu_runbook["execution_runbook_ready"] is True
+    assert gpu_runbook["dispatch_bundle_ready"] is True
+    assert gpu_runbook["bundle_tar_path"] == "runs/residual_force_gpu_worker_dispatch_bundle_current.tar.gz"
+    assert len(gpu_runbook["bundle_tar_sha256"]) == 64
+    assert gpu_runbook["queue_rows"] == 768
+    assert gpu_runbook["worker_script_path"] == "runs/residual_force_gpu_worker_execution_runbook_current.sh"
+    assert gpu_runbook["worker_script_exists"] is True
+    assert gpu_runbook["worker_script_executable"] is True
+    assert gpu_runbook["return_packager_script_path"] == (
+        "runs/residual_force_gpu_worker_return_bundle_packager_current.sh"
+    )
+    assert gpu_runbook["return_packager_script_exists"] is True
+    assert gpu_runbook["return_packager_script_executable"] is True
+    assert gpu_runbook["return_bundle_tar_path"] == (
+        "runs/residual_force_gpu_worker_return_bundle_current.tar.gz"
+    )
+    assert gpu_runbook["return_bundle_sha256_path"].endswith(".tar.gz.sha256")
+    assert "expected_regenerated_trajectory_npz" in gpu_runbook["manifest_npz_path_columns"]
+    assert "runs/residual_force_trajectory_regeneration_current_summary.json" in gpu_runbook[
+        "required_return_core_files"
+    ]
+    assert gpu_runbook["return_packager_command"] == (
+        "bash runs/residual_force_gpu_worker_return_bundle_packager_current.sh"
+    )
+    assert gpu_runbook["step_count"] == 8
+    assert gpu_runbook["worker_executable_step_count"] == 6
+    assert gpu_runbook["required_return_artifact_count"] == 5
+    assert "runs/rocm_environment_manifest_current.json" in gpu_runbook["required_return_artifacts"]
+    assert "generate_ligand_trajectory_engine.py" in gpu_runbook["tiny_pilot_command"]
+    assert "generate_ligand_trajectory_engine.py" in gpu_runbook["full_regeneration_command"]
+    assert "build_residual_force_gpu_worker_return_receipt.py" in gpu_runbook[
+        "post_return_validation_command"
+    ]
+    assert gpu_runbook["execution_enabled"] is False
+    assert gpu_runbook["full_regeneration_executed"] is False
+    assert gpu_runbook["model_promoted"] is False
+
+    gpu_return = asyncio.run(product.get_product_production_ai_gpu_return_intake())
+    assert gpu_return["status"] == "blocked_product_production_ai_gpu_return_intake"
+    assert gpu_return["gpu_return_intake_ready"] is True
+    assert gpu_return["gpu_return_artifacts_ready"] is False
+    assert gpu_return["expected_queue_rows"] == 768
+    assert gpu_return["operator_return_blocker_count"] == 17
+    assert gpu_return["operator_return_bundle_contract_ready"] is True
+    assert gpu_return["operator_return_required_artifact_count"] == 5
+    assert gpu_return["operator_return_required_artifacts"] == [
+        "runs/residual_force_trajectory_regeneration_current_summary.json",
+        "runs/residual_force_trajectory_regeneration_current_manifest.csv",
+        "regenerated NPZ bundles referenced by the returned manifest",
+        "runs/residual_force_derivation_validation_current.json",
+        "runs/rocm_environment_manifest_current.json",
+    ]
+    assert gpu_return["operator_return_manifest_required_columns"] == [
+        "queue_id",
+        "expected_regenerated_trajectory_npz",
+        "status",
+        "operator_verified_npz_exists",
+    ]
+    assert gpu_return["operator_return_validation_ladder_ready"] is True
+    assert gpu_return["operator_return_handoff_binding_ready"] is True
+    assert gpu_return["operator_return_handoff_queue_csv"] == (
+        "runs/residual_force_trajectory_regeneration_queue_current.csv"
+    )
+    assert len(gpu_return["operator_return_handoff_queue_csv_sha256"]) == 64
+    assert "generate_ligand_trajectory_engine.py" in gpu_return[
+        "operator_return_handoff_full_regeneration_command"
+    ]
+    assert gpu_return["operator_return_handoff_return_manifest_schema_contract_ready"] is True
+    assert "queue_row_fingerprint" in gpu_return[
+        "operator_return_handoff_return_manifest_required_identity_rule"
+    ]
+    assert "queue_row_fingerprint" in gpu_return[
+        "operator_return_handoff_return_manifest_fingerprint_columns"
+    ]
+    assert "queue_id" in gpu_return["operator_return_handoff_return_manifest_queue_id_columns"]
+    assert "expected_regenerated_trajectory_npz" in gpu_return[
+        "operator_return_handoff_return_manifest_npz_columns"
+    ]
+    assert gpu_return["operator_acceptance_matrix_ready"] is True
+    assert gpu_return["operator_acceptance_stage_count"] == 5
+    assert gpu_return["operator_acceptance_ready_stage_count"] == 1
+    assert gpu_return["operator_acceptance_blocked_stage_count"] == 4
+    assert gpu_return["operator_acceptance_ready_stage_ids"] == ["gpu_return_templates_preflight"]
+    assert gpu_return["operator_acceptance_blocked_stage_ids"][0] == "returned_summary_acceptance"
+    assert gpu_return["operator_acceptance_next_stage_id"] == "returned_summary_acceptance"
+    assert gpu_return["operator_acceptance_next_stage_artifact"] == (
+        "runs/residual_force_trajectory_regeneration_current_summary.json"
+    )
+    assert gpu_return["operator_acceptance_next_stage_validation_command"] == (
+        "python3 tools/build_residual_force_gpu_worker_return_receipt.py"
+    )
+    assert "summary is complete" in gpu_return["operator_acceptance_next_stage_release_effect"]
+    assert gpu_return["operator_acceptance_next_stage_required_checks"][0] == (
+        "actual_summary_returned_complete"
+    )
+    assert len(gpu_return["operator_acceptance_matrix"]) == 5
+    assert gpu_return["operator_acceptance_stage_check_matrix_count"] == 5
+    assert gpu_return["operator_acceptance_current_blocked_stage_check_matrix_count"] == 4
+    assert gpu_return["operator_acceptance_stage_check_matrix"][1]["stage_id"] == (
+        "returned_summary_acceptance"
+    )
+    assert gpu_return["operator_acceptance_stage_check_matrix"][1]["failed_check_ids"][0] == (
+        "actual_summary_returned_complete"
+    )
+    assert gpu_return["operator_acceptance_current_blocked_stage_check_matrix"][0]["stage_id"] == (
+        "returned_summary_acceptance"
+    )
+    assert gpu_return["operator_return_artifact_completion_matrix_count"] == 5
+    assert gpu_return["operator_return_artifact_completion_blocker_count"] == 5
+    assert gpu_return["operator_return_next_artifact_id"] == "returned_summary_json"
+    assert gpu_return["operator_return_next_artifact_path"] == (
+        "runs/residual_force_trajectory_regeneration_current_summary.json"
+    )
+    assert gpu_return["operator_return_next_artifact_failed_check_ids"][0] == (
+        "actual_summary_returned_complete"
+    )
+    assert gpu_return["operator_return_next_artifact_completion_packet_ready"] is True
+    assert gpu_return["operator_return_next_artifact_completion_packet"]["artifact_id"] == (
+        "returned_summary_json"
+    )
+    assert gpu_return["operator_return_next_artifact_completion_packet"]["template_payload"][
+        "queue_rows"
+    ] == 768
+    assert gpu_return["operator_return_next_artifact_completion_packet"]["template_payload"][
+        "prod_mode"
+    ] is True
+    assert gpu_return["operator_return_artifact_completion_matrix"][0]["artifact_id"] == (
+        "returned_summary_json"
+    )
+    assert gpu_return["operator_return_artifact_completion_blocker_matrix"][0]["artifact_id"] == (
+        "returned_summary_json"
+    )
+    assert gpu_return["first_failed_check_id"] == "actual_summary_returned_complete"
+    assert gpu_return["first_failed_source_artifact"] == (
+        "runs/residual_force_trajectory_regeneration_current_summary.json"
+    )
+    assert "actual returned summary" in gpu_return["first_failed_required"]
+    assert "Return runs/residual_force_trajectory_regeneration_current_summary.json" in gpu_return[
+        "first_failed_next_action"
+    ]
+    assert gpu_return["handoff_ready"] is True
+    assert gpu_return["operator_action_required"] is True
+    assert gpu_return["manifest_template_ready"] is True
+    assert gpu_return["manifest_template_row_count"] == 768
+    assert gpu_return["manifest_status_placeholder_count"] == 768
+    assert gpu_return["manifest_operator_verification_placeholder_count"] == 768
+    assert gpu_return["summary_template_ready"] is True
+    assert gpu_return["summary_template_csv"] == "runs/residual_force_gpu_worker_return_summary_template_current.csv"
+    assert gpu_return["summary_template_payload_json"] == (
+        "runs/residual_force_trajectory_regeneration_current_summary_template.json"
+    )
+    assert gpu_return["summary_template_payload"]["queue_rows"] == 768
+    assert gpu_return["summary_template_payload"]["prod_mode"] is True
+    assert gpu_return["summary_template_payload"]["require_rust_hip"] is True
+    assert gpu_return["summary_template_payload"]["out_manifest_csv"] == (
+        "runs/residual_force_trajectory_regeneration_current_manifest.csv"
+    )
+    assert gpu_return["summary_template_field_count"] == 10
+    assert gpu_return["summary_template_required_fields"] == [
+        "queue_rows",
+        "processed_rows",
+        "ok_rows",
+        "failed_rows",
+        "aborted_early",
+        "out_manifest_csv",
+        "out_summary_json",
+        "prod_mode",
+        "require_rust_hip",
+        "backend_counts",
+    ]
+    assert "processed_rows>=expected_queue_rows" in gpu_return["summary_template_completion_rule"]
+    assert gpu_return["summary_template_backend_provenance_contract_ready"] is True
+    assert gpu_return["summary_template_required_backend_provenance_fields"] == [
+        "prod_mode",
+        "require_rust_hip",
+        "backend_counts",
+    ]
+    assert "backend_counts has rust_hip*" in gpu_return[
+        "summary_template_backend_provenance_completion_rule"
+    ]
+    assert gpu_return["summary_returned"] is False
+    assert gpu_return["manifest_returned"] is False
+    assert gpu_return["manifest_npz_paths_complete"] is False
+    assert gpu_return["manifest_npz_files_exist"] is False
+    assert gpu_return["manifest_npz_files_valid"] is False
+    assert gpu_return["manifest_npz_schema_valid"] is False
+    assert gpu_return["manifest_npz_identity_valid"] is False
+    assert gpu_return["manifest_npz_path_column_present"] is False
+    assert gpu_return["manifest_npz_path_present_count"] == 0
+    assert gpu_return["manifest_ok_row_missing_npz_path_count"] == 0
+    assert gpu_return["manifest_operator_verified_missing_npz_path_count"] == 0
+    assert gpu_return["manifest_npz_file_existing_count"] == 0
+    assert gpu_return["manifest_npz_file_missing_count"] == 0
+    assert gpu_return["manifest_ok_row_missing_npz_file_count"] == 0
+    assert gpu_return["manifest_operator_verified_missing_npz_file_count"] == 0
+    assert gpu_return["manifest_npz_file_valid_count"] == 0
+    assert gpu_return["manifest_npz_file_invalid_count"] == 0
+    assert gpu_return["manifest_ok_row_invalid_npz_file_count"] == 0
+    assert gpu_return["manifest_operator_verified_invalid_npz_file_count"] == 0
+    assert gpu_return["manifest_npz_schema_valid_count"] == 0
+    assert gpu_return["manifest_npz_schema_invalid_count"] == 0
+    assert gpu_return["manifest_ok_row_invalid_npz_schema_count"] == 0
+    assert gpu_return["manifest_operator_verified_invalid_npz_schema_count"] == 0
+    assert gpu_return["manifest_npz_identity_valid_count"] == 0
+    assert gpu_return["manifest_npz_identity_invalid_count"] == 0
+    assert gpu_return["manifest_ok_row_invalid_npz_identity_count"] == 0
+    assert gpu_return["manifest_operator_verified_invalid_npz_identity_count"] == 0
+    assert gpu_return["manifest_operator_verified"] is False
+    assert gpu_return["identity_coverage_ready"] is False
+    assert gpu_return["post_run_derivation_validation_ready"] is False
+    assert gpu_return["summary_manifest_bound"] is False
+    assert gpu_return["summary_manifest_csv"] == ""
+    assert gpu_return["summary_out_manifest_csv_present"] is False
+    assert gpu_return["summary_out_manifest_csv"] == ""
+    assert gpu_return["summary_out_manifest_csv_bound"] is False
+    assert gpu_return["summary_out_summary_json_bound"] is False
+    assert gpu_return["summary_out_summary_json"] == ""
+    assert gpu_return["summary_manifest_row_counts_consistent"] is False
+    assert gpu_return["production_gpu_backend_provenance_ready"] is False
+    assert gpu_return["production_gpu_backend_rows"] == 0
+    assert gpu_return["production_gpu_backend_non_production_rows"] == 0
+    assert gpu_return["production_gpu_backend_prod_mode"] is False
+    assert gpu_return["production_gpu_backend_require_rust_hip"] is False
+    assert gpu_return["post_run_validation_command_count"] == 18
+    assert gpu_return["post_run_validation_commands"][0] == (
+        "python3 tools/build_residual_force_gpu_worker_return_receipt.py"
+    )
+    assert "python3 tools/build_residual_model_registry.py" in gpu_return["post_run_validation_commands"]
+    assert "python3 tools/build_residual_force_gpu_worker_return_receipt.py &&" in gpu_return[
+        "post_return_validation_command"
+    ]
+    assert "actual_summary_returned_complete" in gpu_return["failed_check_ids"]
+    assert "actual_summary_manifest_bound" in gpu_return["failed_check_ids"]
+    assert "actual_summary_out_manifest_csv_present" in gpu_return["failed_check_ids"]
+    assert "actual_summary_out_manifest_csv_bound" in gpu_return["failed_check_ids"]
+    assert "actual_summary_out_summary_json_bound" in gpu_return["failed_check_ids"]
+    assert "actual_summary_manifest_row_counts_consistent" in gpu_return["failed_check_ids"]
+    assert "production_gpu_backend_provenance" in gpu_return["failed_check_ids"]
+    assert "actual_manifest_npz_paths_complete" in gpu_return["failed_check_ids"]
+    assert "actual_manifest_npz_files_exist" in gpu_return["failed_check_ids"]
+    assert "actual_manifest_npz_files_valid" in gpu_return["failed_check_ids"]
+    assert "actual_manifest_npz_schema_valid" in gpu_return["failed_check_ids"]
+    assert "actual_manifest_npz_identity_valid" in gpu_return["failed_check_ids"]
+    assert "actual_manifest_operator_verified" in gpu_return["failed_check_ids"]
+    assert "worker_rocm_environment_manifest_ready" in gpu_return["failed_check_ids"]
+    assert gpu_return["worker_rocm_manifest_ready"] is False
+    assert gpu_return["worker_rocm_visible_device_count"] == 0
+    assert "visible_device_count>0" in gpu_return["worker_rocm_manifest_completion_rule"]
+    assert len(gpu_return["checks"]) == 20
+    assert len(gpu_return["blockers"]) == 17
+    assert gpu_return["execution_enabled"] is False
+    assert gpu_return["model_promoted"] is False
+    assert gpu_return["external_state_mutated"] is False
+
+    promotion = asyncio.run(product.get_product_production_ai_promotion_workbench())
+    assert promotion["status"] == "blocked_product_production_ai_promotion_workbench"
+    assert promotion["promotion_workbench_ready"] is True
+    assert promotion["production_ai_promotion_ready"] is False
+    assert promotion["production_ai_checkpoint_ready"] is False
+    assert promotion["production_promotion_allowed"] is False
+    assert promotion["default_residual_mode"] == "shadow"
+    assert promotion["trained_model_checkpoint_count"] == 0
+    assert promotion["gpu_handoff_ready"] is True
+    assert promotion["gpu_operator_action_required"] is True
+    assert promotion["gpu_return_receipt_ready"] is False
+    assert promotion["gpu_receipt_expected_queue_rows"] == 768
+    assert promotion["gpu_receipt_manifest_identity_row_count"] == 0
+    assert promotion["post_return_promotion_ladder_stage_count"] == 10
+    assert promotion["post_return_promotion_ladder_blocked_stage_count"] == 10
+    assert promotion["ready_key_alias_used_count"] == 1
+    assert promotion["ready_key_alias_used_stage_ids"] == ["production_score_model"]
+    assert promotion["blocked_stage_ids"][0] == "gpu_return_receipt"
+    assert promotion["first_blocked_stage_id"] == "gpu_return_receipt"
+    assert promotion["first_blocked_stage_ready_key"] == "gpu_worker_return_receipt_ready"
+    assert promotion["promotion_stages"][0]["stage_id"] == "gpu_return_receipt"
+    assert promotion["promotion_stages"][-1]["stage_id"] == "product_goal_completion_audit"
+    assert "delta_force" in promotion["selected_sidecar_missing_output_fields"]
+    assert "delta_force" in promotion["training_data_missing_output_labels"]
+    assert "generate_ligand_trajectory_engine.py" in promotion["force_gpu_worker_full_regeneration_command"]
+    assert "build_residual_force_gpu_worker_return_receipt.py" in promotion[
+        "force_gpu_worker_post_return_validation_command"
+    ]
+    assert promotion["execution_enabled"] is False
+    assert promotion["model_promoted"] is False
+    assert promotion["external_state_mutated"] is False
+
+    scope_breadth = asyncio.run(product.get_product_scope_breadth_contract())
+    assert scope_breadth["status"] == "blocked_product_scope_breadth_contract"
+    assert scope_breadth["scope_breadth_ready"] is False
+    assert scope_breadth["scope_widened"] is False
+    assert scope_breadth["scope_claim_posture_ready"] is True
+    assert scope_breadth["restricted_scope_claim_allowed"] is True
+    assert scope_breadth["allowed_scope_families"] == ["gpcr", "ion_channel", "kinase"]
+    assert scope_breadth["domain_count"] == 6
+    assert scope_breadth["ready_domain_count"] == 4
+    assert scope_breadth["missing_domain_count"] == 2
+    assert scope_breadth["ready_domains"] == ["ca2", "pxr", "idp_broad", "all_atom"]
+    assert scope_breadth["missing_domains"] == ["transporter", "general_protein_ligand"]
+    assert scope_breadth["first_blocked_domain"] == "transporter"
+    assert scope_breadth["first_blocked_domain_artifact"] == "runs/transporter_blocker_capture_sheet_current.json"
+    assert "supportive=" in scope_breadth["first_blocked_domain_observed"]
+    assert "supportive transporter evidence" in scope_breadth["first_blocked_domain_requirement"]
+    assert scope_breadth["first_blocked_domain_next_action"]
+    assert scope_breadth["transporter_p0_closure_packet_ready"] is True
+    assert scope_breadth["transporter_p0_closure_artifact"] == "runs/transporter_p0_closure_packet_current.json"
+    assert scope_breadth["transporter_p0_current_membrane_open_count"] == 6
+    assert scope_breadth["transporter_p0_closure_row_count"] == 6
+    assert scope_breadth["transporter_p0_count_matches_readiness"] is True
+    assert scope_breadth["transporter_p0_aqp1_core_open_count"] == 3
+    assert scope_breadth["transporter_p0_glut1_core_open_count"] == 3
+    assert scope_breadth["transporter_p0_glut1_reference_placeholder_rows_after_apply"] == 5
+    assert "Close the six core transporter P0 rows" in scope_breadth["transporter_p0_next_required_step"]
+    assert scope_breadth["transporter_p0_readiness_matrix_ready"] is True
+    assert scope_breadth["transporter_p0_readiness_matrix_artifact"] == (
+        "runs/transporter_p0_closure_readiness_matrix_current.json"
+    )
+    assert scope_breadth["transporter_p0_auto_close_ready_artifact_count"] == 0
+    assert scope_breadth["transporter_p0_manual_or_external_required_artifact_count"] == 6
+    assert scope_breadth["transporter_p0_unresolved_slot_count"] == 11
+    assert scope_breadth["transporter_p0_auto_close_ready_slot_count"] == 0
+    assert scope_breadth["transporter_p0_external_exact_evidence_required_slot_count"] == 11
+    assert scope_breadth["transporter_p0_first_manual_or_external_required_step_id"] == (
+        "aqp1_ligand_reference"
+    )
+    assert scope_breadth["transporter_p0_first_manual_or_external_required_slot_step"] == "core_binder_01"
+    assert scope_breadth["transporter_p0_first_manual_or_external_required_action"]
+    assert scope_breadth["transporter_p0_evidence_acquisition_packet_ready"] is True
+    assert scope_breadth["transporter_p0_evidence_acquisition_artifact"] == (
+        "runs/transporter_p0_evidence_acquisition_packet_current.json"
+    )
+    assert scope_breadth["transporter_p0_evidence_acquisition_exact_request_slot_count"] == 11
+    assert scope_breadth["transporter_p0_evidence_acquisition_unresolved_slot_count"] == 11
+    assert scope_breadth["transporter_p0_evidence_acquisition_first_target_id"] == "AQP1"
+    assert scope_breadth["transporter_p0_evidence_acquisition_first_packet_step"] == "core_binder_01"
+    assert scope_breadth["transporter_p0_evidence_acquisition_first_replacement_ligand_id"] == (
+        "aqp1_bacopaside_ii_review_seed"
+    )
+    assert scope_breadth["transporter_p0_evidence_acquisition_first_request_mode"] == (
+        "exact_target_pair_quantitative_binder_kcal_required"
+    )
+    assert scope_breadth["transporter_p0_evidence_acquisition_first_source_signal"].startswith(
+        "https://pubmed"
+    )
+    assert scope_breadth["transporter_p0_evidence_acquisition_first_required_missing_fields"] == (
+        "replacement_reference_binding_kcal_mol"
+    )
+    assert scope_breadth["transporter_p0_evidence_acquisition_first_next_required_action"]
+    assert scope_breadth["transporter_p0_evidence_acquisition_next_slot_completion_packet_ready"] is True
+    assert scope_breadth["transporter_p0_evidence_acquisition_next_slot_id"] == "AQP1.core_binder_01"
+    assert scope_breadth[
+        "transporter_p0_evidence_acquisition_next_slot_operator_review_artifact"
+    ] == "runs/transporter_manual_review_intake_template_current.csv"
+    assert scope_breadth["transporter_p0_evidence_acquisition_next_slot_completion_packet"][
+        "candidate_ligand_id"
+    ] == "aqp1_bacopaside_ii_review_seed"
+    assert scope_breadth[
+        "transporter_p0_evidence_acquisition_next_slot_source_modality_guard_ready"
+    ] is True
+    assert scope_breadth[
+        "transporter_p0_evidence_acquisition_next_slot_source_modality"
+    ] == "functional_quantitative_surrogate"
+    assert scope_breadth[
+        "transporter_p0_evidence_acquisition_next_slot_source_modality_direct_binding_claim_allowed"
+    ] is False
+    assert scope_breadth[
+        "transporter_p0_evidence_acquisition_next_slot_source_modality_decision"
+    ] == "keep_blocked_until_exact_direct_binding_or_claim_safe_kcal"
+    assert scope_breadth[
+        "transporter_p0_evidence_acquisition_aqp1_binding_source_modality_triage_artifact"
+    ] == "runs/aqp1_binding_source_modality_triage_current.json"
+    assert scope_breadth[
+        "transporter_p0_evidence_acquisition_aqp1_binding_source_modality_triage_decision"
+    ] == "keep_blocked_until_direct_experimental_or_operator_verified_claim_safe_binding_kcal"
+    assert scope_breadth[
+        "transporter_p0_evidence_acquisition_aqp1_binding_source_modality_direct_experimental_binding_row_count"
+    ] == 0
+    assert scope_breadth[
+        "transporter_p0_evidence_acquisition_aqp1_binding_source_modality_claim_safe_binding_kcal_ready_count"
+    ] == 0
+    assert scope_breadth[
+        "transporter_p0_evidence_acquisition_aqp1_binding_source_modality_public_direct_binding_recheck_ready"
+    ] is True
+    assert scope_breadth[
+        "transporter_p0_evidence_acquisition_aqp1_binding_source_modality_public_direct_binding_recheck_source_count"
+    ] == 8
+    public_recheck_result = scope_breadth[
+        "transporter_p0_evidence_acquisition_aqp1_binding_source_modality_public_direct_binding_recheck_result"
+    ]
+    assert "chembl_aqp1_bacopaside_ii_rows=0" in public_recheck_result
+    assert "bindingdb_p29972_cutoff100_affinities=0" in public_recheck_result
+    assert "CHEMBL195380_not_CHEMBL390758" in public_recheck_result
+    assert "chembl20_kd_candidate_delta_g=-5.13_requires_operator_validation" in public_recheck_result
+    assert scope_breadth[
+        "transporter_p0_evidence_acquisition_aqp1_binding_source_modality_public_database_recheck_row_count"
+    ] == 3
+    assert scope_breadth[
+        "transporter_p0_evidence_acquisition_aqp1_binding_source_modality_ligand_identity_mismatch_row_count"
+    ] == 1
+    assert scope_breadth[
+        "transporter_p0_evidence_acquisition_aqp1_binding_source_modality_bacopaside_ii_pubchem_cid"
+    ] == "9876264"
+    assert scope_breadth[
+        "transporter_p0_evidence_acquisition_aqp1_binding_source_modality_bacopaside_ii_chembl_id"
+    ] == "CHEMBL390758"
+    assert scope_breadth[
+        "transporter_p0_evidence_acquisition_aqp1_binding_source_modality_aqp1_chembl_target_id"
+    ] == "CHEMBL4523210"
+    assert scope_breadth[
+        "transporter_p0_evidence_acquisition_aqp1_binding_source_modality_aqp1_bindingdb_uniprot_affinity_row_count"
+    ] == 0
+    assert scope_breadth[
+        "transporter_p0_evidence_acquisition_aqp1_binding_source_modality_bacopaside_ii_chembl_aqp1_activity_row_count"
+    ] == 0
+    assert "CHEMBL195380" in scope_breadth[
+        "transporter_p0_evidence_acquisition_aqp1_binding_source_modality_functional_ic50_identity_mismatch_detail"
+    ]
+    assert scope_breadth[
+        "transporter_p0_evidence_acquisition_aqp1_binding_source_modality_replacement_reference_binding_kcal_mol_action"
+    ] == "keep_blank_until_direct_binding_or_operator_verified_claim_safe_kcal"
+    assert scope_breadth[
+        "transporter_p0_evidence_acquisition_aqp1_binding_source_modality_computational_binding_energy_row_count"
+    ] == 1
+    assert scope_breadth[
+        "transporter_p0_evidence_acquisition_aqp1_binding_source_modality_best_computational_binding_energy_kcal_mol"
+    ] == "-34.48"
+    assert scope_breadth[
+        "evidence_queue_next_operator_completion_aqp1_review_sidecar_ready"
+    ] is True
+    assert scope_breadth[
+        "evidence_queue_next_operator_completion_aqp1_review_candidate_name"
+    ] == "bacopaside II"
+    assert scope_breadth[
+        "evidence_queue_next_operator_completion_aqp1_review_source_anchor"
+    ] == "PMID 27474162"
+    assert scope_breadth[
+        "evidence_queue_next_operator_completion_aqp1_review_target_uniprot"
+    ] == "P29972"
+    assert scope_breadth[
+        "evidence_queue_next_operator_completion_aqp1_review_functional_delta_g_surrogate_kcal_mol"
+    ] == "-6.47"
+    assert scope_breadth[
+        "evidence_queue_next_operator_completion_aqp1_review_direct_binding_claim_allowed"
+    ] == "no"
+    assert scope_breadth[
+        "evidence_queue_next_operator_completion_aqp1_review_replacement_reference_binding_kcal_mol_must_remain_blank"
+    ] == "yes"
+    assert scope_breadth["evidence_queue_pxr_exact_review_sidecar_row_count"] == 6
+    assert scope_breadth["evidence_queue_next_pxr_exact_review_sidecar_ready"] is True
+    assert scope_breadth["evidence_queue_next_pxr_exact_review_row_id"] == "pxr_review_d603772038dff21e"
+    assert scope_breadth["evidence_queue_next_pxr_exact_review_candidate_name"] == "acetaminophen"
+    assert scope_breadth["evidence_queue_next_pxr_exact_review_required_evidence_mode"] == (
+        "exact_human_nr1i2_pxr_conflict_resolution_or_negative_value_required"
+    )
+    assert scope_breadth["evidence_queue_next_pxr_exact_review_target_match_confirmed"] == (
+        "OPERATOR_FILL_TRUE_OR_FALSE"
+    )
+    assert scope_breadth["evidence_queue_next_pxr_exact_review_replacement_reference_binding_kcal_mol"].startswith(
+        "OPERATOR_FILL_EXACT_HUMAN_NR1I2_PXR_KCAL"
+    )
+    assert scope_breadth["evidence_queue_next_pxr_exact_review_authoritative_apply_allowed"] is False
+    assert scope_breadth["evidence_queue_next_pxr_exact_review_scope_promotion_allowed"] is False
+    assert scope_breadth["pxr_source_modality_triage_ready"] is True
+    assert scope_breadth["pxr_source_modality_triage_artifact"] == (
+        "runs/pxr_source_modality_triage_current.json"
+    )
+    assert scope_breadth[
+        "pxr_source_modality_activity_proxy_or_conflict_surrogate_row_count"
+    ] == 0
+    assert scope_breadth[
+        "pxr_source_modality_direct_or_claim_safe_quantitative_ready_count"
+    ] == 0
+    assert scope_breadth["pxr_source_modality_next_review_candidate_name"] == ""
+    assert scope_breadth["pxr_source_modality_next_review_source_modality"] == ""
+    assert scope_breadth["transporter_target_ready_for_promotion_count"] == 1
+    assert scope_breadth["transporter_target_blocked_for_promotion_count"] == 1
+    assert scope_breadth["transporter_target_ready_for_promotion_ids"] == ["GLUT1"]
+    assert scope_breadth["transporter_target_blocked_for_promotion_ids"] == ["AQP1"]
+    assert scope_breadth["transporter_primary_blocker_target_id"] == "AQP1"
+    assert scope_breadth["transporter_primary_blocker_packet_step"] == "core_binder_01"
+    assert scope_breadth["transporter_primary_blocker_candidate_name"] == "bacopaside II"
+    assert scope_breadth["blocked_claim_scopes"] == [
+        "transporter_domain_promotion",
+        "general_protein_ligand_platform",
+    ]
+    assert scope_breadth["general_platform_claim_allowed"] is False
+    assert scope_breadth["general_platform_claim_blocked"] is True
+    assert scope_breadth["scope_acceptance_matrix_ready"] is True
+    assert scope_breadth["scope_acceptance_stage_count"] == 5
+    assert scope_breadth["scope_acceptance_blocked_stage_count"] == 3
+    assert scope_breadth["scope_acceptance_next_stage_id"] == "transporter_claim_acceptance"
+    assert scope_breadth["scope_acceptance_matrix"][1]["unlock_claim_scopes"] == [
+        "transporter_domain_promotion"
+    ]
+    assert scope_breadth["scope_acceptance_stage_evidence_matrix_count"] == 5
+    assert scope_breadth["scope_acceptance_current_blocked_stage_evidence_matrix_count"] == 3
+    assert scope_breadth["scope_acceptance_stage_evidence_matrix"][1]["stage_id"] == (
+        "transporter_claim_acceptance"
+    )
+    assert scope_breadth["scope_acceptance_stage_evidence_matrix"][1]["first_blocked_evidence_row"][
+        "evidence_row_id"
+    ] == "AQP1.core_binder_01"
+    assert len(scope_breadth["domain_rows"]) == scope_breadth["domain_count"]
+
+    scope_guard = asyncio.run(product.get_product_scope_claim_guard())
+    assert scope_guard["status"] == "product_scope_breadth_closure_checklist_ready"
+    assert scope_guard["scope_breadth_ready"] is False
+    assert scope_guard["closure_checklist_ready"] is True
+    assert scope_guard["scope_promotion_allowed"] is False
+    assert scope_guard["authoritative_apply_allowed"] is False
+    assert scope_guard["allowed_scope_families"] == ["gpcr", "ion_channel", "kinase"]
+    assert scope_guard["blocked_claim_scopes"] == [
+        "transporter_domain_promotion",
+        "general_protein_ligand_platform",
+    ]
+    assert scope_guard["claim_blocked_domains"] == ["transporter"]
+    assert scope_guard["general_platform_claim_allowed"] is False
+    assert scope_guard["manual_review_subcheck_count"] == 54
+    assert scope_guard["transporter_manual_review_subcheck_count"] == 54
+    assert scope_guard["transporter_identity_scaffold_confirmation_required_count"] == 11
+    assert scope_guard["transporter_direct_binding_or_kcal_confirmation_required_count"] == 4
+    assert scope_guard["transporter_negative_quantitative_confirmation_required_count"] == 6
+    assert scope_guard["transporter_direct_binding_missing_count"] == 4
+    assert scope_guard["transporter_negative_quantitative_missing_count"] == 6
+    assert scope_guard["pxr_reconciled_blocked_row_count"] == 0
+    assert scope_guard["general_claim_blocker_count"] == 3
+    assert scope_guard["ready_for_apply_count"] == 0
+    assert scope_guard["claim_boundary_matrix"][0]["claim_status"] == "allowed"
+    assert len(scope_guard["closure_items"]) == scope_guard["checklist_row_count"]
+
+    scope_priority = asyncio.run(product.get_product_scope_evidence_priority())
+    assert scope_priority["status"] == "product_scope_breadth_evidence_priority_packet_ready"
+    assert scope_priority["priority_packet_ready"] is True
+    assert scope_priority["scope_promotion_allowed"] is False
+    assert scope_priority["authoritative_apply_allowed"] is False
+    assert scope_priority["queue_item_count"] == 21
+    assert scope_priority["open_item_count"] == 21
+    assert scope_priority["scientific_evidence_request_count"] == 17
+    assert scope_priority["local_crosscheck_candidate_count"] == 11
+    assert scope_priority["external_primary_exact_evidence_required_count"] == 6
+    assert scope_priority["all_operator_packet_bindings_ready"] is True
+    assert scope_priority["operator_packet_binding_ready_count"] == 21
+    assert scope_priority["operator_packet_binding_missing_count"] == 0
+    assert scope_priority["top_item_id"] == "AQP1.core_binder_01"
+    assert scope_priority["top_required_evidence_type"] == "exact_transporter_target_pair_quantitative_binder_kcal"
+    assert scope_priority["top_review_template_artifact"] == "runs/transporter_manual_review_intake_template_current.json"
+    assert scope_priority["top_apply_gate_artifact"] == "runs/transporter_binder_promotion_gate_current.json"
+    assert scope_priority["top_priority_items"][0]["item_id"] == "AQP1.core_binder_01"
+    assert scope_priority["top_priority_items"][0]["domain"] == "transporter"
+    assert len(scope_priority["priority_items"]) == scope_priority["queue_item_count"]
+
+    scope_intake = asyncio.run(product.get_product_scope_evidence_intake_readiness())
+    assert scope_intake["status"] == "product_scope_breadth_evidence_intake_readiness_ready"
+    assert scope_intake["intake_readiness_ready"] is True
+    assert scope_intake["scope_promotion_allowed"] is False
+    assert scope_intake["authoritative_apply_allowed"] is False
+    assert scope_intake["row_count"] == 21
+    assert scope_intake["local_crosscheck_intake_ready_count"] == 10
+    assert scope_intake["external_exact_evidence_required_count"] == 6
+    assert scope_intake["all_operator_packet_bindings_ready"] is True
+    assert scope_intake["operator_packet_binding_ready_count"] == 21
+    assert scope_intake["operator_packet_binding_missing_count"] == 0
+    assert scope_intake["next_operator_completion_item_id"] == "AQP1.core_binder_01"
+    assert scope_intake["next_operator_completion_domain"] == "transporter"
+    assert scope_intake["next_operator_completion_candidate_or_check"] == (
+        "aqp1_bacopaside_ii_review_seed"
+    )
+    assert scope_intake["next_operator_completion_intake_mode"] == "local_crosscheck_triage"
+    assert scope_intake["next_operator_completion_required_evidence_type"] == (
+        "exact_transporter_target_pair_quantitative_binder_kcal"
+    )
+    assert "reference_binding_kcal_mol" in scope_intake[
+        "next_operator_completion_required_intake_columns"
+    ]
+    assert scope_intake["next_operator_completion_review_template_artifact"] == (
+        "runs/transporter_manual_review_intake_template_current.json"
+    )
+    assert scope_intake["next_operator_completion_apply_gate_artifact"] == (
+        "runs/transporter_binder_promotion_gate_current.json"
+    )
+    assert scope_intake["next_operator_completion_operator_packet_binding_ready"] is True
+    assert scope_intake["next_operator_completion_transporter_claim_safe_blocker"] == (
+        "functional_assay_quantitative_but_not_direct_binding_claim_safe"
+    )
+    assert scope_intake["next_operator_completion_transporter_best_evidence_activity_type"] == "IC50"
+    assert scope_intake["next_operator_completion_transporter_best_evidence_units"] == "nM"
+    assert scope_intake["transporter_operator_review_evidence_matrix_ready"] is True
+    assert scope_intake["transporter_claim_safe_local_evidence_ready_count"] == 0
+    assert scope_intake["transporter_claim_safe_local_evidence_blocked_count"] == 11
+    assert scope_intake["transporter_direct_binding_claim_blocked_count"] == 4
+    assert scope_intake["transporter_negative_value_claim_blocked_count"] == 6
+    assert scope_intake["transporter_top_claim_safe_blocker"] == (
+        "functional_assay_quantitative_but_not_direct_binding_claim_safe"
+    )
+    assert scope_intake["transporter_manual_review_intake_ready"] is True
+    assert scope_intake["transporter_manual_review_template_row_count"] == 11
+    assert scope_intake["transporter_manual_review_direct_binding_evidence_required_count"] == 4
+    assert scope_intake["transporter_manual_review_negative_quantitative_value_required_count"] == 6
+    assert scope_intake["transporter_manual_review_decision_placeholder_count"] == 11
+    assert scope_intake["first_review_item_id"] == "AQP1.core_binder_01"
+    assert scope_intake["first_review_candidate_ligand_id"] == "aqp1_bacopaside_ii_review_seed"
+    assert scope_intake["first_review_replacement_source"] == (
+        "https://pubmed.ncbi.nlm.nih.gov/27474162/"
+    )
+    assert scope_intake["first_review_replacement_reference_binding_kcal_mol"] == ""
+    assert scope_intake["first_review_direct_binding_evidence_required"] is True
+    assert scope_intake["first_review_direct_binding_source_url_or_doi"] == (
+        "OPERATOR_FILL_EXACT_DIRECT_BINDING_SOURCE_OR_KEEP_BLOCKED"
+    )
+    assert scope_intake["first_review_review_decision"] == (
+        "OPERATOR_FILL_APPROVE_FOR_DRAFT_OR_KEEP_BLOCKED"
+    )
+    assert scope_intake["first_review_p0_slot_overlay_required_missing_fields"] == (
+        "replacement_reference_binding_kcal_mol"
+    )
+    assert scope_intake["first_review_p0_slot_overlay_scope_promotion_allowed"] is False
+    assert scope_intake["scope_operator_transfer_manifest_ready"] is True
+    assert scope_intake["scope_operator_transfer_outbound_artifact_count"] == 10
+    assert "runs/transporter_manual_review_intake_template_current.json" in scope_intake[
+        "scope_operator_transfer_outbound_artifacts"
+    ]
+    assert scope_intake["scope_operator_transfer_inbound_artifact_count"] == 4
+    assert scope_intake["scope_operator_transfer_first_return_artifact"] == (
+        "completed runs/transporter_manual_review_intake_template_current.csv with OPERATOR_FILL placeholders resolved"
+    )
+    assert scope_intake["scope_operator_transfer_acceptance_artifact"] == (
+        "runs/product_scope_breadth_contract_current.json"
+    )
+    assert scope_intake["scope_operator_transfer_acceptance_ready_key"] == "scope_breadth_ready"
+    assert scope_intake["scope_operator_transfer_next_acceptance_stage"] == (
+        "transporter_claim_acceptance"
+    )
+    assert "build_transporter_manual_review_intake_template.py" in scope_intake[
+        "scope_operator_transfer_post_return_validation_command"
+    ]
+    assert len(scope_intake["intake_items"]) == scope_intake["row_count"]
+
+    transporter_review = asyncio.run(product.get_product_transporter_manual_review_intake())
+    assert transporter_review["status"] == "transporter_manual_review_intake_template_ready"
+    assert transporter_review["manual_review_intake_ready"] is True
+    assert transporter_review["manual_review_template_row_count"] == 11
+    assert transporter_review["direct_binding_evidence_required_count"] == 4
+    assert transporter_review["negative_quantitative_value_required_count"] == 6
+    assert transporter_review["review_decision_placeholder_count"] == 11
+    assert transporter_review["authoritative_apply_requested_placeholder_count"] == 11
+    assert transporter_review["first_review_item_id"] == "AQP1.core_binder_01"
+    assert transporter_review["first_review_target_id"] == "AQP1"
+    assert transporter_review["first_review_candidate_ligand_id"] == (
+        "aqp1_bacopaside_ii_review_seed"
+    )
+    assert transporter_review["first_review_replacement_source"] == (
+        "https://pubmed.ncbi.nlm.nih.gov/27474162/"
+    )
+    assert transporter_review["first_review_replacement_reference_binding_kcal_mol"] == ""
+    assert transporter_review["first_review_direct_binding_evidence_required"] is True
+    assert transporter_review["first_review_direct_binding_source_url_or_doi"] == (
+        "OPERATOR_FILL_EXACT_DIRECT_BINDING_SOURCE_OR_KEEP_BLOCKED"
+    )
+    assert transporter_review["first_review_review_decision"] == (
+        "OPERATOR_FILL_APPROVE_FOR_DRAFT_OR_KEEP_BLOCKED"
+    )
+    assert transporter_review["first_review_authoritative_apply_requested"] == (
+        "OPERATOR_FILL_TRUE_OR_FALSE"
+    )
+    assert transporter_review["first_review_p0_slot_overlay_required_missing_fields"] == (
+        "replacement_reference_binding_kcal_mol"
+    )
+    assert transporter_review["first_review_p0_slot_overlay_claim_safe_step_ready"] is False
+    assert transporter_review["first_review_p0_slot_overlay_scope_promotion_allowed"] is False
+    assert transporter_review["review_rows"][0]["review_decision"] == (
+        "OPERATOR_FILL_APPROVE_FOR_DRAFT_OR_KEEP_BLOCKED"
+    )
+
+    aqp1_candidate = asyncio.run(product.get_product_aqp1_operator_validation_candidate())
+    assert aqp1_candidate["status"] == "aqp1_operator_validation_candidate_packet_ready"
+    assert aqp1_candidate["packet_ready"] is True
+    assert aqp1_candidate["candidate_ready"] is True
+    assert aqp1_candidate["candidate_count"] == 1
+    assert aqp1_candidate["candidate_claim_safe_ready_count"] == 0
+    assert aqp1_candidate["operator_validation_required_count"] == 1
+    assert aqp1_candidate["operator_placeholder_count"] == 6
+    assert aqp1_candidate["first_candidate_target_id"] == "AQP1"
+    assert aqp1_candidate["first_candidate_target_uniprot"] == "P29972"
+    assert aqp1_candidate["first_candidate_ligand_external_identifier"] == "CHEMBL20"
+    assert aqp1_candidate["first_candidate_ligand_name"] == "acetazolamide"
+    assert aqp1_candidate["first_candidate_activity_id"] == "29308926"
+    assert aqp1_candidate["first_candidate_standard_type"] == "Kd"
+    assert aqp1_candidate["first_candidate_standard_value_nM"] == "174000.0"
+    assert aqp1_candidate["first_candidate_reference_binding_kcal_mol"] == "-5.13"
+    assert aqp1_candidate["first_candidate_claim_safe_ready"] is False
+    assert aqp1_candidate["claim_promotion_allowed"] is False
+    assert aqp1_candidate["authoritative_apply_allowed"] is False
+    assert "operator_assay_origin_confirmed" in aqp1_candidate[
+        "required_operator_decision_fields"
+    ]
+    assert "data_validity_outside_typical_range" in aqp1_candidate["validation_blockers"]
+    assert any(
+        "build_product_scope_breadth_contract.py" in command
+        for command in aqp1_candidate["post_return_validation_commands"]
+    )
+    assert aqp1_candidate["rows"][0]["operator_claim_safe_decision"] == (
+        "OPERATOR_FILL_APPROVE_CLAIM_SAFE_OR_KEEP_BLOCKED"
+    )
+    assert aqp1_candidate["execution_enabled"] is False
+    assert aqp1_candidate["scope_widened"] is False
+
+    aqp1_procurement = asyncio.run(product.get_product_aqp1_direct_binding_procurement_packet())
+    assert aqp1_procurement["status"] == "aqp1_direct_binding_procurement_packet_ready"
+    assert aqp1_procurement["procurement_packet_ready"] is True
+    assert aqp1_procurement["target_id"] == "AQP1"
+    assert aqp1_procurement["target_uniprot"] == "P29972"
+    assert aqp1_procurement["current_direct_experimental_binding_row_count"] == 0
+    assert aqp1_procurement["current_claim_safe_binding_kcal_ready_count"] == 0
+    assert aqp1_procurement["direct_binding_gap_open"] is True
+    assert aqp1_procurement["external_primary_evidence_required"] is True
+    assert aqp1_procurement["current_operator_candidate_ligand_external_identifier"] == "CHEMBL20"
+    assert aqp1_procurement["current_operator_candidate_reference_binding_kcal_mol"] == "-5.13"
+    assert aqp1_procurement["current_operator_candidate_claim_safe_ready"] is False
+    assert "standard_value_nM" in aqp1_procurement["acceptance_fields"]
+    assert "target_uniprot=P29972" in aqp1_procurement["minimum_acceptance_rule"]
+    assert aqp1_procurement["first_required_external_action_id"] == (
+        "procure_aqp1_bacopaside_ii_direct_binding_measurement"
+    )
+    assert aqp1_procurement["claim_promotion_allowed"] is False
+    assert aqp1_procurement["authoritative_apply_allowed"] is False
+    assert aqp1_procurement["execution_enabled"] is False
+    assert aqp1_procurement["scope_widened"] is False
+
+    pxr_review = asyncio.run(product.get_product_pxr_exact_review_intake())
+    assert pxr_review["status"] == "pxr_exact_evidence_review_intake_template_ready"
+    assert pxr_review["pxr_exact_review_intake_ready"] is True
+    assert pxr_review["scope_promotion_allowed"] is True
+    assert pxr_review["review_template_row_count"] == 0
+    assert pxr_review["expected_blocked_row_count"] == 0
+    assert pxr_review["conflict_resolution_required_count"] == 0
+    assert pxr_review["kcal_placeholder_count"] == 0
+    assert pxr_review["source_placeholder_count"] == 0
+    assert pxr_review["target_match_placeholder_count"] == 0
+    assert pxr_review["next_review_completion_packet_ready"] is False
+    assert pxr_review["next_review_candidate_name"] == ""
+    assert pxr_review["next_review_operator_review_artifact"] == ""
+    assert pxr_review["next_review_completion_packet"]["packet_ready"] is False
+    assert len(pxr_review["review_rows"]) == 0
+
+    operator_packet = asyncio.run(product.get_product_commercial_readiness_operator_packet())
+    assert operator_packet["status"] == "product_commercial_readiness_operator_packet_ready"
+    assert operator_packet["packet_ready"] is True
+    assert operator_packet["goal_audit_artifact"] == "runs/product_goal_completion_audit_current.json"
+    assert len(operator_packet["goal_audit_sha256"]) == 64
+    assert len(operator_packet["commercial_readiness_matrix_sha256"]) == 64
+    assert operator_packet["source_fingerprint_ready"] is True
+    assert operator_packet["goal_complete"] is False
+    assert operator_packet["action_count"] == 5
+    assert operator_packet["blocked_action_count"] == 4
+    assert operator_packet["parallelizable_action_count"] == 2
+    assert operator_packet["parallelizable_action_ids"] == [
+        "transporter_next_slot_exact_evidence",
+        "broad_platform_claim_floor",
+    ]
+    assert operator_packet["first_parallelizable_action_id"] == (
+        "transporter_next_slot_exact_evidence"
+    )
+    assert operator_packet["first_parallelizable_action_lane_id"] == "parallel_scope_evidence"
+    assert "ROCm/GPU environment" in operator_packet["first_parallelizable_action_precondition"]
+    assert "reference_binding_kcal_mol" in operator_packet[
+        "first_parallelizable_action_required_operator_inputs"
+    ]
+    assert "target_match_decision" in operator_packet[
+        "first_parallelizable_action_required_exact_evidence_fields"
+    ]
+    assert "functional_surrogate_does_not_authorize_direct_binding_claim" in operator_packet[
+        "first_parallelizable_action_required_claim_guardrails"
+    ]
+    assert operator_packet["first_parallelizable_action_expected_evidence_type"] == (
+        "direct_or_claim_safe_binding_kcal"
+    )
+    assert operator_packet["first_parallelizable_action_operator_review_artifact"] == (
+        "runs/transporter_manual_review_intake_template_current.csv"
+    )
+    assert "build_product_goal_completion_audit.py" in operator_packet[
+        "first_parallelizable_action_acceptance_gate_commands"
+    ]
+    assert (
+        operator_packet["first_parallelizable_action_next_slot_source_modality_guard_ready"]
+        is True
+    )
+    assert operator_packet["first_parallelizable_action_next_slot_source_modality"] == (
+        "functional_quantitative_surrogate"
+    )
+    assert (
+        operator_packet[
+            "first_parallelizable_action_next_slot_source_modality_direct_binding_claim_allowed"
+        ]
+        is False
+    )
+    assert operator_packet["first_parallelizable_action_next_slot_source_modality_decision"] == (
+        "keep_blocked_until_exact_direct_binding_or_claim_safe_kcal"
+    )
+    assert operator_packet[
+        "first_parallelizable_action_next_slot_source_modality_triage_artifact"
+    ] == "runs/aqp1_binding_source_modality_triage_current.json"
+    assert operator_packet[
+        "first_parallelizable_action_next_slot_source_modality_triage_decision"
+    ] == "keep_blocked_until_direct_experimental_or_operator_verified_claim_safe_binding_kcal"
+    assert operator_packet[
+        "first_parallelizable_action_next_slot_source_modality_computational_binding_energy_row_count"
+    ] == 1
+    assert operator_packet[
+        "first_parallelizable_action_next_slot_source_modality_best_computational_binding_energy_kcal_mol"
+    ] == "-34.48"
+    assert operator_packet["first_parallelizable_action_operator_validation_candidate_ready"] is True
+    assert operator_packet[
+        "first_parallelizable_action_operator_validation_candidate_status"
+    ] == "operator_validation_required"
+    assert operator_packet[
+        "first_parallelizable_action_operator_validation_candidate_ligand_external_identifier"
+    ] == "CHEMBL20"
+    assert operator_packet[
+        "first_parallelizable_action_operator_validation_candidate_reference_binding_kcal_mol"
+    ] == "-5.13"
+    assert operator_packet[
+        "first_parallelizable_action_operator_validation_candidate_blocker"
+    ] == "data_validity_outside_typical_range_and_assay_origin_unknown"
+    assert (
+        operator_packet["first_parallelizable_action_operator_validation_candidate_claim_safe_ready"]
+        is False
+    )
+    assert operator_packet["first_parallelizable_action_direct_binding_procurement_packet_ready"] is True
+    assert operator_packet["first_parallelizable_action_direct_binding_procurement_packet_artifact"] == (
+        "runs/aqp1_direct_binding_procurement_packet_current.json"
+    )
+    assert operator_packet[
+        "first_parallelizable_action_direct_binding_procurement_first_required_external_action_id"
+    ] == "procure_aqp1_bacopaside_ii_direct_binding_measurement"
+    assert operator_packet[
+        "first_parallelizable_action_direct_binding_procurement_external_primary_evidence_required"
+    ] is True
+    assert "standard_type in Kd,Ki" in operator_packet[
+        "first_parallelizable_action_direct_binding_procurement_minimum_acceptance_rule"
+    ]
+    assert operator_packet["first_action_id"] == "production_gpu_execution_environment"
+    assert operator_packet["first_artifact"] == "runs/rocm_environment_manifest_current.json"
+    assert operator_packet["first_execution_command"] == "python3 tools/build_rocm_environment_manifest.py"
+    assert (
+        operator_packet["first_operator_completion_worker_runtime_receipt_contract_ready"]
+        is True
+    )
+    assert "backend_counts" in operator_packet[
+        "first_operator_completion_worker_runtime_receipt_required_fields_or_columns"
+    ]
+    assert operator_packet[
+        "first_operator_completion_worker_runtime_receipt_post_environment_next_artifact"
+    ] == "runs/residual_force_gpu_worker_return_receipt_current.json"
+    assert "build_residual_force_gpu_worker_return_receipt.py" in operator_packet[
+        "first_operator_completion_worker_runtime_receipt_post_environment_validation_command"
+    ]
+    assert operator_packet["first_operator_completion_diagnostic_command_count"] == 5
+    assert any(
+        "torch.cuda.device_count" in command
+        for command in operator_packet["first_operator_completion_diagnostic_commands"]
+    )
+    assert "visible_device_count>0" in operator_packet[
+        "first_operator_completion_diagnostic_completion_rule"
+    ]
+    assert operator_packet["operator_completion_packet_ready_count"] == 5
+    assert operator_packet["actions"][1]["action_id"] == "production_ai_return_summary"
+    assert operator_packet["actions"][1]["blocked_by_action_id"] == (
+        "production_gpu_execution_environment"
+    )
+    assert operator_packet["production_ai_return_action_id"] == "production_ai_return_summary"
+    assert operator_packet["production_ai_return_action_blocked_by_action_id"] == (
+        "production_gpu_execution_environment"
+    )
+    assert "queue_rows" in operator_packet[
+        "production_ai_return_action_required_operator_inputs"
+    ]
+    assert operator_packet["production_ai_return_operator_completion_packet_ready"] is True
+    assert operator_packet["production_ai_return_operator_completion_artifact_id"] == (
+        "returned_summary_json"
+    )
+    assert operator_packet["production_ai_return_operator_completion_expected_queue_rows"] == 768
+    assert "require_rust_hip" in operator_packet[
+        "production_ai_return_operator_completion_backend_provenance_completion_rule"
+    ]
+    assert operator_packet["production_ai_return_bundle_required_artifact_count"] == 5
+    assert any(
+        "residual_force_trajectory_regeneration_current_manifest.csv" in artifact
+        for artifact in operator_packet["production_ai_return_bundle_required_artifacts"]
+    )
+    assert "actual_summary_returned_complete" in operator_packet[
+        "production_ai_return_bundle_next_artifact_failed_check_ids"
+    ]
+    assert "operator_verified_npz_exists" in operator_packet[
+        "production_ai_return_bundle_manifest_required_columns"
+    ]
+    assert "summary alone does not unlock" in operator_packet[
+        "production_ai_return_bundle_guardrail"
+    ]
+    assert operator_packet["delta_force_closure_acceptance_packet_ready"] is True
+    assert operator_packet["delta_force_closure_ready"] is False
+    assert operator_packet["delta_force_closure_first_blocked_output_field"] == "delta_force"
+    assert operator_packet["delta_force_closure_ready_output_field_count"] == 6
+    assert operator_packet["delta_force_closure_blocked_output_field_count"] == 1
+    assert operator_packet["delta_force_closure_failed_stage_count"] == 9
+    assert operator_packet["delta_force_closure_next_stage_id"] == "gpu_worker_return_receipt"
+    assert operator_packet["delta_force_closure_next_stage_artifact"] == (
+        "runs/product_production_ai_gpu_return_intake_current.json"
+    )
+    assert "build_residual_force_gpu_worker_return_receipt.py" in operator_packet[
+        "delta_force_closure_next_stage_validation_command"
+    ]
+    assert "queue_rows" in operator_packet[
+        "delta_force_closure_return_summary_required_fields"
+    ]
+    assert operator_packet["scope_closure_acceptance_packet_ready"] is True
+    assert operator_packet["scope_closure_ready"] is False
+    assert operator_packet["scope_closure_stage_count"] == 5
+    assert operator_packet["scope_closure_blocked_stage_count"] == 3
+    assert operator_packet["scope_closure_next_stage_id"] == "transporter_claim_acceptance"
+    assert operator_packet["scope_closure_first_blocked_evidence_row_id"] == (
+        "AQP1.core_binder_01"
+    )
+    assert operator_packet["scope_closure_first_blocked_target_id"] == "AQP1"
+    assert operator_packet["scope_closure_first_blocked_required_missing_fields"] == (
+        "replacement_reference_binding_kcal_mol"
+    )
+    assert operator_packet["scope_closure_transporter_unresolved_slot_count"] == 11
+    assert (
+        operator_packet["scope_closure_pxr_direct_or_claim_safe_quantitative_ready_count"]
+        == 0
+    )
+    assert operator_packet["scope_closure_general_platform_claim_allowed"] is False
+    assert operator_packet["actions"][2]["next_slot_id"] == "AQP1.core_binder_01"
+    assert operator_packet["actions"][2]["parallelizable_with_primary_blocker"] is True
+    assert operator_packet["actions"][2]["parallel_primary_blocker_action_id"] == (
+        "production_gpu_execution_environment"
+    )
+    assert "reference_binding_kcal_mol" in operator_packet["actions"][2]["required_operator_inputs"]
+    assert operator_packet["operator_completion_packets"][3]["action_id"] == "pxr_next_exact_review"
+    assert operator_packet["operator_completion_packets"][3]["status"] == "ready"
+    assert operator_packet["operator_completion_packets"][3]["next_review_row_id"] == ""
+    assert operator_packet["execution_enabled"] is False
+    assert operator_packet["checkpoint_promoted"] is False
+
+    operator_freshness = asyncio.run(product.get_product_commercial_readiness_operator_packet_freshness())
+    assert operator_freshness["status"] == (
+        "product_commercial_readiness_operator_packet_freshness_ready"
+    )
+    assert operator_freshness["freshness_ready"] is True
+    assert operator_freshness["goal_complete"] is False
+    assert operator_freshness["current_goal_audit_sha256"] == operator_freshness["operator_goal_audit_sha256"]
+    assert operator_freshness["current_commercial_readiness_matrix_sha256"] == (
+        operator_freshness["operator_commercial_readiness_matrix_sha256"]
+    )
+    assert operator_freshness["current_action_count"] == operator_freshness["operator_action_count"]
+    assert operator_freshness["current_blocked_action_count"] == (
+        operator_freshness["operator_blocked_action_count"]
+    )
+    assert operator_freshness["current_first_action_id"] == "production_gpu_execution_environment"
+    assert operator_freshness["command_references_ready"] is True
+    assert operator_freshness["operator_python_tool_reference_count"] >= 20
+    assert operator_freshness["operator_missing_python_tool_reference_count"] == 0
+    assert operator_freshness["operator_missing_python_tool_references"] == []
+    assert "tools/build_pxr_exact_evidence_review_intake_template.py" in operator_freshness[
+        "operator_python_tool_references"
+    ]
+    assert "tools/validate_pxr_packet_fill_readiness.py" not in operator_freshness[
+        "operator_python_tool_references"
+    ]
+    assert operator_freshness["fail_count"] == 0
+    assert operator_freshness["check_count"] == len(operator_freshness["checks"])
+    assert operator_freshness["execution_enabled"] is False
+    assert operator_freshness["checkpoint_promoted"] is False
+
+    execution_ladder = asyncio.run(product.get_product_commercial_readiness_execution_ladder())
+    assert execution_ladder["status"] == "product_commercial_readiness_execution_ladder_ready"
+    assert execution_ladder["ladder_ready"] is True
+    assert execution_ladder["operator_packet_ready"] is True
+    assert execution_ladder["freshness_ready"] is True
+    assert execution_ladder["goal_complete"] is False
+    assert execution_ladder["action_count"] == 5
+    assert execution_ladder["blocked_action_count"] == 4
+    assert execution_ladder["parallelizable_action_count"] == 2
+    assert execution_ladder["parallelizable_action_ids"] == [
+        "transporter_next_slot_exact_evidence",
+        "broad_platform_claim_floor",
+    ]
+    assert execution_ladder["first_parallelizable_action_id"] == (
+        "transporter_next_slot_exact_evidence"
+    )
+    assert execution_ladder["first_parallelizable_action_order"] == 3
+    assert execution_ladder["first_parallelizable_action_lane_id"] == "parallel_scope_evidence"
+    assert "reference_binding_kcal_mol" in execution_ladder[
+        "first_parallelizable_action_required_operator_inputs"
+    ]
+    assert "target_match_decision" in execution_ladder[
+        "first_parallelizable_action_required_exact_evidence_fields"
+    ]
+    assert "functional_surrogate_does_not_authorize_direct_binding_claim" in execution_ladder[
+        "first_parallelizable_action_required_claim_guardrails"
+    ]
+    assert execution_ladder["first_parallelizable_action_operator_review_artifact"] == (
+        "runs/transporter_manual_review_intake_template_current.csv"
+    )
+    assert "build_product_goal_completion_audit.py" in execution_ladder[
+        "first_parallelizable_action_acceptance_gate_commands"
+    ]
+    assert execution_ladder["first_parallelizable_action_next_slot_source_modality"] == (
+        "functional_quantitative_surrogate"
+    )
+    assert (
+        execution_ladder[
+            "first_parallelizable_action_next_slot_source_modality_direct_binding_claim_allowed"
+        ]
+        is False
+    )
+    assert execution_ladder[
+        "first_parallelizable_action_next_slot_source_modality_triage_decision"
+    ] == "keep_blocked_until_direct_experimental_or_operator_verified_claim_safe_binding_kcal"
+    assert execution_ladder[
+        "first_parallelizable_action_next_slot_source_modality_computational_binding_energy_row_count"
+    ] == 1
+    assert execution_ladder["first_parallelizable_action_operator_validation_candidate_ready"] is True
+    assert execution_ladder[
+        "first_parallelizable_action_operator_validation_candidate_status"
+    ] == "operator_validation_required"
+    assert execution_ladder[
+        "first_parallelizable_action_operator_validation_candidate_ligand_external_identifier"
+    ] == "CHEMBL20"
+    assert execution_ladder[
+        "first_parallelizable_action_operator_validation_candidate_reference_binding_kcal_mol"
+    ] == "-5.13"
+    assert execution_ladder[
+        "first_parallelizable_action_operator_validation_candidate_blocker"
+    ] == "data_validity_outside_typical_range_and_assay_origin_unknown"
+    assert (
+        execution_ladder["first_parallelizable_action_operator_validation_candidate_claim_safe_ready"]
+        is False
+    )
+    assert execution_ladder["first_parallelizable_action_direct_binding_procurement_packet_ready"] is True
+    assert execution_ladder["first_parallelizable_action_direct_binding_procurement_packet_artifact"] == (
+        "runs/aqp1_direct_binding_procurement_packet_current.json"
+    )
+    assert execution_ladder[
+        "first_parallelizable_action_direct_binding_procurement_first_required_external_action_id"
+    ] == "procure_aqp1_bacopaside_ii_direct_binding_measurement"
+    assert execution_ladder[
+        "first_parallelizable_action_direct_binding_procurement_external_primary_evidence_required"
+    ] is True
+    assert execution_ladder["first_execution_order"] == 1
+    assert execution_ladder["first_action_id"] == "production_gpu_execution_environment"
+    assert execution_ladder["first_operator_input_artifact"] == (
+        "runs/rocm_environment_manifest_current.json"
+    )
+    assert execution_ladder["first_execution_command"] == "python3 tools/build_rocm_environment_manifest.py"
+    assert (
+        execution_ladder["first_operator_completion_worker_runtime_receipt_contract_ready"]
+        is True
+    )
+    assert "visible_device_count" in execution_ladder[
+        "first_operator_completion_worker_runtime_receipt_required_fields_or_columns"
+    ]
+    assert execution_ladder["first_operator_completion_diagnostic_command_count"] == 5
+    assert any(
+        "torch.cuda.device_count" in command
+        for command in execution_ladder["first_operator_completion_diagnostic_commands"]
+    )
+    assert "visible_device_count>0" in execution_ladder[
+        "first_operator_completion_diagnostic_completion_rule"
+    ]
+    assert execution_ladder["all_preconditions_satisfied"] is True
+    assert execution_ladder["ladder"][0]["precondition_satisfied"] is True
+    assert execution_ladder["ladder"][1]["post_validation_rebuild_command"].endswith(
+        "python3 tools/build_product_goal_completion_audit.py"
+    )
+    assert execution_ladder["production_ai_return_action_id"] == "production_ai_return_summary"
+    assert execution_ladder["production_ai_return_operator_completion_packet_ready"] is True
+    assert execution_ladder["production_ai_return_bundle_next_artifact_id"] == (
+        "returned_summary_json"
+    )
+    assert "operator_verified_npz_exists" in execution_ladder[
+        "production_ai_return_bundle_manifest_required_columns"
+    ]
+    assert execution_ladder["execution_enabled"] is False
+    assert execution_ladder["checkpoint_promoted"] is False
+
+    handoff_bundle = asyncio.run(product.get_product_commercial_readiness_handoff_bundle())
+    assert handoff_bundle["status"] == "product_commercial_readiness_handoff_bundle_ready"
+    assert handoff_bundle["handoff_bundle_ready"] is True
+    assert handoff_bundle["goal_complete"] is False
+    assert handoff_bundle["artifact_count"] == 3
+    assert handoff_bundle["ready_artifact_count"] == 3
+    assert handoff_bundle["blocked_artifact_count"] == 0
+    assert handoff_bundle["operator_packet_ready"] is True
+    assert handoff_bundle["source_fingerprint_ready"] is True
+    assert handoff_bundle["freshness_ready"] is True
+    assert handoff_bundle["execution_ladder_ready"] is True
+    assert handoff_bundle["operator_action_count"] == 5
+    assert handoff_bundle["operator_blocked_action_count"] == 4
+    assert handoff_bundle["ladder_action_count"] == 5
+    assert handoff_bundle["operator_parallelizable_action_count"] == 2
+    assert handoff_bundle["operator_parallelizable_action_ids"] == [
+        "transporter_next_slot_exact_evidence",
+        "broad_platform_claim_floor",
+    ]
+    assert handoff_bundle["ladder_parallelizable_action_count"] == 2
+    assert handoff_bundle["first_parallelizable_action_id"] == (
+        "transporter_next_slot_exact_evidence"
+    )
+    assert handoff_bundle["first_parallelizable_action_lane_id"] == "parallel_scope_evidence"
+    assert "ROCm/GPU environment" in handoff_bundle["first_parallelizable_action_precondition"]
+    assert "reference_binding_kcal_mol" in handoff_bundle[
+        "first_parallelizable_action_required_operator_inputs"
+    ]
+    assert "target_match_decision" in handoff_bundle[
+        "first_parallelizable_action_required_exact_evidence_fields"
+    ]
+    assert "functional_surrogate_does_not_authorize_direct_binding_claim" in handoff_bundle[
+        "first_parallelizable_action_required_claim_guardrails"
+    ]
+    assert handoff_bundle["first_parallelizable_action_operator_review_artifact"] == (
+        "runs/transporter_manual_review_intake_template_current.csv"
+    )
+    assert "build_product_goal_completion_audit.py" in handoff_bundle[
+        "first_parallelizable_action_acceptance_gate_commands"
+    ]
+    assert handoff_bundle["first_parallelizable_action_next_slot_source_modality"] == (
+        "functional_quantitative_surrogate"
+    )
+    assert handoff_bundle["first_parallelizable_action_next_slot_source_modality_decision"] == (
+        "keep_blocked_until_exact_direct_binding_or_claim_safe_kcal"
+    )
+    assert handoff_bundle[
+        "first_parallelizable_action_next_slot_source_modality_triage_artifact"
+    ] == "runs/aqp1_binding_source_modality_triage_current.json"
+    assert handoff_bundle[
+        "first_parallelizable_action_next_slot_source_modality_triage_decision"
+    ] == "keep_blocked_until_direct_experimental_or_operator_verified_claim_safe_binding_kcal"
+    assert handoff_bundle[
+        "first_parallelizable_action_next_slot_source_modality_computational_binding_energy_row_count"
+    ] == 1
+    assert handoff_bundle["first_parallelizable_action_operator_validation_candidate_ready"] is True
+    assert handoff_bundle[
+        "first_parallelizable_action_operator_validation_candidate_status"
+    ] == "operator_validation_required"
+    assert handoff_bundle[
+        "first_parallelizable_action_operator_validation_candidate_ligand_external_identifier"
+    ] == "CHEMBL20"
+    assert handoff_bundle[
+        "first_parallelizable_action_operator_validation_candidate_reference_binding_kcal_mol"
+    ] == "-5.13"
+    assert handoff_bundle[
+        "first_parallelizable_action_operator_validation_candidate_blocker"
+    ] == "data_validity_outside_typical_range_and_assay_origin_unknown"
+    assert (
+        handoff_bundle["first_parallelizable_action_operator_validation_candidate_claim_safe_ready"]
+        is False
+    )
+    assert handoff_bundle["first_parallelizable_action_direct_binding_procurement_packet_ready"] is True
+    assert handoff_bundle["first_parallelizable_action_direct_binding_procurement_packet_artifact"] == (
+        "runs/aqp1_direct_binding_procurement_packet_current.json"
+    )
+    assert handoff_bundle[
+        "first_parallelizable_action_direct_binding_procurement_first_required_external_action_id"
+    ] == "procure_aqp1_bacopaside_ii_direct_binding_measurement"
+    assert handoff_bundle[
+        "first_parallelizable_action_direct_binding_procurement_external_primary_evidence_required"
+    ] is True
+    assert handoff_bundle["first_action_id"] == "production_gpu_execution_environment"
+    assert handoff_bundle["first_operator_input_artifact"] == (
+        "runs/rocm_environment_manifest_current.json"
+    )
+    assert (
+        handoff_bundle["first_operator_completion_worker_runtime_receipt_contract_ready"]
+        is True
+    )
+    assert handoff_bundle[
+        "first_operator_completion_worker_runtime_receipt_post_environment_next_artifact"
+    ] == "runs/residual_force_gpu_worker_return_receipt_current.json"
+    assert handoff_bundle["first_operator_completion_diagnostic_command_count"] == 5
+    assert any(
+        "torch.cuda.device_count" in command
+        for command in handoff_bundle["first_operator_completion_diagnostic_commands"]
+    )
+    assert "visible_device_count>0" in handoff_bundle[
+        "first_operator_completion_diagnostic_completion_rule"
+    ]
+    assert handoff_bundle["production_ai_return_action_id"] == "production_ai_return_summary"
+    assert handoff_bundle["production_ai_return_operator_completion_packet_ready"] is True
+    assert handoff_bundle["production_ai_return_bundle_next_artifact_id"] == (
+        "returned_summary_json"
+    )
+    assert "operator_verified_npz_exists" in handoff_bundle[
+        "production_ai_return_bundle_manifest_required_columns"
+    ]
+    assert handoff_bundle["delta_force_closure_acceptance_packet_artifact"] == (
+        "runs/residual_delta_force_closure_acceptance_packet_current.json"
+    )
+    assert handoff_bundle["delta_force_closure_acceptance_packet_ready"] is True
+    assert handoff_bundle["delta_force_closure_ready"] is False
+    assert handoff_bundle["delta_force_closure_first_blocked_output_field"] == "delta_force"
+    assert handoff_bundle["delta_force_closure_failed_stage_count"] == 9
+    assert handoff_bundle["delta_force_closure_next_stage_id"] == "gpu_worker_return_receipt"
+    assert handoff_bundle["delta_force_closure_next_stage_artifact"] == (
+        "runs/product_production_ai_gpu_return_intake_current.json"
+    )
+    assert "queue_rows" in handoff_bundle[
+        "delta_force_closure_return_summary_required_fields"
+    ]
+    assert handoff_bundle["scope_closure_acceptance_packet_artifact"] == (
+        "runs/product_scope_closure_acceptance_packet_current.json"
+    )
+    assert handoff_bundle["scope_closure_acceptance_packet_ready"] is True
+    assert handoff_bundle["scope_closure_ready"] is False
+    assert handoff_bundle["scope_closure_stage_count"] == 5
+    assert handoff_bundle["scope_closure_blocked_stage_count"] == 3
+    assert handoff_bundle["scope_closure_next_stage_id"] == "transporter_claim_acceptance"
+    assert handoff_bundle["scope_closure_first_blocked_evidence_row_id"] == (
+        "AQP1.core_binder_01"
+    )
+    assert handoff_bundle["scope_closure_first_blocked_target_id"] == "AQP1"
+    assert handoff_bundle["scope_closure_first_blocked_required_missing_fields"] == (
+        "replacement_reference_binding_kcal_mol"
+    )
+    assert handoff_bundle["scope_closure_transporter_unresolved_slot_count"] == 11
+    assert handoff_bundle["scope_closure_general_platform_claim_allowed"] is False
+    assert handoff_bundle["artifact_reference_contract_ready"] is True
+    assert handoff_bundle["artifact_reference_count"] == 21
+    assert handoff_bundle["local_missing_artifact_reference_count"] == 0
+    assert handoff_bundle["operator_return_artifact_reference_count"] >= 4
+    assert handoff_bundle["operator_return_pending_artifact_reference_count"] >= 1
+    assert any(
+        row["reference_role"] == "operator_return_artifact"
+        and row["required_now"] is False
+        and row["expected_from_operator_return"] is True
+        for row in handoff_bundle["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "delta_force_closure_acceptance_packet"
+        and row["reference_role"] == "local_acceptance_evidence"
+        and row["required_now"] is True
+        for row in handoff_bundle["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "scope_closure_acceptance_packet"
+        and row["reference_role"] == "local_acceptance_evidence"
+        and row["required_now"] is True
+        for row in handoff_bundle["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "first_parallelizable_action_direct_binding_procurement_packet"
+        and row["artifact_path"] == "runs/aqp1_direct_binding_procurement_packet_current.json"
+        and row["reference_role"] == "local_parallel_direct_binding_procurement_packet"
+        and row["required_now"] is True
+        for row in handoff_bundle["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "gpu_worker_execution_runbook"
+        and row["artifact_path"] == "runs/residual_force_gpu_worker_execution_runbook_current.json"
+        and row["reference_role"] == "local_gpu_worker_execution_runbook"
+        and row["required_now"] is True
+        for row in handoff_bundle["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "gpu_worker_execution_runbook_script"
+        and row["artifact_path"] == "runs/residual_force_gpu_worker_execution_runbook_current.sh"
+        and row["reference_role"] == "local_gpu_worker_execution_runbook_script"
+        and row["required_now"] is True
+        for row in handoff_bundle["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "gpu_worker_return_bundle_packager_script"
+        and row["artifact_path"] == "runs/residual_force_gpu_worker_return_bundle_packager_current.sh"
+        and row["reference_role"] == "local_gpu_worker_return_bundle_packager_script"
+        and row["required_now"] is True
+        for row in handoff_bundle["artifact_reference_manifest"]
+    )
+    assert len(handoff_bundle["artifacts"]) == 3
+    assert len(handoff_bundle["artifacts"][0]["sha256"]) == 64
+    assert handoff_bundle["execution_enabled"] is False
+    assert handoff_bundle["checkpoint_promoted"] is False
+
+    completion = asyncio.run(product.get_product_goal_completion_audit())
+    assert completion["status"] == "blocked_product_goal_completion_audit"
+    assert completion["goal_complete"] is False
+    assert completion["fail_count"] > 0
+    assert completion["approval_tokens_required"] == []
+    assert completion["product_ai_architecture_ready"] is False
+    assert completion["product_ai_architecture_gap_status"] == "blocked_product_ai_architecture_gap_closure"
+    assert completion["product_ai_architecture_all_gaps_closed"] is False
+    assert completion["product_ai_architecture_gap_count"] == 7
+    assert completion["product_ai_architecture_closed_gap_count"] == 5
+    assert completion["product_ai_architecture_open_gap_count"] == 2
+    assert completion["product_ai_architecture_open_gap_ids"] == [
+        "production_ai_inference_checkpoint",
+        "scope_breadth_expansion",
+    ]
+    assert completion["product_ai_architecture_gap_blocker_matrix_ready"] is True
+    assert completion["product_ai_architecture_gap_blocker_matrix_count"] == 2
+    assert completion["product_ai_architecture_current_primary_blocker_gap_id"] == (
+        "production_ai_inference_checkpoint"
+    )
+    assert completion["product_ai_architecture_current_primary_blocker_id"] == (
+        "production_gpu_execution_environment_ready"
+    )
+    assert completion["product_ai_architecture_current_primary_blocker_artifact"] == (
+        "runs/rocm_environment_manifest_current.json"
+    )
+    assert completion["product_ai_architecture_current_primary_blocker_validation_command"] == (
+        "python3 tools/build_rocm_environment_manifest.py"
+    )
+    assert completion["product_ai_architecture_current_primary_blocker_next_action"] == (
+        "Expose a visible ROCm/HIP AMD GPU device to PyTorch before production regeneration."
+    )
+    assert "visible_device_count" in completion[
+        "product_ai_architecture_current_primary_blocker_operator_input_fields"
+    ]
+    assert completion["product_ai_architecture_current_primary_blocker_unlock_claim"] == (
+        "production_ai_inference_subject"
+    )
+    assert completion[
+        "product_ai_architecture_current_primary_blocker_next_after_stage_id"
+    ] == "gpu_return_acceptance"
+    assert completion[
+        "product_ai_architecture_current_primary_blocker_next_after_artifact"
+    ] == "runs/residual_force_gpu_worker_return_receipt_current.json"
+    assert completion[
+        "product_ai_architecture_current_primary_blocker_next_after_validation_command"
+    ] == "python3 tools/build_residual_force_gpu_worker_return_receipt.py"
+    assert "Return full regeneration summary/manifest" in completion[
+        "product_ai_architecture_current_primary_blocker_next_after_next_action"
+    ]
+    assert completion[
+        "product_ai_architecture_current_primary_blocker_next_after_required_checks"
+    ] == ["force_gpu_worker_return_receipt_ready"]
+    assert "delta_force" in completion[
+        "product_ai_architecture_current_primary_blocker_next_after_unlock_fields"
+    ]
+    assert completion["product_ai_architecture_parallelizable_gap_blocker_count"] == 1
+    assert completion["product_ai_architecture_first_parallelizable_gap_id"] == (
+        "scope_breadth_expansion"
+    )
+    assert completion["product_ai_architecture_first_parallelizable_blocker_id"] == (
+        "AQP1.core_binder_01"
+    )
+    assert completion["product_ai_architecture_first_parallelizable_blocker_artifact"] == (
+        "runs/transporter_manual_review_intake_template_current.csv"
+    )
+    assert completion["product_ai_architecture_gap_blocker_matrix"][1][
+        "parallelizable_workstream"
+    ] is True
+    assert {
+        "target_id",
+        "candidate_ligand_id",
+        "reference_binding_kcal_mol",
+    }.issubset(
+        set(completion["product_ai_architecture_first_parallelizable_blocker_operator_input_fields"])
+    )
+    assert "direct_binding_or_claim_safe_kcal_basis" in completion[
+        "product_ai_architecture_first_parallelizable_blocker_required_exact_evidence_fields"
+    ]
+    assert "functional_surrogate_does_not_authorize_direct_binding_claim" in completion[
+        "product_ai_architecture_first_parallelizable_blocker_required_claim_guardrails"
+    ]
+    assert "exact target-pair quantitative evidence" in completion[
+        "product_ai_architecture_first_parallelizable_blocker_claim_safe_completion_rule"
+    ]
+    assert completion["product_ai_architecture_first_parallelizable_blocker_unlock_claim"] == (
+        "transporter_domain_promotion"
+    )
+    assert completion[
+        "product_ai_architecture_first_parallelizable_blocker_source_modality_triage_artifact"
+    ] == "runs/aqp1_binding_source_modality_triage_current.json"
+    assert completion[
+        "product_ai_architecture_first_parallelizable_blocker_source_modality_triage_decision"
+    ] == "keep_blocked_until_direct_experimental_or_operator_verified_claim_safe_binding_kcal"
+    assert completion[
+        "product_ai_architecture_first_parallelizable_blocker_source_modality_direct_experimental_binding_row_count"
+    ] == 0
+    assert completion[
+        "product_ai_architecture_first_parallelizable_blocker_source_modality_claim_safe_binding_kcal_ready_count"
+    ] == 0
+    assert completion[
+        "product_ai_architecture_first_parallelizable_blocker_source_modality_computational_binding_energy_row_count"
+    ] == 1
+    assert completion[
+        "product_ai_architecture_first_parallelizable_blocker_source_modality_best_computational_binding_energy_kcal_mol"
+    ] == "-34.48"
+    assert completion["product_ai_production_checkpoint_gap_ready"] is False
+    assert "trained_model_checkpoint_count=0" in completion["product_ai_production_checkpoint_gap_observed"]
+    assert completion["product_ai_closed_loop_decision_graph_ready"] is True
+    assert completion["product_ai_durable_job_orchestration_ready"] is True
+    assert "queue_lifecycle_progress_ready=True" in completion["product_ai_durable_job_orchestration_observed"]
+    assert "worker_backend_contract_ready=True" in completion["product_ai_durable_job_orchestration_observed"]
+    assert completion["product_ai_trajectory_sla_ready"] is True
+    assert completion["product_ai_trajectory_sla_claim_tier"] == "restricted_family_sla"
+    assert completion["product_ai_trajectory_sla_restricted_family_allowed"] is True
+    assert completion["product_ai_trajectory_sla_broad_platform_allowed"] is False
+    assert completion["product_ai_trajectory_sla_current_rocm_baseline_claim_scope"] == (
+        "single_target_gpcr_baseline"
+    )
+    assert completion["product_ai_trajectory_sla_current_rocm_baseline_production_profile_enabled"] is False
+    assert completion["product_ai_trajectory_sla_rocm_baseline_profile_gap_acknowledged"] is True
+    assert completion["product_ai_scope_breadth_ready"] is False
+    assert "transporter_domain_promotion" in completion["product_ai_scope_breadth_observed"]
+    assert completion["product_scope_evidence_queue_next_operator_completion_packet_ready"] is True
+    assert completion["product_scope_evidence_queue_next_operator_completion_slot_id"] == "AQP1.core_binder_01"
+    assert completion["product_scope_evidence_queue_next_operator_completion_expected_evidence_type"] == (
+        "direct_or_claim_safe_binding_kcal"
+    )
+    assert (
+        completion[
+            "product_scope_evidence_queue_next_operator_completion_required_exact_evidence_field_count"
+        ]
+        == 19
+    )
+    assert "target_uniprot_accession" in completion[
+        "product_scope_evidence_queue_next_operator_completion_required_exact_evidence_fields"
+    ]
+    assert "reference_binding_kcal_mol" in completion[
+        "product_scope_evidence_queue_next_operator_completion_required_operator_intake_columns"
+    ]
+    assert "functional_surrogate_does_not_authorize_direct_binding_claim" in completion[
+        "product_scope_evidence_queue_next_operator_completion_required_claim_guardrails"
+    ]
+    assert completion["product_scope_evidence_queue_next_operator_completion_operator_review_artifact"] == (
+        "runs/transporter_manual_review_intake_template_current.csv"
+    )
+    assert "ligand_binding_reference_blind_aqp1" in completion[
+        "product_scope_evidence_queue_next_operator_completion_post_intake_synchronization_targets"
+    ]
+    assert "build_product_goal_completion_audit.py" in completion[
+        "product_scope_evidence_queue_next_operator_completion_acceptance_gate_commands"
+    ]
+    assert completion["product_scope_evidence_queue_next_operator_completion_contract_artifact"].endswith(
+        "#next_slot_completion_packet"
+    )
+    assert completion[
+        "product_scope_evidence_queue_next_operator_completion_aqp1_review_sidecar_ready"
+    ] is True
+    assert completion[
+        "product_scope_evidence_queue_next_operator_completion_aqp1_review_candidate_name"
+    ] == "bacopaside II"
+    assert completion[
+        "product_scope_evidence_queue_next_operator_completion_aqp1_review_source_anchor"
+    ] == "PMID 27474162"
+    assert completion[
+        "product_scope_evidence_queue_next_operator_completion_aqp1_review_target_uniprot"
+    ] == "P29972"
+    assert completion[
+        "product_scope_evidence_queue_next_operator_completion_aqp1_review_functional_delta_g_surrogate_kcal_mol"
+    ] == "-6.47"
+    assert completion[
+        "product_scope_evidence_queue_next_operator_completion_aqp1_review_direct_binding_claim_allowed"
+    ] == "no"
+    assert completion[
+        "product_scope_evidence_queue_next_operator_completion_aqp1_review_replacement_reference_binding_kcal_mol_must_remain_blank"
+    ] == "yes"
+    assert completion["product_scope_evidence_queue_pxr_exact_review_sidecar_row_count"] == 6
+    assert completion["product_scope_evidence_queue_next_pxr_exact_review_sidecar_ready"] is True
+    assert completion["product_scope_evidence_queue_next_pxr_exact_review_row_id"] == (
+        "pxr_review_d603772038dff21e"
+    )
+    assert completion["product_scope_evidence_queue_next_pxr_exact_review_candidate_name"] == "acetaminophen"
+    assert completion["product_scope_evidence_queue_next_pxr_exact_review_required_evidence_mode"] == (
+        "exact_human_nr1i2_pxr_conflict_resolution_or_negative_value_required"
+    )
+    assert completion["product_scope_evidence_queue_next_pxr_exact_review_target_match_confirmed"] == (
+        "OPERATOR_FILL_TRUE_OR_FALSE"
+    )
+    assert completion[
+        "product_scope_evidence_queue_next_pxr_exact_review_replacement_reference_binding_kcal_mol"
+    ].startswith("OPERATOR_FILL_EXACT_HUMAN_NR1I2_PXR_KCAL")
+    assert completion["product_scope_evidence_queue_next_pxr_exact_review_authoritative_apply_allowed"] is False
+    assert completion["product_scope_evidence_queue_next_pxr_exact_review_scope_promotion_allowed"] is False
+    assert completion["product_ai_report_ux_ready"] is True
+    assert completion["product_ai_report_ux_customer_report_delivery_contract_ready"] is True
+    assert completion["product_ai_report_ux_customer_report_evidence_binding_ready"] is True
+    assert completion["product_ai_report_ux_customer_report_viewer_binding_ready"] is True
+    assert completion["product_ai_report_ux_viewer_customer_report_binding_ready"] is True
+    assert completion["product_ai_report_ux_customer_report_ready_block_count"] == 6
+    assert completion["product_ai_report_ux_customer_report_required_block_count"] == 6
+    assert completion["product_ai_report_ux_customer_report_blocked_block_count"] == 0
+    assert completion["product_ai_security_deployment_ready"] is True
+    assert completion["product_ai_security_hosted_deployment_contract_ready"] is True
+    assert completion["product_ai_security_hosted_deployment_currently_satisfied"] is False
+    assert completion["product_ai_security_hosted_deployment_next_stage_id"] == "operator_exposure_approval"
+    assert completion["product_ai_security_hosted_external_exposure_allowed"] is False
+    assert completion["product_ai_security_hosted_secret_injection_ready"] is False
+    assert completion["product_ai_security_tls_termination_operator_verified"] is False
+    assert completion["production_ai_inference_subject_active"] is False
+    assert completion["production_ai_default_residual_mode"] == "shadow"
+    assert completion["production_ai_promotion_allowed"] is False
+    assert completion["production_ai_customer_facing_auto_correction_allowed"] is False
+    assert completion["production_ai_customer_facing_score_mutation_allowed"] is False
+    assert completion["production_ai_customer_facing_ranking_mutation_allowed"] is False
+    assert completion["production_ai_trained_checkpoint_count"] == 0
+    assert completion["production_ai_selected_sidecar_ready"] is False
+    assert completion["production_ai_selected_sidecar_missing_output_fields"] == ["delta_force"]
+    assert "production checkpoint preflight is blocked" in completion["production_ai_blocked_reason"]
+    assert completion["production_ai_residual_model_registry_status"] == "residual_model_registry_ready"
+    assert completion["production_ai_residual_model_registry_ready"] is True
+    assert completion["production_ai_product_model_layer_ready"] is True
+    assert completion["production_ai_registry_checkpoint_preflight_ready"] is False
+    assert completion["production_ai_registry_production_checkpoint_blocked"] is True
+    assert "delta_force" in completion["production_ai_registry_checkpoint_primary_blocker"]
+    assert "delta_force" in completion["production_ai_registry_checkpoint_missing_output_fields"]
+    assert "delta_force" in completion[
+        "production_ai_registry_checkpoint_missing_adapter_output_policy_fields"
+    ]
+    assert completion["product_ai_primary_backlog_work_item_id"] == "training_data.production_delta_force_label_evidence"
+    assert "delta_force training/evaluation labels" in completion["product_ai_primary_backlog_acceptance_criteria"]
+    assert completion["production_ai_gpu_worker_return_receipt_ready"] is False
+    assert "full_regeneration_manifest_operator_verified" in completion[
+        "production_ai_gpu_worker_return_receipt_blockers"
+    ]
+    assert "full_regeneration_manifest_npz_paths_complete" in completion[
+        "production_ai_gpu_worker_return_receipt_blockers"
+    ]
+    assert completion["production_ai_gpu_expected_queue_rows"] == 768
+    assert completion["production_ai_gpu_manifest_ok_row_count"] == 0
+    assert completion["production_ai_gpu_manifest_npz_paths_complete"] is False
+    assert completion["production_ai_gpu_manifest_npz_files_exist"] is False
+    assert completion["production_ai_gpu_manifest_npz_path_present_count"] == 0
+    assert completion["production_ai_gpu_manifest_ok_row_missing_npz_path_count"] == 0
+    assert completion["production_ai_gpu_manifest_operator_verified_missing_npz_path_count"] == 0
+    assert completion["production_ai_gpu_manifest_npz_file_existing_count"] == 0
+    assert completion["production_ai_gpu_manifest_npz_file_missing_count"] == 0
+    assert completion["production_ai_gpu_manifest_ok_row_missing_npz_file_count"] == 0
+    assert completion["production_ai_gpu_manifest_operator_verified_missing_npz_file_count"] == 0
+    assert completion["production_ai_gpu_manifest_operator_verified"] is False
+    assert completion["production_ai_gpu_operator_verified_true_count"] == 0
+    assert completion["production_ai_gpu_identity_coverage_ready"] is False
+    assert completion["production_ai_gpu_queue_fingerprints"] == 768
+    assert completion["production_ai_force_derivation_input_ready"] is False
+    assert completion["production_ai_delta_force_derivation_validation_ready"] is False
+    assert "delta_force" in completion["production_ai_missing_output_labels"]
+    assert completion["production_ai_checkpoint_readiness_status"] == (
+        "blocked_product_production_ai_checkpoint_readiness"
+    )
+    assert completion["production_ai_checkpoint_ready"] is False
+    assert completion["production_ai_checkpoint_output_head_gap_contract_ready"] is True
+    assert completion["production_ai_checkpoint_output_heads_complete"] is False
+    assert completion["production_ai_checkpoint_output_head_ready_field_count"] == 6
+    assert completion["production_ai_checkpoint_output_head_blocked_field_count"] == 1
+    assert completion["production_ai_checkpoint_output_head_blocked_fields"] == ["delta_force"]
+    assert completion["production_ai_checkpoint_output_head_first_blocked_field"] == "delta_force"
+    assert "force_gpu_worker_return_receipt_ready" in completion["production_ai_checkpoint_failed_check_ids"]
+    assert completion["production_ai_checkpoint_first_failed_check_id"] == "registry_customer_facing_promotion_allowed"
+    assert completion["production_ai_checkpoint_first_failed_source_artifact"] == "runs/residual_model_registry_current.json"
+    assert "default_residual_mode=shadow" in completion["production_ai_checkpoint_first_failed_observed"]
+    assert "production promotion" in completion["production_ai_checkpoint_first_failed_required"]
+    assert "Keep customer-facing mutation disabled" in completion[
+        "production_ai_checkpoint_first_failed_next_action"
+    ]
+    assert completion["production_ai_checkpoint_actionable_blocker_stage_id"] == (
+        "production_gpu_execution_environment_acceptance"
+    )
+    assert completion["production_ai_checkpoint_actionable_blocker_check_id"] == (
+        "production_gpu_execution_environment_ready"
+    )
+    assert completion["production_ai_checkpoint_actionable_blocker_artifact"] == (
+        "runs/rocm_environment_manifest_current.json"
+    )
+    assert "visible_device_count=0" in completion[
+        "production_ai_checkpoint_actionable_blocker_observed"
+    ]
+    assert "ROCm/HIP runtime is ready" in completion[
+        "production_ai_checkpoint_actionable_blocker_required"
+    ]
+    assert "Expose a visible ROCm/HIP AMD GPU device" in completion[
+        "production_ai_checkpoint_actionable_blocker_next_action"
+    ]
+    assert completion["production_ai_checkpoint_actionable_blocker_validation_command"] == (
+        "python3 tools/build_rocm_environment_manifest.py"
+    )
+    assert completion["production_ai_checkpoint_actionable_blocker_unlock_fields"] == [
+        "manifest_ready",
+        "rocm_stack_detected",
+        "torch_rocm_ready",
+        "amd_gpu_detected",
+        "visible_device_count",
+    ]
+    assert completion["production_ai_checkpoint_actionable_blocker_downstream_blocked_stage_count"] == 7
+    assert completion["production_ai_checkpoint_next_after_actionable_blocker_stage_id"] == (
+        "gpu_return_acceptance"
+    )
+    assert completion["production_ai_checkpoint_next_after_actionable_blocker_artifact"] == (
+        "runs/residual_force_gpu_worker_return_receipt_current.json"
+    )
+    assert completion["production_ai_checkpoint_next_after_actionable_blocker_validation_command"] == (
+        "python3 tools/build_residual_force_gpu_worker_return_receipt.py"
+    )
+    assert completion["production_ai_checkpoint_next_after_actionable_blocker_required_checks"] == [
+        "force_gpu_worker_return_receipt_ready"
+    ]
+    assert "delta_force" in completion[
+        "production_ai_checkpoint_next_after_actionable_blocker_unlock_fields"
+    ]
+    assert completion["production_ai_checkpoint_actionable_blocker_blocks_registry_promotion"] is True
+    assert completion["production_ai_checkpoint_actionable_operator_completion_packet_ready"] is True
+    assert completion["production_ai_checkpoint_actionable_operator_completion_artifact_id"] == (
+        "rocm_environment_manifest_json"
+    )
+    assert completion["production_ai_checkpoint_actionable_operator_completion_artifact_path"] == (
+        "runs/rocm_environment_manifest_current.json"
+    )
+    assert completion["production_ai_checkpoint_actionable_operator_completion_expected_queue_rows"] == 0
+    assert "visible_device_count" in completion[
+        "production_ai_checkpoint_actionable_operator_completion_required_fields_or_columns"
+    ]
+    assert completion[
+        "production_ai_checkpoint_actionable_operator_completion_diagnostic_command_count"
+    ] == 5
+    assert any(
+        "torch.cuda.device_count" in command
+        for command in completion[
+            "production_ai_checkpoint_actionable_operator_completion_diagnostic_commands"
+        ]
+    )
+    assert "torch_version" in completion[
+        "production_ai_checkpoint_actionable_operator_completion_diagnostic_required_fields"
+    ]
+    assert "device_names nonempty" in completion[
+        "production_ai_checkpoint_actionable_operator_completion_diagnostic_completion_rule"
+    ]
+    assert "runs/rocm_environment_manifest_current.md" in completion[
+        "production_ai_checkpoint_actionable_operator_completion_diagnostic_return_artifacts"
+    ]
+    assert completion[
+        "production_ai_checkpoint_actionable_operator_completion_torch_visibility_probe_command"
+    ].startswith("python3 -c")
+    assert completion["production_ai_checkpoint_actionable_operator_completion_failed_check_ids"] == []
+    assert completion["production_ai_checkpoint_actionable_operator_completion_template_payload_json"] == ""
+    assert "visible_device_count>0" in completion[
+        "production_ai_checkpoint_actionable_operator_completion_completion_rule"
+    ]
+    assert completion[
+        "production_ai_checkpoint_actionable_operator_completion_backend_provenance_completion_rule"
+    ] == ""
+    assert completion["production_ai_checkpoint_actionable_operator_completion_packet"]["artifact_id"] == (
+        "rocm_environment_manifest_json"
+    )
+    assert completion["production_ai_checkpoint_actionable_operator_completion_packet"][
+        "post_environment_next_artifact"
+    ] == "runs/residual_force_gpu_worker_return_receipt_current.json"
+    assert completion["production_ai_checkpoint_worker_runtime_receipt_contract_ready"] is True
+    assert "backend_counts" in completion[
+        "production_ai_checkpoint_worker_runtime_receipt_required_fields_or_columns"
+    ]
+    assert "prod_mode=true" in completion["production_ai_checkpoint_worker_runtime_receipt_completion_rule"]
+    assert completion["production_ai_checkpoint_worker_runtime_receipt_post_environment_next_stage_id"] == (
+        "gpu_return_acceptance"
+    )
+    assert completion["production_ai_checkpoint_worker_runtime_receipt_post_environment_next_artifact"] == (
+        "runs/residual_force_gpu_worker_return_receipt_current.json"
+    )
+    assert "cpu_fallback_does_not_satisfy_production_inference" in completion[
+        "production_ai_checkpoint_worker_runtime_receipt_guardrails"
+    ]
+    assert completion["production_ai_checkpoint_acceptance_matrix_ready"] is True
+    assert completion["production_ai_checkpoint_acceptance_stage_count"] == 8
+    assert completion["production_ai_checkpoint_acceptance_ready_stage_count"] == 0
+    assert completion["production_ai_checkpoint_acceptance_blocked_stage_count"] == 8
+    assert completion["production_ai_checkpoint_acceptance_blocked_stage_ids"][0] == (
+        "production_gpu_execution_environment_acceptance"
+    )
+    assert len(completion["production_ai_checkpoint_acceptance_matrix"]) == (
+        completion["production_ai_checkpoint_acceptance_stage_count"]
+    )
+    assert len(completion["production_ai_checkpoint_acceptance_current_blocked_stage_matrix"]) == (
+        completion["production_ai_checkpoint_acceptance_blocked_stage_count"]
+    )
+    assert completion["production_ai_checkpoint_acceptance_release_blocker_stage_count"] == 8
+    assert completion["production_ai_checkpoint_acceptance_release_blocker_stage_ids"] == [
+        "production_gpu_execution_environment_acceptance",
+        "gpu_return_acceptance",
+        "force_derivation_acceptance",
+        "production_training_data_acceptance",
+        "production_score_model_acceptance",
+        "checkpoint_sidecar_acceptance",
+        "checkpoint_preflight_acceptance",
+        "registry_guarded_promotion_acceptance",
+    ]
+    assert completion["production_ai_checkpoint_acceptance_matrix"][0]["stage_id"] == (
+        "production_gpu_execution_environment_acceptance"
+    )
+    assert completion["production_ai_checkpoint_acceptance_matrix"][0]["unlock_fields"] == [
+        "manifest_ready",
+        "rocm_stack_detected",
+        "torch_rocm_ready",
+        "amd_gpu_detected",
+        "visible_device_count",
+    ]
+    assert completion["production_ai_checkpoint_acceptance_next_stage_id"] == (
+        "production_gpu_execution_environment_acceptance"
+    )
+    assert completion["production_ai_checkpoint_acceptance_next_stage_artifact"] == (
+        "runs/rocm_environment_manifest_current.json"
+    )
+    assert completion["production_ai_checkpoint_acceptance_next_stage_validation_command"] == (
+        "python3 tools/build_rocm_environment_manifest.py"
+    )
+    assert completion["production_ai_checkpoint_acceptance_next_stage_unlock_fields"] == [
+        "manifest_ready",
+        "rocm_stack_detected",
+        "torch_rocm_ready",
+        "amd_gpu_detected",
+        "visible_device_count",
+    ]
+    assert completion["production_ai_checkpoint_acceptance_next_stage_required_checks"] == [
+        "production_gpu_execution_environment_ready"
+    ]
+    assert completion["production_ai_gpu_return_intake_status"] == (
+        "blocked_product_production_ai_gpu_return_intake"
+    )
+    assert completion["production_ai_gpu_return_intake_ready"] is True
+    assert completion["production_ai_gpu_return_artifacts_ready"] is False
+    assert completion["production_ai_gpu_return_check_count"] == 20
+    assert completion["production_ai_gpu_return_fail_check_count"] == 17
+    assert completion["production_ai_gpu_return_expected_queue_rows"] == 768
+    assert completion["production_ai_gpu_return_failed_check_ids"] == [
+        "actual_summary_returned_complete",
+        "actual_summary_manifest_bound",
+        "actual_summary_out_manifest_csv_present",
+        "actual_summary_out_manifest_csv_bound",
+        "actual_summary_out_summary_json_bound",
+        "actual_summary_manifest_row_counts_consistent",
+        "production_gpu_backend_provenance",
+        "worker_rocm_environment_manifest_ready",
+        "actual_manifest_returned_complete",
+        "actual_manifest_npz_paths_complete",
+        "actual_manifest_npz_files_exist",
+        "actual_manifest_npz_files_valid",
+        "actual_manifest_npz_schema_valid",
+        "actual_manifest_npz_identity_valid",
+        "actual_manifest_operator_verified",
+        "queue_manifest_identity_coverage",
+        "post_run_force_derivation_validation",
+    ]
+    assert completion["production_ai_gpu_return_blocker_matrix_count"] == 17
+    assert len(completion["production_ai_gpu_return_blocker_matrix"]) == 17
+    assert completion["production_ai_gpu_return_blocker_matrix"][0]["check_id"] == (
+        "actual_summary_returned_complete"
+    )
+    assert "summary_present=False" in completion["production_ai_gpu_return_blocker_matrix"][0]["observed"]
+    assert "full GPU run" in completion["production_ai_gpu_return_blocker_matrix"][0]["next_action"]
+    assert completion["production_ai_gpu_return_first_failed_check_id"] == "actual_summary_returned_complete"
+    assert completion["production_ai_gpu_return_first_failed_source_artifact"] == (
+        "runs/residual_force_trajectory_regeneration_current_summary.json"
+    )
+    assert "summary_present=False" in completion["production_ai_gpu_return_first_failed_observed"]
+    assert "actual returned summary" in completion["production_ai_gpu_return_first_failed_required"]
+    assert "Return runs/residual_force_trajectory_regeneration_current_summary.json" in completion[
+        "production_ai_gpu_return_first_failed_next_action"
+    ]
+    assert completion["production_ai_gpu_return_handoff_binding_ready"] is True
+    assert completion["production_ai_gpu_return_handoff_queue_csv"] == (
+        "runs/residual_force_trajectory_regeneration_queue_current.csv"
+    )
+    assert len(completion["production_ai_gpu_return_handoff_queue_csv_sha256"]) == 64
+    assert "generate_ligand_trajectory_engine.py" in completion[
+        "production_ai_gpu_return_handoff_full_regeneration_command"
+    ]
+    assert completion["production_ai_gpu_return_handoff_return_manifest_schema_contract_ready"] is True
+    assert "queue_row_fingerprint" in completion[
+        "production_ai_gpu_return_handoff_return_manifest_required_identity_rule"
+    ]
+    assert "queue_row_fingerprint" in completion[
+        "production_ai_gpu_return_handoff_return_manifest_fingerprint_columns"
+    ]
+    assert "queue_id" in completion["production_ai_gpu_return_handoff_return_manifest_queue_id_columns"]
+    assert "expected_regenerated_trajectory_npz" in completion[
+        "production_ai_gpu_return_handoff_return_manifest_npz_columns"
+    ]
+    assert completion["production_ai_gpu_return_operator_acceptance_matrix_ready"] is True
+    assert len(completion["production_ai_gpu_return_operator_acceptance_matrix"]) == 5
+    assert completion["production_ai_gpu_return_operator_acceptance_matrix"][0]["stage_id"] == (
+        "gpu_return_templates_preflight"
+    )
+    assert len(completion["production_ai_gpu_return_operator_acceptance_current_blocked_stage_matrix"]) == 4
+    assert completion["production_ai_gpu_return_operator_acceptance_current_blocked_stage_matrix"][0][
+        "stage_id"
+    ] == "returned_summary_acceptance"
+    assert completion["production_ai_gpu_return_operator_acceptance_stage_check_matrix_count"] == 5
+    assert len(completion["production_ai_gpu_return_operator_acceptance_stage_check_matrix"]) == 5
+    assert completion["production_ai_gpu_return_operator_acceptance_stage_check_matrix"][1]["stage_id"] == (
+        "returned_summary_acceptance"
+    )
+    assert completion["production_ai_gpu_return_operator_acceptance_stage_check_matrix"][1][
+        "failed_check_ids"
+    ][0] == "actual_summary_returned_complete"
+    assert (
+        completion[
+            "production_ai_gpu_return_operator_acceptance_current_blocked_stage_check_matrix_count"
+        ]
+        == 4
+    )
+    assert completion["production_ai_gpu_return_operator_acceptance_current_blocked_stage_check_matrix"][0][
+        "stage_id"
+    ] == "returned_summary_acceptance"
+    assert completion["production_ai_gpu_return_operator_return_artifact_completion_matrix_count"] == 5
+    assert len(completion["production_ai_gpu_return_operator_return_artifact_completion_matrix"]) == 5
+    assert completion["production_ai_gpu_return_operator_return_artifact_completion_matrix"][0][
+        "artifact_id"
+    ] == "returned_summary_json"
+    assert completion["production_ai_gpu_return_operator_return_artifact_completion_blocker_count"] == 5
+    assert completion["production_ai_gpu_return_operator_return_artifact_completion_blocker_matrix"][0][
+        "artifact_id"
+    ] == "returned_summary_json"
+    assert completion[
+        "production_ai_gpu_return_operator_return_next_artifact_completion_packet_ready"
+    ] is True
+    assert completion["production_ai_gpu_return_operator_return_next_artifact_completion_packet"][
+        "artifact_id"
+    ] == "returned_summary_json"
+    assert completion["production_ai_gpu_return_operator_return_next_artifact_completion_packet"][
+        "template_payload"
+    ]["queue_rows"] == 768
+    assert completion["production_ai_gpu_return_operator_return_next_artifact_id"] == (
+        "returned_summary_json"
+    )
+    assert completion["production_ai_gpu_return_operator_return_next_artifact_path"] == (
+        "runs/residual_force_trajectory_regeneration_current_summary.json"
+    )
+    assert completion["production_ai_gpu_return_operator_return_next_artifact_failed_check_ids"][0] == (
+        "actual_summary_returned_complete"
+    )
+    assert completion["commercial_readiness_next_action_matrix_ready"] is True
+    assert completion["commercial_readiness_next_action_matrix_count"] == 5
+    assert completion["commercial_readiness_next_action_blocker_count"] == 4
+    assert completion["commercial_readiness_first_next_action_id"] == "production_gpu_execution_environment"
+    assert completion["commercial_readiness_next_action_blocker_matrix"][0]["artifact"] == (
+        "runs/rocm_environment_manifest_current.json"
+    )
+    assert completion["commercial_readiness_next_action_blocker_matrix"][0][
+        "operator_completion_packet_ready"
+    ] is True
+    assert "visible_device_count" in completion["commercial_readiness_next_action_blocker_matrix"][0][
+        "required_operator_inputs"
+    ]
+    assert completion["commercial_readiness_next_action_blocker_matrix"][0][
+        "next_after_actionable_blocker_stage_id"
+    ] == "gpu_return_acceptance"
+    assert completion["commercial_readiness_next_action_blocker_matrix"][0][
+        "next_after_actionable_blocker_artifact"
+    ] == "runs/residual_force_gpu_worker_return_receipt_current.json"
+    assert completion["commercial_readiness_next_action_blocker_matrix"][0][
+        "next_after_actionable_blocker_required_checks"
+    ] == ["force_gpu_worker_return_receipt_ready"]
+    assert "delta_force" in completion["commercial_readiness_next_action_blocker_matrix"][0][
+        "next_after_actionable_blocker_unlock_fields"
+    ]
+    assert completion["commercial_readiness_next_action_matrix"][1]["action_id"] == "production_ai_return_summary"
+    assert "queue_rows" in completion["commercial_readiness_next_action_matrix"][1][
+        "required_operator_inputs"
+    ]
+    assert completion["commercial_readiness_next_action_matrix"][1][
+        "return_bundle_required_artifact_count"
+    ] == 5
+    assert "regenerated NPZ bundles referenced by the returned manifest" in completion[
+        "commercial_readiness_next_action_matrix"
+    ][1]["return_bundle_required_artifacts"]
+    assert completion["commercial_readiness_next_action_matrix"][1][
+        "return_bundle_artifact_completion_matrix_count"
+    ] == 5
+    assert completion["commercial_readiness_next_action_matrix"][1][
+        "return_bundle_next_artifact_id"
+    ] == "returned_summary_json"
+    assert "operator_verified_npz_exists" in completion["commercial_readiness_next_action_matrix"][1][
+        "return_bundle_manifest_required_columns"
+    ]
+    assert "summary alone does not unlock production AI" in completion[
+        "commercial_readiness_next_action_matrix"
+    ][1]["return_bundle_guardrail"]
+    assert completion["commercial_readiness_next_action_matrix"][2]["next_slot_id"] == "AQP1.core_binder_01"
+    assert "reference_binding_kcal_mol" in completion["commercial_readiness_next_action_matrix"][2][
+        "required_operator_inputs"
+    ]
+    assert "direct_binding_or_claim_safe_kcal_basis" in completion[
+        "commercial_readiness_next_action_matrix"
+    ][2]["required_exact_evidence_fields"]
+    assert "target_match_decision" in completion["commercial_readiness_next_action_matrix"][2][
+        "required_exact_evidence_fields"
+    ]
+    assert "functional_surrogate_does_not_authorize_direct_binding_claim" in completion[
+        "commercial_readiness_next_action_matrix"
+    ][2]["required_claim_guardrails"]
+    assert "Review-only or functional surrogate evidence" in completion[
+        "commercial_readiness_next_action_matrix"
+    ][2]["claim_safe_completion_rule"]
+    assert completion["commercial_readiness_next_action_matrix"][2][
+        "target_ready_for_promotion_ids"
+    ] == ["GLUT1"]
+    assert completion["commercial_readiness_next_action_matrix"][2][
+        "target_blocked_for_promotion_ids"
+    ] == ["AQP1"]
+    assert completion["commercial_readiness_next_action_matrix"][2]["primary_blocker_target_id"] == "AQP1"
+    assert completion["commercial_readiness_next_action_matrix"][2]["primary_blocker_packet_step"] == (
+        "core_binder_01"
+    )
+    assert completion["commercial_readiness_next_action_matrix"][2][
+        "primary_blocker_candidate_name"
+    ] == "bacopaside II"
+    assert "blocked transporter target promotion" in completion["commercial_readiness_next_action_matrix"][2][
+        "target_scope_guardrail"
+    ]
+    assert completion["commercial_readiness_next_action_matrix"][3]["status"] == "ready"
+    assert completion["commercial_readiness_next_action_matrix"][3]["release_blocker"] is False
+    assert completion["commercial_readiness_next_action_matrix"][3]["next_review_row_id"] == ""
+    assert completion["commercial_readiness_next_action_matrix"][3]["required_exact_evidence_fields"] == []
+    assert completion["commercial_readiness_next_action_matrix"][3]["required_claim_guardrails"] == []
+    assert completion["commercial_readiness_next_action_matrix"][3]["claim_safe_completion_rule"] == ""
+    assert completion["commercial_readiness_next_action_matrix"][4]["action_id"] == (
+        "broad_platform_claim_floor"
+    )
+    assert completion["commercial_readiness_next_action_matrix"][4]["blocked_stage_dependency_count"] == 3
+    assert "general_platform_claim_allowed_false" in completion[
+        "commercial_readiness_next_action_matrix"
+    ][4]["required_claim_guardrails"][0]
+    assert "general protein-ligand platform wording blocked" in completion[
+        "commercial_readiness_next_action_matrix"
+    ][4]["claim_safe_completion_rule"]
+    assert "ready_restricted_families_do_not_authorize_general_protein_ligand_claim" in completion[
+        "commercial_readiness_next_action_matrix"
+    ][4]["operator_completion_packet"]["required_claim_guardrails"]
+    assert completion["commercial_readiness_next_action_matrix"][4]["first_blocked_stage_id"] == (
+        "transporter_claim_acceptance"
+    )
+    assert completion["commercial_readiness_next_action_matrix"][4]["first_blocked_evidence_row_id"] == (
+        "AQP1.core_binder_01"
+    )
+    assert completion["commercial_readiness_next_action_matrix"][4]["first_blocked_target_id"] == "AQP1"
+    assert completion["commercial_readiness_next_action_matrix"][4][
+        "first_blocked_required_missing_fields"
+    ] == "replacement_reference_binding_kcal_mol"
+    assert completion["commercial_readiness_handoff_bundle_ready"] is True
+    assert completion["commercial_readiness_handoff_bundle_artifact_count"] == 3
+    assert completion["commercial_readiness_handoff_bundle_blocked_artifact_count"] == 0
+    assert completion["commercial_readiness_handoff_bundle_artifact_reference_contract_ready"] is True
+    assert completion["commercial_readiness_handoff_bundle_artifact_reference_count"] == 21
+    assert completion["commercial_readiness_handoff_bundle_local_missing_artifact_reference_count"] == 0
+    assert (
+        completion[
+            "commercial_readiness_handoff_bundle_operator_return_pending_artifact_reference_count"
+        ]
+        == 3
+    )
+    assert completion["commercial_readiness_handoff_bundle_first_action_id"] == (
+        "production_gpu_execution_environment"
+    )
+    assert completion["commercial_readiness_handoff_bundle_first_operator_input_artifact"] == (
+        "runs/rocm_environment_manifest_current.json"
+    )
+    assert completion["production_ai_delta_force_closure_acceptance_packet_ready"] is True
+    assert completion["production_ai_delta_force_closure_ready"] is False
+    assert completion["production_ai_delta_force_closure_first_blocked_output_field"] == "delta_force"
+    assert completion["production_ai_delta_force_closure_failed_stage_count"] == 9
+    assert completion["production_ai_delta_force_closure_next_stage_id"] == "gpu_worker_return_receipt"
+    assert "build_residual_force_gpu_worker_return_receipt.py" in completion[
+        "production_ai_delta_force_closure_next_stage_validation_command"
+    ]
+    assert completion["product_scope_closure_acceptance_packet_ready"] is True
+    assert completion["product_scope_closure_acceptance_ready"] is False
+    assert completion["product_scope_closure_acceptance_stage_count"] == 5
+    assert completion["product_scope_closure_acceptance_blocked_stage_count"] == 3
+    assert completion["product_scope_closure_acceptance_next_stage_id"] == (
+        "transporter_claim_acceptance"
+    )
+    assert completion["product_scope_closure_acceptance_first_blocked_evidence_row_id"] == (
+        "AQP1.core_binder_01"
+    )
+    assert completion["product_scope_closure_acceptance_first_blocked_target_id"] == "AQP1"
+    assert completion["product_scope_closure_acceptance_first_blocked_required_missing_fields"] == (
+        "replacement_reference_binding_kcal_mol"
+    )
+    assert completion["production_ai_gpu_return_operator_acceptance_stage_count"] == 5
+    assert completion["production_ai_gpu_return_operator_acceptance_ready_stage_count"] == 1
+    assert completion["production_ai_gpu_return_operator_acceptance_blocked_stage_count"] == 4
+    assert completion["production_ai_gpu_return_operator_acceptance_ready_stage_ids"] == [
+        "gpu_return_templates_preflight"
+    ]
+    assert completion["production_ai_gpu_return_operator_acceptance_blocked_stage_ids"][0] == (
+        "returned_summary_acceptance"
+    )
+    assert completion["production_ai_gpu_return_operator_acceptance_next_stage_id"] == (
+        "returned_summary_acceptance"
+    )
+    assert completion["production_ai_gpu_return_operator_acceptance_next_stage_artifact"] == (
+        "runs/residual_force_trajectory_regeneration_current_summary.json"
+    )
+    assert completion["production_ai_gpu_return_operator_acceptance_next_stage_validation_command"] == (
+        "python3 tools/build_residual_force_gpu_worker_return_receipt.py"
+    )
+    assert "summary is complete" in completion[
+        "production_ai_gpu_return_operator_acceptance_next_stage_release_effect"
+    ]
+    assert completion["production_ai_gpu_return_operator_acceptance_next_stage_required_checks"][0] == (
+        "actual_summary_returned_complete"
+    )
+    assert completion["production_ai_gpu_manifest_npz_files_valid"] is False
+    assert completion["production_ai_gpu_manifest_npz_file_valid_count"] == 0
+    assert completion["production_ai_gpu_manifest_npz_file_invalid_count"] == 0
+    assert completion["production_ai_gpu_manifest_ok_row_invalid_npz_file_count"] == 0
+    assert completion["production_ai_gpu_manifest_operator_verified_invalid_npz_file_count"] == 0
+    assert completion["production_ai_gpu_manifest_npz_schema_valid"] is False
+    assert completion["production_ai_gpu_manifest_npz_schema_valid_count"] == 0
+    assert completion["production_ai_gpu_manifest_npz_schema_invalid_count"] == 0
+    assert completion["production_ai_gpu_manifest_ok_row_invalid_npz_schema_count"] == 0
+    assert completion["production_ai_gpu_manifest_operator_verified_invalid_npz_schema_count"] == 0
+    assert completion["production_ai_gpu_manifest_npz_identity_valid"] is False
+    assert completion["production_ai_gpu_manifest_npz_identity_valid_count"] == 0
+    assert completion["production_ai_gpu_manifest_npz_identity_invalid_count"] == 0
+    assert completion["production_ai_gpu_manifest_ok_row_invalid_npz_identity_count"] == 0
+    assert completion["production_ai_gpu_manifest_operator_verified_invalid_npz_identity_count"] == 0
+    assert completion["production_ai_gpu_return_actual_summary_return_path"] == (
+        "runs/residual_force_trajectory_regeneration_current_summary.json"
+    )
+    assert completion["production_ai_gpu_return_summary_template_csv"] == (
+        "runs/residual_force_gpu_worker_return_summary_template_current.csv"
+    )
+    assert completion["production_ai_gpu_return_summary_template_payload_json"] == (
+        "runs/residual_force_trajectory_regeneration_current_summary_template.json"
+    )
+    assert completion["production_ai_gpu_return_summary_template_required_fields"] == [
+        "queue_rows",
+        "processed_rows",
+        "ok_rows",
+        "failed_rows",
+        "aborted_early",
+        "out_manifest_csv",
+        "out_summary_json",
+        "prod_mode",
+        "require_rust_hip",
+        "backend_counts",
+    ]
+    assert "processed_rows>=expected_queue_rows" in completion[
+        "production_ai_gpu_return_summary_template_completion_rule"
+    ]
+    assert completion["production_ai_gpu_return_summary_template_backend_provenance_contract_ready"] is True
+    assert completion["production_ai_gpu_return_summary_template_required_backend_provenance_fields"] == [
+        "prod_mode",
+        "require_rust_hip",
+        "backend_counts",
+    ]
+    assert "backend_counts has rust_hip*" in completion[
+        "production_ai_gpu_return_summary_template_backend_provenance_completion_rule"
+    ]
+    assert completion["production_ai_gpu_return_actual_manifest_return_path"] == (
+        "runs/residual_force_trajectory_regeneration_current_manifest.csv"
+    )
+    assert completion["production_ai_gpu_summary_manifest_bound"] is False
+    assert completion["production_ai_gpu_summary_manifest_csv"] == ""
+    assert completion["production_ai_gpu_summary_out_manifest_csv_present"] is False
+    assert completion["production_ai_gpu_summary_out_manifest_csv"] == ""
+    assert completion["production_ai_gpu_summary_out_manifest_csv_bound"] is False
+    assert completion["production_ai_gpu_summary_out_summary_json_bound"] is False
+    assert completion["production_ai_gpu_summary_out_summary_json"] == ""
+    assert completion["production_ai_gpu_summary_manifest_row_counts_consistent"] is False
+    assert completion["production_ai_gpu_backend_provenance_ready"] is False
+    assert completion["production_ai_gpu_backend_rows"] == 0
+    assert completion["production_ai_gpu_backend_non_production_rows"] == 0
+    assert completion["production_ai_gpu_backend_prod_mode"] is False
+    assert completion["production_ai_gpu_backend_require_rust_hip"] is False
+    assert completion["production_ai_promotion_workbench_status"] == (
+        "blocked_product_production_ai_promotion_workbench"
+    )
+    assert completion["production_ai_promotion_workbench_ready"] is True
+    assert completion["production_ai_promotion_ready"] is False
+    assert completion["production_ai_promotion_first_blocked_stage_id"] == "gpu_return_receipt"
+    assert completion["production_ai_promotion_first_blocked_stage_artifact"] == (
+        "runs/residual_force_gpu_worker_return_receipt_current.json"
+    )
+    assert completion["production_ai_promotion_first_blocked_stage_ready_key"] == "gpu_worker_return_receipt_ready"
+    assert completion["production_ai_promotion_blocked_stage_count"] == 10
+    assert completion["production_ai_promotion_blocked_stage_ids"][0] == "gpu_return_receipt"
+    assert completion["production_ai_force_gpu_worker_handoff_ready"] is True
+    assert completion["production_ai_force_gpu_worker_operator_action_required"] is True
+    assert completion["production_ai_force_gpu_operator_transfer_manifest_ready"] is True
+    assert completion["production_ai_force_gpu_operator_transfer_outbound_artifact_count"] == 10
+    assert "tools/generate_ligand_trajectory_engine.py" in completion[
+        "production_ai_force_gpu_operator_transfer_outbound_artifacts"
+    ]
+    assert "tools/build_rocm_environment_manifest.py" in completion[
+        "production_ai_force_gpu_operator_transfer_outbound_artifacts"
+    ]
+    assert completion["production_ai_force_gpu_operator_transfer_inbound_artifact_count"] == 5
+    assert completion["production_ai_force_gpu_operator_transfer_first_return_artifact"] == (
+        "runs/rocm_environment_manifest_current.json"
+    )
+    assert completion["production_ai_force_gpu_operator_transfer_acceptance_artifact"] == (
+        "runs/residual_force_gpu_worker_return_receipt_current.json"
+    )
+    assert completion["production_ai_force_gpu_operator_transfer_acceptance_ready_key"] == (
+        "gpu_worker_return_receipt_ready"
+    )
+    assert "generate_ligand_trajectory_engine.py" in completion["production_ai_force_gpu_full_regeneration_command"]
+    assert "build_residual_force_gpu_worker_return_receipt.py" in completion[
+        "production_ai_force_gpu_post_return_validation_command"
+    ]
+    assert completion["production_ai_force_gpu_post_return_required_production_output_fields"] == [
+        "delta_score",
+        "corrected_score",
+        "delta_energy",
+        "delta_force",
+        "uncertainty",
+        "abstention_reason",
+        "stage2_route_decision",
+    ]
+    assert "runs/residual_force_gpu_worker_return_receipt_current.json" in completion[
+        "production_ai_force_gpu_post_return_gpu_unlock_artifacts"
+    ]
+    assert completion["production_ai_force_gpu_post_return_unlock_output_fields"] == [
+        "delta_force",
+        "uncertainty",
+        "abstention_reason",
+        "stage2_route_decision",
+    ]
+    assert completion["production_ai_force_gpu_post_run_validation_commands"][0] == (
+        "python3 tools/build_residual_force_gpu_worker_return_receipt.py"
+    )
+    assert completion["production_ai_force_gpu_post_return_min_expected_label_rows"] == 768
+    assert completion["production_ai_force_gpu_post_return_promotion_ladder_stage_count"] == 10
+    assert completion["production_ai_force_gpu_post_return_promotion_ladder_contract_ready"] is True
+    assert completion["production_ai_force_gpu_post_return_promotion_ladder_currently_satisfied"] is False
+    assert completion["production_ai_force_gpu_post_return_promotion_ladder_current_blocked_stage_count"] == 8
+    assert completion["production_ai_force_gpu_post_return_promotion_ladder_current_blocked_stage_ids"][0] == (
+        "production_gpu_execution_environment_acceptance"
+    )
+    assert completion["production_ai_force_gpu_post_return_promotion_ladder_current_next_stage_id"] == (
+        "production_gpu_execution_environment_acceptance"
+    )
+    assert completion["production_ai_force_gpu_post_return_promotion_ladder_stage_ids"][0] == (
+        "gpu_return_receipt"
+    )
+    assert completion["production_ai_force_gpu_post_return_promotion_ladder_stage_ids"][-1] == (
+        "product_goal_completion_audit"
+    )
+    assert completion["production_ai_force_gpu_post_return_promotion_ladder_missing_ready_keys"] == []
+    assert completion["production_ai_force_gpu_receipt_manifest_identity_row_count"] == 0
+    assert completion["production_ai_force_gpu_receipt_matched_queue_id_count"] == 0
+    assert completion["production_ai_force_gpu_receipt_matched_expected_npz_count"] == 0
+    assert completion["production_ai_force_gpu_receipt_matched_queue_fingerprint_count"] == 0
+    assert completion["product_scope_closure_blocker_class_counts"]["direct_binding_evidence_missing"] == 4
+    assert completion["product_scope_first_scientific_blocker"] == "AQP1.core_binder_01"
+    assert completion["product_scope_manual_review_subcheck_count"] == 54
+    assert completion["product_scope_transporter_manual_review_subcheck_count"] == 54
+    assert completion["product_scope_transporter_identity_scaffold_confirmation_required_count"] == 11
+    assert completion["product_scope_transporter_direct_binding_or_kcal_confirmation_required_count"] == 4
+    assert completion["product_scope_transporter_negative_quantitative_confirmation_required_count"] == 6
+    assert completion["product_scope_transporter_direct_binding_missing_count"] == 4
+    assert completion["product_scope_transporter_negative_quantitative_missing_count"] == 6
+    assert completion["product_scope_pxr_reconciled_blocked_row_count"] == 0
+    assert completion["product_scope_pxr_conflict_resolution_count"] == 0
+    assert completion["product_scope_pxr_quantitative_missing_count"] == 0
+    assert completion["product_scope_general_claim_blocker_count"] == 3
+    assert completion["product_scope_ready_for_apply_count"] == 0
+    assert completion["product_scope_authoritative_apply_allowed"] is False
+    assert completion["product_scope_domain_count"] == 6
+    assert completion["product_scope_ready_domain_count"] == 4
+    assert completion["product_scope_missing_domain_count"] == 2
+    assert completion["product_scope_ready_domains"] == ["ca2", "pxr", "idp_broad", "all_atom"]
+    assert completion["product_scope_missing_domains"] == ["transporter", "general_protein_ligand"]
+    assert completion["product_scope_first_blocked_domain"] == "transporter"
+    assert completion["product_scope_first_blocked_domain_artifact"] == (
+        "runs/transporter_blocker_capture_sheet_current.json"
+    )
+    assert "supportive=" in completion["product_scope_first_blocked_domain_observed"]
+    assert "supportive transporter evidence" in completion["product_scope_first_blocked_domain_requirement"]
+    assert completion["product_scope_first_blocked_domain_next_action"]
+    assert completion["product_scope_transporter_p0_readiness_matrix_ready"] is True
+    assert completion["product_scope_transporter_p0_readiness_matrix_artifact"] == (
+        "runs/transporter_p0_closure_readiness_matrix_current.json"
+    )
+    assert completion["product_scope_transporter_p0_auto_close_ready_artifact_count"] == 0
+    assert completion["product_scope_transporter_p0_manual_or_external_required_artifact_count"] == 6
+    assert completion["product_scope_transporter_p0_unresolved_slot_count"] == 11
+    assert completion["product_scope_transporter_p0_auto_close_ready_slot_count"] == 0
+    assert completion["product_scope_transporter_p0_external_exact_evidence_required_slot_count"] == 11
+    assert completion["product_scope_transporter_p0_first_manual_or_external_required_step_id"] == (
+        "aqp1_ligand_reference"
+    )
+    assert completion["product_scope_transporter_p0_first_manual_or_external_required_slot_step"] == (
+        "core_binder_01"
+    )
+    assert completion["product_scope_transporter_p0_first_manual_or_external_required_action"]
+    assert completion["product_scope_transporter_p0_evidence_acquisition_packet_ready"] is True
+    assert completion["product_scope_transporter_p0_evidence_acquisition_artifact"] == (
+        "runs/transporter_p0_evidence_acquisition_packet_current.json"
+    )
+    assert completion["product_scope_transporter_p0_evidence_acquisition_exact_request_slot_count"] == 11
+    assert completion["product_scope_transporter_p0_evidence_acquisition_unresolved_slot_count"] == 11
+    assert completion["product_scope_transporter_p0_evidence_acquisition_first_target_id"] == "AQP1"
+    assert completion["product_scope_transporter_p0_evidence_acquisition_first_packet_step"] == (
+        "core_binder_01"
+    )
+    assert completion["product_scope_transporter_p0_evidence_acquisition_first_replacement_ligand_id"] == (
+        "aqp1_bacopaside_ii_review_seed"
+    )
+    assert completion["product_scope_transporter_p0_evidence_acquisition_first_request_mode"] == (
+        "exact_target_pair_quantitative_binder_kcal_required"
+    )
+    assert completion["product_scope_transporter_p0_evidence_acquisition_first_source_signal"].startswith(
+        "https://pubmed"
+    )
+    assert completion["product_scope_transporter_p0_evidence_acquisition_first_required_missing_fields"] == (
+        "replacement_reference_binding_kcal_mol"
+    )
+    assert completion["product_scope_transporter_p0_evidence_acquisition_first_next_required_action"]
+    assert completion[
+        "product_scope_transporter_p0_evidence_acquisition_next_slot_completion_packet_ready"
+    ] is True
+    assert completion["product_scope_transporter_p0_evidence_acquisition_next_slot_id"] == (
+        "AQP1.core_binder_01"
+    )
+    assert completion[
+        "product_scope_transporter_p0_evidence_acquisition_next_slot_operator_review_artifact"
+    ] == "runs/transporter_manual_review_intake_template_current.csv"
+    assert completion["product_scope_transporter_p0_evidence_acquisition_next_slot_completion_packet"][
+        "candidate_ligand_id"
+    ] == "aqp1_bacopaside_ii_review_seed"
+    assert completion[
+        "product_scope_transporter_p0_evidence_acquisition_aqp1_binding_source_modality_public_direct_binding_recheck_source_count"
+    ] == 8
+    completion_public_recheck_result = completion[
+        "product_scope_transporter_p0_evidence_acquisition_aqp1_binding_source_modality_public_direct_binding_recheck_result"
+    ]
+    assert "chembl_aqp1_bacopaside_ii_rows=0" in completion_public_recheck_result
+    assert "bindingdb_p29972_cutoff100_affinities=0" in completion_public_recheck_result
+    assert "CHEMBL195380_not_CHEMBL390758" in completion_public_recheck_result
+    assert "chembl20_kd_candidate_delta_g=-5.13_requires_operator_validation" in completion_public_recheck_result
+    assert completion[
+        "product_scope_transporter_p0_evidence_acquisition_aqp1_binding_source_modality_public_database_recheck_row_count"
+    ] == 3
+    assert completion[
+        "product_scope_transporter_p0_evidence_acquisition_aqp1_binding_source_modality_ligand_identity_mismatch_row_count"
+    ] == 1
+    assert completion[
+        "product_scope_transporter_p0_evidence_acquisition_aqp1_binding_source_modality_direct_like_binding_candidate_row_count"
+    ] == 1
+    assert completion[
+        "product_scope_transporter_p0_evidence_acquisition_aqp1_binding_source_modality_direct_like_binding_candidate_claim_safe_ready_count"
+    ] == 0
+    assert completion[
+        "product_scope_transporter_p0_evidence_acquisition_aqp1_binding_source_modality_chembl_aqp1_direct_like_binding_candidate_chembl_id"
+    ] == "CHEMBL20"
+    assert completion[
+        "product_scope_transporter_p0_evidence_acquisition_aqp1_binding_source_modality_chembl_aqp1_direct_like_binding_candidate_delta_g_kcal_mol"
+    ] == "-5.13"
+    assert completion[
+        "product_scope_transporter_p0_evidence_acquisition_aqp1_binding_source_modality_bacopaside_ii_pubchem_cid"
+    ] == "9876264"
+    assert completion[
+        "product_scope_transporter_p0_evidence_acquisition_aqp1_binding_source_modality_bacopaside_ii_chembl_id"
+    ] == "CHEMBL390758"
+    assert completion[
+        "product_scope_transporter_p0_evidence_acquisition_aqp1_binding_source_modality_aqp1_chembl_target_id"
+    ] == "CHEMBL4523210"
+    assert completion[
+        "product_scope_transporter_p0_evidence_acquisition_aqp1_binding_source_modality_aqp1_bindingdb_uniprot_affinity_row_count"
+    ] == 0
+    assert completion[
+        "product_scope_transporter_p0_evidence_acquisition_aqp1_binding_source_modality_bacopaside_ii_chembl_aqp1_activity_row_count"
+    ] == 0
+    assert "CHEMBL195380" in completion[
+        "product_scope_transporter_p0_evidence_acquisition_aqp1_binding_source_modality_functional_ic50_identity_mismatch_detail"
+    ]
+    assert completion["product_scope_general_platform_domain_floor_ready"] is False
+    assert completion["product_scope_general_platform_domain_floor_missing_domain_count"] == 1
+    assert completion["product_scope_general_platform_domain_floor_missing_domains"] == ["transporter"]
+    assert completion["product_scope_allowed_families"] == ["gpcr", "ion_channel", "kinase"]
+    assert completion["product_scope_blocked_claim_scopes"] == [
+        "transporter_domain_promotion",
+        "general_protein_ligand_platform",
+    ]
+    assert completion["product_scope_claim_blocked_domains"] == ["transporter"]
+    assert completion["product_scope_general_platform_claim_allowed"] is False
+    assert completion["product_scope_evidence_priority_ready"] is True
+    assert completion["product_scope_evidence_priority_queue_item_count"] == 21
+    assert completion["product_scope_evidence_priority_open_item_count"] == 21
+    assert completion["product_scope_evidence_priority_local_crosscheck_candidate_count"] == 11
+    assert completion["product_scope_evidence_priority_external_primary_exact_required_count"] == 6
+    assert completion["product_scope_evidence_priority_top_item_id"] == "AQP1.core_binder_01"
+    assert completion["product_scope_evidence_priority_top_domain"] == "transporter"
+    assert completion["product_scope_evidence_priority_top_bucket"] == (
+        "local_crosscheck_review_present_but_exact_quant_required"
+    )
+    assert "Review local crosscheck files" in completion["product_scope_evidence_priority_top_next_step"]
+    assert completion["product_scope_evidence_intake_ready"] is True
+    assert completion["product_scope_evidence_intake_row_count"] == 21
+    assert completion["product_scope_local_crosscheck_triage_item_count"] == 10
+    assert completion["product_scope_local_crosscheck_intake_ready_count"] == 10
+    assert completion["product_scope_external_exact_evidence_required_count"] == 6
+    assert completion["product_scope_guardrail_item_count"] == 5
+    assert completion["product_scope_transporter_triage_packet_ready"] is True
+    assert completion["product_scope_transporter_operator_review_evidence_matrix_ready"] is True
+    assert completion["product_scope_transporter_claim_safe_local_evidence_ready_count"] == 0
+    assert completion["product_scope_transporter_claim_safe_local_evidence_blocked_count"] == 11
+    assert completion["product_scope_transporter_direct_binding_claim_blocked_count"] == 4
+    assert completion["product_scope_transporter_negative_value_claim_blocked_count"] == 6
+    assert completion["product_scope_transporter_top_claim_safe_blocker"] == (
+        "functional_assay_quantitative_but_not_direct_binding_claim_safe"
+    )
+    assert completion["product_scope_transporter_target_ready_for_promotion_count"] == 1
+    assert completion["product_scope_transporter_target_blocked_for_promotion_count"] == 1
+    assert completion["product_scope_transporter_target_ready_for_promotion_ids"] == ["GLUT1"]
+    assert completion["product_scope_transporter_target_blocked_for_promotion_ids"] == ["AQP1"]
+    assert completion["product_scope_transporter_primary_blocker_target_id"] == "AQP1"
+    assert completion["product_scope_transporter_primary_blocker_packet_step"] == "core_binder_01"
+    assert completion["product_scope_transporter_primary_blocker_candidate_name"] == "bacopaside II"
+    assert completion["product_scope_transporter_candidate_assignment_required_count"] == 7
+    assert completion["product_scope_transporter_functional_quantitative_only_direct_gap_open_count"] == 3
+    assert completion["product_scope_transporter_review_only_direct_binding_gap_count"] == 1
+    assert completion["product_scope_transporter_candidate_ready_for_manual_review_count"] == 11
+    assert completion["product_scope_transporter_candidate_ready_for_apply_count"] == 0
+    assert completion["product_scope_transporter_manual_review_intake_ready"] is True
+    assert completion["product_scope_transporter_manual_review_template_row_count"] == 11
+    assert completion["product_scope_transporter_manual_review_direct_binding_evidence_required_count"] == 4
+    assert completion["product_scope_transporter_manual_review_negative_quantitative_value_required_count"] == 6
+    assert completion["product_scope_transporter_manual_review_decision_placeholder_count"] == 11
+    assert completion["product_scope_transporter_manual_review_first_review_item_id"] == (
+        "AQP1.core_binder_01"
+    )
+    assert completion["product_scope_transporter_manual_review_first_review_candidate_ligand_id"] == (
+        "aqp1_bacopaside_ii_review_seed"
+    )
+    assert completion["product_scope_transporter_manual_review_first_review_replacement_source"] == (
+        "https://pubmed.ncbi.nlm.nih.gov/27474162/"
+    )
+    assert (
+        completion[
+            "product_scope_transporter_manual_review_first_review_replacement_reference_binding_kcal_mol"
+        ]
+        == ""
+    )
+    assert completion[
+        "product_scope_transporter_manual_review_first_review_direct_binding_evidence_required"
+    ] is True
+    assert completion[
+        "product_scope_transporter_manual_review_first_review_direct_binding_source_url_or_doi"
+    ] == "OPERATOR_FILL_EXACT_DIRECT_BINDING_SOURCE_OR_KEEP_BLOCKED"
+    assert completion["product_scope_transporter_manual_review_first_review_review_decision"] == (
+        "OPERATOR_FILL_APPROVE_FOR_DRAFT_OR_KEEP_BLOCKED"
+    )
+    assert completion[
+        "product_scope_transporter_manual_review_first_review_p0_slot_overlay_required_missing_fields"
+    ] == "replacement_reference_binding_kcal_mol"
+    assert completion[
+        "product_scope_transporter_manual_review_first_review_p0_slot_overlay_scope_promotion_allowed"
+    ] is False
+    assert completion["product_scope_breadth_contract_status"] == "blocked_product_scope_breadth_contract"
+    assert completion["product_scope_operator_transfer_manifest_ready"] is True
+    assert completion["product_scope_operator_transfer_outbound_artifact_count"] == 10
+    assert "runs/transporter_manual_review_intake_template_current.json" in completion[
+        "product_scope_operator_transfer_outbound_artifacts"
+    ]
+    assert "runs/pxr_exact_evidence_review_intake_template_current.json" in completion[
+        "product_scope_operator_transfer_outbound_artifacts"
+    ]
+    assert completion["product_scope_operator_transfer_inbound_artifact_count"] == 4
+    assert completion["product_scope_operator_transfer_first_return_artifact"] == (
+        "completed runs/transporter_manual_review_intake_template_current.csv with OPERATOR_FILL placeholders resolved"
+    )
+    assert completion["product_scope_operator_transfer_acceptance_artifact"] == (
+        "runs/product_scope_breadth_contract_current.json"
+    )
+    assert completion["product_scope_operator_transfer_acceptance_ready_key"] == "scope_breadth_ready"
+    assert completion["product_scope_operator_transfer_next_acceptance_stage"] == (
+        "transporter_claim_acceptance"
+    )
+    assert completion["product_scope_acceptance_matrix_ready"] is True
+    assert completion["product_scope_claim_expansion_contract_ready"] is True
+    assert completion["product_scope_claim_expansion_currently_satisfied"] is False
+    assert completion["product_scope_claim_expansion_current_blocked_stage_count"] == 3
+    assert completion["product_scope_claim_expansion_current_blocked_stage_ids"][0] == (
+        "transporter_claim_acceptance"
+    )
+    assert completion["product_scope_claim_expansion_current_next_stage_id"] == "transporter_claim_acceptance"
+    assert completion["product_scope_claim_expansion_current_next_stage_unlock_claim_scopes"] == [
+        "transporter_domain_promotion"
+    ]
+    assert completion["product_scope_acceptance_stage_count"] == 5
+    assert completion["product_scope_acceptance_ready_stage_count"] == 2
+    assert completion["product_scope_acceptance_blocked_stage_count"] == 3
+    assert completion["product_scope_acceptance_ready_stage_ids"] == [
+        "scope_evidence_acquisition_preflight",
+        "pxr_claim_acceptance",
+    ]
+    assert completion["product_scope_acceptance_blocked_stage_ids"][0] == "transporter_claim_acceptance"
+    assert len(completion["product_scope_acceptance_matrix"]) == completion["product_scope_acceptance_stage_count"]
+    assert len(completion["product_scope_acceptance_current_blocked_stage_matrix"]) == (
+        completion["product_scope_acceptance_blocked_stage_count"]
+    )
+    assert completion["product_scope_acceptance_release_blocker_stage_count"] == 3
+    assert completion["product_scope_acceptance_release_blocker_stage_ids"] == [
+        "transporter_claim_acceptance",
+        "breadth_domain_floor_acceptance",
+        "general_platform_claim_acceptance",
+    ]
+    assert completion["product_scope_acceptance_matrix"][1]["stage_id"] == "transporter_claim_acceptance"
+    assert completion["product_scope_acceptance_matrix"][1]["unlock_claim_scopes"] == [
+        "transporter_domain_promotion"
+    ]
+    assert completion["product_scope_acceptance_stage_evidence_matrix_count"] == 5
+    assert len(completion["product_scope_acceptance_stage_evidence_matrix"]) == 5
+    assert completion["product_scope_acceptance_stage_evidence_matrix"][1]["stage_id"] == (
+        "transporter_claim_acceptance"
+    )
+    assert completion["product_scope_acceptance_stage_evidence_matrix"][1]["first_blocked_evidence_row"][
+        "evidence_row_id"
+    ] == "AQP1.core_binder_01"
+    assert completion["product_scope_acceptance_current_blocked_stage_evidence_matrix_count"] == 3
+    assert completion["product_scope_acceptance_current_blocked_stage_evidence_matrix"][0]["stage_id"] == (
+        "transporter_claim_acceptance"
+    )
+    assert completion["product_scope_acceptance_next_stage_id"] == "transporter_claim_acceptance"
+    assert completion["product_scope_acceptance_next_stage_unlock_claim_scopes"] == [
+        "transporter_domain_promotion"
+    ]
+    assert "build_transporter_binder_promotion_gate.py" in completion[
+        "product_scope_acceptance_next_stage_validation_command"
+    ]
+    assert completion["product_scope_acceptance_next_stage_required_checks"][0] == (
+        "transporter_claim_safe_local_evidence_ready"
+    )
+    assert completion["product_scope_pxr_exact_review_intake_ready"] is True
+    assert completion["product_scope_pxr_exact_review_template_row_count"] == 0
+    assert completion["product_scope_pxr_exact_review_expected_blocked_row_count"] == 0
+    assert completion["product_scope_pxr_exact_review_conflict_resolution_required_count"] == 0
+    assert completion["product_scope_pxr_exact_review_kcal_placeholder_count"] == 0
+    assert completion["product_scope_pxr_exact_review_source_placeholder_count"] == 0
+    assert completion["product_scope_pxr_exact_review_target_match_placeholder_count"] == 0
+    assert completion["product_scope_pxr_exact_review_decision_placeholder_count"] == 0
+    assert completion["product_scope_pxr_exact_review_next_review_completion_packet_ready"] is False
+    assert completion["product_scope_pxr_exact_review_next_review_candidate_name"] == ""
+    assert completion["product_scope_pxr_exact_review_next_review_operator_review_artifact"] == ""
+    assert completion["product_scope_pxr_exact_review_next_review_completion_packet"]["packet_ready"] is False
+    assert "No PXR exact-review placeholders remain" in completion[
+        "product_scope_pxr_exact_review_next_required_step"
+    ]
+    assert completion["product_scope_pxr_source_modality_triage_ready"] is True
+    assert completion["product_scope_pxr_source_modality_triage_artifact"] == (
+        "runs/pxr_source_modality_triage_current.json"
+    )
+    assert completion[
+        "product_scope_pxr_source_modality_activity_proxy_or_conflict_surrogate_row_count"
+    ] == 0
+    assert completion[
+        "product_scope_pxr_source_modality_direct_or_claim_safe_quantitative_ready_count"
+    ] == 0
+    assert completion["product_scope_pxr_source_modality_next_review_candidate_name"] == ""
+    assert completion["product_scope_pxr_source_modality_next_review_source_modality"] == ""
+
+    for payload in (
+        capabilities,
+        structure,
+        architecture,
+        service_boundary,
+        api_contract,
+        operational_quality,
+        security_deployment,
+        public_benchmark,
+        trajectory_sla,
+        ai_decision_graph,
+        ai_report_ux,
+        cameo_live_validation,
+        operations,
+        license_decision,
+        license_options,
+        license_work_order,
+        commercial,
+        release,
+        registry,
+        checkpoint,
+        scope_breadth,
+        scope_guard,
+        scope_intake,
+        transporter_review,
+        pxr_review,
+        completion,
+    ):
+        assert payload["execution_enabled"] is False
+        assert payload["external_state_mutated"] is False

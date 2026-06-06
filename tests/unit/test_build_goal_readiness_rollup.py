@@ -187,6 +187,51 @@ def _cleanup_cli_status() -> dict:
     }
 
 
+def _ready_product_ai_gap() -> dict:
+    return {
+        "summary": {
+            "status": "product_ai_architecture_gap_closure_complete",
+            "all_gaps_closed": True,
+            "open_gap_count": 0,
+            "current_primary_open_gap": "none",
+        }
+    }
+
+
+def _blocked_product_ai_gap() -> dict:
+    return {
+        "summary": {
+            "status": "blocked_product_ai_architecture_gap_closure",
+            "all_gaps_closed": False,
+            "open_gap_count": 1,
+            "current_primary_open_gap": "scope_breadth_expansion",
+        }
+    }
+
+
+def _ready_product_ai_backlog() -> dict:
+    return {
+        "summary": {
+            "status": "product_ai_architecture_execution_backlog_clear",
+            "backlog_clear": True,
+            "work_item_count": 0,
+            "primary_work_item_id": "none",
+        }
+    }
+
+
+def _blocked_product_ai_backlog() -> dict:
+    return {
+        "summary": {
+            "status": "product_ai_architecture_execution_backlog_ready",
+            "backlog_clear": False,
+            "work_item_count": 21,
+            "primary_work_item_id": "scope_breadth.transporter.AQP1.core_binder_01",
+            "next_required_step": "Close transporter/PXR scientific rows first.",
+        }
+    }
+
+
 def test_goal_readiness_rollup_blocks_when_cameo_validation_blocked() -> None:
     payload = mod.build_rollup(
         product_readiness_packet=_product_readiness(),
@@ -297,6 +342,55 @@ def test_goal_readiness_rollup_pending_when_no_blockers_but_approvals_required()
     assert payload["summary"]["operator_approval_pending_count"] == 4
 
 
+def test_goal_readiness_rollup_blocks_on_product_ai_architecture_backlog_when_supplied() -> None:
+    payload = mod.build_rollup(
+        product_readiness_packet=_product_readiness(),
+        product_preflight_packet=_product_preflight(),
+        product_delivery_evidence_packet=_product_delivery_evidence(),
+        product_pilot_packet=_product_pilot_packet(),
+        product_architecture_packet=_product_architecture(blocked_lane_count=0, approval_required_lane_count=0, release_ready=True),
+        cameo_readiness_packet=_cameo("cameo_validation_evidence_ready", 0),
+        transition_cleanup_packet=_transition_cleanup(),
+        ligand_cleanup_packet=_ligand_cleanup(),
+        product_ai_architecture_gap_packet=_blocked_product_ai_gap(),
+        product_ai_execution_backlog_packet=_blocked_product_ai_backlog(),
+    )
+
+    rows = {row["lane_id"]: row for row in payload["rows"]}
+    summary = payload["summary"]
+    assert summary["status"] == "blocked_goal_readiness"
+    assert summary["blocked_lane_count"] == 1
+    assert summary["product_ai_architecture_gate_present"] is True
+    assert summary["product_ai_architecture_ready"] is False
+    assert summary["product_ai_architecture_open_gap_count"] == 1
+    assert summary["product_ai_execution_backlog_work_item_count"] == 21
+    assert summary["product_ai_execution_backlog_primary_work_item_id"] == "scope_breadth.transporter.AQP1.core_binder_01"
+    assert rows["product_ai_architecture"]["lane_status"] == "blocked"
+    assert rows["product_ai_architecture"]["blocker_count"] == 21
+    assert "scope_breadth_expansion" in rows["product_ai_architecture"]["current_primary_open_gap"]
+    assert "Close transporter/PXR scientific rows first." in rows["product_ai_architecture"]["next_required_step"]
+
+
+def test_goal_readiness_rollup_accepts_product_ai_architecture_clear_when_supplied() -> None:
+    payload = mod.build_rollup(
+        product_readiness_packet=_product_readiness(),
+        product_preflight_packet=_product_preflight(),
+        product_delivery_evidence_packet=_product_delivery_evidence(),
+        product_pilot_packet=_product_pilot_packet(),
+        product_architecture_packet=_product_architecture(blocked_lane_count=0, approval_required_lane_count=0, release_ready=True),
+        cameo_readiness_packet=_cameo("cameo_validation_evidence_ready", 0),
+        transition_cleanup_packet=_transition_cleanup(),
+        ligand_cleanup_packet=_ligand_cleanup(),
+        product_ai_architecture_gap_packet=_ready_product_ai_gap(),
+        product_ai_execution_backlog_packet=_ready_product_ai_backlog(),
+    )
+
+    rows = {row["lane_id"]: row for row in payload["rows"]}
+    assert payload["summary"]["blocked_lane_count"] == 0
+    assert payload["summary"]["product_ai_architecture_ready"] is True
+    assert rows["product_ai_architecture"]["lane_status"] == "evidence_ready"
+
+
 def test_goal_readiness_rollup_blocks_missing_product_preflight() -> None:
     payload = mod.build_rollup(
         product_readiness_packet=_product_readiness(),
@@ -328,6 +422,8 @@ def test_goal_readiness_rollup_tool_writes_outputs(tmp_path: Path) -> None:
         "ligand": tmp_path / "ligand.json",
         "ligand_preflight": tmp_path / "ligand_preflight.json",
         "cleanup_postcheck": tmp_path / "cleanup_postcheck.json",
+        "product_ai_gap": tmp_path / "product_ai_gap.json",
+        "product_ai_backlog": tmp_path / "product_ai_backlog.json",
     }
     paths["product_readiness"].write_text(json.dumps(_product_readiness()) + "\n", encoding="utf-8")
     paths["product_preflight"].write_text(json.dumps(_product_preflight()) + "\n", encoding="utf-8")
@@ -344,6 +440,8 @@ def test_goal_readiness_rollup_tool_writes_outputs(tmp_path: Path) -> None:
     paths["ligand"].write_text(json.dumps(_ligand_cleanup()) + "\n", encoding="utf-8")
     paths["ligand_preflight"].write_text(json.dumps(_ligand_cleanup_preflight()) + "\n", encoding="utf-8")
     paths["cleanup_postcheck"].write_text(json.dumps(_cleanup_postcheck()) + "\n", encoding="utf-8")
+    paths["product_ai_gap"].write_text(json.dumps(_ready_product_ai_gap()) + "\n", encoding="utf-8")
+    paths["product_ai_backlog"].write_text(json.dumps(_ready_product_ai_backlog()) + "\n", encoding="utf-8")
     out_json = tmp_path / "rollup.json"
     out_csv = tmp_path / "rollup.csv"
     out_md = tmp_path / "rollup.md"
@@ -380,6 +478,10 @@ def test_goal_readiness_rollup_tool_writes_outputs(tmp_path: Path) -> None:
             str(paths["ligand_preflight"]),
             "--cleanup-postcheck-json",
             str(paths["cleanup_postcheck"]),
+            "--product-ai-architecture-gap-json",
+            str(paths["product_ai_gap"]),
+            "--product-ai-execution-backlog-json",
+            str(paths["product_ai_backlog"]),
             "--out-json",
             str(out_json),
             "--out-csv",

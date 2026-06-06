@@ -136,7 +136,7 @@ def test_build_casp17_win_tier_action_queue_packet_orders_blocked_gaps(tmp_path:
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_win_tier_action_queue_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_win_tier_action_queue_packet.py"),
             "--win-rubric-json",
             str(win),
             "--competitive-readiness-json",
@@ -203,7 +203,7 @@ def test_build_casp17_win_tier_action_queue_packet_orders_blocked_gaps(tmp_path:
     assert "build_casp17_historical_input_preflight_packet.py" in rows["historical_benchmark_inputs"]["command"]
     assert rows["refinement_ablation_native_evidence"]["status"] == "blocked_input"
     assert rows["refinement_ablation_native_evidence"]["blockers"] == "manifest_missing"
-    assert "build_casp17_refinement_ablation_packet.py" in rows["refinement_ablation_native_evidence"]["command"]
+    assert "casp17/build_casp17_refinement_ablation_packet.py" in rows["refinement_ablation_native_evidence"]["command"]
     assert rows["model_selection_calibration_inputs"]["status"] == "blocked_input"
     assert rows["visual_review_current"]["status"] == "pass"
     assert rows["final_submission_confirmation"]["status"] == "blocked_r4_confirmation"

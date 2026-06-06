@@ -16,6 +16,7 @@ REQUIRED_SCORECARD_FIELDS = (
     "benchmark_family",
     "dataset_source_url",
     "scorecard_json",
+    "product_provenance_json",
     "status",
     "primary_metric",
     "primary_metric_value",
@@ -169,6 +170,7 @@ def _row(
 ) -> dict[str, Any]:
     status = _text(evidence.get("status") if evidence else "")
     scorecard_json = _text(evidence.get("scorecard_json") if evidence else "")
+    product_provenance_json = _text(evidence.get("product_provenance_json") if evidence else "")
     dataset_source_url = _text(evidence.get("dataset_source_url") if evidence else "")
     primary_metric = _text(evidence.get("primary_metric") if evidence else "") or _text(suite["primary_metric"])
     metric_value = _float(evidence.get("primary_metric_value") if evidence else None)
@@ -263,6 +265,7 @@ def _row(
         "primary_metric_value": metric_value,
         "primary_metric_threshold": metric_threshold,
         "scorecard_json": scorecard_json,
+        "product_provenance_json": product_provenance_json,
         "scorecard_row_csv": _scorecard_row_csv(_text(suite["suite_id"])),
         "scorecard_json_present": scorecard_json_present,
         "scorecard_json_summary_status": scorecard_summary_status,
@@ -303,6 +306,19 @@ def build_product_public_benchmark_contract(*, scorecard_csv: str | Path, root: 
     required_rows = [row for row in rows if row["required_for_commercial_release"]]
     ready_required_rows = [row for row in required_rows if row["status"] == "ready"]
     blocked_rows = [row for row in rows if row["status"] != "ready"]
+    suite_materialization_manifest_count = sum(1 for row in rows if _text(row.get("materialization_manifest_json")))
+    suite_scorecard_row_csv_count = sum(1 for row in rows if _text(row.get("scorecard_row_csv")))
+    suite_threshold_count = sum(1 for row in rows if row.get("primary_metric_threshold") not in ("", None))
+    suite_blocker_count = sum(1 for row in rows if _text(row.get("blocker")) or row["status"] == "ready")
+    suite_run_command_count = sum(1 for row in rows if _text(row.get("run_command")))
+    suite_materialization_run_command_count = sum(1 for row in rows if _text(row.get("materialization_run_command")))
+    suite_no_external_dependency_count = sum(
+        1
+        for row in rows
+        if row["execution_enabled"] is False
+        and row["docking_results_emitted"] is False
+        and row["external_state_mutated"] is False
+    )
     duplicate_count = max(0, len(scorecard_rows) - len(evidence_by_suite))
     unknown_suite_count = sum(1 for row in scorecard_rows if _text(row.get("suite_id")) not in {_text(s["suite_id"]) for s in BENCHMARK_SUITES})
     contract_ready = (
@@ -349,6 +365,13 @@ def build_product_public_benchmark_contract(*, scorecard_csv: str | Path, root: 
         "required_suite_count": len(required_rows),
         "ready_required_suite_count": len(ready_required_rows),
         "blocked_suite_count": len(blocked_rows),
+        "suite_materialization_manifest_count": suite_materialization_manifest_count,
+        "suite_scorecard_row_csv_count": suite_scorecard_row_csv_count,
+        "suite_threshold_count": suite_threshold_count,
+        "suite_blocker_count": suite_blocker_count,
+        "suite_run_command_count": suite_run_command_count,
+        "suite_materialization_run_command_count": suite_materialization_run_command_count,
+        "suite_no_external_dependency_count": suite_no_external_dependency_count,
         "duplicate_scorecard_row_count": duplicate_count,
         "unknown_suite_count": unknown_suite_count,
         "benchmark_mode": "self_hosted_reproducible_public_benchmarks",

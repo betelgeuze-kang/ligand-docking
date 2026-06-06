@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tools import build_wetlab_data_quality_assessment as mod
+from tools.wetlab import build_wetlab_data_quality_assessment as mod
 
 
 def test_build_wetlab_data_quality_assessment_separates_operational_and_measurement_quality(tmp_path, monkeypatch) -> None:

@@ -63,6 +63,13 @@ def _architecture(ready: bool = False) -> dict:
             "approval_required_lane_count": 0 if ready else 2,
             "product_service_boundary_ready": True,
             "product_api_contract_ready": True,
+            "public_benchmark_suite_materialization_manifest_count": 5,
+            "public_benchmark_suite_scorecard_row_csv_count": 5,
+            "public_benchmark_suite_threshold_count": 5,
+            "public_benchmark_suite_blocker_count": 5,
+            "public_benchmark_suite_run_command_count": 5,
+            "public_benchmark_suite_materialization_run_command_count": 5,
+            "public_benchmark_suite_no_external_dependency_count": 5,
             "cameo_architecture_validation_ready": ready,
             "cameo_official_validation_evidence_ready": ready,
             "cameo_receiver_smoke_ready": ready,
@@ -97,6 +104,10 @@ def _public_benchmark_work_order() -> dict:
             "suite_materialization_manifest_count": 5,
             "suite_scorecard_row_csv_count": 5,
             "suite_no_external_dependency_count": 5,
+            "local_artifact_preflight_ready_suite_count": 0,
+            "local_artifact_preflight_blocked_suite_count": 5,
+            "missing_local_input_artifact_count": 8,
+            "missing_local_output_artifact_count": 6,
             "continuous_validation_command": "python3 tools/build_lit_pcba_materialization_manifest.py && python3 tools/build_lit_pcba_scorecard.py",
             "execution_enabled": False,
             "docking_results_emitted": False,
@@ -203,6 +214,24 @@ def _commercial_independence(ready: bool = False) -> dict:
             "status": "product_commercial_independence_gate_ready" if ready else "blocked_product_commercial_independence_gate",
             "blocker_count": 0 if ready else 1,
             "commercial_independent_product_claim_allowed": ready,
+            "restricted_commercial_scope_claim_ready": ready,
+            "commercial_claim_scope_tier": "restricted_family_local_product" if ready else "scope_claim_not_ready",
+            "commercial_claim_scope_detail": (
+                "tier=restricted_family_local_product;allowed_scope_families=gpcr,ion_channel,kinase;"
+                "blocked_claim_scopes=transporter_domain_promotion,pxr_domain_promotion,general_protein_ligand_platform;"
+                "general_platform_claim_allowed=False"
+                if ready
+                else ""
+            ),
+            "allowed_scope_families": ["gpcr", "ion_channel", "kinase"] if ready else [],
+            "blocked_claim_scopes": [
+                "transporter_domain_promotion",
+                "pxr_domain_promotion",
+                "general_protein_ligand_platform",
+            ]
+            if ready
+            else [],
+            "general_platform_claim_allowed": False,
             "license_present": ready,
             "runtime_requirements_present": True,
             "optional_profiles_separated": True,
@@ -292,6 +321,13 @@ def test_product_release_operations_dossier_consolidates_blocked_current_lane() 
     assert summary["architecture_approval_required_lane_count"] == 2
     assert summary["product_service_boundary_ready"] is True
     assert summary["product_api_contract_ready"] is True
+    assert summary["public_benchmark_suite_materialization_manifest_count"] == 5
+    assert summary["public_benchmark_suite_scorecard_row_csv_count"] == 5
+    assert summary["public_benchmark_suite_threshold_count"] == 5
+    assert summary["public_benchmark_suite_blocker_count"] == 5
+    assert summary["public_benchmark_suite_run_command_count"] == 5
+    assert summary["public_benchmark_suite_materialization_run_command_count"] == 5
+    assert summary["public_benchmark_suite_no_external_dependency_count"] == 5
     assert summary["public_benchmark_work_order_status"] == "product_public_benchmark_work_order_ready"
     assert summary["public_benchmark_work_order_open_suite_count"] == 5
     assert summary["public_benchmark_work_order_materialization_required_suite_count"] == 5
@@ -302,6 +338,10 @@ def test_product_release_operations_dossier_consolidates_blocked_current_lane() 
     assert summary["public_benchmark_work_order_suite_materialization_manifest_count"] == 5
     assert summary["public_benchmark_work_order_suite_scorecard_row_csv_count"] == 5
     assert summary["public_benchmark_work_order_suite_no_external_dependency_count"] == 5
+    assert summary["public_benchmark_work_order_local_artifact_preflight_ready_suite_count"] == 0
+    assert summary["public_benchmark_work_order_local_artifact_preflight_blocked_suite_count"] == 5
+    assert summary["public_benchmark_work_order_missing_local_input_artifact_count"] == 8
+    assert summary["public_benchmark_work_order_missing_local_output_artifact_count"] == 6
     assert "build_lit_pcba_scorecard.py" in summary["public_benchmark_work_order_continuous_validation_command"]
     assert summary["cameo_architecture_validation_ready"] is False
     assert summary["cameo_official_validation_evidence_ready"] is False
@@ -321,6 +361,9 @@ def test_product_release_operations_dossier_consolidates_blocked_current_lane() 
     assert summary["structure_analysis_capability_ready"] is True
     assert summary["ligand_docking_capability_ready"] is True
     assert summary["commercial_independence_ready"] is False
+    assert summary["restricted_commercial_scope_claim_ready"] is False
+    assert summary["commercial_claim_scope_tier"] == "scope_claim_not_ready"
+    assert summary["commercial_general_platform_claim_allowed"] is False
     assert summary["license_present"] is False
     assert summary["source_license_decision_packet_status"] == "product_license_decision_packet_ready"
     assert summary["source_license_file_creation_work_order_status"] == "blocked_product_license_file_creation_work_order"
@@ -338,8 +381,13 @@ def test_product_release_operations_dossier_consolidates_blocked_current_lane() 
     assert summary["pilot_delivery_ready"] is False
     assert summary["external_state_mutated"] is False
     architecture_row = next(row for row in payload["rows"] if row["stage"] == "architecture_contract")
+    assert "public_benchmark_suite_scorecard_row_csv_count=5" in architecture_row["reason"]
+    assert "public_benchmark_suite_run_command_count=5" in architecture_row["reason"]
     assert "public_benchmark_work_order_status=product_public_benchmark_work_order_ready" in architecture_row["reason"]
     assert "public_benchmark_work_order_continuous_validation_command_count=5" in architecture_row["reason"]
+    assert "public_benchmark_work_order_local_artifact_preflight_blocked_suite_count=5" in architecture_row["reason"]
+    assert "public_benchmark_work_order_missing_local_input_artifact_count=8" in architecture_row["reason"]
+    assert "public_benchmark_work_order_missing_local_output_artifact_count=6" in architecture_row["reason"]
     assert "cameo_official_validation_evidence_ready=False" in architecture_row["reason"]
     assert "cameo_receiver_smoke_status=blocked_cameo_receiver_smoke" in architecture_row["reason"]
     assert "cameo_api_dependency_status=blocked_cameo_api_dependency_readiness" in architecture_row["reason"]
@@ -375,6 +423,15 @@ def test_product_release_operations_dossier_ready_when_bundle_and_pilot_are_read
     assert payload["summary"]["status"] == "product_release_operations_dossier_ready"
     assert payload["summary"]["blocked_stage_count"] == 0
     assert payload["summary"]["approval_required_stage_count"] == 0
+    assert payload["summary"]["restricted_commercial_scope_claim_ready"] is True
+    assert payload["summary"]["commercial_claim_scope_tier"] == "restricted_family_local_product"
+    assert payload["summary"]["commercial_allowed_scope_families"] == ["gpcr", "ion_channel", "kinase"]
+    assert payload["summary"]["commercial_blocked_claim_scopes"] == [
+        "transporter_domain_promotion",
+        "pxr_domain_promotion",
+        "general_protein_ligand_platform",
+    ]
+    assert payload["summary"]["commercial_general_platform_claim_allowed"] is False
     assert payload["summary"]["pilot_delivery_ready"] is True
 
 
@@ -459,7 +516,11 @@ def test_product_release_operations_dossier_tool_writes_outputs(tmp_path: Path) 
     summary = json.loads(out_json.read_text(encoding="utf-8"))["summary"]
     assert summary["status"] == "blocked_product_release_operations_dossier"
     assert summary["public_benchmark_work_order_suite_run_command_count"] == 5
+    assert summary["public_benchmark_work_order_local_artifact_preflight_blocked_suite_count"] == 5
+    assert summary["public_benchmark_work_order_missing_local_input_artifact_count"] == 8
+    assert summary["public_benchmark_work_order_missing_local_output_artifact_count"] == 6
     assert out_csv.read_text(encoding="utf-8").startswith("priority,stage,")
     md_text = out_md.read_text(encoding="utf-8")
     assert "Product Release Operations Dossier" in md_text
     assert "public_benchmark_work_order_continuous_validation_command" in md_text
+    assert "public_benchmark_work_order_missing_local_output_artifact_count" in md_text

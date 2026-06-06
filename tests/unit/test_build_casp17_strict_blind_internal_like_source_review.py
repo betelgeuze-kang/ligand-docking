@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from tools import build_casp17_strict_blind_internal_like_source_review as mod
+from tools.casp17 import build_casp17_strict_blind_internal_like_source_review as mod
 
 
 def _write_json(path: Path, payload: dict) -> None:

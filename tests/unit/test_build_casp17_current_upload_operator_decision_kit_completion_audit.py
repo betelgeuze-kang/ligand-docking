@@ -1,8 +1,8 @@
 import json
 from pathlib import Path
 
-from tools import build_casp17_current_upload_operator_decision_kit as kit
-from tools import build_casp17_current_upload_operator_decision_kit_completion_audit as audit
+from tools.casp17 import build_casp17_current_upload_operator_decision_kit as kit
+from tools.casp17 import build_casp17_current_upload_operator_decision_kit_completion_audit as audit
 
 
 def _write_json(path: Path, payload: dict) -> None:

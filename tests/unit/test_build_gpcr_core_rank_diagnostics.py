@@ -5,7 +5,7 @@ import json
 from argparse import Namespace
 from pathlib import Path
 
-from tools import build_gpcr_core_rank_diagnostics as mod
+from tools.gpcr_replay import build_gpcr_core_rank_diagnostics as mod
 
 
 def _write_csv(path: Path, rows: list[dict[str, str]]) -> None:

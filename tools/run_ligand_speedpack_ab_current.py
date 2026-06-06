@@ -376,7 +376,7 @@ def _refresh_current_artifacts(
 
     runtime_cmd = [
         sys.executable,
-        str(ROOT / "tools/extract_ligand_scaleup_results.py"),
+        str(ROOT / "tools/product/extract_ligand_scaleup_results.py"),
         "--baseline-run-root",
         str(baseline_run_root),
         "--candidate-run-root",

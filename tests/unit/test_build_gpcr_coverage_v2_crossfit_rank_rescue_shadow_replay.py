@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from tools import build_gpcr_coverage_v2_crossfit_rank_rescue_shadow_replay as mod
+from tools.gpcr_replay import build_gpcr_coverage_v2_crossfit_rank_rescue_shadow_replay as mod
 
 
 pytest.importorskip("sklearn")

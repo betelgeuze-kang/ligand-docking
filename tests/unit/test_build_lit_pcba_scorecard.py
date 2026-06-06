@@ -34,9 +34,11 @@ def test_build_lit_pcba_scorecard_tool_writes_blocked_outputs(tmp_path: Path) ->
     assert payload["summary"]["threshold"] == payload["summary"]["primary_metric_threshold"]
     assert payload["summary"]["metric_gap_to_threshold"] < 0
     assert "scores_csv_missing" in payload["summary"]["blocker"]
+    assert "product_provenance_json_not_declared" in payload["summary"]["blocker"]
     assert payload["scorecard_row"]["suite_id"] == "lit_pcba_virtual_screening"
     assert row_csv.read_text(encoding="utf-8").startswith("suite_id,benchmark_family,")
     md_text = out_md.read_text(encoding="utf-8")
     assert "LIT-PCBA Scorecard" in md_text
     assert "operator_input_artifacts" in md_text
     assert "metric_gap_to_threshold" in md_text
+    assert "product_provenance_json" in md_text

@@ -3,7 +3,7 @@ from __future__ import annotations
 from tools import build_lbdhodh_launch_packet as launch_mod
 from tools import build_lbdhodh_render_suite as render_mod
 from tools import build_lbdhodh_result_review as review_mod
-from tools import build_lbdhodh_run_record as record_mod
+from tools.wetlab import build_lbdhodh_run_record as record_mod
 from tools import build_wetlab_final2_chain_stack as final2_stack_mod
 from tools import build_wetlab_final2_protein_run_queue as final2_queue_mod
 from tools import build_wetlab_master_execution_queue as master_mod

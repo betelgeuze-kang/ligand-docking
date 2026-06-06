@@ -1,5 +1,9 @@
 target,ligand_id,role
+PXR_NR1I2_BLIND,chembl430006,fit
 PXR_NR1I2_BLIND,sr12813,fit
+PXR_NR1I2_BLIND,chembl4854464,far_ood_eval
+PXR_NR1I2_BLIND,chembl4858404,far_ood_eval
+PXR_NR1I2_BLIND,chembl389979,far_ood_eval
 PXR_NR1I2_BLIND,nifedipine,far_ood_eval
 PXR_NR1I2_BLIND,troglitazone,far_ood_eval
 PXR_NR1I2_BLIND,dexamethasone,far_ood_eval

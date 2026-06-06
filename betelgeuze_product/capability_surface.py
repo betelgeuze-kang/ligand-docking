@@ -11,6 +11,14 @@ CLAIM_BOUNDARY = (
     "scientific results, widen scope, upload data, or mutate external state."
 )
 
+RESTRICTED_SCOPE_FAMILIES = {"gpcr", "ion_channel", "kinase"}
+BLOCKED_CLAIM_SCOPES = [
+    "transporter_domain_promotion",
+    "pxr_domain_promotion",
+    "general_protein_ligand_platform",
+]
+DEFAULT_BLOCKED_CLAIM_SCOPES = list(BLOCKED_CLAIM_SCOPES)
+
 
 def _text(value: Any) -> str:
     return str(value or "").strip()
@@ -90,6 +98,7 @@ def build_product_capability_surface_contract(
     bundle_contract_packet: dict[str, Any],
     delivery_evidence_packet: dict[str, Any],
     pilot_packet: dict[str, Any],
+    scope_breadth_packet: dict[str, Any] | None = None,
     root: str | Path = ".",
     readiness_path: str = "runs/product_readiness_gate_current.json",
     work_order_path: str = "runs/product_execution_work_order_current.json",
@@ -98,6 +107,7 @@ def build_product_capability_surface_contract(
     bundle_contract_path: str = "runs/product_bundle_contract_current.json",
     delivery_evidence_path: str = "runs/product_delivery_evidence_contract_current.json",
     pilot_packet_path: str = "runs/product_pilot_packet_contract_current.json",
+    scope_breadth_path: str = "runs/product_scope_breadth_contract_current.json",
 ) -> dict[str, Any]:
     root_path = Path(root).resolve()
     readiness = _summary(readiness_packet)
@@ -107,6 +117,7 @@ def build_product_capability_surface_contract(
     bundle = _summary(bundle_contract_packet)
     delivery = _summary(delivery_evidence_packet)
     pilot = _summary(pilot_packet)
+    scope_breadth = _summary(scope_breadth_packet or {})
     bundle_command_check = (
         bundle_contract_packet.get("bundle_command_check")
         if isinstance(bundle_contract_packet.get("bundle_command_check"), dict)
@@ -143,6 +154,7 @@ def build_product_capability_surface_contract(
     product_license_file_work_order_endpoint_present = _file_contains(root_path, "api/product.py", '"/license-file-work-order"')
     product_commercial_independence_endpoint_present = _file_contains(root_path, "api/product.py", '"/commercial-independence"')
     product_release_readiness_endpoint_present = _file_contains(root_path, "api/product.py", '"/release-readiness"')
+    product_goal_completion_audit_endpoint_present = _file_contains(root_path, "api/product.py", '"/goal-completion-audit"')
     request_contract_ready = (
         _text(readiness.get("status")) == "product_handoff_ready"
         and _text(readiness.get("request_contract_status")) == "pass"
@@ -192,6 +204,7 @@ def build_product_capability_surface_contract(
         and product_license_file_work_order_endpoint_present
         and product_commercial_independence_endpoint_present
         and product_release_readiness_endpoint_present
+        and product_goal_completion_audit_endpoint_present
     )
 
     source_packets = [readiness, work_order, preflight, bundle, delivery, pilot]
@@ -208,6 +221,33 @@ def build_product_capability_surface_contract(
         and results_flags_clear
         and external_flags_clear
         and (not delivery_or_pilot_claimed or delivery_claim_backed_by_bundle_validation)
+    )
+    allowed_scope_families = [
+        str(item)
+        for item in (
+            scope_breadth.get("allowed_scope_families")
+            if isinstance(scope_breadth.get("allowed_scope_families"), list)
+            else sorted(ALLOWED_SCOPE_FAMILIES)
+        )
+    ]
+    general_platform_claim_allowed = _bool(scope_breadth.get("general_platform_claim_allowed"))
+    blocked_claim_scopes = [
+        str(item)
+        for item in (
+            scope_breadth.get("blocked_claim_scopes")
+            if isinstance(scope_breadth.get("blocked_claim_scopes"), list)
+            else DEFAULT_BLOCKED_CLAIM_SCOPES
+        )
+    ]
+    scope_claim_boundary_detail = (
+        f"allowed_scope_families={','.join(allowed_scope_families)};"
+        f"blocked_claim_scopes={','.join(blocked_claim_scopes)};"
+        f"general_platform_claim_allowed={general_platform_claim_allowed}"
+    )
+    restricted_scope_claim_guard_ready = (
+        set(allowed_scope_families) == RESTRICTED_SCOPE_FAMILIES
+        and "general_protein_ligand_platform" in blocked_claim_scopes
+        and general_platform_claim_allowed is False
     )
 
     rows = [
@@ -295,12 +335,13 @@ def build_product_capability_surface_contract(
                 f"license_file_work_order_endpoint={product_license_file_work_order_endpoint_present};"
                 f"commercial_independence_endpoint={product_commercial_independence_endpoint_present};"
                 f"release_readiness_endpoint={product_release_readiness_endpoint_present};"
+                f"goal_completion_audit_endpoint={product_goal_completion_audit_endpoint_present};"
                 f"betelgeuze_product/docking_request.py={product_package_present};"
                 f"betelgeuze_product/cli.py={product_cli_present}"
             ),
-            required="API intake, structure-analysis endpoint, capability endpoint, architecture endpoint, service-boundary endpoint, API-contract endpoint, operational-quality endpoint, operations endpoint, license-decision/options/work-order endpoints, commercial-independence endpoint, release-readiness endpoint, local package contract, and read-only CLI present",
+            required="API intake, structure-analysis endpoint, capability endpoint, architecture endpoint, service-boundary endpoint, API-contract endpoint, operational-quality endpoint, operations endpoint, license-decision/options/work-order endpoints, commercial-independence endpoint, release-readiness endpoint, goal-completion-audit endpoint, local package contract, and read-only CLI present",
             artifact_path="api/product.py;betelgeuze_product/docking_request.py;betelgeuze_product/cli.py",
-            reason="The product must have a local library contract, CLI, request intake API, structure-analysis API, read-only capability API, architecture API, service-boundary API, API-contract API, operational-quality API, operations API, full license handoff API, commercial-independence API, and release-readiness API surface.",
+            reason="The product must have a local library contract, CLI, request intake API, structure-analysis API, read-only capability API, architecture API, service-boundary API, API-contract API, operational-quality API, operations API, full license handoff API, commercial-independence API, release-readiness API, and goal-completion audit API surface.",
         ),
         _row(
             capability_id="guarded_claim_and_execution_flags",
@@ -315,6 +356,18 @@ def build_product_capability_surface_contract(
             required="no execution/results/external mutation and any delivery-ready claim backed by assembled, validated bundle evidence",
             artifact_path=f"{readiness_path};{work_order_path};{preflight_path};{bundle_contract_path};{delivery_evidence_path};{pilot_packet_path}",
             reason="The product surface must remain honest: no fake docking results and no delivery-ready claim unless bundle validation evidence backs it.",
+        ),
+        _row(
+            capability_id="restricted_scope_claim_guard",
+            domain="scope_guardrails",
+            status="ready" if restricted_scope_claim_guard_ready else "blocked",
+            observed=scope_claim_boundary_detail,
+            required=(
+                "allowed scope is exactly gpcr, ion_channel, kinase; current scope-breadth blocked claims are "
+                "disclosed; general platform claim is not allowed"
+            ),
+            artifact_path=f"betelgeuze_product/docking_request.py;api/product.py;{scope_breadth_path}",
+            reason="The product capability surface must disclose the restricted delivery scope and must not imply a broad protein-ligand platform before breadth evidence is complete.",
         ),
     ]
 
@@ -354,10 +407,15 @@ def build_product_capability_surface_contract(
         "product_license_file_work_order_endpoint_present": product_license_file_work_order_endpoint_present,
         "product_commercial_independence_endpoint_present": product_commercial_independence_endpoint_present,
         "product_release_readiness_endpoint_present": product_release_readiness_endpoint_present,
+        "product_goal_completion_audit_endpoint_present": product_goal_completion_audit_endpoint_present,
         "product_cli_surface_present": product_cli_present,
         "guarded_claims_ready": guarded_claims_ready,
         "delivery_claim_backed_by_bundle_validation": delivery_claim_backed_by_bundle_validation,
-        "allowed_scope_families": sorted(ALLOWED_SCOPE_FAMILIES),
+        "allowed_scope_families": allowed_scope_families,
+        "restricted_scope_claim_guard_ready": restricted_scope_claim_guard_ready,
+        "blocked_claim_scopes": blocked_claim_scopes,
+        "general_platform_claim_allowed": general_platform_claim_allowed,
+        "scope_claim_boundary_detail": scope_claim_boundary_detail,
         "max_p0_ligand_count": MAX_P0_LIGAND_COUNT,
         "execution_enabled": False,
         "docking_results_emitted": False,

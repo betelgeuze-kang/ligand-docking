@@ -4,7 +4,7 @@ import csv
 import json
 from pathlib import Path
 
-from tools import build_casp17_active_scope_decision_packet as mod
+from tools.casp17 import build_casp17_active_scope_decision_packet as mod
 
 
 def _read_csv(path: Path) -> list[dict[str, str]]:

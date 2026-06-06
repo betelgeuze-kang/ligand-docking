@@ -6,7 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from tools import build_gpcr_positive_coverage_freeze_packet as mod
+from tools.gpcr_replay import build_gpcr_positive_coverage_freeze_packet as mod
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -198,7 +198,7 @@ def test_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools/build_gpcr_positive_coverage_freeze_packet.py"),
+            str(ROOT / "tools/gpcr_replay/build_gpcr_positive_coverage_freeze_packet.py"),
             "--candidates-csv",
             str(candidates),
             "--leakage-audit-json",

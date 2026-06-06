@@ -11,7 +11,7 @@ def test_cameo_api_dependency_readiness_blocks_missing_imports(tmp_path: Path, m
     monkeypatch.setattr(mod, "_installed_version", lambda display_name: "")
     monkeypatch.setattr(mod, "_importable", lambda import_name: False)
 
-    payload = mod.build_cameo_api_dependency_readiness(requirements_path=req, root=tmp_path)
+    payload = mod.build_cameo_api_dependency_readiness(requirements_path=req, root=tmp_path)  # tools/product/build_cameo_api_dependency_readiness.py
 
     assert payload["summary"]["status"] == "blocked_cameo_api_dependency_readiness"
     assert payload["summary"]["declared_dependency_count"] == 3
@@ -28,7 +28,7 @@ def test_cameo_api_dependency_readiness_ready_when_imports_present(tmp_path: Pat
     monkeypatch.setattr(mod, "_installed_version", lambda display_name: "1.0.0")
     monkeypatch.setattr(mod, "_importable", lambda import_name: True)
 
-    payload = mod.build_cameo_api_dependency_readiness(requirements_path=req, root=tmp_path)
+    payload = mod.build_cameo_api_dependency_readiness(requirements_path=req, root=tmp_path)  # tools/product/build_cameo_api_dependency_readiness.py
 
     assert payload["summary"]["status"] == "cameo_api_dependency_ready"
     assert payload["summary"]["pass_count"] == 4

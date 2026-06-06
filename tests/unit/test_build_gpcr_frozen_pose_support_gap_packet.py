@@ -99,7 +99,7 @@ def test_build_gpcr_frozen_pose_support_gap_packet_blocks_missing_positive_suppo
     subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools/build_gpcr_frozen_pose_support_gap_packet.py"),
+            str(ROOT / "tools/gpcr_replay/build_gpcr_frozen_pose_support_gap_packet.py"),
             "--input-scores-csv",
             str(scores_csv),
             "--label-csv",

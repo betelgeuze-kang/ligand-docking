@@ -2,7 +2,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from tools import build_casp17_current_prospective_strict_blind_escrow as mod
+from tools.casp17 import build_casp17_current_prospective_strict_blind_escrow as mod
 
 
 def _write_json(path: Path, payload: dict) -> None:

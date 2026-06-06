@@ -48,7 +48,7 @@ def _launch_heartbeat_loop(
     subprocess.run(
         [
             python_bin,
-            str(ROOT / "tools/launch_wetlab_broad_screen_antitarget_heartbeat_loop.py"),
+            str(ROOT / "tools/wetlab/launch_wetlab_broad_screen_antitarget_heartbeat_loop.py"),
             "--primary-target-id",
             primary_target_id,
             "--anti-target-id",

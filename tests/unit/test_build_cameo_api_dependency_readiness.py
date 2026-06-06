@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools import build_cameo_api_dependency_readiness as mod
+from tools.product import build_cameo_api_dependency_readiness as mod
 
 
 def test_build_cameo_api_dependency_readiness_tool_writes_outputs(tmp_path: Path) -> None:

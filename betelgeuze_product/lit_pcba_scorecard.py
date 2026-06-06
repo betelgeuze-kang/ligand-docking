@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -56,12 +57,73 @@ def _scorecard_row(summary: dict[str, Any]) -> dict[str, Any]:
         "benchmark_family": BENCHMARK_FAMILY,
         "dataset_source_url": DATASET_SOURCE_URL,
         "scorecard_json": summary.get("scorecard_json", ""),
+        "product_provenance_json": summary.get("product_provenance_json", ""),
         "status": "pass" if summary.get("status") == "lit_pcba_scorecard_pass" else "fail",
         "primary_metric": PRIMARY_METRIC,
         "primary_metric_value": summary.get("primary_metric_value", 0.0),
         "primary_metric_threshold": summary.get("primary_metric_threshold", DEFAULT_PRIMARY_METRIC_THRESHOLD),
         "regression_baseline_ref": summary.get("regression_baseline_ref", ""),
         "run_command": summary.get("run_command", ""),
+    }
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _read_provenance(path: Path | None) -> tuple[bool, dict[str, Any]]:
+    if path is None or not path.exists():
+        return False, {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return True, {}
+    summary = payload.get("summary") if isinstance(payload, dict) else {}
+    return True, summary if isinstance(summary, dict) else {}
+
+
+def _provenance_blockers(
+    *,
+    suite_id: str,
+    score_artifact: Path,
+    product_provenance_json: str | Path,
+    min_rows: int,
+) -> tuple[list[str], dict[str, Any]]:
+    path = Path(product_provenance_json) if _text(product_provenance_json) else None
+    present, summary = _read_provenance(path)
+    blockers: list[str] = []
+    score_sha256 = _sha256(score_artifact) if score_artifact.exists() and score_artifact.is_file() else ""
+    if path is None:
+        blockers.append("product_provenance_json_not_declared")
+    elif not present:
+        blockers.append("product_provenance_json_missing")
+    elif not summary:
+        blockers.append("product_provenance_json_invalid")
+    else:
+        if _text(summary.get("suite_id")) != suite_id:
+            blockers.append("product_provenance_suite_id_mismatch")
+        if summary.get("product_engine_result") is not True:
+            blockers.append("product_provenance_not_product_engine_result")
+        if _text(summary.get("source_engine")) not in {"betelgeuze_product", "betelgeuze_ligand_htvs"}:
+            blockers.append("product_provenance_source_engine_invalid")
+        if _text(summary.get("result_artifact")) != str(score_artifact):
+            blockers.append("product_provenance_result_artifact_mismatch")
+        if score_sha256 and _text(summary.get("result_artifact_sha256")) != score_sha256:
+            blockers.append("product_provenance_result_sha256_mismatch")
+        if _int(summary.get("result_row_count")) < int(min_rows):
+            blockers.append("product_provenance_rows_below_minimum")
+    return blockers, {
+        "product_provenance_json": str(path) if path else "",
+        "product_provenance_json_present": present,
+        "product_provenance_source_engine": _text(summary.get("source_engine")),
+        "product_provenance_result_artifact": _text(summary.get("result_artifact")),
+        "product_provenance_result_artifact_sha256": _text(summary.get("result_artifact_sha256")),
+        "product_provenance_result_row_count": _int(summary.get("result_row_count")),
+        "scores_csv_sha256": score_sha256,
     }
 
 
@@ -75,6 +137,7 @@ def _blocked_summary(
     min_eval_unique_keys: int,
     regression_baseline_ref: str,
     run_command: str,
+    provenance_fields: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     blocker_text = ",".join(blockers)
     missing_inputs = [
@@ -82,6 +145,7 @@ def _blocked_summary(
         for path in (scores_csv, labels_csv)
         if not Path(path).exists()
     ]
+    fields = provenance_fields or {}
     return {
         "packet_type": "lit_pcba_scorecard",
         "suite_id": SUITE_ID,
@@ -90,9 +154,20 @@ def _blocked_summary(
         "blockers": blockers,
         "dataset_source_url": DATASET_SOURCE_URL,
         "scores_csv": _artifact(scores_csv),
+        "scores_csv_sha256": fields.get("scores_csv_sha256", ""),
         "labels_csv": _artifact(labels_csv),
         "scorecard_json": _artifact(out_json),
-        "operator_input_artifacts": f"{_artifact(scores_csv)};{_artifact(labels_csv)}",
+        "product_provenance_json": fields.get("product_provenance_json", ""),
+        "product_provenance_json_present": fields.get("product_provenance_json_present", False),
+        "product_provenance_source_engine": fields.get("product_provenance_source_engine", ""),
+        "product_provenance_result_artifact": fields.get("product_provenance_result_artifact", ""),
+        "product_provenance_result_artifact_sha256": fields.get("product_provenance_result_artifact_sha256", ""),
+        "product_provenance_result_row_count": fields.get("product_provenance_result_row_count", 0),
+        "operator_input_artifacts": ";".join(
+            value
+            for value in [_artifact(scores_csv), _artifact(labels_csv), _text(fields.get("product_provenance_json"))]
+            if value
+        ),
         "operator_output_artifacts": _artifact(out_json),
         "missing_input_artifacts": ";".join(missing_inputs),
         "primary_metric": PRIMARY_METRIC,
@@ -133,6 +208,7 @@ def build_lit_pcba_scorecard(
     min_eval_unique_keys: int = 200,
     primary_metric_threshold: float = DEFAULT_PRIMARY_METRIC_THRESHOLD,
     regression_baseline_ref: str = "lit_pcba:pending_baseline",
+    product_provenance_json: str | Path = "",
     bootstrap_n: int = 100,
     run_command: str = "",
 ) -> dict[str, Any]:
@@ -147,6 +223,13 @@ def build_lit_pcba_scorecard(
         blockers.append("regression_baseline_ref_missing")
     if not _text(run_command):
         blockers.append("run_command_missing")
+    provenance_blockers, provenance_fields = _provenance_blockers(
+        suite_id=SUITE_ID,
+        score_artifact=scores_path,
+        product_provenance_json=product_provenance_json,
+        min_rows=min_eval_unique_keys,
+    )
+    blockers.extend(provenance_blockers)
     if blockers:
         summary = _blocked_summary(
             blockers=blockers,
@@ -157,6 +240,7 @@ def build_lit_pcba_scorecard(
             min_eval_unique_keys=min_eval_unique_keys,
             regression_baseline_ref=regression_baseline_ref,
             run_command=run_command,
+            provenance_fields=provenance_fields,
         )
         return {"summary": summary, "scorecard_row": _scorecard_row(summary), "evaluator": {}}
 
@@ -206,6 +290,7 @@ def build_lit_pcba_scorecard(
         scorecard_blockers.append("eval_unique_keys_below_minimum")
     if ef1 + 1e-12 < float(primary_metric_threshold):
         scorecard_blockers.append("ef1_below_threshold")
+    scorecard_blockers.extend(provenance_blockers)
     status = "lit_pcba_scorecard_pass" if not scorecard_blockers else "blocked_lit_pcba_scorecard"
     blocker_text = ",".join(scorecard_blockers)
     summary = {
@@ -216,9 +301,20 @@ def build_lit_pcba_scorecard(
         "blockers": scorecard_blockers,
         "dataset_source_url": DATASET_SOURCE_URL,
         "scores_csv": _artifact(scores_csv),
+        "scores_csv_sha256": provenance_fields.get("scores_csv_sha256", ""),
         "labels_csv": _artifact(labels_csv),
         "scorecard_json": _artifact(out_json),
-        "operator_input_artifacts": f"{_artifact(scores_csv)};{_artifact(labels_csv)}",
+        "product_provenance_json": provenance_fields.get("product_provenance_json", ""),
+        "product_provenance_json_present": provenance_fields.get("product_provenance_json_present", False),
+        "product_provenance_source_engine": provenance_fields.get("product_provenance_source_engine", ""),
+        "product_provenance_result_artifact": provenance_fields.get("product_provenance_result_artifact", ""),
+        "product_provenance_result_artifact_sha256": provenance_fields.get("product_provenance_result_artifact_sha256", ""),
+        "product_provenance_result_row_count": provenance_fields.get("product_provenance_result_row_count", 0),
+        "operator_input_artifacts": ";".join(
+            value
+            for value in [_artifact(scores_csv), _artifact(labels_csv), _text(provenance_fields.get("product_provenance_json"))]
+            if value
+        ),
         "operator_output_artifacts": (
             f"{_artifact(out_json)};{_artifact(out_detail_csv)};{_artifact(out_topk_csv)};{_artifact(out_unique_csv)}"
         ),
