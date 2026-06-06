@@ -7,6 +7,7 @@ Generated index only. **Do not hand-edit green/closed claims here.**
 | Readiness JSON packet | `runs/commercialization_readiness_current.json` |
 | P0/P1 closure | `docs/p0_p1_closure_status.md` |
 | P2 expansion | `docs/p2_expansion_plan.md` |
+| Engine · AI refinement roadmap | `docs/independent_engine_ai_refinement_roadmap.md` |
 | Code gates | `api/simulation_scope.py`, `core/claim_boundary.py` |
 
 ## Current product scope (code-enforced)
