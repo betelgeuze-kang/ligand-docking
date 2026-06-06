@@ -29,7 +29,8 @@ def materialize(*, evidence_dir: str = "/tmp/api_runner_profile_evidence_templat
     _bootstrap_repo_root()
     from tools.product.ci_contract_fixture_packets import write_capability_prerequisite_packets
 
-    write_capability_prerequisite_packets(ROOT / "runs")
+    runs_dir = ROOT / "runs"
+    write_capability_prerequisite_packets(runs_dir)
     builders = [
         ("tools/build_product_capability_surface_contract.py",),
         ("tools/build_product_architecture_contract.py",),
@@ -65,6 +66,16 @@ def materialize(*, evidence_dir: str = "/tmp/api_runner_profile_evidence_templat
         ("tools/build_goal_operator_intake_kit.py",),
         ("tools/build_goal_api_surface_contract.py",),
         ("tools/product/build_self_hosted_license_distribution_audit.py",),
+        ("tools/build_third_party_license_review_gate.py",),
+        ("tools/build_gpcr_conditional_prior_promotion_gate.py",),
+        ("tools/build_transporter_claim_promotion_boundary.py",),
+        ("tools/build_wetlab_openmm_claim_promotion_boundary.py",),
+        ("tools/build_science_claim_promotion_gap_closure.py",),
+        ("tools/build_deploy_ops_legal_gap_closure.py",),
+        ("tools/build_storage_cleanup_gap_closure.py",),
+        ("tools/build_tools_package_other_review_classification_plan.py",),
+        ("tools/build_tools_package_batch3_review_plan.py",),
+        ("tools/build_tools_refactor_gap_closure.py",),
     ]
     for command in builders:
         _run(*command)

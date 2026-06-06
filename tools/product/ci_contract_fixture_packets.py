@@ -146,6 +146,9 @@ def write_capability_prerequisite_packets(runs_dir: Path) -> None:
     write_production_ai_checkpoint_fixture_packets(runs_dir)
     write_claim_expansion_gate_scaffolds(runs_dir)
     write_data_science_expansion_closure_packets(runs_dir)
+    write_science_claim_promotion_closure_packets(runs_dir)
+    write_deploy_ops_legal_closure_packets(runs_dir)
+    write_storage_tools_closure_packets(runs_dir)
 
 
 def write_production_ai_checkpoint_fixture_packets(runs_dir: Path) -> None:
@@ -308,6 +311,198 @@ def write_data_science_expansion_closure_packets(runs_dir: Path) -> None:
                 "pass_row_count": 5,
                 "row_count": 5,
             }
+        },
+    )
+
+
+def write_science_claim_promotion_closure_packets(runs_dir: Path) -> None:
+    _write(
+        runs_dir / "gpcr_ci_low_recovery_packet_current.json",
+        {
+            "summary": {
+                "status": "gpcr_ci_low_recovery_packet_ready",
+                "ranking_pr_auc_ci_low": 0.21,
+                "threshold": 0.45,
+                "ci_low_blocker": True,
+                "claim_promotion_allowed": False,
+            }
+        },
+    )
+    _write(
+        runs_dir / "gpcr_oprm1_life_science_evidence_packet_current.json",
+        {
+            "summary": {
+                "status": "gpcr_oprm1_life_science_evidence_ready",
+                "pose_collapse_blocker": True,
+                "blocked_positive_count": 3,
+                "claim_promotion_allowed": False,
+            }
+        },
+    )
+    _write(
+        runs_dir / "openmm_2bead_strict_multitarget_current_summary.json",
+        {
+            "pass_count": 11,
+            "target_pass_count": 11,
+            "status": "openmm_2bead_strict_multitarget_ready",
+        },
+    )
+    _write(
+        runs_dir / "wetlab_selected_allatom_gate_burndown_packet_current.json",
+        {
+            "summary": {
+                "status": "wetlab_selected_allatom_gate_burndown_ready",
+                "hard_block_count": 0,
+                "selected_allatom_gate_ready": True,
+            }
+        },
+    )
+    _write(
+        runs_dir / "aqp1_negative_evidence_intake_gate_current.json",
+        {
+            "summary": {
+                "status": "aqp1_negative_evidence_intake_gate_ready",
+                "authoritative_negative_apply_allowed_count": 0,
+            }
+        },
+    )
+    intake_template = runs_dir / "aqp1_negative_evidence_intake_template_current.csv"
+    intake_template.parent.mkdir(parents=True, exist_ok=True)
+    intake_template.write_text(
+        "candidate_name,molecule_id,target_id,operator_decision,approval_token\n",
+        encoding="utf-8",
+    )
+
+
+def write_deploy_ops_legal_closure_packets(runs_dir: Path) -> None:
+    _write(
+        runs_dir / "product_release_bundle_current.json",
+        {
+            "summary": {
+                "status": "release_bundle_ready_for_operator_review",
+                "blocker_count": 0,
+            }
+        },
+    )
+    _write(
+        runs_dir / "product_rollout_plan_current.json",
+        {
+            "summary": {
+                "status": "planned",
+                "dry_run": True,
+                "approval_token_required": "APPROVE_PRODUCT_ROLLOUT",
+            }
+        },
+    )
+    _write(
+        runs_dir / "product_security_deployment_contract_current.json",
+        {
+            "summary": {
+                "status": "product_security_deployment_contract_ready",
+                "security_deployment_ready": True,
+            }
+        },
+    )
+    _write(
+        runs_dir / "alert_delivery_smoke_current.json",
+        {
+            "status": "pass",
+            "received_alert_count": 1,
+        },
+    )
+    _write(
+        runs_dir / "self_hosted_license_distribution_audit_current.json",
+        {
+            "summary": {
+                "status": "self_hosted_license_distribution_audit_recorded",
+                "hard_blocker_count": 0,
+                "operator_review_item_count": 1,
+                "third_party_dual_license_assets": ["jszip"],
+            }
+        },
+    )
+    rollout_csv = runs_dir / "product_rollout_execution_operator_intake.csv"
+    rollout_csv.write_text(
+        "operator_decision,rollout_approval_token,hosted_exposure_approval_token,target_environment,"
+        "image_digest_or_tag,registry_context_verified,k8s_or_compose_context_verified,tls_termination_verified,"
+        "pager_webhook_secret_mounted,rollback_reference_verified,operator_name,reviewed_at_utc,operator_note\n"
+        "approve,APPROVE_PRODUCT_ROLLOUT,APPROVE_HOSTED_PRODUCT_API_EXPOSURE,k8s,"
+        "registry.example/micf-api@sha256:abc,true,true,true,true,true,Operator,2026-06-06T00:00:00Z,ready\n",
+        encoding="utf-8",
+    )
+    license_csv = runs_dir / "third_party_license_review_operator_intake.csv"
+    license_csv.write_text(
+        "package,operator_decision,approval_token,chosen_license_path,reviewer_name,reviewed_at_utc,operator_note\n"
+        "jszip,approve,APPROVE_THIRD_PARTY_LICENSE_REVIEW,MIT,Legal Reviewer,2026-06-06T00:00:00Z,approved MIT path\n",
+        encoding="utf-8",
+    )
+
+
+def write_storage_tools_closure_packets(runs_dir: Path) -> None:
+    _write(
+        runs_dir / "storage_residual_cleanup_status_current.json",
+        {
+            "summary": {
+                "status": "storage_residual_cleanup_status_ready",
+                "operator_action_candidate_count": 0,
+                "existing_path_count": 6,
+            }
+        },
+    )
+    _write(
+        runs_dir / "cleanup_completion_gate_current.json",
+        {
+            "summary": {
+                "status": "cleanup_completion_gate_ready",
+                "cleanup_complete": True,
+                "postcheck_contract_ready": True,
+            }
+        },
+    )
+    _write(
+        runs_dir / "tools_package_separation_work_order_current.json",
+        {
+            "summary": {
+                "status": "tools_package_separation_work_order_ready",
+                "reference_counts_included": True,
+                "other_review_count": 2,
+                "batch_2_review_count": 2,
+                "batch_3_high_reference_count": 2,
+            },
+            "rows": [
+                {
+                    "tool_path": "tools/build_product_alpha.py",
+                    "proposed_package": "other_review",
+                    "migration_batch": "batch_2_review",
+                    "risk_score": 2,
+                    "test_reference_count": 0,
+                    "internal_tool_import_count": 0,
+                },
+                {
+                    "tool_path": "tools/run_cameo_smoke.py",
+                    "proposed_package": "other_review",
+                    "migration_batch": "batch_2_review",
+                    "risk_score": 2,
+                    "test_reference_count": 0,
+                    "internal_tool_import_count": 0,
+                },
+                {
+                    "tool_path": "tools/build_gpcr_replay_packet.py",
+                    "proposed_package": "gpcr_replay",
+                    "migration_batch": "batch_3_high_reference",
+                    "risk_score": 12,
+                    "test_reference_count": 4,
+                    "internal_tool_import_count": 1,
+                },
+                {
+                    "tool_path": "tools/build_accounting_report.py",
+                    "proposed_package": "product",
+                    "migration_batch": "batch_3_high_reference",
+                    "risk_score": 8,
+                    "test_reference_count": 0,
+                    "internal_tool_import_count": 0,
+                },
+            ],
         },
     )
 

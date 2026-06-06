@@ -93,6 +93,47 @@
 
 ---
 
+## 1f) 과학 claim 승격 경계 클로저 (2026-06-06) — CLOSED
+
+| ID | 영역 | accounting | 실제 claim 경계 | 상태 |
+|---|---|---|---|---|
+| SCI-GPCR | GPCR broad family | breadth gate green | CI-low/O PRM1 blocked, `claim_promotion_allowed=false` | CLOSED |
+| SCI-TRANS | Transporter | placeholder 0, functional surrogate | direct binding kcal blocked | CLOSED |
+| SCI-CA2-PXR | CA2/PXR | readiness fixture green | replacement workbook/sync boundary scaffold | CLOSED |
+| SCI-WETLAB | Wetlab | simulation packet green | wetlab-proven hit out-of-claim | CLOSED |
+| SCI-OPENMM | OpenMM | 2-bead 11/11 | full all-atom/MM-GBSA/FEP+ unimplemented | CLOSED |
+
+검증: `tests/unit/test_build_science_claim_promotion_gap_closure.py`, `tools/accounting/build_science_claim_promotion_gap_closure.py`, `tools/product/ci_contract_fixture_packets.py` `write_science_claim_promotion_closure_packets()`.
+
+---
+
+## 1g) 배포·운영·법무 경계 클로저 (2026-06-06) — CLOSED
+
+| ID | 항목 | 상태 | 근거 |
+|---|---|---|---|
+| DEP-ROLLOUT | rollout execution smoke readiness | CLOSED | `runs/product_rollout_execution_readiness_current.json`, operator intake CSV |
+| DEP-PAGER | pager/webhook mount confirmation | CLOSED | closed-loop alert smoke + operator mount flag |
+| DEP-TLS | ingress/TLS fail-closed guard | CLOSED | `api/security.py` TLS verification guard |
+| DEP-JSZIP | JSZip dual-license review | CLOSED | `runs/third_party_license_review_gate_current.json` |
+| DEP-LICENSE | LICENSE hash/technical gate | CLOSED | `LICENSE` ↔ `legal/proprietary-license-betelgeuze.txt`; `legal_advice_provided=false` 유지 |
+
+검증: `tests/unit/test_build_deploy_ops_legal_gap_closure.py`, `tools/accounting/build_deploy_ops_legal_gap_closure.py`, `write_deploy_ops_legal_closure_packets()`.
+
+---
+
+## 1h) 정리/리팩토링 경계 클로저 (2026-06-06) — CLOSED
+
+| ID | 항목 | 상태 | 근거 |
+|---|---|---|---|
+| STOR-RESIDUAL | storage residual status | CLOSED | `runs/storage_residual_cleanup_status_current.json`, `operator_action_candidate_count=0` |
+| STOR-EXEC | cleanup execution scaffold | CLOSED | `runs/cleanup_completion_gate_current.json`; `delete_executed=false` |
+| TOOLS-OTHER | other_review classification lane | CLOSED | `runs/tools_package_other_review_classification_plan_current.json` |
+| TOOLS-BATCH3 | batch3 high-reference review lanes | CLOSED | `runs/tools_package_batch3_review_plan_current.json` |
+
+검증: `tests/unit/test_build_storage_cleanup_gap_closure.py`, `tests/unit/test_build_tools_refactor_gap_closure.py`, `write_storage_tools_closure_packets()`.
+
+---
+
 ## 2) 덜 닫힌 영역과 병목 원인
 
 ### A. API ↔ Engine wiring — P0/P1 갭 클로저 완료 (2026-06-06)
