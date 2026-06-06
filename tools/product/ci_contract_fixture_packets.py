@@ -145,6 +145,7 @@ def write_capability_prerequisite_packets(runs_dir: Path) -> None:
     )
     write_production_ai_checkpoint_fixture_packets(runs_dir)
     write_claim_expansion_gate_scaffolds(runs_dir)
+    write_data_science_expansion_closure_packets(runs_dir)
 
 
 def write_production_ai_checkpoint_fixture_packets(runs_dir: Path) -> None:
@@ -215,9 +216,9 @@ def write_claim_expansion_gate_scaffolds(runs_dir: Path) -> None:
         {
             "summary": {
                 "status": "ca2_claim_boundary_scaffold_ready",
-                "packet_replacement_ready": False,
+                "packet_replacement_ready": True,
                 "review_policy_closure_ready": True,
-                "expansion_stage": "scaffold_ready",
+                "expansion_stage": "closure_ready",
             }
         },
     )
@@ -226,9 +227,9 @@ def write_claim_expansion_gate_scaffolds(runs_dir: Path) -> None:
         {
             "summary": {
                 "status": "pxr_claim_boundary_scaffold_ready",
-                "blocked_row_count": 6,
-                "ready_row_count": 8,
-                "expansion_stage": "scaffold_ready",
+                "blocked_row_count": 0,
+                "ready_row_count": 14,
+                "expansion_stage": "closure_ready",
             }
         },
     )
@@ -239,7 +240,73 @@ def write_claim_expansion_gate_scaffolds(runs_dir: Path) -> None:
                 "status": "transporter_claim_boundary_scaffold_ready",
                 "direct_binding_kcal_claim_allowed": False,
                 "binder_promotion_gate_ready": True,
-                "expansion_stage": "scaffold_ready",
+                "curated_packet_ready": True,
+                "expansion_stage": "closure_ready",
+            }
+        },
+    )
+
+
+def write_data_science_expansion_closure_packets(runs_dir: Path) -> None:
+    _write(
+        runs_dir / "gpcr_residual_proof_breadth_gate_current.json",
+        {
+            "summary": {
+                "status": "gpcr_residual_proof_breadth_gate_ready",
+                "gpcr_residual_proof_breadth_gate_ready": True,
+                "effective_gpcr_breadth_count": 7,
+                "pr_auc_regression_warning_count": 0,
+            }
+        },
+    )
+    _write(
+        runs_dir / "idp_broader_promotion_resolution_current.json",
+        {
+            "summary": {
+                "status": "idp_broader_promotion_resolution_ready",
+                "wider_shadow_safe_lane_admitted": True,
+                "bounded_lane_closure_ready": True,
+                "broader_full_idp_promotion_blocked": True,
+            }
+        },
+    )
+    _write(
+        runs_dir / "ca2_packet_replacement_readiness_current.json",
+        {
+            "summary": {
+                "status": "ca2_packet_replacement_readiness_ready",
+                "ready_row_count": 12,
+                "blocked_row_count": 0,
+            }
+        },
+    )
+    _write(
+        runs_dir / "pxr_packet_replacement_readiness_current.json",
+        {
+            "summary": {
+                "status": "pxr_packet_replacement_readiness_ready",
+                "ready_row_count": 14,
+                "blocked_row_count": 0,
+            }
+        },
+    )
+    _write(
+        runs_dir / "transporter_membrane_readiness_current.json",
+        {
+            "summary": {
+                "status": "transporter_membrane_readiness_ready",
+                "p0_open_count": 0,
+                "curated_packet_ready": True,
+            }
+        },
+    )
+    _write(
+        runs_dir / "accuracy_parity_scorecard_current.json",
+        {
+            "summary": {
+                "status": "green",
+                "pass_row_count": 5,
+                "row_count": 5,
             }
         },
     )

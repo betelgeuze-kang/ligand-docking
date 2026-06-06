@@ -1,0 +1,13 @@
+{
+  "profile_id": "ligand_topk_delivery.production",
+  "claim_boundary": "Operator-approved top-K pose delivery scaffold. Customer pose emission remains gated until delivery bundle validation is green.",
+  "claim_boundary_reviewed": true,
+  "fake_result_emission_forbidden": true,
+  "gate_policy_artifact": "runs/product_execution_approval_gate_current.json",
+  "gate_policy_reviewed": true,
+  "input_contract_reviewed": true,
+  "output_contract_reviewed": true,
+  "required_operator_action": "Enabled after product infrastructure gap closure and operator review.",
+  "reviewed_at_utc": "2026-06-06T18:00:00+00:00",
+  "reviewer": "operator-gap-closure"
+}

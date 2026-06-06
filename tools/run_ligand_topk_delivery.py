@@ -148,13 +148,25 @@ def _run(cmd: List[str]) -> Dict[str, Any]:
     }
 
 
-def build_delivery(args: argparse.Namespace) -> Dict[str, Any]:
-    scores_csv = str(args.scores_csv).strip()
-    queue_csv = str(args.queue_csv).strip()
-    if (not scores_csv) or (not os.path.exists(scores_csv)):
-        raise FileNotFoundError(f"scores csv not found: {scores_csv}")
+def _resolve_queue_csv(args: argparse.Namespace) -> str:
+    docking_request_json = str(getattr(args, "docking_request_json", "") or "").strip()
+    if docking_request_json and os.path.exists(docking_request_json):
+        from tools.product.materialize_docking_backmapping_request import materialize_from_docking_request
+
+        out_dir = os.path.join(os.path.dirname(str(args.out_prefix).strip() or "."), "materialized_queue")
+        materialized = materialize_from_docking_request(docking_request_json, out_dir=out_dir)
+        return str(materialized["queue_csv"])
+    queue_csv = str(getattr(args, "queue_csv", "") or "").strip()
     if (not queue_csv) or (not os.path.exists(queue_csv)):
         raise FileNotFoundError(f"queue csv not found: {queue_csv}")
+    return queue_csv
+
+
+def build_delivery(args: argparse.Namespace) -> Dict[str, Any]:
+    scores_csv = str(args.scores_csv).strip()
+    queue_csv = _resolve_queue_csv(args)
+    if (not scores_csv) or (not os.path.exists(scores_csv)):
+        raise FileNotFoundError(f"scores csv not found: {scores_csv}")
 
     out_prefix = str(args.out_prefix).strip() or "runs/ligand_topk_delivery"
     _ensure_dir(os.path.dirname(out_prefix) or ".")
@@ -183,6 +195,9 @@ def build_delivery(args: argparse.Namespace) -> Dict[str, Any]:
     selected_scores.to_csv(selected_scores_csv, index=False)
     selected_queue.to_csv(selected_queue_csv, index=False)
 
+    trajectory_root = str(args.trajectory_root).strip()
+    if not trajectory_root:
+        raise ValueError("trajectory-root is required for top-k delivery")
     delivery_out_dir = f"{out_prefix}_delivery"
     cmd = [
         sys.executable,
@@ -190,7 +205,7 @@ def build_delivery(args: argparse.Namespace) -> Dict[str, Any]:
         "--queue-csv",
         selected_queue_csv,
         "--trajectory-root",
-        str(args.trajectory_root),
+        trajectory_root,
         "--trajectory-glob",
         str(args.trajectory_glob),
         "--contact-cutoff-A",
@@ -244,8 +259,9 @@ def build_delivery(args: argparse.Namespace) -> Dict[str, Any]:
     if bool(args.make_bundle_zip):
         payload["artifacts"]["delivery_bundle_zip"] = os.path.join(delivery_out_dir, "ligand_delivery_bundle.zip")
 
-    out_json = f"{out_prefix}_summary.json"
+    out_json = str(getattr(args, "out_summary_json", "") or "").strip() or f"{out_prefix}_summary.json"
     out_md = f"{out_prefix}_summary.md"
+    os.makedirs(os.path.dirname(out_json) or ".", exist_ok=True)
     with open(out_json, "w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2, ensure_ascii=False)
     lines = [
@@ -269,9 +285,11 @@ def build_delivery(args: argparse.Namespace) -> Dict[str, Any]:
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Build full delivery artifacts only for top-k ligand hits.")
-    p.add_argument("--scores-csv", type=str, required=True)
-    p.add_argument("--queue-csv", type=str, required=True)
-    p.add_argument("--trajectory-root", type=str, required=True)
+    p.add_argument("--scores-csv", type=str, default="")
+    p.add_argument("--queue-csv", type=str, default="")
+    p.add_argument("--docking-request-json", type=str, default="")
+    p.add_argument("--trajectory-root", type=str, default="")
+    p.add_argument("--out-summary-json", type=str, default="")
     p.add_argument("--trajectory-glob", type=str, default="")
     p.add_argument("--out-prefix", type=str, default="runs/ligand_topk_delivery")
     p.add_argument("--score-col", type=str, default="")

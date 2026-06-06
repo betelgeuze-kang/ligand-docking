@@ -3702,10 +3702,22 @@ def _compute_binding_composite_scores(result_df: pd.DataFrame, args: argparse.Na
     return result_df
 
 
-def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
-    queue_csv = str(args.queue_csv).strip()
+def _resolve_queue_csv(args: argparse.Namespace) -> str:
+    docking_request_json = str(getattr(args, "docking_request_json", "") or "").strip()
+    if docking_request_json and os.path.exists(docking_request_json):
+        from tools.product.materialize_docking_backmapping_request import materialize_from_docking_request
+
+        out_dir = str(getattr(args, "out_dir", "") or "runs/ligand_backmapping_materialized")
+        materialized = materialize_from_docking_request(docking_request_json, out_dir=out_dir)
+        return str(materialized["queue_csv"])
+    queue_csv = str(getattr(args, "queue_csv", "") or "").strip()
     if (not queue_csv) or (not os.path.exists(queue_csv)):
         raise FileNotFoundError(f"queue csv not found: {queue_csv}")
+    return queue_csv
+
+
+def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
+    queue_csv = _resolve_queue_csv(args)
     df = pd.read_csv(queue_csv)
     if df.empty:
         raise ValueError(f"queue csv is empty: {queue_csv}")
@@ -4311,7 +4323,8 @@ def build_parser() -> argparse.ArgumentParser:
             "Backmap queue jobs to pseudo all-atom PDB and compute binding proxy score table for delivery."
         )
     )
-    p.add_argument("--queue-csv", type=str, required=True)
+    p.add_argument("--queue-csv", type=str, default="")
+    p.add_argument("--docking-request-json", type=str, default="")
     p.add_argument("--stage2-manifest-csv", type=str, default="")
     p.add_argument("--trajectory-root", type=str, default="")
     p.add_argument("--trajectory-glob", type=str, default="")

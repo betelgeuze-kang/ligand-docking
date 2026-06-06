@@ -78,9 +78,9 @@ def test_repo_api_runner_profile_enablement_work_order_reflects_operator_approve
     assert example_rows
     assert all(row["enabled"] is False for row in example_rows)
     enabled_rows = [row for row in payload["rows"] if row["enabled"]]
-    assert len(enabled_rows) == 2
+    assert len(enabled_rows) == 3
     assert all(row["runner_allowlisted"] and row["runner_exists"] for row in enabled_rows)
 
     validation = validate_profiles(Path("config/api_validated_runner_profiles"))
     assert validation["status"] == "pass"
-    assert validation["enabled_profile_count"] == 2
+    assert validation["enabled_profile_count"] == 3

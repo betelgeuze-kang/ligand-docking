@@ -13,6 +13,8 @@ from betelgeuze_product.structure_analysis import analyze_structure_source
 ROOT = Path(__file__).resolve().parents[1]
 RESIDUAL_MODEL_REGISTRY_ARTIFACT = ROOT / "runs" / "residual_model_registry_current.json"
 PRODUCT_SCOPE_CLAIM_GUARD_ARTIFACT = ROOT / "runs" / "product_scope_breadth_closure_checklist_current.json"
+PRODUCT_EXECUTION_APPROVAL_ARTIFACT = ROOT / "runs" / "product_execution_approval_gate_current.json"
+EXECUTION_APPROVAL_TOKEN = "APPROVE_PRODUCT_DOCKING_EXECUTION"
 ALLOWED_SCOPE_FAMILIES = {"kinase", "gpcr", "ion_channel"}
 MAX_P0_LIGAND_COUNT = 10000
 JOB_LEDGER_RETENTION_DAYS = 90
@@ -77,6 +79,30 @@ def _read_json_object(path: Path) -> dict[str, Any]:
 def _summary(packet: dict[str, Any]) -> dict[str, Any]:
     summary = packet.get("summary")
     return summary if isinstance(summary, dict) else {}
+
+
+def _execution_approval_posture(approval_packet: dict[str, Any] | None = None) -> dict[str, Any]:
+    approval = _summary(approval_packet or _read_json_object(PRODUCT_EXECUTION_APPROVAL_ARTIFACT))
+    gate_status = _text(approval.get("status"))
+    authorized = gate_status == "authorized_for_operator_execution"
+    row = {}
+    rows = approval.get("rows")
+    if isinstance(rows, list) and rows and isinstance(rows[0], dict):
+        row = rows[0]
+    return {
+        "execution_approval_gate_ready": bool(approval),
+        "execution_approval_gate_status": gate_status or "missing_product_execution_approval_gate",
+        "execution_approval_token_required": _text(approval.get("approval_token_required") or EXECUTION_APPROVAL_TOKEN),
+        "execution_approval_authorized": authorized,
+        "execution_approval_operator_csv_present": approval.get("operator_approval_csv_present") is True,
+        "execution_enabled": False,
+        "execution_enabled_conditional_would_enable": authorized,
+        "docking_results_emitted": False,
+        "docking_results_emitted_conditional_would_emit": False,
+        "execution_approval_row_status": _text(row.get("approval_gate_status")),
+        "execution_approval_next_required_step": _text(approval.get("next_required_step"))
+        or "Review product execution approval gate and provide operator approval token before scoped execution.",
+    }
 
 
 def _production_ai_posture(registry_packet: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -636,6 +662,7 @@ def build_docking_job_record(
     normalized = validation["normalized"]
     structure_analysis = analyze_structure_source(payload)
     ai_posture = _production_ai_posture(residual_registry_packet)
+    execution_approval = _execution_approval_posture()
     scope_claim_guard = _scope_claim_guard(
         family=normalized["family"],
         scope_claim_guard_packet=scope_claim_guard_packet,
@@ -748,6 +775,7 @@ def build_docking_job_record(
         "execution_enabled": False,
         "docking_results_emitted": False,
         **ai_posture,
+        **execution_approval,
         **scope_claim_guard,
         "external_state_mutated": False,
         **workflow_controls,

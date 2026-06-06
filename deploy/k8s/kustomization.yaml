@@ -8,4 +8,5 @@ resources:
   - secret.example.yaml
   - api-deployment.yaml
   - worker-deployment.yaml
+  - dispatch-deployment.yaml
   - service.yaml

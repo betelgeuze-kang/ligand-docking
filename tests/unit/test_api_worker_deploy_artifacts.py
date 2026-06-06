@@ -8,6 +8,9 @@ def test_product_compose_runs_api_and_worker_with_shared_queue() -> None:
 
     assert "api-server:" in compose
     assert "api-worker:" in compose
+    assert "api-docking-dispatch:" in compose
+    assert "tools/run_api_docking_dispatch_worker.py" in compose
+    assert "API_DOCKING_DISPATCH_POLL_INTERVAL_SECONDS" in compose
     assert 'API_INLINE_WORKER_ENABLED: "0"' in compose
     assert 'API_VALIDATED_RUNNER_ENABLED: "${API_VALIDATED_RUNNER_ENABLED:-0}"' in compose
     assert "API_VALIDATED_RUNNER_PROFILES_PATH" in compose
@@ -18,6 +21,17 @@ def test_product_compose_runs_api_and_worker_with_shared_queue() -> None:
     assert "API_RESULT_MANIFEST_SIGNING_KEY: \"${API_RESULT_MANIFEST_SIGNING_KEY:?set API_RESULT_MANIFEST_SIGNING_KEY}\"" in compose
     assert "PRODUCT_API_TOKEN: \"${PRODUCT_API_TOKEN:?set PRODUCT_API_TOKEN}\"" in compose
     assert 'PRODUCT_API_TLS_TERMINATION_OPERATOR_VERIFIED: "${PRODUCT_API_TLS_TERMINATION_OPERATOR_VERIFIED:-1}"' in compose
+
+
+def test_systemd_dispatch_unit_polls_docking_ledger() -> None:
+    unit = Path("deploy/systemd/micf-api-docking-dispatch.service").read_text(encoding="utf-8")
+    env_example = Path("deploy/systemd/api-docking-dispatch.env.example").read_text(encoding="utf-8")
+
+    assert "EnvironmentFile=/etc/micf/api-docking-dispatch.env" in unit
+    assert "tools/run_api_docking_dispatch_worker.py" in unit
+    assert "API_DOCKING_DISPATCH_POLL_INTERVAL_SECONDS" in unit
+    assert "API_JOB_STORE_PATH=/var/lib/micf/api_jobs.sqlite3" in env_example
+    assert "API_VALIDATED_RUNNER_ENABLED=0" in env_example
 
 
 def test_systemd_worker_unit_is_fail_closed_and_writes_only_data_dir() -> None:
@@ -153,8 +167,13 @@ def test_k8s_manifests_define_api_worker_shared_queue_rollout() -> None:
     assert "claimName: micf-product-results" in api_deployment
     assert "path: /metrics" in api_deployment
 
+    dispatch_deployment = (k8s_dir / "dispatch-deployment.yaml").read_text(encoding="utf-8")
+
     assert "name: micf-api-worker" in worker_deployment
     assert "python3 tools/run_api_simulation_worker.py" in worker_deployment
+    assert "name: micf-api-docking-dispatch" in dispatch_deployment
+    assert "run_api_docking_dispatch_worker.py" in dispatch_deployment
+    assert "dispatch-deployment.yaml" in kustomization
     assert "--heartbeat-interval-seconds ${API_WORKER_HEARTBEAT_INTERVAL_SECONDS}" in worker_deployment
     assert "mountPath: /data" in worker_deployment
     assert "claimName: micf-product-results" in worker_deployment

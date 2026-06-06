@@ -17,6 +17,7 @@ from api.config import settings
 ALLOWED_RUNNER_SCRIPTS = {
     "tools/run_ligand_htvs_pipeline.py",
     "tools/run_ligand_backmapping_scoring.py",
+    "tools/run_ligand_topk_delivery.py",
 }
 
 _PROFILE_ID_RE = re.compile(r"^[A-Za-z0-9_.-]{1,80}$")

@@ -336,6 +336,67 @@ def test_stage2_skip_router_exposes_skipped_rows():
     assert len(traj_rows) >= 1
 
 
+def test_materialize_backmapping_from_docking_request(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    from api.config import settings
+    from tools.product.materialize_docking_backmapping_request import materialize_from_docking_request
+
+    jobs_dir = tmp_path / "product_docking_jobs"
+    jobs_dir.mkdir()
+    monkeypatch.setattr(settings, "results_storage_path", str(tmp_path / "results"))
+    ledger = {
+        "job_id": "dock-bm-1",
+        "intake_payload": {
+            "family": "gpcr",
+            "target_id": "ADRB2",
+            "ligands": [{"compound_id": "cmp-1", "smiles": "CCO"}],
+        },
+    }
+    (jobs_dir / "dock-bm-1.json").write_text(json.dumps(ledger, indent=2) + "\n", encoding="utf-8")
+    request_path = tmp_path / "request.json"
+    request_path.write_text(
+        json.dumps(
+            {
+                "job_id": "sim-bm-1",
+                "target_name": "ADRB2",
+                "runner_profile_params": {"docking_job_id": "dock-bm-1"},
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    out = materialize_from_docking_request(str(request_path), out_dir=str(tmp_path / "bm"))
+    assert out["ligand_count"] == 1
+    assert Path(out["queue_csv"]).exists()
+
+
+def test_docking_request_records_execution_approval_posture():
+    from betelgeuze_product.docking_request import build_docking_job_record
+
+    record = build_docking_job_record(
+        {
+            "request_type": "structure_analysis_ligand_docking",
+            "family": "gpcr",
+            "target_id": "ADRB2",
+            "pdb_content": "ATOM      1  CA  GLY A   1      12.104  13.207  14.321  1.00 10.00           C\n",
+            "ligands": [{"ligand_id": "lig_1", "smiles": "CCO"}],
+        },
+        job_id="job_exec_gate",
+    )
+    assert record["execution_enabled"] is False
+    assert record["execution_approval_gate_ready"] in {True, False}
+    assert record["execution_approval_token_required"] == "APPROVE_PRODUCT_DOCKING_EXECUTION"
+    assert record["execution_enabled_conditional_would_enable"] in {True, False}
+
+
+def test_enabled_topk_runner_profile_exists():
+    path = Path("config/api_validated_runner_profiles/ligand_topk_delivery.production.json")
+    assert path.exists()
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    assert payload.get("enabled") is True
+    assert payload.get("runner_script") == "tools/run_ligand_topk_delivery.py"
+
+
 def test_build_simulate_request_includes_intake_payload():
     record = {
         "job_id": "dock-2",

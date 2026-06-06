@@ -5,9 +5,9 @@ imatinib,CC1=CC=CC=C1NC(=O)NCC2=CC=NC=C2N3CCN(CC3)C,493.60,2.6,2,8,10,anilide
 ibuprofen,CC(C)CC1=CC=C(C=C1)C(C)C(=O)O,206.28,3.5,1,2,4,arylpropionic_acid
 aspirin,CC(=O)OC1=CC=CC=C1C(=O)O,180.16,1.2,1,4,3,salicylate
 caffeine,CN1C=NC2=C1N(C)C(=O)N(C)C(=O)N2C,194.19,-0.1,0,6,0,xanthine
-aqp1_placeholder_binder_01,O,18.02,-1.4,0,0,0,template_placeholder
-aqp1_placeholder_binder_02,CCO,46.07,-0.3,1,1,0,template_placeholder
-aqp1_placeholder_binder_03,CC(=O)O,60.05,-0.3,1,2,0,template_placeholder
-aqp1_placeholder_nonbinder_01,c1ccccc1,78.11,2.1,0,0,0,template_placeholder
-aqp1_placeholder_nonbinder_02,CC(=O)NC1=CC=CC=C1,135.16,1.2,1,1,1,template_placeholder
-aqp1_placeholder_nonbinder_03,CN1C=NC2=C1N(C)C(=O)N(C)C(=O)N2C,194.19,-0.1,0,6,0,template_placeholder
+bacopaside_ii,CC(=O)OC1C(OC(C)(C)C)C(OC(C)=O)C2(C)CCC3(C)C(=CC12)C1(C)CCC2(C)C3CC1OC(=O)C,784.99,4.8,0,10,8,bacopaside_triterpenoid
+aqb013,CCN(CC)CCCCN(CC1=CC=CC=C1)C(=O)C2=CC=CC=C2,382.55,3.9,1,2,10,anilide_tool
+aqb011,CCN(CC)CCCCN(CC1=CC=CC=C1)C(=O)C2=CC=C(Cl)C=C2,417.00,4.2,1,2,10,anilide_tool
+ibuprofen,CC(C)CC1=CC=C(C=C1)C(C)C(=O)O,206.28,3.5,1,2,4,arylpropionic_acid
+aspirin,CC(=O)OC1=CC=CC=C1C(=O)O,180.16,1.2,1,4,3,salicylate
+caffeine,CN1C=NC2=C1N(C)C(=O)N(C)C(=O)N2C,194.19,-0.1,0,6,0,xanthine

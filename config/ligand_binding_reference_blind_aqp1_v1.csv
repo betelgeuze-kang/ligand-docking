@@ -5,9 +5,9 @@ EGFR_KINASE,imatinib,-7.4,1,literature_proxy_v2
 EGFR_KINASE,ibuprofen,-2.1,0,literature_proxy_v2
 EGFR_KINASE,aspirin,-1.1,0,literature_proxy_v2
 EGFR_KINASE,caffeine,-0.6,0,literature_proxy_v2
-AQP1_TRANSPORT_BLIND,aqp1_placeholder_binder_01,-8.0,1,template_placeholder_needs_curation
-AQP1_TRANSPORT_BLIND,aqp1_placeholder_binder_02,-7.6,1,template_placeholder_needs_curation
-AQP1_TRANSPORT_BLIND,aqp1_placeholder_binder_03,-7.1,1,template_placeholder_needs_curation
-AQP1_TRANSPORT_BLIND,aqp1_placeholder_nonbinder_01,-1.2,0,template_placeholder_needs_curation
-AQP1_TRANSPORT_BLIND,aqp1_placeholder_nonbinder_02,-0.9,0,template_placeholder_needs_curation
-AQP1_TRANSPORT_BLIND,aqp1_placeholder_nonbinder_03,-0.5,0,template_placeholder_needs_curation
+AQP1_TRANSPORT_BLIND,bacopaside_ii,,1,functional_ic50_derived_surrogate::PMID27474162::IC50_18_uM::not_direct_binding_kcal
+AQP1_TRANSPORT_BLIND,aqb013,,1,functional_ic50_derived_surrogate::PMID22427546::IC50_20_uM::not_direct_binding_kcal
+AQP1_TRANSPORT_BLIND,aqb011,,1,functional_ic50_derived_surrogate::PMID26467039::IC50_14_uM::not_direct_binding_kcal
+AQP1_TRANSPORT_BLIND,ibuprofen,-2.1,0,literature_proxy_v2
+AQP1_TRANSPORT_BLIND,aspirin,-1.1,0,literature_proxy_v2
+AQP1_TRANSPORT_BLIND,caffeine,-0.6,0,literature_proxy_v2

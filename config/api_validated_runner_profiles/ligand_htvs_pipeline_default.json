@@ -7,6 +7,8 @@
     "{job_results_dir}/htvs",
     "--run-scope",
     "smoke",
+    "--pipeline-preset-json",
+    "config/ligand_htvs_blind_gpcr_adrb2_4bead_v1.json",
     "--docking-request-json",
     "{request_json_path}",
     "--no-dry-run",

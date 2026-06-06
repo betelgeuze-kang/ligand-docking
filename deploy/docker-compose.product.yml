@@ -56,5 +56,34 @@ services:
         --lease-seconds $${API_WORKER_LEASE_SECONDS}
         --heartbeat-interval-seconds $${API_WORKER_HEARTBEAT_INTERVAL_SECONDS}
 
+  api-docking-dispatch:
+    image: micf-api:product
+    build:
+      context: ..
+      dockerfile: Dockerfile.product
+    restart: unless-stopped
+    depends_on:
+      - api-server
+      - api-worker
+    environment:
+      API_INLINE_WORKER_ENABLED: "0"
+      API_VALIDATED_RUNNER_ENABLED: "${API_VALIDATED_RUNNER_ENABLED:-0}"
+      API_VALIDATED_RUNNER_PROFILES_PATH: "${API_VALIDATED_RUNNER_PROFILES_PATH:-/app/config/api_validated_runner_profiles}"
+      API_JOB_STORE_PATH: "/data/api_jobs.sqlite3"
+      API_DOCKING_DISPATCH_POLL_INTERVAL_SECONDS: "${API_DOCKING_DISPATCH_POLL_INTERVAL_SECONDS:-2}"
+      API_DOCKING_DISPATCH_LIMIT: "${API_DOCKING_DISPATCH_LIMIT:-1}"
+      RESULTS_STORAGE_PATH: "/data/results"
+      API_RESULT_MANIFEST_SIGNING_KEY: "${API_RESULT_MANIFEST_SIGNING_KEY:?set API_RESULT_MANIFEST_SIGNING_KEY}"
+      API_RESULT_MANIFEST_KEY_ID: "${API_RESULT_MANIFEST_KEY_ID:-product-local}"
+    volumes:
+      - micf-product-results:/data
+    command:
+      - "sh"
+      - "-c"
+      - >
+        python3 tools/run_api_docking_dispatch_worker.py
+        --poll-interval-seconds $${API_DOCKING_DISPATCH_POLL_INTERVAL_SECONDS}
+        --limit $${API_DOCKING_DISPATCH_LIMIT}
+
 volumes:
   micf-product-results:

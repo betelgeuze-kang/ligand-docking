@@ -63,6 +63,36 @@
 
 ---
 
+## 1d) 상용 인프라 갭 클로저 (2026-06-06) — CLOSED
+
+| ID | 항목 | 상태 | 근거 |
+|---|---|---|---|
+| HW-DEP-02 | dispatch worker deploy (compose/systemd/k8s) | CLOSED | `deploy/docker-compose.product.yml` `api-docking-dispatch`, `deploy/systemd/micf-api-docking-dispatch.service`, `deploy/k8s/dispatch-deployment.yaml` |
+| HW-PROF-01 | HTVS profile blind preset + request.json | CLOSED | `ligand_htvs_pipeline_default.json` `--pipeline-preset-json`, `--docking-request-json` |
+| HW-PROF-02 | backmapping ledger materialize | CLOSED | `materialize_docking_backmapping_request.py`, `backmapping_scoring.production.json` `--docking-request-json` |
+| HW-PROF-04 | topk delivery production profile | CLOSED | `ligand_topk_delivery.production.json`, `api/validated_runner.py` allowlist |
+| CB-EXEC | execution approval fail-closed wiring | CLOSED | `betelgeuze_product/docking_request.py` `_execution_approval_posture`, `execution_enabled=false` 유지 |
+
+검증: `tests/unit/test_build_product_infrastructure_gap_closure.py`, `tests/unit/test_api_worker_deploy_artifacts.py`, `tests/unit/test_gap_closure_e2e.py` 확장.
+
+---
+
+## 1e) 데이터·과학품질 확장 클로저 (2026-06-06) — CLOSED
+
+| # | 영역 | 상태 | 근거 |
+|---|---|---|---|
+| 6 | GPCR CI-low / residual proof breadth | CLOSED | `runs/gpcr_residual_proof_breadth_gate_current.json`, `build_gpcr_residual_proof_breadth_gate.py` |
+| 7 | Transporter AQP1/GLUT1 curated packets | CLOSED | `config/ligand_binding_reference_blind_aqp1_v1.csv`, `config/ligand_binding_reference_blind_glut1_4pyp_v1.csv` (placeholder 0건) |
+| 8 | OpenMM / accuracy parity restricted lane | CLOSED | `runs/accuracy_parity_scorecard_current.json` `status=green` |
+| 9 | Prospective wetlab translation scaffold | CLOSED | simulation packet green, wetlab-proven hit out-of-claim 유지 |
+| 10 | CA2/PXR packet replacement | CLOSED | `runs/ca2_packet_replacement_readiness_current.json`, `runs/pxr_packet_replacement_readiness_current.json` |
+| 11 | IDP bounded shadow-safe lane | CLOSED | `runs/idp_broader_promotion_resolution_current.json` `wider_shadow_safe_lane_admitted=true` |
+| 12 | CAMEO sender/fetch executor scaffold | CLOSED | `betelgeuze_cameo/outbound_email_send_executor.py`, `official_result_fetch_executor.py` |
+
+검증: `tests/unit/test_build_data_science_expansion_gap_closure.py`, `tools/product/ci_contract_fixture_packets.py` `write_data_science_expansion_closure_packets()`.
+
+---
+
 ## 2) 덜 닫힌 영역과 병목 원인
 
 ### A. API ↔ Engine wiring — P0/P1 갭 클로저 완료 (2026-06-06)
