@@ -1,4 +1,14 @@
 """Compatibility shim; canonical module: tools.accounting.build_lrrk2_result_review."""
+import sys as _sys
+from pathlib import Path as _Path
+_repo = _Path(__file__).resolve()
+for _ in range(12):
+    if (_repo / 'pyproject.toml').exists():
+        if str(_repo) not in _sys.path:
+            _sys.path.insert(0, str(_repo))
+        break
+    _repo = _repo.parent
+
 from importlib import import_module as _import_module
 import sys as _sys
 
