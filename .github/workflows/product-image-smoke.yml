@@ -1,0 +1,26 @@
+name: product-image-smoke
+
+on:
+  push:
+    branches:
+      - codex/commercialization-accounting-closure
+      - main
+    paths:
+      - Dockerfile.product
+      - pyproject.toml
+      - requirements-package.txt
+      - requirements-api.txt
+      - requirements-deploy.txt
+      - api/**
+      - core/**
+      - betelgeuze_product/**
+      - deploy/verify_product_image.sh
+  workflow_dispatch:
+
+jobs:
+  product-image-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify product image
+        run: bash deploy/verify_product_image.sh

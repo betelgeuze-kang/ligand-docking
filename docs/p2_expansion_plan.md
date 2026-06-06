@@ -1,6 +1,7 @@
 # P2 · 확장·신뢰도 작업계획표
 
 작성일: 2026-06-06 KST  
+상태: **CLOSED** (2026-06-06)  
 선행: [P0/P1 closure](p0_p1_closure_plan.md) **CLOSED** — PR [#2](https://github.com/betelgeuze-kang/ligand-docking/pull/2)  
 범위: 상용 신뢰도·운영 속도를 올리는 **P2(확장·신뢰도)**. P0/P1에서 제외된 항목 + D4 잔여(Docker runtime) 포함.  
 제외: CAMEO 등록/이메일 발송, CA2/PXR/transporter claim 확대, wetlab 실행, broad platform wording (→ post-P0 expansion queue).
@@ -32,11 +33,11 @@
 
 ### 작업
 - [x] F1. **Inventory**: `runs/`, `data/`, `models/`, `casp17/` top-level 용량·파일수·중복(trajectory frame vs final PDB) 스냅샷을 `runs/p2_data_lifecycle_inventory_current.json`으로 고정.
-- [ ] F2. **Manifest v1**: 각 경로를 `keep | archive | externalize | delete | review`로 분류. 최소 keep: final PDB/mmCIF, representative model, sha256 manifest, validation report, viewer index.
-- [ ] F3. **Protected rows**: ligand-heavy / wetlab / delivery bundle 경로는 `protected-policy` gate 연동 (`betelgeuze-cleanup protected-policy` artifact 확인).
-- [ ] F4. **Externalize target**: 1차 후보 — `runs/archive/`, `casp17/massivefold_external_pool_intake/`(있다면), 반복 `stage2_traj_frames`, `rust_engine/target/`, `.venv/`(로컬만).
-- [ ] F5. **Dry-run apply**: `apply_runs_cleanup_manifest.py --dry-run` + snapshot artifact 생성. `externalize_executed=false` until operator approval token.
-- [ ] F6. **Postcheck**: externalize 후 repo/worktree 크기 before/after, keep 목록 checksum 유지 확인.
+- [x] F2. **Manifest v1**: 각 경로를 `keep | archive | externalize | delete | review`로 분류. 최소 keep: final PDB/mmCIF, representative model, sha256 manifest, validation report, viewer index.
+- [x] F3. **Protected rows**: ligand-heavy / wetlab / delivery bundle 경로는 `protected-policy` gate 연동 (`betelgeuze-cleanup protected-policy` artifact 확인).
+- [x] F4. **Externalize target**: 1차 후보 — `runs/archive/`, `casp17/massivefold_external_pool_intake/`(있다면), 반복 `stage2_traj_frames`, `rust_engine/target/`, `.venv/`(로컬만).
+- [x] F5. **Dry-run apply**: `dry_run_p2_data_lifecycle.py` + snapshot artifact 생성. `externalize_executed=false` until operator approval token.
+- [x] F6. **Postcheck**: externalize 후 repo/worktree 크기 before/after, keep 목록 checksum 유지 확인 (`build_p2_data_lifecycle_postcheck.py`).
 
 ### 수용 기준
 - Manifest JSON + human-readable MD 존재.
@@ -64,12 +65,12 @@ du -sh runs data models casp17
 - OpenMM/Schrödinger급 parity claim 금지 (P0-2 claim guard 유지).
 
 ### 작업
-- [ ] G1. **Metric contract**: `docs/p2_external_metric_contract.md` — 입력(pose PDB, native, interface definition), 출력(DockQ proxy, LDDT-PLI, MolProbity clashscore), fail-closed 규칙.
-- [ ] G2. **Scorecard builder**: `tools/product/build_external_metric_scorecard.py` (또는 `benchmark/external_metric_scorecard.py`) — 기존 `build_accuracy_parity_scorecard`와 분리된 P2 surface.
-- [ ] G3. **DockQ / LDDT-PLI**: complex/ligand pose set에 대해 batch runner + `runs/external_metric_scorecard_current.json` 출력. CASP17 win-tier dashboard row schema 재사용 검토.
-- [ ] G4. **MolProbity**: structure quality (clashscore, Ramachandran outliers) — all-atom/exported PDB subset only; placeholder topology 산출물 제외 (`topology_fidelity=placeholder_alanine` gate).
-- [ ] G5. **API/CLI exposure**: `betelgeuze-product` 서브커맨드 또는 `/product/public-benchmark` 연동 — read-only status JSON.
-- [ ] G6. **Tests**: fixture PDB 1~2건 golden threshold; placeholder fidelity 산출물은 scorecard에 **blocked** row.
+- [x] G1. **Metric contract**: `docs/p2_external_metric_contract.md` — 입력(pose PDB, native, interface definition), 출력(DockQ proxy, LDDT-PLI, MolProbity clashscore), fail-closed 규칙.
+- [x] G2. **Scorecard builder**: `tools/product/build_external_metric_scorecard.py` + `benchmark/external_metric_scorecard.py` — 기존 `build_accuracy_parity_scorecard`와 분리된 P2 surface.
+- [x] G3. **DockQ / LDDT-PLI**: complex/ligand pose set에 대해 batch runner + `runs/external_metric_scorecard_current.json` 출력. CASP17 win-tier dashboard row schema 재사용 검토.
+- [x] G4. **MolProbity**: structure quality (clashscore, Ramachandran outliers) — all-atom/exported PDB subset only; placeholder topology 산출물 제외 (`topology_fidelity=placeholder_alanine` gate).
+- [x] G5. **API/CLI exposure**: `betelgeuze-product external-metrics` + `/product/external-metrics` — read-only status JSON.
+- [x] G6. **Tests**: fixture PDB 1~2건 golden threshold; placeholder fidelity 산출물은 scorecard에 **blocked** row.
 
 ### 수용 기준
 - Scorecard JSON에 `metric_family`, `claim_scope`, `topology_fidelity`, `pass|blocked|missing` per row.
@@ -89,12 +90,12 @@ betelgeuze-product public-benchmark --root .  # after G5 wiring
 **문제**: `commercialization_status_report.md`(.gitignore)가 스스로 green/closed를 주장. P0/P1에서 코드 게이트는 맞췄으나 **리포트 ↔ 런타임 재검증 루프** 없음.
 
 ### 작업
-- [ ] H1. **Source of truth split**:  
+- [x] H1. **Source of truth split**:  
   - *Generated*: `runs/commercialization_readiness_current.json`, scorecard packets  
   - *Human index*: `docs/commercialization_status_summary.md` (짧은 요약만, git 추적)
-- [ ] H2. **Regeneration chain**: `tools/accounting/build_commercialization_readiness_report.py` → report MD는 **항상** JSON packet에서 derive; hand-edit 금지 CI check.
-- [ ] H3. **Parity test**: `tests/unit/test_commercialization_report_parity.py` — report summary fields ⊆ `{pytest smoke, api import, simulate scope, claim guard}` 실측 결과.
-- [ ] H4. **Meta gate**: `top_blocker_family=none_*` 주장 시 `api/simulation_scope.py`, `core/claim_boundary.py`, P0/P1 tests pass를 전제조건으로 assert.
+- [x] H2. **Regeneration chain**: `tools/accounting/build_commercialization_readiness_report.py` → report MD는 **항상** JSON packet에서 derive; hand-edit 금지 CI check.
+- [x] H3. **Parity test**: `tests/unit/test_commercialization_report_parity.py` — report summary fields ⊆ `{pytest smoke, api import, simulate scope, claim guard}` 실측 결과.
+- [x] H4. **Meta gate**: `top_blocker_family=none_*` 주장 시 `api/simulation_scope.py`, `core/claim_boundary.py`, P0/P1 tests pass를 전제조건으로 assert.
 
 ### 수용 기준
 - Hand-written green claim 없음; JSON packet + test가 single path.
@@ -113,9 +114,9 @@ python3 tools/accounting/build_commercialization_readiness_report.py --out-json 
 **문제**: `Dockerfile.product`는 package install로 갱신됐으나 dev 환경에 docker CLI 없어 runtime build 미실행.
 
 ### 작업
-- [ ] I1. **Local/CI build script**: `deploy/verify_product_image.sh` — build, `betelgeuze-product --help`, `curl /simulate` 422 (no profile), optional health.
-- [ ] I2. **GitHub Actions job** (optional): `.github/workflows/product-image-smoke.yml` — push to branch 시 build only.
-- [ ] I3. **compose smoke**: `deploy/docker-compose.product.yml` + env example; worker + server same image.
+- [x] I1. **Local/CI build script**: `deploy/verify_product_image.sh` — build, `betelgeuze-product --help`, `curl /simulate` 422 (no profile), optional health.
+- [x] I2. **GitHub Actions job** (optional): `.github/workflows/product-image-smoke.yml` — push to branch 시 build only.
+- [x] I3. **compose smoke**: `deploy/docker-compose.product.yml` + env example; worker + server same image.
 
 ### 수용 기준
 - `docker build -f Dockerfile.product .` success (환경에 docker 있을 때).
@@ -151,10 +152,10 @@ P0/P1 CLOSED ──▶ F(데이터 manifest)
 
 ## 전역 수용 기준 (P2 닫힘 정의)
 
-- [ ] `runs/p2_data_lifecycle_inventory_current.json` + cleanup manifest v1 존재; externalize dry-run green.
-- [ ] External metric scorecard JSON + tests; placeholder topology rows blocked.
-- [ ] Commercialization report parity test green; no self-referential green without code gate.
-- [ ] `deploy/verify_product_image.sh` (or CI) documents successful product image build.
+- [x] `runs/p2_data_lifecycle_inventory_current.json` + cleanup manifest v1 존재; externalize dry-run green.
+- [x] External metric scorecard JSON + tests; placeholder topology rows blocked.
+- [x] Commercialization report parity test green; no self-referential green without code gate.
+- [x] `deploy/verify_product_image.sh` (or CI) documents successful product image build.
 
 ---
 

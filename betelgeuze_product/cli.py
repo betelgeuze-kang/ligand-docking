@@ -18,6 +18,7 @@ ARTIFACTS = {
     "operational-quality": "runs/product_operational_quality_contract_current.json",
     "operations": "runs/product_release_operations_dossier_current.json",
     "public-benchmark": "runs/product_public_benchmark_work_order_current.json",
+    "external-metrics": "runs/external_metric_scorecard_current.json",
     "ai-decision-graph": "runs/product_ai_decision_graph_contract_current.json",
     "ai-report-ux": "runs/product_ai_report_ux_contract_current.json",
     "cameo-live-validation": "runs/cameo_validation_operations_dossier_current.json",

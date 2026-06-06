@@ -38,6 +38,7 @@ PRODUCT_SECURITY_DEPLOYMENT_ARTIFACT = ROOT / "runs" / "product_security_deploym
 PRODUCT_RELEASE_OPERATIONS_ARTIFACT = ROOT / "runs" / "product_release_operations_dossier_current.json"
 PRODUCT_EXECUTION_APPROVAL_ARTIFACT = ROOT / "runs" / "product_execution_approval_gate_current.json"
 PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_ARTIFACT = ROOT / "runs" / "product_public_benchmark_work_order_current.json"
+EXTERNAL_METRIC_SCORECARD_ARTIFACT = ROOT / "runs" / "external_metric_scorecard_current.json"
 PRODUCT_TRAJECTORY_SLA_CONTRACT_ARTIFACT = ROOT / "runs" / "product_trajectory_sla_contract_current.json"
 PRODUCT_JOB_ORCHESTRATION_CONTRACT_ARTIFACT = ROOT / "runs" / "product_job_orchestration_contract_current.json"
 PRODUCT_AI_DECISION_GRAPH_ARTIFACT = ROOT / "runs" / "product_ai_decision_graph_contract_current.json"
@@ -727,6 +728,46 @@ async def get_product_security_deployment_contract() -> dict[str, Any]:
         "checks": rows,
         "blockers": blockers,
         "next_required_step": summary.get("next_required_step", ""),
+        "execution_enabled": False,
+        "docking_results_emitted": False,
+        "external_state_mutated": False,
+        "claim_boundary": summary.get("claim_boundary", ""),
+    }
+
+
+@router.get("/external-metrics")
+async def get_product_external_metrics() -> dict[str, Any]:
+    packet = _read_json_object(EXTERNAL_METRIC_SCORECARD_ARTIFACT)
+    summary = _summary(packet)
+    rows = packet.get("rows") if isinstance(packet.get("rows"), list) else []
+    if not summary:
+        return {
+            "status": "missing_external_metric_scorecard",
+            "artifact_path": str(EXTERNAL_METRIC_SCORECARD_ARTIFACT),
+            "claim_scope": "",
+            "claim_promotion_allowed": False,
+            "row_count": 0,
+            "blocked_row_count": 0,
+            "evaluated_row_count": 0,
+            "rows": [],
+            "execution_enabled": False,
+            "docking_results_emitted": False,
+            "external_state_mutated": False,
+            "claim_boundary": (
+                "Product external-metrics endpoint only; the local external metric scorecard artifact is missing. "
+                "It does not compute DockQ/LDDT/MolProbity or mutate external state."
+            ),
+        }
+    return {
+        "status": summary.get("status", ""),
+        "artifact_path": str(EXTERNAL_METRIC_SCORECARD_ARTIFACT),
+        "claim_scope": summary.get("claim_scope", ""),
+        "claim_promotion_allowed": bool(summary.get("claim_promotion_allowed") is True),
+        "row_count": int(summary.get("row_count") or len(rows)),
+        "blocked_row_count": int(summary.get("blocked_row_count") or 0),
+        "evaluated_row_count": int(summary.get("evaluated_row_count") or 0),
+        "topology_fidelity_required": summary.get("topology_fidelity_required", ""),
+        "rows": rows,
         "execution_enabled": False,
         "docking_results_emitted": False,
         "external_state_mutated": False,
