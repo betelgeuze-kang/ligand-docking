@@ -93,6 +93,9 @@ def build_product_infrastructure_gap_closure() -> dict[str, Any]:
             "_execution_approval_posture",
         )
     )
+    topk_profile_enabled = '"enabled": true' in topk_profile
+    topk_runner_allowlisted = "tools/run_ligand_topk_delivery.py" in validated_runner
+    execution_enabled_hard_false = '"execution_enabled": False' in docking_request
 
     rows = [
         _row(
@@ -124,7 +127,7 @@ def build_product_infrastructure_gap_closure() -> dict[str, Any]:
             "topk delivery production profile",
             "closed" if topk_profile_ready else "open",
             "config/api_validated_runner_profiles/ligand_topk_delivery.production.json; api/validated_runner.py",
-            f"profile_enabled={'\"enabled\": true' in topk_profile}; allowlisted={'tools/run_ligand_topk_delivery.py' in validated_runner}",
+            f"profile_enabled={topk_profile_enabled}; allowlisted={topk_runner_allowlisted}",
             "Add ligand_topk_delivery.production profile and allowlist runner script.",
         ),
         _row(
@@ -132,7 +135,7 @@ def build_product_infrastructure_gap_closure() -> dict[str, Any]:
             "execution approval fail-closed wiring",
             "closed" if execution_gate_ready else "open",
             "betelgeuze_product/docking_request.py; runs/product_execution_approval_gate_current.json",
-            f"conditional_wiring={execution_gate_ready}; execution_enabled_hard_false={'\"execution_enabled\": False' in docking_request}",
+            f"conditional_wiring={execution_gate_ready}; execution_enabled_hard_false={execution_enabled_hard_false}",
             "Wire product execution approval gate into docking ledger while keeping execution_enabled=false.",
         ),
     ]
