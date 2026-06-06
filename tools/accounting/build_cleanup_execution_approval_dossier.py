@@ -9,7 +9,7 @@ from typing import Any
 from tools.builder_table_utils import write_csv_rows
 from tools.build_protected_cleanup_policy_decision_gate import DEFAULT_OUT_JSON as DEFAULT_PROTECTED_POLICY_GATE_JSON
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_TRANSITION_PREFLIGHT_JSON = "runs/transition_cleanup_execution_preflight_current.json"
 DEFAULT_SNAPSHOT_PREFLIGHT_JSON = "runs/cleanup_snapshot_preflight_current.json"
 DEFAULT_SNAPSHOT_ARTIFACTS_JSON = "runs/cleanup_snapshot_artifacts_current.json"

@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FILL_READINESS_JSON = "runs/pxr_packet_fill_readiness_current.json"
 DEFAULT_REVIEW_PACKET_JSON = "runs/pxr_review_packet_current.json"
 DEFAULT_PUBLIC_OVERLAY_JSON = "runs/pxr_public_evidence_overlay_current.json"

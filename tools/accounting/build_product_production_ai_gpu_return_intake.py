@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_HANDOFF_JSON = "runs/residual_force_gpu_worker_handoff_package_current.json"
 DEFAULT_RETURN_MANIFEST_TEMPLATE_JSON = "runs/residual_force_gpu_worker_return_manifest_template_current.json"
 DEFAULT_RETURN_SUMMARY_TEMPLATE_JSON = "runs/residual_force_gpu_worker_return_summary_template_current.json"

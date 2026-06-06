@@ -12,7 +12,7 @@ import numpy as np
 
 from tools.gpcr_replay.build_gpcr_atom_window_anchor_feature_cache import _parse_pdb_anchor_template
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_INPUT_CSV = "runs/gpcr_drd2_pseudo_allatom_repair_rows_current.csv"
 DEFAULT_OUT_CSV = "runs/gpcr_drd2_cationic_center_geometry_cache_current.csv"

@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_COMMERCIALIZATION_JSON = "runs/commercialization_readiness_current.json"
 DEFAULT_GAP_JSON = "runs/commercialization_gap_burndown_current.json"

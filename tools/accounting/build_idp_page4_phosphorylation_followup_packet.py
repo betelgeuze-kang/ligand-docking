@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_CITATION_CONFIRMED_JSON = "runs/idp_page4_anchor_citation_confirmed_packet_current.json"
 DEFAULT_EVIDENCE_SEED_JSON = "runs/idp_page4_anchor_evidence_seed_current.json"

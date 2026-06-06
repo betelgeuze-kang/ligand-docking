@@ -33,7 +33,7 @@ from tools.wetlab_selected_allatom_visual import (
 
 from tools.wetlab_target_render_utils import load_json, maybe_load_json, write_artifact
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FINAL_CAMPAIGN_SUMMARY_JSON = "runs/wetlab_final_campaign_summary_current.json"
 DEFAULT_MASTER_TERMINAL_REVIEW_JSON = "runs/wetlab_master_terminal_review_current.json"
 DEFAULT_OUTBOUND_BOARD_JSON = "runs/wetlab_outbound_execution_priority_board_current.json"

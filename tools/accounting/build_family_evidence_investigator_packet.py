@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote_plus
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_QUEUE_JSON = "runs/family_evidence_acquisition_queue_current.json"
 DEFAULT_PXR_LITERATURE_OVERLAY_JSON = "runs/pxr_literature_candidate_overlay_current.json"

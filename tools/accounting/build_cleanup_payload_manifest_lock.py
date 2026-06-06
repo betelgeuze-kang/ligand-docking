@@ -10,7 +10,7 @@ from typing import Any
 from tools.builder_table_utils import write_csv_rows
 from tools.build_cleanup_execution_approval_dossier import DEFAULT_OUT_JSON as DEFAULT_DOSSIER_JSON
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_JSON = "runs/cleanup_payload_manifest_lock_current.json"
 DEFAULT_OUT_CSV = "runs/cleanup_payload_manifest_lock_current.csv"
 DEFAULT_OUT_MD = "runs/cleanup_payload_manifest_lock_current.md"

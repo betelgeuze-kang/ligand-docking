@@ -12,7 +12,7 @@ from typing import Any
 from tools import build_casp17_competitive_floor_batch_native_provenance_value_gate as gate
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_VALUE_GATE_JSON = "casp17/casp17_competitive_floor_batch_native_provenance_value_gate_current.json"
 DEFAULT_OUT_DIR = "casp17/competitive_floor_batch_native_provenance_value_action_board"

@@ -8,7 +8,7 @@ from typing import Any
 from betelgeuze_product.public_benchmark_scorecard import build_public_benchmark_suite_scorecard, write_scorecard
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def _resolve(path_like: str | Path) -> Path:

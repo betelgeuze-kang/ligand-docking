@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_JSON = "runs/rocm_environment_manifest_current.json"
 DEFAULT_OUT_MD = "runs/rocm_environment_manifest_current.md"
 

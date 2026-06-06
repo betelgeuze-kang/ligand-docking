@@ -9,7 +9,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_PROBE_JSON = "runs/nightly_stage6_probe_result_packet_current.json"
 DEFAULT_FOLLOWUP_JSON = "runs/nightly_stage6_followup_retry_packet_current.json"

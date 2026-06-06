@@ -10,7 +10,7 @@ from typing import Any
 from core.definitions import ResearchConstants
 from tools.native_target_registry import candidate_target_keys, canonicalize_target_name
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_TARGET = "T. cruzi PDE"
 DEFAULT_NATIVE_CSV = "config/real_drug_targets_native_v1.csv"

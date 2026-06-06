@@ -9,7 +9,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 RUNS = Path("runs")
 
 DEFAULT_QUEUE_JSON = RUNS / "product_scope_breadth_evidence_acquisition_queue_current.json"

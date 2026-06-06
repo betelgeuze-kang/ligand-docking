@@ -13,7 +13,7 @@ import numpy as np
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_HANDOFF_JSON = "runs/residual_force_gpu_worker_handoff_package_current.json"
 DEFAULT_REGENERATION_QUEUE_JSON = "runs/residual_force_trajectory_regeneration_queue_current.json"
 DEFAULT_REGENERATION_SUMMARY_JSON = "runs/residual_force_trajectory_regeneration_current_summary.json"

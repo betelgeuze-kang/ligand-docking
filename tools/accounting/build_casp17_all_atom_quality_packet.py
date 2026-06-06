@@ -13,7 +13,7 @@ from typing import Any
 from tools.build_casp17_sidechain_scaffold_packet import BACKBONE_ATOMS, SIDECHAIN_ATOMS
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_WATCHLIST_JSON = "runs/casp17_target_watchlist_current.json"
 DEFAULT_PREDICTION_DIR = "runs/casp17_predictions_sidechain_scaffold_current"

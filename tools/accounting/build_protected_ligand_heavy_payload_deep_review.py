@@ -10,7 +10,7 @@ from typing import Any
 from tools.builder_table_utils import write_csv_rows
 from tools.cleanup_ligand_heavy_runs import PAYLOAD_DIR_NAMES
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PROTECTED_REVIEW_JSON = "runs/protected_cleanup_payload_review_current.json"
 DEFAULT_OUT_JSON = "runs/protected_ligand_heavy_payload_deep_review_current.json"
 DEFAULT_OUT_CSV = "runs/protected_ligand_heavy_payload_deep_review_current.csv"

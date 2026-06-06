@@ -13,7 +13,7 @@ from tools.operator_surface_contracts import (
     MEASURED_NOOP_SAFE_SCOPE,
 )
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_HANDOFF_JSON = "runs/pretest_handoff_bundle_current.json"
 DEFAULT_CHECKLIST_JSON = "runs/pretest_command_checklist_current.json"

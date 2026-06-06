@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_BASELINE_GATE_JSON = "runs/idp_3bead_holdout_v7_literature_anchor_kfshadow_r1_fold6_tau_k18_gate_baseline_summary.json"
 DEFAULT_CORRECTED_GATE_JSON = "runs/idp_3bead_holdout_v7_literature_anchor_kfshadow_r1_fold6_tau_k18_gate_corrected_summary.json"

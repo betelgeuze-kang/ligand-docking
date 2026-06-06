@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_DECISION_JSON = "runs/idp_page4_anchor_backed_candidate_decision_current.json"
 DEFAULT_PH_LOW_FREEZE_JSON = "runs/idp_page4_ph_low_freeze_packet_current.json"

@@ -13,7 +13,7 @@ from tools.build_transporter_local_crosscheck_triage_packet import (
     _records_for_target,
 )
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 RUNS = Path("runs")
 
 DEFAULT_TRIAGE_JSON = RUNS / "transporter_local_crosscheck_triage_packet_current.json"

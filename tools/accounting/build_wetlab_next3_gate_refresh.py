@@ -9,7 +9,7 @@ from typing import Any
 
 from tools.wetlab_target_render_utils import load_json, write_artifact
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_MD = "runs/wetlab_next3_gate_refresh_current.md"
 
 STEP_SPECS: list[tuple[str, list[str], str]] = [

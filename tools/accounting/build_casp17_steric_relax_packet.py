@@ -22,7 +22,7 @@ from tools.build_casp17_all_atom_quality_packet import (
 from tools.build_casp17_sidechain_scaffold_packet import BACKBONE_ATOMS
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_WATCHLIST_JSON = "runs/casp17_target_watchlist_current.json"
 DEFAULT_SOURCE_DIR = "runs/casp17_predictions_sidechain_repacked_current"

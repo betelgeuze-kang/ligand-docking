@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import rows_by_family, write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_COMMERCIALIZATION_JSON = "runs/commercialization_readiness_current.json"
 DEFAULT_HANDOFF_JSON = "runs/execution_handoff_dashboard_current.json"

@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CA2_PENDING_JSON = "runs/ca2_pending_row_disposition_current.json"
 DEFAULT_PXR_PENDING_JSON = "runs/pxr_pending_row_disposition_current.json"
 DEFAULT_OUT_JSON = "runs/family_policy_freeze_notes_current.json"

@@ -9,7 +9,7 @@ from typing import Any
 
 from tools.operator_surface_contracts import PARTIAL_AUTHORITATIVE_SAFE_SCOPE
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_CA2_READINESS_JSON = "runs/ca2_packet_replacement_readiness_current.json"
 DEFAULT_CA2_POLICY_JSON = "runs/ca2_pending_row_disposition_current.json"

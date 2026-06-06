@@ -9,7 +9,7 @@ from typing import Any
 from betelgeuze_product.lit_pcba_materialization import build_lit_pcba_materialization_manifest
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_ARCHIVE_PATH = "data/public_benchmarks/lit_pcba/LIT_PCBA_AVE_docked_released.tar.xz"
 DEFAULT_EXTRACTED_DIR = "data/public_benchmarks/lit_pcba/LIT_PCBA_AVE_docked_released"
 DEFAULT_SOURCE_SCORE_CSV = "data/public_benchmarks/lit_pcba/lit_pcba_source_scores.csv"

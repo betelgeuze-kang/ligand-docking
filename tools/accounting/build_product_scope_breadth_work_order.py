@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SCOPE_CONTRACT_JSON = "runs/product_scope_breadth_contract_current.json"
 DEFAULT_OUT_JSON = "runs/product_scope_breadth_work_order_current.json"
 DEFAULT_OUT_CSV = "runs/product_scope_breadth_work_order_current.csv"

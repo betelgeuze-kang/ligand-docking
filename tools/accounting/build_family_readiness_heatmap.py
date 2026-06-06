@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_PRETEST_JSON = "runs/pretest_execution_readiness_current.json"
 DEFAULT_COMMERCIALIZATION_JSON = "runs/commercialization_readiness_current.json"

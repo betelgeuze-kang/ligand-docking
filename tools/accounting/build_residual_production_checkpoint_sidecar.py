@@ -11,7 +11,7 @@ import torch
 
 from tools.build_residual_production_checkpoint_preflight import REQUIRED_OUTPUT_FIELDS
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CHECKPOINT = "models/residual_production_score_model_current.pt"
 DEFAULT_SCORE_MODEL_JSON = "runs/residual_production_score_model_current.json"
 DEFAULT_SUPERVISED_DATASET_JSON = "runs/residual_production_supervised_dataset_current.json"

@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_SCORE_RECORD_JSON = "runs/casp17_internal_score_record_packet_current.json"
 DEFAULT_RANKED_DEPTH_JSON = "runs/casp17_ranked_model_depth_packet_current.json"

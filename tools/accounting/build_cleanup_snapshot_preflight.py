@@ -9,7 +9,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_TRANSITION_CLEANUP_WORK_ORDER_JSON = "runs/transition_cleanup_work_order_current.json"
 DEFAULT_LIGAND_CLEANUP_PREFLIGHT_JSON = "runs/ligand_heavy_cleanup_execution_preflight_current.json"
 DEFAULT_LIGAND_CLEANUP_WORK_ORDER_JSON = "runs/ligand_heavy_cleanup_work_order_current.json"

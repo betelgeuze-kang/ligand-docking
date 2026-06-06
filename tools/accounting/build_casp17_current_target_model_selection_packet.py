@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_RANKED_PREDICTION_DIR = "runs/casp17_predictions_top5_current"
 DEFAULT_MATERIALIZED_SELECTED_DIR = ""

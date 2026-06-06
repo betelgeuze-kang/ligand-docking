@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_E2E_BENCHMARK_JSON = "runs/product_end_to_end_rocm_benchmark_current.json"
 DEFAULT_PACKAGING_JSON = "runs/amd_workstation_server_packaging_profile_current.json"
 DEFAULT_RESIDUAL_SHADOW_JSON = "runs/residual_shadow_ab_current.json"

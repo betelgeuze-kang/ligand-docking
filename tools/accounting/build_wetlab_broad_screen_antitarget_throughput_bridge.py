@@ -8,7 +8,7 @@ from typing import Any
 from tools import build_wetlab_broad_screen_throughput_bridge as primary_bridge
 from tools.wetlab_target_render_utils import load_json, write_artifact
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_ANTITARGET_EXECUTION_QUEUE_JSON = "runs/wetlab_broad_screen_antitarget_execution_queue_current.json"
 DEFAULT_PRIMARY_QUEUE_JSON = "runs/wetlab_broad_screen_queue_current.json"
 DEFAULT_COMPOUND_UNIVERSE_JSON = "runs/wetlab_broad_screen_compound_universe_current.json"

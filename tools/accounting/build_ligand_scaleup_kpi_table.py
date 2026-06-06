@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DOMAIN_TARGETS = {
     "gpcr": {
         "target_100k_wall_min_upper": 25.0,

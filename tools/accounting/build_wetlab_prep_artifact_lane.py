@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_MPRO_RENDER_SUITE_JSON = "runs/sarscov2_mpro_render_suite_current.json"
 DEFAULT_CAIX_RENDER_SUITE_JSON = "runs/caix_render_suite_current.json"

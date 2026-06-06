@@ -10,7 +10,7 @@ from tools.build_runs_cleanup_batch3_review_manifest import FAMILY_SPECS
 from tools.build_runs_cleanup_batch4_stage_review_manifest import _resolve, _file_size, _summarize_artifact
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RUNS_DIR = 'runs'
 DEFAULT_SOURCE_REVIEW_JSON = 'runs/runs_cleanup_batch4_stage_review_manifest_current.json'
 DEFAULT_OUT_JSON = 'runs/runs_cleanup_batch4_archive_first_manifest_current.json'

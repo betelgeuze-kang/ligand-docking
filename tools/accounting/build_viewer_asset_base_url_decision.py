@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_INDEX = ROOT / "viewer" / "index.html"
 DEFAULT_MANIFEST = ROOT / "viewer" / "vendor" / "manifest.json"
 DEFAULT_OUT = ROOT / "runs" / "viewer_asset_base_url_decision_current.json"

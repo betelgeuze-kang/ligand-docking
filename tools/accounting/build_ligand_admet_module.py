@@ -23,7 +23,7 @@ except Exception:  # pragma: no cover
     QED = None
     rdMolDescriptors = None
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PACKET_INDEX_JSON = "runs/wetlab_cro_delivery_packet_index_current.json"
 DEFAULT_OUT_JSON = "runs/ligand_admet_module_current.json"
 DEFAULT_OUT_CSV = "runs/ligand_admet_module_current.csv"

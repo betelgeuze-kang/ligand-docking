@@ -17,7 +17,7 @@ from tools.operator_surface_contracts import (
 )
 from tools.product.transporter_phase_helpers import infer_transporter_phase
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_COMMERCIALIZATION_JSON = "runs/commercialization_readiness_current.json"
 DEFAULT_CROSSFAMILY_JSON = "runs/cross_family_residual_shadow_layer_current.json"

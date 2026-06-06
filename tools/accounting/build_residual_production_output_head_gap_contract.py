@@ -9,7 +9,7 @@ from typing import Any
 from tools.build_residual_production_checkpoint_preflight import REQUIRED_OUTPUT_FIELDS
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_TRAINING_DATA_JSON = "runs/residual_production_training_data_contract_current.json"
 DEFAULT_SCORE_MODEL_JSON = "runs/residual_production_score_model_current.json"

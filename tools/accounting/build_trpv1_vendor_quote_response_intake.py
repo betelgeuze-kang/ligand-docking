@@ -12,7 +12,7 @@ import pandas as pd
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_BASE_VENDOR_WEB_CHECK_JSON = "runs/trpv1_ion_channel_vendor_web_check_current.json"
 DEFAULT_QUOTE_RESPONSE_CSV = "runs/trpv1_ion_channel_vendor_quote_response_current.csv"

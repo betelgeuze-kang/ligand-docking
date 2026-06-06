@@ -9,7 +9,7 @@ from typing import Any
 
 from tools.operator_surface_contracts import IDP_SAFE_SCOPE_CONTROLLED_PRETEST
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_BASELINE_GATE_JSON = "runs/idp_3bead_holdout_v7_anchor_commercial_pretest_r1_fold6_tau_k18_gate_baseline_summary.json"
 DEFAULT_CORRECTED_GATE_JSON = "runs/idp_3bead_holdout_v7_anchor_commercial_pretest_r1_fold6_tau_k18_gate_corrected_summary.json"

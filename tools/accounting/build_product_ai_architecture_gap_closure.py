@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_REGISTRY_JSON = "runs/residual_model_registry_current.json"
 DEFAULT_E2E_JSON = "runs/product_end_to_end_rocm_benchmark_current.json"
 DEFAULT_SERVICE_BOUNDARY_JSON = "runs/product_service_boundary_contract_current.json"

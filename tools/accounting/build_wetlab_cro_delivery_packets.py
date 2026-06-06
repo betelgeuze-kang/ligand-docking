@@ -19,7 +19,7 @@ from tools.builder_table_utils import write_csv_rows
 from tools.build_trpv1_sourcing_status_sheet import build_payload as build_trpv1_sourcing_payload
 from tools.build_trpv1_sourcing_status_sheet import _load_json as load_trpv1_vendor_json
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_OUT_DIR = "runs/wetlab_cro_packets"
 DEFAULT_OUT_INDEX_JSON = "runs/wetlab_cro_delivery_packet_index_current.json"

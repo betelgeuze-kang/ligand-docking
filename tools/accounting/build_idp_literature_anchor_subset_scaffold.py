@@ -7,7 +7,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_BASE_CONFIG_JSON = "config/idp_3bead_benchmark_v7.json"
 DEFAULT_ANCHOR_JSON = "config/idp_observable_anchors_expanded_v5.json"

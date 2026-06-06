@@ -19,7 +19,7 @@ from tools.local_engine_surface_helpers import (
 )
 from tools.product.transporter_phase_helpers import infer_transporter_phase
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_PRETEST_JSON = "runs/pretest_execution_readiness_current.json"
 DEFAULT_PRETEST_HANDOFF_JSON = "runs/pretest_handoff_bundle_current.json"

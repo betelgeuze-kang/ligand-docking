@@ -11,7 +11,7 @@ from tools.builder_table_utils import write_csv_rows
 from tools.build_ligand_heavy_cleanup_approval_packet import DEFAULT_INPUT_JSON as DEFAULT_LIGAND_HEAVY_DRY_RUN_JSON
 from tools.cleanup_ligand_heavy_runs import PAYLOAD_DIR_NAMES
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_ACTION_BOARD_JSON = "runs/goal_operator_action_board_current.json"
 DEFAULT_OUT_JSON = "runs/large_cleanup_surface_drilldown_current.json"
 DEFAULT_OUT_CSV = "runs/large_cleanup_surface_drilldown_current.csv"

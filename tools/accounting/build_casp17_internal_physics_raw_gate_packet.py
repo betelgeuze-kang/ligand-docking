@@ -14,7 +14,7 @@ from tools import validate_casp17_confidence_calibration as confidence_validator
 from tools import validate_casp17_geometry_sanity as geometry_validator
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_LAUNCH_PACKET_JSON = "runs/casp17_prediction_launch_packet_current.json"
 DEFAULT_OUT_DIR = "runs/casp17_internal_physics_raw_validations_current"

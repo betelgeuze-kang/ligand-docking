@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_REPURPOSING_FILL_MAP_JSON = "runs/wetlab_priority3_repurposing_fill_map_current.json"
 DEFAULT_OUT_JSON = "runs/wetlab_mpro_vendor_cost_check_current.json"
 DEFAULT_OUT_CSV = "runs/wetlab_mpro_vendor_cost_check_current.csv"

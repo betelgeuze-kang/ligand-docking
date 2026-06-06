@@ -13,7 +13,7 @@ from tools import validate_casp17_geometry_sanity as geometry_validator
 from tools import validate_casp17_confidence_calibration as confidence_validator
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_INTAKE_CSV = "runs/casp17_target_intake_prediction_imported_current.csv"
 DEFAULT_OUT_DIR = "runs/casp17_validations_current"

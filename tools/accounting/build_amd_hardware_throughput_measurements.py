@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_ROCM_MANIFEST_JSON = "runs/rocm_environment_manifest_current.json"
 DEFAULT_OUT_JSON = "runs/amd_hardware_throughput_measurements_current.json"
 DEFAULT_OUT_MD = "runs/amd_hardware_throughput_measurements_current.md"

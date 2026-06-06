@@ -9,7 +9,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MODELS_DIR = "models"
 DEFAULT_OUT_JSON = "runs/residual_production_checkpoint_preflight_current.json"
 DEFAULT_OUT_CSV = "runs/residual_production_checkpoint_preflight_current.csv"

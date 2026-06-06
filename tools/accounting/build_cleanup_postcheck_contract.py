@@ -12,7 +12,7 @@ from tools.build_cleanup_execution_approval_gate import DEFAULT_OUT_JSON as DEFA
 from tools.build_cleanup_payload_manifest_lock import DEFAULT_OUT_JSON as DEFAULT_PAYLOAD_LOCK_JSON
 from tools.build_protected_cleanup_policy_decision_gate import DEFAULT_OUT_JSON as DEFAULT_PROTECTED_POLICY_JSON
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_JSON = "runs/cleanup_postcheck_contract_current.json"
 DEFAULT_OUT_CSV = "runs/cleanup_postcheck_contract_current.csv"
 DEFAULT_OUT_MD = "runs/cleanup_postcheck_contract_current.md"

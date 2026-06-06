@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_EXECUTION_HANDOFF_JSON = "runs/execution_handoff_dashboard_current.json"
 DEFAULT_RUN_NOW_SAFE_COMMAND_JSON = "runs/run_now_safe_command_packet_current.json"

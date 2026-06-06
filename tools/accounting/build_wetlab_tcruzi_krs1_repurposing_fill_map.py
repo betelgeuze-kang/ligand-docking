@@ -8,7 +8,7 @@ from pathlib import Path
 from tools.builder_table_utils import write_csv_rows
 from tools.wetlab_target_render_utils import materialize_repurposing_rows, maybe_load_json
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_JSON = "runs/wetlab_tcruzi_krs1_repurposing_fill_map_current.json"
 DEFAULT_OUT_CSV = "runs/wetlab_tcruzi_krs1_repurposing_fill_map_current.csv"
 DEFAULT_OUT_MD = "runs/wetlab_tcruzi_krs1_repurposing_fill_map_current.md"

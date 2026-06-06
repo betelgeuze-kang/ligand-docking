@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_EXPORT_BUNDLE_JSON = "runs/wetlab_partner_first_contact_export_bundle_current.json"
 DEFAULT_PORTFOLIO_JSON = "runs/wetlab_partner_target_portfolio_current.json"
 DEFAULT_MASTER_QUEUE_JSON = "runs/wetlab_master_execution_queue_current.json"

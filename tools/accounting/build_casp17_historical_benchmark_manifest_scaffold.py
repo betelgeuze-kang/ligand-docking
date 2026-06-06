@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_PREDICTION_DIR = "runs/casp17_historical_benchmark_predictions_current"
 DEFAULT_NATIVE_DIR = "runs/casp17_historical_benchmark_natives_current"

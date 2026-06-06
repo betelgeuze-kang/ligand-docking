@@ -9,7 +9,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_BATCH2_PLAN_JSON = "runs/tools_package_batch2_review_plan_current.json"
 DEFAULT_OUT_JSON = "runs/tools_package_batch2_migration_receipt_current.json"
 DEFAULT_OUT_CSV = "runs/tools_package_batch2_migration_receipt_current.csv"

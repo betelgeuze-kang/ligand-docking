@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PORTFOLIO_JSON = "runs/wetlab_partner_target_portfolio_current.json"
 DEFAULT_BLUEPRINT_JSON = "runs/wetlab_wave1_campaign_blueprint_current.json"
 DEFAULT_OUTREACH_JSON = "runs/wetlab_partner_outreach_tracks_current.json"

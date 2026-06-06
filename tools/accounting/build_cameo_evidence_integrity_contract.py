@@ -9,7 +9,7 @@ from typing import Any
 from betelgeuze_cameo.evidence_integrity import build_cameo_evidence_integrity_contract
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OFFICIAL_RESULTS_JSON = "runs/cameo_official_results_intake_gate_current.json"
 DEFAULT_ARCHITECTURE_VALIDATION_JSON = "runs/cameo_architecture_validation_contract_current.json"
 DEFAULT_OPERATIONS_JSON = "runs/cameo_validation_operations_dossier_current.json"

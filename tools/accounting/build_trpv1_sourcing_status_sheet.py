@@ -10,7 +10,7 @@ import pandas as pd
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_SHORTLIST_CSV = "docs/wetlab_packets/trpv1_ion_channel_candidate_shortlist.csv"
 DEFAULT_SOURCING_REQUEST_CSV = "docs/wetlab_packets/trpv1_ion_channel_sourcing_request.csv"

@@ -12,7 +12,7 @@ from tools.operator_surface_contracts import (
     IDP_SAFE_SCOPE_ONE_WIDER_SHADOW_SAFE_LANE,
 )
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_PROMOTION_RESOLUTION_JSON = "runs/idp_broader_promotion_resolution_current.json"
 DEFAULT_BROADER_RESULT_JSON = "runs/idp_broader_shadow_result_current.json"

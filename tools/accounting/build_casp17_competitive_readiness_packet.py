@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_WATCHLIST_JSON = "runs/casp17_target_watchlist_current.json"
 DEFAULT_RAW_GATE_JSON = "runs/casp17_internal_physics_raw_gate_packet_recursive_current.json"

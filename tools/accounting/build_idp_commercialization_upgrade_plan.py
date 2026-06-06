@@ -13,7 +13,7 @@ from tools.operator_surface_contracts import (
     IDP_SAFE_SCOPE_LEGACY_SUBSET_ONLY,
 )
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_SUBSET_DECISION_JSON = "runs/idp_feature_state_subset_decision_current.json"
 DEFAULT_PRETEST_SCOPE_JSON = "runs/idp_pretest_scope_note_current.json"

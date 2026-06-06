@@ -12,7 +12,7 @@ from typing import Any
 import numpy as np
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_MANIFEST_CSV = "runs/casp17_historical_benchmark_manifest_current.csv"
 DEFAULT_OUT_JSON = "runs/casp17_historical_benchmark_packet_current.json"

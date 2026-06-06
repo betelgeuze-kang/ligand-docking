@@ -9,7 +9,7 @@ from typing import Any
 from tools.builder_table_utils import write_csv_rows
 from tools.wetlab_target_render_utils import materialize_repurposing_rows, maybe_load_json
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_BRIEF_FILL_QUEUE_JSON = "runs/wetlab_wave2_brief_fill_queue_current.json"
 DEFAULT_PACKET_QUEUE_JSON = "runs/wetlab_wave2_packet_queue_current.json"
 DEFAULT_OUT_JSON = "runs/wetlab_cathepsin_k_repurposing_fill_map_current.json"

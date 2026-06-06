@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 RUNS = Path("runs")
 
 DEFAULT_ACQUISITION_JSON = RUNS / "transporter_p0_evidence_acquisition_packet_current.json"

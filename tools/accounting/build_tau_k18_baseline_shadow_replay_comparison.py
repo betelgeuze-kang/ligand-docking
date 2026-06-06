@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_ENSEMBLE_SUMMARY_JSON = "runs/idp_tau_k18_baseline_shadow_replay_ensemble_r1_summary.json"
 DEFAULT_ENSEMBLE_SLICE_JSON = "runs/idp_tau_k18_baseline_shadow_replay_ensemble_slice_current.json"

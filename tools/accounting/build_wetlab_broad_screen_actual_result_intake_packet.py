@@ -99,7 +99,7 @@ COMMERCIAL_WEIGHT_BY_READINESS = {
     "calibration_candidate": 1.05,
     "calibration_ready": 1.2,
 }
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def _resolve(path_like: str) -> Path:

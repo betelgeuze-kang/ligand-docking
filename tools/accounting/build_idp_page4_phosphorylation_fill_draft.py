@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_FOLLOWUP_JSON = "runs/idp_page4_phosphorylation_followup_packet_current.json"
 DEFAULT_READINESS_MD = "runs/idp_page4_anchor_backed_candidate_readiness_current.md"

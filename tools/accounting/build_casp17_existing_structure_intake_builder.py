@@ -19,7 +19,7 @@ from tools.casp17 import build_casp17_submission_gate_packet as submission_gate_
 from tools import convert_casp17_ts_prediction_from_pdb as converter
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_INTAKE_CSV = "runs/casp17_target_intake_seed_with_sequences_current.csv"
 DEFAULT_STRUCTURE_DIR = "runs/casp17_existing_structures_current"

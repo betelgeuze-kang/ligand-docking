@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 RUNS_DIR = REPO_ROOT / "runs"
 DEFAULT_BUNDLE_FILES = [
     RUNS_DIR / "selected_allatom_visual_bundle_tcruzi_pde_current.json",

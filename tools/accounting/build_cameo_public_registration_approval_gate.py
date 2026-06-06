@@ -12,7 +12,7 @@ from tools.builder_table_utils import write_csv_rows
 from tools.build_cameo_capability_preflight import DEFAULT_OUT_JSON as DEFAULT_CAPABILITY_JSON
 from tools.build_cameo_validation_operations_dossier import DEFAULT_OUT_JSON as DEFAULT_OPERATIONS_DOSSIER_JSON
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OPERATOR_APPROVAL_CSV = "runs/cameo_public_registration_operator_approval_intake.csv"
 DEFAULT_TEMPLATE_CSV = "runs/cameo_public_registration_operator_approval_template_current.csv"
 DEFAULT_OUT_JSON = "runs/cameo_public_registration_approval_gate_current.json"

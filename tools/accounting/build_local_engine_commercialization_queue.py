@@ -10,7 +10,7 @@ from typing import Any
 from tools import build_nightly_gate_burndown_packet as nightly_gate_burndown_mod
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 RUNS = ROOT / "runs"
 
 DEFAULT_VIEWER_JSON = "runs/viewer_smoke_refresh_current.json"

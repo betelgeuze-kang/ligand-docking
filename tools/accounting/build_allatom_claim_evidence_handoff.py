@@ -14,7 +14,7 @@ import numpy as np
 
 from core.definitions import ResearchConstants
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_REPAIR_PACKET_JSON = "runs/wetlab_selected_allatom_repair_packet_current.json"
 DEFAULT_ACCURACY_GATE_JSON = "runs/accuracy_gate_local_delivery_preflight_current.json"

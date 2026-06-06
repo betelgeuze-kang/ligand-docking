@@ -9,7 +9,7 @@ from typing import Any
 from tools.wetlab_broad_screen_watch_utils import slug
 from tools.wetlab_target_render_utils import load_json, maybe_load_json, write_artifact
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_EXECUTION_QUEUE_JSON = "runs/wetlab_broad_screen_execution_queue_current.json"
 DEFAULT_OUT_MD = "runs/wetlab_primary_retry_preset_surface_current.md"
 DEFAULT_TARGETS = ("SARS-CoV-2 Mpro", "T. cruzi PDE", "ALK2", "STK17B (DRAK2)")

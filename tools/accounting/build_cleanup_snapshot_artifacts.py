@@ -10,7 +10,7 @@ from typing import Any
 from tools.builder_table_utils import write_csv_rows
 from tools.build_cleanup_snapshot_preflight import DEFAULT_OUT_JSON as DEFAULT_SNAPSHOT_PREFLIGHT_JSON
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_JSON = "runs/cleanup_snapshot_artifacts_current.json"
 DEFAULT_OUT_CSV = "runs/cleanup_snapshot_artifacts_current.csv"
 DEFAULT_OUT_MD = "runs/cleanup_snapshot_artifacts_current.md"

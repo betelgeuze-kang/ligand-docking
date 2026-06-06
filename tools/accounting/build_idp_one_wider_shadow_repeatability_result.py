@@ -9,7 +9,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_PACKET_JSON = "runs/idp_one_wider_shadow_repeatability_packet_current.json"
 DEFAULT_REFERENCE_RESULT_JSON = "runs/idp_broader_shadow_result_current.json"

@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_SOURCE_SPEC_JSON = "config/external_validation_biorxiv_blind_sets_v7_bestofgauntlet1.json"
 DEFAULT_SHADOW_ORIGIN_ARTIFACT = "runs/gpcr_residual_ab_current.json"

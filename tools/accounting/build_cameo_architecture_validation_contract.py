@@ -9,7 +9,7 @@ from typing import Any
 from betelgeuze_cameo.architecture_validation import build_cameo_architecture_validation_contract
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PRODUCT_ARCHITECTURE_JSON = "runs/product_architecture_contract_current.json"
 DEFAULT_VALIDATION_OPERATIONS_JSON = "runs/cameo_validation_operations_dossier_current.json"
 DEFAULT_VALIDATION_READINESS_JSON = "runs/cameo_validation_readiness_gate_current.json"

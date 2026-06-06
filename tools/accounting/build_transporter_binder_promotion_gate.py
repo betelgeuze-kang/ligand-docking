@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RUBRIC_JSON = "runs/transporter_binder_decision_rubric_current.json"
 DEFAULT_AQP1_PROVENANCE_JSON = "runs/aqp1_quantitative_provenance_packet_current.json"
 DEFAULT_GLUT1_SOURCE_JSON = "runs/glut1_second_wave_source_confirmation_packet_current.json"

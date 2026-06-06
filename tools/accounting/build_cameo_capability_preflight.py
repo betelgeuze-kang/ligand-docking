@@ -9,7 +9,7 @@ from typing import Any
 from betelgeuze_cameo.capability_preflight import build_cameo_capability_preflight
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_VALIDATION_JSON = "runs/cameo_validation_readiness_gate_current.json"
 DEFAULT_REPAIR_PREFLIGHT_JSON = "runs/cameo_repair_execution_preflight_current.json"
 DEFAULT_RECEIVER_SMOKE_JSON = "runs/cameo_receiver_smoke_contract_current.json"

@@ -9,7 +9,7 @@ from typing import Any
 from betelgeuze_product.pilot_packet import build_product_pilot_packet_contract
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PRODUCT_READINESS_JSON = "runs/product_readiness_gate_current.json"
 DEFAULT_PRODUCT_PREFLIGHT_JSON = "runs/product_execution_preflight_current.json"
 DEFAULT_PRODUCT_BUNDLE_CONTRACT_JSON = "runs/product_bundle_contract_current.json"

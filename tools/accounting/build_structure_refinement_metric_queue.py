@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_STRUCTURE_SCORECARD_JSON = "runs/structure_refinement_scorecard_current.json"
 DEFAULT_NATIVE_MANIFEST_CSV = "runs/selected_allatom_native_structure_manifest_current.csv"

@@ -13,7 +13,7 @@ from tools import validate_casp17_geometry_sanity as geometry_validator
 from tools import validate_casp17_ts_prediction as format_validator
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_WATCHLIST_JSON = "runs/casp17_target_watchlist_current.json"
 DEFAULT_RANKED_RAW_ROOT = "runs/casp17_prediction_jobs_top5_current"

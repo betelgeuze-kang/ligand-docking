@@ -9,7 +9,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SUPERVISED_DATASET_JSON = "runs/residual_production_supervised_dataset_current.json"
 DEFAULT_VALIDATION_JSON = "runs/residual_energy_force_label_validation_current.json"
 DEFAULT_PDBBIND_PREFLIGHT_JSON = "runs/pdbbind_casf_pose_affinity_product_preflight_current.json"

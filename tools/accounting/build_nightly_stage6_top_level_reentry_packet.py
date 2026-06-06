@@ -12,7 +12,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 RUNS = ROOT / "runs"
 
 DEFAULT_TOP_LEVEL_SUMMARY_JSON = ""

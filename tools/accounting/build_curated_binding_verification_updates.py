@@ -8,7 +8,7 @@ import math
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 RT_KCAL_PER_MOL_298K = 0.00198720425864083 * 298.15
 

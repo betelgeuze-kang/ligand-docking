@@ -12,7 +12,7 @@ from tools.build_goal_operator_intake_kit import DEFAULT_OUT_JSON as DEFAULT_INT
 from tools.build_goal_release_burndown_work_order import DEFAULT_OUT_JSON as DEFAULT_BURNDOWN_JSON
 from tools.build_goal_release_decision_gate import DEFAULT_OUT_JSON as DEFAULT_RELEASE_GATE_JSON
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_JSON = "runs/product_public_benchmark_work_order_current.json"
 DEFAULT_PUBLIC_BENCHMARK_PREFLIGHT_JSONS = [
     "runs/dude_z_decoy_smoke_product_inputs_current.json",

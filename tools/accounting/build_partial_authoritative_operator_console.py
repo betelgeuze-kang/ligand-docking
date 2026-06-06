@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_CA2_DAY_PLAN_JSON = "runs/ca2_evidence_closure_day_plan_current.json"
 DEFAULT_CA2_READINESS_JSON = "runs/ca2_packet_replacement_readiness_current.json"

@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_GPCR_CI_LOW_JSON = "runs/gpcr_ci_low_recovery_packet_current.json"
 DEFAULT_GPCR_POSITIVE_COVERAGE_JSON = "runs/gpcr_positive_coverage_freeze_packet_current.json"

@@ -9,7 +9,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_CONFIG_JSON = "config/idp_3bead_benchmark_v7.json"
 DEFAULT_PROVENANCE_CSV = "config/biorxiv_temporal_idp_provenance_v1.csv"

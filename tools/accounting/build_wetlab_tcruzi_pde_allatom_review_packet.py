@@ -23,7 +23,7 @@ DEFAULT_RUNNER_JSON = "runs/wetlab_tcruzi_pde_allatom_rescue_current.json"
 DEFAULT_REPLICATE_EVIDENCE_JSON = "runs/wetlab_tcruzi_pde_replicate_evidence_current.json"
 DEFAULT_ATOMIZED_LOCAL_MIN_JSON = "runs/wetlab_tcruzi_pde_atomized_parameterization_minimization_packet_current.json"
 DEFAULT_OUT_MD = "runs/wetlab_tcruzi_pde_allatom_review_packet_current.md"
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def _text(value: Any, default: str = "") -> str:

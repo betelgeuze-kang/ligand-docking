@@ -11,7 +11,7 @@ from betelgeuze_cameo.cli import build_all_status as build_cameo_cli_all_status
 from betelgeuze_cleanup.cli import build_all_status as build_cleanup_cli_all_status
 from betelgeuze_product.cli import build_all_status as build_product_cli_all_status
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PRODUCT_READINESS_JSON = "runs/product_readiness_gate_current.json"
 DEFAULT_PRODUCT_PREFLIGHT_JSON = "runs/product_execution_preflight_current.json"
 DEFAULT_PRODUCT_BUNDLE_CONTRACT_JSON = "runs/product_bundle_contract_current.json"

@@ -13,7 +13,7 @@ from tools.local_engine_surface_helpers import (
     summarize_local_engine_commercialization_queue,
 )
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_CA2_CAPTURE_INTAKE_JSON = "runs/ca2_negative_evidence_capture_intake_current.json"
 DEFAULT_CA2_COMMIT_JSON = "runs/ca2_evidence_closure_commit_packet_current.json"

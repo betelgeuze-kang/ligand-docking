@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PREFLIGHT_JSON = "runs/residual_production_checkpoint_preflight_current.json"
 DEFAULT_REGISTRY_JSON = "runs/residual_model_registry_current.json"
 DEFAULT_SIDECAR_JSON = "runs/residual_production_checkpoint_sidecar_current.json"

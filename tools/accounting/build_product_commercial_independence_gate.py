@@ -9,7 +9,7 @@ from typing import Any
 from betelgeuze_product.commercial_independence import build_product_commercial_independence_gate
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_JSON = "runs/product_commercial_independence_gate_current.json"
 DEFAULT_OUT_CSV = "runs/product_commercial_independence_gate_current.csv"
 DEFAULT_OUT_MD = "runs/product_commercial_independence_gate_current.md"

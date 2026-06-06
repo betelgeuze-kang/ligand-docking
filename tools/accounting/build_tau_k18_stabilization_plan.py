@@ -7,7 +7,7 @@ import shlex
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_JSON = 'runs/tau_k18_stabilization_plan_current.json'
 DEFAULT_OUT_MD = 'runs/tau_k18_stabilization_plan_current.md'
 DEFAULT_FAILURE_PACKET_MD = 'runs/idp_tau_k18_corrected_path_failure_packet_current.md'

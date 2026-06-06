@@ -9,7 +9,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SUPERVISED_DATASET_JSON = "runs/residual_production_supervised_dataset_current.json"
 DEFAULT_RECOVERY_WORK_ORDER_JSON = "runs/residual_force_artifact_recovery_work_order_current.json"
 DEFAULT_OUT_QUEUE_CSV = "runs/residual_force_trajectory_regeneration_queue_current.csv"

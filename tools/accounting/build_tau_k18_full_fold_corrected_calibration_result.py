@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_PACKET_JSON = "runs/tau_k18_full_fold_corrected_calibration_packet_current.json"
 DEFAULT_REFERENCE_GATE_JSON = "runs/idp_3bead_holdout_v7_anchor_commercial_pretest_r16validation_r1_fold6_tau_k18_gate_corrected_summary.json"

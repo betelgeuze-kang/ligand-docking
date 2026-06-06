@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_HOLDOUT_SUMMARY_JSON = "runs/idp_3bead_holdout_v7_anchor_commercial_pretest_r18validation_r1_summary.json"
 DEFAULT_COMBINED_GATE_JSON = "runs/idp_3bead_holdout_v7_anchor_commercial_pretest_r18validation_r1_combined_gate_summary.json"

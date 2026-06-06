@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CA2_QUEUE_JSON = "runs/ca2_manual_review_queue_current.json"
 DEFAULT_PXR_QUEUE_JSON = "runs/pxr_manual_review_queue_current.json"
 DEFAULT_OUT_JSON = "runs/family_negative_policy_summary_current.json"

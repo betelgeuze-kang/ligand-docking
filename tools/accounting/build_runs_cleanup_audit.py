@@ -10,7 +10,7 @@ from typing import Any
 from tools.builder_table_utils import write_csv_rows
 from tools.prune_runs_files import prune_runs_files
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_RUNS_DIR = "runs"
 DEFAULT_OUT_JSON = "runs/runs_cleanup_audit_current.json"

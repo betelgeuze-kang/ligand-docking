@@ -11,7 +11,7 @@ import numpy as np
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SUPERVISED_DATASET_JSON = "runs/residual_production_supervised_dataset_current.json"
 DEFAULT_TRAJECTORY_REGENERATION_QUEUE_JSON = "runs/residual_force_trajectory_regeneration_queue_current.json"
 DEFAULT_OUT_JSON = "runs/residual_force_derivation_validation_current.json"

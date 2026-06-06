@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_KINASE_FIRST_CONTACT_JSON = "runs/wetlab_wave1_kinase_first_contact_packets_current.json"
 DEFAULT_OUTREACH_JSON = "runs/wetlab_partner_outreach_tracks_current.json"
 DEFAULT_OUT_JSON = "runs/wetlab_kinase_outreach_packet_current.json"

@@ -10,7 +10,7 @@ from typing import Any
 from tools.casp17 import build_casp17_competitive_floor_first_native_provenance_unlock_kit as first
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_BRIDGE_JSON = first.DEFAULT_BRIDGE_JSON
 DEFAULT_OPERATOR_PACKET_JSON = first.DEFAULT_OPERATOR_PACKET_JSON

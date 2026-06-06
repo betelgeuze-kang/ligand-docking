@@ -45,7 +45,7 @@ from tools.build_protected_cleanup_policy_decision_gate import (
     DEFAULT_TEMPLATE_CSV as DEFAULT_PROTECTED_POLICY_TEMPLATE_CSV,
 )
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_DIR = "runs/goal_operator_intake_kit_current"
 DEFAULT_OUT_JSON = f"{DEFAULT_OUT_DIR}/manifest.json"
 DEFAULT_OUT_CSV = f"{DEFAULT_OUT_DIR}/manifest.csv"

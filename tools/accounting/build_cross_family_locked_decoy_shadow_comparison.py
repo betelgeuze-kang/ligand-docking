@@ -9,7 +9,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_SCAFFOLD_JSON = "runs/cross_family_locked_decoy_shadow_current.json"
 DEFAULT_OUT_JSON = "runs/cross_family_locked_decoy_shadow_comparison_current.json"

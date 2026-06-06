@@ -41,7 +41,7 @@ from betelgeuze_cameo.cli import build_all_status as build_cameo_cli_all_status
 from betelgeuze_cleanup.cli import build_all_status as build_cleanup_cli_all_status
 from betelgeuze_product.cli import build_all_status as build_product_cli_all_status
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_JSON = "runs/goal_operator_action_board_current.json"
 DEFAULT_OUT_CSV = "runs/goal_operator_action_board_current.csv"
 DEFAULT_OUT_MD = "runs/goal_operator_action_board_current.md"

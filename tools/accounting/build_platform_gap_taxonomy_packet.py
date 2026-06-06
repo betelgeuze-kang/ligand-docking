@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_GAP_JSON = "runs/commercialization_gap_burndown_current.json"
 DEFAULT_ROLLUP_JSON = "runs/family_expansion_status_rollup_current.json"

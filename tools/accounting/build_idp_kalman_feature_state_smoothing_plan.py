@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_OUT_JSON = "runs/idp_kalman_feature_state_smoothing_plan_current.json"
 DEFAULT_OUT_MD = "runs/idp_kalman_feature_state_smoothing_plan_current.md"

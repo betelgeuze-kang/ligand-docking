@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_FILL_DRAFT_JSON = "runs/idp_page4_phosphorylation_fill_draft_current.json"
 DEFAULT_OUT_JSON = "runs/idp_page4_ph_low_fill_value_packet_current.json"

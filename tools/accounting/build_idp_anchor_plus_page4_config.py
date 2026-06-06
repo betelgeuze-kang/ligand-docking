@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_SUBSET_CONFIG_JSON = "config/idp_3bead_benchmark_v7_literature_anchor_subset.json"
 DEFAULT_FULL_CONFIG_JSON = "config/idp_3bead_benchmark_v7.json"

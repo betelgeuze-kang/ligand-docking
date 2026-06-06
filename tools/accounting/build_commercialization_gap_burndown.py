@@ -25,7 +25,7 @@ from tools.wetlab.wetlab_surface_helpers import (
     wetlab_summary_from_source,
 )
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_COMMERCIALIZATION_JSON = "runs/commercialization_readiness_current.json"
 DEFAULT_PRETEST_JSON = "runs/pretest_execution_readiness_current.json"

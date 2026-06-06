@@ -9,7 +9,7 @@ from typing import Any
 from betelgeuze_product.public_benchmark import BENCHMARK_SUITES, REQUIRED_SCORECARD_FIELDS, build_product_public_benchmark_contract
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SCORECARD_CSV = "runs/product_public_benchmark_scorecard_intake.csv"
 DEFAULT_TEMPLATE_CSV = "runs/product_public_benchmark_scorecard_template_current.csv"
 DEFAULT_OUT_JSON = "runs/product_public_benchmark_contract_current.json"

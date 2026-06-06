@@ -9,7 +9,7 @@ from typing import Any
 from tools.builder_table_utils import write_csv_rows
 from tools.build_cleanup_execution_approval_gate import DEFAULT_OUT_JSON as DEFAULT_APPROVAL_GATE_JSON
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_LIGAND_EXECUTE_JSON = "runs/ligand_heavy_cleanup_execute_after_approval.json"
 DEFAULT_EXTERNALIZED_ROOT = "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/cleanup_externalized/2026-06-03_goal_cleanup"
 DEFAULT_OUT_JSON = "runs/cleanup_execution_completion_evidence_current.json"

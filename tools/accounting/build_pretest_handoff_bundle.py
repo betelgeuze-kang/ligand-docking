@@ -24,7 +24,7 @@ from tools.operator_surface_contracts import (
 )
 from tools.product.transporter_phase_helpers import infer_transporter_phase
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_PRETEST_READINESS_JSON = "runs/pretest_execution_readiness_current.json"
 DEFAULT_GPCR_HANDOFF_JSON = "runs/gpcr_handoff_bundle_current.json"

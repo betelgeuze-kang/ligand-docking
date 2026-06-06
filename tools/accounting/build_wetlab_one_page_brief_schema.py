@@ -5,7 +5,7 @@ import argparse
 import json
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_JSON = "runs/wetlab_one_page_brief_schema_current.json"
 DEFAULT_OUT_MD = "runs/wetlab_one_page_brief_schema_current.md"
 

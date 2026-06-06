@@ -11,7 +11,7 @@ from tools.wetlab_broad_screen_watch_utils import slug
 from tools.wetlab.wetlab_pose_validation_utils import build_pose_validation_fields, summarize_pose_validation_rows
 from tools.wetlab_target_render_utils import load_json, write_artifact
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RESCUE_LANE_JSON = "runs/wetlab_hard_target_rescue_lane_current.json"
 DEFAULT_STAGE6_FAILURE_SURFACE_JSON = "runs/wetlab_primary_stage6_failure_surface_current.json"
 DEFAULT_RETRY_POLICY_TEMPLATES_JSON = "runs/wetlab_target_retry_policy_templates_current.json"

@@ -10,7 +10,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RUNS_DIR = "runs"
 DEFAULT_SOURCE_MANIFEST = "runs/runs_cleanup_batch3_review_manifest_current.json"
 DEFAULT_OUT_JSON = "runs/runs_cleanup_batch4_stage_review_manifest_current.json"

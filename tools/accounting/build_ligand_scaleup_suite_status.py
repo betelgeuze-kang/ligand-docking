@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 
 from tools.ligand_scaleup_surface_helpers import DEFAULT_GPCR_SCALEUP_GUARDRAIL_FRONTIER_JSON
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def _resolve_repo_path(path_str: str) -> Path:

@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_BURNDOWN_JSON = "runs/family_manual_review_burndown_current.json"
 DEFAULT_CA2_SLICE_JSON = "runs/ca2_next_verification_slice_current.json"

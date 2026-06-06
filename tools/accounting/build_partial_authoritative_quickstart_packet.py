@@ -9,7 +9,7 @@ from typing import Any
 
 from tools.operator_surface_contracts import PARTIAL_AUTHORITATIVE_SAFE_SCOPE
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_OPERATOR_CONSOLE_JSON = "runs/partial_authoritative_operator_console_current.json"
 DEFAULT_FAMILY_HANDOFF_JSON = "runs/partial_authoritative_family_handoff_current.json"

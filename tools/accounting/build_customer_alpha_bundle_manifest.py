@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PACKAGING_JSON = "runs/amd_workstation_server_packaging_profile_current.json"
 DEFAULT_ROCM_MANIFEST_JSON = "runs/rocm_environment_manifest_current.json"
 DEFAULT_THROUGHPUT_SCORECARD_JSON = "runs/amd_hardware_throughput_scorecard_current.json"

@@ -11,7 +11,7 @@ from tools.builder_table_utils import write_csv_rows
 from tools.cleanup.build_protected_cleanup_payload_review import DEFAULT_OUT_JSON as DEFAULT_PROTECTED_REVIEW_JSON
 from tools.build_protected_ligand_heavy_payload_deep_review import DEFAULT_OUT_JSON as DEFAULT_PROTECTED_LIGAND_HEAVY_DEEP_REVIEW_JSON
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OPERATOR_POLICY_CSV = "runs/protected_cleanup_policy_decision_intake.csv"
 DEFAULT_TEMPLATE_CSV = "runs/protected_cleanup_policy_decision_template_current.csv"
 DEFAULT_OUT_JSON = "runs/protected_cleanup_policy_decision_gate_current.json"

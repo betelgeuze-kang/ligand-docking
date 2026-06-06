@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_READINESS_JSON = "runs/product_readiness_gate_current.json"
 DEFAULT_CAPABILITY_SURFACE_JSON = "runs/product_capability_surface_contract_current.json"
 DEFAULT_OPERATIONAL_QUALITY_JSON = "runs/product_operational_quality_contract_current.json"

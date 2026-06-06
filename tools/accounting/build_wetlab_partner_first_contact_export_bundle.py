@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_NEGLECTED_OUTREACH_JSON = "runs/wetlab_neglected_outreach_packet_current.json"
 DEFAULT_ONCOLOGY_FIRST_CONTACT_JSON = "runs/wetlab_oncology_first_contact_packet_current.json"
 DEFAULT_ANTIVIRAL_FIRST_CONTACT_JSON = "runs/wetlab_antiviral_first_contact_packets_current.json"

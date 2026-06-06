@@ -22,7 +22,7 @@ from tools.wetlab.wetlab_surface_helpers import (
     summarize_wetlab_execution_readiness_queue,
 )
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CROSSFAMILY_JSON = "runs/cross_family_residual_shadow_layer_current.json"
 DEFAULT_GPCR_ENDPOINT_JSON = "runs/gpcr_apply_safe_endpoint_current.json"
 DEFAULT_IDP_DECISION_JSON = "runs/idp_feature_state_subset_decision_current.json"

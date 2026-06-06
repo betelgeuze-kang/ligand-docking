@@ -9,7 +9,7 @@ from typing import Any
 from betelgeuze_product.architecture import build_product_architecture_contract
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PRODUCT_CAPABILITY_JSON = "runs/product_capability_surface_contract_current.json"
 DEFAULT_PRODUCT_RELEASE_JSON = "runs/product_release_operations_dossier_current.json"
 DEFAULT_COMMERCIAL_INDEPENDENCE_JSON = "runs/product_commercial_independence_gate_current.json"

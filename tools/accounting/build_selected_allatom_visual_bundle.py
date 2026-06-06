@@ -36,7 +36,7 @@ from tools.native_target_registry import (
 from tools.wetlab_selected_allatom_canonical import resolve_selected_allatom_canonical
 from tools.wetlab_target_render_utils import load_json, maybe_load_json, resolve, write_artifact
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RETRY_HANDOFF_JSON = "runs/wetlab_retry_handoff_summary_current.json"
 DEFAULT_CURRENT_RESULTS_INDEX_JSON = "runs/wetlab_current_results_index_current.json"
 DEFAULT_MONITOR_SEMANTICS_JSON = "runs/wetlab_monitor_semantics_current.json"

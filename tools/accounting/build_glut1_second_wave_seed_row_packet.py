@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_SEED_BOARD_JSON = "runs/transporter_seed_row_promotion_board_current.json"
 DEFAULT_WORKBOOK_JSON = "runs/glut1_packet_replacement_workbook_current.json"

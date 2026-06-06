@@ -6,7 +6,7 @@ from pathlib import Path
 
 import numpy as np
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 OUT_DIR = ROOT / "runs" / "viewer_protein_atom_smoke"
 PDB_NAME = "protein_atom_frames_smoke_reference_current.pdb"
 NPZ_NAME = "protein_atom_frames_smoke_trajectory_current.npz"

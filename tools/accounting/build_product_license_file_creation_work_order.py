@@ -9,7 +9,7 @@ from typing import Any
 from betelgeuze_product.license_file_creation import build_product_license_file_creation_work_order
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_LICENSE_DECISION_JSON = "runs/product_license_decision_gate_current.json"
 DEFAULT_COMMERCIAL_INDEPENDENCE_JSON = "runs/product_commercial_independence_gate_current.json"
 DEFAULT_OUT_JSON = "runs/product_license_file_creation_work_order_current.json"

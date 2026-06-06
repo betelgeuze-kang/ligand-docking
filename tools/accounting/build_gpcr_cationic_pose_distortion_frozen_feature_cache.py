@@ -21,7 +21,7 @@ from tools.repair_gpcr_drd2_pseudo_allatom_backmapping import (
     _rdkit_conformer,
 )
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_INPUT_CSV = (
     "runs/external_validation_2026-05-03_family_balanced_frozen_r2_set1_core_blind_gpcr_core_full_"

@@ -18,7 +18,7 @@ from tools.wetlab_selected_allatom_visual import (
     selected_allatom_visual_surface_fields,
 )
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_PRIMARY_QUEUE_JSON = "runs/wetlab_broad_screen_execution_queue_current.json"
 DEFAULT_ANTITARGET_QUEUE_JSON = "runs/wetlab_broad_screen_antitarget_execution_queue_current.json"

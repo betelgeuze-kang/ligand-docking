@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_QUEUE_JSON = "runs/wetlab_wave1_packet_queue_current.json"
 DEFAULT_SCHEMA_JSON = "runs/wetlab_one_page_brief_schema_current.json"
 DEFAULT_PRIORITY3_FILL_MAP_JSON = "runs/wetlab_priority3_repurposing_fill_map_current.json"

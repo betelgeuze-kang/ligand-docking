@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_QUEUE_JSON = "runs/idp_anchor_curation_queue_current.json"
 DEFAULT_ANCHORS_JSON = "config/idp_observable_anchors_expanded_v5.json"

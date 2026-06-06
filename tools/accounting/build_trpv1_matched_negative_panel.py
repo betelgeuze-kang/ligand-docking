@@ -10,7 +10,7 @@ import pandas as pd
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_RANKING_CSV = "runs/ligand_blind_trpv1_chembl20_npz_v6_2026-03-11_r1_stage5_ranking_rows.csv"
 DEFAULT_DECOY_LABELS_CSV = "runs/ligand_blind_trpv1_chembl20_smoke_2026-03-11_r1_hard_decoy_labels.csv"

@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_SOURCING_STATUS_JSON = "runs/trpv1_ion_channel_sourcing_status_current.json"
 DEFAULT_VENDOR_QUOTE_PACKET_JSON = "runs/trpv1_ion_channel_vendor_quote_request_packet_current.json"

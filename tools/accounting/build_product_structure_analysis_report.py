@@ -9,7 +9,7 @@ from typing import Any
 from betelgeuze_product.structure_report import build_product_structure_analysis_report
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_TARGET_NATIVE_CSV = "config/real_drug_targets_blind_gpcr_adrb2_v1.csv"
 DEFAULT_TARGET_KEY = "ADRB2_GPCR_BLIND"
 DEFAULT_TARGET_ID = "ADRB2"

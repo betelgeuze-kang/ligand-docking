@@ -10,7 +10,7 @@ from typing import Any
 from betelgeuze_cameo.selector import build_selection_packet
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_JSON = "runs/cameo_model1_selection_packet_current.json"
 DEFAULT_OUT_CSV = "runs/cameo_model1_selection_packet_current.csv"
 DEFAULT_OUT_MD = "runs/cameo_model1_selection_packet_current.md"

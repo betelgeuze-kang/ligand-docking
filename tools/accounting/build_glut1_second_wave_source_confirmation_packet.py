@@ -8,7 +8,7 @@ import math
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_QUEUE_JSON = "runs/transporter_seed_row_promotion_board_current.json"
 DEFAULT_OUT_JSON = "runs/glut1_second_wave_source_confirmation_packet_current.json"

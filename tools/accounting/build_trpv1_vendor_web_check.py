@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_OUT_JSON = "runs/trpv1_ion_channel_vendor_web_check_current.json"
 DEFAULT_OUT_MD = "runs/trpv1_ion_channel_vendor_web_check_current.md"

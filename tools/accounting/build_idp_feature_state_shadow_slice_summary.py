@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_EVAL_SUMMARY_JSON = "runs/idp_page4_feature_state_v1_shadow_current_summary.json"
 DEFAULT_OUT_JSON = "runs/idp_page4_feature_state_v1_shadow_slice_current.json"

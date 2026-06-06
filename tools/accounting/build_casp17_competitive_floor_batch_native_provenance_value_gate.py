@@ -12,7 +12,7 @@ from tools import build_casp17_competitive_floor_batch_native_provenance_unlock_
 from tools.casp17 import build_casp17_competitive_floor_target_identity_clearance_operator_intake as intake
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_BATCH_KIT_JSON = "casp17/casp17_competitive_floor_batch_native_provenance_unlock_kit_current.json"
 DEFAULT_BATCH_COMPLETION_AUDIT_JSON = (

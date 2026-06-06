@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_CA2_CAPTURE_SHEET_JSON = "runs/ca2_negative_evidence_capture_sheet_current.json"
 DEFAULT_CA2_COMMIT_PACKET_JSON = "runs/ca2_evidence_closure_commit_packet_current.json"

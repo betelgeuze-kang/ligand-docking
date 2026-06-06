@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_TUNING_JSON = "runs/nightly_stage6_tuning_packet_current.json"
 DEFAULT_REALIZATION_JSON = "runs/nightly_stage6_realization_packet_current.json"

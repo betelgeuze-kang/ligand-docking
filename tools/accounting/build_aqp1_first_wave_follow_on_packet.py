@@ -11,7 +11,7 @@ from tools import build_aqp1_first_seed_row_packet as seed_packet_mod
 from tools import build_aqp1_seed_row_fill_draft as fill_draft_mod
 from tools import build_aqp1_seed_row_sync_apply_preview as sync_preview_mod
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_SEED_BOARD_JSON = "runs/transporter_seed_row_promotion_board_current.json"
 DEFAULT_WORKBOOK_JSON = "runs/aqp1_packet_replacement_workbook_current.json"

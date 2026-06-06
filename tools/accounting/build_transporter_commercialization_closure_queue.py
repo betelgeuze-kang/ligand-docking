@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_SEED_BOARD_JSON = "runs/transporter_seed_row_promotion_board_current.json"
 DEFAULT_APPLY_DRAFT_STATUS_JSON = "runs/transporter_apply_draft_status_current.json"

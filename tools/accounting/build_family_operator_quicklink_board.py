@@ -12,7 +12,7 @@ from tools.operator_surface_contracts import (
     TRANSPORTER_SAFE_SCOPE_SEED_ROW_BLOCKER_CLOSURE,
 )
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_PLATFORM_JSON = "runs/platform_operator_quickstart_packet_current.json"
 DEFAULT_CATALOG_JSON = "runs/family_packet_catalog_current.json"

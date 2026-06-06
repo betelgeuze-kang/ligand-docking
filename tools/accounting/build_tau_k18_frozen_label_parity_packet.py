@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_CALIBRATION_PACKET_JSON = "runs/tau_k18_full_fold_corrected_calibration_packet_current.json"
 DEFAULT_FROZEN_LABELS_CSV = "runs/idp_3bead_holdout_v7_anchor_commercial_pretest_r16validation_r1_fold6_tau_k18_eval_corrected_targets.csv"

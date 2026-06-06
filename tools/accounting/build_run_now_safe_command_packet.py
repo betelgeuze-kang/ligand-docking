@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_PRETEST_HANDOFF_JSON = "runs/pretest_handoff_bundle_current.json"
 DEFAULT_PRETEST_CHECKLIST_JSON = "runs/pretest_command_checklist_current.json"

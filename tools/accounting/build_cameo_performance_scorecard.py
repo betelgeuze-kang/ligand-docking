@@ -10,7 +10,7 @@ from typing import Any
 from betelgeuze_cameo.performance import build_cameo_performance_packet
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_HANDOFF_JSON = "runs/cameo_dry_run_handoff_packet_current.json"
 DEFAULT_THRESHOLD_POLICY_JSON = "runs/cameo_performance_threshold_policy_current.json"
 DEFAULT_OUT_JSON = "runs/cameo_performance_scorecard_current.json"

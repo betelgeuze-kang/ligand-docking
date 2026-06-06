@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.operator_surface_contracts import IDP_SAFE_SCOPE_CONTROLLED_PRETEST
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_BROADER_RESULT_JSON = "runs/idp_broader_shadow_result_current.json"
 DEFAULT_COMMERCIAL_PRETEST_DECISION_JSON = "runs/idp_commercial_pretest_decision_current.json"

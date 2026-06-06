@@ -9,7 +9,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_GOAL_AUDIT_JSON = "runs/product_goal_completion_audit_current.json"
 DEFAULT_DELTA_FORCE_CLOSURE_PACKET_JSON = "runs/residual_delta_force_closure_acceptance_packet_current.json"
 DEFAULT_SCOPE_CLOSURE_PACKET_JSON = "runs/product_scope_closure_acceptance_packet_current.json"

@@ -11,7 +11,7 @@ from tools.builder_table_utils import write_csv_rows
 from tools.build_cleanup_execution_approval_dossier import DEFAULT_OUT_JSON as DEFAULT_DOSSIER_JSON
 from tools.build_cleanup_payload_manifest_lock import DEFAULT_OUT_JSON as DEFAULT_PAYLOAD_LOCK_JSON
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OPERATOR_APPROVAL_CSV = "runs/cleanup_execution_operator_approval_intake.csv"
 DEFAULT_TEMPLATE_CSV = "runs/cleanup_execution_operator_approval_template_current.csv"
 DEFAULT_OUT_JSON = "runs/cleanup_execution_approval_gate_current.json"

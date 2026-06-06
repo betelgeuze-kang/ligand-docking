@@ -22,7 +22,7 @@ from tools.wetlab_selected_allatom_visual import (
     selected_allatom_visual_surface_fields,
 )
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PORTFOLIO_JSON = "runs/wetlab_partner_target_portfolio_current.json"
 DEFAULT_BLUEPRINT_JSON = "runs/wetlab_wave1_campaign_blueprint_current.json"
 DEFAULT_BRIEF_MATRIX_JSON = "runs/wetlab_wave1_target_brief_matrix_current.json"

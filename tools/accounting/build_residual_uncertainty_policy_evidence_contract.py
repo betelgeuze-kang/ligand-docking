@@ -8,7 +8,7 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SCORE_MODEL_JSON = "runs/residual_production_score_model_current.json"
 DEFAULT_RESIDUAL_SHADOW_JSON = "runs/residual_shadow_ab_current.json"
 DEFAULT_ASSIST_GATE_JSON = "runs/residual_assist_promotion_gate_current.json"

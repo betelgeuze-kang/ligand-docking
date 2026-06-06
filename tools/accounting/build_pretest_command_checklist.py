@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_SEQUENCE_JSON = "runs/pretest_execution_sequence_note_current.json"
 DEFAULT_OUT_JSON = "runs/pretest_command_checklist_current.json"

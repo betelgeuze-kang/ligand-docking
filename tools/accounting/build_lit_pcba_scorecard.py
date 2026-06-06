@@ -8,7 +8,7 @@ from typing import Any
 from betelgeuze_product.lit_pcba_scorecard import build_lit_pcba_scorecard, write_scorecard
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SCORES_CSV = "runs/lit_pcba_scores_current.csv"
 DEFAULT_LABELS_CSV = "runs/lit_pcba_labels_current.csv"
 DEFAULT_OUT_JSON = "runs/lit_pcba_scorecard_current.json"

@@ -14,7 +14,7 @@ from tools.build_cleanup_postcheck_contract import DEFAULT_OUT_JSON as DEFAULT_P
 from tools.build_protected_cleanup_policy_decision_gate import DEFAULT_OUT_JSON as DEFAULT_PROTECTED_POLICY_GATE_JSON
 from tools.cleanup.build_transition_cleanup_execution_preflight import DEFAULT_OUT_JSON as DEFAULT_TRANSITION_PREFLIGHT_JSON
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_JSON = "runs/cleanup_completion_gate_current.json"
 DEFAULT_OUT_CSV = "runs/cleanup_completion_gate_current.csv"
 DEFAULT_OUT_MD = "runs/cleanup_completion_gate_current.md"

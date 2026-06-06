@@ -10,7 +10,7 @@ from typing import Any
 from betelgeuze_cameo.official_results import build_cameo_official_results_intake_gate
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RESULTS_CSV = "runs/cameo_official_results_operator_intake.csv"
 DEFAULT_TEMPLATE_CSV = "runs/cameo_official_results_operator_template_current.csv"
 DEFAULT_OUT_JSON = "runs/cameo_official_results_intake_gate_current.json"

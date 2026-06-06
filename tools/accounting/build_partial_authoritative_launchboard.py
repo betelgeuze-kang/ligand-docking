@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_QUICKSTART_JSON = "runs/partial_authoritative_quickstart_packet_current.json"
 DEFAULT_REVIEWER_CONSOLE_JSON = "runs/partial_authoritative_reviewer_console_current.json"
