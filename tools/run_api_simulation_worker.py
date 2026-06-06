@@ -4,8 +4,14 @@ from __future__ import annotations
 import argparse
 import asyncio
 import socket
+import sys
 import time
+from pathlib import Path
 from uuid import uuid4
+
+_ROOT = Path(__file__).resolve().parents[1]
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
 from api.config import settings
 from api.job_store import SQLiteJobStore
