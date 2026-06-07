@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def test_build_glut1_manual_verdict_commit_packet_preserves_committed_manual_fields() -> None:
     subprocess.run(
-        [sys.executable, "tools/build_glut1_manual_verdict_commit_packet.py"],
+        [sys.executable, "tools/product/build_glut1_manual_verdict_commit_packet.py"],
         cwd=ROOT,
         check=True,
     )

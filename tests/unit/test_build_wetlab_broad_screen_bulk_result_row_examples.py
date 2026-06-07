@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_wetlab_broad_screen_bulk_result_row_examples as mod
+from tools.wetlab import build_wetlab_broad_screen_bulk_result_row_examples as mod
 
 
 def test_build_wetlab_broad_screen_bulk_result_row_examples_has_two_caix_rows() -> None:

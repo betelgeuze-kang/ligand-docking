@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from tools import build_aqp1_functional_kcal_surrogate_packet as mod
+from tools.product import build_aqp1_functional_kcal_surrogate_packet as mod
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -144,7 +144,7 @@ def test_cli_writes_packet(tmp_path: Path) -> None:
     subprocess.run(
         [
             sys.executable,
-            "tools/build_aqp1_functional_kcal_surrogate_packet.py",
+            "tools/product/build_aqp1_functional_kcal_surrogate_packet.py",
             "--capture-sheet-json",
             str(capture),
             "--provenance-json",

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_wetlab_broad_screen_bulk_result_source_schema as mod
+from tools.wetlab import build_wetlab_broad_screen_bulk_result_source_schema as mod
 
 
 def test_build_wetlab_broad_screen_bulk_result_source_schema_lists_required_fields() -> None:

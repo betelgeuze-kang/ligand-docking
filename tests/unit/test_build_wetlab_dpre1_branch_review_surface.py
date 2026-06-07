@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_wetlab_dpre1_branch_review_surface as mod
+from tools.wetlab import build_wetlab_dpre1_branch_review_surface as mod
 
 
 def test_build_wetlab_dpre1_branch_review_surface_prefers_guarded_gate51_review_language() -> None:

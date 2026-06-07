@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from tools import build_wetlab_prediction_result_comparison as mod
+from tools.wetlab import build_wetlab_prediction_result_comparison as mod
 
 
 def test_build_wetlab_prediction_result_comparison_percent_inhibition() -> None:

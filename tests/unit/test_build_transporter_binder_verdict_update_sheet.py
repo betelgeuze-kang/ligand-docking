@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_transporter_binder_verdict_update_sheet as mod
+from tools.product import build_transporter_binder_verdict_update_sheet as mod
 
 
 def test_build_transporter_binder_verdict_update_sheet() -> None:

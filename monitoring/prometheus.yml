@@ -5,8 +5,7 @@ global:
   evaluation_interval: 15s
 
 rule_files:
-  # - "first_rules.yml"
-  # - "second_rules.yml"
+  - "product_api_alerts.yml"
 
 alerting:
   alertmanagers:
@@ -33,16 +32,3 @@ scrape_configs:
     metrics_path: '/metrics' # FastAPI에서 prometheus_client를 통해 노출하는 경로
     scrape_interval: 5s
     scrape_timeout: 4s
-
-# Add rules for alerts (example)
-# groups:
-# - name: example
-#   rules:
-#   - alert: HighGPUUtilization
-#     expr: gpu_utilization > 90
-#     for: 2m
-#     labels:
-#       severity: warning
-#     annotations:
-#       summary: "High GPU utilization on {{ $labels.instance }}"
-#       description: "{{ $labels.instance }} GPU utilization is above 90% for more than 2 minutes."

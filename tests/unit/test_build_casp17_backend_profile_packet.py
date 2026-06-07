@@ -12,7 +12,7 @@ def _run_builder(tmp_path: Path, *extra: str, env: dict[str, str] | None = None)
     out_json = tmp_path / "profile.json"
     command = [
         "python3",
-        str(ROOT / "tools/build_casp17_backend_profile_packet.py"),
+        str(ROOT / "tools/casp17/build_casp17_backend_profile_packet.py"),
         "--out-json",
         str(out_json),
         "--out-csv",
@@ -32,7 +32,7 @@ def test_backend_profile_blocks_without_multimer_or_predictor_template(tmp_path:
     assert summary["execution_status"] == "blocked"
     assert "backend_multimer_support_not_declared" in summary["blockers"]
     assert "operator_predictor_command_template_missing" in summary["blockers"]
-    assert "run_casp17_external_structure_predictor_adapter.py" in summary["custom_backend_command"]
+    assert "casp17/run_casp17_external_structure_predictor_adapter.py" in summary["custom_backend_command"]
 
 
 def test_backend_profile_ready_with_multimer_and_embedded_template(tmp_path: Path) -> None:

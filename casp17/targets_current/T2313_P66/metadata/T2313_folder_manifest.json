@@ -1,0 +1,133 @@
+{
+  "artifacts": {
+    "fasta_path": "casp17/targets_current/T2313_P66/metadata/T2313.fasta",
+    "figure_paths": [
+      "casp17/targets_current/T2313_P66/figures/T2313_molecular_inspection_poster.png",
+      "casp17/targets_current/T2313_P66/figures/T2313_molecular_review_board.png",
+      "casp17/targets_current/T2313_P66/figures/T2313_molecular_scene_poster.png",
+      "casp17/targets_current/T2313_P66/figures/T2313_molecular_showcase.png",
+      "casp17/targets_current/T2313_P66/figures/T2313_publication_figure.png"
+    ],
+    "final_model_path": "casp17/targets_current/T2313_P66/models/T2313_final_selected_model.pdb",
+    "generated_fallback_figure_paths": [],
+    "generated_fallback_render_paths": [],
+    "metadata_paths": [
+      "casp17/targets_current/T2313_P66/metadata/internal_physics_job/T2313_model_1.pdb",
+      "casp17/targets_current/T2313_P66/metadata/internal_physics_job/backend_runtime.json",
+      "casp17/targets_current/T2313_P66/metadata/internal_physics_job/internal_physics_metrics.json",
+      "casp17/targets_current/T2313_P66/metadata/internal_physics_job/internal_physics_predictor.csv",
+      "casp17/targets_current/T2313_P66/metadata/internal_physics_job/internal_physics_predictor.json",
+      "casp17/targets_current/T2313_P66/metadata/internal_physics_job/internal_physics_predictor.md"
+    ],
+    "object_model_paths": [
+      "casp17/targets_current/T2313_P66/objects/chain_A/models/T2313_chain_A.pdb"
+    ],
+    "object_projection_paths": [
+      "casp17/targets_current/T2313_P66/objects/chain_A/renders/T2313_chain_A_projection.svg"
+    ],
+    "object_viewer_paths": [
+      "casp17/targets_current/T2313_P66/objects/chain_A/viewer.html"
+    ],
+    "raw_internal_model_path": "casp17/targets_current/T2313_P66/models/T2313_internal_physics_raw_model_1.pdb",
+    "render_paths": [
+      "casp17/targets_current/T2313_P66/renders/T2313_structure.png",
+      "casp17/targets_current/T2313_P66/renders/T2313_structure.svg",
+      "casp17/targets_current/T2313_P66/renders/T2313_structure_atlas_panel.png",
+      "casp17/targets_current/T2313_P66/renders/T2313_structure_confidence_pymol.pml",
+      "casp17/targets_current/T2313_P66/renders/T2313_structure_confidence_pymol.png",
+      "casp17/targets_current/T2313_P66/renders/T2313_structure_interface_map.png",
+      "casp17/targets_current/T2313_P66/renders/T2313_structure_molecular_plate.png",
+      "casp17/targets_current/T2313_P66/renders/T2313_structure_presentation_plate.png",
+      "casp17/targets_current/T2313_P66/renders/T2313_structure_publication.png",
+      "casp17/targets_current/T2313_P66/renders/T2313_structure_pymol.pml",
+      "casp17/targets_current/T2313_P66/renders/T2313_structure_pymol.png",
+      "casp17/targets_current/T2313_P66/renders/T2313_structure_qc_pymol.pml",
+      "casp17/targets_current/T2313_P66/renders/T2313_structure_qc_pymol.png",
+      "casp17/targets_current/T2313_P66/renders/T2313_structure_residue_class.png",
+      "casp17/targets_current/T2313_P66/renders/T2313_structure_review_panel.png",
+      "casp17/targets_current/T2313_P66/renders/T2313_structure_stereo_depth.png",
+      "casp17/targets_current/T2313_P66/renders/T2313_structure_studio.png",
+      "casp17/targets_current/T2313_P66/renders/T2313_structure_surface_pymol.pml",
+      "casp17/targets_current/T2313_P66/renders/T2313_structure_surface_pymol.png",
+      "casp17/targets_current/T2313_P66/renders/T2313_structure_turntable.png"
+    ]
+  },
+  "claim_boundary": "Per-target local organization of internal CASP17 predicted coordinates, FASTA, renders, and QC metadata only; not an official CASP submission, native accuracy result, or experimental structure.",
+  "objects": [
+    {
+      "atom_count": 4815,
+      "chain_id": "A",
+      "coordinate_status": "valid",
+      "manifest_path": "casp17/targets_current/T2313_P66/objects/chain_A/metadata/T2313_chain_A_manifest.json",
+      "model_path": "casp17/targets_current/T2313_P66/objects/chain_A/models/T2313_chain_A.pdb",
+      "object_folder": "casp17/targets_current/T2313_P66/objects/chain_A",
+      "object_id": "chain_A",
+      "projection_svg_path": "casp17/targets_current/T2313_P66/objects/chain_A/renders/T2313_chain_A_projection.svg",
+      "protein_atom_count": 4815,
+      "protein_name": "P66",
+      "readme_path": "casp17/targets_current/T2313_P66/objects/chain_A/README.md",
+      "residue_count": 618,
+      "target_folder": "casp17/targets_current/T2313_P66",
+      "target_id": "T2313",
+      "viewer_html_path": "casp17/targets_current/T2313_P66/objects/chain_A/viewer.html"
+    }
+  ],
+  "readme_path": "casp17/targets_current/T2313_P66/README.md",
+  "summary": {
+    "atom_count": 4815,
+    "blockers": "",
+    "chain_count": 1,
+    "coordinate_status": "valid",
+    "fasta_path": "casp17/targets_current/T2313_P66/metadata/T2313.fasta",
+    "figure_file_count": 5,
+    "final_model_path": "casp17/targets_current/T2313_P66/models/T2313_final_selected_model.pdb",
+    "folder_name": "T2313_P66",
+    "folder_path": "casp17/targets_current/T2313_P66",
+    "folder_status": "ready",
+    "generated_fallback_figure_count": 0,
+    "generated_fallback_render_count": 0,
+    "human_expiration": "2026-05-28",
+    "lane": "difficult_protein_complexes",
+    "metadata_file_count": 7,
+    "model_count": 1,
+    "model_source_kind": "final_selected",
+    "object_count": 1,
+    "object_index_md": "casp17/targets_current/T2313_P66/objects/OBJECT_INDEX.md",
+    "object_projection_count": 1,
+    "object_viewer_count": 1,
+    "protein_atom_count": 4815,
+    "protein_name": "P66",
+    "qa_expiration": "2026-05-31",
+    "raw_internal_model_path": "casp17/targets_current/T2313_P66/models/T2313_internal_physics_raw_model_1.pdb",
+    "readme_path": "casp17/targets_current/T2313_P66/README.md",
+    "render_file_count": 20,
+    "residue_count": 618,
+    "target_id": "T2313",
+    "target_manifest_path": "casp17/targets_current/T2313_P66/metadata/T2313_folder_manifest.json"
+  },
+  "target": {
+    "cancellation_date": "",
+    "days_to_human_expiration": 2,
+    "days_to_qa_expiration": 5,
+    "days_to_server_expiration": -9,
+    "deadline_class": "regular_expiring_soon",
+    "description": "P66",
+    "entry_date": "2026-05-14",
+    "human_expiration": "2026-05-28",
+    "human_open": true,
+    "lane_reason": "secondary difficult protein/complex lane",
+    "lane_recommendation": "difficult_protein_complexes",
+    "priority": 228,
+    "qa_expiration": "2026-05-31",
+    "qa_open": true,
+    "recommended_action": "seed_intake_no_go_until_prediction_artifacts_exist",
+    "residues": "618",
+    "server_expiration": "2026-05-17",
+    "server_open": false,
+    "stoichiometry": "A3",
+    "submission_format_seed": "TS",
+    "support_accuracy_estimation": true,
+    "target_id": "T2313",
+    "target_type": "Prot"
+  }
+}

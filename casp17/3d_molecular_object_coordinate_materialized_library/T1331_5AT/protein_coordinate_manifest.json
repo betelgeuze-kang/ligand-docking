@@ -1,0 +1,41 @@
+{
+  "claim_boundary": "CASP17 3D molecular object coordinate materialized library only. It materializes each source coordinate model from the dry-run plan into a protein-name/object folder with sha256 verification. The default symlink mode avoids duplicating raw coordinate bytes. It does not alter source models, compute native accuracy, serialize a CASP author code, or submit to CASP.",
+  "rows": [
+    {
+      "atlas_object_key": "current_chain_A",
+      "atlas_protein_key": "T1331_5AT",
+      "blockers": "",
+      "claim_boundary": "CASP17 3D molecular object coordinate materialized library only. It materializes each source coordinate model from the dry-run plan into a protein-name/object folder with sha256 verification. The default symlink mode avoids duplicating raw coordinate bytes. It does not alter source models, compute native accuracy, serialize a CASP author code, or submit to CASP.",
+      "materialization_mode": "symlink",
+      "materialization_status": "coordinate_materialized",
+      "materialized_bytes": 185077,
+      "materialized_coordinate_folder": "casp17/3d_molecular_object_coordinate_materialized_library/T1331_5AT/current_chain_A/coordinates",
+      "materialized_coordinate_path": "casp17/3d_molecular_object_coordinate_materialized_library/T1331_5AT/current_chain_A/coordinates/T1331_chain_A.pdb",
+      "materialized_coordinate_present": "true",
+      "materialized_object_folder": "casp17/3d_molecular_object_coordinate_materialized_library/T1331_5AT/current_chain_A",
+      "materialized_protein_folder": "casp17/3d_molecular_object_coordinate_materialized_library/T1331_5AT",
+      "materialized_sha256": "94ade7b949870d64e0fb46895f05d2fa3b6882c316af23d3242696efc2231631",
+      "next_action": "Use this per-object materialized coordinate for local 3D review.",
+      "object_id": "chain_A",
+      "object_manifest": "casp17/3d_molecular_object_coordinate_materialized_library/T1331_5AT/current_chain_A/coordinate_manifest.json",
+      "object_readme": "casp17/3d_molecular_object_coordinate_materialized_library/T1331_5AT/current_chain_A/README.md",
+      "protein_manifest": "casp17/3d_molecular_object_coordinate_materialized_library/T1331_5AT/protein_coordinate_manifest.json",
+      "protein_name": "5AT",
+      "sha256_match": "true",
+      "source_bytes": 185077,
+      "source_coordinate_format": "pdb",
+      "source_coordinate_path": "casp17/targets_current/T1331_5AT/objects/chain_A/models/T1331_chain_A.pdb",
+      "source_coordinate_present": "true",
+      "source_lane": "current_object_library",
+      "source_sha256": "94ade7b949870d64e0fb46895f05d2fa3b6882c316af23d3242696efc2231631",
+      "symlink_target": "../../../../targets_current/T1331_5AT/objects/chain_A/models/T1331_chain_A.pdb",
+      "target_id": "T1331"
+    }
+  ],
+  "summary": {
+    "atlas_protein_key": "T1331_5AT",
+    "blocked_count": 0,
+    "materialized_count": 1,
+    "object_count": 1
+  }
+}

@@ -1,0 +1,111 @@
+{
+  "rows": [
+    {
+      "allowed_for_strict_blind": "false",
+      "atom_like_count": 1810,
+      "blockers": "blocked_current_casp17_not_historical",
+      "category_id": "current_casp17_or_review_only",
+      "file_count": 1810,
+      "first_sample_path": "casp17/runs/casp17_prediction_jobs_current/H1311/H1311_model_1.pdb",
+      "next_action": "keep current CASP17 files out of historical strict-blind proof",
+      "proof_use": "blocked_current_casp17_not_historical",
+      "sample_paths": "casp17/runs/casp17_prediction_jobs_current/H1311/H1311_model_1.pdb;casp17/runs/casp17_prediction_jobs_current/H1311/ranked_raw_models/H1311_model_1.pdb;casp17/runs/casp17_prediction_jobs_current/H1311/ranked_raw_models/H1311_model_2.pdb;casp17/runs/casp17_prediction_jobs_current/H1311/ranked_raw_models/H1311_model_3.pdb;casp17/runs/casp17_prediction_jobs_current/H1311/ranked_raw_models/H1311_model_4.pdb;casp17/runs/casp17_prediction_jobs_current/H1311/ranked_raw_models/H1311_model_5.pdb;casp17/runs/casp17_prediction_jobs_current/H1319/H1319_model_1.pdb;casp17/runs/casp17_prediction_jobs_current/H1321/H1321_model_1.pdb",
+      "verified_pre_native_internal_count": 0
+    },
+    {
+      "allowed_for_strict_blind": "false",
+      "atom_like_count": 1663,
+      "blockers": "blocked_external_model_pool",
+      "category_id": "massivefold_external_baseline_only",
+      "file_count": 2895,
+      "first_sample_path": "casp17/massivefold_external_pool_intake/h1311_t327/extracted_models/H1311_all_pdbs/Model_100_af3_woPaired_af3_seed_763060_sample_4_pred_79.cif",
+      "next_action": "keep MassiveFold/AF model pools external-only and never mark as internal proof",
+      "proof_use": "blocked_external_model_pool",
+      "sample_paths": "casp17/massivefold_external_pool_intake/h1311_t327/extracted_models/H1311_all_pdbs/Model_100_af3_woPaired_af3_seed_763060_sample_4_pred_79.cif;casp17/massivefold_external_pool_intake/h1311_t327/extracted_models/H1311_all_pdbs/Model_1054_afm_woTemplates_model_2_multimer_v2_pred_25.pdb;casp17/massivefold_external_pool_intake/h1311_t327/extracted_models/H1311_all_pdbs/Model_1149_afm_woTemplates_model_2_multimer_v2_pred_12.pdb;casp17/massivefold_external_pool_intake/h1311_t327/extracted_models/H1311_all_pdbs/Model_1154_afm_dropout_noSM_woTemplates_model_2_multimer_v2_pred_16.pdb;casp17/massivefold_external_pool_intake/h1311_t327/extracted_models/H1311_all_pdbs/Model_1167_cf_woTemplates_model_1_multimer_v2_pred_58.pdb;casp17/massivefold_external_pool_intake/h1311_t327/extracted_models/H1311_all_pdbs/Model_12040_af3_woUnpaired_woPaired_af3_seed_1167_sample_1_pred_1001.cif;casp17/massivefold_external_pool_intake/h1311_t327/extracted_models/H1311_all_pdbs/Model_12058_af3_woUnpaired_woPaired_af3_seed_951240_sample_4_pred_359.cif;casp17/massivefold_external_pool_intake/h1311_t327/extracted_models/H1311_all_pdbs/Model_12059_af3_woUnpaired_woPaired_af3_seed_1167_sample_4_pred_1004.cif",
+      "verified_pre_native_internal_count": 0
+    },
+    {
+      "allowed_for_strict_blind": "false",
+      "atom_like_count": 385,
+      "blockers": "baseline_only_not_internal_prediction",
+      "category_id": "official_archive_baseline_only",
+      "file_count": 387,
+      "first_sample_path": "casp17/historical_seed_official_archive_baseline_lane/001_casp16_t1212_fanzor2_ternary_structure_protein_subunit_of_m1212/native/9B0L.pdb",
+      "next_action": "use official archive files only for baseline replay or native authority",
+      "proof_use": "baseline_only_not_internal_prediction",
+      "sample_paths": "casp17/historical_seed_official_archive_baseline_lane/001_casp16_t1212_fanzor2_ternary_structure_protein_subunit_of_m1212/native/9B0L.pdb;casp17/official_archive_first_baseline_model1_gap_viewer_packet/reference/native_9B0L.pdb;casp17/official_archive_first_baseline_model1_gap_viewer_packet/t1212_group_015_delta_30_043/T1212TS015_1.pdb;casp17/official_archive_first_baseline_model1_gap_viewer_packet/t1212_group_015_delta_30_043/T1212TS015_4.pdb;casp17/official_archive_first_baseline_model1_gap_viewer_packet/t1212_group_052_delta_24_410/T1212TS052_1.pdb;casp17/official_archive_first_baseline_model1_gap_viewer_packet/t1212_group_052_delta_24_410/T1212TS052_5.pdb;casp17/official_archive_first_baseline_model1_gap_viewer_packet/t1212_group_163_delta_78_380/T1212TS163_1.pdb;casp17/official_archive_first_baseline_model1_gap_viewer_packet/t1212_group_163_delta_78_380/T1212TS163_4.pdb",
+      "verified_pre_native_internal_count": 0
+    },
+    {
+      "allowed_for_strict_blind": "false",
+      "atom_like_count": 229,
+      "blockers": "native_authority_only_not_prediction",
+      "category_id": "native_or_reference_not_prediction",
+      "file_count": 257,
+      "first_sample_path": "casp17/historical_seed_native_replacement_candidates/01_hist_bba5/native_candidate_1T8J.pdb",
+      "next_action": "use native/reference files only as authority after leakage checks",
+      "proof_use": "native_authority_only_not_prediction",
+      "sample_paths": "casp17/historical_seed_native_replacement_candidates/01_hist_bba5/native_candidate_1T8J.pdb;casp17/historical_seed_native_replacement_candidates/02_hist_chignolin/native_candidate_1UAO.pdb;casp17/historical_seed_native_replacement_candidates/03_hist_crambin/native_candidate_1CRN.pdb;casp17/historical_seed_native_replacement_candidates/04_hist_fsd_1/native_candidate_1FSD.pdb;casp17/historical_seed_native_replacement_candidates/05_hist_gb1_mini/native_candidate_2GB1.pdb;casp17/historical_seed_native_replacement_candidates/06_hist_protein_a_bdomain/native_candidate_1BDD.pdb;casp17/historical_seed_native_replacement_candidates/07_hist_trp_cage/native_candidate_1L2Y.pdb;casp17/historical_seed_native_replacement_candidates/08_hist_ubiquitin_mini/native_candidate_1UBQ.pdb",
+      "verified_pre_native_internal_count": 0
+    },
+    {
+      "allowed_for_strict_blind": "false",
+      "atom_like_count": 75,
+      "blockers": "retrospective_only_prediction_not_before_native_unproven",
+      "category_id": "historical_seed_top5_post_native_review_only",
+      "file_count": 75,
+      "first_sample_path": "casp17/historical_seed_top5_candidate_pools/01_hist_bba5/model_1_selected_prediction_copy.pdb",
+      "next_action": "keep deterministic/post-native seed pools retrospective until pre-native evidence exists",
+      "proof_use": "retrospective_only_prediction_not_before_native_unproven",
+      "sample_paths": "casp17/historical_seed_top5_candidate_pools/01_hist_bba5/model_1_selected_prediction_copy.pdb;casp17/historical_seed_top5_candidate_pools/01_hist_bba5/model_2_deterministic_perturbation_2.pdb;casp17/historical_seed_top5_candidate_pools/01_hist_bba5/model_3_deterministic_perturbation_3.pdb;casp17/historical_seed_top5_candidate_pools/01_hist_bba5/model_4_deterministic_perturbation_4.pdb;casp17/historical_seed_top5_candidate_pools/01_hist_bba5/model_5_deterministic_perturbation_5.pdb;casp17/historical_seed_top5_candidate_pools/02_hist_chignolin/model_1_selected_prediction_copy.pdb;casp17/historical_seed_top5_candidate_pools/02_hist_chignolin/model_2_deterministic_perturbation_2.pdb;casp17/historical_seed_top5_candidate_pools/02_hist_chignolin/model_3_deterministic_perturbation_3.pdb",
+      "verified_pre_native_internal_count": 0
+    },
+    {
+      "allowed_for_strict_blind": "false",
+      "atom_like_count": 0,
+      "blockers": "",
+      "category_id": "strict_blind_dropzone_unverified",
+      "file_count": 0,
+      "first_sample_path": "",
+      "next_action": "validate source manifest, timestamp, no-leak evidence, and operator clearance",
+      "proof_use": "operator_gate_required_before_proof",
+      "sample_paths": "",
+      "verified_pre_native_internal_count": 0
+    },
+    {
+      "allowed_for_strict_blind": "false",
+      "atom_like_count": 2260,
+      "blockers": "source_class_chronology_no_leak_operator_clearance_unverified",
+      "category_id": "unknown_possible_internal_review",
+      "file_count": 4551,
+      "first_sample_path": "archives/smoke_cleanup_2026-02-22/ligand_htvs_pipeline_smoke_2026-02-22_stage3_delivery/jobs/Chignolin__rep0000__aspirin/backmapped_Chignolin__rep0000__aspirin.pdb",
+      "next_action": "operator must classify source, chronology, and no-leak evidence before any promotion",
+      "proof_use": "unverified_possible_internal_not_proof",
+      "sample_paths": "archives/smoke_cleanup_2026-02-22/ligand_htvs_pipeline_smoke_2026-02-22_stage3_delivery/jobs/Chignolin__rep0000__aspirin/backmapped_Chignolin__rep0000__aspirin.pdb;archives/smoke_cleanup_2026-02-22/ligand_htvs_pipeline_smoke_2026-02-22_stage3_delivery/jobs/Chignolin__rep0001__caffeine/backmapped_Chignolin__rep0001__caffeine.pdb;archives/smoke_cleanup_2026-02-22/ligand_htvs_pipeline_smoke_2026-02-22_stage3_delivery/jobs/Chignolin__rep0002__ibuprofen/backmapped_Chignolin__rep0002__ibuprofen.pdb;archives/smoke_cleanup_2026-02-22/ligand_htvs_pipeline_smoke_2026-02-22_stage3_delivery/jobs/Chignolin__rep0003__imatinib/backmapped_Chignolin__rep0003__imatinib.pdb;archives/smoke_cleanup_2026-02-22/ligand_htvs_pipeline_smoke_2026-02-22_stage3_delivery/jobs/Chignolin__rep0004__erlotinib/backmapped_Chignolin__rep0004__erlotinib.pdb;archives/smoke_cleanup_2026-02-22/ligand_htvs_pipeline_smoke_2026-02-22_stage3_delivery/jobs/Chignolin__rep0005__nilotinib/backmapped_Chignolin__rep0005__nilotinib.pdb;archives/smoke_cleanup_2026-02-22/ligand_htvs_pipeline_smoke_2026-02-22_stage3_delivery/jobs/Chignolin__rep0006__aspirin/backmapped_Chignolin__rep0006__aspirin.pdb;archives/smoke_cleanup_2026-02-22/ligand_htvs_pipeline_smoke_2026-02-22_stage3_delivery/jobs/Chignolin__rep0007__caffeine/backmapped_Chignolin__rep0007__caffeine.pdb",
+      "verified_pre_native_internal_count": 0
+    }
+  ],
+  "summary": {
+    "atom_like_file_count": 6422,
+    "category_count": 7,
+    "claim_boundary": "CASP17 strict-blind internal candidate filesystem sweep only. It classifies local structure files by path provenance and proof boundary. It does not promote any file into strict-blind proof, does not infer pre-native chronology from filename or mtime, does not approve no-leak evidence, and does not import official, MassiveFold, current CASP17, native, or review-only files as internal predictions.",
+    "current_casp17_or_review_only_count": 1810,
+    "current_target_count": 19,
+    "filesystem_sweep_status": "strict_blind_filesystem_sweep_operator_review_required",
+    "first_unknown_sample_path": "archives/smoke_cleanup_2026-02-22/ligand_htvs_pipeline_smoke_2026-02-22_stage3_delivery/jobs/Chignolin__rep0000__aspirin/backmapped_Chignolin__rep0000__aspirin.pdb",
+    "generated_at_local": "2026-06-02T03:12:57+09:00",
+    "historical_seed_top5_post_native_review_only_count": 75,
+    "massivefold_external_baseline_only_count": 2895,
+    "native_or_reference_not_prediction_count": 257,
+    "next_action": "review unknown_possible_internal_review samples only if an operator can attach source class, pre-native chronology, no-leak evidence, and clearance; otherwise keep strict-blind proof blocked",
+    "official_archive_baseline_only_count": 387,
+    "packet_type": "casp17_strict_blind_internal_candidate_filesystem_sweep",
+    "scan_root": ".",
+    "scanned_structure_file_count": 9975,
+    "source_gate_first_blocker": "internal_source_id_missing_or_external",
+    "source_gate_status": "awaiting_internal_prediction_source_gate_fields",
+    "strict_blind_dropzone_unverified_count": 0,
+    "unknown_possible_internal_review_count": 4551,
+    "verified_pre_native_internal_count": 0
+  }
+}

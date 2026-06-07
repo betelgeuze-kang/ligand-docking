@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from tools import build_wetlab_wave1_campaign_blueprint as blueprint_mod
-from tools import build_wetlab_wave1_candidate_slot_workbook as mod
+from tools.wetlab import build_wetlab_wave1_candidate_slot_workbook as mod
 
 
 def test_build_wetlab_wave1_candidate_slot_workbook() -> None:

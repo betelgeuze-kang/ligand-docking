@@ -1,0 +1,40 @@
+{
+  "claim_boundary": "CASP17 current upload operator decision kit only. It converts the current upload review packet into an operator approve/hold/reject intake surface and preserves previously entered operator decision fields. It does not submit to CASP, serialize a CASP author code, approve a model by itself, compute native accuracy, or mark strict-blind competitive proof.",
+  "rerun_commands": [
+    "python3 tools/build_casp17_current_upload_review_packet.py",
+    "python3 tools/build_casp17_current_upload_operator_decision_kit.py",
+    "python3 tools/build_casp17_current_upload_operator_decision_kit_completion_audit.py",
+    "python3 tools/build_casp17_workbench_index.py"
+  ],
+  "submission_policy": "do_not_submit_without_runtime_author_code_and_operator_approval",
+  "summary": {
+    "approve_count": 0,
+    "author_serialization_missing_count": 8,
+    "batch_manifest_json": "casp17/current_upload_operator_decision_kit/batch_manifest.json",
+    "blocked_review_count": 0,
+    "claim_boundary": "CASP17 current upload operator decision kit only. It converts the current upload review packet into an operator approve/hold/reject intake surface and preserves previously entered operator decision fields. It does not submit to CASP, serialize a CASP author code, approve a model by itself, compute native accuracy, or mark strict-blind competitive proof.",
+    "current_upload_operator_decision_kit_status": "current_upload_operator_decision_kit_awaiting_operator_decisions",
+    "decision_kit_dir": "casp17/current_upload_operator_decision_kit",
+    "decision_kit_status": "current_upload_operator_decision_kit_awaiting_operator_decisions",
+    "first_blocker": "operator_decision_missing",
+    "first_target_id": "H1344",
+    "generated_at_local": "2026-06-03T00:38:29+09:00",
+    "hold_count": 0,
+    "invalid_operator_decision_count": 0,
+    "next_action": "set operator_decision to approve, hold, or reject",
+    "operator_decision_intake_csv": "casp17/current_upload_operator_decision_kit/operator_decision_intake.csv",
+    "operator_decision_missing_count": 8,
+    "packet_type": "casp17_current_upload_operator_decision_kit",
+    "ready_review_count": 8,
+    "reject_count": 0,
+    "rerun_commands_md": "casp17/current_upload_operator_decision_kit/RERUN_COMMANDS.md",
+    "review_packet_json": "casp17/casp17_current_upload_review_packet_current.json",
+    "review_packet_status": "current_upload_review_packet_ready",
+    "review_target_count": 8,
+    "submission_policy": "do_not_submit_without_runtime_author_code_and_operator_approval",
+    "target_summary_csv": "casp17/current_upload_operator_decision_kit/target_summary.csv",
+    "urgency_future_count": 2,
+    "urgency_soon_count": 4,
+    "urgency_today_count": 2
+  }
+}

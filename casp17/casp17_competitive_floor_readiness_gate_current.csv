@@ -1,0 +1,7 @@
+gate_id,gate_order,gate_status,ready_count,blocked_count,total_count,first_blocker,next_action
+identity_gate,1,awaiting_identity,0,15,15,"proposed_benchmark_id_required,proposed_target_id_required,evidence_ref_required,operator_clearance_required","fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance"
+identity_apply_gate,2,pass,15,0,15,,"fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance"
+file_source_gate,3,waiting_on_identity,0,180,180,awaiting_identity,"fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance"
+value_entry_gate,4,waiting_on_identity,0,270,270,awaiting_identity,"fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance"
+evidence_import_gate,5,awaiting_identity,0,15,15,awaiting_identity,"fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance"
+competitive_floor_gate,6,awaiting_identity,0,1,15,identity_gate,"fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance"

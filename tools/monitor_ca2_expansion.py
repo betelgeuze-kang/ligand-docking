@@ -10,7 +10,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from tools import run_ca2_expansion_scaffold_check as scaffold
+from tools.product import run_ca2_expansion_scaffold_check as scaffold
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -413,7 +413,7 @@ def _render(args: argparse.Namespace) -> str:
 
     lines.append(_style(args.color, "Commands", BOLD, BLUE))
     lines.append(
-        "scaffold_check: python3 tools/run_ca2_expansion_scaffold_check.py --template-json "
+        "scaffold_check: python3 tools/product/run_ca2_expansion_scaffold_check.py --template-json "
         f"{args.template_json} --verbose"
     )
     lines.append(

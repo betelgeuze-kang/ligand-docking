@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from tools import build_gpcr_score_reference_stats as mod
+from tools.gpcr_replay import build_gpcr_score_reference_stats as mod
 
 
 def test_build_payload_uses_fit_rows_only_and_records_eval_nonuse(tmp_path: Path) -> None:

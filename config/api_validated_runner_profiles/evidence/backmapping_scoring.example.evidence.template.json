@@ -1,0 +1,14 @@
+{
+  "claim_boundary": "Example only. Enable only after the operator supplies a reviewed queue CSV, native structure provenance, and downstream gate policy.",
+  "claim_boundary_reviewed": true,
+  "fake_result_emission_forbidden": true,
+  "gate_policy_artifact": "runs/product_execution_approval_gate_current.json",
+  "gate_policy_reviewed": true,
+  "input_contract_reviewed": true,
+  "notes": "Example profile evidence reviewed for promotion-readiness accounting only.",
+  "output_contract_reviewed": true,
+  "profile_id": "backmapping_scoring.example",
+  "required_operator_action": "Set every *_reviewed field to true only after reviewing the exact profile inputs, outputs, claim boundary, and downstream gate policy. Do not enable the profile from this template alone.",
+  "reviewed_at_utc": "2026-06-06T12:00:00+00:00",
+  "reviewer": "operator-gap-closure"
+}

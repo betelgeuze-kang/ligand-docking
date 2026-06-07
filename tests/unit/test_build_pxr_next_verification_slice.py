@@ -45,7 +45,7 @@ def test_build_pxr_next_verification_slice(tmp_path: Path) -> None:
     subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools/build_pxr_next_verification_slice.py"),
+            str(ROOT / "tools/product/build_pxr_next_verification_slice.py"),
             "--sheet-csv",
             str(sheet_csv),
             "--capture-sheet-json",
@@ -107,7 +107,7 @@ def test_build_pxr_next_verification_slice_prefers_capture_sheet_manual_fields(t
     subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools/build_pxr_next_verification_slice.py"),
+            str(ROOT / "tools/product/build_pxr_next_verification_slice.py"),
             "--sheet-csv",
             str(sheet_csv),
             "--capture-sheet-json",

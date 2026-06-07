@@ -68,6 +68,27 @@ python3 tools/build_local_delivery_verdict_gate.py
 
 The verdict gate is designed to fail closed until required P0 evidence, wetlab state, and delivery readiness conditions are satisfied.
 
+## Product API (`/simulate`)
+
+The HTTP API product surface is **ligand HTVS and backmapping scoring only**, executed through operator-approved validated runner profiles. Generic molecular-dynamics simulation is intentionally unsupported.
+
+```bash
+pip install -r requirements-api.txt
+uvicorn api.main:app --host 127.0.0.1 --port 8000
+```
+
+Submit a validated-runner job (requires an enabled profile under `config/api_validated_runner_profiles/`):
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/simulate \
+  -H 'Content-Type: application/json' \
+  -d '{"target_name":"ExampleTarget","runner_profile_id":"backmapping_scoring.example"}'
+```
+
+Requests without `runner_profile_id` receive HTTP 422/400 with an explicit unsupported-scope response. The API refuses to emit fake or generic MD results.
+
+Installable CLIs (`betelgeuze-product`, `betelgeuze-cameo`, `betelgeuze-cleanup`) resolve repository paths via `BETELGEUZE_REPO_ROOT` or the installed package layout.
+
 ## Main Workflows
 
 | Workflow | Entry Points |
@@ -91,6 +112,58 @@ Start with these documents when reviewing delivery readiness:
 - `docs/local_delivery_engine_provenance.md`
 - `docs/local_delivery_claim_policy.md`
 - `docs/post_green_improvement_plan.md`
+
+## CASP17 Internal Physics Lane
+
+The repository now includes a CASP17 participation workstream that stays inside the local molecular-dynamics/coarse-grain physics stack. It does not use AlphaFold, ColabFold, ESMFold, OmegaFold, public/template structures, current-target native lookups, or other-team models for the active lane.
+
+Current local status as of 2026-06-03 KST:
+
+- The CASP17 workbench status is `ready_for_operator_fill`; highest proven local level remains `review_quality`.
+- Current target organization is green: target model folders `19/19`, target object folders/viewers/projections `58/58/58`, and a 3D molecular object atlas with `24` protein folders and `68` object folders.
+- The 3D molecular object coordinate materialized library is green in local symlink mode: `24` protein folders, `68` object folders, `68/68` source/materialized sha256 matches, and `68/0` symlink/copy coordinates. Coordinate symlinks remain local review artifacts; GitHub tracks the manifests, reports, and generator.
+- Current package preflight is green for `19/19` targets, with files, format, author fields, sidechain repack status, and sha256 accounting present.
+- The official upload queue is intentionally partial and has been rolled forward against the latest official targetlist snapshot: `8/19` current targets are operator upload-review-ready, while `11/19` are blocked by deadline or official-target state. The upload operator decision kit completion audit is green for the active file surface: `8/0/8` target pass/blocked/total, `4/4` root files, `8/8/8` intake/summary/per-target rows, and `0/0/0` coordinate/proof/portal-submit hygiene. Operator decisions are still `0/0/0/8/0` approve/hold/reject/missing/invalid, with `8` author-serialization gaps.
+- The queue rollover hygiene audit now records retained stale generated folders from the prior date-ranked queue: surfaces pass/stale/blocked/total `0/3/0/3`, active/actual folders `35/73`, and missing/stale folders `0/38`. Active manifests remain the source of truth; stale folders are retained until an operator-approved cleanup.
+- The current upload active-manifest lock passes with stale folders read-only: active locked/blocked/total `8/0/8`, stale readonly/with-values/total `38/0/38`, and operator values active/stale `0/0`. Only the active `H1344`-first decision intake should be used for upload work.
+- The current upload decision-rule gate now marks all active `8` rows as technical upload candidates: active/technical/blocked `8/8/0`, conditional approve-after-operator rows `8`, missing operator decision/author serialization `8/8`, and first action `H1344`. It does not enter decisions or submit anything.
+- The current upload operator action runway is ready for human decisions: active/technical/blocked `8/8/0`, operator/author/runtime `8/0/0`, urgency today/soon/future `2/4/2`, and first row `H1344` with required fields `operator_decision,operator_id,operator_decision_ref,operator_notes_optional`.
+- Prospective strict-blind escrow is ready for `19/19` targets, but competitive proof is still `0` because current-target native structures are pending. The external timestamp packet is also ready for commit/push packaging at `19/0/19` timestamp ready/blocked/total, with `8/11` upload ready/blocked, `19/19/19` sha256/escrow-md/manifest rows, and `0/0/0/0/0` proof/author/coordinate/proof-marker/portal hygiene. A post-native scoring scaffold is now ready-native-pending for `19/0/19` targets, with `8/11/19` upload/blocked/timestamp-ready, `162` metric rows, `16/3` complex/monomer targets, `144/18` complex/monomer metric rows, and `19/19/19/19` native dropzones/manifests/chain-mapping templates/metric CSVs.
+- Strict-blind source-request operator-fill worklist and batch-kit completion audits are green for the file surface: worklist `17/17` requests with `187/187/187` expected/template/worklist rows; batch kit `17/0/17` request pass/blocked/total, `4/4` root files, `187/187/187` expected/batch/per-request rows, `17/17/17` request folder/readme/csv files, and `0/0/0` coordinate/proof/author hygiene markers. Operator values and evidence refs are still missing at `187/153`, with `77` candidate-replacement fields.
+- Strict-blind monomer pre-native acquisition is now separated into its own board: monomer requests ready/acquire/total `0/10/10`, internal-like pre/post candidates `0/166`, and operator fields filled/missing/total `0/110/110`. The first request is `source_request_001` for `HIST_BBA5`, blocked by `prediction_not_before_native`; the first-slot dropzone remains `casp17/historical_seed_strict_blind_replacement_evidence_dropzones/01_hist_required_monomer_001/prediction/replacement_prediction.pdb`.
+- The first historical-seed clearance board now fails closed on the authoritative chronology guard before no-leak promotion: `HIST_CHIGNOLIN` is blocked as `post_native_prediction_chronology_blocked`, with `prediction_not_before_authoritative_native_date`; the next action is to replace it with a pre-native blind prediction artifact or keep it out of competitive proof.
+- MassiveFold external model-selection inputs are `15/15` ready for review-only reranking; this remains external no-native evidence and is not internal prediction proof.
+- Organic ligand LDDT-PLI/BiSyRMSD closure is mapped into a batch operator fill kit, and the kit completion audit passes for `7/7` candidate folders and `35/35` batch/per-candidate rows. Operator values are still missing, so metric evidence remains `0/7` candidates and `0/35` fields complete.
+- Win-tier proof is still fail-closed: strict-blind slots `0/40`, metric rows `0/440`, required files `0/480`, and sidechain-native benchmark `0/40`.
+
+Primary current documents and artifacts:
+
+- `casp17/WORKBENCH.md`
+- `casp17/CASP17_CURRENT_STATUS_REPORT.md`
+- `casp17/CASP17_WIN_TIER_GOAL.md`
+- `casp17/CASP17_ORGANIC_LIGAND_METRIC_BATCH_OPERATOR_FILL_KIT.md`
+- `casp17/CASP17_ORGANIC_LIGAND_METRIC_BATCH_OPERATOR_FILL_KIT_COMPLETION_AUDIT.md`
+- `casp17/CASP17_CURRENT_UPLOAD_OPERATOR_DECISION_KIT.md`
+- `casp17/CASP17_CURRENT_UPLOAD_OPERATOR_DECISION_KIT_COMPLETION_AUDIT.md`
+- `casp17/CASP17_CURRENT_ESCROW_EXTERNAL_TIMESTAMP_PACKET.md`
+- `casp17/CASP17_CURRENT_POST_NATIVE_SCORING_SCAFFOLD.md`
+- `casp17/CASP17_CURRENT_QUEUE_ROLLOVER_HYGIENE_AUDIT.md`
+- `casp17/CASP17_CURRENT_UPLOAD_ACTIVE_MANIFEST_LOCK.md`
+- `casp17/CASP17_CURRENT_UPLOAD_DECISION_RULE_GATE.md`
+- `casp17/CASP17_CURRENT_UPLOAD_OPERATOR_ACTION_RUNWAY.md`
+- `casp17/CASP17_3D_MOLECULAR_OBJECT_ATLAS.md`
+- `casp17/CASP17_3D_MOLECULAR_OBJECT_COORDINATE_MATERIALIZED_LIBRARY.md`
+- `casp17/CASP17_STRICT_BLIND_SOURCE_REQUEST_OPERATOR_FILL_BATCH_KIT.md`
+- `casp17/CASP17_STRICT_BLIND_SOURCE_REQUEST_OPERATOR_FILL_BATCH_KIT_COMPLETION_AUDIT.md`
+- `casp17/CASP17_STRICT_BLIND_SOURCE_REQUEST_OPERATOR_FILL_WORKLIST_COMPLETION_AUDIT.md`
+- `casp17/CASP17_STRICT_BLIND_MONOMER_PRE_NATIVE_ACQUISITION_BOARD.md`
+- `casp17/CASP17_CURRENT_UPLOAD_QUEUE.md`
+- `docs/casp17_participation_gate_2026-05-21.md`
+- `runs/casp17_readiness_dashboard_current.json`
+- `runs/casp17_win_tier_threshold_packet_current.json`
+- `runs/casp17_publication_figure_packet_current.json`
+
+Generated CASP17 render/data mirrors under `runs/` and `casp17/` remain local artifacts and should not be committed as raw generated data.
 
 ## Development Loop
 

@@ -8,7 +8,7 @@ from pathlib import Path
 
 import numpy as np
 
-from tools import build_gpcr_drd2_pose_generation_repair_packet as mod
+from tools.gpcr_replay import build_gpcr_drd2_pose_generation_repair_packet as mod
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -274,7 +274,7 @@ def test_repair_packet_cli_writes_json_markdown_and_rows(tmp_path: Path) -> None
     result = subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools/build_gpcr_drd2_pose_generation_repair_packet.py"),
+            str(ROOT / "tools/gpcr_replay/build_gpcr_drd2_pose_generation_repair_packet.py"),
             "--rows-csv",
             str(rows_csv),
             "--stage3-csv",

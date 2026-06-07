@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_pxr_exact_source_confirmation_packet as mod
+from tools.product import build_pxr_exact_source_confirmation_packet as mod
 
 
 def test_build_pxr_exact_source_confirmation_packet_focuses_manual_confirmation_rows() -> None:

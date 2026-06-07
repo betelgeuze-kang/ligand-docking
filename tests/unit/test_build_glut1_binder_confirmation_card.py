@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_glut1_binder_confirmation_card as mod
+from tools.product import build_glut1_binder_confirmation_card as mod
 
 
 def test_build_glut1_binder_confirmation_card() -> None:

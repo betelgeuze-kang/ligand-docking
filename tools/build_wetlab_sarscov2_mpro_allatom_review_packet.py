@@ -1,61 +1,22 @@
-#!/usr/bin/env python3
-from __future__ import annotations
+"""Compatibility shim; canonical module: tools.accounting.build_wetlab_sarscov2_mpro_allatom_review_packet."""
+import sys as _sys
+from pathlib import Path as _Path
+_repo = _Path(__file__).resolve()
+for _ in range(12):
+    if (_repo / 'pyproject.toml').exists():
+        if str(_repo) not in _sys.path:
+            _sys.path.insert(0, str(_repo))
+        break
+    _repo = _repo.parent
 
-import argparse
-from typing import Any
+from importlib import import_module as _import_module
+import sys as _sys
 
-from tools.wetlab_allatom_refinement_utils import build_target_allatom_review_packet
-from tools.wetlab_target_render_utils import load_json, write_artifact
-
-TARGET_ID = "SARS-CoV-2 Mpro"
-DEFAULT_LANE_JSON = "runs/wetlab_sarscov2_mpro_allatom_refinement_lane_current.json"
-DEFAULT_RUNNER_JSON = "runs/wetlab_sarscov2_mpro_allatom_refinement_runner_current.json"
-DEFAULT_OUT_MD = "runs/wetlab_sarscov2_mpro_allatom_review_packet_current.md"
-
-
-def build_payload(
-    lane_payload: dict[str, Any],
-    runner_payload: dict[str, Any],
-    *,
-    claim_readiness_json: str = "",
-    equivalence_gate_json: str = "",
-) -> dict[str, Any]:
-    payload = build_target_allatom_review_packet(
-        target_id=TARGET_ID,
-        lane_payload=lane_payload,
-        runner_payload=runner_payload,
-        lane_label="sarscov2_mpro_allatom_top32_refinement",
-        branch_mode="promote_tuned_branch_with_allatom_review",
-        default_lane_reopen_allowed=False,
-        claim_readiness_json=claim_readiness_json,
-        equivalence_gate_json=equivalence_gate_json,
-    )
-    payload.setdefault("structured", {})
-    payload["structured"]["allatom_refinement_lane_artifact"] = "runs/wetlab_sarscov2_mpro_allatom_refinement_lane_current.md"
-    payload["structured"]["allatom_runner_artifact"] = "runs/wetlab_sarscov2_mpro_allatom_refinement_runner_current.md"
-    return payload
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Build the SARS-CoV-2 Mpro pseudo all-atom review packet.")
-    parser.add_argument("--lane-json", default=DEFAULT_LANE_JSON)
-    parser.add_argument("--runner-json", default=DEFAULT_RUNNER_JSON)
-    parser.add_argument("--claim-readiness-json", default="")
-    parser.add_argument("--equivalence-gate-json", default="")
-    parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
-    return parser.parse_args()
-
-
-def main() -> None:
-    args = parse_args()
-    payload = build_payload(
-        load_json(args.lane_json),
-        load_json(args.runner_json),
-        claim_readiness_json=str(args.claim_readiness_json),
-        equivalence_gate_json=str(args.equivalence_gate_json),
-    )
-    write_artifact(args.out_md, "Wet-Lab SARS-CoV-2 Mpro All-Atom Review Packet", payload)
-
+_module = _import_module("tools.accounting.build_wetlab_sarscov2_mpro_allatom_review_packet")
+globals().update({k: v for k, v in _module.__dict__.items() if not k.startswith("__")})
 
 if __name__ == "__main__":
-    main()
+    _entry = getattr(_module, "main", None)
+    if _entry is None:
+        raise SystemExit("builder has no main(): tools.accounting.build_wetlab_sarscov2_mpro_allatom_review_packet")
+    raise SystemExit(_entry(_sys.argv[1:]) or 0)

@@ -191,7 +191,7 @@ def main() -> None:
     payload = build_payload(workbook_rows, sheet_rows, args.family)
     _write_csv(workbook_csv, payload["workbook_rows"])
     if args.family == "ca2" and bool(args.freeze_ready_ca2_packets):
-        from tools import ca2_packet_bridge as ca2_bridge
+        from tools.product import ca2_packet_bridge as ca2_bridge
 
         freeze_result = ca2_bridge.materialize_ready_workbook_rows(payload["workbook_rows"], apply_changes=True)
         payload["ca2_freeze_summary"] = freeze_result.get("summary", {})

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_wetlab_master_terminal_review as mod
+from tools.wetlab import build_wetlab_master_terminal_review as mod
 
 
 def test_build_wetlab_master_terminal_review_marks_complete() -> None:

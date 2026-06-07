@@ -1,65 +1,22 @@
-#!/usr/bin/env python3
-from __future__ import annotations
+"""Compatibility shim; canonical module: tools.accounting.build_caix_result_summary."""
+import sys as _sys
+from pathlib import Path as _Path
+_repo = _Path(__file__).resolve()
+for _ in range(12):
+    if (_repo / 'pyproject.toml').exists():
+        if str(_repo) not in _sys.path:
+            _sys.path.insert(0, str(_repo))
+        break
+    _repo = _repo.parent
 
-import argparse
+from importlib import import_module as _import_module
+import sys as _sys
 
-from tools.wetlab_target_render_utils import load_json, write_artifact
-from tools.wetlab_run_writer_utils import RESULT_SUMMARY_STATUSES, build_result_summary_payload
-
-DEFAULT_LAUNCH_JSON = "runs/caix_launch_packet_current.json"
-DEFAULT_GO_NO_GO_JSON = "runs/caix_condition_aware_go_no_go_card_current.json"
-DEFAULT_OUT_MD = "runs/caix_result_summary_current.md"
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Write the canonical CA IX result-summary artifact.")
-    parser.add_argument("--launch-json", default=DEFAULT_LAUNCH_JSON)
-    parser.add_argument("--go-no-go-json", default=DEFAULT_GO_NO_GO_JSON)
-    parser.add_argument("--status", choices=RESULT_SUMMARY_STATUSES, default="not_ready")
-    parser.add_argument("--decision-case", default="")
-    parser.add_argument("--action", default="")
-    parser.add_argument("--started-at", default="")
-    parser.add_argument("--updated-at", default="")
-    parser.add_argument("--completed-at", default="")
-    parser.add_argument("--notes", default="")
-    return parser.parse_args()
-
-
-def build_payload(launch_payload: dict, go_no_go_payload: dict, status: str = "not_ready", decision_case: str = "", action: str = "", started_at: str = "", updated_at: str = "", completed_at: str = "", notes: str = "") -> dict:
-    launch_s = dict(launch_payload.get("summary", {}) or {})
-    go_s = dict(go_no_go_payload.get("summary", {}) or {})
-    return build_result_summary_payload(
-        target_id="CA IX",
-        partner_track_id=str(launch_s.get("partner_track_id", "oncology_condition_aware")).strip() or "oncology_condition_aware",
-        launch_artifact="runs/caix_launch_packet_current.md",
-        launch_status=str(launch_s.get("status", "")).strip(),
-        go_no_go_artifact="runs/caix_condition_aware_go_no_go_card_current.md",
-        go_no_go_status=str(go_s.get("status", "")).strip(),
-        status=status,
-        decision_case=decision_case,
-        action=action,
-        started_at=started_at,
-        updated_at=updated_at,
-        completed_at=completed_at,
-        notes=notes,
-    )
-
-
-def main() -> None:
-    args = parse_args()
-    payload = build_payload(
-        load_json(args.launch_json),
-        load_json(args.go_no_go_json),
-        status=args.status,
-        decision_case=args.decision_case,
-        action=args.action,
-        started_at=args.started_at,
-        updated_at=args.updated_at,
-        completed_at=args.completed_at,
-        notes=args.notes,
-    )
-    write_artifact(DEFAULT_OUT_MD, "CA IX Result Summary", payload)
-
+_module = _import_module("tools.accounting.build_caix_result_summary")
+globals().update({k: v for k, v in _module.__dict__.items() if not k.startswith("__")})
 
 if __name__ == "__main__":
-    main()
+    _entry = getattr(_module, "main", None)
+    if _entry is None:
+        raise SystemExit("builder has no main(): tools.accounting.build_caix_result_summary")
+    raise SystemExit(_entry(_sys.argv[1:]) or 0)

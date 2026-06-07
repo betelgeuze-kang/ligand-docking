@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools.build_wetlab_tcruzi_pde_bindingdb_similarity_seed_packet import build_payload
+from tools.wetlab.build_wetlab_tcruzi_pde_bindingdb_similarity_seed_packet import build_payload
 
 
 def _write_raw(path: Path, affinities: list[dict[str, object]]) -> None:

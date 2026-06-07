@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
-from tools import monitor_ligand_scaleup_suite as mod
+from tools.product import monitor_ligand_scaleup_suite as mod
 
 
 def _write_json(path: Path, payload: dict) -> None:

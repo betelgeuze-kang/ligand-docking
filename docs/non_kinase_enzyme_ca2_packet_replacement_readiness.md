@@ -6,7 +6,7 @@ This helper validates the current CA2 replacement workbook before any packet row
 
 Helper:
 
-- `tools/build_ca2_packet_replacement_readiness.py`
+- `tools/product/build_ca2_packet_replacement_readiness.py`
 
 Outputs:
 

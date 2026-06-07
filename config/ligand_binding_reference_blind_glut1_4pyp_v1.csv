@@ -5,9 +5,9 @@ EGFR_KINASE,imatinib,-7.4,1,literature_proxy_v2
 EGFR_KINASE,ibuprofen,-2.1,0,literature_proxy_v2
 EGFR_KINASE,aspirin,-1.1,0,literature_proxy_v2
 EGFR_KINASE,caffeine,-0.6,0,literature_proxy_v2
-GLUT1_TRANSPORT_BLIND,glut1_placeholder_binder_01,-8.1,1,template_placeholder_needs_curation
-GLUT1_TRANSPORT_BLIND,glut1_placeholder_binder_02,-7.7,1,template_placeholder_needs_curation
-GLUT1_TRANSPORT_BLIND,glut1_placeholder_binder_03,-7.2,1,template_placeholder_needs_curation
-GLUT1_TRANSPORT_BLIND,glut1_placeholder_nonbinder_01,-1.1,0,template_placeholder_needs_curation
-GLUT1_TRANSPORT_BLIND,glut1_placeholder_nonbinder_02,-0.8,0,template_placeholder_needs_curation
-GLUT1_TRANSPORT_BLIND,glut1_placeholder_nonbinder_03,-0.4,0,template_placeholder_needs_curation
+GLUT1_TRANSPORT_BLIND,cytochalasin_b,-9.1694,1,pubmed_direct_binding::PMID1716731::CHEMBL2535::CHEMBL411729::Kd_190_nM::deltaG_298K_-9.1694
+GLUT1_TRANSPORT_BLIND,wzb117,,1,pubmed_functional_glut1_inhibitor::PMID27836974::not_direct_binding_kcal
+GLUT1_TRANSPORT_BLIND,stf31,,1,pubmed_functional_glut1_probe::PMID21813754::not_direct_binding_kcal
+GLUT1_TRANSPORT_BLIND,ibuprofen,-2.1,0,literature_proxy_v2
+GLUT1_TRANSPORT_BLIND,aspirin,-1.1,0,literature_proxy_v2
+GLUT1_TRANSPORT_BLIND,caffeine,-0.6,0,literature_proxy_v2

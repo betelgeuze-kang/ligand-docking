@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_wetlab_wave2_runtime_event as mod
+from tools.wetlab import build_wetlab_wave2_runtime_event as mod
 
 
 def test_build_wetlab_wave2_runtime_event_uses_placeholder_when_no_event_is_present() -> None:

@@ -1,0 +1,22 @@
+{
+  "claim_boundary": "Local CASP17 protein-name object library only. It materializes review folders and pointers for already-generated internal 3D object models; it does not copy native structures, fetch external data, score native accuracy, or submit to CASP.",
+  "summary": {
+    "atom_count": 917,
+    "blockers": "",
+    "chain_id": "B",
+    "coordinate_status": "valid",
+    "library_object_folder": "casp17/protein_object_library_current/H1340_Parahenipavirus_F_protein_antibody_complex/chain_B",
+    "library_protein_folder": "casp17/protein_object_library_current/H1340_Parahenipavirus_F_protein_antibody_complex",
+    "library_status": "pass",
+    "model_path": "casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_B/models/H1340_chain_B.pdb",
+    "object_id": "chain_B",
+    "projection_svg_path": "casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_B/renders/H1340_chain_B_projection.svg",
+    "protein_atom_count": 917,
+    "protein_key": "H1340_Parahenipavirus_F_protein_antibody_complex",
+    "protein_name": "Parahenipavirus F protein /antibody complex",
+    "residue_count": 117,
+    "source_object_folder": "casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_B",
+    "target_id": "H1340",
+    "viewer_html_path": "casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_B/viewer.html"
+  }
+}

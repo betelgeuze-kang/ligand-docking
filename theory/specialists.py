@@ -15,7 +15,7 @@ class SaltBridgeSpecialist(SaltBridgeLogic):
 
 
 class HydrophobicSpecialist(HydrophobicLogic):
-    always_zero_output = True
+    always_zero_output = False
 
 
 class AromaticSpecialist(AromaticLogic):
@@ -23,7 +23,7 @@ class AromaticSpecialist(AromaticLogic):
 
 
 class HBSpecialist(HbondLogic):
-    always_zero_output = True
+    always_zero_output = False
 
 
 class ChargeTransferSpecialist(ChargeTransferLogic):

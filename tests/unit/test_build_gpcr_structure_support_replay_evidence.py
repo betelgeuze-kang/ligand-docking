@@ -2,7 +2,7 @@ import csv
 import json
 from pathlib import Path
 
-from tools import build_gpcr_structure_support_replay_evidence as mod
+from tools.gpcr_replay import build_gpcr_structure_support_replay_evidence as mod
 
 
 def _write_csv(path: Path, rows: list[dict]) -> None:

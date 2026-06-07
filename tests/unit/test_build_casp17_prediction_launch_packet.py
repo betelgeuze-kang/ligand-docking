@@ -86,7 +86,7 @@ def _run_builder(
     _write_json(provisioning_json, {"summary": {"plan_status": provisioning_status}})
     command = [
         "python3",
-        str(ROOT / "tools/build_casp17_prediction_launch_packet.py"),
+        str(ROOT / "tools/casp17/build_casp17_prediction_launch_packet.py"),
         "--work-queue-json",
         str(work_queue),
         "--sequence-packet-json",

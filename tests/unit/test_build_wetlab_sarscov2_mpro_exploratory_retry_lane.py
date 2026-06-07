@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_wetlab_sarscov2_mpro_exploratory_retry_lane as mod
+from tools.wetlab import build_wetlab_sarscov2_mpro_exploratory_retry_lane as mod
 
 
 def test_build_wetlab_sarscov2_mpro_exploratory_retry_lane_uses_gate45_and_legacy_shard() -> None:

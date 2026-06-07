@@ -1,0 +1,21 @@
+[Unit]
+Description=MICF API Simulation Queue Worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/micf
+EnvironmentFile=/etc/micf/api-worker.env
+ExecStart=/usr/bin/python3 /opt/micf/tools/run_api_simulation_worker.py --worker-id %H-api-worker --lease-seconds ${API_WORKER_LEASE_SECONDS} --heartbeat-interval-seconds ${API_WORKER_HEARTBEAT_INTERVAL_SECONDS}
+Restart=always
+RestartSec=5
+User=micf
+Group=micf
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/micf
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,22 @@
+# H2338 Selection 53 MassiveFold Model Review
+
+- target: `H2338`
+- model_set: `H2338_T331`
+- model: `Model_50_cf_woTemplates_model_5_multimer_v2_pred_40.pdb`
+- protocol: `cf_woTemplates_v2`
+- seed/sample/pred: `0/5/40`
+- review_status: `pass`
+- source_cif: `casp17/massivefold_external_pool_intake/h2338_t331/extracted_models/H2338_all_pdbs/Model_50_cf_woTemplates_model_5_multimer_v2_pred_40.pdb`
+- local_cif: `casp17/massivefold_representative_viewers/h2338/selection_053_cf_woTemplates_v2_model_50/model.cif`
+- projection: `casp17/massivefold_representative_viewers/h2338/selection_053_cf_woTemplates_v2_model_50/projection.svg`
+- viewer: `casp17/massivefold_representative_viewers/h2338/selection_053_cf_woTemplates_v2_model_50/viewer.html`
+- atoms/displayed/residues/chains: `8133/900/1050/4`
+- bbox xyz/diagonal: `78.25/144.25/104.125/194.353`
+- centroid xyz: `0.808/0.163/-0.585`
+- radius_of_gyration: `43.745`
+- mean_b_iso: `89.711`
+- blockers: `-`
+
+## Claim Boundary
+
+CASP17 MassiveFold representative viewer packet only. It builds local review folders for organizer-provided external model-pool representatives for the selected target. These are external rerank and accuracy-estimation inputs, not internal predictions, not CASP submissions, and not competitive-proof evidence.

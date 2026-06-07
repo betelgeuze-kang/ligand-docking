@@ -31,6 +31,14 @@ const COMPARE_RESULTS_EXPLORER_FIELDS = [
     { label: 'BVH Path', value: (candidate) => describePocketBvhPath(candidate) },
     { label: 'BVH Query', value: (candidate) => describePocketBvhQuery(candidate) },
 ];
+const CUSTOMER_REPORT_REQUIRED_BLOCKS = [
+    'binding_site_explanation',
+    'pose_comparison',
+    'interaction_rationale',
+    'uncertainty_narrative',
+    'scope_claim_limit',
+    'counterfactual_rescue_suggestion',
+];
 const INTERACTION_KIND_META = {
     hbond: { label: 'H-bond', shortLabel: 'HB', color: '#38bdf8' },
     pipi: { label: 'Pi-Pi', shortLabel: 'Pi', color: '#c084fc' },
@@ -1875,13 +1883,80 @@ function renderBindingInfo(candidate) {
         interactionSummary.total ? `<li><strong>Interaction Mix:</strong> ${escapeHtml(interactionSummary.summaryLong)}</li>` : '',
     ].filter(Boolean);
 
-    dom.bindingRecipeList.innerHTML = recipeRows.length
+    const customerReportCard = renderCustomerReportCard(candidate);
+    const recipeMarkup = recipeRows.length
         ? `<ul class="action-list">${recipeRows.join('')}</ul>`
         : '<div class="contact-map-empty">현재 row에 추가 action recipe가 없습니다.</div>';
+    dom.bindingRecipeList.innerHTML = `${customerReportCard}${recipeMarkup}`;
     renderLigand2DDepiction(candidate, frame);
     renderContactMap(candidate, frame, interactionSummary);
     renderResidueContactHeatmap(candidate, frame, pocketAnalytics);
     renderSequenceViewer(candidate, frame, pocketAnalytics);
+}
+
+function normalizeCustomerReportBlock(blockId, source = {}) {
+    const rawBlock = source?.[blockId] || source?.blocks?.[blockId] || {};
+    const status = firstTruthy(rawBlock.status, source.status, 'not_reported');
+    return {
+        sectionId: blockId,
+        title: firstTruthy(rawBlock.title, humanizeCompactToken(blockId)),
+        status,
+        narrative: firstTruthy(rawBlock.narrative, rawBlock.customer_takeaway, rawBlock.customerTakeaway, ''),
+        claimLimit: firstTruthy(rawBlock.claim_limit, rawBlock.claimLimit, source.claim_limit, ''),
+        abstentionReason: firstTruthy(
+            rawBlock.abstention_reason,
+            rawBlock.abstentionReason,
+            source.primary_abstention_reason,
+            source.primaryAbstentionReason,
+            '',
+        ),
+        whatWouldChangeDecision: firstTruthy(
+            rawBlock.what_would_change_decision,
+            rawBlock.whatWouldChangeDecision,
+            source.what_would_change_decision,
+            source.whatWouldChangeDecision,
+            '',
+        ),
+    };
+}
+
+function renderCustomerReportCard(candidate) {
+    const customerReportCard = candidate?.customerReportCard
+        || candidate?.aiReportCustomerReportCard
+        || candidate?.productAiReportUx?.customer_report_card
+        || candidate?.productAiReportUx?.customerReportCard
+        || null;
+    if (!customerReportCard || typeof customerReportCard !== 'object') return '';
+    const blocks = CUSTOMER_REPORT_REQUIRED_BLOCKS.map((blockId) => normalizeCustomerReportBlock(blockId, customerReportCard));
+    const blockMarkup = blocks.map((block) => `
+        <li>
+          <strong>${escapeHtml(block.title)}</strong>
+          <span>${escapeHtml(humanizeCompactToken(block.status))}</span>
+          ${block.narrative ? `<p>${escapeHtml(block.narrative)}</p>` : ''}
+          ${block.claimLimit ? `<em>${escapeHtml(block.claimLimit)}</em>` : ''}
+        </li>
+    `).join('');
+    const primaryAbstention = firstTruthy(
+        customerReportCard.primary_abstention_reason,
+        customerReportCard.primaryAbstentionReason,
+        'not_reported',
+    );
+    const whatWouldChange = firstTruthy(
+        customerReportCard.what_would_change_decision,
+        customerReportCard.whatWouldChangeDecision,
+        '',
+    );
+    return `
+        <div class="customer-report-card">
+          <div class="section-title">AI Report</div>
+          <div class="info-grid">
+            <div class="info-cell"><span>Abstention</span><strong>${escapeHtml(humanizeCompactToken(primaryAbstention))}</strong></div>
+            <div class="info-cell"><span>Allowed Scope</span><strong>${escapeHtml((customerReportCard.allowed_scope_families || customerReportCard.allowedScopeFamilies || []).join(', ') || 'not_reported')}</strong></div>
+          </div>
+          <ul class="action-list">${blockMarkup}</ul>
+          ${whatWouldChange ? `<div class="analysis-empty">${escapeHtml(whatWouldChange)}</div>` : ''}
+        </div>
+    `;
 }
 
 function summarizeInteractionTypes(candidate, frameIndex = null) {
@@ -6513,11 +6588,6 @@ function resolveAssetUrlCandidates(pathLike) {
     const addCandidate = (value) => {
         if (value && !candidates.includes(value)) candidates.push(value);
     };
-    const addLocalhostFallbacks = (repoPath) => {
-        const clean = repoPath.startsWith('/') ? repoPath : `/${repoPath}`;
-        addCandidate(`http://127.0.0.1:8765${clean}`);
-        addCandidate(`http://localhost:8765${clean}`);
-    };
     const repoMarkers = ['/runs/', '/viewer/', '/data/', '/docs/'];
     for (const marker of repoMarkers) {
         const idx = normalized.indexOf(marker);
@@ -6526,7 +6596,6 @@ function resolveAssetUrlCandidates(pathLike) {
             if (protocol === 'file:') {
                 addCandidate(`..${repoPath}`);
                 addCandidate(`.${repoPath}`);
-                addLocalhostFallbacks(repoPath);
             } else {
                 addCandidate(repoPath);
                 addCandidate(`..${repoPath}`);
@@ -6540,12 +6609,18 @@ function resolveAssetUrlCandidates(pathLike) {
         if (normalized.startsWith('../runs/')) {
             const repoPath = `/${normalized.slice('../'.length)}`;
             if (protocol !== 'file:') addCandidate(repoPath);
-            else addLocalhostFallbacks(repoPath);
+            else {
+                addCandidate(`..${repoPath}`);
+                addCandidate(`.${repoPath}`);
+            }
         }
         if (normalized.startsWith('./runs/')) {
             const repoPath = `/${normalized.slice('./'.length)}`;
             if (protocol !== 'file:') addCandidate(repoPath);
-            else addLocalhostFallbacks(repoPath);
+            else {
+                addCandidate(`..${repoPath}`);
+                addCandidate(`.${repoPath}`);
+            }
         }
         return candidates;
     }
@@ -6553,13 +6628,11 @@ function resolveAssetUrlCandidates(pathLike) {
         if (protocol === 'file:') {
             addCandidate(`..${normalized}`);
             addCandidate(`.${normalized}`);
-            addLocalhostFallbacks(normalized);
         }
         addCandidate(normalized);
         return candidates;
     }
     if (normalized.startsWith('runs/') || normalized.startsWith('viewer/') || normalized.startsWith('data/') || normalized.startsWith('docs/')) {
-        if (protocol === 'file:') addLocalhostFallbacks(normalized);
         addCandidate(`./${normalized}`);
         addCandidate(`../${normalized}`);
         addCandidate(`/${normalized}`);

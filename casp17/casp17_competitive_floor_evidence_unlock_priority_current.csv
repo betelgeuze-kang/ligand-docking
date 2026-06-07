@@ -1,0 +1,61 @@
+dropzone_id,phase_order,phase,unlock_status,action_count,done_count,ready_count,open_count,target_id_done,file_actions_in_row,downstream_unlocked_file_actions,downstream_blocked_file_actions,first_open_column,first_open_status,next_action
+priority_001_REQUIRED_MONOMER_001,1,identity_unlock,awaiting_import,2,0,0,2,False,12,0,12,benchmark_id,awaiting_import_value,fill benchmark_id and target_id values first; target_id unlocks canonical file recommendations
+priority_002_REQUIRED_MONOMER_002,1,identity_unlock,awaiting_import,2,0,0,2,False,12,0,12,benchmark_id,awaiting_import_value,fill benchmark_id and target_id values first; target_id unlocks canonical file recommendations
+priority_003_REQUIRED_MONOMER_003,1,identity_unlock,awaiting_import,2,0,0,2,False,12,0,12,benchmark_id,awaiting_import_value,fill benchmark_id and target_id values first; target_id unlocks canonical file recommendations
+priority_004_REQUIRED_MONOMER_004,1,identity_unlock,awaiting_import,2,0,0,2,False,12,0,12,benchmark_id,awaiting_import_value,fill benchmark_id and target_id values first; target_id unlocks canonical file recommendations
+priority_005_REQUIRED_MONOMER_005,1,identity_unlock,awaiting_import,2,0,0,2,False,12,0,12,benchmark_id,awaiting_import_value,fill benchmark_id and target_id values first; target_id unlocks canonical file recommendations
+priority_006_REQUIRED_MONOMER_006,1,identity_unlock,awaiting_import,2,0,0,2,False,12,0,12,benchmark_id,awaiting_import_value,fill benchmark_id and target_id values first; target_id unlocks canonical file recommendations
+priority_007_REQUIRED_MONOMER_007,1,identity_unlock,awaiting_import,2,0,0,2,False,12,0,12,benchmark_id,awaiting_import_value,fill benchmark_id and target_id values first; target_id unlocks canonical file recommendations
+priority_008_REQUIRED_MONOMER_008,1,identity_unlock,awaiting_import,2,0,0,2,False,12,0,12,benchmark_id,awaiting_import_value,fill benchmark_id and target_id values first; target_id unlocks canonical file recommendations
+priority_009_REQUIRED_MONOMER_009,1,identity_unlock,awaiting_import,2,0,0,2,False,12,0,12,benchmark_id,awaiting_import_value,fill benchmark_id and target_id values first; target_id unlocks canonical file recommendations
+priority_010_REQUIRED_MONOMER_010,1,identity_unlock,awaiting_import,2,0,0,2,False,12,0,12,benchmark_id,awaiting_import_value,fill benchmark_id and target_id values first; target_id unlocks canonical file recommendations
+priority_011_REQUIRED_COMPLEX_001,1,identity_unlock,awaiting_import,2,0,0,2,False,12,0,12,benchmark_id,awaiting_import_value,fill benchmark_id and target_id values first; target_id unlocks canonical file recommendations
+priority_012_REQUIRED_COMPLEX_002,1,identity_unlock,awaiting_import,2,0,0,2,False,12,0,12,benchmark_id,awaiting_import_value,fill benchmark_id and target_id values first; target_id unlocks canonical file recommendations
+priority_013_REQUIRED_COMPLEX_003,1,identity_unlock,awaiting_import,2,0,0,2,False,12,0,12,benchmark_id,awaiting_import_value,fill benchmark_id and target_id values first; target_id unlocks canonical file recommendations
+priority_014_REQUIRED_COMPLEX_004,1,identity_unlock,awaiting_import,2,0,0,2,False,12,0,12,benchmark_id,awaiting_import_value,fill benchmark_id and target_id values first; target_id unlocks canonical file recommendations
+priority_015_REQUIRED_COMPLEX_005,1,identity_unlock,awaiting_import,2,0,0,2,False,12,0,12,benchmark_id,awaiting_import_value,fill benchmark_id and target_id values first; target_id unlocks canonical file recommendations
+priority_001_REQUIRED_MONOMER_001,2,file_sources,awaiting_import,12,0,0,12,False,12,0,0,prediction_pdb,awaiting_import_file,"place/import prediction, native, and ablation PDB source files after target_id is known"
+priority_002_REQUIRED_MONOMER_002,2,file_sources,awaiting_import,12,0,0,12,False,12,0,0,prediction_pdb,awaiting_import_file,"place/import prediction, native, and ablation PDB source files after target_id is known"
+priority_003_REQUIRED_MONOMER_003,2,file_sources,awaiting_import,12,0,0,12,False,12,0,0,prediction_pdb,awaiting_import_file,"place/import prediction, native, and ablation PDB source files after target_id is known"
+priority_004_REQUIRED_MONOMER_004,2,file_sources,awaiting_import,12,0,0,12,False,12,0,0,prediction_pdb,awaiting_import_file,"place/import prediction, native, and ablation PDB source files after target_id is known"
+priority_005_REQUIRED_MONOMER_005,2,file_sources,awaiting_import,12,0,0,12,False,12,0,0,prediction_pdb,awaiting_import_file,"place/import prediction, native, and ablation PDB source files after target_id is known"
+priority_006_REQUIRED_MONOMER_006,2,file_sources,awaiting_import,12,0,0,12,False,12,0,0,prediction_pdb,awaiting_import_file,"place/import prediction, native, and ablation PDB source files after target_id is known"
+priority_007_REQUIRED_MONOMER_007,2,file_sources,awaiting_import,12,0,0,12,False,12,0,0,prediction_pdb,awaiting_import_file,"place/import prediction, native, and ablation PDB source files after target_id is known"
+priority_008_REQUIRED_MONOMER_008,2,file_sources,awaiting_import,12,0,0,12,False,12,0,0,prediction_pdb,awaiting_import_file,"place/import prediction, native, and ablation PDB source files after target_id is known"
+priority_009_REQUIRED_MONOMER_009,2,file_sources,awaiting_import,12,0,0,12,False,12,0,0,prediction_pdb,awaiting_import_file,"place/import prediction, native, and ablation PDB source files after target_id is known"
+priority_010_REQUIRED_MONOMER_010,2,file_sources,awaiting_import,12,0,0,12,False,12,0,0,prediction_pdb,awaiting_import_file,"place/import prediction, native, and ablation PDB source files after target_id is known"
+priority_011_REQUIRED_COMPLEX_001,2,file_sources,awaiting_import,12,0,0,12,False,12,0,0,prediction_pdb,awaiting_import_file,"place/import prediction, native, and ablation PDB source files after target_id is known"
+priority_012_REQUIRED_COMPLEX_002,2,file_sources,awaiting_import,12,0,0,12,False,12,0,0,prediction_pdb,awaiting_import_file,"place/import prediction, native, and ablation PDB source files after target_id is known"
+priority_013_REQUIRED_COMPLEX_003,2,file_sources,awaiting_import,12,0,0,12,False,12,0,0,prediction_pdb,awaiting_import_file,"place/import prediction, native, and ablation PDB source files after target_id is known"
+priority_014_REQUIRED_COMPLEX_004,2,file_sources,awaiting_import,12,0,0,12,False,12,0,0,prediction_pdb,awaiting_import_file,"place/import prediction, native, and ablation PDB source files after target_id is known"
+priority_015_REQUIRED_COMPLEX_005,2,file_sources,awaiting_import,12,0,0,12,False,12,0,0,prediction_pdb,awaiting_import_file,"place/import prediction, native, and ablation PDB source files after target_id is known"
+priority_001_REQUIRED_MONOMER_001,3,provenance_clearance,awaiting_import,10,0,0,10,False,12,0,0,leakage_clearance,awaiting_import_value,fill no-leak provenance confirmations and dates
+priority_002_REQUIRED_MONOMER_002,3,provenance_clearance,awaiting_import,10,0,0,10,False,12,0,0,leakage_clearance,awaiting_import_value,fill no-leak provenance confirmations and dates
+priority_003_REQUIRED_MONOMER_003,3,provenance_clearance,awaiting_import,10,0,0,10,False,12,0,0,leakage_clearance,awaiting_import_value,fill no-leak provenance confirmations and dates
+priority_004_REQUIRED_MONOMER_004,3,provenance_clearance,awaiting_import,10,0,0,10,False,12,0,0,leakage_clearance,awaiting_import_value,fill no-leak provenance confirmations and dates
+priority_005_REQUIRED_MONOMER_005,3,provenance_clearance,awaiting_import,10,0,0,10,False,12,0,0,leakage_clearance,awaiting_import_value,fill no-leak provenance confirmations and dates
+priority_006_REQUIRED_MONOMER_006,3,provenance_clearance,awaiting_import,10,0,0,10,False,12,0,0,leakage_clearance,awaiting_import_value,fill no-leak provenance confirmations and dates
+priority_007_REQUIRED_MONOMER_007,3,provenance_clearance,awaiting_import,10,0,0,10,False,12,0,0,leakage_clearance,awaiting_import_value,fill no-leak provenance confirmations and dates
+priority_008_REQUIRED_MONOMER_008,3,provenance_clearance,awaiting_import,10,0,0,10,False,12,0,0,leakage_clearance,awaiting_import_value,fill no-leak provenance confirmations and dates
+priority_009_REQUIRED_MONOMER_009,3,provenance_clearance,awaiting_import,10,0,0,10,False,12,0,0,leakage_clearance,awaiting_import_value,fill no-leak provenance confirmations and dates
+priority_010_REQUIRED_MONOMER_010,3,provenance_clearance,awaiting_import,10,0,0,10,False,12,0,0,leakage_clearance,awaiting_import_value,fill no-leak provenance confirmations and dates
+priority_011_REQUIRED_COMPLEX_001,3,provenance_clearance,awaiting_import,10,0,0,10,False,12,0,0,leakage_clearance,awaiting_import_value,fill no-leak provenance confirmations and dates
+priority_012_REQUIRED_COMPLEX_002,3,provenance_clearance,awaiting_import,10,0,0,10,False,12,0,0,leakage_clearance,awaiting_import_value,fill no-leak provenance confirmations and dates
+priority_013_REQUIRED_COMPLEX_003,3,provenance_clearance,awaiting_import,10,0,0,10,False,12,0,0,leakage_clearance,awaiting_import_value,fill no-leak provenance confirmations and dates
+priority_014_REQUIRED_COMPLEX_004,3,provenance_clearance,awaiting_import,10,0,0,10,False,12,0,0,leakage_clearance,awaiting_import_value,fill no-leak provenance confirmations and dates
+priority_015_REQUIRED_COMPLEX_005,3,provenance_clearance,awaiting_import,10,0,0,10,False,12,0,0,leakage_clearance,awaiting_import_value,fill no-leak provenance confirmations and dates
+priority_001_REQUIRED_MONOMER_001,4,calibration_values,awaiting_import,6,0,0,6,False,12,0,0,selected_model_rank,awaiting_import_value,"fill ranks, native metrics, and internal scores"
+priority_002_REQUIRED_MONOMER_002,4,calibration_values,awaiting_import,6,0,0,6,False,12,0,0,selected_model_rank,awaiting_import_value,"fill ranks, native metrics, and internal scores"
+priority_003_REQUIRED_MONOMER_003,4,calibration_values,awaiting_import,6,0,0,6,False,12,0,0,selected_model_rank,awaiting_import_value,"fill ranks, native metrics, and internal scores"
+priority_004_REQUIRED_MONOMER_004,4,calibration_values,awaiting_import,6,0,0,6,False,12,0,0,selected_model_rank,awaiting_import_value,"fill ranks, native metrics, and internal scores"
+priority_005_REQUIRED_MONOMER_005,4,calibration_values,awaiting_import,6,0,0,6,False,12,0,0,selected_model_rank,awaiting_import_value,"fill ranks, native metrics, and internal scores"
+priority_006_REQUIRED_MONOMER_006,4,calibration_values,awaiting_import,6,0,0,6,False,12,0,0,selected_model_rank,awaiting_import_value,"fill ranks, native metrics, and internal scores"
+priority_007_REQUIRED_MONOMER_007,4,calibration_values,awaiting_import,6,0,0,6,False,12,0,0,selected_model_rank,awaiting_import_value,"fill ranks, native metrics, and internal scores"
+priority_008_REQUIRED_MONOMER_008,4,calibration_values,awaiting_import,6,0,0,6,False,12,0,0,selected_model_rank,awaiting_import_value,"fill ranks, native metrics, and internal scores"
+priority_009_REQUIRED_MONOMER_009,4,calibration_values,awaiting_import,6,0,0,6,False,12,0,0,selected_model_rank,awaiting_import_value,"fill ranks, native metrics, and internal scores"
+priority_010_REQUIRED_MONOMER_010,4,calibration_values,awaiting_import,6,0,0,6,False,12,0,0,selected_model_rank,awaiting_import_value,"fill ranks, native metrics, and internal scores"
+priority_011_REQUIRED_COMPLEX_001,4,calibration_values,awaiting_import,6,0,0,6,False,12,0,0,selected_model_rank,awaiting_import_value,"fill ranks, native metrics, and internal scores"
+priority_012_REQUIRED_COMPLEX_002,4,calibration_values,awaiting_import,6,0,0,6,False,12,0,0,selected_model_rank,awaiting_import_value,"fill ranks, native metrics, and internal scores"
+priority_013_REQUIRED_COMPLEX_003,4,calibration_values,awaiting_import,6,0,0,6,False,12,0,0,selected_model_rank,awaiting_import_value,"fill ranks, native metrics, and internal scores"
+priority_014_REQUIRED_COMPLEX_004,4,calibration_values,awaiting_import,6,0,0,6,False,12,0,0,selected_model_rank,awaiting_import_value,"fill ranks, native metrics, and internal scores"
+priority_015_REQUIRED_COMPLEX_005,4,calibration_values,awaiting_import,6,0,0,6,False,12,0,0,selected_model_rank,awaiting_import_value,"fill ranks, native metrics, and internal scores"

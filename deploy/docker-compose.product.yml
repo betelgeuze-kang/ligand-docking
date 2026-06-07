@@ -1,0 +1,89 @@
+services:
+  api-server:
+    build:
+      context: ..
+      dockerfile: Dockerfile.product
+    image: micf-api:product
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      PRODUCT_API_AUTH_REQUIRED: "1"
+      PRODUCT_API_TOKEN: "${PRODUCT_API_TOKEN:?set PRODUCT_API_TOKEN}"
+      PRODUCT_API_MAX_PAYLOAD_BYTES: "${PRODUCT_API_MAX_PAYLOAD_BYTES:-10485760}"
+      PRODUCT_API_RATE_LIMIT_PER_MINUTE: "${PRODUCT_API_RATE_LIMIT_PER_MINUTE:-120}"
+      PRODUCT_API_HOSTED_EXPOSURE_APPROVED: "${PRODUCT_API_HOSTED_EXPOSURE_APPROVED:-0}"
+      PRODUCT_API_TLS_TERMINATION_OPERATOR_VERIFIED: "${PRODUCT_API_TLS_TERMINATION_OPERATOR_VERIFIED:-1}"
+      API_INLINE_WORKER_ENABLED: "0"
+      API_VALIDATED_RUNNER_ENABLED: "${API_VALIDATED_RUNNER_ENABLED:-0}"
+      API_VALIDATED_RUNNER_PROFILES_PATH: "${API_VALIDATED_RUNNER_PROFILES_PATH:-/app/config/api_validated_runner_profiles}"
+      API_VALIDATED_RUNNER_TIMEOUT_SECONDS: "${API_VALIDATED_RUNNER_TIMEOUT_SECONDS:-3600}"
+      API_JOB_STORE_PATH: "/data/api_jobs.sqlite3"
+      API_WORKER_LEASE_SECONDS: "${API_WORKER_LEASE_SECONDS:-300}"
+      API_WORKER_HEARTBEAT_INTERVAL_SECONDS: "${API_WORKER_HEARTBEAT_INTERVAL_SECONDS:-30}"
+      API_RESULT_MANIFEST_SIGNING_KEY: "${API_RESULT_MANIFEST_SIGNING_KEY:?set API_RESULT_MANIFEST_SIGNING_KEY}"
+      API_RESULT_MANIFEST_KEY_ID: "${API_RESULT_MANIFEST_KEY_ID:-product-local}"
+    volumes:
+      - micf-product-results:/data
+    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  api-worker:
+    image: micf-api:product
+    build:
+      context: ..
+      dockerfile: Dockerfile.product
+    restart: unless-stopped
+    depends_on:
+      - api-server
+    environment:
+      API_INLINE_WORKER_ENABLED: "0"
+      API_VALIDATED_RUNNER_ENABLED: "${API_VALIDATED_RUNNER_ENABLED:-0}"
+      API_VALIDATED_RUNNER_PROFILES_PATH: "${API_VALIDATED_RUNNER_PROFILES_PATH:-/app/config/api_validated_runner_profiles}"
+      API_VALIDATED_RUNNER_TIMEOUT_SECONDS: "${API_VALIDATED_RUNNER_TIMEOUT_SECONDS:-3600}"
+      API_JOB_STORE_PATH: "/data/api_jobs.sqlite3"
+      API_WORKER_LEASE_SECONDS: "${API_WORKER_LEASE_SECONDS:-300}"
+      API_WORKER_HEARTBEAT_INTERVAL_SECONDS: "${API_WORKER_HEARTBEAT_INTERVAL_SECONDS:-30}"
+      API_RESULT_MANIFEST_SIGNING_KEY: "${API_RESULT_MANIFEST_SIGNING_KEY:?set API_RESULT_MANIFEST_SIGNING_KEY}"
+      API_RESULT_MANIFEST_KEY_ID: "${API_RESULT_MANIFEST_KEY_ID:-product-local}"
+    volumes:
+      - micf-product-results:/data
+    command:
+      - "sh"
+      - "-c"
+      - >
+        python3 tools/run_api_simulation_worker.py
+        --worker-id api-worker-$${HOSTNAME}
+        --lease-seconds $${API_WORKER_LEASE_SECONDS}
+        --heartbeat-interval-seconds $${API_WORKER_HEARTBEAT_INTERVAL_SECONDS}
+
+  api-docking-dispatch:
+    image: micf-api:product
+    build:
+      context: ..
+      dockerfile: Dockerfile.product
+    restart: unless-stopped
+    depends_on:
+      - api-server
+      - api-worker
+    environment:
+      API_INLINE_WORKER_ENABLED: "0"
+      API_VALIDATED_RUNNER_ENABLED: "${API_VALIDATED_RUNNER_ENABLED:-0}"
+      API_VALIDATED_RUNNER_PROFILES_PATH: "${API_VALIDATED_RUNNER_PROFILES_PATH:-/app/config/api_validated_runner_profiles}"
+      API_JOB_STORE_PATH: "/data/api_jobs.sqlite3"
+      API_DOCKING_DISPATCH_POLL_INTERVAL_SECONDS: "${API_DOCKING_DISPATCH_POLL_INTERVAL_SECONDS:-2}"
+      API_DOCKING_DISPATCH_LIMIT: "${API_DOCKING_DISPATCH_LIMIT:-1}"
+      RESULTS_STORAGE_PATH: "/data/results"
+      API_RESULT_MANIFEST_SIGNING_KEY: "${API_RESULT_MANIFEST_SIGNING_KEY:?set API_RESULT_MANIFEST_SIGNING_KEY}"
+      API_RESULT_MANIFEST_KEY_ID: "${API_RESULT_MANIFEST_KEY_ID:-product-local}"
+    volumes:
+      - micf-product-results:/data
+    command:
+      - "sh"
+      - "-c"
+      - >
+        python3 tools/run_api_docking_dispatch_worker.py
+        --poll-interval-seconds $${API_DOCKING_DISPATCH_POLL_INTERVAL_SECONDS}
+        --limit $${API_DOCKING_DISPATCH_LIMIT}
+
+volumes:
+  micf-product-results:

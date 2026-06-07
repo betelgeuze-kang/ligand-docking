@@ -1,0 +1,41 @@
+{
+  "claim_boundary": "CASP17 3D molecular object coordinate materialized library only. It materializes each source coordinate model from the dry-run plan into a protein-name/object folder with sha256 verification. The default symlink mode avoids duplicating raw coordinate bytes. It does not alter source models, compute native accuracy, serialize a CASP author code, or submit to CASP.",
+  "rows": [
+    {
+      "atlas_object_key": "massivefold_model1_candidate",
+      "atlas_protein_key": "R2341_RRE_core",
+      "blockers": "",
+      "claim_boundary": "CASP17 3D molecular object coordinate materialized library only. It materializes each source coordinate model from the dry-run plan into a protein-name/object folder with sha256 verification. The default symlink mode avoids duplicating raw coordinate bytes. It does not alter source models, compute native accuracy, serialize a CASP author code, or submit to CASP.",
+      "materialization_mode": "symlink",
+      "materialization_status": "coordinate_materialized",
+      "materialized_bytes": 319897,
+      "materialized_coordinate_folder": "casp17/3d_molecular_object_coordinate_materialized_library/R2341_RRE_core/massivefold_model1_candidate/coordinates",
+      "materialized_coordinate_path": "casp17/3d_molecular_object_coordinate_materialized_library/R2341_RRE_core/massivefold_model1_candidate/coordinates/model.cif",
+      "materialized_coordinate_present": "true",
+      "materialized_object_folder": "casp17/3d_molecular_object_coordinate_materialized_library/R2341_RRE_core/massivefold_model1_candidate",
+      "materialized_protein_folder": "casp17/3d_molecular_object_coordinate_materialized_library/R2341_RRE_core",
+      "materialized_sha256": "5f82877281cf377e7a4e78b11c84aca52bf30324cb577dbeb8d766e577cffb7f",
+      "next_action": "Use this per-object materialized coordinate for local 3D review.",
+      "object_id": "model1_candidate",
+      "object_manifest": "casp17/3d_molecular_object_coordinate_materialized_library/R2341_RRE_core/massivefold_model1_candidate/coordinate_manifest.json",
+      "object_readme": "casp17/3d_molecular_object_coordinate_materialized_library/R2341_RRE_core/massivefold_model1_candidate/README.md",
+      "protein_manifest": "casp17/3d_molecular_object_coordinate_materialized_library/R2341_RRE_core/protein_coordinate_manifest.json",
+      "protein_name": "RRE core",
+      "sha256_match": "true",
+      "source_bytes": 319897,
+      "source_coordinate_format": "cif",
+      "source_coordinate_path": "casp17/massivefold_representative_viewers/r2341/selection_031_basic_model_2/model.cif",
+      "source_coordinate_present": "true",
+      "source_lane": "massivefold_freeze_candidate",
+      "source_sha256": "5f82877281cf377e7a4e78b11c84aca52bf30324cb577dbeb8d766e577cffb7f",
+      "symlink_target": "../../../../massivefold_representative_viewers/r2341/selection_031_basic_model_2/model.cif",
+      "target_id": "R2341"
+    }
+  ],
+  "summary": {
+    "atlas_protein_key": "R2341_RRE_core",
+    "blocked_count": 0,
+    "materialized_count": 1,
+    "object_count": 1
+  }
+}

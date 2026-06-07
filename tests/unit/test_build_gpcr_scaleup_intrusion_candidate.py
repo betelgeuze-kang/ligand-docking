@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from tools import build_gpcr_scaleup_intrusion_candidate as mod
+from tools.gpcr_replay import build_gpcr_scaleup_intrusion_candidate as mod
 
 
 def _write_json(path: Path, payload: dict) -> None:

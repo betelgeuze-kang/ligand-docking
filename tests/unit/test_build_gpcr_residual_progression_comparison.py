@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_gpcr_residual_progression_comparison as mod
+from tools.product import build_gpcr_residual_progression_comparison as mod
 
 
 def test_build_gpcr_residual_progression_comparison() -> None:

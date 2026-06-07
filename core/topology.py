@@ -1,8 +1,28 @@
 # core/topology.py
 
+import os
+
 import torch
 import torch.nn as nn
+from .claim_boundary import (
+    TOPOLOGY_FIDELITY_PLACEHOLDER_ALANINE,
+    TOPOLOGY_FIDELITY_SEQUENCE_MAPPED,
+    default_topology_claim_metadata,
+)
 from .definitions import StrategyType
+from .sequence_topology import (
+    hbond_role_for_residue_index,
+    residue_indices_from_sequence,
+    virtual_hbond_offset_for_residue_index,
+)
+
+_ADRESS_PRODUCTION_ALLOWED = str(os.getenv("ADRESS_PRODUCTION_ALLOWED", "0")).strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+
 
 class TopologyFactory:
     """
@@ -15,6 +35,10 @@ class TopologyFactory:
         self.device = device
         self.target_name = target_name
         self.strategy_type = strategy_type
+        self.residue_types_source = TOPOLOGY_FIDELITY_PLACEHOLDER_ALANINE
+        self.claim_metadata = default_topology_claim_metadata(
+            residue_types_source=self.residue_types_source
+        )
 
         # [NEW] AdResS support flags
         self.use_adress = strategy_type == StrategyType.ADRESS
@@ -44,7 +68,35 @@ class TopologyFactory:
         """
         # Placeholder: All residues are Alanine (index 1) for simplicity
         # In practice, this would come from a sequence or PDB file
+        self.residue_types_source = TOPOLOGY_FIDELITY_PLACEHOLDER_ALANINE
+        self.claim_metadata = default_topology_claim_metadata(
+            residue_types_source=self.residue_types_source
+        )
         return torch.ones(self.n_res, dtype=torch.long, device=self.device) # Example: all Alanine
+
+    def set_residue_types_from_sequence(self, residue_type_indices: torch.Tensor) -> None:
+        """Inject sequence-mapped residue types when authoritative sequence data exists."""
+        if residue_type_indices.shape[0] != self.n_res:
+            raise ValueError("residue_type_indices length must match n_res")
+        self.residue_types = residue_type_indices.to(dtype=torch.long, device=self.device)
+        self.residue_types_source = TOPOLOGY_FIDELITY_SEQUENCE_MAPPED
+        self.claim_metadata = default_topology_claim_metadata(
+            residue_types_source=self.residue_types_source
+        )
+
+    def set_residue_types_from_sequence_string(self, sequence: str) -> None:
+        """Map one-letter sequence to residue type indices."""
+        indices = residue_indices_from_sequence(sequence, device=self.device)
+        if int(indices.numel()) != int(self.n_res):
+            if int(indices.numel()) > int(self.n_res):
+                indices = indices[: self.n_res]
+            else:
+                pad = torch.ones(self.n_res - int(indices.numel()), dtype=torch.long, device=self.device)
+                indices = torch.cat([indices, pad], dim=0)
+        self.set_residue_types_from_sequence(indices)
+
+    def topology_fidelity(self) -> str:
+        return str(self.claim_metadata.get("topology_fidelity", TOPOLOGY_FIDELITY_PLACEHOLDER_ALANINE))
 
     def _initialize_virtual_sc_coords(self):
         """
@@ -64,8 +116,18 @@ class TopologyFactory:
             c_sc: [B, N_res, 3]
         """
         # Fixed local offset baseline for the lightweight CA-SC model.
-        c_sc_offset = torch.tensor([0.0, 1.5, 0.0], dtype=c_ca.dtype, device=c_ca.device).view(1, 1, 3)
-        return c_ca + c_sc_offset.expand(c_ca.shape[0], c_ca.shape[1], 3)
+        offsets = []
+        for idx in self.residue_types.detach().cpu().tolist():
+            offsets.append(virtual_hbond_offset_for_residue_index(int(idx)))
+        offset_t = torch.tensor(offsets, dtype=c_ca.dtype, device=c_ca.device).unsqueeze(0)
+        return c_ca + offset_t
+
+    def compute_virtual_hbond_bead_coords(self, c_ca: torch.Tensor) -> torch.Tensor:
+        """Pocket-aware virtual H-bond beads from CA coordinates."""
+        return self.compute_virtual_sc_coords(c_ca)
+
+    def hbond_roles(self) -> list[str]:
+        return [hbond_role_for_residue_index(int(v)) for v in self.residue_types.detach().cpu().tolist()]
 
     def expand_residue_types_for_virtual_sc(self):
         """
@@ -167,15 +229,10 @@ class TopologyFactory:
         This is a placeholder. Real implementation requires AdResS-specific logic.
         """
         if self.use_adress:
-            # Use spatial hash or other method on combined coordinates (c_combined)
-            # Return neighbor indices, distances, masks for both AA and CG regions
-            # This is highly complex and depends on the specific AdResS scheme
-            # For now, return a dummy structure
-            B, N_total, _ = c.shape
-            K_max = 100 # Example max neighbors
-            nb_idx = torch.randint(0, N_total, (B, N_total, K_max), device=self.device)
-            nb_dist = torch.randn(B, N_total, K_max, device=self.device)
-            nb_mask = torch.ones(B, N_total, K_max, device=self.device)
-            return nb_idx, nb_dist, nb_mask
-        else:
-            return None, None, None # Not applicable
+            if not _ADRESS_PRODUCTION_ALLOWED:
+                raise RuntimeError(
+                    "AdResS neighbor path is disabled in production. "
+                    "Set ADRESS_PRODUCTION_ALLOWED=1 only for explicit research runs."
+                )
+            raise NotImplementedError("AdResS neighbor builder is not production-ready.")
+        return None, None, None

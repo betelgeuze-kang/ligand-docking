@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: micf-api-server
+  namespace: micf-product
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: micf-api-server
+  template:
+    metadata:
+      labels:
+        app: micf-api-server
+    spec:
+      containers:
+        - name: api-server
+          image: micf-api:product
+          imagePullPolicy: IfNotPresent
+          command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+          ports:
+            - containerPort: 8000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: micf-api-config
+            - secretRef:
+                name: micf-api-secrets
+          volumeMounts:
+            - name: results
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+      volumes:
+        - name: results
+          persistentVolumeClaim:
+            claimName: micf-product-results

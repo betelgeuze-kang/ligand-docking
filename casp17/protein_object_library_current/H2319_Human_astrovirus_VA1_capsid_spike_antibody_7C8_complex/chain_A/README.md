@@ -1,0 +1,16 @@
+# H2319 chain_A
+
+- protein/complex: `Human astrovirus VA1 capsid spike - antibody 7C8 complex`
+- chain: `A`
+- status: `pass`
+- atoms: `2155` protein atoms `2155` residues `273`
+- coordinates: `valid`
+- model: `casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/objects/chain_A/models/H2319_chain_A.pdb`
+- projection: `casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/objects/chain_A/renders/H2319_chain_A_projection.svg`
+- viewer: `casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/objects/chain_A/viewer.html`
+- source object folder: `casp17/targets_current/H2319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex/objects/chain_A`
+- blockers: `-`
+
+## Claim Boundary
+
+Local CASP17 protein-name object library only. It materializes review folders and pointers for already-generated internal 3D object models; it does not copy native structures, fetch external data, score native accuracy, or submit to CASP.

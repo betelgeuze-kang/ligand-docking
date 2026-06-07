@@ -1,0 +1,18 @@
+{
+  "claim_boundary": "CASP17 3D molecular object coordinate materialized library only. It materializes each source coordinate model from the dry-run plan into a protein-name/object folder with sha256 verification. The default symlink mode avoids duplicating raw coordinate bytes. It does not alter source models, compute native accuracy, serialize a CASP author code, or submit to CASP.",
+  "summary": {
+    "atlas_object_key": "current_chain_C",
+    "atlas_protein_key": "H2312_EXT1_EXT2_2BAV4",
+    "blockers": "",
+    "materialization_mode": "symlink",
+    "materialization_status": "coordinate_materialized",
+    "materialized_coordinate_path": "casp17/3d_molecular_object_coordinate_materialized_library/H2312_EXT1_EXT2_2BAV4/current_chain_C/coordinates/H2312_chain_C.pdb",
+    "materialized_sha256": "d7a4b41948b29c4cc0e0ed19f876e6dad6b8172f1cfaceadd86876b01a6f6099",
+    "object_id": "chain_C",
+    "protein_name": "EXT1-EXT2-2BAV4",
+    "sha256_match": "true",
+    "source_coordinate_path": "casp17/targets_current/H2312_EXT1_EXT2_2BAV4/objects/chain_C/models/H2312_chain_C.pdb",
+    "source_sha256": "d7a4b41948b29c4cc0e0ed19f876e6dad6b8172f1cfaceadd86876b01a6f6099",
+    "target_id": "H2312"
+  }
+}

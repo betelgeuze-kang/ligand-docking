@@ -1,0 +1,83 @@
+{
+  "rows": [
+    {
+      "action_count": 450,
+      "applied_count": 0,
+      "awaiting_count": 450,
+      "blocked_count": 0,
+      "next_action": "enter proposed_value, evidence_ref, and operator_clearance in the import CSV",
+      "path": "casp17/casp17_competitive_floor_evidence_import_current.json",
+      "ready_count": 0,
+      "stage": "evidence_import",
+      "status": "awaiting_import"
+    },
+    {
+      "action_count": 270,
+      "applied_count": 0,
+      "awaiting_count": 0,
+      "blocked_count": 0,
+      "next_action": "enter the cleared historical benchmark_id and cite the local target-selection evidence",
+      "path": "casp17/casp17_competitive_floor_value_ledger_current.json",
+      "ready_count": 0,
+      "stage": "value_ledger",
+      "status": "awaiting_values"
+    },
+    {
+      "action_count": 450,
+      "applied_count": 0,
+      "awaiting_count": 450,
+      "blocked_count": 0,
+      "next_action": "fill benchmark_id in row_fill.csv from cleared local evidence",
+      "path": "casp17/casp17_competitive_floor_evidence_intake_current.json",
+      "ready_count": 0,
+      "stage": "evidence_intake",
+      "status": "awaiting_evidence"
+    },
+    {
+      "action_count": 450,
+      "applied_count": 0,
+      "awaiting_count": 450,
+      "blocked_count": 0,
+      "next_action": "provide the missing cleared evidence, then rerun intake and this patch gate",
+      "path": "casp17/casp17_competitive_floor_row_fill_patch_gate_current.json",
+      "ready_count": 0,
+      "stage": "row_fill_patch_gate",
+      "status": "awaiting_evidence"
+    },
+    {
+      "action_count": 450,
+      "applied_count": 0,
+      "awaiting_count": 450,
+      "blocked_count": 0,
+      "next_action": "wait for cleared evidence, then rerun intake and patch gate",
+      "path": "casp17/casp17_competitive_floor_row_fill_apply_plan_current.json",
+      "ready_count": 0,
+      "stage": "row_fill_apply_plan",
+      "status": "awaiting_evidence"
+    }
+  ],
+  "summary": {
+    "apply_import": false,
+    "apply_plan_applied_count": 0,
+    "apply_plan_planned_patch_count": 0,
+    "apply_plan_status": "awaiting_evidence",
+    "apply_row_fill": false,
+    "claim_boundary": "Local competitive-floor evidence round only. It runs the local evidence import, value-ledger audit, evidence intake, row_fill patch gate, and row_fill apply-plan in order. It does not choose targets, clear no-leak provenance, fetch native structures, score native accuracy, run predictors, submit to CASP, or mutate row_fill.csv unless --apply-row-fill is explicitly provided.",
+    "dropzone_json": "casp17/casp17_competitive_floor_evidence_dropzone_current.json",
+    "first_next_action": "enter proposed_value, evidence_ref, and operator_clearance in the import CSV",
+    "generated_at_local": "2026-05-25T23:23:04+09:00",
+    "import_applied_count": 0,
+    "import_awaiting_file_count": 180,
+    "import_awaiting_value_count": 270,
+    "import_csv": "casp17/casp17_competitive_floor_evidence_import_current.csv",
+    "import_ready_for_apply_count": 0,
+    "import_status": "awaiting_import",
+    "intake_patch_candidate_count": 0,
+    "intake_status": "awaiting_evidence",
+    "packet_type": "casp17_competitive_floor_evidence_round",
+    "patch_gate_ready_to_patch_count": 0,
+    "patch_gate_status": "awaiting_evidence",
+    "round_status": "awaiting_import",
+    "stage_count": 5
+  }
+}

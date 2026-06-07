@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from tools import build_tcruzi_krs1_launch_packet as mod
-from tools import build_tcruzi_krs1_render_suite as render_mod
+from tools.wetlab import build_tcruzi_krs1_launch_packet as mod
+from tools.wetlab import build_tcruzi_krs1_render_suite as render_mod
 from tools import build_wetlab_tcruzi_krs1_novelty_fill_map as novelty_mod
 from tools import build_wetlab_tcruzi_krs1_repurposing_fill_map as rep_mod
 

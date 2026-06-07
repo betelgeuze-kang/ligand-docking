@@ -68,6 +68,17 @@ python3 tools/build_local_delivery_verdict_gate.py
 
 이 verdict gate는 필수 P0 evidence, wetlab 상태, delivery readiness 조건이 모두 충족되기 전까지 의도적으로 fail-closed 됩니다.
 
+## 제품 API (`/simulate`)
+
+HTTP API 제품 surface는 **ligand HTVS 및 backmapping scoring**만 지원하며, operator-approved validated runner profile을 통해서만 실행됩니다. 범용 MD 시뮬레이션은 지원하지 않습니다.
+
+```bash
+pip install -r requirements-api.txt
+uvicorn api.main:app --host 127.0.0.1 --port 8000
+```
+
+`runner_profile_id` 없이 `/simulate`를 호출하면 422/400과 함께 unsupported-scope 응답을 반환합니다.
+
 ## 주요 워크플로우
 
 | 워크플로우 | 주요 entry point |
@@ -91,6 +102,36 @@ python3 tools/build_local_delivery_verdict_gate.py
 - `docs/local_delivery_engine_provenance.md`
 - `docs/local_delivery_claim_policy.md`
 - `docs/post_green_improvement_plan.md`
+
+## CASP17 내부 물리 예측 lane
+
+이 저장소에는 현재 CASP17 참가 준비용 내부 물리 lane이 포함되어 있습니다. 활성 lane은 로컬 분자동역학/coarse-grain physics stack 안에서만 동작하며, AlphaFold, ColabFold, ESMFold, OmegaFold, public/template 구조, current-target native lookup, 타 팀 모델을 사용하지 않습니다.
+
+2026-06-02 KST 기준 로컬 상태:
+
+- CASP17 workbench 상태는 `ready_for_operator_fill`이고, 현재 증명된 최고 로컬 단계는 여전히 `review_quality`입니다.
+- 현재 target 정리는 green입니다. target model folder `19/19`, target object folder/viewer/projection `58/58/58`, 3D molecular object atlas는 protein folder `24`, object folder `68`개입니다.
+- current package preflight는 `19/19` target에서 green입니다. 파일, 포맷, author field, sidechain repack 상태, sha256 accounting이 준비되어 있습니다.
+- official upload queue는 의도적으로 partial입니다. 현재 target `10/19`개만 operator upload-review-ready이고, `9/19`개는 deadline 또는 official-target 상태 때문에 blocked입니다.
+- prospective strict-blind escrow는 `19/19` target에서 준비됐지만, current-target native가 아직 pending이므로 competitive proof는 `0`입니다.
+- MassiveFold external model-selection input은 `15/15` ready입니다. 단, external no-native review evidence일 뿐 internal prediction proof는 아닙니다.
+- Organic ligand LDDT-PLI/BiSyRMSD closure는 batch operator fill kit로 묶였지만, 아직 candidate `0/7`, field `0/35`만 complete입니다.
+- Win-tier proof는 계속 fail-closed입니다. strict-blind slot `0/40`, metric row `0/440`, required file `0/480`, sidechain-native benchmark `0/40`입니다.
+
+주요 현재 문서와 artifact:
+
+- `casp17/WORKBENCH.md`
+- `casp17/CASP17_CURRENT_STATUS_REPORT.md`
+- `casp17/CASP17_WIN_TIER_GOAL.md`
+- `casp17/CASP17_ORGANIC_LIGAND_METRIC_BATCH_OPERATOR_FILL_KIT.md`
+- `casp17/CASP17_3D_MOLECULAR_OBJECT_ATLAS.md`
+- `casp17/CASP17_CURRENT_UPLOAD_QUEUE.md`
+- `docs/casp17_participation_gate_2026-05-21.md`
+- `runs/casp17_readiness_dashboard_current.json`
+- `runs/casp17_win_tier_threshold_packet_current.json`
+- `runs/casp17_publication_figure_packet_current.json`
+
+`runs/`와 `casp17/` 아래 생성된 CASP17 render/data mirror는 로컬 산출물이며 raw generated data로 커밋하지 않는 것이 기본 원칙입니다.
 
 ## 현재 검증 스냅샷
 

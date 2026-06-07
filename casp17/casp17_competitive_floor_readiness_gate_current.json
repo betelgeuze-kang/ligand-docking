@@ -1,0 +1,79 @@
+{
+  "rows": [
+    {
+      "blocked_count": 15,
+      "first_blocker": "proposed_benchmark_id_required,proposed_target_id_required,evidence_ref_required,operator_clearance_required",
+      "gate_id": "identity_gate",
+      "gate_order": 1,
+      "gate_status": "awaiting_identity",
+      "next_action": "fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance",
+      "ready_count": 0,
+      "total_count": 15
+    },
+    {
+      "blocked_count": 0,
+      "first_blocker": "",
+      "gate_id": "identity_apply_gate",
+      "gate_order": 2,
+      "gate_status": "pass",
+      "next_action": "fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance",
+      "ready_count": 15,
+      "total_count": 15
+    },
+    {
+      "blocked_count": 180,
+      "first_blocker": "awaiting_identity",
+      "gate_id": "file_source_gate",
+      "gate_order": 3,
+      "gate_status": "waiting_on_identity",
+      "next_action": "fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance",
+      "ready_count": 0,
+      "total_count": 180
+    },
+    {
+      "blocked_count": 270,
+      "first_blocker": "awaiting_identity",
+      "gate_id": "value_entry_gate",
+      "gate_order": 4,
+      "gate_status": "waiting_on_identity",
+      "next_action": "fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance",
+      "ready_count": 0,
+      "total_count": 270
+    },
+    {
+      "blocked_count": 15,
+      "first_blocker": "awaiting_identity",
+      "gate_id": "evidence_import_gate",
+      "gate_order": 5,
+      "gate_status": "awaiting_identity",
+      "next_action": "fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance",
+      "ready_count": 0,
+      "total_count": 15
+    },
+    {
+      "blocked_count": 1,
+      "first_blocker": "identity_gate",
+      "gate_id": "competitive_floor_gate",
+      "gate_order": 6,
+      "gate_status": "awaiting_identity",
+      "next_action": "fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance",
+      "ready_count": 0,
+      "total_count": 15
+    }
+  ],
+  "summary": {
+    "blocked_gate_count": 5,
+    "claim_boundary": "Local competitive-floor readiness gate only. It evaluates row-level execution-board evidence to decide whether identity, file-source, value-entry, and evidence-import stages are ready to advance. It does not choose targets, clear no-leak provenance, fetch native structures, score native accuracy, run predictors, mutate row_fill.csv, apply imports, or submit to CASP.",
+    "execution_board_json": "casp17/casp17_competitive_floor_execution_board_current.json",
+    "execution_board_status": "awaiting_identity",
+    "first_blocked_gate_id": "identity_gate",
+    "first_blocked_next_action": "fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance",
+    "first_blocked_status": "awaiting_identity",
+    "gate_count": 6,
+    "generated_at_local": "2026-05-26T00:32:36+09:00",
+    "packet_type": "casp17_competitive_floor_readiness_gate",
+    "pass_count": 1,
+    "readiness_gate_status": "awaiting_identity",
+    "row_count": 15
+  }
+}

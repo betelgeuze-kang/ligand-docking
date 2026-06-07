@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools.build_wetlab_tcruzi_pde_ligand_atomization_gap_packet import build_payload
+from tools.wetlab.build_wetlab_tcruzi_pde_ligand_atomization_gap_packet import build_payload
 
 
 def test_ligand_atomization_gap_packet_blocks_two_bead_ligands() -> None:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_pxr_pending_resolution_packet as mod
+from tools.product import build_pxr_pending_resolution_packet as mod
 
 
 def test_build_pxr_pending_resolution_packet_merges_policy_slice_and_readiness() -> None:

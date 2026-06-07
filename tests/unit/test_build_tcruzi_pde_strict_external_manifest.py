@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from tools import build_tcruzi_pde_strict_external_manifest as mod
+from tools.wetlab import build_tcruzi_pde_strict_external_manifest as mod
 
 
 def _write_pdb(path: Path) -> None:

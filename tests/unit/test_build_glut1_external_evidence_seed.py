@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_glut1_external_evidence_seed as mod
+from tools.product import build_glut1_external_evidence_seed as mod
 
 
 def test_build_glut1_external_evidence_seed_payload() -> None:

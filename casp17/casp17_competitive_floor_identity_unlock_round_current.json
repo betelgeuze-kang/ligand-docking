@@ -1,0 +1,56 @@
+{
+  "rows": [
+    {
+      "applied_count": 0,
+      "awaiting_count": 15,
+      "blocked_count": 0,
+      "next_action": "proposed_benchmark_id_required,proposed_target_id_required,evidence_ref_required,operator_clearance_required",
+      "path": "casp17/casp17_competitive_floor_identity_unlock_kit_current.json",
+      "ready_count": 0,
+      "stage": "identity_kit",
+      "status": "awaiting_identity"
+    },
+    {
+      "applied_count": 0,
+      "awaiting_count": 450,
+      "blocked_count": 0,
+      "next_action": "enter proposed_value, evidence_ref, and operator_clearance in the import CSV",
+      "path": "casp17/casp17_competitive_floor_evidence_import_current.json",
+      "ready_count": 0,
+      "stage": "evidence_import",
+      "status": "awaiting_import"
+    },
+    {
+      "applied_count": 0,
+      "awaiting_count": 30,
+      "blocked_count": 180,
+      "next_action": "fill benchmark_id and target_id values first; target_id unlocks canonical file recommendations",
+      "path": "casp17/casp17_competitive_floor_evidence_unlock_priority_current.json",
+      "ready_count": 30,
+      "stage": "unlock_priority",
+      "status": "identity_unlock_required"
+    }
+  ],
+  "summary": {
+    "applied_identity_import_count": 0,
+    "apply_identity": false,
+    "apply_import": false,
+    "claim_boundary": "Local competitive-floor identity unlock round only. It chains the compact identity kit, evidence import audit/apply gate, and unlock-priority audit so cleared benchmark_id/target_id entries can be reviewed and applied consistently. It does not choose historical targets, clear no-leak provenance, fetch native structures, score native accuracy, run predictors, mutate row_fill.csv, or submit to CASP.",
+    "file_actions_waiting_on_identity_count": 180,
+    "first_next_action": "fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance in the identity kit",
+    "generated_at_local": "2026-05-26T00:32:36+09:00",
+    "identity_awaiting_count": 15,
+    "identity_blocked_count": 0,
+    "identity_kit_json": "casp17/casp17_competitive_floor_identity_unlock_kit_current.json",
+    "identity_open_action_count": 30,
+    "identity_ready_for_import_count": 0,
+    "identity_round_status": "awaiting_identity",
+    "import_applied_count": 0,
+    "import_json": "casp17/casp17_competitive_floor_evidence_import_current.json",
+    "import_ready_for_apply_count": 0,
+    "packet_type": "casp17_competitive_floor_identity_unlock_round",
+    "row_count": 15,
+    "target_id_open_count": 15,
+    "unlock_priority_json": "casp17/casp17_competitive_floor_evidence_unlock_priority_current.json"
+  }
+}

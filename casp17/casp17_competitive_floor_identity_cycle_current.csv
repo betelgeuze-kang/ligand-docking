@@ -1,0 +1,8 @@
+stage,status,path,ready_count,awaiting_count,blocked_count,total_count,next_action
+identity_sync,awaiting_intake,casp17/casp17_competitive_floor_identity_intake_sync_current.json,0,15,0,15,"fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance in the intake bundle"
+identity_round,awaiting_identity,casp17/casp17_competitive_floor_identity_unlock_round_current.json,0,15,15,15,"fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance in the identity kit"
+file_source_plan,waiting_on_identity,casp17/casp17_competitive_floor_file_source_plan_current.json,0,180,0,180,fill and apply the compact identity unlock kit first
+value_entry_plan,waiting_on_identity,casp17/casp17_competitive_floor_value_entry_plan_current.json,0,270,0,270,fill and apply the compact identity unlock kit first
+execution_board,awaiting_identity,casp17/casp17_competitive_floor_execution_board_current.json,0,15,0,15,"fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance"
+readiness_gate,awaiting_identity,casp17/casp17_competitive_floor_readiness_gate_current.json,1,0,5,6,"fill proposed_benchmark_id, proposed_target_id, evidence_ref, and operator_clearance"
+workbench,ready_for_operator_fill,casp17/casp17_workbench_index_current.json,16,0,0,16,Replace placeholder target/benchmark IDs with a cleared historical non-CASP17 protein target.

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_glut1_negative_review_handoff_packet as mod
+from tools.product import build_glut1_negative_review_handoff_packet as mod
 
 
 def test_build_glut1_negative_review_handoff_packet_collects_negative_and_caution_rows() -> None:

@@ -11,8 +11,8 @@ These files are templates only. They are intended to move the `CA2` family one s
 Use the CA2 scaffold checker when you want to verify the template package is internally consistent without attempting a real blind run:
 
 ```bash
-python3 tools/run_ca2_expansion_scaffold_check.py --verbose
-python3 tools/run_ca2_expansion_scaffold_check.py --json
+python3 tools/product/run_ca2_expansion_scaffold_check.py --verbose
+python3 tools/product/run_ca2_expansion_scaffold_check.py --json
 ```
 
 The command is validate-only. It checks linked files, target IDs, profile/template flags, and task/profile wiring. It does not launch ligand generation, hard-decoy work, or any blind/OOD/smoke execution.

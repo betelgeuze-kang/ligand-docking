@@ -1,50 +1,22 @@
-#!/usr/bin/env python3
-from __future__ import annotations
+"""Compatibility shim; canonical module: tools.accounting.build_wetlab_lrrk2_novelty_fill_map."""
+import sys as _sys
+from pathlib import Path as _Path
+_repo = _Path(__file__).resolve()
+for _ in range(12):
+    if (_repo / 'pyproject.toml').exists():
+        if str(_repo) not in _sys.path:
+            _sys.path.insert(0, str(_repo))
+        break
+    _repo = _repo.parent
 
-from tools.wetlab_target_render_utils import write_artifact
+from importlib import import_module as _import_module
+import sys as _sys
 
-DEFAULT_OUT_MD = 'runs/wetlab_lrrk2_novelty_fill_map_current.md'
+_module = _import_module("tools.accounting.build_wetlab_lrrk2_novelty_fill_map")
+globals().update({k: v for k, v in _module.__dict__.items() if not k.startswith("__")})
 
-
-def build_payload() -> dict:
-    rows = [
-        {
-            'target_id': 'LRRK2',
-            'rank': 1,
-            'novelty_compound_name': 'MLi-2',
-            'series_class': 'benchmark_lrrk2_tool_compound',
-            'selection_role': 'benchmark_control',
-            'why_selected': 'Canonical LRRK2 benchmark inhibitor used to anchor biochemical and cellular pRab10 interpretation.',
-        },
-        {
-            'target_id': 'LRRK2',
-            'rank': 2,
-            'novelty_compound_name': 'PFE-360',
-            'series_class': 'benchmark_lrrk2_tool_compound',
-            'selection_role': 'benchmark_control',
-            'why_selected': 'Established LRRK2 inhibitor comparator that keeps the novelty lane tied to published kinase benchmarks.',
-        },
-        {
-            'target_id': 'LRRK2',
-            'rank': 3,
-            'novelty_compound_name': 'BIIB122 (DNL151)',
-            'series_class': 'clinical_lrrk2_benchmark',
-            'selection_role': 'proceed_now',
-            'why_selected': 'Clinical-stage LRRK2 benchmark used to connect the packet to a translational Parkinson-focused rail.',
-        },
-    ]
-    return {
-        'summary': {
-            'status': 'wetlab_lrrk2_novelty_fill_map_ready',
-            'target_id': 'LRRK2',
-            'row_count': len(rows),
-            'filled_slot_count': len(rows),
-            'selection_policy': 'published_lrrk2_benchmark_and_translational_lane',
-            'next_required_step': 'Use these benchmark and translational compounds as the novelty lane for the fifth Wave 2 LRRK2 packet.',
-        },
-        'rows': rows,
-    }
-
-
-if __name__ == '__main__':
-    write_artifact(DEFAULT_OUT_MD, 'LRRK2 Novelty Fill Map', build_payload())
+if __name__ == "__main__":
+    _entry = getattr(_module, "main", None)
+    if _entry is None:
+        raise SystemExit("builder has no main(): tools.accounting.build_wetlab_lrrk2_novelty_fill_map")
+    raise SystemExit(_entry(_sys.argv[1:]) or 0)

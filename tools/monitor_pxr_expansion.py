@@ -434,7 +434,7 @@ def _render(args: argparse.Namespace) -> str:
         "monitor: python3 tools/monitor_pxr_expansion.py --template-json "
         f"{args.template_json} --bootstrap-json {args.bootstrap_json} --loop --interval-sec 5 --clear-screen --color"
     )
-    lines.append("freeze_helper: python3 tools/build_pxr_curated_packet_freeze.py")
+    lines.append("freeze_helper: python3 tools/product/build_pxr_curated_packet_freeze.py")
     if run_root is not None:
         lines.append(
             "3set_monitor: python3 tools/monitor_biorxiv_external_validation.py --run-root "

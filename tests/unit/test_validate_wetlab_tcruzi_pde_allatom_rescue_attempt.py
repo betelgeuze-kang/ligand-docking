@@ -4,7 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from tools.validate_wetlab_tcruzi_pde_allatom_rescue_attempt import main, validate
+from tools.wetlab.validate_wetlab_tcruzi_pde_allatom_rescue_attempt import main, validate
 
 
 GOOD_SHA = "a" * 64

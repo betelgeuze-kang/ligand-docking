@@ -1,0 +1,4 @@
+stage,status,path,ready_count,awaiting_count,blocked_count,applied_count,next_action
+identity_kit,awaiting_identity,casp17/casp17_competitive_floor_identity_unlock_kit_current.json,0,15,0,0,"proposed_benchmark_id_required,proposed_target_id_required,evidence_ref_required,operator_clearance_required"
+evidence_import,awaiting_import,casp17/casp17_competitive_floor_evidence_import_current.json,0,450,0,0,"enter proposed_value, evidence_ref, and operator_clearance in the import CSV"
+unlock_priority,identity_unlock_required,casp17/casp17_competitive_floor_evidence_unlock_priority_current.json,30,30,180,0,fill benchmark_id and target_id values first; target_id unlocks canonical file recommendations

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_glut1_local_evidence_note as mod
+from tools.product import build_glut1_local_evidence_note as mod
 
 
 def test_build_glut1_local_evidence_note_blocked() -> None:

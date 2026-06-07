@@ -72,7 +72,7 @@ def test_build_ca2_packet_fill_queue(tmp_path: Path) -> None:
     out_csv = runs / 'ca2_packet_fill_queue_current.csv'
     out_md = runs / 'ca2_packet_fill_queue_current.md'
     subprocess.run(
-        ['python3', str(ROOT / 'tools/build_ca2_packet_fill_queue.py'), '--out-json', str(out_json), '--out-csv', str(out_csv), '--out-md', str(out_md)],
+        ['python3', str(ROOT / 'tools/product/build_ca2_packet_fill_queue.py'), '--out-json', str(out_json), '--out-csv', str(out_csv), '--out-md', str(out_md)],
         check=True,
         cwd=tmp_path,
     )

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_transporter_apply_draft_status as mod
+from tools.product import build_transporter_apply_draft_status as mod
 
 
 def _contains_tokens(text: str, *tokens: str) -> None:
@@ -23,8 +23,28 @@ def test_build_transporter_apply_draft_status() -> None:
                 {"target_id": "GLUT1"},
             ]
         },
-        {"summary": {"workbook_row_count": 6, "ready_seed_row_count": 0}, "workbook_rows": [{"row_ready_for_apply": "no", "placeholder_sources": "reference"}] * 6},
-        {"summary": {"workbook_row_count": 6, "ready_seed_row_count": 0}, "workbook_rows": [{"row_ready_for_apply": "no", "placeholder_sources": "reference"}] * 6},
+        {
+            "summary": {"workbook_row_count": 6, "ready_seed_row_count": 0},
+            "workbook_rows": [
+                {"packet_step": "core_binder_01", "row_ready_for_apply": "no", "placeholder_sources": "reference", "replacement_source": "PMID1"},
+                {"packet_step": "core_binder_02", "row_ready_for_apply": "no", "placeholder_sources": "reference", "replacement_source": "PMID2"},
+                {"packet_step": "core_binder_03", "row_ready_for_apply": "no", "placeholder_sources": "reference", "replacement_source": "PMID3"},
+                {"packet_step": "core_non_binder_01", "row_ready_for_apply": "no", "placeholder_sources": "reference"},
+                {"packet_step": "core_non_binder_02", "row_ready_for_apply": "no", "placeholder_sources": "reference"},
+                {"packet_step": "core_non_binder_03", "row_ready_for_apply": "no", "placeholder_sources": "reference"},
+            ],
+        },
+        {
+            "summary": {"workbook_row_count": 6, "ready_seed_row_count": 0},
+            "workbook_rows": [
+                {"packet_step": "core_binder_01", "row_ready_for_apply": "no", "placeholder_sources": "reference", "replacement_source": "PMID4"},
+                {"packet_step": "core_binder_02", "row_ready_for_apply": "no", "placeholder_sources": "reference", "replacement_source": "PMID5"},
+                {"packet_step": "core_binder_03", "row_ready_for_apply": "no", "placeholder_sources": "reference", "replacement_source": "PMID6"},
+                {"packet_step": "core_non_binder_01", "row_ready_for_apply": "no", "placeholder_sources": "reference"},
+                {"packet_step": "core_non_binder_02", "row_ready_for_apply": "no", "placeholder_sources": "reference"},
+                {"packet_step": "core_non_binder_03", "row_ready_for_apply": "no", "placeholder_sources": "reference"},
+            ],
+        },
         {"summary": {"queue_count": 6, "binder_slots": 3, "non_binder_slots": 3}},
         {"summary": {"queue_count": 6, "binder_slots": 3, "non_binder_slots": 3}},
         {"summary": {"exact_human_aqp1_activity_count": 1, "primary_focus_ligand": "AqB013", "signal": "exact_human_activity_present_leave_kcal_blank"}},
@@ -37,6 +57,17 @@ def test_build_transporter_apply_draft_status() -> None:
                 "structured_pair_absent_count": 1,
             }
         },
+        None,
+        {
+            "rows": [
+                {"target_id": "AQP1", "packet_step": "core_non_binder_01", "authoritative_negative_apply_allowed": True},
+                {"target_id": "AQP1", "packet_step": "core_non_binder_02", "authoritative_negative_apply_allowed": True},
+                {"target_id": "AQP1", "packet_step": "core_non_binder_03", "authoritative_negative_apply_allowed": True},
+                {"target_id": "GLUT1", "packet_step": "core_non_binder_01", "authoritative_negative_apply_allowed": True},
+                {"target_id": "GLUT1", "packet_step": "core_non_binder_02", "authoritative_negative_apply_allowed": True},
+                {"target_id": "GLUT1", "packet_step": "core_non_binder_03", "authoritative_negative_apply_allowed": True},
+            ]
+        },
     )
     assert payload["summary"]["target_count"] == 2
     assert payload["summary"]["current_phase"] == "blocker_closure_seed_row_promotion"
@@ -46,7 +77,9 @@ def test_build_transporter_apply_draft_status() -> None:
     assert payload["summary"]["completed_manual_verdict_count"] == 6
     assert payload["summary"]["note_template_count"] == 6
     assert payload["summary"]["packet_queue_count"] == 12
-    assert payload["summary"]["ready_for_apply_rows"] == 0
+    assert payload["summary"]["ready_for_apply_rows"] == 6
+    assert payload["summary"]["placeholder_driven_rows"] == 0
+    assert payload["summary"]["authoritative_negative_apply_rows"] == 6
     assert payload["summary"]["aqp1_exact_human_activity_count"] == 1
     assert payload["summary"]["aqp1_quantitative_provenance_focus_ligand"] == "AqB013"
     assert payload["summary"]["aqp1_quantitative_provenance_signal"] == "exact_human_activity_present_leave_kcal_blank"
@@ -67,12 +100,18 @@ def test_build_transporter_apply_draft_status() -> None:
     )
     assert payload["target_rows"][0]["draft_apply_status"] == "seed_row_promotion_blocked"
     assert payload["target_rows"][0]["binder_seed_row_count"] == 3
+    assert payload["target_rows"][0]["ready_for_apply_rows"] == 3
+    assert payload["target_rows"][0]["placeholder_driven_rows"] == 0
+    assert payload["target_rows"][0]["authoritative_negative_apply_rows"] == 3
     assert payload["target_rows"][0]["second_wave_source_confirmation_ready"] is False
     assert payload["target_rows"][0]["direct_quantitative_binding_count"] == 0
     assert payload["target_rows"][0]["exact_human_activity_count"] == 1
     assert payload["target_rows"][0]["quantitative_provenance_signal"] == "exact_human_activity_present_leave_kcal_blank"
     _contains_tokens(payload["target_rows"][0]["next_required_step"], "exact-human-activity", "blank")
     assert payload["target_rows"][1]["second_wave_source_confirmation_ready"] is True
+    assert payload["target_rows"][1]["ready_for_apply_rows"] == 3
+    assert payload["target_rows"][1]["placeholder_driven_rows"] == 0
+    assert payload["target_rows"][1]["authoritative_negative_apply_rows"] == 3
     assert payload["target_rows"][1]["second_wave_source_confirmation_packet_artifact"] == "runs/glut1_second_wave_source_confirmation_packet_current.md"
     assert payload["target_rows"][1]["second_wave_source_confirmation_row_count"] == 3
     assert payload["target_rows"][1]["second_wave_source_confirmation_primary_focus_ligand"] == "cytochalasin B"

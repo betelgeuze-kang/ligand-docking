@@ -1,0 +1,5 @@
+gate,status,required_evidence
+target_template_pdb,ready,target-specific CAPRI template downloaded from the CAPRI system
+candidate_submission_pdb,ready,local candidate_submission.pdb assembled for this target and role
+local_pdb_format,closed_context,HEADER/MODEL/ENDMDL/TER/END/AUTHOR/COMPND/ATOM checks pass locally
+capri_online_validator,blocked,CAPRI online validator acceptance before upload

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_wetlab_tcruzi_krs1_exploratory_retry_lane as mod
+from tools.wetlab import build_wetlab_tcruzi_krs1_exploratory_retry_lane as mod
 
 
 def test_build_wetlab_tcruzi_krs1_exploratory_retry_lane_selects_gate51() -> None:

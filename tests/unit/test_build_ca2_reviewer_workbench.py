@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_ca2_reviewer_workbench as mod
+from tools.product import build_ca2_reviewer_workbench as mod
 
 
 def test_build_ca2_reviewer_workbench_payload() -> None:

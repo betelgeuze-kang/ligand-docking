@@ -1,0 +1,18 @@
+{
+  "claim_boundary": "Per-target local organization of internal CASP17 predicted coordinates, FASTA, renders, and QC metadata only; not an official CASP submission, native accuracy result, or experimental structure.",
+  "summary": {
+    "atom_count": 820,
+    "chain_id": "C",
+    "coordinate_status": "valid",
+    "manifest_path": "casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_C/metadata/H1340_chain_C_manifest.json",
+    "model_path": "casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_C/models/H1340_chain_C.pdb",
+    "object_folder": "casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_C",
+    "object_id": "chain_C",
+    "projection_svg_path": "casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_C/renders/H1340_chain_C_projection.svg",
+    "protein_atom_count": 820,
+    "readme_path": "casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_C/README.md",
+    "residue_count": 107,
+    "target_id": "H1340",
+    "viewer_html_path": "casp17/targets_current/H1340_Parahenipavirus_F_protein_antibody_complex/objects/chain_C/viewer.html"
+  }
+}

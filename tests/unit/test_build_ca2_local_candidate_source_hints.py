@@ -71,7 +71,7 @@ def test_build_ca2_local_candidate_source_hints(tmp_path: Path) -> None:
     subprocess.run(
         [
             'python3',
-            str(ROOT / 'tools/build_ca2_local_candidate_source_hints.py'),
+            str(ROOT / 'tools/product/build_ca2_local_candidate_source_hints.py'),
             '--out-json',
             str(out_json),
             '--out-csv',

@@ -4,7 +4,7 @@ import csv
 import json
 from pathlib import Path
 
-from tools import build_gpcr_frozen_candidate_profile_support as mod
+from tools.gpcr_replay import build_gpcr_frozen_candidate_profile_support as mod
 
 
 def _write_json(path: Path, payload: dict) -> None:

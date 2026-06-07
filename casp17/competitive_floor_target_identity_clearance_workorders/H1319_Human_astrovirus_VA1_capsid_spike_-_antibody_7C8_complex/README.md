@@ -1,0 +1,23 @@
+# H1319 Target Identity Clearance Workorder
+
+- target_name: Human astrovirus VA1 capsid spike - antibody 7C8 complex
+- scope: `complex`
+- workorder_status: `native_and_provenance_required`
+- prediction_pdb: `runs/casp17_prediction_jobs_current/H1319/H1319_model_1.pdb`
+- ts_prediction_pdb: `runs/casp17_predictions_current/H1319TS.pdb`
+- native_dropzone_pdb: `casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/native/H1319_native.pdb`
+- provenance_template_csv: `casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/provenance_template.csv`
+- manifest_stub_csv: `casp17/competitive_floor_target_identity_clearance_workorders/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/manifest_stub.csv`
+- identity_discovery_blockers: `no_leak_clearance_required`
+- identity_discovery_next_action: operator must confirm historical eligibility, native availability, and no-leak clearance
+
+## Stop Conditions
+
+- Do not use this as a historical/no-leak benchmark row until native release date and provenance are confirmed.
+- Do not mark operator clearance unless prediction generation predates native release.
+- Do not use public/template/native structures, other-team models, or post-release information for prediction.
+- Do not import this stub into identity intake automatically.
+
+## Next Action
+
+place a cleared native PDB and complete the no-leak provenance template

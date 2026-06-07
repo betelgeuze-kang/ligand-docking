@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_aqp1_manual_review_queue as mod
+from tools.product import build_aqp1_manual_review_queue as mod
 
 
 def test_build_aqp1_manual_review_queue() -> None:

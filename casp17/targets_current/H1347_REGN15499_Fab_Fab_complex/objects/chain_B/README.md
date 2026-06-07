@@ -1,0 +1,14 @@
+# H1347 chain_B
+
+- target: `H1347`
+- object: `chain_B`
+- chain_id: `B`
+- model: `casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_B/models/H1347_chain_B.pdb`
+- projection: `casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_B/renders/H1347_chain_B_projection.svg`
+- viewer: `casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_B/viewer.html`
+- atoms/residues: `1655/214`
+- protein atoms / coordinate status: `1655/valid`
+
+## Claim Boundary
+
+Per-target local organization of internal CASP17 predicted coordinates, FASTA, renders, and QC metadata only; not an official CASP submission, native accuracy result, or experimental structure.

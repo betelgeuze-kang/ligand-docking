@@ -126,7 +126,7 @@ def test_internal_physics_ts_gate_blocks_without_author_code(tmp_path: Path) -> 
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/run_casp17_internal_physics_ts_gate_batch.py"),
+            str(ROOT / "tools/casp17/run_casp17_internal_physics_ts_gate_batch.py"),
             "--raw-gate-json",
             str(raw_gate_json),
             "--launch-packet-json",
@@ -161,7 +161,7 @@ def test_internal_physics_ts_gate_executes_to_validation(tmp_path: Path) -> None
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/run_casp17_internal_physics_ts_gate_batch.py"),
+            str(ROOT / "tools/casp17/run_casp17_internal_physics_ts_gate_batch.py"),
             "--raw-gate-json",
             str(raw_gate_json),
             "--launch-packet-json",

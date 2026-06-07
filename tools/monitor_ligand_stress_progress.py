@@ -529,7 +529,7 @@ def _detect_active_stage_for_run(run_prefix: str) -> Optional[Dict[str, str]]:
         ("validate_ligand_eval_integrity.py", "stage45"),
         ("calibrate_ligand_mmpbsa_proxy.py", "stage4"),
         ("run_ligand_backmapping_scoring.py", "stage3"),
-        ("run_ligand_residual_meta_cycle.py", "stage2_meta"),
+        ("product/run_ligand_residual_meta_cycle.py", "stage2_meta"),
         ("generate_ligand_trajectory_engine.py", "stage2_traj"),
         ("generate_ligand_trajectory_batch.py", "stage2_traj"),
         ("build_ligand_mapping_queue.py", "stage1"),

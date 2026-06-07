@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools import build_gpcr_residual_chembl50_v3_decision as mod
+from tools.product import build_gpcr_residual_chembl50_v3_decision as mod
 
 
 def test_build_gpcr_residual_chembl50_v3_decision(tmp_path: Path) -> None:

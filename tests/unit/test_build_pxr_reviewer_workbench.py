@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_pxr_reviewer_workbench as mod
+from tools.product import build_pxr_reviewer_workbench as mod
 
 
 def test_build_pxr_reviewer_workbench_merges_pending_and_day_plan() -> None:

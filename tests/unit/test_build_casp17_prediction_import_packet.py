@@ -55,7 +55,7 @@ def _run_builder(tmp_path: Path, intake_csv: Path, prediction_dir: Path) -> tupl
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_prediction_import_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_prediction_import_packet.py"),
             "--intake-csv",
             str(intake_csv),
             "--prediction-dir",

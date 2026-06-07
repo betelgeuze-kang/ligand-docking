@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_pxr_literature_candidate_overlay as mod
+from tools.product import build_pxr_literature_candidate_overlay as mod
 
 
 def test_build_pxr_literature_candidate_overlay_scores_high_signal_rows() -> None:

@@ -76,3 +76,4 @@ def test_build_wetlab_outbound_execution_priority_board_prioritizes_disease_and_
     assert payload["rows"][0]["track_id"] == "DNDi_IPK"
     assert payload["rows"][0]["execution_now"] is True
     assert payload["rows"][1]["track_id"] == "READDI_Korea"
+    assert "explicit R4 confirmation" in summary["next_required_step"]

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools import build_glut1_second_wave_seed_row_sync_apply_preview as mod
+from tools.product import build_glut1_second_wave_seed_row_sync_apply_preview as mod
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -19,7 +19,11 @@ def test_build_glut1_second_wave_seed_row_sync_apply_preview_reads_current_artif
 
     assert summary["target_id"] == "GLUT1"
     assert summary["wave"] == "second"
-    assert summary["safe_staged_field_count"] == 1
-    assert summary["unresolved_field_count"] == 4
+    assert summary["safe_staged_field_count"] == 4
+    assert summary["unresolved_field_count"] == 1
     assert summary["authoritative_apply_allowed"] is False
-    assert row["staged_replacement_source"] == "https://pubmed.ncbi.nlm.nih.gov/1716731/"
+    assert row["unresolved_fields"] == "replacement_reference_binding_kcal_mol"
+    assert row["staged_replacement_ligand_id"] == "cytochalasin_b"
+    assert row["staged_replacement_source"].startswith("pubmed_direct_binding::PMID1716731")
+    assert row["staged_replacement_smiles"]
+    assert row["staged_replacement_scaffold"] == "cytochalasin_macrocycle"

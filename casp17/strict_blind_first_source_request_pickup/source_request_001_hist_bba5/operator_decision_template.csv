@@ -1,0 +1,9 @@
+field_key,operator_value,operator_evidence_ref,required_format,notes
+resolution_path,,,acquire_pre_native_prediction_source|replace_candidate|defer_current_slot,Choose the operator-approved route for this first strict-blind source request.
+source_id,,,internal source id; not official_archive/casp_official/massivefold_external,Internal pre-native source identifier.
+prediction_pdb,,,local pre-native prediction PDB path with ATOM/HETATM records,Verified pre-native prediction file.
+prediction_created_at,,,YYYY-MM-DD before native_release_date,Must be before 2004-05-13.
+native_release_date,,,YYYY-MM-DD authoritative native release date,Copy from authoritative native source.
+creation_evidence_ref,,,artifact path or URI,Independent timestamp evidence for the prediction artifact.
+no_leak_evidence_ref,,,artifact path or URI,No-leak provenance evidence.
+operator_clearance,,,approved/clear/cleared/true/yes/operator_clear/operator_approved,Operator signoff after evidence review.

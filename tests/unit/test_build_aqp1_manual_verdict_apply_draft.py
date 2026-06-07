@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_aqp1_manual_verdict_apply_draft as mod
+from tools.product import build_aqp1_manual_verdict_apply_draft as mod
 
 
 def test_build_aqp1_manual_verdict_apply_draft() -> None:

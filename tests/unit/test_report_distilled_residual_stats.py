@@ -3,7 +3,7 @@ import json
 import numpy as np
 import pandas as pd
 
-from tools import report_distilled_residual_stats as rstats
+from tools.product import report_distilled_residual_stats as rstats
 
 
 def test_report_distilled_residual_stats_basic(tmp_path):

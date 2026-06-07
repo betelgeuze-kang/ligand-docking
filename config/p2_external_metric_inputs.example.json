@@ -1,0 +1,15 @@
+[
+  {
+    "row_id": "example_sequence_mapped",
+    "target_id": "HIV1_PROTEASE",
+    "topology_fidelity": "sequence_mapped",
+    "dockq_proxy": 0.35,
+    "lddt_pli": 0.62,
+    "molprobity_clashscore": 12.5
+  },
+  {
+    "row_id": "example_placeholder_blocked",
+    "target_id": "PLACEHOLDER_TOPOLOGY",
+    "topology_fidelity": "placeholder_alanine"
+  }
+]

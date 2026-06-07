@@ -1,0 +1,53 @@
+{
+  "assembly": {
+    "chain_count": 1,
+    "chain_pair_count": 0,
+    "chain_pairs_with_contacts_12A": 0,
+    "interchain_ca_clash_count_3A": 0,
+    "interchain_ca_contact_count_12A": 0,
+    "interface_plausibility_status": "not_applicable",
+    "min_interchain_ca_distance_A": 0.0
+  },
+  "chains": [
+    {
+      "breaker_fraction": 0.132646,
+      "ca_distance_max_A": 4.601,
+      "ca_distance_mean_A": 3.809,
+      "ca_distance_min_A": 3.338,
+      "chain_id": "A",
+      "charged_fraction": 0.2,
+      "confidence_max": 89.599,
+      "confidence_mean": 68.904,
+      "confidence_min": 43.489,
+      "energy": 9.63541,
+      "header": "T1342 Spike glycoprotein ectodomain, Ambecovirus Pgymn_15_Bra-2020, 1455 residues|",
+      "hydrophobic_fraction": 0.479038,
+      "net_charge_fraction": 0.013058,
+      "residue_count": 1455,
+      "rg_A": 26.919,
+      "rg_ratio": 0.788,
+      "secondary_coil_fraction": 0.509966,
+      "secondary_helix_fraction": 0.285223,
+      "secondary_strand_fraction": 0.204811,
+      "sequence_compaction_scale": 1.022,
+      "sequence_length": 1455,
+      "target_rg_A": 34.159
+    }
+  ],
+  "summary": {
+    "chain_count": 1,
+    "claim_boundary": "Internal coarse-grain physics baseline metrics only; not true CASP accuracy evidence.",
+    "docking_steps": 240,
+    "ensemble_size": 32,
+    "generated_at_local": "2026-05-22T23:07:02+09:00",
+    "interchain_ca_clash_count_3A": 0,
+    "interchain_ca_contact_count_12A": 0,
+    "interface_plausibility_status": "not_applicable",
+    "max_pairs": 6000,
+    "packet_type": "casp17_internal_physics_metrics",
+    "raw_pdb": "runs/casp17_prediction_jobs_recursive_current/T1342/T1342_model_1.pdb",
+    "residue_count": 1455,
+    "steps": 2500,
+    "target_id": "T1342"
+  }
+}

@@ -58,3 +58,29 @@ def test_build_wetlab_priority3_execution_console() -> None:
     assert payload["rows"][0]["console_role"] == "serialized_queue_status"
     assert payload["rows"][-1]["console_role"] == "recent_runtime_event"
 
+
+def test_build_wetlab_priority3_execution_console_reports_resolved_handoff() -> None:
+    payload = mod.build_payload(
+        {
+            "summary": {
+                "status": "wetlab_priority3_protein_run_queue_ready",
+                "queue_target_count": 3,
+                "ready_now_target_count": 0,
+                "blocked_on_previous_review_count": 0,
+                "running_target_count": 0,
+                "resolved_target_count": 3,
+            },
+            "rows": [],
+        },
+        {
+            "summary": {
+                "status": "wetlab_priority3_gate_refresh_ready",
+                "mpro_execution_state": "result_ready",
+                "caix_review_state": "caix_result_review_resolved",
+                "tcruzi_execution_state": "result_ready",
+            }
+        },
+    )
+
+    assert "partner send-round artifact" in payload["summary"]["next_required_step"]
+    assert "explicit R4 confirmation" in payload["summary"]["next_required_step"]

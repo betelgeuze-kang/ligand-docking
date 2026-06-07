@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "betelgeuze-md-product"
+version = "0.1.0"
+description = "Local molecular structure analysis, ligand-docking readiness, CAMEO validation, and cleanup operations surfaces."
+requires-python = ">=3.10"
+dynamic = ["dependencies"]
+
+[project.scripts]
+betelgeuze-product = "betelgeuze_product.cli:main"
+betelgeuze-cameo = "betelgeuze_cameo.cli:main"
+betelgeuze-cleanup = "betelgeuze_cleanup.cli:main"
+
+[tool.setuptools.packages.find]
+include = [
+  "api*",
+  "core*",
+  "betelgeuze_product*",
+  "betelgeuze_cameo*",
+  "betelgeuze_cleanup*",
+]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements-package.txt"]}

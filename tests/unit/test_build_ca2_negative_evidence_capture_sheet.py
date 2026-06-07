@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_ca2_negative_evidence_capture_sheet as mod
+from tools.product import build_ca2_negative_evidence_capture_sheet as mod
 
 
 def test_build_ca2_negative_evidence_capture_sheet_promotes_no_direct_source_row_with_overlay() -> None:

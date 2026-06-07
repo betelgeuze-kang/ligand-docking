@@ -4,7 +4,7 @@ import csv
 import json
 from pathlib import Path
 
-from tools.probe_wetlab_tcruzi_pde_translation_evidence import build_probe, discover_candidate_files
+from tools.wetlab.probe_wetlab_tcruzi_pde_translation_evidence import build_probe, discover_candidate_files
 
 
 def _write_json(path: Path, payload: dict) -> None:

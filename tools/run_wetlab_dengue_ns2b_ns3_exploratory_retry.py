@@ -5,7 +5,7 @@ import argparse
 import sys
 from typing import Any
 
-from tools import build_wetlab_dengue_ns2b_ns3_exploratory_retry_lane as lane_mod
+from tools.wetlab import build_wetlab_dengue_ns2b_ns3_exploratory_retry_lane as lane_mod
 from tools import run_wetlab_broad_screen_primary_runner as primary_runner_mod
 from tools.wetlab_target_render_utils import load_json, write_artifact
 

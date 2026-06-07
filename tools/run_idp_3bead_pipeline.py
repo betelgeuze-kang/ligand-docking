@@ -93,7 +93,7 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
 
         dataset_cmd = [
             sys.executable,
-            os.path.join(ROOT, "tools", "build_idp_residual_dataset.py"),
+            os.path.join(ROOT, "tools", "product/build_idp_residual_dataset.py"),
             "--eval-json",
             eval_json,
             "--out-prefix",
@@ -107,7 +107,7 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         dataset_npz = f"{dataset_prefix}.npz"
         train_cmd = [
             sys.executable,
-            os.path.join(ROOT, "tools", "train_idp_residual_model.py"),
+            os.path.join(ROOT, "tools", "product/train_idp_residual_model.py"),
             "--input-npz",
             dataset_npz,
             "--device",

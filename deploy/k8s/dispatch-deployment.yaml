@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: micf-api-docking-dispatch
+  namespace: micf-product
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: micf-api-docking-dispatch
+  template:
+    metadata:
+      labels:
+        app: micf-api-docking-dispatch
+    spec:
+      containers:
+        - name: api-docking-dispatch
+          image: micf-api:product
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - >
+              python3 tools/run_api_docking_dispatch_worker.py
+              --poll-interval-seconds ${API_DOCKING_DISPATCH_POLL_INTERVAL_SECONDS}
+              --limit ${API_DOCKING_DISPATCH_LIMIT}
+          envFrom:
+            - configMapRef:
+                name: micf-api-config
+            - secretRef:
+                name: micf-api-secrets
+          env:
+            - name: API_DOCKING_DISPATCH_POLL_INTERVAL_SECONDS
+              value: "2"
+            - name: API_DOCKING_DISPATCH_LIMIT
+              value: "1"
+          volumeMounts:
+            - name: results
+              mountPath: /data
+      volumes:
+        - name: results
+          persistentVolumeClaim:
+            claimName: micf-product-results

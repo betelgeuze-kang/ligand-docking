@@ -1,0 +1,18 @@
+{
+  "claim_boundary": "CASP17 3D molecular object coordinate materialized library only. It materializes each source coordinate model from the dry-run plan into a protein-name/object folder with sha256 verification. The default symlink mode avoids duplicating raw coordinate bytes. It does not alter source models, compute native accuracy, serialize a CASP author code, or submit to CASP.",
+  "summary": {
+    "atlas_object_key": "current_chain_D",
+    "atlas_protein_key": "H1347_REGN15499_Fab_Fab_complex",
+    "blockers": "",
+    "materialization_mode": "symlink",
+    "materialization_status": "coordinate_materialized",
+    "materialized_coordinate_path": "casp17/3d_molecular_object_coordinate_materialized_library/H1347_REGN15499_Fab_Fab_complex/current_chain_D/coordinates/H1347_chain_D.pdb",
+    "materialized_sha256": "c8db6cda0612a778a0e1633367d181e3847ab8e2bffc681a621f96901dff88b8",
+    "object_id": "chain_D",
+    "protein_name": "REGN15499 Fab-Fab complex",
+    "sha256_match": "true",
+    "source_coordinate_path": "casp17/targets_current/H1347_REGN15499_Fab_Fab_complex/objects/chain_D/models/H1347_chain_D.pdb",
+    "source_sha256": "c8db6cda0612a778a0e1633367d181e3847ab8e2bffc681a621f96901dff88b8",
+    "target_id": "H1347"
+  }
+}

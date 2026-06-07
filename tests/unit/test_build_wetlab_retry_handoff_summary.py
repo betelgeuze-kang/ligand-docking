@@ -6,7 +6,7 @@ from pathlib import Path
 from tools import build_wetlab_tcruzi_pde_promoted_top4_review_packet as pde_promoted_top4_packet_mod
 from tools import build_wetlab_tcruzi_pde_rescue_only_branch_summary as pde_rescue_only_branch_summary_mod
 from tools import build_wetlab_tcruzi_pde_rescue_operator_packet as pde_rescue_operator_packet_mod
-from tools import build_wetlab_retry_handoff_summary as mod
+from tools.wetlab import build_wetlab_retry_handoff_summary as mod
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 

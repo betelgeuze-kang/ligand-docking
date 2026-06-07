@@ -19,3 +19,5 @@ def test_build_wetlab_priority3_gate_refresh_runs_chain() -> None:
     assert summary["ready_now_target_count"] == 0
     assert summary["resolved_target_count"] == 3
     assert summary["blocked_on_previous_review_count"] >= 0
+    assert "partner export bundle" in summary["next_required_step"]
+    assert "explicit R4 confirmation" in summary["next_required_step"]

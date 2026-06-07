@@ -1,0 +1,10 @@
+{
+  "claim_boundary": "CASP17 competitive-floor batch native/provenance operator-fill preflight only. It packages the existing batch intake placeholders, field-level policies, and validation commands into target-named folders before operator fill. It does not fill values, fetch native structures, copy coordinate files, clear no-leak provenance, compute native accuracy, serialize a CASP author code, or submit to CASP.",
+  "open_action_count": 36,
+  "packet_type": "casp17_competitive_floor_batch_native_provenance_operator_fill_preflight_manifest",
+  "target_ids": [
+    "H1319",
+    "H1321",
+    "H2324"
+  ]
+}

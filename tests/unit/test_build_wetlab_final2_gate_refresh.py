@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_wetlab_final2_gate_refresh as mod
+from tools.wetlab import build_wetlab_final2_gate_refresh as mod
 
 
 def test_build_wetlab_final2_gate_refresh_main_runs_refresh_by_default(monkeypatch) -> None:

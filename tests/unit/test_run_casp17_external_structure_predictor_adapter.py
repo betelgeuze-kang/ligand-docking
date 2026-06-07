@@ -31,7 +31,7 @@ def test_casp17_external_structure_predictor_adapter_runs_operator_template(tmp_
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/run_casp17_external_structure_predictor_adapter.py"),
+            str(ROOT / "tools/casp17/run_casp17_external_structure_predictor_adapter.py"),
             "--target-id",
             "T8500",
             "--fasta",
@@ -58,7 +58,7 @@ def test_casp17_external_structure_predictor_adapter_blocks_missing_template(tmp
     run = subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/run_casp17_external_structure_predictor_adapter.py"),
+            str(ROOT / "tools/casp17/run_casp17_external_structure_predictor_adapter.py"),
             "--target-id",
             "T8501",
             "--fasta",

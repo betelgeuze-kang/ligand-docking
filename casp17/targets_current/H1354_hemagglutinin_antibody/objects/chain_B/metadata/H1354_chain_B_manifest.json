@@ -1,0 +1,18 @@
+{
+  "claim_boundary": "Per-target local organization of internal CASP17 predicted coordinates, FASTA, renders, and QC metadata only; not an official CASP submission, native accuracy result, or experimental structure.",
+  "summary": {
+    "atom_count": 929,
+    "chain_id": "B",
+    "coordinate_status": "valid",
+    "manifest_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_B/metadata/H1354_chain_B_manifest.json",
+    "model_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_B/models/H1354_chain_B.pdb",
+    "object_folder": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_B",
+    "object_id": "chain_B",
+    "projection_svg_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_B/renders/H1354_chain_B_projection.svg",
+    "protein_atom_count": 929,
+    "readme_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_B/README.md",
+    "residue_count": 120,
+    "target_id": "H1354",
+    "viewer_html_path": "casp17/targets_current/H1354_hemagglutinin_antibody/objects/chain_B/viewer.html"
+  }
+}

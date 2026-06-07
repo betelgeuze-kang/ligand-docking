@@ -1,0 +1,33 @@
+{
+  "claim_boundary": "Local CASP17 protein-name object library only. It materializes review folders and pointers for already-generated internal 3D object models; it does not copy native structures, fetch external data, score native accuracy, or submit to CASP.",
+  "objects": [
+    {
+      "atom_count": 4815,
+      "blockers": "",
+      "chain_id": "A",
+      "coordinate_status": "valid",
+      "library_object_folder": "casp17/protein_object_library_current/T2313_P66/chain_A",
+      "library_protein_folder": "casp17/protein_object_library_current/T2313_P66",
+      "library_status": "pass",
+      "model_path": "casp17/targets_current/T2313_P66/objects/chain_A/models/T2313_chain_A.pdb",
+      "object_id": "chain_A",
+      "projection_svg_path": "casp17/targets_current/T2313_P66/objects/chain_A/renders/T2313_chain_A_projection.svg",
+      "protein_atom_count": 4815,
+      "protein_key": "T2313_P66",
+      "protein_name": "P66",
+      "residue_count": 618,
+      "source_object_folder": "casp17/targets_current/T2313_P66/objects/chain_A",
+      "target_id": "T2313",
+      "viewer_html_path": "casp17/targets_current/T2313_P66/objects/chain_A/viewer.html"
+    }
+  ],
+  "summary": {
+    "blocked_count": 0,
+    "library_protein_folder": "casp17/protein_object_library_current/T2313_P66",
+    "object_count": 1,
+    "pass_count": 1,
+    "protein_key": "T2313_P66",
+    "protein_name": "P66",
+    "target_id": "T2313"
+  }
+}

@@ -184,7 +184,13 @@ def _model_index(model_record: str) -> int | None:
         return None
 
 
-def validate_prediction(*, target_id: str, prediction_file: str | Path, sequence_path: str | Path) -> dict[str, Any]:
+def validate_prediction(
+    *,
+    target_id: str,
+    prediction_file: str | Path,
+    sequence_path: str | Path,
+    allow_ranked_model_index: bool = False,
+) -> dict[str, Any]:
     blockers: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
     prediction_path = _resolve(prediction_file)
@@ -230,7 +236,7 @@ def validate_prediction(*, target_id: str, prediction_file: str | Path, sequence
     model_indices = [_model_index(str(model.get("model_record", ""))) for model in models]
     if len(models) > 6:
         blockers.append(_blocker("too_many_models", "TS submission contains more than six MODEL blocks."))
-    if 1 not in model_indices:
+    if 1 not in model_indices and not allow_ranked_model_index:
         blockers.append(_blocker("model_1_missing", "MODEL 1 is required because CASP focuses primarily on model index 1."))
     if len([idx for idx in model_indices if idx is not None]) != len(set(idx for idx in model_indices if idx is not None)):
         blockers.append(_blocker("duplicate_model_index", "MODEL indices must be unique."))
@@ -417,6 +423,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--target-id", required=True, help="CASP17 target id, e.g. H1340.")
     parser.add_argument("--prediction-file", required=True, help="Prediction file to validate.")
     parser.add_argument("--sequence-path", required=True, help="Target FASTA file.")
+    parser.add_argument("--allow-ranked-model-index", action="store_true", help="Allow standalone MODEL 2-5 files when validating ranked candidate artifacts outside the primary submission gate.")
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -425,7 +432,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
-    payload = validate_prediction(target_id=args.target_id, prediction_file=args.prediction_file, sequence_path=args.sequence_path)
+    payload = validate_prediction(
+        target_id=args.target_id,
+        prediction_file=args.prediction_file,
+        sequence_path=args.sequence_path,
+        allow_ranked_model_index=bool(args.allow_ranked_model_index),
+    )
     _write_json(args.out_json, payload)
     _write_csv(args.out_csv, [payload["summary"]])
     _write_md(args.out_md, payload)

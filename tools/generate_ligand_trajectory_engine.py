@@ -43,6 +43,10 @@ TRAJECTORY_NPZ_RESERVED_KEYS: Dict[str, str] = {
     "protein_atom_frames": "Optional vNext. Shape [T, A, 3]. Full protein atom coordinates for frame-wise in-place protein motion, aligned to viewer proteinTemplateAtoms order.",
     "protein_atom_template_index": "Optional vNext. Shape [A]. Integer mapping from stored protein_atom_frames atom order to viewer proteinTemplateAtoms order when direct order cannot be guaranteed.",
     "protein_atom_schema_version": "Optional vNext. Scalar numeric contract version for atom-level frame mutation.",
+    "queue_id": "Required for production returns. Scalar string identity copied from the regeneration queue row.",
+    "target": "Required for production returns. Scalar string target identity copied from the regeneration queue row.",
+    "ligand_id": "Required for production returns. Scalar string ligand identity copied from the regeneration queue row.",
+    "simulation_seed": "Required for production returns. Scalar integer seed used for deterministic regeneration.",
 }
 
 
@@ -734,6 +738,7 @@ def _write_npz_bundle(
     frame_indices: np.ndarray,
     compression: str = "store",
     extra_arrays: Optional[Dict[str, Any]] = None,
+    identity_metadata: Optional[Dict[str, Any]] = None,
 ) -> None:
     _ensure_dir(os.path.dirname(path) or ".")
     mode = str(compression or "store").strip().lower()
@@ -743,6 +748,11 @@ def _write_npz_bundle(
         ligand_frames=np.asarray(ligand_frames, dtype=np.float32),
         frame_indices=np.asarray(frame_indices, dtype=np.int32),
     )
+    if identity_metadata:
+        payload["queue_id"] = np.asarray(str(identity_metadata.get("queue_id", "")))
+        payload["target"] = np.asarray(str(identity_metadata.get("target", "")))
+        payload["ligand_id"] = np.asarray(str(identity_metadata.get("ligand_id", "")))
+        payload["simulation_seed"] = np.asarray(_safe_int(identity_metadata.get("simulation_seed", 0)), dtype=np.int64)
     if extra_arrays:
         for key, value in extra_arrays.items():
             if key not in TRAJECTORY_NPZ_RESERVED_KEYS:
@@ -964,6 +974,7 @@ def _write_trajectory_artifact(
     npz_compression: str,
     protein_atom_template: Optional[np.ndarray] = None,
     npz_extra_arrays: Optional[Dict[str, Any]] = None,
+    identity_metadata: Optional[Dict[str, Any]] = None,
 ) -> int:
     if str(frame_output_format) == "manifest_only":
         arr = np.asarray(ligand_frames)
@@ -995,6 +1006,7 @@ def _write_trajectory_artifact(
             frame_indices=np.asarray(frame_indices, dtype=np.int32),
             compression=str(npz_compression),
             extra_arrays=resolved_extra_arrays,
+            identity_metadata=identity_metadata,
         )
         arr = np.asarray(ligand_frames)
         return int(arr.shape[0]) if arr.ndim >= 1 else 0
@@ -1049,6 +1061,7 @@ def _writer_process_main(task_queue: Any, result_queue: Any) -> None:
                 npz_compression=task["npz_compression"],
                 protein_atom_template=task.get("protein_atom_template"),
                 npz_extra_arrays=task.get("npz_extra_arrays"),
+                identity_metadata=task.get("identity_metadata"),
             )
             result_queue.put({"ok": True})
         except Exception as exc:
@@ -1243,6 +1256,7 @@ def _engine_cache_key(
     dt_fs: float,
     friction: float,
     kT: float,
+    protein_sequence: str = "",
 ) -> Tuple[Any, ...]:
     return (
         int(n_total),
@@ -1256,6 +1270,7 @@ def _engine_cache_key(
         float(friction),
         float(kT),
         str(config.DEVICE),
+        str(protein_sequence or ""),
     )
 
 
@@ -1273,6 +1288,7 @@ def _get_engine_resources(
     kT: float,
     engine_cache: Optional[Dict[Tuple[Any, ...], Dict[str, Any]]],
     engine_cache_max_entries: int,
+    protein_sequence: str = "",
 ) -> Dict[str, Any]:
     key = _engine_cache_key(
         n_total=n_total,
@@ -1285,6 +1301,7 @@ def _get_engine_resources(
         dt_fs=dt_fs,
         friction=friction,
         kT=kT,
+        protein_sequence=protein_sequence,
     )
     cache_enabled = engine_cache is not None and int(engine_cache_max_entries) > 0
     if cache_enabled and key in engine_cache:
@@ -1299,6 +1316,9 @@ def _get_engine_resources(
         target_name="ligand_htvs",
         strategy_type=str(strategy_type),
     )
+    seq = str(protein_sequence or "").strip()
+    if seq:
+        top.set_residue_types_from_sequence_string(seq)
     ff = ForceField(
         top,
         params={
@@ -1346,6 +1366,7 @@ def _compute_ligand_extra_force(
     bond_k: float,
     bond_ref: Any,
     repulse_cutoff_A: float,
+    pocket_protein_max_atoms: int = 0,
 ) -> torch.Tensor:
     lig = c[:, n_protein:, :]  # [B, L, 3]
     b, l, _ = lig.shape
@@ -1370,9 +1391,15 @@ def _compute_ligand_extra_force(
     center = lig.mean(dim=1, keepdim=True)  # [B,1,3]
     f_lig += -(center - pocket) * pocket_attr_t
 
-    # Soft repulsion from nearby protein beads.
+    # Soft repulsion from nearby protein beads (pocket-local cap keeps O(N) bounded).
     if n_protein > 0:
         prot = c[:, :n_protein, :]  # [B,P,3]
+        cap = int(max(0, pocket_protein_max_atoms))
+        if cap > 0 and n_protein > cap:
+            center = lig.mean(dim=1, keepdim=True)
+            d_center = torch.linalg.norm(prot - center.unsqueeze(2), dim=-1)
+            nearest = torch.topk(d_center, k=cap, largest=False, dim=2).indices
+            prot = torch.gather(prot, 1, nearest.unsqueeze(-1).expand(-1, -1, 3))
         diff = lig.unsqueeze(2) - prot.unsqueeze(1)  # [B,L,P,3]
         dist = torch.linalg.norm(diff, dim=-1).clamp_min(1e-6)  # [B,L,P]
         cutoff = float(repulse_cutoff_A)
@@ -1476,6 +1503,8 @@ def _simulate_with_engine_batch(
     prod_early_stop_max_mean_min_distance_A: float = 0.0,
     engine_cache: Optional[Dict[Tuple[Any, ...], Dict[str, Any]]] = None,
     engine_cache_max_entries: int = 16,
+    pocket_protein_max_atoms: int = 256,
+    protein_sequence: str = "",
 ) -> Tuple[np.ndarray, np.ndarray, str, int, bool, int, Dict[str, Any]]:
     if protein.shape[0] <= 0:
         protein = np.zeros((1, 3), dtype=np.float32)
@@ -1538,6 +1567,7 @@ def _simulate_with_engine_batch(
         kT=float(kT),
         engine_cache=engine_cache,
         engine_cache_max_entries=int(engine_cache_max_entries),
+        protein_sequence=str(protein_sequence or ""),
     )
     ff = engine["ff"]
     integrator = engine["integrator"]
@@ -1647,6 +1677,7 @@ def _simulate_with_engine_batch(
                 bond_k=float(bond_k),
                 bond_ref=bond_ref_t if n_lig >= 2 else 0.0,
                 repulse_cutoff_A=float(repulse_cutoff_A),
+                pocket_protein_max_atoms=int(pocket_protein_max_atoms),
             )
             f_total = f_core
             f_total[:, n_protein:, :].add_(f_extra_lig)
@@ -1717,6 +1748,13 @@ def _simulate_with_engine_batch(
             "prod_early_stop_eval_row_count": int(early_stop_eval_row_count),
         },
     )
+
+
+def _summary_return_contract_fields(out_manifest_csv: str, out_summary_json: str) -> Dict[str, str]:
+    return {
+        "out_manifest_csv": str(out_manifest_csv),
+        "out_summary_json": str(out_summary_json),
+    }
 
 
 def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
@@ -2019,6 +2057,7 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                 tdir=entry["tdir"],
                 npz_compression=str(args.npz_compression),
                 protein_atom_template=None if bool(prod_light_artifacts) else entry.get("protein_atom_template"),
+                identity_metadata=entry.get("npz_identity_metadata"),
             )
             return
         if writer_mode == "process":
@@ -2038,6 +2077,7 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                     "npz_compression": str(args.npz_compression),
                     "protein_atom_template": None if bool(prod_light_artifacts) else entry.get("protein_atom_template"),
                     "npz_extra_arrays": entry.get("npz_extra_arrays"),
+                    "identity_metadata": entry.get("npz_identity_metadata"),
                     "protein_atom_template_source_type": entry.get("protein_atom_template_source_type", ""),
                 }
             )
@@ -2063,6 +2103,7 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                 npz_compression=str(args.npz_compression),
                 protein_atom_template=None if bool(prod_light_artifacts) else entry.get("protein_atom_template"),
                 npz_extra_arrays=entry.get("npz_extra_arrays"),
+                identity_metadata=entry.get("npz_identity_metadata"),
             )
         )
         writer_pending_peak = max(writer_pending_peak, int(len(writer_futures)))
@@ -2274,6 +2315,8 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                 prod_early_stop_max_mean_min_distance_A=float(prod_early_stop_max_mean_min_distance_A),
                 engine_cache=engine_cache,
                 engine_cache_max_entries=int(args.engine_cache_max_entries),
+                pocket_protein_max_atoms=int(getattr(args, "pocket_protein_max_atoms", 256) or 256),
+                protein_sequence=str(getattr(args, "protein_sequence", "") or ""),
             )
             prod_early_stop_eval_keep_count += int(sim_telemetry.get("prod_early_stop_eval_keep_count", 0))
             prod_early_stop_eval_row_count += int(sim_telemetry.get("prod_early_stop_eval_row_count", 0))
@@ -2505,7 +2548,9 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
             k_attr = float(args.pocket_attract_base) * (0.60 + 1.40 * affinity)
             k_rep = float(args.protein_repulse) * (1.00 + 0.30 * max(0.0, 1.0 - affinity))
             k_contact = float(args.contact_attract_base) * (0.60 + 1.40 * affinity)
-            seed_i = int(args.seed) + abs(hash(queue_id)) % 1000003
+            multi_start = max(1, int(getattr(args, "multi_start_count", 1) or 1))
+            replica_idx = _safe_int(row.get("replica_idx", row.get("replicate_idx", 0)))
+            seed_i = int(args.seed) + abs(hash(queue_id)) % 1000003 + (int(replica_idx) % multi_start) * 9973
             strategy_requested, strategy_reason, adress_radius_A, estimated_atom_ratio = _resolve_strategy_type(
                 row=row,
                 protein_coords=protein,
@@ -2564,6 +2609,12 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                 "npz_path": npz_path,
                 "npz_layout_effective": str(npz_layout_effective),
                 "cached_is_npz": False,
+                "npz_identity_metadata": {
+                    "queue_id": queue_id,
+                    "target": target,
+                    "ligand_id": ligand_id,
+                    "simulation_seed": int(seed_i),
+                },
             }
             effective_frames_requested, prod_frame_budget_score, prod_frame_budget_applied = _resolve_prod_effective_frames(
                 requested_frames=int(args.frames),
@@ -2765,6 +2816,7 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
         "contact_attract_cutoff_A": float(args.contact_attract_cutoff_A),
         "contact_attract_enabled": float(args.contact_attract_base) > 0.0,
         "out_root": os.path.abspath(out_root),
+        **_summary_return_contract_fields(out_manifest_csv, out_summary_json),
         "frame_output_format": frame_output_format,
         "npz_layout": str(args.npz_layout),
         "npz_shard_size": int(args.npz_shard_size),
@@ -3007,6 +3059,19 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--prod-early-stop-max-mean-min-distance-A", type=float, default=6.0)
     p.add_argument("--prod-light-artifacts", action=argparse.BooleanOptionalAction, default=False)
     p.add_argument("--prod-light-progress-every-jobs", type=int, default=250)
+    p.add_argument(
+        "--multi-start-count",
+        type=int,
+        default=1,
+        help="Number of deterministic pose starts per queue row (replica_idx mod N).",
+    )
+    p.add_argument(
+        "--pocket-protein-max-atoms",
+        type=int,
+        default=256,
+        help="Cap protein atoms in ligand extra-force pocket term for O(N) bounded work.",
+    )
+    p.add_argument("--protein-sequence", type=str, default="", help="Optional one-letter sequence for topology fidelity.")
     return p
 
 

@@ -3,7 +3,7 @@ import json
 import os
 from pathlib import Path
 
-from tools import monitor_wetlab_campaign as mon
+from tools.wetlab import monitor_wetlab_campaign as mon
 
 
 class _FixedDateTime(dt.datetime):

@@ -1,15 +1,37 @@
 # api/models.py
 
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, Field, model_validator
+from typing import Any, Optional
+
+from api.simulation_scope import RUNNER_PROFILE_REQUIRED_DETAIL
+
 
 class SimulationRequest(BaseModel):
-    pdb_id: Optional[str] = None  # PDB ID
-    pdb_content: Optional[str] = None  # PDB 파일 내용 (Base64 encoded string or plain text)
+    """Ligand validated-runner job request. Generic MD simulation is not supported."""
+
+    runner_profile_id: str = Field(
+        ...,
+        description=(
+            "Required operator-approved validated runner profile id "
+            "(ligand HTVS or backmapping scoring)."
+        ),
+    )
     target_name: str  # e.g., "Chignolin"
+    runner_profile_params: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Metadata only; profile controls runner arguments.",
+    )
+    pdb_id: Optional[str] = None  # Deprecated for generic MD; retained for profile metadata only
+    pdb_content: Optional[str] = None
     steps: int = 1000
-    ai_model_path: Optional[str] = None # Path to specific AI model to use
-    output_format: str = "pdb" # "pdb", "traj", etc.
+    ai_model_path: Optional[str] = None
+    output_format: str = "pdb"
+
+    @model_validator(mode="after")
+    def _runner_profile_required(self) -> "SimulationRequest":
+        if not str(self.runner_profile_id or "").strip():
+            raise ValueError(RUNNER_PROFILE_REQUIRED_DETAIL)
+        return self
 
 class SimulationResponse(BaseModel):
     job_id: str

@@ -1,0 +1,13 @@
+{
+  "profile_id": "backmapping_scoring.production",
+  "claim_boundary": "Operator-approved backmapping scoring with two-pass 4-bead cascade. Customer pose emission remains gated until delivery validation is green.",
+  "claim_boundary_reviewed": true,
+  "fake_result_emission_forbidden": true,
+  "gate_policy_artifact": "runs/product_execution_approval_gate_current.json",
+  "gate_policy_reviewed": true,
+  "input_contract_reviewed": true,
+  "output_contract_reviewed": true,
+  "required_operator_action": "Enabled after two-pass cascade wiring and operator review.",
+  "reviewed_at_utc": "2026-06-06T12:00:00+00:00",
+  "reviewer": "operator-gap-closure"
+}

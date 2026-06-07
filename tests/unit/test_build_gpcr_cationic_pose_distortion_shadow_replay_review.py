@@ -44,7 +44,7 @@ def test_build_gpcr_cationic_pose_distortion_shadow_replay_review_green_claim_lo
     subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools/build_gpcr_cationic_pose_distortion_shadow_replay_review.py"),
+            str(ROOT / "tools/gpcr_replay/build_gpcr_cationic_pose_distortion_shadow_replay_review.py"),
             "--input-scores-csv",
             str(scores_csv),
             "--input-summary-json",
@@ -99,7 +99,7 @@ def test_build_gpcr_cationic_pose_distortion_shadow_replay_review_blocks_when_ac
     subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools/build_gpcr_cationic_pose_distortion_shadow_replay_review.py"),
+            str(ROOT / "tools/gpcr_replay/build_gpcr_cationic_pose_distortion_shadow_replay_review.py"),
             "--input-scores-csv",
             str(scores_csv),
             "--input-summary-json",

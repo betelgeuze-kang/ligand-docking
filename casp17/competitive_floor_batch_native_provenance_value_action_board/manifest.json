@@ -1,0 +1,10 @@
+{
+  "action_count": 36,
+  "claim_boundary": "CASP17 competitive-floor batch native/provenance value action board only. It expands the dry value gate into field-level operator actions and target-named folders. It does not fill values, fetch native structures, copy coordinate files, clear no-leak provenance, compute native accuracy, serialize a CASP author code, or submit to CASP.",
+  "packet_type": "casp17_competitive_floor_batch_native_provenance_value_action_board_manifest",
+  "target_ids": [
+    "H1319",
+    "H1321",
+    "H2324"
+  ]
+}

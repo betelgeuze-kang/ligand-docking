@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools.build_wetlab_tcruzi_pde_external_pdeb1_seed_packet import build_payload
+from tools.wetlab.build_wetlab_tcruzi_pde_external_pdeb1_seed_packet import build_payload
 
 
 def _write_raw(path: Path, activities: list[dict]) -> None:

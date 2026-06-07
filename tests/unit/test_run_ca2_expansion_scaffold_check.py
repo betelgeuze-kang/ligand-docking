@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools import run_ca2_expansion_scaffold_check as mod
+from tools.product import run_ca2_expansion_scaffold_check as mod
 
 
 def _write_json(path: Path, payload: dict) -> None:

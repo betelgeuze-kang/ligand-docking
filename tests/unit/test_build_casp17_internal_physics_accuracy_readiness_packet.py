@@ -124,7 +124,7 @@ def _run_tool(tmp_path: Path, paths: dict[str, Path], *, require_backbone_atoms:
     out_json = tmp_path / "readiness.json"
     command = [
         "python3",
-        str(ROOT / "tools/build_casp17_internal_physics_accuracy_readiness_packet.py"),
+        str(ROOT / "tools/casp17/build_casp17_internal_physics_accuracy_readiness_packet.py"),
         "--target-watchlist-json",
         str(paths["watchlist"]),
         "--raw-gate-json",
@@ -166,3 +166,24 @@ def test_internal_physics_accuracy_readiness_fails_missing_interface_contacts(tm
     assert returncode == 2
     assert payload["summary"]["accuracy_readiness_status"] == "fail"
     assert "interchain_contact_count_below_proxy_floor" in payload["rows"][0]["blockers"]
+
+
+def test_internal_physics_accuracy_readiness_fails_current_open_target_missing_from_submission_gate(tmp_path: Path) -> None:
+    paths = _write_fixture(tmp_path, contacts=6)
+    _write_json(
+        paths["watchlist"],
+        {
+            "rows": [
+                {"target_id": "H9999", "human_open": True, "lane_recommendation": "difficult_protein_complexes"},
+                {"target_id": "T9998", "human_open": True, "lane_recommendation": "difficult_protein_complexes"},
+            ]
+        },
+    )
+
+    returncode, payload = _run_tool(tmp_path, paths)
+    rows = {row["target_id"]: row for row in payload["rows"]}
+
+    assert returncode == 2
+    assert payload["summary"]["target_count"] == 2
+    assert rows["T9998"]["accuracy_readiness_status"] == "fail"
+    assert "submission_gate_not_go" in rows["T9998"]["blockers"]

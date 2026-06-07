@@ -4,7 +4,7 @@ import json
 import os
 from pathlib import Path
 
-from tools import monitor_ligand_scaleup_pilot as mon
+from tools.product import monitor_ligand_scaleup_pilot as mon
 
 
 class _FixedDateTime(dt.datetime):

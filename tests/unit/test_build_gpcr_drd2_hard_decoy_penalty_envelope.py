@@ -6,7 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from tools import build_gpcr_drd2_hard_decoy_penalty_envelope as mod
+from tools.gpcr_replay import build_gpcr_drd2_hard_decoy_penalty_envelope as mod
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -98,7 +98,7 @@ def test_penalty_envelope_cli_writes_outputs(tmp_path: Path) -> None:
     result = subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools/build_gpcr_drd2_hard_decoy_penalty_envelope.py"),
+            str(ROOT / "tools/gpcr_replay/build_gpcr_drd2_hard_decoy_penalty_envelope.py"),
             "--rows-csv",
             str(rows_csv),
             "--grid",

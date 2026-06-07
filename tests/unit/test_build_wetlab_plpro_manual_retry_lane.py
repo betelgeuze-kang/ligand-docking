@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_wetlab_plpro_manual_retry_lane as mod
+from tools.wetlab import build_wetlab_plpro_manual_retry_lane as mod
 
 
 def test_build_wetlab_plpro_manual_retry_lane_prefers_tuned_gate55_when_bridge_requests_gate_relaxation() -> None:

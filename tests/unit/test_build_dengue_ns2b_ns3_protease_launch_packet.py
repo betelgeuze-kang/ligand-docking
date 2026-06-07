@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_dengue_ns2b_ns3_protease_launch_packet as mod
+from tools.wetlab import build_dengue_ns2b_ns3_protease_launch_packet as mod
 from tools import build_dengue_ns2b_ns3_protease_render_suite as render_mod
 from tools import build_wetlab_dengue_ns2b_ns3_protease_novelty_fill_map as novelty_mod
 from tools import build_wetlab_dengue_ns2b_ns3_protease_repurposing_fill_map as rep_mod

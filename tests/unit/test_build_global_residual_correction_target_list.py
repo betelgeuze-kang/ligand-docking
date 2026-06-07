@@ -105,7 +105,7 @@ def test_build_global_residual_correction_target_list(tmp_path: Path) -> None:
     subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools/build_global_residual_correction_target_list.py"),
+            str(ROOT / "tools/product/build_global_residual_correction_target_list.py"),
             "--gpcr-failure-json",
             str(gpcr_failure_json),
             "--kpi-json",

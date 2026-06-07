@@ -1,0 +1,18 @@
+{
+  "claim_boundary": "Per-target local organization of internal CASP17 predicted coordinates, FASTA, renders, and QC metadata only; not an official CASP submission, native accuracy result, or experimental structure.",
+  "summary": {
+    "atom_count": 1669,
+    "chain_id": "B",
+    "coordinate_status": "valid",
+    "manifest_path": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_B/metadata/H1348_chain_B_manifest.json",
+    "model_path": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_B/models/H1348_chain_B.pdb",
+    "object_folder": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_B",
+    "object_id": "chain_B",
+    "projection_svg_path": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_B/renders/H1348_chain_B_projection.svg",
+    "protein_atom_count": 1669,
+    "readme_path": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_B/README.md",
+    "residue_count": 222,
+    "target_id": "H1348",
+    "viewer_html_path": "casp17/targets_current/H1348_gp130_antibody_complex/objects/chain_B/viewer.html"
+  }
+}

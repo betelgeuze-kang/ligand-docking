@@ -1,0 +1,6 @@
+stage,status,path,action_count,ready_count,awaiting_count,blocked_count,applied_count,next_action
+evidence_import,awaiting_import,casp17/casp17_competitive_floor_evidence_import_current.json,450,0,450,0,0,"enter proposed_value, evidence_ref, and operator_clearance in the import CSV"
+value_ledger,awaiting_values,casp17/casp17_competitive_floor_value_ledger_current.json,270,0,0,0,0,enter the cleared historical benchmark_id and cite the local target-selection evidence
+evidence_intake,awaiting_evidence,casp17/casp17_competitive_floor_evidence_intake_current.json,450,0,450,0,0,fill benchmark_id in row_fill.csv from cleared local evidence
+row_fill_patch_gate,awaiting_evidence,casp17/casp17_competitive_floor_row_fill_patch_gate_current.json,450,0,450,0,0,"provide the missing cleared evidence, then rerun intake and this patch gate"
+row_fill_apply_plan,awaiting_evidence,casp17/casp17_competitive_floor_row_fill_apply_plan_current.json,450,0,450,0,0,"wait for cleared evidence, then rerun intake and patch gate"

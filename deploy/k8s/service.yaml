@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: micf-api-server
+  namespace: micf-product
+spec:
+  type: ClusterIP
+  selector:
+    app: micf-api-server
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

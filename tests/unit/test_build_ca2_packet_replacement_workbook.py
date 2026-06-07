@@ -41,7 +41,7 @@ def test_build_ca2_packet_replacement_workbook(tmp_path: Path) -> None:
     subprocess.run(
         [
             'python3',
-            str(ROOT / 'tools/build_ca2_packet_replacement_workbook.py'),
+            str(ROOT / 'tools/product/build_ca2_packet_replacement_workbook.py'),
             '--queue-json',
             str(queue_json),
             '--out-json',

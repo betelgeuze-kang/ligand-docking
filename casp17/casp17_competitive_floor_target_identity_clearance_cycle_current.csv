@@ -1,0 +1,10 @@
+stage,status,path,ready_count,awaiting_count,blocked_count,total_count,next_action
+operator_intake,awaiting_input,casp17/casp17_competitive_floor_target_identity_clearance_operator_intake_current.json,0,3,0,3,"fill native_source_pdb, no_leak_evidence_ref, operator, dates, and true/false provenance controls"
+manifest_sync,awaiting_provenance,casp17/casp17_competitive_floor_target_identity_clearance_manifest_sync_current.json,0,3,0,3,complete the no-leak provenance template before syncing the manifest stub
+workorder_audit,blocked,casp17/casp17_competitive_floor_target_identity_clearance_workorder_audit_current.json,0,0,3,3,complete target-origin and no-leak evidence review before native/provenance promotion
+action_board,open_actions,casp17/casp17_competitive_floor_target_identity_clearance_action_board_current.json,0,0,12,12,Place an operator-cleared native protein PDB in the native dropzone; ensure it is distinct from the prediction and has valid ATOM coordinates.
+action_bundle,open_actions,casp17/casp17_competitive_floor_target_identity_clearance_action_bundle_current.json,0,0,12,12,casp17/competitive_floor_target_identity_clearance_action_bundle/H1319_Human_astrovirus_VA1_capsid_spike_-_antibody_7C8_complex/action_001_native_dropzone/ACTION.md
+promotion_plan,blocked_by_audit,casp17/casp17_competitive_floor_target_identity_clearance_promotion_plan_current.json,0,0,3,3,clear the native/provenance workorder audit before promotion
+intake_staging,waiting_on_promoted_manifest,casp17/casp17_competitive_floor_target_identity_clearance_intake_staging_plan_current.json,0,0,0,0,wait for promoted clearance manifest rows
+candidate_intake_sync,waiting_on_staged_identity,casp17/casp17_competitive_floor_target_identity_clearance_candidate_intake_sync_current.json,0,15,0,15,wait for clearance intake staging to produce staged_for_operator_review rows
+workbench,ready_for_operator_fill,casp17/casp17_workbench_index_current.json,16,0,0,16,Replace placeholder target/benchmark IDs with a cleared historical non-CASP17 protein target.

@@ -1,0 +1,12 @@
+field_key,operator_value,operator_evidence_ref,required_format,source_request_note
+source_id,,,,internal source id for HIST_VILLIN_HP35
+prediction_pdb,,,,path to acquired pre-native prediction PDB
+prediction_pdb_dropzone,,,,fill after acquiring strict-blind source evidence
+prediction_created_at,,,,must be before native_release_date 2005-02-03
+native_release_date,,,,fill after acquiring strict-blind source evidence
+prediction_created_at/native_release_date,,,,fill after acquiring strict-blind source evidence
+native_authority_ref,,,,fill after acquiring strict-blind source evidence
+creation_evidence_ref,,,,fill after acquiring strict-blind source evidence
+no_leak_evidence_ref,,,,fill after acquiring strict-blind source evidence
+method_summary,,,,fill after acquiring strict-blind source evidence
+operator_clearance,,,,fill after acquiring strict-blind source evidence

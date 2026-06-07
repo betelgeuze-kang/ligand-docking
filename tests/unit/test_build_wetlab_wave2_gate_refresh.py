@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_wetlab_wave2_gate_refresh as mod
+from tools.wetlab import build_wetlab_wave2_gate_refresh as mod
 
 
 def test_wave2_gate_refresh_includes_dengue_steps() -> None:

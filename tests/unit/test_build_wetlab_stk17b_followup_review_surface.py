@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools import build_wetlab_stk17b_followup_review_surface as mod
+from tools.wetlab import build_wetlab_stk17b_followup_review_surface as mod
 
 
 def test_build_wetlab_stk17b_followup_review_surface_prefers_gate45_branch(tmp_path: Path, monkeypatch) -> None:

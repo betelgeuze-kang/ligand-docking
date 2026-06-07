@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_transporter_fit_donor_policy_decision as mod
+from tools.product import build_transporter_fit_donor_policy_decision as mod
 
 
 def test_build_transporter_fit_donor_policy_decision() -> None:
@@ -11,3 +11,5 @@ def test_build_transporter_fit_donor_policy_decision() -> None:
     )
     assert payload["summary"]["decision_status"] == "scaffold_default_keep_existing_fit_donor_pool"
     assert payload["summary"]["scaffold_fit_donor_target"] == "EGFR_KINASE"
+    assert payload["summary"]["scaffold_policy_frozen"] is True
+    assert payload["summary"]["claim_bearing_policy_frozen"] is False

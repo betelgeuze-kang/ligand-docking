@@ -78,7 +78,7 @@ def test_build_transporter_placeholder_burndown_queue_reads_current_artifacts() 
     assert rows[4]["source_artifact"] == "runs/glut1_second_wave_seed_row_packet_core_binder_02_current.md"
     assert rows[5]["source_artifact"] == "runs/glut1_second_wave_seed_row_packet_core_binder_03_current.md"
     assert rows[3]["source_anchor"] == "PMID 1716731"
-    assert rows[4]["source_anchor"] == "PMID 22689530"
+    assert rows[4]["source_anchor"] == "PMID 27836974"
     assert rows[5]["source_anchor"] == "PMID 21813754"
 
 

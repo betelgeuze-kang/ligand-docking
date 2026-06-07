@@ -111,7 +111,7 @@ def test_build_pxr_local_candidate_source_helper(tmp_path: Path) -> None:
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_pxr_local_candidate_source_helper.py"),
+            str(ROOT / "tools/product/build_pxr_local_candidate_source_helper.py"),
             "--replacement-csv",
             str(replacement_csv),
             "--provenance-csv",

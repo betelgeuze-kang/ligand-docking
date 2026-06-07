@@ -1,0 +1,18 @@
+{
+  "claim_boundary": "Per-target local organization of internal CASP17 predicted coordinates, FASTA, renders, and QC metadata only; not an official CASP submission, native accuracy result, or experimental structure.",
+  "summary": {
+    "atom_count": 1298,
+    "chain_id": "C",
+    "coordinate_status": "valid",
+    "manifest_path": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_C/metadata/H2332_chain_C_manifest.json",
+    "model_path": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_C/models/H2332_chain_C.pdb",
+    "object_folder": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_C",
+    "object_id": "chain_C",
+    "projection_svg_path": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_C/renders/H2332_chain_C_projection.svg",
+    "protein_atom_count": 1298,
+    "readme_path": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_C/README.md",
+    "residue_count": 160,
+    "target_id": "H2332",
+    "viewer_html_path": "casp17/targets_current/H2332_Fab_047_09_1A02_binding_influenza_virus_H1_HA/objects/chain_C/viewer.html"
+  }
+}

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_pxr_quantitative_provenance_packet as mod
+from tools.product import build_pxr_quantitative_provenance_packet as mod
 
 
 def test_build_pxr_quantitative_provenance_packet_tracks_bexarotene_gap() -> None:

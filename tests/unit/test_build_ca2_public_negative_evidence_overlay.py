@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from urllib.parse import parse_qs, urlparse
 
-from tools import build_ca2_public_negative_evidence_overlay as mod
+from tools.product import build_ca2_public_negative_evidence_overlay as mod
 
 
 def test_build_ca2_public_negative_evidence_overlay_detects_direct_negative_like_evidence() -> None:

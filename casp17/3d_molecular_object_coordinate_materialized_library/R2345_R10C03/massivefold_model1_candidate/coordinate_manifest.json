@@ -1,0 +1,18 @@
+{
+  "claim_boundary": "CASP17 3D molecular object coordinate materialized library only. It materializes each source coordinate model from the dry-run plan into a protein-name/object folder with sha256 verification. The default symlink mode avoids duplicating raw coordinate bytes. It does not alter source models, compute native accuracy, serialize a CASP author code, or submit to CASP.",
+  "summary": {
+    "atlas_object_key": "massivefold_model1_candidate",
+    "atlas_protein_key": "R2345_R10C03",
+    "blockers": "",
+    "materialization_mode": "symlink",
+    "materialization_status": "coordinate_materialized",
+    "materialized_coordinate_path": "casp17/3d_molecular_object_coordinate_materialized_library/R2345_R10C03/massivefold_model1_candidate/coordinates/model.cif",
+    "materialized_sha256": "0fbc11b121154f8d714f3d436c0a0e57ca1b478fdf409a18cca120840a8858bb",
+    "object_id": "model1_candidate",
+    "protein_name": "R10C03",
+    "sha256_match": "true",
+    "source_coordinate_path": "casp17/massivefold_representative_viewers/r2345/selection_013_woUnpaired_model_4/model.cif",
+    "source_sha256": "0fbc11b121154f8d714f3d436c0a0e57ca1b478fdf409a18cca120840a8858bb",
+    "target_id": "R2345"
+  }
+}

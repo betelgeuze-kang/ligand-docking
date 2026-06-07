@@ -1,7 +1,7 @@
 from pathlib import Path
 import json
 
-from tools import extract_ligand_scaleup_results as mod
+from tools.product import extract_ligand_scaleup_results as mod
 
 
 def _write_json(path: Path, payload: dict) -> None:

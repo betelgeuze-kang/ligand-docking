@@ -1,0 +1,80 @@
+{
+  "metric_rows": [
+    {
+      "claim_boundary": "CASP17 3D molecular object metric handoff only. It maps organized 3D object folders to win-tier metric requirements for review. It does not copy model coordinates, compute native accuracy, serialize a CASP author code, claim strict-blind competitive proof, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_output_status": "not_computed_review_only",
+      "metric_evidence_status": "awaiting_strict_blind_native_metric_evidence",
+      "metric_family": "rna_hybrid",
+      "metric_input_contract": "prediction/native residue mapping",
+      "metric_name": "lDDT"
+    },
+    {
+      "claim_boundary": "CASP17 3D molecular object metric handoff only. It maps organized 3D object folders to win-tier metric requirements for review. It does not copy model coordinates, compute native accuracy, serialize a CASP author code, claim strict-blind competitive proof, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_output_status": "not_computed_review_only",
+      "metric_evidence_status": "awaiting_strict_blind_native_metric_evidence",
+      "metric_family": "rna_hybrid",
+      "metric_input_contract": "prediction/native nucleic-acid or hybrid residue mapping",
+      "metric_name": "TM-score"
+    },
+    {
+      "claim_boundary": "CASP17 3D molecular object metric handoff only. It maps organized 3D object folders to win-tier metric requirements for review. It does not copy model coordinates, compute native accuracy, serialize a CASP author code, claim strict-blind competitive proof, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_output_status": "not_computed_review_only",
+      "metric_evidence_status": "awaiting_strict_blind_native_metric_evidence",
+      "metric_family": "rna_hybrid",
+      "metric_input_contract": "prediction/native nucleic-acid or hybrid residue mapping",
+      "metric_name": "RMSD"
+    },
+    {
+      "claim_boundary": "CASP17 3D molecular object metric handoff only. It maps organized 3D object folders to win-tier metric requirements for review. It does not copy model coordinates, compute native accuracy, serialize a CASP author code, claim strict-blind competitive proof, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_output_status": "not_computed_review_only",
+      "metric_evidence_status": "awaiting_strict_blind_native_metric_evidence",
+      "metric_family": "rna_hybrid",
+      "metric_input_contract": "prediction coordinate geometry validation",
+      "metric_name": "MolProbity"
+    }
+  ],
+  "summary": {
+    "atlas_object_folder": "casp17/casp17_3d_molecular_object_atlas/R2350_Tetrahymena_Ribozyme_C7_2_mutant_RNA/massivefold_model1_candidate",
+    "atlas_object_key": "massivefold_model1_candidate",
+    "atlas_object_manifest": "casp17/casp17_3d_molecular_object_atlas/R2350_Tetrahymena_Ribozyme_C7_2_mutant_RNA/massivefold_model1_candidate/object_manifest.json",
+    "atlas_protein_folder": "casp17/casp17_3d_molecular_object_atlas/R2350_Tetrahymena_Ribozyme_C7_2_mutant_RNA",
+    "atlas_protein_key": "R2350_Tetrahymena_Ribozyme_C7_2_mutant_RNA",
+    "atlas_protein_manifest": "casp17/casp17_3d_molecular_object_atlas/R2350_Tetrahymena_Ribozyme_C7_2_mutant_RNA/protein_manifest.json",
+    "author_serialized": "false",
+    "blockers": "",
+    "claim_boundary": "CASP17 3D molecular object metric handoff only. It maps organized 3D object folders to win-tier metric requirements for review. It does not copy model coordinates, compute native accuracy, serialize a CASP author code, claim strict-blind competitive proof, or submit to CASP.",
+    "competitive_proof_eligible": "false",
+    "escrow_md": "casp17/massivefold_freeze_candidate_escrow/09_rna_hybrid_r2350/FREEZE_ESCROW.md",
+    "handoff_object_folder": "casp17/casp17_3d_molecular_object_metric_handoff/R2350_Tetrahymena_Ribozyme_C7_2_mutant_RNA/massivefold_model1_candidate",
+    "handoff_object_manifest": "casp17/casp17_3d_molecular_object_metric_handoff/R2350_Tetrahymena_Ribozyme_C7_2_mutant_RNA/massivefold_model1_candidate/metric_handoff_manifest.json",
+    "handoff_protein_folder": "casp17/casp17_3d_molecular_object_metric_handoff/R2350_Tetrahymena_Ribozyme_C7_2_mutant_RNA",
+    "handoff_protein_manifest": "casp17/casp17_3d_molecular_object_metric_handoff/R2350_Tetrahymena_Ribozyme_C7_2_mutant_RNA/protein_metric_handoff_manifest.json",
+    "handoff_status": "ready_review_only",
+    "metric_evidence_status": "awaiting_strict_blind_native_metric_evidence",
+    "metric_extension_notes": "rna_hybrid_metric_extension_required",
+    "metric_family": "rna_hybrid",
+    "metric_handoff_md": "casp17/casp17_3d_molecular_object_metric_handoff/R2350_Tetrahymena_Ribozyme_C7_2_mutant_RNA/massivefold_model1_candidate/METRIC_HANDOFF.md",
+    "metric_requirement_count": 4,
+    "metric_requirements_csv": "casp17/casp17_3d_molecular_object_metric_handoff/R2350_Tetrahymena_Ribozyme_C7_2_mutant_RNA/massivefold_model1_candidate/metric_requirements.csv",
+    "model_path": "casp17/massivefold_representative_viewers/r2350/selection_020_woPaired_model_20/model.cif",
+    "model_sha256": "4b63ccc2b60c0793b299f38f2fb1bf4c894bfeacccf96d7d0f265e3232a95168",
+    "native_status": "official_native_release_pending",
+    "object_id": "model1_candidate",
+    "object_role": "model1_candidate",
+    "projection_svg": "casp17/massivefold_representative_viewers/r2350/selection_020_woPaired_model_20/projection.svg",
+    "protein_name": "Tetrahymena Ribozyme C7.2 mutant RNA",
+    "required_metric_names": "lDDT|TM-score|RMSD|MolProbity",
+    "source_lane": "massivefold_freeze_candidate",
+    "source_policy": "external_freeze_candidate_review_only_not_internal_prediction",
+    "submission_policy": "do_not_submit_without_rule_check_and_operator_approval",
+    "target_group": "rna_hybrid",
+    "target_id": "R2350",
+    "top5_manifest_csv": "casp17/massivefold_representative_rerank/r2350/top5_manifest.csv",
+    "top5_manifest_sha256": "c602cb20ff2f4ac3e045eb6c7778ba084a14a2d1dfe6e4b264a42acd860ddd0c",
+    "viewer_html": "casp17/massivefold_representative_viewers/r2350/selection_020_woPaired_model_20/viewer.html"
+  }
+}

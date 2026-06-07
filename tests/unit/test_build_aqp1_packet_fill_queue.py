@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tools import build_aqp1_packet_fill_queue as mod
+from tools.product import build_aqp1_packet_fill_queue as mod
 
 
 def test_build_aqp1_packet_fill_queue(tmp_path: Path, monkeypatch) -> None:

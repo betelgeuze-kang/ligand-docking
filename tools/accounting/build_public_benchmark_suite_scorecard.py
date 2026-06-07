@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+from typing import Any
+
+from betelgeuze_product.public_benchmark_scorecard import build_public_benchmark_suite_scorecard, write_scorecard
+from tools.builder_table_utils import write_csv_rows
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def _resolve(path_like: str | Path) -> Path:
+    path = Path(path_like)
+    return path if path.is_absolute() else ROOT / path
+
+
+def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
+    path = _resolve(path_like)
+    s = payload["summary"]
+    lines = [
+        "# Public Benchmark Suite Scorecard",
+        "",
+        f"- status: `{s['status']}`",
+        f"- pass: `{s['pass']}`",
+        f"- suite_id: `{s['suite_id']}`",
+        f"- benchmark_family: `{s['benchmark_family']}`",
+        f"- dataset_source_url: `{s['dataset_source_url']}`",
+        f"- evidence_artifact: `{s['evidence_artifact']}`",
+        f"- evidence_artifact_present: `{s['evidence_artifact_present']}`",
+        f"- evidence_artifact_sha256: `{s['evidence_artifact_sha256']}`",
+        f"- product_provenance_json: `{s['product_provenance_json']}`",
+        f"- product_provenance_json_present: `{s['product_provenance_json_present']}`",
+        f"- product_provenance_source_engine: `{s['product_provenance_source_engine']}`",
+        f"- product_provenance_result_row_count: `{s['product_provenance_result_row_count']}`",
+        f"- operator_input_artifacts: `{s['operator_input_artifacts']}`",
+        f"- operator_output_artifacts: `{s['operator_output_artifacts']}`",
+        f"- missing_input_artifacts: `{s['missing_input_artifacts']}`",
+        f"- evidence_row_count: `{s['evidence_row_count']}`",
+        f"- primary_metric: `{s['primary_metric']}`",
+        f"- primary_metric_value: `{s['primary_metric_value']}`",
+        f"- primary_metric_threshold: `{s['primary_metric_threshold']}`",
+        f"- threshold: `{s['threshold']}`",
+        f"- metric_gap_to_threshold: `{s['metric_gap_to_threshold']}`",
+        f"- blocker: `{s['blocker']}`",
+        f"- regression_baseline_ref: `{s['regression_baseline_ref']}`",
+        f"- external_state_mutated: `{s['external_state_mutated']}`",
+        "",
+        "## Blockers",
+        "",
+    ]
+    blockers = s.get("blockers") or []
+    if blockers:
+        lines.extend(f"- `{blocker}`" for blocker in blockers)
+    else:
+        lines.append("- none")
+    lines.extend(["", "## Claim Boundary", "", s["claim_boundary"], "", "## Next Step", "", f"- {s['next_required_step']}", ""])
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def _default_out_json(suite_id: str) -> str:
+    return f"runs/{suite_id}_scorecard_current.json"
+
+
+def _default_out_md(suite_id: str) -> str:
+    return f"runs/{suite_id}_scorecard_current.md"
+
+
+def _default_row_csv(suite_id: str) -> str:
+    return f"runs/{suite_id}_scorecard_row_current.csv"
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Build a product public benchmark suite scorecard row from operator evidence.")
+    parser.add_argument("--suite-id", required=True)
+    parser.add_argument("--primary-metric-value", type=float, required=True)
+    parser.add_argument("--primary-metric-name", default="")
+    parser.add_argument("--primary-metric-threshold", type=float)
+    parser.add_argument("--evidence-artifact", default="")
+    parser.add_argument("--product-provenance-json", default="")
+    parser.add_argument("--evidence-row-count", type=int, default=0)
+    parser.add_argument("--min-evidence-rows", type=int, default=1)
+    parser.add_argument("--regression-baseline-ref", default="")
+    parser.add_argument("--run-command", default="")
+    parser.add_argument("--out-json", default="")
+    parser.add_argument("--out-md", default="")
+    parser.add_argument("--row-csv", default="")
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = parse_args(argv)
+    out_json = args.out_json or _default_out_json(args.suite_id)
+    out_md = args.out_md or _default_out_md(args.suite_id)
+    row_csv = args.row_csv or _default_row_csv(args.suite_id)
+    evidence_arg = f" --evidence-artifact {args.evidence_artifact}" if args.evidence_artifact else ""
+    provenance_arg = f" --product-provenance-json {args.product_provenance_json}" if args.product_provenance_json else ""
+    baseline_arg = f" --regression-baseline-ref {args.regression_baseline_ref}" if args.regression_baseline_ref else ""
+    metric_name_arg = f" --primary-metric-name {args.primary_metric_name}" if args.primary_metric_name else ""
+    threshold_arg = (
+        f" --primary-metric-threshold {args.primary_metric_threshold}"
+        if args.primary_metric_threshold is not None
+        else ""
+    )
+    run_command = args.run_command or (
+        "python3 tools/build_public_benchmark_suite_scorecard.py "
+        f"--suite-id {args.suite_id} --primary-metric-value {args.primary_metric_value}"
+        f"{metric_name_arg}{threshold_arg}{evidence_arg}{provenance_arg} --evidence-row-count {args.evidence_row_count}"
+        f" --min-evidence-rows {args.min_evidence_rows}{baseline_arg}"
+    )
+    payload = build_public_benchmark_suite_scorecard(
+        suite_id=args.suite_id,
+        primary_metric_value=args.primary_metric_value,
+        primary_metric_name=args.primary_metric_name,
+        primary_metric_threshold=args.primary_metric_threshold,
+        evidence_artifact=_resolve(args.evidence_artifact) if args.evidence_artifact else "",
+        product_provenance_json=_resolve(args.product_provenance_json) if args.product_provenance_json else "",
+        evidence_row_count=args.evidence_row_count,
+        min_evidence_rows=args.min_evidence_rows,
+        regression_baseline_ref=args.regression_baseline_ref,
+        run_command=run_command,
+        out_json=_resolve(out_json),
+    )
+    write_scorecard(_resolve(out_json), payload)
+    write_csv_rows(_resolve(row_csv), [payload["scorecard_row"]])
+    _write_markdown(out_md, payload)
+
+
+if __name__ == "__main__":
+    main()

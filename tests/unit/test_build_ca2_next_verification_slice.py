@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools.build_ca2_next_verification_slice import build_payload
+from tools.product.build_ca2_next_verification_slice import build_payload
 
 
 def test_build_ca2_next_verification_slice_selects_core_rows_after_verified_top3() -> None:

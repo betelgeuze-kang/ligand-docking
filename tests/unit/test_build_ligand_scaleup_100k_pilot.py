@@ -2,8 +2,8 @@ from pathlib import Path
 import json
 from types import SimpleNamespace
 
-from tools import build_ligand_scaleup_100k_pilot as mod
-from tools import run_ligand_scaleup_100k_pilot_current as run_mod
+from tools.product import build_ligand_scaleup_100k_pilot as mod
+from tools.product import run_ligand_scaleup_100k_pilot_current as run_mod
 
 
 def _contains_tokens(text: str, *tokens: str) -> None:
@@ -466,6 +466,8 @@ def test_run_ligand_scaleup_100k_pilot_current_refreshes_current_summaries_after
         "run_external_validation_blind_sets.py",
         "compare_biorxiv_external_validation_runs.py",
         "build_ligand_scaleup_kpi_table.py",
-        "build_ligand_scaleup_100k_pilot.py",
-        "build_ligand_scaleup_benchmark_summary.py",
+        "build_ligand_scaleup_100k_pilot.py",  # tools/product/build_ligand_scaleup_100k_pilot.py
+        "build_ligand_scaleup_benchmark_summary.py",  # tools/product/build_ligand_scaleup_benchmark_summary.py
     ]
+    assert Path(calls[3][1]).as_posix().endswith("tools/product/build_ligand_scaleup_100k_pilot.py")
+    assert Path(calls[4][1]).as_posix().endswith("tools/product/build_ligand_scaleup_benchmark_summary.py")

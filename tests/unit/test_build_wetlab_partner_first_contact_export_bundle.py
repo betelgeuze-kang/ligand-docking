@@ -39,14 +39,18 @@ def test_build_wetlab_partner_first_contact_export_bundle_uses_default_sender() 
     assert summary["ready_to_send_count"] == 5
     assert summary["sender_name"] == "강지훈"
     assert summary["sender_affiliation"] == ""
+    assert "explicit R4 confirmation" in summary["next_required_step"]
     assert rows["DNDi_IPK"]["status"] == "ready_to_send"
     assert rows["DNDi_IPK"]["email_body"].endswith("Best,\n강지훈")
     assert "[Your Name]" not in rows["DNDi_IPK"]["email_body"]
     assert "T. cruzi PDE" in rows["DNDi_IPK"]["lead_targets"]
+    assert "runs/tcruzi_pde_dndi_ipk_export_current.md" in rows["DNDi_IPK"]["attachment_artifacts"]
     assert rows["M4K_open_science"]["status"] == "ready_to_send"
     assert rows["SGC_dark_kinase"]["status"] == "ready_to_send"
     assert rows["oncology_condition_aware"]["status"] == "ready_to_send"
+    assert "runs/caix_oncology_export_current.md" in rows["oncology_condition_aware"]["attachment_artifacts"]
     assert rows["READDI_Korea"]["status"] == "ready_to_send"
+    assert "runs/sarscov2_mpro_readdi_export_current.md" in rows["READDI_Korea"]["attachment_artifacts"]
     assert "Mpro plus PLpro" in rows["READDI_Korea"]["proposal_title"]
 
 

@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from tools import build_ca2_pxr_review_policy_closure_gate as mod
+from tools.product import build_ca2_pxr_review_policy_closure_gate as mod
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -89,7 +89,7 @@ def test_cli_writes_gate(tmp_path: Path) -> None:
     subprocess.run(
         [
             sys.executable,
-            "tools/build_ca2_pxr_review_policy_closure_gate.py",
+            "tools/product/build_ca2_pxr_review_policy_closure_gate.py",
             "--ca2-capture-json",
             str(ca2_capture),
             "--ca2-commit-json",

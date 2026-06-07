@@ -3,7 +3,7 @@ from __future__ import annotations
 import csv
 from pathlib import Path
 
-from tools import build_wetlab_tcruzi_pde_rescue_review_surface as mod
+from tools.wetlab import build_wetlab_tcruzi_pde_rescue_review_surface as mod
 
 
 def test_build_wetlab_tcruzi_pde_rescue_review_surface_promotes_rescue_only_branch(tmp_path: Path) -> None:

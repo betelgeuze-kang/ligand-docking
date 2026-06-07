@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
-from tools import run_ligand_scaleup_suite_current as mod
+from tools.product import run_ligand_scaleup_suite_current as mod
 
 
 def test_run_ligand_scaleup_suite_current_dry_run_default_plan(tmp_path: Path, monkeypatch, capsys) -> None:
@@ -24,7 +24,7 @@ def test_run_ligand_scaleup_suite_current_dry_run_default_plan(tmp_path: Path, m
     assert [row["stage_id"] for row in payload["stages"]] == ["speedpack_ab", "pilot_100k", "pilot_1m"]
     assert all(bool(row["enabled"]) for row in payload["stages"])
     assert payload["stages"][0]["cmd"][1].endswith("tools/run_ligand_speedpack_ab_current.py")
-    assert payload["stages"][1]["cmd"][1].endswith("tools/run_ligand_scaleup_100k_pilot_current.py")
+    assert payload["stages"][1]["cmd"][1].endswith("tools/product/run_ligand_scaleup_100k_pilot_current.py")
     assert payload["stages"][2]["cmd"][1].endswith("tools/run_ligand_scaleup_1m_pilot_current.py")
     assert "--no-refresh-current-artifacts" in payload["stages"][0]["cmd"]
     assert "--no-refresh-current-summaries" in payload["stages"][1]["cmd"]
@@ -134,7 +134,7 @@ def test_run_ligand_scaleup_suite_current_execute_runs_enabled_stages_in_order(t
     assert [Path(cmd[1]).name for cmd in calls] == [
         "run_ligand_speedpack_ab_current.py",
         "build_ligand_scaleup_suite_status.py",
-        "run_ligand_scaleup_100k_pilot_current.py",
+        "run_ligand_scaleup_100k_pilot_current.py",  # product/run_ligand_scaleup_100k_pilot_current.py
         "build_ligand_scaleup_suite_status.py",
     ]
     assert "--baseline-run-root" in calls[0]

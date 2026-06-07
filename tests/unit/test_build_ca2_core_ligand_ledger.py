@@ -51,7 +51,7 @@ def test_ca2_core_ligand_ledger_scopes_to_ca2_reference_and_split(tmp_path: Path
     subprocess.run(
         [
             'python3',
-            str(ROOT / 'tools/build_ca2_core_ligand_ledger.py'),
+            str(ROOT / 'tools/product/build_ca2_core_ligand_ledger.py'),
             '--reference-csv',
             'config/ligand_binding_reference_blind_ca2_zn_v1.csv',
             '--eval-split-csv',

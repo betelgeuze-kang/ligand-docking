@@ -1,0 +1,98 @@
+{
+  "metric_rows": [
+    {
+      "claim_boundary": "CASP17 3D molecular object metric handoff only. It maps organized 3D object folders to win-tier metric requirements for review. It does not copy model coordinates, compute native accuracy, serialize a CASP author code, claim strict-blind competitive proof, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_output_status": "not_computed_review_only",
+      "metric_evidence_status": "awaiting_strict_blind_native_metric_evidence",
+      "metric_family": "monomer_domain",
+      "metric_input_contract": "prediction/native chain mapping",
+      "metric_name": "GDT_TS"
+    },
+    {
+      "claim_boundary": "CASP17 3D molecular object metric handoff only. It maps organized 3D object folders to win-tier metric requirements for review. It does not copy model coordinates, compute native accuracy, serialize a CASP author code, claim strict-blind competitive proof, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_output_status": "not_computed_review_only",
+      "metric_evidence_status": "awaiting_strict_blind_native_metric_evidence",
+      "metric_family": "monomer_domain",
+      "metric_input_contract": "prediction/native residue mapping",
+      "metric_name": "lDDT"
+    },
+    {
+      "claim_boundary": "CASP17 3D molecular object metric handoff only. It maps organized 3D object folders to win-tier metric requirements for review. It does not copy model coordinates, compute native accuracy, serialize a CASP author code, claim strict-blind competitive proof, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_output_status": "not_computed_review_only",
+      "metric_evidence_status": "awaiting_strict_blind_native_metric_evidence",
+      "metric_family": "monomer_domain",
+      "metric_input_contract": "prediction/native chain mapping",
+      "metric_name": "TM-score"
+    },
+    {
+      "claim_boundary": "CASP17 3D molecular object metric handoff only. It maps organized 3D object folders to win-tier metric requirements for review. It does not copy model coordinates, compute native accuracy, serialize a CASP author code, claim strict-blind competitive proof, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_output_status": "not_computed_review_only",
+      "metric_evidence_status": "awaiting_strict_blind_native_metric_evidence",
+      "metric_family": "monomer_domain",
+      "metric_input_contract": "prediction/native chain mapping",
+      "metric_name": "RMSD"
+    },
+    {
+      "claim_boundary": "CASP17 3D molecular object metric handoff only. It maps organized 3D object folders to win-tier metric requirements for review. It does not copy model coordinates, compute native accuracy, serialize a CASP author code, claim strict-blind competitive proof, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_output_status": "not_computed_review_only",
+      "metric_evidence_status": "awaiting_strict_blind_native_metric_evidence",
+      "metric_family": "monomer_domain",
+      "metric_input_contract": "prediction/native chain mapping",
+      "metric_name": "GDT_HA"
+    },
+    {
+      "claim_boundary": "CASP17 3D molecular object metric handoff only. It maps organized 3D object folders to win-tier metric requirements for review. It does not copy model coordinates, compute native accuracy, serialize a CASP author code, claim strict-blind competitive proof, or submit to CASP.",
+      "competitive_proof_eligible": "false",
+      "expected_output_status": "not_computed_review_only",
+      "metric_evidence_status": "awaiting_strict_blind_native_metric_evidence",
+      "metric_family": "monomer_domain",
+      "metric_input_contract": "prediction coordinate geometry validation",
+      "metric_name": "MolProbity"
+    }
+  ],
+  "summary": {
+    "atlas_object_folder": "casp17/casp17_3d_molecular_object_atlas/T2313_P66/current_chain_A",
+    "atlas_object_key": "current_chain_A",
+    "atlas_object_manifest": "casp17/casp17_3d_molecular_object_atlas/T2313_P66/current_chain_A/object_manifest.json",
+    "atlas_protein_folder": "casp17/casp17_3d_molecular_object_atlas/T2313_P66",
+    "atlas_protein_key": "T2313_P66",
+    "atlas_protein_manifest": "casp17/casp17_3d_molecular_object_atlas/T2313_P66/protein_manifest.json",
+    "author_serialized": "false",
+    "blockers": "",
+    "claim_boundary": "CASP17 3D molecular object metric handoff only. It maps organized 3D object folders to win-tier metric requirements for review. It does not copy model coordinates, compute native accuracy, serialize a CASP author code, claim strict-blind competitive proof, or submit to CASP.",
+    "competitive_proof_eligible": "false",
+    "escrow_md": "",
+    "handoff_object_folder": "casp17/casp17_3d_molecular_object_metric_handoff/T2313_P66/current_chain_A",
+    "handoff_object_manifest": "casp17/casp17_3d_molecular_object_metric_handoff/T2313_P66/current_chain_A/metric_handoff_manifest.json",
+    "handoff_protein_folder": "casp17/casp17_3d_molecular_object_metric_handoff/T2313_P66",
+    "handoff_protein_manifest": "casp17/casp17_3d_molecular_object_metric_handoff/T2313_P66/protein_metric_handoff_manifest.json",
+    "handoff_status": "ready_review_only",
+    "metric_evidence_status": "awaiting_strict_blind_native_metric_evidence",
+    "metric_extension_notes": "",
+    "metric_family": "monomer_domain",
+    "metric_handoff_md": "casp17/casp17_3d_molecular_object_metric_handoff/T2313_P66/current_chain_A/METRIC_HANDOFF.md",
+    "metric_requirement_count": 6,
+    "metric_requirements_csv": "casp17/casp17_3d_molecular_object_metric_handoff/T2313_P66/current_chain_A/metric_requirements.csv",
+    "model_path": "casp17/targets_current/T2313_P66/objects/chain_A/models/T2313_chain_A.pdb",
+    "model_sha256": "",
+    "native_status": "native_accuracy_not_scored",
+    "object_id": "chain_A",
+    "object_role": "A",
+    "projection_svg": "casp17/targets_current/T2313_P66/objects/chain_A/renders/T2313_chain_A_projection.svg",
+    "protein_name": "P66",
+    "required_metric_names": "GDT_TS|lDDT|TM-score|RMSD|GDT_HA|MolProbity",
+    "source_lane": "current_object_library",
+    "source_policy": "local_current_object_library_review_only_not_competitive_proof",
+    "submission_policy": "do_not_submit_without_rule_check_and_operator_approval",
+    "target_group": "protein_or_monomer",
+    "target_id": "T2313",
+    "top5_manifest_csv": "",
+    "top5_manifest_sha256": "",
+    "viewer_html": "casp17/targets_current/T2313_P66/objects/chain_A/viewer.html"
+  }
+}

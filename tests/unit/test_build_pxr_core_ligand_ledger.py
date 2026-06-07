@@ -51,7 +51,7 @@ def test_pxr_core_ligand_ledger_scopes_to_pxr_reference_and_split(tmp_path: Path
     subprocess.run(
         [
             'python3',
-            str(ROOT / 'tools/build_pxr_core_ligand_ledger.py'),
+            str(ROOT / 'tools/product/build_pxr_core_ligand_ledger.py'),
             '--reference-csv',
             'config/ligand_binding_reference_blind_pxr_nr1i2_v1.csv',
             '--eval-split-csv',

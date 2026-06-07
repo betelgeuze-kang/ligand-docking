@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 from typing import Any, Sequence
 
-from tools.ligand_scaleup_pilot_helper import (
+from tools.product.ligand_scaleup_pilot_helper import (
     ScaleupPilotPreset,
     build_guardrail_rows,
     build_run_current_payload,
@@ -72,7 +72,7 @@ def _build_post_run_refresh_plan(
             "step_id": "refresh_scaleup_benchmark_summary",
             "cmd": [
                 sys.executable,
-                str(ROOT / "tools/build_ligand_scaleup_benchmark_summary.py"),
+                str(ROOT / "tools/product/build_ligand_scaleup_benchmark_summary.py"),
                 "--pilot-json",
                 "runs/ligand_scaleup_1m_pilot_current.json",
                 "--comparison-json",

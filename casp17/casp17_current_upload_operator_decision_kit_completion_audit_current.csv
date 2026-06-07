@@ -1,0 +1,9 @@
+queue_rank,target_id,audit_status,urgency,review_status,decision_status,decision_packet_folder,decision_folder_present,decision_md_present,operator_decision_row_csv_present,operator_decision_row_csv_rows,target_summary_csv_match,operator_decision_missing,invalid_operator_decision,author_serialization_missing,final_upload_filename_missing,coordinate_copy_count,proof_marker_count,portal_submit_marker_count,blockers,next_action
+1,H1344,pass,today,ready,awaiting_operator_decision,casp17/current_upload_operator_decision_kit/01_h1344,1,1,1,1,1,1,0,1,0,0,0,0,,"set operator_decision to approve, hold, or reject"
+2,H2321,pass,today,ready,awaiting_operator_decision,casp17/current_upload_operator_decision_kit/02_h2321,1,1,1,1,1,1,0,1,0,0,0,0,,"set operator_decision to approve, hold, or reject"
+3,H1346,pass,soon,ready,awaiting_operator_decision,casp17/current_upload_operator_decision_kit/03_h1346,1,1,1,1,1,1,0,1,0,0,0,0,,"set operator_decision to approve, hold, or reject"
+4,H1347,pass,soon,ready,awaiting_operator_decision,casp17/current_upload_operator_decision_kit/04_h1347,1,1,1,1,1,1,0,1,0,0,0,0,,"set operator_decision to approve, hold, or reject"
+5,H1348,pass,soon,ready,awaiting_operator_decision,casp17/current_upload_operator_decision_kit/05_h1348,1,1,1,1,1,1,0,1,0,0,0,0,,"set operator_decision to approve, hold, or reject"
+6,H1349,pass,soon,ready,awaiting_operator_decision,casp17/current_upload_operator_decision_kit/06_h1349,1,1,1,1,1,1,0,1,0,0,0,0,,"set operator_decision to approve, hold, or reject"
+7,H1354,pass,future,ready,awaiting_operator_decision,casp17/current_upload_operator_decision_kit/07_h1354,1,1,1,1,1,1,0,1,0,0,0,0,,"set operator_decision to approve, hold, or reject"
+8,H1355,pass,future,ready,awaiting_operator_decision,casp17/current_upload_operator_decision_kit/08_h1355,1,1,1,1,1,1,0,1,0,0,0,0,,"set operator_decision to approve, hold, or reject"

@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from tools import build_wetlab_wave2_runtime_event as event_mod
+from tools.wetlab import build_wetlab_wave2_runtime_event as event_mod
 from tools.wetlab_target_render_utils import load_json, write_artifact
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -65,9 +65,9 @@ DENGUE_STATIC_BUILDERS = [
     ["tools/build_wetlab_dengue_ns2b_ns3_protease_repurposing_fill_map.py"],
     ["tools/build_wetlab_dengue_ns2b_ns3_protease_novelty_fill_map.py"],
     ["tools/build_dengue_ns2b_ns3_protease_render_suite.py"],
-    ["tools/build_dengue_ns2b_ns3_protease_launch_packet.py"],
+    ["tools/wetlab/wetlab/build_dengue_ns2b_ns3_protease_launch_packet.py"],
     ["tools/build_dengue_ns2b_ns3_protease_result_review.py"],
-    ["tools/build_dengue_ns2b_ns3_protease_run_record.py"],
+    ["tools/wetlab/wetlab/build_dengue_ns2b_ns3_protease_run_record.py"],
     ["tools/build_dengue_ns2b_ns3_protease_result_review.py"],
 ]
 DPRE1_STATIC_BUILDERS = [
@@ -82,10 +82,10 @@ DPRE1_STATIC_BUILDERS = [
 TCRUZI_KRS1_STATIC_BUILDERS = [
     ["tools/build_wetlab_tcruzi_krs1_repurposing_fill_map.py"],
     ["tools/build_wetlab_tcruzi_krs1_novelty_fill_map.py"],
-    ["tools/build_tcruzi_krs1_render_suite.py"],
-    ["tools/build_tcruzi_krs1_launch_packet.py"],
+    ["tools/wetlab/wetlab/build_tcruzi_krs1_render_suite.py"],
+    ["tools/wetlab/wetlab/build_tcruzi_krs1_launch_packet.py"],
     ["tools/build_tcruzi_krs1_result_review.py"],
-    ["tools/build_tcruzi_krs1_run_record.py"],
+    ["tools/wetlab/wetlab/build_tcruzi_krs1_run_record.py"],
     ["tools/build_tcruzi_krs1_result_review.py"],
 ]
 LRRK2_STATIC_BUILDERS = [

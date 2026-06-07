@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
-from tools import build_gpcr_atom_window_anchor_feature_cache as mod
+from tools.gpcr_replay import build_gpcr_atom_window_anchor_feature_cache as mod
 
 
 def _pdb_atom(record: str, serial: int, atom: str, resn: str, chain: str, resi: int, x: float, y: float, z: float) -> str:

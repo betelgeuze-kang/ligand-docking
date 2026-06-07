@@ -15,7 +15,7 @@ def test_build_ligand_scaleup_100k_test_audit() -> None:
     subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools/build_ligand_scaleup_100k_test_audit.py"),
+            str(ROOT / "tools/product/build_ligand_scaleup_100k_test_audit.py"),
             "--out-json", str(out_json),
             "--out-csv", str(out_csv),
             "--out-md", str(out_md),

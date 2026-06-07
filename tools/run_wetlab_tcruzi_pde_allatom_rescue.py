@@ -17,7 +17,7 @@ from tools.build_wetlab_rescue_three_bead_candidates import (
 )
 from tools.native_target_registry import find_matching_target_row, resolve_repo_native_entry
 from tools.wetlab_allatom_refinement_utils import resolve_optional_claim_gate_summary
-from tools.wetlab_pose_validation_utils import summarize_pose_validation_rows
+from tools.wetlab.wetlab_pose_validation_utils import summarize_pose_validation_rows
 from tools.wetlab_target_render_utils import load_json, write_artifact
 from tools.wetlab_broad_screen_watch_utils import slug
 

@@ -73,7 +73,7 @@ def test_build_ligand_scaleup_100k_decoy_proof(tmp_path: Path) -> None:
     subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools/build_ligand_scaleup_100k_decoy_proof.py"),
+            str(ROOT / "tools/product/build_ligand_scaleup_100k_decoy_proof.py"),
             "--run-prefix",
             str(base),
             "--out-json",

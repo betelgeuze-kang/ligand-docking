@@ -1,0 +1,5 @@
+lane,participation_status,priority,reason,next_action
+casp17_historical_benchmark,active,1,required_to_raise_scaffold_score_from_65_to_90,"clear historical non-CASP17 target identity, no-leak provenance, native files, and prediction files"
+casp17_competitive_floor,active,2,required_to_raise_competitive_proof_from_15_25_to_85_90,fill the 15-row competitive-floor batch after cleared historical identities are available
+casp17_3d_object_library,active,3,required_for_per-object_review_and_submission_readiness,"keep per-protein folders, per-chain viewers, projections, and audits green"
+capri_round65,deferred_pi_required,0,operator_not_pi_capri_registration_requires_pi_or_research_group_lead,preserve CAPRI artifacts as context only until a PI or research-group lead confirms registration

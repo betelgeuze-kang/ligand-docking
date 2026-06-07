@@ -97,7 +97,7 @@ def test_build_pxr_ligand_packet_fill_workbook(tmp_path: Path) -> None:
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_pxr_ligand_packet_fill_workbook.py"),
+            str(ROOT / "tools/product/build_pxr_ligand_packet_fill_workbook.py"),
             "--template-json",
             "config/external_validation_biorxiv_nuclear_receptor_pxr_v1_template.json",
             "--out-json",

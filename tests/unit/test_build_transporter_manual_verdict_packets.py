@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_transporter_manual_verdict_packets as mod
+from tools.product import build_transporter_manual_verdict_packets as mod
 
 
 def _contains_tokens(text: str, *tokens: str) -> None:

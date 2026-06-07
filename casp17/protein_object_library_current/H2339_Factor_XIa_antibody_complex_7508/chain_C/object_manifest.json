@@ -1,0 +1,22 @@
+{
+  "claim_boundary": "Local CASP17 protein-name object library only. It materializes review folders and pointers for already-generated internal 3D object models; it does not copy native structures, fetch external data, score native accuracy, or submit to CASP.",
+  "summary": {
+    "atom_count": 2879,
+    "blockers": "",
+    "chain_id": "C",
+    "coordinate_status": "valid",
+    "library_object_folder": "casp17/protein_object_library_current/H2339_Factor_XIa_antibody_complex_7508/chain_C",
+    "library_protein_folder": "casp17/protein_object_library_current/H2339_Factor_XIa_antibody_complex_7508",
+    "library_status": "pass",
+    "model_path": "casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_C/models/H2339_chain_C.pdb",
+    "object_id": "chain_C",
+    "projection_svg_path": "casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_C/renders/H2339_chain_C_projection.svg",
+    "protein_atom_count": 2879,
+    "protein_key": "H2339_Factor_XIa_antibody_complex_7508",
+    "protein_name": "Factor XIa antibody complex 7508",
+    "residue_count": 369,
+    "source_object_folder": "casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_C",
+    "target_id": "H2339",
+    "viewer_html_path": "casp17/targets_current/H2339_Factor_XIa_antibody_complex_7508/objects/chain_C/viewer.html"
+  }
+}

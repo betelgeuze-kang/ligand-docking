@@ -87,7 +87,7 @@ def test_build_ca2_ligand_packet_fill_workbook(tmp_path: Path) -> None:
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_ca2_ligand_packet_fill_workbook.py"),
+            str(ROOT / "tools/product/build_ca2_ligand_packet_fill_workbook.py"),
             "--template-json",
             "config/external_validation_biorxiv_non_kinase_enzyme_ca2_v1_template.json",
             "--out-json",

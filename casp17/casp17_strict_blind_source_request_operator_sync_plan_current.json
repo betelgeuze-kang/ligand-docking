@@ -1,0 +1,42 @@
+{
+  "rows": [
+    {
+      "action_id": "source_request_sync_blocker_001",
+      "action_status": "blocked_awaiting_source_request_fulfillment",
+      "blocker": "source_id_missing",
+      "candidate_target_id": "HIST_BBA5",
+      "current_operator_value": "",
+      "destination_operator_csv": "casp17/strict_blind_source_gate_operator_packet/hist_REQUIRED_MONOMER_001/source_gate_operator_values.csv",
+      "field_key": "source_id_missing",
+      "next_action": "fill operator_value for source_id",
+      "proposed_operator_value": "",
+      "source_evidence_ref": "",
+      "source_request_id": "source_request_001",
+      "source_template_csv": "",
+      "source_value": "",
+      "sync_mode": "dry_run"
+    }
+  ],
+  "summary": {
+    "applied_sync_action_count": 0,
+    "blocked_request_count": 17,
+    "blocked_sync_action_count": 1,
+    "claim_boundary": "Local CASP17 strict-blind source-request operator sync plan only. It maps the first ready source request template into the source-gate operator CSV, with dry-run as the default mode. It does not approve provenance, copy prediction files, mutate source manifests, compute CASP metrics, push remotes, or submit to CASP.",
+    "destination_operator_csv": "casp17/strict_blind_source_gate_operator_packet/hist_REQUIRED_MONOMER_001/source_gate_operator_values.csv",
+    "first_action_id": "source_request_sync_blocker_001",
+    "first_blocker": "source_id_missing",
+    "first_next_action": "fill operator_value for source_id",
+    "fulfillment_gate_status": "awaiting_source_request_operator_values",
+    "generated_at_local": "2026-06-01T03:53:14+09:00",
+    "input_blockers": "",
+    "packet_type": "casp17_strict_blind_source_request_operator_sync_plan",
+    "ready_request_count": 0,
+    "ready_sync_action_count": 0,
+    "selected_request_id": "",
+    "selected_target_id": "",
+    "selected_template_csv": "",
+    "source_request_operator_sync_plan_status": "awaiting_source_request_fulfillment",
+    "sync_action_count": 0,
+    "sync_mode": "dry_run"
+  }
+}

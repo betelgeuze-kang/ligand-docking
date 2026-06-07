@@ -1,0 +1,18 @@
+{
+  "claim_boundary": "CASP17 3D molecular object coordinate materialized library only. It materializes each source coordinate model from the dry-run plan into a protein-name/object folder with sha256 verification. The default symlink mode avoids duplicating raw coordinate bytes. It does not alter source models, compute native accuracy, serialize a CASP author code, or submit to CASP.",
+  "summary": {
+    "atlas_object_key": "current_chain_A",
+    "atlas_protein_key": "H1335_HCMV_Merlin_gHgLgO_Fab_complex",
+    "blockers": "",
+    "materialization_mode": "symlink",
+    "materialization_status": "coordinate_materialized",
+    "materialized_coordinate_path": "casp17/3d_molecular_object_coordinate_materialized_library/H1335_HCMV_Merlin_gHgLgO_Fab_complex/current_chain_A/coordinates/H1335_chain_A.pdb",
+    "materialized_sha256": "836bacbcf2d6b0a3fa6f89624577685f5c801b2f5bc324fb3c0210175f6172b2",
+    "object_id": "chain_A",
+    "protein_name": "HCMV Merlin gHgLgO-Fab complex",
+    "sha256_match": "true",
+    "source_coordinate_path": "casp17/targets_current/H1335_HCMV_Merlin_gHgLgO_Fab_complex/objects/chain_A/models/H1335_chain_A.pdb",
+    "source_sha256": "836bacbcf2d6b0a3fa6f89624577685f5c801b2f5bc324fb3c0210175f6172b2",
+    "target_id": "H1335"
+  }
+}

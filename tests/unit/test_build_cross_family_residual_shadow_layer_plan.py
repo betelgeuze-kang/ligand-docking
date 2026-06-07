@@ -2,7 +2,7 @@ from pathlib import Path
 import importlib.util
 
 ROOT = Path(__file__).resolve().parents[2]
-spec = importlib.util.spec_from_file_location('build_cross_family_residual_shadow_layer_plan', ROOT / 'tools' / 'build_cross_family_residual_shadow_layer_plan.py')
+spec = importlib.util.spec_from_file_location('build_cross_family_residual_shadow_layer_plan', ROOT / 'tools' / 'product/build_cross_family_residual_shadow_layer_plan.py')
 mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
 

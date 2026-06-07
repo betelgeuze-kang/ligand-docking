@@ -1,0 +1,31 @@
+template_column,current_value,recommended_value,intake_status,candidate_count,next_action
+benchmark_id,hist_REQUIRED_MONOMER_010,,awaiting_operator_value,0,fill benchmark_id in row_fill.csv from cleared local evidence
+target_id,REQUIRED_MONOMER_010,,awaiting_operator_value,0,fill target_id in row_fill.csv from cleared local evidence
+prediction_pdb,runs/casp17_historical_benchmark_predictions_current/REQUIRED_MONOMER_010_prediction.pdb,,awaiting_dropzone_file,0,place the validated no-leak local PDB in the indicated dropzone folder
+native_pdb,runs/casp17_historical_benchmark_natives_current/REQUIRED_MONOMER_010_native.pdb,,awaiting_dropzone_file,0,place the validated no-leak local PDB in the indicated dropzone folder
+leakage_clearance,REQUIRED_NO_LEAK_CLEARANCE,,awaiting_operator_value,0,fill leakage_clearance in row_fill.csv from cleared local evidence
+prediction_method,REQUIRED_INTERNAL_METHOD,,awaiting_operator_value,0,fill prediction_method in row_fill.csv from cleared local evidence
+prediction_created_at,YYYY-MM-DD,,awaiting_operator_value,0,fill prediction_created_at in row_fill.csv from cleared local evidence
+native_release_date,YYYY-MM-DD,,awaiting_operator_value,0,fill native_release_date in row_fill.csv from cleared local evidence
+prediction_generated_before_native_release,REQUIRED_TRUE_CONFIRMATION,,awaiting_operator_value,0,fill prediction_generated_before_native_release in row_fill.csv from cleared local evidence
+public_template_or_native_used_for_prediction,REQUIRED_FALSE_CONFIRMATION,,awaiting_operator_value,0,fill public_template_or_native_used_for_prediction in row_fill.csv from cleared local evidence
+other_team_model_used,REQUIRED_FALSE_CONFIRMATION,,awaiting_operator_value,0,fill other_team_model_used in row_fill.csv from cleared local evidence
+post_release_information_used,REQUIRED_FALSE_CONFIRMATION,,awaiting_operator_value,0,fill post_release_information_used in row_fill.csv from cleared local evidence
+current_casp17_target,REQUIRED_FALSE_CONFIRMATION,,awaiting_operator_value,0,fill current_casp17_target in row_fill.csv from cleared local evidence
+operator_clearance,REQUIRED_OPERATOR_CLEARANCE,,awaiting_operator_value,0,fill operator_clearance in row_fill.csv from cleared local evidence
+recursive_prediction_pdb,runs/casp17_historical_ablation_predictions_current/recursive/REQUIRED_MONOMER_010TS.pdb,,awaiting_dropzone_file,0,place the validated no-leak local PDB in the indicated dropzone folder
+scored_prediction_pdb,runs/casp17_historical_ablation_predictions_current/scored/REQUIRED_MONOMER_010TS.pdb,,awaiting_dropzone_file,0,place the validated no-leak local PDB in the indicated dropzone folder
+sidechain_scaffold_prediction_pdb,runs/casp17_historical_ablation_predictions_current/sidechain_scaffold/REQUIRED_MONOMER_010TS.pdb,,awaiting_dropzone_file,0,place the validated no-leak local PDB in the indicated dropzone folder
+sidechain_repacked_prediction_pdb,runs/casp17_historical_ablation_predictions_current/sidechain_repacked/REQUIRED_MONOMER_010TS.pdb,,awaiting_dropzone_file,0,place the validated no-leak local PDB in the indicated dropzone folder
+sidechain_completed_prediction_pdb,runs/casp17_historical_ablation_predictions_current/sidechain_completed/REQUIRED_MONOMER_010TS.pdb,,awaiting_dropzone_file,0,place the validated no-leak local PDB in the indicated dropzone folder
+steric_relaxed_prediction_pdb,runs/casp17_historical_ablation_predictions_current/steric_relaxed/REQUIRED_MONOMER_010TS.pdb,,awaiting_dropzone_file,0,place the validated no-leak local PDB in the indicated dropzone folder
+rotamer_minimized_prediction_pdb,runs/casp17_historical_ablation_predictions_current/rotamer_minimized/REQUIRED_MONOMER_010TS.pdb,,awaiting_dropzone_file,0,place the validated no-leak local PDB in the indicated dropzone folder
+polar_refined_prediction_pdb,runs/casp17_historical_ablation_predictions_current/polar_refined/REQUIRED_MONOMER_010TS.pdb,,awaiting_dropzone_file,0,place the validated no-leak local PDB in the indicated dropzone folder
+forcefield_minimized_prediction_pdb,runs/casp17_historical_ablation_predictions_current/forcefield_minimized/REQUIRED_MONOMER_010TS.pdb,,awaiting_dropzone_file,0,place the validated no-leak local PDB in the indicated dropzone folder
+statistical_rotamer_prediction_pdb,runs/casp17_historical_ablation_predictions_current/statistical_rotamer/REQUIRED_MONOMER_010TS.pdb,,awaiting_dropzone_file,0,place the validated no-leak local PDB in the indicated dropzone folder
+selected_model_rank,REQUIRED_1_TO_5,,awaiting_operator_value,0,fill selected_model_rank in row_fill.csv from cleared local evidence
+best_model_rank,REQUIRED_1_TO_5,,awaiting_operator_value,0,fill best_model_rank in row_fill.csv from cleared local evidence
+selected_native_metric,REQUIRED_NATIVE_METRIC,,awaiting_operator_value,0,fill selected_native_metric in row_fill.csv from cleared local evidence
+best_native_metric,REQUIRED_ORACLE_METRIC,,awaiting_operator_value,0,fill best_native_metric in row_fill.csv from cleared local evidence
+selected_score,REQUIRED_INTERNAL_SCORE,,awaiting_operator_value,0,fill selected_score in row_fill.csv from cleared local evidence
+best_score,REQUIRED_ORACLE_SCORE,,awaiting_operator_value,0,fill best_score in row_fill.csv from cleared local evidence

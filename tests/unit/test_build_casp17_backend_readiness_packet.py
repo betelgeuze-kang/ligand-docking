@@ -20,7 +20,7 @@ def _run_builder(tmp_path: Path, probe: dict) -> dict:
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/build_casp17_backend_readiness_packet.py"),
+            str(ROOT / "tools/casp17/build_casp17_backend_readiness_packet.py"),
             "--probe-json",
             str(probe_json),
             "--out-json",

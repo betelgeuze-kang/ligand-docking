@@ -37,7 +37,7 @@ from tools import build_wetlab_broad_screen_compound_universe as broad_universe_
 from tools import build_wetlab_broad_screen_bulk_results as broad_bulk_results_mod
 from tools import build_wetlab_broad_screen_repurposing_autofill as broad_autofill_mod
 from tools import build_wetlab_broad_screen_execution_queue as broad_execution_mod
-from tools import build_wetlab_broad_screen_runtime_runbook as broad_runbook_mod
+from tools.wetlab import build_wetlab_broad_screen_runtime_runbook as broad_runbook_mod
 from tools import build_wetlab_validation_companion_panels as companion_mod
 from tools import build_wetlab_wave1_brief_fill_queue as fill_queue_mod
 from tools import build_wetlab_one_page_brief_schema as schema_mod

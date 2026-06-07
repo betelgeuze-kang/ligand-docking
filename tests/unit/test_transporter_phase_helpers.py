@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools.transporter_phase_helpers import aqp1_follow_on_seed_steps, infer_transporter_phase
+from tools.product.transporter_phase_helpers import aqp1_follow_on_seed_steps, infer_transporter_phase
 
 
 def test_infer_transporter_phase_switches_to_seed_row_blocker_closure_when_manual_backlog_is_zero() -> None:

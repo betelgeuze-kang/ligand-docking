@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_transporter_binder_verdict_progress as mod
+from tools.product import build_transporter_binder_verdict_progress as mod
 
 
 def _contains_tokens(text: str, *tokens: str) -> None:

@@ -1,0 +1,22 @@
+# T2313 Selection 120 MassiveFold Model Review
+
+- target: `T2313`
+- model_set: `T2313_T330`
+- model: `Model_3075_afm_dropout_04_woTemplates_model_1_multimer_v2_pred_44.pdb`
+- protocol: `afm_dropout_04_woTemplates_v2`
+- seed/sample/pred: `0/1/44`
+- review_status: `pass`
+- source_cif: `casp17/massivefold_external_pool_intake/t2313_t330/extracted_models/T2313_all_pdbs/Model_3075_afm_dropout_04_woTemplates_model_1_multimer_v2_pred_44.pdb`
+- local_cif: `casp17/massivefold_representative_viewers/t2313/selection_120_afm_dropout_04_woTemplates_v2_model_3075/model.cif`
+- projection: `casp17/massivefold_representative_viewers/t2313/selection_120_afm_dropout_04_woTemplates_v2_model_3075/projection.svg`
+- viewer: `casp17/massivefold_representative_viewers/t2313/selection_120_afm_dropout_04_woTemplates_v2_model_3075/viewer.html`
+- atoms/displayed/residues/chains: `14445/900/1854/3`
+- bbox xyz/diagonal: `109.599/117.525/122.046/201.79`
+- centroid xyz: `1.198/-1.78/2.087`
+- radius_of_gyration: `41.374`
+- mean_b_iso: `58.602`
+- blockers: `-`
+
+## Claim Boundary
+
+CASP17 MassiveFold representative viewer packet only. It builds local review folders for organizer-provided external model-pool representatives for the selected target. These are external rerank and accuracy-estimation inputs, not internal predictions, not CASP submissions, and not competitive-proof evidence.

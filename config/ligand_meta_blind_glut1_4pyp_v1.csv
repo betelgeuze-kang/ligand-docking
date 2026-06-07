@@ -5,9 +5,9 @@ imatinib,CC1=CC=CC=C1NC(=O)NCC2=CC=NC=C2N3CCN(CC3)C,493.60,2.6,2,8,10,anilide
 ibuprofen,CC(C)CC1=CC=C(C=C1)C(C)C(=O)O,206.28,3.5,1,2,4,arylpropionic_acid
 aspirin,CC(=O)OC1=CC=CC=C1C(=O)O,180.16,1.2,1,4,3,salicylate
 caffeine,CN1C=NC2=C1N(C)C(=O)N(C)C(=O)N2C,194.19,-0.1,0,6,0,xanthine
-glut1_placeholder_binder_01,OCC1OC(O)C(O)C(O)C1O,180.16,-3.2,5,6,1,template_placeholder
-glut1_placeholder_binder_02,OCC(O)CO,92.09,-1.8,3,3,2,template_placeholder
-glut1_placeholder_binder_03,CC(O)CO,76.09,-0.9,2,2,1,template_placeholder
-glut1_placeholder_nonbinder_01,c1ccccc1,78.11,2.1,0,0,0,template_placeholder
-glut1_placeholder_nonbinder_02,CC(=O)NC1=CC=CC=C1,135.16,1.2,1,1,1,template_placeholder
-glut1_placeholder_nonbinder_03,CN1C=NC2=C1N(C)C(=O)N(C)C(=O)N2C,194.19,-0.1,0,6,0,template_placeholder
+cytochalasin_b,C=C1[C@@H](C)[C@H]2[C@H](Cc3ccccc3)NC(=O)[C@]23OC(=O)/C=C/[C@H](O)CCC[C@@H](C)C/C=C/[C@H]3[C@@H]1O,479.6,,,,,cytochalasin_macrocycle
+wzb117,CC1=CC(=CC=C1)C(=O)NC2=CC=CC=C2C(=O)NC3=CC=CC=C3,346.38,3.6,2,2,5,benzamide
+stf31,CC1=CC(=CC=C1)NS(=O)(=O)C2=CC=C(C=C2)C(=O)NC3=CC=CC=C3,424.48,3.9,2,4,6,sulfonamide
+ibuprofen,CC(C)CC1=CC=C(C=C1)C(C)C(=O)O,206.28,3.5,1,2,4,arylpropionic_acid
+aspirin,CC(=O)OC1=CC=CC=C1C(=O)O,180.16,1.2,1,4,3,salicylate
+caffeine,CN1C=NC2=C1N(C)C(=O)N(C)C(=O)N2C,194.19,-0.1,0,6,0,xanthine

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_ca2_review_only_negative_packet as mod
+from tools.product import build_ca2_review_only_negative_packet as mod
 
 
 def _contains_tokens(text: str, *tokens: str) -> None:

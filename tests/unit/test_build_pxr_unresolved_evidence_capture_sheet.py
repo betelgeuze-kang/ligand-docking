@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools import build_pxr_unresolved_evidence_capture_sheet as mod
+from tools.product import build_pxr_unresolved_evidence_capture_sheet as mod
 
 
 def test_build_pxr_unresolved_evidence_capture_sheet_promotes_gap_row_with_supportive_overlay() -> None:
