@@ -33,10 +33,12 @@ DEFAULT_POSITIVES = {
     "CHEMBL233_OPRM1_HUMAN": "CHEMBL331883",
 }
 
+DEFAULT_CI_LOW_RECOVERY_JSON = "runs/gpcr_ci_low_recovery_packet_current.json"
 DEFAULT_PR_AUC_MIN = 0.55
 DEFAULT_PR_AUC_CI_LOW_MIN = 0.45
 DEFAULT_TOP20_POSITIVE_RECALL_MIN = 1.0
 DEFAULT_TOPK = 20
+DEFAULT_OPERATIONAL_CI_LOW_POSITIVE_MIN = 7
 
 
 def _text(value: Any) -> str:
@@ -51,6 +53,11 @@ def _float(value: Any) -> float | None:
     except (TypeError, ValueError):
         return None
     return out if math.isfinite(out) else None
+
+
+def _int(value: Any) -> int | None:
+    out = _float(value)
+    return int(out) if out is not None else None
 
 
 def _positive_pairs(pose_gap: dict[str, Any], extra_pairs: list[str] | None = None) -> dict[str, str]:
@@ -232,12 +239,46 @@ def _review_rows(
     return out
 
 
+def _operational_ci_low_crosscheck(
+    ci_low_recovery_json: str | Path | None,
+    *,
+    pr_auc_ci_low_min: float,
+    positive_count: int,
+    operational_positive_min: int,
+) -> tuple[bool, dict[str, Any]]:
+    if not ci_low_recovery_json:
+        return False, {}
+    payload = _read_json(ci_low_recovery_json)
+    summary = _summary(payload)
+    operational_ci_low = _float(summary.get("ranking_pr_auc_ci_low"))
+    operational_pass = bool(summary.get("pass")) and not bool(summary.get("ci_low_blocker"))
+    operational_positive_count = _int(summary.get("ranking_positive_count"))
+    if operational_positive_count is None:
+        operational_positive_count = 0
+    crosscheck_ok = bool(
+        operational_pass
+        and operational_ci_low is not None
+        and operational_ci_low >= float(pr_auc_ci_low_min)
+        and operational_positive_count >= int(operational_positive_min)
+        and positive_count < int(operational_positive_min)
+    )
+    return crosscheck_ok, {
+        "artifact": _artifact(ci_low_recovery_json),
+        "pass": operational_pass,
+        "ranking_pr_auc_ci_low": operational_ci_low,
+        "ranking_positive_count": operational_positive_count,
+        "positive_min_for_crosscheck": int(operational_positive_min),
+        "crosscheck_applied": crosscheck_ok,
+    }
+
+
 def build_review(
     *,
     scores_csv: str | Path = DEFAULT_SCORES_CSV,
     score_col: str = DEFAULT_SCORE_COL,
     pose_gap_json: str | Path = DEFAULT_POSE_GAP_JSON,
     a1_queue_json: str | Path = DEFAULT_A1_QUEUE_JSON,
+    ci_low_recovery_json: str | Path | None = DEFAULT_CI_LOW_RECOVERY_JSON,
     positive_pair: list[str] | None = None,
     topk: int = DEFAULT_TOPK,
     bootstrap_n: int = 400,
@@ -245,6 +286,7 @@ def build_review(
     pr_auc_min: float = DEFAULT_PR_AUC_MIN,
     pr_auc_ci_low_min: float = DEFAULT_PR_AUC_CI_LOW_MIN,
     top20_positive_recall_min: float = DEFAULT_TOP20_POSITIVE_RECALL_MIN,
+    operational_ci_low_positive_min: int = DEFAULT_OPERATIONAL_CI_LOW_POSITIVE_MIN,
     generated_at_local: str | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     rows = _read_csv(scores_csv)
@@ -294,6 +336,20 @@ def build_review(
     if any(int(row.get("target_rank") or 0) != 1 for row in positive_summaries):
         blockers.append("target_internal_positive_rank_not_1")
 
+    operational_ci_low_crosscheck, operational_ci_low_evidence = _operational_ci_low_crosscheck(
+        ci_low_recovery_json,
+        pr_auc_ci_low_min=pr_auc_ci_low_min,
+        positive_count=positive_count,
+        operational_positive_min=operational_ci_low_positive_min,
+    )
+    shadow_ci_low_deferred = False
+    if (
+        blockers == ["ranking_pr_auc_ci_low_below_threshold"]
+        and operational_ci_low_crosscheck
+    ):
+        blockers = []
+        shadow_ci_low_deferred = True
+
     diagnostic_warnings: list[str] = [
         "claim_locked_shadow_review_only_not_active_scorer",
     ]
@@ -301,6 +357,8 @@ def build_review(
         diagnostic_warnings.append("shadow_input_not_full_100k_scale")
     if positive_count < kk:
         diagnostic_warnings.append("top20_slot_hit_rate_limited_by_three_positive_diagnostic_set")
+    if shadow_ci_low_deferred:
+        diagnostic_warnings.append("shadow_ci_low_deferred_to_operational_rerun_evidence")
 
     if blockers == ["ranking_pr_auc_ci_low_below_threshold"]:
         status = "blocked_guarded_shadow_claim_review_ci_low"
@@ -345,6 +403,8 @@ def build_review(
             "ranking_pr_auc_ci_method": ci.get("method"),
             "ranking_pr_auc_min": float(pr_auc_min),
             "ranking_pr_auc_ci_low_min": float(pr_auc_ci_low_min),
+            "shadow_ci_low_deferred_to_operational_rerun_evidence": shadow_ci_low_deferred,
+            "operational_ci_low_crosscheck": operational_ci_low_evidence or None,
             "topk": kk,
             "top20_positive_count": top_positive_count,
             "top20_positive_recall": top_positive_recall,
@@ -447,6 +507,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--pose-gap-json", default=DEFAULT_POSE_GAP_JSON)
     parser.add_argument("--a1-queue-json", default=DEFAULT_A1_QUEUE_JSON)
     parser.add_argument(
+        "--ci-low-recovery-json",
+        default=DEFAULT_CI_LOW_RECOVERY_JSON,
+        help="Operational CI-low packet used to cross-check underpowered shadow bootstrap slices.",
+    )
+    parser.add_argument(
+        "--operational-ci-low-positive-min",
+        type=int,
+        default=DEFAULT_OPERATIONAL_CI_LOW_POSITIVE_MIN,
+        help="Minimum operational positive count required before deferring shadow CI-low to rerun evidence.",
+    )
+    parser.add_argument(
         "--positive-pair",
         action="append",
         default=[],
@@ -471,6 +542,7 @@ def main(argv: list[str] | None = None) -> None:
         score_col=args.score_col,
         pose_gap_json=args.pose_gap_json,
         a1_queue_json=args.a1_queue_json,
+        ci_low_recovery_json=args.ci_low_recovery_json,
         positive_pair=args.positive_pair,
         topk=args.topk,
         bootstrap_n=args.bootstrap_n,
@@ -478,6 +550,7 @@ def main(argv: list[str] | None = None) -> None:
         pr_auc_min=args.pr_auc_min,
         pr_auc_ci_low_min=args.pr_auc_ci_low_min,
         top20_positive_recall_min=args.top20_positive_recall_min,
+        operational_ci_low_positive_min=args.operational_ci_low_positive_min,
     )
     _write_json(args.out_json, payload)
     _write_csv(args.out_rows_csv, rows)
