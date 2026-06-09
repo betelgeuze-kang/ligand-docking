@@ -15,6 +15,7 @@ DEFAULT_MEMBRANE_READINESS_JSON = RUNS / "transporter_membrane_readiness_current
 DEFAULT_AQP1_PLAN_JSON = RUNS / "aqp1_p0_packet_plan_current.json"
 DEFAULT_GLUT1_PLAN_JSON = RUNS / "glut1_p0_packet_plan_current.json"
 DEFAULT_GLUT1_APPLY_JSON = RUNS / "glut1_ready_workbook_apply_current.json"
+DEFAULT_AQP1_APPLY_JSON = RUNS / "aqp1_ready_workbook_apply_current.json"
 DEFAULT_BINDER_GATE_JSON = RUNS / "transporter_binder_promotion_gate_current.json"
 DEFAULT_OUT_JSON = RUNS / "transporter_p0_closure_packet_current.json"
 DEFAULT_OUT_CSV = RUNS / "transporter_p0_closure_packet_current.csv"
@@ -97,7 +98,7 @@ def _evidence_required(target_id: str, artifact: str) -> str:
     return "Target-specific transporter packet evidence and synchronized local CSV rows."
 
 
-def _glut1_apply_annotation(apply_summary: dict[str, Any]) -> str:
+def _apply_annotation(apply_summary: dict[str, Any]) -> str:
     if not apply_summary:
         return "apply_receipt_missing"
     applied = _int(apply_summary.get("applied_row_count"))
@@ -113,11 +114,16 @@ def _glut1_apply_annotation(apply_summary: dict[str, Any]) -> str:
     )
 
 
+def _glut1_apply_annotation(apply_summary: dict[str, Any]) -> str:
+    return _apply_annotation(apply_summary)
+
+
 def _open_core_rows(
     plan_payload: dict[str, Any],
     target_id: str,
     *,
-    glut1_apply_summary: dict[str, Any] | None = None,
+    apply_summary: dict[str, Any] | None = None,
+    apply_receipt_path: str = "",
 ) -> list[dict[str, Any]]:
     rows = []
     for row in plan_payload.get("rows", []) or []:
@@ -129,13 +135,9 @@ def _open_core_rows(
         if artifact not in CORE_P0_ARTIFACTS:
             continue
         blocker = _text(row.get("blocker"))
-        apply_annotation = (
-            _glut1_apply_annotation(glut1_apply_summary or {})
-            if target_id == "GLUT1_4PYP"
-            else ""
-        )
+        apply_annotation = _apply_annotation(apply_summary or {}) if apply_summary else ""
         detail = _text(row.get("detail"))
-        if apply_annotation:
+        if apply_annotation and apply_annotation != "apply_receipt_missing":
             detail = f"{detail}; {apply_annotation}" if detail else apply_annotation
         rows.append(
             {
@@ -148,28 +150,16 @@ def _open_core_rows(
                 "next_action": _text(row.get("next_action")),
                 "close_when": _close_when(target_id, artifact, blocker),
                 "evidence_required": _evidence_required(target_id, artifact),
-                "authoritative_apply_receipt": (
-                    "runs/glut1_ready_workbook_apply_current.json"
-                    if target_id == "GLUT1_4PYP" and glut1_apply_summary
-                    else ""
-                ),
-                "authoritative_apply_applied_rows": (
-                    _int((glut1_apply_summary or {}).get("applied_row_count"))
-                    if target_id == "GLUT1_4PYP"
-                    else 0
-                ),
-                "authoritative_apply_blocked_rows": (
-                    _int((glut1_apply_summary or {}).get("blocked_ready_row_count"))
-                    if target_id == "GLUT1_4PYP"
-                    else 0
-                ),
+                "authoritative_apply_receipt": apply_receipt_path if apply_summary else "",
+                "authoritative_apply_applied_rows": _int((apply_summary or {}).get("applied_row_count")),
+                "authoritative_apply_blocked_rows": _int((apply_summary or {}).get("blocked_ready_row_count")),
                 "remaining_placeholder_rows_after_apply": (
                     _int(
-                        (glut1_apply_summary or {}).get(
+                        (apply_summary or {}).get(
                             f"after_{APPLY_PLACEHOLDER_KEYS[artifact]}_placeholder_rows"
                         )
                     )
-                    if target_id == "GLUT1_4PYP" and artifact in CORE_P0_ARTIFACTS
+                    if apply_summary and artifact in CORE_P0_ARTIFACTS
                     else 0
                 ),
                 "authoritative_apply_allowed": False,
@@ -186,19 +176,27 @@ def build_payload(
     membrane_readiness_payload: dict[str, Any],
     aqp1_plan_payload: dict[str, Any],
     glut1_plan_payload: dict[str, Any],
+    aqp1_apply_payload: dict[str, Any],
     glut1_apply_payload: dict[str, Any],
     binder_gate_payload: dict[str, Any],
 ) -> dict[str, Any]:
     membrane = _summary(membrane_readiness_payload)
     aqp1 = _summary(aqp1_plan_payload)
     glut1 = _summary(glut1_plan_payload)
+    aqp1_apply = _summary(aqp1_apply_payload)
     glut1_apply = _summary(glut1_apply_payload)
     binder = _summary(binder_gate_payload)
 
-    rows = _open_core_rows(aqp1_plan_payload, "Aquaporin_1") + _open_core_rows(
+    rows = _open_core_rows(
+        aqp1_plan_payload,
+        "Aquaporin_1",
+        apply_summary=aqp1_apply,
+        apply_receipt_path="runs/aqp1_ready_workbook_apply_current.json",
+    ) + _open_core_rows(
         glut1_plan_payload,
         "GLUT1_4PYP",
-        glut1_apply_summary=glut1_apply,
+        apply_summary=glut1_apply,
+        apply_receipt_path="runs/glut1_ready_workbook_apply_current.json",
     )
     target_counts: dict[str, int] = {}
     for row in rows:
@@ -226,6 +224,15 @@ def build_payload(
         "glut1_split_placeholder_rows_after_apply": _int(glut1_apply.get("after_split_placeholder_rows")),
         "glut1_meta_placeholder_rows_after_apply": _int(glut1_apply.get("after_meta_placeholder_rows")),
         "glut1_full_packet_ready_after_apply": bool(glut1_apply.get("full_packet_ready_after_apply")),
+        "aqp1_ready_workbook_apply_receipt_present": bool(aqp1_apply),
+        "aqp1_ready_workbook_applied_row_count": _int(aqp1_apply.get("applied_row_count")),
+        "aqp1_ready_workbook_newly_applied_row_count": _int(aqp1_apply.get("newly_applied_row_count")),
+        "aqp1_ready_workbook_already_applied_row_count": _int(aqp1_apply.get("already_applied_row_count")),
+        "aqp1_ready_workbook_blocked_ready_row_count": _int(aqp1_apply.get("blocked_ready_row_count")),
+        "aqp1_reference_placeholder_rows_after_apply": _int(aqp1_apply.get("after_reference_placeholder_rows")),
+        "aqp1_split_placeholder_rows_after_apply": _int(aqp1_apply.get("after_split_placeholder_rows")),
+        "aqp1_meta_placeholder_rows_after_apply": _int(aqp1_apply.get("after_meta_placeholder_rows")),
+        "aqp1_full_packet_ready_after_apply": bool(aqp1_apply.get("full_packet_ready_after_apply")),
         "claim_safe_binder_ready_count": _int(binder.get("claim_safe_kcal_ready_count")),
         "authoritative_binder_apply_allowed_count": _int(binder.get("authoritative_binder_apply_allowed_count")),
         "donor_policy_reopen_allowed": False,
@@ -233,7 +240,10 @@ def build_payload(
         "external_state_mutated": False,
         "claim_boundary": CLAIM_BOUNDARY,
         "next_required_step": (
-            "Close the six core transporter P0 rows by synchronizing AQP1 and the remaining GLUT1 ligand "
+            "Close the remaining AQP1 ligand reference/split/meta P0 rows with claim-safe direct-binding kcal, "
+            "external-evidence intake approval, and synchronized workbook apply; GLUT1 placeholders are already closed."
+            if rows and target_counts.get("GLUT1_4PYP", 0) == 0 and target_counts.get("Aquaporin_1", 0) > 0
+            else "Close the six core transporter P0 rows by synchronizing AQP1 and the remaining GLUT1 ligand "
             "reference/split/meta placeholders; only then rerun membrane readiness and donor-policy reopen gates."
             if rows
             else "No transporter core P0 rows remain; rerun membrane readiness and donor-policy reopen gates."
@@ -295,6 +305,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--membrane-readiness-json", default=str(DEFAULT_MEMBRANE_READINESS_JSON))
     parser.add_argument("--aqp1-plan-json", default=str(DEFAULT_AQP1_PLAN_JSON))
     parser.add_argument("--glut1-plan-json", default=str(DEFAULT_GLUT1_PLAN_JSON))
+    parser.add_argument("--aqp1-apply-json", default=str(DEFAULT_AQP1_APPLY_JSON))
     parser.add_argument("--glut1-apply-json", default=str(DEFAULT_GLUT1_APPLY_JSON))
     parser.add_argument("--binder-gate-json", default=str(DEFAULT_BINDER_GATE_JSON))
     parser.add_argument("--out-json", default=str(DEFAULT_OUT_JSON))
@@ -309,6 +320,7 @@ def main(argv: list[str] | None = None) -> None:
         membrane_readiness_payload=_load_json(args.membrane_readiness_json),
         aqp1_plan_payload=_load_json(args.aqp1_plan_json),
         glut1_plan_payload=_load_json(args.glut1_plan_json),
+        aqp1_apply_payload=_load_json(args.aqp1_apply_json),
         glut1_apply_payload=_load_json(args.glut1_apply_json),
         binder_gate_payload=_load_json(args.binder_gate_json),
     )

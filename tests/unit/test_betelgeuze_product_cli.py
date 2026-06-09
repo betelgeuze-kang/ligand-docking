@@ -398,6 +398,7 @@ def test_product_cli_all_surfaces_blocked_when_required_artifacts_missing(tmp_pa
     payload = cli.build_all_status(root=tmp_path)
 
     assert payload["status"] == "blocked_product_cli_status_set"
+    assert payload["core_product_cli_status_set_ready"] is False
     assert payload["command_count"] == len(cli.ARTIFACTS)
     assert payload["blocked_or_missing_command_count"] == len(cli.ARTIFACTS) - 1
     assert "capabilities" not in payload["blocked_or_missing_commands"]
@@ -465,3 +466,35 @@ def test_product_cli_all_surfaces_blocked_when_required_artifacts_missing(tmp_pa
     assert payload["execution_enabled"] is False
     assert payload["docking_results_emitted"] is False
     assert payload["external_state_mutated"] is False
+
+
+def test_product_cli_core_ready_when_only_optional_lanes_blocked(tmp_path: Path) -> None:
+    for command, rel_path in cli.ARTIFACTS.items():
+        if command in cli.OPTIONAL_NON_BLOCKING_COMMANDS:
+            _write_packet(tmp_path, rel_path, f"blocked_{command.replace('-', '_')}")
+            continue
+        status = "product_release_operations_dossier_ready" if command in {"operations", "release-readiness"} else "ready"
+        extra = {}
+        if command in {"operations", "release-readiness"}:
+            extra = {
+                "stage_count": 1,
+                "blocked_stage_count": 0,
+                "approval_required_stage_count": 0,
+                "capability_surface_ready": True,
+                "operational_quality_ready": True,
+                "architecture_release_ready": True,
+                "commercial_independence_ready": True,
+                "authorized_for_execution": True,
+                "bundle_validation_passed": True,
+                "delivery_ready_claim_allowed": True,
+                "pilot_delivery_ready": True,
+            }
+        _write_packet(tmp_path, rel_path, status, extra_summary=extra)
+
+    payload = cli.build_all_status(root=tmp_path)
+
+    assert payload["status"] == "product_cli_status_set_ready"
+    assert payload["core_product_cli_status_set_ready"] is True
+    assert payload["optional_blocked_or_missing_command_count"] == len(cli.OPTIONAL_NON_BLOCKING_COMMANDS)
+    assert payload["core_blocked_or_missing_command_count"] == 0
+    assert payload["delivery_ready_claim_allowed"] is True

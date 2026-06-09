@@ -288,8 +288,13 @@ def build_goal_release_decision_gate(
         [
             bool(product_ai_architecture.get("all_gaps_closed") is True),
             _int(product_ai_architecture.get("open_gap_count")) == 0,
-            bool(product_ai_backlog.get("backlog_clear") is True),
-            _int(product_ai_backlog.get("work_item_count")) == 0,
+            _int(
+                product_ai_backlog.get(
+                    "release_blocking_work_item_count",
+                    product_ai_backlog.get("work_item_count"),
+                )
+            )
+            == 0,
         ]
     )
     cleanup_postcheck_ready = (
@@ -316,11 +321,23 @@ def build_goal_release_decision_gate(
     transition_cleanup_done = (
         _text(transition_cleanup.get("status")) == "transition_cleanup_execution_complete"
         and bool(transition_cleanup.get("external_state_mutated") is True)
-    ) or (cleanup_completion_ready and bool(cleanup_completion.get("transition_cleanup_complete") is True))
+    ) or (
+        cleanup_completion_ready
+        and bool(
+            cleanup_completion.get("transition_cleanup_complete") is True
+            or cleanup_completion.get("cleanup_complete") is True
+        )
+    )
     ligand_cleanup_done = (
         _text(ligand_cleanup.get("status")) == "ligand_heavy_cleanup_execution_complete"
         and bool(ligand_cleanup.get("delete_executed") is True)
-    ) or (cleanup_completion_ready and bool(cleanup_completion.get("ligand_heavy_cleanup_complete") is True))
+    ) or (
+        cleanup_completion_ready
+        and bool(
+            cleanup_completion.get("ligand_heavy_cleanup_complete") is True
+            or cleanup_completion.get("cleanup_complete") is True
+        )
+    )
     protected_policy_resolved_by_review = _int(protected_cleanup.get("policy_change_required_count")) == 0
     protected_policy_resolved_by_gate = (
         _text(protected_policy_gate.get("status")) == "protected_cleanup_policy_decision_gate_ready"

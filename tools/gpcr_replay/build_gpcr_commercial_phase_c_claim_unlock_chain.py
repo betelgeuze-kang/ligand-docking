@@ -188,8 +188,8 @@ def build_packet(
             ):
                 blockers.append("phase_c:cameo_architecture_validation_not_ready")
 
-    _run([sys.executable, "tools/build_goal_readiness_rollup.py"])
-    goal_lane = _lane("goal_readiness_rollup", "runs/goal_readiness_rollup_current.json")
+    _run([sys.executable, "tools/build_goal_product_status_refresh_chain.py"])
+    goal_lane = _lane("goal_product_status_refresh_chain", "runs/goal_product_status_refresh_chain_current.json")
 
     product_delivery_unlock_ready = not any(
         item.startswith("phase_c:") and "cameo" not in item for item in blockers
@@ -225,7 +225,7 @@ def build_packet(
             "product_delivery_evidence_contract": delivery_lane,
             "product_pilot_packet_contract": pilot_lane,
             "gpcr_active_scorer_promotion_decision": scorer_lane,
-            "goal_readiness_rollup": goal_lane,
+            "goal_product_status_refresh_chain": goal_lane,
             "cameo": cameo_lanes,
         },
         "blockers": sorted(set(blockers)),

@@ -224,6 +224,7 @@ def _scope_closure_row(
         _text(item.get("close_action")),
         _text(item.get("verification_command")) or "python3 tools/build_product_scope_breadth_closure_checklist.py && python3 tools/build_product_ai_architecture_gap_closure.py",
         "broad product-scope wording would be overclaimed until this atomic closure item is resolved",
+        release_blocker=False,
     )
 
 
@@ -237,6 +238,8 @@ def _row(
     next_action: str,
     verification_command: str,
     risk: str,
+    *,
+    release_blocker: bool = True,
 ) -> dict[str, Any]:
     return {
         "priority": priority,
@@ -248,7 +251,7 @@ def _row(
         "next_action": next_action,
         "verification_command": verification_command,
         "risk": risk,
-        "release_blocker": True,
+        "release_blocker": release_blocker,
         "execution_enabled": False,
         "training_executed": False,
         "checkpoint_created": False,
@@ -447,6 +450,7 @@ def build_product_ai_architecture_execution_backlog(
                     or _text(item.get("verification"))
                     or "python3 tools/build_product_scope_breadth_contract.py && python3 tools/build_product_ai_architecture_gap_closure.py",
                     _text(item.get("risk_if_skipped")) or _text(item.get("risk")) or "broad product-scope wording would be overclaimed",
+                    release_blocker=False,
                 )
             )
             priority += 1
@@ -470,7 +474,8 @@ def build_product_ai_architecture_execution_backlog(
             )
             priority += 1
 
-    ready = not rows and _bool(architecture.get("all_gaps_closed"))
+    release_blocking_rows = [row for row in rows if _bool(row.get("release_blocker", True))]
+    ready = not release_blocking_rows and _bool(architecture.get("all_gaps_closed"))
     summary = {
         "packet_type": "product_ai_architecture_execution_backlog",
         "status": "product_ai_architecture_execution_backlog_clear" if ready else "product_ai_architecture_execution_backlog_ready",
@@ -478,6 +483,8 @@ def build_product_ai_architecture_execution_backlog(
         "all_gaps_closed": _bool(architecture.get("all_gaps_closed")),
         "open_gap_count": int(architecture.get("open_gap_count") or 0),
         "work_item_count": len(rows),
+        "release_blocking_work_item_count": len(release_blocking_rows),
+        "scope_deferred_work_item_count": len(rows) - len(release_blocking_rows),
         "primary_work_item_id": rows[0]["work_item_id"] if rows else "none",
         "scope_closure_checklist_used": scope_closure_checklist_used,
         "scope_closure_checklist_item_count": len(closure_rows) if scope_closure_checklist_used else 0,

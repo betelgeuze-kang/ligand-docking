@@ -249,7 +249,10 @@ def _product_ai_architecture_lane(
     open_gap_count = _int(gap.get("open_gap_count"))
     backlog_clear = bool(backlog.get("backlog_clear") is True)
     work_item_count = _int(backlog.get("work_item_count"))
-    ready = all_gaps_closed and open_gap_count == 0 and backlog_clear and work_item_count == 0
+    release_blocking_work_item_count = _int(
+        backlog.get("release_blocking_work_item_count", work_item_count)
+    )
+    ready = all_gaps_closed and open_gap_count == 0 and release_blocking_work_item_count == 0
     if not gap_packet or not backlog_packet:
         lane_status = "blocked_missing_artifact"
     elif ready:

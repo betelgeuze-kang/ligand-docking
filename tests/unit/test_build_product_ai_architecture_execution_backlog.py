@@ -439,6 +439,32 @@ def test_execution_backlog_uses_scope_closure_checklist_when_available() -> None
     assert payload["rows"][1]["work_item_id"] == "scope_breadth.general_protein_ligand.explicit_general_platform_flag"
 
 
+def test_execution_backlog_scope_deferred_items_do_not_block_backlog_clear() -> None:
+    payload = mod.build_product_ai_architecture_execution_backlog(
+        architecture_packet=_packet({"all_gaps_closed": True, "open_gap_count": 0}),
+        training_data_packet=_packet({"production_training_data_ready": True}),
+        checkpoint_work_order_packet=_packet({"checkpoint_preflight_ready": True}),
+        scope_work_order_packet=_packet(
+            {"scope_breadth_ready": False},
+            [
+                {
+                    "domain": "transporter",
+                    "observed": "p0_open=3",
+                    "acceptance_criteria": "p0_open=0",
+                    "next_action": "close AQP1 evidence",
+                    "verification": "python3 tools/build_product_scope_breadth_contract.py",
+                }
+            ],
+        ),
+    )
+
+    assert payload["summary"]["work_item_count"] == 1
+    assert payload["summary"]["release_blocking_work_item_count"] == 0
+    assert payload["summary"]["scope_deferred_work_item_count"] == 1
+    assert payload["summary"]["backlog_clear"] is True
+    assert payload["rows"][0]["release_blocker"] is False
+
+
 def test_execution_backlog_cli_writes_outputs(tmp_path: Path) -> None:
     architecture = tmp_path / "architecture.json"
     training = tmp_path / "training.json"

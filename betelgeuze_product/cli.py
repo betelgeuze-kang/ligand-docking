@@ -44,6 +44,16 @@ CLAIM_BOUNDARY = (
     "send email, delete data, upload, or mutate external state."
 )
 
+# Optional lanes tracked by the CLI but not required for restricted local product delivery readiness.
+OPTIONAL_NON_BLOCKING_COMMANDS = frozenset(
+    {
+        "cameo-live-validation",
+        "production-ai-gpu-return-intake",
+        "production-ai-promotion-workbench",
+        "goal-completion-audit",
+    }
+)
+
 
 def _resolve(root: str | Path, path_like: str | Path) -> Path:
     path = Path(path_like)
@@ -141,14 +151,28 @@ def build_cli_status(command: str, *, root: str | Path = ROOT) -> dict[str, Any]
     }
 
 
+def _is_blocked_or_missing_status(status: str) -> bool:
+    return str(status or "").startswith(("blocked_", "missing_"))
+
+
 def build_all_status(*, root: str | Path = ROOT) -> dict[str, Any]:
     statuses = {command: build_cli_status(command, root=root) for command in ARTIFACTS}
     blocked_or_missing = [
         command
         for command, payload in statuses.items()
-        if str(payload.get("status", "")).startswith(("blocked_", "missing_"))
+        if _is_blocked_or_missing_status(str(payload.get("status", "")))
     ]
-    release_statuses = {command: payload for command, payload in statuses.items() if command != "cameo-live-validation"}
+    core_blocked_or_missing = [
+        command for command in blocked_or_missing if command not in OPTIONAL_NON_BLOCKING_COMMANDS
+    ]
+    optional_blocked_or_missing = [
+        command for command in blocked_or_missing if command in OPTIONAL_NON_BLOCKING_COMMANDS
+    ]
+    release_statuses = {
+        command: payload
+        for command, payload in statuses.items()
+        if command not in OPTIONAL_NON_BLOCKING_COMMANDS
+    }
     approval_tokens = sorted({token for payload in release_statuses.values() for token in _approval_tokens_from_status(payload)})
     cameo_live_summary = statuses.get("cameo-live-validation", {}).get("summary", {})
     if not isinstance(cameo_live_summary, dict):
@@ -165,12 +189,18 @@ def build_all_status(*, root: str | Path = ROOT) -> dict[str, Any]:
     goal_completion_summary = statuses.get("goal-completion-audit", {}).get("summary", {})
     if not isinstance(goal_completion_summary, dict):
         goal_completion_summary = {}
+    core_ready = not core_blocked_or_missing
     return {
         "packet_type": "product_cli_status_set",
-        "status": "blocked_product_cli_status_set" if blocked_or_missing else "product_cli_status_set_ready",
+        "status": "product_cli_status_set_ready" if core_ready else "blocked_product_cli_status_set",
+        "core_product_cli_status_set_ready": core_ready,
         "command_count": len(statuses),
         "blocked_or_missing_command_count": len(blocked_or_missing),
         "blocked_or_missing_commands": blocked_or_missing,
+        "core_blocked_or_missing_command_count": len(core_blocked_or_missing),
+        "core_blocked_or_missing_commands": core_blocked_or_missing,
+        "optional_blocked_or_missing_command_count": len(optional_blocked_or_missing),
+        "optional_blocked_or_missing_commands": optional_blocked_or_missing,
         "approval_token_count": len(approval_tokens),
         "approval_tokens_required": approval_tokens,
         "operations_stage_count": _int_value(operations_summary.get("stage_count")),

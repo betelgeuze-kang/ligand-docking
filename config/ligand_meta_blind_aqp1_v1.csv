@@ -5,9 +5,9 @@ imatinib,CC1=CC=CC=C1NC(=O)NCC2=CC=NC=C2N3CCN(CC3)C,493.60,2.6,2,8,10,anilide
 ibuprofen,CC(C)CC1=CC=C(C=C1)C(C)C(=O)O,206.28,3.5,1,2,4,arylpropionic_acid
 aspirin,CC(=O)OC1=CC=CC=C1C(=O)O,180.16,1.2,1,4,3,salicylate
 caffeine,CN1C=NC2=C1N(C)C(=O)N(C)C(=O)N2C,194.19,-0.1,0,6,0,xanthine
-bacopaside_ii,CC(=O)OC1C(OC(C)(C)C)C(OC(C)=O)C2(C)CCC3(C)C(=CC12)C1(C)CCC2(C)C3CC1OC(=O)C,784.99,4.8,0,10,8,bacopaside_triterpenoid
-aqb013,CCN(CC)CCCCN(CC1=CC=CC=C1)C(=O)C2=CC=CC=C2,382.55,3.9,1,2,10,anilide_tool
-aqb011,CCN(CC)CCCCN(CC1=CC=CC=C1)C(=O)C2=CC=C(Cl)C=C2,417.00,4.2,1,2,10,anilide_tool
+bacopaside_ii,CC(C)=CC1COC23CC4(CO2)C(CCC2C5(C)CCC(OC6OC(CO)C(O)C(OC7OC(CO)C(O)C(O)C7O)C6OC6OC(CO)C(O)C6O)C(C)(C)C5CCC24C)C3C1(C)O,784.99,4.8,0,10,8,C1CCC(OC2CCOC(OC3CCC4C(CCC5C4CCC4C6CCCOC67CC54CO7)C3)C2OC2CCCO2)OC1
+aqb013,CCCCNc1cc(C(=O)Nc2ccncc2)cc(S(N)(=O)=O)c1Oc1ccccc1,382.55,3.9,1,2,10,O=C(Nc1ccncc1)c1ccc(Oc2ccccc2)cc1
+aqb011,CCCCNc1cc(C(=O)NCc2cccnc2)cc(S(N)(=O)=O)c1Oc1ccccc1,417.00,4.2,1,2,10,O=C(NCc1cccnc1)c1ccc(Oc2ccccc2)cc1
 ibuprofen,CC(C)CC1=CC=C(C=C1)C(C)C(=O)O,206.28,3.5,1,2,4,arylpropionic_acid
 aspirin,CC(=O)OC1=CC=CC=C1C(=O)O,180.16,1.2,1,4,3,salicylate
 caffeine,CN1C=NC2=C1N(C)C(=O)N(C)C(=O)N2C,194.19,-0.1,0,6,0,xanthine

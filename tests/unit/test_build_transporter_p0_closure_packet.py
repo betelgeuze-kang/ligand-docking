@@ -60,6 +60,16 @@ def test_transporter_p0_closure_packet_expands_aqp1_and_glut1_core_rows() -> Non
         membrane_readiness_payload={"summary": {"p0_open_count": 6}},
         aqp1_plan_payload=_plan("aqp1"),
         glut1_plan_payload=_plan("glut1"),
+        aqp1_apply_payload={
+            "summary": {
+                "applied_row_count": 0,
+                "blocked_ready_row_count": 1,
+                "after_reference_placeholder_rows": 3,
+                "after_split_placeholder_rows": 0,
+                "after_meta_placeholder_rows": 0,
+                "full_packet_ready_after_apply": False,
+            }
+        },
         glut1_apply_payload={
             "summary": {
                 "applied_row_count": 1,
@@ -81,13 +91,17 @@ def test_transporter_p0_closure_packet_expands_aqp1_and_glut1_core_rows() -> Non
     assert summary["aqp1_core_p0_open_count"] == 3
     assert summary["glut1_core_p0_open_count"] == 3
     assert summary["glut1_ready_workbook_apply_receipt_present"] is True
+    assert summary["aqp1_ready_workbook_apply_receipt_present"] is True
     assert summary["glut1_ready_workbook_applied_row_count"] == 1
+    assert summary["aqp1_ready_workbook_blocked_ready_row_count"] == 1
     assert summary["glut1_reference_placeholder_rows_after_apply"] == 5
     assert summary["glut1_full_packet_ready_after_apply"] is False
     assert summary["scope_promotion_allowed"] is False
     assert all(row["authoritative_apply_allowed"] is False for row in payload["rows"])
     glut1_rows = [row for row in payload["rows"] if row["target_id"] == "GLUT1_4PYP"]
+    aqp1_rows = [row for row in payload["rows"] if row["target_id"] == "Aquaporin_1"]
     assert all(row["authoritative_apply_receipt"] == "runs/glut1_ready_workbook_apply_current.json" for row in glut1_rows)
+    assert all(row["authoritative_apply_receipt"] == "runs/aqp1_ready_workbook_apply_current.json" for row in aqp1_rows)
     assert {row["remaining_placeholder_rows_after_apply"] for row in glut1_rows} == {5}
     assert {row["artifact"] for row in payload["rows"]} == {
         "ligand_reference_csv",
@@ -101,6 +115,7 @@ def test_transporter_p0_closure_packet_cli_writes_outputs(tmp_path: Path) -> Non
     aqp1 = tmp_path / "aqp1.json"
     glut1 = tmp_path / "glut1.json"
     glut1_apply = tmp_path / "glut1_apply.json"
+    aqp1_apply = tmp_path / "aqp1_apply.json"
     binder = tmp_path / "binder.json"
     out_json = tmp_path / "out.json"
     out_csv = tmp_path / "out.csv"
@@ -122,6 +137,10 @@ def test_transporter_p0_closure_packet_cli_writes_outputs(tmp_path: Path) -> Non
         ),
         encoding="utf-8",
     )
+    aqp1_apply.write_text(
+        json.dumps({"summary": {"applied_row_count": 0, "blocked_ready_row_count": 1}}),
+        encoding="utf-8",
+    )
     binder.write_text(json.dumps({"summary": {"claim_safe_kcal_ready_count": 1}}), encoding="utf-8")
 
     subprocess.run(
@@ -134,6 +153,8 @@ def test_transporter_p0_closure_packet_cli_writes_outputs(tmp_path: Path) -> Non
             str(aqp1),
             "--glut1-plan-json",
             str(glut1),
+            "--aqp1-apply-json",
+            str(aqp1_apply),
             "--glut1-apply-json",
             str(glut1_apply),
             "--binder-gate-json",
