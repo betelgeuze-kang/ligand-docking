@@ -2140,6 +2140,75 @@ def test_product_goal_completion_audit_blocks_on_license_and_release() -> None:
     assert summary["external_state_mutated"] is False
 
 
+def test_product_goal_completion_audit_rebuilds_closed_loop_and_durable_job_observed_from_live_packets() -> None:
+    payload = mod.build_product_goal_completion_audit(
+        architecture_packet=_architecture(release_ready=True, commercial_ready=True),
+        release_dossier_packet=_release_dossier(release_ready=True, commercial_ready=True),
+        public_benchmark_packet=_public_benchmark(),
+        commercial_independence_packet=_commercial(ready=True),
+        license_work_order_packet=_license_work_order(ready=True),
+        cameo_architecture_packet=_cameo(),
+        release_gate_packet=_release_gate(ready=True),
+        bottleneck_packet={"summary": {"approval_tokens_required": []}},
+        burndown_packet={"summary": {}, "rows": []},
+        product_ai_architecture_gap_packet=_ai_gap(ready=True),
+        product_ai_execution_backlog_packet=_ai_backlog(ready=True),
+        decision_graph_packet={
+            "summary": {
+                "closed_loop_decision_graph_ready": True,
+                "structure_quality_node_ready": True,
+                "binding_site_node_ready": True,
+                "pose_generation_node_ready": True,
+                "scoring_node_ready": True,
+                "uncertainty_abstention_node_ready": True,
+                "report_node_ready": True,
+                "customer_report_ux_node_ready": True,
+                "viewer_interaction_surface_ready": True,
+                "customer_report_card_ready": True,
+                "interaction_rationale_ready": True,
+                "counterfactual_rescue_suggestion_ready": True,
+                "evidence_traceability_ready": True,
+                "fail_closed_transition_ready": True,
+                "ready_edge_count": 6,
+                "required_edge_count": 6,
+            }
+        },
+        service_boundary_packet={
+            "summary": {
+                "status": "product_service_boundary_contract_ready",
+                "api_route_count": 24,
+                "missing_api_route_count": 0,
+            }
+        },
+        product_api_contract_packet={
+            "summary": {
+                "status": "product_api_contract_ready",
+                "expected_route_count": 24,
+                "missing_route_count": 0,
+            }
+        },
+        job_orchestration_packet={
+            "summary": {
+                "status": "product_job_orchestration_contract_ready",
+                "queue_lifecycle_progress_ready": True,
+                "customer_run_history_lineage_ready": True,
+                "worker_backend_contract_ready": True,
+                "worker_lease_heartbeat_ready": True,
+            }
+        },
+    )
+
+    summary = payload["summary"]
+    assert "closed_loop=True" in summary["product_ai_closed_loop_decision_graph_observed"]
+    assert "structure_quality=True" in summary["product_ai_closed_loop_decision_graph_observed"]
+    assert "ready_edges=6/6" in summary["product_ai_closed_loop_decision_graph_observed"]
+    assert "queue_lifecycle_progress_ready=True" in summary["product_ai_durable_job_orchestration_observed"]
+    assert "worker_backend_contract_ready=True" in summary["product_ai_durable_job_orchestration_observed"]
+    assert "service_status=product_service_boundary_contract_ready" in summary[
+        "product_ai_durable_job_orchestration_observed"
+    ]
+
+
 def test_product_goal_completion_audit_blocks_on_open_ai_architecture_backlog() -> None:
     payload = mod.build_product_goal_completion_audit(
         architecture_packet=_architecture(release_ready=True, commercial_ready=True),

@@ -68,3 +68,32 @@ def residual_runtime_status(
     if _text(gpcr_effective_mode) == "shadow_only":
         return "shadow_ready"
     return "apply_ready"
+
+
+def customer_ligand_ranking_snapshot(
+    ligand_rows: list[dict[str, Any]],
+    *,
+    ranking_mutation_allowed: bool,
+    base_score_key: str = "binding_score_composite_v7",
+    active_score_key: str = "binding_score_composite_v7_residual_active",
+    ligand_id_key: str = "ligand_id",
+) -> dict[str, Any]:
+    def _rank_ids(score_key: str) -> list[str]:
+        return [
+            str(row.get(ligand_id_key))
+            for row in sorted(
+                ligand_rows,
+                key=lambda row: (float(row.get(score_key) or 0.0), str(row.get(ligand_id_key))),
+            )
+        ]
+
+    customer_score_key = active_score_key if ranking_mutation_allowed else base_score_key
+    base_ranking_ligand_ids = _rank_ids(base_score_key)
+    customer_ranking_ligand_ids = _rank_ids(customer_score_key)
+    return {
+        "ranking_mutation_allowed": ranking_mutation_allowed,
+        "customer_score_column": customer_score_key,
+        "base_ranking_ligand_ids": base_ranking_ligand_ids,
+        "customer_ranking_ligand_ids": customer_ranking_ligand_ids,
+        "ranking_mutated": base_ranking_ligand_ids != customer_ranking_ligand_ids,
+    }
