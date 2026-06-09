@@ -127,6 +127,12 @@ async def get_goal_status() -> dict[str, Any]:
     return {
         "status": release.get("status") or readiness.get("status") or actions.get("status") or burndown.get("status"),
         "readiness_status": readiness.get("status", ""),
+        "release_complete_vs_operator_pending_lane": readiness.get(
+            "release_complete_vs_operator_pending_lane", ""
+        ),
+        "goal_completion_audit_goal_complete": readiness.get("goal_completion_audit_goal_complete"),
+        "release_complete_lane_ready": readiness.get("release_complete_lane_ready"),
+        "operator_pending_lane_ready": readiness.get("operator_pending_lane_ready"),
         "operator_action_board_status": actions.get("status", ""),
         "operator_intake_kit_status": intake.get("status", ""),
         "release_decision_status": release.get("status", ""),

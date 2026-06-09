@@ -27,6 +27,11 @@ import pandas as pd
 import torch
 import torch.nn as nn
 
+from betelgeuze_product.residual_mode_policy import (
+    residual_active_score_column,
+    residual_ranking_apply_active,
+    residual_runtime_status,
+)
 from core.onsps_backmap import backmap_4bead_onsps, hbond_angle_score, needs_onsps_4bead, onsps_site_count
 from core.score_residual import apply_score_residual
 from core.topo_corrector import summarize_topo_correction
@@ -1688,11 +1693,16 @@ def _apply_residual_prototype_shadow(
     gpcr_effective_mode = mode
     if assist_mode in {"assist", "production", "production_guarded"} and not shadow_only_active_locked:
         gpcr_effective_mode = "apply_ranking"
-    result_df["binding_score_composite_v7_residual_active"] = (
-        shadow_score
-        if gpcr_effective_mode in {"apply", "apply_ranking"} and not shadow_only_active_locked
-        else base_score
+    ranking_apply_active = residual_ranking_apply_active(
+        assist_mode=assist_mode,
+        shadow_only_active_locked=shadow_only_active_locked,
+        base_mode=mode,
     )
+    active_score_col = residual_active_score_column(
+        assist_mode=assist_mode,
+        shadow_only_active_locked=shadow_only_active_locked,
+    )
+    result_df["binding_score_composite_v7_residual_active"] = shadow_score if ranking_apply_active else base_score
     result_df["residual_shadow_family"] = family
     result_df["residual_shadow_mode"] = mode
     result_df["residual_shadow_runtime_hook_ready"] = bool(runtime_hook_ready)
@@ -1716,11 +1726,7 @@ def _apply_residual_prototype_shadow(
     )
     summary.update(
         {
-            "active_score_col": (
-                "binding_score_composite_v7_residual_active"
-                if gpcr_effective_mode in {"apply", "apply_ranking"} and not shadow_only_active_locked
-                else "binding_score_composite_v7"
-            ),
+            "active_score_col": active_score_col,
             "residual_assist_mode": assist_mode,
             "shadow_score_col": "binding_score_composite_v7_residual_shadow",
             "positive_delta_count": int((delta > 0.0).sum()),
@@ -1735,14 +1741,10 @@ def _apply_residual_prototype_shadow(
             "yellow_band_count": int((delta >= float(yellow_band)).sum()),
             "mean_delta": float(np.mean(delta)) if len(delta) > 0 else 0.0,
             "max_delta": float(np.max(delta)) if len(delta) > 0 else 0.0,
-            "status": (
-                "shadow_ready_claim_locked"
-                if shadow_only_active_locked
-                else "residual_assist_ready"
-                if assist_mode in {"assist", "production", "production_guarded"} and not shadow_only_active_locked
-                else "shadow_ready"
-                if gpcr_effective_mode == "shadow_only"
-                else "apply_ready"
+            "status": residual_runtime_status(
+                assist_mode=assist_mode,
+                shadow_only_active_locked=shadow_only_active_locked,
+                gpcr_effective_mode=gpcr_effective_mode,
             ),
             "top_shadow": top_shadow,
             "max_abs_delta_score": float(max_abs_delta),

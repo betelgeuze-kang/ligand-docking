@@ -31,6 +31,10 @@ DEFAULT_PXR_EXACT_REVIEW_INTAKE_JSON = "runs/pxr_exact_evidence_review_intake_te
 DEFAULT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_JSON = "runs/product_commercial_readiness_handoff_bundle_current.json"
 DEFAULT_DELTA_FORCE_CLOSURE_ACCEPTANCE_JSON = "runs/residual_delta_force_closure_acceptance_packet_current.json"
 DEFAULT_SCOPE_CLOSURE_ACCEPTANCE_JSON = "runs/product_scope_closure_acceptance_packet_current.json"
+DEFAULT_SCOPE_CLOSURE_CHECKLIST_JSON = "runs/product_scope_breadth_closure_checklist_current.json"
+DEFAULT_REPORT_UX_JSON = "runs/product_ai_report_ux_contract_current.json"
+DEFAULT_TRAJECTORY_SLA_JSON = "runs/product_trajectory_sla_contract_current.json"
+DEFAULT_SECURITY_DEPLOYMENT_JSON = "runs/product_security_deployment_contract_current.json"
 DEFAULT_OUT_JSON = "runs/product_goal_completion_audit_current.json"
 DEFAULT_OUT_CSV = "runs/product_goal_completion_audit_current.csv"
 DEFAULT_OUT_MD = "runs/product_goal_completion_audit_current.md"
@@ -183,14 +187,250 @@ def _gap_observed(gap_packet: dict[str, Any], gap_id: str) -> str:
     return _text(_gap_row_by_id(gap_packet, gap_id).get("observed"))
 
 
-def _primary_backlog_detail(backlog_packet: dict[str, Any]) -> str:
+def _live_production_ai_checkpoint_observed(
+    *,
+    registry: dict[str, Any],
+    production_ai_checkpoint: dict[str, Any],
+) -> str:
+    missing_sidecar = [
+        str(item)
+        for item in (
+            registry.get("selected_sidecar_missing_output_fields")
+            or production_ai_checkpoint.get("selected_sidecar_missing_output_fields")
+            or registry.get("checkpoint_missing_output_fields")
+            or []
+        )
+    ]
+    return (
+        f"product_model_layer_ready={registry.get('product_model_layer_ready')};"
+        f"default_residual_mode={registry.get('default_residual_mode')};"
+        f"production_promotion_allowed={registry.get('production_promotion_allowed')};"
+        f"customer_facing_auto_correction_allowed={registry.get('customer_facing_auto_correction_allowed')};"
+        f"customer_facing_score_mutation_allowed={registry.get('customer_facing_score_mutation_allowed')};"
+        f"customer_facing_ranking_mutation_allowed={registry.get('customer_facing_ranking_mutation_allowed')};"
+        f"checkpoint_preflight_ready={registry.get('checkpoint_preflight_ready')};"
+        f"candidate_checkpoint_count={registry.get('candidate_checkpoint_count')};"
+        f"trained_model_checkpoint_count={registry.get('trained_model_checkpoint_count')};"
+        f"selected_sidecar_ready={registry.get('selected_sidecar_ready')};"
+        f"selected_sidecar_missing_output_fields={','.join(missing_sidecar)};"
+        f"production_checkpoint_blocked={registry.get('production_checkpoint_blocked')};"
+        f"checkpoint_primary_blocker={registry.get('checkpoint_primary_blocker')};"
+        f"production_training_data_ready={production_ai_checkpoint.get('production_training_data_ready')};"
+        f"force_gpu_worker_return_receipt_ready={production_ai_checkpoint.get('force_gpu_worker_return_receipt_ready')};"
+        f"production_output_heads_complete={production_ai_checkpoint.get('production_output_heads_complete')}"
+    )
+
+
+def _live_gpu_return_receipt_blockers(
+    *,
+    production_ai_gpu_return_intake: dict[str, Any],
+) -> list[str]:
+    receipt_blockers = [str(item) for item in (production_ai_gpu_return_intake.get("receipt_blockers") or []) if _text(item)]
+    if receipt_blockers:
+        return receipt_blockers
+    mapped: list[str] = []
+    for check_id in production_ai_gpu_return_intake.get("failed_check_ids") or []:
+        text = _text(check_id)
+        if text.startswith("actual_summary") and "full_regeneration_summary_complete" not in mapped:
+            mapped.append("full_regeneration_summary_complete")
+        elif text == "post_run_force_derivation_validation":
+            mapped.append(text)
+    return mapped
+
+
+def _live_missing_production_output_labels(
+    *,
+    residual_model_registry: dict[str, Any],
+    production_ai_checkpoint: dict[str, Any],
+) -> list[str]:
+    labels: list[str] = []
+    seen: set[str] = set()
+    for source in (
+        production_ai_checkpoint.get("production_output_head_blocked_fields"),
+        production_ai_checkpoint.get("missing_production_output_labels"),
+        residual_model_registry.get("selected_sidecar_missing_output_fields"),
+        residual_model_registry.get("checkpoint_missing_output_fields"),
+    ):
+        for item in source or []:
+            text = _text(item)
+            if text and text not in seen:
+                seen.add(text)
+                labels.append(text)
+    for part in _text(production_ai_checkpoint.get("first_failed_observed")).split(";"):
+        key, sep, value = part.partition("=")
+        if not sep or key.strip() != "missing":
+            continue
+        for field in value.split(","):
+            field = field.strip()
+            if field and field not in seen:
+                seen.add(field)
+                labels.append(field)
+    return labels
+
+
+def _live_primary_observed_pairs(
+    *,
+    production_ai_gpu_return_intake: dict[str, Any],
+    production_ai_checkpoint: dict[str, Any],
+    residual_model_registry: dict[str, Any],
+) -> dict[str, str]:
+    blockers = _live_gpu_return_receipt_blockers(production_ai_gpu_return_intake=production_ai_gpu_return_intake)
+    missing_output_labels = _live_missing_production_output_labels(
+        residual_model_registry=residual_model_registry,
+        production_ai_checkpoint=production_ai_checkpoint,
+    )
+    return {
+        "gpu_worker_return_receipt_ready": _bool_text(
+            production_ai_checkpoint.get("force_gpu_worker_return_receipt_ready")
+        ),
+        "gpu_worker_return_receipt_blockers": ",".join(blockers),
+        "gpu_worker_return_expected_queue_rows": str(
+            production_ai_gpu_return_intake.get("expected_queue_rows")
+            or production_ai_gpu_return_intake.get("operator_return_handoff_queue_row_count")
+            or 0
+        ),
+        "gpu_worker_return_manifest_ok_row_count": str(
+            production_ai_gpu_return_intake.get("manifest_ok_row_count")
+            or production_ai_checkpoint.get("gpu_receipt_manifest_ok_row_count")
+            or 0
+        ),
+        "gpu_worker_return_manifest_status_placeholder_count": str(
+            production_ai_gpu_return_intake.get("manifest_status_placeholder_count") or 0
+        ),
+        "gpu_worker_return_manifest_status_invalid_count": str(
+            production_ai_gpu_return_intake.get("manifest_status_invalid_count") or 0
+        ),
+        "gpu_worker_return_manifest_operator_verified": _bool_text(
+            production_ai_gpu_return_intake.get("manifest_operator_verified")
+        ),
+        "gpu_worker_return_operator_verified_true_count": str(
+            production_ai_gpu_return_intake.get("manifest_operator_verified_true_count") or 0
+        ),
+        "gpu_worker_return_operator_verification_column_present": _bool_text(
+            production_ai_gpu_return_intake.get("manifest_operator_verification_column_present")
+        ),
+        "gpu_worker_return_identity_coverage_ready": _bool_text(
+            production_ai_gpu_return_intake.get("manifest_identity_coverage_ready")
+        ),
+        "gpu_worker_return_matched_queue_fingerprints": str(
+            production_ai_gpu_return_intake.get("matched_queue_fingerprint_count") or 0
+        ),
+        "gpu_worker_return_queue_fingerprints": str(
+            production_ai_gpu_return_intake.get("queue_fingerprint_count")
+            or production_ai_gpu_return_intake.get("expected_queue_rows")
+            or production_ai_gpu_return_intake.get("manifest_template_row_count")
+            or 0
+        ),
+        "force_derivation_input_ready": _bool_text(
+            production_ai_checkpoint.get("force_derivation_input_ready")
+        ),
+        "delta_force_derivation_validation_ready": _bool_text(
+            production_ai_checkpoint.get("delta_force_derivation_validation_ready")
+        ),
+        "missing_production_output_labels": ",".join(missing_output_labels),
+    }
+
+
+def _live_primary_backlog_observed_string(pairs: dict[str, str]) -> str:
+    return ";".join(f"{key}={value}" for key, value in pairs.items() if value != "")
+
+
+def _live_gap_observed(
+    gap_id: str,
+    *,
+    registry: dict[str, Any],
+    production_ai_checkpoint: dict[str, Any],
+    report_ux: dict[str, Any],
+    trajectory_sla: dict[str, Any],
+    security: dict[str, Any],
+    gap_packet: dict[str, Any],
+) -> str:
+    if gap_id == "production_ai_inference_checkpoint":
+        if registry or production_ai_checkpoint:
+            return _live_production_ai_checkpoint_observed(
+                registry=registry,
+                production_ai_checkpoint=production_ai_checkpoint,
+            )
+        row = _gap_row_by_id(gap_packet, gap_id)
+        stale_observed = _text(row.get("observed"))
+        if stale_observed:
+            return stale_observed
+        return _live_production_ai_checkpoint_observed(
+            registry=registry,
+            production_ai_checkpoint=production_ai_checkpoint,
+        )
+    if gap_id == "ai_analysis_report_ux" and report_ux:
+        return (
+            f"customer_report_delivery_contract_ready={report_ux.get('customer_report_delivery_contract_ready')};"
+            f"customer_report_evidence_binding_ready={report_ux.get('customer_report_evidence_binding_ready')};"
+            f"customer_report_viewer_binding_ready={report_ux.get('customer_report_viewer_binding_ready')};"
+            f"viewer_customer_report_binding_ready={report_ux.get('viewer_customer_report_binding_ready')};"
+            f"customer_report_ready_block_count={report_ux.get('customer_report_ready_block_count')};"
+            f"customer_report_required_block_count={report_ux.get('customer_report_required_block_count')};"
+            f"customer_report_blocked_block_count={report_ux.get('customer_report_blocked_block_count')}"
+        )
+    if gap_id == "production_trajectory_sla" and trajectory_sla:
+        return (
+            f"sla_claim_tier={trajectory_sla.get('sla_claim_tier')};"
+            f"restricted_sla_backed_by_historical_profile_artifacts={trajectory_sla.get('restricted_sla_backed_by_historical_profile_artifacts')};"
+            f"broad_platform_sla_allowed={trajectory_sla.get('broad_platform_sla_allowed')};"
+            f"current_rocm_baseline_claim_scope={trajectory_sla.get('current_rocm_baseline_claim_scope')};"
+            f"current_rocm_baseline_production_profile_enabled={trajectory_sla.get('current_rocm_baseline_production_profile_enabled')};"
+            f"rocm_baseline_profile_gap_acknowledged={trajectory_sla.get('rocm_baseline_profile_gap_acknowledged')}"
+        )
+    if gap_id == "security_deployment_operations" and security:
+        return (
+            f"security_deployment_ready={security.get('security_deployment_ready')};"
+            f"auth_ready={security.get('auth_ready')};"
+            f"tenant_isolation_ready={security.get('tenant_isolation_ready')};"
+            f"hosted_external_exposure_allowed={security.get('hosted_external_exposure_allowed')};"
+            f"sbom_ready={security.get('sbom_ready')};"
+            f"container_image_ready={security.get('container_image_ready')}"
+        )
+    row = _gap_row_by_id(gap_packet, gap_id)
+    stale_observed = _text(row.get("observed"))
+    if stale_observed:
+        return stale_observed
+    return f"gap_status={_text(row.get('status'))};gap_id={gap_id};live_observed_rebuilt=true"
+
+
+def _count_map_text(value: Any) -> str:
+    if not isinstance(value, dict):
+        return ""
+    return ",".join(f"{key}={value[key]}" for key in sorted(value))
+
+
+def _live_scope_closure_detail(closure: dict[str, Any]) -> str:
+    if not closure:
+        return ""
+    return (
+        f"scope_closure_blocker_classes={_count_map_text(closure.get('blocker_class_counts'))};"
+        f"scope_closure_first_scientific_blocker={_text(closure.get('first_scientific_blocker'))};"
+        f"scope_closure_manual_review_subcheck_count={closure.get('manual_review_subcheck_count')};"
+        f"scope_closure_transporter_manual_review_subcheck_count={closure.get('transporter_manual_review_subcheck_count')};"
+        f"scope_closure_transporter_identity_scaffold_confirmation_required_count={closure.get('transporter_identity_scaffold_confirmation_required_count')};"
+        f"scope_closure_transporter_direct_binding_or_kcal_confirmation_required_count={closure.get('transporter_direct_binding_or_kcal_confirmation_required_count')};"
+        f"scope_closure_transporter_negative_quantitative_confirmation_required_count={closure.get('transporter_negative_quantitative_confirmation_required_count')};"
+        f"scope_closure_transporter_direct_binding_missing_count={closure.get('transporter_direct_binding_missing_count')};"
+        f"scope_closure_transporter_negative_quantitative_missing_count={closure.get('transporter_negative_quantitative_missing_count')};"
+        f"scope_closure_pxr_reconciled_blocked_row_count={closure.get('pxr_reconciled_blocked_row_count')};"
+        f"scope_closure_pxr_conflict_resolution_count={closure.get('pxr_conflict_resolution_count')};"
+        f"scope_closure_pxr_quantitative_missing_count={closure.get('pxr_quantitative_missing_count')};"
+        f"scope_closure_general_claim_blocker_count={closure.get('general_claim_blocker_count')};"
+        f"scope_closure_ready_for_apply_count={closure.get('ready_for_apply_count')};"
+        f"scope_closure_authoritative_apply_allowed={closure.get('authoritative_apply_allowed')};"
+        f"scope_claim_boundary={_text(closure.get('claim_boundary_detail'))}"
+    )
+
+
+def _primary_backlog_detail(backlog_packet: dict[str, Any], *, live_observed: str) -> str:
     summary = _summary(backlog_packet)
     primary = _primary_backlog_row(backlog_packet)
     if not summary and not primary:
         return ""
     return (
         f"primary_backlog_work_item_id={_text(summary.get('primary_work_item_id'))};"
-        f"primary_backlog_observed={_text(primary.get('observed'))};"
+        f"primary_backlog_observed={live_observed};"
         f"primary_backlog_next_action={_text(primary.get('next_action'))}"
     )
 
@@ -1146,6 +1386,10 @@ def build_product_goal_completion_audit(
     commercial_readiness_handoff_bundle_packet: dict[str, Any] | None = None,
     delta_force_closure_acceptance_packet: dict[str, Any] | None = None,
     scope_closure_acceptance_packet: dict[str, Any] | None = None,
+    product_scope_breadth_closure_checklist_packet: dict[str, Any] | None = None,
+    report_ux_packet: dict[str, Any] | None = None,
+    trajectory_sla_packet: dict[str, Any] | None = None,
+    security_deployment_packet: dict[str, Any] | None = None,
     architecture_path: str = DEFAULT_ARCHITECTURE_JSON,
     release_dossier_path: str = DEFAULT_RELEASE_DOSSIER_JSON,
     public_benchmark_path: str = DEFAULT_PUBLIC_BENCHMARK_JSON,
@@ -1168,6 +1412,10 @@ def build_product_goal_completion_audit(
     commercial_readiness_handoff_bundle_path: str = DEFAULT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_JSON,
     delta_force_closure_acceptance_path: str = DEFAULT_DELTA_FORCE_CLOSURE_ACCEPTANCE_JSON,
     scope_closure_acceptance_path: str = DEFAULT_SCOPE_CLOSURE_ACCEPTANCE_JSON,
+    product_scope_breadth_closure_checklist_path: str = DEFAULT_SCOPE_CLOSURE_CHECKLIST_JSON,
+    report_ux_path: str = DEFAULT_REPORT_UX_JSON,
+    trajectory_sla_path: str = DEFAULT_TRAJECTORY_SLA_JSON,
+    security_deployment_path: str = DEFAULT_SECURITY_DEPLOYMENT_JSON,
 ) -> dict[str, Any]:
     architecture = _summary(architecture_packet)
     release_dossier = _summary(release_dossier_packet)
@@ -1280,6 +1528,7 @@ def build_product_goal_completion_audit(
     commercial_handoff = _summary(commercial_readiness_handoff_bundle_packet or {})
     delta_force_closure = _summary(delta_force_closure_acceptance_packet or {})
     scope_closure = _summary(scope_closure_acceptance_packet or {})
+    scope_closure_checklist = _summary(product_scope_breadth_closure_checklist_packet or {})
     commercial_next_action_matrix = _commercial_readiness_next_action_matrix(
         production_ai_checkpoint=production_ai_checkpoint,
         production_ai_gpu_return_intake=production_ai_gpu_return_intake,
@@ -1296,9 +1545,23 @@ def build_product_goal_completion_audit(
         commercial_next_action_blocker_matrix[0] if commercial_next_action_blocker_matrix else {}
     )
     primary_backlog = _primary_backlog_row(product_ai_execution_backlog_packet or {})
-    primary_observed_pairs = _observed_pairs(_text(primary_backlog.get("observed")))
-    product_ai_backlog_detail = _primary_backlog_detail(product_ai_execution_backlog_packet or {})
-    product_ai_scope_backlog_detail = _text(product_ai_backlog.get("scope_closure_detail"))
+    report_ux = _summary(report_ux_packet or {})
+    trajectory_sla = _summary(trajectory_sla_packet or {})
+    security_deployment = _summary(security_deployment_packet or {})
+    primary_observed_pairs = _live_primary_observed_pairs(
+        production_ai_gpu_return_intake=production_ai_gpu_return_intake,
+        production_ai_checkpoint=production_ai_checkpoint,
+        residual_model_registry=residual_model_registry,
+    )
+    live_primary_backlog_observed = _live_primary_backlog_observed_string(primary_observed_pairs)
+    product_ai_backlog_detail = _primary_backlog_detail(
+        product_ai_execution_backlog_packet or {},
+        live_observed=live_primary_backlog_observed,
+    )
+    live_scope_closure_detail = _live_scope_closure_detail(scope_closure_checklist)
+    product_ai_scope_backlog_detail = live_scope_closure_detail or _text(
+        product_ai_backlog.get("scope_closure_detail")
+    )
     scope_observed_pairs = _observed_pairs(product_ai_scope_backlog_detail)
     scope_claim_boundary_pairs = _observed_pairs(scope_observed_pairs.get("scope_claim_boundary", ""))
     current_scope_ready_domains = [
@@ -1452,14 +1715,34 @@ def build_product_goal_completion_audit(
         primary_backlog=primary_backlog,
         product_ai_architecture_ready=product_ai_architecture_ready,
     )
-    product_ai_report_ux_observed = _gap_observed(product_ai_architecture_gap_packet or {}, "ai_analysis_report_ux")
+    product_ai_report_ux_observed = _live_gap_observed(
+        "ai_analysis_report_ux",
+        registry=residual_model_registry,
+        production_ai_checkpoint=production_ai_checkpoint,
+        report_ux=report_ux,
+        trajectory_sla=trajectory_sla,
+        security=security_deployment,
+        gap_packet=product_ai_architecture_gap_packet or {},
+    )
     product_ai_report_ux_observed_pairs = _observed_pairs(product_ai_report_ux_observed)
-    product_ai_trajectory_sla_observed = _gap_observed(
-        product_ai_architecture_gap_packet or {}, "production_trajectory_sla"
+    product_ai_trajectory_sla_observed = _live_gap_observed(
+        "production_trajectory_sla",
+        registry=residual_model_registry,
+        production_ai_checkpoint=production_ai_checkpoint,
+        report_ux=report_ux,
+        trajectory_sla=trajectory_sla,
+        security=security_deployment,
+        gap_packet=product_ai_architecture_gap_packet or {},
     )
     product_ai_trajectory_sla_observed_pairs = _observed_pairs(product_ai_trajectory_sla_observed)
-    product_ai_security_deployment_observed = _gap_observed(
-        product_ai_architecture_gap_packet or {}, "security_deployment_operations"
+    product_ai_security_deployment_observed = _live_gap_observed(
+        "security_deployment_operations",
+        registry=residual_model_registry,
+        production_ai_checkpoint=production_ai_checkpoint,
+        report_ux=report_ux,
+        trajectory_sla=trajectory_sla,
+        security=security_deployment,
+        gap_packet=product_ai_architecture_gap_packet or {},
     )
     product_ai_security_deployment_observed_pairs = _observed_pairs(product_ai_security_deployment_observed)
 
@@ -1938,9 +2221,16 @@ def build_product_goal_completion_audit(
             scope_closure.get("next_required_step")
         ),
         "product_ai_production_checkpoint_gap_ready": product_ai_production_checkpoint_gap_ready,
-        "product_ai_production_checkpoint_gap_observed": _gap_observed(
-            product_ai_architecture_gap_packet or {}, "production_ai_inference_checkpoint"
+        "product_ai_production_checkpoint_gap_observed": _live_gap_observed(
+            "production_ai_inference_checkpoint",
+            registry=residual_model_registry,
+            production_ai_checkpoint=production_ai_checkpoint,
+            report_ux=report_ux,
+            trajectory_sla=trajectory_sla,
+            security=security_deployment,
+            gap_packet=product_ai_architecture_gap_packet or {},
         ),
+        "product_ai_observed_rebuilt_from_live_artifacts": True,
         "product_ai_closed_loop_decision_graph_ready": product_ai_closed_loop_decision_graph_ready,
         "product_ai_closed_loop_decision_graph_observed": _gap_observed(
             product_ai_architecture_gap_packet or {}, "closed_loop_structure_docking_ai_graph"
@@ -4515,6 +4805,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--commercial-readiness-handoff-bundle-json", default=DEFAULT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_JSON)
     parser.add_argument("--delta-force-closure-acceptance-json", default=DEFAULT_DELTA_FORCE_CLOSURE_ACCEPTANCE_JSON)
     parser.add_argument("--scope-closure-acceptance-json", default=DEFAULT_SCOPE_CLOSURE_ACCEPTANCE_JSON)
+    parser.add_argument(
+        "--product-scope-breadth-closure-checklist-json",
+        default=DEFAULT_SCOPE_CLOSURE_CHECKLIST_JSON,
+    )
+    parser.add_argument("--report-ux-json", default=DEFAULT_REPORT_UX_JSON)
+    parser.add_argument("--trajectory-sla-json", default=DEFAULT_TRAJECTORY_SLA_JSON)
+    parser.add_argument("--security-deployment-json", default=DEFAULT_SECURITY_DEPLOYMENT_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -4546,6 +4843,12 @@ def main(argv: list[str] | None = None) -> None:
         commercial_readiness_handoff_bundle_packet=_read_json_if_present(args.commercial_readiness_handoff_bundle_json),
         delta_force_closure_acceptance_packet=_read_json_if_present(args.delta_force_closure_acceptance_json),
         scope_closure_acceptance_packet=_read_json_if_present(args.scope_closure_acceptance_json),
+        product_scope_breadth_closure_checklist_packet=_read_json_if_present(
+            args.product_scope_breadth_closure_checklist_json
+        ),
+        report_ux_packet=_read_json_if_present(args.report_ux_json),
+        trajectory_sla_packet=_read_json_if_present(args.trajectory_sla_json),
+        security_deployment_packet=_read_json_if_present(args.security_deployment_json),
         architecture_path=args.architecture_json,
         release_dossier_path=args.release_dossier_json,
         public_benchmark_path=args.public_benchmark_json,
@@ -4568,6 +4871,10 @@ def main(argv: list[str] | None = None) -> None:
         commercial_readiness_handoff_bundle_path=args.commercial_readiness_handoff_bundle_json,
         delta_force_closure_acceptance_path=args.delta_force_closure_acceptance_json,
         scope_closure_acceptance_path=args.scope_closure_acceptance_json,
+        product_scope_breadth_closure_checklist_path=args.product_scope_breadth_closure_checklist_json,
+        report_ux_path=args.report_ux_json,
+        trajectory_sla_path=args.trajectory_sla_json,
+        security_deployment_path=args.security_deployment_json,
     )
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])

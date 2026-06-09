@@ -76,6 +76,10 @@ REQUIRED_STATUS_KEYS = {
     "primary_action_recommended_action",
     "primary_action_artifact_path",
     "goal_api_surface_contract_status",
+    "release_complete_vs_operator_pending_lane",
+    "goal_completion_audit_goal_complete",
+    "release_complete_lane_ready",
+    "operator_pending_lane_ready",
 }
 
 REQUIRED_FAIL_CLOSED_FLAGS = {

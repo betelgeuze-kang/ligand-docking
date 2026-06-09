@@ -37,6 +37,7 @@ E5_STEPS: list[tuple[str, list[str]]] = [
     ("tools/build_residual_model_registry.py", []),
     ("tools/build_commercial_gap_closure_status.py", []),
     ("tools/build_product_goal_completion_audit.py", []),
+    ("tools/build_residual_mode_inference_wiring_smoke.py", []),
 ]
 
 

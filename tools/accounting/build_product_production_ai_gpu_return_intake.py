@@ -1055,7 +1055,15 @@ def build_product_production_ai_gpu_return_intake(
             receipt.get("manifest_operator_verified_invalid_npz_identity_count")
         ),
         "manifest_operator_verified": manifest_operator_verified,
+        "manifest_ok_row_count": _int(receipt.get("manifest_ok_row_count")),
+        "manifest_status_invalid_count": _int(receipt.get("manifest_status_invalid_count")),
+        "manifest_operator_verified_true_count": _int(receipt.get("manifest_operator_verified_true_count")),
+        "manifest_operator_verification_column_present": _bool(
+            receipt.get("manifest_operator_verification_column_present")
+        ),
         "identity_coverage_ready": identity_coverage_ready,
+        "queue_fingerprint_count": _int(receipt.get("queue_fingerprint_count")),
+        "matched_queue_fingerprint_count": _int(receipt.get("manifest_matched_queue_fingerprint_count")),
         "post_run_derivation_validation_ready": derivation_ready,
         "post_return_validation_command": post_return_validation_command,
         "post_run_validation_command_count": len(post_run_validation_commands)

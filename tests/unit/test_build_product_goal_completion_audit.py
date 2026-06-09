@@ -918,6 +918,8 @@ def _checkpoint_readiness() -> dict:
             "gpu_receipt_manifest_matched_queue_id_count": 0,
             "gpu_receipt_manifest_matched_expected_npz_count": 0,
             "gpu_receipt_manifest_matched_queue_fingerprint_count": 0,
+            "force_derivation_input_ready": False,
+            "delta_force_derivation_validation_ready": False,
         },
         "production_inference_acceptance_matrix": _architecture()["production_inference_acceptance_matrix"],
     }
@@ -1185,6 +1187,15 @@ def _gpu_return_intake() -> dict:
                 "expected_queue_rows and no CPU/PyTorch fallback rows"
             ),
             "manifest_template_row_count": 768,
+            "manifest_status_placeholder_count": 1,
+            "manifest_status_invalid_count": 2,
+            "manifest_ok_row_count": 0,
+            "manifest_operator_verified": False,
+            "manifest_operator_verified_true_count": 0,
+            "manifest_operator_verification_column_present": False,
+            "identity_coverage_ready": False,
+            "queue_fingerprint_count": 768,
+            "matched_queue_fingerprint_count": 0,
             "manifest_operator_verification_placeholder_count": 768,
             "manifest_npz_paths_complete": False,
             "manifest_npz_files_exist": False,
@@ -2273,7 +2284,9 @@ def test_product_goal_completion_audit_blocks_on_open_ai_architecture_backlog() 
         "R6_product_ai_architecture_gap_closure"
     ]["observed"]
     assert "scope_breadth.transporter.AQP1.core_binder_01" in by_id["R6_product_ai_architecture_gap_closure"]["observed"]
-    assert "primary_backlog_observed=manual_review_placeholders=11" in by_id["R6_product_ai_architecture_gap_closure"]["observed"]
+    assert "primary_backlog_observed=" in by_id["R6_product_ai_architecture_gap_closure"]["observed"]
+    assert "gpu_worker_return_receipt_ready=" in by_id["R6_product_ai_architecture_gap_closure"]["observed"]
+    assert summary["product_ai_observed_rebuilt_from_live_artifacts"] is True
     assert "scope_closure_pxr_reconciled_blocked_row_count=6" in by_id["R6_product_ai_architecture_gap_closure"]["observed"]
     assert "scope_closure_manual_review_subcheck_count=54" in by_id["R6_product_ai_architecture_gap_closure"]["observed"]
     assert "scope_closure_authoritative_apply_allowed=False" in summary["product_ai_scope_backlog_detail"]
@@ -3532,6 +3545,40 @@ def test_product_goal_completion_audit_uses_force_return_chain_for_production_ai
     assert by_id["R6_product_ai_architecture_gap_closure"]["next_command"] == summary["next_command"]
     assert "gpu_worker_return_operator_verified_true_count=0" in by_id["R6_product_ai_architecture_gap_closure"]["observed"]
     assert "gpu_worker_return_queue_fingerprints=768" in by_id["R6_product_ai_architecture_gap_closure"]["observed"]
+
+
+def test_product_goal_completion_audit_passes_with_scope_deferred_backlog_only() -> None:
+    payload = mod.build_product_goal_completion_audit(
+        architecture_packet=_architecture(release_ready=True, commercial_ready=True),
+        release_dossier_packet=_release_dossier(release_ready=True, commercial_ready=True),
+        public_benchmark_packet=_public_benchmark(),
+        commercial_independence_packet=_commercial(ready=True),
+        license_work_order_packet=_license_work_order(ready=True),
+        cameo_architecture_packet=_cameo(),
+        release_gate_packet=_release_gate(ready=True),
+        bottleneck_packet={"summary": {"approval_tokens_required": []}},
+        burndown_packet={"summary": {}, "rows": []},
+        product_ai_architecture_gap_packet=_ai_gap(),
+        product_ai_execution_backlog_packet={
+            "summary": {
+                "status": "product_ai_architecture_execution_backlog_clear",
+                "backlog_clear": True,
+                "work_item_count": 12,
+                "release_blocking_work_item_count": 0,
+                "scope_deferred_work_item_count": 12,
+                "primary_work_item_id": "scope_breadth.transporter.AQP1.core_non_binder_01",
+            },
+            "rows": [],
+        },
+    )
+
+    summary = payload["summary"]
+    by_id = {row["requirement_id"]: row for row in payload["rows"]}
+    assert summary["goal_complete"] is True
+    assert summary["product_ai_optional_lane_ready"] is True
+    assert summary["product_ai_scope_deferred_work_item_count"] == 12
+    assert summary["optional_requirement_fail_count"] == 0
+    assert by_id["R6_product_ai_architecture_gap_closure"]["status"] == "pass"
 
 
 def test_product_goal_completion_audit_passes_when_all_evidence_is_ready() -> None:

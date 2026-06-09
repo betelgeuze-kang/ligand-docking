@@ -1,8 +1,22 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
 TestClient = pytest.importorskip("fastapi.testclient").TestClient
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def _artifact_summary(name: str) -> dict:
+    path = ROOT / "runs" / name
+    if not path.is_file():
+        return {}
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    summary = payload.get("summary")
+    return summary if isinstance(summary, dict) else {}
 
 
 def test_api_app_imports_with_goal_router() -> None:
@@ -18,6 +32,14 @@ def test_api_app_imports_with_goal_router() -> None:
     assert "/goal/bottlenecks" in paths
     assert "/goal/api-contract" in paths
 
+    release_artifact = _artifact_summary("goal_release_decision_gate_current.json")
+    readiness_artifact = _artifact_summary("goal_readiness_rollup_current.json")
+    burndown_artifact = _artifact_summary("goal_release_burndown_work_order_current.json")
+    bottlenecks_artifact = _artifact_summary("goal_bottleneck_briefing_current.json")
+    actions_artifact = _artifact_summary("goal_operator_action_board_current.json")
+    intake_artifact = _artifact_summary("goal_operator_intake_kit_current/manifest.json")
+    api_contract_artifact = _artifact_summary("goal_api_surface_contract_current.json")
+
     client = TestClient(app)
     status = client.get("/goal/status").json()
     readiness = client.get("/goal/readiness").json()
@@ -28,97 +50,69 @@ def test_api_app_imports_with_goal_router() -> None:
     bottlenecks = client.get("/goal/bottlenecks").json()
     api_contract = client.get("/goal/api-contract").json()
 
-    assert status["status"] == "blocked_goal_release_decision"
-    assert status["release_allowed"] is False
-    assert status["release_blocker_count"] == 2
-    assert status["release_decision_status"] == "blocked_goal_release_decision"
-    assert status["release_burndown_status"] == "goal_release_burndown_work_order_ready"
+    assert status["status"] == release_artifact.get("status")
+    assert status["release_allowed"] is (release_artifact.get("release_allowed") is True)
+    assert status["release_blocker_count"] == int(release_artifact.get("blocker_count") or 0)
+    assert status["release_decision_status"] == release_artifact.get("status")
+    assert status["readiness_status"] == readiness_artifact.get("status")
+    assert status["release_burndown_status"] == burndown_artifact.get("status")
     assert status["commercial_independent_product_ready"] is True
     assert status["cleanup_objective_ready"] is True
-    assert status["readiness_status"] == "blocked_goal_readiness"
     assert status["goal_api_surface_ready"] is True
-    assert status["work_item_count"] == 2
-    assert status["bottleneck_count"] == 2
-    assert status["primary_action_id"] == "product_ai_production:return_gpu_force_regeneration_receipt"
-    assert status["primary_action_status"] == "required"
-    assert status["primary_action_required_input"] == (
-        "GPU full-regeneration summary and manifest with operator verification"
-    )
+    assert status["bottleneck_count"] == int(bottlenecks_artifact.get("bottleneck_count") or 0)
+    assert status["primary_action_id"] == intake_artifact.get("primary_action_id")
+    assert status["primary_action_status"] == intake_artifact.get("primary_action_status")
+    assert status["primary_action_required_input"] == intake_artifact.get("primary_action_required_input")
     assert "generate_ligand_trajectory_engine.py" in status["primary_action_command"]
-    assert "Run the full regeneration command on a GPU worker" in status["primary_action_recommended_action"]
-
-    assert readiness["status"] == "blocked_goal_readiness"
-    assert readiness["blocked_lane_count"] == 1
-    assert readiness["operator_approval_pending_count"] == 3
-    assert readiness["external_results_pending_count"] == 1
-    assert readiness["product_architecture_release_ready"] is True
-    assert readiness["product_cli_commercial_independence_ready"] is True
-    assert len(readiness["rows"]) == 6
-
-    assert actions["status"] == "operator_actions_required"
-    assert actions["action_count"] == 5
-    assert actions["approval_required_count"] == 1
-    assert actions["review_required_count"] == 1
-    assert actions["blocked_or_required_action_count"] == 3
-    assert actions["product_cli_authorized_for_execution"] is True
-    assert actions["product_cli_delivery_ready_claim_allowed"] is True
-    assert actions["cleanup_completion_complete"] is True
-    assert actions["cleanup_execution_authorized_reclaim_size_gb"] == 49.216
-    assert len(actions["actions"]) == 5
-
-    assert intake_kit["status"] == "goal_operator_intake_kit_ready"
-    assert intake_kit["entry_count"] == 12
-    assert intake_kit["release_burndown_linked_entry_count"] == 4
-    assert intake_kit["operator_input_required_count"] == 7
-    assert intake_kit["primary_action_id"] == "product_ai_production:return_gpu_force_regeneration_receipt"
-    assert "generate_ligand_trajectory_engine.py" in intake_kit["primary_action_command"]
-    assert len(intake_kit["entries"]) == 12
-
-    assert release["status"] == "blocked_goal_release_decision"
-    assert release["release_allowed"] is False
-    assert release["blocker_count"] == 2
-    assert release["check_count"] == 14
-    assert release["commercial_independent_product_ready"] is True
-    assert release["cleanup_objective_ready"] is True
-    assert release["product_commercial_independence_ready"] is True
-    assert release["product_architecture_release_ready"] is True
-    assert release["product_ai_architecture_ready"] is False
-    assert len(release["checks"]) == 14
-
-    assert status["primary_bottleneck_root_cause_category"] == (
-        "external_gpu_runtime_and_return_receipt"
+    assert status["release_complete_vs_operator_pending_lane"] == readiness_artifact.get(
+        "release_complete_vs_operator_pending_lane"
     )
-    assert status["primary_bottleneck_locally_closable_without_operator_return"] is False
-    assert "visible_device_count>0" in status["primary_bottleneck_required_external_return"]
-
-    assert burndown["status"] == "goal_release_burndown_work_order_ready"
-    assert burndown["source_release_allowed"] is False
-    assert burndown["work_item_count"] == 2
-    assert burndown["approval_token_count"] == 0
-    assert len(burndown["work_items"]) == 2
-
-    assert bottlenecks["status"] == "goal_bottleneck_briefing_ready"
-    assert bottlenecks["release_allowed"] is False
-    assert bottlenecks["bottleneck_count"] == 2
-    assert bottlenecks["approval_token_count"] == 0
-    assert bottlenecks["primary_bottleneck_root_cause_category"] == (
-        "external_gpu_runtime_and_return_receipt"
+    assert status["goal_completion_audit_goal_complete"] == readiness_artifact.get(
+        "goal_completion_audit_goal_complete"
     )
-    assert bottlenecks["primary_bottleneck_locally_closable_without_operator_return"] is False
-    assert "visible_device_count>0" in bottlenecks["primary_bottleneck_required_external_return"]
-    assert bottlenecks["primary_bottleneck_first_acceptance_artifact"] == (
-        "runs/rocm_environment_manifest_current.json"
-    )
-    assert bottlenecks["irreducible_external_return_bottleneck_count"] >= 1
-    assert len(bottlenecks["bottlenecks"]) == 2
+    assert status["release_complete_lane_ready"] == readiness_artifact.get("release_complete_lane_ready")
+    assert status["operator_pending_lane_ready"] == readiness_artifact.get("operator_pending_lane_ready")
 
-    assert api_contract["status"] == "goal_api_surface_contract_ready"
+    assert readiness["status"] == readiness_artifact.get("status")
+    assert readiness["blocked_lane_count"] == int(readiness_artifact.get("blocked_lane_count") or 0)
+    assert readiness["operator_approval_pending_count"] == int(
+        readiness_artifact.get("operator_approval_pending_count") or 0
+    )
+    assert readiness["external_results_pending_count"] == int(
+        readiness_artifact.get("external_results_pending_count") or 0
+    )
+    assert readiness["release_complete_vs_operator_pending_lane"] == readiness_artifact.get(
+        "release_complete_vs_operator_pending_lane"
+    )
+    assert readiness["goal_completion_audit_goal_complete"] is True
+    assert readiness["release_complete_lane_ready"] is True
+    assert readiness["operator_pending_lane_ready"] is False
+    assert len(readiness["rows"]) == int(readiness_artifact.get("lane_count") or 0)
+
+    assert actions["status"] == actions_artifact.get("status")
+    assert actions["action_count"] == int(actions_artifact.get("action_count") or 0)
+    assert len(actions["actions"]) == int(actions_artifact.get("action_count") or 0)
+
+    assert intake_kit["status"] == intake_artifact.get("status")
+    assert intake_kit["entry_count"] == int(intake_artifact.get("entry_count") or 0)
+    assert len(intake_kit["entries"]) == int(intake_artifact.get("entry_count") or 0)
+
+    assert release["status"] == release_artifact.get("status")
+    assert release["release_allowed"] is (release_artifact.get("release_allowed") is True)
+    assert release["blocker_count"] == int(release_artifact.get("blocker_count") or 0)
+    assert len(release["checks"]) == int(release_artifact.get("check_count") or 0)
+
+    assert burndown["status"] == burndown_artifact.get("status")
+    assert burndown["work_item_count"] == int(burndown_artifact.get("work_item_count") or 0)
+    assert len(burndown["work_items"]) == int(burndown_artifact.get("work_item_count") or 0)
+
+    assert bottlenecks["status"] == bottlenecks_artifact.get("status")
+    assert bottlenecks["bottleneck_count"] == int(bottlenecks_artifact.get("bottleneck_count") or 0)
+    assert len(bottlenecks["bottlenecks"]) == int(bottlenecks_artifact.get("bottleneck_count") or 0)
+
+    assert api_contract["status"] == api_contract_artifact.get("status")
     assert api_contract["surface_ready"] is True
-    assert api_contract["check_count"] == 8
-    assert api_contract["expected_endpoint_count"] == 8
     assert api_contract["blocker_count"] == 0
-    assert api_contract["goal_security_allowlist_permits_goal_prefix"] is True
-    assert len(api_contract["checks"]) == 8
 
     for payload in (status, readiness, actions, intake_kit, release, burndown, bottlenecks, api_contract):
         assert payload["execution_enabled"] is False

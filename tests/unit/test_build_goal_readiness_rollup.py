@@ -405,6 +405,37 @@ def test_goal_readiness_rollup_blocks_missing_product_preflight() -> None:
     assert payload["rows"][0]["lane_status"] == "blocked_missing_artifact"
 
 
+def test_goal_readiness_rollup_splits_release_complete_from_operator_pending() -> None:
+    payload = mod.build_rollup(
+        product_readiness_packet=_product_readiness(),
+        product_preflight_packet=_product_preflight(),
+        product_delivery_evidence_packet=_product_delivery_evidence(),
+        product_pilot_packet=_product_pilot_packet(),
+        product_architecture_packet=_product_architecture(
+            blocked_lane_count=0,
+            approval_required_lane_count=0,
+            release_ready=True,
+        ),
+        cameo_readiness_packet=_cameo("cameo_validation_pending_official_results", 0),
+        transition_cleanup_packet=_transition_cleanup(),
+        ligand_cleanup_packet=_ligand_cleanup(),
+        product_ai_architecture_gap_packet=_ready_product_ai_gap(),
+        product_ai_execution_backlog_packet=_ready_product_ai_backlog(),
+        goal_completion_audit_packet={"summary": {"goal_complete": True, "status": "product_goal_completion_audit_pass"}},
+    )
+    summary = payload["summary"]
+    assert summary["goal_completion_audit_goal_complete"] is True
+    assert summary["release_complete_lane_ready"] is True
+    assert summary["operator_pending_lane_ready"] is False
+    assert summary["status"] == "goal_readiness_release_complete_operator_pending"
+    assert summary["release_complete_vs_operator_pending_lane"] == "release_complete_operator_pending_split"
+    matrix = summary["release_complete_vs_operator_pending_matrix"]
+    assert matrix[0]["lane"] == "release_complete"
+    assert matrix[0]["ready"] is True
+    assert matrix[1]["lane"] == "operator_or_external_pending"
+    assert matrix[1]["ready"] is False
+
+
 def test_goal_readiness_rollup_tool_writes_outputs(tmp_path: Path) -> None:
     paths = {
         "product_readiness": tmp_path / "product_readiness.json",

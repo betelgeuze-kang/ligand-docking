@@ -33,6 +33,7 @@ DEFAULT_LIGAND_CLEANUP_PREFLIGHT_JSON = "runs/ligand_heavy_cleanup_execution_pre
 DEFAULT_CLEANUP_POSTCHECK_JSON = "runs/cleanup_postcheck_contract_current.json"
 DEFAULT_PRODUCT_AI_ARCHITECTURE_GAP_JSON = "runs/product_ai_architecture_gap_closure_current.json"
 DEFAULT_PRODUCT_AI_EXECUTION_BACKLOG_JSON = "runs/product_ai_architecture_execution_backlog_current.json"
+DEFAULT_GOAL_COMPLETION_AUDIT_JSON = "runs/product_goal_completion_audit_current.json"
 DEFAULT_OUT_JSON = "runs/goal_readiness_rollup_current.json"
 DEFAULT_OUT_CSV = "runs/goal_readiness_rollup_current.csv"
 DEFAULT_OUT_MD = "runs/goal_readiness_rollup_current.md"
@@ -455,6 +456,7 @@ def build_rollup(
     cleanup_postcheck_packet: dict[str, Any] | None = None,
     product_ai_architecture_gap_packet: dict[str, Any] | None = None,
     product_ai_execution_backlog_packet: dict[str, Any] | None = None,
+    goal_completion_audit_packet: dict[str, Any] | None = None,
     product_cli_status_packet: dict[str, Any] | None = None,
     cameo_cli_status_packet: dict[str, Any] | None = None,
     cleanup_cli_status_packet: dict[str, Any] | None = None,
@@ -479,6 +481,7 @@ def build_rollup(
     cleanup_postcheck_path: str = DEFAULT_CLEANUP_POSTCHECK_JSON,
     product_ai_architecture_gap_path: str = DEFAULT_PRODUCT_AI_ARCHITECTURE_GAP_JSON,
     product_ai_execution_backlog_path: str = DEFAULT_PRODUCT_AI_EXECUTION_BACKLOG_JSON,
+    goal_completion_audit_path: str = DEFAULT_GOAL_COMPLETION_AUDIT_JSON,
 ) -> dict[str, Any]:
     product_ai_gate_present = (
         product_ai_architecture_gap_packet is not None or product_ai_execution_backlog_packet is not None
@@ -535,6 +538,11 @@ def build_rollup(
     operator_pending_count = sum(1 for row in rows if row["lane_status"] == "operator_approval_pending")
     external_pending_count = sum(1 for row in rows if row["lane_status"] == "external_results_pending")
     evidence_ready_count = sum(1 for row in rows if row["lane_status"] == "evidence_ready")
+    goal_completion_audit = _summary(goal_completion_audit_packet or {})
+    goal_completion_audit_goal_complete = goal_completion_audit.get("goal_complete") is True
+    release_complete_lane_ready = goal_completion_audit_goal_complete
+    operator_pending_lane_ready = operator_pending_count == 0 and external_pending_count == 0
+    operator_or_external_pending_count = operator_pending_count + external_pending_count
     cleanup_postcheck = _summary(cleanup_postcheck_packet or {})
     product_operational_quality = _summary(product_operational_quality_packet or {})
     cameo_evidence_integrity = _summary(cameo_evidence_integrity_packet or {})
@@ -549,13 +557,41 @@ def build_rollup(
     )
     if blocked_count:
         status = "blocked_goal_readiness"
-    elif operator_pending_count or external_pending_count:
+        release_complete_vs_operator_pending_lane = "blocked"
+    elif goal_completion_audit_goal_complete and operator_or_external_pending_count:
+        status = "goal_readiness_release_complete_operator_pending"
+        release_complete_vs_operator_pending_lane = "release_complete_operator_pending_split"
+    elif operator_or_external_pending_count:
         status = "goal_readiness_pending_operator_or_external_results"
+        release_complete_vs_operator_pending_lane = "operator_pending"
     else:
         status = "goal_readiness_evidence_ready"
+        release_complete_vs_operator_pending_lane = "release_complete"
+    release_complete_vs_operator_pending_matrix = [
+        {
+            "lane": "release_complete",
+            "ready": release_complete_lane_ready,
+            "source_artifact": goal_completion_audit_path if goal_completion_audit_packet else "",
+            "goal_complete": goal_completion_audit_goal_complete,
+        },
+        {
+            "lane": "operator_or_external_pending",
+            "ready": operator_pending_lane_ready,
+            "operator_approval_pending_count": operator_pending_count,
+            "external_results_pending_count": external_pending_count,
+            "pending_lane_count": operator_or_external_pending_count,
+        },
+    ]
     summary = {
         "packet_type": "goal_readiness_rollup",
         "status": status,
+        "release_complete_vs_operator_pending_lane": release_complete_vs_operator_pending_lane,
+        "goal_completion_audit_goal_complete": goal_completion_audit_goal_complete,
+        "release_complete_lane_ready": release_complete_lane_ready,
+        "operator_pending_lane_ready": operator_pending_lane_ready,
+        "operator_or_external_pending_lane_count": operator_or_external_pending_count,
+        "release_complete_vs_operator_pending_matrix": release_complete_vs_operator_pending_matrix,
+        "goal_completion_audit_artifact": goal_completion_audit_path if goal_completion_audit_packet else "",
         "lane_count": len(rows),
         "blocked_lane_count": blocked_count,
         "operator_approval_pending_count": operator_pending_count,
@@ -650,9 +686,13 @@ def build_rollup(
             "Repair blocked lanes before treating the full commercial/CAMEO/cleanup objective as ready."
             if status == "blocked_goal_readiness"
             else (
-                "Collect operator approvals or official CAMEO results before executing pending lanes."
-                if status == "goal_readiness_pending_operator_or_external_results"
-                else "All tracked lanes are evidence-ready; perform a full completion audit before claiming the objective is complete."
+                "Release completion is proven by goal audit, but operator/external lanes (for example CAMEO official results) remain pending and must not be conflated with release blockers."
+                if status == "goal_readiness_release_complete_operator_pending"
+                else (
+                    "Collect operator approvals or official CAMEO results before executing pending lanes."
+                    if status == "goal_readiness_pending_operator_or_external_results"
+                    else "All tracked lanes are evidence-ready; perform a full completion audit before claiming the objective is complete."
+                )
             )
         ),
     }
@@ -666,6 +706,11 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         "# Goal Readiness Rollup",
         "",
         f"- status: `{s['status']}`",
+        f"- release_complete_vs_operator_pending_lane: `{s['release_complete_vs_operator_pending_lane']}`",
+        f"- goal_completion_audit_goal_complete: `{s['goal_completion_audit_goal_complete']}`",
+        f"- release_complete_lane_ready: `{s['release_complete_lane_ready']}`",
+        f"- operator_pending_lane_ready: `{s['operator_pending_lane_ready']}`",
+        f"- operator_or_external_pending_lane_count: `{s['operator_or_external_pending_lane_count']}`",
         f"- lane_count: `{s['lane_count']}`",
         f"- blocked_lane_count: `{s['blocked_lane_count']}`",
         f"- operator_approval_pending_count: `{s['operator_approval_pending_count']}`",
@@ -742,6 +787,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--cleanup-postcheck-json", default=DEFAULT_CLEANUP_POSTCHECK_JSON)
     parser.add_argument("--product-ai-architecture-gap-json", default=DEFAULT_PRODUCT_AI_ARCHITECTURE_GAP_JSON)
     parser.add_argument("--product-ai-execution-backlog-json", default=DEFAULT_PRODUCT_AI_EXECUTION_BACKLOG_JSON)
+    parser.add_argument("--goal-completion-audit-json", default=DEFAULT_GOAL_COMPLETION_AUDIT_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -772,6 +818,7 @@ def main(argv: list[str] | None = None) -> None:
         cleanup_postcheck_packet=_read_json_if_present(args.cleanup_postcheck_json),
         product_ai_architecture_gap_packet=_read_json_if_present(args.product_ai_architecture_gap_json),
         product_ai_execution_backlog_packet=_read_json_if_present(args.product_ai_execution_backlog_json),
+        goal_completion_audit_packet=_read_json_if_present(args.goal_completion_audit_json),
         product_cli_status_packet=build_product_cli_all_status(),
         cameo_cli_status_packet=build_cameo_cli_all_status(),
         cleanup_cli_status_packet=build_cleanup_cli_all_status(),
@@ -796,6 +843,7 @@ def main(argv: list[str] | None = None) -> None:
         cleanup_postcheck_path=args.cleanup_postcheck_json,
         product_ai_architecture_gap_path=args.product_ai_architecture_gap_json,
         product_ai_execution_backlog_path=args.product_ai_execution_backlog_json,
+        goal_completion_audit_path=args.goal_completion_audit_json,
     )
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])

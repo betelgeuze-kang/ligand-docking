@@ -8,6 +8,10 @@ from pathlib import Path
 from typing import Any
 
 from betelgeuze_product.engine_dispatch import build_dispatch_manifest
+from betelgeuze_product.residual_mode_policy import (
+    customer_ranking_mutation_allowed_at_runtime,
+    production_ai_inference_subject_active,
+)
 from betelgeuze_product.structure_analysis import analyze_structure_source
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -111,21 +115,21 @@ def _execution_approval_posture(approval_packet: dict[str, Any] | None = None) -
     }
 
 
-def _production_ai_posture_from_registry(registry: dict[str, Any]) -> dict[str, Any]:
+def _production_ai_posture_from_registry(
+    registry: dict[str, Any],
+    *,
+    shadow_only_active_locked: bool = True,
+) -> dict[str, Any]:
     default_mode = _text(registry.get("default_residual_mode"))
     trained_count = int(registry.get("trained_model_checkpoint_count") or 0)
     promotion_allowed = registry.get("production_promotion_allowed") is True
     customer_auto_correction_allowed = registry.get("customer_facing_auto_correction_allowed") is True
     customer_score_mutation_allowed = registry.get("customer_facing_score_mutation_allowed") is True
-    customer_ranking_mutation_allowed = registry.get("customer_facing_ranking_mutation_allowed") is True
-    active = bool(
-        promotion_allowed
-        and customer_auto_correction_allowed
-        and customer_score_mutation_allowed
-        and customer_ranking_mutation_allowed
-        and trained_count > 0
-        and default_mode in {"assist", "production", "production_guarded"}
+    customer_ranking_mutation_allowed = customer_ranking_mutation_allowed_at_runtime(
+        registry,
+        shadow_only_active_locked=shadow_only_active_locked,
     )
+    active = production_ai_inference_subject_active(registry)
     blocked_reason = _text(registry.get("production_promotion_blocked_reason"))
     if not blocked_reason and not active:
         blocked_reason = "production_ai_inference_subject_not_active"
@@ -181,13 +185,23 @@ def _commercial_fail_closed_ai_posture(registry: dict[str, Any], workbench: dict
     }
 
 
-def _production_ai_posture(registry_packet: dict[str, Any] | None = None) -> dict[str, Any]:
+def _production_ai_posture(
+    registry_packet: dict[str, Any] | None = None,
+    *,
+    shadow_only_active_locked: bool = True,
+) -> dict[str, Any]:
     registry = _summary(registry_packet or _read_json_object(RESIDUAL_MODEL_REGISTRY_ARTIFACT))
     if registry_packet is not None:
-        return _production_ai_posture_from_registry(registry)
+        return _production_ai_posture_from_registry(
+            registry,
+            shadow_only_active_locked=shadow_only_active_locked,
+        )
     workbench = _summary(_read_json_object(PRODUCT_AI_PROMOTION_WORKBENCH_ARTIFACT))
     if _bool(workbench.get("production_ai_inference_subject_active")):
-        return _production_ai_posture_from_registry(registry)
+        return _production_ai_posture_from_registry(
+            registry,
+            shadow_only_active_locked=shadow_only_active_locked,
+        )
     return _commercial_fail_closed_ai_posture(registry, workbench)
 
 
@@ -715,11 +729,15 @@ def build_docking_job_record(
     source_host: str = "",
     residual_registry_packet: dict[str, Any] | None = None,
     scope_claim_guard_packet: dict[str, Any] | None = None,
+    shadow_only_active_locked: bool = True,
 ) -> dict[str, Any]:
     validation = validate_docking_request(payload)
     normalized = validation["normalized"]
     structure_analysis = analyze_structure_source(payload)
-    ai_posture = _production_ai_posture(residual_registry_packet)
+    ai_posture = _production_ai_posture(
+        residual_registry_packet,
+        shadow_only_active_locked=shadow_only_active_locked,
+    )
     execution_approval = _execution_approval_posture()
     scope_claim_guard = _scope_claim_guard(
         family=normalized["family"],

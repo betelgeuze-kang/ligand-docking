@@ -205,7 +205,7 @@ def test_docking_job_record_marks_ai_subject_only_when_customer_facing_permissio
     assert record["production_ai_inference_subject_active"] is True
     assert record["production_ai_customer_facing_auto_correction_allowed"] is True
     assert record["production_ai_customer_facing_score_mutation_allowed"] is True
-    assert record["production_ai_customer_facing_ranking_mutation_allowed"] is True
+    assert record["production_ai_customer_facing_ranking_mutation_allowed"] is False
     assert record["production_ai_correction_applied"] is False
     assert record["production_ai_abstention_enforced"] is False
     assert record["production_ai_abstention_reason"] == ""
@@ -219,6 +219,35 @@ def test_docking_job_record_marks_ai_subject_only_when_customer_facing_permissio
     assert record["customer_report_sections"][3]["section_id"] == "uncertainty_narrative"
     assert record["execution_enabled"] is False
     assert record["docking_results_emitted"] is False
+
+
+def test_docking_job_record_allows_ranking_mutation_only_when_shadow_lock_is_released() -> None:
+    record = build_docking_job_record(
+        {
+            "request_type": "structure_analysis_ligand_docking",
+            "family": "gpcr",
+            "target_id": "ADRB2",
+            "pdb_content": "ATOM      1  CA  GLY A   1      12.104  13.207  14.321  1.00 10.00           C\n",
+            "ligands": [{"ligand_id": "lig_1", "smiles": "CCO"}],
+        },
+        job_id="job_ai_ranking_unlocked",
+        residual_registry_packet={
+            "summary": {
+                "default_residual_mode": "production_guarded",
+                "production_promotion_allowed": True,
+                "customer_facing_auto_correction_allowed": True,
+                "customer_facing_score_mutation_allowed": True,
+                "customer_facing_ranking_mutation_allowed": True,
+                "trained_model_checkpoint_count": 1,
+                "selected_sidecar_ready": True,
+                "selected_sidecar_missing_output_fields": [],
+            }
+        },
+        shadow_only_active_locked=False,
+    )
+
+    assert record["production_ai_inference_subject_active"] is True
+    assert record["production_ai_customer_facing_ranking_mutation_allowed"] is True
 
 
 def test_docking_request_blocks_scope_widening_and_missing_ligand_source() -> None:
