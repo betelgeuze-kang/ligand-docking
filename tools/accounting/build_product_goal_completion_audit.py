@@ -405,6 +405,10 @@ def _live_gap_observed(
     api: dict[str, Any],
     job_contract: dict[str, Any],
     gap_packet: dict[str, Any],
+    scope_breadth: dict[str, Any] | None = None,
+    capability: dict[str, Any] | None = None,
+    scope_closure_checklist: dict[str, Any] | None = None,
+    scope_closure_acceptance: dict[str, Any] | None = None,
 ) -> str:
     if gap_id == "production_ai_inference_checkpoint":
         if registry or production_ai_checkpoint:
@@ -452,6 +456,13 @@ def _live_gap_observed(
             f"sbom_ready={security.get('sbom_ready')};"
             f"container_image_ready={security.get('container_image_ready')}"
         )
+    if gap_id == "scope_breadth_expansion" and scope_breadth:
+        return _live_scope_breadth_observed(
+            scope_breadth,
+            capability=capability,
+            scope_closure_checklist=scope_closure_checklist,
+            scope_closure_acceptance=scope_closure_acceptance,
+        )
     row = _gap_row_by_id(gap_packet, gap_id)
     stale_observed = _text(row.get("observed"))
     if stale_observed:
@@ -463,6 +474,78 @@ def _count_map_text(value: Any) -> str:
     if not isinstance(value, dict):
         return ""
     return ",".join(f"{key}={value[key]}" for key in sorted(value))
+
+
+def _live_scope_breadth_observed(
+    scope_breadth: dict[str, Any],
+    *,
+    capability: dict[str, Any] | None = None,
+    scope_closure_checklist: dict[str, Any] | None = None,
+    scope_closure_acceptance: dict[str, Any] | None = None,
+) -> str:
+    if not scope_breadth:
+        return ""
+    capability = capability or {}
+    scope_closure_checklist = scope_closure_checklist or {}
+    scope_closure_acceptance = scope_closure_acceptance or {}
+    allowed_families = (
+        scope_breadth.get("allowed_scope_families")
+        or capability.get("allowed_scope_families")
+        or []
+    )
+    blocked_claim_scopes = list(scope_breadth.get("blocked_claim_scopes") or [])
+    if not blocked_claim_scopes:
+        blocked_claim_scopes = list(
+            scope_breadth.get("scope_acceptance_next_stage_unlock_claim_scopes")
+            or scope_breadth.get("scope_claim_expansion_current_next_stage_unlock_claim_scopes")
+            or []
+        )
+    general_platform_ready = capability.get("general_protein_ligand_platform_ready")
+    if general_platform_ready is None:
+        general_platform_ready = scope_breadth.get("general_protein_ligand_platform_ready")
+    return (
+        f"allowed_scope_families={','.join(str(item) for item in allowed_families)};"
+        f"general_platform={general_platform_ready};"
+        f"scope_breadth_ready={scope_breadth.get('scope_breadth_ready')};"
+        f"scope_claim_posture_ready={scope_breadth.get('scope_claim_posture_ready')};"
+        f"general_platform_claim_allowed={scope_breadth.get('general_platform_claim_allowed')};"
+        f"blocked_claim_scopes={','.join(str(item) for item in blocked_claim_scopes)};"
+        f"scope_claim_boundary_detail={scope_breadth.get('scope_claim_boundary_detail')};"
+        f"ready_domains={','.join(str(item) for item in scope_breadth.get('ready_domains') or [])};"
+        f"missing_domains={','.join(str(item) for item in scope_breadth.get('missing_domains') or [])};"
+        f"acquisition_plan_ready={scope_breadth.get('scope_breadth_acquisition_plan_ready')};"
+        f"intake_readiness_ready={scope_breadth.get('evidence_intake_readiness_ready')};"
+        f"local_crosscheck_intake_ready={scope_breadth.get('local_crosscheck_intake_ready_count')};"
+        f"local_crosscheck_unreadable={scope_breadth.get('local_crosscheck_unreadable_item_count')};"
+        f"transporter_triage_ready={scope_breadth.get('transporter_triage_packet_ready')};"
+        f"transporter_operator_review_evidence_matrix_ready={scope_breadth.get('transporter_operator_review_evidence_matrix_ready')};"
+        f"transporter_claim_safe_local_evidence_ready={scope_breadth.get('transporter_claim_safe_local_evidence_ready_count')};"
+        f"transporter_claim_safe_local_evidence_blocked={scope_breadth.get('transporter_claim_safe_local_evidence_blocked_count')};"
+        f"transporter_direct_binding_claim_blocked={scope_breadth.get('transporter_direct_binding_claim_blocked_count')};"
+        f"transporter_negative_value_claim_blocked={scope_breadth.get('transporter_negative_value_claim_blocked_count')};"
+        f"transporter_top_claim_safe_blocker={scope_breadth.get('transporter_top_claim_safe_blocker')};"
+        f"transporter_candidate_assignment_required={scope_breadth.get('transporter_candidate_assignment_required_count')};"
+        f"transporter_functional_direct_gap={scope_breadth.get('transporter_functional_direct_gap_count')};"
+        f"transporter_candidate_workbook_ready={scope_breadth.get('transporter_candidate_workbook_ready')};"
+        f"transporter_candidate_manual_review={scope_breadth.get('transporter_candidate_ready_for_manual_review_count')};"
+        f"transporter_candidate_apply_ready={scope_breadth.get('transporter_candidate_ready_for_apply_count')};"
+        f"transporter_manual_review_intake_ready={scope_breadth.get('transporter_manual_review_intake_ready')};"
+        f"transporter_manual_review_template_rows={scope_breadth.get('transporter_manual_review_template_row_count')};"
+        f"transporter_manual_review_direct_binding_required={scope_breadth.get('transporter_manual_review_direct_binding_evidence_required_count')};"
+        f"transporter_manual_review_negative_value_required={scope_breadth.get('transporter_manual_review_negative_quantitative_value_required_count')};"
+        f"pxr_exact_review_intake_ready={scope_breadth.get('pxr_exact_review_intake_ready')};"
+        f"pxr_exact_review_template_rows={scope_breadth.get('pxr_exact_review_template_row_count')};"
+        f"pxr_exact_review_conflict_required={scope_breadth.get('pxr_exact_review_conflict_resolution_required_count')};"
+        f"pxr_exact_review_kcal_placeholders={scope_breadth.get('pxr_exact_review_kcal_placeholder_count')};"
+        f"scientific_evidence_requests={scope_breadth.get('scientific_evidence_request_count')};"
+        f"external_exact_evidence_required={scope_breadth.get('external_primary_exact_evidence_required_count')};"
+        f"intake_external_exact_required={scope_breadth.get('intake_external_exact_evidence_required_count')};"
+        f"review_only_keep_blocked={scope_breadth.get('review_only_keep_blocked_count')};"
+        f"scope_acceptance_blocked_stage_count={scope_breadth.get('scope_acceptance_blocked_stage_count')};"
+        f"scope_acceptance_next_stage_id={scope_breadth.get('scope_acceptance_next_stage_id')};"
+        f"scope_closure_authoritative_apply_allowed={scope_closure_checklist.get('authoritative_apply_allowed')};"
+        f"scope_closure_acceptance_ready={scope_closure_acceptance.get('scope_closure_acceptance_ready')}"
+    )
 
 
 def _live_scope_closure_detail(closure: dict[str, Any]) -> str:
@@ -1636,6 +1719,10 @@ def build_product_goal_completion_audit(
         "api": product_api_contract,
         "job_contract": job_orchestration,
         "gap_packet": product_ai_architecture_gap_packet or {},
+        "scope_breadth": product_scope_breadth_contract,
+        "capability": product_scope_breadth_contract,
+        "scope_closure_checklist": scope_closure_checklist,
+        "scope_closure_acceptance": scope_closure,
     }
     primary_observed_pairs = _live_primary_observed_pairs(
         production_ai_gpu_return_intake=production_ai_gpu_return_intake,
@@ -2327,8 +2414,9 @@ def build_product_goal_completion_audit(
             product_ai_trajectory_sla_observed_pairs.get("rocm_baseline_profile_gap_acknowledged")
         ),
         "product_ai_scope_breadth_ready": product_ai_scope_breadth_ready,
-        "product_ai_scope_breadth_observed": _gap_observed(
-            product_ai_architecture_gap_packet or {}, "scope_breadth_expansion"
+        "product_ai_scope_breadth_observed": _live_gap_observed(
+            "scope_breadth_expansion",
+            **gap_observed_live_inputs,
         ),
         "product_ai_report_ux_ready": product_ai_report_ux_ready,
         "product_ai_report_ux_observed": product_ai_report_ux_observed,

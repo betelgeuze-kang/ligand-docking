@@ -2209,6 +2209,42 @@ def test_product_goal_completion_audit_rebuilds_closed_loop_and_durable_job_obse
     ]
 
 
+def test_product_goal_completion_audit_rebuilds_scope_breadth_observed_from_live_contract() -> None:
+    payload = mod.build_product_goal_completion_audit(
+        architecture_packet=_architecture(release_ready=True, commercial_ready=True),
+        release_dossier_packet=_release_dossier(release_ready=True, commercial_ready=True),
+        public_benchmark_packet=_public_benchmark(),
+        commercial_independence_packet=_commercial(ready=True),
+        license_work_order_packet=_license_work_order(ready=True),
+        cameo_architecture_packet=_cameo(),
+        release_gate_packet=_release_gate(ready=True),
+        bottleneck_packet={"summary": {"approval_tokens_required": []}},
+        burndown_packet={"summary": {}, "rows": []},
+        product_ai_architecture_gap_packet=_ai_gap(ready=False),
+        product_ai_execution_backlog_packet=_ai_backlog(ready=False),
+        product_scope_breadth_contract_packet=_scope_contract(),
+        product_scope_breadth_closure_checklist_packet={
+            "summary": {
+                "authoritative_apply_allowed": False,
+                "manual_review_subcheck_count": 54,
+            }
+        },
+        scope_closure_acceptance_packet={
+            "summary": {
+                "scope_closure_acceptance_ready": False,
+            }
+        },
+    )
+
+    observed = payload["summary"]["product_ai_scope_breadth_observed"]
+    assert "blocked_claim_scopes=transporter_domain_promotion" in observed
+    assert "scope_acceptance_blocked_stage_count=4" in observed
+    assert "scope_acceptance_next_stage_id=transporter_claim_acceptance" in observed
+    assert "scope_closure_authoritative_apply_allowed=False" in observed
+    assert "scope_closure_acceptance_ready=False" in observed
+    assert "missing_domains=transporter,pxr,general_protein_ligand" in observed
+
+
 def test_product_goal_completion_audit_blocks_on_open_ai_architecture_backlog() -> None:
     payload = mod.build_product_goal_completion_audit(
         architecture_packet=_architecture(release_ready=True, commercial_ready=True),

@@ -494,6 +494,12 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     assert "product_ai_trajectory_sla_broad_platform_allowed" in goal_completion_keys
     assert "product_ai_trajectory_sla_current_rocm_baseline_claim_scope" in goal_completion_keys
     assert "product_scope_ready_domains" in goal_completion_keys
+    assert "release_complete_vs_operator_pending_lane" in goal_completion_keys
+    assert "goal_completion_audit_goal_complete" in goal_completion_keys
+    assert "release_complete_lane_ready" in goal_completion_keys
+    assert "operator_pending_lane_ready" in goal_completion_keys
+    assert "operator_or_external_pending_lane_count" in goal_completion_keys
+    assert "release_complete_vs_operator_pending_matrix" in goal_completion_keys
     assert "product_scope_missing_domains" in goal_completion_keys
     assert "product_scope_first_blocked_domain" in goal_completion_keys
     assert "product_scope_first_blocked_domain_artifact" in goal_completion_keys

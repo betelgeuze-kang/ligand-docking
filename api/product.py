@@ -60,6 +60,7 @@ PRODUCT_LICENSE_DECISION_INTAKE = ROOT / "runs" / "product_license_decision_oper
 PRODUCT_COMMERCIAL_INDEPENDENCE_ARTIFACT = ROOT / "runs" / "product_commercial_independence_gate_current.json"
 GOAL_RELEASE_DECISION_ARTIFACT = ROOT / "runs" / "goal_release_decision_gate_current.json"
 PRODUCT_GOAL_COMPLETION_AUDIT_ARTIFACT = ROOT / "runs" / "product_goal_completion_audit_current.json"
+GOAL_READINESS_ROLLUP_ARTIFACT = ROOT / "runs" / "goal_readiness_rollup_current.json"
 PRODUCT_COMMERCIAL_READINESS_OPERATOR_PACKET_ARTIFACT = (
     ROOT / "runs" / "product_commercial_readiness_operator_packet_current.json"
 )
@@ -180,6 +181,24 @@ def _read_json_object(path: Path) -> dict[str, Any]:
 def _summary(packet: dict[str, Any]) -> dict[str, Any]:
     summary = packet.get("summary")
     return summary if isinstance(summary, dict) else {}
+
+
+def _goal_readiness_rollup_lane_surface(readiness: dict[str, Any]) -> dict[str, Any]:
+    readiness = readiness or {}
+    return {
+        "release_complete_vs_operator_pending_lane": readiness.get(
+            "release_complete_vs_operator_pending_lane", ""
+        ),
+        "goal_completion_audit_goal_complete": readiness.get("goal_completion_audit_goal_complete"),
+        "release_complete_lane_ready": readiness.get("release_complete_lane_ready"),
+        "operator_pending_lane_ready": readiness.get("operator_pending_lane_ready"),
+        "operator_or_external_pending_lane_count": int(
+            readiness.get("operator_or_external_pending_lane_count") or 0
+        ),
+        "release_complete_vs_operator_pending_matrix": list(
+            readiness.get("release_complete_vs_operator_pending_matrix") or []
+        ),
+    }
 
 
 @router.post("/docking/jobs")
@@ -6105,6 +6124,8 @@ async def get_product_commercial_readiness_handoff_bundle() -> dict[str, Any]:
 @router.get("/goal-completion-audit")
 async def get_product_goal_completion_audit() -> dict[str, Any]:
     packet = _read_json_object(PRODUCT_GOAL_COMPLETION_AUDIT_ARTIFACT)
+    readiness = _summary(_read_json_object(GOAL_READINESS_ROLLUP_ARTIFACT))
+    lane_surface = _goal_readiness_rollup_lane_surface(readiness)
     registry_packet = _read_json_object(RESIDUAL_MODEL_REGISTRY_ARTIFACT)
     summary = _summary(packet)
     registry = _summary(registry_packet)
@@ -6829,6 +6850,12 @@ async def get_product_goal_completion_audit() -> dict[str, Any]:
                 "Product goal-completion-audit endpoint only; the local completion audit artifact is missing or invalid. "
                 "It does not choose a license, run docking, create files, submit predictions, or mutate external state."
             ),
+            "release_complete_vs_operator_pending_lane": lane_surface["release_complete_vs_operator_pending_lane"],
+            "goal_completion_audit_goal_complete": lane_surface["goal_completion_audit_goal_complete"],
+            "release_complete_lane_ready": lane_surface["release_complete_lane_ready"],
+            "operator_pending_lane_ready": lane_surface["operator_pending_lane_ready"],
+            "operator_or_external_pending_lane_count": lane_surface["operator_or_external_pending_lane_count"],
+            "release_complete_vs_operator_pending_matrix": lane_surface["release_complete_vs_operator_pending_matrix"],
         }
     return {
         "status": summary.get("status"),
@@ -9020,6 +9047,12 @@ async def get_product_goal_completion_audit() -> dict[str, Any]:
         "product_scope_pxr_source_modality_next_review_rejection_reason": summary.get(
             "product_scope_pxr_source_modality_next_review_rejection_reason", ""
         ),
+        "release_complete_vs_operator_pending_lane": lane_surface["release_complete_vs_operator_pending_lane"],
+        "goal_completion_audit_goal_complete": lane_surface["goal_completion_audit_goal_complete"],
+        "release_complete_lane_ready": lane_surface["release_complete_lane_ready"],
+        "operator_pending_lane_ready": lane_surface["operator_pending_lane_ready"],
+        "operator_or_external_pending_lane_count": lane_surface["operator_or_external_pending_lane_count"],
+        "release_complete_vs_operator_pending_matrix": lane_surface["release_complete_vs_operator_pending_matrix"],
         "requirements": rows,
         "execution_enabled": False,
         "docking_results_emitted": False,
