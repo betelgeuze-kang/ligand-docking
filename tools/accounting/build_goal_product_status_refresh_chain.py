@@ -16,6 +16,7 @@ DEFAULT_OUT_MD = "runs/goal_product_status_refresh_chain_current.md"
 REFRESH_STEPS = [
     ("product_release_operations_dossier", "tools/build_product_release_operations_dossier.py"),
     ("product_architecture_contract", "tools/build_product_architecture_contract.py"),
+    ("product_multi_family_exemplar_profile_contract", "tools/build_product_multi_family_exemplar_profile_contract.py"),
     ("product_ai_architecture_execution_backlog", "tools/build_product_ai_architecture_execution_backlog.py"),
     ("goal_readiness_rollup", "tools/build_goal_readiness_rollup.py"),
     ("goal_operator_action_board", "tools/build_goal_operator_action_board.py"),
@@ -26,6 +27,7 @@ REFRESH_STEPS = [
 ARTIFACTS = {
     "product_release_operations_dossier": "runs/product_release_operations_dossier_current.json",
     "product_architecture_contract": "runs/product_architecture_contract_current.json",
+    "product_multi_family_exemplar_profile_contract": "runs/product_multi_family_exemplar_profile_contract_current.json",
     "product_ai_architecture_execution_backlog": "runs/product_ai_architecture_execution_backlog_current.json",
     "goal_readiness_rollup": "runs/goal_readiness_rollup_current.json",
     "goal_operator_action_board": "runs/goal_operator_action_board_current.json",

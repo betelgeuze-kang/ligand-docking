@@ -68,6 +68,29 @@ def _text(value: Any) -> str:
     return str(value or "").strip()
 
 
+def _live_apply_rows(staging_rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    return [
+        row
+        for row in staging_rows
+        if not _contains_example_marker(row)
+        and _text(row.get("operator_claim_safe_decision")).upper() in APPROVE_DECISIONS
+    ]
+
+
+def _write_supplement_csv(path_like: str | Path, rows: list[dict[str, str]]) -> None:
+    if not rows:
+        return
+    import csv
+
+    path = _resolve(path_like)
+    fieldnames = list(rows[0].keys())
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=fieldnames, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
 def _contains_example_marker(row: dict[str, str]) -> bool:
     notes = _text(row.get("reviewer_notes"))
     source = _text(row.get("source_locator_or_raw_report"))
@@ -157,6 +180,7 @@ def build_payload(
         "live_claim_safe_approved_count": live_approved_count,
         "validation_error_count": len(validation_errors),
         "live_apply_allowed": live_apply_allowed,
+        "live_copy_executed": False,
         "authoritative_apply_allowed": False,
         "next_required_step": (
             "Copy verified primary-source rows from staging into the live supplement CSV without EXAMPLE markers, "
@@ -237,6 +261,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Preview operator supplement staging intake/worksheet apply without touching live claim-safe rows."
     )
+    parser.add_argument(
+        "--apply-live-copy",
+        action="store_true",
+        help="When live_apply is allowed, copy validated staging rows into the live supplement CSV.",
+    )
     parser.add_argument("--mode", choices=("preview", "rehearsal", "live_apply"), default="rehearsal")
     parser.add_argument("--staging-csv", default=str(DEFAULT_STAGING_SUPPLEMENT_CSV))
     parser.add_argument("--live-supplement-csv", default=str(DEFAULT_LIVE_SUPPLEMENT_CSV))
@@ -261,6 +290,16 @@ def main() -> None:
         live_supplement_csv=args.live_supplement_csv,
         mode=args.mode,
     )
+    summary = payload["summary"]
+    if args.apply_live_copy and summary.get("live_apply_allowed"):
+        live_rows = _live_apply_rows(_read_csv(args.staging_csv))
+        _write_supplement_csv(args.live_supplement_csv, live_rows)
+        summary["live_copy_executed"] = True
+        summary["live_supplement_row_count"] = len(live_rows)
+        summary["next_required_step"] = (
+            "Live supplement CSV updated from validated staging rows. Rerun intake, workbook apply, and transporter scope gates."
+        )
+        payload["summary"] = summary
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])
     _write_markdown(_resolve(args.out_md), payload)

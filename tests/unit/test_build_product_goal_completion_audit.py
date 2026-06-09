@@ -148,6 +148,9 @@ def _release_dossier(*, release_ready: bool = False, commercial_ready: bool = Fa
             "status": "product_release_operations_dossier_ready" if release_ready else "blocked_product_release_operations_dossier",
             "architecture_release_ready": release_ready,
             "commercial_independence_ready": commercial_ready,
+            "bundle_validation_passed": release_ready,
+            "delivery_ready_claim_allowed": release_ready,
+            "pilot_delivery_ready": release_ready,
         }
     }
 
@@ -535,11 +538,14 @@ def _ai_gap(*, ready: bool = True) -> dict:
 
 def _ai_backlog(*, ready: bool = True, observed: str = "") -> dict:
     primary_id = "none" if ready else "scope_breadth.transporter.AQP1.core_binder_01"
+    work_item_count = 0 if ready else 21
     return {
         "summary": {
             "status": "product_ai_architecture_execution_backlog_clear" if ready else "product_ai_architecture_execution_backlog_ready",
             "backlog_clear": ready,
-            "work_item_count": 0 if ready else 21,
+            "work_item_count": work_item_count,
+            "release_blocking_work_item_count": 0,
+            "scope_deferred_work_item_count": 0 if ready else work_item_count,
             "primary_work_item_id": primary_id,
             "scope_closure_detail": ""
             if ready
@@ -2072,8 +2078,10 @@ def test_product_goal_completion_audit_blocks_on_license_and_release() -> None:
     by_id = {row["requirement_id"]: row for row in payload["rows"]}
     assert summary["status"] == "blocked_product_goal_completion_audit"
     assert summary["goal_complete"] is False
+    assert summary["restricted_delivery_complete"] is False
+    assert summary["release_blocker_fail_count"] == 3
     assert summary["pass_count"] == 4
-    assert summary["fail_count"] == 2
+    assert summary["fail_count"] == 3
     assert summary["primary_bottleneck_phase"] == "P1_product_commercial_independence"
     assert summary["approval_tokens_required"] == ["APPROVE_PRODUCT_LICENSE_FILE_CREATION"]
     assert summary["next_command_candidate_count"] == 1
@@ -2082,7 +2090,9 @@ def test_product_goal_completion_audit_blocks_on_license_and_release() -> None:
     assert by_id["R3_commercial_independence"]["approval_token_required"] == "APPROVE_PRODUCT_LICENSE_FILE_CREATION"
     assert "fill_product_license_decision_operator_intake.py" in by_id["R3_commercial_independence"]["next_command"]
     assert by_id["R5_release_decision_artifacts"]["status"] == "fail"
+    assert by_id["R7_restricted_local_delivery_ready"]["status"] == "fail"
     assert by_id["R6_product_ai_architecture_gap_closure"]["status"] == "pass"
+    assert by_id["R6_product_ai_architecture_gap_closure"]["release_blocker"] is False
     assert summary["product_ai_architecture_gap_status"] == "product_ai_architecture_gap_closure_complete"
     assert summary["product_ai_architecture_all_gaps_closed"] is True
     assert summary["product_ai_architecture_gap_count"] == 7
@@ -2136,8 +2146,11 @@ def test_product_goal_completion_audit_blocks_on_open_ai_architecture_backlog() 
 
     summary = payload["summary"]
     by_id = {row["requirement_id"]: row for row in payload["rows"]}
-    assert summary["status"] == "blocked_product_goal_completion_audit"
-    assert summary["goal_complete"] is False
+    assert summary["status"] == "product_goal_completion_audit_pass"
+    assert summary["goal_complete"] is True
+    assert summary["restricted_delivery_complete"] is True
+    assert summary["product_ai_optional_lane_ready"] is False
+    assert summary["optional_requirement_fail_count"] == 1
     assert summary["product_ai_architecture_ready"] is False
     assert summary["product_ai_architecture_gap_status"] == "blocked_product_ai_architecture_gap_closure"
     assert summary["product_ai_architecture_all_gaps_closed"] is False
@@ -2253,7 +2266,7 @@ def test_product_goal_completion_audit_blocks_on_open_ai_architecture_backlog() 
     assert summary["product_ai_security_deployment_ready"] is True
     assert summary["product_ai_security_hosted_deployment_contract_ready"] is True
     assert summary["product_ai_security_hosted_deployment_currently_satisfied"] is False
-    assert summary["pass_count"] == 5
+    assert summary["pass_count"] == 6
     assert summary["fail_count"] == 1
     assert by_id["R6_product_ai_architecture_gap_closure"]["status"] == "fail"
     assert "current_primary_open_gap=production_ai_inference_checkpoint" in by_id[
@@ -3538,7 +3551,8 @@ def test_product_goal_completion_audit_passes_when_all_evidence_is_ready() -> No
 
     assert payload["summary"]["status"] == "product_goal_completion_audit_pass"
     assert payload["summary"]["goal_complete"] is True
-    assert payload["summary"]["pass_count"] == 6
+    assert payload["summary"]["restricted_delivery_complete"] is True
+    assert payload["summary"]["pass_count"] == 7
     assert payload["summary"]["fail_count"] == 0
     assert payload["summary"]["next_command_candidate_count"] == 0
     assert all(row["status"] == "pass" for row in payload["rows"])

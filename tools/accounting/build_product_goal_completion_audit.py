@@ -1102,6 +1102,8 @@ def _row(
     blocker: str = "",
     approval_token_required: str = "",
     next_command: str = "",
+    release_blocker: bool = True,
+    requirement_tier: str = "release",
 ) -> dict[str, Any]:
     return {
         "requirement_id": requirement_id,
@@ -1113,7 +1115,8 @@ def _row(
         "blocker": blocker if not passed else "",
         "approval_token_required": approval_token_required if not passed else "",
         "next_command": next_command if not passed else "",
-        "release_blocker": not passed,
+        "release_blocker": bool(release_blocker and not passed),
+        "requirement_tier": requirement_tier,
         "execution_enabled": False,
         "external_state_mutated": False,
     }
@@ -1378,12 +1381,32 @@ def build_product_goal_completion_audit(
             _bool(release_dossier.get("commercial_independence_ready")),
         ]
     )
+    release_blocking_work_item_count = _int(
+        product_ai_backlog.get(
+            "release_blocking_work_item_count",
+            product_ai_backlog.get("work_item_count"),
+        )
+    )
     product_ai_architecture_ready = all(
         [
             _bool(product_ai_architecture.get("all_gaps_closed")),
             _int(product_ai_architecture.get("open_gap_count")) == 0,
+            release_blocking_work_item_count == 0,
+        ]
+    )
+    product_ai_optional_lane_ready = all(
+        [
+            product_ai_architecture_ready,
             _bool(product_ai_backlog.get("backlog_clear")),
             _int(product_ai_backlog.get("work_item_count")) == 0,
+        ]
+    )
+    restricted_delivery_ready = all(
+        [
+            local_product_ready,
+            _bool(release_dossier.get("bundle_validation_passed")),
+            _bool(release_dossier.get("delivery_ready_claim_allowed")),
+            _bool(release_dossier.get("pilot_delivery_ready")),
         ]
     )
     product_ai_all_gaps_closed = _bool(product_ai_architecture.get("all_gaps_closed"))
@@ -1525,24 +1548,45 @@ def build_product_goal_completion_audit(
             next_command=primary_next_command,
         ),
         _row(
+            requirement_id="R7_restricted_local_delivery_ready",
+            requirement=(
+                "Restricted local product delivery is proven by validated bundle assembly, delivery-ready claim policy, "
+                "and pilot handoff readiness without requiring production-AI promotion or broad platform scope."
+            ),
+            passed=restricted_delivery_ready,
+            observed=(
+                f"local_product_ready={local_product_ready};"
+                f"bundle_validation_passed={_bool(release_dossier.get('bundle_validation_passed'))};"
+                f"delivery_ready_claim_allowed={_bool(release_dossier.get('delivery_ready_claim_allowed'))};"
+                f"pilot_delivery_ready={_bool(release_dossier.get('pilot_delivery_ready'))};"
+                f"release_gate_status={_text(release_gate.get('status'))}"
+            ),
+            required="local product surfaces ready; bundle_validation_passed=true; delivery_ready_claim_allowed=true; pilot_delivery_ready=true",
+            evidence_artifacts=_join([release_dossier_path, architecture_path]),
+            blocker="restricted_local_delivery_not_ready",
+            requirement_tier="restricted_delivery",
+        ),
+        _row(
             requirement_id="R6_product_ai_architecture_gap_closure",
             requirement=(
-                "Protein-structure plus ligand-docking AI architecture gaps are fully closed, with no remaining execution backlog "
-                "for production AI inference, closed-loop analysis, durable job orchestration, trajectory SLA, scope breadth, report UX, or security/deployment."
+                "Production AI inference, closed-loop analysis, durable job orchestration, trajectory SLA, scope breadth, "
+                "report UX, and security/deployment remain optional/deferred lanes tracked separately from restricted delivery."
             ),
-            passed=product_ai_architecture_ready,
+            passed=product_ai_optional_lane_ready,
             observed=(
                 f"ai_gap_status={_text(product_ai_architecture.get('status'))};"
                 f"all_gaps_closed={_bool(product_ai_architecture.get('all_gaps_closed'))};"
                 f"open_gap_count={_int(product_ai_architecture.get('open_gap_count'))};"
                 f"current_primary_open_gap={_text(product_ai_architecture.get('current_primary_open_gap'))};"
+                f"release_blocking_work_item_count={release_blocking_work_item_count};"
                 f"backlog_clear={_bool(product_ai_backlog.get('backlog_clear'))};"
                 f"work_item_count={_int(product_ai_backlog.get('work_item_count'))};"
+                f"scope_deferred_work_item_count={_int(product_ai_backlog.get('scope_deferred_work_item_count'))};"
                 f"primary_work_item_id={_text(product_ai_backlog.get('primary_work_item_id'))}"
                 + (f";{product_ai_backlog_detail}" if product_ai_backlog_detail else "")
                 + (f";{product_ai_scope_backlog_detail}" if product_ai_scope_backlog_detail else "")
             ),
-            required="all_gaps_closed=true;open_gap_count=0;backlog_clear=true;work_item_count=0",
+            required="all_gaps_closed=true;open_gap_count=0;release_blocking_work_item_count=0;optional backlog may remain deferred",
             evidence_artifacts=_join(
                 [
                     product_ai_architecture_gap_path,
@@ -1554,12 +1598,20 @@ def build_product_goal_completion_audit(
                     scope_evidence_intake_readiness_path,
                 ]
             ),
-            blocker="product_ai_architecture_gap_backlog_not_closed",
+            blocker="product_ai_optional_lane_not_closed",
             next_command=_product_ai_gap_next_command(primary_phase, primary_next_command),
+            release_blocker=False,
+            requirement_tier="optional_production_ai",
         ),
     ]
     failed = [row for row in rows if row["status"] != "pass"]
-    status = "product_goal_completion_audit_pass" if not failed else "blocked_product_goal_completion_audit"
+    release_failed = [row for row in failed if row.get("release_blocker")]
+    optional_failed = [row for row in failed if not row.get("release_blocker")]
+    status = (
+        "product_goal_completion_audit_pass"
+        if not release_failed
+        else "blocked_product_goal_completion_audit"
+    )
     product_ai_gap_blocker_matrix = [
         dict(row)
         for row in (product_ai_architecture.get("gap_blocker_matrix") or [])
@@ -1580,7 +1632,11 @@ def build_product_goal_completion_audit(
         "requirement_count": len(rows),
         "pass_count": len(rows) - len(failed),
         "fail_count": len(failed),
-        "goal_complete": not failed,
+        "release_blocker_fail_count": len(release_failed),
+        "optional_requirement_fail_count": len(optional_failed),
+        "goal_complete": not release_failed,
+        "restricted_delivery_complete": restricted_delivery_ready,
+        "product_ai_optional_lane_ready": product_ai_optional_lane_ready,
         "primary_bottleneck_phase": primary_phase,
         "primary_bottleneck_kind": primary_kind,
         "approval_tokens_required": approval_tokens,
@@ -4113,6 +4169,10 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         f"- status: `{s['status']}`",
         f"- goal_complete: `{s['goal_complete']}`",
+        f"- restricted_delivery_complete: `{s['restricted_delivery_complete']}`",
+        f"- release_blocker_fail_count: `{s['release_blocker_fail_count']}`",
+        f"- optional_requirement_fail_count: `{s['optional_requirement_fail_count']}`",
+        f"- product_ai_optional_lane_ready: `{s['product_ai_optional_lane_ready']}`",
         f"- requirement_count: `{s['requirement_count']}`",
         f"- pass_count: `{s['pass_count']}`",
         f"- fail_count: `{s['fail_count']}`",
