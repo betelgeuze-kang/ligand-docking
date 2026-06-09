@@ -58,6 +58,40 @@ def _resolve(root: Path, path_like: str) -> Path:
     return path if path.is_absolute() else root / path
 
 
+def _int(value: Any) -> int:
+    try:
+        return int(float(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _post_execution_bundle_validation_passed(root: Path, bundle_parts: list[str]) -> tuple[bool, str]:
+    bundle_tag = ""
+    out_dir = ""
+    index = 0
+    while index < len(bundle_parts):
+        token = bundle_parts[index]
+        if token == "--bundle-tag" and index + 1 < len(bundle_parts):
+            bundle_tag = _text(bundle_parts[index + 1])
+            index += 2
+            continue
+        if token == "--out-dir" and index + 1 < len(bundle_parts):
+            out_dir = _text(bundle_parts[index + 1])
+            index += 2
+            continue
+        index += 1
+    if not bundle_tag or not out_dir:
+        return False, ""
+    validation_path = root / out_dir / f"bundle_{bundle_tag}" / "validation.json"
+    if not validation_path.exists():
+        return False, str(validation_path)
+    payload, status = _read_json_object(validation_path)
+    if status != "present":
+        return False, str(validation_path)
+    passed = payload.get("overall_ok") is True and _int(payload.get("blocker_count")) == 0
+    return passed, str(validation_path)
+
+
 def _read_json_object(path: Path) -> tuple[dict[str, Any], str]:
     if not path.exists():
         return {}, "missing"
@@ -407,18 +441,28 @@ def build_product_execution_preflight(
     warnings.extend(config_warnings)
     warnings.extend(gate_warnings)
 
+    post_execution_bundle_validated, bundle_validation_json = _post_execution_bundle_validation_passed(root_path, bundle_parts)
+
     artifact_rows: list[dict[str, Any]] = []
     for path_text in planned_artifact_paths:
         path = _resolve(root_path, path_text)
         exists = path.exists()
         artifact_rows.append({"path": path_text, "resolved_path": str(path), "present_before_execution": exists})
         if exists:
-            blockers.append(
-                _blocker(
-                    "planned_artifact_already_present",
-                    f"Planned post-execution artifact already exists and could be stale: {path_text}",
+            if post_execution_bundle_validated:
+                warnings.append(
+                    _warning(
+                        "planned_artifact_present_post_execution_bundle",
+                        f"Planned artifact already exists and matches a validated post-execution bundle: {path_text}",
+                    )
                 )
-            )
+            else:
+                blockers.append(
+                    _blocker(
+                        "planned_artifact_already_present",
+                        f"Planned post-execution artifact already exists and could be stale: {path_text}",
+                    )
+                )
     if not planned_artifact_paths:
         warnings.append(_warning("planned_artifact_paths_missing", "No planned post-execution artifact path was recorded."))
 
@@ -438,9 +482,11 @@ def build_product_execution_preflight(
         "config_count": len(config_rows),
         "operational_gate_feasibility_status": gate_rows[0]["status"] if gate_rows else "not_checked",
         "planned_artifact_count": len(artifact_rows),
+        "post_execution_bundle_validated": post_execution_bundle_validated,
+        "post_execution_bundle_validation_json": bundle_validation_json,
         "execution_enabled": False,
         "docking_results_emitted": False,
-        "bundle_assembled": False,
+        "bundle_assembled": post_execution_bundle_validated,
         "external_state_mutated": False,
         "validated_without_execution": True,
         "approval_token_required": EXECUTION_APPROVAL_TOKEN,

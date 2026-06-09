@@ -12,6 +12,10 @@ from tools.builder_table_utils import write_csv_rows
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_READINESS_JSON = "runs/product_readiness_gate_current.json"
+DEFAULT_PRODUCT_PROFILE_JSON = "config/ligand_htvs_blind_gpcr_adrb2_chembl20_product_gate_repair_v1.json"
+DEFAULT_PROFILE_OUT_PREFIX = "runs/product_gpcr_adrb2_after_approval"
+DEFAULT_PLANNED_ARTIFACT_PATH = "runs/product_gpcr_adrb2_after_approval_summary.json"
+DEFAULT_BUNDLE_TAG = "product_gpcr_adrb2"
 DEFAULT_OUT_JSON = "runs/product_execution_work_order_current.json"
 DEFAULT_OUT_CSV = "runs/product_execution_work_order_current.csv"
 DEFAULT_OUT_MD = "runs/product_execution_work_order_current.md"
@@ -68,6 +72,24 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
+def _resolved_product_profile_args(args: argparse.Namespace) -> tuple[str, str, list[str], str]:
+    profile_json = _text(args.profile_json)
+    profile_out_prefix = _text(args.profile_out_prefix)
+    planned_artifact_paths = list(args.planned_artifact_paths or [])
+    bundle_tag = _text(args.bundle_tag)
+    if not profile_json and _resolve(DEFAULT_PRODUCT_PROFILE_JSON).exists():
+        profile_json = DEFAULT_PRODUCT_PROFILE_JSON
+        profile_out_prefix = profile_out_prefix or DEFAULT_PROFILE_OUT_PREFIX
+        if not planned_artifact_paths:
+            planned_artifact_paths = [DEFAULT_PLANNED_ARTIFACT_PATH]
+        bundle_tag = bundle_tag or DEFAULT_BUNDLE_TAG
+    return profile_json, profile_out_prefix, planned_artifact_paths, bundle_tag
+
+
+def _text(value: Any) -> str:
+    return str(value or "").strip()
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build a product execution work order from a product readiness gate.")
     parser.add_argument("--readiness-json", default=DEFAULT_READINESS_JSON)
@@ -86,14 +108,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
+    profile_json, profile_out_prefix, planned_artifact_paths, bundle_tag = _resolved_product_profile_args(args)
     command_generation: dict[str, Any] = {}
     run_command = args.run_command
     config_paths = list(args.config_paths or [])
-    if args.profile_json:
-        profile_path = str(args.profile_json)
+    if profile_json:
+        profile_path = str(profile_json)
         command_generation = build_htvs_command_from_profile_json(
             _resolve(profile_path),
-            out_prefix=str(args.profile_out_prefix or ""),
+            out_prefix=profile_out_prefix,
         )
         command_generation["profile_json"] = profile_path
         if not run_command:
@@ -104,9 +127,9 @@ def main(argv: list[str] | None = None) -> None:
         _read_json(args.readiness_json),
         run_command=run_command,
         config_paths=config_paths,
-        planned_artifact_paths=args.planned_artifact_paths,
+        planned_artifact_paths=planned_artifact_paths,
         command_generation=command_generation,
-        bundle_tag=args.bundle_tag,
+        bundle_tag=bundle_tag,
         out_dir=args.out_dir,
     )
     _write_json(args.out_json, payload)

@@ -12,10 +12,16 @@ from betelgeuze_product.structure_analysis import analyze_structure_source
 
 ROOT = Path(__file__).resolve().parents[1]
 RESIDUAL_MODEL_REGISTRY_ARTIFACT = ROOT / "runs" / "residual_model_registry_current.json"
+PRODUCT_AI_PROMOTION_WORKBENCH_ARTIFACT = ROOT / "runs" / "product_production_ai_promotion_workbench_current.json"
 PRODUCT_SCOPE_CLAIM_GUARD_ARTIFACT = ROOT / "runs" / "product_scope_breadth_closure_checklist_current.json"
 PRODUCT_EXECUTION_APPROVAL_ARTIFACT = ROOT / "runs" / "product_execution_approval_gate_current.json"
 EXECUTION_APPROVAL_TOKEN = "APPROVE_PRODUCT_DOCKING_EXECUTION"
 ALLOWED_SCOPE_FAMILIES = {"kinase", "gpcr", "ion_channel"}
+DEFAULT_BLOCKED_CLAIM_SCOPES = [
+    "transporter_domain_promotion",
+    "pxr_domain_promotion",
+    "general_protein_ligand_platform",
+]
 MAX_P0_LIGAND_COUNT = 10000
 JOB_LEDGER_RETENTION_DAYS = 90
 MAX_RETRY_ATTEMPTS = 3
@@ -105,8 +111,7 @@ def _execution_approval_posture(approval_packet: dict[str, Any] | None = None) -
     }
 
 
-def _production_ai_posture(registry_packet: dict[str, Any] | None = None) -> dict[str, Any]:
-    registry = _summary(registry_packet or _read_json_object(RESIDUAL_MODEL_REGISTRY_ARTIFACT))
+def _production_ai_posture_from_registry(registry: dict[str, Any]) -> dict[str, Any]:
     default_mode = _text(registry.get("default_residual_mode"))
     trained_count = int(registry.get("trained_model_checkpoint_count") or 0)
     promotion_allowed = registry.get("production_promotion_allowed") is True
@@ -150,6 +155,53 @@ def _production_ai_posture(registry_packet: dict[str, Any] | None = None) -> dic
     }
 
 
+def _commercial_fail_closed_ai_posture(registry: dict[str, Any], workbench: dict[str, Any]) -> dict[str, Any]:
+    blocked_reason = _text(workbench.get("next_required_step")) or "production checkpoint preflight is blocked"
+    if "preflight" not in blocked_reason.lower():
+        blocked_reason = f"production checkpoint preflight is blocked; {blocked_reason}"
+    what_would_change = (
+        "Return and verify GPU force-label evidence, close production training-data outputs, train a guarded "
+        "checkpoint, and promote the residual model registry out of shadow mode."
+    )
+    return {
+        "production_ai_inference_subject_active": False,
+        "production_ai_correction_applied": False,
+        "production_ai_abstention_enforced": True,
+        "production_ai_abstention_reason": blocked_reason,
+        "production_ai_what_would_change_decision": what_would_change,
+        "production_ai_default_residual_mode": "shadow",
+        "production_ai_promotion_allowed": False,
+        "production_ai_customer_facing_auto_correction_allowed": False,
+        "production_ai_customer_facing_score_mutation_allowed": False,
+        "production_ai_customer_facing_ranking_mutation_allowed": False,
+        "production_ai_trained_checkpoint_count": 0,
+        "production_ai_selected_sidecar_ready": False,
+        "production_ai_selected_sidecar_missing_output_fields": ["delta_force"],
+        "production_ai_blocked_reason": blocked_reason,
+    }
+
+
+def _production_ai_posture(registry_packet: dict[str, Any] | None = None) -> dict[str, Any]:
+    registry = _summary(registry_packet or _read_json_object(RESIDUAL_MODEL_REGISTRY_ARTIFACT))
+    if registry_packet is not None:
+        return _production_ai_posture_from_registry(registry)
+    workbench = _summary(_read_json_object(PRODUCT_AI_PROMOTION_WORKBENCH_ARTIFACT))
+    if _bool(workbench.get("production_ai_inference_subject_active")):
+        return _production_ai_posture_from_registry(registry)
+    return _commercial_fail_closed_ai_posture(registry, workbench)
+
+
+def _bool(value: Any) -> bool:
+    return bool(value is True)
+
+
+def _redacted_ligand_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for index, ligand in enumerate(_as_list(payload.get("ligands")), start=1):
+        rows.append({"ligand_id": _ligand_id(ligand, index), "source_redacted": True})
+    return rows
+
+
 def _scope_claim_guard(
     *,
     family: str,
@@ -161,7 +213,13 @@ def _scope_claim_guard(
         for item in (summary.get("allowed_scope_families") or sorted(ALLOWED_SCOPE_FAMILIES))
         if _text(item)
     ]
-    blocked_claim_scopes = list(summary.get("blocked_claim_scopes") or [])
+    blocked_claim_scopes = list(DEFAULT_BLOCKED_CLAIM_SCOPES)
+    extra_blocked = [
+        str(item)
+        for item in (summary.get("blocked_claim_scopes") or [])
+        if _text(item) and str(item) not in blocked_claim_scopes
+    ]
+    blocked_claim_scopes.extend(extra_blocked)
     claim_blocked_domains = list(summary.get("claim_blocked_domains") or [])
     family_allowed = family in set(allowed_families)
     return {
@@ -790,7 +848,7 @@ def build_docking_job_record(
             "target_id": str(normalized["target_id"]),
             "structure_source_kind": str(normalized["structure_source_kind"]),
             "ligand_count": int(normalized["ligand_count"]),
-            "ligands": _as_list(payload.get("ligands")),
+            "ligands": _redacted_ligand_rows(payload),
             "pdb_id": _text(payload.get("pdb_id")),
             "pdb_path": _text(payload.get("pdb_path")),
             "mmcif_path": _text(payload.get("mmcif_path")),

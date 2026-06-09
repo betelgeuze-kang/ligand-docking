@@ -192,3 +192,41 @@ def test_product_execution_preflight_tool_writes_outputs(tmp_path: Path) -> None
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["status"] == "product_execution_preflight_ready"
     assert out_csv.read_text(encoding="utf-8").startswith("check,status,")
     assert "Product Execution Preflight" in out_md.read_text(encoding="utf-8")
+
+
+def test_product_execution_preflight_accepts_artifact_when_post_execution_bundle_validated(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    artifact_path = tmp_path / "runs/product_result_after_approval.json"
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text("{}\n", encoding="utf-8")
+    bundle_dir = tmp_path / "runs/local_delivery/bundle_product_gpcr_adrb2"
+    bundle_dir.mkdir(parents=True, exist_ok=True)
+    (bundle_dir / "validation.json").write_text(
+        json.dumps({"overall_ok": True, "blocker_count": 0}) + "\n",
+        encoding="utf-8",
+    )
+    work_order = _work_order(
+        "python3 tools/run_ligand_htvs_pipeline.py --run-scope smoke --targets ADRB2_GPCR_BLIND --no-dry-run "
+        "--eval-split-csv config/splits.csv --ranking-labels-csv config/ligands.csv --ranking-eval-roles eval "
+        "--gate-min-eval-unique-keys 2 --gate-ef1-min 1.0",
+        config_path,
+    )
+    work_order["commands"]["bundle_command"] = [
+        "python3",
+        "tools/build_local_delivery_bundle.py",
+        "--bundle-tag",
+        "product_gpcr_adrb2",
+        "--out-dir",
+        "runs/local_delivery",
+        "--config-path",
+        config_path,
+        "--artifact-path",
+        "runs/product_result_after_approval.json",
+    ]
+    payload = build_product_execution_preflight(work_order, root=tmp_path)
+
+    assert payload["summary"]["status"] == "product_execution_preflight_ready"
+    assert payload["summary"]["post_execution_bundle_validated"] is True
+    assert payload["summary"]["bundle_assembled"] is True
+    assert not payload["blockers"]
+    assert any(warning["code"] == "planned_artifact_present_post_execution_bundle" for warning in payload["warnings"])

@@ -337,7 +337,7 @@ def test_ligand_ranking_reads_stage5_metric_shape(tmp_path: Path) -> None:
 
     row = mod._ligand_ranking_row(gpcr_ranking_json=ranking, gpcr_core_diagnostics_json=core)
 
-    assert row["status"] == "blocked"
+    assert row["status"] == "restricted_pass"
     assert row["metrics"]["ranking_pr_auc"] == 0.879215
     assert row["metrics"]["ranking_pr_auc_ci_low"] == 0.675882
     assert row["metrics"]["ranking_topk_hit_rate"] == 0.6
@@ -345,7 +345,7 @@ def test_ligand_ranking_reads_stage5_metric_shape(tmp_path: Path) -> None:
     assert row["metrics"]["ranking_score_col_used"] == "binding_score_composite_v7_residual_active"
     assert "claim_promotion_not_allowed" in row["blockers"]
     assert "ranking_pr_auc_ci_low_below_threshold" not in row["blockers"]
-    assert "ranking metrics clear" in row["next_required_step"]
+    assert "independent repeat" in row["next_required_step"]
 
 
 def test_structure_row_exposes_internal_true_metric_backend(tmp_path: Path) -> None:

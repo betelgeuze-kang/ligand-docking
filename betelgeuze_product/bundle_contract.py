@@ -176,7 +176,10 @@ def build_product_bundle_contract(
             blockers.append(_blocker(f"{label}_execution_flag_invalid", f"{label} must keep execution_enabled=false."))
         if summary.get("docking_results_emitted") is not False:
             blockers.append(_blocker(f"{label}_results_flag_invalid", f"{label} must keep docking_results_emitted=false."))
-        if summary.get("bundle_assembled") is not False:
+        post_execution_bundle_validated = (
+            label == "preflight" and summary.get("post_execution_bundle_validated") is True
+        )
+        if summary.get("bundle_assembled") is not False and not post_execution_bundle_validated:
             blockers.append(_blocker(f"{label}_bundle_flag_invalid", f"{label} must keep bundle_assembled=false."))
         if summary.get("external_state_mutated") is not False:
             blockers.append(_blocker(f"{label}_external_state_flag_invalid", f"{label} must keep external_state_mutated=false."))

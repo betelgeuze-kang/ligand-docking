@@ -92,3 +92,30 @@ def test_product_execution_work_order_tool_writes_outputs(tmp_path: Path) -> Non
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["status"] == "product_execution_work_order_ready"
     assert out_csv.read_text(encoding="utf-8").startswith("step,command,")
     assert "Product Execution Work Order" in out_md.read_text(encoding="utf-8")
+
+
+def test_product_execution_work_order_tool_defaults_repo_product_profile(tmp_path: Path) -> None:
+    readiness_json = tmp_path / "readiness.json"
+    out_json = tmp_path / "work_order.json"
+    out_csv = tmp_path / "work_order.csv"
+    out_md = tmp_path / "work_order.md"
+    readiness_json.write_text(json.dumps(_readiness()) + "\n", encoding="utf-8")
+
+    tool.main(
+        [
+            "--readiness-json",
+            str(readiness_json),
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ]
+    )
+
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    assert payload["summary"]["status"] == "product_execution_work_order_ready"
+    assert payload["summary"]["profile_command_generated"] is True
+    assert "OPERATOR_FILL" not in payload["commands"]["execution_command"]
+    assert "tools/run_ligand_htvs_pipeline.py" in payload["commands"]["execution_command"]
