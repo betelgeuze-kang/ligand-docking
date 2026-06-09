@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import json
 from pathlib import Path
@@ -24,6 +25,23 @@ TRUE_FALSE_PLACEHOLDER = "OPERATOR_FILL_TRUE_OR_FALSE"
 REVIEW_DECISION_PLACEHOLDER = "OPERATOR_FILL_APPROVE_FOR_DRAFT_OR_KEEP_BLOCKED"
 DIRECT_BINDING_PLACEHOLDER = "OPERATOR_FILL_EXACT_DIRECT_BINDING_SOURCE_OR_KEEP_BLOCKED"
 NEGATIVE_VALUE_PLACEHOLDER = "OPERATOR_FILL_EXACT_NEGATIVE_KCAL_OR_KEEP_BLOCKED"
+OPERATOR_INTAKE_MERGE_FIELDS = (
+    "manual_ligand_identity_confirmed",
+    "manual_scaffold_confirmed",
+    "manual_source_provenance_confirmed",
+    "manual_split_meta_sync_confirmed",
+    "direct_binding_source_url_or_doi",
+    "negative_reference_binding_kcal_mol",
+    "review_decision",
+    "authoritative_apply_requested",
+    "reviewer_notes",
+)
+OPERATOR_PLACEHOLDER_VALUES = {
+    TRUE_FALSE_PLACEHOLDER,
+    REVIEW_DECISION_PLACEHOLDER,
+    DIRECT_BINDING_PLACEHOLDER,
+    NEGATIVE_VALUE_PLACEHOLDER,
+}
 
 CLAIM_BOUNDARY = (
     "Transporter manual review intake template only; pre-fills candidate workbook rows into a reviewer completion "
@@ -412,6 +430,75 @@ def build_payload(
     return {"summary": summary, "rows": rows}
 
 
+def _is_operator_placeholder(value: Any) -> bool:
+    text = _text(value)
+    return not text or text in OPERATOR_PLACEHOLDER_VALUES
+
+
+def _read_operator_intake_csv(path: Path) -> dict[str, dict[str, str]]:
+    if not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8", newline="") as fh:
+        return {
+            _text(row.get("review_row_id")): dict(row)
+            for row in csv.DictReader(fh)
+            if _text(row.get("review_row_id"))
+        }
+
+
+def _merge_operator_intake_rows(
+    rows: list[dict[str, Any]],
+    operator_by_id: dict[str, dict[str, str]],
+) -> list[dict[str, Any]]:
+    if not operator_by_id:
+        return rows
+    merged: list[dict[str, Any]] = []
+    for row in rows:
+        next_row = dict(row)
+        operator_row = operator_by_id.get(_text(row.get("review_row_id")), {})
+        for field in OPERATOR_INTAKE_MERGE_FIELDS:
+            operator_value = _text(operator_row.get(field))
+            if operator_value and not _is_operator_placeholder(operator_value):
+                next_row[field] = operator_value
+        merged.append(next_row)
+    return merged
+
+
+def _refresh_operator_intake_summary(payload: dict[str, Any]) -> None:
+    rows = list(payload.get("rows", []) or [])
+    summary = dict(payload.get("summary", {}) or {})
+    first_review_row = rows[0] if rows else {}
+    summary["review_decision_placeholder_count"] = sum(
+        1 for row in rows if row.get("review_decision") == REVIEW_DECISION_PLACEHOLDER
+    )
+    summary["authoritative_apply_requested_placeholder_count"] = sum(
+        1 for row in rows if row.get("authoritative_apply_requested") == TRUE_FALSE_PLACEHOLDER
+    )
+    summary["first_review_direct_binding_source_url_or_doi"] = _text(
+        first_review_row.get("direct_binding_source_url_or_doi")
+    )
+    summary["first_review_negative_reference_binding_kcal_mol"] = _text(
+        first_review_row.get("negative_reference_binding_kcal_mol")
+    )
+    summary["first_review_review_decision"] = _text(first_review_row.get("review_decision"))
+    summary["first_review_authoritative_apply_requested"] = _text(
+        first_review_row.get("authoritative_apply_requested")
+    )
+    summary["next_required_step"] = (
+        "Regenerate transporter P0 closure, binder promotion gates, and scope-breadth artifacts after operator intake."
+        if summary.get("manual_review_intake_ready") and summary["review_decision_placeholder_count"] == 0
+        else summary.get("next_required_step", "")
+    )
+    payload["summary"] = summary
+
+
+def apply_operator_intake(payload: dict[str, Any], operator_intake_csv: str | Path) -> dict[str, Any]:
+    operator_by_id = _read_operator_intake_csv(_resolve(operator_intake_csv))
+    payload["rows"] = _merge_operator_intake_rows(list(payload.get("rows", []) or []), operator_by_id)
+    _refresh_operator_intake_summary(payload)
+    return payload
+
+
 def _write_json(path_like: str | Path, payload: dict[str, Any]) -> None:
     path = _resolve(path_like)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -463,6 +550,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--out-json", default=str(DEFAULT_OUT_JSON))
     parser.add_argument("--out-csv", default=str(DEFAULT_OUT_CSV))
     parser.add_argument("--out-md", default=str(DEFAULT_OUT_MD))
+    parser.add_argument(
+        "--operator-intake-csv",
+        default="",
+        help="Optional completed operator intake CSV to merge into regenerated template rows.",
+    )
     return parser.parse_args(argv)
 
 
@@ -475,6 +567,8 @@ def main(argv: list[str] | None = None) -> None:
         aqp1_workbook_packet=_read_json(args.aqp1_workbook_json),
         glut1_workbook_packet=_read_json(args.glut1_workbook_json),
     )
+    operator_intake_csv = _text(args.operator_intake_csv) or args.out_csv
+    payload = apply_operator_intake(payload, operator_intake_csv)
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])
     _write_md(args.out_md, payload)

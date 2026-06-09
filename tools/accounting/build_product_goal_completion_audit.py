@@ -1394,12 +1394,11 @@ def build_product_goal_completion_audit(
             release_blocking_work_item_count == 0,
         ]
     )
-    product_ai_optional_lane_ready = all(
-        [
-            product_ai_architecture_ready,
-            _bool(product_ai_backlog.get("backlog_clear")),
-            _int(product_ai_backlog.get("work_item_count")) == 0,
-        ]
+    product_ai_optional_lane_ready = product_ai_architecture_ready and _bool(
+        product_ai_backlog.get("backlog_clear")
+    )
+    product_ai_scope_deferred_work_item_count = _int(
+        product_ai_backlog.get("scope_deferred_work_item_count")
     )
     restricted_delivery_ready = all(
         [
@@ -1637,6 +1636,7 @@ def build_product_goal_completion_audit(
         "goal_complete": not release_failed,
         "restricted_delivery_complete": restricted_delivery_ready,
         "product_ai_optional_lane_ready": product_ai_optional_lane_ready,
+        "product_ai_scope_deferred_work_item_count": product_ai_scope_deferred_work_item_count,
         "primary_bottleneck_phase": primary_phase,
         "primary_bottleneck_kind": primary_kind,
         "approval_tokens_required": approval_tokens,

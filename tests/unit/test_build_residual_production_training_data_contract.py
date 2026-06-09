@@ -589,3 +589,93 @@ def test_training_data_contract_cli_writes_outputs(tmp_path: Path) -> None:
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["check_count"] == 9
     assert "supervised_ligand_dataset_breadth" in out_csv.read_text(encoding="utf-8")
     assert "Residual Production Training Data Contract" in out_md.read_text(encoding="utf-8")
+
+
+def test_training_data_contract_reports_bootstrap_phase(tmp_path: Path) -> None:
+    checkpoint = tmp_path / "score_model.pt"
+    checkpoint.write_bytes(b"checkpoint")
+    preflight_payload = mod.build_residual_production_training_data_contract(
+        residual_shadow_packet=_packet(
+            {
+                "residual_shadow_ab_ready": True,
+                "residual_output_fields": list(mod.REQUIRED_OUTPUT_FIELDS),
+            }
+        ),
+        assist_gate_packet=_packet({"assist_promotion_allowed": True}),
+        public_assist_gate_packet=_packet({"assist_comparison_gate_ready": True}),
+        checkpoint_work_order_packet=_packet({"checkpoint_preflight_ready": False, "ready_checkpoint_count": 0}),
+        supervised_dataset_packet=_packet(
+            {
+                "production_supervised_dataset_ready": True,
+                "rows_emitted": 1500,
+                "binder_rows": 500,
+                "negative_rows": 1000,
+                "unknown_label_rows": 0,
+                "targets": 4,
+                "feature_dim": 4,
+            }
+        ),
+        score_model_packet=_packet(
+            {
+                "checkpoint": str(checkpoint),
+                "train_rows": 1200,
+                "val_rows": 200,
+                "feature_dim": 6,
+                "best": {"pr_auc": 0.61},
+                "production_checkpoint_ready": True,
+                "missing_production_output_fields": [],
+                "learned_output_fields": ["delta_score", "corrected_score", "uncertainty", "delta_energy", "delta_force"],
+                "policy_output_fields": ["abstention_reason", "stage2_route_decision"],
+                "policy_output_adapter_ready": True,
+            }
+        ),
+        energy_force_label_work_order_packet=_packet({"delta_force_label_evidence_ready": True}),
+        uncertainty_policy_evidence_packet=_packet(
+            {"uncertainty_policy_evidence_ready": True, "status": "residual_uncertainty_policy_evidence_contract_ready"}
+        ),
+        aux_summary_packets=[],
+    )
+    assert preflight_payload["summary"]["bootstrap_phase"] == "pre_preflight"
+    assert preflight_payload["summary"]["bootstrap_output_head_ready"] is True
+
+    post_payload = mod.build_residual_production_training_data_contract(
+        residual_shadow_packet=_packet(
+            {
+                "residual_shadow_ab_ready": True,
+                "residual_output_fields": list(mod.REQUIRED_OUTPUT_FIELDS),
+            }
+        ),
+        assist_gate_packet=_packet({"assist_promotion_allowed": True}),
+        public_assist_gate_packet=_packet({"assist_comparison_gate_ready": True}),
+        checkpoint_work_order_packet=_packet({"checkpoint_preflight_ready": True, "ready_checkpoint_count": 1}),
+        supervised_dataset_packet=_packet(
+            {
+                "production_supervised_dataset_ready": True,
+                "rows_emitted": 1500,
+                "binder_rows": 500,
+                "negative_rows": 1000,
+                "unknown_label_rows": 0,
+                "targets": 4,
+                "feature_dim": 4,
+            }
+        ),
+        score_model_packet=_packet(
+            {
+                "checkpoint": str(checkpoint),
+                "train_rows": 1200,
+                "val_rows": 200,
+                "production_checkpoint_ready": True,
+                "missing_production_output_fields": [],
+                "learned_output_fields": ["delta_score", "corrected_score", "uncertainty", "delta_energy", "delta_force"],
+                "policy_output_fields": ["abstention_reason", "stage2_route_decision"],
+                "policy_output_adapter_ready": True,
+            }
+        ),
+        energy_force_label_work_order_packet=_packet({"delta_force_label_evidence_ready": True}),
+        uncertainty_policy_evidence_packet=_packet(
+            {"uncertainty_policy_evidence_ready": True, "status": "residual_uncertainty_policy_evidence_contract_ready"}
+        ),
+        aux_summary_packets=[],
+    )
+    assert post_payload["summary"]["bootstrap_phase"] == "post_preflight"
+    assert post_payload["summary"]["bootstrap_output_head_ready"] is False

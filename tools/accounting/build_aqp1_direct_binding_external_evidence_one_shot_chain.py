@@ -44,8 +44,21 @@ def _write_json(path_like: str | Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
 
 
+_CHILD_ARTIFACT_HINTS: dict[str, str] = {
+    "build_aqp1_direct_binding_external_evidence_supplement_example.py": "runs/aqp1_direct_binding_external_evidence_supplement_example_current.json",
+    "build_aqp1_direct_binding_external_evidence_operator_staging_apply.py": "runs/aqp1_direct_binding_external_evidence_operator_staging_apply_current.json",
+    "build_aqp1_direct_binding_external_evidence_intake.py": "runs/aqp1_direct_binding_external_evidence_intake_current.json",
+    "apply_aqp1_ready_workbook_rows.py": "runs/aqp1_ready_workbook_apply_current.json",
+    "build_transporter_aqp1_external_evidence_refresh_chain.py": "runs/transporter_aqp1_external_evidence_refresh_chain_current.json",
+}
+
+
 def _run(cmd: list[str]) -> None:
-    subprocess.run(cmd, cwd=str(ROOT), check=True)
+    script_name = Path(cmd[1]).name if len(cmd) > 1 else ""
+    artifact_hint = _CHILD_ARTIFACT_HINTS.get(script_name, "")
+    subprocess.run(cmd, cwd=str(ROOT), check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    if artifact_hint:
+        print(f"[aqp1_one_shot] wrote {artifact_hint}", file=sys.stderr)
 
 
 def _lane(name: str, path_like: str | Path) -> dict[str, Any]:

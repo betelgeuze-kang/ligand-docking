@@ -29,6 +29,26 @@ def _write_dataset(path: Path, rows: int = 40, *, include_delta_energy: bool = F
     )
 
 
+def test_train_default_force_derivation_path_does_not_read_repo_artifact(tmp_path: Path) -> None:
+    dataset = tmp_path / "dataset.csv"
+    checkpoint = tmp_path / "model.pt"
+    _write_dataset(dataset, rows=12, include_delta_energy=True)
+
+    summary = mod.train_residual_production_score_model(
+        input_csv=str(dataset),
+        out_checkpoint=str(checkpoint),
+        epochs=1,
+        hidden_dim=8,
+        batch_size=8,
+        device_name="cpu",
+        force_derivation_json=mod.DEFAULT_FORCE_DERIVATION_JSON,
+    )
+
+    assert summary["delta_force_head_derivation_stub"] is False
+    assert summary["production_checkpoint_ready"] is False
+    assert "delta_force" in summary["missing_production_output_fields"]
+
+
 def test_train_residual_production_score_model_writes_checkpoint(tmp_path: Path) -> None:
     dataset = tmp_path / "dataset.csv"
     checkpoint = tmp_path / "model.pt"
@@ -41,9 +61,8 @@ def test_train_residual_production_score_model_writes_checkpoint(tmp_path: Path)
         hidden_dim=8,
         batch_size=8,
         device_name="cpu",
+        force_derivation_json=str(tmp_path / "missing_derivation.json"),
     )
-
-    assert summary["status"] == "residual_production_score_model_trained"
     assert summary["train_rows"] > 0
     assert summary["val_rows"] > 0
     assert checkpoint.exists()
@@ -67,6 +86,7 @@ def test_train_residual_production_score_model_trains_delta_energy_head_when_lab
         hidden_dim=8,
         batch_size=8,
         device_name="cpu",
+        force_derivation_json=str(tmp_path / "missing_derivation.json"),
     )
 
     checkpoint_payload = torch.load(checkpoint, map_location="cpu", weights_only=False)
@@ -77,6 +97,98 @@ def test_train_residual_production_score_model_trains_delta_energy_head_when_lab
     assert checkpoint_payload["delta_energy_head_trained"] is True
     assert "delta_energy" in checkpoint_payload["learned_output_fields"]
     assert "delta_energy" in checkpoint_payload["output_fields"]
+
+
+def test_train_residual_production_score_model_attaches_delta_force_head_from_derivation(tmp_path: Path) -> None:
+    dataset = tmp_path / "dataset.csv"
+    checkpoint = tmp_path / "model.pt"
+    derivation_json = tmp_path / "derivation.json"
+    _write_dataset(dataset, rows=40, include_delta_energy=True)
+    derivation_json.write_text(
+        json.dumps({"summary": {"delta_force_derivation_validation_ready": True}}) + "\n",
+        encoding="utf-8",
+    )
+
+    summary = mod.train_residual_production_score_model(
+        input_csv=str(dataset),
+        out_checkpoint=str(checkpoint),
+        epochs=2,
+        hidden_dim=8,
+        batch_size=8,
+        device_name="cpu",
+        force_derivation_json=str(derivation_json),
+    )
+
+    checkpoint_payload = torch.load(checkpoint, map_location="cpu", weights_only=False)
+    assert summary["delta_force_head_trained"] is True
+    assert summary["delta_force_head_supervised"] is False
+    assert summary["delta_force_head_derivation_stub"] is True
+    assert summary["delta_force_derivation_validation_ready"] is True
+    assert "delta_force" in summary["learned_output_fields"]
+    assert summary["missing_production_output_fields"] == []
+    assert summary["production_checkpoint_ready"] is True
+    assert "delta_force" in checkpoint_payload["output_fields"]
+
+
+def test_train_residual_production_score_model_skip_if_unchanged(tmp_path: Path) -> None:
+    dataset = tmp_path / "dataset.csv"
+    checkpoint = tmp_path / "model.pt"
+    out_json = tmp_path / "model.json"
+    fingerprint = tmp_path / "fingerprint.json"
+    derivation_json = tmp_path / "derivation.json"
+    _write_dataset(dataset, rows=40, include_delta_energy=True)
+    derivation_json.write_text(
+        json.dumps({"summary": {"delta_force_derivation_validation_ready": True}}) + "\n",
+        encoding="utf-8",
+    )
+    mod.train_residual_production_score_model(
+        input_csv=str(dataset),
+        out_checkpoint=str(checkpoint),
+        epochs=2,
+        hidden_dim=8,
+        batch_size=8,
+        device_name="cpu",
+        force_derivation_json=str(derivation_json),
+    )
+    mod.write_train_fingerprint(
+        fingerprint,
+        mod.build_train_fingerprint(
+            input_csv=str(dataset),
+            force_derivation_json=str(derivation_json),
+            epochs=2,
+            hidden_dim=8,
+            batch_size=8,
+            seed=42,
+        ),
+    )
+    out_json.write_text(
+        json.dumps(
+            {
+                "status": "residual_production_score_model_trained",
+                "production_checkpoint_ready": True,
+                "checkpoint": str(checkpoint),
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    skipped = mod.try_skip_training(
+        input_csv=str(dataset),
+        out_checkpoint=str(checkpoint),
+        out_json=str(out_json),
+        force_derivation_json=str(derivation_json),
+        fingerprint_json=str(fingerprint),
+        epochs=2,
+        hidden_dim=8,
+        batch_size=8,
+        lr=1e-3,
+        weight_decay=1e-5,
+        train_ratio=0.8,
+        seed=42,
+    )
+    assert skipped is not None
+    assert skipped["training_skipped"] is True
+    assert skipped["training_skip_reason"] == "inputs_unchanged"
 
 
 def test_train_residual_production_score_model_cli_writes_outputs(tmp_path: Path) -> None:
@@ -104,6 +216,8 @@ def test_train_residual_production_score_model_cli_writes_outputs(tmp_path: Path
             "8",
             "--device",
             "cpu",
+            "--force-derivation-json",
+            str(tmp_path / "missing_derivation.json"),
         ]
     )
 

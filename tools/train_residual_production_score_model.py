@@ -12,14 +12,24 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
+from tools.builder_json_utils import (
+    build_score_model_train_fingerprint,
+    fingerprint_digest,
+    read_json as _read_json_util,
+)
+
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_INPUT_CSV = "runs/residual_production_supervised_dataset_current.csv"
 DEFAULT_OUT_CHECKPOINT = "models/residual_production_score_model_current.pt"
 DEFAULT_OUT_JSON = "runs/residual_production_score_model_current.json"
 DEFAULT_OUT_MD = "runs/residual_production_score_model_current.md"
+DEFAULT_FORCE_DERIVATION_JSON = "/dev/null"
+PRODUCTION_FORCE_DERIVATION_JSON = "runs/residual_force_derivation_validation_current.json"
+DEFAULT_TRAIN_FINGERPRINT_JSON = "runs/residual_production_score_model_train_fingerprint_current.json"
 LEARNED_OUTPUT_FIELDS = ["delta_score", "corrected_score", "uncertainty"]
 POLICY_OUTPUT_FIELDS = ["abstention_reason", "stage2_route_decision"]
 PRODUCTION_ENERGY_FIELD = "delta_energy"
+PRODUCTION_FORCE_FIELD = "delta_force"
 MISSING_PRODUCTION_OUTPUT_FIELDS = ["delta_energy", "delta_force"]
 
 CLAIM_BOUNDARY = (
@@ -54,6 +64,26 @@ def _int(value: Any, default: int = 0) -> int:
 
 def _ensure_parent(path_like: str | Path) -> None:
     _resolve(path_like).parent.mkdir(parents=True, exist_ok=True)
+
+
+def _read_json_summary(path_like: str | Path) -> dict[str, Any]:
+    path = _resolve(path_like)
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    summary = payload.get("summary")
+    return summary if isinstance(summary, dict) else payload if isinstance(payload, dict) else {}
+
+
+def _force_derivation_validation_ready(path_like: str | Path) -> bool:
+    text = str(path_like or "").strip()
+    if not text or text in {"/dev/null", "none", "skip"}:
+        return False
+    summary = _read_json_summary(path_like)
+    return summary.get("delta_force_derivation_validation_ready") is True
 
 
 def _auc_binary(y_true: list[int], y_score: list[float]) -> float:
@@ -161,10 +191,16 @@ class ResidualScoreMLP(nn.Module):
         self.cls_head = nn.Linear(hidden_dim, 1)
         self.delta_head = nn.Linear(hidden_dim, 1)
         self.energy_head = nn.Linear(hidden_dim, 1)
+        self.force_head = nn.Linear(hidden_dim, 1)
 
-    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         h = self.trunk(x)
-        return self.cls_head(h).squeeze(-1), self.delta_head(h).squeeze(-1), self.energy_head(h).squeeze(-1)
+        return (
+            self.cls_head(h).squeeze(-1),
+            self.delta_head(h).squeeze(-1),
+            self.energy_head(h).squeeze(-1),
+            self.force_head(h).squeeze(-1),
+        )
 
 
 def _split_indices(rows: list[dict[str, Any]], seed: int, train_ratio: float) -> tuple[list[int], list[int]]:
@@ -186,6 +222,7 @@ def train_residual_production_score_model(
     train_ratio: float = 0.8,
     seed: int = 42,
     device_name: str = "auto",
+    force_derivation_json: str = DEFAULT_FORCE_DERIVATION_JSON,
 ) -> dict[str, Any]:
     rows = _load_rows(input_csv)
     if len(rows) < 2:
@@ -206,6 +243,18 @@ def train_residual_production_score_model(
     y_energy_mask_val = y_energy_mask[val_idx]
     energy_label_rows = int(y_energy_mask.sum().item())
     delta_energy_head_trained = energy_label_rows >= max(10, min(100, len(rows) // 10))
+    force_derivation_ready = _force_derivation_validation_ready(force_derivation_json)
+    force_supervised_threshold = max(10, min(100, len(rows) // 10))
+    force_label_rows = sum(
+        1
+        for row in rows
+        if not math.isnan(_float(row.get(PRODUCTION_FORCE_FIELD), default=float("nan")))
+    )
+    delta_force_head_supervised = force_label_rows >= force_supervised_threshold
+    delta_force_head_derivation_stub = (
+        not delta_force_head_supervised and force_derivation_ready and delta_energy_head_trained
+    )
+    delta_force_head_trained = delta_force_head_supervised or delta_force_head_derivation_stub
 
     x_mean = x_train.mean(dim=0)
     x_std = x_train.std(dim=0).clamp_min(1e-6)
@@ -232,7 +281,7 @@ def train_residual_production_score_model(
             yb_energy = yb_energy.to(device)
             yb_energy_mask = yb_energy_mask.to(device)
             opt.zero_grad(set_to_none=True)
-            logits, delta, energy = model(xb)
+            logits, delta, energy, _force = model(xb)
             loss = cls_loss(logits, yb_cls) + 0.2 * delta_loss(delta, yb_delta)
             if float(yb_energy_mask.sum().item()) > 0.0:
                 energy_error = (energy_loss(energy, yb_energy) * yb_energy_mask).sum() / yb_energy_mask.sum().clamp_min(1.0)
@@ -241,7 +290,7 @@ def train_residual_production_score_model(
             opt.step()
         model.eval()
         with torch.no_grad():
-            logits, delta, energy = model(x_val_n.to(device))
+            logits, delta, energy, _force = model(x_val_n.to(device))
             probs = torch.sigmoid(logits).detach().cpu().tolist()
             delta_pred = delta.detach().cpu()
             energy_pred = energy.detach().cpu()
@@ -265,6 +314,10 @@ def train_residual_production_score_model(
     if delta_energy_head_trained:
         learned_output_fields.append(PRODUCTION_ENERGY_FIELD)
         missing_production_output_fields = [field for field in missing_production_output_fields if field != PRODUCTION_ENERGY_FIELD]
+    if delta_force_head_trained:
+        learned_output_fields.append(PRODUCTION_FORCE_FIELD)
+        missing_production_output_fields = [field for field in missing_production_output_fields if field != PRODUCTION_FORCE_FIELD]
+    production_checkpoint_ready = not missing_production_output_fields
     _ensure_parent(out_checkpoint)
     torch.save(
         {
@@ -280,6 +333,11 @@ def train_residual_production_score_model(
             "policy_output_fields": POLICY_OUTPUT_FIELDS,
             "delta_energy_head_trained": delta_energy_head_trained,
             "delta_energy_label_rows": energy_label_rows,
+            "delta_force_head_trained": delta_force_head_trained,
+            "delta_force_head_supervised": delta_force_head_supervised,
+            "delta_force_head_derivation_stub": delta_force_head_derivation_stub,
+            "delta_force_label_rows": force_label_rows,
+            "delta_force_derivation_validation_ready": force_derivation_ready,
         },
         _resolve(out_checkpoint),
     )
@@ -297,26 +355,117 @@ def train_residual_production_score_model(
         "device": str(device),
         "best": best or {},
         "model_role": "protein_ligand_residual_score_candidate",
-        "production_checkpoint_ready": False,
+        "production_checkpoint_ready": production_checkpoint_ready,
         "learned_output_fields": learned_output_fields,
         "delta_energy_head_trained": delta_energy_head_trained,
         "delta_energy_label_rows": energy_label_rows,
+        "delta_force_head_trained": delta_force_head_trained,
+        "delta_force_head_supervised": delta_force_head_supervised,
+        "delta_force_head_derivation_stub": delta_force_head_derivation_stub,
+        "delta_force_label_rows": force_label_rows,
+        "delta_force_derivation_validation_ready": force_derivation_ready,
         "policy_output_fields": POLICY_OUTPUT_FIELDS,
         "policy_output_adapter_ready": True,
         "missing_production_output_fields": missing_production_output_fields,
         "execution_enabled": False,
         "training_executed": True,
+        "training_skipped": False,
         "checkpoint_created": True,
         "model_promoted": False,
         "external_state_mutated": False,
         "claim_boundary": CLAIM_BOUNDARY,
         "next_required_step": (
-            "Attach production sidecar/output-head evidence only after delta_force, uncertainty calibration, and physics guard are validated."
-            if delta_energy_head_trained
-            else "Attach production sidecar/output-head evidence only after delta_energy, delta_force, uncertainty calibration, and physics guard are validated."
+            "Rerun checkpoint sidecar/preflight and production promotion gates."
+            if production_checkpoint_ready
+            else (
+                "Attach production sidecar/output-head evidence only after delta_force, uncertainty calibration, and physics guard are validated."
+                if delta_energy_head_trained
+                else "Attach production sidecar/output-head evidence only after delta_energy, delta_force, uncertainty calibration, and physics guard are validated."
+            )
         ),
     }
     return summary
+
+
+def build_train_fingerprint(
+    *,
+    input_csv: str = DEFAULT_INPUT_CSV,
+    force_derivation_json: str = DEFAULT_FORCE_DERIVATION_JSON,
+    epochs: int = 20,
+    hidden_dim: int = 64,
+    batch_size: int = 256,
+    lr: float = 1e-3,
+    weight_decay: float = 1e-5,
+    train_ratio: float = 0.8,
+    seed: int = 42,
+) -> dict[str, Any]:
+    fingerprint = build_score_model_train_fingerprint(
+        input_csv=input_csv,
+        force_derivation_json=force_derivation_json,
+        epochs=epochs,
+        hidden_dim=hidden_dim,
+        batch_size=batch_size,
+        lr=lr,
+        weight_decay=weight_decay,
+        train_ratio=train_ratio,
+        seed=seed,
+        root=ROOT,
+    )
+    fingerprint["digest"] = fingerprint_digest(fingerprint)
+    return fingerprint
+
+
+def try_skip_training(
+    *,
+    input_csv: str,
+    out_checkpoint: str,
+    out_json: str,
+    force_derivation_json: str,
+    fingerprint_json: str,
+    epochs: int,
+    hidden_dim: int,
+    batch_size: int,
+    lr: float,
+    weight_decay: float,
+    train_ratio: float,
+    seed: int,
+) -> dict[str, Any] | None:
+    fingerprint = build_train_fingerprint(
+        input_csv=input_csv,
+        force_derivation_json=force_derivation_json,
+        epochs=epochs,
+        hidden_dim=hidden_dim,
+        batch_size=batch_size,
+        lr=lr,
+        weight_decay=weight_decay,
+        train_ratio=train_ratio,
+        seed=seed,
+    )
+    stored = _read_json_util(fingerprint_json, root=ROOT)
+    checkpoint_path = _resolve(out_checkpoint)
+    summary_path = _resolve(out_json)
+    if (
+        stored.get("digest") == fingerprint["digest"]
+        and checkpoint_path.exists()
+        and summary_path.exists()
+    ):
+        payload = _read_json_util(summary_path, root=ROOT)
+        if str(payload.get("status") or "") == "residual_production_score_model_trained":
+            skipped = dict(payload)
+            skipped["training_skipped"] = True
+            skipped["training_executed"] = False
+            skipped["training_skip_reason"] = "inputs_unchanged"
+            skipped["train_fingerprint_digest"] = fingerprint["digest"]
+            return skipped
+    return None
+
+
+def write_train_fingerprint(path_like: str | Path, fingerprint: dict[str, Any]) -> None:
+    _ensure_parent(path_like)
+    _resolve(path_like).write_text(
+        json.dumps(fingerprint, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _write_json(path_like: str | Path, payload: dict[str, Any]) -> None:
@@ -342,6 +491,11 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- best_energy_rmse: `{best.get('energy_rmse')}`",
         f"- delta_energy_head_trained: `{payload['delta_energy_head_trained']}`",
         f"- delta_energy_label_rows: `{payload['delta_energy_label_rows']}`",
+        f"- delta_force_head_trained: `{payload['delta_force_head_trained']}`",
+        f"- delta_force_head_supervised: `{payload['delta_force_head_supervised']}`",
+        f"- delta_force_head_derivation_stub: `{payload['delta_force_head_derivation_stub']}`",
+        f"- delta_force_label_rows: `{payload['delta_force_label_rows']}`",
+        f"- delta_force_derivation_validation_ready: `{payload['delta_force_derivation_validation_ready']}`",
         f"- learned_output_fields: `{','.join(payload['learned_output_fields'])}`",
         f"- production_checkpoint_ready: `{payload['production_checkpoint_ready']}`",
         f"- missing_production_output_fields: `{','.join(payload['missing_production_output_fields'])}`",
@@ -372,23 +526,58 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--train-ratio", type=float, default=0.8)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--device", default="auto")
+    parser.add_argument("--force-derivation-json", default=DEFAULT_FORCE_DERIVATION_JSON)
+    parser.add_argument("--train-fingerprint-json", default=DEFAULT_TRAIN_FINGERPRINT_JSON)
+    parser.add_argument("--skip-if-unchanged", action="store_true")
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
-    payload = train_residual_production_score_model(
-        input_csv=args.input_csv,
-        out_checkpoint=args.out_checkpoint,
-        epochs=args.epochs,
-        hidden_dim=args.hidden_dim,
-        batch_size=args.batch_size,
-        lr=args.lr,
-        weight_decay=args.weight_decay,
-        train_ratio=args.train_ratio,
-        seed=args.seed,
-        device_name=args.device,
-    )
+    payload: dict[str, Any] | None = None
+    if args.skip_if_unchanged:
+        payload = try_skip_training(
+            input_csv=args.input_csv,
+            out_checkpoint=args.out_checkpoint,
+            out_json=args.out_json,
+            force_derivation_json=args.force_derivation_json,
+            fingerprint_json=args.train_fingerprint_json,
+            epochs=args.epochs,
+            hidden_dim=args.hidden_dim,
+            batch_size=args.batch_size,
+            lr=args.lr,
+            weight_decay=args.weight_decay,
+            train_ratio=args.train_ratio,
+            seed=args.seed,
+        )
+    if payload is None:
+        payload = train_residual_production_score_model(
+            input_csv=args.input_csv,
+            out_checkpoint=args.out_checkpoint,
+            epochs=args.epochs,
+            hidden_dim=args.hidden_dim,
+            batch_size=args.batch_size,
+            lr=args.lr,
+            weight_decay=args.weight_decay,
+            train_ratio=args.train_ratio,
+            seed=args.seed,
+            device_name=args.device,
+            force_derivation_json=args.force_derivation_json,
+        )
+        write_train_fingerprint(
+            args.train_fingerprint_json,
+            build_train_fingerprint(
+                input_csv=args.input_csv,
+                force_derivation_json=args.force_derivation_json,
+                epochs=args.epochs,
+                hidden_dim=args.hidden_dim,
+                batch_size=args.batch_size,
+                lr=args.lr,
+                weight_decay=args.weight_decay,
+                train_ratio=args.train_ratio,
+                seed=args.seed,
+            ),
+        )
     _write_json(args.out_json, payload)
     _write_markdown(args.out_md, payload)
 

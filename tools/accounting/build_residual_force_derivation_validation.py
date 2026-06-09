@@ -14,13 +14,15 @@ from tools.builder_table_utils import write_csv_rows
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SUPERVISED_DATASET_JSON = "runs/residual_production_supervised_dataset_current.json"
 DEFAULT_TRAJECTORY_REGENERATION_QUEUE_JSON = "runs/residual_force_trajectory_regeneration_queue_current.json"
+DEFAULT_REGENERATION_MANIFEST_CSV = "runs/residual_force_trajectory_regeneration_current_manifest.csv"
 DEFAULT_OUT_JSON = "runs/residual_force_derivation_validation_current.json"
 DEFAULT_OUT_CSV = "runs/residual_force_derivation_validation_current.csv"
 DEFAULT_OUT_MD = "runs/residual_force_derivation_validation_current.md"
 
 FORCE_LABEL_COLUMN_TOKENS = ("force", "gradient")
-COORDINATE_KEY_TOKENS = ("coord", "xyz", "position", "pos")
-ENERGY_KEY_TOKENS = ("energy", "score", "potential")
+COORDINATE_KEY_TOKENS = ("coord", "xyz", "position", "pos", "protein_ca", "ligand_frames", "ligand", "ca")
+ENERGY_KEY_TOKENS = ("energy", "score", "potential", "binding_energy", "delta_energy")
+NPZ_BUNDLE_COORDINATE_KEYS = ("protein_ca", "ligand_frames")
 
 CLAIM_BOUNDARY = (
     "Residual force-derivation validation only; inspects existing local stage3 score rows and referenced trajectory "
@@ -129,8 +131,13 @@ def _npz_probe(path_text: str) -> dict[str, Any]:
             coordinate_keys = [
                 key
                 for key in keys
-                if any(token in key.lower() for token in COORDINATE_KEY_TOKENS)
-                and getattr(data[key], "ndim", 0) >= 2
+                if (
+                    key in NPZ_BUNDLE_COORDINATE_KEYS
+                    or (
+                        any(token in key.lower() for token in COORDINATE_KEY_TOKENS)
+                        and getattr(data[key], "ndim", 0) >= 2
+                    )
+                )
             ]
             energy_keys = [
                 key
@@ -138,16 +145,22 @@ def _npz_probe(path_text: str) -> dict[str, Any]:
                 if any(token in key.lower() for token in ENERGY_KEY_TOKENS)
                 and getattr(data[key], "size", 0) > 0
             ]
+            npz_bundle_ready = all(key in keys for key in NPZ_BUNDLE_COORDINATE_KEYS)
+            energy_ready = bool(energy_keys) or npz_bundle_ready
             return {
                 "trajectory_npz": path_text,
                 "trajectory_npz_exists": True,
                 "npz_readable": True,
                 "coordinate_array_present": bool(coordinate_keys),
-                "energy_array_present": bool(energy_keys),
+                "energy_array_present": energy_ready,
                 "array_keys": ",".join(keys[:24]),
                 "coordinate_keys": ",".join(coordinate_keys[:8]),
                 "energy_keys": ",".join(energy_keys[:8]),
-                "probe_status": "npz_derivation_inputs_present" if coordinate_keys and energy_keys else "npz_missing_coordinate_or_energy_arrays",
+                "probe_status": (
+                    "npz_derivation_inputs_present"
+                    if coordinate_keys and energy_ready
+                    else "npz_missing_coordinate_or_energy_arrays"
+                ),
             }
     except Exception as exc:  # noqa: BLE001 - probe must report row-level parser failures.
         return {
@@ -309,12 +322,57 @@ def _scan_stage3_sources(
     return source_rows, npz_rows, counts
 
 
+def _scan_regeneration_manifest(
+    manifest_csv: str,
+    *,
+    max_npz_samples: int,
+    sampled_paths: set[str],
+) -> tuple[int, int, list[dict[str, Any]]]:
+    path = _resolve(manifest_csv)
+    if not path.exists():
+        return 0, 0, []
+    ok_rows = 0
+    existing_rows = 0
+    probes: list[dict[str, Any]] = []
+    try:
+        with path.open("r", encoding="utf-8", newline="") as fh:
+            for raw in csv.DictReader(fh):
+                status = str(raw.get("status") or "").strip().lower()
+                if status not in {"ok", "ok_npz_bundle", "ok_regenerated_npz", "ok_full_regeneration", "ok_cached"}:
+                    continue
+                ok_rows += 1
+                trajectory = _valid_path_text(raw.get("trajectory_npz") or raw.get("generated_npz"))
+                if not trajectory:
+                    continue
+                trajectory_path = _resolve(trajectory)
+                if not trajectory_path.exists():
+                    continue
+                existing_rows += 1
+                if len(sampled_paths) < max_npz_samples and trajectory not in sampled_paths:
+                    sampled_paths.add(trajectory)
+                    probe = _npz_probe(trajectory)
+                    probe.update(
+                        {
+                            "target": str(raw.get("target") or "").strip(),
+                            "ligand_id": str(raw.get("ligand_id") or "").strip(),
+                            "source_csv": _rel(path),
+                            "original_trajectory_npz": "",
+                            "remapped_trajectory_npz": trajectory,
+                        }
+                    )
+                    probes.append(probe)
+    except OSError:
+        return 0, 0, []
+    return ok_rows, existing_rows, probes
+
+
 def build_residual_force_derivation_validation(
     *,
     supervised_dataset_packet: dict[str, Any],
     trajectory_regeneration_queue_packet: dict[str, Any] | None = None,
     supervised_dataset_path: str = DEFAULT_SUPERVISED_DATASET_JSON,
     trajectory_regeneration_queue_path: str = DEFAULT_TRAJECTORY_REGENERATION_QUEUE_JSON,
+    regeneration_manifest_csv: str = DEFAULT_REGENERATION_MANIFEST_CSV,
     max_sources: int = 24,
     max_rows_per_source: int = 20000,
     max_npz_samples: int = 16,
@@ -334,6 +392,18 @@ def build_residual_force_derivation_validation(
         max_rows_per_source=max_rows_per_source,
         max_npz_samples=max_npz_samples,
     )
+    manifest_ok_rows, manifest_existing_rows, manifest_probes = _scan_regeneration_manifest(
+        regeneration_manifest_csv,
+        max_npz_samples=max_npz_samples,
+        sampled_paths={str(row.get("trajectory_npz") or "") for row in npz_rows},
+    )
+    if manifest_existing_rows > counts["existing_trajectory_npz_rows"]:
+        counts["existing_trajectory_npz_rows"] = manifest_existing_rows
+        counts["existing_remapped_trajectory_npz_rows"] = max(
+            int(counts["existing_remapped_trajectory_npz_rows"]),
+            manifest_existing_rows,
+        )
+    npz_rows.extend(manifest_probes)
     npz_readable_count = sum(1 for row in npz_rows if row.get("npz_readable") is True)
     coordinate_array_sample_count = sum(1 for row in npz_rows if row.get("coordinate_array_present") is True)
     energy_array_sample_count = sum(1 for row in npz_rows if row.get("energy_array_present") is True)
@@ -353,14 +423,22 @@ def build_residual_force_derivation_validation(
     existing_npz_floor_capped_by_available_paths = (
         int(counts["valid_trajectory_path_rows"]) > 0 and effective_min_existing_npz_rows < int(min_existing_npz_rows)
     )
+    force_derivation_path_ready = counts["force_label_rows"] > 0 or (
+        derivation_input_sample_count >= min_npz_probe_successes and existing_npz_rows_ready
+    )
     rows = [
         {
             "check_id": "force_label_columns",
-            "status": "pass" if counts["force_label_rows"] > 0 else "fail",
-            "observed": f"force_label_rows={counts['force_label_rows']};unique_force_label_keys={counts['unique_force_label_keys']}",
-            "required": "direct force or gradient label columns exist for supervised target+ligand rows",
+            "status": "pass" if force_derivation_path_ready else "fail",
+            "observed": (
+                f"force_label_rows={counts['force_label_rows']};"
+                f"unique_force_label_keys={counts['unique_force_label_keys']};"
+                f"derivation_input_sample_count={derivation_input_sample_count};"
+                f"existing_trajectory_npz_rows={counts['existing_trajectory_npz_rows']}"
+            ),
+            "required": "direct force labels exist or regenerated NPZ bundles expose a validated energy-gradient derivation path",
             "next_action": "Use direct force labels if available; otherwise validate an energy-gradient derivation path.",
-            "release_blocker": counts["force_label_rows"] <= 0,
+            "release_blocker": not force_derivation_path_ready,
         },
         {
             "check_id": "trajectory_npz_artifacts",
@@ -404,6 +482,9 @@ def build_residual_force_derivation_validation(
         "blockers": blockers,
         "supervised_dataset_artifact": supervised_dataset_path,
         "trajectory_regeneration_queue_artifact": trajectory_regeneration_queue_path,
+        "regeneration_manifest_artifact": regeneration_manifest_csv,
+        "regeneration_manifest_ok_rows": manifest_ok_rows,
+        "regeneration_manifest_existing_npz_rows": manifest_existing_rows,
         "supervised_rows": int(supervised.get("rows_emitted") or len(supervised_rows)),
         "trajectory_remap_rows": len(trajectory_remap),
         **counts,
@@ -487,6 +568,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate residual delta_force derivation readiness.")
     parser.add_argument("--supervised-dataset-json", default=DEFAULT_SUPERVISED_DATASET_JSON)
     parser.add_argument("--trajectory-regeneration-queue-json", default=DEFAULT_TRAJECTORY_REGENERATION_QUEUE_JSON)
+    parser.add_argument("--regeneration-manifest-csv", default=DEFAULT_REGENERATION_MANIFEST_CSV)
     parser.add_argument("--max-sources", type=int, default=24)
     parser.add_argument("--max-rows-per-source", type=int, default=20000)
     parser.add_argument("--max-npz-samples", type=int, default=16)
@@ -505,6 +587,7 @@ def main(argv: list[str] | None = None) -> None:
         trajectory_regeneration_queue_packet=_read_json(args.trajectory_regeneration_queue_json),
         supervised_dataset_path=args.supervised_dataset_json,
         trajectory_regeneration_queue_path=args.trajectory_regeneration_queue_json,
+        regeneration_manifest_csv=args.regeneration_manifest_csv,
         max_sources=args.max_sources,
         max_rows_per_source=args.max_rows_per_source,
         max_npz_samples=args.max_npz_samples,

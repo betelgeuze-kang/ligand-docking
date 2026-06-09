@@ -2543,6 +2543,140 @@ def _frame_mmpbsa_proxy(
     return out
 
 
+def _prepare_ligand_frames_for_batch(
+    ligand_frames_xyz: np.ndarray,
+    *,
+    ligand_model: str,
+    smiles: str,
+) -> tuple[np.ndarray, dict[str, Any]]:
+    """Normalize trajectory frames to a common bead count for batched scoring."""
+    frames = np.asarray(ligand_frames_xyz, dtype=np.float32)
+    if frames.ndim == 2 and frames.shape[1] == 3:
+        frames = frames.reshape(1, frames.shape[0], 3)
+    if frames.ndim != 3 or frames.shape[2] != 3:
+        return np.zeros((0, 0, 3), dtype=np.float32), {"batch_ready": False}
+    model = str(ligand_model).strip().lower()
+    meta: dict[str, Any] = {"batch_ready": True, "ligand_model": model}
+    if model == "3bead_implicit_hbond":
+        return np.stack([_virtual_third_bead(frame) for frame in frames], axis=0), meta
+    if model == "4bead_onsps_hbond":
+        mapped_frames: list[np.ndarray] = []
+        site_counts: list[int] = []
+        for frame in frames:
+            two_bead = frame[:2] if frame.shape[0] >= 2 else frame
+            mapped, backmap_meta = backmap_4bead_onsps(two_bead, str(smiles or ""))
+            mapped_frames.append(np.asarray(mapped, dtype=np.float32))
+            site_counts.append(int(backmap_meta.get("site_count", 0) or 0))
+        max_beads = max((mapped.shape[0] for mapped in mapped_frames), default=0)
+        if max_beads <= 0:
+            return np.zeros((0, 0, 3), dtype=np.float32), {"batch_ready": False}
+        stacked = np.zeros((len(mapped_frames), max_beads, 3), dtype=np.float32)
+        for idx, mapped in enumerate(mapped_frames):
+            stacked[idx, : mapped.shape[0], :] = mapped
+        meta["onsps_site_count_mean"] = float(np.mean(site_counts)) if site_counts else 0.0
+        return stacked, meta
+    return frames, meta
+
+
+def _frame_mmpbsa_proxy_batch(
+    protein_xyz: np.ndarray,
+    ligand_frames_xyz: np.ndarray,
+    props: Dict[str, float],
+    contact_cutoff_A: float,
+    ligand_model: str = "2bead",
+    hbond_onsps_weight: float = 1.0,
+    smiles: str = "",
+) -> Dict[str, np.ndarray]:
+    """Vectorized MM/PBSA-like proxy across trajectory frames (same protein, F ligand poses)."""
+    prot = np.asarray(protein_xyz, dtype=np.float32)
+    frames, prep_meta = _prepare_ligand_frames_for_batch(
+        ligand_frames_xyz,
+        ligand_model=ligand_model,
+        smiles=smiles,
+    )
+    frame_count = int(frames.shape[0])
+    empty = {
+        "min_distance_A": np.asarray([], dtype=np.float64),
+        "contact_fraction": np.asarray([], dtype=np.float64),
+        "contact_count": np.asarray([], dtype=np.float64),
+        "close_contact_count": np.asarray([], dtype=np.float64),
+        "clash_count": np.asarray([], dtype=np.float64),
+        "deltaG_mmpbsa_proxy_kcal_mol": np.asarray([], dtype=np.float64),
+        "e_vdw": np.asarray([], dtype=np.float64),
+        "e_polar": np.asarray([], dtype=np.float64),
+        "e_nonpolar": np.asarray([], dtype=np.float64),
+        "e_solvation": np.asarray([], dtype=np.float64),
+    }
+    if frame_count <= 0 or prot.size == 0 or frames.size == 0 or not prep_meta.get("batch_ready"):
+        return empty
+
+    model = str(ligand_model).strip().lower()
+    cutoff = float(contact_cutoff_A)
+    d = np.linalg.norm(prot[:, None, None, :] - frames[None, :, :, :], axis=-1)  # P,F,L
+    min_d = d.min(axis=(0, 2)).astype(np.float64)
+    per_frame_denom = float(max(int(d.shape[0] * d.shape[2]), 1))
+    contacts = np.sum(d < cutoff, axis=(0, 2)).astype(np.float64)
+    close_contacts = np.sum(d < 4.5, axis=(0, 2)).astype(np.float64)
+    clashes = np.sum(d < 2.1, axis=(0, 2)).astype(np.float64)
+    contact_fraction = contacts / per_frame_denom
+
+    affinity = float(props.get("affinity_hint", 0.5))
+    polar_n = float(props.get("polar_norm", 0.0))
+    logp_n = float(props.get("logp_norm", 0.0))
+    onsps_n = float(props.get("onsps_norm", 0.0))
+
+    if model == "4bead_onsps_hbond":
+        hb_contacts = np.zeros(frame_count, dtype=np.float64)
+        for frame_idx in range(frame_count):
+            lig = frames[frame_idx]
+            pocket_center = lig.mean(axis=0)
+            for bead_idx in range(int(lig.shape[0])):
+                bead = lig[bead_idx]
+                if float(np.linalg.norm(bead)) <= 1e-8:
+                    continue
+                bead_d = np.linalg.norm(prot - bead.reshape(1, 3), axis=1)
+                ideal = 2.8
+                width = 0.40
+                hb_core = np.exp(-((bead_d - ideal) / width) ** 2)
+                hb_contacts[frame_idx] += float(np.sum(hb_core))
+    elif model == "3bead_implicit_hbond":
+        hb_core = np.exp(-((d - 2.9) / 0.45) ** 2)
+        hb_contacts = np.sum(hb_core, axis=(0, 2)).astype(np.float64)
+    else:
+        hb_contacts = np.sum(d < 3.6, axis=(0, 2)).astype(np.float64)
+
+    e_vdw = (
+        -(0.015 + 0.05 * affinity) * contacts
+        -(0.03 + 0.07 * affinity) * close_contacts
+        + (0.22 + 0.05 * (1.0 - affinity)) * clashes
+    )
+    if model == "4bead_onsps_hbond":
+        element_weight = 1.0 + 0.08 * float(prep_meta.get("onsps_site_count_mean", 0.0) or 0.0)
+        e_polar = -(0.03 + 0.06 * polar_n + float(hbond_onsps_weight) * 0.06 * onsps_n * element_weight) * hb_contacts
+    elif model == "3bead_implicit_hbond":
+        e_polar = -(0.02 + 0.05 * polar_n + float(hbond_onsps_weight) * 0.05 * onsps_n) * hb_contacts
+    else:
+        e_polar = -(0.02 + 0.04 * polar_n) * hb_contacts
+    e_nonpolar = -(0.01 + 0.06 * logp_n) * contacts
+    e_solv = 0.12 * np.maximum(0.0, min_d - 4.0) + 0.35 * np.maximum(0.0, 0.20 - contact_fraction)
+    if model in {"3bead_implicit_hbond", "4bead_onsps_hbond"}:
+        unsat = np.maximum(0.0, (0.25 + 0.35 * polar_n) - contact_fraction)
+        e_solv += 0.25 * (1.0 + float(hbond_onsps_weight) * onsps_n) * unsat
+    delta_g = e_vdw + e_polar + e_nonpolar + e_solv
+    return {
+        "min_distance_A": min_d.astype(np.float64),
+        "contact_fraction": contact_fraction.astype(np.float64),
+        "contact_count": contacts.astype(np.float64),
+        "close_contact_count": close_contacts.astype(np.float64),
+        "clash_count": clashes.astype(np.float64),
+        "deltaG_mmpbsa_proxy_kcal_mol": delta_g.astype(np.float64),
+        "e_vdw": e_vdw.astype(np.float64),
+        "e_polar": e_polar.astype(np.float64),
+        "e_nonpolar": e_nonpolar.astype(np.float64),
+        "e_solvation": e_solv.astype(np.float64),
+    }
+
+
 def _model_ligand_xyz(ligand_xyz: np.ndarray, ligand_model: str, smiles: str = "") -> np.ndarray:
     lig = np.asarray(ligand_xyz, dtype=np.float32)
     model = str(ligand_model).strip().lower()
@@ -2819,22 +2953,79 @@ def _score_frames(
                 lig_frames = lig_frames.reshape(1, lig_frames.shape[0], 3)
             if lig_frames.ndim == 3 and lig_frames.shape[2] == 3 and lig_frames.shape[0] > 0:
                 prot = prot_npz if (prot_npz.ndim == 2 and prot_npz.shape[1] == 3 and prot_npz.shape[0] > 0) else protein_default
-                for i in range(int(lig_frames.shape[0])):
-                    lig = lig_frames[i]
-                    frame_count += 1
-                    if lig.size > 0:
-                        frame_with_ligand += 1
-                    ff = _score_one_frame(prot, lig)
-                    min_dists.append(float(ff["min_distance_A"]))
-                    contact_fracs.append(float(ff["contact_fraction"]))
-                    contact_counts.append(float(ff["contact_count"]))
-                    close_contact_counts.append(float(ff["close_contact_count"]))
-                    clash_counts.append(float(ff["clash_count"]))
-                    frame_energy.append(float(ff["deltaG_mmpbsa_proxy_kcal_mol"]))
-                    e_vdw.append(float(ff["e_vdw"]))
-                    e_polar.append(float(ff["e_polar"]))
-                    e_nonpolar.append(float(ff["e_nonpolar"]))
-                    e_solv.append(float(ff["e_solvation"]))
+                batch_frames = lig_frames
+                if relief_enabled and int(lig_frames.shape[0]) > 1:
+                    first_lig = np.asarray(lig_frames[0], dtype=np.float32)
+                    pre_ff = _frame_mmpbsa_proxy(
+                        protein_xyz=prot,
+                        ligand_xyz=first_lig,
+                        props=props,
+                        contact_cutoff_A=float(contact_cutoff_A),
+                        ligand_model=str(ligand_model),
+                        hbond_onsps_weight=float(hbond_onsps_weight),
+                        smiles=smiles,
+                    )
+                    repaired_first, repair_meta = _relieve_ligand_clashes(
+                        protein_xyz=prot,
+                        ligand_xyz=first_lig,
+                        ligand_model=str(ligand_model),
+                        smiles=smiles,
+                        target_min_distance_A=float(clash_relief_target_min_distance_A),
+                        max_translation_A=float(clash_relief_max_translation_A),
+                        max_steps=int(clash_relief_max_steps),
+                    )
+                    translation = np.asarray(repaired_first, dtype=np.float32) - first_lig
+                    batch_frames = lig_frames + translation.reshape(1, translation.shape[0], 3)
+                    pre_repair_min_dists.append(float(pre_ff["min_distance_A"]))
+                    pre_repair_frame_energy.append(float(pre_ff["deltaG_mmpbsa_proxy_kcal_mol"]))
+                    pre_repair_clash_counts.append(float(pre_ff["clash_count"]))
+                    pre_repair_e_vdw.append(float(pre_ff["e_vdw"]))
+                    clash_relief_translations.append(float(repair_meta.get("translation_norm_A", 0.0)))
+                    clash_relief_applied.append(bool(repair_meta.get("applied", False)))
+                    representative_ligand_xyz = np.asarray(repaired_first, dtype=np.float32)
+                if int(batch_frames.shape[0]) > 1 and (not relief_enabled or int(lig_frames.shape[0]) > 1):
+                    batch_ff = _frame_mmpbsa_proxy_batch(
+                        protein_xyz=prot,
+                        ligand_frames_xyz=batch_frames,
+                        props=props,
+                        contact_cutoff_A=float(contact_cutoff_A),
+                        ligand_model=str(ligand_model),
+                        hbond_onsps_weight=float(hbond_onsps_weight),
+                        smiles=smiles,
+                    )
+                    batch_count = int(batch_ff["min_distance_A"].shape[0])
+                    if batch_count > 0:
+                        frame_count = batch_count
+                        frame_with_ligand = int(np.sum(np.linalg.norm(batch_frames, axis=2).sum(axis=1) > 0))
+                        min_dists.extend(batch_ff["min_distance_A"].tolist())
+                        contact_fracs.extend(batch_ff["contact_fraction"].tolist())
+                        contact_counts.extend(batch_ff["contact_count"].tolist())
+                        close_contact_counts.extend(batch_ff["close_contact_count"].tolist())
+                        clash_counts.extend(batch_ff["clash_count"].tolist())
+                        frame_energy.extend(batch_ff["deltaG_mmpbsa_proxy_kcal_mol"].tolist())
+                        e_vdw.extend(batch_ff["e_vdw"].tolist())
+                        e_polar.extend(batch_ff["e_polar"].tolist())
+                        e_nonpolar.extend(batch_ff["e_nonpolar"].tolist())
+                        e_solv.extend(batch_ff["e_solvation"].tolist())
+                        if representative_ligand_xyz is None:
+                            representative_ligand_xyz = np.asarray(batch_frames[0], dtype=np.float32)
+                if frame_count <= 0:
+                    for i in range(int(lig_frames.shape[0])):
+                        lig = lig_frames[i]
+                        frame_count += 1
+                        if lig.size > 0:
+                            frame_with_ligand += 1
+                        ff = _score_one_frame(prot, lig)
+                        min_dists.append(float(ff["min_distance_A"]))
+                        contact_fracs.append(float(ff["contact_fraction"]))
+                        contact_counts.append(float(ff["contact_count"]))
+                        close_contact_counts.append(float(ff["close_contact_count"]))
+                        clash_counts.append(float(ff["clash_count"]))
+                        frame_energy.append(float(ff["deltaG_mmpbsa_proxy_kcal_mol"]))
+                        e_vdw.append(float(ff["e_vdw"]))
+                        e_polar.append(float(ff["e_polar"]))
+                        e_nonpolar.append(float(ff["e_nonpolar"]))
+                        e_solv.append(float(ff["e_solvation"]))
         except Exception:
             # Fall back to per-frame PDB parsing below.
             frame_count = 0

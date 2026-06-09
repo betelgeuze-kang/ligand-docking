@@ -19,6 +19,7 @@ DEFAULT_STAGE3_SUMMARY_JSON = "runs/product_gpcr_adrb2_after_approval_stage3_sum
 DEFAULT_STAGE5_SUMMARY_JSON = "runs/product_gpcr_adrb2_after_approval_stage5_ranking_summary.json"
 DEFAULT_SLA_SUMMARY_JSON = "runs/product_gpcr_adrb2_after_approval_sla_summary.json"
 DEFAULT_OUT_JSON = "runs/product_end_to_end_rocm_benchmark_current.json"
+DEFAULT_BACKMAPPING_SMOKE_JSON = "runs/backmapping_scoring_batch_smoke_benchmark_current.json"
 DEFAULT_OUT_CSV = "runs/product_end_to_end_rocm_benchmark_current.csv"
 DEFAULT_OUT_MD = "runs/product_end_to_end_rocm_benchmark_current.md"
 
@@ -122,6 +123,7 @@ def build_product_end_to_end_rocm_benchmark(
     stage3_packet: dict[str, Any],
     stage5_packet: dict[str, Any],
     sla_packet: dict[str, Any] | None = None,
+    backmapping_smoke_packet: dict[str, Any] | None = None,
     run_summary_path: str = DEFAULT_RUN_SUMMARY_JSON,
     rocm_manifest_path: str = DEFAULT_ROCM_MANIFEST_JSON,
     bundle_manifest_path: str = DEFAULT_BUNDLE_MANIFEST_JSON,
@@ -131,6 +133,7 @@ def build_product_end_to_end_rocm_benchmark(
     stage3_path: str = DEFAULT_STAGE3_SUMMARY_JSON,
     stage5_path: str = DEFAULT_STAGE5_SUMMARY_JSON,
     sla_path: str = DEFAULT_SLA_SUMMARY_JSON,
+    backmapping_smoke_path: str = DEFAULT_BACKMAPPING_SMOKE_JSON,
 ) -> dict[str, Any]:
     run_summary = _summary(run_summary_packet)
     rocm = _summary(rocm_manifest_packet)
@@ -142,6 +145,10 @@ def build_product_end_to_end_rocm_benchmark(
     stage5 = stage5_packet if "rows_scores" in stage5_packet else _summary(stage5_packet)
     sla_packet = sla_packet or {}
     sla = sla_packet if "total_latency_sec" in sla_packet else _summary(sla_packet)
+    backmapping_smoke_packet = backmapping_smoke_packet or {}
+    backmapping_smoke = _summary(backmapping_smoke_packet)
+    backmapping_batch_frames_per_sec = _float(backmapping_smoke.get("batch_frames_per_sec"))
+    backmapping_smoke_ready = _text(backmapping_smoke.get("status")) == "backmapping_scoring_batch_smoke_benchmark_ready"
 
     rocm_ready = _text(rocm.get("status")) == "rocm_environment_manifest_ready" and rocm.get("manifest_ready") is True
     full_run_pass = run_summary.get("pass") is True and _text(run_summary.get("run_scope")) == "full"
@@ -179,6 +186,14 @@ def build_product_end_to_end_rocm_benchmark(
         _status_row("throughput_metrics", "pass" if jobs_per_hour > 0 and unique_ligands_per_hour > 0 and failure_rate <= 0.05 else "fail", f"jobs_per_hour={jobs_per_hour:.3f}; unique_ligands_per_hour={unique_ligands_per_hour:.3f}; failure_rate={failure_rate:.6f}", "positive throughput and failure_rate <= 0.05", "A real end-to-end run must expose measured product throughput.", run_summary_path),
         _status_row("bundle_validation", "pass" if bundle_validation_ok and bundle_zip_present else "fail", f"bundle_validation_ok={bundle_validation_ok}; bundle_zip_present={bundle_zip_present}", "validated bundle.zip present", "Customer-facing evidence needs a validated local bundle artifact.", f"{bundle_manifest_path}; {bundle_validation_path}"),
         _status_row("production_trajectory_profile", "warn" if not production_profile_enabled else "pass", f"production_profile_enabled={production_profile_enabled}; prod_mode={stage2.get('prod_mode')}", "preferred true for final customer SLA claim", "The current run proves rust_hip execution but not the stricter production trajectory profile.", f"{run_summary_path}; {stage2_path}; {sla_path}"),
+        _status_row(
+            "backmapping_batch_smoke_benchmark",
+            "pass" if backmapping_smoke_ready and backmapping_batch_frames_per_sec > 0 else "warn",
+            f"status={backmapping_smoke.get('status')}; batch_frames_per_sec={backmapping_batch_frames_per_sec:.3f}",
+            "backmapping_scoring_batch_smoke_benchmark_ready with positive batch_frames_per_sec",
+            "Vectorized backmapping scoring should expose a recent local smoke throughput guard.",
+            backmapping_smoke_path,
+        ),
     ]
     fail_rows = [row for row in rows if row["status"] == "fail"]
     warn_rows = [row for row in rows if row["status"] == "warn"]
@@ -205,6 +220,9 @@ def build_product_end_to_end_rocm_benchmark(
         "unique_ligands_per_hour": unique_ligands_per_hour,
         "score_rows_per_sec": score_rows_per_sec,
         "failure_rate": failure_rate,
+        "backmapping_batch_smoke_ready": backmapping_smoke_ready,
+        "backmapping_batch_frames_per_sec": backmapping_batch_frames_per_sec,
+        "backmapping_batch_smoke_json": backmapping_smoke_path,
         "bundle_zip_present": bundle_zip_present,
         "bundle_validation_ok": bundle_validation_ok,
         "component_count": len(rows),
@@ -272,6 +290,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--stage3-summary-json", default=DEFAULT_STAGE3_SUMMARY_JSON)
     parser.add_argument("--stage5-summary-json", default=DEFAULT_STAGE5_SUMMARY_JSON)
     parser.add_argument("--sla-summary-json", default=DEFAULT_SLA_SUMMARY_JSON)
+    parser.add_argument("--backmapping-smoke-json", default=DEFAULT_BACKMAPPING_SMOKE_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -290,6 +309,7 @@ def main(argv: list[str] | None = None) -> None:
         stage3_packet=_read_json_if_present(args.stage3_summary_json),
         stage5_packet=_read_json_if_present(args.stage5_summary_json),
         sla_packet=_read_json_if_present(args.sla_summary_json),
+        backmapping_smoke_packet=_read_json_if_present(args.backmapping_smoke_json),
         run_summary_path=args.run_summary_json,
         rocm_manifest_path=args.rocm_manifest_json,
         bundle_manifest_path=args.bundle_manifest_json,
@@ -299,6 +319,7 @@ def main(argv: list[str] | None = None) -> None:
         stage3_path=args.stage3_summary_json,
         stage5_path=args.stage5_summary_json,
         sla_path=args.sla_summary_json,
+        backmapping_smoke_path=args.backmapping_smoke_json,
     )
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])

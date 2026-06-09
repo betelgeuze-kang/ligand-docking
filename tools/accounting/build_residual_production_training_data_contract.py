@@ -236,11 +236,20 @@ def build_residual_production_training_data_contract(
 
     checkpoint_preflight_ready = _bool(checkpoint.get("checkpoint_preflight_ready"))
     ready_checkpoint_count = _int(checkpoint.get("ready_checkpoint_count"))
-    production_output_head_ready = checkpoint_preflight_ready and ready_checkpoint_count > 0
     score_model_production_checkpoint_ready = _bool(score_model.get("production_checkpoint_ready"))
     missing_production_output_fields = [
         str(field) for field in score_model.get("missing_production_output_fields") or []
     ]
+    score_model_output_contract_ready = score_model_production_checkpoint_ready and not missing_production_output_fields
+    preflight_output_head_ready = checkpoint_preflight_ready and ready_checkpoint_count > 0
+    bootstrap_output_head_ready = score_model_output_contract_ready and not preflight_output_head_ready
+    production_output_head_ready = preflight_output_head_ready or bootstrap_output_head_ready
+    if preflight_output_head_ready:
+        bootstrap_phase = "post_preflight"
+    elif bootstrap_output_head_ready:
+        bootstrap_phase = "pre_preflight"
+    else:
+        bootstrap_phase = "blocked"
     dataset_label_fields = [str(field) for field in supervised_dataset.get("label_fields") or []]
     dataset_missing_output_labels = [
         str(field) for field in supervised_dataset.get("missing_production_output_labels") or []
@@ -435,6 +444,8 @@ def build_residual_production_training_data_contract(
                 "pass" if production_output_head_ready else "fail",
                 (
                     f"checkpoint_preflight_ready={checkpoint_preflight_ready};ready_checkpoint_count={ready_checkpoint_count};"
+                    f"bootstrap_phase={bootstrap_phase};preflight_output_head_ready={preflight_output_head_ready};"
+                    f"bootstrap_output_head_ready={bootstrap_output_head_ready};"
                     f"top_checkpoint={top_checkpoint.get('checkpoint_path', '')};"
                     f"top_compatibility={top_checkpoint.get('compatibility_status', '')};"
                     f"score_model_production_checkpoint_ready={score_model_production_checkpoint_ready};"
@@ -506,6 +517,9 @@ def build_residual_production_training_data_contract(
         "abstention_schema_ready": abstention_schema_ready,
         "energy_force_label_work_order_artifact": energy_force_label_work_order_path,
         "score_model_production_checkpoint_ready": score_model_production_checkpoint_ready,
+        "bootstrap_phase": bootstrap_phase,
+        "preflight_output_head_ready": preflight_output_head_ready,
+        "bootstrap_output_head_ready": bootstrap_output_head_ready,
         "execution_enabled": False,
         "training_executed": False,
         "checkpoint_created": False,
