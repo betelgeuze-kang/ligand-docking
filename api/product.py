@@ -33,6 +33,8 @@ router = APIRouter(prefix="/product", tags=["product"])
 ROOT = Path(__file__).resolve().parents[1]
 PRODUCT_CAPABILITY_ARTIFACT = ROOT / "runs" / "product_capability_surface_contract_current.json"
 PRODUCT_ARCHITECTURE_ARTIFACT = ROOT / "runs" / "product_architecture_contract_current.json"
+ARCHITECTURE_VALIDATION_REPORT_ARTIFACT = ROOT / "runs" / "architecture_validation_package_report_current.json"
+COMPETITION_EXTERNAL_OPERATOR_TRACK_ARTIFACT = ROOT / "runs" / "competition_external_operator_track_current.json"
 PRODUCT_SERVICE_BOUNDARY_ARTIFACT = ROOT / "runs" / "product_service_boundary_contract_current.json"
 PRODUCT_API_CONTRACT_ARTIFACT = ROOT / "runs" / "product_api_contract_current.json"
 PRODUCT_OPERATIONAL_QUALITY_ARTIFACT = ROOT / "runs" / "product_operational_quality_contract_current.json"
@@ -459,6 +461,55 @@ async def get_product_architecture() -> dict[str, Any]:
         "cameo_submission_executed": False,
         "casp_submission_executed": False,
         "cleanup_executed": False,
+        "external_state_mutated": False,
+        "claim_boundary": summary.get("claim_boundary", ""),
+    }
+
+
+@router.get("/architecture-validation")
+async def get_product_architecture_validation() -> dict[str, Any]:
+    packet = _read_json_object(ARCHITECTURE_VALIDATION_REPORT_ARTIFACT)
+    summary = _summary(packet)
+    rows = packet.get("rows") if isinstance(packet.get("rows"), list) else []
+    warnings = packet.get("overclaim_warnings") if isinstance(packet.get("overclaim_warnings"), list) else []
+    external = _summary(_read_json_object(COMPETITION_EXTERNAL_OPERATOR_TRACK_ARTIFACT))
+    if not summary:
+        return {
+            "status": "missing_architecture_validation_package_report",
+            "artifact_path": str(ARCHITECTURE_VALIDATION_REPORT_ARTIFACT),
+            "architecture_validation_all_packages_complete": False,
+            "package_a_complete": False,
+            "package_b_complete": False,
+            "package_c_complete": False,
+            "evidence_depth_tier": "accounting_only",
+            "overclaim_warning_count": 0,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_boundary": (
+                "Product architecture-validation endpoint only; the local architecture validation report is missing. "
+                "It does not run benchmarks, promote claims, or mutate external state."
+            ),
+        }
+    return {
+        "status": summary.get("status"),
+        "artifact_path": str(ARCHITECTURE_VALIDATION_REPORT_ARTIFACT),
+        "architecture_validation_all_packages_complete": bool(
+            summary.get("status") == "architecture_validation_all_packages_complete"
+        ),
+        "package_a_complete": bool(summary.get("package_a_complete") is True),
+        "package_b_complete": bool(summary.get("package_b_complete") is True),
+        "package_c_complete": bool(summary.get("package_c_complete") is True),
+        "open_required_test_ids": list(summary.get("open_required_test_ids") or []),
+        "overclaim_open_test_ids": list(summary.get("overclaim_open_test_ids") or []),
+        "evidence_depth_tier": summary.get("evidence_depth_tier", "accounting_only"),
+        "overclaim_warning_count": int(summary.get("overclaim_warning_count") or 0),
+        "overclaim_hard_warning_count": int(summary.get("overclaim_hard_warning_count") or 0),
+        "competition_external_operator_track_status": external.get("status", ""),
+        "competition_external_blocked_track_count": int(external.get("blocked_track_count") or 0),
+        "rows": rows,
+        "overclaim_warnings": warnings,
+        "execution_enabled": False,
+        "claim_promotion_allowed": False,
         "external_state_mutated": False,
         "claim_boundary": summary.get("claim_boundary", ""),
     }

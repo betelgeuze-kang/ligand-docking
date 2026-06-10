@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from tools.builder_table_utils import write_csv_rows
+from tools.product.build_architecture_validation_evidence_depth import audit_evidence_depth
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_JSON = "runs/architecture_validation_package_report_current.json"
@@ -70,6 +71,9 @@ def _row(
     evidence: str,
     observed: str,
     next_action: str = "",
+    evidence_depth: str = "accounting",
+    overclaim_warning: bool = False,
+    overclaim_codes: list[str] | None = None,
 ) -> dict[str, Any]:
     closed = status in {"closed", "negative_evidence_closed", "operator_pending_closed"}
     return {
@@ -83,10 +87,56 @@ def _row(
         "evidence": evidence,
         "observed": observed,
         "next_action": next_action,
+        "evidence_depth": evidence_depth,
+        "overclaim_warning": overclaim_warning,
+        "overclaim_codes": overclaim_codes or [],
         "execution_enabled": False,
         "benchmark_executed": False,
         "external_state_mutated": False,
     }
+
+
+def _apply_overclaim(
+    row: dict[str, Any],
+    *,
+    depth_audit: dict[str, Any],
+) -> dict[str, Any]:
+    warnings = depth_audit.get("overclaim_warnings") or []
+    hard_codes = [
+        _text(item.get("code"))
+        for item in warnings
+        if isinstance(item, dict) and item.get("severity") == "hard" and _text(row.get("test_id")) in (item.get("test_ids") or [])
+    ]
+    soft_codes = [
+        _text(item.get("code"))
+        for item in warnings
+        if isinstance(item, dict) and item.get("severity") != "hard" and _text(row.get("test_id")) in (item.get("test_ids") or [])
+    ]
+    if hard_codes and row.get("status") == "closed":
+        row = {
+            **row,
+            "status": "summary_overclaim_open",
+            "closed": False,
+            "release_blocker": True,
+            "evidence_depth": "accounting_only",
+            "overclaim_warning": True,
+            "overclaim_codes": hard_codes + soft_codes,
+            "next_action": (
+                row.get("next_action") or "Repair row-level evidence before treating this test as closed."
+            ),
+            "observed": f"{row.get('observed')};overclaim={','.join(hard_codes)}",
+        }
+    elif soft_codes:
+        row = {
+            **row,
+            "overclaim_warning": True,
+            "overclaim_codes": soft_codes,
+            "evidence_depth": "row_evidence_partial",
+            "observed": f"{row.get('observed')};overclaim_soft={','.join(soft_codes)}",
+        }
+    elif _text(depth_audit.get("evidence_depth_tier")) in {"row_evidence_complete", "row_evidence_partial"}:
+        row = {**row, "evidence_depth": _text(depth_audit.get("evidence_depth_tier"))}
+    return row
 
 
 def _metric_pr_auc(packet: dict[str, Any]) -> float:
@@ -416,6 +466,9 @@ def build_architecture_validation_package_report(*, bundle_dir: str = DEFAULT_BU
         )
     )
 
+    depth_audit = audit_evidence_depth()
+    rows = [_apply_overclaim(row, depth_audit=depth_audit) for row in rows]
+
     def _package_complete(package: str) -> bool:
         required_rows = [row for row in rows if row["package"] == package and row["required"]]
         return bool(required_rows) and all(row["closed"] for row in required_rows)
@@ -436,9 +489,14 @@ def build_architecture_validation_package_report(*, bundle_dir: str = DEFAULT_BU
         "package_c_closed_count": sum(1 for row in rows if row["package"] == "C" and row["closed"]),
         "package_c_required_count": sum(1 for row in rows if row["package"] == "C" and row["required"]),
         "open_required_test_ids": [row["test_id"] for row in rows if row["required"] and not row["closed"]],
+        "overclaim_warning_count": int(depth_audit.get("overclaim_warning_count") or 0),
+        "overclaim_hard_warning_count": int(depth_audit.get("overclaim_hard_warning_count") or 0),
+        "overclaim_soft_warning_count": int(depth_audit.get("overclaim_soft_warning_count") or 0),
+        "overclaim_open_test_ids": [row["test_id"] for row in rows if row.get("status") == "summary_overclaim_open"],
+        "evidence_depth_tier": _text(depth_audit.get("evidence_depth_tier")) or "accounting_only",
         "claim_boundary": CLAIM_BOUNDARY,
     }
-    return {"summary": summary, "rows": rows}
+    return {"summary": summary, "rows": rows, "overclaim_warnings": depth_audit.get("overclaim_warnings") or []}
 
 
 def _write_md(path: Path, payload: dict[str, Any]) -> None:
@@ -451,12 +509,28 @@ def _write_md(path: Path, payload: dict[str, Any]) -> None:
         f"- package_b_complete: `{s['package_b_complete']}`",
         f"- package_c_complete: `{s['package_c_complete']}`",
         f"- open_required_test_ids: `{s['open_required_test_ids']}`",
+        f"- evidence_depth_tier: `{s.get('evidence_depth_tier', 'accounting_only')}`",
+        f"- overclaim_warning_count: `{s.get('overclaim_warning_count', 0)}`",
+        f"- overclaim_open_test_ids: `{s.get('overclaim_open_test_ids', [])}`",
         "",
-        "## Rows",
+        "## Overclaim Warnings",
         "",
-        "| test_id | package | status | observed | evidence |",
-        "| --- | --- | --- | --- | --- |",
     ]
+    warnings = payload.get("overclaim_warnings") or []
+    if warnings:
+        for item in warnings:
+            lines.append(f"- `{item.get('code')}` ({item.get('severity')}): {item.get('detail')} [{','.join(item.get('test_ids') or [])}]")
+    else:
+        lines.append("- none")
+    lines.extend(
+        [
+            "",
+            "## Rows",
+            "",
+            "| test_id | package | status | observed | evidence |",
+            "| --- | --- | --- | --- | --- |",
+        ]
+    )
     for row in payload["rows"]:
         lines.append(
             f"| `{row['test_id']}` | `{row['package']}` | `{row['status']}` | {row['observed']} | `{row['evidence']}` |"

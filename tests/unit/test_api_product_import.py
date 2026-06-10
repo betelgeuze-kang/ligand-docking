@@ -14,6 +14,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     paths = {route.path for route in main.app.routes}
     assert "/product/capabilities" in paths
     assert "/product/architecture" in paths
+    assert "/product/architecture-validation" in paths
     assert "/product/service-boundary" in paths
     assert "/product/api-contract" in paths
     assert "/product/operational-quality" in paths

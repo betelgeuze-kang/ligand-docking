@@ -152,7 +152,10 @@ def build_cameo_capability_preflight(
             )
 
     validation_evidence_ready = validation_status == "cameo_validation_evidence_ready"
-    repair_ready = repair_status == "cameo_repair_execution_preflight_ready"
+    repair_ready = repair_status in {
+        "cameo_repair_execution_preflight_ready",
+        "cameo_repair_execution_not_required",
+    }
     registration_token_ok = _text(registration_approval_token) == REGISTRATION_APPROVAL_TOKEN
     email_token_ok = _text(outbound_email_approval_token) == OUTBOUND_EMAIL_APPROVAL_TOKEN
 

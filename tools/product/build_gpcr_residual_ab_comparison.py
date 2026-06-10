@@ -202,18 +202,18 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Build a partial-safe comparison for the current GPCR residual equal-size A/B run.")
     p.add_argument("--baseline-run-root", default=DEFAULT_BASELINE_RUN_ROOT)
     p.add_argument("--candidate-run-root", default=DEFAULT_CANDIDATE_RUN_ROOT)
     p.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     p.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     p.add_argument("--out-md", default=DEFAULT_OUT_MD)
-    return p.parse_args()
+    return p.parse_args(argv)
 
 
-def main() -> None:
-    args = parse_args()
+def main(argv: list[str] | None = None) -> None:
+    args = parse_args(argv)
     payload = build_payload(
         baseline_run_root=_resolve(args.baseline_run_root),
         candidate_run_root=_resolve(args.candidate_run_root),

@@ -107,6 +107,8 @@ def test_build_cameo_capability_preflight_blocks_missing_architecture_validation
 
     mod.main(
         [
+            "--repo-root",
+            str(root),
             "--validation-json",
             str(validation_json),
             "--repair-preflight-json",

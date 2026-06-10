@@ -46,13 +46,15 @@ def _write_json(path_like: str | Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def _receiver_scaffold_present() -> bool:
-    return (ROOT / "api" / "cameo.py").exists() and (ROOT / "betelgeuze_cameo" / "intake.py").exists()
+def _receiver_scaffold_present(repo_root: Path | None = None) -> bool:
+    root = repo_root or ROOT
+    return (root / "api" / "cameo.py").exists() and (root / "betelgeuze_cameo" / "intake.py").exists()
 
 
-def _api_route_registered() -> bool:
-    main = ROOT / "api" / "main.py"
-    cameo = ROOT / "api" / "cameo.py"
+def _api_route_registered(repo_root: Path | None = None) -> bool:
+    root = repo_root or ROOT
+    main = root / "api" / "main.py"
+    cameo = root / "api" / "cameo.py"
     if not main.exists() or not cameo.exists():
         return False
     try:
@@ -63,9 +65,10 @@ def _api_route_registered() -> bool:
     return "cameo" in main_text and 'prefix="/cameo"' in cameo_text and '"/targets"' in cameo_text
 
 
-def _api_operations_route_registered() -> bool:
-    main = ROOT / "api" / "main.py"
-    cameo = ROOT / "api" / "cameo.py"
+def _api_operations_route_registered(repo_root: Path | None = None) -> bool:
+    root = repo_root or ROOT
+    main = root / "api" / "main.py"
+    cameo = root / "api" / "cameo.py"
     if not main.exists() or not cameo.exists():
         return False
     try:
@@ -85,8 +88,9 @@ def _api_operations_route_registered() -> bool:
     )
 
 
-def _local_status_cli_present() -> bool:
-    return (ROOT / "betelgeuze_cameo" / "cli.py").exists()
+def _local_status_cli_present(repo_root: Path | None = None) -> bool:
+    root = repo_root or ROOT
+    return (root / "betelgeuze_cameo" / "cli.py").exists()
 
 
 def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
@@ -157,6 +161,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--outbound-email-requested", action="store_true")
     parser.add_argument("--outbound-email-approval-token", default="")
     parser.add_argument("--prediction-generation-requested", action="store_true")
+    parser.add_argument("--repo-root", default="")
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -165,14 +170,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
+    repo_root = _resolve(args.repo_root) if str(args.repo_root or "").strip() else ROOT
     payload = build_cameo_capability_preflight(
         validation_readiness_packet=_read_json(args.validation_json),
         repair_execution_preflight_packet=_read_json(args.repair_preflight_json),
         receiver_smoke_packet=_read_json_if_present(args.receiver_smoke_json),
-        receiver_scaffold_present=_receiver_scaffold_present(),
-        api_route_registered=_api_route_registered(),
-        api_operations_route_registered=_api_operations_route_registered(),
-        local_status_cli_present=_local_status_cli_present(),
+        receiver_scaffold_present=_receiver_scaffold_present(repo_root),
+        api_route_registered=_api_route_registered(repo_root),
+        api_operations_route_registered=_api_operations_route_registered(repo_root),
+        local_status_cli_present=_local_status_cli_present(repo_root),
         capability_lane=args.capability_lane,
         public_registration_requested=args.public_registration_requested,
         registration_approval_token=args.registration_approval_token,

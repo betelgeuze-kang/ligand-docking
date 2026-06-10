@@ -91,7 +91,7 @@ def build_competition_benchmark_rollup(*, intake_csv: str = DEFAULT_INTAKE_CSV) 
     unblocked_bands = [row for row in band_rows if isinstance(row, dict) and _text(row.get("band_status")) != "blocked_input"]
 
     official_used = bool(cameo_validation.get("official_cameo_results_used") is True) or bool(
-        cameo_intake_gate.get("official_results_used") is True
+        cameo_intake_gate.get("official_cameo_results_used") is True
     )
 
     summary = {
