@@ -789,8 +789,11 @@ def build_queue(args: argparse.Namespace) -> Dict[str, Any]:
         target_col=str(args.target_ligand_target_col),
         ligand_col=str(args.target_ligand_id_col),
     )
+    target_set = set(targets)
     required_override_ids: List[str] = []
     for _t, ids in target_ligand_overrides.items():
+        if _t not in target_set:
+            continue
         required_override_ids.extend([str(x).strip() for x in ids if str(x).strip()])
     binder_map: Dict[str, int] = {}
     if bool(args.csv_prioritize_binders):

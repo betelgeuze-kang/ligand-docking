@@ -24,6 +24,7 @@ DEFAULT_DATASET_CSV = "runs/residual_production_supervised_dataset_current.csv"
 DEFAULT_ENRICHED_CSV = "runs/residual_production_supervised_dataset_refine_tier_current.csv"
 DEFAULT_CHECKPOINT = "models/residual_production_score_model_refine_tier_current.pt"
 DEFAULT_SUMMARY_JSON = "runs/refine_tier_residual_training_chain_current.json"
+DEFAULT_FORCE_DERIVATION_JSON = "runs/residual_force_derivation_validation_current.json"
 
 CLAIM_BOUNDARY = (
     "Refine-tier residual training chain only; materializes a supervised dataset, enriches refine-tier labels "
@@ -61,7 +62,7 @@ def run_refine_tier_residual_training_chain(
     hidden_dim: int = 16,
     batch_size: int = 16,
     device_name: str = "cpu",
-    force_derivation_json: str = "/dev/null",
+    force_derivation_json: str = DEFAULT_FORCE_DERIVATION_JSON,
 ) -> dict[str, Any]:
     dataset_payload = build_residual_production_supervised_dataset(
         stage5_glob=stage5_glob,
@@ -171,7 +172,7 @@ def main() -> None:
     p.add_argument("--hidden-dim", type=int, default=16)
     p.add_argument("--batch-size", type=int, default=16)
     p.add_argument("--device", type=str, default="cpu")
-    p.add_argument("--force-derivation-json", type=str, default="/dev/null")
+    p.add_argument("--force-derivation-json", type=str, default=DEFAULT_FORCE_DERIVATION_JSON)
     args = p.parse_args()
     summary = run_refine_tier_residual_training_chain(
         stage5_glob=args.stage5_glob,

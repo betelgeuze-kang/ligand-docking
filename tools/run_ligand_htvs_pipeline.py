@@ -1799,11 +1799,22 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
     replicas = int(args.replicas_smoke if mode == "smoke" else args.replicas_full)
     max_ligands = int(args.max_ligands_smoke if mode == "smoke" else args.max_ligands_full)
     jobs_per_target = int(args.jobs_per_target_smoke if mode == "smoke" else args.jobs_per_target_full)
+    # Stage1 queue builder caps jobs_per_target at replicas; align slots to requested ligand coverage.
+    if jobs_per_target > 0 and max_ligands > 0:
+        stage1_job_budget = min(jobs_per_target, max_ligands)
+    elif jobs_per_target > 0:
+        stage1_job_budget = jobs_per_target
+    else:
+        stage1_job_budget = max_ligands
+    if stage1_job_budget > 0:
+        replicas = max(replicas, int(stage1_job_budget))
     max_jobs_score = int(args.max_jobs_score_smoke if mode == "smoke" else args.max_jobs_score_full)
     traj_stage2_diag = _traj_prod_stage2_preset_diagnostics(args)
     traj_prod_summary = _traj_prod_runtime_summary(args, traj_stage2_diag)
     traj_stage2_settings = _traj_stage2_runtime_settings(args, mode=mode)
     traj_frames = int(traj_stage2_settings["traj_frames"])
+    if mode == "smoke" and int(args.stage3_min_frames) > traj_frames:
+        args.stage3_min_frames = traj_frames
 
     rec0: Dict[str, Any] = {"ok": True, "skipped": True, "cmd": [], "cmd_str": ""}
     if (not resume_stage3_only) and bool(args.run_leakage_audit):
