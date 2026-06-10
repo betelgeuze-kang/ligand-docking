@@ -1,6 +1,6 @@
 # CASP17 Strict-Blind Internal Prediction Source Gate
 
-- generated: `2026-06-01T02:29:26+09:00`
+- generated: `2026-06-10T22:46:11+09:00`
 - status: `awaiting_internal_prediction_source_gate_fields`
 - required benchmark/target/scope: `hist_REQUIRED_MONOMER_001` `REQUIRED_MONOMER_001` `monomer`
 - manifest rows: `1`

@@ -80,6 +80,8 @@ def materialize(*, evidence_dir: str = "/tmp/api_runner_profile_evidence_templat
         ("tools/build_public_benchmark_residual_assist_replays.py",),
         ("tools/build_public_benchmark_residual_assist_comparisons.py",),
         ("tools/build_public_benchmark_residual_assist_comparison_gate.py",),
+        ("tools/build_architecture_validation_public_benchmark_subset_manifests.py",),
+        ("tools/build_architecture_validation_speedpack_ab_retrospective.py",),
     ]
     for command in builders:
         _run(*command)
@@ -95,6 +97,15 @@ def materialize(*, evidence_dir: str = "/tmp/api_runner_profile_evidence_templat
         ("tools/build_product_ai_architecture_execution_backlog.py",),
         ("tools/build_data_science_expansion_gap_closure.py",),
         ("tools/build_master_gap_closure_rollup.py",),
+        ("tools/build_cameo_api_dependency_readiness.py",),
+        ("tools/build_cameo_receiver_smoke_contract.py",),
+        ("tools/build_cameo_format_validation_packet.py",),
+        ("tools/build_cameo_model1_selection_packet.py",),
+        ("tools/build_cameo_dry_run_handoff_packet.py",),
+        ("tools/build_cameo_validation_readiness_gate.py",),
+        ("tools/build_cameo_official_results_intake_gate.py",),
+        ("tools/build_competition_benchmark_rollup.py",),
+        ("tools/build_architecture_validation_package_report.py",),
         ("tools/build_goal_readiness_rollup.py",),
         ("tools/build_goal_operator_action_board.py",),
     ]
