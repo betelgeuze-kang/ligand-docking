@@ -93,6 +93,16 @@ def _pilot() -> dict:
     }
 
 
+def _execution_readiness(*, ready: bool = True) -> dict:
+    return {
+        "summary": {
+            "status": "restricted_unattended_execution_wiring_ready" if ready else "blocked_restricted_unattended_execution_readiness",
+            "restricted_unattended_execution_ready": ready,
+            "restricted_unattended_execution_runtime_ready": False,
+        }
+    }
+
+
 def _root(tmp_path: Path) -> Path:
     (tmp_path / "api").mkdir()
     (tmp_path / "api" / "product.py").write_text(
@@ -126,13 +136,14 @@ def test_product_capability_surface_contract_ready_for_guarded_product_surface(t
         bundle_contract_packet=_bundle(),
         delivery_evidence_packet=_delivery(),
         pilot_packet=_pilot(),
+        execution_readiness_packet=_execution_readiness(),
         root=_root(tmp_path),
     )
 
     summary = payload["summary"]
     assert summary["status"] == "product_capability_surface_contract_ready"
-    assert summary["capability_count"] == 8
-    assert summary["ready_capability_count"] == 8
+    assert summary["capability_count"] == 9
+    assert summary["ready_capability_count"] == 9
     assert summary["blocked_capability_count"] == 0
     assert summary["structure_analysis_capability_ready"] is True
     assert summary["product_structure_analysis_report_ready"] is True
@@ -161,6 +172,7 @@ def test_product_capability_surface_contract_ready_for_guarded_product_surface(t
     assert summary["product_cli_surface_present"] is True
     assert summary["guarded_claims_ready"] is True
     assert summary["restricted_scope_claim_guard_ready"] is True
+    assert summary["restricted_unattended_execution_ready"] is True
     assert summary["allowed_scope_families"] == ["gpcr", "ion_channel", "kinase"]
     assert summary["blocked_claim_scopes"] == [
         "transporter_domain_promotion",
@@ -184,10 +196,12 @@ def test_product_capability_surface_blocks_failed_request_contract(tmp_path: Pat
         bundle_contract_packet=_bundle(),
         delivery_evidence_packet=_delivery(),
         pilot_packet=_pilot(),
+        execution_readiness_packet=_execution_readiness(ready=False),
         root=_root(tmp_path),
     )
 
     assert payload["summary"]["status"] == "blocked_product_capability_surface_contract"
+    assert payload["summary"]["capability_count"] == 9
     assert payload["summary"]["structure_analysis_capability_ready"] is False
     assert payload["summary"]["ligand_docking_capability_ready"] is False
     assert any(blocker["code"] == "molecular_structure_analysis_intake_not_ready" for blocker in payload["blockers"])
@@ -210,6 +224,7 @@ def test_product_capability_surface_allows_delivery_claim_when_validated_bundle_
         bundle_contract_packet=bundle,
         delivery_evidence_packet=delivery,
         pilot_packet=pilot,
+        execution_readiness_packet=_execution_readiness(),
         root=_root(tmp_path),
     )
 

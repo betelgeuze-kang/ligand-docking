@@ -84,6 +84,41 @@ def _ligand_row_from_intake(ligand: dict[str, Any], *, target: str, replica_idx:
     }
 
 
+def _pocket_metadata_from_native_pdb(native_pdb_path: str) -> dict[str, Any]:
+    path = Path(native_pdb_path)
+    if not path.is_file():
+        return {"pocket_status": "native_pdb_missing"}
+    try:
+        import numpy as np
+
+        from core.pocket_detection import detect_pocket_geometric
+
+        coords: list[list[float]] = []
+        for line in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+            if not line.startswith(("ATOM  ", "HETATM")):
+                continue
+            if len(line) < 54:
+                continue
+            try:
+                coords.append([float(line[30:38]), float(line[38:46]), float(line[46:54])])
+            except ValueError:
+                continue
+        if not coords:
+            return {"pocket_status": "native_pdb_no_coords"}
+        pocket = detect_pocket_geometric(np.asarray(coords, dtype=np.float64))
+        center = pocket.get("pocket_center") or [0.0, 0.0, 0.0]
+        return {
+            "pocket_status": pocket.get("status"),
+            "pocket_center_x": float(center[0]),
+            "pocket_center_y": float(center[1]),
+            "pocket_center_z": float(center[2]),
+            "pocket_radius_a": float(pocket.get("pocket_radius_a") or 0.0),
+            "pocket_method": pocket.get("method", "geometric"),
+        }
+    except Exception as exc:
+        return {"pocket_status": "pocket_detection_failed", "pocket_error": str(exc)}
+
+
 def materialize_from_docking_request(
     request_json_path: str,
     *,
@@ -120,6 +155,9 @@ def materialize_from_docking_request(
     for row in rows:
         row["family"] = family
         row["target_family"] = family
+    pocket_meta = _pocket_metadata_from_native_pdb(str(rows[0].get("native_pdb_path") or ""))
+    for row in rows:
+        row.update(pocket_meta)
     os.makedirs(out_dir, exist_ok=True)
     queue_csv = os.path.join(out_dir, "docking_queue.csv")
     pd.DataFrame(rows).to_csv(queue_csv, index=False)
@@ -130,6 +168,7 @@ def materialize_from_docking_request(
         "ligand_count": int(len(rows)),
         "docking_job_id": docking_job_id,
         "request_json_path": str(request_json_path),
+        "pocket_metadata": pocket_meta,
     }
     meta_path = os.path.join(out_dir, "docking_htvs_materialized.json")
     Path(meta_path).write_text(json.dumps(materialized, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

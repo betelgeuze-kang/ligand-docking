@@ -99,6 +99,7 @@ def build_product_capability_surface_contract(
     delivery_evidence_packet: dict[str, Any],
     pilot_packet: dict[str, Any],
     scope_breadth_packet: dict[str, Any] | None = None,
+    execution_readiness_packet: dict[str, Any] | None = None,
     root: str | Path = ".",
     readiness_path: str = "runs/product_readiness_gate_current.json",
     work_order_path: str = "runs/product_execution_work_order_current.json",
@@ -108,6 +109,7 @@ def build_product_capability_surface_contract(
     delivery_evidence_path: str = "runs/product_delivery_evidence_contract_current.json",
     pilot_packet_path: str = "runs/product_pilot_packet_contract_current.json",
     scope_breadth_path: str = "runs/product_scope_breadth_contract_current.json",
+    execution_readiness_path: str = "runs/restricted_unattended_execution_readiness_current.json",
 ) -> dict[str, Any]:
     root_path = Path(root).resolve()
     readiness = _summary(readiness_packet)
@@ -118,6 +120,7 @@ def build_product_capability_surface_contract(
     delivery = _summary(delivery_evidence_packet)
     pilot = _summary(pilot_packet)
     scope_breadth = _summary(scope_breadth_packet or {})
+    execution_readiness = _summary(execution_readiness_packet or {})
     bundle_command_check = (
         bundle_contract_packet.get("bundle_command_check")
         if isinstance(bundle_contract_packet.get("bundle_command_check"), dict)
@@ -250,6 +253,9 @@ def build_product_capability_surface_contract(
         and general_platform_claim_allowed is False
     )
 
+    restricted_unattended_execution_ready = _bool(execution_readiness.get("restricted_unattended_execution_ready"))
+    restricted_unattended_execution_runtime_ready = _bool(execution_readiness.get("restricted_unattended_execution_runtime_ready"))
+
     rows = [
         _row(
             capability_id="molecular_structure_analysis_intake",
@@ -369,6 +375,19 @@ def build_product_capability_surface_contract(
             artifact_path=f"betelgeuze_product/docking_request.py;api/product.py;{scope_breadth_path}",
             reason="The product capability surface must disclose the restricted delivery scope and must not imply a broad protein-ligand platform before breadth evidence is complete.",
         ),
+        _row(
+            capability_id="restricted_unattended_execution",
+            domain="ligand_docking",
+            status="ready" if restricted_unattended_execution_ready else "blocked",
+            observed=(
+                f"execution_readiness={_text(execution_readiness.get('status')) or 'missing'};"
+                f"wiring_ready={restricted_unattended_execution_ready};"
+                f"runtime_ready={restricted_unattended_execution_runtime_ready}"
+            ),
+            required="restricted_unattended_execution_wiring_ready with API dispatch E2E and delivery verdict gates",
+            artifact_path=execution_readiness_path,
+            reason="Restricted-scope unattended execution requires wiring evidence separate from global execution_enabled API flags.",
+        ),
     ]
 
     blockers = [_blocker(row) for row in rows if row["status"] != "ready"]
@@ -413,6 +432,8 @@ def build_product_capability_surface_contract(
         "delivery_claim_backed_by_bundle_validation": delivery_claim_backed_by_bundle_validation,
         "allowed_scope_families": allowed_scope_families,
         "restricted_scope_claim_guard_ready": restricted_scope_claim_guard_ready,
+        "restricted_unattended_execution_ready": restricted_unattended_execution_ready,
+        "restricted_unattended_execution_runtime_ready": restricted_unattended_execution_runtime_ready,
         "blocked_claim_scopes": blocked_claim_scopes,
         "general_platform_claim_allowed": general_platform_claim_allowed,
         "scope_claim_boundary_detail": scope_claim_boundary_detail,
@@ -424,7 +445,9 @@ def build_product_capability_surface_contract(
         "external_state_mutated": False,
         "claim_boundary": CLAIM_BOUNDARY,
         "next_required_step": (
-            "Capability surface is contract-ready; execution, bundle assembly, and delivery-ready claims still require separate approval and validation."
+            "Capability surface is contract-ready; enable runtime dispatch with API_VALIDATED_RUNNER_ENABLED=1 after reviewing restricted_unattended_execution_readiness."
+            if status == "product_capability_surface_contract_ready" and restricted_unattended_execution_ready
+            else "Capability surface is contract-ready; execution, bundle assembly, and delivery-ready claims still require separate approval and validation."
             if status == "product_capability_surface_contract_ready"
             else "Repair blocked product capability rows before claiming a complete structure-analysis and docking product surface."
         ),

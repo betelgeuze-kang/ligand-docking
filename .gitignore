@@ -2,6 +2,8 @@
 .env
 .env.*
 !.env.example
+deploy/docker-compose.product.env
+deploy/docker-compose.product.env.local
 
 # Local tooling / agent metadata
 .agents/

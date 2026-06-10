@@ -94,6 +94,30 @@ def _pilot() -> dict:
     }
 
 
+def _execution_readiness() -> dict:
+    return {
+        "summary": {
+            "status": "restricted_unattended_execution_wiring_ready",
+            "restricted_unattended_execution_ready": True,
+            "restricted_unattended_execution_runtime_ready": False,
+        }
+    }
+
+
+def _scope_breadth() -> dict:
+    return {
+        "summary": {
+            "allowed_scope_families": ["gpcr", "ion_channel", "kinase"],
+            "blocked_claim_scopes": [
+                "transporter_domain_promotion",
+                "pxr_domain_promotion",
+                "general_protein_ligand_platform",
+            ],
+            "general_platform_claim_allowed": False,
+        }
+    }
+
+
 def _root(tmp_path: Path) -> Path:
     (tmp_path / "api").mkdir(parents=True)
     (tmp_path / "api" / "product.py").write_text(
@@ -128,6 +152,8 @@ def test_product_capability_surface_contract_tool_writes_outputs(tmp_path: Path)
         "bundle": tmp_path / "bundle.json",
         "delivery": tmp_path / "delivery.json",
         "pilot": tmp_path / "pilot.json",
+        "execution_readiness": tmp_path / "execution_readiness.json",
+        "scope_breadth": tmp_path / "scope_breadth.json",
     }
     paths["readiness"].write_text(json.dumps(_readiness()) + "\n", encoding="utf-8")
     paths["work_order"].write_text(json.dumps(_work_order()) + "\n", encoding="utf-8")
@@ -136,6 +162,8 @@ def test_product_capability_surface_contract_tool_writes_outputs(tmp_path: Path)
     paths["bundle"].write_text(json.dumps(_bundle()) + "\n", encoding="utf-8")
     paths["delivery"].write_text(json.dumps(_delivery()) + "\n", encoding="utf-8")
     paths["pilot"].write_text(json.dumps(_pilot()) + "\n", encoding="utf-8")
+    paths["execution_readiness"].write_text(json.dumps(_execution_readiness()) + "\n", encoding="utf-8")
+    paths["scope_breadth"].write_text(json.dumps(_scope_breadth()) + "\n", encoding="utf-8")
     out_json = tmp_path / "capability.json"
     out_csv = tmp_path / "capability.csv"
     out_md = tmp_path / "capability.md"
@@ -156,6 +184,10 @@ def test_product_capability_surface_contract_tool_writes_outputs(tmp_path: Path)
             str(paths["delivery"]),
             "--pilot-packet-json",
             str(paths["pilot"]),
+            "--execution-readiness-json",
+            str(paths["execution_readiness"]),
+            "--scope-breadth-json",
+            str(paths["scope_breadth"]),
             "--root",
             str(root),
             "--out-json",
@@ -174,7 +206,8 @@ def test_product_capability_surface_contract_tool_writes_outputs(tmp_path: Path)
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["result_bundle_artifact_count"] == 1
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["result_bundle_rerun_command_present"] is True
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["delivery_claim_backed_by_bundle_validation"] is False
-    assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["restricted_scope_claim_guard_ready"] is True
+    assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["restricted_unattended_execution_ready"] is True
+    assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["capability_count"] == 9
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["allowed_scope_families"] == ["gpcr", "ion_channel", "kinase"]
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["blocked_claim_scopes"] == [
         "transporter_domain_promotion",

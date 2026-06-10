@@ -18,6 +18,7 @@ DEFAULT_BUNDLE_CONTRACT_JSON = "runs/product_bundle_contract_current.json"
 DEFAULT_DELIVERY_EVIDENCE_JSON = "runs/product_delivery_evidence_contract_current.json"
 DEFAULT_PILOT_PACKET_JSON = "runs/product_pilot_packet_contract_current.json"
 DEFAULT_SCOPE_BREADTH_JSON = "runs/product_scope_breadth_contract_current.json"
+DEFAULT_EXECUTION_READINESS_JSON = "runs/restricted_unattended_execution_readiness_current.json"
 DEFAULT_OUT_JSON = "runs/product_capability_surface_contract_current.json"
 DEFAULT_OUT_CSV = "runs/product_capability_surface_contract_current.csv"
 DEFAULT_OUT_MD = "runs/product_capability_surface_contract_current.md"
@@ -123,6 +124,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--delivery-evidence-json", default=DEFAULT_DELIVERY_EVIDENCE_JSON)
     parser.add_argument("--pilot-packet-json", default=DEFAULT_PILOT_PACKET_JSON)
     parser.add_argument("--scope-breadth-json", default=DEFAULT_SCOPE_BREADTH_JSON)
+    parser.add_argument("--execution-readiness-json", default=DEFAULT_EXECUTION_READINESS_JSON)
     parser.add_argument("--root", default=".")
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
@@ -141,6 +143,7 @@ def main(argv: list[str] | None = None) -> None:
         delivery_evidence_packet=_read_json_if_present(args.delivery_evidence_json),
         pilot_packet=_read_json_if_present(args.pilot_packet_json),
         scope_breadth_packet=_read_json_if_present(args.scope_breadth_json),
+        execution_readiness_packet=_read_json_if_present(args.execution_readiness_json),
         root=args.root,
         readiness_path=args.readiness_json,
         work_order_path=args.work_order_json,
@@ -150,6 +153,7 @@ def main(argv: list[str] | None = None) -> None:
         delivery_evidence_path=args.delivery_evidence_json,
         pilot_packet_path=args.pilot_packet_json,
         scope_breadth_path=args.scope_breadth_json,
+        execution_readiness_path=args.execution_readiness_json,
     )
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])

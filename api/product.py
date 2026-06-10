@@ -378,6 +378,8 @@ async def get_product_capabilities() -> dict[str, Any]:
         "restricted_scope_claim_guard_ready": bool(summary.get("restricted_scope_claim_guard_ready") is True),
         "blocked_claim_scopes": summary.get("blocked_claim_scopes", []),
         "general_platform_claim_allowed": bool(summary.get("general_platform_claim_allowed") is True),
+        "restricted_unattended_execution_ready": bool(summary.get("restricted_unattended_execution_ready") is True),
+        "restricted_unattended_execution_runtime_ready": bool(summary.get("restricted_unattended_execution_runtime_ready") is True),
         "scope_claim_boundary_detail": summary.get("scope_claim_boundary_detail", ""),
         "execution_enabled": False,
         "docking_results_emitted": False,

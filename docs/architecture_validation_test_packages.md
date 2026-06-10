@@ -31,6 +31,7 @@ This document does **not** register CAMEO servers, submit CASP predictions, enab
 | `docs/biorxiv_architecture_validation_protocol.md` | Frozen cross-domain blind validation protocol |
 | `docs/cameo_transition_prd.md` | CAMEO live blind lane requirements |
 | `docs/complete_commercial_product_gap_analysis.md` | P0/P1 science and benchmark gaps |
+| `docs/product_full_implementation_plan.md` | Master workstream plan (no calendar deadlines) |
 | `betelgeuze_product/public_benchmark.py` | Required public benchmark suite contract |
 
 ## Claim Boundary (All Packages)
