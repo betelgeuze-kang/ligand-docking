@@ -184,6 +184,58 @@ def test_rollup_moves_top_priority_past_gpcr_when_guarded_claim_review_is_green(
     assert "GPCR guarded 100k evidence is green" in summary["next_required_step"]
 
 
+def test_gpcr_rollup_prioritizes_trajectory_storage_gap_before_claim_review() -> None:
+    payload = mod.build_payload(
+        {
+            "summary": {
+                "ci_low_blocker": True,
+                "ranking_pr_auc_ci_low": 0.128,
+                "threshold": 0.45,
+                "ranking_positive_count": 9,
+                "ranking_topk_hit_rate": 0.25,
+            },
+            "rank_diagnostics": {"top20_hit_rate_max_possible": 0.3, "top20_missing_positives": []},
+            "claim_coverage_requirement": {"ci_low_policy": {"status": "blocked"}},
+        },
+        {"summary": {}},
+        {"summary": {}},
+        {"summary": {}},
+        {"summary": {}},
+        {"summary": {}},
+        gpcr_positive_coverage={"summary": {"frozen": True, "positive_count": 9}},
+        gpcr_guarded_100k_readiness={
+            "summary": {
+                "launch_eligible": True,
+                "claim_review_eligible": False,
+                "blocker_count": 3,
+                "blockers": ["ci_low_below_threshold"],
+                "next_required_step": "Launch a guarded 100k rerun candidate.",
+            }
+        },
+        gpcr_trajectory_storage_gap={
+            "summary": {
+                "drd2_repair_blocked": True,
+                "blocker_count": 4,
+                "blockers": ["stage2_trajectory_frames_missing", "repair_slice_source_npz_missing"],
+                "stage2_missing_run_count": 1,
+                "repair_slice_npz_missing_count": 6,
+                "repair_slice_unique_npz_count": 6,
+                "positive_trajectory_npz_exists": False,
+                "next_required_step": "Restore stage2 trajectory frames before DRD2 repair.",
+            }
+        },
+    )
+
+    row = payload["rows"][0]
+    summary = payload["summary"]
+    assert row["primary_blocker"] == "gpcr_frozen_trajectory_storage_gap"
+    assert row["drd2_repair_blocked"] is True
+    assert row["repair_slice_npz_missing_count"] == 6
+    assert row["trajectory_gap_source_artifact"] == "runs/gpcr_frozen_trajectory_storage_gap_packet_current.json"
+    assert "Restore stage2 trajectory frames" in row["next_required_step"]
+    assert "Restore frozen GPCR trajectory storage" in summary["next_required_step"]
+
+
 def test_render_markdown_contains_claim_boundary() -> None:
     payload = {
         "summary": {

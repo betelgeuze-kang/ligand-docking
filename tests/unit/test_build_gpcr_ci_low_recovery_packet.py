@@ -254,3 +254,30 @@ def test_cli_writes_operator_json_and_markdown(tmp_path: Path) -> None:
     assert "threshold_relaxation_allowed=false" in md
     assert "positive_ranks=[1]" in md
     assert "bootstrap_valid_n=796" in md
+
+
+def test_stage5_ranking_summary_fallback_when_stage6_missing(tmp_path: Path) -> None:
+    summary_json = tmp_path / "runs" / "family_balanced_summary.json"
+    _write_json(summary_json, {"stages": {}, "failed_stage": "stage5b_admet_surface"})
+    _write_json(
+        tmp_path / "runs" / "family_balanced_stage5_ranking_summary.json",
+        {
+            "score_col": "binding_score_composite_v7_residual_active",
+            "metrics": {
+                "pr_auc_unique_key": 0.114,
+                "positive_count_unique_key": 9.0,
+            },
+            "metrics_unique": {"pr_auc": 0.114},
+            "metrics_ci": {"pr_auc_unique_key": {"low": 0.00084, "high": 0.35, "mean": 0.11, "std": 0.11, "n": 800}},
+            "topk_unique": [{"k": 20, "hit_rate": 0.05, "hits": 1}],
+        },
+    )
+
+    payload = mod.build_packet(summary_json=summary_json, triage_json=None)
+
+    assert payload["summary"]["ranking_pr_auc_ci_low"] == 0.00084
+    assert payload["summary"]["ranking_topk_hit_rate"] == 0.05
+    assert payload["summary"]["ranking_positive_count"] == 9
+    assert payload["summary"]["ranking_topk_hit_rate_max_possible"] == 0.45
+    assert payload["summary"]["ci_low_blocker"] is True
+    assert payload["claim_coverage_requirement"]["top20_ceiling_observed"] == 0.45

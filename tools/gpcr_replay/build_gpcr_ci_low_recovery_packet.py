@@ -230,6 +230,125 @@ def _bootstrap_diagnostics(ranking_summary: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _topk_hit_rate(topk_rows: list[Any], *, topk_k: int = DEFAULT_TOP20_K) -> float | None:
+    for row in topk_rows:
+        if not isinstance(row, dict):
+            continue
+        try:
+            if int(row.get("k", -1)) == int(topk_k):
+                return _maybe_float(row.get("hit_rate"))
+        except (TypeError, ValueError):
+            continue
+    if not topk_rows:
+        return None
+    try:
+        fallback = sorted(
+            [row for row in topk_rows if isinstance(row, dict)],
+            key=lambda row: int(row.get("k", -1)),
+        )[-1]
+        return _maybe_float(fallback.get("hit_rate"))
+    except (IndexError, TypeError, ValueError):
+        return None
+
+
+def _stage6_from_ranking_summary(
+    ranking_summary: dict[str, Any],
+    *,
+    topk_k: int = DEFAULT_TOP20_K,
+    ci_low_threshold: float = DEFAULT_CI_LOW_THRESHOLD,
+    topk_hit_rate_min: float = 0.20,
+) -> dict[str, Any]:
+    metrics = ranking_summary.get("metrics") if isinstance(ranking_summary.get("metrics"), dict) else {}
+    metrics_unique = (
+        ranking_summary.get("metrics_unique") if isinstance(ranking_summary.get("metrics_unique"), dict) else {}
+    )
+    metrics_ci = ranking_summary.get("metrics_ci") if isinstance(ranking_summary.get("metrics_ci"), dict) else {}
+    topk_unique = ranking_summary.get("topk_unique") if isinstance(ranking_summary.get("topk_unique"), list) else []
+    topk = ranking_summary.get("topk") if isinstance(ranking_summary.get("topk"), list) else []
+    topk_source = topk_unique if topk_unique else topk
+
+    pr_auc = _maybe_float(metrics.get("pr_auc_unique_key"))
+    if pr_auc is None:
+        pr_auc = _maybe_float(metrics_unique.get("pr_auc"))
+
+    pr_ci_low = None
+    pr_ci_row = metrics_ci.get("pr_auc_unique_key")
+    if isinstance(pr_ci_row, dict):
+        pr_ci_low = _maybe_float(pr_ci_row.get("low"))
+    if pr_ci_low is None and isinstance(metrics_ci.get("pr_auc"), dict):
+        pr_ci_low = _maybe_float(metrics_ci.get("pr_auc", {}).get("low"))
+
+    positive_count = _maybe_float(metrics.get("positive_count_unique_key"))
+    if positive_count is None:
+        positive_count = _maybe_float(metrics.get("positive_count"))
+    positive_count_int = int(positive_count) if positive_count is not None else None
+
+    topk_hit_rate = _topk_hit_rate(topk_source, topk_k=topk_k)
+    max_hit_rate = None
+    if positive_count_int is not None:
+        max_hit_rate = float(min(1.0, float(positive_count_int) / float(max(topk_k, 1))))
+
+    failed_metrics: list[dict[str, Any]] = []
+    if pr_ci_low is None:
+        failed_metrics.append(
+            {
+                "metric": "ranking_pr_auc_ci_low_present",
+                "value": pr_ci_low,
+                "threshold": "numeric",
+            }
+        )
+    elif pr_ci_low < ci_low_threshold:
+        failed_metrics.append(
+            {
+                "metric": "ranking_pr_auc_ci_low",
+                "value": pr_ci_low,
+                "threshold": ci_low_threshold,
+            }
+        )
+    if topk_hit_rate is None:
+        failed_metrics.append(
+            {
+                "metric": f"topk_hit_rate@{topk_k}_present",
+                "value": topk_hit_rate,
+                "threshold": "numeric",
+            }
+        )
+    elif topk_hit_rate < topk_hit_rate_min:
+        failed_metrics.append(
+            {
+                "metric": f"topk_hit_rate@{topk_k}",
+                "value": topk_hit_rate,
+                "threshold": topk_hit_rate_min,
+            }
+        )
+
+    score_col = _text(ranking_summary.get("score_col") or metrics.get("probability_score_col_used"))
+    return {
+        "pass": not failed_metrics,
+        "failed_metrics": failed_metrics,
+        "ranking_pr_auc": pr_auc,
+        "ranking_pr_auc_ci_low": pr_ci_low,
+        "ranking_topk_hit_rate": topk_hit_rate,
+        "ranking_positive_count": positive_count_int,
+        "ranking_topk_hit_rate_max_possible": max_hit_rate,
+        "ranking_unique_auc": _maybe_float(metrics.get("roc_auc_unique_key") or metrics_unique.get("roc_auc")),
+        "ranking_score_col_used": score_col,
+        "source": "stage5_ranking_summary_fallback",
+    }
+
+
+def _stage6_has_ranking_evidence(stage6: dict[str, Any]) -> bool:
+    if not stage6:
+        return False
+    if _maybe_float(stage6.get("ranking_pr_auc_ci_low")) is not None:
+        return True
+    if _maybe_float(stage6.get("ranking_pr_auc")) is not None:
+        return True
+    if stage6.get("failed_metrics"):
+        return True
+    return False
+
+
 def _stage6_summary(stage6: dict[str, Any]) -> dict[str, Any]:
     failed_metrics = stage6.get("failed_metrics", [])
     threshold = _threshold_from_failed_metrics(failed_metrics)
@@ -302,6 +421,8 @@ def build_packet(*, summary_json: str | Path, triage_json: str | Path | None = N
     ranking_rows_path = _ranking_rows_path(summary_path)
     ranking_summary = _read_json(ranking_summary_path)
     ranking_rows = _read_csv(ranking_rows_path)
+    if not _stage6_has_ranking_evidence(stage6) and ranking_summary:
+        stage6 = _stage6_from_ranking_summary(ranking_summary)
 
     summary = _stage6_summary(stage6)
 

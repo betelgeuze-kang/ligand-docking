@@ -16,7 +16,6 @@ _module = _import_module("tools.accounting.build_gpcr_guarded_100k_rerun_readine
 globals().update({k: v for k, v in _module.__dict__.items() if not k.startswith("__")})
 
 if __name__ == "__main__":
-    _entry = getattr(_module, "main", None)
-    if _entry is None:
-        raise SystemExit("builder has no main(): tools.accounting.build_gpcr_guarded_100k_rerun_readiness")
-    raise SystemExit(_entry(_sys.argv[1:]) or 0)
+    result = _module.main()
+    if result is not None:
+        raise SystemExit(result)

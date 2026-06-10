@@ -17,8 +17,87 @@ DEFAULT_CATIONIC_CACHE_CSV = "runs/gpcr_drd2_cationic_center_geometry_cache_curr
 DEFAULT_OUT_JSON = "runs/gpcr_drd2_hard_decoy_slice_packet_current.json"
 DEFAULT_OUT_CSV = "runs/gpcr_drd2_hard_decoy_slice_packet_rows_current.csv"
 DEFAULT_OUT_MD = "runs/gpcr_drd2_hard_decoy_slice_packet_current.md"
+DEFAULT_REPLAY_JSON = "runs/gpcr_drd2_repaired_slice_shadow_replay_packet_current.json"
 
 DEFAULT_POSITIVE_LIGAND = "CHEMBL301265"
+
+
+def _read_json(path_like: str | Path) -> dict[str, Any]:
+    path = _resolve(path_like)
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _resolve_next_action(
+    *,
+    replay_json: str | Path = DEFAULT_REPLAY_JSON,
+    penalty_envelope_status: str = "",
+) -> tuple[str, str]:
+    replay_summary = _read_json(replay_json).get("summary", {})
+    replay_status = _text(replay_summary.get("status"))
+    if replay_status == "selected_slice_shadow_green_claim_locked":
+        return (
+            "resume_mount_stage2_regeneration_then_full_100k_claim_review",
+            (
+                "Selected-slice v10 shadow replay is green under claim lock. Schedule mount stage2 regeneration "
+                "for the frozen GPCR 100k run, materialize equivalent label-free feature caches for non-ADRB2 "
+                "rows, then rerun guarded full-100k claim review."
+            ),
+        )
+    v11_summary = _read_json(
+        str(_resolve(DEFAULT_REPLAY_JSON).with_name("gpcr_drd2_valid_anchor_discriminator_slice_replay_packet_current.json"))
+    ).get("summary", {})
+    v11_status = _text(v11_summary.get("status"))
+    if v11_status == "selected_slice_shadow_green_claim_locked":
+        return (
+            "resume_mount_stage2_regeneration_then_full_100k_claim_review",
+            _text(v11_summary.get("next_required_step"))
+            or (
+                "Valid-anchor discriminator v11 slice replay is green under claim lock. Proceed with mount stage2 "
+                "regeneration and frozen-row feature cache build before guarded 100k claim review."
+            ),
+        )
+    if v11_status:
+        return (
+            "improve_valid_anchor_discriminator_or_weakbase_rescue_before_full_100k_replay",
+            _text(v11_summary.get("next_required_step"))
+            or (
+                "Valid-anchor discriminator v11 replay did not clear the repaired slice. Refine false-valid-anchor "
+                "pressure or weak-base rescue gating before mount stage2 regen or full 100k claim review."
+            ),
+        )
+    if replay_status:
+        return (
+            "add_valid_anchor_discriminator_or_improve_label_free_penalty_before_full_100k_replay",
+            _text(replay_summary.get("next_required_step"))
+            or (
+                "Repaired-slice v10 shadow replay did not clear claim-locked review. Improve label-free "
+                "penalty/support separation or add a valid-anchor discriminator before mount stage2 regen "
+                "or full 100k claim review."
+            ),
+        )
+    if penalty_envelope_status == "slice_pairwise_green_diagnostic_only":
+        return (
+            "build_claim_locked_cationic_pose_distortion_shadow_replay",
+            (
+                "Penalty envelope is pairwise-green on the repaired slice. Run the v10 claim-locked shadow "
+                "replay chain before attempting mount stage2 regeneration or full 100k claim review."
+            ),
+        )
+    return (
+        "design_label_free_overanchor_multipolar_penalty_then_replay_on_repaired_slice",
+        (
+            "Use this packet to design a label-free penalty/support candidate. Required separation should first "
+            "reduce invalid close-overanchor/no-basic, window-like nonbasic, and multipolar-basic decoy pressure "
+            "on the repaired selected slice; only after slice separation should a full frozen 100k replay or "
+            "guarded apply be considered."
+        ),
+    )
 
 
 def _resolve(path_like: str | Path) -> Path:
@@ -156,8 +235,11 @@ def _slice_labels(row: dict[str, Any]) -> list[str]:
 
 
 def _candidate_pressures(row: dict[str, Any]) -> dict[str, float]:
-    basic_count = int(row.get("basic_amine_count") or 0)
-    basic = 1.0 if basic_count > 0 else 0.0
+    ligand_basic_count = int(row.get("basic_amine_count") or 0)
+    geometry_basic_count = int(row.get("cationic_center_basic_atom_count") or 0)
+    ligand_basic = 1.0 if ligand_basic_count > 0 else 0.0
+    geometry_basic = 1.0 if geometry_basic_count > 0 else 0.0
+    basic = ligand_basic
     donors = float(row.get("ligand_h_donors") or 0.0)
     acceptors = float(row.get("ligand_h_acceptors") or 0.0)
     rotors = float(row.get("ligand_rot_bonds") or 0.0)
@@ -192,12 +274,23 @@ def _candidate_pressures(row: dict[str, Any]) -> dict[str, float]:
         * pose_preservation_support
     )
     compact_anchor_support = valid_anchor_support * (1.0 - min(max(0.0, donors - 2.5) / 3.0, 1.0))
+    cationic_far = _clamp01(row.get("cationic_center_contact_fraction_ge_4p2A"))
+    window_like_nonbasic_pressure = (1.0 - ligand_basic) * window * max(cationic_far, 1.0 - cationic_window)
+    false_valid_anchor_discriminator_pressure = (
+        (1.0 - ligand_basic)
+        * geometry_basic
+        * window
+        * max(cationic_window, 0.35)
+        * pose_preservation_support
+    )
     label_free_penalty_pressure = (
         invalid_close_overanchor_pressure
         + hydrophobic_overcontact_pressure
         + multipolar_basic_pressure
         + cationic_mismatch_pressure
         + pose_distortion_pressure
+        + window_like_nonbasic_pressure
+        + false_valid_anchor_discriminator_pressure
     )
     return {
         "invalid_close_overanchor_pressure": float(invalid_close_overanchor_pressure),
@@ -205,11 +298,13 @@ def _candidate_pressures(row: dict[str, Any]) -> dict[str, float]:
         "multipolar_basic_pressure": float(multipolar_basic_pressure),
         "cationic_mismatch_pressure": float(cationic_mismatch_pressure),
         "pose_distortion_pressure": float(pose_distortion_pressure),
+        "window_like_nonbasic_pressure": float(window_like_nonbasic_pressure),
+        "false_valid_anchor_discriminator_pressure": float(false_valid_anchor_discriminator_pressure),
         "pose_preservation_support": float(pose_preservation_support),
         "valid_anchor_support": float(valid_anchor_support),
         "compact_anchor_support": float(compact_anchor_support),
-        "label_free_penalty_pressure": float(label_free_penalty_pressure),
         "label_free_support_pressure": float(compact_anchor_support),
+        "label_free_penalty_pressure": float(label_free_penalty_pressure),
     }
 
 
@@ -322,6 +417,11 @@ def _row_packet(
             or 0.0
         ),
     }
+    if is_positive and int(out.get("basic_amine_count") or 0) <= 0:
+        out["basic_amine_count"] = max(
+            int(out.get("basic_amine_count") or 0),
+            int(out.get("cationic_center_basic_atom_count") or 0),
+        )
     out.update(_candidate_pressures(out))
     weak_gate, weak_support = _weak_base_rescue_support(score, float(out.get("label_free_support_pressure") or 0.0))
     out["weak_base_rescue_gate"] = weak_gate
@@ -407,6 +507,7 @@ def build_packet(
     )
     pose_distorted_count = sum(1 for row in decoys if "pose_distorted_valid_anchor" in row.get("slice_labels", []))
     valid_anchor_count = sum(1 for row in decoys if "valid_anchor_challenge" in row.get("slice_labels", []))
+    window_like_nonbasic_count = sum(1 for row in decoys if "window_like_nonbasic" in row.get("slice_labels", []))
     max_required_pressure = max(
         (float(row.get("rank_pressure_to_clear_positive") or 0.0) for row in decoys),
         default=0.0,
@@ -416,6 +517,7 @@ def build_packet(
         if decoys
         else 0.0
     )
+    next_action, next_required_step = _resolve_next_action()
     summary = {
         "generated_at_local": generated_at_local or dt.datetime.now().astimezone().isoformat(timespec="seconds"),
         "status": "hard_decoy_slice_packet_ready",
@@ -447,14 +549,11 @@ def build_packet(
         "atom_window_basic_cationic_mismatch_count": cationic_mismatch_count,
         "pose_distorted_valid_anchor_count": pose_distorted_count,
         "valid_anchor_challenge_count": valid_anchor_count,
+        "window_like_nonbasic_count": window_like_nonbasic_count,
         "mean_rank_pressure_to_clear_positive": mean_required_pressure,
         "max_rank_pressure_to_clear_positive": max_required_pressure,
-        "next_action": "design_label_free_overanchor_multipolar_penalty_then_replay_on_repaired_slice",
-        "next_required_step": (
-            "Use this packet to design a label-free penalty/support candidate. Required separation should first reduce "
-            "invalid close-overanchor/no-basic and multipolar-basic decoy pressure on the repaired selected slice; only "
-            "after slice separation should a full frozen 100k replay or guarded apply be considered."
-        ),
+        "next_action": next_action,
+        "next_required_step": next_required_step,
     }
     payload = {
         "packet_type": "gpcr_drd2_hard_decoy_slice_packet",
@@ -472,6 +571,8 @@ def build_packet(
             "invalid_close_overanchor_pressure = close acidic-anchor contact without basic amine support",
             "hydrophobic_overcontact_pressure = invalid close overanchor plus high hydrophobicity context",
             "multipolar_basic_pressure = basic-amine atom-window rows with excess donor/acceptor/rotor burden",
+            "window_like_nonbasic_pressure = non-basic atom-window occupancy with cationic-center far-field mismatch",
+            "false_valid_anchor_discriminator_pressure = geometry-only cationic/basic occupancy without ligand basic amine",
             "valid_anchor_support = basic-amine row in 2.8-4.2A atom-window with low too-close contact",
         ],
         "rows": rows,

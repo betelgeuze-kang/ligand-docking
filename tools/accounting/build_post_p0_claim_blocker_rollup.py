@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_GPCR_CI_LOW_JSON = "runs/gpcr_ci_low_recovery_packet_current.json"
 DEFAULT_GPCR_POSITIVE_COVERAGE_JSON = "runs/gpcr_positive_coverage_freeze_packet_current.json"
 DEFAULT_GPCR_GUARDED_100K_READINESS_JSON = "runs/gpcr_guarded_100k_rerun_readiness_current.json"
+DEFAULT_GPCR_TRAJECTORY_GAP_JSON = "runs/gpcr_frozen_trajectory_storage_gap_packet_current.json"
 DEFAULT_PDE_TRANSLATION_JSON = "runs/wetlab_tcruzi_pde_translation_quality_packet_current.json"
 DEFAULT_TRANSPORTER_BLOCKER_JSON = "runs/transporter_authoritative_apply_blocker_decomposition_current.json"
 DEFAULT_CA2_READINESS_JSON = "runs/ca2_packet_replacement_readiness_current.json"
@@ -74,12 +75,14 @@ def _gpcr_row(
     payload: dict[str, Any],
     coverage_payload: dict[str, Any] | None = None,
     guarded_readiness_payload: dict[str, Any] | None = None,
+    trajectory_gap_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     summary = dict(payload.get("summary", {}) or {})
     rank = dict(payload.get("rank_diagnostics", {}) or {})
     coverage = dict(payload.get("claim_coverage_requirement", {}) or {})
     coverage_summary = dict((coverage_payload or {}).get("summary", {}) or {})
     readiness_summary = dict((guarded_readiness_payload or {}).get("summary", {}) or {})
+    gap_summary = dict((trajectory_gap_payload or {}).get("summary", {}) or {})
     ci_policy = dict(coverage.get("ci_low_policy", {}) or {})
     frozen_coverage = bool(coverage_summary.get("frozen", False))
     gap = (
@@ -95,7 +98,12 @@ def _gpcr_row(
     if not isinstance(launch_blockers, list):
         launch_blockers = []
     readiness_blocker_count = _int(readiness_summary.get("blocker_count"))
-    blocker_count = max(int(ci_low_blocker) + int(gap > 0), readiness_blocker_count)
+    drd2_repair_blocked = bool(gap_summary.get("drd2_repair_blocked"))
+    trajectory_gap_blocker_count = _int(gap_summary.get("blocker_count")) if drd2_repair_blocked else 0
+    gap_blockers = gap_summary.get("blockers")
+    if not isinstance(gap_blockers, list):
+        gap_blockers = []
+    blocker_count = max(int(ci_low_blocker) + int(gap > 0), readiness_blocker_count, trajectory_gap_blocker_count)
     readiness_ready = bool(readiness_summary.get("launch_eligible", readiness_summary.get("eligible", False)))
     claim_review_ready = bool(readiness_summary.get("claim_review_eligible", readiness_summary.get("eligible", False)))
     return {
@@ -106,7 +114,9 @@ def _gpcr_row(
         "claim_promotion_allowed": False,
         "comparison_only": True,
         "primary_blocker": (
-            "guarded_100k_launch_blocked"
+            "gpcr_frozen_trajectory_storage_gap"
+            if drd2_repair_blocked
+            else "guarded_100k_launch_blocked"
             if guarded_readiness_payload and not readiness_ready
             else "guarded_100k_claim_review_blocked"
             if guarded_readiness_payload and readiness_ready and not claim_review_ready
@@ -125,15 +135,26 @@ def _gpcr_row(
         "top20_missing_positives": ", ".join(
             _text(row.get("ligand_id")) for row in rank.get("top20_missing_positives", []) if isinstance(row, dict)
         ),
-        "next_required_step": _text(readiness_summary.get("next_required_step"))
-        or "; ".join(coverage.get("required_next_evidence", []) or [])
-        or _text(coverage_summary.get("next_required_step"))
-        or "Keep claim_promotion_allowed=false until CI-low, positive coverage, and family-held-out gates clear.",
+        "next_required_step": (
+            _text(gap_summary.get("next_required_step"))
+            if drd2_repair_blocked
+            else _text(readiness_summary.get("next_required_step"))
+            or "; ".join(coverage.get("required_next_evidence", []) or [])
+            or _text(coverage_summary.get("next_required_step"))
+            or "Keep claim_promotion_allowed=false until CI-low, positive coverage, and family-held-out gates clear."
+        ),
         "source_artifact": DEFAULT_GPCR_CI_LOW_JSON,
         "coverage_source_artifact": DEFAULT_GPCR_POSITIVE_COVERAGE_JSON if coverage_payload else "",
         "guarded_100k_readiness_source_artifact": (
             DEFAULT_GPCR_GUARDED_100K_READINESS_JSON if guarded_readiness_payload else ""
         ),
+        "trajectory_gap_source_artifact": DEFAULT_GPCR_TRAJECTORY_GAP_JSON if trajectory_gap_payload else "",
+        "drd2_repair_blocked": drd2_repair_blocked,
+        "stage2_missing_run_count": _int(gap_summary.get("stage2_missing_run_count")),
+        "repair_slice_npz_missing_count": _int(gap_summary.get("repair_slice_npz_missing_count")),
+        "repair_slice_unique_npz_count": _int(gap_summary.get("repair_slice_unique_npz_count")),
+        "positive_trajectory_npz_exists": gap_summary.get("positive_trajectory_npz_exists"),
+        "trajectory_gap_blockers": ", ".join(_text(row) for row in gap_blockers),
         "guarded_100k_rerun_ready": readiness_ready,
         "guarded_100k_claim_review_ready": claim_review_ready,
         "guarded_100k_launch_blockers": ", ".join(_text(row) for row in launch_blockers),
@@ -293,9 +314,15 @@ def build_payload(
     idp_promotion: dict[str, Any],
     gpcr_positive_coverage: dict[str, Any] | None = None,
     gpcr_guarded_100k_readiness: dict[str, Any] | None = None,
+    gpcr_trajectory_storage_gap: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     rows = [
-        _gpcr_row(gpcr_ci_low, gpcr_positive_coverage, gpcr_guarded_100k_readiness),
+        _gpcr_row(
+            gpcr_ci_low,
+            gpcr_positive_coverage,
+            gpcr_guarded_100k_readiness,
+            gpcr_trajectory_storage_gap,
+        ),
         _pde_row(pde_translation),
         _transporter_row(transporter_blocker),
         _ca2_row(ca2_readiness),
@@ -317,7 +344,11 @@ def build_payload(
         "top_priority_primary_blocker": top_priority["primary_blocker"],
         "top_priority_next_required_step": top_priority["next_required_step"],
         "next_required_step": (
-            "GPCR guarded 100k evidence is green; refresh GPCR scorecard/repeat evidence, then burn down PDE "
+            "Restore frozen GPCR trajectory storage and complete DRD2 repair before guarded 100k claim review; "
+            "then burn down PDE translation quality, transporter, CA2, PXR, and IDP evidence boundaries without "
+            "widening the delivery claim."
+            if rows[0].get("primary_blocker") == "gpcr_frozen_trajectory_storage_gap"
+            else "GPCR guarded 100k evidence is green; refresh GPCR scorecard/repeat evidence, then burn down PDE "
             "translation quality, transporter, CA2, PXR, and IDP evidence boundaries without widening the delivery claim."
             if rows[0].get("status") != "blocked" and _int(rows[0].get("blocker_count")) == 0
             else "Launch/refresh GPCR guarded 100k evidence first, then PDE translation quality, then transporter, "
@@ -368,6 +399,7 @@ def write_outputs(args: argparse.Namespace) -> dict[str, Any]:
         gpcr_ci_low=_read_json(args.gpcr_ci_low_json),
         gpcr_positive_coverage=_read_json(args.gpcr_positive_coverage_json),
         gpcr_guarded_100k_readiness=_read_json(args.gpcr_guarded_100k_readiness_json),
+        gpcr_trajectory_storage_gap=_read_json(args.gpcr_trajectory_gap_json),
         pde_translation=_read_json(args.pde_translation_json),
         transporter_blocker=_read_json(args.transporter_blocker_json),
         ca2_readiness=_read_json(args.ca2_readiness_json),
@@ -386,6 +418,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--gpcr-ci-low-json", default=DEFAULT_GPCR_CI_LOW_JSON)
     parser.add_argument("--gpcr-positive-coverage-json", default=DEFAULT_GPCR_POSITIVE_COVERAGE_JSON)
     parser.add_argument("--gpcr-guarded-100k-readiness-json", default=DEFAULT_GPCR_GUARDED_100K_READINESS_JSON)
+    parser.add_argument("--gpcr-trajectory-gap-json", default=DEFAULT_GPCR_TRAJECTORY_GAP_JSON)
     parser.add_argument("--pde-translation-json", default=DEFAULT_PDE_TRANSLATION_JSON)
     parser.add_argument("--transporter-blocker-json", default=DEFAULT_TRANSPORTER_BLOCKER_JSON)
     parser.add_argument("--ca2-readiness-json", default=DEFAULT_CA2_READINESS_JSON)
