@@ -2635,6 +2635,47 @@ def _parse_api(root: Path) -> ast.Module | None:
         return None
 
 
+def _parse_module(path: Path) -> ast.Module | None:
+    if not path.is_file():
+        return None
+    try:
+        return ast.parse(path.read_text(encoding="utf-8"))
+    except (OSError, SyntaxError):
+        return None
+
+
+def _product_accounting_import_aliases(tree: ast.Module | None) -> dict[str, str]:
+    if tree is None:
+        return {}
+    aliases: dict[str, str] = {}
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ImportFrom):
+            continue
+        if node.module != "api.product_accounting":
+            continue
+        for alias in node.names:
+            local_name = alias.asname or alias.name
+            aliases[local_name] = alias.name
+    return aliases
+
+
+def _status_response_helper_functions(
+    root: Path,
+    *,
+    api_tree: ast.Module | None,
+    api_functions: dict[str, ast.FunctionDef | ast.AsyncFunctionDef],
+) -> dict[str, ast.FunctionDef | ast.AsyncFunctionDef]:
+    accounting_tree = _parse_module(root / "api" / "product_accounting.py")
+    accounting_functions = _function_nodes(accounting_tree)
+    helpers = dict(api_functions)
+    helpers.update(accounting_functions)
+    for local_name, original_name in _product_accounting_import_aliases(api_tree).items():
+        function = accounting_functions.get(original_name)
+        if function is not None:
+            helpers[local_name] = function
+    return helpers
+
+
 def _function_nodes(tree: ast.Module | None) -> dict[str, ast.FunctionDef | ast.AsyncFunctionDef]:
     if tree is None:
         return {}
@@ -2712,6 +2753,11 @@ def build_product_api_contract(*, root: str | Path = ".") -> dict[str, Any]:
     root_path = Path(root).resolve()
     tree = _parse_api(root_path)
     functions = _function_nodes(tree)
+    status_response_helpers = _status_response_helper_functions(
+        root_path,
+        api_tree=tree,
+        api_functions=functions,
+    )
     routes = {name: _route_for(functions[name]) for name in functions}
     missing_routes = sorted(
         f"{method} {path}" for name, (method, path) in EXPECTED_ROUTES.items() if routes.get(name) != (method, path)
@@ -2734,12 +2780,14 @@ def build_product_api_contract(*, root: str | Path = ".") -> dict[str, Any]:
     status_missing = sorted(
         f"{name}.{key}"
         for name in status_function_names
-        for key in REQUIRED_STATUS_RESPONSE_KEYS - _literal_return_keys(functions.get(name), functions)
+        for key in REQUIRED_STATUS_RESPONSE_KEYS
+        - _literal_return_keys(functions.get(name), status_response_helpers)
     )
     domain_status_missing = sorted(
         f"{name}.{key}"
         for name, required_keys in REQUIRED_STATUS_DOMAIN_KEYS.items()
-        for key in required_keys - _literal_return_keys(functions.get(name), functions)
+        for key in required_keys
+        - _literal_return_keys(functions.get(name), status_response_helpers)
     )
     api_contract_keys = _literal_return_keys(functions.get("get_product_api_contract"), functions)
     api_contract_missing = sorted(

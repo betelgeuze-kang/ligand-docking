@@ -469,18 +469,40 @@ def build_product_ai_architecture_gap_closure(
             and not trajectory_sla.get("missing_qualified_families")
         )
     )
-    allowed_families = capability.get("allowed_scope_families") or []
+    allowed_families = [
+        str(item)
+        for item in (scope_breadth.get("allowed_scope_families") or capability.get("allowed_scope_families") or [])
+    ]
     blocked_claim_scopes = [str(item) for item in scope_breadth.get("blocked_claim_scopes") or []]
-    scope_ready = (
-        _text(scope_breadth.get("status")) == "product_scope_breadth_contract_ready"
+    restricted_scope_families = ["gpcr", "ion_channel", "kinase"]
+    scope_contract_status = _text(scope_breadth.get("status"))
+    scope_contract_present = scope_contract_status in {
+        "product_scope_breadth_contract_ready",
+        "blocked_product_scope_breadth_contract",
+    }
+    scope_breadth_full_ready = (
+        scope_contract_status == "product_scope_breadth_contract_ready"
         and _bool(scope_breadth.get("scope_breadth_ready"))
         and _bool(scope_breadth.get("scope_claim_posture_ready"))
         and _bool(scope_breadth.get("general_platform_claim_allowed"))
         and not blocked_claim_scopes
     )
+    restricted_scope_delivery_ready = (
+        scope_contract_present
+        and _bool(scope_breadth.get("scope_claim_posture_ready"))
+        and sorted(allowed_families) == sorted(restricted_scope_families)
+        and not _bool(scope_breadth.get("general_platform_claim_allowed"))
+        and bool(blocked_claim_scopes)
+    )
+    scope_ready = scope_breadth_full_ready or restricted_scope_delivery_ready
     missing_scope_domains = [str(item) for item in scope_breadth.get("missing_domains") or []]
-    if scope_ready:
+    if scope_breadth_full_ready:
         scope_next_action = "Scope breadth contract is ready; widen platform wording only through an explicit product decision."
+    elif restricted_scope_delivery_ready:
+        scope_next_action = (
+            "Restricted gpcr/ion_channel/kinase delivery scope is claim-safe; "
+            f"deferred scope promotions remain blocked: {','.join(blocked_claim_scopes)}."
+        )
     elif blocked_claim_scopes:
         scope_next_action = f"Keep broad claims blocked at the product surface: {','.join(blocked_claim_scopes)}."
     elif missing_scope_domains:

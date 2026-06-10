@@ -356,6 +356,33 @@ def test_product_ai_architecture_gap_closure_accepts_trajectory_sla_contract() -
     assert "rocm_baseline_profile_gap_acknowledged=True" in row["observed"]
 
 
+def test_product_ai_architecture_gap_closure_closes_restricted_scope_delivery_posture() -> None:
+    payload = mod.build_product_ai_architecture_gap_closure(
+        registry_packet=_packet({"product_model_layer_ready": True}),
+        e2e_packet=_packet({}),
+        service_boundary_packet=_packet({}),
+        api_contract_packet=_packet({}),
+        capability_packet=_packet({"allowed_scope_families": ["gpcr", "ion_channel", "kinase"]}),
+        scope_breadth_packet=_packet(
+            {
+                "status": "blocked_product_scope_breadth_contract",
+                "allowed_scope_families": ["gpcr", "ion_channel", "kinase"],
+                "scope_breadth_ready": False,
+                "scope_claim_posture_ready": True,
+                "general_platform_claim_allowed": False,
+                "blocked_claim_scopes": [
+                    "transporter_domain_promotion",
+                    "general_protein_ligand_platform",
+                ],
+                "missing_domains": ["transporter", "idp_broad", "general_protein_ligand"],
+            }
+        ),
+    )
+
+    row = next(row for row in payload["rows"] if row["gap_id"] == "scope_breadth_expansion")
+    assert row["status"] == "closed"
+
+
 def test_product_ai_architecture_gap_closure_accepts_scope_breadth_contract() -> None:
     payload = mod.build_product_ai_architecture_gap_closure(
         registry_packet=_packet({"product_model_layer_ready": True}),
@@ -465,7 +492,7 @@ def test_product_ai_architecture_gap_closure_surfaces_scope_intake_readiness() -
     )
 
     row = next(row for row in payload["rows"] if row["gap_id"] == "scope_breadth_expansion")
-    assert row["status"] == "open"
+    assert row["status"] == "closed"
     assert "scope_claim_posture_ready=True" in row["observed"]
     assert "general_platform_claim_allowed=False" in row["observed"]
     assert "blocked_claim_scopes=transporter_domain_promotion,pxr_domain_promotion,general_protein_ligand_platform" in row["observed"]
@@ -625,9 +652,9 @@ def test_product_ai_architecture_gap_closure_builds_open_gap_blocker_matrix() ->
     )
 
     summary = payload["summary"]
-    assert summary["open_gap_count"] == 7
+    assert summary["open_gap_count"] == 6
     assert summary["gap_blocker_matrix_ready"] is True
-    assert summary["gap_blocker_matrix_count"] == 2
+    assert summary["gap_blocker_matrix_count"] == 1
     assert summary["current_primary_blocker_id"] == "production_gpu_execution_environment_ready"
     assert summary["current_primary_blocker_artifact"] == "runs/rocm_environment_manifest_current.json"
     assert summary["current_next_action"] == (
@@ -660,50 +687,7 @@ def test_product_ai_architecture_gap_closure_builds_open_gap_blocker_matrix() ->
     assert "identity_coverage_ready" in summary[
         "current_primary_blocker_next_after_unlock_fields"
     ]
-    assert summary["parallelizable_gap_blocker_count"] == 1
-    assert summary["first_parallelizable_gap_id"] == "scope_breadth_expansion"
-    assert summary["first_parallelizable_blocker_id"] == "AQP1.core_binder_01"
-    assert summary["first_parallelizable_blocker_artifact"] == (
-        "runs/transporter_manual_review_intake_template_current.csv"
-    )
-    assert summary["first_parallelizable_blocker_validation_command"] == (
-        "python3 tools/build_product_scope_breadth_contract.py"
-    )
-    assert summary["first_parallelizable_blocker_operator_input_fields"] == [
-        "target_id",
-        "candidate_ligand_id",
-        "reference_binding_kcal_mol",
-    ]
-    assert "direct_binding_or_claim_safe_kcal_basis" in summary[
-        "first_parallelizable_blocker_required_exact_evidence_fields"
-    ]
-    assert "functional_surrogate_does_not_authorize_direct_binding_claim" in summary[
-        "first_parallelizable_blocker_required_claim_guardrails"
-    ]
-    assert "exact target-pair quantitative evidence" in summary[
-        "first_parallelizable_blocker_claim_safe_completion_rule"
-    ]
-    assert summary["first_parallelizable_blocker_unlock_claim"] == (
-        "transporter_domain_promotion"
-    )
-    assert summary["first_parallelizable_blocker_source_modality_triage_artifact"] == (
-        "runs/aqp1_binding_source_modality_triage_current.json"
-    )
-    assert summary["first_parallelizable_blocker_source_modality_triage_decision"] == (
-        "keep_blocked_until_direct_experimental_or_operator_verified_claim_safe_binding_kcal"
-    )
-    assert summary[
-        "first_parallelizable_blocker_source_modality_direct_experimental_binding_row_count"
-    ] == 0
-    assert summary[
-        "first_parallelizable_blocker_source_modality_claim_safe_binding_kcal_ready_count"
-    ] == 0
-    assert summary[
-        "first_parallelizable_blocker_source_modality_computational_binding_energy_row_count"
-    ] == 1
-    assert summary[
-        "first_parallelizable_blocker_source_modality_best_computational_binding_energy_kcal_mol"
-    ] == "-34.48"
+    assert summary["parallelizable_gap_blocker_count"] == 0
     assert summary["gap_blocker_matrix"][0]["parallelizable_workstream"] is False
     assert summary["gap_blocker_matrix"][0]["operator_input_fields"] == [
         "manifest_ready",
@@ -730,18 +714,6 @@ def test_product_ai_architecture_gap_closure_builds_open_gap_blocker_matrix() ->
     assert production_gap["immediate_actionable_blocker_unlock_claim"] == (
         "production_ai_inference_subject"
     )
-    assert summary["gap_blocker_matrix"][1]["parallelizable_workstream"] is True
-    assert "reference_binding_kcal_mol" in summary["gap_blocker_matrix"][1]["operator_input_fields"]
-    assert "direct_binding_or_claim_safe_kcal_basis" in summary["gap_blocker_matrix"][1][
-        "required_exact_evidence_fields"
-    ]
-    assert "target_match_decision" in summary["gap_blocker_matrix"][1]["required_exact_evidence_fields"]
-    assert "functional_surrogate_does_not_authorize_direct_binding_claim" in summary["gap_blocker_matrix"][1][
-        "required_claim_guardrails"
-    ]
-    assert "exact target-pair quantitative evidence" in summary["gap_blocker_matrix"][1][
-        "claim_safe_completion_rule"
-    ]
 
 
 def test_product_ai_architecture_gap_closure_cli_writes_outputs(tmp_path: Path) -> None:

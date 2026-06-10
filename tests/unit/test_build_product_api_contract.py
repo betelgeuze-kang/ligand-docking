@@ -5,7 +5,16 @@ from pathlib import Path
 
 from betelgeuze_product.api_contract import EXPECTED_ROUTES
 from betelgeuze_product.api_contract import REQUIRED_STATUS_DOMAIN_KEYS
+from betelgeuze_product.api_contract import build_product_api_contract
 from tools import build_product_api_contract as mod
+
+
+def test_product_api_contract_resolves_commercial_readiness_accounting_helpers() -> None:
+    payload = build_product_api_contract(root=".")
+    summary = payload["summary"]
+    assert summary["status"] == "product_api_contract_ready"
+    assert summary["api_contract_ready"] is True
+    assert summary["status_response_domain_missing_key_count"] == 0
 
 
 def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:

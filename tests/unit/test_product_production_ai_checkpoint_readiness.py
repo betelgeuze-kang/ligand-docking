@@ -608,6 +608,40 @@ def test_production_ai_checkpoint_readiness_ready_when_all_gates_pass() -> None:
     assert payload["summary"]["first_failed_source_artifact"] == ""
 
 
+def test_force_derivation_acceptance_ready_when_delta_force_evidence_ready_without_dataset_label() -> None:
+    payload = build_product_production_ai_checkpoint_readiness(
+        registry_packet=_packet({"product_model_layer_ready": True, "trained_model_checkpoint_count": 1}),
+        checkpoint_work_order_packet=_packet({"checkpoint_preflight_ready": True, "ready_checkpoint_count": 1}),
+        training_data_packet=_packet(
+            {
+                "production_training_data_ready": True,
+                "dataset_missing_output_labels": ["delta_force"],
+                "delta_force_label_evidence_ready": True,
+            }
+        ),
+        output_head_gap_contract_packet=_packet(
+            {"output_head_gap_contract_ready": True, "production_output_heads_complete": True}
+        ),
+        force_gpu_worker_return_receipt_packet=_packet({"gpu_worker_return_receipt_ready": True}),
+        rocm_environment_packet=_packet(
+            {
+                "manifest_ready": True,
+                "rocm_stack_detected": True,
+                "torch_rocm_ready": True,
+                "amd_gpu_detected": True,
+                "visible_device_count": 1,
+            }
+        ),
+    )
+
+    force_derivation = next(
+        row
+        for row in payload["production_inference_acceptance_matrix"]
+        if row["stage_id"] == "force_derivation_acceptance"
+    )
+    assert force_derivation["status"] == "ready"
+
+
 def test_build_product_production_ai_checkpoint_readiness_tool_writes_outputs(tmp_path: Path) -> None:
     paths = {
         "registry": tmp_path / "registry.json",

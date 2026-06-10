@@ -356,7 +356,7 @@ def build_product_production_ai_checkpoint_readiness(
             stage_id="force_derivation_acceptance",
             ready=bool(
                 gpu_receipt_ready
-                and not any("delta_force" in str(item) for item in _list(training.get("dataset_missing_output_labels")))
+                and _bool(training.get("delta_force_label_evidence_ready"))
             ),
             required_checks=["force_gpu_worker_return_receipt_ready", "delta_force_derivation_validation_ready"],
             artifact="runs/residual_force_derivation_validation_current.json",

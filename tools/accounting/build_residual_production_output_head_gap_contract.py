@@ -83,10 +83,26 @@ def _field_row(
     registry_missing_adapter = set(_list(registry.get("checkpoint_missing_adapter_output_policy_fields")))
     work_order_blockers = _list(work_order.get("checkpoint_closure_blockers"))
 
-    training_label_ready = field not in training_missing and (
+    energy_force_evidence_ready = (
+        (field == "delta_energy" and _bool(training.get("delta_energy_label_evidence_ready")))
+        or (field == "delta_force" and _bool(training.get("delta_force_label_evidence_ready")))
+    )
+    uncertainty_policy_evidence_ready = field in {
+        "uncertainty",
+        "abstention_reason",
+        "stage2_route_decision",
+    } and _bool(training.get("uncertainty_policy_evidence_ready"))
+    training_label_ready = (
+        field not in training_missing or energy_force_evidence_ready or uncertainty_policy_evidence_ready
+    ) and (
         field in dataset_labels
+        or energy_force_evidence_ready
         or (field == "uncertainty" and _bool(training.get("uncertainty_learned_output_ready")))
-        or (field in {"abstention_reason", "stage2_route_decision"} and _bool(training.get("policy_output_fields_ready")))
+        or (
+            field in {"abstention_reason", "stage2_route_decision"}
+            and _bool(training.get("policy_output_fields_ready"))
+        )
+        or uncertainty_policy_evidence_ready
     )
     score_output_ready = field in score_outputs
     sidecar_payload_ready = field in sidecar_payload_outputs
