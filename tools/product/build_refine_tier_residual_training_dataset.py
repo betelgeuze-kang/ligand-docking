@@ -226,6 +226,8 @@ def _apply_refine_meta(row: dict[str, Any], meta: dict[str, Any], join_method: s
     if base is not None:
         row["mm_gbsa_delta"] = float(meta["refined"]) - float(base)
         row["refine_tier_delta"] = row["mm_gbsa_delta"]
+        row["delta_force"] = -float(row["mm_gbsa_delta"])
+        row["delta_force_label_source"] = "refine_tier_energy_derivation_proxy"
     if meta.get("refine_confidence") is not None:
         row["refine_confidence"] = meta["refine_confidence"]
 
@@ -255,6 +257,8 @@ def enrich_refine_tier_labels(
             "refine_tier_delta",
             "mm_gbsa_delta",
             "refine_confidence",
+            "delta_force",
+            "delta_force_label_source",
         ):
             if extra not in fieldnames:
                 fieldnames.append(extra)

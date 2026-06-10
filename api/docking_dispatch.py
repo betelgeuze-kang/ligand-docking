@@ -100,9 +100,10 @@ def sync_ledger_from_simulation_result(
             "docking_results_emitted": False,
         },
     )
-    updated["worker_state"] = updated.get("worker_state") or (
-        "completed_fail_closed" if status == "completed" else "failed_fail_closed"
-    )
+    worker_state = "completed_fail_closed" if status == "completed" else "failed_fail_closed"
+    updated["worker_state"] = worker_state
+    updated["progress_state"] = event_type
+    updated["current_step"] = event_type
     updated["simulation_sync_status"] = str(status)
     updated["simulation_result_file"] = str(result_file or "")
     write_job_record(jobs_dir, updated)

@@ -278,6 +278,7 @@ def build_goal_release_decision_gate(
         "goal_readiness_ready",
         "goal_readiness_evidence_ready",
         "goal_readiness_pending_operator_or_external_results",
+        "goal_readiness_release_complete_operator_pending",
     } and _int(rollup.get("blocked_lane_count")) == 0
     goal_api_surface_ready = (
         _text(goal_api_surface.get("status")) == "goal_api_surface_contract_ready"

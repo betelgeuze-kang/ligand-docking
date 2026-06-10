@@ -180,6 +180,17 @@ def _pending_nonblocking_rollup() -> dict:
     }
 
 
+def _release_complete_operator_pending_rollup() -> dict:
+    return {
+        "summary": {
+            "status": "goal_readiness_release_complete_operator_pending",
+            "blocked_lane_count": 0,
+            "operator_approval_pending_count": 3,
+            "external_results_pending_count": 1,
+        }
+    }
+
+
 def _blocked_action_board() -> dict:
     return {
         "summary": {
@@ -623,6 +634,30 @@ def test_goal_release_decision_gate_accepts_nonblocking_pending_rollup_lanes() -
     assert row["status"] == "pass"
     assert "operator_approval_pending_count=3" in row["observed"]
     assert "external_results_pending_count=1" in row["observed"]
+
+
+def test_goal_release_decision_gate_accepts_release_complete_operator_pending_split() -> None:
+    payload = mod.build_goal_release_decision_gate(
+        product_pilot_packet=_ready_product(),
+        product_architecture_packet=_ready_product_architecture(),
+        product_commercial_independence_packet=_ready_product_independence(),
+        cameo_validation_packet=_blocked_cameo_validation(),
+        cameo_capability_packet=_blocked_cameo_capability(),
+        goal_rollup_packet=_release_complete_operator_pending_rollup(),
+        operator_action_board_packet=_clear_action_board(),
+        transition_cleanup_preflight_packet=_transition_cleanup("transition_cleanup_execution_complete"),
+        ligand_cleanup_preflight_packet=_ligand_cleanup("ligand_heavy_cleanup_execution_complete"),
+        protected_cleanup_review_packet=_protected_cleanup(0),
+        cleanup_postcheck_contract_packet=_ready_cleanup_postcheck(),
+        goal_api_surface_contract_packet=_ready_goal_api_surface_contract(),
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "goal_release_ready"
+    assert summary["release_allowed"] is True
+    row = next(row for row in payload["rows"] if row["check"] == "product_release_evidence_ready")
+    assert row["status"] == "pass"
+    assert "goal_readiness_release_complete_operator_pending" in row["observed"]
 
 
 def test_goal_release_decision_gate_accepts_explicit_keep_policy_gate() -> None:

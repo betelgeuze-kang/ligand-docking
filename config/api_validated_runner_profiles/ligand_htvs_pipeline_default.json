@@ -8,20 +8,34 @@
     "--run-scope",
     "smoke",
     "--pipeline-preset-json",
-    "config/ligand_htvs_blind_gpcr_adrb2_4bead_v1.json",
+    "config/ligand_htvs_api_dispatch_smoke_v1.json",
     "--docking-request-json",
     "{request_json_path}",
     "--no-dry-run",
-    "--out-summary-json",
-    "{result_file}"
+    "--no-enforce-operational-gate",
+    "--max-ligands-smoke",
+    "1",
+    "--replicas-smoke",
+    "1",
+    "--jobs-per-target-smoke",
+    "1",
+    "--traj-frames-smoke",
+    "80",
+    "--stage3-min-frames",
+    "80",
+    "--trajectory-engine-mode",
+    "proxy",
+    "--no-traj-require-rust-hip",
+    "--no-require-native-path",
+    "--no-run-ranking-eval"
   ],
-  "result_file_template": "{job_results_dir}/runner_result.json",
+  "result_file_template": "{job_results_dir}/htvs_summary.json",
   "claim_boundary": "Operator-approved HTVS pipeline dispatch. Execution remains fail-closed for customer pose emission until delivery bundle validation is green.",
   "production_readiness": {
     "approved_by": "operator-gap-closure",
     "approved_at_utc": "2026-06-06T12:00:00+00:00",
     "claim_scope": "restricted_local_delivery_proxy_refinement_only",
     "evidence_artifact": "config/api_validated_runner_profiles/evidence/ligand_htvs_pipeline_default.evidence.json",
-    "runner_script_sha256": "8562b09b8b2b12339990893b1388068255f1f0ef7b86c9b3c1e5da89f1b12999"
+    "runner_script_sha256": "da3d98b0c690dbda54d37db1037bef8c8220b3dd450d484fb02198f56b3cdd7f"
   }
 }

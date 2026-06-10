@@ -77,6 +77,9 @@ def materialize(*, evidence_dir: str = "/tmp/api_runner_profile_evidence_templat
         ("tools/build_tools_package_batch3_review_plan.py",),
         ("tools/build_tools_refactor_gap_closure.py",),
         ("tools/build_product_infrastructure_gap_closure.py",),
+        ("tools/build_public_benchmark_residual_assist_replays.py",),
+        ("tools/build_public_benchmark_residual_assist_comparisons.py",),
+        ("tools/build_public_benchmark_residual_assist_comparison_gate.py",),
     ]
     for command in builders:
         _run(*command)

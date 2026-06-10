@@ -75,19 +75,35 @@ def _comparison_md_path(suite_id: str) -> Path:
     return _resolve(f"runs/{suite_id}_residual_assist_comparison_current.md")
 
 
+def _replay_path(suite_id: str) -> Path:
+    return _resolve(f"runs/{suite_id}_residual_assist_replay_current.json")
+
+
 def _comparison_for_suite(suite: dict[str, Any], assist_selection: dict[str, Any]) -> dict[str, Any]:
     suite_id = _text(suite.get("suite_id"))
     metric = _text(suite.get("primary_metric"))
     baseline_value = _float(suite.get("primary_metric_value"))
     threshold = _float(suite.get("primary_metric_threshold") or suite.get("threshold"))
     baseline_pass = _text(suite.get("status")) == "ready" and baseline_value + 1e-12 >= threshold
-    route_decision = "abstain_noop"
-    abstention_reason = "no_suite_specific_public_benchmark_assist_replay_artifact"
-    raw_value = baseline_value
-    shadow_value = baseline_value
-    assist_value = baseline_value
+    replay_packet = _read_json_if_present(_replay_path(suite_id))
+    replay = _summary(replay_packet)
+    replay_ready = replay.get("assist_replay_ready") is True
+    if replay_ready:
+        raw_value = _float(replay.get("raw_primary_metric_value", baseline_value))
+        shadow_value = _float(replay.get("shadow_primary_metric_value", raw_value))
+        assist_value = _float(replay.get("assist_primary_metric_value", shadow_value))
+        route_decision = _text(replay.get("assist_route_decision")) or "shadow_identity_replay"
+        abstention_reason = ""
+        residual_assist_applied = replay.get("residual_assist_applied") is True
+    else:
+        route_decision = "abstain_noop"
+        abstention_reason = "no_suite_specific_public_benchmark_assist_replay_artifact"
+        raw_value = baseline_value
+        shadow_value = baseline_value
+        assist_value = baseline_value
+        residual_assist_applied = False
     shadow_pass = baseline_pass
-    assist_pass = baseline_pass
+    assist_pass = baseline_pass and assist_value + 1e-12 >= threshold
     pass_to_fail = bool(baseline_pass and not assist_pass)
     metric_regression = bool(assist_value + 1e-12 < raw_value)
     row = {
@@ -105,7 +121,7 @@ def _comparison_for_suite(suite: dict[str, Any], assist_selection: dict[str, Any
         "assist_pass": assist_pass,
         "pass_to_fail_regression": pass_to_fail,
         "metric_regression": metric_regression,
-        "residual_assist_applied": False,
+        "residual_assist_applied": residual_assist_applied,
         "assist_route_decision": route_decision,
         "abstention_reason": abstention_reason,
         "throughput_loss_fraction": 0.0,
@@ -131,9 +147,10 @@ def _comparison_for_suite(suite: dict[str, Any], assist_selection: dict[str, Any
         "pass_to_fail_regression_count": 1 if pass_to_fail else 0,
         "metric_regression_count": 1 if metric_regression else 0,
         "throughput_loss_fraction": 0.0,
-        "residual_assist_applied": False,
+        "residual_assist_applied": residual_assist_applied,
         "assist_route_decision": route_decision,
         "abstention_reason": abstention_reason,
+        "assist_replay_ready": replay_ready,
         "gpcr_assist_selection_ready": assist_selection.get("assist_candidate_ready") is True,
         "execution_enabled": False,
         "benchmark_executed": False,
@@ -210,6 +227,8 @@ def build_public_benchmark_residual_assist_comparisons(
                 "assist_comparison_csv": str(csv_path.relative_to(ROOT)),
                 "assist_comparison_md": str(md_path.relative_to(ROOT)),
                 "assist_route_decision": summary["assist_route_decision"],
+                "residual_assist_applied": summary.get("residual_assist_applied") is True,
+                "assist_replay_ready": summary.get("assist_replay_ready") is True,
                 "delta_assist_vs_raw": summary["delta_assist_vs_raw"],
                 "pass_to_fail_regression_count": summary["pass_to_fail_regression_count"],
                 "metric_regression_count": summary["metric_regression_count"],
@@ -231,9 +250,9 @@ def build_public_benchmark_residual_assist_comparisons(
         "suite_count": len(rows),
         "pass_suite_count": len(pass_rows),
         "fail_suite_count": len(fail_rows),
-        "assist_applied_suite_count": 0,
+        "assist_applied_suite_count": len([row for row in rows if row.get("residual_assist_applied") is True]),
         "abstain_noop_suite_count": len([row for row in rows if row["assist_route_decision"] == "abstain_noop"]),
-        "claim_public_metric_improvement_allowed": False,
+        "claim_public_metric_improvement_allowed": len([row for row in rows if row.get("residual_assist_applied") is True and float(row.get("delta_assist_vs_raw") or 0.0) > 1e-12]) > 0,
         "execution_enabled": False,
         "benchmark_executed": False,
         "external_state_mutated": False,

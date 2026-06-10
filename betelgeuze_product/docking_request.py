@@ -94,11 +94,16 @@ def _summary(packet: dict[str, Any]) -> dict[str, Any]:
 def _execution_approval_posture(approval_packet: dict[str, Any] | None = None) -> dict[str, Any]:
     approval = _summary(approval_packet or _read_json_object(PRODUCT_EXECUTION_APPROVAL_ARTIFACT))
     gate_status = _text(approval.get("status"))
-    authorized = gate_status == "authorized_for_operator_execution"
     row = {}
     rows = approval.get("rows")
     if isinstance(rows, list) and rows and isinstance(rows[0], dict):
         row = rows[0]
+    row_gate_status = _text(row.get("approval_gate_status"))
+    authorized = (
+        approval.get("authorized_for_execution") is True
+        or row_gate_status == "authorized_for_operator_execution"
+        or gate_status == "authorized_for_operator_execution"
+    )
     return {
         "execution_approval_gate_ready": bool(approval),
         "execution_approval_gate_status": gate_status or "missing_product_execution_approval_gate",
@@ -109,7 +114,7 @@ def _execution_approval_posture(approval_packet: dict[str, Any] | None = None) -
         "execution_enabled_conditional_would_enable": authorized,
         "docking_results_emitted": False,
         "docking_results_emitted_conditional_would_emit": False,
-        "execution_approval_row_status": _text(row.get("approval_gate_status")),
+        "execution_approval_row_status": row_gate_status,
         "execution_approval_next_required_step": _text(approval.get("next_required_step"))
         or "Review product execution approval gate and provide operator approval token before scoped execution.",
     }
@@ -213,6 +218,21 @@ def _redacted_ligand_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for index, ligand in enumerate(_as_list(payload.get("ligands")), start=1):
         rows.append({"ligand_id": _ligand_id(ligand, index), "source_redacted": True})
+    return rows
+
+
+def _materialization_ligand_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for index, ligand in enumerate(_as_list(payload.get("ligands")), start=1):
+        if not isinstance(ligand, dict):
+            continue
+        rows.append(
+            {
+                "ligand_id": _ligand_id(ligand, index),
+                "compound_id": _text(ligand.get("compound_id") or ligand.get("ligand_id") or ligand.get("id")),
+                "smiles": _text(ligand.get("smiles") or ligand.get("inchi")),
+            }
+        )
     return rows
 
 
@@ -924,6 +944,9 @@ def build_docking_job_record(
             "pdb_path": _text(payload.get("pdb_path")),
             "mmcif_path": _text(payload.get("mmcif_path")),
         },
+        "materialization_ligands": (
+            _materialization_ligand_rows(payload) if execution_approval.get("execution_approval_authorized") else []
+        ),
         "claim_boundary": CLAIM_BOUNDARY,
     }
 

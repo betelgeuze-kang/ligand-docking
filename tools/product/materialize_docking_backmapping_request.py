@@ -28,11 +28,19 @@ def materialize_from_docking_request(
     ligands: list[dict[str, Any]] = []
     if docking_job_id:
         ledger = read_job_record(_jobs_dir(), docking_job_id)
-        intake = ledger.get("intake_payload", {})
-        if isinstance(intake, dict):
-            family = str(intake.get("family", family) or family)
-            target = str(intake.get("target_id", target) or target)
-            ligands = list(intake.get("ligands", []) or [])
+        materialization_ligands = ledger.get("materialization_ligands")
+        if isinstance(materialization_ligands, list) and materialization_ligands:
+            ligands = list(materialization_ligands)
+            intake = ledger.get("intake_payload", {})
+            if isinstance(intake, dict):
+                family = str(intake.get("family", family) or family)
+                target = str(intake.get("target_id", target) or target)
+        else:
+            intake = ledger.get("intake_payload", {})
+            if isinstance(intake, dict):
+                family = str(intake.get("family", family) or family)
+                target = str(intake.get("target_id", target) or target)
+                ligands = list(intake.get("ligands", []) or [])
     if not ligands:
         ligands = list(params.get("ligands", []) or [])
     rows = [_ligand_row_from_intake(lig, target=target, replica_idx=i) for i, lig in enumerate(ligands)]

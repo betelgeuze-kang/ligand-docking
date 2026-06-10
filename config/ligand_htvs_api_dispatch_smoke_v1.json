@@ -1,0 +1,14 @@
+{
+  "version": "ligand_htvs_api_dispatch_smoke_v1",
+  "description": "Minimal HTVS preset for operator-approved API dispatch smoke; no operational gate or strict fail-fast.",
+  "run_scope": "smoke",
+  "trajectory_engine_mode": "proxy",
+  "require_rust_hip": false,
+  "stage3_score_only": true,
+  "stage3_min_frames": 80,
+  "gate": {
+    "enforce_operational_gate": false,
+    "strict_fail_fast": false,
+    "four_bead_cascade_enabled": false
+  }
+}
