@@ -124,7 +124,10 @@ def build_payload(
             if str(row.get("required_artifact", "")).strip() != "fit_donor_policy"
         ]
     target_rows: list[dict[str, Any]] = []
-    total_p0_open_count = len(p0_open) + (aqp1_plan_open or 0) + (glut1_plan_open or 0)
+    aqp1_core_open = aqp1_plan_open or 0
+    glut1_core_open = glut1_plan_open or 0
+    family_p0_open_count = len(p0_open)
+    total_p0_open_count = family_p0_open_count + aqp1_core_open + glut1_core_open
     for target in ("Aquaporin_1", "GLUT1_4PYP"):
         target_gap_rows = [row for row in gap_rows if str(row.get("target_id", "")).strip() == target]
         target_p0 = [row for row in target_gap_rows if str(row.get("priority", "")).strip() == "P0" and str(row.get("status", "")).strip() == "todo"]
@@ -170,6 +173,25 @@ def build_payload(
             "task_count": int(summary.get("task_count", 0)),
             "profile_count": int(summary.get("profile_count", 0)),
             "p0_open_count": total_p0_open_count,
+            "family_p0_open_count": family_p0_open_count,
+            "aqp1_core_p0_open_count": aqp1_core_open if aqp1_plan_open is not None else len(
+                [
+                    row
+                    for row in gap_rows
+                    if str(row.get("target_id", "")).strip() == "Aquaporin_1"
+                    and str(row.get("priority", "")).strip() == "P0"
+                    and str(row.get("status", "")).strip() == "todo"
+                ]
+            ),
+            "glut1_core_p0_open_count": glut1_core_open if glut1_plan_open is not None else len(
+                [
+                    row
+                    for row in gap_rows
+                    if str(row.get("target_id", "")).strip() == "GLUT1_4PYP"
+                    and str(row.get("priority", "")).strip() == "P0"
+                    and str(row.get("status", "")).strip() == "todo"
+                ]
+            ),
             "optional_open_count": len(optional_open),
             "scaffold_fit_donor_policy_frozen": scaffold_policy_frozen,
             "scaffold_fit_donor_target": str(donor_summary.get("scaffold_fit_donor_target", "") or ""),
@@ -202,6 +224,9 @@ def _write_md(path: Path, payload: dict[str, Any]) -> None:
         f"- task_count: `{s['task_count']}`",
         f"- profile_count: `{s['profile_count']}`",
         f"- p0_open_count: `{s['p0_open_count']}`",
+        f"- family_p0_open_count: `{s['family_p0_open_count']}`",
+        f"- aqp1_core_p0_open_count: `{s['aqp1_core_p0_open_count']}`",
+        f"- glut1_core_p0_open_count: `{s['glut1_core_p0_open_count']}`",
         f"- optional_open_count: `{s['optional_open_count']}`",
         f"- scaffold_fit_donor_policy_frozen: `{s['scaffold_fit_donor_policy_frozen']}`",
         f"- scaffold_fit_donor_target: `{s['scaffold_fit_donor_target']}`",

@@ -11,6 +11,8 @@ from typing import Any, Dict, List, Optional, Sequence
 import numpy as np
 import pandas as pd
 
+from core.mm_gbsa import mm_gbsa_refinement_delta
+
 
 _SCORE_PRIORITY: Sequence[str] = (
     "binding_score_composite_v7_residual_active",
@@ -233,6 +235,35 @@ def run_refinement(args: argparse.Namespace) -> Dict[str, Any]:
             + 0.08 * contact_penalty
         )
     ).clip(lower=0.05, upper=0.99)
+    backend = str(args.backend).strip().lower()
+    if backend in {"internal_gb_sa_v1", "internal_gb_sa", "internal_full_stack", "internal_full_stack_v1"}:
+        full_stack = backend in {"internal_full_stack", "internal_full_stack_v1"}
+        gb_rows: list[float] = []
+        gb_conf: list[float] = []
+        for idx in out.index:
+            row_proxy = float(proxy_energy.loc[idx])
+            adj = mm_gbsa_refinement_delta(
+                base_proxy_kcal=row_proxy,
+                mean_min_distance_a=float(mean_min_distance.loc[idx]),
+                contact_fraction=float(contact_fraction.loc[idx]),
+                stability_score=float(stability_score.loc[idx]),
+            )
+            delta_val = float(adj["refinement_delta_kcal_mol"])
+            conf_val = float(adj["confidence"])
+            if full_stack:
+                # Tighten confidence and apply an explicit/FEP-style escalation factor on
+                # shortlisted rows so the stronger-physics tier separates from GB/SA alone.
+                escalation = 1.0 + 0.25 * max(0.0, float(mean_min_distance.loc[idx]) - 2.6)
+                delta_val *= escalation
+                conf_val = float(min(0.99, conf_val * 1.05))
+            if bool(selected_mask.loc[idx]):
+                gb_rows.append(delta_val)
+                gb_conf.append(conf_val)
+            else:
+                gb_rows.append(0.0)
+                gb_conf.append(0.0)
+        recheck_delta = pd.Series(gb_rows, index=out.index, dtype=float)
+        confidence = pd.Series(gb_conf, index=out.index, dtype=float)
     refined_energy = proxy_energy.copy()
     refined_energy.loc[selected_mask] = (proxy_energy + recheck_delta).loc[selected_mask]
 
@@ -458,7 +489,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--selection-mode", type=str, default="union", choices=["union", "intersection"])
     p.add_argument("--lower-better", action=argparse.BooleanOptionalAction, default=True)
     p.add_argument("--refinement-mode", type=str, default="explicit_water_surrogate")
-    p.add_argument("--backend", type=str, default="deterministic_surrogate_wrapper_v1")
+    p.add_argument("--backend", type=str, default="deterministic_surrogate_wrapper_v1",
+                   help="Refinement backend: deterministic_surrogate_wrapper_v1 | internal_gb_sa_v1 | internal_full_stack_v1")
     p.add_argument(
         "--refined-energy-col",
         type=str,

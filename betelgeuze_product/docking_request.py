@@ -505,7 +505,9 @@ def _ai_decision_graph_trace(
     ai_posture: dict[str, Any],
     scope_claim_guard: dict[str, Any],
     customer_report: dict[str, Any],
+    pose_generation_contract: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    pose_generation_contract = pose_generation_contract or {}
     scope_allowed = scope_claim_guard["scope_claim_allowed_for_request"]
     production_ai_active = ai_posture["production_ai_inference_subject_active"]
     production_abstained = ai_posture["production_ai_abstention_enforced"]
@@ -549,6 +551,9 @@ def _ai_decision_graph_trace(
                 "ligand_count": int(normalized.get("ligand_count") or 0),
                 "execution_enabled": execution_enabled,
                 "docking_results_emitted": docking_results_emitted,
+                "pocket_detection_available": bool(pose_generation_contract.get("pocket_detection_available")),
+                "pocket_method": _text(pose_generation_contract.get("pocket_method")),
+                "pose_generation_modes": pose_generation_contract.get("pose_generation_modes", []),
             },
         },
         {
@@ -722,6 +727,50 @@ def validate_docking_request(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _pose_generation_contract(payload: dict[str, Any], normalized: dict[str, Any]) -> dict[str, Any]:
+    """Preview pose-generation capability without emitting customer poses (fail-closed)."""
+    contract: dict[str, Any] = {
+        "pose_generation_modes": ["standard", "cross_docking", "induced_fit"],
+        "planned_poses_per_ligand": 3,
+        "pocket_detection_available": False,
+        "pocket_method": "",
+        "execution_enabled": False,
+        "docking_results_emitted": False,
+    }
+    pdb_text = _text(payload.get("pdb_content"))
+    if not pdb_text:
+        path_value = _text(payload.get("pdb_path"))
+        if path_value:
+            candidate = Path(path_value)
+            if not candidate.is_absolute():
+                candidate = ROOT / candidate
+            if candidate.is_file():
+                try:
+                    pdb_text = candidate.read_text(encoding="utf-8", errors="ignore")
+                except OSError:
+                    pdb_text = ""
+    if not pdb_text:
+        return contract
+    try:
+        import numpy as np
+
+        from core.pocket_detection import detect_binding_pocket
+        from core.structure_metrics import parse_pdb_atoms_with_coords
+
+        atoms = parse_pdb_atoms_with_coords(pdb_text)
+        protein_atoms = [a for a in atoms if a.get("record") == "ATOM"]
+        if protein_atoms:
+            coords = np.stack([a["xyz"] for a in protein_atoms], axis=0)
+            pocket = detect_binding_pocket(coords)
+            contract["pocket_detection_available"] = pocket.get("status") == "pocket_ready"
+            contract["pocket_method"] = pocket.get("method", "")
+            contract["pocket_center"] = pocket.get("pocket_center")
+            contract["pocket_radius_a"] = pocket.get("pocket_radius_a")
+    except Exception:
+        return contract
+    return contract
+
+
 def build_docking_job_record(
     payload: dict[str, Any],
     *,
@@ -734,6 +783,7 @@ def build_docking_job_record(
     validation = validate_docking_request(payload)
     normalized = validation["normalized"]
     structure_analysis = analyze_structure_source(payload)
+    pose_generation_contract = _pose_generation_contract(payload, normalized)
     ai_posture = _production_ai_posture(
         residual_registry_packet,
         shadow_only_active_locked=shadow_only_active_locked,
@@ -757,6 +807,7 @@ def build_docking_job_record(
         ai_posture=ai_posture,
         scope_claim_guard=scope_claim_guard,
         customer_report=customer_report,
+        pose_generation_contract=pose_generation_contract,
     )
     digest = request_sha256(payload)
     resolved_job_id = job_id or str(uuid.uuid4())
@@ -819,6 +870,8 @@ def build_docking_job_record(
         "structure_residue_count": structure_analysis["residue_count"],
         "structure_ligand_like_residue_count": structure_analysis["ligand_like_residue_count"],
         "structure_analysis": structure_analysis,
+        "pose_generation_contract": pose_generation_contract,
+        "pocket_detection_available": bool(pose_generation_contract.get("pocket_detection_available")),
         "validation_status": validation["status"],
         "blockers": validation["blockers"],
         "warnings": validation["warnings"],

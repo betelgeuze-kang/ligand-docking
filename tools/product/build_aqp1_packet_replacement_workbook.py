@@ -113,6 +113,33 @@ def _seed_row(queue_row: dict[str, Any]) -> dict[str, Any]:
     return row
 
 
+def _merge_overlay_rows(workbook_rows: list[dict[str, Any]], overlay_rows: list[dict[str, str]]) -> list[dict[str, Any]]:
+    overlay_by_step = {
+        str(row.get("packet_step", "")).strip(): row
+        for row in overlay_rows
+        if str(row.get("packet_step", "")).strip()
+    }
+    merge_fields = [
+        "replacement_ligand_id",
+        "replacement_reference_binding_kcal_mol",
+        "replacement_source",
+        "notes",
+    ]
+    out: list[dict[str, Any]] = []
+    for row in workbook_rows:
+        merged = dict(row)
+        overlay = overlay_by_step.get(str(row.get("packet_step", "")).strip())
+        if overlay:
+            for field in merge_fields:
+                value = str(overlay.get(field, "")).strip()
+                if value:
+                    merged[field] = value
+        merged["required_missing_fields"] = _required_missing_fields(merged)
+        merged["row_ready_for_apply"] = _row_ready_for_apply(merged)
+        out.append(merged)
+    return out
+
+
 def _merge_existing_rows(workbook_rows: list[dict[str, Any]], existing_rows: list[dict[str, str]]) -> list[dict[str, Any]]:
     existing_by_step = {
         str(row.get("packet_step", "")).strip(): row
@@ -148,11 +175,17 @@ def _merge_existing_rows(workbook_rows: list[dict[str, Any]], existing_rows: lis
     return out
 
 
-def build_payload(queue_payload: dict[str, Any], existing_rows: list[dict[str, str]] | None = None) -> dict[str, Any]:
+def build_payload(
+    queue_payload: dict[str, Any],
+    existing_rows: list[dict[str, str]] | None = None,
+    overlay_rows: list[dict[str, str]] | None = None,
+) -> dict[str, Any]:
     queue_rows = list(queue_payload.get("queue_rows", []))
     workbook_rows = [_seed_row(row) for row in queue_rows]
     if existing_rows:
         workbook_rows = _merge_existing_rows(workbook_rows, existing_rows)
+    if overlay_rows:
+        workbook_rows = _merge_overlay_rows(workbook_rows, overlay_rows)
     staged_non_authoritative_row_count = sum(
         1
         for row in workbook_rows
@@ -209,6 +242,10 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build an AQP1 packet replacement workbook from the current fill queue.")
     parser.add_argument("--queue-json", default=DEFAULT_QUEUE_JSON)
     parser.add_argument("--existing-csv", default="runs/aqp1_packet_replacement_workbook_current.csv")
+    parser.add_argument(
+        "--external-evidence-overlay-csv",
+        default="runs/aqp1_direct_binding_external_evidence_workbook_overlay_current.csv",
+    )
     parser.add_argument("--out-json", default="runs/aqp1_packet_replacement_workbook_current.json")
     parser.add_argument("--out-csv", default="runs/aqp1_packet_replacement_workbook_current.csv")
     parser.add_argument("--out-md", default="runs/aqp1_packet_replacement_workbook_current.md")
@@ -219,7 +256,8 @@ def main() -> None:
     args = parse_args()
     queue_payload = _load_json(_resolve(args.queue_json))
     existing_rows = _read_csv_rows(_resolve(args.existing_csv))
-    payload = build_payload(queue_payload, existing_rows)
+    overlay_rows = _read_csv_rows(_resolve(args.external_evidence_overlay_csv))
+    payload = build_payload(queue_payload, existing_rows, overlay_rows)
     out_json = _resolve(args.out_json)
     out_csv = _resolve(args.out_csv)
     out_md = _resolve(args.out_md)

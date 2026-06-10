@@ -32,6 +32,7 @@ from betelgeuze_product.residual_mode_policy import (
     residual_ranking_apply_active,
     residual_runtime_status,
 )
+from core.mm_gbsa import REFINE_LIGAND_MODEL, mm_gbsa_binding_energy
 from core.onsps_backmap import backmap_4bead_onsps, hbond_angle_score, needs_onsps_4bead, onsps_site_count
 from core.score_residual import apply_score_residual
 from core.topo_corrector import summarize_topo_correction
@@ -2447,6 +2448,10 @@ def _frame_mmpbsa_proxy(
     elif model == "4bead_onsps_hbond":
         two_bead = lig[:2] if lig.shape[0] >= 2 else lig
         lig, backmap_meta = backmap_4bead_onsps(two_bead, str(smiles or ""))
+    elif model in {REFINE_LIGAND_MODEL, "refine_gb_sa"}:
+        refined = mm_gbsa_binding_energy(prot, lig, contact_cutoff_a=float(contact_cutoff_A), props=props)
+        refined["ligand_model"] = REFINE_LIGAND_MODEL
+        return refined
     if prot.size == 0 or lig.size == 0:
         return {
             "min_distance_A": 999.0,
@@ -2577,6 +2582,8 @@ def _prepare_ligand_frames_for_batch(
             stacked[idx, : mapped.shape[0], :] = mapped
         meta["onsps_site_count_mean"] = float(np.mean(site_counts)) if site_counts else 0.0
         return stacked, meta
+    if model in {REFINE_LIGAND_MODEL, "refine_gb_sa"}:
+        return frames, meta
     return frames, meta
 
 
@@ -2613,6 +2620,24 @@ def _frame_mmpbsa_proxy_batch(
         return empty
 
     model = str(ligand_model).strip().lower()
+    if model in {REFINE_LIGAND_MODEL, "refine_gb_sa"}:
+        per_frame = [
+            mm_gbsa_binding_energy(prot, frames[i], contact_cutoff_a=float(contact_cutoff_A), props=props)
+            for i in range(frame_count)
+        ]
+        return {
+            "min_distance_A": np.asarray([r["min_distance_a"] for r in per_frame], dtype=np.float64),
+            "contact_fraction": np.asarray([r["contact_fraction"] for r in per_frame], dtype=np.float64),
+            "contact_count": np.asarray([r["contact_count"] for r in per_frame], dtype=np.float64),
+            "close_contact_count": np.asarray([r["close_contact_count"] for r in per_frame], dtype=np.float64),
+            "clash_count": np.asarray([r["clash_count"] for r in per_frame], dtype=np.float64),
+            "deltaG_mmpbsa_proxy_kcal_mol": np.asarray([r["deltaG_mm_gbsa_kcal_mol"] for r in per_frame], dtype=np.float64),
+            "e_vdw": np.asarray([r["e_vdw"] for r in per_frame], dtype=np.float64),
+            "e_polar": np.asarray([r["e_polar"] for r in per_frame], dtype=np.float64),
+            "e_nonpolar": np.asarray([r["e_nonpolar"] for r in per_frame], dtype=np.float64),
+            "e_solvation": np.asarray([r["e_solvation"] for r in per_frame], dtype=np.float64),
+        }
+
     cutoff = float(contact_cutoff_A)
     d = np.linalg.norm(prot[:, None, None, :] - frames[None, :, :, :], axis=-1)  # P,F,L
     min_d = d.min(axis=(0, 2)).astype(np.float64)

@@ -3,7 +3,24 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
+from betelgeuze_product import docking_request as docking_request_mod
 from betelgeuze_product.docking_request import build_docking_job_record, persist_docking_job_record, validate_docking_request
+
+
+@pytest.fixture(autouse=True)
+def _isolate_runtime_artifacts(tmp_path, monkeypatch):
+    """Force the fail-closed (no-artifact) posture so tests do not depend on local runs/ state."""
+    missing = tmp_path / "missing_runtime_artifact.json"
+    for attr in (
+        "RESIDUAL_MODEL_REGISTRY_ARTIFACT",
+        "PRODUCT_AI_PROMOTION_WORKBENCH_ARTIFACT",
+        "PRODUCT_SCOPE_CLAIM_GUARD_ARTIFACT",
+        "PRODUCT_EXECUTION_APPROVAL_ARTIFACT",
+    ):
+        monkeypatch.setattr(docking_request_mod, attr, missing, raising=False)
+    yield
 
 
 def test_docking_request_accepts_restricted_scope_but_keeps_execution_disabled() -> None:

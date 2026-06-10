@@ -30,6 +30,13 @@ LEARNED_OUTPUT_FIELDS = ["delta_score", "corrected_score", "uncertainty"]
 POLICY_OUTPUT_FIELDS = ["abstention_reason", "stage2_route_decision"]
 PRODUCTION_ENERGY_FIELD = "delta_energy"
 PRODUCTION_FORCE_FIELD = "delta_force"
+REFINE_TIER_LABEL_FIELD = "refine_tier_label"
+REFINE_TIER_FEATURE_FIELDS = (
+    "refine_tier_delta",
+    "mm_gbsa_delta",
+    "refine_confidence",
+    "physics_refinement_confidence",
+)
 MISSING_PRODUCTION_OUTPUT_FIELDS = ["delta_energy", "delta_force"]
 
 CLAIM_BOUNDARY = (
@@ -137,14 +144,24 @@ def _role_vocab(rows: list[dict[str, Any]]) -> list[str]:
     return sorted({str(row.get("role") or "unknown") for row in rows})
 
 
+def _refine_feature_fields(rows: list[dict[str, Any]]) -> list[str]:
+    present: list[str] = []
+    for field in REFINE_TIER_FEATURE_FIELDS:
+        if any(str(row.get(field) or "").strip() not in {"", "nan", "none"} for row in rows):
+            present.append(field)
+    return present
+
+
 def _matrix(
     rows: list[dict[str, Any]],
     families: list[str],
     roles: list[str],
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, list[str]]:
+    refine_fields = _refine_feature_fields(rows)
     feature_names = ["raw_score", "mean_min_distance_A"]
     feature_names.extend(f"family={item}" for item in families)
     feature_names.extend(f"role={item}" for item in roles)
+    feature_names.extend(refine_fields)
     xs: list[list[float]] = []
     y_cls: list[float] = []
     y_delta: list[float] = []
@@ -159,10 +176,15 @@ def _matrix(
         ]
         values.extend(1.0 if family == item else 0.0 for item in families)
         values.extend(1.0 if role == item else 0.0 for item in roles)
+        for field in refine_fields:
+            values.append(_float(row.get(field)))
         xs.append(values)
         y_cls.append(float(_int(row.get("is_binder"))))
         y_delta.append(_float(row.get("delta_score")))
-        energy = _float(row.get(PRODUCTION_ENERGY_FIELD), default=float("nan"))
+        energy_raw = row.get(PRODUCTION_ENERGY_FIELD)
+        if str(energy_raw or "").strip() in {"", "nan", "none"} and str(row.get(REFINE_TIER_LABEL_FIELD) or "").strip():
+            energy_raw = row.get(REFINE_TIER_LABEL_FIELD)
+        energy = _float(energy_raw, default=float("nan"))
         if math.isnan(energy):
             y_energy.append(0.0)
             y_energy_mask.append(0.0)
@@ -229,6 +251,10 @@ def train_residual_production_score_model(
         raise RuntimeError("need at least two rows for score-model training")
     families = _family_vocab(rows)
     roles = _role_vocab(rows)
+    refine_fields = _refine_feature_fields(rows)
+    refine_tier_label_rows = sum(
+        1 for row in rows if str(row.get(REFINE_TIER_LABEL_FIELD) or "").strip() not in {"", "nan", "none"}
+    )
     x, y_cls, y_delta, y_energy, y_energy_mask, feature_names = _matrix(rows, families, roles)
     train_idx, val_idx = _split_indices(rows, seed=seed, train_ratio=train_ratio)
     x_train = x[train_idx]
@@ -350,6 +376,9 @@ def train_residual_production_score_model(
         "train_rows": len(train_idx),
         "val_rows": len(val_idx),
         "feature_dim": len(feature_names),
+        "feature_names": feature_names,
+        "refine_tier_feature_fields": refine_fields,
+        "refine_tier_label_rows": refine_tier_label_rows,
         "target_count": len({str(row.get("target") or "") for row in rows}),
         "family_count": len(families),
         "device": str(device),

@@ -34,6 +34,9 @@ def apply_score_residual(
     structural_support: float = 0.0,
     topo_delta: float = 0.0,
     delta_backmap: float = 0.0,
+    refine_tier_delta: float = 0.0,
+    mm_gbsa_delta: float = 0.0,
+    refine_confidence: float = 0.0,
     mode: str = "assist",
     max_abs_delta: float = DEFAULT_MAX_ABS_DELTA,
 ) -> dict[str, Any]:
@@ -51,12 +54,15 @@ def apply_score_residual(
             "mode": str(mode),
         }
 
+    refine_signal = 0.12 * float(refine_tier_delta) + 0.10 * float(mm_gbsa_delta)
+    refine_signal *= float(np.clip(refine_confidence, 0.0, 1.0))
     raw = (
         0.35 * float(prior_pressure)
         + 0.40 * float(structural_weakness)
         - 0.25 * float(structural_support)
         + 0.20 * float(topo_delta)
         - 0.15 * float(abs(delta_backmap))
+        + refine_signal
     )
     gated = raw if (raw > 0.0 and prior_pressure > 0.05) else 0.0
     delta = _clip_delta(gated, max_abs_delta)
@@ -97,4 +103,7 @@ def apply_score_residual(
         "abstention_reason": abstention_reason,
         "corrected_score": float(shadow),
         "uncertainty": float(abs(delta) / max(float(max_abs_delta), 1e-6)),
+        "refine_tier_delta": float(refine_tier_delta),
+        "mm_gbsa_delta": float(mm_gbsa_delta),
+        "refine_confidence": float(refine_confidence),
     }

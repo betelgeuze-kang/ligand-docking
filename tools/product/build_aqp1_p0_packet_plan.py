@@ -34,11 +34,8 @@ def main() -> None:
     gap_rows = [r for r in read_csv(CONFIG / 'transporter_membrane_expansion_gap_checklist_v1.csv') if r.get('target_id') == 'Aquaporin_1']
     ref_rows = [r for r in read_csv(CONFIG / 'ligand_binding_reference_blind_aqp1_v1.csv') if r.get('target') == 'AQP1_TRANSPORT_BLIND']
     split_rows = [r for r in read_csv(CONFIG / 'ligand_eval_splits_blind_aqp1_v1.csv') if r.get('target') == 'AQP1_TRANSPORT_BLIND']
-    meta_rows = [r for r in read_csv(CONFIG / 'ligand_meta_blind_aqp1_v1.csv') if r.get('ligand_id','').startswith('aqp1_')]
     target_rows = [r for r in read_csv(CONFIG / 'real_drug_targets_blind_aqp1_v1.csv') if r.get('target') == 'AQP1_TRANSPORT_BLIND']
     target_meta_rows = [r for r in read_csv(CONFIG / 'ligand_target_metadata_blind_aqp1_v1.csv') if r.get('target') == 'AQP1_TRANSPORT_BLIND']
-
-    artifact_map = {r['required_artifact']: r for r in gap_rows}
     packet_rows: List[Dict[str, str]] = []
 
     def add(step, artifact, status, blocker, next_action, repo_path, detail):
@@ -58,14 +55,63 @@ def main() -> None:
     add('aqp1_target_native', 'target_native_csv', 'todo' if pocket_zero else 'ready', 'pocket_centroid_placeholder' if pocket_zero else '', 'freeze AQP1 pocket centroid and update native target row', 'config/real_drug_targets_blind_aqp1_v1.csv', f"pdb_id={target_row.get('pdb_id','')} native={target_row.get('native_pdb_path','')}")
     add('aqp1_target_meta', 'target_meta_csv', 'todo' if seq_placeholder else 'ready', 'sequence_placeholder' if seq_placeholder else '', 'replace template sequence and finalize pocket fingerprint note', 'config/ligand_target_metadata_blind_aqp1_v1.csv', f"target_family={target_meta_rows[0].get('target_family','') if target_meta_rows else ''}")
 
-    placeholder_ref = sum(1 for r in ref_rows if 'placeholder' in r.get('ligand_id','') or 'placeholder' in r.get('source',''))
-    add('aqp1_ligand_reference', 'ligand_reference_csv', 'todo' if placeholder_ref else 'ready', 'placeholder_ligand_rows' if placeholder_ref else '', 'replace placeholder binders/non-binders with curated AQP1 packet', 'config/ligand_binding_reference_blind_aqp1_v1.csv', f'row_count={len(ref_rows)} placeholder_rows={placeholder_ref}')
+    binder_ids = {
+        str(r.get("ligand_id", "")).strip()
+        for r in ref_rows
+        if str(r.get("is_binder", "")).strip() == "1"
+    }
+    binder_ref_rows = [r for r in ref_rows if str(r.get("is_binder", "")).strip() == "1"]
+    binder_meta_rows = [
+        r for r in read_csv(CONFIG / "ligand_meta_blind_aqp1_v1.csv") if str(r.get("ligand_id", "")).strip() in binder_ids
+    ]
 
-    placeholder_split = sum(1 for r in split_rows if 'placeholder' in r.get('ligand_id',''))
-    add('aqp1_eval_split', 'eval_split_csv', 'todo' if placeholder_split else 'ready', 'placeholder_split_roles' if placeholder_split else '', 'freeze fit/far_ood_eval roles after curated ligand packet is ready', 'config/ligand_eval_splits_blind_aqp1_v1.csv', f'row_count={len(split_rows)} placeholder_rows={placeholder_split}')
+    def _reference_needs_curation(row: Dict[str, str]) -> bool:
+        source = str(row.get("source", "")).lower()
+        return (
+            "placeholder" in str(row.get("ligand_id", "")).lower()
+            or "placeholder" in source
+            or not str(row.get("reference_binding_kcal_mol", "")).strip()
+            or "functional_ic50_derived_surrogate" in source
+            or "not_direct_binding" in source
+        )
 
-    placeholder_meta = sum(1 for r in meta_rows if 'template_placeholder' in r.get('scaffold','') or 'placeholder' in r.get('ligand_id',''))
-    add('aqp1_ligand_meta', 'ligand_meta_csv', 'todo' if placeholder_meta else 'ready', 'placeholder_meta_rows' if placeholder_meta else '', 'replace placeholder smiles/physchem rows with curated AQP1 ligand metadata', 'config/ligand_meta_blind_aqp1_v1.csv', f'row_count={len(meta_rows)} placeholder_rows={placeholder_meta}')
+    placeholder_ref = sum(1 for r in binder_ref_rows if _reference_needs_curation(r))
+    ref_blocker = "claim_safe_direct_binding_kcal_missing" if placeholder_ref else ""
+    add(
+        "aqp1_ligand_reference",
+        "ligand_reference_csv",
+        "todo" if placeholder_ref else "ready",
+        ref_blocker if placeholder_ref else "",
+        "replace placeholder binders/non-binders with curated AQP1 packet",
+        "config/ligand_binding_reference_blind_aqp1_v1.csv",
+        f"row_count={len(ref_rows)} binder_rows={len(binder_ref_rows)} claim_safe_blocker_rows={placeholder_ref}",
+    )
+
+    placeholder_split = sum(1 for r in split_rows if "placeholder" in r.get("ligand_id", ""))
+    add(
+        "aqp1_eval_split",
+        "eval_split_csv",
+        "todo" if placeholder_split else "ready",
+        "placeholder_split_roles" if placeholder_split else "",
+        "freeze fit/far_ood_eval roles after curated ligand packet is ready",
+        "config/ligand_eval_splits_blind_aqp1_v1.csv",
+        f"row_count={len(split_rows)} placeholder_rows={placeholder_split}",
+    )
+
+    placeholder_meta = sum(
+        1
+        for r in binder_meta_rows
+        if "template_placeholder" in r.get("scaffold", "") or "placeholder" in r.get("ligand_id", "")
+    )
+    add(
+        "aqp1_ligand_meta",
+        "ligand_meta_csv",
+        "todo" if placeholder_meta else "ready",
+        "placeholder_meta_rows" if placeholder_meta else "",
+        "replace placeholder smiles/physchem rows with curated AQP1 ligand metadata",
+        "config/ligand_meta_blind_aqp1_v1.csv",
+        f"row_count={len(binder_meta_rows)} placeholder_rows={placeholder_meta}",
+    )
 
     add('aqp1_profile_json', 'profile_json', 'ready', '', 'keep dry_run until packet blockers are closed, then freeze donor policy', 'config/ligand_htvs_blind_aqp1_v1.json', 'profile scaffold exists with dry_run=true')
     add('aqp1_smoke_binding', 'smoke_task_binding', 'todo', 'core_packet_not_frozen', 'reuse core profile for smoke only after core packet is frozen', 'config/external_validation_transporter_membrane_sets_v1_template.json', 'set3 smoke remains dependent on set1 core packet')

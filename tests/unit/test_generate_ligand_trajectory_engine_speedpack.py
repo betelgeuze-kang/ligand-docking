@@ -119,6 +119,31 @@ def test_batched_min_distance_contact_fraction_matches_inline_proxy() -> None:
     assert np.allclose(contact_fraction, expected_contact_fraction, atol=1e-6)
 
 
+def test_pocket_protein_max_atoms_caps_repulsion_neighbors_without_shape_error() -> None:
+    bsz = 2
+    n_protein = 300
+    n_lig = 2
+    c = torch.randn(bsz, n_protein + n_lig, 3, dtype=torch.float32)
+    pocket = torch.zeros(bsz, 1, 3, dtype=torch.float32)
+
+    force = mod._compute_ligand_extra_force(
+        c,
+        n_protein=n_protein,
+        pocket=pocket,
+        pocket_attract=0.0,
+        protein_repulse=0.5,
+        contact_attract=0.0,
+        contact_target_distance_A=3.2,
+        contact_attract_cutoff_A=8.0,
+        bond_k=0.0,
+        bond_ref=0.0,
+        repulse_cutoff_A=4.5,
+        pocket_protein_max_atoms=256,
+    )
+
+    assert force.shape == (bsz, n_lig, 3)
+
+
 def test_contact_attract_force_is_opt_in_and_pulls_toward_nearest_protein() -> None:
     c = torch.tensor(
         [
@@ -188,6 +213,79 @@ def test_register_batch_limit_derate_halves_limit_and_records_event() -> None:
             "reason": "runtime_error:RuntimeError",
         }
     ]
+
+
+def test_register_batch_limit_derate_respects_target_floor() -> None:
+    sig = ("CHEMBL233_OPRM1_HUMAN", "native.pdb", (1000, 3), (2, 3), "core", 120)
+    limits = {sig: 8}
+    events: list[dict[str, object]] = []
+
+    next_limit, changed = mod._register_batch_limit_derate(
+        batch_limit_by_sig=limits,
+        sig=sig,
+        attempted_size=8,
+        reason="runtime_error:RuntimeError",
+        events=events,
+        min_limit=4,
+    )
+
+    assert changed is True
+    assert next_limit == 4
+    assert limits[sig] == 4
+    assert events[0]["new_batch_limit"] == 4
+
+
+def test_load_target_batch_floor_map_reads_json_file(tmp_path) -> None:
+    cfg = tmp_path / "floors.json"
+    cfg.write_text('{"CHEMBL233_OPRM1_HUMAN": 4, "BAD": "x"}', encoding="utf-8")
+
+    loaded = mod._load_target_batch_floor_map(str(cfg))
+
+    assert loaded == {"CHEMBL233_OPRM1_HUMAN": 4}
+
+
+def test_target_batch_floor_for_sig() -> None:
+    sig = ("CHEMBL233_OPRM1_HUMAN", "native.pdb", (1000, 3), (2, 3), "core", 120)
+    floor_map = {"CHEMBL233_OPRM1_HUMAN": 4}
+
+    assert mod._target_batch_floor_for_sig(sig, floor_map) == 4
+    assert mod._target_batch_floor_for_sig(sig, {}) == 1
+    assert mod._target_batch_floor_for_sig(("OTHER",), floor_map) == 1
+
+
+def test_resolve_prod_early_stop_for_target_disables_oprm1() -> None:
+    resolved = mod._resolve_prod_early_stop_for_target(
+        "CHEMBL233_OPRM1_HUMAN",
+        prod_mode=True,
+        global_enabled=True,
+        min_frames=120,
+        window=12,
+        min_distance_drift_A=0.12,
+        contact_drift=0.015,
+        max_mean_min_distance_A=5.9,
+        override_map={"CHEMBL233_OPRM1_HUMAN": {"enabled": False}},
+    )
+
+    assert resolved["target_override_applied"] is True
+    assert resolved["enabled"] is False
+    assert resolved["min_frames"] == 120
+
+
+def test_resolve_prod_early_stop_for_target_keeps_defaults_for_other_targets() -> None:
+    resolved = mod._resolve_prod_early_stop_for_target(
+        "ADRB2_GPCR_BLIND",
+        prod_mode=True,
+        global_enabled=True,
+        min_frames=120,
+        window=12,
+        min_distance_drift_A=0.12,
+        contact_drift=0.015,
+        max_mean_min_distance_A=5.9,
+        override_map={"CHEMBL233_OPRM1_HUMAN": {"enabled": False}},
+    )
+
+    assert resolved["target_override_applied"] is False
+    assert resolved["enabled"] is True
 
 
 def test_get_engine_resources_can_disable_cache(monkeypatch) -> None:

@@ -537,7 +537,14 @@ def _expand_protein_atom_frames(protein_frames: np.ndarray, template: Dict[str, 
     return np.asarray(protein_atom_frames, dtype=np.float32)
 
 
-def _compose_ligand_xyz(row: Dict[str, Any]) -> np.ndarray:
+def _cross_docking_rotation(angle_rad: float) -> np.ndarray:
+    """Rotation about z-axis for cross-docking multi-start pose seeding."""
+    c = float(np.cos(angle_rad))
+    s = float(np.sin(angle_rad))
+    return np.asarray([[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]], dtype=np.float32)
+
+
+def _compose_ligand_xyz(row: Dict[str, Any], *, cross_docking_angle_rad: float = 0.0) -> np.ndarray:
     px = _safe_float(row.get("pocket_x", 0.0))
     py = _safe_float(row.get("pocket_y", 0.0))
     pz = _safe_float(row.get("pocket_z", 0.0))
@@ -557,6 +564,10 @@ def _compose_ligand_xyz(row: Dict[str, Any]) -> np.ndarray:
         ],
         dtype=np.float32,
     )
+    if float(cross_docking_angle_rad) != 0.0:
+        rot = _cross_docking_rotation(float(cross_docking_angle_rad))
+        b0 = rot @ b0
+        b1 = rot @ b1
     ctr = np.asarray([px, py, pz], dtype=np.float32)
     return np.stack([ctr + b0, ctr + b1], axis=0)
 
@@ -1156,6 +1167,96 @@ def _row_batch_signature(
     )
 
 
+def _load_target_batch_floor_map(spec: str) -> Dict[str, int]:
+    raw = str(spec or "").strip()
+    if not raw:
+        return {}
+    path = Path(raw)
+    if path.is_file():
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    else:
+        payload = json.loads(raw)
+    out: Dict[str, int] = {}
+    if isinstance(payload, dict):
+        for key, value in payload.items():
+            target = str(key).strip()
+            if not target:
+                continue
+            try:
+                floor = int(value)
+            except Exception:
+                continue
+            if floor > 0:
+                out[target] = int(floor)
+    return out
+
+
+def _target_batch_floor_for_sig(sig: Tuple[Any, ...], floor_map: Dict[str, int]) -> int:
+    if (not floor_map) or (not sig):
+        return 1
+    target = str(sig[0]).strip()
+    return int(max(1, int(floor_map.get(target, 1))))
+
+
+def _load_target_prod_early_stop_map(spec: str) -> Dict[str, Dict[str, Any]]:
+    raw = str(spec or "").strip()
+    if not raw:
+        return {}
+    path = Path(raw)
+    if path.is_file():
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    else:
+        payload = json.loads(raw)
+    out: Dict[str, Dict[str, Any]] = {}
+    if isinstance(payload, dict):
+        for key, value in payload.items():
+            target = str(key).strip()
+            if (not target) or (not isinstance(value, dict)):
+                continue
+            out[target] = dict(value)
+    return out
+
+
+def _resolve_prod_early_stop_for_target(
+    target: str,
+    *,
+    prod_mode: bool,
+    global_enabled: bool,
+    min_frames: int,
+    window: int,
+    min_distance_drift_A: float,
+    contact_drift: float,
+    max_mean_min_distance_A: float,
+    override_map: Dict[str, Dict[str, Any]],
+) -> Dict[str, Any]:
+    resolved: Dict[str, Any] = {
+        "enabled": bool(prod_mode and global_enabled),
+        "min_frames": int(min_frames),
+        "window": int(window),
+        "min_distance_drift_A": float(min_distance_drift_A),
+        "contact_drift": float(contact_drift),
+        "max_mean_min_distance_A": float(max_mean_min_distance_A),
+        "target_override_applied": False,
+    }
+    override = override_map.get(str(target).strip(), {})
+    if not isinstance(override, dict) or not override:
+        return resolved
+    resolved["target_override_applied"] = True
+    if "enabled" in override:
+        resolved["enabled"] = bool(prod_mode and bool(override["enabled"]))
+    if "min_frames" in override:
+        resolved["min_frames"] = int(max(1, int(override["min_frames"])))
+    if "window" in override:
+        resolved["window"] = int(max(2, int(override["window"])))
+    if "min_distance_drift_A" in override:
+        resolved["min_distance_drift_A"] = float(max(0.0, float(override["min_distance_drift_A"])))
+    if "contact_drift" in override:
+        resolved["contact_drift"] = float(max(0.0, float(override["contact_drift"])))
+    if "max_mean_min_distance_A" in override:
+        resolved["max_mean_min_distance_A"] = float(max(0.0, float(override["max_mean_min_distance_A"])))
+    return resolved
+
+
 def _register_batch_limit_derate(
     *,
     batch_limit_by_sig: Dict[Tuple[Any, ...], int],
@@ -1164,10 +1265,12 @@ def _register_batch_limit_derate(
     reason: str,
     events: Optional[List[Dict[str, Any]]] = None,
     event_limit: int = 64,
+    min_limit: int = 1,
 ) -> Tuple[int, bool]:
     attempted = int(max(1, int(attempted_size)))
     previous = int(max(1, int(batch_limit_by_sig.get(sig, attempted))))
-    next_limit = int(max(1, min(previous, attempted // 2 if attempted > 1 else 1)))
+    floor = int(max(1, int(min_limit)))
+    next_limit = int(max(floor, min(previous, attempted // 2 if attempted > 1 else 1)))
     batch_limit_by_sig[sig] = int(next_limit)
     changed = bool(next_limit < previous)
     if changed and events is not None and len(events) < int(max(0, int(event_limit))):
@@ -1396,9 +1499,9 @@ def _compute_ligand_extra_force(
         prot = c[:, :n_protein, :]  # [B,P,3]
         cap = int(max(0, pocket_protein_max_atoms))
         if cap > 0 and n_protein > cap:
-            center = lig.mean(dim=1, keepdim=True)
-            d_center = torch.linalg.norm(prot - center.unsqueeze(2), dim=-1)
-            nearest = torch.topk(d_center, k=cap, largest=False, dim=2).indices
+            center = lig.mean(dim=1, keepdim=True)  # [B,1,3]
+            d_center = torch.linalg.norm(prot - center, dim=-1)  # [B,P]
+            nearest = torch.topk(d_center, k=min(cap, n_protein), largest=False, dim=1).indices  # [B,cap]
             prot = torch.gather(prot, 1, nearest.unsqueeze(-1).expand(-1, -1, 3))
         diff = lig.unsqueeze(2) - prot.unsqueeze(1)  # [B,L,P,3]
         dist = torch.linalg.norm(diff, dim=-1).clamp_min(1e-6)  # [B,L,P]
@@ -1897,6 +2000,12 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
     )
     batch_autotune_prefill = int(max(batch_autotune_candidates)) if batch_autotune_candidates else 1
     batch_autotune_frames = int(max(4, int(getattr(args, "job_batch_autotune_frames", 12))))
+    target_batch_floor_map = _load_target_batch_floor_map(
+        str(getattr(args, "job_batch_floor_by_target_json", "") or "")
+    )
+    target_prod_early_stop_map = _load_target_prod_early_stop_map(
+        str(getattr(args, "prod_early_stop_by_target_json", "") or "")
+    )
     batch_autotune_rows: List[Dict[str, Any]] = []
     writer_workers = int(max(0, int(getattr(args, "writer_workers", 0))))
     writer_max_pending = int(max(1, int(getattr(args, "writer_max_pending", 32))))
@@ -1953,6 +2062,7 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
             return int(batch_limit_by_sig[sig])
         if int(batch_job_size) > 0:
             resolved = int(max(1, batch_job_size))
+            resolved = int(max(resolved, _target_batch_floor_for_sig(sig, target_batch_floor_map)))
             batch_limit_by_sig[sig] = resolved
             return resolved
         if len(batch) <= 1:
@@ -2025,7 +2135,17 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                         "error": f"{type(exc).__name__}: {exc}",
                     }
                 )
+        floor = int(_target_batch_floor_for_sig(sig, target_batch_floor_map))
+        best_limit = int(max(best_limit, floor))
         batch_limit_by_sig[sig] = int(max(1, best_limit))
+        if floor > 1:
+            batch_autotune_rows.append(
+                {
+                    "signature": str(sig),
+                    "applied_target_batch_floor": int(floor),
+                    "resolved_batch_limit": int(batch_limit_by_sig[sig]),
+                }
+            )
         return int(batch_limit_by_sig[sig])
 
     def _record_progress(
@@ -2278,6 +2398,18 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
         affinity_hint_batch = np.asarray([x["affinity"] for x in batch], dtype=np.float32)
         onsps_norm_batch = np.asarray([x.get("onsps_norm", 0.0) for x in batch], dtype=np.float32)
         batch_seed = int(min(x["seed_i"] for x in batch))
+        batch_target = str(batch[0].get("target", "") or "").strip()
+        batch_early_stop = _resolve_prod_early_stop_for_target(
+            batch_target,
+            prod_mode=bool(prod_mode),
+            global_enabled=bool(prod_early_stop),
+            min_frames=int(prod_early_stop_min_frames),
+            window=int(prod_early_stop_window),
+            min_distance_drift_A=float(prod_early_stop_min_distance_drift_A),
+            contact_drift=float(prod_early_stop_contact_drift),
+            max_mean_min_distance_A=float(prod_early_stop_max_mean_min_distance_A),
+            override_map=target_prod_early_stop_map,
+        )
         t0 = time.perf_counter()
         try:
             selected_cpu, frame_indices_np, backend, simulated_frames_count, early_stop_triggered, early_stop_frame, sim_telemetry = _simulate_with_engine_batch(
@@ -2307,12 +2439,12 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                 force_backend=str(args.force_backend),
                 require_rust_hip=bool(args.require_rust_hip),
                 seed=batch_seed,
-                prod_early_stop_enabled=bool(prod_mode and prod_early_stop),
-                prod_early_stop_min_frames=int(prod_early_stop_min_frames),
-                prod_early_stop_window=int(prod_early_stop_window),
-                prod_early_stop_min_distance_drift_A=float(prod_early_stop_min_distance_drift_A),
-                prod_early_stop_contact_drift=float(prod_early_stop_contact_drift),
-                prod_early_stop_max_mean_min_distance_A=float(prod_early_stop_max_mean_min_distance_A),
+                prod_early_stop_enabled=bool(batch_early_stop["enabled"]),
+                prod_early_stop_min_frames=int(batch_early_stop["min_frames"]),
+                prod_early_stop_window=int(batch_early_stop["window"]),
+                prod_early_stop_min_distance_drift_A=float(batch_early_stop["min_distance_drift_A"]),
+                prod_early_stop_contact_drift=float(batch_early_stop["contact_drift"]),
+                prod_early_stop_max_mean_min_distance_A=float(batch_early_stop["max_mean_min_distance_A"]),
                 engine_cache=engine_cache,
                 engine_cache_max_entries=int(args.engine_cache_max_entries),
                 pocket_protein_max_atoms=int(getattr(args, "pocket_protein_max_atoms", 256) or 256),
@@ -2346,6 +2478,7 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                         attempted_size=len(batch),
                         reason=f"runtime_error:{type(sim_exc).__name__}",
                         events=job_batch_derate_events,
+                        min_limit=_target_batch_floor_for_sig(batch_sig, target_batch_floor_map),
                     )
                     if bool(changed):
                         job_batch_derate_count += 1
@@ -2374,6 +2507,7 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                         attempted_size=len(batch),
                         reason="cpu_backend_abort",
                         events=job_batch_derate_events,
+                        min_limit=_target_batch_floor_for_sig(batch_sig, target_batch_floor_map),
                     )
                     if bool(changed):
                         job_batch_derate_count += 1
@@ -2471,7 +2605,7 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                     "frames_effective_cap": int(entry.get("effective_frames_requested", sim_frames_count)),
                     "prod_frame_budget_score": float(entry.get("prod_frame_budget_score", 0.0)),
                     "prod_frame_budget_applied": bool(entry.get("prod_frame_budget_applied", False)),
-                    "prod_early_stop_enabled": bool(prod_mode and prod_early_stop),
+                    "prod_early_stop_enabled": bool(batch_early_stop["enabled"]),
                     "prod_early_stop_triggered": bool(early_stop_triggered),
                     "prod_early_stop_frame": int(early_stop_frame if bool(early_stop_triggered) else sim_frames_count),
                     "sim_frames_count": int(sim_frames_count),
@@ -2531,7 +2665,15 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
             if protein.shape[0] <= 0:
                 protein = np.zeros((1, 3), dtype=np.float32)
 
-            ligand0 = _compose_ligand_xyz(row)
+            cross_docking_seed_enabled = bool(getattr(args, "cross_docking_pose_seed", False))
+            multi_start_count_row = max(1, int(getattr(args, "multi_start_count", 1) or 1))
+            replica_idx_for_seed = _safe_int(row.get("replica_idx", row.get("replicate_idx", 0)))
+            cross_docking_angle_rad = 0.0
+            if cross_docking_seed_enabled and multi_start_count_row > 1:
+                cross_docking_angle_rad = (
+                    2.0 * float(np.pi) * (int(replica_idx_for_seed) % multi_start_count_row) / float(multi_start_count_row)
+                )
+            ligand0 = _compose_ligand_xyz(row, cross_docking_angle_rad=cross_docking_angle_rad)
             pocket = np.asarray(
                 [
                     _safe_float(row.get("pocket_x", 0.0)),
@@ -2828,6 +2970,8 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
         "job_batch_derate_events": job_batch_derate_events,
         "job_batch_autotune_rows": batch_autotune_rows,
         "job_batch_autotune_candidates": batch_autotune_candidates,
+        "job_batch_floor_by_target": {str(k): int(v) for k, v in target_batch_floor_map.items()},
+        "prod_early_stop_by_target": target_prod_early_stop_map,
         "writer_workers": int(writer_workers),
         "writer_mode": str(writer_mode),
         "writer_max_pending": int(writer_max_pending),
@@ -3038,6 +3182,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--job-batch-size", type=int, default=0, help="0 means autotune per signature.")
     p.add_argument("--job-batch-autotune-candidates", type=str, default="1,2,4,8")
     p.add_argument("--job-batch-autotune-frames", type=int, default=12)
+    p.add_argument(
+        "--job-batch-floor-by-target-json",
+        type=str,
+        default="",
+        help=(
+            "JSON file path or inline object mapping target name to minimum resolved job batch size "
+            "(e.g. config/gpcr_stage2_target_batch_floors_v1.json)."
+        ),
+    )
     p.add_argument("--writer-workers", type=int, default=1)
     p.add_argument("--writer-mode", type=str, default="process", choices=["sync", "thread", "process"])
     p.add_argument("--writer-max-pending", type=int, default=64)
@@ -3057,6 +3210,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--prod-early-stop-min-distance-drift-A", type=float, default=0.12)
     p.add_argument("--prod-early-stop-contact-drift", type=float, default=0.015)
     p.add_argument("--prod-early-stop-max-mean-min-distance-A", type=float, default=6.0)
+    p.add_argument(
+        "--prod-early-stop-by-target-json",
+        type=str,
+        default="",
+        help=(
+            "JSON file path or inline object mapping target name to prod early-stop overrides "
+            "(enabled, min_frames, window, min_distance_drift_A, contact_drift, max_mean_min_distance_A)."
+        ),
+    )
     p.add_argument("--prod-light-artifacts", action=argparse.BooleanOptionalAction, default=False)
     p.add_argument("--prod-light-progress-every-jobs", type=int, default=250)
     p.add_argument(
@@ -3064,6 +3226,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=1,
         help="Number of deterministic pose starts per queue row (replica_idx mod N).",
+    )
+    p.add_argument(
+        "--cross-docking-pose-seed",
+        action="store_true",
+        help="Rotate the initial 2-bead pose by a replica-dependent angle so multi-start replicas explore distinct cross-docking orientations.",
     )
     p.add_argument(
         "--pocket-protein-max-atoms",

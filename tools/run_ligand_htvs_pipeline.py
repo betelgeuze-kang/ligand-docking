@@ -371,6 +371,8 @@ _TRAJ_PROD_STAGE2_PRESETS: Dict[str, Dict[str, Any]] = {
     },
     "gpcr": {
         "traj_job_batch_autotune_candidates": "2,4,8,16",
+        "traj_job_batch_floor_by_target_json": "config/gpcr_stage2_target_batch_floors_v1.json",
+        "traj_prod_early_stop_by_target_json": "config/gpcr_stage2_target_prod_early_stop_v1.json",
         "traj_writer_workers": 2,
         "traj_writer_max_pending": 160,
         "traj_dynamic_adress_min_affinity": 0.80,
@@ -490,6 +492,12 @@ def _traj_stage2_runtime_settings(args: argparse.Namespace, *, mode: str) -> Dic
     settings: Dict[str, Any] = {
         "traj_frames": base_traj_frames,
         "traj_job_batch_autotune_candidates": str(getattr(args, "traj_job_batch_autotune_candidates", "1,2,4,8")),
+        "traj_job_batch_floor_by_target_json": str(
+            getattr(args, "traj_job_batch_floor_by_target_json", "") or ""
+        ),
+        "traj_prod_early_stop_by_target_json": str(
+            getattr(args, "traj_prod_early_stop_by_target_json", "") or ""
+        ),
         "traj_writer_workers": int(getattr(args, "traj_writer_workers", 1)),
         "traj_writer_max_pending": int(getattr(args, "traj_writer_max_pending", 64)),
         "traj_dynamic_adress_min_affinity": float(getattr(args, "traj_dynamic_adress_min_affinity", 0.78)),
@@ -528,6 +536,14 @@ def _traj_stage2_runtime_settings(args: argparse.Namespace, *, mode: str) -> Dic
     if str(getattr(args, "traj_job_batch_autotune_candidates", "1,2,4,8")) != "1,2,4,8":
         explicit_runtime_overrides["traj_job_batch_autotune_candidates"] = str(
             getattr(args, "traj_job_batch_autotune_candidates")
+        )
+    if str(getattr(args, "traj_job_batch_floor_by_target_json", "") or "").strip():
+        explicit_runtime_overrides["traj_job_batch_floor_by_target_json"] = str(
+            getattr(args, "traj_job_batch_floor_by_target_json")
+        )
+    if str(getattr(args, "traj_prod_early_stop_by_target_json", "") or "").strip():
+        explicit_runtime_overrides["traj_prod_early_stop_by_target_json"] = str(
+            getattr(args, "traj_prod_early_stop_by_target_json")
         )
     if int(getattr(args, "traj_writer_workers", 1)) != 1:
         explicit_runtime_overrides["traj_writer_workers"] = int(getattr(args, "traj_writer_workers"))
@@ -912,6 +928,9 @@ def _traj_prod_stage2_args(args: argparse.Namespace, *, mode: str, traj_frames: 
                 str(float(traj_stage2_settings["traj_prod_early_stop_max_mean_min_distance_A"])),
             ]
         )
+        early_stop_json = str(traj_stage2_settings.get("traj_prod_early_stop_by_target_json", "") or "").strip()
+        if early_stop_json:
+            out.extend(["--prod-early-stop-by-target-json", early_stop_json])
     if bool(getattr(args, "traj_prod_light_artifacts", True)):
         out.extend(
             [
@@ -2141,6 +2160,13 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
                     str(traj_stage2_settings["traj_job_batch_autotune_candidates"]),
                     "--job-batch-autotune-frames",
                     str(int(getattr(args, "traj_job_batch_autotune_frames", 12))),
+                ]
+            )
+            floor_json = str(traj_stage2_settings.get("traj_job_batch_floor_by_target_json", "") or "").strip()
+            if floor_json:
+                traj_cmd.extend(["--job-batch-floor-by-target-json", floor_json])
+            traj_cmd.extend(
+                [
                     "--writer-workers",
                     str(int(traj_stage2_settings["traj_writer_workers"])),
                     "--writer-mode",
@@ -4067,6 +4093,18 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--traj-job-batch-size", type=int, default=0)
     p.add_argument("--traj-job-batch-autotune-candidates", type=str, default="1,2,4,8")
     p.add_argument("--traj-job-batch-autotune-frames", type=int, default=12)
+    p.add_argument(
+        "--traj-job-batch-floor-by-target-json",
+        type=str,
+        default="",
+        help="Optional JSON path/object mapping target to minimum stage2 job batch size.",
+    )
+    p.add_argument(
+        "--traj-prod-early-stop-by-target-json",
+        type=str,
+        default="",
+        help="Optional JSON path/object mapping target to prod early-stop overrides.",
+    )
     p.add_argument("--traj-writer-workers", type=int, default=1)
     p.add_argument("--traj-writer-mode", type=str, default="process", choices=["sync", "thread", "process"])
     p.add_argument("--traj-writer-max-pending", type=int, default=64)

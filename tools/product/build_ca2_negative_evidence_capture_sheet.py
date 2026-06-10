@@ -329,6 +329,13 @@ def build_payload(
                 ).strip(),
             }
         )
+        if verified:
+            for key, value in verified.items():
+                if key in {"packet_step"}:
+                    continue
+                text = str(value).strip()
+                if text:
+                    rows[-1][key] = text
 
     direct_evidence_count = sum(1 for row in rows if str(row.get("supports_direct_ca2_negative", "")).strip().lower() in {"yes", "true", "1"})
     conflict_row_count = sum(

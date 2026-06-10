@@ -4,6 +4,9 @@ import shlex
 from pathlib import Path
 from typing import Any
 
+from core.structure_metrics import parse_pdb_atoms_with_coords
+from core.structure_metrics_external import evaluate_structure_quality_with_external
+
 CLAIM_BOUNDARY = (
     "Local molecular-structure analysis only; it parses supplied PDB/mmCIF content or local files to summarize "
     "atoms, chains, residues, waters, and ligand-like HETATM residues. It does not fetch PDB entries, run docking, "
@@ -171,11 +174,20 @@ def analyze_structure_source(payload: dict[str, Any], *, root: str | Path = ".")
     atoms: list[dict[str, str]] = []
     if source_text:
         parser = "mmcif" if source_kind.startswith("mmcif") else "pdb"
-        atoms = _parse_mmcif(source_text) if parser == "mmcif" else _parse_pdb(source_text)
+        if parser == "pdb":
+            atoms = parse_pdb_atoms_with_coords(source_text)
+        else:
+            atoms = _parse_mmcif(source_text)
         if not atoms:
             blockers.append(_blocker("structure_atoms_not_found", "No ATOM/HETATM rows were parsed from the supplied structure source."))
 
     summary = _summarize_atoms(atoms)
+    quality_metrics: dict[str, Any] = {}
+    if atoms:
+        quality_metrics = evaluate_structure_quality_with_external(
+            atoms,
+            pdb_text=source_text if parser == "pdb" else "",
+        )
     status = "structure_analysis_ready" if source_available and atoms and not blockers else "blocked_structure_analysis"
     if source_kind == "pdb_id" and source_value:
         status = "structure_reference_recorded"
@@ -186,6 +198,11 @@ def analyze_structure_source(payload: dict[str, Any], *, root: str | Path = ".")
         "source_reference": source_value if source_kind == "pdb_id" else "",
         "parser": parser,
         **summary,
+        "quality_metrics": quality_metrics,
+        "molprobity_clashscore": quality_metrics.get("molprobity_clashscore"),
+        "molprobity_clashscore_source": quality_metrics.get("molprobity_clashscore_source", "internal_proxy"),
+        "ramachandran_outlier_fraction": quality_metrics.get("ramachandran_outlier_fraction"),
+        "lddt_pli_source": quality_metrics.get("lddt_pli_source"),
         "blocker_count": len(blockers),
         "blockers": blockers,
         "execution_enabled": False,

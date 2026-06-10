@@ -23,6 +23,8 @@ SCORE_COLUMNS = (
     "binding_score_composite_v4",
 )
 ENERGY_PROXY_COLUMNS = (
+    "deltaG_mm_gbsa_kcal_mol",
+    "binding_energy_explicit_water_recheck_kcal_mol_proxy",
     "binding_energy_mmpbsa_kcal_mol_proxy",
     "binding_energy_proxy",
     "physics_favorable_energy_proxy",
@@ -30,6 +32,13 @@ ENERGY_PROXY_COLUMNS = (
     "mean_e_polar",
     "mean_e_nonpolar",
     "mean_e_solvation",
+)
+REFINE_FEATURE_COLUMNS = (
+    "refine_tier_delta",
+    "mm_gbsa_delta",
+    "refine_confidence",
+    "physics_refinement_confidence",
+    "physics_refinement_delta_kcal_mol",
 )
 
 CLAIM_BOUNDARY = (
@@ -206,9 +215,17 @@ def _iter_source_rows(path: Path, *, max_rows_per_source: int) -> tuple[list[dic
                     row["delta_energy"] = energy_proxy[0]
                     row["delta_energy_label_source"] = f"stage3_energy_proxy:{energy_proxy[1]}"
                     energy_joined += 1
+                    if energy_proxy[1] in {"deltaG_mm_gbsa_kcal_mol", "binding_energy_explicit_water_recheck_kcal_mol_proxy"}:
+                        row["refine_tier_label"] = energy_proxy[0]
+                        row["refine_tier_label_source"] = energy_proxy[1]
                 else:
                     row["delta_energy"] = ""
                     row["delta_energy_label_source"] = ""
+                    row["refine_tier_label"] = ""
+                    row["refine_tier_label_source"] = ""
+                for col in REFINE_FEATURE_COLUMNS:
+                    val = _float(raw.get(col))
+                    row[col] = val if val is not None else ""
                 rows.append(row)
     except OSError as exc:
         return [], {

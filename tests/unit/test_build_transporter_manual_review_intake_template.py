@@ -180,6 +180,25 @@ def test_transporter_manual_review_intake_template_overlays_p0_next_slot_identit
     assert aqp1["p0_slot_overlay_authoritative_apply_allowed"] is False
 
 
+def test_transporter_manual_review_intake_template_merges_completed_operator_csv(tmp_path: Path) -> None:
+    payload = mod.build_payload(candidate_workbook_packet=_workbook())
+    out_csv = tmp_path / "review.csv"
+    write_csv_rows = __import__("tools.builder_table_utils", fromlist=["write_csv_rows"]).write_csv_rows
+    write_csv_rows(out_csv, payload["rows"])
+    completed_rows = [dict(row) for row in payload["rows"]]
+    completed_rows[0]["review_decision"] = "KEEP_BLOCKED"
+    completed_rows[0]["authoritative_apply_requested"] = "false"
+    completed_rows[0]["direct_binding_source_url_or_doi"] = "KEEP_BLOCKED"
+    write_csv_rows(out_csv, completed_rows)
+
+    merged = mod.apply_operator_intake(payload, out_csv)
+
+    assert merged["summary"]["review_decision_placeholder_count"] == 2
+    assert merged["rows"][0]["review_decision"] == "KEEP_BLOCKED"
+    assert merged["rows"][0]["authoritative_apply_requested"] == "false"
+    assert merged["rows"][0]["direct_binding_source_url_or_doi"] == "KEEP_BLOCKED"
+
+
 def test_transporter_manual_review_intake_template_blocks_without_workbook() -> None:
     payload = mod.build_payload(candidate_workbook_packet={"summary": {"candidate_workbook_ready": False}})
 
