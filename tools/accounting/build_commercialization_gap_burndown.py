@@ -1021,7 +1021,15 @@ def build_payload(
         "aqp1_focus_ligand": execution_summary.get("aqp1_quantitative_provenance_primary_focus_ligand", ""),
         "aqp1_operator_provenance_note": aqp1_operator_provenance_note,
         "ca2_direct_conflict_row_count": execution_summary.get("ca2_direct_conflict_row_count", 0),
+        "ca2_direct_conflict_parked_review_only_count": execution_summary.get(
+            "ca2_direct_conflict_parked_review_only_count", 0
+        ),
+        "ca2_direct_conflict_active_blocker_count": execution_summary.get("ca2_direct_conflict_active_blocker_count", 0),
         "pxr_must_defer_count": execution_summary.get("pxr_must_defer_count", 0),
+        "pxr_must_defer_parked_review_only_count": execution_summary.get("pxr_must_defer_parked_review_only_count", 0),
+        "pxr_must_defer_active_blocker_count": execution_summary.get("pxr_must_defer_active_blocker_count", 0),
+        "science_lane_parked_review_only_count": execution_summary.get("science_lane_parked_review_only_count", 0),
+        "science_lane_active_blocker_count": execution_summary.get("science_lane_active_blocker_count", 0),
         "next_required_step": next_required_step,
     }
     return {"summary": summary, "rows": rows}
@@ -1115,7 +1123,13 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- aqp1_focus_ligand: `{s['aqp1_focus_ligand']}`",
         f"- aqp1_operator_provenance_note: `{s['aqp1_operator_provenance_note']}`",
         f"- ca2_direct_conflict_row_count: `{s['ca2_direct_conflict_row_count']}`",
+        f"- ca2_direct_conflict_parked_review_only_count: `{s['ca2_direct_conflict_parked_review_only_count']}`",
+        f"- ca2_direct_conflict_active_blocker_count: `{s['ca2_direct_conflict_active_blocker_count']}`",
         f"- pxr_must_defer_count: `{s['pxr_must_defer_count']}`",
+        f"- pxr_must_defer_parked_review_only_count: `{s['pxr_must_defer_parked_review_only_count']}`",
+        f"- pxr_must_defer_active_blocker_count: `{s['pxr_must_defer_active_blocker_count']}`",
+        f"- science_lane_parked_review_only_count: `{s['science_lane_parked_review_only_count']}`",
+        f"- science_lane_active_blocker_count: `{s['science_lane_active_blocker_count']}`",
         f"- ligand_scaleup_blocker_ready: `{s['ligand_scaleup_blocker_ready']}`",
         f"- ligand_scaleup_blocked: `{s['ligand_scaleup_blocked']}`",
         f"- ligand_scaleup_blocker_note: `{s['ligand_scaleup_blocker_note']}`",

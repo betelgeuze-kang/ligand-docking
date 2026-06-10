@@ -14,9 +14,14 @@ DEFAULT_OUT_JSON = "runs/goal_product_status_refresh_chain_current.json"
 DEFAULT_OUT_MD = "runs/goal_product_status_refresh_chain_current.md"
 
 REFRESH_STEPS = [
+    ("local_delivery_requirements_lock", "tools/build_local_delivery_requirements_lock.py"),
+    ("local_delivery_environment_manifest", "tools/build_local_delivery_environment_manifest.py"),
+    ("product_service_boundary_contract", "tools/build_product_service_boundary_contract.py"),
+    ("product_commercial_independence_gate", "tools/build_product_commercial_independence_gate.py"),
     ("product_release_operations_dossier", "tools/build_product_release_operations_dossier.py"),
     ("product_architecture_contract", "tools/build_product_architecture_contract.py"),
     ("product_multi_family_exemplar_profile_contract", "tools/build_product_multi_family_exemplar_profile_contract.py"),
+    ("product_ai_architecture_gap_closure", "tools/build_product_ai_architecture_gap_closure.py"),
     ("product_ai_architecture_execution_backlog", "tools/build_product_ai_architecture_execution_backlog.py"),
     ("goal_readiness_rollup", "tools/build_goal_readiness_rollup.py"),
     ("goal_operator_action_board", "tools/build_goal_operator_action_board.py"),
@@ -25,9 +30,14 @@ REFRESH_STEPS = [
 ]
 
 ARTIFACTS = {
+    "local_delivery_requirements_lock": "runs/local_delivery_requirements_lock_current.json",
+    "local_delivery_environment_manifest": "runs/local_delivery_environment_manifest_current.json",
+    "product_service_boundary_contract": "runs/product_service_boundary_contract_current.json",
+    "product_commercial_independence_gate": "runs/product_commercial_independence_gate_current.json",
     "product_release_operations_dossier": "runs/product_release_operations_dossier_current.json",
     "product_architecture_contract": "runs/product_architecture_contract_current.json",
     "product_multi_family_exemplar_profile_contract": "runs/product_multi_family_exemplar_profile_contract_current.json",
+    "product_ai_architecture_gap_closure": "runs/product_ai_architecture_gap_closure_current.json",
     "product_ai_architecture_execution_backlog": "runs/product_ai_architecture_execution_backlog_current.json",
     "goal_readiness_rollup": "runs/goal_readiness_rollup_current.json",
     "goal_operator_action_board": "runs/goal_operator_action_board_current.json",

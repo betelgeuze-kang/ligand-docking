@@ -295,6 +295,7 @@ def build_goal_release_decision_gate(
                 )
             )
             == 0,
+            bool(product_ai_backlog.get("backlog_clear") is True),
         ]
     )
     cleanup_postcheck_ready = (
@@ -566,7 +567,7 @@ def build_goal_release_decision_gate(
                     f"{product_ai_backlog_detail}"
                     + (f";{product_ai_scope_detail}" if product_ai_scope_detail else "")
                 ),
-                required="all_gaps_closed=true;open_gap_count=0;backlog_clear=true;work_item_count=0",
+                required="all_gaps_closed=true;open_gap_count=0;release_blocking_work_item_count=0;optional scope backlog may remain deferred",
                 passed=product_ai_architecture_ready,
                 reason=(
                     "Commercial release cannot be allowed while the protein-structure plus ligand-docking AI "

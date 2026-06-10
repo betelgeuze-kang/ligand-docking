@@ -511,6 +511,10 @@ def write_storage_tools_closure_packets(runs_dir: Path) -> None:
 
 
 def write_license_packets(runs_dir: Path) -> None:
+    write_license_decision_packets(runs_dir)
+
+
+def write_license_decision_packets(runs_dir: Path) -> None:
     _write(
         runs_dir / "product_license_decision_gate_current.json",
         {
@@ -534,16 +538,6 @@ def write_license_packets(runs_dir: Path) -> None:
                 "license_text_source": "LICENSE",
                 "copyright_holder": "JIHOON KANG",
                 "effective_year": "2026",
-            }
-        },
-    )
-    _write(
-        runs_dir / "product_commercial_independence_gate_current.json",
-        {
-            "summary": {
-                "status": "product_commercial_independence_gate_ready",
-                "license_present": True,
-                "commercial_independent_product_claim_allowed": True,
             }
         },
     )

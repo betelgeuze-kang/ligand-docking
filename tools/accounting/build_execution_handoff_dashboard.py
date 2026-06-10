@@ -17,6 +17,7 @@ from tools.local_engine_surface_helpers import (
     local_engine_summary_from_source,
     summarize_local_engine_commercialization_queue,
 )
+from tools.accounting.science_lane_blocker_accounting import science_lane_dual_counts
 from tools.product.transporter_phase_helpers import infer_transporter_phase
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -57,6 +58,9 @@ DEFAULT_EVIDENCE_ACQUISITION_QUEUE_JSON = "runs/family_evidence_acquisition_queu
 DEFAULT_EVIDENCE_INVESTIGATOR_PACKET_JSON = "runs/family_evidence_investigator_packet_current.json"
 DEFAULT_COMMERCIALIZATION_JSON = "runs/commercialization_readiness_current.json"
 DEFAULT_COMMERCIALIZATION_GAP_JSON = "runs/commercialization_gap_burndown_current.json"
+DEFAULT_CA2_WORKBENCH_JSON = "runs/ca2_reviewer_workbench_current.json"
+DEFAULT_CA2_CONFLICT_SHORTLIST_JSON = "runs/ca2_conflict_replacement_shortlist_current.json"
+DEFAULT_PXR_DEFER_GUIDE_JSON = "runs/pxr_defer_exact_evidence_operator_fill_guide_current.json"
 DEFAULT_LOCAL_ENGINE_QUEUE_JSON = DEFAULT_LOCAL_ENGINE_COMMERCIALIZATION_QUEUE_JSON
 DEFAULT_LIGAND_SCALEUP_SUITE_STATUS_JSON = LIGAND_SCALEUP_SUITE_STATUS_JSON
 DEFAULT_LIGAND_SCALEUP_BENCHMARK_SUMMARY_JSON = LIGAND_SCALEUP_BENCHMARK_SUMMARY_JSON
@@ -131,6 +135,9 @@ def build_payload(
     ligand_scaleup_suite_status: dict[str, Any] | None = None,
     ligand_scaleup_benchmark_summary: dict[str, Any] | None = None,
     local_engine_commercialization_queue: dict[str, Any] | None = None,
+    ca2_workbench: dict[str, Any] | None = None,
+    ca2_conflict_shortlist: dict[str, Any] | None = None,
+    pxr_defer_intake_supplement: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     pretest_s = dict(pretest.get("summary", {}) or {})
     pretest_rows = list(pretest.get("rows", []) or [])
@@ -446,10 +453,21 @@ def build_payload(
     ca2_next_required_step = str(
         ca2_commit_s.get("next_required_step", ca2_capture_s.get("next_required_step", ""))
     ).strip()
+    pxr_must_defer_count = int(
+        pxr_commit_s.get("must_remain_deferred_count", pxr_burndown_s.get("must_defer_count", 0)) or 0
+    )
+    science_lane_counts = science_lane_dual_counts(
+        ca2_direct_conflict_row_count=ca2_direct_conflict_count,
+        ca2_workbench_rows=list((ca2_workbench or {}).get("rows", []) or []),
+        ca2_shortlist_rows=list((ca2_conflict_shortlist or {}).get("rows", []) or []),
+        pxr_must_defer_count=pxr_must_defer_count,
+        pxr_commit_rows=list((pxr_commit_packet or {}).get("rows", []) or []),
+        pxr_defer_intake_rows=list((pxr_defer_intake_supplement or {}).get("rows", []) or []),
+    )
 
     pxr_signal = (
         f"review_only_{pxr_capture_sheet_s.get('review_only_candidate_count', 0)}"
-        f"_deferred_{pxr_commit_s.get('must_remain_deferred_count', pxr_burndown_s.get('must_defer_count', 0))}"
+        f"_deferred_{pxr_must_defer_count}"
         "_keep_human_support_explicit"
     )
 
@@ -632,6 +650,10 @@ def build_payload(
         "partial_handoff_row_count": partial_s.get("handoff_row_count", 0),
         "ca2_closure_mode": ca2_closure_mode,
         "ca2_direct_conflict_row_count": ca2_direct_conflict_count,
+        "ca2_direct_conflict_parked_review_only_count": science_lane_counts[
+            "ca2_direct_conflict_parked_review_only_count"
+        ],
+        "ca2_direct_conflict_active_blocker_count": science_lane_counts["ca2_direct_conflict_active_blocker_count"],
         "ca2_no_direct_negative_source_row_count": ca2_no_direct_negative_count,
         "ca2_source_linked_count": ca2_source_linked_count,
         "ca2_direct_negative_evidence_count": ca2_direct_negative_evidence_count,
@@ -643,7 +665,11 @@ def build_payload(
         "pxr_review_only_candidate_count": pxr_capture_sheet_s.get("review_only_candidate_count", 0),
         "pxr_captured_conflict_or_gap_count": pxr_capture_s.get("captured_conflict_or_gap_count", 0),
         "pxr_confirm_now_count": pxr_commit_s.get("confirm_now_count", 0),
-        "pxr_must_defer_count": pxr_commit_s.get("must_remain_deferred_count", pxr_burndown_s.get("must_defer_count", 0)),
+        "pxr_must_defer_count": pxr_must_defer_count,
+        "pxr_must_defer_parked_review_only_count": science_lane_counts["pxr_must_defer_parked_review_only_count"],
+        "pxr_must_defer_active_blocker_count": science_lane_counts["pxr_must_defer_active_blocker_count"],
+        "science_lane_parked_review_only_count": science_lane_counts["science_lane_parked_review_only_count"],
+        "science_lane_active_blocker_count": science_lane_counts["science_lane_active_blocker_count"],
         "pxr_binder_gap_count": pxr_commit_s.get("binder_gap_count", 0),
         "pxr_today_open_now": pxr_burndown_s.get("today_open_now", ""),
         "pxr_signal": pxr_signal,
@@ -852,6 +878,8 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- partial_handoff_row_count: `{s['partial_handoff_row_count']}`",
         f"- ca2_closure_mode: `{s['ca2_closure_mode']}`",
         f"- ca2_direct_conflict_row_count: `{s['ca2_direct_conflict_row_count']}`",
+        f"- ca2_direct_conflict_parked_review_only_count: `{s['ca2_direct_conflict_parked_review_only_count']}`",
+        f"- ca2_direct_conflict_active_blocker_count: `{s['ca2_direct_conflict_active_blocker_count']}`",
         f"- ca2_no_direct_negative_source_row_count: `{s['ca2_no_direct_negative_source_row_count']}`",
         f"- ca2_source_linked_count: `{s['ca2_source_linked_count']}`",
         f"- ca2_direct_negative_evidence_count: `{s['ca2_direct_negative_evidence_count']}`",
@@ -864,6 +892,10 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- pxr_captured_conflict_or_gap_count: `{s['pxr_captured_conflict_or_gap_count']}`",
         f"- pxr_confirm_now_count: `{s['pxr_confirm_now_count']}`",
         f"- pxr_must_defer_count: `{s['pxr_must_defer_count']}`",
+        f"- pxr_must_defer_parked_review_only_count: `{s['pxr_must_defer_parked_review_only_count']}`",
+        f"- pxr_must_defer_active_blocker_count: `{s['pxr_must_defer_active_blocker_count']}`",
+        f"- science_lane_parked_review_only_count: `{s['science_lane_parked_review_only_count']}`",
+        f"- science_lane_active_blocker_count: `{s['science_lane_active_blocker_count']}`",
         f"- pxr_binder_gap_count: `{s['pxr_binder_gap_count']}`",
         f"- pxr_today_open_now: `{s['pxr_today_open_now']}`",
         f"- pxr_signal: `{s['pxr_signal']}`",
@@ -1083,6 +1115,9 @@ def parse_args() -> argparse.Namespace:
         "--ligand-scaleup-benchmark-summary-json",
         default=DEFAULT_LIGAND_SCALEUP_BENCHMARK_SUMMARY_JSON,
     )
+    parser.add_argument("--ca2-workbench-json", default=DEFAULT_CA2_WORKBENCH_JSON)
+    parser.add_argument("--ca2-conflict-shortlist-json", default=DEFAULT_CA2_CONFLICT_SHORTLIST_JSON)
+    parser.add_argument("--pxr-defer-guide-json", default=DEFAULT_PXR_DEFER_GUIDE_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -1136,6 +1171,9 @@ def main() -> None:
         ligand_scaleup_suite_status=_maybe_load_json(args.ligand_scaleup_suite_status_json),
         ligand_scaleup_benchmark_summary=_maybe_load_json(args.ligand_scaleup_benchmark_summary_json),
         local_engine_commercialization_queue=_maybe_load_json(args.local_engine_commercialization_queue_json),
+        ca2_workbench=_maybe_load_json(args.ca2_workbench_json),
+        ca2_conflict_shortlist=_maybe_load_json(args.ca2_conflict_shortlist_json),
+        pxr_defer_intake_supplement=_maybe_load_json(args.pxr_defer_guide_json),
     )
     out_json = _resolve(args.out_json)
     out_csv = _resolve(args.out_csv)

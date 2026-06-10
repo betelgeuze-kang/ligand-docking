@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from tools.accounting.science_lane_blocker_accounting import science_lane_dual_counts
+
 ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_EXECUTION_JSON = "runs/execution_handoff_dashboard_current.json"
@@ -59,9 +61,11 @@ DEFAULT_PXR_DAY_PLAN_JSON = "runs/pxr_evidence_closure_day_plan_current.json"
 DEFAULT_CA2_WORKBENCH_JSON = "runs/ca2_reviewer_workbench_current.json"
 DEFAULT_CA2_DRAFT_PACKET_JSON = "runs/ca2_negative_reviewer_draft_packet_current.json"
 DEFAULT_CA2_COMMIT_PACKET_JSON = "runs/ca2_evidence_closure_commit_packet_current.json"
+DEFAULT_CA2_CONFLICT_SHORTLIST_JSON = "runs/ca2_conflict_replacement_shortlist_current.json"
 DEFAULT_PXR_WORKBENCH_JSON = "runs/pxr_reviewer_workbench_current.json"
 DEFAULT_PXR_DRAFT_PACKET_JSON = "runs/pxr_pending_resolution_reviewer_draft_packet_current.json"
 DEFAULT_PXR_COMMIT_PACKET_JSON = "runs/pxr_pending_resolution_commit_packet_current.json"
+DEFAULT_PXR_DEFER_GUIDE_JSON = "runs/pxr_defer_exact_evidence_operator_fill_guide_current.json"
 DEFAULT_PXR_CAPTURE_SHEET_JSON = "runs/pxr_unresolved_evidence_capture_sheet_current.json"
 DEFAULT_PXR_CAPTURE_INTAKE_JSON = "runs/pxr_unresolved_evidence_capture_intake_current.json"
 DEFAULT_PXR_EXACT_SOURCE_CONFIRMATION_JSON = "runs/pxr_exact_source_confirmation_packet_current.json"
@@ -245,6 +249,8 @@ def build_payload(
     idp_one_wider_repeatability_packet: dict[str, Any] | None = None,
     idp_one_wider_repeatability_result: dict[str, Any] | None = None,
     pxr_conflict_resolver: dict[str, Any] | None = None,
+    ca2_conflict_shortlist: dict[str, Any] | None = None,
+    pxr_defer_intake_supplement: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     execution_s = dict(execution.get("summary", {}) or {})
     platform_s = dict(platform_index.get("summary", {}) or {})
@@ -1062,12 +1068,25 @@ def build_payload(
             }
         )
 
+    science_lane_counts = science_lane_dual_counts(
+        ca2_direct_conflict_row_count=int(ca2_commit_s.get("conflict_review_row_count", 0) or 0),
+        ca2_workbench_rows=list(ca2_workbench.get("rows", []) or []),
+        ca2_shortlist_rows=list((ca2_conflict_shortlist or {}).get("rows", []) or []),
+        pxr_must_defer_count=int(pxr_commit_s.get("must_remain_deferred_count", 0) or 0),
+        pxr_commit_rows=list(pxr_commit_packet.get("rows", []) or []),
+        pxr_defer_intake_rows=list((pxr_defer_intake_supplement or {}).get("rows", []) or []),
+    )
+
     summary = {
         "catalog_row_count": len(rows),
         "top_level_packet_count": 3,
         "family_packet_count": len(rows) - 3,
         "ca2_closure_mode": ca2_workbench_s.get("closure_mode", "review_only_conflict_closure"),
         "ca2_direct_conflict_row_count": ca2_commit_s.get("conflict_review_row_count", 0),
+        "ca2_direct_conflict_parked_review_only_count": science_lane_counts[
+            "ca2_direct_conflict_parked_review_only_count"
+        ],
+        "ca2_direct_conflict_active_blocker_count": science_lane_counts["ca2_direct_conflict_active_blocker_count"],
         "ca2_no_direct_negative_source_row_count": ca2_commit_s.get("no_direct_negative_source_row_count", 0),
         "ca2_authoritative_negative_closure_allowed": ca2_workbench_s.get("authoritative_negative_closure_allowed", False),
         "ca2_remaining_blank_field": ca2_commit_s.get("remaining_blank_field", "replacement_reference_binding_kcal_mol"),
@@ -1078,6 +1097,10 @@ def build_payload(
         "pxr_captured_conflict_or_gap_count": pxr_capture_intake_s.get("captured_conflict_or_gap_count", 0),
         "pxr_confirm_now_count": pxr_commit_s.get("confirm_now_count", 0),
         "pxr_must_defer_count": pxr_commit_s.get("must_remain_deferred_count", 0),
+        "pxr_must_defer_parked_review_only_count": science_lane_counts["pxr_must_defer_parked_review_only_count"],
+        "pxr_must_defer_active_blocker_count": science_lane_counts["pxr_must_defer_active_blocker_count"],
+        "science_lane_parked_review_only_count": science_lane_counts["science_lane_parked_review_only_count"],
+        "science_lane_active_blocker_count": science_lane_counts["science_lane_active_blocker_count"],
         "pxr_binder_gap_count": pxr_commit_s.get("binder_gap_count", 0),
         "pxr_confirmation_focus_count": pxr_confirmation_s.get("row_count", 0),
         "pxr_confirmation_supportive_binder_count": pxr_confirmation_s.get(
@@ -1276,6 +1299,8 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- family_packet_count: `{s['family_packet_count']}`",
         f"- ca2_closure_mode: `{s['ca2_closure_mode']}`",
         f"- ca2_direct_conflict_row_count: `{s['ca2_direct_conflict_row_count']}`",
+        f"- ca2_direct_conflict_parked_review_only_count: `{s['ca2_direct_conflict_parked_review_only_count']}`",
+        f"- ca2_direct_conflict_active_blocker_count: `{s['ca2_direct_conflict_active_blocker_count']}`",
         f"- ca2_no_direct_negative_source_row_count: `{s['ca2_no_direct_negative_source_row_count']}`",
         f"- ca2_authoritative_negative_closure_allowed: `{s['ca2_authoritative_negative_closure_allowed']}`",
         f"- ca2_remaining_blank_field: `{s['ca2_remaining_blank_field']}`",
@@ -1286,6 +1311,10 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- pxr_captured_conflict_or_gap_count: `{s['pxr_captured_conflict_or_gap_count']}`",
         f"- pxr_confirm_now_count: `{s['pxr_confirm_now_count']}`",
         f"- pxr_must_defer_count: `{s['pxr_must_defer_count']}`",
+        f"- pxr_must_defer_parked_review_only_count: `{s['pxr_must_defer_parked_review_only_count']}`",
+        f"- pxr_must_defer_active_blocker_count: `{s['pxr_must_defer_active_blocker_count']}`",
+        f"- science_lane_parked_review_only_count: `{s['science_lane_parked_review_only_count']}`",
+        f"- science_lane_active_blocker_count: `{s['science_lane_active_blocker_count']}`",
         f"- pxr_binder_gap_count: `{s['pxr_binder_gap_count']}`",
         f"- pxr_confirmation_focus_count: `{s['pxr_confirmation_focus_count']}`",
         f"- pxr_confirmation_supportive_binder_count: `{s['pxr_confirmation_supportive_binder_count']}`",
@@ -1468,9 +1497,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ca2-workbench-json", default=DEFAULT_CA2_WORKBENCH_JSON)
     parser.add_argument("--ca2-draft-packet-json", default=DEFAULT_CA2_DRAFT_PACKET_JSON)
     parser.add_argument("--ca2-commit-packet-json", default=DEFAULT_CA2_COMMIT_PACKET_JSON)
+    parser.add_argument("--ca2-conflict-shortlist-json", default=DEFAULT_CA2_CONFLICT_SHORTLIST_JSON)
     parser.add_argument("--pxr-workbench-json", default=DEFAULT_PXR_WORKBENCH_JSON)
     parser.add_argument("--pxr-draft-packet-json", default=DEFAULT_PXR_DRAFT_PACKET_JSON)
     parser.add_argument("--pxr-commit-packet-json", default=DEFAULT_PXR_COMMIT_PACKET_JSON)
+    parser.add_argument("--pxr-defer-guide-json", default=DEFAULT_PXR_DEFER_GUIDE_JSON)
     parser.add_argument("--pxr-capture-sheet-json", default=DEFAULT_PXR_CAPTURE_SHEET_JSON)
     parser.add_argument("--pxr-capture-intake-json", default=DEFAULT_PXR_CAPTURE_INTAKE_JSON)
     parser.add_argument("--pxr-exact-source-confirmation-json", default=DEFAULT_PXR_EXACT_SOURCE_CONFIRMATION_JSON)
@@ -1644,6 +1675,8 @@ def main() -> None:
         idp_one_wider_repeatability_packet=_maybe_load_json(args.idp_one_wider_repeatability_packet_json),
         idp_one_wider_repeatability_result=_maybe_load_json(args.idp_one_wider_repeatability_result_json),
         pxr_conflict_resolver=_maybe_load_json(args.pxr_conflict_resolver_json),
+        ca2_conflict_shortlist=_maybe_load_json(args.ca2_conflict_shortlist_json),
+        pxr_defer_intake_supplement=_maybe_load_json(args.pxr_defer_guide_json),
     )
     out_json = _resolve(args.out_json)
     out_csv = _resolve(args.out_csv)

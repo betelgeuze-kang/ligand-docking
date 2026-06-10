@@ -20,17 +20,6 @@ def _resolve(path_like: str | Path) -> Path:
     return path if path.is_absolute() else ROOT / path
 
 
-def _read_json_if_present(path_like: str | Path) -> dict[str, Any]:
-    path = _resolve(path_like)
-    if not path.exists():
-        return {}
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-    return payload if isinstance(payload, dict) else {}
-
-
 def _write_json(path_like: str | Path, payload: dict[str, Any]) -> None:
     path = _resolve(path_like)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -175,16 +164,10 @@ def main(argv: list[str] | None = None) -> None:
         public_benchmark_json=args.public_benchmark_json,
         public_benchmark_work_order_json=args.public_benchmark_work_order_json,
     )
-    summary = payload.get("summary", {})
-    license_decision = _read_json_if_present("runs/product_license_decision_gate_current.json").get("summary", {})
-    if _resolve("LICENSE").is_file() and license_decision.get("status") == "product_license_decision_gate_ready":
-        summary["license_present"] = True
-        summary["status"] = "product_commercial_independence_gate_ready"
-        payload["summary"] = summary
     _write_json(args.out_json, payload)
-    from tools.product.ci_contract_fixture_packets import write_license_packets
+    from tools.product.ci_contract_fixture_packets import write_license_decision_packets
 
-    write_license_packets(_resolve("runs"))
+    write_license_decision_packets(_resolve("runs"))
     write_csv_rows(_resolve(args.out_csv), payload["rows"])
     _write_markdown(args.out_md, payload)
 

@@ -19,4 +19,7 @@ if __name__ == "__main__":
     _entry = getattr(_module, "main", None)
     if _entry is None:
         raise SystemExit("builder has no main(): tools.accounting.build_family_manual_review_burndown")
+    import inspect as _inspect
+    if len(_inspect.signature(_entry).parameters) == 0:
+        raise SystemExit(_entry() or 0)
     raise SystemExit(_entry(_sys.argv[1:]) or 0)
