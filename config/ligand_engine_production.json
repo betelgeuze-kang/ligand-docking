@@ -6,7 +6,8 @@
     "pocket_protein_max_atoms": 256,
     "prod_mode": true,
     "prod_early_stop": true,
-    "require_rust_hip": true
+    "require_rust_hip": true,
+    "cross_docking_pose_seed": true
   },
   "stage3": {
     "ligand_model_default": "auto",
@@ -14,7 +15,16 @@
     "residual_assist_mode": "assist",
     "hbond_onsps_weight": 1.0,
     "two_pass_scoring": true,
-    "two_pass_topk_pct": 0.05
+    "two_pass_topk_pct": 0.05,
+    "refine_tier_cascade": true
+  },
+  "stage3b": {
+    "run_physics_refinement": true,
+    "physics_refinement_mode": "implicit_gb_sa_v1",
+    "physics_refinement_backend": "internal_gb_sa_v1",
+    "physics_refinement_refined_energy_col": "deltaG_mm_gbsa_kcal_mol",
+    "physics_refinement_use_refined_scores_downstream": true,
+    "physics_refinement_use_refined_proxy_for_calibration": true
   },
   "claim_boundary": "restricted_local_delivery_proxy_refinement_only"
 }

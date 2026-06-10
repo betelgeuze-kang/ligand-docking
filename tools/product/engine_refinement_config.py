@@ -17,6 +17,7 @@ _BUILTIN_DEFAULTS: dict[str, Any] = {
         "prod_mode": True,
         "prod_early_stop": True,
         "require_rust_hip": True,
+        "cross_docking_pose_seed": True,
     },
     "stage3": {
         "ligand_model_default": "auto",
@@ -25,6 +26,15 @@ _BUILTIN_DEFAULTS: dict[str, Any] = {
         "hbond_onsps_weight": 1.0,
         "two_pass_scoring": True,
         "two_pass_topk_pct": 0.05,
+        "refine_tier_cascade": True,
+    },
+    "stage3b": {
+        "run_physics_refinement": True,
+        "physics_refinement_mode": "implicit_gb_sa_v1",
+        "physics_refinement_backend": "internal_gb_sa_v1",
+        "physics_refinement_refined_energy_col": "deltaG_mm_gbsa_kcal_mol",
+        "physics_refinement_use_refined_scores_downstream": True,
+        "physics_refinement_use_refined_proxy_for_calibration": True,
     },
 }
 
@@ -36,7 +46,7 @@ def load_engine_refinement_config(path: str | Path | None = None) -> dict[str, A
         try:
             loaded = json.loads(config_path.read_text(encoding="utf-8"))
             if isinstance(loaded, dict):
-                for key in ("stage2", "stage3"):
+                for key in ("stage2", "stage3", "stage3b"):
                     section = loaded.get(key, {})
                     if isinstance(section, dict):
                         payload.setdefault(key, {})
@@ -58,4 +68,10 @@ def stage2_defaults(config: dict[str, Any] | None = None) -> dict[str, Any]:
 def stage3_defaults(config: dict[str, Any] | None = None) -> dict[str, Any]:
     cfg = config or load_engine_refinement_config()
     section = cfg.get("stage3", {})
+    return section if isinstance(section, dict) else {}
+
+
+def stage3b_defaults(config: dict[str, Any] | None = None) -> dict[str, Any]:
+    cfg = config or load_engine_refinement_config()
+    section = cfg.get("stage3b", {})
     return section if isinstance(section, dict) else {}

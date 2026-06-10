@@ -13,9 +13,10 @@ from api.docking_dispatch import (
     is_dispatch_eligible,
 )
 from core.score_residual import apply_score_residual
-from tools.product.engine_refinement_config import load_engine_refinement_config, stage3_defaults
+from tools.product.engine_refinement_config import load_engine_refinement_config, stage3_defaults, stage3b_defaults
 from tools.product.stage2_skip_router import apply_stage2_skip_router, route_stage2_candidate
 from tools.run_ligand_backmapping_scoring import _resolve_ligand_model_for_row
+from tools.run_ligand_htvs_pipeline import _apply_engine_refinement_defaults, build_parser
 
 
 def test_engine_refinement_config_loads_stage3_defaults():
@@ -24,6 +25,25 @@ def test_engine_refinement_config_loads_stage3_defaults():
     assert s3.get("ligand_model_default") == "auto"
     assert bool(s3.get("onsps_4bead_cascade")) is True
     assert bool(s3.get("two_pass_scoring")) is True
+    assert bool(s3.get("refine_tier_cascade")) is True
+
+
+def test_engine_refinement_config_loads_stage3b_defaults():
+    cfg = load_engine_refinement_config()
+    s3b = stage3b_defaults(cfg)
+    assert bool(s3b.get("run_physics_refinement")) is True
+    assert s3b.get("physics_refinement_backend") == "internal_gb_sa_v1"
+    assert s3b.get("physics_refinement_refined_energy_col") == "deltaG_mm_gbsa_kcal_mol"
+
+
+def test_apply_engine_refinement_defaults_enables_refine_tier_cascade():
+    args = build_parser().parse_args([])
+    meta = _apply_engine_refinement_defaults(args, load_engine_refinement_config())
+    assert meta["applied"] is True
+    assert bool(getattr(args, "run_physics_refinement")) is True
+    assert getattr(args, "physics_refinement_backend") == "internal_gb_sa_v1"
+    assert bool(getattr(args, "traj_cross_docking_pose_seed")) is True
+    assert getattr(args, "calibration_proxy_col") == "deltaG_mm_gbsa_kcal_mol"
 
 
 def test_resolve_ligand_model_auto_and_rank_pct():

@@ -73,3 +73,23 @@ def test_write_smiles_bead_cache_writes_destination_with_unique_tmp(tmp_path: Pa
     assert dst.exists()
     assert dst.read_text(encoding="utf-8")
     assert not any(path.name == f"{dst.name}.tmp" for path in tmp_path.iterdir())
+
+
+def test_default_pocket_center_uses_geometric_detection_not_global_centroid(tmp_path: Path) -> None:
+    pdb_path = tmp_path / "target.pdb"
+    lines = []
+    # Dense shell around origin with a low-density cavity near (10, 10, 10).
+    for x in range(0, 12, 3):
+        for y in range(0, 12, 3):
+            for z in range(0, 12, 3):
+                if 6 <= x <= 9 and 6 <= y <= 9 and 6 <= z <= 9:
+                    continue
+                lines.append(f"ATOM  {len(lines)+1:5d}  CA  ALA A{len(lines)+1:4d}    {x:8.3f}{y:8.3f}{z:8.3f}  1.00  0.00           C")
+    pdb_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    pocket = mod._default_pocket_center("TEST_TARGET", native_path=str(pdb_path))  # noqa: SLF001
+
+    centroid = mod._pdb_centroid(str(pdb_path))  # noqa: SLF001
+    assert centroid is not None
+    assert pocket != centroid
+    assert max(abs(pocket[i] - centroid[i]) for i in range(3)) > 1.0

@@ -27,6 +27,7 @@ import pandas as pd
 
 from core.definitions import ResearchConstants
 from core.onsps_backmap import needs_onsps_4bead, onsps_site_count
+from core.pocket_detection import detect_pocket_geometric
 from tools.pdb_loader import load_native_structure
 
 try:
@@ -178,6 +179,27 @@ def _load_ligand_binder_map(
     return out
 
 
+def _pdb_atom_coords(path: str) -> Optional[np.ndarray]:
+    src = str(path).strip()
+    if (not src) or (not os.path.exists(src)):
+        return None
+    xyz: List[List[float]] = []
+    with open(src, "r", encoding="utf-8", errors="ignore") as f:
+        for line in f:
+            if not (line.startswith("ATOM") or line.startswith("HETATM")):
+                continue
+            try:
+                x = float(line[30:38])
+                y = float(line[38:46])
+                z = float(line[46:54])
+            except Exception:
+                continue
+            xyz.append([x, y, z])
+    if len(xyz) <= 0:
+        return None
+    return np.asarray(xyz, dtype=np.float64)
+
+
 def _pdb_centroid(path: str) -> Optional[Tuple[float, float, float]]:
     src = str(path).strip()
     if (not src) or (not os.path.exists(src)):
@@ -207,17 +229,25 @@ def _pdb_centroid(path: str) -> Optional[Tuple[float, float, float]]:
 
 
 def _default_pocket_center(target: str, native_path: str = "") -> Tuple[float, float, float]:
+    coords = _pdb_atom_coords(native_path)
+    if coords is None or coords.size == 0:
+        loaded, _ = load_native_structure(target)
+        if loaded is not None:
+            arr = loaded.detach().cpu().numpy()
+            if arr.ndim == 2 and arr.shape[1] == 3 and arr.shape[0] > 0:
+                coords = np.asarray(arr, dtype=np.float64)
+    if coords is not None and coords.size > 0:
+        pocket = detect_pocket_geometric(coords)
+        if str(pocket.get("status", "")) == "pocket_ready":
+            center = pocket.get("pocket_center", [0.0, 0.0, 0.0])
+            return float(center[0]), float(center[1]), float(center[2])
     c = _pdb_centroid(native_path)
     if c is not None:
         return c
-    coords, _ = load_native_structure(target)
-    if coords is None:
-        return 0.0, 0.0, 0.0
-    arr = coords.detach().cpu().numpy()
-    if arr.ndim != 2 or arr.shape[1] != 3 or arr.shape[0] <= 0:
-        return 0.0, 0.0, 0.0
-    center = np.mean(arr, axis=0)
-    return float(center[0]), float(center[1]), float(center[2])
+    if coords is not None and coords.size > 0:
+        center = np.mean(coords, axis=0)
+        return float(center[0]), float(center[1]), float(center[2])
+    return 0.0, 0.0, 0.0
 
 
 def _load_target_native_overrides(path: str) -> Dict[str, Dict[str, Any]]:

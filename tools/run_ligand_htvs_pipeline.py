@@ -16,7 +16,12 @@ from typing import Any, Dict, List, Optional, Sequence
 
 import pandas as pd
 
-from tools.product.engine_refinement_config import load_engine_refinement_config, stage2_defaults, stage3_defaults
+from tools.product.engine_refinement_config import (
+    load_engine_refinement_config,
+    stage2_defaults,
+    stage3_defaults,
+    stage3b_defaults,
+)
 from tools.product.four_bead_gate_evaluator import evaluate_four_bead_gate
 from tools.product.materialize_docking_htvs_request import materialize_from_docking_request
 from tools.product.merge_stage2_manifests import merge_stage2_manifests
@@ -1468,6 +1473,11 @@ def _apply_pipeline_preset_json(args: argparse.Namespace) -> Dict[str, Any]:
         "stage3_hbond_onsps_weight": "stage3_hbond_onsps_weight",
         "stage2_skip_router_enabled": "stage2_skip_router_enabled",
         "stage3_force_residual_shortlist": "stage3_force_residual_shortlist",
+        "run_physics_refinement": "run_physics_refinement",
+        "physics_refinement_mode": "physics_refinement_mode",
+        "physics_refinement_backend": "physics_refinement_backend",
+        "physics_refinement_refined_energy_col": "physics_refinement_refined_energy_col",
+        "traj_cross_docking_pose_seed": "traj_cross_docking_pose_seed",
         "traj_multi_start_count": "traj_multi_start_count",
         "traj_pocket_protein_max_atoms": "traj_pocket_protein_max_atoms",
         "target_native_csv": "target_native_csv",
@@ -1508,6 +1518,61 @@ def _apply_pipeline_preset_json(args: argparse.Namespace) -> Dict[str, Any]:
                 setattr(args, dst, gate[src])
                 applied_keys.append(dst)
     return {"applied": True, "preset_path": preset_path, "applied_keys": applied_keys}
+
+
+def _apply_engine_refinement_defaults(args: argparse.Namespace, engine_cfg: Dict[str, Any]) -> Dict[str, Any]:
+    """Apply production engine refinement defaults unless preset already set the key."""
+    s2 = stage2_defaults(engine_cfg)
+    s3 = stage3_defaults(engine_cfg)
+    s3b = stage3b_defaults(engine_cfg)
+    applied_keys: List[str] = []
+
+    s2_mapping = {
+        "multi_start_count": "traj_multi_start_count",
+        "pocket_protein_max_atoms": "traj_pocket_protein_max_atoms",
+        "cross_docking_pose_seed": "traj_cross_docking_pose_seed",
+    }
+    for src, dst in s2_mapping.items():
+        if src in s2:
+            setattr(args, dst, s2[src])
+            applied_keys.append(dst)
+
+    s3_mapping = {
+        "ligand_model_default": "stage3_ligand_model",
+        "onsps_4bead_cascade": "stage3_onsps_4bead_cascade",
+        "residual_assist_mode": "stage3_residual_assist_mode",
+        "hbond_onsps_weight": "stage3_hbond_onsps_weight",
+        "two_pass_scoring": "stage3_two_pass_scoring",
+        "two_pass_topk_pct": "stage3_two_pass_topk_pct",
+    }
+    for src, dst in s3_mapping.items():
+        if src in s3:
+            setattr(args, dst, s3[src])
+            applied_keys.append(dst)
+
+    s3b_mapping = {
+        "run_physics_refinement": "run_physics_refinement",
+        "physics_refinement_mode": "physics_refinement_mode",
+        "physics_refinement_backend": "physics_refinement_backend",
+        "physics_refinement_refined_energy_col": "physics_refinement_refined_energy_col",
+        "physics_refinement_use_refined_scores_downstream": "physics_refinement_use_refined_scores_downstream",
+        "physics_refinement_use_refined_proxy_for_calibration": "physics_refinement_use_refined_proxy_for_calibration",
+    }
+    for src, dst in s3b_mapping.items():
+        if src in s3b:
+            setattr(args, dst, s3b[src])
+            applied_keys.append(dst)
+
+    if bool(s3.get("refine_tier_cascade")) and str(getattr(args, "physics_refinement_refined_energy_col", "")).strip():
+        refined_col = str(getattr(args, "physics_refinement_refined_energy_col", "")).strip()
+        if refined_col and str(getattr(args, "calibration_proxy_col", "")).strip() in {
+            "",
+            "binding_energy_mmpbsa_kcal_mol_proxy",
+        }:
+            setattr(args, "calibration_proxy_col", refined_col)
+            applied_keys.append("calibration_proxy_col")
+
+    return {"applied": bool(applied_keys), "applied_keys": applied_keys}
 
 
 def _strict_gate_from_operational(op_gate: Dict[str, Any], args: argparse.Namespace) -> Dict[str, Any]:
@@ -1608,6 +1673,7 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
     _ensure_parent(f"{out_prefix}_summary.json")
     preset_meta = _apply_pipeline_preset_json(args)
     engine_cfg = load_engine_refinement_config(str(getattr(args, "engine_refinement_config", "") or "") or None)
+    engine_defaults_meta = _apply_engine_refinement_defaults(args, engine_cfg)
     s2_defaults = stage2_defaults(engine_cfg)
     s3_defaults = stage3_defaults(engine_cfg)
     resume_stage3_only = bool(getattr(args, "resume_stage3_only", False))
@@ -2140,6 +2206,8 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
                 str(int(getattr(args, "traj_pocket_protein_max_atoms", s2_defaults.get("pocket_protein_max_atoms", 256)))),
             ]
         )
+        if bool(getattr(args, "traj_cross_docking_pose_seed", False)):
+            traj_cmd.append("--cross-docking-pose-seed")
         protein_sequence = str(getattr(args, "protein_sequence", "") or "").strip()
         if protein_sequence:
             traj_cmd.extend(["--protein-sequence", protein_sequence])
@@ -4104,6 +4172,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=str,
         default="",
         help="Optional JSON path/object mapping target to prod early-stop overrides.",
+    )
+    p.add_argument(
+        "--traj-cross-docking-pose-seed",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Rotate initial ligand pose per replica for cross-docking multi-start exploration.",
     )
     p.add_argument("--traj-writer-workers", type=int, default=1)
     p.add_argument("--traj-writer-mode", type=str, default="process", choices=["sync", "thread", "process"])
