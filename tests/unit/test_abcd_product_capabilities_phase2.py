@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import json
 from pathlib import Path
 
@@ -88,6 +89,83 @@ def test_refine_tier_training_enrichment_and_model_features(tmp_path: Path):
     )
     assert "refine_confidence" in train_summary["feature_names"] or "mm_gbsa_delta" in train_summary["feature_names"]
     assert checkpoint.exists()
+
+
+def test_refine_tier_enrichment_merges_multiple_stage3_sources(tmp_path: Path) -> None:
+    dataset = tmp_path / "dataset.csv"
+    stage3_a = tmp_path / "a_refine.csv"
+    stage3_b = tmp_path / "b_refine.csv"
+    enriched = tmp_path / "enriched.csv"
+    dataset.write_text(
+        "target,family,ligand_id,is_binder,role,reference_binding_kcal_mol,raw_score,score_col,delta_score,corrected_score,mean_min_distance_A,source_csv,label_source\n"
+        "T1,gpcr,lig1,1,fit,-9.0,-8.0,binding_score_composite_v7,-1.0,-9.0,3.0,fixture,fixture\n"
+        "T2,gpcr,lig2,0,fit,-2.0,-1.0,binding_score_composite_v7,-1.0,-2.0,3.5,fixture,fixture\n",
+        encoding="utf-8",
+    )
+    stage3_a.write_text(
+        "target,ligand_id,binding_energy_mmpbsa_kcal_mol_proxy,deltaG_mm_gbsa_kcal_mol,physics_refinement_confidence\n"
+        "T1,lig1,-6.0,-5.0,0.8\n",
+        encoding="utf-8",
+    )
+    stage3_b.write_text(
+        "target,ligand_id,binding_energy_mmpbsa_kcal_mol_proxy,deltaG_mm_gbsa_kcal_mol,physics_refinement_confidence\n"
+        "T2,lig2,-1.0,-0.4,0.6\n",
+        encoding="utf-8",
+    )
+    summary = enrich_refine_tier_labels(
+        input_csv=dataset,
+        stage3_glob=str(tmp_path / "*_refine.csv"),
+        out_csv=enriched,
+    )
+    assert summary["stage3_source_count"] == 2
+    assert summary["refine_tier_label_rows"] == 2
+
+
+def test_refine_tier_enrichment_normalizes_product_gate_decoy_ids(tmp_path: Path) -> None:
+    dataset = tmp_path / "dataset.csv"
+    stage3 = tmp_path / "refine.csv"
+    enriched = tmp_path / "enriched.csv"
+    dataset.write_text(
+        "target,family,ligand_id,is_binder,role,reference_binding_kcal_mol,raw_score,score_col,delta_score,corrected_score,mean_min_distance_A,source_csv,label_source\n"
+        "ADRB2_GPCR_BLIND,gpcr,decoy_ADRB2_GPCR_BLIND_0144,0,fit,-2.0,-1.0,binding_score_composite_v7,-1.0,-2.0,3.5,fixture,fixture\n",
+        encoding="utf-8",
+    )
+    stage3.write_text(
+        "target,ligand_id,binding_energy_mmpbsa_kcal_mol_proxy,deltaG_mm_gbsa_kcal_mol,physics_refinement_confidence\n"
+        "ADRB2_GPCR_BLIND,product_gate_decoy_0144,-1.0,-0.4,0.6\n",
+        encoding="utf-8",
+    )
+    summary = enrich_refine_tier_labels(
+        input_csv=dataset,
+        stage3_csv=stage3,
+        out_csv=enriched,
+    )
+    assert summary["refine_tier_label_rows"] == 1
+    rows = list(csv.DictReader(enriched.open(encoding="utf-8")))
+    assert rows[0]["refine_tier_join_method"] == "target_ligand_id_normalized"
+
+
+def test_refine_tier_enrichment_joins_by_queue_id(tmp_path: Path) -> None:
+    dataset = tmp_path / "dataset.csv"
+    stage3 = tmp_path / "refine.csv"
+    enriched = tmp_path / "enriched.csv"
+    dataset.write_text(
+        "target,family,ligand_id,queue_id,is_binder,role,reference_binding_kcal_mol,raw_score,score_col,delta_score,corrected_score,mean_min_distance_A,source_csv,label_source\n"
+        "HIV1_PROTEASE,protease,legacy_alias,HIV1_PROTEASE__rep0022__imatinib,1,fit,-9.0,-8.0,binding_score_composite_v7,-1.0,-9.0,3.0,fixture,fixture\n",
+        encoding="utf-8",
+    )
+    stage3.write_text(
+        "target,ligand_id,queue_id,binding_energy_mmpbsa_kcal_mol_proxy,deltaG_mm_gbsa_kcal_mol,physics_refinement_confidence\n"
+        "HIV1_PROTEASE,imatinib,HIV1_PROTEASE__rep0022__imatinib,-6.0,-5.0,0.8\n",
+        encoding="utf-8",
+    )
+    summary = enrich_refine_tier_labels(
+        input_csv=dataset,
+        stage3_csv=stage3,
+        out_csv=enriched,
+    )
+    assert summary["refine_tier_label_rows"] == 1
+    assert summary["refine_tier_join_methods"]["queue_id"] == 1
 
 
 def test_external_metric_adapter_falls_back_to_proxy():

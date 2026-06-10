@@ -50,6 +50,7 @@ def run_refine_tier_residual_training_chain(
     stage5_glob: str = DEFAULT_STAGE5_GLOB,
     stage3_csv: str = "",
     stage3_glob: str = DEFAULT_STAGE3_GLOB,
+    stage3_refine_glob: str = "",
     dataset_csv: str = DEFAULT_DATASET_CSV,
     enriched_csv: str = DEFAULT_ENRICHED_CSV,
     out_checkpoint: str = DEFAULT_CHECKPOINT,
@@ -77,7 +78,14 @@ def run_refine_tier_residual_training_chain(
     enriched_path = _resolve(enriched_csv)
     enrich_summary: dict[str, Any] = {"status": "skipped_no_base_dataset"}
     train_input = dataset_path
-    if base_rows and stage3_path and stage3_path.exists():
+    if base_rows and str(stage3_refine_glob).strip():
+        enrich_summary = enrich_refine_tier_labels(
+            input_csv=dataset_path,
+            stage3_glob=str(stage3_refine_glob),
+            out_csv=enriched_path,
+        )
+        train_input = enriched_path
+    elif base_rows and stage3_path and stage3_path.exists():
         enrich_summary = enrich_refine_tier_labels(
             input_csv=dataset_path,
             stage3_csv=stage3_path,
@@ -112,6 +120,7 @@ def run_refine_tier_residual_training_chain(
         "dataset_csv": str(dataset_path),
         "enriched_csv": str(enriched_path),
         "stage3_csv": str(stage3_path) if stage3_path else "",
+        "stage3_refine_glob": str(stage3_refine_glob or ""),
         "enrichment": enrich_summary,
         "training": train_summary,
         "out_checkpoint": str(_resolve(out_checkpoint)),
@@ -146,6 +155,12 @@ def main() -> None:
     p.add_argument("--stage5-glob", type=str, default=DEFAULT_STAGE5_GLOB)
     p.add_argument("--stage3-csv", type=str, default="")
     p.add_argument("--stage3-glob", type=str, default=DEFAULT_STAGE3_GLOB)
+    p.add_argument(
+        "--stage3-refine-glob",
+        type=str,
+        default="",
+        help="Optional glob of refined stage3 CSVs (deltaG_mm_gbsa_kcal_mol) for multi-source label enrichment.",
+    )
     p.add_argument("--dataset-csv", type=str, default=DEFAULT_DATASET_CSV)
     p.add_argument("--enriched-csv", type=str, default=DEFAULT_ENRICHED_CSV)
     p.add_argument("--out-checkpoint", type=str, default=DEFAULT_CHECKPOINT)
@@ -162,6 +177,7 @@ def main() -> None:
         stage5_glob=args.stage5_glob,
         stage3_csv=args.stage3_csv,
         stage3_glob=args.stage3_glob,
+        stage3_refine_glob=args.stage3_refine_glob,
         dataset_csv=args.dataset_csv,
         enriched_csv=args.enriched_csv,
         out_checkpoint=args.out_checkpoint,
