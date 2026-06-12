@@ -210,6 +210,14 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   input/output/claim/gate review boolean, `gate_policy_artifact`, `reviewer`,
   `reviewed_at_utc` 입력 칸을 제공하며, release bundle의
   `api_runner_profile_promotion_operator_template_recorded` 체크에 포함된다.
+- `tools/product/build_api_runner_profile_promotion_operator_receipt.py`는 위 template을
+  operator receipt로 판정한다. 현재 기본 template은 빈 operator decision/review
+  fields라 `runs/api_runner_profile_promotion_operator_receipt_current.json`이
+  `blocked_api_runner_profile_promotion_operator_receipt`,
+  `operator_receipt_ready=false`, `blocked_row_count=4`를 기록한다. 이 receipt는
+  release bundle, source-of-truth refresh/freshness, goal operator intake kit에
+  연결되어, `promotion_ready=true`와 실제 operator-approved promotion decision을
+  분리한다.
 - `api/main.py`의 legacy `jobs = {}` in-memory dict은 제거됨.
   현재는 `api/job_store.py`의 `SQLiteJobStore`와
   `api/config.py`의 `api_job_store_path` 기본값

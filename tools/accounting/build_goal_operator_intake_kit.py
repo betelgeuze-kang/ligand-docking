@@ -34,6 +34,11 @@ from tools.product.build_engine_refinement_claim_evidence_receipt import (
     DEFAULT_OUT_JSON as DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_JSON,
     DEFAULT_RECEIPT_CSV as DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_CSV,
 )
+from tools.product.build_api_runner_profile_promotion_operator_receipt import (
+    APPROVAL_TOKEN as API_RUNNER_PROFILE_PROMOTION_APPROVAL_TOKEN,
+    DEFAULT_OPERATOR_TEMPLATE_CSV as DEFAULT_API_RUNNER_PROFILE_PROMOTION_TEMPLATE_CSV,
+    DEFAULT_OUT_JSON as DEFAULT_API_RUNNER_PROFILE_PROMOTION_RECEIPT_JSON,
+)
 from tools.build_goal_api_surface_contract import DEFAULT_OUT_JSON as DEFAULT_GOAL_API_SURFACE_CONTRACT_JSON
 from tools.build_goal_release_burndown_work_order import DEFAULT_OUT_JSON as DEFAULT_RELEASE_BURNDOWN_JSON
 from tools.build_product_execution_approval_gate import (
@@ -138,6 +143,21 @@ CATALOG: list[dict[str, Any]] = [
         "approval_token_required": "APPROVE_PRODUCT_DOCKING_EXECUTION",
         "release_checks": "product_architecture_release_ready;pilot_delivery_ready;bundle_validation_passed;delivery_ready_claim_allowed",
         "recommended_action": "Review product execution target and token intake before any docking run.",
+    },
+    {
+        "kit_entry_id": "api_runner_profile_promotion_operator_receipt",
+        "lane_id": "commercial_product_execution",
+        "action_types": [],
+        "input_kind": "api_runner_profile_promotion_operator_receipt",
+        "source_gate_json": DEFAULT_API_RUNNER_PROFILE_PROMOTION_RECEIPT_JSON,
+        "template_path": DEFAULT_API_RUNNER_PROFILE_PROMOTION_TEMPLATE_CSV,
+        "intake_path": DEFAULT_API_RUNNER_PROFILE_PROMOTION_TEMPLATE_CSV,
+        "approval_token_required": API_RUNNER_PROFILE_PROMOTION_APPROVAL_TOKEN,
+        "release_checks": "api_runner_profile_promotion_operator_receipt_recorded",
+        "recommended_action": (
+            "Fill runner-profile promotion decisions, contract-review flags, gate-policy artifact, reviewer metadata, "
+            "and approval token before any separate profile promotion edit."
+        ),
     },
     {
         "kit_entry_id": "product_license_decision",
@@ -690,6 +710,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--cameo-official-results-gate-json", default=DEFAULT_CAMEO_OFFICIAL_RESULTS_GATE_JSON)
     parser.add_argument("--cameo-registration-gate-json", default=DEFAULT_CAMEO_REGISTRATION_GATE_JSON)
     parser.add_argument("--product-execution-gate-json", default=DEFAULT_PRODUCT_EXECUTION_GATE_JSON)
+    parser.add_argument(
+        "--api-runner-profile-promotion-receipt-json",
+        default=DEFAULT_API_RUNNER_PROFILE_PROMOTION_RECEIPT_JSON,
+    )
     parser.add_argument("--product-commercial-independence-json", default=DEFAULT_PRODUCT_COMMERCIAL_INDEPENDENCE_JSON)
     parser.add_argument("--product-license-gate-json", default=DEFAULT_PRODUCT_LICENSE_GATE_JSON)
     parser.add_argument("--production-ai-gpu-return-intake-json", default=DEFAULT_PRODUCTION_AI_GPU_RETURN_INTAKE_JSON)
@@ -721,6 +745,9 @@ def main(argv: list[str] | None = None) -> None:
         DEFAULT_CAMEO_OFFICIAL_RESULTS_GATE_JSON: _read_json_if_present(args.cameo_official_results_gate_json),
         DEFAULT_CAMEO_REGISTRATION_GATE_JSON: _read_json_if_present(args.cameo_registration_gate_json),
         DEFAULT_PRODUCT_EXECUTION_GATE_JSON: _read_json_if_present(args.product_execution_gate_json),
+        DEFAULT_API_RUNNER_PROFILE_PROMOTION_RECEIPT_JSON: _read_json_if_present(
+            args.api_runner_profile_promotion_receipt_json
+        ),
         DEFAULT_PRODUCT_COMMERCIAL_INDEPENDENCE_JSON: _read_json_if_present(args.product_commercial_independence_json),
         DEFAULT_PRODUCT_LICENSE_GATE_JSON: _read_json_if_present(args.product_license_gate_json),
         DEFAULT_PRODUCTION_AI_GPU_RETURN_INTAKE_JSON: _read_json_if_present(

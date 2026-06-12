@@ -206,6 +206,43 @@ def test_product_release_current_refresh_blocks_timed_out_command(tmp_path: Path
     assert payload["verification_rows"] == []
 
 
+def test_product_release_current_refresh_uses_command_timeout_hint(tmp_path: Path, monkeypatch) -> None:
+    observed: list[int] = []
+
+    def fake_run(command: str, *, cwd: Path, timeout_seconds: int) -> dict:
+        observed.append(timeout_seconds)
+        return {"returncode": 0, "timed_out": False}
+
+    monkeypatch.setattr(refresh_mod, "_run_command", fake_run)
+    _write_json(
+        tmp_path / "runs" / "product_release_source_of_truth_gate_current.json",
+        {
+            "summary": {
+                "status": "product_release_source_of_truth_gate_ready",
+                "release_source_of_truth_ready": True,
+                "blocker_count": 0,
+                "stale_artifact_count": 0,
+                "readme_drift_count": 0,
+            }
+        },
+    )
+    _write_json(
+        tmp_path / "runs" / "goal_release_decision_gate_current.json",
+        {"summary": {"status": "goal_release_ready", "release_allowed": True, "blocker_count": 0}},
+    )
+
+    payload = refresh_mod.run_product_release_current_refresh(
+        execute=True,
+        root=tmp_path,
+        commands=["python3 tools/smoke.py --timeout-seconds 12"],
+        command_timeout_seconds=99,
+    )
+
+    assert observed == [42]
+    assert payload["rows"][0]["timeout_seconds"] == 42
+    assert payload["summary"]["status"] == "product_release_current_refresh_verified"
+
+
 def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     artifact_ids = {spec["artifact_id"] for spec in mod.DEFAULT_ARTIFACT_SPECS}
     status_ids = {spec["artifact_id"] for spec in mod.DEFAULT_STATUS_SPECS}
@@ -215,9 +252,11 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "product_ai_report_explanation_packet_semantic_ready" in status_ids
     assert "product_ai_report_ux_contract_semantic_ready" in status_ids
     assert "product_ledger_privacy_scan" in artifact_ids
+    assert "api_runner_profile_promotion_operator_receipt" in artifact_ids
     assert "product_launch_r4_preflight" in artifact_ids
     assert "engine_refinement_claim_promotion_action_board" in artifact_ids
     assert "engine_refinement_claim_evidence_receipt" in artifact_ids
+    assert "python3 tools/build_api_runner_profile_promotion_operator_receipt.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "product_release_bundle_semantic_ready" in status_ids
     goal_action_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "goal_operator_action_board"

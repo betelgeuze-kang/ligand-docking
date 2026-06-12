@@ -118,6 +118,7 @@ def run_tier_alpha_adrb2_dispatch_smoke(
     worker_ran = False
     sqlite_status = ""
     last_error = ""
+    drain_timed_out = False
 
     async def _drain_queue() -> None:
         nonlocal worker_ran, sqlite_status, last_error
@@ -145,7 +146,11 @@ def run_tier_alpha_adrb2_dispatch_smoke(
                 return
             await asyncio.sleep(float(poll_seconds))
 
-    asyncio.run(_drain_queue())
+    try:
+        asyncio.run(asyncio.wait_for(_drain_queue(), timeout=max(1.0, deadline - time.monotonic())))
+    except asyncio.TimeoutError:
+        drain_timed_out = True
+        last_error = "tier_alpha_dispatch_smoke_timeout"
 
     ledger = read_job_record(jobs_dir, resolved_job_id) or {}
     worker_state = _text(ledger.get("worker_state"))
@@ -181,7 +186,7 @@ def run_tier_alpha_adrb2_dispatch_smoke(
         except (OSError, json.JSONDecodeError):
             result_manifest_signature_verified = False
 
-    success = worker_state == "completed_fail_closed" and simulation_sync == "completed"
+    success = not drain_timed_out and worker_state == "completed_fail_closed" and simulation_sync == "completed"
     return {
         "summary": {
             "packet_type": "tier_alpha_adrb2_dispatch_smoke",
@@ -198,6 +203,8 @@ def run_tier_alpha_adrb2_dispatch_smoke(
         "worker_ran": worker_ran,
         "sqlite_job_status": sqlite_status,
         "worker_error": last_error,
+        "drain_timed_out": drain_timed_out,
+        "timeout_seconds": max(30, int(timeout_seconds)),
         "jobs_dir": str(jobs_dir.relative_to(ROOT) if jobs_dir.is_relative_to(ROOT) else jobs_dir),
         "htvs_summary_exists": htvs_summary.exists(),
         "result_file": str(result_template) if result_template.exists() else "",

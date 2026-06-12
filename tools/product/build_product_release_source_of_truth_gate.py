@@ -28,6 +28,7 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_product_scope_breadth_contract.py",
     "python3 tools/build_product_operational_quality_contract.py",
     "python3 tools/build_api_runner_profile_promotion_readiness.py",
+    "python3 tools/build_api_runner_profile_promotion_operator_receipt.py",
     "python3 tools/gpcr_replay/run_tier_alpha_adrb2_dispatch_smoke.py --timeout-seconds 180",
     "python3 tools/build_api_docking_dispatch_e2e_evidence.py",
     "python3 tools/product/build_restricted_unattended_execution_readiness.py",
@@ -102,6 +103,16 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "depends_on": [
             "tools/product/build_api_runner_profile_promotion_readiness.py",
             "config/api_validated_runner_profiles",
+        ],
+    },
+    {
+        "artifact_id": "api_runner_profile_promotion_operator_receipt",
+        "artifact_path": "runs/api_runner_profile_promotion_operator_receipt_current.json",
+        "builder_command": "python3 tools/build_api_runner_profile_promotion_operator_receipt.py",
+        "depends_on": [
+            "tools/product/build_api_runner_profile_promotion_operator_receipt.py",
+            "runs/api_runner_profile_promotion_readiness_current.json",
+            "runs/api_runner_profile_promotion_operator_template_current.csv",
         ],
     },
     {
@@ -189,6 +200,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/alert_delivery_smoke_current.json",
             "runs/product_launch_r4_preflight_current.json",
             "runs/product_goal_completion_audit_current.json",
+            "runs/api_runner_profile_promotion_operator_receipt_current.json",
             "runs/engine_refinement_claim_evidence_receipt_current.json",
         ],
     },

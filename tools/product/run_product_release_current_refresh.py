@@ -67,6 +67,22 @@ def _run_command(command: str, *, cwd: Path, timeout_seconds: int) -> dict[str, 
         return {"returncode": int(returncode), "timed_out": True}
 
 
+def _command_timeout_seconds(command: str, default_timeout_seconds: int) -> int:
+    parts = shlex.split(command)
+    for index, part in enumerate(parts):
+        if part == "--timeout-seconds" and index + 1 < len(parts):
+            try:
+                return max(1, int(parts[index + 1]) + 30)
+            except ValueError:
+                return int(default_timeout_seconds)
+        if part.startswith("--timeout-seconds="):
+            try:
+                return max(1, int(part.split("=", 1)[1]) + 30)
+            except ValueError:
+                return int(default_timeout_seconds)
+    return int(default_timeout_seconds)
+
+
 def _read_json_if_present(path_like: str | Path, *, root: Path = ROOT) -> dict[str, Any]:
     path = _resolve(path_like, root=root)
     if not path.is_file():
@@ -146,7 +162,9 @@ def run_product_release_current_refresh(
             "timeout_seconds": int(command_timeout_seconds),
         }
         if execute and not failed:
-            completed = _run_command(command, cwd=root_path, timeout_seconds=int(command_timeout_seconds))
+            row_timeout_seconds = _command_timeout_seconds(command, int(command_timeout_seconds))
+            row["timeout_seconds"] = row_timeout_seconds
+            completed = _run_command(command, cwd=root_path, timeout_seconds=row_timeout_seconds)
             row["executed"] = True
             row["returncode"] = completed["returncode"]
             row["timed_out"] = bool(completed["timed_out"])

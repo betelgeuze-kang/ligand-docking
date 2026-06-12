@@ -93,6 +93,14 @@ def _source_packets() -> dict[str, dict]:
         mod.DEFAULT_CAMEO_OFFICIAL_RESULTS_GATE_JSON: {"summary": {"status": "blocked_cameo_official_results_intake"}},
         mod.DEFAULT_CAMEO_REGISTRATION_GATE_JSON: {"summary": {"status": "blocked_cameo_public_registration_approval_gate"}},
         mod.DEFAULT_PRODUCT_EXECUTION_GATE_JSON: {"summary": {"status": "blocked_product_execution_operator_approval_gate"}},
+        mod.DEFAULT_API_RUNNER_PROFILE_PROMOTION_RECEIPT_JSON: {
+            "summary": {
+                "status": "blocked_api_runner_profile_promotion_operator_receipt",
+                "operator_receipt_ready": False,
+                "blocked_row_count": 4,
+                "external_state_mutated": False,
+            }
+        },
         mod.DEFAULT_PRODUCT_COMMERCIAL_INDEPENDENCE_JSON: {
             "summary": {
                 "status": "blocked_product_commercial_independence_gate",
@@ -234,13 +242,13 @@ def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp
     summary = payload["summary"]
     by_id = {row["kit_entry_id"]: row for row in payload["rows"]}
     assert summary["status"] == "goal_operator_intake_kit_ready"
-    assert summary["entry_count"] == 14
+    assert summary["entry_count"] == 15
     assert summary["source_action_count"] == 8
     assert summary["release_burndown_source_row_count"] == 8
     assert summary["release_burndown_linked_entry_count"] == 11
-    assert summary["operator_input_required_count"] == 13
+    assert summary["operator_input_required_count"] == 14
     assert summary["current_action_required_count"] == 11
-    assert summary["deferred_operator_input_count"] == 2
+    assert summary["deferred_operator_input_count"] == 3
     assert summary["primary_action_id"] == "product_ai_production:return_gpu_force_regeneration_receipt"
     assert summary["top_action_id"] == summary["primary_action_id"]
     assert summary["primary_action_priority"] == 0
@@ -268,6 +276,7 @@ def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp
     assert summary["goal_api_status_endpoint"] == "/goal/status"
     assert summary["goal_api_contract_endpoint"] == "/goal/api-contract"
     assert "APPROVE_API_DEPENDENCY_INSTALL" in summary["approval_tokens"]
+    assert mod.API_RUNNER_PROFILE_PROMOTION_APPROVAL_TOKEN in summary["approval_tokens"]
     assert mod.ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_APPROVAL_TOKEN in summary["approval_tokens"]
     assert summary["current_action_approval_token_count"] == 3
     assert summary["current_action_approval_tokens"] == [
@@ -300,6 +309,19 @@ def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp
     assert by_id["product_license_decision"]["related_source_json"] == mod.DEFAULT_PRODUCT_COMMERCIAL_INDEPENDENCE_JSON
     assert by_id["product_license_decision"]["related_source_status"] == "blocked_product_commercial_independence_gate"
     assert by_id["product_license_decision"]["release_sequence"] == "2"
+    assert by_id["api_runner_profile_promotion_operator_receipt"]["kit_status"] == "approval_required"
+    assert by_id["api_runner_profile_promotion_operator_receipt"]["current_action_surfaced"] is False
+    assert by_id["api_runner_profile_promotion_operator_receipt"]["operator_input_required"] is True
+    assert by_id["api_runner_profile_promotion_operator_receipt"]["operator_input_required_now"] is False
+    assert by_id["api_runner_profile_promotion_operator_receipt"]["source_gate_status"] == (
+        "blocked_api_runner_profile_promotion_operator_receipt"
+    )
+    assert by_id["api_runner_profile_promotion_operator_receipt"]["template_path"] == (
+        "runs/api_runner_profile_promotion_operator_template_current.csv"
+    )
+    assert by_id["api_runner_profile_promotion_operator_receipt"]["approval_token_required"] == (
+        mod.API_RUNNER_PROFILE_PROMOTION_APPROVAL_TOKEN
+    )
     assert by_id["production_ai_gpu_return"]["kit_status"] == "operator_input_required"
     assert by_id["production_ai_gpu_return"]["current_action_surfaced"] is True
     assert by_id["production_ai_gpu_return"]["operator_input_required_now"] is True
@@ -433,6 +455,7 @@ def test_goal_operator_intake_kit_tool_writes_manifest_and_copies_templates(tmp_
         "cameo_official.csv",
         "cameo_registration.csv",
         "product_execution.csv",
+        "api_runner_profile_promotion.csv",
         "product_license.csv",
         "gpu_return_manifest.csv",
         "gpu_return_summary.json",
@@ -478,6 +501,8 @@ def test_goal_operator_intake_kit_tool_writes_manifest_and_copies_templates(tmp_
                 str(source_paths[mod.DEFAULT_CAMEO_REGISTRATION_GATE_JSON]),
                 "--product-execution-gate-json",
                 str(source_paths[mod.DEFAULT_PRODUCT_EXECUTION_GATE_JSON]),
+                "--api-runner-profile-promotion-receipt-json",
+                str(source_paths[mod.DEFAULT_API_RUNNER_PROFILE_PROMOTION_RECEIPT_JSON]),
                 "--product-commercial-independence-json",
                 str(source_paths[mod.DEFAULT_PRODUCT_COMMERCIAL_INDEPENDENCE_JSON]),
                 "--product-license-gate-json",
@@ -510,7 +535,7 @@ def test_goal_operator_intake_kit_tool_writes_manifest_and_copies_templates(tmp_
         mod.CATALOG = original_catalog
 
     payload = json.loads(out_json.read_text(encoding="utf-8"))
-    assert payload["summary"]["template_copied_count"] == 11
+    assert payload["summary"]["template_copied_count"] == 12
     assert payload["summary"]["release_burndown_linked_entry_count"] == 11
     assert payload["summary"]["goal_api_surface_contract_status"] == "goal_api_surface_contract_ready"
     assert out_csv.read_text(encoding="utf-8").startswith("kit_entry_id,lane_id,")

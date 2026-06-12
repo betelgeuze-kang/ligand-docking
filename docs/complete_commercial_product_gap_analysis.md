@@ -198,6 +198,14 @@
 - HTVS stage2/3 + two-pass(rank → top-K 4-bead) + topo corrector + stage2 skip router 연결됨
   (`tools/run_ligand_htvs_pipeline.py`, `run_ligand_backmapping_scoring.py`).
 - composite v7 스코어 + force-residual shortlist hook 존재.
+- API runner profile promotion readiness는 green이지만, operator promotion decision은
+  별도 receipt로 fail-closed 추적한다. `tools/product/build_api_runner_profile_promotion_operator_receipt.py`는
+  `runs/api_runner_profile_promotion_operator_template_current.csv`의 decision/token/review
+  fields를 검증하고, 현재 빈 template 기준
+  `blocked_api_runner_profile_promotion_operator_receipt`,
+  `operator_receipt_ready=false`로 남겨 실제 profile edit/runner execution과 readiness
+  accounting을 분리한다. release bundle, source-of-truth, goal operator intake kit는 이
+  receipt를 필수 산출물로 기록한다.
 
 **갭**
 - **포즈 생성(pose sampling)** 단계가 명시적으로 약함: 컨포머 생성, 결합 포켓 탐색,

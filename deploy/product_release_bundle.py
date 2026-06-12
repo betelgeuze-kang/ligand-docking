@@ -21,6 +21,7 @@ DEFAULT_ARTIFACTS = {
     "runner_profile_work_order": "runs/api_runner_profile_enablement_work_order_current.json",
     "api_runner_profile_promotion_readiness": "runs/api_runner_profile_promotion_readiness_current.json",
     "api_runner_profile_promotion_operator_template": "runs/api_runner_profile_promotion_operator_template_current.csv",
+    "api_runner_profile_promotion_operator_receipt": "runs/api_runner_profile_promotion_operator_receipt_current.json",
     "rollback_runbook": "deploy/product_rollback_runbook.md",
     "rollout_runbook": "deploy/product_rollout_runbook.md",
     "dockerfile": "Dockerfile.product",
@@ -121,6 +122,9 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
     alert = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["alert_delivery_smoke"])))
     runner = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["runner_profile_work_order"])))
     runner_promotion = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["api_runner_profile_promotion_readiness"])))
+    runner_promotion_receipt = _summary(
+        _read_json(_resolve(DEFAULT_ARTIFACTS["api_runner_profile_promotion_operator_receipt"]))
+    )
     viewer_asset_base = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["viewer_asset_base_url_decision"])))
     license_audit = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["self_hosted_license_distribution_audit"])))
     third_party_license_review = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["third_party_license_review_gate"])))
@@ -234,6 +238,36 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
             "observed": (
                 f"template_path={DEFAULT_ARTIFACTS['api_runner_profile_promotion_operator_template']};"
                 f"readiness_template_path={runner_promotion.get('operator_template_csv')}"
+            ),
+        },
+        {
+            "check": "api_runner_profile_promotion_operator_receipt_recorded",
+            "passed": (
+                runner_promotion_receipt.get("status")
+                in {
+                    "blocked_api_runner_profile_promotion_operator_receipt",
+                    "api_runner_profile_promotion_operator_receipt_ready",
+                }
+                and runner_promotion_receipt.get("profile_enabled_by_this_tool") is False
+                and runner_promotion_receipt.get("runner_executed") is False
+                and runner_promotion_receipt.get("external_state_mutated") is False
+                and runner_promotion_receipt.get("approval_token_required") == "APPROVE_API_RUNNER_PROFILE_PROMOTION"
+                and runner_promotion_receipt.get("operator_template_csv")
+                == DEFAULT_ARTIFACTS["api_runner_profile_promotion_operator_template"]
+                and runner_promotion_receipt.get("readiness_artifact")
+                == DEFAULT_ARTIFACTS["api_runner_profile_promotion_readiness"]
+                and int(runner_promotion_receipt.get("profile_count") or 0)
+                == int(runner_promotion.get("profile_count") or 0)
+                and int(runner_promotion_receipt.get("receipt_row_count") or 0)
+                >= int(runner_promotion.get("profile_count") or 0)
+                and int(runner_promotion_receipt.get("missing_profile_count") or 0) == 0
+            ),
+            "observed": (
+                f"receipt_status={runner_promotion_receipt.get('status')};"
+                f"receipt_ready={runner_promotion_receipt.get('operator_receipt_ready')};"
+                f"blocked_row_count={runner_promotion_receipt.get('blocked_row_count')};"
+                f"profile_count={runner_promotion_receipt.get('profile_count')};"
+                f"receipt_row_count={runner_promotion_receipt.get('receipt_row_count')}"
             ),
         },
         {

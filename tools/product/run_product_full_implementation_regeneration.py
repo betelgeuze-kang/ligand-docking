@@ -23,6 +23,8 @@ def regenerate_tier_alpha_product_chain(
     steps: list[str] = []
     _run([sys.executable, "tools/build_api_runner_profile_promotion_readiness.py"])
     steps.append("api_runner_profile_promotion_readiness")
+    _run([sys.executable, "tools/build_api_runner_profile_promotion_operator_receipt.py"])
+    steps.append("api_runner_profile_promotion_operator_receipt")
     if run_dispatch_smoke:
         _run(
             [
