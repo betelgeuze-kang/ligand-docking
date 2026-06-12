@@ -105,6 +105,59 @@ def build_payload(*, triage_packet: dict[str, Any], operator_candidate_packet: d
     candidate_blocker = _text(candidate.get("candidate_blocker")) or _text(
         operator_summary.get("first_candidate_blocker")
     )
+    candidate_raw_activity_verified = bool(
+        candidate.get("candidate_raw_activity_verified") is True
+        or operator_summary.get("first_candidate_raw_activity_verified") is True
+    )
+    candidate_public_recheck_ready = bool(
+        candidate.get("external_recheck_receipt_ready") is True
+        or operator_summary.get("external_recheck_receipt_ready") is True
+        or candidate.get("automated_public_recheck_ready") is True
+        or operator_summary.get("automated_public_recheck_ready") is True
+    )
+    candidate_target_match_confirmed = bool(
+        candidate.get("automated_target_match_confirmed") is True
+        or operator_summary.get("automated_target_match_confirmed") is True
+    )
+    candidate_endpoint_binding_like = bool(
+        candidate.get("automated_endpoint_binding_like_confirmed") is True
+        or candidate.get("automated_endpoint_binding_like") is True
+        or operator_summary.get("automated_endpoint_binding_like_confirmed") is True
+        or operator_summary.get("automated_endpoint_binding_like") is True
+    )
+    candidate_data_validity_blocker = bool(
+        candidate.get("automated_data_validity_blocker_present") is True
+        or operator_summary.get("automated_data_validity_blocker_present") is True
+    )
+    candidate_assay_origin_blocker = bool(
+        candidate.get("automated_assay_origin_unknown_blocker_present") is True
+        or operator_summary.get("automated_assay_origin_unknown_blocker_present") is True
+    )
+    candidate_bacopaside_absence_confirmed = bool(
+        candidate.get("automated_bacopaside_absence_confirmed") is True
+        or operator_summary.get("automated_bacopaside_absence_confirmed") is True
+    )
+    candidate_bindingdb_cutoff100_empty_confirmed = bool(
+        candidate.get("automated_bindingdb_cutoff100_empty_confirmed") is True
+        or operator_summary.get("automated_bindingdb_cutoff100_empty_confirmed") is True
+    )
+    public_database_recheck_required_source_count = int(
+        operator_summary.get("external_recheck_source_count")
+        or candidate.get("external_recheck_source_count")
+        or 3
+    )
+    public_database_recheck_source_file_count = int(
+        operator_summary.get("external_recheck_present_source_count")
+        or operator_summary.get("public_recheck_source_file_count")
+        or candidate.get("external_recheck_present_source_count")
+        or candidate.get("external_recheck_source_count")
+        or 0
+    )
+    public_absence_claim_supported = bool(
+        candidate_public_recheck_ready
+        and candidate_bacopaside_absence_confirmed
+        and candidate_bindingdb_cutoff100_empty_confirmed
+    )
     rows = [
         {
             "action_id": "reject_current_chembl20_candidate_for_claim_safe_apply",
@@ -120,6 +173,15 @@ def build_payload(*, triage_packet: dict[str, Any], operator_candidate_packet: d
             "observed_units": "kcal/mol derived from reported Kd",
             "evidence_verdict": "keep_blocked",
             "blocker": candidate_blocker,
+            "public_recheck_receipt_ready": candidate_public_recheck_ready,
+            "public_recheck_raw_activity_verified": candidate_raw_activity_verified,
+            "public_recheck_target_match_confirmed": candidate_target_match_confirmed,
+            "public_recheck_endpoint_binding_like_confirmed": candidate_endpoint_binding_like,
+            "public_recheck_bacopaside_absence_confirmed": candidate_bacopaside_absence_confirmed,
+            "public_recheck_bindingdb_cutoff100_empty_confirmed": candidate_bindingdb_cutoff100_empty_confirmed,
+            "public_absence_claim_supported": public_absence_claim_supported,
+            "public_recheck_data_validity_blocker_present": candidate_data_validity_blocker,
+            "public_recheck_assay_origin_unknown_blocker_present": candidate_assay_origin_blocker,
             "claim_safe_evidence_currently_available": candidate_claim_safe,
             "authoritative_apply_allowed": False,
             "execution_enabled": False,
@@ -186,6 +248,28 @@ def build_payload(*, triage_packet: dict[str, Any], operator_candidate_packet: d
         or _text(operator_summary.get("first_candidate_reference_binding_kcal_mol")),
         "current_operator_candidate_blocker": candidate_blocker,
         "current_operator_candidate_claim_safe_ready": candidate_claim_safe,
+        "current_operator_candidate_public_recheck_receipt_ready": candidate_public_recheck_ready,
+        "current_operator_candidate_raw_activity_verified": candidate_raw_activity_verified,
+        "current_operator_candidate_target_match_confirmed": candidate_target_match_confirmed,
+        "current_operator_candidate_endpoint_binding_like_confirmed": candidate_endpoint_binding_like,
+        "current_operator_candidate_bacopaside_absence_confirmed": candidate_bacopaside_absence_confirmed,
+        "current_operator_candidate_bindingdb_cutoff100_empty_confirmed": candidate_bindingdb_cutoff100_empty_confirmed,
+        "public_database_recheck_receipt_ready": candidate_public_recheck_ready,
+        "public_database_recheck_required_source_count": public_database_recheck_required_source_count,
+        "public_database_recheck_source_file_count": public_database_recheck_source_file_count,
+        "public_absence_claim_supported": public_absence_claim_supported,
+        "current_operator_candidate_data_validity_blocker_present": candidate_data_validity_blocker,
+        "current_operator_candidate_assay_origin_unknown_blocker_present": candidate_assay_origin_blocker,
+        "current_operator_candidate_public_recheck_observed": (
+            f"receipt_ready={candidate_public_recheck_ready};"
+            f"raw_activity_verified={candidate_raw_activity_verified};"
+            f"target_match={candidate_target_match_confirmed};"
+            f"endpoint_binding_like={candidate_endpoint_binding_like};"
+            f"bacopaside_absence={candidate_bacopaside_absence_confirmed};"
+            f"bindingdb_cutoff100_empty={candidate_bindingdb_cutoff100_empty_confirmed};"
+            f"data_validity_blocker={candidate_data_validity_blocker};"
+            f"assay_origin_unknown_blocker={candidate_assay_origin_blocker}"
+        ),
         "external_primary_evidence_required": direct_binding_gap_open,
         "accepted_direct_binding_methods": [
             "SPR equilibrium Kd",
@@ -236,6 +320,8 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- direct_binding_gap_open: `{s['direct_binding_gap_open']}`",
         f"- current_operator_candidate: `{s['current_operator_candidate_ligand_external_identifier']}`",
         f"- current_operator_candidate_blocker: `{s['current_operator_candidate_blocker']}`",
+        f"- current_operator_candidate_public_recheck_observed: `{s['current_operator_candidate_public_recheck_observed']}`",
+        f"- public_absence_claim_supported: `{s['public_absence_claim_supported']}`",
         f"- first_required_external_action_id: `{s['first_required_external_action_id']}`",
         "",
         "## Acceptance Rule",

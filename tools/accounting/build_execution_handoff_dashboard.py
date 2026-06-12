@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
-from tools.ligand_scaleup_surface_helpers import (
+from tools.product.ligand_scaleup_surface_helpers import (
     DEFAULT_LIGAND_SCALEUP_BENCHMARK_SUMMARY_JSON as LIGAND_SCALEUP_BENCHMARK_SUMMARY_JSON,
     DEFAULT_LIGAND_SCALEUP_SUITE_STATUS_JSON as LIGAND_SCALEUP_SUITE_STATUS_JSON,
     summarize_ligand_scaleup_blocker,

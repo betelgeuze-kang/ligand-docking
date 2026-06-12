@@ -1,4 +1,4 @@
-from tools.accounting.build_ca2_conflict_replacement_shortlist import (
+from tools.product.build_ca2_conflict_replacement_shortlist import (
     REPLACEMENTS,
     apply_workbook_patch,
     build_payload,

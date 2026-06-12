@@ -189,6 +189,7 @@ async def process_next_job_once(
     runner: SimulationRunner = run_simulation_async,
     lease_seconds: int = 300,
     heartbeat_interval_seconds: float | None = None,
+    retry_on_failure: bool = True,
 ) -> dict[str, Any] | None:
     acquired = store.acquire_next_job(worker_id, lease_seconds=lease_seconds)
     if acquired is None:
@@ -201,7 +202,7 @@ async def process_next_job_once(
         worker_id=worker_id,
         lease_seconds=lease_seconds,
         heartbeat_interval_seconds=heartbeat_interval_seconds,
-        retry_on_failure=True,
+        retry_on_failure=retry_on_failure,
     )
 
 

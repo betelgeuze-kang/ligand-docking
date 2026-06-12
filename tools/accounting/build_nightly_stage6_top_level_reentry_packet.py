@@ -425,7 +425,7 @@ def build_payload(
     )
     operator_command_tokens = [
         "python3",
-        "tools/run_ligand_htvs_nightly.py",
+        "tools/product/run_ligand_htvs_nightly.py",
         "--profile-json",
         profile_out_artifact,
         "--date-tag",

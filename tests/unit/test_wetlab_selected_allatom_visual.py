@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools.wetlab_selected_allatom_visual import (
+from tools.wetlab.wetlab_selected_allatom_visual import (
     resolve_selected_allatom_visual_bundle,
     selected_allatom_visual_surface_fields,
 )

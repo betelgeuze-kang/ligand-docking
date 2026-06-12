@@ -6,7 +6,7 @@ import re
 from typing import Any
 
 try:
-    from tools.wetlab_selected_allatom_canonical import (
+    from tools.wetlab.wetlab_selected_allatom_canonical import (
         resolve_selected_allatom_canonical,
         selected_allatom_green_next_required_step,
     )
@@ -24,7 +24,7 @@ except ModuleNotFoundError:
         fallback_next_required_step: Any = "",
     ) -> str:
         return str(fallback_next_required_step or "").strip()
-from tools.wetlab_selected_allatom_visual import (
+from tools.wetlab.wetlab_selected_allatom_visual import (
     resolve_selected_allatom_visual_bundle,
     selected_allatom_visual_surface_fields,
 )

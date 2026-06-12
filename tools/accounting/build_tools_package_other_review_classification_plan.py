@@ -44,6 +44,53 @@ EXTENDED_KEYWORDS: dict[str, tuple[str, ...]] = {
     "cameo": ("cameo",),
 }
 
+MANUAL_PACKAGE_DECISIONS: dict[str, tuple[str, str]] = {
+    "analyze_idp_holdout_runtime": ("product", "idp_product_scope_runtime"),
+    "audit_ligand_leakage": ("product", "ligand_product_data_leakage_audit"),
+    "builder_json_utils": ("product", "shared_product_builder_json_helper"),
+    "check_biorxiv_temporal_provenance_maps": ("product", "biorxiv_temporal_product_validation"),
+    "check_idp_holdout_regression": ("product", "idp_product_scope_regression"),
+    "check_idp_virtual_hbond_parity": ("product", "idp_product_scope_physics_parity"),
+    "check_rust_hip_engine": ("product", "rocm_hip_product_engine_probe"),
+    "check_strict_release_regression": ("product", "product_release_regression_gate"),
+    "compare_idp_global_aggregation_calibrators": ("product", "idp_product_scope_calibration"),
+    "create_percent_encoded_path_aliases": ("product", "product_local_viewer_path_helper"),
+    "diagnose_ligand_stress_run": ("product", "ligand_product_runtime_diagnostic"),
+    "evaluate_active_learning_priority_ab": ("product", "product_active_learning_evaluation"),
+    "evaluate_allatom_equivalence_gate": ("product", "product_allatom_accuracy_gate"),
+    "evaluate_idp_global_aggregation_calibrator": ("product", "idp_product_scope_calibration"),
+    "evaluate_idp_release_candidate": ("product", "idp_product_scope_release_gate"),
+    "evaluate_target_mts_policy": ("product", "product_ai_runtime_policy_eval"),
+    "export_ai_router_onnx": ("product", "product_ai_router_export"),
+    "extract_special_case_labels": ("product", "product_accuracy_label_generation"),
+    "fetch_biorxiv_temporal_chembl_item_provenance": ("product", "biorxiv_temporal_product_validation"),
+    "fetch_biorxiv_temporal_named_ligand_item_provenance": ("product", "biorxiv_temporal_product_validation"),
+    "fetch_idp_llps_afdb_set": ("product", "idp_product_scope_source_fetch"),
+    "generate_meta_tasks": ("product", "product_ai_router_training_helper"),
+    "gio_wrapper": ("product", "product_local_viewer_open_helper"),
+    "idp_branch_labeling": ("product", "idp_product_scope_label_helper"),
+    "local_engine_surface_helpers": ("product", "product_local_engine_surface_helper"),
+    "operator_surface_contracts": ("product", "product_operator_surface_contract_helper"),
+    "prepare_real_drug_targets": ("product", "product_real_target_source_materialization"),
+    "prepare_real_md_manifest": ("product", "product_real_md_manifest_helper"),
+    "profile_ai_runtime_modes": ("product", "product_ai_runtime_profile"),
+    "profile_bottlenecks": ("product", "product_runtime_bottleneck_profile"),
+    "profile_idp_force_components": ("product", "idp_product_scope_force_profile"),
+    "publish_openmm_2bead_release": ("product", "product_openmm_release_packaging"),
+    "render_chimerax_movies": ("product", "product_molecular_rendering_asset_helper"),
+    "render_live_unseen_monitor": ("product", "product_live_unseen_monitor"),
+    "render_readme_molecular_figures": ("wetlab", "wetlab_tcruzi_pde_readme_figures"),
+    "report_stage2_speed_bottlenecks": ("product", "product_stage2_runtime_report"),
+    "report_real_md_metadata_gaps": ("product", "product_real_md_metadata_gap_report"),
+    "scaffold_md_manifest": ("product", "product_md_manifest_scaffold"),
+    "scaffold_real_md_source_manifest": ("product", "product_real_md_source_manifest_scaffold"),
+    "simulate_ligand_gate_scenarios": ("product", "ligand_product_gate_simulation"),
+    "summarize_ligand_gate_failure": ("product", "ligand_product_gate_failure_summary"),
+    "view_idp_global_aggregation_predictions": ("product", "idp_product_scope_prediction_view"),
+    "watch_ligand_run_closeout": ("product", "ligand_product_run_closeout_watch"),
+    "xdg_open_wrapper": ("product", "product_local_viewer_open_helper"),
+}
+
 CLAIM_BOUNDARY = (
     "Tools package other_review classification plan only; it reclassifies batch2 other_review rows into target "
     "package buckets before any move. It does not move files, rewrite imports, or mutate external state."
@@ -96,6 +143,9 @@ def _combined_keywords() -> dict[str, tuple[str, ...]]:
 
 def _classify_extended(stem: str) -> tuple[str, str]:
     normalized = stem.lower()
+    manual = MANUAL_PACKAGE_DECISIONS.get(normalized)
+    if manual:
+        return manual[0], f"manual_decision:{manual[1]}"
     for package, keywords in _combined_keywords().items():
         for keyword in keywords:
             if keyword in normalized:
@@ -138,7 +188,10 @@ def build_tools_package_other_review_classification_plan(
     unclassified_count = sum(1 for row in classified_rows if row["classification_status"] != "classified")
     classified_count = len(classified_rows) - unclassified_count
     package_counts = Counter(row["reclassified_package"] for row in classified_rows)
-    plan_ready = bool(classified_rows) and unclassified_count == 0
+    manual_decision_count = sum(
+        1 for row in classified_rows if str(row["reclassification_keyword"]).startswith("manual_decision:")
+    )
+    plan_ready = unclassified_count == 0
     status = "tools_package_other_review_classification_plan_ready" if plan_ready else "blocked_tools_package_other_review_classification_plan"
     summary = {
         "packet_type": "tools_package_other_review_classification_plan",
@@ -147,13 +200,16 @@ def build_tools_package_other_review_classification_plan(
         "classified_count": classified_count,
         "unclassified_count": unclassified_count,
         "manual_review_required_count": package_counts.get("defer_manual_review", 0),
+        "manual_decision_count": manual_decision_count,
         "reclassified_package_counts": dict(sorted(package_counts.items())),
         "plan_ready": plan_ready,
         "move_executed": False,
         "external_state_mutated": False,
         "claim_boundary": CLAIM_BOUNDARY,
         "next_required_step": (
-            "Apply reclassified package buckets in a separate approved tools migration slice."
+            "No batch2 other_review rows remain to classify."
+            if not classified_rows
+            else "Apply reclassified package buckets in a separate approved tools migration slice."
             if plan_ready
             else "Resolve remaining other_review rows with manual package bucket decisions."
         ),
@@ -171,6 +227,9 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- candidate_count: `{s['candidate_count']}`",
         f"- classified_count: `{s['classified_count']}`",
         f"- unclassified_count: `{s['unclassified_count']}`",
+        f"- manual_decision_count: `{s['manual_decision_count']}`",
+        f"- reclassified_package_counts: `{s['reclassified_package_counts']}`",
+        f"- next_required_step: `{s['next_required_step']}`",
         "",
         "## Claim Boundary",
         "",

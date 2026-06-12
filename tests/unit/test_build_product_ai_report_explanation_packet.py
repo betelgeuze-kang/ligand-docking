@@ -20,14 +20,26 @@ def test_report_explanation_packet_ready_from_local_evidence() -> None:
                 "target_id": "ADRB2",
                 "family": "gpcr",
                 "atom_count": 3804,
-                "chain_count": 2,
-                "residue_count": 507,
                 "ligand_like_residue_count": 17,
             }
         ),
-        execution_preflight_packet=_packet(
-            {"status": "product_execution_preflight_ready", "operational_gate_feasibility_status": "pass", "config_count": 1}
-        ),
+        execution_preflight_packet={
+            "summary": {
+                "status": "product_execution_preflight_ready",
+                "operational_gate_feasibility_status": "pass",
+                "config_count": 1,
+            },
+            "execution_command_check": {
+                "argv": [
+                    "--ranking-score-col",
+                    "binding_score_composite_v5",
+                    "--gate-max-mean-min-distance-A",
+                    "4.75",
+                    "--gate-topk-hit-rate-min",
+                    "0.2",
+                ]
+            },
+        },
         bundle_packet=_packet(
             {
                 "status": "product_bundle_contract_ready",
@@ -80,14 +92,21 @@ def test_report_explanation_packet_ready_from_local_evidence() -> None:
     assert summary["customer_report_card"]["scope_claim_limit_ready"] is True
     assert summary["interaction_rationale_ready"] is True
     assert summary["evidence_traceability_ready"] is True
-    assert summary["ranking_score_col"] == "not_reported"
-    assert summary["ready_section_count"] == 6
+    assert summary["ranking_score_col"] == "binding_score_composite_v5"
+    assert summary["ligand_selection_rationale_ready"] is True
+    assert summary["customer_report_card"]["ligand_selection_rationale_ready"] is True
+    assert "ranking source is `binding_score_composite_v5`" in summary["selection_rationale"]
+    assert summary["ready_section_count"] == 7
     assert {row["section_id"] for row in payload["rows"]} == set(mod.REQUIRED_SECTIONS)
     assert "3804 atoms" in payload["rows"][0]["narrative"]
     interaction = next(row for row in payload["rows"] if row["section_id"] == "interaction_rationale")
     assert interaction["status"] == "ready"
     assert "why is this pose plausible" in interaction["customer_question"].lower()
     assert "artifact_count=1" in interaction["evidence_traceability"]
+    ligand_selection = next(row for row in payload["rows"] if row["section_id"] == "ligand_selection_rationale")
+    assert ligand_selection["status"] == "ready"
+    assert "Why was this ligand or pose surfaced" in ligand_selection["customer_question"]
+    assert "ranking_score_col=binding_score_composite_v5" in ligand_selection["evidence_traceability"]
     assert all(row["customer_question"] for row in payload["rows"])
     assert all(row["claim_limit"] for row in payload["rows"])
     assert all(row["what_would_change_decision"] for row in payload["rows"])
@@ -101,6 +120,86 @@ def test_report_explanation_packet_ready_from_local_evidence() -> None:
     assert "general_protein_ligand_platform" in scope["claim_limit"]
 
 
+def test_report_explanation_packet_accepts_production_guarded_uncertainty_policy() -> None:
+    payload = mod.build_product_ai_report_explanation_packet(
+        decision_graph_packet=_packet({"closed_loop_decision_graph_ready": True}),
+        structure_report_packet=_packet(
+            {
+                "status": "product_structure_analysis_report_ready",
+                "local_structure_parsed": True,
+                "target_id": "ADRB2",
+                "family": "gpcr",
+                "atom_count": 3804,
+                "chain_count": 2,
+                "residue_count": 507,
+                "ligand_like_residue_count": 17,
+            }
+        ),
+        execution_preflight_packet={
+            "summary": {
+                "status": "product_execution_preflight_ready",
+                "operational_gate_feasibility_status": "pass",
+                "config_count": 1,
+            },
+            "execution_command_check": {
+                "argv": [
+                    "--ranking-score-col",
+                    "binding_score_composite_v5",
+                    "--gate-max-mean-min-distance-A",
+                    "4.75",
+                    "--gate-topk-hit-rate-min",
+                    "0.2",
+                ]
+            },
+        },
+        bundle_packet=_packet(
+            {
+                "status": "product_bundle_contract_ready",
+                "artifact_count": 1,
+                "expected_bundle_dir": "runs/local_delivery/bundle",
+                "bundle_validation_command_matches": True,
+            }
+        ),
+        registry_packet=_packet(
+            {
+                "status": "residual_model_registry_ready",
+                "default_residual_mode": "production_guarded",
+                "production_promotion_allowed": True,
+                "customer_facing_auto_correction_allowed": True,
+                "customer_facing_score_mutation_allowed": True,
+                "customer_facing_ranking_mutation_allowed": True,
+                "selected_sidecar_ready": True,
+                "selected_sidecar_missing_output_fields": [],
+            }
+        ),
+        scope_claim_guard_packet=_packet(
+            {
+                "closure_checklist_ready": True,
+                "allowed_scope_families": ["gpcr", "ion_channel", "kinase"],
+                "blocked_claim_scopes": [
+                    "transporter_domain_promotion",
+                    "pxr_domain_promotion",
+                    "general_protein_ligand_platform",
+                ],
+                "general_platform_claim_allowed": False,
+            }
+        ),
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "product_ai_report_explanation_packet_ready"
+    assert summary["uncertainty_policy_mode"] == "production_guarded_active"
+    assert summary["production_guarded_active_ready"] is True
+    assert summary["shadow_abstention_ready"] is False
+    assert summary["production_ai_abstention_enforced"] is False
+    assert summary["primary_abstention_reason"] == "production_guarded_active_report_packet_does_not_apply_correction"
+    assert summary["customer_report_card"]["uncertainty_policy_mode"] == "production_guarded_active"
+    assert "signed execution result manifest" in summary["customer_report_card"]["what_would_change_decision"]
+    uncertainty = next(row for row in payload["rows"] if row["section_id"] == "uncertainty_narrative")
+    assert uncertainty["status"] == "ready"
+    assert uncertainty["abstention_reason"] == "production_guarded_active_report_packet_does_not_apply_correction"
+
+
 def test_report_explanation_packet_blocks_missing_graph() -> None:
     payload = mod.build_product_ai_report_explanation_packet(
         decision_graph_packet=_packet({"closed_loop_decision_graph_ready": False}),
@@ -111,7 +210,7 @@ def test_report_explanation_packet_blocks_missing_graph() -> None:
     )
 
     assert payload["summary"]["status"] == "blocked_product_ai_report_explanation_packet"
-    assert payload["summary"]["blocked_section_count"] == 6
+    assert payload["summary"]["blocked_section_count"] == 7
     assert payload["summary"]["customer_report_delivery_contract_ready"] is False
 
 
@@ -148,7 +247,7 @@ def test_report_explanation_packet_cli_writes_outputs(tmp_path: Path) -> None:
         ]
     )
 
-    assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["section_count"] == 6
+    assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["section_count"] == 7
     assert "binding_site_explanation" in out_csv.read_text(encoding="utf-8")
     md = out_md.read_text(encoding="utf-8")
     assert "Product AI Report Explanation Packet" in md

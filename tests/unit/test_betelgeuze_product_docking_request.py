@@ -96,14 +96,21 @@ def test_docking_request_accepts_restricted_scope_but_keeps_execution_disabled()
     assert record["customer_report_card_ready"] is True
     assert record["customer_report_delivery_contract_ready"] is True
     assert record["customer_report_evidence_binding_ready"] is True
-    assert record["customer_report_required_block_count"] == 6
-    assert record["customer_report_ready_block_count"] == 6
+    assert record["customer_report_selection_rationale_ready"] is True
+    assert record["customer_report_uncertainty_posture_ready"] is True
+    assert record["customer_report_prohibited_claims_ready"] is True
+    assert record["customer_report_uncertainty_posture"] == "production_ai_abstained"
+    assert "No ligand winner is selected" in record["customer_report_selection_rationale"]
+    assert "fresh_docking_pose_claim" in record["customer_report_prohibited_claims"]
+    assert record["customer_report_required_block_count"] == 7
+    assert record["customer_report_ready_block_count"] == 7
     assert record["customer_report_blocked_block_count"] == 0
-    assert record["customer_report_section_count"] == 6
+    assert record["customer_report_section_count"] == 7
     assert record["customer_report_required_blocks"] == [
         "binding_site_explanation",
         "pose_comparison",
         "interaction_rationale",
+        "ligand_selection_rationale",
         "uncertainty_narrative",
         "scope_claim_limit",
         "counterfactual_rescue_suggestion",
@@ -114,6 +121,12 @@ def test_docking_request_accepts_restricted_scope_but_keeps_execution_disabled()
     assert record["customer_report_card"]["target_id"] == "ADRB2"
     assert record["customer_report_card"]["family"] == "gpcr"
     assert record["customer_report_card"]["production_ai_correction_applied"] is False
+    assert record["customer_report_card"]["ligand_selection_policy"] == (
+        "no_customer_ligand_selection_without_pose_score_and_ranking_gate"
+    )
+    assert record["customer_report_card"]["blocks"]["ligand_selection_rationale"]["status"] == "ready"
+    assert record["customer_report_card"]["uncertainty_posture"] == "production_ai_abstained"
+    assert "clinical_or_therapeutic_claim" in record["customer_report_card"]["prohibited_claims"]
     assert record["customer_report_sections"][0]["section_id"] == "binding_site_explanation"
     assert any(
         section["section_id"] == "counterfactual_rescue_suggestion"
@@ -156,6 +169,52 @@ def test_docking_request_accepts_restricted_scope_but_keeps_execution_disabled()
     assert record["external_state_mutated"] is False
 
 
+def test_docking_job_record_materialization_refs_are_hash_only_when_execution_authorized(
+    tmp_path: Path, monkeypatch
+) -> None:
+    approval_path = tmp_path / "approval.json"
+    approval_path.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "authorized_for_operator_execution",
+                    "authorized_for_execution": True,
+                    "operator_approval_csv_present": True,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(docking_request_mod, "PRODUCT_EXECUTION_APPROVAL_ARTIFACT", approval_path)
+
+    record = build_docking_job_record(
+        {
+            "request_type": "structure_analysis_ligand_docking",
+            "family": "gpcr",
+            "target_id": "ADRB2",
+            "pdb_content": "ATOM      1  CA  GLY A   1      12.104  13.207  14.321  1.00 10.00           C\n",
+            "ligands": [{"ligand_id": "lig_1", "smiles": "CCO"}],
+        },
+        job_id="job_privacy",
+    )
+
+    assert record["execution_approval_authorized"] is True
+    assert record["materialization_ligands"] == [
+        {
+            "ligand_id": "lig_1",
+            "compound_id_sha256": "c6b99063931edd8226bdd97fee325528faec8a4c3cf3292cef173f79fec42bdf",
+            "source_kind": "smiles",
+            "source_value_sha256": "ab1de819ede91df490e6441934decfa9041b49f91d6bbadbba4df634ccff57fa",
+            "source_redacted": True,
+        }
+    ]
+    assert record["intake_payload"]["ligands"] == [{"ligand_id": "lig_1", "source_redacted": True}]
+
+    record_json = json.dumps(record, ensure_ascii=True, sort_keys=True)
+    assert "CCO" not in record_json
+    assert "ATOM      1" not in record_json
+
+
 def test_docking_job_record_requires_customer_facing_permission_for_ai_subject() -> None:
     record = build_docking_job_record(
         {
@@ -189,7 +248,7 @@ def test_docking_job_record_requires_customer_facing_permission_for_ai_subject()
     assert record["ai_decision_graph_abstention_node_id"] == "uncertainty_abstention_guard"
     assert record["customer_report_explanation_ready"] is True
     assert record["customer_report_card_ready"] is True
-    assert record["customer_report_ready_block_count"] == 6
+    assert record["customer_report_ready_block_count"] == 7
     assert record["customer_report_card"]["production_ai_inference_subject_active"] is False
     assert record["execution_enabled"] is False
     assert record["docking_results_emitted"] is False
@@ -233,7 +292,16 @@ def test_docking_job_record_marks_ai_subject_only_when_customer_facing_permissio
     assert record["customer_report_primary_abstention_reason"] == ""
     assert record["customer_report_card_ready"] is True
     assert record["customer_report_card"]["production_ai_inference_subject_active"] is True
-    assert record["customer_report_sections"][3]["section_id"] == "uncertainty_narrative"
+    assert record["customer_report_uncertainty_posture"] == "production_guarded_active_customer_ranking_locked"
+    assert record["customer_report_card"]["uncertainty_posture"] == (
+        "production_guarded_active_customer_ranking_locked"
+    )
+    assert record["customer_report_card"]["ranking_mutation_policy"] == (
+        "customer_ranking_mutation_locked_by_shadow_guard"
+    )
+    assert "learned_score_correction_claim" in record["customer_report_prohibited_claims"]
+    assert record["customer_report_sections"][3]["section_id"] == "ligand_selection_rationale"
+    assert any(section["section_id"] == "uncertainty_narrative" for section in record["customer_report_sections"])
     assert record["execution_enabled"] is False
     assert record["docking_results_emitted"] is False
 
@@ -323,6 +391,7 @@ def test_docking_job_record_explains_blocked_scope_for_customer_report() -> None
     assert record["customer_report_primary_abstention_reason"] == record["production_ai_abstention_reason"]
     assert "force-label evidence" in record["customer_report_what_would_change_decision"]
     assert record["customer_report_card"]["scope_claim_allowed_for_request"] is False
+    assert "transporter_domain_promotion" in record["customer_report_card"]["prohibited_claims"]
     assert any(
         section["section_id"] == "scope_claim_limit"
         and "outside the restricted delivery scope" in section["narrative"]
@@ -357,12 +426,19 @@ def test_persist_docking_job_record_writes_local_ledger(tmp_path: Path) -> None:
         },
         job_id="job_ledger",
     )
+    record["materialization_ligands"] = [{"ligand_id": "cap", "smiles": "CCO"}]
+    record["debug_pdb_content"] = "ATOM      1  CA  GLY A   1      12.104  13.207  14.321  1.00 10.00           C\n"
 
     out_path = persist_docking_job_record(record, tmp_path)
-    payload = json.loads(out_path.read_text(encoding="utf-8"))
+    raw_payload = out_path.read_text(encoding="utf-8")
+    payload = json.loads(raw_payload)
 
     assert payload["job_id"] == "job_ledger"
     assert payload["status"] == "accepted_fail_closed"
     assert payload["heavy_artifact_policy"] == "manifest_first_externalize_before_delete"
     assert payload["rerun_manifest_ready"] is True
     assert payload["status_snapshot_persisted"] is True
+    assert payload["materialization_ligands"][0]["smiles"]["redacted"] is True
+    assert payload["debug_pdb_content"]["redacted"] is True
+    assert "CCO" not in raw_payload
+    assert "ATOM      1" not in raw_payload

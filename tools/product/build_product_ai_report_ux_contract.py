@@ -25,6 +25,7 @@ REQUIRED_CUSTOMER_REPORT_BLOCKS = (
     "binding_site_explanation",
     "pose_comparison",
     "interaction_rationale",
+    "ligand_selection_rationale",
     "uncertainty_narrative",
     "scope_claim_limit",
     "counterfactual_rescue_suggestion",
@@ -196,14 +197,18 @@ def build_product_ai_report_ux_contract(
         and _bool(explanation.get("structured_customer_report_ready"))
         and customer_report_delivery_contract_ready
         and _bool(explanation.get("interaction_rationale_ready"))
+        and _bool(explanation.get("ligand_selection_rationale_ready"))
         and _bool(explanation.get("evidence_traceability_ready"))
         and customer_report_viewer_binding_ready
         and "interaction_rationale" in explanation_section_ids
+        and "ligand_selection_rationale" in explanation_section_ids
         and "scope_claim_limit" in explanation_section_ids
         and isinstance(report_card, dict)
         and _text(report_card.get("primary_abstention_reason"))
         and _text(report_card.get("what_would_change_decision"))
+        and _text(report_card.get("selection_rationale"))
         and _bool(report_card.get("scope_claim_limit_ready"))
+        and _bool(report_card.get("ligand_selection_rationale_ready"))
         and report_card.get("general_platform_claim_allowed") is False
         and bool(report_card.get("blocked_claim_scopes"))
     )
@@ -211,8 +216,10 @@ def build_product_ai_report_ux_contract(
         graph_ready
         and explanation_ready
         and _text(structure.get("status")) == "product_structure_analysis_report_ready"
-        and _int(structure.get("chain_count")) > 0
-        and _int(structure.get("residue_count")) > 0
+        and (
+            _int(structure.get("atom_count")) > 0
+            or (_int(structure.get("chain_count")) > 0 and _int(structure.get("residue_count")) > 0)
+        )
     )
     pose_comparison_ready = (
         graph_ready
@@ -232,12 +239,36 @@ def build_product_ai_report_ux_contract(
         and _text(explanation.get("ranking_score_col"))
         and _text(explanation.get("interaction_distance_gate_A"))
     )
+    ligand_selection_rationale_ready = bool(
+        graph_ready
+        and explanation_ready
+        and customer_report_viewer_binding_ready
+        and _bool(explanation.get("ligand_selection_rationale_ready"))
+        and _bool(report_card.get("ligand_selection_rationale_ready"))
+        and "ligand_selection_rationale" in explanation_section_ids
+        and _text(report_card.get("selection_rationale"))
+        and _text(explanation.get("ranking_score_col"))
+        and explanation.get("ranking_score_col") != "not_reported"
+    )
+    default_residual_mode = _text(registry.get("default_residual_mode"))
+    missing_sidecar_outputs = [str(item) for item in registry.get("selected_sidecar_missing_output_fields") or []]
+    shadow_abstention_ready = (
+        default_residual_mode in {"shadow", "shadow_only"}
+        and registry.get("production_promotion_allowed") is False
+    )
+    guarded_active_ready = (
+        default_residual_mode == "production_guarded"
+        and registry.get("production_promotion_allowed") is True
+        and registry.get("customer_facing_auto_correction_allowed") is True
+        and registry.get("customer_facing_score_mutation_allowed") is True
+        and registry.get("selected_sidecar_ready") is True
+        and not missing_sidecar_outputs
+    )
     uncertainty_ready = (
         graph_ready
         and explanation_ready
         and _text(registry.get("status")) == "residual_model_registry_ready"
-        and _text(registry.get("default_residual_mode")) == "shadow"
-        and registry.get("production_promotion_allowed") is False
+        and (shadow_abstention_ready or guarded_active_ready)
     )
     counterfactual_ready = (
         graph_ready
@@ -250,6 +281,7 @@ def build_product_ai_report_ux_contract(
         binding_site_ready
         and pose_comparison_ready
         and interaction_rationale_ready
+        and ligand_selection_rationale_ready
         and uncertainty_ready
         and counterfactual_ready
         and viewer_ready
@@ -267,6 +299,7 @@ def build_product_ai_report_ux_contract(
                 f"structured_customer_report_ready={explanation.get('structured_customer_report_ready')};"
                 f"primary_abstention_reason={(explanation.get('customer_report_card') or {}).get('primary_abstention_reason')};"
                 f"interaction_rationale_ready={explanation.get('interaction_rationale_ready')};"
+                f"ligand_selection_rationale_ready={explanation.get('ligand_selection_rationale_ready')};"
                 f"evidence_traceability_ready={explanation.get('evidence_traceability_ready')};"
                 f"ready_sections={explanation.get('ready_section_count')};"
                 f"blocked_sections={explanation.get('blocked_section_count')};"
@@ -311,9 +344,12 @@ def build_product_ai_report_ux_contract(
             "binding_site_explanation",
             "ready" if binding_site_ready else "blocked",
             structure_report_path,
-            f"chains={structure.get('chain_count')};residues={structure.get('residue_count')};ligand_like={structure.get('ligand_like_residue_count')}",
-            "parsed structure context with chains/residues for binding-site explanation",
-            "Report can explain the local structure context used before docking/scoring.",
+            (
+                f"atoms={structure.get('atom_count')};chains={structure.get('chain_count')};"
+                f"residues={structure.get('residue_count')};ligand_like={structure.get('ligand_like_residue_count')}"
+            ),
+            "parsed atom-level or chain/residue structure context for binding-site explanation",
+            "Report can explain the available local structure context used before docking/scoring.",
         ),
         _row(
             "pose_comparison",
@@ -338,15 +374,31 @@ def build_product_ai_report_ux_contract(
             "Report can answer why a pose is plausible or weak beyond the aggregate score.",
         ),
         _row(
+            "ligand_selection_rationale",
+            "ready" if ligand_selection_rationale_ready else "blocked",
+            explanation_packet_path,
+            (
+                f"ligand_selection_rationale_ready={explanation.get('ligand_selection_rationale_ready')};"
+                f"report_card_ligand_selection_rationale_ready={report_card.get('ligand_selection_rationale_ready')};"
+                f"ranking_score_col={explanation.get('ranking_score_col')};"
+                f"selection_rationale_present={bool(_text(report_card.get('selection_rationale')))};"
+                f"section_bound={'ligand_selection_rationale' in explanation_section_ids}"
+            ),
+            "customer report explains why a ligand or pose was surfaced using score provenance, ligand context, and restricted-scope guardrails",
+            "Report can answer why this ligand/pose was selected for review without making winner, clinical, or broad-platform claims.",
+        ),
+        _row(
             "uncertainty_narrative",
             "ready" if uncertainty_ready else "blocked",
             registry_path,
             (
                 f"registry={registry.get('status')};default_mode={registry.get('default_residual_mode')};"
-                f"production_promotion={registry.get('production_promotion_allowed')};{registry_abstention_detail}"
+                f"production_promotion={registry.get('production_promotion_allowed')};"
+                f"shadow_abstention_ready={shadow_abstention_ready};guarded_active_ready={guarded_active_ready};"
+                f"{registry_abstention_detail}"
             ),
-            "residual registry has shadow/abstention policy",
-            "Report can state when AI residuals are evidence-only and abstain from automatic correction.",
+            "residual registry has either shadow abstention or production_guarded active policy with sidecar evidence",
+            "Report can state when AI residuals abstain or when guarded AI is active without silently changing scores.",
         ),
         _row(
             "counterfactual_rescue_suggestion",
@@ -380,6 +432,7 @@ def build_product_ai_report_ux_contract(
         "binding_site_explanation_ready": binding_site_ready,
         "pose_comparison_ready": pose_comparison_ready,
         "interaction_rationale_ready": interaction_rationale_ready,
+        "ligand_selection_rationale_ready": ligand_selection_rationale_ready,
         "viewer_interaction_surface_ready": viewer_interaction_surface_ready,
         "viewer_customer_report_binding_ready": viewer_customer_report_binding_ready,
         "customer_report_viewer_binding_ready": customer_report_viewer_binding_ready,
@@ -401,10 +454,20 @@ def build_product_ai_report_ux_contract(
         "customer_report_card": report_card,
         "evidence_traceability_ready": _bool(explanation.get("evidence_traceability_ready")),
         "ranking_score_col": explanation.get("ranking_score_col", ""),
+        "selection_rationale": report_card.get("selection_rationale", ""),
         "interaction_distance_gate_A": explanation.get("interaction_distance_gate_A", ""),
         "interaction_topk_hit_rate_gate": explanation.get("interaction_topk_hit_rate_gate", ""),
         "primary_abstention_reason": (explanation.get("customer_report_card") or {}).get("primary_abstention_reason", ""),
         "what_would_change_decision": (explanation.get("customer_report_card") or {}).get("what_would_change_decision", ""),
+        "uncertainty_policy_mode": (
+            "production_guarded_active"
+            if guarded_active_ready
+            else "shadow_abstention"
+            if shadow_abstention_ready
+            else "blocked"
+        ),
+        "shadow_abstention_ready": shadow_abstention_ready,
+        "production_guarded_active_ready": guarded_active_ready,
         "allowed_scope_families": list(report_card.get("allowed_scope_families") or []),
         "blocked_claim_scopes": list(report_card.get("blocked_claim_scopes") or []),
         "claim_blocked_domains": list(report_card.get("claim_blocked_domains") or []),
@@ -451,6 +514,7 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- customer_report_delivery_contract_ready: `{s['customer_report_delivery_contract_ready']}`",
         f"- customer_report_ready_block_count: `{s['customer_report_ready_block_count']}` / `{s['customer_report_required_block_count']}`",
         f"- interaction_rationale_ready: `{s['interaction_rationale_ready']}`",
+        f"- ligand_selection_rationale_ready: `{s['ligand_selection_rationale_ready']}`",
         f"- evidence_traceability_ready: `{s['evidence_traceability_ready']}`",
         f"- ranking_score_col: `{s['ranking_score_col']}`",
         f"- primary_abstention_reason: `{s['primary_abstention_reason']}`",

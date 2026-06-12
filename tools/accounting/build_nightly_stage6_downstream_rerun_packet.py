@@ -184,7 +184,7 @@ def build_payload(
 
     dry_run_command_tokens = [
         "python3",
-        "tools/run_ligand_htvs_nightly.py",
+        "tools/product/run_ligand_htvs_nightly.py",
         "--profile-json",
         downstream_profile_json_artifact,
         "--date-tag",
@@ -203,7 +203,7 @@ def build_payload(
     ]
     execute_command_tokens = [
         "python3",
-        "tools/run_ligand_htvs_nightly.py",
+        "tools/product/run_ligand_htvs_nightly.py",
         "--profile-json",
         downstream_profile_json_artifact,
         "--date-tag",

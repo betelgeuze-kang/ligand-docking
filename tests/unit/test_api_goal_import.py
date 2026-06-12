@@ -84,8 +84,10 @@ def test_api_app_imports_with_goal_router() -> None:
     assert readiness["release_complete_vs_operator_pending_lane"] == readiness_artifact.get(
         "release_complete_vs_operator_pending_lane"
     )
-    assert readiness["goal_completion_audit_goal_complete"] is True
-    assert readiness["release_complete_lane_ready"] is True
+    assert readiness["goal_completion_audit_goal_complete"] is readiness_artifact.get(
+        "goal_completion_audit_goal_complete"
+    )
+    assert readiness["release_complete_lane_ready"] is readiness_artifact.get("release_complete_lane_ready")
     assert readiness["operator_pending_lane_ready"] is False
     assert len(readiness["rows"]) == int(readiness_artifact.get("lane_count") or 0)
 

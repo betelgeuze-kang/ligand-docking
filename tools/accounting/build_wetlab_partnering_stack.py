@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 try:
-    import tools.wetlab_selected_allatom_canonical as selected_allatom_canonical_mod
+    import tools.wetlab.wetlab_selected_allatom_canonical as selected_allatom_canonical_mod
 except ImportError:
     class _SelectedAllatomCanonicalFallback:
         @staticmethod
@@ -17,7 +17,7 @@ except ImportError:
             raise NotImplementedError("selected_allatom canonical resolver is not available")
 
     selected_allatom_canonical_mod = _SelectedAllatomCanonicalFallback()
-from tools.wetlab_selected_allatom_visual import (
+from tools.wetlab.wetlab_selected_allatom_visual import (
     resolve_selected_allatom_visual_bundle,
     selected_allatom_visual_surface_fields,
 )

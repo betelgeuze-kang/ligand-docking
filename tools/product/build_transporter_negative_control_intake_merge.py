@@ -137,7 +137,7 @@ def build_payload(
         "documented_blocked_field_count": documented_blocked,
         "operator_fill_pending_field_count": pending,
         "next_required_step": (
-            "Rerun tools/build_product_scope_optional_lane_refresh_chain.py after operator intake merge."
+            "Rerun tools/product/build_product_scope_optional_lane_refresh_chain.py after operator intake merge."
             if patched_row_count > 0
             else "Fill transporter_negative_control_operator_intake_export_current.csv before merge."
         ),

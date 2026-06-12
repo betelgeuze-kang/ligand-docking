@@ -58,9 +58,11 @@ for _control in (
     "auth_hook",
     "tenant_header",
     "rate_limit",
+    "tenant_quota",
     "payload_limit",
     "path_allowlist",
     "audit_log",
+    "audit_retention",
     "runtime_request_counters",
     "hosted_tls_guard",
 ):
@@ -71,6 +73,7 @@ class ProductSecurityMiddleware(BaseHTTPMiddleware):
     def __init__(self, app) -> None:  # type: ignore[no-untyped-def]
         super().__init__(app)
         self._requests: dict[str, deque[float]] = defaultdict(deque)
+        self._tenant_quota_counts: dict[tuple[str, str], int] = defaultdict(int)
 
     async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
         blocked = self._preflight_blocker(request)
@@ -112,6 +115,8 @@ class ProductSecurityMiddleware(BaseHTTPMiddleware):
         rate_key = f"{tenant_id}:{client_host}"
         if self._rate_limited(rate_key):
             return self._blocked("rate_limited", 429)
+        if self._tenant_quota_exceeded(tenant_id):
+            return self._blocked("tenant_quota_exceeded", 429)
         if settings.product_api_auth_required:
             if path == "/metrics":
                 return None
@@ -130,6 +135,17 @@ class ProductSecurityMiddleware(BaseHTTPMiddleware):
         window.append(now)
         return False
 
+    def _tenant_quota_exceeded(self, tenant_id: str) -> bool:
+        quota = int(settings.product_api_tenant_daily_quota or 0)
+        if quota <= 0:
+            return False
+        day_key = time.strftime("%Y-%m-%d", time.gmtime())
+        key = (tenant_id or "local", day_key)
+        if self._tenant_quota_counts[key] >= quota:
+            return True
+        self._tenant_quota_counts[key] += 1
+        return False
+
     def _audit_request(self, request: Request, status_code: int) -> None:
         path = Path(settings.product_api_audit_log_path)
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -143,6 +159,7 @@ class ProductSecurityMiddleware(BaseHTTPMiddleware):
             "authorization_present": bool(request.headers.get("Authorization")),
             "request_body_logged": False,
             "authorization_value_logged": False,
+            "audit_retention_days": settings.product_api_audit_retention_days,
         }
         try:
             with path.open("a", encoding="utf-8") as handle:

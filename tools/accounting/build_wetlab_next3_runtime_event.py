@@ -16,14 +16,14 @@ TARGETS: dict[str, dict[str, str]] = {
     "cruzain": {
         "target_id": "Cruzain",
         "progress_builder": "tools/build_cruzain_live_progress.py",
-        "result_builder": "tools/build_cruzain_result_summary.py",
+        "result_builder": "tools/wetlab/build_cruzain_result_summary.py",
         "run_record_json": "runs/cruzain_run_record_current.json",
         "gate_json": "runs/cruzain_run_status_current.json",
     },
     "sarscov2_plpro": {
         "target_id": "SARS-CoV-2 PLpro",
-        "progress_builder": "tools/build_sarscov2_plpro_live_progress.py",
-        "result_builder": "tools/build_sarscov2_plpro_result_summary.py",
+        "progress_builder": "tools/wetlab/build_sarscov2_plpro_live_progress.py",
+        "result_builder": "tools/wetlab/build_sarscov2_plpro_result_summary.py",
         "run_record_json": "runs/sarscov2_plpro_run_record_current.json",
         "gate_json": "runs/sarscov2_plpro_result_review_current.json",
     },
@@ -123,7 +123,7 @@ def apply_runtime_event(
     _run(progress_cmd, python_bin)
     if event in {"reset", "complete", "hold"}:
         _run(result_cmd, python_bin)
-    _run(["tools/build_wetlab_next3_gate_refresh.py"], python_bin)
+    _run(["tools/wetlab/build_wetlab_next3_gate_refresh.py"], python_bin)
 
     run_record_s = _summary(target["run_record_json"])
     gate_s = _summary(target["gate_json"])
@@ -160,7 +160,7 @@ def build_payload(event_result: dict[str, Any]) -> dict[str, Any]:
         "structured": {
             "progress_command": event_result["progress_command"],
             "result_command": event_result["result_command"],
-            "refresh_command": "tools/build_wetlab_next3_gate_refresh.py",
+            "refresh_command": "tools/wetlab/build_wetlab_next3_gate_refresh.py",
         },
         "rows": [
             {

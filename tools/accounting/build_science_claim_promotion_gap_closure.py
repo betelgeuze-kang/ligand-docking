@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import Any
 
 from tools.accounting.build_gpcr_conditional_prior_promotion_gate import build_gpcr_conditional_prior_promotion_gate
-from tools.accounting.build_transporter_claim_promotion_boundary import build_transporter_claim_promotion_boundary
-from tools.accounting.build_wetlab_openmm_claim_promotion_boundary import build_wetlab_openmm_claim_promotion_boundary
+from tools.product.build_transporter_claim_promotion_boundary import build_transporter_claim_promotion_boundary
+from tools.wetlab.build_wetlab_openmm_claim_promotion_boundary import build_wetlab_openmm_claim_promotion_boundary
 from tools.builder_table_utils import write_csv_rows
 
 ROOT = Path(__file__).resolve().parents[2]

@@ -312,14 +312,14 @@ def main() -> None:
         ("wetlab_selected_allatom_repair_packet", [sys.executable, _script("build_wetlab_selected_allatom_repair_packet.py")]),
         ("wetlab_execution_readiness_queue", [sys.executable, _script("build_wetlab_execution_readiness_queue.py")]),
         ("local_engine_commercialization_queue", [sys.executable, _script("build_local_engine_commercialization_queue.py")]),
-        ("ca2_conflict_replacement_shortlist", [sys.executable, _script("build_ca2_conflict_replacement_shortlist.py")]),
+        ("ca2_conflict_replacement_shortlist", [sys.executable, _script("product/build_ca2_conflict_replacement_shortlist.py")]),
         (
             "ca2_conflict_replacement_chembl205_verification",
-            [sys.executable, _script("build_ca2_conflict_replacement_chembl205_verification.py")],
+            [sys.executable, _script("product/build_ca2_conflict_replacement_chembl205_verification.py")],
         ),
         (
             "pxr_defer_exact_evidence_operator_fill_guide",
-            [sys.executable, _script("build_pxr_defer_exact_evidence_operator_fill_guide.py")],
+            [sys.executable, _script("product/build_pxr_defer_exact_evidence_operator_fill_guide.py")],
         ),
         ("execution_handoff_dashboard", [sys.executable, _script("build_execution_handoff_dashboard.py")]),
         ("family_packet_catalog", [sys.executable, _script("build_family_packet_catalog.py")]),

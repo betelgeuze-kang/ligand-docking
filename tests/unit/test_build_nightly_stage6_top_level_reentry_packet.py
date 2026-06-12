@@ -205,7 +205,7 @@ def test_top_level_reentry_packet_is_ready_without_fake_promotion() -> None:
     assert profile["run_scope"] == "smoke_then_full"
 
     md = mod._markdown(payload)
-    assert "python3 tools/run_ligand_htvs_nightly.py --profile-json runs/nightly_stage6_top_level_reentry_profile_current.json" in md
+    assert "python3 tools/product/run_ligand_htvs_nightly.py --profile-json runs/nightly_stage6_top_level_reentry_profile_current.json" in md
     assert "--run-scope smoke_then_full" in md
     assert "--targets KRAS_G12D,EGFR_KINASE,HIV1_PROTEASE" in md
     assert "supporting-only" in md

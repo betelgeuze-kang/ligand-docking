@@ -37,16 +37,23 @@ SMOKE_PAYLOAD: dict[str, Any] = {
 }
 
 
-def _configure_runtime(*, workspace: Path, runner_enabled: bool = True) -> None:
+def _configure_runtime(
+    *,
+    workspace: Path,
+    job_id: str,
+    runner_enabled: bool = True,
+    runner_timeout_seconds: int = 240,
+) -> None:
     results = workspace / "results"
     jobs = results / "product_docking_jobs"
     results.mkdir(parents=True, exist_ok=True)
     jobs.mkdir(parents=True, exist_ok=True)
     os.environ["BETELGEUZE_REPO_ROOT"] = str(ROOT)
     os.environ["RESULTS_STORAGE_PATH"] = str(results)
-    os.environ["API_JOB_STORE_PATH"] = str(results / "api_jobs.sqlite3")
+    os.environ["API_JOB_STORE_PATH"] = str(results / f"{job_id}.sqlite3")
     os.environ["API_VALIDATED_RUNNER_ENABLED"] = "1" if runner_enabled else "0"
     os.environ["API_VALIDATED_RUNNER_PROFILES_PATH"] = str(ROOT / "config/api_validated_runner_profiles")
+    os.environ["API_VALIDATED_RUNNER_TIMEOUT_SECONDS"] = str(max(5, int(runner_timeout_seconds)))
     os.environ["API_RESULT_MANIFEST_SIGNING_KEY"] = os.environ.get(
         "API_RESULT_MANIFEST_SIGNING_KEY",
         "tier-alpha-local-smoke-signing-key",
@@ -77,7 +84,14 @@ def run_tier_alpha_adrb2_dispatch_smoke(
     workspace_path = Path(workspace)
     if not workspace_path.is_absolute():
         workspace_path = ROOT / workspace_path
-    _configure_runtime(workspace=workspace_path, runner_enabled=True)
+    resolved_job_id = job_id or _adrb2_smoke_job_id(DEFAULT_JOB_PREFIX)
+    runner_timeout_seconds = max(5, min(int(timeout_seconds) - 30, 180))
+    _configure_runtime(
+        workspace=workspace_path,
+        job_id=resolved_job_id,
+        runner_enabled=True,
+        runner_timeout_seconds=runner_timeout_seconds,
+    )
     _reload_settings()
 
     from api.config import settings
@@ -87,7 +101,6 @@ def run_tier_alpha_adrb2_dispatch_smoke(
     from betelgeuze_product.docking_request import build_docking_job_record, persist_docking_job_record
     from betelgeuze_product.job_orchestration import read_job_record
 
-    resolved_job_id = job_id or _adrb2_smoke_job_id(DEFAULT_JOB_PREFIX)
     jobs_dir = Path(settings.results_storage_path) / "product_docking_jobs"
 
     record = build_docking_job_record(SMOKE_PAYLOAD, job_id=resolved_job_id, source_host="tier_alpha_dispatch_smoke")
@@ -109,11 +122,17 @@ def run_tier_alpha_adrb2_dispatch_smoke(
     async def _drain_queue() -> None:
         nonlocal worker_ran, sqlite_status, last_error
         while time.monotonic() < deadline:
+            ledger = read_job_record(jobs_dir, resolved_job_id) or {}
+            if _text(ledger.get("worker_state")) in {"completed_fail_closed", "failed_fail_closed"}:
+                simulation_state = _text(ledger.get("simulation_sync_status"))
+                sqlite_status = "completed" if simulation_state == "completed" else simulation_state or sqlite_status
+                return
             result = await process_next_job_once(
                 store,
                 worker_id=worker_id,
                 lease_seconds=int(os.environ.get("API_WORKER_LEASE_SECONDS", "300")),
                 heartbeat_interval_seconds=float(os.environ.get("API_WORKER_HEARTBEAT_INTERVAL_SECONDS", "30")),
+                retry_on_failure=False,
             )
             if result is not None:
                 worker_ran = True
@@ -133,6 +152,34 @@ def run_tier_alpha_adrb2_dispatch_smoke(
     simulation_sync = _text(ledger.get("simulation_sync_status"))
     htvs_summary = Path(settings.results_storage_path) / resolved_job_id / "htvs_summary.json"
     result_template = Path(settings.results_storage_path) / resolved_job_id / "htvs_summary.json"
+    status_json = Path(settings.results_storage_path) / resolved_job_id / "status.json"
+    status_payload: dict[str, Any] = {}
+    if status_json.is_file():
+        try:
+            status_payload = json.loads(status_json.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            status_payload = {}
+    result_manifest = _text(status_payload.get("result_manifest")) or str(
+        Path(settings.results_storage_path) / resolved_job_id / "result_manifest.json"
+    )
+    result_manifest_path = Path(result_manifest)
+    result_manifest_signature_verified = False
+    result_manifest_status = ""
+    result_manifest_key_id = ""
+    if result_manifest_path.is_file():
+        try:
+            from api.result_manifest import verify_result_manifest
+
+            manifest_payload = json.loads(result_manifest_path.read_text(encoding="utf-8"))
+            if isinstance(manifest_payload, dict):
+                result_manifest_status = _text(manifest_payload.get("status"))
+                result_manifest_key_id = _text(manifest_payload.get("signature_key_id"))
+                result_manifest_signature_verified = verify_result_manifest(
+                    manifest_payload,
+                    signing_key=settings.api_result_manifest_signing_key,
+                )
+        except (OSError, json.JSONDecodeError):
+            result_manifest_signature_verified = False
 
     success = worker_state == "completed_fail_closed" and simulation_sync == "completed"
     return {
@@ -154,6 +201,12 @@ def run_tier_alpha_adrb2_dispatch_smoke(
         "jobs_dir": str(jobs_dir.relative_to(ROOT) if jobs_dir.is_relative_to(ROOT) else jobs_dir),
         "htvs_summary_exists": htvs_summary.exists(),
         "result_file": str(result_template) if result_template.exists() else "",
+        "status_json": str(status_json) if status_json.exists() else "",
+        "result_manifest": str(result_manifest_path) if result_manifest_path.exists() else "",
+        "result_manifest_exists": result_manifest_path.is_file(),
+        "result_manifest_signature_verified": result_manifest_signature_verified,
+        "result_manifest_status": result_manifest_status,
+        "result_manifest_key_id": result_manifest_key_id,
         "generated_at_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
     }
 

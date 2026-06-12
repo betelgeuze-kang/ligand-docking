@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from betelgeuze_product.payload_privacy import sanitize_request_for_ledger
+
 CLAIM_BOUNDARY = (
     "Product job orchestration ledger only; it lists and updates local fail-closed docking job records. "
     "It does not run docking, retry compute, cancel an external worker, emit scientific results, upload data, "
@@ -147,6 +149,21 @@ def _status_snapshot(record: dict[str, Any]) -> dict[str, Any]:
             "customer_report_evidence_binding_ready"
         )
         is True,
+        "customer_report_selection_rationale_ready": record.get(
+            "customer_report_selection_rationale_ready"
+        )
+        is True,
+        "customer_report_uncertainty_posture_ready": record.get(
+            "customer_report_uncertainty_posture_ready"
+        )
+        is True,
+        "customer_report_prohibited_claims_ready": record.get(
+            "customer_report_prohibited_claims_ready"
+        )
+        is True,
+        "customer_report_selection_rationale": _text(record.get("customer_report_selection_rationale")),
+        "customer_report_uncertainty_posture": _text(record.get("customer_report_uncertainty_posture")),
+        "customer_report_prohibited_claims": list(record.get("customer_report_prohibited_claims") or []),
         "customer_report_required_block_count": int(
             record.get("customer_report_required_block_count") or 0
         ),
@@ -312,7 +329,8 @@ def read_job_record(jobs_dir: Path, job_id: str) -> dict[str, Any]:
 def write_job_record(jobs_dir: Path, record: dict[str, Any]) -> Path:
     jobs_dir.mkdir(parents=True, exist_ok=True)
     path = _job_path(jobs_dir, _text(record.get("job_id")))
-    path.write_text(json.dumps(record, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+    safe_record = sanitize_request_for_ledger(record)
+    path.write_text(json.dumps(safe_record, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
     return path
 
 
@@ -492,6 +510,23 @@ def list_job_records(
                     "customer_report_evidence_binding_ready"
                 )
                 is True,
+                "customer_report_selection_rationale_ready": record.get(
+                    "customer_report_selection_rationale_ready"
+                )
+                is True,
+                "customer_report_uncertainty_posture_ready": record.get(
+                    "customer_report_uncertainty_posture_ready"
+                )
+                is True,
+                "customer_report_prohibited_claims_ready": record.get(
+                    "customer_report_prohibited_claims_ready"
+                )
+                is True,
+                "customer_report_selection_rationale": _text(
+                    record.get("customer_report_selection_rationale")
+                ),
+                "customer_report_uncertainty_posture": _text(record.get("customer_report_uncertainty_posture")),
+                "customer_report_prohibited_claims": list(record.get("customer_report_prohibited_claims") or []),
                 "customer_report_required_block_count": int(
                     record.get("customer_report_required_block_count") or 0
                 ),
@@ -1019,6 +1054,21 @@ def job_history(jobs_dir: Path, job_id: str) -> dict[str, Any]:
             "customer_report_evidence_binding_ready"
         )
         is True,
+        "customer_report_selection_rationale_ready": record.get(
+            "customer_report_selection_rationale_ready"
+        )
+        is True,
+        "customer_report_uncertainty_posture_ready": record.get(
+            "customer_report_uncertainty_posture_ready"
+        )
+        is True,
+        "customer_report_prohibited_claims_ready": record.get(
+            "customer_report_prohibited_claims_ready"
+        )
+        is True,
+        "customer_report_selection_rationale": _text(record.get("customer_report_selection_rationale")),
+        "customer_report_uncertainty_posture": _text(record.get("customer_report_uncertainty_posture")),
+        "customer_report_prohibited_claims": list(record.get("customer_report_prohibited_claims") or []),
         "customer_report_required_block_count": int(
             record.get("customer_report_required_block_count") or 0
         ),

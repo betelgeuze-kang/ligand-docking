@@ -191,8 +191,24 @@ def build_product_ai_decision_graph_contract(
     )
     binding_site_ready = (
         structure_ready
-        and _int(structure.get("chain_count")) > 0
-        and _int(structure.get("residue_count")) > 0
+        and (
+            _int(structure.get("atom_count")) > 0
+            or (_int(structure.get("chain_count")) > 0 and _int(structure.get("residue_count")) > 0)
+        )
+    )
+    default_residual_mode = _text(registry.get("default_residual_mode"))
+    missing_sidecar_outputs = [str(item) for item in registry.get("selected_sidecar_missing_output_fields") or []]
+    shadow_abstention_ready = (
+        default_residual_mode in {"shadow", "shadow_only"}
+        and registry.get("production_promotion_allowed") is False
+    )
+    guarded_active_ready = (
+        default_residual_mode == "production_guarded"
+        and registry.get("production_promotion_allowed") is True
+        and registry.get("customer_facing_auto_correction_allowed") is True
+        and registry.get("customer_facing_score_mutation_allowed") is True
+        and registry.get("selected_sidecar_ready") is True
+        and not missing_sidecar_outputs
     )
     pose_ready = (
         _text(capability.get("status")) == "product_capability_surface_contract_ready"
@@ -208,8 +224,7 @@ def build_product_ai_decision_graph_contract(
         _text(registry.get("status")) == "residual_model_registry_ready"
         and _bool(registry.get("product_model_layer_ready"))
         and _bool(registry.get("registry_ready"))
-        and _text(registry.get("default_residual_mode")) == "shadow"
-        and registry.get("production_promotion_allowed") is False
+        and (shadow_abstention_ready or guarded_active_ready)
     )
     report_ready = (
         _text(bundle.get("status")) == "product_bundle_contract_ready"
@@ -224,6 +239,7 @@ def build_product_ai_decision_graph_contract(
         and _bool(report_ux.get("binding_site_explanation_ready"))
         and _bool(report_ux.get("pose_comparison_ready"))
         and _bool(report_ux.get("interaction_rationale_ready"))
+        and _bool(report_ux.get("ligand_selection_rationale_ready"))
         and _bool(report_ux.get("viewer_interaction_surface_ready"))
         and _bool(report_ux.get("uncertainty_narrative_ready"))
         and _bool(report_ux.get("counterfactual_rescue_suggestion_ready"))
@@ -243,8 +259,11 @@ def build_product_ai_decision_graph_contract(
             "binding_site_context",
             "ready" if binding_site_ready else "blocked",
             structure_report_path,
-            f"chains={structure.get('chain_count')};residues={structure.get('residue_count')};ligand_like={structure.get('ligand_like_residue_count')}",
-            "structure context has chain and residue counts for binding-site interpretation",
+            (
+                f"atoms={structure.get('atom_count')};chains={structure.get('chain_count')};"
+                f"residues={structure.get('residue_count')};ligand_like={structure.get('ligand_like_residue_count')}"
+            ),
+            "structure context has atom-level evidence or chain/residue counts for binding-site interpretation",
             "Binding-site explanation should be grounded in parsed local structure context.",
         ),
         _row(
@@ -270,10 +289,11 @@ def build_product_ai_decision_graph_contract(
             (
                 f"registry={registry.get('status')};product_model_layer={registry.get('product_model_layer_ready')};"
                 f"default_mode={registry.get('default_residual_mode')};production_promotion={registry.get('production_promotion_allowed')};"
+                f"shadow_abstention_ready={shadow_abstention_ready};guarded_active_ready={guarded_active_ready};"
                 f"{registry_abstention_detail}"
             ),
-            "residual registry ready with shadow default and production promotion blocked",
-            "The graph must know when AI residuals are evidence-only and must abstain from production correction.",
+            "residual registry ready with shadow abstention or production_guarded active policy",
+            "The graph must know when AI residuals are evidence-only or guarded and must not silently mutate product correction.",
         ),
         _row(
             "report_bundle_contract",
@@ -290,10 +310,11 @@ def build_product_ai_decision_graph_contract(
             (
                 f"report_ux={report_ux.get('status')};structured_customer_report={report_ux.get('structured_customer_report_ready')};"
                 f"viewer={report_ux.get('viewer_interaction_surface_ready')};interaction={report_ux.get('interaction_rationale_ready')};"
+                f"ligand_selection={report_ux.get('ligand_selection_rationale_ready')};"
                 f"uncertainty={report_ux.get('uncertainty_narrative_ready')};counterfactual={report_ux.get('counterfactual_rescue_suggestion_ready')};"
                 f"traceability={report_ux.get('evidence_traceability_ready')}"
             ),
-            "customer report UX contract covers viewer surface, explanations, uncertainty, counterfactuals, and evidence traceability",
+            "customer report UX contract covers viewer surface, explanations, ligand-selection rationale, uncertainty, counterfactuals, and evidence traceability",
             "The graph must terminate in the customer-facing report surface, not only internal evidence bundles.",
         ),
     ]
@@ -332,11 +353,21 @@ def build_product_ai_decision_graph_contract(
         "pose_generation_node_ready": pose_ready,
         "scoring_node_ready": scoring_ready,
         "uncertainty_abstention_node_ready": uncertainty_ready,
+        "shadow_abstention_ready": shadow_abstention_ready,
+        "production_guarded_active_ready": guarded_active_ready,
+        "uncertainty_policy_mode": (
+            "production_guarded_active"
+            if guarded_active_ready
+            else "shadow_abstention"
+            if shadow_abstention_ready
+            else "blocked"
+        ),
         "report_node_ready": report_ready,
         "customer_report_ux_node_ready": customer_report_ux_ready,
         "viewer_interaction_surface_ready": _bool(report_ux.get("viewer_interaction_surface_ready")),
         "customer_report_card_ready": _bool(report_ux.get("customer_report_card_ready")),
         "interaction_rationale_ready": _bool(report_ux.get("interaction_rationale_ready")),
+        "ligand_selection_rationale_ready": _bool(report_ux.get("ligand_selection_rationale_ready")),
         "counterfactual_rescue_suggestion_ready": _bool(report_ux.get("counterfactual_rescue_suggestion_ready")),
         "evidence_traceability_ready": _bool(report_ux.get("evidence_traceability_ready")),
         "production_ai_inference_enabled": False,

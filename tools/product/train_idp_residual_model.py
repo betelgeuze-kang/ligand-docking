@@ -11,7 +11,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from tools.idp_residual_common import FEATURE_NAMES, build_residual_model
+from tools.product.idp_residual_common import FEATURE_NAMES, build_residual_model
 
 
 OFF_FEATURE_BY_TARGET = {

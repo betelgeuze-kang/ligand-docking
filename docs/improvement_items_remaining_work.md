@@ -121,16 +121,19 @@
 
 ---
 
-## 1h) 정리/리팩토링 경계 클로저 (2026-06-06) — CLOSED
+## 1h) 정리/리팩토링 경계 클로저 (2026-06-06, 2026-06-12 재확인) — PLANNING CLOSED / MIGRATION QUEUED
 
 | ID | 항목 | 상태 | 근거 |
 |---|---|---|---|
 | STOR-RESIDUAL | storage residual status | CLOSED | `runs/storage_residual_cleanup_status_current.json`, `operator_action_candidate_count=0` |
 | STOR-EXEC | cleanup execution scaffold | CLOSED | `runs/cleanup_completion_gate_current.json`; `delete_executed=false` |
-| TOOLS-OTHER | other_review classification lane | CLOSED | `runs/tools_package_other_review_classification_plan_current.json` |
-| TOOLS-BATCH3 | batch3 high-reference review lanes | CLOSED | `runs/tools_package_batch3_review_plan_current.json` |
+| TOOLS-OTHER | other_review classification lane | CLOSED | `runs/tools_package_other_review_classification_plan_current.json`: `candidate_count=88`, `classified_count=88`, `unclassified_count=0`, `manual_decision_count=41` |
+| TOOLS-BATCH3 | batch3 high-reference review lanes | READY / QUEUED | `runs/tools_package_batch3_review_plan_current.json`: `batch3_total_count=1425`, `first_slice_raw_candidate_count=106`, `first_slice_candidate_count=0`; `runs/tools_package_batch3_other_review_classification_plan_current.json`: `candidate_count=0`, `unclassified_count=0`; lane_a receipts `3+1` verified; initial/tail reclassified receipts `3+6` verified; lane_b receipts `10+10+10+10` verified; package-classified migration receipts `10+10+10+10` verified; `runs/tools_package_batch3_lane_decomposition_plan_current.json`: `lane_b_target_move_candidate_count=0`, `package_classification_required_count=40`; `runs/tools_package_batch3_package_classification_plan_current.json`: `candidate_count=40`, `classified_count=40`, `unclassified_count=0` |
 
 검증: `tests/unit/test_build_storage_cleanup_gap_closure.py`, `tests/unit/test_build_tools_refactor_gap_closure.py`, `write_storage_tools_closure_packets()`.
+최신 `runs/tools_refactor_gap_closure_current.json`은
+`tools_refactor_gap_closure_complete`, `gap_count=5`, `all_gaps_closed=true`,
+`open_gap_ids=[]`이며, `TOOLS-BATCH3-PACKAGE-CLASSIFICATION`까지 closed로 포함한다.
 
 ---
 
@@ -267,42 +270,38 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
 - `core/forcefield.py`/`core/topology.py`의 LJ 단순/alanine placeholder 자산을
   실제 residue/atom-type topology로 확장 (별도 S-class 작업).
 
-### A-2. Production AI 추론 주체 전환 (ROCm/HIP fail-closed)
+### A-2. Production AI 추론 주체 전환 (ROCm/HIP production_guarded)
 
 **현재 상태**
 - `runs/product_production_ai_checkpoint_readiness_current.json`은
-  `blocked_product_production_ai_checkpoint_readiness`,
-  `production_ai_checkpoint_ready=false`,
-  `production_gpu_execution_environment_ready=false`,
-  `default_residual_mode=shadow`를 기록한다.
-- `runs/rocm_environment_manifest_current.json`은 manifest 자체는 ready이나,
-  visible ROCm/HIP AMD GPU를 PyTorch에서 확인해야 하는 상태다.
-- `runs/residual_force_gpu_worker_handoff_package_current.json`은
-  `residual_force_gpu_worker_handoff_package_ready`로 GPU worker에 보낼 패키지와
-  재생성 명령을 준비하지만, return receipt는 아직 없다.
-- `runs/residual_force_gpu_worker_return_receipt_current.json`은
-  `blocked_residual_force_gpu_worker_return_receipt`, `blocker_count=16`이며,
-  full GPU regeneration summary/manifest/NPZ 반환 전까지 후속 chain을 차단한다.
-- 후속 산출물인 force derivation validation, production training data contract,
-  checkpoint sidecar, checkpoint preflight도 모두 GPU return receipt 부재로 blocked다.
+  `product_production_ai_checkpoint_readiness_ready`,
+  `production_ai_checkpoint_ready=true`,
+  `production_gpu_execution_environment_ready=true`,
+  `default_residual_mode=production_guarded`,
+  `production_promotion_allowed=true`를 기록한다.
+- ROCm/HIP 환경은 `rocm_environment_manifest_ready`이며,
+  `torch_version=2.6.0+rocm6.1`, `torch_hip_version=6.1.40091-a8dbc0c19`,
+  `visible_device_count=1`, AMD GPU detected로 기록되어 있다.
+- GPU worker handoff/return receipt도 준비되어 있으며,
+  `gpu_receipt_operator_verified_true_count=768`,
+  `gpu_receipt_manifest_ok_row_count=768`이다.
+- production training data, selected sidecar, checkpoint preflight,
+  inference acceptance matrix는 모두 ready이고
+  `production_inference_acceptance_blocked_stage_count=0`이다.
 
 **병목 원인**
-- 현재 CPU 노드가 GPU production run을 가장하지 않도록 fail-closed claim boundary가
-  살아 있다.
-- 통과 조건은 `manifest_ready && rocm_stack_detected && torch_rocm_ready &&
-  amd_gpu_detected && visible_device_count > 0`이며, 실제 device name까지
-  기록되어야 production GPU execution environment가 ready가 된다.
-- ROCm 노드를 직접 붙이거나, operator-transfer 방식으로 handoff package를 GPU worker에
-  보내 full regeneration 결과를 받아야만 `production_guarded` 승격 chain이 열린다.
+- 추론 주체 전환 자체는 더 이상 현재 병목이 아니다.
+- 남은 병목은 production AI가 열린 뒤의 **고객 실행 표면**이다. 즉,
+  runner profile evidence/operator approval, customer-facing score/ranking mutation
+  정책, release gate linkage를 실제 배포 단위에서 일관되게 잠그는 작업이다.
+- fail-closed 경계는 여전히 필요하다. GPU receipt가 있다고 해서 임의 요청이나
+  claim 범위 밖 target까지 자동 허용되는 것은 아니다.
 
 **필요 작업**
-- 현재 노드 ROCm 가시화: `rocminfo`, `rocm-smi`, `hipcc --version`,
-  `tools/build_rocm_environment_manifest.py`, torch visibility probe 통과.
-- 또는 operator-transfer: handoff package 송부 → GPU worker에서 full regeneration 실행
-  → returned summary/manifest/NPZ 수령 → return receipt 검증.
-- 이후 force derivation validation → production training data contract →
-  score model 학습 → checkpoint sidecar/preflight → registry rebuild →
-  `default_residual_mode=production_guarded` promotion gate 순서로 진행.
+- GPU/ROCm receipt와 checkpoint promotion chain은 현재 산출물 기준 완료 상태로 유지.
+- 다음은 API validated runner profile별 evidence artifact 작성,
+  `APPROVE_API_RUNNER_PROFILE_PROMOTION` review, release bundle/rollout smoke에서
+  production_guarded 정책이 실제 고객 요청 경로에만 제한적으로 연결되는지 검증.
 
 ### B. CAMEO public benchmark (blocked_lane_count=1, approval_required=3)
 
@@ -457,24 +456,30 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
 ### E. CA2 / PXR packet closure
 
 **현재 상태**
-- CA2: `replacement_workbook ready_row_count=0/12, blocked_row_count=12`.
-  most_common_missing_field: `replacement_ligand_id`.
-- PXR: `readiness 8/14 ready`, `blocked 6/14`.
-  most_common_missing_field: `replacement_reference_binding_kcal_mol`.
-- PXR quantitative provenance 비어 있음, review-only rows stay locked.
+- CA2: `ready_row_count=6/12`, `applied_row_count=6`,
+  `blocked_row_count=6`. most_common_missing_field는
+  `replacement_reference_binding_kcal_mol`.
+- PXR: `pxr_packet_replacement_readiness_ready`,
+  `ready_row_count=14`, `blocked_row_count=0`.
+- PXR direct-binding replacement candidate/draft는 준비됨:
+  selected replacement candidate 6건, first replacement kcal `-6.8212`,
+  draft 후 `ready_for_apply_row_count_after_draft=14`.
+- 단, PXR draft는 `authoritative_apply_allowed=false`,
+  `authoritative_replacement_fields_touched=false`로 claim-safe 경계를 유지한다.
 - 두 영역 모두 review-only / prep-only 상태로 delivery claim 밖.
 
 **병목 원인**
-- 사람(운영자) 입력 대기 + 정량 reference 값 외부 의존.
+- CA2는 여전히 운영자 입력 + 정량 reference 값 외부 의존이 남아 있다.
+- PXR은 technical readiness는 올라왔지만, authoritative apply는 아직 운영자/claim
+  정책으로 잠겨 있다.
 - replacement_ligand_id / replacement_reference_binding_kcal_mol /
-  replacement_source / replacement_smiles / replacement_scaffold 동기화
-  triple-edit 미완료.
+  replacement_source / replacement_smiles / replacement_scaffold 동기화 triple-edit
+  경계는 유지해야 한다.
 
 **필요 작업**
-- 운영자 fill-in 으로 `replacement_*` 필드 채우기.
-- 동기화 triple-edit (reference/split/meta).
-- 정량 provenance ledger (`runs/pxr_quantitative_provenance_packet_current.json`)
-  채우기.
+- CA2 잔여 6개 blocked row의 `replacement_*` 필드와 정량 kcal provenance 확정.
+- PXR은 draft를 authoritative apply로 승격할지 운영자/claim policy로 결정.
+- 동기화 triple-edit (reference/split/meta)와 provenance ledger 검증 유지.
 
 ### F. Wetlab prospective translation
 
@@ -699,7 +704,7 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
 - Final PDB/mmCIF, top representative, sha256 manifest, viewer index,
   validation report 보존.
 
-### J. Tools 비대 (1,496 top-level wrapper/tool files)
+### J. Tools 비대 (1,575 top-level wrapper/tool files)
 
 **현재 상태**
 - CASP17 일회성 운영 코드, ligand HTVS, wetlab, GPCR replay,
@@ -708,14 +713,14 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   더 이상 active claim의 근거가 아님.
 - `tools/build_tools_package_separation_work_order.py`와
   `runs/tools_package_separation_work_order_current.json`은 top-level
-  `tools/*.py` 1496개를 read-only로 인벤토리화한다.
-  `classified_target_package_count=1036`, `other_review_count=460`,
-  package counts는 `product=327`, `casp17=295`, `wetlab=287`, `gpcr_replay=55`,
-  `cleanup=49`, `cameo=23`이다.
+  `tools/*.py` 1575개를 read-only로 인벤토리화한다.
+  `classified_target_package_count=1092`, `other_review_count=483`,
+  package counts는 `product=362`, `casp17=296`, `wetlab=288`, `gpcr_replay=73`,
+  `cleanup=50`, `cameo=23`이다.
 - 현재 work order는 `--include-reference-counts` deep mode로 재생성되어
   `reference_counts_included=true`이며,
-  `batch_1_low_reference_count=0`, `batch_2_review_count=196`,
-  `batch_3_high_reference_count=1300`로 이동 후보/검토 후보를 더 보수적으로
+  `batch_1_low_reference_count=0`, `batch_2_review_count=149`,
+  `batch_3_high_reference_count=1426`로 이동 후보/검토 후보를 더 보수적으로
   나눈다.
   `move_executed=false`, `import_rewrite_executed=false`,
   `external_state_mutated=false`.
@@ -725,7 +730,7 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   batch만 선별한다. 첫 실행 전 plan은 `candidate_pool_count=5`, `selected_count=5`
   였고, exact-token reference counter 보강 후 새로 드러난
   `tools/run_ligand_scaleup_100k_pilot.py` 1개도 product target으로 이동했다.
-  실행 receipt 생성 후 최신 plan은
+  실행 receipt 생성 후 최신 plan은 다시 재생성되어
   `blocked_tools_package_migration_plan`, `candidate_pool_count=0`,
   `selected_count=0`, `blocker_count=1`
   (`no_low_reference_candidates`)이다.
@@ -733,7 +738,7 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `runs/tools_package_migration_receipt_current.json/.csv/.md`는 selected low-reference
   batch가 package target으로 이동됐고 top-level compatibility wrapper가 남아 있음을
   검증한다. 최신 상태는 `tools_package_migration_receipt_ready`,
-  `plan_selected_count=1`, `verified_migration_count=1`,
+  `plan_selected_count=2`, `verified_migration_count=2`,
   `blocked_migration_count=0`, `move_executed=true`,
   `compatibility_wrapper_retained=true`, `import_rewrite_executed=false`,
   `external_state_mutated=false`다.
@@ -743,7 +748,9 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `tools/gpcr_replay/build_blind_gpcr_adrb2_chembl_dataset.py`,
   `tools/product/freeze_ca2_target_packet_from_pdb.py`,
   `tools/wetlab/resolve_wetlab_compound_name.py`이며, 후속 low-reference target은
-  `tools/product/run_ligand_scaleup_100k_pilot.py`다.
+  `tools/product/run_ligand_scaleup_100k_pilot.py`,
+  `tools/wetlab/wetlab_run_writer_utils.py`,
+  `tools/wetlab/wetlab_stage6_tuning_utils.py`다.
   기존 `tools/*.py` 경로에는 wrapper가 남아 CLI/import 호환성을 유지한다.
 - 이전 잔여 `batch_1_low_reference_count=4` row는 모두 `tool_reference_count=1`이어서
   zero-reference 자동 plan에서 제외됐으나, 이후 referenced migration receipt로
@@ -783,10 +790,13 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   25개 manual slice, 25개 manual slice, 25개 manual slice, 25개 manual slice,
   25개 manual slice, 25개 manual slice, 25개 manual slice, 8개 manual slice,
   13개 internal-import manual slice, 1개 product audit manual slice를
-  추가 이동했다. 최신 재계산 상태는
-  `blocked_tools_package_batch2_review_plan`, `batch2_total_count=196`,
-  `first_slice_raw_candidate_count=0`, `first_slice_candidate_count=0`,
-  `selected_count=0`, `skipped_existing_target_candidate_count=0`,
+  추가 이동했다. 이어서 `tools/product/ligand_scaleup_surface_helpers.py`와
+  `tools/wetlab/wetlab_selected_allatom_canonical.py` 2개 first-slice도
+  wrapper-preserving move + recorded reference rewrite로 검증했다. 최신 재계산
+  상태는 `blocked_tools_package_batch2_review_plan`,
+  `batch2_total_count=149`, `first_slice_raw_candidate_count=1`,
+  `first_slice_candidate_count=0`, `selected_count=0`,
+  `skipped_existing_target_candidate_count=1`,
   `skipped_missing_reference_candidate_count=0`, `blocker_count=1`
   (`no_batch2_first_slice_candidates_with_exact_references`)이다.
   최신 plan도 아직 move 자체는 수행하지 않는 plan-only 산출물이며
@@ -805,6 +815,24 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `compatibility_wrapper_retained=true`, `caller_or_test_rewrite_executed=true`,
   `external_state_mutated=false`다. 해당 자동 1개 관련 targeted unit test는
   `9 passed`였고, 당시 tools package split unit suite는 `28 passed`였다.
+- 최신 자동 batch2 first-slice 2개는
+  `runs/tools_package_batch2_migration_receipt_current.json/.csv/.md`에서
+  `tools_package_batch2_migration_receipt_ready`,
+  `plan_selected_count=2`, `verified_migration_count=2`,
+  `reference_rewrite_verified_count=2`, `blocked_migration_count=0`으로 검증됐다.
+- 이어서 최신 manual slice 25개는
+  `runs/tools_package_batch2_manual_migration_receipt_current.json/.csv/.md`와
+  `runs/tools_package_batch2_manual_migration_executed_plan_current.json`에서
+  `tools_package_batch2_migration_receipt_ready`,
+  `plan_selected_count=25`, `verified_migration_count=25`,
+  `reference_rewrite_verified_count=25`, `cli_main_wrapper_count=3`,
+  `import_only_wrapper_count=22`, `blocked_migration_count=0`으로 검증됐다.
+- 마지막 target-package manual tail slice 4개는
+  `runs/tools_package_batch2_manual_tail_migration_receipt_current.json/.csv/.md`에서
+  `tools_package_batch2_migration_receipt_ready`,
+  `plan_selected_count=4`, `verified_migration_count=4`,
+  `reference_rewrite_verified_count=4`, `import_only_wrapper_count=4`,
+  `blocked_migration_count=0`으로 검증됐다.
 - `tools/build_tools_package_batch2_manual_review_plan.py`와
   `runs/tools_package_batch2_manual_review_plan_current.json/.csv/.md`는 자동
   first-slice가 고갈되거나 부족해진 뒤의 다음 수동 검토 큐를 생성한다. import-only
@@ -843,12 +871,12 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `blocked_migration_count=0`으로 검증됐다.
   관련 unit suite는 `46 passed`, 후속 low-reference migration suite는 `32 passed`다.
 - 최신 manual plan은 재생성 후
-  `blocked_tools_package_batch2_manual_review_plan`, `batch2_total_count=196`,
-  `batch2_target_package_count=18`,
-  `batch2_reference_bearing_target_count=18`,
+  `blocked_tools_package_batch2_manual_review_plan`, `batch2_total_count=149`,
+  `batch2_target_package_count=62`,
+  `batch2_reference_bearing_target_count=62`,
   `batch2_unmigrated_reference_bearing_target_count=0`,
   `candidate_pool_count=0`, `selected_count=0`,
-  `skipped_existing_target_candidate_count=18`,
+  `skipped_existing_target_candidate_count=62`,
   `skipped_missing_reference_candidate_count=0`, `blocker_count=1`
   (`no_batch2_manual_review_candidates_with_exact_references`)이다.
   선택 가능한 unmigrated target-package exact-reference manual slice는 현재 0개다.
@@ -858,20 +886,22 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
 
 **병목 원인**
 - 제품/캠페인/벤치마크 코드가 분리되지 않은 채 누적 — 리팩토링 속도 저하.
-- zero/low-risk 자동 이동 후보와 target-package exact-reference manual 후보는
-  소진됐다. 최신 batch2 target package 18개는 모두 target module이 이미 존재해
+- zero/low-risk 자동 이동 후보, batch2 first-slice 자동 후보, target-package
+  exact-reference manual 후보는 현재 모두 소진됐다.
+  최신 batch2 target package 62개는 모두 target module이 존재하고,
   `batch2_unmigrated_reference_bearing_target_count=0`이다.
-- 남은 batch2의 대부분은 `other_review=178` package classification row이며,
-  이동보다 제품별 package bucket 확정이 먼저 필요하다.
+- batch2 `other_review=88` package classification row는 모두 확정됐다. 47개는
+  extended keyword로 자동 재분류됐고, 나머지 41개는 명시 manual decision map으로
+  `product=87`, `gpcr_replay=1` bucket에 기록됐다.
 - `main()` 없는 helper module은 기존 CLI-main wrapper receipt를 그대로 적용할 수
   없어서 import-only wrapper strategy를 receipt가 별도 인정하도록 보강했다. 직전
   25개 manual slice는 24개 CLI-main wrapper와 1개 import-only wrapper였고,
   8개 manual slice는 7개 CLI-main wrapper와 1개 import-only wrapper였으며,
   internal-import 13개 slice는 12개 CLI-main wrapper와 1개 import-only wrapper였다.
   이 구분은 유지해야 한다.
-- `other_review=460` 중 batch2 `other_review` 178개는 아직 제품별 package bucket이
-  확정되지 않아 이동보다
-  package classification review가 먼저 필요하다.
+- `other_review=483` 중 batch2 `other_review` 88개는 package classification lane에서
+  `tools_package_other_review_classification_plan_ready`,
+  `classified_count=88`, `unclassified_count=0`, `manual_decision_count=41`로 닫혔다.
 
 **필요 작업**
 - `tools/`를 제품별 (product / cameo / casp17 / wetlab / cleanup / gpcr_replay)
@@ -883,11 +913,176 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   자동 1개, manual 25개, manual 25개, manual 25개, manual 25개, manual 25개,
   manual 25개, manual 25개, manual 25개, manual 25개, manual 25개, manual 25개,
   manual 8개, internal-import manual 13개, product audit manual 1개 이동 및
-  receipt는 완료. batch2 누적 이동은 총 605개다.
-- 다음은 target-package reference-bearing batch2 migration이 소진됐으므로,
-  batch2 `other_review=178` row의 package classification lane을 열어 제품별 bucket을
-  확정하거나, batch3 high-reference target package row를 별도 high-risk migration
-  lane으로 분해해야 한다.
+  latest low-reference 2개, batch2 first-slice 2개, latest manual 25개,
+  manual tail 4개 이동 및 receipt는 완료. batch2 누적 이동은 총 636개다.
+- batch3 lane_a 첫 실이동 후보 3개
+  (`generate_ligand_trajectory_batch.py`, `sweep_neighbor_and_generate_residuals.py`,
+  `run_wetlab_wave1_tail_runtime_event.py`)는
+  `runs/tools_package_batch3_migration_receipt_current.json/.csv/.md`에서
+  `tools_package_batch3_migration_receipt_ready`, `plan_selected_count=3`,
+  `verified_migration_count=3`, `blocked_migration_count=0`으로 검증됐다.
+- batch3 lane_a late 실이동 후보 1개
+  (`wetlab_broad_screen_watch_utils.py`)도
+  `runs/tools_package_batch3_migration_late_receipt_current.json/.csv/.md`에서
+  `tools_package_batch3_migration_receipt_ready`, `plan_selected_count=1`,
+  `verified_migration_count=1`, `blocked_migration_count=0`으로 검증됐다.
+- batch3 `other_review` reclassified 첫 실이동 후보 3개
+  (`ab_test_ai_hip_graph.py`, `benchmark_idp_force_components.py`,
+  `benchmark_idp_hbond_prepare_components.py`)는
+  `runs/tools_package_batch3_other_review_migration_initial_receipt_current.json/.csv/.md`에서
+  `tools_package_batch3_migration_receipt_ready`, `plan_selected_count=3`,
+  `verified_migration_count=3`, `blocked_migration_count=0`으로 검증됐다.
+  `build_tools_package_batch3_review_plan.py`는 wrapper import 기반 canonical module
+  detection도 수행해 이동 완료 shim을 다시 미분류 migration 후보로 보지 않는다.
+- batch3 `other_review` reclassified tail 6개
+  (`monitor_ligand_stress_progress.py`, `report_neighbor_force_parity.py`,
+  `run_idp_virtual_hbond_rollout_eval.py`, `run_target_tuned_long_stability.py`,
+  `sweep_long_stability_tuning.py`, `update_closeout_latest.py`)도
+  `runs/tools_package_batch3_other_review_migration_receipt_current.json/.csv/.md`에서
+  `tools_package_batch3_migration_receipt_ready`, `plan_selected_count=6`,
+  `verified_migration_count=6`, `blocked_migration_count=0`으로 검증됐다.
+- 최신 batch3 high-reference lane은 `batch3_total_count=1425`,
+  `first_slice_raw_candidate_count=106`, `first_slice_candidate_count=0`,
+  `skipped_existing_target_candidate_count=102`,
+  `skipped_existing_canonical_candidate_count=4`,
+  `skipped_unclassified_candidate_count=0`이다. 최신 batch3 `other_review` 후보는
+  `runs/tools_package_batch3_other_review_classification_plan_current.json/.csv/.md`에서
+  `tools_package_batch3_other_review_classification_plan_ready`,
+  `candidate_count=0`, `unclassified_count=0`으로 고갈됐다.
+- batch3 lane_b 첫 target-move slice 10개
+  (`apply_idp_3bead_holdout_archive_first.py`,
+  `apply_idp_3bead_release_archive_first.py`,
+  `apply_ligand_smiles_bead_archive_first.py`,
+  `apply_runs_archive_cleanup_now.py`,
+  `apply_runs_cleanup_batch3_archive_first.py`,
+  `apply_runs_cleanup_batch4_archive_first.py`,
+  `apply_runs_cleanup_batch5_stage_heavy_archive.py`,
+  `launch_wetlab_broad_screen_heartbeat_loop.py`,
+  `monitor_ca2_expansion.py`, `monitor_pxr_expansion.py`)는
+  `runs/tools_package_batch3_lane_b_migration_initial_receipt_current.json/.csv/.md`에서
+  `tools_package_batch3_migration_receipt_ready`, `plan_selected_count=10`,
+  `verified_migration_count=10`, `blocked_migration_count=0`으로 검증됐다.
+  cleanup/wetlab/product target module의 `ROOT = Path(__file__)` 계산은 package
+  depth에 맞게 보정했고, 기존 top-level path에는 compatibility wrapper를 남겼다.
+- 이어서 lane_b 두 번째 target-move slice 10개
+  (`repair_gpcr_drd2_pseudo_allatom_backmapping.py`,
+  `run_pxr_expansion_scaffold_check.py`,
+  `run_wetlab_broad_screen_actual_append.py`,
+  `run_wetlab_broad_screen_antitarget_runner.py`,
+  `run_wetlab_broad_screen_antitarget_runtime_event.py`,
+  `run_wetlab_broad_screen_antitarget_watcher.py`,
+  `run_wetlab_broad_screen_primary_watch.py`,
+  `run_wetlab_broad_screen_runtime_event.py`,
+  `run_wetlab_cathepsin_k_allatom_refinement.py`,
+  `run_wetlab_cathepsin_k_exploratory_retry.py`)도
+  `runs/tools_package_batch3_lane_b_migration_receipt_current.json/.csv/.md`에서
+  `tools_package_batch3_migration_receipt_ready`, `plan_selected_count=10`,
+  `verified_migration_count=10`, `blocked_migration_count=0`으로 검증됐다.
+  gpcr_replay/product/wetlab target module의 `ROOT` 계산은 package depth에 맞게
+  보정했고, `main()` 없는 wetlab CLI wrappers는 `runpy.run_module`로 기존 script
+  실행 경로를 유지한다.
+- 이어서 lane_b 세 번째 target-move slice 10개
+  (`run_wetlab_dengue_ns2b_ns3_exploratory_retry.py`,
+  `run_wetlab_dpre1_exploratory_retry.py`,
+  `run_wetlab_final2_runtime_event.py`,
+  `run_wetlab_hard_target_rescue_lane.py`,
+  `run_wetlab_master_runtime_event.py`,
+  `run_wetlab_next3_runtime_event.py`,
+  `run_wetlab_plpro_manual_retry.py`,
+  `run_wetlab_priority3_runtime_event.py`,
+  `run_wetlab_rescue_three_bead_slice.py`,
+  `run_wetlab_sarscov2_mpro_allatom_refinement.py`)도
+  `runs/tools_package_batch3_lane_b_migration_third_receipt_current.json/.csv/.md`에서
+  `tools_package_batch3_migration_receipt_ready`, `plan_selected_count=10`,
+  `verified_migration_count=10`, `blocked_migration_count=0`으로 검증됐다.
+  wetlab target module의 `ROOT` 계산은 package depth에 맞게 보정했고,
+  기존 top-level path에는 module-alias compatibility wrapper를 남겼다.
+- 이어서 lane_b 네 번째 target-move slice 10개
+  (`run_wetlab_broad_screen_primary_runner.py`,
+  `run_wetlab_stk17b_exploratory_followup_retry.py`,
+  `run_wetlab_stk17b_manual_retry.py`,
+  `run_wetlab_tcruzi_krs1_exploratory_retry.py`,
+  `run_wetlab_tcruzi_pde_rescue_only_branch.py`,
+  `run_wetlab_wave2_runtime_event.py`,
+  `watch_wetlab_broad_screen_primary.py`,
+  `wetlab_allatom_refinement_utils.py`,
+  `wetlab_broad_screen_antitarget_watcher_state.py`,
+  `wetlab_rescue_only_branch_builder.py`)도
+  `runs/tools_package_batch3_lane_b_migration_fourth_receipt_current.json/.csv/.md`에서
+  `tools_package_batch3_migration_receipt_ready`, `plan_selected_count=10`,
+  `verified_migration_count=10`, `blocked_migration_count=0`으로 검증됐다.
+  `main()` 없는 primary runner, antitarget watcher state, helper modules는
+  module-alias 또는 `runpy.run_module` wrapper로 기존 import/CLI surface를 유지한다.
+- 이어서 batch3 package-classified migration slice 10개
+  (`append_keep_green_lane_history.py`,
+  `apply_biorxiv_temporal_idp_item_provenance_facts.py`,
+  `apply_verified_binding_sources.py`, `audit_ligand_leakage.py`,
+  `bootstrap_real_md_metadata.py`, `builder_json_utils.py`,
+  `builder_table_utils.py`, `calibrate_ligand_mmpbsa_proxy.py`,
+  `classify_runs_files.py`, `collect_feature_matrix.py`)도
+  `runs/tools_package_batch3_package_classification_migration_receipt_current.json/.csv/.md`에서
+  `tools_package_batch3_migration_receipt_ready`, `plan_selected_count=10`,
+  `verified_migration_count=10`, `blocked_migration_count=0`으로 검증됐다.
+  import-only helper wrappers와 CLI wrappers는 module-alias 방식으로 기존
+  top-level import surface를 유지한다.
+- 이어서 두 번째 batch3 package-classified migration slice 10개
+  (`compare_biorxiv_external_validation_runs.py`, `curate_structure_quality.py`,
+  `evaluate_ligand_ranking_metrics.py`, `fetch_public_structure_set.py`,
+  `generate_openmm_ca_md_references.py`, `generate_perturbed_data.py`,
+  `idp_3bead_common.py`, `import_real_md_and_run_gate.py`,
+  `monitor_biorxiv_external_validation.py`,
+  `monitor_cross_family_locked_decoy_shadow.py`)도
+  `runs/tools_package_batch3_package_classification_migration_second_receipt_current.json/.csv/.md`에서
+  `tools_package_batch3_migration_receipt_ready`, `plan_selected_count=10`,
+  `verified_migration_count=10`, `blocked_migration_count=0`으로 검증됐다.
+  `generate_perturbed_data.py`는 `runpy.run_module`, `idp_3bead_common.py`는
+  import-only module-alias wrapper로 기존 surface를 유지한다.
+- 이어서 세 번째 batch3 package-classified migration slice 10개
+  (`monitor_idp_holdout_progress.py`, `native_target_registry.py`,
+  `pdb_loader.py`, `postprocess_structure_visuals.py`,
+  `promote_biorxiv_external_validation_package.py`,
+  `promote_verified_binding_rows_to_workbook.py`, `prune_runs_files.py`,
+  `render_readme_molecular_figures.py`, `report_md_gap.py`,
+  `report_physics_fidelity.py`)도
+  `runs/tools_package_batch3_package_classification_migration_third_receipt_current.json/.csv/.md`에서
+  `tools_package_batch3_migration_receipt_ready`, `plan_selected_count=10`,
+  `verified_migration_count=10`, `blocked_migration_count=0`으로 검증됐다.
+  `native_target_registry.py`, `promote_*`, `render_readme_molecular_figures.py`의
+  repo-root 계산은 package depth에 맞게 보정했고, 기존 top-level path에는
+  module-alias compatibility wrapper를 남겼다.
+- 이어서 네 번째 batch3 package-classified migration slice 10개
+  (`report_sparse_checkpoints.py`, `resume_biorxiv_external_validation.py`,
+  `run_accuracy_revalidation.py`, `run_active_learning_cycle.py`,
+  `run_allatom_claim_readiness.py`, `run_bigdata_curriculum_training.py`,
+  `run_biorxiv_external_validation_current.py`,
+  `run_biorxiv_robustness_battery_current.py`,
+  `run_biorxiv_robustness_current.py`,
+  `run_biorxiv_robustness_scenario.py`)도
+  `runs/tools_package_batch3_package_classification_migration_fourth_receipt_current.json/.csv/.md`에서
+  `tools_package_batch3_migration_receipt_ready`, `plan_selected_count=10`,
+  `verified_migration_count=10`, `blocked_migration_count=0`으로 검증됐다.
+  biorxiv runner 계열의 repo-root 계산은 package depth에 맞게 보정했고,
+  기존 top-level path에는 module-alias compatibility wrapper를 남겼다.
+- `tools/accounting/build_tools_package_batch3_lane_decomposition_plan.py`와
+  `runs/tools_package_batch3_lane_decomposition_plan_current.json/.csv/.md`는 남은
+  lane_b/c/d 1,319개를 실행 lane으로 분해한다. 최신 상태는
+  `tools_package_batch3_lane_decomposition_plan_ready`,
+  `selected_for_next_slice_count=0`, `lane_b_target_move_candidate_count=0`,
+  `existing_target_wrapper_verification_count=395`,
+  `canonical_owner_review_count=860`,
+  `package_classification_required_count=40`,
+  `manual_or_reference_review_count=24`이다.
+  compatibility wrapper 유지 방식으로 바로 이동 가능한 lane_b target-package 후보는
+  현재 고갈됐다.
+- `tools/accounting/build_tools_package_batch3_package_classification_plan.py`와
+  `runs/tools_package_batch3_package_classification_plan_current.json/.csv/.md`는
+  남은 `package_classification_required` 40개를 package bucket으로 분류한다.
+  최신 상태는 `tools_package_batch3_package_classification_plan_ready`,
+  `candidate_count=40`, `classified_count=40`, `unclassified_count=0`,
+  `reclassified_package_counts={'canonical_owner_review': 1, 'product': 38,
+  'wetlab': 1}`이다. 이 산출물은
+  move/rewrite 없는 plan-only이며, `tools/__init__.py`는 root package
+  canonical-owner review로 유지한다.
   최근 slice에서 `tools/cameo/` package 추가와 CASP17/cleanup/GPCR/product/wetlab
   build tools의 wrapper-preserving package 이동을 계속 진행했다.
 - 한시성 운영 코드와 제품 파이프라인 분리.
@@ -946,11 +1141,10 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
    validated runner profile adapter, durable job state, idempotent records,
    signed manifests, profile readiness/evidence/hash gate는 1차 완료. 다음은 실제
    profile별 evidence artifact 작성과 operator approval 승격.
-2. **Production AI 추론 주체 전환** — ROCm/HIP GPU execution environment 또는
-   operator-transfer GPU worker return receipt가 필요. 현재
-   `production_gpu_execution_environment_ready=false`,
-   `default_residual_mode=shadow`라 production guarded residual checkpoint 승격은
-   fail-closed 상태.
+2. **Production AI 고객 실행 경계** — ROCm/HIP GPU execution environment,
+   GPU worker return receipt, production guarded checkpoint 승격은 현재 ready.
+   다음은 validated runner profile evidence/operator approval과 고객 요청 경로에서의
+   score/ranking mutation policy 검증.
 3. **License 결정 + LICENSE 파일 작성** — LICENSE/source hash 일치,
    license decision/work-order/commercial gate, self-hosted license audit, release
    bundle linkage는 1차 완료. 다음은 법률 최종 확인과 JSZip dual-license
@@ -979,7 +1173,8 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
 
 ### 확장 (claim boundary 확대)
 
-10. **CA2/PXR packet closure** — 운영자 fill-in 으로 정량 reference 채우기.
+10. **CA2/PXR packet closure** — PXR은 replacement readiness가 ready이고,
+    CA2는 잔여 6개 blocked row의 정량 reference/operator fill-in 필요.
 11. **IDP broader promotion lane** — bounded shadow-safe 단계 통과.
 12. **CAMEO public registration** — API dependency 설치, prediction email /
     result fetcher, 운영자 approval token 발급, 공식 CAMEO 결과 입력.
@@ -998,12 +1193,45 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
     manual 25개, manual 25개, manual 25개, manual 25개, manual 25개,
     manual 25개, manual 25개, manual 25개, manual 25개, manual 25개,
     manual 8개, internal-import manual 13개, product audit manual 1개를 추가 이동해
-    batch2 누적 605개
+    batch2 누적 636개
     move/rewrite까지 완료.
-    현재는 target-package reference-bearing batch2 migration queue가 소진되어
-    `batch2_unmigrated_reference_bearing_target_count=0`이고, 남은 작업은
-    batch2 `other_review=178` package classification 또는 batch3 high-reference
-    lane 분리 단계.
+    최신 재생성 기준으로는 `blocked_tools_package_migration_plan`
+    (`selected_count=0`), `blocked_tools_package_batch2_review_plan`
+    (`selected_count=0`), `blocked_tools_package_batch2_manual_review_plan`
+    (`selected_count=0`) 상태다. batch2 `other_review=88` classification은
+    `classified_count=88`, `unclassified_count=0`으로 닫혔고, batch3 lane_a
+    실이동 후보 `3+1`개도 각각 `verified_migration_count=3`,
+    `verified_migration_count=1`로 닫혔다. batch3
+    `other_review` reclassified 첫 slice 3개도
+    `runs/tools_package_batch3_other_review_migration_initial_receipt_current.json`에서
+    `verified_migration_count=3`, `blocked_migration_count=0`으로 닫혔다.
+    batch3 `other_review` reclassified tail 6개도
+    `verified_migration_count=6`, `blocked_migration_count=0`으로 닫혔다.
+    batch3 lane_b target-move slice 40개도
+    `runs/tools_package_batch3_lane_b_migration_initial_receipt_current.json` 및
+    `runs/tools_package_batch3_lane_b_migration_receipt_current.json` 및
+    `runs/tools_package_batch3_lane_b_migration_third_receipt_current.json` 및
+    `runs/tools_package_batch3_lane_b_migration_fourth_receipt_current.json`에서
+    각 `verified_migration_count=10`,
+    `blocked_migration_count=0`으로 닫혔다.
+    package-classified migration slice 40개도
+    `runs/tools_package_batch3_package_classification_migration_receipt_current.json`에서
+    `verified_migration_count=10`, `blocked_migration_count=0`으로 닫혔고,
+    `runs/tools_package_batch3_package_classification_migration_second_receipt_current.json`에서도
+    `verified_migration_count=10`, `blocked_migration_count=0`으로 닫혔으며,
+    `runs/tools_package_batch3_package_classification_migration_third_receipt_current.json`에서도
+    `verified_migration_count=10`, `blocked_migration_count=0`으로 닫혔고,
+    `runs/tools_package_batch3_package_classification_migration_fourth_receipt_current.json`에서도
+    `verified_migration_count=10`, `blocked_migration_count=0`으로 닫혔다.
+    wrapper-aware batch3 plan 재생성 후 최신 `other_review` classification은
+    `candidate_count=0`, `unclassified_count=0`이다. lane_b/c/d decomposition은
+    `selected_for_next_slice_count=0`,
+    `lane_b_target_move_candidate_count=0`,
+    `package_classification_required_count=40`,
+    `canonical_owner_review_count=860`으로 다음 migration slice를 분리했다.
+    이어서 batch3 package classification plan은 해당
+    `package_classification_required` 40개를
+    `classified_count=40`, `unclassified_count=0`으로 닫았다.
 
 ### 합산 잔여 gap (영역별)
 
@@ -1033,7 +1261,7 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
 
 2. **Science scoring 한계**
    - GPCR CI-low 0.21 vs 0.45 임계치, OPRM1 pose collapse,
-     AQP1 직접 negative 0건, CA2/PXR 정량 reference 부재.
+     AQP1 direct-binding/negative evidence 부족, CA2 잔여 정량 reference 부재.
    - feature/data engineering 병목. v3~v16까지 tombstone/selected-slice
      green의 누적.
    - 외부 source (PubMed/wetlab) 의존성.
@@ -1046,7 +1274,7 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
      delivery/ingress certificate smoke/operator-approved rollout execution smoke는 미완.
    - local delivery + on-prem pilot 가정. hosted SaaS는 별도.
 
-가장 큰 단일 잔여 gap은 **API ↔ engine wiring** — 상용 API surface는 있고
-status는 노출되지만 실제 docking/MD 실행은 의도적으로 NotImplementedError로
-막혀 있는 상태. 이걸 풀면 곧바로 license → deploy → self-hosted 순으로
-상용화 가능한 product가 된다.
+가장 큰 단일 잔여 gap은 **operator-approved product execution surface**다. 상용 API,
+durable worker, validated runner profile, production_guarded AI receipt는 갖춰졌지만,
+실제 고객 실행은 profile evidence/operator approval, license/legal review,
+rollout smoke, claim-boundary 정책이 한 release bundle 안에서 동시에 green이어야 열린다.

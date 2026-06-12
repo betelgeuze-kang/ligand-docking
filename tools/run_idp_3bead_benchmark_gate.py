@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional, Sequence
 import numpy as np
 
 from tools.idp_3bead_common import BRANCH_NAMES, STATE_NAMES
-from tools.idp_residual_common import RANKING_HEAD_NAMES
+from tools.product.idp_residual_common import RANKING_HEAD_NAMES
 
 
 def _read_json(path: str) -> Dict[str, Any]:

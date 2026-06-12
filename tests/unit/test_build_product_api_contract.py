@@ -59,6 +59,12 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     assert "customer_report_card_ready" in docking_response
     assert "customer_report_delivery_contract_ready" in docking_response
     assert "customer_report_evidence_binding_ready" in docking_response
+    assert "customer_report_selection_rationale_ready" in docking_response
+    assert "customer_report_uncertainty_posture_ready" in docking_response
+    assert "customer_report_prohibited_claims_ready" in docking_response
+    assert "customer_report_selection_rationale" in docking_response
+    assert "customer_report_uncertainty_posture" in docking_response
+    assert "customer_report_prohibited_claims" in docking_response
     assert "customer_report_required_block_count" in docking_response
     assert "customer_report_ready_block_count" in docking_response
     assert "customer_report_blocked_block_count" in docking_response
@@ -66,6 +72,10 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     assert "customer_report_required_blocks" in docking_response
     assert "customer_report_card" in docking_response
     assert "customer_report_sections" in docking_response
+
+    ai_report_ux_keys = REQUIRED_STATUS_DOMAIN_KEYS["get_product_ai_report_ux"]
+    assert "ligand_selection_rationale_ready" in ai_report_ux_keys
+    assert "selection_rationale" in ai_report_ux_keys
     assert EXPECTED_ROUTES["get_product_trajectory_sla_contract"] == ("GET", "/trajectory-sla-contract")
     trajectory_sla_keys = REQUIRED_STATUS_DOMAIN_KEYS["get_product_trajectory_sla_contract"]
     assert "sla_claim_tier" in trajectory_sla_keys

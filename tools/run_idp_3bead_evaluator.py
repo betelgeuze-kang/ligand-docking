@@ -29,7 +29,7 @@ from tools.idp_3bead_common import (
     rollout_condition_bundle,
 )
 from tools.idp_branch_labeling import dynamic_labels, quantile_thresholds, row_rg_percentiles
-from tools.idp_residual_common import (
+from tools.product.idp_residual_common import (
     RANKING_HEAD_NAMES,
     TARGET_NAMES,
     load_residual_model,

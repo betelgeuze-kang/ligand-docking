@@ -1,4 +1,4 @@
-from tools.accounting.build_ca2_conflict_replacement_chembl205_verification import (
+from tools.product.build_ca2_conflict_replacement_chembl205_verification import (
     build_payload,
     verify_shortlist_row,
 )

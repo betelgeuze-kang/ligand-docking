@@ -18,7 +18,7 @@ from tools.idp_3bead_common import (
     normalize_branch_profile,
 )
 from tools.idp_branch_labeling import dynamic_labels, quantile_thresholds, row_rg_percentiles
-from tools.idp_residual_common import FEATURE_NAMES, RANKING_HEAD_NAMES
+from tools.product.idp_residual_common import FEATURE_NAMES, RANKING_HEAD_NAMES
 
 
 STATE_TO_INDEX = {name: idx for idx, name in enumerate(STATE_NAMES)}

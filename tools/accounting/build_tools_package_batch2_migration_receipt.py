@@ -102,6 +102,15 @@ def _wrapper_strategy(plan_row: dict[str, Any]) -> str:
     return CLI_MAIN_WRAPPER
 
 
+def _target_has_main(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    try:
+        return "def main" in path.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return False
+
+
 def _parse_locations(value: str) -> list[tuple[str, int]]:
     out: list[tuple[str, int]] = []
     for item in value.split(";"):
@@ -188,7 +197,8 @@ def build_tools_package_batch2_migration_receipt(
             row_blockers.append("package_init_missing")
         if _wrapper_import_line(target_path_text) not in wrapper_text:
             row_blockers.append("wrapper_import_missing")
-        if wrapper_strategy != IMPORT_ONLY_WRAPPER and _wrapper_main_line(target_path_text) not in wrapper_text:
+        wrapper_main_required = wrapper_strategy != IMPORT_ONLY_WRAPPER and _target_has_main(target_path)
+        if wrapper_main_required and _wrapper_main_line(target_path_text) not in wrapper_text:
             row_blockers.append("wrapper_main_passthrough_missing")
         source_compile_ok = _compile_ok(source_path)
         target_compile_ok = _compile_ok(target_path)
@@ -238,7 +248,7 @@ def build_tools_package_batch2_migration_receipt(
                 "proposed_package": _text(plan_row.get("proposed_package")),
                 "reference_class": _text(plan_row.get("reference_class")),
                 "compatibility_wrapper_strategy": wrapper_strategy,
-                "wrapper_main_passthrough_required": wrapper_strategy != IMPORT_ONLY_WRAPPER,
+                "wrapper_main_passthrough_required": wrapper_main_required,
                 "source_wrapper_present": source_path.is_file(),
                 "target_module_present": target_path.is_file(),
                 "source_wrapper_py_compile_ok": source_compile_ok,

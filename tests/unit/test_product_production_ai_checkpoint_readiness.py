@@ -564,7 +564,12 @@ def test_production_ai_checkpoint_readiness_ready_when_all_gates_pass() -> None:
             }
         ),
         checkpoint_work_order_packet=_packet({"checkpoint_preflight_ready": True, "ready_checkpoint_count": 1}),
-        training_data_packet=_packet({"production_training_data_ready": True}),
+        training_data_packet=_packet(
+            {
+                "production_training_data_ready": True,
+                "delta_force_label_evidence_ready": True,
+            }
+        ),
         output_head_gap_contract_packet=_packet(
             {
                 "output_head_gap_contract_ready": True,

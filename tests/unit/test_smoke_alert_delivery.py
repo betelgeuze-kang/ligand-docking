@@ -19,6 +19,24 @@ def test_local_receiver_smoke_posts_alertmanager_payload() -> None:
     assert report["request_body_sha256"] == report["received_body_sha256"]
     assert report["request_body_logged"] is False
     assert report["alertname"] == "MicfApiAlertDeliverySmoke"
+    assert report["receiver_transport"] == "loopback_http"
+
+
+def test_local_receiver_smoke_can_use_in_process_fallback(monkeypatch) -> None:
+    class _BlockedServer:
+        def __init__(self, *args, **kwargs) -> None:
+            raise PermissionError("[Errno 1] Operation not permitted")
+
+    monkeypatch.setattr(mod, "HTTPServer", _BlockedServer)
+
+    report = mod.local_receiver_smoke(timeout_seconds=3, allow_in_process_fallback=True)
+
+    assert report["status"] == "pass"
+    assert report["local_receiver_smoke"] is True
+    assert report["receiver_transport"] == "in_process_fallback"
+    assert report["loopback_http_available"] is False
+    assert report["received_alert_count"] == 1
+    assert report["request_body_sha256"] == report["received_body_sha256"]
 
 
 def test_non_local_http_webhook_is_rejected() -> None:

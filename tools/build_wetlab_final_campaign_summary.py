@@ -14,6 +14,7 @@ import sys as _sys
 
 _module = _import_module("tools.accounting.build_wetlab_final_campaign_summary")
 globals().update({k: v for k, v in _module.__dict__.items() if not k.startswith("__")})
+_sys.modules[__name__] = _module
 
 if __name__ == "__main__":
     _entry = getattr(_module, "main", None)

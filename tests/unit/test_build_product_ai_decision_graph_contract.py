@@ -67,6 +67,7 @@ def test_product_ai_decision_graph_contract_ready_from_local_evidence() -> None:
                 "binding_site_explanation_ready": True,
                 "pose_comparison_ready": True,
                 "interaction_rationale_ready": True,
+                "ligand_selection_rationale_ready": True,
                 "viewer_interaction_surface_ready": True,
                 "uncertainty_narrative_ready": True,
                 "counterfactual_rescue_suggestion_ready": True,
@@ -86,6 +87,7 @@ def test_product_ai_decision_graph_contract_ready_from_local_evidence() -> None:
     assert summary["viewer_interaction_surface_ready"] is True
     assert summary["customer_report_card_ready"] is True
     assert summary["interaction_rationale_ready"] is True
+    assert summary["ligand_selection_rationale_ready"] is True
     assert summary["counterfactual_rescue_suggestion_ready"] is True
     assert summary["evidence_traceability_ready"] is True
     assert summary["production_ai_inference_enabled"] is False
@@ -101,6 +103,78 @@ def test_product_ai_decision_graph_contract_ready_from_local_evidence() -> None:
         "uncertainty_abstention_guard->report_bundle_contract",
         "report_bundle_contract->customer_report_ux",
     ]
+
+
+def test_product_ai_decision_graph_accepts_guarded_active_registry_with_atom_context() -> None:
+    payload = mod.build_product_ai_decision_graph_contract(
+        structure_report_packet=_packet(
+            {
+                "status": "product_structure_analysis_report_ready",
+                "local_structure_parsed": True,
+                "atom_count": 42,
+                "ligand_like_residue_count": 1,
+            }
+        ),
+        execution_preflight_packet=_packet(
+            {
+                "status": "product_execution_preflight_ready",
+                "operational_gate_feasibility_status": "pass",
+                "config_count": 1,
+            }
+        ),
+        capability_packet=_packet(
+            {
+                "status": "product_capability_surface_contract_ready",
+                "ligand_docking_capability_ready": True,
+            }
+        ),
+        bundle_packet=_packet(
+            {
+                "status": "product_bundle_contract_ready",
+                "bundle_parser_status": "parsed",
+                "bundle_validation_command_matches": True,
+            }
+        ),
+        registry_packet=_packet(
+            {
+                "status": "residual_model_registry_ready",
+                "product_model_layer_ready": True,
+                "registry_ready": True,
+                "default_residual_mode": "production_guarded",
+                "production_promotion_allowed": True,
+                "customer_facing_auto_correction_allowed": True,
+                "customer_facing_score_mutation_allowed": True,
+                "selected_sidecar_ready": True,
+                "selected_sidecar_missing_output_fields": [],
+            }
+        ),
+        report_ux_packet=_packet(
+            {
+                "status": "product_ai_report_ux_contract_ready",
+                "ai_report_ux_ready": True,
+                "structured_customer_report_ready": True,
+                "customer_report_card_ready": True,
+                "binding_site_explanation_ready": True,
+                "pose_comparison_ready": True,
+                "interaction_rationale_ready": True,
+                "ligand_selection_rationale_ready": True,
+                "viewer_interaction_surface_ready": True,
+                "uncertainty_narrative_ready": True,
+                "counterfactual_rescue_suggestion_ready": True,
+                "evidence_traceability_ready": True,
+            }
+        ),
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "product_ai_decision_graph_contract_ready"
+    assert summary["binding_site_node_ready"] is True
+    assert summary["uncertainty_abstention_node_ready"] is True
+    assert summary["shadow_abstention_ready"] is False
+    assert summary["production_guarded_active_ready"] is True
+    assert summary["uncertainty_policy_mode"] == "production_guarded_active"
+    uncertainty_row = next(row for row in payload["rows"] if row["node_id"] == "uncertainty_abstention_guard")
+    assert "guarded_active_ready=True" in uncertainty_row["observed"]
 
 
 def test_product_ai_decision_graph_contract_blocks_missing_structure() -> None:

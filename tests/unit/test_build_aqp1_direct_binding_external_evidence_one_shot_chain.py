@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from tools.accounting.build_aqp1_direct_binding_external_evidence_one_shot_chain import build_packet
+from tools.product.build_aqp1_direct_binding_external_evidence_one_shot_chain import build_packet
 
 
 def test_one_shot_chain_reports_blockers_when_claim_safe_missing() -> None:

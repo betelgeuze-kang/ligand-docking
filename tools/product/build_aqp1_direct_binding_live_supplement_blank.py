@@ -121,7 +121,7 @@ def build_payload(
         "next_required_step": (
             "Fill runs/aqp1_direct_binding_live_supplement_blank_current.csv using the field checklist, "
             "copy verified rows into runs/aqp1_direct_binding_external_evidence_intake_supplement_current.csv, "
-            "then run tools/build_aqp1_direct_binding_external_evidence_one_shot_chain.py."
+            "then run tools/product/build_aqp1_direct_binding_external_evidence_one_shot_chain.py."
             if blank_rows
             else "Regenerate AQP1 procurement/fill-guide packets before building the blank live supplement."
         ),

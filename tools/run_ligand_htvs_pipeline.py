@@ -2139,7 +2139,7 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         traj_script = (
             "tools/generate_ligand_trajectory_engine.py"
             if trajectory_engine_mode == "rust_hip"
-            else "tools/generate_ligand_trajectory_batch.py"
+            else "tools/product/generate_ligand_trajectory_batch.py"
         )
         traj_queue_csv = queue_csv
         if bool(getattr(args, "stage2_skip_router_enabled", True)) and os.path.exists(queue_csv):

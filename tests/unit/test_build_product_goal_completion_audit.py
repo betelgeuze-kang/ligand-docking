@@ -359,8 +359,8 @@ def _ai_gap(*, ready: bool = True) -> dict:
                 "customer_report_evidence_binding_ready=True;"
                 "customer_report_viewer_binding_ready=True;"
                 "viewer_customer_report_binding_ready=True;"
-                "customer_report_ready_block_count=6;"
-                "customer_report_required_block_count=6;"
+                "customer_report_ready_block_count=7;"
+                "customer_report_required_block_count=7;"
                 "customer_report_blocked_block_count=0"
             ),
         },
@@ -1956,6 +1956,102 @@ def _scope_contract() -> dict:
     }
 
 
+def _scope_contract_ready() -> dict:
+    payload = _scope_contract()
+    payload["summary"].update(
+        {
+            "status": "product_scope_breadth_contract_ready",
+            "scope_breadth_ready": True,
+            "scope_claim_expansion_currently_satisfied": True,
+            "scope_claim_expansion_current_blocked_stage_count": 0,
+            "scope_claim_expansion_current_blocked_stage_ids": [],
+            "scope_acceptance_ready_stage_count": 5,
+            "scope_acceptance_blocked_stage_count": 0,
+            "scope_acceptance_ready_stage_ids": [
+                "scope_evidence_acquisition_preflight",
+                "transporter_claim_acceptance",
+                "pxr_claim_acceptance",
+                "breadth_domain_floor_acceptance",
+                "general_platform_claim_acceptance",
+            ],
+            "scope_acceptance_blocked_stage_ids": [],
+            "domain_count": 6,
+            "ready_domain_count": 6,
+            "missing_domain_count": 0,
+            "ready_domains": [
+                "ca2",
+                "idp_broad",
+                "all_atom",
+                "transporter",
+                "pxr",
+                "general_protein_ligand",
+            ],
+            "missing_domains": [],
+            "first_blocked_domain": "",
+            "general_platform_claim_allowed": True,
+            "authoritative_apply_allowed": True,
+        }
+    )
+    return payload
+
+
+def _scope_contract_r8_ready() -> dict:
+    payload = _scope_contract()
+    payload["summary"].update(
+        {
+            "scope_breadth_ready": True,
+            "authoritative_apply_allowed": True,
+        }
+    )
+    return payload
+
+
+def _scope_closure_acceptance_ready() -> dict:
+    return {
+        "summary": {
+            "packet_ready": True,
+            "scope_closure_ready": True,
+            "scope_acceptance_stage_count": 5,
+            "scope_acceptance_blocked_stage_count": 0,
+            "scope_acceptance_blocked_stage_ids": [],
+            "scope_acceptance_next_stage_id": "",
+            "first_blocked_evidence_row_id": "",
+            "first_blocked_target_id": "",
+            "first_blocked_required_missing_fields": "",
+            "transporter_unresolved_slot_count": 0,
+            "pxr_direct_or_claim_safe_quantitative_ready_count": 6,
+            "general_platform_claim_allowed": True,
+            "next_required_step": "",
+        }
+    }
+
+
+def _scope_closure_acceptance_blocked() -> dict:
+    return {
+        "summary": {
+            "packet_ready": True,
+            "scope_closure_ready": False,
+            "scope_acceptance_stage_count": 5,
+            "scope_acceptance_blocked_stage_count": 4,
+            "scope_acceptance_blocked_stage_ids": [
+                "transporter_claim_acceptance",
+                "pxr_claim_acceptance",
+                "breadth_domain_floor_acceptance",
+                "general_platform_claim_acceptance",
+            ],
+            "scope_acceptance_next_stage_id": "transporter_claim_acceptance",
+            "first_blocked_evidence_row_id": "AQP1.core_binder_01",
+            "first_blocked_target_id": "AQP1",
+            "first_blocked_required_missing_fields": "replacement_reference_binding_kcal_mol",
+            "transporter_unresolved_slot_count": 11,
+            "pxr_direct_or_claim_safe_quantitative_ready_count": 0,
+            "general_platform_claim_allowed": False,
+            "next_stage_validation_command": "python3 tools/build_transporter_manual_review_intake_template.py",
+            "next_required_step": "Acquire exact transporter evidence.",
+        }
+    }
+
+
 def _pxr_exact_review() -> dict:
     return {
         "summary": {
@@ -2083,6 +2179,8 @@ def test_product_goal_completion_audit_blocks_on_license_and_release() -> None:
         burndown_packet=_burndown(),
         product_ai_architecture_gap_packet=_ai_gap(),
         product_ai_execution_backlog_packet=_ai_backlog(),
+        product_scope_breadth_contract_packet=_scope_contract_ready(),
+        scope_closure_acceptance_packet=_scope_closure_acceptance_ready(),
     )
 
     summary = payload["summary"]
@@ -2091,7 +2189,7 @@ def test_product_goal_completion_audit_blocks_on_license_and_release() -> None:
     assert summary["goal_complete"] is False
     assert summary["restricted_delivery_complete"] is False
     assert summary["release_blocker_fail_count"] == 3
-    assert summary["pass_count"] == 4
+    assert summary["pass_count"] == 5
     assert summary["fail_count"] == 3
     assert summary["primary_bottleneck_phase"] == "P1_product_commercial_independence"
     assert summary["approval_tokens_required"] == ["APPROVE_PRODUCT_LICENSE_FILE_CREATION"]
@@ -2104,6 +2202,7 @@ def test_product_goal_completion_audit_blocks_on_license_and_release() -> None:
     assert by_id["R7_restricted_local_delivery_ready"]["status"] == "fail"
     assert by_id["R6_product_ai_architecture_gap_closure"]["status"] == "pass"
     assert by_id["R6_product_ai_architecture_gap_closure"]["release_blocker"] is False
+    assert by_id["R8_full_scope_claim_closure"]["status"] == "pass"
     assert summary["product_ai_architecture_gap_status"] == "product_ai_architecture_gap_closure_complete"
     assert summary["product_ai_architecture_all_gaps_closed"] is True
     assert summary["product_ai_architecture_gap_count"] == 7
@@ -2126,8 +2225,8 @@ def test_product_goal_completion_audit_blocks_on_license_and_release() -> None:
     assert summary["product_ai_report_ux_customer_report_evidence_binding_ready"] is True
     assert summary["product_ai_report_ux_customer_report_viewer_binding_ready"] is True
     assert summary["product_ai_report_ux_viewer_customer_report_binding_ready"] is True
-    assert summary["product_ai_report_ux_customer_report_ready_block_count"] == 6
-    assert summary["product_ai_report_ux_customer_report_required_block_count"] == 6
+    assert summary["product_ai_report_ux_customer_report_ready_block_count"] == 7
+    assert summary["product_ai_report_ux_customer_report_required_block_count"] == 7
     assert summary["product_ai_report_ux_customer_report_blocked_block_count"] == 0
     assert summary["product_ai_security_deployment_ready"] is True
     assert summary["product_ai_security_hosted_deployment_contract_ready"] is True
@@ -2258,6 +2357,8 @@ def test_product_goal_completion_audit_blocks_on_open_ai_architecture_backlog() 
         burndown_packet={"summary": {}, "rows": []},
         product_ai_architecture_gap_packet=_ai_gap(ready=False),
         product_ai_execution_backlog_packet=_ai_backlog(ready=False),
+        product_scope_breadth_contract_packet=_scope_contract_r8_ready(),
+        scope_closure_acceptance_packet=_scope_closure_acceptance_ready(),
     )
 
     summary = payload["summary"]
@@ -2378,11 +2479,11 @@ def test_product_goal_completion_audit_blocks_on_open_ai_architecture_backlog() 
     assert summary["product_ai_report_ux_ready"] is True
     assert summary["product_ai_report_ux_customer_report_delivery_contract_ready"] is True
     assert summary["product_ai_report_ux_customer_report_viewer_binding_ready"] is True
-    assert summary["product_ai_report_ux_customer_report_ready_block_count"] == 6
+    assert summary["product_ai_report_ux_customer_report_ready_block_count"] == 7
     assert summary["product_ai_security_deployment_ready"] is True
     assert summary["product_ai_security_hosted_deployment_contract_ready"] is True
     assert summary["product_ai_security_hosted_deployment_currently_satisfied"] is False
-    assert summary["pass_count"] == 6
+    assert summary["pass_count"] == 7
     assert summary["fail_count"] == 1
     assert by_id["R6_product_ai_architecture_gap_closure"]["status"] == "fail"
     assert "current_primary_open_gap=production_ai_inference_checkpoint" in by_id[
@@ -3652,7 +3753,49 @@ def test_product_goal_completion_audit_uses_force_return_chain_for_production_ai
     assert "gpu_worker_return_queue_fingerprints=768" in by_id["R6_product_ai_architecture_gap_closure"]["observed"]
 
 
-def test_product_goal_completion_audit_passes_with_scope_deferred_backlog_only() -> None:
+def test_product_goal_completion_audit_blocks_full_scope_when_scope_acceptance_is_missing() -> None:
+    payload = mod.build_product_goal_completion_audit(
+        architecture_packet=_architecture(release_ready=True, commercial_ready=True),
+        release_dossier_packet=_release_dossier(release_ready=True, commercial_ready=True),
+        public_benchmark_packet=_public_benchmark(),
+        commercial_independence_packet=_commercial(ready=True),
+        license_work_order_packet=_license_work_order(ready=True),
+        cameo_architecture_packet=_cameo(),
+        release_gate_packet=_release_gate(ready=True),
+        bottleneck_packet={"summary": {"approval_tokens_required": []}},
+        burndown_packet={"summary": {}, "rows": []},
+        product_ai_architecture_gap_packet=_ai_gap(),
+        product_ai_execution_backlog_packet=_ai_backlog(),
+        product_scope_breadth_contract_packet=_scope_contract(),
+        scope_closure_acceptance_packet=_scope_closure_acceptance_blocked(),
+    )
+
+    summary = payload["summary"]
+    by_id = {row["requirement_id"]: row for row in payload["rows"]}
+    r8 = by_id["R8_full_scope_claim_closure"]
+
+    assert summary["status"] == "blocked_product_goal_completion_audit"
+    assert summary["goal_complete"] is False
+    assert summary["restricted_delivery_complete"] is True
+    assert summary["product_ai_optional_lane_ready"] is True
+    assert summary["pass_count"] == 7
+    assert summary["fail_count"] == 1
+    assert summary["release_blocker_fail_count"] == 1
+    assert by_id["R6_product_ai_architecture_gap_closure"]["status"] == "pass"
+    assert r8["status"] == "fail"
+    assert r8["blocker"] == "full_scope_claim_closure_not_ready"
+    assert r8["release_blocker"] is True
+    assert "scope_closure_ready=False" in r8["observed"]
+    assert "scope_breadth_ready=False" in r8["observed"]
+    assert "next_stage_id=transporter_claim_acceptance" in r8["observed"]
+    assert "first_blocked_evidence_row_id=AQP1.core_binder_01" in r8["observed"]
+    assert "first_blocked_target_id=AQP1" in r8["observed"]
+    assert "first_blocked_required_missing_fields=replacement_reference_binding_kcal_mol" in r8[
+        "observed"
+    ]
+
+
+def test_product_goal_completion_audit_blocks_scope_deferred_backlog_without_scope_acceptance() -> None:
     payload = mod.build_product_goal_completion_audit(
         architecture_packet=_architecture(release_ready=True, commercial_ready=True),
         release_dossier_packet=_release_dossier(release_ready=True, commercial_ready=True),
@@ -3675,15 +3818,21 @@ def test_product_goal_completion_audit_passes_with_scope_deferred_backlog_only()
             },
             "rows": [],
         },
+        product_scope_breadth_contract_packet=_scope_contract(),
+        scope_closure_acceptance_packet=_scope_closure_acceptance_blocked(),
     )
 
     summary = payload["summary"]
     by_id = {row["requirement_id"]: row for row in payload["rows"]}
-    assert summary["goal_complete"] is True
+    assert summary["status"] == "blocked_product_goal_completion_audit"
+    assert summary["goal_complete"] is False
+    assert summary["restricted_delivery_complete"] is True
     assert summary["product_ai_optional_lane_ready"] is True
     assert summary["product_ai_scope_deferred_work_item_count"] == 12
     assert summary["optional_requirement_fail_count"] == 0
+    assert summary["release_blocker_fail_count"] == 1
     assert by_id["R6_product_ai_architecture_gap_closure"]["status"] == "pass"
+    assert by_id["R8_full_scope_claim_closure"]["status"] == "fail"
 
 
 def test_product_goal_completion_audit_passes_when_all_evidence_is_ready() -> None:
@@ -3699,12 +3848,14 @@ def test_product_goal_completion_audit_passes_when_all_evidence_is_ready() -> No
         burndown_packet={"summary": {}, "rows": []},
         product_ai_architecture_gap_packet=_ai_gap(),
         product_ai_execution_backlog_packet=_ai_backlog(),
+        product_scope_breadth_contract_packet=_scope_contract_ready(),
+        scope_closure_acceptance_packet=_scope_closure_acceptance_ready(),
     )
 
     assert payload["summary"]["status"] == "product_goal_completion_audit_pass"
     assert payload["summary"]["goal_complete"] is True
     assert payload["summary"]["restricted_delivery_complete"] is True
-    assert payload["summary"]["pass_count"] == 7
+    assert payload["summary"]["pass_count"] == 8
     assert payload["summary"]["fail_count"] == 0
     assert payload["summary"]["next_command_candidate_count"] == 0
     assert all(row["status"] == "pass" for row in payload["rows"])

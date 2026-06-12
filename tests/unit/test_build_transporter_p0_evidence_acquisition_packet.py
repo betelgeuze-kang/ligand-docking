@@ -28,6 +28,33 @@ def _workbook(rows: list[dict[str, str]]) -> dict[str, object]:
     return {"workbook_rows": rows}
 
 
+def _operator_candidate_packet() -> dict[str, object]:
+    return {
+        "summary": {"packet_ready": True},
+        "rows": [
+            {
+                "candidate_status": "operator_validation_required",
+                "target_id": "AQP1",
+                "target_uniprot": "P29972",
+                "candidate_ligand_external_identifier": "CHEMBL20",
+                "candidate_ligand_name": "acetazolamide",
+                "candidate_activity_id": "29308926",
+                "candidate_standard_type": "Kd",
+                "candidate_standard_value_nM": "174000.0",
+                "candidate_reference_binding_kcal_mol": "-5.13",
+                "candidate_blocker": "data_validity_outside_typical_range_and_assay_origin_unknown",
+                "candidate_claim_safe_ready": False,
+                "external_recheck_receipt_ready": True,
+                "candidate_raw_activity_verified": True,
+                "automated_target_match_confirmed": True,
+                "automated_endpoint_binding_like_confirmed": True,
+                "automated_data_validity_blocker_present": True,
+                "automated_assay_origin_unknown_blocker_present": True,
+            }
+        ],
+    }
+
+
 def test_transporter_p0_evidence_acquisition_packet_splits_unresolved_slots() -> None:
     aqp1_rows = [
         _row("core_binder_01", "1"),
@@ -94,6 +121,7 @@ def test_transporter_p0_evidence_acquisition_packet_splits_unresolved_slots() ->
                 "next_required_step": "Keep AQP1.core_binder_01 blocked.",
             }
         },
+        aqp1_operator_candidate_payload=_operator_candidate_packet(),
         glut1_workbook_payload=_workbook(glut1_rows),
         glut1_second_wave_payload={
             "rows": [
@@ -165,6 +193,16 @@ def test_transporter_p0_evidence_acquisition_packet_splits_unresolved_slots() ->
     )
     assert summary["aqp1_binding_source_modality_computational_binding_energy_row_count"] == 1
     assert summary["aqp1_binding_source_modality_best_computational_binding_energy_kcal_mol"] == "-34.48"
+    assert summary["aqp1_operator_validation_candidate_artifact"] == (
+        "runs/aqp1_operator_validation_candidate_packet_current.json"
+    )
+    assert summary["aqp1_operator_validation_candidate_public_recheck_receipt_ready"] is True
+    assert summary["aqp1_operator_validation_candidate_raw_activity_verified"] is True
+    assert summary["aqp1_operator_validation_candidate_data_validity_blocker_present"] is True
+    assert summary["aqp1_operator_validation_candidate_assay_origin_unknown_blocker_present"] is True
+    assert "raw_activity_verified=True" in summary[
+        "aqp1_operator_validation_candidate_public_recheck_observed"
+    ]
     assert summary["next_slot_return_bundle_required_artifact_count"] == 5
     assert summary["next_slot_return_bundle_blocker_count"] == 5
     assert summary["next_slot_return_bundle_next_artifact_id"] == "operator_review_row"
@@ -179,6 +217,16 @@ def test_transporter_p0_evidence_acquisition_packet_splits_unresolved_slots() ->
     assert next_packet["slot_id"] == "AQP1.core_binder_01"
     assert next_packet["completion_contract_version"] == "transporter_next_slot_exact_evidence_v2"
     assert next_packet["expected_evidence_type"] == "direct_or_claim_safe_binding_kcal"
+    assert next_packet["operator_validation_candidate"]["candidate_source"] == (
+        "aqp1_operator_validation_candidate_packet"
+    )
+    assert next_packet["operator_validation_candidate_public_recheck_receipt_ready"] is True
+    assert next_packet["operator_validation_candidate_raw_activity_verified"] is True
+    assert next_packet["operator_validation_candidate_data_validity_blocker_present"] is True
+    assert next_packet["operator_validation_candidate_assay_origin_unknown_blocker_present"] is True
+    assert "assay_origin_unknown_blocker=True" in next_packet[
+        "operator_validation_candidate_public_recheck_observed"
+    ]
     assert next_packet["next_slot_source_modality_guard_ready"] is True
     assert next_packet["next_slot_source_modality"] == "functional_quantitative_surrogate"
     assert next_packet["next_slot_source_modality_direct_binding_claim_allowed"] is False
@@ -250,6 +298,7 @@ def test_transporter_p0_evidence_acquisition_packet_cli_writes_outputs(tmp_path:
     aqp1_negative = tmp_path / "aqp1_negative.json"
     aqp1_negative_intake = tmp_path / "aqp1_negative_intake.json"
     aqp1_negative_slot_closure = tmp_path / "aqp1_negative_slot_closure.json"
+    aqp1_operator_candidate = tmp_path / "aqp1_operator_candidate.json"
     glut1 = tmp_path / "glut1.json"
     second_wave = tmp_path / "second_wave.json"
     claim_safe = tmp_path / "claim_safe.json"
@@ -262,6 +311,7 @@ def test_transporter_p0_evidence_acquisition_packet_cli_writes_outputs(tmp_path:
     aqp1_negative.write_text(json.dumps({"summary": {"negative_slot_cover_ready_count": 0}}), encoding="utf-8")
     aqp1_negative_intake.write_text(json.dumps({"summary": {}}), encoding="utf-8")
     aqp1_negative_slot_closure.write_text(json.dumps({"summary": {}}), encoding="utf-8")
+    aqp1_operator_candidate.write_text(json.dumps(_operator_candidate_packet()), encoding="utf-8")
     glut1.write_text(json.dumps(_workbook([_row("core_binder_01", "1", ready=True), _row("core_binder_02", "1")])), encoding="utf-8")
     second_wave.write_text(json.dumps({"rows": []}), encoding="utf-8")
     claim_safe.write_text(json.dumps({"rows": [{"packet_step": "core_binder_01", "ready": "yes"}]}), encoding="utf-8")
@@ -280,6 +330,8 @@ def test_transporter_p0_evidence_acquisition_packet_cli_writes_outputs(tmp_path:
             str(aqp1_negative_intake),
             "--aqp1-negative-slot-closure-json",
             str(aqp1_negative_slot_closure),
+            "--aqp1-operator-candidate-json",
+            str(aqp1_operator_candidate),
             "--glut1-workbook-json",
             str(glut1),
             "--glut1-second-wave-json",
@@ -299,6 +351,9 @@ def test_transporter_p0_evidence_acquisition_packet_cli_writes_outputs(tmp_path:
 
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["unresolved_slot_count"] == 2
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["next_slot_return_bundle_required_artifact_count"] == 5
+    assert json.loads(out_json.read_text(encoding="utf-8"))["summary"][
+        "aqp1_operator_validation_candidate_raw_activity_verified"
+    ] is True
     assert "Transporter P0 Evidence Acquisition Packet" in out_md.read_text(encoding="utf-8")
     assert "Next Slot Return Bundle" in out_md.read_text(encoding="utf-8")
     assert "target_id" in out_csv.read_text(encoding="utf-8")

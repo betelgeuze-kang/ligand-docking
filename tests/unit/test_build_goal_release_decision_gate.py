@@ -429,6 +429,60 @@ def _blocked_product_ai_backlog() -> dict:
     }
 
 
+def _blocked_source_of_truth() -> dict:
+    return {
+        "summary": {
+            "status": "blocked_product_release_source_of_truth_gate",
+            "release_source_of_truth_ready": False,
+            "blocker_count": 2,
+            "stale_artifact_count": 1,
+            "readme_drift_count": 1,
+            "missing_artifact_count": 0,
+        }
+    }
+
+
+def _ready_source_of_truth() -> dict:
+    return {
+        "summary": {
+            "status": "product_release_source_of_truth_gate_ready",
+            "release_source_of_truth_ready": True,
+            "blocker_count": 0,
+            "stale_artifact_count": 0,
+            "readme_drift_count": 0,
+            "missing_artifact_count": 0,
+        }
+    }
+
+
+def _blocked_api_customer_flow() -> dict:
+    return {
+        "summary": {
+            "status": "blocked_api_customer_flow_release_evidence",
+            "formal_release_evidence_ready": False,
+            "clean_install_flow_ready": False,
+            "result_manifest_signature_verified": False,
+            "bundle_validation_ready": True,
+            "restricted_unattended_runtime_ready": True,
+            "blocker_count": 1,
+        }
+    }
+
+
+def _ready_api_customer_flow() -> dict:
+    return {
+        "summary": {
+            "status": "api_customer_flow_release_evidence_ready",
+            "formal_release_evidence_ready": True,
+            "clean_install_flow_ready": True,
+            "result_manifest_signature_verified": True,
+            "bundle_validation_ready": True,
+            "restricted_unattended_runtime_ready": True,
+            "blocker_count": 0,
+        }
+    }
+
+
 def test_goal_release_decision_gate_blocks_current_incomplete_goal() -> None:
     payload = mod.build_goal_release_decision_gate(
         product_pilot_packet=_blocked_product(),
@@ -581,6 +635,114 @@ def test_goal_release_decision_gate_allows_only_when_all_lanes_are_complete() ->
     assert summary["release_allowed"] is True
     assert summary["blocker_count"] == 0
     assert all(row["status"] == "pass" for row in payload["rows"])
+
+
+def test_goal_release_decision_gate_blocks_stale_current_source_of_truth() -> None:
+    payload = mod.build_goal_release_decision_gate(
+        product_pilot_packet=_ready_product(),
+        product_architecture_packet=_ready_product_architecture(),
+        product_commercial_independence_packet=_ready_product_independence(),
+        cameo_validation_packet=_ready_cameo_validation(),
+        cameo_capability_packet=_ready_cameo_capability(),
+        goal_rollup_packet=_ready_rollup(),
+        operator_action_board_packet=_clear_action_board(),
+        transition_cleanup_preflight_packet=_transition_cleanup("transition_cleanup_execution_complete"),
+        ligand_cleanup_preflight_packet=_ligand_cleanup("ligand_heavy_cleanup_execution_complete"),
+        protected_cleanup_review_packet=_protected_cleanup(0),
+        cleanup_postcheck_contract_packet=_ready_cleanup_postcheck(),
+        goal_api_surface_contract_packet=_ready_goal_api_surface_contract(),
+        product_release_source_of_truth_packet=_blocked_source_of_truth(),
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "blocked_goal_release_decision"
+    assert summary["release_allowed"] is False
+    assert summary["product_release_source_of_truth_gate_present"] is True
+    assert summary["product_release_source_of_truth_ready"] is False
+    assert summary["product_release_source_of_truth_stale_artifact_count"] == 1
+    assert summary["product_release_source_of_truth_readme_drift_count"] == 1
+    row = next(row for row in payload["rows"] if row["check"] == "product_release_source_of_truth_ready")
+    assert row["status"] == "fail"
+    assert row["release_blocker"] is True
+
+
+def test_goal_release_decision_gate_passes_ready_current_source_of_truth() -> None:
+    payload = mod.build_goal_release_decision_gate(
+        product_pilot_packet=_ready_product(),
+        product_architecture_packet=_ready_product_architecture(),
+        product_commercial_independence_packet=_ready_product_independence(),
+        cameo_validation_packet=_ready_cameo_validation(),
+        cameo_capability_packet=_ready_cameo_capability(),
+        goal_rollup_packet=_ready_rollup(),
+        operator_action_board_packet=_clear_action_board(),
+        transition_cleanup_preflight_packet=_transition_cleanup("transition_cleanup_execution_complete"),
+        ligand_cleanup_preflight_packet=_ligand_cleanup("ligand_heavy_cleanup_execution_complete"),
+        protected_cleanup_review_packet=_protected_cleanup(0),
+        cleanup_postcheck_contract_packet=_ready_cleanup_postcheck(),
+        goal_api_surface_contract_packet=_ready_goal_api_surface_contract(),
+        product_release_source_of_truth_packet=_ready_source_of_truth(),
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "goal_release_ready"
+    assert summary["release_allowed"] is True
+    assert summary["product_release_source_of_truth_ready"] is True
+    assert next(row for row in payload["rows"] if row["check"] == "product_release_source_of_truth_ready")[
+        "status"
+    ] == "pass"
+
+
+def test_goal_release_decision_gate_blocks_missing_api_customer_flow_release_evidence() -> None:
+    payload = mod.build_goal_release_decision_gate(
+        product_pilot_packet=_ready_product(),
+        product_architecture_packet=_ready_product_architecture(),
+        product_commercial_independence_packet=_ready_product_independence(),
+        cameo_validation_packet=_ready_cameo_validation(),
+        cameo_capability_packet=_ready_cameo_capability(),
+        goal_rollup_packet=_ready_rollup(),
+        operator_action_board_packet=_clear_action_board(),
+        transition_cleanup_preflight_packet=_transition_cleanup("transition_cleanup_execution_complete"),
+        ligand_cleanup_preflight_packet=_ligand_cleanup("ligand_heavy_cleanup_execution_complete"),
+        protected_cleanup_review_packet=_protected_cleanup(0),
+        cleanup_postcheck_contract_packet=_ready_cleanup_postcheck(),
+        goal_api_surface_contract_packet=_ready_goal_api_surface_contract(),
+        api_customer_flow_release_evidence_packet=_blocked_api_customer_flow(),
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "blocked_goal_release_decision"
+    assert summary["release_allowed"] is False
+    assert summary["api_customer_flow_release_evidence_gate_present"] is True
+    assert summary["api_customer_flow_release_evidence_ready"] is False
+    row = next(row for row in payload["rows"] if row["check"] == "api_customer_flow_release_evidence_ready")
+    assert row["status"] == "fail"
+    assert row["release_blocker"] is True
+
+
+def test_goal_release_decision_gate_passes_ready_api_customer_flow_release_evidence() -> None:
+    payload = mod.build_goal_release_decision_gate(
+        product_pilot_packet=_ready_product(),
+        product_architecture_packet=_ready_product_architecture(),
+        product_commercial_independence_packet=_ready_product_independence(),
+        cameo_validation_packet=_ready_cameo_validation(),
+        cameo_capability_packet=_ready_cameo_capability(),
+        goal_rollup_packet=_ready_rollup(),
+        operator_action_board_packet=_clear_action_board(),
+        transition_cleanup_preflight_packet=_transition_cleanup("transition_cleanup_execution_complete"),
+        ligand_cleanup_preflight_packet=_ligand_cleanup("ligand_heavy_cleanup_execution_complete"),
+        protected_cleanup_review_packet=_protected_cleanup(0),
+        cleanup_postcheck_contract_packet=_ready_cleanup_postcheck(),
+        goal_api_surface_contract_packet=_ready_goal_api_surface_contract(),
+        api_customer_flow_release_evidence_packet=_ready_api_customer_flow(),
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "goal_release_ready"
+    assert summary["release_allowed"] is True
+    assert summary["api_customer_flow_release_evidence_ready"] is True
+    assert next(row for row in payload["rows"] if row["check"] == "api_customer_flow_release_evidence_ready")[
+        "status"
+    ] == "pass"
 
 
 def test_goal_release_decision_gate_does_not_block_on_optional_cameo_live_validation() -> None:
@@ -940,6 +1102,8 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
         "goal_api_surface": tmp_path / "goal_api_surface.json",
         "product_ai_gap": tmp_path / "product_ai_gap.json",
         "product_ai_backlog": tmp_path / "product_ai_backlog.json",
+        "source_of_truth": tmp_path / "source_of_truth.json",
+        "api_customer_flow": tmp_path / "api_customer_flow.json",
     }
     paths["product"].write_text(json.dumps(_blocked_product()) + "\n", encoding="utf-8")
     paths["product_architecture"].write_text(json.dumps(_blocked_product_architecture()) + "\n", encoding="utf-8")
@@ -955,6 +1119,8 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     paths["goal_api_surface"].write_text(json.dumps(_ready_goal_api_surface_contract()) + "\n", encoding="utf-8")
     paths["product_ai_gap"].write_text(json.dumps(_ready_product_ai_gap()) + "\n", encoding="utf-8")
     paths["product_ai_backlog"].write_text(json.dumps(_ready_product_ai_backlog()) + "\n", encoding="utf-8")
+    paths["source_of_truth"].write_text(json.dumps(_ready_source_of_truth()) + "\n", encoding="utf-8")
+    paths["api_customer_flow"].write_text(json.dumps(_ready_api_customer_flow()) + "\n", encoding="utf-8")
     out_json = tmp_path / "release_gate.json"
     out_csv = tmp_path / "release_gate.csv"
     out_md = tmp_path / "release_gate.md"
@@ -989,6 +1155,10 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
             str(paths["product_ai_gap"]),
             "--product-ai-execution-backlog-json",
             str(paths["product_ai_backlog"]),
+            "--product-release-source-of-truth-json",
+            str(paths["source_of_truth"]),
+            "--api-customer-flow-release-evidence-json",
+            str(paths["api_customer_flow"]),
             "--out-json",
             str(out_json),
             "--out-csv",

@@ -7,6 +7,15 @@ from pathlib import Path
 from typing import Any
 
 from tools.accounting.build_tools_package_batch3_review_plan import build_tools_package_batch3_review_plan
+from tools.accounting.build_tools_package_batch3_other_review_classification_plan import (
+    build_tools_package_batch3_other_review_classification_plan,
+)
+from tools.accounting.build_tools_package_batch3_lane_decomposition_plan import (
+    build_tools_package_batch3_lane_decomposition_plan,
+)
+from tools.accounting.build_tools_package_batch3_package_classification_plan import (
+    build_tools_package_batch3_package_classification_plan,
+)
 from tools.accounting.build_tools_package_other_review_classification_plan import (
     build_tools_package_other_review_classification_plan,
 )
@@ -18,8 +27,8 @@ DEFAULT_OUT_CSV = "runs/tools_refactor_gap_closure_current.csv"
 DEFAULT_OUT_MD = "runs/tools_refactor_gap_closure_current.md"
 
 CLAIM_BOUNDARY = (
-    "Tools refactor gap closure status only; it audits other_review classification and batch3 review lane "
-    "decomposition without moving files or rewriting imports."
+    "Tools refactor gap closure status only; it audits other_review classification, batch3 review lane "
+    "decomposition, and batch3 lane_a other_review package classification without moving files or rewriting imports."
 )
 
 
@@ -51,13 +60,31 @@ def build_tools_refactor_gap_closure(
     *,
     other_review_plan_packet: dict[str, Any] | None = None,
     batch3_plan_packet: dict[str, Any] | None = None,
+    batch3_other_review_plan_packet: dict[str, Any] | None = None,
+    batch3_lane_decomposition_plan_packet: dict[str, Any] | None = None,
+    batch3_package_classification_plan_packet: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     other_review = other_review_plan_packet or build_tools_package_other_review_classification_plan()
     batch3 = batch3_plan_packet or build_tools_package_batch3_review_plan()
+    batch3_other_review = (
+        batch3_other_review_plan_packet or build_tools_package_batch3_other_review_classification_plan()
+    )
+    batch3_lane_decomposition = (
+        batch3_lane_decomposition_plan_packet or build_tools_package_batch3_lane_decomposition_plan()
+    )
+    batch3_package_classification = (
+        batch3_package_classification_plan_packet or build_tools_package_batch3_package_classification_plan()
+    )
     other_summary = _summary(other_review)
     batch3_summary = _summary(batch3)
+    batch3_other_summary = _summary(batch3_other_review)
+    batch3_lane_summary = _summary(batch3_lane_decomposition)
+    batch3_package_summary = _summary(batch3_package_classification)
     other_closed = bool(other_summary.get("plan_ready"))
     batch3_closed = bool(batch3_summary.get("plan_ready"))
+    batch3_other_closed = bool(batch3_other_summary.get("plan_ready"))
+    batch3_lane_closed = bool(batch3_lane_summary.get("plan_ready"))
+    batch3_package_closed = bool(batch3_package_summary.get("plan_ready"))
     rows = [
         _row(
             "TOOLS-OTHER",
@@ -74,6 +101,30 @@ def build_tools_refactor_gap_closure(
             "runs/tools_package_batch3_review_plan_current.json",
             f"batch3_total_count={batch3_summary.get('batch3_total_count')}; first_slice_candidate_count={batch3_summary.get('first_slice_candidate_count')}",
             "Start with lane_a_zero_test_low_internal slice before manual high-reference lanes.",
+        ),
+        _row(
+            "TOOLS-BATCH3-OTHER",
+            "batch3 lane_a other_review package classification",
+            "closed" if batch3_other_closed else "open",
+            "runs/tools_package_batch3_other_review_classification_plan_current.json",
+            f"candidate_count={batch3_other_summary.get('candidate_count')}; unclassified_count={batch3_other_summary.get('unclassified_count')}",
+            "Apply reclassified batch3 package buckets in approved migration slices.",
+        ),
+        _row(
+            "TOOLS-BATCH3-LANES",
+            "batch3 lane_b/c/d decomposition",
+            "closed" if batch3_lane_closed else "open",
+            "runs/tools_package_batch3_lane_decomposition_plan_current.json",
+            f"candidate_count={batch3_lane_summary.get('candidate_count')}; selected_for_next_slice_count={batch3_lane_summary.get('selected_for_next_slice_count')}",
+            "Migrate selected lane_b target-package candidates, then regenerate lane decomposition.",
+        ),
+        _row(
+            "TOOLS-BATCH3-PACKAGE-CLASSIFICATION",
+            "batch3 package_classification_required bucket assignment",
+            "closed" if batch3_package_closed else "open",
+            "runs/tools_package_batch3_package_classification_plan_current.json",
+            f"candidate_count={batch3_package_summary.get('candidate_count')}; unclassified_count={batch3_package_summary.get('unclassified_count')}",
+            "Use classified package buckets to plan separate migration/rewrite slices.",
         ),
     ]
     closed_rows = [row for row in rows if row["status"] == "closed"]
@@ -111,6 +162,9 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         f"- status: `{s['status']}`",
         f"- all_gaps_closed: `{s['all_gaps_closed']}`",
+        f"- gap_count: `{s['gap_count']}`",
+        f"- closed_gap_ids: `{s['closed_gap_ids']}`",
+        f"- open_gap_ids: `{s['open_gap_ids']}`",
         "",
         "## Claim Boundary",
         "",

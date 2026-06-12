@@ -15,15 +15,15 @@ DEFAULT_OUT_MD = "runs/wetlab_wave1_tail_runtime_event_current.md"
 TARGETS: dict[str, dict[str, str]] = {
     "stk17b": {
         "target_id": "STK17B (DRAK2)",
-        "progress_builder": "tools/build_stk17b_live_progress.py",
-        "result_builder": "tools/build_stk17b_result_summary.py",
+        "progress_builder": "tools/wetlab/build_stk17b_live_progress.py",
+        "result_builder": "tools/wetlab/build_stk17b_result_summary.py",
         "run_record_json": "runs/stk17b_run_record_current.json",
         "gate_json": "runs/stk17b_run_status_current.json",
     },
     "lbdhodh": {
         "target_id": "Leishmania braziliensis DHODH",
-        "progress_builder": "tools/build_lbdhodh_live_progress.py",
-        "result_builder": "tools/build_lbdhodh_result_summary.py",
+        "progress_builder": "tools/wetlab/build_lbdhodh_live_progress.py",
+        "result_builder": "tools/wetlab/build_lbdhodh_result_summary.py",
         "run_record_json": "runs/lbdhodh_run_record_current.json",
         "gate_json": "runs/lbdhodh_result_review_current.json",
     },

@@ -14,10 +14,10 @@ DEFAULT_OUT_JSON = "runs/transporter_aqp1_external_evidence_refresh_chain_curren
 DEFAULT_OUT_MD = "runs/transporter_aqp1_external_evidence_refresh_chain_current.md"
 
 REFRESH_STEPS = [
+    ("aqp1_external_evidence_operator_fill_guide", "tools/build_aqp1_direct_binding_external_evidence_operator_fill_guide.py"),
     ("aqp1_external_evidence_supplement_example", "tools/build_aqp1_direct_binding_external_evidence_supplement_example.py"),
     ("aqp1_external_evidence_intake", "tools/build_aqp1_direct_binding_external_evidence_intake.py"),
     ("aqp1_external_evidence_operator_worksheet", "tools/build_aqp1_direct_binding_external_evidence_operator_worksheet.py"),
-    ("aqp1_external_evidence_operator_fill_guide", "tools/build_aqp1_direct_binding_external_evidence_operator_fill_guide.py"),
     ("aqp1_ready_workbook_apply", "tools/apply_aqp1_ready_workbook_rows.py"),
     ("transporter_p0_closure_packet", "tools/build_transporter_p0_closure_packet.py"),
     ("transporter_blocker_capture_sheet", "tools/product/build_transporter_blocker_capture_sheet.py"),
@@ -86,6 +86,14 @@ def _lane(name: str, path_like: str | Path) -> dict[str, Any]:
     }
 
 
+def _claim_safe_approved_count(intake_summary: dict[str, Any]) -> int:
+    return int(
+        intake_summary.get("claim_safe_approved_count")
+        or intake_summary.get("claim_safe_approved_row_count")
+        or 0
+    )
+
+
 def build_packet(*, generated_at_local: str | None = None) -> dict[str, Any]:
     lanes: dict[str, dict[str, Any]] = {}
     for lane_id, script in REFRESH_STEPS:
@@ -98,7 +106,8 @@ def build_packet(*, generated_at_local: str | None = None) -> dict[str, Any]:
     backlog = lanes["product_ai_architecture_execution_backlog"]["summary"]
 
     blockers: list[str] = []
-    if int(intake.get("claim_safe_approved_row_count") or 0) == 0:
+    claim_safe_approved_count = _claim_safe_approved_count(intake)
+    if claim_safe_approved_count == 0:
         blockers.append("transporter_refresh:aqp1_claim_safe_external_evidence_pending")
     if int(p0.get("aqp1_core_p0_open_count") or 0) > 0:
         blockers.append("transporter_refresh:aqp1_core_p0_open")
@@ -117,7 +126,8 @@ def build_packet(*, generated_at_local: str | None = None) -> dict[str, Any]:
         "generated_at_local": generated_at_local or dt.datetime.now().astimezone().isoformat(timespec="seconds"),
         "claim_boundary": CLAIM_BOUNDARY,
         "blockers": blockers,
-        "aqp1_claim_safe_approved_row_count": int(intake.get("claim_safe_approved_row_count") or 0),
+        "aqp1_claim_safe_approved_count": claim_safe_approved_count,
+        "aqp1_claim_safe_approved_row_count": claim_safe_approved_count,
         "aqp1_core_p0_open_count": int(p0.get("aqp1_core_p0_open_count") or 0),
         "scope_breadth_status": str(scope.get("status") or ""),
         "scope_deferred_work_item_count": int(backlog.get("scope_deferred_work_item_count") or 0),

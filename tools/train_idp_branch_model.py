@@ -11,7 +11,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from tools.idp_residual_common import BRANCH_NAMES, RANKING_HEAD_NAMES, STATE_NAMES, build_residual_model
+from tools.product.idp_residual_common import BRANCH_NAMES, RANKING_HEAD_NAMES, STATE_NAMES, build_residual_model
 
 
 def _ensure_parent(path: str) -> None:

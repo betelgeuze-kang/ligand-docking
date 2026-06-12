@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import Any
 
 from tools import validate_casp17_backend_contract as contract_validator
-from tools import validate_casp17_confidence_calibration as confidence_validator
-from tools import validate_casp17_geometry_sanity as geometry_validator
+from tools.casp17 import validate_casp17_confidence_calibration as confidence_validator
+from tools.casp17 import validate_casp17_geometry_sanity as geometry_validator
 
 
 ROOT = Path(__file__).resolve().parents[2]

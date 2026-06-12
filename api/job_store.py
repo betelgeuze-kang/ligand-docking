@@ -6,6 +6,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from api.request_privacy import sanitize_request_for_ledger
+
 
 def _utc_now_dt() -> datetime:
     return datetime.now(timezone.utc).replace(microsecond=0)
@@ -91,7 +93,7 @@ class SQLiteJobStore:
         max_attempts: int = 3,
     ) -> dict[str, Any]:
         now = _utc_now()
-        request_json = json.dumps(request, sort_keys=True, ensure_ascii=False)
+        request_json = json.dumps(sanitize_request_for_ledger(request), sort_keys=True, ensure_ascii=False)
         with self._connect() as conn:
             conn.execute(
                 """

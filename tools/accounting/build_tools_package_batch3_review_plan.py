@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -78,6 +79,42 @@ def _assign_lane(row: dict[str, Any]) -> str:
     return "lane_d_high_reference_manual"
 
 
+def _target_path_for(row: dict[str, Any]) -> str:
+    package = _text(row.get("proposed_package"))
+    tool_path = _text(row.get("tool_path"))
+    if not package or package == "other_review" or not tool_path:
+        return ""
+    return str(Path("tools") / package / Path(tool_path).name)
+
+
+def _file_text(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return ""
+
+
+def _canonical_module_path(source_path_text: str) -> str:
+    text = _file_text(_resolve(source_path_text))
+    if not text:
+        return ""
+    match = re.search(r"canonical module:\s*([A-Za-z0-9_.]+)", text)
+    if match:
+        module_name = match.group(1).strip().rstrip(".")
+    else:
+        wrapper_match = re.search(
+            r"from\s+(tools\.(?:accounting|cameo|casp17|cleanup|gpcr_replay|product|wetlab)\.[A-Za-z0-9_]+)"
+            r"\s+import\s+(?:\*|main\s+as\s+_main)(?:\s|#|$)",
+            text,
+        )
+        if not wrapper_match:
+            return ""
+        module_name = wrapper_match.group(1).strip().rstrip(".")
+    if not module_name.startswith("tools."):
+        return ""
+    return module_name.replace(".", "/") + ".py"
+
+
 def build_tools_package_batch3_review_plan(
     *,
     work_order_packet: dict[str, Any] | None = None,
@@ -88,25 +125,64 @@ def build_tools_package_batch3_review_plan(
     plan_rows: list[dict[str, Any]] = []
     for row in candidates:
         lane_id = _assign_lane(row)
+        raw_target_path = _target_path_for(row)
+        canonical_module_path = _canonical_module_path(_text(row.get("tool_path")))
+        canonical_module_exists = bool(canonical_module_path and _resolve(canonical_module_path).is_file())
+        target_path = raw_target_path or canonical_module_path
+        target_module_exists = bool(target_path and _resolve(target_path).is_file())
+        has_non_target_canonical = bool(
+            canonical_module_exists and raw_target_path and canonical_module_path != raw_target_path
+        )
+        migration_candidate = bool(
+            lane_id == "lane_a_zero_test_low_internal"
+            and target_path
+            and not target_module_exists
+            and not has_non_target_canonical
+        )
         plan_rows.append(
             {
                 **row,
+                "target_path": target_path,
+                "target_module_exists": target_module_exists,
+                "canonical_module_path": canonical_module_path,
+                "canonical_module_exists": canonical_module_exists,
+                "has_non_target_canonical_module": has_non_target_canonical,
                 "review_lane": lane_id,
-                "selected_for_first_slice": lane_id == "lane_a_zero_test_low_internal",
+                "selected_for_first_slice": migration_candidate,
                 "move_executed": False,
                 "caller_or_test_rewrite_executed": False,
                 "external_state_mutated": False,
             }
         )
     lane_counts = Counter(row["review_lane"] for row in plan_rows)
+    raw_first_slice_count = sum(1 for row in plan_rows if row["review_lane"] == "lane_a_zero_test_low_internal")
     first_slice_count = sum(1 for row in plan_rows if row["selected_for_first_slice"])
+    skipped_existing_target_count = sum(
+        1
+        for row in plan_rows
+        if row["review_lane"] == "lane_a_zero_test_low_internal" and row["target_module_exists"]
+    )
+    skipped_existing_canonical_count = sum(
+        1
+        for row in plan_rows
+        if row["review_lane"] == "lane_a_zero_test_low_internal" and row["has_non_target_canonical_module"]
+    )
+    skipped_unclassified_count = sum(
+        1
+        for row in plan_rows
+        if row["review_lane"] == "lane_a_zero_test_low_internal" and not _text(row.get("target_path"))
+    )
     plan_ready = bool(plan_rows)
     status = "tools_package_batch3_review_plan_ready" if plan_ready else "blocked_tools_package_batch3_review_plan"
     summary = {
         "packet_type": "tools_package_batch3_review_plan",
         "status": status,
         "batch3_total_count": len(plan_rows),
+        "first_slice_raw_candidate_count": raw_first_slice_count,
         "first_slice_candidate_count": first_slice_count,
+        "skipped_existing_target_candidate_count": skipped_existing_target_count,
+        "skipped_existing_canonical_candidate_count": skipped_existing_canonical_count,
+        "skipped_unclassified_candidate_count": skipped_unclassified_count,
         "review_lane_counts": dict(sorted(lane_counts.items())),
         "plan_ready": plan_ready,
         "move_executed": False,
@@ -114,7 +190,7 @@ def build_tools_package_batch3_review_plan(
         "external_state_mutated": False,
         "claim_boundary": CLAIM_BOUNDARY,
         "next_required_step": (
-            "Review lane_a_zero_test_low_internal slice first, then escalate to manual high-reference lanes."
+            "Move selected lane_a_zero_test_low_internal target-package rows first, then regenerate batch3 plan."
             if plan_ready
             else "Regenerate tools package separation work order before batch3 decomposition."
         ),
@@ -130,7 +206,11 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         f"- status: `{s['status']}`",
         f"- batch3_total_count: `{s['batch3_total_count']}`",
+        f"- first_slice_raw_candidate_count: `{s['first_slice_raw_candidate_count']}`",
         f"- first_slice_candidate_count: `{s['first_slice_candidate_count']}`",
+        f"- skipped_existing_target_candidate_count: `{s['skipped_existing_target_candidate_count']}`",
+        f"- skipped_existing_canonical_candidate_count: `{s['skipped_existing_canonical_candidate_count']}`",
+        f"- skipped_unclassified_candidate_count: `{s['skipped_unclassified_candidate_count']}`",
         "",
         "## Claim Boundary",
         "",

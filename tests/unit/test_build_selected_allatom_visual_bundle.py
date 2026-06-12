@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 
 from tools import build_selected_allatom_visual_bundle as mod
-from tools import wetlab_selected_allatom_visual as visual_mod
+from tools.wetlab import wetlab_selected_allatom_visual as visual_mod
 
 
 def _write_pdb(path: Path) -> None:

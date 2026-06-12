@@ -78,6 +78,15 @@ def _wrapper_main_expected(target_path: str) -> str:
     return f"from {module} import main as _main"
 
 
+def _module_has_main(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    try:
+        return "def main" in path.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return False
+
+
 def build_tools_package_migration_receipt(
     *,
     plan_packet: dict[str, Any],
@@ -109,7 +118,8 @@ def build_tools_package_migration_receipt(
             row_blockers.append("package_init_missing")
         if source_path.is_file() and _wrapper_import_expected(target_path_text) not in wrapper_text:
             row_blockers.append("wrapper_import_missing")
-        if source_path.is_file() and _wrapper_main_expected(target_path_text) not in wrapper_text:
+        wrapper_main_required = _module_has_main(target_path)
+        if source_path.is_file() and wrapper_main_required and _wrapper_main_expected(target_path_text) not in wrapper_text:
             row_blockers.append("wrapper_main_passthrough_missing")
         source_compile_ok = _compile_ok(source_path)
         target_compile_ok = _compile_ok(target_path)
@@ -127,6 +137,7 @@ def build_tools_package_migration_receipt(
                 "target_module_present": target_path.is_file(),
                 "package_init_present": package_init.is_file(),
                 "wrapper_imports_target": _wrapper_import_expected(target_path_text) in wrapper_text,
+                "wrapper_main_passthrough_required": wrapper_main_required,
                 "wrapper_main_passthrough": _wrapper_main_expected(target_path_text) in wrapper_text,
                 "source_wrapper_py_compile_ok": source_compile_ok,
                 "target_module_py_compile_ok": target_compile_ok,

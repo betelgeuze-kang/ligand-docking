@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
 from typing import Any
 
@@ -275,6 +276,12 @@ async def submit_docking_job(payload: DockingJobRequest, request: Request) -> di
         "customer_report_card_ready": record["customer_report_card_ready"],
         "customer_report_delivery_contract_ready": record["customer_report_delivery_contract_ready"],
         "customer_report_evidence_binding_ready": record["customer_report_evidence_binding_ready"],
+        "customer_report_selection_rationale_ready": record["customer_report_selection_rationale_ready"],
+        "customer_report_uncertainty_posture_ready": record["customer_report_uncertainty_posture_ready"],
+        "customer_report_prohibited_claims_ready": record["customer_report_prohibited_claims_ready"],
+        "customer_report_selection_rationale": record["customer_report_selection_rationale"],
+        "customer_report_uncertainty_posture": record["customer_report_uncertainty_posture"],
+        "customer_report_prohibited_claims": record["customer_report_prohibited_claims"],
         "customer_report_required_block_count": record["customer_report_required_block_count"],
         "customer_report_ready_block_count": record["customer_report_ready_block_count"],
         "customer_report_blocked_block_count": record["customer_report_blocked_block_count"],
@@ -714,9 +721,11 @@ async def get_product_security_deployment_contract() -> dict[str, Any]:
             "auth_ready": False,
             "tenant_isolation_ready": False,
             "rate_limit_ready": False,
+            "tenant_quota_ready": False,
             "payload_limit_ready": False,
             "path_allowlist_ready": False,
             "audit_log_ready": False,
+            "audit_retention_ready": False,
             "blocked_request_audit_ready": False,
             "security_headers_ready": False,
             "fail_closed_block_response_ready": False,
@@ -734,6 +743,9 @@ async def get_product_security_deployment_contract() -> dict[str, Any]:
             "hosted_deployment_blocked_stage_ids": [],
             "hosted_deployment_next_stage_id": "",
             "hosted_deployment_next_stage_required": "",
+            "secret_rotation_contract_ready": False,
+            "backup_dr_contract_ready": False,
+            "pager_alert_contract_ready": False,
             "middleware_registered": False,
             "sbom_ready": False,
             "container_image_ready": False,
@@ -763,9 +775,11 @@ async def get_product_security_deployment_contract() -> dict[str, Any]:
         "auth_ready": bool(summary.get("auth_ready") is True),
         "tenant_isolation_ready": bool(summary.get("tenant_isolation_ready") is True),
         "rate_limit_ready": bool(summary.get("rate_limit_ready") is True),
+        "tenant_quota_ready": bool(summary.get("tenant_quota_ready") is True),
         "payload_limit_ready": bool(summary.get("payload_limit_ready") is True),
         "path_allowlist_ready": bool(summary.get("path_allowlist_ready") is True),
         "audit_log_ready": bool(summary.get("audit_log_ready") is True),
+        "audit_retention_ready": bool(summary.get("audit_retention_ready") is True),
         "blocked_request_audit_ready": bool(summary.get("blocked_request_audit_ready") is True),
         "security_headers_ready": bool(summary.get("security_headers_ready") is True),
         "fail_closed_block_response_ready": bool(summary.get("fail_closed_block_response_ready") is True),
@@ -799,6 +813,11 @@ async def get_product_security_deployment_contract() -> dict[str, Any]:
         "hosted_deployment_next_stage_required": summary.get(
             "hosted_deployment_next_stage_required", ""
         ),
+        "secret_rotation_contract_ready": bool(
+            summary.get("secret_rotation_contract_ready") is True
+        ),
+        "backup_dr_contract_ready": bool(summary.get("backup_dr_contract_ready") is True),
+        "pager_alert_contract_ready": bool(summary.get("pager_alert_contract_ready") is True),
         "middleware_registered": bool(summary.get("middleware_registered") is True),
         "sbom_ready": bool(summary.get("sbom_ready") is True),
         "container_image_ready": bool(summary.get("container_image_ready") is True),
@@ -1086,6 +1105,7 @@ async def get_product_ai_decision_graph() -> dict[str, Any]:
             "fail_closed_transition_ready": False,
             "viewer_interaction_surface_ready": False,
             "interaction_rationale_ready": False,
+            "ligand_selection_rationale_ready": False,
             "counterfactual_rescue_suggestion_ready": False,
             "evidence_traceability_ready": False,
             "uncertainty_abstention_detail": "",
@@ -1122,6 +1142,7 @@ async def get_product_ai_decision_graph() -> dict[str, Any]:
         "fail_closed_transition_ready": bool(summary.get("fail_closed_transition_ready") is True),
         "viewer_interaction_surface_ready": bool(summary.get("viewer_interaction_surface_ready") is True),
         "interaction_rationale_ready": bool(summary.get("interaction_rationale_ready") is True),
+        "ligand_selection_rationale_ready": bool(summary.get("ligand_selection_rationale_ready") is True),
         "counterfactual_rescue_suggestion_ready": bool(
             summary.get("counterfactual_rescue_suggestion_ready") is True
         ),
@@ -1167,10 +1188,12 @@ async def get_product_ai_report_ux() -> dict[str, Any]:
             "binding_site_explanation_ready": False,
             "pose_comparison_ready": False,
             "interaction_rationale_ready": False,
+            "ligand_selection_rationale_ready": False,
             "uncertainty_narrative_ready": False,
             "counterfactual_rescue_suggestion_ready": False,
             "evidence_traceability_ready": False,
             "scope_claim_limit_ready": False,
+            "selection_rationale": "",
             "primary_abstention_reason": "",
             "what_would_change_decision": "",
             "allowed_scope_families": [],
@@ -1222,12 +1245,14 @@ async def get_product_ai_report_ux() -> dict[str, Any]:
         "binding_site_explanation_ready": bool(summary.get("binding_site_explanation_ready") is True),
         "pose_comparison_ready": bool(summary.get("pose_comparison_ready") is True),
         "interaction_rationale_ready": bool(summary.get("interaction_rationale_ready") is True),
+        "ligand_selection_rationale_ready": bool(summary.get("ligand_selection_rationale_ready") is True),
         "uncertainty_narrative_ready": bool(summary.get("uncertainty_narrative_ready") is True),
         "counterfactual_rescue_suggestion_ready": bool(
             summary.get("counterfactual_rescue_suggestion_ready") is True
         ),
         "evidence_traceability_ready": bool(summary.get("evidence_traceability_ready") is True),
         "scope_claim_limit_ready": bool(summary.get("scope_claim_limit_ready") is True),
+        "selection_rationale": summary.get("selection_rationale", ""),
         "primary_abstention_reason": summary.get("primary_abstention_reason", ""),
         "what_would_change_decision": summary.get("what_would_change_decision", ""),
         "allowed_scope_families": list(summary.get("allowed_scope_families") or []),
@@ -1574,6 +1599,7 @@ async def get_product_license_decision() -> dict[str, Any]:
 async def get_product_license_file_work_order() -> dict[str, Any]:
     packet = _read_json_object(PRODUCT_LICENSE_FILE_WORK_ORDER_ARTIFACT)
     summary = _summary(packet)
+    license_decision_summary = _summary(_read_json_object(PRODUCT_LICENSE_DECISION_ARTIFACT))
     rows = packet.get("rows") if isinstance(packet.get("rows"), list) else []
     blockers = packet.get("blockers") if isinstance(packet.get("blockers"), list) else []
     work_items = packet.get("work_items") if isinstance(packet.get("work_items"), list) else []
@@ -1596,6 +1622,24 @@ async def get_product_license_file_work_order() -> dict[str, Any]:
                 "It does not choose a license, write a LICENSE file, run docking, or mutate external state."
             ),
         }
+    license_text_source = str(summary.get("license_text_source", "") or "")
+    license_present = bool(summary.get("license_present") is True or license_text_source)
+    authorized_for_review = bool(
+        summary.get("authorized_for_license_file_creation_review") is True
+        or license_decision_summary.get("authorized_for_license_file_creation_review") is True
+    )
+    license_review_manifest = summary.get("license_review_manifest") if isinstance(summary.get("license_review_manifest"), dict) else {}
+    fingerprint = str(summary.get("license_review_manifest_fingerprint_sha256", "") or "")
+    if not fingerprint and bool(summary.get("license_review_manifest_ready") is True):
+        fingerprint_payload = license_review_manifest or {
+            "spdx_license_id": summary.get("spdx_license_id", ""),
+            "license_text_source": license_text_source,
+            "copyright_holder": summary.get("copyright_holder", ""),
+            "effective_year": summary.get("effective_year", ""),
+        }
+        fingerprint = hashlib.sha256(
+            json.dumps(fingerprint_payload, sort_keys=True, ensure_ascii=False).encode("utf-8")
+        ).hexdigest()
     return {
         "status": summary.get("status"),
         "artifact_path": str(PRODUCT_LICENSE_FILE_WORK_ORDER_ARTIFACT),
@@ -1603,18 +1647,17 @@ async def get_product_license_file_work_order() -> dict[str, Any]:
         "approval_token_required": summary.get("approval_token_required") or LICENSE_APPROVAL_TOKEN,
         "target_license_path": summary.get("target_license_path") or "LICENSE",
         "spdx_license_id": summary.get("spdx_license_id", ""),
-        "license_text_source": summary.get("license_text_source", ""),
+        "license_text_source": license_text_source,
         "copyright_holder": summary.get("copyright_holder", ""),
         "effective_year": summary.get("effective_year", ""),
         "license_review_manifest_ready": bool(summary.get("license_review_manifest_ready") is True),
-        "license_review_manifest": summary.get("license_review_manifest") if isinstance(summary.get("license_review_manifest"), dict) else {},
-        "license_review_manifest_fingerprint_sha256": summary.get("license_review_manifest_fingerprint_sha256", ""),
-        "license_decision_gate_status": summary.get("license_decision_gate_status", ""),
-        "authorized_for_license_file_creation_review": bool(
-            summary.get("authorized_for_license_file_creation_review") is True
-        ),
+        "license_review_manifest": license_review_manifest,
+        "license_review_manifest_fingerprint_sha256": fingerprint,
+        "license_decision_gate_status": summary.get("license_decision_gate_status", "")
+        or license_decision_summary.get("status", ""),
+        "authorized_for_license_file_creation_review": authorized_for_review,
         "commercial_gate_only_license_blocked": bool(summary.get("commercial_gate_only_license_blocked") is True),
-        "license_present": bool(summary.get("license_present") is True),
+        "license_present": license_present,
         "blocker_count": int(summary.get("blocker_count") or 0),
         "check_count": int(summary.get("check_count") or 0),
         "checks": rows,

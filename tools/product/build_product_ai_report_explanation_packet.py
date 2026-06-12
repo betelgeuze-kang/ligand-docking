@@ -23,6 +23,7 @@ REQUIRED_SECTIONS = (
     "binding_site_explanation",
     "pose_comparison",
     "interaction_rationale",
+    "ligand_selection_rationale",
     "uncertainty_narrative",
     "scope_claim_limit",
     "counterfactual_rescue_suggestion",
@@ -161,31 +162,52 @@ def build_product_ai_report_explanation_packet(
         and _text(preflight.get("operational_gate_feasibility_status")) == "pass"
         and _text(bundle.get("status")) == "product_bundle_contract_ready"
     )
+    production_promotion_allowed = registry.get("production_promotion_allowed") is True
+    default_residual_mode = _text(registry.get("default_residual_mode")) or "unknown"
+    missing_sidecar_outputs = ",".join(str(item) for item in registry.get("selected_sidecar_missing_output_fields") or [])
+    shadow_abstention_ready = (
+        default_residual_mode in {"shadow", "shadow_only"}
+        and not production_promotion_allowed
+    )
+    guarded_active_ready = (
+        default_residual_mode == "production_guarded"
+        and production_promotion_allowed
+        and registry.get("customer_facing_auto_correction_allowed") is True
+        and registry.get("customer_facing_score_mutation_allowed") is True
+        and registry.get("selected_sidecar_ready") is True
+        and not missing_sidecar_outputs
+    )
     uncertainty_ready = (
         _text(registry.get("status")) == "residual_model_registry_ready"
-        and _text(registry.get("default_residual_mode")) == "shadow"
-        and registry.get("production_promotion_allowed") is False
+        and (shadow_abstention_ready or guarded_active_ready)
     )
     bundle_ready = _text(bundle.get("expected_bundle_dir")) and _bool(bundle.get("bundle_validation_command_matches"))
     ligand_context_ready = _int(structure.get("ligand_like_residue_count")) > 0
     ranking_score_col = _argv_value("--ranking-score-col") or _argv_value("--ranking-probability-score-col") or "not_reported"
     distance_gate = _argv_value("--gate-max-mean-min-distance-A") or "not_reported"
     topk_hit_gate = _argv_value("--gate-topk-hit-rate-min") or "not_reported"
-    production_promotion_allowed = registry.get("production_promotion_allowed") is True
-    default_residual_mode = _text(registry.get("default_residual_mode")) or "unknown"
+    ranking_score_ready = ranking_score_col != "not_reported"
     abstention_reason = (
         "production_residual_checkpoint_not_promoted"
         if not production_promotion_allowed
-        else "production_residual_checkpoint_promoted_but_correction_still_requires_explicit_execution_gate"
+        else "production_guarded_active_report_packet_does_not_apply_correction"
     )
     force_receipt_ready = registry.get("selected_sidecar_force_receipt_ready") is True
-    missing_sidecar_outputs = ",".join(str(item) for item in registry.get("selected_sidecar_missing_output_fields") or [])
     checkpoint_change_condition = (
-        "Return and verify the full GPU force-label receipt, derive delta_force/uncertainty labels, train a checkpoint, "
-        "and promote the residual model registry out of shadow mode."
+        "Bind a signed execution result manifest, preserve score/ranking provenance, and keep customer-facing "
+        "correction or ranking changes separately audited from this explanation packet."
+        if guarded_active_ready
+        else (
+            "Return and verify the full GPU force-label receipt, derive delta_force/uncertainty labels, train a "
+            "checkpoint, and promote the residual model registry out of shadow mode."
+        )
     )
     target = _text(structure.get("target_id")) or _text(preflight.get("target_id")) or "target"
     family = _text(structure.get("family")) or _text(preflight.get("family")) or "unknown"
+    atom_count = _int(structure.get("atom_count"))
+    chain_count_text = _text(structure.get("chain_count")) or "not_reported"
+    residue_count_text = _text(structure.get("residue_count")) or "not_reported"
+    ligand_like_count = _int(structure.get("ligand_like_residue_count"))
     allowed_scope_families = [str(item) for item in scope.get("allowed_scope_families") or [] if str(item)]
     if not allowed_scope_families:
         allowed_scope_families = [family] if family != "unknown" else []
@@ -203,13 +225,13 @@ def build_product_ai_report_explanation_packet(
     sections = [
         _section(
             "binding_site_explanation",
-            "ready" if graph_ready and structure_ready and _int(structure.get("chain_count")) > 0 and _int(structure.get("residue_count")) > 0 else "blocked",
+            "ready" if graph_ready and structure_ready and atom_count > 0 else "blocked",
             structure_report_path,
             "Structure and Binding-Site Context",
             (
-                f"{target} ({family}) was parsed locally with {_int(structure.get('atom_count'))} atoms, "
-                f"{_int(structure.get('chain_count'))} chains, {_int(structure.get('residue_count'))} residues, "
-                f"and {_int(structure.get('ligand_like_residue_count'))} ligand-like residues. This grounds the "
+                f"{target} ({family}) was parsed locally with {atom_count} atoms, "
+                f"{chain_count_text} chains, {residue_count_text} residues, "
+                f"and {ligand_like_count} ligand-like residues. This grounds the "
                 "binding-site discussion in the submitted structure rather than in a detached score."
             ),
             "The report can explain what structural context was available before interpreting any ligand pose.",
@@ -271,6 +293,56 @@ def build_product_ai_report_explanation_packet(
             ),
         ),
         _section(
+            "ligand_selection_rationale",
+            (
+                "ready"
+                if graph_ready
+                and structure_ready
+                and pose_ready
+                and ligand_context_ready
+                and ranking_score_ready
+                and _int(bundle.get("artifact_count")) > 0
+                else "blocked"
+            ),
+            f"{structure_report_path};{execution_preflight_path};{bundle_path};{scope_claim_guard_path}",
+            "Ligand Selection Rationale",
+            (
+                f"The report can explain why the current {target} ligand/pose evidence is eligible for customer "
+                f"review: family `{family}` is inside the restricted delivery lane, the local structure exposes "
+                f"{ligand_like_count} ligand-like residue(s), the ranking source is `{ranking_score_col}`, and the "
+                f"review remains bounded by distance gate `{distance_gate}` plus top-k hit-rate gate `{topk_hit_gate}`. "
+                "This is a selection rationale for an audited evidence packet, not a claim that the ligand is a "
+                "therapeutic winner or that ranking was silently mutated by AI."
+            ),
+            "The report can tell the customer why this ligand/pose evidence was surfaced while keeping winner claims gated.",
+            (
+                "Restore ligand context, ranking-score provenance, bundle evidence, and scope-claim guard before explaining selection."
+                if not (structure_ready and pose_ready and ligand_context_ready and ranking_score_ready)
+                else "Use ranking-score provenance, ligand context, and restricted-scope guardrails as the selection rationale source."
+            ),
+            customer_question="Why was this ligand or pose surfaced for review instead of another candidate?",
+            claim_limit=(
+                "Ligand selection rationale explains audited surfacing criteria only; it does not claim clinical efficacy, "
+                "therapeutic superiority, broad-platform generality, or ungated customer ranking mutation."
+            ),
+            abstention_reason="ligand_winner_claim_requires_pose_score_result_manifest_and_ranking_gate",
+            what_would_change_decision=(
+                "A signed result manifest with per-ligand score provenance, pose/contact evidence, and an open "
+                "customer ranking-mutation gate would allow stronger ligand-winner language."
+            ),
+            confidence_posture=(
+                "ligand_selection_rationale_ready"
+                if ligand_context_ready and ranking_score_ready and scope_claim_limit_ready
+                else "ligand_selection_rationale_blocked"
+            ),
+            evidence_traceability=(
+                f"{structure_report_path}:ligand_like_residue_count={ligand_like_count};"
+                f"{execution_preflight_path}:ranking_score_col={ranking_score_col};"
+                f"{bundle_path}:artifact_count={_int(bundle.get('artifact_count'))};"
+                f"{scope_claim_guard_path}:allowed_scope_families={','.join(allowed_scope_families) or 'not_reported'}"
+            ),
+        ),
+        _section(
             "uncertainty_narrative",
             "ready" if graph_ready and uncertainty_ready else "blocked",
             registry_path,
@@ -278,11 +350,12 @@ def build_product_ai_report_explanation_packet(
             (
                 f"The residual model layer is registered with default mode `{_text(registry.get('default_residual_mode')) or 'unknown'}` "
                 f"and production promotion `{registry.get('production_promotion_allowed')}`. The customer narrative must state "
-                "that learned residual corrections are evidence-only until checkpoint, benchmark, and promotion gates pass."
+                "whether learned residual corrections are abstained, or active under a guarded policy that still keeps "
+                "this explanation packet from silently changing customer scores."
             ),
             "The report can explain why the system may abstain instead of automatically correcting customer results.",
-            "Keep residual correction language conservative until production promotion is allowed." if uncertainty_ready else "Repair residual registry evidence before presenting uncertainty/abstention narrative.",
-            customer_question="Why did the AI layer abstain instead of automatically correcting the result?",
+            "Keep residual correction language tied to the guarded execution/result-manifest gate." if uncertainty_ready else "Repair residual registry evidence before presenting uncertainty/abstention narrative.",
+            customer_question="Why did the AI layer abstain or avoid silently correcting the result?",
             claim_limit=f"Residual AI is in `{default_residual_mode}` mode; production correction is not claimed while promotion is {production_promotion_allowed}.",
             abstention_reason=abstention_reason,
             what_would_change_decision=checkpoint_change_condition,
@@ -312,7 +385,7 @@ def build_product_ai_report_explanation_packet(
         ),
     ]
     sections.insert(
-        4,
+        5,
         _section(
             "scope_claim_limit",
             "ready" if graph_ready and scope_claim_limit_ready else "blocked",
@@ -389,12 +462,39 @@ def build_product_ai_report_explanation_packet(
         and len(ready_delivery_blocks) == len(required_block_ids)
         and customer_report_evidence_binding_ready
     )
+    customer_report_blocks = {
+        row["section_id"]: {
+            "title": row["title"],
+            "status": row["status"],
+            "narrative": row["narrative"],
+            "customer_takeaway": row["customer_takeaway"],
+            "claim_limit": row["claim_limit"],
+            "abstention_reason": row["abstention_reason"],
+            "what_would_change_decision": row["what_would_change_decision"],
+            "confidence_posture": row["confidence_posture"],
+            "evidence_traceability": row["evidence_traceability"],
+            "delivery_block_ready": row["customer_report_delivery_block_ready"],
+        }
+        for row in sections
+    }
+    selection_section = section_by_id.get("ligand_selection_rationale", {})
+    selection_rationale_ready = bool(selection_section.get("status") == "ready")
+    selection_rationale = _text(selection_section.get("narrative"))
     customer_report_card = {
         "target_id": target,
         "family": family,
         "production_ai_correction_applied": False,
         "production_ai_abstention_enforced": not production_promotion_allowed,
         "default_residual_mode": default_residual_mode,
+        "uncertainty_policy_mode": (
+            "production_guarded_active"
+            if guarded_active_ready
+            else "shadow_abstention"
+            if shadow_abstention_ready
+            else "blocked"
+        ),
+        "shadow_abstention_ready": shadow_abstention_ready,
+        "production_guarded_active_ready": guarded_active_ready,
         "primary_abstention_reason": abstention_reason,
         "claim_limit": "Customer report is an evidence review over local artifacts; it does not run docking, apply learned correction, or widen delivery scope.",
         "what_would_change_decision": checkpoint_change_condition,
@@ -407,7 +507,12 @@ def build_product_ai_report_explanation_packet(
         "interaction_rationale_ready": any(
             row["section_id"] == "interaction_rationale" and row["status"] == "ready" for row in sections
         ),
+        "ligand_selection_rationale_ready": selection_rationale_ready,
+        "selection_rationale_ready": selection_rationale_ready,
+        "selection_rationale": selection_rationale,
+        "ligand_selection_policy": "audited_score_provenance_and_restricted_scope_required_before_customer_winner_claim",
         "evidence_traceability_ready": all(_text(row.get("evidence_traceability")) for row in sections),
+        "blocks": customer_report_blocks,
         "customer_report_delivery_contract_ready": customer_report_delivery_contract_ready,
         "customer_report_required_block_count": len(required_block_ids),
         "customer_report_ready_block_count": len(ready_delivery_blocks),
@@ -437,12 +542,24 @@ def build_product_ai_report_explanation_packet(
         "customer_report_missing_blocks": missing_delivery_blocks,
         "customer_report_evidence_binding_ready": customer_report_evidence_binding_ready,
         "interaction_rationale_ready": customer_report_card["interaction_rationale_ready"],
+        "ligand_selection_rationale_ready": selection_rationale_ready,
+        "selection_rationale": selection_rationale,
+        "ranking_score_ready": ranking_score_ready,
         "evidence_traceability_ready": customer_report_card["evidence_traceability_ready"],
         "ranking_score_col": ranking_score_col,
         "interaction_distance_gate_A": distance_gate,
         "interaction_topk_hit_rate_gate": topk_hit_gate,
         "production_ai_correction_applied": False,
         "production_ai_abstention_enforced": not production_promotion_allowed,
+        "uncertainty_policy_mode": (
+            "production_guarded_active"
+            if guarded_active_ready
+            else "shadow_abstention"
+            if shadow_abstention_ready
+            else "blocked"
+        ),
+        "shadow_abstention_ready": shadow_abstention_ready,
+        "production_guarded_active_ready": guarded_active_ready,
         "primary_abstention_reason": abstention_reason,
         "allowed_scope_families": allowed_scope_families,
         "blocked_claim_scopes": blocked_claim_scopes,

@@ -44,7 +44,7 @@ fi
 
 log "Ligand HTVS nightly started: date_tag=${DATE_TAG}"
 FORCE_RUST_HIP=1 RUST_HIP_USE_GPU_NBLIST_BUILDER=1 \
-python3 tools/run_ligand_htvs_nightly.py \
+python3 tools/product/run_ligand_htvs_nightly.py \
   --date-tag "$DATE_TAG" \
   >>"$LOG_PATH" 2>&1 || status=$?
 

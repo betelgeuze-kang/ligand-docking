@@ -16,7 +16,7 @@ DEFAULT_OUT_MD = "runs/product_scope_optional_lane_refresh_chain_current.md"
 REFRESH_STEPS = [
     ("transporter_manual_review_intake_template", "tools/build_transporter_manual_review_intake_template.py"),
     ("product_scope_breadth_closure_checklist", "tools/build_product_scope_breadth_closure_checklist.py"),
-    ("transporter_aqp1_external_evidence_refresh_chain", "tools/build_transporter_aqp1_external_evidence_refresh_chain.py"),
+    ("transporter_aqp1_external_evidence_refresh_chain", "tools/product/build_transporter_aqp1_external_evidence_refresh_chain.py"),
     ("product_scope_breadth_contract", "tools/build_product_scope_breadth_contract.py"),
     ("product_ai_architecture_gap_closure", "tools/build_product_ai_architecture_gap_closure.py"),
     ("product_ai_architecture_execution_backlog", "tools/build_product_ai_architecture_execution_backlog.py"),

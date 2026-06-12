@@ -1,4 +1,4 @@
-from tools.accounting.build_pxr_defer_exact_evidence_operator_fill_guide import (
+from tools.product.build_pxr_defer_exact_evidence_operator_fill_guide import (
     DEFER_OPERATOR_GUIDANCE,
     build_intake_rows,
     build_payload,

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from betelgeuze_product.engine_dispatch import build_dispatch_manifest
+from betelgeuze_product.payload_privacy import sanitize_request_for_ledger
 from betelgeuze_product.residual_mode_policy import (
     customer_ranking_mutation_allowed_at_runtime,
     production_ai_inference_subject_active,
@@ -38,6 +39,7 @@ CUSTOMER_REPORT_REQUIRED_BLOCKS = (
     "binding_site_explanation",
     "pose_comparison",
     "interaction_rationale",
+    "ligand_selection_rationale",
     "uncertainty_narrative",
     "scope_claim_limit",
     "counterfactual_rescue_suggestion",
@@ -50,6 +52,12 @@ AI_DECISION_GRAPH_NODE_IDS = (
     "uncertainty_abstention_guard",
     "report_bundle_contract",
     "customer_report_ux",
+)
+PROHIBITED_CUSTOMER_CLAIMS = (
+    "fresh_docking_pose_claim",
+    "learned_score_correction_claim",
+    "customer_facing_ranking_mutation_claim",
+    "clinical_or_therapeutic_claim",
 )
 
 
@@ -221,16 +229,32 @@ def _redacted_ligand_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return rows
 
 
+def _sha256_text(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest() if value else ""
+
+
+def _ligand_source_ref(ligand: dict[str, Any]) -> tuple[str, str]:
+    for key in ("smiles", "inchi", "sdf_path", "mol2_path", "pdbqt_path", "compound_id"):
+        value = _text(ligand.get(key))
+        if value:
+            return key, value
+    return "", ""
+
+
 def _materialization_ligand_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for index, ligand in enumerate(_as_list(payload.get("ligands")), start=1):
         if not isinstance(ligand, dict):
             continue
+        source_kind, source_value = _ligand_source_ref(ligand)
+        compound_id = _text(ligand.get("compound_id") or ligand.get("ligand_id") or ligand.get("id"))
         rows.append(
             {
                 "ligand_id": _ligand_id(ligand, index),
-                "compound_id": _text(ligand.get("compound_id") or ligand.get("ligand_id") or ligand.get("id")),
-                "smiles": _text(ligand.get("smiles") or ligand.get("inchi")),
+                "compound_id_sha256": _sha256_text(compound_id),
+                "source_kind": source_kind,
+                "source_value_sha256": _sha256_text(source_value),
+                "source_redacted": True,
             }
         )
     return rows
@@ -392,6 +416,22 @@ def _customer_report_packet(
     ligand_count = int(normalized.get("ligand_count") or 0)
     structure_ready = structure_analysis.get("source_available") is True
     scope_allowed = scope_claim_guard["scope_claim_allowed_for_request"]
+    ranking_mutation_allowed = ai_posture["production_ai_customer_facing_ranking_mutation_allowed"]
+    production_ai_active = ai_posture["production_ai_inference_subject_active"]
+    uncertainty_posture = (
+        "production_guarded_active_customer_ranking_locked"
+        if production_ai_active and not ranking_mutation_allowed
+        else "production_guarded_active_customer_ranking_allowed"
+        if production_ai_active
+        else "production_ai_abstained"
+    )
+    selection_rationale = (
+        "No ligand winner is selected in the intake ledger. Ligand ordering remains input-order only until "
+        "audited pose artifacts, score provenance, and the customer ranking-mutation gate are present."
+    )
+    prohibited_claims = list(
+        dict.fromkeys([*scope_claim_guard["blocked_claim_scopes"], *PROHIBITED_CUSTOMER_CLAIMS])
+    )
     report_card = {
         "target_id": target_id,
         "family": family,
@@ -418,6 +458,19 @@ def _customer_report_packet(
         "allowed_scope_families": scope_claim_guard["allowed_scope_families"],
         "blocked_claim_scopes": scope_claim_guard["blocked_claim_scopes"],
         "general_platform_claim_allowed": scope_claim_guard["general_platform_claim_allowed"],
+        "selection_rationale_ready": True,
+        "selection_rationale": selection_rationale,
+        "ligand_selection_policy": "no_customer_ligand_selection_without_pose_score_and_ranking_gate",
+        "uncertainty_posture_ready": True,
+        "uncertainty_posture": uncertainty_posture,
+        "prohibited_claims_ready": True,
+        "prohibited_claims": prohibited_claims,
+        "result_interpretation_policy": "evidence_review_until_execution_result_manifest_is_bound",
+        "ranking_mutation_policy": (
+            "customer_ranking_mutation_locked_by_shadow_guard"
+            if not ranking_mutation_allowed
+            else "customer_ranking_mutation_allowed_by_registry_and_runtime_guard"
+        ),
         "claim_limit": (
             "Customer report is an intake and evidence explanation. Docking poses, learned score corrections, "
             "and broad platform claims remain disabled until their gates are explicitly green."
@@ -457,9 +510,29 @@ def _customer_report_packet(
             "ready": True,
             "narrative": (
                 "Interaction rationale is presented as a guarded explanation over intake and scoring contract "
-                "state until pose-level interactions are available."
+                "state until pose-level interactions are available. No customer-facing ligand winner is selected "
+                "from this intake-only record."
             ),
-            "evidence_fields": ["family", "target_id", "scope_claim_status"],
+            "evidence_fields": [
+                "family",
+                "target_id",
+                "scope_claim_status",
+                "selection_rationale",
+                "ligand_selection_policy",
+            ],
+        },
+        {
+            "section_id": "ligand_selection_rationale",
+            "title": "Ligand Selection Rationale",
+            "ready": True,
+            "narrative": selection_rationale,
+            "evidence_fields": [
+                "ligand_count",
+                "selection_rationale",
+                "ligand_selection_policy",
+                "ranking_mutation_policy",
+                "scope_claim_status",
+            ],
         },
         {
             "section_id": "uncertainty_narrative",
@@ -470,6 +543,8 @@ def _customer_report_packet(
                 "production_ai_abstention_enforced",
                 "production_ai_abstention_reason",
                 "production_ai_trained_checkpoint_count",
+                "uncertainty_posture",
+                "ranking_mutation_policy",
             ],
         },
         {
@@ -485,6 +560,7 @@ def _customer_report_packet(
                 "allowed_scope_families",
                 "blocked_claim_scopes",
                 "general_platform_claim_allowed",
+                "prohibited_claims",
             ],
         },
         {
@@ -498,11 +574,28 @@ def _customer_report_packet(
             ],
         },
     ]
+    report_card["blocks"] = {
+        section["section_id"]: {
+            "title": section["title"],
+            "status": "ready" if section["ready"] else "blocked",
+            "narrative": section["narrative"],
+            "claim_limit": report_card["claim_limit"],
+            "abstention_reason": primary_abstention,
+            "what_would_change_decision": what_would_change,
+        }
+        for section in sections
+    }
     return {
         "customer_report_explanation_ready": True,
         "customer_report_card_ready": True,
         "customer_report_delivery_contract_ready": True,
         "customer_report_evidence_binding_ready": True,
+        "customer_report_selection_rationale_ready": True,
+        "customer_report_uncertainty_posture_ready": True,
+        "customer_report_prohibited_claims_ready": True,
+        "customer_report_selection_rationale": selection_rationale,
+        "customer_report_uncertainty_posture": uncertainty_posture,
+        "customer_report_prohibited_claims": prohibited_claims,
         "customer_report_required_blocks": list(CUSTOMER_REPORT_REQUIRED_BLOCKS),
         "customer_report_ready_blocks": list(CUSTOMER_REPORT_REQUIRED_BLOCKS),
         "customer_report_missing_blocks": [],
@@ -954,5 +1047,6 @@ def build_docking_job_record(
 def persist_docking_job_record(record: dict[str, Any], jobs_dir: Path) -> Path:
     jobs_dir.mkdir(parents=True, exist_ok=True)
     out_path = jobs_dir / f"{record['job_id']}.json"
-    out_path.write_text(json.dumps(record, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+    safe_record = sanitize_request_for_ledger(record)
+    out_path.write_text(json.dumps(safe_record, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
     return out_path

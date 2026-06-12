@@ -27,7 +27,7 @@ def regenerate_tier_alpha_product_chain(
         _run(
             [
                 sys.executable,
-                "tools/product/run_tier_alpha_adrb2_dispatch_smoke.py",
+                "tools/gpcr_replay/run_tier_alpha_adrb2_dispatch_smoke.py",
                 "--timeout-seconds",
                 str(max(30, int(smoke_timeout_seconds))),
             ]

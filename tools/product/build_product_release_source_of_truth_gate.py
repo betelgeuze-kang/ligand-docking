@@ -1,0 +1,678 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import hashlib
+import json
+from pathlib import Path
+from typing import Any
+
+from tools.builder_table_utils import write_csv_rows
+
+ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_OUT_JSON = "runs/product_release_source_of_truth_gate_current.json"
+DEFAULT_OUT_CSV = "runs/product_release_source_of_truth_gate_current.csv"
+DEFAULT_OUT_MD = "runs/product_release_source_of_truth_gate_current.md"
+
+CLAIM_BOUNDARY = (
+    "Product release source-of-truth gate only; it checks local current artifact freshness, source/dependency "
+    "ordering, and README metric drift. It does not run docking, execute GPU jobs, assemble bundles, submit "
+    "external validation, upload, delete, email, commit, push, or mutate external state."
+)
+
+RELEASE_REFRESH_COMMANDS = [
+    "python3 tools/build_accuracy_parity_scorecard.py",
+    "python3 tools/build_residual_model_registry.py",
+    "python3 tools/build_product_production_ai_checkpoint_readiness.py",
+    "python3 tools/build_product_scope_breadth_contract.py",
+    "python3 tools/build_product_operational_quality_contract.py",
+    "python3 tools/build_api_runner_profile_promotion_readiness.py",
+    "python3 tools/gpcr_replay/run_tier_alpha_adrb2_dispatch_smoke.py --timeout-seconds 180",
+    "python3 tools/build_api_docking_dispatch_e2e_evidence.py",
+    "python3 tools/product/build_restricted_unattended_execution_readiness.py",
+    "python3 tools/build_product_security_deployment_contract.py",
+    "python3 tools/build_product_capability_surface_contract.py",
+    "python3 tools/build_product_commercial_independence_gate.py",
+    "python3 deploy/product_rollout.py --out-json runs/product_rollout_plan_current.json",
+    "python3 tools/smoke_alert_delivery.py --local-receiver-smoke --allow-in-process-fallback --out-json runs/alert_delivery_smoke_current.json",
+    "python3 deploy/product_release_bundle.py",
+    "python3 tools/build_product_ai_report_explanation_packet.py",
+    "python3 tools/build_product_ai_report_ux_contract.py",
+    "python3 tools/build_product_rollout_execution_readiness.py",
+    "python3 tools/build_api_customer_flow_release_evidence.py",
+    "python3 tools/build_product_release_operations_dossier.py",
+    "python3 tools/build_product_architecture_contract.py",
+    "python3 tools/build_goal_readiness_rollup.py",
+    "python3 tools/build_goal_operator_action_board.py",
+    "python3 tools/build_product_goal_completion_audit.py",
+    "python3 tools/build_product_commercial_readiness_operator_packet.py",
+    "python3 tools/build_product_commercial_readiness_handoff_bundle.py",
+    "python3 tools/build_product_commercial_readiness_operator_packet_freshness.py",
+    "python3 tools/build_product_ledger_privacy_scan.py",
+    "python3 tools/build_product_release_source_of_truth_gate.py",
+    "python3 tools/build_goal_release_decision_gate.py",
+]
+
+DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
+    {
+        "artifact_id": "accuracy_parity_scorecard",
+        "artifact_path": "runs/accuracy_parity_scorecard_current.json",
+        "builder_command": "python3 tools/build_accuracy_parity_scorecard.py",
+        "depends_on": [],
+    },
+    {
+        "artifact_id": "residual_model_registry",
+        "artifact_path": "runs/residual_model_registry_current.json",
+        "builder_command": "python3 tools/build_residual_model_registry.py",
+        "depends_on": [],
+    },
+    {
+        "artifact_id": "product_production_ai_checkpoint_readiness",
+        "artifact_path": "runs/product_production_ai_checkpoint_readiness_current.json",
+        "builder_command": "python3 tools/build_product_production_ai_checkpoint_readiness.py",
+        "depends_on": ["runs/residual_model_registry_current.json"],
+    },
+    {
+        "artifact_id": "product_scope_breadth_contract",
+        "artifact_path": "runs/product_scope_breadth_contract_current.json",
+        "builder_command": "python3 tools/build_product_scope_breadth_contract.py",
+        "depends_on": [],
+    },
+    {
+        "artifact_id": "product_operational_quality_contract",
+        "artifact_path": "runs/product_operational_quality_contract_current.json",
+        "builder_command": "python3 tools/build_product_operational_quality_contract.py",
+        "depends_on": [
+            "betelgeuze_product/operational_quality.py",
+            "betelgeuze_product/docking_request.py",
+            "runs/residual_model_registry_current.json",
+            "runs/product_production_ai_promotion_workbench_current.json",
+        ],
+    },
+    {
+        "artifact_id": "api_runner_profile_promotion_readiness",
+        "artifact_path": "runs/api_runner_profile_promotion_readiness_current.json",
+        "builder_command": "python3 tools/build_api_runner_profile_promotion_readiness.py",
+        "depends_on": [
+            "tools/product/build_api_runner_profile_promotion_readiness.py",
+            "config/api_validated_runner_profiles",
+        ],
+    },
+    {
+        "artifact_id": "tier_alpha_adrb2_dispatch_smoke",
+        "artifact_path": "runs/tier_alpha_adrb2_dispatch_smoke_current.json",
+            "builder_command": "python3 tools/gpcr_replay/run_tier_alpha_adrb2_dispatch_smoke.py --timeout-seconds 180",
+            "depends_on": [
+                "tools/gpcr_replay/run_tier_alpha_adrb2_dispatch_smoke.py",
+            "api/worker.py",
+            "api/docking_dispatch.py",
+            "api/validated_runner.py",
+            "api/result_manifest.py",
+            "runs/api_runner_profile_promotion_readiness_current.json",
+        ],
+    },
+    {
+        "artifact_id": "api_docking_dispatch_e2e_evidence",
+        "artifact_path": "runs/api_docking_dispatch_e2e_evidence_current.json",
+        "builder_command": "python3 tools/build_api_docking_dispatch_e2e_evidence.py",
+        "depends_on": [
+            "tools/product/build_api_docking_dispatch_e2e_evidence.py",
+            "runs/api_runner_profile_promotion_readiness_current.json",
+            "runs/tier_alpha_adrb2_dispatch_smoke_current.json",
+        ],
+    },
+    {
+        "artifact_id": "restricted_unattended_execution_readiness",
+        "artifact_path": "runs/restricted_unattended_execution_readiness_current.json",
+        "builder_command": "python3 tools/product/build_restricted_unattended_execution_readiness.py",
+        "depends_on": [
+            "tools/product/build_restricted_unattended_execution_readiness.py",
+            "runs/api_docking_dispatch_e2e_evidence_current.json",
+            "runs/api_runner_profile_promotion_readiness_current.json",
+            "runs/tier_alpha_adrb2_dispatch_smoke_current.json",
+        ],
+    },
+    {
+        "artifact_id": "product_security_deployment_contract",
+        "artifact_path": "runs/product_security_deployment_contract_current.json",
+        "builder_command": "python3 tools/build_product_security_deployment_contract.py",
+        "depends_on": [
+            "tools/product/build_product_security_deployment_contract.py",
+            "api/config.py",
+            "api/security.py",
+            "api/main.py",
+            "Dockerfile.product",
+            "docs/product_security_deployment_policy.md",
+        ],
+    },
+    {
+        "artifact_id": "product_capability_surface_contract",
+        "artifact_path": "runs/product_capability_surface_contract_current.json",
+        "builder_command": "python3 tools/build_product_capability_surface_contract.py",
+        "depends_on": [
+            "runs/restricted_unattended_execution_readiness_current.json",
+            "runs/product_security_deployment_contract_current.json",
+        ],
+    },
+    {
+        "artifact_id": "product_commercial_independence_gate",
+        "artifact_path": "runs/product_commercial_independence_gate_current.json",
+        "builder_command": "python3 tools/build_product_commercial_independence_gate.py",
+        "depends_on": [],
+    },
+    {
+        "artifact_id": "product_rollout_plan",
+        "artifact_path": "runs/product_rollout_plan_current.json",
+        "builder_command": "python3 deploy/product_rollout.py --out-json runs/product_rollout_plan_current.json",
+        "depends_on": ["deploy/product_rollout.py"],
+    },
+    {
+        "artifact_id": "alert_delivery_smoke",
+        "artifact_path": "runs/alert_delivery_smoke_current.json",
+        "builder_command": "python3 tools/smoke_alert_delivery.py --local-receiver-smoke --allow-in-process-fallback --out-json runs/alert_delivery_smoke_current.json",
+        "depends_on": ["tools/smoke_alert_delivery.py"],
+    },
+    {
+        "artifact_id": "product_release_bundle",
+        "artifact_path": "runs/product_release_bundle_current.json",
+        "builder_command": "python3 deploy/product_release_bundle.py",
+        "depends_on": [
+            "deploy/product_release_bundle.py",
+            "runs/product_security_deployment_contract_current.json",
+            "runs/product_rollout_plan_current.json",
+            "runs/alert_delivery_smoke_current.json",
+        ],
+    },
+    {
+        "artifact_id": "product_ai_report_explanation_packet",
+        "artifact_path": "runs/product_ai_report_explanation_packet_current.json",
+        "builder_command": "python3 tools/build_product_ai_report_explanation_packet.py",
+        "depends_on": [
+            "tools/product/build_product_ai_report_explanation_packet.py",
+            "runs/product_ai_decision_graph_contract_current.json",
+            "runs/product_structure_analysis_report_current.json",
+            "runs/product_execution_preflight_current.json",
+            "runs/product_bundle_contract_current.json",
+            "runs/residual_model_registry_current.json",
+            "runs/product_scope_breadth_closure_checklist_current.json",
+        ],
+    },
+    {
+        "artifact_id": "product_ai_report_ux_contract",
+        "artifact_path": "runs/product_ai_report_ux_contract_current.json",
+        "builder_command": "python3 tools/build_product_ai_report_ux_contract.py",
+        "depends_on": [
+            "tools/product/build_product_ai_report_ux_contract.py",
+            "runs/product_ai_report_explanation_packet_current.json",
+            "runs/product_ai_decision_graph_contract_current.json",
+            "runs/product_structure_analysis_report_current.json",
+            "runs/product_execution_preflight_current.json",
+            "runs/product_bundle_contract_current.json",
+            "runs/residual_model_registry_current.json",
+            "viewer/index.html",
+            "viewer/app.js",
+        ],
+    },
+    {
+        "artifact_id": "product_rollout_execution_readiness",
+        "artifact_path": "runs/product_rollout_execution_readiness_current.json",
+        "builder_command": "python3 tools/build_product_rollout_execution_readiness.py",
+        "depends_on": [
+            "tools/product/build_product_rollout_execution_readiness.py",
+            "runs/product_release_bundle_current.json",
+            "runs/product_rollout_plan_current.json",
+            "runs/product_security_deployment_contract_current.json",
+            "runs/alert_delivery_smoke_current.json",
+        ],
+    },
+    {
+        "artifact_id": "api_customer_flow_release_evidence",
+        "artifact_path": "runs/api_customer_flow_release_evidence_current.json",
+        "builder_command": "python3 tools/build_api_customer_flow_release_evidence.py",
+        "depends_on": [
+            "tools/product/build_api_customer_flow_release_evidence.py",
+            "runs/api_docking_dispatch_e2e_evidence_current.json",
+            "runs/restricted_unattended_execution_readiness_current.json",
+            "runs/tier_alpha_adrb2_dispatch_smoke_current.json",
+            "runs/product_bundle_contract_current.json",
+            "runs/product_delivery_evidence_contract_current.json",
+            "runs/product_pilot_packet_contract_current.json",
+        ],
+    },
+    {
+        "artifact_id": "goal_readiness_rollup",
+        "artifact_path": "runs/goal_readiness_rollup_current.json",
+        "builder_command": "python3 tools/build_goal_readiness_rollup.py",
+        "depends_on": [
+            "runs/product_operational_quality_contract_current.json",
+            "runs/product_capability_surface_contract_current.json",
+            "runs/product_commercial_independence_gate_current.json",
+            "runs/product_scope_breadth_contract_current.json",
+            "runs/product_production_ai_checkpoint_readiness_current.json",
+            "runs/api_customer_flow_release_evidence_current.json",
+            "runs/product_security_deployment_contract_current.json",
+        ],
+    },
+    {
+        "artifact_id": "goal_operator_action_board",
+        "artifact_path": "runs/goal_operator_action_board_current.json",
+        "builder_command": "python3 tools/build_goal_operator_action_board.py",
+        "depends_on": ["runs/goal_readiness_rollup_current.json"],
+    },
+    {
+        "artifact_id": "product_goal_completion_audit",
+        "artifact_path": "runs/product_goal_completion_audit_current.json",
+        "builder_command": "python3 tools/build_product_goal_completion_audit.py",
+        "depends_on": [
+            "runs/goal_readiness_rollup_current.json",
+            "runs/goal_operator_action_board_current.json",
+        ],
+    },
+    {
+        "artifact_id": "product_commercial_readiness_operator_packet",
+        "artifact_path": "runs/product_commercial_readiness_operator_packet_current.json",
+        "builder_command": "python3 tools/build_product_commercial_readiness_operator_packet.py",
+        "depends_on": ["runs/product_goal_completion_audit_current.json"],
+    },
+    {
+        "artifact_id": "product_commercial_readiness_handoff_bundle",
+        "artifact_path": "runs/product_commercial_readiness_handoff_bundle_current.json",
+        "builder_command": "python3 tools/build_product_commercial_readiness_handoff_bundle.py",
+        "depends_on": [
+            "runs/product_goal_completion_audit_current.json",
+            "runs/product_commercial_readiness_operator_packet_current.json",
+        ],
+    },
+    {
+        "artifact_id": "product_commercial_readiness_operator_packet_freshness",
+        "artifact_path": "runs/product_commercial_readiness_operator_packet_freshness_current.json",
+        "builder_command": "python3 tools/build_product_commercial_readiness_operator_packet_freshness.py",
+        "depends_on": [
+            "runs/product_goal_completion_audit_current.json",
+            "runs/product_commercial_readiness_operator_packet_current.json",
+        ],
+    },
+    {
+        "artifact_id": "product_ledger_privacy_scan",
+        "artifact_path": "runs/product_ledger_privacy_scan_current.json",
+        "builder_command": "python3 tools/build_product_ledger_privacy_scan.py",
+        "depends_on": [
+            "tools/product/build_product_ledger_privacy_scan.py",
+            "betelgeuze_product/payload_privacy.py",
+            "api/job_store.py",
+            "api/validated_runner.py",
+            "betelgeuze_product/docking_request.py",
+            "betelgeuze_product/job_orchestration.py",
+            "runs/product_operational_quality_contract_current.json",
+            "runs/api_docking_dispatch_e2e_evidence_current.json",
+            "runs/api_customer_flow_release_evidence_current.json",
+            "runs/product_commercial_readiness_operator_packet_current.json",
+            "runs/product_commercial_readiness_handoff_bundle_current.json",
+            "runs/product_commercial_readiness_operator_packet_freshness_current.json",
+            "runs/product_goal_completion_audit_current.json",
+        ],
+    },
+]
+
+DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
+    {
+        "artifact_id": "product_ai_report_explanation_packet_semantic_ready",
+        "artifact_path": "runs/product_ai_report_explanation_packet_current.json",
+        "builder_command": "python3 tools/build_product_ai_report_explanation_packet.py",
+        "required_status": "product_ai_report_explanation_packet_ready",
+        "required_true_fields": [
+            "ai_report_explanation_packet_ready",
+            "structured_customer_report_ready",
+            "customer_report_delivery_contract_ready",
+            "customer_report_evidence_binding_ready",
+            "ligand_selection_rationale_ready",
+        ],
+    },
+    {
+        "artifact_id": "product_ai_report_ux_contract_semantic_ready",
+        "artifact_path": "runs/product_ai_report_ux_contract_current.json",
+        "builder_command": "python3 tools/build_product_ai_report_ux_contract.py",
+        "required_status": "product_ai_report_ux_contract_ready",
+        "required_true_fields": [
+            "ai_report_ux_ready",
+            "explanation_packet_ready",
+            "customer_report_viewer_binding_ready",
+            "binding_site_explanation_ready",
+            "ligand_selection_rationale_ready",
+            "uncertainty_narrative_ready",
+        ],
+    },
+    {
+        "artifact_id": "product_ledger_privacy_scan_semantic_ready",
+        "artifact_path": "runs/product_ledger_privacy_scan_current.json",
+        "builder_command": "python3 tools/build_product_ledger_privacy_scan.py",
+        "required_status": "product_ledger_privacy_scan_ready",
+        "required_true_fields": [
+            "ledger_privacy_scan_ready",
+        ],
+    },
+]
+
+
+def _resolve(path_like: str | Path, *, root: Path = ROOT) -> Path:
+    path = Path(path_like)
+    return path if path.is_absolute() else root / path
+
+
+def _read_json_if_present(path_like: str | Path, *, root: Path = ROOT) -> dict[str, Any]:
+    path = _resolve(path_like, root=root)
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _write_json(path_like: str | Path, payload: dict[str, Any], *, root: Path = ROOT) -> None:
+    path = _resolve(path_like, root=root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _sha256_file_if_present(path_like: str | Path, *, root: Path = ROOT) -> str:
+    path = _resolve(path_like, root=root)
+    if not path.is_file():
+        return ""
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _mtime(path_like: str | Path, *, root: Path = ROOT) -> float:
+    path = _resolve(path_like, root=root)
+    if not path.exists():
+        return 0.0
+    return path.stat().st_mtime
+
+
+def _iso_from_mtime(value: float) -> str:
+    if value <= 0:
+        return ""
+    return dt.datetime.fromtimestamp(value, tz=dt.timezone.utc).isoformat(timespec="seconds")
+
+
+def _summary(packet: dict[str, Any]) -> dict[str, Any]:
+    summary = packet.get("summary")
+    return summary if isinstance(summary, dict) else {}
+
+
+def _text(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def _int(value: Any) -> int:
+    try:
+        return int(float(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _artifact_row(spec: dict[str, Any], *, root: Path = ROOT) -> dict[str, Any]:
+    artifact_path = _text(spec.get("artifact_path"))
+    depends_on = [_text(item) for item in spec.get("depends_on") or [] if _text(item)]
+    artifact = _resolve(artifact_path, root=root)
+    artifact_present = artifact.is_file()
+    artifact_mtime = _mtime(artifact_path, root=root)
+    missing_dependencies = [path for path in depends_on if not _resolve(path, root=root).exists()]
+    stale_dependencies = [
+        path
+        for path in depends_on
+        if _resolve(path, root=root).exists() and artifact_mtime > 0 and _mtime(path, root=root) > artifact_mtime
+    ]
+    if depends_on:
+        newest_dependency_mtime = max((_mtime(path, root=root) for path in depends_on if _resolve(path, root=root).exists()), default=0.0)
+    else:
+        newest_dependency_mtime = 0.0
+    passed = artifact_present and not missing_dependencies and not stale_dependencies
+    return {
+        "row_type": "artifact_freshness",
+        "artifact_id": _text(spec.get("artifact_id")),
+        "status": "pass" if passed else "fail",
+        "artifact_path": artifact_path,
+        "builder_command": _text(spec.get("builder_command")),
+        "artifact_present": artifact_present,
+        "artifact_mtime_utc": _iso_from_mtime(artifact_mtime),
+        "artifact_sha256": _sha256_file_if_present(artifact_path, root=root),
+        "dependency_count": len(depends_on),
+        "newest_dependency_mtime_utc": _iso_from_mtime(newest_dependency_mtime),
+        "missing_dependency_count": len(missing_dependencies),
+        "missing_dependency_paths": missing_dependencies,
+        "stale_dependency_count": len(stale_dependencies),
+        "stale_dependency_paths": stale_dependencies,
+        "observed": (
+            f"present={artifact_present};dependencies={len(depends_on)};"
+            f"missing_dependencies={len(missing_dependencies)};stale_dependencies={len(stale_dependencies)}"
+        ),
+        "required": "artifact exists and is not older than any listed source/dependency artifact",
+        "release_blocker": not passed,
+        "execution_enabled": False,
+        "external_state_mutated": False,
+    }
+
+
+def _status_row(spec: dict[str, Any], *, root: Path = ROOT) -> dict[str, Any]:
+    artifact_path = _text(spec.get("artifact_path"))
+    packet = _read_json_if_present(artifact_path, root=root)
+    summary = _summary(packet)
+    required_status = _text(spec.get("required_status"))
+    required_true_fields = [_text(item) for item in spec.get("required_true_fields") or [] if _text(item)]
+    missing_true_fields = [field for field in required_true_fields if summary.get(field) is not True]
+    status_matches = _text(summary.get("status")) == required_status
+    passed = bool(summary) and status_matches and not missing_true_fields
+    return {
+        "row_type": "artifact_semantic_status",
+        "artifact_id": _text(spec.get("artifact_id")),
+        "status": "pass" if passed else "fail",
+        "artifact_path": artifact_path,
+        "builder_command": _text(spec.get("builder_command")),
+        "artifact_present": bool(packet),
+        "artifact_mtime_utc": _iso_from_mtime(_mtime(artifact_path, root=root)),
+        "artifact_sha256": _sha256_file_if_present(artifact_path, root=root),
+        "dependency_count": 0,
+        "newest_dependency_mtime_utc": "",
+        "missing_dependency_count": 0 if packet else 1,
+        "missing_dependency_paths": [] if packet else [artifact_path],
+        "stale_dependency_count": 0,
+        "stale_dependency_paths": [],
+        "required_status": required_status,
+        "observed_status": _text(summary.get("status")) or "missing",
+        "required_true_fields": required_true_fields,
+        "missing_true_fields": missing_true_fields,
+        "missing_true_field_count": len(missing_true_fields),
+        "observed": (
+            f"status={_text(summary.get('status')) or 'missing'};"
+            f"required_status={required_status};missing_true_fields={len(missing_true_fields)}"
+        ),
+        "required": (
+            f"status={required_status};"
+            f"required_true_fields={','.join(required_true_fields) or 'none'}"
+        ),
+        "release_blocker": not passed,
+        "execution_enabled": False,
+        "external_state_mutated": False,
+    }
+
+
+def _readme_accuracy_rows(
+    *,
+    root: Path = ROOT,
+    accuracy_path: str = "runs/accuracy_parity_scorecard_current.json",
+    readme_paths: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    if readme_paths is None:
+        readme_paths = ["README.md", "README.ko.md"]
+    packet = _read_json_if_present(accuracy_path, root=root)
+    summary = _summary(packet)
+    status = _text(summary.get("status"))
+    row_count = _int(summary.get("row_count"))
+    pass_count = _int(summary.get("pass_row_count"))
+    restricted_pass_count = _int(summary.get("restricted_pass_row_count"))
+    blocked_count = _int(summary.get("blocked_row_count"))
+    missing_count = _int(summary.get("missing_row_count"))
+    required_fragments = [
+        f"status={status}",
+        f"pass={pass_count}",
+        f"restricted_pass={restricted_pass_count}",
+        f"blocked={blocked_count}",
+    ]
+    if missing_count:
+        required_fragments.append(f"missing={missing_count}")
+    obsolete_fragments: list[str] = []
+    if row_count and restricted_pass_count and pass_count != row_count:
+        obsolete_fragments.extend([f"pass={row_count}", f"pass={row_count}/{row_count}"])
+    rows: list[dict[str, Any]] = []
+    for readme_path in readme_paths:
+        path = _resolve(readme_path, root=root)
+        text = path.read_text(encoding="utf-8") if path.is_file() else ""
+        missing_required = [fragment for fragment in required_fragments if fragment not in text]
+        obsolete_present = [fragment for fragment in obsolete_fragments if fragment in text]
+        passed = bool(summary) and path.is_file() and not missing_required and not obsolete_present
+        rows.append(
+            {
+                "row_type": "readme_metric_drift",
+                "artifact_id": f"readme_accuracy_parity:{readme_path}",
+                "status": "pass" if passed else "fail",
+                "artifact_path": readme_path,
+                "builder_command": "manual README update from runs/accuracy_parity_scorecard_current.json",
+                "artifact_present": path.is_file(),
+                "artifact_mtime_utc": _iso_from_mtime(_mtime(readme_path, root=root)),
+                "artifact_sha256": _sha256_file_if_present(readme_path, root=root),
+                "dependency_count": 1,
+                "newest_dependency_mtime_utc": _iso_from_mtime(_mtime(accuracy_path, root=root)),
+                "missing_dependency_count": 0 if summary else 1,
+                "missing_dependency_paths": [] if summary else [accuracy_path],
+                "stale_dependency_count": 0,
+                "stale_dependency_paths": [],
+                "missing_required_fragments": missing_required,
+                "obsolete_fragments_present": obsolete_present,
+                "observed": (
+                    f"accuracy_status={status or 'missing'};pass={pass_count};"
+                    f"restricted_pass={restricted_pass_count};blocked={blocked_count};"
+                    f"missing_required={len(missing_required)};obsolete_present={len(obsolete_present)}"
+                ),
+                "required": ";".join(required_fragments),
+                "release_blocker": not passed,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            }
+        )
+    return rows
+
+
+def build_product_release_source_of_truth_gate(
+    *,
+    root: str | Path = ROOT,
+    artifact_specs: list[dict[str, Any]] | None = None,
+    status_specs: list[dict[str, Any]] | None = None,
+    readme_paths: list[str] | None = None,
+) -> dict[str, Any]:
+    root_path = Path(root)
+    artifact_spec_rows = artifact_specs if artifact_specs is not None else DEFAULT_ARTIFACT_SPECS
+    status_spec_rows = (
+        status_specs
+        if status_specs is not None
+        else DEFAULT_STATUS_SPECS
+        if artifact_specs is None
+        else []
+    )
+    rows = [
+        _artifact_row(spec, root=root_path)
+        for spec in artifact_spec_rows
+    ]
+    rows.extend(_status_row(spec, root=root_path) for spec in status_spec_rows)
+    rows.extend(_readme_accuracy_rows(root=root_path, readme_paths=readme_paths))
+    blockers = [row for row in rows if row["release_blocker"]]
+    artifact_rows = [row for row in rows if row["row_type"] == "artifact_freshness"]
+    status_rows = [row for row in rows if row["row_type"] == "artifact_semantic_status"]
+    readme_rows = [row for row in rows if row["row_type"] == "readme_metric_drift"]
+    ready = not blockers
+    summary = {
+        "packet_type": "product_release_source_of_truth_gate",
+        "status": "product_release_source_of_truth_gate_ready" if ready else "blocked_product_release_source_of_truth_gate",
+        "release_source_of_truth_ready": ready,
+        "row_count": len(rows),
+        "artifact_row_count": len(artifact_rows),
+        "semantic_status_row_count": len(status_rows),
+        "readme_row_count": len(readme_rows),
+        "pass_count": len(rows) - len(blockers),
+        "blocker_count": len(blockers),
+        "missing_artifact_count": sum(1 for row in artifact_rows if not row["artifact_present"]),
+        "missing_dependency_count": sum(int(row["missing_dependency_count"]) for row in artifact_rows),
+        "stale_artifact_count": sum(1 for row in artifact_rows if int(row["stale_dependency_count"]) > 0),
+        "semantic_status_blocker_count": sum(1 for row in status_rows if row["release_blocker"]),
+        "readme_drift_count": sum(1 for row in readme_rows if row["release_blocker"]),
+        "blocked_artifact_ids": [row["artifact_id"] for row in blockers],
+        "release_refresh_command_count": len(RELEASE_REFRESH_COMMANDS),
+        "release_refresh_commands": list(RELEASE_REFRESH_COMMANDS),
+        "claim_boundary": CLAIM_BOUNDARY,
+        "execution_enabled": False,
+        "external_state_mutated": False,
+        "next_required_step": (
+            "Source-of-truth gate is ready; release decision may consume these current artifacts."
+            if ready
+            else "Run python3 tools/run_product_release_current_refresh.py --execute, then rerun the source-of-truth and release decision gates."
+        ),
+    }
+    return {"summary": summary, "rows": rows, "blockers": blockers}
+
+
+def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Path = ROOT) -> None:
+    path = _resolve(path_like, root=root)
+    s = payload["summary"]
+    lines = [
+        "# Product Release Source Of Truth Gate",
+        "",
+        f"- status: `{s['status']}`",
+        f"- release_source_of_truth_ready: `{s['release_source_of_truth_ready']}`",
+        f"- blocker_count: `{s['blocker_count']}`",
+        f"- stale_artifact_count: `{s['stale_artifact_count']}`",
+        f"- semantic_status_blocker_count: `{s['semantic_status_blocker_count']}`",
+        f"- readme_drift_count: `{s['readme_drift_count']}`",
+        f"- release_refresh_command_count: `{s['release_refresh_command_count']}`",
+        "",
+        "## Checks",
+        "",
+        "| type | artifact | status | observed | required |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    for row in payload["rows"]:
+        lines.append(
+            f"| `{row['row_type']}` | `{row['artifact_id']}` | `{row['status']}` | "
+            f"`{row['observed']}` | `{row['required']}` |"
+        )
+    lines.extend(["", "## Claim Boundary", "", s["claim_boundary"], "", "## Next Step", "", f"- {s['next_required_step']}", ""])
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Build the product release source-of-truth freshness gate.")
+    parser.add_argument("--root", default=str(ROOT))
+    parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
+    parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
+    parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = parse_args(argv)
+    root = Path(args.root)
+    payload = build_product_release_source_of_truth_gate(root=root)
+    _write_json(args.out_json, payload, root=root)
+    write_csv_rows(_resolve(args.out_csv, root=root), payload["rows"])
+    _write_markdown(args.out_md, payload, root=root)
+    print(json.dumps(payload["summary"], indent=2, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    main()

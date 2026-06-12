@@ -29,25 +29,45 @@ def _operator_candidate() -> dict:
             "packet_ready": True,
             "first_candidate_id": "aqp1_chembl20_direct_like_kd_operator_validation",
             "first_candidate_ligand_external_identifier": "CHEMBL20",
-            "first_candidate_ligand_name": "acetazolamide",
-            "first_candidate_reference_binding_kcal_mol": "-5.13",
-            "first_candidate_blocker": "data_validity_outside_typical_range_and_assay_origin_unknown",
-        },
-        "rows": [
-            {
-                "candidate_id": "aqp1_chembl20_direct_like_kd_operator_validation",
-                "candidate_ligand_external_identifier": "CHEMBL20",
+                "first_candidate_ligand_name": "acetazolamide",
+                "first_candidate_reference_binding_kcal_mol": "-5.13",
+                "first_candidate_blocker": "data_validity_outside_typical_range_and_assay_origin_unknown",
+                "first_candidate_raw_activity_verified": True,
+                "external_recheck_receipt_ready": True,
+                "automated_target_match_confirmed": True,
+                "automated_endpoint_binding_like_confirmed": True,
+                "automated_bacopaside_absence_confirmed": True,
+                "automated_bindingdb_cutoff100_empty_confirmed": True,
+                "external_recheck_source_count": 3,
+                "external_recheck_present_source_count": 3,
+                "automated_data_validity_blocker_present": True,
+                "automated_assay_origin_unknown_blocker_present": True,
+            },
+            "rows": [
+                {
+                    "candidate_id": "aqp1_chembl20_direct_like_kd_operator_validation",
+                    "candidate_ligand_external_identifier": "CHEMBL20",
                 "candidate_ligand_name": "acetazolamide",
                 "candidate_reference_binding_kcal_mol": "-5.13",
                 "candidate_source_locator": (
                     "https://www.ebi.ac.uk/chembl/api/data/activity.json?"
                     "target_chembl_id=CHEMBL4523210&molecule_chembl_id=CHEMBL20"
-                ),
-                "candidate_blocker": "data_validity_outside_typical_range_and_assay_origin_unknown",
-                "candidate_claim_safe_ready": False,
-            }
-        ],
-    }
+                    ),
+                    "candidate_blocker": "data_validity_outside_typical_range_and_assay_origin_unknown",
+                    "candidate_claim_safe_ready": False,
+                    "candidate_raw_activity_verified": True,
+                    "external_recheck_receipt_ready": True,
+                    "automated_target_match_confirmed": True,
+                    "automated_endpoint_binding_like_confirmed": True,
+                    "automated_bacopaside_absence_confirmed": True,
+                    "automated_bindingdb_cutoff100_empty_confirmed": True,
+                    "external_recheck_source_count": 3,
+                    "external_recheck_present_source_count": 3,
+                    "automated_data_validity_blocker_present": True,
+                    "automated_assay_origin_unknown_blocker_present": True,
+                }
+            ],
+        }
 
 
 def test_aqp1_direct_binding_procurement_packet_defines_external_acceptance_contract() -> None:
@@ -66,6 +86,21 @@ def test_aqp1_direct_binding_procurement_packet_defines_external_acceptance_cont
     assert summary["current_operator_candidate_ligand_external_identifier"] == "CHEMBL20"
     assert summary["current_operator_candidate_reference_binding_kcal_mol"] == "-5.13"
     assert summary["current_operator_candidate_claim_safe_ready"] is False
+    assert summary["current_operator_candidate_public_recheck_receipt_ready"] is True
+    assert summary["current_operator_candidate_raw_activity_verified"] is True
+    assert summary["current_operator_candidate_target_match_confirmed"] is True
+    assert summary["current_operator_candidate_endpoint_binding_like_confirmed"] is True
+    assert summary["current_operator_candidate_bacopaside_absence_confirmed"] is True
+    assert summary["current_operator_candidate_bindingdb_cutoff100_empty_confirmed"] is True
+    assert summary["public_database_recheck_receipt_ready"] is True
+    assert summary["public_database_recheck_required_source_count"] == 3
+    assert summary["public_database_recheck_source_file_count"] == 3
+    assert summary["public_absence_claim_supported"] is True
+    assert summary["current_operator_candidate_data_validity_blocker_present"] is True
+    assert summary["current_operator_candidate_assay_origin_unknown_blocker_present"] is True
+    assert "raw_activity_verified=True" in summary["current_operator_candidate_public_recheck_observed"]
+    assert "bacopaside_absence=True" in summary["current_operator_candidate_public_recheck_observed"]
+    assert "bindingdb_cutoff100_empty=True" in summary["current_operator_candidate_public_recheck_observed"]
     assert "standard_value_nM" in summary["acceptance_fields"]
     assert "operator_claim_safe_decision" in summary["acceptance_fields"]
     assert "target_uniprot=P29972" in summary["minimum_acceptance_rule"]
@@ -80,6 +115,24 @@ def test_aqp1_direct_binding_procurement_packet_defines_external_acceptance_cont
     assert rows["reject_current_chembl20_candidate_for_claim_safe_apply"]["evidence_verdict"] == (
         "keep_blocked"
     )
+    assert rows["reject_current_chembl20_candidate_for_claim_safe_apply"][
+        "public_recheck_raw_activity_verified"
+    ] is True
+    assert rows["reject_current_chembl20_candidate_for_claim_safe_apply"][
+        "public_recheck_bacopaside_absence_confirmed"
+    ] is True
+    assert rows["reject_current_chembl20_candidate_for_claim_safe_apply"][
+        "public_recheck_bindingdb_cutoff100_empty_confirmed"
+    ] is True
+    assert rows["reject_current_chembl20_candidate_for_claim_safe_apply"][
+        "public_absence_claim_supported"
+    ] is True
+    assert rows["reject_current_chembl20_candidate_for_claim_safe_apply"][
+        "public_recheck_data_validity_blocker_present"
+    ] is True
+    assert rows["reject_current_chembl20_candidate_for_claim_safe_apply"][
+        "public_recheck_assay_origin_unknown_blocker_present"
+    ] is True
     assert rows["procure_aqp1_bacopaside_ii_direct_binding_measurement"]["action_type"] == (
         "external_primary_evidence_request"
     )

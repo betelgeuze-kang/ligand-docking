@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools.accounting.build_product_multi_family_exemplar_profile_contract import build_contract
+from tools.product.build_product_multi_family_exemplar_profile_contract import build_contract
 
 
 def test_multi_family_exemplar_contract_ready() -> None:

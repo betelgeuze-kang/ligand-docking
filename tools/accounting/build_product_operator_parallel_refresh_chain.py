@@ -20,7 +20,7 @@ REFRESH_STEPS = [
     ("gpu_worker_preflight_checklist", "tools/build_residual_force_gpu_worker_preflight_checklist.py"),
     ("rocm_environment_manifest", "tools/build_rocm_environment_manifest.py"),
     ("residual_force_execution_probe", "tools/build_residual_force_trajectory_regeneration_execution_probe.py"),
-    ("scope_optional_lane_refresh", "tools/build_product_scope_optional_lane_refresh_chain.py"),
+    ("scope_optional_lane_refresh", "tools/product/build_product_scope_optional_lane_refresh_chain.py"),
 ]
 
 STEP_ARTIFACTS = {
@@ -98,8 +98,8 @@ def build_payload(*, execute: bool) -> dict[str, Any]:
         "operator_evidence_blocker": "exact_direct_binding_and_negative_quantitative_values_require_primary_source_review",
         "next_required_step": (
             "Complete operator CSV fills (AQP1 direct Kd/Ki + 6 negative kcal with primary sources), then rerun "
-            "tools/build_aqp1_direct_binding_external_evidence_one_shot_chain.py and "
-            "tools/build_product_scope_optional_lane_refresh_chain.py."
+            "tools/product/build_aqp1_direct_binding_external_evidence_one_shot_chain.py and "
+            "tools/product/build_product_scope_optional_lane_refresh_chain.py."
             if full_ok_rows >= 768
             else (
                 "Complete operator CSV fills (AQP1 direct Kd/Ki + 6 negative kcal), wait for gpu full regeneration, "

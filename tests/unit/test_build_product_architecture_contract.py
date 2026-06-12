@@ -513,6 +513,139 @@ def test_product_architecture_contract_uses_cleanup_completion_gate(tmp_path: Pa
     assert "cleanup approval gates" not in summary["next_required_step"]
 
 
+def test_product_architecture_contract_accepts_cameo_public_registration_preflight_status(tmp_path: Path) -> None:
+    payload = mod.build_product_architecture_contract(
+        product_capability_packet=_packet(
+            {
+                "status": "product_capability_surface_contract_ready",
+                "structure_analysis_capability_ready": True,
+                "ligand_docking_capability_ready": True,
+                "local_delivery_bundle_capability_ready": True,
+                "result_bundle_generation_contract_ready": True,
+                "result_bundle_expected_dir": "runs/local_delivery/bundle_product_gpcr_adrb2",
+                "result_bundle_artifact_count": 1,
+                "result_bundle_planned_artifact_paths": ["runs/product_gpcr_adrb2_after_approval_summary.json"],
+                "result_bundle_validation_command_matches": True,
+                "result_bundle_rerun_command_present": True,
+            }
+        ),
+        product_release_packet=_product_release_ready(),
+        commercial_independence_packet=_packet(
+            {
+                "status": "product_commercial_independence_gate_ready",
+                "commercial_independent_product_claim_allowed": True,
+            }
+        ),
+        product_service_boundary_packet=_packet(
+            {
+                "status": "product_service_boundary_contract_ready",
+                "service_boundary_ready": True,
+                "api_route_count": 12,
+                "cli_command_count": 9,
+            }
+        ),
+        product_api_contract_packet=_packet(
+            {
+                "status": "product_api_contract_ready",
+                "api_contract_ready": True,
+                "expected_route_count": 12,
+                "missing_route_count": 0,
+                "status_response_missing_key_count": 0,
+            }
+        ),
+        product_execution_preflight_packet=_execution_preflight_ready(),
+        public_benchmark_packet=_packet(
+            {
+                "status": "product_public_benchmark_contract_ready",
+                "public_benchmark_validation_ready": True,
+                "benchmark_mode": "self_hosted_reproducible_public_benchmarks",
+                "required_suite_count": 5,
+                "ready_required_suite_count": 5,
+                "blocked_suite_count": 0,
+                "suite_materialization_manifest_count": 5,
+                "suite_scorecard_row_csv_count": 5,
+                "suite_threshold_count": 5,
+                "suite_blocker_count": 5,
+                "suite_run_command_count": 5,
+                "suite_materialization_run_command_count": 5,
+                "suite_no_external_dependency_count": 5,
+                "requires_24h_server": False,
+                "requires_competition_season": False,
+                "requires_paid_vps": False,
+            }
+        ),
+        public_benchmark_work_order_packet=_public_benchmark_work_order(),
+        cameo_capability_packet=_packet(
+            {
+                "status": "cameo_public_registration_preflight_ready",
+                "api_operations_route_registered": True,
+                "api_dependency_ready": True,
+                "source_api_dependency_status": "cameo_api_dependency_ready",
+                "source_receiver_smoke_status": "cameo_receiver_smoke_ready",
+                "public_registration_allowed": True,
+                "public_registration_blocker_count": 0,
+            }
+        ),
+        cameo_architecture_validation_packet=_packet(
+            {
+                "status": "blocked_cameo_architecture_validation_contract",
+                "local_validation_protocol_ready": True,
+                "cameo_service_boundary_ready": True,
+                "cameo_service_boundary_status": "cameo_service_boundary_contract_ready",
+                "cameo_api_contract_ready": True,
+                "cameo_api_contract_status": "cameo_api_contract_ready",
+                "cameo_architecture_validation_ready": False,
+                "validation_evidence_ready": False,
+                "official_results_ready": False,
+            }
+        ),
+        cleanup_operations_packet=_packet(
+            {
+                "status": "cleanup_operations_surface_contract_ready",
+                "surface_ready": True,
+                "cleanup_approval_gate_endpoint_present": True,
+            }
+        ),
+        cleanup_approval_packet=_packet(
+            {
+                "status": "cleanup_execution_operator_approval_gate_ready",
+                "authorized_row_count": 5,
+                "awaiting_operator_approval_row_count": 0,
+                "blocked_row_count": 0,
+                "total_reclaim_size_gb": 49.216,
+            }
+        ),
+        cleanup_postcheck_packet=_packet(
+            {
+                "status": "cleanup_postcheck_contract_ready",
+                "postcheck_contract_ready": True,
+                "row_count": 5,
+                "blocked_row_count": 0,
+                "global_refresh_command_count": 9,
+            }
+        ),
+        cleanup_completion_packet=_packet(
+            {
+                "status": "cleanup_completion_gate_ready",
+                "cleanup_complete": True,
+                "blocked_stage_count": 0,
+            }
+        ),
+        ligand_cleanup_work_order_packet=_packet({"status": "cleanup_work_order_ready"}),
+        ligand_cleanup_preflight_packet=_packet({"status": "ligand_heavy_cleanup_execution_preflight_ready", "blocker_count": 0}),
+        casp17_transition_packet=_packet({"status": "casp17_transition_surface_contract_ready", "surface_ready": True}),
+        root=_root(tmp_path / "repo"),
+    )
+
+    summary = payload["summary"]
+    assert summary["cameo_local_surface_ready"] is True
+    assert summary["canonical_architecture_lane_statuses"]["CAMEO_live_validation"] == "ready"
+    assert summary["architecture_release_ready"] is True
+    cameo_row = next(row for row in payload["rows"] if row["lane_id"] == "cameo_optional_live_validation_surface")
+    assert cameo_row["status"] == "ready"
+    assert "cameo_status=cameo_public_registration_preflight_ready" in cameo_row["observed"]
+
+
 def test_product_architecture_contract_tool_writes_outputs(tmp_path: Path) -> None:
     root = _root(tmp_path / "repo")
     packets = {

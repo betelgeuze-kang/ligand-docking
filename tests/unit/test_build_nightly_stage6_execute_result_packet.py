@@ -13,7 +13,7 @@ def test_build_nightly_stage6_execute_result_packet() -> None:
                 "primary_canonical_retry_preset_id": "target_forced_adress_uncapped_probe",
                 "rescored_gate_mean_min_distance_A": 2.2707623770833014,
                 "gate_threshold_A": 2.5,
-                "runner_execute_command": "python3 tools/run_ligand_htvs_nightly.py --no-dry-run",
+                "runner_execute_command": "python3 tools/product/run_ligand_htvs_nightly.py --no-dry-run",
             },
             "rows": [
                 {

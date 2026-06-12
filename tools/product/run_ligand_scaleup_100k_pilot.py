@@ -141,7 +141,7 @@ def _load_spec(spec_path: Path) -> Dict[str, Any]:
 def _build_runner_cmd(profile_json: Path, out_prefix: Path, dry_run: bool) -> List[str]:
     return [
         "python3",
-        "tools/run_ligand_htvs_nightly.py",
+        "tools/product/run_ligand_htvs_nightly.py",
         "--profile-json",
         str(profile_json),
         "--run-scope",

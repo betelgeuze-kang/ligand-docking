@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from api.config import settings
+from api.request_privacy import sanitize_request_for_ledger
 
 ALLOWED_RUNNER_SCRIPTS = {
     "tools/run_ligand_htvs_pipeline.py",
@@ -167,7 +168,10 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
     results_dir = _results_dir(job_id)
     results_dir.mkdir(parents=True, exist_ok=True)
     request_json_path = results_dir / "request.json"
-    request_json_path.write_text(json.dumps(request_data, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
+    request_json_path.write_text(
+        json.dumps(sanitize_request_for_ledger(request_data), sort_keys=True, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
 
     result_file_template = str(profile.get("result_file_template", "{job_results_dir}/runner_result.json") or "")
     context = {

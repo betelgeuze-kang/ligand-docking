@@ -13,6 +13,8 @@ def _write_minimal_repo(root: Path) -> None:
     (root / "api" / "config.py").write_text(
         (
             'PRODUCT_API_AUTH_REQUIRED PRODUCT_API_TOKEN PRODUCT_API_RATE_LIMIT_PER_MINUTE '
+            'PRODUCT_API_TENANT_DAILY_QUOTA PRODUCT_API_AUDIT_RETENTION_DAYS '
+            'PRODUCT_API_SECRET_ROTATION_DAYS PRODUCT_API_PAGER_WEBHOOK_CONFIGURED '
             'PRODUCT_API_MAX_PAYLOAD_BYTES PRODUCT_API_AUDIT_LOG_PATH '
             'PRODUCT_API_HOSTED_EXPOSURE_APPROVED os.getenv("PRODUCT_API_HOSTED_EXPOSURE_APPROVED", "0") == "1" '
             'PRODUCT_API_TLS_TERMINATION_OPERATOR_VERIFIED os.getenv("PRODUCT_API_TLS_TERMINATION_OPERATOR_VERIFIED", "0") == "1"'
@@ -22,10 +24,12 @@ def _write_minimal_repo(root: Path) -> None:
     (root / "api" / "security.py").write_text(
         (
             "Authorization X-Tenant-ID _rate_limited payload_too_large ALLOWED_PRODUCT_PREFIXES path_not_allowed "
+            "_tenant_quota_exceeded tenant_quota_exceeded "
             "_audit_request self._audit_request(request, blocked.status_code) SECURITY_HEADERS X-Content-Type-Options "
             "X-Frame-Options Referrer-Policy _attach_security_headers(blocked) _attach_security_headers(response) "
             'def _blocked "status": "blocked" "execution_enabled": False "docking_results_emitted": False '
             '"external_state_mutated": False "authorization_present" "request_body_logged": False '
+            '"audit_retention_days" '
             '"authorization_value_logged": False def security_metrics_text generate_latest control="auth_hook" '
             'hosted_tls_termination_not_verified'
         ),
@@ -37,9 +41,27 @@ def _write_minimal_repo(root: Path) -> None:
     )
     (root / "Dockerfile.product").write_text("FROM python:3.11-slim\nENV PRODUCT_API_AUTH_REQUIRED=1\n", encoding="utf-8")
     (root / "deploy" / "product_rollback_runbook.md").write_text("previous image digest\n/metrics\n", encoding="utf-8")
+    (root / "deploy" / "docker-compose.product.yml").write_text(
+        (
+            "PRODUCT_API_TENANT_DAILY_QUOTA PRODUCT_API_AUDIT_RETENTION_DAYS "
+            "PRODUCT_API_SECRET_ROTATION_DAYS PRODUCT_API_PAGER_WEBHOOK_CONFIGURED "
+            "API_RESULT_MANIFEST_SIGNING_KEY micf-product-results API_JOB_STORE_PATH"
+        ),
+        encoding="utf-8",
+    )
+    (root / "deploy" / "docker-compose.product.env.example").write_text(
+        (
+            "PRODUCT_API_TENANT_DAILY_QUOTA PRODUCT_API_AUDIT_RETENTION_DAYS "
+            "PRODUCT_API_SECRET_ROTATION_DAYS PRODUCT_API_PAGER_WEBHOOK_CONFIGURED"
+        ),
+        encoding="utf-8",
+    )
     (root / "docs" / "product_security_deployment_policy.md").write_text(
         (
             "API token hook\nPayload size limit\nRollback\n"
+            "tenant_quota_exceeded\nAudit retention\nSecret rotation\n"
+            "Backup/DR procedure\nresult manifests\n"
+            "tools/smoke_alert_delivery.py\noperator-managed pager receiver\n"
             "APPROVE_HOSTED_PRODUCT_API_EXPOSURE\n"
             "PRODUCT_API_HOSTED_EXPOSURE_APPROVED\n"
             "PRODUCT_API_TLS_TERMINATION_OPERATOR_VERIFIED=1\n"
@@ -59,13 +81,18 @@ def test_product_security_deployment_contract_ready(tmp_path: Path) -> None:
     assert summary["security_deployment_ready"] is True
     assert summary["pass_count"] == summary["check_count"]
     assert summary["auth_ready"] is True
+    assert summary["tenant_quota_ready"] is True
     assert summary["metrics_endpoint_ready"] is True
     assert summary["metrics_secret_free_ready"] is True
     assert summary["blocked_request_audit_ready"] is True
     assert summary["security_headers_ready"] is True
     assert summary["fail_closed_block_response_ready"] is True
     assert summary["audit_redaction_ready"] is True
+    assert summary["audit_retention_ready"] is True
     assert summary["sbom_ready"] is True
+    assert summary["secret_rotation_contract_ready"] is True
+    assert summary["backup_dr_contract_ready"] is True
+    assert summary["pager_alert_contract_ready"] is True
     assert summary["hosted_external_exposure_guard_ready"] is True
     assert summary["hosted_external_exposure_allowed"] is False
     assert summary["hosted_exposure_approval_token_required"] == "APPROVE_HOSTED_PRODUCT_API_EXPOSURE"
@@ -108,6 +135,6 @@ def test_product_security_deployment_contract_cli_writes_outputs(tmp_path: Path)
         ]
     )
 
-    assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["check_count"] == 17
+    assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["check_count"] == 22
     assert out_csv.exists()
     assert "# Product Security Deployment Contract" in out_md.read_text(encoding="utf-8")

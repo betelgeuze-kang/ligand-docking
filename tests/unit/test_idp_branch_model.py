@@ -1,6 +1,6 @@
 import torch
 
-from tools.idp_residual_common import BRANCH_NAMES, FEATURE_NAMES, RANKING_HEAD_NAMES, STATE_NAMES, build_residual_model
+from tools.product.idp_residual_common import BRANCH_NAMES, FEATURE_NAMES, RANKING_HEAD_NAMES, STATE_NAMES, build_residual_model
 
 
 def test_branch_selector_moe_shapes():

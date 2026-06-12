@@ -4,6 +4,7 @@ from pathlib import Path
 
 import asyncio
 import json
+import sqlite3
 
 import pytest
 from fastapi import BackgroundTasks
@@ -31,6 +32,39 @@ def test_sqlite_job_store_persists_across_instances(tmp_path: Path) -> None:
     assert record["error"] == "fail-closed runner not wired"
     assert reopened.job_exists("job_1") is True
     assert reopened.job_exists("missing") is False
+
+
+def test_sqlite_job_store_redacts_sensitive_request_payload(tmp_path: Path) -> None:
+    db_path = tmp_path / "api_jobs.sqlite3"
+    store = SQLiteJobStore(db_path)
+
+    created = store.create_job(
+        "job_private",
+        {
+            "target_name": "ADRB2",
+            "pdb_content": "ATOM      1  CA  GLY A   1      12.104  13.207  14.321  1.00 10.00           C\n",
+            "runner_profile_id": "smoke",
+            "runner_profile_params": {
+                "ligands": ["CCO"],
+                "metadata": {"ligand_smiles": "CCN"},
+            },
+        },
+        status="submitted",
+    )
+
+    assert created["request"]["target_name"] == "ADRB2"
+    assert created["request"]["pdb_content"]["redacted"] is True
+    assert created["request"]["runner_profile_params"]["ligands"][0]["redacted"] is True
+    assert created["request"]["runner_profile_params"]["metadata"]["ligand_smiles"]["redacted"] is True
+
+    with sqlite3.connect(db_path) as conn:
+        raw_request = conn.execute(
+            "SELECT request_json FROM simulation_jobs WHERE job_id='job_private'"
+        ).fetchone()[0]
+    assert "ATOM      1" not in raw_request
+    assert "CCO" not in raw_request
+    assert "CCN" not in raw_request
+    assert "sha256" in raw_request
 
 
 def test_sqlite_job_store_acquires_jobs_with_worker_lease(tmp_path: Path) -> None:

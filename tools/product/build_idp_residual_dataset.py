@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional, Sequence
 
 import numpy as np
 
-from tools.idp_residual_common import ANCHOR_METRIC_NAMES, FEATURE_NAMES, TARGET_NAMES
+from tools.product.idp_residual_common import ANCHOR_METRIC_NAMES, FEATURE_NAMES, TARGET_NAMES
 
 
 def _read_json(path: str) -> Dict[str, Any]:

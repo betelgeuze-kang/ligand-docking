@@ -37,6 +37,21 @@ def _import_only_plan() -> dict:
     }
 
 
+def _implicit_import_only_plan() -> dict:
+    return {
+        "summary": {"status": "tools_package_batch2_review_plan_ready"},
+        "rows": [
+            {
+                "tool_path": "tools/surface_helpers.py",
+                "target_path": "tools/product/surface_helpers.py",
+                "proposed_package": "product",
+                "reference_class": "test_only_reference",
+                "reference_locations": "tests/unit/test_surface_helpers.py:1",
+            }
+        ],
+    }
+
+
 def _intra_slice_plan() -> dict:
     return {
         "summary": {"status": "tools_package_batch2_manual_review_plan_ready"},
@@ -110,6 +125,23 @@ def _write_import_only_fixture(root: Path) -> None:
     (root / "tools" / "driver.py").write_text('cmd = "python3 tools/wetlab/wetlab_helpers.py"\n', encoding="utf-8")
 
 
+def _write_implicit_import_only_fixture(root: Path) -> None:
+    package_dir = root / "tools" / "product"
+    package_dir.mkdir(parents=True)
+    (root / "tools" / "__init__.py").write_text("", encoding="utf-8")
+    (package_dir / "__init__.py").write_text("", encoding="utf-8")
+    (package_dir / "surface_helpers.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (root / "tools" / "surface_helpers.py").write_text(
+        "from tools.product.surface_helpers import *  # noqa: F401,F403\n",
+        encoding="utf-8",
+    )
+    (root / "tests" / "unit").mkdir(parents=True)
+    (root / "tests" / "unit" / "test_surface_helpers.py").write_text(
+        "from tools.product.surface_helpers import VALUE\n",
+        encoding="utf-8",
+    )
+
+
 def _write_intra_slice_fixture(root: Path) -> None:
     package_dir = root / "tools" / "product"
     package_dir.mkdir(parents=True)
@@ -178,6 +210,19 @@ def test_batch2_migration_receipt_accepts_import_only_wrapper(tmp_path: Path, mo
     assert payload["summary"]["verified_migration_count"] == 1
     assert payload["summary"]["cli_main_wrapper_count"] == 0
     assert payload["summary"]["import_only_wrapper_count"] == 1
+    assert payload["rows"][0]["wrapper_main_passthrough_required"] is False
+    assert payload["rows"][0]["migration_verified"] is True
+
+
+def test_batch2_migration_receipt_allows_implicit_import_only_helpers(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    _write_implicit_import_only_fixture(tmp_path)
+
+    payload = mod.build_tools_package_batch2_migration_receipt(batch2_plan_packet=_implicit_import_only_plan())
+
+    assert payload["summary"]["status"] == "tools_package_batch2_migration_receipt_ready"
+    assert payload["summary"]["verified_migration_count"] == 1
+    assert payload["summary"]["cli_main_wrapper_count"] == 1
     assert payload["rows"][0]["wrapper_main_passthrough_required"] is False
     assert payload["rows"][0]["migration_verified"] is True
 

@@ -1,11 +1,12 @@
-"""Compatibility shim; canonical module: tools.product.run_tier_alpha_adrb2_dispatch_smoke."""
-from __future__ import annotations
+"""Compatibility wrapper for tools.gpcr_replay.run_tier_alpha_adrb2_dispatch_smoke."""
+from tools.gpcr_replay.run_tier_alpha_adrb2_dispatch_smoke import *  # noqa: F401,F403
 
-import importlib
-import sys
-
-_module = importlib.import_module("tools.product.run_tier_alpha_adrb2_dispatch_smoke")
-sys.modules[__name__] = _module
+try:
+    from tools.gpcr_replay.run_tier_alpha_adrb2_dispatch_smoke import main as _main
+except ImportError:
+    _main = None
 
 if __name__ == "__main__":
-    _module.main()
+    if _main is None:
+        raise SystemExit("target module has no main(): tools.gpcr_replay.run_tier_alpha_adrb2_dispatch_smoke")
+    raise SystemExit(_main())

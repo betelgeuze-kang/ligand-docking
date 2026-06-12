@@ -237,7 +237,15 @@ def test_worker_queue_executes_validated_runner_profile_and_signs_manifest(
     monkeypatch.setattr(validated_runner.settings, "results_storage_path", str(tmp_path / "results"))
 
     store = SQLiteJobStore(tmp_path / "api_jobs.sqlite3")
-    request = {"target_name": "Chignolin", "runner_profile_id": "worker_smoke"}
+    request = {
+        "target_name": "Chignolin",
+        "runner_profile_id": "worker_smoke",
+        "pdb_content": "ATOM      1  CA  GLY A   1      12.104  13.207  14.321  1.00 10.00           C\n",
+        "runner_profile_params": {
+            "ligands": ["CCO"],
+            "metadata": {"ligand_smiles": "CCN"},
+        },
+    }
     store.create_job("job_worker_profile", request, status="submitted")
     worker.write_status_file(
         worker.job_status_path("job_worker_profile"),
@@ -262,6 +270,13 @@ def test_worker_queue_executes_validated_runner_profile_and_signs_manifest(
     assert manifest["status"] == "completed"
     assert manifest["result_file"] == completed["result_file"]
     assert verify_result_manifest(manifest, signing_key=validated_runner.settings.api_result_manifest_signing_key)
+    runner_request = (tmp_path / "results" / "job_worker_profile" / "request.json").read_text(
+        encoding="utf-8"
+    )
+    assert "ATOM      1" not in runner_request
+    assert "CCO" not in runner_request
+    assert "CCN" not in runner_request
+    assert "sha256" in runner_request
 
 
 def test_validate_api_runner_profiles_cli_reports_ready_enabled_profile(

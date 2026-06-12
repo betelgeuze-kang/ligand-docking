@@ -43,7 +43,7 @@ def test_validate_casp17_geometry_sanity_passes_basic_model(tmp_path: Path) -> N
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/validate_casp17_geometry_sanity.py"),
+            str(ROOT / "tools/casp17/validate_casp17_geometry_sanity.py"),
             "--target-id",
             "T4000",
             "--prediction-file",
@@ -90,7 +90,7 @@ def test_validate_casp17_geometry_sanity_fails_severe_inter_residue_clash(tmp_pa
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/validate_casp17_geometry_sanity.py"),
+            str(ROOT / "tools/casp17/validate_casp17_geometry_sanity.py"),
             "--target-id",
             "T4001",
             "--prediction-file",

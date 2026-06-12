@@ -1,13 +1,12 @@
-"""Compatibility shim; canonical module: tools.accounting.build_goal_product_status_refresh_chain."""
-from __future__ import annotations
+"""Compatibility wrapper for tools.product.build_goal_product_status_refresh_chain."""
+from tools.product.build_goal_product_status_refresh_chain import *  # noqa: F401,F403
 
-import importlib
-import sys
-
-_module = importlib.import_module("tools.accounting.build_goal_product_status_refresh_chain")
+try:
+    from tools.product.build_goal_product_status_refresh_chain import main as _main
+except ImportError:
+    _main = None
 
 if __name__ == "__main__":
-    main = getattr(_module, "main", None)
-    if main is None:
-        raise SystemExit("builder has no main(): tools.accounting.build_goal_product_status_refresh_chain")
-    raise SystemExit(main())
+    if _main is None:
+        raise SystemExit("target module has no main(): tools.product.build_goal_product_status_refresh_chain")
+    raise SystemExit(_main())

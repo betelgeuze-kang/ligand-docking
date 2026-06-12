@@ -313,7 +313,7 @@ def build_payload(
         "next_required_step": (
             "Fill transporter_negative_control_operator_intake_export_current.csv, run "
             "tools/build_transporter_negative_control_intake_merge.py --write-template, then rerun "
-            "tools/build_product_scope_optional_lane_refresh_chain.py."
+            "tools/product/build_product_scope_optional_lane_refresh_chain.py."
             if negative_rows
             else "Regenerate transporter manual review intake template before building negative-control worksheet."
         ),

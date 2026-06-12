@@ -35,6 +35,7 @@ const CUSTOMER_REPORT_REQUIRED_BLOCKS = [
     'binding_site_explanation',
     'pose_comparison',
     'interaction_rationale',
+    'ligand_selection_rationale',
     'uncertainty_narrative',
     'scope_claim_limit',
     'counterfactual_rescue_suggestion',

@@ -19,6 +19,19 @@ def _plan() -> dict:
     }
 
 
+def _import_only_plan() -> dict:
+    return {
+        "summary": {"status": "tools_package_migration_plan_ready"},
+        "rows": [
+            {
+                "source_path": "tools/wetlab_helpers.py",
+                "target_path": "tools/wetlab/wetlab_helpers.py",
+                "proposed_package": "wetlab",
+            }
+        ],
+    }
+
+
 def _write_fixture(root: Path) -> None:
     package_dir = root / "tools" / "product"
     package_dir.mkdir(parents=True)
@@ -28,6 +41,18 @@ def _write_fixture(root: Path) -> None:
     (root / "tools" / "build_product_alpha.py").write_text(
         "from tools.product.build_product_alpha import *  # noqa: F401,F403\n"
         "from tools.product.build_product_alpha import main as _main\n",
+        encoding="utf-8",
+    )
+
+
+def _write_import_only_fixture(root: Path) -> None:
+    package_dir = root / "tools" / "wetlab"
+    package_dir.mkdir(parents=True)
+    (root / "tools" / "__init__.py").write_text("", encoding="utf-8")
+    (package_dir / "__init__.py").write_text("", encoding="utf-8")
+    (package_dir / "wetlab_helpers.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (root / "tools" / "wetlab_helpers.py").write_text(
+        "from tools.wetlab.wetlab_helpers import *  # noqa: F401,F403\n",
         encoding="utf-8",
     )
 
@@ -47,6 +72,20 @@ def test_tools_package_migration_receipt_verifies_wrapped_move(tmp_path: Path, m
     assert summary["external_state_mutated"] is False
     assert row["wrapper_imports_target"] is True
     assert row["target_module_py_compile_ok"] is True
+
+
+def test_tools_package_migration_receipt_allows_import_only_helpers(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    _write_import_only_fixture(tmp_path)
+
+    payload = mod.build_tools_package_migration_receipt(plan_packet=_import_only_plan())
+    summary = payload["summary"]
+    row = payload["rows"][0]
+
+    assert summary["status"] == "tools_package_migration_receipt_ready"
+    assert row["wrapper_imports_target"] is True
+    assert row["wrapper_main_passthrough_required"] is False
+    assert row["wrapper_main_passthrough"] is False
 
 
 def test_tools_package_migration_receipt_blocks_missing_target(tmp_path: Path, monkeypatch) -> None:

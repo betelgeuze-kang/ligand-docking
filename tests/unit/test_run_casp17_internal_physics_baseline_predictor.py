@@ -7,8 +7,8 @@ from pathlib import Path
 
 from tools import run_casp17_internal_physics_baseline_predictor as predictor
 from tools import validate_casp17_backend_contract as contract
-from tools import validate_casp17_confidence_calibration as confidence
-from tools import validate_casp17_geometry_sanity as geometry
+from tools.casp17 import validate_casp17_confidence_calibration as confidence
+from tools.casp17 import validate_casp17_geometry_sanity as geometry
 
 
 ROOT = Path(__file__).resolve().parents[2]

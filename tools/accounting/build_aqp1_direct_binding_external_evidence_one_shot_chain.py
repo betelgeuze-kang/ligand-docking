@@ -49,7 +49,7 @@ _CHILD_ARTIFACT_HINTS: dict[str, str] = {
     "build_aqp1_direct_binding_external_evidence_operator_staging_apply.py": "runs/aqp1_direct_binding_external_evidence_operator_staging_apply_current.json",
     "build_aqp1_direct_binding_external_evidence_intake.py": "runs/aqp1_direct_binding_external_evidence_intake_current.json",
     "apply_aqp1_ready_workbook_rows.py": "runs/aqp1_ready_workbook_apply_current.json",
-    "build_transporter_aqp1_external_evidence_refresh_chain.py": "runs/transporter_aqp1_external_evidence_refresh_chain_current.json",
+    "product/build_transporter_aqp1_external_evidence_refresh_chain.py": "runs/transporter_aqp1_external_evidence_refresh_chain_current.json",
 }
 
 
@@ -138,7 +138,7 @@ def build_packet(
     _run([sys.executable, "tools/apply_aqp1_ready_workbook_rows.py"])
     lanes["workbook_apply"] = _lane("workbook_apply", "runs/aqp1_ready_workbook_apply_current.json")
 
-    _run([sys.executable, "tools/build_transporter_aqp1_external_evidence_refresh_chain.py"])
+    _run([sys.executable, "tools/product/build_transporter_aqp1_external_evidence_refresh_chain.py"])
     lanes["transporter_refresh"] = _lane(
         "transporter_refresh",
         "runs/transporter_aqp1_external_evidence_refresh_chain_current.json",

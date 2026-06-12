@@ -20,7 +20,7 @@ REFRESH_STEPS = [
     ("product_commercial_independence_gate", "tools/build_product_commercial_independence_gate.py"),
     ("product_release_operations_dossier", "tools/build_product_release_operations_dossier.py"),
     ("product_architecture_contract", "tools/build_product_architecture_contract.py"),
-    ("product_multi_family_exemplar_profile_contract", "tools/build_product_multi_family_exemplar_profile_contract.py"),
+    ("product_multi_family_exemplar_profile_contract", "tools/product/build_product_multi_family_exemplar_profile_contract.py"),
     ("product_ai_architecture_gap_closure", "tools/build_product_ai_architecture_gap_closure.py"),
     ("product_ai_architecture_execution_backlog", "tools/build_product_ai_architecture_execution_backlog.py"),
     ("goal_readiness_rollup", "tools/build_goal_readiness_rollup.py"),

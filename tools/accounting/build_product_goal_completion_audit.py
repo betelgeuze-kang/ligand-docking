@@ -452,7 +452,17 @@ def _live_gap_observed(
             f"security_deployment_ready={security.get('security_deployment_ready')};"
             f"auth_ready={security.get('auth_ready')};"
             f"tenant_isolation_ready={security.get('tenant_isolation_ready')};"
+            f"tenant_quota_ready={security.get('tenant_quota_ready')};"
+            f"audit_retention_ready={security.get('audit_retention_ready')};"
+            f"secret_rotation_contract_ready={security.get('secret_rotation_contract_ready')};"
+            f"backup_dr_contract_ready={security.get('backup_dr_contract_ready')};"
+            f"pager_alert_contract_ready={security.get('pager_alert_contract_ready')};"
+            f"hosted_deployment_contract_ready={security.get('hosted_deployment_contract_ready')};"
+            f"hosted_deployment_currently_satisfied={security.get('hosted_deployment_currently_satisfied')};"
+            f"hosted_deployment_next_stage_id={security.get('hosted_deployment_next_stage_id')};"
             f"hosted_external_exposure_allowed={security.get('hosted_external_exposure_allowed')};"
+            f"hosted_secret_injection_ready={security.get('hosted_secret_injection_ready')};"
+            f"tls_termination_operator_verified={security.get('tls_termination_operator_verified')};"
             f"sbom_ready={security.get('sbom_ready')};"
             f"container_image_ready={security.get('container_image_ready')}"
         )
@@ -2047,6 +2057,47 @@ def build_product_goal_completion_audit(
             next_command=_product_ai_gap_next_command(primary_phase, primary_next_command),
             release_blocker=False,
             requirement_tier="optional_production_ai",
+        ),
+        _row(
+            requirement_id="R8_full_scope_claim_closure",
+            requirement=(
+                "Full independent commercial-product claims stay blocked until scope-closure acceptance is green, "
+                "transporter evidence is claim-safe, and broad/general protein-ligand wording is explicitly allowed."
+            ),
+            passed=(
+                _bool(scope_closure.get("scope_closure_ready"))
+                and _bool(product_scope_breadth_contract.get("scope_breadth_ready"))
+                and _bool(scope_closure.get("general_platform_claim_allowed"))
+            ),
+            observed=(
+                f"scope_closure_ready={_bool(scope_closure.get('scope_closure_ready'))};"
+                f"scope_breadth_ready={_bool(product_scope_breadth_contract.get('scope_breadth_ready'))};"
+                f"blocked_stage_count={_int(scope_closure.get('scope_acceptance_blocked_stage_count'))};"
+                f"next_stage_id={_text(scope_closure.get('scope_acceptance_next_stage_id'))};"
+                f"first_blocked_evidence_row_id={_text(scope_closure.get('first_blocked_evidence_row_id'))};"
+                f"first_blocked_target_id={_text(scope_closure.get('first_blocked_target_id'))};"
+                f"first_blocked_required_missing_fields={_text(scope_closure.get('first_blocked_required_missing_fields'))};"
+                f"general_platform_claim_allowed={_bool(scope_closure.get('general_platform_claim_allowed'))};"
+                f"authoritative_apply_allowed={_bool(product_scope_breadth_contract.get('authoritative_apply_allowed'))}"
+            ),
+            required=(
+                "scope_closure_ready=true;scope_breadth_ready=true;general_platform_claim_allowed=true;"
+                "authoritative_apply_allowed=true for broadened commercial claims"
+            ),
+            evidence_artifacts=_join(
+                [
+                    scope_closure_acceptance_path,
+                    product_scope_breadth_contract_path,
+                    scope_evidence_priority_path,
+                    scope_evidence_intake_readiness_path,
+                ]
+            ),
+            blocker="full_scope_claim_closure_not_ready",
+            next_command=_text(scope_closure.get("next_stage_validation_command"))
+            or _text(product_scope_breadth_contract.get("validation_command"))
+            or _text(scope_top_priority.get("regeneration_commands")),
+            release_blocker=True,
+            requirement_tier="full_commercial_scope",
         ),
     ]
     failed = [row for row in rows if row["status"] != "pass"]

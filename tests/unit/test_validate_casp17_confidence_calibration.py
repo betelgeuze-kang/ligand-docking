@@ -45,7 +45,7 @@ def test_validate_casp17_confidence_calibration_passes_nonuniform_confidence(tmp
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/validate_casp17_confidence_calibration.py"),
+            str(ROOT / "tools/casp17/validate_casp17_confidence_calibration.py"),
             "--target-id",
             "T5000",
             "--prediction-file",
@@ -97,7 +97,7 @@ def test_validate_casp17_confidence_calibration_fails_uniform_confidence(tmp_pat
     subprocess.run(
         [
             "python3",
-            str(ROOT / "tools/validate_casp17_confidence_calibration.py"),
+            str(ROOT / "tools/casp17/validate_casp17_confidence_calibration.py"),
             "--target-id",
             "T5001",
             "--prediction-file",

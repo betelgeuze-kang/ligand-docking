@@ -219,7 +219,12 @@ def build_product_architecture_contract(
     cameo_local_surface_ready = (
         cameo_api_present
         and _text(cameo.get("status"))
-        in {"cameo_capability_preflight_ready", "cameo_development_capability_preflight_ready", "blocked_cameo_capability_preflight"}
+        in {
+            "cameo_capability_preflight_ready",
+            "cameo_development_capability_preflight_ready",
+            "cameo_public_registration_preflight_ready",
+            "blocked_cameo_capability_preflight",
+        }
         and _bool(cameo.get("api_operations_route_registered"))
     )
     cameo_architecture_contract_present = bool(cameo_architecture)

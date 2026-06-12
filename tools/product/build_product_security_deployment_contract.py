@@ -62,6 +62,8 @@ def build_product_security_deployment_contract(*, root: str | Path = ROOT) -> di
     main_py = _read_text(root_path, "api/main.py")
     config_py = _read_text(root_path, "api/config.py")
     dockerfile = _read_text(root_path, "Dockerfile.product")
+    compose = _read_text(root_path, "deploy/docker-compose.product.yml")
+    compose_env = _read_text(root_path, "deploy/docker-compose.product.env.example")
     rollback = _read_text(root_path, "deploy/product_rollback_runbook.md")
     policy = _read_text(root_path, "docs/product_security_deployment_policy.md")
     requirements = [
@@ -78,9 +80,24 @@ def build_product_security_deployment_contract(*, root: str | Path = ROOT) -> di
     auth_ready = "PRODUCT_API_AUTH_REQUIRED" in config_py and "PRODUCT_API_TOKEN" in config_py and "Authorization" in security_py
     tenant_ready = "X-Tenant-ID" in security_py
     rate_limit_ready = "PRODUCT_API_RATE_LIMIT_PER_MINUTE" in config_py and "_rate_limited" in security_py
+    tenant_quota_ready = (
+        "PRODUCT_API_TENANT_DAILY_QUOTA" in config_py
+        and "_tenant_quota_exceeded" in security_py
+        and "tenant_quota_exceeded" in security_py
+        and "PRODUCT_API_TENANT_DAILY_QUOTA" in compose
+        and "PRODUCT_API_TENANT_DAILY_QUOTA" in compose_env
+        and "tenant_quota_exceeded" in policy
+    )
     payload_limit_ready = "PRODUCT_API_MAX_PAYLOAD_BYTES" in config_py and "payload_too_large" in security_py
     path_allowlist_ready = "ALLOWED_PRODUCT_PREFIXES" in security_py and "path_not_allowed" in security_py
     audit_log_ready = "PRODUCT_API_AUDIT_LOG_PATH" in config_py and "_audit_request" in security_py
+    audit_retention_ready = (
+        "PRODUCT_API_AUDIT_RETENTION_DAYS" in config_py
+        and "audit_retention_days" in security_py
+        and "PRODUCT_API_AUDIT_RETENTION_DAYS" in compose
+        and "PRODUCT_API_AUDIT_RETENTION_DAYS" in compose_env
+        and "Audit retention" in policy
+    )
     blocked_audit_ready = "self._audit_request(request, blocked.status_code)" in security_py
     security_headers_ready = (
         "SECURITY_HEADERS" in security_py
@@ -124,6 +141,26 @@ def build_product_security_deployment_contract(*, root: str | Path = ROOT) -> di
     tls_termination_operator_verified = False
     hosted_secret_injection_operator_verified = False
     hosted_tls_termination_operator_verified = False
+    secret_rotation_contract_ready = (
+        "PRODUCT_API_SECRET_ROTATION_DAYS" in config_py
+        and "PRODUCT_API_SECRET_ROTATION_DAYS" in compose
+        and "PRODUCT_API_SECRET_ROTATION_DAYS" in compose_env
+        and "Secret rotation" in policy
+        and "API_RESULT_MANIFEST_SIGNING_KEY" in compose
+    )
+    backup_dr_contract_ready = (
+        "Backup/DR procedure" in policy
+        and "micf-product-results" in compose
+        and "API_JOB_STORE_PATH" in compose
+        and "result manifests" in policy
+    )
+    pager_alert_contract_ready = (
+        "PRODUCT_API_PAGER_WEBHOOK_CONFIGURED" in config_py
+        and "PRODUCT_API_PAGER_WEBHOOK_CONFIGURED" in compose
+        and "PRODUCT_API_PAGER_WEBHOOK_CONFIGURED" in compose_env
+        and "tools/smoke_alert_delivery.py" in policy
+        and "operator-managed pager receiver" in policy
+    )
     metrics_route_present = '@app.get("/metrics"' in main_py
     metrics_func_present = "security_metrics_text" in main_py
     metrics_secret_free_ready = (
@@ -142,9 +179,36 @@ def build_product_security_deployment_contract(*, root: str | Path = ROOT) -> di
         _row("auth_ready", auth_ready, f"auth_required={'PRODUCT_API_AUTH_REQUIRED' in config_py};authorization={'Authorization' in security_py}", "env-driven API token hook", "api/config.py;api/security.py", "Hosted API exposure needs an authentication hook."),
         _row("tenant_isolation_ready", tenant_ready, f"x_tenant={'X-Tenant-ID' in security_py}", "tenant marker captured for audit/rate separation", "api/security.py", "Customer traffic needs tenant-aware request accounting."),
         _row("rate_limit_ready", rate_limit_ready, f"rate_config={'PRODUCT_API_RATE_LIMIT_PER_MINUTE' in config_py};rate_func={'_rate_limited' in security_py}", "per tenant/client rate limiter", "api/config.py;api/security.py", "Hosted API exposure needs denial-of-service guardrails."),
+        _row(
+            "tenant_quota_ready",
+            tenant_quota_ready,
+            (
+                f"quota_config={'PRODUCT_API_TENANT_DAILY_QUOTA' in config_py};"
+                f"quota_func={'_tenant_quota_exceeded' in security_py};"
+                f"quota_blocker={'tenant_quota_exceeded' in security_py};"
+                f"compose={'PRODUCT_API_TENANT_DAILY_QUOTA' in compose};"
+                f"policy={'tenant_quota_exceeded' in policy}"
+            ),
+            "per-tenant quota with fail-closed quota blocker and deployment profile env",
+            "api/config.py;api/security.py;deploy/docker-compose.product.yml;deploy/docker-compose.product.env.example;docs/product_security_deployment_policy.md",
+            "Hosted/on-prem customer use needs a quota guard separate from minute-level rate limiting.",
+        ),
         _row("payload_limit_ready", payload_limit_ready, f"payload_config={'PRODUCT_API_MAX_PAYLOAD_BYTES' in config_py};blocker={'payload_too_large' in security_py}", "request payload size limit", "api/config.py;api/security.py", "Raw molecular payloads need a hard size boundary."),
         _row("path_allowlist_ready", path_allowlist_ready, f"allowlist={'ALLOWED_PRODUCT_PREFIXES' in security_py};blocker={'path_not_allowed' in security_py}", "path allowlist blocker", "api/security.py", "Hosted API exposure needs a narrow route surface."),
         _row("audit_log_ready", audit_log_ready, f"audit_config={'PRODUCT_API_AUDIT_LOG_PATH' in config_py};audit_func={'_audit_request' in security_py}", "JSONL audit log hook", "api/config.py;api/security.py", "Customer operations need traceable request logs."),
+        _row(
+            "audit_retention_ready",
+            audit_retention_ready,
+            (
+                f"retention_config={'PRODUCT_API_AUDIT_RETENTION_DAYS' in config_py};"
+                f"audit_row_retention={'audit_retention_days' in security_py};"
+                f"compose={'PRODUCT_API_AUDIT_RETENTION_DAYS' in compose};"
+                f"policy={'Audit retention' in policy}"
+            ),
+            "audit retention days are configured, emitted in audit rows, and documented in deployment policy",
+            "api/config.py;api/security.py;deploy/docker-compose.product.yml;deploy/docker-compose.product.env.example;docs/product_security_deployment_policy.md",
+            "Commercial audit logs need an explicit retention profile before hosted or on-prem handoff.",
+        ),
         _row(
             "blocked_request_audit_ready",
             blocked_audit_ready,
@@ -208,6 +272,46 @@ def build_product_security_deployment_contract(*, root: str | Path = ROOT) -> di
         _row("metrics_endpoint_ready", metrics_ready and metrics_secret_free_ready, f"metrics_route={metrics_route_present};metrics_func={metrics_func_present};metrics_secret_free={metrics_secret_free_ready}", "/metrics route available without secret/token disclosure", "api/main.py;api/security.py", "Deployment monitoring needs a scrapeable smoke endpoint that does not leak secrets."),
         _row("sbom_ready", sbom_ready, ";".join(f"{row['path']}={row['sha256'][:12] or 'missing'}" for row in sbom_rows), "requirements manifest sha256 inventory", ";".join(requirements), "Release review needs dependency manifest provenance."),
         _row("container_image_ready", container_ready, f"dockerfile_present={bool(dockerfile)};auth_env={'PRODUCT_API_AUTH_REQUIRED=1' in dockerfile}", "product Dockerfile with security env defaults", "Dockerfile.product", "Hosted/customer deployment needs a reproducible container recipe."),
+        _row(
+            "secret_rotation_contract_ready",
+            secret_rotation_contract_ready,
+            (
+                f"rotation_config={'PRODUCT_API_SECRET_ROTATION_DAYS' in config_py};"
+                f"compose={'PRODUCT_API_SECRET_ROTATION_DAYS' in compose};"
+                f"env_example={'PRODUCT_API_SECRET_ROTATION_DAYS' in compose_env};"
+                f"signing_key_env={'API_RESULT_MANIFEST_SIGNING_KEY' in compose};"
+                f"policy={'Secret rotation' in policy}"
+            ),
+            "secret rotation interval and operator-managed signing/API key handling are documented in deployment profile",
+            "api/config.py;deploy/docker-compose.product.yml;deploy/docker-compose.product.env.example;docs/product_security_deployment_policy.md",
+            "Hosted/on-prem deployments need a rotation contract for bearer tokens and result-manifest signing keys.",
+        ),
+        _row(
+            "backup_dr_contract_ready",
+            backup_dr_contract_ready,
+            (
+                f"policy={'Backup/DR procedure' in policy};"
+                f"volume={'micf-product-results' in compose};"
+                f"job_store={'API_JOB_STORE_PATH' in compose};"
+                f"manifest_restore={'result manifests' in policy}"
+            ),
+            "backup/DR profile covers product result volume, job store, and signed result manifest restore verification",
+            "deploy/docker-compose.product.yml;docs/product_security_deployment_policy.md",
+            "Commercial operations need restore evidence boundaries before external hosted claims.",
+        ),
+        _row(
+            "pager_alert_contract_ready",
+            pager_alert_contract_ready,
+            (
+                f"pager_config={'PRODUCT_API_PAGER_WEBHOOK_CONFIGURED' in config_py};"
+                f"compose={'PRODUCT_API_PAGER_WEBHOOK_CONFIGURED' in compose};"
+                f"env_example={'PRODUCT_API_PAGER_WEBHOOK_CONFIGURED' in compose_env};"
+                f"smoke_policy={'tools/smoke_alert_delivery.py' in policy}"
+            ),
+            "pager route is represented by deployment env and gated on alert delivery smoke against operator receiver",
+            "api/config.py;deploy/docker-compose.product.yml;deploy/docker-compose.product.env.example;docs/product_security_deployment_policy.md",
+            "Hosted/on-prem deployment needs an alerting handoff contract, not only a local metrics endpoint.",
+        ),
         _row("rollback_ready", rollback_ready, f"rollback_doc={bool(rollback)};metrics={'/metrics' in rollback}", "rollback runbook with image digest and smoke checks", "deploy/product_rollback_runbook.md", "Commercial deployment needs a rollback plan."),
         _row("security_policy_ready", policy_ready, f"policy_doc={bool(policy)}", "security/deployment policy documents operator boundaries", "docs/product_security_deployment_policy.md", "Security controls need an operator-facing policy boundary."),
     ]
@@ -243,9 +347,11 @@ def build_product_security_deployment_contract(*, root: str | Path = ROOT) -> di
         "auth_ready": auth_ready,
         "tenant_isolation_ready": tenant_ready,
         "rate_limit_ready": rate_limit_ready,
+        "tenant_quota_ready": tenant_quota_ready,
         "payload_limit_ready": payload_limit_ready,
         "path_allowlist_ready": path_allowlist_ready,
         "audit_log_ready": audit_log_ready,
+        "audit_retention_ready": audit_retention_ready,
         "blocked_request_audit_ready": blocked_audit_ready,
         "security_headers_ready": security_headers_ready,
         "fail_closed_block_response_ready": fail_closed_block_response_ready,
@@ -257,6 +363,9 @@ def build_product_security_deployment_contract(*, root: str | Path = ROOT) -> di
         "tls_termination_operator_verified": tls_termination_operator_verified,
         "hosted_secret_injection_operator_verified": hosted_secret_injection_operator_verified,
         "hosted_tls_termination_operator_verified": hosted_tls_termination_operator_verified,
+        "secret_rotation_contract_ready": secret_rotation_contract_ready,
+        "backup_dr_contract_ready": backup_dr_contract_ready,
+        "pager_alert_contract_ready": pager_alert_contract_ready,
         "hosted_deployment_contract_ready": hosted_deployment_contract_ready,
         "hosted_deployment_currently_satisfied": hosted_deployment_currently_satisfied,
         "hosted_deployment_blocked_stage_count": len(hosted_deployment_blocked_stage_ids),

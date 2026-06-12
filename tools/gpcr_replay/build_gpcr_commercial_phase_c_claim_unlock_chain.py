@@ -188,7 +188,7 @@ def build_packet(
             ):
                 blockers.append("phase_c:cameo_architecture_validation_not_ready")
 
-    _run([sys.executable, "tools/build_goal_product_status_refresh_chain.py"])
+    _run([sys.executable, "tools/product/build_goal_product_status_refresh_chain.py"])
     goal_lane = _lane("goal_product_status_refresh_chain", "runs/goal_product_status_refresh_chain_current.json")
 
     product_delivery_unlock_ready = not any(

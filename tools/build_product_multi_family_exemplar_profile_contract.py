@@ -1,14 +1,12 @@
-"""Compatibility shim; canonical module: tools.accounting.build_product_multi_family_exemplar_profile_contract."""
-from __future__ import annotations
+"""Compatibility wrapper for tools.product.build_product_multi_family_exemplar_profile_contract."""
+from tools.product.build_product_multi_family_exemplar_profile_contract import *  # noqa: F401,F403
 
-import importlib
-
-_module = importlib.import_module("tools.accounting.build_product_multi_family_exemplar_profile_contract")
+try:
+    from tools.product.build_product_multi_family_exemplar_profile_contract import main as _main
+except ImportError:
+    _main = None
 
 if __name__ == "__main__":
-    main = getattr(_module, "main", None)
-    if main is None:
-        raise SystemExit(
-            "builder has no main(): tools.accounting.build_product_multi_family_exemplar_profile_contract"
-        )
-    raise SystemExit(main())
+    if _main is None:
+        raise SystemExit("target module has no main(): tools.product.build_product_multi_family_exemplar_profile_contract")
+    raise SystemExit(_main())

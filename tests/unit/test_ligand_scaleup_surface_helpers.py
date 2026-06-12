@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools.ligand_scaleup_surface_helpers import summarize_ligand_scaleup_blocker
+from tools.product.ligand_scaleup_surface_helpers import summarize_ligand_scaleup_blocker
 
 
 def test_summarize_ligand_scaleup_blocker_uses_gpcr_frontier_recovery() -> None:

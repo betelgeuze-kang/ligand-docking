@@ -14,9 +14,10 @@ import sys as _sys
 
 _module = _import_module("tools.accounting.build_biorxiv_temporal_idp_item_helpers")
 globals().update({k: v for k, v in _module.__dict__.items() if not k.startswith("__")})
+_sys.modules[__name__] = _module
 
 if __name__ == "__main__":
     _entry = getattr(_module, "main", None)
     if _entry is None:
         raise SystemExit("builder has no main(): tools.accounting.build_biorxiv_temporal_idp_item_helpers")
-    raise SystemExit(_entry(_sys.argv[1:]) or 0)
+    raise SystemExit(_entry() or 0)

@@ -10,8 +10,8 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-from tools import validate_casp17_confidence_calibration as confidence_validator
-from tools import validate_casp17_geometry_sanity as geometry_validator
+from tools.casp17 import validate_casp17_confidence_calibration as confidence_validator
+from tools.casp17 import validate_casp17_geometry_sanity as geometry_validator
 from tools import validate_casp17_ts_prediction as format_validator
 from tools.build_casp17_all_atom_quality_packet import _inter_residue_contact_counts, _parse_first_model
 from tools.build_casp17_sidechain_scaffold_packet import BACKBONE_ATOMS

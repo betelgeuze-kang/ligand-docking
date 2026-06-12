@@ -8,8 +8,8 @@ from statistics import median
 from typing import Any
 
 from tools.wetlab_target_render_utils import load_json, maybe_load_json, resolve
-from tools.wetlab_selected_allatom_canonical import resolve_selected_allatom_canonical
-from tools.wetlab_selected_allatom_visual import (
+from tools.wetlab.wetlab_selected_allatom_canonical import resolve_selected_allatom_canonical
+from tools.wetlab.wetlab_selected_allatom_visual import (
     resolve_selected_allatom_visual_bundle,
     selected_allatom_visual_surface_fields,
 )

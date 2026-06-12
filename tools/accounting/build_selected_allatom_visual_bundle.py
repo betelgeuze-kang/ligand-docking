@@ -33,7 +33,7 @@ from tools.native_target_registry import (
     normalize_target_key,
     resolve_repo_native_entry,
 )
-from tools.wetlab_selected_allatom_canonical import resolve_selected_allatom_canonical
+from tools.wetlab.wetlab_selected_allatom_canonical import resolve_selected_allatom_canonical
 from tools.wetlab_target_render_utils import load_json, maybe_load_json, resolve, write_artifact
 
 ROOT = Path(__file__).resolve().parents[2]

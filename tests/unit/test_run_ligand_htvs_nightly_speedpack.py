@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools import run_ligand_htvs_nightly as nightly
+from tools.product import run_ligand_htvs_nightly as nightly
 
 
 def test_run_ligand_htvs_nightly_forwards_speedpack_profile_flags(tmp_path: Path, monkeypatch) -> None:

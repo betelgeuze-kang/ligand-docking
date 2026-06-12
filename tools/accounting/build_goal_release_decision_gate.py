@@ -26,6 +26,8 @@ DEFAULT_CLEANUP_COMPLETION_GATE_JSON = "runs/cleanup_completion_gate_current.jso
 DEFAULT_GOAL_API_SURFACE_CONTRACT_JSON = "runs/goal_api_surface_contract_current.json"
 DEFAULT_PRODUCT_AI_ARCHITECTURE_GAP_JSON = "runs/product_ai_architecture_gap_closure_current.json"
 DEFAULT_PRODUCT_AI_EXECUTION_BACKLOG_JSON = "runs/product_ai_architecture_execution_backlog_current.json"
+DEFAULT_PRODUCT_RELEASE_SOURCE_OF_TRUTH_JSON = "runs/product_release_source_of_truth_gate_current.json"
+DEFAULT_API_CUSTOMER_FLOW_RELEASE_EVIDENCE_JSON = "runs/api_customer_flow_release_evidence_current.json"
 DEFAULT_OUT_JSON = "runs/goal_release_decision_gate_current.json"
 DEFAULT_OUT_CSV = "runs/goal_release_decision_gate_current.csv"
 DEFAULT_OUT_MD = "runs/goal_release_decision_gate_current.md"
@@ -159,6 +161,8 @@ def build_goal_release_decision_gate(
     goal_api_surface_contract_packet: dict[str, Any] | None = None,
     product_ai_architecture_gap_packet: dict[str, Any] | None = None,
     product_ai_execution_backlog_packet: dict[str, Any] | None = None,
+    product_release_source_of_truth_packet: dict[str, Any] | None = None,
+    api_customer_flow_release_evidence_packet: dict[str, Any] | None = None,
     product_pilot_path: str = DEFAULT_PRODUCT_PILOT_JSON,
     product_architecture_path: str = DEFAULT_PRODUCT_ARCHITECTURE_JSON,
     product_commercial_independence_path: str = DEFAULT_PRODUCT_COMMERCIAL_INDEPENDENCE_JSON,
@@ -176,6 +180,8 @@ def build_goal_release_decision_gate(
     goal_api_surface_contract_path: str = DEFAULT_GOAL_API_SURFACE_CONTRACT_JSON,
     product_ai_architecture_gap_path: str = DEFAULT_PRODUCT_AI_ARCHITECTURE_GAP_JSON,
     product_ai_execution_backlog_path: str = DEFAULT_PRODUCT_AI_EXECUTION_BACKLOG_JSON,
+    product_release_source_of_truth_path: str = DEFAULT_PRODUCT_RELEASE_SOURCE_OF_TRUTH_JSON,
+    api_customer_flow_release_evidence_path: str = DEFAULT_API_CUSTOMER_FLOW_RELEASE_EVIDENCE_JSON,
 ) -> dict[str, Any]:
     product = _summary(product_pilot_packet)
     product_architecture = _summary(product_architecture_packet or {})
@@ -192,6 +198,24 @@ def build_goal_release_decision_gate(
     cleanup_postcheck = _summary(cleanup_postcheck_contract_packet or {})
     cleanup_completion = _summary(cleanup_completion_gate_packet or {})
     goal_api_surface = _summary(goal_api_surface_contract_packet or {})
+    release_source_of_truth = _summary(product_release_source_of_truth_packet or {})
+    release_source_of_truth_gate_present = product_release_source_of_truth_packet is not None
+    release_source_of_truth_ready = (
+        _text(release_source_of_truth.get("status")) == "product_release_source_of_truth_gate_ready"
+        and bool(release_source_of_truth.get("release_source_of_truth_ready") is True)
+        and _int(release_source_of_truth.get("blocker_count")) == 0
+    )
+    api_customer_flow = _summary(api_customer_flow_release_evidence_packet or {})
+    api_customer_flow_gate_present = api_customer_flow_release_evidence_packet is not None
+    api_customer_flow_ready = (
+        _text(api_customer_flow.get("status")) == "api_customer_flow_release_evidence_ready"
+        and bool(api_customer_flow.get("formal_release_evidence_ready") is True)
+        and bool(api_customer_flow.get("clean_install_flow_ready") is True)
+        and bool(api_customer_flow.get("result_manifest_signature_verified") is True)
+        and bool(api_customer_flow.get("bundle_validation_ready") is True)
+        and bool(api_customer_flow.get("restricted_unattended_runtime_ready") is True)
+        and _int(api_customer_flow.get("blocker_count")) == 0
+    )
     product_ai_architecture_gate_present = (
         product_ai_architecture_gap_packet is not None or product_ai_execution_backlog_packet is not None
     )
@@ -551,6 +575,45 @@ def build_goal_release_decision_gate(
             reason="The top-level local API must expose a verified read-only goal status surface before release can be claimed.",
         ),
     ]
+    if release_source_of_truth_gate_present:
+        rows.append(
+            _row(
+                lane_id="goal_release",
+                check="product_release_source_of_truth_ready",
+                artifact_path=product_release_source_of_truth_path,
+                observed=(
+                    f"{_text(release_source_of_truth.get('status')) or 'missing'};"
+                    f"ready={_bool_text(release_source_of_truth_ready)};"
+                    f"blocker_count={_int(release_source_of_truth.get('blocker_count'))};"
+                    f"stale_artifact_count={_int(release_source_of_truth.get('stale_artifact_count'))};"
+                    f"readme_drift_count={_int(release_source_of_truth.get('readme_drift_count'))};"
+                    f"missing_artifact_count={_int(release_source_of_truth.get('missing_artifact_count'))}"
+                ),
+                required="product_release_source_of_truth_gate_ready;release_source_of_truth_ready=true;blocker_count=0",
+                passed=release_source_of_truth_ready,
+                reason="Release must fail when any current artifact is stale against its source dependencies or README metrics drift from current JSON evidence.",
+            )
+        )
+    if api_customer_flow_gate_present:
+        rows.append(
+            _row(
+                lane_id="commercial_product_release",
+                check="api_customer_flow_release_evidence_ready",
+                artifact_path=api_customer_flow_release_evidence_path,
+                observed=(
+                    f"{_text(api_customer_flow.get('status')) or 'missing'};"
+                    f"formal_release_evidence_ready={_bool_text(api_customer_flow_ready)};"
+                    f"clean_install_flow_ready={_bool_text(bool(api_customer_flow.get('clean_install_flow_ready') is True))};"
+                    f"result_manifest_signature_verified={_bool_text(bool(api_customer_flow.get('result_manifest_signature_verified') is True))};"
+                    f"bundle_validation_ready={_bool_text(bool(api_customer_flow.get('bundle_validation_ready') is True))};"
+                    f"restricted_runtime={_bool_text(bool(api_customer_flow.get('restricted_unattended_runtime_ready') is True))};"
+                    f"blocker_count={_int(api_customer_flow.get('blocker_count'))}"
+                ),
+                required="api_customer_flow_release_evidence_ready with live job, signed result manifest, bundle validation, and restricted runtime readiness",
+                passed=api_customer_flow_ready,
+                reason="Customer-facing API release claims require live end-to-end evidence, not only static wiring or synthetic ledger sync.",
+            )
+        )
     if product_ai_architecture_gate_present:
         rows.append(
             _row(
@@ -609,6 +672,10 @@ def build_goal_release_decision_gate(
         next_required_items.append("product release evidence rollup")
     if not goal_api_surface_ready:
         next_required_items.append("goal API surface contract")
+    if release_source_of_truth_gate_present and not release_source_of_truth_ready:
+        next_required_items.append("product release source-of-truth gate")
+    if api_customer_flow_gate_present and not api_customer_flow_ready:
+        next_required_items.append("API customer-flow release evidence")
     if product_ai_architecture_gate_present and not product_ai_architecture_ready:
         next_required_items.append("product AI architecture gap closure")
     next_required_step = (
@@ -675,6 +742,27 @@ def build_goal_release_decision_gate(
         "source_goal_rollup_status": _text(rollup.get("status")),
         "source_goal_api_surface_contract_status": _text(goal_api_surface.get("status")),
         "goal_api_surface_ready": goal_api_surface_ready,
+        "product_release_source_of_truth_gate_present": release_source_of_truth_gate_present,
+        "product_release_source_of_truth_status": _text(release_source_of_truth.get("status")),
+        "product_release_source_of_truth_ready": release_source_of_truth_ready if release_source_of_truth_gate_present else None,
+        "product_release_source_of_truth_blocker_count": _int(release_source_of_truth.get("blocker_count")),
+        "product_release_source_of_truth_stale_artifact_count": _int(
+            release_source_of_truth.get("stale_artifact_count")
+        ),
+        "product_release_source_of_truth_readme_drift_count": _int(
+            release_source_of_truth.get("readme_drift_count")
+        ),
+        "api_customer_flow_release_evidence_gate_present": api_customer_flow_gate_present,
+        "api_customer_flow_release_evidence_status": _text(api_customer_flow.get("status")),
+        "api_customer_flow_release_evidence_ready": api_customer_flow_ready if api_customer_flow_gate_present else None,
+        "api_customer_flow_result_manifest_signature_verified": bool(
+            api_customer_flow.get("result_manifest_signature_verified") is True
+        ),
+        "api_customer_flow_bundle_validation_ready": bool(api_customer_flow.get("bundle_validation_ready") is True),
+        "api_customer_flow_restricted_runtime_ready": bool(
+            api_customer_flow.get("restricted_unattended_runtime_ready") is True
+        ),
+        "api_customer_flow_blocker_count": _int(api_customer_flow.get("blocker_count")),
         "product_ai_architecture_gate_present": product_ai_architecture_gate_present,
         "product_ai_architecture_ready": product_ai_architecture_ready if product_ai_architecture_gate_present else None,
         "product_ai_architecture_open_gap_count": _int(product_ai_architecture.get("open_gap_count")),
@@ -843,6 +931,19 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- blocker_count: `{s['blocker_count']}`",
         f"- source_goal_api_surface_contract_status: `{s['source_goal_api_surface_contract_status']}`",
         f"- goal_api_surface_ready: `{s['goal_api_surface_ready']}`",
+        f"- product_release_source_of_truth_gate_present: `{s['product_release_source_of_truth_gate_present']}`",
+        f"- product_release_source_of_truth_status: `{s['product_release_source_of_truth_status']}`",
+        f"- product_release_source_of_truth_ready: `{s['product_release_source_of_truth_ready']}`",
+        f"- product_release_source_of_truth_blocker_count: `{s['product_release_source_of_truth_blocker_count']}`",
+        f"- product_release_source_of_truth_stale_artifact_count: `{s['product_release_source_of_truth_stale_artifact_count']}`",
+        f"- product_release_source_of_truth_readme_drift_count: `{s['product_release_source_of_truth_readme_drift_count']}`",
+        f"- api_customer_flow_release_evidence_gate_present: `{s['api_customer_flow_release_evidence_gate_present']}`",
+        f"- api_customer_flow_release_evidence_status: `{s['api_customer_flow_release_evidence_status']}`",
+        f"- api_customer_flow_release_evidence_ready: `{s['api_customer_flow_release_evidence_ready']}`",
+        f"- api_customer_flow_result_manifest_signature_verified: `{s['api_customer_flow_result_manifest_signature_verified']}`",
+        f"- api_customer_flow_bundle_validation_ready: `{s['api_customer_flow_bundle_validation_ready']}`",
+        f"- api_customer_flow_restricted_runtime_ready: `{s['api_customer_flow_restricted_runtime_ready']}`",
+        f"- api_customer_flow_blocker_count: `{s['api_customer_flow_blocker_count']}`",
         f"- product_ai_architecture_gate_present: `{s['product_ai_architecture_gate_present']}`",
         f"- product_ai_architecture_ready: `{s['product_ai_architecture_ready']}`",
         f"- product_ai_architecture_open_gap_count: `{s['product_ai_architecture_open_gap_count']}`",
@@ -935,6 +1036,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--goal-api-surface-contract-json", default=DEFAULT_GOAL_API_SURFACE_CONTRACT_JSON)
     parser.add_argument("--product-ai-architecture-gap-json", default=DEFAULT_PRODUCT_AI_ARCHITECTURE_GAP_JSON)
     parser.add_argument("--product-ai-execution-backlog-json", default=DEFAULT_PRODUCT_AI_EXECUTION_BACKLOG_JSON)
+    parser.add_argument("--product-release-source-of-truth-json", default=DEFAULT_PRODUCT_RELEASE_SOURCE_OF_TRUTH_JSON)
+    parser.add_argument("--api-customer-flow-release-evidence-json", default=DEFAULT_API_CUSTOMER_FLOW_RELEASE_EVIDENCE_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -961,6 +1064,10 @@ def main(argv: list[str] | None = None) -> None:
         goal_api_surface_contract_packet=_read_json_if_present(args.goal_api_surface_contract_json),
         product_ai_architecture_gap_packet=_read_json_if_present(args.product_ai_architecture_gap_json),
         product_ai_execution_backlog_packet=_read_json_if_present(args.product_ai_execution_backlog_json),
+        product_release_source_of_truth_packet=_read_json_if_present(args.product_release_source_of_truth_json),
+        api_customer_flow_release_evidence_packet=_read_json_if_present(
+            args.api_customer_flow_release_evidence_json
+        ),
         product_pilot_path=args.product_pilot_json,
         product_architecture_path=args.product_architecture_json,
         product_commercial_independence_path=args.product_commercial_independence_json,
@@ -978,6 +1085,8 @@ def main(argv: list[str] | None = None) -> None:
         goal_api_surface_contract_path=args.goal_api_surface_contract_json,
         product_ai_architecture_gap_path=args.product_ai_architecture_gap_json,
         product_ai_execution_backlog_path=args.product_ai_execution_backlog_json,
+        product_release_source_of_truth_path=args.product_release_source_of_truth_json,
+        api_customer_flow_release_evidence_path=args.api_customer_flow_release_evidence_json,
     )
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])

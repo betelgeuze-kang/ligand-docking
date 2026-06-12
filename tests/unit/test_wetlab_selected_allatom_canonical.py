@@ -1,4 +1,4 @@
-from tools.wetlab_selected_allatom_canonical import resolve_selected_allatom_canonical
+from tools.wetlab.wetlab_selected_allatom_canonical import resolve_selected_allatom_canonical
 
 
 def test_claim_only_commercial_block_is_semi_hard_not_translation_hard() -> None:

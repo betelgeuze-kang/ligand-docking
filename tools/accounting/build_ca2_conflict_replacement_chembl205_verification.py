@@ -16,7 +16,7 @@ from tools.product.build_ca2_public_negative_evidence_overlay import (
     _direct_negative_like,
     _text,
 )
-from tools.accounting.build_ca2_conflict_replacement_shortlist import REPLACEMENTS
+from tools.product.build_ca2_conflict_replacement_shortlist import REPLACEMENTS
 
 ROOT = Path(__file__).resolve().parents[2]
 RUNS = Path("runs")

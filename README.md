@@ -196,7 +196,7 @@ Runtime artifacts under `runs/` are local and intentionally ignored by Git. The 
 | Restricted local delivery | Green | `runs/local_delivery_verdict_gate_current.json` | `delivery_ready=true`, `verdict=delivery_ready`, `p0_blocker_count=0` | Queue and verdict are synchronized green for the restricted local scope. |
 | Commercialization gap/readiness accounting | Closed for tracked local scope | `runs/commercialization_readiness_current.json`, `runs/commercialization_gap_burndown_current.json` | `tracked_readiness_accounting_closed=true`, `tracked_gap_accounting_closed=true`, `blocked_count=0`, `parked_or_review_only_blocked_count=2` | Active tracked blockers are zero; two legacy blocked-bucket rows remain parked/review-only audit entries, not delivery blockers. |
 | Delivery claim boundary | Restricted | `docs/local_delivery_claim_policy.md` | `kinase,gpcr,ion_channel` | Transporter, CA2/PXR, broader IDP, broad all-atom, broad platform, and unattended decision-making remain outside the claim. |
-| Accuracy parity | Green for tracked axes | `runs/accuracy_parity_scorecard_current.json` | `status=green`, `pass=5`, `blocked=0` | GPCR ranking, pose geometry, OpenMM, structure, and wetlab translation now pass the tracked scorecard gate. Router/platform deployment claims remain separate. |
+| Accuracy parity | Blocked for tracked axes | `runs/accuracy_parity_scorecard_current.json` | `status=blocked_accuracy_parity`, `pass=4`, `restricted_pass=0`, `blocked=1` | Ligand ranking claim promotion and ranking PR-AUC checks remain blockers. Pose geometry, OpenMM, structure, and wetlab translation pass the tracked scorecard gate. Router/platform deployment claims remain separate. |
 | Family refresh reproducibility | Green | `runs/family_expansion_refresh_current.json` | `overall_ok=true`, `step_count=137`, `failed_count=0` | Current packet chain is reproducible locally. |
 | Ligand scale-up suite | Green for tracked suite | `runs/ligand_scaleup_suite_status_current.json` | `commercialization_ready_suite_count=3`, `pending_suite_ids=[]` | Useful restricted-scale evidence, not broad commercial discovery parity. |
 | T. cruzi PDE selected all-atom | Green | `runs/wetlab_selected_allatom_gate_burndown_packet_current.json` | `hard_block_count=0`, `selected_allatom=pass` | The atomized local-min overlay closed the six selected all-atom hard blocks. |
@@ -275,7 +275,7 @@ Acceptable current wording:
 - T. cruzi PDE selected all-atom gate is closed with zero hard blocks.
 - OpenMM 11-target and structure deterministic true-metric scorecards are current green evidence.
 - GPCR A1 tracked ranking evidence is green on the 2026-05-18 independent repeat plus out-of-fold crossfit replay: PR-AUC `0.8719`, CI-low `0.7612`, top20 `1.00`.
-- The tracked commercial-tool accuracy parity scorecard is currently `status=green`, `pass=5/5`.
+- The tracked commercial-tool accuracy parity scorecard is currently `status=blocked_accuracy_parity`, `pass=4`, `restricted_pass=0`, `blocked=1`.
 
 Not acceptable yet:
 

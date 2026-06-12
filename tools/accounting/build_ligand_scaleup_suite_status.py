@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from tools.ligand_scaleup_surface_helpers import DEFAULT_GPCR_SCALEUP_GUARDRAIL_FRONTIER_JSON
+from tools.product.ligand_scaleup_surface_helpers import DEFAULT_GPCR_SCALEUP_GUARDRAIL_FRONTIER_JSON
 
 ROOT = Path(__file__).resolve().parents[2]
 

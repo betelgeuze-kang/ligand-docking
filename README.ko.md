@@ -152,7 +152,7 @@ manifest에 명시된 로컬 T. cruzi PDE OpenMM artifact가 존재하면 두 RE
 | 제한 로컬 납품 | Green | `runs/local_delivery_verdict_gate_current.json` | `delivery_ready=true`, `verdict=delivery_ready`, `p0_blocker_count=0` | 제한 로컬 scope에서는 queue와 verdict가 같은 green 상태입니다. |
 | 상용화 gap/readiness accounting | Tracked local scope closed | `runs/commercialization_readiness_current.json`, `runs/commercialization_gap_burndown_current.json` | `tracked_readiness_accounting_closed=true`, `tracked_gap_accounting_closed=true`, `blocked_count=0`, `parked_or_review_only_blocked_count=2` | active tracked blocker는 0개입니다. blocked bucket에 남은 2개 row는 delivery blocker가 아니라 parked/review-only 감사 항목입니다. |
 | 납품 claim 경계 | Restricted | `docs/local_delivery_claim_policy.md` | `kinase,gpcr,ion_channel` | transporter, CA2/PXR, broad IDP, broad all-atom, broad platform, unattended decision-making은 claim 밖입니다. |
-| 상용툴 정확도 parity | Green for tracked axes | `runs/accuracy_parity_scorecard_current.json` | `status=green`, `pass=5`, `blocked=0` | GPCR ranking, pose geometry, OpenMM, structure, wetlab translation 축이 현재 scorecard gate를 통과했습니다. router/platform 배포 claim은 별도입니다. |
+| 상용툴 정확도 parity | Blocked for tracked axes | `runs/accuracy_parity_scorecard_current.json` | `status=blocked_accuracy_parity`, `pass=4`, `restricted_pass=0`, `blocked=1` | ligand ranking claim promotion과 ranking PR-AUC 계열이 아직 blocker입니다. pose geometry, OpenMM, structure, wetlab translation 축은 pass입니다. router/platform 배포 claim은 별도입니다. |
 | family refresh 재현성 | Green | `runs/family_expansion_refresh_current.json` | `overall_ok=true`, `step_count=137`, `failed_count=0` | 현재 packet chain은 로컬에서 재현 가능합니다. |
 | ligand scale-up suite | Tracked suite green | `runs/ligand_scaleup_suite_status_current.json` | `commercialization_ready_suite_count=3`, `pending_suite_ids=[]` | 제한된 scale evidence이며 broad discovery parity 주장은 아닙니다. |
 | T. cruzi PDE selected all-atom | Green | `runs/wetlab_selected_allatom_gate_burndown_packet_current.json` | `hard_block_count=0`, `selected_allatom=pass` | atomized local-min overlay로 selected all-atom hard block 6개를 닫았습니다. |
@@ -231,7 +231,7 @@ PY
 - T. cruzi PDE selected all-atom gate는 hard block 0개로 닫혔습니다.
 - OpenMM 11-target과 structure deterministic true-metric scorecard는 최신 green evidence입니다.
 - GPCR A1 tracked ranking evidence는 2026-05-18 independent repeat + out-of-fold crossfit replay에서 PR-AUC `0.8719`, CI-low `0.7612`, top20 `1.00`으로 green입니다.
-- 현재 tracked 상용툴 정확도 parity scorecard는 `status=green`, `pass=5/5`입니다.
+- 현재 tracked 상용툴 정확도 parity scorecard는 `status=blocked_accuracy_parity`, `pass=4`, `restricted_pass=0`, `blocked=1`입니다.
 
 아직 쓰면 안 되는 표현:
 

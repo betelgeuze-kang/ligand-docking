@@ -9,11 +9,11 @@ from typing import Any
 
 from tools.wetlab_target_render_utils import maybe_load_json, resolve
 from tools.wetlab.wetlab_pose_validation_utils import build_pose_validation_fields_from_summary
-from tools.wetlab_selected_allatom_canonical import (
+from tools.wetlab.wetlab_selected_allatom_canonical import (
     resolve_selected_allatom_canonical,
     selected_allatom_green_next_required_step,
 )
-from tools.wetlab_selected_allatom_visual import (
+from tools.wetlab.wetlab_selected_allatom_visual import (
     resolve_selected_allatom_visual_bundle,
     selected_allatom_visual_surface_fields,
 )

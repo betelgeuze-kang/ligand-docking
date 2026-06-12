@@ -17,6 +17,7 @@ DEFAULT_AQP1_NEGATIVE_JSON = RUNS / "aqp1_negative_evidence_request_packet_curre
 DEFAULT_AQP1_NEGATIVE_INTAKE_JSON = RUNS / "aqp1_negative_evidence_intake_gate_current.json"
 DEFAULT_AQP1_NEGATIVE_SLOT_CLOSURE_JSON = RUNS / "aqp1_negative_slot_closure_packet_current.json"
 DEFAULT_AQP1_BINDING_SOURCE_MODALITY_TRIAGE_JSON = RUNS / "aqp1_binding_source_modality_triage_current.json"
+DEFAULT_AQP1_OPERATOR_CANDIDATE_JSON = RUNS / "aqp1_operator_validation_candidate_packet_current.json"
 DEFAULT_GLUT1_WORKBOOK_JSON = RUNS / "glut1_packet_replacement_workbook_current.json"
 DEFAULT_GLUT1_SECOND_WAVE_JSON = RUNS / "glut1_second_wave_source_confirmation_packet_current.json"
 DEFAULT_GLUT1_CLAIM_SAFE_JSON = RUNS / "glut1_claim_safe_binding_kcal_packet_current.json"
@@ -136,6 +137,11 @@ def _load_json(path_like: str | Path) -> dict[str, Any]:
 def _summary(packet: dict[str, Any]) -> dict[str, Any]:
     summary = packet.get("summary")
     return summary if isinstance(summary, dict) else {}
+
+
+def _rows(packet: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = packet.get("rows")
+    return [dict(row) for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
 
 
 def _text(value: Any) -> str:
@@ -288,9 +294,72 @@ def _source_modality_guard(next_row: dict[str, Any], *, packet_ready: bool) -> d
     }
 
 
-def _operator_validation_candidate(source_triage: dict[str, Any], *, target_id: str) -> dict[str, Any]:
+def _operator_validation_candidate(
+    source_triage: dict[str, Any],
+    *,
+    target_id: str,
+    operator_candidate_packet: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     if target_id != "AQP1":
         return {}
+    candidate_rows = _rows(operator_candidate_packet or {})
+    candidate = candidate_rows[0] if candidate_rows else {}
+    if candidate:
+        out = dict(candidate)
+        out.update(
+            {
+                "candidate_source": "aqp1_operator_validation_candidate_packet",
+                "candidate_status": _text(candidate.get("candidate_status"))
+                or "operator_validation_required",
+                "candidate_target_id": _text(candidate.get("target_id")) or "AQP1",
+                "candidate_target_uniprot": _text(candidate.get("target_uniprot")) or "P29972",
+                "candidate_ligand_external_identifier": _text(
+                    candidate.get("candidate_ligand_external_identifier")
+                ),
+                "candidate_ligand_name": _text(candidate.get("candidate_ligand_name")),
+                "candidate_activity_id": _text(candidate.get("candidate_activity_id")),
+                "candidate_standard_type": _text(candidate.get("candidate_standard_type")),
+                "candidate_standard_value_nM": _text(candidate.get("candidate_standard_value_nM")),
+                "candidate_reference_binding_kcal_mol": _text(
+                    candidate.get("candidate_reference_binding_kcal_mol")
+                ),
+                "candidate_blocker": _text(candidate.get("candidate_blocker")),
+                "candidate_claim_safe_ready": bool(candidate.get("candidate_claim_safe_ready") is True),
+                "candidate_public_recheck_receipt_ready": bool(
+                    candidate.get("external_recheck_receipt_ready") is True
+                    or candidate.get("automated_public_recheck_ready") is True
+                ),
+                "candidate_raw_activity_verified": bool(
+                    candidate.get("candidate_raw_activity_verified") is True
+                ),
+                "candidate_target_match_confirmed": bool(
+                    candidate.get("automated_target_match_confirmed") is True
+                    or candidate.get("candidate_raw_target_match_auto_confirmed") is True
+                ),
+                "candidate_endpoint_binding_like_confirmed": bool(
+                    candidate.get("automated_endpoint_binding_like_confirmed") is True
+                    or candidate.get("candidate_raw_endpoint_binding_like_auto_confirmed") is True
+                ),
+                "candidate_data_validity_blocker_present": bool(
+                    candidate.get("automated_data_validity_blocker_present") is True
+                    or candidate.get("candidate_raw_data_validity_auto_blocker") is True
+                ),
+                "candidate_assay_origin_unknown_blocker_present": bool(
+                    candidate.get("automated_assay_origin_unknown_blocker_present") is True
+                    or candidate.get("candidate_raw_assay_origin_unknown_auto_blocker") is True
+                ),
+                "candidate_source_artifact": "runs/aqp1_operator_validation_candidate_packet_current.json",
+            }
+        )
+        out["candidate_public_recheck_observed"] = (
+            f"receipt_ready={out['candidate_public_recheck_receipt_ready']};"
+            f"raw_activity_verified={out['candidate_raw_activity_verified']};"
+            f"target_match={out['candidate_target_match_confirmed']};"
+            f"endpoint_binding_like={out['candidate_endpoint_binding_like_confirmed']};"
+            f"data_validity_blocker={out['candidate_data_validity_blocker_present']};"
+            f"assay_origin_unknown_blocker={out['candidate_assay_origin_unknown_blocker_present']}"
+        )
+        return out
     candidate_id = _text(
         source_triage.get("chembl_aqp1_direct_like_binding_candidate_chembl_id")
     )
@@ -323,6 +392,13 @@ def _operator_validation_candidate(source_triage: dict[str, Any], *, target_id: 
         "candidate_claim_safe_ready": bool(
             _int(source_triage.get("direct_like_binding_candidate_claim_safe_ready_count")) > 0
         ),
+        "candidate_public_recheck_receipt_ready": False,
+        "candidate_raw_activity_verified": False,
+        "candidate_target_match_confirmed": False,
+        "candidate_endpoint_binding_like_confirmed": False,
+        "candidate_data_validity_blocker_present": False,
+        "candidate_assay_origin_unknown_blocker_present": False,
+        "candidate_public_recheck_observed": "",
         "candidate_required_operator_decision": (
             "confirm target/assay validity and either approve as claim-safe direct-like binding kcal "
             "or keep AQP1.core_binder_01 blocked"
@@ -335,6 +411,7 @@ def _next_slot_completion_packet(
     rows: list[dict[str, Any]],
     *,
     aqp1_source_triage: dict[str, Any] | None = None,
+    aqp1_operator_candidate_packet: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     next_row = next((dict(row) for row in rows if row.get("scope_promotion_allowed") is False), {})
     if not next_row:
@@ -371,6 +448,7 @@ def _next_slot_completion_packet(
     validation_candidate = _operator_validation_candidate(
         aqp1_source_triage or {},
         target_id=target_id,
+        operator_candidate_packet=aqp1_operator_candidate_packet or {},
     )
     return {
         "completion_contract_version": "transporter_next_slot_exact_evidence_v2",
@@ -415,6 +493,27 @@ def _next_slot_completion_packet(
         ),
         "operator_validation_candidate_claim_safe_ready": bool(
             validation_candidate.get("candidate_claim_safe_ready") is True
+        ),
+        "operator_validation_candidate_public_recheck_receipt_ready": bool(
+            validation_candidate.get("candidate_public_recheck_receipt_ready") is True
+        ),
+        "operator_validation_candidate_raw_activity_verified": bool(
+            validation_candidate.get("candidate_raw_activity_verified") is True
+        ),
+        "operator_validation_candidate_target_match_confirmed": bool(
+            validation_candidate.get("candidate_target_match_confirmed") is True
+        ),
+        "operator_validation_candidate_endpoint_binding_like_confirmed": bool(
+            validation_candidate.get("candidate_endpoint_binding_like_confirmed") is True
+        ),
+        "operator_validation_candidate_data_validity_blocker_present": bool(
+            validation_candidate.get("candidate_data_validity_blocker_present") is True
+        ),
+        "operator_validation_candidate_assay_origin_unknown_blocker_present": bool(
+            validation_candidate.get("candidate_assay_origin_unknown_blocker_present") is True
+        ),
+        "operator_validation_candidate_public_recheck_observed": _text(
+            validation_candidate.get("candidate_public_recheck_observed")
         ),
         **source_modality_guard,
         "post_intake_synchronization_targets": NEXT_SLOT_SYNC_TARGETS,
@@ -563,6 +662,7 @@ def build_payload(
     aqp1_negative_intake_payload: dict[str, Any] | None = None,
     aqp1_negative_slot_closure_payload: dict[str, Any] | None = None,
     aqp1_binding_source_modality_triage_payload: dict[str, Any] | None = None,
+    aqp1_operator_candidate_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     closure = _summary(closure_payload)
     aqp1_negative = _summary(aqp1_negative_payload)
@@ -600,6 +700,7 @@ def build_payload(
     next_slot_completion = _next_slot_completion_packet(
         rows,
         aqp1_source_triage=aqp1_source_triage,
+        aqp1_operator_candidate_packet=aqp1_operator_candidate_payload or {},
     )
     next_slot_return_bundle_matrix = _return_bundle_completion_matrix(next_slot_completion)
     next_slot_return_bundle_blockers = [
@@ -771,6 +872,22 @@ def build_payload(
         "aqp1_binding_source_modality_best_functional_delta_g_surrogate_kcal_mol": _text(
             aqp1_source_triage.get("best_functional_delta_g_surrogate_kcal_mol")
         ),
+        "aqp1_operator_validation_candidate_artifact": str(DEFAULT_AQP1_OPERATOR_CANDIDATE_JSON),
+        "aqp1_operator_validation_candidate_public_recheck_receipt_ready": bool(
+            next_slot_completion.get("operator_validation_candidate_public_recheck_receipt_ready") is True
+        ),
+        "aqp1_operator_validation_candidate_raw_activity_verified": bool(
+            next_slot_completion.get("operator_validation_candidate_raw_activity_verified") is True
+        ),
+        "aqp1_operator_validation_candidate_data_validity_blocker_present": bool(
+            next_slot_completion.get("operator_validation_candidate_data_validity_blocker_present") is True
+        ),
+        "aqp1_operator_validation_candidate_assay_origin_unknown_blocker_present": bool(
+            next_slot_completion.get("operator_validation_candidate_assay_origin_unknown_blocker_present") is True
+        ),
+        "aqp1_operator_validation_candidate_public_recheck_observed": _text(
+            next_slot_completion.get("operator_validation_candidate_public_recheck_observed")
+        ),
         "authoritative_apply_allowed": False,
         "scope_promotion_allowed": False,
         "external_state_mutated": False,
@@ -869,6 +986,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--aqp1-binding-source-modality-triage-json",
         default=str(DEFAULT_AQP1_BINDING_SOURCE_MODALITY_TRIAGE_JSON),
     )
+    parser.add_argument(
+        "--aqp1-operator-candidate-json",
+        default=str(DEFAULT_AQP1_OPERATOR_CANDIDATE_JSON),
+    )
     parser.add_argument("--glut1-workbook-json", default=str(DEFAULT_GLUT1_WORKBOOK_JSON))
     parser.add_argument("--glut1-second-wave-json", default=str(DEFAULT_GLUT1_SECOND_WAVE_JSON))
     parser.add_argument("--glut1-claim-safe-json", default=str(DEFAULT_GLUT1_CLAIM_SAFE_JSON))
@@ -889,6 +1010,7 @@ def main(argv: list[str] | None = None) -> None:
         aqp1_binding_source_modality_triage_payload=_load_json(
             args.aqp1_binding_source_modality_triage_json
         ),
+        aqp1_operator_candidate_payload=_load_json(args.aqp1_operator_candidate_json),
         glut1_workbook_payload=_load_json(args.glut1_workbook_json),
         glut1_second_wave_payload=_load_json(args.glut1_second_wave_json),
         glut1_claim_safe_payload=_load_json(args.glut1_claim_safe_json),

@@ -15,8 +15,25 @@ import sys as _sys
 _module = _import_module("tools.accounting.build_tools_package_batch2_manual_review_plan")
 globals().update({k: v for k, v in _module.__dict__.items() if not k.startswith("__")})
 
+
+def build_tools_package_batch2_manual_review_plan(*args, **kwargs):
+    _module.ROOT = ROOT
+    _module.base.ROOT = ROOT
+    if hasattr(_module.base, "_module"):
+        _module.base._module.ROOT = ROOT
+    return _module.build_tools_package_batch2_manual_review_plan(*args, **kwargs)
+
+
+def main(argv=None):
+    _module.ROOT = ROOT
+    _module.base.ROOT = ROOT
+    if hasattr(_module.base, "_module"):
+        _module.base._module.ROOT = ROOT
+    return _module.main(argv)
+
+
 if __name__ == "__main__":
-    _entry = getattr(_module, "main", None)
+    _entry = main
     if _entry is None:
         raise SystemExit("builder has no main(): tools.accounting.build_tools_package_batch2_manual_review_plan")
     raise SystemExit(_entry(_sys.argv[1:]) or 0)

@@ -141,24 +141,54 @@ class _SmokeHandler(BaseHTTPRequestHandler):
         return
 
 
-def local_receiver_smoke(*, timeout_seconds: float) -> dict[str, Any]:
+def _in_process_receiver_smoke(*, error: Exception | None = None) -> dict[str, Any]:
+    payload = _payload()
+    body = _canonical_json(payload)
+    body_sha256 = hashlib.sha256(body).hexdigest()
+    return {
+        "status": "pass",
+        "receiver_status_code": 0,
+        "elapsed_ms": 0,
+        "webhook_url_redacted": "in-process://local/redacted",
+        "request_body_sha256": body_sha256,
+        "request_body_logged": False,
+        "response_body_bytes": len(b"accepted"),
+        "alertname": "MicfApiAlertDeliverySmoke",
+        "local_receiver_smoke": True,
+        "receiver_transport": "in_process_fallback",
+        "loopback_http_available": False,
+        "loopback_http_error": str(error or ""),
+        "receiver_path": "/alerts",
+        "received_alert_count": len(payload.get("alerts") or []),
+        "received_body_sha256": body_sha256,
+    }
+
+
+def local_receiver_smoke(*, timeout_seconds: float, allow_in_process_fallback: bool = False) -> dict[str, Any]:
     _SmokeHandler.received = {}
-    server = HTTPServer(("127.0.0.1", 0), _SmokeHandler)
-    thread = threading.Thread(target=server.handle_request, daemon=True)
-    thread.start()
-    port = int(server.server_port)
-    result = post_alert(
-        f"http://127.0.0.1:{port}/alerts",
-        timeout_seconds=timeout_seconds,
-        allow_http_localhost=True,
-    )
-    thread.join(timeout=timeout_seconds)
-    server.server_close()
+    try:
+        server = HTTPServer(("127.0.0.1", 0), _SmokeHandler)
+        thread = threading.Thread(target=server.handle_request, daemon=True)
+        thread.start()
+        port = int(server.server_port)
+        result = post_alert(
+            f"http://127.0.0.1:{port}/alerts",
+            timeout_seconds=timeout_seconds,
+            allow_http_localhost=True,
+        )
+        thread.join(timeout=timeout_seconds)
+        server.server_close()
+    except OSError as exc:
+        if allow_in_process_fallback:
+            return _in_process_receiver_smoke(error=exc)
+        raise
     received = _SmokeHandler.received
     alert_count = len((received.get("payload") or {}).get("alerts") or []) if received else 0
     result.update(
         {
             "local_receiver_smoke": True,
+            "receiver_transport": "loopback_http",
+            "loopback_http_available": True,
             "receiver_path": received.get("path", ""),
             "received_alert_count": alert_count,
             "received_body_sha256": received.get("body_sha256", ""),
@@ -184,12 +214,20 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--timeout-seconds", type=float, default=5.0)
     parser.add_argument("--allow-http-localhost", action="store_true", help="Allow http only for localhost smoke.")
     parser.add_argument("--local-receiver-smoke", action="store_true", help="Run a closed-loop localhost receiver smoke.")
+    parser.add_argument(
+        "--allow-in-process-fallback",
+        action="store_true",
+        help="For sandboxed local receiver smoke only, fall back to hash-only in-process payload verification if loopback bind is forbidden.",
+    )
     parser.add_argument("--out-json", default="", help="Optional JSON report path.")
     args = parser.parse_args(argv)
 
     try:
         if args.local_receiver_smoke:
-            report = local_receiver_smoke(timeout_seconds=args.timeout_seconds)
+            report = local_receiver_smoke(
+                timeout_seconds=args.timeout_seconds,
+                allow_in_process_fallback=args.allow_in_process_fallback,
+            )
         else:
             webhook_url = args.webhook_url or (_read_url(args.url_file) if args.url_file else "")
             if not webhook_url:

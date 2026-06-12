@@ -15,8 +15,25 @@ import sys as _sys
 _module = _import_module("tools.accounting.build_nightly_stage6_top_level_reentry_packet")
 globals().update({k: v for k, v in _module.__dict__.items() if not k.startswith("__")})
 
+
+def _sync_module_state():
+    for _name in ("ROOT", "RUNS"):
+        if _name in globals():
+            setattr(_module, _name, globals()[_name])
+
+
+def _resolve_top_level_summary_artifact(*args, **kwargs):
+    _sync_module_state()
+    return _module._resolve_top_level_summary_artifact(*args, **kwargs)
+
+
+def main(*args, **kwargs):
+    _sync_module_state()
+    return _module.main(*args, **kwargs)
+
+
 if __name__ == "__main__":
-    _entry = getattr(_module, "main", None)
+    _entry = main
     if _entry is None:
         raise SystemExit("builder has no main(): tools.accounting.build_nightly_stage6_top_level_reentry_packet")
     raise SystemExit(_entry(_sys.argv[1:]) or 0)
