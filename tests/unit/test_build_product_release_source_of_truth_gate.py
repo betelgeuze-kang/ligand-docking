@@ -256,8 +256,14 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "product_launch_r4_preflight" in artifact_ids
     assert "engine_refinement_claim_promotion_action_board" in artifact_ids
     assert "engine_refinement_claim_evidence_receipt" in artifact_ids
+    assert "product_scope_breadth_closure_checklist" in artifact_ids
+    assert "product_scope_breadth_evidence_receipt" in artifact_ids
+    assert "goal_api_surface_contract" in artifact_ids
+    assert "goal_bottleneck_briefing" in artifact_ids
     assert "python3 tools/build_api_runner_profile_promotion_operator_receipt.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "product_release_bundle_semantic_ready" in status_ids
+    assert "goal_api_surface_contract_semantic_ready" in status_ids
+    assert "goal_bottleneck_briefing_semantic_ready" in status_ids
     goal_action_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "goal_operator_action_board"
     )
@@ -268,11 +274,37 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert "runs/goal_operator_action_board_current.json" not in goal_audit_spec["depends_on"]
     assert "runs/engine_refinement_tier_readiness_current.json" in goal_audit_spec["depends_on"]
+    scope_closure_spec = next(
+        spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_scope_breadth_closure_checklist"
+    )
+    assert "runs/transporter_slot_assignment_candidate_workbook_current.json" in scope_closure_spec["depends_on"]
+    assert "runs/transporter_manual_review_intake_template_current.json" in scope_closure_spec["depends_on"]
+    scope_receipt_spec = next(
+        spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_scope_breadth_evidence_receipt"
+    )
+    assert "config/product_scope_breadth_evidence_receipt_current.csv" in scope_receipt_spec["depends_on"]
+    assert "runs/product_scope_breadth_closure_checklist_current.json" in scope_receipt_spec["depends_on"]
+    goal_api_surface_spec = next(
+        spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "goal_api_surface_contract"
+    )
+    assert "api/goal.py" in goal_api_surface_spec["depends_on"]
+    assert "api/main.py" in goal_api_surface_spec["depends_on"]
+    assert "api/security.py" in goal_api_surface_spec["depends_on"]
+    goal_bottleneck_spec = next(
+        spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "goal_bottleneck_briefing"
+    )
+    assert "runs/product_goal_completion_audit_current.json" in goal_bottleneck_spec["depends_on"]
+    assert "runs/goal_operator_action_board_current.json" in goal_bottleneck_spec["depends_on"]
+    assert "runs/goal_operator_intake_kit_current/manifest.json" in goal_bottleneck_spec["depends_on"]
+    assert "runs/product_public_benchmark_work_order_current.json" in goal_bottleneck_spec["depends_on"]
+    assert "runs/goal_release_decision_gate_current.json" not in goal_bottleneck_spec["depends_on"]
+    assert "runs/product_release_source_of_truth_gate_current.json" not in goal_bottleneck_spec["depends_on"]
     release_bundle_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_release_bundle"
     )
     assert "runs/product_goal_completion_audit_current.json" in release_bundle_spec["depends_on"]
     assert "runs/engine_refinement_claim_evidence_receipt_current.json" in release_bundle_spec["depends_on"]
+    assert "runs/product_scope_breadth_evidence_receipt_current.json" in release_bundle_spec["depends_on"]
     evidence_receipt_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "engine_refinement_claim_evidence_receipt"
     )
@@ -285,8 +317,30 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/product/build_product_launch_r4_preflight.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_ledger_privacy_scan.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_product_scope_breadth_closure_checklist.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_product_scope_breadth_evidence_receipt.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_goal_api_surface_contract.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_goal_bottleneck_briefing.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_scope_breadth_closure_checklist.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_scope_breadth_evidence_receipt.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_scope_breadth_evidence_receipt.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 deploy/product_release_bundle.py")
+    )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_goal_completion_audit.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_operator_action_board.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_operator_action_board.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_bottleneck_briefing.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_bottleneck_briefing.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_release_source_of_truth_gate.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_api_surface_contract.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_release_source_of_truth_gate.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_api_surface_contract.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_release_decision_gate.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/product/build_engine_refinement_tier_readiness.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/product/build_engine_refinement_claim_evidence_receipt.py")

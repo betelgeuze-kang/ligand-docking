@@ -146,6 +146,19 @@
   active 병목으로 우선 노출한다. 따라서 restricted release가 green인 상태에서도
   full-scope transporter evidence와 refine-tier claim-grade calibration/parity
   미완료가 상위 상태 API에서 사라지지 않는다.
+- `tools/product/build_product_scope_breadth_evidence_receipt.py`와
+  `config/product_scope_breadth_evidence_receipt_current.csv`는 R8 full-scope
+  blocker별 operator evidence receipt를 R9 claim-evidence receipt와 같은
+  fail-closed 경계로 분리한다. 현재 receipt는 placeholder evidence를 막아
+  `blocked_product_scope_breadth_evidence_receipt`,
+  `full_scope_evidence_receipt_ready=false`, `blocked_row_count=6`이다.
+- `product_release_source_of_truth_gate_current.json`은
+  `product_scope_breadth_closure_checklist_current.json`,
+  `product_scope_breadth_evidence_receipt_current.json`,
+  `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`의
+  freshness 및 semantic-ready 상태를 함께 검증한다. 최신 source-of-truth refresh는
+  `row_count=42`, `pass_count=42`, `blocker_count=0`으로, R8 receipt와 상위 상태
+  API/병목 visibility가 release freshness 체인 안에 들어와 있다.
 - `tools/product/build_refine_tier_public_benchmark_readiness.py`: curated 공개
   pose/free-energy benchmark intake를 별도 fail-closed gate로 판정한다.
   `config/refine_tier_public_benchmark_intake_current.csv`는 required column header를

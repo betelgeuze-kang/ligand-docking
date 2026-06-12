@@ -40,6 +40,7 @@ DEFAULT_ARTIFACTS = {
     "product_launch_r4_preflight": "runs/product_launch_r4_preflight_current.json",
     "engine_refinement_claim_promotion_action_board": "runs/engine_refinement_claim_promotion_action_board_current.csv",
     "engine_refinement_claim_evidence_receipt": "runs/engine_refinement_claim_evidence_receipt_current.json",
+    "product_scope_breadth_evidence_receipt": "runs/product_scope_breadth_evidence_receipt_current.json",
     "product_goal_completion_audit": "runs/product_goal_completion_audit_current.json",
 }
 APPROVAL_TOKENS = [
@@ -134,9 +135,21 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
     engine_claim_evidence_receipt = _summary(
         _read_json(_resolve(DEFAULT_ARTIFACTS["engine_refinement_claim_evidence_receipt"]))
     )
+    scope_evidence_receipt = _summary(
+        _read_json(_resolve(DEFAULT_ARTIFACTS["product_scope_breadth_evidence_receipt"]))
+    )
     goal_audit_payload = _read_json(_resolve(DEFAULT_ARTIFACTS["product_goal_completion_audit"]))
     goal_audit = _summary(goal_audit_payload)
     goal_audit_rows = goal_audit_payload.get("rows") if isinstance(goal_audit_payload.get("rows"), list) else []
+    full_scope_row = next(
+        (
+            row
+            for row in goal_audit_rows
+            if isinstance(row, dict)
+            and row.get("requirement_id") == "R8_full_scope_claim_closure"
+        ),
+        {},
+    )
     engine_claim_row = next(
         (
             row
@@ -420,10 +433,31 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
             ),
         },
         {
+            "check": "product_scope_breadth_evidence_receipt_recorded",
+            "passed": (
+                scope_evidence_receipt.get("status")
+                in {"blocked_product_scope_breadth_evidence_receipt", "product_scope_breadth_evidence_receipt_ready"}
+                and int(scope_evidence_receipt.get("required_scope_blocker_count") or 0) == 6
+                and int(scope_evidence_receipt.get("receipt_row_count") or 0) >= 6
+                and int(scope_evidence_receipt.get("missing_required_scope_blocker_count") or 0) == 0
+                and scope_evidence_receipt.get("external_state_mutated") is False
+            ),
+            "observed": (
+                f"receipt_status={scope_evidence_receipt.get('status')};"
+                f"receipt_ready={scope_evidence_receipt.get('full_scope_evidence_receipt_ready')};"
+                f"blocked_row_count={scope_evidence_receipt.get('blocked_row_count')};"
+                f"blocker_count={scope_evidence_receipt.get('blocker_count')};"
+                f"required_scope_blocker_count={scope_evidence_receipt.get('required_scope_blocker_count')}"
+            ),
+        },
+        {
             "check": "product_goal_completion_audit_full_claim_boundary_recorded",
             "passed": (
                 goal_audit.get("status") == "blocked_product_goal_completion_audit"
                 and goal_audit.get("goal_complete") is False
+                and full_scope_row.get("status") == "fail"
+                and full_scope_row.get("release_blocker") is True
+                and full_scope_row.get("blocker") == "full_scope_claim_closure_not_ready"
                 and goal_audit.get("engine_refinement_claim_promotion_ready") is False
                 and int(goal_audit.get("engine_refinement_claim_promotion_blocker_count") or 0) >= 6
                 and engine_claim_row.get("status") == "fail"
@@ -433,6 +467,8 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
             "observed": (
                 f"goal_audit_status={goal_audit.get('status')};"
                 f"goal_complete={goal_audit.get('goal_complete')};"
+                f"r8_status={full_scope_row.get('status')};"
+                f"r8_release_blocker={full_scope_row.get('release_blocker')};"
                 f"engine_refinement_claim_promotion_ready="
                 f"{goal_audit.get('engine_refinement_claim_promotion_ready')};"
                 f"engine_refinement_claim_promotion_blocker_count="

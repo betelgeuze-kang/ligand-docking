@@ -435,6 +435,24 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `completion_audit_release_blocker` 병목으로 노출한다. `/goal/status`도 active
   bottleneck briefing이 있으면 intake/action board의 오래된 primary action보다 이
   full-commercial 병목 primary를 우선 표시한다.
+  `tools/product/build_product_scope_breadth_evidence_receipt.py`와
+  `config/product_scope_breadth_evidence_receipt_current.csv`는 R8 full-scope
+  blocker 6종(`direct_binding_evidence_missing`,
+  `exact_negative_quantitative_value_missing`,
+  `manual_identity_scaffold_confirmation_required`,
+  `scientific_domain_gate_not_ready`,
+  `allowed_scope_family_count_too_narrow`,
+  `explicit_general_platform_flag_missing`)에 대한 operator evidence receipt를
+  별도 fail-closed gate로 분리한다. 최신
+  `runs/product_scope_breadth_evidence_receipt_current.json`은 placeholder evidence를
+  막아 `blocked_product_scope_breadth_evidence_receipt`,
+  `full_scope_evidence_receipt_ready=false`, `blocked_row_count=6`을 기록한다.
+  `product_release_source_of_truth_gate_current.json`은 이제
+  `product_scope_breadth_closure_checklist_current.json`,
+  `product_scope_breadth_evidence_receipt_current.json`,
+  `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`을
+  freshness row 및 semantic-ready row로 함께 검증해, R8 receipt와 상위 상태 API/병목
+  브리핑 자체가 릴리스 freshness 감시 밖으로 빠지지 않게 한다.
   `tools/product/build_refine_tier_public_benchmark_readiness.py`는 curated 공개
   pose/free-energy benchmark intake를 별도 fail-closed gate로 고정한다.
   `config/refine_tier_public_benchmark_intake_current.csv`는 required column header를
@@ -757,10 +775,10 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   enablement work order, API runner profile promotion readiness gate/operator template,
   rollback/rollout runbook, Docker/K8s/compose artifact hash, systemd API server/worker
   unit/env example, viewer vendor manifest/notice, viewer asset base URL decision,
-  product launch R4 preflight
+  product launch R4 preflight, product scope-breadth evidence receipt
   artifact를 하나의 release bundle manifest로 묶고 operator promotion policy를
-  `operator_approval_required`로 고정한다. 최신 상태는 `artifact_count=26`,
-  `check_count=19`, `pass_count=19`, `blocker_count=0`이다.
+  `operator_approval_required`로 고정한다. 최신 상태는 `artifact_count=27`,
+  `check_count=20`, `pass_count=20`, `blocker_count=0`이다.
 - `deploy/docker-compose.product.yml`, `deploy/k8s/configmap.yaml`,
   `deploy/systemd/api-server.env.example`, `deploy/systemd/api-worker.env.example`은
   `PRODUCT_API_TLS_TERMINATION_OPERATOR_VERIFIED=1`을 product deployment default로
@@ -777,8 +795,10 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   readiness, external mutation guard를 R4 직전 단일 preflight로 묶는다. 최신 상태는
   `product_launch_r4_preflight_ready`, `pass_count=7/7`, `blocker_count=0`이다.
 - `tools/run_product_release_current_refresh.py --execute`는 source-of-truth 순서에
-  R4 preflight와 최종 release bundle 재생성을 포함하며, 최신 실행 결과는
-  `product_release_current_refresh_verified`, `command_count=36`, `executed_count=36`,
+  R4 preflight, scope-breadth closure checklist, scope-breadth evidence receipt,
+  goal API surface contract, bottleneck briefing, 최종 release bundle 재생성을 포함하며,
+  최신 실행 결과는
+  `product_release_current_refresh_verified`, `command_count=40`, `executed_count=40`,
   `failed_count=0`, `final_gate_verification_ready=true`, `final_gate_blocker_count=0`이다.
 
 **병목 원인**
@@ -801,8 +821,9 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
 - Model registry + signed artifact + rollback은 1차 완료; 다음은 operator promotion
   policy + release bundle linkage와 rollout execution readiness gate는 1차 완료;
   R4 launch preflight도 1차 완료. 다음은 explicit R4/operator-approved rollout 실행 smoke.
-- release source-of-truth gate는 R4 preflight 포함 refresh 이후
-  `product_release_source_of_truth_gate_ready`, `pass_count=36/36`,
+- release source-of-truth gate는 R4 preflight, R8 scope-breadth receipt, goal
+  API/bottleneck visibility 포함 refresh 이후
+  `product_release_source_of_truth_gate_ready`, `pass_count=42/42`,
   `blocker_count=0`, `stale_artifact_count=0`으로 재검증됐다.
 - `prometheus_client` 기반 실제 metrics endpoint는 1차 완료.
 - Alert rules + paged webhook receiver + closed-loop alert delivery smoke는 1차 완료;
@@ -816,7 +837,8 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `hard_blocker_count=0`, `operator_review_item_count=1`).
 - release bundle은 systemd API server/worker units와 third-party license review
   gate, API runner profile promotion readiness gate/operator template, rollout
-  execution readiness gate, product launch R4 preflight를 포함해 `artifact_count=26`, `check_count=19`,
+  execution readiness gate, product launch R4 preflight, product scope-breadth
+  evidence receipt를 포함해 `artifact_count=27`, `check_count=20`,
   `blocker_count=0` 상태다.
 
 ### H. Viewer 외부 의존성

@@ -26,6 +26,8 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_residual_model_registry.py",
     "python3 tools/build_product_production_ai_checkpoint_readiness.py",
     "python3 tools/build_product_scope_breadth_contract.py",
+    "python3 tools/build_product_scope_breadth_closure_checklist.py",
+    "python3 tools/build_product_scope_breadth_evidence_receipt.py",
     "python3 tools/build_product_operational_quality_contract.py",
     "python3 tools/build_api_runner_profile_promotion_readiness.py",
     "python3 tools/build_api_runner_profile_promotion_operator_receipt.py",
@@ -51,6 +53,8 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_goal_readiness_rollup.py",
     "python3 tools/build_product_goal_completion_audit.py",
     "python3 tools/build_goal_operator_action_board.py",
+    "python3 tools/build_goal_api_surface_contract.py",
+    "python3 tools/build_goal_bottleneck_briefing.py",
     "python3 deploy/product_release_bundle.py",
     "python3 tools/build_product_commercial_readiness_operator_packet.py",
     "python3 tools/build_product_commercial_readiness_handoff_bundle.py",
@@ -84,6 +88,31 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "artifact_path": "runs/product_scope_breadth_contract_current.json",
         "builder_command": "python3 tools/build_product_scope_breadth_contract.py",
         "depends_on": [],
+    },
+    {
+        "artifact_id": "product_scope_breadth_closure_checklist",
+        "artifact_path": "runs/product_scope_breadth_closure_checklist_current.json",
+        "builder_command": "python3 tools/build_product_scope_breadth_closure_checklist.py",
+        "depends_on": [
+            "tools/accounting/build_product_scope_breadth_closure_checklist.py",
+            "tools/build_product_scope_breadth_closure_checklist.py",
+            "runs/transporter_slot_assignment_candidate_workbook_current.json",
+            "runs/transporter_manual_review_intake_template_current.json",
+            "runs/pxr_authoritative_reconciliation_packet_current.json",
+            "runs/pxr_exact_evidence_review_intake_template_current.json",
+            "runs/general_protein_ligand_claim_blocker_packet_current.json",
+        ],
+    },
+    {
+        "artifact_id": "product_scope_breadth_evidence_receipt",
+        "artifact_path": "runs/product_scope_breadth_evidence_receipt_current.json",
+        "builder_command": "python3 tools/build_product_scope_breadth_evidence_receipt.py",
+        "depends_on": [
+            "tools/product/build_product_scope_breadth_evidence_receipt.py",
+            "tools/build_product_scope_breadth_evidence_receipt.py",
+            "config/product_scope_breadth_evidence_receipt_current.csv",
+            "runs/product_scope_breadth_closure_checklist_current.json",
+        ],
     },
     {
         "artifact_id": "product_operational_quality_contract",
@@ -202,6 +231,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/product_goal_completion_audit_current.json",
             "runs/api_runner_profile_promotion_operator_receipt_current.json",
             "runs/engine_refinement_claim_evidence_receipt_current.json",
+            "runs/product_scope_breadth_evidence_receipt_current.json",
         ],
     },
     {
@@ -328,6 +358,36 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         ],
     },
     {
+        "artifact_id": "goal_api_surface_contract",
+        "artifact_path": "runs/goal_api_surface_contract_current.json",
+        "builder_command": "python3 tools/build_goal_api_surface_contract.py",
+        "depends_on": [
+            "tools/accounting/build_goal_api_surface_contract.py",
+            "tools/build_goal_api_surface_contract.py",
+            "api/goal.py",
+            "api/main.py",
+            "api/security.py",
+        ],
+    },
+    {
+        "artifact_id": "goal_bottleneck_briefing",
+        "artifact_path": "runs/goal_bottleneck_briefing_current.json",
+        "builder_command": "python3 tools/build_goal_bottleneck_briefing.py",
+        "depends_on": [
+            "tools/accounting/build_goal_bottleneck_briefing.py",
+            "tools/build_goal_bottleneck_briefing.py",
+            "runs/product_goal_completion_audit_current.json",
+            "runs/goal_operator_action_board_current.json",
+            "runs/goal_operator_intake_kit_current/manifest.json",
+            "runs/goal_release_burndown_work_order_current.json",
+            "runs/product_public_benchmark_work_order_current.json",
+            "runs/dude_z_decoy_smoke_product_inputs_current.json",
+            "runs/pdbbind_casf_pose_affinity_product_preflight_current.json",
+            "runs/protein_protein_docking_benchmark_v5_product_preflight_current.json",
+            "runs/casp_archive_structure_regression_product_preflight_current.json",
+        ],
+    },
+    {
         "artifact_id": "product_commercial_readiness_operator_packet",
         "artifact_path": "runs/product_commercial_readiness_operator_packet_current.json",
         "builder_command": "python3 tools/build_product_commercial_readiness_operator_packet.py",
@@ -418,6 +478,22 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "required_true_fields": [
             "release_bundle_ready",
         ],
+    },
+    {
+        "artifact_id": "goal_api_surface_contract_semantic_ready",
+        "artifact_path": "runs/goal_api_surface_contract_current.json",
+        "builder_command": "python3 tools/build_goal_api_surface_contract.py",
+        "required_status": "goal_api_surface_contract_ready",
+        "required_true_fields": [
+            "surface_ready",
+        ],
+    },
+    {
+        "artifact_id": "goal_bottleneck_briefing_semantic_ready",
+        "artifact_path": "runs/goal_bottleneck_briefing_current.json",
+        "builder_command": "python3 tools/build_goal_bottleneck_briefing.py",
+        "required_status": "goal_bottleneck_briefing_ready",
+        "required_true_fields": [],
     },
 ]
 
