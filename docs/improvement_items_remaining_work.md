@@ -153,6 +153,12 @@
 - `goal_readiness_rollup` → `goal_readiness_pending_operator_or_external_results` (`blocked_lane_count=0`)
 - `goal_operator_action_board` → `operator_actions_required` (execution/approval/cleanup 토큰은 operator 범위)
 - `claim_promotion_allowed=false`, `execution_enabled=false`, `rollout_executed=false` 유지
+- `runs/product_launch_r4_preflight_current.json`은 local customer-flow, rollout
+  readiness, release bundle, commercial-independence/license, third-party review,
+  restricted engine readiness를 하나로 묶어 `product_launch_r4_preflight_ready`,
+  `check_count=7`, `pass_count=7`, `blocker_count=0`을 기록한다.
+  단, `authorized_for_external_mutation=false`, `launch_executed=false`,
+  `external_state_mutated=false`이므로 실제 배포/remote mutation은 여전히 별도 R4 확인 전까지 닫혀 있다.
 
 ---
 
@@ -162,7 +168,7 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
 
 | 영역 | 현재 posture | 다음 operator 단계 |
 |---|---|---|
-| Product execution / delivery | `operator_approval_pending` | `APPROVE_PRODUCT_DOCKING_EXECUTION` + bundle assembly/validation |
+| Product execution / delivery | `r4_preflight_ready`, execution still fail-closed | Target/Action/Impact/Risk/Rollback/Verification 제시 후 explicit R4/operator approval |
 | Transition / ligand-heavy cleanup | `operator_approval_pending` | cleanup approval token + protected policy decision |
 | CAMEO official results | `evidence_ready` (local scaffold) | official results intake; outbound send는 별도 승인 |
 | Goal operator board | `operator_actions_required` | surfaced action rows를 순서대로 처리 |
@@ -194,6 +200,10 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `promotion_ready_count=4`이며 enabled production profile은 reviewed evidence로
   accounting green을 유지한다. `profile_enabled_by_this_tool=false`,
   `runner_executed=false`, `external_state_mutated=false`는 그대로다.
+- enabled runner profile 3종의 `production_readiness.runner_script_sha256`은 현재
+  allowlisted runner script hash와 동기화됐고, `tools/product/validate_api_runner_profiles.py`는
+  `status=pass`, `failed_profile_count=0`이다. 이 hash gate 복구 뒤
+  Tier α ADRB2 dispatch smoke도 `tier_alpha_adrb2_dispatch_smoke_pass`로 재검증됐다.
 - 같은 도구는
   `runs/api_runner_profile_promotion_operator_template_current.csv`도 생성한다.
   이 템플릿은 profile별 `operator_decision`, `approval_token`,
@@ -567,20 +577,21 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `runs/product_rollout_execution_readiness_current.json`은 release bundle, rollout
   dry-run plan, security contract, alert smoke가 준비됐는지와 operator execution
   intake가 채워졌는지를 read-only로 검증한다. 최신 상태는
-  `blocked_product_rollout_execution_readiness`, `release_bundle_ready=true`,
+  `product_rollout_execution_readiness_ready`, `release_bundle_ready=true`,
   `rollout_plan_ready=true`, `security_contract_ready=true`, `alert_smoke_ready=true`,
-  `operator_csv_present=false`, `blocker_count=2`
-  (`operator_rollout_execution_csv_missing`, `operator_decision_missing`)이다.
+  `operator_csv_present=true`, `authorized_for_separate_operator_execution=true`,
+  `blocker_count=0`이다.
   `rollout_executed=false`, `pager_provider_contacted=false`,
   `ingress_certificate_verified_live=false`, `external_state_mutated=false`.
 - `deploy/product_release_bundle.py`와 `runs/product_release_bundle_current.json/.md`는
   security contract, rollout dry-run plan, alert delivery smoke, runner profile
   enablement work order, API runner profile promotion readiness gate/operator template,
   rollback/rollout runbook, Docker/K8s/compose artifact hash, systemd API server/worker
-  unit/env example, viewer vendor manifest/notice, viewer asset base URL decision
+  unit/env example, viewer vendor manifest/notice, viewer asset base URL decision,
+  product launch R4 preflight
   artifact를 하나의 release bundle manifest로 묶고 operator promotion policy를
-  `operator_approval_required`로 고정한다. 최신 상태는 `artifact_count=21`,
-  `check_count=14`, `pass_count=14`, `blocker_count=0`이다.
+  `operator_approval_required`로 고정한다. 최신 상태는 `artifact_count=22`,
+  `check_count=15`, `pass_count=15`, `blocker_count=0`이다.
 - `deploy/docker-compose.product.yml`, `deploy/k8s/configmap.yaml`,
   `deploy/systemd/api-server.env.example`, `deploy/systemd/api-worker.env.example`은
   `PRODUCT_API_TLS_TERMINATION_OPERATOR_VERIFIED=1`을 product deployment default로
@@ -590,6 +601,16 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `hosted_tls_termination_not_verified`로 fail-closed 차단한다.
 - `api/config.py`의 로컬/dev 기본값은 보수적으로 TLS verified `false`.
 - `product_api_hosted_exposure_approved` 기본 `false` (B2B self-host 가드).
+- `tools/product/build_product_launch_r4_preflight.py`와
+  `runs/product_launch_r4_preflight_current.json/.csv/.md`는 API customer-flow
+  evidence, rollout execution readiness, release bundle operator policy,
+  commercial-independence/license, third-party license review, restricted engine
+  readiness, external mutation guard를 R4 직전 단일 preflight로 묶는다. 최신 상태는
+  `product_launch_r4_preflight_ready`, `pass_count=7/7`, `blocker_count=0`이다.
+- `tools/run_product_release_current_refresh.py --execute`는 source-of-truth 순서에
+  R4 preflight와 최종 release bundle 재생성을 포함하며, 최신 실행 결과는
+  `product_release_current_refresh_verified`, `command_count=32`, `executed_count=32`,
+  `failed_count=0`, `final_gate_verification_ready=true`, `final_gate_blocker_count=0`이다.
 
 **병목 원인**
 - hosted/상용 SaaS화 자체가 productization roadmap에 없음.
@@ -610,7 +631,10 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   refresh를 1차 완료; build/push/deploy rollout dry-run/approval gate는 1차 완료.
 - Model registry + signed artifact + rollback은 1차 완료; 다음은 operator promotion
   policy + release bundle linkage와 rollout execution readiness gate는 1차 완료;
-  다음은 operator-approved rollout 실행 smoke.
+  R4 launch preflight도 1차 완료. 다음은 explicit R4/operator-approved rollout 실행 smoke.
+- release source-of-truth gate는 R4 preflight 포함 refresh 이후
+  `product_release_source_of_truth_gate_ready`, `pass_count=32/32`,
+  `blocker_count=0`, `stale_artifact_count=0`으로 재검증됐다.
 - `prometheus_client` 기반 실제 metrics endpoint는 1차 완료.
 - Alert rules + paged webhook receiver + closed-loop alert delivery smoke는 1차 완료;
   다음은 operator webhook secret mount, 실제 pager provider delivery smoke,
@@ -623,7 +647,7 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `hard_blocker_count=0`, `operator_review_item_count=1`).
 - release bundle은 systemd API server/worker units와 third-party license review
   gate, API runner profile promotion readiness gate/operator template, rollout
-  execution readiness gate를 포함해 `artifact_count=21`, `check_count=14`,
+  execution readiness gate, product launch R4 preflight를 포함해 `artifact_count=22`, `check_count=15`,
   `blocker_count=0` 상태다.
 
 ### H. Viewer 외부 의존성
@@ -1201,8 +1225,9 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
 
 1. **API ↔ engine wiring** — 일반 요청 fail-closed 유지 + operator-approved
    validated runner profile adapter, durable job state, idempotent records,
-   signed manifests, profile readiness/evidence/hash gate는 1차 완료. 다음은 실제
-   profile별 evidence artifact 작성과 operator approval 승격.
+   signed manifests, profile readiness/evidence/hash gate, customer-flow release
+   evidence, R4 launch preflight는 1차 완료. 다음은 explicit operator approval하의
+   실제 실행.
 2. **Production AI 고객 실행 경계** — ROCm/HIP GPU execution environment,
    GPU worker return receipt, production guarded checkpoint 승격은 현재 ready.
    다음은 validated runner profile evidence/operator approval과 고객 요청 경로에서의
@@ -1215,7 +1240,8 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
    operator-approved rollout 실행 smoke. TLS hosted-exposure guard, model
    registry/signed artifact/rollback, build/push/deploy rollout dry-run approval gate,
    release bundle linkage, `/metrics`의 prometheus_client 통합, 1차 alert
-   rules/paged webhook receiver, closed-loop alert delivery smoke는 완료.
+   rules/paged webhook receiver, closed-loop alert delivery smoke, R4 launch
+   preflight는 완료.
 5. **Self-hosted B2B pilot 인프라** — viewer 자산 vendoring/pinning,
    reproducible build, on-prem license 검증. viewer CDN/localhost fallback 제거,
    asset base URL decision, self-hosted license audit는 1차 완료.
@@ -1341,11 +1367,13 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
    - `core/` physics는 local-only 가정.
    - `docker-compose`/`K8s`/`CI`/`prometheus_client`/alert rules/signed model
      registry/TLS hosted-exposure guard/closed-loop alert smoke/rollout dry-run
-     approval gate/release bundle linkage는 1차 통합됐으나, 실제 pager provider
+     approval gate/release bundle linkage/R4 launch preflight는 1차 통합됐으나, 실제 pager provider
      delivery/ingress certificate smoke/operator-approved rollout execution smoke는 미완.
    - local delivery + on-prem pilot 가정. hosted SaaS는 별도.
 
-가장 큰 단일 잔여 gap은 **operator-approved product execution surface**다. 상용 API,
-durable worker, validated runner profile, production_guarded AI receipt는 갖춰졌지만,
-실제 고객 실행은 profile evidence/operator approval, license/legal review,
-rollout smoke, claim-boundary 정책이 한 release bundle 안에서 동시에 green이어야 열린다.
+가장 큰 단일 잔여 gap은 이제 **실제 R4/operator-approved rollout 실행 smoke**다.
+상용 API, durable worker, validated runner profile, production_guarded AI receipt,
+license/legal review, release bundle, claim-boundary 정책, R4 launch preflight는
+local artifact 기준 green이다. 다만 실제 고객 실행은 Target/Action/Impact/Risk/
+Rollback/Verification을 제시하고 명시적 R4 확인을 받은 뒤에만 remote/deployment
+state mutation으로 넘어갈 수 있다.

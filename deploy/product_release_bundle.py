@@ -36,6 +36,7 @@ DEFAULT_ARTIFACTS = {
     "self_hosted_license_distribution_audit": "runs/self_hosted_license_distribution_audit_current.json",
     "third_party_license_review_gate": "runs/third_party_license_review_gate_current.json",
     "product_rollout_execution_readiness": "runs/product_rollout_execution_readiness_current.json",
+    "product_launch_r4_preflight": "runs/product_launch_r4_preflight_current.json",
 }
 APPROVAL_TOKENS = [
     "APPROVE_PRODUCT_ROLLOUT",
@@ -121,6 +122,7 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
     license_audit = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["self_hosted_license_distribution_audit"])))
     third_party_license_review = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["third_party_license_review_gate"])))
     rollout_execution_readiness = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["product_rollout_execution_readiness"])))
+    launch_r4_preflight = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["product_launch_r4_preflight"])))
     viewer_vendor = _read_json(_resolve(DEFAULT_ARTIFACTS["viewer_vendor_manifest"]))
     systemd_api_server_unit = _read_text(_resolve(DEFAULT_ARTIFACTS["systemd_api_server_unit"]))
     systemd_api_server_env = _read_text(_resolve(DEFAULT_ARTIFACTS["systemd_api_server_env_example"]))
@@ -302,6 +304,27 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
                 f"status={rollout_execution_readiness.get('status')};"
                 f"blocker_count={rollout_execution_readiness.get('blocker_count')};"
                 f"operator_csv_present={rollout_execution_readiness.get('operator_csv_present')}"
+            ),
+        },
+        {
+            "check": "product_launch_r4_preflight_recorded",
+            "passed": (
+                launch_r4_preflight.get("status")
+                in {"blocked_product_launch_r4_preflight", "product_launch_r4_preflight_ready"}
+                and launch_r4_preflight.get("authorized_for_external_mutation") is False
+                and launch_r4_preflight.get("launch_executed") is False
+                and launch_r4_preflight.get("external_state_mutated") is False
+                and isinstance(launch_r4_preflight.get("required_r4_fields"), list)
+                and all(
+                    field in launch_r4_preflight.get("required_r4_fields")
+                    for field in ("target", "action", "impact", "risk", "rollback", "verification")
+                )
+            ),
+            "observed": (
+                f"status={launch_r4_preflight.get('status')};"
+                f"blocker_count={launch_r4_preflight.get('blocker_count')};"
+                f"authorized_for_external_mutation={launch_r4_preflight.get('authorized_for_external_mutation')};"
+                f"launch_executed={launch_r4_preflight.get('launch_executed')}"
             ),
         },
     ]

@@ -41,6 +41,8 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_product_ai_report_ux_contract.py",
     "python3 tools/build_product_rollout_execution_readiness.py",
     "python3 tools/build_api_customer_flow_release_evidence.py",
+    "python3 tools/product/build_product_launch_r4_preflight.py",
+    "python3 deploy/product_release_bundle.py",
     "python3 tools/build_product_release_operations_dossier.py",
     "python3 tools/build_product_architecture_contract.py",
     "python3 tools/build_goal_readiness_rollup.py",
@@ -182,6 +184,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/product_security_deployment_contract_current.json",
             "runs/product_rollout_plan_current.json",
             "runs/alert_delivery_smoke_current.json",
+            "runs/product_launch_r4_preflight_current.json",
         ],
     },
     {
@@ -220,7 +223,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "builder_command": "python3 tools/build_product_rollout_execution_readiness.py",
         "depends_on": [
             "tools/product/build_product_rollout_execution_readiness.py",
-            "runs/product_release_bundle_current.json",
+            "deploy/product_release_bundle.py",
             "runs/product_rollout_plan_current.json",
             "runs/product_security_deployment_contract_current.json",
             "runs/alert_delivery_smoke_current.json",
@@ -238,6 +241,21 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/product_bundle_contract_current.json",
             "runs/product_delivery_evidence_contract_current.json",
             "runs/product_pilot_packet_contract_current.json",
+        ],
+    },
+    {
+        "artifact_id": "product_launch_r4_preflight",
+        "artifact_path": "runs/product_launch_r4_preflight_current.json",
+        "builder_command": "python3 tools/product/build_product_launch_r4_preflight.py",
+        "depends_on": [
+            "tools/product/build_product_launch_r4_preflight.py",
+            "deploy/product_release_bundle.py",
+            "runs/api_customer_flow_release_evidence_current.json",
+            "runs/product_rollout_execution_readiness_current.json",
+            "runs/product_commercial_independence_gate_current.json",
+            "runs/product_license_decision_gate_current.json",
+            "runs/third_party_license_review_gate_current.json",
+            "runs/engine_refinement_tier_readiness_current.json",
         ],
     },
     {

@@ -23,6 +23,6 @@
     "approved_at_utc": "2026-06-06T18:00:00+00:00",
     "claim_scope": "restricted_local_delivery_proxy_refinement_only",
     "evidence_artifact": "config/api_validated_runner_profiles/evidence/ligand_topk_delivery.production.evidence.json",
-    "runner_script_sha256": "4cf49f05ffb7c44683250ff26fca04b6bbac9f6350faa196592c1eef44d6e4b3"
+        "runner_script_sha256": "c4428efee3f29586a22df55276bfd62f51ab6ee691f977ec974e9a7c653af6a2"
   }
 }

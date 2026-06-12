@@ -13,7 +13,7 @@
 
 - **닫힌 것:** restricted(`gpcr` / `ion_channel` / `kinase`) 로컬 self-hosted 전달, commercial independence gate,
   7/7 AI architecture gap, production-guarded promotion accounting — 모두 artifact green.
-- **닫히지 않은 것(제품 역량):** 과학 엔진 정밀도(가장 큰 진짜 갭), 실제 실행 wiring,
+- **닫히지 않은 것(제품 역량):** 과학 엔진 정밀도(가장 큰 진짜 갭), 실제 R4/operator-approved rollout smoke,
   hosted 인프라, 범용 claim 확장, 외부 표준 벤치마크, 제품 UX.
 - **핵심 보정:** accounting이 green이라는 것은 "회계상 닫힘 + fail-closed 유지"를 의미하며,
   **"OpenMM/Schrödinger급 정밀도 제품이 완성됐다"는 뜻이 아니다.**
@@ -148,14 +148,17 @@ abstention 사유가 결과 번들에 명시.
 - 상용 API surface + security middleware + SQLite job store + signed result manifest 존재.
 - 일반 `/simulate` 요청은 **의도적 fail-closed**, `runner_profile_id` + operator-approved validated runner profile만 실행.
 - `core/forcefield.py:17`, `core/topology.py:38`이 restricted analysis engine임을 명시.
+- `runs/api_customer_flow_release_evidence_current.json`과
+  `runs/product_launch_r4_preflight_current.json`은 restricted customer-flow evidence와
+  R4 직전 preflight를 local artifact 기준 green으로 묶는다.
 
 **갭**
-- 실제 docking/MD 실행이 operator approval token + enabled profile에 묶여 있어,
-  "API 호출 → 결과" 의 **무인 end-to-end 상용 경험**이 아직 닫혀 있음.
+- 실제 docking/MD 실행과 rollout smoke는 여전히 explicit operator approval token과
+  R4 확인에 묶여 있어, 배포/remote mutation이 자동으로 열리지는 않는다.
 
 **구현 방향**
-1. validated runner profile별 **claim/gate evidence를 실제 채우고** operator approval 승격(이미 템플릿 존재:
-   `api_runner_profile_promotion_operator_template_current.csv`).
+1. R4 preflight 산출물을 기반으로 Target/Action/Impact/Risk/Rollback/Verification을
+   제시하고 explicit operator approval을 받은 뒤 실행 smoke를 분리 수행.
 2. fail-closed 정책은 유지하되, **restricted scope 안에서는** profile 기반 무인 실행 경로를 SLA로 보장.
 3. dispatch worker(`api/docking_dispatch.py`, `run_api_docking_dispatch_worker.py`) 상시 운영화 + 모니터링.
 
@@ -169,6 +172,8 @@ durable queue → worker 실행 → signed 결과 번들 회수까지 무인 동
 **현황**
 - `deploy/`: docker-compose, systemd, k8s manifest, model registry, rollout/rollback runbook 1차 존재.
 - monitoring/`: `/metrics`, alert rules, closed-loop alert smoke 1차 통합.
+- R4 launch preflight는 `7/7 pass`, `authorized_for_external_mutation=false`,
+  `launch_executed=false`로 실제 실행 전 상태를 명시한다.
 
 **갭**
 - 실제 pager provider delivery, ingress certificate(TLS) smoke, operator-approved rollout **실행** smoke 미완.
@@ -306,8 +311,8 @@ durable queue → worker 실행 → signed 결과 번들 회수까지 무인 동
 
 1. **회계상 닫힘 ≠ 제품 완성.** 현재 green은 "restricted scope + fail-closed 유지"의 정직한 경계이며,
    범용 정밀 제품 완성을 의미하지 않는다.
-2. **가장 빠른 상용 스위치는 E(API↔engine 실행 wiring).** restricted scope에서 무인 실행 경로만 열면
-   곧바로 self-hosted 파일럿 제품으로 동작.
+2. **가장 빠른 상용 스위치는 R4/operator-approved rollout smoke.** restricted scope의
+   local evidence와 preflight는 green이므로, 명시 승인 후 실행 검증이 self-hosted 파일럿 전환점이다.
 3. **가장 큰 실제 갭은 A(과학 엔진 정밀도).** 현재 2-bead 조대화 엔진을 all-atom force field + solvent +
    MM-GBSA로 끌어올려야 "외부 엔진 무의존 완전 상용 제품"이라는 claim이 성립한다.
 4. **AI는 정밀도 갭을 덮는 용도가 아니라** 물리 코어 위 bounded residual로 유지해야 하며(C),

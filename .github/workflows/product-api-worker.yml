@@ -85,6 +85,7 @@ jobs:
             deploy/product_rollout.py \
             tools/run_api_simulation_worker.py \
             tools/smoke_alert_delivery.py \
+            tools/product/build_product_launch_r4_preflight.py \
             tools/product/validate_api_runner_profiles.py \
             tools/product/build_api_runner_profile_enablement_work_order.py \
             tools/build_viewer_asset_base_url_decision.py \
@@ -97,6 +98,8 @@ jobs:
           python3 tools/build_product_commercial_independence_gate.py
           python3 tools/product/build_self_hosted_license_distribution_audit.py \
             --out-json runs/self_hosted_license_distribution_audit_current.json
+          python3 tools/product/build_product_launch_r4_preflight.py
+          python3 deploy/product_release_bundle.py
 
       - name: Run API worker and deploy artifact tests
         run: |
@@ -108,6 +111,7 @@ jobs:
             tests/unit/test_api_security_middleware.py \
             tests/unit/test_deploy_model_registry.py \
             tests/unit/test_product_release_bundle.py \
+            tests/unit/test_build_product_launch_r4_preflight.py \
             tests/unit/test_product_rollout.py \
             tests/unit/test_smoke_alert_delivery.py \
             tests/unit/test_viewer_self_hosted_assets.py \

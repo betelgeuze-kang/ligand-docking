@@ -37,6 +37,7 @@ def test_release_bundle_links_required_artifacts_and_policy() -> None:
     assert artifacts["self_hosted_license_distribution_audit"]["sha256"]
     assert artifacts["third_party_license_review_gate"]["sha256"]
     assert artifacts["product_rollout_execution_readiness"]["sha256"]
+    assert artifacts["product_launch_r4_preflight"]["sha256"]
 
     checks = {row["check"]: row for row in payload["checks"]}
     assert checks["security_contract_ready"]["passed"] is True
@@ -52,6 +53,7 @@ def test_release_bundle_links_required_artifacts_and_policy() -> None:
     assert checks["third_party_license_review_gate_recorded"]["passed"] is True
     assert checks["systemd_api_server_worker_units_recorded"]["passed"] is True
     assert checks["product_rollout_execution_readiness_recorded"]["passed"] is True
+    assert checks["product_launch_r4_preflight_recorded"]["passed"] is True
 
 
 def test_release_bundle_blocks_missing_required_artifact() -> None:

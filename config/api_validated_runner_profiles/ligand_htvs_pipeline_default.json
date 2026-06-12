@@ -36,6 +36,6 @@
     "approved_at_utc": "2026-06-06T12:00:00+00:00",
     "claim_scope": "restricted_local_delivery_proxy_refinement_only",
     "evidence_artifact": "config/api_validated_runner_profiles/evidence/ligand_htvs_pipeline_default.evidence.json",
-    "runner_script_sha256": "da3d98b0c690dbda54d37db1037bef8c8220b3dd450d484fb02198f56b3cdd7f"
+        "runner_script_sha256": "b98c07ef8ff39b3f1d8ca509b218780ffc241bd861a98c2d4da257995dceb7e2"
   }
 }
