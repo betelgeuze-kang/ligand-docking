@@ -100,10 +100,25 @@
   pose RMSD/LDDT-PLI/DockQ proxy metric surface와 MM-GBSA calibration claim guard를
   함께 확인한다. `claim_grade_public_benchmark_ready=false`라서 공개 benchmark claim은
   여전히 열지 않는다. 같은 summary는 `claim_promotion_allowed=false`,
-  `claim_promotion_blocker_count=6`을 노출하며 blocker를
+  `claim_promotion_blocker_count=6`, `claim_promotion_action_row_count=6`을 노출하며 blocker를
   public benchmark, parameter calibration, metal/cofactor parameterization,
   protonation/charge calibration, solvent/FEP public-pair calibration,
   external structure-quality parity로 고정한다.
+  `claim_promotion_action_rows`는 각 blocker별 `required_evidence`,
+  `owner_action`, `gate_or_artifact`, `external_dependency`, `claim_boundary`,
+  `blocking_signals`를 기계 판독 가능한 action-board로 제공한다. 따라서 현재 병목은
+  "무엇이 막혔는가"에서 "각 claim blocker를 닫기 위해 어떤 operator evidence와
+  gate artifact가 필요한가"까지 추적 가능하다. CLI 실행 시 같은 내용은
+  `runs/engine_refinement_claim_promotion_action_board_current.csv`로도 생성되어
+  operator review/work tracking에 바로 사용할 수 있다. 이 CSV는
+  `product_launch_r4_preflight` summary와 `deploy/product_release_bundle.py`의
+  `engine_refinement_claim_promotion_action_board_recorded` check, 그리고
+  `product_release_source_of_truth_gate` freshness artifact spec에도 연결되어
+  릴리스 검증 묶음에서 누락되거나 stale 상태로 남지 않는다. 같은 CSV는
+  `goal_operator_action_board_current.json`의 `product_engine_refinement` lane과
+  `goal_operator_intake_kit_current/manifest.json`의
+  `engine_refinement_claim_promotion_action_board` entry에도 노출되어,
+  operator-facing 작업판에서 claim blocker evidence 수집 상태를 직접 추적한다.
 - `tools/product/build_refine_tier_public_benchmark_readiness.py`: curated 공개
   pose/free-energy benchmark intake를 별도 fail-closed gate로 판정한다.
   `config/refine_tier_public_benchmark_intake_current.csv`는 required column header를

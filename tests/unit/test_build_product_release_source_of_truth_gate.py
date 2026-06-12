@@ -216,9 +216,15 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "product_ai_report_ux_contract_semantic_ready" in status_ids
     assert "product_ledger_privacy_scan" in artifact_ids
     assert "product_launch_r4_preflight" in artifact_ids
+    assert "engine_refinement_claim_promotion_action_board" in artifact_ids
+    goal_action_spec = next(
+        spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "goal_operator_action_board"
+    )
+    assert "runs/engine_refinement_claim_promotion_action_board_current.csv" in goal_action_spec["depends_on"]
     assert "product_ledger_privacy_scan_semantic_ready" in status_ids
     assert "python3 tools/build_product_ai_report_explanation_packet.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_ai_report_ux_contract.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/product/build_engine_refinement_tier_readiness.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/product/build_product_launch_r4_preflight.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_ledger_privacy_scan.py" in mod.RELEASE_REFRESH_COMMANDS
 

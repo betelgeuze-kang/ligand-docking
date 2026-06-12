@@ -71,6 +71,13 @@ def _action_board() -> dict:
                 "approval_token": "",
             },
             {
+                "lane_id": "product_engine_refinement",
+                "action_type": "resolve_refine_tier_claim_promotion_blocker",
+                "status": "required",
+                "artifact_path": "runs/engine_refinement_claim_promotion_action_board_current.csv",
+                "approval_token": "",
+            },
+            {
                 "lane_id": "ligand_heavy_cleanup",
                 "action_type": "review_protected_ligand_heavy_policy",
                 "status": "policy_decision_required",
@@ -219,12 +226,12 @@ def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp
     summary = payload["summary"]
     by_id = {row["kit_entry_id"]: row for row in payload["rows"]}
     assert summary["status"] == "goal_operator_intake_kit_ready"
-    assert summary["entry_count"] == 12
-    assert summary["source_action_count"] == 7
+    assert summary["entry_count"] == 13
+    assert summary["source_action_count"] == 8
     assert summary["release_burndown_source_row_count"] == 8
     assert summary["release_burndown_linked_entry_count"] == 11
-    assert summary["operator_input_required_count"] == 11
-    assert summary["current_action_required_count"] == 9
+    assert summary["operator_input_required_count"] == 12
+    assert summary["current_action_required_count"] == 10
     assert summary["deferred_operator_input_count"] == 2
     assert summary["primary_action_id"] == "product_ai_production:return_gpu_force_regeneration_receipt"
     assert summary["top_action_id"] == summary["primary_action_id"]
@@ -326,6 +333,13 @@ def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp
         "runs/pxr_exact_evidence_review_intake_template_current.csv"
     )
     assert by_id["scope_pxr_exact_evidence_review"]["release_sequence"] == "0"
+    assert by_id["engine_refinement_claim_promotion_action_board"]["kit_status"] == "operator_input_required"
+    assert by_id["engine_refinement_claim_promotion_action_board"]["current_action_surfaced"] is True
+    assert by_id["engine_refinement_claim_promotion_action_board"]["operator_input_required_now"] is True
+    assert by_id["engine_refinement_claim_promotion_action_board"]["template_required"] is False
+    assert by_id["engine_refinement_claim_promotion_action_board"]["template_path"] == (
+        "runs/engine_refinement_claim_promotion_action_board_current.csv"
+    )
     assert by_id["protected_cleanup_policy"]["kit_status"] == "policy_decision_required"
     assert by_id["protected_cleanup_policy"]["operator_input_required_now"] is True
     assert by_id["protected_cleanup_policy"]["release_burndown_status"] == "policy_decision_required"

@@ -274,6 +274,12 @@ def build_product_launch_r4_preflight(
         "source_license_decision_status": _text(license_summary.get("status")),
         "source_third_party_license_status": _text(third_party.get("status")),
         "source_engine_refinement_status": _text(engine.get("status")),
+        "engine_refinement_claim_promotion_action_board_csv": _text(
+            engine.get("claim_promotion_action_board_csv")
+        ),
+        "engine_refinement_claim_promotion_action_row_count": _int(
+            engine.get("claim_promotion_action_row_count")
+        ),
         "claim_boundary": CLAIM_BOUNDARY,
         "next_required_step": (
             "Present Target/Action/Impact/Risk/Rollback/Verification and wait for explicit R4 operator confirmation before any deployment, push, hosted exposure, provider contact, or remote mutation."

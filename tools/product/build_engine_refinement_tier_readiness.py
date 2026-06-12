@@ -9,16 +9,28 @@ import json
 from pathlib import Path
 from typing import Any
 
+from tools.builder_table_utils import write_csv_rows
+
 ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_ENGINE_CONFIG = "config/ligand_engine_production.json"
 DEFAULT_PUBLIC_BENCHMARK_INPUT_CSV = "config/refine_tier_public_benchmark_intake_current.csv"
 DEFAULT_OUT_JSON = "runs/engine_refinement_tier_readiness_current.json"
+DEFAULT_OUT_ACTION_BOARD_CSV = "runs/engine_refinement_claim_promotion_action_board_current.csv"
 
 CLAIM_BOUNDARY = (
     "Engine refinement tier readiness only; it verifies internal refine-tier modules and HTVS stage3b "
     "policy wiring. It is not an OpenMM/Schrödinger-grade accuracy claim."
 )
+
+CLAIM_PROMOTION_BLOCKERS = [
+    "public_benchmark_gate_not_ready",
+    "parameter_calibration_claim_not_ready",
+    "metal_cofactor_parameterization_not_ready",
+    "charged_residue_protonation_and_charge_calibration_not_ready",
+    "solvent_fep_public_pair_calibration_not_ready",
+    "external_structure_quality_parity_not_ready",
+]
 
 
 def _resolve(path_like: str | Path) -> Path:
@@ -798,6 +810,158 @@ def _refine_tier_public_benchmark_linkage_check(*, input_csv: str = DEFAULT_PUBL
         )
 
 
+def _build_claim_promotion_action_rows(public_benchmark_summary: dict[str, Any]) -> list[dict[str, Any]]:
+    work_order_rows = int(public_benchmark_summary.get("work_order_row_count", 0) or 0)
+    public_blockers = list(public_benchmark_summary.get("blockers", []) or [])
+    public_status = str(public_benchmark_summary.get("status", "") or "unknown")
+    public_next_step = str(public_benchmark_summary.get("next_required_step", "") or "")
+    return [
+        {
+            "blocker_id": "public_benchmark_gate_not_ready",
+            "current_status": public_status,
+            "required_evidence": (
+                f"Curated public benchmark intake with at least {work_order_rows or 8} non-placeholder fit/holdout "
+                "rows, public provenance/license review, pose metric fields, internal refine ΔG, and public "
+                "experimental ΔG values."
+            ),
+            "owner_action": (
+                "Fill runs/refine_tier_public_benchmark_work_order_current.csv, run "
+                "tools/product/apply_refine_tier_public_benchmark_work_order.py, then write the tracked intake "
+                "only with APPROVE_REFINE_TIER_PUBLIC_BENCHMARK_INTAKE."
+            ),
+            "gate_or_artifact": "runs/refine_tier_public_benchmark_readiness_current.json",
+            "external_dependency": "Operator-curated public benchmark rows; no automatic external docking or MD calls.",
+            "claim_boundary": "Public benchmark and OpenMM/Schrödinger-grade claims stay blocked until this gate is green.",
+            "blocking_signals": public_blockers,
+            "next_required_step": public_next_step,
+        },
+        {
+            "blocker_id": "parameter_calibration_claim_not_ready",
+            "current_status": "internal_proxy_uncalibrated",
+            "required_evidence": (
+                "Fit/holdout calibration evidence over enough public benchmark pairs, with passing rank/pose/free-energy "
+                "quality gates and no placeholder rows."
+            ),
+            "owner_action": (
+                "After public benchmark readiness is green, calibrate charge, bonded, torsion, improper, and MM-GBSA "
+                "weights against fit rows, then verify holdout rows before changing any claim boundary."
+            ),
+            "gate_or_artifact": "runs/engine_refinement_tier_readiness_current.json",
+            "external_dependency": "Curated public benchmark intake must be ready first.",
+            "claim_boundary": "Internal proxy parameters remain restricted-analysis only until calibrated fit/holdout evidence exists.",
+            "blocking_signals": [
+                "public_benchmark_gate_not_ready",
+                "insufficient_public_benchmark_pairs",
+            ],
+            "next_required_step": "Promote only after parameter calibration gates prove fit/holdout behavior.",
+        },
+        {
+            "blocker_id": "metal_cofactor_parameterization_not_ready",
+            "current_status": "blocked_metal_cofactor_parameterization",
+            "required_evidence": (
+                "Metal/cofactor parameter source, coordination chemistry coverage, and public benchmark complexes containing "
+                "metal/cofactor sites."
+            ),
+            "owner_action": (
+                "Add explicit metal/cofactor parameter sources and benchmark rows for Zn/Mg/Fe/Ca/Na-like coordination "
+                "cases; keep unsupported metals fail-closed until coverage is proven."
+            ),
+            "gate_or_artifact": "refine_tier_metal_cofactor_coordination_claim_guard",
+            "external_dependency": "Curated metal/cofactor benchmark complexes and reviewed parameter source.",
+            "claim_boundary": "Coordination sites are counted, but metal/cofactor parameterization is not claim-grade.",
+            "blocking_signals": [
+                "metal_cofactor_parameter_source_missing",
+                "metal_cofactor_parameterization_not_supported",
+            ],
+            "next_required_step": "Create calibrated metal/cofactor parameter and benchmark coverage gate.",
+        },
+        {
+            "blocker_id": "charged_residue_protonation_and_charge_calibration_not_ready",
+            "current_status": "blocked_formal_charge_proxy",
+            "required_evidence": (
+                "Formal protonation-state assignment source plus calibrated atom-level charge/torsion/improper parameters "
+                "for charged and ionizable local chemistry."
+            ),
+            "owner_action": (
+                "Connect a reviewed protonation-state source, then calibrate charged-residue/carboxylate/basic "
+                "N/phosphate/thiolate-like parameters against public benchmark evidence."
+            ),
+            "gate_or_artifact": "refine_tier_formal_charge_proxy_claim_guard",
+            "external_dependency": "Reviewed protonation source and public charged/ionizable benchmark coverage.",
+            "claim_boundary": "Ionizable atom typing and formal charge proxy are diagnostic surfaces, not calibrated charge claims.",
+            "blocking_signals": [
+                "protonation_source_missing",
+                "charged_residue_parameter_calibration_not_ready",
+                "formal_charge_proxy_not_calibrated",
+            ],
+            "next_required_step": "Add protonation/charge calibration gate fed by curated public rows.",
+        },
+        {
+            "blocker_id": "solvent_fep_public_pair_calibration_not_ready",
+            "current_status": "blocked_solvent_fep_calibration_claim",
+            "required_evidence": (
+                "Enough public solvent/FEP pair rows, explicit solvent sampling validation, and FEP holdout calibration "
+                "with finite internal GB/SA, explicit shell, and FEP surfaces."
+            ),
+            "owner_action": (
+                "Curate public solvent and FEP pair rows, validate explicit sampling assumptions, and require holdout "
+                "calibration before promoting solvent/FEP claims."
+            ),
+            "gate_or_artifact": "refine_tier_solvent_fep_calibration_claim_guard",
+            "external_dependency": "Public solvent/FEP pair evidence and holdout validation.",
+            "claim_boundary": "GB/SA, explicit shell, and FEP are scaffolded but remain uncalibrated claim guards.",
+            "blocking_signals": [
+                "insufficient_public_solvent_pairs",
+                "insufficient_public_fep_pairs",
+                "explicit_solvent_md_sampling_not_validated",
+                "fep_holdout_calibration_not_validated",
+            ],
+            "next_required_step": "Build public solvent/FEP calibration intake and holdout gate.",
+        },
+        {
+            "blocker_id": "external_structure_quality_parity_not_ready",
+            "current_status": "blocked_structure_quality_claim",
+            "required_evidence": (
+                "External MolProbity/OpenStructure parity and native complex benchmark evidence for clashscore, lDDT, "
+                "DockQ/TM-like structure quality, and receptor-ligand interface coverage."
+            ),
+            "owner_action": (
+                "Run or ingest external MolProbity/OpenStructure/native-complex benchmark results and compare them "
+                "against the internal structure-quality proxy before any parity claim."
+            ),
+            "gate_or_artifact": "refine_tier_structure_quality_interface_claim_guard",
+            "external_dependency": "External structure-quality tools or operator-provided parity result packets.",
+            "claim_boundary": "Internal clash/interface/reference proxies do not equal external structure-quality parity.",
+            "blocking_signals": [
+                "external_molprobity_not_available",
+                "external_openstructure_not_available",
+                "native_complex_benchmark_not_ready",
+                "structure_quality_proxy_not_external_parity",
+            ],
+            "next_required_step": "Add external structure-quality parity intake and comparison gate.",
+        },
+    ]
+
+
+def _claim_promotion_action_rows_for_csv(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    csv_rows: list[dict[str, Any]] = []
+    for row in rows:
+        csv_rows.append(
+            {
+                "blocker_id": row.get("blocker_id", ""),
+                "current_status": row.get("current_status", ""),
+                "required_evidence": row.get("required_evidence", ""),
+                "owner_action": row.get("owner_action", ""),
+                "gate_or_artifact": row.get("gate_or_artifact", ""),
+                "external_dependency": row.get("external_dependency", ""),
+                "claim_boundary": row.get("claim_boundary", ""),
+                "blocking_signals": ";".join(str(item) for item in row.get("blocking_signals", []) or []),
+                "next_required_step": row.get("next_required_step", ""),
+            }
+        )
+    return csv_rows
+
+
 def build_engine_refinement_tier_readiness(
     *,
     engine_config: str = DEFAULT_ENGINE_CONFIG,
@@ -864,14 +1028,8 @@ def build_engine_refinement_tier_readiness(
     ready = not blocked
     by_id = {item["check_id"]: item for item in checks}
     public_benchmark_ready = bool(public_benchmark_summary.get("claim_grade_public_benchmark_ready", False))
-    claim_promotion_blockers = [
-        "public_benchmark_gate_not_ready",
-        "parameter_calibration_claim_not_ready",
-        "metal_cofactor_parameterization_not_ready",
-        "charged_residue_protonation_and_charge_calibration_not_ready",
-        "solvent_fep_public_pair_calibration_not_ready",
-        "external_structure_quality_parity_not_ready",
-    ]
+    claim_promotion_blockers = list(CLAIM_PROMOTION_BLOCKERS)
+    claim_promotion_action_rows = _build_claim_promotion_action_rows(public_benchmark_summary)
     return {
         "summary": {
             "packet_type": "engine_refinement_tier_readiness",
@@ -933,8 +1091,10 @@ def build_engine_refinement_tier_readiness(
             "public_benchmark_next_required_step": public_benchmark_summary.get("next_required_step", ""),
             "claim_grade_public_benchmark_ready": public_benchmark_ready,
             "claim_promotion_allowed": False,
+            "claim_promotion_action_board_csv": DEFAULT_OUT_ACTION_BOARD_CSV,
             "claim_promotion_blocker_count": len(claim_promotion_blockers),
             "claim_promotion_blockers": claim_promotion_blockers,
+            "claim_promotion_action_row_count": len(claim_promotion_action_rows),
             "claim_promotion_next_required_step": (
                 "Fill and apply the curated public benchmark work-order rows, rerun public benchmark readiness, "
                 "then calibrate parameter, metal/cofactor, protonation/charge, solvent/FEP, and external "
@@ -948,6 +1108,7 @@ def build_engine_refinement_tier_readiness(
             "claim_boundary": CLAIM_BOUNDARY,
         },
         "checks": checks,
+        "claim_promotion_action_rows": claim_promotion_action_rows,
         "engine_config_path": engine_config,
     }
 
@@ -957,6 +1118,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--engine-config", default=DEFAULT_ENGINE_CONFIG)
     parser.add_argument("--public-benchmark-input-csv", default=DEFAULT_PUBLIC_BENCHMARK_INPUT_CSV)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
+    parser.add_argument("--out-action-board-csv", default=DEFAULT_OUT_ACTION_BOARD_CSV)
     args = parser.parse_args(argv)
     payload = build_engine_refinement_tier_readiness(
         engine_config=args.engine_config,
@@ -965,6 +1127,7 @@ def main(argv: list[str] | None = None) -> None:
     out = _resolve(args.out_json)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+    write_csv_rows(_resolve(args.out_action_board_csv), _claim_promotion_action_rows_for_csv(payload["claim_promotion_action_rows"]))
 
 
 if __name__ == "__main__":

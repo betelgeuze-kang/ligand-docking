@@ -25,7 +25,10 @@ from tools.build_cleanup_execution_approval_gate import (
     DEFAULT_OUT_JSON as DEFAULT_CLEANUP_APPROVAL_GATE_JSON,
     DEFAULT_TEMPLATE_CSV as DEFAULT_CLEANUP_APPROVAL_TEMPLATE_CSV,
 )
-from tools.build_goal_operator_action_board import DEFAULT_OUT_JSON as DEFAULT_ACTION_BOARD_JSON
+from tools.build_goal_operator_action_board import (
+    DEFAULT_ENGINE_REFINEMENT_CLAIM_ACTION_BOARD_CSV,
+    DEFAULT_OUT_JSON as DEFAULT_ACTION_BOARD_JSON,
+)
 from tools.build_goal_api_surface_contract import DEFAULT_OUT_JSON as DEFAULT_GOAL_API_SURFACE_CONTRACT_JSON
 from tools.build_goal_release_burndown_work_order import DEFAULT_OUT_JSON as DEFAULT_RELEASE_BURNDOWN_JSON
 from tools.build_product_execution_approval_gate import (
@@ -200,6 +203,21 @@ CATALOG: list[dict[str, Any]] = [
         "recommended_action": (
             "Complete exact human NR1I2/PXR kcal, source, assay, target-match, and conflict-resolution review rows "
             "before any PXR or broad platform scope promotion."
+        ),
+    },
+    {
+        "kit_entry_id": "engine_refinement_claim_promotion_action_board",
+        "lane_id": "product_engine_refinement",
+        "action_types": ["resolve_refine_tier_claim_promotion_blocker"],
+        "input_kind": "claim_promotion_blocker_action_board",
+        "source_gate_json": "",
+        "template_path": DEFAULT_ENGINE_REFINEMENT_CLAIM_ACTION_BOARD_CSV,
+        "intake_path": DEFAULT_ENGINE_REFINEMENT_CLAIM_ACTION_BOARD_CSV,
+        "template_required": False,
+        "release_checks": "engine_refinement_claim_promotion_action_board_recorded",
+        "recommended_action": (
+            "Use the refine-tier claim blocker action board to track public benchmark rows, parameter calibration, "
+            "metal/cofactor, protonation/charge, solvent/FEP, and external structure-quality parity evidence."
         ),
     },
     {

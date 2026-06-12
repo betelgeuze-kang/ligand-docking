@@ -84,6 +84,8 @@ def _engine() -> dict:
             "check_count": 18,
             "pass_count": 18,
             "blocked_count": 0,
+            "claim_promotion_action_board_csv": "runs/engine_refinement_claim_promotion_action_board_current.csv",
+            "claim_promotion_action_row_count": 6,
         }
     }
 
@@ -112,6 +114,11 @@ def test_product_launch_r4_preflight_ready_but_does_not_execute() -> None:
     assert summary["launch_executed"] is False
     assert summary["external_state_mutated"] is False
     assert summary["pass_count"] == summary["check_count"]
+    assert (
+        summary["engine_refinement_claim_promotion_action_board_csv"]
+        == "runs/engine_refinement_claim_promotion_action_board_current.csv"
+    )
+    assert summary["engine_refinement_claim_promotion_action_row_count"] == 6
     assert payload["blockers"] == []
 
 

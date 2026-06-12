@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 from pathlib import Path
 from typing import Any
@@ -50,6 +51,9 @@ DEFAULT_PROTECTED_CLEANUP_REVIEW_JSON = "runs/protected_cleanup_payload_review_c
 DEFAULT_CAMEO_RUNTIME_REPAIR_WORK_ORDER_JSON = "runs/cameo_runtime_repair_work_order_current.json"
 DEFAULT_GOAL_OPERATOR_INTAKE_KIT_JSON = "runs/goal_operator_intake_kit_current/manifest.json"
 DEFAULT_PRODUCT_GOAL_COMPLETION_AUDIT_JSON = "runs/product_goal_completion_audit_current.json"
+DEFAULT_ENGINE_REFINEMENT_CLAIM_ACTION_BOARD_CSV = (
+    "runs/engine_refinement_claim_promotion_action_board_current.csv"
+)
 
 CLAIM_BOUNDARY = (
     "Goal operator action board only; it consolidates approval tokens, blocked CAMEO operator inputs, and cleanup review rows "
@@ -72,6 +76,14 @@ def _read_json_if_present(path_like: str | Path) -> dict[str, Any]:
     except (OSError, json.JSONDecodeError):
         return {}
     return payload if isinstance(payload, dict) else {}
+
+
+def _read_csv_if_present(path_like: str | Path) -> list[dict[str, Any]]:
+    path = _resolve(path_like)
+    if not path.exists():
+        return []
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        return [dict(row) for row in csv.DictReader(handle)]
 
 
 def _write_json(path_like: str | Path, payload: dict[str, Any]) -> None:
@@ -630,6 +642,47 @@ def _product_goal_completion_actions(
     return actions
 
 
+def _engine_refinement_claim_actions(
+    *,
+    action_board_rows: list[dict[str, Any]],
+    action_board_path: str,
+) -> list[dict[str, Any]]:
+    actions: list[dict[str, Any]] = []
+    for row in action_board_rows:
+        blocker_id = _text(row.get("blocker_id"))
+        if not blocker_id:
+            continue
+        action = _action(
+            priority=2,
+            lane_id="product_engine_refinement",
+            action_type="resolve_refine_tier_claim_promotion_blocker",
+            status="required",
+            required_input=blocker_id,
+            artifact_path=action_board_path,
+            recommended_action=_text(row.get("owner_action")),
+            reason=(
+                f"current_status={_text(row.get('current_status'))}; "
+                f"required_evidence={_text(row.get('required_evidence'))}; "
+                f"gate_or_artifact={_text(row.get('gate_or_artifact'))}; "
+                f"blocking_signals={_text(row.get('blocking_signals'))}; "
+                f"claim_boundary={_text(row.get('claim_boundary'))}."
+            ),
+        )
+        action.update(
+            {
+                "claim_blocker_id": blocker_id,
+                "claim_blocker_current_status": _text(row.get("current_status")),
+                "claim_blocker_required_evidence": _text(row.get("required_evidence")),
+                "claim_blocker_gate_or_artifact": _text(row.get("gate_or_artifact")),
+                "claim_blocker_blocking_signals": _text(row.get("blocking_signals")),
+                "claim_blocker_next_required_step": _text(row.get("next_required_step")),
+                "claim_blocker_external_dependency": _text(row.get("external_dependency")),
+            }
+        )
+        actions.append(action)
+    return actions
+
+
 def _drilldown_surface_paths(drilldown_packet: dict[str, Any]) -> set[str]:
     summary = _summary(drilldown_packet)
     if summary.get("status") != "large_cleanup_surface_drilldown_ready":
@@ -789,6 +842,7 @@ def build_action_board(
     cleanup_execution_approval_gate_packet: dict[str, Any] | None = None,
     cleanup_completion_gate_packet: dict[str, Any] | None = None,
     goal_operator_intake_kit_packet: dict[str, Any] | None = None,
+    engine_refinement_claim_action_board_rows: list[dict[str, Any]] | None = None,
     rollup_path: str = DEFAULT_ROLLUP_JSON,
     product_preflight_path: str = DEFAULT_PRODUCT_PREFLIGHT_JSON,
     product_bundle_contract_path: str = DEFAULT_PRODUCT_BUNDLE_CONTRACT_JSON,
@@ -822,6 +876,7 @@ def build_action_board(
     cleanup_execution_approval_gate_path: str = DEFAULT_CLEANUP_EXECUTION_APPROVAL_GATE_JSON,
     cleanup_completion_gate_path: str = DEFAULT_CLEANUP_COMPLETION_GATE_JSON,
     goal_operator_intake_kit_path: str = DEFAULT_GOAL_OPERATOR_INTAKE_KIT_JSON,
+    engine_refinement_claim_action_board_path: str = DEFAULT_ENGINE_REFINEMENT_CLAIM_ACTION_BOARD_CSV,
 ) -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
     cleanup_completion_gate_packet = cleanup_completion_gate_packet or {}
@@ -835,6 +890,12 @@ def build_action_board(
         _product_goal_completion_actions(
             goal_completion_audit=product_goal_completion_audit_packet or {},
             goal_completion_audit_path=product_goal_completion_audit_path,
+        )
+    )
+    rows.extend(
+        _engine_refinement_claim_actions(
+            action_board_rows=engine_refinement_claim_action_board_rows or [],
+            action_board_path=engine_refinement_claim_action_board_path,
         )
     )
     rows.extend(
@@ -998,6 +1059,15 @@ def build_action_board(
         ),
         "product_ai_production_action_count": sum(1 for row in rows if row["lane_id"] == "product_ai_production"),
         "product_scope_expansion_action_count": sum(1 for row in rows if row["lane_id"] == "product_scope_expansion"),
+        "product_engine_refinement_action_count": sum(
+            1 for row in rows if row["lane_id"] == "product_engine_refinement"
+        ),
+        "product_engine_refinement_action_board_csv": (
+            engine_refinement_claim_action_board_path
+            if engine_refinement_claim_action_board_rows
+            else ""
+        ),
+        "product_engine_refinement_claim_blocker_count": len(engine_refinement_claim_action_board_rows or []),
         "parallel_product_action_count": len(parallel_product_actions),
         "parallel_product_action_ids": [
             f"{_text(row.get('lane_id'))}:{_text(row.get('action_type'))}"
@@ -1462,6 +1532,9 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- primary_action_recommended_action: `{s['primary_action_recommended_action']}`",
         f"- product_ai_production_action_count: `{s['product_ai_production_action_count']}`",
         f"- product_scope_expansion_action_count: `{s['product_scope_expansion_action_count']}`",
+        f"- product_engine_refinement_action_count: `{s['product_engine_refinement_action_count']}`",
+        f"- product_engine_refinement_action_board_csv: `{s['product_engine_refinement_action_board_csv']}`",
+        f"- product_engine_refinement_claim_blocker_count: `{s['product_engine_refinement_claim_blocker_count']}`",
         f"- product_goal_completion_audit_status: `{s['product_goal_completion_audit_status']}`",
         f"- product_goal_complete: `{s['product_goal_complete']}`",
         f"- product_goal_primary_bottleneck_kind: `{s['product_goal_primary_bottleneck_kind']}`",
@@ -1764,6 +1837,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--cleanup-execution-approval-gate-json", default=DEFAULT_CLEANUP_EXECUTION_APPROVAL_GATE_JSON)
     parser.add_argument("--cleanup-completion-gate-json", default=DEFAULT_CLEANUP_COMPLETION_GATE_JSON)
     parser.add_argument("--goal-operator-intake-kit-json", default=DEFAULT_GOAL_OPERATOR_INTAKE_KIT_JSON)
+    parser.add_argument(
+        "--engine-refinement-claim-action-board-csv",
+        default=DEFAULT_ENGINE_REFINEMENT_CLAIM_ACTION_BOARD_CSV,
+    )
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -1809,6 +1886,9 @@ def main(argv: list[str] | None = None) -> None:
         cleanup_execution_approval_gate_packet=_read_json_if_present(args.cleanup_execution_approval_gate_json),
         cleanup_completion_gate_packet=_read_json_if_present(args.cleanup_completion_gate_json),
         goal_operator_intake_kit_packet=_read_json_if_present(args.goal_operator_intake_kit_json),
+        engine_refinement_claim_action_board_rows=_read_csv_if_present(
+            args.engine_refinement_claim_action_board_csv
+        ),
         rollup_path=args.rollup_json,
         product_preflight_path=args.product_preflight_json,
         product_bundle_contract_path=args.product_bundle_contract_json,
@@ -1842,6 +1922,7 @@ def main(argv: list[str] | None = None) -> None:
         cleanup_execution_approval_gate_path=args.cleanup_execution_approval_gate_json,
         cleanup_completion_gate_path=args.cleanup_completion_gate_json,
         goal_operator_intake_kit_path=args.goal_operator_intake_kit_json,
+        engine_refinement_claim_action_board_path=args.engine_refinement_claim_action_board_csv,
     )
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])

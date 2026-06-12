@@ -37,6 +37,7 @@ DEFAULT_ARTIFACTS = {
     "third_party_license_review_gate": "runs/third_party_license_review_gate_current.json",
     "product_rollout_execution_readiness": "runs/product_rollout_execution_readiness_current.json",
     "product_launch_r4_preflight": "runs/product_launch_r4_preflight_current.json",
+    "engine_refinement_claim_promotion_action_board": "runs/engine_refinement_claim_promotion_action_board_current.csv",
 }
 APPROVAL_TOKENS = [
     "APPROVE_PRODUCT_ROLLOUT",
@@ -123,6 +124,7 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
     third_party_license_review = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["third_party_license_review_gate"])))
     rollout_execution_readiness = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["product_rollout_execution_readiness"])))
     launch_r4_preflight = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["product_launch_r4_preflight"])))
+    engine_action_board_text = _read_text(_resolve(DEFAULT_ARTIFACTS["engine_refinement_claim_promotion_action_board"]))
     viewer_vendor = _read_json(_resolve(DEFAULT_ARTIFACTS["viewer_vendor_manifest"]))
     systemd_api_server_unit = _read_text(_resolve(DEFAULT_ARTIFACTS["systemd_api_server_unit"]))
     systemd_api_server_env = _read_text(_resolve(DEFAULT_ARTIFACTS["systemd_api_server_env_example"]))
@@ -325,6 +327,24 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
                 f"blocker_count={launch_r4_preflight.get('blocker_count')};"
                 f"authorized_for_external_mutation={launch_r4_preflight.get('authorized_for_external_mutation')};"
                 f"launch_executed={launch_r4_preflight.get('launch_executed')}"
+            ),
+        },
+        {
+            "check": "engine_refinement_claim_promotion_action_board_recorded",
+            "passed": (
+                engine_action_board_text.startswith("blocker_id,current_status,required_evidence,")
+                and engine_action_board_text.count("\n") >= 6
+                and "public_benchmark_gate_not_ready" in engine_action_board_text
+                and "external_structure_quality_parity_not_ready" in engine_action_board_text
+                and "APPROVE_REFINE_TIER_PUBLIC_BENCHMARK_INTAKE" in engine_action_board_text
+                and DEFAULT_ARTIFACTS["engine_refinement_claim_promotion_action_board"]
+                == str(launch_r4_preflight.get("engine_refinement_claim_promotion_action_board_csv", ""))
+            ),
+            "observed": (
+                f"action_board_path={DEFAULT_ARTIFACTS['engine_refinement_claim_promotion_action_board']};"
+                f"launch_preflight_action_board_path="
+                f"{launch_r4_preflight.get('engine_refinement_claim_promotion_action_board_csv')};"
+                f"line_count={engine_action_board_text.count(chr(10))}"
             ),
         },
     ]

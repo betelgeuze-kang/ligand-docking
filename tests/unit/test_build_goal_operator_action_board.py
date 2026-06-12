@@ -637,6 +637,33 @@ def _goal_operator_intake_kit() -> dict:
     }
 
 
+def _engine_refinement_claim_action_rows() -> list[dict[str, str]]:
+    return [
+        {
+            "blocker_id": "public_benchmark_gate_not_ready",
+            "current_status": "blocked_refine_tier_public_benchmark_readiness",
+            "required_evidence": "Curated public benchmark intake rows.",
+            "owner_action": "Fill public benchmark work-order rows.",
+            "gate_or_artifact": "runs/refine_tier_public_benchmark_readiness_current.json",
+            "external_dependency": "Operator curated public benchmark rows.",
+            "claim_boundary": "Public benchmark claim stays blocked.",
+            "blocking_signals": "insufficient_total_rows;fit_and_holdout_splits_required",
+            "next_required_step": "Fill and apply work-order rows.",
+        },
+        {
+            "blocker_id": "external_structure_quality_parity_not_ready",
+            "current_status": "blocked_structure_quality_claim",
+            "required_evidence": "External MolProbity/OpenStructure parity.",
+            "owner_action": "Ingest external structure-quality parity result packet.",
+            "gate_or_artifact": "refine_tier_structure_quality_interface_claim_guard",
+            "external_dependency": "External parity result packet.",
+            "claim_boundary": "Internal proxy is not external parity.",
+            "blocking_signals": "external_molprobity_not_available;external_openstructure_not_available",
+            "next_required_step": "Add external structure-quality parity intake.",
+        },
+    ]
+
+
 def _product_goal_completion_audit() -> dict:
     return {
         "summary": {
@@ -809,6 +836,41 @@ def test_goal_operator_action_board_surfaces_product_ai_goal_completion_actions(
     assert scope["scope_pxr_exact_review_kcal_placeholder_count"] == 6
     assert scope["scope_pxr_exact_review_conflict_resolution_required_count"] == 3
     assert "pxr_exact_review_kcal_placeholder_count=6" in scope["reason"]
+
+
+def test_goal_operator_action_board_surfaces_engine_refinement_claim_actions() -> None:
+    payload = mod.build_action_board(
+        rollup_packet={},
+        product_preflight_packet={},
+        product_bundle_contract_packet={},
+        product_delivery_evidence_packet={},
+        cameo_input_kit_packet={},
+        cameo_input_validation_packet={},
+        cameo_repair_preflight_packet={},
+        transition_cleanup_preflight_packet={},
+        ligand_cleanup_preflight_packet={},
+        cleanup_completion_gate_packet=_cleanup_completion_gate_ready(),
+        engine_refinement_claim_action_board_rows=_engine_refinement_claim_action_rows(),
+        engine_refinement_claim_action_board_path=(
+            "runs/engine_refinement_claim_promotion_action_board_current.csv"
+        ),
+    )
+
+    summary = payload["summary"]
+    assert summary["product_engine_refinement_action_count"] == 2
+    assert summary["product_engine_refinement_claim_blocker_count"] == 2
+    assert (
+        summary["product_engine_refinement_action_board_csv"]
+        == "runs/engine_refinement_claim_promotion_action_board_current.csv"
+    )
+    rows = {row["claim_blocker_id"]: row for row in payload["rows"]}
+    public = rows["public_benchmark_gate_not_ready"]
+    assert public["lane_id"] == "product_engine_refinement"
+    assert public["action_type"] == "resolve_refine_tier_claim_promotion_blocker"
+    assert public["status"] == "required"
+    assert public["required_input"] == "public_benchmark_gate_not_ready"
+    assert public["claim_blocker_gate_or_artifact"] == "runs/refine_tier_public_benchmark_readiness_current.json"
+    assert "insufficient_total_rows" in public["claim_blocker_blocking_signals"]
 
 
 def test_goal_operator_action_board_summary_points_to_primary_product_ai_action() -> None:

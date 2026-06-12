@@ -372,11 +372,31 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `claim_grade_public_benchmark_ready=false`로 claim 경계를 고정한다.
   summary는 `claim_promotion_allowed=false`,
   `claim_promotion_blocker_count=6`,
+  `claim_promotion_action_row_count=6`,
   `claim_promotion_blockers=[public_benchmark_gate_not_ready,
   parameter_calibration_claim_not_ready, metal_cofactor_parameterization_not_ready,
   charged_residue_protonation_and_charge_calibration_not_ready,
   solvent_fep_public_pair_calibration_not_ready,
   external_structure_quality_parity_not_ready]`도 함께 노출한다.
+  `claim_promotion_action_rows`는 blocker별 `required_evidence`,
+  `owner_action`, `gate_or_artifact`, `external_dependency`, `claim_boundary`,
+  `blocking_signals`, `next_required_step`를 포함하는 action board로 남아,
+  public benchmark work-order 채움, parameter calibration, metal/cofactor parameter source,
+  protonation/charge calibration, solvent/FEP public-pair calibration, 외부
+  MolProbity/OpenStructure/native-complex parity ingestion을 각각 별도 operator/evidence
+  작업으로 분리한다. CLI 실행 시 같은 row set은
+  `runs/engine_refinement_claim_promotion_action_board_current.csv`에도 기록되어
+  operator가 blocker별 evidence 수집/검토 상태를 별도 표로 추적할 수 있다.
+  이 action board CSV는 `product_launch_r4_preflight` summary,
+  `product_release_bundle_current.json`의
+  `engine_refinement_claim_promotion_action_board_recorded` check,
+  `product_release_source_of_truth_gate_current.json`의 freshness row에도 연결되어
+  독립 상용 릴리스 묶음에서 evidence blocker board가 빠지거나 stale해지는 것을 막는다.
+  또한 `goal_operator_action_board_current.json`은 같은 CSV를
+  `product_engine_refinement` lane의 `resolve_refine_tier_claim_promotion_blocker`
+  actions로 흡수하고, `goal_operator_intake_kit_current/manifest.json`은
+  `engine_refinement_claim_promotion_action_board` entry로 노출해 operator-facing
+  작업판에서도 claim blocker evidence 수집이 빠지지 않게 한다.
   `tools/product/build_refine_tier_public_benchmark_readiness.py`는 curated 공개
   pose/free-energy benchmark intake를 별도 fail-closed gate로 고정한다.
   `config/refine_tier_public_benchmark_intake_current.csv`는 required column header를

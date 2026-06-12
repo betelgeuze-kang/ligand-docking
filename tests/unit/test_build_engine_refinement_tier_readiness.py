@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import csv
+
 from tools.product import build_engine_refinement_tier_readiness as mod
 
 
@@ -35,7 +37,25 @@ def test_build_engine_refinement_tier_readiness_passes_on_repo_defaults() -> Non
         "solvent_fep_public_pair_calibration_not_ready",
         "external_structure_quality_parity_not_ready",
     ]
+    assert summary["claim_promotion_action_row_count"] == 6
     assert "curated public benchmark work-order rows" in summary["claim_promotion_next_required_step"]
+    action_rows = payload["claim_promotion_action_rows"]
+    assert len(action_rows) == 6
+    assert [row["blocker_id"] for row in action_rows] == summary["claim_promotion_blockers"]
+    rows_by_id = {row["blocker_id"]: row for row in action_rows}
+    public_row = rows_by_id["public_benchmark_gate_not_ready"]
+    assert public_row["current_status"] == "blocked_refine_tier_public_benchmark_readiness"
+    assert "runs/refine_tier_public_benchmark_work_order_current.csv" in public_row["owner_action"]
+    assert "APPROVE_REFINE_TIER_PUBLIC_BENCHMARK_INTAKE" in public_row["owner_action"]
+    assert public_row["gate_or_artifact"] == "runs/refine_tier_public_benchmark_readiness_current.json"
+    assert "insufficient_total_rows" in public_row["blocking_signals"]
+    assert "OpenMM/Schrödinger-grade claims stay blocked" in public_row["claim_boundary"]
+    assert rows_by_id["metal_cofactor_parameterization_not_ready"]["gate_or_artifact"] == (
+        "refine_tier_metal_cofactor_coordination_claim_guard"
+    )
+    assert "MolProbity/OpenStructure" in rows_by_id[
+        "external_structure_quality_parity_not_ready"
+    ]["required_evidence"]
     assert summary["pass_count"] == summary["check_count"]
     checks = {row["check_id"]: row for row in payload["checks"]}
     assert checks["fast_tier_ca_sc_residue_block_layout"]["status"] == "pass"
@@ -63,3 +83,21 @@ def test_build_engine_refinement_tier_readiness_passes_on_repo_defaults() -> Non
     assert checks["refine_tier_pose_metric_surface_ready"]["status"] == "pass"
     assert checks["refine_tier_free_energy_calibration_claim_guard"]["status"] == "pass"
     assert checks["refine_tier_public_benchmark_blocker_linkage"]["status"] == "pass"
+
+
+def test_engine_refinement_tier_readiness_writes_claim_promotion_action_board(tmp_path) -> None:
+    out_json = tmp_path / "engine_refinement_tier_readiness.json"
+    out_csv = tmp_path / "engine_refinement_claim_promotion_action_board.csv"
+
+    mod.main(["--out-json", str(out_json), "--out-action-board-csv", str(out_csv)])
+
+    assert out_json.is_file()
+    assert out_csv.is_file()
+    with out_csv.open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    assert len(rows) == 6
+    assert rows[0]["blocker_id"] == "public_benchmark_gate_not_ready"
+    assert rows[0]["gate_or_artifact"] == "runs/refine_tier_public_benchmark_readiness_current.json"
+    assert "insufficient_total_rows" in rows[0]["blocking_signals"]
+    assert rows[-1]["blocker_id"] == "external_structure_quality_parity_not_ready"
+    assert rows[-1]["gate_or_artifact"] == "refine_tier_structure_quality_interface_claim_guard"

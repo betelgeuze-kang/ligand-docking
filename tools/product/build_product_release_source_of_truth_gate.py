@@ -41,6 +41,7 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_product_ai_report_ux_contract.py",
     "python3 tools/build_product_rollout_execution_readiness.py",
     "python3 tools/build_api_customer_flow_release_evidence.py",
+    "python3 tools/product/build_engine_refinement_tier_readiness.py",
     "python3 tools/product/build_product_launch_r4_preflight.py",
     "python3 deploy/product_release_bundle.py",
     "python3 tools/build_product_release_operations_dossier.py",
@@ -276,7 +277,19 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "artifact_id": "goal_operator_action_board",
         "artifact_path": "runs/goal_operator_action_board_current.json",
         "builder_command": "python3 tools/build_goal_operator_action_board.py",
-        "depends_on": ["runs/goal_readiness_rollup_current.json"],
+        "depends_on": [
+            "runs/goal_readiness_rollup_current.json",
+            "runs/engine_refinement_claim_promotion_action_board_current.csv",
+        ],
+    },
+    {
+        "artifact_id": "engine_refinement_claim_promotion_action_board",
+        "artifact_path": "runs/engine_refinement_claim_promotion_action_board_current.csv",
+        "builder_command": "python3 tools/product/build_engine_refinement_tier_readiness.py",
+        "depends_on": [
+            "tools/product/build_engine_refinement_tier_readiness.py",
+            "runs/engine_refinement_tier_readiness_current.json",
+        ],
     },
     {
         "artifact_id": "product_goal_completion_audit",
