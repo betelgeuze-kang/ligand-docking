@@ -653,6 +653,25 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `registry_promotion_upstream_acceptance_ready`,
   `registry_promotion_currently_satisfied` 구조화 필드로도 고정되어,
   API/goal audit 소비자가 next-action 문자열을 파싱하지 않아도 된다.
+  같은 registry promotion 필드는 `/goal/status`에도
+  `production_ai_checkpoint_registry_promotion_*` 키로 전파되어, 운영자용 상위
+  상태 API에서 남은 AI registry gate와 upstream acceptance 상태가 숨지 않는다.
+  또한 actionable blocker가 `registry_guarded_promotion_acceptance`인 경우
+  checkpoint-readiness summary는
+  `residual_model_registry_guarded_promotion` operator completion packet을
+  반환한다. 이 packet은 `production_promotion_allowed`, customer-facing mutation
+  flags, guarded `default_residual_mode`, positive `trained_model_checkpoint_count`,
+  validation chain을 구조화하되 실제 checkpoint 생성/registry promotion은 수행하지 않는다.
+  `/goal/status`도 이 packet의 ready flag, artifact id, required fields, diagnostic
+  commands, completion rule, next action을 노출한다.
+  `goal_operator_action_board_current.json`의 primary action도 더 이상 ready GPU return을
+  재요구하지 않고 `complete_residual_registry_guarded_promotion`을 가리킨다.
+  `goal_operator_intake_kit_current/manifest.json`은
+  `production_ai_registry_promotion` entry를 operator input required로 surface하며,
+  `/product/commercial-readiness-operator-packet`,
+  `/product/commercial-readiness-execution-ladder`,
+  `/product/commercial-readiness-handoff-bundle`은
+  `production_ai_registry_promotion_*` alias와 completion packet을 그대로 전달한다.
 - `runs/product_production_ai_promotion_workbench_current.json`도
   `blocked_product_production_ai_promotion_workbench`,
   `production_ai_promotion_ready=false`,

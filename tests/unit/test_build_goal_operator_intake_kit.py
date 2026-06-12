@@ -284,13 +284,15 @@ def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp
     summary = payload["summary"]
     by_id = {row["kit_entry_id"]: row for row in payload["rows"]}
     assert summary["status"] == "goal_operator_intake_kit_ready"
-    assert summary["entry_count"] == 16
+    assert summary["entry_count"] == 17
     assert summary["source_action_count"] == 9
     assert summary["release_burndown_source_row_count"] == 8
     assert summary["release_burndown_linked_entry_count"] == 11
     assert summary["operator_input_required_count"] == 15
     assert summary["current_action_required_count"] == 12
     assert summary["deferred_operator_input_count"] == 3
+    assert by_id["production_ai_registry_promotion"]["kit_status"] == "not_surfaced"
+    assert by_id["production_ai_registry_promotion"]["template_required"] is False
     assert summary["primary_action_id"] == "product_ai_production:return_gpu_force_regeneration_receipt"
     assert summary["top_action_id"] == summary["primary_action_id"]
     assert summary["primary_action_priority"] == 0

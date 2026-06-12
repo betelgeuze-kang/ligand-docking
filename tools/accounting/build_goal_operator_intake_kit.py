@@ -81,6 +81,7 @@ DEFAULT_PRODUCTION_AI_GPU_RETURN_SUMMARY_TEMPLATE_JSON = (
 DEFAULT_PRODUCTION_AI_GPU_RETURN_SUMMARY_INTAKE_JSON = (
     "runs/residual_force_trajectory_regeneration_current_summary.json"
 )
+DEFAULT_PRODUCT_GOAL_COMPLETION_AUDIT_JSON = "runs/product_goal_completion_audit_current.json"
 DEFAULT_PRODUCT_SCOPE_EVIDENCE_INTAKE_READINESS_JSON = (
     "runs/product_scope_breadth_evidence_intake_readiness_current.json"
 )
@@ -203,6 +204,24 @@ CATALOG: list[dict[str, Any]] = [
         "recommended_action": (
             "Return the GPU completion summary JSON with queue_rows, processed_rows, ok_rows, failed_rows, "
             "aborted_early, out_manifest_csv, and out_summary_json satisfying the full-regeneration acceptance rule."
+        ),
+    },
+    {
+        "kit_entry_id": "production_ai_registry_promotion",
+        "lane_id": "product_ai_production",
+        "action_types": [
+            "complete_residual_registry_guarded_promotion",
+            "complete_production_ai_actionable_operator_packet",
+        ],
+        "input_kind": "residual_model_registry_guarded_promotion",
+        "source_gate_json": DEFAULT_PRODUCT_GOAL_COMPLETION_AUDIT_JSON,
+        "template_path": "",
+        "intake_path": "",
+        "template_required": False,
+        "release_checks": "production_ai_checkpoint_actionable_operator_completion_packet_ready",
+        "recommended_action": (
+            "Complete the current production AI actionable operator packet, then rerun the registry, "
+            "checkpoint-readiness, promotion workbench, and goal-completion audit gates."
         ),
     },
     {
@@ -776,6 +795,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--product-commercial-independence-json", default=DEFAULT_PRODUCT_COMMERCIAL_INDEPENDENCE_JSON)
     parser.add_argument("--product-license-gate-json", default=DEFAULT_PRODUCT_LICENSE_GATE_JSON)
     parser.add_argument("--production-ai-gpu-return-intake-json", default=DEFAULT_PRODUCTION_AI_GPU_RETURN_INTAKE_JSON)
+    parser.add_argument("--product-goal-completion-audit-json", default=DEFAULT_PRODUCT_GOAL_COMPLETION_AUDIT_JSON)
     parser.add_argument(
         "--product-scope-evidence-intake-readiness-json",
         default=DEFAULT_PRODUCT_SCOPE_EVIDENCE_INTAKE_READINESS_JSON,
@@ -815,6 +835,9 @@ def main(argv: list[str] | None = None) -> None:
         DEFAULT_PRODUCT_LICENSE_GATE_JSON: _read_json_if_present(args.product_license_gate_json),
         DEFAULT_PRODUCTION_AI_GPU_RETURN_INTAKE_JSON: _read_json_if_present(
             args.production_ai_gpu_return_intake_json
+        ),
+        DEFAULT_PRODUCT_GOAL_COMPLETION_AUDIT_JSON: _read_json_if_present(
+            args.product_goal_completion_audit_json
         ),
         DEFAULT_PRODUCT_SCOPE_EVIDENCE_INTAKE_READINESS_JSON: _read_json_if_present(
             args.product_scope_evidence_intake_readiness_json

@@ -809,6 +809,101 @@ def _product_goal_completion_audit() -> dict:
     }
 
 
+def _product_goal_completion_audit_registry_action() -> dict:
+    payload = json.loads(json.dumps(_product_goal_completion_audit()))
+    summary = payload["summary"]
+    packet = {
+        "artifact_id": "residual_model_registry_guarded_promotion",
+        "artifact_path": "runs/residual_model_registry_current.json",
+        "packet_ready": True,
+        "required_fields_or_columns": [
+            "production_promotion_allowed",
+            "customer_facing_auto_correction_allowed",
+            "customer_facing_score_mutation_allowed",
+            "customer_facing_ranking_mutation_allowed",
+            "default_residual_mode",
+            "trained_model_checkpoint_count",
+        ],
+        "diagnostic_commands": [
+            "python3 tools/build_residual_model_registry.py",
+            "python3 tools/build_product_production_ai_checkpoint_readiness.py",
+            "python3 tools/build_product_production_ai_promotion_workbench.py",
+        ],
+        "diagnostic_command_count": 3,
+        "diagnostic_required_fields": [
+            "production_promotion_allowed",
+            "customer_facing_auto_correction_allowed",
+            "customer_facing_score_mutation_allowed",
+            "customer_facing_ranking_mutation_allowed",
+            "default_residual_mode",
+            "trained_model_checkpoint_count",
+        ],
+        "diagnostic_required_field_count": 6,
+        "diagnostic_completion_rule": (
+            "production_promotion_allowed=true; all customer-facing mutation flags true; "
+            "default_residual_mode in assist/production/production_guarded; "
+            "trained_model_checkpoint_count>0"
+        ),
+        "diagnostic_return_artifacts": [
+            "runs/residual_model_registry_current.json",
+            "runs/product_production_ai_checkpoint_readiness_current.json",
+            "runs/product_production_ai_promotion_workbench_current.json",
+        ],
+        "failed_check_ids": [
+            "production_promotion_allowed",
+            "customer_facing_mutation_flags",
+            "default_residual_mode_guarded",
+            "trained_model_checkpoint_count_positive",
+        ],
+        "validation_command": (
+            "python3 tools/build_residual_model_registry.py && "
+            "python3 tools/build_product_production_ai_checkpoint_readiness.py && "
+            "python3 tools/build_product_production_ai_promotion_workbench.py"
+        ),
+        "full_regeneration_command": "python3 tools/generate_ligand_trajectory_engine.py --prod-mode",
+        "completion_rule": "registry_promotion_missing_gate_count=0 and registry_promotion_currently_satisfied=true",
+        "next_action": "Register or promote a trained preflight-ready production checkpoint in residual_model_registry.",
+    }
+    summary.update(
+        {
+            "production_ai_checkpoint_failed_check_ids": [
+                "registry_customer_facing_promotion_allowed"
+            ],
+            "production_ai_gpu_return_artifacts_ready": True,
+            "production_ai_gpu_return_failed_check_ids": [],
+            "production_ai_force_gpu_receipt_manifest_identity_row_count": 768,
+            "production_ai_force_gpu_receipt_matched_queue_id_count": 768,
+            "production_ai_force_gpu_receipt_matched_expected_npz_count": 768,
+            "production_ai_force_gpu_receipt_matched_queue_fingerprint_count": 768,
+            "production_ai_checkpoint_actionable_blocker_stage_id": "registry_guarded_promotion_acceptance",
+            "production_ai_checkpoint_actionable_blocker_check_id": "registry_customer_facing_promotion_allowed",
+            "production_ai_checkpoint_actionable_operator_completion_packet_ready": True,
+            "production_ai_checkpoint_actionable_operator_completion_artifact_id": (
+                "residual_model_registry_guarded_promotion"
+            ),
+            "production_ai_checkpoint_actionable_operator_completion_artifact_path": (
+                "runs/residual_model_registry_current.json"
+            ),
+            "production_ai_checkpoint_actionable_operator_completion_required_fields_or_columns": packet[
+                "required_fields_or_columns"
+            ],
+            "production_ai_checkpoint_actionable_operator_completion_diagnostic_commands": packet[
+                "diagnostic_commands"
+            ],
+            "production_ai_checkpoint_actionable_operator_completion_diagnostic_command_count": 3,
+            "production_ai_checkpoint_actionable_operator_completion_validation_command": packet[
+                "validation_command"
+            ],
+            "production_ai_checkpoint_actionable_operator_completion_completion_rule": packet[
+                "completion_rule"
+            ],
+            "production_ai_checkpoint_actionable_operator_completion_next_action": packet["next_action"],
+            "production_ai_checkpoint_actionable_operator_completion_packet": packet,
+        }
+    )
+    return payload
+
+
 def test_goal_operator_action_board_surfaces_product_ai_goal_completion_actions() -> None:
     actions = mod._product_goal_completion_actions(
         goal_completion_audit=_product_goal_completion_audit(),
@@ -858,6 +953,28 @@ def test_goal_operator_action_board_surfaces_product_ai_goal_completion_actions(
     assert gpu["receipt_matched_queue_fingerprint_count"] == 0
     assert "gpu_return_failed_checks=actual_summary_returned_complete;actual_manifest_operator_verified" in gpu["reason"]
     assert "receipt_manifest_identity_rows=0" in gpu["reason"]
+
+    registry_payload = mod._product_goal_completion_actions(
+        goal_completion_audit=_product_goal_completion_audit_registry_action(),
+        goal_completion_audit_path="runs/product_goal_completion_audit_current.json",
+    )
+    registry_by_type = {row["action_type"]: row for row in registry_payload}
+    registry = registry_by_type["complete_residual_registry_guarded_promotion"]
+    assert "return_gpu_force_regeneration_receipt" not in registry_by_type
+    assert registry["priority"] == 0
+    assert registry["lane_id"] == "product_ai_production"
+    assert registry["operator_completion_packet_ready"] is True
+    assert registry["operator_completion_artifact_id"] == "residual_model_registry_guarded_promotion"
+    assert registry["required_input"] == (
+        "production_promotion_allowed;customer_facing_auto_correction_allowed;"
+        "customer_facing_score_mutation_allowed;customer_facing_ranking_mutation_allowed;"
+        "default_residual_mode;trained_model_checkpoint_count"
+    )
+    assert "build_residual_model_registry.py" in registry["command"]
+    assert "registry_promotion_missing_gate_count=0" in registry[
+        "operator_completion_completion_rule"
+    ]
+    assert "failed_checks=production_promotion_allowed" in registry["reason"]
 
     scope = by_type["curate_scope_evidence_priority_item"]
     assert scope["priority"] == 2
@@ -937,7 +1054,7 @@ def test_goal_operator_action_board_summary_points_to_primary_product_ai_action(
         product_preflight_packet={},
         product_bundle_contract_packet={},
         product_delivery_evidence_packet={},
-        product_goal_completion_audit_packet=_product_goal_completion_audit(),
+        product_goal_completion_audit_packet=_product_goal_completion_audit_registry_action(),
         cameo_input_kit_packet={},
         cameo_input_validation_packet={},
         cameo_repair_preflight_packet={},
@@ -947,17 +1064,19 @@ def test_goal_operator_action_board_summary_points_to_primary_product_ai_action(
     )
 
     summary = payload["summary"]
-    assert summary["primary_action_id"] == "product_ai_production:return_gpu_force_regeneration_receipt"
+    assert summary["primary_action_id"] == "product_ai_production:complete_residual_registry_guarded_promotion"
     assert summary["top_action_id"] == summary["primary_action_id"]
     assert summary["primary_action_priority"] == 0
     assert summary["primary_action_lane_id"] == "product_ai_production"
-    assert summary["primary_action_type"] == "return_gpu_force_regeneration_receipt"
+    assert summary["primary_action_type"] == "complete_residual_registry_guarded_promotion"
     assert summary["primary_action_status"] == "required"
     assert summary["primary_action_required_input"] == (
-        "GPU full-regeneration summary and manifest with operator verification"
+        "production_promotion_allowed;customer_facing_auto_correction_allowed;"
+        "customer_facing_score_mutation_allowed;customer_facing_ranking_mutation_allowed;"
+        "default_residual_mode;trained_model_checkpoint_count"
     )
-    assert "generate_ligand_trajectory_engine.py" in summary["primary_action_command"]
-    assert "Run the full regeneration command on a GPU worker" in summary[
+    assert "build_residual_model_registry.py" in summary["primary_action_command"]
+    assert "Register or promote a trained preflight-ready production checkpoint" in summary[
         "primary_action_recommended_action"
     ]
     assert summary["product_goal_engine_refinement_claim_promotion_ready"] is False

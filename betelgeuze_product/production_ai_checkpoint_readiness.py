@@ -35,6 +35,14 @@ REGISTRY_PROMOTION_REQUIRED_GATE_IDS = [
     "default_residual_mode_guarded",
     "trained_model_checkpoint_count_positive",
 ]
+REGISTRY_PROMOTION_OPERATOR_COMPLETION_FIELDS = [
+    "production_promotion_allowed",
+    "customer_facing_auto_correction_allowed",
+    "customer_facing_score_mutation_allowed",
+    "customer_facing_ranking_mutation_allowed",
+    "default_residual_mode",
+    "trained_model_checkpoint_count",
+]
 
 
 def _summary(packet: dict[str, Any]) -> dict[str, Any]:
@@ -720,6 +728,45 @@ def build_product_production_ai_checkpoint_readiness(
             ),
         }
         operator_completion_packet_artifact = rocm_environment_artifact_path
+    elif _text(first_acceptance_blocker.get("stage_id")) == "registry_guarded_promotion_acceptance":
+        operator_completion_packet = {
+            "artifact_id": "residual_model_registry_guarded_promotion",
+            "artifact_path": registry_artifact_path,
+            "packet_ready": True,
+            "required_fields_or_columns": list(REGISTRY_PROMOTION_OPERATOR_COMPLETION_FIELDS),
+            "diagnostic_commands": [
+                "python3 tools/build_residual_model_registry.py",
+                "python3 tools/build_product_production_ai_checkpoint_readiness.py",
+                "python3 tools/build_product_production_ai_promotion_workbench.py",
+            ],
+            "diagnostic_command_count": 3,
+            "diagnostic_required_fields": list(REGISTRY_PROMOTION_OPERATOR_COMPLETION_FIELDS),
+            "diagnostic_required_field_count": len(REGISTRY_PROMOTION_OPERATOR_COMPLETION_FIELDS),
+            "diagnostic_completion_rule": (
+                "production_promotion_allowed=true; all customer-facing mutation flags true; "
+                "default_residual_mode in assist/production/production_guarded; "
+                "trained_model_checkpoint_count>0"
+            ),
+            "diagnostic_return_artifacts": [
+                registry_artifact_path,
+                "runs/product_production_ai_checkpoint_readiness_current.json",
+                "runs/product_production_ai_promotion_workbench_current.json",
+            ],
+            "failed_check_ids": list(registry_promotion_missing_gate_ids),
+            "validation_command": (
+                "python3 tools/build_residual_model_registry.py && "
+                "python3 tools/build_product_production_ai_checkpoint_readiness.py && "
+                "python3 tools/build_product_production_ai_promotion_workbench.py"
+            ),
+            "full_regeneration_command": _text(handoff.get("full_regeneration_command"))
+            or _first_row_command(handoff_packet, "run_full_regeneration_queue"),
+            "completion_rule": (
+                "registry_promotion_missing_gate_count=0 and registry_promotion_currently_satisfied=true"
+            ),
+            "next_action": registry_promotion_next_action,
+            "observed": _text(first_actionable_check_row.get("observed")),
+        }
+        operator_completion_packet_artifact = registry_artifact_path
     else:
         operator_completion_packet = dict(gpu_return_operator_completion_packet)
         operator_completion_packet_artifact = (

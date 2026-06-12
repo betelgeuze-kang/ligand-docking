@@ -17,6 +17,7 @@ def _write_goal_api_surface(root: Path, *, include_router: bool = True, include_
         "GOAL_RELEASE_BURNDOWN_ARTIFACT = 'runs/goal_release_burndown_work_order_current.json'\n"
         "GOAL_BOTTLENECK_BRIEFING_ARTIFACT = 'runs/goal_bottleneck_briefing_current.json'\n"
         "GOAL_API_SURFACE_CONTRACT_ARTIFACT = 'runs/goal_api_surface_contract_current.json'\n"
+        "PRODUCT_GOAL_COMPLETION_AUDIT_ARTIFACT = 'runs/product_goal_completion_audit_current.json'\n"
         "PRODUCT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_ARTIFACT = 'runs/product_commercial_readiness_handoff_bundle_current.json'\n"
         "PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_ARTIFACT = 'runs/product_full_commercial_blocker_evidence_matrix_current.json'\n"
         "FULL_COMMERCIAL_RELEASE_BLOCKER_IDS = ('R8_full_scope_claim_closure', 'R9_engine_refinement_claim_promotion')\n"
@@ -71,6 +72,19 @@ def _write_goal_api_surface(root: Path, *, include_router: bool = True, include_
         '"primary_release_blocker_action_required_input": "config/product_scope_breadth_evidence_receipt_current.csv",'
         '"primary_release_blocker_action_artifact_path": "runs/product_scope_breadth_evidence_receipt_current.json",'
         '"primary_release_blocker_action_recommended_action": "Fill the full-scope evidence receipt",'
+        '"product_goal_completion_audit_artifact_path": PRODUCT_GOAL_COMPLETION_AUDIT_ARTIFACT,'
+        '"production_ai_checkpoint_registry_promotion_required_gate_ids": ["production_promotion_allowed", "customer_facing_mutation_flags", "default_residual_mode_guarded", "trained_model_checkpoint_count_positive"],'
+        '"production_ai_checkpoint_registry_promotion_missing_gate_ids": ["production_promotion_allowed", "customer_facing_mutation_flags", "default_residual_mode_guarded", "trained_model_checkpoint_count_positive"],'
+        '"production_ai_checkpoint_registry_promotion_missing_gate_count": 4,'
+        '"production_ai_checkpoint_registry_promotion_upstream_acceptance_ready": True,'
+        '"production_ai_checkpoint_registry_promotion_currently_satisfied": False,'
+        '"production_ai_checkpoint_actionable_operator_completion_packet_ready": True,'
+        '"production_ai_checkpoint_actionable_operator_completion_artifact_id": "residual_model_registry_guarded_promotion",'
+        '"production_ai_checkpoint_actionable_operator_completion_required_fields_or_columns": ["production_promotion_allowed", "customer_facing_auto_correction_allowed", "customer_facing_score_mutation_allowed", "customer_facing_ranking_mutation_allowed", "default_residual_mode", "trained_model_checkpoint_count"],'
+        '"production_ai_checkpoint_actionable_operator_completion_diagnostic_commands": ["python3 tools/build_residual_model_registry.py", "python3 tools/build_product_production_ai_checkpoint_readiness.py", "python3 tools/build_product_production_ai_promotion_workbench.py"],'
+        '"production_ai_checkpoint_actionable_operator_completion_diagnostic_command_count": 3,'
+        '"production_ai_checkpoint_actionable_operator_completion_completion_rule": "registry_promotion_missing_gate_count=0 and registry_promotion_currently_satisfied=true",'
+        '"production_ai_checkpoint_actionable_operator_completion_next_action": "Register or promote a trained preflight-ready production checkpoint",'
         '"commercial_readiness_handoff_bundle_status": "product_commercial_readiness_handoff_bundle_ready",'
         '"commercial_readiness_handoff_bundle_ready": True,'
         '"commercial_readiness_handoff_bundle_artifact_path": PRODUCT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_ARTIFACT,'

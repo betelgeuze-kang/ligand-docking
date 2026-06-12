@@ -123,6 +123,17 @@ def _float(value: Any) -> float:
         return 0.0
 
 
+def _list(value: Any) -> list[Any]:
+    if isinstance(value, list):
+        return list(value)
+    text = _text(value)
+    return [part.strip() for part in text.split(";") if part.strip()] if text else []
+
+
+def _dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
 def _action(
     *,
     priority: int,
@@ -487,9 +498,85 @@ def _product_goal_completion_actions(
     if not summary or summary.get("goal_complete") is True:
         return []
     actions: list[dict[str, Any]] = []
+    actionable_operator_packet = _dict(
+        summary.get("production_ai_checkpoint_actionable_operator_completion_packet")
+    )
+    actionable_operator_packet_ready = bool(
+        summary.get("production_ai_checkpoint_actionable_operator_completion_packet_ready") is True
+        and actionable_operator_packet
+    )
+    actionable_artifact_id = _text(
+        summary.get("production_ai_checkpoint_actionable_operator_completion_artifact_id")
+        or actionable_operator_packet.get("artifact_id")
+    )
+    if summary.get("production_ai_checkpoint_ready") is False and actionable_operator_packet_ready:
+        action_type = (
+            "complete_residual_registry_guarded_promotion"
+            if actionable_artifact_id == "residual_model_registry_guarded_promotion"
+            else "complete_production_ai_actionable_operator_packet"
+        )
+        required_fields = _list(
+            summary.get("production_ai_checkpoint_actionable_operator_completion_required_fields_or_columns")
+            or actionable_operator_packet.get("required_fields_or_columns")
+        )
+        diagnostic_commands = _list(
+            summary.get("production_ai_checkpoint_actionable_operator_completion_diagnostic_commands")
+            or actionable_operator_packet.get("diagnostic_commands")
+        )
+        action = _action(
+            priority=0,
+            lane_id="product_ai_production",
+            action_type=action_type,
+            status="required",
+            required_input=";".join(str(item) for item in required_fields) or actionable_artifact_id,
+            artifact_path=(
+                f"{goal_completion_audit_path};{_text(actionable_operator_packet.get('artifact_path'))}"
+                if _text(actionable_operator_packet.get("artifact_path"))
+                else goal_completion_audit_path
+            ),
+            command=_text(
+                summary.get("production_ai_checkpoint_actionable_operator_completion_validation_command")
+                or actionable_operator_packet.get("validation_command")
+            ),
+            recommended_action=_text(
+                summary.get("production_ai_checkpoint_actionable_operator_completion_next_action")
+                or actionable_operator_packet.get("next_action")
+            ),
+            reason=(
+                f"checkpoint_ready={bool(summary.get('production_ai_checkpoint_ready') is True)}; "
+                f"actionable_stage={_text(summary.get('production_ai_checkpoint_actionable_blocker_stage_id'))}; "
+                f"actionable_check={_text(summary.get('production_ai_checkpoint_actionable_blocker_check_id'))}; "
+                f"artifact_id={actionable_artifact_id}; "
+                f"required_fields={';'.join(str(item) for item in required_fields)}; "
+                f"failed_checks={';'.join(str(item) for item in _list(actionable_operator_packet.get('failed_check_ids')))}; "
+                f"completion_rule={_text(actionable_operator_packet.get('completion_rule'))}."
+            ),
+        )
+        action.update(
+            {
+                "parallelizable_with_primary_action": False,
+                "parallel_primary_action_id": "",
+                "parallel_lane_precondition": "",
+                "operator_completion_packet_ready": True,
+                "operator_completion_packet": actionable_operator_packet,
+                "operator_completion_artifact_id": actionable_artifact_id,
+                "operator_completion_required_fields_or_columns": ";".join(
+                    str(item) for item in required_fields
+                ),
+                "operator_completion_diagnostic_commands": ";".join(
+                    str(item) for item in diagnostic_commands
+                ),
+                "operator_completion_diagnostic_command_count": len(diagnostic_commands),
+                "operator_completion_completion_rule": _text(
+                    actionable_operator_packet.get("completion_rule")
+                ),
+                "operator_completion_next_action": _text(actionable_operator_packet.get("next_action")),
+            }
+        )
+        actions.append(action)
     if summary.get("production_ai_checkpoint_ready") is False and summary.get(
         "production_ai_force_gpu_worker_handoff_ready"
-    ) is True:
+    ) is True and summary.get("production_ai_gpu_return_artifacts_ready") is not True:
         gpu_return_intake_path = _text(summary.get("production_ai_gpu_return_intake_artifact_path"))
         artifact_path = goal_completion_audit_path
         if gpu_return_intake_path:
@@ -1213,6 +1300,45 @@ def build_action_board(
         ),
         "product_goal_primary_release_blocker_next_command": _text(
             product_goal_completion_audit.get("primary_release_blocker_next_command")
+        ),
+        "production_ai_checkpoint_actionable_operator_completion_packet_ready": bool(
+            product_goal_completion_audit.get(
+                "production_ai_checkpoint_actionable_operator_completion_packet_ready"
+            )
+            is True
+        ),
+        "production_ai_checkpoint_actionable_operator_completion_artifact_id": _text(
+            product_goal_completion_audit.get(
+                "production_ai_checkpoint_actionable_operator_completion_artifact_id"
+            )
+        ),
+        "production_ai_checkpoint_actionable_operator_completion_required_fields_or_columns": [
+            str(item)
+            for item in (
+                product_goal_completion_audit.get(
+                    "production_ai_checkpoint_actionable_operator_completion_required_fields_or_columns"
+                )
+                or []
+            )
+        ],
+        "production_ai_checkpoint_actionable_operator_completion_diagnostic_commands": [
+            str(item)
+            for item in (
+                product_goal_completion_audit.get(
+                    "production_ai_checkpoint_actionable_operator_completion_diagnostic_commands"
+                )
+                or []
+            )
+        ],
+        "production_ai_checkpoint_actionable_operator_completion_completion_rule": _text(
+            product_goal_completion_audit.get(
+                "production_ai_checkpoint_actionable_operator_completion_completion_rule"
+            )
+        ),
+        "production_ai_checkpoint_actionable_operator_completion_next_action": _text(
+            product_goal_completion_audit.get(
+                "production_ai_checkpoint_actionable_operator_completion_next_action"
+            )
         ),
         "primary_release_blocker_action_id": _action_identifier(primary_release_blocker_action),
         "primary_release_blocker_action_lane_id": _text(primary_release_blocker_action.get("lane_id")),

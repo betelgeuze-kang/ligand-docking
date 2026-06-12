@@ -76,6 +76,71 @@ def commercial_production_ai_return_fields(summary: dict[str, Any]) -> dict[str,
     }
 
 
+def commercial_production_ai_registry_promotion_fields(summary: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "production_ai_registry_promotion_action_id": summary.get(
+            "production_ai_registry_promotion_action_id", ""
+        ),
+        "production_ai_registry_promotion_action_artifact": summary.get(
+            "production_ai_registry_promotion_action_artifact", ""
+        ),
+        "production_ai_registry_promotion_action_next_action": summary.get(
+            "production_ai_registry_promotion_action_next_action", ""
+        ),
+        "production_ai_registry_promotion_action_validation_command": summary.get(
+            "production_ai_registry_promotion_action_validation_command", ""
+        ),
+        "production_ai_registry_promotion_action_blocked_by_action_id": summary.get(
+            "production_ai_registry_promotion_action_blocked_by_action_id", ""
+        ),
+        "production_ai_registry_promotion_action_required_operator_inputs": summary.get(
+            "production_ai_registry_promotion_action_required_operator_inputs", ""
+        ),
+        "production_ai_registry_promotion_action_required_evidence": summary.get(
+            "production_ai_registry_promotion_action_required_evidence", ""
+        ),
+        "production_ai_registry_promotion_operator_completion_packet_ready": bool(
+            summary.get("production_ai_registry_promotion_operator_completion_packet_ready") is True
+        ),
+        "production_ai_registry_promotion_operator_completion_packet_keys": list(
+            summary.get("production_ai_registry_promotion_operator_completion_packet_keys")
+            or []
+        ),
+        "production_ai_registry_promotion_operator_completion_artifact_id": summary.get(
+            "production_ai_registry_promotion_operator_completion_artifact_id", ""
+        ),
+        "production_ai_registry_promotion_operator_completion_artifact_path": summary.get(
+            "production_ai_registry_promotion_operator_completion_artifact_path", ""
+        ),
+        "production_ai_registry_promotion_operator_completion_required_fields_or_columns": list(
+            summary.get(
+                "production_ai_registry_promotion_operator_completion_required_fields_or_columns"
+            )
+            or []
+        ),
+        "production_ai_registry_promotion_operator_completion_diagnostic_commands": list(
+            summary.get("production_ai_registry_promotion_operator_completion_diagnostic_commands")
+            or []
+        ),
+        "production_ai_registry_promotion_operator_completion_diagnostic_command_count": int(
+            summary.get(
+                "production_ai_registry_promotion_operator_completion_diagnostic_command_count"
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_operator_completion_completion_rule": summary.get(
+            "production_ai_registry_promotion_operator_completion_completion_rule", ""
+        ),
+        "production_ai_registry_promotion_operator_completion_failed_check_ids": list(
+            summary.get("production_ai_registry_promotion_operator_completion_failed_check_ids")
+            or []
+        ),
+        "production_ai_registry_promotion_operator_completion_packet": dict(
+            summary.get("production_ai_registry_promotion_operator_completion_packet") or {}
+        ),
+    }
+
+
 def commercial_delta_force_closure_fields(summary: dict[str, Any]) -> dict[str, Any]:
     return {
         "delta_force_closure_acceptance_packet_artifact": summary.get(

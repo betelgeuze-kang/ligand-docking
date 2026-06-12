@@ -363,7 +363,20 @@
   재실행하는 것이다. 이 정보는
   `registry_promotion_missing_gate_ids` 및
   `production_ai_checkpoint_registry_promotion_missing_gate_ids`로도 노출되어
-  product API contract와 goal completion audit에서 구조화된 병목으로 추적된다.
+  product API contract, goal completion audit, `/goal/status`에서 구조화된 병목으로
+  추적된다. 현재 registry blocker에는
+  `residual_model_registry_guarded_promotion` operator completion packet도 붙어 있어,
+  필요한 registry fields와 validation chain은 product API, goal completion audit,
+  `/goal/status`에서 보이지만 실제 checkpoint 생성·registry promotion은 여전히
+  실행하지 않는다. `goal_operator_action_board_current.json`의 primary action은
+  ready GPU return을 다시 요구하지 않고
+  `complete_residual_registry_guarded_promotion`을 가리키며,
+  `goal_operator_intake_kit_current/manifest.json`은
+  `production_ai_registry_promotion` entry를 operator input required로 노출한다.
+  `/product/commercial-readiness-operator-packet`,
+  `/product/commercial-readiness-execution-ladder`,
+  `/product/commercial-readiness-handoff-bundle`도
+  `production_ai_registry_promotion_*` alias와 completion packet을 전달한다.
 
 **갭**
 - `residual_model_registry`가 customer-facing guarded promotion을 허용하지 않고,

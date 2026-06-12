@@ -638,6 +638,9 @@ def test_registry_blocker_next_action_names_missing_registry_gates_after_upstrea
         checkpoint_work_order_packet=_packet({"checkpoint_preflight_ready": True, "ready_checkpoint_count": 1}),
         training_data_packet=_packet({"production_training_data_ready": True}),
         force_derivation_validation_packet=_packet({"delta_force_derivation_validation_ready": True}),
+        force_gpu_worker_handoff_packet=_packet(
+            {"full_regeneration_command": "python3 tools/generate_ligand_trajectory_engine.py --prod-mode"}
+        ),
         output_head_gap_contract_packet=_packet(
             {"output_head_gap_contract_ready": True, "production_output_heads_complete": True}
         ),
@@ -680,6 +683,49 @@ def test_registry_blocker_next_action_names_missing_registry_gates_after_upstrea
     assert "trained_model_checkpoint_count_positive" in summary["first_failed_next_action"]
     assert "upstream production-inference acceptance gates" not in summary["first_failed_next_action"]
     assert summary["production_inference_acceptance_next_stage_id"] == "registry_guarded_promotion_acceptance"
+    assert summary["production_inference_actionable_operator_completion_packet_ready"] is True
+    assert summary["production_inference_actionable_operator_completion_packet_artifact"] == (
+        "runs/residual_model_registry_current.json"
+    )
+    assert summary["production_inference_actionable_operator_completion_artifact_id"] == (
+        "residual_model_registry_guarded_promotion"
+    )
+    assert summary["production_inference_actionable_operator_completion_artifact_path"] == (
+        "runs/residual_model_registry_current.json"
+    )
+    assert summary["production_inference_actionable_operator_completion_required_fields_or_columns"] == [
+        "production_promotion_allowed",
+        "customer_facing_auto_correction_allowed",
+        "customer_facing_score_mutation_allowed",
+        "customer_facing_ranking_mutation_allowed",
+        "default_residual_mode",
+        "trained_model_checkpoint_count",
+    ]
+    assert summary["production_inference_actionable_operator_completion_diagnostic_command_count"] == 3
+    assert summary["production_inference_actionable_operator_completion_diagnostic_commands"] == [
+        "python3 tools/build_residual_model_registry.py",
+        "python3 tools/build_product_production_ai_checkpoint_readiness.py",
+        "python3 tools/build_product_production_ai_promotion_workbench.py",
+    ]
+    assert summary["production_inference_actionable_operator_completion_failed_check_ids"] == [
+        "production_promotion_allowed",
+        "customer_facing_mutation_flags",
+        "default_residual_mode_guarded",
+        "trained_model_checkpoint_count_positive",
+    ]
+    assert "registry_promotion_missing_gate_count=0" in summary[
+        "production_inference_actionable_operator_completion_completion_rule"
+    ]
+    assert "generate_ligand_trajectory_engine.py" in summary[
+        "production_inference_actionable_operator_completion_full_regeneration_command"
+    ]
+    assert "production_promotion_allowed=true" in summary[
+        "production_inference_actionable_operator_completion_diagnostic_completion_rule"
+    ]
+    assert summary["production_inference_actionable_operator_completion_packet"]["artifact_id"] == (
+        "residual_model_registry_guarded_promotion"
+    )
+    assert summary["production_inference_worker_runtime_receipt_contract_ready"] is False
 
 
 def test_force_derivation_acceptance_ready_when_delta_force_evidence_ready_without_dataset_label() -> None:

@@ -39,6 +39,7 @@ def test_api_app_imports_with_goal_router() -> None:
     actions_artifact = _artifact_summary("goal_operator_action_board_current.json")
     intake_artifact = _artifact_summary("goal_operator_intake_kit_current/manifest.json")
     api_contract_artifact = _artifact_summary("goal_api_surface_contract_current.json")
+    product_goal_completion_artifact = _artifact_summary("product_goal_completion_audit_current.json")
     full_matrix_artifact = _artifact_summary(
         "product_full_commercial_blocker_evidence_matrix_current.json"
     )
@@ -136,6 +137,73 @@ def test_api_app_imports_with_goal_router() -> None:
     )
     assert status["primary_release_blocker_action_recommended_action"] == actions_artifact.get(
         "primary_release_blocker_action_recommended_action"
+    )
+    assert status["production_ai_checkpoint_registry_promotion_required_gate_ids"] == (
+        product_goal_completion_artifact.get(
+            "production_ai_checkpoint_registry_promotion_required_gate_ids"
+        )
+    )
+    assert status["production_ai_checkpoint_registry_promotion_missing_gate_ids"] == (
+        product_goal_completion_artifact.get(
+            "production_ai_checkpoint_registry_promotion_missing_gate_ids"
+        )
+    )
+    assert status["production_ai_checkpoint_registry_promotion_missing_gate_count"] == int(
+        product_goal_completion_artifact.get(
+            "production_ai_checkpoint_registry_promotion_missing_gate_count"
+        )
+        or 0
+    )
+    assert status["production_ai_checkpoint_registry_promotion_upstream_acceptance_ready"] is (
+        product_goal_completion_artifact.get(
+            "production_ai_checkpoint_registry_promotion_upstream_acceptance_ready"
+        )
+        is True
+    )
+    assert status["production_ai_checkpoint_registry_promotion_currently_satisfied"] is (
+        product_goal_completion_artifact.get(
+            "production_ai_checkpoint_registry_promotion_currently_satisfied"
+        )
+        is True
+    )
+    assert status["production_ai_checkpoint_actionable_operator_completion_packet_ready"] is (
+        product_goal_completion_artifact.get(
+            "production_ai_checkpoint_actionable_operator_completion_packet_ready"
+        )
+        is True
+    )
+    assert status["production_ai_checkpoint_actionable_operator_completion_artifact_id"] == (
+        product_goal_completion_artifact.get(
+            "production_ai_checkpoint_actionable_operator_completion_artifact_id"
+        )
+    )
+    assert status[
+        "production_ai_checkpoint_actionable_operator_completion_required_fields_or_columns"
+    ] == product_goal_completion_artifact.get(
+        "production_ai_checkpoint_actionable_operator_completion_required_fields_or_columns"
+    )
+    assert status[
+        "production_ai_checkpoint_actionable_operator_completion_diagnostic_commands"
+    ] == product_goal_completion_artifact.get(
+        "production_ai_checkpoint_actionable_operator_completion_diagnostic_commands"
+    )
+    assert status[
+        "production_ai_checkpoint_actionable_operator_completion_diagnostic_command_count"
+    ] == int(
+        product_goal_completion_artifact.get(
+            "production_ai_checkpoint_actionable_operator_completion_diagnostic_command_count"
+        )
+        or 0
+    )
+    assert status["production_ai_checkpoint_actionable_operator_completion_completion_rule"] == (
+        product_goal_completion_artifact.get(
+            "production_ai_checkpoint_actionable_operator_completion_completion_rule"
+        )
+    )
+    assert status["production_ai_checkpoint_actionable_operator_completion_next_action"] == (
+        product_goal_completion_artifact.get(
+            "production_ai_checkpoint_actionable_operator_completion_next_action"
+        )
     )
     assert status["completion_audit_release_blocker_bottleneck_count"] == int(
         bottlenecks_artifact.get("completion_audit_release_blocker_bottleneck_count") or 0

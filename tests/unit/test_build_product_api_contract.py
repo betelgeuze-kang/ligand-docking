@@ -380,6 +380,23 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     assert "first_operator_completion_diagnostic_completion_rule" in operator_packet_keys
     assert "first_operator_completion_torch_visibility_probe_command" in operator_packet_keys
     assert "production_ai_return_action_id" in operator_packet_keys
+    assert "production_ai_registry_promotion_action_id" in operator_packet_keys
+    assert (
+        "production_ai_registry_promotion_operator_completion_artifact_path"
+        in operator_packet_keys
+    )
+    assert (
+        "production_ai_registry_promotion_operator_completion_completion_rule"
+        in operator_packet_keys
+    )
+    assert (
+        "production_ai_registry_promotion_operator_completion_failed_check_ids"
+        in operator_packet_keys
+    )
+    assert (
+        "production_ai_registry_promotion_operator_completion_packet"
+        in operator_packet_keys
+    )
     assert "production_ai_return_operator_completion_artifact_path" in operator_packet_keys
     assert "production_ai_return_operator_completion_completion_rule" in operator_packet_keys
     assert (
@@ -451,6 +468,23 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     assert "first_operator_completion_diagnostic_completion_rule" in execution_ladder_keys
     assert "first_operator_completion_torch_visibility_probe_command" in execution_ladder_keys
     assert "production_ai_return_action_id" in execution_ladder_keys
+    assert "production_ai_registry_promotion_action_id" in execution_ladder_keys
+    assert (
+        "production_ai_registry_promotion_operator_completion_artifact_path"
+        in execution_ladder_keys
+    )
+    assert (
+        "production_ai_registry_promotion_operator_completion_completion_rule"
+        in execution_ladder_keys
+    )
+    assert (
+        "production_ai_registry_promotion_operator_completion_failed_check_ids"
+        in execution_ladder_keys
+    )
+    assert (
+        "production_ai_registry_promotion_operator_completion_packet"
+        in execution_ladder_keys
+    )
     assert "production_ai_return_operator_completion_artifact_path" in execution_ladder_keys
     assert "production_ai_return_operator_completion_completion_rule" in execution_ladder_keys
     assert (
@@ -494,6 +528,23 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     assert "first_operator_completion_diagnostic_completion_rule" in handoff_bundle_keys
     assert "first_operator_completion_torch_visibility_probe_command" in handoff_bundle_keys
     assert "production_ai_return_action_id" in handoff_bundle_keys
+    assert "production_ai_registry_promotion_action_id" in handoff_bundle_keys
+    assert (
+        "production_ai_registry_promotion_operator_completion_artifact_path"
+        in handoff_bundle_keys
+    )
+    assert (
+        "production_ai_registry_promotion_operator_completion_completion_rule"
+        in handoff_bundle_keys
+    )
+    assert (
+        "production_ai_registry_promotion_operator_completion_failed_check_ids"
+        in handoff_bundle_keys
+    )
+    assert (
+        "production_ai_registry_promotion_operator_completion_packet"
+        in handoff_bundle_keys
+    )
     assert "production_ai_return_operator_completion_artifact_path" in handoff_bundle_keys
     assert "production_ai_return_operator_completion_completion_rule" in handoff_bundle_keys
     assert (

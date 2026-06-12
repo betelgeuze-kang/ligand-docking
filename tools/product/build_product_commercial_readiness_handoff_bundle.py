@@ -1127,6 +1127,138 @@ def build_product_commercial_readiness_handoff_bundle(
             ladder_summary.get("production_ai_return_bundle_guardrail")
             or operator_summary.get("production_ai_return_bundle_guardrail")
         ),
+        "production_ai_registry_promotion_action_id": _text(
+            ladder_summary.get("production_ai_registry_promotion_action_id")
+            or operator_summary.get("production_ai_registry_promotion_action_id")
+        ),
+        "production_ai_registry_promotion_action_artifact": _text(
+            ladder_summary.get("production_ai_registry_promotion_action_artifact")
+            or operator_summary.get("production_ai_registry_promotion_action_artifact")
+        ),
+        "production_ai_registry_promotion_action_next_action": _text(
+            ladder_summary.get("production_ai_registry_promotion_action_next_action")
+            or operator_summary.get("production_ai_registry_promotion_action_next_action")
+        ),
+        "production_ai_registry_promotion_action_validation_command": _text(
+            ladder_summary.get("production_ai_registry_promotion_action_validation_command")
+            or operator_summary.get("production_ai_registry_promotion_action_validation_command")
+        ),
+        "production_ai_registry_promotion_action_blocked_by_action_id": _text(
+            ladder_summary.get("production_ai_registry_promotion_action_blocked_by_action_id")
+            or operator_summary.get(
+                "production_ai_registry_promotion_action_blocked_by_action_id"
+            )
+        ),
+        "production_ai_registry_promotion_action_required_operator_inputs": _text(
+            ladder_summary.get(
+                "production_ai_registry_promotion_action_required_operator_inputs"
+            )
+            or operator_summary.get(
+                "production_ai_registry_promotion_action_required_operator_inputs"
+            )
+        ),
+        "production_ai_registry_promotion_action_required_evidence": _text(
+            ladder_summary.get("production_ai_registry_promotion_action_required_evidence")
+            or operator_summary.get("production_ai_registry_promotion_action_required_evidence")
+        ),
+        "production_ai_registry_promotion_operator_completion_packet_ready": bool(
+            ladder_summary.get(
+                "production_ai_registry_promotion_operator_completion_packet_ready"
+            )
+            is True
+            or operator_summary.get(
+                "production_ai_registry_promotion_operator_completion_packet_ready"
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_operator_completion_packet_keys": [
+            str(item)
+            for item in (
+                ladder_summary.get(
+                    "production_ai_registry_promotion_operator_completion_packet_keys"
+                )
+                or operator_summary.get(
+                    "production_ai_registry_promotion_operator_completion_packet_keys"
+                )
+                or []
+            )
+        ],
+        "production_ai_registry_promotion_operator_completion_artifact_id": _text(
+            ladder_summary.get(
+                "production_ai_registry_promotion_operator_completion_artifact_id"
+            )
+            or operator_summary.get(
+                "production_ai_registry_promotion_operator_completion_artifact_id"
+            )
+        ),
+        "production_ai_registry_promotion_operator_completion_artifact_path": _text(
+            ladder_summary.get(
+                "production_ai_registry_promotion_operator_completion_artifact_path"
+            )
+            or operator_summary.get(
+                "production_ai_registry_promotion_operator_completion_artifact_path"
+            )
+        ),
+        "production_ai_registry_promotion_operator_completion_required_fields_or_columns": [
+            str(item)
+            for item in (
+                ladder_summary.get(
+                    "production_ai_registry_promotion_operator_completion_required_fields_or_columns"
+                )
+                or operator_summary.get(
+                    "production_ai_registry_promotion_operator_completion_required_fields_or_columns"
+                )
+                or []
+            )
+        ],
+        "production_ai_registry_promotion_operator_completion_diagnostic_commands": [
+            str(item)
+            for item in (
+                ladder_summary.get(
+                    "production_ai_registry_promotion_operator_completion_diagnostic_commands"
+                )
+                or operator_summary.get(
+                    "production_ai_registry_promotion_operator_completion_diagnostic_commands"
+                )
+                or []
+            )
+        ],
+        "production_ai_registry_promotion_operator_completion_diagnostic_command_count": int(
+            ladder_summary.get(
+                "production_ai_registry_promotion_operator_completion_diagnostic_command_count"
+            )
+            or operator_summary.get(
+                "production_ai_registry_promotion_operator_completion_diagnostic_command_count"
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_operator_completion_completion_rule": _text(
+            ladder_summary.get(
+                "production_ai_registry_promotion_operator_completion_completion_rule"
+            )
+            or operator_summary.get(
+                "production_ai_registry_promotion_operator_completion_completion_rule"
+            )
+        ),
+        "production_ai_registry_promotion_operator_completion_failed_check_ids": [
+            str(item)
+            for item in (
+                ladder_summary.get(
+                    "production_ai_registry_promotion_operator_completion_failed_check_ids"
+                )
+                or operator_summary.get(
+                    "production_ai_registry_promotion_operator_completion_failed_check_ids"
+                )
+                or []
+            )
+        ],
+        "production_ai_registry_promotion_operator_completion_packet": dict(
+            ladder_summary.get("production_ai_registry_promotion_operator_completion_packet")
+            or operator_summary.get(
+                "production_ai_registry_promotion_operator_completion_packet"
+            )
+            or {}
+        ),
         "delta_force_closure_acceptance_packet_artifact": _text(
             operator_summary.get("delta_force_closure_acceptance_packet_artifact")
         ),
@@ -1319,6 +1451,9 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- production_ai_return_bundle_next_artifact_id: `{s['production_ai_return_bundle_next_artifact_id']}`",
         f"- production_ai_return_bundle_failed_check_ids: `{';'.join(s['production_ai_return_bundle_next_artifact_failed_check_ids'])}`",
         f"- production_ai_return_bundle_post_return_validation_command: `{s['production_ai_return_bundle_post_return_validation_command']}`",
+        f"- production_ai_registry_promotion_action_id: `{s['production_ai_registry_promotion_action_id']}`",
+        f"- production_ai_registry_promotion_operator_completion_artifact_path: `{s['production_ai_registry_promotion_operator_completion_artifact_path']}`",
+        f"- production_ai_registry_promotion_operator_completion_completion_rule: `{s['production_ai_registry_promotion_operator_completion_completion_rule']}`",
         f"- first_operator_completion_worker_runtime_receipt_contract_ready: `{s['first_operator_completion_worker_runtime_receipt_contract_ready']}`",
         f"- first_operator_completion_worker_runtime_receipt_required_fields_or_columns: `{';'.join(s['first_operator_completion_worker_runtime_receipt_required_fields_or_columns'])}`",
         f"- first_operator_completion_worker_runtime_receipt_post_environment_next_artifact: `{s['first_operator_completion_worker_runtime_receipt_post_environment_next_artifact']}`",

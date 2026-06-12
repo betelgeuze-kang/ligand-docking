@@ -16,6 +16,7 @@ GOAL_RELEASE_DECISION_ARTIFACT = ROOT / "runs" / "goal_release_decision_gate_cur
 GOAL_RELEASE_BURNDOWN_ARTIFACT = ROOT / "runs" / "goal_release_burndown_work_order_current.json"
 GOAL_BOTTLENECK_BRIEFING_ARTIFACT = ROOT / "runs" / "goal_bottleneck_briefing_current.json"
 GOAL_API_SURFACE_CONTRACT_ARTIFACT = ROOT / "runs" / "goal_api_surface_contract_current.json"
+PRODUCT_GOAL_COMPLETION_AUDIT_ARTIFACT = ROOT / "runs" / "product_goal_completion_audit_current.json"
 PRODUCT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_ARTIFACT = (
     ROOT / "runs" / "product_commercial_readiness_handoff_bundle_current.json"
 )
@@ -111,6 +112,7 @@ async def get_goal_status() -> dict[str, Any]:
     burndown_packet = _read_json_object(GOAL_RELEASE_BURNDOWN_ARTIFACT)
     bottleneck_packet = _read_json_object(GOAL_BOTTLENECK_BRIEFING_ARTIFACT)
     api_contract_packet = _read_json_object(GOAL_API_SURFACE_CONTRACT_ARTIFACT)
+    product_goal_completion_packet = _read_json_object(PRODUCT_GOAL_COMPLETION_AUDIT_ARTIFACT)
     handoff_packet = _read_json_object(PRODUCT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_ARTIFACT)
     full_commercial_matrix_packet = _read_json_object(
         PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_ARTIFACT
@@ -123,6 +125,7 @@ async def get_goal_status() -> dict[str, Any]:
     burndown = _summary(burndown_packet)
     bottlenecks = _summary(bottleneck_packet)
     api_contract = _summary(api_contract_packet)
+    product_goal_completion = _summary(product_goal_completion_packet)
     handoff = _summary(handoff_packet)
     full_commercial_matrix = _summary(full_commercial_matrix_packet)
     bottleneck_rows = _rows(bottleneck_packet)
@@ -189,6 +192,19 @@ async def get_goal_status() -> dict[str, Any]:
             "primary_release_blocker_action_required_input": "",
             "primary_release_blocker_action_artifact_path": "",
             "primary_release_blocker_action_recommended_action": "",
+            "product_goal_completion_audit_artifact_path": str(PRODUCT_GOAL_COMPLETION_AUDIT_ARTIFACT),
+            "production_ai_checkpoint_registry_promotion_required_gate_ids": [],
+            "production_ai_checkpoint_registry_promotion_missing_gate_ids": [],
+            "production_ai_checkpoint_registry_promotion_missing_gate_count": 0,
+            "production_ai_checkpoint_registry_promotion_upstream_acceptance_ready": False,
+            "production_ai_checkpoint_registry_promotion_currently_satisfied": False,
+            "production_ai_checkpoint_actionable_operator_completion_packet_ready": False,
+            "production_ai_checkpoint_actionable_operator_completion_artifact_id": "",
+            "production_ai_checkpoint_actionable_operator_completion_required_fields_or_columns": [],
+            "production_ai_checkpoint_actionable_operator_completion_diagnostic_commands": [],
+            "production_ai_checkpoint_actionable_operator_completion_diagnostic_command_count": 0,
+            "production_ai_checkpoint_actionable_operator_completion_completion_rule": "",
+            "production_ai_checkpoint_actionable_operator_completion_next_action": "",
             "commercial_readiness_handoff_bundle_status": "",
             "commercial_readiness_handoff_bundle_ready": False,
             "commercial_readiness_handoff_bundle_artifact_path": str(
@@ -317,6 +333,58 @@ async def get_goal_status() -> dict[str, Any]:
             "primary_release_blocker_action_recommended_action"
         )
         or intake.get("primary_release_blocker_action_recommended_action", ""),
+        "product_goal_completion_audit_artifact_path": str(PRODUCT_GOAL_COMPLETION_AUDIT_ARTIFACT),
+        "production_ai_checkpoint_registry_promotion_required_gate_ids": _string_list(
+            product_goal_completion.get("production_ai_checkpoint_registry_promotion_required_gate_ids")
+        ),
+        "production_ai_checkpoint_registry_promotion_missing_gate_ids": _string_list(
+            product_goal_completion.get("production_ai_checkpoint_registry_promotion_missing_gate_ids")
+        ),
+        "production_ai_checkpoint_registry_promotion_missing_gate_count": _int(
+            product_goal_completion.get("production_ai_checkpoint_registry_promotion_missing_gate_count")
+        ),
+        "production_ai_checkpoint_registry_promotion_upstream_acceptance_ready": bool(
+            product_goal_completion.get(
+                "production_ai_checkpoint_registry_promotion_upstream_acceptance_ready"
+            )
+            is True
+        ),
+        "production_ai_checkpoint_registry_promotion_currently_satisfied": bool(
+            product_goal_completion.get(
+                "production_ai_checkpoint_registry_promotion_currently_satisfied"
+            )
+            is True
+        ),
+        "production_ai_checkpoint_actionable_operator_completion_packet_ready": bool(
+            product_goal_completion.get(
+                "production_ai_checkpoint_actionable_operator_completion_packet_ready"
+            )
+            is True
+        ),
+        "production_ai_checkpoint_actionable_operator_completion_artifact_id": product_goal_completion.get(
+            "production_ai_checkpoint_actionable_operator_completion_artifact_id", ""
+        ),
+        "production_ai_checkpoint_actionable_operator_completion_required_fields_or_columns": _string_list(
+            product_goal_completion.get(
+                "production_ai_checkpoint_actionable_operator_completion_required_fields_or_columns"
+            )
+        ),
+        "production_ai_checkpoint_actionable_operator_completion_diagnostic_commands": _string_list(
+            product_goal_completion.get(
+                "production_ai_checkpoint_actionable_operator_completion_diagnostic_commands"
+            )
+        ),
+        "production_ai_checkpoint_actionable_operator_completion_diagnostic_command_count": _int(
+            product_goal_completion.get(
+                "production_ai_checkpoint_actionable_operator_completion_diagnostic_command_count"
+            )
+        ),
+        "production_ai_checkpoint_actionable_operator_completion_completion_rule": product_goal_completion.get(
+            "production_ai_checkpoint_actionable_operator_completion_completion_rule", ""
+        ),
+        "production_ai_checkpoint_actionable_operator_completion_next_action": product_goal_completion.get(
+            "production_ai_checkpoint_actionable_operator_completion_next_action", ""
+        ),
         "commercial_readiness_handoff_bundle_status": handoff.get("status", ""),
         "commercial_readiness_handoff_bundle_ready": bool(handoff.get("handoff_bundle_ready") is True),
         "commercial_readiness_handoff_bundle_artifact_path": str(

@@ -861,6 +861,25 @@ def _commercial_readiness_next_action_matrix(
             or []
         )
     ]
+    registry_actionable = (
+        _text(production_ai_checkpoint.get("production_inference_actionable_blocker_stage_id"))
+        == "registry_guarded_promotion_acceptance"
+    )
+    registry_ready = _bool(production_ai_checkpoint.get("registry_promotion_currently_satisfied"))
+    registry_packet = (
+        dict(production_ai_checkpoint.get("production_inference_actionable_operator_completion_packet"))
+        if isinstance(
+            production_ai_checkpoint.get("production_inference_actionable_operator_completion_packet"),
+            dict,
+        )
+        else {}
+    )
+    registry_packet_is_registry = (
+        _text(registry_packet.get("artifact_id"))
+        == "residual_model_registry_guarded_promotion"
+    )
+    if not registry_actionable and not registry_packet_is_registry:
+        registry_packet = {}
     return_bundle_artifacts = [
         str(item) for item in (production_ai_gpu_return_intake.get("operator_return_required_artifacts") or [])
     ]
@@ -1093,6 +1112,87 @@ def _commercial_readiness_next_action_matrix(
                         else ""
                     )
                 ),
+            }
+        )
+    if registry_actionable or registry_packet:
+        actions.append(
+            {
+                "action_id": "production_ai_registry_guarded_promotion",
+                "gap_id": "production_ai_inference_checkpoint",
+                "status": "ready" if registry_ready else "blocked",
+                "release_blocker": not registry_ready,
+                "artifact": _text(
+                    registry_packet.get("artifact_path")
+                    or production_ai_checkpoint.get("production_inference_actionable_blocker_artifact")
+                    or "runs/residual_model_registry_current.json"
+                ),
+                "required_evidence": _text(
+                    registry_packet.get("completion_rule")
+                    or "registry_promotion_missing_gate_count=0 and registry_promotion_currently_satisfied=true"
+                ),
+                "next_action": _text(
+                    registry_packet.get("next_action")
+                    or production_ai_checkpoint.get("production_inference_actionable_blocker_next_action")
+                ),
+                "validation_command": _text(
+                    registry_packet.get("validation_command")
+                    or production_ai_checkpoint.get("production_inference_actionable_blocker_validation_command")
+                ),
+                "execution_command": "",
+                "required_operator_inputs": [
+                    str(item)
+                    for item in (
+                        registry_packet.get("required_fields_or_columns")
+                        or production_ai_checkpoint.get(
+                            "production_inference_actionable_operator_completion_required_fields_or_columns"
+                        )
+                        or []
+                    )
+                ],
+                "operator_completion_packet_ready": bool(registry_packet),
+                "operator_completion_packet": dict(registry_packet),
+                "workstream_lane_id": "registry_promotion_after_gpu_return",
+                "parallelizable_with_primary_blocker": False,
+                "parallel_lane_precondition": "gpu_return_acceptance_ready",
+                "parallel_lane_priority": 0,
+                "blocked_by_action_id": "production_ai_return_summary",
+                "unlock_claim": "production_ai_inference_subject",
+                "first_blocked_stage_id": _text(
+                    production_ai_checkpoint.get("production_inference_actionable_blocker_stage_id")
+                ),
+                "next_after_actionable_blocker_stage_id": _text(
+                    production_ai_checkpoint.get(
+                        "production_inference_next_after_actionable_blocker_stage_id"
+                    )
+                ),
+                "next_after_actionable_blocker_artifact": _text(
+                    production_ai_checkpoint.get(
+                        "production_inference_next_after_actionable_blocker_artifact"
+                    )
+                ),
+                "next_after_actionable_blocker_validation_command": _text(
+                    production_ai_checkpoint.get(
+                        "production_inference_next_after_actionable_blocker_validation_command"
+                    )
+                ),
+                "next_after_actionable_blocker_required_checks": [
+                    str(item)
+                    for item in (
+                        production_ai_checkpoint.get(
+                            "production_inference_next_after_actionable_blocker_required_checks"
+                        )
+                        or []
+                    )
+                ],
+                "next_after_actionable_blocker_unlock_fields": [
+                    str(item)
+                    for item in (
+                        production_ai_checkpoint.get(
+                            "production_inference_next_after_actionable_blocker_unlock_fields"
+                        )
+                        or []
+                    )
+                ],
             }
         )
     actions.extend(

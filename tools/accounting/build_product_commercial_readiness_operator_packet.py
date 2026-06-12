@@ -510,6 +510,23 @@ def build_product_commercial_readiness_operator_packet(
         {},
     )
     production_ai_return_packet = _dict(production_ai_return_raw.get("operator_completion_packet"))
+    production_ai_registry_raw = next(
+        (
+            row
+            for row in rows
+            if _text(row.get("action_id")) == "production_ai_registry_guarded_promotion"
+        ),
+        {},
+    )
+    production_ai_registry = next(
+        (
+            row
+            for row in csv_rows
+            if _text(row.get("action_id")) == "production_ai_registry_guarded_promotion"
+        ),
+        {},
+    )
+    production_ai_registry_packet = _dict(production_ai_registry_raw.get("operator_completion_packet"))
     source_sha256 = _goal_audit_source_sha256(goal_audit_packet)
     matrix_sha256 = _sha256_json(source_rows)
     packet_ready = bool(rows)
@@ -814,6 +831,49 @@ def build_product_commercial_readiness_operator_packet(
             str(item) for item in _list(production_ai_return_packet.get("failed_check_ids"))
         ],
         "production_ai_return_operator_completion_packet": production_ai_return_packet,
+        "production_ai_registry_promotion_action_id": _text(production_ai_registry.get("action_id")),
+        "production_ai_registry_promotion_action_artifact": _text(production_ai_registry.get("artifact")),
+        "production_ai_registry_promotion_action_next_action": _text(production_ai_registry.get("next_action")),
+        "production_ai_registry_promotion_action_validation_command": _text(
+            production_ai_registry.get("validation_command")
+        ),
+        "production_ai_registry_promotion_action_blocked_by_action_id": _text(
+            production_ai_registry.get("blocked_by_action_id")
+        ),
+        "production_ai_registry_promotion_action_required_operator_inputs": _text(
+            production_ai_registry.get("required_operator_inputs")
+        ),
+        "production_ai_registry_promotion_action_required_evidence": _text(
+            production_ai_registry.get("required_evidence")
+        ),
+        "production_ai_registry_promotion_operator_completion_packet_ready": bool(
+            production_ai_registry_raw.get("operator_completion_packet_ready") is True
+        ),
+        "production_ai_registry_promotion_operator_completion_packet_keys": sorted(
+            str(key) for key in production_ai_registry_packet
+        ),
+        "production_ai_registry_promotion_operator_completion_artifact_id": _text(
+            production_ai_registry_packet.get("artifact_id")
+        ),
+        "production_ai_registry_promotion_operator_completion_artifact_path": _text(
+            production_ai_registry_packet.get("artifact_path")
+        ),
+        "production_ai_registry_promotion_operator_completion_required_fields_or_columns": _list(
+            production_ai_registry_packet.get("required_fields_or_columns")
+        ),
+        "production_ai_registry_promotion_operator_completion_diagnostic_commands": _list(
+            production_ai_registry_packet.get("diagnostic_commands")
+        ),
+        "production_ai_registry_promotion_operator_completion_diagnostic_command_count": _int(
+            production_ai_registry_packet.get("diagnostic_command_count")
+        ),
+        "production_ai_registry_promotion_operator_completion_completion_rule": _text(
+            production_ai_registry_packet.get("completion_rule")
+        ),
+        "production_ai_registry_promotion_operator_completion_failed_check_ids": [
+            str(item) for item in _list(production_ai_registry_packet.get("failed_check_ids"))
+        ],
+        "production_ai_registry_promotion_operator_completion_packet": production_ai_registry_packet,
         "production_ai_return_bundle_required_artifact_count": _int(
             production_ai_return.get("return_bundle_required_artifact_count")
         ),
@@ -1008,6 +1068,19 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- worker_runtime_receipt_post_environment_validation_command: `{s['first_operator_completion_worker_runtime_receipt_post_environment_validation_command']}`",
         f"- diagnostic_command_count: `{s['first_operator_completion_diagnostic_command_count']}`",
         f"- diagnostic_completion_rule: `{s['first_operator_completion_diagnostic_completion_rule'] or '-'}`",
+        "",
+        "## Production AI Registry Promotion Packet",
+        "",
+        f"- action_id: `{s['production_ai_registry_promotion_action_id']}`",
+        f"- artifact: `{s['production_ai_registry_promotion_action_artifact']}`",
+        f"- blocked_by_action_id: `{s['production_ai_registry_promotion_action_blocked_by_action_id']}`",
+        f"- packet_ready: `{s['production_ai_registry_promotion_operator_completion_packet_ready']}`",
+        f"- artifact_id: `{s['production_ai_registry_promotion_operator_completion_artifact_id']}`",
+        f"- artifact_path: `{s['production_ai_registry_promotion_operator_completion_artifact_path']}`",
+        f"- required_fields_or_columns: `{';'.join(s['production_ai_registry_promotion_operator_completion_required_fields_or_columns'])}`",
+        f"- diagnostic_command_count: `{s['production_ai_registry_promotion_operator_completion_diagnostic_command_count']}`",
+        f"- completion_rule: `{s['production_ai_registry_promotion_operator_completion_completion_rule']}`",
+        f"- failed_check_ids: `{';'.join(s['production_ai_registry_promotion_operator_completion_failed_check_ids'])}`",
         "",
         "## Production AI Return Completion Packet",
         "",

@@ -593,12 +593,27 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert checkpoint["production_inference_next_after_actionable_blocker_unlock_fields"] == []
     assert checkpoint["production_inference_next_after_actionable_blocker_next_action"] == ""
     assert checkpoint["production_inference_actionable_blocker_blocks_registry_promotion"] is False
-    assert checkpoint["production_inference_actionable_operator_completion_packet_ready"] is False
-    assert checkpoint["production_inference_actionable_operator_completion_packet"]["artifact_id"] == ""
-    assert checkpoint["production_inference_actionable_operator_completion_diagnostic_command_count"] == 0
-    assert checkpoint["production_inference_actionable_operator_completion_diagnostic_commands"] == []
-    assert checkpoint["production_inference_actionable_operator_completion_diagnostic_required_fields"] == []
-    assert checkpoint["production_inference_actionable_operator_completion_diagnostic_completion_rule"] == ""
+    assert checkpoint["production_inference_actionable_operator_completion_packet_ready"] is True
+    assert checkpoint["production_inference_actionable_operator_completion_packet"]["artifact_id"] == (
+        "residual_model_registry_guarded_promotion"
+    )
+    assert checkpoint["production_inference_actionable_operator_completion_diagnostic_command_count"] == 3
+    assert checkpoint["production_inference_actionable_operator_completion_diagnostic_commands"] == [
+        "python3 tools/build_residual_model_registry.py",
+        "python3 tools/build_product_production_ai_checkpoint_readiness.py",
+        "python3 tools/build_product_production_ai_promotion_workbench.py",
+    ]
+    assert checkpoint["production_inference_actionable_operator_completion_diagnostic_required_fields"] == [
+        "production_promotion_allowed",
+        "customer_facing_auto_correction_allowed",
+        "customer_facing_score_mutation_allowed",
+        "customer_facing_ranking_mutation_allowed",
+        "default_residual_mode",
+        "trained_model_checkpoint_count",
+    ]
+    assert "production_promotion_allowed=true" in checkpoint[
+        "production_inference_actionable_operator_completion_diagnostic_completion_rule"
+    ]
     assert checkpoint["production_inference_actionable_operator_completion_torch_visibility_probe_command"] == ""
     assert checkpoint["production_inference_worker_runtime_receipt_contract_ready"] is False
     assert checkpoint["production_inference_worker_runtime_receipt_required_fields_or_columns"] == []
@@ -1417,8 +1432,8 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert len(operator_packet["commercial_readiness_matrix_sha256"]) == 64
     assert operator_packet["source_fingerprint_ready"] is True
     assert operator_packet["goal_complete"] is False
-    assert operator_packet["action_count"] == 5
-    assert operator_packet["blocked_action_count"] == 2
+    assert operator_packet["action_count"] == 6
+    assert operator_packet["blocked_action_count"] == 3
     assert operator_packet["parallelizable_action_count"] == 2
     assert operator_packet["parallelizable_action_ids"] == [
         "transporter_next_slot_exact_evidence",
@@ -1505,11 +1520,9 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert "standard_type in Kd,Ki" in operator_packet[
         "first_parallelizable_action_direct_binding_procurement_minimum_acceptance_rule"
     ]
-    assert operator_packet["first_action_id"] == "transporter_next_slot_exact_evidence"
-    assert operator_packet["first_artifact"] == "runs/transporter_manual_review_intake_template_current.csv"
-    assert "build_transporter_manual_review_intake_template.py" in operator_packet[
-        "first_execution_command"
-    ]
+    assert operator_packet["first_action_id"] == "production_ai_registry_guarded_promotion"
+    assert operator_packet["first_artifact"] == "runs/residual_model_registry_current.json"
+    assert "build_residual_model_registry.py" in operator_packet["first_validation_command"]
     assert (
         operator_packet["first_operator_completion_worker_runtime_receipt_contract_ready"]
         is False
@@ -1526,12 +1539,27 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert "visible_device_count>0" in operator_packet["actions"][0][
         "operator_completion_diagnostic_completion_rule"
     ]
-    assert operator_packet["operator_completion_packet_ready_count"] == 5
-    assert operator_packet["actions"][1]["action_id"] == "production_ai_return_summary"
+    assert operator_packet["operator_completion_packet_ready_count"] == 6
+    assert operator_packet["actions"][1]["action_id"] == (
+        "production_ai_registry_guarded_promotion"
+    )
     assert operator_packet["actions"][1]["blocked_by_action_id"] == (
+        "production_ai_return_summary"
+    )
+    assert operator_packet["actions"][1]["operator_completion_packet_ready"] is True
+    assert "artifact_id" in operator_packet["actions"][1]["operator_completion_packet_keys"]
+    assert "build_residual_model_registry.py" in (
+        operator_packet["actions"][1]["operator_completion_diagnostic_commands"]
+    )
+    assert operator_packet["actions"][2]["action_id"] == "production_ai_return_summary"
+    assert operator_packet["actions"][2]["blocked_by_action_id"] == (
         "production_gpu_execution_environment"
     )
     assert operator_packet["production_ai_return_action_id"] == "production_ai_return_summary"
+    assert (
+        "production_ai_registry_promotion_operator_completion_packet_ready"
+        in operator_packet
+    )
     assert operator_packet["production_ai_return_action_blocked_by_action_id"] == (
         "production_gpu_execution_environment"
     )
@@ -1557,6 +1585,31 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert "summary alone does not unlock" in operator_packet[
         "production_ai_return_bundle_guardrail"
     ]
+    if operator_packet["production_ai_registry_promotion_action_id"]:
+        assert operator_packet["production_ai_registry_promotion_action_id"] == (
+            "production_ai_registry_guarded_promotion"
+        )
+        assert (
+            operator_packet[
+                "production_ai_registry_promotion_operator_completion_packet_ready"
+            ]
+            is True
+        )
+        assert operator_packet[
+            "production_ai_registry_promotion_operator_completion_artifact_id"
+        ] == "residual_model_registry_guarded_promotion"
+        assert "production_promotion_allowed" in operator_packet[
+            "production_ai_registry_promotion_operator_completion_required_fields_or_columns"
+        ]
+        assert any(
+            "build_residual_model_registry.py" in command
+            for command in operator_packet[
+                "production_ai_registry_promotion_operator_completion_diagnostic_commands"
+            ]
+        )
+        assert "registry_promotion_missing_gate_count=0" in operator_packet[
+            "production_ai_registry_promotion_operator_completion_completion_rule"
+        ]
     assert operator_packet["delta_force_closure_acceptance_packet_ready"] is True
     assert operator_packet["delta_force_closure_ready"] is False
     assert operator_packet["delta_force_closure_first_blocked_output_field"] == "delta_force"
@@ -1591,13 +1644,13 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
         == 0
     )
     assert operator_packet["scope_closure_general_platform_claim_allowed"] is False
-    assert operator_packet["actions"][2]["next_slot_id"] == "AQP1.core_binder_01"
-    assert operator_packet["actions"][2]["parallelizable_with_primary_blocker"] is True
-    assert operator_packet["actions"][2]["parallel_primary_blocker_action_id"] == ""
-    assert "reference_binding_kcal_mol" in operator_packet["actions"][2]["required_operator_inputs"]
-    assert operator_packet["operator_completion_packets"][3]["action_id"] == "pxr_next_exact_review"
-    assert operator_packet["operator_completion_packets"][3]["status"] == "ready"
-    assert operator_packet["operator_completion_packets"][3]["next_review_row_id"] == ""
+    assert operator_packet["actions"][3]["next_slot_id"] == "AQP1.core_binder_01"
+    assert operator_packet["actions"][3]["parallelizable_with_primary_blocker"] is True
+    assert operator_packet["actions"][3]["parallel_primary_blocker_action_id"] == ""
+    assert "reference_binding_kcal_mol" in operator_packet["actions"][3]["required_operator_inputs"]
+    assert operator_packet["operator_completion_packets"][4]["action_id"] == "pxr_next_exact_review"
+    assert operator_packet["operator_completion_packets"][4]["status"] == "ready"
+    assert operator_packet["operator_completion_packets"][4]["next_review_row_id"] == ""
     assert operator_packet["engine_refinement_claim_promotion_ready"] is False
     assert operator_packet["engine_refinement_claim_promotion_blocker_count"] == 6
     assert operator_packet["engine_refinement_claim_promotion_action_board_csv"] == (
@@ -1640,7 +1693,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert operator_freshness["current_blocked_action_count"] == (
         operator_freshness["operator_blocked_action_count"]
     )
-    assert operator_freshness["current_first_action_id"] == "transporter_next_slot_exact_evidence"
+    assert operator_freshness["current_first_action_id"] == "production_ai_registry_guarded_promotion"
     assert operator_freshness["command_references_ready"] is True
     assert operator_freshness["operator_python_tool_reference_count"] >= 20
     assert operator_freshness["operator_missing_python_tool_reference_count"] == 0
@@ -1662,8 +1715,8 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert execution_ladder["operator_packet_ready"] is True
     assert execution_ladder["freshness_ready"] is True
     assert execution_ladder["goal_complete"] is False
-    assert execution_ladder["action_count"] == 5
-    assert execution_ladder["blocked_action_count"] == 2
+    assert execution_ladder["action_count"] == 6
+    assert execution_ladder["blocked_action_count"] == 3
     assert execution_ladder["parallelizable_action_count"] == 2
     assert execution_ladder["parallelizable_action_ids"] == [
         "transporter_next_slot_exact_evidence",
@@ -1672,7 +1725,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert execution_ladder["first_parallelizable_action_id"] == (
         "transporter_next_slot_exact_evidence"
     )
-    assert execution_ladder["first_parallelizable_action_order"] == 3
+    assert execution_ladder["first_parallelizable_action_order"] == 4
     assert execution_ladder["first_parallelizable_action_lane_id"] == "parallel_scope_evidence"
     assert "reference_binding_kcal_mol" in execution_ladder[
         "first_parallelizable_action_required_operator_inputs"
@@ -1731,19 +1784,21 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert execution_ladder[
         "first_parallelizable_action_direct_binding_procurement_external_primary_evidence_required"
     ] is True
-    assert execution_ladder["first_execution_order"] == 3
-    assert execution_ladder["first_action_id"] == "transporter_next_slot_exact_evidence"
+    assert execution_ladder["first_execution_order"] == 2
+    assert execution_ladder["first_action_id"] == "production_ai_registry_guarded_promotion"
     assert execution_ladder["first_operator_input_artifact"] == (
-        "runs/transporter_manual_review_intake_template_current.csv"
+        "runs/residual_model_registry_current.json"
     )
-    assert "build_transporter_manual_review_intake_template.py" in execution_ladder[
-        "first_execution_command"
-    ]
+    assert "build_residual_model_registry.py" in execution_ladder["first_validation_command"]
     assert (
         execution_ladder["first_operator_completion_worker_runtime_receipt_contract_ready"]
         is False
     )
-    assert execution_ladder["first_operator_completion_diagnostic_command_count"] == 0
+    assert execution_ladder["first_operator_completion_diagnostic_command_count"] == 3
+    assert any(
+        "build_residual_model_registry.py" in command
+        for command in execution_ladder["first_operator_completion_diagnostic_commands"]
+    )
     assert execution_ladder["ladder"][0]["action_id"] == "production_gpu_execution_environment"
     assert execution_ladder["ladder"][0]["execution_order"] == 1
     assert execution_ladder["ladder"][0]["operator_input_artifact"] == (
@@ -1761,15 +1816,35 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     ]
     assert execution_ladder["all_preconditions_satisfied"] is True
     assert execution_ladder["ladder"][0]["precondition_satisfied"] is True
-    assert execution_ladder["ladder"][1]["post_validation_rebuild_command"].endswith(
+    assert execution_ladder["ladder"][2]["post_validation_rebuild_command"].endswith(
         "python3 tools/build_product_goal_completion_audit.py"
     )
     assert execution_ladder["production_ai_return_action_id"] == "production_ai_return_summary"
+    assert (
+        "production_ai_registry_promotion_operator_completion_packet_ready"
+        in execution_ladder
+    )
     assert execution_ladder["production_ai_return_operator_completion_packet_ready"] is True
     assert execution_ladder["production_ai_return_bundle_next_artifact_id"] == ""
     assert "operator_verified_npz_exists" in execution_ladder[
         "production_ai_return_bundle_manifest_required_columns"
     ]
+    if execution_ladder["production_ai_registry_promotion_action_id"]:
+        assert execution_ladder["production_ai_registry_promotion_action_id"] == (
+            "production_ai_registry_guarded_promotion"
+        )
+        assert (
+            execution_ladder[
+                "production_ai_registry_promotion_operator_completion_packet_ready"
+            ]
+            is True
+        )
+        assert any(
+            "build_residual_model_registry.py" in command
+            for command in execution_ladder[
+                "production_ai_registry_promotion_operator_completion_diagnostic_commands"
+            ]
+        )
     assert execution_ladder["execution_enabled"] is False
     assert execution_ladder["checkpoint_promoted"] is False
 
@@ -1784,9 +1859,9 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert handoff_bundle["source_fingerprint_ready"] is True
     assert handoff_bundle["freshness_ready"] is True
     assert handoff_bundle["execution_ladder_ready"] is True
-    assert handoff_bundle["operator_action_count"] == 5
-    assert handoff_bundle["operator_blocked_action_count"] == 2
-    assert handoff_bundle["ladder_action_count"] == 5
+    assert handoff_bundle["operator_action_count"] == 6
+    assert handoff_bundle["operator_blocked_action_count"] == 3
+    assert handoff_bundle["ladder_action_count"] == 6
     assert handoff_bundle["operator_parallelizable_action_count"] == 2
     assert handoff_bundle["operator_parallelizable_action_ids"] == [
         "transporter_next_slot_exact_evidence",
@@ -1866,13 +1941,37 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert handoff_bundle[
         "first_operator_completion_worker_runtime_receipt_post_environment_next_artifact"
     ] == ""
-    assert handoff_bundle["first_operator_completion_diagnostic_command_count"] == 0
+    assert handoff_bundle["first_operator_completion_diagnostic_command_count"] == 3
+    assert any(
+        "build_residual_model_registry.py" in command
+        for command in handoff_bundle["first_operator_completion_diagnostic_commands"]
+    )
     assert handoff_bundle["production_ai_return_action_id"] == "production_ai_return_summary"
+    assert (
+        "production_ai_registry_promotion_operator_completion_packet_ready"
+        in handoff_bundle
+    )
     assert handoff_bundle["production_ai_return_operator_completion_packet_ready"] is True
     assert handoff_bundle["production_ai_return_bundle_next_artifact_id"] == ""
     assert "operator_verified_npz_exists" in handoff_bundle[
         "production_ai_return_bundle_manifest_required_columns"
     ]
+    if handoff_bundle["production_ai_registry_promotion_action_id"]:
+        assert handoff_bundle["production_ai_registry_promotion_action_id"] == (
+            "production_ai_registry_guarded_promotion"
+        )
+        assert (
+            handoff_bundle[
+                "production_ai_registry_promotion_operator_completion_packet_ready"
+            ]
+            is True
+        )
+        assert any(
+            "build_residual_model_registry.py" in command
+            for command in handoff_bundle[
+                "production_ai_registry_promotion_operator_completion_diagnostic_commands"
+            ]
+        )
     assert handoff_bundle["delta_force_closure_acceptance_packet_artifact"] == (
         "runs/residual_delta_force_closure_acceptance_packet_current.json"
     )
@@ -2171,9 +2270,11 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert completion["commercial_readiness_handoff_bundle_artifact_reference_count"] == 26
     assert completion["commercial_readiness_handoff_bundle_operator_return_pending_artifact_reference_count"] == 1
     assert completion["commercial_readiness_next_action_matrix_ready"] is True
-    assert completion["commercial_readiness_next_action_matrix_count"] == 5
-    assert completion["commercial_readiness_next_action_blocker_count"] == 2
-    assert completion["commercial_readiness_first_next_action_id"] == "transporter_next_slot_exact_evidence"
+    assert completion["commercial_readiness_next_action_matrix_count"] == 6
+    assert completion["commercial_readiness_next_action_blocker_count"] == 3
+    assert completion["commercial_readiness_first_next_action_id"] == (
+        "production_ai_registry_guarded_promotion"
+    )
 
     for payload in (
         capabilities,
