@@ -141,6 +141,11 @@
   `product_goal_completion_audit_full_claim_boundary_recorded` check를 포함해,
   restricted release bundle review에서도 full commercial science claim 미완료가
   명시적으로 보인다.
+- `tools/accounting/build_goal_bottleneck_briefing.py`와 `/goal/status`는 release
+  burndown이 clear여도 `product_goal_completion_audit`의 R8/R9 release blockers를
+  active 병목으로 우선 노출한다. 따라서 restricted release가 green인 상태에서도
+  full-scope transporter evidence와 refine-tier claim-grade calibration/parity
+  미완료가 상위 상태 API에서 사라지지 않는다.
 - `tools/product/build_refine_tier_public_benchmark_readiness.py`: curated 공개
   pose/free-energy benchmark intake를 별도 fail-closed gate로 판정한다.
   `config/refine_tier_public_benchmark_intake_current.csv`는 required column header를

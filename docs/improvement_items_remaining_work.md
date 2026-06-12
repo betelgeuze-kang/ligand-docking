@@ -429,6 +429,12 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   artifact와 `product_goal_completion_audit_full_claim_boundary_recorded` check를
   포함해, restricted release bundle review에서도 full commercial science claim
   미완료가 숨지 않게 한다.
+  `tools/accounting/build_goal_bottleneck_briefing.py`는 release burndown이 clear인
+  경우에도 `product_goal_completion_audit`의 `release_blocker=true` rows를 흡수해
+  현재 `R8_full_scope_claim_closure`와 `R9_engine_refinement_claim_promotion`을
+  `completion_audit_release_blocker` 병목으로 노출한다. `/goal/status`도 active
+  bottleneck briefing이 있으면 intake/action board의 오래된 primary action보다 이
+  full-commercial 병목 primary를 우선 표시한다.
   `tools/product/build_refine_tier_public_benchmark_readiness.py`는 curated 공개
   pose/free-energy benchmark intake를 별도 fail-closed gate로 고정한다.
   `config/refine_tier_public_benchmark_intake_current.csv`는 required column header를
@@ -753,8 +759,8 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   unit/env example, viewer vendor manifest/notice, viewer asset base URL decision,
   product launch R4 preflight
   artifact를 하나의 release bundle manifest로 묶고 operator promotion policy를
-  `operator_approval_required`로 고정한다. 최신 상태는 `artifact_count=22`,
-  `check_count=15`, `pass_count=15`, `blocker_count=0`이다.
+  `operator_approval_required`로 고정한다. 최신 상태는 `artifact_count=26`,
+  `check_count=19`, `pass_count=19`, `blocker_count=0`이다.
 - `deploy/docker-compose.product.yml`, `deploy/k8s/configmap.yaml`,
   `deploy/systemd/api-server.env.example`, `deploy/systemd/api-worker.env.example`은
   `PRODUCT_API_TLS_TERMINATION_OPERATOR_VERIFIED=1`을 product deployment default로
@@ -772,7 +778,7 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `product_launch_r4_preflight_ready`, `pass_count=7/7`, `blocker_count=0`이다.
 - `tools/run_product_release_current_refresh.py --execute`는 source-of-truth 순서에
   R4 preflight와 최종 release bundle 재생성을 포함하며, 최신 실행 결과는
-  `product_release_current_refresh_verified`, `command_count=32`, `executed_count=32`,
+  `product_release_current_refresh_verified`, `command_count=36`, `executed_count=36`,
   `failed_count=0`, `final_gate_verification_ready=true`, `final_gate_blocker_count=0`이다.
 
 **병목 원인**
@@ -796,7 +802,7 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   policy + release bundle linkage와 rollout execution readiness gate는 1차 완료;
   R4 launch preflight도 1차 완료. 다음은 explicit R4/operator-approved rollout 실행 smoke.
 - release source-of-truth gate는 R4 preflight 포함 refresh 이후
-  `product_release_source_of_truth_gate_ready`, `pass_count=32/32`,
+  `product_release_source_of_truth_gate_ready`, `pass_count=36/36`,
   `blocker_count=0`, `stale_artifact_count=0`으로 재검증됐다.
 - `prometheus_client` 기반 실제 metrics endpoint는 1차 완료.
 - Alert rules + paged webhook receiver + closed-loop alert delivery smoke는 1차 완료;
@@ -810,7 +816,7 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `hard_blocker_count=0`, `operator_review_item_count=1`).
 - release bundle은 systemd API server/worker units와 third-party license review
   gate, API runner profile promotion readiness gate/operator template, rollout
-  execution readiness gate, product launch R4 preflight를 포함해 `artifact_count=22`, `check_count=15`,
+  execution readiness gate, product launch R4 preflight를 포함해 `artifact_count=26`, `check_count=19`,
   `blocker_count=0` 상태다.
 
 ### H. Viewer 외부 의존성

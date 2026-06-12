@@ -227,6 +227,67 @@ def _intake_kit() -> dict:
     }
 
 
+def _release_gate_ready() -> dict:
+    return {
+        "summary": {
+            "status": "goal_release_ready",
+            "release_allowed": True,
+            "blocker_count": 0,
+            "check_count": 16,
+            "cleanup_objective_ready": True,
+            "cleanup_completion_complete": True,
+        }
+    }
+
+
+def _completion_audit_full_commercial_blockers() -> dict:
+    return {
+        "summary": {
+            "status": "blocked_product_goal_completion_audit",
+            "goal_complete": False,
+            "release_blocker_fail_count": 2,
+        },
+        "rows": [
+            {
+                "requirement_id": "R8_full_scope_claim_closure",
+                "requirement_tier": "full_commercial_scope",
+                "requirement": "Full independent commercial-product claims stay blocked.",
+                "status": "fail",
+                "release_blocker": True,
+                "blocker": "full_scope_claim_closure_not_ready",
+                "evidence_artifacts": (
+                    "runs/product_scope_breadth_contract_current.json;"
+                    "runs/product_scope_breadth_evidence_intake_readiness_current.json"
+                ),
+                "observed": (
+                    "scope_closure_ready=False;first_blocked_evidence_row_id=AQP1.core_binder_01;"
+                    "first_blocked_required_missing_fields=replacement_reference_binding_kcal_mol"
+                ),
+                "required": "scope_closure_ready=true;authoritative_apply_allowed=true",
+                "next_command": "python3 tools/build_product_scope_breadth_contract.py",
+            },
+            {
+                "requirement_id": "R9_engine_refinement_claim_promotion",
+                "requirement_tier": "full_commercial_science_claim",
+                "requirement": "Refine-tier science claims stay blocked.",
+                "status": "fail",
+                "release_blocker": True,
+                "blocker": "engine_refinement_claim_promotion_not_ready",
+                "evidence_artifacts": (
+                    "runs/engine_refinement_tier_readiness_current.json;"
+                    "runs/engine_refinement_claim_evidence_receipt_current.json"
+                ),
+                "observed": (
+                    "engine_refinement_status=engine_refinement_tier_ready;"
+                    "claim_promotion_allowed=False;claim_promotion_blocker_count=6"
+                ),
+                "required": "claim_promotion_allowed=true;claim_promotion_evidence_receipt_ready=true",
+                "next_command": "python3 tools/product/build_engine_refinement_tier_readiness.py",
+            },
+        ],
+    }
+
+
 def _burndown_with_scientific_scope_before_refresh() -> dict:
     return {
         "summary": {"status": "goal_release_burndown_work_order_ready"},
@@ -425,6 +486,45 @@ def test_goal_bottleneck_briefing_prioritizes_production_inference_before_refres
     first_row = payload["rows"][0]
     assert first_row["root_cause_category"] == "external_gpu_runtime_and_return_receipt"
     assert first_row["locally_closable_without_operator_return"] is False
+
+
+def test_goal_bottleneck_briefing_keeps_full_commercial_completion_blockers_when_release_is_clear() -> None:
+    payload = mod.build_goal_bottleneck_briefing(
+        release_gate_packet=_release_gate_ready(),
+        burndown_packet={"summary": {"status": "goal_release_burndown_clear"}, "rows": []},
+        action_board_packet=_action_board(),
+        intake_kit_packet=_intake_kit(),
+        completion_audit_packet=_completion_audit_full_commercial_blockers(),
+    )
+
+    summary = payload["summary"]
+    by_id = {row["bottleneck_id"]: row for row in payload["rows"]}
+    assert summary["status"] == "goal_bottleneck_briefing_ready"
+    assert summary["release_allowed"] is True
+    assert summary["source_burndown_status"] == "goal_release_burndown_clear"
+    assert summary["source_completion_audit_status"] == "blocked_product_goal_completion_audit"
+    assert summary["completion_audit_goal_complete"] is False
+    assert summary["completion_audit_release_blocker_fail_count"] == 2
+    assert summary["completion_audit_release_blocker_bottleneck_count"] == 2
+    assert summary["bottleneck_count"] == 2
+    assert summary["current_bottleneck_count"] == 2
+    assert summary["kind_counts"]["scientific_scope_evidence_required"] == 1
+    assert summary["kind_counts"]["engine_refinement_claim_promotion_required"] == 1
+    assert summary["primary_bottleneck_sequence"] == 8
+    assert summary["primary_bottleneck_kind"] == "scientific_scope_evidence_required"
+    assert summary["primary_action_id"] == "full_commercial_scope:scientific_scope_evidence_required"
+    assert summary["top_action_id"] == summary["primary_action_id"]
+    assert summary["primary_action_status"] == "required"
+    assert "replacement_reference_binding_kcal_mol" in summary["primary_bottleneck_required_external_return"]
+    assert "engine refinement claim evidence" in summary["next_required_step"]
+    assert by_id["R8_full_scope_claim_closure"]["row_source"] == "completion_audit"
+    assert by_id["R8_full_scope_claim_closure"]["root_cause_category"] == "external_exact_scope_evidence"
+    assert by_id["R9_engine_refinement_claim_promotion"]["root_cause_category"] == (
+        "external_public_benchmark_and_calibration_evidence"
+    )
+    assert by_id["R9_engine_refinement_claim_promotion"]["post_return_acceptance_artifact"] == (
+        "runs/engine_refinement_claim_evidence_receipt_current.json"
+    )
 
 
 def test_goal_bottleneck_briefing_filters_stale_intake_tokens_when_burndown_token_is_current() -> None:

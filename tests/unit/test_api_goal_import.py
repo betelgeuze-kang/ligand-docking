@@ -60,10 +60,16 @@ def test_api_app_imports_with_goal_router() -> None:
     assert status["cleanup_objective_ready"] is True
     assert status["goal_api_surface_ready"] is True
     assert status["bottleneck_count"] == int(bottlenecks_artifact.get("bottleneck_count") or 0)
-    assert status["primary_action_id"] == intake_artifact.get("primary_action_id")
-    assert status["primary_action_status"] == intake_artifact.get("primary_action_status")
-    assert status["primary_action_required_input"] == intake_artifact.get("primary_action_required_input")
-    assert "generate_ligand_trajectory_engine.py" in status["primary_action_command"]
+    primary_source = (
+        bottlenecks_artifact
+        if int(bottlenecks_artifact.get("current_bottleneck_count") or bottlenecks_artifact.get("bottleneck_count") or 0)
+        and bottlenecks_artifact.get("primary_action_id")
+        else intake_artifact
+    )
+    assert status["primary_action_id"] == primary_source.get("primary_action_id")
+    assert status["primary_action_status"] == primary_source.get("primary_action_status")
+    assert status["primary_action_required_input"] == primary_source.get("primary_action_required_input")
+    assert status["primary_action_command"] == primary_source.get("primary_action_command")
     assert status["release_complete_vs_operator_pending_lane"] == readiness_artifact.get(
         "release_complete_vs_operator_pending_lane"
     )

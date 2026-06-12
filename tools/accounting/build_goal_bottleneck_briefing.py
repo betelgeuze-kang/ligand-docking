@@ -13,6 +13,7 @@ from tools.build_goal_release_burndown_work_order import DEFAULT_OUT_JSON as DEF
 from tools.build_goal_release_decision_gate import DEFAULT_OUT_JSON as DEFAULT_RELEASE_GATE_JSON
 
 ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_COMPLETION_AUDIT_JSON = "runs/product_goal_completion_audit_current.json"
 DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_JSON = "runs/product_public_benchmark_work_order_current.json"
 DEFAULT_PUBLIC_BENCHMARK_PREFLIGHT_JSONS = [
     "runs/dude_z_decoy_smoke_product_inputs_current.json",
@@ -156,6 +157,46 @@ def _bottleneck_kind(row: dict[str, Any]) -> str:
     return status or "unknown"
 
 
+def _completion_bottleneck_kind(row: dict[str, Any]) -> str:
+    requirement_id = _text(row.get("requirement_id"))
+    blocker = _text(row.get("blocker"))
+    if requirement_id == "R8_full_scope_claim_closure" or blocker == "full_scope_claim_closure_not_ready":
+        return "scientific_scope_evidence_required"
+    if (
+        requirement_id == "R9_engine_refinement_claim_promotion"
+        or blocker == "engine_refinement_claim_promotion_not_ready"
+    ):
+        return "engine_refinement_claim_promotion_required"
+    return blocker or "completion_audit_release_blocker"
+
+
+def _completion_sequence(row: dict[str, Any], fallback: int) -> int:
+    requirement_id = _text(row.get("requirement_id"))
+    if len(requirement_id) >= 2 and requirement_id[0] == "R":
+        digits = ""
+        for char in requirement_id[1:]:
+            if not char.isdigit():
+                break
+            digits += char
+        if digits:
+            return _int(digits)
+    return fallback
+
+
+def _completion_recommended_action(row: dict[str, Any], kind: str) -> str:
+    if kind == "scientific_scope_evidence_required":
+        return (
+            "Acquire exact target-pair quantitative evidence for the blocked scope row, rerun the "
+            "scope-breadth gates, and keep authoritative apply disabled until those gates are green."
+        )
+    if kind == "engine_refinement_claim_promotion_required":
+        return (
+            "Fill the refine-tier public benchmark and claim-evidence receipt rows, then rerun engine "
+            "refinement readiness and the product goal completion audit."
+        )
+    return _text(row.get("required")) or _text(row.get("requirement"))
+
+
 def _mutation_flags() -> dict[str, bool]:
     return {
         "execution_enabled": False,
@@ -212,6 +253,23 @@ def _root_cause_fields(row: dict[str, Any], *, required_inputs: list[str], sourc
             "first_acceptance_artifact": "runs/transporter_manual_review_intake_template_current.csv",
             "post_return_acceptance_artifact": "runs/product_scope_breadth_contract_current.json",
         }
+    if kind == "engine_refinement_claim_promotion_required" or "engine_refinement" in observed:
+        return {
+            "root_cause_category": "external_public_benchmark_and_calibration_evidence",
+            "root_cause_summary": (
+                "Refine-tier science claims cannot promote until public benchmark intake, parameter "
+                "calibration, metal/cofactor handling, protonation and charge calibration, solvent/FEP "
+                "calibration, and external structure-quality parity evidence are all claim-grade."
+            ),
+            "locally_closable_without_operator_return": False,
+            "required_external_return": (
+                "curated public benchmark rows; parameter calibration evidence; metal/cofactor parameter "
+                "coverage; protonation/charge calibration; solvent/FEP public-pair calibration; external "
+                "MolProbity/OpenStructure/native-complex parity packets"
+            ),
+            "first_acceptance_artifact": "runs/refine_tier_public_benchmark_work_order_current.csv",
+            "post_return_acceptance_artifact": "runs/engine_refinement_claim_evidence_receipt_current.json",
+        }
     if kind == "dependent_refresh_after_prior_phases":
         return {
             "root_cause_category": "dependent_refresh_after_upstream_acceptance",
@@ -251,6 +309,8 @@ def _next_required_step(*, kind_counts: dict[str, int], cleanup_objective_ready:
 
     if kind_counts.get("scientific_scope_evidence_required"):
         add("product AI architecture scope closure")
+    if kind_counts.get("engine_refinement_claim_promotion_required"):
+        add("engine refinement claim evidence and calibration")
     if kind_counts.get("production_ai_checkpoint_evidence_required"):
         add("product AI production inference closure")
     if kind_counts.get("operator_approval_required") or kind_counts.get("operator_action_board_not_clear"):
@@ -289,6 +349,7 @@ def build_goal_bottleneck_briefing(
     burndown_packet: dict[str, Any],
     action_board_packet: dict[str, Any],
     intake_kit_packet: dict[str, Any],
+    completion_audit_packet: dict[str, Any] | None = None,
     public_benchmark_work_order_packet: dict[str, Any] | None = None,
     public_benchmark_preflight_packets: list[dict[str, Any]] | None = None,
     public_benchmark_preflight_paths: list[str] | None = None,
@@ -296,12 +357,14 @@ def build_goal_bottleneck_briefing(
     burndown_path: str = DEFAULT_BURNDOWN_JSON,
     action_board_path: str = DEFAULT_ACTION_BOARD_JSON,
     intake_kit_path: str = DEFAULT_INTAKE_KIT_JSON,
+    completion_audit_path: str = DEFAULT_COMPLETION_AUDIT_JSON,
     public_benchmark_work_order_path: str = DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_JSON,
 ) -> dict[str, Any]:
     release = _summary(release_gate_packet)
     burndown = _summary(burndown_packet)
     actions = _summary(action_board_packet)
     intake = _summary(intake_kit_packet)
+    completion_audit = _summary(completion_audit_packet or {})
     public_benchmark_work_order = _summary(public_benchmark_work_order_packet or {})
     public_benchmark_preflights = _preflight_summaries(public_benchmark_preflight_packets)
     public_benchmark_preflight_tokens = _unique(
@@ -363,6 +426,7 @@ def build_goal_bottleneck_briefing(
         row = {
             "bottleneck_id": f"P{_int(burndown_row.get('sequence')):02d}_{_text(burndown_row.get('phase')) or 'unknown'}",
             "sequence": _int(burndown_row.get("sequence")),
+            "row_source": "release_burndown",
             "phase": _text(burndown_row.get("phase")),
             "lane_id": _text(burndown_row.get("lane_id")),
             "bottleneck_kind": (
@@ -504,6 +568,85 @@ def build_goal_bottleneck_briefing(
         )
         rows.append(row)
 
+    completion_blocker_rows: list[dict[str, Any]] = []
+    for index, audit_row in enumerate(_rows(completion_audit_packet or {}), start=1):
+        if audit_row.get("release_blocker") is not True or _text(audit_row.get("status")) == "pass":
+            continue
+        kind = _completion_bottleneck_kind(audit_row)
+        source_artifacts = _unique([audit_row.get("evidence_artifacts")])
+        required_inputs = _unique([audit_row.get("blocker"), audit_row.get("requirement_id")])
+        row = {
+            "bottleneck_id": _text(audit_row.get("requirement_id")) or f"completion_audit_blocker_{index}",
+            "sequence": _completion_sequence(audit_row, 900 + index),
+            "row_source": "completion_audit",
+            "phase": _text(audit_row.get("requirement_id")) or "product_goal_completion_audit",
+            "lane_id": _text(audit_row.get("requirement_tier")) or "full_commercial_completion",
+            "bottleneck_kind": kind,
+            "burndown_status": "completion_audit_release_blocker",
+            "is_current_bottleneck": True,
+            "superseded_by_current_evidence": False,
+            "release_checks": _text(audit_row.get("requirement_id")),
+            "release_observed": _text(audit_row.get("observed")),
+            "release_required": _text(audit_row.get("required")),
+            "release_check_count": 1,
+            "requires_operator_action": True,
+            "approval_token_required": _text(audit_row.get("approval_token_required")),
+            "approval_token_count": len(_split_semicolon(audit_row.get("approval_token_required"))),
+            "required_inputs": ";".join(required_inputs),
+            "required_input_count": len(required_inputs),
+            "operator_intake_entries": "",
+            "operator_intake_statuses": "",
+            "operator_action_types": "",
+            "operator_action_statuses": "",
+            "operator_action_reasons": "",
+            "operator_action_count": 0,
+            "source_artifacts": ";".join(source_artifacts),
+            "source_artifact_count": len(source_artifacts),
+            "command": _text(audit_row.get("next_command")),
+            "command_candidate_count": 0,
+            "command_candidates": "",
+            "recommended_action": _completion_recommended_action(audit_row, kind),
+            "completion_audit_requirement": _text(audit_row.get("requirement")),
+            "completion_audit_requirement_id": _text(audit_row.get("requirement_id")),
+            "completion_audit_requirement_tier": _text(audit_row.get("requirement_tier")),
+            "completion_audit_blocker": _text(audit_row.get("blocker")),
+            "public_benchmark_work_order_json": "",
+            "public_benchmark_open_suite_count": 0,
+            "public_benchmark_materialization_required_suite_count": 0,
+            "public_benchmark_scorecard_required_suite_count": 0,
+            "public_benchmark_continuous_validation_command_count": 0,
+            "public_benchmark_suite_run_command_count": 0,
+            "public_benchmark_suite_blocker_count": 0,
+            "public_benchmark_suite_threshold_count": 0,
+            "public_benchmark_suite_materialization_manifest_count": 0,
+            "public_benchmark_suite_materialization_run_command_count": 0,
+            "public_benchmark_suite_scorecard_command_count": 0,
+            "public_benchmark_suite_scorecard_row_csv_count": 0,
+            "public_benchmark_suite_no_external_dependency_count": 0,
+            "public_benchmark_local_artifact_preflight_ready_suite_count": 0,
+            "public_benchmark_local_artifact_preflight_blocked_suite_count": 0,
+            "public_benchmark_missing_local_input_artifact_count": 0,
+            "public_benchmark_missing_local_output_artifact_count": 0,
+            "public_benchmark_result_generation_required_suite_count": 0,
+            "public_benchmark_result_generation_approval_token_required": "",
+            "public_benchmark_benchmark_result_missing_artifact_count": 0,
+            "public_benchmark_continuous_validation_command": "",
+            "public_benchmark_input_preflight_statuses": "",
+            "public_benchmark_input_preflight_blocked_count": 0,
+            "public_benchmark_input_preflight_approval_tokens_required": "",
+            "size_gb": 0.0,
+            **_mutation_flags(),
+        }
+        row.update(
+            _root_cause_fields(
+                row,
+                required_inputs=required_inputs,
+                source_artifacts=source_artifacts,
+            )
+        )
+        completion_blocker_rows.append(row)
+    rows.extend(completion_blocker_rows)
+
     status_counts: dict[str, int] = {}
     kind_counts: dict[str, int] = {}
     for row in rows:
@@ -512,8 +655,17 @@ def build_goal_bottleneck_briefing(
     approval_tokens = _unique([row.get("approval_token_required") for row in rows])
     current_rows = [row for row in rows if row.get("is_current_bottleneck") is not False]
     primary = current_rows[0] if current_rows else {}
+    completion_only_current = bool(current_rows) and all(
+        _text(row.get("row_source")) == "completion_audit" for row in current_rows
+    )
+    derived_primary_action_id = (
+        f"{_text(primary.get('lane_id'))}:{_text(primary.get('bottleneck_kind'))}"
+        if completion_only_current and primary
+        else ""
+    )
     primary_action_id = (
-        _text(intake.get("primary_action_id"))
+        derived_primary_action_id
+        or _text(intake.get("primary_action_id"))
         or _text(actions.get("primary_action_id"))
         or _text(burndown.get("primary_action_id"))
     )
@@ -536,6 +688,11 @@ def build_goal_bottleneck_briefing(
         "source_burndown_status": _text(burndown.get("status")),
         "source_action_board_status": _text(actions.get("status")),
         "source_intake_kit_status": _text(intake.get("status")),
+        "source_completion_audit_status": _text(completion_audit.get("status")),
+        "source_completion_audit_json": completion_audit_path,
+        "completion_audit_goal_complete": bool(completion_audit.get("goal_complete") is True),
+        "completion_audit_release_blocker_fail_count": _int(completion_audit.get("release_blocker_fail_count")),
+        "completion_audit_release_blocker_bottleneck_count": len(completion_blocker_rows),
         "bottleneck_count": len(rows),
         "current_bottleneck_count": len(current_rows),
         "superseded_bottleneck_count": sum(1 for row in rows if row.get("superseded_by_current_evidence") is True),
@@ -623,44 +780,64 @@ def build_goal_bottleneck_briefing(
         "public_benchmark_input_preflight_blocked_count": public_benchmark_preflight_blocked_count,
         "public_benchmark_input_preflight_approval_tokens_required": ";".join(public_benchmark_preflight_tokens),
         "primary_action_id": primary_action_id,
-        "top_action_id": _text(intake.get("top_action_id")) or _text(actions.get("top_action_id")) or primary_action_id,
+        "top_action_id": (
+            primary_action_id
+            if completion_only_current
+            else _text(intake.get("top_action_id")) or _text(actions.get("top_action_id")) or primary_action_id
+        ),
         "primary_action_priority": _int(
-            intake.get("primary_action_priority")
+            0
+            if completion_only_current
+            else intake.get("primary_action_priority")
             or actions.get("primary_action_priority")
             or burndown.get("primary_action_priority")
         ),
         "primary_action_lane_id": _text(
-            intake.get("primary_action_lane_id")
+            primary.get("lane_id")
+            if completion_only_current
+            else intake.get("primary_action_lane_id")
             or actions.get("primary_action_lane_id")
             or burndown.get("primary_action_lane_id")
         ),
         "primary_action_type": _text(
-            intake.get("primary_action_type")
+            primary.get("bottleneck_kind")
+            if completion_only_current
+            else intake.get("primary_action_type")
             or actions.get("primary_action_type")
             or burndown.get("primary_action_type")
         ),
         "primary_action_status": _text(
-            intake.get("primary_action_status")
+            "required"
+            if completion_only_current
+            else intake.get("primary_action_status")
             or actions.get("primary_action_status")
             or burndown.get("primary_action_status")
         ),
         "primary_action_required_input": _text(
-            intake.get("primary_action_required_input")
+            primary.get("required_external_return") or primary.get("required_inputs")
+            if completion_only_current
+            else intake.get("primary_action_required_input")
             or actions.get("primary_action_required_input")
             or burndown.get("primary_action_required_input")
         ),
         "primary_action_artifact_path": _text(
-            intake.get("primary_action_artifact_path")
+            primary.get("source_artifacts")
+            if completion_only_current
+            else intake.get("primary_action_artifact_path")
             or actions.get("primary_action_artifact_path")
             or burndown.get("primary_action_artifact_path")
         ),
         "primary_action_command": _text(
-            intake.get("primary_action_command")
+            primary.get("command")
+            if completion_only_current
+            else intake.get("primary_action_command")
             or actions.get("primary_action_command")
             or burndown.get("primary_action_command")
         ),
         "primary_action_recommended_action": _text(
-            intake.get("primary_action_recommended_action")
+            primary.get("recommended_action")
+            if completion_only_current
+            else intake.get("primary_action_recommended_action")
             or actions.get("primary_action_recommended_action")
             or burndown.get("primary_action_recommended_action")
         ),
@@ -810,6 +987,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--burndown-json", default=DEFAULT_BURNDOWN_JSON)
     parser.add_argument("--action-board-json", default=DEFAULT_ACTION_BOARD_JSON)
     parser.add_argument("--intake-kit-json", default=DEFAULT_INTAKE_KIT_JSON)
+    parser.add_argument("--completion-audit-json", default=DEFAULT_COMPLETION_AUDIT_JSON)
     parser.add_argument("--public-benchmark-work-order-json", default=DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_JSON)
     parser.add_argument("--public-benchmark-preflight-json", action="append", default=DEFAULT_PUBLIC_BENCHMARK_PREFLIGHT_JSONS)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
@@ -825,6 +1003,7 @@ def main(argv: list[str] | None = None) -> None:
         burndown_packet=_read_json_if_present(args.burndown_json),
         action_board_packet=_read_json_if_present(args.action_board_json),
         intake_kit_packet=_read_json_if_present(args.intake_kit_json),
+        completion_audit_packet=_read_json_if_present(args.completion_audit_json),
         public_benchmark_work_order_packet=_read_json_if_present(args.public_benchmark_work_order_json),
         public_benchmark_preflight_packets=[
             _read_json_if_present(path) for path in (args.public_benchmark_preflight_json or [])
@@ -834,6 +1013,7 @@ def main(argv: list[str] | None = None) -> None:
         burndown_path=args.burndown_json,
         action_board_path=args.action_board_json,
         intake_kit_path=args.intake_kit_json,
+        completion_audit_path=args.completion_audit_json,
         public_benchmark_work_order_path=args.public_benchmark_work_order_json,
     )
     _write_json(args.out_json, payload)

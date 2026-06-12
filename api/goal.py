@@ -104,6 +104,11 @@ async def get_goal_status() -> dict[str, Any]:
     burndown = _summary(burndown_packet)
     bottlenecks = _summary(bottleneck_packet)
     api_contract = _summary(api_contract_packet)
+    active_bottleneck_primary = (
+        _int(bottlenecks.get("current_bottleneck_count") or bottlenecks.get("bottleneck_count")) > 0
+        and bool(bottlenecks.get("primary_action_id"))
+    )
+    primary_action_source = bottlenecks if active_bottleneck_primary else intake
     if not any([readiness, actions, release, burndown]):
         return {
             "status": "missing_goal_status_artifacts",
@@ -165,14 +170,14 @@ async def get_goal_status() -> dict[str, Any]:
         "operator_action_count": _int(actions.get("action_count") or release.get("operator_action_count")),
         "operator_approval_required_count": _int(actions.get("approval_required_count") or release.get("operator_approval_required_count")),
         "operator_input_required_count": _int(intake.get("operator_input_required_count")),
-        "primary_action_id": intake.get("primary_action_id") or actions.get("primary_action_id", ""),
-        "primary_action_status": intake.get("primary_action_status") or actions.get("primary_action_status", ""),
-        "primary_action_required_input": intake.get("primary_action_required_input")
+        "primary_action_id": primary_action_source.get("primary_action_id") or actions.get("primary_action_id", ""),
+        "primary_action_status": primary_action_source.get("primary_action_status") or actions.get("primary_action_status", ""),
+        "primary_action_required_input": primary_action_source.get("primary_action_required_input")
         or actions.get("primary_action_required_input", ""),
-        "primary_action_command": intake.get("primary_action_command") or actions.get("primary_action_command", ""),
-        "primary_action_recommended_action": intake.get("primary_action_recommended_action")
+        "primary_action_command": primary_action_source.get("primary_action_command") or actions.get("primary_action_command", ""),
+        "primary_action_recommended_action": primary_action_source.get("primary_action_recommended_action")
         or actions.get("primary_action_recommended_action", ""),
-        "primary_action_artifact_path": intake.get("primary_action_artifact_path")
+        "primary_action_artifact_path": primary_action_source.get("primary_action_artifact_path")
         or actions.get("primary_action_artifact_path", ""),
         "operator_intake_kit_release_burndown_linked_entry_count": _int(
             intake.get("release_burndown_linked_entry_count")
