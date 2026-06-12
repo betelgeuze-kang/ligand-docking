@@ -16,10 +16,17 @@ DEFAULT_OUT_CSV = "runs/tools_package_batch3_migration_receipt_current.csv"
 DEFAULT_OUT_MD = "runs/tools_package_batch3_migration_receipt_current.md"
 
 CLAIM_BOUNDARY = (
-    "Tools package batch3 migration receipt only; it verifies selected batch3 lane_a rows have been moved to "
+    "Tools package batch3 migration receipt only; it verifies selected batch3 rows have been moved to "
     "their package target modules while top-level compatibility wrappers remain syntax-valid. It does not move "
     "additional files, delete, archive, commit, push, execute selected tools, or mutate external state."
 )
+
+READY_SOURCE_STATUSES = {
+    "tools_package_batch3_review_plan_ready",
+    "tools_package_batch3_lane_decomposition_plan_ready",
+    "tools_package_batch3_package_classification_plan_ready",
+    "tools_package_batch3_other_review_classification_plan_ready",
+}
 
 
 def _resolve(path_like: str | Path) -> Path:
@@ -90,7 +97,21 @@ def _target_has_main(path: Path) -> bool:
 
 
 def _selected_rows(batch3_plan_packet: dict[str, Any]) -> list[dict[str, Any]]:
-    return [row for row in _rows(batch3_plan_packet) if row.get("selected_for_first_slice") is True]
+    source_status = _text(_summary(batch3_plan_packet).get("status"))
+    if source_status in {
+        "tools_package_batch3_package_classification_plan_ready",
+        "tools_package_batch3_other_review_classification_plan_ready",
+    }:
+        return [
+            row
+            for row in _rows(batch3_plan_packet)
+            if _text(row.get("target_path")) and _text(row.get("classification_status")) == "classified"
+        ]
+    return [
+        row
+        for row in _rows(batch3_plan_packet)
+        if row.get("selected_for_first_slice") is True or row.get("selected_for_next_slice") is True
+    ]
 
 
 def build_tools_package_batch3_migration_receipt(
@@ -101,8 +122,8 @@ def build_tools_package_batch3_migration_receipt(
     plan_summary = _summary(batch3_plan_packet)
     plan_rows = _selected_rows(batch3_plan_packet)
     blockers: list[str] = []
-    if _text(plan_summary.get("status")) != "tools_package_batch3_review_plan_ready":
-        blockers.append("batch3_review_plan_not_ready")
+    if _text(plan_summary.get("status")) not in READY_SOURCE_STATUSES:
+        blockers.append("batch3_plan_not_ready")
     if not plan_rows:
         blockers.append("batch3_selected_rows_missing")
 
