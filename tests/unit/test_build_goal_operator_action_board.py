@@ -963,6 +963,7 @@ def test_goal_operator_action_board_surfaces_product_ai_goal_completion_actions(
     assert "return_gpu_force_regeneration_receipt" not in registry_by_type
     assert registry["priority"] == 0
     assert registry["lane_id"] == "product_ai_production"
+    assert registry["approval_token"] == mod.PRODUCTION_AI_REGISTRY_PROMOTION_APPROVAL_TOKEN
     assert registry["operator_completion_packet_ready"] is True
     assert registry["operator_completion_artifact_id"] == "residual_model_registry_guarded_promotion"
     assert registry["required_input"] == (
@@ -975,6 +976,7 @@ def test_goal_operator_action_board_surfaces_product_ai_goal_completion_actions(
         "operator_completion_completion_rule"
     ]
     assert "failed_checks=production_promotion_allowed" in registry["reason"]
+    assert "registry promotion operator receipt" in mod._next_required_step([registry])
 
     scope = by_type["curate_scope_evidence_priority_item"]
     assert scope["priority"] == 2

@@ -252,6 +252,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "product_ai_decision_graph_contract" in artifact_ids
     assert "product_production_ai_checkpoint_readiness" in artifact_ids
     assert "product_production_ai_promotion_workbench" in artifact_ids
+    assert "production_ai_registry_promotion_operator_receipt" in artifact_ids
     assert "product_api_contract" in artifact_ids
     assert "product_service_boundary_contract" in artifact_ids
     assert "local_delivery_environment_manifest" in artifact_ids
@@ -288,11 +289,13 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "science_claim_promotion_gap_closure" in artifact_ids
     assert "master_gap_closure_rollup" in artifact_ids
     assert "python3 tools/build_api_runner_profile_promotion_operator_receipt.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_production_ai_registry_promotion_operator_receipt.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "product_release_bundle_semantic_ready" in status_ids
     assert "product_goal_completion_audit_full_commercial_release_blockers_semantic_ready" in status_ids
     assert "api_runner_profile_promotion_operator_receipt_blocked_semantic_ready" in status_ids
     assert "product_production_ai_checkpoint_shadow_blocked_semantic_ready" in status_ids
     assert "product_production_ai_promotion_workbench_shadow_blocked_semantic_ready" in status_ids
+    assert "production_ai_registry_promotion_operator_receipt_blocked_semantic_ready" in status_ids
     assert "cameo_validation_operations_dossier_current_bottleneck_semantic_ready" in status_ids
     assert "product_full_commercial_blocker_evidence_matrix_semantic_ready" in status_ids
     assert "goal_operator_action_board_primary_release_blocker_semantic_ready" in status_ids
@@ -386,6 +389,34 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "post_return_promotion_ladder_blocked_stage_count"
     ] == 2
     assert promotion_status_spec["required_text_exact_fields"]["first_blocked_stage_id"] == "residual_model_registry"
+    registry_receipt_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "production_ai_registry_promotion_operator_receipt_blocked_semantic_ready"
+    )
+    assert registry_receipt_spec["required_int_exact_fields"] == {
+        "operator_receipt_ready": 0,
+        "receipt_row_count": 1,
+        "pass_row_count": 0,
+        "blocked_row_count": 1,
+        "blocker_count": 1,
+        "observed_registry_trained_model_checkpoint_count": 0,
+        "observed_checkpoint_registry_promotion_currently_satisfied": 0,
+    }
+    assert registry_receipt_spec["required_text_exact_fields"][
+        "approval_token_required"
+    ] == "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION"
+    registry_receipt_artifact_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "production_ai_registry_promotion_operator_receipt"
+    )
+    assert "config/production_ai_registry_promotion_operator_receipt_current.csv" in registry_receipt_artifact_spec[
+        "depends_on"
+    ]
+    assert "runs/product_production_ai_checkpoint_readiness_current.json" in registry_receipt_artifact_spec[
+        "depends_on"
+    ]
     goal_action_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "goal_operator_action_board"
     )
@@ -411,6 +442,8 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "goal_operator_intake_kit"
     )
     assert "runs/goal_operator_action_board_current.json" in intake_kit_spec["depends_on"]
+    assert "runs/production_ai_registry_promotion_operator_receipt_current.json" in intake_kit_spec["depends_on"]
+    assert "config/production_ai_registry_promotion_operator_receipt_current.csv" in intake_kit_spec["depends_on"]
     assert "runs/product_scope_breadth_evidence_receipt_current.json" in intake_kit_spec["depends_on"]
     assert "config/product_scope_breadth_evidence_receipt_current.csv" in intake_kit_spec["depends_on"]
     goal_api_surface_spec = next(
@@ -552,6 +585,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/goal_api_surface_contract_current.json" in privacy_scan_spec["depends_on"]
     assert "runs/goal_bottleneck_briefing_current.json" in privacy_scan_spec["depends_on"]
     assert "runs/product_full_commercial_blocker_evidence_matrix_current.json" in privacy_scan_spec["depends_on"]
+    assert "runs/production_ai_registry_promotion_operator_receipt_current.json" in privacy_scan_spec["depends_on"]
     release_bundle_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_release_bundle"
     )

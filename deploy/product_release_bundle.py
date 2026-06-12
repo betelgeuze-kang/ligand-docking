@@ -22,6 +22,9 @@ DEFAULT_ARTIFACTS = {
     "api_runner_profile_promotion_readiness": "runs/api_runner_profile_promotion_readiness_current.json",
     "api_runner_profile_promotion_operator_template": "runs/api_runner_profile_promotion_operator_template_current.csv",
     "api_runner_profile_promotion_operator_receipt": "runs/api_runner_profile_promotion_operator_receipt_current.json",
+    "production_ai_registry_promotion_operator_receipt": (
+        "runs/production_ai_registry_promotion_operator_receipt_current.json"
+    ),
     "rollback_runbook": "deploy/product_rollback_runbook.md",
     "rollout_runbook": "deploy/product_rollout_runbook.md",
     "dockerfile": "Dockerfile.product",
@@ -128,6 +131,9 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
     runner_promotion = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["api_runner_profile_promotion_readiness"])))
     runner_promotion_receipt = _summary(
         _read_json(_resolve(DEFAULT_ARTIFACTS["api_runner_profile_promotion_operator_receipt"]))
+    )
+    production_ai_registry_receipt = _summary(
+        _read_json(_resolve(DEFAULT_ARTIFACTS["production_ai_registry_promotion_operator_receipt"]))
     )
     viewer_asset_base = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["viewer_asset_base_url_decision"])))
     license_audit = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["self_hosted_license_distribution_audit"])))
@@ -287,6 +293,38 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
                 f"blocked_row_count={runner_promotion_receipt.get('blocked_row_count')};"
                 f"profile_count={runner_promotion_receipt.get('profile_count')};"
                 f"receipt_row_count={runner_promotion_receipt.get('receipt_row_count')}"
+            ),
+        },
+        {
+            "check": "production_ai_registry_promotion_operator_receipt_recorded",
+            "passed": (
+                production_ai_registry_receipt.get("status")
+                in {
+                    "blocked_production_ai_registry_promotion_operator_receipt",
+                    "production_ai_registry_promotion_operator_receipt_ready",
+                }
+                and production_ai_registry_receipt.get("registry_edited_by_this_tool") is False
+                and production_ai_registry_receipt.get("checkpoint_created_by_this_tool") is False
+                and production_ai_registry_receipt.get("external_state_mutated") is False
+                and production_ai_registry_receipt.get("approval_token_required")
+                == "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION"
+                and production_ai_registry_receipt.get("receipt_csv")
+                == "config/production_ai_registry_promotion_operator_receipt_current.csv"
+                and production_ai_registry_receipt.get("registry_artifact")
+                == "runs/residual_model_registry_current.json"
+                and production_ai_registry_receipt.get("checkpoint_readiness_artifact")
+                == "runs/product_production_ai_checkpoint_readiness_current.json"
+                and int(production_ai_registry_receipt.get("receipt_row_count") or 0) >= 1
+            ),
+            "observed": (
+                f"receipt_status={production_ai_registry_receipt.get('status')};"
+                f"receipt_ready={production_ai_registry_receipt.get('operator_receipt_ready')};"
+                f"blocked_row_count={production_ai_registry_receipt.get('blocked_row_count')};"
+                f"first_blocked_row_blocker="
+                f"{production_ai_registry_receipt.get('first_blocked_row_blocker')};"
+                f"observed_mode={production_ai_registry_receipt.get('observed_registry_default_residual_mode')};"
+                f"observed_checkpoint_count="
+                f"{production_ai_registry_receipt.get('observed_registry_trained_model_checkpoint_count')}"
             ),
         },
         {

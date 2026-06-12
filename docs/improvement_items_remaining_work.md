@@ -565,19 +565,20 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `product_commercial_readiness_execution_ladder_current.json`,
   `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`,
   `product_full_commercial_blocker_evidence_matrix_current.json`,
+  `production_ai_registry_promotion_operator_receipt_current.json`,
   `cameo_validation_operations_dossier_current.json`을
   freshness row 및 semantic-ready row로 함께 검증해, R8 receipt와 상용 readiness
   handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
-  빠지지 않게 한다. 최신 source-of-truth는 `row_count=76`, `pass_count=76`,
-  `blocker_count=0`, `artifact_row_count=54`, `semantic_status_row_count=20`,
-  `release_refresh_command_count=68`, `stale_artifact_count=0`,
+  빠지지 않게 한다. 최신 source-of-truth는 `row_count=78`, `pass_count=78`,
+  `blocker_count=0`, `artifact_row_count=55`, `semantic_status_row_count=21`,
+  `release_refresh_command_count=69`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   API/service-boundary semantic readiness와 self-hosted license audit semantic
   readiness도 이 source-of-truth 안으로 편입됐다. 고객-facing AI report explanation/UX semantic
   readiness는 core/full decision graph 순환을 분리한 뒤 닫혔다. production AI
   checkpoint/promotion workbench는 현재 `shadow`/blocked 상태를 semantic-ready row로
-  검증한다. API runner profile operator receipt도 blocked 상태와 첫 row blocker를
-  semantic-ready row로 검증한다.
+  검증한다. API runner profile operator receipt와 production AI registry promotion
+  operator receipt도 blocked 상태와 첫 row blocker를 semantic-ready row로 검증한다.
   최신 goal API surface contract는 `check_count=9`,
   `pass_count=9`, `missing_full_commercial_visibility_token_count=0`이다.
   source-of-truth의 `goal_api_surface_contract_semantic_ready` row도
@@ -587,7 +588,8 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   (`goal_readiness_rollup`, `goal_operator_action_board`, `goal_operator_intake_kit`,
   `goal_release_burndown_work_order`,
   `goal_api_surface_contract`, `goal_bottleneck_briefing`,
-  `product_full_commercial_blocker_evidence_matrix`)를 scan 대상 및
+  `product_full_commercial_blocker_evidence_matrix`,
+  `production_ai_registry_promotion_operator_receipt`)를 scan 대상 및
   source-of-truth dependency로 포함해, R8/R9 상위 API/병목 surface에 raw molecular
   payload가 섞이면 release gate에서 숨지 않게 한다. 최신 scan은 `leak_count=0`이다.
   `tools/product/build_refine_tier_public_benchmark_readiness.py`는 curated 공개
@@ -668,6 +670,14 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   재요구하지 않고 `complete_residual_registry_guarded_promotion`을 가리킨다.
   `goal_operator_intake_kit_current/manifest.json`은
   `production_ai_registry_promotion` entry를 operator input required로 surface하며,
+  `config/production_ai_registry_promotion_operator_receipt_current.csv`와
+  `runs/production_ai_registry_promotion_operator_receipt_current.json`을 연결한다.
+  이 receipt는 현재 `blocked_production_ai_registry_promotion_operator_receipt`,
+  `operator_receipt_ready=false`, `first_blocked_row_blocker=operator_placeholders_unfilled`,
+  `approval_token_required=APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION`,
+  `observed_registry_default_residual_mode=shadow`,
+  `observed_registry_trained_model_checkpoint_count=0`으로 fail-closed 상태를 기록하며,
+  registry/checkpoint-readiness artifact와 CSV 입력값이 일치하지 않으면 ready가 되지 않는다.
   `/product/commercial-readiness-operator-packet`,
   `/product/commercial-readiness-execution-ladder`,
   `/product/commercial-readiness-handoff-bundle`은
@@ -1036,10 +1046,11 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   release claim 밖으로 계속 분리해 유지하는 일이다.
 - release source-of-truth gate는 R4 preflight, R4 rollout smoke receipt artifact,
   R8 scope-breadth receipt, goal operator intake kit, commercial readiness execution
-  ladder, API/bottleneck visibility, master gap closure rollup 포함 refresh 이후
-  `product_release_source_of_truth_gate_ready`, `pass_count=76/76`,
+  ladder, API/bottleneck visibility, production AI registry promotion operator
+  receipt, master gap closure rollup 포함 refresh 이후
+  `product_release_source_of_truth_gate_ready`, `pass_count=78/78`,
   `blocker_count=0`, `stale_artifact_count=0`,
-  `release_refresh_command_count=68`으로 재검증됐다.
+  `release_refresh_command_count=69`으로 재검증됐다.
 - `prometheus_client` 기반 실제 metrics endpoint는 1차 완료.
 - Alert rules + paged webhook receiver + closed-loop alert delivery smoke는 1차 완료;
   다음은 operator webhook secret mount, 실제 pager provider delivery smoke,

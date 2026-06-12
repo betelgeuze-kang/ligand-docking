@@ -45,6 +45,9 @@ from tools.product.build_product_scope_breadth_evidence_receipt import (
     APPROVAL_TOKEN as PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_APPROVAL_TOKEN,
     DEFAULT_RECEIPT_CSV as DEFAULT_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_CSV,
 )
+from tools.product.build_production_ai_registry_promotion_operator_receipt import (
+    APPROVAL_TOKEN as PRODUCTION_AI_REGISTRY_PROMOTION_APPROVAL_TOKEN,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_JSON = "runs/goal_operator_action_board_current.json"
@@ -174,6 +177,11 @@ def _next_required_step(rows: list[dict[str, Any]]) -> str:
     if first_lane in {"commercial_product_execution", "commercial_product_license"}:
         return "Complete P1 product execution and license intake actions first; CAMEO official evidence and registration remain P2."
     if first_lane == "product_ai_production":
+        if first_action == "complete_residual_registry_guarded_promotion":
+            return (
+                "Complete the production AI registry promotion operator receipt, then rerun the registry, "
+                "checkpoint-readiness, promotion workbench, and goal-completion audit gates."
+            )
         return "Return the GPU force-regeneration summary and identity-locked manifest first, then run the post-return validation chain before any production AI promotion claim."
     if first_lane == "product_scope_expansion":
         return "Curate the top scope-priority evidence item first, keeping broader platform claims blocked until authoritative apply gates pass."
@@ -533,6 +541,11 @@ def _product_goal_completion_actions(
                 f"{goal_completion_audit_path};{_text(actionable_operator_packet.get('artifact_path'))}"
                 if _text(actionable_operator_packet.get("artifact_path"))
                 else goal_completion_audit_path
+            ),
+            approval_token=(
+                PRODUCTION_AI_REGISTRY_PROMOTION_APPROVAL_TOKEN
+                if actionable_artifact_id == "residual_model_registry_guarded_promotion"
+                else ""
             ),
             command=_text(
                 summary.get("production_ai_checkpoint_actionable_operator_completion_validation_command")

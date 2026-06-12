@@ -244,11 +244,12 @@
   `product_commercial_readiness_execution_ladder_current.json`,
   `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`,
   `product_full_commercial_blocker_evidence_matrix_current.json`,
+  `production_ai_registry_promotion_operator_receipt_current.json`,
   `cameo_validation_operations_dossier_current.json`의
   freshness 및 semantic-ready 상태를 함께 검증한다. 최신 full refresh 후
-  source-of-truth는 `row_count=76`, `pass_count=76`, `blocker_count=0`,
-  `artifact_row_count=54`, `semantic_status_row_count=20`,
-  `release_refresh_command_count=68`, `stale_artifact_count=0`,
+  source-of-truth는 `row_count=78`, `pass_count=78`, `blocker_count=0`,
+  `artifact_row_count=55`, `semantic_status_row_count=21`,
+  `release_refresh_command_count=69`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   `product_ai_report_explanation_packet_semantic_ready`와
   `product_ai_report_ux_contract_semantic_ready`는 core/full decision graph 순환을
@@ -257,7 +258,8 @@
   아니라 `goal_readiness_rollup`, `goal_operator_action_board`,
   `goal_operator_intake_kit`, `goal_release_burndown_work_order`,
   `goal_api_surface_contract`,
-  `goal_bottleneck_briefing`, `product_full_commercial_blocker_evidence_matrix`
+  `goal_bottleneck_briefing`, `product_full_commercial_blocker_evidence_matrix`,
+  `production_ai_registry_promotion_operator_receipt`
   JSON도 scan 대상과 source-of-truth dependency로 포함한다.
   따라서 R8/R9 상위 API/병목 visibility surface에 raw molecular payload가 섞이면
   release privacy gate에서 fail-closed로 드러난다. 최신 scan은 `leak_count=0`이다.
@@ -373,6 +375,15 @@
   `complete_residual_registry_guarded_promotion`을 가리키며,
   `goal_operator_intake_kit_current/manifest.json`은
   `production_ai_registry_promotion` entry를 operator input required로 노출한다.
+  이 entry는 이제 `config/production_ai_registry_promotion_operator_receipt_current.csv`
+  template/intake와 `runs/production_ai_registry_promotion_operator_receipt_current.json`
+  source gate를 갖는다. receipt는
+  `blocked_production_ai_registry_promotion_operator_receipt`,
+  `first_blocked_row_blocker=operator_placeholders_unfilled`,
+  `approval_token_required=APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION`,
+  `observed_registry_default_residual_mode=shadow`,
+  `observed_registry_trained_model_checkpoint_count=0`을 기록하며,
+  CSV 값과 residual registry/checkpoint-readiness artifact가 어긋나면 ready가 되지 않는다.
   `/product/commercial-readiness-operator-packet`,
   `/product/commercial-readiness-execution-ladder`,
   `/product/commercial-readiness-handoff-bundle`도

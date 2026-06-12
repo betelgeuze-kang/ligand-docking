@@ -135,6 +135,15 @@ def _source_packets() -> dict[str, dict]:
                 "external_state_mutated": False,
             }
         },
+        mod.DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_RECEIPT_JSON: {
+            "summary": {
+                "status": "blocked_production_ai_registry_promotion_operator_receipt",
+                "operator_receipt_ready": False,
+                "blocked_row_count": 1,
+                "approval_token_required": mod.PRODUCTION_AI_REGISTRY_PROMOTION_APPROVAL_TOKEN,
+                "external_state_mutated": False,
+            }
+        },
         mod.DEFAULT_PRODUCT_COMMERCIAL_INDEPENDENCE_JSON: {
             "summary": {
                 "status": "blocked_product_commercial_independence_gate",
@@ -288,11 +297,21 @@ def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp
     assert summary["source_action_count"] == 9
     assert summary["release_burndown_source_row_count"] == 8
     assert summary["release_burndown_linked_entry_count"] == 11
-    assert summary["operator_input_required_count"] == 15
+    assert summary["operator_input_required_count"] == 16
     assert summary["current_action_required_count"] == 12
-    assert summary["deferred_operator_input_count"] == 3
-    assert by_id["production_ai_registry_promotion"]["kit_status"] == "not_surfaced"
-    assert by_id["production_ai_registry_promotion"]["template_required"] is False
+    assert summary["deferred_operator_input_count"] == 4
+    assert by_id["production_ai_registry_promotion"]["kit_status"] == "approval_required"
+    assert by_id["production_ai_registry_promotion"]["template_required"] is True
+    assert by_id["production_ai_registry_promotion"]["template_path"] == (
+        "config/production_ai_registry_promotion_operator_receipt_current.csv"
+    )
+    assert by_id["production_ai_registry_promotion"]["intake_path"] == (
+        "config/production_ai_registry_promotion_operator_receipt_current.csv"
+    )
+    assert by_id["production_ai_registry_promotion"]["approval_token_required"] == (
+        mod.PRODUCTION_AI_REGISTRY_PROMOTION_APPROVAL_TOKEN
+    )
+    assert by_id["production_ai_registry_promotion"]["operator_input_required_now"] is False
     assert summary["primary_action_id"] == "product_ai_production:return_gpu_force_regeneration_receipt"
     assert summary["top_action_id"] == summary["primary_action_id"]
     assert summary["primary_action_priority"] == 0
@@ -342,6 +361,7 @@ def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp
     assert summary["goal_api_contract_endpoint"] == "/goal/api-contract"
     assert "APPROVE_API_DEPENDENCY_INSTALL" in summary["approval_tokens"]
     assert mod.API_RUNNER_PROFILE_PROMOTION_APPROVAL_TOKEN in summary["approval_tokens"]
+    assert mod.PRODUCTION_AI_REGISTRY_PROMOTION_APPROVAL_TOKEN in summary["approval_tokens"]
     assert mod.PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_APPROVAL_TOKEN in summary["approval_tokens"]
     assert mod.ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_APPROVAL_TOKEN in summary["approval_tokens"]
     assert summary["current_action_approval_token_count"] == 4
@@ -479,6 +499,55 @@ def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp
     assert by_id["goal_api_status_surface"]["release_burndown_surfaced"] is False
 
 
+def test_goal_operator_intake_kit_surfaces_registry_promotion_receipt_for_current_action(tmp_path: Path) -> None:
+    action_board = _action_board()
+    registry_action = {
+        "lane_id": "product_ai_production",
+        "action_type": "complete_residual_registry_guarded_promotion",
+        "status": "required",
+        "artifact_path": "runs/product_goal_completion_audit_current.json;runs/residual_model_registry_current.json",
+        "approval_token": mod.PRODUCTION_AI_REGISTRY_PROMOTION_APPROVAL_TOKEN,
+        "required_input": (
+            "production_promotion_allowed;customer_facing_auto_correction_allowed;"
+            "customer_facing_score_mutation_allowed;customer_facing_ranking_mutation_allowed;"
+            "default_residual_mode;trained_model_checkpoint_count"
+        ),
+    }
+    action_board["rows"] = [registry_action]
+    action_board["summary"].update(
+        {
+            "primary_action_id": "product_ai_production:complete_residual_registry_guarded_promotion",
+            "top_action_id": "product_ai_production:complete_residual_registry_guarded_promotion",
+            "primary_action_type": "complete_residual_registry_guarded_promotion",
+            "primary_action_required_input": registry_action["required_input"],
+            "primary_action_artifact_path": registry_action["artifact_path"],
+        }
+    )
+
+    payload = mod.build_goal_operator_intake_kit(
+        action_board_packet=action_board,
+        release_burndown_packet=_release_burndown(),
+        source_packets=_source_packets(),
+        out_dir=tmp_path / "kit",
+    )
+
+    summary = payload["summary"]
+    by_id = {row["kit_entry_id"]: row for row in payload["rows"]}
+    registry = by_id["production_ai_registry_promotion"]
+    assert summary["primary_action_id"] == "product_ai_production:complete_residual_registry_guarded_promotion"
+    assert summary["current_action_approval_tokens"] == [
+        mod.PRODUCTION_AI_REGISTRY_PROMOTION_APPROVAL_TOKEN
+    ]
+    assert registry["kit_status"] == "operator_input_required"
+    assert registry["current_action_surfaced"] is True
+    assert registry["operator_input_required_now"] is True
+    assert registry["source_gate_status"] == "blocked_production_ai_registry_promotion_operator_receipt"
+    assert registry["related_source_json"] == mod.DEFAULT_PRODUCT_GOAL_COMPLETION_AUDIT_JSON
+    assert registry["template_path"] == "config/production_ai_registry_promotion_operator_receipt_current.csv"
+    assert registry["intake_path"] == "config/production_ai_registry_promotion_operator_receipt_current.csv"
+    assert registry["approval_token_required"] == mod.PRODUCTION_AI_REGISTRY_PROMOTION_APPROVAL_TOKEN
+
+
 def test_goal_operator_intake_kit_suppresses_stale_api_install_entry_when_runtime_ready(tmp_path: Path) -> None:
     action_board = _action_board()
     action_board["rows"] = [
@@ -541,6 +610,7 @@ def test_goal_operator_intake_kit_tool_writes_manifest_and_copies_templates(tmp_
         "product_license.csv",
         "gpu_return_manifest.csv",
         "gpu_return_summary.json",
+        "production_ai_registry_promotion.csv",
         "scope_transporter_manual_review.csv",
         "scope_pxr_exact_evidence_review.csv",
         "product_scope_breadth_evidence_receipt.csv",
@@ -586,6 +656,8 @@ def test_goal_operator_intake_kit_tool_writes_manifest_and_copies_templates(tmp_
                 str(source_paths[mod.DEFAULT_PRODUCT_EXECUTION_GATE_JSON]),
                 "--api-runner-profile-promotion-receipt-json",
                 str(source_paths[mod.DEFAULT_API_RUNNER_PROFILE_PROMOTION_RECEIPT_JSON]),
+                "--production-ai-registry-promotion-receipt-json",
+                str(source_paths[mod.DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_RECEIPT_JSON]),
                 "--product-commercial-independence-json",
                 str(source_paths[mod.DEFAULT_PRODUCT_COMMERCIAL_INDEPENDENCE_JSON]),
                 "--product-license-gate-json",
@@ -620,7 +692,7 @@ def test_goal_operator_intake_kit_tool_writes_manifest_and_copies_templates(tmp_
         mod.CATALOG = original_catalog
 
     payload = json.loads(out_json.read_text(encoding="utf-8"))
-    assert payload["summary"]["template_copied_count"] == 13
+    assert payload["summary"]["template_copied_count"] == 14
     assert payload["summary"]["release_burndown_linked_entry_count"] == 11
     assert payload["summary"]["goal_api_surface_contract_status"] == "goal_api_surface_contract_ready"
     assert out_csv.read_text(encoding="utf-8").startswith("kit_entry_id,lane_id,")
@@ -629,6 +701,9 @@ def test_goal_operator_intake_kit_tool_writes_manifest_and_copies_templates(tmp_
     assert "release sequence" in md
     assert (out_dir / "templates" / "product_license.csv").read_text(encoding="utf-8").startswith("field")
     assert (out_dir / "templates" / "gpu_return_summary.json").read_text(encoding="utf-8").startswith("field")
+    assert (out_dir / "templates" / "production_ai_registry_promotion.csv").read_text(
+        encoding="utf-8"
+    ).startswith("field")
     assert (out_dir / "templates" / "scope_transporter_manual_review.csv").read_text(
         encoding="utf-8"
     ).startswith("field")

@@ -44,6 +44,11 @@ from tools.product.build_api_runner_profile_promotion_operator_receipt import (
     DEFAULT_OPERATOR_TEMPLATE_CSV as DEFAULT_API_RUNNER_PROFILE_PROMOTION_TEMPLATE_CSV,
     DEFAULT_OUT_JSON as DEFAULT_API_RUNNER_PROFILE_PROMOTION_RECEIPT_JSON,
 )
+from tools.product.build_production_ai_registry_promotion_operator_receipt import (
+    APPROVAL_TOKEN as PRODUCTION_AI_REGISTRY_PROMOTION_APPROVAL_TOKEN,
+    DEFAULT_OUT_JSON as DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_RECEIPT_JSON,
+    DEFAULT_RECEIPT_CSV as DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_RECEIPT_CSV,
+)
 from tools.build_goal_api_surface_contract import DEFAULT_OUT_JSON as DEFAULT_GOAL_API_SURFACE_CONTRACT_JSON
 from tools.build_goal_release_burndown_work_order import DEFAULT_OUT_JSON as DEFAULT_RELEASE_BURNDOWN_JSON
 from tools.build_product_execution_approval_gate import (
@@ -214,14 +219,15 @@ CATALOG: list[dict[str, Any]] = [
             "complete_production_ai_actionable_operator_packet",
         ],
         "input_kind": "residual_model_registry_guarded_promotion",
-        "source_gate_json": DEFAULT_PRODUCT_GOAL_COMPLETION_AUDIT_JSON,
-        "template_path": "",
-        "intake_path": "",
-        "template_required": False,
+        "source_gate_json": DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_RECEIPT_JSON,
+        "template_path": DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_RECEIPT_CSV,
+        "intake_path": DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_RECEIPT_CSV,
+        "related_source_json": DEFAULT_PRODUCT_GOAL_COMPLETION_AUDIT_JSON,
+        "approval_token_required": PRODUCTION_AI_REGISTRY_PROMOTION_APPROVAL_TOKEN,
         "release_checks": "production_ai_checkpoint_actionable_operator_completion_packet_ready",
         "recommended_action": (
-            "Complete the current production AI actionable operator packet, then rerun the registry, "
-            "checkpoint-readiness, promotion workbench, and goal-completion audit gates."
+            "Fill the production AI registry promotion receipt with guarded promotion fields, reviewer metadata, "
+            "approval token, and matching residual registry/checkpoint-readiness artifacts."
         ),
     },
     {
@@ -792,6 +798,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--api-runner-profile-promotion-receipt-json",
         default=DEFAULT_API_RUNNER_PROFILE_PROMOTION_RECEIPT_JSON,
     )
+    parser.add_argument(
+        "--production-ai-registry-promotion-receipt-json",
+        default=DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_RECEIPT_JSON,
+    )
     parser.add_argument("--product-commercial-independence-json", default=DEFAULT_PRODUCT_COMMERCIAL_INDEPENDENCE_JSON)
     parser.add_argument("--product-license-gate-json", default=DEFAULT_PRODUCT_LICENSE_GATE_JSON)
     parser.add_argument("--production-ai-gpu-return-intake-json", default=DEFAULT_PRODUCTION_AI_GPU_RETURN_INTAKE_JSON)
@@ -830,6 +840,9 @@ def main(argv: list[str] | None = None) -> None:
         DEFAULT_PRODUCT_EXECUTION_GATE_JSON: _read_json_if_present(args.product_execution_gate_json),
         DEFAULT_API_RUNNER_PROFILE_PROMOTION_RECEIPT_JSON: _read_json_if_present(
             args.api_runner_profile_promotion_receipt_json
+        ),
+        DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_RECEIPT_JSON: _read_json_if_present(
+            args.production_ai_registry_promotion_receipt_json
         ),
         DEFAULT_PRODUCT_COMMERCIAL_INDEPENDENCE_JSON: _read_json_if_present(args.product_commercial_independence_json),
         DEFAULT_PRODUCT_LICENSE_GATE_JSON: _read_json_if_present(args.product_license_gate_json),
