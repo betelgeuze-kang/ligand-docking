@@ -636,6 +636,8 @@ async def get_product_operational_quality() -> dict[str, Any]:
             "operational_quality_ready": False,
             "blocker_count": 1,
             "production_ai_correction_fail_closed_ready": False,
+            "production_ai_shadow_abstention_ready": False,
+            "production_ai_guarded_active_ready": False,
             "sample_production_ai_inference_subject_active": False,
             "sample_production_ai_correction_applied": False,
             "sample_production_ai_abstention_enforced": False,
@@ -645,6 +647,8 @@ async def get_product_operational_quality() -> dict[str, Any]:
             "sample_production_ai_customer_facing_score_mutation_allowed": False,
             "sample_production_ai_customer_facing_ranking_mutation_allowed": False,
             "sample_production_ai_trained_checkpoint_count": 0,
+            "sample_production_ai_selected_sidecar_ready": False,
+            "sample_production_ai_selected_sidecar_missing_output_fields": [],
             "checks": [],
             "blockers": [],
             "input_payload_persisted": False,
@@ -669,6 +673,8 @@ async def get_product_operational_quality() -> dict[str, Any]:
         "production_ai_correction_fail_closed_ready": bool(
             summary.get("production_ai_correction_fail_closed_ready") is True
         ),
+        "production_ai_shadow_abstention_ready": bool(summary.get("production_ai_shadow_abstention_ready") is True),
+        "production_ai_guarded_active_ready": bool(summary.get("production_ai_guarded_active_ready") is True),
         "sample_production_ai_inference_subject_active": bool(
             summary.get("sample_production_ai_inference_subject_active") is True
         ),
@@ -689,6 +695,12 @@ async def get_product_operational_quality() -> dict[str, Any]:
         ),
         "sample_production_ai_trained_checkpoint_count": int(
             summary.get("sample_production_ai_trained_checkpoint_count") or 0
+        ),
+        "sample_production_ai_selected_sidecar_ready": bool(
+            summary.get("sample_production_ai_selected_sidecar_ready") is True
+        ),
+        "sample_production_ai_selected_sidecar_missing_output_fields": list(
+            summary.get("sample_production_ai_selected_sidecar_missing_output_fields") or []
         ),
         "ledger_payload_privacy_ready": bool(summary.get("ledger_payload_privacy_ready") is True),
         "request_traceability_ready": bool(summary.get("request_traceability_ready") is True),
@@ -6266,9 +6278,15 @@ async def get_product_full_commercial_blocker_evidence_matrix() -> dict[str, Any
             "approval_tokens_required": [],
             "first_blocked_release_blocker_id": "",
             "first_blocked_evidence_row_id": "",
+            "first_blocked_evidence_artifact": "",
+            "first_blocked_expected_evidence_status": "",
+            "first_blocked_observed_evidence_status": "",
+            "first_blocked_row_blockers": "",
             "first_blocked_receipt_json": "",
             "first_blocked_acceptance_artifact": "",
             "first_blocked_next_required_step": "",
+            "scope_receipt_most_common_row_blocker": "",
+            "engine_receipt_most_common_row_blocker": "",
             "evidence_matrix": [],
             "blockers": [],
             "next_required_step": "",
@@ -6322,9 +6340,23 @@ async def get_product_full_commercial_blocker_evidence_matrix() -> dict[str, Any
         "approval_tokens_required": list(summary.get("approval_tokens_required") or []),
         "first_blocked_release_blocker_id": summary.get("first_blocked_release_blocker_id", ""),
         "first_blocked_evidence_row_id": summary.get("first_blocked_evidence_row_id", ""),
+        "first_blocked_evidence_artifact": summary.get("first_blocked_evidence_artifact", ""),
+        "first_blocked_expected_evidence_status": summary.get(
+            "first_blocked_expected_evidence_status", ""
+        ),
+        "first_blocked_observed_evidence_status": summary.get(
+            "first_blocked_observed_evidence_status", ""
+        ),
+        "first_blocked_row_blockers": summary.get("first_blocked_row_blockers", ""),
         "first_blocked_receipt_json": summary.get("first_blocked_receipt_json", ""),
         "first_blocked_acceptance_artifact": summary.get("first_blocked_acceptance_artifact", ""),
         "first_blocked_next_required_step": summary.get("first_blocked_next_required_step", ""),
+        "scope_receipt_most_common_row_blocker": summary.get(
+            "scope_receipt_most_common_row_blocker", ""
+        ),
+        "engine_receipt_most_common_row_blocker": summary.get(
+            "engine_receipt_most_common_row_blocker", ""
+        ),
         "evidence_matrix": list(rows),
         "blockers": list(blockers),
         "next_required_step": summary.get("next_required_step", ""),

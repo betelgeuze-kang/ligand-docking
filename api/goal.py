@@ -170,6 +170,17 @@ async def get_goal_status() -> dict[str, Any]:
             "full_commercial_release_blocker_count": 0,
             "missing_full_commercial_release_blocker_ids": list(FULL_COMMERCIAL_RELEASE_BLOCKER_IDS),
             "full_commercial_release_blocker_visibility_ready": False,
+            "product_goal_release_blocker_fail_count": 0,
+            "product_goal_release_blocker_requirement_ids": [],
+            "product_goal_primary_release_blocker_requirement_id": "",
+            "product_goal_primary_release_blocker_tier": "",
+            "product_goal_primary_release_blocker": "",
+            "product_goal_primary_release_blocker_next_command": "",
+            "primary_release_blocker_action_id": "",
+            "primary_release_blocker_action_status": "",
+            "primary_release_blocker_action_required_input": "",
+            "primary_release_blocker_action_artifact_path": "",
+            "primary_release_blocker_action_recommended_action": "",
             "commercial_readiness_handoff_bundle_status": "",
             "commercial_readiness_handoff_bundle_ready": False,
             "commercial_readiness_handoff_bundle_artifact_path": str(
@@ -188,7 +199,13 @@ async def get_goal_status() -> dict[str, Any]:
             "full_commercial_blocker_evidence_matrix_approval_token_count": 0,
             "full_commercial_blocker_evidence_matrix_first_blocked_release_blocker_id": "",
             "full_commercial_blocker_evidence_matrix_first_blocked_evidence_row_id": "",
+            "full_commercial_blocker_evidence_matrix_first_blocked_evidence_artifact": "",
+            "full_commercial_blocker_evidence_matrix_first_blocked_expected_evidence_status": "",
+            "full_commercial_blocker_evidence_matrix_first_blocked_observed_evidence_status": "",
+            "full_commercial_blocker_evidence_matrix_first_blocked_row_blockers": "",
             "full_commercial_blocker_evidence_matrix_first_blocked_acceptance_artifact": "",
+            "full_commercial_blocker_evidence_matrix_scope_receipt_most_common_row_blocker": "",
+            "full_commercial_blocker_evidence_matrix_engine_receipt_most_common_row_blocker": "",
             **_mutation_flags(),
             "claim_boundary": CLAIM_BOUNDARY,
         }
@@ -241,6 +258,41 @@ async def get_goal_status() -> dict[str, Any]:
         "full_commercial_release_blocker_count": len(full_commercial_release_blocker_ids),
         "missing_full_commercial_release_blocker_ids": missing_full_commercial_release_blocker_ids,
         "full_commercial_release_blocker_visibility_ready": full_commercial_release_blocker_visibility_ready,
+        "product_goal_release_blocker_fail_count": _int(
+            actions.get("product_goal_release_blocker_fail_count")
+            or intake.get("product_goal_release_blocker_fail_count")
+        ),
+        "product_goal_release_blocker_requirement_ids": _string_list(
+            actions.get("product_goal_release_blocker_requirement_ids")
+            or intake.get("product_goal_release_blocker_requirement_ids")
+        ),
+        "product_goal_primary_release_blocker_requirement_id": actions.get(
+            "product_goal_primary_release_blocker_requirement_id"
+        )
+        or intake.get("product_goal_primary_release_blocker_requirement_id", ""),
+        "product_goal_primary_release_blocker_tier": actions.get("product_goal_primary_release_blocker_tier")
+        or intake.get("product_goal_primary_release_blocker_tier", ""),
+        "product_goal_primary_release_blocker": actions.get("product_goal_primary_release_blocker")
+        or intake.get("product_goal_primary_release_blocker", ""),
+        "product_goal_primary_release_blocker_next_command": actions.get(
+            "product_goal_primary_release_blocker_next_command", ""
+        ),
+        "primary_release_blocker_action_id": actions.get("primary_release_blocker_action_id")
+        or intake.get("primary_release_blocker_action_id", ""),
+        "primary_release_blocker_action_status": actions.get("primary_release_blocker_action_status")
+        or intake.get("primary_release_blocker_action_status", ""),
+        "primary_release_blocker_action_required_input": actions.get(
+            "primary_release_blocker_action_required_input"
+        )
+        or intake.get("primary_release_blocker_action_required_input", ""),
+        "primary_release_blocker_action_artifact_path": actions.get(
+            "primary_release_blocker_action_artifact_path"
+        )
+        or intake.get("primary_release_blocker_action_artifact_path", ""),
+        "primary_release_blocker_action_recommended_action": actions.get(
+            "primary_release_blocker_action_recommended_action"
+        )
+        or intake.get("primary_release_blocker_action_recommended_action", ""),
         "commercial_readiness_handoff_bundle_status": handoff.get("status", ""),
         "commercial_readiness_handoff_bundle_ready": bool(handoff.get("handoff_bundle_ready") is True),
         "commercial_readiness_handoff_bundle_artifact_path": str(
@@ -277,8 +329,26 @@ async def get_goal_status() -> dict[str, Any]:
         "full_commercial_blocker_evidence_matrix_first_blocked_evidence_row_id": full_commercial_matrix.get(
             "first_blocked_evidence_row_id", ""
         ),
+        "full_commercial_blocker_evidence_matrix_first_blocked_evidence_artifact": full_commercial_matrix.get(
+            "first_blocked_evidence_artifact", ""
+        ),
+        "full_commercial_blocker_evidence_matrix_first_blocked_expected_evidence_status": (
+            full_commercial_matrix.get("first_blocked_expected_evidence_status", "")
+        ),
+        "full_commercial_blocker_evidence_matrix_first_blocked_observed_evidence_status": (
+            full_commercial_matrix.get("first_blocked_observed_evidence_status", "")
+        ),
+        "full_commercial_blocker_evidence_matrix_first_blocked_row_blockers": full_commercial_matrix.get(
+            "first_blocked_row_blockers", ""
+        ),
         "full_commercial_blocker_evidence_matrix_first_blocked_acceptance_artifact": full_commercial_matrix.get(
             "first_blocked_acceptance_artifact", ""
+        ),
+        "full_commercial_blocker_evidence_matrix_scope_receipt_most_common_row_blocker": (
+            full_commercial_matrix.get("scope_receipt_most_common_row_blocker", "")
+        ),
+        "full_commercial_blocker_evidence_matrix_engine_receipt_most_common_row_blocker": (
+            full_commercial_matrix.get("engine_receipt_most_common_row_blocker", "")
         ),
         "official_results_required_bottleneck_count": _int(
             bottlenecks.get("official_results_required_bottleneck_count")

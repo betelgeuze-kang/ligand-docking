@@ -919,6 +919,32 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         },
     },
     {
+        "artifact_id": "product_full_commercial_blocker_evidence_matrix_semantic_ready",
+        "artifact_path": "runs/product_full_commercial_blocker_evidence_matrix_current.json",
+        "builder_command": "python3 tools/build_product_full_commercial_blocker_evidence_matrix.py",
+        "required_status": "blocked_product_full_commercial_blocker_evidence_matrix",
+        "required_true_fields": [
+            "release_blocker_visibility_ready",
+        ],
+        "required_int_exact_fields": {
+            "blocked_matrix_row_count": 12,
+            "approval_token_count": 2,
+            "scope_receipt_blocked_row_count": 6,
+            "engine_receipt_blocked_row_count": 6,
+        },
+        "required_text_exact_fields": {
+            "first_blocked_release_blocker_id": "R8_full_scope_claim_closure",
+            "first_blocked_evidence_row_id": "direct_binding_evidence_missing",
+            "first_blocked_evidence_artifact": "OPERATOR_FILL_LOCAL_EVIDENCE_JSON",
+            "first_blocked_expected_evidence_status": (
+                "product_scope_transporter_direct_binding_evidence_ready"
+            ),
+            "first_blocked_observed_evidence_status": "missing",
+            "scope_receipt_most_common_row_blocker": "operator_placeholders_unfilled",
+            "engine_receipt_most_common_row_blocker": "operator_placeholders_unfilled",
+        },
+    },
+    {
         "artifact_id": "goal_operator_action_board_primary_release_blocker_semantic_ready",
         "artifact_path": "runs/goal_operator_action_board_current.json",
         "builder_command": "python3 tools/build_goal_operator_action_board.py",
@@ -970,6 +996,12 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "required_true_fields": [
             "surface_ready",
         ],
+        "required_int_exact_fields": {
+            "blocker_count": 0,
+            "missing_status_key_count": 0,
+            "missing_full_commercial_visibility_token_count": 0,
+            "missing_fail_closed_flag_count": 0,
+        },
     },
     {
         "artifact_id": "goal_bottleneck_briefing_semantic_ready",

@@ -171,6 +171,10 @@
   `full_commercial_release_blocker_visibility_ready`,
   `completion_audit_release_blocker_bottleneck_count`, 그리고
   `commercial_readiness_handoff_bundle_artifact_reference_count=26`를 함께 노출한다.
+  또한 `product_goal_primary_release_blocker_requirement_id`,
+  `product_goal_primary_release_blocker`, `primary_release_blocker_action_id`,
+  `primary_release_blocker_action_required_input`을 goal operator action board/intake
+  kit에서 직접 전달해 첫 operator 입력 파일을 `/goal/status`에도 고정한다.
   같은 status surface는
   `full_commercial_blocker_evidence_matrix_*` 요약 키로 matrix status, row count,
   blocked row count, approval token count, 첫 blocked release blocker/evidence row도
@@ -179,9 +183,13 @@
   `product_full_commercial_blocker_evidence_matrix_recorded` row로 노출해,
   restricted release source-of-truth가 green이어도 full commercial R8/R9 receipt
   미완료가 decision packet에서 사라지지 않는다.
-  `goal_api_surface_contract_current.json`은 이 R8/R9 + commercial handoff visibility를
+  `goal_api_surface_contract_current.json`은 이 R8/R9 + primary release blocker action +
+  commercial handoff visibility를
   `goal_full_commercial_bottleneck_visibility_present` check로 고정하며 최신
   `check_count=9`, `pass_count=9`, `missing_full_commercial_visibility_token_count=0`이다.
+  source-of-truth의 `goal_api_surface_contract_semantic_ready` row도
+  `missing_status_key_count=0`, `missing_full_commercial_visibility_token_count=0`,
+  `missing_fail_closed_flag_count=0`, `blocker_count=0`을 exact field로 검증한다.
 - `tools/product/build_product_full_commercial_blocker_evidence_matrix.py`는 R8/R9
   release blocker evidence receipt를 한 matrix로 집계한다. 최신
   `runs/product_full_commercial_blocker_evidence_matrix_current.json`은
@@ -195,7 +203,13 @@
   blocker별 operator evidence receipt를 R9 claim-evidence receipt와 같은
   fail-closed 경계로 분리한다. 현재 receipt는 placeholder evidence를 막아
   `blocked_product_scope_breadth_evidence_receipt`,
-  `full_scope_evidence_receipt_ready=false`, `blocked_row_count=6`이다.
+  `full_scope_evidence_receipt_ready=false`, `blocked_row_count=6`,
+  `first_blocked_scope_blocker_id=direct_binding_evidence_missing`,
+  `first_blocked_evidence_artifact=OPERATOR_FILL_LOCAL_EVIDENCE_JSON`,
+  `most_common_row_blocker=operator_placeholders_unfilled`이다. full-commercial
+  blocker matrix와 `/goal/status`도 이 first-blocked diagnostics를
+  `full_commercial_blocker_evidence_matrix_first_blocked_*` 및
+  `full_commercial_blocker_evidence_matrix_*_most_common_row_blocker` 필드로 전달한다.
   `product_goal_completion_audit`의 `R8_full_scope_claim_closure` row는 이 receipt를
   evidence artifact와 observed field로 직접 사용하며, `goal_operator_action_board`는
   `resolve_full_scope_breadth_evidence_receipt` action을 노출한다.
@@ -225,8 +239,8 @@
   `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`,
   `product_full_commercial_blocker_evidence_matrix_current.json`의
   freshness 및 semantic-ready 상태를 함께 검증한다. 최신 full refresh 후
-  source-of-truth는 `row_count=70`, `pass_count=70`, `blocker_count=0`,
-  `artifact_row_count=53`, `semantic_status_row_count=15`,
+  source-of-truth는 `row_count=71`, `pass_count=71`, `blocker_count=0`,
+  `artifact_row_count=53`, `semantic_status_row_count=16`,
   `release_refresh_command_count=61`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   `product_ai_report_explanation_packet_semantic_ready`와

@@ -481,7 +481,11 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `full_commercial_release_blocker_visibility_ready=true`,
   `completion_audit_release_blocker_bottleneck_count=2`,
   `commercial_readiness_handoff_bundle_artifact_reference_count=26`를 노출하고,
-  `goal_api_surface_contract_current.json`은 이 R8/R9 + commercial handoff visibility를
+  `product_goal_primary_release_blocker_requirement_id=R8_full_scope_claim_closure`,
+  `primary_release_blocker_action_id=product_scope_expansion:resolve_full_scope_breadth_evidence_receipt`,
+  `primary_release_blocker_action_required_input=config/product_scope_breadth_evidence_receipt_current.csv`도
+  action board/intake kit에서 끌어와 노출한다. `goal_api_surface_contract_current.json`은 이
+  R8/R9 + primary release blocker action + commercial handoff visibility를
   `goal_full_commercial_bottleneck_visibility_present` check로 고정한다.
   `tools/product/build_product_full_commercial_blocker_evidence_matrix.py`는 같은
   R8/R9 release blocker를 `runs/product_full_commercial_blocker_evidence_matrix_current.json`
@@ -509,7 +513,15 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   별도 fail-closed gate로 분리한다. 최신
   `runs/product_scope_breadth_evidence_receipt_current.json`은 placeholder evidence를
   막아 `blocked_product_scope_breadth_evidence_receipt`,
-  `full_scope_evidence_receipt_ready=false`, `blocked_row_count=6`을 기록한다.
+  `full_scope_evidence_receipt_ready=false`, `blocked_row_count=6`,
+  `first_blocked_scope_blocker_id=direct_binding_evidence_missing`,
+  `first_blocked_evidence_artifact=OPERATOR_FILL_LOCAL_EVIDENCE_JSON`,
+  `most_common_row_blocker=operator_placeholders_unfilled`을 기록한다. 같은
+  first-blocked diagnostics는 full-commercial matrix와 `/goal/status`의
+  `full_commercial_blocker_evidence_matrix_first_blocked_*`,
+  `full_commercial_blocker_evidence_matrix_scope_receipt_most_common_row_blocker`,
+  `full_commercial_blocker_evidence_matrix_engine_receipt_most_common_row_blocker`로도
+  전파된다.
   `runs/product_goal_completion_audit_current.json`의 `R8_full_scope_claim_closure`
   row도 이 receipt를 evidence artifact와 observed field로 직접 흡수해,
   scope contract가 green처럼 보이더라도 `full_scope_evidence_receipt_ready=false`면
@@ -544,8 +556,8 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `product_full_commercial_blocker_evidence_matrix_current.json`을
   freshness row 및 semantic-ready row로 함께 검증해, R8 receipt와 상용 readiness
   handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
-  빠지지 않게 한다. 최신 source-of-truth는 `row_count=70`, `pass_count=70`,
-  `blocker_count=0`, `artifact_row_count=53`, `semantic_status_row_count=15`,
+  빠지지 않게 한다. 최신 source-of-truth는 `row_count=71`, `pass_count=71`,
+  `blocker_count=0`, `artifact_row_count=53`, `semantic_status_row_count=16`,
   `release_refresh_command_count=61`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   API/service-boundary semantic readiness와 self-hosted license audit semantic
@@ -553,6 +565,9 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   readiness는 core/full decision graph 순환을 분리한 뒤 닫혔다.
   최신 goal API surface contract는 `check_count=9`,
   `pass_count=9`, `missing_full_commercial_visibility_token_count=0`이다.
+  source-of-truth의 `goal_api_surface_contract_semantic_ready` row도
+  `missing_status_key_count=0`, `missing_full_commercial_visibility_token_count=0`,
+  `missing_fail_closed_flag_count=0`, `blocker_count=0`을 exact field로 검증한다.
   `product_ledger_privacy_scan_current.json`도 goal-facing JSON artifacts
   (`goal_readiness_rollup`, `goal_operator_action_board`, `goal_operator_intake_kit`,
   `goal_release_burndown_work_order`,
@@ -955,7 +970,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
 - release source-of-truth gate는 R4 preflight, R4 rollout smoke receipt artifact,
   R8 scope-breadth receipt, goal operator intake kit, commercial readiness execution
   ladder, API/bottleneck visibility, master gap closure rollup 포함 refresh 이후
-  `product_release_source_of_truth_gate_ready`, `pass_count=70/70`,
+  `product_release_source_of_truth_gate_ready`, `pass_count=71/71`,
   `blocker_count=0`, `stale_artifact_count=0`,
   `release_refresh_command_count=61`로 재검증됐다.
 - `prometheus_client` 기반 실제 metrics endpoint는 1차 완료.

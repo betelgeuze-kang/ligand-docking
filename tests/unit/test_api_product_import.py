@@ -117,10 +117,13 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert operational_quality["operational_quality_ready"] is True
     assert operational_quality["production_ai_correction_fail_closed_ready"] is True
     assert operational_quality["sample_production_ai_correction_applied"] is False
-    assert operational_quality["sample_production_ai_default_residual_mode"] == "production_guarded"
-    assert operational_quality["sample_production_ai_customer_facing_auto_correction_allowed"] is True
-    assert operational_quality["sample_production_ai_customer_facing_score_mutation_allowed"] is True
+    assert operational_quality["production_ai_shadow_abstention_ready"] is True
+    assert operational_quality["sample_production_ai_abstention_enforced"] is True
+    assert operational_quality["sample_production_ai_default_residual_mode"] == "shadow"
+    assert operational_quality["sample_production_ai_customer_facing_auto_correction_allowed"] is False
+    assert operational_quality["sample_production_ai_customer_facing_score_mutation_allowed"] is False
     assert operational_quality["sample_production_ai_customer_facing_ranking_mutation_allowed"] is False
+    assert operational_quality["sample_production_ai_selected_sidecar_missing_output_fields"] == ["delta_force"]
 
     job_list = asyncio.run(product.list_docking_jobs(limit=5))
     assert job_list["status"] == "product_job_history_ready"
@@ -226,7 +229,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert trajectory_sla["missing_qualified_families"] == []
     assert trajectory_sla["minimum_ready_rows_per_family"] == 10000
     assert trajectory_sla["current_rocm_baseline_claim_scope"] == "single_target_gpcr_baseline"
-    assert trajectory_sla["current_rocm_baseline_production_trajectory_profile_enabled"] is False
+    assert trajectory_sla["current_rocm_baseline_production_trajectory_profile_enabled"] is True
     assert trajectory_sla["current_rocm_baseline_supports_restricted_family_sla"] is False
     assert trajectory_sla["current_rocm_baseline_supports_broad_platform_sla"] is False
     assert trajectory_sla["customer_sla_disclosure_ready"] is True
@@ -239,7 +242,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
         "single_target_gpcr_baseline"
     )
     assert trajectory_sla["restricted_sla_backed_by_historical_profile_artifacts"] is True
-    assert trajectory_sla["rocm_baseline_profile_gap_acknowledged"] is True
+    assert trajectory_sla["rocm_baseline_profile_gap_acknowledged"] is False
     assert all(row["qualified_for_restricted_family_sla"] for row in trajectory_sla["family_sla_matrix"])
     assert len(trajectory_sla["trajectory_sla_rows"]) == trajectory_sla["candidate_artifact_count"]
 
@@ -274,7 +277,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert ai_report_ux["customer_report_blocked_block_count"] == 0
     assert ai_report_ux["customer_report_card_ready"] is True
     assert ai_report_ux["customer_report_card"]["primary_abstention_reason"] == (
-        "production_guarded_active_report_packet_does_not_apply_correction"
+        "production_residual_checkpoint_not_promoted"
     )
     assert ai_report_ux["pose_comparison_ready"] is True
     assert ai_report_ux["interaction_rationale_ready"] is True
@@ -371,20 +374,21 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert registry["status"] == "residual_model_registry_ready"
     assert registry["registry_ready"] is True
     assert registry["product_model_layer_ready"] is True
-    assert registry["production_ai_inference_subject_active"] is True
-    assert registry["default_residual_mode"] == "production_guarded"
-    assert registry["production_promotion_allowed"] is True
-    assert registry["production_mode_allowed"] is True
-    assert registry["customer_facing_auto_correction_allowed"] is True
-    assert registry["customer_facing_score_mutation_allowed"] is True
-    assert registry["customer_facing_ranking_mutation_allowed"] is True
-    assert registry["trained_model_checkpoint_count"] == 1
-    assert registry["candidate_checkpoint_count"] == 1461
-    assert registry["checkpoint_preflight_ready"] is True
-    assert registry["production_checkpoint_blocked"] is False
+    assert registry["production_ai_inference_subject_active"] is False
+    assert registry["default_residual_mode"] == "shadow"
+    assert registry["production_promotion_allowed"] is False
+    assert registry["production_mode_allowed"] is False
+    assert registry["customer_facing_auto_correction_allowed"] is False
+    assert registry["customer_facing_score_mutation_allowed"] is False
+    assert registry["customer_facing_ranking_mutation_allowed"] is False
+    assert registry["trained_model_checkpoint_count"] == 0
+    assert registry["candidate_checkpoint_count"] == 0
+    assert registry["checkpoint_preflight_ready"] is False
+    assert registry["production_checkpoint_blocked"] is True
     assert registry["selected_sidecar_ready"] is True
     assert registry["selected_sidecar_status"] == "residual_production_checkpoint_sidecar_ready"
     assert registry["selected_sidecar_missing_output_fields"] == []
+    assert registry["selected_sidecar_training_contract_missing_label_fields"] == ["delta_force"]
     assert registry["checkpoint_missing_output_fields"] == []
     assert registry["checkpoint_missing_adapter_output_policy_fields"] == []
     assert registry["component_count"] == 6
@@ -392,21 +396,21 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert len(registry["components"]) == registry["component_count"]
 
     checkpoint = asyncio.run(product.get_product_production_ai_checkpoint_readiness())
-    assert checkpoint["status"] == "product_production_ai_checkpoint_readiness_ready"
+    assert checkpoint["status"] == "blocked_product_production_ai_checkpoint_readiness"
     assert checkpoint["check_count"] == 8
-    assert checkpoint["fail_check_count"] == 0
-    assert checkpoint["failed_check_ids"] == []
-    assert checkpoint["first_failed_check_id"] == ""
-    assert checkpoint["production_ai_checkpoint_ready"] is True
-    assert checkpoint["production_ai_inference_subject_active"] is True
+    assert checkpoint["fail_check_count"] == 1
+    assert checkpoint["failed_check_ids"] == ["registry_customer_facing_promotion_allowed"]
+    assert checkpoint["first_failed_check_id"] == "registry_customer_facing_promotion_allowed"
+    assert checkpoint["production_ai_checkpoint_ready"] is False
+    assert checkpoint["production_ai_inference_subject_active"] is False
     assert checkpoint["product_model_layer_ready"] is True
-    assert checkpoint["default_residual_mode"] == "production_guarded"
-    assert checkpoint["production_promotion_allowed"] is True
-    assert checkpoint["customer_facing_auto_correction_allowed"] is True
-    assert checkpoint["customer_facing_score_mutation_allowed"] is True
-    assert checkpoint["customer_facing_ranking_mutation_allowed"] is True
-    assert checkpoint["trained_model_checkpoint_count"] == 1
-    assert checkpoint["candidate_checkpoint_count"] == 1460
+    assert checkpoint["default_residual_mode"] == "shadow"
+    assert checkpoint["production_promotion_allowed"] is False
+    assert checkpoint["customer_facing_auto_correction_allowed"] is False
+    assert checkpoint["customer_facing_score_mutation_allowed"] is False
+    assert checkpoint["customer_facing_ranking_mutation_allowed"] is False
+    assert checkpoint["trained_model_checkpoint_count"] == 0
+    assert checkpoint["candidate_checkpoint_count"] == 1
     assert checkpoint["ready_checkpoint_count"] >= 1
     assert checkpoint["checkpoint_preflight_ready"] is True
     assert checkpoint["production_training_data_ready"] is True
@@ -496,12 +500,21 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert checkpoint["force_gpu_worker_post_return_min_expected_label_rows"] == 768
     assert checkpoint["force_gpu_worker_post_return_promotion_ladder_ready"] is True
     assert checkpoint["force_gpu_worker_post_return_promotion_ladder_contract_ready"] is True
-    assert checkpoint["force_gpu_worker_post_return_promotion_ladder_currently_satisfied"] is True
-    assert checkpoint["force_gpu_worker_post_return_promotion_ladder_current_blocked_stage_count"] == 0
-    assert checkpoint["force_gpu_worker_post_return_promotion_ladder_current_blocked_stage_ids"] == []
-    assert checkpoint["force_gpu_worker_post_return_promotion_ladder_current_next_stage_id"] == ""
-    assert checkpoint["force_gpu_worker_post_return_promotion_ladder_current_next_stage_artifact"] == ""
-    assert checkpoint["force_gpu_worker_post_return_promotion_ladder_current_next_stage_validation_command"] == ""
+    assert checkpoint["force_gpu_worker_post_return_promotion_ladder_currently_satisfied"] is False
+    assert checkpoint["force_gpu_worker_post_return_promotion_ladder_current_blocked_stage_count"] == 2
+    assert checkpoint["force_gpu_worker_post_return_promotion_ladder_current_blocked_stage_ids"] == [
+        "force_derivation_acceptance",
+        "registry_guarded_promotion_acceptance",
+    ]
+    assert checkpoint["force_gpu_worker_post_return_promotion_ladder_current_next_stage_id"] == (
+        "force_derivation_acceptance"
+    )
+    assert checkpoint["force_gpu_worker_post_return_promotion_ladder_current_next_stage_artifact"] == (
+        "runs/residual_force_derivation_validation_current.json"
+    )
+    assert checkpoint["force_gpu_worker_post_return_promotion_ladder_current_next_stage_validation_command"] == (
+        "python3 tools/build_residual_force_derivation_validation.py"
+    )
     assert checkpoint["force_gpu_worker_post_return_promotion_ladder_stage_count"] == 10
     assert checkpoint["force_gpu_worker_post_return_promotion_ladder_stage_ids"][:2] == [
         "gpu_return_receipt",
@@ -513,30 +526,61 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert checkpoint["force_gpu_worker_post_return_promotion_ladder_missing_ready_keys"] == []
     assert checkpoint["production_inference_acceptance_matrix_ready"] is True
     assert checkpoint["production_inference_acceptance_stage_count"] == 8
-    assert checkpoint["production_inference_acceptance_ready_stage_count"] == 8
-    assert checkpoint["production_inference_acceptance_blocked_stage_count"] == 0
-    assert checkpoint["production_inference_acceptance_blocked_stage_ids"] == []
-    assert checkpoint["production_inference_acceptance_next_stage_id"] == ""
-    assert checkpoint["production_inference_acceptance_next_stage_artifact"] == ""
-    assert checkpoint["production_inference_acceptance_next_stage_validation_command"] == ""
-    assert checkpoint["production_inference_acceptance_next_stage_unlock_fields"] == []
-    assert checkpoint["production_inference_acceptance_next_stage_required_checks"] == []
-    assert checkpoint["production_inference_actionable_blocker_stage_id"] == ""
-    assert checkpoint["production_inference_actionable_blocker_check_id"] == ""
-    assert checkpoint["production_inference_actionable_blocker_artifact"] == ""
-    assert checkpoint["production_inference_actionable_blocker_observed"] == ""
-    assert checkpoint["production_inference_actionable_blocker_required"] == ""
-    assert checkpoint["production_inference_actionable_blocker_next_action"] == ""
-    assert checkpoint["production_inference_actionable_blocker_validation_command"] == ""
-    assert checkpoint["production_inference_actionable_blocker_unlock_fields"] == []
-    assert checkpoint["production_inference_actionable_blocker_downstream_blocked_stage_count"] == 0
-    assert checkpoint["production_inference_next_after_actionable_blocker_stage_id"] == ""
-    assert checkpoint["production_inference_next_after_actionable_blocker_artifact"] == ""
-    assert checkpoint["production_inference_next_after_actionable_blocker_validation_command"] == ""
-    assert checkpoint["production_inference_next_after_actionable_blocker_required_checks"] == []
+    assert checkpoint["production_inference_acceptance_ready_stage_count"] == 6
+    assert checkpoint["production_inference_acceptance_blocked_stage_count"] == 2
+    assert checkpoint["production_inference_acceptance_blocked_stage_ids"] == [
+        "force_derivation_acceptance",
+        "registry_guarded_promotion_acceptance",
+    ]
+    assert checkpoint["production_inference_acceptance_next_stage_id"] == "force_derivation_acceptance"
+    assert checkpoint["production_inference_acceptance_next_stage_artifact"] == (
+        "runs/residual_force_derivation_validation_current.json"
+    )
+    assert checkpoint["production_inference_acceptance_next_stage_validation_command"] == (
+        "python3 tools/build_residual_force_derivation_validation.py"
+    )
+    assert checkpoint["production_inference_acceptance_next_stage_unlock_fields"] == ["delta_force"]
+    assert checkpoint["production_inference_acceptance_next_stage_required_checks"] == [
+        "force_gpu_worker_return_receipt_ready",
+        "delta_force_derivation_validation_ready",
+    ]
+    assert checkpoint["production_inference_actionable_blocker_stage_id"] == "force_derivation_acceptance"
+    assert checkpoint["production_inference_actionable_blocker_check_id"] == "force_gpu_worker_return_receipt_ready"
+    assert checkpoint["production_inference_actionable_blocker_artifact"] == (
+        "runs/residual_force_derivation_validation_current.json"
+    )
+    assert "gpu_worker_return_receipt_ready=True" in checkpoint["production_inference_actionable_blocker_observed"]
+    assert checkpoint["production_inference_actionable_blocker_required"] == (
+        "GPU return receipt covers queue, manifest, operator verification, and post-run force derivation"
+    )
+    assert checkpoint["production_inference_actionable_blocker_next_action"] == (
+        "Rerun force derivation validation after the GPU return receipt is accepted."
+    )
+    assert checkpoint["production_inference_actionable_blocker_validation_command"] == (
+        "python3 tools/build_residual_force_derivation_validation.py"
+    )
+    assert checkpoint["production_inference_actionable_blocker_unlock_fields"] == ["delta_force"]
+    assert checkpoint["production_inference_actionable_blocker_downstream_blocked_stage_count"] == 1
+    assert checkpoint["production_inference_next_after_actionable_blocker_stage_id"] == (
+        "registry_guarded_promotion_acceptance"
+    )
+    assert checkpoint["production_inference_next_after_actionable_blocker_artifact"] == (
+        "runs/residual_model_registry_current.json"
+    )
+    assert checkpoint["production_inference_next_after_actionable_blocker_validation_command"] == (
+        "python3 tools/build_residual_model_registry.py && "
+        "python3 tools/build_product_production_ai_checkpoint_readiness.py"
+    )
+    assert checkpoint["production_inference_next_after_actionable_blocker_required_checks"] == [
+        "registry_customer_facing_promotion_allowed",
+        "trained_model_checkpoint_count_positive",
+        "default_residual_mode_guarded",
+    ]
     assert checkpoint["production_inference_next_after_actionable_blocker_unlock_fields"] == []
-    assert checkpoint["production_inference_next_after_actionable_blocker_next_action"] == ""
-    assert checkpoint["production_inference_actionable_blocker_blocks_registry_promotion"] is False
+    assert checkpoint["production_inference_next_after_actionable_blocker_next_action"] == (
+        "Rebuild the residual registry after a preflight-ready checkpoint is available."
+    )
+    assert checkpoint["production_inference_actionable_blocker_blocks_registry_promotion"] is True
     assert checkpoint["production_inference_actionable_operator_completion_packet_ready"] is False
     assert checkpoint["production_inference_actionable_operator_completion_packet"]["artifact_id"] == ""
     assert checkpoint["production_inference_actionable_operator_completion_diagnostic_command_count"] == 0
@@ -556,12 +600,13 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     ]
     assert checkpoint["production_inference_worker_runtime_receipt_guardrails"] == []
     assert len(checkpoint["production_inference_acceptance_matrix"]) == 8
-    assert checkpoint["force_gpu_worker_post_run_validation_chain_current"] is True
-    assert checkpoint["force_gpu_worker_post_run_validation_command_count"] == 18
+    assert checkpoint["force_gpu_worker_post_run_validation_chain_current"] is False
+    assert checkpoint["force_gpu_worker_post_run_validation_command_count"] == 0
+    assert len(checkpoint["force_gpu_worker_post_run_validation_commands"]) == 18
     assert checkpoint["force_gpu_worker_post_run_validation_commands"][0] == (
         "python3 tools/build_residual_force_gpu_worker_return_receipt.py"
     )
-    assert checkpoint["checkpoint_closure_blockers"] == ["training_missing_label:delta_force"]
+    assert checkpoint["checkpoint_closure_blockers"] == []
     assert checkpoint["checkpoint_missing_output_fields"] == []
     assert checkpoint["selected_sidecar_ready"] is True
     assert checkpoint["selected_sidecar_missing_output_fields"] == []
@@ -571,38 +616,33 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert checkpoint["selected_sidecar_force_receipt_operator_verified_true_count"] == 768
     assert checkpoint["selected_sidecar_force_receipt_expected_queue_rows"] == 768
     assert checkpoint["gpu_receipt_blockers"] == []
-    assert checkpoint["gpu_receipt_summary_manifest_bound"] is True
-    assert checkpoint["gpu_receipt_summary_out_manifest_csv_bound"] is True
-    assert checkpoint["gpu_receipt_summary_out_summary_json_bound"] is True
-    assert checkpoint["gpu_receipt_summary_manifest_row_counts_consistent"] is True
-    assert checkpoint["gpu_receipt_summary_manifest_csv"] == "runs/residual_force_trajectory_regeneration_current_manifest.csv"
-    assert checkpoint["gpu_receipt_summary_out_manifest_csv"] == "runs/residual_force_trajectory_regeneration_current_manifest.csv"
-    assert checkpoint["gpu_receipt_summary_out_summary_json"] == "runs/residual_force_trajectory_regeneration_current_summary.json"
-    assert checkpoint["gpu_receipt_production_gpu_backend_provenance_ready"] is True
-    assert checkpoint["gpu_receipt_production_gpu_backend_rows"] == 768
+    assert checkpoint["gpu_receipt_summary_manifest_bound"] is False
+    assert checkpoint["gpu_receipt_summary_out_manifest_csv_bound"] is False
+    assert checkpoint["gpu_receipt_summary_out_summary_json_bound"] is False
+    assert checkpoint["gpu_receipt_summary_manifest_row_counts_consistent"] is False
+    assert checkpoint["gpu_receipt_summary_manifest_csv"] == ""
+    assert checkpoint["gpu_receipt_summary_out_manifest_csv"] == ""
+    assert checkpoint["gpu_receipt_summary_out_summary_json"] == ""
+    assert checkpoint["gpu_receipt_production_gpu_backend_provenance_ready"] is False
+    assert checkpoint["gpu_receipt_production_gpu_backend_rows"] == 0
     assert checkpoint["gpu_receipt_production_gpu_backend_non_production_rows"] == 0
-    assert checkpoint["gpu_receipt_production_gpu_backend_prod_mode"] is True
-    assert checkpoint["gpu_receipt_production_gpu_backend_require_rust_hip"] is True
-    assert checkpoint["gpu_receipt_expected_queue_rows"] == 768
-    assert checkpoint["gpu_receipt_expected_npz_count"] == 768
-    assert checkpoint["gpu_receipt_queue_id_count"] == 768
-    assert checkpoint["gpu_receipt_queue_fingerprint_count"] == 768
-    assert checkpoint["gpu_receipt_manifest_row_count"] == 768
-    assert checkpoint["gpu_receipt_manifest_ok_row_count"] == 768
-    assert checkpoint["gpu_receipt_manifest_identity_row_count"] == 768
-    assert checkpoint["gpu_receipt_manifest_matched_queue_id_count"] == 768
-    assert checkpoint["gpu_receipt_manifest_matched_expected_npz_count"] == 384
+    assert checkpoint["gpu_receipt_production_gpu_backend_prod_mode"] is False
+    assert checkpoint["gpu_receipt_production_gpu_backend_require_rust_hip"] is False
+    assert checkpoint["gpu_receipt_expected_queue_rows"] == 0
+    assert checkpoint["gpu_receipt_expected_npz_count"] == 0
+    assert checkpoint["gpu_receipt_queue_id_count"] == 0
+    assert checkpoint["gpu_receipt_queue_fingerprint_count"] == 0
+    assert checkpoint["gpu_receipt_manifest_row_count"] == 0
+    assert checkpoint["gpu_receipt_manifest_ok_row_count"] == 0
+    assert checkpoint["gpu_receipt_manifest_identity_row_count"] == 0
+    assert checkpoint["gpu_receipt_manifest_matched_queue_id_count"] == 0
+    assert checkpoint["gpu_receipt_manifest_matched_expected_npz_count"] == 0
     assert checkpoint["gpu_receipt_manifest_matched_queue_fingerprint_count"] == 0
-    assert checkpoint["gpu_receipt_manifest_operator_verified"] is True
-    assert checkpoint["gpu_receipt_operator_verified_true_count"] == 768
-    assert checkpoint["gpu_receipt_identity_coverage_ready"] is True
+    assert checkpoint["gpu_receipt_manifest_operator_verified"] is False
+    assert checkpoint["gpu_receipt_operator_verified_true_count"] == 0
+    assert checkpoint["gpu_receipt_identity_coverage_ready"] is False
     assert checkpoint["training_data_failed_check_ids"] == []
-    assert checkpoint["training_data_missing_output_labels"] == [
-        "delta_force",
-        "uncertainty",
-        "abstention_reason",
-        "stage2_route_decision",
-    ]
+    assert checkpoint["training_data_missing_output_labels"] == []
 
     gpu_dispatch = asyncio.run(product.get_product_production_ai_gpu_worker_dispatch_manifest())
     assert gpu_dispatch["status"] == "residual_force_gpu_worker_dispatch_manifest_ready"
@@ -871,31 +911,35 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert gpu_return["external_state_mutated"] is False
 
     promotion = asyncio.run(product.get_product_production_ai_promotion_workbench())
-    assert promotion["status"] == "product_production_ai_promotion_workbench_ready"
+    assert promotion["status"] == "blocked_product_production_ai_promotion_workbench"
     assert promotion["promotion_workbench_ready"] is True
-    assert promotion["production_ai_promotion_ready"] is True
-    assert promotion["production_ai_checkpoint_ready"] is True
-    assert promotion["production_promotion_allowed"] is True
-    assert promotion["default_residual_mode"] == "production_guarded"
-    assert promotion["trained_model_checkpoint_count"] == 1
+    assert promotion["production_ai_promotion_ready"] is False
+    assert promotion["production_ai_checkpoint_ready"] is False
+    assert promotion["production_promotion_allowed"] is False
+    assert promotion["default_residual_mode"] == "shadow"
+    assert promotion["trained_model_checkpoint_count"] == 0
     assert promotion["gpu_handoff_ready"] is True
     assert promotion["gpu_operator_action_required"] is True
     assert promotion["gpu_return_receipt_ready"] is True
-    assert promotion["gpu_receipt_expected_queue_rows"] == 768
-    assert promotion["gpu_receipt_manifest_identity_row_count"] == 768
+    assert promotion["gpu_receipt_expected_queue_rows"] == 0
+    assert promotion["gpu_receipt_manifest_identity_row_count"] == 0
     assert promotion["post_return_promotion_ladder_stage_count"] == 10
-    assert promotion["post_return_promotion_ladder_ready_stage_count"] == 10
-    assert promotion["post_return_promotion_ladder_blocked_stage_count"] == 0
+    assert promotion["post_return_promotion_ladder_ready_stage_count"] == 7
+    assert promotion["post_return_promotion_ladder_blocked_stage_count"] == 3
     assert promotion["ready_key_alias_used_count"] == 1
     assert promotion["ready_key_alias_used_stage_ids"] == ["production_score_model"]
-    assert promotion["blocked_stage_ids"] == []
-    assert promotion["first_blocked_stage_id"] == ""
-    assert promotion["first_blocked_stage_ready_key"] == ""
+    assert promotion["blocked_stage_ids"] == [
+        "production_checkpoint_preflight",
+        "residual_model_registry",
+        "product_goal_completion_audit",
+    ]
+    assert promotion["first_blocked_stage_id"] == "production_checkpoint_preflight"
+    assert promotion["first_blocked_stage_ready_key"] == "checkpoint_preflight_ready"
     assert promotion["promotion_stages"][0]["stage_id"] == "gpu_return_receipt"
     assert promotion["promotion_stages"][-1]["stage_id"] == "product_goal_completion_audit"
     assert promotion["selected_sidecar_ready"] is True
     assert promotion["selected_sidecar_missing_output_fields"] == []
-    assert "delta_force" in promotion["training_data_missing_output_labels"]
+    assert promotion["training_data_missing_output_labels"] == []
     assert "generate_ligand_trajectory_engine.py" in promotion["force_gpu_worker_full_regeneration_command"]
     assert "build_residual_force_gpu_worker_return_receipt.py" in promotion[
         "force_gpu_worker_post_return_validation_command"
@@ -1990,8 +2034,26 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert full_matrix["first_blocked_evidence_row_id"] == full_matrix_summary.get(
         "first_blocked_evidence_row_id"
     )
+    assert full_matrix["first_blocked_evidence_artifact"] == full_matrix_summary.get(
+        "first_blocked_evidence_artifact"
+    )
+    assert full_matrix["first_blocked_expected_evidence_status"] == full_matrix_summary.get(
+        "first_blocked_expected_evidence_status"
+    )
+    assert full_matrix["first_blocked_observed_evidence_status"] == full_matrix_summary.get(
+        "first_blocked_observed_evidence_status"
+    )
+    assert full_matrix["first_blocked_row_blockers"] == full_matrix_summary.get(
+        "first_blocked_row_blockers"
+    )
     assert full_matrix["first_blocked_acceptance_artifact"] == full_matrix_summary.get(
         "first_blocked_acceptance_artifact"
+    )
+    assert full_matrix["scope_receipt_most_common_row_blocker"] == full_matrix_summary.get(
+        "scope_receipt_most_common_row_blocker"
+    )
+    assert full_matrix["engine_receipt_most_common_row_blocker"] == full_matrix_summary.get(
+        "engine_receipt_most_common_row_blocker"
     )
     assert len(full_matrix["evidence_matrix"]) == full_matrix["matrix_row_count"]
     assert full_matrix["execution_enabled"] is False
@@ -2006,7 +2068,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
         "R8_full_scope_claim_closure",
         "R9_engine_refinement_claim_promotion",
     ]
-    assert completion["approval_tokens_required"] == []
+    assert completion["approval_tokens_required"] == ["APPROVE_PRODUCT_DOCKING_EXECUTION"]
     assert completion["release_allowed"] is True
     assert completion["release_artifact_ready"] is True
     assert completion["local_self_hosted_product_ready"] is True
@@ -2019,12 +2081,16 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert completion["product_ai_architecture_open_gap_count"] == 0
     assert completion["product_ai_architecture_gap_blocker_matrix_count"] == 0
     assert completion["product_ai_production_checkpoint_gap_ready"] is True
-    assert completion["production_ai_checkpoint_readiness_status"] == "product_production_ai_checkpoint_readiness_ready"
-    assert completion["production_ai_checkpoint_ready"] is True
-    assert completion["production_ai_promotion_workbench_status"] == "product_production_ai_promotion_workbench_ready"
-    assert completion["production_ai_promotion_ready"] is True
-    assert completion["production_ai_promotion_allowed"] is True
-    assert completion["production_ai_trained_checkpoint_count"] == 1
+    assert completion["production_ai_checkpoint_readiness_status"] == (
+        "blocked_product_production_ai_checkpoint_readiness"
+    )
+    assert completion["production_ai_checkpoint_ready"] is False
+    assert completion["production_ai_promotion_workbench_status"] == (
+        "blocked_product_production_ai_promotion_workbench"
+    )
+    assert completion["production_ai_promotion_ready"] is False
+    assert completion["production_ai_promotion_allowed"] is False
+    assert completion["production_ai_trained_checkpoint_count"] == 0
     assert completion["production_ai_selected_sidecar_ready"] is True
     assert completion["production_ai_selected_sidecar_missing_output_fields"] == []
 

@@ -672,7 +672,13 @@ def build_goal_release_decision_gate(
                     f"blocked_matrix_row_count={_int(full_commercial_matrix.get('blocked_matrix_row_count'))};"
                     f"approval_token_count={_int(full_commercial_matrix.get('approval_token_count'))};"
                     f"first_blocked_release_blocker_id={_text(full_commercial_matrix.get('first_blocked_release_blocker_id'))};"
-                    f"first_blocked_evidence_row_id={_text(full_commercial_matrix.get('first_blocked_evidence_row_id'))}"
+                    f"first_blocked_evidence_row_id={_text(full_commercial_matrix.get('first_blocked_evidence_row_id'))};"
+                    f"first_blocked_evidence_artifact={_text(full_commercial_matrix.get('first_blocked_evidence_artifact'))};"
+                    f"first_blocked_expected_evidence_status={_text(full_commercial_matrix.get('first_blocked_expected_evidence_status'))};"
+                    f"first_blocked_observed_evidence_status={_text(full_commercial_matrix.get('first_blocked_observed_evidence_status'))};"
+                    f"first_blocked_row_blockers={_text(full_commercial_matrix.get('first_blocked_row_blockers'))};"
+                    f"scope_receipt_most_common_row_blocker={_text(full_commercial_matrix.get('scope_receipt_most_common_row_blocker'))};"
+                    f"engine_receipt_most_common_row_blocker={_text(full_commercial_matrix.get('engine_receipt_most_common_row_blocker'))}"
                 ),
                 required="R8/R9 full-commercial blocker matrix recorded with release blocker visibility and read-only flags",
                 passed=full_commercial_matrix_recorded,
@@ -910,6 +916,24 @@ def build_goal_release_decision_gate(
         "product_full_commercial_blocker_evidence_matrix_first_blocked_evidence_row_id": _text(
             full_commercial_matrix.get("first_blocked_evidence_row_id")
         ),
+        "product_full_commercial_blocker_evidence_matrix_first_blocked_evidence_artifact": _text(
+            full_commercial_matrix.get("first_blocked_evidence_artifact")
+        ),
+        "product_full_commercial_blocker_evidence_matrix_first_blocked_expected_evidence_status": _text(
+            full_commercial_matrix.get("first_blocked_expected_evidence_status")
+        ),
+        "product_full_commercial_blocker_evidence_matrix_first_blocked_observed_evidence_status": _text(
+            full_commercial_matrix.get("first_blocked_observed_evidence_status")
+        ),
+        "product_full_commercial_blocker_evidence_matrix_first_blocked_row_blockers": _text(
+            full_commercial_matrix.get("first_blocked_row_blockers")
+        ),
+        "product_full_commercial_blocker_evidence_matrix_scope_receipt_most_common_row_blocker": _text(
+            full_commercial_matrix.get("scope_receipt_most_common_row_blocker")
+        ),
+        "product_full_commercial_blocker_evidence_matrix_engine_receipt_most_common_row_blocker": _text(
+            full_commercial_matrix.get("engine_receipt_most_common_row_blocker")
+        ),
         "product_rollout_execution_smoke_receipt_gate_present": rollout_smoke_gate_present,
         "product_rollout_execution_smoke_receipt_status": _text(rollout_smoke.get("status")),
         "product_rollout_execution_smoke_receipt_ready": (
@@ -1144,6 +1168,12 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_full_commercial_blocker_evidence_matrix_approval_token_count: `{s['product_full_commercial_blocker_evidence_matrix_approval_token_count']}`",
         f"- product_full_commercial_blocker_evidence_matrix_first_blocked_release_blocker_id: `{s['product_full_commercial_blocker_evidence_matrix_first_blocked_release_blocker_id']}`",
         f"- product_full_commercial_blocker_evidence_matrix_first_blocked_evidence_row_id: `{s['product_full_commercial_blocker_evidence_matrix_first_blocked_evidence_row_id']}`",
+        f"- product_full_commercial_blocker_evidence_matrix_first_blocked_evidence_artifact: `{s['product_full_commercial_blocker_evidence_matrix_first_blocked_evidence_artifact']}`",
+        f"- product_full_commercial_blocker_evidence_matrix_first_blocked_expected_evidence_status: `{s['product_full_commercial_blocker_evidence_matrix_first_blocked_expected_evidence_status']}`",
+        f"- product_full_commercial_blocker_evidence_matrix_first_blocked_observed_evidence_status: `{s['product_full_commercial_blocker_evidence_matrix_first_blocked_observed_evidence_status']}`",
+        f"- product_full_commercial_blocker_evidence_matrix_first_blocked_row_blockers: `{s['product_full_commercial_blocker_evidence_matrix_first_blocked_row_blockers']}`",
+        f"- product_full_commercial_blocker_evidence_matrix_scope_receipt_most_common_row_blocker: `{s['product_full_commercial_blocker_evidence_matrix_scope_receipt_most_common_row_blocker']}`",
+        f"- product_full_commercial_blocker_evidence_matrix_engine_receipt_most_common_row_blocker: `{s['product_full_commercial_blocker_evidence_matrix_engine_receipt_most_common_row_blocker']}`",
         f"- product_rollout_execution_smoke_receipt_gate_present: `{s['product_rollout_execution_smoke_receipt_gate_present']}`",
         f"- product_rollout_execution_smoke_receipt_status: `{s['product_rollout_execution_smoke_receipt_status']}`",
         f"- product_rollout_execution_smoke_receipt_ready: `{s['product_rollout_execution_smoke_receipt_ready']}`",

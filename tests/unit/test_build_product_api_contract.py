@@ -554,7 +554,13 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     assert "approval_token_count" in full_matrix_keys
     assert "first_blocked_release_blocker_id" in full_matrix_keys
     assert "first_blocked_evidence_row_id" in full_matrix_keys
+    assert "first_blocked_evidence_artifact" in full_matrix_keys
+    assert "first_blocked_expected_evidence_status" in full_matrix_keys
+    assert "first_blocked_observed_evidence_status" in full_matrix_keys
+    assert "first_blocked_row_blockers" in full_matrix_keys
     assert "first_blocked_acceptance_artifact" in full_matrix_keys
+    assert "scope_receipt_most_common_row_blocker" in full_matrix_keys
+    assert "engine_receipt_most_common_row_blocker" in full_matrix_keys
     assert "evidence_matrix" in full_matrix_keys
     assert "external_state_mutated" in full_matrix_keys
     goal_completion_keys = REQUIRED_STATUS_DOMAIN_KEYS["get_product_goal_completion_audit"]

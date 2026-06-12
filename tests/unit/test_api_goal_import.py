@@ -85,6 +85,39 @@ def test_api_app_imports_with_goal_router() -> None:
     assert status["full_commercial_release_blocker_count"] == len(expected_full_commercial_blockers)
     assert status["missing_full_commercial_release_blocker_ids"] == []
     assert status["full_commercial_release_blocker_visibility_ready"] is True
+    assert status["product_goal_release_blocker_fail_count"] == int(
+        actions_artifact.get("product_goal_release_blocker_fail_count") or 0
+    )
+    assert status["product_goal_release_blocker_requirement_ids"] == actions_artifact.get(
+        "product_goal_release_blocker_requirement_ids"
+    )
+    assert status["product_goal_primary_release_blocker_requirement_id"] == actions_artifact.get(
+        "product_goal_primary_release_blocker_requirement_id"
+    )
+    assert status["product_goal_primary_release_blocker_tier"] == actions_artifact.get(
+        "product_goal_primary_release_blocker_tier"
+    )
+    assert status["product_goal_primary_release_blocker"] == actions_artifact.get(
+        "product_goal_primary_release_blocker"
+    )
+    assert status["product_goal_primary_release_blocker_next_command"] == actions_artifact.get(
+        "product_goal_primary_release_blocker_next_command"
+    )
+    assert status["primary_release_blocker_action_id"] == actions_artifact.get(
+        "primary_release_blocker_action_id"
+    )
+    assert status["primary_release_blocker_action_status"] == actions_artifact.get(
+        "primary_release_blocker_action_status"
+    )
+    assert status["primary_release_blocker_action_required_input"] == actions_artifact.get(
+        "primary_release_blocker_action_required_input"
+    )
+    assert status["primary_release_blocker_action_artifact_path"] == actions_artifact.get(
+        "primary_release_blocker_action_artifact_path"
+    )
+    assert status["primary_release_blocker_action_recommended_action"] == actions_artifact.get(
+        "primary_release_blocker_action_recommended_action"
+    )
     assert status["completion_audit_release_blocker_bottleneck_count"] == int(
         bottlenecks_artifact.get("completion_audit_release_blocker_bottleneck_count") or 0
     )
@@ -124,8 +157,26 @@ def test_api_app_imports_with_goal_router() -> None:
     assert status["full_commercial_blocker_evidence_matrix_first_blocked_evidence_row_id"] == (
         full_matrix_artifact.get("first_blocked_evidence_row_id")
     )
+    assert status["full_commercial_blocker_evidence_matrix_first_blocked_evidence_artifact"] == (
+        full_matrix_artifact.get("first_blocked_evidence_artifact")
+    )
+    assert status["full_commercial_blocker_evidence_matrix_first_blocked_expected_evidence_status"] == (
+        full_matrix_artifact.get("first_blocked_expected_evidence_status")
+    )
+    assert status["full_commercial_blocker_evidence_matrix_first_blocked_observed_evidence_status"] == (
+        full_matrix_artifact.get("first_blocked_observed_evidence_status")
+    )
+    assert status["full_commercial_blocker_evidence_matrix_first_blocked_row_blockers"] == (
+        full_matrix_artifact.get("first_blocked_row_blockers")
+    )
     assert status["full_commercial_blocker_evidence_matrix_first_blocked_acceptance_artifact"] == (
         full_matrix_artifact.get("first_blocked_acceptance_artifact")
+    )
+    assert status["full_commercial_blocker_evidence_matrix_scope_receipt_most_common_row_blocker"] == (
+        full_matrix_artifact.get("scope_receipt_most_common_row_blocker")
+    )
+    assert status["full_commercial_blocker_evidence_matrix_engine_receipt_most_common_row_blocker"] == (
+        full_matrix_artifact.get("engine_receipt_most_common_row_blocker")
     )
     assert status["goal_completion_audit_goal_complete"] == readiness_artifact.get(
         "goal_completion_audit_goal_complete"

@@ -470,6 +470,14 @@ def _blocked_full_commercial_matrix() -> dict:
             "approval_token_count": 2,
             "first_blocked_release_blocker_id": "R8_full_scope_claim_closure",
             "first_blocked_evidence_row_id": "direct_binding_evidence_missing",
+            "first_blocked_evidence_artifact": "OPERATOR_FILL_LOCAL_EVIDENCE_JSON",
+            "first_blocked_expected_evidence_status": (
+                "product_scope_transporter_direct_binding_evidence_ready"
+            ),
+            "first_blocked_observed_evidence_status": "missing",
+            "first_blocked_row_blockers": "operator_placeholders_unfilled",
+            "scope_receipt_most_common_row_blocker": "operator_placeholders_unfilled",
+            "engine_receipt_most_common_row_blocker": "operator_placeholders_unfilled",
             "execution_enabled": False,
             "external_state_mutated": False,
         }
@@ -777,6 +785,30 @@ def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_bloc
     assert summary["product_full_commercial_blocker_evidence_matrix_row_count"] == 12
     assert summary["product_full_commercial_blocker_evidence_matrix_blocked_row_count"] == 12
     assert summary["product_full_commercial_blocker_evidence_matrix_approval_token_count"] == 2
+    assert summary["product_full_commercial_blocker_evidence_matrix_first_blocked_release_blocker_id"] == (
+        "R8_full_scope_claim_closure"
+    )
+    assert summary["product_full_commercial_blocker_evidence_matrix_first_blocked_evidence_row_id"] == (
+        "direct_binding_evidence_missing"
+    )
+    assert summary["product_full_commercial_blocker_evidence_matrix_first_blocked_evidence_artifact"] == (
+        "OPERATOR_FILL_LOCAL_EVIDENCE_JSON"
+    )
+    assert summary[
+        "product_full_commercial_blocker_evidence_matrix_first_blocked_expected_evidence_status"
+    ] == "product_scope_transporter_direct_binding_evidence_ready"
+    assert summary[
+        "product_full_commercial_blocker_evidence_matrix_first_blocked_observed_evidence_status"
+    ] == "missing"
+    assert summary["product_full_commercial_blocker_evidence_matrix_first_blocked_row_blockers"] == (
+        "operator_placeholders_unfilled"
+    )
+    assert summary["product_full_commercial_blocker_evidence_matrix_scope_receipt_most_common_row_blocker"] == (
+        "operator_placeholders_unfilled"
+    )
+    assert summary["product_full_commercial_blocker_evidence_matrix_engine_receipt_most_common_row_blocker"] == (
+        "operator_placeholders_unfilled"
+    )
     matrix_row = next(
         row
         for row in payload["rows"]
@@ -785,6 +817,8 @@ def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_bloc
     assert matrix_row["status"] == "pass"
     assert matrix_row["release_blocker"] is False
     assert "first_blocked_evidence_row_id=direct_binding_evidence_missing" in matrix_row["observed"]
+    assert "first_blocked_evidence_artifact=OPERATOR_FILL_LOCAL_EVIDENCE_JSON" in matrix_row["observed"]
+    assert "scope_receipt_most_common_row_blocker=operator_placeholders_unfilled" in matrix_row["observed"]
 
 
 def test_goal_release_decision_gate_surfaces_r4_smoke_and_master_rollup_without_blocking_restricted_release() -> None:

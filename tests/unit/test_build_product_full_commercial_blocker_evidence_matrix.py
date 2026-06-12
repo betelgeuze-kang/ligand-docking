@@ -40,6 +40,8 @@ def test_full_commercial_blocker_evidence_matrix_surfaces_r8_r9_blocked_receipts
             "status": "blocked_product_scope_breadth_evidence_receipt",
             "full_scope_evidence_receipt_ready": False,
             "blocked_row_count": 1,
+            "first_blocked_scope_blocker_id": "direct_binding_evidence_missing",
+            "most_common_row_blocker": "operator_placeholders_unfilled",
             "receipt_csv": "config/product_scope_breadth_evidence_receipt_current.csv",
             "approval_token_required": "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT",
             "next_required_step": "Fill scope receipt rows.",
@@ -60,6 +62,8 @@ def test_full_commercial_blocker_evidence_matrix_surfaces_r8_r9_blocked_receipts
             "status": "blocked_engine_refinement_claim_evidence_receipt",
             "claim_promotion_evidence_receipt_ready": False,
             "blocked_row_count": 1,
+            "first_blocked_blocker_id": "public_benchmark_gate_not_ready",
+            "most_common_row_blocker": "operator_placeholders_unfilled",
             "receipt_csv": "config/engine_refinement_claim_promotion_evidence_receipt_current.csv",
             "approval_token_required": "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT",
             "next_required_step": "Fill engine receipt rows.",
@@ -102,6 +106,16 @@ def test_full_commercial_blocker_evidence_matrix_surfaces_r8_r9_blocked_receipts
     assert summary["blocked_matrix_row_count"] == 2
     assert summary["first_blocked_release_blocker_id"] == "R8_full_scope_claim_closure"
     assert summary["first_blocked_evidence_row_id"] == "direct_binding_evidence_missing"
+    assert summary["first_blocked_evidence_artifact"] == "OPERATOR_FILL_LOCAL_EVIDENCE_JSON"
+    assert summary["first_blocked_expected_evidence_status"] == (
+        "product_scope_transporter_direct_binding_evidence_ready"
+    )
+    assert summary["first_blocked_observed_evidence_status"] == "missing"
+    assert summary["first_blocked_row_blockers"] == "operator_placeholders_unfilled"
+    assert summary["scope_receipt_first_blocked_scope_blocker_id"] == "direct_binding_evidence_missing"
+    assert summary["scope_receipt_most_common_row_blocker"] == "operator_placeholders_unfilled"
+    assert summary["engine_receipt_first_blocked_blocker_id"] == "public_benchmark_gate_not_ready"
+    assert summary["engine_receipt_most_common_row_blocker"] == "operator_placeholders_unfilled"
     assert "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT" in summary["approval_tokens_required"]
     assert "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT" in summary["approval_tokens_required"]
     assert "blocked_evidence_matrix_rows_present" in summary["blockers"]
@@ -172,4 +186,6 @@ def test_full_commercial_blocker_evidence_matrix_passes_when_both_receipts_are_r
     assert summary["full_commercial_blocker_evidence_matrix_ready"] is True
     assert summary["full_commercial_evidence_receipts_ready"] is True
     assert summary["blocked_matrix_row_count"] == 0
+    assert summary["first_blocked_release_blocker_id"] == ""
+    assert summary["first_blocked_row_blockers"] == ""
     assert summary["blocker_count"] == 0

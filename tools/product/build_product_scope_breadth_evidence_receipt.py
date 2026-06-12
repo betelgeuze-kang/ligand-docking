@@ -147,6 +147,23 @@ def _reviewed_at_valid(value: Any) -> bool:
     return True
 
 
+def _split_blockers(value: Any) -> list[str]:
+    return [item for item in _text(value).split(";") if item]
+
+
+def _most_common_blocker(rows: list[dict[str, Any]]) -> str:
+    counts: dict[str, int] = {}
+    first_seen: dict[str, int] = {}
+    for row in rows:
+        for blocker in _split_blockers(row.get("blockers")):
+            if blocker not in first_seen:
+                first_seen[blocker] = len(first_seen)
+            counts[blocker] = counts.get(blocker, 0) + 1
+    if not counts:
+        return ""
+    return sorted(counts.items(), key=lambda item: (-item[1], first_seen[item[0]]))[0][0]
+
+
 def _current_scope_blocker_classes(path_like: str | Path, *, root: Path = ROOT) -> tuple[set[str], dict[str, Any], bool]:
     packet, present = _read_json(path_like, root=root)
     summary = _summary(packet)
@@ -254,6 +271,7 @@ def build_product_scope_breadth_evidence_receipt(
     ]
     passed_rows = [row for row in rows if row["row_status"] == "pass"]
     blocked_rows = [row for row in rows if row["row_status"] != "pass"]
+    first_blocked_row = blocked_rows[0] if blocked_rows else {}
     row_ids = {_text(row.get("scope_blocker_id")) for row in raw_rows}
     missing_required_scope_blockers = [blocker for blocker in REQUIRED_SCOPE_BLOCKERS if blocker not in row_ids]
 
@@ -287,6 +305,19 @@ def build_product_scope_breadth_evidence_receipt(
         "duplicate_scope_blocker_ids": duplicate_scope_blocker_ids,
         "pass_row_count": len(passed_rows),
         "blocked_row_count": len(blocked_rows),
+        "first_blocked_scope_blocker_id": _text(first_blocked_row.get("scope_blocker_id")),
+        "first_blocked_row_blockers": _split_blockers(first_blocked_row.get("blockers")),
+        "first_blocked_evidence_artifact": _text(first_blocked_row.get("evidence_artifact")),
+        "first_blocked_expected_evidence_status": _text(
+            first_blocked_row.get("expected_evidence_status")
+        ),
+        "first_blocked_observed_evidence_status": _text(
+            first_blocked_row.get("observed_evidence_status")
+        ),
+        "first_blocked_missing_true_fields": _split_blockers(
+            first_blocked_row.get("missing_true_fields")
+        ),
+        "most_common_row_blocker": _most_common_blocker(blocked_rows),
         "evidence_artifact_present_count": sum(1 for row in rows if row["evidence_artifact_present"]),
         "evidence_status_verified_count": sum(
             1
@@ -329,6 +360,9 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         f"- full_scope_evidence_receipt_ready: `{summary['full_scope_evidence_receipt_ready']}`",
         f"- rows pass/total: `{summary['pass_row_count']}/{summary['receipt_row_count']}`",
         f"- blocked_row_count: `{summary['blocked_row_count']}`",
+        f"- first_blocked_scope_blocker_id: `{summary['first_blocked_scope_blocker_id']}`",
+        f"- first_blocked_row_blockers: `{';'.join(summary['first_blocked_row_blockers'])}`",
+        f"- most_common_row_blocker: `{summary['most_common_row_blocker']}`",
         f"- blocker_count: `{summary['blocker_count']}`",
         f"- approval_token_required: `{summary['approval_token_required']}`",
         "",

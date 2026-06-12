@@ -288,10 +288,39 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "python3 tools/build_api_runner_profile_promotion_operator_receipt.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "product_release_bundle_semantic_ready" in status_ids
     assert "product_goal_completion_audit_full_commercial_release_blockers_semantic_ready" in status_ids
+    assert "product_full_commercial_blocker_evidence_matrix_semantic_ready" in status_ids
     assert "goal_operator_action_board_primary_release_blocker_semantic_ready" in status_ids
     assert "goal_operator_intake_kit_primary_release_blocker_semantic_ready" in status_ids
     assert "goal_api_surface_contract_semantic_ready" in status_ids
     assert "goal_bottleneck_briefing_semantic_ready" in status_ids
+    goal_api_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "goal_api_surface_contract_semantic_ready"
+    )
+    assert goal_api_status_spec["required_int_exact_fields"] == {
+        "blocker_count": 0,
+        "missing_status_key_count": 0,
+        "missing_full_commercial_visibility_token_count": 0,
+        "missing_fail_closed_flag_count": 0,
+    }
+    full_matrix_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "product_full_commercial_blocker_evidence_matrix_semantic_ready"
+    )
+    assert full_matrix_status_spec["required_int_exact_fields"] == {
+        "blocked_matrix_row_count": 12,
+        "approval_token_count": 2,
+        "scope_receipt_blocked_row_count": 6,
+        "engine_receipt_blocked_row_count": 6,
+    }
+    assert full_matrix_status_spec["required_text_exact_fields"][
+        "first_blocked_release_blocker_id"
+    ] == "R8_full_scope_claim_closure"
+    assert full_matrix_status_spec["required_text_exact_fields"][
+        "scope_receipt_most_common_row_blocker"
+    ] == "operator_placeholders_unfilled"
     goal_action_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "goal_operator_action_board"
     )
@@ -784,6 +813,120 @@ def test_release_source_of_truth_blocks_semantic_status_when_required_text_field
         "primary_release_blocker_action_required_input",
     ]
     assert "failed_text_exact_fields=4" in row["observed"]
+
+
+def test_release_source_of_truth_blocks_goal_api_surface_contract_semantic_count_regression(
+    tmp_path: Path,
+) -> None:
+    _write_json(
+        tmp_path / "runs" / "goal_api_surface_contract_current.json",
+        {
+            "summary": {
+                "status": "goal_api_surface_contract_ready",
+                "surface_ready": True,
+                "blocker_count": 0,
+                "missing_status_key_count": 1,
+                "missing_full_commercial_visibility_token_count": 0,
+                "missing_fail_closed_flag_count": 0,
+            }
+        },
+    )
+
+    payload = mod.build_product_release_source_of_truth_gate(
+        root=tmp_path,
+        artifact_specs=[],
+        status_specs=[
+            {
+                "artifact_id": "goal_api_surface_contract_semantic_ready",
+                "artifact_path": "runs/goal_api_surface_contract_current.json",
+                "builder_command": "python3 tools/build_goal_api_surface_contract.py",
+                "required_status": "goal_api_surface_contract_ready",
+                "required_true_fields": ["surface_ready"],
+                "required_int_exact_fields": {
+                    "blocker_count": 0,
+                    "missing_status_key_count": 0,
+                    "missing_full_commercial_visibility_token_count": 0,
+                    "missing_fail_closed_flag_count": 0,
+                },
+            }
+        ],
+        readme_paths=[],
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "blocked_product_release_source_of_truth_gate"
+    assert summary["semantic_status_blocker_count"] == 1
+    row = payload["rows"][0]
+    assert row["failed_int_exact_fields"] == ["missing_status_key_count"]
+    assert "failed_int_exact_fields=1" in row["observed"]
+
+
+def test_release_source_of_truth_blocks_full_commercial_matrix_diagnostic_regression(
+    tmp_path: Path,
+) -> None:
+    _write_json(
+        tmp_path / "runs" / "product_full_commercial_blocker_evidence_matrix_current.json",
+        {
+            "summary": {
+                "status": "blocked_product_full_commercial_blocker_evidence_matrix",
+                "release_blocker_visibility_ready": True,
+                "blocked_matrix_row_count": 12,
+                "approval_token_count": 2,
+                "scope_receipt_blocked_row_count": 6,
+                "engine_receipt_blocked_row_count": 6,
+                "first_blocked_release_blocker_id": "R9_engine_refinement_claim_promotion",
+                "first_blocked_evidence_row_id": "public_benchmark_gate_not_ready",
+                "first_blocked_evidence_artifact": "OPERATOR_FILL_LOCAL_EVIDENCE_JSON",
+                "first_blocked_expected_evidence_status": "refine_tier_public_benchmark_ready",
+                "first_blocked_observed_evidence_status": "missing",
+                "scope_receipt_most_common_row_blocker": "operator_placeholders_unfilled",
+                "engine_receipt_most_common_row_blocker": "operator_placeholders_unfilled",
+            }
+        },
+    )
+
+    payload = mod.build_product_release_source_of_truth_gate(
+        root=tmp_path,
+        artifact_specs=[],
+        status_specs=[
+            {
+                "artifact_id": "product_full_commercial_blocker_evidence_matrix_semantic_ready",
+                "artifact_path": "runs/product_full_commercial_blocker_evidence_matrix_current.json",
+                "builder_command": "python3 tools/build_product_full_commercial_blocker_evidence_matrix.py",
+                "required_status": "blocked_product_full_commercial_blocker_evidence_matrix",
+                "required_true_fields": ["release_blocker_visibility_ready"],
+                "required_int_exact_fields": {
+                    "blocked_matrix_row_count": 12,
+                    "approval_token_count": 2,
+                    "scope_receipt_blocked_row_count": 6,
+                    "engine_receipt_blocked_row_count": 6,
+                },
+                "required_text_exact_fields": {
+                    "first_blocked_release_blocker_id": "R8_full_scope_claim_closure",
+                    "first_blocked_evidence_row_id": "direct_binding_evidence_missing",
+                    "first_blocked_evidence_artifact": "OPERATOR_FILL_LOCAL_EVIDENCE_JSON",
+                    "first_blocked_expected_evidence_status": (
+                        "product_scope_transporter_direct_binding_evidence_ready"
+                    ),
+                    "first_blocked_observed_evidence_status": "missing",
+                    "scope_receipt_most_common_row_blocker": "operator_placeholders_unfilled",
+                    "engine_receipt_most_common_row_blocker": "operator_placeholders_unfilled",
+                },
+            }
+        ],
+        readme_paths=[],
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "blocked_product_release_source_of_truth_gate"
+    assert summary["semantic_status_blocker_count"] == 1
+    row = payload["rows"][0]
+    assert row["failed_text_exact_fields"] == [
+        "first_blocked_release_blocker_id",
+        "first_blocked_evidence_row_id",
+        "first_blocked_expected_evidence_status",
+    ]
+    assert "failed_text_exact_fields=3" in row["observed"]
 
 
 def test_release_source_of_truth_blocks_minimal_bundle_fixture_semantics(tmp_path: Path) -> None:

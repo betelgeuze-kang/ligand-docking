@@ -39,6 +39,13 @@ def test_engine_refinement_claim_evidence_receipt_blocks_default_template() -> N
     assert summary["required_blocker_count"] == 6
     assert summary["missing_required_blocker_count"] == 0
     assert summary["blocked_row_count"] == 6
+    assert summary["first_blocked_blocker_id"] == "public_benchmark_gate_not_ready"
+    assert summary["first_blocked_evidence_artifact"] == "OPERATOR_FILL_LOCAL_EVIDENCE_JSON"
+    assert summary["first_blocked_expected_evidence_status"] == "refine_tier_public_benchmark_ready"
+    assert summary["first_blocked_observed_evidence_status"] == "missing"
+    assert summary["first_blocked_missing_true_fields"] == ["claim_grade_public_benchmark_ready"]
+    assert "operator_placeholders_unfilled" in summary["first_blocked_row_blockers"]
+    assert summary["most_common_row_blocker"] == "operator_placeholders_unfilled"
     assert summary["external_state_mutated"] is False
     assert "blocked_receipt_rows_present" in summary["blockers"]
     assert all(row["row_status"] == "blocked" for row in payload["rows"])
@@ -89,6 +96,9 @@ def test_engine_refinement_claim_evidence_receipt_passes_verified_local_evidence
     assert summary["claim_promotion_evidence_receipt_ready"] is True
     assert summary["pass_row_count"] == 6
     assert summary["blocked_row_count"] == 0
+    assert summary["first_blocked_blocker_id"] == ""
+    assert summary["first_blocked_row_blockers"] == []
+    assert summary["most_common_row_blocker"] == ""
     assert summary["evidence_status_verified_count"] == 6
     assert summary["blockers"] == []
 
