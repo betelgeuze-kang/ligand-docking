@@ -127,8 +127,8 @@
 |---|---|---|---|
 | STOR-RESIDUAL | storage residual status | CLOSED | `runs/storage_residual_cleanup_status_current.json`, `operator_action_candidate_count=0` |
 | STOR-EXEC | cleanup execution scaffold | CLOSED | `runs/cleanup_completion_gate_current.json`; `delete_executed=false` |
-| TOOLS-OTHER | other_review classification lane | CLOSED | `runs/tools_package_other_review_classification_plan_current.json`: `candidate_count=88`, `classified_count=88`, `unclassified_count=0`, `manual_decision_count=41` |
-| TOOLS-BATCH3 | batch3 high-reference review lanes | READY / QUEUED | `runs/tools_package_batch3_review_plan_current.json`: `batch3_total_count=1425`, `first_slice_raw_candidate_count=106`, `first_slice_candidate_count=0`; `runs/tools_package_batch3_other_review_classification_plan_current.json`: `candidate_count=0`, `unclassified_count=0`; lane_a receipts `3+1` verified; initial/tail reclassified receipts `3+6` verified; lane_b receipts `10+10+10+10` verified; package-classified migration receipts `10+10+10+10` verified; `runs/tools_package_batch3_lane_decomposition_plan_current.json`: `lane_b_target_move_candidate_count=0`, `package_classification_required_count=40`; `runs/tools_package_batch3_package_classification_plan_current.json`: `candidate_count=40`, `classified_count=40`, `unclassified_count=0` |
+| TOOLS-OTHER | other_review classification lane | CLOSED | `runs/tools_package_other_review_classification_plan_current.json`: `candidate_count=101`, `classified_count=101`, `unclassified_count=0`, `manual_decision_count=46` |
+| TOOLS-BATCH3 | batch3 high-reference review lanes | READY / QUEUED | `runs/tools_package_batch3_review_plan_current.json`: `batch3_total_count=530`, `first_slice_raw_candidate_count=471`, `first_slice_candidate_count=1`; `runs/tools_package_batch3_other_review_classification_plan_current.json`: `candidate_count=10`, `classified_count=10`, `unclassified_count=0`; lane_a receipts `3+1` verified; initial/tail reclassified receipts `3+6` verified; lane_b receipts `10+10+10+10` verified; package-classified migration receipts `10+10+10+10+10` verified; `runs/tools_package_batch3_lane_decomposition_plan_current.json`: `candidate_count=59`, `selected_for_next_slice_count=1`, `lane_b_target_move_candidate_count=1`, `package_classification_required_count=7`; `runs/tools_package_batch3_package_classification_plan_current.json`: `candidate_count=7`, `classified_count=7`, `unclassified_count=0` |
 
 검증: `tests/unit/test_build_storage_cleanup_gap_closure.py`, `tests/unit/test_build_tools_refactor_gap_closure.py`, `write_storage_tools_closure_packets()`.
 최신 `runs/tools_refactor_gap_closure_current.json`은
@@ -881,8 +881,8 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   (`no_batch2_manual_review_candidates_with_exact_references`)이다.
   선택 가능한 unmigrated target-package exact-reference manual slice는 현재 0개다.
   `tools/bin` 같은 vendored reference-noise tree는 새 manual plan 검색에서 제외해
-  실제 프로젝트 참조 위치만 기록한다. 최신 unit 확인은 tools package split suite
-  기준 `32 passed`다.
+  실제 프로젝트 참조 위치만 기록한다. 최신 unit 확인은 tools package/refactor
+  split suite 기준 `64 passed`다.
 
 **병목 원인**
 - 제품/캠페인/벤치마크 코드가 분리되지 않은 채 누적 — 리팩토링 속도 저하.
@@ -890,18 +890,18 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   exact-reference manual 후보는 현재 모두 소진됐다.
   최신 batch2 target package 62개는 모두 target module이 존재하고,
   `batch2_unmigrated_reference_bearing_target_count=0`이다.
-- batch2 `other_review=88` package classification row는 모두 확정됐다. 47개는
-  extended keyword로 자동 재분류됐고, 나머지 41개는 명시 manual decision map으로
-  `product=87`, `gpcr_replay=1` bucket에 기록됐다.
+- batch2 `other_review=101` package classification row는 모두 확정됐다. 55개는
+  extended keyword로 자동 재분류됐고, 나머지 46개는 명시 manual decision map으로
+  `canonical_owner_review=1`, `product=99`, `gpcr_replay=1` bucket에 기록됐다.
 - `main()` 없는 helper module은 기존 CLI-main wrapper receipt를 그대로 적용할 수
   없어서 import-only wrapper strategy를 receipt가 별도 인정하도록 보강했다. 직전
   25개 manual slice는 24개 CLI-main wrapper와 1개 import-only wrapper였고,
   8개 manual slice는 7개 CLI-main wrapper와 1개 import-only wrapper였으며,
   internal-import 13개 slice는 12개 CLI-main wrapper와 1개 import-only wrapper였다.
   이 구분은 유지해야 한다.
-- `other_review=483` 중 batch2 `other_review` 88개는 package classification lane에서
+- `other_review=483` 중 batch2 `other_review` 101개는 package classification lane에서
   `tools_package_other_review_classification_plan_ready`,
-  `classified_count=88`, `unclassified_count=0`, `manual_decision_count=41`로 닫혔다.
+  `classified_count=101`, `unclassified_count=0`, `manual_decision_count=46`로 닫혔다.
 
 **필요 작업**
 - `tools/`를 제품별 (product / cameo / casp17 / wetlab / cleanup / gpcr_replay)
@@ -941,14 +941,14 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `runs/tools_package_batch3_other_review_migration_receipt_current.json/.csv/.md`에서
   `tools_package_batch3_migration_receipt_ready`, `plan_selected_count=6`,
   `verified_migration_count=6`, `blocked_migration_count=0`으로 검증됐다.
-- 최신 batch3 high-reference lane은 `batch3_total_count=1425`,
-  `first_slice_raw_candidate_count=106`, `first_slice_candidate_count=0`,
-  `skipped_existing_target_candidate_count=102`,
+- 최신 batch3 high-reference lane은 `batch3_total_count=530`,
+  `first_slice_raw_candidate_count=471`, `first_slice_candidate_count=1`,
+  `skipped_existing_target_candidate_count=456`,
   `skipped_existing_canonical_candidate_count=4`,
-  `skipped_unclassified_candidate_count=0`이다. 최신 batch3 `other_review` 후보는
+  `skipped_unclassified_candidate_count=10`이다. 최신 batch3 `other_review` 후보는
   `runs/tools_package_batch3_other_review_classification_plan_current.json/.csv/.md`에서
   `tools_package_batch3_other_review_classification_plan_ready`,
-  `candidate_count=0`, `unclassified_count=0`으로 고갈됐다.
+  `candidate_count=10`, `classified_count=10`, `unclassified_count=0`으로 닫혔다.
 - batch3 lane_b 첫 target-move slice 10개
   (`apply_idp_3bead_holdout_archive_first.py`,
   `apply_idp_3bead_release_archive_first.py`,
@@ -1063,26 +1063,39 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `verified_migration_count=10`, `blocked_migration_count=0`으로 검증됐다.
   biorxiv runner 계열의 repo-root 계산은 package depth에 맞게 보정했고,
   기존 top-level path에는 module-alias compatibility wrapper를 남겼다.
+- 이어서 다섯 번째 batch3 package-classified migration slice 10개
+  (`run_claim_metric_correction_loop.py`,
+  `run_external_validation_blind_sets.py`, `run_family_expansion_refresh.py`,
+  `run_idp_3bead_benchmark_gate.py`, `run_idp_3bead_evaluator.py`,
+  `run_idp_3bead_holdout_pipeline.py`,
+  `run_idp_3bead_release_smoke_current.py`,
+  `run_idp_tau_k18_stabilization_trial.py`,
+  `run_initial_claim_triplet_gate.py`,
+  `run_ligand_backmapping_scoring.py`)도
+  `runs/tools_package_batch3_package_classification_migration_fifth_receipt_current.json/.csv/.md`에서
+  `tools_package_batch3_migration_receipt_ready`, `plan_selected_count=10`,
+  `verified_migration_count=10`, `blocked_migration_count=0`으로 검증됐다.
+  direct script 실행 경로는 top-level compatibility wrapper의 repo-root
+  bootstrap으로 유지했고, residual shadow/apply scoring 및 clash-relief batch
+  provenance 회귀 테스트를 통과했다.
 - `tools/accounting/build_tools_package_batch3_lane_decomposition_plan.py`와
   `runs/tools_package_batch3_lane_decomposition_plan_current.json/.csv/.md`는 남은
-  lane_b/c/d 1,319개를 실행 lane으로 분해한다. 최신 상태는
+  lane_b/c/d 59개를 실행 lane으로 분해한다. 최신 상태는
   `tools_package_batch3_lane_decomposition_plan_ready`,
-  `selected_for_next_slice_count=0`, `lane_b_target_move_candidate_count=0`,
-  `existing_target_wrapper_verification_count=395`,
-  `canonical_owner_review_count=860`,
-  `package_classification_required_count=40`,
-  `manual_or_reference_review_count=24`이다.
-  compatibility wrapper 유지 방식으로 바로 이동 가능한 lane_b target-package 후보는
-  현재 고갈됐다.
+  `selected_for_next_slice_count=1`, `lane_b_target_move_candidate_count=1`,
+  `existing_target_wrapper_verification_count=47`,
+  `canonical_owner_review_count=0`,
+  `package_classification_required_count=7`,
+  `manual_or_reference_review_count=4`이다.
+  다음 바로 이동 가능한 lane_b target-package 후보는
+  `tools/run_casp17_competitive_floor_evidence_round.py` 1개다.
 - `tools/accounting/build_tools_package_batch3_package_classification_plan.py`와
   `runs/tools_package_batch3_package_classification_plan_current.json/.csv/.md`는
-  남은 `package_classification_required` 40개를 package bucket으로 분류한다.
+  남은 `package_classification_required` 7개를 package bucket으로 분류한다.
   최신 상태는 `tools_package_batch3_package_classification_plan_ready`,
-  `candidate_count=40`, `classified_count=40`, `unclassified_count=0`,
-  `reclassified_package_counts={'canonical_owner_review': 1, 'product': 38,
-  'wetlab': 1}`이다. 이 산출물은
-  move/rewrite 없는 plan-only이며, `tools/__init__.py`는 root package
-  canonical-owner review로 유지한다.
+  `candidate_count=7`, `classified_count=7`, `unclassified_count=0`,
+  `reclassified_package_counts={'product': 7}`이다. 이 산출물은
+  move/rewrite 없는 plan-only이다.
   최근 slice에서 `tools/cameo/` package 추가와 CASP17/cleanup/GPCR/product/wetlab
   build tools의 wrapper-preserving package 이동을 계속 진행했다.
 - 한시성 운영 코드와 제품 파이프라인 분리.
@@ -1198,8 +1211,8 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
     최신 재생성 기준으로는 `blocked_tools_package_migration_plan`
     (`selected_count=0`), `blocked_tools_package_batch2_review_plan`
     (`selected_count=0`), `blocked_tools_package_batch2_manual_review_plan`
-    (`selected_count=0`) 상태다. batch2 `other_review=88` classification은
-    `classified_count=88`, `unclassified_count=0`으로 닫혔고, batch3 lane_a
+    (`selected_count=0`) 상태다. batch2 `other_review=101` classification은
+    `classified_count=101`, `unclassified_count=0`으로 닫혔고, batch3 lane_a
     실이동 후보 `3+1`개도 각각 `verified_migration_count=3`,
     `verified_migration_count=1`로 닫혔다. batch3
     `other_review` reclassified 첫 slice 3개도
@@ -1214,7 +1227,7 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
     `runs/tools_package_batch3_lane_b_migration_fourth_receipt_current.json`에서
     각 `verified_migration_count=10`,
     `blocked_migration_count=0`으로 닫혔다.
-    package-classified migration slice 40개도
+    package-classified migration slice 50개도
     `runs/tools_package_batch3_package_classification_migration_receipt_current.json`에서
     `verified_migration_count=10`, `blocked_migration_count=0`으로 닫혔고,
     `runs/tools_package_batch3_package_classification_migration_second_receipt_current.json`에서도
@@ -1222,16 +1235,19 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
     `runs/tools_package_batch3_package_classification_migration_third_receipt_current.json`에서도
     `verified_migration_count=10`, `blocked_migration_count=0`으로 닫혔고,
     `runs/tools_package_batch3_package_classification_migration_fourth_receipt_current.json`에서도
+    `verified_migration_count=10`, `blocked_migration_count=0`으로 닫혔으며,
+    `runs/tools_package_batch3_package_classification_migration_fifth_receipt_current.json`에서도
     `verified_migration_count=10`, `blocked_migration_count=0`으로 닫혔다.
     wrapper-aware batch3 plan 재생성 후 최신 `other_review` classification은
-    `candidate_count=0`, `unclassified_count=0`이다. lane_b/c/d decomposition은
-    `selected_for_next_slice_count=0`,
-    `lane_b_target_move_candidate_count=0`,
-    `package_classification_required_count=40`,
-    `canonical_owner_review_count=860`으로 다음 migration slice를 분리했다.
+    `candidate_count=10`, `classified_count=10`, `unclassified_count=0`이다.
+    lane_b/c/d decomposition은 `candidate_count=59`,
+    `selected_for_next_slice_count=1`,
+    `lane_b_target_move_candidate_count=1`,
+    `package_classification_required_count=7`,
+    `existing_target_wrapper_verification_count=47`으로 다음 migration slice를 분리했다.
     이어서 batch3 package classification plan은 해당
-    `package_classification_required` 40개를
-    `classified_count=40`, `unclassified_count=0`으로 닫았다.
+    `package_classification_required` 7개를
+    `classified_count=7`, `unclassified_count=0`으로 닫았다.
 
 ### 합산 잔여 gap (영역별)
 

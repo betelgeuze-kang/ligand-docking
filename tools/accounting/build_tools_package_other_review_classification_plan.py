@@ -47,6 +47,7 @@ EXTENDED_KEYWORDS: dict[str, tuple[str, ...]] = {
 MANUAL_PACKAGE_DECISIONS: dict[str, tuple[str, str]] = {
     "analyze_idp_holdout_runtime": ("product", "idp_product_scope_runtime"),
     "audit_ligand_leakage": ("product", "ligand_product_data_leakage_audit"),
+    "__init__": ("canonical_owner_review", "root_tools_package_init"),
     "builder_json_utils": ("product", "shared_product_builder_json_helper"),
     "check_biorxiv_temporal_provenance_maps": ("product", "biorxiv_temporal_product_validation"),
     "check_idp_holdout_regression": ("product", "idp_product_scope_regression"),
@@ -85,8 +86,12 @@ MANUAL_PACKAGE_DECISIONS: dict[str, tuple[str, str]] = {
     "scaffold_md_manifest": ("product", "product_md_manifest_scaffold"),
     "scaffold_real_md_source_manifest": ("product", "product_real_md_source_manifest_scaffold"),
     "simulate_ligand_gate_scenarios": ("product", "ligand_product_gate_simulation"),
+    "speed_profile": ("product", "product_runtime_speed_profile"),
+    "speed_profile_defaults": ("product", "product_runtime_speed_profile_defaults"),
     "summarize_ligand_gate_failure": ("product", "ligand_product_gate_failure_summary"),
+    "sweep_claim_input_profiles": ("product", "product_claim_input_profile_sweep"),
     "view_idp_global_aggregation_predictions": ("product", "idp_product_scope_prediction_view"),
+    "visualize_experiment_dashboard": ("product", "product_experiment_dashboard_visualization"),
     "watch_ligand_run_closeout": ("product", "ligand_product_run_closeout_watch"),
     "xdg_open_wrapper": ("product", "product_local_viewer_open_helper"),
 }

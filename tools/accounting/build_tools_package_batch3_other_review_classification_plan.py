@@ -59,10 +59,20 @@ BATCH3_MANUAL_PACKAGE_DECISIONS: dict[str, tuple[str, str]] = {
     "report_neighbor_force_parity": ("product", "product_force_parity_report"),
     "run_competition_benchmark_regeneration": ("product", "product_competition_regeneration"),
     "run_idp_virtual_hbond_rollout_eval": ("product", "idp_product_scope_hbond_rollout"),
+    "run_ligand_stress_validation": ("product", "product_ligand_stress_validation"),
+    "run_ligand_topk_delivery": ("product", "product_ligand_topk_delivery"),
+    "run_nightly_screening_batch": ("product", "product_nightly_screening_batch"),
+    "run_ood_first_validation_batch": ("product", "product_ood_validation_batch"),
     "run_package_b_external_defense_regeneration": ("product", "product_external_defense_regeneration"),
+    "run_rust_native_inference_poc": ("product", "product_rust_native_inference_poc"),
+    "run_strict_release_with_regression_gate": ("product", "product_strict_release_regression_gate"),
     "run_target_tuned_long_stability": ("product", "product_long_stability_validation"),
+    "stage2_full_report": ("product", "product_stage2_full_report"),
     "sweep_long_stability_tuning": ("product", "product_long_stability_tuning"),
+    "sweep_ai_interval_tradeoff": ("product", "product_ai_interval_tradeoff_sweep"),
+    "train_idp_branch_model": ("product", "idp_product_scope_branch_training"),
     "update_closeout_latest": ("product", "product_closeout_pointer"),
+    "validate_accuracy_gate": ("product", "product_accuracy_gate_validation"),
 }
 
 CLAIM_BOUNDARY = (

@@ -3,12 +3,17 @@ from __future__ import annotations
 from pathlib import Path
 
 
-def test_refresh_chain_includes_aqp1_reviewer_workbench_step() -> None:
-    refresh_script = (
+def _refresh_script() -> Path:
+    return (
         Path(__file__).resolve().parents[2]
         / "tools"
+        / "product"
         / "run_family_expansion_refresh.py"
     )
+
+
+def test_refresh_chain_includes_aqp1_reviewer_workbench_step() -> None:
+    refresh_script = _refresh_script()
     text = refresh_script.read_text(encoding="utf-8")
 
     reviewer_step = '(\"aqp1_reviewer_workbench\", [sys.executable, _script(\"product/build_aqp1_reviewer_workbench.py\")])'
@@ -22,11 +27,7 @@ def test_refresh_chain_includes_aqp1_reviewer_workbench_step() -> None:
 
 
 def test_refresh_chain_includes_aqp1_source_confirmation_after_quantitative_provenance() -> None:
-    refresh_script = (
-        Path(__file__).resolve().parents[2]
-        / "tools"
-        / "run_family_expansion_refresh.py"
-    )
+    refresh_script = _refresh_script()
     text = refresh_script.read_text(encoding="utf-8")
 
     quant_step = '(\"aqp1_quantitative_provenance_packet\", [sys.executable, _script(\"product/build_aqp1_quantitative_provenance_packet.py\")])'
@@ -40,11 +41,7 @@ def test_refresh_chain_includes_aqp1_source_confirmation_after_quantitative_prov
 
 
 def test_refresh_chain_includes_aqp1_follow_on_after_seed_sync_preview() -> None:
-    refresh_script = (
-        Path(__file__).resolve().parents[2]
-        / "tools"
-        / "run_family_expansion_refresh.py"
-    )
+    refresh_script = _refresh_script()
     text = refresh_script.read_text(encoding="utf-8")
 
     seed_sync_step = '(\"aqp1_seed_sync_preview\", [sys.executable, _script(\"build_aqp1_seed_row_sync_apply_preview.py\")])'
@@ -58,11 +55,7 @@ def test_refresh_chain_includes_aqp1_follow_on_after_seed_sync_preview() -> None
 
 
 def test_refresh_chain_includes_aqp1_follow_on_source_confirmation_before_blocker_decomposition() -> None:
-    refresh_script = (
-        Path(__file__).resolve().parents[2]
-        / "tools"
-        / "run_family_expansion_refresh.py"
-    )
+    refresh_script = _refresh_script()
     text = refresh_script.read_text(encoding="utf-8")
 
     follow_on_step = '(\"aqp1_first_wave_follow_on_packet\", [sys.executable, _script(\"build_aqp1_first_wave_follow_on_packet.py\")])'
@@ -78,11 +71,7 @@ def test_refresh_chain_includes_aqp1_follow_on_source_confirmation_before_blocke
 
 
 def test_refresh_chain_includes_transporter_commercialization_closure_steps() -> None:
-    refresh_script = (
-        Path(__file__).resolve().parents[2]
-        / "tools"
-        / "run_family_expansion_refresh.py"
-    )
+    refresh_script = _refresh_script()
     text = refresh_script.read_text(encoding="utf-8")
 
     queue_step = '(\"transporter_commercialization_closure_queue\", [sys.executable, _script(\"build_transporter_commercialization_closure_queue.py\")])'
@@ -100,11 +89,7 @@ def test_refresh_chain_includes_transporter_commercialization_closure_steps() ->
 
 
 def test_refresh_chain_runs_local_engine_queue_before_execution_handoff_dashboard() -> None:
-    refresh_script = (
-        Path(__file__).resolve().parents[2]
-        / "tools"
-        / "run_family_expansion_refresh.py"
-    )
+    refresh_script = _refresh_script()
     text = refresh_script.read_text(encoding="utf-8")
 
     placeholder_queue_step = '(\"transporter_placeholder_burndown_queue\", [sys.executable, _script(\"build_transporter_placeholder_burndown_queue.py\")])'
@@ -148,11 +133,7 @@ def test_refresh_chain_runs_local_engine_queue_before_execution_handoff_dashboar
 
 
 def test_refresh_chain_includes_nightly_stage6_tuning_packet_after_gate_packet() -> None:
-    refresh_script = (
-        Path(__file__).resolve().parents[2]
-        / "tools"
-        / "run_family_expansion_refresh.py"
-    )
+    refresh_script = _refresh_script()
     text = refresh_script.read_text(encoding="utf-8")
 
     nightly_gate_step = '(\"nightly_gate_burndown_packet\", [sys.executable, _script(\"build_nightly_gate_burndown_packet.py\")])'
@@ -180,11 +161,7 @@ def test_refresh_chain_includes_nightly_stage6_tuning_packet_after_gate_packet()
 
 
 def test_refresh_chain_includes_glut1_second_wave_source_confirmation_before_placeholder_queue() -> None:
-    refresh_script = (
-        Path(__file__).resolve().parents[2]
-        / "tools"
-        / "run_family_expansion_refresh.py"
-    )
+    refresh_script = _refresh_script()
     text = refresh_script.read_text(encoding="utf-8")
 
     glut1_step = '(\"glut1_second_wave_source_confirmation_packet\", [sys.executable, _script(\"build_glut1_second_wave_source_confirmation_packet.py\")])'
@@ -198,11 +175,7 @@ def test_refresh_chain_includes_glut1_second_wave_source_confirmation_before_pla
 
 
 def test_refresh_chain_includes_transporter_negative_target_packets_before_family_packet_catalog() -> None:
-    refresh_script = (
-        Path(__file__).resolve().parents[2]
-        / "tools"
-        / "run_family_expansion_refresh.py"
-    )
+    refresh_script = _refresh_script()
     text = refresh_script.read_text(encoding="utf-8")
 
     negative_day_plan_step = '(\"transporter_negative_day_plan\", [sys.executable, _script(\"product/build_transporter_negative_reviewer_day_plan.py\")])'
@@ -216,11 +189,7 @@ def test_refresh_chain_includes_transporter_negative_target_packets_before_famil
 
 
 def test_refresh_chain_includes_aqp1_negative_source_exclusion_before_transporter_negative_day_plan() -> None:
-    refresh_script = (
-        Path(__file__).resolve().parents[2]
-        / "tools"
-        / "run_family_expansion_refresh.py"
-    )
+    refresh_script = _refresh_script()
     text = refresh_script.read_text(encoding="utf-8")
 
     aqp1_negative_handoff_step = '(\"aqp1_negative_handoff\", [sys.executable, _script(\"product/build_aqp1_negative_review_handoff_packet.py\")])'

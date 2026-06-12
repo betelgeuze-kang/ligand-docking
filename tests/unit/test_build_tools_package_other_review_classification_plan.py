@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from tools import build_tools_package_other_review_classification_plan as mod
 
 
@@ -84,3 +86,37 @@ def test_other_review_classification_ready_when_no_candidates_remain() -> None:
     assert summary["plan_ready"] is True
     assert summary["candidate_count"] == 0
     assert summary["unclassified_count"] == 0
+
+
+@pytest.mark.parametrize(
+    ("tool_path", "expected_package"),
+    [
+        ("tools/__init__.py", "canonical_owner_review"),
+        ("tools/speed_profile.py", "product"),
+        ("tools/speed_profile_defaults.py", "product"),
+        ("tools/sweep_claim_input_profiles.py", "product"),
+        ("tools/visualize_experiment_dashboard.py", "product"),
+    ],
+)
+def test_other_review_classification_covers_current_manual_residuals(
+    tool_path: str,
+    expected_package: str,
+) -> None:
+    payload = mod.build_tools_package_other_review_classification_plan(
+        work_order_packet={
+            "rows": [
+                {
+                    "tool_path": tool_path,
+                    "proposed_package": "other_review",
+                    "migration_batch": "batch_2_review",
+                    "risk_score": 2,
+                }
+            ]
+        }
+    )
+
+    summary = payload["summary"]
+    row = payload["rows"][0]
+    assert summary["status"] == "tools_package_other_review_classification_plan_ready"
+    assert summary["unclassified_count"] == 0
+    assert row["reclassified_package"] == expected_package
