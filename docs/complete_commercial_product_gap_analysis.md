@@ -159,13 +159,24 @@
   `product_scope_breadth_evidence_receipt` entry와 copied template으로
   `config/product_scope_breadth_evidence_receipt_current.csv`를 operator handoff에
   포함한다.
+  같은 R8 receipt 상태는
+  `runs/product_commercial_readiness_operator_packet_current.json`과
+  `runs/product_commercial_readiness_handoff_bundle_current.json` summary의
+  `product_scope_breadth_evidence_receipt_*` 필드 및
+  `/product/commercial-readiness-operator-packet`,
+  `/product/commercial-readiness-handoff-bundle` API surface에도 전파된다.
+  handoff bundle의 artifact reference manifest는
+  `product_scope_breadth_evidence_receipt` JSON과 CSV를 필수 local
+  scope-breadth receipt evidence로 추적하며 `local_missing_artifact_reference_count=0`이다.
 - `product_release_source_of_truth_gate_current.json`은
   `product_scope_breadth_closure_checklist_current.json`,
   `product_scope_breadth_evidence_receipt_current.json`,
   `goal_operator_intake_kit_current/manifest.json`,
+  `product_commercial_readiness_execution_ladder_current.json`,
   `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`의
   freshness 및 semantic-ready 상태를 함께 검증한다. 최신 source-of-truth refresh는
-  `row_count=43`, `pass_count=43`, `blocker_count=0`으로, R8 receipt와 상위 상태
+  `row_count=44`, `pass_count=44`, `blocker_count=0`으로, R8 receipt와 상용 readiness
+  handoff 입력 순서, 상위 상태
   API/병목 visibility가 release freshness 체인 안에 들어와 있다.
 - `tools/product/build_refine_tier_public_benchmark_readiness.py`: curated 공개
   pose/free-energy benchmark intake를 별도 fail-closed gate로 판정한다.

@@ -1520,6 +1520,18 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert operator_packet["operator_completion_packets"][3]["action_id"] == "pxr_next_exact_review"
     assert operator_packet["operator_completion_packets"][3]["status"] == "ready"
     assert operator_packet["operator_completion_packets"][3]["next_review_row_id"] == ""
+    assert operator_packet["product_scope_breadth_evidence_receipt_ready"] is False
+    assert operator_packet["product_scope_breadth_evidence_receipt_status"] == (
+        "blocked_product_scope_breadth_evidence_receipt"
+    )
+    assert operator_packet["product_scope_breadth_evidence_receipt_blocked_row_count"] == 6
+    assert operator_packet["product_scope_breadth_evidence_receipt_required_scope_blocker_count"] == 6
+    assert operator_packet["product_scope_breadth_evidence_receipt_artifact"] == (
+        "runs/product_scope_breadth_evidence_receipt_current.json"
+    )
+    assert operator_packet["product_scope_breadth_evidence_receipt_csv"] == (
+        "config/product_scope_breadth_evidence_receipt_current.csv"
+    )
     assert operator_packet["execution_enabled"] is False
     assert operator_packet["checkpoint_promoted"] is False
 
@@ -1801,8 +1813,20 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     )
     assert handoff_bundle["scope_closure_transporter_unresolved_slot_count"] == 11
     assert handoff_bundle["scope_closure_general_platform_claim_allowed"] is False
+    assert handoff_bundle["product_scope_breadth_evidence_receipt_ready"] is False
+    assert handoff_bundle["product_scope_breadth_evidence_receipt_status"] == (
+        "blocked_product_scope_breadth_evidence_receipt"
+    )
+    assert handoff_bundle["product_scope_breadth_evidence_receipt_blocked_row_count"] == 6
+    assert handoff_bundle["product_scope_breadth_evidence_receipt_required_scope_blocker_count"] == 6
+    assert handoff_bundle["product_scope_breadth_evidence_receipt_artifact"] == (
+        "runs/product_scope_breadth_evidence_receipt_current.json"
+    )
+    assert handoff_bundle["product_scope_breadth_evidence_receipt_csv"] == (
+        "config/product_scope_breadth_evidence_receipt_current.csv"
+    )
     assert handoff_bundle["artifact_reference_contract_ready"] is True
-    assert handoff_bundle["artifact_reference_count"] == 20
+    assert handoff_bundle["artifact_reference_count"] == 22
     assert handoff_bundle["local_missing_artifact_reference_count"] == 0
     assert handoff_bundle["operator_return_artifact_reference_count"] >= 4
     assert handoff_bundle["operator_return_pending_artifact_reference_count"] >= 1
@@ -1821,6 +1845,20 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert any(
         row["artifact_id"] == "scope_closure_acceptance_packet"
         and row["reference_role"] == "local_acceptance_evidence"
+        and row["required_now"] is True
+        for row in handoff_bundle["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "product_scope_breadth_evidence_receipt"
+        and row["artifact_path"] == "runs/product_scope_breadth_evidence_receipt_current.json"
+        and row["reference_role"] == "local_scope_breadth_receipt"
+        and row["required_now"] is True
+        for row in handoff_bundle["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "product_scope_breadth_evidence_receipt_csv"
+        and row["artifact_path"] == "config/product_scope_breadth_evidence_receipt_current.csv"
+        and row["reference_role"] == "local_scope_breadth_receipt_template"
         and row["required_now"] is True
         for row in handoff_bundle["artifact_reference_manifest"]
     )
@@ -1860,7 +1898,11 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     completion = asyncio.run(product.get_product_goal_completion_audit())
     assert completion["status"] == "blocked_product_goal_completion_audit"
     assert completion["goal_complete"] is False
-    assert completion["fail_count"] == 1
+    assert completion["fail_count"] == 2
+    assert [row["requirement_id"] for row in completion["requirements"] if row["status"] == "fail"] == [
+        "R8_full_scope_claim_closure",
+        "R9_engine_refinement_claim_promotion",
+    ]
     assert completion["approval_tokens_required"] == []
     assert completion["release_allowed"] is True
     assert completion["release_artifact_ready"] is True
@@ -1928,7 +1970,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     ] == "AQP1.core_binder_01"
 
     assert completion["commercial_readiness_handoff_bundle_ready"] is True
-    assert completion["commercial_readiness_handoff_bundle_artifact_reference_count"] == 20
+    assert completion["commercial_readiness_handoff_bundle_artifact_reference_count"] == 22
     assert completion["commercial_readiness_handoff_bundle_operator_return_pending_artifact_reference_count"] == 1
     assert completion["commercial_readiness_next_action_matrix_ready"] is True
     assert completion["commercial_readiness_next_action_matrix_count"] == 5

@@ -28,6 +28,7 @@ DEFAULT_SCAN_GLOBS = [
     "runs/product_commercial_readiness_operator_packet_current.json",
     "runs/product_commercial_readiness_handoff_bundle_current.json",
     "runs/product_commercial_readiness_operator_packet_freshness_current.json",
+    "runs/product_commercial_readiness_execution_ladder_current.json",
     "runs/product_goal_completion_audit_current.json",
 ]
 

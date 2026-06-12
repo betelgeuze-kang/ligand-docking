@@ -27,6 +27,7 @@ from api.product_accounting import (
     commercial_first_worker_runtime_receipt_fields as _commercial_first_worker_runtime_receipt_fields,
     commercial_handoff_closure_acceptance_fields as _commercial_handoff_closure_acceptance_fields,
     commercial_production_ai_return_fields as _commercial_production_ai_return_fields,
+    commercial_scope_breadth_evidence_receipt_fields as _commercial_scope_breadth_evidence_receipt_fields,
     commercial_scope_closure_fields as _commercial_scope_closure_fields,
 )
 
@@ -5716,6 +5717,7 @@ async def get_product_commercial_readiness_operator_packet() -> dict[str, Any]:
             **_commercial_production_ai_return_fields(summary),
             **_commercial_delta_force_closure_fields(summary),
             **_commercial_scope_closure_fields(summary),
+            **_commercial_scope_breadth_evidence_receipt_fields(summary),
             "operator_input_total_count": 0,
             "operator_completion_packet_ready_count": 0,
             "release_blocker_action_ids": [],
@@ -5793,6 +5795,7 @@ async def get_product_commercial_readiness_operator_packet() -> dict[str, Any]:
         **_commercial_production_ai_return_fields(summary),
         **_commercial_delta_force_closure_fields(summary),
         **_commercial_scope_closure_fields(summary),
+        **_commercial_scope_breadth_evidence_receipt_fields(summary),
         "operator_input_total_count": int(summary.get("operator_input_total_count") or 0),
         "operator_completion_packet_ready_count": int(
             summary.get("operator_completion_packet_ready_count") or 0
@@ -6085,6 +6088,7 @@ async def get_product_commercial_readiness_handoff_bundle() -> dict[str, Any]:
             **_commercial_first_worker_runtime_receipt_fields(summary),
             **_commercial_production_ai_return_fields(summary),
             **_commercial_handoff_closure_acceptance_fields(summary),
+            **_commercial_scope_breadth_evidence_receipt_fields(summary),
             "artifact_reference_contract_ready": False,
             "artifact_reference_count": 0,
             "artifact_reference_manifest": [],
@@ -6182,6 +6186,7 @@ async def get_product_commercial_readiness_handoff_bundle() -> dict[str, Any]:
         **_commercial_first_worker_runtime_receipt_fields(summary),
         **_commercial_production_ai_return_fields(summary),
         **_commercial_handoff_closure_acceptance_fields(summary),
+        **_commercial_scope_breadth_evidence_receipt_fields(summary),
         "artifact_reference_contract_ready": bool(
             summary.get("artifact_reference_contract_ready") is True
         ),

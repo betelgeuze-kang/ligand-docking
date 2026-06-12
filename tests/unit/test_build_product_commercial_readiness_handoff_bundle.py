@@ -34,6 +34,19 @@ def _operator_packet(ready: bool = True) -> dict:
             "engine_refinement_claim_promotion_next_required_step": (
                 "Fill and apply curated public benchmark rows, then calibrate claim-grade parameterization gates."
             ),
+            "product_scope_breadth_evidence_receipt_status": (
+                "blocked_product_scope_breadth_evidence_receipt"
+            ),
+            "product_scope_breadth_evidence_receipt_ready": False,
+            "product_scope_breadth_evidence_receipt_blocker_count": 1,
+            "product_scope_breadth_evidence_receipt_blocked_row_count": 6,
+            "product_scope_breadth_evidence_receipt_required_scope_blocker_count": 6,
+            "product_scope_breadth_evidence_receipt_artifact": (
+                "runs/product_scope_breadth_evidence_receipt_current.json"
+            ),
+            "product_scope_breadth_evidence_receipt_csv": (
+                "config/product_scope_breadth_evidence_receipt_current.csv"
+            ),
             "action_count": 4,
             "blocked_action_count": 4,
             "parallelizable_action_count": 2,
@@ -586,6 +599,19 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
         summary["engine_refinement_claim_evidence_receipt_artifact"]
         == "runs/engine_refinement_claim_evidence_receipt_current.json"
     )
+    assert summary["product_scope_breadth_evidence_receipt_ready"] is False
+    assert summary["product_scope_breadth_evidence_receipt_status"] == (
+        "blocked_product_scope_breadth_evidence_receipt"
+    )
+    assert summary["product_scope_breadth_evidence_receipt_blocker_count"] == 1
+    assert summary["product_scope_breadth_evidence_receipt_blocked_row_count"] == 6
+    assert summary["product_scope_breadth_evidence_receipt_required_scope_blocker_count"] == 6
+    assert summary["product_scope_breadth_evidence_receipt_artifact"] == (
+        "runs/product_scope_breadth_evidence_receipt_current.json"
+    )
+    assert summary["product_scope_breadth_evidence_receipt_csv"] == (
+        "config/product_scope_breadth_evidence_receipt_current.csv"
+    )
     assert summary["artifact_count"] == 3
     assert summary["ready_artifact_count"] == 3
     assert summary["blocked_artifact_count"] == 0
@@ -810,6 +836,20 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
         and row["required_now"] is True
         for row in summary["artifact_reference_manifest"]
     )
+    assert any(
+        row["artifact_id"] == "product_scope_breadth_evidence_receipt"
+        and row["artifact_path"] == "runs/product_scope_breadth_evidence_receipt_current.json"
+        and row["reference_role"] == "local_scope_breadth_receipt"
+        and row["required_now"] is True
+        for row in summary["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "product_scope_breadth_evidence_receipt_csv"
+        and row["artifact_path"] == "config/product_scope_breadth_evidence_receipt_current.csv"
+        and row["reference_role"] == "local_scope_breadth_receipt_template"
+        and row["required_now"] is True
+        for row in summary["artifact_reference_manifest"]
+    )
     assert "actual_summary_returned_complete" in summary[
         "production_ai_return_bundle_next_artifact_failed_check_ids"
     ]
@@ -881,4 +921,5 @@ def test_product_commercial_readiness_handoff_bundle_tool_writes_outputs(tmp_pat
     md_text = out_md.read_text(encoding="utf-8")
     assert "Product Commercial Readiness Handoff Bundle" in md_text
     assert "operator_packet_freshness" in md_text
+    assert "product_scope_breadth_evidence_receipt_current.json" in md_text
     assert "Artifact References" in md_text

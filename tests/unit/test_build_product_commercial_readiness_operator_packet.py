@@ -35,6 +35,19 @@ def _goal_audit() -> dict:
             "engine_refinement_claim_promotion_next_required_step": (
                 "Fill and apply curated public benchmark rows, then calibrate claim-grade parameterization gates."
             ),
+            "product_scope_breadth_evidence_receipt_status": (
+                "blocked_product_scope_breadth_evidence_receipt"
+            ),
+            "product_scope_breadth_evidence_receipt_ready": False,
+            "product_scope_breadth_evidence_receipt_blocker_count": 1,
+            "product_scope_breadth_evidence_receipt_blocked_row_count": 6,
+            "product_scope_breadth_evidence_receipt_required_scope_blocker_count": 6,
+            "product_scope_breadth_evidence_receipt_artifact": (
+                "runs/product_scope_breadth_evidence_receipt_current.json"
+            ),
+            "product_scope_breadth_evidence_receipt_csv": (
+                "config/product_scope_breadth_evidence_receipt_current.csv"
+            ),
             "product_ai_architecture_open_gap_ids": [
                 "production_ai_inference_checkpoint",
                 "scope_breadth_expansion",
@@ -548,6 +561,19 @@ def test_build_product_commercial_readiness_operator_packet_flattens_next_action
     assert "curated public benchmark rows" in summary[
         "engine_refinement_claim_promotion_next_required_step"
     ]
+    assert summary["product_scope_breadth_evidence_receipt_ready"] is False
+    assert summary["product_scope_breadth_evidence_receipt_status"] == (
+        "blocked_product_scope_breadth_evidence_receipt"
+    )
+    assert summary["product_scope_breadth_evidence_receipt_blocker_count"] == 1
+    assert summary["product_scope_breadth_evidence_receipt_blocked_row_count"] == 6
+    assert summary["product_scope_breadth_evidence_receipt_required_scope_blocker_count"] == 6
+    assert summary["product_scope_breadth_evidence_receipt_artifact"] == (
+        "runs/product_scope_breadth_evidence_receipt_current.json"
+    )
+    assert summary["product_scope_breadth_evidence_receipt_csv"] == (
+        "config/product_scope_breadth_evidence_receipt_current.csv"
+    )
     assert summary["open_gap_ids"] == [
         "production_ai_inference_checkpoint",
         "scope_breadth_expansion",
@@ -985,5 +1011,6 @@ def test_build_product_commercial_readiness_operator_packet_tool_writes_outputs(
     assert "First Operator Completion Packet" in md_text
     assert "rocm_environment_manifest_json" in md_text
     assert "production_ai_return_summary" in md_text
+    assert "product_scope_breadth_evidence_receipt_current.json" in md_text
     assert "Delta Force Closure Acceptance" in md_text
     assert "Scope Closure Acceptance" in md_text

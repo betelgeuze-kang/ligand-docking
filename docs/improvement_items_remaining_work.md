@@ -457,13 +457,26 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `product_scope_breadth_evidence_receipt` entry로
   `config/product_scope_breadth_evidence_receipt_current.csv`를 operator template에
   복사한다.
+  같은 R8 receipt 상태는
+  `runs/product_commercial_readiness_operator_packet_current.json`과
+  `runs/product_commercial_readiness_handoff_bundle_current.json` summary의
+  `product_scope_breadth_evidence_receipt_*` 필드 및
+  `/product/commercial-readiness-operator-packet`,
+  `/product/commercial-readiness-handoff-bundle` API surface로도 전파된다.
+  handoff bundle은 `runs/product_scope_breadth_evidence_receipt_current.json`과
+  `config/product_scope_breadth_evidence_receipt_current.csv`를
+  `local_scope_breadth_receipt` / `local_scope_breadth_receipt_template`
+  artifact reference로 추적하며, 최신
+  `local_missing_artifact_reference_count=0`, `artifact_reference_count=22`이다.
   `product_release_source_of_truth_gate_current.json`은 이제
   `product_scope_breadth_closure_checklist_current.json`,
   `product_scope_breadth_evidence_receipt_current.json`,
   `goal_operator_intake_kit_current/manifest.json`,
+  `product_commercial_readiness_execution_ladder_current.json`,
   `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`을
-  freshness row 및 semantic-ready row로 함께 검증해, R8 receipt와 상위 상태 API/병목
-  브리핑 자체가 릴리스 freshness 감시 밖으로 빠지지 않게 한다.
+  freshness row 및 semantic-ready row로 함께 검증해, R8 receipt와 상용 readiness
+  handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
+  빠지지 않게 한다.
   `tools/product/build_refine_tier_public_benchmark_readiness.py`는 curated 공개
   pose/free-energy benchmark intake를 별도 fail-closed gate로 고정한다.
   `config/refine_tier_public_benchmark_intake_current.csv`는 required column header를
@@ -808,9 +821,10 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
 - `tools/run_product_release_current_refresh.py --execute`는 source-of-truth 순서에
   R4 preflight, scope-breadth closure checklist, scope-breadth evidence receipt,
   goal operator intake kit, goal API surface contract, bottleneck briefing,
+  commercial readiness operator packet/freshness/execution ladder/handoff,
   최종 release bundle 재생성을 포함하며,
   최신 실행 결과는
-  `product_release_current_refresh_verified`, `command_count=41`, `executed_count=41`,
+  `product_release_current_refresh_verified`, `command_count=42`, `executed_count=42`,
   `failed_count=0`, `final_gate_verification_ready=true`, `final_gate_blocker_count=0`이다.
 
 **병목 원인**
@@ -834,8 +848,8 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   policy + release bundle linkage와 rollout execution readiness gate는 1차 완료;
   R4 launch preflight도 1차 완료. 다음은 explicit R4/operator-approved rollout 실행 smoke.
 - release source-of-truth gate는 R4 preflight, R8 scope-breadth receipt, goal
-  operator intake kit, API/bottleneck visibility 포함 refresh 이후
-  `product_release_source_of_truth_gate_ready`, `pass_count=43/43`,
+  operator intake kit, commercial readiness execution ladder, API/bottleneck visibility
+  포함 refresh 이후 `product_release_source_of_truth_gate_ready`, `pass_count=44/44`,
   `blocker_count=0`, `stale_artifact_count=0`으로 재검증됐다.
 - `prometheus_client` 기반 실제 metrics endpoint는 1차 완료.
 - Alert rules + paged webhook receiver + closed-loop alert delivery smoke는 1차 완료;

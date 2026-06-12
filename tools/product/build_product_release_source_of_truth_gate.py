@@ -58,8 +58,9 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_goal_bottleneck_briefing.py",
     "python3 deploy/product_release_bundle.py",
     "python3 tools/build_product_commercial_readiness_operator_packet.py",
-    "python3 tools/build_product_commercial_readiness_handoff_bundle.py",
     "python3 tools/build_product_commercial_readiness_operator_packet_freshness.py",
+    "python3 tools/build_product_commercial_readiness_execution_ladder.py",
+    "python3 tools/build_product_commercial_readiness_handoff_bundle.py",
     "python3 tools/build_product_ledger_privacy_scan.py",
     "python3 tools/build_product_release_source_of_truth_gate.py",
     "python3 tools/build_goal_release_decision_gate.py",
@@ -417,6 +418,8 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "depends_on": [
             "runs/product_goal_completion_audit_current.json",
             "runs/product_commercial_readiness_operator_packet_current.json",
+            "runs/product_commercial_readiness_operator_packet_freshness_current.json",
+            "runs/product_commercial_readiness_execution_ladder_current.json",
         ],
     },
     {
@@ -426,6 +429,15 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "depends_on": [
             "runs/product_goal_completion_audit_current.json",
             "runs/product_commercial_readiness_operator_packet_current.json",
+        ],
+    },
+    {
+        "artifact_id": "product_commercial_readiness_execution_ladder",
+        "artifact_path": "runs/product_commercial_readiness_execution_ladder_current.json",
+        "builder_command": "python3 tools/build_product_commercial_readiness_execution_ladder.py",
+        "depends_on": [
+            "runs/product_commercial_readiness_operator_packet_current.json",
+            "runs/product_commercial_readiness_operator_packet_freshness_current.json",
         ],
     },
     {
@@ -445,6 +457,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/product_commercial_readiness_operator_packet_current.json",
             "runs/product_commercial_readiness_handoff_bundle_current.json",
             "runs/product_commercial_readiness_operator_packet_freshness_current.json",
+            "runs/product_commercial_readiness_execution_ladder_current.json",
             "runs/product_goal_completion_audit_current.json",
         ],
     },

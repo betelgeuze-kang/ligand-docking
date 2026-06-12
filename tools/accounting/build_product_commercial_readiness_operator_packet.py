@@ -553,6 +553,27 @@ def build_product_commercial_readiness_operator_packet(
         "engine_refinement_claim_promotion_next_required_step": _text(
             summary.get("engine_refinement_claim_promotion_next_required_step")
         ),
+        "product_scope_breadth_evidence_receipt_status": _text(
+            summary.get("product_scope_breadth_evidence_receipt_status")
+        ),
+        "product_scope_breadth_evidence_receipt_ready": bool(
+            summary.get("product_scope_breadth_evidence_receipt_ready") is True
+        ),
+        "product_scope_breadth_evidence_receipt_blocker_count": _int(
+            summary.get("product_scope_breadth_evidence_receipt_blocker_count")
+        ),
+        "product_scope_breadth_evidence_receipt_blocked_row_count": _int(
+            summary.get("product_scope_breadth_evidence_receipt_blocked_row_count")
+        ),
+        "product_scope_breadth_evidence_receipt_required_scope_blocker_count": _int(
+            summary.get("product_scope_breadth_evidence_receipt_required_scope_blocker_count")
+        ),
+        "product_scope_breadth_evidence_receipt_artifact": _text(
+            summary.get("product_scope_breadth_evidence_receipt_artifact")
+        ),
+        "product_scope_breadth_evidence_receipt_csv": _text(
+            summary.get("product_scope_breadth_evidence_receipt_csv")
+        ),
         "open_gap_ids": [str(item) for item in (summary.get("product_ai_architecture_open_gap_ids") or [])],
         "action_count": len(rows),
         "blocked_action_count": len(blocker_rows),
@@ -949,6 +970,12 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- engine_refinement_claim_promotion_action_board_csv: `{s['engine_refinement_claim_promotion_action_board_csv']}`",
         f"- engine_refinement_claim_evidence_receipt_ready: `{s['engine_refinement_claim_evidence_receipt_ready']}`",
         f"- engine_refinement_claim_evidence_receipt_artifact: `{s['engine_refinement_claim_evidence_receipt_artifact']}`",
+        f"- product_scope_breadth_evidence_receipt_ready: `{s['product_scope_breadth_evidence_receipt_ready']}`",
+        f"- product_scope_breadth_evidence_receipt_status: `{s['product_scope_breadth_evidence_receipt_status']}`",
+        f"- product_scope_breadth_evidence_receipt_blocked_row_count: `{s['product_scope_breadth_evidence_receipt_blocked_row_count']}`",
+        f"- product_scope_breadth_evidence_receipt_required_scope_blocker_count: `{s['product_scope_breadth_evidence_receipt_required_scope_blocker_count']}`",
+        f"- product_scope_breadth_evidence_receipt_artifact: `{s['product_scope_breadth_evidence_receipt_artifact']}`",
+        f"- product_scope_breadth_evidence_receipt_csv: `{s['product_scope_breadth_evidence_receipt_csv']}`",
         f"- goal_audit_sha256: `{s['goal_audit_sha256']}`",
         f"- commercial_readiness_matrix_sha256: `{s['commercial_readiness_matrix_sha256']}`",
         f"- source_fingerprint_ready: `{s['source_fingerprint_ready']}`",

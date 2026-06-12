@@ -177,6 +177,33 @@ def commercial_scope_closure_fields(summary: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def commercial_scope_breadth_evidence_receipt_fields(summary: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "product_scope_breadth_evidence_receipt_status": summary.get(
+            "product_scope_breadth_evidence_receipt_status", ""
+        ),
+        "product_scope_breadth_evidence_receipt_ready": bool(
+            summary.get("product_scope_breadth_evidence_receipt_ready") is True
+        ),
+        "product_scope_breadth_evidence_receipt_blocker_count": int(
+            summary.get("product_scope_breadth_evidence_receipt_blocker_count") or 0
+        ),
+        "product_scope_breadth_evidence_receipt_blocked_row_count": int(
+            summary.get("product_scope_breadth_evidence_receipt_blocked_row_count") or 0
+        ),
+        "product_scope_breadth_evidence_receipt_required_scope_blocker_count": int(
+            summary.get("product_scope_breadth_evidence_receipt_required_scope_blocker_count")
+            or 0
+        ),
+        "product_scope_breadth_evidence_receipt_artifact": summary.get(
+            "product_scope_breadth_evidence_receipt_artifact", ""
+        ),
+        "product_scope_breadth_evidence_receipt_csv": summary.get(
+            "product_scope_breadth_evidence_receipt_csv", ""
+        ),
+    }
+
+
 def commercial_handoff_closure_acceptance_fields(summary: dict[str, Any]) -> dict[str, Any]:
     return {
         **commercial_delta_force_closure_fields(summary),

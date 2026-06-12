@@ -336,6 +336,32 @@ def _build_artifact_reference_manifest(
                 note="Local acceptance packet proving the current scope-breadth closure stage.",
             )
         )
+    scope_receipt_artifact = _text(
+        summary.get("product_scope_breadth_evidence_receipt_artifact")
+    )
+    if scope_receipt_artifact:
+        refs.append(
+            _artifact_reference(
+                artifact_id="product_scope_breadth_evidence_receipt",
+                artifact_path=scope_receipt_artifact,
+                reference_role="local_scope_breadth_receipt",
+                required_now=True,
+                expected_from_operator_return=False,
+                note="Local fail-closed receipt proving whether full-scope breadth evidence has been operator-reviewed.",
+            )
+        )
+    scope_receipt_csv = _text(summary.get("product_scope_breadth_evidence_receipt_csv"))
+    if scope_receipt_csv:
+        refs.append(
+            _artifact_reference(
+                artifact_id="product_scope_breadth_evidence_receipt_csv",
+                artifact_path=scope_receipt_csv,
+                reference_role="local_scope_breadth_receipt_template",
+                required_now=True,
+                expected_from_operator_return=False,
+                note="Operator-fill template consumed by the full-scope breadth evidence receipt gate.",
+            )
+        )
     next_artifact_path = _text(summary.get("production_ai_return_bundle_next_artifact_path"))
     worker_receipt_path = _text(
         summary.get(
@@ -453,6 +479,27 @@ def build_product_commercial_readiness_handoff_bundle(
         ),
         "engine_refinement_claim_promotion_next_required_step": _text(
             operator_summary.get("engine_refinement_claim_promotion_next_required_step")
+        ),
+        "product_scope_breadth_evidence_receipt_status": _text(
+            operator_summary.get("product_scope_breadth_evidence_receipt_status")
+        ),
+        "product_scope_breadth_evidence_receipt_ready": bool(
+            operator_summary.get("product_scope_breadth_evidence_receipt_ready") is True
+        ),
+        "product_scope_breadth_evidence_receipt_blocker_count": int(
+            operator_summary.get("product_scope_breadth_evidence_receipt_blocker_count") or 0
+        ),
+        "product_scope_breadth_evidence_receipt_blocked_row_count": int(
+            operator_summary.get("product_scope_breadth_evidence_receipt_blocked_row_count") or 0
+        ),
+        "product_scope_breadth_evidence_receipt_required_scope_blocker_count": int(
+            operator_summary.get("product_scope_breadth_evidence_receipt_required_scope_blocker_count") or 0
+        ),
+        "product_scope_breadth_evidence_receipt_artifact": _text(
+            operator_summary.get("product_scope_breadth_evidence_receipt_artifact")
+        ),
+        "product_scope_breadth_evidence_receipt_csv": _text(
+            operator_summary.get("product_scope_breadth_evidence_receipt_csv")
         ),
         "artifact_count": len(artifact_rows),
         "ready_artifact_count": len(artifact_rows) - len(blocked_artifacts),
@@ -1195,6 +1242,12 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- engine_refinement_claim_promotion_action_board_csv: `{s['engine_refinement_claim_promotion_action_board_csv']}`",
         f"- engine_refinement_claim_evidence_receipt_ready: `{s['engine_refinement_claim_evidence_receipt_ready']}`",
         f"- engine_refinement_claim_evidence_receipt_artifact: `{s['engine_refinement_claim_evidence_receipt_artifact']}`",
+        f"- product_scope_breadth_evidence_receipt_ready: `{s['product_scope_breadth_evidence_receipt_ready']}`",
+        f"- product_scope_breadth_evidence_receipt_status: `{s['product_scope_breadth_evidence_receipt_status']}`",
+        f"- product_scope_breadth_evidence_receipt_blocked_row_count: `{s['product_scope_breadth_evidence_receipt_blocked_row_count']}`",
+        f"- product_scope_breadth_evidence_receipt_required_scope_blocker_count: `{s['product_scope_breadth_evidence_receipt_required_scope_blocker_count']}`",
+        f"- product_scope_breadth_evidence_receipt_artifact: `{s['product_scope_breadth_evidence_receipt_artifact']}`",
+        f"- product_scope_breadth_evidence_receipt_csv: `{s['product_scope_breadth_evidence_receipt_csv']}`",
         f"- artifact_count: `{s['artifact_count']}`",
         f"- blocked_artifact_count: `{s['blocked_artifact_count']}`",
         f"- artifact_reference_contract_ready: `{s['artifact_reference_contract_ready']}`",
