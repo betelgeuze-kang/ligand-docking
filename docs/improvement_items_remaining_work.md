@@ -233,8 +233,17 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   worker CLI smoke를 CI에서 실행한다.
 - 즉, API는 기본적으로 queue/status surface만 열고, 실제 docking/MD 실행은
   operator-approved validated runner profile이 있을 때만 제한적으로 연결된다.
-- `core/forcefield.py:17`는 단순 LJ 성격, `core/topology.py:45`는 alanine placeholder
-  → "restricted analysis engine"이지 OpenMM/Schrodinger급이라고는 못 함.
+- `core/forcefield.py`는 sequence-mapped residue class별 coarse LJ
+  sigma/epsilon mixing과 screened acidic/basic residue charge proxy를
+  PyTorch reference/nonbonded 경로에 반영하고, consecutive CA residue에 대한
+  restricted harmonic backbone bond term과 consecutive CA triplet angle term을
+  core/reference 경로에 더한다. `DataGenerator` runtime profile의
+  `backbone_bond_*`, `k_angle`, `theta0`도 ForceField param으로 연결되고,
+  `tools/generate_ligand_trajectory_engine.py` CLI/cache key도 coarse
+  forcefield param surface를 노출한다.
+  `core/topology.py`는 CA/SC block-layout residue type alignment를 제공한다.
+  다만 full all-atom/solvent force field는 아니므로 "restricted analysis engine"이지
+  OpenMM/Schrodinger급이라고는 못 함.
 
 **병목 원인**
 - scientific claim boundary를 깨지 않기 위해 일반 요청은 fail-closed로 의도적 차단.
@@ -248,8 +257,11 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   template와 release bundle linkage는 1차 보강 완료.
 - 현재 직접 병목은 runner script 자체 부재가 아니라, disabled profile evidence
   template의 operator review field가 모두 false/empty라 승격 조건을 만족하지 못하는 점이다.
-- 다만 실제 상용 profile 승격과 `core/forcefield.py`/`core/topology.py`의 S-class
-  physics/topology 확장은 아직 남아 있다.
+- 다만 실제 상용 profile 승격과 full all-atom/solvent S-class
+  physics/topology 확장은 아직 남아 있다. 이번 residue-aware coarse nonbonded,
+  screened charge, coarse backbone bond/angle 보강은
+  alanine-only/단일 LJ/무전하/무연결 병목을 줄이고 runtime profile 및
+  trajectory engine param surface 연결까지 확보했지만, claim 경계는 그대로 restricted다.
 
 **필요 작업**
 - `api/tasks.py`는 operator-approved profile 기반으로
@@ -267,8 +279,14 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
 - 다음 단계: operator가 evidence template의 input/output/claim/gate 항목을 실제 검토해
   true로 채우고, `gate_policy_artifact`, `reviewer`, `reviewed_at_utc`를 기록한 뒤,
   별도 `APPROVE_API_RUNNER_PROFILE_PROMOTION` 승인/edit 절차로 enabled profile로 승격.
-- `core/forcefield.py`/`core/topology.py`의 LJ 단순/alanine placeholder 자산을
-  실제 residue/atom-type topology로 확장 (별도 S-class 작업).
+- `core/forcefield.py`/`core/topology.py`는 sequence-aware residue class
+  nonbonded, screened coarse charge, coarse CA backbone bond/angle terms,
+  CA/SC block-layout residue alignment까지 확장 완료.
+  trajectory engine CLI/cache key에도 해당 coarse forcefield param surface를
+  연결 완료.
+  다음 S-class 작업은 full all-atom/solvent topology, atom typing, atom-level
+  bond/angle/dihedral/improper terms, atom-level charge/parameterization,
+  OpenMM parity gate로 남는다.
 
 ### A-2. Production AI 추론 주체 전환 (ROCm/HIP production_guarded)
 

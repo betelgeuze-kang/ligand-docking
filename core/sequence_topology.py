@@ -64,3 +64,66 @@ def virtual_hbond_offset_for_residue_index(residue_index: int) -> tuple[float, f
     if role == "acceptor":
         return (1.0, -0.5, 0.0)
     return (0.0, 1.2, 0.0)
+
+
+def residue_nonbonded_scale_for_index(residue_index: int) -> tuple[float, float]:
+    """Coarse residue-class LJ scale factors as (sigma_scale, epsilon_scale)."""
+    idx = int(residue_index)
+    if idx == 0:
+        return (1.0, 1.0)
+    if idx == 6:  # Gly
+        return (0.90, 0.75)
+    if idx in {3, 4, 9, 15, 7}:  # D E K R H
+        return (1.02, 0.90)
+    if idx in {12, 14, 16, 17, 2}:  # N Q S T C
+        return (0.96, 0.82)
+    if idx in {5, 8, 10, 11, 18, 19, 20, 13}:  # hydrophobic/aromatic/proline
+        return (1.08, 1.12)
+    return (1.0, 1.0)
+
+
+def residue_nonbonded_params_from_indices(
+    residue_indices: torch.Tensor,
+    *,
+    base_sigma: float,
+    base_epsilon: float,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Map residue indices to coarse LJ sigma/epsilon tensors."""
+    values = residue_indices.detach().to(dtype=torch.long).reshape(-1).cpu().tolist()
+    scales = [residue_nonbonded_scale_for_index(int(v)) for v in values]
+    sigma = torch.tensor(
+        [base_sigma * s for s, _ in scales],
+        dtype=torch.float32,
+        device=residue_indices.device,
+    )
+    epsilon = torch.tensor(
+        [base_epsilon * e for _, e in scales],
+        dtype=torch.float32,
+        device=residue_indices.device,
+    )
+    return sigma, epsilon
+
+
+def residue_coarse_charge_for_index(residue_index: int) -> float:
+    """Claim-safe coarse residue charge proxy for fast-tier screening."""
+    idx = int(residue_index)
+    if idx in {3, 4}:  # D E
+        return -1.0
+    if idx in {9, 15}:  # K R
+        return 1.0
+    if idx == 7:  # H
+        return 0.5
+    return 0.0
+
+
+def residue_coarse_charges_from_indices(
+    residue_indices: torch.Tensor,
+    *,
+    charge_scale: float = 1.0,
+) -> torch.Tensor:
+    values = residue_indices.detach().to(dtype=torch.long).reshape(-1).cpu().tolist()
+    return torch.tensor(
+        [float(charge_scale) * residue_coarse_charge_for_index(int(v)) for v in values],
+        dtype=torch.float32,
+        device=residue_indices.device,
+    )

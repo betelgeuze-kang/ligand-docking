@@ -1,5 +1,6 @@
 import os
 import tempfile
+import math
 
 import h5py
 import torch
@@ -20,8 +21,11 @@ def test_topology_default_is_ca_sc():
 def test_expand_residue_types_for_virtual_sc():
     n_res = 7
     top = TopologyFactory(n_res, "protein", [30.0, 30.0, 30.0], Config.DEVICE, target_name="test")
+    top.set_residue_types_from_sequence_string("ACDEFGH")
     expanded = top.expand_residue_types_for_virtual_sc()
     assert expanded.shape[0] == n_res * 2
+    assert torch.equal(expanded[:n_res], top.residue_types)
+    assert torch.equal(expanded[n_res:], top.residue_types)
 
 
 def test_forcefield_shapes_for_implicit_and_explicit_2bead():
@@ -70,3 +74,26 @@ def test_data_generator_explicit_2bead_writes_2n_shape():
             assert residue_types.shape[1] == 20
             assert f.attrs["representation"] == "ca_sc_explicit"
             assert int(f.attrs["n_beads_per_residue"]) == 2
+
+
+def test_data_generator_accepts_coarse_backbone_runtime_profile():
+    gen = DataGenerator(
+        target="Chignolin",
+        total_samples=1,
+        fast_mode=True,
+        sim_param_overrides={
+            "backbone_bond_k": 3.0,
+            "backbone_bond_r0": 4.1,
+            "k_angle": 50.0,
+            "theta0": 120.0,
+        },
+    )
+    assert gen.runtime_profile["backbone_bond_k"] == 3.0
+    assert gen.runtime_profile["backbone_bond_r0"] == 4.1
+    assert gen.runtime_profile["k_angle"] == 50.0
+    assert gen.runtime_profile["theta0"] == 120.0
+    params = gen._build_forcefield_params()
+    assert params["backbone_bond_k"] == 3.0
+    assert params["backbone_bond_r0"] == 4.1
+    assert params["backbone_angle_k"] == 2.0
+    assert params["backbone_angle_theta0_rad"] == math.radians(120.0)

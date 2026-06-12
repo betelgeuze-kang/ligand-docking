@@ -18,6 +18,9 @@ def test_prod_speedpack_parser_defaults_are_off() -> None:
     assert args.prod_early_stop is False
     assert args.prod_light_artifacts is False
     assert args.contact_attract_base == 0.0
+    assert args.backbone_bond_k == 1.5
+    assert args.backbone_bond_r0 == 3.8
+    assert args.backbone_angle_k == 0.0
 
 
 def test_resolve_prod_effective_frames_is_noop_when_disabled() -> None:
@@ -290,12 +293,14 @@ def test_resolve_prod_early_stop_for_target_keeps_defaults_for_other_targets() -
 
 def test_get_engine_resources_can_disable_cache(monkeypatch) -> None:
     build_count = {"top": 0, "ff": 0, "integrator": 0}
+    ff_params_seen: list[dict[str, float]] = []
 
     class _FakeForceField:
         physics_backend = "rust_hip"
 
-        def __init__(self, *_args, **_kwargs) -> None:
+        def __init__(self, *_args, **kwargs) -> None:
             build_count["ff"] += 1
+            ff_params_seen.append(dict(kwargs.get("params", {}) or {}))
 
         def to(self, _device):
             return self
@@ -322,6 +327,12 @@ def test_get_engine_resources_can_disable_cache(monkeypatch) -> None:
         "box_size_A": 120.0,
         "ff_sigma": 3.8,
         "ff_eps_solv": 25.0,
+        "electrostatic_scale": 3.5,
+        "debye_kappa": 0.2,
+        "backbone_bond_k": 2.5,
+        "backbone_bond_r0": 4.0,
+        "backbone_angle_k": 1.25,
+        "backbone_angle_theta0_rad": 2.2,
         "force_backend": "auto",
         "require_rust_hip": True,
         "dt_fs": 0.002,
@@ -337,6 +348,10 @@ def test_get_engine_resources_can_disable_cache(monkeypatch) -> None:
     assert first is not second
     assert cache == {}
     assert build_count == {"top": 2, "ff": 2, "integrator": 2}
+    assert ff_params_seen[0]["electrostatic_scale"] == 3.5
+    assert ff_params_seen[0]["debye_kappa"] == 0.2
+    assert ff_params_seen[0]["backbone_bond_k"] == 2.5
+    assert ff_params_seen[0]["backbone_angle_k"] == 1.25
 
 
 def test_run_batch_records_batch_derate_telemetry(tmp_path, monkeypatch) -> None:

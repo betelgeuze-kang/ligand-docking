@@ -7,6 +7,10 @@ from .spatial import GridSpatialHash
 from .topology import TopologyFactory
 from .config import config, logger
 from .rust_hip_backend import RustHipBackend
+from .sequence_topology import (
+    residue_coarse_charges_from_indices,
+    residue_nonbonded_params_from_indices,
+)
 
 class ForceField(nn.Module):
     """
@@ -91,6 +95,91 @@ class ForceField(nn.Module):
             return self._rust_nb_cache
         return self.sh.get_neighbor_data(coords_model)
 
+    def _residue_forcefield_params_for_coords(
+        self,
+        n_atoms: int,
+        *,
+        device: torch.device,
+        dtype: torch.dtype,
+        base_sigma: float,
+        base_epsilon: float,
+        charge_scale: float,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor] | None:
+        if not hasattr(self.top, "residue_types_for_coordinate_count"):
+            return None
+        residue_types = self.top.residue_types_for_coordinate_count(int(n_atoms))
+        if residue_types is None:
+            return None
+        residue_types = residue_types.to(device=device)
+        sigma, epsilon = residue_nonbonded_params_from_indices(
+            residue_types,
+            base_sigma=float(base_sigma),
+            base_epsilon=float(base_epsilon),
+        )
+        charges = residue_coarse_charges_from_indices(
+            residue_types,
+            charge_scale=float(charge_scale),
+        )
+        return (
+            sigma.to(device=device, dtype=dtype),
+            epsilon.to(device=device, dtype=dtype),
+            charges.to(device=device, dtype=dtype),
+        )
+
+    def _compute_coarse_backbone_bonds(self, c: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """Restricted fast-tier CA backbone harmonic bonds over consecutive residues."""
+        B, N, _ = c.shape
+        f_bond = torch.zeros_like(c)
+        pe_bond = torch.zeros(B, 1, dtype=c.dtype, device=c.device)
+        n_ca = int(getattr(self.top, "n_res", N))
+        if n_ca < 2 or N < n_ca:
+            return f_bond, pe_bond
+        k = float(self.params.get("backbone_bond_k", 1.5))
+        if k <= 0.0:
+            return f_bond, pe_bond
+        r0 = float(self.params.get("backbone_bond_r0", 3.8))
+        ca = c[:, :n_ca, :]
+        dr = ca[:, :-1, :] - ca[:, 1:, :]
+        box = self.top.box_size.to(dtype=c.dtype, device=c.device).view(1, 1, 3)
+        dr = dr - box * torch.floor(dr / box + 0.5)
+        eps = torch.tensor(1e-8, dtype=c.dtype, device=c.device)
+        r = dr.norm(dim=-1).clamp_min(eps)
+        delta = r - torch.tensor(r0, dtype=c.dtype, device=c.device)
+        k_t = torch.tensor(k, dtype=c.dtype, device=c.device)
+        pair_force = -k_t * delta.unsqueeze(-1) * dr / r.unsqueeze(-1)
+        f_bond[:, : n_ca - 1, :] += pair_force
+        f_bond[:, 1:n_ca, :] -= pair_force
+        pe_bond = 0.5 * k_t * delta.pow(2).sum(dim=-1, keepdim=True)
+        return f_bond, pe_bond
+
+    def _compute_coarse_backbone_angles(self, c: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """Restricted fast-tier CA angle restraint over consecutive residue triplets."""
+        B, N, _ = c.shape
+        f_angle = torch.zeros_like(c)
+        pe_zero = torch.zeros(B, 1, dtype=c.dtype, device=c.device)
+        n_ca = int(getattr(self.top, "n_res", N))
+        if n_ca < 3 or N < n_ca:
+            return f_angle, pe_zero
+        k = float(self.params.get("backbone_angle_k", 0.0))
+        if k <= 0.0:
+            return f_angle, pe_zero
+        theta0 = float(self.params.get("backbone_angle_theta0_rad", 2.0))
+        ca = c[:, :n_ca, :].detach().clone().requires_grad_(True)
+        box = self.top.box_size.to(dtype=c.dtype, device=c.device).view(1, 1, 3)
+        v1 = ca[:, :-2, :] - ca[:, 1:-1, :]
+        v2 = ca[:, 2:, :] - ca[:, 1:-1, :]
+        v1 = v1 - box * torch.floor(v1 / box + 0.5)
+        v2 = v2 - box * torch.floor(v2 / box + 0.5)
+        eps = torch.tensor(1e-8, dtype=c.dtype, device=c.device)
+        cos_theta = (v1 * v2).sum(dim=-1) / (v1.norm(dim=-1).clamp_min(eps) * v2.norm(dim=-1).clamp_min(eps))
+        theta = torch.acos(cos_theta.clamp(-0.999999, 0.999999))
+        delta = theta - torch.tensor(theta0, dtype=c.dtype, device=c.device)
+        k_t = torch.tensor(k, dtype=c.dtype, device=c.device)
+        pe_angle = 0.5 * k_t * delta.pow(2).sum(dim=-1, keepdim=True)
+        grad = torch.autograd.grad(pe_angle.sum(), ca, create_graph=False, retain_graph=False)[0]
+        f_angle[:, :n_ca, :] = -grad.detach()
+        return f_angle, pe_angle.detach()
+
     def compute(self, c, nb_data):
         """
         Computes forces and potential energy using HIP kernels and AI correction.
@@ -135,6 +224,10 @@ class ForceField(nn.Module):
                     else:
                         nb_model = nb_data
                 f_core_model, pe = self.rust_backend.compute_nonbonded(coords_model.float(), nb_model, runtime_params)
+                f_bond_model, pe_bond = self._compute_coarse_backbone_bonds(coords_model.float())
+                f_angle_model, pe_angle = self._compute_coarse_backbone_angles(coords_model.float())
+                f_core_model = f_core_model + f_bond_model + f_angle_model
+                pe = pe + pe_bond + pe_angle
                 if project_virtual_to_ca:
                     f_core = f_core_model[:, :n_ca, :] + f_core_model[:, n_ca:(2 * n_ca), :]
                 else:
@@ -152,6 +245,10 @@ class ForceField(nn.Module):
         if nb_model is None or nb_model[0].shape[1] != coords_model.shape[1]:
             nb_model = self.sh.get_neighbor_data(coords_model)
         f_core_model, pe = self._compute_nonbonded_pytorch(coords_model, nb_model, to_fp32=True)
+        f_bond_model, pe_bond = self._compute_coarse_backbone_bonds(coords_model.float())
+        f_angle_model, pe_angle = self._compute_coarse_backbone_angles(coords_model.float())
+        f_core_model = f_core_model + f_bond_model + f_angle_model
+        pe = pe + pe_bond + pe_angle
         if project_virtual_to_ca:
             f_core = f_core_model[:, :n_ca, :] + f_core_model[:, n_ca:(2 * n_ca), :]
         else:
@@ -182,6 +279,24 @@ class ForceField(nn.Module):
         sigma_t = torch.tensor(sigma, dtype=dtype, device=device)
         eps_t = torch.tensor(eps, dtype=dtype, device=device)
         eps_small = torch.tensor(1e-8, dtype=dtype, device=device)
+        electrostatic_scale = torch.tensor(
+            float(self.params.get("electrostatic_scale", 4.0)),
+            dtype=dtype,
+            device=device,
+        )
+        debye_kappa = torch.tensor(
+            float(self.params.get("debye_kappa", 0.125)),
+            dtype=dtype,
+            device=device,
+        )
+        residue_params = self._residue_forcefield_params_for_coords(
+            N,
+            device=device,
+            dtype=dtype,
+            base_sigma=float(sigma),
+            base_epsilon=float(eps),
+            charge_scale=float(self.params.get("residue_charge_scale", 1.0)),
+        )
 
         # Gather neighbor coordinates with mask
         K = nb_idx.shape[-1]
@@ -201,19 +316,45 @@ class ForceField(nn.Module):
         r = torch.where(mask_bool, r, torch.ones_like(r))
         mask = mask_bool.to(dtype)
 
-        r_sigma_inv = sigma_t / (r + eps_small)
+        if residue_params is None:
+            sigma_pair = sigma_t
+            eps_pair = eps_t
+            charge_pair = torch.zeros_like(r)
+        else:
+            sigma_atom, eps_atom, charge_atom = residue_params
+            sigma_center = sigma_atom.view(1, N, 1)
+            eps_center = eps_atom.view(1, N, 1)
+            charge_center = charge_atom.view(1, N, 1)
+            sigma_neigh = sigma_atom[safe_idx]
+            eps_neigh = eps_atom[safe_idx]
+            charge_neigh = charge_atom[safe_idx]
+            sigma_pair = 0.5 * (sigma_center + sigma_neigh)
+            eps_pair = torch.sqrt((eps_center * eps_neigh).clamp_min(0.0))
+            charge_pair = charge_center * charge_neigh
+
+        r_sigma_inv = sigma_pair / (r + eps_small)
         r_sigma_inv_6 = r_sigma_inv.pow(6)
         r_sigma_inv_12 = r_sigma_inv_6.pow(2)
 
-        lj_pot = 4 * eps_t * (r_sigma_inv_12 - r_sigma_inv_6)
-        lj_force_mag = 4 * eps_t * (12 * r_sigma_inv_12 - 6 * r_sigma_inv_6) / (r + eps_small)
+        lj_pot = 4 * eps_pair * (r_sigma_inv_12 - r_sigma_inv_6)
+        lj_force_mag = 4 * eps_pair * (12 * r_sigma_inv_12 - 6 * r_sigma_inv_6) / (r + eps_small)
+        screened = torch.exp(-debye_kappa * r)
+        coulomb_pot = electrostatic_scale * charge_pair * screened / (r + eps_small)
+        coulomb_force_mag = (
+            electrostatic_scale
+            * charge_pair
+            * screened
+            * (debye_kappa * r + 1.0)
+            / ((r + eps_small).pow(2))
+        )
 
-        lj_pot_masked = lj_pot * mask
-        f_pair = lj_force_mag.unsqueeze(-1) * dr / (r.unsqueeze(-1) + eps_small)
+        total_pot_masked = (lj_pot + coulomb_pot) * mask
+        total_force_mag = lj_force_mag + coulomb_force_mag
+        f_pair = total_force_mag.unsqueeze(-1) * dr / (r.unsqueeze(-1) + eps_small)
         f_pair = f_pair * mask.unsqueeze(-1)
 
         # Neighbor list는 (i->j, j->i)를 포함하므로 energy는 0.5 배로 보정
-        pe = 0.5 * lj_pot_masked.sum(dim=-1).sum(dim=-1, keepdim=True) # [B, 1]
+        pe = 0.5 * total_pot_masked.sum(dim=-1).sum(dim=-1, keepdim=True) # [B, 1]
         f_total = f_pair.sum(dim=2) # [B, N, 3]
 
         # [NEW] Cast result to FP32 if requested
@@ -250,6 +391,10 @@ class ForceField(nn.Module):
         )
         nb_ref = sh_ref.get_neighbor_data(coords_model, force_rebuild=True)
         f_ref_model, pe_ref = self._compute_nonbonded_pytorch(coords_model, nb_ref, to_fp32=True)
+        f_bond_model, pe_bond = self._compute_coarse_backbone_bonds(coords_model.float())
+        f_angle_model, pe_angle = self._compute_coarse_backbone_angles(coords_model.float())
+        f_ref_model = f_ref_model + f_bond_model + f_angle_model
+        pe_ref = pe_ref + pe_bond + pe_angle
 
         if project_virtual_to_ca:
             f_ref = f_ref_model[:, :n_ca, :] + f_ref_model[:, n_ca:(2 * n_ca), :]

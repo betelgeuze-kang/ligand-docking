@@ -132,11 +132,20 @@ class TopologyFactory:
     def expand_residue_types_for_virtual_sc(self):
         """
         Returns residue types aligned to a CA+SC representation.
-        Each residue type is repeated for (CA, SC) beads.
+        Coordinates are stored as [all CA beads, all virtual SC beads].
         """
         if not self.use_virtual_sc:
             return self.residue_types
-        return self.residue_types.repeat_interleave(2)
+        return torch.cat([self.residue_types, self.residue_types], dim=0)
+
+    def residue_types_for_coordinate_count(self, n_atoms: int) -> torch.Tensor | None:
+        """Return residue types aligned to the current coordinate tensor layout."""
+        n = int(n_atoms)
+        if n == int(self.n_res):
+            return self.residue_types
+        if self.use_virtual_sc and n == int(self.n_res) * 2:
+            return self.expand_residue_types_for_virtual_sc()
+        return None
 
     # [NEW] AdResS-specific methods
     def _create_adress_atom_types(self):

@@ -73,6 +73,8 @@ class DataGenerator:
             "force_scale": 1.0,
             "cooling_rate": 0.0,
             "hydro_strength": 1.0,
+            "backbone_bond_k": 1.5,
+            "backbone_bond_r0": 3.8,
             "k_angle": 25.0,
             "theta0": 109.5,
             "k_dihedral": 1.0,
@@ -98,6 +100,8 @@ class DataGenerator:
         self.runtime_profile["force_scale"] = float(np.clip(self.runtime_profile.get("force_scale", 1.0), 0.5, 1.5))
         self.runtime_profile["cooling_rate"] = float(np.clip(self.runtime_profile.get("cooling_rate", 0.0), -2.0, 2.0))
         self.runtime_profile["hydro_strength"] = float(np.clip(self.runtime_profile.get("hydro_strength", 1.0), 0.5, 1.5))
+        self.runtime_profile["backbone_bond_k"] = float(np.clip(self.runtime_profile.get("backbone_bond_k", 1.5), 0.0, 20.0))
+        self.runtime_profile["backbone_bond_r0"] = float(np.clip(self.runtime_profile.get("backbone_bond_r0", 3.8), 2.5, 5.5))
         self.runtime_profile["k_angle"] = float(np.clip(self.runtime_profile.get("k_angle", 25.0), 1.0, 200.0))
         self.runtime_profile["theta0"] = float(np.clip(self.runtime_profile.get("theta0", 109.5), 60.0, 180.0))
         self.runtime_profile["k_dihedral"] = float(np.clip(self.runtime_profile.get("k_dihedral", 1.0), 0.0, 50.0))
@@ -133,6 +137,23 @@ class DataGenerator:
         finite_penalty = 1.0 - min(max(finite_ratio, 0.0), 1.0)
         score = 1.0 - (0.45 * max_norm_penalty + 0.35 * target_penalty + 0.20 * finite_penalty)
         return float(np.clip(score, 0.0, 1.0))
+
+    def _build_forcefield_params(self) -> dict[str, float]:
+        hydro_scale = float(self.runtime_profile.get("hydro_strength", 1.0))
+        ionic_strength = float(self.runtime_profile.get("ionic_strength", 0.15))
+        force_scale = float(self.runtime_profile.get("force_scale", 1.0))
+        return {
+            'd_e': 20.0 * hydro_scale,
+            'eps_solv': 25.0 * (1.0 + 0.5 * ionic_strength),
+            'sigma': 3.8 * (1.0 + 0.05 * (force_scale - 1.0)),
+            'r0': 4.2,
+            'electrostatic_scale': 4.0,
+            'debye_kappa': 0.125 * (1.0 + ionic_strength),
+            'backbone_bond_k': float(self.runtime_profile.get("backbone_bond_k", 1.5)),
+            'backbone_bond_r0': float(self.runtime_profile.get("backbone_bond_r0", 3.8)),
+            'backbone_angle_k': float(self.runtime_profile.get("k_angle", 25.0)) / 25.0,
+            'backbone_angle_theta0_rad': math.radians(float(self.runtime_profile.get("theta0", 109.5))),
+        }
 
     def generate(self):
         """
@@ -180,15 +201,7 @@ class DataGenerator:
                 self.dev,
                 **{k: v for k, v in self.neighbor_settings.items() if k != "grid_spacing"},
             )
-            hydro_scale = float(self.runtime_profile.get("hydro_strength", 1.0))
-            ionic_strength = float(self.runtime_profile.get("ionic_strength", 0.15))
-            force_scale = float(self.runtime_profile.get("force_scale", 1.0))
-            ff_params = {
-                'd_e': 20.0 * hydro_scale,
-                'eps_solv': 25.0 * (1.0 + 0.5 * ionic_strength),
-                'sigma': 3.8 * (1.0 + 0.05 * (force_scale - 1.0)),
-                'r0': 4.2,
-            } # Standard params + conservative runtime perturbation
+            ff_params = self._build_forcefield_params() # Standard params + conservative runtime perturbation
             ff = ForceField(
                 top,
                 params=ff_params,

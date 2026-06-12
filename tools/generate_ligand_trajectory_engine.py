@@ -1360,6 +1360,12 @@ def _engine_cache_key(
     friction: float,
     kT: float,
     protein_sequence: str = "",
+    electrostatic_scale: float = 4.0,
+    debye_kappa: float = 0.125,
+    backbone_bond_k: float = 1.5,
+    backbone_bond_r0: float = 3.8,
+    backbone_angle_k: float = 0.0,
+    backbone_angle_theta0_rad: float = 2.0,
 ) -> Tuple[Any, ...]:
     return (
         int(n_total),
@@ -1367,6 +1373,12 @@ def _engine_cache_key(
         float(box_size_A),
         float(ff_sigma),
         float(ff_eps_solv),
+        float(electrostatic_scale),
+        float(debye_kappa),
+        float(backbone_bond_k),
+        float(backbone_bond_r0),
+        float(backbone_angle_k),
+        float(backbone_angle_theta0_rad),
         str(force_backend),
         bool(require_rust_hip),
         float(dt_fs),
@@ -1392,6 +1404,12 @@ def _get_engine_resources(
     engine_cache: Optional[Dict[Tuple[Any, ...], Dict[str, Any]]],
     engine_cache_max_entries: int,
     protein_sequence: str = "",
+    electrostatic_scale: float = 4.0,
+    debye_kappa: float = 0.125,
+    backbone_bond_k: float = 1.5,
+    backbone_bond_r0: float = 3.8,
+    backbone_angle_k: float = 0.0,
+    backbone_angle_theta0_rad: float = 2.0,
 ) -> Dict[str, Any]:
     key = _engine_cache_key(
         n_total=n_total,
@@ -1399,6 +1417,12 @@ def _get_engine_resources(
         box_size_A=box_size_A,
         ff_sigma=ff_sigma,
         ff_eps_solv=ff_eps_solv,
+        electrostatic_scale=electrostatic_scale,
+        debye_kappa=debye_kappa,
+        backbone_bond_k=backbone_bond_k,
+        backbone_bond_r0=backbone_bond_r0,
+        backbone_angle_k=backbone_angle_k,
+        backbone_angle_theta0_rad=backbone_angle_theta0_rad,
         force_backend=force_backend,
         require_rust_hip=require_rust_hip,
         dt_fs=dt_fs,
@@ -1430,6 +1454,12 @@ def _get_engine_resources(
             "sigma": float(ff_sigma),
             "r0": 4.2,
             "box_size": float(box_size_A),
+            "electrostatic_scale": float(electrostatic_scale),
+            "debye_kappa": float(debye_kappa),
+            "backbone_bond_k": float(backbone_bond_k),
+            "backbone_bond_r0": float(backbone_bond_r0),
+            "backbone_angle_k": float(backbone_angle_k),
+            "backbone_angle_theta0_rad": float(backbone_angle_theta0_rad),
         },
         force_backend=str(force_backend),
     ).to(device)
@@ -1608,6 +1638,12 @@ def _simulate_with_engine_batch(
     engine_cache_max_entries: int = 16,
     pocket_protein_max_atoms: int = 256,
     protein_sequence: str = "",
+    electrostatic_scale: float = 4.0,
+    debye_kappa: float = 0.125,
+    backbone_bond_k: float = 1.5,
+    backbone_bond_r0: float = 3.8,
+    backbone_angle_k: float = 0.0,
+    backbone_angle_theta0_rad: float = 2.0,
 ) -> Tuple[np.ndarray, np.ndarray, str, int, bool, int, Dict[str, Any]]:
     if protein.shape[0] <= 0:
         protein = np.zeros((1, 3), dtype=np.float32)
@@ -1671,6 +1707,12 @@ def _simulate_with_engine_batch(
         engine_cache=engine_cache,
         engine_cache_max_entries=int(engine_cache_max_entries),
         protein_sequence=str(protein_sequence or ""),
+        electrostatic_scale=float(electrostatic_scale),
+        debye_kappa=float(debye_kappa),
+        backbone_bond_k=float(backbone_bond_k),
+        backbone_bond_r0=float(backbone_bond_r0),
+        backbone_angle_k=float(backbone_angle_k),
+        backbone_angle_theta0_rad=float(backbone_angle_theta0_rad),
     )
     ff = engine["ff"]
     integrator = engine["integrator"]
@@ -2105,6 +2147,12 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                     box_size_A=float(args.box_size_A),
                     ff_sigma=float(args.ff_sigma),
                     ff_eps_solv=float(args.ff_eps_solv),
+                    electrostatic_scale=float(args.electrostatic_scale),
+                    debye_kappa=float(args.debye_kappa),
+                    backbone_bond_k=float(args.backbone_bond_k),
+                    backbone_bond_r0=float(args.backbone_bond_r0),
+                    backbone_angle_k=float(args.backbone_angle_k),
+                    backbone_angle_theta0_rad=float(args.backbone_angle_theta0_rad),
                     force_backend=str(args.force_backend),
                     require_rust_hip=bool(args.require_rust_hip),
                     seed=int(min(x["seed_i"] for x in probe)),
@@ -2436,6 +2484,12 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
                 box_size_A=float(args.box_size_A),
                 ff_sigma=float(args.ff_sigma),
                 ff_eps_solv=float(args.ff_eps_solv),
+                electrostatic_scale=float(args.electrostatic_scale),
+                debye_kappa=float(args.debye_kappa),
+                backbone_bond_k=float(args.backbone_bond_k),
+                backbone_bond_r0=float(args.backbone_bond_r0),
+                backbone_angle_k=float(args.backbone_angle_k),
+                backbone_angle_theta0_rad=float(args.backbone_angle_theta0_rad),
                 force_backend=str(args.force_backend),
                 require_rust_hip=bool(args.require_rust_hip),
                 seed=batch_seed,
@@ -3120,6 +3174,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--box-size-A", type=float, default=120.0)
     p.add_argument("--ff-sigma", type=float, default=3.8)
     p.add_argument("--ff-eps-solv", type=float, default=25.0)
+    p.add_argument("--electrostatic-scale", type=float, default=4.0)
+    p.add_argument("--debye-kappa", type=float, default=0.125)
+    p.add_argument("--backbone-bond-k", type=float, default=1.5)
+    p.add_argument("--backbone-bond-r0", type=float, default=3.8)
+    p.add_argument("--backbone-angle-k", type=float, default=0.0)
+    p.add_argument("--backbone-angle-theta0-rad", type=float, default=2.0)
     p.add_argument("--force-backend", type=str, default="auto", choices=["auto", "pytorch"])
     p.add_argument("--require-rust-hip", action=argparse.BooleanOptionalAction, default=True)
     p.add_argument(

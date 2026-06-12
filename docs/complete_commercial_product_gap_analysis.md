@@ -42,9 +42,16 @@
 ### A. 과학 엔진 정밀도 — *가장 큰 실제 갭* (P0/P1)
 
 **현황**
-- `core/topology.py`: 기본이 **placeholder alanine** 토폴로지 + sequence-mapped 2-bead(CA + virtual sidechain).
+- `core/topology.py`: 기본은 claim-safe **placeholder alanine**으로 시작하지만,
+  sequence-mapped 2-bead(CA + virtual sidechain)와 CA/SC block-layout residue type
+  alignment를 지원한다.
   All-atom 경로(`AdResS`)는 `ADRESS_PRODUCTION_ALLOWED` 환경변수로 게이트되어 사실상 비활성.
-- `core/forcefield.py`: 단순 LJ 성격의 힘장(`d_e/eps_solv/sigma/r0` 파라미터) + Rust/HIP 비결합 커널.
+- `core/forcefield.py`: fast-tier LJ 계열 힘장에 sequence-mapped residue class별
+  coarse sigma/epsilon mixing, screened acidic/basic residue charge proxy,
+  restricted CA backbone harmonic bond/angle terms를 더했고, Rust/HIP 비결합 커널은
+  단일 파라미터 fast path로 유지된다. `DataGenerator` runtime profile은 coarse
+  backbone bond/angle param을 ForceField로 전달하며, trajectory engine CLI/cache key도
+  coarse forcefield param surface를 노출한다.
 - `core/integrator.py`: Langevin 적분기(2-bead 수준).
 - AI 보정(`core/score_residual.py`, `core/onsps_backmap.py`)은 **bounded residual** 로만 사용.
 
