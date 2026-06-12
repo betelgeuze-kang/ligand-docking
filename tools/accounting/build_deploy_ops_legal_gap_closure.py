@@ -10,6 +10,10 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 from tools.product.build_product_rollout_execution_readiness import build_product_rollout_execution_readiness
+from tools.product.build_product_rollout_execution_smoke_receipt import (
+    DEFAULT_RECEIPT_CSV as DEFAULT_ROLLOUT_SMOKE_RECEIPT_CSV,
+    build_product_rollout_execution_smoke_receipt,
+)
 from tools.product.build_third_party_license_review_gate import build_third_party_license_review_gate
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -18,9 +22,9 @@ DEFAULT_OUT_CSV = "runs/deploy_ops_legal_gap_closure_current.csv"
 DEFAULT_OUT_MD = "runs/deploy_ops_legal_gap_closure_current.md"
 
 CLAIM_BOUNDARY = (
-    "Deploy/ops/legal gap closure status only; it audits rollout execution readiness, pager/TLS operator intake, "
-    "third-party license review, and LICENSE technical consistency while keeping rollout_executed=false and "
-    "legal_advice_provided=false. It does not deploy services, contact pager providers, or provide legal advice."
+    "Deploy/ops/legal gap closure status only; it audits rollout execution readiness, the separate R4 rollout "
+    "execution smoke receipt, pager/TLS operator intake, third-party license review, and LICENSE technical consistency. "
+    "It does not deploy services, contact pager providers, mutate external state, or provide legal advice."
 )
 
 
@@ -62,7 +66,17 @@ def _sha256_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def _row(gap_id: str, gap: str, status: str, evidence: str, observed: str, next_action: str) -> dict[str, Any]:
+def _row(
+    gap_id: str,
+    gap: str,
+    status: str,
+    evidence: str,
+    observed: str,
+    next_action: str,
+    *,
+    rollout_executed: bool = False,
+    external_state_mutated: bool = False,
+) -> dict[str, Any]:
     return {
         "gap_id": gap_id,
         "gap": gap,
@@ -71,15 +85,16 @@ def _row(gap_id: str, gap: str, status: str, evidence: str, observed: str, next_
         "observed": observed,
         "next_action": next_action,
         "release_blocker": status != "closed",
-        "rollout_executed": False,
+        "rollout_executed": rollout_executed,
         "legal_advice_provided": False,
-        "external_state_mutated": False,
+        "external_state_mutated": external_state_mutated,
     }
 
 
 def build_deploy_ops_legal_gap_closure(
     *,
     rollout_readiness_packet: dict[str, Any] | None = None,
+    rollout_smoke_receipt_packet: dict[str, Any] | None = None,
     license_review_packet: dict[str, Any] | None = None,
     license_decision_packet: dict[str, Any] | None = None,
     security_contract_packet: dict[str, Any] | None = None,
@@ -99,6 +114,13 @@ def build_deploy_ops_legal_gap_closure(
         operator_csv_present=_resolve(operator_csv).exists(),
         operator_csv=operator_csv,
     )
+    smoke_rows = _read_csv_rows(DEFAULT_ROLLOUT_SMOKE_RECEIPT_CSV)
+    rollout_smoke_receipt = rollout_smoke_receipt_packet or build_product_rollout_execution_smoke_receipt(
+        readiness_packet=rollout,
+        receipt_rows=smoke_rows,
+        receipt_csv_present=_resolve(DEFAULT_ROLLOUT_SMOKE_RECEIPT_CSV).exists(),
+        receipt_csv=DEFAULT_ROLLOUT_SMOKE_RECEIPT_CSV,
+    )
     audit = _read_json_if_present("runs/self_hosted_license_distribution_audit_current.json")
     review_csv = "runs/third_party_license_review_operator_intake.csv"
     review_rows = _read_csv_rows(review_csv)
@@ -112,8 +134,10 @@ def build_deploy_ops_legal_gap_closure(
     security_summary = _summary(security)
 
     rollout_summary = _summary(rollout)
+    rollout_smoke_summary = _summary(rollout_smoke_receipt)
     license_review_summary = _summary(license_review)
     rollout_closed = rollout_summary.get("status") == "product_rollout_execution_readiness_ready"
+    rollout_smoke_closed = rollout_smoke_summary.get("status") == "product_rollout_execution_smoke_receipt_ready"
     pager_closed = rollout_closed and bool(rollout_summary.get("alert_smoke_ready"))
     security_py = _read_text("api/security.py")
     config_py = _read_text("api/config.py")
@@ -130,12 +154,29 @@ def build_deploy_ops_legal_gap_closure(
 
     rows = [
         _row(
-            "DEP-ROLLOUT",
-            "Rollout execution smoke readiness",
+            "DEP-ROLLOUT-READINESS",
+            "Rollout execution readiness preflight",
             "closed" if rollout_closed else "open",
             "runs/product_rollout_execution_readiness_current.json",
             f"status={rollout_summary.get('status')}; rollout_executed=false",
             "Fill operator rollout intake CSV and run separate operator-approved rollout smoke.",
+        ),
+        _row(
+            "DEP-ROLLOUT-SMOKE",
+            "Actual R4 rollout execution smoke receipt",
+            "closed" if rollout_smoke_closed else "open",
+            "runs/product_rollout_execution_smoke_receipt_current.json",
+            (
+                f"status={rollout_smoke_summary.get('status')}; "
+                f"rollout_executed={rollout_smoke_summary.get('rollout_executed')}; "
+                f"external_state_mutated={rollout_smoke_summary.get('external_state_mutated')}; "
+                f"pager_provider_contacted={rollout_smoke_summary.get('pager_provider_contacted')}; "
+                f"ingress_certificate_verified_live="
+                f"{rollout_smoke_summary.get('ingress_certificate_verified_live')}"
+            ),
+            "Run the separate R4-approved rollout execution smoke and attach its receipt.",
+            rollout_executed=bool(rollout_smoke_summary.get("rollout_executed") is True),
+            external_state_mutated=bool(rollout_smoke_summary.get("external_state_mutated") is True),
         ),
         _row(
             "DEP-PAGER",
@@ -184,7 +225,17 @@ def build_deploy_ops_legal_gap_closure(
         "open_gap_ids": [row["gap_id"] for row in open_rows],
         "current_primary_open_gap_id": first_open["gap_id"] if first_open else "none",
         "current_next_action": first_open["next_action"] if first_open else "All deploy/ops/legal boundary gaps are closed.",
-        "rollout_executed": False,
+        "rollout_execution_readiness_ready": rollout_closed,
+        "rollout_smoke_receipt_status": rollout_smoke_summary.get("status"),
+        "rollout_smoke_receipt_ready": rollout_smoke_closed,
+        "rollout_executed": bool(rollout_smoke_summary.get("rollout_executed") is True),
+        "rollout_smoke_external_state_mutated": bool(rollout_smoke_summary.get("external_state_mutated") is True),
+        "rollout_smoke_pager_provider_contacted": bool(
+            rollout_smoke_summary.get("pager_provider_contacted") is True
+        ),
+        "rollout_smoke_ingress_certificate_verified_live": bool(
+            rollout_smoke_summary.get("ingress_certificate_verified_live") is True
+        ),
         "pager_provider_contacted": False,
         "ingress_certificate_verified_live": False,
         "legal_advice_provided": False,

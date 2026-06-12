@@ -62,18 +62,18 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build a CAMEO model1/top5 selection packet from candidate rows.")
     parser.add_argument("--candidates-csv", required=True)
     parser.add_argument("--target-id", default="")
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
-def main() -> None:
-    args = parse_args()
+def main(argv: list[str] | None = None) -> None:
+    args = parse_args(argv)
     payload = build_selection_packet(_read_csv_rows(args.candidates_csv), target_id=args.target_id)
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])
@@ -82,4 +82,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -263,6 +263,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "goal_bottleneck_briefing" in artifact_ids
     assert "product_full_commercial_blocker_evidence_matrix" in artifact_ids
     assert "product_commercial_readiness_execution_ladder" in artifact_ids
+    assert "product_rollout_execution_smoke_receipt" in artifact_ids
+    assert "deploy_ops_legal_gap_closure" in artifact_ids
+    assert "science_claim_promotion_gap_closure" in artifact_ids
+    assert "master_gap_closure_rollup" in artifact_ids
     assert "python3 tools/build_api_runner_profile_promotion_operator_receipt.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "product_release_bundle_semantic_ready" in status_ids
     assert "goal_api_surface_contract_semantic_ready" in status_ids
@@ -346,6 +350,27 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/product_full_commercial_blocker_evidence_matrix_current.json" in commercial_handoff_spec[
         "depends_on"
     ]
+    rollout_smoke_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "product_rollout_execution_smoke_receipt"
+    )
+    assert "runs/product_rollout_execution_readiness_current.json" in rollout_smoke_spec["depends_on"]
+    deploy_ops_spec = next(
+        spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "deploy_ops_legal_gap_closure"
+    )
+    assert "runs/product_rollout_execution_smoke_receipt_current.json" in deploy_ops_spec["depends_on"]
+    science_claim_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "science_claim_promotion_gap_closure"
+    )
+    assert "runs/gpcr_conditional_prior_promotion_gate_current.json" in science_claim_spec["depends_on"]
+    master_rollup_spec = next(
+        spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "master_gap_closure_rollup"
+    )
+    assert "runs/science_claim_promotion_gap_closure_current.json" in master_rollup_spec["depends_on"]
+    assert "runs/deploy_ops_legal_gap_closure_current.json" in master_rollup_spec["depends_on"]
     privacy_scan_spec = next(
         spec
         for spec in mod.DEFAULT_ARTIFACT_SPECS
@@ -389,6 +414,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "python3 tools/build_product_commercial_readiness_operator_packet_freshness.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_commercial_readiness_execution_ladder.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_commercial_readiness_handoff_bundle.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_product_rollout_execution_smoke_receipt.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_deploy_ops_legal_gap_closure.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_science_claim_promotion_gap_closure.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_master_gap_closure_rollup.py" in mod.RELEASE_REFRESH_COMMANDS
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_scope_breadth_closure_checklist.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_scope_breadth_evidence_receipt.py")
     )
@@ -433,6 +462,21 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_commercial_readiness_handoff_bundle.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_ledger_privacy_scan.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_rollout_execution_readiness.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_rollout_execution_smoke_receipt.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_rollout_execution_smoke_receipt.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_deploy_ops_legal_gap_closure.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_deploy_ops_legal_gap_closure.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_master_gap_closure_rollup.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_science_claim_promotion_gap_closure.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_master_gap_closure_rollup.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_master_gap_closure_rollup.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_release_source_of_truth_gate.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/product/build_engine_refinement_tier_readiness.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/product/build_engine_refinement_claim_evidence_receipt.py")

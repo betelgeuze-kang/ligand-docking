@@ -68,7 +68,7 @@
 | ID | 항목 | 상태 | 근거 |
 |---|---|---|---|
 | HW-DEP-02 | dispatch worker deploy (compose/systemd/k8s) | CLOSED | `deploy/docker-compose.product.yml` `api-docking-dispatch`, `deploy/systemd/micf-api-docking-dispatch.service`, `deploy/k8s/dispatch-deployment.yaml` |
-| HW-PROF-01 | HTVS profile blind preset + request.json | CLOSED | `ligand_htvs_pipeline_default.json` `--pipeline-preset-json`, `--docking-request-json` |
+| HW-PROF-01 | HTVS profile API dispatch preset + request.json | CLOSED | `ligand_htvs_pipeline_default.json` `--pipeline-preset-json`, `ligand_htvs_api_dispatch_smoke_v1.json`, `--docking-request-json` |
 | HW-PROF-02 | backmapping ledger materialize | CLOSED | `materialize_docking_backmapping_request.py`, `backmapping_scoring.production.json` `--docking-request-json` |
 | HW-PROF-04 | topk delivery production profile | CLOSED | `ligand_topk_delivery.production.json`, `api/validated_runner.py` allowlist |
 | CB-EXEC | execution approval fail-closed wiring | CLOSED | `betelgeuze_product/docking_request.py` `_execution_approval_posture`, `execution_enabled=false` 유지 |
@@ -93,31 +93,39 @@
 
 ---
 
-## 1f) 과학 claim 승격 경계 클로저 (2026-06-06) — CLOSED
+## 1f) 과학 claim 승격 경계 클로저 (2026-06-06, 2026-06-13 재확인) — ACCOUNTING CLOSED / GPCR CLAIM PENDING
 
 | ID | 영역 | accounting | 실제 claim 경계 | 상태 |
 |---|---|---|---|---|
-| SCI-GPCR | GPCR broad family | breadth gate green | CI-low/O PRM1 blocked, `claim_promotion_allowed=false` | CLOSED |
+| SCI-GPCR | GPCR broad family | breadth gate green | CI-low/OPRM1 blocked, `claim_promotion_allowed=false` | PENDING |
 | SCI-TRANS | Transporter | placeholder 0, functional surrogate | direct binding kcal blocked | CLOSED |
 | SCI-CA2-PXR | CA2/PXR | readiness fixture green | replacement workbook/sync boundary scaffold | CLOSED |
 | SCI-WETLAB | Wetlab | simulation packet green | wetlab-proven hit out-of-claim | CLOSED |
 | SCI-OPENMM | OpenMM | 2-bead 11/11 | internal all-atom/GB-SA/explicit-shell/FEP scaffold exists, OpenMM/Schrodinger-grade validation blocked | CLOSED |
 
+최신 `runs/science_claim_promotion_gap_closure_current.json`은
+`blocked_science_claim_promotion_gap_closure`, `open_gap_ids=[SCI-GPCR]`,
+`current_next_action=Maintain conditional prior gate and keep broad-family claim promotion blocked until CI-low and OPRM1 gates clear.`다.
 검증: `tests/unit/test_build_science_claim_promotion_gap_closure.py`, `tools/accounting/build_science_claim_promotion_gap_closure.py`, `tools/product/ci_contract_fixture_packets.py` `write_science_claim_promotion_closure_packets()`.
 
 ---
 
-## 1g) 배포·운영·법무 경계 클로저 (2026-06-06) — CLOSED
+## 1g) 배포·운영·법무 경계 클로저 (2026-06-06, 2026-06-13 재확인) — READINESS CLOSED / R4 SMOKE PENDING
 
 | ID | 항목 | 상태 | 근거 |
 |---|---|---|---|
-| DEP-ROLLOUT | rollout execution smoke readiness | CLOSED | `runs/product_rollout_execution_readiness_current.json`, operator intake CSV |
+| DEP-ROLLOUT-READINESS | rollout execution readiness preflight | CLOSED | `runs/product_rollout_execution_readiness_current.json`, operator intake CSV |
+| DEP-ROLLOUT-SMOKE | actual R4 rollout execution smoke receipt | PENDING | `runs/product_rollout_execution_smoke_receipt_current.json`: `blocked_product_rollout_execution_smoke_receipt`, `receipt_csv_present=false`, `rollout_executed=false` |
 | DEP-PAGER | pager/webhook mount confirmation | CLOSED | closed-loop alert smoke + operator mount flag |
 | DEP-TLS | ingress/TLS fail-closed guard | CLOSED | `api/security.py` TLS verification guard |
 | DEP-JSZIP | JSZip dual-license review | CLOSED | `runs/third_party_license_review_gate_current.json` |
 | DEP-LICENSE | LICENSE hash/technical gate | CLOSED | `LICENSE` ↔ `legal/proprietary-license-betelgeuze.txt`; `legal_advice_provided=false` 유지 |
 
-검증: `tests/unit/test_build_deploy_ops_legal_gap_closure.py`, `tools/accounting/build_deploy_ops_legal_gap_closure.py`, `write_deploy_ops_legal_closure_packets()`.
+검증: `tests/unit/test_build_product_rollout_execution_smoke_receipt.py`,
+`tests/unit/test_build_deploy_ops_legal_gap_closure.py`,
+`tools/product/build_product_rollout_execution_smoke_receipt.py`,
+`tools/accounting/build_deploy_ops_legal_gap_closure.py`,
+`write_deploy_ops_legal_closure_packets()`.
 
 ---
 
@@ -137,7 +145,7 @@
 
 ---
 
-## 1i) 잔여 상용·AI·CAMEO·master rollup 클로저 (2026-06-06) — CLOSED
+## 1i) 잔여 상용·AI·CAMEO·master rollup 클로저 (2026-06-06, 2026-06-13 재확인) — R4 SMOKE PENDING
 
 | ID | 영역 | 상태 | 근거 |
 |---|---|---|---|
@@ -145,7 +153,9 @@
 | PRODUCT-AI | Product AI architecture 7-gap | CLOSED | `runs/product_ai_architecture_gap_closure_current.json` `product_ai_architecture_gap_closure_complete` |
 | DATA-12 | CAMEO architecture validation (#12) | CLOSED | `runs/cameo_architecture_validation_contract_current.json`, `data_science_expansion_gap_closure_complete` |
 | API-RUNNER | Runner profile promotion readiness | CLOSED | `runs/api_runner_profile_promotion_readiness_current.json` `api_runner_profile_promotion_ready` |
-| MASTER | Master gap closure rollup | CLOSED | `runs/master_gap_closure_rollup_current.json` `master_gap_closure_rollup_complete` |
+| SCI-CLAIM | Science claim promotion rollup | PENDING | `runs/science_claim_promotion_gap_closure_current.json` `blocked_science_claim_promotion_gap_closure`, `open_gap_ids=[SCI-GPCR]` |
+| DEPLOY-OPS | Deploy/ops/legal rollup | PENDING | `runs/deploy_ops_legal_gap_closure_current.json` `blocked_deploy_ops_legal_gap_closure`, `open_gap_ids=[DEP-ROLLOUT-SMOKE]` |
+| MASTER | Master gap closure rollup | PENDING | `runs/master_gap_closure_rollup_current.json` `blocked_master_gap_closure_rollup`, `open_gap_ids=[SCI-CLAIM, DEPLOY-OPS]` |
 
 검증: `tests/unit/test_build_master_gap_closure_rollup.py`, `tests/unit/test_build_commercial_gap_closure_status.py`, `tests/unit/test_build_product_ai_architecture_gap_closure.py`, `tests/unit/test_build_data_science_expansion_gap_closure.py`, `tools/product/write_full_gap_closure_fixture_packets.py`, `tools/product/bootstrap_api_worker_contract_artifacts.py` post-bootstrap finalize.
 
@@ -153,6 +163,13 @@
 - `goal_readiness_rollup` → `goal_readiness_pending_operator_or_external_results` (`blocked_lane_count=0`)
 - `goal_operator_action_board` → `operator_actions_required` (execution/approval/cleanup 토큰은 operator 범위)
 - `claim_promotion_allowed=false`, `execution_enabled=false`, `rollout_executed=false` 유지
+- `runs/science_claim_promotion_gap_closure_current.json`은 GPCR broad-family claim
+  promotion을 `SCI-GPCR` open으로 유지한다. CI-low/OPRM1 gate가 clear되기 전에는
+  restricted GPCR evidence를 broad-family claim으로 승격하지 않는다.
+- `runs/product_rollout_execution_smoke_receipt_current.json`은 실제 R4 rollout smoke
+  receipt를 별도 검증하지만 현재 `blocked_product_rollout_execution_smoke_receipt`,
+  `receipt_csv_present=false`, `rollout_executed=false`이므로 deploy/ops/legal rollup과
+  master rollup은 full-commercial 관점에서 다시 pending이다.
 - `runs/product_launch_r4_preflight_current.json`은 local customer-flow, rollout
   readiness, release bundle, commercial-independence/license, third-party review,
   restricted engine readiness를 하나로 묶어 `product_launch_r4_preflight_ready`,
@@ -164,7 +181,10 @@
 
 ## 2) Operator 경계만 남은 영역 (accounting green, 실행/승인은 fail-closed)
 
-Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **실제 실행·승인·외부 결과**가 필요한 operator/external 경계이며, builder artifact가 green이어도 자동으로 닫히지 않는다.
+Tracked accounting roll-up 중 §1b–§1e, §1h, API runner readiness는 닫혔지만,
+§1f의 GPCR broad claim promotion과 §1g의 actual R4 rollout smoke receipt 때문에
+full-commercial master rollup은 pending이다. 아래는 **실제 실행·승인·외부 결과**가 필요한
+operator/external 경계이며, builder artifact가 green이어도 자동으로 닫히지 않는다.
 
 | 영역 | 현재 posture | 다음 operator 단계 |
 |---|---|---|
@@ -507,7 +527,10 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `product_full_commercial_blocker_evidence_matrix_current.json`을
   freshness row 및 semantic-ready row로 함께 검증해, R8 receipt와 상용 readiness
   handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
-  빠지지 않게 한다. 최신 goal API surface contract는 `check_count=9`,
+  빠지지 않게 한다. 최신 source-of-truth는 `row_count=49`, `pass_count=47`,
+  `blocker_count=2`, `stale_artifact_count=0`, `readme_drift_count=0`이며,
+  남은 blocker는 고객-facing AI report explanation/UX semantic readiness 2개다.
+  최신 goal API surface contract는 `check_count=9`,
   `pass_count=9`, `missing_full_commercial_visibility_token_count=0`이다.
   `product_ledger_privacy_scan_current.json`도 goal-facing JSON artifacts
   (`goal_readiness_rollup`, `goal_operator_action_board`, `goal_operator_intake_kit`,
@@ -833,6 +856,13 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `blocker_count=0`이다.
   `rollout_executed=false`, `pager_provider_contacted=false`,
   `ingress_certificate_verified_live=false`, `external_state_mutated=false`.
+- `tools/product/build_product_rollout_execution_smoke_receipt.py`와
+  `runs/product_rollout_execution_smoke_receipt_current.json/.csv/.md`는 위 readiness
+  이후 **별도 R4 승인으로 실제 rollout smoke를 수행했다는 운영자 receipt**를 검증한다.
+  현재 상태는 `blocked_product_rollout_execution_smoke_receipt`,
+  `receipt_csv_present=false`, `receipt_row_count=0`, `rollout_executed=false`,
+  `external_state_mutated=false`다. 이 산출물은 builder 자체가 배포/푸쉬/서비스 재시작을
+  실행하지 않고, 실행 후 남겨진 receipt만 read-only로 검증한다.
 - `deploy/product_release_bundle.py`와 `runs/product_release_bundle_current.json/.md`는
   security contract, rollout dry-run plan, alert delivery smoke, runner profile
   enablement work order, API runner profile promotion readiness gate/operator template,
@@ -864,8 +894,15 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   commercial readiness operator packet/freshness/execution ladder/handoff,
   최종 release bundle 재생성을 포함하며,
   최신 실행 결과는
-  `product_release_current_refresh_verified`, `command_count=43`, `executed_count=43`,
-  `failed_count=0`, `final_gate_verification_ready=true`, `final_gate_blocker_count=0`이다.
+  `blocked_product_release_current_refresh`, `command_count=47`, `executed_count=47`,
+  `failed_count=0`, `final_gate_verification_ready=false`, `final_gate_blocker_count=2`이다.
+- `runs/deploy_ops_legal_gap_closure_current.json`은 이제 rollout readiness와 actual
+  rollout smoke receipt를 분리해 `blocked_deploy_ops_legal_gap_closure`,
+  `closed_gap_count=5/6`, `open_gap_ids=[DEP-ROLLOUT-SMOKE]`로 기록한다.
+  `runs/science_claim_promotion_gap_closure_current.json`도 GPCR broad claim promotion
+  때문에 `blocked_science_claim_promotion_gap_closure`, `open_gap_ids=[SCI-GPCR]`이며,
+  `runs/master_gap_closure_rollup_current.json`은
+  `blocked_master_gap_closure_rollup`, `open_gap_ids=[SCI-CLAIM, DEPLOY-OPS]`다.
 
 **병목 원인**
 - hosted/상용 SaaS화 자체가 productization roadmap에 없음.
@@ -884,13 +921,16 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   1차 완료.
 - CI workflow는 API worker/deploy contract와 release bundle local decision artifact
   refresh를 1차 완료; build/push/deploy rollout dry-run/approval gate는 1차 완료.
-- Model registry + signed artifact + rollback은 1차 완료; 다음은 operator promotion
+- Model registry + signed artifact + rollback은 1차 완료; operator promotion
   policy + release bundle linkage와 rollout execution readiness gate는 1차 완료;
-  R4 launch preflight도 1차 완료. 다음은 explicit R4/operator-approved rollout 실행 smoke.
-- release source-of-truth gate는 R4 preflight, R8 scope-breadth receipt, goal
-  operator intake kit, commercial readiness execution ladder, API/bottleneck visibility
-  포함 refresh 이후 `product_release_source_of_truth_gate_ready`, `pass_count=45/45`,
-  `blocker_count=0`, `stale_artifact_count=0`으로 재검증됐다.
+  R4 launch preflight도 1차 완료. 다음은 explicit R4/operator-approved rollout 실행 smoke
+  receipt 작성과 검증.
+- release source-of-truth gate는 R4 preflight, R4 rollout smoke receipt artifact,
+  R8 scope-breadth receipt, goal operator intake kit, commercial readiness execution
+  ladder, API/bottleneck visibility, master gap closure rollup 포함 refresh 이후
+  `blocked_product_release_source_of_truth_gate`, `pass_count=47/49`,
+  `blocker_count=2`, `stale_artifact_count=0`으로 재검증됐다. 남은 blocker는
+  고객-facing AI report explanation/UX semantic readiness다.
 - `prometheus_client` 기반 실제 metrics endpoint는 1차 완료.
 - Alert rules + paged webhook receiver + closed-loop alert delivery smoke는 1차 완료;
   다음은 operator webhook secret mount, 실제 pager provider delivery smoke,

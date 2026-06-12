@@ -433,6 +433,17 @@ def write_deploy_ops_legal_closure_packets(runs_dir: Path) -> None:
         "registry.example/micf-api@sha256:abc,true,true,true,true,true,Operator,2026-06-06T00:00:00Z,ready\n",
         encoding="utf-8",
     )
+    rollout_smoke_csv = runs_dir / "product_rollout_execution_smoke_receipt_operator_intake.csv"
+    rollout_smoke_csv.write_text(
+        "operator_decision,rollout_approval_token,hosted_exposure_approval_token,target_environment,"
+        "image_digest_or_tag,rollout_command_summary,image_pushed,service_restarted,live_healthcheck_passed,"
+        "metrics_scrape_verified,audit_log_write_verified,rollback_probe_verified,pager_provider_contacted,"
+        "ingress_certificate_verified_live,external_state_mutated,operator_name,reviewed_at_utc,operator_note\n"
+        "executed,APPROVE_PRODUCT_ROLLOUT,APPROVE_HOSTED_PRODUCT_API_EXPOSURE,k8s,"
+        "registry.example/micf-api@sha256:abc,kubectl rollout smoke,true,true,true,true,true,true,true,true,true,"
+        "Operator,2026-06-06T00:05:00Z,R4 rollout smoke passed\n",
+        encoding="utf-8",
+    )
     license_csv = runs_dir / "third_party_license_review_operator_intake.csv"
     license_csv.write_text(
         "package,operator_decision,approval_token,chosen_license_path,reviewer_name,reviewed_at_utc,operator_note\n"

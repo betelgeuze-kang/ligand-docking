@@ -72,7 +72,10 @@ def build_product_infrastructure_gap_closure() -> dict[str, Any]:
         '"enabled": true' in htvs_profile
         and "--pipeline-preset-json" in htvs_profile
         and "--docking-request-json" in htvs_profile
-        and "ligand_htvs_blind_gpcr_adrb2_4bead_v1.json" in htvs_profile
+        and (
+            "ligand_htvs_api_dispatch_smoke_v1.json" in htvs_profile
+            or "ligand_htvs_blind_gpcr_adrb2_4bead_v1.json" in htvs_profile
+        )
     )
     backmap_profile_ready = (
         '"enabled": true' in backmap_profile
@@ -108,11 +111,16 @@ def build_product_infrastructure_gap_closure() -> dict[str, Any]:
         ),
         _row(
             "HW-PROF-01",
-            "HTVS profile blind preset + docking request materialize",
+            "HTVS profile API dispatch preset + docking request materialize",
             "closed" if htvs_profile_ready else "open",
             "config/api_validated_runner_profiles/ligand_htvs_pipeline_default.json",
-            f"pipeline_preset_json={'--pipeline-preset-json' in htvs_profile}; docking_request_json={'--docking-request-json' in htvs_profile}",
-            "Enable HTVS profile with blind 4-bead preset and docking request.json consumption.",
+            (
+                f"pipeline_preset_json={'--pipeline-preset-json' in htvs_profile}; "
+                f"api_dispatch_smoke_preset={'ligand_htvs_api_dispatch_smoke_v1.json' in htvs_profile}; "
+                f"blind_4bead_preset={'ligand_htvs_blind_gpcr_adrb2_4bead_v1.json' in htvs_profile}; "
+                f"docking_request_json={'--docking-request-json' in htvs_profile}"
+            ),
+            "Enable HTVS profile with API dispatch or blind 4-bead preset and docking request.json consumption.",
         ),
         _row(
             "HW-PROF-02",

@@ -206,10 +206,12 @@
   `product_commercial_readiness_execution_ladder_current.json`,
   `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`,
   `product_full_commercial_blocker_evidence_matrix_current.json`의
-  freshness 및 semantic-ready 상태를 함께 검증한다. 최신 source-of-truth refresh는
-  `row_count=45`, `pass_count=45`, `blocker_count=0`으로, R8 receipt와 상용 readiness
-  handoff 입력 순서, 상위 상태
-  API/병목 visibility가 release freshness 체인 안에 들어와 있다.
+  freshness 및 semantic-ready 상태를 함께 검증한다. 최신 full refresh 후
+  source-of-truth는 `row_count=49`, `pass_count=47`, `blocker_count=2`,
+  `stale_artifact_count=0`, `readme_drift_count=0`이다. 파일 최신성 체인은 닫혔지만
+  `product_ai_report_explanation_packet_semantic_ready`와
+  `product_ai_report_ux_contract_semantic_ready`가 아직 고객-facing AI report semantic
+  readiness blocker로 남아 있다.
 - `product_ledger_privacy_scan_current.json`은 product/commercial readiness artifacts뿐
   아니라 `goal_readiness_rollup`, `goal_operator_action_board`,
   `goal_operator_intake_kit`, `goal_release_burndown_work_order`,
@@ -350,6 +352,13 @@ abstention 사유가 결과 번들에 명시.
 - `runs/api_customer_flow_release_evidence_current.json`과
   `runs/product_launch_r4_preflight_current.json`은 restricted customer-flow evidence와
   R4 직전 preflight를 local artifact 기준 green으로 묶는다.
+- `runs/product_rollout_execution_smoke_receipt_current.json`은 preflight 이후의 실제
+  R4 rollout smoke receipt를 별도 산출물로 검증하지만, 현재
+  `blocked_product_rollout_execution_smoke_receipt`, `receipt_csv_present=false`,
+  `rollout_executed=false`다. 따라서 `deploy_ops_legal_gap_closure_current.json`은
+  `open_gap_ids=[DEP-ROLLOUT-SMOKE]`, `master_gap_closure_rollup_current.json`은
+  GPCR broad-family science claim promotion pending과 함께
+  `open_gap_ids=[SCI-CLAIM, DEPLOY-OPS]`로 남는다.
 
 **갭**
 - 실제 docking/MD 실행과 rollout smoke는 여전히 explicit operator approval token과
@@ -357,7 +366,8 @@ abstention 사유가 결과 번들에 명시.
 
 **구현 방향**
 1. R4 preflight 산출물을 기반으로 Target/Action/Impact/Risk/Rollback/Verification을
-   제시하고 explicit operator approval을 받은 뒤 실행 smoke를 분리 수행.
+   제시하고 explicit operator approval을 받은 뒤 실행 smoke를 분리 수행한 다음
+   `product_rollout_execution_smoke_receipt`에 receipt를 기록한다.
 2. fail-closed 정책은 유지하되, **restricted scope 안에서는** profile 기반 무인 실행 경로를 SLA로 보장.
 3. dispatch worker(`api/docking_dispatch.py`, `run_api_docking_dispatch_worker.py`) 상시 운영화 + 모니터링.
 
@@ -373,6 +383,9 @@ durable queue → worker 실행 → signed 결과 번들 회수까지 무인 동
 - monitoring/`: `/metrics`, alert rules, closed-loop alert smoke 1차 통합.
 - R4 launch preflight는 `7/7 pass`, `authorized_for_external_mutation=false`,
   `launch_executed=false`로 실제 실행 전 상태를 명시한다.
+- actual rollout execution smoke receipt는 아직 blocked이며, 이 때문에 deploy/ops/legal
+  rollup과 master full-commercial rollup은 pending이다. master rollup에는 GPCR
+  broad-family claim promotion(`SCI-CLAIM`)도 open으로 함께 남아 있다.
 
 **갭**
 - 실제 pager provider delivery, ingress certificate(TLS) smoke, operator-approved rollout **실행** smoke 미완.
@@ -510,8 +523,9 @@ durable queue → worker 실행 → signed 결과 번들 회수까지 무인 동
 
 1. **회계상 닫힘 ≠ 제품 완성.** 현재 green은 "restricted scope + fail-closed 유지"의 정직한 경계이며,
    범용 정밀 제품 완성을 의미하지 않는다.
-2. **가장 빠른 상용 스위치는 R4/operator-approved rollout smoke.** restricted scope의
-   local evidence와 preflight는 green이므로, 명시 승인 후 실행 검증이 self-hosted 파일럿 전환점이다.
+2. **가장 빠른 상용 스위치는 R4/operator-approved rollout smoke receipt.** restricted scope의
+   local evidence와 preflight는 green이므로, 명시 승인 후 실행 검증과 receipt 기록이
+   self-hosted 파일럿 전환점이다.
 3. **가장 큰 실제 갭은 A(과학 엔진 정밀도).** internal typed all-atom/GB-SA/explicit-shell/FEP scaffold,
    common ligand halogen/charged-residue local-chemistry/metal-coordination coverage surface, proxy benchmark metric surface는 green이지만,
    metal/cofactor parameterization·formal protonation·charge/torsion/improper calibration·curated 공개 pose/free-energy benchmark intake를 통과해야

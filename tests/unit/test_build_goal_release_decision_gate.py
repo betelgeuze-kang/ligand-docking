@@ -476,6 +476,38 @@ def _blocked_full_commercial_matrix() -> dict:
     }
 
 
+def _blocked_rollout_smoke_receipt() -> dict:
+    return {
+        "summary": {
+            "status": "blocked_product_rollout_execution_smoke_receipt",
+            "rollout_execution_smoke_receipt_ready": False,
+            "source_authorized_for_separate_operator_execution": True,
+            "receipt_csv_present": False,
+            "receipt_row_count": 0,
+            "blocker_count": 2,
+            "rollout_executed": False,
+            "external_state_mutated": False,
+            "pager_provider_contacted": False,
+            "ingress_certificate_verified_live": False,
+        }
+    }
+
+
+def _blocked_master_gap_rollup() -> dict:
+    return {
+        "summary": {
+            "status": "blocked_master_gap_closure_rollup",
+            "all_gaps_closed": False,
+            "gap_count": 9,
+            "open_gap_count": 2,
+            "open_gap_ids": ["SCI-CLAIM", "DEPLOY-OPS"],
+            "current_primary_open_gap_id": "SCI-CLAIM",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+        }
+    }
+
+
 def _blocked_api_customer_flow() -> dict:
     return {
         "summary": {
@@ -753,6 +785,54 @@ def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_bloc
     assert matrix_row["status"] == "pass"
     assert matrix_row["release_blocker"] is False
     assert "first_blocked_evidence_row_id=direct_binding_evidence_missing" in matrix_row["observed"]
+
+
+def test_goal_release_decision_gate_surfaces_r4_smoke_and_master_rollup_without_blocking_restricted_release() -> None:
+    payload = mod.build_goal_release_decision_gate(
+        product_pilot_packet=_ready_product(),
+        product_architecture_packet=_ready_product_architecture(),
+        product_commercial_independence_packet=_ready_product_independence(),
+        cameo_validation_packet=_ready_cameo_validation(),
+        cameo_capability_packet=_ready_cameo_capability(),
+        goal_rollup_packet=_ready_rollup(),
+        operator_action_board_packet=_clear_action_board(),
+        transition_cleanup_preflight_packet=_transition_cleanup("transition_cleanup_execution_complete"),
+        ligand_cleanup_preflight_packet=_ligand_cleanup("ligand_heavy_cleanup_execution_complete"),
+        protected_cleanup_review_packet=_protected_cleanup(0),
+        cleanup_postcheck_contract_packet=_ready_cleanup_postcheck(),
+        goal_api_surface_contract_packet=_ready_goal_api_surface_contract(),
+        product_release_source_of_truth_packet=_ready_source_of_truth(),
+        product_rollout_execution_smoke_receipt_packet=_blocked_rollout_smoke_receipt(),
+        master_gap_closure_rollup_packet=_blocked_master_gap_rollup(),
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "goal_release_ready"
+    assert summary["release_allowed"] is True
+    assert summary["product_rollout_execution_smoke_receipt_gate_present"] is True
+    assert summary["product_rollout_execution_smoke_receipt_status"] == (
+        "blocked_product_rollout_execution_smoke_receipt"
+    )
+    assert summary["product_rollout_execution_smoke_receipt_ready"] is False
+    assert summary["product_rollout_execution_smoke_receipt_csv_present"] is False
+    assert summary["product_rollout_execution_smoke_receipt_rollout_executed"] is False
+    assert summary["master_gap_closure_rollup_gate_present"] is True
+    assert summary["master_gap_closure_rollup_status"] == "blocked_master_gap_closure_rollup"
+    assert summary["master_gap_closure_rollup_open_gap_ids"] == ["SCI-CLAIM", "DEPLOY-OPS"]
+    smoke_row = next(
+        row
+        for row in payload["rows"]
+        if row["check"] == "product_rollout_execution_smoke_receipt_recorded"
+    )
+    master_row = next(
+        row for row in payload["rows"] if row["check"] == "master_gap_closure_rollup_recorded"
+    )
+    assert smoke_row["status"] == "pass"
+    assert smoke_row["release_blocker"] is False
+    assert "rollout_executed=false" in smoke_row["observed"]
+    assert master_row["status"] == "pass"
+    assert master_row["release_blocker"] is False
+    assert "open_gap_ids=SCI-CLAIM;DEPLOY-OPS" in master_row["observed"]
 
 
 def test_goal_release_decision_gate_blocks_missing_api_customer_flow_release_evidence() -> None:
@@ -1168,6 +1248,8 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
         "source_of_truth": tmp_path / "source_of_truth.json",
         "api_customer_flow": tmp_path / "api_customer_flow.json",
         "full_commercial_matrix": tmp_path / "full_commercial_matrix.json",
+        "rollout_smoke_receipt": tmp_path / "rollout_smoke_receipt.json",
+        "master_gap_rollup": tmp_path / "master_gap_rollup.json",
     }
     paths["product"].write_text(json.dumps(_blocked_product()) + "\n", encoding="utf-8")
     paths["product_architecture"].write_text(json.dumps(_blocked_product_architecture()) + "\n", encoding="utf-8")
@@ -1187,6 +1269,14 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     paths["api_customer_flow"].write_text(json.dumps(_ready_api_customer_flow()) + "\n", encoding="utf-8")
     paths["full_commercial_matrix"].write_text(
         json.dumps(_blocked_full_commercial_matrix()) + "\n",
+        encoding="utf-8",
+    )
+    paths["rollout_smoke_receipt"].write_text(
+        json.dumps(_blocked_rollout_smoke_receipt()) + "\n",
+        encoding="utf-8",
+    )
+    paths["master_gap_rollup"].write_text(
+        json.dumps(_blocked_master_gap_rollup()) + "\n",
         encoding="utf-8",
     )
     out_json = tmp_path / "release_gate.json"
@@ -1229,6 +1319,10 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
             str(paths["api_customer_flow"]),
             "--product-full-commercial-blocker-evidence-matrix-json",
             str(paths["full_commercial_matrix"]),
+            "--product-rollout-execution-smoke-receipt-json",
+            str(paths["rollout_smoke_receipt"]),
+            "--master-gap-closure-rollup-json",
+            str(paths["master_gap_rollup"]),
             "--out-json",
             str(out_json),
             "--out-csv",
@@ -1243,6 +1337,10 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     assert summary["product_full_commercial_blocker_evidence_matrix_status"] == (
         "blocked_product_full_commercial_blocker_evidence_matrix"
     )
+    assert summary["product_rollout_execution_smoke_receipt_status"] == (
+        "blocked_product_rollout_execution_smoke_receipt"
+    )
+    assert summary["master_gap_closure_rollup_status"] == "blocked_master_gap_closure_rollup"
     assert summary["release_blocked_by_public_benchmark"] is True
     assert summary["cameo_live_validation_required_for_product_release"] is False
     assert out_csv.read_text(encoding="utf-8").startswith("lane_id,check,")
@@ -1250,3 +1348,5 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     assert "Goal Release Decision Gate" in md_text
     assert "cameo_live_validation_required_for_product_release" in md_text
     assert "product_full_commercial_blocker_evidence_matrix_status" in md_text
+    assert "product_rollout_execution_smoke_receipt_status" in md_text
+    assert "master_gap_closure_rollup_status" in md_text
