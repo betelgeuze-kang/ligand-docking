@@ -423,8 +423,14 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   refine-tier claim-grade evidence가 없으면 `goal_complete=false`가 유지된다.
   같은 R9 상태는 `runs/product_commercial_readiness_operator_packet_current.json`과
   `runs/product_commercial_readiness_handoff_bundle_current.json` summary의
-  `engine_refinement_claim_promotion_*` 필드로도 전파되어, 상용 readiness
-  handoff 단계에서 claim-grade evidence 병목이 빠지지 않게 한다. 또한
+  `engine_refinement_claim_promotion_*` 필드 및
+  `/product/commercial-readiness-operator-packet`,
+  `/product/commercial-readiness-handoff-bundle` API surface로도 전파되어, 상용 readiness
+  handoff 단계에서 claim-grade evidence 병목이 빠지지 않게 한다. handoff bundle은
+  `runs/engine_refinement_claim_promotion_action_board_current.csv`,
+  `runs/engine_refinement_claim_evidence_receipt_current.json`,
+  `config/engine_refinement_claim_promotion_evidence_receipt_current.csv`도
+  `local_engine_refinement_claim_*` artifact reference로 추적한다. 또한
   `runs/product_release_bundle_current.json`은 `product_goal_completion_audit`
   artifact와 `product_goal_completion_audit_full_claim_boundary_recorded` check를
   포함해, restricted release bundle review에서도 full commercial science claim
@@ -434,7 +440,14 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   현재 `R8_full_scope_claim_closure`와 `R9_engine_refinement_claim_promotion`을
   `completion_audit_release_blocker` 병목으로 노출한다. `/goal/status`도 active
   bottleneck briefing이 있으면 intake/action board의 오래된 primary action보다 이
-  full-commercial 병목 primary를 우선 표시한다.
+  full-commercial 병목 primary를 우선 표시한다. 또한 `/goal/status`는
+  `full_commercial_release_blocker_ids=[R8_full_scope_claim_closure,
+  R9_engine_refinement_claim_promotion]`,
+  `full_commercial_release_blocker_visibility_ready=true`,
+  `completion_audit_release_blocker_bottleneck_count=2`,
+  `commercial_readiness_handoff_bundle_artifact_reference_count=25`를 노출하고,
+  `goal_api_surface_contract_current.json`은 이 R8/R9 + commercial handoff visibility를
+  `goal_full_commercial_bottleneck_visibility_present` check로 고정한다.
   `tools/product/build_product_scope_breadth_evidence_receipt.py`와
   `config/product_scope_breadth_evidence_receipt_current.csv`는 R8 full-scope
   blocker 6종(`direct_binding_evidence_missing`,
@@ -467,7 +480,7 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `config/product_scope_breadth_evidence_receipt_current.csv`를
   `local_scope_breadth_receipt` / `local_scope_breadth_receipt_template`
   artifact reference로 추적하며, 최신
-  `local_missing_artifact_reference_count=0`, `artifact_reference_count=22`이다.
+  `local_missing_artifact_reference_count=0`, `artifact_reference_count=25`이다.
   `product_release_source_of_truth_gate_current.json`은 이제
   `product_scope_breadth_closure_checklist_current.json`,
   `product_scope_breadth_evidence_receipt_current.json`,
@@ -476,7 +489,14 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`을
   freshness row 및 semantic-ready row로 함께 검증해, R8 receipt와 상용 readiness
   handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
-  빠지지 않게 한다.
+  빠지지 않게 한다. 최신 goal API surface contract는 `check_count=9`,
+  `pass_count=9`, `missing_full_commercial_visibility_token_count=0`이다.
+  `product_ledger_privacy_scan_current.json`도 goal-facing JSON artifacts
+  (`goal_readiness_rollup`, `goal_operator_action_board`, `goal_operator_intake_kit`,
+  `goal_release_decision_gate`, `goal_release_burndown_work_order`,
+  `goal_api_surface_contract`, `goal_bottleneck_briefing`)를 scan 대상 및
+  source-of-truth dependency로 포함해, R8/R9 상위 API/병목 surface에 raw molecular
+  payload가 섞이면 release gate에서 숨지 않게 한다. 최신 scan은 `leak_count=0`이다.
   `tools/product/build_refine_tier_public_benchmark_readiness.py`는 curated 공개
   pose/free-energy benchmark intake를 별도 fail-closed gate로 고정한다.
   `config/refine_tier_public_benchmark_intake_current.csv`는 required column header를

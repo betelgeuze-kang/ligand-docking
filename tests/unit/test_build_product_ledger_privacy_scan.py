@@ -11,8 +11,15 @@ def _write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
 
 
-def test_product_ledger_privacy_scan_defaults_include_commercial_readiness_ladder() -> None:
+def test_product_ledger_privacy_scan_defaults_include_goal_and_commercial_readiness_artifacts() -> None:
     assert "runs/product_commercial_readiness_execution_ladder_current.json" in DEFAULT_SCAN_GLOBS
+    assert "runs/goal_readiness_rollup_current.json" in DEFAULT_SCAN_GLOBS
+    assert "runs/goal_operator_action_board_current.json" in DEFAULT_SCAN_GLOBS
+    assert "runs/goal_operator_intake_kit_current/manifest.json" in DEFAULT_SCAN_GLOBS
+    assert "runs/goal_release_decision_gate_current.json" in DEFAULT_SCAN_GLOBS
+    assert "runs/goal_release_burndown_work_order_current.json" in DEFAULT_SCAN_GLOBS
+    assert "runs/goal_api_surface_contract_current.json" in DEFAULT_SCAN_GLOBS
+    assert "runs/goal_bottleneck_briefing_current.json" in DEFAULT_SCAN_GLOBS
 
 
 def test_product_ledger_privacy_scan_passes_hash_only_redactions(tmp_path: Path) -> None:

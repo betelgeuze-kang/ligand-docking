@@ -333,6 +333,18 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/product_commercial_readiness_execution_ladder_current.json" in commercial_handoff_spec[
         "depends_on"
     ]
+    privacy_scan_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "product_ledger_privacy_scan"
+    )
+    assert "runs/goal_readiness_rollup_current.json" in privacy_scan_spec["depends_on"]
+    assert "runs/goal_operator_action_board_current.json" in privacy_scan_spec["depends_on"]
+    assert "runs/goal_operator_intake_kit_current/manifest.json" in privacy_scan_spec["depends_on"]
+    assert "runs/goal_release_decision_gate_current.json" in privacy_scan_spec["depends_on"]
+    assert "runs/goal_release_burndown_work_order_current.json" in privacy_scan_spec["depends_on"]
+    assert "runs/goal_api_surface_contract_current.json" in privacy_scan_spec["depends_on"]
+    assert "runs/goal_bottleneck_briefing_current.json" in privacy_scan_spec["depends_on"]
     release_bundle_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_release_bundle"
     )
@@ -383,6 +395,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_api_surface_contract.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_release_decision_gate.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_bottleneck_briefing.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_ledger_privacy_scan.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_commercial_readiness_operator_packet.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_commercial_readiness_operator_packet_freshness.py")

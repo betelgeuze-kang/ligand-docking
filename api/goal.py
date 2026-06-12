@@ -16,6 +16,14 @@ GOAL_RELEASE_DECISION_ARTIFACT = ROOT / "runs" / "goal_release_decision_gate_cur
 GOAL_RELEASE_BURNDOWN_ARTIFACT = ROOT / "runs" / "goal_release_burndown_work_order_current.json"
 GOAL_BOTTLENECK_BRIEFING_ARTIFACT = ROOT / "runs" / "goal_bottleneck_briefing_current.json"
 GOAL_API_SURFACE_CONTRACT_ARTIFACT = ROOT / "runs" / "goal_api_surface_contract_current.json"
+PRODUCT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_ARTIFACT = (
+    ROOT / "runs" / "product_commercial_readiness_handoff_bundle_current.json"
+)
+
+FULL_COMMERCIAL_RELEASE_BLOCKER_IDS = (
+    "R8_full_scope_claim_closure",
+    "R9_engine_refinement_claim_promotion",
+)
 
 CLAIM_BOUNDARY = (
     "Goal endpoints are read-only local status surfaces for the commercial product, CAMEO validation, "
@@ -71,6 +79,10 @@ def _string_list(value: Any) -> list[str]:
     return []
 
 
+def _bottleneck_id(row: dict[str, Any]) -> str:
+    return str(row.get("bottleneck_id") or row.get("requirement_id") or row.get("phase") or "").strip()
+
+
 def _mutation_flags() -> dict[str, bool]:
     return {
         "execution_enabled": False,
@@ -96,6 +108,7 @@ async def get_goal_status() -> dict[str, Any]:
     burndown_packet = _read_json_object(GOAL_RELEASE_BURNDOWN_ARTIFACT)
     bottleneck_packet = _read_json_object(GOAL_BOTTLENECK_BRIEFING_ARTIFACT)
     api_contract_packet = _read_json_object(GOAL_API_SURFACE_CONTRACT_ARTIFACT)
+    handoff_packet = _read_json_object(PRODUCT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_ARTIFACT)
 
     readiness = _summary(readiness_packet)
     actions = _summary(action_packet)
@@ -104,6 +117,23 @@ async def get_goal_status() -> dict[str, Any]:
     burndown = _summary(burndown_packet)
     bottlenecks = _summary(bottleneck_packet)
     api_contract = _summary(api_contract_packet)
+    handoff = _summary(handoff_packet)
+    bottleneck_rows = _rows(bottleneck_packet)
+    full_commercial_release_blocker_ids = [
+        bottleneck_id
+        for row in bottleneck_rows
+        for bottleneck_id in [_bottleneck_id(row)]
+        if bottleneck_id in FULL_COMMERCIAL_RELEASE_BLOCKER_IDS
+    ]
+    missing_full_commercial_release_blocker_ids = [
+        blocker_id
+        for blocker_id in FULL_COMMERCIAL_RELEASE_BLOCKER_IDS
+        if blocker_id not in full_commercial_release_blocker_ids
+    ]
+    full_commercial_release_blocker_visibility_ready = (
+        not missing_full_commercial_release_blocker_ids
+        and len(full_commercial_release_blocker_ids) >= len(FULL_COMMERCIAL_RELEASE_BLOCKER_IDS)
+    )
     active_bottleneck_primary = (
         _int(bottlenecks.get("current_bottleneck_count") or bottlenecks.get("bottleneck_count")) > 0
         and bool(bottlenecks.get("primary_action_id"))
@@ -125,6 +155,21 @@ async def get_goal_status() -> dict[str, Any]:
             "primary_bottleneck_root_cause_category": "",
             "primary_bottleneck_locally_closable_without_operator_return": False,
             "primary_bottleneck_required_external_return": "",
+            "primary_bottleneck_post_return_acceptance_artifact": "",
+            "completion_audit_release_blocker_bottleneck_count": 0,
+            "irreducible_external_return_bottleneck_count": 0,
+            "expected_full_commercial_release_blocker_ids": list(FULL_COMMERCIAL_RELEASE_BLOCKER_IDS),
+            "full_commercial_release_blocker_ids": [],
+            "full_commercial_release_blocker_count": 0,
+            "missing_full_commercial_release_blocker_ids": list(FULL_COMMERCIAL_RELEASE_BLOCKER_IDS),
+            "full_commercial_release_blocker_visibility_ready": False,
+            "commercial_readiness_handoff_bundle_status": "",
+            "commercial_readiness_handoff_bundle_ready": False,
+            "commercial_readiness_handoff_bundle_artifact_path": str(
+                PRODUCT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_ARTIFACT
+            ),
+            "commercial_readiness_handoff_bundle_artifact_reference_count": 0,
+            "commercial_readiness_handoff_bundle_local_missing_artifact_reference_count": 0,
             **_mutation_flags(),
             "claim_boundary": CLAIM_BOUNDARY,
         }
@@ -162,6 +207,31 @@ async def get_goal_status() -> dict[str, Any]:
         ),
         "primary_bottleneck_required_external_return": bottlenecks.get(
             "primary_bottleneck_required_external_return", ""
+        ),
+        "primary_bottleneck_post_return_acceptance_artifact": bottlenecks.get(
+            "primary_bottleneck_post_return_acceptance_artifact", ""
+        ),
+        "completion_audit_release_blocker_bottleneck_count": _int(
+            bottlenecks.get("completion_audit_release_blocker_bottleneck_count")
+        ),
+        "irreducible_external_return_bottleneck_count": _int(
+            bottlenecks.get("irreducible_external_return_bottleneck_count")
+        ),
+        "expected_full_commercial_release_blocker_ids": list(FULL_COMMERCIAL_RELEASE_BLOCKER_IDS),
+        "full_commercial_release_blocker_ids": full_commercial_release_blocker_ids,
+        "full_commercial_release_blocker_count": len(full_commercial_release_blocker_ids),
+        "missing_full_commercial_release_blocker_ids": missing_full_commercial_release_blocker_ids,
+        "full_commercial_release_blocker_visibility_ready": full_commercial_release_blocker_visibility_ready,
+        "commercial_readiness_handoff_bundle_status": handoff.get("status", ""),
+        "commercial_readiness_handoff_bundle_ready": bool(handoff.get("handoff_bundle_ready") is True),
+        "commercial_readiness_handoff_bundle_artifact_path": str(
+            PRODUCT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_ARTIFACT
+        ),
+        "commercial_readiness_handoff_bundle_artifact_reference_count": _int(
+            handoff.get("artifact_reference_count")
+        ),
+        "commercial_readiness_handoff_bundle_local_missing_artifact_reference_count": _int(
+            handoff.get("local_missing_artifact_reference_count")
         ),
         "official_results_required_bottleneck_count": _int(
             bottlenecks.get("official_results_required_bottleneck_count")

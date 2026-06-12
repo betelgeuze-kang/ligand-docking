@@ -17,6 +17,8 @@ def _write_goal_api_surface(root: Path, *, include_router: bool = True, include_
         "GOAL_RELEASE_BURNDOWN_ARTIFACT = 'runs/goal_release_burndown_work_order_current.json'\n"
         "GOAL_BOTTLENECK_BRIEFING_ARTIFACT = 'runs/goal_bottleneck_briefing_current.json'\n"
         "GOAL_API_SURFACE_CONTRACT_ARTIFACT = 'runs/goal_api_surface_contract_current.json'\n"
+        "PRODUCT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_ARTIFACT = 'runs/product_commercial_readiness_handoff_bundle_current.json'\n"
+        "FULL_COMMERCIAL_RELEASE_BLOCKER_IDS = ('R8_full_scope_claim_closure', 'R9_engine_refinement_claim_promotion')\n"
         '@router.get("/status")\n'
         "async def get_goal_status():\n"
         "    return {"
@@ -44,6 +46,19 @@ def _write_goal_api_surface(root: Path, *, include_router: bool = True, include_
         '"primary_bottleneck_root_cause_category": "operator_decision_or_external_result_required",'
         '"primary_bottleneck_locally_closable_without_operator_return": False,'
         '"primary_bottleneck_required_external_return": "approval token",'
+        '"primary_bottleneck_post_return_acceptance_artifact": "runs/product_scope_breadth_contract_current.json",'
+        '"completion_audit_release_blocker_bottleneck_count": 2,'
+        '"irreducible_external_return_bottleneck_count": 2,'
+        '"expected_full_commercial_release_blocker_ids": list(FULL_COMMERCIAL_RELEASE_BLOCKER_IDS),'
+        '"full_commercial_release_blocker_ids": ["R8_full_scope_claim_closure", "R9_engine_refinement_claim_promotion"],'
+        '"full_commercial_release_blocker_count": 2,'
+        '"missing_full_commercial_release_blocker_ids": [],'
+        '"full_commercial_release_blocker_visibility_ready": True,'
+        '"commercial_readiness_handoff_bundle_status": "product_commercial_readiness_handoff_bundle_ready",'
+        '"commercial_readiness_handoff_bundle_ready": True,'
+        '"commercial_readiness_handoff_bundle_artifact_path": PRODUCT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_ARTIFACT,'
+        '"commercial_readiness_handoff_bundle_artifact_reference_count": 25,'
+        '"commercial_readiness_handoff_bundle_local_missing_artifact_reference_count": 0,'
         '"operator_action_count": 0,'
         '"operator_intake_kit_status": "goal_operator_intake_kit_ready",'
         '"operator_intake_kit_release_burndown_linked_entry_count": 0,'
@@ -102,13 +117,14 @@ def test_goal_api_surface_contract_reports_ready_for_current_source() -> None:
     summary = payload["summary"]
     assert summary["status"] == "goal_api_surface_contract_ready"
     assert summary["surface_ready"] is True
-    assert summary["check_count"] == 8
-    assert summary["pass_count"] == 8
+    assert summary["check_count"] == 9
+    assert summary["pass_count"] == 9
     assert summary["blocker_count"] == 0
     assert summary["expected_endpoint_count"] == 8
     assert summary["missing_endpoint_count"] == 0
     assert summary["missing_artifact_source_count"] == 0
     assert summary["missing_status_key_count"] == 0
+    assert summary["missing_full_commercial_visibility_token_count"] == 0
     assert summary["missing_fail_closed_flag_count"] == 0
     assert summary["goal_router_registered"] is True
     assert summary["goal_security_allowlist_permits_goal_prefix"] is True

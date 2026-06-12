@@ -336,6 +336,46 @@ def _build_artifact_reference_manifest(
                 note="Local acceptance packet proving the current scope-breadth closure stage.",
             )
         )
+    engine_action_board = _text(
+        summary.get("engine_refinement_claim_promotion_action_board_csv")
+    )
+    if engine_action_board:
+        refs.append(
+            _artifact_reference(
+                artifact_id="engine_refinement_claim_promotion_action_board",
+                artifact_path=engine_action_board,
+                reference_role="local_engine_refinement_claim_action_board",
+                required_now=True,
+                expected_from_operator_return=False,
+                note="Local action board for claim-grade engine refinement evidence blockers.",
+            )
+        )
+    engine_receipt_artifact = _text(
+        summary.get("engine_refinement_claim_evidence_receipt_artifact")
+    )
+    if engine_receipt_artifact:
+        refs.append(
+            _artifact_reference(
+                artifact_id="engine_refinement_claim_evidence_receipt",
+                artifact_path=engine_receipt_artifact,
+                reference_role="local_engine_refinement_claim_receipt",
+                required_now=True,
+                expected_from_operator_return=False,
+                note="Local fail-closed receipt proving whether engine refinement claim evidence has been reviewed.",
+            )
+        )
+    engine_receipt_csv = _text(summary.get("engine_refinement_claim_evidence_receipt_csv"))
+    if engine_receipt_csv:
+        refs.append(
+            _artifact_reference(
+                artifact_id="engine_refinement_claim_evidence_receipt_csv",
+                artifact_path=engine_receipt_csv,
+                reference_role="local_engine_refinement_claim_receipt_template",
+                required_now=True,
+                expected_from_operator_return=False,
+                note="Operator-fill template consumed by the engine refinement claim evidence receipt gate.",
+            )
+        )
     scope_receipt_artifact = _text(
         summary.get("product_scope_breadth_evidence_receipt_artifact")
     )

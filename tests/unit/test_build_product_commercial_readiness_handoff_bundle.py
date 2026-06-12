@@ -599,6 +599,9 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
         summary["engine_refinement_claim_evidence_receipt_artifact"]
         == "runs/engine_refinement_claim_evidence_receipt_current.json"
     )
+    assert summary["engine_refinement_claim_evidence_receipt_csv"] == (
+        "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
+    )
     assert summary["product_scope_breadth_evidence_receipt_ready"] is False
     assert summary["product_scope_breadth_evidence_receipt_status"] == (
         "blocked_product_scope_breadth_evidence_receipt"
@@ -833,6 +836,27 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
         row["artifact_id"] == "scope_closure_acceptance_packet"
         and row["artifact_path"] == "runs/product_scope_closure_acceptance_packet_current.json"
         and row["reference_role"] == "local_acceptance_evidence"
+        and row["required_now"] is True
+        for row in summary["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "engine_refinement_claim_promotion_action_board"
+        and row["artifact_path"] == "runs/engine_refinement_claim_promotion_action_board_current.csv"
+        and row["reference_role"] == "local_engine_refinement_claim_action_board"
+        and row["required_now"] is True
+        for row in summary["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "engine_refinement_claim_evidence_receipt"
+        and row["artifact_path"] == "runs/engine_refinement_claim_evidence_receipt_current.json"
+        and row["reference_role"] == "local_engine_refinement_claim_receipt"
+        and row["required_now"] is True
+        for row in summary["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "engine_refinement_claim_evidence_receipt_csv"
+        and row["artifact_path"] == "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
+        and row["reference_role"] == "local_engine_refinement_claim_receipt_template"
         and row["required_now"] is True
         for row in summary["artifact_reference_manifest"]
     )

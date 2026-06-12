@@ -204,6 +204,41 @@ def commercial_scope_breadth_evidence_receipt_fields(summary: dict[str, Any]) ->
     }
 
 
+def commercial_engine_refinement_claim_fields(summary: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "engine_refinement_claim_promotion_ready": bool(
+            summary.get("engine_refinement_claim_promotion_ready") is True
+        ),
+        "engine_refinement_claim_promotion_blocker_count": int(
+            summary.get("engine_refinement_claim_promotion_blocker_count") or 0
+        ),
+        "engine_refinement_claim_promotion_action_row_count": int(
+            summary.get("engine_refinement_claim_promotion_action_row_count") or 0
+        ),
+        "engine_refinement_claim_promotion_blockers": list(
+            summary.get("engine_refinement_claim_promotion_blockers") or []
+        ),
+        "engine_refinement_claim_promotion_action_board_csv": summary.get(
+            "engine_refinement_claim_promotion_action_board_csv", ""
+        ),
+        "engine_refinement_claim_evidence_receipt_ready": bool(
+            summary.get("engine_refinement_claim_evidence_receipt_ready") is True
+        ),
+        "engine_refinement_claim_evidence_receipt_blocked_row_count": int(
+            summary.get("engine_refinement_claim_evidence_receipt_blocked_row_count") or 0
+        ),
+        "engine_refinement_claim_evidence_receipt_artifact": summary.get(
+            "engine_refinement_claim_evidence_receipt_artifact", ""
+        ),
+        "engine_refinement_claim_evidence_receipt_csv": summary.get(
+            "engine_refinement_claim_evidence_receipt_csv", ""
+        ),
+        "engine_refinement_claim_promotion_next_required_step": summary.get(
+            "engine_refinement_claim_promotion_next_required_step", ""
+        ),
+    }
+
+
 def commercial_handoff_closure_acceptance_fields(summary: dict[str, Any]) -> dict[str, Any]:
     return {
         **commercial_delta_force_closure_fields(summary),

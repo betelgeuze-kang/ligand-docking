@@ -39,6 +39,15 @@ EXPECTED_ARTIFACT_CONSTANTS = {
     "GOAL_RELEASE_BURNDOWN_ARTIFACT",
     "GOAL_BOTTLENECK_BRIEFING_ARTIFACT",
     "GOAL_API_SURFACE_CONTRACT_ARTIFACT",
+    "PRODUCT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_ARTIFACT",
+}
+
+REQUIRED_FULL_COMMERCIAL_VISIBILITY_TOKENS = {
+    "FULL_COMMERCIAL_RELEASE_BLOCKER_IDS",
+    "R8_full_scope_claim_closure",
+    "R9_engine_refinement_claim_promotion",
+    "full_commercial_release_blocker_visibility_ready",
+    "missing_full_commercial_release_blocker_ids",
 }
 
 REQUIRED_STATUS_KEYS = {
@@ -66,6 +75,19 @@ REQUIRED_STATUS_KEYS = {
     "primary_bottleneck_root_cause_category",
     "primary_bottleneck_locally_closable_without_operator_return",
     "primary_bottleneck_required_external_return",
+    "primary_bottleneck_post_return_acceptance_artifact",
+    "completion_audit_release_blocker_bottleneck_count",
+    "irreducible_external_return_bottleneck_count",
+    "expected_full_commercial_release_blocker_ids",
+    "full_commercial_release_blocker_ids",
+    "full_commercial_release_blocker_count",
+    "missing_full_commercial_release_blocker_ids",
+    "full_commercial_release_blocker_visibility_ready",
+    "commercial_readiness_handoff_bundle_status",
+    "commercial_readiness_handoff_bundle_ready",
+    "commercial_readiness_handoff_bundle_artifact_path",
+    "commercial_readiness_handoff_bundle_artifact_reference_count",
+    "commercial_readiness_handoff_bundle_local_missing_artifact_reference_count",
     "operator_action_count",
     "operator_intake_kit_status",
     "operator_intake_kit_release_burndown_linked_entry_count",
@@ -159,6 +181,10 @@ def build_goal_api_surface_contract(*, root: str | Path = ".") -> dict[str, Any]
     missing_endpoints = _missing_endpoint_tokens(api_text)
     missing_artifact_constants = _missing_tokens(api_text, EXPECTED_ARTIFACT_CONSTANTS)
     missing_status_keys = _missing_tokens(api_text, REQUIRED_STATUS_KEYS)
+    missing_full_commercial_visibility_tokens = _missing_tokens(
+        api_text,
+        REQUIRED_FULL_COMMERCIAL_VISIBILITY_TOKENS,
+    )
     missing_fail_closed_flags = _missing_tokens(api_text, REQUIRED_FAIL_CLOSED_FLAGS)
     contract_endpoint_reads_contract = (
         "GOAL_API_SURFACE_CONTRACT_ARTIFACT" in api_text
@@ -216,6 +242,14 @@ def build_goal_api_surface_contract(*, root: str | Path = ".") -> dict[str, Any]
             "The top-level API status needs the same commercial product, CAMEO validation, and cleanup blockers that the JSON/CLI surfaces expose.",
         ),
         _row(
+            "goal_full_commercial_bottleneck_visibility_present",
+            not missing_full_commercial_visibility_tokens,
+            f"missing={','.join(missing_full_commercial_visibility_tokens) or 'none'}",
+            "/goal/status exposes R8/R9 full-commercial release blockers and commercial-readiness handoff visibility",
+            "api/goal.py",
+            "The goal API must not let restricted release readiness hide full-scope transporter or engine-refinement claim blockers.",
+        ),
+        _row(
             "goal_fail_closed_flags_present",
             not missing_fail_closed_flags,
             f"missing={','.join(missing_fail_closed_flags) or 'none'}",
@@ -254,6 +288,9 @@ def build_goal_api_surface_contract(*, root: str | Path = ".") -> dict[str, Any]
         "missing_endpoint_count": len(missing_endpoints),
         "missing_artifact_source_count": len(missing_artifact_constants),
         "missing_status_key_count": len(missing_status_keys),
+        "missing_full_commercial_visibility_token_count": len(
+            missing_full_commercial_visibility_tokens
+        ),
         "missing_fail_closed_flag_count": len(missing_fail_closed_flags),
         "goal_api_file_present": api_file_present,
         "goal_router_registered": router_registered,
@@ -303,6 +340,7 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- missing_endpoint_count: `{s['missing_endpoint_count']}`",
         f"- missing_artifact_source_count: `{s['missing_artifact_source_count']}`",
         f"- missing_status_key_count: `{s['missing_status_key_count']}`",
+        f"- missing_full_commercial_visibility_token_count: `{s['missing_full_commercial_visibility_token_count']}`",
         f"- missing_fail_closed_flag_count: `{s['missing_fail_closed_flag_count']}`",
         f"- goal_router_registered: `{s['goal_router_registered']}`",
         f"- goal_api_contract_endpoint_present: `{s['goal_api_contract_endpoint_present']}`",

@@ -73,6 +73,30 @@ def test_api_app_imports_with_goal_router() -> None:
     assert status["release_complete_vs_operator_pending_lane"] == readiness_artifact.get(
         "release_complete_vs_operator_pending_lane"
     )
+    expected_full_commercial_blockers = [
+        "R8_full_scope_claim_closure",
+        "R9_engine_refinement_claim_promotion",
+    ]
+    assert status["expected_full_commercial_release_blocker_ids"] == expected_full_commercial_blockers
+    assert status["full_commercial_release_blocker_ids"] == expected_full_commercial_blockers
+    assert status["full_commercial_release_blocker_count"] == len(expected_full_commercial_blockers)
+    assert status["missing_full_commercial_release_blocker_ids"] == []
+    assert status["full_commercial_release_blocker_visibility_ready"] is True
+    assert status["completion_audit_release_blocker_bottleneck_count"] == int(
+        bottlenecks_artifact.get("completion_audit_release_blocker_bottleneck_count") or 0
+    )
+    assert status["irreducible_external_return_bottleneck_count"] == int(
+        bottlenecks_artifact.get("irreducible_external_return_bottleneck_count") or 0
+    )
+    assert status["primary_bottleneck_post_return_acceptance_artifact"] == bottlenecks_artifact.get(
+        "primary_bottleneck_post_return_acceptance_artifact"
+    )
+    assert status["commercial_readiness_handoff_bundle_status"] == (
+        "product_commercial_readiness_handoff_bundle_ready"
+    )
+    assert status["commercial_readiness_handoff_bundle_ready"] is True
+    assert status["commercial_readiness_handoff_bundle_artifact_reference_count"] == 25
+    assert status["commercial_readiness_handoff_bundle_local_missing_artifact_reference_count"] == 0
     assert status["goal_completion_audit_goal_complete"] == readiness_artifact.get(
         "goal_completion_audit_goal_complete"
     )

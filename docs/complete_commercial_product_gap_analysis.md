@@ -135,8 +135,13 @@
   `goal_complete=false`가 유지된다. 이 R9 상태는
   `runs/product_commercial_readiness_operator_packet_current.json`과
   `runs/product_commercial_readiness_handoff_bundle_current.json` summary에도
-  `engine_refinement_claim_promotion_*` 필드로 전파되어, handoff 단계에서도
-  claim-grade evidence 병목이 숨지 않는다. `runs/product_release_bundle_current.json`도
+  `engine_refinement_claim_promotion_*` 필드 및
+  `/product/commercial-readiness-operator-packet`,
+  `/product/commercial-readiness-handoff-bundle` API surface로 전파되어, handoff 단계에서도
+  claim-grade evidence 병목이 숨지 않는다. handoff bundle artifact reference manifest는
+  engine refinement action board, receipt JSON, receipt CSV를
+  `local_engine_refinement_claim_*` reference로 추적한다.
+  `runs/product_release_bundle_current.json`도
   `product_goal_completion_audit` artifact와
   `product_goal_completion_audit_full_claim_boundary_recorded` check를 포함해,
   restricted release bundle review에서도 full commercial science claim 미완료가
@@ -145,7 +150,14 @@
   burndown이 clear여도 `product_goal_completion_audit`의 R8/R9 release blockers를
   active 병목으로 우선 노출한다. 따라서 restricted release가 green인 상태에서도
   full-scope transporter evidence와 refine-tier claim-grade calibration/parity
-  미완료가 상위 상태 API에서 사라지지 않는다.
+  미완료가 상위 상태 API에서 사라지지 않는다. `/goal/status`는
+  `full_commercial_release_blocker_ids`,
+  `full_commercial_release_blocker_visibility_ready`,
+  `completion_audit_release_blocker_bottleneck_count`, 그리고
+  `commercial_readiness_handoff_bundle_artifact_reference_count=25`를 함께 노출한다.
+  `goal_api_surface_contract_current.json`은 이 R8/R9 + commercial handoff visibility를
+  `goal_full_commercial_bottleneck_visibility_present` check로 고정하며 최신
+  `check_count=9`, `pass_count=9`, `missing_full_commercial_visibility_token_count=0`이다.
 - `tools/product/build_product_scope_breadth_evidence_receipt.py`와
   `config/product_scope_breadth_evidence_receipt_current.csv`는 R8 full-scope
   blocker별 operator evidence receipt를 R9 claim-evidence receipt와 같은
@@ -167,7 +179,8 @@
   `/product/commercial-readiness-handoff-bundle` API surface에도 전파된다.
   handoff bundle의 artifact reference manifest는
   `product_scope_breadth_evidence_receipt` JSON과 CSV를 필수 local
-  scope-breadth receipt evidence로 추적하며 `local_missing_artifact_reference_count=0`이다.
+  scope-breadth receipt evidence로 추적하며
+  `local_missing_artifact_reference_count=0`, `artifact_reference_count=25`이다.
 - `product_release_source_of_truth_gate_current.json`은
   `product_scope_breadth_closure_checklist_current.json`,
   `product_scope_breadth_evidence_receipt_current.json`,
@@ -178,6 +191,13 @@
   `row_count=44`, `pass_count=44`, `blocker_count=0`으로, R8 receipt와 상용 readiness
   handoff 입력 순서, 상위 상태
   API/병목 visibility가 release freshness 체인 안에 들어와 있다.
+- `product_ledger_privacy_scan_current.json`은 product/commercial readiness artifacts뿐
+  아니라 `goal_readiness_rollup`, `goal_operator_action_board`,
+  `goal_operator_intake_kit`, `goal_release_decision_gate`,
+  `goal_release_burndown_work_order`, `goal_api_surface_contract`,
+  `goal_bottleneck_briefing` JSON도 scan 대상과 source-of-truth dependency로 포함한다.
+  따라서 R8/R9 상위 API/병목 visibility surface에 raw molecular payload가 섞이면
+  release privacy gate에서 fail-closed로 드러난다. 최신 scan은 `leak_count=0`이다.
 - `tools/product/build_refine_tier_public_benchmark_readiness.py`: curated 공개
   pose/free-energy benchmark intake를 별도 fail-closed gate로 판정한다.
   `config/refine_tier_public_benchmark_intake_current.csv`는 required column header를
