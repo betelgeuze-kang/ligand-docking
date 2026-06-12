@@ -78,6 +78,9 @@ PRODUCT_COMMERCIAL_READINESS_EXECUTION_LADDER_ARTIFACT = (
 PRODUCT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_ARTIFACT = (
     ROOT / "runs" / "product_commercial_readiness_handoff_bundle_current.json"
 )
+PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_ARTIFACT = (
+    ROOT / "runs" / "product_full_commercial_blocker_evidence_matrix_current.json"
+)
 PRODUCT_SCOPE_BREADTH_CONTRACT_ARTIFACT = ROOT / "runs" / "product_scope_breadth_contract_current.json"
 PRODUCT_SCOPE_CLAIM_GUARD_ARTIFACT = ROOT / "runs" / "product_scope_breadth_closure_checklist_current.json"
 PRODUCT_SCOPE_EVIDENCE_PRIORITY_ARTIFACT = (
@@ -6223,6 +6226,111 @@ async def get_product_commercial_readiness_handoff_bundle() -> dict[str, Any]:
         "docking_results_emitted": False,
         "scope_widened": False,
         "checkpoint_promoted": False,
+        "claim_boundary": summary.get("claim_boundary", ""),
+    }
+
+
+@router.get("/full-commercial-blocker-evidence-matrix")
+async def get_product_full_commercial_blocker_evidence_matrix() -> dict[str, Any]:
+    packet = _read_json_object(PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_ARTIFACT)
+    summary = _summary(packet)
+    rows = packet.get("rows") if isinstance(packet.get("rows"), list) else []
+    blockers = packet.get("blockers") if isinstance(packet.get("blockers"), list) else []
+    if not summary:
+        return {
+            "status": "missing_product_full_commercial_blocker_evidence_matrix",
+            "artifact_path": str(PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_ARTIFACT),
+            "full_commercial_blocker_evidence_matrix_ready": False,
+            "full_commercial_evidence_receipts_ready": False,
+            "release_blocker_visibility_ready": False,
+            "expected_release_blocker_ids": [],
+            "expected_release_blocker_count": 0,
+            "goal_audit_release_blocker_ids": [],
+            "missing_goal_audit_release_blocker_ids": [],
+            "bottleneck_release_blocker_ids": [],
+            "missing_bottleneck_release_blocker_ids": [],
+            "scope_receipt_json": "",
+            "scope_receipt_status": "",
+            "scope_receipt_ready": False,
+            "scope_receipt_blocked_row_count": 0,
+            "engine_receipt_json": "",
+            "engine_receipt_status": "",
+            "engine_receipt_ready": False,
+            "engine_receipt_blocked_row_count": 0,
+            "matrix_row_count": 0,
+            "pass_matrix_row_count": 0,
+            "blocked_matrix_row_count": 0,
+            "ready_receipt_count": 0,
+            "blocked_receipt_count": 0,
+            "approval_token_count": 0,
+            "approval_tokens_required": [],
+            "first_blocked_release_blocker_id": "",
+            "first_blocked_evidence_row_id": "",
+            "first_blocked_receipt_json": "",
+            "first_blocked_acceptance_artifact": "",
+            "first_blocked_next_required_step": "",
+            "evidence_matrix": [],
+            "blockers": [],
+            "next_required_step": "",
+            "execution_enabled": False,
+            "docking_results_emitted": False,
+            "external_state_mutated": False,
+            "claim_boundary": (
+                "Product full-commercial blocker evidence-matrix endpoint only; the local matrix artifact is "
+                "missing or invalid. It does not fill evidence, approve tokens, run docking, promote claims, "
+                "upload, email, delete, commit, push, or mutate external state."
+            ),
+        }
+    return {
+        "status": summary.get("status"),
+        "artifact_path": str(PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_ARTIFACT),
+        "full_commercial_blocker_evidence_matrix_ready": bool(
+            summary.get("full_commercial_blocker_evidence_matrix_ready") is True
+        ),
+        "full_commercial_evidence_receipts_ready": bool(
+            summary.get("full_commercial_evidence_receipts_ready") is True
+        ),
+        "release_blocker_visibility_ready": bool(
+            summary.get("release_blocker_visibility_ready") is True
+        ),
+        "expected_release_blocker_ids": list(summary.get("expected_release_blocker_ids") or []),
+        "expected_release_blocker_count": int(summary.get("expected_release_blocker_count") or 0),
+        "goal_audit_release_blocker_ids": list(summary.get("goal_audit_release_blocker_ids") or []),
+        "missing_goal_audit_release_blocker_ids": list(
+            summary.get("missing_goal_audit_release_blocker_ids") or []
+        ),
+        "bottleneck_release_blocker_ids": list(summary.get("bottleneck_release_blocker_ids") or []),
+        "missing_bottleneck_release_blocker_ids": list(
+            summary.get("missing_bottleneck_release_blocker_ids") or []
+        ),
+        "scope_receipt_json": summary.get("scope_receipt_json", ""),
+        "scope_receipt_status": summary.get("scope_receipt_status", ""),
+        "scope_receipt_ready": bool(summary.get("scope_receipt_ready") is True),
+        "scope_receipt_blocked_row_count": int(summary.get("scope_receipt_blocked_row_count") or 0),
+        "engine_receipt_json": summary.get("engine_receipt_json", ""),
+        "engine_receipt_status": summary.get("engine_receipt_status", ""),
+        "engine_receipt_ready": bool(summary.get("engine_receipt_ready") is True),
+        "engine_receipt_blocked_row_count": int(
+            summary.get("engine_receipt_blocked_row_count") or 0
+        ),
+        "matrix_row_count": int(summary.get("matrix_row_count") or 0),
+        "pass_matrix_row_count": int(summary.get("pass_matrix_row_count") or 0),
+        "blocked_matrix_row_count": int(summary.get("blocked_matrix_row_count") or 0),
+        "ready_receipt_count": int(summary.get("ready_receipt_count") or 0),
+        "blocked_receipt_count": int(summary.get("blocked_receipt_count") or 0),
+        "approval_token_count": int(summary.get("approval_token_count") or 0),
+        "approval_tokens_required": list(summary.get("approval_tokens_required") or []),
+        "first_blocked_release_blocker_id": summary.get("first_blocked_release_blocker_id", ""),
+        "first_blocked_evidence_row_id": summary.get("first_blocked_evidence_row_id", ""),
+        "first_blocked_receipt_json": summary.get("first_blocked_receipt_json", ""),
+        "first_blocked_acceptance_artifact": summary.get("first_blocked_acceptance_artifact", ""),
+        "first_blocked_next_required_step": summary.get("first_blocked_next_required_step", ""),
+        "evidence_matrix": list(rows),
+        "blockers": list(blockers),
+        "next_required_step": summary.get("next_required_step", ""),
+        "execution_enabled": False,
+        "docking_results_emitted": False,
+        "external_state_mutated": False,
         "claim_boundary": summary.get("claim_boundary", ""),
     }
 

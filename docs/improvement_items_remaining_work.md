@@ -445,9 +445,21 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   R9_engine_refinement_claim_promotion]`,
   `full_commercial_release_blocker_visibility_ready=true`,
   `completion_audit_release_blocker_bottleneck_count=2`,
-  `commercial_readiness_handoff_bundle_artifact_reference_count=25`를 노출하고,
+  `commercial_readiness_handoff_bundle_artifact_reference_count=26`를 노출하고,
   `goal_api_surface_contract_current.json`은 이 R8/R9 + commercial handoff visibility를
   `goal_full_commercial_bottleneck_visibility_present` check로 고정한다.
+  `tools/product/build_product_full_commercial_blocker_evidence_matrix.py`는 같은
+  R8/R9 release blocker를 `runs/product_full_commercial_blocker_evidence_matrix_current.json`
+  한곳에 집계한다. 최신 matrix는
+  `blocked_product_full_commercial_blocker_evidence_matrix`,
+  `release_blocker_visibility_ready=true`, `matrix_row_count=12`,
+  `blocked_matrix_row_count=12`, `approval_token_count=2`를 기록해 R8/R9 receipt
+  입력이 둘 다 아직 operator evidence/approval token 대기 상태임을 숨기지 않는다.
+  이 matrix는 `/product/full-commercial-blocker-evidence-matrix` API surface로
+  직접 노출되며, `/goal/status`도
+  `full_commercial_blocker_evidence_matrix_*` 요약 키로 matrix status, row count,
+  blocked row count, approval token count, 첫 blocked release blocker/evidence row를
+  함께 표시한다.
   `tools/product/build_product_scope_breadth_evidence_receipt.py`와
   `config/product_scope_breadth_evidence_receipt_current.csv`는 R8 full-scope
   blocker 6종(`direct_binding_evidence_missing`,
@@ -480,21 +492,23 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `config/product_scope_breadth_evidence_receipt_current.csv`를
   `local_scope_breadth_receipt` / `local_scope_breadth_receipt_template`
   artifact reference로 추적하며, 최신
-  `local_missing_artifact_reference_count=0`, `artifact_reference_count=25`이다.
+  `local_missing_artifact_reference_count=0`, `artifact_reference_count=26`이다.
   `product_release_source_of_truth_gate_current.json`은 이제
   `product_scope_breadth_closure_checklist_current.json`,
   `product_scope_breadth_evidence_receipt_current.json`,
   `goal_operator_intake_kit_current/manifest.json`,
   `product_commercial_readiness_execution_ladder_current.json`,
-  `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`을
+  `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`,
+  `product_full_commercial_blocker_evidence_matrix_current.json`을
   freshness row 및 semantic-ready row로 함께 검증해, R8 receipt와 상용 readiness
   handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
   빠지지 않게 한다. 최신 goal API surface contract는 `check_count=9`,
   `pass_count=9`, `missing_full_commercial_visibility_token_count=0`이다.
   `product_ledger_privacy_scan_current.json`도 goal-facing JSON artifacts
   (`goal_readiness_rollup`, `goal_operator_action_board`, `goal_operator_intake_kit`,
-  `goal_release_decision_gate`, `goal_release_burndown_work_order`,
-  `goal_api_surface_contract`, `goal_bottleneck_briefing`)를 scan 대상 및
+  `goal_release_burndown_work_order`,
+  `goal_api_surface_contract`, `goal_bottleneck_briefing`,
+  `product_full_commercial_blocker_evidence_matrix`)를 scan 대상 및
   source-of-truth dependency로 포함해, R8/R9 상위 API/병목 surface에 raw molecular
   payload가 섞이면 release gate에서 숨지 않게 한다. 최신 scan은 `leak_count=0`이다.
   `tools/product/build_refine_tier_public_benchmark_readiness.py`는 curated 공개
@@ -844,7 +858,7 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   commercial readiness operator packet/freshness/execution ladder/handoff,
   최종 release bundle 재생성을 포함하며,
   최신 실행 결과는
-  `product_release_current_refresh_verified`, `command_count=42`, `executed_count=42`,
+  `product_release_current_refresh_verified`, `command_count=43`, `executed_count=43`,
   `failed_count=0`, `final_gate_verification_ready=true`, `final_gate_blocker_count=0`이다.
 
 **병목 원인**
@@ -869,7 +883,7 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   R4 launch preflight도 1차 완료. 다음은 explicit R4/operator-approved rollout 실행 smoke.
 - release source-of-truth gate는 R4 preflight, R8 scope-breadth receipt, goal
   operator intake kit, commercial readiness execution ladder, API/bottleneck visibility
-  포함 refresh 이후 `product_release_source_of_truth_gate_ready`, `pass_count=44/44`,
+  포함 refresh 이후 `product_release_source_of_truth_gate_ready`, `pass_count=45/45`,
   `blocker_count=0`, `stale_artifact_count=0`으로 재검증됐다.
 - `prometheus_client` 기반 실제 metrics endpoint는 1차 완료.
 - Alert rules + paged webhook receiver + closed-loop alert delivery smoke는 1차 완료;

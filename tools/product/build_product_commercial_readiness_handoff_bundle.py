@@ -16,6 +16,9 @@ DEFAULT_EXECUTION_LADDER_JSON = "runs/product_commercial_readiness_execution_lad
 DEFAULT_GPU_WORKER_EXECUTION_RUNBOOK_JSON = "runs/residual_force_gpu_worker_execution_runbook_current.json"
 DEFAULT_GPU_WORKER_EXECUTION_RUNBOOK_SH = "runs/residual_force_gpu_worker_execution_runbook_current.sh"
 DEFAULT_GPU_WORKER_RETURN_BUNDLE_PACKAGER_SH = "runs/residual_force_gpu_worker_return_bundle_packager_current.sh"
+DEFAULT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_JSON = (
+    "runs/product_full_commercial_blocker_evidence_matrix_current.json"
+)
 DEFAULT_OUT_JSON = "runs/product_commercial_readiness_handoff_bundle_current.json"
 DEFAULT_OUT_CSV = "runs/product_commercial_readiness_handoff_bundle_current.csv"
 DEFAULT_OUT_MD = "runs/product_commercial_readiness_handoff_bundle_current.md"
@@ -196,6 +199,7 @@ def _build_artifact_reference_manifest(
     gpu_worker_execution_runbook_path: str = DEFAULT_GPU_WORKER_EXECUTION_RUNBOOK_JSON,
     gpu_worker_execution_runbook_script_path: str = DEFAULT_GPU_WORKER_EXECUTION_RUNBOOK_SH,
     gpu_worker_return_bundle_packager_script_path: str = DEFAULT_GPU_WORKER_RETURN_BUNDLE_PACKAGER_SH,
+    full_commercial_blocker_evidence_matrix_path: str = DEFAULT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_JSON,
 ) -> list[dict[str, Any]]:
     refs = [
         _artifact_reference(
@@ -245,6 +249,14 @@ def _build_artifact_reference_manifest(
             required_now=True,
             expected_from_operator_return=False,
             note="Worker-side shell script that packages returned summary, manifest, ROCm manifest, execution probe, and NPZ files.",
+        ),
+        _artifact_reference(
+            artifact_id="product_full_commercial_blocker_evidence_matrix",
+            artifact_path=full_commercial_blocker_evidence_matrix_path,
+            reference_role="local_full_commercial_blocker_evidence_matrix",
+            required_now=True,
+            expected_from_operator_return=False,
+            note="Local matrix aggregating R8/R9 full-commercial evidence receipt blockers into one operator acceptance surface.",
         ),
     ]
     for row in artifact_rows:

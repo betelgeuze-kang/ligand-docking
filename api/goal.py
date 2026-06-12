@@ -19,6 +19,9 @@ GOAL_API_SURFACE_CONTRACT_ARTIFACT = ROOT / "runs" / "goal_api_surface_contract_
 PRODUCT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_ARTIFACT = (
     ROOT / "runs" / "product_commercial_readiness_handoff_bundle_current.json"
 )
+PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_ARTIFACT = (
+    ROOT / "runs" / "product_full_commercial_blocker_evidence_matrix_current.json"
+)
 
 FULL_COMMERCIAL_RELEASE_BLOCKER_IDS = (
     "R8_full_scope_claim_closure",
@@ -109,6 +112,9 @@ async def get_goal_status() -> dict[str, Any]:
     bottleneck_packet = _read_json_object(GOAL_BOTTLENECK_BRIEFING_ARTIFACT)
     api_contract_packet = _read_json_object(GOAL_API_SURFACE_CONTRACT_ARTIFACT)
     handoff_packet = _read_json_object(PRODUCT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_ARTIFACT)
+    full_commercial_matrix_packet = _read_json_object(
+        PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_ARTIFACT
+    )
 
     readiness = _summary(readiness_packet)
     actions = _summary(action_packet)
@@ -118,6 +124,7 @@ async def get_goal_status() -> dict[str, Any]:
     bottlenecks = _summary(bottleneck_packet)
     api_contract = _summary(api_contract_packet)
     handoff = _summary(handoff_packet)
+    full_commercial_matrix = _summary(full_commercial_matrix_packet)
     bottleneck_rows = _rows(bottleneck_packet)
     full_commercial_release_blocker_ids = [
         bottleneck_id
@@ -170,6 +177,18 @@ async def get_goal_status() -> dict[str, Any]:
             ),
             "commercial_readiness_handoff_bundle_artifact_reference_count": 0,
             "commercial_readiness_handoff_bundle_local_missing_artifact_reference_count": 0,
+            "full_commercial_blocker_evidence_matrix_status": "",
+            "full_commercial_blocker_evidence_matrix_ready": False,
+            "full_commercial_blocker_evidence_matrix_artifact_path": str(
+                PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_ARTIFACT
+            ),
+            "full_commercial_blocker_evidence_matrix_release_blocker_visibility_ready": False,
+            "full_commercial_blocker_evidence_matrix_row_count": 0,
+            "full_commercial_blocker_evidence_matrix_blocked_row_count": 0,
+            "full_commercial_blocker_evidence_matrix_approval_token_count": 0,
+            "full_commercial_blocker_evidence_matrix_first_blocked_release_blocker_id": "",
+            "full_commercial_blocker_evidence_matrix_first_blocked_evidence_row_id": "",
+            "full_commercial_blocker_evidence_matrix_first_blocked_acceptance_artifact": "",
             **_mutation_flags(),
             "claim_boundary": CLAIM_BOUNDARY,
         }
@@ -232,6 +251,34 @@ async def get_goal_status() -> dict[str, Any]:
         ),
         "commercial_readiness_handoff_bundle_local_missing_artifact_reference_count": _int(
             handoff.get("local_missing_artifact_reference_count")
+        ),
+        "full_commercial_blocker_evidence_matrix_status": full_commercial_matrix.get("status", ""),
+        "full_commercial_blocker_evidence_matrix_ready": bool(
+            full_commercial_matrix.get("full_commercial_blocker_evidence_matrix_ready") is True
+        ),
+        "full_commercial_blocker_evidence_matrix_artifact_path": str(
+            PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_ARTIFACT
+        ),
+        "full_commercial_blocker_evidence_matrix_release_blocker_visibility_ready": bool(
+            full_commercial_matrix.get("release_blocker_visibility_ready") is True
+        ),
+        "full_commercial_blocker_evidence_matrix_row_count": _int(
+            full_commercial_matrix.get("matrix_row_count")
+        ),
+        "full_commercial_blocker_evidence_matrix_blocked_row_count": _int(
+            full_commercial_matrix.get("blocked_matrix_row_count")
+        ),
+        "full_commercial_blocker_evidence_matrix_approval_token_count": _int(
+            full_commercial_matrix.get("approval_token_count")
+        ),
+        "full_commercial_blocker_evidence_matrix_first_blocked_release_blocker_id": full_commercial_matrix.get(
+            "first_blocked_release_blocker_id", ""
+        ),
+        "full_commercial_blocker_evidence_matrix_first_blocked_evidence_row_id": full_commercial_matrix.get(
+            "first_blocked_evidence_row_id", ""
+        ),
+        "full_commercial_blocker_evidence_matrix_first_blocked_acceptance_artifact": full_commercial_matrix.get(
+            "first_blocked_acceptance_artifact", ""
         ),
         "official_results_required_bottleneck_count": _int(
             bottlenecks.get("official_results_required_bottleneck_count")

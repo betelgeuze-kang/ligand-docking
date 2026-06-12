@@ -534,6 +534,29 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     assert "operator_return_pending_artifact_reference_count" in handoff_bundle_keys
     assert "abstract_artifact_reference_count" in handoff_bundle_keys
     assert "checkpoint_promoted" in handoff_bundle_keys
+    assert EXPECTED_ROUTES["get_product_full_commercial_blocker_evidence_matrix"] == (
+        "GET",
+        "/full-commercial-blocker-evidence-matrix",
+    )
+    full_matrix_keys = REQUIRED_STATUS_DOMAIN_KEYS[
+        "get_product_full_commercial_blocker_evidence_matrix"
+    ]
+    assert "full_commercial_blocker_evidence_matrix_ready" in full_matrix_keys
+    assert "full_commercial_evidence_receipts_ready" in full_matrix_keys
+    assert "release_blocker_visibility_ready" in full_matrix_keys
+    assert "expected_release_blocker_ids" in full_matrix_keys
+    assert "goal_audit_release_blocker_ids" in full_matrix_keys
+    assert "bottleneck_release_blocker_ids" in full_matrix_keys
+    assert "scope_receipt_status" in full_matrix_keys
+    assert "engine_receipt_status" in full_matrix_keys
+    assert "matrix_row_count" in full_matrix_keys
+    assert "blocked_matrix_row_count" in full_matrix_keys
+    assert "approval_token_count" in full_matrix_keys
+    assert "first_blocked_release_blocker_id" in full_matrix_keys
+    assert "first_blocked_evidence_row_id" in full_matrix_keys
+    assert "first_blocked_acceptance_artifact" in full_matrix_keys
+    assert "evidence_matrix" in full_matrix_keys
+    assert "external_state_mutated" in full_matrix_keys
     goal_completion_keys = REQUIRED_STATUS_DOMAIN_KEYS["get_product_goal_completion_audit"]
     assert "product_ai_trajectory_sla_claim_tier" in goal_completion_keys
     assert "product_ai_trajectory_sla_broad_platform_allowed" in goal_completion_keys

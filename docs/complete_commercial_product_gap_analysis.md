@@ -154,10 +154,22 @@
   `full_commercial_release_blocker_ids`,
   `full_commercial_release_blocker_visibility_ready`,
   `completion_audit_release_blocker_bottleneck_count`, 그리고
-  `commercial_readiness_handoff_bundle_artifact_reference_count=25`를 함께 노출한다.
+  `commercial_readiness_handoff_bundle_artifact_reference_count=26`를 함께 노출한다.
+  같은 status surface는
+  `full_commercial_blocker_evidence_matrix_*` 요약 키로 matrix status, row count,
+  blocked row count, approval token count, 첫 blocked release blocker/evidence row도
+  함께 노출한다.
   `goal_api_surface_contract_current.json`은 이 R8/R9 + commercial handoff visibility를
   `goal_full_commercial_bottleneck_visibility_present` check로 고정하며 최신
   `check_count=9`, `pass_count=9`, `missing_full_commercial_visibility_token_count=0`이다.
+- `tools/product/build_product_full_commercial_blocker_evidence_matrix.py`는 R8/R9
+  release blocker evidence receipt를 한 matrix로 집계한다. 최신
+  `runs/product_full_commercial_blocker_evidence_matrix_current.json`은
+  `blocked_product_full_commercial_blocker_evidence_matrix`,
+  `release_blocker_visibility_ready=true`, `matrix_row_count=12`,
+  `blocked_matrix_row_count=12`, `approval_token_count=2`라서 full commercial
+  evidence receipt 미충족이 source-of-truth, handoff, 그리고
+  `/product/full-commercial-blocker-evidence-matrix` API surface에서 한 번 더 드러난다.
 - `tools/product/build_product_scope_breadth_evidence_receipt.py`와
   `config/product_scope_breadth_evidence_receipt_current.csv`는 R8 full-scope
   blocker별 operator evidence receipt를 R9 claim-evidence receipt와 같은
@@ -180,22 +192,24 @@
   handoff bundle의 artifact reference manifest는
   `product_scope_breadth_evidence_receipt` JSON과 CSV를 필수 local
   scope-breadth receipt evidence로 추적하며
-  `local_missing_artifact_reference_count=0`, `artifact_reference_count=25`이다.
+  `local_missing_artifact_reference_count=0`, `artifact_reference_count=26`이다.
 - `product_release_source_of_truth_gate_current.json`은
   `product_scope_breadth_closure_checklist_current.json`,
   `product_scope_breadth_evidence_receipt_current.json`,
   `goal_operator_intake_kit_current/manifest.json`,
   `product_commercial_readiness_execution_ladder_current.json`,
-  `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`의
+  `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`,
+  `product_full_commercial_blocker_evidence_matrix_current.json`의
   freshness 및 semantic-ready 상태를 함께 검증한다. 최신 source-of-truth refresh는
-  `row_count=44`, `pass_count=44`, `blocker_count=0`으로, R8 receipt와 상용 readiness
+  `row_count=45`, `pass_count=45`, `blocker_count=0`으로, R8 receipt와 상용 readiness
   handoff 입력 순서, 상위 상태
   API/병목 visibility가 release freshness 체인 안에 들어와 있다.
 - `product_ledger_privacy_scan_current.json`은 product/commercial readiness artifacts뿐
   아니라 `goal_readiness_rollup`, `goal_operator_action_board`,
-  `goal_operator_intake_kit`, `goal_release_decision_gate`,
-  `goal_release_burndown_work_order`, `goal_api_surface_contract`,
-  `goal_bottleneck_briefing` JSON도 scan 대상과 source-of-truth dependency로 포함한다.
+  `goal_operator_intake_kit`, `goal_release_burndown_work_order`,
+  `goal_api_surface_contract`,
+  `goal_bottleneck_briefing`, `product_full_commercial_blocker_evidence_matrix`
+  JSON도 scan 대상과 source-of-truth dependency로 포함한다.
   따라서 R8/R9 상위 API/병목 visibility surface에 raw molecular payload가 섞이면
   release privacy gate에서 fail-closed로 드러난다. 최신 scan은 `leak_count=0`이다.
 - `tools/product/build_refine_tier_public_benchmark_readiness.py`: curated 공개

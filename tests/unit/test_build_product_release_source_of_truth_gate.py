@@ -261,6 +261,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "goal_operator_intake_kit" in artifact_ids
     assert "goal_api_surface_contract" in artifact_ids
     assert "goal_bottleneck_briefing" in artifact_ids
+    assert "product_full_commercial_blocker_evidence_matrix" in artifact_ids
     assert "product_commercial_readiness_execution_ladder" in artifact_ids
     assert "python3 tools/build_api_runner_profile_promotion_operator_receipt.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "product_release_bundle_semantic_ready" in status_ids
@@ -308,6 +309,15 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/product_public_benchmark_work_order_current.json" in goal_bottleneck_spec["depends_on"]
     assert "runs/goal_release_decision_gate_current.json" not in goal_bottleneck_spec["depends_on"]
     assert "runs/product_release_source_of_truth_gate_current.json" not in goal_bottleneck_spec["depends_on"]
+    full_commercial_matrix_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "product_full_commercial_blocker_evidence_matrix"
+    )
+    assert "runs/product_scope_breadth_evidence_receipt_current.json" in full_commercial_matrix_spec["depends_on"]
+    assert "runs/engine_refinement_claim_evidence_receipt_current.json" in full_commercial_matrix_spec["depends_on"]
+    assert "runs/product_goal_completion_audit_current.json" in full_commercial_matrix_spec["depends_on"]
+    assert "runs/goal_bottleneck_briefing_current.json" in full_commercial_matrix_spec["depends_on"]
     commercial_ladder_spec = next(
         spec
         for spec in mod.DEFAULT_ARTIFACT_SPECS
@@ -333,6 +343,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/product_commercial_readiness_execution_ladder_current.json" in commercial_handoff_spec[
         "depends_on"
     ]
+    assert "runs/product_full_commercial_blocker_evidence_matrix_current.json" in commercial_handoff_spec[
+        "depends_on"
+    ]
     privacy_scan_spec = next(
         spec
         for spec in mod.DEFAULT_ARTIFACT_SPECS
@@ -341,10 +354,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/goal_readiness_rollup_current.json" in privacy_scan_spec["depends_on"]
     assert "runs/goal_operator_action_board_current.json" in privacy_scan_spec["depends_on"]
     assert "runs/goal_operator_intake_kit_current/manifest.json" in privacy_scan_spec["depends_on"]
-    assert "runs/goal_release_decision_gate_current.json" in privacy_scan_spec["depends_on"]
     assert "runs/goal_release_burndown_work_order_current.json" in privacy_scan_spec["depends_on"]
     assert "runs/goal_api_surface_contract_current.json" in privacy_scan_spec["depends_on"]
     assert "runs/goal_bottleneck_briefing_current.json" in privacy_scan_spec["depends_on"]
+    assert "runs/product_full_commercial_blocker_evidence_matrix_current.json" in privacy_scan_spec["depends_on"]
     release_bundle_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_release_bundle"
     )
@@ -368,6 +381,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "python3 tools/build_goal_operator_intake_kit.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_goal_api_surface_contract.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_goal_bottleneck_briefing.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_product_full_commercial_blocker_evidence_matrix.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_commercial_readiness_operator_packet.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_commercial_readiness_operator_packet_freshness.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_commercial_readiness_execution_ladder.py" in mod.RELEASE_REFRESH_COMMANDS
@@ -388,6 +402,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_bottleneck_briefing.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_bottleneck_briefing.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_full_commercial_blocker_evidence_matrix.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_full_commercial_blocker_evidence_matrix.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_release_source_of_truth_gate.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_api_surface_contract.py") < (
@@ -398,6 +415,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_bottleneck_briefing.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_ledger_privacy_scan.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_full_commercial_blocker_evidence_matrix.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_commercial_readiness_handoff_bundle.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_commercial_readiness_operator_packet.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_commercial_readiness_operator_packet_freshness.py")

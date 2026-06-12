@@ -33,10 +33,10 @@ DEFAULT_SCAN_GLOBS = [
     "runs/goal_readiness_rollup_current.json",
     "runs/goal_operator_action_board_current.json",
     "runs/goal_operator_intake_kit_current/manifest.json",
-    "runs/goal_release_decision_gate_current.json",
     "runs/goal_release_burndown_work_order_current.json",
     "runs/goal_api_surface_contract_current.json",
     "runs/goal_bottleneck_briefing_current.json",
+    "runs/product_full_commercial_blocker_evidence_matrix_current.json",
 ]
 
 CLAIM_BOUNDARY = (

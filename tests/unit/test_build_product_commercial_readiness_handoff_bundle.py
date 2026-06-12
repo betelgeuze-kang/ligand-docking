@@ -826,6 +826,13 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
         for row in summary["artifact_reference_manifest"]
     )
     assert any(
+        row["artifact_id"] == "product_full_commercial_blocker_evidence_matrix"
+        and row["artifact_path"] == "runs/product_full_commercial_blocker_evidence_matrix_current.json"
+        and row["reference_role"] == "local_full_commercial_blocker_evidence_matrix"
+        and row["required_now"] is True
+        for row in summary["artifact_reference_manifest"]
+    )
+    assert any(
         row["artifact_id"] == "delta_force_closure_acceptance_packet"
         and row["artifact_path"] == "runs/residual_delta_force_closure_acceptance_packet_current.json"
         and row["reference_role"] == "local_acceptance_evidence"

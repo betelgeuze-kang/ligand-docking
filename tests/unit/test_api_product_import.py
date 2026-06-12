@@ -2,8 +2,21 @@ from __future__ import annotations
 
 import asyncio
 import importlib
+import json
+from pathlib import Path
 
 import pytest
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def _artifact_summary(name: str) -> dict:
+    path = ROOT / "runs" / name
+    if not path.is_file():
+        return {}
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    summary = payload.get("summary")
+    return summary if isinstance(summary, dict) else {}
 
 
 def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
@@ -50,6 +63,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert "/product/commercial-readiness-operator-packet-freshness" in paths
     assert "/product/commercial-readiness-execution-ladder" in paths
     assert "/product/commercial-readiness-handoff-bundle" in paths
+    assert "/product/full-commercial-blocker-evidence-matrix" in paths
     assert "/product/goal-completion-audit" in paths
     assert "/product/structure/analyze" in paths
     assert "/product/docking/jobs" in paths
@@ -1852,7 +1866,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
         "config/product_scope_breadth_evidence_receipt_current.csv"
     )
     assert handoff_bundle["artifact_reference_contract_ready"] is True
-    assert handoff_bundle["artifact_reference_count"] == 25
+    assert handoff_bundle["artifact_reference_count"] == 26
     assert handoff_bundle["local_missing_artifact_reference_count"] == 0
     assert handoff_bundle["operator_return_artifact_reference_count"] >= 4
     assert handoff_bundle["operator_return_pending_artifact_reference_count"] >= 1
@@ -1942,6 +1956,48 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert handoff_bundle["execution_enabled"] is False
     assert handoff_bundle["checkpoint_promoted"] is False
 
+    full_matrix_summary = _artifact_summary(
+        "product_full_commercial_blocker_evidence_matrix_current.json"
+    )
+    full_matrix = asyncio.run(product.get_product_full_commercial_blocker_evidence_matrix())
+    assert full_matrix["status"] == full_matrix_summary.get("status")
+    assert full_matrix["status"] == "blocked_product_full_commercial_blocker_evidence_matrix"
+    assert full_matrix["full_commercial_blocker_evidence_matrix_ready"] is False
+    assert full_matrix["full_commercial_evidence_receipts_ready"] is False
+    assert full_matrix["release_blocker_visibility_ready"] is True
+    assert full_matrix["expected_release_blocker_ids"] == [
+        "R8_full_scope_claim_closure",
+        "R9_engine_refinement_claim_promotion",
+    ]
+    assert full_matrix["goal_audit_release_blocker_ids"] == full_matrix_summary.get(
+        "goal_audit_release_blocker_ids"
+    )
+    assert full_matrix["bottleneck_release_blocker_ids"] == full_matrix_summary.get(
+        "bottleneck_release_blocker_ids"
+    )
+    assert full_matrix["matrix_row_count"] == int(
+        full_matrix_summary.get("matrix_row_count") or 0
+    )
+    assert full_matrix["blocked_matrix_row_count"] == int(
+        full_matrix_summary.get("blocked_matrix_row_count") or 0
+    )
+    assert full_matrix["approval_token_count"] == int(
+        full_matrix_summary.get("approval_token_count") or 0
+    )
+    assert full_matrix["first_blocked_release_blocker_id"] == full_matrix_summary.get(
+        "first_blocked_release_blocker_id"
+    )
+    assert full_matrix["first_blocked_evidence_row_id"] == full_matrix_summary.get(
+        "first_blocked_evidence_row_id"
+    )
+    assert full_matrix["first_blocked_acceptance_artifact"] == full_matrix_summary.get(
+        "first_blocked_acceptance_artifact"
+    )
+    assert len(full_matrix["evidence_matrix"]) == full_matrix["matrix_row_count"]
+    assert full_matrix["execution_enabled"] is False
+    assert full_matrix["docking_results_emitted"] is False
+    assert full_matrix["external_state_mutated"] is False
+
     completion = asyncio.run(product.get_product_goal_completion_audit())
     assert completion["status"] == "blocked_product_goal_completion_audit"
     assert completion["goal_complete"] is False
@@ -2017,7 +2073,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     ] == "AQP1.core_binder_01"
 
     assert completion["commercial_readiness_handoff_bundle_ready"] is True
-    assert completion["commercial_readiness_handoff_bundle_artifact_reference_count"] == 25
+    assert completion["commercial_readiness_handoff_bundle_artifact_reference_count"] == 26
     assert completion["commercial_readiness_handoff_bundle_operator_return_pending_artifact_reference_count"] == 1
     assert completion["commercial_readiness_next_action_matrix_ready"] is True
     assert completion["commercial_readiness_next_action_matrix_count"] == 5

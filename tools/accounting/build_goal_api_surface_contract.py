@@ -40,6 +40,7 @@ EXPECTED_ARTIFACT_CONSTANTS = {
     "GOAL_BOTTLENECK_BRIEFING_ARTIFACT",
     "GOAL_API_SURFACE_CONTRACT_ARTIFACT",
     "PRODUCT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_ARTIFACT",
+    "PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_ARTIFACT",
 }
 
 REQUIRED_FULL_COMMERCIAL_VISIBILITY_TOKENS = {
@@ -88,6 +89,16 @@ REQUIRED_STATUS_KEYS = {
     "commercial_readiness_handoff_bundle_artifact_path",
     "commercial_readiness_handoff_bundle_artifact_reference_count",
     "commercial_readiness_handoff_bundle_local_missing_artifact_reference_count",
+    "full_commercial_blocker_evidence_matrix_status",
+    "full_commercial_blocker_evidence_matrix_ready",
+    "full_commercial_blocker_evidence_matrix_artifact_path",
+    "full_commercial_blocker_evidence_matrix_release_blocker_visibility_ready",
+    "full_commercial_blocker_evidence_matrix_row_count",
+    "full_commercial_blocker_evidence_matrix_blocked_row_count",
+    "full_commercial_blocker_evidence_matrix_approval_token_count",
+    "full_commercial_blocker_evidence_matrix_first_blocked_release_blocker_id",
+    "full_commercial_blocker_evidence_matrix_first_blocked_evidence_row_id",
+    "full_commercial_blocker_evidence_matrix_first_blocked_acceptance_artifact",
     "operator_action_count",
     "operator_intake_kit_status",
     "operator_intake_kit_release_burndown_linked_entry_count",

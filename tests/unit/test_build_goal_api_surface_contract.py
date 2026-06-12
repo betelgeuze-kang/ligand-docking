@@ -18,6 +18,7 @@ def _write_goal_api_surface(root: Path, *, include_router: bool = True, include_
         "GOAL_BOTTLENECK_BRIEFING_ARTIFACT = 'runs/goal_bottleneck_briefing_current.json'\n"
         "GOAL_API_SURFACE_CONTRACT_ARTIFACT = 'runs/goal_api_surface_contract_current.json'\n"
         "PRODUCT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_ARTIFACT = 'runs/product_commercial_readiness_handoff_bundle_current.json'\n"
+        "PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_ARTIFACT = 'runs/product_full_commercial_blocker_evidence_matrix_current.json'\n"
         "FULL_COMMERCIAL_RELEASE_BLOCKER_IDS = ('R8_full_scope_claim_closure', 'R9_engine_refinement_claim_promotion')\n"
         '@router.get("/status")\n'
         "async def get_goal_status():\n"
@@ -57,8 +58,18 @@ def _write_goal_api_surface(root: Path, *, include_router: bool = True, include_
         '"commercial_readiness_handoff_bundle_status": "product_commercial_readiness_handoff_bundle_ready",'
         '"commercial_readiness_handoff_bundle_ready": True,'
         '"commercial_readiness_handoff_bundle_artifact_path": PRODUCT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_ARTIFACT,'
-        '"commercial_readiness_handoff_bundle_artifact_reference_count": 25,'
+        '"commercial_readiness_handoff_bundle_artifact_reference_count": 26,'
         '"commercial_readiness_handoff_bundle_local_missing_artifact_reference_count": 0,'
+        '"full_commercial_blocker_evidence_matrix_status": "blocked_product_full_commercial_blocker_evidence_matrix",'
+        '"full_commercial_blocker_evidence_matrix_ready": False,'
+        '"full_commercial_blocker_evidence_matrix_artifact_path": PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_ARTIFACT,'
+        '"full_commercial_blocker_evidence_matrix_release_blocker_visibility_ready": True,'
+        '"full_commercial_blocker_evidence_matrix_row_count": 12,'
+        '"full_commercial_blocker_evidence_matrix_blocked_row_count": 12,'
+        '"full_commercial_blocker_evidence_matrix_approval_token_count": 2,'
+        '"full_commercial_blocker_evidence_matrix_first_blocked_release_blocker_id": "R8_full_scope_claim_closure",'
+        '"full_commercial_blocker_evidence_matrix_first_blocked_evidence_row_id": "direct_binding_evidence_missing",'
+        '"full_commercial_blocker_evidence_matrix_first_blocked_acceptance_artifact": "runs/product_scope_breadth_evidence_receipt_current.json",'
         '"operator_action_count": 0,'
         '"operator_intake_kit_status": "goal_operator_intake_kit_ready",'
         '"operator_intake_kit_release_burndown_linked_entry_count": 0,'

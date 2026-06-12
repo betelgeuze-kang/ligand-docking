@@ -39,6 +39,9 @@ def test_api_app_imports_with_goal_router() -> None:
     actions_artifact = _artifact_summary("goal_operator_action_board_current.json")
     intake_artifact = _artifact_summary("goal_operator_intake_kit_current/manifest.json")
     api_contract_artifact = _artifact_summary("goal_api_surface_contract_current.json")
+    full_matrix_artifact = _artifact_summary(
+        "product_full_commercial_blocker_evidence_matrix_current.json"
+    )
 
     client = TestClient(app)
     status = client.get("/goal/status").json()
@@ -95,8 +98,35 @@ def test_api_app_imports_with_goal_router() -> None:
         "product_commercial_readiness_handoff_bundle_ready"
     )
     assert status["commercial_readiness_handoff_bundle_ready"] is True
-    assert status["commercial_readiness_handoff_bundle_artifact_reference_count"] == 25
+    assert status["commercial_readiness_handoff_bundle_artifact_reference_count"] == 26
     assert status["commercial_readiness_handoff_bundle_local_missing_artifact_reference_count"] == 0
+    assert status["full_commercial_blocker_evidence_matrix_status"] == full_matrix_artifact.get(
+        "status"
+    )
+    assert status["full_commercial_blocker_evidence_matrix_ready"] is (
+        full_matrix_artifact.get("full_commercial_blocker_evidence_matrix_ready") is True
+    )
+    assert status["full_commercial_blocker_evidence_matrix_release_blocker_visibility_ready"] is (
+        full_matrix_artifact.get("release_blocker_visibility_ready") is True
+    )
+    assert status["full_commercial_blocker_evidence_matrix_row_count"] == int(
+        full_matrix_artifact.get("matrix_row_count") or 0
+    )
+    assert status["full_commercial_blocker_evidence_matrix_blocked_row_count"] == int(
+        full_matrix_artifact.get("blocked_matrix_row_count") or 0
+    )
+    assert status["full_commercial_blocker_evidence_matrix_approval_token_count"] == int(
+        full_matrix_artifact.get("approval_token_count") or 0
+    )
+    assert status["full_commercial_blocker_evidence_matrix_first_blocked_release_blocker_id"] == (
+        full_matrix_artifact.get("first_blocked_release_blocker_id")
+    )
+    assert status["full_commercial_blocker_evidence_matrix_first_blocked_evidence_row_id"] == (
+        full_matrix_artifact.get("first_blocked_evidence_row_id")
+    )
+    assert status["full_commercial_blocker_evidence_matrix_first_blocked_acceptance_artifact"] == (
+        full_matrix_artifact.get("first_blocked_acceptance_artifact")
+    )
     assert status["goal_completion_audit_goal_complete"] == readiness_artifact.get(
         "goal_completion_audit_goal_complete"
     )

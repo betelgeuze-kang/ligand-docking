@@ -56,6 +56,7 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_goal_operator_intake_kit.py",
     "python3 tools/build_goal_api_surface_contract.py",
     "python3 tools/build_goal_bottleneck_briefing.py",
+    "python3 tools/build_product_full_commercial_blocker_evidence_matrix.py",
     "python3 deploy/product_release_bundle.py",
     "python3 tools/build_product_commercial_readiness_operator_packet.py",
     "python3 tools/build_product_commercial_readiness_operator_packet_freshness.py",
@@ -406,6 +407,19 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         ],
     },
     {
+        "artifact_id": "product_full_commercial_blocker_evidence_matrix",
+        "artifact_path": "runs/product_full_commercial_blocker_evidence_matrix_current.json",
+        "builder_command": "python3 tools/build_product_full_commercial_blocker_evidence_matrix.py",
+        "depends_on": [
+            "tools/product/build_product_full_commercial_blocker_evidence_matrix.py",
+            "tools/build_product_full_commercial_blocker_evidence_matrix.py",
+            "runs/product_scope_breadth_evidence_receipt_current.json",
+            "runs/engine_refinement_claim_evidence_receipt_current.json",
+            "runs/product_goal_completion_audit_current.json",
+            "runs/goal_bottleneck_briefing_current.json",
+        ],
+    },
+    {
         "artifact_id": "product_commercial_readiness_operator_packet",
         "artifact_path": "runs/product_commercial_readiness_operator_packet_current.json",
         "builder_command": "python3 tools/build_product_commercial_readiness_operator_packet.py",
@@ -420,6 +434,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/product_commercial_readiness_operator_packet_current.json",
             "runs/product_commercial_readiness_operator_packet_freshness_current.json",
             "runs/product_commercial_readiness_execution_ladder_current.json",
+            "runs/product_full_commercial_blocker_evidence_matrix_current.json",
         ],
     },
     {
@@ -462,10 +477,10 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/goal_readiness_rollup_current.json",
             "runs/goal_operator_action_board_current.json",
             "runs/goal_operator_intake_kit_current/manifest.json",
-            "runs/goal_release_decision_gate_current.json",
             "runs/goal_release_burndown_work_order_current.json",
             "runs/goal_api_surface_contract_current.json",
             "runs/goal_bottleneck_briefing_current.json",
+            "runs/product_full_commercial_blocker_evidence_matrix_current.json",
         ],
     },
 ]
