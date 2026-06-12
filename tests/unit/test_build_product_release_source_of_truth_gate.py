@@ -250,6 +250,8 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "product_ai_report_explanation_packet" in artifact_ids
     assert "product_ai_report_ux_contract" in artifact_ids
     assert "product_ai_decision_graph_contract" in artifact_ids
+    assert "product_production_ai_checkpoint_readiness" in artifact_ids
+    assert "product_production_ai_promotion_workbench" in artifact_ids
     assert "product_api_contract" in artifact_ids
     assert "product_service_boundary_contract" in artifact_ids
     assert "local_delivery_environment_manifest" in artifact_ids
@@ -288,11 +290,18 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "python3 tools/build_api_runner_profile_promotion_operator_receipt.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "product_release_bundle_semantic_ready" in status_ids
     assert "product_goal_completion_audit_full_commercial_release_blockers_semantic_ready" in status_ids
+    assert "api_runner_profile_promotion_operator_receipt_blocked_semantic_ready" in status_ids
+    assert "product_production_ai_checkpoint_shadow_blocked_semantic_ready" in status_ids
+    assert "product_production_ai_promotion_workbench_shadow_blocked_semantic_ready" in status_ids
+    assert "cameo_validation_operations_dossier_current_bottleneck_semantic_ready" in status_ids
     assert "product_full_commercial_blocker_evidence_matrix_semantic_ready" in status_ids
     assert "goal_operator_action_board_primary_release_blocker_semantic_ready" in status_ids
     assert "goal_operator_intake_kit_primary_release_blocker_semantic_ready" in status_ids
     assert "goal_api_surface_contract_semantic_ready" in status_ids
     assert "goal_bottleneck_briefing_semantic_ready" in status_ids
+    assert "python3 tools/build_cameo_official_result_fetch_preflight.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_cameo_validation_operations_dossier.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_cameo_architecture_validation_contract.py" in mod.RELEASE_REFRESH_COMMANDS
     goal_api_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS
@@ -321,6 +330,62 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert full_matrix_status_spec["required_text_exact_fields"][
         "scope_receipt_most_common_row_blocker"
     ] == "operator_placeholders_unfilled"
+    runner_receipt_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "api_runner_profile_promotion_operator_receipt_blocked_semantic_ready"
+    )
+    assert runner_receipt_status_spec["required_int_exact_fields"] == {
+        "operator_receipt_ready": 0,
+        "profile_count": 4,
+        "receipt_row_count": 4,
+        "pass_row_count": 0,
+        "blocked_row_count": 4,
+        "blocker_count": 1,
+    }
+    assert runner_receipt_status_spec["required_text_exact_fields"][
+        "first_blocked_profile_id"
+    ] == "backmapping_scoring.example"
+    assert runner_receipt_status_spec["required_text_exact_fields"][
+        "most_common_row_blocker"
+    ] == "operator_decision_missing"
+    cameo_operations_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "cameo_validation_operations_dossier_current_bottleneck_semantic_ready"
+    )
+    assert cameo_operations_status_spec["required_int_exact_fields"][
+        "blocked_stage_count"
+    ] == 1
+    assert cameo_operations_status_spec["required_int_exact_fields"][
+        "first_blocked_stage_blocker_count"
+    ] == 2
+    assert cameo_operations_status_spec["required_text_exact_fields"][
+        "first_blocked_stage_id"
+    ] == "official_result_fetch_preflight"
+    assert cameo_operations_status_spec["required_text_exact_fields"][
+        "first_approval_required_stage_id"
+    ] == "public_registration_and_email"
+    checkpoint_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "product_production_ai_checkpoint_shadow_blocked_semantic_ready"
+    )
+    assert checkpoint_status_spec["required_int_exact_fields"][
+        "production_inference_acceptance_blocked_stage_count"
+    ] == 1
+    assert checkpoint_status_spec["required_text_exact_fields"][
+        "production_inference_actionable_blocker_stage_id"
+    ] == "registry_guarded_promotion_acceptance"
+    promotion_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "product_production_ai_promotion_workbench_shadow_blocked_semantic_ready"
+    )
+    assert promotion_status_spec["required_int_exact_fields"][
+        "post_return_promotion_ladder_blocked_stage_count"
+    ] == 2
+    assert promotion_status_spec["required_text_exact_fields"]["first_blocked_stage_id"] == "residual_model_registry"
     goal_action_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "goal_operator_action_board"
     )
@@ -507,6 +572,8 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "python3 tools/build_product_ai_report_explanation_packet.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_ai_report_ux_contract.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_residual_shadow_ab.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_residual_force_derivation_validation.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_product_production_ai_promotion_workbench.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_execution_work_order.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_execution_preflight.py" in mod.RELEASE_REFRESH_COMMANDS
     assert (
@@ -563,6 +630,15 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_residual_shadow_ab.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_residual_model_registry.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_residual_model_registry.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_residual_force_derivation_validation.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_residual_force_derivation_validation.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_production_ai_checkpoint_readiness.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_production_ai_checkpoint_readiness.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_production_ai_promotion_workbench.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_execution_work_order.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_execution_preflight.py")

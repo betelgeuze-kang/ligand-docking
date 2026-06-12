@@ -19,16 +19,19 @@ def test_product_production_ai_promotion_workbench_surfaces_blocked_ladder_witho
     assert summary["default_residual_mode"] == "shadow"
     assert summary["trained_model_checkpoint_count"] == 0
     assert summary["gpu_handoff_ready"] is True
-    assert summary["gpu_return_receipt_ready"] is False
-    assert summary["gpu_receipt_expected_queue_rows"] == 768
+    assert summary["gpu_return_receipt_ready"] is True
+    assert summary["gpu_receipt_expected_queue_rows"] == 0
     assert summary["gpu_receipt_manifest_identity_row_count"] == 0
     assert summary["post_return_promotion_ladder_stage_count"] == 10
-    assert summary["post_return_promotion_ladder_blocked_stage_count"] == 10
-    assert summary["blocked_stage_ids"][0] == "gpu_return_receipt"
-    assert summary["ready_key_alias_used_count"] == 1
-    assert summary["ready_key_alias_used_stage_ids"] == ["production_score_model"]
-    assert summary["first_blocked_stage_id"] == "gpu_return_receipt"
-    assert summary["first_blocked_stage_ready_key"] == "gpu_worker_return_receipt_ready"
+    assert summary["post_return_promotion_ladder_blocked_stage_count"] == 2
+    assert summary["blocked_stage_ids"] == ["residual_model_registry", "product_goal_completion_audit"]
+    assert summary["ready_key_alias_used_count"] == 2
+    assert summary["ready_key_alias_used_stage_ids"] == [
+        "production_score_model",
+        "production_checkpoint_preflight",
+    ]
+    assert summary["first_blocked_stage_id"] == "residual_model_registry"
+    assert summary["first_blocked_stage_ready_key"] == "production_promotion_allowed"
     assert "generate_ligand_trajectory_engine.py" in summary["force_gpu_worker_full_regeneration_command"]
     assert "build_residual_force_gpu_worker_return_receipt.py" in summary[
         "force_gpu_worker_post_return_validation_command"
@@ -38,11 +41,14 @@ def test_product_production_ai_promotion_workbench_surfaces_blocked_ladder_witho
     assert summary["model_promoted"] is False
     assert summary["external_state_mutated"] is False
     assert len(payload["rows"]) == 10
-    assert len(payload["blockers"]) == 10
+    assert len(payload["blockers"]) == 2
     assert payload["rows"][0]["artifact"] == "runs/residual_force_gpu_worker_return_receipt_current.json"
-    assert payload["rows"][0]["observed_value"] is False
+    assert payload["rows"][0]["observed_value"] is True
     rows_by_stage = {row["stage_id"]: row for row in payload["rows"]}
     assert rows_by_stage["production_score_model"]["ready_key"] == "score_model_production_checkpoint_ready"
     assert rows_by_stage["production_score_model"]["observed_ready_key"] == "production_checkpoint_ready"
     assert rows_by_stage["production_score_model"]["ready_key_alias_used"] is True
-    assert rows_by_stage["production_score_model"]["observed_value"] is False
+    assert rows_by_stage["production_score_model"]["observed_value"] is True
+    assert rows_by_stage["production_checkpoint_preflight"]["observed_ready_key"] == "preflight_green"
+    assert rows_by_stage["production_checkpoint_preflight"]["ready_key_alias_used"] is True
+    assert rows_by_stage["production_checkpoint_preflight"]["observed_value"] is True

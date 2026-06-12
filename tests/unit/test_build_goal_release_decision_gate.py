@@ -478,6 +478,9 @@ def _blocked_full_commercial_matrix() -> dict:
             "first_blocked_row_blockers": "operator_placeholders_unfilled",
             "scope_receipt_most_common_row_blocker": "operator_placeholders_unfilled",
             "engine_receipt_most_common_row_blocker": "operator_placeholders_unfilled",
+            "next_required_step": (
+                "Fill the R8/R9 receipt CSVs with reviewed local evidence artifacts and approval tokens."
+            ),
             "execution_enabled": False,
             "external_state_mutated": False,
         }
@@ -694,6 +697,10 @@ def test_goal_release_decision_gate_allows_only_when_all_lanes_are_complete() ->
     summary = payload["summary"]
     assert summary["status"] == "goal_release_ready"
     assert summary["release_allowed"] is True
+    assert summary["restricted_release_allowed"] is True
+    assert summary["full_commercial_release_allowed"] is True
+    assert summary["full_commercial_release_blocker_count"] == 0
+    assert summary["full_commercial_release_blocker_ids"] == []
     assert summary["blocker_count"] == 0
     assert all(row["status"] == "pass" for row in payload["rows"])
 
@@ -774,6 +781,16 @@ def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_bloc
     summary = payload["summary"]
     assert summary["status"] == "goal_release_ready"
     assert summary["release_allowed"] is True
+    assert summary["restricted_release_allowed"] is True
+    assert summary["full_commercial_release_allowed"] is False
+    assert summary["full_commercial_release_blocker_count"] == 2
+    assert summary["full_commercial_release_blocker_ids"] == [
+        "R8_full_scope_claim_closure",
+        "R9_engine_refinement_claim_promotion",
+    ]
+    assert summary["primary_full_commercial_release_blocker_id"] == "R8_full_scope_claim_closure"
+    assert summary["primary_full_commercial_release_blocker"] == "direct_binding_evidence_missing"
+    assert summary["full_commercial_release_next_required_step"].startswith("Fill the R8/R9 receipt CSVs")
     assert summary["product_full_commercial_blocker_evidence_matrix_gate_present"] is True
     assert summary["product_full_commercial_blocker_evidence_matrix_status"] == (
         "blocked_product_full_commercial_blocker_evidence_matrix"

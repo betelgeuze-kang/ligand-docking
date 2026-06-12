@@ -237,7 +237,9 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   operator receipt로 판정한다. 현재 기본 template은 빈 operator decision/review
   fields라 `runs/api_runner_profile_promotion_operator_receipt_current.json`이
   `blocked_api_runner_profile_promotion_operator_receipt`,
-  `operator_receipt_ready=false`, `blocked_row_count=4`를 기록한다. 이 receipt는
+  `operator_receipt_ready=false`, `blocked_row_count=4`,
+  `first_blocked_profile_id=backmapping_scoring.example`,
+  `most_common_row_blocker=operator_decision_missing`을 기록한다. 이 receipt는
   release bundle, source-of-truth refresh/freshness, goal operator intake kit에
   연결되어, `promotion_ready=true`와 실제 operator-approved promotion decision을
   분리한다.
@@ -477,7 +479,8 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   bottleneck briefing이 있으면 intake/action board의 오래된 primary action보다 이
   full-commercial 병목 primary를 우선 표시한다. 또한 `/goal/status`는
   `full_commercial_release_blocker_ids=[R8_full_scope_claim_closure,
-  R9_engine_refinement_claim_promotion]`,
+  R9_engine_refinement_claim_promotion, MASTER:SCI-CLAIM]`,
+  `restricted_release_allowed=true`, `full_commercial_release_allowed=false`,
   `full_commercial_release_blocker_visibility_ready=true`,
   `completion_audit_release_blocker_bottleneck_count=2`,
   `commercial_readiness_handoff_bundle_artifact_reference_count=26`를 노출하고,
@@ -502,6 +505,14 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `product_full_commercial_blocker_evidence_matrix_*` 요약 키와
   `product_full_commercial_blocker_evidence_matrix_recorded` row로 기록해,
   최종 release decision packet에서도 R8/R9 evidence receipt 병목이 숨지 않는다.
+  최신 decision summary는 restricted/local release surface를
+  `release_allowed=true`, `restricted_release_allowed=true`로 유지하면서도
+  `full_commercial_release_allowed=false`,
+  `full_commercial_release_blocker_ids=[R8_full_scope_claim_closure,
+  R9_engine_refinement_claim_promotion, MASTER:SCI-CLAIM]`,
+  `primary_full_commercial_release_blocker_id=R8_full_scope_claim_closure`,
+  `primary_full_commercial_release_blocker=direct_binding_evidence_missing`을
+  별도로 노출한다.
   `tools/product/build_product_scope_breadth_evidence_receipt.py`와
   `config/product_scope_breadth_evidence_receipt_current.csv`는 R8 full-scope
   blocker 6종(`direct_binding_evidence_missing`,
@@ -553,16 +564,20 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `goal_operator_intake_kit_current/manifest.json`,
   `product_commercial_readiness_execution_ladder_current.json`,
   `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`,
-  `product_full_commercial_blocker_evidence_matrix_current.json`을
+  `product_full_commercial_blocker_evidence_matrix_current.json`,
+  `cameo_validation_operations_dossier_current.json`을
   freshness row 및 semantic-ready row로 함께 검증해, R8 receipt와 상용 readiness
   handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
-  빠지지 않게 한다. 최신 source-of-truth는 `row_count=71`, `pass_count=71`,
-  `blocker_count=0`, `artifact_row_count=53`, `semantic_status_row_count=16`,
-  `release_refresh_command_count=61`, `stale_artifact_count=0`,
+  빠지지 않게 한다. 최신 source-of-truth는 `row_count=76`, `pass_count=76`,
+  `blocker_count=0`, `artifact_row_count=54`, `semantic_status_row_count=20`,
+  `release_refresh_command_count=68`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   API/service-boundary semantic readiness와 self-hosted license audit semantic
   readiness도 이 source-of-truth 안으로 편입됐다. 고객-facing AI report explanation/UX semantic
-  readiness는 core/full decision graph 순환을 분리한 뒤 닫혔다.
+  readiness는 core/full decision graph 순환을 분리한 뒤 닫혔다. production AI
+  checkpoint/promotion workbench는 현재 `shadow`/blocked 상태를 semantic-ready row로
+  검증한다. API runner profile operator receipt도 blocked 상태와 첫 row blocker를
+  semantic-ready row로 검증한다.
   최신 goal API surface contract는 `check_count=9`,
   `pass_count=9`, `missing_full_commercial_visibility_token_count=0`이다.
   source-of-truth의 `goal_api_surface_contract_semantic_ready` row도
@@ -611,41 +626,60 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
 
 **현재 상태**
 - `runs/product_production_ai_checkpoint_readiness_current.json`은
-  `product_production_ai_checkpoint_readiness_ready`,
-  `production_ai_checkpoint_ready=true`,
+  `blocked_product_production_ai_checkpoint_readiness`,
+  `production_ai_checkpoint_ready=false`,
+  `production_ai_inference_subject_active=false`,
   `production_gpu_execution_environment_ready=true`,
-  `default_residual_mode=production_guarded`,
-  `production_promotion_allowed=true`를 기록한다.
+  `delta_force_derivation_validation_ready=true`,
+  `default_residual_mode=shadow`,
+  `production_promotion_allowed=false`,
+  `trained_model_checkpoint_count=0`을 기록한다.
 - ROCm/HIP 환경은 `rocm_environment_manifest_ready`이며,
   `torch_version=2.6.0+rocm6.1`, `torch_hip_version=6.1.40091-a8dbc0c19`,
   `visible_device_count=1`, AMD GPU detected로 기록되어 있다.
-- GPU worker handoff/return receipt도 준비되어 있으며,
-  `gpu_receipt_operator_verified_true_count=768`,
-  `gpu_receipt_manifest_ok_row_count=768`이다.
-- production training data, selected sidecar, checkpoint preflight,
-  inference acceptance matrix는 모두 ready이고
-  `production_inference_acceptance_blocked_stage_count=0`이다.
+- production inference acceptance matrix는 `8`개 stage 중 `7`개 ready이고,
+  남은 blocked stage는 `registry_guarded_promotion_acceptance` 하나다.
+  actionable blocker는 `registry_customer_facing_promotion_allowed`이며,
+  observed 값은 `default_residual_mode=shadow`,
+  `production_promotion_allowed=false`, customer-facing score/ranking mutation
+  disabled, `trained_model_checkpoint_count=0`이다.
+- `runs/product_production_ai_promotion_workbench_current.json`도
+  `blocked_product_production_ai_promotion_workbench`,
+  `production_ai_promotion_ready=false`,
+  `post_return_promotion_ladder_blocked_stage_count=2`를 기록한다.
+  남은 blocked stage는 `residual_model_registry`,
+  `product_goal_completion_audit`이다.
 
 **병목 원인**
-- 추론 주체 전환 자체는 더 이상 현재 병목이 아니다.
-- 남은 병목은 production AI가 열린 뒤의 **고객 실행 표면**이다. 즉,
-  runner profile evidence/operator approval, customer-facing score/ranking mutation
-  정책, release gate linkage를 실제 배포 단위에서 일관되게 잠그는 작업이다.
+- ROCm/HIP 환경, force derivation validation, training data, selected sidecar,
+  checkpoint preflight는 현재 산출물 기준 ready지만, residual registry가 아직
+  customer-facing guarded promotion을 허용하지 않는다.
+- production AI 추론 주체 전환은 아직 현재 병목이다. 특히 registry promotion,
+  trained checkpoint accounting, customer-facing score/ranking mutation policy,
+  goal completion audit linkage가 닫혀야 한다.
 - fail-closed 경계는 여전히 필요하다. GPU receipt가 있다고 해서 임의 요청이나
   claim 범위 밖 target까지 자동 허용되는 것은 아니다.
 
 **필요 작업**
-- GPU/ROCm receipt와 checkpoint promotion chain은 현재 산출물 기준 완료 상태로 유지.
-- 다음은 API validated runner profile별 evidence artifact 작성,
-  `APPROVE_API_RUNNER_PROFILE_PROMOTION` review, release bundle/rollout smoke에서
-  production_guarded 정책이 실제 고객 요청 경로에만 제한적으로 연결되는지 검증.
+- `residual_model_registry`를 rebuild/promotion 가능한 상태로 만들기 전까지
+  `default_residual_mode=shadow`와 customer-facing mutation disabled를 유지한다.
+- 다음은 trained checkpoint count/promotion policy를 실제 guarded checkpoint와
+  연결하고, registry guarded promotion acceptance를 통과한 뒤
+  `product_goal_completion_audit`을 재검증하는 것이다.
+- API validated runner profile evidence/operator approval과 score/ranking mutation
+  policy 검증은 registry promotion 이후에도 별도 운영 경계로 유지한다.
 
-### B. CAMEO public benchmark (blocked_lane_count=1, approval_required=3)
+### B. CAMEO public benchmark (architecture ready, fetch preflight blocked)
 
 **현재 상태**
 - `runs/cameo_architecture_validation_contract_current.json`:
-  `cameo_architecture_validation_ready=false`,
-  `official_cameo_results_used=false`, `public_registration_authorized=false`.
+  `status=cameo_architecture_validation_contract_ready`,
+  `cameo_architecture_validation_ready=true`,
+  `official_cameo_results_used=true`, `public_registration_authorized=true`,
+  `ready_lane_count=10`, `blocked_lane_count=0`,
+  `approval_required_lane_count=0`이다. 단 이 contract는 등록/메일/웹 fetch를
+  실행하지 않으며 `server_registration_mutated=false`,
+  `outbound_email_enabled=false`, `external_state_mutated=false`를 유지한다.
 - `runs/cameo_api_dependency_readiness_current.json`은
   `status=cameo_api_dependency_ready`, `pass_count=5`,
   `missing_or_unimportable_count=0`, `blocker_count=0`이다.
@@ -654,9 +688,10 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `ledger_written=true`, `prediction_generation_enabled=false`,
   `outbound_email_enabled=false`, `external_state_mutated=false`를 기록한다.
 - `runs/cameo_capability_preflight_current.json`은
-  `status=cameo_development_capability_preflight_ready`, `blocker_count=0`,
+  `status=cameo_public_registration_preflight_ready`, `blocker_count=0`,
   `api_dependency_ready=true`, `source_receiver_smoke_status=cameo_receiver_smoke_ready`.
-  public registration은 요청되지 않았고 `public_registration_allowed=false`.
+  approval-token metadata가 채워진 별도 운영 검토 기준으로
+  `public_registration_requested=true`, `public_registration_allowed=true`이다.
 - `betelgeuze_cameo/outbound_email_draft.py`와
   `tools/cameo/build_cameo_outbound_email_draft.py`는 dry-run handoff attachment에서
   local RFC 5322 `.eml` draft를 조립한다. 최신 산출물
@@ -669,10 +704,10 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `tools/cameo/build_cameo_outbound_email_send_preflight.py`는 actual send 직전의
   approval/SMTP metadata를 검사하는 fail-closed preflight다. 최신 산출물
   `runs/cameo_outbound_email_send_preflight_current.json`은
-  `status=blocked_cameo_outbound_email_send_preflight`, `blocker_count=3`,
+  `status=cameo_outbound_email_send_preflight_ready`, `blocker_count=0`,
   `draft_ready=true`, `draft_eml_present=true`,
-  `registration_email_approval_ready=false`, `operator_send_csv_present=false`,
-  `authorized_for_separate_operator_send=false`, `email_sent=false`,
+  `registration_email_approval_ready=true`, `operator_send_csv_present=true`,
+  `authorized_for_separate_operator_send=true`, `email_sent=false`,
   `smtp_connection_opened=false`, `outbound_email_enabled=false`,
   `external_state_mutated=false`다.
 - `betelgeuze_cameo/official_result_fetch_preflight.py`와
@@ -687,46 +722,47 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `network_request_opened=false`, `official_results_fetched=false`,
   `native_local_accuracy_used=false`, `external_state_mutated=false`다.
 - `runs/cameo_validation_operations_dossier_current.json`은
-  `stage_count=10`, `blocked_stage_count=4`, `approval_required_stage_count=0`,
+  `stage_count=10`, `blocked_stage_count=1`, `approval_required_stage_count=1`,
   `official_result_fetch_preflight_ready=false`,
   `outbound_email_draft_ready=true`,
-  `outbound_email_send_preflight_ready=false`다. blocked stage는 공식 결과
-  fetch preflight, 공식 결과 intake, outbound email send preflight,
-  public registration/email approval이며,
-  `blocked_cameo_validation_operations_dossier` 상태를 유지한다.
+  `outbound_email_send_preflight_ready=true`다. 첫 blocked stage는
+  `first_blocked_stage_id=official_result_fetch_preflight`
+  (`first_blocked_stage_blocker_count=2`)이고, 첫 approval-required stage는
+  `first_approval_required_stage_id=public_registration_and_email`
+  (`APPROVE_CAMEO_SERVER_REGISTRATION;APPROVE_CAMEO_OUTBOUND_EMAIL`)이다.
+  따라서 dossier 자체는 `blocked_cameo_validation_operations_dossier` 상태를
+  유지하지만, blocked 원인은 공식 결과 fetch preflight 한 곳으로 수렴했다.
 - `runs/cameo_architecture_validation_contract_current.json`은 최신 재생성 후
   `local_validation_protocol_ready=true`, `receiver_api_readiness_ready=true`,
-  `validation_operations_surface_ready=true`, `ready_lane_count=6`,
-  `blocked_lane_count=1`, `approval_required_lane_count=3`이다.
-- actual prediction email sender와 result fetcher는 미구현이다. 단, sender 이전 단계인
-  local outbound email `.eml` draft assembly는 ready stage로, actual send 직전
-  preflight와 official-result fetch 직전 preflight는 blocked stage로
-  operations dossier에 편입됐다.
-- 공식 CAMEO 결과 0건 — 외부 web fetch 금지, 운영자 입력만 허용.
-- `local_validation_protocol_ready=true` (lane 6/10 ready, 1 blocked, 3 approval-required).
-- capability preflight는 development receiver lane 기준 ready지만,
-  public registration lane은 registration approval, outbound email approval,
-  prediction-generation approval 부재로 계속 잠겨 있다.
+  `validation_operations_surface_ready=true`, `ready_lane_count=10`,
+  `blocked_lane_count=0`, `approval_required_lane_count=0`이다.
+- prediction email sender와 result fetcher는 scaffold가 존재하지만 실제 SMTP send,
+  public registration, official-result web fetch는 별도 operator-run action으로
+  남아 있고 current artifact는 이를 실행하지 않았다.
+- 공식 CAMEO 결과는 operator intake 기준 1건 accepted이며 performance scorecard와
+  architecture validation evidence에는 반영됐다. 다만 official-result fetch preflight는
+  별도 retrieval approval CSV가 없어 계속 blocked다.
 
 **병목 원인**
 - `external_state_mutated=false` / `outbound_email_enabled=false` /
   `server_registration_mutated=false` 같은 fail-closed 플래그로 의도적 차단.
-- 공식 CAMEO 결과 자체가 외부 의존 — 자체 통제 불가.
+- official-result fetch preflight의 운영자 CSV/승인 토큰
+  (`APPROVE_CAMEO_OFFICIAL_RESULT_FETCH`)이 비어 있어 별도 retrieval step을 열 수 없다.
 - API dependency profile, local receiver smoke, outbound email draft assembly는
-  1차 통과했고 outbound send / official-result fetch preflight scaffold도
-  생겼지만,
-  public CAMEO registration/email/prediction submission은 운영자 approval token과
-  외부 CAMEO 운영 흐름 없이는 의도적으로 열리지 않는다.
+  1차 통과했고 outbound send preflight도 ready다. 하지만 public CAMEO
+  registration/email/prediction submission 및 official-result retrieval은 외부 CAMEO
+  운영 흐름 없이는 의도적으로 실행되지 않는다.
 
 **필요 작업**
 - API dependency profile 설치/활성화와 receiver smoke contract는 1차 완료.
-- outbound email draft assembly, send preflight scaffold, official-result fetch
-  preflight scaffold는 1차 완료. 다음은 operator-approved actual prediction
-  email sender / result fetcher /
-  public endpoint 등록.
-- 운영자 approval token (`APPROVE_CAMEO_SERVER_REGISTRATION`,
-  `APPROVE_CAMEO_OUTBOUND_EMAIL`) 발급.
-- 공식 CAMEO 결과 입력 → performance scorecard 활성화.
+- outbound email draft assembly와 send preflight는 ready. 다음은 실제 SMTP send가
+  필요한 경우 separate operator-run action으로만 수행.
+- official-result fetch preflight CSV를 채우고
+  `APPROVE_CAMEO_OFFICIAL_RESULT_FETCH` 기준의 separate retrieval step을 운영자가
+  실행할지 결정.
+- public endpoint 등록은 `APPROVE_CAMEO_SERVER_REGISTRATION`,
+  `APPROVE_CAMEO_OUTBOUND_EMAIL` approval metadata가 준비된 상태에서 별도 외부
+  operator-run action으로만 진행.
 
 ### C. GPCR family / router / scorer promotion (shadow-only lock)
 
@@ -970,9 +1006,9 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
 - release source-of-truth gate는 R4 preflight, R4 rollout smoke receipt artifact,
   R8 scope-breadth receipt, goal operator intake kit, commercial readiness execution
   ladder, API/bottleneck visibility, master gap closure rollup 포함 refresh 이후
-  `product_release_source_of_truth_gate_ready`, `pass_count=71/71`,
+  `product_release_source_of_truth_gate_ready`, `pass_count=76/76`,
   `blocker_count=0`, `stale_artifact_count=0`,
-  `release_refresh_command_count=61`로 재검증됐다.
+  `release_refresh_command_count=68`으로 재검증됐다.
 - `prometheus_client` 기반 실제 metrics endpoint는 1차 완료.
 - Alert rules + paged webhook receiver + closed-loop alert delivery smoke는 1차 완료;
   다음은 operator webhook secret mount, 실제 pager provider delivery smoke,
@@ -1571,10 +1607,13 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
    evidence의 live/signed path, bundle validation, R4 preflight는 1차 green이다.
    다음은 restricted scope 안의 운영 SLA/모니터링을 유지하면서 full-commercial
    science claim evidence와 분리하는 일이다.
-2. **Production AI 고객 실행 경계** — ROCm/HIP GPU execution environment,
-   GPU worker return receipt, production guarded checkpoint 승격은 현재 ready.
-   다음은 validated runner profile evidence/operator approval과 고객 요청 경로에서의
-   score/ranking mutation policy 검증.
+2. **Production AI 고객 실행 경계** — ROCm/HIP GPU execution environment와
+   force derivation validation은 ready지만, product checkpoint/promotion은
+   `default_residual_mode=shadow`, `production_promotion_allowed=false`,
+   `trained_model_checkpoint_count=0`으로 registry guarded promotion에서 멈춰 있다.
+   다음은 residual registry promotion, goal completion audit 재검증, validated
+   runner profile evidence/operator approval, 고객 요청 경로의 score/ranking
+   mutation policy 검증.
 3. **License 결정 + LICENSE 파일 작성** — LICENSE/source hash 일치,
    license decision/work-order/commercial gate, self-hosted license audit, release
    bundle linkage는 1차 완료. 다음은 법률 최종 확인과 JSZip dual-license
@@ -1712,20 +1751,23 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
      green의 누적.
    - 외부 source (PubMed/wetlab) 의존성.
 
-3. **Hosted infrastructure 부재**
+3. **Hosted/full-commercial 운영 증거 부재**
    - `core/` physics는 local-only 가정.
    - `docker-compose`/`K8s`/`CI`/`prometheus_client`/alert rules/signed model
      registry/TLS hosted-exposure guard/closed-loop alert smoke/rollout dry-run
-     approval gate/release bundle linkage/R4 launch preflight surface는 1차 통합됐으나,
-     R4 preflight는 현재 API customer-flow bundle validation과 commercial-independence
-     gate 때문에 blocked이며, 실제 pager provider delivery/ingress certificate
-     smoke/operator-approved rollout execution smoke도 미완.
+     approval gate/release bundle linkage/R4 launch preflight surface는 1차 green이다.
+   - 실제 외부 mutation은 여전히 Target/Action/Impact/Risk/Rollback/Verification
+     확인과 operator approval 전에는 금지된다.
+   - full-commercial release는 R8 full-scope claim closure와 R9 engine refinement
+     claim promotion evidence receipt가 operator placeholder 상태라 막혀 있고,
+     production AI registry guarded promotion도 shadow 상태다.
    - local delivery + on-prem pilot 가정. hosted SaaS는 별도.
 
-가장 큰 단일 잔여 gap은 이제 **API customer-flow bundle validation +
-commercial-independence gate + 실제 R4/operator-approved rollout 실행 smoke**다.
-상용 API, durable worker, validated runner profile, production_guarded AI receipt,
-license/legal review, release bundle, claim-boundary 정책, source-of-truth gate는
-local artifact 기준 닫혔지만, R4 launch preflight와 실제 고객 실행은
+가장 큰 단일 잔여 gap은 이제 **R8/R9 full-commercial science claim evidence
+receipt + production AI registry guarded promotion + operator-approved 실제 실행
+증거**다. 상용 API, durable worker, validated runner profile, license/legal review,
+release bundle, R4 preflight, claim-boundary 정책, source-of-truth gate는 local artifact
+기준 1차 green이지만, full-scope/science claim promotion과 production AI 고객-facing
+promotion은 아직 막혀 있다. 실제 고객 실행은
 Target/Action/Impact/Risk/Rollback/Verification을 제시하고 명시적 R4 확인을 받은 뒤에만
 remote/deployment state mutation으로 넘어갈 수 있다.

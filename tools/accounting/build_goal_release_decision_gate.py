@@ -790,6 +790,29 @@ def build_goal_release_decision_gate(
         and protected_policy_resolved
     )
     release_allowed = blocker_count == 0
+    full_commercial_release_blocker_ids = (
+        list(full_commercial_matrix.get("expected_release_blocker_ids") or [])
+        if full_commercial_matrix_gate_present
+        and _int(full_commercial_matrix.get("blocked_matrix_row_count")) > 0
+        else []
+    )
+    if master_gap_rollup_gate_present and master_gap_open_ids:
+        full_commercial_release_blocker_ids.extend(
+            f"MASTER:{gap_id}" for gap_id in master_gap_open_ids if f"MASTER:{gap_id}" not in full_commercial_release_blocker_ids
+        )
+    full_commercial_release_blocker_ids = list(dict.fromkeys(full_commercial_release_blocker_ids))
+    primary_full_commercial_release_blocker_id = (
+        _text(full_commercial_matrix.get("first_blocked_release_blocker_id"))
+        or (f"MASTER:{master_gap_open_ids[0]}" if master_gap_open_ids else "")
+    )
+    full_commercial_release_allowed = (
+        release_allowed
+        and (
+            not full_commercial_matrix_gate_present
+            or bool(full_commercial_matrix.get("full_commercial_blocker_evidence_matrix_ready") is True)
+        )
+        and (not master_gap_rollup_gate_present or bool(master_gap_rollup.get("all_gaps_closed") is True))
+    )
     next_required_items: list[str] = []
     if not product_bundle_validated or not product_ready or not product_claim_allowed:
         next_required_items.append("product bundle validation")
@@ -825,6 +848,24 @@ def build_goal_release_decision_gate(
         "packet_type": "goal_release_decision_gate",
         "status": "goal_release_ready" if release_allowed else "blocked_goal_release_decision",
         "release_allowed": release_allowed,
+        "restricted_release_allowed": release_allowed,
+        "full_commercial_release_allowed": full_commercial_release_allowed,
+        "full_commercial_release_blocker_count": len(full_commercial_release_blocker_ids),
+        "full_commercial_release_blocker_ids": full_commercial_release_blocker_ids,
+        "primary_full_commercial_release_blocker_id": primary_full_commercial_release_blocker_id,
+        "primary_full_commercial_release_blocker": _text(
+            full_commercial_matrix.get("first_blocked_evidence_row_id")
+        )
+        or _text(master_gap_rollup.get("current_primary_open_gap_id")),
+        "full_commercial_release_next_required_step": (
+            "Full-commercial release is clear."
+            if full_commercial_release_allowed
+            else (
+                _text(full_commercial_matrix.get("next_required_step"))
+                or _text(master_gap_rollup.get("current_next_action"))
+                or "Close full-commercial release blockers before claiming full-commercial release."
+            )
+        ),
         "commercial_independent_product_ready": product_release_ready,
         "cameo_architecture_validation_ready": cameo_architecture_validation_ready,
         "cleanup_objective_ready": cleanup_objective_ready,
@@ -1116,6 +1157,12 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         f"- status: `{s['status']}`",
         f"- release_allowed: `{s['release_allowed']}`",
+        f"- restricted_release_allowed: `{s['restricted_release_allowed']}`",
+        f"- full_commercial_release_allowed: `{s['full_commercial_release_allowed']}`",
+        f"- full_commercial_release_blocker_count: `{s['full_commercial_release_blocker_count']}`",
+        f"- full_commercial_release_blocker_ids: `{';'.join(s['full_commercial_release_blocker_ids'])}`",
+        f"- primary_full_commercial_release_blocker_id: `{s['primary_full_commercial_release_blocker_id']}`",
+        f"- primary_full_commercial_release_blocker: `{s['primary_full_commercial_release_blocker']}`",
         f"- commercial_independent_product_ready: `{s['commercial_independent_product_ready']}`",
         f"- product_architecture_local_surface_ready: `{s['product_architecture_local_surface_ready']}`",
         f"- product_architecture_release_ready: `{s['product_architecture_release_ready']}`",

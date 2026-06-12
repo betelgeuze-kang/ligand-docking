@@ -168,6 +168,7 @@
   full-scope transporter evidence와 refine-tier claim-grade calibration/parity
   미완료가 상위 상태 API에서 사라지지 않는다. `/goal/status`는
   `full_commercial_release_blocker_ids`,
+  `restricted_release_allowed`, `full_commercial_release_allowed`,
   `full_commercial_release_blocker_visibility_ready`,
   `completion_audit_release_blocker_bottleneck_count`, 그리고
   `commercial_readiness_handoff_bundle_artifact_reference_count=26`를 함께 노출한다.
@@ -182,7 +183,12 @@
   `product_full_commercial_blocker_evidence_matrix_*` summary와
   `product_full_commercial_blocker_evidence_matrix_recorded` row로 노출해,
   restricted release source-of-truth가 green이어도 full commercial R8/R9 receipt
-  미완료가 decision packet에서 사라지지 않는다.
+  미완료가 decision packet에서 사라지지 않는다. 최신 decision summary는
+  `release_allowed=true`, `restricted_release_allowed=true`와 별개로
+  `full_commercial_release_allowed=false`,
+  `full_commercial_release_blocker_ids=[R8_full_scope_claim_closure,
+  R9_engine_refinement_claim_promotion, MASTER:SCI-CLAIM]`,
+  `primary_full_commercial_release_blocker_id=R8_full_scope_claim_closure`를 노출한다.
   `goal_api_surface_contract_current.json`은 이 R8/R9 + primary release blocker action +
   commercial handoff visibility를
   `goal_full_commercial_bottleneck_visibility_present` check로 고정하며 최신
@@ -237,11 +243,12 @@
   `goal_operator_intake_kit_current/manifest.json`,
   `product_commercial_readiness_execution_ladder_current.json`,
   `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`,
-  `product_full_commercial_blocker_evidence_matrix_current.json`의
+  `product_full_commercial_blocker_evidence_matrix_current.json`,
+  `cameo_validation_operations_dossier_current.json`의
   freshness 및 semantic-ready 상태를 함께 검증한다. 최신 full refresh 후
-  source-of-truth는 `row_count=71`, `pass_count=71`, `blocker_count=0`,
-  `artifact_row_count=53`, `semantic_status_row_count=16`,
-  `release_refresh_command_count=61`, `stale_artifact_count=0`,
+  source-of-truth는 `row_count=76`, `pass_count=76`, `blocker_count=0`,
+  `artifact_row_count=54`, `semantic_status_row_count=20`,
+  `release_refresh_command_count=68`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   `product_ai_report_explanation_packet_semantic_ready`와
   `product_ai_report_ux_contract_semantic_ready`는 core/full decision graph 순환을
@@ -316,7 +323,9 @@
   `runs/api_runner_profile_promotion_operator_template_current.csv`의 decision/token/review
   fields를 검증하고, 현재 빈 template 기준
   `blocked_api_runner_profile_promotion_operator_receipt`,
-  `operator_receipt_ready=false`로 남겨 실제 profile edit/runner execution과 readiness
+  `operator_receipt_ready=false`, `blocked_row_count=4`,
+  `first_blocked_profile_id=backmapping_scoring.example`,
+  `most_common_row_blocker=operator_decision_missing`으로 남겨 실제 profile edit/runner execution과 readiness
   accounting을 분리한다. release bundle, source-of-truth, goal operator intake kit는 이
   receipt를 필수 산출물로 기록한다.
 
@@ -339,17 +348,24 @@
 ### C. AI Residual / Production 추론 주체 전환 (P1)
 
 **현황**
-- residual model registry `production_guarded` 승격 accounting green, checkpoint/sidecar 7/7 output head 준비.
-- delta_force 라벨은 GPU worker return receipt(operator-transfer) 기반으로 충족 처리됨.
+- ROCm/HIP execution environment, force derivation validation, training data,
+  checkpoint sidecar/preflight는 ready이고, checkpoint-readiness acceptance matrix는
+  `8`개 stage 중 `7`개 ready다.
+- production AI 자체는 아직 `default_residual_mode=shadow`,
+  `production_promotion_allowed=false`, `trained_model_checkpoint_count=0`으로
+  registry guarded promotion에서 blocked다.
 
 **갭**
-- `production_gpu_execution_environment_ready` 의 실제 ROCm/HIP GPU 노드 또는 영속 worker 부재 시,
-  full regeneration은 operator-transfer 의존.
+- `residual_model_registry`가 customer-facing guarded promotion을 허용하지 않고,
+  product goal completion audit도 여전히 blocked다.
+- trained checkpoint accounting과 score/ranking mutation policy가 실제 고객 요청 경로에
+  연결되기 전까지 production AI는 shadow-only다.
 - residual이 **물리 코어 위 bounded corrector** 라는 경계는 유지되어야 함(정밀도 갭을 AI로 덮지 않기).
 
 **구현 방향**
-1. ROCm/HIP GPU 노드 상시화 또는 GPU worker 영속 큐(이미 SQLite lease/heartbeat primitive 존재) 운영화.
-2. residual 학습 데이터의 **물리 라벨 출처 명확화**(force/energy 라벨이 자체 정밀 tier에서 나오도록 — A와 연동).
+1. residual registry guarded promotion 조건을 trained checkpoint/promotion policy와 연결.
+2. customer-facing score/ranking mutation disabled 경계를 유지하면서 operator-approved
+   promotion path만 허용.
 3. shadow → assist → production_guarded 승격 시 **abstention/uncertainty 게이트**를 제품 SLA에 노출.
 
 **완료 정의**: 정밀 tier 라벨로 학습된 residual이 production_guarded로 고객 노출 가능,

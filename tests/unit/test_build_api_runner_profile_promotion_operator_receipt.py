@@ -98,6 +98,10 @@ def test_api_runner_profile_promotion_operator_receipt_blocks_unfilled_template(
     assert summary["profile_count"] == 2
     assert summary["receipt_row_count"] == 2
     assert summary["blocked_row_count"] == 2
+    assert summary["first_blocked_profile_id"] == "profile_a"
+    assert summary["first_blocked_row_blocker"] == "operator_decision_missing"
+    assert "approval_token_invalid" in summary["first_blocked_row_blockers"]
+    assert summary["most_common_row_blocker"] == "operator_decision_missing"
     assert summary["missing_profile_count"] == 0
     assert summary["external_state_mutated"] is False
     assert "blocked_receipt_rows_present" in summary["blockers"]
@@ -142,6 +146,10 @@ def test_api_runner_profile_promotion_operator_receipt_passes_reviewed_decisions
     assert summary["operator_receipt_ready"] is True
     assert summary["pass_row_count"] == 2
     assert summary["blocked_row_count"] == 0
+    assert summary["first_blocked_profile_id"] == ""
+    assert summary["first_blocked_row_blocker"] == ""
+    assert summary["first_blocked_row_blockers"] == []
+    assert summary["most_common_row_blocker"] == ""
     assert summary["approved_profile_count"] == 2
     assert summary["blockers"] == []
 

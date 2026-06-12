@@ -140,6 +140,20 @@ async def get_cameo_operations() -> dict[str, Any]:
         "stage_count": int(operations.get("stage_count") or 0),
         "blocked_stage_count": int(operations.get("blocked_stage_count") or 0),
         "approval_required_stage_count": int(operations.get("approval_required_stage_count") or 0),
+        "first_blocked_stage_id": operations.get("first_blocked_stage_id", ""),
+        "first_blocked_stage_source_status": operations.get("first_blocked_stage_source_status", ""),
+        "first_blocked_stage_artifact": operations.get("first_blocked_stage_artifact", ""),
+        "first_blocked_stage_blocker_count": int(operations.get("first_blocked_stage_blocker_count") or 0),
+        "first_blocked_stage_recommended_action": operations.get("first_blocked_stage_recommended_action", ""),
+        "first_approval_required_stage_id": operations.get("first_approval_required_stage_id", ""),
+        "first_approval_required_stage_source_status": operations.get("first_approval_required_stage_source_status", ""),
+        "first_approval_required_stage_artifact": operations.get("first_approval_required_stage_artifact", ""),
+        "first_approval_required_stage_token_required": operations.get(
+            "first_approval_required_stage_token_required", ""
+        ),
+        "first_approval_required_stage_recommended_action": operations.get(
+            "first_approval_required_stage_recommended_action", ""
+        ),
         "validation_ready": bool(operations.get("validation_ready") is True),
         "official_result_required": bool(operations.get("official_result_required") is True),
         "official_results_intake_status": operations.get("official_results_intake_status", ""),

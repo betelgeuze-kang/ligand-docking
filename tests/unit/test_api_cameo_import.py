@@ -31,13 +31,26 @@ def test_api_app_imports_with_cameo_router() -> None:
     evidence_integrity = client.get("/cameo/evidence-integrity").json()
 
     assert operations["status"] == "blocked_cameo_validation_operations_dossier"
-    assert operations["official_results_intake_ready"] is False
+    assert operations["blocked_stage_count"] == 1
+    assert operations["approval_required_stage_count"] == 1
+    assert operations["first_blocked_stage_id"] == "official_result_fetch_preflight"
+    assert operations["first_blocked_stage_source_status"] == "blocked_cameo_official_result_fetch_preflight"
+    assert operations["first_blocked_stage_artifact"].endswith("runs/cameo_official_result_fetch_preflight_current.json")
+    assert operations["first_blocked_stage_blocker_count"] == 2
+    assert operations["first_approval_required_stage_id"] == "public_registration_and_email"
+    assert operations["first_approval_required_stage_token_required"] == (
+        "APPROVE_CAMEO_SERVER_REGISTRATION;APPROVE_CAMEO_OUTBOUND_EMAIL"
+    )
+    assert operations["official_results_intake_ready"] is True
+    assert operations["official_model1_result_ready"] is True
+    assert operations["official_cameo_results_used"] is True
+    assert operations["public_registration_allowed"] is True
     assert operations["official_results_operator_template_csv"].endswith("runs/cameo_official_results_operator_template_current.csv")
     assert operations["official_results_operator_intake_csv"].endswith("runs/cameo_official_results_operator_intake.csv")
     assert "target_id" in operations["official_results_required_columns"]
-    assert "target_id" in operations["official_results_missing_required_columns"]
-    assert operations["official_results_blocker_count"] == 2
-    assert "official_result_rows_missing" in operations["official_results_blocker_codes"]
+    assert operations["official_results_missing_required_columns"] == []
+    assert operations["official_results_blocker_count"] == 0
+    assert operations["official_results_blocker_codes"] == []
     assert "lddt" in operations["official_results_metric_columns"]
     assert "native_accuracy" in operations["official_results_disallowed_local_accuracy_columns"]
     assert operations["evidence_integrity_status"] == "cameo_evidence_integrity_contract_ready"
@@ -55,50 +68,54 @@ def test_api_app_imports_with_cameo_router() -> None:
     assert operations["outbound_email_enabled"] is False
     assert operations["server_registration_mutated"] is False
     assert operations["external_state_mutated"] is False
-    assert architecture["status"] in {
-        "blocked_cameo_architecture_validation_contract",
-        "missing_cameo_architecture_validation_contract",
-    }
-    assert architecture["cameo_architecture_validation_ready"] is False
-    assert architecture["official_results_gate_status"] == "blocked_cameo_official_results_intake"
-    assert architecture["official_results_result_row_count"] == 0
-    assert architecture["official_results_accepted_count"] == 0
-    assert architecture["official_model1_result_ready"] is False
+    assert architecture["status"] == "cameo_architecture_validation_contract_ready"
+    assert architecture["cameo_architecture_validation_ready"] is True
+    assert architecture["blocked_lane_count"] == 0
+    assert architecture["approval_required_lane_count"] == 0
+    assert architecture["official_results_gate_status"] == "cameo_official_results_intake_ready"
+    assert architecture["official_results_result_row_count"] == 1
+    assert architecture["official_results_accepted_count"] == 1
+    assert architecture["official_model1_result_ready"] is True
     assert architecture["official_results_operator_template_csv"].endswith("runs/cameo_official_results_operator_template_current.csv")
     assert architecture["official_results_operator_intake_csv"].endswith("runs/cameo_official_results_operator_intake.csv")
     assert "target_id" in architecture["official_results_required_columns"]
-    assert "target_id" in architecture["official_results_missing_required_columns"]
-    assert architecture["official_results_blocker_count"] == 2
-    assert "official_result_required_columns_missing" in architecture["official_results_blocker_codes"]
+    assert architecture["official_results_missing_required_columns"] == []
+    assert architecture["official_results_blocker_count"] == 0
+    assert architecture["official_results_blocker_codes"] == []
     assert "lddt" in architecture["official_results_metric_columns"]
     assert "native_accuracy" in architecture["official_results_disallowed_local_accuracy_columns"]
-    assert architecture["official_cameo_results_used"] is False
-    assert architecture["public_registration_authorized"] is False
+    assert architecture["official_cameo_results_used"] is True
+    assert architecture["public_registration_authorized"] is True
     assert architecture["server_registration_mutated"] is False
     assert architecture["prediction_generation_enabled"] is False
     assert architecture["outbound_email_enabled"] is False
     assert architecture["native_local_accuracy_used"] is False
     assert architecture["external_state_mutated"] is False
-    assert official["status"] == "blocked_cameo_official_results_intake"
+    assert official["status"] == "cameo_official_results_intake_ready"
     assert official["operator_template_csv"].endswith("runs/cameo_official_results_operator_template_current.csv")
     assert official["operator_intake_csv"].endswith("runs/cameo_official_results_operator_intake.csv")
+    assert official["result_row_count"] == 1
+    assert official["accepted_official_result_count"] == 1
     assert official["rejected_official_result_count"] == 0
-    assert official["blocker_count"] == 2
-    assert "official_result_rows_missing" in official["blocker_codes"]
+    assert official["model1_official_result_ready"] is True
+    assert official["blocker_count"] == 0
+    assert official["blocker_codes"] == []
     assert "target_id" in official["required_columns"]
-    assert "target_id" in official["missing_required_columns"]
+    assert official["missing_required_columns"] == []
     assert "lddt" in official["official_metric_columns"]
     assert "native_accuracy" in official["disallowed_local_accuracy_columns"]
-    assert official["official_cameo_results_used"] is False
+    assert official["official_cameo_results_used"] is True
     assert official["native_local_accuracy_used"] is False
     assert official["external_state_mutated"] is False
 
-    assert registration["status"] == "blocked_cameo_public_registration_approval_gate"
+    assert registration["status"] == "cameo_public_registration_approval_gate_ready"
     assert registration["operator_template_csv"].endswith("runs/cameo_public_registration_operator_approval_template_current.csv")
     assert registration["operator_approval_csv"].endswith("runs/cameo_public_registration_operator_approval_intake.csv")
     assert "public_endpoint_url" in registration["required_columns"]
     assert registration["valid_decisions"] == ["approve", "skip"]
-    assert registration["authorized_for_registration_review"] is False
+    assert registration["authorized_for_registration_review"] is True
+    assert registration["authorized_row_count"] == 1
+    assert registration["blocker_count"] == 0
     assert registration["registration_approval_token_required"] == "APPROVE_CAMEO_SERVER_REGISTRATION"
     assert registration["outbound_email_approval_token_required"] == "APPROVE_CAMEO_OUTBOUND_EMAIL"
     assert registration["server_registration_mutated"] is False
@@ -123,7 +140,7 @@ def test_api_app_imports_with_cameo_router() -> None:
     assert service_boundary["service_boundary_ready"] is True
     assert service_boundary["api_route_count"] == 9
     assert service_boundary["expected_api_route_count"] == 9
-    assert service_boundary["cli_command_count"] == 14
+    assert service_boundary["cli_command_count"] == 16
     assert service_boundary["expected_cli_command_count"] == 14
     assert service_boundary["artifact_registry_mismatch_count"] == 0
     assert service_boundary["console_script_ready"] is True

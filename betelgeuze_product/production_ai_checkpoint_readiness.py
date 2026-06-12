@@ -114,6 +114,7 @@ def build_product_production_ai_checkpoint_readiness(
     checkpoint_work_order_packet: dict[str, Any],
     training_data_packet: dict[str, Any],
     force_gpu_worker_return_receipt_packet: dict[str, Any],
+    force_derivation_validation_packet: dict[str, Any] | None = None,
     force_gpu_worker_handoff_packet: dict[str, Any] | None = None,
     gpu_return_intake_packet: dict[str, Any] | None = None,
     rocm_environment_packet: dict[str, Any] | None = None,
@@ -122,6 +123,7 @@ def build_product_production_ai_checkpoint_readiness(
     checkpoint_work_order_artifact_path: str = "runs/residual_production_checkpoint_work_order_current.json",
     training_data_artifact_path: str = "runs/residual_production_training_data_contract_current.json",
     force_gpu_worker_return_receipt_artifact_path: str = "runs/residual_force_gpu_worker_return_receipt_current.json",
+    force_derivation_validation_artifact_path: str = "runs/residual_force_derivation_validation_current.json",
     force_gpu_worker_handoff_artifact_path: str = "runs/residual_force_gpu_worker_handoff_package_current.json",
     gpu_return_intake_artifact_path: str = "runs/product_production_ai_gpu_return_intake_current.json",
     rocm_environment_artifact_path: str = "runs/rocm_environment_manifest_current.json",
@@ -131,6 +133,7 @@ def build_product_production_ai_checkpoint_readiness(
     work_order = _summary(checkpoint_work_order_packet)
     training = _summary(training_data_packet)
     receipt = _summary(force_gpu_worker_return_receipt_packet)
+    force_derivation = _summary(force_derivation_validation_packet or {})
     handoff_packet = force_gpu_worker_handoff_packet or {}
     handoff = _summary(handoff_packet)
     gpu_return_intake = _summary(gpu_return_intake_packet or {})
@@ -161,6 +164,9 @@ def build_product_production_ai_checkpoint_readiness(
     ready_checkpoint_count = _int(work_order.get("ready_checkpoint_count"))
     training_data_ready = _bool(training.get("production_training_data_ready"))
     gpu_receipt_ready = _bool(receipt.get("gpu_worker_return_receipt_ready"))
+    delta_force_derivation_validation_ready = _bool(
+        force_derivation.get("delta_force_derivation_validation_ready")
+    ) or _bool(training.get("delta_force_label_evidence_ready"))
     gpu_handoff_ready = _bool(handoff.get("gpu_worker_handoff_ready"))
     rocm_manifest_ready = _bool(rocm_environment.get("manifest_ready"))
     rocm_stack_detected = _bool(rocm_environment.get("rocm_stack_detected"))
@@ -356,10 +362,10 @@ def build_product_production_ai_checkpoint_readiness(
             stage_id="force_derivation_acceptance",
             ready=bool(
                 gpu_receipt_ready
-                and _bool(training.get("delta_force_label_evidence_ready"))
+                and delta_force_derivation_validation_ready
             ),
             required_checks=["force_gpu_worker_return_receipt_ready", "delta_force_derivation_validation_ready"],
-            artifact="runs/residual_force_derivation_validation_current.json",
+            artifact=force_derivation_validation_artifact_path,
             validation_command="python3 tools/build_residual_force_derivation_validation.py",
             release_effect="regenerated trajectory bundles can provide accepted delta_force derivation inputs",
             unlock_fields=["delta_force"],
@@ -435,17 +441,77 @@ def build_product_production_ai_checkpoint_readiness(
     ]
     acceptance_blockers = [row for row in acceptance_rows if row["status"] != "ready"]
     first_acceptance_blocker = acceptance_blockers[0] if acceptance_blockers else {}
+    check_ready_by_id = {
+        "production_gpu_execution_environment_ready": production_gpu_execution_environment_ready,
+        "force_gpu_worker_return_receipt_ready": gpu_receipt_ready,
+        "delta_force_derivation_validation_ready": delta_force_derivation_validation_ready,
+        "production_training_data_ready": training_data_ready,
+        "ready_checkpoint_count_positive": ready_checkpoint_count > 0,
+        "production_output_policy_complete": not _list(registry.get("checkpoint_missing_output_fields"))
+        and not _list(registry.get("checkpoint_missing_adapter_output_policy_fields")),
+        "selected_sidecar_ready": selected_sidecar_ready,
+        "selected_sidecar_training_contract_ready": selected_sidecar_training_ready,
+        "selected_sidecar_force_receipt_ready": selected_sidecar_force_receipt_ready,
+        "checkpoint_preflight_ready": checkpoint_preflight_ready,
+        "trained_model_checkpoint_count_positive": trained_checkpoint_count > 0,
+        "default_residual_mode_guarded": mode_ready,
+        "registry_customer_facing_promotion_allowed": registry_promotion_ready,
+    }
     first_actionable_check_id = next(
         (
             str(item)
             for item in (first_acceptance_blocker.get("required_checks") or [])
-            if str(item)
+            if str(item) and check_ready_by_id.get(str(item)) is False
         ),
-        "",
+        next(
+            (
+                str(item)
+                for item in (first_acceptance_blocker.get("required_checks") or [])
+                if str(item)
+            ),
+            "",
+        ),
     )
+    synthetic_check_rows = {
+        "delta_force_derivation_validation_ready": {
+            "observed": (
+                f"force_derivation_status={force_derivation.get('status')};"
+                f"delta_force_derivation_validation_ready={delta_force_derivation_validation_ready};"
+                f"blocker_count={_int(force_derivation.get('blocker_count'))}"
+            ),
+            "required": "delta_force derivation validation is ready",
+            "next_action": _text(force_derivation.get("next_required_step"))
+            or "Rerun force derivation validation after the GPU return receipt is accepted.",
+        },
+        "ready_checkpoint_count_positive": {
+            "observed": f"ready_checkpoint_count={ready_checkpoint_count}",
+            "required": "ready_checkpoint_count is positive",
+            "next_action": "Rerun checkpoint preflight after the sidecar and output contracts are ready.",
+        },
+        "production_output_policy_complete": {
+            "observed": (
+                "checkpoint_missing_output_fields="
+                f"{','.join(str(item) for item in _list(registry.get('checkpoint_missing_output_fields')))};"
+                "checkpoint_missing_adapter_output_policy_fields="
+                f"{','.join(str(item) for item in _list(registry.get('checkpoint_missing_adapter_output_policy_fields')))}"
+            ),
+            "required": "production output policy is complete",
+            "next_action": "Train or rebuild a production residual score model with the full output-head contract.",
+        },
+        "trained_model_checkpoint_count_positive": {
+            "observed": f"trained_model_checkpoint_count={trained_checkpoint_count}",
+            "required": "trained_model_checkpoint_count is positive",
+            "next_action": "Rebuild the residual registry after a preflight-ready checkpoint is available.",
+        },
+        "default_residual_mode_guarded": {
+            "observed": f"default_residual_mode={registry.get('default_residual_mode')}",
+            "required": "default residual mode is assist, production, or production_guarded",
+            "next_action": "Rebuild the residual registry after guarded promotion is approved.",
+        },
+    }
     first_actionable_check_row = next(
         (row for row in rows if row.get("check_id") == first_actionable_check_id),
-        {},
+        synthetic_check_rows.get(first_actionable_check_id, {}),
     )
     if first_actionable_check_id == "production_gpu_execution_environment_ready":
         worker_runtime_receipt_contract = {
@@ -575,6 +641,10 @@ def build_product_production_ai_checkpoint_readiness(
         "ready_checkpoint_count": ready_checkpoint_count,
         "checkpoint_preflight_ready": checkpoint_preflight_ready,
         "production_training_data_ready": training_data_ready,
+        "delta_force_derivation_validation_ready": delta_force_derivation_validation_ready,
+        "force_derivation_validation_status": _text(force_derivation.get("status")),
+        "force_derivation_validation_artifact_path": force_derivation_validation_artifact_path,
+        "force_derivation_validation_blocker_count": _int(force_derivation.get("blocker_count")),
         "production_output_head_gap_contract_ready": output_head_gap_contract_ready,
         "production_output_heads_complete": production_output_heads_complete,
         "production_output_head_required_field_count": _int(

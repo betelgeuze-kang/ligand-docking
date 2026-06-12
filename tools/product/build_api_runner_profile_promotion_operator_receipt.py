@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -259,6 +260,14 @@ def build_api_runner_profile_promotion_operator_receipt(
             row["row_status"] = "blocked"
 
     blocked_rows = [row for row in rows if row["row_status"] != "pass"]
+    first_blocked_row = blocked_rows[0] if blocked_rows else {}
+    row_blocker_counter: Counter[str] = Counter(
+        blocker
+        for row in blocked_rows
+        for blocker in _text(row.get("blockers")).split(";")
+        if blocker
+    )
+    most_common_row_blocker = row_blocker_counter.most_common(1)[0][0] if row_blocker_counter else ""
     summary_blockers: list[str] = []
     if not readiness:
         summary_blockers.append("readiness_packet_missing_or_empty")
@@ -286,6 +295,23 @@ def build_api_runner_profile_promotion_operator_receipt(
         "receipt_row_count": len(source_rows),
         "pass_row_count": len(rows) - len(blocked_rows),
         "blocked_row_count": len(blocked_rows),
+        "first_blocked_profile_id": _text(first_blocked_row.get("profile_id")),
+        "first_blocked_row_blockers": [
+            blocker
+            for blocker in _text(first_blocked_row.get("blockers")).split(";")
+            if blocker
+        ],
+        "first_blocked_row_blocker": (
+            next(
+                (
+                    blocker
+                    for blocker in _text(first_blocked_row.get("blockers")).split(";")
+                    if blocker
+                ),
+                "",
+            )
+        ),
+        "most_common_row_blocker": most_common_row_blocker,
         "approved_profile_count": sum(1 for row in rows if row["operator_decision"] in APPROVED_DECISIONS and row["row_status"] == "pass"),
         "held_profile_count": sum(1 for row in rows if row["operator_decision"] == "hold" and row["row_status"] == "pass"),
         "missing_profile_count": len(missing_profiles),
@@ -320,6 +346,9 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         f"- receipt_row_count: `{s['receipt_row_count']}`",
         f"- pass_row_count: `{s['pass_row_count']}`",
         f"- blocked_row_count: `{s['blocked_row_count']}`",
+        f"- first_blocked_profile_id: `{s['first_blocked_profile_id']}`",
+        f"- first_blocked_row_blocker: `{s['first_blocked_row_blocker']}`",
+        f"- most_common_row_blocker: `{s['most_common_row_blocker']}`",
         f"- approval_token_required: `{s['approval_token_required']}`",
         f"- profile_enabled_by_this_tool: `{s['profile_enabled_by_this_tool']}`",
         f"- runner_executed: `{s['runner_executed']}`",

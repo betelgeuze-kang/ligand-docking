@@ -621,7 +621,13 @@ def test_force_derivation_acceptance_ready_when_delta_force_evidence_ready_witho
             {
                 "production_training_data_ready": True,
                 "dataset_missing_output_labels": ["delta_force"],
-                "delta_force_label_evidence_ready": True,
+            }
+        ),
+        force_derivation_validation_packet=_packet(
+            {
+                "status": "residual_force_derivation_validation_ready",
+                "delta_force_derivation_validation_ready": True,
+                "blocker_count": 0,
             }
         ),
         output_head_gap_contract_packet=_packet(
@@ -645,6 +651,10 @@ def test_force_derivation_acceptance_ready_when_delta_force_evidence_ready_witho
         if row["stage_id"] == "force_derivation_acceptance"
     )
     assert force_derivation["status"] == "ready"
+    assert payload["summary"]["delta_force_derivation_validation_ready"] is True
+    assert payload["summary"]["force_derivation_validation_status"] == (
+        "residual_force_derivation_validation_ready"
+    )
 
 
 def test_build_product_production_ai_checkpoint_readiness_tool_writes_outputs(tmp_path: Path) -> None:
@@ -654,6 +664,7 @@ def test_build_product_production_ai_checkpoint_readiness_tool_writes_outputs(tm
         "training": tmp_path / "training.json",
         "output_head_gap": tmp_path / "output_head_gap.json",
         "receipt": tmp_path / "receipt.json",
+        "force_derivation": tmp_path / "force_derivation.json",
         "gpu_return_intake": tmp_path / "gpu_return_intake.json",
         "rocm": tmp_path / "rocm.json",
     }
@@ -665,6 +676,10 @@ def test_build_product_production_ai_checkpoint_readiness_tool_writes_outputs(tm
         encoding="utf-8",
     )
     paths["receipt"].write_text(json.dumps(_packet({"gpu_worker_return_receipt_ready": False})) + "\n", encoding="utf-8")
+    paths["force_derivation"].write_text(
+        json.dumps(_packet({"delta_force_derivation_validation_ready": False})) + "\n",
+        encoding="utf-8",
+    )
     paths["gpu_return_intake"].write_text(
         json.dumps(
             _packet(
@@ -711,6 +726,8 @@ def test_build_product_production_ai_checkpoint_readiness_tool_writes_outputs(tm
             str(paths["output_head_gap"]),
             "--force-gpu-receipt-json",
             str(paths["receipt"]),
+            "--force-derivation-validation-json",
+            str(paths["force_derivation"]),
             "--gpu-return-intake-json",
             str(paths["gpu_return_intake"]),
             "--rocm-environment-json",

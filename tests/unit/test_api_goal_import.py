@@ -55,6 +55,12 @@ def test_api_app_imports_with_goal_router() -> None:
 
     assert status["status"] == release_artifact.get("status")
     assert status["release_allowed"] is (release_artifact.get("release_allowed") is True)
+    assert status["restricted_release_allowed"] is (
+        release_artifact.get("restricted_release_allowed") is True
+    )
+    assert status["full_commercial_release_allowed"] is (
+        release_artifact.get("full_commercial_release_allowed") is True
+    )
     assert status["release_blocker_count"] == int(release_artifact.get("blocker_count") or 0)
     assert status["release_decision_status"] == release_artifact.get("status")
     assert status["readiness_status"] == readiness_artifact.get("status")
@@ -81,10 +87,23 @@ def test_api_app_imports_with_goal_router() -> None:
         "R9_engine_refinement_claim_promotion",
     ]
     assert status["expected_full_commercial_release_blocker_ids"] == expected_full_commercial_blockers
-    assert status["full_commercial_release_blocker_ids"] == expected_full_commercial_blockers
-    assert status["full_commercial_release_blocker_count"] == len(expected_full_commercial_blockers)
+    assert status["full_commercial_release_blocker_ids"] == release_artifact.get(
+        "full_commercial_release_blocker_ids"
+    )
+    assert status["full_commercial_release_blocker_count"] == int(
+        release_artifact.get("full_commercial_release_blocker_count") or 0
+    )
     assert status["missing_full_commercial_release_blocker_ids"] == []
     assert status["full_commercial_release_blocker_visibility_ready"] is True
+    assert status["primary_full_commercial_release_blocker_id"] == release_artifact.get(
+        "primary_full_commercial_release_blocker_id"
+    )
+    assert status["primary_full_commercial_release_blocker"] == release_artifact.get(
+        "primary_full_commercial_release_blocker"
+    )
+    assert status["full_commercial_release_next_required_step"] == release_artifact.get(
+        "full_commercial_release_next_required_step"
+    )
     assert status["product_goal_release_blocker_fail_count"] == int(
         actions_artifact.get("product_goal_release_blocker_fail_count") or 0
     )
@@ -212,6 +231,21 @@ def test_api_app_imports_with_goal_router() -> None:
 
     assert release["status"] == release_artifact.get("status")
     assert release["release_allowed"] is (release_artifact.get("release_allowed") is True)
+    assert release["restricted_release_allowed"] is (
+        release_artifact.get("restricted_release_allowed") is True
+    )
+    assert release["full_commercial_release_allowed"] is (
+        release_artifact.get("full_commercial_release_allowed") is True
+    )
+    assert release["full_commercial_release_blocker_count"] == int(
+        release_artifact.get("full_commercial_release_blocker_count") or 0
+    )
+    assert release["full_commercial_release_blocker_ids"] == release_artifact.get(
+        "full_commercial_release_blocker_ids"
+    )
+    assert release["primary_full_commercial_release_blocker_id"] == release_artifact.get(
+        "primary_full_commercial_release_blocker_id"
+    )
     assert release["blocker_count"] == int(release_artifact.get("blocker_count") or 0)
     assert len(release["checks"]) == int(release_artifact.get("check_count") or 0)
 

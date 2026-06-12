@@ -22,6 +22,7 @@ CLAIM_BOUNDARY = (
 )
 
 READY_KEY_ALIASES = {
+    "checkpoint_preflight_ready": ("preflight_green",),
     "score_model_production_checkpoint_ready": ("production_checkpoint_ready",),
 }
 

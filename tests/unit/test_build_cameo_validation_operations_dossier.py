@@ -200,6 +200,12 @@ def test_cameo_validation_operations_dossier_consolidates_blocked_current_lane()
     assert summary["status"] == "blocked_cameo_validation_operations_dossier"
     assert summary["blocked_stage_count"] == 5
     assert summary["approval_required_stage_count"] == 1
+    assert summary["first_blocked_stage_id"] == "operator_inputs"
+    assert summary["first_blocked_stage_source_status"] == "blocked_cameo_operator_input_validation"
+    assert summary["first_blocked_stage_artifact"] == "runs/cameo_operator_input_validation_current.json"
+    assert summary["first_blocked_stage_blocker_count"] == 3
+    assert summary["first_approval_required_stage_id"] == "runtime_receiver_smoke"
+    assert summary["first_approval_required_stage_token_required"] == "APPROVE_API_DEPENDENCY_INSTALL"
     assert summary["operator_input_required_count"] == 3
     assert summary["official_results_intake_status"] == "blocked_cameo_official_results_intake"
     assert summary["official_results_intake_ready"] is False
@@ -239,6 +245,39 @@ def test_cameo_validation_operations_dossier_consolidates_blocked_current_lane()
     assert any(row["stage"] == "outbound_email_send_preflight" and row["status"] == "ready" for row in payload["rows"])
 
 
+def test_cameo_validation_operations_dossier_names_current_fetch_preflight_blocker() -> None:
+    payload = mod.build_cameo_validation_operations_dossier(
+        input_kit_packet=_input_kit(),
+        input_validation_packet=_input_validation("cameo_operator_inputs_ready_pending_official_results"),
+        repair_preflight_packet=_repair_preflight("cameo_repair_execution_not_required"),
+        readiness_packet=_readiness("cameo_validation_evidence_ready"),
+        official_results_intake_packet=_official_results_intake(True),
+        evidence_integrity_packet=_evidence_integrity(),
+        runtime_repair_packet=_runtime_repair(False),
+        api_dependency_packet=_api_dependency("cameo_api_dependency_ready"),
+        receiver_smoke_packet=_receiver_smoke("cameo_receiver_smoke_ready"),
+        capability_preflight_packet=_capability(True),
+        outbound_email_draft_packet=_outbound_email_draft(),
+        outbound_email_send_preflight_packet=_outbound_email_send_preflight(),
+        official_result_fetch_preflight_packet=_official_result_fetch_preflight(False),
+    )
+    summary = payload["summary"]
+
+    assert summary["status"] == "blocked_cameo_validation_operations_dossier"
+    assert summary["blocked_stage_count"] == 1
+    assert summary["approval_required_stage_count"] == 1
+    assert summary["first_blocked_stage_id"] == "official_result_fetch_preflight"
+    assert summary["first_blocked_stage_source_status"] == "blocked_cameo_official_result_fetch_preflight"
+    assert summary["first_blocked_stage_artifact"] == "runs/cameo_official_result_fetch_preflight_current.json"
+    assert summary["first_blocked_stage_blocker_count"] == 1
+    assert summary["first_blocked_stage_recommended_action"].startswith("Fill the fetch preflight CSV")
+    assert summary["first_approval_required_stage_id"] == "public_registration_and_email"
+    assert summary["first_approval_required_stage_token_required"] == (
+        "APPROVE_CAMEO_SERVER_REGISTRATION;APPROVE_CAMEO_OUTBOUND_EMAIL"
+    )
+    assert summary["next_required_step"] == summary["first_blocked_stage_recommended_action"]
+
+
 def test_cameo_validation_operations_dossier_ready_when_all_operations_clear() -> None:
     payload = mod.build_cameo_validation_operations_dossier(
         input_kit_packet=_input_kit(),
@@ -264,6 +303,8 @@ def test_cameo_validation_operations_dossier_ready_when_all_operations_clear() -
     assert payload["summary"]["official_result_fetch_preflight_ready"] is True
     assert payload["summary"]["outbound_email_draft_ready"] is True
     assert payload["summary"]["outbound_email_send_preflight_ready"] is True
+    assert payload["summary"]["first_blocked_stage_id"] == ""
+    assert payload["summary"]["first_approval_required_stage_id"] == "public_registration_and_email"
     assert next(row for row in payload["rows"] if row["stage"] == "public_registration_and_email")["status"] == "approval_required"
 
 

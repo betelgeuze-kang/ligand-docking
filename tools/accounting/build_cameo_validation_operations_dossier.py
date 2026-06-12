@@ -449,6 +449,8 @@ def build_cameo_validation_operations_dossier(
     blocked_stage_count = sum(1 for row in rows if row["status"] == "blocked")
     approval_required_stage_count = sum(1 for row in rows if row["status"] == "approval_required")
     approval_tokens = sorted({token for row in rows for token in _approval_tokens(row["approval_token_required"])})
+    first_blocked_stage = next((row for row in rows if row["status"] == "blocked"), {})
+    first_approval_required_stage = next((row for row in rows if row["status"] == "approval_required"), {})
     operator_input_required_count = max(input_blockers, required_template_count) if input_row_status == "blocked" else 0
     native_local_accuracy_used = any(
         _bool(_summary(packet).get("native_local_accuracy_used"))
@@ -513,6 +515,20 @@ def build_cameo_validation_operations_dossier(
         "approval_required_stage_count": approval_required_stage_count,
         "approval_token_count": len(approval_tokens),
         "approval_tokens_required": approval_tokens,
+        "first_blocked_stage_id": _text(first_blocked_stage.get("stage")),
+        "first_blocked_stage_source_status": _text(first_blocked_stage.get("source_status")),
+        "first_blocked_stage_artifact": _text(first_blocked_stage.get("source_artifact")),
+        "first_blocked_stage_blocker_count": _int(first_blocked_stage.get("blocker_count")),
+        "first_blocked_stage_recommended_action": _text(first_blocked_stage.get("recommended_action")),
+        "first_approval_required_stage_id": _text(first_approval_required_stage.get("stage")),
+        "first_approval_required_stage_source_status": _text(first_approval_required_stage.get("source_status")),
+        "first_approval_required_stage_artifact": _text(first_approval_required_stage.get("source_artifact")),
+        "first_approval_required_stage_token_required": _text(
+            first_approval_required_stage.get("approval_token_required")
+        ),
+        "first_approval_required_stage_recommended_action": _text(
+            first_approval_required_stage.get("recommended_action")
+        ),
         "operator_input_required_count": operator_input_required_count,
         "operator_input_blocker_count": input_blockers,
         "validation_readiness_status": readiness_status,
@@ -572,20 +588,12 @@ def build_cameo_validation_operations_dossier(
         "external_state_mutated": external_state_mutated,
         "claim_boundary": CLAIM_BOUNDARY,
         "next_required_step": (
-            (
-                "Fill official CAMEO result intake rows from official assessment output; registration/email remain gated."
-                if runtime_row_status == "ready"
-                else "Fill official CAMEO result intake rows from official assessment output; runtime receiver smoke and registration/email remain gated."
-            )
-            if official_result_required and input_row_status == "ready"
+            _text(first_blocked_stage.get("recommended_action"))
+            if blocked_stage_count
             else (
-                "Clear operator inputs first, then repair CAMEO validation artifacts and runtime receiver smoke before any registration/email approval."
-                if blocked_stage_count
-                else (
-                    "Review approval-gated runtime and registration/email rows."
-                    if approval_required_stage_count
-                    else "CAMEO validation operations dossier is clear."
-                )
+                _text(first_approval_required_stage.get("recommended_action"))
+                if approval_required_stage_count
+                else "CAMEO validation operations dossier is clear."
             )
         ),
     }
@@ -602,6 +610,14 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- blocked_stage_count: `{s['blocked_stage_count']}`",
         f"- approval_required_stage_count: `{s['approval_required_stage_count']}`",
         f"- approval_tokens_required: `{';'.join(s['approval_tokens_required'])}`",
+        f"- first_blocked_stage_id: `{s['first_blocked_stage_id']}`",
+        f"- first_blocked_stage_source_status: `{s['first_blocked_stage_source_status']}`",
+        f"- first_blocked_stage_artifact: `{s['first_blocked_stage_artifact']}`",
+        f"- first_blocked_stage_blocker_count: `{s['first_blocked_stage_blocker_count']}`",
+        f"- first_approval_required_stage_id: `{s['first_approval_required_stage_id']}`",
+        f"- first_approval_required_stage_source_status: `{s['first_approval_required_stage_source_status']}`",
+        f"- first_approval_required_stage_artifact: `{s['first_approval_required_stage_artifact']}`",
+        f"- first_approval_required_stage_token_required: `{s['first_approval_required_stage_token_required']}`",
         f"- operator_input_required_count: `{s['operator_input_required_count']}`",
         f"- official_result_required: `{s['official_result_required']}`",
         f"- official_results_intake_status: `{s['official_results_intake_status']}`",

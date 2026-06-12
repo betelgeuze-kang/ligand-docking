@@ -16,6 +16,7 @@ DEFAULT_REGISTRY_JSON = "runs/residual_model_registry_current.json"
 DEFAULT_CHECKPOINT_WORK_ORDER_JSON = "runs/residual_production_checkpoint_work_order_current.json"
 DEFAULT_TRAINING_DATA_JSON = "runs/residual_production_training_data_contract_current.json"
 DEFAULT_FORCE_GPU_RECEIPT_JSON = "runs/residual_force_gpu_worker_return_receipt_current.json"
+DEFAULT_FORCE_DERIVATION_VALIDATION_JSON = "runs/residual_force_derivation_validation_current.json"
 DEFAULT_FORCE_GPU_HANDOFF_JSON = "runs/residual_force_gpu_worker_handoff_package_current.json"
 DEFAULT_GPU_RETURN_INTAKE_JSON = "runs/product_production_ai_gpu_return_intake_current.json"
 DEFAULT_ROCM_ENVIRONMENT_JSON = "runs/rocm_environment_manifest_current.json"
@@ -66,6 +67,8 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- production_output_head_blocked_fields: `{','.join(str(item) for item in summary['production_output_head_blocked_fields'])}`",
         f"- production_output_head_first_blocked_field: `{summary['production_output_head_first_blocked_field']}`",
         f"- force_gpu_worker_return_receipt_ready: `{summary['force_gpu_worker_return_receipt_ready']}`",
+        f"- delta_force_derivation_validation_ready: `{summary['delta_force_derivation_validation_ready']}`",
+        f"- force_derivation_validation_status: `{summary['force_derivation_validation_status']}`",
         f"- force_gpu_worker_handoff_ready: `{summary['force_gpu_worker_handoff_ready']}`",
         f"- production_gpu_execution_environment_ready: `{summary['production_gpu_execution_environment_ready']}`",
         f"- production_gpu_execution_environment_status: `{summary['production_gpu_execution_environment_status']}`",
@@ -165,6 +168,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--checkpoint-work-order-json", default=DEFAULT_CHECKPOINT_WORK_ORDER_JSON)
     parser.add_argument("--training-data-json", default=DEFAULT_TRAINING_DATA_JSON)
     parser.add_argument("--force-gpu-receipt-json", default=DEFAULT_FORCE_GPU_RECEIPT_JSON)
+    parser.add_argument("--force-derivation-validation-json", default=DEFAULT_FORCE_DERIVATION_VALIDATION_JSON)
     parser.add_argument("--force-gpu-handoff-json", default=DEFAULT_FORCE_GPU_HANDOFF_JSON)
     parser.add_argument("--gpu-return-intake-json", default=DEFAULT_GPU_RETURN_INTAKE_JSON)
     parser.add_argument("--rocm-environment-json", default=DEFAULT_ROCM_ENVIRONMENT_JSON)
@@ -182,6 +186,7 @@ def main(argv: list[str] | None = None) -> None:
         checkpoint_work_order_packet=_read_json(args.checkpoint_work_order_json),
         training_data_packet=_read_json(args.training_data_json),
         force_gpu_worker_return_receipt_packet=_read_json(args.force_gpu_receipt_json),
+        force_derivation_validation_packet=_read_json(args.force_derivation_validation_json),
         force_gpu_worker_handoff_packet=_read_json(args.force_gpu_handoff_json),
         gpu_return_intake_packet=_read_json(args.gpu_return_intake_json),
         rocm_environment_packet=_read_json(args.rocm_environment_json),
@@ -190,6 +195,7 @@ def main(argv: list[str] | None = None) -> None:
         checkpoint_work_order_artifact_path=args.checkpoint_work_order_json,
         training_data_artifact_path=args.training_data_json,
         force_gpu_worker_return_receipt_artifact_path=args.force_gpu_receipt_json,
+        force_derivation_validation_artifact_path=args.force_derivation_validation_json,
         force_gpu_worker_handoff_artifact_path=args.force_gpu_handoff_json,
         gpu_return_intake_artifact_path=args.gpu_return_intake_json,
         rocm_environment_artifact_path=args.rocm_environment_json,

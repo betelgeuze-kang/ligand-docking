@@ -132,6 +132,9 @@ async def get_goal_status() -> dict[str, Any]:
         for bottleneck_id in [_bottleneck_id(row)]
         if bottleneck_id in FULL_COMMERCIAL_RELEASE_BLOCKER_IDS
     ]
+    release_full_commercial_blocker_ids = _string_list(
+        release.get("full_commercial_release_blocker_ids")
+    ) or list(full_commercial_release_blocker_ids)
     missing_full_commercial_release_blocker_ids = [
         blocker_id
         for blocker_id in FULL_COMMERCIAL_RELEASE_BLOCKER_IDS
@@ -170,6 +173,11 @@ async def get_goal_status() -> dict[str, Any]:
             "full_commercial_release_blocker_count": 0,
             "missing_full_commercial_release_blocker_ids": list(FULL_COMMERCIAL_RELEASE_BLOCKER_IDS),
             "full_commercial_release_blocker_visibility_ready": False,
+            "restricted_release_allowed": False,
+            "full_commercial_release_allowed": False,
+            "primary_full_commercial_release_blocker_id": "",
+            "primary_full_commercial_release_blocker": "",
+            "full_commercial_release_next_required_step": "",
             "product_goal_release_blocker_fail_count": 0,
             "product_goal_release_blocker_requirement_ids": [],
             "product_goal_primary_release_blocker_requirement_id": "",
@@ -227,6 +235,13 @@ async def get_goal_status() -> dict[str, Any]:
         "goal_api_surface_contract_status": api_contract.get("status", ""),
         "goal_api_surface_ready": bool(api_contract.get("surface_ready") is True),
         "release_allowed": bool(release.get("release_allowed") is True),
+        "restricted_release_allowed": bool(
+            release.get("restricted_release_allowed") is True
+            or release.get("release_allowed") is True
+        ),
+        "full_commercial_release_allowed": bool(
+            release.get("full_commercial_release_allowed") is True
+        ),
         "commercial_independent_product_ready": bool(release.get("commercial_independent_product_ready") is True),
         "cameo_architecture_validation_ready": bool(release.get("cameo_architecture_validation_ready") is True),
         "cleanup_objective_ready": bool(release.get("cleanup_objective_ready") is True),
@@ -254,10 +269,19 @@ async def get_goal_status() -> dict[str, Any]:
             bottlenecks.get("irreducible_external_return_bottleneck_count")
         ),
         "expected_full_commercial_release_blocker_ids": list(FULL_COMMERCIAL_RELEASE_BLOCKER_IDS),
-        "full_commercial_release_blocker_ids": full_commercial_release_blocker_ids,
-        "full_commercial_release_blocker_count": len(full_commercial_release_blocker_ids),
+        "full_commercial_release_blocker_ids": release_full_commercial_blocker_ids,
+        "full_commercial_release_blocker_count": len(release_full_commercial_blocker_ids),
         "missing_full_commercial_release_blocker_ids": missing_full_commercial_release_blocker_ids,
         "full_commercial_release_blocker_visibility_ready": full_commercial_release_blocker_visibility_ready,
+        "primary_full_commercial_release_blocker_id": release.get(
+            "primary_full_commercial_release_blocker_id", ""
+        ),
+        "primary_full_commercial_release_blocker": release.get(
+            "primary_full_commercial_release_blocker", ""
+        ),
+        "full_commercial_release_next_required_step": release.get(
+            "full_commercial_release_next_required_step", ""
+        ),
         "product_goal_release_blocker_fail_count": _int(
             actions.get("product_goal_release_blocker_fail_count")
             or intake.get("product_goal_release_blocker_fail_count")
