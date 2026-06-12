@@ -6,7 +6,7 @@
 
 ---
 
-## 1) 현재 닫혀 있는 영역 (tracked green)
+## 1) 현재 닫혀 있거나 명시적으로 추적되는 영역 (tracked current)
 
 | 영역 | 상태 | 근거 산출물 |
 |---|---|---|
@@ -15,7 +15,7 @@
 | Tracked commercialization accounting | `closed=true`, `blocked_count=0` | `runs/commercialization_readiness_current.json`, `runs/commercialization_gap_burndown_current.json` |
 | Platform gap taxonomy | `platform_accounting_closed=true`, `top_expansion_gap_id=none_tracked_platform_expansion` | `runs/platform_gap_taxonomy_packet_current.json` |
 | Transporter/AQP1/CA2/PXR placeholder accounting | `placeholder_driven_rows=0`, `evidence_blocked_placeholder_rows=0` | `runs/transporter_placeholder_burndown_queue_current.json`, `runs/ca2_pxr_review_policy_closure_gate_current.json` |
-| Accuracy parity scorecard | `status=green`, `pass_row_count=5/5` (GPCR ranking, pose geometry, OpenMM, structure, wetlab translation) | `runs/accuracy_parity_scorecard_current.json` |
+| Accuracy parity scorecard | `blocked_accuracy_parity`, `pass_row_count=4/5`, `blocked_row_count=1`; ligand ranking broad parity/claim promotion blocked | `runs/accuracy_parity_scorecard_current.json` |
 | T. cruzi PDE selected all-atom | `hard_block_count=0`, parameterization/local-min 7/7 | `runs/wetlab_selected_allatom_gate_burndown_packet_current.json`, `runs/wetlab_tcruzi_pde_atomized_parameterization_minimization_packet_current.json` |
 | OpenMM 11-target 2-bead strict release | 11/11 pass | `runs/openmm_2bead_strict_multitarget_current_summary.json` |
 | Structure deterministic CA true-metric backend | pass | `runs/structure_refinement_scorecard_current.json` |
@@ -83,7 +83,7 @@
 |---|---|---|---|
 | 6 | GPCR CI-low / residual proof breadth | CLOSED | `runs/gpcr_residual_proof_breadth_gate_current.json`, `build_gpcr_residual_proof_breadth_gate.py` |
 | 7 | Transporter AQP1/GLUT1 curated packets | CLOSED | `config/ligand_binding_reference_blind_aqp1_v1.csv`, `config/ligand_binding_reference_blind_glut1_4pyp_v1.csv` (placeholder 0건) |
-| 8 | OpenMM / accuracy parity restricted lane | CLOSED | `runs/accuracy_parity_scorecard_current.json` `status=green` |
+| 8 | OpenMM lane / broad accuracy parity scorecard | OPENMM CLOSED / BROAD PARITY BLOCKED | `runs/accuracy_parity_scorecard_current.json` `blocked_accuracy_parity`, OpenMM row pass, ligand ranking row blocked |
 | 9 | Prospective wetlab translation scaffold | CLOSED | simulation packet green, wetlab-proven hit out-of-claim 유지 |
 | 10 | CA2/PXR packet replacement | CLOSED | `runs/ca2_packet_replacement_readiness_current.json`, `runs/pxr_packet_replacement_readiness_current.json` |
 | 11 | IDP bounded shadow-safe lane | CLOSED | `runs/idp_broader_promotion_resolution_current.json` `wider_shadow_safe_lane_admitted=true` |
@@ -520,6 +520,10 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   artifact reference로 추적하며, 최신
   `local_missing_artifact_reference_count=0`, `artifact_reference_count=26`이다.
   `product_release_source_of_truth_gate_current.json`은 이제
+  `product_api_contract_current.json`,
+  `product_service_boundary_contract_current.json`,
+  `self_hosted_license_distribution_audit_current.json`,
+  `third_party_license_review_gate_current.json`,
   `product_scope_breadth_closure_checklist_current.json`,
   `product_scope_breadth_evidence_receipt_current.json`,
   `goal_operator_intake_kit_current/manifest.json`,
@@ -528,9 +532,12 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `product_full_commercial_blocker_evidence_matrix_current.json`을
   freshness row 및 semantic-ready row로 함께 검증해, R8 receipt와 상용 readiness
   handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
-  빠지지 않게 한다. 최신 source-of-truth는 `row_count=52`, `pass_count=52`,
-  `blocker_count=0`, `stale_artifact_count=0`, `semantic_status_blocker_count=0`,
-  `readme_drift_count=0`이다. 고객-facing AI report explanation/UX semantic
+  빠지지 않게 한다. 최신 source-of-truth는 `row_count=59`, `pass_count=59`,
+  `blocker_count=0`, `artifact_row_count=48`, `semantic_status_row_count=9`,
+  `release_refresh_command_count=56`, `stale_artifact_count=0`,
+  `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
+  API/service-boundary semantic readiness와 self-hosted license audit semantic
+  readiness도 이 source-of-truth 안으로 편입됐다. 고객-facing AI report explanation/UX semantic
   readiness는 core/full decision graph 순환을 분리한 뒤 닫혔다.
   최신 goal API surface contract는 `check_count=9`,
   `pass_count=9`, `missing_full_commercial_visibility_token_count=0`이다.
@@ -893,12 +900,13 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `blocked_check_ids=[api_customer_flow_release_evidence_ready, commercial_independence_and_license_ready]`이다.
 - `tools/run_product_release_current_refresh.py --execute`는 source-of-truth 순서에
   residual shadow/registry, product execution work-order/preflight, core/full AI decision
-  graph, AI report explanation/UX, R4 preflight, scope-breadth closure checklist,
+  graph, AI report explanation/UX, API/service-boundary contracts, self-hosted
+  license audit, third-party review gate, R4 preflight, scope-breadth closure checklist,
   scope-breadth evidence receipt, goal operator intake kit, goal API surface contract, bottleneck briefing,
   commercial readiness operator packet/freshness/execution ladder/handoff,
   최종 release bundle 재생성을 포함하며,
   최신 실행 결과는
-  `blocked_product_release_current_refresh`, `command_count=52`, `executed_count=52`,
+  `blocked_product_release_current_refresh`, `command_count=56`, `executed_count=56`,
   `failed_count=0`, `final_gate_verification_ready=false`, `final_gate_blocker_count=1`이다.
 - `runs/deploy_ops_legal_gap_closure_current.json`은 이제 rollout readiness와 actual
   rollout smoke receipt를 분리해 `blocked_deploy_ops_legal_gap_closure`,
@@ -933,7 +941,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
 - release source-of-truth gate는 R4 preflight, R4 rollout smoke receipt artifact,
   R8 scope-breadth receipt, goal operator intake kit, commercial readiness execution
   ladder, API/bottleneck visibility, master gap closure rollup 포함 refresh 이후
-  `product_release_source_of_truth_gate_ready`, `pass_count=52/52`,
+  `product_release_source_of_truth_gate_ready`, `pass_count=59/59`,
   `blocker_count=0`, `stale_artifact_count=0`으로 재검증됐다.
 - `prometheus_client` 기반 실제 metrics endpoint는 1차 완료.
 - Alert rules + paged webhook receiver + closed-loop alert delivery smoke는 1차 완료;
@@ -1495,9 +1503,10 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   source hash, commercial-independence license status, viewer third-party notice linkage를
   read-only로 검증한다.
 - `runs/self_hosted_license_distribution_audit_current.json`은
-  `third_party_license_review_gate_status=blocked_third_party_license_review_gate`,
-  `third_party_license_review_gate_ready=false`,
-  `third_party_license_review_gate_blocker_count=2`를 함께 기록한다.
+  `self_hosted_license_distribution_audit_recorded`, `hard_blocker_count=0`,
+  `operator_review_item_count=1`, `third_party_license_review_gate_status=third_party_license_review_gate_ready`,
+  `third_party_license_review_gate_ready=true`,
+  `third_party_license_review_gate_blocker_count=0`를 함께 기록한다.
 - release bundle은 `self_hosted_license_distribution_audit_recorded` 체크로 이 감사
   산출물을 포함한다.
 - `license_decision.py`의 APPROVAL_TOKEN 기반 write path는 유지된다.
@@ -1509,15 +1518,16 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   운영자/법률 자문 영역이다.
 - JSZip dual-license expression `(MIT OR GPL-3.0-or-later)`의 commercial
   redistribution path는 audit에 operator review item으로 기록되어 있고,
-  third-party license review gate로 operator CSV/approval token 입력 대기 상태가
-  분리됐다. 최종 선택은 기술 영역 밖이다.
+  현재 third-party license review gate는 operator CSV 기준
+  `third_party_license_review_gate_ready`, `blocker_count=0`이다.
+  단 `legal_advice_provided=false`라서 최종 법률 판단은 여전히 기술 영역 밖이다.
 
 **필요 작업**
 - product LICENSE와 approved source hash 일치 검증은 1차 완료.
 - 결정된 license metadata와 release bundle linkage는 1차 완료.
 - third-party license review gate와 release bundle linkage는 1차 완료.
 - 다음은 proprietary product license의 법률 최종 확인과 JSZip dual-license
-  redistribution path operator/legal review CSV 작성.
+  redistribution path의 operator/legal confirmation 유지.
 
 ---
 

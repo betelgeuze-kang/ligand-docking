@@ -11,8 +11,10 @@
 
 ## 0. 현재 위치 한 줄 요약
 
-- **닫힌 것:** restricted(`gpcr` / `ion_channel` / `kinase`) 로컬 self-hosted 전달, commercial independence gate,
-  7/7 AI architecture gap, production-guarded promotion accounting — 모두 artifact green.
+- **닫힌 것:** restricted(`gpcr` / `ion_channel` / `kinase`) 로컬 self-hosted 전달 기반, API/service-boundary,
+  license/self-hosted distribution audit, 7/7 AI architecture gap, production-guarded promotion accounting.
+- **아직 닫히지 않은 것:** commercial independence gate 자체는 local delivery bundle validation과
+  pilot delivery claim이 닫히기 전까지 `blocked_product_commercial_independence_gate`다.
 - **닫히지 않은 것(제품 역량):** 과학 엔진 정밀도(가장 큰 진짜 갭), 실제 R4/operator-approved rollout smoke,
   hosted 인프라, 범용 claim 확장, 외부 표준 벤치마크, 제품 UX.
 - **핵심 보정:** accounting이 green이라는 것은 "회계상 닫힘 + fail-closed 유지"를 의미하며,
@@ -200,6 +202,10 @@
   scope-breadth receipt evidence로 추적하며
   `local_missing_artifact_reference_count=0`, `artifact_reference_count=26`이다.
 - `product_release_source_of_truth_gate_current.json`은
+  `product_api_contract_current.json`,
+  `product_service_boundary_contract_current.json`,
+  `self_hosted_license_distribution_audit_current.json`,
+  `third_party_license_review_gate_current.json`,
   `product_scope_breadth_closure_checklist_current.json`,
   `product_scope_breadth_evidence_receipt_current.json`,
   `goal_operator_intake_kit_current/manifest.json`,
@@ -207,8 +213,10 @@
   `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`,
   `product_full_commercial_blocker_evidence_matrix_current.json`의
   freshness 및 semantic-ready 상태를 함께 검증한다. 최신 full refresh 후
-  source-of-truth는 `row_count=52`, `pass_count=52`, `blocker_count=0`,
-  `stale_artifact_count=0`, `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
+  source-of-truth는 `row_count=59`, `pass_count=59`, `blocker_count=0`,
+  `artifact_row_count=48`, `semantic_status_row_count=9`,
+  `release_refresh_command_count=56`, `stale_artifact_count=0`,
+  `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   `product_ai_report_explanation_packet_semantic_ready`와
   `product_ai_report_ux_contract_semantic_ready`는 core/full decision graph 순환을
   분리한 뒤 고객-facing AI report semantic readiness 안으로 닫혔다.

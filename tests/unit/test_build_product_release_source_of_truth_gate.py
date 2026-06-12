@@ -250,8 +250,15 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "product_ai_report_explanation_packet" in artifact_ids
     assert "product_ai_report_ux_contract" in artifact_ids
     assert "product_ai_decision_graph_contract" in artifact_ids
+    assert "product_api_contract" in artifact_ids
+    assert "product_service_boundary_contract" in artifact_ids
+    assert "self_hosted_license_distribution_audit" in artifact_ids
+    assert "third_party_license_review_gate" in artifact_ids
     assert "product_execution_work_order" in artifact_ids
     assert "product_execution_preflight" in artifact_ids
+    assert "product_api_contract_semantic_ready" in status_ids
+    assert "product_service_boundary_contract_semantic_ready" in status_ids
+    assert "self_hosted_license_distribution_audit_semantic_ready" in status_ids
     assert "product_ai_report_explanation_packet_semantic_ready" in status_ids
     assert "product_ai_report_ux_contract_semantic_ready" in status_ids
     assert "product_ledger_privacy_scan" in artifact_ids
@@ -369,6 +376,38 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_execution_preflight"
     )
     assert "runs/product_execution_work_order_current.json" in execution_preflight_spec["depends_on"]
+    api_contract_spec = next(
+        spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_api_contract"
+    )
+    assert "api/product.py" in api_contract_spec["depends_on"]
+    assert "betelgeuze_product/api_contract.py" in api_contract_spec["depends_on"]
+    service_boundary_spec = next(
+        spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_service_boundary_contract"
+    )
+    assert "api/product.py" in service_boundary_spec["depends_on"]
+    assert "betelgeuze_product/cli.py" in service_boundary_spec["depends_on"]
+    commercial_independence_spec = next(
+        spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_commercial_independence_gate"
+    )
+    assert "runs/product_api_contract_current.json" in commercial_independence_spec["depends_on"]
+    assert "runs/product_service_boundary_contract_current.json" in commercial_independence_spec["depends_on"]
+    assert "runs/product_bundle_contract_current.json" in commercial_independence_spec["depends_on"]
+    assert "runs/product_delivery_evidence_contract_current.json" in commercial_independence_spec["depends_on"]
+    assert "runs/product_pilot_packet_contract_current.json" in commercial_independence_spec["depends_on"]
+    license_audit_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "self_hosted_license_distribution_audit"
+    )
+    assert "runs/product_commercial_independence_gate_current.json" in license_audit_spec["depends_on"]
+    assert "viewer/vendor/manifest.json" in license_audit_spec["depends_on"]
+    third_party_review_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "third_party_license_review_gate"
+    )
+    assert "runs/self_hosted_license_distribution_audit_current.json" in third_party_review_spec["depends_on"]
+    assert "runs/third_party_license_review_operator_intake.csv" in third_party_review_spec["depends_on"]
     decision_graph_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_ai_decision_graph_contract"
     )
@@ -411,6 +450,8 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     release_bundle_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_release_bundle"
     )
+    assert "runs/self_hosted_license_distribution_audit_current.json" in release_bundle_spec["depends_on"]
+    assert "runs/third_party_license_review_gate_current.json" in release_bundle_spec["depends_on"]
     assert "runs/product_goal_completion_audit_current.json" in release_bundle_spec["depends_on"]
     assert "runs/engine_refinement_claim_evidence_receipt_current.json" in release_bundle_spec["depends_on"]
     assert "runs/product_scope_breadth_evidence_receipt_current.json" in release_bundle_spec["depends_on"]
@@ -428,6 +469,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "python3 tools/build_residual_shadow_ab.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_execution_work_order.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_execution_preflight.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_product_api_contract.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_product_service_boundary_contract.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/product/build_self_hosted_license_distribution_audit.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_third_party_license_review_gate.py" in mod.RELEASE_REFRESH_COMMANDS
     assert mod.RELEASE_REFRESH_COMMANDS.count("python3 tools/build_product_ai_decision_graph_contract.py") == 2
     assert "python3 tools/product/build_engine_refinement_tier_readiness.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py" in mod.RELEASE_REFRESH_COMMANDS
@@ -475,7 +520,25 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_execution_preflight.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_execution_preflight.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_api_contract.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_api_contract.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_service_boundary_contract.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_service_boundary_contract.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_capability_surface_contract.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_service_boundary_contract.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_commercial_independence_gate.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_commercial_independence_gate.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/product/build_self_hosted_license_distribution_audit.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/product/build_self_hosted_license_distribution_audit.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_third_party_license_review_gate.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_third_party_license_review_gate.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 deploy/product_release_bundle.py")
     )
     decision_graph_indices = [
         index
@@ -578,6 +641,100 @@ def test_release_source_of_truth_blocks_fresh_but_semantically_blocked_report(tm
     assert row["row_type"] == "artifact_semantic_status"
     assert row["observed_status"] == "blocked_product_ai_report_ux_contract"
     assert row["missing_true_fields"] == ["ai_report_ux_ready", "customer_report_viewer_binding_ready"]
+
+
+def test_release_source_of_truth_blocks_semantic_status_when_required_int_fields_missing(tmp_path: Path) -> None:
+    service_boundary = tmp_path / "runs" / "product_service_boundary_contract_current.json"
+    _write_json(
+        service_boundary,
+        {
+            "summary": {
+                "status": "product_service_boundary_contract_ready",
+                "service_boundary_ready": True,
+                "console_script_ready": True,
+                "api_route_count": 46,
+                "missing_api_route_count": 0,
+            }
+        },
+    )
+
+    payload = mod.build_product_release_source_of_truth_gate(
+        root=tmp_path,
+        artifact_specs=[],
+        status_specs=[
+            {
+                "artifact_id": "product_service_boundary_contract_semantic_ready",
+                "artifact_path": "runs/product_service_boundary_contract_current.json",
+                "builder_command": "python3 tools/build_product_service_boundary_contract.py",
+                "required_status": "product_service_boundary_contract_ready",
+                "required_true_fields": ["service_boundary_ready", "console_script_ready"],
+                "required_int_min_fields": {"api_route_count": 1, "cli_command_count": 1},
+                "required_int_exact_fields": {
+                    "missing_api_route_count": 0,
+                    "missing_cli_command_count": 0,
+                    "artifact_registry_mismatch_count": 0,
+                },
+            }
+        ],
+        readme_paths=[],
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "blocked_product_release_source_of_truth_gate"
+    assert summary["semantic_status_blocker_count"] == 1
+    row = payload["rows"][0]
+    assert row["failed_int_min_fields"] == ["cli_command_count"]
+    assert row["failed_int_exact_fields"] == [
+        "missing_cli_command_count",
+        "artifact_registry_mismatch_count",
+    ]
+    assert "failed_int_min_fields=1" in row["observed"]
+    assert "failed_int_exact_fields=2" in row["observed"]
+
+
+def test_release_source_of_truth_accepts_semantic_status_required_int_fields(tmp_path: Path) -> None:
+    service_boundary = tmp_path / "runs" / "product_service_boundary_contract_current.json"
+    _write_json(
+        service_boundary,
+        {
+            "summary": {
+                "status": "product_service_boundary_contract_ready",
+                "service_boundary_ready": True,
+                "console_script_ready": True,
+                "api_route_count": 48,
+                "cli_command_count": 25,
+                "missing_api_route_count": 0,
+                "missing_cli_command_count": 0,
+                "artifact_registry_mismatch_count": 0,
+            }
+        },
+    )
+
+    payload = mod.build_product_release_source_of_truth_gate(
+        root=tmp_path,
+        artifact_specs=[],
+        status_specs=[
+            {
+                "artifact_id": "product_service_boundary_contract_semantic_ready",
+                "artifact_path": "runs/product_service_boundary_contract_current.json",
+                "builder_command": "python3 tools/build_product_service_boundary_contract.py",
+                "required_status": "product_service_boundary_contract_ready",
+                "required_true_fields": ["service_boundary_ready", "console_script_ready"],
+                "required_int_min_fields": {"api_route_count": 1, "cli_command_count": 1},
+                "required_int_exact_fields": {
+                    "missing_api_route_count": 0,
+                    "missing_cli_command_count": 0,
+                    "artifact_registry_mismatch_count": 0,
+                },
+            }
+        ],
+        readme_paths=[],
+    )
+
+    assert payload["summary"]["status"] == "product_release_source_of_truth_gate_ready"
+    row = payload["rows"][0]
+    assert row["failed_int_min_fields"] == []
+    assert row["failed_int_exact_fields"] == []
 
 
 def test_release_source_of_truth_accepts_top_level_release_bundle_status(tmp_path: Path) -> None:

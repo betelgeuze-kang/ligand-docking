@@ -159,10 +159,15 @@ def build_audit(
         ),
         _row(
             "commercial_independence_license_check_passed",
-            commercial.get("license_present") is True
-            and commercial.get("status") == "product_commercial_independence_gate_ready",
-            f"status={commercial.get('status')};license_present={commercial.get('license_present')}",
-            "commercial-independence gate ready with license_present=true",
+            _text(commercial.get("status"))
+            in {"product_commercial_independence_gate_ready", "blocked_product_commercial_independence_gate"}
+            and commercial.get("license_present") is True,
+            (
+                f"status={commercial.get('status')};license_present={commercial.get('license_present')};"
+                f"commercial_claim_allowed={commercial.get('commercial_independent_product_claim_allowed')};"
+                f"local_delivery_bundle_ready={commercial.get('local_delivery_bundle_ready')}"
+            ),
+            "commercial-independence artifact records license_present=true; non-license product-readiness blockers are tracked by the commercial gate",
         ),
         _row(
             "viewer_third_party_notice_complete",
@@ -210,8 +215,12 @@ def build_audit(
                 "not choose a license or provide legal approval for redistribution."
             ),
             "next_required_step": (
-                "Operator/legal review should confirm recorded dual-license third-party redistribution choices."
+                "Resolve hard license distribution blockers before self-hosted redistribution."
+                if blockers
+                else "Operator/legal review should confirm recorded dual-license third-party redistribution choices."
                 if review_items and not review_gate_ready
+                else "No hard license distribution blockers remain; recorded review items are surfaced for operator/legal confirmation."
+                if review_items
                 else "No hard blockers or recorded license-review items remain in this audit packet."
             ),
         },

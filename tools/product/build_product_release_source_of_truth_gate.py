@@ -38,8 +38,12 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_product_security_deployment_contract.py",
     "python3 tools/build_product_execution_work_order.py",
     "python3 tools/build_product_execution_preflight.py",
+    "python3 tools/build_product_api_contract.py",
+    "python3 tools/build_product_service_boundary_contract.py",
     "python3 tools/build_product_capability_surface_contract.py",
     "python3 tools/build_product_commercial_independence_gate.py",
+    "python3 tools/product/build_self_hosted_license_distribution_audit.py",
+    "python3 tools/build_third_party_license_review_gate.py",
     "python3 deploy/product_rollout.py --out-json runs/product_rollout_plan_current.json",
     "python3 tools/smoke_alert_delivery.py --local-receiver-smoke --allow-in-process-fallback --out-json runs/alert_delivery_smoke_current.json",
     "python3 deploy/product_release_bundle.py",
@@ -235,6 +239,30 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         ],
     },
     {
+        "artifact_id": "product_api_contract",
+        "artifact_path": "runs/product_api_contract_current.json",
+        "builder_command": "python3 tools/build_product_api_contract.py",
+        "depends_on": [
+            "tools/accounting/build_product_api_contract.py",
+            "tools/build_product_api_contract.py",
+            "betelgeuze_product/api_contract.py",
+            "api/product.py",
+        ],
+    },
+    {
+        "artifact_id": "product_service_boundary_contract",
+        "artifact_path": "runs/product_service_boundary_contract_current.json",
+        "builder_command": "python3 tools/build_product_service_boundary_contract.py",
+        "depends_on": [
+            "tools/accounting/build_product_service_boundary_contract.py",
+            "tools/build_product_service_boundary_contract.py",
+            "betelgeuze_product/service_boundary.py",
+            "betelgeuze_product/cli.py",
+            "api/product.py",
+            "pyproject.toml",
+        ],
+    },
+    {
         "artifact_id": "product_capability_surface_contract",
         "artifact_path": "runs/product_capability_surface_contract_current.json",
         "builder_command": "python3 tools/build_product_capability_surface_contract.py",
@@ -247,7 +275,56 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "artifact_id": "product_commercial_independence_gate",
         "artifact_path": "runs/product_commercial_independence_gate_current.json",
         "builder_command": "python3 tools/build_product_commercial_independence_gate.py",
-        "depends_on": [],
+        "depends_on": [
+            "tools/accounting/build_product_commercial_independence_gate.py",
+            "betelgeuze_product/commercial_independence.py",
+            "LICENSE",
+            "requirements.txt",
+            "requirements-api.txt",
+            "requirements-deploy.txt",
+            "requirements-optional.txt",
+            "requirements-train.txt",
+            "pyproject.toml",
+            "Dockerfile.product",
+            "runs/local_delivery_environment_manifest_current.json",
+            "runs/local_delivery_requirements_lock_current.json",
+            "runs/local_delivery_requirements_lock_current.md",
+            "runs/local_delivery_requirements_lock_current.txt",
+            "runs/product_api_contract_current.json",
+            "runs/product_service_boundary_contract_current.json",
+            "runs/product_capability_surface_contract_current.json",
+            "runs/product_bundle_contract_current.json",
+            "runs/product_delivery_evidence_contract_current.json",
+            "runs/product_pilot_packet_contract_current.json",
+            "runs/product_public_benchmark_contract_current.json",
+            "runs/product_public_benchmark_work_order_current.json",
+        ],
+    },
+    {
+        "artifact_id": "self_hosted_license_distribution_audit",
+        "artifact_path": "runs/self_hosted_license_distribution_audit_current.json",
+        "builder_command": "python3 tools/product/build_self_hosted_license_distribution_audit.py",
+        "depends_on": [
+            "tools/product/build_self_hosted_license_distribution_audit.py",
+            "LICENSE",
+            "runs/product_license_decision_gate_current.json",
+            "runs/product_license_file_creation_work_order_current.json",
+            "runs/product_commercial_independence_gate_current.json",
+            "viewer/vendor/manifest.json",
+            "viewer/vendor/THIRD_PARTY_NOTICES.md",
+        ],
+    },
+    {
+        "artifact_id": "third_party_license_review_gate",
+        "artifact_path": "runs/third_party_license_review_gate_current.json",
+        "builder_command": "python3 tools/build_third_party_license_review_gate.py",
+        "depends_on": [
+            "tools/product/build_third_party_license_review_gate.py",
+            "tools/accounting/build_third_party_license_review_gate.py",
+            "tools/build_third_party_license_review_gate.py",
+            "runs/self_hosted_license_distribution_audit_current.json",
+            "runs/third_party_license_review_operator_intake.csv",
+        ],
     },
     {
         "artifact_id": "product_rollout_plan",
@@ -270,6 +347,8 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/product_security_deployment_contract_current.json",
             "runs/product_rollout_plan_current.json",
             "runs/alert_delivery_smoke_current.json",
+            "runs/self_hosted_license_distribution_audit_current.json",
+            "runs/third_party_license_review_gate_current.json",
             "runs/product_launch_r4_preflight_current.json",
             "runs/product_goal_completion_audit_current.json",
             "runs/api_runner_profile_promotion_operator_receipt_current.json",
@@ -595,6 +674,54 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
 
 DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
     {
+        "artifact_id": "product_api_contract_semantic_ready",
+        "artifact_path": "runs/product_api_contract_current.json",
+        "builder_command": "python3 tools/build_product_api_contract.py",
+        "required_status": "product_api_contract_ready",
+        "required_true_fields": [
+            "api_contract_ready",
+        ],
+        "required_int_min_fields": {
+            "expected_route_count": 1,
+        },
+        "required_int_exact_fields": {
+            "missing_route_count": 0,
+            "status_response_missing_key_count": 0,
+        },
+    },
+    {
+        "artifact_id": "product_service_boundary_contract_semantic_ready",
+        "artifact_path": "runs/product_service_boundary_contract_current.json",
+        "builder_command": "python3 tools/build_product_service_boundary_contract.py",
+        "required_status": "product_service_boundary_contract_ready",
+        "required_true_fields": [
+            "service_boundary_ready",
+            "console_script_ready",
+        ],
+        "required_int_min_fields": {
+            "api_route_count": 1,
+            "cli_command_count": 1,
+        },
+        "required_int_exact_fields": {
+            "missing_api_route_count": 0,
+            "missing_cli_command_count": 0,
+            "artifact_registry_mismatch_count": 0,
+        },
+    },
+    {
+        "artifact_id": "self_hosted_license_distribution_audit_semantic_ready",
+        "artifact_path": "runs/self_hosted_license_distribution_audit_current.json",
+        "builder_command": "python3 tools/product/build_self_hosted_license_distribution_audit.py",
+        "required_status": "self_hosted_license_distribution_audit_recorded",
+        "required_true_fields": [],
+        "required_int_min_fields": {
+            "operator_review_item_count": 0,
+        },
+        "required_int_exact_fields": {
+            "hard_blocker_count": 0,
+        },
+    },
+    {
         "artifact_id": "product_ai_report_explanation_packet_semantic_ready",
         "artifact_path": "runs/product_ai_report_explanation_packet_current.json",
         "builder_command": "python3 tools/build_product_ai_report_explanation_packet.py",
@@ -774,8 +901,34 @@ def _status_row(spec: dict[str, Any], *, root: Path = ROOT) -> dict[str, Any]:
     required_status = _text(spec.get("required_status"))
     required_true_fields = [_text(item) for item in spec.get("required_true_fields") or [] if _text(item)]
     missing_true_fields = [field for field in required_true_fields if summary.get(field) is not True]
+    required_int_min_fields = {
+        _text(field): _int(value)
+        for field, value in (spec.get("required_int_min_fields") or {}).items()
+        if _text(field)
+    }
+    required_int_exact_fields = {
+        _text(field): _int(value)
+        for field, value in (spec.get("required_int_exact_fields") or {}).items()
+        if _text(field)
+    }
+    failed_int_min_fields = [
+        field
+        for field, minimum in required_int_min_fields.items()
+        if field not in summary or _int(summary.get(field)) < minimum
+    ]
+    failed_int_exact_fields = [
+        field
+        for field, expected in required_int_exact_fields.items()
+        if field not in summary or _int(summary.get(field)) != expected
+    ]
     status_matches = _text(summary.get("status")) == required_status
-    passed = bool(summary) and status_matches and not missing_true_fields
+    passed = (
+        bool(summary)
+        and status_matches
+        and not missing_true_fields
+        and not failed_int_min_fields
+        and not failed_int_exact_fields
+    )
     return {
         "row_type": "artifact_semantic_status",
         "artifact_id": _text(spec.get("artifact_id")),
@@ -796,13 +949,23 @@ def _status_row(spec: dict[str, Any], *, root: Path = ROOT) -> dict[str, Any]:
         "required_true_fields": required_true_fields,
         "missing_true_fields": missing_true_fields,
         "missing_true_field_count": len(missing_true_fields),
+        "required_int_min_fields": required_int_min_fields,
+        "failed_int_min_fields": failed_int_min_fields,
+        "failed_int_min_field_count": len(failed_int_min_fields),
+        "required_int_exact_fields": required_int_exact_fields,
+        "failed_int_exact_fields": failed_int_exact_fields,
+        "failed_int_exact_field_count": len(failed_int_exact_fields),
         "observed": (
             f"status={_text(summary.get('status')) or 'missing'};"
-            f"required_status={required_status};missing_true_fields={len(missing_true_fields)}"
+            f"required_status={required_status};missing_true_fields={len(missing_true_fields)};"
+            f"failed_int_min_fields={len(failed_int_min_fields)};"
+            f"failed_int_exact_fields={len(failed_int_exact_fields)}"
         ),
         "required": (
             f"status={required_status};"
-            f"required_true_fields={','.join(required_true_fields) or 'none'}"
+            f"required_true_fields={','.join(required_true_fields) or 'none'};"
+            f"required_int_min_fields={','.join(required_int_min_fields) or 'none'};"
+            f"required_int_exact_fields={','.join(required_int_exact_fields) or 'none'}"
         ),
         "release_blocker": not passed,
         "execution_enabled": False,

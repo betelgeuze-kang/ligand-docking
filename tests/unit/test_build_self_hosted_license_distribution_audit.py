@@ -97,6 +97,91 @@ def test_self_hosted_license_distribution_audit_blocks_license_source_mismatch(t
     assert "license_matches_approved_source" in blockers
 
 
+def test_self_hosted_license_distribution_audit_accepts_blocked_commercial_gate_when_license_present(
+    tmp_path: Path,
+) -> None:
+    license_file = tmp_path / "LICENSE"
+    source_file = tmp_path / "approved-license.txt"
+    license_text = "Approved proprietary license text 2026 Example\n"
+    license_file.write_text(license_text, encoding="utf-8")
+    source_file.write_text(license_text, encoding="utf-8")
+    decision = tmp_path / "decision.json"
+    work_order = tmp_path / "work_order.json"
+    commercial = tmp_path / "commercial.json"
+    manifest = tmp_path / "manifest.json"
+    notice = tmp_path / "THIRD_PARTY_NOTICES.md"
+    decision.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "product_license_decision_gate_ready",
+                    "authorized_for_license_file_creation_review": True,
+                    "spdx_license_id": "ProprietaryRef-Test",
+                    "license_text_source": str(source_file),
+                    "copyright_holder": "Example",
+                    "effective_year": "2026",
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    work_order.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "product_license_file_creation_work_order_ready",
+                    "license_review_manifest_ready": True,
+                    "spdx_license_id": "ProprietaryRef-Test",
+                    "license_text_source": str(source_file),
+                    "copyright_holder": "Example",
+                    "effective_year": "2026",
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    commercial.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "blocked_product_commercial_independence_gate",
+                    "license_present": True,
+                    "commercial_independent_product_claim_allowed": False,
+                    "local_delivery_bundle_ready": False,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    notice.write_text("pkg MIT https://example.invalid/LICENSE\n", encoding="utf-8")
+    manifest.write_text(
+        json.dumps(
+            {
+                "manifest_version": "viewer_vendor_assets_v1",
+                "third_party_notice_path": str(notice),
+                "assets": [{"package": "pkg", "license_id": "MIT", "license_source_url": "https://example.invalid/LICENSE"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = mod.build_audit(
+        license_path=str(license_file),
+        license_decision_json=str(decision),
+        license_work_order_json=str(work_order),
+        commercial_independence_json=str(commercial),
+        viewer_vendor_manifest=str(manifest),
+    )
+
+    assert payload["summary"]["status"] == "self_hosted_license_distribution_audit_recorded"
+    assert payload["summary"]["hard_blocker_count"] == 0
+    checks = {row["check"]: row for row in payload["rows"]}
+    license_check = checks["commercial_independence_license_check_passed"]
+    assert license_check["status"] == "pass"
+    assert "status=blocked_product_commercial_independence_gate" in license_check["observed"]
+    assert "local_delivery_bundle_ready=False" in license_check["observed"]
+
+
 def test_self_hosted_license_distribution_audit_cli_writes_json(tmp_path: Path) -> None:
     from tools.product.bootstrap_api_worker_contract_artifacts import materialize
 
