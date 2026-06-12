@@ -3856,6 +3856,10 @@ def test_product_goal_completion_audit_blocks_full_scope_when_scope_acceptance_i
     assert summary["pass_count"] == 7
     assert summary["fail_count"] == 1
     assert summary["release_blocker_fail_count"] == 1
+    assert summary["release_blocker_requirement_ids"] == ["R8_full_scope_claim_closure"]
+    assert summary["primary_release_blocker_requirement_id"] == "R8_full_scope_claim_closure"
+    assert summary["primary_release_blocker_tier"] == "full_commercial_scope"
+    assert summary["primary_release_blocker"] == "full_scope_claim_closure_not_ready"
     assert by_id["R6_product_ai_architecture_gap_closure"]["status"] == "pass"
     assert r8["status"] == "fail"
     assert r8["blocker"] == "full_scope_claim_closure_not_ready"
@@ -3940,6 +3944,10 @@ def test_product_goal_completion_audit_blocks_refine_tier_claim_promotion() -> N
     assert summary["pass_count"] == 8
     assert summary["fail_count"] == 1
     assert summary["release_blocker_fail_count"] == 1
+    assert summary["release_blocker_requirement_ids"] == ["R9_engine_refinement_claim_promotion"]
+    assert summary["primary_release_blocker_requirement_id"] == "R9_engine_refinement_claim_promotion"
+    assert summary["primary_release_blocker_tier"] == "full_commercial_science_claim"
+    assert summary["primary_release_blocker"] == "engine_refinement_claim_promotion_not_ready"
     assert summary["engine_refinement_claim_promotion_evidence_present"] is True
     assert summary["engine_refinement_claim_promotion_ready"] is False
     assert summary["engine_refinement_claim_promotion_blocker_count"] == 6
@@ -3956,6 +3964,49 @@ def test_product_goal_completion_audit_blocks_refine_tier_claim_promotion() -> N
     assert "claim_promotion_blocker_count=6" in r9["observed"]
     assert "external_structure_quality_parity_not_ready" in r9["observed"]
     assert "build_engine_refinement_tier_readiness.py" in r9["next_command"]
+
+
+def test_product_goal_completion_audit_uses_release_gate_cameo_optional_flags() -> None:
+    release_gate = _release_gate(ready=True)
+    release_gate["summary"].update(
+        {
+            "cameo_live_validation_required_for_product_release": False,
+            "cameo_registration_required_for_product_release": False,
+            "cameo_official_results_required_for_product_release": False,
+        }
+    )
+    cameo_without_release_flags = {
+        "summary": {
+            "receiver_api_readiness_ready": True,
+            "validation_operations_surface_ready": True,
+            "local_validation_protocol_ready": True,
+        }
+    }
+
+    payload = mod.build_product_goal_completion_audit(
+        architecture_packet=_architecture(release_ready=True, commercial_ready=True),
+        release_dossier_packet=_release_dossier(release_ready=True, commercial_ready=True),
+        public_benchmark_packet=_public_benchmark(),
+        commercial_independence_packet=_commercial(ready=True),
+        license_work_order_packet=_license_work_order(ready=True),
+        cameo_architecture_packet=cameo_without_release_flags,
+        release_gate_packet=release_gate,
+        bottleneck_packet={"summary": {"approval_tokens_required": []}},
+        burndown_packet={"summary": {}, "rows": []},
+        product_ai_architecture_gap_packet=_ai_gap(),
+        product_ai_execution_backlog_packet=_ai_backlog(),
+        product_scope_breadth_contract_packet=_scope_contract_ready(),
+        scope_closure_acceptance_packet=_scope_closure_acceptance_ready(),
+        scope_breadth_evidence_receipt_packet=_scope_breadth_evidence_receipt(ready=True),
+    )
+
+    by_id = {row["requirement_id"]: row for row in payload["rows"]}
+    assert by_id["R4_cameo_optional_live_validation"]["status"] == "pass"
+    assert "official_results_required_for_release=False" in by_id[
+        "R4_cameo_optional_live_validation"
+    ]["observed"]
+    assert payload["summary"]["release_blocker_fail_count"] == 0
+    assert payload["summary"]["primary_release_blocker_requirement_id"] == ""
 
 
 def test_product_goal_completion_audit_passes_refine_tier_claim_promotion_when_ready() -> None:

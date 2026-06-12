@@ -670,6 +670,15 @@ def _product_goal_completion_audit() -> dict:
             "status": "blocked_product_goal_completion_audit",
             "goal_complete": False,
             "primary_bottleneck_kind": "production_ai_checkpoint_evidence_required",
+            "release_blocker_fail_count": 2,
+            "release_blocker_requirement_ids": [
+                "R8_full_scope_claim_closure",
+                "R9_engine_refinement_claim_promotion",
+            ],
+            "primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
+            "primary_release_blocker_tier": "full_commercial_scope",
+            "primary_release_blocker": "full_scope_claim_closure_not_ready",
+            "primary_release_blocker_next_command": "python3 tools/build_product_scope_breadth_closure_checklist.py",
             "engine_refinement_claim_promotion_ready": False,
             "engine_refinement_claim_promotion_blocker_count": 6,
             "engine_refinement_claim_promotion_action_row_count": 6,
@@ -952,6 +961,23 @@ def test_goal_operator_action_board_summary_points_to_primary_product_ai_action(
         "primary_action_recommended_action"
     ]
     assert summary["product_goal_engine_refinement_claim_promotion_ready"] is False
+    assert summary["product_goal_release_blocker_fail_count"] == 2
+    assert summary["product_goal_release_blocker_requirement_ids"] == [
+        "R8_full_scope_claim_closure",
+        "R9_engine_refinement_claim_promotion",
+    ]
+    assert summary["product_goal_primary_release_blocker_requirement_id"] == "R8_full_scope_claim_closure"
+    assert summary["product_goal_primary_release_blocker_tier"] == "full_commercial_scope"
+    assert summary["product_goal_primary_release_blocker"] == "full_scope_claim_closure_not_ready"
+    assert summary["primary_release_blocker_action_id"] == (
+        "product_scope_expansion:resolve_full_scope_breadth_evidence_receipt"
+    )
+    assert summary["primary_release_blocker_action_required_input"] == (
+        "config/product_scope_breadth_evidence_receipt_current.csv"
+    )
+    assert "full-scope evidence receipt rows" in summary[
+        "primary_release_blocker_action_recommended_action"
+    ]
     assert summary["product_goal_engine_refinement_claim_promotion_blocker_count"] == 6
     assert summary["product_goal_engine_refinement_claim_promotion_action_row_count"] == 6
     assert (

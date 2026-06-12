@@ -12,11 +12,12 @@
 ## 0. 현재 위치 한 줄 요약
 
 - **닫힌 것:** restricted(`gpcr` / `ion_channel` / `kinase`) 로컬 self-hosted 전달 기반, API/service-boundary,
-  license/self-hosted distribution audit, 7/7 AI architecture gap, production-guarded promotion accounting.
-- **아직 닫히지 않은 것:** commercial independence gate 자체는 local delivery bundle validation과
-  pilot delivery claim이 닫히기 전까지 `blocked_product_commercial_independence_gate`다.
-- **닫히지 않은 것(제품 역량):** 과학 엔진 정밀도(가장 큰 진짜 갭), 실제 R4/operator-approved rollout smoke,
-  hosted 인프라, 범용 claim 확장, 외부 표준 벤치마크, 제품 UX.
+  license/self-hosted distribution audit, local delivery bundle validation, commercial independence gate,
+  R4 preflight, operator-provided rollout smoke receipt, 7/7 AI architecture gap, production-guarded promotion accounting.
+- **아직 닫히지 않은 것:** full-commercial science claim promotion은 `SCI-CLAIM`으로 남아 있으며,
+  세부적으로 GPCR broad-family claim과 OpenMM full all-atom/MM-GBSA/FEP+ claim boundary가 open이다.
+- **닫히지 않은 것(제품 역량):** 과학 엔진 정밀도(가장 큰 진짜 갭), hosted/SaaS 운영 성숙도,
+  범용 claim 확장, 외부 표준 벤치마크, 제품 UX.
 - **핵심 보정:** accounting이 green이라는 것은 "회계상 닫힘 + fail-closed 유지"를 의미하며,
   **"OpenMM/Schrödinger급 정밀도 제품이 완성됐다"는 뜻이 아니다.**
 
@@ -134,7 +135,18 @@
   최신 `runs/product_goal_completion_audit_current.json`도 이를
   `R9_engine_refinement_claim_promotion` release blocker로 흡수해,
   scope closure가 green이어도 refine-tier claim promotion evidence가 없으면
-  `goal_complete=false`가 유지된다. 이 R9 상태는
+  `goal_complete=false`가 유지된다. 최신 audit summary는
+  `release_blocker_fail_count=2`,
+  `release_blocker_requirement_ids=[R8_full_scope_claim_closure, R9_engine_refinement_claim_promotion]`,
+  `primary_release_blocker_requirement_id=R8_full_scope_claim_closure`,
+  `primary_release_blocker=full_scope_claim_closure_not_ready`를 노출해,
+  legacy upstream bottleneck label과 별개로 현재 full-commercial release blocker를
+  직접 판정한다. `runs/goal_operator_action_board_current.json`은 이를
+  `primary_release_blocker_action_id=product_scope_expansion:resolve_full_scope_breadth_evidence_receipt`와
+  `primary_release_blocker_action_required_input=config/product_scope_breadth_evidence_receipt_current.csv`로
+  operator action에 연결한다. `runs/goal_operator_intake_kit_current/manifest.json`과
+  README도 같은 `primary_release_blocker_action_*` 필드를 전달해 operator handoff에서
+  현재 R8 입력 파일이 숨지 않는다. 이 R9 상태는
   `runs/product_commercial_readiness_operator_packet_current.json`과
   `runs/product_commercial_readiness_handoff_bundle_current.json` summary에도
   `engine_refinement_claim_promotion_*` 필드 및
@@ -213,9 +225,9 @@
   `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`,
   `product_full_commercial_blocker_evidence_matrix_current.json`의
   freshness 및 semantic-ready 상태를 함께 검증한다. 최신 full refresh 후
-  source-of-truth는 `row_count=59`, `pass_count=59`, `blocker_count=0`,
-  `artifact_row_count=48`, `semantic_status_row_count=9`,
-  `release_refresh_command_count=56`, `stale_artifact_count=0`,
+  source-of-truth는 `row_count=70`, `pass_count=70`, `blocker_count=0`,
+  `artifact_row_count=53`, `semantic_status_row_count=15`,
+  `release_refresh_command_count=61`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   `product_ai_report_explanation_packet_semantic_ready`와
   `product_ai_report_ux_contract_semantic_ready`는 core/full decision graph 순환을
@@ -358,27 +370,28 @@ abstention 사유가 결과 번들에 명시.
 - 일반 `/simulate` 요청은 **의도적 fail-closed**, `runner_profile_id` + operator-approved validated runner profile만 실행.
 - `core/forcefield.py:17`, `core/topology.py:38`이 restricted analysis engine임을 명시.
 - `runs/api_customer_flow_release_evidence_current.json`은 현재
-  `blocked_api_customer_flow_release_evidence`, `blocked_check_ids=[bundle_validation_ready]`이며,
-  `runs/product_launch_r4_preflight_current.json`도
-  `blocked_product_launch_r4_preflight`, `blocked_check_ids=[api_customer_flow_release_evidence_ready, commercial_independence_and_license_ready]`다.
-  따라서 restricted customer-flow evidence와 R4 직전 preflight는 아직 local artifact 기준
-  green이 아니다.
-- `runs/product_rollout_execution_smoke_receipt_current.json`은 preflight 이후의 실제
-  R4 rollout smoke receipt를 별도 산출물로 검증하지만, 현재
-  `blocked_product_rollout_execution_smoke_receipt`, `receipt_csv_present=false`,
-  `rollout_executed=false`다. 따라서 `deploy_ops_legal_gap_closure_current.json`은
-  `open_gap_ids=[DEP-ROLLOUT-SMOKE]`, `master_gap_closure_rollup_current.json`은
-  GPCR broad-family science claim promotion pending과 함께
-  `open_gap_ids=[SCI-CLAIM, DEPLOY-OPS]`로 남는다.
+  `api_customer_flow_release_evidence_ready`, `formal_release_evidence_ready=true`,
+  `clean_install_flow_ready=true`, `bundle_validation_ready=true`, `blocker_count=0`이다.
+  `runs/product_launch_r4_preflight_current.json`도 `product_launch_r4_preflight_ready`,
+  `check_count=7`, `pass_count=7`, `blocker_count=0`이다. 단, preflight 자체는
+  `authorized_for_external_mutation=false`, `launch_executed=false`,
+  `external_state_mutated=false`로 실제 mutation과 분리된다.
+- `runs/product_rollout_execution_smoke_receipt_current.json`은 preflight 이후의 별도
+  R4-approved operator 실행 receipt를 read-only로 검증하며 현재
+  `product_rollout_execution_smoke_receipt_ready`, `receipt_csv_present=true`,
+  `rollout_executed=true`, `external_state_mutated=true`다. 따라서
+  `deploy_ops_legal_gap_closure_current.json`은 `deploy_ops_legal_gap_closure_complete`,
+  `open_gap_ids=[]`이고, `master_gap_closure_rollup_current.json`의 open gap은
+  `SCI-CLAIM` 하나다.
 
 **갭**
-- 실제 docking/MD 실행과 rollout smoke는 여전히 explicit operator approval token과
-  R4 확인에 묶여 있어, 배포/remote mutation이 자동으로 열리지는 않는다.
+- 실제 docking/MD 실행과 future rollout mutation은 여전히 explicit operator approval
+  token과 R4 확인에 묶여 있어, 배포/remote mutation이 자동으로 열리지는 않는다.
 
 **구현 방향**
-1. R4 preflight 산출물을 기반으로 Target/Action/Impact/Risk/Rollback/Verification을
-   제시하고 explicit operator approval을 받은 뒤 실행 smoke를 분리 수행한 다음
-   `product_rollout_execution_smoke_receipt`에 receipt를 기록한다.
+1. 완료된 R4 preflight와 rollout execution smoke receipt를 release evidence로 유지하고,
+   future rollout마다 Target/Action/Impact/Risk/Rollback/Verification과 explicit
+   operator approval을 다시 요구한다.
 2. fail-closed 정책은 유지하되, **restricted scope 안에서는** profile 기반 무인 실행 경로를 SLA로 보장.
 3. dispatch worker(`api/docking_dispatch.py`, `run_api_docking_dispatch_worker.py`) 상시 운영화 + 모니터링.
 
@@ -392,17 +405,19 @@ durable queue → worker 실행 → signed 결과 번들 회수까지 무인 동
 **현황**
 - `deploy/`: docker-compose, systemd, k8s manifest, model registry, rollout/rollback runbook 1차 존재.
 - monitoring/`: `/metrics`, alert rules, closed-loop alert smoke 1차 통합.
-- R4 launch preflight는 현재 `blocked_product_launch_r4_preflight`,
-  `blocked_check_ids=[api_customer_flow_release_evidence_ready, commercial_independence_and_license_ready]`,
-  `authorized_for_external_mutation=false`, `launch_executed=false`로 실제 실행 전
-  차단 상태를 명시한다.
-- actual rollout execution smoke receipt는 아직 blocked이며, 이 때문에 deploy/ops/legal
-  rollup과 master full-commercial rollup은 pending이다. master rollup에는 GPCR
-  broad-family claim promotion(`SCI-CLAIM`)도 open으로 함께 남아 있다.
+- R4 launch preflight는 현재 `product_launch_r4_preflight_ready`,
+  `check_count=7`, `pass_count=7`, `blocker_count=0`이다. preflight는 여전히
+  `authorized_for_external_mutation=false`, `launch_executed=false`,
+  `external_state_mutated=false`라서 실행 권한과 분리된다.
+- actual rollout execution smoke receipt는 operator-provided receipt 기준
+  `product_rollout_execution_smoke_receipt_ready`이며, deploy/ops/legal rollup은 닫혔다.
+  master full-commercial rollup은 GPCR broad-family와 OpenMM full all-atom/MM-GBSA/FEP+
+  science claim promotion(`SCI-CLAIM`) 때문에 pending이다.
 
 **갭**
-- 실제 pager provider delivery, ingress certificate(TLS) smoke, operator-approved rollout **실행** smoke 미완.
-- 멀티테넌시 격리·쿼터, 작업 영속성/재시도의 운영 검증, 백업/DR.
+- 실제 pager provider delivery, ingress certificate(TLS) smoke, operator-approved rollout
+  receipt는 1차 검증됐다. 남은 운영 갭은 반복 가능한 환경별 SLO tuning, DR/backup,
+  멀티테넌시 격리·쿼터, 작업 영속성/재시도의 운영 검증이다.
 
 **구현 방향**
 1. 실배포 smoke: TLS 인증서 + ingress, pager 실연동, rollout 실행 후 health/rollback 검증.

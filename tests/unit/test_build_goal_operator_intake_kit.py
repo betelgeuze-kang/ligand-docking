@@ -23,6 +23,29 @@ def _action_board() -> dict:
             "primary_action_recommended_action": (
                 "Run the full regeneration command on a GPU worker, return the identity-locked manifest and summary."
             ),
+            "product_goal_release_blocker_fail_count": 2,
+            "product_goal_release_blocker_requirement_ids": [
+                "R8_full_scope_claim_closure",
+                "R9_engine_refinement_claim_promotion",
+            ],
+            "product_goal_primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
+            "product_goal_primary_release_blocker_tier": "full_commercial_scope",
+            "product_goal_primary_release_blocker": "full_scope_claim_closure_not_ready",
+            "primary_release_blocker_action_id": (
+                "product_scope_expansion:resolve_full_scope_breadth_evidence_receipt"
+            ),
+            "primary_release_blocker_action_status": "required",
+            "primary_release_blocker_action_required_input": (
+                "config/product_scope_breadth_evidence_receipt_current.csv"
+            ),
+            "primary_release_blocker_action_artifact_path": (
+                "runs/product_goal_completion_audit_current.json;"
+                "runs/product_scope_breadth_evidence_receipt_current.json;"
+                "config/product_scope_breadth_evidence_receipt_current.csv"
+            ),
+            "primary_release_blocker_action_recommended_action": (
+                "Fill the full-scope evidence receipt rows with local evidence artifacts."
+            ),
         },
         "rows": [
             {
@@ -280,6 +303,27 @@ def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp
     assert "generate_ligand_trajectory_engine.py" in summary["primary_action_command"]
     assert "Run the full regeneration command on a GPU worker" in summary[
         "primary_action_recommended_action"
+    ]
+    assert summary["product_goal_release_blocker_fail_count"] == 2
+    assert summary["product_goal_release_blocker_requirement_ids"] == [
+        "R8_full_scope_claim_closure",
+        "R9_engine_refinement_claim_promotion",
+    ]
+    assert summary["product_goal_primary_release_blocker_requirement_id"] == "R8_full_scope_claim_closure"
+    assert summary["product_goal_primary_release_blocker_tier"] == "full_commercial_scope"
+    assert summary["product_goal_primary_release_blocker"] == "full_scope_claim_closure_not_ready"
+    assert summary["primary_release_blocker_action_id"] == (
+        "product_scope_expansion:resolve_full_scope_breadth_evidence_receipt"
+    )
+    assert summary["primary_release_blocker_action_status"] == "required"
+    assert summary["primary_release_blocker_action_required_input"] == (
+        "config/product_scope_breadth_evidence_receipt_current.csv"
+    )
+    assert "product_scope_breadth_evidence_receipt_current.json" in summary[
+        "primary_release_blocker_action_artifact_path"
+    ]
+    assert "full-scope evidence receipt rows" in summary[
+        "primary_release_blocker_action_recommended_action"
     ]
     assert summary["official_results_required_count"] == 1
     assert summary["policy_decision_required_count"] == 1

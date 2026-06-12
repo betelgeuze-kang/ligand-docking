@@ -181,6 +181,34 @@ def _primary_action(rows: list[dict[str, Any]]) -> dict[str, Any]:
     return rows[0]
 
 
+def _action_identifier(row: dict[str, Any]) -> str:
+    lane_id = _text(row.get("lane_id"))
+    action_type = _text(row.get("action_type"))
+    return f"{lane_id}:{action_type}" if lane_id and action_type else ""
+
+
+def _primary_release_blocker_action(
+    rows: list[dict[str, Any]],
+    product_goal_completion_audit: dict[str, Any],
+) -> dict[str, Any]:
+    requirement_id = _text(product_goal_completion_audit.get("primary_release_blocker_requirement_id"))
+    if requirement_id == "R8_full_scope_claim_closure":
+        for row in rows:
+            if (
+                _text(row.get("lane_id")) == "product_scope_expansion"
+                and _text(row.get("action_type")) == "resolve_full_scope_breadth_evidence_receipt"
+            ):
+                return row
+    if requirement_id == "R9_engine_refinement_claim_promotion":
+        for row in rows:
+            if (
+                _text(row.get("lane_id")) == "product_engine_refinement"
+                and _text(row.get("action_type")) == "resolve_refine_tier_claim_promotion_blocker"
+            ):
+                return row
+    return {}
+
+
 def _cameo_actions(
     *,
     input_kit: dict[str, Any],
@@ -1086,6 +1114,7 @@ def build_action_board(
     product_release_dossier = _summary(product_release_operations_dossier_packet or {})
     product_cli_status = product_cli_status_packet or {}
     product_goal_completion_audit = _summary(product_goal_completion_audit_packet or {})
+    primary_release_blocker_action = _primary_release_blocker_action(rows, product_goal_completion_audit)
     parallel_product_actions = [
         row
         for row in rows
@@ -1166,6 +1195,38 @@ def build_action_board(
         "product_goal_completion_audit_status": _text(product_goal_completion_audit.get("status")),
         "product_goal_complete": bool(product_goal_completion_audit.get("goal_complete") is True),
         "product_goal_primary_bottleneck_kind": _text(product_goal_completion_audit.get("primary_bottleneck_kind")),
+        "product_goal_release_blocker_fail_count": _int(
+            product_goal_completion_audit.get("release_blocker_fail_count")
+        ),
+        "product_goal_release_blocker_requirement_ids": [
+            str(item)
+            for item in (product_goal_completion_audit.get("release_blocker_requirement_ids") or [])
+        ],
+        "product_goal_primary_release_blocker_requirement_id": _text(
+            product_goal_completion_audit.get("primary_release_blocker_requirement_id")
+        ),
+        "product_goal_primary_release_blocker_tier": _text(
+            product_goal_completion_audit.get("primary_release_blocker_tier")
+        ),
+        "product_goal_primary_release_blocker": _text(
+            product_goal_completion_audit.get("primary_release_blocker")
+        ),
+        "product_goal_primary_release_blocker_next_command": _text(
+            product_goal_completion_audit.get("primary_release_blocker_next_command")
+        ),
+        "primary_release_blocker_action_id": _action_identifier(primary_release_blocker_action),
+        "primary_release_blocker_action_lane_id": _text(primary_release_blocker_action.get("lane_id")),
+        "primary_release_blocker_action_type": _text(primary_release_blocker_action.get("action_type")),
+        "primary_release_blocker_action_status": _text(primary_release_blocker_action.get("status")),
+        "primary_release_blocker_action_required_input": _text(
+            primary_release_blocker_action.get("required_input")
+        ),
+        "primary_release_blocker_action_artifact_path": _text(
+            primary_release_blocker_action.get("artifact_path")
+        ),
+        "primary_release_blocker_action_recommended_action": _text(
+            primary_release_blocker_action.get("recommended_action")
+        ),
         "product_goal_engine_refinement_claim_promotion_ready": bool(
             product_goal_completion_audit.get("engine_refinement_claim_promotion_ready") is True
         ),
@@ -1654,6 +1715,13 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_goal_completion_audit_status: `{s['product_goal_completion_audit_status']}`",
         f"- product_goal_complete: `{s['product_goal_complete']}`",
         f"- product_goal_primary_bottleneck_kind: `{s['product_goal_primary_bottleneck_kind']}`",
+        f"- product_goal_release_blocker_fail_count: `{s['product_goal_release_blocker_fail_count']}`",
+        f"- product_goal_release_blocker_requirement_ids: `{';'.join(s['product_goal_release_blocker_requirement_ids'])}`",
+        f"- product_goal_primary_release_blocker_requirement_id: `{s['product_goal_primary_release_blocker_requirement_id']}`",
+        f"- product_goal_primary_release_blocker_tier: `{s['product_goal_primary_release_blocker_tier']}`",
+        f"- product_goal_primary_release_blocker: `{s['product_goal_primary_release_blocker']}`",
+        f"- primary_release_blocker_action_id: `{s['primary_release_blocker_action_id']}`",
+        f"- primary_release_blocker_action_required_input: `{s['primary_release_blocker_action_required_input']}`",
         f"- product_goal_engine_refinement_claim_promotion_ready: `{s['product_goal_engine_refinement_claim_promotion_ready']}`",
         f"- product_goal_engine_refinement_claim_promotion_blocker_count: `{s['product_goal_engine_refinement_claim_promotion_blocker_count']}`",
         f"- product_goal_engine_refinement_claim_promotion_action_board_csv: `{s['product_goal_engine_refinement_claim_promotion_action_board_csv']}`",

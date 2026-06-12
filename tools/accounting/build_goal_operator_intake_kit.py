@@ -638,6 +638,37 @@ def build_goal_operator_intake_kit(
         or _text(primary_action.get("command")),
         "primary_action_recommended_action": _text(action_board_summary.get("primary_action_recommended_action"))
         or _text(primary_action.get("recommended_action")),
+        "product_goal_release_blocker_fail_count": _int(
+            action_board_summary.get("product_goal_release_blocker_fail_count")
+        ),
+        "product_goal_release_blocker_requirement_ids": [
+            str(item)
+            for item in (action_board_summary.get("product_goal_release_blocker_requirement_ids") or [])
+        ],
+        "product_goal_primary_release_blocker_requirement_id": _text(
+            action_board_summary.get("product_goal_primary_release_blocker_requirement_id")
+        ),
+        "product_goal_primary_release_blocker_tier": _text(
+            action_board_summary.get("product_goal_primary_release_blocker_tier")
+        ),
+        "product_goal_primary_release_blocker": _text(
+            action_board_summary.get("product_goal_primary_release_blocker")
+        ),
+        "primary_release_blocker_action_id": _text(
+            action_board_summary.get("primary_release_blocker_action_id")
+        ),
+        "primary_release_blocker_action_status": _text(
+            action_board_summary.get("primary_release_blocker_action_status")
+        ),
+        "primary_release_blocker_action_required_input": _text(
+            action_board_summary.get("primary_release_blocker_action_required_input")
+        ),
+        "primary_release_blocker_action_artifact_path": _text(
+            action_board_summary.get("primary_release_blocker_action_artifact_path")
+        ),
+        "primary_release_blocker_action_recommended_action": _text(
+            action_board_summary.get("primary_release_blocker_action_recommended_action")
+        ),
         "approval_required_count": sum(1 for row in rows if row["kit_status"] == "approval_required"),
         "official_results_required_count": sum(1 for row in rows if row["official_result_required"]),
         "policy_decision_required_count": sum(1 for row in rows if row["policy_decision_required"]),
@@ -693,6 +724,14 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- primary_action_status: `{s['primary_action_status']}`",
         f"- primary_action_required_input: `{s['primary_action_required_input']}`",
         f"- primary_action_recommended_action: `{s['primary_action_recommended_action']}`",
+        f"- product_goal_release_blocker_fail_count: `{s['product_goal_release_blocker_fail_count']}`",
+        f"- product_goal_release_blocker_requirement_ids: `{';'.join(s['product_goal_release_blocker_requirement_ids'])}`",
+        f"- product_goal_primary_release_blocker_requirement_id: `{s['product_goal_primary_release_blocker_requirement_id']}`",
+        f"- product_goal_primary_release_blocker_tier: `{s['product_goal_primary_release_blocker_tier']}`",
+        f"- product_goal_primary_release_blocker: `{s['product_goal_primary_release_blocker']}`",
+        f"- primary_release_blocker_action_id: `{s['primary_release_blocker_action_id']}`",
+        f"- primary_release_blocker_action_status: `{s['primary_release_blocker_action_status']}`",
+        f"- primary_release_blocker_action_required_input: `{s['primary_release_blocker_action_required_input']}`",
         f"- approval_required_count: `{s['approval_required_count']}`",
         f"- official_results_required_count: `{s['official_results_required_count']}`",
         f"- policy_decision_required_count: `{s['policy_decision_required_count']}`",

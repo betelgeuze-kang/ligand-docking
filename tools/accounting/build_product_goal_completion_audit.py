@@ -138,6 +138,34 @@ def _product_ai_gap_next_command(primary_phase: str, primary_next_command: str) 
     )
 
 
+def _first_present_value(source_packets: list[dict[str, Any]], keys: list[str]) -> Any:
+    for packet in source_packets:
+        for key in keys:
+            if key in packet:
+                return packet.get(key)
+    return None
+
+
+def _release_blocker_summary(row: dict[str, Any] | None) -> dict[str, Any]:
+    if not row:
+        return {
+            "primary_release_blocker_requirement_id": "",
+            "primary_release_blocker_tier": "",
+            "primary_release_blocker": "",
+            "primary_release_blocker_next_command": "",
+            "primary_release_blocker_observed": "",
+            "primary_release_blocker_required": "",
+        }
+    return {
+        "primary_release_blocker_requirement_id": _text(row.get("requirement_id")),
+        "primary_release_blocker_tier": _text(row.get("requirement_tier")),
+        "primary_release_blocker": _text(row.get("blocker")),
+        "primary_release_blocker_next_command": _text(row.get("next_command")),
+        "primary_release_blocker_observed": _text(row.get("observed")),
+        "primary_release_blocker_required": _text(row.get("required")),
+    }
+
+
 def _next_command_candidates(
     *,
     primary_next_command: str,
@@ -1854,16 +1882,37 @@ def build_product_goal_completion_audit(
             _bool(public_benchmark.get("public_benchmark_validation_ready")),
         ]
     )
+    cameo_release_sources = [cameo, release_gate]
+    cameo_live_required_for_release = _first_present_value(
+        cameo_release_sources,
+        ["cameo_live_validation_required_for_product_release", "live_validation_required_for_product_release"],
+    )
+    cameo_registration_required_for_release = _first_present_value(
+        cameo_release_sources,
+        ["cameo_registration_required_for_product_release", "registration_required_for_product_release"],
+    )
+    cameo_official_results_required_for_release = _first_present_value(
+        cameo_release_sources,
+        ["cameo_official_results_required_for_product_release", "official_results_required_for_product_release"],
+    )
+    cameo_official_results_pending_honest = _first_present_value(
+        cameo_release_sources,
+        ["cameo_official_results_pending_honest", "official_results_pending_honest"],
+    )
+    cameo_no_local_native_accuracy_substitution = _first_present_value(
+        cameo_release_sources,
+        ["cameo_no_local_native_accuracy_substitution", "no_local_native_accuracy_substitution"],
+    )
     cameo_optional_ready = all(
         [
             _bool(cameo.get("receiver_api_readiness_ready")),
             _bool(cameo.get("validation_operations_surface_ready")),
             _bool(cameo.get("local_validation_protocol_ready")),
-            cameo.get("cameo_live_validation_required_for_product_release") is False,
-            cameo.get("registration_required_for_product_release") is False,
-            cameo.get("official_results_required_for_product_release") is False,
-            _bool(release_gate.get("cameo_official_results_pending_honest")),
-            _bool(release_gate.get("cameo_no_local_native_accuracy_substitution")),
+            cameo_live_required_for_release is False,
+            cameo_registration_required_for_release is False,
+            cameo_official_results_required_for_release is False,
+            _bool(cameo_official_results_pending_honest),
+            _bool(cameo_no_local_native_accuracy_substitution),
         ]
     )
     release_artifact_ready = all(
@@ -2021,9 +2070,10 @@ def build_product_goal_completion_audit(
             passed=cameo_optional_ready,
             observed=(
                 f"receiver_api={_bool(cameo.get('receiver_api_readiness_ready'))};"
-                f"live_required_for_release={_bool(cameo.get('cameo_live_validation_required_for_product_release'))};"
-                f"registration_required_for_release={_bool(cameo.get('registration_required_for_product_release'))};"
-                f"official_results_pending_honest={_bool(release_gate.get('cameo_official_results_pending_honest'))}"
+                f"live_required_for_release={_bool(cameo_live_required_for_release)};"
+                f"registration_required_for_release={_bool(cameo_registration_required_for_release)};"
+                f"official_results_required_for_release={_bool(cameo_official_results_required_for_release)};"
+                f"official_results_pending_honest={_bool(cameo_official_results_pending_honest)}"
             ),
             required="CAMEO local receiver/API ready; live official results honest but not product-release blocking",
             evidence_artifacts=_join([cameo_architecture_path, release_gate_path]),
@@ -2194,6 +2244,8 @@ def build_product_goal_completion_audit(
     failed = [row for row in rows if row["status"] != "pass"]
     release_failed = [row for row in failed if row.get("release_blocker")]
     optional_failed = [row for row in failed if not row.get("release_blocker")]
+    primary_release_blocker = release_failed[0] if release_failed else None
+    primary_release_blocker_summary = _release_blocker_summary(primary_release_blocker)
     status = (
         "product_goal_completion_audit_pass"
         if not release_failed
@@ -2220,6 +2272,13 @@ def build_product_goal_completion_audit(
         "pass_count": len(rows) - len(failed),
         "fail_count": len(failed),
         "release_blocker_fail_count": len(release_failed),
+        "release_blocker_requirement_ids": [
+            _text(row.get("requirement_id")) for row in release_failed
+        ],
+        "release_blocker_tiers": [
+            _text(row.get("requirement_tier")) for row in release_failed
+        ],
+        **primary_release_blocker_summary,
         "optional_requirement_fail_count": len(optional_failed),
         "goal_complete": not release_failed,
         "restricted_delivery_complete": restricted_delivery_ready,

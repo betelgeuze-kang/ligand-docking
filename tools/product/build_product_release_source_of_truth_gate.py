@@ -901,6 +901,68 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         ],
     },
     {
+        "artifact_id": "product_goal_completion_audit_full_commercial_release_blockers_semantic_ready",
+        "artifact_path": "runs/product_goal_completion_audit_current.json",
+        "builder_command": "python3 tools/build_product_goal_completion_audit.py",
+        "required_status": "blocked_product_goal_completion_audit",
+        "required_true_fields": [
+            "commercial_independence_ready",
+            "restricted_delivery_complete",
+        ],
+        "required_int_exact_fields": {
+            "release_blocker_fail_count": 2,
+        },
+        "required_text_exact_fields": {
+            "primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
+            "primary_release_blocker_tier": "full_commercial_scope",
+            "primary_release_blocker": "full_scope_claim_closure_not_ready",
+        },
+    },
+    {
+        "artifact_id": "goal_operator_action_board_primary_release_blocker_semantic_ready",
+        "artifact_path": "runs/goal_operator_action_board_current.json",
+        "builder_command": "python3 tools/build_goal_operator_action_board.py",
+        "required_status": "operator_actions_required",
+        "required_true_fields": [],
+        "required_int_exact_fields": {
+            "product_goal_release_blocker_fail_count": 2,
+        },
+        "required_text_exact_fields": {
+            "product_goal_primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
+            "product_goal_primary_release_blocker_tier": "full_commercial_scope",
+            "product_goal_primary_release_blocker": "full_scope_claim_closure_not_ready",
+            "primary_release_blocker_action_id": (
+                "product_scope_expansion:resolve_full_scope_breadth_evidence_receipt"
+            ),
+            "primary_release_blocker_action_required_input": (
+                "config/product_scope_breadth_evidence_receipt_current.csv"
+            ),
+            "primary_release_blocker_action_status": "required",
+        },
+    },
+    {
+        "artifact_id": "goal_operator_intake_kit_primary_release_blocker_semantic_ready",
+        "artifact_path": "runs/goal_operator_intake_kit_current/manifest.json",
+        "builder_command": "python3 tools/build_goal_operator_intake_kit.py",
+        "required_status": "goal_operator_intake_kit_ready",
+        "required_true_fields": [],
+        "required_int_exact_fields": {
+            "product_goal_release_blocker_fail_count": 2,
+        },
+        "required_text_exact_fields": {
+            "product_goal_primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
+            "product_goal_primary_release_blocker_tier": "full_commercial_scope",
+            "product_goal_primary_release_blocker": "full_scope_claim_closure_not_ready",
+            "primary_release_blocker_action_id": (
+                "product_scope_expansion:resolve_full_scope_breadth_evidence_receipt"
+            ),
+            "primary_release_blocker_action_required_input": (
+                "config/product_scope_breadth_evidence_receipt_current.csv"
+            ),
+            "primary_release_blocker_action_status": "required",
+        },
+    },
+    {
         "artifact_id": "goal_api_surface_contract_semantic_ready",
         "artifact_path": "runs/goal_api_surface_contract_current.json",
         "builder_command": "python3 tools/build_goal_api_surface_contract.py",
@@ -1045,6 +1107,11 @@ def _status_row(spec: dict[str, Any], *, root: Path = ROOT) -> dict[str, Any]:
         for field, value in (spec.get("required_int_exact_fields") or {}).items()
         if _text(field)
     }
+    required_text_exact_fields = {
+        _text(field): _text(value)
+        for field, value in (spec.get("required_text_exact_fields") or {}).items()
+        if _text(field)
+    }
     failed_int_min_fields = [
         field
         for field, minimum in required_int_min_fields.items()
@@ -1055,6 +1122,11 @@ def _status_row(spec: dict[str, Any], *, root: Path = ROOT) -> dict[str, Any]:
         for field, expected in required_int_exact_fields.items()
         if field not in summary or _int(summary.get(field)) != expected
     ]
+    failed_text_exact_fields = [
+        field
+        for field, expected in required_text_exact_fields.items()
+        if field not in summary or _text(summary.get(field)) != expected
+    ]
     status_matches = _text(summary.get("status")) == required_status
     passed = (
         bool(summary)
@@ -1062,6 +1134,7 @@ def _status_row(spec: dict[str, Any], *, root: Path = ROOT) -> dict[str, Any]:
         and not missing_true_fields
         and not failed_int_min_fields
         and not failed_int_exact_fields
+        and not failed_text_exact_fields
     )
     return {
         "row_type": "artifact_semantic_status",
@@ -1089,17 +1162,22 @@ def _status_row(spec: dict[str, Any], *, root: Path = ROOT) -> dict[str, Any]:
         "required_int_exact_fields": required_int_exact_fields,
         "failed_int_exact_fields": failed_int_exact_fields,
         "failed_int_exact_field_count": len(failed_int_exact_fields),
+        "required_text_exact_fields": required_text_exact_fields,
+        "failed_text_exact_fields": failed_text_exact_fields,
+        "failed_text_exact_field_count": len(failed_text_exact_fields),
         "observed": (
             f"status={_text(summary.get('status')) or 'missing'};"
             f"required_status={required_status};missing_true_fields={len(missing_true_fields)};"
             f"failed_int_min_fields={len(failed_int_min_fields)};"
-            f"failed_int_exact_fields={len(failed_int_exact_fields)}"
+            f"failed_int_exact_fields={len(failed_int_exact_fields)};"
+            f"failed_text_exact_fields={len(failed_text_exact_fields)}"
         ),
         "required": (
             f"status={required_status};"
             f"required_true_fields={','.join(required_true_fields) or 'none'};"
             f"required_int_min_fields={','.join(required_int_min_fields) or 'none'};"
-            f"required_int_exact_fields={','.join(required_int_exact_fields) or 'none'}"
+            f"required_int_exact_fields={','.join(required_int_exact_fields) or 'none'};"
+            f"required_text_exact_fields={','.join(required_text_exact_fields) or 'none'}"
         ),
         "release_blocker": not passed,
         "execution_enabled": False,

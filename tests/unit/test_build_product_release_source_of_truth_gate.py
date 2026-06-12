@@ -287,6 +287,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "master_gap_closure_rollup" in artifact_ids
     assert "python3 tools/build_api_runner_profile_promotion_operator_receipt.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "product_release_bundle_semantic_ready" in status_ids
+    assert "product_goal_completion_audit_full_commercial_release_blockers_semantic_ready" in status_ids
+    assert "goal_operator_action_board_primary_release_blocker_semantic_ready" in status_ids
+    assert "goal_operator_intake_kit_primary_release_blocker_semantic_ready" in status_ids
     assert "goal_api_surface_contract_semantic_ready" in status_ids
     assert "goal_bottleneck_briefing_semantic_ready" in status_ids
     goal_action_spec = next(
@@ -726,6 +729,63 @@ def test_release_source_of_truth_blocks_semantic_status_when_required_int_fields
     assert "failed_int_exact_fields=2" in row["observed"]
 
 
+def test_release_source_of_truth_blocks_semantic_status_when_required_text_fields_mismatch(tmp_path: Path) -> None:
+    action_board = tmp_path / "runs" / "goal_operator_action_board_current.json"
+    _write_json(
+        action_board,
+        {
+            "summary": {
+                "status": "operator_actions_required",
+                "product_goal_release_blocker_fail_count": 2,
+                "product_goal_primary_release_blocker_requirement_id": "R9_engine_refinement_claim_promotion",
+                "product_goal_primary_release_blocker_tier": "full_commercial_scope",
+                "product_goal_primary_release_blocker": "engine_refinement_claim_promotion_not_ready",
+                "primary_release_blocker_action_id": "product_engine_refinement:resolve_claim_promotion",
+            }
+        },
+    )
+
+    payload = mod.build_product_release_source_of_truth_gate(
+        root=tmp_path,
+        artifact_specs=[],
+        status_specs=[
+            {
+                "artifact_id": "goal_operator_action_board_primary_release_blocker_semantic_ready",
+                "artifact_path": "runs/goal_operator_action_board_current.json",
+                "builder_command": "python3 tools/build_goal_operator_action_board.py",
+                "required_status": "operator_actions_required",
+                "required_int_exact_fields": {
+                    "product_goal_release_blocker_fail_count": 2,
+                },
+                "required_text_exact_fields": {
+                    "product_goal_primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
+                    "product_goal_primary_release_blocker_tier": "full_commercial_scope",
+                    "product_goal_primary_release_blocker": "full_scope_claim_closure_not_ready",
+                    "primary_release_blocker_action_id": (
+                        "product_scope_expansion:resolve_full_scope_breadth_evidence_receipt"
+                    ),
+                    "primary_release_blocker_action_required_input": (
+                        "config/product_scope_breadth_evidence_receipt_current.csv"
+                    ),
+                },
+            }
+        ],
+        readme_paths=[],
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "blocked_product_release_source_of_truth_gate"
+    assert summary["semantic_status_blocker_count"] == 1
+    row = payload["rows"][0]
+    assert row["failed_text_exact_fields"] == [
+        "product_goal_primary_release_blocker_requirement_id",
+        "product_goal_primary_release_blocker",
+        "primary_release_blocker_action_id",
+        "primary_release_blocker_action_required_input",
+    ]
+    assert "failed_text_exact_fields=4" in row["observed"]
+
+
 def test_release_source_of_truth_blocks_minimal_bundle_fixture_semantics(tmp_path: Path) -> None:
     bundle = tmp_path / "runs" / "product_bundle_contract_current.json"
     _write_json(
@@ -815,6 +875,56 @@ def test_release_source_of_truth_accepts_semantic_status_required_int_fields(tmp
     row = payload["rows"][0]
     assert row["failed_int_min_fields"] == []
     assert row["failed_int_exact_fields"] == []
+
+
+def test_release_source_of_truth_accepts_full_commercial_release_blocker_semantics(tmp_path: Path) -> None:
+    _write_json(
+        tmp_path / "runs" / "product_goal_completion_audit_current.json",
+        {
+            "summary": {
+                "status": "blocked_product_goal_completion_audit",
+                "commercial_independence_ready": True,
+                "restricted_delivery_complete": True,
+                "release_blocker_fail_count": 2,
+                "primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
+                "primary_release_blocker_tier": "full_commercial_scope",
+                "primary_release_blocker": "full_scope_claim_closure_not_ready",
+            }
+        },
+    )
+
+    payload = mod.build_product_release_source_of_truth_gate(
+        root=tmp_path,
+        artifact_specs=[],
+        status_specs=[
+            {
+                "artifact_id": "product_goal_completion_audit_full_commercial_release_blockers_semantic_ready",
+                "artifact_path": "runs/product_goal_completion_audit_current.json",
+                "builder_command": "python3 tools/build_product_goal_completion_audit.py",
+                "required_status": "blocked_product_goal_completion_audit",
+                "required_true_fields": [
+                    "commercial_independence_ready",
+                    "restricted_delivery_complete",
+                ],
+                "required_int_exact_fields": {
+                    "release_blocker_fail_count": 2,
+                },
+                "required_text_exact_fields": {
+                    "primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
+                    "primary_release_blocker_tier": "full_commercial_scope",
+                    "primary_release_blocker": "full_scope_claim_closure_not_ready",
+                },
+            }
+        ],
+        readme_paths=[],
+    )
+
+    assert payload["summary"]["status"] == "product_release_source_of_truth_gate_ready"
+    row = payload["rows"][0]
+    assert row["failed_text_exact_fields"] == []
+    assert row["required_text_exact_fields"]["primary_release_blocker_requirement_id"] == (
+        "R8_full_scope_claim_closure"
+    )
 
 
 def test_release_source_of_truth_accepts_top_level_release_bundle_status(tmp_path: Path) -> None:
