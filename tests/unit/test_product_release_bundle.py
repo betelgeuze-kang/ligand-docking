@@ -43,6 +43,7 @@ def test_release_bundle_links_required_artifacts_and_policy() -> None:
     assert artifacts["engine_refinement_claim_promotion_action_board"]["sha256"]
     assert artifacts["engine_refinement_claim_evidence_receipt"]["sha256"]
     assert artifacts["product_scope_breadth_evidence_receipt"]["sha256"]
+    assert artifacts["product_full_commercial_blocker_evidence_matrix"]["sha256"]
     assert artifacts["product_goal_completion_audit"]["sha256"]
 
     checks = {row["check"]: row for row in payload["checks"]}
@@ -71,6 +72,16 @@ def test_release_bundle_links_required_artifacts_and_policy() -> None:
     assert checks["product_scope_breadth_evidence_receipt_recorded"]["passed"] is True
     assert "receipt_ready=False" in checks["product_scope_breadth_evidence_receipt_recorded"]["observed"]
     assert "required_scope_blocker_count=6" in checks["product_scope_breadth_evidence_receipt_recorded"]["observed"]
+    assert checks["product_full_commercial_blocker_evidence_matrix_recorded"]["passed"] is True
+    assert "matrix_status=blocked_product_full_commercial_blocker_evidence_matrix" in checks[
+        "product_full_commercial_blocker_evidence_matrix_recorded"
+    ]["observed"]
+    assert "release_blocker_visibility_ready=True" in checks[
+        "product_full_commercial_blocker_evidence_matrix_recorded"
+    ]["observed"]
+    assert "blocked_matrix_row_count=12" in checks[
+        "product_full_commercial_blocker_evidence_matrix_recorded"
+    ]["observed"]
     assert checks["product_goal_completion_audit_full_claim_boundary_recorded"]["passed"] is True
     assert "r8_status=fail" in checks[
         "product_goal_completion_audit_full_claim_boundary_recorded"

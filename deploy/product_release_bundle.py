@@ -41,6 +41,9 @@ DEFAULT_ARTIFACTS = {
     "engine_refinement_claim_promotion_action_board": "runs/engine_refinement_claim_promotion_action_board_current.csv",
     "engine_refinement_claim_evidence_receipt": "runs/engine_refinement_claim_evidence_receipt_current.json",
     "product_scope_breadth_evidence_receipt": "runs/product_scope_breadth_evidence_receipt_current.json",
+    "product_full_commercial_blocker_evidence_matrix": (
+        "runs/product_full_commercial_blocker_evidence_matrix_current.json"
+    ),
     "product_goal_completion_audit": "runs/product_goal_completion_audit_current.json",
 }
 APPROVAL_TOKENS = [
@@ -137,6 +140,9 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
     )
     scope_evidence_receipt = _summary(
         _read_json(_resolve(DEFAULT_ARTIFACTS["product_scope_breadth_evidence_receipt"]))
+    )
+    full_commercial_matrix = _summary(
+        _read_json(_resolve(DEFAULT_ARTIFACTS["product_full_commercial_blocker_evidence_matrix"]))
     )
     goal_audit_payload = _read_json(_resolve(DEFAULT_ARTIFACTS["product_goal_completion_audit"]))
     goal_audit = _summary(goal_audit_payload)
@@ -448,6 +454,35 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
                 f"blocked_row_count={scope_evidence_receipt.get('blocked_row_count')};"
                 f"blocker_count={scope_evidence_receipt.get('blocker_count')};"
                 f"required_scope_blocker_count={scope_evidence_receipt.get('required_scope_blocker_count')}"
+            ),
+        },
+        {
+            "check": "product_full_commercial_blocker_evidence_matrix_recorded",
+            "passed": (
+                full_commercial_matrix.get("status")
+                in {
+                    "blocked_product_full_commercial_blocker_evidence_matrix",
+                    "product_full_commercial_blocker_evidence_matrix_ready",
+                }
+                and full_commercial_matrix.get("release_blocker_visibility_ready") is True
+                and full_commercial_matrix.get("expected_release_blocker_ids")
+                == ["R8_full_scope_claim_closure", "R9_engine_refinement_claim_promotion"]
+                and int(full_commercial_matrix.get("matrix_row_count") or 0) >= 2
+                and int(full_commercial_matrix.get("approval_token_count") or 0) >= 0
+                and full_commercial_matrix.get("execution_enabled") is False
+                and full_commercial_matrix.get("external_state_mutated") is False
+            ),
+            "observed": (
+                f"matrix_status={full_commercial_matrix.get('status')};"
+                f"matrix_ready={full_commercial_matrix.get('full_commercial_blocker_evidence_matrix_ready')};"
+                f"release_blocker_visibility_ready={full_commercial_matrix.get('release_blocker_visibility_ready')};"
+                f"matrix_row_count={full_commercial_matrix.get('matrix_row_count')};"
+                f"blocked_matrix_row_count={full_commercial_matrix.get('blocked_matrix_row_count')};"
+                f"approval_token_count={full_commercial_matrix.get('approval_token_count')};"
+                f"first_blocked_release_blocker_id="
+                f"{full_commercial_matrix.get('first_blocked_release_blocker_id')};"
+                f"first_blocked_evidence_row_id="
+                f"{full_commercial_matrix.get('first_blocked_evidence_row_id')}"
             ),
         },
         {

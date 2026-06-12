@@ -455,6 +455,27 @@ def _ready_source_of_truth() -> dict:
     }
 
 
+def _blocked_full_commercial_matrix() -> dict:
+    return {
+        "summary": {
+            "status": "blocked_product_full_commercial_blocker_evidence_matrix",
+            "full_commercial_blocker_evidence_matrix_ready": False,
+            "release_blocker_visibility_ready": True,
+            "expected_release_blocker_ids": [
+                "R8_full_scope_claim_closure",
+                "R9_engine_refinement_claim_promotion",
+            ],
+            "matrix_row_count": 12,
+            "blocked_matrix_row_count": 12,
+            "approval_token_count": 2,
+            "first_blocked_release_blocker_id": "R8_full_scope_claim_closure",
+            "first_blocked_evidence_row_id": "direct_binding_evidence_missing",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+        }
+    }
+
+
 def _blocked_api_customer_flow() -> dict:
     return {
         "summary": {
@@ -690,6 +711,48 @@ def test_goal_release_decision_gate_passes_ready_current_source_of_truth() -> No
     assert next(row for row in payload["rows"] if row["check"] == "product_release_source_of_truth_ready")[
         "status"
     ] == "pass"
+
+
+def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_blocking_restricted_release() -> None:
+    payload = mod.build_goal_release_decision_gate(
+        product_pilot_packet=_ready_product(),
+        product_architecture_packet=_ready_product_architecture(),
+        product_commercial_independence_packet=_ready_product_independence(),
+        cameo_validation_packet=_ready_cameo_validation(),
+        cameo_capability_packet=_ready_cameo_capability(),
+        goal_rollup_packet=_ready_rollup(),
+        operator_action_board_packet=_clear_action_board(),
+        transition_cleanup_preflight_packet=_transition_cleanup("transition_cleanup_execution_complete"),
+        ligand_cleanup_preflight_packet=_ligand_cleanup("ligand_heavy_cleanup_execution_complete"),
+        protected_cleanup_review_packet=_protected_cleanup(0),
+        cleanup_postcheck_contract_packet=_ready_cleanup_postcheck(),
+        goal_api_surface_contract_packet=_ready_goal_api_surface_contract(),
+        product_release_source_of_truth_packet=_ready_source_of_truth(),
+        product_full_commercial_blocker_evidence_matrix_packet=_blocked_full_commercial_matrix(),
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "goal_release_ready"
+    assert summary["release_allowed"] is True
+    assert summary["product_full_commercial_blocker_evidence_matrix_gate_present"] is True
+    assert summary["product_full_commercial_blocker_evidence_matrix_status"] == (
+        "blocked_product_full_commercial_blocker_evidence_matrix"
+    )
+    assert summary["product_full_commercial_blocker_evidence_matrix_ready"] is False
+    assert summary[
+        "product_full_commercial_blocker_evidence_matrix_release_blocker_visibility_ready"
+    ] is True
+    assert summary["product_full_commercial_blocker_evidence_matrix_row_count"] == 12
+    assert summary["product_full_commercial_blocker_evidence_matrix_blocked_row_count"] == 12
+    assert summary["product_full_commercial_blocker_evidence_matrix_approval_token_count"] == 2
+    matrix_row = next(
+        row
+        for row in payload["rows"]
+        if row["check"] == "product_full_commercial_blocker_evidence_matrix_recorded"
+    )
+    assert matrix_row["status"] == "pass"
+    assert matrix_row["release_blocker"] is False
+    assert "first_blocked_evidence_row_id=direct_binding_evidence_missing" in matrix_row["observed"]
 
 
 def test_goal_release_decision_gate_blocks_missing_api_customer_flow_release_evidence() -> None:
@@ -1104,6 +1167,7 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
         "product_ai_backlog": tmp_path / "product_ai_backlog.json",
         "source_of_truth": tmp_path / "source_of_truth.json",
         "api_customer_flow": tmp_path / "api_customer_flow.json",
+        "full_commercial_matrix": tmp_path / "full_commercial_matrix.json",
     }
     paths["product"].write_text(json.dumps(_blocked_product()) + "\n", encoding="utf-8")
     paths["product_architecture"].write_text(json.dumps(_blocked_product_architecture()) + "\n", encoding="utf-8")
@@ -1121,6 +1185,10 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     paths["product_ai_backlog"].write_text(json.dumps(_ready_product_ai_backlog()) + "\n", encoding="utf-8")
     paths["source_of_truth"].write_text(json.dumps(_ready_source_of_truth()) + "\n", encoding="utf-8")
     paths["api_customer_flow"].write_text(json.dumps(_ready_api_customer_flow()) + "\n", encoding="utf-8")
+    paths["full_commercial_matrix"].write_text(
+        json.dumps(_blocked_full_commercial_matrix()) + "\n",
+        encoding="utf-8",
+    )
     out_json = tmp_path / "release_gate.json"
     out_csv = tmp_path / "release_gate.csv"
     out_md = tmp_path / "release_gate.md"
@@ -1159,6 +1227,8 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
             str(paths["source_of_truth"]),
             "--api-customer-flow-release-evidence-json",
             str(paths["api_customer_flow"]),
+            "--product-full-commercial-blocker-evidence-matrix-json",
+            str(paths["full_commercial_matrix"]),
             "--out-json",
             str(out_json),
             "--out-csv",
@@ -1170,9 +1240,13 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
 
     summary = json.loads(out_json.read_text(encoding="utf-8"))["summary"]
     assert summary["status"] == "blocked_goal_release_decision"
+    assert summary["product_full_commercial_blocker_evidence_matrix_status"] == (
+        "blocked_product_full_commercial_blocker_evidence_matrix"
+    )
     assert summary["release_blocked_by_public_benchmark"] is True
     assert summary["cameo_live_validation_required_for_product_release"] is False
     assert out_csv.read_text(encoding="utf-8").startswith("lane_id,check,")
     md_text = out_md.read_text(encoding="utf-8")
     assert "Goal Release Decision Gate" in md_text
     assert "cameo_live_validation_required_for_product_release" in md_text
+    assert "product_full_commercial_blocker_evidence_matrix_status" in md_text

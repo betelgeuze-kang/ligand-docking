@@ -129,6 +129,8 @@ def test_product_release_bundle_links_operator_policy_and_evidence() -> None:
     assert "runs/product_rollout_plan_current.json" in bundle
     assert "runs/alert_delivery_smoke_current.json" in bundle
     assert "runs/product_security_deployment_contract_current.json" in bundle
+    assert "runs/product_full_commercial_blocker_evidence_matrix_current.json" in bundle
+    assert "product_full_commercial_blocker_evidence_matrix_recorded" in bundle
     assert "external_state_mutation_allowed" in bundle
 
 

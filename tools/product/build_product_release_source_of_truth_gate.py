@@ -235,6 +235,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/api_runner_profile_promotion_operator_receipt_current.json",
             "runs/engine_refinement_claim_evidence_receipt_current.json",
             "runs/product_scope_breadth_evidence_receipt_current.json",
+            "runs/product_full_commercial_blocker_evidence_matrix_current.json",
         ],
     },
     {

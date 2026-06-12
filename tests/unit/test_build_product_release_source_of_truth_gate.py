@@ -364,6 +364,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/product_goal_completion_audit_current.json" in release_bundle_spec["depends_on"]
     assert "runs/engine_refinement_claim_evidence_receipt_current.json" in release_bundle_spec["depends_on"]
     assert "runs/product_scope_breadth_evidence_receipt_current.json" in release_bundle_spec["depends_on"]
+    assert "runs/product_full_commercial_blocker_evidence_matrix_current.json" in release_bundle_spec[
+        "depends_on"
+    ]
     evidence_receipt_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "engine_refinement_claim_evidence_receipt"
     )

@@ -432,9 +432,11 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `config/engine_refinement_claim_promotion_evidence_receipt_current.csv`도
   `local_engine_refinement_claim_*` artifact reference로 추적한다. 또한
   `runs/product_release_bundle_current.json`은 `product_goal_completion_audit`
-  artifact와 `product_goal_completion_audit_full_claim_boundary_recorded` check를
-  포함해, restricted release bundle review에서도 full commercial science claim
-  미완료가 숨지 않게 한다.
+  artifact, `product_full_commercial_blocker_evidence_matrix` artifact,
+  `product_goal_completion_audit_full_claim_boundary_recorded` check,
+  `product_full_commercial_blocker_evidence_matrix_recorded` check를 포함해,
+  restricted release bundle review에서도 full commercial science claim 미완료가
+  숨지 않게 한다.
   `tools/accounting/build_goal_bottleneck_briefing.py`는 release burndown이 clear인
   경우에도 `product_goal_completion_audit`의 `release_blocker=true` rows를 흡수해
   현재 `R8_full_scope_claim_closure`와 `R9_engine_refinement_claim_promotion`을
@@ -459,7 +461,10 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   직접 노출되며, `/goal/status`도
   `full_commercial_blocker_evidence_matrix_*` 요약 키로 matrix status, row count,
   blocked row count, approval token count, 첫 blocked release blocker/evidence row를
-  함께 표시한다.
+  함께 표시한다. `goal_release_decision_gate_current.json`도 같은 matrix를
+  `product_full_commercial_blocker_evidence_matrix_*` 요약 키와
+  `product_full_commercial_blocker_evidence_matrix_recorded` row로 기록해,
+  최종 release decision packet에서도 R8/R9 evidence receipt 병목이 숨지 않는다.
   `tools/product/build_product_scope_breadth_evidence_receipt.py`와
   `config/product_scope_breadth_evidence_receipt_current.csv`는 R8 full-scope
   blocker 6종(`direct_binding_evidence_missing`,
@@ -833,10 +838,11 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   enablement work order, API runner profile promotion readiness gate/operator template,
   rollback/rollout runbook, Docker/K8s/compose artifact hash, systemd API server/worker
   unit/env example, viewer vendor manifest/notice, viewer asset base URL decision,
-  product launch R4 preflight, product scope-breadth evidence receipt
+  product launch R4 preflight, product scope-breadth evidence receipt,
+  product full-commercial blocker evidence matrix
   artifact를 하나의 release bundle manifest로 묶고 operator promotion policy를
-  `operator_approval_required`로 고정한다. 최신 상태는 `artifact_count=27`,
-  `check_count=20`, `pass_count=20`, `blocker_count=0`이다.
+  `operator_approval_required`로 고정한다. 최신 상태는 `artifact_count=28`,
+  `check_count=21`, `pass_count=21`, `blocker_count=0`이다.
 - `deploy/docker-compose.product.yml`, `deploy/k8s/configmap.yaml`,
   `deploy/systemd/api-server.env.example`, `deploy/systemd/api-worker.env.example`은
   `PRODUCT_API_TLS_TERMINATION_OPERATOR_VERIFIED=1`을 product deployment default로
@@ -898,7 +904,8 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
 - release bundle은 systemd API server/worker units와 third-party license review
   gate, API runner profile promotion readiness gate/operator template, rollout
   execution readiness gate, product launch R4 preflight, product scope-breadth
-  evidence receipt를 포함해 `artifact_count=27`, `check_count=20`,
+  evidence receipt, product full-commercial blocker evidence matrix를 포함해
+  `artifact_count=28`, `check_count=21`,
   `blocker_count=0` 상태다.
 
 ### H. Viewer 외부 의존성

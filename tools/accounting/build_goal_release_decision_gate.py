@@ -28,6 +28,9 @@ DEFAULT_PRODUCT_AI_ARCHITECTURE_GAP_JSON = "runs/product_ai_architecture_gap_clo
 DEFAULT_PRODUCT_AI_EXECUTION_BACKLOG_JSON = "runs/product_ai_architecture_execution_backlog_current.json"
 DEFAULT_PRODUCT_RELEASE_SOURCE_OF_TRUTH_JSON = "runs/product_release_source_of_truth_gate_current.json"
 DEFAULT_API_CUSTOMER_FLOW_RELEASE_EVIDENCE_JSON = "runs/api_customer_flow_release_evidence_current.json"
+DEFAULT_PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_JSON = (
+    "runs/product_full_commercial_blocker_evidence_matrix_current.json"
+)
 DEFAULT_OUT_JSON = "runs/goal_release_decision_gate_current.json"
 DEFAULT_OUT_CSV = "runs/goal_release_decision_gate_current.csv"
 DEFAULT_OUT_MD = "runs/goal_release_decision_gate_current.md"
@@ -163,6 +166,7 @@ def build_goal_release_decision_gate(
     product_ai_execution_backlog_packet: dict[str, Any] | None = None,
     product_release_source_of_truth_packet: dict[str, Any] | None = None,
     api_customer_flow_release_evidence_packet: dict[str, Any] | None = None,
+    product_full_commercial_blocker_evidence_matrix_packet: dict[str, Any] | None = None,
     product_pilot_path: str = DEFAULT_PRODUCT_PILOT_JSON,
     product_architecture_path: str = DEFAULT_PRODUCT_ARCHITECTURE_JSON,
     product_commercial_independence_path: str = DEFAULT_PRODUCT_COMMERCIAL_INDEPENDENCE_JSON,
@@ -182,6 +186,9 @@ def build_goal_release_decision_gate(
     product_ai_execution_backlog_path: str = DEFAULT_PRODUCT_AI_EXECUTION_BACKLOG_JSON,
     product_release_source_of_truth_path: str = DEFAULT_PRODUCT_RELEASE_SOURCE_OF_TRUTH_JSON,
     api_customer_flow_release_evidence_path: str = DEFAULT_API_CUSTOMER_FLOW_RELEASE_EVIDENCE_JSON,
+    product_full_commercial_blocker_evidence_matrix_path: str = (
+        DEFAULT_PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_JSON
+    ),
 ) -> dict[str, Any]:
     product = _summary(product_pilot_packet)
     product_architecture = _summary(product_architecture_packet or {})
@@ -215,6 +222,23 @@ def build_goal_release_decision_gate(
         and bool(api_customer_flow.get("bundle_validation_ready") is True)
         and bool(api_customer_flow.get("restricted_unattended_runtime_ready") is True)
         and _int(api_customer_flow.get("blocker_count")) == 0
+    )
+    full_commercial_matrix = _summary(product_full_commercial_blocker_evidence_matrix_packet or {})
+    full_commercial_matrix_gate_present = (
+        product_full_commercial_blocker_evidence_matrix_packet is not None
+    )
+    full_commercial_matrix_recorded = (
+        _text(full_commercial_matrix.get("status"))
+        in {
+            "blocked_product_full_commercial_blocker_evidence_matrix",
+            "product_full_commercial_blocker_evidence_matrix_ready",
+        }
+        and full_commercial_matrix.get("expected_release_blocker_ids")
+        == ["R8_full_scope_claim_closure", "R9_engine_refinement_claim_promotion"]
+        and bool(full_commercial_matrix.get("release_blocker_visibility_ready") is True)
+        and _int(full_commercial_matrix.get("matrix_row_count")) >= 2
+        and bool(full_commercial_matrix.get("execution_enabled") is False)
+        and bool(full_commercial_matrix.get("external_state_mutated") is False)
     )
     product_ai_architecture_gate_present = (
         product_ai_architecture_gap_packet is not None or product_ai_execution_backlog_packet is not None
@@ -594,6 +618,27 @@ def build_goal_release_decision_gate(
                 reason="Release must fail when any current artifact is stale against its source dependencies or README metrics drift from current JSON evidence.",
             )
         )
+    if full_commercial_matrix_gate_present:
+        rows.append(
+            _row(
+                lane_id="commercial_product_release",
+                check="product_full_commercial_blocker_evidence_matrix_recorded",
+                artifact_path=product_full_commercial_blocker_evidence_matrix_path,
+                observed=(
+                    f"{_text(full_commercial_matrix.get('status')) or 'missing'};"
+                    f"matrix_ready={_bool_text(bool(full_commercial_matrix.get('full_commercial_blocker_evidence_matrix_ready') is True))};"
+                    f"release_blocker_visibility_ready={_bool_text(bool(full_commercial_matrix.get('release_blocker_visibility_ready') is True))};"
+                    f"matrix_row_count={_int(full_commercial_matrix.get('matrix_row_count'))};"
+                    f"blocked_matrix_row_count={_int(full_commercial_matrix.get('blocked_matrix_row_count'))};"
+                    f"approval_token_count={_int(full_commercial_matrix.get('approval_token_count'))};"
+                    f"first_blocked_release_blocker_id={_text(full_commercial_matrix.get('first_blocked_release_blocker_id'))};"
+                    f"first_blocked_evidence_row_id={_text(full_commercial_matrix.get('first_blocked_evidence_row_id'))}"
+                ),
+                required="R8/R9 full-commercial blocker matrix recorded with release blocker visibility and read-only flags",
+                passed=full_commercial_matrix_recorded,
+                reason="The final release decision must not hide R8/R9 full-commercial evidence receipt blockers even when restricted release source-of-truth is green.",
+            )
+        )
     if api_customer_flow_gate_present:
         rows.append(
             _row(
@@ -674,6 +719,8 @@ def build_goal_release_decision_gate(
         next_required_items.append("goal API surface contract")
     if release_source_of_truth_gate_present and not release_source_of_truth_ready:
         next_required_items.append("product release source-of-truth gate")
+    if full_commercial_matrix_gate_present and not full_commercial_matrix_recorded:
+        next_required_items.append("full-commercial blocker evidence matrix")
     if api_customer_flow_gate_present and not api_customer_flow_ready:
         next_required_items.append("API customer-flow release evidence")
     if product_ai_architecture_gate_present and not product_ai_architecture_ready:
@@ -751,6 +798,33 @@ def build_goal_release_decision_gate(
         ),
         "product_release_source_of_truth_readme_drift_count": _int(
             release_source_of_truth.get("readme_drift_count")
+        ),
+        "product_full_commercial_blocker_evidence_matrix_gate_present": full_commercial_matrix_gate_present,
+        "product_full_commercial_blocker_evidence_matrix_status": _text(
+            full_commercial_matrix.get("status")
+        ),
+        "product_full_commercial_blocker_evidence_matrix_ready": (
+            bool(full_commercial_matrix.get("full_commercial_blocker_evidence_matrix_ready") is True)
+            if full_commercial_matrix_gate_present
+            else None
+        ),
+        "product_full_commercial_blocker_evidence_matrix_release_blocker_visibility_ready": bool(
+            full_commercial_matrix.get("release_blocker_visibility_ready") is True
+        ),
+        "product_full_commercial_blocker_evidence_matrix_row_count": _int(
+            full_commercial_matrix.get("matrix_row_count")
+        ),
+        "product_full_commercial_blocker_evidence_matrix_blocked_row_count": _int(
+            full_commercial_matrix.get("blocked_matrix_row_count")
+        ),
+        "product_full_commercial_blocker_evidence_matrix_approval_token_count": _int(
+            full_commercial_matrix.get("approval_token_count")
+        ),
+        "product_full_commercial_blocker_evidence_matrix_first_blocked_release_blocker_id": _text(
+            full_commercial_matrix.get("first_blocked_release_blocker_id")
+        ),
+        "product_full_commercial_blocker_evidence_matrix_first_blocked_evidence_row_id": _text(
+            full_commercial_matrix.get("first_blocked_evidence_row_id")
         ),
         "api_customer_flow_release_evidence_gate_present": api_customer_flow_gate_present,
         "api_customer_flow_release_evidence_status": _text(api_customer_flow.get("status")),
@@ -937,6 +1011,15 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_release_source_of_truth_blocker_count: `{s['product_release_source_of_truth_blocker_count']}`",
         f"- product_release_source_of_truth_stale_artifact_count: `{s['product_release_source_of_truth_stale_artifact_count']}`",
         f"- product_release_source_of_truth_readme_drift_count: `{s['product_release_source_of_truth_readme_drift_count']}`",
+        f"- product_full_commercial_blocker_evidence_matrix_gate_present: `{s['product_full_commercial_blocker_evidence_matrix_gate_present']}`",
+        f"- product_full_commercial_blocker_evidence_matrix_status: `{s['product_full_commercial_blocker_evidence_matrix_status']}`",
+        f"- product_full_commercial_blocker_evidence_matrix_ready: `{s['product_full_commercial_blocker_evidence_matrix_ready']}`",
+        f"- product_full_commercial_blocker_evidence_matrix_release_blocker_visibility_ready: `{s['product_full_commercial_blocker_evidence_matrix_release_blocker_visibility_ready']}`",
+        f"- product_full_commercial_blocker_evidence_matrix_row_count: `{s['product_full_commercial_blocker_evidence_matrix_row_count']}`",
+        f"- product_full_commercial_blocker_evidence_matrix_blocked_row_count: `{s['product_full_commercial_blocker_evidence_matrix_blocked_row_count']}`",
+        f"- product_full_commercial_blocker_evidence_matrix_approval_token_count: `{s['product_full_commercial_blocker_evidence_matrix_approval_token_count']}`",
+        f"- product_full_commercial_blocker_evidence_matrix_first_blocked_release_blocker_id: `{s['product_full_commercial_blocker_evidence_matrix_first_blocked_release_blocker_id']}`",
+        f"- product_full_commercial_blocker_evidence_matrix_first_blocked_evidence_row_id: `{s['product_full_commercial_blocker_evidence_matrix_first_blocked_evidence_row_id']}`",
         f"- api_customer_flow_release_evidence_gate_present: `{s['api_customer_flow_release_evidence_gate_present']}`",
         f"- api_customer_flow_release_evidence_status: `{s['api_customer_flow_release_evidence_status']}`",
         f"- api_customer_flow_release_evidence_ready: `{s['api_customer_flow_release_evidence_ready']}`",
@@ -1038,6 +1121,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--product-ai-execution-backlog-json", default=DEFAULT_PRODUCT_AI_EXECUTION_BACKLOG_JSON)
     parser.add_argument("--product-release-source-of-truth-json", default=DEFAULT_PRODUCT_RELEASE_SOURCE_OF_TRUTH_JSON)
     parser.add_argument("--api-customer-flow-release-evidence-json", default=DEFAULT_API_CUSTOMER_FLOW_RELEASE_EVIDENCE_JSON)
+    parser.add_argument(
+        "--product-full-commercial-blocker-evidence-matrix-json",
+        default=DEFAULT_PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_JSON,
+    )
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -1068,6 +1155,9 @@ def main(argv: list[str] | None = None) -> None:
         api_customer_flow_release_evidence_packet=_read_json_if_present(
             args.api_customer_flow_release_evidence_json
         ),
+        product_full_commercial_blocker_evidence_matrix_packet=_read_json_if_present(
+            args.product_full_commercial_blocker_evidence_matrix_json
+        ),
         product_pilot_path=args.product_pilot_json,
         product_architecture_path=args.product_architecture_json,
         product_commercial_independence_path=args.product_commercial_independence_json,
@@ -1087,6 +1177,9 @@ def main(argv: list[str] | None = None) -> None:
         product_ai_execution_backlog_path=args.product_ai_execution_backlog_json,
         product_release_source_of_truth_path=args.product_release_source_of_truth_json,
         api_customer_flow_release_evidence_path=args.api_customer_flow_release_evidence_json,
+        product_full_commercial_blocker_evidence_matrix_path=(
+            args.product_full_commercial_blocker_evidence_matrix_json
+        ),
     )
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])

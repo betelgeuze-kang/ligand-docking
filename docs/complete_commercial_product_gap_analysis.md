@@ -142,8 +142,10 @@
   engine refinement action board, receipt JSON, receipt CSV를
   `local_engine_refinement_claim_*` reference로 추적한다.
   `runs/product_release_bundle_current.json`도
-  `product_goal_completion_audit` artifact와
-  `product_goal_completion_audit_full_claim_boundary_recorded` check를 포함해,
+  `product_goal_completion_audit` artifact,
+  `product_full_commercial_blocker_evidence_matrix` artifact,
+  `product_goal_completion_audit_full_claim_boundary_recorded` check,
+  `product_full_commercial_blocker_evidence_matrix_recorded` check를 포함해,
   restricted release bundle review에서도 full commercial science claim 미완료가
   명시적으로 보인다.
 - `tools/accounting/build_goal_bottleneck_briefing.py`와 `/goal/status`는 release
@@ -158,7 +160,11 @@
   같은 status surface는
   `full_commercial_blocker_evidence_matrix_*` 요약 키로 matrix status, row count,
   blocked row count, approval token count, 첫 blocked release blocker/evidence row도
-  함께 노출한다.
+  함께 노출한다. 최종 `goal_release_decision_gate_current.json`도 matrix를
+  `product_full_commercial_blocker_evidence_matrix_*` summary와
+  `product_full_commercial_blocker_evidence_matrix_recorded` row로 노출해,
+  restricted release source-of-truth가 green이어도 full commercial R8/R9 receipt
+  미완료가 decision packet에서 사라지지 않는다.
   `goal_api_surface_contract_current.json`은 이 R8/R9 + commercial handoff visibility를
   `goal_full_commercial_bottleneck_visibility_present` check로 고정하며 최신
   `check_count=9`, `pass_count=9`, `missing_full_commercial_visibility_token_count=0`이다.
@@ -168,7 +174,7 @@
   `blocked_product_full_commercial_blocker_evidence_matrix`,
   `release_blocker_visibility_ready=true`, `matrix_row_count=12`,
   `blocked_matrix_row_count=12`, `approval_token_count=2`라서 full commercial
-  evidence receipt 미충족이 source-of-truth, handoff, 그리고
+  evidence receipt 미충족이 source-of-truth, release bundle, handoff, 그리고
   `/product/full-commercial-blocker-evidence-matrix` API surface에서 한 번 더 드러난다.
 - `tools/product/build_product_scope_breadth_evidence_receipt.py`와
   `config/product_scope_breadth_evidence_receipt_current.csv`는 R8 full-scope
