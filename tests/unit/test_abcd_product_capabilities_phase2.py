@@ -12,6 +12,7 @@ import torch
 from betelgeuze_product.structure_analysis import analyze_structure_source
 from core.allatom_forcefield import (
     allatom_energy,
+    atom_typing_coverage_report,
     bonded_energy,
     dihedral_energy,
     equilibrium_bond_length,
@@ -21,6 +22,7 @@ from core.allatom_forcefield import (
     infer_impropers,
     infer_torsions,
     nonbonded_energy,
+    parameter_calibration_report,
     partial_charges_from_atom_types,
 )
 from core.explicit_solvent import explicit_solvation_energy
@@ -46,6 +48,9 @@ def test_allatom_explicit_fep_stack():
     assert aa["bond_model"] == "covalent_radii_equilibrium_with_coarse_trace_fallback"
     assert aa["parameterization_level"] == "internal_united_atom_typed_v1"
     assert aa["charge_model"] == "typed_partial_charge_neutralized_v1"
+    assert aa["parameter_calibration_status"] == "internal_proxy_uncalibrated"
+    assert aa["claim_grade_parameterization_ready"] is False
+    assert aa["charge_parameter_source"] == "internal_atom_type_proxy_uncalibrated"
     assert aa["dihedral_model"] == "periodic_torsion_proxy_n3"
     assert aa["improper_model"] == "planarity_proxy_for_sp2_like_centers"
     ex = explicit_solvation_energy(_prot(), ["C"] * 4)
@@ -101,6 +106,50 @@ def test_allatom_atom_types_charges_and_bonded_nonbonded_exclusions():
     assert aa["nonbonded_exclusions"] == "1-2_bonded_pairs"
     assert aa["atom_types"] == atom_types
     assert abs(float(aa["net_charge_e"])) < 1e-8
+
+
+def test_allatom_atom_typing_coverage_reports_halogen_and_unknown_boundaries():
+    coords = np.asarray(
+        [[float(idx) * 1.5, 0.0, 0.0] for idx in range(10)],
+        dtype=np.float32,
+    )
+    elements = ["H", "C", "N", "O", "S", "P", "F", "Cl", "Br", "I"]
+    report = atom_typing_coverage_report(coords, elements, bonds=[])
+    assert report["status"] == "atom_typing_coverage_ready"
+    assert report["default_atom_count"] == 0
+    assert report["coverage_fraction"] == 1.0
+    assert report["atom_type_counts"]["CL_HALOGEN"] == 1
+    assert report["atom_type_counts"]["BR_HALOGEN"] == 1
+    assert report["charge_neutralization_ok"] is True
+
+    blocked = atom_typing_coverage_report(coords[:2], ["C", "Zn"], bonds=[])
+    assert blocked["status"] == "blocked_atom_typing_coverage"
+    assert blocked["default_atom_count"] == 1
+    assert blocked["unsupported_elements"] == ["ZN"]
+    assert blocked["unsupported_metal_or_cofactor_elements"] == ["ZN"]
+    assert blocked["unsupported_metal_or_cofactor_count"] == 1
+
+    aa_blocked = allatom_energy(coords[:2], ["C", "Zn"])
+    assert aa_blocked["atom_typing_coverage_status"] == "blocked_atom_typing_coverage"
+    assert aa_blocked["default_atom_count"] == 1
+    assert aa_blocked["unsupported_metal_or_cofactor_elements"] == ["ZN"]
+
+
+def test_allatom_parameter_calibration_claim_guard_is_fail_closed():
+    blocked = parameter_calibration_report(public_benchmark_pair_count=4, min_public_benchmark_pairs=5)
+    assert blocked["status"] == "blocked_parameter_calibration_claim"
+    assert blocked["claim_grade_parameterization_ready"] is False
+    assert blocked["parameter_calibration_status"] == "internal_proxy_uncalibrated"
+    assert "insufficient_public_benchmark_pairs" in blocked["blockers"]
+    assert "public_benchmark_gate_not_ready" in blocked["blockers"]
+
+    ready = parameter_calibration_report(
+        public_benchmark_pair_count=5,
+        min_public_benchmark_pairs=5,
+        public_benchmark_ready=True,
+    )
+    assert ready["status"] == "claim_grade_parameterization_ready"
+    assert ready["claim_grade_parameterization_ready"] is True
 
 
 def test_allatom_dihedral_and_improper_terms_are_active():

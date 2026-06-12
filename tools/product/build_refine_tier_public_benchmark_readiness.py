@@ -18,6 +18,13 @@ DEFAULT_INPUT_CSV = "config/refine_tier_public_benchmark_intake_current.csv"
 DEFAULT_OUT_JSON = "runs/refine_tier_public_benchmark_readiness_current.json"
 DEFAULT_OUT_CSV = "runs/refine_tier_public_benchmark_readiness_current.csv"
 DEFAULT_OUT_MD = "runs/refine_tier_public_benchmark_readiness_current.md"
+DEFAULT_OUT_WORK_ORDER_CSV = "runs/refine_tier_public_benchmark_work_order_current.csv"
+REFINE_TIER_PUBLIC_BENCHMARK_INTAKE_APPROVAL_TOKEN = "APPROVE_REFINE_TIER_PUBLIC_BENCHMARK_INTAKE"
+DEFAULT_WORK_ORDER_APPLY_COMMAND = "python3 tools/product/apply_refine_tier_public_benchmark_work_order.py"
+DEFAULT_WORK_ORDER_APPLY_WRITE_INTAKE_COMMAND = (
+    "python3 tools/product/apply_refine_tier_public_benchmark_work_order.py "
+    f"--write-intake --approval-token {REFINE_TIER_PUBLIC_BENCHMARK_INTAKE_APPROVAL_TOKEN}"
+)
 
 REQUIRED_COLUMNS = [
     "benchmark_id",
@@ -41,6 +48,28 @@ CLAIM_BOUNDARY = (
     "provenance, licensing flags, and no external engine calls. It does not download data, run docking/MD, "
     "contact providers, or open an OpenMM/Schrödinger-grade claim."
 )
+
+WORK_ORDER_COLUMNS = [
+    "work_order_id",
+    "target_input_csv",
+    "template_row_index",
+    "benchmark_id",
+    "target_id",
+    "benchmark_family",
+    "split",
+    "provenance_kind",
+    "provenance_id",
+    "license_ok",
+    "external_engine_calls",
+    "pose_rmsd_A",
+    "dockq",
+    "lddt_pli",
+    "deltaG_mm_gbsa_kcal_mol",
+    "deltaG_experimental_kcal_mol",
+    "operator_action",
+    "acceptance_rule",
+    "external_state_mutated",
+]
 
 
 def _resolve(path_like: str | Path) -> Path:
@@ -133,6 +162,66 @@ def _row_status(row: dict[str, Any], *, max_pose_rmsd_a: float, min_dockq: float
     }
 
 
+def _build_operator_work_order_rows(
+    *,
+    input_csv: str | Path,
+    existing_row_count: int,
+    valid_row_count: int,
+    pose_pass_count: int,
+    free_energy_pair_count: int,
+    fit_split_present: bool,
+    holdout_or_test_split_present: bool,
+    min_total_rows: int,
+    min_pose_rows: int,
+    min_free_energy_pairs: int,
+) -> list[dict[str, Any]]:
+    needed = max(
+        int(min_total_rows) - int(existing_row_count),
+        int(min_total_rows) - int(valid_row_count),
+        int(min_pose_rows) - int(pose_pass_count),
+        int(min_free_energy_pairs) - int(free_energy_pair_count),
+        0,
+    )
+    if needed <= 0 and fit_split_present and holdout_or_test_split_present:
+        return []
+    if needed <= 0:
+        needed = 2
+
+    rows: list[dict[str, Any]] = []
+    for idx in range(needed):
+        split = "fit" if idx < max(1, min(5, needed - 1)) else "holdout"
+        if not fit_split_present and holdout_or_test_split_present and idx == 0:
+            split = "fit"
+        if fit_split_present and not holdout_or_test_split_present and idx == needed - 1:
+            split = "holdout"
+        row = {
+            "work_order_id": f"refine_tier_public_benchmark_fill_{idx + 1:03d}",
+            "target_input_csv": str(input_csv),
+            "template_row_index": idx + 1,
+            "benchmark_id": f"OPERATOR_FILL_PUBLIC_BENCHMARK_{idx + 1:03d}",
+            "target_id": "OPERATOR_FILL_TARGET_OR_COMPLEX_ID",
+            "benchmark_family": "pdbbind_or_casf_refine_tier_public",
+            "split": split,
+            "provenance_kind": "operator_curated_public",
+            "provenance_id": "OPERATOR_FILL_PUBLIC_SOURCE_ID",
+            "license_ok": "OPERATOR_CONFIRM_TRUE",
+            "external_engine_calls": 0,
+            "pose_rmsd_A": "OPERATOR_FILL_POSE_RMSD_A",
+            "dockq": "OPERATOR_FILL_DOCKQ",
+            "lddt_pli": "OPERATOR_FILL_LDDT_PLI",
+            "deltaG_mm_gbsa_kcal_mol": "OPERATOR_FILL_INTERNAL_REFINE_DG",
+            "deltaG_experimental_kcal_mol": "OPERATOR_FILL_PUBLIC_EXPERIMENTAL_DG",
+            "operator_action": "append_validated_public_benchmark_row",
+            "acceptance_rule": (
+                "Fill all required columns from public provenance, set external_engine_calls=0, "
+                "include at least one fit and one holdout/test split, and rerun this readiness gate."
+            ),
+            "external_state_mutated": False,
+        }
+        rows.append(row)
+    return rows
+
+
 def build_refine_tier_public_benchmark_readiness(
     *,
     input_csv: str | Path = DEFAULT_INPUT_CSV,
@@ -219,7 +308,38 @@ def build_refine_tier_public_benchmark_readiness(
         "external_state_mutated": False,
         "claim_boundary": CLAIM_BOUNDARY,
     }
-    return {"summary": summary, "rows": rows, "required_columns": REQUIRED_COLUMNS}
+    work_order_rows = _build_operator_work_order_rows(
+        input_csv=input_csv,
+        existing_row_count=len(rows),
+        valid_row_count=len(valid_rows),
+        pose_pass_count=len(pose_pass_rows),
+        free_energy_pair_count=len(free_energy_rows),
+        fit_split_present=fit_ready,
+        holdout_or_test_split_present=holdout_ready,
+        min_total_rows=min_total_rows,
+        min_pose_rows=min_pose_rows,
+        min_free_energy_pairs=min_free_energy_pairs,
+    )
+    summary["work_order_row_count"] = len(work_order_rows)
+    summary["operator_work_order_ready"] = bool(work_order_rows and not ready)
+    summary["work_order_columns"] = WORK_ORDER_COLUMNS
+    summary["work_order_csv"] = DEFAULT_OUT_WORK_ORDER_CSV
+    summary["work_order_apply_command"] = DEFAULT_WORK_ORDER_APPLY_COMMAND
+    summary["work_order_apply_write_intake_command"] = DEFAULT_WORK_ORDER_APPLY_WRITE_INTAKE_COMMAND
+    summary["write_intake_approval_token_required"] = REFINE_TIER_PUBLIC_BENCHMARK_INTAKE_APPROVAL_TOKEN
+    summary["next_required_step"] = (
+        "Fill the work-order CSV from reviewed public provenance, run the apply command to validate row and aggregate readiness, "
+        "then rerun with --write-intake only after the apply gate is ready."
+        if work_order_rows and not ready
+        else "Public benchmark readiness is ready; no work-order apply step is required."
+    )
+    return {
+        "summary": summary,
+        "rows": rows,
+        "work_order_rows": work_order_rows,
+        "required_columns": REQUIRED_COLUMNS,
+        "work_order_columns": WORK_ORDER_COLUMNS,
+    }
 
 
 def _write_json(path_like: str | Path, payload: dict[str, Any]) -> None:
@@ -240,12 +360,28 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- free-energy pairs: `{summary['free_energy_pair_count']}`",
         f"- free-energy Spearman: `{summary['free_energy_spearman']}`",
         f"- blockers: `{summary['blocker_count']}`",
+        f"- work-order rows: `{summary.get('work_order_row_count', 0)}`",
         "",
         "## Blockers",
     ]
     lines.extend(f"- `{blocker}`" for blocker in summary["blockers"])
     if not summary["blockers"]:
         lines.append("- none")
+    lines.extend(
+        [
+            "",
+            "## Operator Work Order",
+            "",
+            f"- operator_work_order_ready: `{summary.get('operator_work_order_ready', False)}`",
+            f"- target input CSV: `{summary['input_csv']}`",
+            f"- work-order CSV: `{summary.get('work_order_csv')}`",
+            f"- validate command: `{summary.get('work_order_apply_command')}`",
+            f"- write-intake command: `{summary.get('work_order_apply_write_intake_command')}`",
+            f"- write-intake approval token: `{summary.get('write_intake_approval_token_required')}`",
+            "- fill the work-order CSV after operator/public-source review, validate it with the apply command, then use the write-intake command only after the apply gate is ready.",
+            "- rerun this builder after intake rows are applied; this builder does not download data or run docking/MD.",
+        ]
+    )
     path = _resolve(path_like)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -257,10 +393,12 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
+    parser.add_argument("--out-work-order-csv", default=DEFAULT_OUT_WORK_ORDER_CSV)
     args = parser.parse_args(argv)
     payload = build_refine_tier_public_benchmark_readiness(input_csv=args.input_csv)
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])
+    write_csv_rows(_resolve(args.out_work_order_csv), payload["work_order_rows"])
     _write_markdown(args.out_md, payload)
 
 

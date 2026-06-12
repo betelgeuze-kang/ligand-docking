@@ -54,9 +54,20 @@
   coarse forcefield param surface를 노출한다.
 - `core/allatom_forcefield.py`, `core/mm_gbsa.py`, `core/explicit_solvent.py`,
   `core/fep.py`: internal typed united-atom all-atom tier, periodic torsion/improper
-  proxy, GB/SA MM-GBSA proxy, TIP3P-like explicit shell recheck, FEP scaffold가 존재한다. 최신
+  proxy, common ligand halogen(`F/Cl/Br/I`) atom typing coverage surface,
+  unsupported metal/cofactor-like element fail-closed reporting,
+  internal proxy parameter calibration claim guard,
+  GB/SA MM-GBSA proxy, TIP3P-like explicit shell recheck, FEP scaffold가 존재한다. 최신
   `runs/engine_refinement_tier_readiness_current.json`은 full refine stack smoke를 포함해
-  `check_count=27`, `pass_count=27`, `blocked_count=0`이며,
+  `check_count=30`, `pass_count=30`, `blocked_count=0`이며,
+  `refine_tier_atom_typing_coverage_surface`는
+  `supported_elements=H,C,N,O,S,P,F,CL,BR,I`, `default_atom_count=0`,
+  `coverage_fraction=1.0`과 summary `atom_typing_coverage_surface_ready=true`를 확인한다.
+  `refine_tier_unsupported_metal_fail_closed_surface`는 `Zn/Mg`가 support로
+  오인되지 않고 `blocked_atom_typing_coverage`로 노출되는지 확인한다.
+  `refine_tier_parameter_calibration_claim_guard`는
+  `parameter_calibration_status=internal_proxy_uncalibrated`,
+  `claim_grade_parameterization_ready=false`를 유지한다.
   pose RMSD/LDDT-PLI/DockQ proxy metric surface와 MM-GBSA calibration claim guard를
   함께 확인한다. `claim_grade_public_benchmark_ready=false`라서 공개 benchmark claim은
   여전히 열지 않는다.
@@ -66,14 +77,25 @@
   tracked template로 제공한다. 현재 기본 산출물
   `runs/refine_tier_public_benchmark_readiness_current.json`은
   `blocked_refine_tier_public_benchmark_readiness`, `input_csv_present=true`,
-  `row_count=0`, `claim_grade_public_benchmark_ready=false`, `blocker_count=6`이다.
+  `row_count=0`, `claim_grade_public_benchmark_ready=false`, `blocker_count=6`,
+  `operator_work_order_ready=true`, `work_order_row_count=8`이다.
+  `runs/refine_tier_public_benchmark_work_order_current.csv`는 최소 fit/holdout
+  split을 갖춘 8개 operator fill template row를 생성해 curated public benchmark
+  intake의 다음 수동 단계를 구체화한다.
+  `tools/product/apply_refine_tier_public_benchmark_work_order.py`는 채워진 work-order를
+  intake candidate로 변환하기 전 placeholder/license/external-engine/metric fields를
+  fail-closed로 검증한다. tracked intake CSV를 실제 갱신하는 `--write-intake` 경로는
+  `APPROVE_REFINE_TIER_PUBLIC_BENCHMARK_INTAKE` 승인 토큰 없이는 막힌다.
+  현재 placeholder work-order 기준 apply 산출물은
+  `blocked_refine_tier_public_benchmark_work_order_apply`, `blocked_row_count=8`,
+  `candidate_intake_written=false`, `intake_written=false`이다.
 - `core/integrator.py`: Langevin 적분기(2-bead 수준).
 - AI 보정(`core/score_residual.py`, `core/onsps_backmap.py`)은 **bounded residual** 로만 사용.
 
 **갭 (근본 원인)**
 - product lane은 아직 "조대화(coarse-grained) + internal refine scaffold" 단계이지
   **claim-grade all-atom 정밀 MD/도킹 엔진이 아니다.**
-- 남은 미구현/미검증: residue/ligand atom typing coverage expansion,
+- 남은 미구현/미검증: metal/cofactor/charged-residue까지의 atom typing coverage expansion,
   calibrated atom-level charge/torsion/improper parameterization, solvent/FEP calibration,
   curated 공개 pose/free-energy benchmark intake row 입력 및 통과, MolProbity급 구조 품질 검증,
   공개 ΔG benchmark 상관.
@@ -330,8 +352,9 @@ durable queue → worker 실행 → signed 결과 번들 회수까지 무인 동
    범용 정밀 제품 완성을 의미하지 않는다.
 2. **가장 빠른 상용 스위치는 R4/operator-approved rollout smoke.** restricted scope의
    local evidence와 preflight는 green이므로, 명시 승인 후 실행 검증이 self-hosted 파일럿 전환점이다.
-3. **가장 큰 실제 갭은 A(과학 엔진 정밀도).** internal typed all-atom/GB-SA/explicit-shell/FEP scaffold와
-   proxy benchmark metric surface는 green이지만, wider atom typing coverage·parameter calibration·curated 공개 pose/free-energy benchmark intake를 통과해야
+3. **가장 큰 실제 갭은 A(과학 엔진 정밀도).** internal typed all-atom/GB-SA/explicit-shell/FEP scaffold,
+   common ligand halogen coverage surface, proxy benchmark metric surface는 green이지만,
+   metal/cofactor coverage·parameter calibration·curated 공개 pose/free-energy benchmark intake를 통과해야
    "외부 엔진 무의존 완전 상용 제품"이라는 claim이 성립한다.
 4. **AI는 정밀도 갭을 덮는 용도가 아니라** 물리 코어 위 bounded residual로 유지해야 하며(C),
    학습 라벨이 자체 정밀 tier(A)에서 나와야 일관성이 생긴다.

@@ -297,14 +297,32 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `core/allatom_forcefield.py`는 covalent-radii equilibrium 기반 bonded energy,
   tetrahedral angle proxy, periodic torsion proxy, sp2-like improper planarity proxy,
   element/degree 기반 internal atom typing, neutralized partial charge proxy,
-  1-2 bonded-pair nonbonded exclusion을 쓰는 internal united-atom typed tier로 보강됐고,
+  1-2 bonded-pair nonbonded exclusion을 쓰는 internal united-atom typed tier로 보강됐다.
+  `atom_typing_coverage_report`는 흔한 ligand halogen(`F/Cl/Br/I`)을 별도 타입으로
+  계량하고 unsupported element/default fallback 및 metal/cofactor-like element
+  (`Mg/Zn/Fe/Ca/Na`)를 fail-closed로 드러낸다. `allatom_energy` 결과도
+  `atom_typing_coverage_status`, `unsupported_elements`,
+  `unsupported_metal_or_cofactor_count`와
+  `parameter_calibration_status=internal_proxy_uncalibrated`,
+  `claim_grade_parameterization_ready=false`를 함께 싣는다.
   `core/mm_gbsa.py`, `core/explicit_solvent.py`, `core/fep.py`의
   GB/SA → all-atom → explicit TIP3P-like shell → FEP scaffold smoke까지
   `runs/engine_refinement_tier_readiness_current.json`에서
-  `check_count=27`, `pass_count=27`, `blocked_count=0`으로 검증된다.
+  `check_count=30`, `pass_count=30`, `blocked_count=0`으로 검증된다.
+  같은 gate는 `refine_tier_atom_typing_coverage_surface`에서
+  `supported_elements=H,C,N,O,S,P,F,CL,BR,I`, `default_atom_count=0`,
+  `coverage_fraction=1.0`인 내부 타입 커버리지 surface도 확인하며,
+  summary에 `atom_typing_coverage_surface_ready=true`를 노출한다.
+  `refine_tier_unsupported_metal_fail_closed_surface`는 `Zn/Mg`가
+  support로 오인되지 않고 `blocked_atom_typing_coverage`로 보고되는지 확인하며,
+  summary에 `unsupported_metal_fail_closed_surface_ready=true`를 노출한다.
+  `refine_tier_parameter_calibration_claim_guard`는 internal proxy parameter가
+  공개 benchmark pair 부족과 benchmark gate 미통과 상태에서 claim-grade로 승격되지
+  않도록 `parameter_calibration_claim_guard_ready=true`로 감시한다.
   같은 gate는 pose RMSD/LDDT-PLI/DockQ proxy metric surface와
   MM-GBSA calibration claim guard도 확인하며,
   `benchmark_metric_surface_ready=true`,
+  `parameter_calibration_claim_guard_ready=true`,
   `free_energy_calibration_claim_guard_ready=true`,
   `claim_grade_public_benchmark_ready=false`로 claim 경계를 고정한다.
   `tools/product/build_refine_tier_public_benchmark_readiness.py`는 curated 공개
@@ -314,9 +332,24 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `runs/refine_tier_public_benchmark_readiness_current.json`이며,
   `status=blocked_refine_tier_public_benchmark_readiness`,
   `input_csv_present=true`, `row_count=0`, `valid_row_count=0`,
-  `claim_grade_public_benchmark_ready=false`, `blocker_count=6`으로 실제 curated
+  `claim_grade_public_benchmark_ready=false`, `blocker_count=6`,
+  `operator_work_order_ready=true`, `work_order_row_count=8`로 실제 curated
   benchmark row 입력만 아직 없음을 명확히 드러낸다.
-  다음 S-class 작업은 residue/ligand atom typing coverage expansion,
+  같은 builder는 `runs/refine_tier_public_benchmark_work_order_current.csv`에
+  최소 5개 fit row + 3개 holdout row를 채우기 위한 operator fill template을
+  생성한다. 이 template은 public provenance/license 확인, `external_engine_calls=0`,
+  pose RMSD/DockQ/LDDT-PLI, internal refine ΔG, public experimental ΔG 입력 후
+  tracked intake CSV로 옮겨 재검증하는 절차만 제공하며 외부 다운로드/도킹/MD 실행은 하지 않는다.
+  `tools/product/apply_refine_tier_public_benchmark_work_order.py`는 operator-filled
+  work-order CSV를 intake candidate로 변환하기 전에 placeholder, license,
+  external-engine call, pose/free-energy fields를 fail-closed로 검증한다.
+  tracked intake CSV를 실제 갱신하는 `--write-intake`는
+  `APPROVE_REFINE_TIER_PUBLIC_BENCHMARK_INTAKE` 승인 토큰까지 요구한다. 현재 기본
+  placeholder work-order 기준 산출물
+  `runs/refine_tier_public_benchmark_work_order_apply_current.json`은
+  `blocked_refine_tier_public_benchmark_work_order_apply`, `work_order_row_count=8`,
+  `blocked_row_count=8`, `candidate_intake_written=false`, `intake_written=false`이다.
+  다음 S-class 작업은 metal/cofactor/charged-residue까지의 atom typing coverage expansion,
   calibrated atom-level charge/torsion/improper parameterization, solvent/FEP calibration,
   `config/refine_tier_public_benchmark_intake_current.csv` 수준의 curated 공개
   pose/free-energy benchmark row 입력 및 gate 통과, OpenMM parity gate로 남는다.
@@ -1278,7 +1311,8 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
    negative/positive reference 데이터 (PubMed primary source 또는
    internal wetlab).
 8. **OpenMM/Schrodinger급 정확도 parity** — internal typed all-atom/GB-SA/explicit-shell/FEP
-   scaffold는 green이지만, atom typing coverage expansion, calibrated charge/torsion/improper
+   scaffold와 common ligand halogen atom typing coverage surface는 green이지만,
+   metal/cofactor/charged-residue coverage expansion, calibrated charge/torsion/improper
    parameterization, solvent/FEP calibration, curated 공개 pose/free-energy benchmark intake
    (`refine_tier_public_benchmark_readiness_current` 현재 blocked), MolProbity,
    complex/interface coverage가 남아 있다.

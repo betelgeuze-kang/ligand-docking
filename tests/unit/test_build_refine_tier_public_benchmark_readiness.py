@@ -48,6 +48,17 @@ def test_missing_input_blocks_without_external_mutation(tmp_path: Path) -> None:
     assert summary["claim_grade_public_benchmark_ready"] is False
     assert summary["external_state_mutated"] is False
     assert "input_csv_missing" in summary["blockers"]
+    assert summary["operator_work_order_ready"] is True
+    assert summary["work_order_row_count"] == 8
+    assert len(payload["work_order_rows"]) == 8
+    assert payload["work_order_rows"][0]["external_engine_calls"] == 0
+    assert {row["split"] for row in payload["work_order_rows"]} == {"fit", "holdout"}
+    assert summary["work_order_apply_command"].endswith("apply_refine_tier_public_benchmark_work_order.py")
+    assert summary["work_order_apply_write_intake_command"].endswith(
+        "--write-intake --approval-token APPROVE_REFINE_TIER_PUBLIC_BENCHMARK_INTAKE"
+    )
+    assert summary["write_intake_approval_token_required"] == "APPROVE_REFINE_TIER_PUBLIC_BENCHMARK_INTAKE"
+    assert "apply command" in summary["next_required_step"]
 
 
 def test_ready_rows_pass_claim_grade_public_benchmark_gate(tmp_path: Path) -> None:
@@ -65,6 +76,10 @@ def test_ready_rows_pass_claim_grade_public_benchmark_gate(tmp_path: Path) -> No
     assert summary["fit_split_present"] is True
     assert summary["holdout_or_test_split_present"] is True
     assert float(summary["free_energy_spearman"]) > 0.9
+    assert summary["operator_work_order_ready"] is False
+    assert summary["work_order_row_count"] == 0
+    assert payload["work_order_rows"] == []
+    assert summary["next_required_step"] == "Public benchmark readiness is ready; no work-order apply step is required."
 
 
 def test_external_engine_and_missing_provenance_block(tmp_path: Path) -> None:
@@ -88,6 +103,7 @@ def test_cli_writes_json_csv_and_markdown(tmp_path: Path) -> None:
     input_csv = tmp_path / "ready.csv"
     out_json = tmp_path / "out.json"
     out_csv = tmp_path / "out.csv"
+    out_work_order_csv = tmp_path / "work_order.csv"
     out_md = tmp_path / "out.md"
     _write_rows(input_csv, _ready_rows())
 
@@ -99,6 +115,8 @@ def test_cli_writes_json_csv_and_markdown(tmp_path: Path) -> None:
             str(out_json),
             "--out-csv",
             str(out_csv),
+            "--out-work-order-csv",
+            str(out_work_order_csv),
             "--out-md",
             str(out_md),
         ]
@@ -107,4 +125,36 @@ def test_cli_writes_json_csv_and_markdown(tmp_path: Path) -> None:
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["summary"]["claim_grade_public_benchmark_ready"] is True
     assert out_csv.read_text(encoding="utf-8").startswith("benchmark_id,")
+    assert out_work_order_csv.read_text(encoding="utf-8") == ""
     assert "Refine Tier Public Benchmark Readiness" in out_md.read_text(encoding="utf-8")
+
+
+def test_cli_writes_operator_work_order_for_empty_intake(tmp_path: Path) -> None:
+    input_csv = tmp_path / "empty.csv"
+    out_json = tmp_path / "out.json"
+    out_csv = tmp_path / "out.csv"
+    out_work_order_csv = tmp_path / "work_order.csv"
+    out_md = tmp_path / "out.md"
+    input_csv.write_text(",".join(mod.REQUIRED_COLUMNS) + "\n", encoding="utf-8")
+
+    mod.main(
+        [
+            "--input-csv",
+            str(input_csv),
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-work-order-csv",
+            str(out_work_order_csv),
+            "--out-md",
+            str(out_md),
+        ]
+    )
+
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    assert payload["summary"]["operator_work_order_ready"] is True
+    assert payload["summary"]["work_order_row_count"] == 8
+    assert "work_order_id,target_input_csv" in out_work_order_csv.read_text(encoding="utf-8")
+    assert "Operator Work Order" in out_md.read_text(encoding="utf-8")
+    assert "apply_refine_tier_public_benchmark_work_order.py" in out_md.read_text(encoding="utf-8")

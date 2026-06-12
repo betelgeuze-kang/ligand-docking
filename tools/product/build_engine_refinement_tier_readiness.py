@@ -259,6 +259,7 @@ def _refine_tier_physics_smoke_checks() -> list[dict[str, Any]]:
 
         from core.allatom_forcefield import (
             allatom_energy,
+            atom_typing_coverage_report,
             bonded_energy,
             dihedral_energy,
             equilibrium_bond_length,
@@ -268,6 +269,7 @@ def _refine_tier_physics_smoke_checks() -> list[dict[str, Any]]:
             infer_impropers,
             infer_torsions,
             nonbonded_energy,
+            parameter_calibration_report,
             partial_charges_from_atom_types,
         )
         from core.mm_gbsa import compute_full_refine_stack
@@ -321,6 +323,98 @@ def _refine_tier_physics_smoke_checks() -> list[dict[str, Any]]:
                 "check_id": "refine_tier_atom_typing_charge_exclusion_active",
                 "status": "pass" if typed_ok else "blocked",
                 "detail": "internal all-atom tier infers atom types, neutralized partial charges, and bonded-pair nonbonded exclusions",
+            }
+        )
+
+        coverage_coords = np.asarray(
+            [
+                [0.0, 0.0, 0.0],
+                [1.5, 0.0, 0.0],
+                [3.0, 0.0, 0.0],
+                [4.5, 0.0, 0.0],
+                [6.0, 0.0, 0.0],
+                [7.5, 0.0, 0.0],
+                [9.0, 0.0, 0.0],
+                [10.5, 0.0, 0.0],
+                [12.0, 0.0, 0.0],
+                [13.5, 0.0, 0.0],
+            ],
+            dtype=np.float64,
+        )
+        coverage = atom_typing_coverage_report(
+            coverage_coords,
+            ["H", "C", "N", "O", "S", "P", "F", "Cl", "Br", "I"],
+            bonds=[],
+        )
+        coverage_ok = bool(
+            coverage.get("status") == "atom_typing_coverage_ready"
+            and int(coverage.get("default_atom_count", -1)) == 0
+            and abs(float(coverage.get("coverage_fraction", 0.0)) - 1.0) < 1e-12
+            and "CL_HALOGEN" in coverage.get("atom_type_counts", {})
+            and "BR_HALOGEN" in coverage.get("atom_type_counts", {})
+            and coverage.get("charge_neutralization_ok") is True
+        )
+        checks.append(
+            {
+                "check_id": "refine_tier_atom_typing_coverage_surface",
+                "status": "pass" if coverage_ok else "blocked",
+                "detail": (
+                    f"supported_elements={','.join(coverage.get('supported_elements', []))}; "
+                    f"default_atom_count={coverage.get('default_atom_count')}; "
+                    f"coverage_fraction={coverage.get('coverage_fraction')}"
+                ),
+            }
+        )
+
+        unsupported = atom_typing_coverage_report(
+            np.asarray([[0.0, 0.0, 0.0], [2.2, 0.0, 0.0], [4.4, 0.0, 0.0]], dtype=np.float64),
+            ["C", "Zn", "Mg"],
+            bonds=[],
+        )
+        unsupported_energy = allatom_energy(
+            np.asarray([[0.0, 0.0, 0.0], [2.2, 0.0, 0.0], [4.4, 0.0, 0.0]], dtype=np.float64),
+            ["C", "Zn", "Mg"],
+        )
+        unsupported_fail_closed_ok = bool(
+            unsupported.get("status") == "blocked_atom_typing_coverage"
+            and unsupported.get("unsupported_metal_or_cofactor_elements") == ["MG", "ZN"]
+            and int(unsupported.get("unsupported_metal_or_cofactor_count", 0)) == 2
+            and unsupported_energy.get("atom_typing_coverage_status") == "blocked_atom_typing_coverage"
+            and int(unsupported_energy.get("unsupported_metal_or_cofactor_count", 0)) == 2
+        )
+        checks.append(
+            {
+                "check_id": "refine_tier_unsupported_metal_fail_closed_surface",
+                "status": "pass" if unsupported_fail_closed_ok else "blocked",
+                "detail": (
+                    "unsupported_metal_or_cofactor_elements="
+                    f"{','.join(unsupported.get('unsupported_metal_or_cofactor_elements', []))}; "
+                    f"energy_coverage_status={unsupported_energy.get('atom_typing_coverage_status')}"
+                ),
+            }
+        )
+
+        calibration = parameter_calibration_report(
+            public_benchmark_pair_count=4,
+            min_public_benchmark_pairs=5,
+            public_benchmark_ready=False,
+        )
+        calibration_guard_ok = bool(
+            calibration.get("status") == "blocked_parameter_calibration_claim"
+            and calibration.get("claim_grade_parameterization_ready") is False
+            and "insufficient_public_benchmark_pairs" in calibration.get("blockers", [])
+            and "public_benchmark_gate_not_ready" in calibration.get("blockers", [])
+        )
+        checks.append(
+            {
+                "check_id": "refine_tier_parameter_calibration_claim_guard",
+                "status": "pass" if calibration_guard_ok else "blocked",
+                "detail": (
+                    f"parameter_calibration_status={calibration.get('parameter_calibration_status')}; "
+                    f"claim_grade_parameterization_ready={calibration.get('claim_grade_parameterization_ready')}; "
+                    f"public_benchmark_pair_count={calibration.get('public_benchmark_pair_count')}/"
+                    f"{calibration.get('min_public_benchmark_pairs')}"
+                ),
             }
         )
 
@@ -534,6 +628,21 @@ def build_engine_refinement_tier_readiness(*, engine_config: str = DEFAULT_ENGIN
             "packet_type": "engine_refinement_tier_readiness",
             "status": "engine_refinement_tier_ready" if ready else "blocked_engine_refinement_tier_readiness",
             "engine_refinement_tier_ready": ready,
+            "atom_typing_coverage_surface_ready": by_id.get(
+                "refine_tier_atom_typing_coverage_surface",
+                {},
+            ).get("status")
+            == "pass",
+            "unsupported_metal_fail_closed_surface_ready": by_id.get(
+                "refine_tier_unsupported_metal_fail_closed_surface",
+                {},
+            ).get("status")
+            == "pass",
+            "parameter_calibration_claim_guard_ready": by_id.get(
+                "refine_tier_parameter_calibration_claim_guard",
+                {},
+            ).get("status")
+            == "pass",
             "benchmark_metric_surface_ready": by_id.get("refine_tier_pose_metric_surface_ready", {}).get("status") == "pass",
             "free_energy_calibration_claim_guard_ready": by_id.get(
                 "refine_tier_free_energy_calibration_claim_guard",

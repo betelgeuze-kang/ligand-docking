@@ -14,6 +14,7 @@ ALLATOM_CLAIM_BOUNDARY = (
     REFINE_TIER_CLAIM_BOUNDARY + " All-atom tier uses united-atom parameters and distance-based "
     "bond inference plus typed internal partial charges; not AMBER/CHARMM parity."
 )
+PARAMETER_CALIBRATION_STATUS = "internal_proxy_uncalibrated"
 
 # kcal/mol/Å², kcal/mol/rad²
 _BOND_K = 300.0
@@ -36,8 +37,16 @@ _ATOM_TYPE_PARAMS: dict[str, tuple[float, float, float]] = {
     "O_HYDROXYL": (3.05, 0.180, -0.35),
     "S_THIOETHER": (3.50, 0.250, -0.10),
     "P_PHOSPHATE": (3.74, 0.200, 0.70),
+    "F_HALOGEN": (2.95, 0.061, -0.08),
+    "CL_HALOGEN": (3.47, 0.150, -0.03),
+    "BR_HALOGEN": (3.73, 0.200, -0.02),
+    "I_HALOGEN": (4.00, 0.250, -0.01),
     "X_DEFAULT": (3.50, 0.080, 0.00),
 }
+
+SUPPORTED_ATOM_TYPES = tuple(sorted(atom_type for atom_type in _ATOM_TYPE_PARAMS if atom_type != "X_DEFAULT"))
+SUPPORTED_ELEMENTS = ("H", "C", "N", "O", "S", "P", "F", "CL", "BR", "I")
+UNSUPPORTED_METAL_OR_COFACTOR_ELEMENTS = ("NA", "MG", "CA", "FE", "ZN")
 
 
 def infer_bonds(coords: np.ndarray, elements: list[str], *, max_bond_a: float = 4.2) -> list[tuple[int, int]]:
@@ -63,8 +72,29 @@ def infer_bonds(coords: np.ndarray, elements: list[str], *, max_bond_a: float = 
     return bonds
 
 
+def _normalize_element(element: str) -> str:
+    raw = str(element or "C").strip().upper()
+    if not raw:
+        return "C"
+    two_char = raw[:2]
+    if two_char in {"CL", "BR", "NA", "MG", "CA", "FE", "ZN"}:
+        return two_char
+    return raw[:1]
+
+
 def _radius(element: str) -> float:
-    return {"H": 0.31, "C": 0.76, "N": 0.71, "O": 0.66, "S": 1.05, "P": 1.07}.get(str(element or "C").upper()[:1], 0.76)
+    return {
+        "H": 0.31,
+        "C": 0.76,
+        "N": 0.71,
+        "O": 0.66,
+        "S": 1.05,
+        "P": 1.07,
+        "F": 0.57,
+        "CL": 1.02,
+        "BR": 1.20,
+        "I": 1.39,
+    }.get(_normalize_element(element), 0.76)
 
 
 def _covalent_bond_threshold(ri: float, rj: float) -> float:
@@ -81,7 +111,7 @@ def equilibrium_bond_length(element_i: str, element_j: str, observed_distance_a:
 
 
 def _element(elements: list[str], idx: int) -> str:
-    return str(elements[idx] if idx < len(elements) else "C").strip().upper()[:1] or "C"
+    return _normalize_element(elements[idx] if idx < len(elements) else "C")
 
 
 def _bond_degrees(n_atoms: int, bonds: list[tuple[int, int]]) -> list[int]:
@@ -145,9 +175,93 @@ def infer_atom_types(
             types.append("S_THIOETHER")
         elif element == "P":
             types.append("P_PHOSPHATE")
+        elif element == "F":
+            types.append("F_HALOGEN")
+        elif element == "CL":
+            types.append("CL_HALOGEN")
+        elif element == "BR":
+            types.append("BR_HALOGEN")
+        elif element == "I":
+            types.append("I_HALOGEN")
         else:
             types.append("X_DEFAULT")
     return types
+
+
+def atom_typing_coverage_report(
+    coords: np.ndarray,
+    elements: list[str],
+    *,
+    bonds: list[tuple[int, int]] | None = None,
+) -> dict[str, Any]:
+    """Report internal atom-typing coverage without upgrading the claim boundary."""
+    pts = np.asarray(coords, dtype=np.float64)
+    inferred_bonds = infer_bonds(pts, elements) if bonds is None else list(bonds)
+    atom_types = infer_atom_types(pts, elements, bonds=inferred_bonds)
+    normalized_elements = [_element(elements, idx) for idx in range(int(pts.shape[0]))]
+    unsupported_elements = sorted({element for element in normalized_elements if element not in SUPPORTED_ELEMENTS})
+    unsupported_metal_or_cofactor_elements = sorted(
+        {element for element in unsupported_elements if element in UNSUPPORTED_METAL_OR_COFACTOR_ELEMENTS}
+    )
+    default_atom_count = sum(1 for atom_type in atom_types if atom_type == "X_DEFAULT")
+    atom_type_counts = {atom_type: atom_types.count(atom_type) for atom_type in sorted(set(atom_types))}
+    charges = partial_charges_from_atom_types(atom_types)
+    atom_count = int(pts.shape[0])
+    typed_atom_count = atom_count - int(default_atom_count)
+    coverage_fraction = float(typed_atom_count / atom_count) if atom_count else 0.0
+    coverage_ready = bool(atom_count and default_atom_count == 0 and not unsupported_elements)
+    return {
+        "status": "atom_typing_coverage_ready" if coverage_ready else "blocked_atom_typing_coverage",
+        "atom_count": atom_count,
+        "typed_atom_count": int(typed_atom_count),
+        "default_atom_count": int(default_atom_count),
+        "coverage_fraction": coverage_fraction,
+        "supported_elements": list(SUPPORTED_ELEMENTS),
+        "unsupported_elements": unsupported_elements,
+        "unsupported_metal_or_cofactor_elements": unsupported_metal_or_cofactor_elements,
+        "unsupported_metal_or_cofactor_count": sum(
+            1 for element in normalized_elements if element in UNSUPPORTED_METAL_OR_COFACTOR_ELEMENTS
+        ),
+        "atom_types": atom_types,
+        "atom_type_counts": atom_type_counts,
+        "bond_count": len(inferred_bonds),
+        "charge_neutralization_ok": bool(abs(float(np.sum(charges))) < 1e-8),
+        "net_charge_e": float(np.sum(charges)) if charges.size else 0.0,
+        "claim_boundary": ALLATOM_CLAIM_BOUNDARY,
+    }
+
+
+def parameter_calibration_report(
+    *,
+    public_benchmark_pair_count: int = 0,
+    min_public_benchmark_pairs: int = 5,
+    public_benchmark_ready: bool = False,
+) -> dict[str, Any]:
+    """Report calibration posture for internal all-atom proxy parameters."""
+    pair_count = int(public_benchmark_pair_count)
+    min_pairs = int(min_public_benchmark_pairs)
+    enough_pairs = pair_count >= min_pairs
+    claim_ready = bool(public_benchmark_ready and enough_pairs)
+    blockers: list[str] = []
+    if not enough_pairs:
+        blockers.append("insufficient_public_benchmark_pairs")
+    if not public_benchmark_ready:
+        blockers.append("public_benchmark_gate_not_ready")
+    return {
+        "status": "claim_grade_parameterization_ready" if claim_ready else "blocked_parameter_calibration_claim",
+        "parameter_calibration_status": PARAMETER_CALIBRATION_STATUS,
+        "claim_grade_parameterization_ready": claim_ready,
+        "public_benchmark_pair_count": pair_count,
+        "min_public_benchmark_pairs": min_pairs,
+        "public_benchmark_ready": bool(public_benchmark_ready),
+        "blockers": blockers,
+        "charge_parameter_source": "internal_atom_type_proxy_uncalibrated",
+        "bonded_parameter_source": "covalent_radii_and_harmonic_proxy_uncalibrated",
+        "torsion_parameter_source": "periodic_proxy_n3_uncalibrated",
+        "improper_parameter_source": "planarity_proxy_uncalibrated",
+        "solvent_parameter_source": "gb_sa_proxy_uncalibrated",
+        "claim_boundary": ALLATOM_CLAIM_BOUNDARY,
+    }
 
 
 def vdw_params_for_atom_type(atom_type: str) -> tuple[float, float]:
@@ -349,6 +463,8 @@ def allatom_energy(
     pts = np.asarray(coords, dtype=np.float64)
     bonds = infer_bonds(pts, elements)
     atom_types = infer_atom_types(pts, elements, bonds=bonds)
+    coverage = atom_typing_coverage_report(pts, elements, bonds=bonds)
+    calibration = parameter_calibration_report()
     q = partial_charges_from_atom_types(atom_types) if charges is None else np.asarray(charges, dtype=np.float64).reshape(-1)
     torsions = infer_torsions(bonds)
     impropers = infer_impropers(bonds, atom_types)
@@ -375,8 +491,20 @@ def allatom_energy(
         "dihedral_model": "periodic_torsion_proxy_n3",
         "improper_model": "planarity_proxy_for_sp2_like_centers",
         "charge_model": "typed_partial_charge_neutralized_v1" if charges is None else "caller_supplied",
+        "parameter_calibration_status": calibration["parameter_calibration_status"],
+        "claim_grade_parameterization_ready": calibration["claim_grade_parameterization_ready"],
+        "charge_parameter_source": calibration["charge_parameter_source"],
+        "bonded_parameter_source": calibration["bonded_parameter_source"],
+        "torsion_parameter_source": calibration["torsion_parameter_source"],
+        "improper_parameter_source": calibration["improper_parameter_source"],
         "nonbonded_exclusions": "1-2_bonded_pairs",
         "atom_types": atom_types,
+        "atom_typing_coverage_status": coverage["status"],
+        "atom_typing_coverage_fraction": coverage["coverage_fraction"],
+        "default_atom_count": coverage["default_atom_count"],
+        "unsupported_elements": coverage["unsupported_elements"],
+        "unsupported_metal_or_cofactor_elements": coverage["unsupported_metal_or_cofactor_elements"],
+        "unsupported_metal_or_cofactor_count": coverage["unsupported_metal_or_cofactor_count"],
         "net_charge_e": float(np.sum(q)) if q.size else 0.0,
         "bond_count": len(bonds),
         "torsion_count": len(torsions),
