@@ -172,8 +172,9 @@
   master rollup은 full-commercial 관점에서 다시 pending이다.
 - `runs/product_launch_r4_preflight_current.json`은 local customer-flow, rollout
   readiness, release bundle, commercial-independence/license, third-party review,
-  restricted engine readiness를 하나로 묶어 `product_launch_r4_preflight_ready`,
-  `check_count=7`, `pass_count=7`, `blocker_count=0`을 기록한다.
+  restricted engine readiness를 하나로 묶어
+  `blocked_product_launch_r4_preflight`, `blocker_count=2`,
+  `blocked_check_ids=[api_customer_flow_release_evidence_ready, commercial_independence_and_license_ready]`를 기록한다.
   단, `authorized_for_external_mutation=false`, `launch_executed=false`,
   `external_state_mutated=false`이므로 실제 배포/remote mutation은 여전히 별도 R4 확인 전까지 닫혀 있다.
 
@@ -527,9 +528,10 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `product_full_commercial_blocker_evidence_matrix_current.json`을
   freshness row 및 semantic-ready row로 함께 검증해, R8 receipt와 상용 readiness
   handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
-  빠지지 않게 한다. 최신 source-of-truth는 `row_count=49`, `pass_count=47`,
-  `blocker_count=2`, `stale_artifact_count=0`, `readme_drift_count=0`이며,
-  남은 blocker는 고객-facing AI report explanation/UX semantic readiness 2개다.
+  빠지지 않게 한다. 최신 source-of-truth는 `row_count=52`, `pass_count=52`,
+  `blocker_count=0`, `stale_artifact_count=0`, `semantic_status_blocker_count=0`,
+  `readme_drift_count=0`이다. 고객-facing AI report explanation/UX semantic
+  readiness는 core/full decision graph 순환을 분리한 뒤 닫혔다.
   최신 goal API surface contract는 `check_count=9`,
   `pass_count=9`, `missing_full_commercial_visibility_token_count=0`이다.
   `product_ledger_privacy_scan_current.json`도 goal-facing JSON artifacts
@@ -887,15 +889,17 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   evidence, rollout execution readiness, release bundle operator policy,
   commercial-independence/license, third-party license review, restricted engine
   readiness, external mutation guard를 R4 직전 단일 preflight로 묶는다. 최신 상태는
-  `product_launch_r4_preflight_ready`, `pass_count=7/7`, `blocker_count=0`이다.
+  `blocked_product_launch_r4_preflight`, `blocker_count=2`,
+  `blocked_check_ids=[api_customer_flow_release_evidence_ready, commercial_independence_and_license_ready]`이다.
 - `tools/run_product_release_current_refresh.py --execute`는 source-of-truth 순서에
-  R4 preflight, scope-breadth closure checklist, scope-breadth evidence receipt,
-  goal operator intake kit, goal API surface contract, bottleneck briefing,
+  residual shadow/registry, product execution work-order/preflight, core/full AI decision
+  graph, AI report explanation/UX, R4 preflight, scope-breadth closure checklist,
+  scope-breadth evidence receipt, goal operator intake kit, goal API surface contract, bottleneck briefing,
   commercial readiness operator packet/freshness/execution ladder/handoff,
   최종 release bundle 재생성을 포함하며,
   최신 실행 결과는
-  `blocked_product_release_current_refresh`, `command_count=47`, `executed_count=47`,
-  `failed_count=0`, `final_gate_verification_ready=false`, `final_gate_blocker_count=2`이다.
+  `blocked_product_release_current_refresh`, `command_count=52`, `executed_count=52`,
+  `failed_count=0`, `final_gate_verification_ready=false`, `final_gate_blocker_count=1`이다.
 - `runs/deploy_ops_legal_gap_closure_current.json`은 이제 rollout readiness와 actual
   rollout smoke receipt를 분리해 `blocked_deploy_ops_legal_gap_closure`,
   `closed_gap_count=5/6`, `open_gap_ids=[DEP-ROLLOUT-SMOKE]`로 기록한다.
@@ -923,14 +927,14 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   refresh를 1차 완료; build/push/deploy rollout dry-run/approval gate는 1차 완료.
 - Model registry + signed artifact + rollback은 1차 완료; operator promotion
   policy + release bundle linkage와 rollout execution readiness gate는 1차 완료;
-  R4 launch preflight도 1차 완료. 다음은 explicit R4/operator-approved rollout 실행 smoke
-  receipt 작성과 검증.
+  R4 launch preflight는 현재 API customer-flow release evidence와 commercial
+  independence/license 때문에 blocked다. 다음은 이 두 preflight blocker와 explicit
+  R4/operator-approved rollout 실행 smoke receipt 작성/검증.
 - release source-of-truth gate는 R4 preflight, R4 rollout smoke receipt artifact,
   R8 scope-breadth receipt, goal operator intake kit, commercial readiness execution
   ladder, API/bottleneck visibility, master gap closure rollup 포함 refresh 이후
-  `blocked_product_release_source_of_truth_gate`, `pass_count=47/49`,
-  `blocker_count=2`, `stale_artifact_count=0`으로 재검증됐다. 남은 blocker는
-  고객-facing AI report explanation/UX semantic readiness다.
+  `product_release_source_of_truth_gate_ready`, `pass_count=52/52`,
+  `blocker_count=0`, `stale_artifact_count=0`으로 재검증됐다.
 - `prometheus_client` 기반 실제 metrics endpoint는 1차 완료.
 - Alert rules + paged webhook receiver + closed-loop alert delivery smoke는 1차 완료;
   다음은 operator webhook secret mount, 실제 pager provider delivery smoke,
@@ -1524,8 +1528,9 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
 1. **API ↔ engine wiring** — 일반 요청 fail-closed 유지 + operator-approved
    validated runner profile adapter, durable job state, idempotent records,
    signed manifests, profile readiness/evidence/hash gate, customer-flow release
-   evidence, R4 launch preflight는 1차 완료. 다음은 explicit operator approval하의
-   실제 실행.
+   evidence의 live/signed path는 1차 형성됐으나, 현재 `bundle_validation_ready=false`
+   때문에 API customer-flow release evidence와 R4 launch preflight가 blocked다.
+   다음은 bundle validation과 explicit operator approval하의 실제 실행.
 2. **Production AI 고객 실행 경계** — ROCm/HIP GPU execution environment,
    GPU worker return receipt, production guarded checkpoint 승격은 현재 ready.
    다음은 validated runner profile evidence/operator approval과 고객 요청 경로에서의
@@ -1671,13 +1676,16 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
    - `core/` physics는 local-only 가정.
    - `docker-compose`/`K8s`/`CI`/`prometheus_client`/alert rules/signed model
      registry/TLS hosted-exposure guard/closed-loop alert smoke/rollout dry-run
-     approval gate/release bundle linkage/R4 launch preflight는 1차 통합됐으나, 실제 pager provider
-     delivery/ingress certificate smoke/operator-approved rollout execution smoke는 미완.
+     approval gate/release bundle linkage/R4 launch preflight surface는 1차 통합됐으나,
+     R4 preflight는 현재 API customer-flow bundle validation과 commercial-independence
+     gate 때문에 blocked이며, 실제 pager provider delivery/ingress certificate
+     smoke/operator-approved rollout execution smoke도 미완.
    - local delivery + on-prem pilot 가정. hosted SaaS는 별도.
 
-가장 큰 단일 잔여 gap은 이제 **실제 R4/operator-approved rollout 실행 smoke**다.
+가장 큰 단일 잔여 gap은 이제 **API customer-flow bundle validation +
+commercial-independence gate + 실제 R4/operator-approved rollout 실행 smoke**다.
 상용 API, durable worker, validated runner profile, production_guarded AI receipt,
-license/legal review, release bundle, claim-boundary 정책, R4 launch preflight는
-local artifact 기준 green이다. 다만 실제 고객 실행은 Target/Action/Impact/Risk/
-Rollback/Verification을 제시하고 명시적 R4 확인을 받은 뒤에만 remote/deployment
-state mutation으로 넘어갈 수 있다.
+license/legal review, release bundle, claim-boundary 정책, source-of-truth gate는
+local artifact 기준 닫혔지만, R4 launch preflight와 실제 고객 실행은
+Target/Action/Impact/Risk/Rollback/Verification을 제시하고 명시적 R4 확인을 받은 뒤에만
+remote/deployment state mutation으로 넘어갈 수 있다.

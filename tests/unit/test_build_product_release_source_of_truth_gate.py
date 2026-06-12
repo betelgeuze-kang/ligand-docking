@@ -249,6 +249,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
 
     assert "product_ai_report_explanation_packet" in artifact_ids
     assert "product_ai_report_ux_contract" in artifact_ids
+    assert "product_ai_decision_graph_contract" in artifact_ids
+    assert "product_execution_work_order" in artifact_ids
+    assert "product_execution_preflight" in artifact_ids
     assert "product_ai_report_explanation_packet_semantic_ready" in status_ids
     assert "product_ai_report_ux_contract_semantic_ready" in status_ids
     assert "product_ledger_privacy_scan" in artifact_ids
@@ -356,6 +359,28 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         if spec["artifact_id"] == "product_rollout_execution_smoke_receipt"
     )
     assert "runs/product_rollout_execution_readiness_current.json" in rollout_smoke_spec["depends_on"]
+    registry_spec = next(spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "residual_model_registry")
+    assert "runs/residual_shadow_ab_current.json" in registry_spec["depends_on"]
+    execution_work_order_spec = next(
+        spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_execution_work_order"
+    )
+    assert "runs/product_readiness_gate_current.json" in execution_work_order_spec["depends_on"]
+    execution_preflight_spec = next(
+        spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_execution_preflight"
+    )
+    assert "runs/product_execution_work_order_current.json" in execution_preflight_spec["depends_on"]
+    decision_graph_spec = next(
+        spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_ai_decision_graph_contract"
+    )
+    assert "runs/product_ai_report_ux_contract_current.json" in decision_graph_spec["depends_on"]
+    explanation_spec = next(
+        spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_ai_report_explanation_packet"
+    )
+    assert "runs/product_ai_decision_graph_contract_current.json" not in explanation_spec["depends_on"]
+    report_ux_spec = next(
+        spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_ai_report_ux_contract"
+    )
+    assert "runs/product_ai_decision_graph_contract_current.json" not in report_ux_spec["depends_on"]
     deploy_ops_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "deploy_ops_legal_gap_closure"
     )
@@ -400,6 +425,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "product_ledger_privacy_scan_semantic_ready" in status_ids
     assert "python3 tools/build_product_ai_report_explanation_packet.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_ai_report_ux_contract.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_residual_shadow_ab.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_product_execution_work_order.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_product_execution_preflight.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert mod.RELEASE_REFRESH_COMMANDS.count("python3 tools/build_product_ai_decision_graph_contract.py") == 2
     assert "python3 tools/product/build_engine_refinement_tier_readiness.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/product/build_product_launch_r4_preflight.py" in mod.RELEASE_REFRESH_COMMANDS
@@ -438,6 +467,26 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_full_commercial_blocker_evidence_matrix.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_release_source_of_truth_gate.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_residual_shadow_ab.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_residual_model_registry.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_execution_work_order.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_execution_preflight.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_execution_preflight.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_capability_surface_contract.py")
+    )
+    decision_graph_indices = [
+        index
+        for index, command in enumerate(mod.RELEASE_REFRESH_COMMANDS)
+        if command == "python3 tools/build_product_ai_decision_graph_contract.py"
+    ]
+    assert decision_graph_indices[0] < mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/build_product_ai_report_explanation_packet.py"
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_ai_report_ux_contract.py") < (
+        decision_graph_indices[1]
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_api_surface_contract.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_release_source_of_truth_gate.py")

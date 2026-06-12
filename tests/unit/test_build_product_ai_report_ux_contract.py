@@ -270,6 +270,100 @@ def test_product_ai_report_ux_contract_accepts_production_guarded_policy(tmp_pat
     assert "guarded_active_ready=True" in uncertainty["observed"]
 
 
+def test_product_ai_report_ux_contract_accepts_core_graph_before_full_graph(tmp_path: Path) -> None:
+    viewer_index = tmp_path / "viewer" / "index.html"
+    viewer_app = tmp_path / "viewer" / "app.js"
+    viewer_index.parent.mkdir()
+    viewer_index.write_text("<html></html>\n", encoding="utf-8")
+    viewer_app.write_text(
+        "const interactionOverlay = true; const contactMap = true; "
+        "const CUSTOMER_REPORT_REQUIRED_BLOCKS = ['binding_site_explanation','pose_comparison',"
+        "'interaction_rationale','ligand_selection_rationale','uncertainty_narrative','scope_claim_limit',"
+        "'counterfactual_rescue_suggestion']; "
+        "const customerReportCard = {}; "
+        "function summarizeInteractionTypes(){} function renderInteractionOverlay(){} "
+        "function normalizeCustomerReportBlock(){} function renderCustomerReportCard(){}\n",
+        encoding="utf-8",
+    )
+
+    payload = mod.build_product_ai_report_ux_contract(
+        decision_graph_packet=_packet(
+            {
+                "status": "blocked_product_ai_decision_graph_contract",
+                "closed_loop_decision_graph_ready": False,
+                "core_analysis_graph_ready": True,
+            }
+        ),
+        structure_report_packet=_packet(
+            {
+                "status": "product_structure_analysis_report_ready",
+                "chain_count": 1,
+                "residue_count": 20,
+                "ligand_like_residue_count": 2,
+            }
+        ),
+        execution_preflight_packet=_packet(
+            {
+                "status": "product_execution_preflight_ready",
+                "operational_gate_feasibility_status": "pass",
+            }
+        ),
+        bundle_packet=_packet(
+            {
+                "status": "product_bundle_contract_ready",
+                "artifact_count": 1,
+                "expected_bundle_dir": "runs/local_delivery/bundle",
+                "bundle_validation_command_matches": True,
+            }
+        ),
+        registry_packet=_packet(
+            {
+                "status": "residual_model_registry_ready",
+                "default_residual_mode": "shadow",
+                "production_promotion_allowed": False,
+            }
+        ),
+        explanation_packet={
+            "summary": {
+                "status": "product_ai_report_explanation_packet_ready",
+                "ai_report_explanation_packet_ready": True,
+                "structured_customer_report_ready": True,
+                "customer_report_card": {
+                    "primary_abstention_reason": "production_residual_checkpoint_not_promoted",
+                    "what_would_change_decision": "Return delta_force labels and promote the checkpoint.",
+                    "ligand_selection_rationale_ready": True,
+                    "selection_rationale": "Ligand was surfaced by audited score provenance and restricted-scope guardrails.",
+                    "allowed_scope_families": ["gpcr"],
+                    "blocked_claim_scopes": ["general_protein_ligand_platform"],
+                    "general_platform_claim_allowed": False,
+                    "scope_claim_guard_ready": True,
+                    "scope_claim_limit_ready": True,
+                },
+                "interaction_rationale_ready": True,
+                "ligand_selection_rationale_ready": True,
+                "evidence_traceability_ready": True,
+                "customer_report_delivery_contract_ready": True,
+                "customer_report_evidence_binding_ready": True,
+                "customer_report_required_block_count": 7,
+                "customer_report_ready_block_count": 7,
+                "customer_report_blocked_block_count": 0,
+                "customer_report_required_blocks": list(mod.REQUIRED_CUSTOMER_REPORT_BLOCKS),
+                "customer_report_ready_blocks": list(mod.REQUIRED_CUSTOMER_REPORT_BLOCKS),
+                "customer_report_missing_blocks": [],
+                "ranking_score_col": "binding_score_composite_v5",
+                "interaction_distance_gate_A": "4.75",
+                "interaction_topk_hit_rate_gate": "0.2",
+            },
+            "rows": [{"section_id": section_id} for section_id in mod.REQUIRED_CUSTOMER_REPORT_BLOCKS],
+        },
+        viewer_index=str(viewer_index),
+        viewer_app=str(viewer_app),
+    )
+
+    assert payload["summary"]["status"] == "product_ai_report_ux_contract_ready"
+    assert payload["summary"]["ai_report_ux_ready"] is True
+
+
 def test_product_ai_report_ux_contract_blocks_missing_viewer() -> None:
     payload = mod.build_product_ai_report_ux_contract(
         decision_graph_packet=_packet({"closed_loop_decision_graph_ready": True}),

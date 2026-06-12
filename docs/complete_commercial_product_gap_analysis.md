@@ -207,11 +207,11 @@
   `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`,
   `product_full_commercial_blocker_evidence_matrix_current.json`의
   freshness 및 semantic-ready 상태를 함께 검증한다. 최신 full refresh 후
-  source-of-truth는 `row_count=49`, `pass_count=47`, `blocker_count=2`,
-  `stale_artifact_count=0`, `readme_drift_count=0`이다. 파일 최신성 체인은 닫혔지만
+  source-of-truth는 `row_count=52`, `pass_count=52`, `blocker_count=0`,
+  `stale_artifact_count=0`, `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   `product_ai_report_explanation_packet_semantic_ready`와
-  `product_ai_report_ux_contract_semantic_ready`가 아직 고객-facing AI report semantic
-  readiness blocker로 남아 있다.
+  `product_ai_report_ux_contract_semantic_ready`는 core/full decision graph 순환을
+  분리한 뒤 고객-facing AI report semantic readiness 안으로 닫혔다.
 - `product_ledger_privacy_scan_current.json`은 product/commercial readiness artifacts뿐
   아니라 `goal_readiness_rollup`, `goal_operator_action_board`,
   `goal_operator_intake_kit`, `goal_release_burndown_work_order`,
@@ -349,9 +349,12 @@ abstention 사유가 결과 번들에 명시.
 - 상용 API surface + security middleware + SQLite job store + signed result manifest 존재.
 - 일반 `/simulate` 요청은 **의도적 fail-closed**, `runner_profile_id` + operator-approved validated runner profile만 실행.
 - `core/forcefield.py:17`, `core/topology.py:38`이 restricted analysis engine임을 명시.
-- `runs/api_customer_flow_release_evidence_current.json`과
-  `runs/product_launch_r4_preflight_current.json`은 restricted customer-flow evidence와
-  R4 직전 preflight를 local artifact 기준 green으로 묶는다.
+- `runs/api_customer_flow_release_evidence_current.json`은 현재
+  `blocked_api_customer_flow_release_evidence`, `blocked_check_ids=[bundle_validation_ready]`이며,
+  `runs/product_launch_r4_preflight_current.json`도
+  `blocked_product_launch_r4_preflight`, `blocked_check_ids=[api_customer_flow_release_evidence_ready, commercial_independence_and_license_ready]`다.
+  따라서 restricted customer-flow evidence와 R4 직전 preflight는 아직 local artifact 기준
+  green이 아니다.
 - `runs/product_rollout_execution_smoke_receipt_current.json`은 preflight 이후의 실제
   R4 rollout smoke receipt를 별도 산출물로 검증하지만, 현재
   `blocked_product_rollout_execution_smoke_receipt`, `receipt_csv_present=false`,
@@ -381,8 +384,10 @@ durable queue → worker 실행 → signed 결과 번들 회수까지 무인 동
 **현황**
 - `deploy/`: docker-compose, systemd, k8s manifest, model registry, rollout/rollback runbook 1차 존재.
 - monitoring/`: `/metrics`, alert rules, closed-loop alert smoke 1차 통합.
-- R4 launch preflight는 `7/7 pass`, `authorized_for_external_mutation=false`,
-  `launch_executed=false`로 실제 실행 전 상태를 명시한다.
+- R4 launch preflight는 현재 `blocked_product_launch_r4_preflight`,
+  `blocked_check_ids=[api_customer_flow_release_evidence_ready, commercial_independence_and_license_ready]`,
+  `authorized_for_external_mutation=false`, `launch_executed=false`로 실제 실행 전
+  차단 상태를 명시한다.
 - actual rollout execution smoke receipt는 아직 blocked이며, 이 때문에 deploy/ops/legal
   rollup과 master full-commercial rollup은 pending이다. master rollup에는 GPCR
   broad-family claim promotion(`SCI-CLAIM`)도 open으로 함께 남아 있다.

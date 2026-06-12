@@ -333,12 +333,32 @@ def build_product_ai_decision_graph_contract(
     ]
     blocked = [row for row in rows if row["status"] != "ready"]
     blocked_edges = [row for row in edges if row["status"] != "ready"]
+    core_node_ids = {
+        "structure_quality",
+        "binding_site_context",
+        "pose_generation_contract",
+        "scoring_ranking_gate",
+        "uncertainty_abstention_guard",
+        "report_bundle_contract",
+    }
+    core_rows = [row for row in rows if row["node_id"] in core_node_ids]
+    core_edges = [edge for edge in edges if edge["target_node_id"] in core_node_ids]
+    blocked_core_rows = [row for row in core_rows if row["status"] != "ready"]
+    blocked_core_edges = [edge for edge in core_edges if edge["status"] != "ready"]
+    core_ready = bool(core_rows and not blocked_core_rows and core_edges and not blocked_core_edges)
     edge_ready = not blocked_edges and len(edges) == len(REQUIRED_EDGES)
     ready = not blocked and edge_ready
     summary = {
         "packet_type": "product_ai_decision_graph_contract",
         "status": "product_ai_decision_graph_contract_ready" if ready else "blocked_product_ai_decision_graph_contract",
         "closed_loop_decision_graph_ready": ready,
+        "core_analysis_graph_ready": core_ready,
+        "core_node_count": len(core_rows),
+        "core_ready_node_count": sum(1 for row in core_rows if row["status"] == "ready"),
+        "core_blocked_node_count": len(blocked_core_rows),
+        "core_edge_count": len(core_edges),
+        "core_ready_edge_count": sum(1 for row in core_edges if row["status"] == "ready"),
+        "core_blocked_edge_count": len(blocked_core_edges),
         "node_count": len(rows),
         "ready_node_count": sum(1 for row in rows if row["status"] == "ready"),
         "blocked_node_count": len(blocked),

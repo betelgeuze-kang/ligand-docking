@@ -151,7 +151,7 @@ def build_product_ai_report_explanation_packet(
                 return _text(command_argv[index + 1])
         return ""
 
-    graph_ready = _bool(graph.get("closed_loop_decision_graph_ready"))
+    graph_ready = _bool(graph.get("closed_loop_decision_graph_ready")) or _bool(graph.get("core_analysis_graph_ready"))
     structure_ready = (
         _text(structure.get("status")) == "product_structure_analysis_report_ready"
         and _bool(structure.get("local_structure_parsed"))
@@ -381,7 +381,7 @@ def build_product_ai_report_explanation_packet(
             abstention_reason=abstention_reason,
             what_would_change_decision="A validated rerun bundle, restored trajectory evidence, and green production AI promotion gates would allow stronger recommendation language.",
             confidence_posture="counterfactual_next_actions_ready" if bundle_ready else "counterfactual_next_actions_blocked",
-            evidence_traceability=f"{decision_graph_path}:closed_loop_decision_graph;{bundle_path}:bundle_validation_command",
+            evidence_traceability=f"{decision_graph_path}:core_or_closed_loop_decision_graph;{bundle_path}:bundle_validation_command",
         ),
     ]
     sections.insert(

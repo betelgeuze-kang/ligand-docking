@@ -200,6 +200,68 @@ def test_report_explanation_packet_accepts_production_guarded_uncertainty_policy
     assert uncertainty["abstention_reason"] == "production_guarded_active_report_packet_does_not_apply_correction"
 
 
+def test_report_explanation_packet_accepts_core_graph_before_report_ux_closes() -> None:
+    payload = mod.build_product_ai_report_explanation_packet(
+        decision_graph_packet=_packet(
+            {
+                "closed_loop_decision_graph_ready": False,
+                "core_analysis_graph_ready": True,
+            }
+        ),
+        structure_report_packet=_packet(
+            {
+                "status": "product_structure_analysis_report_ready",
+                "local_structure_parsed": True,
+                "target_id": "ADRB2",
+                "family": "gpcr",
+                "atom_count": 3804,
+                "ligand_like_residue_count": 17,
+            }
+        ),
+        execution_preflight_packet={
+            "summary": {
+                "status": "product_execution_preflight_ready",
+                "operational_gate_feasibility_status": "pass",
+                "config_count": 1,
+            },
+            "execution_command_check": {
+                "argv": [
+                    "--ranking-score-col",
+                    "binding_score_composite_v5",
+                    "--gate-max-mean-min-distance-A",
+                    "4.75",
+                    "--gate-topk-hit-rate-min",
+                    "0.2",
+                ]
+            },
+        },
+        bundle_packet=_packet(
+            {
+                "status": "product_bundle_contract_ready",
+                "artifact_count": 1,
+                "expected_bundle_dir": "runs/local_delivery/bundle",
+                "bundle_validation_command_matches": True,
+            }
+        ),
+        registry_packet=_packet(
+            {"status": "residual_model_registry_ready", "default_residual_mode": "shadow", "production_promotion_allowed": False}
+        ),
+        scope_claim_guard_packet=_packet(
+            {
+                "closure_checklist_ready": True,
+                "allowed_scope_families": ["gpcr", "ion_channel", "kinase"],
+                "blocked_claim_scopes": ["general_protein_ligand_platform"],
+                "claim_blocked_domains": ["idp_broad"],
+                "general_platform_claim_allowed": False,
+            }
+        ),
+    )
+
+    assert payload["summary"]["status"] == "product_ai_report_explanation_packet_ready"
+    counterfactual = next(row for row in payload["rows"] if row["section_id"] == "counterfactual_rescue_suggestion")
+    assert "core_or_closed_loop_decision_graph" in counterfactual["evidence_traceability"]
+
+
 def test_report_explanation_packet_blocks_missing_graph() -> None:
     payload = mod.build_product_ai_report_explanation_packet(
         decision_graph_packet=_packet({"closed_loop_decision_graph_ready": False}),

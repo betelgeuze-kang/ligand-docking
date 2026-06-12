@@ -165,7 +165,7 @@ def build_product_ai_report_ux_contract(
             *REQUIRED_CUSTOMER_REPORT_BLOCKS,
         ),
     )
-    graph_ready = _bool(graph.get("closed_loop_decision_graph_ready"))
+    graph_ready = _bool(graph.get("closed_loop_decision_graph_ready")) or _bool(graph.get("core_analysis_graph_ready"))
     customer_report_required_blocks = [
         str(item) for item in explanation.get("customer_report_required_blocks") or [] if str(item)
     ]
