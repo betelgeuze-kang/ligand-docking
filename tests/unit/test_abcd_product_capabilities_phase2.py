@@ -10,7 +10,19 @@ import numpy as np
 import torch
 
 from betelgeuze_product.structure_analysis import analyze_structure_source
-from core.allatom_forcefield import allatom_energy
+from core.allatom_forcefield import (
+    allatom_energy,
+    bonded_energy,
+    dihedral_energy,
+    equilibrium_bond_length,
+    improper_energy,
+    infer_atom_types,
+    infer_bonds,
+    infer_impropers,
+    infer_torsions,
+    nonbonded_energy,
+    partial_charges_from_atom_types,
+)
 from core.explicit_solvent import explicit_solvation_energy
 from core.fep import estimate_binding_fep
 from core.mm_gbsa import compute_full_refine_stack
@@ -31,12 +43,95 @@ def _lig() -> np.ndarray:
 def test_allatom_explicit_fep_stack():
     aa = allatom_energy(_prot(), ["C"] * 4)
     assert aa["bond_count"] >= 1
+    assert aa["bond_model"] == "covalent_radii_equilibrium_with_coarse_trace_fallback"
+    assert aa["parameterization_level"] == "internal_united_atom_typed_v1"
+    assert aa["charge_model"] == "typed_partial_charge_neutralized_v1"
+    assert aa["dihedral_model"] == "periodic_torsion_proxy_n3"
+    assert aa["improper_model"] == "planarity_proxy_for_sp2_like_centers"
     ex = explicit_solvation_energy(_prot(), ["C"] * 4)
     assert ex["water_count"] >= 0
     fep = estimate_binding_fep(_prot(), _lig(), n_windows=5, n_bootstrap=2)
     assert fep["status"] == "fep_estimate_ready"
     stack = compute_full_refine_stack(_prot(), _lig(), include_explicit=True, include_fep=True)
     assert "gb_sa" in stack and "allatom" in stack and "fep" in stack
+
+
+def test_allatom_bonded_energy_uses_element_equilibrium_lengths():
+    near_equilibrium = np.asarray([[0.0, 0.0, 0.0], [1.53, 0.0, 0.0]], dtype=np.float32)
+    stretched = np.asarray([[0.0, 0.0, 0.0], [1.85, 0.0, 0.0]], dtype=np.float32)
+    elements = ["C", "O"]
+    assert infer_bonds(stretched, elements) == [(0, 1)]
+    assert 1.40 <= equilibrium_bond_length("C", "O", 1.85) <= 1.65
+    assert bonded_energy(stretched, [(0, 1)], elements=elements) > 10.0
+    assert bonded_energy(near_equilibrium, [(0, 1)], elements=elements) < bonded_energy(
+        stretched,
+        [(0, 1)],
+        elements=elements,
+    )
+
+
+def test_allatom_atom_types_charges_and_bonded_nonbonded_exclusions():
+    coords = np.asarray(
+        [
+            [0.0, 0.0, 0.0],
+            [1.25, 0.0, 0.0],
+            [2.45, 0.0, 0.0],
+            [3.75, 0.0, 0.0],
+        ],
+        dtype=np.float32,
+    )
+    elements = ["C", "O", "N", "H"]
+    bonds = infer_bonds(coords, elements)
+    atom_types = infer_atom_types(coords, elements, bonds=bonds)
+    assert atom_types[0] == "C_CARBONYL"
+    assert "O_" in atom_types[1]
+    charges = partial_charges_from_atom_types(atom_types)
+    assert abs(float(np.sum(charges))) < 1e-8
+    assert float(charges[1]) < 0.0
+    included = nonbonded_energy(coords, elements, atom_types=atom_types, charges=charges)
+    excluded = nonbonded_energy(
+        coords,
+        elements,
+        atom_types=atom_types,
+        charges=charges,
+        exclude_pairs={(min(i, j), max(i, j)) for i, j in bonds},
+    )
+    assert included["e_nonbonded"] != excluded["e_nonbonded"]
+    aa = allatom_energy(coords, elements)
+    assert aa["nonbonded_exclusions"] == "1-2_bonded_pairs"
+    assert aa["atom_types"] == atom_types
+    assert abs(float(aa["net_charge_e"])) < 1e-8
+
+
+def test_allatom_dihedral_and_improper_terms_are_active():
+    planar_chain = np.asarray(
+        [[0.0, 0.0, 0.0], [1.54, 0.0, 0.0], [2.54, 1.0, 0.0], [3.54, 1.0, 0.0]],
+        dtype=np.float32,
+    )
+    twisted_chain = np.asarray(
+        [[0.0, 0.0, 0.0], [1.54, 0.0, 0.0], [2.54, 1.0, 0.0], [3.54, 1.0, 0.8]],
+        dtype=np.float32,
+    )
+    chain_bonds = infer_bonds(planar_chain, ["C", "C", "C", "C"])
+    torsions = infer_torsions(chain_bonds)
+    assert torsions == [(0, 1, 2, 3)]
+    assert dihedral_energy(planar_chain, torsions) != dihedral_energy(twisted_chain, torsions)
+
+    planar_center = np.asarray(
+        [[0.0, 0.0, 0.0], [1.25, 0.0, 0.0], [0.0, 1.25, 0.0], [-1.0, -1.0, 0.0]],
+        dtype=np.float32,
+    )
+    out_of_plane_center = planar_center.copy()
+    out_of_plane_center[0, 2] = 0.4
+    elements = ["C", "O", "N", "H"]
+    improper_bonds = infer_bonds(planar_center, elements)
+    atom_types = infer_atom_types(planar_center, elements, bonds=improper_bonds)
+    impropers = infer_impropers(improper_bonds, atom_types)
+    assert impropers == [(0, 1, 2, 3)]
+    assert improper_energy(out_of_plane_center, impropers) > improper_energy(planar_center, impropers)
+    aa = allatom_energy(out_of_plane_center, elements)
+    assert aa["torsion_count"] >= 0
+    assert aa["improper_count"] == 1
 
 
 def test_cross_docking_and_induced_fit():

@@ -1,0 +1,1 @@
+benchmark_id,target_id,benchmark_family,split,provenance_kind,provenance_id,license_ok,external_engine_calls,pose_rmsd_A,dockq,lddt_pli,deltaG_mm_gbsa_kcal_mol,deltaG_experimental_kcal_mol

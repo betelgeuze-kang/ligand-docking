@@ -252,6 +252,226 @@ def _residue_aware_fast_tier_checks() -> list[dict[str, Any]]:
     return checks
 
 
+def _refine_tier_physics_smoke_checks() -> list[dict[str, Any]]:
+    checks: list[dict[str, Any]] = []
+    try:
+        import numpy as np
+
+        from core.allatom_forcefield import (
+            allatom_energy,
+            bonded_energy,
+            dihedral_energy,
+            equilibrium_bond_length,
+            improper_energy,
+            infer_atom_types,
+            infer_bonds,
+            infer_impropers,
+            infer_torsions,
+            nonbonded_energy,
+            partial_charges_from_atom_types,
+        )
+        from core.mm_gbsa import compute_full_refine_stack
+
+        compressed = np.asarray([[0.0, 0.0, 0.0], [1.20, 0.0, 0.0]], dtype=np.float64)
+        stretched = np.asarray([[0.0, 0.0, 0.0], [1.85, 0.0, 0.0]], dtype=np.float64)
+        elements = ["C", "O"]
+        bonds = infer_bonds(stretched, elements)
+        eq = equilibrium_bond_length("C", "O", 1.85)
+        e_compressed = bonded_energy(compressed, [(0, 1)], elements=elements)
+        e_stretched = bonded_energy(stretched, [(0, 1)], elements=elements)
+        bonded_active = bool(
+            bonds == [(0, 1)]
+            and 1.40 <= float(eq) <= 1.65
+            and float(e_stretched) > 0.0
+            and abs(float(e_stretched) - float(e_compressed)) > 1e-3
+        )
+        checks.append(
+            {
+                "check_id": "refine_tier_allatom_bonded_energy_active",
+                "status": "pass" if bonded_active else "blocked",
+                "detail": "all-atom tier uses element-derived equilibrium bond lengths instead of current-distance zeroing",
+            }
+        )
+
+        typed_coords = np.asarray(
+            [[0.0, 0.0, 0.0], [1.25, 0.0, 0.0], [2.45, 0.0, 0.0], [3.75, 0.0, 0.0]],
+            dtype=np.float64,
+        )
+        typed_elements = ["C", "O", "N", "H"]
+        typed_bonds = infer_bonds(typed_coords, typed_elements)
+        atom_types = infer_atom_types(typed_coords, typed_elements, bonds=typed_bonds)
+        charges = partial_charges_from_atom_types(atom_types)
+        nb_included = nonbonded_energy(typed_coords, typed_elements, atom_types=atom_types, charges=charges)
+        nb_excluded = nonbonded_energy(
+            typed_coords,
+            typed_elements,
+            atom_types=atom_types,
+            charges=charges,
+            exclude_pairs={(min(i, j), max(i, j)) for i, j in typed_bonds},
+        )
+        typed_ok = bool(
+            atom_types[0] == "C_CARBONYL"
+            and any(atom_type.startswith("O_") for atom_type in atom_types)
+            and abs(float(np.sum(charges))) < 1e-8
+            and float(charges[1]) < 0.0
+            and nb_included["e_nonbonded"] != nb_excluded["e_nonbonded"]
+        )
+        checks.append(
+            {
+                "check_id": "refine_tier_atom_typing_charge_exclusion_active",
+                "status": "pass" if typed_ok else "blocked",
+                "detail": "internal all-atom tier infers atom types, neutralized partial charges, and bonded-pair nonbonded exclusions",
+            }
+        )
+
+        planar_chain = np.asarray(
+            [[0.0, 0.0, 0.0], [1.54, 0.0, 0.0], [2.54, 1.0, 0.0], [3.54, 1.0, 0.0]],
+            dtype=np.float64,
+        )
+        twisted_chain = np.asarray(
+            [[0.0, 0.0, 0.0], [1.54, 0.0, 0.0], [2.54, 1.0, 0.0], [3.54, 1.0, 0.8]],
+            dtype=np.float64,
+        )
+        torsions = infer_torsions(infer_bonds(planar_chain, ["C", "C", "C", "C"]))
+        planar_center = np.asarray(
+            [[0.0, 0.0, 0.0], [1.25, 0.0, 0.0], [0.0, 1.25, 0.0], [-1.0, -1.0, 0.0]],
+            dtype=np.float64,
+        )
+        out_of_plane_center = planar_center.copy()
+        out_of_plane_center[0, 2] = 0.4
+        improper_elements = ["C", "O", "N", "H"]
+        improper_bonds = infer_bonds(planar_center, improper_elements)
+        improper_atom_types = infer_atom_types(planar_center, improper_elements, bonds=improper_bonds)
+        impropers = infer_impropers(improper_bonds, improper_atom_types)
+        bonded_shape_ok = bool(
+            torsions == [(0, 1, 2, 3)]
+            and dihedral_energy(planar_chain, torsions) != dihedral_energy(twisted_chain, torsions)
+            and impropers == [(0, 1, 2, 3)]
+            and improper_energy(out_of_plane_center, impropers) > improper_energy(planar_center, impropers)
+        )
+        checks.append(
+            {
+                "check_id": "refine_tier_dihedral_improper_terms_active",
+                "status": "pass" if bonded_shape_ok else "blocked",
+                "detail": "internal all-atom tier has periodic torsion and sp2-like improper planarity proxy terms",
+            }
+        )
+
+        protein = np.asarray(
+            [[0.0, 0.0, 0.0], [1.46, 0.0, 0.0], [2.02, 1.40, 0.0], [3.30, 1.55, 0.0]],
+            dtype=np.float64,
+        )
+        ligand = np.asarray([[1.0, 2.3, 0.1], [2.2, 2.4, -0.1]], dtype=np.float64)
+        stack = compute_full_refine_stack(protein, ligand, include_explicit=True, include_fep=True)
+        aa = stack.get("allatom", {})
+        gb = stack.get("gb_sa", {})
+        explicit = stack.get("explicit", {})
+        fep = stack.get("fep", {})
+        stack_ok = bool(
+            stack.get("refine_stack") == ["gb_sa", "allatom", "explicit_tip3p_shell", "fep"]
+            and aa.get("parameterization_level") == "internal_united_atom_typed_v1"
+            and aa.get("bond_model") == "covalent_radii_equilibrium_with_coarse_trace_fallback"
+            and aa.get("charge_model") == "typed_partial_charge_neutralized_v1"
+            and aa.get("nonbonded_exclusions") == "1-2_bonded_pairs"
+            and aa.get("dihedral_model") == "periodic_torsion_proxy_n3"
+            and aa.get("improper_model") == "planarity_proxy_for_sp2_like_centers"
+            and gb.get("refine_tier") == "gb_sa_v1"
+            and explicit.get("refine_tier") == "explicit_tip3p_shell_v1"
+            and fep.get("status") == "fep_estimate_ready"
+        )
+        checks.append(
+            {
+                "check_id": "refine_tier_full_stack_internal_smoke",
+                "status": "pass" if stack_ok else "blocked",
+                "detail": "GB/SA, all-atom, explicit shell, and FEP scaffold run without external MD/docking engines",
+            }
+        )
+
+        aa_energy = allatom_energy(protein, ["N", "C", "C", "O"])
+        finite_energy = bool(np.isfinite(float(aa_energy.get("e_total", float("nan")))))
+        checks.append(
+            {
+                "check_id": "refine_tier_allatom_energy_finite",
+                "status": "pass" if finite_energy else "blocked",
+                "detail": f"e_total={aa_energy.get('e_total')}",
+            }
+        )
+    except Exception as exc:
+        checks.append(
+            {
+                "check_id": "refine_tier_physics_smoke",
+                "status": "blocked",
+                "detail": f"{type(exc).__name__}: {exc}",
+            }
+        )
+    return checks
+
+
+def _refine_tier_benchmark_readiness_checks() -> list[dict[str, Any]]:
+    checks: list[dict[str, Any]] = []
+    try:
+        import numpy as np
+
+        from core.score_calibration import calibration_quality_gate, fit_linear_calibration
+        from core.structure_metrics import dockq_proxy, kabsch_rmsd, lddt_pli_proxy
+
+        reference = np.asarray(
+            [[0.0, 0.0, 0.0], [1.5, 0.0, 0.0], [2.0, 1.2, 0.0], [3.2, 1.3, 0.2]],
+            dtype=np.float64,
+        )
+        model = reference + np.asarray(
+            [[0.05, -0.03, 0.02], [0.00, 0.04, -0.01], [-0.04, 0.00, 0.03], [0.02, -0.02, 0.00]],
+            dtype=np.float64,
+        )
+        pose_rmsd = kabsch_rmsd(model, reference)
+        lddt = lddt_pli_proxy(model, reference)
+        dockq = dockq_proxy(model, reference)
+        pose_metrics_ready = bool(
+            pose_rmsd is not None
+            and float(pose_rmsd) < 0.20
+            and lddt is not None
+            and 0.0 <= float(lddt) <= 1.0
+            and dockq is not None
+        )
+        checks.append(
+            {
+                "check_id": "refine_tier_pose_metric_surface_ready",
+                "status": "pass" if pose_metrics_ready else "blocked",
+                "detail": f"pose_rmsd_A={pose_rmsd}; lddt_pli_proxy={lddt}; dockq_proxy={dockq}",
+            }
+        )
+
+        fit = fit_linear_calibration(
+            proxy_values=np.asarray([-8.0, -7.0, -6.0, -5.0], dtype=np.float64),
+            reference_dg=np.asarray([-9.1, -8.0, -6.8, -5.9], dtype=np.float64),
+        )
+        gate = calibration_quality_gate(fit, min_pairs=5, min_spearman=0.5)
+        claim_guard_ok = bool(
+            fit.get("status") == "calibration_ready"
+            and int(gate.get("pair_count", 0)) == 4
+            and gate.get("calibration_promotion_ready") is False
+        )
+        checks.append(
+            {
+                "check_id": "refine_tier_free_energy_calibration_claim_guard",
+                "status": "pass" if claim_guard_ok else "blocked",
+                "detail": (
+                    "MM-GBSA calibration surface computes locally but remains claim-blocked until "
+                    f"pair_count={gate.get('pair_count')} reaches min_pairs={gate.get('min_pairs_required')}"
+                ),
+            }
+        )
+    except Exception as exc:
+        checks.append(
+            {
+                "check_id": "refine_tier_benchmark_readiness",
+                "status": "blocked",
+                "detail": f"{type(exc).__name__}: {exc}",
+            }
+        )
+    return checks
+
+
 def build_engine_refinement_tier_readiness(*, engine_config: str = DEFAULT_ENGINE_CONFIG) -> dict[str, Any]:
     from tools.product.engine_refinement_config import load_engine_refinement_config
 
@@ -285,6 +505,8 @@ def build_engine_refinement_tier_readiness(*, engine_config: str = DEFAULT_ENGIN
         "core.refine_physics",
         "core.mm_gbsa",
         "core.allatom_forcefield",
+        "core.explicit_solvent",
+        "core.fep",
         "core.pocket_detection",
         "core.pose_generation",
     ):
@@ -301,14 +523,24 @@ def build_engine_refinement_tier_readiness(*, engine_config: str = DEFAULT_ENGIN
         checks.append({"check_id": f"script_{Path(rel).name}", "status": "pass" if ok else "blocked", "detail": rel})
 
     checks.extend(_residue_aware_fast_tier_checks())
+    checks.extend(_refine_tier_physics_smoke_checks())
+    checks.extend(_refine_tier_benchmark_readiness_checks())
 
     blocked = [item for item in checks if item["status"] != "pass"]
     ready = not blocked
+    by_id = {item["check_id"]: item for item in checks}
     return {
         "summary": {
             "packet_type": "engine_refinement_tier_readiness",
             "status": "engine_refinement_tier_ready" if ready else "blocked_engine_refinement_tier_readiness",
             "engine_refinement_tier_ready": ready,
+            "benchmark_metric_surface_ready": by_id.get("refine_tier_pose_metric_surface_ready", {}).get("status") == "pass",
+            "free_energy_calibration_claim_guard_ready": by_id.get(
+                "refine_tier_free_energy_calibration_claim_guard",
+                {},
+            ).get("status")
+            == "pass",
+            "claim_grade_public_benchmark_ready": False,
             "refine_tier": stage3b.get("physics_refinement_mode", "implicit_gb_sa_v1"),
             "refined_energy_col": stage3b.get("physics_refinement_refined_energy_col"),
             "check_count": len(checks),

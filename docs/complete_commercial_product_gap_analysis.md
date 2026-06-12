@@ -52,24 +52,41 @@
   단일 파라미터 fast path로 유지된다. `DataGenerator` runtime profile은 coarse
   backbone bond/angle param을 ForceField로 전달하며, trajectory engine CLI/cache key도
   coarse forcefield param surface를 노출한다.
+- `core/allatom_forcefield.py`, `core/mm_gbsa.py`, `core/explicit_solvent.py`,
+  `core/fep.py`: internal typed united-atom all-atom tier, periodic torsion/improper
+  proxy, GB/SA MM-GBSA proxy, TIP3P-like explicit shell recheck, FEP scaffold가 존재한다. 최신
+  `runs/engine_refinement_tier_readiness_current.json`은 full refine stack smoke를 포함해
+  `check_count=27`, `pass_count=27`, `blocked_count=0`이며,
+  pose RMSD/LDDT-PLI/DockQ proxy metric surface와 MM-GBSA calibration claim guard를
+  함께 확인한다. `claim_grade_public_benchmark_ready=false`라서 공개 benchmark claim은
+  여전히 열지 않는다.
+- `tools/product/build_refine_tier_public_benchmark_readiness.py`: curated 공개
+  pose/free-energy benchmark intake를 별도 fail-closed gate로 판정한다.
+  `config/refine_tier_public_benchmark_intake_current.csv`는 required column header를
+  tracked template로 제공한다. 현재 기본 산출물
+  `runs/refine_tier_public_benchmark_readiness_current.json`은
+  `blocked_refine_tier_public_benchmark_readiness`, `input_csv_present=true`,
+  `row_count=0`, `claim_grade_public_benchmark_ready=false`, `blocker_count=6`이다.
 - `core/integrator.py`: Langevin 적분기(2-bead 수준).
 - AI 보정(`core/score_residual.py`, `core/onsps_backmap.py`)은 **bounded residual** 로만 사용.
 
 **갭 (근본 원인)**
-- 이것은 "조대화(coarse-grained) 분석 엔진"이지 **all-atom 정밀 MD/도킹 엔진이 아니다.**
-- 명시적 미구현: full all-atom + explicit/implicit solvent force field, MM-GBSA/MM-PBSA,
-  FEP+/TI 자유에너지, pose RMSD / LDDT-PLI / DockQ 산출, MolProbity급 구조 품질 검증.
+- product lane은 아직 "조대화(coarse-grained) + internal refine scaffold" 단계이지
+  **claim-grade all-atom 정밀 MD/도킹 엔진이 아니다.**
+- 남은 미구현/미검증: residue/ligand atom typing coverage expansion,
+  calibrated atom-level charge/torsion/improper parameterization, solvent/FEP calibration,
+  curated 공개 pose/free-energy benchmark intake row 입력 및 통과, MolProbity급 구조 품질 검증,
+  공개 ΔG benchmark 상관.
 - 외부 정밀 엔진 없이 정밀도를 내려면 force field·solvent·sampling을 자체 구현해야 함.
 
 **구현 방향**
-1. **Force field 정식화**: 자체 all-atom 또는 united-atom force field 파라미터셋 정의(bonded:
-   bond/angle/dihedral/improper, nonbonded: LJ + 정전기 PME/Ewald 또는 reaction-field).
-   기존 LJ 힘장을 "스크리닝용 fast tier"로 강등하고, 정밀 tier를 별도 도입.
-2. **Solvent 모델**: 우선 implicit solvent(GB/SA)부터 — explicit water보다 독립 구현·검증 비용이 낮음.
-   이후 explicit TIP3P 옵션.
-3. **Sampling/자유에너지**: MM-GBSA end-state 결합 자유에너지 → (확장) alchemical FEP/TI.
-4. **정밀도 tier 정책**: `fast(2-bead 스크리닝)` → `refine(all-atom 국소 최소화/MM-GBSA)` 2-tier를
-   HTVS 파이프라인의 stage 정책으로 명시(이미 stage2/3 two-pass 구조 존재 → 정밀 tier만 채우면 됨).
+1. **Force field 정식화**: internal typed united-atom scaffold를 wider residue/ligand atom typing,
+   calibrated charge, torsion/improper, bonded/nonbonded parameter set으로 승격.
+2. **Solvent 모델**: GB/SA와 TIP3P-like shell scaffold를 공개 complex set에서 calibration하고,
+   이후 explicit TIP3P dynamics 옵션으로 확장.
+3. **Sampling/자유에너지**: MM-GBSA end-state 결합 자유에너지 → alchemical FEP/TI scaffold calibration.
+4. **정밀도 tier 정책**: `fast(2-bead 스크리닝)` → `refine(internal all-atom/GB-SA/FEP scaffold)` 2-tier를
+   HTVS 파이프라인의 stage 정책으로 명시하고, curated public benchmark 통과 전 claim은 restricted로 유지.
 5. **Rust/HIP 커널 결합**: nonbonded 정밀 커널을 native backend에 실제 결합(`rust_hip_backend.py` 확장),
    `FORCE_RUST_HIP` 요구 모드를 정밀 tier 기본값으로.
 
@@ -270,7 +287,7 @@ durable queue → worker 실행 → signed 결과 번들 회수까지 무인 동
    │
    ├─ P0  E. API↔Engine 무인 실행 wiring (restricted scope)      ← 가장 빠른 상용화 스위치
    │
-   ├─ P0/P1  A. 과학 엔진 정밀도 (all-atom force field + GB/SA + MM-GBSA)  ← 가장 큰 실제 갭
+   ├─ P0/P1  A. 과학 엔진 정밀도 (typed all-atom calibration + GB-SA/FEP benchmarks)  ← 가장 큰 실제 갭
    │           └─ B. 도킹 포즈 생성/포켓 검출/ΔG 보정
    │           └─ C. residual을 정밀 tier 라벨로 재학습
    │
@@ -313,8 +330,9 @@ durable queue → worker 실행 → signed 결과 번들 회수까지 무인 동
    범용 정밀 제품 완성을 의미하지 않는다.
 2. **가장 빠른 상용 스위치는 R4/operator-approved rollout smoke.** restricted scope의
    local evidence와 preflight는 green이므로, 명시 승인 후 실행 검증이 self-hosted 파일럿 전환점이다.
-3. **가장 큰 실제 갭은 A(과학 엔진 정밀도).** 현재 2-bead 조대화 엔진을 all-atom force field + solvent +
-   MM-GBSA로 끌어올려야 "외부 엔진 무의존 완전 상용 제품"이라는 claim이 성립한다.
+3. **가장 큰 실제 갭은 A(과학 엔진 정밀도).** internal typed all-atom/GB-SA/explicit-shell/FEP scaffold와
+   proxy benchmark metric surface는 green이지만, wider atom typing coverage·parameter calibration·curated 공개 pose/free-energy benchmark intake를 통과해야
+   "외부 엔진 무의존 완전 상용 제품"이라는 claim이 성립한다.
 4. **AI는 정밀도 갭을 덮는 용도가 아니라** 물리 코어 위 bounded residual로 유지해야 하며(C),
    학습 라벨이 자체 정밀 tier(A)에서 나와야 일관성이 생긴다.
 5. **scope 확장(G)·외부 벤치마크(H)** 는 정밀도(A) 위에서만 방어 가능하므로, A를 선행 투자로 본다.

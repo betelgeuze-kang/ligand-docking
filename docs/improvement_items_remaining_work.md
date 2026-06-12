@@ -101,7 +101,7 @@
 | SCI-TRANS | Transporter | placeholder 0, functional surrogate | direct binding kcal blocked | CLOSED |
 | SCI-CA2-PXR | CA2/PXR | readiness fixture green | replacement workbook/sync boundary scaffold | CLOSED |
 | SCI-WETLAB | Wetlab | simulation packet green | wetlab-proven hit out-of-claim | CLOSED |
-| SCI-OPENMM | OpenMM | 2-bead 11/11 | full all-atom/MM-GBSA/FEP+ unimplemented | CLOSED |
+| SCI-OPENMM | OpenMM | 2-bead 11/11 | internal all-atom/GB-SA/explicit-shell/FEP scaffold exists, OpenMM/Schrodinger-grade validation blocked | CLOSED |
 
 검증: `tests/unit/test_build_science_claim_promotion_gap_closure.py`, `tools/accounting/build_science_claim_promotion_gap_closure.py`, `tools/product/ci_contract_fixture_packets.py` `write_science_claim_promotion_closure_packets()`.
 
@@ -294,9 +294,32 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   CA/SC block-layout residue alignment까지 확장 완료.
   trajectory engine CLI/cache key에도 해당 coarse forcefield param surface를
   연결 완료.
-  다음 S-class 작업은 full all-atom/solvent topology, atom typing, atom-level
-  bond/angle/dihedral/improper terms, atom-level charge/parameterization,
-  OpenMM parity gate로 남는다.
+  `core/allatom_forcefield.py`는 covalent-radii equilibrium 기반 bonded energy,
+  tetrahedral angle proxy, periodic torsion proxy, sp2-like improper planarity proxy,
+  element/degree 기반 internal atom typing, neutralized partial charge proxy,
+  1-2 bonded-pair nonbonded exclusion을 쓰는 internal united-atom typed tier로 보강됐고,
+  `core/mm_gbsa.py`, `core/explicit_solvent.py`, `core/fep.py`의
+  GB/SA → all-atom → explicit TIP3P-like shell → FEP scaffold smoke까지
+  `runs/engine_refinement_tier_readiness_current.json`에서
+  `check_count=27`, `pass_count=27`, `blocked_count=0`으로 검증된다.
+  같은 gate는 pose RMSD/LDDT-PLI/DockQ proxy metric surface와
+  MM-GBSA calibration claim guard도 확인하며,
+  `benchmark_metric_surface_ready=true`,
+  `free_energy_calibration_claim_guard_ready=true`,
+  `claim_grade_public_benchmark_ready=false`로 claim 경계를 고정한다.
+  `tools/product/build_refine_tier_public_benchmark_readiness.py`는 curated 공개
+  pose/free-energy benchmark intake를 별도 fail-closed gate로 고정한다.
+  `config/refine_tier_public_benchmark_intake_current.csv`는 required column header를
+  tracked template로 제공한다. 현재 기본 artifact는
+  `runs/refine_tier_public_benchmark_readiness_current.json`이며,
+  `status=blocked_refine_tier_public_benchmark_readiness`,
+  `input_csv_present=true`, `row_count=0`, `valid_row_count=0`,
+  `claim_grade_public_benchmark_ready=false`, `blocker_count=6`으로 실제 curated
+  benchmark row 입력만 아직 없음을 명확히 드러낸다.
+  다음 S-class 작업은 residue/ligand atom typing coverage expansion,
+  calibrated atom-level charge/torsion/improper parameterization, solvent/FEP calibration,
+  `config/refine_tier_public_benchmark_intake_current.csv` 수준의 curated 공개
+  pose/free-energy benchmark row 입력 및 gate 통과, OpenMM parity gate로 남는다.
 
 ### A-2. Production AI 추론 주체 전환 (ROCm/HIP production_guarded)
 
@@ -1254,9 +1277,11 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
 7. **Transporter direct-binding evidence** — AQP1/GLUT1 1차 정량
    negative/positive reference 데이터 (PubMed primary source 또는
    internal wetlab).
-8. **OpenMM/Schrodinger급 정확도 parity** — full all-atom/solvent force field,
-   MM-GBSA/FEP+ 스타일, pose RMSD/LDDT-PLI/DockQ 벤치마크, MolProbity,
-   complex/interface coverage.
+8. **OpenMM/Schrodinger급 정확도 parity** — internal typed all-atom/GB-SA/explicit-shell/FEP
+   scaffold는 green이지만, atom typing coverage expansion, calibrated charge/torsion/improper
+   parameterization, solvent/FEP calibration, curated 공개 pose/free-energy benchmark intake
+   (`refine_tier_public_benchmark_readiness_current` 현재 blocked), MolProbity,
+   complex/interface coverage가 남아 있다.
 9. **Prospective wetlab T. cruzi PDE 검증** — 실제 assay + hit confirmation.
 
 ### 확장 (claim boundary 확대)
@@ -1359,6 +1384,9 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
 2. **Science scoring 한계**
    - GPCR CI-low 0.21 vs 0.45 임계치, OPRM1 pose collapse,
      AQP1 direct-binding/negative evidence 부족, CA2 잔여 정량 reference 부재.
+   - typed all-atom/GB-SA/explicit-shell/FEP internal scaffold와 readiness smoke는 green이나,
+     curated 공개 pose/free-energy parity 및 atom typing coverage/charge/torsion/improper
+     calibration은 아직 claim-grade가 아니다.
    - feature/data engineering 병목. v3~v16까지 tombstone/selected-slice
      green의 누적.
    - 외부 source (PubMed/wetlab) 의존성.
