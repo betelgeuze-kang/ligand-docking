@@ -489,10 +489,48 @@ def _aqp1_procurement() -> dict:
     }
 
 
+def _registry_receipt() -> dict:
+    return {
+        "summary": {
+            "status": "blocked_production_ai_registry_promotion_operator_receipt",
+            "operator_receipt_ready": False,
+            "receipt_present": True,
+            "receipt_csv": "config/production_ai_registry_promotion_operator_receipt_current.csv",
+            "receipt_row_count": 1,
+            "blocker_count": 1,
+            "blocked_row_count": 1,
+            "blockers": ["blocked_receipt_rows_present"],
+            "first_blocked_artifact_id": "residual_model_registry_guarded_promotion",
+            "first_blocked_row_blocker": "operator_placeholders_unfilled",
+            "first_blocked_row_blockers": [
+                "operator_placeholders_unfilled",
+                "default_residual_mode_not_guarded",
+            ],
+            "most_common_row_blocker": "operator_placeholders_unfilled",
+            "approval_token_required": "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION",
+            "next_required_step": "Fill the production AI registry promotion receipt.",
+            "registry_artifact": "runs/residual_model_registry_current.json",
+            "checkpoint_readiness_artifact": (
+                "runs/product_production_ai_checkpoint_readiness_current.json"
+            ),
+            "observed_registry_default_residual_mode": "shadow",
+            "observed_registry_trained_model_checkpoint_count": 0,
+            "observed_checkpoint_registry_promotion_currently_satisfied": False,
+            "observed_checkpoint_registry_promotion_missing_gate_ids": [
+                "production_promotion_allowed",
+                "default_residual_mode_guarded",
+            ],
+            "registry_edited_by_this_tool": False,
+            "checkpoint_created_by_this_tool": False,
+        }
+    }
+
+
 def test_build_product_commercial_readiness_operator_packet_flattens_next_actions() -> None:
     payload = mod.build_product_commercial_readiness_operator_packet(
         goal_audit_packet=_goal_audit(),
         aqp1_direct_binding_procurement_packet=_aqp1_procurement(),
+        production_ai_registry_promotion_operator_receipt_packet=_registry_receipt(),
         delta_force_closure_packet={
             "summary": {
                 "packet_ready": True,
@@ -786,6 +824,37 @@ def test_build_product_commercial_readiness_operator_packet_flattens_next_action
         "production_ai_return_bundle_post_return_validation_command"
     ]
     assert "summary alone does not unlock" in summary["production_ai_return_bundle_guardrail"]
+    assert summary["production_ai_registry_promotion_operator_receipt_status"] == (
+        "blocked_production_ai_registry_promotion_operator_receipt"
+    )
+    assert summary["production_ai_registry_promotion_operator_receipt_ready"] is False
+    assert summary["production_ai_registry_promotion_operator_receipt_present"] is True
+    assert summary["production_ai_registry_promotion_operator_receipt_csv"] == (
+        "config/production_ai_registry_promotion_operator_receipt_current.csv"
+    )
+    assert summary["production_ai_registry_promotion_operator_receipt_blocker_count"] == 1
+    assert summary["production_ai_registry_promotion_operator_receipt_blocked_row_count"] == 1
+    assert summary["production_ai_registry_promotion_operator_receipt_first_blocked_row_blocker"] == (
+        "operator_placeholders_unfilled"
+    )
+    assert "default_residual_mode_guarded" in summary[
+        "production_ai_registry_promotion_operator_receipt_observed_checkpoint_registry_promotion_missing_gate_ids"
+    ]
+    assert summary[
+        "production_ai_registry_promotion_operator_receipt_approval_token_required"
+    ] == "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION"
+    assert summary[
+        "production_ai_registry_promotion_operator_receipt_observed_registry_default_residual_mode"
+    ] == "shadow"
+    assert summary[
+        "production_ai_registry_promotion_operator_receipt_observed_registry_trained_model_checkpoint_count"
+    ] == 0
+    assert (
+        summary[
+            "production_ai_registry_promotion_operator_receipt_observed_checkpoint_registry_promotion_currently_satisfied"
+        ]
+        is False
+    )
     assert summary["delta_force_closure_acceptance_packet_artifact"] == (
         "runs/unit_delta_force_closure.json"
     )

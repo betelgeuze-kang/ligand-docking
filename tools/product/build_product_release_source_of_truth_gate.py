@@ -671,7 +671,11 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "artifact_id": "product_commercial_readiness_operator_packet",
         "artifact_path": "runs/product_commercial_readiness_operator_packet_current.json",
         "builder_command": "python3 tools/build_product_commercial_readiness_operator_packet.py",
-        "depends_on": ["runs/product_goal_completion_audit_current.json"],
+        "depends_on": [
+            "runs/product_goal_completion_audit_current.json",
+            "runs/production_ai_registry_promotion_operator_receipt_current.json",
+            "config/production_ai_registry_promotion_operator_receipt_current.csv",
+        ],
     },
     {
         "artifact_id": "product_commercial_readiness_handoff_bundle",

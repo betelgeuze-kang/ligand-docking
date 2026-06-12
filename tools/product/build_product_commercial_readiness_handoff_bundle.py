@@ -77,6 +77,10 @@ def _text(value: Any) -> str:
     return str(value or "").strip()
 
 
+def _first_present(primary: dict[str, Any], fallback: dict[str, Any], key: str) -> Any:
+    return primary[key] if key in primary else fallback.get(key)
+
+
 def _artifact_row(
     *,
     artifact_id: str,
@@ -412,6 +416,34 @@ def _build_artifact_reference_manifest(
                 required_now=True,
                 expected_from_operator_return=False,
                 note="Operator-fill template consumed by the full-scope breadth evidence receipt gate.",
+            )
+        )
+    registry_receipt_artifact = _text(
+        summary.get("production_ai_registry_promotion_operator_receipt_artifact")
+    )
+    if registry_receipt_artifact:
+        refs.append(
+            _artifact_reference(
+                artifact_id="production_ai_registry_promotion_operator_receipt",
+                artifact_path=registry_receipt_artifact,
+                reference_role="local_production_ai_registry_promotion_receipt",
+                required_now=True,
+                expected_from_operator_return=False,
+                note="Local fail-closed receipt proving whether guarded production AI registry promotion has been operator-reviewed.",
+            )
+        )
+    registry_receipt_csv = _text(
+        summary.get("production_ai_registry_promotion_operator_receipt_csv")
+    )
+    if registry_receipt_csv:
+        refs.append(
+            _artifact_reference(
+                artifact_id="production_ai_registry_promotion_operator_receipt_csv",
+                artifact_path=registry_receipt_csv,
+                reference_role="local_production_ai_registry_promotion_receipt_template",
+                required_now=True,
+                expected_from_operator_return=False,
+                note="Operator-fill template consumed by the guarded production AI registry promotion receipt gate.",
             )
         )
     next_artifact_path = _text(summary.get("production_ai_return_bundle_next_artifact_path"))
@@ -1259,6 +1291,188 @@ def build_product_commercial_readiness_handoff_bundle(
             )
             or {}
         ),
+        "production_ai_registry_promotion_operator_receipt_artifact": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_receipt_artifact",
+            )
+        ),
+        "production_ai_registry_promotion_operator_receipt_status": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_receipt_status",
+            )
+        ),
+        "production_ai_registry_promotion_operator_receipt_ready": bool(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_receipt_ready",
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_operator_receipt_present": bool(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_receipt_present",
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_operator_receipt_csv": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_receipt_csv",
+            )
+        ),
+        "production_ai_registry_promotion_operator_receipt_row_count": int(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_receipt_row_count",
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_operator_receipt_blocker_count": int(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_receipt_blocker_count",
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_operator_receipt_blocked_row_count": int(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_receipt_blocked_row_count",
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_operator_receipt_blockers": [
+            str(item)
+            for item in (
+                _first_present(
+                    ladder_summary,
+                    operator_summary,
+                    "production_ai_registry_promotion_operator_receipt_blockers",
+                )
+                or []
+            )
+        ],
+        "production_ai_registry_promotion_operator_receipt_first_blocked_artifact_id": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_receipt_first_blocked_artifact_id",
+            )
+        ),
+        "production_ai_registry_promotion_operator_receipt_first_blocked_row_blocker": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_receipt_first_blocked_row_blocker",
+            )
+        ),
+        "production_ai_registry_promotion_operator_receipt_first_blocked_row_blockers": [
+            str(item)
+            for item in (
+                _first_present(
+                    ladder_summary,
+                    operator_summary,
+                    "production_ai_registry_promotion_operator_receipt_first_blocked_row_blockers",
+                )
+                or []
+            )
+        ],
+        "production_ai_registry_promotion_operator_receipt_most_common_row_blocker": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_receipt_most_common_row_blocker",
+            )
+        ),
+        "production_ai_registry_promotion_operator_receipt_approval_token_required": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_receipt_approval_token_required",
+            )
+        ),
+        "production_ai_registry_promotion_operator_receipt_next_required_step": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_receipt_next_required_step",
+            )
+        ),
+        "production_ai_registry_promotion_operator_receipt_registry_artifact": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_receipt_registry_artifact",
+            )
+        ),
+        "production_ai_registry_promotion_operator_receipt_checkpoint_readiness_artifact": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_receipt_checkpoint_readiness_artifact",
+            )
+        ),
+        "production_ai_registry_promotion_operator_receipt_observed_registry_default_residual_mode": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_receipt_observed_registry_default_residual_mode",
+            )
+        ),
+        "production_ai_registry_promotion_operator_receipt_observed_registry_trained_model_checkpoint_count": int(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_receipt_observed_registry_trained_model_checkpoint_count",
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_operator_receipt_observed_checkpoint_registry_promotion_currently_satisfied": bool(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_receipt_observed_checkpoint_registry_promotion_currently_satisfied",
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_operator_receipt_observed_checkpoint_registry_promotion_missing_gate_ids": [
+            str(item)
+            for item in (
+                _first_present(
+                    ladder_summary,
+                    operator_summary,
+                    "production_ai_registry_promotion_operator_receipt_observed_checkpoint_registry_promotion_missing_gate_ids",
+                )
+                or []
+            )
+        ],
+        "production_ai_registry_promotion_operator_receipt_registry_edited_by_this_tool": bool(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_receipt_registry_edited_by_this_tool",
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_operator_receipt_checkpoint_created_by_this_tool": bool(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_receipt_checkpoint_created_by_this_tool",
+            )
+            is True
+        ),
         "delta_force_closure_acceptance_packet_artifact": _text(
             operator_summary.get("delta_force_closure_acceptance_packet_artifact")
         ),
@@ -1454,6 +1668,10 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- production_ai_registry_promotion_action_id: `{s['production_ai_registry_promotion_action_id']}`",
         f"- production_ai_registry_promotion_operator_completion_artifact_path: `{s['production_ai_registry_promotion_operator_completion_artifact_path']}`",
         f"- production_ai_registry_promotion_operator_completion_completion_rule: `{s['production_ai_registry_promotion_operator_completion_completion_rule']}`",
+        f"- production_ai_registry_promotion_operator_receipt_status: `{s['production_ai_registry_promotion_operator_receipt_status']}`",
+        f"- production_ai_registry_promotion_operator_receipt_ready: `{s['production_ai_registry_promotion_operator_receipt_ready']}`",
+        f"- production_ai_registry_promotion_operator_receipt_csv: `{s['production_ai_registry_promotion_operator_receipt_csv']}`",
+        f"- production_ai_registry_promotion_operator_receipt_approval_token_required: `{s['production_ai_registry_promotion_operator_receipt_approval_token_required']}`",
         f"- first_operator_completion_worker_runtime_receipt_contract_ready: `{s['first_operator_completion_worker_runtime_receipt_contract_ready']}`",
         f"- first_operator_completion_worker_runtime_receipt_required_fields_or_columns: `{';'.join(s['first_operator_completion_worker_runtime_receipt_required_fields_or_columns'])}`",
         f"- first_operator_completion_worker_runtime_receipt_post_environment_next_artifact: `{s['first_operator_completion_worker_runtime_receipt_post_environment_next_artifact']}`",

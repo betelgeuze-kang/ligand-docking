@@ -483,7 +483,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `restricted_release_allowed=true`, `full_commercial_release_allowed=false`,
   `full_commercial_release_blocker_visibility_ready=true`,
   `completion_audit_release_blocker_bottleneck_count=2`,
-  `commercial_readiness_handoff_bundle_artifact_reference_count=26`를 노출하고,
+  `commercial_readiness_handoff_bundle_artifact_reference_count=28`를 노출하고,
   `product_goal_primary_release_blocker_requirement_id=R8_full_scope_claim_closure`,
   `primary_release_blocker_action_id=product_scope_expansion:resolve_full_scope_breadth_evidence_receipt`,
   `primary_release_blocker_action_required_input=config/product_scope_breadth_evidence_receipt_current.csv`도
@@ -553,7 +553,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `config/product_scope_breadth_evidence_receipt_current.csv`를
   `local_scope_breadth_receipt` / `local_scope_breadth_receipt_template`
   artifact reference로 추적하며, 최신
-  `local_missing_artifact_reference_count=0`, `artifact_reference_count=26`이다.
+  `local_missing_artifact_reference_count=0`, `artifact_reference_count=28`이다.
   `product_release_source_of_truth_gate_current.json`은 이제
   `product_api_contract_current.json`,
   `product_service_boundary_contract_current.json`,
@@ -681,7 +681,15 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `/product/commercial-readiness-operator-packet`,
   `/product/commercial-readiness-execution-ladder`,
   `/product/commercial-readiness-handoff-bundle`은
-  `production_ai_registry_promotion_*` alias와 completion packet을 그대로 전달한다.
+  `production_ai_registry_promotion_*` alias, completion packet,
+  `production_ai_registry_promotion_operator_receipt_*` status/token/observed blocker
+  fields를 그대로 전달한다. `/goal/status`도 같은
+  `production_ai_registry_promotion_operator_receipt_*` status/token/observed blocker
+  fields를 handoff bundle summary에서 끌어와 goal API surface에 고정한다.
+  handoff bundle의 artifact reference manifest도
+  `runs/production_ai_registry_promotion_operator_receipt_current.json`과
+  `config/production_ai_registry_promotion_operator_receipt_current.csv`를 local required
+  operator receipt/template으로 포함한다.
 - `runs/product_production_ai_promotion_workbench_current.json`도
   `blocked_product_production_ai_promotion_workbench`,
   `production_ai_promotion_ready=false`,

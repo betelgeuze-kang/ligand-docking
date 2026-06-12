@@ -171,7 +171,7 @@
   `restricted_release_allowed`, `full_commercial_release_allowed`,
   `full_commercial_release_blocker_visibility_ready`,
   `completion_audit_release_blocker_bottleneck_count`, 그리고
-  `commercial_readiness_handoff_bundle_artifact_reference_count=26`를 함께 노출한다.
+  `commercial_readiness_handoff_bundle_artifact_reference_count=28`를 함께 노출한다.
   또한 `product_goal_primary_release_blocker_requirement_id`,
   `product_goal_primary_release_blocker`, `primary_release_blocker_action_id`,
   `primary_release_blocker_action_required_input`을 goal operator action board/intake
@@ -232,7 +232,7 @@
   handoff bundle의 artifact reference manifest는
   `product_scope_breadth_evidence_receipt` JSON과 CSV를 필수 local
   scope-breadth receipt evidence로 추적하며
-  `local_missing_artifact_reference_count=0`, `artifact_reference_count=26`이다.
+  `local_missing_artifact_reference_count=0`, `artifact_reference_count=28`이다.
 - `product_release_source_of_truth_gate_current.json`은
   `product_api_contract_current.json`,
   `product_service_boundary_contract_current.json`,
@@ -387,7 +387,15 @@
   `/product/commercial-readiness-operator-packet`,
   `/product/commercial-readiness-execution-ladder`,
   `/product/commercial-readiness-handoff-bundle`도
-  `production_ai_registry_promotion_*` alias와 completion packet을 전달한다.
+  `production_ai_registry_promotion_*` alias, completion packet,
+  `production_ai_registry_promotion_operator_receipt_*` status/token/observed blocker
+  fields를 전달한다. `/goal/status`도 같은
+  `production_ai_registry_promotion_operator_receipt_*` status/token/observed blocker
+  fields를 handoff bundle summary에서 끌어와 goal API surface에 고정한다.
+  handoff bundle artifact reference manifest에는
+  `runs/production_ai_registry_promotion_operator_receipt_current.json`과
+  `config/production_ai_registry_promotion_operator_receipt_current.csv`가 local required
+  receipt/template으로 포함된다.
 
 **갭**
 - `residual_model_registry`가 customer-facing guarded promotion을 허용하지 않고,

@@ -1610,6 +1610,25 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
         assert "registry_promotion_missing_gate_count=0" in operator_packet[
             "production_ai_registry_promotion_operator_completion_completion_rule"
         ]
+        assert operator_packet[
+            "production_ai_registry_promotion_operator_receipt_status"
+        ] == "blocked_production_ai_registry_promotion_operator_receipt"
+        assert (
+            operator_packet["production_ai_registry_promotion_operator_receipt_ready"]
+            is False
+        )
+        assert operator_packet[
+            "production_ai_registry_promotion_operator_receipt_approval_token_required"
+        ] == "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION"
+        assert operator_packet[
+            "production_ai_registry_promotion_operator_receipt_first_blocked_row_blocker"
+        ] == "operator_placeholders_unfilled"
+        assert operator_packet[
+            "production_ai_registry_promotion_operator_receipt_observed_registry_default_residual_mode"
+        ] == "shadow"
+        assert operator_packet[
+            "production_ai_registry_promotion_operator_receipt_observed_registry_trained_model_checkpoint_count"
+        ] == 0
     assert operator_packet["delta_force_closure_acceptance_packet_ready"] is True
     assert operator_packet["delta_force_closure_ready"] is False
     assert operator_packet["delta_force_closure_first_blocked_output_field"] == "delta_force"
@@ -1845,6 +1864,19 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
                 "production_ai_registry_promotion_operator_completion_diagnostic_commands"
             ]
         )
+        assert execution_ladder[
+            "production_ai_registry_promotion_operator_receipt_status"
+        ] == "blocked_production_ai_registry_promotion_operator_receipt"
+        assert (
+            execution_ladder["production_ai_registry_promotion_operator_receipt_ready"]
+            is False
+        )
+        assert execution_ladder[
+            "production_ai_registry_promotion_operator_receipt_approval_token_required"
+        ] == "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION"
+        assert execution_ladder[
+            "production_ai_registry_promotion_operator_receipt_first_blocked_row_blocker"
+        ] == "operator_placeholders_unfilled"
     assert execution_ladder["execution_enabled"] is False
     assert execution_ladder["checkpoint_promoted"] is False
 
@@ -1972,6 +2004,22 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
                 "production_ai_registry_promotion_operator_completion_diagnostic_commands"
             ]
         )
+        assert handoff_bundle[
+            "production_ai_registry_promotion_operator_receipt_status"
+        ] == "blocked_production_ai_registry_promotion_operator_receipt"
+        assert (
+            handoff_bundle["production_ai_registry_promotion_operator_receipt_ready"]
+            is False
+        )
+        assert handoff_bundle[
+            "production_ai_registry_promotion_operator_receipt_approval_token_required"
+        ] == "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION"
+        assert any(
+            row["artifact_id"] == "production_ai_registry_promotion_operator_receipt"
+            and row["artifact_path"]
+            == "runs/production_ai_registry_promotion_operator_receipt_current.json"
+            for row in handoff_bundle["artifact_reference_manifest"]
+        )
     assert handoff_bundle["delta_force_closure_acceptance_packet_artifact"] == (
         "runs/residual_delta_force_closure_acceptance_packet_current.json"
     )
@@ -2029,7 +2077,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
         "config/product_scope_breadth_evidence_receipt_current.csv"
     )
     assert handoff_bundle["artifact_reference_contract_ready"] is True
-    assert handoff_bundle["artifact_reference_count"] == 26
+    assert handoff_bundle["artifact_reference_count"] == 28
     assert handoff_bundle["local_missing_artifact_reference_count"] == 0
     assert handoff_bundle["operator_return_artifact_reference_count"] >= 4
     assert handoff_bundle["operator_return_pending_artifact_reference_count"] >= 1
@@ -2083,6 +2131,14 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
         row["artifact_id"] == "product_scope_breadth_evidence_receipt_csv"
         and row["artifact_path"] == "config/product_scope_breadth_evidence_receipt_current.csv"
         and row["reference_role"] == "local_scope_breadth_receipt_template"
+        and row["required_now"] is True
+        for row in handoff_bundle["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "production_ai_registry_promotion_operator_receipt_csv"
+        and row["artifact_path"]
+        == "config/production_ai_registry_promotion_operator_receipt_current.csv"
+        and row["reference_role"] == "local_production_ai_registry_promotion_receipt_template"
         and row["required_now"] is True
         for row in handoff_bundle["artifact_reference_manifest"]
     )
@@ -2267,7 +2323,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     ] == "AQP1.core_binder_01"
 
     assert completion["commercial_readiness_handoff_bundle_ready"] is True
-    assert completion["commercial_readiness_handoff_bundle_artifact_reference_count"] == 26
+    assert completion["commercial_readiness_handoff_bundle_artifact_reference_count"] == 28
     assert completion["commercial_readiness_handoff_bundle_operator_return_pending_artifact_reference_count"] == 1
     assert completion["commercial_readiness_next_action_matrix_ready"] is True
     assert completion["commercial_readiness_next_action_matrix_count"] == 6

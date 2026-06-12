@@ -14,6 +14,9 @@ DEFAULT_GOAL_AUDIT_JSON = "runs/product_goal_completion_audit_current.json"
 DEFAULT_DELTA_FORCE_CLOSURE_PACKET_JSON = "runs/residual_delta_force_closure_acceptance_packet_current.json"
 DEFAULT_SCOPE_CLOSURE_PACKET_JSON = "runs/product_scope_closure_acceptance_packet_current.json"
 DEFAULT_AQP1_DIRECT_BINDING_PROCUREMENT_JSON = "runs/aqp1_direct_binding_procurement_packet_current.json"
+DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_OPERATOR_RECEIPT_JSON = (
+    "runs/production_ai_registry_promotion_operator_receipt_current.json"
+)
 DEFAULT_OUT_JSON = "runs/product_commercial_readiness_operator_packet_current.json"
 DEFAULT_OUT_CSV = "runs/product_commercial_readiness_operator_packet_current.csv"
 DEFAULT_OUT_MD = "runs/product_commercial_readiness_operator_packet_current.md"
@@ -448,14 +451,21 @@ def build_product_commercial_readiness_operator_packet(
     delta_force_closure_packet: dict[str, Any] | None = None,
     scope_closure_packet: dict[str, Any] | None = None,
     aqp1_direct_binding_procurement_packet: dict[str, Any] | None = None,
+    production_ai_registry_promotion_operator_receipt_packet: dict[str, Any] | None = None,
     goal_audit_path: str = DEFAULT_GOAL_AUDIT_JSON,
     delta_force_closure_packet_path: str = DEFAULT_DELTA_FORCE_CLOSURE_PACKET_JSON,
     scope_closure_packet_path: str = DEFAULT_SCOPE_CLOSURE_PACKET_JSON,
     aqp1_direct_binding_procurement_path: str = DEFAULT_AQP1_DIRECT_BINDING_PROCUREMENT_JSON,
+    production_ai_registry_promotion_operator_receipt_path: str = (
+        DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_OPERATOR_RECEIPT_JSON
+    ),
 ) -> dict[str, Any]:
     summary = _summary(goal_audit_packet)
     delta_force_closure = _summary(delta_force_closure_packet or {})
     scope_closure = _summary(scope_closure_packet or {})
+    production_ai_registry_receipt = _summary(
+        production_ai_registry_promotion_operator_receipt_packet or {}
+    )
     raw_rows = summary.get("commercial_readiness_next_action_matrix")
     source_rows = [dict(row) for row in (raw_rows or []) if isinstance(row, dict)]
     rows = [
@@ -874,6 +884,84 @@ def build_product_commercial_readiness_operator_packet(
             str(item) for item in _list(production_ai_registry_packet.get("failed_check_ids"))
         ],
         "production_ai_registry_promotion_operator_completion_packet": production_ai_registry_packet,
+        "production_ai_registry_promotion_operator_receipt_artifact": (
+            production_ai_registry_promotion_operator_receipt_path
+        ),
+        "production_ai_registry_promotion_operator_receipt_status": _text(
+            production_ai_registry_receipt.get("status")
+        ),
+        "production_ai_registry_promotion_operator_receipt_ready": bool(
+            production_ai_registry_receipt.get("operator_receipt_ready") is True
+        ),
+        "production_ai_registry_promotion_operator_receipt_present": bool(
+            production_ai_registry_receipt.get("receipt_present") is True
+        ),
+        "production_ai_registry_promotion_operator_receipt_csv": _text(
+            production_ai_registry_receipt.get("receipt_csv")
+        ),
+        "production_ai_registry_promotion_operator_receipt_row_count": _int(
+            production_ai_registry_receipt.get("receipt_row_count")
+        ),
+        "production_ai_registry_promotion_operator_receipt_blocker_count": _int(
+            production_ai_registry_receipt.get("blocker_count")
+        ),
+        "production_ai_registry_promotion_operator_receipt_blocked_row_count": _int(
+            production_ai_registry_receipt.get("blocked_row_count")
+        ),
+        "production_ai_registry_promotion_operator_receipt_blockers": [
+            str(item) for item in _list(production_ai_registry_receipt.get("blockers"))
+        ],
+        "production_ai_registry_promotion_operator_receipt_first_blocked_artifact_id": _text(
+            production_ai_registry_receipt.get("first_blocked_artifact_id")
+        ),
+        "production_ai_registry_promotion_operator_receipt_first_blocked_row_blocker": _text(
+            production_ai_registry_receipt.get("first_blocked_row_blocker")
+        ),
+        "production_ai_registry_promotion_operator_receipt_first_blocked_row_blockers": [
+            str(item)
+            for item in _list(production_ai_registry_receipt.get("first_blocked_row_blockers"))
+        ],
+        "production_ai_registry_promotion_operator_receipt_most_common_row_blocker": _text(
+            production_ai_registry_receipt.get("most_common_row_blocker")
+        ),
+        "production_ai_registry_promotion_operator_receipt_approval_token_required": _text(
+            production_ai_registry_receipt.get("approval_token_required")
+        ),
+        "production_ai_registry_promotion_operator_receipt_next_required_step": _text(
+            production_ai_registry_receipt.get("next_required_step")
+        ),
+        "production_ai_registry_promotion_operator_receipt_registry_artifact": _text(
+            production_ai_registry_receipt.get("registry_artifact")
+        ),
+        "production_ai_registry_promotion_operator_receipt_checkpoint_readiness_artifact": _text(
+            production_ai_registry_receipt.get("checkpoint_readiness_artifact")
+        ),
+        "production_ai_registry_promotion_operator_receipt_observed_registry_default_residual_mode": _text(
+            production_ai_registry_receipt.get("observed_registry_default_residual_mode")
+        ),
+        "production_ai_registry_promotion_operator_receipt_observed_registry_trained_model_checkpoint_count": _int(
+            production_ai_registry_receipt.get("observed_registry_trained_model_checkpoint_count")
+        ),
+        "production_ai_registry_promotion_operator_receipt_observed_checkpoint_registry_promotion_currently_satisfied": bool(
+            production_ai_registry_receipt.get(
+                "observed_checkpoint_registry_promotion_currently_satisfied"
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_operator_receipt_observed_checkpoint_registry_promotion_missing_gate_ids": [
+            str(item)
+            for item in _list(
+                production_ai_registry_receipt.get(
+                    "observed_checkpoint_registry_promotion_missing_gate_ids"
+                )
+            )
+        ],
+        "production_ai_registry_promotion_operator_receipt_registry_edited_by_this_tool": bool(
+            production_ai_registry_receipt.get("registry_edited_by_this_tool") is True
+        ),
+        "production_ai_registry_promotion_operator_receipt_checkpoint_created_by_this_tool": bool(
+            production_ai_registry_receipt.get("checkpoint_created_by_this_tool") is True
+        ),
         "production_ai_return_bundle_required_artifact_count": _int(
             production_ai_return.get("return_bundle_required_artifact_count")
         ),
@@ -1081,6 +1169,14 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- diagnostic_command_count: `{s['production_ai_registry_promotion_operator_completion_diagnostic_command_count']}`",
         f"- completion_rule: `{s['production_ai_registry_promotion_operator_completion_completion_rule']}`",
         f"- failed_check_ids: `{';'.join(s['production_ai_registry_promotion_operator_completion_failed_check_ids'])}`",
+        f"- receipt_status: `{s['production_ai_registry_promotion_operator_receipt_status']}`",
+        f"- receipt_ready: `{s['production_ai_registry_promotion_operator_receipt_ready']}`",
+        f"- receipt_artifact: `{s['production_ai_registry_promotion_operator_receipt_artifact']}`",
+        f"- receipt_csv: `{s['production_ai_registry_promotion_operator_receipt_csv']}`",
+        f"- receipt_approval_token_required: `{s['production_ai_registry_promotion_operator_receipt_approval_token_required']}`",
+        f"- receipt_first_blocked_row_blocker: `{s['production_ai_registry_promotion_operator_receipt_first_blocked_row_blocker']}`",
+        f"- receipt_observed_registry_default_residual_mode: `{s['production_ai_registry_promotion_operator_receipt_observed_registry_default_residual_mode']}`",
+        f"- receipt_observed_registry_trained_model_checkpoint_count: `{s['production_ai_registry_promotion_operator_receipt_observed_registry_trained_model_checkpoint_count']}`",
         "",
         "## Production AI Return Completion Packet",
         "",
@@ -1142,6 +1238,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--delta-force-closure-packet-json", default=DEFAULT_DELTA_FORCE_CLOSURE_PACKET_JSON)
     parser.add_argument("--scope-closure-packet-json", default=DEFAULT_SCOPE_CLOSURE_PACKET_JSON)
     parser.add_argument("--aqp1-direct-binding-procurement-json", default=DEFAULT_AQP1_DIRECT_BINDING_PROCUREMENT_JSON)
+    parser.add_argument(
+        "--production-ai-registry-promotion-operator-receipt-json",
+        default=DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_OPERATOR_RECEIPT_JSON,
+    )
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -1157,10 +1257,16 @@ def main(argv: list[str] | None = None) -> None:
         aqp1_direct_binding_procurement_packet=_read_json_if_present(
             args.aqp1_direct_binding_procurement_json
         ),
+        production_ai_registry_promotion_operator_receipt_packet=_read_json_if_present(
+            args.production_ai_registry_promotion_operator_receipt_json
+        ),
         goal_audit_path=args.goal_audit_json,
         delta_force_closure_packet_path=args.delta_force_closure_packet_json,
         scope_closure_packet_path=args.scope_closure_packet_json,
         aqp1_direct_binding_procurement_path=args.aqp1_direct_binding_procurement_json,
+        production_ai_registry_promotion_operator_receipt_path=(
+            args.production_ai_registry_promotion_operator_receipt_json
+        ),
     )
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])

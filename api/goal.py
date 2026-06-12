@@ -103,6 +103,49 @@ def _mutation_flags() -> dict[str, bool]:
     }
 
 
+def _production_ai_registry_promotion_receipt_fields(handoff: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "production_ai_registry_promotion_operator_receipt_status": handoff.get(
+            "production_ai_registry_promotion_operator_receipt_status", ""
+        ),
+        "production_ai_registry_promotion_operator_receipt_ready": bool(
+            handoff.get("production_ai_registry_promotion_operator_receipt_ready") is True
+        ),
+        "production_ai_registry_promotion_operator_receipt_artifact": handoff.get(
+            "production_ai_registry_promotion_operator_receipt_artifact", ""
+        ),
+        "production_ai_registry_promotion_operator_receipt_csv": handoff.get(
+            "production_ai_registry_promotion_operator_receipt_csv", ""
+        ),
+        "production_ai_registry_promotion_operator_receipt_approval_token_required": handoff.get(
+            "production_ai_registry_promotion_operator_receipt_approval_token_required", ""
+        ),
+        "production_ai_registry_promotion_operator_receipt_first_blocked_row_blocker": handoff.get(
+            "production_ai_registry_promotion_operator_receipt_first_blocked_row_blocker", ""
+        ),
+        "production_ai_registry_promotion_operator_receipt_observed_registry_default_residual_mode": handoff.get(
+            "production_ai_registry_promotion_operator_receipt_observed_registry_default_residual_mode",
+            "",
+        ),
+        "production_ai_registry_promotion_operator_receipt_observed_registry_trained_model_checkpoint_count": _int(
+            handoff.get(
+                "production_ai_registry_promotion_operator_receipt_observed_registry_trained_model_checkpoint_count"
+            )
+        ),
+        "production_ai_registry_promotion_operator_receipt_observed_checkpoint_registry_promotion_currently_satisfied": bool(
+            handoff.get(
+                "production_ai_registry_promotion_operator_receipt_observed_checkpoint_registry_promotion_currently_satisfied"
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_operator_receipt_observed_checkpoint_registry_promotion_missing_gate_ids": _string_list(
+            handoff.get(
+                "production_ai_registry_promotion_operator_receipt_observed_checkpoint_registry_promotion_missing_gate_ids"
+            )
+        ),
+    }
+
+
 @router.get("/status")
 async def get_goal_status() -> dict[str, Any]:
     readiness_packet = _read_json_object(GOAL_READINESS_ROLLUP_ARTIFACT)
@@ -212,6 +255,7 @@ async def get_goal_status() -> dict[str, Any]:
             ),
             "commercial_readiness_handoff_bundle_artifact_reference_count": 0,
             "commercial_readiness_handoff_bundle_local_missing_artifact_reference_count": 0,
+            **_production_ai_registry_promotion_receipt_fields({}),
             "full_commercial_blocker_evidence_matrix_status": "",
             "full_commercial_blocker_evidence_matrix_ready": False,
             "full_commercial_blocker_evidence_matrix_artifact_path": str(
@@ -396,6 +440,7 @@ async def get_goal_status() -> dict[str, Any]:
         "commercial_readiness_handoff_bundle_local_missing_artifact_reference_count": _int(
             handoff.get("local_missing_artifact_reference_count")
         ),
+        **_production_ai_registry_promotion_receipt_fields(handoff),
         "full_commercial_blocker_evidence_matrix_status": full_commercial_matrix.get("status", ""),
         "full_commercial_blocker_evidence_matrix_ready": bool(
             full_commercial_matrix.get("full_commercial_blocker_evidence_matrix_ready") is True

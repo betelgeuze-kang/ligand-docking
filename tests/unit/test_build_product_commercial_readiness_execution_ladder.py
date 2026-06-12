@@ -68,6 +68,59 @@ def _operator_packet() -> dict:
             "production_ai_return_bundle_guardrail": (
                 "Returned summary alone does not unlock production AI."
             ),
+            "production_ai_registry_promotion_operator_receipt_artifact": (
+                "runs/production_ai_registry_promotion_operator_receipt_current.json"
+            ),
+            "production_ai_registry_promotion_operator_receipt_status": (
+                "blocked_production_ai_registry_promotion_operator_receipt"
+            ),
+            "production_ai_registry_promotion_operator_receipt_ready": False,
+            "production_ai_registry_promotion_operator_receipt_present": True,
+            "production_ai_registry_promotion_operator_receipt_csv": (
+                "config/production_ai_registry_promotion_operator_receipt_current.csv"
+            ),
+            "production_ai_registry_promotion_operator_receipt_row_count": 1,
+            "production_ai_registry_promotion_operator_receipt_blocker_count": 1,
+            "production_ai_registry_promotion_operator_receipt_blocked_row_count": 1,
+            "production_ai_registry_promotion_operator_receipt_blockers": [
+                "blocked_receipt_rows_present"
+            ],
+            "production_ai_registry_promotion_operator_receipt_first_blocked_artifact_id": (
+                "residual_model_registry_guarded_promotion"
+            ),
+            "production_ai_registry_promotion_operator_receipt_first_blocked_row_blocker": (
+                "operator_placeholders_unfilled"
+            ),
+            "production_ai_registry_promotion_operator_receipt_first_blocked_row_blockers": [
+                "operator_placeholders_unfilled",
+                "default_residual_mode_not_guarded",
+            ],
+            "production_ai_registry_promotion_operator_receipt_most_common_row_blocker": (
+                "operator_placeholders_unfilled"
+            ),
+            "production_ai_registry_promotion_operator_receipt_approval_token_required": (
+                "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION"
+            ),
+            "production_ai_registry_promotion_operator_receipt_next_required_step": (
+                "Fill the production AI registry promotion receipt."
+            ),
+            "production_ai_registry_promotion_operator_receipt_registry_artifact": (
+                "runs/residual_model_registry_current.json"
+            ),
+            "production_ai_registry_promotion_operator_receipt_checkpoint_readiness_artifact": (
+                "runs/product_production_ai_checkpoint_readiness_current.json"
+            ),
+            "production_ai_registry_promotion_operator_receipt_observed_registry_default_residual_mode": (
+                "shadow"
+            ),
+            "production_ai_registry_promotion_operator_receipt_observed_registry_trained_model_checkpoint_count": 0,
+            "production_ai_registry_promotion_operator_receipt_observed_checkpoint_registry_promotion_currently_satisfied": False,
+            "production_ai_registry_promotion_operator_receipt_observed_checkpoint_registry_promotion_missing_gate_ids": [
+                "production_promotion_allowed",
+                "default_residual_mode_guarded",
+            ],
+            "production_ai_registry_promotion_operator_receipt_registry_edited_by_this_tool": False,
+            "production_ai_registry_promotion_operator_receipt_checkpoint_created_by_this_tool": False,
             "first_operator_completion_worker_runtime_receipt_contract_ready": True,
             "first_operator_completion_worker_runtime_receipt_contract": {
                 "manifest_ready": True,
@@ -494,6 +547,26 @@ def test_product_commercial_readiness_execution_ladder_orders_fresh_actions() ->
         "production_ai_return_bundle_manifest_required_columns"
     ]
     assert "summary alone does not unlock" in summary["production_ai_return_bundle_guardrail"]
+    assert summary["production_ai_registry_promotion_operator_receipt_status"] == (
+        "blocked_production_ai_registry_promotion_operator_receipt"
+    )
+    assert summary["production_ai_registry_promotion_operator_receipt_ready"] is False
+    assert summary["production_ai_registry_promotion_operator_receipt_present"] is True
+    assert summary["production_ai_registry_promotion_operator_receipt_csv"] == (
+        "config/production_ai_registry_promotion_operator_receipt_current.csv"
+    )
+    assert summary[
+        "production_ai_registry_promotion_operator_receipt_approval_token_required"
+    ] == "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION"
+    assert summary[
+        "production_ai_registry_promotion_operator_receipt_first_blocked_row_blocker"
+    ] == "operator_placeholders_unfilled"
+    assert summary[
+        "production_ai_registry_promotion_operator_receipt_observed_registry_default_residual_mode"
+    ] == "shadow"
+    assert summary[
+        "production_ai_registry_promotion_operator_receipt_observed_registry_trained_model_checkpoint_count"
+    ] == 0
     assert summary["all_preconditions_satisfied"] is True
     assert payload["rows"][1]["post_validation_rebuild_command"].endswith(
         "python3 tools/build_product_goal_completion_audit.py"

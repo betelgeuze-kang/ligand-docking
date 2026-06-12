@@ -138,6 +138,95 @@ def commercial_production_ai_registry_promotion_fields(summary: dict[str, Any]) 
         "production_ai_registry_promotion_operator_completion_packet": dict(
             summary.get("production_ai_registry_promotion_operator_completion_packet") or {}
         ),
+        "production_ai_registry_promotion_operator_receipt_artifact": summary.get(
+            "production_ai_registry_promotion_operator_receipt_artifact", ""
+        ),
+        "production_ai_registry_promotion_operator_receipt_status": summary.get(
+            "production_ai_registry_promotion_operator_receipt_status", ""
+        ),
+        "production_ai_registry_promotion_operator_receipt_ready": bool(
+            summary.get("production_ai_registry_promotion_operator_receipt_ready") is True
+        ),
+        "production_ai_registry_promotion_operator_receipt_present": bool(
+            summary.get("production_ai_registry_promotion_operator_receipt_present") is True
+        ),
+        "production_ai_registry_promotion_operator_receipt_csv": summary.get(
+            "production_ai_registry_promotion_operator_receipt_csv", ""
+        ),
+        "production_ai_registry_promotion_operator_receipt_row_count": int(
+            summary.get("production_ai_registry_promotion_operator_receipt_row_count") or 0
+        ),
+        "production_ai_registry_promotion_operator_receipt_blocker_count": int(
+            summary.get("production_ai_registry_promotion_operator_receipt_blocker_count") or 0
+        ),
+        "production_ai_registry_promotion_operator_receipt_blocked_row_count": int(
+            summary.get("production_ai_registry_promotion_operator_receipt_blocked_row_count") or 0
+        ),
+        "production_ai_registry_promotion_operator_receipt_blockers": list(
+            summary.get("production_ai_registry_promotion_operator_receipt_blockers") or []
+        ),
+        "production_ai_registry_promotion_operator_receipt_first_blocked_artifact_id": summary.get(
+            "production_ai_registry_promotion_operator_receipt_first_blocked_artifact_id", ""
+        ),
+        "production_ai_registry_promotion_operator_receipt_first_blocked_row_blocker": summary.get(
+            "production_ai_registry_promotion_operator_receipt_first_blocked_row_blocker", ""
+        ),
+        "production_ai_registry_promotion_operator_receipt_first_blocked_row_blockers": list(
+            summary.get(
+                "production_ai_registry_promotion_operator_receipt_first_blocked_row_blockers"
+            )
+            or []
+        ),
+        "production_ai_registry_promotion_operator_receipt_most_common_row_blocker": summary.get(
+            "production_ai_registry_promotion_operator_receipt_most_common_row_blocker", ""
+        ),
+        "production_ai_registry_promotion_operator_receipt_approval_token_required": summary.get(
+            "production_ai_registry_promotion_operator_receipt_approval_token_required", ""
+        ),
+        "production_ai_registry_promotion_operator_receipt_next_required_step": summary.get(
+            "production_ai_registry_promotion_operator_receipt_next_required_step", ""
+        ),
+        "production_ai_registry_promotion_operator_receipt_registry_artifact": summary.get(
+            "production_ai_registry_promotion_operator_receipt_registry_artifact", ""
+        ),
+        "production_ai_registry_promotion_operator_receipt_checkpoint_readiness_artifact": summary.get(
+            "production_ai_registry_promotion_operator_receipt_checkpoint_readiness_artifact",
+            "",
+        ),
+        "production_ai_registry_promotion_operator_receipt_observed_registry_default_residual_mode": summary.get(
+            "production_ai_registry_promotion_operator_receipt_observed_registry_default_residual_mode",
+            "",
+        ),
+        "production_ai_registry_promotion_operator_receipt_observed_registry_trained_model_checkpoint_count": int(
+            summary.get(
+                "production_ai_registry_promotion_operator_receipt_observed_registry_trained_model_checkpoint_count"
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_operator_receipt_observed_checkpoint_registry_promotion_currently_satisfied": bool(
+            summary.get(
+                "production_ai_registry_promotion_operator_receipt_observed_checkpoint_registry_promotion_currently_satisfied"
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_operator_receipt_observed_checkpoint_registry_promotion_missing_gate_ids": list(
+            summary.get(
+                "production_ai_registry_promotion_operator_receipt_observed_checkpoint_registry_promotion_missing_gate_ids"
+            )
+            or []
+        ),
+        "production_ai_registry_promotion_operator_receipt_registry_edited_by_this_tool": bool(
+            summary.get(
+                "production_ai_registry_promotion_operator_receipt_registry_edited_by_this_tool"
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_operator_receipt_checkpoint_created_by_this_tool": bool(
+            summary.get(
+                "production_ai_registry_promotion_operator_receipt_checkpoint_created_by_this_tool"
+            )
+            is True
+        ),
     }
 
 

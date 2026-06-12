@@ -492,6 +492,59 @@ def _ladder(ready: bool = True) -> dict:
             "production_ai_return_bundle_guardrail": (
                 "Returned summary alone does not unlock production AI."
             ),
+            "production_ai_registry_promotion_operator_receipt_artifact": (
+                "runs/production_ai_registry_promotion_operator_receipt_current.json"
+            ),
+            "production_ai_registry_promotion_operator_receipt_status": (
+                "blocked_production_ai_registry_promotion_operator_receipt"
+            ),
+            "production_ai_registry_promotion_operator_receipt_ready": False,
+            "production_ai_registry_promotion_operator_receipt_present": True,
+            "production_ai_registry_promotion_operator_receipt_csv": (
+                "config/production_ai_registry_promotion_operator_receipt_current.csv"
+            ),
+            "production_ai_registry_promotion_operator_receipt_row_count": 1,
+            "production_ai_registry_promotion_operator_receipt_blocker_count": 1,
+            "production_ai_registry_promotion_operator_receipt_blocked_row_count": 1,
+            "production_ai_registry_promotion_operator_receipt_blockers": [
+                "blocked_receipt_rows_present"
+            ],
+            "production_ai_registry_promotion_operator_receipt_first_blocked_artifact_id": (
+                "residual_model_registry_guarded_promotion"
+            ),
+            "production_ai_registry_promotion_operator_receipt_first_blocked_row_blocker": (
+                "operator_placeholders_unfilled"
+            ),
+            "production_ai_registry_promotion_operator_receipt_first_blocked_row_blockers": [
+                "operator_placeholders_unfilled",
+                "default_residual_mode_not_guarded",
+            ],
+            "production_ai_registry_promotion_operator_receipt_most_common_row_blocker": (
+                "operator_placeholders_unfilled"
+            ),
+            "production_ai_registry_promotion_operator_receipt_approval_token_required": (
+                "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION"
+            ),
+            "production_ai_registry_promotion_operator_receipt_next_required_step": (
+                "Fill the production AI registry promotion receipt."
+            ),
+            "production_ai_registry_promotion_operator_receipt_registry_artifact": (
+                "runs/residual_model_registry_current.json"
+            ),
+            "production_ai_registry_promotion_operator_receipt_checkpoint_readiness_artifact": (
+                "runs/product_production_ai_checkpoint_readiness_current.json"
+            ),
+            "production_ai_registry_promotion_operator_receipt_observed_registry_default_residual_mode": (
+                "shadow"
+            ),
+            "production_ai_registry_promotion_operator_receipt_observed_registry_trained_model_checkpoint_count": 0,
+            "production_ai_registry_promotion_operator_receipt_observed_checkpoint_registry_promotion_currently_satisfied": False,
+            "production_ai_registry_promotion_operator_receipt_observed_checkpoint_registry_promotion_missing_gate_ids": [
+                "production_promotion_allowed",
+                "default_residual_mode_guarded",
+            ],
+            "production_ai_registry_promotion_operator_receipt_registry_edited_by_this_tool": False,
+            "production_ai_registry_promotion_operator_receipt_checkpoint_created_by_this_tool": False,
             "first_operator_completion_worker_runtime_receipt_contract_ready": True,
             "first_operator_completion_worker_runtime_receipt_contract": {
                 "manifest_ready": True,
@@ -747,6 +800,23 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
         "residual_force_trajectory_regeneration_current_manifest.csv" in artifact
         for artifact in summary["production_ai_return_bundle_required_artifacts"]
     )
+    assert summary["production_ai_registry_promotion_operator_receipt_status"] == (
+        "blocked_production_ai_registry_promotion_operator_receipt"
+    )
+    assert summary["production_ai_registry_promotion_operator_receipt_ready"] is False
+    assert summary["production_ai_registry_promotion_operator_receipt_present"] is True
+    assert summary["production_ai_registry_promotion_operator_receipt_csv"] == (
+        "config/production_ai_registry_promotion_operator_receipt_current.csv"
+    )
+    assert summary[
+        "production_ai_registry_promotion_operator_receipt_approval_token_required"
+    ] == "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION"
+    assert summary[
+        "production_ai_registry_promotion_operator_receipt_first_blocked_row_blocker"
+    ] == "operator_placeholders_unfilled"
+    assert summary[
+        "production_ai_registry_promotion_operator_receipt_observed_registry_default_residual_mode"
+    ] == "shadow"
     assert summary["delta_force_closure_acceptance_packet_ready"] is True
     assert summary["delta_force_closure_ready"] is False
     assert summary["delta_force_closure_first_blocked_output_field"] == "delta_force"
@@ -878,6 +948,20 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
         row["artifact_id"] == "product_scope_breadth_evidence_receipt_csv"
         and row["artifact_path"] == "config/product_scope_breadth_evidence_receipt_current.csv"
         and row["reference_role"] == "local_scope_breadth_receipt_template"
+        and row["required_now"] is True
+        for row in summary["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "production_ai_registry_promotion_operator_receipt"
+        and row["artifact_path"] == "runs/production_ai_registry_promotion_operator_receipt_current.json"
+        and row["reference_role"] == "local_production_ai_registry_promotion_receipt"
+        and row["required_now"] is True
+        for row in summary["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "production_ai_registry_promotion_operator_receipt_csv"
+        and row["artifact_path"] == "config/production_ai_registry_promotion_operator_receipt_current.csv"
+        and row["reference_role"] == "local_production_ai_registry_promotion_receipt_template"
         and row["required_now"] is True
         for row in summary["artifact_reference_manifest"]
     )

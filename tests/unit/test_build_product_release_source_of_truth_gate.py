@@ -470,6 +470,20 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/engine_refinement_claim_evidence_receipt_current.json" in full_commercial_matrix_spec["depends_on"]
     assert "runs/product_goal_completion_audit_current.json" in full_commercial_matrix_spec["depends_on"]
     assert "runs/goal_bottleneck_briefing_current.json" in full_commercial_matrix_spec["depends_on"]
+    commercial_operator_packet_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "product_commercial_readiness_operator_packet"
+    )
+    assert "runs/product_goal_completion_audit_current.json" in commercial_operator_packet_spec["depends_on"]
+    assert (
+        "runs/production_ai_registry_promotion_operator_receipt_current.json"
+        in commercial_operator_packet_spec["depends_on"]
+    )
+    assert (
+        "config/production_ai_registry_promotion_operator_receipt_current.csv"
+        in commercial_operator_packet_spec["depends_on"]
+    )
     commercial_ladder_spec = next(
         spec
         for spec in mod.DEFAULT_ARTIFACT_SPECS

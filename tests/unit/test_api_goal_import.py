@@ -40,6 +40,7 @@ def test_api_app_imports_with_goal_router() -> None:
     intake_artifact = _artifact_summary("goal_operator_intake_kit_current/manifest.json")
     api_contract_artifact = _artifact_summary("goal_api_surface_contract_current.json")
     product_goal_completion_artifact = _artifact_summary("product_goal_completion_audit_current.json")
+    handoff_artifact = _artifact_summary("product_commercial_readiness_handoff_bundle_current.json")
     full_matrix_artifact = _artifact_summary(
         "product_full_commercial_blocker_evidence_matrix_current.json"
     )
@@ -218,8 +219,42 @@ def test_api_app_imports_with_goal_router() -> None:
         "product_commercial_readiness_handoff_bundle_ready"
     )
     assert status["commercial_readiness_handoff_bundle_ready"] is True
-    assert status["commercial_readiness_handoff_bundle_artifact_reference_count"] == 26
+    assert status["commercial_readiness_handoff_bundle_artifact_reference_count"] == 28
     assert status["commercial_readiness_handoff_bundle_local_missing_artifact_reference_count"] == 0
+    assert status["production_ai_registry_promotion_operator_receipt_status"] == (
+        handoff_artifact.get("production_ai_registry_promotion_operator_receipt_status")
+    )
+    assert status["production_ai_registry_promotion_operator_receipt_status"] == (
+        "blocked_production_ai_registry_promotion_operator_receipt"
+    )
+    assert status["production_ai_registry_promotion_operator_receipt_ready"] is False
+    assert status["production_ai_registry_promotion_operator_receipt_artifact"] == (
+        "runs/production_ai_registry_promotion_operator_receipt_current.json"
+    )
+    assert status["production_ai_registry_promotion_operator_receipt_csv"] == (
+        "config/production_ai_registry_promotion_operator_receipt_current.csv"
+    )
+    assert status["production_ai_registry_promotion_operator_receipt_approval_token_required"] == (
+        "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION"
+    )
+    assert status["production_ai_registry_promotion_operator_receipt_first_blocked_row_blocker"] == (
+        "operator_placeholders_unfilled"
+    )
+    assert status[
+        "production_ai_registry_promotion_operator_receipt_observed_registry_default_residual_mode"
+    ] == "shadow"
+    assert status[
+        "production_ai_registry_promotion_operator_receipt_observed_registry_trained_model_checkpoint_count"
+    ] == 0
+    assert (
+        status[
+            "production_ai_registry_promotion_operator_receipt_observed_checkpoint_registry_promotion_currently_satisfied"
+        ]
+        is False
+    )
+    assert "default_residual_mode_guarded" in status[
+        "production_ai_registry_promotion_operator_receipt_observed_checkpoint_registry_promotion_missing_gate_ids"
+    ]
     assert status["full_commercial_blocker_evidence_matrix_status"] == full_matrix_artifact.get(
         "status"
     )

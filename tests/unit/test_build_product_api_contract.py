@@ -397,6 +397,16 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
         "production_ai_registry_promotion_operator_completion_packet"
         in operator_packet_keys
     )
+    assert "production_ai_registry_promotion_operator_receipt_status" in operator_packet_keys
+    assert "production_ai_registry_promotion_operator_receipt_ready" in operator_packet_keys
+    assert (
+        "production_ai_registry_promotion_operator_receipt_approval_token_required"
+        in operator_packet_keys
+    )
+    assert (
+        "production_ai_registry_promotion_operator_receipt_observed_registry_default_residual_mode"
+        in operator_packet_keys
+    )
     assert "production_ai_return_operator_completion_artifact_path" in operator_packet_keys
     assert "production_ai_return_operator_completion_completion_rule" in operator_packet_keys
     assert (
@@ -485,6 +495,16 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
         "production_ai_registry_promotion_operator_completion_packet"
         in execution_ladder_keys
     )
+    assert "production_ai_registry_promotion_operator_receipt_status" in execution_ladder_keys
+    assert "production_ai_registry_promotion_operator_receipt_ready" in execution_ladder_keys
+    assert (
+        "production_ai_registry_promotion_operator_receipt_approval_token_required"
+        in execution_ladder_keys
+    )
+    assert (
+        "production_ai_registry_promotion_operator_receipt_observed_registry_default_residual_mode"
+        in execution_ladder_keys
+    )
     assert "production_ai_return_operator_completion_artifact_path" in execution_ladder_keys
     assert "production_ai_return_operator_completion_completion_rule" in execution_ladder_keys
     assert (
@@ -543,6 +563,16 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     )
     assert (
         "production_ai_registry_promotion_operator_completion_packet"
+        in handoff_bundle_keys
+    )
+    assert "production_ai_registry_promotion_operator_receipt_status" in handoff_bundle_keys
+    assert "production_ai_registry_promotion_operator_receipt_ready" in handoff_bundle_keys
+    assert (
+        "production_ai_registry_promotion_operator_receipt_approval_token_required"
+        in handoff_bundle_keys
+    )
+    assert (
+        "production_ai_registry_promotion_operator_receipt_observed_registry_default_residual_mode"
         in handoff_bundle_keys
     )
     assert "production_ai_return_operator_completion_artifact_path" in handoff_bundle_keys
