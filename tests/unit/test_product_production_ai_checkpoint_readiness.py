@@ -597,6 +597,10 @@ def test_production_ai_checkpoint_readiness_ready_when_all_gates_pass() -> None:
     assert payload["summary"]["status"] == "product_production_ai_checkpoint_readiness_ready"
     assert payload["summary"]["production_ai_checkpoint_ready"] is True
     assert payload["summary"]["production_ai_inference_subject_active"] is True
+    assert payload["summary"]["registry_promotion_missing_gate_ids"] == []
+    assert payload["summary"]["registry_promotion_missing_gate_count"] == 0
+    assert payload["summary"]["registry_promotion_upstream_acceptance_ready"] is True
+    assert payload["summary"]["registry_promotion_currently_satisfied"] is True
     assert payload["summary"]["fail_check_count"] == 0
     assert payload["summary"]["production_inference_acceptance_matrix_ready"] is True
     assert payload["summary"]["production_gpu_execution_environment_ready"] is True
@@ -611,6 +615,71 @@ def test_production_ai_checkpoint_readiness_ready_when_all_gates_pass() -> None:
     assert payload["summary"]["production_inference_actionable_blocker_blocks_registry_promotion"] is False
     assert payload["summary"]["first_failed_check_id"] == ""
     assert payload["summary"]["first_failed_source_artifact"] == ""
+
+
+def test_registry_blocker_next_action_names_missing_registry_gates_after_upstream_ready() -> None:
+    payload = build_product_production_ai_checkpoint_readiness(
+        registry_packet=_packet(
+            {
+                "product_model_layer_ready": True,
+                "default_residual_mode": "shadow",
+                "production_promotion_allowed": False,
+                "customer_facing_auto_correction_allowed": False,
+                "customer_facing_score_mutation_allowed": False,
+                "customer_facing_ranking_mutation_allowed": False,
+                "trained_model_checkpoint_count": 0,
+                "selected_sidecar_ready": True,
+                "selected_sidecar_training_contract_ready": True,
+                "selected_sidecar_force_receipt_ready": True,
+                "checkpoint_missing_output_fields": [],
+                "checkpoint_missing_adapter_output_policy_fields": [],
+            }
+        ),
+        checkpoint_work_order_packet=_packet({"checkpoint_preflight_ready": True, "ready_checkpoint_count": 1}),
+        training_data_packet=_packet({"production_training_data_ready": True}),
+        force_derivation_validation_packet=_packet({"delta_force_derivation_validation_ready": True}),
+        output_head_gap_contract_packet=_packet(
+            {"output_head_gap_contract_ready": True, "production_output_heads_complete": True}
+        ),
+        force_gpu_worker_return_receipt_packet=_packet({"gpu_worker_return_receipt_ready": True}),
+        rocm_environment_packet=_packet(
+            {
+                "manifest_ready": True,
+                "rocm_stack_detected": True,
+                "torch_rocm_ready": True,
+                "amd_gpu_detected": True,
+                "visible_device_count": 1,
+            }
+        ),
+    )
+
+    summary = payload["summary"]
+    assert summary["fail_check_count"] == 1
+    assert summary["first_failed_check_id"] == "registry_customer_facing_promotion_allowed"
+    assert summary["registry_promotion_required_gate_ids"] == [
+        "production_promotion_allowed",
+        "customer_facing_mutation_flags",
+        "default_residual_mode_guarded",
+        "trained_model_checkpoint_count_positive",
+    ]
+    assert summary["registry_promotion_missing_gate_ids"] == [
+        "production_promotion_allowed",
+        "customer_facing_mutation_flags",
+        "default_residual_mode_guarded",
+        "trained_model_checkpoint_count_positive",
+    ]
+    assert summary["registry_promotion_missing_gate_count"] == 4
+    assert summary["registry_promotion_upstream_acceptance_ready"] is True
+    assert summary["registry_promotion_currently_satisfied"] is False
+    assert "Register or promote a trained preflight-ready production checkpoint" in summary[
+        "first_failed_next_action"
+    ]
+    assert "production_promotion_allowed" in summary["first_failed_next_action"]
+    assert "customer_facing_mutation_flags" in summary["first_failed_next_action"]
+    assert "default_residual_mode_guarded" in summary["first_failed_next_action"]
+    assert "trained_model_checkpoint_count_positive" in summary["first_failed_next_action"]
+    assert "upstream production-inference acceptance gates" not in summary["first_failed_next_action"]
+    assert summary["production_inference_acceptance_next_stage_id"] == "registry_guarded_promotion_acceptance"
 
 
 def test_force_derivation_acceptance_ready_when_delta_force_evidence_ready_without_dataset_label() -> None:

@@ -244,6 +244,11 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     assert "first_failed_observed" in checkpoint_keys
     assert "first_failed_required" in checkpoint_keys
     assert "first_failed_next_action" in checkpoint_keys
+    assert "registry_promotion_required_gate_ids" in checkpoint_keys
+    assert "registry_promotion_missing_gate_ids" in checkpoint_keys
+    assert "registry_promotion_missing_gate_count" in checkpoint_keys
+    assert "registry_promotion_upstream_acceptance_ready" in checkpoint_keys
+    assert "registry_promotion_currently_satisfied" in checkpoint_keys
     assert "production_inference_actionable_blocker_stage_id" in checkpoint_keys
     assert "production_inference_actionable_blocker_check_id" in checkpoint_keys
     assert "production_inference_actionable_blocker_next_action" in checkpoint_keys
@@ -258,6 +263,10 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     assert "production_inference_actionable_operator_completion_packet" in checkpoint_keys
     assert "production_inference_worker_runtime_receipt_contract_ready" in checkpoint_keys
     assert "production_inference_worker_runtime_receipt_required_fields_or_columns" in checkpoint_keys
+    promotion_keys = REQUIRED_STATUS_DOMAIN_KEYS["get_product_production_ai_promotion_workbench"]
+    assert "registry_promotion_missing_gate_ids" in promotion_keys
+    assert "registry_promotion_missing_gate_count" in promotion_keys
+    assert "registry_promotion_upstream_acceptance_ready" in promotion_keys
     assert "production_inference_worker_runtime_receipt_completion_rule" in checkpoint_keys
     assert "production_inference_worker_runtime_receipt_post_environment_next_stage_id" in checkpoint_keys
     assert "production_inference_worker_runtime_receipt_guardrails" in checkpoint_keys
@@ -685,6 +694,9 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     assert "production_ai_checkpoint_first_failed_check_id" in goal_completion_keys
     assert "production_ai_checkpoint_first_failed_source_artifact" in goal_completion_keys
     assert "production_ai_checkpoint_first_failed_next_action" in goal_completion_keys
+    assert "production_ai_checkpoint_registry_promotion_missing_gate_ids" in goal_completion_keys
+    assert "production_ai_checkpoint_registry_promotion_missing_gate_count" in goal_completion_keys
+    assert "production_ai_checkpoint_registry_promotion_upstream_acceptance_ready" in goal_completion_keys
     assert "production_ai_checkpoint_actionable_blocker_stage_id" in goal_completion_keys
     assert "production_ai_checkpoint_actionable_blocker_check_id" in goal_completion_keys
     assert "production_ai_checkpoint_actionable_blocker_next_action" in goal_completion_keys

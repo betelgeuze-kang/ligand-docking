@@ -29,6 +29,12 @@ ROCM_WORKER_RUNTIME_RECEIPT_FIELDS = [
     "require_rust_hip",
     "backend_counts",
 ]
+REGISTRY_PROMOTION_REQUIRED_GATE_IDS = [
+    "production_promotion_allowed",
+    "customer_facing_mutation_flags",
+    "default_residual_mode_guarded",
+    "trained_model_checkpoint_count_positive",
+]
 
 
 def _summary(packet: dict[str, Any]) -> dict[str, Any]:
@@ -78,6 +84,103 @@ def _row(check_id: str, ready: bool, observed: str, required: str, next_action: 
         "model_promoted": False,
         "external_state_mutated": False,
     }
+
+
+def _registry_promotion_missing_gate_ids(
+    *,
+    production_promotion_allowed: bool,
+    customer_flags_ready: bool,
+    mode_ready: bool,
+    trained_checkpoint_count: int,
+) -> list[str]:
+    missing_registry_gates: list[str] = []
+    if not production_promotion_allowed:
+        missing_registry_gates.append("production_promotion_allowed")
+    if not customer_flags_ready:
+        missing_registry_gates.append("customer_facing_mutation_flags")
+    if not mode_ready:
+        missing_registry_gates.append("default_residual_mode_guarded")
+    if trained_checkpoint_count <= 0:
+        missing_registry_gates.append("trained_model_checkpoint_count_positive")
+    return missing_registry_gates
+
+
+def _registry_promotion_upstream_acceptance_ready(
+    *,
+    production_gpu_execution_environment_ready: bool,
+    gpu_receipt_ready: bool,
+    delta_force_derivation_validation_ready: bool,
+    training_data_ready: bool,
+    score_model_ready: bool,
+    selected_sidecar_ready: bool,
+    selected_sidecar_training_ready: bool,
+    selected_sidecar_force_receipt_ready: bool,
+    checkpoint_preflight_ready: bool,
+    ready_checkpoint_count: int,
+) -> bool:
+    return all(
+        (
+            production_gpu_execution_environment_ready,
+            gpu_receipt_ready,
+            delta_force_derivation_validation_ready,
+            training_data_ready,
+            score_model_ready,
+            selected_sidecar_ready,
+            selected_sidecar_training_ready,
+            selected_sidecar_force_receipt_ready,
+            checkpoint_preflight_ready,
+            ready_checkpoint_count > 0,
+        )
+    )
+
+
+def _registry_promotion_next_action(
+    *,
+    production_promotion_allowed: bool,
+    customer_flags_ready: bool,
+    mode_ready: bool,
+    trained_checkpoint_count: int,
+    production_gpu_execution_environment_ready: bool,
+    gpu_receipt_ready: bool,
+    delta_force_derivation_validation_ready: bool,
+    training_data_ready: bool,
+    score_model_ready: bool,
+    selected_sidecar_ready: bool,
+    selected_sidecar_training_ready: bool,
+    selected_sidecar_force_receipt_ready: bool,
+    checkpoint_preflight_ready: bool,
+    ready_checkpoint_count: int,
+) -> str:
+    missing_registry_gates = _registry_promotion_missing_gate_ids(
+        production_promotion_allowed=production_promotion_allowed,
+        customer_flags_ready=customer_flags_ready,
+        mode_ready=mode_ready,
+        trained_checkpoint_count=trained_checkpoint_count,
+    )
+    upstream_ready = _registry_promotion_upstream_acceptance_ready(
+        production_gpu_execution_environment_ready=production_gpu_execution_environment_ready,
+        gpu_receipt_ready=gpu_receipt_ready,
+        delta_force_derivation_validation_ready=delta_force_derivation_validation_ready,
+        training_data_ready=training_data_ready,
+        score_model_ready=score_model_ready,
+        selected_sidecar_ready=selected_sidecar_ready,
+        selected_sidecar_training_ready=selected_sidecar_training_ready,
+        selected_sidecar_force_receipt_ready=selected_sidecar_force_receipt_ready,
+        checkpoint_preflight_ready=checkpoint_preflight_ready,
+        ready_checkpoint_count=ready_checkpoint_count,
+    )
+    gate_list = ",".join(missing_registry_gates) or "none"
+    if upstream_ready:
+        return (
+            "Register or promote a trained preflight-ready production checkpoint in residual_model_registry, "
+            "then rerun the registry and checkpoint-readiness gates; keep customer-facing mutation disabled "
+            f"until registry_customer_facing_promotion_allowed passes. Missing registry gates: {gate_list}."
+        )
+    return (
+        "Keep customer-facing mutation disabled while closing the upstream production-inference acceptance gates, "
+        "then rebuild residual_model_registry for guarded promotion. Missing registry gates: "
+        f"{gate_list}."
+    )
 
 
 def _acceptance_stage(
@@ -194,6 +297,45 @@ def build_product_production_ai_checkpoint_readiness(
     selected_sidecar_force_receipt_ready = _bool(registry.get("selected_sidecar_force_receipt_ready"))
     output_head_gap_contract_ready = _bool(output_head_gap.get("output_head_gap_contract_ready"))
     production_output_heads_complete = _bool(output_head_gap.get("production_output_heads_complete"))
+    score_model_ready = bool(
+        ready_checkpoint_count > 0
+        and not _list(registry.get("checkpoint_missing_output_fields"))
+        and not _list(registry.get("checkpoint_missing_adapter_output_policy_fields"))
+    )
+    registry_promotion_missing_gate_ids = _registry_promotion_missing_gate_ids(
+        production_promotion_allowed=production_promotion_allowed,
+        customer_flags_ready=customer_flags_ready,
+        mode_ready=mode_ready,
+        trained_checkpoint_count=trained_checkpoint_count,
+    )
+    registry_promotion_upstream_acceptance_ready = _registry_promotion_upstream_acceptance_ready(
+        production_gpu_execution_environment_ready=production_gpu_execution_environment_ready,
+        gpu_receipt_ready=gpu_receipt_ready,
+        delta_force_derivation_validation_ready=delta_force_derivation_validation_ready,
+        training_data_ready=training_data_ready,
+        score_model_ready=score_model_ready,
+        selected_sidecar_ready=selected_sidecar_ready,
+        selected_sidecar_training_ready=selected_sidecar_training_ready,
+        selected_sidecar_force_receipt_ready=selected_sidecar_force_receipt_ready,
+        checkpoint_preflight_ready=checkpoint_preflight_ready,
+        ready_checkpoint_count=ready_checkpoint_count,
+    )
+    registry_promotion_next_action = _registry_promotion_next_action(
+        production_promotion_allowed=production_promotion_allowed,
+        customer_flags_ready=customer_flags_ready,
+        mode_ready=mode_ready,
+        trained_checkpoint_count=trained_checkpoint_count,
+        production_gpu_execution_environment_ready=production_gpu_execution_environment_ready,
+        gpu_receipt_ready=gpu_receipt_ready,
+        delta_force_derivation_validation_ready=delta_force_derivation_validation_ready,
+        training_data_ready=training_data_ready,
+        score_model_ready=score_model_ready,
+        selected_sidecar_ready=selected_sidecar_ready,
+        selected_sidecar_training_ready=selected_sidecar_training_ready,
+        selected_sidecar_force_receipt_ready=selected_sidecar_force_receipt_ready,
+        checkpoint_preflight_ready=checkpoint_preflight_ready,
+        ready_checkpoint_count=ready_checkpoint_count,
+    )
     post_return_promotion_ladder = _list(handoff.get("post_return_promotion_ladder"))
     post_return_promotion_ladder_stage_ids = [
         _text(row.get("stage_id")) for row in post_return_promotion_ladder if isinstance(row, dict) and row.get("stage_id")
@@ -221,7 +363,7 @@ def build_product_production_ai_checkpoint_readiness(
                 f"trained_model_checkpoint_count={trained_checkpoint_count}"
             ),
             "production promotion, customer-facing mutation flags, guarded mode, and trained checkpoint count are ready",
-            "Keep customer-facing mutation disabled until checkpoint preflight, training data, and force receipt are ready.",
+            registry_promotion_next_action,
         ),
         _row(
             "production_gpu_execution_environment_ready",
@@ -322,11 +464,6 @@ def build_product_production_ai_checkpoint_readiness(
         "selected_sidecar_ready": registry_artifact_path,
     }
     production_ai_checkpoint_ready = all(row["status"] == "pass" for row in rows)
-    score_model_ready = bool(
-        ready_checkpoint_count > 0
-        and not _list(registry.get("checkpoint_missing_output_fields"))
-        and not _list(registry.get("checkpoint_missing_adapter_output_policy_fields"))
-    )
     registry_promotion_ready = bool(
         production_promotion_allowed and customer_flags_ready and mode_ready and trained_checkpoint_count > 0
     )
@@ -436,7 +573,7 @@ def build_product_production_ai_checkpoint_readiness(
             release_effect=(
                 "AI model can become the guarded production inference subject for customer-facing correction"
             ),
-            next_action="Rebuild the residual registry after a preflight-ready checkpoint is available.",
+            next_action=registry_promotion_next_action,
         ),
     ]
     acceptance_blockers = [row for row in acceptance_rows if row["status"] != "ready"]
@@ -501,12 +638,12 @@ def build_product_production_ai_checkpoint_readiness(
         "trained_model_checkpoint_count_positive": {
             "observed": f"trained_model_checkpoint_count={trained_checkpoint_count}",
             "required": "trained_model_checkpoint_count is positive",
-            "next_action": "Rebuild the residual registry after a preflight-ready checkpoint is available.",
+            "next_action": registry_promotion_next_action,
         },
         "default_residual_mode_guarded": {
             "observed": f"default_residual_mode={registry.get('default_residual_mode')}",
             "required": "default residual mode is assist, production, or production_guarded",
-            "next_action": "Rebuild the residual registry after guarded promotion is approved.",
+            "next_action": registry_promotion_next_action,
         },
     }
     first_actionable_check_row = next(
@@ -633,6 +770,11 @@ def build_product_production_ai_checkpoint_readiness(
         "product_model_layer_ready": product_model_layer_ready,
         "default_residual_mode": str(registry.get("default_residual_mode") or ""),
         "production_promotion_allowed": production_promotion_allowed,
+        "registry_promotion_required_gate_ids": list(REGISTRY_PROMOTION_REQUIRED_GATE_IDS),
+        "registry_promotion_missing_gate_ids": list(registry_promotion_missing_gate_ids),
+        "registry_promotion_missing_gate_count": len(registry_promotion_missing_gate_ids),
+        "registry_promotion_upstream_acceptance_ready": registry_promotion_upstream_acceptance_ready,
+        "registry_promotion_currently_satisfied": registry_promotion_ready,
         "customer_facing_auto_correction_allowed": _bool(registry.get("customer_facing_auto_correction_allowed")),
         "customer_facing_score_mutation_allowed": _bool(registry.get("customer_facing_score_mutation_allowed")),
         "customer_facing_ranking_mutation_allowed": _bool(registry.get("customer_facing_ranking_mutation_allowed")),

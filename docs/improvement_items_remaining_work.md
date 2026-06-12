@@ -643,12 +643,24 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   observed 값은 `default_residual_mode=shadow`,
   `production_promotion_allowed=false`, customer-facing score/ranking mutation
   disabled, `trained_model_checkpoint_count=0`이다.
+  `first_failed_next_action`과
+  `production_inference_actionable_blocker_next_action`은 이제 이미 ready인
+  ROCm/GPU receipt/training/preflight를 다시 요구하지 않고,
+  `production_promotion_allowed`, `customer_facing_mutation_flags`,
+  `default_residual_mode_guarded`, `trained_model_checkpoint_count_positive`를
+  남은 registry gate로 직접 지목한다. 같은 정보는
+  `registry_promotion_missing_gate_ids`, `registry_promotion_missing_gate_count`,
+  `registry_promotion_upstream_acceptance_ready`,
+  `registry_promotion_currently_satisfied` 구조화 필드로도 고정되어,
+  API/goal audit 소비자가 next-action 문자열을 파싱하지 않아도 된다.
 - `runs/product_production_ai_promotion_workbench_current.json`도
   `blocked_product_production_ai_promotion_workbench`,
   `production_ai_promotion_ready=false`,
   `post_return_promotion_ladder_blocked_stage_count=2`를 기록한다.
   남은 blocked stage는 `residual_model_registry`,
-  `product_goal_completion_audit`이다.
+  `product_goal_completion_audit`이며, workbench `next_required_step`도 같은
+  trained production checkpoint registry promotion action과 structured missing
+  gate fields를 승계한다.
 
 **병목 원인**
 - ROCm/HIP 환경, force derivation validation, training data, selected sidecar,

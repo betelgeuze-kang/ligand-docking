@@ -2971,6 +2971,21 @@ def build_product_goal_completion_audit(
         "production_ai_checkpoint_first_failed_next_action": _text(
             production_ai_checkpoint.get("first_failed_next_action")
         ),
+        "production_ai_checkpoint_registry_promotion_required_gate_ids": [
+            str(item) for item in (production_ai_checkpoint.get("registry_promotion_required_gate_ids") or [])
+        ],
+        "production_ai_checkpoint_registry_promotion_missing_gate_ids": [
+            str(item) for item in (production_ai_checkpoint.get("registry_promotion_missing_gate_ids") or [])
+        ],
+        "production_ai_checkpoint_registry_promotion_missing_gate_count": _int(
+            production_ai_checkpoint.get("registry_promotion_missing_gate_count")
+        ),
+        "production_ai_checkpoint_registry_promotion_upstream_acceptance_ready": _bool(
+            production_ai_checkpoint.get("registry_promotion_upstream_acceptance_ready")
+        ),
+        "production_ai_checkpoint_registry_promotion_currently_satisfied": _bool(
+            production_ai_checkpoint.get("registry_promotion_currently_satisfied")
+        ),
         "production_ai_checkpoint_actionable_blocker_stage_id": _text(
             production_ai_checkpoint.get("production_inference_actionable_blocker_stage_id")
         ),
@@ -4935,6 +4950,9 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- production_ai_checkpoint_first_failed_check_id: `{s['production_ai_checkpoint_first_failed_check_id']}`",
         f"- production_ai_checkpoint_first_failed_source_artifact: `{s['production_ai_checkpoint_first_failed_source_artifact']}`",
         f"- production_ai_checkpoint_first_failed_next_action: `{s['production_ai_checkpoint_first_failed_next_action']}`",
+        f"- production_ai_checkpoint_registry_promotion_upstream_acceptance_ready: `{s['production_ai_checkpoint_registry_promotion_upstream_acceptance_ready']}`",
+        f"- production_ai_checkpoint_registry_promotion_missing_gate_count: `{s['production_ai_checkpoint_registry_promotion_missing_gate_count']}`",
+        f"- production_ai_checkpoint_registry_promotion_missing_gate_ids: `{';'.join(s['production_ai_checkpoint_registry_promotion_missing_gate_ids'])}`",
         f"- production_ai_checkpoint_actionable_blocker_stage_id: `{s['production_ai_checkpoint_actionable_blocker_stage_id']}`",
         f"- production_ai_checkpoint_actionable_blocker_check_id: `{s['production_ai_checkpoint_actionable_blocker_check_id']}`",
         f"- production_ai_checkpoint_actionable_blocker_artifact: `{s['production_ai_checkpoint_actionable_blocker_artifact']}`",

@@ -32,6 +32,17 @@ def test_product_production_ai_promotion_workbench_surfaces_blocked_ladder_witho
     ]
     assert summary["first_blocked_stage_id"] == "residual_model_registry"
     assert summary["first_blocked_stage_ready_key"] == "production_promotion_allowed"
+    assert summary["registry_promotion_missing_gate_ids"] == [
+        "production_promotion_allowed",
+        "customer_facing_mutation_flags",
+        "default_residual_mode_guarded",
+        "trained_model_checkpoint_count_positive",
+    ]
+    assert summary["registry_promotion_missing_gate_count"] == 4
+    assert summary["registry_promotion_upstream_acceptance_ready"] is True
+    assert summary["registry_promotion_currently_satisfied"] is False
+    assert "Register or promote a trained preflight-ready production checkpoint" in summary["next_required_step"]
+    assert "trained_model_checkpoint_count_positive" in summary["next_required_step"]
     assert "generate_ligand_trajectory_engine.py" in summary["force_gpu_worker_full_regeneration_command"]
     assert "build_residual_force_gpu_worker_return_receipt.py" in summary[
         "force_gpu_worker_post_return_validation_command"
@@ -52,3 +63,6 @@ def test_product_production_ai_promotion_workbench_surfaces_blocked_ladder_witho
     assert rows_by_stage["production_checkpoint_preflight"]["observed_ready_key"] == "preflight_green"
     assert rows_by_stage["production_checkpoint_preflight"]["ready_key_alias_used"] is True
     assert rows_by_stage["production_checkpoint_preflight"]["observed_value"] is True
+    assert "Register or promote a trained preflight-ready production checkpoint" in rows_by_stage[
+        "residual_model_registry"
+    ]["next_action"]

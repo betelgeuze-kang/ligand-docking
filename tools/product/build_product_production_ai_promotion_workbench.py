@@ -120,7 +120,11 @@ def _stage_next_action(stage_id: str, checkpoint: dict[str, Any], stage_summary:
             or "Rerun checkpoint preflight after sidecar metadata and benchmark gates are ready."
         )
     if stage_id == "residual_model_registry":
-        return "Rebuild the residual model registry after a preflight-ready checkpoint is available."
+        return (
+            _text(checkpoint.get("production_inference_actionable_blocker_next_action"))
+            or _text(checkpoint.get("first_failed_next_action"))
+            or "Rebuild the residual model registry after a preflight-ready checkpoint is available."
+        )
     if stage_id == "product_ai_architecture_gap_closure":
         return "Rebuild AI architecture gap closure after production checkpoint and scope blockers are closed."
     if stage_id == "product_goal_completion_audit":
@@ -188,6 +192,15 @@ def build_product_production_ai_promotion_workbench(
         "production_ai_checkpoint_ready": _bool(checkpoint.get("production_ai_checkpoint_ready")),
         "production_ai_inference_subject_active": _bool(checkpoint.get("production_ai_inference_subject_active")),
         "production_promotion_allowed": _bool(checkpoint.get("production_promotion_allowed")),
+        "registry_promotion_required_gate_ids": _list(checkpoint.get("registry_promotion_required_gate_ids")),
+        "registry_promotion_missing_gate_ids": _list(checkpoint.get("registry_promotion_missing_gate_ids")),
+        "registry_promotion_missing_gate_count": _int(checkpoint.get("registry_promotion_missing_gate_count")),
+        "registry_promotion_upstream_acceptance_ready": _bool(
+            checkpoint.get("registry_promotion_upstream_acceptance_ready")
+        ),
+        "registry_promotion_currently_satisfied": _bool(
+            checkpoint.get("registry_promotion_currently_satisfied")
+        ),
         "default_residual_mode": _text(checkpoint.get("default_residual_mode")),
         "trained_model_checkpoint_count": _int(checkpoint.get("trained_model_checkpoint_count")),
         "candidate_checkpoint_count": _int(checkpoint.get("candidate_checkpoint_count")),
@@ -274,6 +287,9 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- production_ai_checkpoint_ready: `{summary['production_ai_checkpoint_ready']}`",
         f"- default_residual_mode: `{summary['default_residual_mode']}`",
         f"- production_promotion_allowed: `{summary['production_promotion_allowed']}`",
+        f"- registry_promotion_upstream_acceptance_ready: `{summary['registry_promotion_upstream_acceptance_ready']}`",
+        f"- registry_promotion_missing_gate_count: `{summary['registry_promotion_missing_gate_count']}`",
+        f"- registry_promotion_missing_gate_ids: `{','.join(str(item) for item in summary['registry_promotion_missing_gate_ids'])}`",
         f"- trained_model_checkpoint_count: `{summary['trained_model_checkpoint_count']}`",
         f"- gpu_handoff_ready: `{summary['gpu_handoff_ready']}`",
         f"- gpu_return_receipt_ready: `{summary['gpu_return_receipt_ready']}`",

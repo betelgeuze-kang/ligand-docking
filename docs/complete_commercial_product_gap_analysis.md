@@ -354,6 +354,16 @@
 - production AI 자체는 아직 `default_residual_mode=shadow`,
   `production_promotion_allowed=false`, `trained_model_checkpoint_count=0`으로
   registry guarded promotion에서 blocked다.
+- checkpoint readiness와 promotion workbench의 next-action은 이 상태를
+  `production_promotion_allowed`, `customer_facing_mutation_flags`,
+  `default_residual_mode_guarded`, `trained_model_checkpoint_count_positive`가
+  남은 registry gate라는 형태로 노출한다. ROCm/GPU receipt/training/preflight는
+  현재 ready인 하위 gate로 남고, operator-facing 다음 행동은 trained production
+  checkpoint를 registry에 등록/승격한 뒤 registry와 checkpoint-readiness gate를
+  재실행하는 것이다. 이 정보는
+  `registry_promotion_missing_gate_ids` 및
+  `production_ai_checkpoint_registry_promotion_missing_gate_ids`로도 노출되어
+  product API contract와 goal completion audit에서 구조화된 병목으로 추적된다.
 
 **갭**
 - `residual_model_registry`가 customer-facing guarded promotion을 허용하지 않고,

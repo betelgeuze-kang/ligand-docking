@@ -406,6 +406,21 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert checkpoint["product_model_layer_ready"] is True
     assert checkpoint["default_residual_mode"] == "shadow"
     assert checkpoint["production_promotion_allowed"] is False
+    assert checkpoint["registry_promotion_required_gate_ids"] == [
+        "production_promotion_allowed",
+        "customer_facing_mutation_flags",
+        "default_residual_mode_guarded",
+        "trained_model_checkpoint_count_positive",
+    ]
+    assert checkpoint["registry_promotion_missing_gate_ids"] == [
+        "production_promotion_allowed",
+        "customer_facing_mutation_flags",
+        "default_residual_mode_guarded",
+        "trained_model_checkpoint_count_positive",
+    ]
+    assert checkpoint["registry_promotion_missing_gate_count"] == 4
+    assert checkpoint["registry_promotion_upstream_acceptance_ready"] is True
+    assert checkpoint["registry_promotion_currently_satisfied"] is False
     assert checkpoint["customer_facing_auto_correction_allowed"] is False
     assert checkpoint["customer_facing_score_mutation_allowed"] is False
     assert checkpoint["customer_facing_ranking_mutation_allowed"] is False
@@ -554,9 +569,15 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert checkpoint["production_inference_actionable_blocker_required"] == (
         "production promotion, customer-facing mutation flags, guarded mode, and trained checkpoint count are ready"
     )
-    assert checkpoint["production_inference_actionable_blocker_next_action"] == (
-        "Rebuild the residual registry after a preflight-ready checkpoint is available."
-    )
+    assert "Register or promote a trained preflight-ready production checkpoint" in checkpoint[
+        "production_inference_actionable_blocker_next_action"
+    ]
+    assert "trained_model_checkpoint_count_positive" in checkpoint[
+        "production_inference_actionable_blocker_next_action"
+    ]
+    assert "customer-facing mutation disabled" in checkpoint[
+        "production_inference_actionable_blocker_next_action"
+    ]
     assert checkpoint["production_inference_actionable_blocker_validation_command"] == (
         "python3 tools/build_residual_model_registry.py && "
         "python3 tools/build_product_production_ai_checkpoint_readiness.py"
@@ -907,6 +928,12 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert promotion["production_ai_promotion_ready"] is False
     assert promotion["production_ai_checkpoint_ready"] is False
     assert promotion["production_promotion_allowed"] is False
+    assert promotion["registry_promotion_missing_gate_ids"] == checkpoint[
+        "registry_promotion_missing_gate_ids"
+    ]
+    assert promotion["registry_promotion_missing_gate_count"] == 4
+    assert promotion["registry_promotion_upstream_acceptance_ready"] is True
+    assert promotion["registry_promotion_currently_satisfied"] is False
     assert promotion["default_residual_mode"] == "shadow"
     assert promotion["trained_model_checkpoint_count"] == 0
     assert promotion["gpu_handoff_ready"] is True
@@ -2084,6 +2111,15 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert completion["production_ai_promotion_ready"] is False
     assert completion["production_ai_promotion_allowed"] is False
     assert completion["production_ai_trained_checkpoint_count"] == 0
+    assert completion["production_ai_checkpoint_registry_promotion_missing_gate_ids"] == [
+        "production_promotion_allowed",
+        "customer_facing_mutation_flags",
+        "default_residual_mode_guarded",
+        "trained_model_checkpoint_count_positive",
+    ]
+    assert completion["production_ai_checkpoint_registry_promotion_missing_gate_count"] == 4
+    assert completion["production_ai_checkpoint_registry_promotion_upstream_acceptance_ready"] is True
+    assert completion["production_ai_checkpoint_registry_promotion_currently_satisfied"] is False
     assert completion["production_ai_selected_sidecar_ready"] is True
     assert completion["production_ai_selected_sidecar_missing_output_fields"] == []
 

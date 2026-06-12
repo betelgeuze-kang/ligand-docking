@@ -2375,6 +2375,11 @@ async def get_product_production_ai_checkpoint_readiness() -> dict[str, Any]:
             "product_model_layer_ready": False,
             "default_residual_mode": "",
             "production_promotion_allowed": False,
+            "registry_promotion_required_gate_ids": [],
+            "registry_promotion_missing_gate_ids": [],
+            "registry_promotion_missing_gate_count": 0,
+            "registry_promotion_upstream_acceptance_ready": False,
+            "registry_promotion_currently_satisfied": False,
             "customer_facing_auto_correction_allowed": False,
             "customer_facing_score_mutation_allowed": False,
             "customer_facing_ranking_mutation_allowed": False,
@@ -2594,6 +2599,15 @@ async def get_product_production_ai_checkpoint_readiness() -> dict[str, Any]:
         "product_model_layer_ready": bool(summary.get("product_model_layer_ready") is True),
         "default_residual_mode": summary.get("default_residual_mode", ""),
         "production_promotion_allowed": bool(summary.get("production_promotion_allowed") is True),
+        "registry_promotion_required_gate_ids": list(summary.get("registry_promotion_required_gate_ids") or []),
+        "registry_promotion_missing_gate_ids": list(summary.get("registry_promotion_missing_gate_ids") or []),
+        "registry_promotion_missing_gate_count": int(summary.get("registry_promotion_missing_gate_count") or 0),
+        "registry_promotion_upstream_acceptance_ready": bool(
+            summary.get("registry_promotion_upstream_acceptance_ready") is True
+        ),
+        "registry_promotion_currently_satisfied": bool(
+            summary.get("registry_promotion_currently_satisfied") is True
+        ),
         "customer_facing_auto_correction_allowed": bool(
             summary.get("customer_facing_auto_correction_allowed") is True
         ),
@@ -3793,6 +3807,11 @@ async def get_product_production_ai_promotion_workbench() -> dict[str, Any]:
             "production_ai_checkpoint_ready": False,
             "production_ai_inference_subject_active": False,
             "production_promotion_allowed": False,
+            "registry_promotion_required_gate_ids": [],
+            "registry_promotion_missing_gate_ids": [],
+            "registry_promotion_missing_gate_count": 0,
+            "registry_promotion_upstream_acceptance_ready": False,
+            "registry_promotion_currently_satisfied": False,
             "default_residual_mode": "",
             "trained_model_checkpoint_count": 0,
             "candidate_checkpoint_count": 0,
@@ -3861,6 +3880,15 @@ async def get_product_production_ai_promotion_workbench() -> dict[str, Any]:
             summary.get("production_ai_inference_subject_active") is True
         ),
         "production_promotion_allowed": bool(summary.get("production_promotion_allowed") is True),
+        "registry_promotion_required_gate_ids": list(summary.get("registry_promotion_required_gate_ids") or []),
+        "registry_promotion_missing_gate_ids": list(summary.get("registry_promotion_missing_gate_ids") or []),
+        "registry_promotion_missing_gate_count": int(summary.get("registry_promotion_missing_gate_count") or 0),
+        "registry_promotion_upstream_acceptance_ready": bool(
+            summary.get("registry_promotion_upstream_acceptance_ready") is True
+        ),
+        "registry_promotion_currently_satisfied": bool(
+            summary.get("registry_promotion_currently_satisfied") is True
+        ),
         "default_residual_mode": summary.get("default_residual_mode", ""),
         "trained_model_checkpoint_count": int(summary.get("trained_model_checkpoint_count") or 0),
         "candidate_checkpoint_count": int(summary.get("candidate_checkpoint_count") or 0),
@@ -6615,6 +6643,11 @@ async def get_product_goal_completion_audit() -> dict[str, Any]:
             "production_ai_checkpoint_first_failed_observed": "",
             "production_ai_checkpoint_first_failed_required": "",
             "production_ai_checkpoint_first_failed_next_action": "",
+            "production_ai_checkpoint_registry_promotion_required_gate_ids": [],
+            "production_ai_checkpoint_registry_promotion_missing_gate_ids": [],
+            "production_ai_checkpoint_registry_promotion_missing_gate_count": 0,
+            "production_ai_checkpoint_registry_promotion_upstream_acceptance_ready": False,
+            "production_ai_checkpoint_registry_promotion_currently_satisfied": False,
             "production_ai_checkpoint_actionable_blocker_stage_id": "",
             "production_ai_checkpoint_actionable_blocker_check_id": "",
             "production_ai_checkpoint_actionable_blocker_artifact": "",
@@ -7795,6 +7828,21 @@ async def get_product_goal_completion_audit() -> dict[str, Any]:
         ),
         "production_ai_checkpoint_first_failed_next_action": summary.get(
             "production_ai_checkpoint_first_failed_next_action", ""
+        ),
+        "production_ai_checkpoint_registry_promotion_required_gate_ids": list(
+            summary.get("production_ai_checkpoint_registry_promotion_required_gate_ids") or []
+        ),
+        "production_ai_checkpoint_registry_promotion_missing_gate_ids": list(
+            summary.get("production_ai_checkpoint_registry_promotion_missing_gate_ids") or []
+        ),
+        "production_ai_checkpoint_registry_promotion_missing_gate_count": int(
+            summary.get("production_ai_checkpoint_registry_promotion_missing_gate_count") or 0
+        ),
+        "production_ai_checkpoint_registry_promotion_upstream_acceptance_ready": bool(
+            summary.get("production_ai_checkpoint_registry_promotion_upstream_acceptance_ready") is True
+        ),
+        "production_ai_checkpoint_registry_promotion_currently_satisfied": bool(
+            summary.get("production_ai_checkpoint_registry_promotion_currently_satisfied") is True
         ),
         "production_ai_checkpoint_actionable_blocker_stage_id": summary.get(
             "production_ai_checkpoint_actionable_blocker_stage_id", ""
