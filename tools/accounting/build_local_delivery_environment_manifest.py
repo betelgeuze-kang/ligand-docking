@@ -420,10 +420,36 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--requirements-lock-json", default=str(DEFAULT_REQUIREMENTS_LOCK_JSON))
     parser.add_argument("--requirements-lock-md", default=str(DEFAULT_REQUIREMENTS_LOCK_MD))
     parser.add_argument("--requirements-lock-txt", default=str(DEFAULT_REQUIREMENTS_LOCK_TXT))
+    parser.add_argument(
+        "--accelerator-env",
+        nargs="*",
+        default=None,
+        metavar="KEY=VALUE",
+        help=(
+            "Use an explicit whitelist of accelerator environment variables instead of reading the process "
+            "environment. Keys must be known accelerator keys such as TORCH_BLAS_PREFER_HIPBLASLT."
+        ),
+    )
     parser.add_argument("--probe-accelerator-commands", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--out-json", default=str(DEFAULT_OUT_JSON))
     parser.add_argument("--out-md", default=str(DEFAULT_OUT_MD))
     return parser
+
+
+def _parse_accelerator_env_overrides(items: Sequence[str] | None) -> dict[str, str] | None:
+    if items is None:
+        return None
+    overrides: dict[str, str] = {}
+    for raw in items:
+        if "=" not in raw:
+            raise ValueError(f"expected KEY=VALUE, got {raw!r}")
+        key, value = raw.split("=", 1)
+        key = key.strip()
+        if key not in _ACCELERATOR_ENV_KEYS:
+            raise ValueError(f"{key!r} is not an allowed accelerator environment key")
+        if value:
+            overrides[key] = value
+    return overrides
 
 
 def build_payload(
@@ -781,6 +807,10 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
 
 def main(argv: Sequence[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
+    try:
+        accelerator_env = _parse_accelerator_env_overrides(args.accelerator_env)
+    except ValueError as exc:
+        raise SystemExit(f"invalid --accelerator-env: {exc}") from exc
     requirements_lock_payload = _load_json_object(args.requirements_lock_json)
     payload = build_payload(
         args,
@@ -788,7 +818,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         python_runtime=_collect_python_runtime(),
         platform_info=_collect_platform_info(),
         accelerator_info=_collect_accelerator_info(
-            env=dict(os.environ),
+            env=accelerator_env if accelerator_env is not None else dict(os.environ),
             probe_commands=bool(args.probe_accelerator_commands),
         ),
         git_info=_collect_git_info(),

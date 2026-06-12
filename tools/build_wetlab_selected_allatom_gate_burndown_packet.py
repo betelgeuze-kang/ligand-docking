@@ -1,4 +1,5 @@
 """Compatibility shim; canonical module: tools.accounting.build_wetlab_selected_allatom_gate_burndown_packet."""
+import inspect as _inspect
 import sys as _sys
 from pathlib import Path as _Path
 _repo = _Path(__file__).resolve()
@@ -19,4 +20,6 @@ if __name__ == "__main__":
     _entry = getattr(_module, "main", None)
     if _entry is None:
         raise SystemExit("builder has no main(): tools.accounting.build_wetlab_selected_allatom_gate_burndown_packet")
+    if len(_inspect.signature(_entry).parameters) == 0:
+        raise SystemExit(_entry() or 0)
     raise SystemExit(_entry(_sys.argv[1:]) or 0)

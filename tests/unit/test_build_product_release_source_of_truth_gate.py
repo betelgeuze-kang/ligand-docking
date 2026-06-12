@@ -252,10 +252,18 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "product_ai_decision_graph_contract" in artifact_ids
     assert "product_api_contract" in artifact_ids
     assert "product_service_boundary_contract" in artifact_ids
+    assert "local_delivery_environment_manifest" in artifact_ids
+    assert "wetlab_selected_allatom_gate_burndown" in artifact_ids
+    assert "product_bundle_contract" in artifact_ids
+    assert "product_delivery_evidence_contract" in artifact_ids
+    assert "product_pilot_packet_contract" in artifact_ids
     assert "self_hosted_license_distribution_audit" in artifact_ids
     assert "third_party_license_review_gate" in artifact_ids
     assert "product_execution_work_order" in artifact_ids
     assert "product_execution_preflight" in artifact_ids
+    assert "product_bundle_contract_semantic_ready" in status_ids
+    assert "product_delivery_evidence_contract_semantic_ready" in status_ids
+    assert "product_pilot_packet_contract_semantic_ready" in status_ids
     assert "product_api_contract_semantic_ready" in status_ids
     assert "product_service_boundary_contract_semantic_ready" in status_ids
     assert "self_hosted_license_distribution_audit_semantic_ready" in status_ids
@@ -469,6 +477,14 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "python3 tools/build_residual_shadow_ab.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_execution_work_order.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_execution_preflight.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert (
+        "python3 tools/build_local_delivery_environment_manifest.py --accelerator-env "
+        "TORCH_BLAS_PREFER_HIPBLASLT=0 --no-probe-accelerator-commands"
+    ) in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_wetlab_selected_allatom_gate_burndown_packet.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_product_bundle_contract.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_product_delivery_evidence_contract.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_product_pilot_packet_contract.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_api_contract.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_service_boundary_contract.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/product/build_self_hosted_license_distribution_audit.py" in mod.RELEASE_REFRESH_COMMANDS
@@ -520,6 +536,24 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_execution_preflight.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_execution_preflight.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_bundle_contract.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/build_local_delivery_environment_manifest.py --accelerator-env "
+        "TORCH_BLAS_PREFER_HIPBLASLT=0 --no-probe-accelerator-commands"
+    ) < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_delivery_evidence_contract.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_wetlab_selected_allatom_gate_burndown_packet.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_delivery_evidence_contract.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_bundle_contract.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_delivery_evidence_contract.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_delivery_evidence_contract.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_pilot_packet_contract.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_pilot_packet_contract.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_api_contract.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_api_contract.py") < (
@@ -690,6 +724,52 @@ def test_release_source_of_truth_blocks_semantic_status_when_required_int_fields
     ]
     assert "failed_int_min_fields=1" in row["observed"]
     assert "failed_int_exact_fields=2" in row["observed"]
+
+
+def test_release_source_of_truth_blocks_minimal_bundle_fixture_semantics(tmp_path: Path) -> None:
+    bundle = tmp_path / "runs" / "product_bundle_contract_current.json"
+    _write_json(
+        bundle,
+        {
+            "summary": {
+                "status": "product_bundle_contract_ready",
+                "bundle_validation_command_matches": True,
+                "artifact_count": 1,
+                "bundle_unknown_arg_count": 0,
+            }
+        },
+    )
+
+    payload = mod.build_product_release_source_of_truth_gate(
+        root=tmp_path,
+        artifact_specs=[],
+        status_specs=[
+            {
+                "artifact_id": "product_bundle_contract_semantic_ready",
+                "artifact_path": "runs/product_bundle_contract_current.json",
+                "builder_command": "python3 tools/build_product_bundle_contract.py",
+                "required_status": "product_bundle_contract_ready",
+                "required_true_fields": [
+                    "bundle_validation_command_matches",
+                    "bundle_validation_present",
+                    "bundle_validation_passed",
+                    "bundle_assembled",
+                ],
+                "required_int_min_fields": {"artifact_count": 1},
+                "required_int_exact_fields": {"blocker_count": 0, "bundle_unknown_arg_count": 0},
+            }
+        ],
+        readme_paths=[],
+    )
+
+    assert payload["summary"]["status"] == "blocked_product_release_source_of_truth_gate"
+    row = payload["rows"][0]
+    assert row["missing_true_fields"] == [
+        "bundle_validation_present",
+        "bundle_validation_passed",
+        "bundle_assembled",
+    ]
+    assert row["failed_int_exact_fields"] == ["blocker_count"]
 
 
 def test_release_source_of_truth_accepts_semantic_status_required_int_fields(tmp_path: Path) -> None:

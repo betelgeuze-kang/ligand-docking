@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from tools import build_local_delivery_environment_manifest as mod
+from tools.accounting import build_local_delivery_environment_manifest as mod
 
 
 class _FakeDistribution:
@@ -241,6 +241,19 @@ def test_collect_accelerator_info_records_torch_blas_prefer_hipblaslt_without_ov
     assert accelerator_info["detected_stack"] == "accelerator_env_present"
     assert accelerator_info["present_env"] == {"TORCH_BLAS_PREFER_HIPBLASLT": "1"}
     assert "stack=accelerator_env_present" in accelerator_info["status_line"]
+
+
+def test_parse_accelerator_env_overrides_rejects_non_accelerator_keys() -> None:
+    assert mod._parse_accelerator_env_overrides(["TORCH_BLAS_PREFER_HIPBLASLT=0"]) == {
+        "TORCH_BLAS_PREFER_HIPBLASLT": "0"
+    }
+
+    try:
+        mod._parse_accelerator_env_overrides(["OPENAI_API_KEY=secret"])
+    except ValueError as exc:
+        assert "not an allowed accelerator environment key" in str(exc)
+    else:  # pragma: no cover - assertion guard
+        raise AssertionError("expected ValueError")
 
 
 def test_build_payload_exposes_torch_blas_prefer_hipblaslt_summary() -> None:
