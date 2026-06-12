@@ -38,6 +38,7 @@ DEFAULT_ARTIFACTS = {
     "product_rollout_execution_readiness": "runs/product_rollout_execution_readiness_current.json",
     "product_launch_r4_preflight": "runs/product_launch_r4_preflight_current.json",
     "engine_refinement_claim_promotion_action_board": "runs/engine_refinement_claim_promotion_action_board_current.csv",
+    "product_goal_completion_audit": "runs/product_goal_completion_audit_current.json",
 }
 APPROVAL_TOKENS = [
     "APPROVE_PRODUCT_ROLLOUT",
@@ -125,6 +126,18 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
     rollout_execution_readiness = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["product_rollout_execution_readiness"])))
     launch_r4_preflight = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["product_launch_r4_preflight"])))
     engine_action_board_text = _read_text(_resolve(DEFAULT_ARTIFACTS["engine_refinement_claim_promotion_action_board"]))
+    goal_audit_payload = _read_json(_resolve(DEFAULT_ARTIFACTS["product_goal_completion_audit"]))
+    goal_audit = _summary(goal_audit_payload)
+    goal_audit_rows = goal_audit_payload.get("rows") if isinstance(goal_audit_payload.get("rows"), list) else []
+    engine_claim_row = next(
+        (
+            row
+            for row in goal_audit_rows
+            if isinstance(row, dict)
+            and row.get("requirement_id") == "R9_engine_refinement_claim_promotion"
+        ),
+        {},
+    )
     viewer_vendor = _read_json(_resolve(DEFAULT_ARTIFACTS["viewer_vendor_manifest"]))
     systemd_api_server_unit = _read_text(_resolve(DEFAULT_ARTIFACTS["systemd_api_server_unit"]))
     systemd_api_server_env = _read_text(_resolve(DEFAULT_ARTIFACTS["systemd_api_server_env_example"]))
@@ -347,6 +360,28 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
                 f"line_count={engine_action_board_text.count(chr(10))}"
             ),
         },
+        {
+            "check": "product_goal_completion_audit_full_claim_boundary_recorded",
+            "passed": (
+                goal_audit.get("status") == "blocked_product_goal_completion_audit"
+                and goal_audit.get("goal_complete") is False
+                and goal_audit.get("engine_refinement_claim_promotion_ready") is False
+                and int(goal_audit.get("engine_refinement_claim_promotion_blocker_count") or 0) >= 6
+                and engine_claim_row.get("status") == "fail"
+                and engine_claim_row.get("release_blocker") is True
+                and engine_claim_row.get("blocker") == "engine_refinement_claim_promotion_not_ready"
+            ),
+            "observed": (
+                f"goal_audit_status={goal_audit.get('status')};"
+                f"goal_complete={goal_audit.get('goal_complete')};"
+                f"engine_refinement_claim_promotion_ready="
+                f"{goal_audit.get('engine_refinement_claim_promotion_ready')};"
+                f"engine_refinement_claim_promotion_blocker_count="
+                f"{goal_audit.get('engine_refinement_claim_promotion_blocker_count')};"
+                f"r9_status={engine_claim_row.get('status')};"
+                f"r9_release_blocker={engine_claim_row.get('release_blocker')}"
+            ),
+        },
     ]
     return checks
 
@@ -362,6 +397,7 @@ def build_release_bundle(*, release_id: str, artifact_overrides: dict[str, str] 
         "bundle_version": "product_release_bundle_manifest_v1",
         "release_id": release_id,
         "status": status,
+        "release_bundle_ready": not blocker_checks,
         "created_at_utc": _utc_now(),
         "artifact_count": len(artifact_rows),
         "check_count": len(checks),

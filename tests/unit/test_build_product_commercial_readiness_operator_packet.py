@@ -10,6 +10,23 @@ def _goal_audit() -> dict:
     return {
         "summary": {
             "goal_complete": False,
+            "engine_refinement_claim_promotion_ready": False,
+            "engine_refinement_claim_promotion_blocker_count": 6,
+            "engine_refinement_claim_promotion_action_row_count": 6,
+            "engine_refinement_claim_promotion_blockers": [
+                "public_benchmark_gate_not_ready",
+                "parameter_calibration_claim_not_ready",
+                "metal_cofactor_parameterization_not_ready",
+                "charged_residue_protonation_and_charge_calibration_not_ready",
+                "solvent_fep_public_pair_calibration_not_ready",
+                "external_structure_quality_parity_not_ready",
+            ],
+            "engine_refinement_claim_promotion_action_board_csv": (
+                "runs/engine_refinement_claim_promotion_action_board_current.csv"
+            ),
+            "engine_refinement_claim_promotion_next_required_step": (
+                "Fill and apply curated public benchmark rows, then calibrate claim-grade parameterization gates."
+            ),
             "product_ai_architecture_open_gap_ids": [
                 "production_ai_inference_checkpoint",
                 "scope_breadth_expansion",
@@ -506,6 +523,17 @@ def test_build_product_commercial_readiness_operator_packet_flattens_next_action
     assert summary["status"] == "product_commercial_readiness_operator_packet_ready"
     assert summary["packet_ready"] is True
     assert summary["goal_complete"] is False
+    assert summary["engine_refinement_claim_promotion_ready"] is False
+    assert summary["engine_refinement_claim_promotion_blocker_count"] == 6
+    assert summary["engine_refinement_claim_promotion_action_row_count"] == 6
+    assert "public_benchmark_gate_not_ready" in summary["engine_refinement_claim_promotion_blockers"]
+    assert (
+        summary["engine_refinement_claim_promotion_action_board_csv"]
+        == "runs/engine_refinement_claim_promotion_action_board_current.csv"
+    )
+    assert "curated public benchmark rows" in summary[
+        "engine_refinement_claim_promotion_next_required_step"
+    ]
     assert summary["open_gap_ids"] == [
         "production_ai_inference_checkpoint",
         "scope_breadth_expansion",

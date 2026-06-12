@@ -217,16 +217,37 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "product_ledger_privacy_scan" in artifact_ids
     assert "product_launch_r4_preflight" in artifact_ids
     assert "engine_refinement_claim_promotion_action_board" in artifact_ids
+    assert "product_release_bundle_semantic_ready" in status_ids
     goal_action_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "goal_operator_action_board"
     )
+    assert "runs/product_goal_completion_audit_current.json" in goal_action_spec["depends_on"]
     assert "runs/engine_refinement_claim_promotion_action_board_current.csv" in goal_action_spec["depends_on"]
+    goal_audit_spec = next(
+        spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_goal_completion_audit"
+    )
+    assert "runs/goal_operator_action_board_current.json" not in goal_audit_spec["depends_on"]
+    assert "runs/engine_refinement_tier_readiness_current.json" in goal_audit_spec["depends_on"]
+    release_bundle_spec = next(
+        spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_release_bundle"
+    )
+    assert "runs/product_goal_completion_audit_current.json" in release_bundle_spec["depends_on"]
     assert "product_ledger_privacy_scan_semantic_ready" in status_ids
     assert "python3 tools/build_product_ai_report_explanation_packet.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_ai_report_ux_contract.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/product/build_engine_refinement_tier_readiness.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/product/build_product_launch_r4_preflight.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_ledger_privacy_scan.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_goal_completion_audit.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_operator_action_board.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_goal_completion_audit.py") < (
+        max(
+            index
+            for index, command in enumerate(mod.RELEASE_REFRESH_COMMANDS)
+            if command == "python3 deploy/product_release_bundle.py"
+        )
+    )
 
 
 def test_release_source_of_truth_blocks_fresh_but_semantically_blocked_report(tmp_path: Path) -> None:
@@ -265,3 +286,35 @@ def test_release_source_of_truth_blocks_fresh_but_semantically_blocked_report(tm
     assert row["row_type"] == "artifact_semantic_status"
     assert row["observed_status"] == "blocked_product_ai_report_ux_contract"
     assert row["missing_true_fields"] == ["ai_report_ux_ready", "customer_report_viewer_binding_ready"]
+
+
+def test_release_source_of_truth_accepts_top_level_release_bundle_status(tmp_path: Path) -> None:
+    _write_json(
+        tmp_path / "runs" / "product_release_bundle_current.json",
+        {
+            "status": "release_bundle_ready_for_operator_review",
+            "release_bundle_ready": True,
+            "blocker_count": 0,
+        },
+    )
+
+    payload = mod.build_product_release_source_of_truth_gate(
+        root=tmp_path,
+        artifact_specs=[],
+        status_specs=[
+            {
+                "artifact_id": "product_release_bundle_semantic_ready",
+                "artifact_path": "runs/product_release_bundle_current.json",
+                "builder_command": "python3 deploy/product_release_bundle.py",
+                "required_status": "release_bundle_ready_for_operator_review",
+                "required_true_fields": ["release_bundle_ready"],
+            }
+        ],
+        readme_paths=[],
+    )
+
+    assert payload["summary"]["status"] == "product_release_source_of_truth_gate_ready"
+    assert payload["summary"]["semantic_status_blocker_count"] == 0
+    row = payload["rows"][0]
+    assert row["status"] == "pass"
+    assert row["observed_status"] == "release_bundle_ready_for_operator_review"

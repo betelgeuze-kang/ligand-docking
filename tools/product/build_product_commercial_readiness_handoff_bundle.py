@@ -423,6 +423,25 @@ def build_product_commercial_readiness_handoff_bundle(
         ),
         "handoff_bundle_ready": handoff_ready,
         "goal_complete": bool(operator_summary.get("goal_complete") is True),
+        "engine_refinement_claim_promotion_ready": bool(
+            operator_summary.get("engine_refinement_claim_promotion_ready") is True
+        ),
+        "engine_refinement_claim_promotion_blocker_count": int(
+            operator_summary.get("engine_refinement_claim_promotion_blocker_count") or 0
+        ),
+        "engine_refinement_claim_promotion_action_row_count": int(
+            operator_summary.get("engine_refinement_claim_promotion_action_row_count") or 0
+        ),
+        "engine_refinement_claim_promotion_blockers": [
+            str(item)
+            for item in (operator_summary.get("engine_refinement_claim_promotion_blockers") or [])
+        ],
+        "engine_refinement_claim_promotion_action_board_csv": _text(
+            operator_summary.get("engine_refinement_claim_promotion_action_board_csv")
+        ),
+        "engine_refinement_claim_promotion_next_required_step": _text(
+            operator_summary.get("engine_refinement_claim_promotion_next_required_step")
+        ),
         "artifact_count": len(artifact_rows),
         "ready_artifact_count": len(artifact_rows) - len(blocked_artifacts),
         "blocked_artifact_count": len(blocked_artifacts),
@@ -1159,6 +1178,9 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- status: `{s['status']}`",
         f"- handoff_bundle_ready: `{s['handoff_bundle_ready']}`",
         f"- goal_complete: `{s['goal_complete']}`",
+        f"- engine_refinement_claim_promotion_ready: `{s['engine_refinement_claim_promotion_ready']}`",
+        f"- engine_refinement_claim_promotion_blocker_count: `{s['engine_refinement_claim_promotion_blocker_count']}`",
+        f"- engine_refinement_claim_promotion_action_board_csv: `{s['engine_refinement_claim_promotion_action_board_csv']}`",
         f"- artifact_count: `{s['artifact_count']}`",
         f"- blocked_artifact_count: `{s['blocked_artifact_count']}`",
         f"- artifact_reference_contract_ready: `{s['artifact_reference_contract_ready']}`",

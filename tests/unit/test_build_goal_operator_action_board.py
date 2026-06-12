@@ -670,6 +670,23 @@ def _product_goal_completion_audit() -> dict:
             "status": "blocked_product_goal_completion_audit",
             "goal_complete": False,
             "primary_bottleneck_kind": "production_ai_checkpoint_evidence_required",
+            "engine_refinement_claim_promotion_ready": False,
+            "engine_refinement_claim_promotion_blocker_count": 6,
+            "engine_refinement_claim_promotion_action_row_count": 6,
+            "engine_refinement_claim_promotion_blockers": [
+                "public_benchmark_gate_not_ready",
+                "parameter_calibration_claim_not_ready",
+                "metal_cofactor_parameterization_not_ready",
+                "charged_residue_protonation_and_charge_calibration_not_ready",
+                "solvent_fep_public_pair_calibration_not_ready",
+                "external_structure_quality_parity_not_ready",
+            ],
+            "engine_refinement_claim_promotion_action_board_csv": (
+                "runs/engine_refinement_claim_promotion_action_board_current.csv"
+            ),
+            "engine_refinement_claim_promotion_next_required_step": (
+                "Fill and apply curated public benchmark rows, then calibrate claim-grade parameterization gates."
+            ),
             "production_ai_checkpoint_ready": False,
             "production_ai_checkpoint_failed_check_ids": [
                 "production_training_data_ready",
@@ -901,6 +918,20 @@ def test_goal_operator_action_board_summary_points_to_primary_product_ai_action(
     assert "generate_ligand_trajectory_engine.py" in summary["primary_action_command"]
     assert "Run the full regeneration command on a GPU worker" in summary[
         "primary_action_recommended_action"
+    ]
+    assert summary["product_goal_engine_refinement_claim_promotion_ready"] is False
+    assert summary["product_goal_engine_refinement_claim_promotion_blocker_count"] == 6
+    assert summary["product_goal_engine_refinement_claim_promotion_action_row_count"] == 6
+    assert (
+        "public_benchmark_gate_not_ready"
+        in summary["product_goal_engine_refinement_claim_promotion_blockers"]
+    )
+    assert (
+        summary["product_goal_engine_refinement_claim_promotion_action_board_csv"]
+        == "runs/engine_refinement_claim_promotion_action_board_current.csv"
+    )
+    assert "curated public benchmark rows" in summary[
+        "product_goal_engine_refinement_claim_promotion_next_required_step"
     ]
     assert summary["operator_input_required_count"] == 2
     assert summary["blocked_or_required_action_count"] == 1

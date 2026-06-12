@@ -167,6 +167,47 @@ def _public_benchmark() -> dict:
     }
 
 
+def _engine_refinement_claim_readiness(*, ready: bool = False) -> dict:
+    blockers = [] if ready else [
+        "public_benchmark_gate_not_ready",
+        "parameter_calibration_claim_not_ready",
+        "metal_cofactor_parameterization_not_ready",
+        "charged_residue_protonation_and_charge_calibration_not_ready",
+        "solvent_fep_public_pair_calibration_not_ready",
+        "external_structure_quality_parity_not_ready",
+    ]
+    return {
+        "summary": {
+            "status": "engine_refinement_tier_ready",
+            "engine_refinement_tier_ready": True,
+            "claim_grade_public_benchmark_ready": ready,
+            "claim_promotion_allowed": ready,
+            "claim_promotion_blocker_count": len(blockers),
+            "claim_promotion_action_row_count": len(blockers),
+            "claim_promotion_blockers": blockers,
+            "claim_promotion_action_board_csv": (
+                "runs/engine_refinement_claim_promotion_action_board_current.csv"
+            ),
+            "public_benchmark_gate_status": (
+                "refine_tier_public_benchmark_readiness_ready"
+                if ready
+                else "blocked_refine_tier_public_benchmark_readiness"
+            ),
+            "claim_promotion_next_required_step": (
+                "Fill and apply curated public benchmark rows, then calibrate claim-grade parameterization gates."
+            ),
+        },
+        "claim_promotion_action_rows": [
+            {
+                "blocker_id": blocker,
+                "owner_action": "Provide claim-grade evidence before promotion.",
+                "required_evidence": "Claim-grade public benchmark and calibration evidence.",
+            }
+            for blocker in blockers
+        ],
+    }
+
+
 def _commercial(*, ready: bool = False) -> dict:
     return {
         "summary": {
@@ -3833,6 +3874,82 @@ def test_product_goal_completion_audit_blocks_scope_deferred_backlog_without_sco
     assert summary["release_blocker_fail_count"] == 1
     assert by_id["R6_product_ai_architecture_gap_closure"]["status"] == "pass"
     assert by_id["R8_full_scope_claim_closure"]["status"] == "fail"
+
+
+def test_product_goal_completion_audit_blocks_refine_tier_claim_promotion() -> None:
+    payload = mod.build_product_goal_completion_audit(
+        architecture_packet=_architecture(release_ready=True, commercial_ready=True),
+        release_dossier_packet=_release_dossier(release_ready=True, commercial_ready=True),
+        public_benchmark_packet=_public_benchmark(),
+        commercial_independence_packet=_commercial(ready=True),
+        license_work_order_packet=_license_work_order(ready=True),
+        cameo_architecture_packet=_cameo(),
+        release_gate_packet=_release_gate(ready=True),
+        bottleneck_packet={"summary": {"approval_tokens_required": []}},
+        burndown_packet={"summary": {}, "rows": []},
+        product_ai_architecture_gap_packet=_ai_gap(),
+        product_ai_execution_backlog_packet=_ai_backlog(),
+        product_scope_breadth_contract_packet=_scope_contract_ready(),
+        scope_closure_acceptance_packet=_scope_closure_acceptance_ready(),
+        engine_refinement_tier_readiness_packet=_engine_refinement_claim_readiness(),
+    )
+
+    summary = payload["summary"]
+    by_id = {row["requirement_id"]: row for row in payload["rows"]}
+    r9 = by_id["R9_engine_refinement_claim_promotion"]
+
+    assert summary["status"] == "blocked_product_goal_completion_audit"
+    assert summary["goal_complete"] is False
+    assert summary["restricted_delivery_complete"] is True
+    assert summary["requirement_count"] == 9
+    assert summary["pass_count"] == 8
+    assert summary["fail_count"] == 1
+    assert summary["release_blocker_fail_count"] == 1
+    assert summary["engine_refinement_claim_promotion_evidence_present"] is True
+    assert summary["engine_refinement_claim_promotion_ready"] is False
+    assert summary["engine_refinement_claim_promotion_blocker_count"] == 6
+    assert summary["engine_refinement_claim_promotion_action_row_count"] == 6
+    assert "public_benchmark_gate_not_ready" in summary["engine_refinement_claim_promotion_blockers"]
+    assert r9["status"] == "fail"
+    assert r9["blocker"] == "engine_refinement_claim_promotion_not_ready"
+    assert r9["release_blocker"] is True
+    assert r9["requirement_tier"] == "full_commercial_science_claim"
+    assert "claim_promotion_allowed=False" in r9["observed"]
+    assert "claim_promotion_blocker_count=6" in r9["observed"]
+    assert "external_structure_quality_parity_not_ready" in r9["observed"]
+    assert "build_engine_refinement_tier_readiness.py" in r9["next_command"]
+
+
+def test_product_goal_completion_audit_passes_refine_tier_claim_promotion_when_ready() -> None:
+    payload = mod.build_product_goal_completion_audit(
+        architecture_packet=_architecture(release_ready=True, commercial_ready=True),
+        release_dossier_packet=_release_dossier(release_ready=True, commercial_ready=True),
+        public_benchmark_packet=_public_benchmark(),
+        commercial_independence_packet=_commercial(ready=True),
+        license_work_order_packet=_license_work_order(ready=True),
+        cameo_architecture_packet=_cameo(),
+        release_gate_packet=_release_gate(ready=True),
+        bottleneck_packet={"summary": {"approval_tokens_required": []}},
+        burndown_packet={"summary": {}, "rows": []},
+        product_ai_architecture_gap_packet=_ai_gap(),
+        product_ai_execution_backlog_packet=_ai_backlog(),
+        product_scope_breadth_contract_packet=_scope_contract_ready(),
+        scope_closure_acceptance_packet=_scope_closure_acceptance_ready(),
+        engine_refinement_tier_readiness_packet=_engine_refinement_claim_readiness(ready=True),
+    )
+
+    summary = payload["summary"]
+    by_id = {row["requirement_id"]: row for row in payload["rows"]}
+    r9 = by_id["R9_engine_refinement_claim_promotion"]
+
+    assert summary["status"] == "product_goal_completion_audit_pass"
+    assert summary["goal_complete"] is True
+    assert summary["requirement_count"] == 9
+    assert summary["pass_count"] == 9
+    assert summary["fail_count"] == 0
+    assert summary["engine_refinement_claim_promotion_ready"] is True
+    assert r9["status"] == "pass"
+    assert r9["blocker"] == ""
 
 
 def test_product_goal_completion_audit_passes_when_all_evidence_is_ready() -> None:

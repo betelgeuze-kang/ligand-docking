@@ -39,6 +39,7 @@ DEFAULT_DECISION_GRAPH_JSON = "runs/product_ai_decision_graph_contract_current.j
 DEFAULT_SERVICE_BOUNDARY_JSON = "runs/product_service_boundary_contract_current.json"
 DEFAULT_PRODUCT_API_CONTRACT_JSON = "runs/product_api_contract_current.json"
 DEFAULT_JOB_ORCHESTRATION_JSON = "runs/product_job_orchestration_contract_current.json"
+DEFAULT_ENGINE_REFINEMENT_TIER_READINESS_JSON = "runs/engine_refinement_tier_readiness_current.json"
 DEFAULT_OUT_JSON = "runs/product_goal_completion_audit_current.json"
 DEFAULT_OUT_CSV = "runs/product_goal_completion_audit_current.csv"
 DEFAULT_OUT_MD = "runs/product_goal_completion_audit_current.md"
@@ -1552,6 +1553,7 @@ def build_product_goal_completion_audit(
     service_boundary_packet: dict[str, Any] | None = None,
     product_api_contract_packet: dict[str, Any] | None = None,
     job_orchestration_packet: dict[str, Any] | None = None,
+    engine_refinement_tier_readiness_packet: dict[str, Any] | None = None,
     architecture_path: str = DEFAULT_ARCHITECTURE_JSON,
     release_dossier_path: str = DEFAULT_RELEASE_DOSSIER_JSON,
     public_benchmark_path: str = DEFAULT_PUBLIC_BENCHMARK_JSON,
@@ -1582,6 +1584,7 @@ def build_product_goal_completion_audit(
     service_boundary_path: str = DEFAULT_SERVICE_BOUNDARY_JSON,
     product_api_contract_path: str = DEFAULT_PRODUCT_API_CONTRACT_JSON,
     job_orchestration_path: str = DEFAULT_JOB_ORCHESTRATION_JSON,
+    engine_refinement_tier_readiness_path: str = DEFAULT_ENGINE_REFINEMENT_TIER_READINESS_JSON,
 ) -> dict[str, Any]:
     architecture = _summary(architecture_packet)
     release_dossier = _summary(release_dossier_packet)
@@ -1718,6 +1721,36 @@ def build_product_goal_completion_audit(
     service_boundary = _summary(service_boundary_packet or {})
     product_api_contract = _summary(product_api_contract_packet or {})
     job_orchestration = _summary(job_orchestration_packet or {})
+    engine_refinement = _summary(engine_refinement_tier_readiness_packet or {})
+    engine_refinement_claim_action_rows = [
+        dict(row)
+        for row in ((engine_refinement_tier_readiness_packet or {}).get("claim_promotion_action_rows") or [])
+        if isinstance(row, dict)
+    ]
+    engine_refinement_claim_blockers = [
+        str(item) for item in (engine_refinement.get("claim_promotion_blockers") or [])
+    ]
+    engine_refinement_claim_action_row_count = _int(
+        engine_refinement.get("claim_promotion_action_row_count")
+    )
+    if not engine_refinement_claim_action_row_count and engine_refinement_claim_action_rows:
+        engine_refinement_claim_action_row_count = len(engine_refinement_claim_action_rows)
+    engine_refinement_claim_blocker_count = _int(
+        engine_refinement.get("claim_promotion_blocker_count")
+    )
+    if not engine_refinement_claim_blocker_count and engine_refinement_claim_blockers:
+        engine_refinement_claim_blocker_count = len(engine_refinement_claim_blockers)
+    engine_refinement_claim_promotion_ready = (
+        not engine_refinement
+        or all(
+            [
+                _bool(engine_refinement.get("claim_promotion_allowed")),
+                engine_refinement_claim_blocker_count == 0,
+                engine_refinement_claim_action_row_count == 0,
+                _bool(engine_refinement.get("claim_grade_public_benchmark_ready")),
+            ]
+        )
+    )
     gap_observed_live_inputs = {
         "registry": residual_model_registry,
         "production_ai_checkpoint": production_ai_checkpoint,
@@ -2100,6 +2133,45 @@ def build_product_goal_completion_audit(
             requirement_tier="full_commercial_scope",
         ),
     ]
+    if engine_refinement:
+        rows.append(
+            _row(
+                requirement_id="R9_engine_refinement_claim_promotion",
+                requirement=(
+                    "Refine-tier science claims stay blocked until public benchmark intake, parameter calibration, "
+                    "metal/cofactor handling, protonation/charge calibration, solvent/FEP calibration, and external "
+                    "structure-quality parity evidence are all claim-grade."
+                ),
+                passed=engine_refinement_claim_promotion_ready,
+                observed=(
+                    f"engine_refinement_status={_text(engine_refinement.get('status'))};"
+                    f"engine_refinement_tier_ready={_bool(engine_refinement.get('engine_refinement_tier_ready'))};"
+                    f"claim_promotion_allowed={_bool(engine_refinement.get('claim_promotion_allowed'))};"
+                    f"claim_promotion_blocker_count={engine_refinement_claim_blocker_count};"
+                    f"claim_promotion_action_row_count={engine_refinement_claim_action_row_count};"
+                    f"claim_grade_public_benchmark_ready={_bool(engine_refinement.get('claim_grade_public_benchmark_ready'))};"
+                    f"public_benchmark_gate_status={_text(engine_refinement.get('public_benchmark_gate_status'))};"
+                    f"claim_promotion_blockers={','.join(engine_refinement_claim_blockers)}"
+                ),
+                required=(
+                    "claim_promotion_allowed=true;claim_promotion_blocker_count=0;"
+                    "claim_promotion_action_row_count=0;claim_grade_public_benchmark_ready=true"
+                ),
+                evidence_artifacts=_join(
+                    [
+                        engine_refinement_tier_readiness_path,
+                        engine_refinement.get("claim_promotion_action_board_csv"),
+                    ]
+                ),
+                blocker="engine_refinement_claim_promotion_not_ready",
+                next_command=(
+                    "python3 tools/product/build_engine_refinement_tier_readiness.py && "
+                    "python3 tools/build_product_goal_completion_audit.py"
+                ),
+                release_blocker=True,
+                requirement_tier="full_commercial_science_claim",
+            )
+        )
     failed = [row for row in rows if row["status"] != "pass"]
     release_failed = [row for row in failed if row.get("release_blocker")]
     optional_failed = [row for row in failed if not row.get("release_blocker")]
@@ -2134,6 +2206,24 @@ def build_product_goal_completion_audit(
         "restricted_delivery_complete": restricted_delivery_ready,
         "product_ai_optional_lane_ready": product_ai_optional_lane_ready,
         "product_ai_scope_deferred_work_item_count": product_ai_scope_deferred_work_item_count,
+        "engine_refinement_claim_promotion_evidence_present": bool(engine_refinement),
+        "engine_refinement_claim_promotion_ready": engine_refinement_claim_promotion_ready,
+        "engine_refinement_status": _text(engine_refinement.get("status")),
+        "engine_refinement_claim_promotion_allowed": _bool(
+            engine_refinement.get("claim_promotion_allowed")
+        ),
+        "engine_refinement_claim_promotion_blocker_count": engine_refinement_claim_blocker_count,
+        "engine_refinement_claim_promotion_blockers": engine_refinement_claim_blockers,
+        "engine_refinement_claim_promotion_action_row_count": engine_refinement_claim_action_row_count,
+        "engine_refinement_claim_promotion_action_board_csv": _text(
+            engine_refinement.get("claim_promotion_action_board_csv")
+        ),
+        "engine_refinement_public_benchmark_gate_status": _text(
+            engine_refinement.get("public_benchmark_gate_status")
+        ),
+        "engine_refinement_claim_promotion_next_required_step": _text(
+            engine_refinement.get("claim_promotion_next_required_step")
+        ),
         "primary_bottleneck_phase": primary_phase,
         "primary_bottleneck_kind": primary_kind,
         "approval_tokens_required": approval_tokens,
@@ -4669,6 +4759,9 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- release_blocker_fail_count: `{s['release_blocker_fail_count']}`",
         f"- optional_requirement_fail_count: `{s['optional_requirement_fail_count']}`",
         f"- product_ai_optional_lane_ready: `{s['product_ai_optional_lane_ready']}`",
+        f"- engine_refinement_claim_promotion_ready: `{s['engine_refinement_claim_promotion_ready']}`",
+        f"- engine_refinement_claim_promotion_blocker_count: `{s['engine_refinement_claim_promotion_blocker_count']}`",
+        f"- engine_refinement_claim_promotion_action_board_csv: `{s['engine_refinement_claim_promotion_action_board_csv']}`",
         f"- requirement_count: `{s['requirement_count']}`",
         f"- pass_count: `{s['pass_count']}`",
         f"- fail_count: `{s['fail_count']}`",
@@ -5022,6 +5115,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--service-boundary-json", default=DEFAULT_SERVICE_BOUNDARY_JSON)
     parser.add_argument("--product-api-contract-json", default=DEFAULT_PRODUCT_API_CONTRACT_JSON)
     parser.add_argument("--job-orchestration-json", default=DEFAULT_JOB_ORCHESTRATION_JSON)
+    parser.add_argument(
+        "--engine-refinement-tier-readiness-json",
+        default=DEFAULT_ENGINE_REFINEMENT_TIER_READINESS_JSON,
+    )
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -5063,6 +5160,7 @@ def main(argv: list[str] | None = None) -> None:
         service_boundary_packet=_read_json_if_present(args.service_boundary_json),
         product_api_contract_packet=_read_json_if_present(args.product_api_contract_json),
         job_orchestration_packet=_read_json_if_present(args.job_orchestration_json),
+        engine_refinement_tier_readiness_packet=_read_json_if_present(args.engine_refinement_tier_readiness_json),
         architecture_path=args.architecture_json,
         release_dossier_path=args.release_dossier_json,
         public_benchmark_path=args.public_benchmark_json,
@@ -5093,6 +5191,7 @@ def main(argv: list[str] | None = None) -> None:
         service_boundary_path=args.service_boundary_json,
         product_api_contract_path=args.product_api_contract_json,
         job_orchestration_path=args.job_orchestration_json,
+        engine_refinement_tier_readiness_path=args.engine_refinement_tier_readiness_json,
     )
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])

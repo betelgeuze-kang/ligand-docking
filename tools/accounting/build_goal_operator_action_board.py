@@ -1099,6 +1099,28 @@ def build_action_board(
         "product_goal_completion_audit_status": _text(product_goal_completion_audit.get("status")),
         "product_goal_complete": bool(product_goal_completion_audit.get("goal_complete") is True),
         "product_goal_primary_bottleneck_kind": _text(product_goal_completion_audit.get("primary_bottleneck_kind")),
+        "product_goal_engine_refinement_claim_promotion_ready": bool(
+            product_goal_completion_audit.get("engine_refinement_claim_promotion_ready") is True
+        ),
+        "product_goal_engine_refinement_claim_promotion_blocker_count": _int(
+            product_goal_completion_audit.get("engine_refinement_claim_promotion_blocker_count")
+        ),
+        "product_goal_engine_refinement_claim_promotion_action_row_count": _int(
+            product_goal_completion_audit.get("engine_refinement_claim_promotion_action_row_count")
+        ),
+        "product_goal_engine_refinement_claim_promotion_blockers": [
+            str(item)
+            for item in (
+                product_goal_completion_audit.get("engine_refinement_claim_promotion_blockers")
+                or []
+            )
+        ],
+        "product_goal_engine_refinement_claim_promotion_action_board_csv": _text(
+            product_goal_completion_audit.get("engine_refinement_claim_promotion_action_board_csv")
+        ),
+        "product_goal_engine_refinement_claim_promotion_next_required_step": _text(
+            product_goal_completion_audit.get("engine_refinement_claim_promotion_next_required_step")
+        ),
         "product_goal_production_ai_checkpoint_ready": bool(
             product_goal_completion_audit.get("production_ai_checkpoint_ready") is True
         ),
@@ -1538,6 +1560,9 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_goal_completion_audit_status: `{s['product_goal_completion_audit_status']}`",
         f"- product_goal_complete: `{s['product_goal_complete']}`",
         f"- product_goal_primary_bottleneck_kind: `{s['product_goal_primary_bottleneck_kind']}`",
+        f"- product_goal_engine_refinement_claim_promotion_ready: `{s['product_goal_engine_refinement_claim_promotion_ready']}`",
+        f"- product_goal_engine_refinement_claim_promotion_blocker_count: `{s['product_goal_engine_refinement_claim_promotion_blocker_count']}`",
+        f"- product_goal_engine_refinement_claim_promotion_action_board_csv: `{s['product_goal_engine_refinement_claim_promotion_action_board_csv']}`",
         f"- product_goal_production_ai_checkpoint_ready: `{s['product_goal_production_ai_checkpoint_ready']}`",
         f"- product_goal_production_ai_gpu_handoff_ready: `{s['product_goal_production_ai_gpu_handoff_ready']}`",
         f"- product_goal_scope_priority_ready: `{s['product_goal_scope_priority_ready']}`",

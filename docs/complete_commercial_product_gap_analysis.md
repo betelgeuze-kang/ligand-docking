@@ -119,6 +119,18 @@
   `goal_operator_intake_kit_current/manifest.json`의
   `engine_refinement_claim_promotion_action_board` entry에도 노출되어,
   operator-facing 작업판에서 claim blocker evidence 수집 상태를 직접 추적한다.
+  최신 `runs/product_goal_completion_audit_current.json`도 이를
+  `R9_engine_refinement_claim_promotion` release blocker로 흡수해,
+  scope closure가 green이어도 refine-tier claim promotion evidence가 없으면
+  `goal_complete=false`가 유지된다. 이 R9 상태는
+  `runs/product_commercial_readiness_operator_packet_current.json`과
+  `runs/product_commercial_readiness_handoff_bundle_current.json` summary에도
+  `engine_refinement_claim_promotion_*` 필드로 전파되어, handoff 단계에서도
+  claim-grade evidence 병목이 숨지 않는다. `runs/product_release_bundle_current.json`도
+  `product_goal_completion_audit` artifact와
+  `product_goal_completion_audit_full_claim_boundary_recorded` check를 포함해,
+  restricted release bundle review에서도 full commercial science claim 미완료가
+  명시적으로 보인다.
 - `tools/product/build_refine_tier_public_benchmark_readiness.py`: curated 공개
   pose/free-energy benchmark intake를 별도 fail-closed gate로 판정한다.
   `config/refine_tier_public_benchmark_intake_current.csv`는 required column header를

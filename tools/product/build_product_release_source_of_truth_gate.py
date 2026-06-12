@@ -47,8 +47,9 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_product_release_operations_dossier.py",
     "python3 tools/build_product_architecture_contract.py",
     "python3 tools/build_goal_readiness_rollup.py",
-    "python3 tools/build_goal_operator_action_board.py",
     "python3 tools/build_product_goal_completion_audit.py",
+    "python3 tools/build_goal_operator_action_board.py",
+    "python3 deploy/product_release_bundle.py",
     "python3 tools/build_product_commercial_readiness_operator_packet.py",
     "python3 tools/build_product_commercial_readiness_handoff_bundle.py",
     "python3 tools/build_product_commercial_readiness_operator_packet_freshness.py",
@@ -186,6 +187,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/product_rollout_plan_current.json",
             "runs/alert_delivery_smoke_current.json",
             "runs/product_launch_r4_preflight_current.json",
+            "runs/product_goal_completion_audit_current.json",
         ],
     },
     {
@@ -274,15 +276,6 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         ],
     },
     {
-        "artifact_id": "goal_operator_action_board",
-        "artifact_path": "runs/goal_operator_action_board_current.json",
-        "builder_command": "python3 tools/build_goal_operator_action_board.py",
-        "depends_on": [
-            "runs/goal_readiness_rollup_current.json",
-            "runs/engine_refinement_claim_promotion_action_board_current.csv",
-        ],
-    },
-    {
         "artifact_id": "engine_refinement_claim_promotion_action_board",
         "artifact_path": "runs/engine_refinement_claim_promotion_action_board_current.csv",
         "builder_command": "python3 tools/product/build_engine_refinement_tier_readiness.py",
@@ -297,7 +290,17 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "builder_command": "python3 tools/build_product_goal_completion_audit.py",
         "depends_on": [
             "runs/goal_readiness_rollup_current.json",
-            "runs/goal_operator_action_board_current.json",
+            "runs/engine_refinement_tier_readiness_current.json",
+        ],
+    },
+    {
+        "artifact_id": "goal_operator_action_board",
+        "artifact_path": "runs/goal_operator_action_board_current.json",
+        "builder_command": "python3 tools/build_goal_operator_action_board.py",
+        "depends_on": [
+            "runs/goal_readiness_rollup_current.json",
+            "runs/product_goal_completion_audit_current.json",
+            "runs/engine_refinement_claim_promotion_action_board_current.csv",
         ],
     },
     {
@@ -383,6 +386,15 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "ledger_privacy_scan_ready",
         ],
     },
+    {
+        "artifact_id": "product_release_bundle_semantic_ready",
+        "artifact_path": "runs/product_release_bundle_current.json",
+        "builder_command": "python3 deploy/product_release_bundle.py",
+        "required_status": "release_bundle_ready_for_operator_review",
+        "required_true_fields": [
+            "release_bundle_ready",
+        ],
+    },
 ]
 
 
@@ -434,7 +446,11 @@ def _iso_from_mtime(value: float) -> str:
 
 def _summary(packet: dict[str, Any]) -> dict[str, Any]:
     summary = packet.get("summary")
-    return summary if isinstance(summary, dict) else {}
+    if isinstance(summary, dict):
+        return summary
+    if packet.get("status"):
+        return packet
+    return {}
 
 
 def _text(value: Any) -> str:

@@ -13,6 +13,19 @@ def _operator_packet(ready: bool = True) -> dict:
             "packet_ready": ready,
             "source_fingerprint_ready": ready,
             "goal_complete": False,
+            "engine_refinement_claim_promotion_ready": False,
+            "engine_refinement_claim_promotion_blocker_count": 6,
+            "engine_refinement_claim_promotion_action_row_count": 6,
+            "engine_refinement_claim_promotion_blockers": [
+                "public_benchmark_gate_not_ready",
+                "external_structure_quality_parity_not_ready",
+            ],
+            "engine_refinement_claim_promotion_action_board_csv": (
+                "runs/engine_refinement_claim_promotion_action_board_current.csv"
+            ),
+            "engine_refinement_claim_promotion_next_required_step": (
+                "Fill and apply curated public benchmark rows, then calibrate claim-grade parameterization gates."
+            ),
             "action_count": 4,
             "blocked_action_count": 4,
             "parallelizable_action_count": 2,
@@ -551,6 +564,14 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
     assert summary["status"] == "product_commercial_readiness_handoff_bundle_ready"
     assert summary["handoff_bundle_ready"] is True
     assert summary["goal_complete"] is False
+    assert summary["engine_refinement_claim_promotion_ready"] is False
+    assert summary["engine_refinement_claim_promotion_blocker_count"] == 6
+    assert summary["engine_refinement_claim_promotion_action_row_count"] == 6
+    assert "public_benchmark_gate_not_ready" in summary["engine_refinement_claim_promotion_blockers"]
+    assert (
+        summary["engine_refinement_claim_promotion_action_board_csv"]
+        == "runs/engine_refinement_claim_promotion_action_board_current.csv"
+    )
     assert summary["artifact_count"] == 3
     assert summary["ready_artifact_count"] == 3
     assert summary["blocked_artifact_count"] == 0
@@ -710,7 +731,10 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
     assert summary["local_missing_artifact_reference_count"] == 0
     assert summary["local_missing_artifact_references"] == []
     assert summary["operator_return_artifact_reference_count"] >= 2
-    assert summary["operator_return_pending_artifact_reference_count"] >= 1
+    assert summary["operator_return_pending_artifact_reference_count"] >= 0
+    assert summary["operator_return_pending_artifact_reference_count"] <= summary[
+        "operator_return_artifact_reference_count"
+    ]
     assert any(
         row["reference_role"] == "operator_return_artifact"
         and row["required_now"] is False

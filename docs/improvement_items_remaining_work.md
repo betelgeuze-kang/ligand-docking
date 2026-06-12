@@ -397,6 +397,18 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   actions로 흡수하고, `goal_operator_intake_kit_current/manifest.json`은
   `engine_refinement_claim_promotion_action_board` entry로 노출해 operator-facing
   작업판에서도 claim blocker evidence 수집이 빠지지 않게 한다.
+  최신 `runs/product_goal_completion_audit_current.json`은 같은 blocker 묶음을
+  `R9_engine_refinement_claim_promotion` release blocker로 기록한다. 따라서
+  full-scope claim closure나 restricted delivery accounting이 green이어도,
+  refine-tier claim-grade evidence가 없으면 `goal_complete=false`가 유지된다.
+  같은 R9 상태는 `runs/product_commercial_readiness_operator_packet_current.json`과
+  `runs/product_commercial_readiness_handoff_bundle_current.json` summary의
+  `engine_refinement_claim_promotion_*` 필드로도 전파되어, 상용 readiness
+  handoff 단계에서 claim-grade evidence 병목이 빠지지 않게 한다. 또한
+  `runs/product_release_bundle_current.json`은 `product_goal_completion_audit`
+  artifact와 `product_goal_completion_audit_full_claim_boundary_recorded` check를
+  포함해, restricted release bundle review에서도 full commercial science claim
+  미완료가 숨지 않게 한다.
   `tools/product/build_refine_tier_public_benchmark_readiness.py`는 curated 공개
   pose/free-energy benchmark intake를 별도 fail-closed gate로 고정한다.
   `config/refine_tier_public_benchmark_intake_current.csv`는 required column header를

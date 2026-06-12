@@ -13,6 +13,7 @@ def test_release_bundle_links_required_artifacts_and_policy() -> None:
 
     assert payload["bundle_version"] == "product_release_bundle_manifest_v1"
     assert payload["status"] == "release_bundle_ready_for_operator_review"
+    assert payload["release_bundle_ready"] is True
     assert payload["blocker_count"] == 0
     assert payload["operator_promotion_policy"]["status"] == "operator_approval_required"
     assert payload["operator_promotion_policy"]["external_state_mutation_allowed"] is False
@@ -39,6 +40,7 @@ def test_release_bundle_links_required_artifacts_and_policy() -> None:
     assert artifacts["product_rollout_execution_readiness"]["sha256"]
     assert artifacts["product_launch_r4_preflight"]["sha256"]
     assert artifacts["engine_refinement_claim_promotion_action_board"]["sha256"]
+    assert artifacts["product_goal_completion_audit"]["sha256"]
 
     checks = {row["check"]: row for row in payload["checks"]}
     assert checks["security_contract_ready"]["passed"] is True
@@ -56,6 +58,10 @@ def test_release_bundle_links_required_artifacts_and_policy() -> None:
     assert checks["product_rollout_execution_readiness_recorded"]["passed"] is True
     assert checks["product_launch_r4_preflight_recorded"]["passed"] is True
     assert checks["engine_refinement_claim_promotion_action_board_recorded"]["passed"] is True
+    assert checks["product_goal_completion_audit_full_claim_boundary_recorded"]["passed"] is True
+    assert "r9_status=fail" in checks[
+        "product_goal_completion_audit_full_claim_boundary_recorded"
+    ]["observed"]
 
 
 def test_release_bundle_blocks_missing_required_artifact() -> None:
@@ -65,6 +71,7 @@ def test_release_bundle_blocks_missing_required_artifact() -> None:
     )
 
     assert payload["status"] == "blocked_release_bundle"
+    assert payload["release_bundle_ready"] is False
     assert payload["blocker_count"] >= 1
     blockers = {row["check"]: row for row in payload["blockers"]}
     assert blockers["required_artifacts_present"]["passed"] is False

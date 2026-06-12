@@ -522,6 +522,25 @@ def build_product_commercial_readiness_operator_packet(
         "commercial_readiness_matrix_sha256": matrix_sha256,
         "source_fingerprint_ready": bool(source_sha256 and matrix_sha256),
         "goal_complete": bool(summary.get("goal_complete") is True),
+        "engine_refinement_claim_promotion_ready": bool(
+            summary.get("engine_refinement_claim_promotion_ready") is True
+        ),
+        "engine_refinement_claim_promotion_blocker_count": _int(
+            summary.get("engine_refinement_claim_promotion_blocker_count")
+        ),
+        "engine_refinement_claim_promotion_action_row_count": _int(
+            summary.get("engine_refinement_claim_promotion_action_row_count")
+        ),
+        "engine_refinement_claim_promotion_blockers": [
+            str(item)
+            for item in (summary.get("engine_refinement_claim_promotion_blockers") or [])
+        ],
+        "engine_refinement_claim_promotion_action_board_csv": _text(
+            summary.get("engine_refinement_claim_promotion_action_board_csv")
+        ),
+        "engine_refinement_claim_promotion_next_required_step": _text(
+            summary.get("engine_refinement_claim_promotion_next_required_step")
+        ),
         "open_gap_ids": [str(item) for item in (summary.get("product_ai_architecture_open_gap_ids") or [])],
         "action_count": len(rows),
         "blocked_action_count": len(blocker_rows),
@@ -913,6 +932,9 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- status: `{s['status']}`",
         f"- packet_ready: `{s['packet_ready']}`",
         f"- goal_complete: `{s['goal_complete']}`",
+        f"- engine_refinement_claim_promotion_ready: `{s['engine_refinement_claim_promotion_ready']}`",
+        f"- engine_refinement_claim_promotion_blocker_count: `{s['engine_refinement_claim_promotion_blocker_count']}`",
+        f"- engine_refinement_claim_promotion_action_board_csv: `{s['engine_refinement_claim_promotion_action_board_csv']}`",
         f"- goal_audit_sha256: `{s['goal_audit_sha256']}`",
         f"- commercial_readiness_matrix_sha256: `{s['commercial_readiness_matrix_sha256']}`",
         f"- source_fingerprint_ready: `{s['source_fingerprint_ready']}`",
