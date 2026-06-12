@@ -684,6 +684,14 @@ def _product_goal_completion_audit() -> dict:
             "engine_refinement_claim_promotion_action_board_csv": (
                 "runs/engine_refinement_claim_promotion_action_board_current.csv"
             ),
+            "engine_refinement_claim_evidence_receipt_ready": False,
+            "engine_refinement_claim_evidence_receipt_blocked_row_count": 6,
+            "engine_refinement_claim_evidence_receipt_artifact": (
+                "runs/engine_refinement_claim_evidence_receipt_current.json"
+            ),
+            "engine_refinement_claim_evidence_receipt_csv": (
+                "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
+            ),
             "engine_refinement_claim_promotion_next_required_step": (
                 "Fill and apply curated public benchmark rows, then calibrate claim-grade parameterization gates."
             ),
@@ -929,6 +937,12 @@ def test_goal_operator_action_board_summary_points_to_primary_product_ai_action(
     assert (
         summary["product_goal_engine_refinement_claim_promotion_action_board_csv"]
         == "runs/engine_refinement_claim_promotion_action_board_current.csv"
+    )
+    assert summary["product_goal_engine_refinement_claim_evidence_receipt_ready"] is False
+    assert summary["product_goal_engine_refinement_claim_evidence_receipt_blocked_row_count"] == 6
+    assert (
+        summary["product_goal_engine_refinement_claim_evidence_receipt_artifact"]
+        == "runs/engine_refinement_claim_evidence_receipt_current.json"
     )
     assert "curated public benchmark rows" in summary[
         "product_goal_engine_refinement_claim_promotion_next_required_step"

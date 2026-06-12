@@ -397,6 +397,18 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   actions로 흡수하고, `goal_operator_intake_kit_current/manifest.json`은
   `engine_refinement_claim_promotion_action_board` entry로 노출해 operator-facing
   작업판에서도 claim blocker evidence 수집이 빠지지 않게 한다.
+  `tools/product/build_engine_refinement_claim_evidence_receipt.py`는 이 action board
+  뒤에 붙는 evidence receipt gate다.
+  `config/engine_refinement_claim_promotion_evidence_receipt_current.csv`는 6개 blocker
+  receipt template을 tracked로 제공하고, 최신
+  `runs/engine_refinement_claim_evidence_receipt_current.json`은 placeholder evidence를
+  fail-closed로 판정해 `blocked_engine_refinement_claim_evidence_receipt`,
+  `claim_promotion_evidence_receipt_ready=false`, `blocked_row_count=6`을 기록한다.
+  이 receipt artifact는 `engine_refinement_tier_readiness`,
+  `product_launch_r4_preflight`, `product_goal_completion_audit`,
+  `goal_operator_action_board`, `goal_operator_intake_kit`,
+  commercial readiness operator packet/handoff, release bundle/source-of-truth
+  freshness에 연결되어 "증거가 필요함"과 "증거가 검증됨"의 경계가 분리된다.
   최신 `runs/product_goal_completion_audit_current.json`은 같은 blocker 묶음을
   `R9_engine_refinement_claim_promotion` release blocker로 기록한다. 따라서
   full-scope claim closure나 restricted delivery accounting이 green이어도,

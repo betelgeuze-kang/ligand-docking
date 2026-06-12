@@ -40,6 +40,7 @@ def test_release_bundle_links_required_artifacts_and_policy() -> None:
     assert artifacts["product_rollout_execution_readiness"]["sha256"]
     assert artifacts["product_launch_r4_preflight"]["sha256"]
     assert artifacts["engine_refinement_claim_promotion_action_board"]["sha256"]
+    assert artifacts["engine_refinement_claim_evidence_receipt"]["sha256"]
     assert artifacts["product_goal_completion_audit"]["sha256"]
 
     checks = {row["check"]: row for row in payload["checks"]}
@@ -58,6 +59,11 @@ def test_release_bundle_links_required_artifacts_and_policy() -> None:
     assert checks["product_rollout_execution_readiness_recorded"]["passed"] is True
     assert checks["product_launch_r4_preflight_recorded"]["passed"] is True
     assert checks["engine_refinement_claim_promotion_action_board_recorded"]["passed"] is True
+    assert checks["engine_refinement_claim_evidence_receipt_recorded"]["passed"] is True
+    assert "receipt_ready=False" in checks["engine_refinement_claim_evidence_receipt_recorded"]["observed"]
+    assert "launch_preflight_receipt_artifact=runs/engine_refinement_claim_evidence_receipt_current.json" in checks[
+        "engine_refinement_claim_evidence_receipt_recorded"
+    ]["observed"]
     assert checks["product_goal_completion_audit_full_claim_boundary_recorded"]["passed"] is True
     assert "r9_status=fail" in checks[
         "product_goal_completion_audit_full_claim_boundary_recorded"

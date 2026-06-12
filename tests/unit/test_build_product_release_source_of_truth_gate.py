@@ -217,6 +217,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "product_ledger_privacy_scan" in artifact_ids
     assert "product_launch_r4_preflight" in artifact_ids
     assert "engine_refinement_claim_promotion_action_board" in artifact_ids
+    assert "engine_refinement_claim_evidence_receipt" in artifact_ids
     assert "product_release_bundle_semantic_ready" in status_ids
     goal_action_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "goal_operator_action_board"
@@ -232,14 +233,27 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_release_bundle"
     )
     assert "runs/product_goal_completion_audit_current.json" in release_bundle_spec["depends_on"]
+    assert "runs/engine_refinement_claim_evidence_receipt_current.json" in release_bundle_spec["depends_on"]
+    evidence_receipt_spec = next(
+        spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "engine_refinement_claim_evidence_receipt"
+    )
+    assert "config/engine_refinement_claim_promotion_evidence_receipt_current.csv" in evidence_receipt_spec["depends_on"]
+    assert "runs/engine_refinement_claim_promotion_action_board_current.csv" in evidence_receipt_spec["depends_on"]
     assert "product_ledger_privacy_scan_semantic_ready" in status_ids
     assert "python3 tools/build_product_ai_report_explanation_packet.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_ai_report_ux_contract.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/product/build_engine_refinement_tier_readiness.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/product/build_product_launch_r4_preflight.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_ledger_privacy_scan.py" in mod.RELEASE_REFRESH_COMMANDS
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_goal_completion_audit.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_operator_action_board.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/product/build_engine_refinement_tier_readiness.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/product/build_engine_refinement_claim_evidence_receipt.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/product/build_engine_refinement_claim_evidence_receipt.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/product/build_product_launch_r4_preflight.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_goal_completion_audit.py") < (
         max(

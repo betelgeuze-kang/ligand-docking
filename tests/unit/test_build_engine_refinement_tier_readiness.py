@@ -27,6 +27,14 @@ def test_build_engine_refinement_tier_readiness_passes_on_repo_defaults() -> Non
     assert summary["public_benchmark_work_order_row_count"] == 8
     assert "insufficient_total_rows" in summary["public_benchmark_blockers"]
     assert "free_energy_spearman_or_pair_gate_not_ready" in summary["public_benchmark_blockers"]
+    assert summary["claim_promotion_evidence_receipt_status"] == (
+        "blocked_engine_refinement_claim_evidence_receipt"
+    )
+    assert summary["claim_promotion_evidence_receipt_ready"] is False
+    assert summary["claim_promotion_evidence_receipt_blocked_row_count"] == 6
+    assert summary["claim_promotion_evidence_receipt_csv"] == (
+        "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
+    )
     assert summary["claim_promotion_allowed"] is False
     assert summary["claim_promotion_blocker_count"] == 6
     assert summary["claim_promotion_blockers"] == [
@@ -83,6 +91,7 @@ def test_build_engine_refinement_tier_readiness_passes_on_repo_defaults() -> Non
     assert checks["refine_tier_pose_metric_surface_ready"]["status"] == "pass"
     assert checks["refine_tier_free_energy_calibration_claim_guard"]["status"] == "pass"
     assert checks["refine_tier_public_benchmark_blocker_linkage"]["status"] == "pass"
+    assert checks["refine_tier_claim_evidence_receipt_linkage"]["status"] == "pass"
 
 
 def test_engine_refinement_tier_readiness_writes_claim_promotion_action_board(tmp_path) -> None:

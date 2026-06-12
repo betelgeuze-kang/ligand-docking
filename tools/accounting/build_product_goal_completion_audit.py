@@ -1740,11 +1740,15 @@ def build_product_goal_completion_audit(
     )
     if not engine_refinement_claim_blocker_count and engine_refinement_claim_blockers:
         engine_refinement_claim_blocker_count = len(engine_refinement_claim_blockers)
+    engine_refinement_claim_evidence_receipt_ready = _bool(
+        engine_refinement.get("claim_promotion_evidence_receipt_ready")
+    )
     engine_refinement_claim_promotion_ready = (
         not engine_refinement
         or all(
             [
                 _bool(engine_refinement.get("claim_promotion_allowed")),
+                engine_refinement_claim_evidence_receipt_ready,
                 engine_refinement_claim_blocker_count == 0,
                 engine_refinement_claim_action_row_count == 0,
                 _bool(engine_refinement.get("claim_grade_public_benchmark_ready")),
@@ -2147,6 +2151,7 @@ def build_product_goal_completion_audit(
                     f"engine_refinement_status={_text(engine_refinement.get('status'))};"
                     f"engine_refinement_tier_ready={_bool(engine_refinement.get('engine_refinement_tier_ready'))};"
                     f"claim_promotion_allowed={_bool(engine_refinement.get('claim_promotion_allowed'))};"
+                    f"claim_promotion_evidence_receipt_ready={engine_refinement_claim_evidence_receipt_ready};"
                     f"claim_promotion_blocker_count={engine_refinement_claim_blocker_count};"
                     f"claim_promotion_action_row_count={engine_refinement_claim_action_row_count};"
                     f"claim_grade_public_benchmark_ready={_bool(engine_refinement.get('claim_grade_public_benchmark_ready'))};"
@@ -2154,13 +2159,15 @@ def build_product_goal_completion_audit(
                     f"claim_promotion_blockers={','.join(engine_refinement_claim_blockers)}"
                 ),
                 required=(
-                    "claim_promotion_allowed=true;claim_promotion_blocker_count=0;"
+                    "claim_promotion_allowed=true;claim_promotion_evidence_receipt_ready=true;"
+                    "claim_promotion_blocker_count=0;"
                     "claim_promotion_action_row_count=0;claim_grade_public_benchmark_ready=true"
                 ),
                 evidence_artifacts=_join(
                     [
                         engine_refinement_tier_readiness_path,
                         engine_refinement.get("claim_promotion_action_board_csv"),
+                        engine_refinement.get("claim_promotion_evidence_receipt_artifact"),
                     ]
                 ),
                 blocker="engine_refinement_claim_promotion_not_ready",
@@ -2217,6 +2224,22 @@ def build_product_goal_completion_audit(
         "engine_refinement_claim_promotion_action_row_count": engine_refinement_claim_action_row_count,
         "engine_refinement_claim_promotion_action_board_csv": _text(
             engine_refinement.get("claim_promotion_action_board_csv")
+        ),
+        "engine_refinement_claim_evidence_receipt_status": _text(
+            engine_refinement.get("claim_promotion_evidence_receipt_status")
+        ),
+        "engine_refinement_claim_evidence_receipt_ready": engine_refinement_claim_evidence_receipt_ready,
+        "engine_refinement_claim_evidence_receipt_blocker_count": _int(
+            engine_refinement.get("claim_promotion_evidence_receipt_blocker_count")
+        ),
+        "engine_refinement_claim_evidence_receipt_blocked_row_count": _int(
+            engine_refinement.get("claim_promotion_evidence_receipt_blocked_row_count")
+        ),
+        "engine_refinement_claim_evidence_receipt_artifact": _text(
+            engine_refinement.get("claim_promotion_evidence_receipt_artifact")
+        ),
+        "engine_refinement_claim_evidence_receipt_csv": _text(
+            engine_refinement.get("claim_promotion_evidence_receipt_csv")
         ),
         "engine_refinement_public_benchmark_gate_status": _text(
             engine_refinement.get("public_benchmark_gate_status")
@@ -4762,6 +4785,8 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- engine_refinement_claim_promotion_ready: `{s['engine_refinement_claim_promotion_ready']}`",
         f"- engine_refinement_claim_promotion_blocker_count: `{s['engine_refinement_claim_promotion_blocker_count']}`",
         f"- engine_refinement_claim_promotion_action_board_csv: `{s['engine_refinement_claim_promotion_action_board_csv']}`",
+        f"- engine_refinement_claim_evidence_receipt_ready: `{s['engine_refinement_claim_evidence_receipt_ready']}`",
+        f"- engine_refinement_claim_evidence_receipt_artifact: `{s['engine_refinement_claim_evidence_receipt_artifact']}`",
         f"- requirement_count: `{s['requirement_count']}`",
         f"- pass_count: `{s['pass_count']}`",
         f"- fail_count: `{s['fail_count']}`",

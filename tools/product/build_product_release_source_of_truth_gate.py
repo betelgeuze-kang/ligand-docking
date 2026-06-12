@@ -42,6 +42,7 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_product_rollout_execution_readiness.py",
     "python3 tools/build_api_customer_flow_release_evidence.py",
     "python3 tools/product/build_engine_refinement_tier_readiness.py",
+    "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py",
     "python3 tools/product/build_product_launch_r4_preflight.py",
     "python3 deploy/product_release_bundle.py",
     "python3 tools/build_product_release_operations_dossier.py",
@@ -188,6 +189,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/alert_delivery_smoke_current.json",
             "runs/product_launch_r4_preflight_current.json",
             "runs/product_goal_completion_audit_current.json",
+            "runs/engine_refinement_claim_evidence_receipt_current.json",
         ],
     },
     {
@@ -282,6 +284,16 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "depends_on": [
             "tools/product/build_engine_refinement_tier_readiness.py",
             "runs/engine_refinement_tier_readiness_current.json",
+        ],
+    },
+    {
+        "artifact_id": "engine_refinement_claim_evidence_receipt",
+        "artifact_path": "runs/engine_refinement_claim_evidence_receipt_current.json",
+        "builder_command": "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py",
+        "depends_on": [
+            "tools/product/build_engine_refinement_claim_evidence_receipt.py",
+            "config/engine_refinement_claim_promotion_evidence_receipt_current.csv",
+            "runs/engine_refinement_claim_promotion_action_board_current.csv",
         ],
     },
     {

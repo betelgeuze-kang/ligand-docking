@@ -29,6 +29,11 @@ from tools.build_goal_operator_action_board import (
     DEFAULT_ENGINE_REFINEMENT_CLAIM_ACTION_BOARD_CSV,
     DEFAULT_OUT_JSON as DEFAULT_ACTION_BOARD_JSON,
 )
+from tools.product.build_engine_refinement_claim_evidence_receipt import (
+    APPROVAL_TOKEN as ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_APPROVAL_TOKEN,
+    DEFAULT_OUT_JSON as DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_JSON,
+    DEFAULT_RECEIPT_CSV as DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_CSV,
+)
 from tools.build_goal_api_surface_contract import DEFAULT_OUT_JSON as DEFAULT_GOAL_API_SURFACE_CONTRACT_JSON
 from tools.build_goal_release_burndown_work_order import DEFAULT_OUT_JSON as DEFAULT_RELEASE_BURNDOWN_JSON
 from tools.build_product_execution_approval_gate import (
@@ -218,6 +223,21 @@ CATALOG: list[dict[str, Any]] = [
         "recommended_action": (
             "Use the refine-tier claim blocker action board to track public benchmark rows, parameter calibration, "
             "metal/cofactor, protonation/charge, solvent/FEP, and external structure-quality parity evidence."
+        ),
+    },
+    {
+        "kit_entry_id": "engine_refinement_claim_evidence_receipt",
+        "lane_id": "product_engine_refinement",
+        "action_types": ["resolve_refine_tier_claim_promotion_blocker"],
+        "input_kind": "claim_promotion_evidence_receipt",
+        "source_gate_json": DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_JSON,
+        "template_path": DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_CSV,
+        "intake_path": DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_CSV,
+        "approval_token_required": ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_APPROVAL_TOKEN,
+        "release_checks": "engine_refinement_claim_evidence_receipt_recorded",
+        "recommended_action": (
+            "Replace placeholder receipt rows with local evidence JSON paths, reviewed provenance, license flags, "
+            "zero external engine calls, and the engine-refinement claim evidence receipt approval token."
         ),
     },
     {
@@ -683,6 +703,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--cleanup-approval-gate-json", default=DEFAULT_CLEANUP_APPROVAL_GATE_JSON)
     parser.add_argument("--protected-policy-gate-json", default=DEFAULT_PROTECTED_POLICY_GATE_JSON)
+    parser.add_argument(
+        "--engine-refinement-claim-evidence-receipt-json",
+        default=DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_JSON,
+    )
     parser.add_argument("--goal-api-surface-contract-json", default=DEFAULT_GOAL_API_SURFACE_CONTRACT_JSON)
     parser.add_argument("--out-dir", default=DEFAULT_OUT_DIR)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
@@ -710,6 +734,9 @@ def main(argv: list[str] | None = None) -> None:
         ),
         DEFAULT_CLEANUP_APPROVAL_GATE_JSON: _read_json_if_present(args.cleanup_approval_gate_json),
         DEFAULT_PROTECTED_POLICY_GATE_JSON: _read_json_if_present(args.protected_policy_gate_json),
+        DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_JSON: _read_json_if_present(
+            args.engine_refinement_claim_evidence_receipt_json
+        ),
         DEFAULT_GOAL_API_SURFACE_CONTRACT_JSON: _read_json_if_present(args.goal_api_surface_contract_json),
     }
     payload = build_goal_operator_intake_kit(

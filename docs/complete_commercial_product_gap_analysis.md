@@ -119,6 +119,16 @@
   `goal_operator_intake_kit_current/manifest.json`의
   `engine_refinement_claim_promotion_action_board` entry에도 노출되어,
   operator-facing 작업판에서 claim blocker evidence 수집 상태를 직접 추적한다.
+  `tools/product/build_engine_refinement_claim_evidence_receipt.py`와
+  `config/engine_refinement_claim_promotion_evidence_receipt_current.csv`는 action board
+  다음 단계인 evidence receipt gate를 제공한다. 현재 기본 template은 6개 blocker row를
+  모두 포함하지만 placeholder evidence라
+  `runs/engine_refinement_claim_evidence_receipt_current.json`이
+  `blocked_engine_refinement_claim_evidence_receipt`,
+  `claim_promotion_evidence_receipt_ready=false`, `blocked_row_count=6`으로 남는다.
+  이 receipt 상태는 engine readiness, R4 preflight, goal audit, goal operator intake kit,
+  operator packet, handoff, release bundle, release source-of-truth freshness에 연결되어
+  claim-grade 증거 수집/승인 상태가 숨지 않는다.
   최신 `runs/product_goal_completion_audit_current.json`도 이를
   `R9_engine_refinement_claim_promotion` release blocker로 흡수해,
   scope closure가 green이어도 refine-tier claim promotion evidence가 없으면

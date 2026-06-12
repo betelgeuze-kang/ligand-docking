@@ -15,6 +15,8 @@ ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_ENGINE_CONFIG = "config/ligand_engine_production.json"
 DEFAULT_PUBLIC_BENCHMARK_INPUT_CSV = "config/refine_tier_public_benchmark_intake_current.csv"
+DEFAULT_CLAIM_EVIDENCE_RECEIPT_CSV = "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
+DEFAULT_CLAIM_EVIDENCE_RECEIPT_JSON = "runs/engine_refinement_claim_evidence_receipt_current.json"
 DEFAULT_OUT_JSON = "runs/engine_refinement_tier_readiness_current.json"
 DEFAULT_OUT_ACTION_BOARD_CSV = "runs/engine_refinement_claim_promotion_action_board_current.csv"
 
@@ -810,6 +812,50 @@ def _refine_tier_public_benchmark_linkage_check(*, input_csv: str = DEFAULT_PUBL
         )
 
 
+def _refine_tier_claim_evidence_receipt_linkage_check(
+    *,
+    receipt_csv: str = DEFAULT_CLAIM_EVIDENCE_RECEIPT_CSV,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    try:
+        from tools.product.build_engine_refinement_claim_evidence_receipt import (
+            build_engine_refinement_claim_evidence_receipt,
+        )
+
+        payload = build_engine_refinement_claim_evidence_receipt(receipt_csv=receipt_csv)
+        summary = payload.get("summary", {})
+        required_blockers = set(summary.get("required_blockers", []) or [])
+        linkage_ok = bool(
+            summary.get("status")
+            in {"blocked_engine_refinement_claim_evidence_receipt", "engine_refinement_claim_evidence_receipt_ready"}
+            and required_blockers == set(CLAIM_PROMOTION_BLOCKERS)
+            and int(summary.get("required_blocker_count", 0) or 0) == len(CLAIM_PROMOTION_BLOCKERS)
+            and int(summary.get("receipt_row_count", 0) or 0) >= len(CLAIM_PROMOTION_BLOCKERS)
+            and int(summary.get("missing_required_blocker_count", 0) or 0) == 0
+            and summary.get("external_state_mutated") is False
+        )
+        return (
+            {
+                "check_id": "refine_tier_claim_evidence_receipt_linkage",
+                "status": "pass" if linkage_ok else "blocked",
+                "detail": (
+                    f"receipt_status={summary.get('status')}; "
+                    f"receipt_ready={summary.get('claim_promotion_evidence_receipt_ready')}; "
+                    f"blocked_row_count={summary.get('blocked_row_count')}"
+                ),
+            },
+            summary,
+        )
+    except Exception as exc:
+        return (
+            {
+                "check_id": "refine_tier_claim_evidence_receipt_linkage",
+                "status": "blocked",
+                "detail": f"{type(exc).__name__}: {exc}",
+            },
+            {},
+        )
+
+
 def _build_claim_promotion_action_rows(public_benchmark_summary: dict[str, Any]) -> list[dict[str, Any]]:
     work_order_rows = int(public_benchmark_summary.get("work_order_row_count", 0) or 0)
     public_blockers = list(public_benchmark_summary.get("blockers", []) or [])
@@ -966,6 +1012,7 @@ def build_engine_refinement_tier_readiness(
     *,
     engine_config: str = DEFAULT_ENGINE_CONFIG,
     public_benchmark_input_csv: str = DEFAULT_PUBLIC_BENCHMARK_INPUT_CSV,
+    claim_evidence_receipt_csv: str = DEFAULT_CLAIM_EVIDENCE_RECEIPT_CSV,
 ) -> dict[str, Any]:
     from tools.product.engine_refinement_config import load_engine_refinement_config
 
@@ -1023,6 +1070,10 @@ def build_engine_refinement_tier_readiness(
         input_csv=public_benchmark_input_csv,
     )
     checks.append(public_benchmark_check)
+    claim_evidence_receipt_check, claim_evidence_receipt_summary = _refine_tier_claim_evidence_receipt_linkage_check(
+        receipt_csv=claim_evidence_receipt_csv,
+    )
+    checks.append(claim_evidence_receipt_check)
 
     blocked = [item for item in checks if item["status"] != "pass"]
     ready = not blocked
@@ -1090,6 +1141,22 @@ def build_engine_refinement_tier_readiness(
             ),
             "public_benchmark_next_required_step": public_benchmark_summary.get("next_required_step", ""),
             "claim_grade_public_benchmark_ready": public_benchmark_ready,
+            "claim_promotion_evidence_receipt_status": claim_evidence_receipt_summary.get("status", ""),
+            "claim_promotion_evidence_receipt_ready": bool(
+                claim_evidence_receipt_summary.get("claim_promotion_evidence_receipt_ready", False)
+            ),
+            "claim_promotion_evidence_receipt_blocker_count": int(
+                claim_evidence_receipt_summary.get("blocker_count", 0) or 0
+            ),
+            "claim_promotion_evidence_receipt_blocked_row_count": int(
+                claim_evidence_receipt_summary.get("blocked_row_count", 0) or 0
+            ),
+            "claim_promotion_evidence_receipt_csv": claim_evidence_receipt_csv,
+            "claim_promotion_evidence_receipt_artifact": DEFAULT_CLAIM_EVIDENCE_RECEIPT_JSON,
+            "claim_promotion_evidence_receipt_next_required_step": claim_evidence_receipt_summary.get(
+                "next_required_step",
+                "",
+            ),
             "claim_promotion_allowed": False,
             "claim_promotion_action_board_csv": DEFAULT_OUT_ACTION_BOARD_CSV,
             "claim_promotion_blocker_count": len(claim_promotion_blockers),
@@ -1117,12 +1184,14 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Build engine refinement tier readiness gate.")
     parser.add_argument("--engine-config", default=DEFAULT_ENGINE_CONFIG)
     parser.add_argument("--public-benchmark-input-csv", default=DEFAULT_PUBLIC_BENCHMARK_INPUT_CSV)
+    parser.add_argument("--claim-evidence-receipt-csv", default=DEFAULT_CLAIM_EVIDENCE_RECEIPT_CSV)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-action-board-csv", default=DEFAULT_OUT_ACTION_BOARD_CSV)
     args = parser.parse_args(argv)
     payload = build_engine_refinement_tier_readiness(
         engine_config=args.engine_config,
         public_benchmark_input_csv=args.public_benchmark_input_csv,
+        claim_evidence_receipt_csv=args.claim_evidence_receipt_csv,
     )
     out = _resolve(args.out_json)
     out.parent.mkdir(parents=True, exist_ok=True)

@@ -439,6 +439,18 @@ def build_product_commercial_readiness_handoff_bundle(
         "engine_refinement_claim_promotion_action_board_csv": _text(
             operator_summary.get("engine_refinement_claim_promotion_action_board_csv")
         ),
+        "engine_refinement_claim_evidence_receipt_ready": bool(
+            operator_summary.get("engine_refinement_claim_evidence_receipt_ready") is True
+        ),
+        "engine_refinement_claim_evidence_receipt_blocked_row_count": int(
+            operator_summary.get("engine_refinement_claim_evidence_receipt_blocked_row_count") or 0
+        ),
+        "engine_refinement_claim_evidence_receipt_artifact": _text(
+            operator_summary.get("engine_refinement_claim_evidence_receipt_artifact")
+        ),
+        "engine_refinement_claim_evidence_receipt_csv": _text(
+            operator_summary.get("engine_refinement_claim_evidence_receipt_csv")
+        ),
         "engine_refinement_claim_promotion_next_required_step": _text(
             operator_summary.get("engine_refinement_claim_promotion_next_required_step")
         ),
@@ -1181,6 +1193,8 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- engine_refinement_claim_promotion_ready: `{s['engine_refinement_claim_promotion_ready']}`",
         f"- engine_refinement_claim_promotion_blocker_count: `{s['engine_refinement_claim_promotion_blocker_count']}`",
         f"- engine_refinement_claim_promotion_action_board_csv: `{s['engine_refinement_claim_promotion_action_board_csv']}`",
+        f"- engine_refinement_claim_evidence_receipt_ready: `{s['engine_refinement_claim_evidence_receipt_ready']}`",
+        f"- engine_refinement_claim_evidence_receipt_artifact: `{s['engine_refinement_claim_evidence_receipt_artifact']}`",
         f"- artifact_count: `{s['artifact_count']}`",
         f"- blocked_artifact_count: `{s['blocked_artifact_count']}`",
         f"- artifact_reference_contract_ready: `{s['artifact_reference_contract_ready']}`",

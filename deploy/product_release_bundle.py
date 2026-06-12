@@ -38,6 +38,7 @@ DEFAULT_ARTIFACTS = {
     "product_rollout_execution_readiness": "runs/product_rollout_execution_readiness_current.json",
     "product_launch_r4_preflight": "runs/product_launch_r4_preflight_current.json",
     "engine_refinement_claim_promotion_action_board": "runs/engine_refinement_claim_promotion_action_board_current.csv",
+    "engine_refinement_claim_evidence_receipt": "runs/engine_refinement_claim_evidence_receipt_current.json",
     "product_goal_completion_audit": "runs/product_goal_completion_audit_current.json",
 }
 APPROVAL_TOKENS = [
@@ -126,6 +127,9 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
     rollout_execution_readiness = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["product_rollout_execution_readiness"])))
     launch_r4_preflight = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["product_launch_r4_preflight"])))
     engine_action_board_text = _read_text(_resolve(DEFAULT_ARTIFACTS["engine_refinement_claim_promotion_action_board"]))
+    engine_claim_evidence_receipt = _summary(
+        _read_json(_resolve(DEFAULT_ARTIFACTS["engine_refinement_claim_evidence_receipt"]))
+    )
     goal_audit_payload = _read_json(_resolve(DEFAULT_ARTIFACTS["product_goal_completion_audit"]))
     goal_audit = _summary(goal_audit_payload)
     goal_audit_rows = goal_audit_payload.get("rows") if isinstance(goal_audit_payload.get("rows"), list) else []
@@ -358,6 +362,27 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
                 f"launch_preflight_action_board_path="
                 f"{launch_r4_preflight.get('engine_refinement_claim_promotion_action_board_csv')};"
                 f"line_count={engine_action_board_text.count(chr(10))}"
+            ),
+        },
+        {
+            "check": "engine_refinement_claim_evidence_receipt_recorded",
+            "passed": (
+                engine_claim_evidence_receipt.get("status")
+                in {"blocked_engine_refinement_claim_evidence_receipt", "engine_refinement_claim_evidence_receipt_ready"}
+                and int(engine_claim_evidence_receipt.get("required_blocker_count") or 0) == 6
+                and int(engine_claim_evidence_receipt.get("receipt_row_count") or 0) >= 6
+                and int(engine_claim_evidence_receipt.get("missing_required_blocker_count") or 0) == 0
+                and engine_claim_evidence_receipt.get("external_state_mutated") is False
+                and DEFAULT_ARTIFACTS["engine_refinement_claim_evidence_receipt"]
+                == str(launch_r4_preflight.get("engine_refinement_claim_evidence_receipt_artifact", ""))
+            ),
+            "observed": (
+                f"receipt_status={engine_claim_evidence_receipt.get('status')};"
+                f"receipt_ready={engine_claim_evidence_receipt.get('claim_promotion_evidence_receipt_ready')};"
+                f"blocked_row_count={engine_claim_evidence_receipt.get('blocked_row_count')};"
+                f"blocker_count={engine_claim_evidence_receipt.get('blocker_count')};"
+                f"launch_preflight_receipt_artifact="
+                f"{launch_r4_preflight.get('engine_refinement_claim_evidence_receipt_artifact')}"
             ),
         },
         {

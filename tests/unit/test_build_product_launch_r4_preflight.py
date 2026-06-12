@@ -86,6 +86,15 @@ def _engine() -> dict:
             "blocked_count": 0,
             "claim_promotion_action_board_csv": "runs/engine_refinement_claim_promotion_action_board_current.csv",
             "claim_promotion_action_row_count": 6,
+            "claim_promotion_evidence_receipt_status": "blocked_engine_refinement_claim_evidence_receipt",
+            "claim_promotion_evidence_receipt_ready": False,
+            "claim_promotion_evidence_receipt_blocked_row_count": 6,
+            "claim_promotion_evidence_receipt_artifact": (
+                "runs/engine_refinement_claim_evidence_receipt_current.json"
+            ),
+            "claim_promotion_evidence_receipt_csv": (
+                "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
+            ),
         }
     }
 
@@ -119,6 +128,12 @@ def test_product_launch_r4_preflight_ready_but_does_not_execute() -> None:
         == "runs/engine_refinement_claim_promotion_action_board_current.csv"
     )
     assert summary["engine_refinement_claim_promotion_action_row_count"] == 6
+    assert summary["engine_refinement_claim_evidence_receipt_ready"] is False
+    assert summary["engine_refinement_claim_evidence_receipt_blocked_row_count"] == 6
+    assert (
+        summary["engine_refinement_claim_evidence_receipt_artifact"]
+        == "runs/engine_refinement_claim_evidence_receipt_current.json"
+    )
     assert payload["blockers"] == []
 
 

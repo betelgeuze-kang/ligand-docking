@@ -182,6 +182,20 @@ def _engine_refinement_claim_readiness(*, ready: bool = False) -> dict:
             "engine_refinement_tier_ready": True,
             "claim_grade_public_benchmark_ready": ready,
             "claim_promotion_allowed": ready,
+            "claim_promotion_evidence_receipt_status": (
+                "engine_refinement_claim_evidence_receipt_ready"
+                if ready
+                else "blocked_engine_refinement_claim_evidence_receipt"
+            ),
+            "claim_promotion_evidence_receipt_ready": ready,
+            "claim_promotion_evidence_receipt_blocker_count": 0 if ready else 1,
+            "claim_promotion_evidence_receipt_blocked_row_count": 0 if ready else len(blockers),
+            "claim_promotion_evidence_receipt_artifact": (
+                "runs/engine_refinement_claim_evidence_receipt_current.json"
+            ),
+            "claim_promotion_evidence_receipt_csv": (
+                "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
+            ),
             "claim_promotion_blocker_count": len(blockers),
             "claim_promotion_action_row_count": len(blockers),
             "claim_promotion_blockers": blockers,
@@ -3909,12 +3923,15 @@ def test_product_goal_completion_audit_blocks_refine_tier_claim_promotion() -> N
     assert summary["engine_refinement_claim_promotion_ready"] is False
     assert summary["engine_refinement_claim_promotion_blocker_count"] == 6
     assert summary["engine_refinement_claim_promotion_action_row_count"] == 6
+    assert summary["engine_refinement_claim_evidence_receipt_ready"] is False
+    assert summary["engine_refinement_claim_evidence_receipt_blocked_row_count"] == 6
     assert "public_benchmark_gate_not_ready" in summary["engine_refinement_claim_promotion_blockers"]
     assert r9["status"] == "fail"
     assert r9["blocker"] == "engine_refinement_claim_promotion_not_ready"
     assert r9["release_blocker"] is True
     assert r9["requirement_tier"] == "full_commercial_science_claim"
     assert "claim_promotion_allowed=False" in r9["observed"]
+    assert "claim_promotion_evidence_receipt_ready=False" in r9["observed"]
     assert "claim_promotion_blocker_count=6" in r9["observed"]
     assert "external_structure_quality_parity_not_ready" in r9["observed"]
     assert "build_engine_refinement_tier_readiness.py" in r9["next_command"]
@@ -3948,6 +3965,7 @@ def test_product_goal_completion_audit_passes_refine_tier_claim_promotion_when_r
     assert summary["pass_count"] == 9
     assert summary["fail_count"] == 0
     assert summary["engine_refinement_claim_promotion_ready"] is True
+    assert summary["engine_refinement_claim_evidence_receipt_ready"] is True
     assert r9["status"] == "pass"
     assert r9["blocker"] == ""
 

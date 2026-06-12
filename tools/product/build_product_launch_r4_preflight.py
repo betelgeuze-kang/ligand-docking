@@ -280,6 +280,21 @@ def build_product_launch_r4_preflight(
         "engine_refinement_claim_promotion_action_row_count": _int(
             engine.get("claim_promotion_action_row_count")
         ),
+        "engine_refinement_claim_evidence_receipt_status": _text(
+            engine.get("claim_promotion_evidence_receipt_status")
+        ),
+        "engine_refinement_claim_evidence_receipt_ready": _bool(
+            engine.get("claim_promotion_evidence_receipt_ready")
+        ),
+        "engine_refinement_claim_evidence_receipt_blocked_row_count": _int(
+            engine.get("claim_promotion_evidence_receipt_blocked_row_count")
+        ),
+        "engine_refinement_claim_evidence_receipt_artifact": _text(
+            engine.get("claim_promotion_evidence_receipt_artifact")
+        ),
+        "engine_refinement_claim_evidence_receipt_csv": _text(
+            engine.get("claim_promotion_evidence_receipt_csv")
+        ),
         "claim_boundary": CLAIM_BOUNDARY,
         "next_required_step": (
             "Present Target/Action/Impact/Risk/Rollback/Verification and wait for explicit R4 operator confirmation before any deployment, push, hosted exposure, provider contact, or remote mutation."
@@ -303,6 +318,8 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- external_state_mutated: `{s['external_state_mutated']}`",
         f"- pass_count: `{s['pass_count']}/{s['check_count']}`",
         f"- blocker_count: `{s['blocker_count']}`",
+        f"- engine_refinement_claim_evidence_receipt_ready: `{s['engine_refinement_claim_evidence_receipt_ready']}`",
+        f"- engine_refinement_claim_evidence_receipt_artifact: `{s['engine_refinement_claim_evidence_receipt_artifact']}`",
         "",
         "## Checks",
         "",
