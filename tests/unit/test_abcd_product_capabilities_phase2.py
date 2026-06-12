@@ -16,19 +16,23 @@ from core.allatom_forcefield import (
     bonded_energy,
     dihedral_energy,
     equilibrium_bond_length,
+    formal_charge_proxy_report,
     improper_energy,
     infer_atom_types,
     infer_bonds,
     infer_impropers,
     infer_torsions,
+    ionizable_atom_typing_report,
+    metal_cofactor_coordination_report,
     nonbonded_energy,
     parameter_calibration_report,
     partial_charges_from_atom_types,
 )
 from core.explicit_solvent import explicit_solvation_energy
 from core.fep import estimate_binding_fep
-from core.mm_gbsa import compute_full_refine_stack
+from core.mm_gbsa import compute_full_refine_stack, refine_stack_calibration_report
 from core.pose_generation import generate_cross_docking_poses, induced_fit_relax, sample_sidechain_rotamers
+from core.structure_metrics import structure_quality_claim_guard_report
 from core.structure_metrics_external import try_molprobity_clashscore
 from tools import train_residual_production_score_model as train_mod
 from tools.product.build_refine_tier_residual_training_dataset import enrich_refine_tier_labels
@@ -59,6 +63,52 @@ def test_allatom_explicit_fep_stack():
     assert fep["status"] == "fep_estimate_ready"
     stack = compute_full_refine_stack(_prot(), _lig(), include_explicit=True, include_fep=True)
     assert "gb_sa" in stack and "allatom" in stack and "fep" in stack
+    calibration = refine_stack_calibration_report(
+        stack,
+        public_solvent_pair_count=4,
+        public_fep_pair_count=4,
+        min_public_solvent_pairs=5,
+        min_public_fep_pairs=5,
+    )
+    assert calibration["status"] == "blocked_solvent_fep_calibration_claim"
+    assert calibration["solvent_fep_surface_ready"] is True
+    assert calibration["claim_grade_solvent_fep_calibration_ready"] is False
+    assert "insufficient_public_solvent_pairs" in calibration["blockers"]
+    assert "insufficient_public_fep_pairs" in calibration["blockers"]
+    assert "explicit_solvent_md_sampling_not_validated" in calibration["blockers"]
+    assert "fep_holdout_calibration_not_validated" in calibration["blockers"]
+
+
+def test_structure_quality_interface_proxy_is_reported_but_claim_blocked():
+    atoms = [
+        {"record": "ATOM", "atom_name": "CA", "resname": "ALA", "chain_id": "A", "residue_id": "1", "element": "C", "xyz": np.asarray([0.0, 0.0, 0.0])},
+        {"record": "ATOM", "atom_name": "CA", "resname": "GLY", "chain_id": "A", "residue_id": "2", "element": "C", "xyz": np.asarray([3.8, 0.0, 0.0])},
+        {"record": "ATOM", "atom_name": "CA", "resname": "SER", "chain_id": "A", "residue_id": "3", "element": "C", "xyz": np.asarray([7.6, 0.2, 0.0])},
+        {"record": "ATOM", "atom_name": "CA", "resname": "THR", "chain_id": "A", "residue_id": "4", "element": "C", "xyz": np.asarray([11.4, 0.1, 0.0])},
+        {"record": "HETATM", "atom_name": "C1", "resname": "LIG", "chain_id": "L", "residue_id": "1", "element": "C", "xyz": np.asarray([3.8, 3.2, 0.0])},
+        {"record": "HETATM", "atom_name": "O1", "resname": "LIG", "chain_id": "L", "residue_id": "1", "element": "O", "xyz": np.asarray([5.0, 3.2, 0.0])},
+    ]
+    reference = [
+        {**atom, "xyz": np.asarray(atom["xyz"], dtype=np.float64) + np.asarray([0.05, -0.02, 0.01])}
+        for atom in atoms
+    ]
+    report = structure_quality_claim_guard_report(
+        atoms,
+        receptor_coords=np.asarray([atom["xyz"] for atom in atoms[:4]], dtype=np.float64),
+        ligand_coords=np.asarray([atom["xyz"] for atom in atoms[4:]], dtype=np.float64),
+        reference_atoms=reference,
+        max_clashscore_proxy=200.0,
+    )
+    assert report["status"] == "blocked_structure_quality_claim"
+    assert report["structure_quality_proxy_surface_ready"] is True
+    assert report["claim_grade_structure_quality_ready"] is False
+    assert report["clashscore_proxy_ready"] is True
+    assert report["reference_metric_surface_ready"] is True
+    assert report["interface"]["contact_count"] >= 1
+    assert "external_molprobity_not_available" in report["blockers"]
+    assert "external_openstructure_not_available" in report["blockers"]
+    assert "native_complex_benchmark_not_ready" in report["blockers"]
+    assert "structure_quality_proxy_not_external_parity" in report["blockers"]
 
 
 def test_allatom_bonded_energy_uses_element_equilibrium_lengths():
@@ -133,6 +183,93 @@ def test_allatom_atom_typing_coverage_reports_halogen_and_unknown_boundaries():
     assert aa_blocked["atom_typing_coverage_status"] == "blocked_atom_typing_coverage"
     assert aa_blocked["default_atom_count"] == 1
     assert aa_blocked["unsupported_metal_or_cofactor_elements"] == ["ZN"]
+
+
+def test_allatom_metal_cofactor_coordination_is_reported_but_claim_blocked():
+    coords = np.asarray(
+        [
+            [0.0, 0.0, 0.0],
+            [2.0, 0.0, 0.0],
+            [0.0, 2.1, 0.0],
+            [0.0, 0.0, 2.2],
+            [4.5, 0.0, 0.0],
+        ],
+        dtype=np.float32,
+    )
+    elements = ["Zn", "N", "O", "S", "C"]
+
+    report = metal_cofactor_coordination_report(coords, elements)
+    assert report["status"] == "blocked_metal_cofactor_parameterization"
+    assert report["metal_cofactor_coordination_surface_ready"] is True
+    assert report["claim_grade_metal_cofactor_parameterization_ready"] is False
+    assert report["metal_count"] == 1
+    assert report["metal_elements"] == ["ZN"]
+    assert report["coordination_site_count"] == 1
+    assert report["coordination_donor_count"] == 3
+    assert report["coordination_rows"][0]["donor_count"] == 3
+    assert "metal_cofactor_parameter_source_missing" in report["blockers"]
+    assert "metal_cofactor_parameterization_not_supported" in report["blockers"]
+
+    aa = allatom_energy(coords, elements)
+    assert aa["atom_typing_coverage_status"] == "blocked_atom_typing_coverage"
+    assert aa["metal_cofactor_coordination_status"] == "blocked_metal_cofactor_parameterization"
+    assert aa["metal_cofactor_coordination_surface_ready"] is True
+    assert aa["metal_cofactor_coordination_site_count"] == 1
+    assert aa["metal_cofactor_coordination_donor_count"] == 3
+    assert aa["claim_grade_metal_cofactor_parameterization_ready"] is False
+
+
+def test_allatom_ionizable_charged_residue_typing_is_reported_but_claim_blocked():
+    coords = np.asarray([[float(idx) * 1.4, 0.0, 0.0] for idx in range(12)], dtype=np.float32)
+    elements = ["C", "O", "O", "C", "N", "H", "H", "H", "P", "O", "O", "S"]
+    bonds = [
+        (0, 1),
+        (0, 2),
+        (0, 3),
+        (3, 4),
+        (4, 5),
+        (4, 6),
+        (4, 7),
+        (8, 9),
+        (8, 10),
+        (3, 11),
+    ]
+
+    atom_types = infer_atom_types(coords, elements, bonds=bonds)
+    assert atom_types[0] == "C_CARBOXYLATE"
+    assert atom_types[1:3] == ["O_CARBOXYLATE", "O_CARBOXYLATE"]
+    assert atom_types[4] == "N_CATIONIC"
+    assert atom_types[9:11] == ["O_PHOSPHATE", "O_PHOSPHATE"]
+    assert atom_types[11] == "S_THIOLATE"
+
+    report = ionizable_atom_typing_report(coords, elements, bonds=bonds)
+    assert report["status"] == "ionizable_atom_typing_surface_ready"
+    assert report["ionizable_atom_typing_surface_ready"] is True
+    assert report["claim_grade_charged_parameterization_ready"] is False
+    assert report["ionizable_atom_count"] == 7
+    assert report["ionizable_atom_type_counts"]["C_CARBOXYLATE"] == 1
+    assert report["ionizable_atom_type_counts"]["O_CARBOXYLATE"] == 2
+    assert report["ionizable_atom_type_counts"]["N_CATIONIC"] == 1
+    assert report["ionizable_atom_type_counts"]["O_PHOSPHATE"] == 2
+    assert report["ionizable_atom_type_counts"]["S_THIOLATE"] == 1
+    assert "charged_residue_parameter_calibration_not_ready" in report["blockers"]
+
+    formal = formal_charge_proxy_report(coords, elements, bonds=bonds)
+    assert formal["status"] == "blocked_formal_charge_proxy"
+    assert formal["formal_charge_proxy_ready"] is True
+    assert formal["claim_grade_formal_charge_ready"] is False
+    assert formal["formal_charge_proxy_atom_count"] == 7
+    assert formal["formal_charge_proxy_net_e"] == -2.0
+    assert "protonation_source_missing" in formal["blockers"]
+    assert "formal_charge_proxy_not_calibrated" in formal["blockers"]
+
+    aa = allatom_energy(coords, elements, bonds=bonds, charges=partial_charges_from_atom_types(atom_types), cutoff_a=6.0)
+    assert aa["ionizable_atom_typing_status"] == "ionizable_atom_typing_surface_ready"
+    assert aa["ionizable_atom_count"] == 7
+    assert aa["claim_grade_charged_parameterization_ready"] is False
+    assert aa["formal_charge_proxy_status"] == "blocked_formal_charge_proxy"
+    assert aa["formal_charge_proxy_net_e"] == -2.0
+    assert aa["claim_grade_formal_charge_ready"] is False
 
 
 def test_allatom_parameter_calibration_claim_guard_is_fail_closed():

@@ -15,6 +15,7 @@ from core.refine_physics import (
 )
 
 REFINE_LIGAND_MODEL = "refine_gb_sa"
+REFINE_STACK_CALIBRATION_STATUS = "internal_solvent_fep_proxy_uncalibrated"
 
 
 def mm_gbsa_binding_energy(
@@ -177,3 +178,64 @@ def compute_full_refine_stack(
         out["refine_stack"].append("fep")
     out["claim_boundary"] = REFINE_TIER_CLAIM_BOUNDARY
     return out
+
+
+def refine_stack_calibration_report(
+    refine_stack: dict[str, Any],
+    *,
+    public_solvent_pair_count: int = 0,
+    public_fep_pair_count: int = 0,
+    min_public_solvent_pairs: int = 5,
+    min_public_fep_pairs: int = 5,
+    public_benchmark_ready: bool = False,
+) -> dict[str, Any]:
+    """Report solvent/FEP calibration posture without opening an accuracy claim."""
+    gb = refine_stack.get("gb_sa") if isinstance(refine_stack.get("gb_sa"), dict) else {}
+    explicit = refine_stack.get("explicit") if isinstance(refine_stack.get("explicit"), dict) else {}
+    fep = refine_stack.get("fep") if isinstance(refine_stack.get("fep"), dict) else {}
+
+    def _finite_number(mapping: dict[str, Any], key: str) -> bool:
+        try:
+            return bool(np.isfinite(float(mapping.get(key))))
+        except (TypeError, ValueError):
+            return False
+
+    gb_ready = _finite_number(gb, "deltaG_mm_gbsa_kcal_mol")
+    explicit_ready = bool(explicit.get("refine_tier") == "explicit_tip3p_shell_v1" and _finite_number(explicit, "delta_e_total_kcal_mol"))
+    fep_ready = bool(fep.get("status") == "fep_estimate_ready" and _finite_number(fep, "delta_g_fep_kcal_mol"))
+    solvent_pairs = int(public_solvent_pair_count)
+    fep_pairs = int(public_fep_pair_count)
+    enough_solvent_pairs = solvent_pairs >= int(min_public_solvent_pairs)
+    enough_fep_pairs = fep_pairs >= int(min_public_fep_pairs)
+    claim_ready = False
+    blockers: list[str] = []
+    if not gb_ready:
+        blockers.append("gb_sa_surface_not_ready")
+    if not explicit_ready:
+        blockers.append("explicit_solvent_surface_not_ready")
+    if not fep_ready:
+        blockers.append("fep_surface_not_ready")
+    if not enough_solvent_pairs:
+        blockers.append("insufficient_public_solvent_pairs")
+    if not enough_fep_pairs:
+        blockers.append("insufficient_public_fep_pairs")
+    if not public_benchmark_ready:
+        blockers.append("public_benchmark_gate_not_ready")
+    blockers.append("explicit_solvent_md_sampling_not_validated")
+    blockers.append("fep_holdout_calibration_not_validated")
+    return {
+        "status": "claim_grade_solvent_fep_calibration_ready" if claim_ready else "blocked_solvent_fep_calibration_claim",
+        "calibration_status": REFINE_STACK_CALIBRATION_STATUS,
+        "solvent_fep_surface_ready": bool(gb_ready and explicit_ready and fep_ready),
+        "gb_sa_surface_ready": gb_ready,
+        "explicit_solvent_surface_ready": explicit_ready,
+        "fep_surface_ready": fep_ready,
+        "claim_grade_solvent_fep_calibration_ready": claim_ready,
+        "public_solvent_pair_count": solvent_pairs,
+        "public_fep_pair_count": fep_pairs,
+        "min_public_solvent_pairs": int(min_public_solvent_pairs),
+        "min_public_fep_pairs": int(min_public_fep_pairs),
+        "public_benchmark_ready": bool(public_benchmark_ready),
+        "blockers": blockers,
+        "claim_boundary": REFINE_TIER_CLAIM_BOUNDARY,
+    }

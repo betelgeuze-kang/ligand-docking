@@ -55,22 +55,55 @@
 - `core/allatom_forcefield.py`, `core/mm_gbsa.py`, `core/explicit_solvent.py`,
   `core/fep.py`: internal typed united-atom all-atom tier, periodic torsion/improper
   proxy, common ligand halogen(`F/Cl/Br/I`) atom typing coverage surface,
+  ionizable/charged-residue local chemistry typing surface,
+  formal charge proxy claim guard,
   unsupported metal/cofactor-like element fail-closed reporting,
+  metal/cofactor coordination candidate claim guard,
   internal proxy parameter calibration claim guard,
+  solvent/FEP calibration claim guard,
+  structure-quality/interface proxy claim guard,
+  public benchmark blocker linkage guard,
   GB/SA MM-GBSA proxy, TIP3P-like explicit shell recheck, FEP scaffold가 존재한다. 최신
   `runs/engine_refinement_tier_readiness_current.json`은 full refine stack smoke를 포함해
-  `check_count=30`, `pass_count=30`, `blocked_count=0`이며,
+  `check_count=36`, `pass_count=36`, `blocked_count=0`이며,
   `refine_tier_atom_typing_coverage_surface`는
   `supported_elements=H,C,N,O,S,P,F,CL,BR,I`, `default_atom_count=0`,
   `coverage_fraction=1.0`과 summary `atom_typing_coverage_surface_ready=true`를 확인한다.
   `refine_tier_unsupported_metal_fail_closed_surface`는 `Zn/Mg`가 support로
   오인되지 않고 `blocked_atom_typing_coverage`로 노출되는지 확인한다.
+  `refine_tier_metal_cofactor_coordination_claim_guard`는 Zn 주변 N/O/S donor
+  후보 3개를 coordination surface로 artifact화하지만
+  `claim_grade_metal_cofactor_parameterization_ready=false`와
+  `metal_cofactor_parameterization_not_supported` blocker로 금속 parameter claim을 막는다.
+  `refine_tier_charged_residue_atom_typing_surface`는 carboxylate/basic N/phosphate/
+  thiolate-like local chemistry를 타입으로 분리하고
+  `charged_residue_atom_typing_surface_ready=true`를 노출하지만,
+  `claim_grade_charged_parameterization_ready=false`로 formal protonation 및 calibrated
+  charge parameter claim은 열지 않는다.
+  `refine_tier_formal_charge_proxy_claim_guard`는 local formal charge hypothesis
+  (`formal_charge_proxy_net_e=-2.0`)를 artifact화하지만
+  `claim_grade_formal_charge_ready=false`로 protonation/calibration claim을 유지 차단한다.
   `refine_tier_parameter_calibration_claim_guard`는
   `parameter_calibration_status=internal_proxy_uncalibrated`,
   `claim_grade_parameterization_ready=false`를 유지한다.
+  `refine_tier_solvent_fep_calibration_claim_guard`는 GB/SA, explicit shell, FEP
+  surface가 finite로 계산되는지 확인하지만 `claim_grade_solvent_fep_calibration_ready=false`,
+  `explicit_solvent_md_sampling_not_validated`, `fep_holdout_calibration_not_validated`로
+  solvent/FEP claim을 막는다.
+  `refine_tier_structure_quality_interface_claim_guard`는 MolProbity-like clashscore proxy와
+  receptor-ligand interface contact coverage를 계산하지만
+  `claim_grade_structure_quality_ready=false`, `external_molprobity_not_available`,
+  `native_complex_benchmark_not_ready`로 외부 metric parity claim을 막는다.
+  `refine_tier_public_benchmark_blocker_linkage`는 public benchmark gate의
+  `blocked_refine_tier_public_benchmark_readiness`, `blocker_count=6`,
+  `work_order_row_count=8`을 engine readiness summary에 직접 연결한다.
   pose RMSD/LDDT-PLI/DockQ proxy metric surface와 MM-GBSA calibration claim guard를
   함께 확인한다. `claim_grade_public_benchmark_ready=false`라서 공개 benchmark claim은
-  여전히 열지 않는다.
+  여전히 열지 않는다. 같은 summary는 `claim_promotion_allowed=false`,
+  `claim_promotion_blocker_count=6`을 노출하며 blocker를
+  public benchmark, parameter calibration, metal/cofactor parameterization,
+  protonation/charge calibration, solvent/FEP public-pair calibration,
+  external structure-quality parity로 고정한다.
 - `tools/product/build_refine_tier_public_benchmark_readiness.py`: curated 공개
   pose/free-energy benchmark intake를 별도 fail-closed gate로 판정한다.
   `config/refine_tier_public_benchmark_intake_current.csv`는 required column header를
@@ -79,6 +112,10 @@
   `blocked_refine_tier_public_benchmark_readiness`, `input_csv_present=true`,
   `row_count=0`, `claim_grade_public_benchmark_ready=false`, `blocker_count=6`,
   `operator_work_order_ready=true`, `work_order_row_count=8`이다.
+  같은 상태는 `runs/engine_refinement_tier_readiness_current.json` summary의
+  `public_benchmark_gate_status`, `public_benchmark_blockers`,
+  `public_benchmark_work_order_row_count=8`,
+  `public_benchmark_operator_work_order_ready=true`로도 노출된다.
   `runs/refine_tier_public_benchmark_work_order_current.csv`는 최소 fit/holdout
   split을 갖춘 8개 operator fill template row를 생성해 curated public benchmark
   intake의 다음 수동 단계를 구체화한다.
@@ -95,9 +132,10 @@
 **갭 (근본 원인)**
 - product lane은 아직 "조대화(coarse-grained) + internal refine scaffold" 단계이지
   **claim-grade all-atom 정밀 MD/도킹 엔진이 아니다.**
-- 남은 미구현/미검증: metal/cofactor/charged-residue까지의 atom typing coverage expansion,
-  calibrated atom-level charge/torsion/improper parameterization, solvent/FEP calibration,
-  curated 공개 pose/free-energy benchmark intake row 입력 및 통과, MolProbity급 구조 품질 검증,
+- 남은 미구현/미검증: metal/cofactor calibrated parameterization 및 coverage expansion,
+  charged-residue formal protonation-state assignment, calibrated atom-level charge/torsion/improper parameterization,
+  solvent/FEP public-pair calibration,
+  curated 공개 pose/free-energy benchmark intake row 입력 및 통과, 외부 MolProbity/OpenStructure 구조 품질 검증,
   공개 ΔG benchmark 상관.
 - 외부 정밀 엔진 없이 정밀도를 내려면 force field·solvent·sampling을 자체 구현해야 함.
 
@@ -353,8 +391,8 @@ durable queue → worker 실행 → signed 결과 번들 회수까지 무인 동
 2. **가장 빠른 상용 스위치는 R4/operator-approved rollout smoke.** restricted scope의
    local evidence와 preflight는 green이므로, 명시 승인 후 실행 검증이 self-hosted 파일럿 전환점이다.
 3. **가장 큰 실제 갭은 A(과학 엔진 정밀도).** internal typed all-atom/GB-SA/explicit-shell/FEP scaffold,
-   common ligand halogen coverage surface, proxy benchmark metric surface는 green이지만,
-   metal/cofactor coverage·parameter calibration·curated 공개 pose/free-energy benchmark intake를 통과해야
+   common ligand halogen/charged-residue local-chemistry/metal-coordination coverage surface, proxy benchmark metric surface는 green이지만,
+   metal/cofactor parameterization·formal protonation·charge/torsion/improper calibration·curated 공개 pose/free-energy benchmark intake를 통과해야
    "외부 엔진 무의존 완전 상용 제품"이라는 claim이 성립한다.
 4. **AI는 정밀도 갭을 덮는 용도가 아니라** 물리 코어 위 bounded residual로 유지해야 하며(C),
    학습 라벨이 자체 정밀 tier(A)에서 나와야 일관성이 생긴다.

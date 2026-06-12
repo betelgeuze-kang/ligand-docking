@@ -11,6 +11,7 @@ STRUCTURE_METRICS_CLAIM_BOUNDARY = (
     "Internal geometry proxies for structure quality reporting. "
     "Not validated MolProbity/OpenStructure parity."
 )
+STRUCTURE_QUALITY_CALIBRATION_STATUS = "internal_structure_quality_proxy_uncalibrated"
 
 _VDW_RADII = {"H": 1.20, "C": 1.70, "N": 1.55, "O": 1.52, "S": 1.80, "P": 1.80, "DEFAULT": 1.70}
 
@@ -208,6 +209,101 @@ def dockq_proxy(
     irms = kabsch_rmsd(m, r) or 999.0
     lrms = float(np.linalg.norm(m.mean(axis=0) - r.mean(axis=0)))
     return float(0.724 * fnat + 0.0130 * lrms + 0.0180 * irms + 0.0020)
+
+
+def interface_contact_coverage(
+    receptor_coords: np.ndarray,
+    ligand_coords: np.ndarray,
+    *,
+    contact_cutoff_a: float = 5.0,
+) -> dict[str, Any]:
+    """Report simple receptor-ligand interface contact coverage."""
+    rec = np.asarray(receptor_coords, dtype=np.float64)
+    lig = np.asarray(ligand_coords, dtype=np.float64)
+    if rec.size == 0 or lig.size == 0:
+        return {
+            "status": "blocked_interface_contact_coverage",
+            "contact_count": 0,
+            "receptor_contact_atom_count": 0,
+            "ligand_contact_atom_count": 0,
+            "interface_contact_fraction": 0.0,
+            "min_interface_distance_a": None,
+        }
+    d = np.linalg.norm(rec[:, None, :] - lig[None, :, :], axis=-1)
+    contacts = d <= float(contact_cutoff_a)
+    contact_count = int(np.sum(contacts))
+    receptor_contact_atom_count = int(np.sum(np.any(contacts, axis=1)))
+    ligand_contact_atom_count = int(np.sum(np.any(contacts, axis=0)))
+    total_pairs = int(max(d.size, 1))
+    return {
+        "status": "interface_contact_coverage_ready" if contact_count > 0 else "blocked_interface_contact_coverage",
+        "contact_count": contact_count,
+        "receptor_contact_atom_count": receptor_contact_atom_count,
+        "ligand_contact_atom_count": ligand_contact_atom_count,
+        "interface_contact_fraction": float(contact_count / total_pairs),
+        "min_interface_distance_a": float(np.min(d)) if d.size else None,
+    }
+
+
+def structure_quality_claim_guard_report(
+    atoms: list[dict[str, Any]],
+    *,
+    receptor_coords: np.ndarray | None = None,
+    ligand_coords: np.ndarray | None = None,
+    reference_atoms: list[dict[str, Any]] | None = None,
+    molprobity_external_available: bool = False,
+    openstructure_external_available: bool = False,
+    native_complex_benchmark_ready: bool = False,
+    max_clashscore_proxy: float = 50.0,
+    min_interface_contacts: int = 1,
+) -> dict[str, Any]:
+    """Report structure-quality/interface coverage while keeping external parity claim fail-closed."""
+    quality = evaluate_structure_quality(atoms, reference_atoms=reference_atoms)
+    rec = np.asarray(receptor_coords, dtype=np.float64) if receptor_coords is not None else np.zeros((0, 3))
+    lig = np.asarray(ligand_coords, dtype=np.float64) if ligand_coords is not None else np.zeros((0, 3))
+    interface = interface_contact_coverage(rec, lig)
+    clash = quality.get("molprobity_clashscore")
+    clash_proxy_ready = clash is not None and float(clash) <= float(max_clashscore_proxy)
+    interface_ready = int(interface["contact_count"]) >= int(min_interface_contacts)
+    reference_metric_ready = bool(
+        quality.get("lddt_pli") is not None
+        and quality.get("dockq_proxy") is not None
+        and quality.get("tm_score_proxy") is not None
+    )
+    claim_ready = False
+    blockers: list[str] = []
+    if not clash_proxy_ready:
+        blockers.append("clashscore_proxy_threshold_not_met")
+    if not interface_ready:
+        blockers.append("interface_contact_coverage_not_ready")
+    if not reference_metric_ready:
+        blockers.append("native_reference_metrics_missing")
+    if not molprobity_external_available:
+        blockers.append("external_molprobity_not_available")
+    if not openstructure_external_available:
+        blockers.append("external_openstructure_not_available")
+    if not native_complex_benchmark_ready:
+        blockers.append("native_complex_benchmark_not_ready")
+    blockers.append("structure_quality_proxy_not_external_parity")
+    return {
+        "status": "claim_grade_structure_quality_ready" if claim_ready else "blocked_structure_quality_claim",
+        "calibration_status": STRUCTURE_QUALITY_CALIBRATION_STATUS,
+        "structure_quality_proxy_surface_ready": bool(clash_proxy_ready and interface_ready),
+        "claim_grade_structure_quality_ready": claim_ready,
+        "molprobity_clashscore_proxy": clash,
+        "clashscore_proxy_ready": clash_proxy_ready,
+        "ramachandran_outlier_fraction": quality.get("ramachandran_outlier_fraction"),
+        "reference_metric_surface_ready": reference_metric_ready,
+        "lddt_pli": quality.get("lddt_pli"),
+        "dockq_proxy": quality.get("dockq_proxy"),
+        "tm_score_proxy": quality.get("tm_score_proxy"),
+        "interface": interface,
+        "molprobity_external_available": bool(molprobity_external_available),
+        "openstructure_external_available": bool(openstructure_external_available),
+        "native_complex_benchmark_ready": bool(native_complex_benchmark_ready),
+        "blockers": blockers,
+        "claim_boundary": STRUCTURE_METRICS_CLAIM_BOUNDARY,
+    }
 
 
 def evaluate_structure_quality(

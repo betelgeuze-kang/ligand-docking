@@ -31,11 +31,16 @@ _ATOM_TYPE_PARAMS: dict[str, tuple[float, float, float]] = {
     "C_SP2": (3.40, 0.070, 0.05),
     "C_SP": (3.35, 0.060, 0.03),
     "C_CARBONYL": (3.35, 0.080, 0.35),
+    "C_CARBOXYLATE": (3.35, 0.080, 0.55),
     "N_POLAR": (3.25, 0.170, -0.30),
     "N_BASIC": (3.30, 0.160, -0.18),
+    "N_CATIONIC": (3.30, 0.170, 0.35),
     "O_CARBONYL": (3.00, 0.210, -0.45),
+    "O_CARBOXYLATE": (3.00, 0.220, -0.65),
     "O_HYDROXYL": (3.05, 0.180, -0.35),
+    "O_PHOSPHATE": (3.05, 0.220, -0.60),
     "S_THIOETHER": (3.50, 0.250, -0.10),
+    "S_THIOLATE": (3.55, 0.260, -0.45),
     "P_PHOSPHATE": (3.74, 0.200, 0.70),
     "F_HALOGEN": (2.95, 0.061, -0.08),
     "CL_HALOGEN": (3.47, 0.150, -0.03),
@@ -47,6 +52,32 @@ _ATOM_TYPE_PARAMS: dict[str, tuple[float, float, float]] = {
 SUPPORTED_ATOM_TYPES = tuple(sorted(atom_type for atom_type in _ATOM_TYPE_PARAMS if atom_type != "X_DEFAULT"))
 SUPPORTED_ELEMENTS = ("H", "C", "N", "O", "S", "P", "F", "CL", "BR", "I")
 UNSUPPORTED_METAL_OR_COFACTOR_ELEMENTS = ("NA", "MG", "CA", "FE", "ZN")
+METAL_COORDINATION_DONOR_ELEMENTS = ("N", "O", "S", "P")
+METAL_COORDINATION_CUTOFF_A = {
+    "NA": 3.0,
+    "MG": 2.6,
+    "CA": 3.0,
+    "FE": 2.8,
+    "ZN": 2.7,
+}
+IONIZABLE_ATOM_TYPES = (
+    "C_CARBOXYLATE",
+    "O_CARBOXYLATE",
+    "N_CATIONIC",
+    "O_PHOSPHATE",
+    "S_THIOLATE",
+)
+IONIZABLE_CLAIM_BOUNDARY = (
+    "Ionizable/charged-residue local chemistry is detected for internal atom typing only; "
+    "formal protonation-state assignment and calibrated residue/ligand charge parameters remain blocked."
+)
+FORMAL_CHARGE_PROXY_BY_ATOM_TYPE = {
+    "C_CARBOXYLATE": 0.0,
+    "O_CARBOXYLATE": -0.5,
+    "N_CATIONIC": 1.0,
+    "O_PHOSPHATE": -0.5,
+    "S_THIOLATE": -1.0,
+}
 
 
 def infer_bonds(coords: np.ndarray, elements: list[str], *, max_bond_a: float = 4.2) -> list[tuple[int, int]]:
@@ -132,6 +163,22 @@ def _neighbors_from_bonds(bonds: list[tuple[int, int]]) -> dict[int, list[int]]:
     return {idx: sorted(set(values)) for idx, values in neighbors.items()}
 
 
+def _neighbor_elements(elements: list[str], neighbors: dict[int, list[int]], idx: int) -> list[str]:
+    return [_element(elements, nbr) for nbr in neighbors.get(idx, [])]
+
+
+def _is_carboxylate_carbon(elements: list[str], neighbors: dict[int, list[int]], idx: int) -> bool:
+    if _element(elements, idx) != "C":
+        return False
+    return _neighbor_elements(elements, neighbors, idx).count("O") >= 2
+
+
+def _is_oxygen_bound_to_carboxylate(elements: list[str], neighbors: dict[int, list[int]], idx: int) -> bool:
+    if _element(elements, idx) != "O":
+        return False
+    return any(_is_carboxylate_carbon(elements, neighbors, nbr) for nbr in neighbors.get(idx, []))
+
+
 def infer_atom_types(
     coords: np.ndarray,
     elements: list[str],
@@ -142,24 +189,19 @@ def infer_atom_types(
     pts = np.asarray(coords, dtype=np.float64)
     inferred_bonds = infer_bonds(pts, elements) if bonds is None else list(bonds)
     degree = _bond_degrees(int(pts.shape[0]), inferred_bonds)
+    neighbors = _neighbors_from_bonds(inferred_bonds)
     types: list[str] = []
     for idx in range(int(pts.shape[0])):
         element = _element(elements, idx)
         deg = degree[idx]
         if element == "H":
-            attached = [
-                _element(elements, j if i == idx else i)
-                for i, j in inferred_bonds
-                if i == idx or j == idx
-            ]
+            attached = _neighbor_elements(elements, neighbors, idx)
             types.append("H_POLAR" if any(e in {"N", "O", "S"} for e in attached) else "H_APOLAR")
         elif element == "C":
-            neighbor_elements = [
-                _element(elements, j if i == idx else i)
-                for i, j in inferred_bonds
-                if i == idx or j == idx
-            ]
-            if any(e == "O" for e in neighbor_elements) and deg <= 3:
+            neighbor_elements = _neighbor_elements(elements, neighbors, idx)
+            if _is_carboxylate_carbon(elements, neighbors, idx) and deg <= 3:
+                types.append("C_CARBOXYLATE")
+            elif any(e == "O" for e in neighbor_elements) and deg <= 3:
                 types.append("C_CARBONYL")
             elif deg <= 1:
                 types.append("C_SP")
@@ -168,11 +210,17 @@ def infer_atom_types(
             else:
                 types.append("C_SP3")
         elif element == "N":
-            types.append("N_BASIC" if deg >= 3 else "N_POLAR")
+            types.append("N_CATIONIC" if deg >= 4 else "N_BASIC" if deg == 3 else "N_POLAR")
         elif element == "O":
-            types.append("O_CARBONYL" if deg <= 1 else "O_HYDROXYL")
+            neighbor_elements = _neighbor_elements(elements, neighbors, idx)
+            if any(e == "P" for e in neighbor_elements):
+                types.append("O_PHOSPHATE")
+            elif _is_oxygen_bound_to_carboxylate(elements, neighbors, idx):
+                types.append("O_CARBOXYLATE")
+            else:
+                types.append("O_CARBONYL" if deg <= 1 else "O_HYDROXYL")
         elif element == "S":
-            types.append("S_THIOETHER")
+            types.append("S_THIOLATE" if deg <= 1 else "S_THIOETHER")
         elif element == "P":
             types.append("P_PHOSPHATE")
         elif element == "F":
@@ -227,6 +275,155 @@ def atom_typing_coverage_report(
         "bond_count": len(inferred_bonds),
         "charge_neutralization_ok": bool(abs(float(np.sum(charges))) < 1e-8),
         "net_charge_e": float(np.sum(charges)) if charges.size else 0.0,
+        "claim_boundary": ALLATOM_CLAIM_BOUNDARY,
+    }
+
+
+def ionizable_atom_typing_report(
+    coords: np.ndarray,
+    elements: list[str],
+    *,
+    bonds: list[tuple[int, int]] | None = None,
+) -> dict[str, Any]:
+    """Report charged-residue/ionizable local chemistry coverage without claiming calibrated protonation."""
+    coverage = atom_typing_coverage_report(coords, elements, bonds=bonds)
+    atom_types = list(coverage["atom_types"])
+    ionizable_counts = {
+        atom_type: atom_types.count(atom_type)
+        for atom_type in IONIZABLE_ATOM_TYPES
+        if atom_types.count(atom_type) > 0
+    }
+    local_chemistry_count = sum(ionizable_counts.values())
+    surface_ready = bool(coverage["status"] == "atom_typing_coverage_ready" and local_chemistry_count > 0)
+    calibration_ready = False
+    blockers: list[str] = []
+    if coverage["status"] != "atom_typing_coverage_ready":
+        blockers.append("atom_typing_coverage_not_ready")
+    if local_chemistry_count <= 0:
+        blockers.append("ionizable_local_chemistry_not_detected")
+    blockers.append("formal_protonation_state_assignment_not_calibrated")
+    blockers.append("charged_residue_parameter_calibration_not_ready")
+    return {
+        "status": "ionizable_atom_typing_surface_ready" if surface_ready else "blocked_ionizable_atom_typing_surface",
+        "ionizable_atom_typing_surface_ready": surface_ready,
+        "claim_grade_charged_parameterization_ready": calibration_ready,
+        "ionizable_atom_types": list(IONIZABLE_ATOM_TYPES),
+        "ionizable_atom_type_counts": ionizable_counts,
+        "ionizable_atom_count": int(local_chemistry_count),
+        "coverage_status": coverage["status"],
+        "coverage_fraction": coverage["coverage_fraction"],
+        "blockers": blockers,
+        "claim_boundary": IONIZABLE_CLAIM_BOUNDARY,
+    }
+
+
+def formal_charge_proxy_report(
+    coords: np.ndarray,
+    elements: list[str],
+    *,
+    bonds: list[tuple[int, int]] | None = None,
+    protonation_source: str = "",
+    public_benchmark_ready: bool = False,
+) -> dict[str, Any]:
+    """Estimate local formal-charge proxies while keeping protonation/calibration fail-closed."""
+    ionizable = ionizable_atom_typing_report(coords, elements, bonds=bonds)
+    atom_types = atom_typing_coverage_report(coords, elements, bonds=bonds)["atom_types"]
+    per_atom = [
+        {
+            "atom_index": idx,
+            "atom_type": atom_type,
+            "formal_charge_proxy_e": float(FORMAL_CHARGE_PROXY_BY_ATOM_TYPE[atom_type]),
+        }
+        for idx, atom_type in enumerate(atom_types)
+        if atom_type in FORMAL_CHARGE_PROXY_BY_ATOM_TYPE
+    ]
+    net_charge = float(sum(item["formal_charge_proxy_e"] for item in per_atom))
+    protonation_ready = bool(str(protonation_source or "").strip())
+    claim_ready = False
+    blockers: list[str] = []
+    if not ionizable["ionizable_atom_typing_surface_ready"]:
+        blockers.append("ionizable_atom_typing_surface_not_ready")
+    if not protonation_ready:
+        blockers.append("protonation_source_missing")
+    if not public_benchmark_ready:
+        blockers.append("public_benchmark_gate_not_ready")
+    blockers.append("formal_charge_proxy_not_calibrated")
+    return {
+        "status": "claim_grade_formal_charge_ready" if claim_ready else "blocked_formal_charge_proxy",
+        "formal_charge_proxy_ready": bool(per_atom),
+        "claim_grade_formal_charge_ready": claim_ready,
+        "protonation_source": str(protonation_source or ""),
+        "public_benchmark_ready": bool(public_benchmark_ready),
+        "formal_charge_proxy_net_e": net_charge,
+        "formal_charge_proxy_atom_count": len(per_atom),
+        "formal_charge_proxy_by_atom": per_atom,
+        "blockers": blockers,
+        "claim_boundary": IONIZABLE_CLAIM_BOUNDARY,
+    }
+
+
+def metal_cofactor_coordination_report(
+    coords: np.ndarray,
+    elements: list[str],
+    *,
+    parameter_source: str = "",
+    public_benchmark_ready: bool = False,
+) -> dict[str, Any]:
+    """Report metal/cofactor-like coordination candidates while keeping metal parameters fail-closed."""
+    pts = np.asarray(coords, dtype=np.float64)
+    normalized_elements = [_element(elements, idx) for idx in range(int(pts.shape[0]))]
+    metal_indices = [
+        idx for idx, element in enumerate(normalized_elements) if element in UNSUPPORTED_METAL_OR_COFACTOR_ELEMENTS
+    ]
+    coordination_rows: list[dict[str, Any]] = []
+    for metal_idx in metal_indices:
+        metal = normalized_elements[metal_idx]
+        cutoff = float(METAL_COORDINATION_CUTOFF_A.get(metal, 2.8))
+        donor_rows: list[dict[str, Any]] = []
+        for donor_idx, donor in enumerate(normalized_elements):
+            if donor_idx == metal_idx or donor not in METAL_COORDINATION_DONOR_ELEMENTS:
+                continue
+            distance = float(np.linalg.norm(pts[donor_idx] - pts[metal_idx]))
+            if distance <= cutoff:
+                donor_rows.append(
+                    {
+                        "atom_index": donor_idx,
+                        "element": donor,
+                        "distance_a": distance,
+                    }
+                )
+        coordination_rows.append(
+            {
+                "metal_atom_index": metal_idx,
+                "metal_element": metal,
+                "coordination_cutoff_a": cutoff,
+                "donor_count": len(donor_rows),
+                "donors": donor_rows,
+            }
+        )
+
+    parameter_ready = False
+    blockers: list[str] = []
+    if not metal_indices:
+        blockers.append("metal_or_cofactor_element_not_present")
+    if not str(parameter_source or "").strip():
+        blockers.append("metal_cofactor_parameter_source_missing")
+    if not public_benchmark_ready:
+        blockers.append("public_benchmark_gate_not_ready")
+    blockers.append("metal_cofactor_parameterization_not_supported")
+    return {
+        "status": "metal_cofactor_parameterization_ready" if parameter_ready else "blocked_metal_cofactor_parameterization",
+        "metal_cofactor_coordination_surface_ready": bool(coordination_rows),
+        "claim_grade_metal_cofactor_parameterization_ready": False,
+        "metal_count": len(metal_indices),
+        "metal_elements": sorted({normalized_elements[idx] for idx in metal_indices}),
+        "coordination_rows": coordination_rows,
+        "coordination_site_count": len(coordination_rows),
+        "coordination_donor_count": sum(int(row["donor_count"]) for row in coordination_rows),
+        "supported_donor_elements": list(METAL_COORDINATION_DONOR_ELEMENTS),
+        "parameter_source": str(parameter_source or ""),
+        "public_benchmark_ready": bool(public_benchmark_ready),
+        "blockers": blockers,
         "claim_boundary": ALLATOM_CLAIM_BOUNDARY,
     }
 
@@ -341,7 +538,7 @@ def infer_impropers(
 ) -> list[tuple[int, int, int, int]]:
     neighbors = _neighbors_from_bonds(bonds)
     impropers: list[tuple[int, int, int, int]] = []
-    planar_types = {"C_SP2", "C_CARBONYL", "N_POLAR", "P_PHOSPHATE"}
+    planar_types = {"C_SP2", "C_CARBONYL", "C_CARBOXYLATE", "N_POLAR", "N_CATIONIC", "P_PHOSPHATE"}
     for center, nbrs in neighbors.items():
         if center >= len(atom_types) or atom_types[center] not in planar_types or len(nbrs) < 3:
             continue
@@ -457,20 +654,24 @@ def allatom_energy(
     coords: np.ndarray,
     elements: list[str],
     *,
+    bonds: list[tuple[int, int]] | None = None,
     charges: np.ndarray | None = None,
     cutoff_a: float = 12.0,
 ) -> dict[str, Any]:
     pts = np.asarray(coords, dtype=np.float64)
-    bonds = infer_bonds(pts, elements)
-    atom_types = infer_atom_types(pts, elements, bonds=bonds)
-    coverage = atom_typing_coverage_report(pts, elements, bonds=bonds)
+    inferred_bonds = infer_bonds(pts, elements) if bonds is None else list(bonds)
+    atom_types = infer_atom_types(pts, elements, bonds=inferred_bonds)
+    coverage = atom_typing_coverage_report(pts, elements, bonds=inferred_bonds)
+    ionizable = ionizable_atom_typing_report(pts, elements, bonds=inferred_bonds)
+    formal_charge = formal_charge_proxy_report(pts, elements, bonds=inferred_bonds)
+    metal_cofactor = metal_cofactor_coordination_report(pts, elements)
     calibration = parameter_calibration_report()
     q = partial_charges_from_atom_types(atom_types) if charges is None else np.asarray(charges, dtype=np.float64).reshape(-1)
-    torsions = infer_torsions(bonds)
-    impropers = infer_impropers(bonds, atom_types)
+    torsions = infer_torsions(inferred_bonds)
+    impropers = infer_impropers(inferred_bonds, atom_types)
     bonded = (
-        bonded_energy(pts, bonds, elements=elements)
-        + angle_energy(pts, bonds)
+        bonded_energy(pts, inferred_bonds, elements=elements)
+        + angle_energy(pts, inferred_bonds)
         + dihedral_energy(pts, torsions)
         + improper_energy(pts, impropers)
     )
@@ -479,7 +680,7 @@ def allatom_energy(
         elements,
         atom_types=atom_types,
         charges=q,
-        exclude_pairs={(min(i, j), max(i, j)) for i, j in bonds},
+        exclude_pairs={(min(i, j), max(i, j)) for i, j in inferred_bonds},
         cutoff_a=cutoff_a,
     )
     total = bonded + nb["e_nonbonded"]
@@ -505,8 +706,25 @@ def allatom_energy(
         "unsupported_elements": coverage["unsupported_elements"],
         "unsupported_metal_or_cofactor_elements": coverage["unsupported_metal_or_cofactor_elements"],
         "unsupported_metal_or_cofactor_count": coverage["unsupported_metal_or_cofactor_count"],
+        "metal_cofactor_coordination_status": metal_cofactor["status"],
+        "metal_cofactor_coordination_surface_ready": metal_cofactor["metal_cofactor_coordination_surface_ready"],
+        "metal_cofactor_coordination_site_count": metal_cofactor["coordination_site_count"],
+        "metal_cofactor_coordination_donor_count": metal_cofactor["coordination_donor_count"],
+        "claim_grade_metal_cofactor_parameterization_ready": metal_cofactor[
+            "claim_grade_metal_cofactor_parameterization_ready"
+        ],
+        "ionizable_atom_typing_status": ionizable["status"],
+        "ionizable_atom_typing_surface_ready": ionizable["ionizable_atom_typing_surface_ready"],
+        "ionizable_atom_count": ionizable["ionizable_atom_count"],
+        "ionizable_atom_type_counts": ionizable["ionizable_atom_type_counts"],
+        "claim_grade_charged_parameterization_ready": ionizable["claim_grade_charged_parameterization_ready"],
+        "formal_charge_proxy_status": formal_charge["status"],
+        "formal_charge_proxy_ready": formal_charge["formal_charge_proxy_ready"],
+        "formal_charge_proxy_net_e": formal_charge["formal_charge_proxy_net_e"],
+        "formal_charge_proxy_atom_count": formal_charge["formal_charge_proxy_atom_count"],
+        "claim_grade_formal_charge_ready": formal_charge["claim_grade_formal_charge_ready"],
         "net_charge_e": float(np.sum(q)) if q.size else 0.0,
-        "bond_count": len(bonds),
+        "bond_count": len(inferred_bonds),
         "torsion_count": len(torsions),
         "improper_count": len(impropers),
         "e_bonded": float(bonded),

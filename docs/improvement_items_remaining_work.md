@@ -303,12 +303,26 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   (`Mg/Zn/Fe/Ca/Na`)를 fail-closed로 드러낸다. `allatom_energy` 결과도
   `atom_typing_coverage_status`, `unsupported_elements`,
   `unsupported_metal_or_cofactor_count`와
+  `metal_cofactor_coordination_status`,
+  `metal_cofactor_coordination_donor_count`,
+  `claim_grade_metal_cofactor_parameterization_ready=false`를 노출해 금속/보조인자성
+  원소가 있는 경우 coordination 후보를 계량하지만 parameter claim은 막는다.
+  `ionizable_atom_typing_status`, `ionizable_atom_type_counts`,
+  `claim_grade_charged_parameterization_ready=false`를 노출해 charged-residue/
+  ionizable local chemistry가 내부 타입 surface로만 처리됨을 명시한다.
+  `ionizable_atom_typing_report`는 carboxylate/basic N/phosphate/thiolate-like
+  local chemistry를 계량하지만 formal protonation-state assignment와 calibrated
+  charged-residue parameter claim은 열지 않는다.
+  `formal_charge_proxy_report`는 같은 local chemistry에서 formal charge proxy를
+  계산해 `formal_charge_proxy_net_e`와 atom-level proxy rows를 남기지만,
+  `formal_charge_proxy_not_calibrated` blocker와
+  `claim_grade_formal_charge_ready=false`를 유지한다.
   `parameter_calibration_status=internal_proxy_uncalibrated`,
   `claim_grade_parameterization_ready=false`를 함께 싣는다.
   `core/mm_gbsa.py`, `core/explicit_solvent.py`, `core/fep.py`의
   GB/SA → all-atom → explicit TIP3P-like shell → FEP scaffold smoke까지
   `runs/engine_refinement_tier_readiness_current.json`에서
-  `check_count=30`, `pass_count=30`, `blocked_count=0`으로 검증된다.
+  `check_count=36`, `pass_count=36`, `blocked_count=0`으로 검증된다.
   같은 gate는 `refine_tier_atom_typing_coverage_surface`에서
   `supported_elements=H,C,N,O,S,P,F,CL,BR,I`, `default_atom_count=0`,
   `coverage_fraction=1.0`인 내부 타입 커버리지 surface도 확인하며,
@@ -316,15 +330,53 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `refine_tier_unsupported_metal_fail_closed_surface`는 `Zn/Mg`가
   support로 오인되지 않고 `blocked_atom_typing_coverage`로 보고되는지 확인하며,
   summary에 `unsupported_metal_fail_closed_surface_ready=true`를 노출한다.
+  `refine_tier_metal_cofactor_coordination_claim_guard`는 Zn 주변 N/O/S donor
+  후보 3개를 coordination surface로 남기며,
+  `metal_cofactor_coordination_claim_guard_ready=true`를 노출한다. 동시에
+  `claim_grade_metal_cofactor_parameterization_ready=false`와
+  `metal_cofactor_parameterization_not_supported` blocker를 유지한다.
+  `refine_tier_charged_residue_atom_typing_surface`는 carboxylate/basic N/phosphate/
+  thiolate-like local chemistry를 타입으로 분리하고
+  `charged_residue_atom_typing_surface_ready=true`를 노출한다. 동시에
+  `claim_grade_charged_parameterization_ready=false`와
+  `charged_residue_parameter_calibration_not_ready` blocker를 유지해 formal
+  protonation/calibrated charge claim을 막는다.
+  `refine_tier_formal_charge_proxy_claim_guard`는 `formal_charge_proxy_net_e=-2.0`을
+  계산하지만 `claim_grade_formal_charge_ready=false`와
+  `formal_charge_proxy_not_calibrated` blocker를 유지한다.
   `refine_tier_parameter_calibration_claim_guard`는 internal proxy parameter가
   공개 benchmark pair 부족과 benchmark gate 미통과 상태에서 claim-grade로 승격되지
   않도록 `parameter_calibration_claim_guard_ready=true`로 감시한다.
+  `refine_tier_solvent_fep_calibration_claim_guard`는 GB/SA, explicit TIP3P-like shell,
+  FEP surface가 finite로 계산되는지 확인하고
+  `solvent_fep_calibration_claim_guard_ready=true`를 노출한다. 동시에
+  `claim_grade_solvent_fep_calibration_ready=false`,
+  `explicit_solvent_md_sampling_not_validated`,
+  `fep_holdout_calibration_not_validated`, public pair 부족 blocker를 유지한다.
+  `refine_tier_structure_quality_interface_claim_guard`는 MolProbity-like clashscore proxy,
+  reference lDDT/DockQ/TM proxy, receptor-ligand interface contact coverage를 계산하고
+  `structure_quality_interface_claim_guard_ready=true`를 노출한다. 동시에
+  `claim_grade_structure_quality_ready=false`,
+  `external_molprobity_not_available`, `external_openstructure_not_available`,
+  `native_complex_benchmark_not_ready` blocker를 유지한다.
+  `refine_tier_public_benchmark_blocker_linkage`는 public benchmark gate의
+  `blocked_refine_tier_public_benchmark_readiness`, `blocker_count=6`,
+  `public_benchmark_work_order_row_count=8`,
+  `public_benchmark_operator_work_order_ready=true`를 engine readiness summary에
+  직접 연결한다.
   같은 gate는 pose RMSD/LDDT-PLI/DockQ proxy metric surface와
   MM-GBSA calibration claim guard도 확인하며,
   `benchmark_metric_surface_ready=true`,
   `parameter_calibration_claim_guard_ready=true`,
   `free_energy_calibration_claim_guard_ready=true`,
   `claim_grade_public_benchmark_ready=false`로 claim 경계를 고정한다.
+  summary는 `claim_promotion_allowed=false`,
+  `claim_promotion_blocker_count=6`,
+  `claim_promotion_blockers=[public_benchmark_gate_not_ready,
+  parameter_calibration_claim_not_ready, metal_cofactor_parameterization_not_ready,
+  charged_residue_protonation_and_charge_calibration_not_ready,
+  solvent_fep_public_pair_calibration_not_ready,
+  external_structure_quality_parity_not_ready]`도 함께 노출한다.
   `tools/product/build_refine_tier_public_benchmark_readiness.py`는 curated 공개
   pose/free-energy benchmark intake를 별도 fail-closed gate로 고정한다.
   `config/refine_tier_public_benchmark_intake_current.csv`는 required column header를
@@ -335,6 +387,8 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `claim_grade_public_benchmark_ready=false`, `blocker_count=6`,
   `operator_work_order_ready=true`, `work_order_row_count=8`로 실제 curated
   benchmark row 입력만 아직 없음을 명확히 드러낸다.
+  같은 blocker/work-order 상태는 engine readiness summary에도
+  `public_benchmark_blockers`, `public_benchmark_next_required_step`로 반영된다.
   같은 builder는 `runs/refine_tier_public_benchmark_work_order_current.csv`에
   최소 5개 fit row + 3개 holdout row를 채우기 위한 operator fill template을
   생성한다. 이 template은 public provenance/license 확인, `external_engine_calls=0`,
@@ -349,8 +403,9 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `runs/refine_tier_public_benchmark_work_order_apply_current.json`은
   `blocked_refine_tier_public_benchmark_work_order_apply`, `work_order_row_count=8`,
   `blocked_row_count=8`, `candidate_intake_written=false`, `intake_written=false`이다.
-  다음 S-class 작업은 metal/cofactor/charged-residue까지의 atom typing coverage expansion,
-  calibrated atom-level charge/torsion/improper parameterization, solvent/FEP calibration,
+  다음 S-class 작업은 metal/cofactor calibrated parameterization 및 coverage expansion,
+  charged-residue formal protonation-state assignment, calibrated atom-level charge/torsion/improper parameterization,
+  solvent/FEP public-pair calibration,
   `config/refine_tier_public_benchmark_intake_current.csv` 수준의 curated 공개
   pose/free-energy benchmark row 입력 및 gate 통과, OpenMM parity gate로 남는다.
 
@@ -1311,11 +1366,11 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
    negative/positive reference 데이터 (PubMed primary source 또는
    internal wetlab).
 8. **OpenMM/Schrodinger급 정확도 parity** — internal typed all-atom/GB-SA/explicit-shell/FEP
-   scaffold와 common ligand halogen atom typing coverage surface는 green이지만,
-   metal/cofactor/charged-residue coverage expansion, calibrated charge/torsion/improper
-   parameterization, solvent/FEP calibration, curated 공개 pose/free-energy benchmark intake
-   (`refine_tier_public_benchmark_readiness_current` 현재 blocked), MolProbity,
-   complex/interface coverage가 남아 있다.
+   scaffold와 common ligand halogen/charged-residue local-chemistry/metal-coordination/structure-interface proxy surface는 green이지만,
+   metal/cofactor calibrated parameterization, charged-residue formal protonation, calibrated charge/torsion/improper
+   parameterization, solvent/FEP public-pair calibration, curated 공개 pose/free-energy benchmark intake
+   (`refine_tier_public_benchmark_readiness_current` 현재 blocked), external MolProbity/OpenStructure,
+   native complex/interface benchmark parity가 남아 있다.
 9. **Prospective wetlab T. cruzi PDE 검증** — 실제 assay + hit confirmation.
 
 ### 확장 (claim boundary 확대)
