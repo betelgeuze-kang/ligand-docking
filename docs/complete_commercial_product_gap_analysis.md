@@ -152,12 +152,20 @@
   fail-closed 경계로 분리한다. 현재 receipt는 placeholder evidence를 막아
   `blocked_product_scope_breadth_evidence_receipt`,
   `full_scope_evidence_receipt_ready=false`, `blocked_row_count=6`이다.
+  `product_goal_completion_audit`의 `R8_full_scope_claim_closure` row는 이 receipt를
+  evidence artifact와 observed field로 직접 사용하며, `goal_operator_action_board`는
+  `resolve_full_scope_breadth_evidence_receipt` action을 노출한다.
+  `goal_operator_intake_kit_current/manifest.json`은
+  `product_scope_breadth_evidence_receipt` entry와 copied template으로
+  `config/product_scope_breadth_evidence_receipt_current.csv`를 operator handoff에
+  포함한다.
 - `product_release_source_of_truth_gate_current.json`은
   `product_scope_breadth_closure_checklist_current.json`,
   `product_scope_breadth_evidence_receipt_current.json`,
+  `goal_operator_intake_kit_current/manifest.json`,
   `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`의
   freshness 및 semantic-ready 상태를 함께 검증한다. 최신 source-of-truth refresh는
-  `row_count=42`, `pass_count=42`, `blocker_count=0`으로, R8 receipt와 상위 상태
+  `row_count=43`, `pass_count=43`, `blocker_count=0`으로, R8 receipt와 상위 상태
   API/병목 visibility가 release freshness 체인 안에 들어와 있다.
 - `tools/product/build_refine_tier_public_benchmark_readiness.py`: curated 공개
   pose/free-energy benchmark intake를 별도 fail-closed gate로 판정한다.

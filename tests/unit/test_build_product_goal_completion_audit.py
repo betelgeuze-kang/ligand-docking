@@ -2081,6 +2081,24 @@ def _scope_closure_acceptance_ready() -> dict:
     }
 
 
+def _scope_breadth_evidence_receipt(*, ready: bool = False) -> dict:
+    return {
+        "summary": {
+            "status": (
+                "product_scope_breadth_evidence_receipt_ready"
+                if ready
+                else "blocked_product_scope_breadth_evidence_receipt"
+            ),
+            "full_scope_evidence_receipt_ready": ready,
+            "blocker_count": 0 if ready else 1,
+            "blocked_row_count": 0 if ready else 6,
+            "required_scope_blocker_count": 6,
+            "receipt_csv": "config/product_scope_breadth_evidence_receipt_current.csv",
+            "external_state_mutated": False,
+        }
+    }
+
+
 def _scope_closure_acceptance_blocked() -> dict:
     return {
         "summary": {
@@ -2236,6 +2254,7 @@ def test_product_goal_completion_audit_blocks_on_license_and_release() -> None:
         product_ai_execution_backlog_packet=_ai_backlog(),
         product_scope_breadth_contract_packet=_scope_contract_ready(),
         scope_closure_acceptance_packet=_scope_closure_acceptance_ready(),
+        scope_breadth_evidence_receipt_packet=_scope_breadth_evidence_receipt(ready=True),
     )
 
     summary = payload["summary"]
@@ -2414,6 +2433,7 @@ def test_product_goal_completion_audit_blocks_on_open_ai_architecture_backlog() 
         product_ai_execution_backlog_packet=_ai_backlog(ready=False),
         product_scope_breadth_contract_packet=_scope_contract_r8_ready(),
         scope_closure_acceptance_packet=_scope_closure_acceptance_ready(),
+        scope_breadth_evidence_receipt_packet=_scope_breadth_evidence_receipt(ready=True),
     )
 
     summary = payload["summary"]
@@ -3905,6 +3925,7 @@ def test_product_goal_completion_audit_blocks_refine_tier_claim_promotion() -> N
         product_ai_execution_backlog_packet=_ai_backlog(),
         product_scope_breadth_contract_packet=_scope_contract_ready(),
         scope_closure_acceptance_packet=_scope_closure_acceptance_ready(),
+        scope_breadth_evidence_receipt_packet=_scope_breadth_evidence_receipt(ready=True),
         engine_refinement_tier_readiness_packet=_engine_refinement_claim_readiness(),
     )
 
@@ -3952,6 +3973,7 @@ def test_product_goal_completion_audit_passes_refine_tier_claim_promotion_when_r
         product_ai_execution_backlog_packet=_ai_backlog(),
         product_scope_breadth_contract_packet=_scope_contract_ready(),
         scope_closure_acceptance_packet=_scope_closure_acceptance_ready(),
+        scope_breadth_evidence_receipt_packet=_scope_breadth_evidence_receipt(ready=True),
         engine_refinement_tier_readiness_packet=_engine_refinement_claim_readiness(ready=True),
     )
 
@@ -3985,6 +4007,7 @@ def test_product_goal_completion_audit_passes_when_all_evidence_is_ready() -> No
         product_ai_execution_backlog_packet=_ai_backlog(),
         product_scope_breadth_contract_packet=_scope_contract_ready(),
         scope_closure_acceptance_packet=_scope_closure_acceptance_ready(),
+        scope_breadth_evidence_receipt_packet=_scope_breadth_evidence_receipt(ready=True),
     )
 
     assert payload["summary"]["status"] == "product_goal_completion_audit_pass"

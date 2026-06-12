@@ -71,6 +71,17 @@ def _action_board() -> dict:
                 "approval_token": "",
             },
             {
+                "lane_id": "product_scope_expansion",
+                "action_type": "resolve_full_scope_breadth_evidence_receipt",
+                "status": "required",
+                "artifact_path": (
+                    "runs/product_goal_completion_audit_current.json;"
+                    "runs/product_scope_breadth_evidence_receipt_current.json;"
+                    "config/product_scope_breadth_evidence_receipt_current.csv"
+                ),
+                "approval_token": mod.PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_APPROVAL_TOKEN,
+            },
+            {
                 "lane_id": "product_engine_refinement",
                 "action_type": "resolve_refine_tier_claim_promotion_blocker",
                 "status": "required",
@@ -124,6 +135,14 @@ def _source_packets() -> dict[str, dict]:
             "summary": {
                 "packet_type": "product_scope_breadth_evidence_priority_packet",
                 "priority_packet_ready": True,
+            }
+        },
+        mod.DEFAULT_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_JSON: {
+            "summary": {
+                "status": "blocked_product_scope_breadth_evidence_receipt",
+                "full_scope_evidence_receipt_ready": False,
+                "blocked_row_count": 6,
+                "external_state_mutated": False,
             }
         },
         mod.DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_JSON: {
@@ -242,12 +261,12 @@ def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp
     summary = payload["summary"]
     by_id = {row["kit_entry_id"]: row for row in payload["rows"]}
     assert summary["status"] == "goal_operator_intake_kit_ready"
-    assert summary["entry_count"] == 15
-    assert summary["source_action_count"] == 8
+    assert summary["entry_count"] == 16
+    assert summary["source_action_count"] == 9
     assert summary["release_burndown_source_row_count"] == 8
     assert summary["release_burndown_linked_entry_count"] == 11
-    assert summary["operator_input_required_count"] == 14
-    assert summary["current_action_required_count"] == 11
+    assert summary["operator_input_required_count"] == 15
+    assert summary["current_action_required_count"] == 12
     assert summary["deferred_operator_input_count"] == 3
     assert summary["primary_action_id"] == "product_ai_production:return_gpu_force_regeneration_receipt"
     assert summary["top_action_id"] == summary["primary_action_id"]
@@ -277,12 +296,14 @@ def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp
     assert summary["goal_api_contract_endpoint"] == "/goal/api-contract"
     assert "APPROVE_API_DEPENDENCY_INSTALL" in summary["approval_tokens"]
     assert mod.API_RUNNER_PROFILE_PROMOTION_APPROVAL_TOKEN in summary["approval_tokens"]
+    assert mod.PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_APPROVAL_TOKEN in summary["approval_tokens"]
     assert mod.ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_APPROVAL_TOKEN in summary["approval_tokens"]
-    assert summary["current_action_approval_token_count"] == 3
+    assert summary["current_action_approval_token_count"] == 4
     assert summary["current_action_approval_tokens"] == [
         "APPROVE_API_DEPENDENCY_INSTALL",
         "APPROVE_PRODUCT_DOCKING_EXECUTION",
         "APPROVE_PRODUCT_LICENSE_FILE_CREATION",
+        mod.PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_APPROVAL_TOKEN,
     ]
     assert summary["action_executed"] is False
     assert summary["delete_executed"] is False
@@ -364,6 +385,21 @@ def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp
         "runs/pxr_exact_evidence_review_intake_template_current.csv"
     )
     assert by_id["scope_pxr_exact_evidence_review"]["release_sequence"] == "0"
+    assert by_id["product_scope_breadth_evidence_receipt"]["kit_status"] == "operator_input_required"
+    assert by_id["product_scope_breadth_evidence_receipt"]["current_action_surfaced"] is True
+    assert by_id["product_scope_breadth_evidence_receipt"]["operator_input_required_now"] is True
+    assert by_id["product_scope_breadth_evidence_receipt"]["source_gate_status"] == (
+        "blocked_product_scope_breadth_evidence_receipt"
+    )
+    assert by_id["product_scope_breadth_evidence_receipt"]["template_path"] == (
+        "config/product_scope_breadth_evidence_receipt_current.csv"
+    )
+    assert by_id["product_scope_breadth_evidence_receipt"]["intake_path"] == (
+        "config/product_scope_breadth_evidence_receipt_current.csv"
+    )
+    assert by_id["product_scope_breadth_evidence_receipt"]["approval_token_required"] == (
+        mod.PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_APPROVAL_TOKEN
+    )
     assert by_id["engine_refinement_claim_promotion_action_board"]["kit_status"] == "operator_input_required"
     assert by_id["engine_refinement_claim_promotion_action_board"]["current_action_surfaced"] is True
     assert by_id["engine_refinement_claim_promotion_action_board"]["operator_input_required_now"] is True
@@ -461,6 +497,7 @@ def test_goal_operator_intake_kit_tool_writes_manifest_and_copies_templates(tmp_
         "gpu_return_summary.json",
         "scope_transporter_manual_review.csv",
         "scope_pxr_exact_evidence_review.csv",
+        "product_scope_breadth_evidence_receipt.csv",
         "engine_refinement_claim_evidence_receipt.csv",
         "cleanup_approval.csv",
         "protected_policy.csv",
@@ -513,6 +550,8 @@ def test_goal_operator_intake_kit_tool_writes_manifest_and_copies_templates(tmp_
                 str(source_paths[mod.DEFAULT_PRODUCT_SCOPE_EVIDENCE_INTAKE_READINESS_JSON]),
                 "--product-scope-evidence-priority-json",
                 str(source_paths[mod.DEFAULT_PRODUCT_SCOPE_EVIDENCE_PRIORITY_JSON]),
+                "--product-scope-breadth-evidence-receipt-json",
+                str(source_paths[mod.DEFAULT_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_JSON]),
                 "--cleanup-approval-gate-json",
                 str(source_paths[mod.DEFAULT_CLEANUP_APPROVAL_GATE_JSON]),
                 "--protected-policy-gate-json",
@@ -535,7 +574,7 @@ def test_goal_operator_intake_kit_tool_writes_manifest_and_copies_templates(tmp_
         mod.CATALOG = original_catalog
 
     payload = json.loads(out_json.read_text(encoding="utf-8"))
-    assert payload["summary"]["template_copied_count"] == 12
+    assert payload["summary"]["template_copied_count"] == 13
     assert payload["summary"]["release_burndown_linked_entry_count"] == 11
     assert payload["summary"]["goal_api_surface_contract_status"] == "goal_api_surface_contract_ready"
     assert out_csv.read_text(encoding="utf-8").startswith("kit_entry_id,lane_id,")

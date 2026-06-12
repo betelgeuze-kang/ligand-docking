@@ -258,6 +258,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "engine_refinement_claim_evidence_receipt" in artifact_ids
     assert "product_scope_breadth_closure_checklist" in artifact_ids
     assert "product_scope_breadth_evidence_receipt" in artifact_ids
+    assert "goal_operator_intake_kit" in artifact_ids
     assert "goal_api_surface_contract" in artifact_ids
     assert "goal_bottleneck_briefing" in artifact_ids
     assert "python3 tools/build_api_runner_profile_promotion_operator_receipt.py" in mod.RELEASE_REFRESH_COMMANDS
@@ -274,6 +275,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert "runs/goal_operator_action_board_current.json" not in goal_audit_spec["depends_on"]
     assert "runs/engine_refinement_tier_readiness_current.json" in goal_audit_spec["depends_on"]
+    assert "runs/product_scope_breadth_evidence_receipt_current.json" in goal_audit_spec["depends_on"]
     scope_closure_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_scope_breadth_closure_checklist"
     )
@@ -284,6 +286,12 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert "config/product_scope_breadth_evidence_receipt_current.csv" in scope_receipt_spec["depends_on"]
     assert "runs/product_scope_breadth_closure_checklist_current.json" in scope_receipt_spec["depends_on"]
+    intake_kit_spec = next(
+        spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "goal_operator_intake_kit"
+    )
+    assert "runs/goal_operator_action_board_current.json" in intake_kit_spec["depends_on"]
+    assert "runs/product_scope_breadth_evidence_receipt_current.json" in intake_kit_spec["depends_on"]
+    assert "config/product_scope_breadth_evidence_receipt_current.csv" in intake_kit_spec["depends_on"]
     goal_api_surface_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "goal_api_surface_contract"
     )
@@ -319,6 +327,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "python3 tools/build_product_ledger_privacy_scan.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_scope_breadth_closure_checklist.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_scope_breadth_evidence_receipt.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_goal_operator_intake_kit.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_goal_api_surface_contract.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_goal_bottleneck_briefing.py" in mod.RELEASE_REFRESH_COMMANDS
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_scope_breadth_closure_checklist.py") < (
@@ -331,6 +340,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_operator_action_board.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_operator_action_board.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_operator_intake_kit.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_operator_intake_kit.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_bottleneck_briefing.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_bottleneck_briefing.py") < (

@@ -764,6 +764,17 @@ def _product_goal_completion_audit() -> dict:
             "production_ai_force_gpu_receipt_matched_expected_npz_count": 0,
             "production_ai_force_gpu_receipt_matched_queue_fingerprint_count": 0,
             "product_scope_general_platform_claim_allowed": False,
+            "product_scope_breadth_evidence_receipt_status": "blocked_product_scope_breadth_evidence_receipt",
+            "product_scope_breadth_evidence_receipt_ready": False,
+            "product_scope_breadth_evidence_receipt_blocker_count": 1,
+            "product_scope_breadth_evidence_receipt_blocked_row_count": 6,
+            "product_scope_breadth_evidence_receipt_required_scope_blocker_count": 6,
+            "product_scope_breadth_evidence_receipt_artifact": (
+                "runs/product_scope_breadth_evidence_receipt_current.json"
+            ),
+            "product_scope_breadth_evidence_receipt_csv": (
+                "config/product_scope_breadth_evidence_receipt_current.csv"
+            ),
             "product_scope_evidence_priority_ready": True,
             "product_scope_evidence_priority_queue_item_count": 21,
             "product_scope_evidence_priority_open_item_count": 21,
@@ -862,6 +873,19 @@ def test_goal_operator_action_board_surfaces_product_ai_goal_completion_actions(
     assert scope["scope_pxr_exact_review_conflict_resolution_required_count"] == 3
     assert "pxr_exact_review_kcal_placeholder_count=6" in scope["reason"]
 
+    receipt = by_type["resolve_full_scope_breadth_evidence_receipt"]
+    assert receipt["priority"] == 2
+    assert receipt["lane_id"] == "product_scope_expansion"
+    assert receipt["status"] == "required"
+    assert receipt["approval_token"] == mod.PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_APPROVAL_TOKEN
+    assert receipt["required_input"] == "config/product_scope_breadth_evidence_receipt_current.csv"
+    assert receipt["scope_breadth_evidence_receipt_status"] == (
+        "blocked_product_scope_breadth_evidence_receipt"
+    )
+    assert receipt["scope_breadth_evidence_receipt_blocked_row_count"] == 6
+    assert receipt["scope_breadth_evidence_receipt_required_scope_blocker_count"] == 6
+    assert "blocked_row_count=6" in receipt["reason"]
+
 
 def test_goal_operator_action_board_surfaces_engine_refinement_claim_actions() -> None:
     payload = mod.build_action_board(
@@ -944,15 +968,22 @@ def test_goal_operator_action_board_summary_points_to_primary_product_ai_action(
         summary["product_goal_engine_refinement_claim_evidence_receipt_artifact"]
         == "runs/engine_refinement_claim_evidence_receipt_current.json"
     )
+    assert summary["product_goal_scope_breadth_evidence_receipt_ready"] is False
+    assert summary["product_goal_scope_breadth_evidence_receipt_blocked_row_count"] == 6
+    assert (
+        summary["product_goal_scope_breadth_evidence_receipt_artifact"]
+        == "runs/product_scope_breadth_evidence_receipt_current.json"
+    )
     assert "curated public benchmark rows" in summary[
         "product_goal_engine_refinement_claim_promotion_next_required_step"
     ]
-    assert summary["operator_input_required_count"] == 2
-    assert summary["blocked_or_required_action_count"] == 1
+    assert summary["operator_input_required_count"] == 3
+    assert summary["blocked_or_required_action_count"] == 2
     assert summary["review_required_count"] == 1
-    assert summary["parallel_product_action_count"] == 1
+    assert summary["parallel_product_action_count"] == 2
     assert summary["parallel_product_action_ids"] == [
-        "product_scope_expansion:curate_scope_evidence_priority_item"
+        "product_scope_expansion:curate_scope_evidence_priority_item",
+        "product_scope_expansion:resolve_full_scope_breadth_evidence_receipt",
     ]
     assert summary["first_parallel_product_action_id"] == (
         "product_scope_expansion:curate_scope_evidence_priority_item"

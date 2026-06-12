@@ -447,9 +447,20 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `runs/product_scope_breadth_evidence_receipt_current.json`은 placeholder evidence를
   막아 `blocked_product_scope_breadth_evidence_receipt`,
   `full_scope_evidence_receipt_ready=false`, `blocked_row_count=6`을 기록한다.
+  `runs/product_goal_completion_audit_current.json`의 `R8_full_scope_claim_closure`
+  row도 이 receipt를 evidence artifact와 observed field로 직접 흡수해,
+  scope contract가 green처럼 보이더라도 `full_scope_evidence_receipt_ready=false`면
+  full commercial goal completion이 닫히지 않는다. 또한
+  `runs/goal_operator_action_board_current.json`은
+  `resolve_full_scope_breadth_evidence_receipt` action을 만들고,
+  `runs/goal_operator_intake_kit_current/manifest.json`은
+  `product_scope_breadth_evidence_receipt` entry로
+  `config/product_scope_breadth_evidence_receipt_current.csv`를 operator template에
+  복사한다.
   `product_release_source_of_truth_gate_current.json`은 이제
   `product_scope_breadth_closure_checklist_current.json`,
   `product_scope_breadth_evidence_receipt_current.json`,
+  `goal_operator_intake_kit_current/manifest.json`,
   `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`을
   freshness row 및 semantic-ready row로 함께 검증해, R8 receipt와 상위 상태 API/병목
   브리핑 자체가 릴리스 freshness 감시 밖으로 빠지지 않게 한다.
@@ -796,9 +807,10 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   `product_launch_r4_preflight_ready`, `pass_count=7/7`, `blocker_count=0`이다.
 - `tools/run_product_release_current_refresh.py --execute`는 source-of-truth 순서에
   R4 preflight, scope-breadth closure checklist, scope-breadth evidence receipt,
-  goal API surface contract, bottleneck briefing, 최종 release bundle 재생성을 포함하며,
+  goal operator intake kit, goal API surface contract, bottleneck briefing,
+  최종 release bundle 재생성을 포함하며,
   최신 실행 결과는
-  `product_release_current_refresh_verified`, `command_count=40`, `executed_count=40`,
+  `product_release_current_refresh_verified`, `command_count=41`, `executed_count=41`,
   `failed_count=0`, `final_gate_verification_ready=true`, `final_gate_blocker_count=0`이다.
 
 **병목 원인**
@@ -822,8 +834,8 @@ Tracked accounting roll-up은 §1b–§1i 기준으로 닫혔다. 아래는 **�
   policy + release bundle linkage와 rollout execution readiness gate는 1차 완료;
   R4 launch preflight도 1차 완료. 다음은 explicit R4/operator-approved rollout 실행 smoke.
 - release source-of-truth gate는 R4 preflight, R8 scope-breadth receipt, goal
-  API/bottleneck visibility 포함 refresh 이후
-  `product_release_source_of_truth_gate_ready`, `pass_count=42/42`,
+  operator intake kit, API/bottleneck visibility 포함 refresh 이후
+  `product_release_source_of_truth_gate_ready`, `pass_count=43/43`,
   `blocker_count=0`, `stale_artifact_count=0`으로 재검증됐다.
 - `prometheus_client` 기반 실제 metrics endpoint는 1차 완료.
 - Alert rules + paged webhook receiver + closed-loop alert delivery smoke는 1차 완료;

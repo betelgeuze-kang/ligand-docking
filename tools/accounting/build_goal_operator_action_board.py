@@ -41,6 +41,10 @@ from tools.build_cleanup_completion_gate import DEFAULT_OUT_JSON as DEFAULT_CLEA
 from betelgeuze_cameo.cli import build_all_status as build_cameo_cli_all_status
 from betelgeuze_cleanup.cli import build_all_status as build_cleanup_cli_all_status
 from betelgeuze_product.cli import build_all_status as build_product_cli_all_status
+from tools.product.build_product_scope_breadth_evidence_receipt import (
+    APPROVAL_TOKEN as PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_APPROVAL_TOKEN,
+    DEFAULT_RECEIPT_CSV as DEFAULT_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_CSV,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_JSON = "runs/goal_operator_action_board_current.json"
@@ -639,6 +643,69 @@ def _product_goal_completion_actions(
             }
         )
         actions.append(action)
+    scope_receipt_status = _text(summary.get("product_scope_breadth_evidence_receipt_status"))
+    raw_scope_receipt_artifact = _text(summary.get("product_scope_breadth_evidence_receipt_artifact"))
+    raw_scope_receipt_csv = _text(summary.get("product_scope_breadth_evidence_receipt_csv"))
+    scope_receipt_artifact = raw_scope_receipt_artifact or "runs/product_scope_breadth_evidence_receipt_current.json"
+    scope_receipt_csv = raw_scope_receipt_csv or DEFAULT_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_CSV
+    scope_receipt_present = bool(
+        scope_receipt_status
+        or raw_scope_receipt_artifact
+        or raw_scope_receipt_csv
+        or "product_scope_breadth_evidence_receipt_ready" in summary
+    )
+    if scope_receipt_present and summary.get("product_scope_breadth_evidence_receipt_ready") is not True:
+        action = _action(
+            priority=2,
+            lane_id="product_scope_expansion",
+            action_type="resolve_full_scope_breadth_evidence_receipt",
+            status="required",
+            required_input=scope_receipt_csv,
+            approval_token=PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_APPROVAL_TOKEN,
+            artifact_path=f"{goal_completion_audit_path};{scope_receipt_artifact};{scope_receipt_csv}",
+            recommended_action=(
+                "Fill the full-scope evidence receipt rows with local evidence artifacts, reviewer metadata, "
+                "license/provenance flags, and the scope-breadth evidence receipt approval token."
+            ),
+            reason=(
+                f"scope_evidence_receipt_status={scope_receipt_status or 'missing'}; "
+                f"receipt_ready={bool(summary.get('product_scope_breadth_evidence_receipt_ready') is True)}; "
+                f"blocked_row_count={_int(summary.get('product_scope_breadth_evidence_receipt_blocked_row_count'))}; "
+                f"blocker_count={_int(summary.get('product_scope_breadth_evidence_receipt_blocker_count'))}; "
+                f"required_scope_blocker_count={_int(summary.get('product_scope_breadth_evidence_receipt_required_scope_blocker_count'))}; "
+                f"receipt_csv={scope_receipt_csv}."
+            ),
+        )
+        action.update(
+            {
+                "parallelizable_with_primary_action": bool(actions),
+                "parallel_primary_action_id": (
+                    f"{_text(actions[0].get('lane_id'))}:{_text(actions[0].get('action_type'))}"
+                    if actions
+                    else ""
+                ),
+                "parallel_lane_precondition": (
+                    "Can be completed while GPU or engine-refinement evidence work proceeds; it only validates "
+                    "operator-provided local full-scope evidence packets."
+                ),
+                "scope_breadth_evidence_receipt_status": scope_receipt_status,
+                "scope_breadth_evidence_receipt_ready": bool(
+                    summary.get("product_scope_breadth_evidence_receipt_ready") is True
+                ),
+                "scope_breadth_evidence_receipt_blocked_row_count": _int(
+                    summary.get("product_scope_breadth_evidence_receipt_blocked_row_count")
+                ),
+                "scope_breadth_evidence_receipt_blocker_count": _int(
+                    summary.get("product_scope_breadth_evidence_receipt_blocker_count")
+                ),
+                "scope_breadth_evidence_receipt_required_scope_blocker_count": _int(
+                    summary.get("product_scope_breadth_evidence_receipt_required_scope_blocker_count")
+                ),
+                "scope_breadth_evidence_receipt_csv": scope_receipt_csv,
+                "scope_breadth_evidence_receipt_artifact": scope_receipt_artifact,
+            }
+        )
+        actions.append(action)
     return actions
 
 
@@ -1142,6 +1209,21 @@ def build_action_board(
         "product_goal_scope_priority_ready": bool(
             product_goal_completion_audit.get("product_scope_evidence_priority_ready") is True
         ),
+        "product_goal_scope_breadth_evidence_receipt_status": _text(
+            product_goal_completion_audit.get("product_scope_breadth_evidence_receipt_status")
+        ),
+        "product_goal_scope_breadth_evidence_receipt_ready": bool(
+            product_goal_completion_audit.get("product_scope_breadth_evidence_receipt_ready") is True
+        ),
+        "product_goal_scope_breadth_evidence_receipt_blocked_row_count": _int(
+            product_goal_completion_audit.get("product_scope_breadth_evidence_receipt_blocked_row_count")
+        ),
+        "product_goal_scope_breadth_evidence_receipt_artifact": _text(
+            product_goal_completion_audit.get("product_scope_breadth_evidence_receipt_artifact")
+        ),
+        "product_goal_scope_breadth_evidence_receipt_csv": _text(
+            product_goal_completion_audit.get("product_scope_breadth_evidence_receipt_csv")
+        ),
         "product_goal_scope_priority_top_item_id": _text(
             product_goal_completion_audit.get("product_scope_evidence_priority_top_item_id")
         ),
@@ -1580,6 +1662,9 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_goal_production_ai_checkpoint_ready: `{s['product_goal_production_ai_checkpoint_ready']}`",
         f"- product_goal_production_ai_gpu_handoff_ready: `{s['product_goal_production_ai_gpu_handoff_ready']}`",
         f"- product_goal_scope_priority_ready: `{s['product_goal_scope_priority_ready']}`",
+        f"- product_goal_scope_breadth_evidence_receipt_ready: `{s['product_goal_scope_breadth_evidence_receipt_ready']}`",
+        f"- product_goal_scope_breadth_evidence_receipt_status: `{s['product_goal_scope_breadth_evidence_receipt_status']}`",
+        f"- product_goal_scope_breadth_evidence_receipt_artifact: `{s['product_goal_scope_breadth_evidence_receipt_artifact']}`",
         f"- product_goal_scope_priority_top_item_id: `{s['product_goal_scope_priority_top_item_id']}`",
         f"- approval_reclaim_size_gb: `{s['approval_reclaim_size_gb']}`",
         f"- large_review_size_gb: `{s['large_review_size_gb']}`",

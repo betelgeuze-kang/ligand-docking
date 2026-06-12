@@ -34,6 +34,11 @@ from tools.product.build_engine_refinement_claim_evidence_receipt import (
     DEFAULT_OUT_JSON as DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_JSON,
     DEFAULT_RECEIPT_CSV as DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_CSV,
 )
+from tools.product.build_product_scope_breadth_evidence_receipt import (
+    APPROVAL_TOKEN as PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_APPROVAL_TOKEN,
+    DEFAULT_OUT_JSON as DEFAULT_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_JSON,
+    DEFAULT_RECEIPT_CSV as DEFAULT_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_CSV,
+)
 from tools.product.build_api_runner_profile_promotion_operator_receipt import (
     APPROVAL_TOKEN as API_RUNNER_PROFILE_PROMOTION_APPROVAL_TOKEN,
     DEFAULT_OPERATOR_TEMPLATE_CSV as DEFAULT_API_RUNNER_PROFILE_PROMOTION_TEMPLATE_CSV,
@@ -228,6 +233,21 @@ CATALOG: list[dict[str, Any]] = [
         "recommended_action": (
             "Complete exact human NR1I2/PXR kcal, source, assay, target-match, and conflict-resolution review rows "
             "before any PXR or broad platform scope promotion."
+        ),
+    },
+    {
+        "kit_entry_id": "product_scope_breadth_evidence_receipt",
+        "lane_id": "product_scope_expansion",
+        "action_types": ["resolve_full_scope_breadth_evidence_receipt"],
+        "input_kind": "full_scope_breadth_evidence_receipt",
+        "source_gate_json": DEFAULT_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_JSON,
+        "template_path": DEFAULT_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_CSV,
+        "intake_path": DEFAULT_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_CSV,
+        "approval_token_required": PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_APPROVAL_TOKEN,
+        "release_checks": "product_scope_breadth_evidence_receipt_recorded",
+        "recommended_action": (
+            "Replace placeholder full-scope blocker receipt rows with local evidence JSON paths, reviewed "
+            "provenance/license flags, zero external mutation, and the scope-breadth evidence receipt approval token."
         ),
     },
     {
@@ -725,6 +745,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--product-scope-evidence-priority-json",
         default=DEFAULT_PRODUCT_SCOPE_EVIDENCE_PRIORITY_JSON,
     )
+    parser.add_argument(
+        "--product-scope-breadth-evidence-receipt-json",
+        default=DEFAULT_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_JSON,
+    )
     parser.add_argument("--cleanup-approval-gate-json", default=DEFAULT_CLEANUP_APPROVAL_GATE_JSON)
     parser.add_argument("--protected-policy-gate-json", default=DEFAULT_PROTECTED_POLICY_GATE_JSON)
     parser.add_argument(
@@ -758,6 +782,9 @@ def main(argv: list[str] | None = None) -> None:
         ),
         DEFAULT_PRODUCT_SCOPE_EVIDENCE_PRIORITY_JSON: _read_json_if_present(
             args.product_scope_evidence_priority_json
+        ),
+        DEFAULT_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_JSON: _read_json_if_present(
+            args.product_scope_breadth_evidence_receipt_json
         ),
         DEFAULT_CLEANUP_APPROVAL_GATE_JSON: _read_json_if_present(args.cleanup_approval_gate_json),
         DEFAULT_PROTECTED_POLICY_GATE_JSON: _read_json_if_present(args.protected_policy_gate_json),

@@ -27,6 +27,7 @@ DEFAULT_PRODUCTION_AI_PROMOTION_WORKBENCH_JSON = "runs/product_production_ai_pro
 DEFAULT_PRODUCT_SCOPE_BREADTH_CONTRACT_JSON = "runs/product_scope_breadth_contract_current.json"
 DEFAULT_SCOPE_EVIDENCE_PRIORITY_JSON = "runs/product_scope_breadth_evidence_priority_packet_current.json"
 DEFAULT_SCOPE_EVIDENCE_INTAKE_READINESS_JSON = "runs/product_scope_breadth_evidence_intake_readiness_current.json"
+DEFAULT_SCOPE_BREADTH_EVIDENCE_RECEIPT_JSON = "runs/product_scope_breadth_evidence_receipt_current.json"
 DEFAULT_PXR_EXACT_REVIEW_INTAKE_JSON = "runs/pxr_exact_evidence_review_intake_template_current.json"
 DEFAULT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_JSON = "runs/product_commercial_readiness_handoff_bundle_current.json"
 DEFAULT_DELTA_FORCE_CLOSURE_ACCEPTANCE_JSON = "runs/residual_delta_force_closure_acceptance_packet_current.json"
@@ -1541,6 +1542,7 @@ def build_product_goal_completion_audit(
     product_scope_breadth_contract_packet: dict[str, Any] | None = None,
     scope_evidence_priority_packet: dict[str, Any] | None = None,
     scope_evidence_intake_readiness_packet: dict[str, Any] | None = None,
+    scope_breadth_evidence_receipt_packet: dict[str, Any] | None = None,
     pxr_exact_review_intake_packet: dict[str, Any] | None = None,
     commercial_readiness_handoff_bundle_packet: dict[str, Any] | None = None,
     delta_force_closure_acceptance_packet: dict[str, Any] | None = None,
@@ -1572,6 +1574,7 @@ def build_product_goal_completion_audit(
     product_scope_breadth_contract_path: str = DEFAULT_PRODUCT_SCOPE_BREADTH_CONTRACT_JSON,
     scope_evidence_priority_path: str = DEFAULT_SCOPE_EVIDENCE_PRIORITY_JSON,
     scope_evidence_intake_readiness_path: str = DEFAULT_SCOPE_EVIDENCE_INTAKE_READINESS_JSON,
+    scope_breadth_evidence_receipt_path: str = DEFAULT_SCOPE_BREADTH_EVIDENCE_RECEIPT_JSON,
     pxr_exact_review_intake_path: str = DEFAULT_PXR_EXACT_REVIEW_INTAKE_JSON,
     commercial_readiness_handoff_bundle_path: str = DEFAULT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_JSON,
     delta_force_closure_acceptance_path: str = DEFAULT_DELTA_FORCE_CLOSURE_ACCEPTANCE_JSON,
@@ -1693,6 +1696,7 @@ def build_product_goal_completion_audit(
     scope_priority = _summary(scope_evidence_priority_packet or {})
     scope_top_priority = _top_priority_row(scope_evidence_priority_packet or {})
     scope_intake = _summary(scope_evidence_intake_readiness_packet or {})
+    scope_breadth_evidence_receipt = _summary(scope_breadth_evidence_receipt_packet or {})
     pxr_exact_review = _summary(pxr_exact_review_intake_packet or {})
     commercial_handoff = _summary(commercial_readiness_handoff_bundle_packet or {})
     delta_force_closure = _summary(delta_force_closure_acceptance_packet or {})
@@ -1803,6 +1807,9 @@ def build_product_goal_completion_audit(
         str(item) for item in (product_scope_breadth_contract.get("allowed_scope_families") or [])
     ]
     pxr_currently_ready = "pxr" in current_scope_ready_domains
+    scope_breadth_evidence_receipt_ready = _bool(
+        scope_breadth_evidence_receipt.get("full_scope_evidence_receipt_ready")
+    )
 
     primary_phase = _text(bottleneck.get("primary_bottleneck_phase"))
     primary_kind = _text(bottleneck.get("primary_bottleneck_kind"))
@@ -2105,10 +2112,14 @@ def build_product_goal_completion_audit(
                 _bool(scope_closure.get("scope_closure_ready"))
                 and _bool(product_scope_breadth_contract.get("scope_breadth_ready"))
                 and _bool(scope_closure.get("general_platform_claim_allowed"))
+                and scope_breadth_evidence_receipt_ready
             ),
             observed=(
                 f"scope_closure_ready={_bool(scope_closure.get('scope_closure_ready'))};"
                 f"scope_breadth_ready={_bool(product_scope_breadth_contract.get('scope_breadth_ready'))};"
+                f"full_scope_evidence_receipt_ready={scope_breadth_evidence_receipt_ready};"
+                f"scope_evidence_receipt_status={_text(scope_breadth_evidence_receipt.get('status'))};"
+                f"scope_evidence_receipt_blocked_row_count={_int(scope_breadth_evidence_receipt.get('blocked_row_count'))};"
                 f"blocked_stage_count={_int(scope_closure.get('scope_acceptance_blocked_stage_count'))};"
                 f"next_stage_id={_text(scope_closure.get('scope_acceptance_next_stage_id'))};"
                 f"first_blocked_evidence_row_id={_text(scope_closure.get('first_blocked_evidence_row_id'))};"
@@ -2119,7 +2130,7 @@ def build_product_goal_completion_audit(
             ),
             required=(
                 "scope_closure_ready=true;scope_breadth_ready=true;general_platform_claim_allowed=true;"
-                "authoritative_apply_allowed=true for broadened commercial claims"
+                "authoritative_apply_allowed=true;full_scope_evidence_receipt_ready=true for broadened commercial claims"
             ),
             evidence_artifacts=_join(
                 [
@@ -2127,6 +2138,7 @@ def build_product_goal_completion_audit(
                     product_scope_breadth_contract_path,
                     scope_evidence_priority_path,
                     scope_evidence_intake_readiness_path,
+                    scope_breadth_evidence_receipt_path,
                 ]
             ),
             blocker="full_scope_claim_closure_not_ready",
@@ -2213,6 +2225,26 @@ def build_product_goal_completion_audit(
         "restricted_delivery_complete": restricted_delivery_ready,
         "product_ai_optional_lane_ready": product_ai_optional_lane_ready,
         "product_ai_scope_deferred_work_item_count": product_ai_scope_deferred_work_item_count,
+        "product_scope_breadth_evidence_receipt_status": _text(
+            scope_breadth_evidence_receipt.get("status")
+        ),
+        "product_scope_breadth_evidence_receipt_ready": scope_breadth_evidence_receipt_ready,
+        "product_scope_breadth_evidence_receipt_blocker_count": _int(
+            scope_breadth_evidence_receipt.get("blocker_count")
+        ),
+        "product_scope_breadth_evidence_receipt_blocked_row_count": _int(
+            scope_breadth_evidence_receipt.get("blocked_row_count")
+        ),
+        "product_scope_breadth_evidence_receipt_required_scope_blocker_count": _int(
+            scope_breadth_evidence_receipt.get("required_scope_blocker_count")
+        ),
+        "product_scope_breadth_evidence_receipt_artifact": _text(
+            scope_breadth_evidence_receipt.get("artifact_path")
+            or scope_breadth_evidence_receipt_path
+        ),
+        "product_scope_breadth_evidence_receipt_csv": _text(
+            scope_breadth_evidence_receipt.get("receipt_csv")
+        ),
         "engine_refinement_claim_promotion_evidence_present": bool(engine_refinement),
         "engine_refinement_claim_promotion_ready": engine_refinement_claim_promotion_ready,
         "engine_refinement_status": _text(engine_refinement.get("status")),
@@ -4782,6 +4814,9 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- release_blocker_fail_count: `{s['release_blocker_fail_count']}`",
         f"- optional_requirement_fail_count: `{s['optional_requirement_fail_count']}`",
         f"- product_ai_optional_lane_ready: `{s['product_ai_optional_lane_ready']}`",
+        f"- product_scope_breadth_evidence_receipt_ready: `{s['product_scope_breadth_evidence_receipt_ready']}`",
+        f"- product_scope_breadth_evidence_receipt_status: `{s['product_scope_breadth_evidence_receipt_status']}`",
+        f"- product_scope_breadth_evidence_receipt_artifact: `{s['product_scope_breadth_evidence_receipt_artifact']}`",
         f"- engine_refinement_claim_promotion_ready: `{s['engine_refinement_claim_promotion_ready']}`",
         f"- engine_refinement_claim_promotion_blocker_count: `{s['engine_refinement_claim_promotion_blocker_count']}`",
         f"- engine_refinement_claim_promotion_action_board_csv: `{s['engine_refinement_claim_promotion_action_board_csv']}`",
@@ -5125,6 +5160,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--product-scope-breadth-contract-json", default=DEFAULT_PRODUCT_SCOPE_BREADTH_CONTRACT_JSON)
     parser.add_argument("--scope-evidence-priority-json", default=DEFAULT_SCOPE_EVIDENCE_PRIORITY_JSON)
     parser.add_argument("--scope-evidence-intake-readiness-json", default=DEFAULT_SCOPE_EVIDENCE_INTAKE_READINESS_JSON)
+    parser.add_argument("--scope-breadth-evidence-receipt-json", default=DEFAULT_SCOPE_BREADTH_EVIDENCE_RECEIPT_JSON)
     parser.add_argument("--pxr-exact-review-intake-json", default=DEFAULT_PXR_EXACT_REVIEW_INTAKE_JSON)
     parser.add_argument("--commercial-readiness-handoff-bundle-json", default=DEFAULT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_JSON)
     parser.add_argument("--delta-force-closure-acceptance-json", default=DEFAULT_DELTA_FORCE_CLOSURE_ACCEPTANCE_JSON)
@@ -5171,6 +5207,7 @@ def main(argv: list[str] | None = None) -> None:
         product_scope_breadth_contract_packet=_read_json_if_present(args.product_scope_breadth_contract_json),
         scope_evidence_priority_packet=_read_json_if_present(args.scope_evidence_priority_json),
         scope_evidence_intake_readiness_packet=_read_json_if_present(args.scope_evidence_intake_readiness_json),
+        scope_breadth_evidence_receipt_packet=_read_json_if_present(args.scope_breadth_evidence_receipt_json),
         pxr_exact_review_intake_packet=_read_json_if_present(args.pxr_exact_review_intake_json),
         commercial_readiness_handoff_bundle_packet=_read_json_if_present(args.commercial_readiness_handoff_bundle_json),
         delta_force_closure_acceptance_packet=_read_json_if_present(args.delta_force_closure_acceptance_json),
@@ -5204,6 +5241,7 @@ def main(argv: list[str] | None = None) -> None:
         product_scope_breadth_contract_path=args.product_scope_breadth_contract_json,
         scope_evidence_priority_path=args.scope_evidence_priority_json,
         scope_evidence_intake_readiness_path=args.scope_evidence_intake_readiness_json,
+        scope_breadth_evidence_receipt_path=args.scope_breadth_evidence_receipt_json,
         pxr_exact_review_intake_path=args.pxr_exact_review_intake_json,
         commercial_readiness_handoff_bundle_path=args.commercial_readiness_handoff_bundle_json,
         delta_force_closure_acceptance_path=args.delta_force_closure_acceptance_json,

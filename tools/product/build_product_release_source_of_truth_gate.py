@@ -53,6 +53,7 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_goal_readiness_rollup.py",
     "python3 tools/build_product_goal_completion_audit.py",
     "python3 tools/build_goal_operator_action_board.py",
+    "python3 tools/build_goal_operator_intake_kit.py",
     "python3 tools/build_goal_api_surface_contract.py",
     "python3 tools/build_goal_bottleneck_briefing.py",
     "python3 deploy/product_release_bundle.py",
@@ -345,6 +346,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "depends_on": [
             "runs/goal_readiness_rollup_current.json",
             "runs/engine_refinement_tier_readiness_current.json",
+            "runs/product_scope_breadth_evidence_receipt_current.json",
         ],
     },
     {
@@ -355,6 +357,21 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/goal_readiness_rollup_current.json",
             "runs/product_goal_completion_audit_current.json",
             "runs/engine_refinement_claim_promotion_action_board_current.csv",
+        ],
+    },
+    {
+        "artifact_id": "goal_operator_intake_kit",
+        "artifact_path": "runs/goal_operator_intake_kit_current/manifest.json",
+        "builder_command": "python3 tools/build_goal_operator_intake_kit.py",
+        "depends_on": [
+            "tools/accounting/build_goal_operator_intake_kit.py",
+            "tools/build_goal_operator_intake_kit.py",
+            "runs/goal_operator_action_board_current.json",
+            "runs/goal_release_burndown_work_order_current.json",
+            "runs/product_scope_breadth_evidence_receipt_current.json",
+            "config/product_scope_breadth_evidence_receipt_current.csv",
+            "runs/engine_refinement_claim_evidence_receipt_current.json",
+            "config/engine_refinement_claim_promotion_evidence_receipt_current.csv",
         ],
     },
     {
