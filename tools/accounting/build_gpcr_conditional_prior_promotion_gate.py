@@ -10,7 +10,7 @@ from tools.builder_table_utils import write_csv_rows
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_BREADTH_JSON = "runs/gpcr_residual_proof_breadth_gate_current.json"
-DEFAULT_CI_LOW_JSON = "runs/gpcr_ci_low_recovery_packet_current.json"
+DEFAULT_CI_LOW_JSON = "runs/gpcr_rank_rescue_crossfit_repeat_r1_evidence_packet_current.json"
 DEFAULT_OPRM1_JSON = "runs/gpcr_oprm1_life_science_evidence_packet_current.json"
 DEFAULT_OUT_JSON = "runs/gpcr_conditional_prior_promotion_gate_current.json"
 DEFAULT_OUT_CSV = "runs/gpcr_conditional_prior_promotion_gate_current.csv"
@@ -83,7 +83,12 @@ def build_gpcr_conditional_prior_promotion_gate(
     breadth = _summary(breadth_packet or _read_json_if_present(DEFAULT_BREADTH_JSON))
     ci_low = _summary(ci_low_packet or _read_json_if_present(DEFAULT_CI_LOW_JSON))
     oprm1 = _summary(oprm1_packet or _read_json_if_present(DEFAULT_OPRM1_JSON))
-    backmapping = _read_text("tools/run_ligand_backmapping_scoring.py")
+    backmapping = "\n".join(
+        [
+            _read_text("tools/run_ligand_backmapping_scoring.py"),
+            _read_text("tools/product/run_ligand_backmapping_scoring.py"),
+        ]
+    )
     prototype_spec = _read_text("tools/accounting/build_gpcr_residual_prototype_spec.py")
 
     breadth_gate_ready = _bool(breadth.get("gpcr_residual_proof_breadth_gate_ready")) or _text(breadth.get("status")) == "gpcr_residual_proof_breadth_gate_ready"
@@ -95,7 +100,7 @@ def build_gpcr_conditional_prior_promotion_gate(
         and "gpcr_core_acidic_anchor_overcontact_prior_gate_v4" in prototype_spec
         and ("conditional_prior" in prototype_spec.lower() or "acidic_anchor_overcontact" in prototype_spec)
     )
-    promotion_boundary_ready = breadth_gate_ready and conditional_prior_scaffold
+    promotion_boundary_ready = breadth_gate_ready and conditional_prior_scaffold and not ci_low_blocker and not oprm1_collapse
     claim_promotion_allowed = False
     blockers: list[str] = []
     if ci_low_blocker:

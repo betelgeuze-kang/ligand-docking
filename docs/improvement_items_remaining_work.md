@@ -1,4 +1,4 @@
-# 분자동역학 저장소 — 개선사항 및 잔여 작업 (2026-06-13 KST 기준)
+# 분자동역학 저장소 — 개선사항 및 잔여 작업 (2026-06-14 KST 기준)
 
 본 문서는 restricted local delivery P0가 닫힌 상태에서, 완전한 독립 상용 제품까지
 남아 있는 개선 영역과 그 병목 원인을 정리한 것이다. 기간/공정 추정은 제외하고
@@ -15,7 +15,7 @@
 | Tracked commercialization accounting | `closed=true`, `blocked_count=0` | `runs/commercialization_readiness_current.json`, `runs/commercialization_gap_burndown_current.json` |
 | Platform gap taxonomy | `platform_accounting_closed=true`, `top_expansion_gap_id=none_tracked_platform_expansion` | `runs/platform_gap_taxonomy_packet_current.json` |
 | Transporter/AQP1/CA2/PXR placeholder accounting | `placeholder_driven_rows=0`, `evidence_blocked_placeholder_rows=0` | `runs/transporter_placeholder_burndown_queue_current.json`, `runs/ca2_pxr_review_policy_closure_gate_current.json` |
-| Accuracy parity scorecard | `blocked_accuracy_parity`, `pass_row_count=4/5`, `blocked_row_count=1`; ligand ranking broad parity/claim promotion blocked | `runs/accuracy_parity_scorecard_current.json` |
+| Accuracy parity scorecard | `blocked_accuracy_parity`, `pass_row_count=4/5`, `restricted_pass_row_count=1`, `blocked_row_count=0`; ligand ranking metrics green but broad claim locked | `runs/accuracy_parity_scorecard_current.json` |
 | T. cruzi PDE selected all-atom | `hard_block_count=0`, parameterization/local-min 7/7 | `runs/wetlab_selected_allatom_gate_burndown_packet_current.json`, `runs/wetlab_tcruzi_pde_atomized_parameterization_minimization_packet_current.json` |
 | OpenMM 11-target 2-bead strict release | 11/11 pass | `runs/openmm_2bead_strict_multitarget_current_summary.json` |
 | Structure deterministic CA true-metric backend | pass | `runs/structure_refinement_scorecard_current.json` |
@@ -83,7 +83,7 @@
 |---|---|---|---|
 | 6 | GPCR CI-low / residual proof breadth | CLOSED | `runs/gpcr_residual_proof_breadth_gate_current.json`, `build_gpcr_residual_proof_breadth_gate.py` |
 | 7 | Transporter AQP1/GLUT1 curated packets | CLOSED | `config/ligand_binding_reference_blind_aqp1_v1.csv`, `config/ligand_binding_reference_blind_glut1_4pyp_v1.csv` (placeholder 0건) |
-| 8 | OpenMM lane / broad accuracy parity scorecard | 2-BEAD LANE CLOSED / FULL ALL-ATOM CLAIM BLOCKED | `runs/accuracy_parity_scorecard_current.json` `blocked_accuracy_parity`, OpenMM row pass, ligand ranking row blocked; `runs/science_claim_promotion_gap_closure_current.json` keeps `SCI-OPENMM` open |
+| 8 | OpenMM lane / broad accuracy parity scorecard | 2-BEAD LANE CLOSED / FULL ALL-ATOM CLAIM BLOCKED | `runs/accuracy_parity_scorecard_current.json` `blocked_accuracy_parity`, OpenMM row pass, ligand ranking row restricted-pass; `runs/science_claim_promotion_gap_closure_current.json` keeps `SCI-OPENMM` open |
 | 9 | Prospective wetlab translation scaffold | CLOSED | simulation packet green, wetlab-proven hit out-of-claim 유지 |
 | 10 | CA2/PXR packet replacement | CLOSED | `runs/ca2_packet_replacement_readiness_current.json`, `runs/pxr_packet_replacement_readiness_current.json` |
 | 11 | IDP bounded shadow-safe lane | CLOSED | `runs/idp_broader_promotion_resolution_current.json` `wider_shadow_safe_lane_admitted=true` |
@@ -97,7 +97,7 @@
 
 | ID | 영역 | accounting | 실제 claim 경계 | 상태 |
 |---|---|---|---|---|
-| SCI-GPCR | GPCR broad family | breadth gate green | CI-low/OPRM1 blocked, `claim_promotion_allowed=false` | PENDING |
+| SCI-GPCR | GPCR broad family | breadth gate green | CI-low green in rank-rescue lane; OPRM1 blocked, `claim_promotion_allowed=false` | PENDING |
 | SCI-TRANS | Transporter | placeholder 0, functional surrogate | direct binding kcal blocked | CLOSED |
 | SCI-CA2-PXR | CA2/PXR | readiness fixture green | replacement workbook/sync boundary scaffold | CLOSED |
 | SCI-WETLAB | Wetlab | simulation packet green | wetlab-proven hit out-of-claim | CLOSED |
@@ -105,17 +105,18 @@
 
 최신 `runs/science_claim_promotion_gap_closure_current.json`은
 `blocked_science_claim_promotion_gap_closure`, `open_gap_ids=[SCI-GPCR, SCI-OPENMM]`,
-`current_next_action=Maintain conditional prior gate and keep broad-family claim promotion blocked until CI-low and OPRM1 gates clear.`다.
+`current_next_action=CI-low evidence is green in the tracked rank-rescue lane; keep broad-family claim promotion blocked until OPRM1 pose-collapse evidence clears.`다.
 검증: `tests/unit/test_build_science_claim_promotion_gap_closure.py`, `tools/accounting/build_science_claim_promotion_gap_closure.py`, `tools/product/ci_contract_fixture_packets.py` `write_science_claim_promotion_closure_packets()`.
 
-2026-06-13 추가 확인: 최신 `goal_release_decision_gate_current.json`과 `/goal/status`는
+2026-06-14 추가 확인: 최신 `accuracy_parity_scorecard_current.json`은
 `accuracy_parity_scorecard_*` 및 `accuracy_parity_ligand_ranking_*` 키로
 `blocked_accuracy_parity`, `schrodinger_class_claim_allowed=false`,
-`ligand_ranking_status=blocked`, `ranking_pr_auc=0.15749`,
-`ranking_pr_auc_ci_low=0.001347`, `ranking_topk_hit_rate=0.1`,
-`top_blocker_count=4`를 직접 노출한다. 따라서 restricted release가 green이어도
-Schrodinger-class/broad GPCR ligand-ranking parity 미달이 full-commercial blocker
-surface 밖으로 빠지지 않는다.
+`ligand_ranking_status=restricted_pass`, `ranking_pr_auc=0.871853`,
+`ranking_pr_auc_ci_low=0.761168`, `ranking_topk_hit_rate=1.0`,
+`top_blocker_count=1`, `top_blocker=ligand_ranking:broad_gpcr_claim_not_allowed`를
+노출한다. 따라서 rank-rescue 독립 반복의 metric blocker는 닫혔지만,
+Schrodinger-class/broad GPCR ligand-ranking claim은 OPRM1/broad-scope evidence가
+닫히기 전까지 full-commercial blocker surface 밖으로 빠지지 않는다.
 
 ---
 
@@ -174,7 +175,7 @@ surface 밖으로 빠지지 않는다.
 - `claim_promotion_allowed=false`, `execution_enabled=false` 유지. R4 rollout execution은
   별도 operator receipt로 검증됐으며 builder 자체는 read-only다.
 - `runs/science_claim_promotion_gap_closure_current.json`은 GPCR broad-family claim
-  promotion을 `SCI-GPCR` open으로 유지한다. CI-low/OPRM1 gate가 clear되기 전에는
+  promotion을 `SCI-GPCR` open으로 유지한다. OPRM1 pose-collapse gate가 clear되기 전에는
   restricted GPCR evidence를 broad-family claim으로 승격하지 않는다. 최신
   `goal_release_decision_gate_current.json`과 `/goal/status`도
   `science_claim_promotion_gap_closure_*` 키로 이 세부 open gap을 직접 노출해,
@@ -187,8 +188,9 @@ surface 밖으로 빠지지 않는다.
   `goal_release_decision_gate_current.json`과 `/goal/status`의
   `accuracy_parity_scorecard_*`/`accuracy_parity_ligand_ranking_*` 키로 전파된다.
   현재 posture는 `blocked_accuracy_parity`, `overall_commercial_tool_accuracy_parity_allowed=false`,
-  `schrodinger_class_claim_allowed=false`, `ligand_ranking_status=blocked`이며,
-  PR-AUC/CI-low/top-k가 threshold 아래라 broad GPCR ligand-ranking/Schrodinger-class
+  `schrodinger_class_claim_allowed=false`, `ligand_ranking_status=restricted_pass`이며,
+  rank-rescue 독립 반복은 PR-AUC/CI-low/top-k threshold를 통과했지만
+  `broad_gpcr_claim_not_allowed`가 남아 broad GPCR ligand-ranking/Schrodinger-class
   claim promotion은 계속 차단된다.
   최신 `goal_operator_action_board_current.json`은 이를
   `product_accuracy_parity:repair_ligand_ranking_parity` action으로도 노출하고,
@@ -1307,8 +1309,10 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
 ### C. GPCR family / router / scorer promotion (shadow-only lock)
 
 **현재 상태**
-- `gpcr_residual_prototype_spec_family_anchor_ci_stability_v3`의
-  `ranking_pr_auc_ci_low=0.21 < 0.45` 임계치 미달.
+- rank-rescue 독립 반복의 `ranking_pr_auc_ci_low=0.7612 >= 0.45`로
+  현재 tracked CI-low metric blocker는 닫혔다. legacy
+  `gpcr_residual_prototype_spec_family_anchor_ci_stability_v3`의
+  `ranking_pr_auc_ci_low=0.21 < 0.45`는 diagnostic-only 비교 근거로 남긴다.
 - v3~v16, adaptive까지 14+번 반복에도 DRD2 deep inversion 잔존
   (global rank 8562~18923, within-target 5315).
 - OPRM1 pose collapse 미해결, v15/v16/adaptive에서 `blocked_positive_count=3` 잔존.

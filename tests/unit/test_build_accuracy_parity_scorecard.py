@@ -17,7 +17,7 @@ def test_default_pose_gap_uses_latest_v16_adaptive_packet() -> None:
     )
     assert mod.DEFAULT_OPENMM_EXTERNAL_JSON == "runs/openmm_2bead_strict_multitarget_current_accuracy_external.json"
     assert mod.DEFAULT_OPENMM_STABILITY_JSON == "runs/openmm_2bead_strict_multitarget_current_long_stability_validation.json"
-    assert "gpcr_a1_independent_repeat_r2" in mod.DEFAULT_GPCR_RANKING_JSON
+    assert mod.DEFAULT_GPCR_RANKING_JSON == "runs/gpcr_rank_rescue_crossfit_repeat_r1_evidence_packet_current.json"
 
 
 def _write_json(path: Path, payload: dict) -> None:
@@ -346,6 +346,52 @@ def test_ligand_ranking_reads_stage5_metric_shape(tmp_path: Path) -> None:
     assert "claim_promotion_not_allowed" in row["blockers"]
     assert "ranking_pr_auc_ci_low_below_threshold" not in row["blockers"]
     assert "independent repeat" in row["next_required_step"]
+
+
+def test_ligand_ranking_uses_rank_rescue_evidence_without_broad_claim(tmp_path: Path) -> None:
+    ranking = tmp_path / "rank_rescue_evidence.json"
+    core = tmp_path / "core.json"
+    child_ranking = "runs/gpcr_coverage_v2_crossfit_rank_rescue_repeat_r1_shadow_replay_ranking_summary_current.json"
+    _write_json(
+        ranking,
+        {
+            "summary": {
+                "status": "metric_pass_claim_ready",
+                "claim_promotion_allowed": True,
+                "validation_claim_promotion_allowed": True,
+                "broad_gpcr_claim_allowed": False,
+                "router_claim_allowed": False,
+                "platform_claim_allowed": False,
+                "independent_repeat_completed": True,
+                "crossfit_validation_ready": True,
+                "label_derived_weight_selection": False,
+                "ranking_pr_auc": 0.8718530390764964,
+                "ranking_pr_auc_ci_low": 0.7611678630724843,
+                "ranking_topk_hit_rate": 1.0,
+                "positive_count": 34,
+                "ranking_score_col_used": "binding_score_composite_v7_coverage_v2_crossfit_rank_rescue_shadow",
+                "blockers": [],
+            },
+            "source_artifacts": [child_ranking],
+        },
+    )
+    _write_json(core, {"summary": {"claim_safe": False, "primary_blocker_task": "gpcr_core_full"}})
+
+    row = mod._ligand_ranking_row(gpcr_ranking_json=ranking, gpcr_core_diagnostics_json=core)
+
+    assert row["status"] == "restricted_pass"
+    assert row["commercial_parity_claim_allowed"] is False
+    assert row["metrics"]["ranking_pr_auc"] == 0.871853
+    assert row["metrics"]["ranking_pr_auc_ci_low"] == 0.761168
+    assert row["metrics"]["ranking_topk_hit_rate"] == 1.0
+    assert row["metrics"]["positive_count"] == 34
+    assert row["metrics"]["broad_gpcr_claim_allowed"] is False
+    assert row["metrics"]["validation_claim_promotion_allowed"] is True
+    assert row["metrics"]["independent_repeat_completed"] is True
+    assert "broad_gpcr_claim_not_allowed" in row["blockers"]
+    assert "ranking_pr_auc_below_threshold" not in row["blockers"]
+    assert child_ranking in row["source_artifacts"]
+    assert "OPRM1" in row["next_required_step"]
 
 
 def test_structure_row_exposes_internal_true_metric_backend(tmp_path: Path) -> None:

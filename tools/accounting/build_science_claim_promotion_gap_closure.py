@@ -107,17 +107,39 @@ def build_science_claim_promotion_gap_closure(
     ca2_pxr_closed = ca2_closed and pxr_closed
     wetlab_closed = bool(wetlab_openmm_summary.get("wetlab_lane_closed"))
     openmm_closed = bool(wetlab_openmm_summary.get("openmm_2bead_lane_closed"))
+    gpcr_blockers = [str(item) for item in (gpcr_summary.get("blockers") or []) if str(item)]
+    if gpcr_closed:
+        gpcr_claim_status = "boundary_ready_comparison_only"
+        gpcr_next_action = "Maintain claim_promotion_allowed=false until a separate broad-family claim review is approved."
+    elif "ranking_pr_auc_ci_low_below_threshold" in gpcr_blockers and "oprm1_pose_collapse_unresolved" in gpcr_blockers:
+        gpcr_claim_status = "blocked_ci_low_oprm1"
+        gpcr_next_action = (
+            "Maintain conditional prior gate and keep broad-family claim promotion blocked until CI-low and "
+            "OPRM1 gates clear."
+        )
+    elif "oprm1_pose_collapse_unresolved" in gpcr_blockers:
+        gpcr_claim_status = "blocked_oprm1_pose_collapse"
+        gpcr_next_action = (
+            "CI-low evidence is green in the tracked rank-rescue lane; keep broad-family claim promotion blocked "
+            "until OPRM1 pose-collapse evidence clears."
+        )
+    else:
+        gpcr_claim_status = "blocked_boundary_evidence"
+        gpcr_next_action = "Close the listed GPCR boundary blockers before any broad-family claim review."
 
     rows = [
         _row(
             "SCI-GPCR",
             "GPCR broad family",
             "green" if gpcr_summary.get("accounting_closed") else "fixture_or_blocked",
-            "blocked_ci_low_oprm1" if not gpcr_closed else "boundary_ready_comparison_only",
+            gpcr_claim_status,
             "closed" if gpcr_closed else "open",
             "runs/gpcr_conditional_prior_promotion_gate_current.json",
-            f"promotion_boundary_ready={gpcr_summary.get('promotion_boundary_ready')}; claim_promotion_allowed=false",
-            "Maintain conditional prior gate and keep broad-family claim promotion blocked until CI-low and OPRM1 gates clear.",
+            (
+                f"promotion_boundary_ready={gpcr_summary.get('promotion_boundary_ready')}; "
+                f"claim_promotion_allowed=false; blockers={','.join(gpcr_blockers) or 'none'}"
+            ),
+            gpcr_next_action,
         ),
         _row(
             "SCI-TRANS",

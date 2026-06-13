@@ -19,10 +19,7 @@ from tools.lib.artifacts import (
 DEFAULT_LOCAL_ACCURACY_JSON = "runs/accuracy_gate_local_delivery_preflight_current.json"
 DEFAULT_OPENMM_EXTERNAL_JSON = "runs/openmm_2bead_strict_multitarget_current_accuracy_external.json"
 DEFAULT_OPENMM_STABILITY_JSON = "runs/openmm_2bead_strict_multitarget_current_long_stability_validation.json"
-DEFAULT_GPCR_RANKING_JSON = (
-    "runs/external_validation_2026-05-13_gpcr_a1_independent_repeat_r2_"
-    "set1_core_blind_gpcr_core_full_p0_n100000_r1_stage5_ranking_summary.json"
-)
+DEFAULT_GPCR_RANKING_JSON = "runs/gpcr_rank_rescue_crossfit_repeat_r1_evidence_packet_current.json"
 DEFAULT_GPCR_CORE_DIAGNOSTICS_JSON = "runs/gpcr_core_rank_diagnostics_current.json"
 DEFAULT_GPCR_DRD2_REPAIR_JSON = "runs/gpcr_drd2_pose_generation_repair_packet_current.json"
 DEFAULT_GPCR_DRD2_BACKMAPPING_SUPPORT_JSON = "runs/gpcr_drd2_atom_typed_backmapping_support_current.json"
@@ -95,7 +92,14 @@ def _topk_hit_rate(payload: dict[str, Any], *, k: int = 20) -> float | None:
 def _ranking_summary(payload: dict[str, Any]) -> dict[str, Any]:
     summary = _summary(payload)
     if summary:
-        return summary
+        out = dict(summary)
+        source_artifacts = payload.get("source_artifacts")
+        if isinstance(source_artifacts, list):
+            out["source_artifacts"] = [str(item) for item in source_artifacts if str(item)]
+        claim_boundary = payload.get("claim_boundary")
+        if isinstance(claim_boundary, dict):
+            out["claim_boundary"] = claim_boundary
+        return out
     stage6 = payload.get("stages", {}).get("stage6_operational_gate") if isinstance(payload.get("stages"), dict) else {}
     if isinstance(stage6, dict) and stage6:
         return {
@@ -236,6 +240,13 @@ def _ligand_ranking_row(
     ci_low = _float(ranking_summary.get("ranking_pr_auc_ci_low"))
     topk = _float(ranking_summary.get("ranking_topk_hit_rate"))
     claim_allowed = _bool(ranking_summary.get("claim_promotion_allowed"))
+    broad_gpcr_claim_allowed = _bool(ranking_summary.get("broad_gpcr_claim_allowed"))
+    validation_claim_promotion_allowed = _bool(ranking_summary.get("validation_claim_promotion_allowed"))
+    router_claim_allowed = _bool(ranking_summary.get("router_claim_allowed"))
+    platform_claim_allowed = _bool(ranking_summary.get("platform_claim_allowed"))
+    independent_repeat_completed = _bool(ranking_summary.get("independent_repeat_completed"))
+    crossfit_validation_ready = _bool(ranking_summary.get("crossfit_validation_ready"))
+    label_derived_weight_selection = _bool(ranking_summary.get("label_derived_weight_selection"))
     blockers = list(ranking_summary.get("blockers") or [])
     if pr_auc is None or pr_auc < GPCR_PR_AUC_MIN:
         blockers.append("ranking_pr_auc_below_threshold")
@@ -245,6 +256,9 @@ def _ligand_ranking_row(
         blockers.append("topk_hit_rate_below_threshold")
     if claim_allowed is not True:
         blockers.append("claim_promotion_not_allowed")
+    scope_blockers: list[str] = []
+    if broad_gpcr_claim_allowed is False:
+        scope_blockers.append("broad_gpcr_claim_not_allowed")
     blockers = sorted(set(blockers))
     metric_blockers = [
         blocker
@@ -262,7 +276,15 @@ def _ligand_ranking_row(
             "accuracy scorecard, leakage/pose guardrails, and an independent repeat are reviewed."
         )
         status = "restricted_pass"
+    elif not metric_blockers and scope_blockers:
+        blockers = sorted(set(blockers + scope_blockers))
+        next_required_step = (
+            "Rank-rescue independent-repeat metrics clear the guarded thresholds; keep the broad GPCR/"
+            "Schrödinger-class claim locked until target-held-out breadth and OPRM1 pose-collapse evidence clear."
+        )
+        status = "restricted_pass"
     elif blockers:
+        blockers = sorted(set(blockers + scope_blockers))
         next_required_step = (
             "Repair DRD2/HTR2A/OPRM1 pose-supported ranking, rebuild hard decoys, then rerun guarded "
             "100k review before any Schrödinger-class ligand-ranking claim."
@@ -274,18 +296,35 @@ def _ligand_ranking_row(
             "promotion separate from this scorecard row."
         )
         status = "pass"
+    source_artifacts = [_artifact(gpcr_ranking_json), _artifact(gpcr_core_diagnostics_json)]
+    for artifact in ranking_summary.get("source_artifacts") or []:
+        artifact_text = str(artifact)
+        if artifact_text and artifact_text not in source_artifacts:
+            source_artifacts.append(artifact_text)
+    claim_scope = (
+        "restricted GPCR rank-rescue validation lane; broad GPCR/Schrödinger claim locked"
+        if status == "restricted_pass" and "broad_gpcr_claim_not_allowed" in blockers
+        else "broad GPCR ligand ranking/docking parity"
+    )
     return _row(
         axis="ligand_ranking",
         comparator="Schrodinger Glide/FEP+ class ranking",
         status=status,
-        claim_scope="broad GPCR ligand ranking/docking parity",
-        source_artifacts=[_artifact(gpcr_ranking_json), _artifact(gpcr_core_diagnostics_json)],
+        claim_scope=claim_scope,
+        source_artifacts=source_artifacts,
         metrics={
             "ranking_pr_auc": pr_auc,
             "ranking_pr_auc_ci_low": ci_low,
             "ranking_topk_hit_rate": topk,
             "positive_count": _int(ranking_summary.get("positive_count")),
             "ranking_score_col_used": ranking_summary.get("ranking_score_col_used"),
+            "broad_gpcr_claim_allowed": broad_gpcr_claim_allowed,
+            "validation_claim_promotion_allowed": validation_claim_promotion_allowed,
+            "router_claim_allowed": router_claim_allowed,
+            "platform_claim_allowed": platform_claim_allowed,
+            "independent_repeat_completed": independent_repeat_completed,
+            "crossfit_validation_ready": crossfit_validation_ready,
+            "label_derived_weight_selection": label_derived_weight_selection,
             "worst_positive_global_rank": _int(ranking_summary.get("worst_positive_global_rank")),
             "worst_positive_within_target_rank": _int(ranking_summary.get("worst_positive_within_target_rank")),
             "core_claim_safe": _bool(core_summary.get("claim_safe")),
@@ -296,6 +335,7 @@ def _ligand_ranking_row(
             "ranking_pr_auc_ci_low_min": GPCR_PR_AUC_CI_LOW_MIN,
             "ranking_topk_hit_rate_min": GPCR_TOPK_MIN,
             "requires_pose_supported_decoy_resistance": True,
+            "requires_broad_scope_claim_boundary": True,
         },
         blockers=blockers,
         next_required_step=next_required_step,
@@ -669,7 +709,7 @@ def build_scorecard(
     for row in rows:
         for blocker in row["blockers"][:5]:
             top_blockers.append(f"{row['axis']}:{blocker}")
-    overall_allowed = len(blocked_rows) == 0 and len(missing_rows) == 0
+    overall_allowed = len(blocked_rows) == 0 and len(missing_rows) == 0 and len(restricted_rows) == 0
     status = "green" if overall_allowed else "blocked_accuracy_parity"
     if overall_allowed:
         restricted_estimate = "80-85"
@@ -678,6 +718,14 @@ def build_scorecard(
         next_required_step = (
             "Maintain the green tracked scorecard, keep scorer/router/platform deployment as a separate guardrail, "
             "and expand external held-out coverage before making unbounded commercial-platform claims."
+        )
+    elif not blocked_rows and not missing_rows and restricted_rows:
+        restricted_estimate = "80-85"
+        broad_accuracy_estimate = "65-75"
+        broad_platform_estimate = "45-55"
+        next_required_step = (
+            "Metric blockers are closed in the tracked rows, but restricted claim-scope rows remain. Close the "
+            "target-held-out/OPRM1 broad-claim evidence before any unbounded commercial-tool parity claim."
         )
     else:
         restricted_estimate = "70-75"
