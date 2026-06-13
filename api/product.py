@@ -43,12 +43,18 @@ PRODUCT_SERVICE_BOUNDARY_ARTIFACT = ROOT / "runs" / "product_service_boundary_co
 PRODUCT_API_CONTRACT_ARTIFACT = ROOT / "runs" / "product_api_contract_current.json"
 PRODUCT_OPERATIONAL_QUALITY_ARTIFACT = ROOT / "runs" / "product_operational_quality_contract_current.json"
 PRODUCT_SECURITY_DEPLOYMENT_ARTIFACT = ROOT / "runs" / "product_security_deployment_contract_current.json"
+PRODUCT_ROLLOUT_EXECUTION_SMOKE_RECEIPT_ARTIFACT = (
+    ROOT / "runs" / "product_rollout_execution_smoke_receipt_current.json"
+)
 PRODUCT_RELEASE_OPERATIONS_ARTIFACT = ROOT / "runs" / "product_release_operations_dossier_current.json"
 PRODUCT_EXECUTION_APPROVAL_ARTIFACT = ROOT / "runs" / "product_execution_approval_gate_current.json"
 PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_ARTIFACT = ROOT / "runs" / "product_public_benchmark_work_order_current.json"
 EXTERNAL_METRIC_SCORECARD_ARTIFACT = ROOT / "runs" / "external_metric_scorecard_current.json"
 PRODUCT_TRAJECTORY_SLA_CONTRACT_ARTIFACT = ROOT / "runs" / "product_trajectory_sla_contract_current.json"
 PRODUCT_JOB_ORCHESTRATION_CONTRACT_ARTIFACT = ROOT / "runs" / "product_job_orchestration_contract_current.json"
+API_RUNNER_PROFILE_PROMOTION_OPERATOR_RECEIPT_ARTIFACT = (
+    ROOT / "runs" / "api_runner_profile_promotion_operator_receipt_current.json"
+)
 PRODUCT_AI_DECISION_GRAPH_ARTIFACT = ROOT / "runs" / "product_ai_decision_graph_contract_current.json"
 PRODUCT_POSE_SAMPLING_READINESS_ARTIFACT = ROOT / "runs" / "product_pose_sampling_readiness_current.json"
 PRODUCT_AI_REPORT_UX_ARTIFACT = ROOT / "runs" / "product_ai_report_ux_contract_current.json"
@@ -56,12 +62,24 @@ CAMEO_VALIDATION_OPERATIONS_ARTIFACT = ROOT / "runs" / "cameo_validation_operati
 CAMEO_OFFICIAL_RESULTS_ARTIFACT = ROOT / "runs" / "cameo_official_results_intake_gate_current.json"
 CAMEO_OFFICIAL_RESULTS_TEMPLATE = ROOT / "runs" / "cameo_official_results_operator_template_current.csv"
 CAMEO_OFFICIAL_RESULTS_INTAKE = ROOT / "runs" / "cameo_official_results_operator_intake.csv"
+CAMEO_OFFICIAL_RESULT_FETCH_PREFLIGHT_ARTIFACT = (
+    ROOT / "runs" / "cameo_official_result_fetch_preflight_current.json"
+)
+CAMEO_OFFICIAL_RESULT_FETCH_TEMPLATE = (
+    ROOT / "runs" / "cameo_official_result_fetch_operator_approval_template_current.csv"
+)
+CAMEO_OFFICIAL_RESULT_FETCH_INTAKE = (
+    ROOT / "runs" / "cameo_official_result_fetch_operator_approval_intake.csv"
+)
 CAMEO_PUBLIC_REGISTRATION_ARTIFACT = ROOT / "runs" / "cameo_public_registration_approval_gate_current.json"
 CAMEO_PUBLIC_REGISTRATION_TEMPLATE = ROOT / "runs" / "cameo_public_registration_operator_approval_template_current.csv"
 CAMEO_PUBLIC_REGISTRATION_INTAKE = ROOT / "runs" / "cameo_public_registration_operator_approval_intake.csv"
 PRODUCT_LICENSE_DECISION_ARTIFACT = ROOT / "runs" / "product_license_decision_gate_current.json"
 PRODUCT_LICENSE_DECISION_PACKET_ARTIFACT = ROOT / "runs" / "product_license_decision_packet_current.json"
 PRODUCT_LICENSE_FILE_WORK_ORDER_ARTIFACT = ROOT / "runs" / "product_license_file_creation_work_order_current.json"
+SELF_HOSTED_LICENSE_DISTRIBUTION_AUDIT_ARTIFACT = (
+    ROOT / "runs" / "self_hosted_license_distribution_audit_current.json"
+)
 PRODUCT_LICENSE_DECISION_TEMPLATE = ROOT / "runs" / "product_license_decision_operator_template_current.csv"
 PRODUCT_LICENSE_DECISION_INTAKE = ROOT / "runs" / "product_license_decision_operator_intake.csv"
 PRODUCT_COMMERCIAL_INDEPENDENCE_ARTIFACT = ROOT / "runs" / "product_commercial_independence_gate_current.json"
@@ -1466,6 +1484,246 @@ async def get_product_cameo_live_validation() -> dict[str, Any]:
     }
 
 
+@router.get("/cameo-official-result-fetch-preflight")
+async def get_product_cameo_official_result_fetch_preflight() -> dict[str, Any]:
+    packet = _read_json_object(CAMEO_OFFICIAL_RESULT_FETCH_PREFLIGHT_ARTIFACT)
+    summary = _summary(packet)
+    rows = packet.get("rows") if isinstance(packet.get("rows"), list) else []
+    if not summary:
+        return {
+            "status": "missing_cameo_official_result_fetch_preflight",
+            "artifact_path": str(CAMEO_OFFICIAL_RESULT_FETCH_PREFLIGHT_ARTIFACT),
+            "official_result_fetch_preflight_ready": False,
+            "operations_surface_ready": False,
+            "receiver_smoke_ready": False,
+            "source_operations_dossier_status": "",
+            "operator_template_csv": str(CAMEO_OFFICIAL_RESULT_FETCH_TEMPLATE),
+            "operator_fetch_csv": str(CAMEO_OFFICIAL_RESULT_FETCH_INTAKE),
+            "operator_fetch_csv_present": False,
+            "fetch_approval_token_required": "APPROVE_CAMEO_OFFICIAL_RESULT_FETCH",
+            "authorized_for_separate_operator_fetch": False,
+            "authorized_row_count": 0,
+            "awaiting_operator_fetch_approval_row_count": 0,
+            "blocked_row_count": 0,
+            "skipped_row_count": 0,
+            "target_id": "",
+            "blocker_count": 1,
+            "blockers": [],
+            "fetch_rows": [],
+            "next_required_step": "",
+            "network_request_opened": False,
+            "official_results_fetched": False,
+            "native_local_accuracy_used": False,
+            "outbound_email_enabled": False,
+            "execution_enabled": False,
+            "docking_results_emitted": False,
+            "external_state_mutated": False,
+            "claim_boundary": (
+                "Product CAMEO official result fetch preflight endpoint only; the local preflight artifact is "
+                "missing or invalid. It does not open network connections, fetch official CAMEO pages, parse "
+                "remote content, use local native accuracy, send email, upload, delete, commit, push, or mutate "
+                "external state."
+            ),
+        }
+    return {
+        "status": summary.get("status"),
+        "artifact_path": str(CAMEO_OFFICIAL_RESULT_FETCH_PREFLIGHT_ARTIFACT),
+        "official_result_fetch_preflight_ready": (
+            summary.get("status") == "cameo_official_result_fetch_preflight_ready"
+        ),
+        "operations_surface_ready": bool(summary.get("operations_surface_ready") is True),
+        "receiver_smoke_ready": bool(summary.get("receiver_smoke_ready") is True),
+        "source_operations_dossier_status": summary.get("source_operations_dossier_status", ""),
+        "operator_template_csv": summary.get("operator_template_csv")
+        or str(CAMEO_OFFICIAL_RESULT_FETCH_TEMPLATE),
+        "operator_fetch_csv": summary.get("operator_fetch_csv")
+        or str(CAMEO_OFFICIAL_RESULT_FETCH_INTAKE),
+        "operator_fetch_csv_present": bool(summary.get("operator_fetch_csv_present") is True),
+        "fetch_approval_token_required": summary.get(
+            "fetch_approval_token_required", "APPROVE_CAMEO_OFFICIAL_RESULT_FETCH"
+        ),
+        "authorized_for_separate_operator_fetch": bool(
+            summary.get("authorized_for_separate_operator_fetch") is True
+        ),
+        "authorized_row_count": int(summary.get("authorized_row_count") or 0),
+        "awaiting_operator_fetch_approval_row_count": int(
+            summary.get("awaiting_operator_fetch_approval_row_count") or 0
+        ),
+        "blocked_row_count": int(summary.get("blocked_row_count") or 0),
+        "skipped_row_count": int(summary.get("skipped_row_count") or 0),
+        "target_id": summary.get("target_id", ""),
+        "blocker_count": int(summary.get("blocker_count") or 0),
+        "blockers": list(summary.get("blockers") or []),
+        "fetch_rows": rows,
+        "next_required_step": summary.get("next_required_step", ""),
+        "network_request_opened": bool(summary.get("network_request_opened") is True),
+        "official_results_fetched": bool(summary.get("official_results_fetched") is True),
+        "native_local_accuracy_used": bool(summary.get("native_local_accuracy_used") is True),
+        "outbound_email_enabled": bool(summary.get("outbound_email_enabled") is True),
+        "execution_enabled": False,
+        "docking_results_emitted": False,
+        "external_state_mutated": bool(summary.get("external_state_mutated") is True),
+        "claim_boundary": summary.get("claim_boundary", ""),
+    }
+
+
+@router.get("/api-runner-profile-promotion-operator-receipt")
+async def get_product_api_runner_profile_promotion_operator_receipt() -> dict[str, Any]:
+    packet = _read_json_object(API_RUNNER_PROFILE_PROMOTION_OPERATOR_RECEIPT_ARTIFACT)
+    summary = _summary(packet)
+    rows = packet.get("rows") if isinstance(packet.get("rows"), list) else []
+    if not summary:
+        return {
+            "status": "missing_api_runner_profile_promotion_operator_receipt",
+            "artifact_path": str(API_RUNNER_PROFILE_PROMOTION_OPERATOR_RECEIPT_ARTIFACT),
+            "operator_receipt_ready": False,
+            "readiness_artifact": "",
+            "readiness_status": "",
+            "operator_template_csv": "",
+            "profile_count": 0,
+            "receipt_row_count": 0,
+            "pass_row_count": 0,
+            "blocked_row_count": 0,
+            "first_blocked_profile_id": "",
+            "first_blocked_row_blocker": "",
+            "first_blocked_row_blockers": [],
+            "most_common_row_blocker": "",
+            "approved_profile_count": 0,
+            "held_profile_count": 0,
+            "missing_profile_count": 0,
+            "duplicate_profile_count": 0,
+            "missing_columns": [],
+            "approval_token_required": "APPROVE_API_RUNNER_PROFILE_PROMOTION",
+            "profile_enabled_by_this_tool": False,
+            "runner_executed": False,
+            "profile_promoted": False,
+            "blocker_count": 1,
+            "blockers": [],
+            "receipt_rows": [],
+            "next_required_step": "",
+            "execution_enabled": False,
+            "docking_results_emitted": False,
+            "external_state_mutated": False,
+            "claim_boundary": (
+                "API runner profile promotion operator receipt endpoint only; the local receipt artifact is "
+                "missing or invalid. It does not edit profile JSON, enable profiles, run scientific runners, "
+                "submit jobs, emit fake results, upload, delete, commit, push, or mutate external state."
+            ),
+        }
+    return {
+        "status": summary.get("status"),
+        "artifact_path": str(API_RUNNER_PROFILE_PROMOTION_OPERATOR_RECEIPT_ARTIFACT),
+        "operator_receipt_ready": bool(summary.get("operator_receipt_ready") is True),
+        "readiness_artifact": summary.get("readiness_artifact", ""),
+        "readiness_status": summary.get("readiness_status", ""),
+        "operator_template_csv": summary.get("operator_template_csv", ""),
+        "profile_count": int(summary.get("profile_count") or 0),
+        "receipt_row_count": int(summary.get("receipt_row_count") or 0),
+        "pass_row_count": int(summary.get("pass_row_count") or 0),
+        "blocked_row_count": int(summary.get("blocked_row_count") or 0),
+        "first_blocked_profile_id": summary.get("first_blocked_profile_id", ""),
+        "first_blocked_row_blocker": summary.get("first_blocked_row_blocker", ""),
+        "first_blocked_row_blockers": list(summary.get("first_blocked_row_blockers") or []),
+        "most_common_row_blocker": summary.get("most_common_row_blocker", ""),
+        "approved_profile_count": int(summary.get("approved_profile_count") or 0),
+        "held_profile_count": int(summary.get("held_profile_count") or 0),
+        "missing_profile_count": int(summary.get("missing_profile_count") or 0),
+        "duplicate_profile_count": int(summary.get("duplicate_profile_count") or 0),
+        "missing_columns": list(summary.get("missing_columns") or []),
+        "approval_token_required": summary.get(
+            "approval_token_required", "APPROVE_API_RUNNER_PROFILE_PROMOTION"
+        ),
+        "profile_enabled_by_this_tool": bool(summary.get("profile_enabled_by_this_tool") is True),
+        "runner_executed": bool(summary.get("runner_executed") is True),
+        "profile_promoted": False,
+        "blocker_count": int(summary.get("blocker_count") or 0),
+        "blockers": list(summary.get("blockers") or []),
+        "receipt_rows": rows,
+        "next_required_step": summary.get("next_required_step", ""),
+        "execution_enabled": False,
+        "docking_results_emitted": False,
+        "external_state_mutated": bool(summary.get("external_state_mutated") is True),
+        "claim_boundary": summary.get("claim_boundary", ""),
+    }
+
+
+@router.get("/rollout-execution-smoke-receipt")
+async def get_product_rollout_execution_smoke_receipt() -> dict[str, Any]:
+    packet = _read_json_object(PRODUCT_ROLLOUT_EXECUTION_SMOKE_RECEIPT_ARTIFACT)
+    summary = _summary(packet)
+    rows = packet.get("rows") if isinstance(packet.get("rows"), list) else []
+    if not summary:
+        return {
+            "status": "missing_product_rollout_execution_smoke_receipt",
+            "artifact_path": str(PRODUCT_ROLLOUT_EXECUTION_SMOKE_RECEIPT_ARTIFACT),
+            "rollout_execution_smoke_receipt_ready": False,
+            "source_rollout_execution_readiness_status": "",
+            "source_authorized_for_separate_operator_execution": False,
+            "source_rollout_executed": False,
+            "receipt_csv": "",
+            "receipt_csv_present": False,
+            "operator_template_csv": "",
+            "receipt_row_count": 0,
+            "ready_receipt_row_count": 0,
+            "blocker_count": 1,
+            "blockers": [],
+            "target_environment": "",
+            "rollout_executed": False,
+            "image_pushed": False,
+            "service_restarted": False,
+            "pager_provider_contacted": False,
+            "ingress_certificate_verified_live": False,
+            "receipt_external_state_mutated": False,
+            "rollout_receipt_rows": [],
+            "next_required_step": "",
+            "execution_enabled": False,
+            "docking_results_emitted": False,
+            "external_state_mutated": False,
+            "claim_boundary": (
+                "Product rollout execution smoke receipt endpoint only; the local receipt artifact is missing "
+                "or invalid. It does not build images, push containers, apply manifests, restart services, "
+                "contact providers, verify certificates, roll back services, upload, delete, commit, push, or "
+                "mutate external state."
+            ),
+        }
+    return {
+        "status": summary.get("status"),
+        "artifact_path": str(PRODUCT_ROLLOUT_EXECUTION_SMOKE_RECEIPT_ARTIFACT),
+        "rollout_execution_smoke_receipt_ready": bool(
+            summary.get("rollout_execution_smoke_receipt_ready") is True
+        ),
+        "source_rollout_execution_readiness_status": summary.get(
+            "source_rollout_execution_readiness_status", ""
+        ),
+        "source_authorized_for_separate_operator_execution": bool(
+            summary.get("source_authorized_for_separate_operator_execution") is True
+        ),
+        "source_rollout_executed": bool(summary.get("source_rollout_executed") is True),
+        "receipt_csv": summary.get("receipt_csv", ""),
+        "receipt_csv_present": bool(summary.get("receipt_csv_present") is True),
+        "operator_template_csv": summary.get("operator_template_csv", ""),
+        "receipt_row_count": int(summary.get("receipt_row_count") or 0),
+        "ready_receipt_row_count": int(summary.get("ready_receipt_row_count") or 0),
+        "blocker_count": int(summary.get("blocker_count") or 0),
+        "blockers": list(summary.get("blockers") or []),
+        "target_environment": summary.get("target_environment", ""),
+        "rollout_executed": bool(summary.get("rollout_executed") is True),
+        "image_pushed": bool(summary.get("image_pushed") is True),
+        "service_restarted": bool(summary.get("service_restarted") is True),
+        "pager_provider_contacted": bool(summary.get("pager_provider_contacted") is True),
+        "ingress_certificate_verified_live": bool(
+            summary.get("ingress_certificate_verified_live") is True
+        ),
+        "receipt_external_state_mutated": bool(summary.get("external_state_mutated") is True),
+        "rollout_receipt_rows": rows,
+        "next_required_step": summary.get("next_required_step", ""),
+        "execution_enabled": False,
+        "docking_results_emitted": False,
+        "external_state_mutated": False,
+        "claim_boundary": summary.get("claim_boundary", ""),
+    }
+
+
 @router.get("/operations")
 async def get_product_operations() -> dict[str, Any]:
     release_packet = _read_json_object(PRODUCT_RELEASE_OPERATIONS_ARTIFACT)
@@ -1772,6 +2030,92 @@ async def get_product_license_file_work_order() -> dict[str, Any]:
         "execution_enabled": False,
         "docking_results_emitted": False,
         "external_state_mutated": False,
+        "claim_boundary": summary.get("claim_boundary", ""),
+    }
+
+
+@router.get("/self-hosted-license-distribution-audit")
+async def get_product_self_hosted_license_distribution_audit() -> dict[str, Any]:
+    packet = _read_json_object(SELF_HOSTED_LICENSE_DISTRIBUTION_AUDIT_ARTIFACT)
+    summary = _summary(packet)
+    rows = packet.get("rows") if isinstance(packet.get("rows"), list) else []
+    blockers = packet.get("blockers") if isinstance(packet.get("blockers"), list) else []
+    operator_review_items = (
+        packet.get("operator_review_items")
+        if isinstance(packet.get("operator_review_items"), list)
+        else []
+    )
+    if not summary:
+        return {
+            "status": "missing_self_hosted_license_distribution_audit",
+            "artifact_path": str(SELF_HOSTED_LICENSE_DISTRIBUTION_AUDIT_ARTIFACT),
+            "hard_blocker_count": 1,
+            "operator_review_item_count": 0,
+            "product_license_path": "LICENSE",
+            "product_license_sha256": "",
+            "approved_license_text_source": "",
+            "approved_license_text_source_sha256": "",
+            "spdx_license_id": "",
+            "copyright_holder": "",
+            "effective_year": "",
+            "viewer_third_party_notice_path": "",
+            "third_party_dual_license_assets": [],
+            "third_party_license_review_gate_json": "",
+            "third_party_license_review_gate_status": "",
+            "third_party_license_review_gate_ready": False,
+            "third_party_license_review_gate_blocker_count": 0,
+            "legal_advice_provided": False,
+            "audit_rows": [],
+            "operator_review_items": [],
+            "blockers": [],
+            "next_required_step": "",
+            "license_file_written": False,
+            "execution_enabled": False,
+            "docking_results_emitted": False,
+            "external_state_mutated": False,
+            "claim_boundary": (
+                "Self-hosted license distribution audit endpoint only; the local audit artifact is missing "
+                "or invalid. It does not choose a license, provide legal advice, write files, modify vendor "
+                "assets, upload, publish, delete, commit, push, or mutate external state."
+            ),
+        }
+    return {
+        "status": summary.get("status"),
+        "artifact_path": str(SELF_HOSTED_LICENSE_DISTRIBUTION_AUDIT_ARTIFACT),
+        "hard_blocker_count": int(summary.get("hard_blocker_count") or 0),
+        "operator_review_item_count": int(summary.get("operator_review_item_count") or 0),
+        "product_license_path": summary.get("product_license_path", ""),
+        "product_license_sha256": summary.get("product_license_sha256", ""),
+        "approved_license_text_source": summary.get("approved_license_text_source", ""),
+        "approved_license_text_source_sha256": summary.get(
+            "approved_license_text_source_sha256", ""
+        ),
+        "spdx_license_id": summary.get("spdx_license_id", ""),
+        "copyright_holder": summary.get("copyright_holder", ""),
+        "effective_year": summary.get("effective_year", ""),
+        "viewer_third_party_notice_path": summary.get("viewer_third_party_notice_path", ""),
+        "third_party_dual_license_assets": list(summary.get("third_party_dual_license_assets") or []),
+        "third_party_license_review_gate_json": summary.get(
+            "third_party_license_review_gate_json", ""
+        ),
+        "third_party_license_review_gate_status": summary.get(
+            "third_party_license_review_gate_status", ""
+        ),
+        "third_party_license_review_gate_ready": bool(
+            summary.get("third_party_license_review_gate_ready") is True
+        ),
+        "third_party_license_review_gate_blocker_count": int(
+            summary.get("third_party_license_review_gate_blocker_count") or 0
+        ),
+        "legal_advice_provided": bool(summary.get("legal_advice_provided") is True),
+        "audit_rows": rows,
+        "operator_review_items": operator_review_items,
+        "blockers": blockers,
+        "next_required_step": summary.get("next_required_step", ""),
+        "license_file_written": False,
+        "execution_enabled": False,
+        "docking_results_emitted": False,
+        "external_state_mutated": bool(summary.get("external_state_mutated") is True),
         "claim_boundary": summary.get("claim_boundary", ""),
     }
 

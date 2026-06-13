@@ -240,9 +240,9 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `operator_receipt_ready=false`, `blocked_row_count=4`,
   `first_blocked_profile_id=backmapping_scoring.example`,
   `most_common_row_blocker=operator_decision_missing`을 기록한다. 이 receipt는
-  release bundle, source-of-truth refresh/freshness, goal operator intake kit에
-  연결되어, `promotion_ready=true`와 실제 operator-approved promotion decision을
-  분리한다.
+  release bundle, source-of-truth refresh/freshness, goal operator intake kit,
+  `/product/api-runner-profile-promotion-operator-receipt` API surface에 연결되어,
+  `promotion_ready=true`와 실제 operator-approved promotion decision을 분리한다.
 - `api/main.py`의 legacy `jobs = {}` in-memory dict은 제거됨.
   현재는 `api/job_store.py`의 `SQLiteJobStore`와
   `api/config.py`의 `api_job_store_path` 기본값
@@ -824,7 +824,8 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `APPROVE_CAMEO_OFFICIAL_RESULT_FETCH` 토큰을 함께 표시한다. `/goal/status`도
   `cameo_official_result_fetch_preflight_*` keys로 preflight status,
   template/intake path, approval token, blocked flags, no-network/no-fetch 상태를
-  직접 노출한다.
+  직접 노출한다. 같은 상태는
+  `/product/cameo-official-result-fetch-preflight` API surface에서도 확인된다.
 - `runs/cameo_validation_operations_dossier_current.json`은
   `stage_count=10`, `blocked_stage_count=1`, `approval_required_stage_count=1`,
   `official_result_fetch_preflight_ready=false`,
@@ -1037,7 +1038,9 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   현재 상태는 `product_rollout_execution_smoke_receipt_ready`,
   `receipt_csv_present=true`, `receipt_row_count=1`, `rollout_executed=true`,
   `external_state_mutated=true`, `target_environment=k8s`다. 이 산출물은 builder 자체가 배포/푸쉬/서비스 재시작을
-  실행하지 않고, 실행 후 남겨진 receipt만 read-only로 검증한다.
+  실행하지 않고, 실행 후 남겨진 receipt만 read-only로 검증하며
+  `/product/rollout-execution-smoke-receipt` API surface에서도 endpoint mutation과
+  receipt mutation 사실을 분리해 노출한다.
 - `deploy/product_release_bundle.py`와 `runs/product_release_bundle_current.json/.md`는
   security contract, rollout dry-run plan, alert delivery smoke, runner profile
   enablement work order, API runner profile promotion readiness gate/operator template,
@@ -1679,7 +1682,8 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `third_party_license_review_gate_ready=true`,
   `third_party_license_review_gate_blocker_count=0`를 함께 기록한다.
 - release bundle은 `self_hosted_license_distribution_audit_recorded` 체크로 이 감사
-  산출물을 포함한다.
+  산출물을 포함하며, `/product/self-hosted-license-distribution-audit` API surface도
+  hard blocker와 operator/legal review 경계를 직접 노출한다.
 - `license_decision.py`의 APPROVAL_TOKEN 기반 write path는 유지된다.
 - `license_options.py`가 operator-selectable license path 요약 제공
   (proprietary, source-available, enterprise EULA 등).

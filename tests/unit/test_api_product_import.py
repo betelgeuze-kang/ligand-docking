@@ -32,16 +32,20 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert "/product/api-contract" in paths
     assert "/product/operational-quality" in paths
     assert "/product/security-deployment-contract" in paths
+    assert "/product/rollout-execution-smoke-receipt" in paths
     assert "/product/public-benchmark" in paths
     assert "/product/job-orchestration-contract" in paths
     assert "/product/trajectory-sla-contract" in paths
+    assert "/product/api-runner-profile-promotion-operator-receipt" in paths
     assert "/product/ai-decision-graph" in paths
     assert "/product/ai-report-ux" in paths
     assert "/product/cameo-live-validation" in paths
+    assert "/product/cameo-official-result-fetch-preflight" in paths
     assert "/product/operations" in paths
     assert "/product/license-decision" in paths
     assert "/product/license-options" in paths
     assert "/product/license-file-work-order" in paths
+    assert "/product/self-hosted-license-distribution-audit" in paths
     assert "/product/commercial-independence" in paths
     assert "/product/release-readiness" in paths
     assert "/product/residual-model-registry" in paths
@@ -317,6 +321,89 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert cameo_live_validation["registration_blocker_count"] == 0
     assert cameo_live_validation["server_registration_mutated"] is False
 
+    cameo_fetch = asyncio.run(product.get_product_cameo_official_result_fetch_preflight())
+    assert cameo_fetch["status"] == "blocked_cameo_official_result_fetch_preflight"
+    assert cameo_fetch["official_result_fetch_preflight_ready"] is False
+    assert cameo_fetch["operations_surface_ready"] is True
+    assert cameo_fetch["receiver_smoke_ready"] is True
+    assert cameo_fetch["source_operations_dossier_status"] == (
+        "blocked_cameo_validation_operations_dossier"
+    )
+    assert cameo_fetch["operator_fetch_csv_present"] is False
+    assert cameo_fetch["operator_fetch_csv"].endswith(
+        "runs/cameo_official_result_fetch_operator_approval_intake.csv"
+    )
+    assert cameo_fetch["fetch_approval_token_required"] == (
+        "APPROVE_CAMEO_OFFICIAL_RESULT_FETCH"
+    )
+    assert cameo_fetch["authorized_for_separate_operator_fetch"] is False
+    assert cameo_fetch["blocked_row_count"] == 1
+    assert cameo_fetch["blocker_count"] == 2
+    assert cameo_fetch["blockers"] == [
+        "operator_decision_missing",
+        "operator_fetch_csv_missing",
+    ]
+    assert len(cameo_fetch["fetch_rows"]) == 1
+    assert cameo_fetch["network_request_opened"] is False
+    assert cameo_fetch["official_results_fetched"] is False
+    assert cameo_fetch["native_local_accuracy_used"] is False
+    assert cameo_fetch["outbound_email_enabled"] is False
+    assert cameo_fetch["execution_enabled"] is False
+    assert cameo_fetch["docking_results_emitted"] is False
+    assert cameo_fetch["external_state_mutated"] is False
+
+    api_runner_receipt = asyncio.run(
+        product.get_product_api_runner_profile_promotion_operator_receipt()
+    )
+    assert api_runner_receipt["status"] == "blocked_api_runner_profile_promotion_operator_receipt"
+    assert api_runner_receipt["operator_receipt_ready"] is False
+    assert api_runner_receipt["readiness_status"] == "api_runner_profile_promotion_ready"
+    assert api_runner_receipt["operator_template_csv"] == (
+        "runs/api_runner_profile_promotion_operator_template_current.csv"
+    )
+    assert api_runner_receipt["profile_count"] == 4
+    assert api_runner_receipt["receipt_row_count"] == 4
+    assert api_runner_receipt["pass_row_count"] == 0
+    assert api_runner_receipt["blocked_row_count"] == 4
+    assert api_runner_receipt["first_blocked_profile_id"] == "backmapping_scoring.example"
+    assert api_runner_receipt["first_blocked_row_blocker"] == "operator_decision_missing"
+    assert api_runner_receipt["most_common_row_blocker"] == "operator_decision_missing"
+    assert api_runner_receipt["approval_token_required"] == (
+        "APPROVE_API_RUNNER_PROFILE_PROMOTION"
+    )
+    assert api_runner_receipt["blockers"] == ["blocked_receipt_rows_present"]
+    assert len(api_runner_receipt["receipt_rows"]) == api_runner_receipt["receipt_row_count"]
+    assert api_runner_receipt["profile_enabled_by_this_tool"] is False
+    assert api_runner_receipt["runner_executed"] is False
+    assert api_runner_receipt["profile_promoted"] is False
+    assert api_runner_receipt["execution_enabled"] is False
+    assert api_runner_receipt["docking_results_emitted"] is False
+    assert api_runner_receipt["external_state_mutated"] is False
+
+    rollout_receipt = asyncio.run(product.get_product_rollout_execution_smoke_receipt())
+    assert rollout_receipt["status"] == "product_rollout_execution_smoke_receipt_ready"
+    assert rollout_receipt["rollout_execution_smoke_receipt_ready"] is True
+    assert rollout_receipt["source_rollout_execution_readiness_status"] == (
+        "product_rollout_execution_readiness_ready"
+    )
+    assert rollout_receipt["source_authorized_for_separate_operator_execution"] is True
+    assert rollout_receipt["source_rollout_executed"] is False
+    assert rollout_receipt["receipt_csv_present"] is True
+    assert rollout_receipt["receipt_row_count"] == 1
+    assert rollout_receipt["ready_receipt_row_count"] == 1
+    assert rollout_receipt["blocker_count"] == 0
+    assert rollout_receipt["target_environment"] == "k8s"
+    assert rollout_receipt["rollout_executed"] is True
+    assert rollout_receipt["image_pushed"] is True
+    assert rollout_receipt["service_restarted"] is True
+    assert rollout_receipt["pager_provider_contacted"] is True
+    assert rollout_receipt["ingress_certificate_verified_live"] is True
+    assert rollout_receipt["receipt_external_state_mutated"] is True
+    assert len(rollout_receipt["rollout_receipt_rows"]) == rollout_receipt["receipt_row_count"]
+    assert rollout_receipt["execution_enabled"] is False
+    assert rollout_receipt["docking_results_emitted"] is False
+    assert rollout_receipt["external_state_mutated"] is False
+
     operations = asyncio.run(product.get_product_operations())
     license_work_order = asyncio.run(product.get_product_license_file_work_order())
     assert operations["status"] == "product_release_operations_dossier_ready"
@@ -353,6 +440,33 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert license_work_order["blocker_count"] >= 0
     assert len(license_work_order["license_review_manifest_fingerprint_sha256"]) == 64
 
+    license_audit = asyncio.run(product.get_product_self_hosted_license_distribution_audit())
+    assert license_audit["status"] == "self_hosted_license_distribution_audit_recorded"
+    assert license_audit["hard_blocker_count"] == 0
+    assert license_audit["operator_review_item_count"] == 1
+    assert license_audit["product_license_path"] == "LICENSE"
+    assert len(license_audit["product_license_sha256"]) == 64
+    assert license_audit["product_license_sha256"] == license_audit[
+        "approved_license_text_source_sha256"
+    ]
+    assert license_audit["spdx_license_id"] == "ProprietaryRef-Betelgeuze"
+    assert license_audit["viewer_third_party_notice_path"] == (
+        "viewer/vendor/THIRD_PARTY_NOTICES.md"
+    )
+    assert license_audit["third_party_dual_license_assets"] == ["jszip"]
+    assert license_audit["third_party_license_review_gate_status"] == (
+        "third_party_license_review_gate_ready"
+    )
+    assert license_audit["third_party_license_review_gate_ready"] is True
+    assert license_audit["third_party_license_review_gate_blocker_count"] == 0
+    assert license_audit["legal_advice_provided"] is False
+    assert len(license_audit["audit_rows"]) >= 1
+    assert len(license_audit["operator_review_items"]) == 1
+    assert license_audit["license_file_written"] is False
+    assert license_audit["execution_enabled"] is False
+    assert license_audit["docking_results_emitted"] is False
+    assert license_audit["external_state_mutated"] is False
+
     commercial = asyncio.run(product.get_product_commercial_independence())
     assert commercial["status"] == "product_commercial_independence_gate_ready"
     assert commercial["commercial_independent_product_claim_allowed"] is True
@@ -369,7 +483,9 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
 
     release = asyncio.run(product.get_product_release_readiness())
     assert release["status"] == "product_release_operations_dossier_ready"
-    assert release["release_allowed"] is True
+    assert release["release_allowed"] is False
+    assert release["goal_release_status"] == "blocked_goal_release_decision"
+    assert release["goal_release_blocker_count"] == 2
     assert release["commercial_independent_product_ready"] is True
     assert release["restricted_commercial_scope_claim_ready"] is True
     assert release["commercial_claim_scope_tier"] == "restricted_family_local_product"
@@ -2342,14 +2458,15 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     completion = asyncio.run(product.get_product_goal_completion_audit())
     assert completion["status"] == "blocked_product_goal_completion_audit"
     assert completion["goal_complete"] is False
-    assert completion["fail_count"] == 2
+    assert completion["fail_count"] == 3
     assert [row["requirement_id"] for row in completion["requirements"] if row["status"] == "fail"] == [
+        "R5_release_decision_artifacts",
         "R8_full_scope_claim_closure",
         "R9_engine_refinement_claim_promotion",
     ]
     assert completion["approval_tokens_required"] == ["APPROVE_PRODUCT_DOCKING_EXECUTION"]
-    assert completion["release_allowed"] is True
-    assert completion["release_artifact_ready"] is True
+    assert completion["release_allowed"] is False
+    assert completion["release_artifact_ready"] is False
     assert completion["local_self_hosted_product_ready"] is True
 
     assert completion["product_ai_architecture_ready"] is True

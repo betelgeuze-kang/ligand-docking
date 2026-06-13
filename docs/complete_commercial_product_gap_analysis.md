@@ -273,7 +273,9 @@
   source-of-truth는 `row_count=84`, `pass_count=84`, `blocker_count=0`,
   `artifact_row_count=57`, `semantic_status_row_count=25`,
   `release_refresh_command_count=70`, `stale_artifact_count=0`,
-  `semantic_status_blocker_count=0`, `readme_drift_count=0`이다. R8/R9 evidence
+  `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
+  `/product/self-hosted-license-distribution-audit` API surface도 같은 audit의
+  hard blocker/operator review 경계를 직접 노출한다. R8/R9 evidence
   receipt 자체도 `product_scope_breadth_evidence_receipt_blocked_semantic_ready`,
   `engine_refinement_claim_evidence_receipt_blocked_semantic_ready` row로 고정되어
   placeholder evidence, 6/6 blocked rows, approval token requirement, first-blocked
@@ -378,8 +380,9 @@
   `operator_receipt_ready=false`, `blocked_row_count=4`,
   `first_blocked_profile_id=backmapping_scoring.example`,
   `most_common_row_blocker=operator_decision_missing`으로 남겨 실제 profile edit/runner execution과 readiness
-  accounting을 분리한다. release bundle, source-of-truth, goal operator intake kit는 이
-  receipt를 필수 산출물로 기록한다.
+  accounting을 분리한다. release bundle, source-of-truth, goal operator intake kit,
+  `/product/api-runner-profile-promotion-operator-receipt` API surface는 이 receipt를
+  필수 산출물로 기록한다.
 
 **갭**
 - **포즈 생성(pose sampling)** 단계는 이제 local deterministic smoke와 release
@@ -506,7 +509,9 @@ abstention 사유가 결과 번들에 명시.
 - `runs/product_rollout_execution_smoke_receipt_current.json`은 preflight 이후의 별도
   R4-approved operator 실행 receipt를 read-only로 검증하며 현재
   `product_rollout_execution_smoke_receipt_ready`, `receipt_csv_present=true`,
-  `rollout_executed=true`, `external_state_mutated=true`다. 따라서
+  `rollout_executed=true`, `external_state_mutated=true`다.
+  `/product/rollout-execution-smoke-receipt`는 이 receipt를 endpoint mutation과
+  분리해 직접 노출한다. 따라서
   `deploy_ops_legal_gap_closure_current.json`은 `deploy_ops_legal_gap_closure_complete`,
   `open_gap_ids=[]`이고, `master_gap_closure_rollup_current.json`의 open gap은
   `SCI-CLAIM` 하나다.
@@ -537,7 +542,8 @@ durable queue → worker 실행 → signed 결과 번들 회수까지 무인 동
   `authorized_for_external_mutation=false`, `launch_executed=false`,
   `external_state_mutated=false`라서 실행 권한과 분리된다.
 - actual rollout execution smoke receipt는 operator-provided receipt 기준
-  `product_rollout_execution_smoke_receipt_ready`이며, deploy/ops/legal rollup은 닫혔다.
+  `product_rollout_execution_smoke_receipt_ready`이며,
+  `/product/rollout-execution-smoke-receipt`로도 조회된다. deploy/ops/legal rollup은 닫혔다.
   master full-commercial rollup은 GPCR broad-family와 OpenMM full all-atom/MM-GBSA/FEP+
   science claim promotion(`SCI-CLAIM`) 때문에 pending이다.
 
@@ -595,7 +601,8 @@ durable queue → worker 실행 → signed 결과 번들 회수까지 무인 동
    `runs/cameo_official_result_fetch_operator_approval_intake.csv`,
    `APPROVE_CAMEO_OFFICIAL_RESULT_FETCH`를 operator handoff에 노출한다. 같은
    preflight status/template/intake/token/no-network flags는 `/goal/status`의
-   `cameo_official_result_fetch_preflight_*` keys에서도 확인된다.
+   `cameo_official_result_fetch_preflight_*` keys와
+   `/product/cameo-official-result-fetch-preflight`에서도 확인된다.
 3. GPCR CI-low: feature/data engineering + 100k 재실행으로 ≥ 0.45 + top20 안정화.
 
 **완료 정의**: 공개 표준에서 재현 가능한 수치 리포트 + CI-low 임계치 통과로 scorer/router claim 승격.

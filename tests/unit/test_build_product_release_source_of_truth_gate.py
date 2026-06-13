@@ -305,7 +305,11 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "product_ai_report_explanation_packet_semantic_ready" in status_ids
     assert "product_ai_report_ux_contract_semantic_ready" in status_ids
     assert "product_pose_sampling_readiness_semantic_ready" in status_ids
+    assert "product_trajectory_sla_contract_semantic_ready" in status_ids
+    assert "product_job_orchestration_contract_semantic_ready" in status_ids
     assert "product_ledger_privacy_scan" in artifact_ids
+    assert "product_trajectory_sla_contract" in artifact_ids
+    assert "product_job_orchestration_contract" in artifact_ids
     assert "api_runner_profile_promotion_operator_receipt" in artifact_ids
     assert "product_launch_r4_preflight" in artifact_ids
     assert "engine_refinement_claim_promotion_action_board" in artifact_ids
@@ -779,6 +783,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/third_party_license_review_gate_current.json" in release_bundle_spec["depends_on"]
     assert "runs/product_goal_completion_audit_current.json" in release_bundle_spec["depends_on"]
     assert "runs/product_pose_sampling_readiness_current.json" in release_bundle_spec["depends_on"]
+    assert "runs/product_trajectory_sla_contract_current.json" in release_bundle_spec["depends_on"]
     assert "runs/engine_refinement_claim_evidence_receipt_current.json" in release_bundle_spec["depends_on"]
     assert "runs/product_scope_breadth_evidence_receipt_current.json" in release_bundle_spec["depends_on"]
     assert "runs/product_full_commercial_blocker_evidence_matrix_current.json" in release_bundle_spec[
@@ -793,6 +798,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "python3 tools/build_product_ai_report_explanation_packet.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_ai_report_ux_contract.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_pose_sampling_readiness.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_product_trajectory_sla_contract.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_residual_shadow_ab.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_residual_force_derivation_validation.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_production_ai_promotion_workbench.py" in mod.RELEASE_REFRESH_COMMANDS
@@ -817,6 +823,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "python3 tools/build_product_ledger_privacy_scan.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_scope_breadth_closure_checklist.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_scope_breadth_evidence_receipt.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_product_job_orchestration_contract.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_goal_operator_intake_kit.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_goal_api_surface_contract.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_goal_bottleneck_briefing.py" in mod.RELEASE_REFRESH_COMMANDS
@@ -868,6 +875,12 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_execution_preflight.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_bundle_contract.py")
     )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_api_docking_dispatch_e2e_evidence.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_job_orchestration_contract.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_job_orchestration_contract.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/product/build_restricted_unattended_execution_readiness.py")
+    )
     assert mod.RELEASE_REFRESH_COMMANDS.index(
         "python3 tools/build_local_delivery_environment_manifest.py --accelerator-env "
         "TORCH_BLAS_PREFER_HIPBLASLT=0 --no-probe-accelerator-commands"
@@ -905,6 +918,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         mod.RELEASE_REFRESH_COMMANDS.index("python3 deploy/product_release_bundle.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_pose_sampling_readiness.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_trajectory_sla_contract.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_trajectory_sla_contract.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 deploy/product_release_bundle.py")
     )
     decision_graph_indices = [

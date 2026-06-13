@@ -38,6 +38,9 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["summary"]["status"] == "product_api_contract_ready"
     assert payload["summary"]["api_contract_ready"] is True
+    assert payload["summary"]["expected_route_count"] == len(EXPECTED_ROUTES)
+    assert payload["summary"]["status_response_missing_key_count"] == 0
+    assert payload["summary"]["status_response_domain_missing_key_count"] == 0
     assert payload["summary"]["docking_response_missing_key_count"] == 0
     docking_response = mod.build_product_api_contract.__globals__[
         "REQUIRED_DOCKING_RESPONSE_KEYS"
@@ -76,6 +79,39 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     ai_report_ux_keys = REQUIRED_STATUS_DOMAIN_KEYS["get_product_ai_report_ux"]
     assert "ligand_selection_rationale_ready" in ai_report_ux_keys
     assert "selection_rationale" in ai_report_ux_keys
+    assert EXPECTED_ROUTES["get_product_cameo_official_result_fetch_preflight"] == (
+        "GET",
+        "/cameo-official-result-fetch-preflight",
+    )
+    cameo_fetch_keys = REQUIRED_STATUS_DOMAIN_KEYS[
+        "get_product_cameo_official_result_fetch_preflight"
+    ]
+    assert "official_result_fetch_preflight_ready" in cameo_fetch_keys
+    assert "operator_fetch_csv_present" in cameo_fetch_keys
+    assert "fetch_approval_token_required" in cameo_fetch_keys
+    assert "authorized_for_separate_operator_fetch" in cameo_fetch_keys
+    assert "network_request_opened" in cameo_fetch_keys
+    assert "official_results_fetched" in cameo_fetch_keys
+    assert "native_local_accuracy_used" in cameo_fetch_keys
+    assert "fetch_rows" in cameo_fetch_keys
+    assert EXPECTED_ROUTES["get_product_api_runner_profile_promotion_operator_receipt"] == (
+        "GET",
+        "/api-runner-profile-promotion-operator-receipt",
+    )
+    api_runner_receipt_keys = REQUIRED_STATUS_DOMAIN_KEYS[
+        "get_product_api_runner_profile_promotion_operator_receipt"
+    ]
+    assert "operator_receipt_ready" in api_runner_receipt_keys
+    assert "readiness_status" in api_runner_receipt_keys
+    assert "operator_template_csv" in api_runner_receipt_keys
+    assert "receipt_row_count" in api_runner_receipt_keys
+    assert "blocked_row_count" in api_runner_receipt_keys
+    assert "first_blocked_profile_id" in api_runner_receipt_keys
+    assert "approval_token_required" in api_runner_receipt_keys
+    assert "profile_enabled_by_this_tool" in api_runner_receipt_keys
+    assert "runner_executed" in api_runner_receipt_keys
+    assert "profile_promoted" in api_runner_receipt_keys
+    assert "receipt_rows" in api_runner_receipt_keys
     assert EXPECTED_ROUTES["get_product_pose_sampling_readiness"] == (
         "GET",
         "/pose-sampling-readiness",
@@ -109,6 +145,20 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     assert "hosted_deployment_currently_satisfied" in security_keys
     assert "hosted_external_exposure_allowed" in security_keys
     assert "hosted_deployment_blocked_stage_ids" in security_keys
+    assert EXPECTED_ROUTES["get_product_rollout_execution_smoke_receipt"] == (
+        "GET",
+        "/rollout-execution-smoke-receipt",
+    )
+    rollout_receipt_keys = REQUIRED_STATUS_DOMAIN_KEYS[
+        "get_product_rollout_execution_smoke_receipt"
+    ]
+    assert "rollout_execution_smoke_receipt_ready" in rollout_receipt_keys
+    assert "receipt_csv_present" in rollout_receipt_keys
+    assert "ready_receipt_row_count" in rollout_receipt_keys
+    assert "rollout_executed" in rollout_receipt_keys
+    assert "pager_provider_contacted" in rollout_receipt_keys
+    assert "receipt_external_state_mutated" in rollout_receipt_keys
+    assert "external_state_mutated" in rollout_receipt_keys
     assert EXPECTED_ROUTES["get_product_job_orchestration_contract"] == (
         "GET",
         "/job-orchestration-contract",
@@ -170,6 +220,21 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
         "transporter_p0_evidence_acquisition_aqp1_binding_source_modality_replacement_reference_binding_kcal_mol_action"
         in scope_breadth_keys
     )
+    assert EXPECTED_ROUTES["get_product_self_hosted_license_distribution_audit"] == (
+        "GET",
+        "/self-hosted-license-distribution-audit",
+    )
+    license_audit_keys = REQUIRED_STATUS_DOMAIN_KEYS[
+        "get_product_self_hosted_license_distribution_audit"
+    ]
+    assert "hard_blocker_count" in license_audit_keys
+    assert "operator_review_item_count" in license_audit_keys
+    assert "product_license_sha256" in license_audit_keys
+    assert "third_party_dual_license_assets" in license_audit_keys
+    assert "third_party_license_review_gate_status" in license_audit_keys
+    assert "third_party_license_review_gate_ready" in license_audit_keys
+    assert "legal_advice_provided" in license_audit_keys
+    assert "operator_review_items" in license_audit_keys
     assert "evidence_queue_next_operator_completion_aqp1_review_sidecar_ready" in scope_breadth_keys
     assert "evidence_queue_next_operator_completion_aqp1_review_candidate_name" in scope_breadth_keys
     assert (
