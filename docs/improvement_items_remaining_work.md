@@ -807,6 +807,17 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `production_ai_registry_promotion_priority_packet`)를 scan 대상 및
   source-of-truth dependency로 포함해, R8/R9 상위 API/병목 surface에 raw molecular
   payload가 섞이면 release gate에서 숨지 않게 한다. 최신 scan은 `leak_count=0`이다.
+  최신 `goal_release_decision_gate_current.json`과 `/goal/status`도 같은 scan을 직접 읽어
+  `product_ledger_privacy_scan_recorded=true`,
+  `product_ledger_privacy_scan_ready=true`,
+  `product_ledger_privacy_scan_scan_file_count>=285`,
+  `product_ledger_privacy_scan_scan_glob_count=24`,
+  `product_ledger_privacy_scan_pass_count=scan_file_count`,
+  `product_ledger_privacy_scan_leak_count=0`,
+  `product_ledger_privacy_scan_invalid_json_count=0`,
+  `product_ledger_privacy_scan_execution_enabled=false`,
+  `product_ledger_privacy_scan_external_state_mutated=false`를 노출하며, final refresh
+  exact check가 이 no-leak/no-mutation privacy receipt의 드리프트를 차단한다.
   `tools/product/build_refine_tier_public_benchmark_readiness.py`는 curated 공개
   pose/free-energy benchmark intake를 별도 fail-closed gate로 고정한다.
   `config/refine_tier_public_benchmark_intake_current.csv`는 required column header를

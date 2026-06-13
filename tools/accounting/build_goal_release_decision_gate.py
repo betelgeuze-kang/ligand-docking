@@ -46,6 +46,7 @@ DEFAULT_PRODUCT_AI_EXECUTION_BACKLOG_JSON = "runs/product_ai_architecture_execut
 DEFAULT_PRODUCT_RELEASE_SOURCE_OF_TRUTH_JSON = "runs/product_release_source_of_truth_gate_current.json"
 DEFAULT_PRODUCT_QUALITY_GATE_VERIFICATION_JSON = "runs/product_quality_gate_verification_current.json"
 DEFAULT_PRODUCT_POSE_SAMPLING_READINESS_JSON = "runs/product_pose_sampling_readiness_current.json"
+DEFAULT_PRODUCT_LEDGER_PRIVACY_SCAN_JSON = "runs/product_ledger_privacy_scan_current.json"
 DEFAULT_API_CUSTOMER_FLOW_RELEASE_EVIDENCE_JSON = "runs/api_customer_flow_release_evidence_current.json"
 DEFAULT_API_RUNNER_PROFILE_PROMOTION_OPERATOR_RECEIPT_JSON = (
     "runs/api_runner_profile_promotion_operator_receipt_current.json"
@@ -227,6 +228,7 @@ def build_goal_release_decision_gate(
     product_release_source_of_truth_packet: dict[str, Any] | None = None,
     product_quality_gate_verification_packet: dict[str, Any] | None = None,
     product_pose_sampling_readiness_packet: dict[str, Any] | None = None,
+    product_ledger_privacy_scan_packet: dict[str, Any] | None = None,
     api_customer_flow_release_evidence_packet: dict[str, Any] | None = None,
     api_runner_profile_promotion_operator_receipt_packet: dict[str, Any] | None = None,
     product_scope_breadth_evidence_receipt_packet: dict[str, Any] | None = None,
@@ -270,6 +272,7 @@ def build_goal_release_decision_gate(
     product_release_source_of_truth_path: str = DEFAULT_PRODUCT_RELEASE_SOURCE_OF_TRUTH_JSON,
     product_quality_gate_verification_path: str = DEFAULT_PRODUCT_QUALITY_GATE_VERIFICATION_JSON,
     product_pose_sampling_readiness_path: str = DEFAULT_PRODUCT_POSE_SAMPLING_READINESS_JSON,
+    product_ledger_privacy_scan_path: str = DEFAULT_PRODUCT_LEDGER_PRIVACY_SCAN_JSON,
     api_customer_flow_release_evidence_path: str = DEFAULT_API_CUSTOMER_FLOW_RELEASE_EVIDENCE_JSON,
     api_runner_profile_promotion_operator_receipt_path: str = (
         DEFAULT_API_RUNNER_PROFILE_PROMOTION_OPERATOR_RECEIPT_JSON
@@ -782,6 +785,32 @@ def build_goal_release_decision_gate(
         and bool(product_pose_sampling.get("docking_results_emitted") is False)
         and bool(product_pose_sampling.get("execution_enabled") is False)
         and bool(product_pose_sampling.get("external_state_mutated") is False)
+    )
+    product_ledger_privacy_scan = _summary(product_ledger_privacy_scan_packet or {})
+    product_ledger_privacy_scan_gate_present = product_ledger_privacy_scan_packet is not None
+    product_ledger_privacy_scan_scan_file_count = _int(
+        product_ledger_privacy_scan.get("scan_file_count")
+    )
+    product_ledger_privacy_scan_pass_count = _int(
+        product_ledger_privacy_scan.get("pass_count")
+    )
+    product_ledger_privacy_scan_glob_count = len(
+        product_ledger_privacy_scan.get("scan_globs")
+        if isinstance(product_ledger_privacy_scan.get("scan_globs"), list)
+        else []
+    )
+    product_ledger_privacy_scan_recorded = (
+        _text(product_ledger_privacy_scan.get("status")) == "product_ledger_privacy_scan_ready"
+        and bool(product_ledger_privacy_scan.get("ledger_privacy_scan_ready") is True)
+        and product_ledger_privacy_scan_scan_file_count > 0
+        and product_ledger_privacy_scan_pass_count == product_ledger_privacy_scan_scan_file_count
+        and _int(product_ledger_privacy_scan.get("blocker_count")) == 0
+        and _int(product_ledger_privacy_scan.get("leak_count")) == 0
+        and _int(product_ledger_privacy_scan.get("invalid_json_count")) == 0
+        and len(_text_list(product_ledger_privacy_scan.get("blocked_artifact_paths"))) == 0
+        and len(_text_list(product_ledger_privacy_scan.get("invalid_json_paths"))) == 0
+        and bool(product_ledger_privacy_scan.get("execution_enabled") is False)
+        and bool(product_ledger_privacy_scan.get("external_state_mutated") is False)
     )
     api_customer_flow = _summary(api_customer_flow_release_evidence_packet or {})
     api_customer_flow_gate_present = api_customer_flow_release_evidence_packet is not None
@@ -1831,6 +1860,44 @@ def build_goal_release_decision_gate(
                 ),
             )
         )
+    if product_ledger_privacy_scan_gate_present:
+        rows.append(
+            _row(
+                lane_id="commercial_product_release",
+                check="product_ledger_privacy_scan_recorded",
+                artifact_path=product_ledger_privacy_scan_path,
+                observed=(
+                    f"{_text(product_ledger_privacy_scan.get('status')) or 'missing'};"
+                    f"ledger_privacy_scan_ready="
+                    f"{_bool_text(bool(product_ledger_privacy_scan.get('ledger_privacy_scan_ready') is True))};"
+                    f"scan_file_count={product_ledger_privacy_scan_scan_file_count};"
+                    f"scan_glob_count={product_ledger_privacy_scan_glob_count};"
+                    f"pass_count={product_ledger_privacy_scan_pass_count};"
+                    f"blocker_count={_int(product_ledger_privacy_scan.get('blocker_count'))};"
+                    f"leak_count={_int(product_ledger_privacy_scan.get('leak_count'))};"
+                    f"invalid_json_count={_int(product_ledger_privacy_scan.get('invalid_json_count'))};"
+                    f"blocked_artifact_path_count="
+                    f"{len(_text_list(product_ledger_privacy_scan.get('blocked_artifact_paths')))};"
+                    f"invalid_json_path_count="
+                    f"{len(_text_list(product_ledger_privacy_scan.get('invalid_json_paths')))};"
+                    f"execution_enabled="
+                    f"{_bool_text(bool(product_ledger_privacy_scan.get('execution_enabled') is True))};"
+                    f"external_state_mutated="
+                    f"{_bool_text(bool(product_ledger_privacy_scan.get('external_state_mutated') is True))}"
+                ),
+                required=(
+                    "product_ledger_privacy_scan_ready with every scanned local JSON artifact passing, "
+                    "zero raw molecular payload leaks, zero invalid JSON files, and no execution or "
+                    "external mutation"
+                ),
+                passed=product_ledger_privacy_scan_recorded,
+                reason=(
+                    "The final release decision must directly preserve the privacy scan receipt so raw "
+                    "SMILES, inline PDB text, or ligand source values in goal-facing JSON artifacts "
+                    "cannot be hidden behind source-of-truth or bundle rollups."
+                ),
+            )
+        )
     if full_commercial_matrix_gate_present:
         rows.append(
             _row(
@@ -2217,6 +2284,8 @@ def build_goal_release_decision_gate(
         next_required_items.append("product quality gate verification receipt")
     if product_pose_sampling_gate_present and not product_pose_sampling_recorded:
         next_required_items.append("product pose sampling readiness receipt")
+    if product_ledger_privacy_scan_gate_present and not product_ledger_privacy_scan_recorded:
+        next_required_items.append("product ledger privacy scan receipt")
     if full_commercial_matrix_gate_present and not full_commercial_matrix_recorded:
         next_required_items.append("full-commercial blocker evidence matrix")
     if rollout_smoke_gate_present and not rollout_smoke_recorded:
@@ -3273,6 +3342,43 @@ def build_goal_release_decision_gate(
         "product_pose_sampling_readiness_next_required_step": _text(
             product_pose_sampling.get("next_required_step")
         ),
+        "product_ledger_privacy_scan_gate_present": product_ledger_privacy_scan_gate_present,
+        "product_ledger_privacy_scan_status": _text(product_ledger_privacy_scan.get("status")),
+        "product_ledger_privacy_scan_recorded": (
+            product_ledger_privacy_scan_recorded
+            if product_ledger_privacy_scan_gate_present
+            else None
+        ),
+        "product_ledger_privacy_scan_ready": bool(
+            product_ledger_privacy_scan.get("ledger_privacy_scan_ready") is True
+        ),
+        "product_ledger_privacy_scan_scan_file_count": product_ledger_privacy_scan_scan_file_count,
+        "product_ledger_privacy_scan_scan_glob_count": product_ledger_privacy_scan_glob_count,
+        "product_ledger_privacy_scan_pass_count": product_ledger_privacy_scan_pass_count,
+        "product_ledger_privacy_scan_blocker_count": _int(
+            product_ledger_privacy_scan.get("blocker_count")
+        ),
+        "product_ledger_privacy_scan_leak_count": _int(
+            product_ledger_privacy_scan.get("leak_count")
+        ),
+        "product_ledger_privacy_scan_invalid_json_count": _int(
+            product_ledger_privacy_scan.get("invalid_json_count")
+        ),
+        "product_ledger_privacy_scan_blocked_artifact_path_count": len(
+            _text_list(product_ledger_privacy_scan.get("blocked_artifact_paths"))
+        ),
+        "product_ledger_privacy_scan_invalid_json_path_count": len(
+            _text_list(product_ledger_privacy_scan.get("invalid_json_paths"))
+        ),
+        "product_ledger_privacy_scan_execution_enabled": bool(
+            product_ledger_privacy_scan.get("execution_enabled") is True
+        ),
+        "product_ledger_privacy_scan_external_state_mutated": bool(
+            product_ledger_privacy_scan.get("external_state_mutated") is True
+        ),
+        "product_ledger_privacy_scan_next_required_step": _text(
+            product_ledger_privacy_scan.get("next_required_step")
+        ),
         "product_full_commercial_blocker_evidence_matrix_gate_present": full_commercial_matrix_gate_present,
         "product_full_commercial_blocker_evidence_matrix_status": _text(
             full_commercial_matrix.get("status")
@@ -3816,6 +3922,18 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_pose_sampling_readiness_docking_results_emitted: `{s['product_pose_sampling_readiness_docking_results_emitted']}`",
         f"- product_pose_sampling_readiness_execution_enabled: `{s['product_pose_sampling_readiness_execution_enabled']}`",
         f"- product_pose_sampling_readiness_external_state_mutated: `{s['product_pose_sampling_readiness_external_state_mutated']}`",
+        f"- product_ledger_privacy_scan_gate_present: `{s['product_ledger_privacy_scan_gate_present']}`",
+        f"- product_ledger_privacy_scan_status: `{s['product_ledger_privacy_scan_status']}`",
+        f"- product_ledger_privacy_scan_recorded: `{s['product_ledger_privacy_scan_recorded']}`",
+        f"- product_ledger_privacy_scan_ready: `{s['product_ledger_privacy_scan_ready']}`",
+        f"- product_ledger_privacy_scan_scan_file_count: `{s['product_ledger_privacy_scan_scan_file_count']}`",
+        f"- product_ledger_privacy_scan_scan_glob_count: `{s['product_ledger_privacy_scan_scan_glob_count']}`",
+        f"- product_ledger_privacy_scan_pass_count: `{s['product_ledger_privacy_scan_pass_count']}`",
+        f"- product_ledger_privacy_scan_blocker_count: `{s['product_ledger_privacy_scan_blocker_count']}`",
+        f"- product_ledger_privacy_scan_leak_count: `{s['product_ledger_privacy_scan_leak_count']}`",
+        f"- product_ledger_privacy_scan_invalid_json_count: `{s['product_ledger_privacy_scan_invalid_json_count']}`",
+        f"- product_ledger_privacy_scan_execution_enabled: `{s['product_ledger_privacy_scan_execution_enabled']}`",
+        f"- product_ledger_privacy_scan_external_state_mutated: `{s['product_ledger_privacy_scan_external_state_mutated']}`",
         f"- product_full_commercial_blocker_evidence_matrix_gate_present: `{s['product_full_commercial_blocker_evidence_matrix_gate_present']}`",
         f"- product_full_commercial_blocker_evidence_matrix_status: `{s['product_full_commercial_blocker_evidence_matrix_status']}`",
         f"- product_full_commercial_blocker_evidence_matrix_ready: `{s['product_full_commercial_blocker_evidence_matrix_ready']}`",
@@ -4019,6 +4137,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--product-pose-sampling-readiness-json",
         default=DEFAULT_PRODUCT_POSE_SAMPLING_READINESS_JSON,
     )
+    parser.add_argument(
+        "--product-ledger-privacy-scan-json",
+        default=DEFAULT_PRODUCT_LEDGER_PRIVACY_SCAN_JSON,
+    )
     parser.add_argument("--api-customer-flow-release-evidence-json", default=DEFAULT_API_CUSTOMER_FLOW_RELEASE_EVIDENCE_JSON)
     parser.add_argument(
         "--api-runner-profile-promotion-operator-receipt-json",
@@ -4108,6 +4230,9 @@ def main(argv: list[str] | None = None) -> None:
         product_pose_sampling_readiness_packet=_read_json_if_present(
             args.product_pose_sampling_readiness_json
         ),
+        product_ledger_privacy_scan_packet=_read_json_if_present(
+            args.product_ledger_privacy_scan_json
+        ),
         api_customer_flow_release_evidence_packet=_read_json_if_present(
             args.api_customer_flow_release_evidence_json
         ),
@@ -4171,6 +4296,7 @@ def main(argv: list[str] | None = None) -> None:
         product_release_source_of_truth_path=args.product_release_source_of_truth_json,
         product_quality_gate_verification_path=args.product_quality_gate_verification_json,
         product_pose_sampling_readiness_path=args.product_pose_sampling_readiness_json,
+        product_ledger_privacy_scan_path=args.product_ledger_privacy_scan_json,
         api_customer_flow_release_evidence_path=args.api_customer_flow_release_evidence_json,
         api_runner_profile_promotion_operator_receipt_path=(
             args.api_runner_profile_promotion_operator_receipt_json

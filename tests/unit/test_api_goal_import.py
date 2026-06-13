@@ -389,6 +389,36 @@ def test_api_app_imports_with_goal_router() -> None:
     assert status["product_pose_sampling_readiness_external_state_mutated"] is (
         release_artifact.get("product_pose_sampling_readiness_external_state_mutated") is True
     )
+    assert status["product_ledger_privacy_scan_status"] == release_artifact.get(
+        "product_ledger_privacy_scan_status", ""
+    )
+    assert status["product_ledger_privacy_scan_recorded"] is (
+        release_artifact.get("product_ledger_privacy_scan_recorded") is True
+    )
+    assert status["product_ledger_privacy_scan_ready"] is (
+        release_artifact.get("product_ledger_privacy_scan_ready") is True
+    )
+    assert status["product_ledger_privacy_scan_scan_file_count"] == int(
+        release_artifact.get("product_ledger_privacy_scan_scan_file_count") or 0
+    )
+    assert status["product_ledger_privacy_scan_scan_glob_count"] == int(
+        release_artifact.get("product_ledger_privacy_scan_scan_glob_count") or 0
+    )
+    assert status["product_ledger_privacy_scan_pass_count"] == int(
+        release_artifact.get("product_ledger_privacy_scan_pass_count") or 0
+    )
+    assert status["product_ledger_privacy_scan_leak_count"] == int(
+        release_artifact.get("product_ledger_privacy_scan_leak_count") or 0
+    )
+    assert status["product_ledger_privacy_scan_invalid_json_count"] == int(
+        release_artifact.get("product_ledger_privacy_scan_invalid_json_count") or 0
+    )
+    assert status["product_ledger_privacy_scan_execution_enabled"] is (
+        release_artifact.get("product_ledger_privacy_scan_execution_enabled") is True
+    )
+    assert status["product_ledger_privacy_scan_external_state_mutated"] is (
+        release_artifact.get("product_ledger_privacy_scan_external_state_mutated") is True
+    )
     assert status["api_runner_profile_promotion_operator_receipt_recorded"] is (
         release_artifact.get("api_runner_profile_promotion_operator_receipt_recorded") is True
     )
@@ -1000,6 +1030,15 @@ def test_api_app_imports_with_goal_router() -> None:
         release_artifact.get(
             "api_runner_profile_promotion_operator_receipt_first_blocked_profile_id", ""
         )
+    )
+    assert release["product_ledger_privacy_scan_status"] == release_artifact.get(
+        "product_ledger_privacy_scan_status", ""
+    )
+    assert release["product_ledger_privacy_scan_recorded"] is (
+        release_artifact.get("product_ledger_privacy_scan_recorded") is True
+    )
+    assert release["product_ledger_privacy_scan_leak_count"] == int(
+        release_artifact.get("product_ledger_privacy_scan_leak_count") or 0
     )
     assert release["blocker_count"] == int(release_artifact.get("blocker_count") or 0)
     assert len(release["checks"]) == int(release_artifact.get("check_count") or 0)

@@ -65,6 +65,7 @@ def _release_decision_ready(*, bottleneck_recorded: bool = True) -> dict:
         **{field: True for field in spec.get("required_true_fields", [])},
         **{field: 0 for field in spec.get("required_zero_fields", [])},
         **dict(spec.get("required_int_exact_fields", {})),
+        **dict(spec.get("required_int_min_fields", {})),
         **dict(spec.get("required_text_exact_fields", {})),
     }
     summary["goal_bottleneck_briefing_full_commercial_receipts_recorded"] = bottleneck_recorded
@@ -147,6 +148,17 @@ def test_refresh_final_gate_requires_release_decision_bottleneck_receipt_linkage
     assert decision_row["required_text_exact_fields"][
         "product_pose_sampling_readiness_status"
     ] == "product_pose_sampling_readiness_ready"
+    assert "product_ledger_privacy_scan_recorded" in decision_row["required_true_fields"]
+    assert "product_ledger_privacy_scan_leak_count" in decision_row["required_zero_fields"]
+    assert decision_row["required_int_min_fields"][
+        "product_ledger_privacy_scan_scan_file_count"
+    ] == 285
+    assert decision_row["required_int_equal_fields"][
+        "product_ledger_privacy_scan_pass_count"
+    ] == "product_ledger_privacy_scan_scan_file_count"
+    assert decision_row["required_text_exact_fields"][
+        "product_ledger_privacy_scan_status"
+    ] == "product_ledger_privacy_scan_ready"
     assert decision_row["required_text_exact_fields"][
         "goal_bottleneck_briefing_full_commercial_evidence_receipt_required_inputs"
     ] == (
@@ -306,6 +318,96 @@ def test_refresh_final_gate_blocks_pose_sampling_release_decision_drift(tmp_path
     ]
     assert decision_row["failed_int_exact_fields"] == [
         "product_pose_sampling_readiness_pose_count"
+    ]
+
+
+def test_refresh_final_gate_blocks_ledger_privacy_scan_release_decision_drift(
+    tmp_path: Path,
+) -> None:
+    decision_payload = _release_decision_ready()
+    decision_payload["summary"]["product_ledger_privacy_scan_leak_count"] = 1
+    decision_payload["summary"]["product_ledger_privacy_scan_scan_file_count"] = 284
+    decision_payload["summary"]["product_ledger_privacy_scan_pass_count"] = 284
+    _write_json(
+        tmp_path / "runs" / "product_release_source_of_truth_gate_current.json",
+        _source_of_truth_ready(),
+    )
+    _write_json(
+        tmp_path / "runs" / "product_quality_gate_verification_current.json",
+        _quality_gate_ready(),
+    )
+    _write_json(
+        tmp_path / "runs" / "goal_release_decision_gate_current.json",
+        decision_payload,
+    )
+    _write_json(
+        tmp_path / "runs" / "goal_operator_action_board_current.json",
+        _action_board_ready(),
+    )
+
+    payload = mod.run_product_release_current_refresh(
+        execute=True,
+        root=tmp_path,
+        commands=[],
+    )
+
+    summary = payload["summary"]
+    decision_row = next(
+        row for row in payload["verification_rows"] if row["gate_id"] == "goal_release_decision_gate"
+    )
+    assert summary["status"] == "blocked_product_release_current_refresh"
+    assert summary["final_gate_verification_ready"] is False
+    assert summary["final_gate_blocker_count"] == 1
+    assert decision_row["status"] == "fail"
+    assert decision_row["nonzero_fields"] == ["product_ledger_privacy_scan_leak_count"]
+    assert decision_row["failed_int_min_fields"] == [
+        "product_ledger_privacy_scan_scan_file_count",
+        "product_ledger_privacy_scan_pass_count",
+    ]
+    assert decision_row["failed_int_equal_fields"] == []
+    assert decision_row["failed_int_exact_fields"] == []
+
+
+def test_refresh_final_gate_blocks_ledger_privacy_scan_pass_count_mismatch(
+    tmp_path: Path,
+) -> None:
+    decision_payload = _release_decision_ready()
+    decision_payload["summary"]["product_ledger_privacy_scan_pass_count"] = 286
+    decision_payload["summary"]["product_ledger_privacy_scan_scan_file_count"] = 287
+    _write_json(
+        tmp_path / "runs" / "product_release_source_of_truth_gate_current.json",
+        _source_of_truth_ready(),
+    )
+    _write_json(
+        tmp_path / "runs" / "product_quality_gate_verification_current.json",
+        _quality_gate_ready(),
+    )
+    _write_json(
+        tmp_path / "runs" / "goal_release_decision_gate_current.json",
+        decision_payload,
+    )
+    _write_json(
+        tmp_path / "runs" / "goal_operator_action_board_current.json",
+        _action_board_ready(),
+    )
+
+    payload = mod.run_product_release_current_refresh(
+        execute=True,
+        root=tmp_path,
+        commands=[],
+    )
+
+    summary = payload["summary"]
+    decision_row = next(
+        row for row in payload["verification_rows"] if row["gate_id"] == "goal_release_decision_gate"
+    )
+    assert summary["status"] == "blocked_product_release_current_refresh"
+    assert summary["final_gate_verification_ready"] is False
+    assert summary["final_gate_blocker_count"] == 1
+    assert decision_row["status"] == "fail"
+    assert decision_row["failed_int_min_fields"] == []
+    assert decision_row["failed_int_equal_fields"] == [
+        "product_ledger_privacy_scan_pass_count"
     ]
 
 

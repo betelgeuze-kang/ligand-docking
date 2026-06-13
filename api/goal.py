@@ -398,6 +398,56 @@ def _pose_sampling_release_fields(release: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _ledger_privacy_scan_release_fields(release: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "product_ledger_privacy_scan_gate_present": bool(
+            release.get("product_ledger_privacy_scan_gate_present") is True
+        ),
+        "product_ledger_privacy_scan_status": release.get(
+            "product_ledger_privacy_scan_status", ""
+        ),
+        "product_ledger_privacy_scan_recorded": bool(
+            release.get("product_ledger_privacy_scan_recorded") is True
+        ),
+        "product_ledger_privacy_scan_ready": bool(
+            release.get("product_ledger_privacy_scan_ready") is True
+        ),
+        "product_ledger_privacy_scan_scan_file_count": _int(
+            release.get("product_ledger_privacy_scan_scan_file_count")
+        ),
+        "product_ledger_privacy_scan_scan_glob_count": _int(
+            release.get("product_ledger_privacy_scan_scan_glob_count")
+        ),
+        "product_ledger_privacy_scan_pass_count": _int(
+            release.get("product_ledger_privacy_scan_pass_count")
+        ),
+        "product_ledger_privacy_scan_blocker_count": _int(
+            release.get("product_ledger_privacy_scan_blocker_count")
+        ),
+        "product_ledger_privacy_scan_leak_count": _int(
+            release.get("product_ledger_privacy_scan_leak_count")
+        ),
+        "product_ledger_privacy_scan_invalid_json_count": _int(
+            release.get("product_ledger_privacy_scan_invalid_json_count")
+        ),
+        "product_ledger_privacy_scan_blocked_artifact_path_count": _int(
+            release.get("product_ledger_privacy_scan_blocked_artifact_path_count")
+        ),
+        "product_ledger_privacy_scan_invalid_json_path_count": _int(
+            release.get("product_ledger_privacy_scan_invalid_json_path_count")
+        ),
+        "product_ledger_privacy_scan_execution_enabled": bool(
+            release.get("product_ledger_privacy_scan_execution_enabled") is True
+        ),
+        "product_ledger_privacy_scan_external_state_mutated": bool(
+            release.get("product_ledger_privacy_scan_external_state_mutated") is True
+        ),
+        "product_ledger_privacy_scan_next_required_step": release.get(
+            "product_ledger_privacy_scan_next_required_step", ""
+        ),
+    }
+
+
 def _bottleneck_id(row: dict[str, Any]) -> str:
     return str(row.get("bottleneck_id") or row.get("requirement_id") or row.get("phase") or "").strip()
 
@@ -770,6 +820,7 @@ async def get_goal_status() -> dict[str, Any]:
             **_accuracy_parity_release_fields({}),
             **_api_runner_profile_receipt_release_fields({}),
             **_pose_sampling_release_fields({}),
+            **_ledger_privacy_scan_release_fields({}),
             "product_goal_release_blocker_fail_count": 0,
             "product_goal_release_blocker_requirement_ids": [],
             "product_goal_primary_release_blocker_requirement_id": "",
@@ -1084,6 +1135,7 @@ async def get_goal_status() -> dict[str, Any]:
         **_accuracy_parity_release_fields(release),
         **_api_runner_profile_receipt_release_fields(release),
         **_pose_sampling_release_fields(release),
+        **_ledger_privacy_scan_release_fields(release),
         "product_goal_release_blocker_fail_count": _int(
             actions.get("product_goal_release_blocker_fail_count")
             or intake.get("product_goal_release_blocker_fail_count")
@@ -1677,6 +1729,7 @@ async def get_goal_release_decision() -> dict[str, Any]:
             **_accuracy_parity_release_fields({}),
             **_api_runner_profile_receipt_release_fields({}),
             **_pose_sampling_release_fields({}),
+            **_ledger_privacy_scan_release_fields({}),
             **_mutation_flags(),
             "claim_boundary": CLAIM_BOUNDARY,
         }
@@ -1685,6 +1738,7 @@ async def get_goal_release_decision() -> dict[str, Any]:
         **_accuracy_parity_release_fields(summary),
         **_api_runner_profile_receipt_release_fields(summary),
         **_pose_sampling_release_fields(summary),
+        **_ledger_privacy_scan_release_fields(summary),
         "artifact_path": str(GOAL_RELEASE_DECISION_ARTIFACT),
         "checks": _rows(packet),
         "blockers": _blockers(packet),

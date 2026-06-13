@@ -133,6 +133,15 @@ def _refresh_release_decision_ready() -> dict:
             "product_pose_sampling_readiness_docking_results_emitted": False,
             "product_pose_sampling_readiness_execution_enabled": False,
             "product_pose_sampling_readiness_external_state_mutated": False,
+            "product_ledger_privacy_scan_recorded": True,
+            "product_ledger_privacy_scan_ready": True,
+            "product_ledger_privacy_scan_blocker_count": 0,
+            "product_ledger_privacy_scan_leak_count": 0,
+            "product_ledger_privacy_scan_invalid_json_count": 0,
+            "product_ledger_privacy_scan_blocked_artifact_path_count": 0,
+            "product_ledger_privacy_scan_invalid_json_path_count": 0,
+            "product_ledger_privacy_scan_execution_enabled": False,
+            "product_ledger_privacy_scan_external_state_mutated": False,
             "source_goal_bottleneck_briefing_status": "goal_bottleneck_briefing_ready",
             "goal_bottleneck_briefing_completion_audit_release_blocker_bottleneck_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_entry_count": 2,
@@ -221,6 +230,9 @@ def _refresh_release_decision_ready() -> dict:
             "product_pose_sampling_readiness_pose_count": 6,
             "product_pose_sampling_readiness_cluster_count": 6,
             "product_pose_sampling_readiness_cross_docking_pose_count": 4,
+            "product_ledger_privacy_scan_scan_file_count": 285,
+            "product_ledger_privacy_scan_scan_glob_count": 24,
+            "product_ledger_privacy_scan_pass_count": 285,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_source_gate_statuses": (
                 "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"
                 "engine_refinement_claim_evidence_receipt=blocked_engine_refinement_claim_evidence_receipt"
@@ -375,6 +387,7 @@ def _refresh_release_decision_ready() -> dict:
             ),
             "product_pose_sampling_readiness_status": "product_pose_sampling_readiness_ready",
             "product_pose_sampling_readiness_pocket_method": "ligand_guided",
+            "product_ledger_privacy_scan_status": "product_ledger_privacy_scan_ready",
             "accuracy_parity_scorecard_status": "blocked_accuracy_parity",
             "accuracy_parity_scorecard_current_broad_accuracy_parity_estimate_pct": "40-50",
             "accuracy_parity_scorecard_current_broad_commercial_platform_estimate_pct": "35-45",
@@ -769,6 +782,11 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     )
     assert "product_pose_sampling_readiness_execution_enabled" in release_row["required_zero_fields"]
     assert "product_pose_sampling_readiness_external_state_mutated" in release_row["required_zero_fields"]
+    assert "product_ledger_privacy_scan_blocker_count" in release_row["required_zero_fields"]
+    assert "product_ledger_privacy_scan_leak_count" in release_row["required_zero_fields"]
+    assert "product_ledger_privacy_scan_invalid_json_count" in release_row["required_zero_fields"]
+    assert "product_ledger_privacy_scan_execution_enabled" in release_row["required_zero_fields"]
+    assert "product_ledger_privacy_scan_external_state_mutated" in release_row["required_zero_fields"]
     assert "accuracy_parity_scorecard_recorded" in release_row["required_true_fields"]
     assert (
         "api_runner_profile_promotion_operator_receipt_recorded"
@@ -787,6 +805,8 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     assert "product_quality_gate_verification_ready" in release_row["required_true_fields"]
     assert "product_pose_sampling_readiness_recorded" in release_row["required_true_fields"]
     assert "product_pose_sampling_readiness_ready" in release_row["required_true_fields"]
+    assert "product_ledger_privacy_scan_recorded" in release_row["required_true_fields"]
+    assert "product_ledger_privacy_scan_ready" in release_row["required_true_fields"]
     assert (
         "product_pose_sampling_readiness_pose_generation_contract_ready"
         in release_row["required_true_fields"]
@@ -852,6 +872,18 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     assert release_row["required_int_exact_fields"][
         "product_pose_sampling_readiness_cross_docking_pose_count"
     ] == 4
+    assert release_row["required_int_exact_fields"][
+        "product_ledger_privacy_scan_scan_glob_count"
+    ] == 24
+    assert release_row["required_int_min_fields"][
+        "product_ledger_privacy_scan_scan_file_count"
+    ] == 285
+    assert release_row["required_int_min_fields"][
+        "product_ledger_privacy_scan_pass_count"
+    ] == 285
+    assert release_row["required_int_equal_fields"][
+        "product_ledger_privacy_scan_pass_count"
+    ] == "product_ledger_privacy_scan_scan_file_count"
     assert release_row["required_text_exact_fields"][
         "product_quality_gate_verification_status"
     ] == "product_quality_gate_verified"
@@ -864,6 +896,9 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     assert release_row["required_text_exact_fields"][
         "product_pose_sampling_readiness_pocket_method"
     ] == "ligand_guided"
+    assert release_row["required_text_exact_fields"][
+        "product_ledger_privacy_scan_status"
+    ] == "product_ledger_privacy_scan_ready"
     assert release_row["required_text_exact_fields"][
         "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_gate_id"
     ] == "default_residual_mode_guarded"

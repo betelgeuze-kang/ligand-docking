@@ -106,6 +106,8 @@ FINAL_GATE_SPECS = [
             "product_pose_sampling_readiness_pose_rmsd_diversity_surface_ready",
             "product_pose_sampling_readiness_bounded_cross_docking_induced_fit_guard_ready",
             "product_pose_sampling_readiness_pose_claim_boundary_guard_ready",
+            "product_ledger_privacy_scan_recorded",
+            "product_ledger_privacy_scan_ready",
         ],
         "required_zero_fields": [
             "blocker_count",
@@ -158,6 +160,13 @@ FINAL_GATE_SPECS = [
             "product_pose_sampling_readiness_docking_results_emitted",
             "product_pose_sampling_readiness_execution_enabled",
             "product_pose_sampling_readiness_external_state_mutated",
+            "product_ledger_privacy_scan_blocker_count",
+            "product_ledger_privacy_scan_leak_count",
+            "product_ledger_privacy_scan_invalid_json_count",
+            "product_ledger_privacy_scan_blocked_artifact_path_count",
+            "product_ledger_privacy_scan_invalid_json_path_count",
+            "product_ledger_privacy_scan_execution_enabled",
+            "product_ledger_privacy_scan_external_state_mutated",
         ],
         "required_int_exact_fields": {
             "cameo_official_result_fetch_preflight_blocked_row_count": 1,
@@ -247,6 +256,14 @@ FINAL_GATE_SPECS = [
             "product_pose_sampling_readiness_pose_count": 6,
             "product_pose_sampling_readiness_cluster_count": 6,
             "product_pose_sampling_readiness_cross_docking_pose_count": 4,
+            "product_ledger_privacy_scan_scan_glob_count": 24,
+        },
+        "required_int_min_fields": {
+            "product_ledger_privacy_scan_scan_file_count": 285,
+            "product_ledger_privacy_scan_pass_count": 285,
+        },
+        "required_int_equal_fields": {
+            "product_ledger_privacy_scan_pass_count": "product_ledger_privacy_scan_scan_file_count",
         },
         "required_text_exact_fields": {
             "product_quality_gate_verification_status": "product_quality_gate_verified",
@@ -255,6 +272,7 @@ FINAL_GATE_SPECS = [
             ),
             "product_pose_sampling_readiness_status": "product_pose_sampling_readiness_ready",
             "product_pose_sampling_readiness_pocket_method": "ligand_guided",
+            "product_ledger_privacy_scan_status": "product_ledger_privacy_scan_ready",
             "cameo_official_result_fetch_preflight_status": (
                 "blocked_cameo_official_result_fetch_preflight"
             ),
@@ -612,6 +630,14 @@ def _verify_final_gate(spec: dict[str, Any], *, root: Path) -> dict[str, Any]:
         str(field): _int(expected)
         for field, expected in (spec.get("required_int_exact_fields") or {}).items()
     }
+    required_int_min_fields = {
+        str(field): _int(expected)
+        for field, expected in (spec.get("required_int_min_fields") or {}).items()
+    }
+    required_int_equal_fields = {
+        str(field): str(peer_field)
+        for field, peer_field in (spec.get("required_int_equal_fields") or {}).items()
+    }
     required_text_exact_fields = {
         str(field): str(expected)
         for field, expected in (spec.get("required_text_exact_fields") or {}).items()
@@ -620,6 +646,14 @@ def _verify_final_gate(spec: dict[str, Any], *, root: Path) -> dict[str, Any]:
     nonzero_fields = [field for field in required_zero_fields if _int(summary.get(field)) != 0]
     failed_int_exact_fields = [
         field for field, expected in required_int_exact_fields.items() if _int(summary.get(field)) != expected
+    ]
+    failed_int_min_fields = [
+        field for field, minimum in required_int_min_fields.items() if _int(summary.get(field)) < minimum
+    ]
+    failed_int_equal_fields = [
+        field
+        for field, peer_field in required_int_equal_fields.items()
+        if _int(summary.get(field)) != _int(summary.get(peer_field))
     ]
     failed_text_exact_fields = [
         field
@@ -632,6 +666,8 @@ def _verify_final_gate(spec: dict[str, Any], *, root: Path) -> dict[str, Any]:
             missing_true_fields,
             nonzero_fields,
             failed_int_exact_fields,
+            failed_int_min_fields,
+            failed_int_equal_fields,
             failed_text_exact_fields,
         ]
     )
@@ -648,18 +684,26 @@ def _verify_final_gate(spec: dict[str, Any], *, root: Path) -> dict[str, Any]:
         "nonzero_fields": nonzero_fields,
         "required_int_exact_fields": required_int_exact_fields,
         "failed_int_exact_fields": failed_int_exact_fields,
+        "required_int_min_fields": required_int_min_fields,
+        "failed_int_min_fields": failed_int_min_fields,
+        "required_int_equal_fields": required_int_equal_fields,
+        "failed_int_equal_fields": failed_int_equal_fields,
         "required_text_exact_fields": required_text_exact_fields,
         "failed_text_exact_fields": failed_text_exact_fields,
         "observed": (
             f"status={observed_status};missing_true_fields={len(missing_true_fields)};"
             f"nonzero_fields={len(nonzero_fields)};"
             f"failed_int_exact_fields={len(failed_int_exact_fields)};"
+            f"failed_int_min_fields={len(failed_int_min_fields)};"
+            f"failed_int_equal_fields={len(failed_int_equal_fields)};"
             f"failed_text_exact_fields={len(failed_text_exact_fields)}"
         ),
         "required": (
             f"status={required_status};true={','.join(required_true_fields) or 'none'};"
             f"zero={','.join(required_zero_fields) or 'none'};"
             f"int_exact={','.join(required_int_exact_fields) or 'none'};"
+            f"int_min={','.join(required_int_min_fields) or 'none'};"
+            f"int_equal={','.join(required_int_equal_fields) or 'none'};"
             f"text_exact={','.join(required_text_exact_fields) or 'none'}"
         ),
         "release_blocker": not passed,

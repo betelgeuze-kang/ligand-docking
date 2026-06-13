@@ -613,6 +613,43 @@ def _blocked_product_pose_sampling_readiness() -> dict:
     return packet
 
 
+def _ready_product_ledger_privacy_scan() -> dict:
+    return {
+        "summary": {
+            "status": "product_ledger_privacy_scan_ready",
+            "ledger_privacy_scan_ready": True,
+            "scan_file_count": 285,
+            "pass_count": 285,
+            "scan_globs": [f"runs/privacy-scan-target-{index}.json" for index in range(24)],
+            "blocker_count": 0,
+            "leak_count": 0,
+            "invalid_json_count": 0,
+            "blocked_artifact_paths": [],
+            "invalid_json_paths": [],
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "next_required_step": (
+                "Ledger privacy scan is ready; keep this artifact in the release source-of-truth gate."
+            ),
+        }
+    }
+
+
+def _blocked_product_ledger_privacy_scan() -> dict:
+    packet = _ready_product_ledger_privacy_scan()
+    packet["summary"].update(
+        {
+            "status": "blocked_product_ledger_privacy_scan",
+            "ledger_privacy_scan_ready": False,
+            "pass_count": 284,
+            "blocker_count": 1,
+            "leak_count": 1,
+            "blocked_artifact_paths": ["runs/goal_operator_action_board_current.json"],
+        }
+    )
+    return packet
+
+
 def _blocked_full_commercial_matrix() -> dict:
     return {
         "summary": {
@@ -1725,6 +1762,83 @@ def test_goal_release_decision_gate_blocks_failed_pose_sampling_readiness() -> N
     assert pose_row["status"] == "fail"
     assert pose_row["release_blocker"] is True
     assert "pose_count=4" in pose_row["observed"]
+
+
+def test_goal_release_decision_gate_passes_ready_ledger_privacy_scan() -> None:
+    payload = mod.build_goal_release_decision_gate(
+        product_pilot_packet=_ready_product(),
+        product_architecture_packet=_ready_product_architecture(),
+        product_commercial_independence_packet=_ready_product_independence(),
+        cameo_validation_packet=_ready_cameo_validation(),
+        cameo_capability_packet=_ready_cameo_capability(),
+        goal_rollup_packet=_ready_rollup(),
+        operator_action_board_packet=_clear_action_board(),
+        transition_cleanup_preflight_packet=_transition_cleanup("transition_cleanup_execution_complete"),
+        ligand_cleanup_preflight_packet=_ligand_cleanup("ligand_heavy_cleanup_execution_complete"),
+        protected_cleanup_review_packet=_protected_cleanup(0),
+        cleanup_postcheck_contract_packet=_ready_cleanup_postcheck(),
+        goal_api_surface_contract_packet=_ready_goal_api_surface_contract(),
+        product_release_source_of_truth_packet=_ready_source_of_truth(),
+        product_quality_gate_verification_packet=_ready_product_quality_gate_verification(),
+        product_pose_sampling_readiness_packet=_ready_product_pose_sampling_readiness(),
+        product_ledger_privacy_scan_packet=_ready_product_ledger_privacy_scan(),
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "goal_release_ready"
+    assert summary["product_ledger_privacy_scan_gate_present"] is True
+    assert summary["product_ledger_privacy_scan_recorded"] is True
+    assert summary["product_ledger_privacy_scan_ready"] is True
+    assert summary["product_ledger_privacy_scan_scan_file_count"] == 285
+    assert summary["product_ledger_privacy_scan_scan_glob_count"] == 24
+    assert summary["product_ledger_privacy_scan_pass_count"] == 285
+    assert summary["product_ledger_privacy_scan_leak_count"] == 0
+    assert summary["product_ledger_privacy_scan_invalid_json_count"] == 0
+    assert summary["product_ledger_privacy_scan_execution_enabled"] is False
+    assert summary["product_ledger_privacy_scan_external_state_mutated"] is False
+    privacy_row = next(
+        row for row in payload["rows"] if row["check"] == "product_ledger_privacy_scan_recorded"
+    )
+    assert privacy_row["status"] == "pass"
+    assert privacy_row["release_blocker"] is False
+    assert "scan_file_count=285" in privacy_row["observed"]
+    assert "leak_count=0" in privacy_row["observed"]
+
+
+def test_goal_release_decision_gate_blocks_failed_ledger_privacy_scan() -> None:
+    payload = mod.build_goal_release_decision_gate(
+        product_pilot_packet=_ready_product(),
+        product_architecture_packet=_ready_product_architecture(),
+        product_commercial_independence_packet=_ready_product_independence(),
+        cameo_validation_packet=_ready_cameo_validation(),
+        cameo_capability_packet=_ready_cameo_capability(),
+        goal_rollup_packet=_ready_rollup(),
+        operator_action_board_packet=_clear_action_board(),
+        transition_cleanup_preflight_packet=_transition_cleanup("transition_cleanup_execution_complete"),
+        ligand_cleanup_preflight_packet=_ligand_cleanup("ligand_heavy_cleanup_execution_complete"),
+        protected_cleanup_review_packet=_protected_cleanup(0),
+        cleanup_postcheck_contract_packet=_ready_cleanup_postcheck(),
+        goal_api_surface_contract_packet=_ready_goal_api_surface_contract(),
+        product_release_source_of_truth_packet=_ready_source_of_truth(),
+        product_quality_gate_verification_packet=_ready_product_quality_gate_verification(),
+        product_pose_sampling_readiness_packet=_ready_product_pose_sampling_readiness(),
+        product_ledger_privacy_scan_packet=_blocked_product_ledger_privacy_scan(),
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "blocked_goal_release_decision"
+    assert summary["release_allowed"] is False
+    assert summary["product_ledger_privacy_scan_recorded"] is False
+    assert summary["product_ledger_privacy_scan_pass_count"] == 284
+    assert summary["product_ledger_privacy_scan_leak_count"] == 1
+    assert summary["product_ledger_privacy_scan_blocked_artifact_path_count"] == 1
+    assert "product ledger privacy scan receipt" in summary["next_required_step"]
+    privacy_row = next(
+        row for row in payload["rows"] if row["check"] == "product_ledger_privacy_scan_recorded"
+    )
+    assert privacy_row["status"] == "fail"
+    assert privacy_row["release_blocker"] is True
+    assert "leak_count=1" in privacy_row["observed"]
 
 
 def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_blocking_restricted_release() -> None:
